@@ -30,15 +30,13 @@ pub const system_0_public_input = protocol.public_input.Spec{
 // expression: "bool"
 const system_0_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 0 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 0 } },
 };
 
 const system_0_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "bool"
-    .{ .expression = 4, .cancelled_positions = &.{} },
+    .{ .expression = 2, .cancelled_positions = &.{} },
 };
 
 const system_0_module_0_buckets = [_]vanishing.Bucket{
@@ -143,9 +141,9 @@ pub const system_1_public_input = protocol.public_input.Spec{
 const system_1_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 2 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
 };
 
 const system_1_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -260,8 +258,8 @@ const system_2_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .constant = .{ .value = 2 } },
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 1, 2 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 3 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 2 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 3 } },
 };
 
 const system_2_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -373,9 +371,9 @@ pub const system_3_public_input = protocol.public_input.Spec{
 const system_3_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "colA"
     .{ .column_claim = 1 }, // col: "colA"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 2 }, // col: "colB"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
 };
 
 const system_3_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -488,13 +486,13 @@ pub const system_4_public_input = protocol.public_input.Spec{
 // expression: "pyth"
 const system_4_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "colA"
-    .{ .op = .{ .operator = .square, .operands = &.{0} } },
+    .{ .op = .{ .operator = .square, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "colB"
-    .{ .op = .{ .operator = .square, .operands = &.{2} } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 3 } } },
+    .{ .op = .{ .operator = .square, .lhs = 2, .rhs = 0 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 3 } },
     .{ .column_claim = 2 }, // col: "colC"
-    .{ .op = .{ .operator = .square, .operands = &.{5} } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 4, 6 } } },
+    .{ .op = .{ .operator = .square, .lhs = 5, .rhs = 0 } },
+    .{ .op = .{ .operator = .sub, .lhs = 4, .rhs = 6 } },
 };
 
 const system_4_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -608,9 +606,9 @@ pub const system_5_public_input = protocol.public_input.Spec{
 const system_5_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 2 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
 };
 
 const system_5_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -724,7 +722,7 @@ pub const system_6_public_input = protocol.public_input.Spec{
 const system_6_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .constant = .{ .value = 7 } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
 };
 
 const system_6_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -834,7 +832,7 @@ pub const system_7_public_input = protocol.public_input.Spec{
 const system_7_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
 };
 
 const system_7_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -945,17 +943,14 @@ pub const system_8_public_input = protocol.public_input.Spec{
 // expression: "cube"
 const system_8_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 4, 5 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 0 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 0 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 0 } },
 };
 
 const system_8_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "cube"
-    .{ .expression = 6, .cancelled_positions = &.{} },
+    .{ .expression = 3, .cancelled_positions = &.{} },
 };
 
 const system_8_module_0_buckets = [_]vanishing.Bucket{
@@ -1063,12 +1058,12 @@ const system_9_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "a"
     .{ .constant = .{ .value = 2 } },
     .{ .column_claim = 1 }, // col: "b"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 1, 2 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 3 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 2 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 3 } },
     .{ .constant = .{ .value = 3 } },
     .{ .column_claim = 2 }, // col: "c"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 4, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 4, .rhs = 7 } },
 };
 
 const system_9_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -1182,9 +1177,9 @@ pub const system_10_public_input = protocol.public_input.Spec{
 const system_10_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 2 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
 };
 
 const system_10_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -1297,17 +1292,16 @@ pub const system_11_public_input = protocol.public_input.Spec{
 const system_11_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "a"
     .{ .constant = .{ .value = 4 } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 1 }, // col: "b"
-    .{ .column_claim = 0 }, // col: "a"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 3, 4 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 0 } },
 };
 
 const system_11_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "v1"
     .{ .expression = 2, .cancelled_positions = &.{} },
     // expression: "v2"
-    .{ .expression = 5, .cancelled_positions = &.{} },
+    .{ .expression = 4, .cancelled_positions = &.{} },
 };
 
 const system_11_module_0_buckets = [_]vanishing.Bucket{
@@ -1413,19 +1407,16 @@ pub const system_12_public_input = protocol.public_input.Spec{
 const system_12_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "a"
     .{ .column_claim = 1 }, // col: "a"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
-    .{ .column_claim = 0 }, // col: "a"
-    .{ .column_claim = 0 }, // col: "a"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 4 } } },
-    .{ .column_claim = 0 }, // col: "a"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 5, 6 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 0 } },
+    .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 0 } },
 };
 
 const system_12_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "lin"
     .{ .expression = 2, .cancelled_positions = &.{0} },
     // expression: "bool"
-    .{ .expression = 7, .cancelled_positions = &.{} },
+    .{ .expression = 4, .cancelled_positions = &.{} },
 };
 
 const system_12_module_0_buckets = [_]vanishing.Bucket{
@@ -1531,15 +1522,13 @@ pub const system_13_public_input = protocol.public_input.Spec{
 // expression: "a-bool"
 const system_13_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "colA"
-    .{ .column_claim = 0 }, // col: "colA"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
-    .{ .column_claim = 0 }, // col: "colA"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 0 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 0 } },
 };
 
 const system_13_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "a-bool"
-    .{ .expression = 4, .cancelled_positions = &.{} },
+    .{ .expression = 2, .cancelled_positions = &.{} },
 };
 
 const system_13_module_0_buckets = [_]vanishing.Bucket{
@@ -1550,7 +1539,7 @@ const system_13_module_0_buckets = [_]vanishing.Bucket{
 const system_13_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "colB"
     .{ .constant = .{ .value = 7 } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
 };
 
 const system_13_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -1666,9 +1655,9 @@ pub const system_14_public_input = protocol.public_input.Spec{
 const system_14_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
 };
 
 const system_14_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -1781,8 +1770,8 @@ const system_15_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "sel"
     .{ .column_claim = 1 }, // col: "col"
     .{ .constant = .{ .value = 9 } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 3 } },
 };
 
 const system_15_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -1894,7 +1883,7 @@ pub const system_16_public_input = protocol.public_input.Spec{
 const system_16_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .cell_value = .{ .round = 0, .index = 0 } }, // cell: "c"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
 };
 
 const system_16_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -2009,8 +1998,8 @@ const system_17_module_0_expressions = [_]vanishing.ExprNode{
     .{ .coin_value = 0 }, // coin: "coin"
     .{ .column_claim = 0 }, // col: "col"
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 3 } },
 };
 
 const system_17_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -2128,9 +2117,9 @@ pub const system_18_public_input = protocol.public_input.Spec{
 const system_18_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 2 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
 };
 
 const system_18_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -2243,19 +2232,14 @@ pub const system_19_public_input = protocol.public_input.Spec{
 // expression: "q"
 const system_19_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 4 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 5 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 6, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 0 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 1 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 0 } },
 };
 
 const system_19_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "q"
-    .{ .expression = 8, .cancelled_positions = &.{} },
+    .{ .expression = 3, .cancelled_positions = &.{} },
 };
 
 const system_19_module_0_buckets = [_]vanishing.Bucket{
@@ -2366,7 +2350,7 @@ pub const system_20_public_input = protocol.public_input.Spec{
 const system_20_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
 };
 
 const system_20_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -2477,17 +2461,15 @@ pub const system_21_public_input = protocol.public_input.Spec{
 // expression: "cube-shift"
 const system_21_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 4, 5 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 2 } },
+    .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 0 } },
 };
 
 const system_21_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "cube-shift"
-    .{ .expression = 6, .cancelled_positions = &.{0} },
+    .{ .expression = 4, .cancelled_positions = &.{0} },
 };
 
 const system_21_module_0_buckets = [_]vanishing.Bucket{
@@ -2594,31 +2576,21 @@ pub const system_22_public_input = protocol.public_input.Spec{
 
 const system_22_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 4, 5 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 7, 8 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 10, 11 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 9, 12 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 13, 14 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 0 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 0 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 0 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 1 } },
+    .{ .op = .{ .operator = .sub, .lhs = 4, .rhs = 0 } },
 };
 
 const system_22_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "cube"
-    .{ .expression = 6, .cancelled_positions = &.{} },
+    .{ .expression = 3, .cancelled_positions = &.{} },
 };
 
 const system_22_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "quartic"
-    .{ .expression = 15, .cancelled_positions = &.{} },
+    .{ .expression = 5, .cancelled_positions = &.{} },
 };
 
 const system_22_module_0_buckets = [_]vanishing.Bucket{
@@ -2733,17 +2705,14 @@ pub const system_23_public_input = protocol.public_input.Spec{
 // expression: "cubeA"
 const system_23_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "colA"
-    .{ .column_claim = 0 }, // col: "colA"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
-    .{ .column_claim = 0 }, // col: "colA"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
-    .{ .column_claim = 0 }, // col: "colA"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 4, 5 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 0 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 0 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 0 } },
 };
 
 const system_23_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "cubeA"
-    .{ .expression = 6, .cancelled_positions = &.{} },
+    .{ .expression = 3, .cancelled_positions = &.{} },
 };
 
 const system_23_module_0_buckets = [_]vanishing.Bucket{
@@ -2753,17 +2722,14 @@ const system_23_module_0_buckets = [_]vanishing.Bucket{
 // expression: "cubeB"
 const system_23_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "colB"
-    .{ .column_claim = 0 }, // col: "colB"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
-    .{ .column_claim = 0 }, // col: "colB"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
-    .{ .column_claim = 0 }, // col: "colB"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 4, 5 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 0 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 0 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 0 } },
 };
 
 const system_23_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "cubeB"
-    .{ .expression = 6, .cancelled_positions = &.{} },
+    .{ .expression = 3, .cancelled_positions = &.{} },
 };
 
 const system_23_module_1_buckets = [_]vanishing.Bucket{
@@ -2877,17 +2843,14 @@ pub const system_24_public_input = protocol.public_input.Spec{
 // expression: "cube"
 const system_24_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 4, 5 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 0 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 0 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 0 } },
 };
 
 const system_24_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "cube"
-    .{ .expression = 6, .cancelled_positions = &.{} },
+    .{ .expression = 3, .cancelled_positions = &.{} },
 };
 
 const system_24_module_0_buckets = [_]vanishing.Bucket{
@@ -2994,7 +2957,7 @@ pub const system_25_public_input = protocol.public_input.Spec{
 const system_25_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
 };
 
 const system_25_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -3106,11 +3069,11 @@ pub const system_26_public_input = protocol.public_input.Spec{
 const system_26_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .constant = .{ .value = 2 } },
     .{ .column_claim = 2 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 4 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 5 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 5 } },
 };
 
 const system_26_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -3223,15 +3186,13 @@ pub const system_27_public_input = protocol.public_input.Spec{
 // expression: "bool"
 const system_27_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 0 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 0 } },
 };
 
 const system_27_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "bool"
-    .{ .expression = 4, .cancelled_positions = &.{} },
+    .{ .expression = 2, .cancelled_positions = &.{} },
 };
 
 const system_27_module_0_buckets = [_]vanishing.Bucket{
@@ -3335,21 +3296,16 @@ pub const system_28_public_input = protocol.public_input.Spec{
 // expression: "quartic-shift"
 const system_28_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "col"
-    .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 4 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 5 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 7, 8 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 6, 9 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 2 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 3 } },
+    .{ .op = .{ .operator = .sub, .lhs = 4, .rhs = 1 } },
 };
 
 const system_28_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "quartic-shift"
-    .{ .expression = 10, .cancelled_positions = &.{0} },
+    .{ .expression = 5, .cancelled_positions = &.{0} },
 };
 
 const system_28_module_0_buckets = [_]vanishing.Bucket{
@@ -3462,9 +3418,9 @@ pub const system_29_public_input = protocol.public_input.Spec{
 const system_29_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 2 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
 };
 
 const system_29_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -3554,9 +3510,9 @@ pub const system_30_public_input = protocol.public_input.Spec{
 const system_30_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "colA"
     .{ .column_claim = 1 }, // col: "colA"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 2 }, // col: "colA"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
 };
 
 const system_30_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -3572,9 +3528,9 @@ const system_30_module_0_buckets = [_]vanishing.Bucket{
 const system_30_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "colB"
     .{ .column_claim = 1 }, // col: "colB"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 2 }, // col: "colB"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
 };
 
 const system_30_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -3670,31 +3626,27 @@ const system_31_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "num"
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 4 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 5 } } },
-    .{ .column_claim = 0 }, // col: "num"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 8, 9 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 7, 10 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 9 } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 15 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 13 } },
 };
 
 const system_31_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 6, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 10, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 18, .cancelled_positions = &.{} },
+    .{ .expression = 14, .cancelled_positions = &.{} },
 };
 
 const system_31_module_0_buckets = [_]vanishing.Bucket{
@@ -3791,39 +3743,33 @@ pub const system_32_public_input = protocol.public_input.Spec{
 const system_32_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "flt"
     .{ .column_claim = 1 }, // col: "num"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .column_claim = 3 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 3, 4 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 4 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 7 } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 3 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .column_claim = 0 }, // col: "flt"
-    .{ .column_claim = 1 }, // col: "num"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 14, 15 } } },
-    .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_32_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_32_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_32_module_0_buckets = [_]vanishing.Bucket{
@@ -3924,39 +3870,33 @@ pub const system_33_public_input = protocol.public_input.Spec{
 const system_33_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "flt"
     .{ .column_claim = 1 }, // col: "num"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .column_claim = 3 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 3, 4 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 4 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 7 } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 3 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .column_claim = 0 }, // col: "flt"
-    .{ .column_claim = 1 }, // col: "num"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 14, 15 } } },
-    .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_33_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_33_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_33_module_0_buckets = [_]vanishing.Bucket{
@@ -4057,39 +3997,33 @@ pub const system_34_public_input = protocol.public_input.Spec{
 const system_34_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "flt"
     .{ .column_claim = 1 }, // col: "num"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .column_claim = 3 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 3, 4 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 4 } },
     .{ .column_claim = 4 }, // col: "den"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 7 } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 3 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .column_claim = 0 }, // col: "flt"
-    .{ .column_claim = 1 }, // col: "num"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 14, 15 } } },
-    .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .column_claim = 4 }, // col: "den"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_34_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_34_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_34_module_0_buckets = [_]vanishing.Bucket{
@@ -4191,100 +4125,61 @@ pub const system_35_public_input = protocol.public_input.Spec{
 const system_35_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "c0"
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 1 } },
     .{ .column_claim = 1 }, // col: "c1"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 7, 8 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 9 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 1 } },
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 6 } },
     .{ .column_claim = 2 }, // col: "c2"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 13, 14 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 10, 15 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 9, .rhs = 1 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 10 } },
     .{ .column_claim = 3 }, // col: "z-b0-k0"
     .{ .column_claim = 4 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 17, 18 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 19, 24 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 25 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 12, .rhs = 13 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 16 } },
+    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 17 } },
     .{ .column_claim = 5 }, // col: "c3"
     .{ .column_claim = 6 }, // col: "z-b0-k1"
     .{ .column_claim = 7 }, // col: "z-b0-k1"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 28, 29 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 30, 31 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 27, 32 } } },
-    .{ .column_claim = 0 }, // col: "c0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 34, 35 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 36, 37 } } },
-    .{ .column_claim = 1 }, // col: "c1"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 39, 40 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 41, 42 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 38, 43 } } },
-    .{ .column_claim = 2 }, // col: "c2"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 45, 46 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 47, 48 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 44, 49 } } },
-    .{ .column_claim = 3 }, // col: "z-b0-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 52, 53 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 54, 55 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 51, 56 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 50, 57 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 20, .rhs = 21 } },
+    .{ .op = .{ .operator = .mul, .lhs = 22, .rhs = 1 } },
+    .{ .op = .{ .operator = .sub, .lhs = 19, .rhs = 23 } },
+    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 16 } },
+    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 25 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 58, 59 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 26, .rhs = 27 } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 3 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 61, 62 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 29, .rhs = 12 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 63, 64 } } },
-    .{ .column_claim = 5 }, // col: "c3"
-    .{ .column_claim = 6 }, // col: "z-b0-k1"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 67, 68 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 66, 69 } } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 70, 71 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 30, .rhs = 31 } },
+    .{ .op = .{ .operator = .mul, .lhs = 20, .rhs = 1 } },
+    .{ .op = .{ .operator = .sub, .lhs = 19, .rhs = 33 } },
+    .{ .op = .{ .operator = .mul, .lhs = 34, .rhs = 27 } },
     .{ .cell_value = .{ .round = 1, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 6 }, // col: "z-b0-k1"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 73, 74 } } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 75, 76 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 36, .rhs = 20 } },
+    .{ .op = .{ .operator = .mul, .lhs = 37, .rhs = 31 } },
 };
 
 const system_35_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 26, .cancelled_positions = &.{0} },
+    .{ .expression = 18, .cancelled_positions = &.{0} },
 };
 
 const system_35_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k1"
-    .{ .expression = 33, .cancelled_positions = &.{0} },
+    .{ .expression = 24, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 60, .cancelled_positions = &.{} },
+    .{ .expression = 28, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 65, .cancelled_positions = &.{} },
+    .{ .expression = 32, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 72, .cancelled_positions = &.{} },
+    .{ .expression = 35, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 77, .cancelled_positions = &.{} },
+    .{ .expression = 38, .cancelled_positions = &.{} },
 };
 
 const system_35_module_0_buckets = [_]vanishing.Bucket{
@@ -4394,31 +4289,27 @@ const system_36_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "cA"
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 4 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 5 } } },
-    .{ .column_claim = 0 }, // col: "cA"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 8, 9 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 7, 10 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 9 } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 15 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 13 } },
 };
 
 const system_36_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 6, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 10, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 18, .cancelled_positions = &.{} },
+    .{ .expression = 14, .cancelled_positions = &.{} },
 };
 
 const system_36_module_0_buckets = [_]vanishing.Bucket{
@@ -4428,39 +4319,33 @@ const system_36_module_0_buckets = [_]vanishing.Bucket{
 const system_36_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "fB"
     .{ .column_claim = 1 }, // col: "cB"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 2 }, // col: "z-b1-k0"
     .{ .column_claim = 3 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 3, 4 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 4 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 7 } },
     .{ .cell_value = .{ .round = 1, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 2 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 3 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .column_claim = 0 }, // col: "fB"
-    .{ .column_claim = 1 }, // col: "cB"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 14, 15 } } },
-    .{ .column_claim = 2 }, // col: "z-b1-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_36_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_36_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_36_module_1_buckets = [_]vanishing.Bucket{
@@ -4570,22 +4455,20 @@ const system_37_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "num"
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 1, 2 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 3 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 2 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 3 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 5 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 5 } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 7, 8 } } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 7, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 5 } },
 };
 
 const system_37_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
     .{ .expression = 6, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 11, .cancelled_positions = &.{} },
+    .{ .expression = 9, .cancelled_positions = &.{} },
 };
 
 const system_37_module_0_buckets = [_]vanishing.Bucket{
@@ -4681,43 +4564,35 @@ pub const system_38_public_input = protocol.public_input.Spec{
 const system_38_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "filterS"
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 3, 4 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 4 } },
     .{ .constant = .{ .value = 7 } },
     .{ .column_claim = 3 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 6, 7 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 8 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 9 } } },
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 9 } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 11, 12 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 3 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 13, 14 } } },
-    .{ .column_claim = 0 }, // col: "filterS"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .constant = .{ .value = 7 } },
-    .{ .column_claim = 3 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 20, 21 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 19, 22 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 18, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 13 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 15 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 24, 25 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 16, .rhs = 17 } },
 };
 
 const system_38_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 10, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 15, .cancelled_positions = &.{} },
+    .{ .expression = 14, .cancelled_positions = &.{} },
 };
 
 const system_38_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 26, .cancelled_positions = &.{} },
+    .{ .expression = 18, .cancelled_positions = &.{} },
 };
 
 const system_38_module_0_buckets = [_]vanishing.Bucket{
@@ -4727,42 +4602,35 @@ const system_38_module_0_buckets = [_]vanishing.Bucket{
 
 const system_38_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .column_claim = 2 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .constant = .{ .value = 7 } },
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 1, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .constant = .{ .value = 7 } },
-    .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_38_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_38_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_38_module_1_buckets = [_]vanishing.Bucket{
@@ -4874,165 +4742,89 @@ pub const system_39_public_input = protocol.public_input.Spec{
 const system_39_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "c0"
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 1 } },
     .{ .column_claim = 1 }, // col: "c1"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 7, 8 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 9 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 1 } },
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 6 } },
     .{ .column_claim = 2 }, // col: "c2"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 13, 14 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 10, 15 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 9, .rhs = 1 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 10 } },
     .{ .column_claim = 3 }, // col: "z-b0-k0"
     .{ .column_claim = 4 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 17, 18 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 19, 24 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 25 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 12, .rhs = 13 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 16 } },
+    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 17 } },
     .{ .column_claim = 5 }, // col: "c3"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 27, 28 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 29, 30 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 19, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 20, .rhs = 1 } },
     .{ .column_claim = 6 }, // col: "c4"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 32, 33 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 34, 35 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 31, 36 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 22, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 23, .rhs = 1 } },
+    .{ .op = .{ .operator = .add, .lhs = 21, .rhs = 24 } },
     .{ .column_claim = 7 }, // col: "c5"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 38, 39 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 40, 41 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 37, 42 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 26, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 27, .rhs = 1 } },
+    .{ .op = .{ .operator = .add, .lhs = 25, .rhs = 28 } },
     .{ .column_claim = 8 }, // col: "z-b0-k1"
     .{ .column_claim = 9 }, // col: "z-b0-k1"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 44, 45 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 47, 48 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 49, 50 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 46, 51 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 43, 52 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 30, .rhs = 31 } },
+    .{ .op = .{ .operator = .mul, .lhs = 32, .rhs = 16 } },
+    .{ .op = .{ .operator = .sub, .lhs = 29, .rhs = 33 } },
     .{ .column_claim = 10 }, // col: "c6"
     .{ .column_claim = 11 }, // col: "z-b0-k2"
     .{ .column_claim = 12 }, // col: "z-b0-k2"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 55, 56 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 57, 58 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 54, 59 } } },
-    .{ .column_claim = 0 }, // col: "c0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 61, 62 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 63, 64 } } },
-    .{ .column_claim = 1 }, // col: "c1"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 66, 67 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 68, 69 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 65, 70 } } },
-    .{ .column_claim = 2 }, // col: "c2"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 72, 73 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 74, 75 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 71, 76 } } },
-    .{ .column_claim = 3 }, // col: "z-b0-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 79, 80 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 81, 82 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 78, 83 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 77, 84 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 36, .rhs = 37 } },
+    .{ .op = .{ .operator = .mul, .lhs = 38, .rhs = 1 } },
+    .{ .op = .{ .operator = .sub, .lhs = 35, .rhs = 39 } },
+    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 16 } },
+    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 41 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 85, 86 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 42, .rhs = 43 } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 3 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 88, 89 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 45, .rhs = 12 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 90, 91 } } },
-    .{ .column_claim = 5 }, // col: "c3"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 93, 94 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 95, 96 } } },
-    .{ .column_claim = 6 }, // col: "c4"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 98, 99 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 100, 101 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 97, 102 } } },
-    .{ .column_claim = 7 }, // col: "c5"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 104, 105 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 106, 107 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 103, 108 } } },
-    .{ .column_claim = 8 }, // col: "z-b0-k1"
-    .{ .constant = .{ .value = 1 } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 111, 112 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 113, 114 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 110, 115 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 109, 116 } } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 117, 118 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 46, .rhs = 47 } },
+    .{ .op = .{ .operator = .mul, .lhs = 30, .rhs = 16 } },
+    .{ .op = .{ .operator = .sub, .lhs = 29, .rhs = 49 } },
+    .{ .op = .{ .operator = .mul, .lhs = 50, .rhs = 43 } },
     .{ .cell_value = .{ .round = 1, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 8 }, // col: "z-b0-k1"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 120, 121 } } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 122, 123 } } },
-    .{ .column_claim = 10 }, // col: "c6"
-    .{ .column_claim = 11 }, // col: "z-b0-k2"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 126, 127 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 125, 128 } } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 129, 130 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 52, .rhs = 30 } },
+    .{ .op = .{ .operator = .mul, .lhs = 53, .rhs = 47 } },
+    .{ .op = .{ .operator = .mul, .lhs = 36, .rhs = 1 } },
+    .{ .op = .{ .operator = .sub, .lhs = 35, .rhs = 55 } },
+    .{ .op = .{ .operator = .mul, .lhs = 56, .rhs = 43 } },
     .{ .cell_value = .{ .round = 1, .index = 3 } }, // cell: "result"
-    .{ .column_claim = 11 }, // col: "z-b0-k2"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 132, 133 } } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 134, 135 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 58, .rhs = 36 } },
+    .{ .op = .{ .operator = .mul, .lhs = 59, .rhs = 47 } },
 };
 
 const system_39_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 26, .cancelled_positions = &.{0} },
+    .{ .expression = 18, .cancelled_positions = &.{0} },
     // expression: "z-recurrence-b0-k1"
-    .{ .expression = 53, .cancelled_positions = &.{0} },
+    .{ .expression = 34, .cancelled_positions = &.{0} },
 };
 
 const system_39_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k2"
-    .{ .expression = 60, .cancelled_positions = &.{0} },
+    .{ .expression = 40, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 87, .cancelled_positions = &.{} },
+    .{ .expression = 44, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 92, .cancelled_positions = &.{} },
+    .{ .expression = 48, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 119, .cancelled_positions = &.{} },
+    .{ .expression = 51, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 124, .cancelled_positions = &.{} },
+    .{ .expression = 54, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 131, .cancelled_positions = &.{} },
+    .{ .expression = 57, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 136, .cancelled_positions = &.{} },
+    .{ .expression = 60, .cancelled_positions = &.{} },
 };
 
 const system_39_module_0_buckets = [_]vanishing.Bucket{
@@ -5149,31 +4941,27 @@ const system_40_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "num"
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 4 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 5 } } },
-    .{ .column_claim = 0 }, // col: "num"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 8, 9 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 7, 10 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 9 } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 15 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 1 } },
     .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 13 } },
 };
 
 const system_40_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 6, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 10, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 18, .cancelled_positions = &.{} },
+    .{ .expression = 14, .cancelled_positions = &.{} },
 };
 
 const system_40_module_0_buckets = [_]vanishing.Bucket{
@@ -5271,56 +5059,45 @@ const system_41_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "c1"
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 4 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 5 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 5 } },
     .{ .column_claim = 3 }, // col: "c2"
     .{ .column_claim = 4 }, // col: "z-b0-k0"
     .{ .column_claim = 5 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 8, 9 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 10, 11 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 7, 12 } } },
-    .{ .column_claim = 0 }, // col: "c1"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 16 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 17 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 8, .rhs = 9 } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 7, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 18, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
     .{ .cell_value = .{ .round = 1, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 21, 22 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 17, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 23, 24 } } },
-    .{ .column_claim = 3 }, // col: "c2"
-    .{ .column_claim = 4 }, // col: "z-b0-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 27, 28 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 26, 29 } } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 30, 31 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 18, .rhs = 19 } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 7, .rhs = 21 } },
+    .{ .op = .{ .operator = .mul, .lhs = 22, .rhs = 15 } },
     .{ .cell_value = .{ .round = 1, .index = 3 } }, // cell: "result"
-    .{ .column_claim = 4 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 33, 34 } } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 35, 36 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 24, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 25, .rhs = 19 } },
 };
 
 const system_41_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 6, .cancelled_positions = &.{0} },
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 13, .cancelled_positions = &.{0} },
+    .{ .expression = 12, .cancelled_positions = &.{0} },
+    // expression: "global"
+    .{ .expression = 16, .cancelled_positions = &.{} },
     // expression: "global"
     .{ .expression = 20, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 25, .cancelled_positions = &.{} },
+    .{ .expression = 23, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 32, .cancelled_positions = &.{} },
-    // expression: "global"
-    .{ .expression = 37, .cancelled_positions = &.{} },
+    .{ .expression = 26, .cancelled_positions = &.{} },
 };
 
 const system_41_module_0_buckets = [_]vanishing.Bucket{
@@ -5428,34 +5205,30 @@ const system_42_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "num"
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .column_claim = 3 }, // col: "den"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 4 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 5 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 5 } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 7, 8 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 7, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 9, 10 } } },
-    .{ .column_claim = 0 }, // col: "num"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .column_claim = 3 }, // col: "den"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 13, 14 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 12, 15 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 9 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 11 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 13 } },
 };
 
 const system_42_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 6, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 11, .cancelled_positions = &.{} },
+    .{ .expression = 10, .cancelled_positions = &.{} },
 };
 
 const system_42_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 18, .cancelled_positions = &.{} },
+    .{ .expression = 14, .cancelled_positions = &.{} },
 };
 
 const system_42_module_0_buckets = [_]vanishing.Bucket{
@@ -5556,90 +5329,50 @@ pub const system_43_public_input = protocol.public_input.Spec{
 const system_43_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "flt"
     .{ .column_claim = 1 }, // col: "n1"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 5 } } },
-    .{ .column_claim = 0 }, // col: "flt"
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 3 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 3 } },
     .{ .column_claim = 2 }, // col: "n2"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 7, 8 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 9, 10 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 6, 13 } } },
-    .{ .column_claim = 0 }, // col: "flt"
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 3 } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 3 } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 9 } },
     .{ .column_claim = 3 }, // col: "n3"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 16 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 18 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 19, 20 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 14, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 3 } },
+    .{ .op = .{ .operator = .mul, .lhs = 13, .rhs = 3 } },
+    .{ .op = .{ .operator = .add, .lhs = 10, .rhs = 14 } },
     .{ .column_claim = 4 }, // col: "z-b0-k0"
     .{ .column_claim = 5 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 23, 24 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 26, 27 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 28, 29 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 25, 30 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 22, 31 } } },
-    .{ .column_claim = 0 }, // col: "flt"
-    .{ .column_claim = 1 }, // col: "n1"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 33, 34 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 35, 36 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 37, 38 } } },
-    .{ .column_claim = 0 }, // col: "flt"
-    .{ .column_claim = 2 }, // col: "n2"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 40, 41 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 42, 43 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 44, 45 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 39, 46 } } },
-    .{ .column_claim = 0 }, // col: "flt"
-    .{ .column_claim = 3 }, // col: "n3"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 48, 49 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 50, 51 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 52, 53 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 47, 54 } } },
-    .{ .column_claim = 4 }, // col: "z-b0-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 57, 58 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 59, 60 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 56, 61 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 55, 62 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 16, .rhs = 17 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 3 } },
+    .{ .op = .{ .operator = .mul, .lhs = 19, .rhs = 3 } },
+    .{ .op = .{ .operator = .mul, .lhs = 18, .rhs = 20 } },
+    .{ .op = .{ .operator = .sub, .lhs = 15, .rhs = 21 } },
+    .{ .op = .{ .operator = .mul, .lhs = 16, .rhs = 20 } },
+    .{ .op = .{ .operator = .sub, .lhs = 15, .rhs = 23 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 63, 64 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 24, .rhs = 25 } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 4 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 66, 67 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 27, .rhs = 16 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 68, 69 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 28, .rhs = 29 } },
 };
 
 const system_43_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 32, .cancelled_positions = &.{0} },
+    .{ .expression = 22, .cancelled_positions = &.{0} },
 };
 
 const system_43_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 65, .cancelled_positions = &.{} },
+    .{ .expression = 26, .cancelled_positions = &.{} },
 };
 
 const system_43_module_0_bucket_2_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 70, .cancelled_positions = &.{} },
+    .{ .expression = 30, .cancelled_positions = &.{} },
 };
 
 const system_43_module_0_buckets = [_]vanishing.Bucket{
@@ -5746,42 +5479,35 @@ pub const system_44_public_input = protocol.public_input.Spec{
 
 const system_44_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_44_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_44_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_44_module_0_buckets = [_]vanishing.Bucket{
@@ -5793,38 +5519,32 @@ const system_44_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 7 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 16, 17 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_44_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_44_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_44_module_1_buckets = [_]vanishing.Bucket{
@@ -5947,42 +5667,35 @@ pub const system_45_public_input = protocol.public_input.Spec{
 
 const system_45_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_45_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_45_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_45_module_0_buckets = [_]vanishing.Bucket{
@@ -5993,43 +5706,35 @@ const system_45_module_0_buckets = [_]vanishing.Bucket{
 const system_45_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "filterS"
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .column_claim = 2 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 3, 4 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 4 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 6, 7 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 8 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 9 } } },
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 9 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 11, 12 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 3 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 13, 14 } } },
-    .{ .column_claim = 0 }, // col: "filterS"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
-    .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 20, 21 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 19, 22 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 18, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 13 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 15 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 24, 25 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 16, .rhs = 17 } },
 };
 
 const system_45_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 10, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 15, .cancelled_positions = &.{} },
+    .{ .expression = 14, .cancelled_positions = &.{} },
 };
 
 const system_45_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 26, .cancelled_positions = &.{} },
+    .{ .expression = 18, .cancelled_positions = &.{} },
 };
 
 const system_45_module_1_buckets = [_]vanishing.Bucket{
@@ -6153,50 +5858,39 @@ pub const system_46_public_input = protocol.public_input.Spec{
 
 const system_46_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 6, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 7 } },
     .{ .column_claim = 4 }, // col: "filterT"
-    .{ .op = .{ .operator = .add, .operands = &.{ 8, 9 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 10 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 11 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 12 } } },
+    .{ .op = .{ .operator = .add, .lhs = 8, .rhs = 9 } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 10 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 11 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 12 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 15 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 14, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{19} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 23, 24 } } },
-    .{ .column_claim = 4 }, // col: "filterT"
-    .{ .op = .{ .operator = .add, .operands = &.{ 25, 26 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 22, 27 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 21, 28 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 20, 29 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 11 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 18 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 30, 31 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 19, .rhs = 20 } },
 };
 
 const system_46_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 13, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 18, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_46_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 32, .cancelled_positions = &.{} },
+    .{ .expression = 21, .cancelled_positions = &.{} },
 };
 
 const system_46_module_0_buckets = [_]vanishing.Bucket{
@@ -6208,46 +5902,35 @@ const system_46_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 7, 8 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 9 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 10 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 11 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 0 } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 9 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 10 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 13, 14 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 12, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 16 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 21, 22 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 23, 24 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 20, 25 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 19, 26 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 18, 27 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 13, .rhs = 14 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 9 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 16 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 28, 29 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 17, .rhs = 18 } },
 };
 
 const system_46_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 12, .cancelled_positions = &.{0} },
+    .{ .expression = 11, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
+    .{ .expression = 15, .cancelled_positions = &.{} },
 };
 
 const system_46_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 30, .cancelled_positions = &.{} },
+    .{ .expression = 19, .cancelled_positions = &.{} },
 };
 
 const system_46_module_1_buckets = [_]vanishing.Bucket{
@@ -6371,50 +6054,39 @@ pub const system_47_public_input = protocol.public_input.Spec{
 
 const system_47_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 6, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 7 } },
     .{ .column_claim = 4 }, // col: "filterT"
-    .{ .op = .{ .operator = .add, .operands = &.{ 8, 9 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 10 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 11 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 12 } } },
+    .{ .op = .{ .operator = .add, .lhs = 8, .rhs = 9 } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 10 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 11 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 12 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 15 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 14, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{19} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 23, 24 } } },
-    .{ .column_claim = 4 }, // col: "filterT"
-    .{ .op = .{ .operator = .add, .operands = &.{ 25, 26 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 22, 27 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 21, 28 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 20, 29 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 11 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 18 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 30, 31 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 19, .rhs = 20 } },
 };
 
 const system_47_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 13, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 18, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_47_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 32, .cancelled_positions = &.{} },
+    .{ .expression = 21, .cancelled_positions = &.{} },
 };
 
 const system_47_module_0_buckets = [_]vanishing.Bucket{
@@ -6425,51 +6097,38 @@ const system_47_module_0_buckets = [_]vanishing.Bucket{
 const system_47_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "filterS"
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .column_claim = 2 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 3, 4 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 4 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 3 }, // col: "S"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 7, 8 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 9, 10 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 6, 11 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 12 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 13 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .add, .lhs = 9, .rhs = 1 } },
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 10 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 11 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 12 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 15, 16 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 14, .rhs = 3 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 18 } } },
-    .{ .column_claim = 0 }, // col: "filterS"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
-    .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .column_claim = 3 }, // col: "S"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 25, 26 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 27, 28 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 24, 29 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 23, 30 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 22, 31 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 11 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 18 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 32, 33 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 19, .rhs = 20 } },
 };
 
 const system_47_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 14, .cancelled_positions = &.{0} },
+    .{ .expression = 13, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 19, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_47_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 34, .cancelled_positions = &.{} },
+    .{ .expression = 21, .cancelled_positions = &.{} },
 };
 
 const system_47_module_1_buckets = [_]vanishing.Bucket{
@@ -6594,50 +6253,39 @@ pub const system_48_public_input = protocol.public_input.Spec{
 
 const system_48_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 3 }, // col: "Ty"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 6, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 7 } },
     .{ .column_claim = 4 }, // col: "Tx"
-    .{ .op = .{ .operator = .add, .operands = &.{ 8, 9 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 10 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 11 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 12 } } },
+    .{ .op = .{ .operator = .add, .lhs = 8, .rhs = 9 } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 10 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 11 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 12 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 15 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 14, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{19} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .column_claim = 3 }, // col: "Ty"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 23, 24 } } },
-    .{ .column_claim = 4 }, // col: "Tx"
-    .{ .op = .{ .operator = .add, .operands = &.{ 25, 26 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 22, 27 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 21, 28 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 20, 29 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 11 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 18 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 30, 31 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 19, .rhs = 20 } },
 };
 
 const system_48_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 13, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 18, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_48_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 32, .cancelled_positions = &.{} },
+    .{ .expression = 21, .cancelled_positions = &.{} },
 };
 
 const system_48_module_0_buckets = [_]vanishing.Bucket{
@@ -6649,46 +6297,36 @@ const system_48_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 2 }, // col: "Sy"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
     .{ .column_claim = 3 }, // col: "Sx"
-    .{ .op = .{ .operator = .add, .operands = &.{ 7, 8 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 9 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 10 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 11 } } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 9 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 10 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 11 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 13, 14 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 13, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 16 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .column_claim = 2 }, // col: "Sy"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 21, 22 } } },
-    .{ .column_claim = 3 }, // col: "Sx"
-    .{ .op = .{ .operator = .add, .operands = &.{ 23, 24 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 20, 25 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 19, 26 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 18, 27 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 10 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 17 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 28, 29 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 18, .rhs = 19 } },
 };
 
 const system_48_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 12, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_48_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 30, .cancelled_positions = &.{} },
+    .{ .expression = 20, .cancelled_positions = &.{} },
 };
 
 const system_48_module_1_buckets = [_]vanishing.Bucket{
@@ -6813,42 +6451,35 @@ pub const system_49_public_input = protocol.public_input.Spec{
 
 const system_49_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_49_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_49_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_49_module_0_buckets = [_]vanishing.Bucket{
@@ -6860,38 +6491,32 @@ const system_49_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S1"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 7 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 2 }, // col: "S1"
-    .{ .op = .{ .operator = .add, .operands = &.{ 16, 17 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_49_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_49_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_49_module_1_buckets = [_]vanishing.Bucket{
@@ -6903,38 +6528,32 @@ const system_49_module_2_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b2-k0"
     .{ .column_claim = 1 }, // col: "z-b2-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S2"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 7 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 3 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b2-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
     .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b2-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 2 }, // col: "S2"
-    .{ .op = .{ .operator = .add, .operands = &.{ 16, 17 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_49_module_2_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b2-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_49_module_2_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_49_module_2_buckets = [_]vanishing.Bucket{
@@ -7068,42 +6687,35 @@ pub const system_50_public_input = protocol.public_input.Spec{
 
 const system_50_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T1"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "T1"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_50_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_50_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_50_module_0_buckets = [_]vanishing.Bucket{
@@ -7113,42 +6725,35 @@ const system_50_module_0_buckets = [_]vanishing.Bucket{
 
 const system_50_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b2-k0"
     .{ .column_claim = 2 }, // col: "z-b2-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T2"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 3 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b2-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b2-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "T2"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_50_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b2-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_50_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_50_module_1_buckets = [_]vanishing.Bucket{
@@ -7160,38 +6765,32 @@ const system_50_module_2_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S1"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 7 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
     .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 2 }, // col: "S1"
-    .{ .op = .{ .operator = .add, .operands = &.{ 16, 17 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_50_module_2_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_50_module_2_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_50_module_2_buckets = [_]vanishing.Bucket{
@@ -7203,38 +6802,32 @@ const system_50_module_3_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b3-k0"
     .{ .column_claim = 1 }, // col: "z-b3-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S2"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 7 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 4 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b3-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
     .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b3-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 2 }, // col: "S2"
-    .{ .op = .{ .operator = .add, .operands = &.{ 16, 17 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_50_module_3_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b3-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_50_module_3_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_50_module_3_buckets = [_]vanishing.Bucket{
@@ -7387,58 +6980,42 @@ pub const system_51_public_input = protocol.public_input.Spec{
 
 const system_51_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 3 }, // col: "Ty"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 7, 8 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 7 } },
     .{ .column_claim = 4 }, // col: "Tx"
-    .{ .op = .{ .operator = .add, .operands = &.{ 9, 10 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 6, 11 } } },
+    .{ .op = .{ .operator = .add, .lhs = 8, .rhs = 9 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 10 } },
     .{ .column_claim = 5 }, // col: "filterT"
-    .{ .op = .{ .operator = .add, .operands = &.{ 12, 13 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 14 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 15 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 16 } } },
+    .{ .op = .{ .operator = .add, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 13 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 14 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 15 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 18, 19 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 17, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{23} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .column_claim = 3 }, // col: "Ty"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 28, 29 } } },
-    .{ .column_claim = 4 }, // col: "Tx"
-    .{ .op = .{ .operator = .add, .operands = &.{ 30, 31 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 27, 32 } } },
-    .{ .column_claim = 5 }, // col: "filterT"
-    .{ .op = .{ .operator = .add, .operands = &.{ 33, 34 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 26, 35 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 25, 36 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 24, 37 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 18, .rhs = 19 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 14 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 21 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 38, 39 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 22, .rhs = 23 } },
 };
 
 const system_51_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 17, .cancelled_positions = &.{0} },
+    .{ .expression = 16, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 20, .cancelled_positions = &.{} },
 };
 
 const system_51_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 40, .cancelled_positions = &.{} },
+    .{ .expression = 24, .cancelled_positions = &.{} },
 };
 
 const system_51_module_0_buckets = [_]vanishing.Bucket{
@@ -7450,54 +7027,38 @@ const system_51_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 2 }, // col: "Sy"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 6, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
     .{ .column_claim = 3 }, // col: "Sx"
-    .{ .op = .{ .operator = .add, .operands = &.{ 8, 9 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 10 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 11, 12 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 13 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 14 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 15 } } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 9 } },
+    .{ .op = .{ .operator = .add, .lhs = 10, .rhs = 0 } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 12 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 17, 18 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 15, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 19, 20 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .column_claim = 2 }, // col: "Sy"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 26, 27 } } },
-    .{ .column_claim = 3 }, // col: "Sx"
-    .{ .op = .{ .operator = .add, .operands = &.{ 28, 29 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 25, 30 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 31, 32 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 24, 33 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 23, 34 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 22, 35 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 16, .rhs = 17 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 12 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 19 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 36, 37 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 20, .rhs = 21 } },
 };
 
 const system_51_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 16, .cancelled_positions = &.{0} },
+    .{ .expression = 14, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 21, .cancelled_positions = &.{} },
+    .{ .expression = 18, .cancelled_positions = &.{} },
 };
 
 const system_51_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 38, .cancelled_positions = &.{} },
+    .{ .expression = 22, .cancelled_positions = &.{} },
 };
 
 const system_51_module_1_buckets = [_]vanishing.Bucket{
@@ -7623,42 +7184,35 @@ pub const system_52_public_input = protocol.public_input.Spec{
 
 const system_52_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_52_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_52_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_52_module_0_buckets = [_]vanishing.Bucket{
@@ -7670,38 +7224,32 @@ const system_52_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 7 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 16, 17 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_52_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_52_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_52_module_1_buckets = [_]vanishing.Bucket{
@@ -7824,42 +7372,35 @@ pub const system_53_public_input = protocol.public_input.Spec{
 
 const system_53_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_53_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_53_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_53_module_0_buckets = [_]vanishing.Bucket{
@@ -7871,38 +7412,32 @@ const system_53_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 7 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 11, 12 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 10, 13 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 14 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 9 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 16 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 18, 19 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 13, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_53_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 8, .cancelled_positions = &.{ -1, 0 } },
     // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_53_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_53_module_1_buckets = [_]vanishing.Bucket{
@@ -8025,42 +7560,37 @@ pub const system_54_public_input = protocol.public_input.Spec{
 
 const system_54_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
     .{ .column_claim = 4 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 14 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 15 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 16 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 17, .rhs = 18 } },
 };
 
 const system_54_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_54_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 19, .cancelled_positions = &.{} },
 };
 
 const system_54_module_0_buckets = [_]vanishing.Bucket{
@@ -8072,38 +7602,32 @@ const system_54_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 7 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 16, 17 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_54_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_54_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_54_module_1_buckets = [_]vanishing.Bucket{
@@ -8227,42 +7751,35 @@ pub const system_55_public_input = protocol.public_input.Spec{
 
 const system_55_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_55_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_55_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_55_module_0_buckets = [_]vanishing.Bucket{
@@ -8274,38 +7791,32 @@ const system_55_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S1"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 7 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 2 }, // col: "S1"
-    .{ .op = .{ .operator = .add, .operands = &.{ 16, 17 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_55_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_55_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_55_module_1_buckets = [_]vanishing.Bucket{
@@ -8317,38 +7828,32 @@ const system_55_module_2_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b2-k0"
     .{ .column_claim = 1 }, // col: "z-b2-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S2"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 7 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 3 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b2-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
     .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b2-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 2 }, // col: "S2"
-    .{ .op = .{ .operator = .add, .operands = &.{ 16, 17 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_55_module_2_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b2-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_55_module_2_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_55_module_2_buckets = [_]vanishing.Bucket{
@@ -8482,58 +7987,42 @@ pub const system_56_public_input = protocol.public_input.Spec{
 
 const system_56_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 3 }, // col: "Tz"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 7, 8 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 7 } },
     .{ .column_claim = 4 }, // col: "Ty"
-    .{ .op = .{ .operator = .add, .operands = &.{ 9, 10 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 6, 11 } } },
+    .{ .op = .{ .operator = .add, .lhs = 8, .rhs = 9 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 10 } },
     .{ .column_claim = 5 }, // col: "Tx"
-    .{ .op = .{ .operator = .add, .operands = &.{ 12, 13 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 14 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 15 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 16 } } },
+    .{ .op = .{ .operator = .add, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 13 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 14 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 15 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 18, 19 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 17, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{23} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .column_claim = 3 }, // col: "Tz"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 28, 29 } } },
-    .{ .column_claim = 4 }, // col: "Ty"
-    .{ .op = .{ .operator = .add, .operands = &.{ 30, 31 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 27, 32 } } },
-    .{ .column_claim = 5 }, // col: "Tx"
-    .{ .op = .{ .operator = .add, .operands = &.{ 33, 34 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 26, 35 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 25, 36 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 24, 37 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 18, .rhs = 19 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 14 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 21 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 38, 39 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 22, .rhs = 23 } },
 };
 
 const system_56_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 17, .cancelled_positions = &.{0} },
+    .{ .expression = 16, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 20, .cancelled_positions = &.{} },
 };
 
 const system_56_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 40, .cancelled_positions = &.{} },
+    .{ .expression = 24, .cancelled_positions = &.{} },
 };
 
 const system_56_module_0_buckets = [_]vanishing.Bucket{
@@ -8545,54 +8034,39 @@ const system_56_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 2 }, // col: "Sz"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 6, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
     .{ .column_claim = 3 }, // col: "Sy"
-    .{ .op = .{ .operator = .add, .operands = &.{ 8, 9 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 10 } } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 9 } },
     .{ .column_claim = 4 }, // col: "Sx"
-    .{ .op = .{ .operator = .add, .operands = &.{ 11, 12 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 13 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 14 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 15 } } },
+    .{ .op = .{ .operator = .add, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 13 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 14 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 17, 18 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 16, .rhs = 1 } },
     .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 19, 20 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .column_claim = 2 }, // col: "Sz"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 26, 27 } } },
-    .{ .column_claim = 3 }, // col: "Sy"
-    .{ .op = .{ .operator = .add, .operands = &.{ 28, 29 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 25, 30 } } },
-    .{ .column_claim = 4 }, // col: "Sx"
-    .{ .op = .{ .operator = .add, .operands = &.{ 31, 32 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 24, 33 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 23, 34 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 22, 35 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 17, .rhs = 18 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 13 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 20 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 36, 37 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 21, .rhs = 22 } },
 };
 
 const system_56_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 16, .cancelled_positions = &.{0} },
+    .{ .expression = 15, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 21, .cancelled_positions = &.{} },
+    .{ .expression = 19, .cancelled_positions = &.{} },
 };
 
 const system_56_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 38, .cancelled_positions = &.{} },
+    .{ .expression = 23, .cancelled_positions = &.{} },
 };
 
 const system_56_module_1_buckets = [_]vanishing.Bucket{
@@ -8719,20 +8193,18 @@ pub const system_57_public_input = protocol.public_input.Spec{
 
 const system_57_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 3, 4 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 5 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 6 } } },
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 5 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 6 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 7, 8 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 8 } },
 };
 
 const system_57_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -8742,7 +8214,7 @@ const system_57_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
 
 const system_57_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_57_module_0_buckets = [_]vanishing.Bucket{
@@ -8755,16 +8227,14 @@ const system_57_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 1 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 2, 3 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 1, 4 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 5 } } },
+    .{ .op = .{ .operator = .add, .lhs = 2, .rhs = 3 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 5 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 6, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 7 } },
 };
 
 const system_57_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -8774,7 +8244,7 @@ const system_57_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
 
 const system_57_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 11, .cancelled_positions = &.{} },
 };
 
 const system_57_module_1_buckets = [_]vanishing.Bucket{
@@ -8895,42 +8365,35 @@ pub const system_58_public_input = protocol.public_input.Spec{
 
 const system_58_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_58_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_58_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_58_module_0_buckets = [_]vanishing.Bucket{
@@ -8942,38 +8405,32 @@ const system_58_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 7 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 16, 17 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_58_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_58_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_58_module_1_buckets = [_]vanishing.Bucket{
@@ -9096,42 +8553,35 @@ pub const system_59_public_input = protocol.public_input.Spec{
 
 const system_59_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_59_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_59_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_59_module_0_buckets = [_]vanishing.Bucket{
@@ -9143,38 +8593,32 @@ const system_59_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 7 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 16, 17 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_59_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_59_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_59_module_1_buckets = [_]vanishing.Bucket{
@@ -9297,42 +8741,35 @@ pub const system_60_public_input = protocol.public_input.Spec{
 
 const system_60_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_60_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_60_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_60_module_0_buckets = [_]vanishing.Bucket{
@@ -9343,43 +8780,35 @@ const system_60_module_0_buckets = [_]vanishing.Bucket{
 const system_60_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "filterS"
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .column_claim = 2 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 3, 4 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 4 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 6, 7 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 8 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 9 } } },
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 9 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 11, 12 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 3 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 13, 14 } } },
-    .{ .column_claim = 0 }, // col: "filterS"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
-    .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 20, 21 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 19, 22 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 18, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 13 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 15 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 24, 25 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 16, .rhs = 17 } },
 };
 
 const system_60_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 10, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 15, .cancelled_positions = &.{} },
+    .{ .expression = 14, .cancelled_positions = &.{} },
 };
 
 const system_60_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 26, .cancelled_positions = &.{} },
+    .{ .expression = 18, .cancelled_positions = &.{} },
 };
 
 const system_60_module_1_buckets = [_]vanishing.Bucket{
@@ -9505,69 +8934,41 @@ const system_61_module_0_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 0 }, // col: "colB"
-    .{ .op = .{ .operator = .add, .operands = &.{ 1, 2 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 3 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .coin_value = 0 }, // coin: "gamma"
+    .{ .op = .{ .operator = .add, .lhs = 1, .rhs = 2 } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 3 } },
     .{ .column_claim = 1 }, // col: "colA"
-    .{ .op = .{ .operator = .add, .operands = &.{ 6, 7 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 8 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 9 } } },
+    .{ .op = .{ .operator = .add, .lhs = 1, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 6 } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 7 } },
     .{ .column_claim = 2 }, // col: "z-b1-k0"
     .{ .column_claim = 3 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 11, 12 } } },
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 1 }, // col: "colA"
-    .{ .op = .{ .operator = .add, .operands = &.{ 14, 15 } } },
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 0 }, // col: "colB"
-    .{ .op = .{ .operator = .add, .operands = &.{ 17, 18 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 16, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 13, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 21 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 0 }, // col: "colB"
-    .{ .op = .{ .operator = .add, .operands = &.{ 24, 25 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 23, 26 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 1 }, // col: "colA"
-    .{ .op = .{ .operator = .add, .operands = &.{ 29, 30 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 28, 31 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 27, 32 } } },
-    .{ .column_claim = 2 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 1 }, // col: "colA"
-    .{ .op = .{ .operator = .add, .operands = &.{ 35, 36 } } },
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 0 }, // col: "colB"
-    .{ .op = .{ .operator = .add, .operands = &.{ 38, 39 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 37, 40 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 34, 41 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 33, 42 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 10 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 3 } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .sub, .lhs = 8, .rhs = 13 } },
+    .{ .op = .{ .operator = .mul, .lhs = 9, .rhs = 12 } },
+    .{ .op = .{ .operator = .sub, .lhs = 8, .rhs = 15 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 43, 44 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 16, .rhs = 17 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 2 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 46, 47 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 19, .rhs = 9 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 48, 49 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 20, .rhs = 21 } },
 };
 
 const system_61_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 22, .cancelled_positions = &.{0} },
+    .{ .expression = 14, .cancelled_positions = &.{0} },
 };
 
 const system_61_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 45, .cancelled_positions = &.{} },
+    .{ .expression = 18, .cancelled_positions = &.{} },
 };
 
 const system_61_module_0_bucket_2_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 50, .cancelled_positions = &.{} },
+    .{ .expression = 22, .cancelled_positions = &.{} },
 };
 
 const system_61_module_0_buckets = [_]vanishing.Bucket{
@@ -9578,42 +8979,35 @@ const system_61_module_0_buckets = [_]vanishing.Bucket{
 
 const system_61_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "range-col-b4"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "range-col-b4"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_61_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_61_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_61_module_1_buckets = [_]vanishing.Bucket{
@@ -9623,42 +9017,35 @@ const system_61_module_1_buckets = [_]vanishing.Bucket{
 
 const system_61_module_2_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b2-k0"
     .{ .column_claim = 2 }, // col: "z-b2-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "range-col-b8"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 3 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b2-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 7 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b2-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "range-col-b8"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_61_module_2_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b2-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_61_module_2_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_61_module_2_buckets = [_]vanishing.Bucket{
@@ -9808,9 +9195,9 @@ pub const system_62_public_input = protocol.public_input.Spec{
 const system_62_module_0_expressions = [_]vanishing.ExprNode{
     .{ .cell_value = .{ .round = 0, .index = 0 } }, // cell: "result"
     .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .lagrange_selector = 2 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 3 } },
 };
 
 const system_62_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -9924,9 +9311,9 @@ pub const system_63_public_input = protocol.public_input.Spec{
 const system_63_module_0_expressions = [_]vanishing.ExprNode{
     .{ .cell_value = .{ .round = 0, .index = 0 } }, // cell: "result"
     .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 3 } },
 };
 
 const system_63_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -10041,8 +9428,8 @@ const system_64_module_0_expressions = [_]vanishing.ExprNode{
     .{ .lagrange_selector = 1 },
     .{ .column_claim = 0 }, // col: "col"
     .{ .constant = .{ .value = 99 } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 3 } },
 };
 
 const system_64_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -10153,8 +9540,8 @@ const system_65_module_0_expressions = [_]vanishing.ExprNode{
     .{ .lagrange_selector = 1 },
     .{ .column_claim = 0 }, // col: "col"
     .{ .constant = .{ .value = 99 } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 3 } },
 };
 
 const system_65_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -10262,74 +9649,48 @@ pub const system_66_public_input = protocol.public_input.Spec{
 
 const system_66_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 3 }, // col: "T4"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 7 } },
     .{ .column_claim = 4 }, // col: "T3"
-    .{ .op = .{ .operator = .add, .operands = &.{ 11, 12 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 8, 13 } } },
+    .{ .op = .{ .operator = .add, .lhs = 8, .rhs = 9 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 10 } },
     .{ .column_claim = 5 }, // col: "T2"
-    .{ .op = .{ .operator = .add, .operands = &.{ 14, 15 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 7, 16 } } },
+    .{ .op = .{ .operator = .add, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 13 } },
     .{ .column_claim = 6 }, // col: "T1"
-    .{ .op = .{ .operator = .add, .operands = &.{ 17, 18 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 6, 19 } } },
+    .{ .op = .{ .operator = .add, .lhs = 14, .rhs = 15 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 16 } },
     .{ .column_claim = 7 }, // col: "T0"
-    .{ .op = .{ .operator = .add, .operands = &.{ 20, 21 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 22 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 23 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 24 } } },
+    .{ .op = .{ .operator = .add, .lhs = 17, .rhs = 18 } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 19 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 20 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 21 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 26, 27 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 23, .rhs = 2 } },
     .{ .lagrange_selector = 1023 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 28, 29 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{31} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .column_claim = 3 }, // col: "T4"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 38, 39 } } },
-    .{ .column_claim = 4 }, // col: "T3"
-    .{ .op = .{ .operator = .add, .operands = &.{ 40, 41 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 37, 42 } } },
-    .{ .column_claim = 5 }, // col: "T2"
-    .{ .op = .{ .operator = .add, .operands = &.{ 43, 44 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 36, 45 } } },
-    .{ .column_claim = 6 }, // col: "T1"
-    .{ .op = .{ .operator = .add, .operands = &.{ 46, 47 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 35, 48 } } },
-    .{ .column_claim = 7 }, // col: "T0"
-    .{ .op = .{ .operator = .add, .operands = &.{ 49, 50 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 34, 51 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 33, 52 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 32, 53 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 24, .rhs = 25 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 20 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 27 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 54, 55 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 28, .rhs = 29 } },
 };
 
 const system_66_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 25, .cancelled_positions = &.{0} },
+    .{ .expression = 22, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 30, .cancelled_positions = &.{} },
+    .{ .expression = 26, .cancelled_positions = &.{} },
 };
 
 const system_66_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 56, .cancelled_positions = &.{} },
+    .{ .expression = 30, .cancelled_positions = &.{} },
 };
 
 const system_66_module_0_buckets = [_]vanishing.Bucket{
@@ -10341,70 +9702,45 @@ const system_66_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 2 }, // col: "S4"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 8, 9 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
     .{ .column_claim = 3 }, // col: "S3"
-    .{ .op = .{ .operator = .add, .operands = &.{ 10, 11 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 7, 12 } } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 9 } },
     .{ .column_claim = 4 }, // col: "S2"
-    .{ .op = .{ .operator = .add, .operands = &.{ 13, 14 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 6, 15 } } },
+    .{ .op = .{ .operator = .add, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 12 } },
     .{ .column_claim = 5 }, // col: "S1"
-    .{ .op = .{ .operator = .add, .operands = &.{ 16, 17 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 18 } } },
+    .{ .op = .{ .operator = .add, .lhs = 13, .rhs = 14 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 15 } },
     .{ .column_claim = 6 }, // col: "S0"
-    .{ .op = .{ .operator = .add, .operands = &.{ 19, 20 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 21 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 22 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 23 } } },
+    .{ .op = .{ .operator = .add, .lhs = 16, .rhs = 17 } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 18 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 19 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 20 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 25, 26 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 22, .rhs = 1 } },
     .{ .lagrange_selector = 1023 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 27, 28 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .column_claim = 2 }, // col: "S4"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 36, 37 } } },
-    .{ .column_claim = 3 }, // col: "S3"
-    .{ .op = .{ .operator = .add, .operands = &.{ 38, 39 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 35, 40 } } },
-    .{ .column_claim = 4 }, // col: "S2"
-    .{ .op = .{ .operator = .add, .operands = &.{ 41, 42 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 34, 43 } } },
-    .{ .column_claim = 5 }, // col: "S1"
-    .{ .op = .{ .operator = .add, .operands = &.{ 44, 45 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 33, 46 } } },
-    .{ .column_claim = 6 }, // col: "S0"
-    .{ .op = .{ .operator = .add, .operands = &.{ 47, 48 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 32, 49 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 31, 50 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 30, 51 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 23, .rhs = 24 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 19 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 26 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 52, 53 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 27, .rhs = 28 } },
 };
 
 const system_66_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 24, .cancelled_positions = &.{0} },
+    .{ .expression = 21, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 29, .cancelled_positions = &.{} },
+    .{ .expression = 25, .cancelled_positions = &.{} },
 };
 
 const system_66_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 54, .cancelled_positions = &.{} },
+    .{ .expression = 29, .cancelled_positions = &.{} },
 };
 
 const system_66_module_1_buckets = [_]vanishing.Bucket{
@@ -10536,36 +9872,29 @@ pub const system_67_public_input = protocol.public_input.Spec{
 const system_67_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "z-m0-k0"
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 1 }, // col: "z-m0-k0"
     .{ .column_claim = 2 }, // col: "A"
     .{ .coin_value = 0 }, // coin: "beta"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 7 } } },
-    .{ .column_claim = 0 }, // col: "z-m0-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 9, 10 } } },
-    .{ .column_claim = 2 }, // col: "A"
-    .{ .coin_value = 0 }, // coin: "beta"
-    .{ .op = .{ .operator = .add, .operands = &.{ 12, 13 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 11, 14 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 6 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 16 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 9, .rhs = 10 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-m0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 18, 19 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 12, .rhs = 0 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 13, .rhs = 14 } },
 };
 
 const system_67_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-m0-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
+    .{ .expression = 11, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 15, .cancelled_positions = &.{} },
 };
 
 const system_67_module_0_buckets = [_]vanishing.Bucket{
@@ -10576,38 +9905,31 @@ const system_67_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "z-m1-k0"
     .{ .column_claim = 1 }, // col: "B"
     .{ .coin_value = 0 }, // coin: "beta"
-    .{ .op = .{ .operator = .add, .operands = &.{ 1, 2 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 3 } } },
+    .{ .op = .{ .operator = .add, .lhs = 1, .rhs = 2 } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 3 } },
     .{ .column_claim = 2 }, // col: "z-m1-k0"
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 4, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 4, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-m1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 0 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .column_claim = 0 }, // col: "z-m1-k0"
-    .{ .column_claim = 1 }, // col: "B"
-    .{ .coin_value = 0 }, // coin: "beta"
-    .{ .op = .{ .operator = .add, .operands = &.{ 15, 16 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 14, 17 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 18, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .sub, .lhs = 4, .rhs = 6 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 13, .rhs = 14 } },
 };
 
 const system_67_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-m1-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_67_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 15, .cancelled_positions = &.{} },
 };
 
 const system_67_module_1_buckets = [_]vanishing.Bucket{
@@ -10769,40 +10091,31 @@ pub const system_68_public_input = protocol.public_input.Spec{
 const system_68_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "z-m0-k0"
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 1 }, // col: "z-m0-k0"
     .{ .coin_value = 1 }, // coin: "beta"
     .{ .coin_value = 0 }, // coin: "alpha"
     .{ .column_claim = 2 }, // col: "A"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 8 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 9 } } },
-    .{ .column_claim = 0 }, // col: "z-m0-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .coin_value = 1 }, // coin: "beta"
-    .{ .coin_value = 0 }, // coin: "alpha"
-    .{ .column_claim = 2 }, // col: "A"
-    .{ .op = .{ .operator = .add, .operands = &.{ 15, 16 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 14, 17 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 13, 18 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 9 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 8 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 19, 20 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-m0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 14, .rhs = 0 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 24, 25 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_68_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-m0-k0"
     .{ .expression = 10, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 21, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 26, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_68_module_0_buckets = [_]vanishing.Bucket{
@@ -10814,41 +10127,32 @@ const system_68_module_1_expressions = [_]vanishing.ExprNode{
     .{ .coin_value = 1 }, // coin: "beta"
     .{ .coin_value = 0 }, // coin: "alpha"
     .{ .column_claim = 1 }, // col: "B"
-    .{ .op = .{ .operator = .add, .operands = &.{ 2, 3 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 1, 4 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 5 } } },
+    .{ .op = .{ .operator = .add, .lhs = 2, .rhs = 3 } },
+    .{ .op = .{ .operator = .add, .lhs = 1, .rhs = 4 } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 5 } },
     .{ .column_claim = 2 }, // col: "z-m1-k0"
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 7, 8 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 6, 9 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 6, .rhs = 9 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-m1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 11, 12 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 0 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 13, 14 } } },
-    .{ .column_claim = 0 }, // col: "z-m1-k0"
-    .{ .coin_value = 1 }, // coin: "beta"
-    .{ .coin_value = 0 }, // coin: "alpha"
-    .{ .column_claim = 1 }, // col: "B"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 16, 21 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 13 } },
+    .{ .op = .{ .operator = .sub, .lhs = 6, .rhs = 8 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 24, 25 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_68_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-m1-k0"
     .{ .expression = 10, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 15, .cancelled_positions = &.{} },
+    .{ .expression = 14, .cancelled_positions = &.{} },
 };
 
 const system_68_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 26, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_68_module_1_buckets = [_]vanishing.Bucket{

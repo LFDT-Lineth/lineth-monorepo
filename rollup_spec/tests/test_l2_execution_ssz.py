@@ -101,11 +101,10 @@ def test_l2_execution_output_hash_is_keccak_of_the_public_input_tuple() -> None:
     assert decode_l2_execution_output_ssz(encoded) == expected
 
 
-def test_l2_execution_public_input_tuple_encodes_to_exactly_368_bytes() -> None:
-    # Pins the fixed tuple layout (16 fields: 10 x Bytes32 + 6 x uint64) the
-    # guest hashes; any field addition/reorder/retype changes this size.
+def test_l2_execution_public_input_empty_offsets_encode_to_380_bytes() -> None:
+    # The PI has a variable-length offset list; this pins the empty-list base.
     proof = _l2_execution_proof()
-    assert len(encode_l2_execution_public_inputs_bytes(proof.public_inputs)) == 368
+    assert len(encode_l2_execution_public_inputs_bytes(proof.public_inputs)) == 380
 
 
 # ══════════════════════════════════════════════════════════════════════════════

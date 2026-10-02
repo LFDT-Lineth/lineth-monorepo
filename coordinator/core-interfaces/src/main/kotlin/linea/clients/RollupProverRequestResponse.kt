@@ -6,6 +6,8 @@ import linea.domain.StartBlockTimestampProvider
 import linea.domain.assertConsecutiveIntervals
 import linea.kotlin.byteArrayListEquals
 import linea.kotlin.byteArrayListHashCode
+import linea.kotlin.byteArrayListToHexString
+import linea.kotlin.encodeHex
 import kotlin.time.Instant
 
 data class RollupProofRequestV1(
@@ -64,6 +66,14 @@ data class RollupProofRequestV1(
     result = 31 * result + (boundaryPrevDataRollingHash?.contentHashCode() ?: 0)
     return result
   }
+
+  override fun toString(): String {
+    return "RollupProofRequestV1(conflations=$conflations, l2Executions=$l2Executions, " +
+      "chunks=${chunks.byteArrayListToHexString()}, parentDataRollingHash=${parentDataRollingHash.encodeHex()}, " +
+      "startOffset=$startOffset, opaquePrefixBytes=${opaquePrefixBytes.encodeHex()}, " +
+      "opaqueSuffixBytes=${opaqueSuffixBytes.encodeHex()}, " +
+      "boundaryPrevDataRollingHash=${boundaryPrevDataRollingHash?.encodeHex()})"
+  }
 }
 
 data class ConflationWitness(
@@ -81,6 +91,10 @@ data class ConflationWitness(
   }
 
   override fun hashCode(): Int = blockRlps.byteArrayListHashCode()
+
+  override fun toString(): String {
+    return "ConflationWitness(blockRlps=${blockRlps.byteArrayListToHexString()})"
+  }
 }
 
 /**

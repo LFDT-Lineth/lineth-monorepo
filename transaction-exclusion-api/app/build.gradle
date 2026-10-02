@@ -48,6 +48,7 @@ dependencies {
   testImplementation testFixtures(project(":jvm-libs:generic:extensions:kotlin"))
   testImplementation testFixtures(project(":jvm-libs:generic:persistence:db"))
   testImplementation testFixtures(project(":transaction-exclusion-api:core"))
+  testImplementation testFixtures(project(":jvm-libs:generic:vertx-helper"))
 }
 
 application {
@@ -56,15 +57,22 @@ application {
 
 jar {
   archiveBaseName = 'transaction-exclusion-api'
-  // Move Class-Path computation back to execution time and don’t resolve runtimeClasspath at configuration time
-  doFirst {
-    manifest {
-      attributes(
-          'Class-Path': configurations.runtimeClasspath.collect { it.getName() }.findAll { it.endsWith('.jar') }.join(' '),
-          'Main-Class': 'net.consensys.linea.transactionexclusion.app.TransactionExclusionAppMain',
-          'Multi-Release': 'true'
-          )
-    }
+  // Compute Class-Path lazily so runtimeClasspath is resolved only when the jar task runs, and so the
+  // value is part of the task inputs (a doFirst manifest change is invisible to up-to-date/cache checks).
+  // dependsOn(Configuration) wires the tasks producing runtimeClasspath's artifacts, see maru/app/build.gradle.
+  dependsOn(configurations.runtimeClasspath)
+  def classPathAttribute = configurations.runtimeClasspath.elements.map { locations ->
+    locations
+        .collect { it.asFile.name }
+        .findAll { it.endsWith('.jar') }
+        .join(' ')
+  }
+  manifest {
+    attributes(
+        'Class-Path': classPathAttribute,
+        'Main-Class': 'net.consensys.linea.transactionexclusion.app.TransactionExclusionAppMain',
+        'Multi-Release': 'true'
+        )
   }
 }
 

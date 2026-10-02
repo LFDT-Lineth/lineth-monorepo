@@ -16,15 +16,19 @@ import pytest
 from ethereum.crypto.hash import Hash32
 from ethereum_types.numeric import U64
 
-from rollup_spec.rollup import RollupProof, RollupPublicInput
-from rollup_spec.rollup_aggregation import assert_rollup_proof_continuity
+import rollup_spec.rollup_aggregation as aggregation_module
+from rollup_spec.rollup import RollupProof, RollupPublicInput, VerifiableRollupProof
+from rollup_spec.rollup_aggregation import (
+    RollupAggregationProofPrivateInput,
+    assert_rollup_proof_continuity,
+    run_rollup_aggregation_guest,
+)
 
 
 def _base_public_input(**overrides) -> RollupPublicInput:
     base = RollupPublicInput(
         end_block_number=U64(1000510),
         end_block_timestamp=U64(1763000200),
-        l2_l1_bridge_transaction_tree=Hash32(bytes([0x11]) * 32),
         parent_l1_l2_bridge_rolling_hash=Hash32(bytes([0x22]) * 32),
         parent_l1_l2_bridge_rolling_hash_message_number=U64(0),
         end_l1_l2_bridge_rolling_hash=Hash32(bytes([0x33]) * 32),
@@ -34,13 +38,14 @@ def _base_public_input(**overrides) -> RollupPublicInput:
         parent_ftx_number=U64(10),
         end_ftx_rolling_hash=Hash32(bytes([0x55]) * 32),
         end_processed_ftx_number=U64(12),
-        filtered_addresses_hash=Hash32(bytes([0x66]) * 32),
         parent_data_rolling_hash=Hash32(bytes([0x47]) * 32),
         end_data_rolling_hash=Hash32(bytes([0x8D]) * 32),
         parent_block_hash=Hash32(bytes([0x0A]) * 32),
         end_block_hash=Hash32(bytes([0x0B]) * 32),
         start_offset=0,
         end_offset=0,
+        l2_l1_roots=[],
+        filtered_addresses=[],
         program_vks=[],
     )
     return replace(base, **overrides)
@@ -57,6 +62,7 @@ def _left_pi(**overrides) -> RollupPublicInput:
         end_l1_l2_bridge_rolling_hash_message_number=U64(4),
         end_ftx_rolling_hash=Hash32(bytes([0x55]) * 32),
         end_processed_ftx_number=U64(12),
+        block_count=10,
     )
     defaults.update(overrides)
     return _base_public_input(**defaults)
@@ -71,6 +77,7 @@ def _right_pi(**overrides) -> RollupPublicInput:
         parent_l1_l2_bridge_rolling_hash_message_number=U64(4),
         parent_ftx_rolling_hash=Hash32(bytes([0x55]) * 32),
         parent_ftx_number=U64(12),
+        block_count=10,
     )
     defaults.update(overrides)
     return _base_public_input(**defaults)
@@ -82,6 +89,50 @@ def _proof(public_inputs: RollupPublicInput) -> RollupProof:
 
 def test_fully_continuous_proofs_pass() -> None:
     assert_rollup_proof_continuity(_proof(_left_pi()), _proof(_right_pi()))
+
+
+def test_aggregation_carries_proven_tree_depth(monkeypatch) -> None:
+    monkeypatch.setattr(aggregation_module, "_program_ids_from_verified_vks", lambda _: [])
+    depth = 4
+    result = run_rollup_aggregation_guest(RollupAggregationProofPrivateInput(
+        rollup_proofs=[VerifiableRollupProof(_proof(_left_pi(l2_l1_tree_depth=depth)), Hash32(bytes(32)))],
+    ))
+    assert result.public_inputs.l2_l1_tree_depth == depth
+
+
+def test_aggregation_rejects_mismatched_tree_depth() -> None:
+    proofs = [
+        VerifiableRollupProof(_proof(_left_pi()), Hash32(bytes(32))),
+        VerifiableRollupProof(RollupProof(_right_pi(l2_l1_tree_depth=4, end_block_number=U64(1000520)), U64(1000511)), Hash32(bytes(32))),
+    ]
+    with pytest.raises(Exception, match="tree depth"):
+        run_rollup_aggregation_guest(RollupAggregationProofPrivateInput(rollup_proofs=proofs))
+
+
+def test_aggregation_rebases_messaging_block_offsets(monkeypatch) -> None:
+    monkeypatch.setattr(aggregation_module, "_program_ids_from_verified_vks", lambda _: [])
+    left = RollupProof(_left_pi(l2_messaging_blocks_offsets=[1, 10]), U64(1000501))
+    right = RollupProof(_right_pi(end_block_number=U64(1000520), l2_messaging_blocks_offsets=[2]), U64(1000511))
+    result = run_rollup_aggregation_guest(RollupAggregationProofPrivateInput(rollup_proofs=[
+        VerifiableRollupProof(left, Hash32(bytes(32))),
+        VerifiableRollupProof(right, Hash32(bytes(32))),
+    ]))
+    assert result.public_inputs.l2_messaging_blocks_offsets == [1, 10, 12]
+
+
+def test_aggregation_requires_verified_program_id_correspondence() -> None:
+    with pytest.raises(NotImplementedError, match="VK-to-program-ID conversion"):
+        run_rollup_aggregation_guest(RollupAggregationProofPrivateInput(rollup_proofs=[
+            VerifiableRollupProof(_proof(_left_pi()), Hash32(bytes(32))),
+        ]))
+
+
+def test_aggregation_rejects_offset_past_proven_block_range() -> None:
+    proof = RollupProof(_left_pi(l2_messaging_blocks_offsets=[11]), U64(1000501))
+    with pytest.raises(Exception, match="messaging block offset"):
+        run_rollup_aggregation_guest(RollupAggregationProofPrivateInput(rollup_proofs=[
+            VerifiableRollupProof(proof, Hash32(bytes(32))),
+        ]))
 
 
 def test_data_rolling_hash_mismatch_is_rejected() -> None:

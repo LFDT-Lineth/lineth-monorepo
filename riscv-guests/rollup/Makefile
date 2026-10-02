@@ -26,6 +26,8 @@ ZIG_FETCH_FLAGS ?=
 NAME := rollup_guest
 BIN  := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 
+include $(MAKEFILE_DIR)../release/Makefile
+
 # Sample fixture input used by exec/debug. The default is generated fresh by `require-input` via
 # `zig build gen-fixture` (this package's own encodeInput over its own test sample) — never checked
 # into git, so it can't silently drift from what the current wire format produces. Pass your own
@@ -36,10 +38,6 @@ INPUT ?= $(GENERATED_INPUT)
 # Flags forwarded to `zkc exec` by exec. Quiet (no per-instruction printf) is zkc's default unless
 # -v/-vv/-vvv raise verbosity.
 ZKC_EXEC_FLAGS ?=
-
-# Production proving config: build with the arithmetization keccak accelerator backend
-# (-Dkeccak-accel=true), same knob as l2-execution's Makefile.
-KECCAK_ACCEL ?= false
 
 # If true, generates an objdump of the generated ELF for debugging purposes.
 OBJDUMP ?= false
@@ -55,7 +53,7 @@ clean:
 	rm -rf $(BUILD_CACHE_DIR)
 
 compile:
-	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(filter true,$(KECCAK_ACCEL)),-Dkeccak-accel=true)
+	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(KECCAK_ACCEL),-Dkeccak-accel=$(KECCAK_ACCEL))
 	@if command -v riscv64-unknown-elf-objdump >/dev/null 2>&1; then \
 		if [ "$(OBJDUMP)" = "true" ]; then \
 			echo "\nDisassembling $(BIN)"; \

@@ -2,15 +2,17 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://linea.build/schemas/getZkRollupAggregationProofV1.request.schema.json",
   "title": "getZkRollupAggregationProof V1 request",
-  "description": "Coordinator -> prover rollup-aggregation proof request. The shared, versioned contract for the rollup-aggregation guest input (RollupAggregationProofPrivateInput): a {programVk, proofRequest} envelope embedding the rollup proofs it recursively verifies.",
+  "description": "Coordinator -> prover rollup-aggregation proof request. The shared, versioned contract for the rollup-aggregation guest input (RollupAggregationProofPrivateInput): a {guestProgramId, provingSystem, proofRequest} envelope embedding the rollup proofs it recursively verifies.",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "programVk",
+    "guestProgramId",
+    "provingSystem",
     "proofRequest"
   ],
   "properties": {
-    "programVk": { "$ref": "#/$defs/hash32" },
+    "guestProgramId": { "$ref": "#/$defs/hash32" },
+    "provingSystem": { "type": "string", "minLength": 1 },
     "metadata": { "$ref": "#/$defs/metadata" },
     "proofRequest": {
       "type": "object",
@@ -27,7 +29,7 @@
   },
   "$defs": {
     "uint": { "type": "integer", "minimum": 0 },
-    "offset": { "type": "integer", "minimum": 0, "maximum": 131071 },
+    "offset": { "type": "integer", "minimum": 0, "maximum": 130046 },
     "hex": { "type": "string", "pattern": "^0x([0-9a-fA-F]{2})*$" },
     "hash32": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },
     "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
@@ -39,6 +41,8 @@
         "startBlockNumber": { "$ref": "#/$defs/uint" },
         "endBlockNumber": { "$ref": "#/$defs/uint" },
         "startBlockTimestamp": { "$ref": "#/$defs/uint" },
+        "endBlockTimestamp": { "$ref": "#/$defs/uint" },
+        "transactionsCount": { "$ref": "#/$defs/uint" },
         "totalGasUsed": { "$ref": "#/$defs/uint" }
       }
     },
@@ -48,7 +52,6 @@
       "required": [
         "endBlockNumber",
         "endBlockTimestamp",
-        "l2L1BridgeTransactionTree",
         "parentL1L2BridgeRollingHash",
         "parentL1L2BridgeRollingHashMessageNumber",
         "endL1L2BridgeRollingHash",
@@ -58,19 +61,22 @@
         "parentFtxNumber",
         "endFtxRollingHash",
         "endProcessedFtxNumber",
-        "filteredAddressesHash",
         "parentDataRollingHash",
         "endDataRollingHash",
         "parentBlockHash",
         "endBlockHash",
         "startOffset",
         "endOffset",
-        "programVks"
+        "l2L1Roots",
+        "l2L1TreeDepth",
+        "filteredAddresses",
+        "programVks",
+        "blockCount",
+        "l2MessagingBlocksOffsets"
       ],
       "properties": {
         "endBlockNumber": { "$ref": "#/$defs/uint" },
         "endBlockTimestamp": { "$ref": "#/$defs/uint" },
-        "l2L1BridgeTransactionTree": { "$ref": "#/$defs/hash32" },
         "parentL1L2BridgeRollingHash": { "$ref": "#/$defs/hash32" },
         "parentL1L2BridgeRollingHashMessageNumber": { "$ref": "#/$defs/uint" },
         "endL1L2BridgeRollingHash": { "$ref": "#/$defs/hash32" },
@@ -80,25 +86,32 @@
         "parentFtxNumber": { "$ref": "#/$defs/uint" },
         "endFtxRollingHash": { "$ref": "#/$defs/hash32" },
         "endProcessedFtxNumber": { "$ref": "#/$defs/uint" },
-        "filteredAddressesHash": { "$ref": "#/$defs/hash32" },
         "parentDataRollingHash": { "$ref": "#/$defs/hash32" },
         "endDataRollingHash": { "$ref": "#/$defs/hash32" },
         "parentBlockHash": { "$ref": "#/$defs/hash32" },
         "endBlockHash": { "$ref": "#/$defs/hash32" },
         "startOffset": {
-          "description": "Canonical start position: 0 at a fully consumed chunk boundary, positive only inside a shared blob (§3.1).",
+          "description": "Canonical start position in unpacked blob payload bytes: 0 at a fully consumed chunk boundary, positive only inside a shared blob (§3.1).",
           "$ref": "#/$defs/offset"
         },
         "endOffset": {
-          "description": "Canonical end position: 0 after fully consuming a calldata or blob chunk, positive only inside a shared terminal blob (§3.1).",
+          "description": "Canonical end position in unpacked blob payload bytes: 0 after fully consuming a calldata or blob chunk (including a short terminal blob), positive only inside a shared terminal blob (§3.1).",
           "$ref": "#/$defs/offset"
         },
+        "l2L1TreeDepth": {
+          "description": "Guest-proven depth of each L2-to-L1 message tree; the guest implementation chooses the depth.",
+          "type": "integer", "minimum": 1, "maximum": 18446744073709551615
+        },
+        "l2L1Roots": { "type": "array", "items": { "$ref": "#/$defs/hash32" } },
+        "filteredAddresses": { "type": "array", "items": { "$ref": "#/$defs/address" } },
         "programVks": {
           "description": "Distinct, sorted ascending by byte value: the canonical encoding of the set of guest program VKs verified beneath this proof (order carries no meaning).",
           "type": "array",
           "uniqueItems": true,
           "items": { "$ref": "#/$defs/hash32" }
-        }
+        },
+        "l2MessagingBlocksOffsets": { "type": "array", "items": { "type": "integer", "minimum": 1, "maximum": 65535 } },
+        "blockCount": { "$ref": "#/$defs/uint" }
       }
     },
     "rollupProof": {
@@ -108,16 +121,12 @@
         "proof",
         "startBlockNumber",
         "publicInputs",
-        "l2L1Roots",
-        "filteredAddresses",
         "programVk"
       ],
       "properties": {
         "proof": { "$ref": "#/$defs/hex" },
         "startBlockNumber": { "$ref": "#/$defs/uint" },
         "publicInputs": { "$ref": "#/$defs/rollupPublicInputs" },
-        "l2L1Roots": { "type": "array", "items": { "$ref": "#/$defs/hash32" } },
-        "filteredAddresses": { "type": "array", "items": { "$ref": "#/$defs/address" } },
         "programVk": { "$ref": "#/$defs/hash32" }
       }
     }

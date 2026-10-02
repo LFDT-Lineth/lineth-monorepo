@@ -1,20 +1,21 @@
-.PHONY: build
+.PHONY: build spotless-happy pre-commit clean
+
+# Maru is part of the monorepo Gradle build: use the root wrapper. Invoked from this
+# directory, unqualified task names run on :maru and all of its subprojects.
+GRADLEW := ../gradlew
 
 build:
-	./gradlew build
+	$(GRADLEW) build
 
 spotless-happy:
-	./gradlew spotlessApply
+	$(GRADLEW) spotlessApply
 
 pre-commit:
 	$(MAKE) spotless-happy
 	$(MAKE) build
 
-run-e2e-test:
-	./gradlew e2e:acceptanceTest
-
 clean:
-	./gradlew clean
+	$(GRADLEW) clean
 
 # Delegates to the monorepo-wide recipe in scripts/docker/images.mk, which mirrors
 # .github/workflows/maru-build-and-publish.yml. Produces consensys/maru:local.

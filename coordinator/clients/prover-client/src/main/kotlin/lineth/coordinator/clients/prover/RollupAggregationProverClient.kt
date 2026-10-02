@@ -17,7 +17,8 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
  * `rollup_spec/prover_io/schemas/getZkRollupAggregationProofV1.request.schema.json`.
  */
 internal class FileBasedRollupAggregationProofRequestDtoMapper(
-  private val programVk: String,
+  private val programId: String,
+  private val provingSystemVersion: String,
   private val rollupProofTransport: FileBasedRollupProofTransport,
 ) : (RollupAggregationProofRequestV1) -> SafeFuture<FileBasedRollupAggregationProofRequestDto> {
   override fun invoke(request: RollupAggregationProofRequestV1): SafeFuture<FileBasedRollupAggregationProofRequestDto> {
@@ -27,7 +28,8 @@ internal class FileBasedRollupAggregationProofRequestDtoMapper(
     return SafeFuture.collectAll(rollupProofFutures.stream())
       .thenApply { rollupResponseDtos ->
         FileBasedRollupAggregationProofRequestDto(
-          programVk = programVk,
+          programId = programId,
+          provingSystemVersion = provingSystemVersion,
           proofRequest = FileBasedRollupAggregationProofRequestParamsDto(
             rollupProofs = rollupResponseDtos.mapIndexed { index, response ->
               val proofResponse = requireNotNull(response) {
@@ -50,31 +52,6 @@ internal class FileBasedRollupAggregationProofRequestDtoMapper(
           ),
         )
       }
-  }
-}
-
-/**
- * Maps a [RollupAggregationProofRequestV1] domain request to the RISC-V rollup proof request DTO described by
- * `rollup_spec/prover_io/schemas/getZkRollupAggregationProofV1.request.schema.json` with proof index to reference
- * each rollup proof response.
- */
-internal class RestfulRollupAggregationProofRequestDtoMapper(
-  private val programVk: String,
-) : (RollupAggregationProofRequestV1) -> SafeFuture<RestfulRollupAggregationProofRequestDto> {
-  override fun invoke(request: RollupAggregationProofRequestV1): SafeFuture<RestfulRollupAggregationProofRequestDto> {
-    val dto = RestfulRollupAggregationProofRequestDto(
-      programVk = programVk,
-      proofRequest = RestfulRollupAggregationProofRequestParamsDto(
-        rollupProofIndexes = request.rollupProofs,
-      ),
-      metadata = MetaDataDto(
-        startBlockNumber = request.startBlockNumber.toLong(),
-        endBlockNumber = request.endBlockNumber.toLong(),
-        startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
-      ),
-    )
-
-    return SafeFuture.completedFuture(dto)
   }
 }
 
@@ -108,13 +85,6 @@ private typealias FileBasedRollupAggregationProofTransport =
     BlockIntervalProofIndex,
     >
 
-private typealias RestfulRollupAggregationProofTransport =
-  ProverProofTransport<
-    RestfulRollupAggregationProofRequestDto,
-    RollupAggregationProofResponseDto,
-    BlockIntervalProofIndex,
-    >
-
 /**
  * RISC-V file-based rollup-aggregation prover client.
  * The request/response transport is injected via file-based transport.
@@ -122,10 +92,12 @@ private typealias RestfulRollupAggregationProofTransport =
 class FileBasedRollupAggregationProverClient(
   transport: FileBasedRollupAggregationProofTransport,
   rollupProofTransport: FileBasedRollupProofTransport,
-  programVk: String,
+  programId: String,
+  provingSystemVersion: String,
   proofRequestDtoMapper: (RollupAggregationProofRequestV1)
   -> SafeFuture<FileBasedRollupAggregationProofRequestDto> = FileBasedRollupAggregationProofRequestDtoMapper(
-    programVk,
+    programId,
+    provingSystemVersion,
     rollupProofTransport,
   ),
   proofResponseDtoMapper: (RollupAggregationProofResponseDto)
@@ -150,39 +122,5 @@ class FileBasedRollupAggregationProverClient(
 
   companion object {
     val LOG: Logger = LogManager.getLogger(FileBasedRollupAggregationProverClient::class.java)
-  }
-}
-
-/**
- * RISC-V Restful rollup-aggregation prover client.
- * The request/response transport is injected via Restful transport.
- */
-class RestfulRollupAggregationProverClient(
-  transport: RestfulRollupAggregationProofTransport,
-  programVk: String,
-  proofRequestDtoMapper: (RollupAggregationProofRequestV1) -> SafeFuture<RestfulRollupAggregationProofRequestDto> =
-    RestfulRollupAggregationProofRequestDtoMapper(programVk),
-  proofResponseDtoMapper: (RollupAggregationProofResponseDto)
-  -> RollupAggregationProofResponseV1 = RollupAggregationProofResponseDtoMapper,
-  hashFunction: HashFunction = Sha256HashFunction(),
-  log: Logger = LOG,
-) : GenericProverClient<
-  RollupAggregationProofRequestV1,
-  RollupAggregationProofResponseV1,
-  RestfulRollupAggregationProofRequestDto,
-  RollupAggregationProofResponseDto,
-  BlockIntervalProofIndex,
-  >(
-  transport = transport,
-  proofIndexProvider = BlockIntervalProofIndexProvider<RollupAggregationProofRequestV1>(hashFunction),
-  requestMapper = proofRequestDtoMapper,
-  responseMapper = proofResponseDtoMapper,
-  proofTypeLabel = "rollup-aggregation",
-  log = log,
-),
-  RollupAggregationProverClientV1 {
-
-  companion object {
-    val LOG: Logger = LogManager.getLogger(RestfulRollupAggregationProverClient::class.java)
   }
 }

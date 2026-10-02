@@ -2,11 +2,14 @@ package linea.clients
 
 import linea.domain.BlockInterval
 import linea.domain.ExecutionPayload
+import linea.domain.ProofRequestMetaDataProvider
 import linea.domain.StartBlockTimestampProvider
 import linea.ethapi.ExecutionWitness
 import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.kotlin.byteArrayListEquals
 import linea.kotlin.byteArrayListHashCode
+import linea.kotlin.byteArrayListToHexString
+import linea.kotlin.encodeHex
 import kotlin.time.Instant
 
 data class ExecutionInfo(
@@ -45,6 +48,15 @@ data class ExecutionInfo(
     result = 31 * result + parentBeaconBlockRoot.contentHashCode()
     return result
   }
+
+  override fun toString(): String {
+    return "ExecutionInfo(blockNumber=$blockNumber, " +
+      "executionPayload=$executionPayload, " +
+      "executionWitness=$executionWitness, " +
+      "executionRequests=${executionRequests.byteArrayListToHexString()}, " +
+      "forcedTransactions=$forcedTransactions, " +
+      "parentBeaconBlockRoot=${parentBeaconBlockRoot.encodeHex()})"
+  }
 }
 
 data class L2ExecutionProofRequestV1(
@@ -53,7 +65,7 @@ data class L2ExecutionProofRequestV1(
   val coinbase: String,
   val parentFtxRollingHash: ByteArray,
   val parentFtxNumber: ULong,
-) : BlockInterval, StartBlockTimestampProvider {
+) : BlockInterval, StartBlockTimestampProvider, ProofRequestMetaDataProvider {
   init {
     require(executions.isNotEmpty()) { "executions must not be empty" }
     require(
@@ -71,6 +83,12 @@ data class L2ExecutionProofRequestV1(
     get() = executions.last().blockNumber
   override val startBlockTimestamp: Instant
     get() = Instant.fromEpochSeconds(executions.first().executionPayload.timestamp.toLong())
+  override val endBlockTimestamp: Instant
+    get() = Instant.fromEpochSeconds(executions.last().executionPayload.timestamp.toLong())
+  override val transactionsCount: Long
+    get() = executions.sumOf { it.executionPayload.transactions.size.toLong() }
+  override val totalGasUsed: Long
+    get() = executions.sumOf { it.executionPayload.gasUsed.toLong() }
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -94,6 +112,11 @@ data class L2ExecutionProofRequestV1(
     result = 31 * result + parentFtxRollingHash.contentHashCode()
     result = 31 * result + parentFtxNumber.hashCode()
     return result
+  }
+
+  override fun toString(): String {
+    return "L2ExecutionProofRequestV1(executions=$executions, chainId=$chainId, coinbase=$coinbase, " +
+      "parentFtxRollingHash=${parentFtxRollingHash.encodeHex()}, parentFtxNumber=$parentFtxNumber)"
   }
 }
 
@@ -123,6 +146,11 @@ data class ForcedTransaction(
     result = 31 * result + signedTxRlp.contentHashCode()
     result = 31 * result + acceptance.hashCode()
     return result
+  }
+
+  override fun toString(): String {
+    return "ForcedTransaction(ftxNumber=$ftxNumber, deadlineBlockNumber=$deadlineBlockNumber, " +
+      "signedTxRlp=${signedTxRlp.encodeHex()}, acceptance=$acceptance)"
   }
 }
 
