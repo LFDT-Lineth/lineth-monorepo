@@ -35,11 +35,11 @@ class RiscvProofRequestDtoMapperTest {
   @Test
   fun `serialized payload includes slot zero and omits absent slot`() {
     val mapper = JsonSerialization.proofResponseMapperV1
-    val dto = executionPayload().copy(slotNumber = 0UL).fromDomainObject()
+    val dto = executionPayload().copy(slotNumber = 0UL).toDto()
     val json = mapper.readTree(mapper.writeValueAsString(dto))
     assertThat(json.get("slotNumber").longValue()).isZero()
 
-    val oldPayload = executionPayload().copy(slotNumber = null).fromDomainObject()
+    val oldPayload = executionPayload().copy(slotNumber = null).toDto()
     assertThat(mapper.readTree(mapper.writeValueAsString(oldPayload)).has("slotNumber")).isFalse()
   }
 
@@ -147,14 +147,14 @@ class RiscvProofRequestDtoMapperTest {
       RiscvProverClientTestFixtures.ROLLUP_PROGRAM_ID,
       RiscvProverClientTestFixtures.PROVING_SYSTEM_VERSION,
       chainId,
-      l2ExecutionProofTransport,
+      l2ExecutionProofTransport::findResponse,
     ).invoke(request).get()
 
     assertThat(dto).isEqualTo(
       FileBasedRollupProofRequestDto(
         programId = RiscvProverClientTestFixtures.ROLLUP_PROGRAM_ID,
         provingSystemVersion = RiscvProverClientTestFixtures.PROVING_SYSTEM_VERSION,
-        proofRequest = FileBasedRollupProofRequestParamsDto(
+        proofRequest = RollupProofRequestParamsDto(
           chainId = chainId,
           conflations = listOf(
             ConflationWitnessDto(
@@ -163,7 +163,7 @@ class RiscvProofRequestDtoMapperTest {
           ),
           l2ExecutionProofs = l2Executions.map { proofIndex ->
             val resolved = l2ExecutionProofTransport.findResponse(proofIndex).get()!!
-            L2ExecutionProofDto(
+            L2ExecutionProofResponseDto(
               proof = resolved.proof,
               startBlockNumber = resolved.startBlockNumber,
               publicInputs = resolved.publicInputs,
@@ -203,7 +203,7 @@ class RiscvProofRequestDtoMapperTest {
         RiscvProverClientTestFixtures.ROLLUP_PROGRAM_ID,
         RiscvProverClientTestFixtures.PROVING_SYSTEM_VERSION,
         chainId,
-        transport,
+        transport::findResponse,
       ).invoke(request).get()
     }
       .hasRootCauseInstanceOf(IllegalArgumentException::class.java)
@@ -219,10 +219,10 @@ class RiscvProofRequestDtoMapperTest {
     val request = RollupAggregationProofRequestV1(rollupProofs = rollupProofs)
     val rollupProofTransport = FakeRollupProofTransport()
 
-    val dto = FileBasedRollupAggregationProofRequestDtoMapper(
+    val dto = RollupAggregationProofRequestDtoMapper(
       RiscvProverClientTestFixtures.ROLLUP_AGGREGATION_PROGRAM_ID,
       RiscvProverClientTestFixtures.PROVING_SYSTEM_VERSION,
-      rollupProofTransport,
+      rollupProofTransport::findResponse,
     ).invoke(request).get()
 
     assertThat(dto).isEqualTo(
@@ -232,7 +232,7 @@ class RiscvProofRequestDtoMapperTest {
         proofRequest = FileBasedRollupAggregationProofRequestParamsDto(
           rollupProofs = rollupProofs.map { proofIndex ->
             val resolved = rollupProofTransport.findResponse(proofIndex).get()!!
-            RollupProofDto(
+            RollupProofResponseDto(
               proof = resolved.proof,
               startBlockNumber = resolved.startBlockNumber,
               publicInputs = resolved.publicInputs,
@@ -258,10 +258,10 @@ class RiscvProofRequestDtoMapperTest {
     val transport = FakeRollupProofTransport(responseProvider = { null })
 
     assertThatThrownBy {
-      FileBasedRollupAggregationProofRequestDtoMapper(
+      RollupAggregationProofRequestDtoMapper(
         RiscvProverClientTestFixtures.ROLLUP_AGGREGATION_PROGRAM_ID,
         RiscvProverClientTestFixtures.PROVING_SYSTEM_VERSION,
-        transport,
+        transport::findResponse,
       ).invoke(request).get()
     }
       .hasRootCauseInstanceOf(IllegalArgumentException::class.java)

@@ -77,7 +77,7 @@ class FileBasedRollupProverClientTest {
       ROLLUP_PROGRAM_ID,
       PROVING_SYSTEM_VERSION,
       CHAIN_ID,
-      l2ExecutionProofTransport,
+      l2ExecutionProofTransport::findResponse,
     ).invoke(request).get()
     assertThat(writtenDto).isEqualTo(expectedDto)
   }

@@ -22,6 +22,11 @@ import lineth.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.GaugeAggregator
 import org.apache.logging.log4j.Logger
+import tech.pegasys.teku.infrastructure.async.SafeFuture
+
+fun interface ProofProvider<P> {
+  fun findProof(proofIndex: BlockIntervalProofIndex): SafeFuture<P?>
+}
 
 /**
  * Builds the prover clients a conflation app needs.
