@@ -36,6 +36,7 @@ component_include_path() {
         "riscv-guests/l2-execution/**" \
         "riscv-guests/guest-common/**" \
         "riscv-guests/build_common/**" \
+        "riscv-guests/release/**" \
         "riscv-guests/lineth-accelerators/**" \
         "riscv-guests/guest-crypto-ctt/**" \
         "riscv-guests/.zigversion" \
@@ -46,6 +47,7 @@ component_include_path() {
         "riscv-guests/rollup/**" \
         "riscv-guests/guest-common/**" \
         "riscv-guests/build_common/**" \
+        "riscv-guests/release/**" \
         "riscv-guests/lineth-accelerators/**" \
         "riscv-guests/.zigversion" \
         "riscv-guests/Makefile"
