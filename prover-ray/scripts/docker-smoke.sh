@@ -6,11 +6,17 @@
 #   2. the dev-zkvm artifacts (native runner + guest ELF) are present and the
 #      runner's shared libraries all resolve inside the image.
 #
-# Usage: scripts/docker-smoke.sh [image]
+# Usage: scripts/docker-smoke.sh [image] [dev-mock|dev-zkvm]
+# dev-mock skips native artifact checks for the Go-only release image.
 set -euo pipefail
 
 DOCKER="${DOCKER:-docker}"
-IMAGE="${1:-consensys/linea-prover-ray:dev}"
+IMAGE="${1:-consensys/lineth-prover-ray:dev}"
+MODE="${2:-dev-zkvm}"
+case "$MODE" in
+    dev-mock|dev-zkvm) ;;
+    *) echo "Unsupported smoke mode: $MODE" >&2; exit 1 ;;
+esac
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 FIXTURE="$SCRIPT_DIR/../backend/jobadapter/testdata/request_single_block.json"
 CONTAINER="prover-ray-smoke-$$"
@@ -65,6 +71,11 @@ if ! grep -q '"proverVersion": "smoke-dev-mock"' "$WORK/responses/req.json"; the
     exit 1
 fi
 echo "    ok: response written with proverVersion smoke-dev-mock"
+
+if [ "$MODE" = "dev-mock" ]; then
+    echo "SMOKE PASSED (dev-mock)"
+    exit 0
+fi
 
 echo "==> native runner: emits the dev-zkvm commitment from an extended input"
 # Run the bundled native execution runner on an extended (0x0002) input and check

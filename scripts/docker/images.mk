@@ -26,6 +26,7 @@ DRY_RUN ?= false
 SKIP_PREBUILD ?= false
 NODE_VERSION ?= $(shell tr -d '[:space:]' < .nvmrc)
 POSTMAN_NATIVE_LIBS_RELEASE_TAG ?= blob-libs-v3.0.1
+PROVER_RAY_MODE ?= dev-mock
 
 DOCKER_BUILD := scripts/docker/build-image.sh \
 	--tags $(DOCKER_IMAGE_TAG) \
@@ -52,6 +53,7 @@ DOCKER_IMAGE_TARGETS := \
 	docker-build-maru \
 	docker-build-postman \
 	docker-build-prover \
+	docker-build-prover-ray \
 	docker-build-native-yield-automation-service \
 	docker-build-lido-governance-monitor \
 	docker-build-alltools
@@ -108,6 +110,15 @@ docker-build-prover:
 		--dockerfile ./prover/Dockerfile \
 		--context . \
 		--build-context prover=prover/
+
+# .github/workflows/prover-ray-build-and-publish.yml
+docker-build-prover-ray:
+	$(DOCKER_BUILD) \
+		--image-name consensys/lineth-prover-ray \
+		--dockerfile ./prover-ray/Dockerfile \
+		--context prover-ray \
+		--build-arg PROVER_RUNTIME=$(PROVER_RAY_MODE) \
+		$(if $(filter dev-zkvm,$(PROVER_RAY_MODE)),--build-context riscv-guests=riscv-guests/)
 
 # .github/workflows/native-yield-automation-service-build-and-publish.yml
 docker-build-native-yield-automation-service:

@@ -1,16 +1,9 @@
 # syntax=docker/dockerfile:1
-#
-# One prover-ray image for all modes; the mode is set per pipeline in the mounted
-# config (CONFIG_FILE), not on the command line.
-# Build (from prover-ray/, so the positional context is prover-ray):
-#   make docker-build
-# which runs, in effect:
-#   docker build -f Dockerfile \
-#     --build-context riscv-guests=<repo>/riscv-guests \
-#     -t consensys/linea-prover-ray:dev .
-#
-# dev-mock needs only the Go binary. dev-zkvm additionally uses the bundled
-# native runner (glibc, links libmcl.so) and the guest ELF, both built here.
+# Default: Go prover + native runner + guest ELF for dev-zkvm.
+# CI draft releases pass --build-arg PROVER_RUNTIME=dev-mock to build only Go.
+# Native build: make -C prover-ray docker-build
+# Mock build: make docker-build-prover-ray
+ARG PROVER_RUNTIME=dev-zkvm
 
 ########################################
 # Go builder: the static prover binary
@@ -24,6 +17,27 @@ COPY . .
 # embedded source), so the binary is static and base-image independent.
 # -ldflags "-s -w" strips the symbol table and DWARF for a smaller prod binary.
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/prover ./cmd/prover
+
+########################################
+# Common runtime: static Go prover and filesystem adapter entrypoint
+########################################
+FROM docker.io/library/debian:bookworm-slim AS runtime-base
+ARG VERSION
+ARG VCS_REF
+ARG BUILD_DATE
+LABEL org.label-schema.version=$VERSION \
+      org.label-schema.vcs-ref=$VCS_REF \
+      org.label-schema.build-date=$BUILD_DATE
+ENV DEBIAN_FRONTEND=noninteractive
+COPY --from=go-builder /out/prover /opt/linea/prover-ray/prover
+ENV PATH="/opt/linea/prover-ray:${PATH}"
+WORKDIR /opt/linea/prover-ray
+ENV CONFIG_FILE="/opt/linea/prover-ray/config/config.toml"
+CMD ["sh", "-c", "exec prover --config \"$CONFIG_FILE\" --local-id \"$WORKER_ID\""]
+
+# Mock releases need no Zig toolchain, native libraries, or guest ELF.
+FROM runtime-base AS dev-mock
+COPY config/config-dev-mock.toml /opt/linea/prover-ray/config/config.toml
 
 ########################################
 # Zig builder: the native runner + guest ELF
@@ -70,33 +84,16 @@ RUN make -C /riscv-guests/l2-execution compile \
     && strip /riscv-guests/l2-execution/zig-out/bin/l2-execution-runner
 
 ########################################
-# Final runtime image: debian:bookworm-slim (glibc 2.36, same release as the
-# builders, with a shell so the CMD expands $CONFIG_FILE and $WORKER_ID like the
-# legacy prover). The native runner links glibc, libstdc++, libmcl, libsecp256k1
-# and libcrypto: the apt ones come from the same bookworm release, and libmcl.so
-# is source-built so it is copied in.
+# Native runtime: built against the same glibc as the Zig builder
 ########################################
-FROM docker.io/library/debian:bookworm-slim AS final
-ENV DEBIAN_FRONTEND=noninteractive
+FROM runtime-base AS dev-zkvm
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
         libstdc++6 libsecp256k1-1 libssl3 \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=zig-builder /usr/local/lib/libmcl.so /usr/local/lib/
 RUN ldconfig
-
-# Prover binary (static), native runner, and guest ELF.
-COPY --from=go-builder  /out/prover                                             /opt/linea/prover-ray/prover
 COPY --from=zig-builder /riscv-guests/l2-execution/zig-out/bin/l2-execution-runner /opt/linea/prover-ray/l2-execution-runner
 COPY --from=zig-builder /riscv-guests/l2-execution/zig-out/bin/evm_execution_guest /opt/linea/prover-ray/evm_execution_guest
+# Native mode still requires a mounted config; no default is baked in.
 
-ENV PATH="/opt/linea/prover-ray:${PATH}"
-WORKDIR /opt/linea/prover-ray
-
-# Configuration is a TOML file. No default is baked in (fail loudly rather than
-# run a wrong config): mount one and point CONFIG_FILE at it. The CMD runs the
-# queue adapter, expanding CONFIG_FILE and WORKER_ID like the legacy prover.
-# Samples: prover-ray/config/config-dev-mock.toml, config-dev-zkvm.toml.
-#   docker run -e CONFIG_FILE=/data/config.toml -e WORKER_ID=prover-ray-0 \
-#              -v ./config-dev-zkvm.toml:/data/config.toml -v ./data:/data <image>
-ENV CONFIG_FILE="/opt/linea/prover-ray/config/config.toml"
-CMD ["sh", "-c", "exec prover --config \"$CONFIG_FILE\" --local-id \"$WORKER_ID\""]
+FROM ${PROVER_RUNTIME} AS final

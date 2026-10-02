@@ -104,3 +104,31 @@ upload.
 
 The workflow and the make target hold the per-image recipe independently — when
 you change one, change the other.
+
+## Prover-ray
+
+CI publishes **dev-mock-only** images for Linux AMD64 and ARM64. Local builds
+use `make docker-build-prover-ray` (`PLATFORMS=linux/arm64` for ARM64). Both use
+`PROVER_RUNTIME=dev-mock` to skip the native toolchain. The package-local
+`make -C prover-ray docker-build` keeps the existing native build default.
+
+```bash
+make docker-build-prover-ray
+./prover-ray/scripts/docker-smoke.sh consensys/lineth-prover-ray:local dev-mock
+```
+
+Run **Prover Ray Release** in GitHub Actions to publish through the
+shared component release workflow and create a draft release with pull commands.
+Confirm public access to `consensys/lineth-prover-ray` and CI push permissions
+before the first release; pin the full published tag in local setup.
+
+Mount a dev-mock config with the stack's shared queue paths at `CONFIG_FILE`.
+The existing `docker/config/prover-ray/prover-ray-config.toml` selects dev-zkvm
+and cannot be used unchanged with this image.
+
+`prover_mode` defaults to `dev-mock`. Once native proving is ready, select
+`dev-zkvm` in the same release workflow (locally: `PROVER_RAY_MODE=dev-zkvm`).
+Builds, smoke checks, and default tag suffixes follow the selection. Native mode
+is currently WIP and AMD64-only; its toolchain and full dev-zkvm request validation
+must be completed before switching the default. Mount a dev-zkvm runtime config
+when using that image; the release bot and changelog process stay the same.

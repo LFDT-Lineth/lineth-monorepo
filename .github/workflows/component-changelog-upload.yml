@@ -15,6 +15,7 @@ jobs:
       coordinator: ${{ steps.filter.outputs.coordinator }}
       postman: ${{ steps.filter.outputs.postman }}
       prover: ${{ steps.filter.outputs.prover }}
+      prover-ray: ${{ steps.filter.outputs.prover-ray }}
       tx-exclusion-api: ${{ steps.filter.outputs.tx-exclusion-api }}
       linea-besu-package: ${{ steps.filter.outputs.linea-besu-package }}
       maru: ${{ steps.filter.outputs.maru }}
@@ -37,6 +38,8 @@ jobs:
               - 'postman/**'
             prover:
               - 'prover/**'
+            prover-ray:
+              - 'prover-ray/**'
             tx-exclusion-api:
               - 'transaction-exclusion-api/**'
             linea-besu-package:
@@ -65,7 +68,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        component: [ coordinator, maru, prover, postman, tx-exclusion-api, linea-besu-package, linea ]
+        component: [ coordinator, maru, prover, prover-ray, postman, tx-exclusion-api, linea-besu-package, linea ]
         include:
           # scopes/include-path per component are the single source of truth in
           # .github/actions/run-git-cliff-commands/scripts/components.sh — the
@@ -76,6 +79,8 @@ jobs:
             folder-name: maru
           - component: prover
             folder-name: prover
+          - component: prover-ray
+            folder-name: prover-ray
           - component: postman
             folder-name: postman
           - component: tx-exclusion-api
