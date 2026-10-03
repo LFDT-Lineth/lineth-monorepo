@@ -1,9 +1,11 @@
 export type BlobSubmission = {
-  dataEvaluationClaim: string;
-  kzgCommitment: string;
-  kzgProof: string;
-  finalStateRootHash: string;
-  snarkHash: string;
+  /** Final L2 block hash for this blob (submitBlobs argument). */
+  finalBlockHash: string;
+  /** EIP-4844 versioned blob hash (blobhash(i)); used when computing expected shnarf. */
+  dataHash: string;
+  compressedData: string;
+  /** Kept for fixture/debug; not sent on-chain. */
+  kzgCommitment?: string;
 };
 
 export type ParentAndExpectedShnarf = {
@@ -11,6 +13,7 @@ export type ParentAndExpectedShnarf = {
   expectedShnarf: string;
 };
 
+/** Legacy 5-field shnarf layout retained as FinalizationDataV5 ABI padding. */
 export type ShnarfData = {
   parentShnarf: string;
   snarkHash: string;
@@ -20,8 +23,7 @@ export type ShnarfData = {
 };
 
 export type CalldataSubmissionData = {
-  finalStateRootHash: string;
-  snarkHash: string;
+  blockHash: string;
   compressedData: string;
 };
 
@@ -30,6 +32,7 @@ export type FinalizationData = {
   endBlockNumber: bigint;
   shnarfData: ShnarfData;
   parentStateRootHash: string;
+  parentBlockHash: string;
   lastFinalizedTimestamp: bigint;
   finalTimestamp: bigint;
   l1RollingHash: string;
@@ -43,6 +46,9 @@ export type FinalizationData = {
   lastFinalizedForcedTransactionNumber: bigint;
   finalForcedTransactionNumber: bigint;
   lastFinalizedForcedTransactionRollingHash: string;
+  finalBlockHash: string;
+  finalBlobHash: string;
+  verifierKeys: string[];
 };
 
 export type ShnarfDataGenerator = (blobParentShnarfIndex: number, isMultiple?: boolean) => ShnarfData;
@@ -90,7 +96,7 @@ export type PauseTypeRole = {
 };
 
 export type LinethRollupInitializationData = {
-  initialStateRootHash: string;
+  initialBlockHash: string;
   initialL2BlockNumber: bigint;
   genesisTimestamp: bigint;
   defaultVerifier: string;
@@ -99,6 +105,7 @@ export type LinethRollupInitializationData = {
   roleAddresses: RoleAddress[];
   pauseTypeRoles: PauseTypeRole[];
   unpauseTypeRoles: PauseTypeRole[];
+  verifierKeys: string[];
   defaultAdmin: string;
   shnarfProvider: string;
   addressFilter: string;
