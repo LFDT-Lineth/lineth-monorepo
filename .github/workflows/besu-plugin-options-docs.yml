@@ -7,21 +7,21 @@ permissions:
   contents: read
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - ".github/actions/setup-java-and-gradle/**"
-      - ".github/workflows/besu-plugin-options-docs.yml"
-      - "build.gradle"
-      - "gradle.properties"
-      - "gradle/**"
-      - "gradlew"
-      - "gradlew.bat"
-      - "settings.gradle"
-      - "linea-besu/plugins/besu-plugin-options-docgen/**"
-      - "linea-besu/plugins/linea-sequencer/**"
-      - "scripts/besu-plugin-options/**"
-      - "tracer/arithmetization/**"
+  # pull_request:
+  #   types: [opened, synchronize, reopened, ready_for_review]
+  #   paths:
+  #     - ".github/actions/setup-java-and-gradle/**"
+  #     - ".github/workflows/besu-plugin-options-docs.yml"
+  #     - "build.gradle"
+  #     - "gradle.properties"
+  #     - "gradle/**"
+  #     - "gradlew"
+  #     - "gradlew.bat"
+  #     - "settings.gradle"
+  #     - "linea-besu/plugins/besu-plugin-options-docgen/**"
+  #     - "linea-besu/plugins/linea-sequencer/**"
+  #     - "scripts/besu-plugin-options/**"
+  #     - "tracer/arithmetization/**"
   push:
     branches:
       - main
