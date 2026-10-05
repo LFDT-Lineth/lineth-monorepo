@@ -22,19 +22,19 @@ permissions:
   contents: read
 
 on:
-  # pull_request:
-  #   types: [opened, synchronize, reopened, ready_for_review]
-  #   paths:
-  #     - ".github/actions/setup-java-and-gradle/**"
-  #     - ".github/actions/validate-config-docs/**"
-  #     - ".github/actions/publish-config-docs/**"
-  #     - "buildSrc/src/main/groovy/ConfigDocsExtension.groovy"
-  #     - "buildSrc/src/main/groovy/ConfigDocsPlugin.groovy"
-  #     - "buildSrc/build.gradle"
-  #     - "coordinator/config/build.gradle"
-  #     - "coordinator/config/src/configDocs/**"
-  #     - "coordinator/config/src/main/kotlin/lineth/coordinator/config/v2/toml/**"
-  #     - "jvm-libs/linea/config-docs/**"
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - ".github/actions/setup-java-and-gradle/**"
+      - ".github/actions/validate-config-docs/**"
+      - ".github/actions/publish-config-docs/**"
+      - "buildSrc/src/main/groovy/ConfigDocsExtension.groovy"
+      - "buildSrc/src/main/groovy/ConfigDocsPlugin.groovy"
+      - "buildSrc/build.gradle"
+      - "coordinator/config/build.gradle"
+      - "coordinator/config/src/configDocs/**"
+      - "coordinator/config/src/main/kotlin/lineth/coordinator/config/v2/toml/**"
+      - "jvm-libs/linea/config-docs/**"
   push:
     branches:
       - main

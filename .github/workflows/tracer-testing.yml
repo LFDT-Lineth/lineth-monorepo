@@ -5,16 +5,16 @@ permissions:
   actions: read
 
 on:
-  # pull_request:
-  #   types: [opened, synchronize, reopened, ready_for_review]
-  #   branches:
-  #     - main
-  #   paths:
-  #     - 'tracer/**'
-  #     - 'tracer-constraints/**'
-  #     - '.github/actions/setup-tracer-environment/**'
-  #     - '.github/workflows/tracer-*.yml'
-  #     - '.github/workflows/reusable-tracer-*.yml'
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches:
+      - main
+    paths:
+      - 'tracer/**'
+      - 'tracer-constraints/**'
+      - '.github/actions/setup-tracer-environment/**'
+      - '.github/workflows/tracer-*.yml'
+      - '.github/workflows/reusable-tracer-*.yml'
   push:
     branches:
       - main
