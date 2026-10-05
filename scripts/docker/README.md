@@ -117,7 +117,16 @@ make docker-build-prover-ray
 ./prover-ray/scripts/docker-smoke.sh consensys/lineth-prover-ray:local
 ```
 
-One image includes the Go prover, native runner, and guest ELF. Mount a config at
+One image includes the Go prover, native runner, and a pinned released guest ELF.
+The build downloads the ELF from the guest's GitHub release and verifies its SHA-256;
+release, asset name, and checksum are pinned together in `prover-ray/Makefile`.
+The current guest release is a draft, so local builds require `gh auth login` with
+access to that release; CI uses its repository token. No credentials enter the image.
+The native runner is still compiled from `riscv-guests` and requires Nim/LLVM for
+Constantine. Updating the guest pin requires checking compatibility with that runner
+and updating the coordinator's Program ID to the released ELF's ID.
+
+Mount a config at
 `CONFIG_FILE` with `execution.prover_mode = "dev-mock"` and the stack's shared queue
 paths. When dev-zkvm is ready, switch that config to `"dev-zkvm"` and set the
 bundled artifact paths as shown in `prover-ray/config/config-dev-zkvm.toml`;

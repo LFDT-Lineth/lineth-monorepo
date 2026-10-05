@@ -7,10 +7,11 @@
 # which runs, in effect:
 #   docker build -f Dockerfile \
 #     --build-context riscv-guests=<repo>/riscv-guests \
+#     --build-context l2-execution-guest=<repo>/prover-ray/bin/guest \
 #     -t consensys/lineth-prover-ray:dev .
 #
 # dev-mock needs only the Go binary. dev-zkvm additionally uses the bundled
-# native runner (glibc, links libmcl.so) and the guest ELF, both built here.
+# native runner and the separately released guest ELF staged by make download-guest.
 
 ########################################
 # Go builder: the static prover binary
@@ -26,7 +27,7 @@ COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/prover ./cmd/prover
 
 ########################################
-# Zig builder: the native runner + guest ELF
+# Zig builder: the native runner
 ########################################
 # debian:bookworm = glibc 2.36, matching the debian:bookworm-slim final stage,
 # so the native runner is built on the same glibc it runs on.
@@ -60,7 +61,7 @@ RUN git clone https://github.com/herumi/mcl.git /tmp/mcl \
     && cp -r /tmp/mcl/include/mcl /usr/local/include/ \
     && ldconfig \
     && rm -rf /tmp/mcl
-# Build the statically-linked rv64im guest ELF + the native runner. Path deps
+# Build the native runner. The RISC-V guest ELF comes from its own release. Path deps
 # (build_common, guest-common, lineth-accelerators) are siblings in riscv-guests;
 # the rest are fetched by zig from the network.
 COPY --from=riscv-guests Makefile /riscv-guests/Makefile
@@ -68,10 +69,8 @@ RUN make -C /riscv-guests install-constantine-deps \
     && rm -rf /var/lib/apt/lists/*
 ENV PATH="/root/.local/bin:${PATH}"
 COPY --from=riscv-guests . /riscv-guests
-# strip the native runner's debug_info (the guest ELF is already stripped); the
-# ReleaseSafe build keeps its runtime checks, we just drop symbols for prod size.
+# Strip debug symbols from the native runner; ReleaseSafe retains runtime checks.
 RUN make -C /riscv-guests/l2-execution fetch-host \
-    && make -C /riscv-guests/l2-execution compile \
     && cd /riscv-guests/l2-execution \
     && zig build install-runner -Dhost-tools=true --summary all \
     && strip /riscv-guests/l2-execution/zig-out/bin/l2-execution-runner
@@ -100,7 +99,7 @@ RUN ldconfig
 # Prover binary (static), native runner, and guest ELF.
 COPY --from=go-builder  /out/prover                                             /opt/linea/prover-ray/prover
 COPY --from=zig-builder /riscv-guests/l2-execution/zig-out/bin/l2-execution-runner /opt/linea/prover-ray/l2-execution-runner
-COPY --from=zig-builder /riscv-guests/l2-execution/zig-out/bin/evm_execution_guest /opt/linea/prover-ray/evm_execution_guest
+COPY --from=l2-execution-guest --chmod=0644 evm_execution_guest /opt/linea/prover-ray/evm_execution_guest
 
 ENV PATH="/opt/linea/prover-ray:${PATH}"
 WORKDIR /opt/linea/prover-ray
