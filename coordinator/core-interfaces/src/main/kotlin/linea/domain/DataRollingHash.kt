@@ -20,7 +20,9 @@ data class StreamPosition(
   }
 }
 
+/**
+ * Folds a chunk hash into the data rolling hash: keccak256(parentDataRollingHash || chunkHash).
+ */
 fun interface DataRollingHashCalculator {
-  // TODO("implement: keccak256(parentDataRollingHash + chunkHash)")
   fun fold(parentDataRollingHash: ByteArray, chunkHash: ByteArray): ByteArray
 }
