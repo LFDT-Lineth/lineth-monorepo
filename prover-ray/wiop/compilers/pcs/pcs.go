@@ -479,7 +479,12 @@ func roundMaxSizeIndex(round *wiop.Round, rt *wiop.Runtime, manifest ColumnManif
 
 // commitToRound materializes a round's columns and commits the Present ones
 // (see [commitVectors]).
-func commitToRound(inverseRate uint8, round *wiop.Round, rt *wiop.Runtime, manifest ColumnManifest) *fri.CommitterState {
+func commitToRound(
+	inverseRate uint8,
+	round *wiop.Round,
+	rt *wiop.Runtime,
+	manifest ColumnManifest,
+) *fri.CommitterState {
 	return commitVectors(inverseRate, materializeColumns(round, rt), manifest)
 }
 
@@ -520,7 +525,11 @@ func commitVectors(inverseRate uint8, vectors []paddedColumn, manifest ColumnMan
 // length is maxSizeIndex+1 over the Present columns, matching the committed
 // table produced by [commitVectors], and positions are assigned in
 // column-declaration order so both agree. Elided columns have no location.
-func GetLayout(round *wiop.Round, rt *wiop.Runtime, manifest ColumnManifest) (map[wiop.ObjectID]ColumnLocation, fri.Shape) {
+func GetLayout(
+	round *wiop.Round,
+	rt *wiop.Runtime,
+	manifest ColumnManifest,
+) (map[wiop.ObjectID]ColumnLocation, fri.Shape) {
 
 	var (
 		cols   = round.Columns
