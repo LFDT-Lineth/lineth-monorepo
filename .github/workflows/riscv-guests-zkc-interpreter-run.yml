@@ -282,4 +282,4 @@ jobs:
       - name: Run zkc reference-test
         env:
           REFERENCE_ARGS: ${{ inputs.reference-args }}
-        run: make -C riscv-guests/l2-execution reference-test-zkc KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast"
+        run: make -C riscv-guests/l2-execution reference-test-zkc KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast --gogen"
