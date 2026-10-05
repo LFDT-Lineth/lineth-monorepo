@@ -48,6 +48,13 @@ class ConfigDocsPlugin implements Plugin<Project> {
       it.classpath = configDocs.runtimeClasspath
       it.mainClass.set('linea.config.docs.ConfigDocsCheckMain')
       it.argumentProviders.add({ [specProvider.get()] } as org.gradle.process.CommandLineArgumentProvider)
+      // The check only reflects over classes on the classpath (an input of JavaExec), so a marker
+      // output lets it be up-to-date/cached instead of re-running on every `check`.
+      it.inputs.property('spec', specProvider)
+      def marker = project.layout.buildDirectory.file("tmp/${it.name}/result.txt")
+      it.outputs.file(marker).withPropertyName('result')
+      it.outputs.cacheIf { true }
+      it.doLast { marker.get().asFile.text = "OK\n" }
     }
 
     // Enforce documentation completeness as part of `check` (and therefore CI's buildNeeded).

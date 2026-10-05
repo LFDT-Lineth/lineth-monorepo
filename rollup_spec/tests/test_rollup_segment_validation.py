@@ -1,4 +1,4 @@
-"""The DA parser accepts exactly one complete zstd frame per conflation."""
+"""Unit tests for the rollup guest's witnessed zstd segment validation."""
 
 import pytest
 import zstandard as zstd
@@ -6,20 +6,38 @@ import zstandard as zstd
 from rollup_spec.rollup import _validate_conflation_segment
 
 
-def _frame(payload):
+def _segment(payload: bytes) -> bytes:
     return zstd.ZstdCompressor().compress(payload)
 
 
-def test_matching_frame_is_accepted():
-    _validate_conflation_segment(_frame(b"canonical payload"), b"canonical payload")
+@pytest.mark.parametrize("write_content_size", [True, False])
+def test_validate_conflation_segment_accepts_matching_zstd_frame(write_content_size: bool) -> None:
+    expected = b"canonical truncated-block RLP"
+    frame = zstd.ZstdCompressor(write_content_size=write_content_size).compress(expected)
+
+    _validate_conflation_segment(frame, expected)
 
 
-@pytest.mark.parametrize("frame", [b"bad", _frame(b"payload") + b"trailing", _frame(b"payload") + _frame(b"other"), _frame(b"payload")[:-1]])
-def test_incomplete_or_extra_frame_is_rejected(frame):
+def test_validate_conflation_segment_rejects_invalid_zstd_data() -> None:
     with pytest.raises(Exception, match="invalid zstd"):
-        _validate_conflation_segment(frame, b"payload")
+        _validate_conflation_segment(b"bad", b"payload")
 
 
-def test_different_canonical_payload_is_rejected():
+def test_validate_conflation_segment_rejects_trailing_zstd_data() -> None:
+    with pytest.raises(Exception, match="invalid zstd"):
+        _validate_conflation_segment(_segment(b"payload") + b"trailing", b"payload")
+
+
+def test_validate_conflation_segment_rejects_second_frame() -> None:
+    with pytest.raises(Exception, match="invalid zstd"):
+        _validate_conflation_segment(_segment(b"payload") + _segment(b"other"), b"payload")
+
+
+def test_validate_conflation_segment_rejects_truncated_frame() -> None:
+    with pytest.raises(Exception, match="invalid zstd"):
+        _validate_conflation_segment(_segment(b"payload")[:-1], b"payload")
+
+
+def test_validate_conflation_segment_rejects_mismatched_decompressed_bytes() -> None:
     with pytest.raises(Exception, match="does not match"):
-        _validate_conflation_segment(_frame(b"other"), b"payload")
+        _validate_conflation_segment(_segment(b"other!!"), b"payload")

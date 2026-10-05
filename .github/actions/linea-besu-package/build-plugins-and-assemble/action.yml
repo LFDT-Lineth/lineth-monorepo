@@ -12,18 +12,6 @@ inputs:
     required: false
     default: ''
 
-  with_besu_fleet_plugin:
-    description: When "true", assemble with besu fleet plugin
-    required: true
-
-  fleet_github_app_id:
-    description: When "with_besu_fleet_plugin" is true, it should be set with besu fleet github app id
-    required: true
-
-  fleet_github_app_private_key:
-    description: When "with_besu_fleet_plugin" is true, it should be set with besu fleet github app private key
-    required: true
-
 outputs:
   workflow_id:
     description: workflow id
@@ -65,10 +53,6 @@ outputs:
     description: shomei plugin version
     value: ${{ steps.metadata.outputs.shomei_version }}
 
-  besu_fleet_version:
-    description: besu fleet plugin version
-    value: ${{ steps.metadata.outputs.besu_fleet_version }}
-
 runs:
   using: "composite"
   steps:
@@ -105,7 +89,3 @@ runs:
       uses: ./.github/actions/linea-besu-package/assemble
       with:
         local_besu_version: ${{ steps.metadata.outputs.besu_version }}
-        fetch_besu_fleet_plugin: ${{ inputs.with_besu_fleet_plugin }}
-        besu_fleet_plugin_version: ${{ steps.metadata.outputs.besu_fleet_version }}
-        fleet_github_app_id: ${{ inputs.fleet_github_app_id }}
-        fleet_github_app_private_key: ${{ inputs.fleet_github_app_private_key }}

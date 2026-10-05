@@ -16,11 +16,9 @@ import linea.web3j.ethapi.createEthApiClient
 import lineth.coordinator.blockcreation.BatchesRepoBasedLastProvenBlockNumberProvider
 import lineth.coordinator.blockcreation.ConflationTargetCheckpointPauseController
 import lineth.coordinator.clients.ForcedTransactionsJsonRpcClient
-import lineth.coordinator.clients.prover.ProverClientFactory
+import lineth.coordinator.clients.prover.ProverClientFactoryBuilder
 import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.config.v2.CoordinatorConfig
-import lineth.ftx.conflation.ForcedTransactionsInvalidityProofService
-import lineth.ftx.conflation.InvalidityProofAssembler
 import lineth.metrics.LineaMetricsCategory
 import lineth.persistence.AggregationsRepository
 import lineth.persistence.BatchesRepository
@@ -56,6 +54,7 @@ class ConflationAppOrchestrator(
   private val l2EthClient: EthApiClient,
   private val zkStateClient: StateManagerV1JsonRpcClient,
   private val tracesClients: TracesClients,
+  private val proverClientFactoryBuilder: ProverClientFactoryBuilder = ProverClientFactoryBuilder.FILE_BASED,
 ) : LongRunningService {
 
   private val log = LogManager.getLogger(ConflationAppOrchestrator::class.java)
@@ -70,9 +69,13 @@ class ConflationAppOrchestrator(
       .get()
   }
 
-  private val preRiscvProverClientFactory = ProverClientFactory(
+  private val chainId: ULong = l2EthClient.ethChainId().get()
+
+  private val proverClientFactory = proverClientFactoryBuilder.build(
     vertx = vertx,
     config = configs.proversConfig,
+    l2MessageServiceAddress = configs.protocol.l2.contractAddress,
+    chainId = chainId,
     metricsFacade = metricsFacade,
   )
 
@@ -143,26 +146,7 @@ class ConflationAppOrchestrator(
         )
         DisabledService("forced-transactions-invalidity-proof")
       } else {
-        check(configs.proversConfig.proverA.invalidity != null) {
-          "prover.invalidity config is required for forced transactions feature to work"
-        }
-        val l1EthLogsSearcherForFtx = EthLogsSearcherImpl(vertx = vertx, ethApiClient = l1EthClient)
-        ForcedTransactionsInvalidityProofService(
-          ftxDao = forcedTransactionsDao,
-          invalidityProofAssembler = InvalidityProofAssembler(
-            invalidityProofClient = preRiscvProverClientFactory.preRiscvInvalidityProverClient(),
-            stateManagerClient = zkStateClient,
-            accountProofClient = zkStateClient,
-            ethApiLogsSearcher = l1EthLogsSearcherForFtx,
-            ftxDao = forcedTransactionsDao,
-            tracesClient = tracesClients.tracesConflationClient,
-            contractAddress = configs.protocol.l1.contractAddress,
-            l1EventSearchMaxBlockRange = ftxConfig.l1EventScraping.ethLogsSearchMaxBlockRange,
-          ),
-          vertx = vertx,
-          pollingInterval = ftxConfig.invalidityProofCheckInterval,
-          riscvCutoverTimestamp = riscvCutoverTimestamp,
-        )
+        throw IllegalStateException("FTX invalidity proof not supported before RISC-V")
       }
       ForcedTransactionsApp.create(
         config = ftxAppConfig,
@@ -249,7 +233,7 @@ class ConflationAppOrchestrator(
       forcedTransactionsDao = forcedTransactionsDao,
       configs = configs,
       metricsFacade = metricsFacade,
-      proverClientFactory = preRiscvProverClientFactory,
+      proverClientFactory = proverClientFactory,
       httpJsonRpcClientFactory = httpJsonRpcClientFactory,
       l2EthClient = l2EthClient,
       zkStateClient = zkStateClient,
@@ -264,20 +248,15 @@ class ConflationAppOrchestrator(
 
   private val conflationAppV2: LongRunningService =
     if (configs.conflation.riscvStartingBlockTimestampInclusive != null) {
-      val riscvProverClientFactory = ProverClientFactory(
-        vertx = vertx,
-        config = configs.riscvProversConfig!!,
-        l2MessageServiceAddress = configs.protocol.l2.contractAddress,
-        metricsFacade = metricsFacade,
-      )
       ConflationAppV2(
         vertx = vertx,
+        chainId = chainId,
         batchesRepository = batchesRepository,
         configs = configs,
         forcedTransactionsApp = forcedTransactionsApp,
         forcedTransactionsDao = forcedTransactionsDao,
         metricsFacade = metricsFacade,
-        proverClientFactory = riscvProverClientFactory,
+        proverClientFactory = proverClientFactory,
         lastProvenBlockNumberProvider = lastProvenBlockNumberProvider,
         targetCheckpointPauseController = targetCheckpointPauseControllerV2,
         lastProcessedBlocks = lastProcessedBlocks,

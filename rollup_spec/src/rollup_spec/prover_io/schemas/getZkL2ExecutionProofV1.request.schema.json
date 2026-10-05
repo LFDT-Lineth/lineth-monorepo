@@ -50,6 +50,8 @@
         "startBlockNumber": { "$ref": "#/$defs/uint" },
         "endBlockNumber": { "$ref": "#/$defs/uint" },
         "startBlockTimestamp": { "$ref": "#/$defs/uint" },
+        "endBlockTimestamp": { "$ref": "#/$defs/uint" },
+        "transactionsCount": { "$ref": "#/$defs/uint" },
         "totalGasUsed": { "$ref": "#/$defs/uint" }
       }
     },
@@ -145,7 +147,8 @@
         "withdrawals": { "type": "array", "items": { "$ref": "#/$defs/withdrawal" } },
         "blobGasUsed": { "$ref": "#/$defs/uint" },
         "excessBlobGas": { "$ref": "#/$defs/uint" },
-        "blockAccessList": { "$ref": "#/$defs/bytes" }
+        "blockAccessList": { "$ref": "#/$defs/bytes" },
+        "slotNumber": { "$ref": "#/$defs/uint" }
       }
     },
     "newPayloadRequest": {

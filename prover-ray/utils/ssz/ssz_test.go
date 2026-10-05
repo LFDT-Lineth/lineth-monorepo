@@ -145,7 +145,7 @@ func TestEncodeStatelessInput_NoTransactions_EmptyPublicKeys(t *testing.T) {
 	got, err := EncodeStatelessInput([]byte(noTx))
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(got), 2)
-	assert.Equal(t, byte(0x00), got[0], "schema id high byte")
+	assert.Equal(t, byte(0x15), got[0], "Amsterdam fork index")
 	assert.Equal(t, byte(0x01), got[1], "schema id low byte")
 }
 
@@ -300,6 +300,14 @@ func TestEncodeStatelessInput_MalformedInputs(t *testing.T) {
 		{"MissingChainID",
 			func(o map[string]any) { delete(o["chainConfig"].(map[string]any), "chainId") },
 			"missing chainId"},
+		{"NegativeChainID",
+			func(o map[string]any) { o["chainConfig"].(map[string]any)["chainId"] = -1 },
+			"chainId"},
+		{"OverflowChainID",
+			func(o map[string]any) {
+				o["chainConfig"].(map[string]any)["chainId"] = json.Number("18446744073709551616")
+			},
+			"chainId"},
 		{"MissingForkName",
 			func(o map[string]any) { delete(o["chainConfig"].(map[string]any), "forkName") },
 			"missing forkName"},
@@ -318,6 +326,26 @@ func TestEncodeStatelessInput_MalformedInputs(t *testing.T) {
 				npr(o)["executionRequests"] = map[string]any{"consolidations": []any{map[string]any{}}}
 			},
 			"consolidations must be empty"},
+		{"NonEmptyBuilderDeposits",
+			func(o map[string]any) {
+				npr(o)["executionRequests"] = map[string]any{"builderDeposits": []any{map[string]any{}}}
+			},
+			"builderDeposits must be empty"},
+		{"NonEmptyBuilderExits",
+			func(o map[string]any) {
+				npr(o)["executionRequests"] = map[string]any{"builderExits": []any{map[string]any{}}}
+			},
+			"builderExits must be empty"},
+		{"NullBuilderDeposits",
+			func(o map[string]any) {
+				npr(o)["executionRequests"] = map[string]any{"builderDeposits": nil}
+			},
+			"executionRequests.builderDeposits"},
+		{"NullBuilderExits",
+			func(o map[string]any) {
+				npr(o)["executionRequests"] = map[string]any{"builderExits": nil}
+			},
+			"executionRequests.builderExits"},
 		{"NullExecutionRequestsList",
 			func(o map[string]any) {
 				npr(o)["executionRequests"] = map[string]any{"deposits": nil}
@@ -429,7 +457,7 @@ func TestEncodeStatelessInput_MalformedInputs(t *testing.T) {
 			"public_keys"},
 		{"UnknownForkName",
 			func(o map[string]any) { o["chainConfig"].(map[string]any)["forkName"] = "Foo" },
-			"unknown fork name"},
+			"unsupported fork"},
 	}
 
 	for _, tc := range cases {

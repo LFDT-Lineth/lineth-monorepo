@@ -94,7 +94,7 @@ class L2PricingApp(
         retryConfig = l2NetworkGasPricingConfig.extraDataUpdateRequestRetries.toJsonRpcRetry(),
       ),
       l2CalldataPricingCalculatorConfig = l2NetworkGasPricingConfig.dynamicGasPricing.calldataBasedPricing?.let {
-        if (l2NetworkGasPricingConfig.dynamicGasPricing.calldataBasedPricing.calldataSumSizeBlockCount > 0U) {
+        if (it.calldataSumSizeBlockCount > 0U) {
           L2NetworkGasPricingService.L2CalldataPricingConfig(
             l2CalldataSizeAccumulatorConfig = L2CalldataSizeAccumulatorImpl.Config(
               blockSizeNonCalldataOverhead = it.blockSizeNonCalldataOverhead,

@@ -47,7 +47,7 @@ jobs:
       linea-besu-package: ${{ steps.changelog-outputs.outputs.linea-besu-package }}
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # No ref override: defaults to github.sha, the immutable commit
           # selected at dispatch time.
@@ -56,7 +56,7 @@ jobs:
           submodules: false
 
       - name: Install git-cliff
-        uses: taiki-e/install-action@bffeee26d4db9be238a4ea78d8826604ebcb594d #v2.82.5
+        uses: taiki-e/install-action@7623a79cdfecb99d681017af368ca353d9f49bb5 # v2.87.19
         with:
           tool: git-cliff
 

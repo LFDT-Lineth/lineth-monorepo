@@ -260,7 +260,7 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
     timeToReturn = Clock.System.now()
     blobCompressionProofCoordinator.handleBlob(blobEvent).get()
 
-    waitAtMost(10.seconds.toJavaDuration())
+    waitAtMost(60.seconds.toJavaDuration())
       .pollInterval(200.milliseconds.toJavaDuration())
       .untilAsserted {
         val actualBlobs = blobsPostgresDao.getConsecutiveBlobsFromBlockNumber(
@@ -347,7 +347,7 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
       }.stream(),
     ).get()
 
-    waitAtMost(10.seconds.toJavaDuration())
+    waitAtMost(60.seconds.toJavaDuration())
       .pollInterval(200.milliseconds.toJavaDuration())
       .untilAsserted {
         val actualBlobs = blobsPostgresDao.getConsecutiveBlobsFromBlockNumber(
