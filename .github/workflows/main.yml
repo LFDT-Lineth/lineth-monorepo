@@ -282,7 +282,7 @@ jobs:
     uses: ./.github/workflows/prepare-linea-besu-maven.yml
 
   testing:
-    needs: [prepare-linea-besu-maven]
+    needs: [filter-commit-changes, compute-commit-tags, prepare-linea-besu-maven]
     # !cancelled() (not always()): run on need failure/skip, but not after a
     # concurrency cancel supersedes this run.
     if: ${{ !cancelled() && needs.prepare-linea-besu-maven.result == 'success' }}
