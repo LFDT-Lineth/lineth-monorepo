@@ -192,6 +192,9 @@ func Compile(sys *wiop.System, opts ...CompileOptions) {
 		manifestCells: make(map[int][]*wiop.Cell),
 		colShifts:     collectColumnShifts(sys),
 	}
+	if len(opts) > 1 {
+		panic(fmt.Errorf("pcs: Compile accepts at most one CompileOptions, got %d", len(opts)))
+	}
 	if len(opts) > 0 {
 		c.elisionDisabled = opts[0].DisableColumnElision
 	}
@@ -569,7 +572,6 @@ type claimKey struct {
 // every Present column's schedule has been built.
 type elidedClaim struct {
 	batchIdx int
-	colIdx   int // index in round.Columns
 	code     uint32
 	rawShift int
 	value    field.Ext
@@ -651,7 +653,6 @@ func RecoverBatchClaims(rt *wiop.Runtime, batches []BatchRef, manifests []Column
 			if code := manifests[batchIdx][ci]; code != ManifestPresent {
 				elided = append(elided, elidedClaim{
 					batchIdx: batchIdx,
-					colIdx:   ci,
 					code:     code,
 					rawShift: colView.ShiftingOffset,
 					value:    value,
