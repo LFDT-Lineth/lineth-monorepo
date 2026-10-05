@@ -12,8 +12,8 @@ import linea.kotlin.encodeHex
 import linea.kotlin.xor
 import maru.crypto.Hashing
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
 import kotlin.random.Random
-import kotlin.test.Test
 
 class PrevRandaoProviderTest {
   @Test

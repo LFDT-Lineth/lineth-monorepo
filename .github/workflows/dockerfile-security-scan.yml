@@ -18,7 +18,7 @@ jobs:
     if: false # Disabled — see header note
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Run KICS
         uses: checkmarx/kics-github-action@05aa5eb70eede1355220f4ca5238d96b397e30a6 # v2.1.20
@@ -32,7 +32,7 @@ jobs:
       - name: Upload SARIF to GitHub Security
         if: ${{ !cancelled() && hashFiles('kics-results/results.sarif') != '' }}
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
+        uses: github/codeql-action/upload-sarif@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
         with:
           sarif_file: kics-results/results.sarif
           category: kics-dockerfiles

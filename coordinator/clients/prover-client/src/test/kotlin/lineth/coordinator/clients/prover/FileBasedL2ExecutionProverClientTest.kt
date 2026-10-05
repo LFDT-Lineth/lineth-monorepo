@@ -4,15 +4,18 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.domain.BlockIntervalProofIndex
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.FORK_NAME
-import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.L2_EXECUTION_PROGRAM_VK
+import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.L2_EXECUTION_PROGRAM_ID
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.L2_MESSAGE_SERVICE_ADDRESS
+import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.PROVING_SYSTEM_VERSION
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.fileBasedProverConfig
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.jsonMapper
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.l2ExecutionProofRequestV1
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.l2ExecutionProofResponseDto
+import lineth.coordinator.config.v2.FileBasedProverConfig
 import lineth.fileio.FileReader
 import lineth.fileio.FileWriter
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -30,11 +33,12 @@ import kotlin.time.Instant
 class FileBasedL2ExecutionProverClientTest {
   private lateinit var config: FileBasedProverConfig
   private lateinit var client: L2ExecutionProverClient
+  private lateinit var transport: L2ExecutionProofTransport
 
   @BeforeEach
   fun beforeEach(vertx: Vertx, @TempDir tempDir: Path) {
     config = fileBasedProverConfig(tempDir)
-    val transport = FileBasedProverProofTransport<
+    transport = FileBasedProverProofTransport<
       L2ExecutionProofRequestDto,
       L2ExecutionProofResponseDto,
       BlockIntervalProofIndex,
@@ -48,10 +52,26 @@ class FileBasedL2ExecutionProverClientTest {
     )
     client = L2ExecutionProverClient(
       transport = transport,
-      programVk = L2_EXECUTION_PROGRAM_VK,
+      programId = L2_EXECUTION_PROGRAM_ID,
+      provingSystemVersion = PROVING_SYSTEM_VERSION,
       l2MessageServiceAddress = L2_MESSAGE_SERVICE_ADDRESS,
       forkName = FORK_NAME,
     )
+  }
+
+  @Test
+  fun `l2ExecutionProverClient should fail when l2MessageServiceAddress is empty`() {
+    assertThatThrownBy {
+      L2ExecutionProverClient(
+        transport = transport,
+        programId = L2_EXECUTION_PROGRAM_ID,
+        provingSystemVersion = PROVING_SYSTEM_VERSION,
+        l2MessageServiceAddress = "",
+        forkName = FORK_NAME,
+      )
+    }
+      .isInstanceOf(IllegalArgumentException::class.java)
+      .hasMessage("l2MessageServiceAddress must be configured for L2ExecutionProverClient")
   }
 
   @Test
@@ -65,7 +85,8 @@ class FileBasedL2ExecutionProverClientTest {
 
     val writtenDto = jsonMapper.readValue(requestFile.toFile(), L2ExecutionProofRequestDto::class.java)
     val expectedDto = L2ExecutionProofRequestDtoMapper(
-      L2_EXECUTION_PROGRAM_VK,
+      L2_EXECUTION_PROGRAM_ID,
+      PROVING_SYSTEM_VERSION,
       L2_MESSAGE_SERVICE_ADDRESS,
       FORK_NAME,
     ).invoke(request).get()

@@ -108,7 +108,6 @@ class RiscvProofResponseDtoMapperTest {
   fun `L2ExecutionProofResponseDtoMapper decodes every field`() {
     val programVkHex = "0x" + "dd".repeat(32)
     val dto = L2ExecutionProofResponseDto(
-      proverVersion = "4.0.0-riscv",
       startBlockNumber = 1000500L,
       proof = "0xabcd",
       publicInputs = executionPublicInputsDto,
@@ -138,7 +137,6 @@ class RiscvProofResponseDtoMapperTest {
   fun `RollupProofResponseDtoMapper decodes every field`() {
     val programVkHex = "0x" + "bb".repeat(32)
     val dto = RollupProofResponseDto(
-      proverVersion = "4.0.0-riscv",
       startBlockNumber = 1000500L,
       proof = "0xabcd",
       publicInputs = rollupPublicInputsDto,

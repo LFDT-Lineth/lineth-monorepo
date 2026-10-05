@@ -12,7 +12,7 @@ import linea.kotlin.decodeHex
 import maru.core.Validator
 import maru.core.ext.DataGenerators
 import org.assertj.core.api.Assertions.assertThat
-import kotlin.test.Test
+import org.junit.jupiter.api.Test
 
 class StaticValidatorProviderTest {
   private val validators = DataGenerators.randomValidators()

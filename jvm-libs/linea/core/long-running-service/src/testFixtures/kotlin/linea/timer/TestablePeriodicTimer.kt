@@ -1,5 +1,6 @@
 package linea.timer
 
+import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration
 
@@ -29,8 +30,9 @@ class TestablePeriodicTimer(
     task.run()
   }
 
-  override fun stop() {
+  override fun stop(): SafeFuture<Unit> {
     stopCounter.incrementAndGet()
+    return SafeFuture.completedFuture(Unit)
   }
 }
 

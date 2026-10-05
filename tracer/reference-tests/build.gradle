@@ -62,6 +62,11 @@ tasks.register("generateExecutionSpecBlockchainTests", RefTestGenerationTask) {
   failedConstraint = System.getenv('FAILED_CONSTRAINT') ?: ""
 }
 
+// The tests are generated into src/test/java, so they must exist before the test sources are compiled.
+tasks.named('compileTestJava') {
+  mustRunAfter 'generateExecutionSpecBlockchainTests'
+}
+
 // Added to fix the state root parallelization disabling for ref tests that triggered a StackOverflow error
 // This mimics the JVM args used in the linea-tracer plugin's test task, to exclude // on besu side "'-Xss4m',"
 tasks.withType(Test).configureEach {

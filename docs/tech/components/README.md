@@ -128,7 +128,7 @@ root package.json
 ### TypeScript
 
 - Node.js >= 24.18.0 required
-- pnpm >= 11.9.0 for package management
+- pnpm >= 12.6.0 for package management
 - Build: `pnpm run build`
 - Test: `pnpm run test`
 - Lint: `pnpm run lint`

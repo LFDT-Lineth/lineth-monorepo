@@ -9,9 +9,9 @@
 package maru.consensus.qbft
 
 import org.hyperledger.besu.consensus.qbft.core.types.QbftMessage
+import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verifyNoInteractions
-import kotlin.test.Test
 
 class QbftGossiperTest {
   private val mockQbftMessage = mock<QbftMessage>()
