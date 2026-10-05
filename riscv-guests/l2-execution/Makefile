@@ -30,7 +30,7 @@ ZIG_FETCH_FLAGS ?=
 NAME     := evm_execution_guest
 BIN      := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 
-include $(MAKEFILE_DIR)../release/Makefile
+include $(MAKEFILE_DIR)../build_common/release.mk
 
 # Sample fixture input used by exec/debug / zkc-smoke-*
 INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz

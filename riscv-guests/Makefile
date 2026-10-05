@@ -39,7 +39,7 @@ release-check:
 	$(MAKE) -C $(GUEST) compile ZIG="$(ZIG)"
 
 release-asset:
-	$(MAKE) -C $(GUEST) release-asset RELEASE_DIR="$(abspath $(RELEASE_DIR))" ZIG="$(ZIG)"
+	$(MAKE) -C $(GUEST) release-asset RELEASE_DIR="$(abspath $(RELEASE_DIR))" ZIG="$(ZIG)" RELEASE_VERSION="$(RELEASE_VERSION)"
 
 NIM_VERSION := 2.2.10
 CHOOSENIM_VERSION := 0.8.16
