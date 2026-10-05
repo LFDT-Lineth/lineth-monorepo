@@ -12,7 +12,7 @@ component_scopes() {
     coordinator)         echo "coordinator|deps|misc" ;;
     maru)                echo "maru|deps|misc" ;;
     prover)               echo "prover|deps|misc" ;;
-    prover-ray)           echo "prover-ray|deps|misc" ;;
+    prover-ray)           echo "prover-ray|riscv-guest|deps|misc" ;;
     postman)              echo "postman|deps|misc" ;;
     tx-exclusion-api)     echo "tx-exclusion-api|deps|misc" ;;
     linea-besu-package)   echo "linea-besu|tracer|sequencer|deps|misc" ;;
@@ -30,7 +30,7 @@ component_include_path() {
     coordinator)       printf '%s\n' "coordinator/**" ;;
     maru)              printf '%s\n' "maru/**" ;;
     prover)            printf '%s\n' "prover/**" ;;
-    prover-ray)        printf '%s\n' "prover-ray/**" ;;
+    prover-ray)        printf '%s\n' "prover-ray/**" "riscv-guests/**" ;;
     postman)           printf '%s\n' "postman/**" ;;
     tx-exclusion-api)  printf '%s\n' "transaction-exclusion-api/**" ;;
     linea-besu-package)

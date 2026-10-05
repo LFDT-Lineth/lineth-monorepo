@@ -40,6 +40,7 @@ jobs:
               - 'prover/**'
             prover-ray:
               - 'prover-ray/**'
+              - 'riscv-guests/**'
             tx-exclusion-api:
               - 'transaction-exclusion-api/**'
             linea-besu-package:

@@ -500,7 +500,9 @@ pub fn build(b: *std.Build) void {
         l2_execution_runner_exe.root_module.addImport("l2_execution_ssz", l2_execution_ssz_mod);
         l2_execution_runner_exe.root_module.addImport("l2_execution_json", l2_execution_json_mod);
         linkNativeCryptoProvider(l2_execution_runner_exe, provide_native_obj, guest_crypto_host_a);
-        b.installArtifact(l2_execution_runner_exe);
+        const install_runner = b.addInstallArtifact(l2_execution_runner_exe, .{});
+        b.getInstallStep().dependOn(&install_runner.step);
+        b.step("install-runner", "Install the native runner for the prover image").dependOn(&install_runner.step);
 
         const run_l2_execution_runner_step = b.step(
             "l2-execution-runner",

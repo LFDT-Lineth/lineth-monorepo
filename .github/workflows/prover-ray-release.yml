@@ -9,16 +9,8 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
-      prover_mode:
-        description: 'Image mode (dev-zkvm is WIP; requires native build and validation to pass)'
-        required: true
-        type: choice
-        default: dev-mock
-        options:
-          - dev-mock
-          - dev-zkvm
       image_tag_suffix:
-        description: 'Custom image tag suffix; defaults to the selected prover mode'
+        description: 'Optional suffix appended to the version/date/commit image tag'
         required: false
         type: string
         default: ''
@@ -38,12 +30,7 @@ jobs:
     with:
       component-name: prover-ray
       folder-name: prover-ray
-      prover_ray_mode: ${{ inputs.prover_mode }}
-      image_tag_suffix: ${{ inputs.image_tag_suffix || inputs.prover_mode }}
-      include-path: |
-        prover-ray/**
-        ${{ inputs.prover_mode == 'dev-zkvm' && 'riscv-guests/**' || '' }}
-      scopes: ${{ inputs.prover_mode == 'dev-zkvm' && 'prover-ray|riscv-guest|deps|misc' || '' }}
+      image_tag_suffix: ${{ inputs.image_tag_suffix }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }}
       draft_release: true
       pre_release: false

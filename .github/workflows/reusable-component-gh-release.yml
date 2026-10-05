@@ -33,11 +33,6 @@ on:
         required: false
         type: string
         default: ''
-      prover_ray_mode:
-        description: 'Prover-ray image mode; ignored for other components'
-        required: false
-        type: string
-        default: dev-mock
       image_tag_suffix:
         description: 'Custom docker image tag suffix, i.e. docker image tag would be [semver]-[YYYYMMDD]-[commit]-[suffix], if not given, would be [semver]-[YYYYMMDD]-[commit]'
         required: false
@@ -137,10 +132,9 @@ jobs:
       needs.compute-docker-tag.result == 'success'
     uses: ./.github/workflows/prover-ray-build-and-publish.yml
     with:
-      prover_mode: ${{ inputs.prover_ray_mode }}
       image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
       image_tag_with_suffix: ${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
-      develop_tag: ${{ format('develop-{0}', inputs.prover_ray_mode) }}
+      develop_tag: develop
       push_image: true
     secrets: inherit
 
