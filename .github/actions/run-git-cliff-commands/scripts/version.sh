@@ -26,10 +26,9 @@ paths=()
 while IFS= read -r p; do
   [ -n "$p" ] && paths+=("$p")
 done <<< "${INCLUDE_PATHS:-}"
-# --unreleased scopes the bump computation to commits since the last matching
-# tag. Without it, git-cliff walks the full visible history and can over-bump
-# (e.g. counting feats from prior release windows).
-cliff_args=(--config "${CLIFF_CONFIG}" --bumped-version --unreleased)
+# --unreleased scopes both commit selection and bump computation to commits
+# since the last matching tag.
+cliff_args=(--config "${CLIFF_CONFIG}" --unreleased)
 for p in "${paths[@]}"; do
   [ -n "$p" ] || continue
   cliff_args+=(--include-path "${p}")
@@ -38,18 +37,29 @@ cliff_args+=(--tag-pattern "releases/${COMPONENT}/v[0-9]+\.[0-9]+\.[0-9]+$")
 
 # Capture stdout and stderr separately so we can both surface git-cliff's logs
 # and detect the "nothing to bump" warning it writes to stderr.
-temp_dir=$(mktemp -d)
-stderr_file="${temp_dir}/stderr"
-trap 'rm -rf "${temp_dir}"' EXIT
-# git-cliff's default initial tag (0.1.0) does not match our component namespace.
-next_tag=$(GIT_CLIFF__BUMP__INITIAL_TAG="releases/${COMPONENT}/v0.1.0" \
-  git cliff "${cliff_args[@]}" 2> "${stderr_file}")
+stderr_file=$(mktemp)
+trap 'rm -f "${stderr_file}"' EXIT
+if [ -z "${latest_tag}" ]; then
+  if ! commit_count=$(git cliff "${cliff_args[@]}" --body '{{ commits | length }}' 2> "${stderr_file}"); then
+    cat "${stderr_file}" >&2
+    exit 1
+  fi
+  next_tag=""
+  if [ -n "${commit_count}" ] && [ "${commit_count}" -gt 0 ]; then
+    next_tag="releases/${COMPONENT}/v0.1.0"
+  fi
+else
+  if ! next_tag=$(git cliff "${cliff_args[@]}" --bumped-version 2> "${stderr_file}"); then
+    cat "${stderr_file}" >&2
+    exit 1
+  fi
+fi
 # Re-emit stderr so it's visible in logs
 cat "${stderr_file}" >&2
 
 changed=true
 # Check if git cliff warned "nothing to bump"
-if grep -q "There is nothing to bump" "${stderr_file}"; then
+if [ -z "${next_tag}" ] || grep -q "There is nothing to bump" "${stderr_file}"; then
   changed=false
 elif [ "${next_tag}" = "${latest_tag}" ]; then
   changed=false

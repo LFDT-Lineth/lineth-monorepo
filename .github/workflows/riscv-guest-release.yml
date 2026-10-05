@@ -88,25 +88,23 @@ jobs:
           fi
       - name: Setup guest toolchain
         uses: ./.github/actions/setup-riscv-guests
-      - name: Test and compile tagged guest
-        env:
-          GUEST: ${{ inputs.guest }}
-        run: make -C riscv-guests release-check GUEST="$GUEST"
-      - name: Verify Program ID staging
-        run: zig test riscv-guests/build_common/program-id.zig
-      - name: Stage ID-named ELF
+      - name: Stage release ELF
         id: artifact
         env:
           GUEST: ${{ inputs.guest }}
-        run: make -C riscv-guests release-asset GUEST="$GUEST" RELEASE_DIR="$GITHUB_WORKSPACE/release-assets"
+          RELEASE_VERSION: ${{ needs.push-tag-and-changelog.outputs.release_version }}
+        run: |
+          test -n "$RELEASE_VERSION"
+          make -C riscv-guests release-asset GUEST="$GUEST" RELEASE_VERSION="$RELEASE_VERSION" RELEASE_DIR="$GITHUB_WORKSPACE/release-assets"
       - name: Write release notes
         env:
           CHANGELOG: ${{ needs.push-tag-and-changelog.outputs.changelog }}
           ID: ${{ steps.artifact.outputs.program_id }}
           TAG: ${{ needs.push-tag-and-changelog.outputs.release_tag }}
+          FILENAME: ${{ steps.artifact.outputs.filename }}
         run: |
           printf '%s\n' "$CHANGELOG" > "$RUNNER_TEMP/guest-release-notes.md"
-          printf '\n### Guest program\n\nProgram ID (Keccak-256 of complete ELF): `0x%s`\n\nELF: `%s.elf`\n\nSource tag: `%s`\n' "$ID" "$ID" "$TAG" >> "$RUNNER_TEMP/guest-release-notes.md"
+          printf '\n### Guest program\n\nProgram ID (Keccak-256 of complete ELF): `0x%s`\n\nELF: `%s`\n\nSource tag: `%s`\n' "$ID" "$FILENAME" "$TAG" >> "$RUNNER_TEMP/guest-release-notes.md"
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:

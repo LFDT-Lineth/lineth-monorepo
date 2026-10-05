@@ -13,6 +13,8 @@ jobs:
     name: Filter commit changes
     outputs:
       coordinator: ${{ steps.filter.outputs.coordinator }}
+      riscv-l2-execution: ${{ steps.filter.outputs.riscv-l2-execution }}
+      riscv-rollup: ${{ steps.filter.outputs.riscv-rollup }}
       postman: ${{ steps.filter.outputs.postman }}
       prover: ${{ steps.filter.outputs.prover }}
       prover-ray: ${{ steps.filter.outputs.prover-ray }}
@@ -32,6 +34,23 @@ jobs:
           filters: |
             coordinator:
               - 'coordinator/**'
+            riscv-l2-execution:
+              - 'riscv-guests/l2-execution/**'
+              - 'riscv-guests/guest-common/**'
+              - 'riscv-guests/build_common/**'
+              - 'riscv-guests/release/**'
+              - 'riscv-guests/lineth-accelerators/**'
+              - 'riscv-guests/guest-crypto-ctt/**'
+              - 'riscv-guests/.zigversion'
+              - 'riscv-guests/Makefile'
+            riscv-rollup:
+              - 'riscv-guests/rollup/**'
+              - 'riscv-guests/guest-common/**'
+              - 'riscv-guests/build_common/**'
+              - 'riscv-guests/release/**'
+              - 'riscv-guests/lineth-accelerators/**'
+              - 'riscv-guests/.zigversion'
+              - 'riscv-guests/Makefile'
             maru:
               - 'maru/**'
             postman:
@@ -76,13 +95,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        component: [ coordinator, maru, prover, prover-ray, postman, tx-exclusion-api, linea-besu-package, linea ]
+        component: [ coordinator, riscv-l2-execution, riscv-rollup, maru, prover, prover-ray, postman, tx-exclusion-api, linea-besu-package, linea ]
         include:
           # scopes/include-path per component are the single source of truth in
           # .github/actions/run-git-cliff-commands/scripts/components.sh — the
           # run-git-cliff-commands action resolves them from component-name.
           - component: coordinator
             folder-name: coordinator
+          - component: riscv-l2-execution
+            folder-name: riscv-guests/l2-execution
+            artifact-name: riscv-l2-execution
+          - component: riscv-rollup
+            folder-name: riscv-guests/rollup
+            artifact-name: riscv-rollup
           - component: maru
             folder-name: maru
           - component: prover
@@ -134,4 +159,3 @@ jobs:
         with:
           name: unreleased-changelog-${{ matrix.artifact-name || matrix.folder-name }}
           path: ${{ matrix.folder-name }}/CHANGELOG.md
-
