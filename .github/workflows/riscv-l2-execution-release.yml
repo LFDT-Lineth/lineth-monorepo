@@ -20,7 +20,7 @@ on:
         default: false
 
 concurrency:
-  group: riscv-l2-execution-release
+  group: riscv-l2-execution-release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:

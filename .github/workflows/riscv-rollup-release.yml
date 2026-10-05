@@ -20,7 +20,7 @@ on:
         default: false
 
 concurrency:
-  group: riscv-rollup-release
+  group: riscv-rollup-release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
