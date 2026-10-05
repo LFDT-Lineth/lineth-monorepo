@@ -11,10 +11,10 @@ description: >-
 
 inputs:
   gradle-check-task:
-    description: 'Gradle task that fails if any config key is undocumented (e.g. :coordinator:app:checkConfigDocs).'
+    description: 'Gradle task that fails if any config key is undocumented (e.g. :coordinator:config:checkConfigDocs).'
     required: true
   gradle-generate-task:
-    description: 'Gradle task that regenerates committed snapshots + the ephemeral MDX partial (e.g. :coordinator:app:generateConfigDocs).'
+    description: 'Gradle task that regenerates committed snapshots + the ephemeral MDX partial (e.g. :coordinator:config:generateConfigDocs).'
     required: true
   mdx-partial-path:
     description: 'Repo-relative path to the generated MDX partial to validate. Provenance is written next to it as provenance.mdx.'
