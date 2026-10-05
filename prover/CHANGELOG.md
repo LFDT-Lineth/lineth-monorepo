@@ -1,3 +1,8 @@
+## [unreleased]
+
+### 🐛 Bug Fixes
+
+- *(prover)* Segment MODEXP_LARGE by whole instances in limitless (#4127)
 ## [1.0.6] - 2026-09-02
 
 ### 🐛 Bug Fixes
