@@ -109,8 +109,7 @@ you change one, change the other.
 
 Run **Prover Ray Release** to publish `consensys/lineth-prover-ray` through the
 shared component release workflow and create a draft release with pull commands.
-Pin the full published tag in local setup. The native toolchain currently supports
-Linux AMD64.
+Pin the full published tag in local setup. The Docker image targets Linux AMD64.
 
 ```bash
 make docker-build-prover-ray
@@ -120,14 +119,17 @@ make docker-build-prover-ray
 One image includes the Go prover, native runner, and a pinned released guest ELF.
 The build downloads the ELF from the guest's GitHub release and verifies its SHA-256;
 release, asset name, and checksum are pinned together in `prover-ray/Makefile`.
-The current guest release is a draft, so local builds require `gh auth login` with
-access to that release; CI uses its repository token. No credentials enter the image.
-The native runner is still compiled from `riscv-guests` and requires Nim/LLVM for
-Constantine. Updating the guest pin requires checking compatibility with that runner
-and updating the coordinator's Program ID to the released ELF's ID.
+The download uses GitHub CLI authentication (`gh auth login` locally or `GH_TOKEN`
+in CI). For draft or access-restricted releases, that identity must have access to
+the release. Credentials are used by the download step outside Docker.
 
-Mount a config at
-`CONFIG_FILE` with `execution.prover_mode = "dev-mock"` and the stack's shared queue
-paths. When dev-zkvm is ready, switch that config to `"dev-zkvm"` and set the
-bundled artifact paths as shown in `prover-ray/config/config-dev-zkvm.toml`;
-the image build and release workflow stay the same.
+The native runner is compiled from `riscv-guests`. Docker installs Nim/LLVM in the
+builder stage to compile its Constantine dependency; these tools are not required
+on the host for Docker builds or in the final runtime image. Updating the guest pin
+requires checking compatibility with the native runner and updating the
+coordinator's Program ID to the released ELF's ID.
+
+Mount a config at `CONFIG_FILE` with the stack's shared queue paths and select
+`execution.prover_mode = "dev-mock"` or `"dev-zkvm"`. For `dev-zkvm`, set the bundled
+native-runner and guest-ELF paths as shown in `prover-ray/config/config-dev-zkvm.toml`.
+Both modes use the same image and release workflow.

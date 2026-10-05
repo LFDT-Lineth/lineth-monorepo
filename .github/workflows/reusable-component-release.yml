@@ -140,7 +140,8 @@ jobs:
     needs: [compute-release-metadata]
     if: >
       needs.compute-release-metadata.outputs.tag_changed == 'true' &&
-      inputs.component-name == 'prover-ray'
+      inputs.component-name == 'prover-ray' &&
+      github.ref_name != 'main'
     secrets: inherit
 
   run-test-maru:
@@ -214,7 +215,7 @@ jobs:
       always() && !cancelled() &&
       needs.compute-release-metadata.outputs.tag_changed == 'true' &&
       inputs.component-name == 'prover-ray' &&
-      needs.run-test-prover-ray.result == 'success'
+      (github.ref_name == 'main' || needs.run-test-prover-ray.result == 'success')
     uses: ./.github/workflows/prover-ray-build-and-publish.yml
     with:
       image_tag: local
@@ -273,8 +274,8 @@ jobs:
 
   push-tag-update-changelog-and-gh-release:
     needs: [compute-release-metadata, run-e2e-tests, build-local-prover-ray]
-    # The shared zkEVM stack does not consume prover-ray yet. Require its
-    # tests and container request/response smoke test before publication.
+    # Prover-ray requires the image build and smoke check before publication.
+    # Its component tests also run for releases from non-main branches.
     if: >
       always() && !cancelled() &&
       needs.compute-release-metadata.outputs.tag_changed == 'true' &&
