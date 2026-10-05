@@ -35,27 +35,18 @@ class RollupTriggerCalculatorByConflationCountTest {
   }
 
   @Test
-  fun `checkTrigger returns null before max conflations reached`() {
-    val c1 = makeConflation(1UL, 2UL)
-    val c2 = makeConflation(3UL, 4UL)
-
-    calculator.appendConflation(c1)
-    assertThat(calculator.checkTrigger(c1)).isNull()
-
-    calculator.appendConflation(c2)
-    assertThat(calculator.checkTrigger(c2)).isNull()
-  }
-
-  @Test
   fun `checkTrigger returns CONFLATION_COUNT at max conflations`() {
     val c1 = makeConflation(1UL, 2UL)
     val c2 = makeConflation(3UL, 4UL)
     val c3 = makeConflation(5UL, 6UL)
 
     calculator.appendConflation(c1)
-    calculator.appendConflation(c2)
-    calculator.appendConflation(c3)
+    assertThat(calculator.checkTrigger(c1)).isNull()
 
+    calculator.appendConflation(c2)
+    assertThat(calculator.checkTrigger(c2)).isNull()
+
+    calculator.appendConflation(c3)
     assertThat(calculator.checkTrigger(c3)).isEqualTo(RollupTrigger.CONFLATION_COUNT)
   }
 

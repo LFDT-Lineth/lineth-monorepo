@@ -1,10 +1,10 @@
 package lineth.coordination.riscv.rollup
 
 import io.vertx.core.Vertx
-import io.vertx.junit5.VertxExtension
-import linea.clients.RollupProverClientV1
+import linea.clients.FakeRollupProverClient
+import linea.clients.RollupProofResponseV1
+import linea.clients.dummyRollupProofResponse
 import linea.domain.Batch
-import linea.domain.BlockIntervalProofIndex
 import linea.domain.BlocksConflation
 import linea.domain.ConflationCalculationResult
 import linea.domain.ConflationTrigger
@@ -16,25 +16,20 @@ import lineth.conflation.calculators.GlobalRollupCalculator
 import lineth.conflation.calculators.RollupTriggerCalculatorByConflationCount
 import lineth.coordination.riscv.conflation.ConflationSegmentBuilder
 import lineth.encoding.BlockEncoder
-import lineth.persistence.BatchesRepository
+import lineth.persistence.FakeBatchesRepository
+import lineth.vertx.vertxTestOptions
 import net.consensys.linea.traces.TracesCountersV2
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mockito
-import org.mockito.kotlin.any
-import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
-@ExtendWith(VertxExtension::class)
 class RollupProofGeneratingCoordinatorTest {
 
   private val chainId = 1UL
@@ -44,26 +39,40 @@ class RollupProofGeneratingCoordinatorTest {
   private val fakeSegment = ByteArray(segmentSize) { it.toByte() }
   private val fakeEncodedBlock = ByteArray(10) { 0xAB.toByte() }
   private val fakeChunkHash = ByteArray(32) { 0x42.toByte() }
+  private val proofHash1 = ByteArray(32) { 0x11.toByte() }
+  private val proofHash2 = ByteArray(32) { 0x22.toByte() }
 
-  private val rollupProverClient = mock<RollupProverClientV1>()
-  private val batchesRepository = mock<BatchesRepository>()
-  private val rollupProofPoller = mock<RollupProofPoller>()
-  private val blockEncoder = mock<BlockEncoder>()
+  private val rollupProverClient = FakeRollupProverClient()
+  private val batchesRepository = FakeBatchesRepository()
+  private val handledProofs = CopyOnWriteArrayList<Pair<RollupProofResponseV1, RollupProofPoller.ProofContext>>()
+  private val blockEncoder = BlockEncoder { fakeEncodedBlock }
 
   private val conflationSegmentBuilder = ConflationSegmentBuilder { _, _ -> fakeSegment }
   private val dataRollingHashCalculator = DataRollingHashCalculator { _, chunk -> chunk.copyOf(32) }
   private val chunkHasher: (ByteArray) -> ByteArray = { _ -> fakeChunkHash }
 
+  private lateinit var vertx: Vertx
+  private lateinit var rollupProofPoller: RollupProofPoller
   private lateinit var coordinator: RollupProofGeneratingCoordinator
 
-  private lateinit var vertx: Vertx
-
   @BeforeEach
-  fun setUp(vertx: Vertx) {
-    this.vertx = vertx
-    whenever(blockEncoder.encode(any())).thenReturn(fakeEncodedBlock)
+  fun setUp() {
+    this.vertx = Vertx.vertx(vertxTestOptions)
+    rollupProofPoller = RollupProofPoller(
+      rollupProverClient = rollupProverClient,
+      rollupProofHandler = { proof, context ->
+        handledProofs.add(proof to context)
+        SafeFuture.completedFuture(Unit)
+      },
+      vertx = vertx,
+      config = RollupProofPoller.Config(pollingInterval = 1.seconds),
+      metricsFacade = mock(defaultAnswer = Mockito.RETURNS_DEEP_STUBS),
+    )
+    coordinator = createCoordinator(conflationSegmentBuilder)
+  }
 
-    coordinator = RollupProofGeneratingCoordinator(
+  private fun createCoordinator(segmentBuilder: ConflationSegmentBuilder): RollupProofGeneratingCoordinator {
+    return RollupProofGeneratingCoordinator(
       chainId = chainId,
       rollupCalculator = GlobalRollupCalculator(
         listOf(RollupTriggerCalculatorByConflationCount(conflationsPerRollupProof)),
@@ -72,15 +81,14 @@ class RollupProofGeneratingCoordinatorTest {
       batchesRepository = batchesRepository,
       streamPositionProvider = { SafeFuture.completedFuture(StreamPosition(0UL, genesisDataRollingHash)) },
       rollupProofPoller = rollupProofPoller,
-      conflationSegmentBuilder = conflationSegmentBuilder,
+      conflationSegmentBuilder = segmentBuilder,
       dataRollingHashCalculator = dataRollingHashCalculator,
       blockEncoder = blockEncoder,
       chunkHasher = chunkHasher,
       proofCheckingInterval = 1.seconds,
       vertx = vertx,
       metricsFacade = mock(defaultAnswer = Mockito.RETURNS_DEEP_STUBS),
-    )
-    coordinator.start().get()
+    ).also { it.start().get() }
   }
 
   private fun makeConflation(start: ULong, end: ULong): BlocksConflation {
@@ -98,6 +106,10 @@ class RollupProofGeneratingCoordinatorTest {
     )
   }
 
+  private fun markProven(start: ULong, end: ULong, proofHash: ByteArray = ByteArray(32)) {
+    batchesRepository.saveNewBatch(Batch(start, end, proofHash)).get()
+  }
+
   @Test
   fun `handleConflatedBatch throws when conflation arrives out of order`() {
     coordinator.handleConflatedBatch(makeConflation(1UL, 3UL)).get()
@@ -113,13 +125,11 @@ class RollupProofGeneratingCoordinatorTest {
   @Test
   fun `action does not submit proof when fewer than conflationsPerRollupProof conflations accumulated`() {
     coordinator.handleConflatedBatch(makeConflation(1UL, 3UL)).get()
-
-    whenever(batchesRepository.findHighestConsecutiveEndBlockNumberFromBlockNumber(1L))
-      .thenReturn(SafeFuture.completedFuture(3L))
+    markProven(1UL, 3UL)
 
     coordinator.action().get()
 
-    verify(rollupProverClient, never()).createProofRequest(any())
+    assertThat(rollupProverClient.requests).isEmpty()
   }
 
   @Test
@@ -127,64 +137,33 @@ class RollupProofGeneratingCoordinatorTest {
     coordinator.handleConflatedBatch(makeConflation(1UL, 3UL)).get()
     coordinator.handleConflatedBatch(makeConflation(4UL, 6UL)).get()
 
-    whenever(batchesRepository.findHighestConsecutiveEndBlockNumberFromBlockNumber(1L))
-      .thenReturn(SafeFuture.completedFuture(null))
-
     coordinator.action().get()
 
-    verify(rollupProverClient, never()).createProofRequest(any())
+    assertThat(rollupProverClient.requests).isEmpty()
   }
 
   @Test
   fun `action does not submit proof when only first conflation is proven`() {
     coordinator.handleConflatedBatch(makeConflation(1UL, 3UL)).get()
     coordinator.handleConflatedBatch(makeConflation(4UL, 6UL)).get()
-
-    whenever(batchesRepository.findHighestConsecutiveEndBlockNumberFromBlockNumber(1L))
-      .thenReturn(SafeFuture.completedFuture(3L))
+    markProven(1UL, 3UL)
 
     coordinator.action().get()
 
-    verify(rollupProverClient, never()).createProofRequest(any())
+    assertThat(rollupProverClient.requests).isEmpty()
   }
 
   @Test
   fun `action submits proof request when all N conflations are proven`() {
-    val conflation1 = makeConflation(1UL, 3UL)
-    val conflation2 = makeConflation(4UL, 6UL)
-    val proofHash1 = ByteArray(32) { 0x11.toByte() }
-    val proofHash2 = ByteArray(32) { 0x22.toByte() }
-
-    coordinator.handleConflatedBatch(conflation1).get()
-    coordinator.handleConflatedBatch(conflation2).get()
-
-    whenever(batchesRepository.findHighestConsecutiveEndBlockNumberFromBlockNumber(1L))
-      .thenReturn(SafeFuture.completedFuture(6L))
-    whenever(batchesRepository.findBatchesByBlockRange(1L, 6L))
-      .thenReturn(
-        SafeFuture.completedFuture(
-          listOf(
-            Batch(1UL, 3UL, proofHash1),
-            Batch(4UL, 6UL, proofHash2),
-          ),
-        ),
-      )
-
-    val returnedProofIndex = BlockIntervalProofIndex(
-      startBlockNumber = 1UL,
-      endBlockNumber = 6UL,
-      startBlockTimestamp = Instant.fromEpochSeconds(12),
-      hash = ByteArray(32) { 0xFF.toByte() },
-    )
-    whenever(rollupProverClient.createProofRequest(any()))
-      .thenReturn(SafeFuture.completedFuture(returnedProofIndex))
+    coordinator.handleConflatedBatch(makeConflation(1UL, 3UL)).get()
+    coordinator.handleConflatedBatch(makeConflation(4UL, 6UL)).get()
+    markProven(1UL, 3UL, proofHash1)
+    markProven(4UL, 6UL, proofHash2)
 
     coordinator.action().get()
 
-    val requestCaptor = argumentCaptor<linea.clients.RollupProofRequestV1>()
-    verify(rollupProverClient).createProofRequest(requestCaptor.capture())
-
-    val request = requestCaptor.firstValue
+    assertThat(rollupProverClient.requests).hasSize(1)
+    val request = rollupProverClient.requests.first()
     assertThat(request.startBlockNumber).isEqualTo(1UL)
     assertThat(request.endBlockNumber).isEqualTo(6UL)
     assertThat(request.startOffset).isEqualTo(0)
@@ -204,179 +183,78 @@ class RollupProofGeneratingCoordinatorTest {
   }
 
   @Test
-  fun `action passes correct context to proof poller after submission`() {
-    val conflation1 = makeConflation(1UL, 3UL)
-    val conflation2 = makeConflation(4UL, 6UL)
-    val proofHash1 = ByteArray(32) { 0x11.toByte() }
-    val proofHash2 = ByteArray(32) { 0x22.toByte() }
-
-    coordinator.handleConflatedBatch(conflation1).get()
-    coordinator.handleConflatedBatch(conflation2).get()
-
-    whenever(batchesRepository.findHighestConsecutiveEndBlockNumberFromBlockNumber(1L))
-      .thenReturn(SafeFuture.completedFuture(6L))
-    whenever(batchesRepository.findBatchesByBlockRange(1L, 6L))
-      .thenReturn(
-        SafeFuture.completedFuture(
-          listOf(
-            Batch(1UL, 3UL, proofHash1),
-            Batch(4UL, 6UL, proofHash2),
-          ),
-        ),
-      )
-
-    val returnedProofIndex = BlockIntervalProofIndex(
-      startBlockNumber = 1UL,
-      endBlockNumber = 6UL,
-      startBlockTimestamp = Instant.fromEpochSeconds(12),
-      hash = ByteArray(32) { 0xFF.toByte() },
-    )
-    whenever(rollupProverClient.createProofRequest(any()))
-      .thenReturn(SafeFuture.completedFuture(returnedProofIndex))
+  fun `submitted proof is handed to the proof handler with correct context once ready`() {
+    rollupProverClient.responseProvider = { null }
+    coordinator.handleConflatedBatch(makeConflation(1UL, 3UL)).get()
+    coordinator.handleConflatedBatch(makeConflation(4UL, 6UL)).get()
+    markProven(1UL, 3UL, proofHash1)
+    markProven(4UL, 6UL, proofHash2)
 
     coordinator.action().get()
+    rollupProofPoller.action().get()
+    assertThat(handledProofs).isEmpty()
 
-    val proofIndexCaptor = argumentCaptor<BlockIntervalProofIndex>()
-    val parentDrhCaptor = argumentCaptor<ByteArray>()
-    val dataRollingHashCaptor = argumentCaptor<ByteArray>()
-    val endOffsetCaptor = argumentCaptor<Int>()
-    val startTimestampCaptor = argumentCaptor<Instant>()
-    val endTimestampCaptor = argumentCaptor<Instant>()
-    val totalBatchesCaptor = argumentCaptor<Int>()
-    verify(rollupProofPoller).addProofInProgress(
-      proofIndex = proofIndexCaptor.capture(),
-      blobsData = any(),
-      parentDataRollingHash = parentDrhCaptor.capture(),
-      dataRollingHash = dataRollingHashCaptor.capture(),
-      endOffset = endOffsetCaptor.capture(),
-      startBlockTimestamp = startTimestampCaptor.capture(),
-      endBlockTimestamp = endTimestampCaptor.capture(),
-      totalBatchesCount = totalBatchesCaptor.capture(),
-    )
-    assertThat(proofIndexCaptor.firstValue).isEqualTo(returnedProofIndex)
-    assertThat(parentDrhCaptor.firstValue).isEqualTo(genesisDataRollingHash)
+    rollupProverClient.responseProvider = ::dummyRollupProofResponse
+    rollupProofPoller.action().get()
+
+    assertThat(handledProofs).hasSize(1)
+    val (proof, context) = handledProofs.first()
+    val expectedProofIndex = rollupProverClient.getProofIndex(rollupProverClient.requests.single())
+    assertThat(proof.startBlockNumber).isEqualTo(1UL)
+    assertThat(proof.endBlockNumber).isEqualTo(6UL)
+    assertThat(context.proofIndex).isEqualTo(expectedProofIndex)
+    assertThat(context.parentDataRollingHash).isEqualTo(genesisDataRollingHash)
     // fold(genesisDataRollingHash, fakeChunkHash) = fakeChunkHash.copyOf(32) per our calculator
-    assertThat(dataRollingHashCaptor.firstValue).isEqualTo(fakeChunkHash.copyOf(32))
-    assertThat(endOffsetCaptor.firstValue).isEqualTo(segmentSize * conflationsPerRollupProof)
-    assertThat(startTimestampCaptor.firstValue).isEqualTo(Instant.fromEpochSeconds(12))
-    assertThat(endTimestampCaptor.firstValue).isEqualTo(Instant.fromEpochSeconds(6L * 12))
-    assertThat(totalBatchesCaptor.firstValue).isEqualTo(conflationsPerRollupProof)
+    assertThat(context.dataRollingHash).isEqualTo(fakeChunkHash.copyOf(32))
+    assertThat(context.endOffset).isEqualTo(segmentSize * conflationsPerRollupProof)
+    assertThat(context.startBlockTimestamp).isEqualTo(Instant.fromEpochSeconds(12))
+    assertThat(context.endBlockTimestamp).isEqualTo(Instant.fromEpochSeconds(6L * 12))
+    assertThat(context.totalBatchesCount).isEqualTo(conflationsPerRollupProof)
+
+    // handled proofs are no longer polled
+    rollupProofPoller.action().get()
+    assertThat(handledProofs).hasSize(1)
   }
 
   @Test
   fun `action resets window state after successful submission`() {
-    val proofHash1 = ByteArray(32) { 0x11.toByte() }
-    val proofHash2 = ByteArray(32) { 0x22.toByte() }
-
     coordinator.handleConflatedBatch(makeConflation(1UL, 3UL)).get()
     coordinator.handleConflatedBatch(makeConflation(4UL, 6UL)).get()
     // Third conflation queued — should remain after window reset
     coordinator.handleConflatedBatch(makeConflation(7UL, 9UL)).get()
-
-    whenever(batchesRepository.findHighestConsecutiveEndBlockNumberFromBlockNumber(1L))
-      .thenReturn(SafeFuture.completedFuture(6L))
-    whenever(batchesRepository.findBatchesByBlockRange(1L, 6L))
-      .thenReturn(
-        SafeFuture.completedFuture(
-          listOf(
-            Batch(1UL, 3UL, proofHash1),
-            Batch(4UL, 6UL, proofHash2),
-          ),
-        ),
-      )
-
-    val returnedProofIndex = BlockIntervalProofIndex(
-      startBlockNumber = 1UL,
-      endBlockNumber = 6UL,
-      startBlockTimestamp = Instant.fromEpochSeconds(12),
-      hash = ByteArray(32) { 0xFF.toByte() },
-    )
-    whenever(rollupProverClient.createProofRequest(any()))
-      .thenReturn(SafeFuture.completedFuture(returnedProofIndex))
+    markProven(1UL, 3UL, proofHash1)
+    markProven(4UL, 6UL, proofHash2)
 
     coordinator.action().get()
-
-    // Second action tick: only one conflation left — should not submit again
-    whenever(batchesRepository.findHighestConsecutiveEndBlockNumberFromBlockNumber(any()))
-      .thenReturn(SafeFuture.completedFuture(null))
-
+    // Second action tick: third conflation proven but window not full — should not submit again
+    markProven(7UL, 9UL)
     coordinator.action().get()
 
-    // createProofRequest should have been called exactly once (first window only)
-    verify(rollupProverClient, org.mockito.kotlin.times(1)).createProofRequest(any())
+    assertThat(rollupProverClient.requests).hasSize(1)
+    assertThat(rollupProverClient.requests.first().endBlockNumber).isEqualTo(6UL)
   }
 
   @Test
   fun `action submits proof when segment bytes exactly fill full chunks with no remainder`() {
-    // Coordinator where each segment is exactly half of BLOB_SIZE so two conflations = one full chunk, no remainder
+    // Each segment is exactly half of BLOB_SIZE so two conflations = one full chunk, no remainder
     val halfBlobSize = Constants.Eip4844BlobSize / 2
     val exactSegment = ByteArray(halfBlobSize) { it.toByte() }
-    val exactCoordinator = RollupProofGeneratingCoordinator(
-      chainId = chainId,
-      rollupCalculator = GlobalRollupCalculator(
-        listOf(RollupTriggerCalculatorByConflationCount(conflationsPerRollupProof)),
-      ),
-      rollupProverClient = rollupProverClient,
-      batchesRepository = batchesRepository,
-      streamPositionProvider = { SafeFuture.completedFuture(StreamPosition(0UL, genesisDataRollingHash)) },
-      rollupProofPoller = rollupProofPoller,
-      conflationSegmentBuilder = ConflationSegmentBuilder { _, _ -> exactSegment },
-      dataRollingHashCalculator = dataRollingHashCalculator,
-      blockEncoder = blockEncoder,
-      chunkHasher = chunkHasher,
-      proofCheckingInterval = 1.seconds,
-      vertx = vertx,
-      metricsFacade = mock(defaultAnswer = Mockito.RETURNS_DEEP_STUBS),
-    )
-    exactCoordinator.start().get()
-
-    val proofHash1 = ByteArray(32) { 0x11.toByte() }
-    val proofHash2 = ByteArray(32) { 0x22.toByte() }
+    val exactCoordinator = createCoordinator { _, _ -> exactSegment }
 
     exactCoordinator.handleConflatedBatch(makeConflation(1UL, 3UL)).get()
     exactCoordinator.handleConflatedBatch(makeConflation(4UL, 6UL)).get()
-
-    whenever(batchesRepository.findHighestConsecutiveEndBlockNumberFromBlockNumber(1L))
-      .thenReturn(SafeFuture.completedFuture(6L))
-    whenever(batchesRepository.findBatchesByBlockRange(1L, 6L))
-      .thenReturn(
-        SafeFuture.completedFuture(
-          listOf(
-            Batch(1UL, 3UL, proofHash1),
-            Batch(4UL, 6UL, proofHash2),
-          ),
-        ),
-      )
-    val returnedProofIndex = BlockIntervalProofIndex(
-      startBlockNumber = 1UL,
-      endBlockNumber = 6UL,
-      startBlockTimestamp = Instant.fromEpochSeconds(12),
-      hash = ByteArray(32) { 0xFF.toByte() },
-    )
-    whenever(rollupProverClient.createProofRequest(any()))
-      .thenReturn(SafeFuture.completedFuture(returnedProofIndex))
+    markProven(1UL, 3UL, proofHash1)
+    markProven(4UL, 6UL, proofHash2)
 
     exactCoordinator.action().get()
+    rollupProofPoller.action().get()
 
-    val requestCaptor = argumentCaptor<linea.clients.RollupProofRequestV1>()
-    verify(rollupProverClient).createProofRequest(requestCaptor.capture())
-
-    val request = requestCaptor.firstValue
-    // One full chunk sealed, no partial — endOffset on the full chunk is BLOB_BYTES_LENGTH
+    assertThat(rollupProverClient.requests).hasSize(1)
+    val request = rollupProverClient.requests.first()
+    // One full chunk sealed, no partial — endOffset on the full chunk is BLOB_SIZE
     assertThat(request.chunks).hasSize(1)
     assertThat(request.opaqueSuffixBytes).isEmpty()
-
-    val endOffsetCaptor = argumentCaptor<Int>()
-    verify(rollupProofPoller).addProofInProgress(
-      proofIndex = any(),
-      blobsData = any(),
-      parentDataRollingHash = any(),
-      dataRollingHash = any(),
-      endOffset = endOffsetCaptor.capture(),
-      startBlockTimestamp = any(),
-      endBlockTimestamp = any(),
-      totalBatchesCount = any(),
-    )
-    assertThat(endOffsetCaptor.firstValue).isEqualTo(Constants.Eip4844BlobSize)
+    assertThat(handledProofs).hasSize(1)
+    assertThat(handledProofs.first().second.endOffset).isEqualTo(Constants.Eip4844BlobSize)
   }
 }
