@@ -268,11 +268,24 @@ jobs:
     if: ${{ !cancelled() && needs.filter-commit-changes.result == 'success' }}
     uses: ./.github/workflows/reusable-compute-commit-tags.yml
 
-  testing:
+  # Runs once before the JVM testing jobs: checks whether the Besu version pinned by
+  # besuCommit (gradle/libs.versions.toml) is published to a remote maven repo and, if not,
+  # builds the Besu source distribution a single time and shares it as a workflow artifact.
+  # The JVM testing jobs restore it via actions/setup-besu-maven-local instead of each
+  # building Besu from source in parallel.
+  prepare-linea-besu-maven:
     needs: [filter-commit-changes, compute-commit-tags]
+    if: >
+      !cancelled() && 
+      needs.filter-commit-changes.outputs.has-changes-requiring-build == 'true' &&
+      needs.compute-commit-tags.outputs.commit_tag != ''
+    uses: ./.github/workflows/prepare-linea-besu-maven.yml
+
+  testing:
+    needs: [prepare-linea-besu-maven]
     # !cancelled() (not always()): run on need failure/skip, but not after a
     # concurrency cancel supersedes this run.
-    if: ${{ !cancelled() && needs.filter-commit-changes.outputs.has-changes-requiring-build == 'true' && needs.compute-commit-tags.outputs.commit_tag != '' }}
+    if: ${{ !cancelled() && needs.prepare-linea-besu-maven.result == 'success' }}
     uses: ./.github/workflows/testing.yml
     with:
       commit_tag: ${{ needs.compute-commit-tags.outputs.commit_tag }}
@@ -299,12 +312,13 @@ jobs:
 
   manual-docker-build-and-e2e-tests:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
-    needs: [compute-commit-tags, get-has-changes-requiring-e2e-testing]
+    needs: [compute-commit-tags, get-has-changes-requiring-e2e-testing, prepare-linea-besu-maven]
     if: >
       !cancelled() &&
       needs.compute-commit-tags.result == 'success' &&
       needs.get-has-changes-requiring-e2e-testing.result == 'success' &&
-      needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing == 'true'
+      needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing == 'true' &&
+      (needs.prepare-linea-besu-maven.result == 'success' || needs.prepare-linea-besu-maven.result == 'skipped')
     environment: ${{ github.ref != 'refs/heads/main' && 'docker-build-and-e2e' || '' }}
     concurrency:
       group: manual-docker-build-and-e2e-tests-${{ github.workflow }}-${{ github.ref }}

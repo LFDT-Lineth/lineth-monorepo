@@ -54,31 +54,9 @@ on:
         type: string
 
 jobs:
-  # Runs once before the JVM testing jobs: checks whether the Besu version pinned by
-  # besuCommit (gradle/libs.versions.toml) is published to a remote maven repo and, if not,
-  # builds the Besu source distribution a single time and shares it as a workflow artifact.
-  # The JVM testing jobs restore it via actions/setup-besu-maven-local instead of each
-  # building Besu from source in parallel.
-  prepare-linea-besu-maven:
-    uses: ./.github/workflows/prepare-linea-besu-maven.yml
-
-  # Lightweight gate that runs before every JVM testing job which may need Besu artifacts.
-  # It always runs (even when all those jobs are skipped due to no changes) so that a failed
-  # Besu preparation fails the dependent jobs instead of silently skipping them, and a
-  # successful preparation lets skipped jobs stay skipped without wasting a runner.
-  besu-maven-ready:
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
-    needs: [prepare-linea-besu-maven]
-    steps:
-      - name: Check Besu maven preparation result
-        run: |
-          echo "Besu version: ${{ needs.prepare-linea-besu-maven.outputs.besu_version }}"
-          echo "Published remotely: ${{ needs.prepare-linea-besu-maven.outputs.published_remotely }}"
-
   # Cache for pulling Docker images is disabled as we empirically found that this
   # (retrieving cache and loading Docker images) actually increased test time-to-completion
   coordinator:
-    needs: [besu-maven-ready]
     uses: ./.github/workflows/coordinator-testing.yml
     if: ${{ inputs.coordinator_changed == 'true' }}
     with:
@@ -122,13 +100,11 @@ jobs:
     secrets: inherit
 
   transaction-exclusion-api:
-    needs: [besu-maven-ready]
     uses: ./.github/workflows/transaction-exclusion-api-testing.yml
     if: ${{ inputs.transaction_exclusion_api_changed == 'true' }}
     secrets: inherit
 
   staterecovery:
-    needs: [besu-maven-ready]
     uses: ./.github/workflows/staterecovery-testing.yml
     if: ${{ inputs.staterecovery_changed == 'true' }}
     with:
@@ -143,7 +119,6 @@ jobs:
     secrets: inherit
 
   linea-sequencer:
-    needs: [besu-maven-ready]
     uses: ./.github/workflows/linea-sequencer-plugin-testing.yml
     if: ${{ inputs.linea_sequencer_changed == 'true' || inputs.tracer_changed == 'true' }}
     secrets: inherit
@@ -159,7 +134,6 @@ jobs:
     secrets: inherit
 
   maru:
-    needs: [besu-maven-ready]
     uses: ./.github/workflows/maru-testing.yml
     if: ${{ inputs.maru_changed == 'true' }}
     with:
@@ -174,21 +148,11 @@ jobs:
     # Don't run if all test jobs were skipped due to no changes
     if: |
       always() && (
-        needs.coordinator.result == 'success' ||
-        needs.coordinator.result == 'failure' ||
-        needs.coordinator.result == 'cancelled' ||
-        needs.linea-sequencer.result == 'success' ||
-        needs.linea-sequencer.result == 'failure' ||
-        needs.linea-sequencer.result == 'cancelled' ||
-        needs.maru.result == 'success' ||
-        needs.maru.result == 'failure' ||
-        needs.maru.result == 'cancelled' ||
-        needs.staterecovery.result == 'success' ||
-        needs.staterecovery.result == 'failure' ||
-        needs.staterecovery.result == 'cancelled' ||
-        needs.transaction-exclusion-api.result == 'success' ||
-        needs.transaction-exclusion-api.result == 'failure' ||
-        needs.transaction-exclusion-api.result == 'cancelled'
+        needs.coordinator.result != 'skipped' ||
+        needs.linea-sequencer.result != 'skipped' ||
+        needs.maru.result != 'skipped' ||
+        needs.staterecovery.result != 'skipped' ||
+        needs.transaction-exclusion-api.result != 'skipped'
       )
     needs:
       - coordinator
