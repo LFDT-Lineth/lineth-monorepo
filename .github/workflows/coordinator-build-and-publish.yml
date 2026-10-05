@@ -70,7 +70,7 @@ jobs:
       - name: Generate coordinator config docs
         if: ${{ env.PUSH_IMAGE == 'true' }}
         run: |
-          ./gradlew -V :coordinator:app:checkConfigDocs :coordinator:app:generateConfigDocs
+          ./gradlew -V :coordinator:config:checkConfigDocs :coordinator:config:generateConfigDocs
           # Stage flat so the files sit at the artifact root (not under docs/tech/components/).
           mkdir -p "${{ runner.temp }}/coordinator-config-docs"
           cp docs/tech/components/coordinator-config-reference.md \

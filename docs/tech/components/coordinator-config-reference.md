@@ -359,9 +359,6 @@ File-based prover request/response directories and switch-over settings.
 | `prover.fs-inprogress-request-writing-suffix` | Filename suffix appended while the coordinator is still writing a request file, so provers ignore partially-written requests. | `String` | no | `.inprogress_coordinator_writing` | active |
 | `prover.fs-polling-interval` | Interval between scans of the prover response directories for new responses. | `Duration` | no | `PT15S` | active |
 | `prover.fs-polling-timeout` | Maximum time to wait for a prover response before timing out. Defaults to no timeout. | `Duration` | no | `infinite` | active |
-| `prover.invalidity.fs-requests-directory` | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. | `String` | yes | - | active |
-| `prover.invalidity.fs-responses-directory` | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. | `String` | yes | - | active |
-| `prover.invalidity.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
 | `prover.l2-execution.fs-requests-directory` | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. | `String` | yes | - | active |
 | `prover.l2-execution.fs-responses-directory` | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. | `String` | yes | - | active |
 | `prover.l2-execution.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
@@ -377,9 +374,6 @@ File-based prover request/response directories and switch-over settings.
 | `prover.new.fs-inprogress-request-writing-suffix` | Filename suffix appended while the coordinator is still writing a request file, so provers ignore partially-written requests. | `String` | no | `.inprogress_coordinator_writing` | active |
 | `prover.new.fs-polling-interval` | Interval between scans of the prover response directories for new responses. | `Duration` | no | `PT15S` | active |
 | `prover.new.fs-polling-timeout` | Maximum time to wait for a prover response before timing out. Defaults to no timeout. | `Duration` | no | `infinite` | active |
-| `prover.new.invalidity.fs-requests-directory` | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. | `String` | yes | - | active |
-| `prover.new.invalidity.fs-responses-directory` | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. | `String` | yes | - | active |
-| `prover.new.invalidity.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
 | `prover.new.l2-execution.fs-requests-directory` | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. | `String` | yes | - | active |
 | `prover.new.l2-execution.fs-responses-directory` | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. | `String` | yes | - | active |
 | `prover.new.l2-execution.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |

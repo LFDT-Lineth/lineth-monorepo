@@ -48,11 +48,11 @@ jobs:
           ./gradlew -V coordinator:app:buildNeeded
       - name: Verify generated coordinator config docs are up to date
         run: |
-          ./gradlew -V :coordinator:app:generateConfigDocs
+          ./gradlew -V :coordinator:config:generateConfigDocs
           if ! git diff --exit-code -- \
               docs/tech/components/coordinator-config-reference.md \
               docs/tech/components/coordinator-config-schema.json; then
-            echo "::error::Coordinator config docs are out of date. Run './gradlew :coordinator:app:generateConfigDocs' and commit the changes."
+            echo "::error::Coordinator config docs are out of date. Run './gradlew :coordinator:config:generateConfigDocs' and commit the changes."
             exit 1
           fi
       - name: Login to Docker Hub
