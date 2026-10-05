@@ -243,12 +243,28 @@ next:
 
 	// A batch is never emptied: CommittedBatches is a static function of the
 	// System and the FRI layer needs at least one committed row per batch. If
-	// everything is zero (no alias can exist without a Present target), keep the
-	// first column.
+	// everything is zero (no alias can exist without a Present target), keep one
+	// column. It must be a column that is actually opened: the FRI layer requires
+	// every committed row to carry at least one shift, so keeping an unopened
+	// column would fail canonicalLayout with "empty shift list". Fall back to
+	// column 0 only when the round opens nothing at all, which cannot reach FRI
+	// anyway.
 	if !manifest.hasPresent() {
-		manifest[0] = ManifestPresent
+		manifest[c.firstOpenedColumn(round)] = ManifestPresent
 	}
 	return manifest
+}
+
+// firstOpenedColumn returns the index of the first column of round that is
+// opened by at least one [wiop.LagrangeEval], or 0 if none is. It is the pick
+// for the never-empty-batch fallback in [compiled.buildManifest].
+func (c *compiled) firstOpenedColumn(round *wiop.Round) int {
+	for i, col := range round.Columns {
+		if len(c.colShifts[col.Context.ID]) > 0 {
+			return i
+		}
+	}
+	return 0
 }
 
 // validateManifest checks the structural rules every manifest must satisfy,

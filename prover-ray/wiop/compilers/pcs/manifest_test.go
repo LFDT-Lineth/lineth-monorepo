@@ -228,6 +228,34 @@ func TestColumnElisionKeepsOneColumn(t *testing.T) {
 	require.NoError(t, sys.Verify(proof, pub))
 }
 
+// The never-empty-batch fallback must keep a column that is actually opened:
+// FRI requires every committed row to carry at least one shift, so keeping an
+// unopened column 0 would fail canonicalLayout with "empty shift list".
+func TestColumnElisionKeepsAnOpenedColumn(t *testing.T) {
+	sys := wiop.NewSystemf("pcs-all-zero-unopened")
+	r0 := sys.NewRound()
+	r1 := sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
+	// x is committed but never opened; only y is in the LagrangeEval.
+	x := mod.NewColumn(sys.Context.Childf("x"), r0)
+	y := mod.NewColumn(sys.Context.Childf("y"), r0)
+	zeta := r1.NewCoinField(sys.Context.Childf("zeta"))
+	le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{y.View()}, zeta)
+	r1.RegisterAction(&selfAssignLagrange{le: le})
+	Compile(sys)
+
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+		rt.AssignColumn(x, baseVec(4, 0))
+		rt.AssignColumn(y, baseVec(4, 0))
+	})
+	cells := r0.Cells[len(r0.Cells)-2:]
+	xCode := proof.Cells[cells[0].Context.ID].AsBase()
+	yCode := proof.Cells[cells[1].Context.ID].AsBase()
+	require.Equal(t, uint64(ManifestZero), xCode.Uint64(), "unopened column must not be the fallback")
+	require.Equal(t, uint64(ManifestPresent), yCode.Uint64())
+	require.NoError(t, sys.Verify(proof, pub))
+}
+
 // Elision of the largest columns of a batch must shrink the FRI top domain
 // consistently on both sides.
 func TestColumnElisionShrinksTopSize(t *testing.T) {
