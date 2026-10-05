@@ -38,7 +38,7 @@ func BenchmarkR5Fibonacci(b *testing.B) {
 		// Each shard covers 500K interpreter() invocations = 500K executed
 		// RISC-V instructions (see r5_benchmark_test.go's fixture comment).
 		tracingConfig = vm.DEFAULT_TRACE_CONFIG.
-				WithSharding(vm.NewShardingStrategy("interpreter", 500000)).
+				WithSharding(vm.NewShardingStrategy("interpreter", 250000)).
 				WithParallelism(true)
 	)
 
