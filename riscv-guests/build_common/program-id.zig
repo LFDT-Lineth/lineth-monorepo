@@ -2,11 +2,15 @@ const std = @import("std");
 
 pub fn main(init: std.process.Init) !void {
     const args = try init.minimal.args.toSlice(init.arena.allocator());
-    if (args.len != 4) return error.ExpectedElfOutputDirectoryAndIdFile;
+    if (args.len != 6) return error.ExpectedElfOutputDirectoryIdFileGuestAndVersion;
 
-    const id = try stageElf(init.io, init.gpa, args[1], args[2]);
-    const hex = std.fmt.bytesToHex(id, .lower);
+    const staged = try stageElf(init.io, init.gpa, args[1], args[2], args[4], args[5]);
+    defer init.gpa.free(staged.filename);
+    const hex = std.fmt.bytesToHex(staged.id, .lower);
     try writeProgramId(init.io, args[3], &hex);
+    const filename_file = try std.fmt.allocPrint(init.gpa, "{s}.asset", .{args[3]});
+    defer init.gpa.free(filename_file);
+    try writeProgramId(init.io, filename_file, staged.filename);
 }
 
 fn writeProgramId(io: std.Io, path: []const u8, hex: []const u8) !void {
@@ -15,7 +19,12 @@ fn writeProgramId(io: std.Io, path: []const u8, hex: []const u8) !void {
     try cwd.writeFile(io, .{ .sub_path = path, .data = hex });
 }
 
-fn stageElf(io: std.Io, allocator: std.mem.Allocator, source: []const u8, output_directory: []const u8) ![32]u8 {
+const StagedElf = struct { id: [32]u8, filename: []const u8 };
+
+fn stageElf(io: std.Io, allocator: std.mem.Allocator, source: []const u8, output_directory: []const u8, guest: []const u8, version: []const u8) !StagedElf {
+    if (guest.len == 0 or version.len == 0 or version[0] == 'v') return error.InvalidReleaseName;
+    for (guest) |c| if (!std.ascii.isAlphanumeric(c) and c != '-') return error.InvalidReleaseName;
+    for (version) |c| if (!std.ascii.isAlphanumeric(c) and c != '.' and c != '-' and c != '+') return error.InvalidReleaseName;
     const cwd = std.Io.Dir.cwd();
     const file = try cwd.openFile(io, source, .{});
     defer file.close(io);
@@ -34,10 +43,12 @@ fn stageElf(io: std.Io, allocator: std.mem.Allocator, source: []const u8, output
     hasher.final(&id);
 
     try cwd.createDirPath(io, output_directory);
-    const asset_name = try std.fmt.allocPrint(allocator, "{s}/{s}.elf", .{ output_directory, std.fmt.bytesToHex(id, .lower) });
+    const filename = try std.fmt.allocPrint(allocator, "{s}-v{s}-{s}.elf", .{ guest, version, std.fmt.bytesToHex(id, .lower) });
+    errdefer allocator.free(filename);
+    const asset_name = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ output_directory, filename });
     defer allocator.free(asset_name);
     try cwd.copyFile(source, cwd, asset_name, io, .{ .replace = false });
-    return id;
+    return .{ .id = id, .filename = filename };
 }
 
 test "stage complete ELF and refuse replacement" {
@@ -56,15 +67,36 @@ test "stage complete ELF and refuse replacement" {
 
     const elf = "\x7fELFguest data";
     try cwd.writeFile(io, .{ .sub_path = source, .data = elf });
-    const id = try stageElf(io, allocator, source, output_directory);
-    try std.testing.expectEqualStrings("8e7dae55483e7b63d384e441238245d76cf07ab4dd89eaac76e00ce9e811a665", &std.fmt.bytesToHex(id, .lower));
+    const staged = try stageElf(io, allocator, source, output_directory, "rollup", "0.0.1");
+    defer allocator.free(staged.filename);
+    try std.testing.expectEqualStrings("8e7dae55483e7b63d384e441238245d76cf07ab4dd89eaac76e00ce9e811a665", &std.fmt.bytesToHex(staged.id, .lower));
 
-    const asset_name = try std.fmt.allocPrint(allocator, "{s}/{s}.elf", .{ output_directory, std.fmt.bytesToHex(id, .lower) });
+    const asset_name = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ output_directory, staged.filename });
     defer allocator.free(asset_name);
     const asset = try cwd.readFileAlloc(io, asset_name, allocator, .limited(1024));
     defer allocator.free(asset);
     try std.testing.expectEqualStrings(elf, asset);
-    try std.testing.expectError(error.PathAlreadyExists, stageElf(io, allocator, source, output_directory));
+    try std.testing.expectError(error.PathAlreadyExists, stageElf(io, allocator, source, output_directory, "rollup", "0.0.1"));
+
+    for ([_][]const u8{ "l2-execution", "rollup" }) |guest| {
+        const released = try stageElf(io, allocator, source, output_directory, guest, "0.0.1-debug");
+        defer allocator.free(released.filename);
+        try std.testing.expectEqual(staged.id, released.id);
+        const expected_name = try std.fmt.allocPrint(allocator, "{s}-v0.0.1-debug-{s}.elf", .{ guest, std.fmt.bytesToHex(released.id, .lower) });
+        defer allocator.free(expected_name);
+        try std.testing.expectEqualStrings(expected_name, released.filename);
+        const released_path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ output_directory, released.filename });
+        defer allocator.free(released_path);
+        const bytes = try cwd.readFileAlloc(io, released_path, allocator, .limited(1024));
+        defer allocator.free(bytes);
+        try std.testing.expectEqualStrings(elf, bytes);
+        try std.testing.expectError(error.PathAlreadyExists, stageElf(io, allocator, source, output_directory, guest, "0.0.1-debug"));
+    }
+    try std.testing.expectError(error.InvalidReleaseName, stageElf(io, allocator, source, output_directory, "", "0.0.1"));
+    try std.testing.expectError(error.InvalidReleaseName, stageElf(io, allocator, source, output_directory, "rollup", ""));
+    try std.testing.expectError(error.InvalidReleaseName, stageElf(io, allocator, source, output_directory, "", ""));
+    try std.testing.expectError(error.InvalidReleaseName, stageElf(io, allocator, source, output_directory, "rollup", "v0.0.1"));
+    try std.testing.expectError(error.InvalidReleaseName, stageElf(io, allocator, source, output_directory, "rollup", "0.0.1/unsafe"));
 }
 
 test "write Program ID into a fresh build directory" {

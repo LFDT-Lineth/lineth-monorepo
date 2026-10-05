@@ -81,16 +81,21 @@ convention.
 The workflow runs that guest's `make test` and `make compile` before creating the changelog commit
 and tag. It checks out the tag to build and stage the released ELF. Reference tests run separately
 and do not gate guest releases. The GitHub Release attaches the complete ELF as
-`<program-id>.elf`, with 64 lowercase hexadecimal characters and no `0x` in the filename. Its
+`<guest>-v<version>-<program-id>.elf` (for example, `l2-execution-v0.0.1-<program-id>.elf`).
+The Program ID is 64 lowercase hexadecimal characters with no `0x` in the filename. Its
 notes give the `0x`-prefixed Program ID: **Keccak-256 of the complete uploaded ELF bytes** (not
 SHA3-256). Published release assets are immutable; use a new tag for a changed binary. Coordinator
 deployment and Program ID selection are handled separately.
 
-To build and stage a guest ELF locally by its ID, run `make release-asset GUEST=l2-execution`
-(or `GUEST=rollup`) from this directory. Each guest exposes the shared `zig build program-id`
-step; `-Drelease-dir=<path>` selects the asset directory. The step hashes the ELF produced by
-the Zig build graph using the pinned toolchain's Keccak implementation. Zig's guest build defaults
-to accelerated Keccak; ordinary builds can opt out with `KECCAK_ACCEL=false` or
+To stage a release ELF locally, run `make release-asset GUEST=l2-execution RELEASE_VERSION=0.0.1`
+(or use `GUEST=rollup`) from this directory. From inside a guest directory, use
+`make release-asset RELEASE_VERSION=0.0.1`; the guest name comes from that directory. A release
+version is required, and staging fails if it is missing. Each guest exposes the shared
+`zig build program-id` step;
+`-Drelease-dir=<path>` selects the asset directory. The staged ELF is named
+`l2-execution-v0.0.1-<program-id>.elf`. The step hashes
+the ELF produced by the Zig build graph using the pinned toolchain's Keccak implementation. Zig's
+guest build defaults to accelerated Keccak; ordinary builds can opt out with `KECCAK_ACCEL=false` or
 `-Dkeccak-accel=false`. Release staging uses the Zig build default.
 
 ## Continuous Integration
