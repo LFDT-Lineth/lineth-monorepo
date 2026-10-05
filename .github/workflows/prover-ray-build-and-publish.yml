@@ -75,8 +75,6 @@ jobs:
           docker_context: prover-ray
           build_contexts: riscv-guests=riscv-guests/
           push_platforms: linux/amd64
-          save_artifact: ${{ env.PUSH_IMAGE == 'false' }}
-          artifact_name: linea-prover-ray
 
       # Smoke gate: on the local (push_image=false) build the image is loaded
       # locally, so run the same smoke test used in dev. If it fails, the release

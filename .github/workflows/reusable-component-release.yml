@@ -268,7 +268,7 @@ jobs:
       image_tag: local
       linea_besu_package_tag: ''
       e2e-tests-logs-dump: true
-      has-changes-requiring-e2e-testing: ${{ 'true' }}
+      has-changes-requiring-e2e-testing: "true"
     secrets: inherit
 
   push-tag-update-changelog-and-gh-release:

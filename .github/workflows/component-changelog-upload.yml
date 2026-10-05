@@ -40,7 +40,14 @@ jobs:
               - 'prover/**'
             prover-ray:
               - 'prover-ray/**'
-              - 'riscv-guests/**'
+              - 'riscv-guests/l2-execution/**'
+              - 'riscv-guests/guest-common/**'
+              - 'riscv-guests/build_common/**'
+              - 'riscv-guests/release/**'
+              - 'riscv-guests/lineth-accelerators/**'
+              - 'riscv-guests/guest-crypto-ctt/**'
+              - 'riscv-guests/.zigversion'
+              - 'riscv-guests/Makefile'
             tx-exclusion-api:
               - 'transaction-exclusion-api/**'
             linea-besu-package:

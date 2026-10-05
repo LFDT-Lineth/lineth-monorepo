@@ -42,13 +42,8 @@ temp_dir=$(mktemp -d)
 stderr_file="${temp_dir}/stderr"
 trap 'rm -rf "${temp_dir}"' EXIT
 # git-cliff's default initial tag (0.1.0) does not match our component namespace.
-if [ -z "${latest_tag}" ]; then
-  initial_config="${temp_dir}/initial.toml"
-  cp "${CLIFF_CONFIG}" "${initial_config}"
-  printf '\n[bump]\ninitial_tag = "releases/%s/v0.1.0"\n' "${COMPONENT}" >> "${initial_config}"
-  cliff_args[1]="${initial_config}"
-fi
-next_tag=$(git cliff "${cliff_args[@]}" 2> "${stderr_file}")
+next_tag=$(GIT_CLIFF__BUMP__INITIAL_TAG="releases/${COMPONENT}/v0.1.0" \
+  git cliff "${cliff_args[@]}" 2> "${stderr_file}")
 # Re-emit stderr so it's visible in logs
 cat "${stderr_file}" >&2
 
