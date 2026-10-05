@@ -10,9 +10,16 @@ package wiop
 // leaf nodes). The returned expression replaces curr in the rebuilt tree.
 type Constructor func(curr Expression, newChildren []Expression) Expression
 
-// EditExpression walks the expression tree rooted at expr in bottom-up order
-// and rebuilds it by calling constructor at each node. The input expression is
+// EditExpression walks the expression rooted at expr in bottom-up order and
+// rebuilds it by calling constructor at each node. The input expression is
 // not modified.
+//
+// The walk is DAG-aware: a node reachable along several paths (the same
+// pointer occurring more than once, as interned expressions do) is rebuilt
+// once and its result reused at every occurrence, so the output preserves the
+// input's sharing and the cost is linear in the number of distinct nodes
+// rather than in the tree size. constructor must therefore be a pure function
+// of (curr, newChildren); it is called exactly once per distinct node.
 //
 // For leaf nodes ([*Constant], [*ColumnView], [*ColumnPosition], [*Cell],
 // [*CoinField], and any unknown [Expression] implementation) newChildren is
@@ -29,15 +36,27 @@ type Constructor func(curr Expression, newChildren []Expression) Expression
 //	    return DefaultConstruct(curr, newChildren)
 //	})
 func EditExpression(expr Expression, constructor Constructor) Expression {
-	ao, ok := expr.(*ArithmeticOperation)
-	if !ok {
-		return constructor(expr, nil)
+	return editExpression(expr, constructor, map[Expression]Expression{})
+}
+
+// editExpression is the memoised recursion behind [EditExpression]. memo maps
+// each already-visited input node to its rebuilt counterpart.
+func editExpression(expr Expression, constructor Constructor, memo map[Expression]Expression) Expression {
+	if rebuilt, ok := memo[expr]; ok {
+		return rebuilt
 	}
-	newChildren := make([]Expression, len(ao.Operands))
-	for i, operand := range ao.Operands {
-		newChildren[i] = EditExpression(operand, constructor)
+	var rebuilt Expression
+	if ao, ok := expr.(*ArithmeticOperation); ok {
+		newChildren := make([]Expression, len(ao.Operands))
+		for i, operand := range ao.Operands {
+			newChildren[i] = editExpression(operand, constructor, memo)
+		}
+		rebuilt = constructor(ao, newChildren)
+	} else {
+		rebuilt = constructor(expr, nil)
 	}
-	return constructor(ao, newChildren)
+	memo[expr] = rebuilt
+	return rebuilt
 }
 
 // DefaultConstruct is the identity [Constructor]: it returns a new
