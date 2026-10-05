@@ -15,7 +15,7 @@ pub fn build(b: *std.Build) void {
     // stub's keccak use is comptime-only, so today the flag only keeps the CI/production
     // invocation stable; the real guest implementation wires it to the arithmetization keccak
     // accelerator backend.
-    _ = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: standard)") orelse false;
+    _ = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: accelerated)") orelse true;
 
     const gp_name = "rollup_guest";
 

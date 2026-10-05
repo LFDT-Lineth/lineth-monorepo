@@ -184,3 +184,4 @@
 - *(coordinator)* Carve out config module (#4093)
 - *(coordinator)* Arrange config module dependencies (#4100)
 - *(coordinator)* Remove unsupported invalidity proof client (#4101)
+- *(coordinator)* Simplify Risc5 prover DTO mappers (#4121)

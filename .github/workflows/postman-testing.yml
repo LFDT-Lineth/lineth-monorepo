@@ -26,8 +26,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # Install only what the test commands below exercise: postman and its
+      # dependency closure (includes native-libs, sdk-viem, sdk-core, shared-utils)
+      # — ~930 packages instead of ~2263.
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
+        with:
+          pnpm-install-options: '--frozen-lockfile --prefer-offline --ignore-scripts -F "@lfdt-lineth/postman..."'
 
       - name: Run tests and generate coverage report
         env:

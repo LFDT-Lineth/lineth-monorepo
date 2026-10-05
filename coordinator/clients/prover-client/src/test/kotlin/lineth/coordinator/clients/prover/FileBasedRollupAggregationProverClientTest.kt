@@ -66,10 +66,10 @@ class FileBasedRollupAggregationProverClientTest {
     assertThat(requestFile).exists()
 
     val writtenDto = jsonMapper.readValue(requestFile.toFile(), FileBasedRollupAggregationProofRequestDto::class.java)
-    val expectedDto = FileBasedRollupAggregationProofRequestDtoMapper(
+    val expectedDto = RollupAggregationProofRequestDtoMapper(
       ROLLUP_AGGREGATION_PROGRAM_ID,
       PROVING_SYSTEM_VERSION,
-      rollupProofTransport,
+      rollupProofTransport::findResponse,
     ).invoke(request).get()
     assertThat(writtenDto).isEqualTo(expectedDto)
   }
