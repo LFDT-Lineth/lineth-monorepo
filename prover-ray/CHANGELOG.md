@@ -1,3 +1,8 @@
+## [0.1.1] - 2026-10-06
+
+### 🐛 Bug Fixes
+
+- *(prover-ray)* Set endBlockNumber in dev-mock responses (#4137)
 ## [0.1.0] - 2026-10-06
 
 ### 🚀 Features
