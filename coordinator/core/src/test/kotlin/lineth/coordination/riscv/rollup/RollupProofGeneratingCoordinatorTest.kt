@@ -68,10 +68,15 @@ class RollupProofGeneratingCoordinatorTest {
       config = RollupProofPoller.Config(pollingInterval = 1.seconds),
       metricsFacade = mock(defaultAnswer = Mockito.RETURNS_DEEP_STUBS),
     )
-    coordinator = createCoordinator(conflationSegmentBuilder)
+    coordinator = createCoordinator()
   }
 
-  private fun createCoordinator(segmentBuilder: ConflationSegmentBuilder): RollupProofGeneratingCoordinator {
+  private fun createCoordinator(
+    segmentBuilder: ConflationSegmentBuilder = conflationSegmentBuilder,
+    streamPositionProvider: StreamPositionProvider = StreamPositionProvider {
+      SafeFuture.completedFuture(StreamPosition(0UL, genesisDataRollingHash))
+    },
+  ): RollupProofGeneratingCoordinator {
     return RollupProofGeneratingCoordinator(
       chainId = chainId,
       rollupCalculator = GlobalRollupCalculator(
@@ -79,7 +84,7 @@ class RollupProofGeneratingCoordinatorTest {
       ),
       rollupProverClient = rollupProverClient,
       batchesRepository = batchesRepository,
-      streamPositionProvider = { SafeFuture.completedFuture(StreamPosition(0UL, genesisDataRollingHash)) },
+      streamPositionProvider = streamPositionProvider,
       rollupProofPoller = rollupProofPoller,
       conflationSegmentBuilder = segmentBuilder,
       dataRollingHashCalculator = dataRollingHashCalculator,
@@ -239,7 +244,7 @@ class RollupProofGeneratingCoordinatorTest {
     // Each segment is exactly half of BLOB_SIZE so two conflations = one full chunk, no remainder
     val halfBlobSize = Constants.Eip4844BlobSize / 2
     val exactSegment = ByteArray(halfBlobSize) { it.toByte() }
-    val exactCoordinator = createCoordinator { _, _ -> exactSegment }
+    val exactCoordinator = createCoordinator(segmentBuilder = { _, _ -> exactSegment })
 
     exactCoordinator.handleConflatedBatch(makeConflation(1UL, 3UL)).get()
     exactCoordinator.handleConflatedBatch(makeConflation(4UL, 6UL)).get()
@@ -256,5 +261,92 @@ class RollupProofGeneratingCoordinatorTest {
     assertThat(request.opaqueSuffixBytes).isEmpty()
     assertThat(handledProofs).hasSize(1)
     assertThat(handledProofs.first().second.endOffset).isEqualTo(Constants.Eip4844BlobSize)
+  }
+
+  // --- concurrency ---
+
+  private fun RollupProofGeneratingCoordinator.readField(name: String): Any? =
+    RollupProofGeneratingCoordinator::class.java.getDeclaredField(name)
+      .apply { isAccessible = true }
+      .get(this)
+
+  private fun RollupProofGeneratingCoordinator.lastHandledBlockNumber(): ULong =
+    (readField("lastHandledBlockNumber") as Long).toULong()
+
+  private fun RollupProofGeneratingCoordinator.nextBlockNumberToPoll(): Long? =
+    readField("nextBlockNumberToPoll") as Long?
+
+  private fun RollupProofGeneratingCoordinator.parentDataRollingHash(): ByteArray? =
+    readField("parentDataRollingHash") as ByteArray?
+
+  private fun completeOnAnotherThread(future: SafeFuture<StreamPosition>, position: StreamPosition): Thread =
+    Thread { future.complete(position) }.also { it.start() }
+
+  @Test
+  fun `stream position resolved on another thread must not mutate state while the coordinator lock is held`() {
+    val streamPosition = SafeFuture<StreamPosition>()
+    val asyncCoordinator = createCoordinator(streamPositionProvider = { streamPosition })
+
+    val result = asyncCoordinator.handleConflatedBatch(makeConflation(1UL, 3UL))
+
+    lateinit var completer: Thread
+    synchronized(asyncCoordinator) {
+      // While this thread owns the coordinator monitor, no other thread may touch the guarded state.
+      completer = completeOnAnotherThread(streamPosition, StreamPosition(0UL, genesisDataRollingHash))
+      completer.join(500)
+
+      assertThat(asyncCoordinator.lastHandledBlockNumber())
+        .`as`("lastHandledBlockNumber mutated by another thread while the lock was held")
+        .isEqualTo(0UL)
+      assertThat(asyncCoordinator.nextBlockNumberToPoll())
+        .`as`("nextBlockNumberToPoll mutated by another thread while the lock was held")
+        .isNull()
+      assertThat(asyncCoordinator.parentDataRollingHash())
+        .`as`("parentDataRollingHash mutated by another thread while the lock was held")
+        .isNull()
+    }
+
+    completer.join(5_000)
+    result.get()
+    assertThat(asyncCoordinator.lastHandledBlockNumber()).isEqualTo(3UL)
+    assertThat(asyncCoordinator.nextBlockNumberToPoll()).isEqualTo(1L)
+    assertThat(asyncCoordinator.parentDataRollingHash()).isEqualTo(genesisDataRollingHash)
+  }
+
+  @Test
+  fun `conflations arriving before initialization share a single stream position fetch`() {
+    val streamPositionRequests = CopyOnWriteArrayList<SafeFuture<StreamPosition>>()
+    val asyncCoordinator = createCoordinator(
+      streamPositionProvider = { SafeFuture<StreamPosition>().also(streamPositionRequests::add) },
+    )
+
+    // Two conflations arrive before the stream position is resolved
+    val firstResult = asyncCoordinator.handleConflatedBatch(makeConflation(1UL, 3UL))
+    val secondResult = asyncCoordinator.handleConflatedBatch(makeConflation(4UL, 6UL))
+
+    // Each extra fetch would later blindly overwrite lastHandledBlockNumber, nextBlockNumberToPoll
+    // and parentDataRollingHash with a stale position, regressing the coordinator.
+    assertThat(streamPositionRequests)
+      .`as`("stream position must be fetched only once")
+      .hasSize(1)
+
+    completeOnAnotherThread(streamPositionRequests.single(), StreamPosition(0UL, genesisDataRollingHash))
+      .join(5_000)
+    firstResult.get()
+    secondResult.get()
+
+    markProven(1UL, 3UL, proofHash1)
+    markProven(4UL, 6UL, proofHash2)
+    asyncCoordinator.action().get()
+
+    assertThat(rollupProverClient.requests).hasSize(1)
+    assertThat(rollupProverClient.requests.single().parentDataRollingHash).isEqualTo(genesisDataRollingHash)
+    assertThat(asyncCoordinator.lastHandledBlockNumber()).isEqualTo(6UL)
+    assertThat(asyncCoordinator.nextBlockNumberToPoll()).isEqualTo(7L)
+    assertThat(asyncCoordinator.parentDataRollingHash()).isEqualTo(fakeChunkHash.copyOf(32))
+
+    // The coordinator keeps progressing from where it left off
+    asyncCoordinator.handleConflatedBatch(makeConflation(7UL, 9UL)).get()
+    assertThat(asyncCoordinator.lastHandledBlockNumber()).isEqualTo(9UL)
   }
 }
