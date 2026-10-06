@@ -11,10 +11,6 @@ on:
       - '.github/actions/setup-zig/**'
       - '.github/workflows/arithmetization-guest-programs-trace.yml'
       - '.github/workflows/arithmetization-*.yml'
-      - 'riscv-guests/l2-execution/**'
-      - 'riscv-guests/build_common/**'
-      - 'riscv-guests/lineth-accelerators/**'
-      - 'riscv-guests/Makefile'
   push:
     branches:
       - main
@@ -70,7 +66,7 @@ jobs:
         run: make -C riscv-guests/l2-execution trace
         timeout-minutes: 45
         env:
-          ZKC_REF: "1183cd10e59fe08d4cb5d4184c30bcf041f4512e
+          ZKC_REF: "1183cd10e59fe08d4cb5d4184c30bcf041f4512e"
           INPUT: test/testdata/block_amsterdam_51584_500k.ssz
           KECCAK_ACCEL: true
           ZKC_TRACE_FLAGS: "--stats -vv --sharding interpreter:500000"
