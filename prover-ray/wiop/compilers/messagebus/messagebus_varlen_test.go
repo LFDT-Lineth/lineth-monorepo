@@ -40,7 +40,7 @@ func TestCompile_VariableLength_Permutation_Balanced(t *testing.T) {
 		wiop.NewFilteredTable(selR.View(), colR.View()),
 	)
 
-	messagebus.Compile(sys)
+	messagebus.Compile(sys, messagebus.WithoutSharedRandomness())
 	grandproduct.Compile(sys)
 
 	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
@@ -77,7 +77,7 @@ func TestCompile_VariableLength_Permutation_Unbalanced(t *testing.T) {
 		wiop.NewFilteredTable(selR.View(), colR.View()),
 	)
 
-	messagebus.Compile(sys)
+	messagebus.Compile(sys, messagebus.WithoutSharedRandomness())
 	grandproduct.Compile(sys)
 
 	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
@@ -118,7 +118,7 @@ func TestCompile_MixedWidth_LeadingOneDoesNotAlias(t *testing.T) {
 		wiop.NewTable(hiR.View(), loR.View()),
 	)
 
-	messagebus.Compile(sys)
+	messagebus.Compile(sys, messagebus.WithoutSharedRandomness())
 	grandproduct.Compile(sys)
 
 	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
