@@ -1,6 +1,6 @@
 import { Mutex } from "async-mutex";
 import { Address, BaseError, Client, PrivateKeyAccount, PublicActions } from "viem";
-import { getTransactionCount, sendTransaction } from "viem/actions";
+import { estimateGas, getTransactionCount, sendTransaction } from "viem/actions";
 
 import {
   awaitUntil,
@@ -15,6 +15,13 @@ import { sendTransactionWithRetry, type TransactionResult } from "../../common/u
 import type { Logger } from "winston";
 
 type FundingClient = Client & Pick<PublicActions, "estimateFeesPerGas">;
+
+// Post-Amsterdam (state-growth charging) an ETH transfer to a fresh (previously empty)
+// account costs significantly more than the legacy 21,000 — measured ~204,600 on the local
+// Amsterdam L1, versus ~24,000 to an existing account. Hardcoding 21,000 therefore reverts
+// with out-of-gas. Estimate per-transfer instead; this constant is only a fallback ceiling
+// when estimation is unavailable.
+const FUNDING_GAS_FALLBACK = 250_000n;
 
 type FeeData = Eip1559Fees;
 
@@ -105,6 +112,7 @@ export class AccountFundingService {
         async () => {
           try {
             const feeData = await this.estimateFees(whaleAccountWallet.address, targetAddress, initialBalanceWei);
+            const gas = await this.estimateFundingGas(whaleAccountWallet.address, targetAddress, initialBalanceWei);
             const nonce = await this.nextNonce(whaleAccountAddress);
 
             return await sendTransactionWithRetry(
@@ -117,7 +125,7 @@ export class AccountFundingService {
                   to: targetAddress,
                   value: initialBalanceWei,
                   nonce,
-                  gas: 21000n,
+                  gas,
                   ...feeData,
                   ...fees,
                 }),
@@ -173,6 +181,26 @@ export class AccountFundingService {
    */
   private invalidateNonce(address: Address): void {
     this.localNonces.delete(address);
+  }
+
+  /**
+   * Estimates the gas required for the funding transfer. Post-Amsterdam, sending ETH to a
+   * fresh account is far costlier than the legacy 21,000, so we estimate against the live
+   * chain rather than hardcode. Falls back to FUNDING_GAS_FALLBACK if estimation fails.
+   */
+  private async estimateFundingGas(fromAddress: Address, toAddress: Address, value: bigint): Promise<bigint> {
+    try {
+      return await estimateGas(this.client, {
+        account: fromAddress,
+        to: toAddress,
+        value,
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Gas estimation for funding failed, using fallback ${FUNDING_GAS_FALLBACK}. address=${toAddress} error=${(error as Error).message}`,
+      );
+      return FUNDING_GAS_FALLBACK;
+    }
   }
 
   /**
