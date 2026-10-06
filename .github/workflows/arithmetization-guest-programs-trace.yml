@@ -98,12 +98,12 @@ jobs:
       #     KECCAK_ACCEL: true
       #     ZKC_TRACE_FLAGS: "--stats -vv"
 
-      - name: Trace l2-execution guest program with Amsterdam block 213k without sender recovery sharding 500000
+      - name: Trace l2-execution guest program with Amsterdam block 500k without sender recovery sharding 500000
         run: make -C riscv-guests/l2-execution trace
         timeout-minutes: 45
         env:
           ZKC_REF: "1183cd10e59fe08d4cb5d4184c30bcf041f4512e" # Empty to avoid installing zkc again
-          INPUT: test/testdata/block_amsterdam_59829.ssz
+          INPUT: test/testdata/block_amsterdam_51584_500k.ssz
           KECCAK_ACCEL: true
           ZKC_TRACE_FLAGS: "--stats -vv --sharding interpreter:500000"
 
