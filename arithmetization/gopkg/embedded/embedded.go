@@ -15,6 +15,7 @@ import (
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/compiler/ast"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/compiler/codegen"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/constraints"
+	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 )
 
 const mainDir = "main"
@@ -160,7 +161,7 @@ func WithAirValidation() CompileOption {
 //   - The embedded R5 interpreter source files as the root filesystem.
 //   - No metadata or attributes for the compiled binary file.
 //   - No AIR validation.
-func CompiledBinaryFile(opts ...CompileOption) (binfile *constraints.BinaryFile[koalabear.Element], err error) {
+func CompiledBinaryFile(opts ...CompileOption) (binfile *constraints.BinaryFile[koalabear.Element, vm.Uint32], err error) {
 	cfg := new(compileCfg)
 	for _, opt := range opts {
 		if err := opt(cfg); err != nil {
@@ -191,7 +192,7 @@ func CompiledBinaryFile(opts ...CompileOption) (binfile *constraints.BinaryFile[
 		}
 		return nil, errors.Join(errs...)
 	}
-	binfile = constraints.NewBinaryFile[koalabear.Element](cfg.metadata, cfg.attributes, ir)
+	binfile = constraints.NewBinaryFile[koalabear.Element, vm.Uint32](cfg.metadata, cfg.attributes, ir)
 	if cfg.validateAir {
 		air := binfile.AirConstraints()
 		errs := constraints.Validate(air)

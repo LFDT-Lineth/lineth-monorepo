@@ -125,5 +125,12 @@
     },
     "unit/fixed_array_22.zkc": {
         "0": "zkc trace/check failed"
+    },
+    "unit/switch_19.zkc": {
+        "0": "zkc trace/check failed",
+        "1": "zkc trace/check failed",
+        "2": "zkc trace/check failed",
+        "3": "zkc trace/check failed",
+        "4": "zkc trace/check failed"
     }
 }

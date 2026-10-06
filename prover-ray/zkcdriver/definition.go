@@ -273,12 +273,12 @@ func (s *schemaScanner) collectReferencedColumns() map[string]struct{} {
 	for _, cs := range s.Schema.Constraints().Collect() {
 		switch cs := cs.(type) {
 
-		case air.VanishingConstraint[koalabear.Element]:
-			vc := cs.Unwrap()
+		case *air.VanishingConstraint[koalabear.Element]:
+			vc := cs
 			s.collectFromTerm(vc.Context, vc.Constraint.Term, referenced)
 
-		case air.LookupConstraint[koalabear.Element]:
-			lc := cs.Unwrap()
+		case *air.LookupConstraint[koalabear.Element]:
+			lc := cs
 			for _, frag := range lc.Sources {
 				for _, reg := range frag.Registers {
 					s.addColRef(frag.Module, reg, referenced)
@@ -296,11 +296,8 @@ func (s *schemaScanner) collectReferencedColumns() map[string]struct{} {
 				}
 			}
 
-		case air.RangeConstraint[koalabear.Element]:
-			rc := cs.Unwrap()
-			for i := range rc.Bitwidths {
-				s.addColRef(rc.Context, rc.Sources[i], referenced)
-			}
+		case *air.RangeConstraint[koalabear.Element]:
+			s.addColRef(cs.Context, cs.Source, referenced)
 		}
 	}
 
@@ -396,9 +393,9 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 
 	switch cs := corsetCS.(type) {
 
-	case air.BusConstraint[koalabear.Element]:
+	case *air.BusConstraint[koalabear.Element]:
 
-		var bc = cs.Unwrap()
+		var bc = cs
 		// Iterate receive ports, each of which identifies a set of columns in a
 		// given module (including a selector) which determine the message being
 		// reveived.
@@ -432,11 +429,11 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 			s.Sys.NewMessageBusSend(s.Sys.Context.Childf("bus-%v", name), "0", name, table)
 		}
 
-	case air.LookupConstraint[koalabear.Element]:
+	case *air.LookupConstraint[koalabear.Element]:
 
 		var (
-			cSource                  = cs.Unwrap().Sources[0]
-			cTarget                  = cs.Unwrap().Targets[0]
+			cSource                  = cs.Sources[0]
+			cTarget                  = cs.Targets[0]
 			numCol                   = cSource.Len()
 			wSources                 = make([]*wiop.ColumnView, numCol)
 			wTargets                 = make([]*wiop.ColumnView, numCol)
@@ -452,8 +449,8 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 		}
 
 		// Sanity check for fragment lookup
-		if len(cs.Unwrap().Sources) != 1 {
-			utils.Panic("lookup %q has %d source fragments; only single-fragment lookups are supported", name, len(cs.Unwrap().Sources))
+		if len(cs.Sources) != 1 {
+			utils.Panic("lookup %q has %d source fragments; only single-fragment lookups are supported", name, len(cs.Sources))
 		}
 
 		// this will panic over interleaved columns, we can debug that later
@@ -486,10 +483,10 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 			[]wiop.Table{tableTarget},
 		)
 
-	case air.VanishingConstraint[koalabear.Element]:
+	case *air.VanishingConstraint[koalabear.Element]:
 
 		var (
-			vc     = cs.Unwrap()
+			vc     = cs
 			wExpr  = s.castExpression(vc.Context, vc.Constraint.Term)
 			module = wExpr.Module()
 		)
@@ -522,23 +519,12 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 
 		module.NewVanishing(module.Context.Childf("local-%v", name), wExpr)
 
-	case air.RangeConstraint[koalabear.Element]:
+	case *air.RangeConstraint[koalabear.Element]:
 
-		rc := cs.Unwrap()
-
-		// Sanity check:  If a RangeConstraint ever has more than one source/bitwidth, the second iteration will panic
-		// because the first iteration already registered that QueryID in the CompiledIOP. In practice
-		// the len is always expected to be either 0 (no-op) or 1 (single pass).
-		if len(rc.Bitwidths) > 1 {
-			utils.Panic("multiple bitwidths for range constraints not supported")
-		}
-
-		for i, bitwidth := range rc.Bitwidths {
-			// Determine bound for this range constraint
-			bound := 1 << bitwidth
-			col := s.compColumnByCorsetID(rc.Context, rc.Sources[i])
-			col.Module.NewRangeCheck(col.Context.Childf("range-%v", name), col, bound)
-		}
+		// Determine bound for this range constraint
+		bound := 1 << cs.Bitwidth
+		col := s.compColumnByCorsetID(cs.Context, cs.Source)
+		col.Module.NewRangeCheck(col.Context.Childf("range-%v", name), col, bound)
 
 	default:
 		utils.Panic("unexpected constraint type: %s", cs.Lisp(s.Schema).String(false))

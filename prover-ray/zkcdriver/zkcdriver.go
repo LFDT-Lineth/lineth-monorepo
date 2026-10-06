@@ -23,7 +23,7 @@ import (
 // access to the AIR constraints representing the given ZkC program; secondly,
 // it provides a means to generate a trace of that program from a given set of
 // inputs.
-type BinaryFile = constraints.BinaryFile[koalabear.Element]
+type BinaryFile = constraints.BinaryFile[koalabear.Element, vm.Uint32]
 
 // Settings specifies the parameters for the arithmetization (a.k.a. the
 // "constraints").
@@ -96,9 +96,10 @@ func PreReadZkcInputs(inputsFile string) *PreReadInputs {
 	return &PreReadInputs{Inputs: inputs, Err: err, InputsFile: inputsFile}
 }
 
-// TraceZkcInputs reads and expands a trace file, returning the pre-read trace
-// data laid out on multiple shards. The function panics on errors.
-func (a *ZkCDriver) TraceZkcInputs(preRead *PreReadInputs) trace.Trace[koalabear.Element] {
+// LazyTraceZkcInputs reads the pre-read inputs and returns a lazy trace whose
+// shards are only generated on demand (see [trace.LazyTrace]).  The function
+// panics on unrecoverable tracing errors.
+func (a *ZkCDriver) LazyTraceZkcInputs(preRead *PreReadInputs) trace.LazyTrace[koalabear.Element] {
 
 	assignStart := time.Now()
 	var (
@@ -125,12 +126,31 @@ func (a *ZkCDriver) TraceZkcInputs(preRead *PreReadInputs) trace.Trace[koalabear
 	// Attempt to trace the ZkC program using the provided inputs, generating a
 	// fully expanded AIR-compatible trace.
 	tracingStart := time.Now()
-	_, expandedTrace, errs := a.BinaryFile.Trace(inputs, a.TracingConfig)
+	_, lazyTrace, errs := a.BinaryFile.Trace(inputs, a.TracingConfig)
 
+	if len(errs) > 0 || !lazyTrace.HasValue() {
+		logrus.Panicf("tracing failed: %v", errors.Join(errs...))
+	}
+	logrus.Infof("[bootstrapper] tracing: %v", time.Since(tracingStart))
+
+	return lazyTrace.Unwrap()
+}
+
+// TraceZkcInputs reads and expands a trace file, returning the pre-read trace
+// data laid out on multiple shards. The function panics on errors.
+func (a *ZkCDriver) TraceZkcInputs(preRead *PreReadInputs) trace.Trace[koalabear.Element] {
+	var (
+		lazyTrace     = a.LazyTraceZkcInputs(preRead)
+		expandedTrace = make(trace.Trace[koalabear.Element], lazyTrace.Len())
+		expandStart   = time.Now()
+	)
+	errs := lazyTrace.Apply(func(i uint, shard trace.Shard[koalabear.Element]) {
+		expandedTrace[i] = shard
+	})
 	if len(errs) > 0 {
 		logrus.Panicf("tracing failed: %v", errors.Join(errs...).Error())
 	}
-	logrus.Infof("[bootstrapper] tracing: %v", time.Since(tracingStart))
+	logrus.Infof("[bootstrapper] shard expansion: %v", time.Since(expandStart))
 
 	return expandedTrace
 }

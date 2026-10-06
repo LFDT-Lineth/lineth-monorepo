@@ -30,7 +30,7 @@ var (
 )
 
 type r5BenchmarkFixture struct {
-	binFile        *constraints.BinaryFile[koalabear.Element]
+	binFile        *constraints.BinaryFile[koalabear.Element, vm.Uint32]
 	inputs         map[string][]byte
 	expandedShards []trace.Shard[koalabear.Element]
 	serialized     []byte
@@ -76,10 +76,11 @@ func loadR5BenchmarkFixture(b *testing.B) *r5BenchmarkFixture {
 	if err != nil {
 		b.Fatalf("compiling R5 ZKC program: %v", err)
 	}
-	_, expandedTrace, errs := binFile.Trace(inputs, tracingConfig)
-	if len(errs) > 0 {
+	_, lazyTrace, errs := binFile.Trace(inputs, tracingConfig)
+	if len(errs) > 0 || !lazyTrace.HasValue() {
 		b.Fatalf("tracing R5 fixture: %v", errors.Join(errs...))
 	}
+	expandedTrace := expandR5Trace(b, lazyTrace.Unwrap())
 	serialized, err := binFile.MarshalBinary()
 	if err != nil {
 		b.Fatalf("serializing R5 constraints: %v", err)
@@ -143,14 +144,15 @@ func BenchmarkR5Trace(b *testing.B) {
 	b.ResetTimer()
 
 	for b.Loop() {
-		_, expandedTrace, errs := fixture.binFile.Trace(
+		_, lazyTrace, errs := fixture.binFile.Trace(
 			fixture.inputs,
 			vm.DEFAULT_TRACE_CONFIG,
 		)
-		if len(errs) > 0 {
+		if len(errs) > 0 || !lazyTrace.HasValue() {
 			b.Fatalf("tracing R5 program: %v", errors.Join(errs...))
 		}
-		r5TraceSink = expandedTrace
+		// Shards are generated lazily, hence force their expansion here.
+		r5TraceSink = expandR5Trace(b, lazyTrace.Unwrap())
 	}
 	reportR5Work(b, fixture)
 }
@@ -163,20 +165,24 @@ func BenchmarkR5TraceAndCheck(b *testing.B) {
 	b.ResetTimer()
 
 	for b.Loop() {
-		_, expandedTrace, errs := fixture.binFile.Trace(
+		_, lazyTrace, errs := fixture.binFile.Trace(
 			fixture.inputs,
 			vm.DEFAULT_TRACE_CONFIG,
 		)
-		if len(errs) > 0 {
+		if len(errs) > 0 || !lazyTrace.HasValue() {
 			b.Fatalf("tracing R5 program: %v", errors.Join(errs...))
 		}
-		if failures := fixture.binFile.Check(
+		// Check expands each shard on demand.
+		failures, errs := fixture.binFile.Check(
 			vm.DEFAULT_TRACE_CONFIG,
-			expandedTrace,
-		); len(failures) > 0 {
+			lazyTrace.Unwrap(),
+		)
+		if len(errs) > 0 {
+			b.Fatalf("checking R5 trace: %v", errors.Join(errs...))
+		}
+		if len(failures) > 0 {
 			b.Fatalf("checking R5 trace: %s", failures[0].Message())
 		}
-		r5TraceSink = expandedTrace
 	}
 	reportR5Work(b, fixture)
 }
@@ -343,4 +349,16 @@ func BenchmarkR5ColdEndToEnd(b *testing.B) {
 		r5ProofSink, r5PubSink = proofs, pubs
 	}
 	reportR5Work(b, fixture)
+}
+
+// expandR5Trace forces the generation of every shard in the given lazy trace.
+func expandR5Trace(b *testing.B, lazyTrace trace.LazyTrace[koalabear.Element]) trace.Trace[koalabear.Element] {
+	b.Helper()
+	expanded := make(trace.Trace[koalabear.Element], lazyTrace.Len())
+	if errs := lazyTrace.Apply(func(i uint, shard trace.Shard[koalabear.Element]) {
+		expanded[i] = shard
+	}); len(errs) > 0 {
+		b.Fatalf("expanding R5 trace: %v", errors.Join(errs...))
+	}
+	return expanded
 }
