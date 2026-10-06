@@ -37,7 +37,7 @@ from typing import Any, Optional
 from ethereum.crypto.hash import Hash32
 from ethereum.state import Address
 from ethereum_types.numeric import U64
-from remerkleable.basic import boolean, uint64
+from remerkleable.basic import boolean, uint16, uint64
 from remerkleable.byte_arrays import ByteList, Bytes32 as SszBytes32
 from remerkleable.complex import Container, List
 
@@ -108,9 +108,12 @@ class SszRollupPublicInput(Container):
     end_block_hash: SszBytes32
     start_offset: uint64
     end_offset: uint64
+    l2_l1_tree_depth: uint64
     l2_l1_roots: List[SszBytes32, MAX_L2_L1_ROOTS]
     filtered_addresses: List[SszAddress, MAX_FILTERED_ADDRESSES]
     program_vks: List[SszBytes32, MAX_PROGRAM_VKS]
+    block_count: uint64
+    l2_messaging_blocks_offsets: List[uint16, MAX_L2_L1_ROOTS]
 
 
 class SszRollupProofPrivateInput(Container):
@@ -166,9 +169,12 @@ def _ssz_rollup_public_input(pi: RollupPublicInput) -> SszRollupPublicInput:
         end_block_hash=bytes(pi.end_block_hash),
         start_offset=int(pi.start_offset),
         end_offset=int(pi.end_offset),
+        l2_l1_tree_depth=int(pi.l2_l1_tree_depth),
         l2_l1_roots=[bytes(r) for r in pi.l2_l1_roots],
         filtered_addresses=[bytes(a) for a in pi.filtered_addresses],
         program_vks=[bytes(v) for v in pi.program_vks],
+        block_count=int(pi.block_count),
+        l2_messaging_blocks_offsets=pi.l2_messaging_blocks_offsets,
     )
 
 
@@ -227,9 +233,12 @@ def _rollup_public_input_from_view(view: Any) -> RollupPublicInput:
         end_block_hash=Hash32(bytes(view.end_block_hash)),
         start_offset=int(view.start_offset),
         end_offset=int(view.end_offset),
+        l2_l1_tree_depth=int(view.l2_l1_tree_depth),
         l2_l1_roots=[Hash32(bytes(r)) for r in view.l2_l1_roots],
         filtered_addresses=[Address(bytes(a)) for a in view.filtered_addresses],
         program_vks=[Hash32(bytes(v)) for v in view.program_vks],
+        block_count=int(view.block_count) if hasattr(view, "block_count") else 0,
+        l2_messaging_blocks_offsets=[int(o) for o in view.l2_messaging_blocks_offsets],
     )
 
 

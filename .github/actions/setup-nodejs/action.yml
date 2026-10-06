@@ -53,29 +53,24 @@ runs:
         head=$(git rev-parse HEAD 2>/dev/null || echo unknown)
         echo "checkout-matches-ref=$([ "$head" = "$RUNNING_SHA" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
-    # pnpm records the result of its lockfile supply-chain verification
-    # (minimumReleaseAge, trustPolicy, tarball URL binding, ...) in
-    # lockfile-verified.jsonl. A verdict is reused only when the normalized
-    # lockfile hash and the full policy match, so any dependency, resolution
-    # or policy change forces a fresh verification. Restored on every ref, but
-    # saved only by main runs (see ./.github/actions/cache), never by PRs.
+    # Cache pnpm's lockfile verification verdicts (pnpm cacheDir). A verdict only
+    # applies to the exact lockfile and policy it was computed for.
     - id: verdict-path
       name: Locate the pnpm verification verdict file
       shell: bash
-      run: |
-        echo "path=${XDG_CACHE_HOME:-$HOME/.cache}/pnpm/lockfile-verified.jsonl" >> "$GITHUB_OUTPUT"
+      run: echo "path=$(pnpm cache path)/lockfile-verified.jsonl" >> "$GITHUB_OUTPUT"
 
-    - uses: ./.github/actions/cache
-      name: Cache pnpm lockfile verification verdicts
+    - id: verdict-restore
+      name: Restore pnpm lockfile verification verdicts
       if: ${{ hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory)) != '' }}
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
       with:
         path: ${{ steps.verdict-path.outputs.path }}
-        key: pnpm-verified-${{ hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory)) }}
-        # Append-only JSONL: a fallback restore carries older verdicts (inert
-        # unless the lockfile hash and policy match) and the next save adds the new one.
+        key: pnpm-verified-${{ runner.os }}-${{ hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory)) }}
+        # A fallback restore only carries older verdicts, which pnpm ignores
+        # unless the lockfile hash and policy match.
         restore-keys: |
-          pnpm-verified-
-        cache-save: ${{ steps.guard.outputs.checkout-matches-ref }}
+          pnpm-verified-${{ runner.os }}-
 
     - id: versions
       name: Capture versions
@@ -88,6 +83,20 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       run: pnpm i ${{ inputs.pnpm-install-options }}
       shell: bash
+
+    # Save only from main runs whose checkout matches the running ref, so
+    # release/publish dispatches cannot write verdicts under another ref's key.
+    - name: Save pnpm lockfile verification verdicts
+      if: >-
+        ${{ steps.verdict-restore.outcome == 'success'
+        && steps.verdict-restore.outputs.cache-hit != 'true'
+        && steps.guard.outputs.checkout-matches-ref == 'true'
+        && github.ref == 'refs/heads/main'
+        && !startsWith(github.event_name, 'pull_request') }}
+      uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+      with:
+        path: ${{ steps.verdict-path.outputs.path }}
+        key: ${{ steps.verdict-restore.outputs.cache-primary-key }}
 
     - name: Run post-install commands
       if: inputs.commands != ''

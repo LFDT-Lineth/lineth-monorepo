@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🐛 Bug Fixes
+
+- *(linea-besu)* Limit large MODEXP calls to 1 per block (#4128)
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(misc)* Fix code licence header (#4009)

@@ -82,6 +82,34 @@ def test_schema_is_valid_draft_2020_12(schema_path: Path) -> None:
     jsonschema.Draft202012Validator.check_schema(schema)
 
 
+@pytest.mark.parametrize(
+    ("fixture_name", "public_inputs"),
+    [
+        ("10-14-getZkRollupProofV1.response.json", lambda fixture: [fixture["publicInputs"]]),
+        (
+            "10-18-getZkRollupAggregationProofV1.request.json",
+            lambda fixture: [proof["publicInputs"] for proof in fixture["proofRequest"]["rollupProofs"]],
+        ),
+        ("10-18-getZkRollupAggregationProofV1.response.json", lambda fixture: [fixture["publicInputs"]]),
+    ],
+)
+def test_l2_l1_tree_depth_schema_accepts_other_guest_depths(fixture_name, public_inputs) -> None:
+    jsonschema = pytest.importorskip("jsonschema")
+    fixture_path = _FIXTURE_DIR / fixture_name
+    schema = json.loads(_schema_path_for(fixture_path).read_text())
+    fixture = json.loads(fixture_path.read_text())
+    validator = jsonschema.Draft202012Validator(schema)
+
+    for inputs in public_inputs(fixture):
+        inputs["l2L1TreeDepth"] = 4
+    validator.validate(fixture)
+
+    for invalid_depth in (0, -1, 1.5, 2**64):
+        for inputs in public_inputs(fixture):
+            inputs["l2L1TreeDepth"] = invalid_depth
+        assert not validator.is_valid(fixture), f"depth {invalid_depth} must be rejected"
+
+
 @pytest.fixture
 def execution_request_and_validator():
     jsonschema = pytest.importorskip("jsonschema")

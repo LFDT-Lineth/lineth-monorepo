@@ -2,15 +2,17 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://linea.build/schemas/getZkRollupAggregationProofV1.request.schema.json",
   "title": "getZkRollupAggregationProof V1 request",
-  "description": "Coordinator -> prover rollup-aggregation proof request. The shared, versioned contract for the rollup-aggregation guest input (RollupAggregationProofPrivateInput): a {programVk, proofRequest} envelope embedding the rollup proofs it recursively verifies.",
+  "description": "Coordinator -> prover rollup-aggregation proof request. The shared, versioned contract for the rollup-aggregation guest input (RollupAggregationProofPrivateInput): a {guestProgramId, provingSystem, proofRequest} envelope embedding the rollup proofs it recursively verifies.",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "programVk",
+    "guestProgramId",
+    "provingSystem",
     "proofRequest"
   ],
   "properties": {
-    "programVk": { "$ref": "#/$defs/hash32" },
+    "guestProgramId": { "$ref": "#/$defs/hash32" },
+    "provingSystem": { "type": "string", "minLength": 1 },
     "metadata": { "$ref": "#/$defs/metadata" },
     "proofRequest": {
       "type": "object",
@@ -66,8 +68,11 @@
         "startOffset",
         "endOffset",
         "l2L1Roots",
+        "l2L1TreeDepth",
         "filteredAddresses",
-        "programVks"
+        "programVks",
+        "blockCount",
+        "l2MessagingBlocksOffsets"
       ],
       "properties": {
         "endBlockNumber": { "$ref": "#/$defs/uint" },
@@ -90,8 +95,12 @@
           "$ref": "#/$defs/offset"
         },
         "endOffset": {
-          "description": "Canonical end position in unpacked blob payload bytes: 0 after fully consuming a calldata or blob chunk, positive only inside a shared terminal blob (§3.1).",
+          "description": "Canonical end position in unpacked blob payload bytes: 0 after fully consuming a calldata or blob chunk (including a short terminal blob), positive only inside a shared terminal blob (§3.1).",
           "$ref": "#/$defs/offset"
+        },
+        "l2L1TreeDepth": {
+          "description": "Guest-proven depth of each L2-to-L1 message tree; the guest implementation chooses the depth.",
+          "type": "integer", "minimum": 1, "maximum": 18446744073709551615
         },
         "l2L1Roots": { "type": "array", "items": { "$ref": "#/$defs/hash32" } },
         "filteredAddresses": { "type": "array", "items": { "$ref": "#/$defs/address" } },
@@ -100,7 +109,9 @@
           "type": "array",
           "uniqueItems": true,
           "items": { "$ref": "#/$defs/hash32" }
-        }
+        },
+        "l2MessagingBlocksOffsets": { "type": "array", "items": { "type": "integer", "minimum": 1, "maximum": 65535 } },
+        "blockCount": { "$ref": "#/$defs/uint" }
       }
     },
     "rollupProof": {

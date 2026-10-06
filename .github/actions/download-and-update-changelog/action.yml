@@ -42,6 +42,10 @@ runs:
               dest_folder="linea-besu/package"
             elif [ "${dest_folder}" = "tx-exclusion-api" ]; then
               dest_folder="transaction-exclusion-api"
+            elif [ "${dest_folder}" = "riscv-l2-execution" ]; then
+              dest_folder="riscv-guests/l2-execution"
+            elif [ "${dest_folder}" = "riscv-rollup" ]; then
+              dest_folder="riscv-guests/rollup"
             elif [ "${dest_folder}" = "linea" ]; then
               dest_folder="."
             fi
@@ -64,4 +68,3 @@ runs:
           else
             echo "Applied ${applied} CHANGELOG.md update(s)."
           fi
-

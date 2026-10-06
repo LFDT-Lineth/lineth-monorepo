@@ -14,7 +14,6 @@ class FakeL2ExecutionProofTransport(
 ) : L2ExecutionProofTransport {
   private val l2ExecutionProofResponseDto = L2ExecutionProofResponseDto(
     startBlockNumber = 1L,
-    proverVersion = RiscvProverClientTestFixtures.PROVER_VERSION,
     proof = byteArrayOf(0x02).encodeHex(),
     publicInputs = RiscvProverClientTestFixtures.l2ExecutionProofPublicInputsDto(2L),
     l2L1Messages = listOf(ByteArray(32) { 0x4a }.encodeHex()),
@@ -66,7 +65,6 @@ class FakeRollupProofTransport(
 ) : FileBasedRollupProofTransport {
   private val rollupProofResponseDto = RollupProofResponseDto(
     startBlockNumber = 1L,
-    proverVersion = RiscvProverClientTestFixtures.PROVER_VERSION,
     proof = byteArrayOf(0x4a).encodeHex(),
     publicInputs = RiscvProverClientTestFixtures.rollupProofPublicInputsDto(2L),
     l2L1Roots = listOf(ByteArray(32) { 0x5a }.encodeHex()),
