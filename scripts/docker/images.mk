@@ -112,13 +112,11 @@ docker-build-prover:
 
 # .github/workflows/prover-ray-build-and-publish.yml
 docker-build-prover-ray:
-	$(call prebuild,$(MAKE) -C prover-ray download-guest)
 	$(DOCKER_BUILD) \
 		--image-name consensys/lineth-prover-ray \
 		--dockerfile ./prover-ray/Dockerfile \
 		--context prover-ray \
-		--build-context riscv-guests=riscv-guests/ \
-		--build-context l2-execution-guest=prover-ray/bin/guest/
+		--build-context riscv-guests=riscv-guests/
 
 # .github/workflows/native-yield-automation-service-build-and-publish.yml
 docker-build-native-yield-automation-service:

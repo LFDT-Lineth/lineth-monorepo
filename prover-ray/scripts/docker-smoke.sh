@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Docker smoke test for the prover-ray image (reusable by CI).
 #
-# Checks two things:
+# Checks three things:
 #   1. dev-mock turns a dropped request file into a valid response file.
-#   2. the dev-zkvm artifacts (native runner + guest ELF) are present and the
-#      runner's shared libraries all resolve inside the image.
+#   2. the native runner and its shared libraries run inside the image.
+#   3. dev-zkvm proves a real request: the bundled guest ELF and native runner
+#      emit the same commitment.
 #
 # Usage: scripts/docker-smoke.sh [image]
 set -euo pipefail
@@ -66,8 +67,6 @@ if ! grep -q '"proverVersion": "smoke-dev-mock"' "$WORK/responses/req.json"; the
 fi
 echo "    ok: response written with proverVersion smoke-dev-mock"
 
-$DOCKER run --rm --entrypoint sh "$IMAGE" -c 'test -s /opt/linea/prover-ray/evm_execution_guest'
-
 echo "==> native runner: emits the dev-zkvm commitment from an extended input"
 # Run the bundled native execution runner on an extended (0x0002) input and check
 # it emits a 34-byte 0x0003 commitment (schema id + keccak256(SSZ(public inputs))).
@@ -88,5 +87,38 @@ if [ "$sz" -ne 34 ] || [ "$prefix" != "0003" ]; then
     exit 1
 fi
 echo "    ok: native runner emitted a valid 0x0003 commitment (runner + libs OK)"
+
+echo "==> dev-zkvm: bundled guest and native runner agree on a real request"
+# Runs one dev-zkvm prove: the bundled guest ELF under ZkC Execute, cross-checked
+# byte for byte against the bundled native runner. A runner/guest mismatch in the
+# image fails here. The request fixture encodes the guest's own stateless_input.ssz.
+ZKVM_FIXTURE="$SCRIPT_DIR/../backend/jobadapter/testdata/request_guest_fixture.json"
+mkdir -p "$WORK/zkvm"
+cp "$ZKVM_FIXTURE" "$WORK/zkvm/1-1-getZkL2ExecutionProofV1.json"
+cat > "$WORK/zkvm/config.toml" <<'TOML'
+version = "smoke"
+log_level = 4
+[execution]
+prover_mode = "dev-zkvm"
+requests_root_dir = "/data"
+native_runner_bin = "/opt/linea/prover-ray/l2-execution-runner"
+guest_elf = "/opt/linea/prover-ray/evm_execution_guest"
+TOML
+if ! $DOCKER run --rm \
+        "${run_opts[@]}" \
+        --entrypoint /opt/linea/prover-ray/prover \
+        -v "$WORK/zkvm:/data" \
+        "$IMAGE" prove --config /data/config.toml \
+        --in /data/1-1-getZkL2ExecutionProofV1.json --out /data/response.json; then
+    echo "FAIL: dev-zkvm prove failed (guest/native-runner mismatch or runtime error)"
+    cat "$WORK/zkvm/response.json" 2>/dev/null || true
+    exit 1
+fi
+if ! grep -q '"proverVersion": "smoke-dev-zkvm"' "$WORK/zkvm/response.json"; then
+    echo "FAIL: unexpected dev-zkvm response body"
+    cat "$WORK/zkvm/response.json"
+    exit 1
+fi
+echo "    ok: guest commitment matches the native runner"
 
 echo "SMOKE PASSED"

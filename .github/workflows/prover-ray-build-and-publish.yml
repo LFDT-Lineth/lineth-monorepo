@@ -64,11 +64,6 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Download released L2 execution guest
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: make -C prover-ray download-guest
-
       - name: Build and publish Docker image
         uses: ./.github/actions/docker-build-publish
         with:
@@ -78,9 +73,7 @@ jobs:
           push_image: ${{ env.PUSH_IMAGE }}
           dockerfile_path: ./prover-ray/Dockerfile
           docker_context: prover-ray
-          build_contexts: |
-            riscv-guests=riscv-guests/
-            l2-execution-guest=prover-ray/bin/guest/
+          build_contexts: riscv-guests=riscv-guests/
           push_platforms: linux/amd64
 
       # Smoke gate: on the local (push_image=false) build the image is loaded

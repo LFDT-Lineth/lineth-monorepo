@@ -116,18 +116,13 @@ make docker-build-prover-ray
 ./prover-ray/scripts/docker-smoke.sh consensys/lineth-prover-ray:local
 ```
 
-One image includes the Go prover, native runner, and a pinned released guest ELF.
-The build downloads the ELF from the guest's GitHub release and verifies its SHA-256;
-release, asset name, and checksum are pinned together in `prover-ray/Makefile`.
-The download uses GitHub CLI authentication (`gh auth login` locally or `GH_TOKEN`
-in CI). For draft or access-restricted releases, that identity must have access to
-the release. Credentials are used by the download step outside Docker.
-
-The native runner is compiled from `riscv-guests`. Docker installs Nim/LLVM in the
-builder stage to compile its Constantine dependency; these tools are not required
-on the host for Docker builds or in the final runtime image. Updating the guest pin
-requires checking compatibility with the native runner and updating the
-coordinator's Program ID to the released ELF's ID.
+One image includes the Go prover, native runner, and guest ELF. The runner and
+guest are both compiled from `riscv-guests` at the same commit, so every image
+build checks their compatibility; the smoke test runs one `dev-zkvm` prove that
+cross-checks the guest's commitment against the runner's. Docker installs Nim/LLVM
+in the builder stage to compile the Constantine dependency; these tools are not
+required on the host or in the final runtime image. The coordinator's Program ID
+must match the bundled ELF (Keccak-256 of the complete ELF).
 
 Mount a config at `CONFIG_FILE` with the stack's shared queue paths and select
 `execution.prover_mode = "dev-mock"` or `"dev-zkvm"`. For `dev-zkvm`, set the bundled

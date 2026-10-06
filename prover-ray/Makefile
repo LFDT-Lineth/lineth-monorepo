@@ -12,7 +12,6 @@ ZKC_TESTDATA_SYNC_DST_DIR := zkcdriver/testdata/synced
 	ci-lint \
 	download-zkc-testdata \
 	docker-build \
-	download-guest \
 	docker-smoke
 
 # One prover-ray image for all modes; the mode is set per pipeline in the config.
@@ -56,34 +55,13 @@ download-zkc-testdata:
 
 	# we don't compile binaries. They are compiled as-needed during integration tests (to be up-to-date)
 
-# Published guest artifact, independently versioned from the prover image.
-L2_EXECUTION_GUEST_RELEASE ?= releases/riscv-l2-execution/v0.1.0-debug
-L2_EXECUTION_GUEST_ASSET ?= l2-execution-v0.1.0-debug-ace669155c1f5492b26d4ae816b032338a8467323c668ea96ac288307115be1a.elf
-L2_EXECUTION_GUEST_SHA256 ?= 62e8c9b1cd2d5c0fa4de2974792740f7ccd633175fa2e398756896795385a432
-GUEST_ASSET_DIR := $(REPO_ROOT)/prover-ray/bin/guest
-
-# Uses local gh authentication or GH_TOKEN in CI; credentials never enter Docker.
-download-guest:
-	@set -eu; \
-	mkdir -p "$(GUEST_ASSET_DIR)"; \
-	asset="$(GUEST_ASSET_DIR)/evm_execution_guest"; \
-	if [ -f "$$asset" ] && printf '%s  %s\n' "$(L2_EXECUTION_GUEST_SHA256)" "$$asset" | shasum -a 256 -c - >/dev/null 2>&1; then \
-		echo "Using verified guest ELF: $(L2_EXECUTION_GUEST_RELEASE)"; exit 0; \
-	fi; \
-	tmp=$$(mktemp "$(GUEST_ASSET_DIR)/download.XXXXXX"); \
-	trap 'rm -f "$$tmp"' EXIT; \
-	gh release download "$(L2_EXECUTION_GUEST_RELEASE)" --repo LFDT-Lineth/lineth-monorepo \
-		--pattern "$(L2_EXECUTION_GUEST_ASSET)" --output "$$tmp" --clobber; \
-	printf '%s  %s\n' "$(L2_EXECUTION_GUEST_SHA256)" "$$tmp" | shasum -a 256 -c -; \
-	mv "$$tmp" "$$asset"
-
 ##
-## Build the prover image with a released guest ELF and a locally built native runner.
+## Build the one prover-ray image (Go prover + native runner + guest ELF).
+## The native runner is built from riscv-guests, passed in as a build context.
 ##
-docker-build: download-guest
+docker-build:
 	$(DOCKER) build -f Dockerfile \
 		--build-context riscv-guests=$(REPO_ROOT)/riscv-guests \
-		--build-context l2-execution-guest=$(GUEST_ASSET_DIR) \
 		-t $(IMAGE_NAME):$(IMAGE_TAG) \
 		.
 
