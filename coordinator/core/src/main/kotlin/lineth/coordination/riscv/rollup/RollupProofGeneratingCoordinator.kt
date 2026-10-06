@@ -143,32 +143,41 @@ class RollupProofGeneratingCoordinator(
   private var lastHandledBlockNumber: ULong = 0u
   private var nextBlockNumberToPoll: Long? = null
   private val pendingConflations = ArrayDeque<PendingConflation>()
+  private var streamPositionFuture: SafeFuture<Unit>? = null
 
   init {
     rollupCalculator.onRollup { window -> submitProofWindow(window) }
   }
 
-  private fun ensureStreamPositionInitialized(): SafeFuture<Unit> {
-    if (::parentDataRollingHash.isInitialized) return SafeFuture.completedFuture(Unit)
-    return streamPositionProvider.getStreamPosition()
-      .thenApply { position ->
-        parentDataRollingHash = position.dataRollingHash
-        lastHandledBlockNumber = position.lastConflationEndBlock
-        nextBlockNumberToPoll = position.lastConflationEndBlock.toLong() + 1L
-      }.toSafeFuture()
-  }
+  private fun ensureStreamPositionInitialized(): SafeFuture<Unit> =
+    synchronized(this) {
+      if (::parentDataRollingHash.isInitialized) return SafeFuture.completedFuture(Unit)
+      streamPositionFuture?.let { return it }
+      streamPositionProvider.getStreamPosition()
+        .thenApply { position ->
+          synchronized(this) {
+            if (!::parentDataRollingHash.isInitialized) {
+              parentDataRollingHash = position.dataRollingHash
+              lastHandledBlockNumber = position.lastConflationEndBlock
+              nextBlockNumberToPoll = position.lastConflationEndBlock.toLong() + 1L
+            }
+          }
+        }.toSafeFuture()
+        .also { streamPositionFuture = it }
+    }
 
-  @Synchronized
   override fun handleConflatedBatch(conflation: BlocksConflation): SafeFuture<*> {
     return ensureStreamPositionInitialized().thenCompose {
-      require(conflation.conflationResult.startBlockNumber == lastHandledBlockNumber + 1u) {
-        "Conflation out of order: expected startBlockNumber=${lastHandledBlockNumber + 1u}, " +
-          "got ${conflation.conflationResult.startBlockNumber}"
+      synchronized(this) {
+        require(conflation.conflationResult.startBlockNumber == lastHandledBlockNumber + 1u) {
+          "Conflation out of order: expected startBlockNumber=${lastHandledBlockNumber + 1u}, " +
+            "got ${conflation.conflationResult.startBlockNumber}"
+        }
+        val segmentBytes = conflationSegmentBuilder.buildSegment(conflation.blocks, chainId)
+        pendingConflations += PendingConflation(conflation.conflationResult, conflation.blocks, segmentBytes)
+        lastHandledBlockNumber = conflation.conflationResult.endBlockNumber
+        SafeFuture.completedFuture(Unit)
       }
-      val segmentBytes = conflationSegmentBuilder.buildSegment(conflation.blocks, chainId)
-      pendingConflations += PendingConflation(conflation.conflationResult, conflation.blocks, segmentBytes)
-      lastHandledBlockNumber = conflation.conflationResult.endBlockNumber
-      SafeFuture.completedFuture(Unit)
     }
   }
 
