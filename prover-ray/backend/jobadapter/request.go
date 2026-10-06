@@ -11,6 +11,9 @@ import (
 )
 
 const (
+	// guestProgramIDKey is the top-level request field (all three request types).
+	guestProgramIDKey = "guestProgramId"
+	// programVkKey is the response/embedded-proof field, unchanged by the request rename.
 	programVkKey = "programVk"
 	chainIDKey   = "chainId"
 	forkNameKey  = "forkName"
@@ -68,8 +71,9 @@ type L2ExecutionPayload struct {
 // block. The block range is implied by the payloads (their
 // executionPayload.blockNumber), as in the reference decoder.
 type L2ExecutionRequest struct {
-	// ProgramVk is routing metadata; this decoder validates its shape but
-	// does not verify it against the configured guest ELF.
+	// ProgramVk is routing metadata, read from the request's guestProgramId
+	// field; this decoder validates its shape but does not verify it against the
+	// configured guest ELF. It is echoed back as the response's programVk.
 	ProgramVk               []byte
 	ChainID                 uint64
 	ForkName                string
@@ -93,18 +97,18 @@ func DecodeL2ExecutionRequest(data []byte) (*L2ExecutionRequest, error) {
 		return nil, fmt.Errorf("DecodeL2ExecutionRequest: parsing JSON: %w", err)
 	}
 
-	programVkRaw, err := requireField(env, programVkKey, "")
+	programVkRaw, err := requireField(env, guestProgramIDKey, "")
 	if err != nil {
 		return nil, err
 	}
-	programVk, err := hexString(programVkRaw, programVkKey)
+	programVk, err := hexString(programVkRaw, guestProgramIDKey)
 	if err != nil {
 		return nil, err
 	}
 	if len(programVk) != programVkByteSize {
 		return nil, fmt.Errorf(
 			"DecodeL2ExecutionRequest: %s must be %d bytes, got %d",
-			programVkKey,
+			guestProgramIDKey,
 			programVkByteSize,
 			len(programVk),
 		)

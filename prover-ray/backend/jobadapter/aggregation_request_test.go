@@ -55,7 +55,7 @@ func TestDecodeAggregationRequest_InvalidShape(t *testing.T) {
 		mutate  func(o map[string]any)
 		wantErr string
 	}{
-		{"MissingProgramVk", func(o map[string]any) { delete(o, programVkKey) }, programVkKey},
+		{"MissingProgramVk", func(o map[string]any) { delete(o, guestProgramIDKey) }, guestProgramIDKey},
 		{"MissingProofRequest", func(o map[string]any) { delete(o, proofRequestKey) }, proofRequestKey},
 		{"MissingRollupProofs", func(o map[string]any) { delete(pr(o), rollupProofsKey) }, rollupProofsKey},
 		{"EmptyRollupProofs", func(o map[string]any) { pr(o)[rollupProofsKey] = []any{} }, rollupProofsKey},
