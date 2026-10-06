@@ -145,6 +145,9 @@ class RollupProofGeneratingCoordinator(
   private val pendingConflations = ArrayDeque<PendingConflation>()
   private var streamPositionFuture: SafeFuture<Unit>? = null
 
+  // Each handleConflatedBatch chains on the previous call's future, guaranteeing arrival order.
+  private var lastHandleFuture: SafeFuture<Unit> = SafeFuture.completedFuture(Unit)
+
   init {
     rollupCalculator.onRollup { window -> submitProofWindow(window) }
   }
@@ -167,17 +170,23 @@ class RollupProofGeneratingCoordinator(
     }
 
   override fun handleConflatedBatch(conflation: BlocksConflation): SafeFuture<*> {
-    return ensureStreamPositionInitialized().thenCompose {
-      synchronized(this) {
-        require(conflation.conflationResult.startBlockNumber == lastHandledBlockNumber + 1u) {
-          "Conflation out of order: expected startBlockNumber=${lastHandledBlockNumber + 1u}, " +
-            "got ${conflation.conflationResult.startBlockNumber}"
-        }
-        val segmentBytes = conflationSegmentBuilder.buildSegment(conflation.blocks, chainId)
-        pendingConflations += PendingConflation(conflation.conflationResult, conflation.blocks, segmentBytes)
-        lastHandledBlockNumber = conflation.conflationResult.endBlockNumber
-        SafeFuture.completedFuture(Unit)
-      }
+    return synchronized(this) {
+      val next = lastHandleFuture
+        .thenCompose { ensureStreamPositionInitialized() }
+        .thenCompose {
+          synchronized(this) {
+            require(conflation.conflationResult.startBlockNumber == lastHandledBlockNumber + 1u) {
+              "Conflation out of order: expected startBlockNumber=${lastHandledBlockNumber + 1u}, " +
+                "got ${conflation.conflationResult.startBlockNumber}"
+            }
+            val segmentBytes = conflationSegmentBuilder.buildSegment(conflation.blocks, chainId)
+            pendingConflations += PendingConflation(conflation.conflationResult, conflation.blocks, segmentBytes)
+            lastHandledBlockNumber = conflation.conflationResult.endBlockNumber
+            SafeFuture.completedFuture(Unit)
+          }
+        }.toSafeFuture()
+      lastHandleFuture = next
+      next
     }
   }
 
@@ -191,13 +200,14 @@ class RollupProofGeneratingCoordinator(
 
   @Synchronized
   private fun processProvenConflations(highestProven: Long) {
-    val provenPending = buildList {
+    val toFeed = buildList {
       for (pending in pendingConflations) {
         if (pending.endBlockNumber.toLong() > highestProven) break
+        if (pending.endBlockNumber.toLong() < nextBlockNumberToPoll!!) continue
         add(pending)
       }
     }
-    provenPending.forEach { pending ->
+    toFeed.forEach { pending ->
       rollupCalculator.newConflation(BlocksConflation(pending.blocks, pending.conflationResult))
       nextBlockNumberToPoll = pending.endBlockNumber.toLong() + 1L
     }

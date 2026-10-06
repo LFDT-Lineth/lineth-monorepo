@@ -76,6 +76,7 @@ class RollupProofGeneratingCoordinatorTest {
     streamPositionProvider: StreamPositionProvider = StreamPositionProvider {
       SafeFuture.completedFuture(StreamPosition(0UL, genesisDataRollingHash))
     },
+    conflationsPerRollupProof: Int = this.conflationsPerRollupProof,
   ): RollupProofGeneratingCoordinator {
     return RollupProofGeneratingCoordinator(
       chainId = chainId,
@@ -261,6 +262,32 @@ class RollupProofGeneratingCoordinatorTest {
     assertThat(request.opaqueSuffixBytes).isEmpty()
     assertThat(handledProofs).hasSize(1)
     assertThat(handledProofs.first().second.endOffset).isEqualTo(Constants.Eip4844BlobSize)
+  }
+
+  @Test
+  fun `action does not re-feed conflations already seen in a prior tick`() {
+    // Window requires 3 conflations. Proofs arrive one per tick, so the window does not fire
+    // until tick 3. Without a skip cursor, tick 2 re-feeds conflation 1..3 (already fed in
+    // tick 1), which corrupts the calculator window and causes drainWindow's check to throw.
+    val threePerWindow = createCoordinator(conflationsPerRollupProof = 3)
+
+    threePerWindow.handleConflatedBatch(makeConflation(1UL, 3UL)).get()
+    threePerWindow.handleConflatedBatch(makeConflation(4UL, 6UL)).get()
+    threePerWindow.handleConflatedBatch(makeConflation(7UL, 9UL)).get()
+
+    markProven(1UL, 3UL, proofHash1)
+    threePerWindow.action().get() // tick 1: feeds 1..3 (count=1), window not full
+
+    markProven(4UL, 6UL, proofHash2)
+    threePerWindow.action().get() // tick 2: must feed only 4..6 (count=2), not 1..3 again
+
+    markProven(7UL, 9UL)
+    threePerWindow.action().get() // tick 3: feeds 7..9 (count=3) → window fires [1..3, 4..6, 7..9]
+
+    assertThat(rollupProverClient.requests).hasSize(1)
+    val request = rollupProverClient.requests.single()
+    assertThat(request.startBlockNumber).isEqualTo(1UL)
+    assertThat(request.endBlockNumber).isEqualTo(9UL)
   }
 
   // --- concurrency ---
