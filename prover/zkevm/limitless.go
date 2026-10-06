@@ -208,7 +208,10 @@ func DiscoveryAdvices(zkevm *ZkEvm) []*distributed.ModuleDiscoveryAdvice {
 
 		// MODEXP 8192
 		//
-		{BaseSize: 256, Cluster: ModexpLargeModuleName, Column: zkevm.Modexp.Large.IsActive},
+		// The segment must hold a whole instance (8192 rows) as the module has
+		// a global constraint shifting by instanceSize-1 rows, which cannot be
+		// split across smaller segments.
+		{BaseSize: 8192, Cluster: ModexpLargeModuleName, Column: zkevm.Modexp.Large.IsActive},
 
 		// SHA2
 		//
