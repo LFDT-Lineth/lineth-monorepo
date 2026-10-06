@@ -15,7 +15,10 @@ IMAGE="${1:-consensys/lineth-prover-ray:dev}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 FIXTURE="$SCRIPT_DIR/../backend/jobadapter/testdata/request_single_block.json"
 CONTAINER="prover-ray-smoke-$$"
-WORK="$(mktemp -d)"
+# The work dir is bind-mounted into the container, so it must live where the
+# Docker daemon can see it. On CI the daemon runs in its own container that
+# shares the workspace (RUNNER_TEMP) but not the runner's /tmp.
+WORK="$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/prover-ray-smoke.XXXXXX")"
 
 cleanup() {
     $DOCKER rm -f "$CONTAINER" >/dev/null 2>&1 || true
