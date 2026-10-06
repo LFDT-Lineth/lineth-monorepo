@@ -1,4 +1,4 @@
-## [unreleased]
+## [0.1.0] - 2026-10-06
 
 ### 🚀 Features
 
@@ -66,6 +66,7 @@
 - *(prover-ray)* Fetch data from hash module (#4023)
 - *(riscv-guest)* Rename parentProcessedFtxNumber to parentFtxNumber (#4011)
 - *(prover-ray)* Align Amsterdam SSZ inputs with the guest (#4084)
+- *(prover-ray)* Create smoke-test work dir under RUNNER_TEMP (#4136)
 
 ### 🚜 Refactor
 
@@ -98,5 +99,3 @@
 - *(riscv-guest)* Error codes and their coverage (#3786)
 - *(riscv-guest)* More coverage for the multi block case. Added an … (#3795)
 - *(prover-ray)* Add image draft releases (#4104)
-# Changelog
-
