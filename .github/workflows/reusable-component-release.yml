@@ -219,7 +219,7 @@ jobs:
     uses: ./.github/workflows/prover-ray-build-and-publish.yml
     with:
       image_tag: local
-      develop_tag: ''
+      develop_tag: develop
       push_image: false
     secrets: inherit
 
