@@ -85,7 +85,7 @@ object RollupAggregationProofResponseDtoMapper :
   }
 }
 
-private typealias FileBasedRollupAggregationProofTransport =
+typealias RollupAggregationProofTransport =
   ProverProofTransport<
     FileBasedRollupAggregationProofRequestDto,
     RollupAggregationProofResponseDto,
@@ -93,19 +93,22 @@ private typealias FileBasedRollupAggregationProofTransport =
     >
 
 /**
- * RISC-V file-based rollup-aggregation prover client.
- * The request/response transport is injected via file-based transport.
+ * RISC-V rollup-aggregation prover client. The request/response transport is injected via
+ * [transport], so the same client works whether requests are written as JSON files or sent over REST.
+ *
+ * @param rollupProofProvider source of the rollup proofs inlined into each request; null sends only
+ *   their indexes, for a prover (e.g. the prover gateway) that resolves them itself.
  */
-class FileBasedRollupAggregationProverClient(
-  transport: FileBasedRollupAggregationProofTransport,
-  rollupProofTransport: FileBasedRollupProofTransport,
+class RollupAggregationProverClient(
+  transport: RollupAggregationProofTransport,
+  rollupProofProvider: ProofProvider<RollupProofResponseDto>?,
   programId: String,
   provingSystemVersion: String,
   proofRequestDtoMapper: (RollupAggregationProofRequestV1)
   -> SafeFuture<FileBasedRollupAggregationProofRequestDto> = RollupAggregationProofRequestDtoMapper(
     programId,
     provingSystemVersion,
-    rollupProofTransport::findResponse,
+    rollupProofProvider,
   ),
   proofResponseDtoMapper: (RollupAggregationProofResponseDto)
   -> RollupAggregationProofResponseV1 = RollupAggregationProofResponseDtoMapper,
@@ -128,6 +131,6 @@ class FileBasedRollupAggregationProverClient(
   RollupAggregationProverClientV1 {
 
   companion object {
-    val LOG: Logger = LogManager.getLogger(FileBasedRollupAggregationProverClient::class.java)
+    val LOG: Logger = LogManager.getLogger(RollupAggregationProverClient::class.java)
   }
 }
