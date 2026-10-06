@@ -11,6 +11,10 @@ on:
       - '.github/actions/setup-zig/**'
       - '.github/workflows/arithmetization-guest-programs-trace.yml'
       - '.github/workflows/arithmetization-*.yml'
+      - 'riscv-guests/l2-execution/**'
+      - 'riscv-guests/build_common/**'
+      - 'riscv-guests/lineth-accelerators/**'
+      - 'riscv-guests/Makefile'
   push:
     branches:
       - main
