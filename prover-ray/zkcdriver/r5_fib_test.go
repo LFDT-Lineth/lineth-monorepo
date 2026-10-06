@@ -18,7 +18,7 @@ import (
 )
 
 // BenchmarkR5Fibonacci traces and proves the [minimalelf.FibonacciELF]
-// guest sharded at 500K interpreter invocations per shard, reporting per-shard
+// guest sharded at 250K interpreter invocations per shard, reporting per-shard
 // trace/proof metrics. This is a benchmark (not a CI test): it is heavy.
 //
 // Environment knobs:
@@ -32,13 +32,14 @@ import (
 //
 //	R5_FIB_N=4000000 R5_FIB_PROVE=2 go test -bench BenchmarkR5Fibonacci -benchtime 1x -run XXX ./zkcdriver/ -v -timeout 3500s
 func BenchmarkR5Fibonacci(b *testing.B) {
+	const instrPerShard = 250_000
 	var (
 		n           = fibBenchEnvInt(b, "R5_FIB_N", 1_000_000)
 		proveShards = fibBenchEnvInt(b, "R5_FIB_PROVE", 1)
-		// Each shard covers 500K interpreter() invocations = 500K executed
+		// Each shard covers 250K interpreter() invocations = 250K executed
 		// RISC-V instructions (see r5_benchmark_test.go's fixture comment).
 		tracingConfig = vm.DEFAULT_TRACE_CONFIG.
-				WithSharding(vm.NewShardingStrategy("interpreter", 250000)).
+				WithSharding(vm.NewShardingStrategy("interpreter", instrPerShard)).
 				WithParallelism(true)
 	)
 
@@ -64,7 +65,7 @@ func BenchmarkR5Fibonacci(b *testing.B) {
 
 	// Per-shard trace statistics.
 	numShards := len(traces)
-	b.Logf("shards: %d (R5_FIB_N=%d, 500K interpreter invocations per shard)", numShards, n)
+	b.Logf("shards: %d (R5_FIB_N=%d, %d interpreter invocations per shard)", numShards, n, instrPerShard)
 	rowLimit := 0
 	for i, shard := range traces {
 		var rows, cells uint64
@@ -107,7 +108,6 @@ func BenchmarkR5Fibonacci(b *testing.B) {
 	// Deterministic extrapolation to the cross-zkVM workload: the guest executes
 	// exactly 14+5*N instructions (see FibonacciELF doc), so shard count scales
 	// linearly from the measured interpreter rows per shard.
-	const instrPerShard = 500_000
 	b.ReportMetric(float64((14+5*uint64(4_000_000)+instrPerShard-1)/instrPerShard), "shards-at-N4M")
 
 	if proveShards < 1 {
