@@ -194,8 +194,8 @@ func newSimpleFilteredSum(t *testing.T, n int) (
 	r0 := sys.NewRound()
 	sys.NewRound() // hosts ld.Result
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), n, wiop.PaddingDirectionNone)
-	num = mod.NewColumn(sys.Context.Childf("num"), wiop.VisibilityOracle, r0)
-	filter = mod.NewColumn(sys.Context.Childf("filter"), wiop.VisibilityOracle, r0)
+	num = mod.NewColumn(sys.Context.Childf("num"), r0)
+	filter = mod.NewColumn(sys.Context.Childf("filter"), r0)
 	one := wiop.NewConstantVector(mod, field.NewFromString("1"))
 	ld = sys.NewLogDerivativeSum(
 		sys.Context.Childf("ld2"),
@@ -292,7 +292,7 @@ func TestCompile_PacksFractions(t *testing.T) {
 
 	fractions := make([]wiop.Fraction, 4)
 	for i := range fractions {
-		c := mod.NewColumn(sys.Context.Childf("c%d", i), wiop.VisibilityOracle, r0)
+		c := mod.NewColumn(sys.Context.Childf("c%d", i), r0)
 		fractions[i] = wiop.Fraction{Numerator: c.View(), Denominator: one}
 	}
 	sys.NewLogDerivativeSum(sys.Context.Childf("ld2"), fractions)
@@ -317,7 +317,7 @@ func TestCompile_Completeness_NoFilter(t *testing.T) {
 	r0 := sys.NewRound()
 	sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	one := wiop.NewConstantVector(mod, field.NewFromString("1"))
 
 	ld := sys.NewLogDerivativeSum(sys.Context.Childf("ld2"), []wiop.Fraction{
@@ -404,9 +404,9 @@ func TestCompile_Completeness_FilterMasksZeroDenominator(t *testing.T) {
 	sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
 
-	num := mod.NewColumn(sys.Context.Childf("num"), wiop.VisibilityOracle, r0)
-	den := mod.NewColumn(sys.Context.Childf("den"), wiop.VisibilityOracle, r0)
-	filter := mod.NewColumn(sys.Context.Childf("filter"), wiop.VisibilityOracle, r0)
+	num := mod.NewColumn(sys.Context.Childf("num"), r0)
+	den := mod.NewColumn(sys.Context.Childf("den"), r0)
+	filter := mod.NewColumn(sys.Context.Childf("filter"), r0)
 
 	ld := sys.NewLogDerivativeSum(sys.Context.Childf("ld2"), []wiop.Fraction{
 		{Filter: filter.View(), Numerator: num.View(), Denominator: den.View()},
@@ -438,11 +438,11 @@ func TestCompile_Completeness_PackedMixedFilters(t *testing.T) {
 	sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
 
-	num1 := mod.NewColumn(sys.Context.Childf("num1"), wiop.VisibilityOracle, r0)
-	num2 := mod.NewColumn(sys.Context.Childf("num2"), wiop.VisibilityOracle, r0)
-	num3 := mod.NewColumn(sys.Context.Childf("num3"), wiop.VisibilityOracle, r0)
-	den := mod.NewColumn(sys.Context.Childf("den"), wiop.VisibilityOracle, r0)
-	filter2 := mod.NewColumn(sys.Context.Childf("filter2"), wiop.VisibilityOracle, r0)
+	num1 := mod.NewColumn(sys.Context.Childf("num1"), r0)
+	num2 := mod.NewColumn(sys.Context.Childf("num2"), r0)
+	num3 := mod.NewColumn(sys.Context.Childf("num3"), r0)
+	den := mod.NewColumn(sys.Context.Childf("den"), r0)
+	filter2 := mod.NewColumn(sys.Context.Childf("filter2"), r0)
 	one := wiop.NewConstantVector(mod, field.NewFromString("1"))
 
 	ld := sys.NewLogDerivativeSum(sys.Context.Childf("ld2"), []wiop.Fraction{
@@ -478,9 +478,9 @@ func TestCompile_Completeness_BucketsByModule(t *testing.T) {
 
 	mA := sys.NewSizedModule(sys.Context.Childf("mA"), 4, wiop.PaddingDirectionNone)
 	mB := sys.NewSizedModule(sys.Context.Childf("mB"), 4, wiop.PaddingDirectionNone)
-	cA := mA.NewColumn(sys.Context.Childf("cA"), wiop.VisibilityOracle, r0)
-	cB := mB.NewColumn(sys.Context.Childf("cB"), wiop.VisibilityOracle, r0)
-	fB := mB.NewColumn(sys.Context.Childf("fB"), wiop.VisibilityOracle, r0)
+	cA := mA.NewColumn(sys.Context.Childf("cA"), r0)
+	cB := mB.NewColumn(sys.Context.Childf("cB"), r0)
+	fB := mB.NewColumn(sys.Context.Childf("fB"), r0)
 	oneA := wiop.NewConstantVector(mA, field.NewFromString("1"))
 	oneB := wiop.NewConstantVector(mB, field.NewFromString("1"))
 
@@ -632,8 +632,8 @@ func newDynamicFilteredSum(t *testing.T) (
 	r0 := sys.NewRound()
 	sys.NewRound() // hosts ld.Result
 	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
-	num = mod.NewColumn(sys.Context.Childf("num"), wiop.VisibilityOracle, r0)
-	filter = mod.NewColumn(sys.Context.Childf("filter"), wiop.VisibilityOracle, r0)
+	num = mod.NewColumn(sys.Context.Childf("num"), r0)
+	filter = mod.NewColumn(sys.Context.Childf("filter"), r0)
 	one := wiop.NewConstantVector(mod, field.NewFromString("1"))
 	ld = sys.NewLogDerivativeSum(
 		sys.Context.Childf("ld2-dyn"),
@@ -837,7 +837,7 @@ func TestNewLogDerivativeSum_NilCtxPanic(t *testing.T) {
 	sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("m"), 4, wiop.PaddingDirectionNone)
 	r := sys.Rounds[0]
-	col := mod.NewColumn(sys.Context.Childf("c"), wiop.VisibilityOracle, r)
+	col := mod.NewColumn(sys.Context.Childf("c"), r)
 	one := wiop.NewConstantVector(mod, field.NewFromString("1"))
 	frac := wiop.Fraction{Numerator: col.View(), Denominator: one}
 	assert.Panics(t, func() { sys.NewLogDerivativeSum(nil, []wiop.Fraction{frac}) })
@@ -856,7 +856,7 @@ func TestNewLogDerivativeSum_NilNumeratorPanic(t *testing.T) {
 	r0 := sys.NewRound()
 	sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("m"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("c"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("c"), r0)
 	frac := wiop.Fraction{Numerator: nil, Denominator: col.View()}
 	assert.Panics(t, func() {
 		sys.NewLogDerivativeSum(sys.Context.Childf("q"), []wiop.Fraction{frac})
@@ -868,7 +868,7 @@ func TestNewLogDerivativeSum_NilDenominatorPanic(t *testing.T) {
 	r0 := sys.NewRound()
 	sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("m"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("c"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("c"), r0)
 	frac := wiop.Fraction{Numerator: col.View(), Denominator: nil}
 	assert.Panics(t, func() {
 		sys.NewLogDerivativeSum(sys.Context.Childf("q"), []wiop.Fraction{frac})
@@ -881,8 +881,8 @@ func TestNewLogDerivativeSum_FilterModuleMismatchPanic(t *testing.T) {
 	sys.NewRound()
 	mod1 := sys.NewSizedModule(sys.Context.Childf("m1"), 4, wiop.PaddingDirectionNone)
 	mod2 := sys.NewSizedModule(sys.Context.Childf("m2"), 4, wiop.PaddingDirectionNone)
-	num := mod1.NewColumn(sys.Context.Childf("num"), wiop.VisibilityOracle, r0)
-	flt := mod2.NewColumn(sys.Context.Childf("flt"), wiop.VisibilityOracle, r0)
+	num := mod1.NewColumn(sys.Context.Childf("num"), r0)
+	flt := mod2.NewColumn(sys.Context.Childf("flt"), r0)
 	one := wiop.NewConstantVector(mod1, field.NewFromString("1"))
 	frac := wiop.Fraction{Filter: flt.View(), Numerator: num.View(), Denominator: one}
 	assert.Panics(t, func() {
@@ -908,10 +908,10 @@ func TestCompile_ConditionalLookupShape(t *testing.T) {
 	mS := sys.NewSizedModule(sys.Context.Childf("mS"), 4, wiop.PaddingDirectionNone)
 	mT := sys.NewSizedModule(sys.Context.Childf("mT"), 2, wiop.PaddingDirectionNone)
 
-	colS := mS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
-	filterS := mS.NewColumn(sys.Context.Childf("filterS"), wiop.VisibilityOracle, r0)
-	colT := mT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
-	colM := mT.NewColumn(sys.Context.Childf("M"), wiop.VisibilityOracle, r0)
+	colS := mS.NewColumn(sys.Context.Childf("S"), r0)
+	filterS := mS.NewColumn(sys.Context.Childf("filterS"), r0)
+	colT := mT.NewColumn(sys.Context.Childf("T"), r0)
+	colM := mT.NewColumn(sys.Context.Childf("M"), r0)
 
 	gammaS := wiop.NewConstantVector(mS, field.NewFromString("7"))
 	gammaT := wiop.NewConstantVector(mT, field.NewFromString("7"))

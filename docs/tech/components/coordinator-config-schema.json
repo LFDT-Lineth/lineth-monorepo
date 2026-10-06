@@ -212,6 +212,16 @@
         "deprecated": false,
         "replacement": null
       },
+      "conflation.l2-engine-endpoint": {
+        "type": "URL?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 Engine API endpoint for RISC-V payload bodies; required by ConflationAppV2. JWT-protected endpoints require an authenticating proxy; this client does not generate JWT tokens.",
+        "example": "http://sequencer:8550",
+        "deprecated": false,
+        "replacement": null
+      },
       "conflation.l2-fetch-blocks-limit": {
         "type": "UInt?",
         "section": false,
@@ -747,7 +757,7 @@
         "section": true,
         "required": false,
         "default": null,
-        "description": "Forced transactions handling settings; omit the section to disable the feature.",
+        "description": "Forced transactions handling settings; omit the section to disable the feature. Ignored on validium deployments: the coordinator does not support forced transactions there yet and disables them with a warning.",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -1382,12 +1392,32 @@
         "deprecated": false,
         "replacement": null
       },
+      "l1-submission.aggregation.signer.custom": {
+        "type": "CustomConfig?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Named signer settings; required when type is CUSTOM.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.signer.custom.name": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Logical signer name resolved by the injected signer factory.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
       "l1-submission.aggregation.signer.type": {
         "type": "SignerType",
         "section": false,
         "required": true,
         "default": null,
-        "description": "Signer backend to use: WEB3J (local private key) or WEB3SIGNER (remote signer).",
+        "description": "Signer backend to use: WEB3J, WEB3SIGNER, or CUSTOM.",
         "example": "web3signer",
         "deprecated": false,
         "replacement": null
@@ -1732,12 +1762,32 @@
         "deprecated": false,
         "replacement": null
       },
+      "l1-submission.blob.signer.custom": {
+        "type": "CustomConfig?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Named signer settings; required when type is CUSTOM.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.signer.custom.name": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Logical signer name resolved by the injected signer factory.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
       "l1-submission.blob.signer.type": {
         "type": "SignerType",
         "section": false,
         "required": true,
         "default": null,
-        "description": "Signer backend to use: WEB3J (local private key) or WEB3SIGNER (remote signer).",
+        "description": "Signer backend to use: WEB3J, WEB3SIGNER, or CUSTOM.",
         "example": "web3signer",
         "deprecated": false,
         "replacement": null
@@ -2962,12 +3012,32 @@
         "deprecated": false,
         "replacement": null
       },
+      "message-anchoring.signer.custom": {
+        "type": "CustomConfig?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Named signer settings; required when type is CUSTOM.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.signer.custom.name": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Logical signer name resolved by the injected signer factory.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
       "message-anchoring.signer.type": {
         "type": "SignerType",
         "section": false,
         "required": true,
         "default": null,
-        "description": "Signer backend to use: WEB3J (local private key) or WEB3SIGNER (remote signer).",
+        "description": "Signer backend to use: WEB3J, WEB3SIGNER, or CUSTOM.",
         "example": "web3signer",
         "deprecated": false,
         "replacement": null
@@ -3097,7 +3167,7 @@
         "section": true,
         "required": true,
         "default": null,
-        "description": "Linea protocol contract addresses and genesis settings.",
+        "description": "Lineth protocol contract addresses and genesis settings.",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -3107,7 +3177,7 @@
         "section": true,
         "required": true,
         "default": null,
-        "description": "Linea genesis state root and shnarf.",
+        "description": "Lineth genesis state root and shnarf.",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -3117,7 +3187,7 @@
         "section": false,
         "required": true,
         "default": null,
-        "description": "Genesis shnarf (starting shnarf) of the Linea chain (hex).",
+        "description": "Genesis shnarf (starting shnarf) of the Lineth chain (hex).",
         "example": "0xc286ff42414401ccdc23ea8e738775378e8f6c6f7b2966eb2747798d45571b79",
         "deprecated": false,
         "replacement": null
@@ -3127,7 +3197,7 @@
         "section": false,
         "required": true,
         "default": null,
-        "description": "Genesis state root hash of the Linea chain (hex).",
+        "description": "Genesis state root hash of the Lineth chain (hex).",
         "example": "0x01d9afcd495c870f3ae9d8362cd0257a7de2057055058183596719285cae6101",
         "deprecated": false,
         "replacement": null
@@ -3157,7 +3227,7 @@
         "section": false,
         "required": true,
         "default": null,
-        "description": "Address of the Linea rollup contract on L1.",
+        "description": "Address of the Lineth rollup contract on L1.",
         "example": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
         "deprecated": false,
         "replacement": null
@@ -3187,7 +3257,7 @@
         "section": false,
         "required": true,
         "default": null,
-        "description": "Address of the Linea contract on L2.",
+        "description": "Address of the Lineth contract on L2.",
         "example": "0xe537D669CA013d86EBeF1D64e40fC74CADC91987",
         "deprecated": false,
         "replacement": null
@@ -3213,9 +3283,9 @@
         "replacement": null
       },
       "prover.blob-compression": {
-        "type": "ProverDirectoriesToml",
+        "type": "FileBasedProverConfigToml?",
         "section": true,
-        "required": true,
+        "required": false,
         "default": null,
         "description": "Blob compression prover request/response directories.",
         "example": null,
@@ -3242,6 +3312,16 @@
         "deprecated": false,
         "replacement": null
       },
+      "prover.blob-compression.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
       "prover.enable-request-files-cleanup": {
         "type": "Boolean",
         "section": false,
@@ -3253,9 +3333,9 @@
         "replacement": null
       },
       "prover.execution": {
-        "type": "ProverDirectoriesToml",
+        "type": "FileBasedProverConfigToml?",
         "section": true,
-        "required": true,
+        "required": false,
         "default": null,
         "description": "Execution (block) prover request/response directories.",
         "example": null,
@@ -3279,6 +3359,26 @@
         "default": null,
         "description": "Directory the coordinator reads prover response files from.",
         "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.execution.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"amsterdam\").",
+        "example": "amsterdam",
         "deprecated": false,
         "replacement": null
       },
@@ -3322,17 +3422,17 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.invalidity": {
-        "type": "ProverDirectoriesToml?",
+      "prover.l2-execution": {
+        "type": "FileBasedProverConfigToml?",
         "section": true,
         "required": false,
         "default": null,
-        "description": "Invalidity prover request/response directories; omit to disable.",
+        "description": "L2 execution RISC-V prover config.",
         "example": null,
         "deprecated": false,
         "replacement": null
       },
-      "prover.invalidity.fs-requests-directory": {
+      "prover.l2-execution.fs-requests-directory": {
         "type": "String",
         "section": false,
         "required": true,
@@ -3342,13 +3442,23 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.invalidity.fs-responses-directory": {
+      "prover.l2-execution.fs-responses-directory": {
         "type": "String",
         "section": false,
         "required": true,
         "default": null,
         "description": "Directory the coordinator reads prover response files from.",
         "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.l2-execution.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
       },
@@ -3363,9 +3473,9 @@
         "replacement": null
       },
       "prover.new.blob-compression": {
-        "type": "ProverDirectoriesToml",
+        "type": "FileBasedProverConfigToml?",
         "section": true,
-        "required": true,
+        "required": false,
         "default": null,
         "description": "Blob compression prover request/response directories.",
         "example": null,
@@ -3392,6 +3502,16 @@
         "deprecated": false,
         "replacement": null
       },
+      "prover.new.blob-compression.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
       "prover.new.enable-request-files-cleanup": {
         "type": "Boolean",
         "section": false,
@@ -3403,9 +3523,9 @@
         "replacement": null
       },
       "prover.new.execution": {
-        "type": "ProverDirectoriesToml",
+        "type": "FileBasedProverConfigToml?",
         "section": true,
-        "required": true,
+        "required": false,
         "default": null,
         "description": "Execution (block) prover request/response directories.",
         "example": null,
@@ -3429,6 +3549,26 @@
         "default": null,
         "description": "Directory the coordinator reads prover response files from.",
         "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.execution.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"amsterdam\").",
+        "example": "amsterdam",
         "deprecated": false,
         "replacement": null
       },
@@ -3472,17 +3612,17 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.new.invalidity": {
-        "type": "ProverDirectoriesToml?",
+      "prover.new.l2-execution": {
+        "type": "FileBasedProverConfigToml?",
         "section": true,
         "required": false,
         "default": null,
-        "description": "Invalidity prover request/response directories; omit to disable.",
+        "description": "L2 execution RISC-V prover config.",
         "example": null,
         "deprecated": false,
         "replacement": null
       },
-      "prover.new.invalidity.fs-requests-directory": {
+      "prover.new.l2-execution.fs-requests-directory": {
         "type": "String",
         "section": false,
         "required": true,
@@ -3492,13 +3632,23 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.new.invalidity.fs-responses-directory": {
+      "prover.new.l2-execution.fs-responses-directory": {
         "type": "String",
         "section": false,
         "required": true,
         "default": null,
         "description": "Directory the coordinator reads prover response files from.",
         "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.l2-execution.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
       },
@@ -3513,9 +3663,9 @@
         "replacement": null
       },
       "prover.new.proof-aggregation": {
-        "type": "ProverDirectoriesToml",
+        "type": "FileBasedProverConfigToml?",
         "section": true,
-        "required": true,
+        "required": false,
         "default": null,
         "description": "Proof aggregation prover request/response directories.",
         "example": null,
@@ -3542,6 +3692,106 @@
         "deprecated": false,
         "replacement": null
       },
+      "prover.new.proof-aggregation.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.proving-system-version": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Version for the RISC-V proving system.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.rollup": {
+        "type": "FileBasedProverConfigToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Rollup RISC-V prover config.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.rollup-aggregation": {
+        "type": "FileBasedProverConfigToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Rollup aggregation RISC-V prover config.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.rollup-aggregation.fs-requests-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator writes prover request files to.",
+        "example": "/data/prover/v3/execution/requests",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.rollup-aggregation.fs-responses-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator reads prover response files from.",
+        "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.rollup-aggregation.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.rollup.fs-requests-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator writes prover request files to.",
+        "example": "/data/prover/v3/execution/requests",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.rollup.fs-responses-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator reads prover response files from.",
+        "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.rollup.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
       "prover.new.switch-block-number-inclusive": {
         "type": "ULong?",
         "section": false,
@@ -3562,10 +3812,20 @@
         "deprecated": false,
         "replacement": null
       },
+      "prover.new.type": {
+        "type": "ProverType",
+        "section": false,
+        "required": false,
+        "default": "pre_riscv",
+        "description": "Prover type: pre_riscv or riscv.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
       "prover.proof-aggregation": {
-        "type": "ProverDirectoriesToml",
+        "type": "FileBasedProverConfigToml?",
         "section": true,
-        "required": true,
+        "required": false,
         "default": null,
         "description": "Proof aggregation prover request/response directories.",
         "example": null,
@@ -3592,6 +3852,106 @@
         "deprecated": false,
         "replacement": null
       },
+      "prover.proof-aggregation.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.proving-system-version": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Version for the RISC-V proving system.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.rollup": {
+        "type": "FileBasedProverConfigToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Rollup RISC-V prover config.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.rollup-aggregation": {
+        "type": "FileBasedProverConfigToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Rollup aggregation RISC-V prover config.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.rollup-aggregation.fs-requests-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator writes prover request files to.",
+        "example": "/data/prover/v3/execution/requests",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.rollup-aggregation.fs-responses-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator reads prover response files from.",
+        "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.rollup-aggregation.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.rollup.fs-requests-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator writes prover request files to.",
+        "example": "/data/prover/v3/execution/requests",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.rollup.fs-responses-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator reads prover response files from.",
+        "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.rollup.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
       "prover.switch-block-number-inclusive": {
         "type": "ULong?",
         "section": false,
@@ -3609,6 +3969,16 @@
         "default": null,
         "description": "Timestamp at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockNumberInclusive.",
         "example": "2024-01-01T00:00:00Z",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.type": {
+        "type": "ProverType",
+        "section": false,
+        "required": false,
+        "default": "pre_riscv",
+        "description": "Prover type: pre_riscv or riscv.",
+        "example": null,
         "deprecated": false,
         "replacement": null
       },
@@ -4520,14 +4890,14 @@
     }
   },
   "smart-contract-errors": {
-    "description": "Mapping of Linea smart-contract revert error codes to messages.",
+    "description": "Mapping of Lineth smart-contract revert error codes to messages.",
     "keys": {
       "smart-contract-errors": {
         "type": "Map<String, String>",
         "section": false,
         "required": true,
         "default": null,
-        "description": "Mapping of Linea smart-contract revert error codes to human-readable messages, used to decode on-chain rejection reasons.",
+        "description": "Mapping of Lineth smart-contract revert error codes to human-readable messages, used to decode on-chain rejection reasons.",
         "example": null,
         "deprecated": false,
         "replacement": null

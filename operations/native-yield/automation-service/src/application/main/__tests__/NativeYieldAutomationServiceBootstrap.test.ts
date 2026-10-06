@@ -111,9 +111,9 @@ jest.mock(
   { virtual: true },
 );
 jest.mock(
-  "../../../clients/contracts/LineaRollupYieldExtensionContractClient.js",
+  "../../../clients/contracts/LinethRollupYieldExtensionContractClient.js",
   () => ({
-    LineaRollupYieldExtensionContractClient: jest.fn().mockImplementation(() => ({})),
+    LinethRollupYieldExtensionContractClient: jest.fn().mockImplementation(() => ({})),
   }),
   { virtual: true },
 );
@@ -216,7 +216,7 @@ const createBootstrapConfig = () => ({
     audience: "audience",
   },
   contractAddresses: {
-    lineaRollupContractAddress: "0x1111111111111111111111111111111111111111",
+    linethRollupContractAddress: "0x1111111111111111111111111111111111111111",
     lazyOracleAddress: "0x2222222222222222222222222222222222222222",
     vaultHubAddress: "0x3333333333333333333333333333333333333333",
     yieldManagerAddress: "0x4444444444444444444444444444444444444444",

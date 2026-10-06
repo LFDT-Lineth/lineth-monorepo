@@ -16,7 +16,7 @@ include "constants.zkc"
 
 // Poseidon2 state: where the permutation takes place. An array of 16
 // KOALABEAR field elements (felts): [ σ₀, σ₁, ..., σ₁₅ ].
-memory poseidon2_state(address:u5) -> (felt:𝔽)
+memory poseidon2_state[u32](address:u5) -> (felt:𝔽)
 
 #[inline]
 fn write_to_state<poseidon2_state>(address:u5, value:𝔽) -> () {

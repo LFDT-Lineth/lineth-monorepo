@@ -1,3 +1,0 @@
-package linea.finalization
-
-class FinalizationUpdatePollerTest

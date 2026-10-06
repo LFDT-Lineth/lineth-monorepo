@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.33;
-import { LineaRollupBase } from "./LineaRollupBase.sol";
+import { LinethRollupBase } from "./LinethRollupBase.sol";
 import { ShnarfDataAcceptor } from "./dataAvailability/ShnarfDataAcceptor.sol";
 import { LocalShnarfProvider } from "./dataAvailability/LocalShnarfProvider.sol";
 
@@ -9,14 +9,14 @@ import { LocalShnarfProvider } from "./dataAvailability/LocalShnarfProvider.sol"
  * @author ConsenSys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
-contract Validium is LineaRollupBase, LocalShnarfProvider, ShnarfDataAcceptor {
+contract Validium is LinethRollupBase, LocalShnarfProvider, ShnarfDataAcceptor {
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
     _disableInitializers();
   }
 
   /**
-   * @notice Initializes LineaRollup and underlying service dependencies - used for new networks only.
+   * @notice Initializes LinethRollup and underlying service dependencies - used for new networks only.
    * @dev DEFAULT_ADMIN_ROLE is set for the security council.
    * @dev OPERATOR_ROLE is set for operators.
    * @dev Note: This is used for new testnets and local/CI testing, and will not replace existing proxy based contracts.
@@ -33,7 +33,7 @@ contract Validium is LineaRollupBase, LocalShnarfProvider, ShnarfDataAcceptor {
 
     _blobShnarfExists[genesisShnarf] = SHNARF_EXISTS_DEFAULT_VALUE;
 
-    __LineaRollup_init(_initializationData, genesisShnarf);
+    __LinethRollup_init(_initializationData, genesisShnarf);
   }
 
   /**

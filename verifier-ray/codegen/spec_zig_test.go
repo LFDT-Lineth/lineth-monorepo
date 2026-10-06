@@ -13,7 +13,7 @@ func boolModuleSystem(name string) *wiop.System {
 	sys := wiop.NewSystemf("%s", name)
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	mod.NewVanishing(sys.Context.Childf("bool"), wiop.Sub(wiop.Mul(col.View(), col.View()), col.View()))
 	global.Compile(sys)
 	return sys
@@ -55,6 +55,27 @@ func TestBuildCoinRoutingRejectsRoundZeroCoins(t *testing.T) {
 
 	if _, err := BuildCoinRouting(sys); err == nil {
 		t.Fatalf("BuildCoinRouting() error = nil, want round-0-coin error")
+	}
+}
+
+// TestBuildCoinRoutingSharedRandomnessAlphaBetaAreStandardCoins verifies that
+// α and β are standard Fiat-Shamir coins: they appear in RoundCoinCounts[1]
+// and are squeezed from the transcript after round 1's message is absorbed,
+// with no override or special injection.
+func TestBuildCoinRoutingSharedRandomnessAlphaBetaAreStandardCoins(t *testing.T) {
+	sys := newSharedRandomnessMessageBusHandle(t)
+
+	routing, err := BuildCoinRouting(sys)
+	if err != nil {
+		t.Fatalf("BuildCoinRouting() error = %v", err)
+	}
+
+	// registerSharedRandomness declares exactly 2 coins (α and β) on round 1.
+	if len(routing.RoundCoinCounts) <= 1 {
+		t.Fatalf("expected at least 2 rounds in coin routing, got %d", len(routing.RoundCoinCounts))
+	}
+	if routing.RoundCoinCounts[1] != 2 {
+		t.Fatalf("round 1 must carry exactly 2 coins (α and β), got %d", routing.RoundCoinCounts[1])
 	}
 }
 

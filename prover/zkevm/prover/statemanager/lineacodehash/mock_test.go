@@ -5,19 +5,25 @@ import (
 	"os"
 	"testing"
 
+	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
+	"github.com/stretchr/testify/require"
 
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils/csvtraces"
 )
 
-func TestMiMCCodeHash(t *testing.T) {
+// runCodeHashModule builds and proves the module over the given romlex fixture
+// and returns the assignments of IsHashEnd and IsForConsistency.
+func runCodeHashModule(t *testing.T, romLexPath string) (isHashEnd, isForConsistency []field.Element) {
+	t.Helper()
+
 	romFile, errRom := os.Open("testdata/rom_input.csv")
 	if errRom != nil {
 		t.Fatal(errRom)
 	}
-	romLexFile, errRomLex := os.Open("testdata/romlex_input.csv")
+	romLexFile, errRomLex := os.Open(romLexPath)
 	if errRomLex != nil {
 		t.Fatal(errRomLex)
 	}
@@ -89,6 +95,9 @@ func TestMiMCCodeHash(t *testing.T) {
 
 		mod.Assign(run)
 
+		isHashEnd = mod.IsHashEnd.GetColAssignment(run).IntoRegVecSaveAlloc()
+		isForConsistency = mod.IsForConsistency.GetColAssignment(run).IntoRegVecSaveAlloc()
+
 		romInput := mod.InputModules.RomInput
 
 		ctRom.CheckAssignmentCols(run, romInput.CFI[:]...).
@@ -99,5 +108,31 @@ func TestMiMCCodeHash(t *testing.T) {
 	if err := wizard.Verify(cmp, proof); err != nil {
 		t.Fatal("proof failed", err)
 	}
-	t.Log("proof succeeded")
+
+	return isHashEnd, isForConsistency
+}
+
+func countOnes(col []field.Element) int {
+	n := 0
+	for i := range col {
+		if col[i].IsOne() {
+			n++
+		}
+	}
+	return n
+}
+
+func TestMiMCCodeHash(t *testing.T) {
+	runCodeHashModule(t, "testdata/romlex_input.csv")
+}
+
+// TestCodeHashEmptyKeccakLimbs checks that IsForConsistency is decided by the
+// whole codehash rather than by individual limbs. The fixture holds three
+// codehashes: two matching emptyKeccak on a single limb (0 and 11) and one
+// matching on all of them, so only the latter is filtered out.
+func TestCodeHashEmptyKeccakLimbs(t *testing.T) {
+	isHashEnd, isForConsistency := runCodeHashModule(t, "testdata/romlex_input_empty_keccak_limbs.csv")
+
+	require.Equal(t, 3, countOnes(isHashEnd), "expected one hash-end per CFI segment")
+	require.Equal(t, 2, countOnes(isForConsistency), "only the all-limbs match must be filtered out")
 }

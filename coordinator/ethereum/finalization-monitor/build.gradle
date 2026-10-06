@@ -1,6 +1,6 @@
 plugins {
-  id "net.consensys.zkevm.kotlin-library-conventions"
-  id "net.consensys.zkevm.linea-contracts-helper"
+  id "lineth.kotlin-library-conventions"
+  id "lineth.linea-contracts-helper"
 }
 
 dependencies {

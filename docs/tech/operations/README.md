@@ -2,7 +2,7 @@
 
 ## Operational Tools
 
-The monorepo includes several operational utilities for managing the Linea network.
+The monorepo includes several operational utilities for managing the Lineth network.
 
 ## Operations CLI (`operations/cli/`)
 
@@ -177,7 +177,7 @@ make staterecovery-replay-from-block \
 ### Deployment Steps
 
 1. Deploy PlonkVerifier
-2. Deploy LineaRollup (with verifier address)
+2. Deploy LinethRollup (with verifier address)
 3. Deploy L2MessageService
 4. Deploy TokenBridge (L1 and L2)
 5. Verify all contract deployments

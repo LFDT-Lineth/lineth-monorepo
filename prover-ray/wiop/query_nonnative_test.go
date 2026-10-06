@@ -132,8 +132,8 @@ func TestNonNative_Check_MultiLimb(t *testing.T) {
 
 		newLimbs := func(label string) []*wiop.Column {
 			return []*wiop.Column{
-				mod.NewColumn(sys.Context.Childf("%s-limb-0", label), wiop.VisibilityOracle, r0),
-				mod.NewColumn(sys.Context.Childf("%s-limb-1", label), wiop.VisibilityOracle, r0),
+				mod.NewColumn(sys.Context.Childf("%s-limb-0", label), r0),
+				mod.NewColumn(sys.Context.Childf("%s-limb-1", label), r0),
 			}
 		}
 		left := newLimbs("left")
@@ -258,8 +258,8 @@ func TestNonNative_NewNonNative_EmptyLimbSlicePanic(t *testing.T) {
 func TestNonNative_NewNonNative_MismatchedLimbCountPanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
 	left := []*wiop.Column{
-		mod.NewColumn(sys.Context.Childf("left-0"), wiop.VisibilityOracle, r0),
-		mod.NewColumn(sys.Context.Childf("left-1"), wiop.VisibilityOracle, r0),
+		mod.NewColumn(sys.Context.Childf("left-0"), r0),
+		mod.NewColumn(sys.Context.Childf("left-1"), r0),
 	}
 	right := singleLimb(sys, mod, r0, "right")
 	modulus := singleLimb(sys, mod, r0, "modulus")
@@ -285,7 +285,7 @@ func TestNonNative_NewNonNative_NilColumnPanic(t *testing.T) {
 func TestNonNative_NewNonNative_ColumnFromDifferentModulePanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
 	otherMod := sys.NewSizedModule(sys.Context.Childf("other-mod"), 4, wiop.PaddingDirectionNone)
-	left := []*wiop.Column{otherMod.NewColumn(sys.Context.Childf("left"), wiop.VisibilityOracle, r0)}
+	left := []*wiop.Column{otherMod.NewColumn(sys.Context.Childf("left"), r0)}
 	right := singleLimb(sys, mod, r0, "right")
 	modulus := singleLimb(sys, mod, r0, "modulus")
 	result := singleLimb(sys, mod, r0, "result")
@@ -298,7 +298,7 @@ func TestNonNative_NewNonNative_ColumnFromDifferentModulePanic(t *testing.T) {
 func TestNonNative_NewNonNative_ColumnFromDifferentRoundPanic(t *testing.T) {
 	sys, r0, r1, mod := newTestSystem(t)
 	left := singleLimb(sys, mod, r0, "left")
-	right := []*wiop.Column{mod.NewColumn(sys.Context.Childf("right"), wiop.VisibilityOracle, r1)}
+	right := []*wiop.Column{mod.NewColumn(sys.Context.Childf("right"), r1)}
 	modulus := singleLimb(sys, mod, r0, "modulus")
 	result := singleLimb(sys, mod, r0, "result")
 	quotient := singleLimb(sys, mod, r0, "quotient")
@@ -309,5 +309,5 @@ func TestNonNative_NewNonNative_ColumnFromDifferentRoundPanic(t *testing.T) {
 
 // singleLimb declares a single-column limb slice for label in mod/round r.
 func singleLimb(sys *wiop.System, mod *wiop.Module, r *wiop.Round, label string) []*wiop.Column {
-	return []*wiop.Column{mod.NewColumn(sys.Context.Childf("%s", label), wiop.VisibilityOracle, r)}
+	return []*wiop.Column{mod.NewColumn(sys.Context.Childf("%s", label), r)}
 }

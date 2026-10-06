@@ -20,13 +20,14 @@ import maru.executionlayer.manager.ForkChoiceUpdatedResult
 import maru.executionlayer.manager.LatestBlockMetadata
 import maru.executionlayer.manager.PayloadStatus
 import org.apache.tuweni.bytes.Bytes32
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.hyperledger.besu.consensus.common.bft.ConsensusRoundIdentifier
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.random.Random
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import maru.executionlayer.manager.ext.DataGenerators as ExecutionLayerDataGenerators
 
 class FollowerBeaconBlockImporterTest {
@@ -52,6 +53,7 @@ class FollowerBeaconBlockImporterTest {
         shouldBuildNextBlock
       },
       feeRecipient = feeRecipient,
+      targetGasLimit = 60_000_000UL,
     )
   }
 
@@ -75,8 +77,34 @@ class FollowerBeaconBlockImporterTest {
     assertEquals(finalizationState.finalizedBlockHash, call.finalizedHash)
     assertEquals(nextBlockTimestamp, call.nextBlockTimestamp)
     assertEquals(feeRecipient.contentToString(), call.feeRecipient.contentToString())
+    assertEquals(2UL, call.nextBlockSlotNumber)
+    assertEquals(60_000_000UL, call.targetGasLimit)
 
     assertTrue(executionLayerManagerDouble.setHeadCalls.isEmpty())
+  }
+
+  @Test
+  fun `prevRandao signing failure returns a failed future`() {
+    shouldBuildNextBlock = true
+    val signingError = IllegalStateException("signing unavailable")
+    beaconBlockImporter =
+      BlockBuildingBeaconBlockImporter(
+        executionLayerManager = executionLayerManagerDouble,
+        finalizationStateProvider = { finalizationState },
+        nextBlockTimestampProvider = { nextBlockTimestamp },
+        prevRandaoProvider = { _, _ -> throw signingError },
+        shouldBuildNextBlock = { _, _, _ -> true },
+        feeRecipient = feeRecipient,
+      )
+
+    val result =
+      beaconBlockImporter.importBlock(
+        DataGenerators.randomBeaconState(1uL),
+        DataGenerators.randomBeaconBlock(1uL),
+      )
+
+    assertThatThrownBy { result.get() }.hasRootCause(signingError)
+    assertTrue(executionLayerManagerDouble.setHeadAndStartBlockBuildingCalls.isEmpty())
   }
 
   @Test
@@ -144,6 +172,8 @@ class FollowerBeaconBlockImporterTest {
     val nextBlockTimestamp: ULong,
     val feeRecipient: ByteArray,
     val prevRandao: ByteArray,
+    val nextBlockSlotNumber: ULong?,
+    val targetGasLimit: ULong?,
   ) {
     override fun equals(other: Any?): Boolean {
       if (this === other) return true
@@ -157,6 +187,8 @@ class FollowerBeaconBlockImporterTest {
       if (nextBlockTimestamp != other.nextBlockTimestamp) return false
       if (!feeRecipient.contentEquals(other.feeRecipient)) return false
       if (!prevRandao.contentEquals(other.prevRandao)) return false
+      if (nextBlockSlotNumber != other.nextBlockSlotNumber) return false
+      if (targetGasLimit != other.targetGasLimit) return false
 
       return true
     }
@@ -168,6 +200,8 @@ class FollowerBeaconBlockImporterTest {
       result = 31 * result + nextBlockTimestamp.hashCode()
       result = 31 * result + feeRecipient.contentHashCode()
       result = 31 * result + prevRandao.contentHashCode()
+      result = 31 * result + (nextBlockSlotNumber?.hashCode() ?: 0)
+      result = 31 * result + (targetGasLimit?.hashCode() ?: 0)
       return result
     }
   }
@@ -213,6 +247,8 @@ class FollowerBeaconBlockImporterTest {
       nextBlockTimestamp: ULong,
       feeRecipient: ByteArray,
       prevRandao: ByteArray,
+      nextBlockSlotNumber: ULong?,
+      targetGasLimit: ULong?,
     ): SafeFuture<ForkChoiceUpdatedResult> {
       setHeadAndStartBlockBuildingCalls.add(
         SetHeadAndStartBlockBuildingCall(
@@ -222,6 +258,8 @@ class FollowerBeaconBlockImporterTest {
           nextBlockTimestamp,
           feeRecipient,
           prevRandao,
+          nextBlockSlotNumber,
+          targetGasLimit,
         ),
       )
       return expectedResponse

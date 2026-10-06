@@ -198,7 +198,7 @@ func (req *Request) collectSignatures() ([]ethereum.Signature, [][32]byte) {
 // FuncInput are all the relevant fields parsed by the prover that
 // are functionally useful to contextualize what the proof is proving. This
 // is used by the aggregation circuit to ensure that the execution proofs
-// relate to consecutive Linea block execution.
+// relate to consecutive Lineth block execution.
 func (rsp *Response) FuncInput() *public_input.Execution {
 
 	var (

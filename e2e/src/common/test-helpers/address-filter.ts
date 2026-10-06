@@ -1,7 +1,7 @@
 import { type Address, type Hex, type PublicClient, type WalletClient } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
-import { AddressFilterAbi, LineaRollupV8Abi } from "../../generated";
+import { AddressFilterAbi, LinethRollupV8Abi } from "../../generated";
 
 // Well-known Hardhat account #3 — pre-funded on the local L1 genesis and granted
 // DEFAULT_ADMIN_ROLE on the AddressFilter contract. Local-only test infrastructure.
@@ -48,12 +48,12 @@ async function setOnChainFilteredStatus(
  * finalization data references via `filteredAddresses`, otherwise finalization reverts with
  * `AddressIsNotFiltered`.
  *
- * Reads `addressFilter()` from the LineaRollup contract to discover the filter address.
+ * Reads `addressFilter()` from the LinethRollup contract to discover the filter address.
  */
 export async function withOnChainFilteredAddresses(
   l1PublicClient: PublicClient,
   adminWalletClient: WalletClient,
-  lineaRollupAddress: Address,
+  linethRollupAddress: Address,
   addresses: readonly Address[],
   run: () => Promise<void>,
 ): Promise<void> {
@@ -63,8 +63,8 @@ export async function withOnChainFilteredAddresses(
   }
 
   const addressFilterAddress = (await l1PublicClient.readContract({
-    address: lineaRollupAddress,
-    abi: LineaRollupV8Abi,
+    address: linethRollupAddress,
+    abi: LinethRollupV8Abi,
     functionName: "addressFilter",
   })) as Address;
 

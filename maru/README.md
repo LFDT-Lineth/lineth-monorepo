@@ -16,26 +16,51 @@ docker-run-stack
 
 Use **JDK 25** (same major version as CI). Check with `java -version`.
 
-To build Maru from source code:
+Maru is built as part of the monorepo Gradle build. From the repository root:
 
 ```sh
 # Create a distribution ready to run
-./gradlew :app:installDist
+./gradlew :maru:app:installDist
 ```
 
 ### Validating a full build
 
-- Run unit and integration tests and checks: `./gradlew build` (several minutes).
-- If Spotless reports drift: `./gradlew spotlessApply`, then `./gradlew spotlessCheck`.
+- Run unit and integration tests and checks: `./gradlew -p maru build` (several minutes).
+- If Spotless reports drift: `./gradlew -p maru spotlessApply`, then `./gradlew -p maru spotlessCheck`.
 - After changing `app/Dockerfile` or the Java baseline, confirm the image still builds (see **Build Docker Image Locally** below).
 
 After building, you can run Maru using:
 
 ```sh
-./app/build/install/app/bin/app [options]
+./maru/app/build/install/app/bin/app [options]
 ```
 
-The distribution will be created in `app/build/install/app/` with all necessary dependencies included.
+The distribution will be created in `maru/app/build/install/app/` with all necessary dependencies included.
+
+## Validator signing
+
+QBFT validator signing defaults to the local key at `persistence.private-key-path`:
+
+```toml
+[qbft]
+fee-recipient = "0x0000000000000000000000000000000000000000"
+signer-type = "local"
+```
+
+An application embedding Maru can inject a `CustomValidatorSignerFactory` that resolves a backend-neutral
+`CloseableSigner` by logical name:
+
+```toml
+[qbft]
+fee-recipient = "0x0000000000000000000000000000000000000000"
+signer-type = "custom"
+signer-name = "maru-validator"
+```
+
+With a custom signer, `persistence.private-key-path` remains the P2P and discovery identity only. The custom public key
+determines the QBFT validator address, and startup fails if that address is absent from every configured validator set.
+Maru never passes the P2P private key to the custom signer factory and never falls back to the local validator key.
+The app owns the returned signer and closes it during shutdown or when startup fails.
 
 ### Build Docker Image Locally
 
@@ -67,6 +92,3 @@ Dockerhub. `-<date>-<commit-hash>` suffix is added to the actual docker image an
   `v2.0.1-betav4-20251027155452-cd25bfd`
 * Changelog will be pulled automatically into the release description. Review it and publish the release
 * Make a PR to clean up the changelog
-
-
-

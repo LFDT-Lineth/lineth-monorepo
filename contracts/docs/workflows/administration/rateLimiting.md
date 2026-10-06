@@ -1,5 +1,5 @@
 
-# 🧮 Setting/Resetting Rate Limit Values on the LineaRollup and L2MessageService
+# 🧮 Setting/Resetting Rate Limit Values on the LinethRollup and L2MessageService
 
 This process allows a designated Safe Member to set or reset rate limit values, either by defining a new limit or resetting the amount used during a period.
 
@@ -53,7 +53,7 @@ Safe Member
 
 | Contract           | Address                                           |
 |--------------------|---------------------------------------------------|
-| LineaRollup        | `0xd194Bd535d285f05D7B411E21A1460D11B0876F`       |
+| LinethRollup        | `0xd19d4B5d358258f05D7B411E21A1460D11B0876F`       |
 | L2MessageService   | `0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec`      |
 
 ---

@@ -1,5 +1,5 @@
 plugins {
-  id 'net.consensys.zkevm.kotlin-common-conventions'
+  id 'lineth.kotlin-common-conventions'
   id 'java-library'
 }
 
@@ -8,10 +8,6 @@ description = "Logging utilities"
 dependencies {
   implementation(project(':jvm-libs:generic:extensions:kotlin'))
   testImplementation "org.apache.logging.log4j:log4j-core-test:${libs.versions.log4j.get()}"
-}
-
-jar {
-  dependsOn configurations.runtimeClasspath
 }
 
 test {

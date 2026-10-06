@@ -4,7 +4,7 @@ import { getTaskCliOrEnvValue } from "../../../common/helpers/environmentHelper"
 
 /*
     *******************************************************************************************
-    1. Set the CONTRACT_TYPE of the proxy - e.g. LineaRollup
+    1. Set the CONTRACT_TYPE of the proxy - e.g. LinethRollup
     2. Set the PROXY_ADDRESS for the contract 
     *******************************************************************************************
 
@@ -31,8 +31,8 @@ task("getCurrentFinalizedBlockNumber", "Gets the finalized block number")
       throw new Error(`PROXY_ADDRESS and CONTRACT_NAME env variables are undefined.`);
     }
 
-    const LineaRollupContract = await ethers.getContractAt(contractType, proxyAddress);
-    const blockNum = await LineaRollupContract.currentL2BlockNumber();
+    const LinethRollupContract = await ethers.getContractAt(contractType, proxyAddress);
+    const blockNum = await LinethRollupContract.currentL2BlockNumber();
 
     console.log("Current finalized L2 block number", blockNum);
   });

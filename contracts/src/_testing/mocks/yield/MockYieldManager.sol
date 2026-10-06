@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import { ILineaRollupYieldExtension } from "../../../yield/interfaces/ILineaRollupYieldExtension.sol";
+import { ILinethRollupYieldExtension } from "../../../yield/interfaces/ILinethRollupYieldExtension.sol";
 import { IL1MessageService } from "../../../messaging/l1/interfaces/IL1MessageService.sol";
 
-/// @dev Mock YieldManager contract for unit testing of LineaRollup
+/// @dev Mock YieldManager contract for unit testing of LinethRollup
 contract MockYieldManager {
   bytes private reentryCalldata;
   address private reentryYieldProvider;
@@ -24,7 +24,7 @@ contract MockYieldManager {
   }
 
   function withdrawLST(address /*_yieldProvider*/, uint256 /*_amount*/, address /*_recipient*/) external {
-    bool isWithdrawalToggleOn = ILineaRollupYieldExtension(msg.sender).isWithdrawLSTAllowed();
+    bool isWithdrawalToggleOn = ILinethRollupYieldExtension(msg.sender).isWithdrawLSTAllowed();
     emit LSTWithdrawalFlag(isWithdrawalToggleOn);
     if (!shouldAttemptReentry) {
       return;
@@ -37,6 +37,6 @@ contract MockYieldManager {
       (IL1MessageService.ClaimMessageWithProofParams)
     );
 
-    ILineaRollupYieldExtension(msg.sender).claimMessageWithProofAndWithdrawLST(params, reentryYieldProvider);
+    ILinethRollupYieldExtension(msg.sender).claimMessageWithProofAndWithdrawLST(params, reentryYieldProvider);
   }
 }

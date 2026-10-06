@@ -1,5 +1,5 @@
 /**
- * ABI fragments shared by the message-service base of both the L1 `LineaRollup` and the L2
+ * ABI fragments shared by the message-service base of both the L1 `LinethRollup` and the L2
  * `L2MessageService` (`MessageServiceBase`).
  *
  * The `as const` assertions are required for viem to infer argument and return types from the ABI.

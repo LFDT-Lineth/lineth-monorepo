@@ -1,9 +1,68 @@
 ## [unreleased]
 
+### 🐛 Bug Fixes
+
+- *(linea-besu)* Limit large MODEXP calls to 1 per block (#4128)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Fix code licence header (#4009)
+- *(coordinator, maru, linea-besu)* Update jvm dependencies: (#4029)
+- *(misc)* Update gradle to v9.8 (#4032)
+- *(misc)* Fix gradle build correctness bugs (#4044)
+- *(misc)* Gradle improve tasks (#4046)
+- *(misc)* CI Merge sequencer plugin unit and acceptance jobs (#4048)
+- *(misc)* Update gradle besu plugin to v0.3.0 (#4072)
+## [2.3.0] - 2026-09-23
+
+### 🚀 Features
+
+- *(sequencer)* Stop bespoke tracing at configured timestamp (#3908)
+
+### 🐛 Bug Fixes
+
+- *(sequencer)* Deduplicate forced transactions in pool (#3807)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(linea-besu)* Upgrade besu to 26.8.1 for vertx 5 (#3904)
+- *(misc)* Upgrade teku libs to 26.9.0 (#3990)
+## [2.2.0] - 2026-08-21
+
+### 🚀 Features
+
+- *(linea-besu)* Support custom liveness signers (#3666)
+
+### 🐛 Bug Fixes
+
+- *(linea-besu)* Update Besu to 26.8.0 (#3830)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(linea-besu)* Logging consistency and noise reduction (#3788)
+- *(misc)* Docker image build streamlining (#3790)
+## [2.1.1] - 2026-08-11
+
+### ⚙️ Miscellaneous Tasks
+
+- *(linea-besu)* Package renaming to lineth.* (#3750)
+## [2.1.0] - 2026-08-07
+
+### 🚀 Features
+
+- *(linea-besu)* Update to v26.7.0 (#3623)
+- *(linea-besu)* Update to 26.7.1 (#3699)
+
+### 🐛 Bug Fixes
+
+- *(linea-besu)* Align Besu Kotlin runtime (#3734)
+- *(linea-besu)* Add the missing web3j crypto jar in dist and fix ci … (#3737)
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(linea-besu)* Tidy v2.0.0 changelog entries (#3574)
 - *(misc)* Update jackson from 2.19.4 to 2.22.1 (#3595)
+- *(misc)* Rename gradle plugins (#3729)
 ## [2.0.0] - 2026-07-14
 
 ### 🐛 Bug Fixes

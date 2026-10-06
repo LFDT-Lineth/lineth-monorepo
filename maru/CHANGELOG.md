@@ -2,8 +2,31 @@
 
 ### ⚙️ Miscellaneous Tasks
 
+- *(misc)* Maru use root gradle configs (#4031)
+- *(misc)* Use junit over kotlin test (#4045)
+- *(misc)* Fix gradle build correctness bugs (#4044)
+- *(misc)* Decrease vertx threadpool sizes for testing (#4047)
+- *(misc)* Maru break down integration tests into smaller chunks (#4049)
+## [1.4.0] - 2026-09-23
+
+### 🚀 Features
+
+- *(maru)* Support Noise / Yamux (#3751)
+- *(maru)* Support custom validator signers (#3700)
+- *(maru)* Add Amsterdam support (#3939)
+
+### 🐛 Bug Fixes
+
+- *(maru)* Declare jar task dependency on runtimeClasspath to fix manifest race (#3694)
+
+### ⚙️ Miscellaneous Tasks
+
 - *(misc)* Update jackson from 2.19.4 to 2.22.1 (#3595)
 - *(misc)* Cleanup redundant deps (#3596)
+- *(misc)* Rename gradle plugins (#3729)
+- *(maru)* Package renaming to lineth.* from (net.consensys.zkevm.*, net.consensys.linea.*, net.consensys.*, build.linea.*, linea.*) (#3755)
+- *(misc)* Docker image build streamlining (#3790)
+- *(misc)* Upgrade teku libs to 26.9.0 (#3990)
 ## [1.3.0] - 2026-07-14
 
 ### 🚀 Features

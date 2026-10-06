@@ -91,7 +91,7 @@ export interface ViewCallConfig {
 }
 
 export interface NamespaceConfig {
-  /** ERC-7201 namespace identifier (e.g., "linea.storage.YieldManager") */
+  /** ERC-7201 namespace identifier (e.g., "linea.storage.YieldManagerStorage") */
   id: string;
   /** Variables within the namespace to verify */
   variables: NamespaceVariable[];
@@ -376,7 +376,7 @@ export interface StorageSchema {
 }
 
 export interface StoragePathConfig {
-  /** Storage path (e.g., "YieldManagerStorage:yieldManager" or "LineaRollupStorage:yieldManager") */
+  /** Storage path (e.g., "YieldManagerStorage:yieldManager" or "LinethRollupStorage:yieldManager") */
   path: string;
   /** Expected value */
   expected: unknown;

@@ -8,7 +8,7 @@ import { getUiSigner, runWithSignerUiSession } from "../../../scripts/hardhat/si
     1. Set the OLD_ADMIN_ADDRESS to the EOA address
     2. Set the NEW_ADMIN_ADDRESS that you have just granted the roles to
     3. Set the PROXY_ADDRESS for the contract 
-    4. Set the CONTRACT_TYPE of the proxy - e.g. LineaRollup
+    4. Set the CONTRACT_TYPE of the proxy - e.g. LinethRollup
     5. Set the CONTRACT_ROLES comma separated, e.g "0x356a809dfdea9198dd76fb76bf6d403ecf13ea675eb89e1eda2db2c4a4676a26,0x1185e52d62bfbbea270e57d3d09733d221b53ab7a18bae82bb3c6c74bab16d82,0x0000000000000000000000000000000000000000000000000000000000000000"
     *******************************************************************************************
     NB: Be sure to have use the roles initially set to the security council EOA before changing
@@ -49,7 +49,7 @@ task("renounceContractRoles", "Sets the rate limit on a Message Service contract
       const contractRoles = getTaskCliOrEnvValue(taskArgs, "contractRoles", "CONTRACT_ROLES");
 
       if (contractType === undefined) {
-        throw "Please specify a Message Service name e.g: --proxy-address LineaRollup or PROXY_ADDRESS=LineaRollup";
+        throw "Please specify a Message Service name e.g: --proxy-address LinethRollup or PROXY_ADDRESS=LinethRollup";
       }
 
       if (proxyAddress === undefined) {

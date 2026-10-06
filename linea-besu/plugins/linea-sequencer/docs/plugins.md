@@ -35,6 +35,13 @@ It is used in:
 |-------------------------------------------------------|----------------------|
 | `--plugin-linea-module-limit-file-path`               | moduleLimitFile.toml |
 | `--plugin-linea-over-line-count-limit-cache-size`     | 10_000               |
+| `--plugin-linea-tracing-end-timestamp`                | not set              |
+
+`--plugin-linea-tracing-end-timestamp` is an optional Unix epoch timestamp in seconds. Bespoke
+tracing and module-line-limit validation are enabled when the next pending block timestamp is
+strictly less than the configured value, and disabled when it is equal to or greater than the
+configured value. A value of `0` disables bespoke tracing for all normal blocks. When the option is
+not set, tracing remains enabled.
 
 
 ### L1<>L2 bridge
@@ -56,7 +63,7 @@ This plugin extends the standard transaction selection protocols employed by Bes
 It leverages the `TransactionSelectionService` to manage and customize the process of transaction selection.
 This includes setting limits such as `TraceLineLimit`, `maxBlockGas`, and optionally a compression-aware blob
 size limit and/or a raw block calldata limit. Block size selectors are only instantiated when their
-respective CLI flag is set. The selectors are in the package `net.consensys.linea.sequencer.txselection.selectors`.
+respective CLI flag is set. The selectors are in the package `lineth.sequencer.txselection.selectors`.
 
 - **`--plugin-linea-blob-size-limit`** (optional): If set, enables `CompressionAwareBlockTransactionSelector`
   which constructs an RLP-encoded block (using placeholder values for header fields) containing all currently
@@ -96,7 +103,7 @@ This includes setting limits such as `TraceLineLimit`, `maxTxGasLimit`, and chec
 of a transaction, and enforcing deny list rules against sender, recipient, and EIP-7702 authorization list entries
 (recovered authority and delegation target address). Per-transaction calldata size validation is optional and only enabled when
 `--plugin-linea-max-tx-calldata-size` is set.
-The validators are in the package `net.consensys.linea.sequencer.txpoolvalidation.validators`.
+The validators are in the package `lineth.sequencer.txpoolvalidation.validators`.
 
 #### CLI options
 

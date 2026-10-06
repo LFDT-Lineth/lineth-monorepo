@@ -3,10 +3,10 @@ pragma solidity ^0.8.33;
 
 import { IMessageService } from "../../../messaging/interfaces/IMessageService.sol";
 import { IGenericErrors } from "../../../interfaces/IGenericErrors.sol";
-import { LineaRollupPauseManager } from "../../../security/pausing/LineaRollupPauseManager.sol";
+import { LinethRollupPauseManager } from "../../../security/pausing/LinethRollupPauseManager.sol";
 import { L1MessageManager } from "../../../messaging/l1/L1MessageManager.sol";
 
-contract MockMessageServiceV2 is L1MessageManager, IMessageService, LineaRollupPauseManager, IGenericErrors {
+contract MockMessageServiceV2 is L1MessageManager, IMessageService, LinethRollupPauseManager, IGenericErrors {
   address internal messageSender = address(0);
   uint256 public nextMessageNumber = 1;
 

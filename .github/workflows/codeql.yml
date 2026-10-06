@@ -16,11 +16,11 @@ jobs:
       contents: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
-      - uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: changes
         with:
           filters: |
@@ -63,21 +63,26 @@ jobs:
               - '**/Pipfile'
       - name: Build matrix
         id: set-matrix
+        env:
+          ANALYZE_JVM: ${{ github.ref == 'refs/heads/main' && !startsWith(github.event_name, 'pull_request') }}
         run: |
-          # Scheduled and manual runs analyze all languages
+          # Scheduled and manual runs analyze all eligible languages.
+          analyze_all=false
           if [ "${{ github.event_name }}" == "schedule" ] || [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo 'languages=["go","java-kotlin","javascript-typescript","actions","python"]' >> $GITHUB_OUTPUT
-            exit 0
+            analyze_all=true
           fi
 
           languages=()
-          if [ "${{ steps.changes.outputs.go }}" == "true" ]; then languages+=("\"go\""); fi
-          if [ "${{ steps.changes.outputs.java-kotlin }}" == "true" ]; then languages+=("\"java-kotlin\""); fi
-          if [ "${{ steps.changes.outputs.javascript-typescript }}" == "true" ]; then languages+=("\"javascript-typescript\""); fi
-          if [ "${{ steps.changes.outputs.actions }}" == "true" ]; then languages+=("\"actions\""); fi
-          if [ "${{ steps.changes.outputs.python }}" == "true" ]; then languages+=("\"python\""); fi
+          if [ "$analyze_all" == "true" ] || [ "${{ steps.changes.outputs.go }}" == "true" ]; then languages+=("\"go\""); fi
+          # JVM builds share a Maven Central IP; analyze on main to reduce dependency traffic.
+          if [ "$ANALYZE_JVM" == "true" ] && { [ "$analyze_all" == "true" ] || [ "${{ steps.changes.outputs.java-kotlin }}" == "true" ]; }; then
+            languages+=("\"java-kotlin\"")
+          fi
+          if [ "$analyze_all" == "true" ] || [ "${{ steps.changes.outputs.javascript-typescript }}" == "true" ]; then languages+=("\"javascript-typescript\""); fi
+          if [ "$analyze_all" == "true" ] || [ "${{ steps.changes.outputs.actions }}" == "true" ]; then languages+=("\"actions\""); fi
+          if [ "$analyze_all" == "true" ] || [ "${{ steps.changes.outputs.python }}" == "true" ]; then languages+=("\"python\""); fi
 
-          echo "languages=[$(IFS=,; echo "${languages[*]}")]" >> $GITHUB_OUTPUT
+          echo "languages=[$(IFS=,; echo "${languages[*]}")]" >> "$GITHUB_OUTPUT"
 
   analyze:
     name: Analyze
@@ -96,14 +101,16 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@8aad20d150bbac5944a9f9d289da16a4b0d87c1e #v4.36.2
+        uses: github/codeql-action/init@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
         with:
           languages: ${{ matrix.language }}
           queries: security-extended
           config-file: .github/codeql/codeql-config.yml
+          # Only main populates shared dependencies; PRs restore without saving duplicates.
+          dependency-caching: ${{ github.ref == 'refs/heads/main' && !startsWith(github.event_name, 'pull_request') && 'full' || 'restore' }}
 
       - name: Setup Java
         if: matrix.language == 'java-kotlin'
@@ -119,13 +126,13 @@ jobs:
       - name: Autobuild
         if: matrix.language != 'actions'
         continue-on-error: ${{ matrix.language == 'java-kotlin' }}
-        uses: github/codeql-action/autobuild@8aad20d150bbac5944a9f9d289da16a4b0d87c1e #v4.36.2
+        uses: github/codeql-action/autobuild@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
         env:
           GITHUB_TOKEN: ${{ secrets._GITHUB_TOKEN_RELEASE_ACCESS }}
 
       - name: Perform CodeQL Analysis
         continue-on-error: ${{ matrix.language == 'java-kotlin' }}
-        uses: github/codeql-action/analyze@8aad20d150bbac5944a9f9d289da16a4b0d87c1e #v4.36.2
+        uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
         with:
           category: "/language:${{matrix.language}}"
           output: sarif-results

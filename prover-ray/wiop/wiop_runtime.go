@@ -29,9 +29,8 @@ type Runtime struct {
 	System *System
 	// currentRound is the round currently being processed.
 	currentRound *Round
-	// fs is the Fiat-Shamir state. It is updated with column and cell
-	// assignments at the end of each round and used to derive coin values for
-	// the next round.
+	// fs is the Fiat-Shamir state. It is updated with cell assignments at the
+	// end of each round and used to derive coin values for the next round.
 	fs *fiatshamir.FiatShamir
 	// columns maps each column's [ObjectID] to its concrete vector assignment.
 	columns map[ObjectID]*ConcreteVector
@@ -106,25 +105,18 @@ func (run *Runtime) dynamicModuleSize(m *Module) int {
 	return size
 }
 
-// CurrentRound returns the round currently being processed, or nil if the
-// system has no interactive rounds.
+// CurrentRound returns the round whose actions are currently running.
 func (run *Runtime) CurrentRound() *Round { return run.currentRound }
 
 // AdvanceRound closes the current round and opens the next one:
-//  1. Every oracle or public column assigned in the current round is fed into
-//     the Fiat-Shamir state.
-//  2. Every cell value assigned in the current round is fed into the
-//     Fiat-Shamir state. All cells are always public (see [Cell.Visibility]).
-//  3. The runtime advances to the next round.
-//  4. Every [Round.PreSamplingHooks] entry on the new round runs, in
-//     declaration order. Hooks may mutate the Fiat-Shamir state via
-//     [Runtime.SetFSState] for shared-randomness seeding; any subsequent
-//     coin in this round is derived from the post-hook state.
-//  5. A fresh extension-field coin is derived via [fiatshamir.FiatShamir.RandomFext]
+//  1. Every cell value assigned in the current round is fed into the
+//     Fiat-Shamir state.
+//  2. The runtime advances to the next round.
+//  3. A fresh extension-field coin is derived via [fiatshamir.FiatShamir.RandomFext]
 //     for each [CoinField] declared in the new round.
 //
-// Panics if there is no next round, or if any oracle/public column in the
-// current round has not been assigned.
+// Panics if there is no next round, or if any cell in the current round has
+// not been assigned.
 func (run *Runtime) AdvanceRound() {
 	if run.currentRound == nil {
 		panic("wiop: AdvanceRound: system has no interactive rounds")
@@ -164,15 +156,6 @@ func (run *Runtime) AdvanceRound() {
 		run.fs.Update(commitment[:]...)
 	}
 
-	// Feed oracle and public column assignments into the Fiat-Shamir state.
-	for _, col := range run.currentRound.Columns {
-		if col.Visibility < VisibilityOracle {
-			continue
-		}
-		cv := run.GetColumnAssignment(col) // panics if unassigned
-		run.fs.UpdateSV(cv.Plain)
-	}
-
 	// Feed all cell values into the Fiat-Shamir state. Lazily-assigned cells
 	// are resolved here if they have not been read yet.
 	for _, cell := range run.currentRound.Cells {
@@ -187,14 +170,6 @@ func (run *Runtime) AdvanceRound() {
 	}
 
 	run.currentRound = next
-
-	// Pre-sampling hooks: run before any coin is derived so they can seed
-	// the FS state (typically via [Runtime.SetFSState]). The Runtime value
-	// is shared with the hooks; FS-state mutations performed by them affect
-	// the coin loop below.
-	for _, h := range run.currentRound.PreSamplingHooks {
-		h.Run(run)
-	}
 
 	// Derive a coin for every CoinField declared in the new round.
 	for _, coin := range run.currentRound.Coins {
@@ -419,18 +394,6 @@ func (run *Runtime) GetCoinValue(coin *CoinField) field.Gen {
 // Either way, do not use it
 func (run *Runtime) GetFS() *fiatshamir.FiatShamir {
 	return run.fs
-}
-
-// SetFSState replaces the runtime's Fiat–Shamir state with s. It is
-// intended for [Round.PreSamplingHooks] entries that seed the FS state
-// from a precomputed shared randomness (e.g. cross-shard handoff). Calling
-// it outside a pre-sampling hook can desynchronize the prover and verifier
-// transcripts and is almost always a bug.
-//
-// fiatshamir is a goroutine-unsafe singleton inside the runtime — like the
-// rest of the AdvanceRound pipeline this must not be called concurrently.
-func (run *Runtime) SetFSState(s field.Octuplet) {
-	run.fs.SetState(s)
 }
 
 // GetState returns the value stored under key and whether it was present.

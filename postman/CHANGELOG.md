@@ -1,3 +1,13 @@
+## [unreleased]
+
+### 🐛 Bug Fixes
+
+- *(postman)* Use lineaRollupAddress and remove duplicate LineaRollup sources (#3456)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Docker image build streamlining (#3790)
+- *(deps)* Refresh dependencies and GitHub Actions (#4088)
 ## [1.0.1] - 2026-06-29
 
 ### ⚙️ Miscellaneous Tasks

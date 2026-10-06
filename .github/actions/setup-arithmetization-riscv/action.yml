@@ -6,27 +6,39 @@ inputs:
     required: false
     default: 'false'
   zkc-ref:
-    description: 'Optional zkc commit/branch/tag override (default: arithmetization/Makefile ZKC_REF)'
+    description: 'Optional zkc commit/branch/tag override (default: version pinned in arithmetization/go.mod)'
     required: false
     default: ''
+  # Downstream workflows may enable cache saves for trusted pinned inputs; keep them disabled for custom refs.
+  cache-save:
+    description: >
+      When true, the Go module/build cache and the Zig cache are saved on a miss. Default false:
+      caches are restored only, so a run that builds an input-supplied ref cannot write into the
+      shared caches.
+    required: false
+    default: 'false'
 
 runs:
   using: 'composite'
   steps:
       - name: Setup upterm session
         if: ${{ inputs.enable-ssh == 'true' }}
-        uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 #v1
+        uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 # v1
 
       - name: Install Go
-        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        uses: ./.github/actions/setup-go
         with:
-          go-version: '1.24.6'
+          go-version: '1.25.7'
           cache-dependency-path: "**/*.sum"
+          # Preserve the existing opt-out for builds of custom refs.
+          cache: ${{ inputs.cache-save }}
 
       - name: Install Zig
-        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        uses: ./.github/actions/setup-zig
         with:
           version: '0.16.0'
+          dependency-hash-paths: arithmetization/src/test/zig/build.zig.zon
+          cache-save: ${{ inputs.cache-save }}
 
       - name: Install Rust nightly
         shell: bash
@@ -42,6 +54,10 @@ runs:
           curl https://mise.run | sh
           echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
           echo "${HOME}/.local/share/mise/shims" >> "${GITHUB_PATH}"
+
+      - name: Install Constantine build deps
+        shell: bash
+        run: make -C riscv-guests install-constantine-deps
 
       - name: Install riscv64-unknown-elf toolchain
         # Install the riscv64-unknown-elf toolchain
@@ -59,18 +75,12 @@ runs:
           ln -sf "${XPACK_GCC_DIR}/bin/riscv-none-elf-gcc" "${XPACK_GCC_DIR}/bin/riscv64-unknown-elf-gcc"
           echo "${XPACK_GCC_DIR}/bin" >> "${GITHUB_PATH}"
 
-      - name: Set zkc version
+      - name: Set optional zkc override
         shell: bash
         run: |
           zkc_ref="${{ inputs.zkc-ref }}"
-          if [ -z "$zkc_ref" ]; then
-            zkc_ref="$(make -C arithmetization -s --no-print-directory echo-zkc-version)"
-          fi
           {
             echo "ZKC_REF<<EOF"
             echo "$zkc_ref"
             echo "EOF"
           } >> "$GITHUB_ENV"
-
-
-

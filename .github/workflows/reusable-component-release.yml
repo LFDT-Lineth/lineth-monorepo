@@ -18,13 +18,21 @@ on:
         required: true
         type: string
       include-path:
-        description: 'newline-separated string to represent the "git-cliff --include-path filter"'
-        required: true
+        description: >
+          newline-separated string to represent the "git-cliff --include-path filter".
+          Optional — defaults to component-name's entry in
+          .github/actions/run-git-cliff-commands/scripts/components.sh.
+        required: false
         type: string
+        default: ''
       scopes:
-        description: "Regex alternation of conventional-commit scopes to gate on (e.g. 'coordinator' or 'linea-besu|tracer|sequencer|deps|misc')"
-        required: true
+        description: >
+          Regex alternation of conventional-commit scopes to gate on (e.g. 'coordinator' or
+          'linea-besu|tracer|sequencer|deps|misc'). Optional — defaults to component-name's
+          entry in .github/actions/run-git-cliff-commands/scripts/components.sh.
+        required: false
         type: string
+        default: ''
       image_tag_suffix:
         description: 'Custom docker image tag suffix, i.e. docker image tag would be [semver]-[YYYYMMDD]-[commit]-[suffix], if not given, would be [semver]-[YYYYMMDD]-[commit]'
         required: false
@@ -45,13 +53,18 @@ on:
         required: false
         type: boolean
         default: false
+      skip_e2e_test:
+        description: 'Skip the run-e2e-tests job'
+        required: false
+        type: boolean
+        default: false
     outputs:
       tag_changed:
         description: "Indicate whether the release tag of the component has changed"
         value: ${{ jobs.compute-release-metadata.outputs.tag_changed }}
       docker_tag:
         description: "Docker image tag associated with the release tag, empty if tag_changed is false"
-        value: ${{ jobs.compute-docker-tag.outputs.docker_tag }}
+        value: ${{ jobs.push-tag-update-changelog-and-gh-release.outputs.docker_tag }}
       release_version:
         description: "Release semver associated with the release tag (e.g. 1.2.3), empty if tag_changed is false"
         value: ${{ jobs.compute-release-metadata.outputs.release_version }}
@@ -76,7 +89,7 @@ jobs:
        commit_tag: ${{ steps.compute-version-tags.outputs.commit_tag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Compute version tags
         id: compute-version-tags
@@ -122,6 +135,15 @@ jobs:
       github.ref_name != 'main'
     secrets: inherit
 
+  run-test-prover-ray:
+    uses: ./.github/workflows/prover-ray-testing.yml
+    needs: [compute-release-metadata]
+    if: >
+      needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      inputs.component-name == 'prover-ray' &&
+      github.ref_name != 'main'
+    secrets: inherit
+
   run-test-maru:
     uses: ./.github/workflows/maru-testing.yml
     needs: [compute-commit-tag, compute-release-metadata]
@@ -147,6 +169,7 @@ jobs:
     if: >
       always() && !cancelled() &&
       needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      !inputs.skip_e2e_test &&
       inputs.component-name == 'coordinator' &&
       (github.ref_name == 'main' || needs.run-test-coordinator.result == 'success')
     uses: ./.github/workflows/coordinator-build-and-publish.yml
@@ -161,6 +184,7 @@ jobs:
     if: >
       always() && !cancelled() &&
       needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      !inputs.skip_e2e_test &&
       inputs.component-name == 'postman' &&
       (github.ref_name == 'main' || needs.run-test-postman.result == 'success')
     uses: ./.github/workflows/postman-build-and-publish.yml
@@ -175,9 +199,24 @@ jobs:
     if: >
       always() && !cancelled() &&
       needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      !inputs.skip_e2e_test &&
       inputs.component-name == 'prover' &&
       (github.ref_name == 'main' || needs.run-test-prover.result == 'success')
     uses: ./.github/workflows/prover-build-and-publish.yml
+    with:
+      image_tag: local
+      develop_tag: develop
+      push_image: false
+    secrets: inherit
+
+  build-local-prover-ray:
+    needs: [compute-release-metadata, run-test-prover-ray]
+    if: >
+      always() && !cancelled() &&
+      needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      inputs.component-name == 'prover-ray' &&
+      (github.ref_name == 'main' || needs.run-test-prover-ray.result == 'success')
+    uses: ./.github/workflows/prover-ray-build-and-publish.yml
     with:
       image_tag: local
       develop_tag: develop
@@ -189,6 +228,7 @@ jobs:
     if: >
       always() && !cancelled() &&
       needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      !inputs.skip_e2e_test &&
       inputs.component-name == 'maru' &&
       (github.ref_name == 'main' || needs.run-test-maru.result == 'success')
     uses: ./.github/workflows/maru-build-and-publish.yml
@@ -203,6 +243,7 @@ jobs:
     if: >
       always() && !cancelled() &&
       needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      !inputs.skip_e2e_test &&
       inputs.component-name == 'tx-exclusion-api' &&
       (github.ref_name == 'main' || needs.run-test-transaction-exclusion-api.result == 'success')
     uses: ./.github/workflows/transaction-exclusion-api-build-and-publish.yml
@@ -217,6 +258,7 @@ jobs:
     if: >
       always() && !cancelled() &&
       needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      !inputs.skip_e2e_test &&
       (needs.build-local-coordinator.result       == 'success' ||
        needs.build-local-postman.result           == 'success' ||
        needs.build-local-prover.result            == 'success' ||
@@ -231,8 +273,16 @@ jobs:
     secrets: inherit
 
   push-tag-update-changelog-and-gh-release:
-    needs: [run-e2e-tests]
-    if: always() && !cancelled() && needs.run-e2e-tests.result == 'success'
+    needs: [compute-release-metadata, run-e2e-tests, build-local-prover-ray]
+    # Prover-ray is not in the e2e stack yet, so its release gate is the local
+    # image build plus smoke test (build-local-prover-ray) instead of run-e2e-tests.
+    if: >
+      always() && !cancelled() &&
+      needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      ((inputs.component-name == 'prover-ray' && needs.build-local-prover-ray.result == 'success') ||
+       (inputs.component-name != 'prover-ray' &&
+        (needs.run-e2e-tests.result == 'success' ||
+         (needs.run-e2e-tests.result == 'skipped' && inputs.skip_e2e_test))))
     uses: ./.github/workflows/reusable-component-gh-release.yml
     with:
       component-name: ${{ inputs.component-name }}

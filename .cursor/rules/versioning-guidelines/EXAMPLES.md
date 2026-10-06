@@ -29,17 +29,17 @@ fun doSomethingV2(items: Map<String, Item>): Result {
 
 ```solidity
 // WRONG - modifying existing interface that external consumers depend on
-interface ILineaRollup {
+interface ILinethRollup {
     // changed parameter type, breaks all integrators
     function submitData(bytes32[] calldata data) external;
 }
 
 // CORRECT - new versioned interface
-interface ILineaRollupV1 {
+interface ILinethRollupV1 {
     function submitData(bytes calldata data) external;
 }
 
-interface ILineaRollupV2 {
+interface ILinethRollupV2 {
     // new signature with breaking changes
     function submitData(bytes32[] calldata data) external;
 }

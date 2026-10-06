@@ -1,4 +1,4 @@
-# Linea developer guidelines <!-- omit in toc -->
+# Lineth developer guidelines <!-- omit in toc -->
 
 <!--
 ToC can be automatically updated with:
@@ -22,7 +22,7 @@ B) IntelliJ - https://www.jetbrains.com/help/idea/markdown.html#table-of-content
 Effective logging is crucial for understanding the behavior of our applications, diagnosing issues, and ensuring that our system is running smoothly. We have established the following logging guidelines, please adhere to these practices to help us keep our logs informative, actionable, and manageable.
 
 ### Log Levels
-- **error** - for errors that compromise application/Linea functionality, may have impact on user experience and should trigger an investigation right away. Consider including stack trace for unknown errors. Examples:
+- **error** - for errors that compromise application/Lineth functionality, may have impact on user experience and should trigger an investigation right away. Consider including stack trace for unknown errors. Examples:
   - Transaction reverted with "Invalid Proof" error.
   - Message anchoring TX reverted
 - **warn** - for error that application can recover/retry from but will compromise the system if the problem persists overtime. e.g. 3 consecutive connection errors to upstream service within 30s period.

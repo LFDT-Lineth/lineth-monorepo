@@ -1,5 +1,5 @@
 plugins {
-  id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'lineth.kotlin-library-conventions'
   id 'java-test-fixtures'
 }
 
@@ -10,6 +10,7 @@ dependencies {
   // api project(':jvm-libs:linea:blob-shnarf-calculator')
   implementation "net.java.dev.jna:jna:${libs.versions.jna.get()}"
   api project(':coordinator:core-interfaces')
+  api project(':jvm-libs:linea:besu-rlp-and-mappers')
   api project(':jvm-libs:linea:core:domain-models')
   api project(':jvm-libs:linea:core:metrics')
   api project(':jvm-libs:linea:core:long-running-service')

@@ -274,6 +274,14 @@ func decodeLegacyTx(b *bytes.Reader) (parsedTx *types.LegacyTx, err error) {
 		TryCast(&parsedTx.Data, decTx[5], "data"),
 	)
 
+	if len(decTx) == legacyTxNumField {
+		if err = errors.Join(err, TryCast(&parsedTx.V, decTx[6], "chainID")); err == nil {
+			// EIP-155: V = 2*chainID + 35 + yParity; yParity isn't encoded in the signing payload, so assume 0.
+			parsedTx.V.Lsh(parsedTx.V, 1)
+			parsedTx.V.Add(parsedTx.V, big.NewInt(35))
+		}
+	}
+
 	return
 }
 

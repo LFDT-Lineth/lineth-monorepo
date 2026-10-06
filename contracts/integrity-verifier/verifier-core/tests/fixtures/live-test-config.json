@@ -9,11 +9,11 @@
   },
   "contracts": [
     {
-      "$comment": "LineaRollup proxy on Sepolia",
-      "name": "LineaRollup-Proxy",
+      "$comment": "LinethRollup proxy on Sepolia",
+      "name": "LinethRollup-Proxy",
       "chain": "ethereum-sepolia",
       "address": "0x2A5CDCfc38856e2590E9Bd32F54Fa348e5De5f48",
-      "artifactFile": "../../../../../contracts/deployments/bytecode/2026-01-14/LineaRollup.json",
+      "artifactFile": "../../../../../contracts/deployments/bytecode/2026-01-14/LinethRollup.json",
       "isProxy": true,
       "stateVerification": {
         "ozVersion": "v4",
@@ -34,11 +34,11 @@
       }
     },
     {
-      "$comment": "LineaRollup implementation on Sepolia",
-      "name": "LineaRollup-Implementation",
+      "$comment": "LinethRollup implementation on Sepolia",
+      "name": "LinethRollup-Implementation",
       "chain": "ethereum-sepolia",
       "address": "0xCaAa421FfCF701bEFd676a2F5d0A161CCFA5a07E",
-      "artifactFile": "../../../../../contracts/deployments/bytecode/2026-01-14/LineaRollup.json",
+      "artifactFile": "../../../../../contracts/deployments/bytecode/2026-01-14/LinethRollup.json",
       "isProxy": false
     }
   ]

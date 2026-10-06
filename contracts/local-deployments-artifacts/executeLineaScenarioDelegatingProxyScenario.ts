@@ -2,15 +2,15 @@
     *******************************************************************************************
     1. Set the RPC_URL 
     2. Set the DEPLOYER_PRIVATE_KEY
-    3. Set LINEA_SCENARIO_DELEGATING_PROXY_ADDRESS
+    3. Set LINETH_SCENARIO_DELEGATING_PROXY_ADDRESS
     4. Set NUMBER_OF_LOOPS
-    5. set LINEA_SCENARIO
+    5. set LINETH_SCENARIO
     6. set GAS_LIMIT
     *******************************************************************************************
     *******************************************************************************************
-    LINEA_SCENARIO_DELEGATING_PROXY_ADDRESS=<address> \
+    LINETH_SCENARIO_DELEGATING_PROXY_ADDRESS=<address> \
     NUMBER_OF_LOOPS=<number> \
-    LINEA_SCENARIO=<number> \
+    LINETH_SCENARIO=<number> \
     GAS_LIMIT=<number> \
     DEPLOYER_PRIVATE_KEY=<key> \
     RPC_URL=<url> \
@@ -27,8 +27,8 @@ async function main() {
   const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
   const wallet = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, provider);
 
-  const testContractAddress = getRequiredEnvVar("LINEA_SCENARIO_DELEGATING_PROXY_ADDRESS");
-  const lineaScenario = 1; //getRequiredEnvVar("LINEA_SCENARIO");
+  const testContractAddress = getRequiredEnvVar("LINETH_SCENARIO_DELEGATING_PROXY_ADDRESS");
+  const lineaScenario = 1; //getRequiredEnvVar("LINETH_SCENARIO");
   const numberOfLoops = getRequiredEnvVar("NUMBER_OF_LOOPS");
   const gasLimit = getRequiredEnvVar("GAS_LIMIT");
 

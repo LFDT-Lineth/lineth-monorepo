@@ -1,8 +1,8 @@
-# Linea Native Yield Automation Service
+# Lineth Native Yield Automation Service
 
 ## Overview
 
-Automates native yield operations on Linea by monitoring the YieldManager contract and executing the appropriate operation mode (yield reporting, ossification pending, or ossification complete). See [docs/architecture.md](./docs/architecture.md) for design details.
+Automates native yield operations on Lineth by monitoring the YieldManager contract and executing the appropriate operation mode (yield reporting, ossification pending, or ossification complete). See [docs/architecture.md](./docs/architecture.md) for design details.
 
 ## Folder Structure
 

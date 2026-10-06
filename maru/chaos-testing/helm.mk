@@ -200,8 +200,7 @@ helm-redeploy-linea-multi-validator:
 
 build-maru-image:
 	@echo "Building Maru image"
-	cd .. && ./gradlew :app:installDist
-	cd .. && docker build app --build-context=libs=./app/build/install/app/lib/ -t consensys/maru:local
+	$(MAKE) -C .. docker-build-local-image
 
 build-and-import-maru-image:
 	@$(MAKE) build-maru-image

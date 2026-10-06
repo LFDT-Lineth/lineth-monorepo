@@ -2,11 +2,25 @@ package fri
 
 import (
 	"errors"
+	"fmt"
+	"math/bits"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
+	gnarkposeidon2 "github.com/consensys/gnark-crypto/field/koalabear/poseidon2"
 )
+
+// minParallelTreeLevel avoids paying goroutine scheduling costs for the small
+// levels near the root. Larger levels contain independent nodes and benefit
+// from using all available CPUs.
+const minParallelTreeLevel = 512
+
+// batchLanes is the width of the batched Poseidon2 compression.
+const batchLanes = 16
+
+var batchPoseidon2 = gnarkposeidon2.NewPermutation(16, 6, 21)
 
 // Tree is a Merkle tree for multi-size FRI. The tree is 3-ary, each node may
 // have:
@@ -59,6 +73,28 @@ type Branch struct {
 	AuxSiblings []*field.Octuplet
 }
 
+// MerkleCap authenticates the shared upper part of a Merkle tree. Nodes are
+// the frontier, from left to right; Aux is the heap-order prefix above it.
+// An empty cap represents depth zero and carries no copy of the known root.
+type MerkleCap struct {
+	Nodes []field.Octuplet
+	Aux   []*field.Octuplet
+}
+
+// merkleCapDepth returns the depth of the frontier shared by all query
+// branches. The cap holds the 2^depth frontier nodes; every branch meets that
+// frontier in exactly one node, so each branch is opened only below the
+// frontier and drops its top `depth` siblings. Descending one more level
+// doubles the cap and saves one sibling on each of the numQueries branches, so
+// the cost balances at 2^depth = numQueries. The height-1 bound keeps at least
+// one branch step per query, so value extraction stays uniform.
+func merkleCapDepth(numQueries uint, height int) int {
+	if numQueries <= 1 || height <= 1 {
+		return 0
+	}
+	return min(bits.Len(numQueries-1), height-1)
+}
+
 // NewTree builds a new Tree from the given leaves. The leaves must be  provided
 // in increasing-size order, from the top of the tree (smallest) down to the
 // bottom layer (largest):
@@ -84,87 +120,128 @@ func NewTree(leaves [][]field.Octuplet) *Tree {
 		}
 	}
 
-	var (
-		nodes = make([]field.Octuplet, 2*len(leaves[bottom])-1)
-		aux   = make([]*field.Octuplet, len(leaves[bottom])-1)
-	)
+	t := allocTree(len(leaves[bottom]))
+	copy(t.Nodes[len(leaves[bottom])-1:], leaves[bottom])
+	t.buildLevels(leaves[:bottom])
+	return t
+}
 
-	copy(nodes[len(leaves[bottom])-1:], leaves[bottom])
+// allocTree allocates the node and aux storage for a tree with the given
+// power-of-two number of bottom leaves. The caller must fill
+// Nodes[numLeaves-1:] with the bottom leaves and then call buildLevels.
+func allocTree(numLeaves int) *Tree {
+	if numLeaves <= 0 || numLeaves&(numLeaves-1) != 0 {
+		panic("fri: allocTree: number of leaves must be a positive power of two")
+	}
+	return &Tree{
+		Nodes: make([]field.Octuplet, 2*numLeaves-1),
+		Aux:   make([]*field.Octuplet, numLeaves-1),
+	}
+}
 
-	for i := bottom - 1; i >= 0; i-- {
-
-		var (
-			n = 1 << i
-			// This level holds n nodes; in a complete binary tree they occupy the
-			// heap positions [n-1, 2n-1), i.e. right above the n-1 nodes of the
-			// levels below them.
-			levelStartPos = n - 1
-		)
-
-		for j := range n {
-
-			k := levelStartPos + j
-
-			if aux[k] != nil {
-				panic("indices on aux are wrong and we are overlapping values")
-			}
-
-			if len(leaves[i]) > 0 {
-				// we already asserted that len(leaves[i]) == n. So this
-				// will not go OOB.
-				aux[k] = &leaves[i][j]
-			}
-
-			left, right := nodes[2*k+1], nodes[2*k+2]
-			if (nodes[k] != field.Octuplet{}) {
-				panic("already computed node; the indexing must be wrong")
-			}
-
-			nodes[k] = hashNode(left, right, aux[k])
+// buildLevels computes every internal level bottom-up; Nodes[NumLeaves()-1:]
+// must already hold the bottom leaves. upperLeaves, if non-nil, lists the
+// auxiliary leaves of the levels above the bottom, indexed as in [NewTree]:
+// len(upperLeaves[i]) is 2^i or 0.
+func (t *Tree) buildLevels(upperLeaves [][]field.Octuplet) {
+	n := t.NumLeaves()
+	for levelSize := n / 2; levelSize > 0; levelSize /= 2 {
+		var auxLeaves []field.Octuplet
+		if upperLeaves != nil {
+			auxLeaves = upperLeaves[utils.Log2Ceil(levelSize)]
 		}
+		hashTreeLevel(t.Nodes, t.Aux, auxLeaves, levelSize)
 	}
 
 	// as the tree cannot be empty (as per our sanity-checks), the root cannot
 	// be zero.
-	if nodes[0] == (field.Octuplet{}) {
+	if n > 1 && t.Nodes[0] == (field.Octuplet{}) {
 		panic("sanity-check failed : the root is zero.")
-	}
-
-	return &Tree{
-		Nodes: nodes,
-		Aux:   aux,
 	}
 }
 
-// newCompleteBinaryTree builds a complete binary Merkle tree from a single bottom
-// layer of octuplet leaves; len(leaves) must be a positive power of two. There
-// are no auxiliary leaves, so every internal node k is hashNode(nodes[2k+1],
-// nodes[2k+2], nil). The returned tree carries a length-(n-1) all-nil Aux so that
-// OpenBranch/RecoverRoot index it consistently.
-func newCompleteBinaryTree(leaves []field.Octuplet) *Tree {
-
-	n := len(leaves)
-	if n == 0 || n&(n-1) != 0 {
-		panic("fri: newCompleteBinaryTree: number of leaves must be a positive power of two")
+// hashTreeLevel computes the complete level of levelSize internal nodes at
+// heap positions [levelSize-1, 2*levelSize-1). Children belong to
+// already-computed lower levels, so the writes are independent. If leaves is
+// non-empty, it contains exactly one auxiliary leaf per node at this level.
+func hashTreeLevel(
+	nodes []field.Octuplet,
+	aux []*field.Octuplet,
+	leaves []field.Octuplet,
+	levelSize int,
+) {
+	levelStart := levelSize - 1
+	if len(leaves) != 0 && len(leaves) != levelSize {
+		panic("fri: hashTreeLevel: invalid auxiliary leaf count")
 	}
 
+	// Levels smaller than one batch (only the topmost few nodes) are hashed
+	// with the scalar compression.
+	if levelSize < batchLanes {
+		for j := range levelSize {
+			k := levelStart + j
+			if len(leaves) != 0 {
+				aux[k] = &leaves[j]
+			}
+			nodes[k] = hashNode(nodes[2*k+1], nodes[2*k+2], aux[k])
+		}
+		return
+	}
+
+	// Levels are powers of two, so levelSize is a multiple of batchLanes.
+	// Each group of 16 sibling pairs is staged column-major and hashed by one
+	// batched Poseidon2 compression, writing the 16 parents directly into
+	// nodes[k0:k0+16]. Bit-identical to the scalar hashNode loop; with aux
+	// leaves, C(C(left,right),aux) is the same chain with one more block.
 	var (
-		nodes = make([]field.Octuplet, 2*n-1)
-		aux   = make([]*field.Octuplet, n-1) // all nil: no auxiliary leaves
+		nbGroups = levelSize / batchLanes
+		hasAux   = len(leaves) != 0
+		nbSteps  = 1
 	)
-	copy(nodes[n-1:], leaves)
-
-	// Children always have a higher index than their parent, so a single
-	// descending pass computes every internal node after its children.
-	for k := n - 2; k >= 0; k-- {
-		nodes[k] = hashNode(nodes[2*k+1], nodes[2*k+2], nil)
+	if hasAux {
+		nbSteps = 2
 	}
 
-	if n > 1 && nodes[0] == (field.Octuplet{}) {
-		panic("fri: newCompleteBinaryTree: sanity-check failed: the root is zero")
+	hashGroups := func(gStart, gEnd int) {
+		state := make([]field.Element, 8*batchLanes)
+		matrix := make([]field.Element, nbSteps*8*batchLanes)
+		for g := gStart; g < gEnd; g++ {
+			var (
+				j        = g * batchLanes
+				k0       = levelStart + j
+				children = nodes[2*k0+1 : 2*k0+1+2*batchLanes]
+			)
+			// Stage both buffers in one pass per lane.
+			for lane := range batchLanes {
+				left, right := &children[2*lane], &children[2*lane+1]
+				for pos := range 8 {
+					state[pos*batchLanes+lane] = left[pos]
+					matrix[pos*batchLanes+lane] = right[pos]
+				}
+			}
+			if hasAux {
+				for lane := range batchLanes {
+					auxLeaf := &leaves[j+lane]
+					aux[k0+lane] = auxLeaf
+					for pos := range 8 {
+						matrix[(8+pos)*batchLanes+lane] = auxLeaf[pos]
+					}
+				}
+			}
+			batchPoseidon2.Compressx16ColumnsWithState(
+				state,
+				matrix,
+				nbSteps*8,
+				nodes[k0:k0+batchLanes],
+			)
+		}
 	}
 
-	return &Tree{Nodes: nodes, Aux: aux}
+	if levelSize < minParallelTreeLevel {
+		hashGroups(0, nbGroups)
+		return
+	}
+	parallel.Execute(nbGroups, hashGroups)
 }
 
 // Root returns the Merkle root digest. Build must be called first.
@@ -183,12 +260,22 @@ func (t *Tree) NumLeaves() int {
 	return (len(t.Nodes) + 1) / 2
 }
 
-// OpenProof returns the Merkle opening proof for the leaf at 0-based index idx.
+// OpenBranch returns the Merkle opening proof for the leaf at 0-based index idx.
 // The function panics if the requested position is not openable.
 func (t *Tree) OpenBranch(idx int) Branch {
+	return t.OpenBranchToDepth(idx, 0)
+}
+
+// OpenBranchToDepth opens idx only up to a depth-c cap frontier. The returned
+// branch retains the lower path, in the same shallowest-to-deepest order as
+// OpenBranch. The caller must authenticate that frontier separately.
+func (t *Tree) OpenBranchToDepth(idx, depth int) Branch {
 
 	if idx < 0 || idx >= t.NumLeaves() {
 		panic("out of bound opening")
+	}
+	if depth < 0 || depth > t.NumLevel()-1 {
+		panic("fri: cap depth out of bounds")
 	}
 
 	// The branch is computed from the bottom-up. current initially points to
@@ -202,13 +289,13 @@ func (t *Tree) OpenBranch(idx int) Branch {
 		idxRemBits  = idx
 		numSiblings = t.NumLevel() - 1
 		branch      = Branch{
-			Siblings:    make([]field.Octuplet, numSiblings),
-			AuxSiblings: make([]*field.Octuplet, numSiblings),
+			Siblings:    make([]field.Octuplet, numSiblings-depth),
+			AuxSiblings: make([]*field.Octuplet, numSiblings-depth),
 			Leaf:        t.Nodes[current],
 		}
 	)
 
-	for level := numSiblings - 1; level >= 0; level-- {
+	for level := numSiblings - 1; level >= depth; level-- {
 
 		var (
 			parent  = (current - 1) / 2
@@ -216,8 +303,8 @@ func (t *Tree) OpenBranch(idx int) Branch {
 			sibling = 2*parent + 2 - currBit
 		)
 
-		branch.AuxSiblings[level] = t.Aux[parent]
-		branch.Siblings[level] = t.Nodes[sibling]
+		branch.AuxSiblings[level-depth] = t.Aux[parent]
+		branch.Siblings[level-depth] = t.Nodes[sibling]
 		idxRemBits >>= 1
 		current = parent
 	}
@@ -225,38 +312,121 @@ func (t *Tree) OpenBranch(idx int) Branch {
 	return branch
 }
 
-// RecoverRoot recovers the root of the tree from a branch and a position. The
-// function errors if the branch is malformed its size is inconsistent with idx.
-func (branch *Branch) RecoverRoot(idx int) (field.Octuplet, error) {
+// OpenCap copies the shared prefix above a depth-c frontier. Auxiliary
+// digests are deep-copied so later proof mutation cannot alter the tree.
+func (t *Tree) OpenCap(depth int) MerkleCap {
+	if depth < 0 || depth > t.NumLevel()-1 {
+		panic("fri: treeCap depth out of bounds")
+	}
+	if depth == 0 {
+		return MerkleCap{}
+	}
 
+	frontierStart := 1<<depth - 1
+	frontierEnd := 2*frontierStart + 1
+	treeCap := MerkleCap{
+		Nodes: append([]field.Octuplet(nil), t.Nodes[frontierStart:frontierEnd]...),
+		Aux:   make([]*field.Octuplet, frontierStart),
+	}
+	for i, aux := range t.Aux[:frontierStart] {
+		if aux == nil {
+			continue
+		}
+		auxCopy := *aux
+		treeCap.Aux[i] = &auxCopy
+	}
+	return treeCap
+}
+
+// Validate checks that cap is the canonical representation for depth.
+func (cap MerkleCap) Validate(depth int) error {
+	if depth < 0 {
+		return errors.New("negative cap depth")
+	}
+	if depth == 0 {
+		if len(cap.Nodes) != 0 || len(cap.Aux) != 0 {
+			return errors.New("depth-zero cap must be empty")
+		}
+		return nil
+	}
+	if depth >= bits.UintSize-1 {
+		return errors.New("cap depth too large")
+	}
+	wantNodes := 1 << depth
+	if len(cap.Nodes) != wantNodes {
+		return fmt.Errorf("cap has %d nodes, want %d", len(cap.Nodes), wantNodes)
+	}
+	if len(cap.Aux) != wantNodes-1 {
+		return fmt.Errorf("cap has %d auxiliary digests, want %d", len(cap.Aux), wantNodes-1)
+	}
+	return nil
+}
+
+// RecoverRoot rebuilds the root from a structurally valid nonempty cap.
+func (cap MerkleCap) RecoverRoot(depth int) (field.Octuplet, error) {
+	if err := cap.Validate(depth); err != nil {
+		return field.Octuplet{}, err
+	}
+	if depth == 0 {
+		return field.Octuplet{}, errors.New("empty cap has no root")
+	}
+
+	work := make([]field.Octuplet, 2*len(cap.Nodes)-1)
+	copy(work[len(cap.Nodes)-1:], cap.Nodes)
+	for i := len(cap.Nodes) - 2; i >= 0; i-- {
+		work[i] = hashNode(work[2*i+1], work[2*i+2], cap.Aux[i])
+	}
+	return work[0], nil
+}
+
+// Authenticate checks a cap once against the caller's trusted root. A
+// depth-zero cap is empty and represents the trusted root directly.
+func (cap MerkleCap) Authenticate(depth int, root field.Octuplet) error {
+	if depth == 0 {
+		return cap.Validate(depth)
+	}
+	recovered, err := cap.RecoverRoot(depth)
+	if err != nil {
+		return err
+	}
+	if recovered != root {
+		return errors.New("invalid Merkle cap")
+	}
+	return nil
+}
+
+// AuthenticateToCap checks this lower branch against a previously
+// authenticated frontier.
+func (branch *Branch) AuthenticateToCap(idx int, frontier []field.Octuplet) error {
+	if idx < 0 {
+		return errors.New("negative opening index")
+	}
+	if len(frontier) == 0 || len(frontier)&(len(frontier)-1) != 0 {
+		return errors.New("frontier size is not a power of two")
+	}
 	if len(branch.AuxSiblings) != len(branch.Siblings) {
-		return field.Octuplet{}, errors.New("malformed proof")
+		return errors.New("malformed proof")
+	}
+	if len(branch.Siblings) >= bits.UintSize ||
+		len(frontier) > int(^uint(0)>>1)>>len(branch.Siblings) ||
+		idx >= len(frontier)<<len(branch.Siblings) {
+		return errors.New("opening index outside capped tree")
 	}
 
-	if len(branch.Siblings) == 0 {
-		return field.Octuplet{}, errors.New("empty proof")
-	}
-
-	var (
-		ancestor = branch.Leaf
-		currPos  = idx
-	)
-
+	ancestor := branch.Leaf
+	currPos := idx
 	for i := len(branch.Siblings) - 1; i >= 0; i-- {
 		left, right := ancestor, branch.Siblings[i]
 		if currPos&1 > 0 {
 			left, right = right, left
 		}
-
 		ancestor = hashNode(left, right, branch.AuxSiblings[i])
 		currPos >>= 1
 	}
-
-	if currPos > 0 {
-		return field.Octuplet{}, errors.New("all bits of currPos should have been bitshifted beyond LSb")
+	if ancestor != frontier[currPos] {
+		return errors.New("invalid Merkle proof")
 	}
-
-	return ancestor, nil
+	return nil
 }
 
 // hashNode hashes two field.Octuplets and an optional field.Octuplet. It works

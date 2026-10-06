@@ -189,16 +189,29 @@ func TestCommit(t *testing.T) {
 			}
 
 			root := cs.Tree.Root()
+			frontier := []field.Octuplet{root}
 			for idx := 0; idx < cs.Tree.NumLeaves(); idx++ {
 				branch := cs.Tree.OpenBranch(idx)
-				got, err := branch.RecoverRoot(idx)
-				if err != nil {
-					t.Fatalf("idx %d: RecoverRoot: %v", idx, err)
-				}
-				if got != root {
-					t.Fatalf("idx %d: recovered root != tree root", idx)
+				if err := branch.AuthenticateToCap(idx, frontier); err != nil {
+					t.Fatalf("idx %d: AuthenticateToCap: %v", idx, err)
 				}
 			}
 		})
+	}
+}
+
+// TestMerkleize_Regression_SizeOneAuxiliaryTable checks that a non-bottom
+// size-one table contributes no auxiliary leaves and therefore does not alter
+// the tree built from the bottom table.
+func TestMerkleize_Regression_SizeOneAuxiliaryTable(t *testing.T) {
+	var ctr uint64
+	aux := tableOfSize(1, &ctr)
+	bottom := tableOfSize(2, &ctr)
+
+	withAux := MultiSizeTable{aux, bottom}.Merkleize()
+	withoutAux := MultiSizeTable{bottom}.Merkleize()
+
+	if got, want := withAux.Root(), withoutAux.Root(); got != want {
+		t.Fatalf("size-one auxiliary table changed root: got %v, want %v", got, want)
 	}
 }

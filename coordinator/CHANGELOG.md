@@ -1,14 +1,79 @@
-## [unreleased]
+## [2.0.1] - 2026-10-06
+
+### ⚙️ Miscellaneous Tasks
+
+- *(coordinator)* Simplify Risc5 prover DTO mappers (#4121)
+## [2.0.0] - 2026-10-02
+
+### 🚀 Features
+
+- *(coordinator)* Add new metadata fields in RISC-V request (#3998)
+- *(coordinator)* [**breaking**] Add new fields on riscv proof requests and revise … (#3993)
+
+### 🐛 Bug Fixes
+
+- *(misc)* Make timer stop() await in-flight task execution (#4042)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Improv JVM flakiness test and gradle configs (#4021)
+- *(coordinator, maru, linea-besu)* Update jvm dependencies: (#4029)
+- *(misc)* Update gradle to v9.8 (#4032)
+- *(misc)* Fix gradle build correctness bugs (#4044)
+- *(misc)* Decrease vertx threadpool sizes for testing (#4047)
+- *(coordinator)* Tidy up move DB sql files to db/coordinator (#4068)
+- *(coordinator)* Make vertx instantiation responsibility of CoordinatorAppMain runner (#4090)
+- *(coordinator)* Carve out config module (#4093)
+- *(coordinator)* Arrange config module dependencies (#4100)
+- *(coordinator)* Remove unsupported invalidity proof client (#4101)
+## [1.2.0] - 2026-09-23
+
+### 🚀 Features
+
+- *(coordinator)* Support custom transaction signers (#3597)
+- *(coordinator)* Implement ExecutionProofGeneratingCoordinator for RISC-V l2-execution proofs (#3684)
+- *(coordinator)* Implement L2ExecutionRequestBuilderImpl for RISC-V execution proofs (#3745)
+- *(coordinator)* Add StartingPoint sealed class to BlockCreationMonitor (#3769)
+- *(coordinator)* Check proof response before submitting request in ExecutionProofGeneratingCoordinator (#3772)
+- *(coordinator)* Add RISC-V prover and protocol config to coordinator config v2 (#3799)
+- *(coordinator)* Add RiscvProverClientFactory with execution proof support (#3800)
+- *(coordinator)* Update rollup proof domain types for flexible-blobs spec (#3801)
+- *(misc)* Rename guestProgramId to programVk in coordinator Kotlin (#3816)
+- *(coordinator)* Add programVk to L2 execution and rollup proof response chain (#3819)
+- *(coordinator)* Support finalization on validium chains (#3910)
+- *(coordinator)* Wire ConflationAppV2 RISC-V execution proof pipeline (#3811)
+- *(coordinator)* Add startBlockTimestamp and totalGasUsed request m… (#3953)
+- *(coordinator)* Store proof_index_hash in batches table for RISC-V rollup proof assembly (#3973)
+- *(coordinator)* Improve ProverClientFactory (#4000)
 
 ### 🐛 Bug Fixes
 
 - *(coordinator)* Correct ByteArray equality checks in domain classes (#3625)
 - *(coordinator)* Address error handling issues from review (#3626)
 - *(coordinator)* Supply parent shnarf preimage for aggregation requests (#3542)
+- *(coordinator)* Apply message anchoring L1 retries (#3715)
+- *(coordinator)* Make runtime invariants explicit (#3716)
+- *(coordinator)* Preserve Amsterdam execution payload fields (#3949)
+
+### 🚜 Refactor
+
+- *(coordinator)* L1RelayingAppV1 to better allow RISC-V extension (#3640)
+- *(coordinator)* Restructure chain params in L2 execution proof request (#3848)
+- *(coordinator)* Extract ForcedTransactionsApp from ConflationAppV1, make invalidity proof service injectable (#3856)
 
 ### ⚙️ Miscellaneous Tasks
 
 - *(coordinator)* Remove dead code and apply small cleanups from review (#3627)
+- *(coordinator)* Riscv blob data skeleton (#3609)
+- *(coordinator)* Rename LineaRollup to LinethRollup in JVM components (#3421)
+- *(coordinator)* Rename Linea to Lineth in app and config (#3707)
+- *(misc)* Rename gradle plugins (#3729)
+- *(coordinator)* Apply review cleanups (#3717)
+- *(coordinator)* Package renaming to lineth (#3746)
+- *(coordinator)* Scaffold ConflationAppV2 for RISC-V cutover (#3771)
+- *(misc)* Enrich R5 request/response samples (#3806)
+- *(misc)* Increase timeout to avoid CI flakiness (#3926)
+- *(coordinator)* Consolidate prover clients (#3944)
 ## [1.1.0] - 2026-07-28
 
 ### 🚀 Features

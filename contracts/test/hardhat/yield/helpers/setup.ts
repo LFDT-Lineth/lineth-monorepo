@@ -2,12 +2,12 @@ import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { expect } from "chai";
 import {
   MockDashboard,
-  MockLineaRollup,
+  MockLinethRollup,
   MockYieldProvider,
   SSZMerkleTree,
   TestValidatorContainerProofVerifier,
   TestLidoStVaultYieldProvider,
-  TestLineaRollup,
+  TestLinethRollup,
   TestYieldManager,
   YieldManager,
   MockSTETH,
@@ -108,7 +108,7 @@ export const fundLidoStVaultYieldProvider = async (
 };
 
 export const getWithdrawLSTCall = async (
-  mockLineaRollup: MockLineaRollup,
+  mockLinethRollup: MockLinethRollup,
   yieldManager: TestYieldManager,
   yieldProvider: TestLidoStVaultYieldProvider,
   signer: SignerWithAddress,
@@ -121,13 +121,13 @@ export const getWithdrawLSTCall = async (
   const l1MessageService = await yieldManager.L1_MESSAGE_SERVICE();
   await ethers.provider.send("hardhat_setBalance", [l1MessageService, ethers.toBeHex(ONE_ETHER)]);
   const l1Signer = await ethers.getImpersonatedSigner(l1MessageService);
-  await mockLineaRollup.setWithdrawLSTAllowed(true);
+  await mockLinethRollup.setWithdrawLSTAllowed(true);
 
   return yieldManager.connect(l1Signer).withdrawLST(await yieldProvider.getAddress(), withdrawAmount, recipient);
 };
 
-export const setupLineaRollupMessageMerkleTree = async (
-  lineaRollup: TestLineaRollup,
+export const setupLinethRollupMessageMerkleTree = async (
+  linethRollup: TestLinethRollup,
   from: string,
   to: string,
   value: bigint,
@@ -141,8 +141,8 @@ export const setupLineaRollupMessageMerkleTree = async (
   const messageHash = ethers.keccak256(expectedBytes);
   const proof = Array.from({ length: 32 }, () => randomBytes32());
   const leafIndex = 0n;
-  const root = await lineaRollup.generateMerkleRoot(messageHash, proof, leafIndex);
-  await lineaRollup.connect(securityCouncil).addL2MerkleRoots([root], proof.length);
+  const root = await linethRollup.generateMerkleRoot(messageHash, proof, leafIndex);
+  await linethRollup.connect(securityCouncil).addL2MerkleRoots([root], proof.length);
 
   const claimParams: ClaimMessageWithProofParams = {
     proof,
@@ -321,22 +321,22 @@ export const cleanupMaxLSTLiabilityPayment = async (
 };
 
 export const withdrawLST = async (
-  lineaRollup: TestLineaRollup,
+  linethRollup: TestLinethRollup,
   nonAuthorizedAccount: SignerWithAddress,
   yieldProviderAddress: string,
   amount: bigint,
   securityCouncil: SignerWithAddress,
 ) => {
   const recipientAddress = await nonAuthorizedAccount.getAddress();
-  const claimParams = await setupLineaRollupMessageMerkleTree(
-    lineaRollup,
+  const claimParams = await setupLinethRollupMessageMerkleTree(
+    linethRollup,
     recipientAddress,
     recipientAddress,
     amount,
     EMPTY_CALLDATA,
     securityCouncil,
   );
-  await lineaRollup
+  await linethRollup
     .connect(nonAuthorizedAccount)
     .claimMessageWithProofAndWithdrawLST(claimParams, yieldProviderAddress);
 };

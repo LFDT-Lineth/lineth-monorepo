@@ -1,6 +1,6 @@
 # Coordinator
 
-> Kotlin service that orchestrates the Linea rollup proving and submission pipeline.
+> Kotlin service that orchestrates the Lineth rollup proving and submission pipeline.
 
 > **Diagram:** [Coordinator Architecture](../diagrams/coordinator-architecture.mmd) (Mermaid source)
 
@@ -67,9 +67,10 @@ coordinator/
 │           ├── CoordinatorAppMain.kt       # Entry point
 │           ├── CoordinatorAppCli.kt        # CLI interface
 │           ├── L1DependentApp.kt           # L1 submission services
-│           ├── conflation/
-│           │   └── ConflationApp.kt        # Proof pipeline
-│           └── config/                     # Configuration parsing
+│           └── conflation/
+│               └── ConflationApp.kt        # Proof pipeline
+│
+├── config/                 # Configuration parsing (TOML -> typed config)
 │
 ├── core/                   # Business logic
 │   └── src/main/kotlin/
@@ -155,14 +156,14 @@ Blob + Compression Proof ───▶ BlobSubmissionCoordinator
                                         │
                                         ▼
                               Submit EIP-4844 blob to L1
-                              (LineaRollup.submitBlobs)
+                              (LinethRollup.submitBlobs)
                                         │
                                         ▼
 Aggregated Proof ───▶ AggregationFinalizationCoordinator
                                         │
                                         ▼
                               Submit finalization to L1
-                              (LineaRollup.finalizeBlocks)
+                              (LinethRollup.finalizeBlocks)
                                         │
                                         ▼
                               FinalizationMonitor tracks

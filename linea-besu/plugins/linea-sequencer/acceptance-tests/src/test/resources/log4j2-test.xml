@@ -41,12 +41,18 @@
                 <AppenderRef ref="MemoryITR" />
               </Async>
             </Route>
+            <!--
+              Routed synchronously (bypassing the Async "Main" appender) so that acceptance tests
+              polling MemoryAppender for this line don't race the async logging disruptor thread
+              under CI CPU contention.
+            -->
+            <Route key="MODULE_LINE_COUNT_FULL" ref="Memory" />
             <Route ref="Main" />
           </Routes>
         </Routing>
     </Appenders>
     <Loggers>
-        <Logger name="net.consensys.linea.sequencer.txselection.selectors.TraceLineLimitTransactionSelector" level="${sys:root.log.level}" additivity="false">
+        <Logger name="lineth.sequencer.txselection.selectors.TraceLineLimitTransactionSelector" level="${sys:root.log.level}" additivity="false">
           <AppenderRef ref="Router" />
         </Logger>
         <Logger name="org.hyperledger.besu.ethereum.eth.transactions"  level="${sys:root.log.level}" additivity="false">
@@ -57,7 +63,7 @@
         <Logger level="INFO" name="org.web3j.protocol.http.HttpService" />
         <Logger level="INFO" name="org.hyperledger.besu.ethereum.p2p.network.DefaultP2PNetwork" />
         <Logger level="INFO" name="org.hyperledger.besu.ethereum.eth.manager.EthPeers" />
-        <Logger level="TRACE" name="net.consensys.linea.sequencer.txselection.selectors" />
+        <Logger level="TRACE" name="lineth.sequencer.txselection.selectors" />
         <Root level="${sys:root.log.level}">
             <AppenderRef ref="Main" />
         </Root>

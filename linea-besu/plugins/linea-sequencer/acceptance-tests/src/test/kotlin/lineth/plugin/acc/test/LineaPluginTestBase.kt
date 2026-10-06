@@ -1,0 +1,798 @@
+/*
+ * Copyright Consensys Software Inc.
+ *
+ * This file is dual-licensed under either the MIT license or Apache License 2.0.
+ * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
+ *
+ * SPDX-License-Identifier: MIT OR Apache-2.0
+ */
+
+package lineth.plugin.acc.test
+
+import com.fasterxml.jackson.core.JsonProcessingException
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ObjectNode
+import lineth.metrics.LineaMetricCategory.PRICING_CONF
+import lineth.metrics.LineaMetricCategory.SEQUENCER_FORCED_TX
+import lineth.metrics.LineaMetricCategory.SEQUENCER_LIVENESS
+import lineth.metrics.LineaMetricCategory.SEQUENCER_PROFITABILITY
+import lineth.metrics.LineaMetricCategory.TX_POOL_PROFITABILITY
+import lineth.plugin.acc.test.LineaPluginTestBase.Companion.RECEIPT_FETCH_MAX_RETRIES
+import lineth.plugin.acc.test.tests.web3j.generated.AcceptanceTestToken
+import lineth.plugin.acc.test.tests.web3j.generated.BLS12_MAP_FP_TO_G1
+import lineth.plugin.acc.test.tests.web3j.generated.DummyAdder
+import lineth.plugin.acc.test.tests.web3j.generated.EcAdd
+import lineth.plugin.acc.test.tests.web3j.generated.EcMul
+import lineth.plugin.acc.test.tests.web3j.generated.EcPairing
+import lineth.plugin.acc.test.tests.web3j.generated.EcRecover
+import lineth.plugin.acc.test.tests.web3j.generated.ExcludedPrecompiles
+import lineth.plugin.acc.test.tests.web3j.generated.LogEmitter
+import lineth.plugin.acc.test.tests.web3j.generated.ModExp
+import lineth.plugin.acc.test.tests.web3j.generated.MulmodExecutor
+import lineth.plugin.acc.test.tests.web3j.generated.RevertExample
+import lineth.plugin.acc.test.tests.web3j.generated.SimpleStorage
+import lineth.plugin.acc.test.utils.MemoryAppender
+import org.apache.commons.lang3.RandomStringUtils
+import org.apache.tuweni.bytes.Bytes
+import org.apache.tuweni.bytes.Bytes32
+import org.apache.tuweni.units.bigints.UInt32
+import org.assertj.core.api.Assertions.assertThat
+import org.awaitility.Awaitility.await
+import org.hyperledger.besu.consensus.clique.CliqueExtraData
+import org.hyperledger.besu.datatypes.Hash
+import org.hyperledger.besu.ethereum.core.ImmutableMiningConfiguration
+import org.hyperledger.besu.ethereum.eth.transactions.ImmutableTransactionPoolConfiguration
+import org.hyperledger.besu.ethereum.eth.transactions.TransactionPoolConfiguration
+import org.hyperledger.besu.metrics.prometheus.MetricsConfiguration
+import org.hyperledger.besu.plugin.services.metrics.MetricCategory
+import org.hyperledger.besu.tests.acceptance.dsl.AcceptanceTestBase
+import org.hyperledger.besu.tests.acceptance.dsl.account.Account
+import org.hyperledger.besu.tests.acceptance.dsl.account.Accounts
+import org.hyperledger.besu.tests.acceptance.dsl.condition.txpool.TxPoolConditions
+import org.hyperledger.besu.tests.acceptance.dsl.node.BesuNode
+import org.hyperledger.besu.tests.acceptance.dsl.node.RunnableNode
+import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.BesuNodeConfigurationBuilder
+import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.NodeConfigurationFactory
+import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.genesis.GenesisConfigurationFactory
+import org.hyperledger.besu.tests.acceptance.dsl.transaction.txpool.TxPoolTransactions
+import org.hyperledger.besu.util.number.PositiveNumber
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.web3j.crypto.Credentials
+import org.web3j.crypto.RawTransaction
+import org.web3j.crypto.TransactionEncoder
+import org.web3j.protocol.Web3j
+import org.web3j.protocol.core.methods.response.TransactionReceipt
+import org.web3j.protocol.exceptions.TransactionException
+import org.web3j.tx.RawTransactionManager
+import org.web3j.tx.gas.DefaultGasProvider
+import org.web3j.tx.response.PollingTransactionReceiptProcessor
+import org.web3j.tx.response.TransactionReceiptProcessor
+import java.io.IOException
+import java.math.BigInteger
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.util.Objects
+import java.util.Optional
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+
+/** Base class for plugin tests. */
+abstract class LineaPluginTestBase : AcceptanceTestBase() {
+
+  companion object {
+    const val MAX_CALLDATA_SIZE = 1188 // contract has a call data size of 1160
+    val MAX_TX_GAS_LIMIT: Int = DefaultGasProvider.GAS_LIMIT.toInt()
+    const val CHAIN_ID = 1337L
+    const val BLOCK_PERIOD_SECONDS = 5
+    const val RECEIPT_FETCH_MAX_CONCURRENCY = 4
+    const val RECEIPT_FETCH_MAX_RETRIES = 2
+    const val RECEIPT_FETCH_RETRY_DELAY_MILLIS = 200L
+    val DEFAULT_REQUESTED_PLUGINS = listOf(
+      "LineaExtraDataPlugin",
+      "LineaEstimateGasEndpointPlugin",
+      "LineaSetExtraDataEndpointPlugin",
+      "LineaTransactionPoolValidatorPlugin",
+      "LineaTransactionSelectorPlugin",
+      "LineaBundleEndpointsPlugin",
+      "LineaForcedTransactionEndpointsPlugin",
+    )
+
+    /**
+     * Plugin list for tests that validate block import behavior. Uses
+     * LineaBlockTransactionValidatorPlugin instead of LineaTransactionPoolValidatorPlugin so the
+     * block-import validation path is exercised in isolation.
+     */
+    val BLOCK_VALIDATOR_REQUESTED_PLUGINS = listOf(
+      "LineaExtraDataPlugin",
+      "LineaEstimateGasEndpointPlugin",
+      "LineaSetExtraDataEndpointPlugin",
+      "LineaBlockTransactionValidatorPlugin",
+      "LineaTransactionSelectorPlugin",
+      "LineaBundleEndpointsPlugin",
+      "LineaForcedTransactionEndpointsPlugin",
+    )
+
+    private val HTTP_CLIENT: HttpClient = HttpClient.newHttpClient()
+
+    @JvmStatic
+    fun getResourcePath(resource: String): String {
+      return Objects.requireNonNull(LineaPluginTestBase::class.java.getResource(resource)).path
+    }
+  }
+
+  @BeforeEach
+  protected open fun setup() {
+    minerNode = createNodeWithExtraCliOptionsAndRpcApis(
+      "miner1",
+      getTestCliOptions(),
+      setOf("LINEA", "MINER", "PLUGINS"),
+      false,
+      requestedPlugins(),
+    )
+    minerNode.transactionPoolConfiguration = ImmutableTransactionPoolConfiguration.builder()
+      .from(TransactionPoolConfiguration.DEFAULT)
+      .noLocalPriority(true)
+      .build()
+    cluster.start(minerNode)
+  }
+
+  protected open fun requestedPlugins(): List<String> = DEFAULT_REQUESTED_PLUGINS
+
+  protected open fun getTestCliOptions(): List<String> {
+    return TestCommandLineOptionsBuilder().build()
+  }
+
+  protected open fun getBlockPeriodSeconds(): Int = BLOCK_PERIOD_SECONDS
+
+  /**
+   * Milliseconds Besu may spend selecting transactions for one block.
+   *
+   * Besu picks between the PoA and PoS variants of this budget via `protocolSpec.isPoS()` (see
+   * `MiningConfiguration.getBlockTxsSelectionMaxTime`), so both are configured from this value.
+   * When the budget is exhausted mid-batch Besu returns `BLOCK_SELECTION_TIMEOUT` and seals the
+   * block with whatever it had evaluated so far, splitting a batch a test expects in one block.
+   * Tests whose transactions are expensive to evaluate (e.g. EcPairing) should override this.
+   */
+  protected open fun getBlockTxsSelectionMaxTimeMillis(): Int = getBlockPeriodSeconds() * 1000
+
+  @AfterEach
+  protected open fun stop() {
+    cluster.stop()
+    cluster.close()
+    MemoryAppender.reset()
+  }
+
+  // Override this in subclasses to use a different genesis file template
+  protected open fun getGenesisFileTemplatePath(): String {
+    return "/clique/clique-to-pos.json.tpl"
+  }
+
+  protected open fun maybeCustomGenesisExtraData(): Optional<Bytes32> {
+    return Optional.empty()
+  }
+
+  protected fun createNodeWithExtraCliOptionsAndRpcApis(
+    name: String,
+    extraCliOptions: List<String>,
+    extraRpcApis: Set<String>,
+    isEngineRpcEnabled: Boolean,
+    requestedPlugins: List<String>,
+  ): BesuNode {
+    val node = NodeConfigurationFactory()
+
+    val nodeConfBuilder = BesuNodeConfigurationBuilder()
+      .name(name)
+      .miningConfiguration(
+        // enable mining
+        // allow for a single iteration to take all the slot time
+        // set plugin max selection time to 5% of slot time
+        //
+        // Note both PoA and PoS budgets are set: Besu picks between them via
+        // protocolSpec.isPoS() (see MiningConfiguration.getBlockTxsSelectionMaxTime). These tests
+        // run a clique-to-PoS genesis and build blocks through the engine API, so the PoS value is
+        // the one that actually applies; the PoA value is kept for the pre-merge phase.
+        ImmutableMiningConfiguration.builder()
+          .poaBlockTxsSelectionMaxTime(
+            PositiveNumber.fromInt(getBlockTxsSelectionMaxTimeMillis()),
+          )
+          .posBlockTxsSelectionMaxTime(
+            PositiveNumber.fromInt(getBlockTxsSelectionMaxTimeMillis()),
+          )
+          .pluginBlockTxsSelectionMaxTime(PositiveNumber.fromInt(2))
+          .mutableInitValues(
+            ImmutableMiningConfiguration.MutableInitValues.builder()
+              .isMiningEnabled(true)
+              .build(),
+          )
+          .build(),
+      )
+      .jsonRpcConfiguration(node.createJsonRpcWithRpcApiEnabledConfig(*extraRpcApis.toTypedArray()))
+      .webSocketConfiguration(node.createWebSocketEnabledConfig())
+      .inProcessRpcConfiguration(node.createInProcessRpcConfiguration(extraRpcApis))
+      .devMode(false)
+      .jsonRpcTxPool()
+      .engineRpcEnabled(isEngineRpcEnabled)
+      .genesisConfigProvider { validators ->
+        Optional.of(provideGenesisConfig(validators))
+      }
+      .extraCLIOptions(extraCliOptions)
+      .metricsConfiguration(
+        MetricsConfiguration.builder()
+          .enabled(true)
+          .port(0)
+          .metricCategories(
+            setOf(
+              PRICING_CONF,
+              SEQUENCER_PROFITABILITY,
+              TX_POOL_PROFITABILITY,
+              SEQUENCER_LIVENESS,
+              SEQUENCER_FORCED_TX,
+            ),
+          )
+          .build(),
+      )
+      .requestedPlugins(requestedPlugins)
+
+    return besu.create(nodeConfBuilder.build())
+  }
+
+  fun provideGenesisConfig(validators: Collection<RunnableNode>): String {
+    val template = GenesisConfigurationFactory.readGenesisFile(getGenesisFileTemplatePath())
+    val addresses = validators.map { it.address }
+    val extraData = CliqueExtraData.createGenesisExtraDataString(addresses)
+    val genesis = template
+      .replace("%blockperiodseconds%", getBlockPeriodSeconds().toString())
+      .replace("%epochlength%", "30000")
+      .replace("%createemptyblocks%", "false")
+      .replace("%extraData%", extraData)
+    return maybeCustomGenesisExtraData()
+      .map { ed -> setGenesisCustomExtraData(genesis, ed) }
+      .orElse(genesis)
+  }
+
+  protected fun setGenesisCustomExtraData(genesis: String, customExtraData: Bytes32): String {
+    val om = ObjectMapper()
+    val root: ObjectNode = try {
+      om.readTree(genesis) as ObjectNode
+    } catch (e: JsonProcessingException) {
+      throw RuntimeException(e)
+    }
+    val existingExtraData = Bytes.fromHexString(root.get("extraData").asText())
+    val updatedExtraData = Bytes.concatenate(customExtraData, existingExtraData.slice(32))
+    root.put("extraData", updatedExtraData.toHexString())
+    return root.toPrettyString()
+  }
+
+  protected fun sendTransactionsWithGivenLengthPayload(
+    simpleStorage: SimpleStorage,
+    accounts: List<String>,
+    web3j: Web3j,
+    num: Int,
+  ) {
+    val contractAddress = simpleStorage.contractAddress
+    val txData = simpleStorage.set(RandomStringUtils.secure().nextAlphabetic(num)).encodeFunctionCall()
+    val hashes = mutableListOf<String>()
+
+    accounts.forEach { a ->
+      val credentials = Credentials.create(a)
+      val txManager = RawTransactionManager(web3j, credentials, CHAIN_ID)
+      repeat(5) {
+        try {
+          hashes.add(
+            txManager.sendTransaction(
+              DefaultGasProvider.GAS_PRICE,
+              DefaultGasProvider.GAS_LIMIT,
+              contractAddress,
+              txData,
+              BigInteger.ZERO,
+            ).transactionHash,
+          )
+        } catch (e: IOException) {
+          throw RuntimeException(e)
+        }
+      }
+    }
+
+    assertTransactionsInCorrectBlocks(web3j, hashes, num)
+  }
+
+  private fun assertTransactionsInCorrectBlocks(web3j: Web3j, hashes: List<String>, num: Int) {
+    // CallData for the transaction for empty String is 68 and grows in steps of 32 with (String
+    // size / 32)
+    val maxTxs = MAX_CALLDATA_SIZE / (68 + ((num + 31) / 32) * 32)
+
+    // Wait for transactions to be mined and check that there are no more than maxTxs per block
+    val txMap = hashMapOf<Long, Int>()
+    getReceiptsInParallel(web3j, hashes).forEach { receipt ->
+      val blockNumber = receipt.blockNumber.toLong()
+      txMap.compute(blockNumber) { _, n -> (n ?: 0) + 1 }
+      // make sure that no block contained more than maxTxs
+      assertThat(txMap[blockNumber]).isLessThanOrEqualTo(maxTxs)
+    }
+    // make sure that at least one block has maxTxs
+    assertThat(txMap).containsValue(maxTxs)
+  }
+
+  protected fun deployLogEmitter(): LogEmitter {
+    val web3j = minerNode.nodeRequests().eth()
+    val credentials = Credentials.create(Accounts.GENESIS_ACCOUNT_ONE_PRIVATE_KEY)
+    val txManager = RawTransactionManager(web3j, credentials, CHAIN_ID, createReceiptProcessor(web3j))
+
+    val deploy = LogEmitter.deploy(web3j, txManager, DefaultGasProvider())
+    return deploy.send()
+  }
+
+  protected fun deploySimpleStorage(): SimpleStorage {
+    val web3j = minerNode.nodeRequests().eth()
+    val credentials = Credentials.create(Accounts.GENESIS_ACCOUNT_ONE_PRIVATE_KEY)
+    val txManager = RawTransactionManager(web3j, credentials, CHAIN_ID, createReceiptProcessor(web3j))
+
+    val deploy = SimpleStorage.deploy(web3j, txManager, DefaultGasProvider())
+    return deploy.send()
+  }
+
+  protected fun deployDummyAdder(): DummyAdder {
+    val web3j = minerNode.nodeRequests().eth()
+    val credentials = Credentials.create(Accounts.GENESIS_ACCOUNT_ONE_PRIVATE_KEY)
+    val txManager = RawTransactionManager(web3j, credentials, CHAIN_ID, createReceiptProcessor(web3j))
+
+    val deploy = DummyAdder.deploy(web3j, txManager, DefaultGasProvider())
+    return deploy.send()
+  }
+
+  protected fun deployMulmodExecutor(): MulmodExecutor {
+    val web3j = minerNode.nodeRequests().eth()
+    val credentials = Credentials.create(Accounts.GENESIS_ACCOUNT_ONE_PRIVATE_KEY)
+    val txManager = RawTransactionManager(web3j, credentials, CHAIN_ID, createReceiptProcessor(web3j))
+
+    val deploy = MulmodExecutor.deploy(web3j, txManager, DefaultGasProvider())
+    return deploy.send()
+  }
+
+  protected fun deployModExp(): ModExp {
+    val web3j = minerNode.nodeRequests().eth()
+    val credentials = Credentials.create(Accounts.GENESIS_ACCOUNT_ONE_PRIVATE_KEY)
+    val txManager = RawTransactionManager(web3j, credentials, CHAIN_ID, createReceiptProcessor(web3j))
+
+    val deploy = ModExp.deploy(web3j, txManager, DefaultGasProvider())
+    return deploy.send()
+  }
+
+  protected fun deployBLS12_MAP_FP_TO_G1(): BLS12_MAP_FP_TO_G1 {
+    val web3j = minerNode.nodeRequests().eth()
+    val credentials = Credentials.create(Accounts.GENESIS_ACCOUNT_ONE_PRIVATE_KEY)
+    val txManager = RawTransactionManager(web3j, credentials, CHAIN_ID, createReceiptProcessor(web3j))
+
+    val deploy = BLS12_MAP_FP_TO_G1.deploy(web3j, txManager, DefaultGasProvider())
+    return deploy.send()
+  }
+
+  protected fun deployEcPairing(): EcPairing {
+    val web3j = minerNode.nodeRequests().eth()
+    val credentials = Credentials.create(Accounts.GENESIS_ACCOUNT_ONE_PRIVATE_KEY)
+    val txManager = RawTransactionManager(web3j, credentials, CHAIN_ID, createReceiptProcessor(web3j))
+
+    val deploy = EcPairing.deploy(web3j, txManager, DefaultGasProvider())
+    return deploy.send()
+  }
+
+  protected fun deployEcAdd(): EcAdd {
+    val web3j = minerNode.nodeRequests().eth()
+    val credentials = Credentials.create(Accounts.GENESIS_ACCOUNT_ONE_PRIVATE_KEY)
+    val txManager = RawTransactionManager(web3j, credentials, CHAIN_ID, createReceiptProcessor(web3j))
+
+    val deploy = EcAdd.deploy(web3j, txManager, DefaultGasProvider())
+    return deploy.send()
+  }
+
+  protected fun deployEcMul(): EcMul {
+    val web3j = minerNode.nodeRequests().eth()
+    val credentials = Credentials.create(Accounts.GENESIS_ACCOUNT_ONE_PRIVATE_KEY)
+    val txManager = RawTransactionManager(web3j, credentials, CHAIN_ID, createReceiptProcessor(web3j))
+
+    val deploy = EcMul.deploy(web3j, txManager, DefaultGasProvider())
+    return deploy.send()
+  }
+
+  protected fun deployEcRecover(): EcRecover {
+    val web3j = minerNode.nodeRequests().eth()
+    val credentials = Credentials.create(Accounts.GENESIS_ACCOUNT_ONE_PRIVATE_KEY)
+    val txManager = RawTransactionManager(web3j, credentials, CHAIN_ID, createReceiptProcessor(web3j))
+
+    val deploy = EcRecover.deploy(web3j, txManager, DefaultGasProvider())
+    return deploy.send()
+  }
+
+  protected fun deployRevertExample(): RevertExample {
+    val web3j = minerNode.nodeRequests().eth()
+    val credentials = Credentials.create(Accounts.GENESIS_ACCOUNT_ONE_PRIVATE_KEY)
+    val txManager = RawTransactionManager(web3j, credentials, CHAIN_ID, createReceiptProcessor(web3j))
+
+    val deploy = RevertExample.deploy(web3j, txManager, DefaultGasProvider())
+    return deploy.send()
+  }
+
+  protected fun deployAcceptanceTestToken(): AcceptanceTestToken {
+    val web3j = minerNode.nodeRequests().eth()
+    // 1000 AT tokens will be assigned to this account on deploy
+    val credentials = accounts.primaryBenefactor.web3jCredentialsOrThrow()
+    val txManager = RawTransactionManager(web3j, credentials, CHAIN_ID, createReceiptProcessor(web3j))
+
+    val deploy = AcceptanceTestToken.deploy(web3j, txManager, DefaultGasProvider())
+    val contract = deploy.send()
+    val balance = contract.balanceOf(accounts.primaryBenefactor.address).send()
+    assertThat(balance).isEqualTo(1000)
+    return contract
+  }
+
+  protected fun deployExcludedPrecompiles(): ExcludedPrecompiles {
+    val web3j = minerNode.nodeRequests().eth()
+    val credentials = Credentials.create(Accounts.GENESIS_ACCOUNT_ONE_PRIVATE_KEY)
+    val txManager = RawTransactionManager(web3j, credentials, CHAIN_ID, createReceiptProcessor(web3j))
+
+    val deploy = ExcludedPrecompiles.deploy(web3j, txManager, DefaultGasProvider())
+    return deploy.send()
+  }
+
+  /**
+   * Waits for the receipt of every transaction in [hashes] in parallel and returns them in input
+   * order. Each [org.web3j.tx.response.TransactionReceiptProcessor.waitForTransactionReceipt] call
+   * is a blocking network poll that can take up to `getBlockPeriodSeconds()`, so running them
+   * sequentially would add that latency per hash; since the lookups are independent they are run on
+   * a bounded thread pool instead.
+   */
+  protected fun getReceiptsInParallel(
+    web3j: Web3j,
+    hashes: List<String>,
+  ): List<TransactionReceipt> {
+    val receiptProcessor = createReceiptProcessor(web3j)
+    val executor = Executors.newFixedThreadPool(minOf(hashes.size, RECEIPT_FETCH_MAX_CONCURRENCY))
+    try {
+      val futures = hashes.map { hash ->
+        executor.submit(
+          Callable<TransactionReceipt> {
+            waitForTransactionReceiptWithRetry(receiptProcessor, hash)
+          },
+        )
+      }
+      return futures.map { it.get() }
+    } finally {
+      executor.shutdownNow()
+    }
+  }
+
+  /**
+   * Polls for [hash]'s receipt, retrying on [IOException] up to [RECEIPT_FETCH_MAX_RETRIES] times.
+   * Under CI load, concurrent polls against the single local node can hit a connection torn down
+   * mid-request by the node's HTTP server (surfaces as OkHttp "unexpected end of stream"); a retry
+   * lets that transient failure self-heal instead of failing the whole batch.
+   */
+  private fun waitForTransactionReceiptWithRetry(
+    receiptProcessor: TransactionReceiptProcessor,
+    hash: String,
+  ): TransactionReceipt {
+    var attempt = 0
+    while (true) {
+      try {
+        return receiptProcessor.waitForTransactionReceipt(hash)
+      } catch (e: IOException) {
+        attempt++
+        if (attempt > RECEIPT_FETCH_MAX_RETRIES) throw RuntimeException(e)
+        Thread.sleep(RECEIPT_FETCH_RETRY_DELAY_MILLIS)
+      } catch (e: TransactionException) {
+        throw RuntimeException(e)
+      }
+    }
+  }
+
+  protected fun assertTransactionsMinedInSeparateBlocks(web3j: Web3j, hashes: List<String>) {
+    val blockNumbers = getReceiptsInParallel(web3j, hashes).map { receipt ->
+      assertThat(receipt).isNotNull
+      receipt.blockNumber.toLong()
+    }
+
+    val uniqueBlockNumbers = blockNumbers.toSet()
+    assertThat(uniqueBlockNumbers.size)
+      .withFailMessage {
+        "Expected transactions to be mined in separate blocks, got block numbers $blockNumbers"
+      }
+      .isEqualTo(blockNumbers.size)
+  }
+
+  protected fun assertTransactionsMinedInSameBlock(web3j: Web3j, hashes: List<String>) {
+    val blockNumbers = getReceiptsInParallel(web3j, hashes).map { receipt ->
+      assertThat(receipt).isNotNull
+      receipt.blockNumber.toLong()
+    }.toSet()
+
+    assertThat(blockNumbers.size).isEqualTo(1)
+  }
+
+  /**
+   * Asserts that all [fittingHashes] were mined together in one block, and that [overflowHash] was
+   * mined in a strictly later block. This is the ordering-based form of the limit tests: what
+   * matters is that the fitting transactions were accepted together and the overflowing one came
+   * after — not the exact block numbers, which can shift by a block under block-build timing jitter
+   * (e.g. the Vert.x 5 migration in Besu 26.8.1 slowed selection enough that an exact
+   * single-block-vs-next-block layout is no longer guaranteed on a loaded CI runner).
+   */
+  protected fun assertFittingTransactionsMinedBeforeOverflow(
+    web3j: Web3j,
+    fittingHashes: List<String>,
+    overflowHash: String,
+  ) {
+    val allHashes = fittingHashes + overflowHash
+    val receipts = getReceiptsInParallel(web3j, allHashes)
+    val blockNumbers = receipts.map { receipt ->
+      assertThat(receipt).isNotNull
+      receipt.blockNumber.toLong()
+    }
+
+    val fittingBlocks = blockNumbers.dropLast(1).toSet()
+    val overflowBlock = blockNumbers.last()
+
+    assertThat(fittingBlocks)
+      .withFailMessage { "Expected fitting transactions to be mined in a single block, got $fittingBlocks" }
+      .hasSize(1)
+    assertThat(overflowBlock)
+      .withFailMessage {
+        "Expected overflow transaction to be mined strictly after the fitting block " +
+          "${fittingBlocks.single()}, got $overflowBlock"
+      }
+      .isGreaterThan(fittingBlocks.single())
+  }
+
+  /**
+   * Asserts the module-line-count limit semantics for a batch of [fittingHashes] plus one
+   * [overflowHash]:
+   *  1. the fitting transactions were mined together in a single block;
+   *  2. the overflowing transaction was mined in a strictly later block; and
+   *  3. the sequencer logged that it stopped selection because adding the overflowing transaction
+   *     pushed [moduleName]'s cumulated line count to [attemptedCount], above [moduleLimit].
+   *
+   * Why this ordering: the rejection log line is only emitted during the block-building selection
+   * round that evaluates (and rejects) the overflowing transaction.
+   */
+  protected fun assertModuleLimitOverflowed(
+    web3j: Web3j,
+    fittingHashes: List<String>,
+    overflowHash: String,
+    moduleName: String,
+    moduleLimit: Int,
+    attemptedCount: Int,
+  ) {
+    val receipts = getReceiptsInParallel(web3j, fittingHashes + overflowHash)
+    val fittingBlocks = receipts.dropLast(1).map { receipt ->
+      assertThat(receipt).isNotNull
+      receipt.blockNumber.toLong()
+    }.toSet()
+    val overflowBlock = receipts.last().blockNumber.toLong()
+
+    assertThat(fittingBlocks)
+      .withFailMessage {
+        "Expected ${fittingHashes.size} transactions to be mined in a single block: " +
+          "mined across ${fittingBlocks.size} blocks, blockNumbers=$fittingBlocks"
+      }
+      .hasSize(1)
+    assertThat(overflowBlock)
+      .withFailMessage {
+        "Expected overflow transaction to be mined strictly after the fitting " +
+          "block=${fittingBlocks.single()}, but was mined at block $overflowBlock"
+      }
+      .isGreaterThan(fittingBlocks.single())
+
+    // The rejection round has already run (proven by the overflow receipt above); only the async
+    // appender flush can still be pending, so poll for the line.
+    val target =
+      "Cumulated line count for module $moduleName=$attemptedCount is above the limit " +
+        "$moduleLimit, stopping selection"
+    await()
+      .atMost(getBlockPeriodSeconds().toLong(), TimeUnit.SECONDS)
+      .pollInterval(100, TimeUnit.MILLISECONDS)
+      .untilAsserted {
+        val log = getLog()
+        assertThat(log)
+          .withFailMessage {
+            val relatedLines = log.lineSequence()
+              .filter {
+                it.contains("line count") ||
+                  it.contains("stopping selection") ||
+                  it.contains("Interrupting the selection") ||
+                  it.contains("too late for inclusion")
+              }
+              .joinToString("\n")
+            "Expected Besu logs to contain '$target'.\n" +
+              "Related log lines captured instead:\n$relatedLines"
+          }
+          .contains(target)
+      }
+    getAndResetLog()
+  }
+
+  protected fun assertTransactionNotInThePool(hash: String) {
+    minerNode.verify(
+      TxPoolConditions(TxPoolTransactions())
+        .notInTransactionPool(Hash.fromHexString(hash)),
+    )
+  }
+
+  protected fun getTxPoolContent(): List<Map<String, String>> {
+    return minerNode.execute(TxPoolTransactions().txPoolContents)
+  }
+
+  private fun createReceiptProcessor(web3j: Web3j): TransactionReceiptProcessor {
+    return PollingTransactionReceiptProcessor(
+      web3j,
+      maxOf(1000L, getBlockPeriodSeconds() * 1000L / 5),
+      getBlockPeriodSeconds() * 6,
+    )
+  }
+
+  protected fun createExtraDataPricingField(
+    fixedCostKWei: Long,
+    variableCostKWei: Long,
+    minGasPriceKWei: Long,
+  ): Bytes32 {
+    val fixed = UInt32.valueOf(BigInteger.valueOf(fixedCostKWei))
+    val variable = UInt32.valueOf(BigInteger.valueOf(variableCostKWei))
+    val min = UInt32.valueOf(BigInteger.valueOf(minGasPriceKWei))
+
+    return Bytes32.rightPad(
+      Bytes.concatenate(Bytes.of(1.toByte()), fixed.toBytes(), variable.toBytes(), min.toBytes()),
+    )
+  }
+
+  protected fun getMetricValue(
+    category: MetricCategory,
+    metricName: String,
+    labelValues: List<Map.Entry<String, String>>,
+  ): Double {
+    val metricsReq = HttpRequest.newBuilder()
+      .GET()
+      .uri(URI.create(minerNode.metricsHttpUrl().get()))
+      .build()
+
+    val respLines = HTTP_CLIENT.send(metricsReq, HttpResponse.BodyHandlers.ofLines())
+
+    val searchString = (
+      category.applicationPrefix.orElse("") +
+        category.name +
+        "_" +
+        metricName +
+        labelValues.joinToString(",", "{", "}") { lv ->
+          "${lv.key}=\"${lv.value}\""
+        }
+      )
+
+    val foundMetric = respLines.body().filter { line -> line.startsWith(searchString) }.findFirst()
+
+    return foundMetric
+      .map { line -> line.substring(searchString.length).trim() }
+      .map { it.toDouble() }
+      .orElse(Double.NaN)
+  }
+
+  protected fun getLog(): String {
+    return MemoryAppender.getLog()
+  }
+
+  protected fun getAndResetLog(): String {
+    val log = MemoryAppender.getLog()
+    MemoryAppender.reset()
+    return log
+  }
+
+  protected fun encodedCallModExp(
+    modExp: ModExp,
+    sender: Account,
+    nonce: Int,
+    input: Bytes,
+  ): ByteArray {
+    val modExpCalldata = modExp.callModExp(input.toArrayUnsafe()).encodeFunctionCall()
+
+    val modExpCall = RawTransaction.createTransaction(
+      CHAIN_ID,
+      BigInteger.valueOf(nonce.toLong()),
+      DefaultGasProvider.GAS_LIMIT,
+      modExp.contractAddress,
+      BigInteger.ZERO,
+      modExpCalldata,
+      DefaultGasProvider.GAS_PRICE,
+      DefaultGasProvider.GAS_PRICE.multiply(BigInteger.TEN).add(BigInteger.ONE),
+    )
+
+    return TransactionEncoder.signMessage(modExpCall, sender.web3jCredentialsOrThrow())
+  }
+
+  protected fun encodedCallEcPairing(
+    ecPairing: EcPairing,
+    sender: Account,
+    nonce: Int,
+    input: Bytes,
+  ): ByteArray {
+    val ecPairingCalldata = ecPairing.callEcPairing(input.toArrayUnsafe()).encodeFunctionCall()
+
+    val ecPairingCall = RawTransaction.createTransaction(
+      CHAIN_ID,
+      BigInteger.valueOf(nonce.toLong()),
+      DefaultGasProvider.GAS_LIMIT,
+      ecPairing.contractAddress,
+      BigInteger.ZERO,
+      ecPairingCalldata,
+      DefaultGasProvider.GAS_PRICE,
+      DefaultGasProvider.GAS_PRICE.multiply(BigInteger.TEN).add(BigInteger.ONE),
+    )
+
+    return TransactionEncoder.signMessage(ecPairingCall, sender.web3jCredentialsOrThrow())
+  }
+
+  protected fun encodedCallEcAdd(
+    ecAdd: EcAdd,
+    sender: Account,
+    nonce: Int,
+    input: Bytes,
+  ): ByteArray {
+    val ecAddCalldata = ecAdd.callEcAdd(input.toArrayUnsafe()).encodeFunctionCall()
+
+    val ecAddCall = RawTransaction.createTransaction(
+      CHAIN_ID,
+      BigInteger.valueOf(nonce.toLong()),
+      DefaultGasProvider.GAS_LIMIT,
+      ecAdd.contractAddress,
+      BigInteger.ZERO,
+      ecAddCalldata,
+      DefaultGasProvider.GAS_PRICE,
+      DefaultGasProvider.GAS_PRICE.multiply(BigInteger.TEN).add(BigInteger.ONE),
+    )
+
+    return TransactionEncoder.signMessage(ecAddCall, sender.web3jCredentialsOrThrow())
+  }
+
+  protected fun encodedCallEcMul(
+    ecMul: EcMul,
+    sender: Account,
+    nonce: Int,
+    input: Bytes,
+  ): ByteArray {
+    val ecMulCalldata = ecMul.callEcMul(input.toArrayUnsafe()).encodeFunctionCall()
+
+    val ecMulCall = RawTransaction.createTransaction(
+      CHAIN_ID,
+      BigInteger.valueOf(nonce.toLong()),
+      DefaultGasProvider.GAS_LIMIT,
+      ecMul.contractAddress,
+      BigInteger.ZERO,
+      ecMulCalldata,
+      DefaultGasProvider.GAS_PRICE,
+      DefaultGasProvider.GAS_PRICE.multiply(BigInteger.TEN).add(BigInteger.ONE),
+    )
+
+    return TransactionEncoder.signMessage(ecMulCall, sender.web3jCredentialsOrThrow())
+  }
+
+  protected fun encodedCallEcRecover(
+    ecRecover: EcRecover,
+    sender: Account,
+    nonce: Int,
+    input: Bytes,
+  ): ByteArray {
+    val ecRecoverCalldata = ecRecover.callEcRecover(input.toArrayUnsafe()).encodeFunctionCall()
+
+    val ecRecoverCall = RawTransaction.createTransaction(
+      CHAIN_ID,
+      BigInteger.valueOf(nonce.toLong()),
+      DefaultGasProvider.GAS_LIMIT,
+      ecRecover.contractAddress,
+      BigInteger.ZERO,
+      ecRecoverCalldata,
+      DefaultGasProvider.GAS_PRICE,
+      DefaultGasProvider.GAS_PRICE.multiply(BigInteger.TEN).add(BigInteger.ONE),
+    )
+
+    return TransactionEncoder.signMessage(ecRecoverCall, sender.web3jCredentialsOrThrow())
+  }
+}

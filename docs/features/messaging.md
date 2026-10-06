@@ -4,7 +4,7 @@
 
 ## Overview
 
-Linea provides a canonical messaging protocol between Ethereum L1 and L2. Messages are sent on the origin chain and claimed on the destination chain after anchoring. Two directions with distinct mechanics:
+Lineth provides a canonical messaging protocol between Ethereum L1 and L2. Messages are sent on the origin chain and claimed on the destination chain after anchoring. Two directions with distinct mechanics:
 
 - **L1→L2**: Messages anchored on L2 via rolling hash; claimed using hash lookup.
 - **L2→L1**: Message hashes grouped into Merkle trees during finalization; claimed on L1 with Merkle proofs.
@@ -15,7 +15,7 @@ The coordinator handles anchoring L1→L2 messages on L2, and the prover compute
 
 | Component | Path | Role |
 |-----------|------|------|
-| L1MessageService | `contracts/src/messaging/l1/L1MessageService.sol` | L1 send and claim (inherited by LineaRollup) |
+| L1MessageService | `contracts/src/messaging/l1/L1MessageService.sol` | L1 send and claim (inherited by LinethRollup) |
 | L1MessageManager | `contracts/src/messaging/l1/L1MessageManager.sol` | L1 message hash and Merkle root storage |
 | L2MessageService | `contracts/src/messaging/l2/L2MessageService.sol` | L2 send, claim, and anchoring |
 | L2MessageManager | `contracts/src/messaging/l2/L2MessageManager.sol` | L2 anchoring logic, rolling hash verification |
@@ -27,7 +27,7 @@ The coordinator handles anchoring L1→L2 messages on L2, and the prover compute
 ```mermaid
 sequenceDiagram
     participant User as L1 User
-    participant L1 as LineaRollup (L1)
+    participant L1 as LinethRollup (L1)
     participant Coord as Coordinator
     participant L2 as L2MessageService
 
@@ -51,7 +51,7 @@ sequenceDiagram
     participant User as L2 User
     participant L2 as L2MessageService
     participant Prover
-    participant L1 as LineaRollup (L1)
+    participant L1 as LinethRollup (L1)
     participant Claimer as L1 Claimer
 
     User->>L2: sendMessage(to, fee, calldata) + ETH
@@ -110,7 +110,7 @@ The Postman automates claiming for users who prepay a fee. It monitors anchored 
 
 Key behaviors:
 - **Sponsorship**: When enabled, the Postman pays gas from its own funds for zero-fee or underpriced messages (up to `MAX_POSTMAN_SPONSOR_GAS_LIMIT`)
-- **L1→L2 difference**: Includes an extra transaction-size computation step for Linea's variable gas pricing model
+- **L1→L2 difference**: Includes an extra transaction-size computation step for Lineth's variable gas pricing model
 - **Retry logic**: Rate-limited claims reset to `SENT`; timed-out transactions retry with gas escalation
 
 See [Postman Feature](postman.md) for the full message lifecycle, sponsorship model, and retry details.

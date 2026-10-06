@@ -49,8 +49,8 @@ make start-env-with-tracing-v2 LINEA_COORDINATOR_TAG=local
 
 - **Kotlin version:** 2.4.0
 - **Formatter:** ktlint via Spotless (disabled rules: discouraged-comment-location, property-naming, function-naming, function-signature)
-- **Build plugin:** `net.consensys.zkevm.kotlin-application-conventions`
-- **Main class:** `linea.coordinator.app.CoordinatorAppMain`
+- **Build plugin:** `lineth.kotlin-application-conventions`
+- **Main class:** `lineth.coordinator.app.CoordinatorAppMain`
 - **Warnings as errors** unless `LINEA_DEV_ALLOW_WARNINGS` is set
 
 ### Directory Structure
@@ -58,6 +58,7 @@ make start-env-with-tracing-v2 LINEA_COORDINATOR_TAG=local
 ```
 coordinator/
 ├── app/          Main application entry point
+├── config/       TOML config parsing (lineth.coordinator.config.v2)
 ├── core/         Core business logic
 ├── clients/      Client implementations (prover, smart-contract, web3signer, traces-generator)
 ├── ethereum/     Ethereum modules (gas-pricing, blob-submitter, finalization-monitor, message-anchoring)

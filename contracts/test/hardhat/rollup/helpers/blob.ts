@@ -1,5 +1,5 @@
 import * as kzg from "c-kzg";
-import { TestLineaRollup } from "contracts/typechain-types";
+import { TestLinethRollup } from "contracts/typechain-types";
 import { BaseContract, Contract, HDNodeWallet, Transaction, TransactionReceipt } from "ethers";
 import * as fs from "fs";
 import { ethers } from "hardhat";
@@ -17,7 +17,7 @@ import { BlobSubmission } from "../../common/types";
  * Context for building and sending blob transactions
  */
 export type BlobTransactionContext = {
-  lineaRollupAddress: string;
+  linethRollupAddress: string;
   encodedCall: string;
   compressedBlobs: string[];
   operatorHDSigner?: HDNodeWallet | undefined;
@@ -30,7 +30,7 @@ export type BlobTransactionContext = {
  */
 export async function buildBlobTransaction(context: BlobTransactionContext): Promise<Transaction> {
   const {
-    lineaRollupAddress,
+    linethRollupAddress,
     encodedCall,
     compressedBlobs,
     operatorHDSigner,
@@ -46,7 +46,7 @@ export async function buildBlobTransaction(context: BlobTransactionContext): Pro
     data: encodedCall,
     maxPriorityFeePerGas: maxPriorityFeePerGas!,
     maxFeePerGas: maxFeePerGas!,
-    to: targetAddress ?? lineaRollupAddress,
+    to: targetAddress ?? linethRollupAddress,
     chainId: (await ethers.provider.getNetwork()).chainId,
     type: 3,
     nonce,
@@ -75,7 +75,7 @@ export async function signAndBroadcastBlobTransaction(
  * Context for submitting blobs with validation
  */
 export type SubmitBlobsContext = {
-  lineaRollup: TestLineaRollup;
+  linethRollup: TestLinethRollup;
   blobSubmission: BlobSubmission[];
   compressedBlobs: string[];
   parentShnarf: string;
@@ -90,7 +90,7 @@ export type SubmitBlobsContext = {
  */
 export async function submitBlobsAndGetReceipt(context: SubmitBlobsContext): Promise<TransactionReceipt | null> {
   const {
-    lineaRollup,
+    linethRollup,
     blobSubmission,
     compressedBlobs,
     parentShnarf,
@@ -100,15 +100,15 @@ export async function submitBlobsAndGetReceipt(context: SubmitBlobsContext): Pro
     targetAddress,
   } = context;
 
-  const lineaRollupAddress = await lineaRollup.getAddress();
-  const encodedCall = lineaRollup.interface.encodeFunctionData("submitBlobs", [
+  const linethRollupAddress = await linethRollup.getAddress();
+  const encodedCall = linethRollup.interface.encodeFunctionData("submitBlobs", [
     blobSubmission,
     parentShnarf,
     finalShnarf,
   ]);
 
   const transaction = await buildBlobTransaction({
-    lineaRollupAddress,
+    linethRollupAddress,
     encodedCall,
     compressedBlobs,
     operatorHDSigner,
@@ -129,7 +129,7 @@ export function ensureKzgIsLoaded() {
 }
 
 export async function sendBlobTransaction(
-  lineaRollup: TestLineaRollup,
+  linethRollup: TestLinethRollup,
   startIndex: number,
   finalIndex: number,
   isMultiple: boolean = false,
@@ -142,7 +142,7 @@ export async function sendBlobTransaction(
   } = generateBlobDataSubmission(startIndex, finalIndex, isMultiple);
 
   const receipt = await submitBlobsAndGetReceipt({
-    lineaRollup,
+    linethRollup,
     blobSubmission,
     compressedBlobs,
     parentShnarf,
@@ -150,16 +150,16 @@ export async function sendBlobTransaction(
   });
 
   const expectedEventArgs = [parentShnarf, finalShnarf, blobSubmission[blobSubmission.length - 1].finalStateRootHash];
-  expectEventDirectFromReceiptData(lineaRollup as BaseContract, receipt!, "DataSubmittedV3", expectedEventArgs);
+  expectEventDirectFromReceiptData(linethRollup as BaseContract, receipt!, "DataSubmittedV3", expectedEventArgs);
 }
 
 export async function sendVersionedBlobTransactionFromFile(
-  lineaRollup: TestLineaRollup,
+  linethRollup: TestLinethRollup,
   filePath: string,
-  versionedLineaRollup: TestLineaRollup,
+  versionedLinethRollup: TestLinethRollup,
   versionFolderName: string,
 ) {
-  const versionedLineaRollupAddress = await versionedLineaRollup.getAddress();
+  const versionedLinethRollupAddress = await versionedLinethRollup.getAddress();
 
   const {
     blobDataSubmission: blobSubmission,
@@ -168,14 +168,14 @@ export async function sendVersionedBlobTransactionFromFile(
     finalShnarf,
   } = generateBlobDataSubmissionFromFile(path.resolve(__dirname, `../../_testData/${versionFolderName}`, filePath));
 
-  const encodedCall = lineaRollup.interface.encodeFunctionData("submitBlobs", [
+  const encodedCall = linethRollup.interface.encodeFunctionData("submitBlobs", [
     blobSubmission,
     parentShnarf,
     finalShnarf,
   ]);
 
   const transaction = await buildBlobTransaction({
-    lineaRollupAddress: versionedLineaRollupAddress,
+    linethRollupAddress: versionedLinethRollupAddress,
     encodedCall,
     compressedBlobs,
   });
@@ -183,11 +183,11 @@ export async function sendVersionedBlobTransactionFromFile(
   const receipt = await signAndBroadcastBlobTransaction(transaction);
   const expectedEventArgs = [parentShnarf, finalShnarf, blobSubmission[blobSubmission.length - 1].finalStateRootHash];
 
-  expectEventDirectFromReceiptData(lineaRollup as BaseContract, receipt!, "DataSubmittedV3", expectedEventArgs);
+  expectEventDirectFromReceiptData(linethRollup as BaseContract, receipt!, "DataSubmittedV3", expectedEventArgs);
 }
 
 export async function sendBlobTransactionViaCallForwarder(
-  lineaRollupUpgraded: Contract,
+  linethRollupUpgraded: Contract,
   startIndex: number,
   finalIndex: number,
   callforwarderAddress: string,
@@ -199,14 +199,14 @@ export async function sendBlobTransactionViaCallForwarder(
     finalShnarf,
   } = generateBlobDataSubmission(startIndex, finalIndex, false);
 
-  const encodedCall = lineaRollupUpgraded.interface.encodeFunctionData("submitBlobs", [
+  const encodedCall = linethRollupUpgraded.interface.encodeFunctionData("submitBlobs", [
     blobSubmission,
     parentShnarf,
     finalShnarf,
   ]);
 
   const transaction = await buildBlobTransaction({
-    lineaRollupAddress: callforwarderAddress,
+    linethRollupAddress: callforwarderAddress,
     encodedCall,
     compressedBlobs,
     targetAddress: callforwarderAddress,
@@ -215,7 +215,12 @@ export async function sendBlobTransactionViaCallForwarder(
   const receipt = await signAndBroadcastBlobTransaction(transaction);
   const expectedEventArgs = [parentShnarf, finalShnarf, blobSubmission[blobSubmission.length - 1].finalStateRootHash];
 
-  expectEventDirectFromReceiptData(lineaRollupUpgraded as BaseContract, receipt!, "DataSubmittedV3", expectedEventArgs);
+  expectEventDirectFromReceiptData(
+    linethRollupUpgraded as BaseContract,
+    receipt!,
+    "DataSubmittedV3",
+    expectedEventArgs,
+  );
 }
 
 // "betaV1" getBetaV1BlobFiles

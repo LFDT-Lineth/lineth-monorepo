@@ -4,7 +4,7 @@
 
 ## Package Overview
 
-This is the ZK prover for Linea, written in Go and built on top of gnark.
+This is the ZK prover for Lineth, written in Go and built on top of gnark.
 It implements the Vortex polynomial commitment scheme and the Consensys zkEVM.
 The proving pipeline works as follows. The `go-corset` library supplies the
 circuit description and witness assignments for the zkEVM arithmetization.
@@ -35,8 +35,8 @@ cd prover && go test ./... -tags nocorset,fuzzlight -timeout 30m
 cd prover && gofmt -l .
 cd prover && golangci-lint run
 
-# Build Docker image
-docker build -f prover/Dockerfile -t consensys/linea-prover:local .
+# Build Docker image (from the repository root; see scripts/docker/README.md)
+make docker-build-prover
 ```
 
 ## Go-Specific Conventions

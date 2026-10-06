@@ -8,10 +8,13 @@
  */
 package maru.executionlayer.client
 
+import linea.teku.Web3JClient
 import maru.consensus.ElFork
 import maru.core.ExecutionPayload
+import maru.executionlayer.manager.PayloadAttributes
 import maru.executionlayer.mappers.Mappers.toDomainExecutionPayload
 import maru.executionlayer.mappers.Mappers.toExecutionPayloadV3
+import maru.executionlayer.mappers.Mappers.toPayloadAttributesV1
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.metrics.MetricsFacade
 import org.apache.tuweni.bytes.Bytes32
@@ -21,7 +24,6 @@ import tech.pegasys.teku.ethereum.executionclient.schema.PayloadAttributesV1
 import tech.pegasys.teku.ethereum.executionclient.schema.PayloadAttributesV3
 import tech.pegasys.teku.ethereum.executionclient.schema.PayloadStatusV1
 import tech.pegasys.teku.ethereum.executionclient.schema.Response
-import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import tech.pegasys.teku.infrastructure.bytes.Bytes8
 import java.util.Optional
@@ -70,12 +72,15 @@ class CancunWeb3JJsonRpcExecutionLayerEngineApiClient(
 
   override fun forkChoiceUpdate(
     forkChoiceState: ForkChoiceStateV1,
-    payloadAttributes: PayloadAttributesV1?,
+    payloadAttributes: PayloadAttributes?,
   ): SafeFuture<Response<ForkChoiceUpdatedResult>> =
     createRequestTimer<ForkChoiceUpdatedResult>(
       method = "forkChoiceUpdate",
     ).captureTime(
-      web3jEngineClient.forkChoiceUpdatedV3(forkChoiceState, Optional.ofNullable(payloadAttributes?.toV3())),
+      web3jEngineClient.forkChoiceUpdatedV3(
+        forkChoiceState,
+        Optional.ofNullable(payloadAttributes?.toPayloadAttributesV1()?.toV3()),
+      ),
     ).toSafeFuture()
 
   private fun PayloadAttributesV1.toV3(): PayloadAttributesV3 =

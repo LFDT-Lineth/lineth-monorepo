@@ -14,7 +14,7 @@
  */
 
 plugins {
-  id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'lineth.kotlin-library-conventions'
   id 'java-test-fixtures'
 }
 
@@ -23,6 +23,8 @@ dependencies {
   implementation(project(':maru:config'))
 
   implementation(project(':jvm-libs:linea:teku-web3j'))
+
+  api "org.web3j:core:${libs.versions.web3j.get()}"
 
   api "tech.pegasys.teku.internal:executionclient:${libs.versions.teku.get()}"
 

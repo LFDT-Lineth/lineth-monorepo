@@ -19,7 +19,37 @@ const (
 	// corsetColumnMap is an annotation to help seeking column from their corset
 	// name.
 	corsetColumnMapAnnotationKey = "corset-column-map"
+	// publicOutputsAnnotationKey is an annotation holding the arithmetization's
+	// [PublicOutput].
+	publicOutputsAnnotationKey = "corset-public-outputs"
+	// guestOutputHashModule is the one public output the prover binds: the memory
+	// holding the keccak digest of the guest program's output.
+	guestOutputHashModule = "guest_output_hash"
 )
+
+// PublicOutput locates the columns of the arithmetization's public output memory
+// — the memory named [guestOutputHashModule], declared with `pub output` and
+// flagged by the schema via IsPublicOutput see [schemaScanner.collectPublicOutputs].
+type PublicOutput struct {
+	// Name is the corset name of the memory. It is empty when the
+	// arithmetization exposes no public output of the described shape.
+	Name string
+	// Address is the memory's address column. The memory's own constraints make
+	// it vanish on padding rows, be zero on the first row carrying an element and
+	// increment from there, so the address on the last row is one less than the
+	// number of elements the memory holds.
+	Address wiop.ObjectID
+	// Data holds the memory's data columns for one address.
+	Data []wiop.ObjectID
+}
+
+// PublicOutputs returns the public output memory [Define] found in the
+// arithmetization. Its Name is empty when there is none, or when the one found
+// had a shape [schemaScanner.collectPublicOutputs] cannot describe.
+func PublicOutputs(sys *wiop.System) PublicOutput {
+	outputs, _ := sys.Annotations[publicOutputsAnnotationKey].(PublicOutput)
+	return outputs
+}
 
 // schemaScanner is a transient scanner structure whose goal is to port the
 // content of an [air.Schema] inside of a pre-initialized [wiop.System]
@@ -41,7 +71,7 @@ func Define(sys *wiop.System, schema *air.Schema[koalabear.Element]) {
 	// Collect modules and sort them by name to ensure deterministic processing order
 	modules := schema.Modules().Collect()
 	sort.Slice(modules, func(i, j int) bool {
-		return modules[i].Name().String() < modules[j].Name().String()
+		return modules[i].Name() < modules[j].Name()
 	})
 
 	scanner := &schemaScanner{
@@ -56,20 +86,103 @@ func Define(sys *wiop.System, schema *air.Schema[koalabear.Element]) {
 	scanner.scanConstraints()
 
 	sys.Annotations[corsetColumnMapAnnotationKey] = scanner.ColumnIDs
+	sys.Annotations[publicOutputsAnnotationKey] = scanner.collectPublicOutputs()
+}
+
+// collectPublicOutputs resolves the address and data columns of the schema's
+// public output memory. It runs after scanColumns so that it can map the declared
+// registers onto the wiop columns that were actually created; a memory whose
+// columns were all dropped as unreferenced is skipped, as there is nothing left to
+// point at.
+func (s *schemaScanner) collectPublicOutputs() PublicOutput {
+
+	var output PublicOutput
+
+	for _, modDecl := range s.Modules {
+
+		if !modDecl.IsPublicOutput() {
+			continue
+		}
+
+		moduleName := modDecl.Name()
+
+		// Only one public output is supported, so a slot already claimed by an
+		// earlier module is refused rather than silently resolved.
+		if output.Name != "" {
+			utils.Panic(
+				"zkcdriver: collectPublicOutputs: expected a single public output, found %q and %q",
+				output.Name, moduleName,
+			)
+		}
+
+		var address, data []wiop.ObjectID
+
+		for _, reg := range modDecl.Registers() {
+
+			id, ok := s.ColumnIDs[qualifiedCorsetName(moduleName, reg.Name())]
+			if !ok {
+				continue
+			}
+
+			// A memory's address lines are exactly its input registers and its data
+			// lines exactly its output registers, so the two are told apart by
+			// register kind rather than by name. Everything else the memory carries
+			// (the access bit, the address selectors) is computed and of no use here.
+			//
+			// Only [guestOutputHashModule] is collected. Any other public output
+			// leaves both lists empty and is skipped just below, so no memory becomes
+			// a public input merely by being declared `pub output`.
+			switch {
+			case reg.IsInput() && moduleName == guestOutputHashModule:
+				address = append(address, id)
+			case reg.IsOutput() && moduleName == guestOutputHashModule:
+				data = append(data, id)
+			}
+		}
+
+		// A memory addressed by several limbs, or holding nothing at all, is not
+		// describable by [PublicOutput], so it is reported and skipped rather than
+		// half-described. Several data columns are expected: that is a value wider
+		// than the field's register width, split into limbs.
+		if len(address) != 1 || len(data) == 0 {
+			logrus.Warnf(
+				"zkcdriver: collectPublicOutputs: skipping public output %q: "+
+					"has %d address and %d data columns, expected one address and at least one datum",
+				moduleName, len(address), len(data),
+			)
+			continue
+		}
+
+		output = PublicOutput{Name: moduleName, Address: address[0], Data: data}
+	}
+
+	return output
 }
 
 // scanColumns scans the column declaration of the corset [air.Schema] into the
-// [wiop.System] object.
+// [wiop.System] object. Only columns referenced by at least one constraint are
+// registered; dangling columns (present in the schema but absent from every
+// constraint) are silently skipped.
 func (s *schemaScanner) scanColumns() {
+
+	referenced := s.collectReferencedColumns()
 
 	// Use the pre-sorted modules from the scanner to ensure deterministic ordering
 	// Iterate each declared module
 	for _, modDecl := range s.Modules {
+		moduleName := modDecl.Name()
+
+		// Skip non-native modules whose every column is dangling to avoid creating empty
+		// wiop modules whose dynamic size would never be set.
+		if !modDecl.IsNative() && !s.moduleHasReferencedColumn(modDecl, moduleName, referenced) {
+			logrus.Warnf("zkcdriver: scanColumns: skipping module %q (no referenced columns)", moduleName)
+			continue
+		}
+
 		// Check for special cases
 		if modDecl.IsStatic() {
 
 			content := modDecl.StaticContents()
-			moduleName := modDecl.Name().String()
 			moduleWIOP := s.Sys.NewSizedModule(
 				s.Sys.Context.Childf("module-%v", moduleName),
 				len(content),
@@ -80,20 +193,20 @@ func (s *schemaScanner) scanColumns() {
 			s.ModulesIDsWiop[moduleName] = len(s.Sys.Modules) - 1
 
 			for i, colDecl := range modDecl.Registers() {
+				colQualifiedName := qualifiedCorsetName(moduleName, colDecl.Name())
+				if _, ok := referenced[colQualifiedName]; !ok {
+					logrus.Warnf("zkcdriver: scanColumns: skipping dangling column %q", colQualifiedName)
+					continue
+				}
 
 				vec := make([]field.Element, len(content))
 				for j := range content {
 					vec[j] = field.Element(content[j][i])
 				}
 
-				var (
-					colName          = colDecl.Name()
-					colQualifiedName = qualifiedCorsetName(moduleName, colName)
-					col              = moduleWIOP.NewPrecomputedColumn(
-						moduleWIOP.Context.Childf("column-%v", colName),
-						wiop.VisibilityOracle,
-						&wiop.ConcreteVector{Plain: field.VecFromBase(vec)},
-					)
+				col := moduleWIOP.NewPrecomputedColumn(
+					moduleWIOP.Context.Childf("column-%v", colDecl.Name()),
+					&wiop.ConcreteVector{Plain: field.VecFromBase(vec)},
 				)
 
 				s.ColumnIDs[colQualifiedName] = col.Context.ID
@@ -125,8 +238,6 @@ func (s *schemaScanner) scanColumns() {
 			continue
 		}
 
-		// moduleName is the name of the module as given by the arithmetization
-		moduleName := modDecl.Name().String()
 		moduleWIOP := s.Sys.NewDynamicModule(
 			s.Sys.Context.Childf("module-%v", moduleName),
 			wiop.PaddingDirectionLeft)
@@ -136,20 +247,118 @@ func (s *schemaScanner) scanColumns() {
 
 		// Iterate each register (i.e. column) in that module
 		for _, colDecl := range modDecl.Registers() {
+			colQualifiedName := qualifiedCorsetName(moduleName, colDecl.Name())
+			if _, ok := referenced[colQualifiedName]; !ok {
+				logrus.Warnf("zkcdriver: scanColumns: skipping dangling column %q", colQualifiedName)
+				continue
+			}
 
-			var (
-				colName          = colDecl.Name()
-				colQualifiedName = qualifiedCorsetName(moduleName, colName)
-				col              = moduleWIOP.NewColumn(
-					moduleWIOP.Context.Childf("column-%v", colName),
-					wiop.VisibilityOracle,
-					s.Sys.Rounds[0],
-				)
+			col := moduleWIOP.NewColumn(
+				moduleWIOP.Context.Childf("column-%v", colDecl.Name()),
+				s.Sys.Rounds[0],
 			)
 
 			s.ColumnIDs[colQualifiedName] = col.Context.ID
 		}
 	}
+}
+
+// collectReferencedColumns does a read-only pass over every constraint and
+// returns the set of qualified column names (module.column) that appear in at
+// least one constraint expression. Columns absent from this set are dangling
+// and can be safely omitted from the wiop System.
+func (s *schemaScanner) collectReferencedColumns() map[string]struct{} {
+	referenced := make(map[string]struct{})
+
+	for _, cs := range s.Schema.Constraints().Collect() {
+		switch cs := cs.(type) {
+
+		case air.VanishingConstraint[koalabear.Element]:
+			vc := cs.Unwrap()
+			s.collectFromTerm(vc.Context, vc.Constraint.Term, referenced)
+
+		case air.LookupConstraint[koalabear.Element]:
+			lc := cs.Unwrap()
+			for _, frag := range lc.Sources {
+				for _, reg := range frag.Registers {
+					s.addColRef(frag.Module, reg, referenced)
+				}
+				if frag.HasSelector() {
+					s.addColRef(frag.Module, frag.Selector.Unwrap(), referenced)
+				}
+			}
+			for _, frag := range lc.Targets {
+				for _, reg := range frag.Registers {
+					s.addColRef(frag.Module, reg, referenced)
+				}
+				if frag.HasSelector() {
+					s.addColRef(frag.Module, frag.Selector.Unwrap(), referenced)
+				}
+			}
+
+		case air.RangeConstraint[koalabear.Element]:
+			rc := cs.Unwrap()
+			for i := range rc.Bitwidths {
+				s.addColRef(rc.Context, rc.Sources[i], referenced)
+			}
+		}
+	}
+
+	return referenced
+}
+
+// collectFromTerm recursively walks a constraint term and adds every column
+// access it finds to out. It mirrors the structure of castExpression.
+func (s *schemaScanner) collectFromTerm(
+	modID schema.ModuleId,
+	term air.Term[koalabear.Element],
+	out map[string]struct{}) {
+
+	switch e := term.(type) {
+	case *air.Add[koalabear.Element]:
+		for _, arg := range e.Args {
+			s.collectFromTerm(modID, arg, out)
+		}
+	case *air.Sub[koalabear.Element]:
+		for _, arg := range e.Args {
+			s.collectFromTerm(modID, arg, out)
+		}
+	case *air.Mul[koalabear.Element]:
+		for _, arg := range e.Args {
+			s.collectFromTerm(modID, arg, out)
+		}
+	case *air.Constant[koalabear.Element]:
+		// no column reference
+	case *air.ColumnAccess[koalabear.Element]:
+		s.addColRef(modID, e.Register(), out)
+	default:
+		utils.Panic("zkcdriver: collectFromTerm: unsupported term type %T", term)
+	}
+}
+
+// addColRef resolves a (moduleID, registerID) pair to its qualified column name
+// and records it in out.
+func (s *schemaScanner) addColRef(modID schema.ModuleId, regID register.Id, out map[string]struct{}) {
+	ref := register.NewRef(modID, regID)
+	cCol := s.Schema.Register(ref)
+	moduleName := s.Schema.Module(modID).Name()
+	out[qualifiedCorsetName(moduleName, cCol.Name())] = struct{}{}
+}
+
+// moduleHasReferencedColumn reports whether any column in modDecl appears in
+// the referenced set.
+func (s *schemaScanner) moduleHasReferencedColumn(
+	modDecl schema.Module[koalabear.Element],
+	moduleName string,
+	referenced map[string]struct{},
+) bool {
+
+	for _, colDecl := range modDecl.Registers() {
+		if _, ok := referenced[qualifiedCorsetName(moduleName, colDecl.Name())]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 // scanConstraints scans the constraint declaration from a corset schema into
@@ -187,6 +396,42 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 
 	switch cs := corsetCS.(type) {
 
+	case air.BusConstraint[koalabear.Element]:
+
+		var bc = cs.Unwrap()
+		// Iterate receive ports, each of which identifies a set of columns in a
+		// given module (including a selector) which determine the message being
+		// reveived.
+		for _, recvPort := range bc.Receives {
+
+			table := wiop.Table{
+				Columns:  make([]*wiop.ColumnView, len(recvPort.Registers)),
+				Selector: s.compColumnByCorsetID(recvPort.Module, recvPort.Selector).View(),
+			}
+
+			for i := range table.Columns {
+				table.Columns[i] = s.compColumnByCorsetID(recvPort.Module, recvPort.Registers[i]).View()
+			}
+
+			s.Sys.NewMessageBusReceive(s.Sys.Context.Childf("bus-%v", name), "0", name, table)
+		}
+
+		// Iterate send ports, each of which identifies a set of columns in a
+		// given module (including a selector) which determine the message being
+		// sent.
+		for _, sendPort := range bc.Sends {
+			table := wiop.Table{
+				Columns:  make([]*wiop.ColumnView, len(sendPort.Registers)),
+				Selector: s.compColumnByCorsetID(sendPort.Module, sendPort.Selector).View(),
+			}
+
+			for i := range table.Columns {
+				table.Columns[i] = s.compColumnByCorsetID(sendPort.Module, sendPort.Registers[i]).View()
+			}
+
+			s.Sys.NewMessageBusSend(s.Sys.Context.Childf("bus-%v", name), "0", name, table)
+		}
+
 	case air.LookupConstraint[koalabear.Element]:
 
 		var (
@@ -198,6 +443,14 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 			tableSource, tableTarget wiop.Table
 		)
 
+		if numCol == 0 {
+			// @alex Technically, this should be a panic but for now the
+			// arithmetization may give us lookup tables with 0 columns. We
+			// just skip those.
+			logrus.Warnf("zkcdriver: inclusion constraint %q has zero columns; skipping", name)
+			return
+		}
+
 		// Sanity check for fragment lookup
 		if len(cs.Unwrap().Sources) != 1 {
 			utils.Panic("lookup %q has %d source fragments; only single-fragment lookups are supported", name, len(cs.Unwrap().Sources))
@@ -205,14 +458,14 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 
 		// this will panic over interleaved columns, we can debug that later
 		for i := range numCol {
-			wSources[i] = s.compColumnByCorsetColumnAccess(cSource.Module, cSource.Terms[i])
-			wTargets[i] = s.compColumnByCorsetColumnAccess(cTarget.Module, cTarget.Terms[i])
+			wSources[i] = s.compColumnByCorsetID(cSource.Module, cSource.Registers[i]).View()
+			wTargets[i] = s.compColumnByCorsetID(cTarget.Module, cTarget.Registers[i]).View()
 		}
 
 		if cSource.HasSelector() {
 			// source vector only has selector
 			selectorSourceRaw := cSource.Selector.Unwrap()
-			selectorSource := s.compColumnByCorsetColumnAccess(cSource.Module, selectorSourceRaw)
+			selectorSource := s.compColumnByCorsetID(cSource.Module, selectorSourceRaw).View()
 			tableSource = wiop.NewFilteredTable(selectorSource, wSources...)
 		} else {
 			tableSource = wiop.NewTable(wSources...)
@@ -221,7 +474,7 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 		if cTarget.HasSelector() {
 			// Target vector only has selector
 			selectorTargetRaw := cTarget.Selector.Unwrap()
-			selectorTarget := s.compColumnByCorsetColumnAccess(cTarget.Module, selectorTargetRaw)
+			selectorTarget := s.compColumnByCorsetID(cTarget.Module, selectorTargetRaw).View()
 			tableTarget = wiop.NewFilteredTable(selectorTarget, wTargets...)
 		} else {
 			tableTarget = wiop.NewTable(wTargets...)
@@ -283,13 +536,9 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 		for i, bitwidth := range rc.Bitwidths {
 			// Determine bound for this range constraint
 			bound := 1 << bitwidth
-			col := s.compColumnByCorsetID(rc.Context, rc.Sources[i].Register())
+			col := s.compColumnByCorsetID(rc.Context, rc.Sources[i])
 			col.Module.NewRangeCheck(col.Context.Childf("range-%v", name), col, bound)
 		}
-
-	case air.Assertion[koalabear.Element]:
-		// Property assertions can be ignored, as they are a debugging tool and
-		// not part of the constraints proper.
 
 	default:
 		utils.Panic("unexpected constraint type: %s", cs.Lisp(s.Schema).String(false))
@@ -382,7 +631,7 @@ func (s *schemaScanner) compColumnByCorsetID(
 		// construct register reference which uniquely identifies the column
 		ref        = register.NewRef(modID, regID)
 		cCol       = s.Schema.Register(ref)
-		moduleName = s.Schema.Module(modID).Name().String()
+		moduleName = s.Schema.Module(modID).Name()
 		columnName = qualifiedCorsetName(moduleName, cCol.Name())
 	)
 

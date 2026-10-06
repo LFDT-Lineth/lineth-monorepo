@@ -311,9 +311,9 @@ export interface PauseTypeTestConfig {
  *     { pauseType: GENERAL_PAUSE_TYPE, name: "GENERAL_PAUSE_TYPE" },
  *     { pauseType: FINALIZATION_PAUSE_TYPE, name: "FINALIZATION_PAUSE_TYPE" },
  *   ],
- *   () => lineaRollup,
- *   () => lineaRollup.connect(securityCouncil),
- *   async () => lineaRollup.connect(operator).finalizeBlocks(proof, 0, finalizationData),
+ *   () => linethRollup,
+ *   () => linethRollup.connect(securityCouncil),
+ *   async () => linethRollup.connect(operator).finalizeBlocks(proof, 0, finalizationData),
  * );
  * ```
  *

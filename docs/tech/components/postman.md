@@ -1,12 +1,12 @@
 # Postman
 
-> Cross-chain message relay service that automates message delivery between L1 (Ethereum) and L2 (Linea).
+> Cross-chain message relay service that automates message delivery between L1 (Ethereum) and L2 (Lineth).
 
 > **Diagrams:** [Postman Architecture](../diagrams/postman-architecture.mmd) | [Message Lifecycle](../diagrams/message-lifecycle.mmd)
 
 ## Overview
 
-The Postman service implements the relay component of Linea's [Canonical Message Service](https://docs.linea.build/protocol/architecture/interoperability/canonical-message-service). It monitors `MessageSent` events on both chains, tracks when messages become claimable (anchored), and automatically submits claim transactions on the destination chain.
+The Postman service implements the relay component of Lineth's [Canonical Message Service](https://docs.linea.build/protocol/architecture/interoperability/canonical-message-service). It monitors `MessageSent` events on both chains, tracks when messages become claimable (anchored), and automatically submits claim transactions on the destination chain.
 
 **Problem it solves**: When a user sends a cross-chain message (L1→L2 or L2→L1), someone must call the `claimMessage` function on the destination chain to finalize delivery. The Postman automates this process, removing the need for users to manually claim messages.
 
@@ -52,7 +52,7 @@ The Postman service implements the relay component of Linea's [Canonical Message
         ▼                       ▼                       ▼
 ┌───────────────┐       ┌───────────────┐       ┌───────────────┐
 │   L1 RPC      │       │   L2 RPC      │       │  PostgreSQL   │
-│  (Ethereum)   │       │   (Linea)     │       │   Database    │
+│  (Ethereum)   │       │   (Lineth)    │       │   Database    │
 └───────────────┘       └───────────────┘       └───────────────┘
 ```
 
@@ -136,7 +136,7 @@ The `MAX_POSTMAN_SPONSOR_GAS_LIMIT` configuration caps the gas the Postman will 
 
 ### Why TRANSACTION_SIZE_COMPUTED? (L1→L2 only)
 
-Linea uses a [variable gas pricing model](https://docs.linea.build/network/how-to/gas-fees#variable-cost-and-linea_estimategas) where the priority fee depends on the **compressed transaction size**:
+Lineth uses a [variable gas pricing model](https://docs.linea.build/network/how-to/gas-fees#variable-cost-and-linea_estimategas) where the priority fee depends on the **compressed transaction size**:
 
 ```
 priorityFeePerGas = MINIMUM_MARGIN * (min-gas-price * L2_compressed_tx_size_in_bytes / L2_tx_gas_used + fixed_cost)
@@ -201,7 +201,7 @@ The Postman uses a single `message` table in PostgreSQL to track all cross-chain
 | `message_nonce` | `integer` | Message nonce from the contract |
 | `calldata` | `varchar` | Message calldata |
 | `message_hash` | `varchar` | Unique hash identifying the message |
-| `message_contract_address` | `varchar` | Origin contract address (LineaRollup or L2MessageService) |
+| `message_contract_address` | `varchar` | Origin contract address (LinethRollup or L2MessageService) |
 | `sent_block_number` | `integer` | Block number where MessageSent event was emitted |
 | `direction` | `enum` | `L1_TO_L2` or `L2_TO_L1` |
 | `status` | `enum` | Current message status (see Message Lifecycle) |

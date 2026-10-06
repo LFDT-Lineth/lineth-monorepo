@@ -15,6 +15,7 @@ on:
     branches:
       - main
     paths:
+      - ".github/workflows/gradle-cache-seed.yml"
       - "gradle/**"
       - "gradle.properties"
       - "settings.gradle"
@@ -32,10 +33,15 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Java and Gradle
         uses: ./.github/actions/setup-java-and-gradle
 
       - name: Resolve all dependencies
         run: ./gradlew --init-script .github/gradle/resolve-all-dependencies.init.gradle resolveAllDependencies
+
+      # Formatter dependencies are provisioned lazily and are not covered by
+      # resolveAllDependencies. Warm them for PR jobs that restore this cache.
+      - name: Resolve Spotless formatter dependencies
+        run: ./gradlew spotlessInternalRegisterDependencies --stacktrace

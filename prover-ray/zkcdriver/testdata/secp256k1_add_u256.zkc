@@ -1,0 +1,80 @@
+include "./lib/secp256k1/secp256k1.zkc"
+
+type tAddr = u8
+
+// Batched test vectors: in_n[0] cases, each a triple (P1, P2, P3 = P1 + P2).
+// in_is_double[i] = 1 marks a doubling case (P1 == P2), which the second loop
+// additionally checks against the dedicated projective doubling formula.
+pub input in_n(address:u1) -> (count:u8)
+pub input in_x1(address:tAddr) -> (val:u256)
+pub input in_y1(address:tAddr) -> (val:u256)
+pub input in_x2(address:tAddr) -> (val:u256)
+pub input in_y2(address:tAddr) -> (val:u256)
+pub input in_x3(address:tAddr) -> (val:u256)
+pub input in_y3(address:tAddr) -> (val:u256)
+pub input in_is_double(address:tAddr) -> (flag:u8)
+
+fn main() {
+
+    var n:u8 = in_n[0]
+
+    // Loop 1: every case is validated with complete projective addition and
+    // conversion back to affine coordinates.
+    for i:tAddr = 0; i<n; i = i + 1 {
+        // Reduce inputs to canonical form up front, so downstream raw comparisons
+        // (ec_add's `x1 != x2`, the x3/y3 result check) operate on residues, not
+        // on non-canonical u256 encodings that alias the same field element.
+        var x1:u256 = reduce_256(in_x1[i], p)
+        var y1:u256 = reduce_256(in_y1[i], p)
+        var x2:u256 = reduce_256(in_x2[i], p)
+        var y2:u256 = reduce_256(in_y2[i], p)
+        var x3:u256 = reduce_256(in_x3[i], p)
+        var y3:u256 = reduce_256(in_y3[i], p)
+
+        // Check P1, P2, and P3 are on y^2 = x^3 + 7 over Fp.
+        assert_on_curve_affine_secp256k1(x1, y1)
+        assert_on_curve_affine_secp256k1(x2, y2)
+        assert_on_curve_affine_secp256k1(x3, y3)
+
+        // complete projective addition: lift P1, P2, add, convert back to affine
+        var X1:u256, Y1:u256, Z1:u256
+        X1, Y1, Z1 = affine_to_projective_secp256k1(x1, y1)
+
+        var X2:u256, Y2:u256, Z2:u256
+        X2, Y2, Z2 = affine_to_projective_secp256k1(x2, y2)
+
+        var X3p:u256, Y3p:u256, Z3p:u256
+        X3p, Y3p, Z3p = add_projective_secp256k1(X1, Y1, Z1, X2, Y2, Z2)
+
+        var x3p:u256, y3p:u256
+        x3p, y3p = projective_to_affine_secp256k1(X3p, Y3p, Z3p)
+
+        if (x3 != x3p) || (y3 != y3p) {
+            fail
+        }
+    }
+
+    // Loop 2: doubling cases (P1 == P2) also exercise the dedicated projective
+    // doubling formula. 2*P1 must match the claimed result (x3, y3).
+    for i:tAddr = 0; i<n; i = i + 1 {
+        if in_is_double[i] != 0 {
+            var x1:u256 = reduce_256(in_x1[i], p)
+            var y1:u256 = reduce_256(in_y1[i], p)
+            var x3:u256 = reduce_256(in_x3[i], p)
+            var y3:u256 = reduce_256(in_y3[i], p)
+
+            var X1:u256, Y1:u256, Z1:u256
+            X1, Y1, Z1 = affine_to_projective_secp256k1(x1, y1)
+
+            var Xd:u256, Yd:u256, Zd:u256
+            Xd, Yd, Zd = double_projective_secp256k1(X1, Y1, Z1)
+
+            var xd:u256, yd:u256
+            xd, yd = projective_to_affine_secp256k1(Xd, Yd, Zd)
+
+            if (x3 != xd) || (y3 != yd) {
+                fail
+            }
+        }
+    }
+}

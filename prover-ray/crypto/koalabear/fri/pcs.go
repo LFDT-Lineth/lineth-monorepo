@@ -115,6 +115,7 @@
 //     the front, AIR-quotient batch at the back, witness rounds
 //     in between -- though the PCS itself doesn't care, only
 //     that prover and verifier agree on the order.
+
 package fri
 
 import (
@@ -124,6 +125,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 )
 
@@ -394,9 +396,43 @@ type quotientClaim struct {
 	Value field.Ext
 }
 
+// claimRotation is the prover-only E2 data for one claim point ζ·ω_n^s: its
+// inverse column is Scale · rotate(level's DenomBaseInv, Rot), with
+// Rot = (r·s) mod N (r = inverse rate, N = codeword-domain size) and
+// Scale = ω_N^{−(r·s)}.
+type claimRotation struct {
+	Rot   int
+	Scale field.Element
+}
+
+// quotientColumn is prover-only (built in reconstructLevels, consumed by
+// Level.EvalsAt). Rotations runs parallel to Claims and lives here — rather than
+// on quotientClaim — so the verifier's claim type (which also instantiates
+// quotientClaim, via claimsForEntry) stays free of prover-only state.
+// quotientColumn holds one opened column's codeword over the domain. To avoid
+// allocating (and, for base columns, widening) a fresh 4N-length []E6 per
+// column in reconstructLevels — the dominant cost of Open — the codeword is
+// aliased directly from the committed table: ext columns keep their []field.Ext
+// in EvalsExt, base columns keep their []field.Element in EvalsBase. Exactly one
+// is non-nil; isBase reports which. Level.EvalsAt lifts base elements to E6 on
+// the stack as it reads them.
 type quotientColumn struct {
-	Evals  []field.Ext // Evals over the codeword domain
-	Claims []quotientClaim
+	EvalsExt  []field.Ext     // set for ext columns; nil for base
+	EvalsBase []field.Element // set for base columns; nil for ext
+	Claims    []quotientClaim
+	Rotations []claimRotation
+}
+
+// isBase reports whether this column's codeword is stored as base elements.
+func (c *quotientColumn) isBase() bool { return c.EvalsBase != nil }
+
+// codewordLen returns the number of evaluations in the column's codeword,
+// regardless of whether it is stored as base or ext.
+func (c *quotientColumn) codewordLen() int {
+	if c.EvalsBase != nil {
+		return len(c.EvalsBase)
+	}
+	return len(c.EvalsExt)
 }
 
 func reconstructDomainSize(domain domainLight) (int, error) {
@@ -419,24 +455,9 @@ func checkColumnClaimPoints(columnIdx int, claims []quotientClaim) error {
 	return nil
 }
 
-func collectClaimPoints(columns []quotientColumn) (map[field.Ext]int, []field.Ext) {
-	indexes := make(map[field.Ext]int)
-	for _, column := range columns {
-		for _, claim := range column.Claims {
-			if _, ok := indexes[claim.Point]; ok {
-				continue
-			}
-			indexes[claim.Point] = len(indexes)
-		}
-	}
-
-	points := make([]field.Ext, len(indexes))
-	for point, index := range indexes {
-		points[index] = point
-	}
-	return indexes, points
-}
-
+// denominatorInverses is the pre-E2 dense builder: 1/(x − z) for every (domain
+// position x, claim point z). Retained as the reference implementation the E2
+// rotation identity is validated against in fri_e2_test.go.
 func denominatorInverses(domainPoints, claimPoints []field.Ext) ([]field.Ext, error) {
 	if len(claimPoints) == 0 {
 		return nil, nil
@@ -456,6 +477,27 @@ func denominatorInverses(domainPoints, claimPoints []field.Ext) ([]field.Ext, er
 	return field.BatchInvertExt(denominators), nil
 }
 
+// denomBaseInverses returns the length-N vector 1/(ω^e − ζ) in natural order
+// (index e = exponent), where ω = generator is the codeword-domain generator.
+// This single vector backs every claim point of the level via the rotation
+// identity in Level.EvalsAt, replacing a dense N×P denominator table (P =
+// distinct claim points) with one N-element batch inversion. A zero denominator
+// means ζ (hence every ζ·ω_n^s claim point) lands on the domain, which is a
+// soundness violation.
+func denomBaseInverses(generator field.Element, n int, zeta field.Ext) ([]field.Ext, error) {
+	denoms := make([]field.Ext, n)
+	pow := field.One()
+	for e := range n {
+		x := field.Lift(pow)
+		denoms[e].Sub(&x, &zeta)
+		if denoms[e].IsZero() {
+			return nil, fmt.Errorf("fri: reconstructLevels: claim point lands on domain position %d", e)
+		}
+		pow.Mul(&pow, &generator)
+	}
+	return field.BatchInvertExt(denoms), nil
+}
+
 // =============================================================================
 // OpeningProof
 // =============================================================================
@@ -465,10 +507,27 @@ func denominatorInverses(domainPoints, claimPoints []field.Ext) ([]field.Ext, er
 type OpeningProof struct {
 	// InputQueries[k] contains one row-carrying opening per input tree for query k.
 	InputQueries []InputQuery
+	// InputCaps contains one authenticated cap per distinct input tree, in the
+	// same canonical order as the tree openings inside InputQueries.
+	InputCaps []InputCap
 
 	// FRIProof is checked through PCS verification, which reconstructs virtual
 	// level values from ClaimedValues and InputQueries.
 	FRIProof Proof
+}
+
+// InputCap is the input-tree cap plus complete encoded tables whose auxiliary
+// leaves lie above the cap. Tables are ordered by SizeLog2 and are authenticated
+// by hashing adjacent rows into the cap reconstruction.
+type InputCap struct {
+	Nodes  []field.Octuplet
+	Tables []InputCapTable
+}
+
+// InputCapTable is one fully revealed encoded table above an input cap.
+type InputCapTable struct {
+	SizeLog2 uint8
+	Rows     []RowOpening
 }
 
 // InputQuery holds the PCS input-tree openings for one FRI query.
@@ -478,7 +537,92 @@ type InputQuery []InputTreeOpening
 // preimages.
 type InputTreeOpening struct {
 	Siblings []field.Octuplet
-	Leaves   []*RowPair // Leaves along the way, when they exist, starting from the root down
+	// Leaves is indexed by tree level, from the root down to the bottom. Slots
+	// below the authenticated cap are required to be nil; the bottom slot is
+	// always populated because its pair supplies the queried value and sibling.
+	Leaves []*RowPair
+}
+
+type inputQuerySource struct {
+	opening           InputQuery
+	caps              []InputCap
+	frontiers         [][]field.Octuplet
+	capInfos          []inputCapInfo
+	shapes            []Shape
+	inputIndexByBatch []int
+	params            Params
+	queryPosition     int
+}
+
+func (source inputQuerySource) pairAtLevel(batchIdx, levelSize int) (*RowPair, error) {
+	branchIdx := source.inputIndexByBatch[batchIdx]
+	if branchIdx < 0 || branchIdx >= len(source.opening) || branchIdx >= len(source.caps) {
+		return nil, fmt.Errorf("batch %d has no input tree opening", batchIdx)
+	}
+	branch := source.opening[branchIdx]
+	info := source.capInfos[branchIdx]
+	height := info.height
+	capDepth := info.depth
+	rateLog := info.rateLog
+	levelLog := bits.TrailingZeros(uint(levelSize))
+	sizeLog2 := levelLog - rateLog
+	auxDepth, isAux := inputAuxDepth(rateLog, sizeLog2, height-rateLog)
+	if isAux && auxDepth < capDepth {
+		for _, table := range source.caps[branchIdx].Tables {
+			if int(table.SizeLog2) != sizeLog2 {
+				continue
+			}
+			numLeaves := 1 << height
+			codewordSize := 1 << source.params.LogCodewordSize
+			if levelSize > numLeaves || codewordSize%numLeaves != 0 || numLeaves%levelSize != 0 {
+				return nil, fmt.Errorf("level size %d is incompatible with input tree", levelSize)
+			}
+			leafIndex := source.queryPosition / (codewordSize / numLeaves)
+			base := leafIndex / (numLeaves / levelSize)
+			if base < 0 || base >= len(table.Rows) || base^1 >= len(table.Rows) {
+				return nil, fmt.Errorf("revealed table row %d is out of bounds", base)
+			}
+			pair := RowPair{table.Rows[base], table.Rows[base^1]}
+			return &pair, nil
+		}
+		return nil, fmt.Errorf("revealed table for size %d is absent", sizeLog2)
+	}
+	return branch.pairAtLevel(levelSize)
+}
+
+func (source inputQuerySource) authenticate() error {
+	if len(source.opening) != len(source.frontiers) || len(source.opening) != len(source.capInfos) {
+		return fmt.Errorf("input query has %d tree openings, want %d", len(source.opening), len(source.frontiers))
+	}
+	for i, branch := range source.opening {
+		info := source.capInfos[i]
+		if len(branch.Leaves) != info.height {
+			return fmt.Errorf("input tree %d: has %d row levels, want %d", i, len(branch.Leaves), info.height)
+		}
+		if branch.Leaves[info.height-1] == nil {
+			return fmt.Errorf("input tree %d: missing bottom level", i)
+		}
+		for level, pair := range branch.Leaves {
+			if level < info.depth {
+				if pair != nil {
+					return fmt.Errorf("input tree %d: query supplied a revealed row pair at level %d", i, level)
+				}
+				continue
+			}
+			if (pair != nil) != info.queryRows[level] {
+				return fmt.Errorf("input tree %d: unexpected row pair at level %d", i, level)
+			}
+		}
+		codewordSize := 1 << source.params.LogCodewordSize
+		if 1<<info.height > codewordSize || codewordSize%(1<<info.height) != 0 {
+			return fmt.Errorf("input tree %d: tree size %d incompatible with domain size %d", i, 1<<info.height, codewordSize)
+		}
+		leafIndex := source.queryPosition / (codewordSize / (1 << info.height))
+		if err := branch.AuthenticateToCap(leafIndex, source.frontiers[i]); err != nil {
+			return fmt.Errorf("input tree %d: %w", i, err)
+		}
+	}
+	return nil
 }
 
 // RowPair holds one level's conjugate row pair (see MultiSizeTable.Merkleize):
@@ -720,8 +864,23 @@ func (pcs *PCS) shiftedPoint(sizeLog2 uint8, shift int, zeta field.Ext) (field.E
 // Level.EvalsAt.
 func (pcs *PCS) reconstructLevels() ([]Level, error) {
 	logD := pcs.Params.LogPlainTextSize
-	levels := make([]Level, 0, logD+1)
-	for sizeLog2 := int(logD); sizeLog2 >= 0; sizeLog2-- {
+	// The domain schedule drives which sizes can host a level: domainsLight
+	// (length numRounds()+1, further sliced for a restricted PCS) holds exactly
+	// the sizes 2^logD down to 2^logFinalPolySize. Iterating it directly makes
+	// it structurally impossible to reach a size below the final-poly floor
+	// (which could never host a FRI level anyway).
+	levels := make([]Level, 0, len(pcs.Params.domainsLight))
+	for di := range pcs.Params.domainsLight {
+		sizeLog2 := int(logD) - di
+		domain := pcs.Params.domainsLight[di]
+		size, err := reconstructDomainSize(domain)
+		if err != nil {
+			return nil, err
+		}
+		// r is the inverse rate: the codeword domain (size N) is the r-fold
+		// blowup of the size-2^sizeLog2 plaintext domain, so ω_n = ω_N^r.
+		r := size >> sizeLog2
+
 		var columns []quotientColumn
 		var trees []*Tree
 		for _, opening := range pcs.openings {
@@ -731,18 +890,27 @@ func (pcs *PCS) reconstructLevels() ([]Level, error) {
 				}
 				trees = append(trees, opening.committed.Tree)
 				for _, entry := range bundle.Entries {
-					evals, err := encodedColumnEvals(opening.committed, entry)
+					column, err := encodedColumnEvals(opening.committed, entry)
 					if err != nil {
 						return nil, err
 					}
-					claims, err := pcs.openingClaimsForEntry(opening, entry)
+					column.Claims, err = pcs.openingClaimsForEntry(opening, entry)
 					if err != nil {
 						return nil, err
 					}
-					columns = append(columns, quotientColumn{
-						Evals:  evals,
-						Claims: claims,
-					})
+					// Precompute the E2 rotation offset and base-field prefactor
+					// of each claim point for Level.EvalsAt, parallel to claims
+					// (entry.Shifts is aligned with claims).
+					rotations := make([]claimRotation, len(entry.Shifts))
+					for i, shift := range entry.Shifts {
+						rot := (r * shift) & (size - 1)
+						rotations[i].Rot = rot
+						// Scale = ω_N^{-rot} = ω_N^{(N-rot) mod N}.
+						expo := (size - rot) & (size - 1)
+						rotations[i].Scale.Exp(domain.generator, big.NewInt(int64(expo)))
+					}
+					column.Rotations = rotations
+					columns = append(columns, column)
 				}
 			}
 		}
@@ -750,38 +918,25 @@ func (pcs *PCS) reconstructLevels() ([]Level, error) {
 			continue
 		}
 
-		domain := pcs.Params.domainsLight[logD-uint8(sizeLog2)]
-		size, err := reconstructDomainSize(domain)
-		if err != nil {
-			return nil, err
-		}
 		for columnIdx, column := range columns {
-			if len(column.Evals) != size {
+			if column.codewordLen() != size {
 				return nil, fmt.Errorf("fri: reconstructLevels: column %d has %d evals, want %d",
-					columnIdx, len(column.Evals), size)
+					columnIdx, column.codewordLen(), size)
 			}
 			if err = checkColumnClaimPoints(columnIdx, column.Claims); err != nil {
 				return nil, err
 			}
 		}
 
-		domainPoints := make([]field.Ext, size)
-		for pos := range domainPoints {
-			domainPoints[pos] = domainPointExt(domain, pos)
-		}
-
-		claimPointIndexes, claimPoints := collectClaimPoints(columns)
-		denominatorInverses, err := denominatorInverses(domainPoints, claimPoints)
+		denomBaseInv, err := denomBaseInverses(domain.generator, size, pcs.zeta)
 		if err != nil {
 			return nil, err
 		}
 
 		levels = append(levels, Level{
-			Trees:               trees,
-			Columns:             columns,
-			ClaimPointIndexes:   claimPointIndexes,
-			ClaimPoints:         claimPoints,
-			DenominatorInverses: denominatorInverses,
+			Trees:        trees,
+			Columns:      columns,
+			DenomBaseInv: denomBaseInv,
 		})
 	}
 	return levels, nil
@@ -795,32 +950,33 @@ func (pcs *PCS) roundForSize(sizeLog2 uint8) (uint8, error) {
 	return logD - sizeLog2, nil
 }
 
-func encodedColumnEvals(committed CommitterState, entry deepEntry) ([]field.Ext, error) {
+// encodedColumnEvals aliases the entry's codeword from the committed table into
+// a quotientColumn (populating exactly one of EvalsExt / EvalsBase). The
+// committed table is never mutated after Commit, and both consumers of these
+// slices — Level.EvalsAt during folding and the query phase — read them
+// read-only, so aliasing rather than copying is safe. This avoids allocating a
+// fresh 4N-length []E6 per column (and, for base columns, widening every
+// element to E6) — the dominant cost of reconstructLevels. EvalsAt lifts base
+// elements to E6 on the stack as it reads them.
+func encodedColumnEvals(committed CommitterState, entry deepEntry) (quotientColumn, error) {
 	table := committed.EncodedTable
 	if int(entry.SizeLog2) >= len(table) {
-		return nil, fmt.Errorf("fri: reconstructLevels: missing encoded size %d", entry.SizeLog2)
+		return quotientColumn{}, fmt.Errorf("fri: reconstructLevels: missing encoded size %d", entry.SizeLog2)
 	}
 	sized := table[entry.SizeLog2]
 	if entry.IsExt {
 		if entry.RowIdx >= len(sized.Ext) {
-			return nil, fmt.Errorf("fri: reconstructLevels: size %d missing ext row %d",
+			return quotientColumn{}, fmt.Errorf("fri: reconstructLevels: size %d missing ext row %d",
 				entry.SizeLog2, entry.RowIdx)
 		}
-		evals := make([]field.Ext, len(sized.Ext[entry.RowIdx]))
-		copy(evals, sized.Ext[entry.RowIdx])
-		return evals, nil
+		return quotientColumn{EvalsExt: sized.Ext[entry.RowIdx]}, nil
 	}
 
 	if entry.RowIdx >= len(sized.Base) {
-		return nil, fmt.Errorf("fri: reconstructLevels: size %d missing base row %d",
+		return quotientColumn{}, fmt.Errorf("fri: reconstructLevels: size %d missing base row %d",
 			entry.SizeLog2, entry.RowIdx)
 	}
-	base := sized.Base[entry.RowIdx]
-	evals := make([]field.Ext, len(base))
-	for i := range base {
-		evals[i] = field.Lift(base[i])
-	}
-	return evals, nil
+	return quotientColumn{EvalsBase: sized.Base[entry.RowIdx]}, nil
 }
 
 func (pcs *PCS) claimsForEntry(
@@ -880,25 +1036,63 @@ func (pcs *PCS) claimsForBatchEntry(
 
 // Open runs the PCS query phase for the already-folded FRI state.
 func (pcs *PCS) Open(state *ProverState, queryPositions []int) OpeningProof {
-	return OpeningProof{
-		InputQueries: pcs.openInputQueries(queryPositions),
-		FRIProof:     state.Open(queryPositions),
-	}
-}
-
-func (pcs *PCS) openInputQueries(queryPositions []int) []InputQuery {
 	restricted, err := pcs.restrictToOpenings()
 	if err != nil {
 		panic(err)
 	}
-	pcs = restricted
+	inputs := restricted.inputOpeningCommitments()
+	return OpeningProof{
+		InputQueries: restricted.openInputQueries(inputs, queryPositions),
+		InputCaps:    restricted.openInputCaps(inputs),
+		FRIProof:     state.Open(queryPositions),
+	}
+}
 
-	inputs := pcs.inputOpeningCommitments()
+func (pcs *PCS) openInputQueries(inputs []CommitterState, queryPositions []int) []InputQuery {
 	res := make([]InputQuery, len(queryPositions))
 	for queryIdx, queryPosition := range queryPositions {
 		res[queryIdx] = make(InputQuery, len(inputs))
 		for inputIdx, committed := range inputs {
-			res[queryIdx][inputIdx] = openInputTreeOpening(pcs.Params, committed, queryPosition)
+			height := committed.Tree.NumLevel() - 1
+			depth := merkleCapDepth(pcs.Params.NumQueries, height)
+			res[queryIdx][inputIdx] = openInputTreeOpeningToDepth(pcs.Params, committed, queryPosition, depth)
+		}
+	}
+	return res
+}
+
+func (pcs *PCS) openInputCaps(inputs []CommitterState) []InputCap {
+	caps := make([]InputCap, len(inputs))
+	for i, committed := range inputs {
+		info, err := inputCapShapeInfo(pcs.Params, committed.EncodedTable.Shape())
+		if err != nil {
+			panic(err)
+		}
+		if info.height != committed.Tree.NumLevel()-1 {
+			panic("fri: openInputCaps: table shape and tree height differ")
+		}
+		if info.depth == 0 {
+			continue
+		}
+		frontierStart := (1 << info.depth) - 1
+		frontierEnd := 2*frontierStart + 1
+		caps[i].Nodes = append([]field.Octuplet(nil), committed.Tree.Nodes[frontierStart:frontierEnd]...)
+		caps[i].Tables = revealedInputTables(committed.EncodedTable, info)
+	}
+	return caps
+}
+
+func revealedInputTables(table MultiSizeTable, info inputCapInfo) []InputCapTable {
+	res := make([]InputCapTable, len(info.revealed))
+	for i, sizeLog2 := range info.revealed {
+		sized := table[sizeLog2]
+		rows := make([]RowOpening, sized.Size())
+		for row := range rows {
+			rows[row] = openEncodedRow(sized, row)
+		}
+		res[i] = InputCapTable{
+			SizeLog2: uint8(sizeLog2),
+			Rows:     rows,
 		}
 	}
 	return res
@@ -926,6 +1120,10 @@ func (pcs *PCS) inputOpeningCommitments() []CommitterState {
 }
 
 func openInputTreeOpening(p Params, committed CommitterState, queryPosition int) InputTreeOpening {
+	return openInputTreeOpeningToDepth(p, committed, queryPosition, 0)
+}
+
+func openInputTreeOpeningToDepth(p Params, committed CommitterState, queryPosition, capDepth int) InputTreeOpening {
 	tree := committed.Tree
 	numLeaves := tree.NumLeaves()
 	codewordSize := 1 << p.LogCodewordSize
@@ -933,7 +1131,8 @@ func openInputTreeOpening(p Params, committed CommitterState, queryPosition int)
 		panic("fri: openInputTreeOpening: tree size incompatible with domain size")
 	}
 	leafIndex := queryPosition / (codewordSize / numLeaves)
-	branch := tree.OpenBranch(leafIndex)
+	branch := tree.OpenBranchToDepth(leafIndex, capDepth)
+	treeHeight := tree.NumLevel() - 1
 	input := InputTreeOpening{
 		// The bottom level's own sibling digest is derived from its pair
 		// (below) rather than transmitted.
@@ -941,15 +1140,21 @@ func openInputTreeOpening(p Params, committed CommitterState, queryPosition int)
 		// The last slot is otherwise always vacant (see Merkleize: nothing
 		// shifts to the depth just above the bottom level), so it is
 		// repurposed for the bottom level's own mandatory pair.
-		Leaves: make([]*RowPair, len(branch.AuxSiblings)),
+		Leaves: make([]*RowPair, treeHeight),
 	}
 	input.Leaves[len(input.Leaves)-1] = &RowPair{
 		openEncodedRowAtSize(committed.EncodedTable, numLeaves, leafIndex),
 		openEncodedRowAtSize(committed.EncodedTable, numLeaves, leafIndex^1),
 	}
+	rateLog := int(p.LogCodewordSize) - int(p.LogPlainTextSize)
+	bottomSizeLog2 := len(committed.EncodedTable) - 1
 	for sizeLog2 := range committed.EncodedTable {
 		table := committed.EncodedTable[sizeLog2]
-		if table.NumRows() == 0 || table.Size() == numLeaves {
+		if table.NumRows() == 0 {
+			continue
+		}
+		auxDepth, isAux := inputAuxDepth(rateLog, sizeLog2, bottomSizeLog2)
+		if !isAux {
 			continue
 		}
 		levelSize := table.Size()
@@ -957,8 +1162,11 @@ func openInputTreeOpening(p Params, committed CommitterState, queryPosition int)
 			panic("fri: openInputTreeOpening: level size incompatible with tree size")
 		}
 		levelLog := bits.TrailingZeros(uint(levelSize)) - 1 // one depth shallower than levelSize (see Merkleize)
-		if levelLog < 0 || levelLog >= len(input.Leaves)-1 {
+		if levelLog != auxDepth || levelLog >= len(input.Leaves)-1 {
 			panic("fri: openInputTreeOpening: level size absent from branch")
+		}
+		if levelLog < capDepth {
+			continue
 		}
 		base := leafIndex / (numLeaves / levelSize)
 		input.Leaves[levelLog] = &RowPair{
@@ -1036,35 +1244,44 @@ func writeRowOpeningElements(hasher *poseidon2.MDHasher, row RowOpening) {
 		hasher.WriteElements(base)
 	}
 	for _, ext := range row.Ext {
-		hasher.WriteElements(ext.B0.A0, ext.B0.A1, ext.B1.A0, ext.B1.A1, ext.B2.A0, ext.B2.A1)
+		limbs := extLimbs(ext)
+		hasher.WriteElements(limbs[:]...)
 	}
 }
 
-// RecoverRoot folds this branch's rows up to the tree root. The bottom
-// (deepest) level's own step combines its pair directly instead of reading a
-// transmitted sibling digest, so Siblings holds one fewer entry than
-// Leaves.
-func (branch InputTreeOpening) RecoverRoot(idx int) (field.Octuplet, error) {
-	numLevels := len(branch.Leaves)
-	if numLevels == 0 || branch.Leaves[numLevels-1] == nil {
-		return field.Octuplet{}, fmt.Errorf("malformed proof: missing bottom level")
+// AuthenticateToCap checks the bottom pair and the retained lower path
+// against an already authenticated input-tree frontier.
+func (branch InputTreeOpening) AuthenticateToCap(idx int, frontier []field.Octuplet) error {
+	if len(branch.Leaves) == 0 || branch.Leaves[len(branch.Leaves)-1] == nil {
+		return fmt.Errorf("missing bottom level")
 	}
-	if len(branch.Siblings) != numLevels-1 {
-		return field.Octuplet{}, fmt.Errorf("malformed proof")
+	height := len(branch.Leaves)
+	depth, err := capDepthFromFrontier(frontier)
+	if err != nil {
+		return err
+	}
+	if depth > height-1 {
+		return fmt.Errorf("cap depth %d outside [0,%d)", depth, height)
+	}
+	if len(branch.Siblings) != height-1-depth {
+		return fmt.Errorf("branch has %d siblings, want %d", len(branch.Siblings), height-1-depth)
+	}
+	if idx < 0 || idx >= len(frontier)<<(height-depth) {
+		return fmt.Errorf("opening index outside capped tree")
 	}
 
-	bottom := branch.Leaves[numLevels-1]
+	bottom := branch.Leaves[height-1]
 	ancestor := hashRowOpening(bottom[0])
 	sibling := hashRowOpening(bottom[1])
 	ancestor, currPos := foldOneLevel(ancestor, sibling, nil, idx)
-
-	for i := numLevels - 2; i >= 0; i-- {
-		ancestor, currPos = foldOneLevel(ancestor, branch.Siblings[i], branch.Leaves[i], currPos)
+	for level := height - 2; level >= depth; level-- {
+		siblingIdx := level - depth
+		ancestor, currPos = foldOneLevel(ancestor, branch.Siblings[siblingIdx], branch.Leaves[level], currPos)
 	}
-	if currPos > 0 {
-		return field.Octuplet{}, fmt.Errorf("all bits of currPos should have been bitshifted beyond LSb")
+	if ancestor != frontier[currPos] {
+		return fmt.Errorf("invalid Merkle proof")
 	}
-	return ancestor, nil
+	return nil
 }
 
 func foldOneLevel(ancestor, sibling field.Octuplet, aux *RowPair, currPos int) (field.Octuplet, int) {
@@ -1132,13 +1349,10 @@ func (branch InputTreeOpening) pairAtLevel(levelSize int) (*RowPair, error) {
 // walked highest AlphaPower first (canonicalLayout assigns them
 // 0..len(Entries)-1 in order, so that's simply the reverse index order).
 func reconstructQueryValueAt(
-	pcs *PCS,
 	bundle sizeBundle,
-	opening InputQuery,
-	inputIndexByBatch []int,
+	entryClaims [][]quotientClaim,
+	source inputQuerySource,
 	levelSize int,
-	claimed []BatchClaimedValues,
-	zeta field.Ext,
 	alphaDeep field.Ext,
 	x field.Ext,
 	sibling bool,
@@ -1147,12 +1361,8 @@ func reconstructQueryValueAt(
 	value := running
 	for i := len(bundle.Entries) - 1; i >= 0; i-- {
 		entry := bundle.Entries[i]
-		claims, err := pcs.claimsForEntry(claimed, entry, zeta)
-		if err != nil {
-			return field.Ext{}, err
-		}
-		branch := opening[inputIndexByBatch[entry.BatchIdx]]
-		pair, err := branch.pairAtLevel(levelSize)
+		claims := entryClaims[i]
+		pair, err := source.pairAtLevel(entry.BatchIdx, levelSize)
 		if err != nil {
 			return field.Ext{}, err
 		}
@@ -1252,13 +1462,49 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	orders := batchOrders(layout)
 	positions := in.Challenges.QueryPositions[:pcs.Params.NumQueries]
 	inputRoots, inputIndexByBatch := inputOpeningRoots(layout, orders, in.Roots)
+	if len(proof.InputCaps) != len(inputRoots) {
+		return fmt.Errorf("fri: pcs.Verify: got %d input caps, want %d", len(proof.InputCaps), len(inputRoots))
+	}
+	inputShapes := make([]Shape, len(inputRoots))
+	for batchIdx, treeIdx := range inputIndexByBatch {
+		if treeIdx < 0 {
+			continue
+		}
+		if inputShapes[treeIdx] == nil {
+			inputShapes[treeIdx] = in.Shapes[batchIdx]
+		}
+	}
+	inputFrontiers := make([][]field.Octuplet, len(inputRoots))
+	inputCapInfos := make([]inputCapInfo, len(inputRoots))
+	for treeIdx := range inputRoots {
+		info, err := inputCapShapeInfo(pcs.Params, inputShapes[treeIdx])
+		if err != nil {
+			return fmt.Errorf("fri: pcs.Verify: input cap %d: %w", treeIdx, err)
+		}
+		inputCapInfos[treeIdx] = info
+		frontier, err := authenticateInputCap(info, proof.InputCaps[treeIdx], inputShapes[treeIdx], inputRoots[treeIdx])
+		if err != nil {
+			return fmt.Errorf("fri: pcs.Verify: input cap %d: %w", treeIdx, err)
+		}
+		inputFrontiers[treeIdx] = frontier
+	}
 	if err = checkOpeningProofShape(pcs.Params, proof.FRIProof, in.Challenges.FoldAlphas, positions); err != nil {
 		return err
 	}
 
-	runningRoots := make([]QueryLayerRoots, pcs.Params.numRounds())
+	runningFrontiers := make([][]field.Octuplet, pcs.Params.numRounds())
 	for j := uint8(1); j < pcs.Params.numRounds(); j++ {
-		runningRoots[j] = QueryLayerRoots{proof.FRIProof.RoundRoots[j-1]}
+		root := proof.FRIProof.RoundRoots[j-1]
+		depth := merkleCapDepth(pcs.Params.NumQueries, int(pcs.Params.LogCodewordSize-j))
+		treeCap := proof.FRIProof.RoundCaps[j-1]
+		if depth == 0 {
+			runningFrontiers[j] = []field.Octuplet{root}
+			continue
+		}
+		if err := treeCap.Authenticate(depth, root); err != nil {
+			return fmt.Errorf("fri: pcs.Verify: round %d cap: %w", j, err)
+		}
+		runningFrontiers[j] = treeCap.Nodes
 	}
 
 	claimed := in.ClaimedValues
@@ -1269,123 +1515,207 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	copy(finalCodeword, proof.FRIProof.FinalPoly)
 	pcs.Params.domains[pcs.Params.numRounds()].FFTExt6(finalCodeword, fft.DIF)
 
+	// A level's entry claims (claim points + values) do not depend on the
+	// query, so precompute them once here rather than rebuilding them — each
+	// with a big.Int Exp in shiftedPoint — inside every query × self/sib.
+	layoutClaims := make([][][]quotientClaim, len(layout))
+	for levelIdx, bundle := range layout {
+		layoutClaims[levelIdx] = make([][]quotientClaim, len(bundle.Entries))
+		for i, entry := range bundle.Entries {
+			entryClaims, err := pcs.claimsForEntry(claimed, entry, zeta)
+			if err != nil {
+				return err
+			}
+			layoutClaims[levelIdx][i] = entryClaims
+		}
+	}
+
+	// Each query is authenticated and reconstructed independently (read-only
+	// shared inputs, disjoint writes to resolved[queryIdx]); the per-query work
+	// — dominated by Merkle branch re-hashing — parallelizes cleanly.
 	resolved := make([]resolvedQuery, pcs.Params.NumQueries)
-	for queryIdx, queryPosition := range positions {
-		rq := resolvedQuery{
-			// Rounds[0..numRounds()-1] hold running-layer pairs; Rounds[0] is
-			// always zero (no committed layer at round 0). An extra slot at
-			// index numRounds() holds the zero seed for any level introduced
-			// at that boundary round (e.g. a D=1 aux level at the final round).
-			Rounds: make([]inputPair, pcs.Params.numRounds()+1),
-			Aux:    make(map[uint8]inputPair, len(layout)),
-			Final:  finalCodeword[queryPosition>>pcs.Params.numRounds()],
+	queryErrs := make([]error, pcs.Params.NumQueries)
+	vq := verifyQueryCtx{
+		pcs:               pcs,
+		layout:            layout,
+		proof:             proof,
+		inputFrontiers:    inputFrontiers,
+		inputCaps:         proof.InputCaps,
+		inputCapInfos:     inputCapInfos,
+		runningFrontiers:  runningFrontiers,
+		layoutClaims:      layoutClaims,
+		inputIndexByBatch: inputIndexByBatch,
+		orders:            orders,
+		shapes:            in.Shapes,
+		foldAlphas:        foldAlphas,
+		finalCodeword:     finalCodeword,
+	}
+	parallel.Execute(int(pcs.Params.NumQueries), func(start, end int) {
+		for queryIdx := start; queryIdx < end; queryIdx++ {
+			rq, err := vq.resolve(queryIdx, positions[queryIdx])
+			if err != nil {
+				queryErrs[queryIdx] = err
+				continue
+			}
+			resolved[queryIdx] = rq
 		}
-
-		inputOpening := proof.InputQueries[queryIdx]
-		if err = authenticateInputQuery(pcs.Params, inputOpening, inputRoots, queryPosition); err != nil {
-			return fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
+	})
+	for _, err := range queryErrs {
+		if err != nil {
+			return err
 		}
-
-		// Running layers: authenticate and decode directly from the committed
-		// codeword -- no PCS reconstruction involved. Computed before the level
-		// loop below, since a level's own reconstruction seeds on this same
-		// round's running pair (rq.Rounds[0] is left at its zero value, so
-		// round 0 needs no special case).
-		for j := uint8(1); j < pcs.Params.numRounds(); j++ {
-			opening := proof.FRIProof.RunningQueries[queryIdx][j-1]
-			if err = checkQueryLayerShape(
-				opening, runningRoots[j], 1<<(pcs.Params.LogCodewordSize-j), true); err != nil {
-				return fmt.Errorf("fri: pcs.Verify: query %d round %d: %w", queryIdx, j, err)
-			}
-			branch, err := authenticateQueryLayer(j, opening, runningRoots[j], queryPosition>>j)
-			if err != nil {
-				return fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
-			}
-			if len(branch.Siblings) == 0 {
-				return fmt.Errorf("fri: pcs.Verify: query %d round %d: branch carries no sibling", queryIdx, j)
-			}
-			self, err := octupletToExt(branch.Leaf)
-			if err != nil {
-				return fmt.Errorf("fri: pcs.Verify: query %d round %d: decode leaf: %w", queryIdx, j, err)
-			}
-			sib, err := octupletToExt(branch.Siblings[len(branch.Siblings)-1])
-			if err != nil {
-				return fmt.Errorf("fri: pcs.Verify: query %d round %d: decode sibling: %w", queryIdx, j, err)
-			}
-			rq.Rounds[j] = inputPair{Self: self, Sibling: sib}
-		}
-
-		// Every level -- including the main degree-D polynomial, introduced
-		// at round 0 -- binds the same way: authenticate its rows against
-		// their declared shape, then reconstruct its conjugate pair at
-		// (position, position^1), using alphaDeep = FoldAlphas[round]²: the
-		// square of that SAME round's own fold challenge, never an earlier
-		// round's (see reconstructQueryValueAt).
-		for levelIdx, bundle := range layout {
-			round, err := pcs.roundForSize(bundle.SizeLog2)
-			if err != nil {
-				return err
-			}
-			if round > pcs.Params.numRounds() {
-				return fmt.Errorf("fri: pcs.Verify: level %d introduced at round %d, must be <= %d",
-					levelIdx, round, pcs.Params.numRounds())
-			}
-			domain := pcs.Params.domainsLight[round]
-			levelSize, err := reconstructDomainSize(domain)
-			if err != nil {
-				return err
-			}
-			label := fmt.Sprintf("level %d", levelIdx)
-			if round == 0 {
-				label = "round 0"
-			}
-			if err = bindInputTreeOpenings(label, inputOpening, inputIndexByBatch,
-				levelSize, orders[levelIdx], bundle, in.Shapes); err != nil {
-				return fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
-			}
-			var alphaDeep field.Ext
-			if int(round) < len(foldAlphas) {
-				alphaDeep.Square(&foldAlphas[round])
-			} else if len(foldAlphas) > 0 {
-				// Boundary round (round == numRounds()): no fold challenge exists
-				// at this round. Use the first power of the last fold challenge to
-				// batch the bundle's entries; the first power is distinct from round
-				// numRounds()-1's alphaDeep = foldAlphas[numRounds()-1]^2.
-				alphaDeep = foldAlphas[len(foldAlphas)-1]
-			}
-			levelPos := queryPosition >> round
-			self, err := reconstructQueryValueAt(pcs, bundle, inputOpening, inputIndexByBatch, levelSize,
-				claimed, zeta, alphaDeep, domainPointExt(domain, levelPos), false, rq.Rounds[round].Self)
-			if err != nil {
-				return err
-			}
-			sib, err := reconstructQueryValueAt(pcs, bundle, inputOpening, inputIndexByBatch, levelSize,
-				claimed, zeta, alphaDeep, domainPointExt(domain, levelPos^1), true, rq.Rounds[round].Sibling)
-			if err != nil {
-				return err
-			}
-			rq.Aux[round] = inputPair{Self: self, Sibling: sib}
-		}
-
-		// D=1: numRounds()==0 so checkFolds runs zero iterations and never
-		// ties the top-level pair to the final polynomial. Do it explicitly:
-		// the revealed FinalPoly IS the constant layer-0 codeword and both
-		// conjugate positions must match it exactly.
-		if pcs.Params.numRounds() == 0 {
-			pair := rq.Aux[0]
-			sibFinal := finalCodeword[queryPosition^1]
-			if !pair.Self.Equal(&rq.Final) {
-				return fmt.Errorf("fri: pcs.Verify: query %d: round-0 self does not match FinalPoly", queryIdx)
-			}
-			if !pair.Sibling.Equal(&sibFinal) {
-				return fmt.Errorf("fri: pcs.Verify: query %d: round-0 sibling does not match FinalPoly", queryIdx)
-			}
-		}
-
-		resolved[queryIdx] = rq
 	}
 
 	return checkFolds(pcs.Params, resolved, in.Challenges.FoldAlphas, positions)
+}
+
+// verifyQueryCtx bundles the per-Verify, query-independent inputs so a single
+// query can be authenticated and reconstructed in isolation (see
+// verifyQueryCtx.resolve). All fields are read-only during resolution, which is
+// what makes the query loop safe to parallelize.
+type verifyQueryCtx struct {
+	pcs               *PCS
+	layout            layout
+	proof             OpeningProof
+	inputFrontiers    [][]field.Octuplet
+	inputCaps         []InputCap
+	inputCapInfos     []inputCapInfo
+	runningFrontiers  [][]field.Octuplet
+	layoutClaims      [][][]quotientClaim
+	inputIndexByBatch []int
+	orders            [][]int
+	shapes            []Shape
+	foldAlphas        []field.Ext
+	finalCodeword     []field.Ext
+}
+
+// resolve authenticates one query's Merkle openings and reconstructs its
+// per-round fold inputs into a resolvedQuery. It is a straight extraction of
+// the former per-query body of Verify.
+func (vq verifyQueryCtx) resolve(queryIdx, queryPosition int) (resolvedQuery, error) {
+	pcs := vq.pcs
+	rq := resolvedQuery{
+		// Rounds[0..numRounds()-1] hold running-layer pairs; Rounds[0] is
+		// always zero (no committed layer at round 0). An extra slot at
+		// index numRounds() holds the zero seed for any level introduced
+		// at that boundary round (e.g. a D=1 aux level at the final round).
+		Rounds: make([]inputPair, pcs.Params.numRounds()+1),
+		Aux:    make(map[uint8]inputPair, len(vq.layout)),
+		Final:  vq.finalCodeword[queryPosition>>pcs.Params.numRounds()],
+	}
+
+	inputOpening := vq.proof.InputQueries[queryIdx]
+	source := inputQuerySource{
+		opening:           inputOpening,
+		caps:              vq.inputCaps,
+		frontiers:         vq.inputFrontiers,
+		capInfos:          vq.inputCapInfos,
+		shapes:            vq.shapes,
+		inputIndexByBatch: vq.inputIndexByBatch,
+		params:            pcs.Params,
+		queryPosition:     queryPosition,
+	}
+	if err := source.authenticate(); err != nil {
+		return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
+	}
+
+	// Running layers: authenticate and decode directly from the committed
+	// codeword -- no PCS reconstruction involved. Computed before the level
+	// loop below, since a level's own reconstruction seeds on this same
+	// round's running pair (rq.Rounds[0] is left at its zero value, so
+	// round 0 needs no special case).
+	for j := uint8(1); j < pcs.Params.numRounds(); j++ {
+		opening := vq.proof.FRIProof.RunningQueries[queryIdx][j-1]
+		depth := merkleCapDepth(pcs.Params.NumQueries, int(pcs.Params.LogCodewordSize-j))
+		if err := checkQueryLayerShape(
+			opening, vq.runningFrontiers[j], 1<<(pcs.Params.LogCodewordSize-j), depth); err != nil {
+			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d round %d: %w", queryIdx, j, err)
+		}
+		if err := opening.AuthenticateToCap(queryPosition>>j, vq.runningFrontiers[j]); err != nil {
+			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d round %d: %w", queryIdx, j, err)
+		}
+		if len(opening.Siblings) == 0 {
+			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d round %d: branch carries no sibling", queryIdx, j)
+		}
+		self, err := octupletToExt(opening.Leaf)
+		if err != nil {
+			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d round %d: decode leaf: %w", queryIdx, j, err)
+		}
+		sib, err := octupletToExt(opening.Siblings[len(opening.Siblings)-1])
+		if err != nil {
+			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d round %d: decode sibling: %w", queryIdx, j, err)
+		}
+		rq.Rounds[j] = inputPair{Self: self, Sibling: sib}
+	}
+
+	// Every level -- including the main degree-D polynomial, introduced
+	// at round 0 -- binds the same way: authenticate its rows against
+	// their declared shape, then reconstruct its conjugate pair at
+	// (position, position^1), using alphaDeep = FoldAlphas[round]²: the
+	// square of that SAME round's own fold challenge, never an earlier
+	// round's (see reconstructQueryValueAt).
+	for levelIdx, bundle := range vq.layout {
+		round, err := pcs.roundForSize(bundle.SizeLog2)
+		if err != nil {
+			return resolvedQuery{}, err
+		}
+		if round > pcs.Params.numRounds() {
+			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: level %d introduced at round %d, must be <= %d",
+				levelIdx, round, pcs.Params.numRounds())
+		}
+		domain := pcs.Params.domainsLight[round]
+		levelSize, err := reconstructDomainSize(domain)
+		if err != nil {
+			return resolvedQuery{}, err
+		}
+		label := fmt.Sprintf("level %d", levelIdx)
+		if round == 0 {
+			label = "round 0"
+		}
+		if err = bindInputTreeOpenings(label, source, levelSize, vq.orders[levelIdx], bundle); err != nil {
+			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
+		}
+		var alphaDeep field.Ext
+		if int(round) < len(vq.foldAlphas) {
+			alphaDeep.Square(&vq.foldAlphas[round])
+		} else if len(vq.foldAlphas) > 0 {
+			// Boundary round (round == numRounds()): no fold challenge exists
+			// at this round. Use the first power of the last fold challenge to
+			// batch the bundle's entries; the first power is distinct from round
+			// numRounds()-1's alphaDeep = foldAlphas[numRounds()-1]^2.
+			alphaDeep = vq.foldAlphas[len(vq.foldAlphas)-1]
+		}
+		levelPos := queryPosition >> round
+		entryClaims := vq.layoutClaims[levelIdx]
+		self, err := reconstructQueryValueAt(bundle, entryClaims, source, levelSize,
+			alphaDeep, domainPointExt(domain, levelPos), false, rq.Rounds[round].Self)
+		if err != nil {
+			return resolvedQuery{}, err
+		}
+		sib, err := reconstructQueryValueAt(bundle, entryClaims, source, levelSize,
+			alphaDeep, domainPointExt(domain, levelPos^1), true, rq.Rounds[round].Sibling)
+		if err != nil {
+			return resolvedQuery{}, err
+		}
+		rq.Aux[round] = inputPair{Self: self, Sibling: sib}
+	}
+
+	// D=1: numRounds()==0 so checkFolds runs zero iterations and never
+	// ties the top-level pair to the final polynomial. Do it explicitly:
+	// the revealed FinalPoly IS the constant layer-0 codeword and both
+	// conjugate positions must match it exactly.
+	if pcs.Params.numRounds() == 0 {
+		pair := rq.Aux[0]
+		sibFinal := vq.finalCodeword[queryPosition^1]
+		if !pair.Self.Equal(&rq.Final) {
+			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d: round-0 self does not match FinalPoly", queryIdx)
+		}
+		if !pair.Sibling.Equal(&sibFinal) {
+			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d: round-0 sibling does not match FinalPoly", queryIdx)
+		}
+	}
+
+	return rq, nil
 }
 
 func inputOpeningRoots(layout layout, orders [][]int, roots []field.Octuplet) (QueryLayerRoots, []int) {
@@ -1410,28 +1740,125 @@ func inputOpeningRoots(layout layout, orders [][]int, roots []field.Octuplet) (Q
 	return inputRoots, indexByBatch
 }
 
-func authenticateInputQuery(p Params, opening InputQuery, roots QueryLayerRoots, queryPosition int) error {
-	if len(opening) != len(roots) {
-		return fmt.Errorf("input query has %d tree openings, want %d", len(opening), len(roots))
+type inputCapInfo struct {
+	height    int
+	depth     int
+	rateLog   int
+	revealed  []int
+	queryRows []bool
+}
+
+// inputAuxDepth maps a plaintext table size to the tree level carrying its
+// conjugate-row auxiliary leaves. It is shared by cap construction,
+// verification, and query opening so size-one and bottom tables are handled
+// identically everywhere.
+func inputAuxDepth(rateLog, sizeLog2, bottom int) (int, bool) {
+	if sizeLog2 >= bottom {
+		return 0, false
 	}
-	for i, branch := range opening {
-		if len(branch.Leaves) == 0 || branch.Leaves[len(branch.Leaves)-1] == nil {
-			return fmt.Errorf("input tree %d: missing bottom level", i)
-		}
-		numLeaves := 1 << len(branch.Leaves)
-		codewordSize := 1 << p.LogCodewordSize
-		if numLeaves > codewordSize || codewordSize%numLeaves != 0 {
-			return fmt.Errorf("input tree %d: tree size %d incompatible with domain size %d", i, numLeaves, codewordSize)
-		}
-		root, err := branch.RecoverRoot(queryPosition / (codewordSize / numLeaves))
-		if err != nil {
-			return fmt.Errorf("input tree %d: recover root: %w", i, err)
-		}
-		if root != roots[i] {
-			return fmt.Errorf("input tree %d: Merkle proof invalid", i)
+	auxDepth := rateLog + sizeLog2 - 1
+	if auxDepth < 0 {
+		return 0, false
+	}
+	return auxDepth, true
+}
+
+func capDepthFromFrontier(frontier []field.Octuplet) (int, error) {
+	if len(frontier) == 0 || len(frontier)&(len(frontier)-1) != 0 {
+		return 0, fmt.Errorf("frontier size is not a power of two")
+	}
+	return bits.TrailingZeros(uint(len(frontier))), nil
+}
+
+func inputCapShapeInfo(p Params, shape Shape) (inputCapInfo, error) {
+	rateLog := int(p.LogCodewordSize) - int(p.LogPlainTextSize)
+	if rateLog < 0 {
+		return inputCapInfo{}, fmt.Errorf("negative inverse-rate log")
+	}
+	bottom := -1
+	for sizeLog2, sized := range shape {
+		if sized.BaseWidth+sized.ExtWidth != 0 {
+			bottom = sizeLog2
 		}
 	}
-	return nil
+	if bottom < 0 {
+		return inputCapInfo{}, fmt.Errorf("shape has no committed size")
+	}
+	height := rateLog + bottom
+	if height <= 0 {
+		return inputCapInfo{}, fmt.Errorf("shape has invalid tree height %d", height)
+	}
+	depth := merkleCapDepth(p.NumQueries, height)
+	info := inputCapInfo{
+		height:    height,
+		depth:     depth,
+		rateLog:   rateLog,
+		queryRows: make([]bool, height),
+	}
+	info.queryRows[height-1] = true
+	for sizeLog2, sized := range shape[:bottom] {
+		if sized.BaseWidth+sized.ExtWidth == 0 {
+			continue
+		}
+		auxDepth, isAux := inputAuxDepth(rateLog, sizeLog2, bottom)
+		if !isAux {
+			continue
+		}
+		if auxDepth < depth {
+			info.revealed = append(info.revealed, sizeLog2)
+			continue
+		}
+		info.queryRows[auxDepth] = true
+	}
+	return info, nil
+}
+
+func authenticateInputCap(
+	info inputCapInfo, treeCap InputCap, shape Shape, root field.Octuplet,
+) ([]field.Octuplet, error) {
+	depth := info.depth
+	if depth == 0 {
+		if len(treeCap.Nodes) != 0 || len(treeCap.Tables) != 0 {
+			return nil, fmt.Errorf("depth-zero input cap must be empty")
+		}
+		return []field.Octuplet{root}, nil
+	}
+	if len(treeCap.Nodes) != 1<<depth {
+		return nil, fmt.Errorf("input cap has %d nodes, want %d", len(treeCap.Nodes), 1<<depth)
+	}
+	if len(treeCap.Tables) != len(info.revealed) {
+		return nil, fmt.Errorf("input cap has %d revealed tables, want %d", len(treeCap.Tables), len(info.revealed))
+	}
+
+	aux := make([]*field.Octuplet, len(treeCap.Nodes)-1)
+	for i, sizeLog2 := range info.revealed {
+		table := treeCap.Tables[i]
+		if int(table.SizeLog2) != sizeLog2 {
+			return nil, fmt.Errorf("revealed table %d has size %d, want %d", i, table.SizeLog2, sizeLog2)
+		}
+		encodedLog := info.rateLog + sizeLog2
+		if len(table.Rows) != 1<<encodedLog {
+			return nil, fmt.Errorf("revealed table %d has %d rows, want %d", i, len(table.Rows), 1<<encodedLog)
+		}
+		shapeAtSize := shape[sizeLog2]
+		for rowIdx, row := range table.Rows {
+			if !rowOpeningMatchesShape(row, shapeAtSize) {
+				return nil, fmt.Errorf("revealed table %d row %d has wrong shape", i, rowIdx)
+			}
+		}
+		auxDepth := encodedLog - 1
+		levelStart := (1 << auxDepth) - 1
+		for pairIdx := range len(table.Rows) / 2 {
+			pair := RowPair{table.Rows[2*pairIdx], table.Rows[2*pairIdx+1]}
+			digest := hashAuxPair(pair, true)
+			aux[levelStart+pairIdx] = &digest
+		}
+	}
+	merkleCap := MerkleCap{Nodes: treeCap.Nodes, Aux: aux}
+	if err := merkleCap.Authenticate(depth, root); err != nil {
+		return nil, err
+	}
+	return treeCap.Nodes, nil
 }
 
 // bindInputTreeOpenings validates that each batch's authenticated branch carries
@@ -1440,25 +1867,20 @@ func authenticateInputQuery(p Params, opening InputQuery, roots QueryLayerRoots,
 // just the on-path one: the conjugate is unread by the fold today but is still
 // transmitted, so an unvalidated conjugate would be a malleable proof.
 func bindInputTreeOpenings(
-	label string, opening InputQuery, inputIndexByBatch []int,
-	levelSize int, order []int, bundle sizeBundle, shapes []Shape,
+	label string, source inputQuerySource,
+	levelSize int, order []int, bundle sizeBundle,
 ) error {
 	for _, batchIdx := range order {
-		branchIdx := inputIndexByBatch[batchIdx]
-		if branchIdx < 0 || branchIdx >= len(opening) {
-			return fmt.Errorf("%s: batch %d has no input opening", label, batchIdx)
-		}
-		branch := opening[branchIdx]
-		pair, err := branch.pairAtLevel(levelSize)
+		pair, err := source.pairAtLevel(batchIdx, levelSize)
 		if err != nil {
-			return fmt.Errorf("%s: tree %d level row: %w", label, branchIdx, err)
+			return fmt.Errorf("%s: batch %d level row: %w", label, batchIdx, err)
 		}
-		shape := shapes[batchIdx][bundle.SizeLog2]
+		shape := source.shapes[batchIdx][bundle.SizeLog2]
 		if !rowOpeningMatchesShape(pair[0], shape) {
-			return fmt.Errorf("%s: tree %d row shape mismatch", label, branchIdx)
+			return fmt.Errorf("%s: batch %d row shape mismatch", label, batchIdx)
 		}
 		if !rowOpeningMatchesShape(pair[1], shape) {
-			return fmt.Errorf("%s: tree %d conjugate row shape mismatch", label, branchIdx)
+			return fmt.Errorf("%s: batch %d conjugate row shape mismatch", label, batchIdx)
 		}
 	}
 	return nil

@@ -1,6 +1,6 @@
 # Smart Contract Style Guide
 
-The following document serves as the expected style guide for the Linea smart contracts:
+The following document serves as the expected style guide for the Lineth smart contracts:
 
 ## Licenses
 - All interfaces will use `// SPDX-License-Identifier: Apache-2.0` for others to potentially consume

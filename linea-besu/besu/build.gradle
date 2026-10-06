@@ -14,7 +14,7 @@
  */
 
 plugins {
-  id 'net.consensys.zkevm.kotlin-common-minimal-conventions'
+  id 'lineth.kotlin-common-minimal-conventions'
   id 'java-library'
 }
 
@@ -38,11 +38,51 @@ dependencies {
   api("${besuArtifactGroup}.internal:besu-crypto-algorithms") {
     transitive = false
   }
+  api("${besuArtifactGroup}.internal:besu-ethereum-rlp") {
+    transitive = false
+  }
+  // The umbrella besu-plugin-api holds org.hyperledger.besu.plugin.services.* types that stayed
+  // top-level (BesuEvents, TransactionValidatorService, ...). It is kept transitive=false (like
+  // everything else here) to keep Besu's transitive graph (tuweni, jackson, netty, ...) off
+  // consumers' classpaths.
   api("${besuArtifactGroup}:besu-plugin-api") {
     transitive = false
   }
-  api("${besuArtifactGroup}.internal:besu-ethereum-rlp") {
-    transitive = false
+  // Besu 26.8.1 split the plugin API into fine submodules, each hosting some of the
+  // org.hyperledger.besu.plugin.services.* types that downstream plugins reference directly.
+  // Because the umbrella is transitive=false, every submodule a consumer uses must be enumerated
+  // here explicitly — the umbrella pom's own dependency list is NOT followed. Current usage:
+  //   core           -> BesuService, PicoCLIOptions
+  //   metrics        -> MetricsSystem, metrics.*
+  //   security       -> securitymodule.*
+  //   permissioning  -> permissioning.*
+  //   storage        -> BesuConfiguration, storage.*
+  //   worldstate     -> WorldStateService
+  //   p2p            -> p2p.P2PService
+  //   txpool         -> TransactionPoolValidatorService, transactionpool.*, txvalidator.*
+  //   sync           -> sync.SynchronizationService
+  //   rpc            -> RpcEndpointService, rpc.*, exception.PluginRpcEndpointException
+  //   chain          -> BlockchainService
+  //   execution      -> BlockSimulationService, TransactionSimulationService
+  //   blockproduction-> mining.MiningService, TransactionSelectionService, txselection.*
+  [
+    'core',
+    'metrics',
+    'security',
+    'permissioning',
+    'storage',
+    'worldstate',
+    'p2p',
+    'txpool',
+    'sync',
+    'rpc',
+    'chain',
+    'execution',
+    'blockproduction',
+  ].each { submodule ->
+    api("${besuArtifactGroup}:besu-plugin-api-${submodule}") {
+      transitive = false
+    }
   }
 }
 
@@ -65,6 +105,17 @@ def mavenLocalBase = providers.systemProperty('maven.repo.local')
     .orElse(providers.systemProperty('user.home').map { it + '/.m2/repository' })
     .get()
 
+// True when the invocation requests only `clean` task(s), e.g. `./gradlew :linea-besu:besu:clean`
+// (the leaf task name of every requested task is `clean`). In that case the on-demand Besu
+// build below is skipped: a clean must never trigger a multi-minute source build of the very
+// artifacts it is about to delete. Version resolution still runs so the root
+// resolutionStrategy can align versionless Besu deps during configuration.
+def requestedTaskNames = gradle.startParameter.taskNames
+def onlyCleanRequested = !requestedTaskNames.isEmpty() && requestedTaskNames.every { String tn ->
+  def leaf = tn.contains(':') ? tn.substring(tn.lastIndexOf(':') + 1) : tn
+  leaf.equalsIgnoreCase('clean')
+}
+
 // Expose Besu version/materialization helper for other modules that need a Besu version
 // during dependency resolution.
 //
@@ -84,19 +135,23 @@ rootProject.ext.resolveBesuVersion = {
     def resolvedVersion = resolveBesuVersionCached(providers, besuCommit, rootDirFile, cachedResolvedFile)
     if (!isBesuAvailableInMavenLocal(logger, resolvedVersion, mavenLocalBase)
         && !isBesuAvailableInMaven(logger, resolvedVersion)) {
-      logger.lifecycle("Besu BOM ${resolvedVersion} missing in both remote and local maven; building/publishing Besu to maven local on-demand")
-      buildAndPublishBesuAction(
-          logger,
-          providers,
-          besuCommit,
-          rootDirFile,
-          false,
-          skipDownloadBesuDist,
-          resolvedVersion,
-          cloudsmithUser,
-          cloudsmithApiKey,
-          mavenLocalBase
-          )
+      if (onlyCleanRequested) {
+        logger.lifecycle("Besu BOM ${resolvedVersion} missing in both remote and local maven, but only clean task(s) were requested; skipping on-demand Besu build.")
+      } else {
+        logger.lifecycle("Besu BOM ${resolvedVersion} missing in both remote and local maven; building/publishing Besu to maven local on-demand")
+        buildAndPublishBesuAction(
+            logger,
+            providers,
+            besuCommit,
+            rootDirFile,
+            false,
+            skipDownloadBesuDist,
+            resolvedVersion,
+            cloudsmithUser,
+            cloudsmithApiKey,
+            mavenLocalBase
+            )
+      }
     }
 
     resolvedVersionMemo.set(resolvedVersion)
@@ -272,8 +327,7 @@ static void buildAndPublishBesuAction(
     logger.lifecycle('Skipping buildAndPublishBesu: no resolved Besu version (run a non-clean-only build first)')
     return
   }
-  def bomAvailableInMaven = isBesuAvailableInMavenLocal(logger, resolvedBesuVer, mavenLocalBase) ||
-      isBesuAvailableInMaven(logger, resolvedBesuVer)
+  def bomAvailableInMaven = isBesuAvailableInMaven(logger, resolvedBesuVer)
   def publishGradleTaskName = publishToMaven ? "publish" : "publishToMavenLocal"
   def shouldSkip = false
   if (publishToMaven) {
@@ -306,7 +360,7 @@ static void buildAndPublishBesuAction(
     return
   }
 
-  logger.lifecycle("Running buildAndPublishBesu as Besu ${resolvedBesuVer} was not found in remote/local maven")
+  logger.lifecycle("Running buildAndPublishBesu as Besu ${resolvedBesuVer} was not found in remote maven")
   runBuildDistAndPublishScript(providers, rootDir, resolvedBesuVer, publishGradleTaskName, cloudsmithUser, cloudsmithApiKey)
 }
 

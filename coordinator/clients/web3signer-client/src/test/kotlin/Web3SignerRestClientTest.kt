@@ -59,14 +59,18 @@ class Web3SignerRestClientTest {
   fun web3Signer_Sign() {
     val keyPair = ECKeyPair(privateKey, publicKey)
 
-    val msg = "Message for signing"
-    val msgHash: ByteArray = Hash.sha3(msg.toByteArray())
-    val signature = Sign.signMessage(msg.toByteArray(), keyPair, true)
+    val digest: ByteArray = Hash.sha3("Message for signing".toByteArray())
+    val signature = Sign.signMessage(digest, keyPair, false)
 
     val returnSignature = Hex.toHexString(signature.r + signature.s + signature.v)
     wiremock.stubFor(
       WireMock.post("$path${publicKeyBytes.encodeHex()}")
         .withHeader("Content-Type", WireMock.containing("application/json"))
+        .withRequestBody(
+          WireMock.equalToJson(
+            """{"data":"${digest.encodeHex()}","applyHash":false}""",
+          ),
+        )
         .willReturn(
           WireMock.ok()
             .withHeader("Content-type", "text/plain; charset=utf-8\n")
@@ -76,7 +80,7 @@ class Web3SignerRestClientTest {
 
     assertThat(web3SignerClient.publicKey()).isEqualTo(publicKeyBytes)
 
-    val signed = web3SignerClient.sign(msg.toByteArray()).get()
+    val signed = web3SignerClient.sign(digest).get()
     assertThat(signed.toRSBytes()).isEqualTo(signature.r + signature.s)
 
     val (r, s) = signed
@@ -84,8 +88,33 @@ class Web3SignerRestClientTest {
     assertThat(s).isEqualTo(BigInteger(Hex.toHexString(signature.s), 16))
 
     val eCDSASignature = ECDSASignature(r, s)
-    val derivedSignatureData = Sign.createSignatureData(eCDSASignature, publicKey, msgHash)
+    val derivedSignatureData = Sign.createSignatureData(eCDSASignature, publicKey, digest)
     assertThat(derivedSignatureData).isEqualTo(signature)
+  }
+
+  @Test
+  fun `rejects input that is not a 32-byte digest`() {
+    val error = assertThrows<IllegalArgumentException> {
+      web3SignerClient.sign(ByteArray(31))
+    }
+
+    assertThat(error).hasMessageContaining("32-byte digest")
+    wiremock.verify(0, WireMock.postRequestedFor(WireMock.urlPathMatching("$path.*")))
+  }
+
+  @Test
+  fun `rejects a malformed signature response`() {
+    val digest = Hash.sha3("Message for signing".toByteArray())
+    wiremock.stubFor(
+      WireMock.post("$path${publicKeyBytes.encodeHex()}")
+        .willReturn(WireMock.ok("0x01")),
+    )
+
+    val error = assertThrows<Exception> {
+      web3SignerClient.sign(digest).get()
+    }
+
+    assertThat(error.cause ?: error).hasMessageContaining("expected 65 bytes")
   }
 
   @Test
@@ -99,6 +128,6 @@ class Web3SignerRestClientTest {
             .withStatusMessage("Public Key not found"),
         ),
     )
-    assertThrows<Exception> { web3SignerClient.sign("Message".toByteArray()).get() }
+    assertThrows<Exception> { web3SignerClient.sign(Hash.sha3("Message".toByteArray())).get() }
   }
 }

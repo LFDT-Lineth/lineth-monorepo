@@ -22,6 +22,7 @@ import io.libp2p.pubsub.gossip.GossipScoreParams
 import io.libp2p.pubsub.gossip.GossipTopicsScoreParams
 import io.libp2p.pubsub.gossip.builders.GossipParamsBuilder
 import io.libp2p.pubsub.gossip.builders.GossipRouterBuilder
+import io.libp2p.security.noise.NoiseXXSecureChannel
 import io.libp2p.security.secio.SecIoSecureChannel
 import io.libp2p.transport.tcp.TcpTransport
 import maru.config.P2PConfig
@@ -39,6 +40,7 @@ import tech.pegasys.teku.networking.p2p.libp2p.PeerManager
 import tech.pegasys.teku.networking.p2p.libp2p.gossip.GossipTopicHandlers
 import tech.pegasys.teku.networking.p2p.libp2p.gossip.LibP2PGossipNetwork
 import tech.pegasys.teku.networking.p2p.libp2p.gossip.PreparedPubsubMessage
+import tech.pegasys.teku.networking.p2p.libp2p.rpc.InboundRpcStreamLimiter
 import tech.pegasys.teku.networking.p2p.libp2p.rpc.RpcHandler
 import tech.pegasys.teku.networking.p2p.network.P2PNetwork
 import tech.pegasys.teku.networking.p2p.network.PeerHandler
@@ -121,9 +123,10 @@ class Libp2pNetworkFactory(
     val peerId = PeerId.fromPubKey(privateKey.publicKey())
     val libP2PNodeId = LibP2PNodeId(peerId)
 
+    val inboundRpcStreamLimiter = InboundRpcStreamLimiter(128)
     val rpcHandlers =
       rpcMethods.map { rpcMethod ->
-        RpcHandler(asyncRunner, rpcMethod, metricsSystem)
+        RpcHandler(asyncRunner, rpcMethod, metricsSystem, inboundRpcStreamLimiter)
       }
 
     val peerManager =
@@ -214,6 +217,7 @@ class Libp2pNetworkFactory(
         factory = { privateKey }
       }
       secureChannels {
+        add { localKey, muxerProtocols -> NoiseXXSecureChannel(localKey, muxerProtocols) }
         add { localKey, muxerProtocols -> SecIoSecureChannel(localKey, muxerProtocols) }
       }
       connectionHandlers {
@@ -222,6 +226,7 @@ class Libp2pNetworkFactory(
         }
       }
       muxers {
+        add(StreamMuxerProtocol.getYamux())
         add(StreamMuxerProtocol.Mplex)
       }
     }

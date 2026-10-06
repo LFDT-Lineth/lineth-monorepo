@@ -1,8 +1,8 @@
 plugins {
-  id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'lineth.kotlin-library-conventions'
 }
 
-description="Linea test utilities for file system interactions"
+description="Lineth test utilities for file system interactions"
 
 dependencies {
   testImplementation(project(':jvm-libs:generic:extensions:kotlin'))

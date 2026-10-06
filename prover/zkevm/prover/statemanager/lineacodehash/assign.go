@@ -251,18 +251,16 @@ func (mh *Module) Assign(run *wizard.ProverRuntime) {
 				continue
 			}
 
-			currIsNonEmptyKeccakLimbs := true
+			// The code-hash is the empty one only if all of its limbs match.
+			currIsEmptyKeccak := true
 			for k := range common.NbLimbU256 {
-				if builder.isHashEnd[i].IsZero() {
-					currIsNonEmptyKeccakLimbs = false
-				}
-				if codeHash[k][j] == emptyKeccak[k] {
-					currIsNonEmptyKeccakLimbs = false
+				if codeHash[k][j] != emptyKeccak[k] {
+					currIsEmptyKeccak = false
 				}
 				builder.codeHash[k] = append(builder.codeHash[k], codeHash[k][j])
 			}
 
-			if currIsNonEmptyKeccakLimbs {
+			if !builder.isHashEnd[i].IsZero() && !currIsEmptyKeccak {
 				builder.isNonEmptyKeccak = append(builder.isNonEmptyKeccak, field.One())
 			} else {
 				builder.isNonEmptyKeccak = append(builder.isNonEmptyKeccak, field.Zero())
@@ -297,6 +295,9 @@ func (mh *Module) Assign(run *wizard.ProverRuntime) {
 		// assign isEmptyKeccak[i]
 		mh.CptIsEmptyKeccak[i].Run(run)
 	}
+
+	// reads the isEmptyKeccak columns, hence after the loop above
+	mh.CptIsEmptyCodeHash.Run(run)
 
 	for i := range poseidon2.BlockSize {
 		run.AssignColumn(mh.PrevState[i].GetColID(), smartvectors.RightZeroPadded(builder.prevState[i], mh.Inputs.Size))

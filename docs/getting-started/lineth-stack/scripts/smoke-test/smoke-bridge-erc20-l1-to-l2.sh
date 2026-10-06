@@ -29,7 +29,7 @@ cast_l2_call() {
 
 cast_l1_send() {
   docker run --rm \
-    --network lineth-stack_linea \
+    --network lineth-stack_lineth \
     --entrypoint cast \
     -e L1_RPC_URL="$L1_RPC_URL" \
     -e L1_DEPLOYER_PRIVATE_KEY="$L1_DEPLOYER_PRIVATE_KEY" \

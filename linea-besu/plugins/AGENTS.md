@@ -8,7 +8,7 @@
 
 ## Package Overview
 
-Besu blockchain client plugins for Linea: the sequencer plugin (transaction ordering, profitability, tracing integration), finalized-tag-updater, and state-recovery modules. Built as Gradle distributions that extend Hyperledger Besu.
+Besu blockchain client plugins for Lineth: the sequencer plugin (transaction ordering, profitability, tracing integration), finalized-tag-updater, and state-recovery modules. Built as Gradle distributions that extend Hyperledger Besu.
 
 ## How to Run
 

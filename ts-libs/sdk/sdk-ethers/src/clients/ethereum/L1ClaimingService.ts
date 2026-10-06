@@ -7,7 +7,7 @@ import {
   ErrorDescription,
 } from "ethers";
 
-import { ILineaRollupClient } from "../../core/clients/ethereum";
+import { ILinethRollupClient } from "../../core/clients/ethereum";
 import { FinalizationMessagingInfo, Proof } from "../../core/clients/ethereum/IMerkleTreeService";
 import { IL2MessageServiceClient, IL2MessageServiceLogClient } from "../../core/clients/linea";
 import { OnChainMessageStatus } from "../../core/enums/message";
@@ -21,13 +21,13 @@ export class L1ClaimingService {
   /**
    * Initializes a new instance of the L1ClaimingService.
    *
-   * @param {ILineaRollupClient<Overrides, ContractTransactionResponse>} l1ContractClient - An instance of a class implementing the `ILineaRollupClient` interface, used to interact with the L1 contract.
+   * @param {ILinethRollupClient<Overrides, ContractTransactionResponse>} l1ContractClient - An instance of a class implementing the `ILinethRollupClient` interface, used to interact with the L1 contract.
    * @param {IL2MessageServiceClient} l2ContractClient - An instance of a class implementing the `IL2MessageServiceClient` interface, used to interact with the L2 contract.
    * @param {IL2MessageServiceLogClient} l2EventLogClient - An instance of a class implementing the `IL2MessageServiceLogClient` interface for fetching L2 event logs.
    * @param {Network} network - The network configuration.
    */
   constructor(
-    public readonly l1ContractClient: ILineaRollupClient<
+    public readonly l1ContractClient: ILinethRollupClient<
       Overrides,
       TransactionReceipt,
       TransactionResponse,

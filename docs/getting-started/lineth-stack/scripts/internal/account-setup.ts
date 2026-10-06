@@ -37,7 +37,7 @@ type PrecomputedAddressPlan = {
   };
   signers: Record<string, string>;
   l1: {
-    LineaRollupV8: string;
+    LinethRollupV8: string;
   };
   l2: {
     L2MessageService: string;
@@ -56,7 +56,7 @@ type BuildPrecomputedAddressPlanInput = {
   wallets: Record<string, RuntimeWallet>;
 };
 
-const DEFAULT_RUNTIME_PASSWORD = "linea-local-dev";
+const DEFAULT_RUNTIME_PASSWORD = "lineth-local-dev";
 const ACCOUNTS_DIR = process.env.LINETH_ACCOUNTS_DIR ?? process.env.LINETH_SHARED_DIR ?? "/accounts";
 const OUT_JSON = path.join(ACCOUNTS_DIR, "addresses-precomputed.json");
 const OUT_RUNTIME_KEYS_ENV = path.join(ACCOUNTS_DIR, "runtime-keys.env");
@@ -255,7 +255,7 @@ export function buildPrecomputedAddressPlan(input: BuildPrecomputedAddressPlanIn
         verifyEqual(stringField(signers, key, "addresses-precomputed.json.signers"), value, key);
       }
     }
-    verifyAddressEqual(stringField(l1, "LineaRollupV8", "addresses-precomputed.json.l1"), expected.l1LineaRollup, "L1 LineaRollupV8");
+    verifyAddressEqual(stringField(l1, "LinethRollupV8", "addresses-precomputed.json.l1"), expected.l1LinethRollup, "L1 LinethRollupV8");
     verifyAddressEqual(
       stringField(l2, "L2MessageService", "addresses-precomputed.json.l2"),
       expected.l2MessageService,
@@ -295,7 +295,7 @@ export function buildPrecomputedAddressPlan(input: BuildPrecomputedAddressPlanIn
       },
       signers: signerAddresses,
       l1: {
-        LineaRollupV8: computed.l1LineaRollup,
+        LinethRollupV8: computed.l1LinethRollup,
       },
       l2: {
         L2MessageService: computed.l2MessageService,
@@ -419,7 +419,7 @@ async function main() {
 
   writeFileAtomic(OUT_JSON, `${JSON.stringify(addresses, null, 2)}\n`, CONTAINER_READABLE_FILE_MODE);
   log(`${reused ? "Reused" : "Wrote"} ${OUT_JSON}`);
-  log(`Pre-computed L1 LineaRollupV8 (proxy): ${addresses.l1.LineaRollupV8}`);
+  log(`Pre-computed L1 LinethRollupV8 (proxy): ${addresses.l1.LinethRollupV8}`);
   log(`Pre-computed L2 MessageService: ${addresses.l2.L2MessageService}`);
   provider.destroy();
   log("Done.");

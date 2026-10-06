@@ -2,7 +2,7 @@ import { WinstonLogger } from "@lfdt-lineth/shared-utils";
 import { type LoggerOptions } from "winston";
 
 import { L1NetworkConfig, L2NetworkConfig } from "./config/config";
-import { ILineaRollupLogClient } from "../../../core/clients/blockchain/ethereum/ILineaRollupLogClient";
+import { ILinethRollupLogClient } from "../../../core/clients/blockchain/ethereum/ILinethRollupLogClient";
 import { IProvider } from "../../../core/clients/blockchain/IProvider";
 import { IL2MessageServiceClient } from "../../../core/clients/blockchain/linea/IL2MessageServiceClient";
 import { ILineaProvider } from "../../../core/clients/blockchain/linea/ILineaProvider";
@@ -29,7 +29,7 @@ import {
 } from "../../../services/processors";
 
 export type L1ToL2Deps = {
-  l1LogClient: ILineaRollupLogClient;
+  l1LogClient: ILinethRollupLogClient;
   l1Provider: IProvider;
   l2MessageServiceClient: IL2MessageServiceClient;
   l2Provider: ILineaProvider;

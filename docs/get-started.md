@@ -7,7 +7,7 @@
   - Docker should ideally have ~16 GB of Memory and 4+ CPUs to run the entire stack.
 - Docker Compose version v2.19+
 - Make v3.81+
-- Pnpm >= 11.9.0 (https://pnpm.io/installation)
+- Pnpm >= 12.6.0 (https://pnpm.io/installation)
 
 ### Run stack locally
 
@@ -87,6 +87,6 @@ For **target block / timestamp checkpoints**, L1 finalization and API **resume**
 
 ## Next steps
 
-Consider reviewing the [Linea architecture](architecture-description.md) description.
+Consider reviewing the [Lineth architecture](architecture-description.md) description.
 
 For detailed instructions on local development and building services locally, see the [Local Development Guide](local-development-guide.md).

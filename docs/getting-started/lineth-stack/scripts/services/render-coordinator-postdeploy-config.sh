@@ -17,6 +17,7 @@ is_uint() { printf '%s\n' "$1" | grep -qE '^[0-9]+$'; }
 GENESIS_STATE_ROOT_HASH=
 GENESIS_SHNARF=
 L2_MESSAGE_SERVICE_DEPLOY_BLOCK=
+LINETH_ROLLUP_L1_DEPLOY_BLOCK=
 
 while IFS= read -r line || [ -n "$line" ]; do
   case "$line" in
@@ -24,7 +25,7 @@ while IFS= read -r line || [ -n "$line" ]; do
     GENESIS_STATE_ROOT_HASH=*) GENESIS_STATE_ROOT_HASH=${line#*=} ;;
     GENESIS_SHNARF=*) GENESIS_SHNARF=${line#*=} ;;
     L2_MESSAGE_SERVICE_DEPLOY_BLOCK=*) L2_MESSAGE_SERVICE_DEPLOY_BLOCK=${line#*=} ;;
-    LINEA_ROLLUP_L1_DEPLOY_BLOCK=*) ;;
+    LINETH_ROLLUP_L1_DEPLOY_BLOCK=*) LINETH_ROLLUP_L1_DEPLOY_BLOCK=${line#*=} ;;
     DEPLOY_FORCED_TRANSACTION_GATEWAY=*) ;;
     *=*) die "unknown key in $DEPLOY_RUNTIME_ENV: ${line%%=*}" ;;
     *) die "malformed line in $DEPLOY_RUNTIME_ENV: $line" ;;

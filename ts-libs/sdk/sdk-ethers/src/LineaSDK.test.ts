@@ -8,11 +8,11 @@ import { NETWORKS } from "./core/constants";
 import { serialize } from "./core/utils";
 import { LineaSDK } from "./LineaSDK";
 import { TEST_L1_SIGNER_PRIVATE_KEY, TEST_L2_SIGNER_PRIVATE_KEY, TEST_RPC_URL } from "./utils/testing/constants/common";
-import { generateL2MessageServiceClient, generateLineaRollupClient } from "./utils/testing/helpers";
+import { generateL2MessageServiceClient, generateLinethRollupClient } from "./utils/testing/helpers";
 
 describe("LineaSDK", () => {
   describe("getL1Contract", () => {
-    it("should return LineaRollupClient in read only mode when the 'mode' option is set to 'read-only'", () => {
+    it("should return LinethRollupClient in read only mode when the 'mode' option is set to 'read-only'", () => {
       const sdk = new LineaSDK({
         mode: "read-only",
         network: "linea-sepolia",
@@ -20,21 +20,21 @@ describe("LineaSDK", () => {
         l2RpcUrlOrProvider: TEST_RPC_URL,
       });
 
-      const lineaRollupClient = sdk.getL1Contract();
-      expect(serialize(lineaRollupClient)).toStrictEqual(
+      const linethRollupClient = sdk.getL1Contract();
+      expect(serialize(linethRollupClient)).toStrictEqual(
         serialize(
-          generateLineaRollupClient(
+          generateLinethRollupClient(
             new Provider(TEST_RPC_URL),
             new LineaProvider(TEST_RPC_URL),
             NETWORKS["linea-sepolia"].l1ContractAddress,
             NETWORKS["linea-sepolia"].l2ContractAddress,
             "read-only",
-          ).lineaRollupClient,
+          ).linethRollupClient,
         ),
       );
     });
 
-    it("should return LineaRollupClient in read and write mode when the 'mode' option is set to 'read-write'", () => {
+    it("should return LinethRollupClient in read and write mode when the 'mode' option is set to 'read-write'", () => {
       const sdk = new LineaSDK({
         mode: "read-write",
         network: "linea-sepolia",
@@ -44,22 +44,22 @@ describe("LineaSDK", () => {
         l2RpcUrlOrProvider: TEST_RPC_URL,
       });
 
-      const lineaRollupClient = sdk.getL1Contract();
-      expect(serialize(lineaRollupClient)).toStrictEqual(
+      const linethRollupClient = sdk.getL1Contract();
+      expect(serialize(linethRollupClient)).toStrictEqual(
         serialize(
-          generateLineaRollupClient(
+          generateLinethRollupClient(
             new Provider(TEST_RPC_URL),
             new LineaProvider(TEST_RPC_URL),
             NETWORKS["linea-sepolia"].l1ContractAddress,
             NETWORKS["linea-sepolia"].l2ContractAddress,
             "read-write",
             new Wallet(TEST_L1_SIGNER_PRIVATE_KEY).connect(new JsonRpcProvider(TEST_RPC_URL)),
-          ).lineaRollupClient,
+          ).linethRollupClient,
         ),
       );
     });
 
-    it("should return LineaRollupClient in read and write mode if l1RpcProvider is given", () => {
+    it("should return LinethRollupClient in read and write mode if l1RpcProvider is given", () => {
       const sdk = new LineaSDK({
         mode: "read-write",
         network: "linea-sepolia",
@@ -69,22 +69,22 @@ describe("LineaSDK", () => {
         l2RpcUrlOrProvider: TEST_RPC_URL,
       });
 
-      const lineaRollupClient = sdk.getL1Contract();
-      expect(serialize(lineaRollupClient)).toStrictEqual(
+      const linethRollupClient = sdk.getL1Contract();
+      expect(serialize(linethRollupClient)).toStrictEqual(
         serialize(
-          generateLineaRollupClient(
+          generateLinethRollupClient(
             new Provider(TEST_RPC_URL),
             new LineaProvider(TEST_RPC_URL),
             NETWORKS["linea-sepolia"].l1ContractAddress,
             NETWORKS["linea-sepolia"].l2ContractAddress,
             "read-write",
             new Wallet(TEST_L1_SIGNER_PRIVATE_KEY).connect(new Provider(TEST_RPC_URL)),
-          ).lineaRollupClient,
+          ).linethRollupClient,
         ),
       );
     });
 
-    it("should return LineaRollupClient with the given signer if l1Wallet is given", () => {
+    it("should return LinethRollupClient with the given signer if l1Wallet is given", () => {
       const wallet = new Wallet(TEST_L1_SIGNER_PRIVATE_KEY, new JsonRpcProvider(TEST_RPC_URL));
       const sdk = new LineaSDK({
         mode: "read-write",
@@ -95,17 +95,17 @@ describe("LineaSDK", () => {
         l2RpcUrlOrProvider: TEST_RPC_URL,
       });
 
-      const lineaRollupClient = sdk.getL1Contract();
-      expect(serialize(lineaRollupClient)).toStrictEqual(
+      const linethRollupClient = sdk.getL1Contract();
+      expect(serialize(linethRollupClient)).toStrictEqual(
         serialize(
-          generateLineaRollupClient(
+          generateLinethRollupClient(
             new Provider(TEST_RPC_URL),
             new LineaProvider(TEST_RPC_URL),
             NETWORKS["linea-sepolia"].l1ContractAddress,
             NETWORKS["linea-sepolia"].l2ContractAddress,
             "read-write",
             wallet,
-          ).lineaRollupClient,
+          ).linethRollupClient,
         ),
       );
     });
@@ -123,7 +123,7 @@ describe("LineaSDK", () => {
       expect(() => sdk.getL1Contract()).toThrow("You need to provide a L1 contract address.");
     });
 
-    it("should return LineaRollupClient with custom contract address when the network option is set to 'custom'", () => {
+    it("should return LinethRollupClient with custom contract address when the network option is set to 'custom'", () => {
       const sdk = new LineaSDK({
         mode: "read-write",
         network: "custom",
@@ -140,14 +140,14 @@ describe("LineaSDK", () => {
 
       expect(serialize(l1MessageService)).toStrictEqual(
         serialize(
-          generateLineaRollupClient(
+          generateLinethRollupClient(
             new Provider(TEST_RPC_URL),
             new LineaProvider(TEST_RPC_URL),
             localL1ContractAddress,
             localL2ContractAddress,
             "read-write",
             new Wallet(TEST_L1_SIGNER_PRIVATE_KEY).connect(new Provider(TEST_RPC_URL)),
-          ).lineaRollupClient,
+          ).linethRollupClient,
         ),
       );
     });
@@ -297,13 +297,13 @@ describe("LineaSDK", () => {
       expect(serialize(l1ClaimingService)).toStrictEqual(
         serialize(
           new L1ClaimingService(
-            generateLineaRollupClient(
+            generateLinethRollupClient(
               new Provider(TEST_RPC_URL),
               new LineaProvider(TEST_RPC_URL),
               NETWORKS["linea-sepolia"].l1ContractAddress,
               NETWORKS["linea-sepolia"].l2ContractAddress,
               "read-only",
-            ).lineaRollupClient,
+            ).linethRollupClient,
             generateL2MessageServiceClient(
               new LineaProvider(TEST_RPC_URL),
               NETWORKS["linea-sepolia"].l2ContractAddress,

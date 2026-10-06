@@ -76,14 +76,6 @@ data class BlobCounters(
   val endBlockTimestamp: Instant,
   val expectedShnarf: ByteArray,
 ) : BlockInterval {
-  companion object {
-    fun areAllConsecutive(blobs: List<BlobCounters>): Boolean {
-      return blobs.foldIndexed(true) { i, acc, next ->
-        acc && (i == 0 || next.startBlockNumber == blobs[i - 1].endBlockNumber + 1UL)
-      }
-    }
-  }
-
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
@@ -150,6 +142,73 @@ data class BlobRecord(
     result = 31 * result + expectedShnarf.contentHashCode()
     result = 31 * result + blobCompressionProof.hashCode()
 
+    return result
+  }
+}
+
+data class BlobRecordV2(
+  override val startBlockNumber: ULong,
+  override val endBlockNumber: ULong,
+  val startBlockTimestamp: Instant,
+  val endBlockTimestamp: Instant,
+  val parentShnarf: ByteArray,
+  val endShnarf: ByteArray,
+  val totalBatchesCount: UInt,
+  val blobsData: List<BlobData>,
+) : BlockInterval {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as BlobRecordV2
+
+    if (startBlockNumber != other.startBlockNumber) return false
+    if (endBlockNumber != other.endBlockNumber) return false
+    if (startBlockTimestamp != other.startBlockTimestamp) return false
+    if (endBlockTimestamp != other.endBlockTimestamp) return false
+    if (!parentShnarf.contentEquals(other.parentShnarf)) return false
+    if (!endShnarf.contentEquals(other.endShnarf)) return false
+    if (totalBatchesCount != other.totalBatchesCount) return false
+    if (blobsData != other.blobsData) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = startBlockNumber.hashCode()
+    result = 31 * result + endBlockNumber.hashCode()
+    result = 31 * result + startBlockTimestamp.hashCode()
+    result = 31 * result + endBlockTimestamp.hashCode()
+    result = 31 * result + parentShnarf.contentHashCode()
+    result = 31 * result + endShnarf.contentHashCode()
+    result = 31 * result + totalBatchesCount.hashCode()
+    result = 31 * result + blobsData.hashCode()
+    return result
+  }
+}
+
+data class BlobData(
+  val blobHash: ByteArray,
+  val compressedData: ByteArray,
+  val batchesCount: UInt,
+) {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as BlobData
+
+    if (!blobHash.contentEquals(other.blobHash)) return false
+    if (!compressedData.contentEquals(other.compressedData)) return false
+    if (batchesCount != other.batchesCount) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = blobHash.contentHashCode()
+    result = 31 * result + compressedData.contentHashCode()
+    result = 31 * result + batchesCount.hashCode()
     return result
   }
 }

@@ -115,7 +115,7 @@ Port interfaces in `core/clients/contracts/` with adapter implementations in `cl
 | `IDashboard` | `DashboardContractClient` | Static singleton - dashboard data reads |
 | `ISTETH` | `STETHContractClient` | stETH balance and share queries |
 | `IStakingVault` | `StakingVaultContractClient` | Static singleton - staking vault operations |
-| `ILineaRollupYieldExtension` | `LineaRollupYieldExtensionContractClient` | L1 rollup yield reporting |
+| `ILinethRollupYieldExtension` | `LinethRollupYieldExtensionContractClient` | L1 rollup yield reporting |
 
 ### Domain clients
 

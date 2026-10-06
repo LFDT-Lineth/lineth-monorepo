@@ -20,13 +20,13 @@ on:
         required: false
         type: string
         default: ''
-      without_besu_fleet_plugin:
-        description: 'Type "true" to exclude besu-fleet-plugin in the release'
-        required: false
-        type: string
-        default: ''
       pre_release:
         description: 'Pre Release if checked; Draft release otherwise'
+        required: false
+        type: boolean
+        default: false
+      skip_e2e_test:
+        description: 'Skip the run of e2e test'
         required: false
         type: boolean
         default: false
@@ -51,17 +51,6 @@ jobs:
     with:
       # Release tag uses 'linea-besu-package' (e.g. releases/linea-besu-package/v1.2.3)
       component-name: linea-besu-package
-      # Scope-and-path gated: the shared cliff.template.toml (scopes `linea-besu|tracer|sequencer|deps|misc`)
-      # keeps only commits scoped to `linea-besu`, AND include-path restricts to the linea-besu package paths;
-      # a commit must satisfy both to drive the version bump and changelog.
-      scopes: linea-besu|tracer|sequencer|deps|misc
-      include-path: |
-        tracer/**
-        tracer-constraints/**
-        linea-besu/plugins/linea-sequencer/**
-        linea-besu/besu/**
-        linea-besu/package/**
-        gradle/libs.versions.toml
       release_tag_suffix: ${{ inputs.release_tag_suffix }}
 
   run-test-linea-sequencer:
@@ -89,7 +78,6 @@ jobs:
     uses: ./.github/workflows/linea-besu-package-build-and-upload.yml
     with:
       release_version: ${{ needs.compute-linea-besu-release-metadata.outputs.release_version }}
-      with_besu_fleet_plugin: ${{ inputs.without_besu_fleet_plugin != 'true' }}
     secrets: inherit
 
   run-test:
@@ -104,7 +92,10 @@ jobs:
 
   run-e2e-tests:
     needs: [ build-and-upload-artifact ]
-    if: always() && !cancelled() && needs.build-and-upload-artifact.result == 'success'
+    if: >
+      always() && !cancelled() &&
+      needs.build-and-upload-artifact.result == 'success' &&
+      !inputs.skip_e2e_test
     concurrency:
       group: run-e2e-tests-${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
@@ -112,17 +103,19 @@ jobs:
     with:
       linea_besu_package_tag: ${{ needs.build-and-upload-artifact.outputs.linea_besu_package_tag }}
       e2e-tests-logs-dump: true
-      e2e-tests-with-besu-fleet: ${{ inputs.without_besu_fleet_plugin != 'true' }}
     secrets: inherit
 
   push-tag-update-changelog-and-gh-release:
     needs: [run-test, run-e2e-tests]
-    if: always() && !cancelled() && needs.run-test.result == 'success' && needs.run-e2e-tests.result == 'success'
+    if: >
+      always() && !cancelled() &&
+      needs.run-test.result == 'success' &&
+      (needs.run-e2e-tests.result == 'success' ||
+       (needs.run-e2e-tests.result == 'skipped' && inputs.skip_e2e_test))
     uses: ./.github/workflows/reusable-linea-besu-package-gh-release.yml
     with:
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }}
-      without_besu_fleet_plugin: ${{ inputs.without_besu_fleet_plugin }}
       draft_release: ${{ !inputs.pre_release }}
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit

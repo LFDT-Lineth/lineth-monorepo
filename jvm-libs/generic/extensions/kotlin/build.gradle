@@ -1,13 +1,9 @@
 plugins {
-  id 'net.consensys.zkevm.kotlin-common-minimal-conventions'
+  id 'lineth.kotlin-common-minimal-conventions'
   id 'java-test-fixtures'
 }
 
 description = "Basic Kotlin types extensions"
 
 dependencies {
-}
-
-jar {
-  dependsOn configurations.runtimeClasspath
 }

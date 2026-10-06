@@ -1,0 +1,93 @@
+import { network } from "hardhat";
+import { DeployFunction } from "hardhat-deploy/types";
+
+import {
+  LINETH_ROLLUP_INITIALIZE_SIGNATURE,
+  LINETH_ROLLUP_V8_PAUSE_TYPES_ROLES,
+  LINETH_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
+  LINETH_ROLLUP_V8_ROLES,
+  OPERATOR_ROLE,
+  ADDRESS_ZERO,
+} from "../common/constants";
+import {
+  generateRoleAssignments,
+  getEnvVarOrDefault,
+  getRequiredEnvVar,
+  requireAddressFromRegistryOrEnv,
+  requireAddressesFromRegistryOrEnv,
+  tryVerifyContract,
+  LogContractDeployment,
+} from "../common/helpers";
+import { withSignerUiSession } from "../scripts/hardhat/signer-ui-bridge";
+import { deployUpgradableFromFactory } from "../scripts/hardhat/utils";
+
+const func: DeployFunction = withSignerUiSession("03_deploy_LinethRollup.ts", async function () {
+  const contractName = "LinethRollup";
+
+  // LinethRollup DEPLOYED AS UPGRADEABLE PROXY (OpenZeppelin transparent). Hardhat Upgrades may reuse an
+  // implementation and/or ProxyAdmin from `.openzeppelin/` for this network, so you might sign fewer than three txs.
+  const verifierAddress = requireAddressFromRegistryOrEnv(network.name, "PlonkVerifier", "VERIFIER_ADDRESS");
+  const linethRollupInitialStateRootHash = getRequiredEnvVar("INITIAL_L2_STATE_ROOT_HASH");
+  const linethRollupInitialL2BlockNumber = getRequiredEnvVar("INITIAL_L2_BLOCK_NUMBER");
+  const linethRollupSecurityCouncil = requireAddressFromRegistryOrEnv(
+    network.name,
+    "L1_SECURITY_COUNCIL",
+    "L1_SECURITY_COUNCIL",
+  );
+  const linethRollupOperators = requireAddressesFromRegistryOrEnv(
+    network.name,
+    "LINETH_ROLLUP_OPERATORS",
+    "LINETH_ROLLUP_OPERATORS",
+  );
+  const linethRollupRateLimitPeriodInSeconds = getRequiredEnvVar("LINETH_ROLLUP_RATE_LIMIT_PERIOD");
+  const linethRollupRateLimitAmountInWei = getRequiredEnvVar("LINETH_ROLLUP_RATE_LIMIT_AMOUNT");
+  const linethRollupGenesisTimestamp = getRequiredEnvVar("L2_GENESIS_TIMESTAMP");
+  const livenessRecoveryOperator = "0xcA11bde05977b3631167028862bE2a173976CA11";
+
+  const pauseTypeRoles = getEnvVarOrDefault("LINETH_ROLLUP_PAUSE_TYPES_ROLES", LINETH_ROLLUP_V8_PAUSE_TYPES_ROLES);
+  const unpauseTypeRoles = getEnvVarOrDefault(
+    "LINETH_ROLLUP_UNPAUSE_TYPES_ROLES",
+    LINETH_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
+  );
+  const defaultRoleAddresses = generateRoleAssignments(LINETH_ROLLUP_V8_ROLES, linethRollupSecurityCouncil, [
+    { role: OPERATOR_ROLE, addresses: linethRollupOperators },
+  ]);
+  const roleAddresses = getEnvVarOrDefault("LINETH_ROLLUP_ROLE_ADDRESSES", defaultRoleAddresses);
+  const yieldManagerAddress = requireAddressFromRegistryOrEnv(network.name, "YieldManager", "YIELD_MANAGER_ADDRESS");
+
+  const addressFilter = requireAddressFromRegistryOrEnv(network.name, "AddressFilter", "LINETH_ROLLUP_ADDRESS_FILTER");
+
+  const contract = await deployUpgradableFromFactory(
+    "LinethRollup",
+    [
+      {
+        initialStateRootHash: linethRollupInitialStateRootHash,
+        initialL2BlockNumber: linethRollupInitialL2BlockNumber,
+        genesisTimestamp: linethRollupGenesisTimestamp,
+        defaultVerifier: verifierAddress,
+        rateLimitPeriodInSeconds: linethRollupRateLimitPeriodInSeconds,
+        rateLimitAmountInWei: linethRollupRateLimitAmountInWei,
+        roleAddresses,
+        pauseTypeRoles,
+        unpauseTypeRoles,
+        defaultAdmin: linethRollupSecurityCouncil,
+        shnarfProvider: ADDRESS_ZERO,
+        addressFilter,
+      },
+      livenessRecoveryOperator,
+      yieldManagerAddress,
+    ],
+    {
+      initializer: LINETH_ROLLUP_INITIALIZE_SIGNATURE,
+      unsafeAllow: ["constructor", "incorrect-initializer-order"],
+    },
+  );
+
+  await LogContractDeployment(contractName, contract);
+  const contractAddress = await contract.getAddress();
+
+  await tryVerifyContract(contractAddress);
+});
+
+export default func;
+func.tags = ["LinethRollup"];

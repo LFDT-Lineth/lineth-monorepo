@@ -309,7 +309,7 @@ def decode_stateless_input_ssz(data: bytes) -> StatelessInput:
 # logical view, so a few SSZ-only fields are reconstructed at canonical defaults:
 #   - `chain_config.active_fork.{activation,blob_schedule}`: empty — the guest
 #     validates only the fork index, taken here from `forkName`;
-#   - `execution_payload.slot_number`: 0 — absent from the readable payload.
+#   - `execution_payload.slot_number`: 0 when the optional `slotNumber` is omitted.
 
 
 def _hexbytes(value: str) -> bytes:

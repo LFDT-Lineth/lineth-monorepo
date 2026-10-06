@@ -34,7 +34,10 @@ func WriteSpecZigWithOptions(w io.Writer, routing CoinRouting, opts SpecZigOptio
 	if err != nil {
 		return err
 	}
-	return tmpl.Execute(w, specZigData{Options: opts, Routing: routing})
+	return tmpl.Execute(w, specZigData{
+		Options: opts,
+		Routing: routing,
+	})
 }
 
 type specZigData struct {
@@ -50,5 +53,6 @@ const protocol = {{.Options.ProtocolImport}};
     .round_coin_counts = &[_]usize{{intArray .Routing.RoundCoinCounts}},
     .round_coin_offsets = &[_]usize{{intArray .Routing.RoundCoinOffsets}},
     .total_round_coins = {{.Routing.TotalRoundCoins}},
+    .dynamic_module_count = {{.Routing.DynamicModuleCount}},
 };
 `

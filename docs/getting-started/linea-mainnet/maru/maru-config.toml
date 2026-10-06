@@ -25,7 +25,6 @@ reconnect-delay = "500ms"
 [payload-validator]
 # Besu and Geth node as execution layer client
 engine-api-endpoint = { endpoint = "http://el-client:8550", jwt-secret-path = "/opt/consensys/maru/configs/jwt" }
-eth-api-endpoint = { endpoint = "http://el-client:8545" }
 payload-validation-enabled = false
 
 [observability]

@@ -18,8 +18,8 @@ func newGrandProductSystem(t *testing.T) (*wiop.System, *wiop.Column, *wiop.Colu
 	r0 := sys.NewRound()
 	sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("gpMod"), 4, wiop.PaddingDirectionNone)
-	num := mod.NewColumn(sys.Context.Childf("num"), wiop.VisibilityOracle, r0)
-	den := mod.NewColumn(sys.Context.Childf("den"), wiop.VisibilityOracle, r0)
+	num := mod.NewColumn(sys.Context.Childf("num"), r0)
+	den := mod.NewColumn(sys.Context.Childf("den"), r0)
 	return sys, num, den
 }
 
@@ -153,8 +153,8 @@ func TestNewGrandProduct_NoNextRoundPanic(t *testing.T) {
 	sys := wiop.NewSystemf("gpNoNext")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("m"), 4, wiop.PaddingDirectionNone)
-	num := mod.NewColumn(sys.Context.Childf("num"), wiop.VisibilityOracle, r0)
-	den := mod.NewColumn(sys.Context.Childf("den"), wiop.VisibilityOracle, r0)
+	num := mod.NewColumn(sys.Context.Childf("num"), r0)
+	den := mod.NewColumn(sys.Context.Childf("den"), r0)
 	assert.Panics(t, func() {
 		sys.NewGrandProduct(sys.Context.Childf("gp"), []wiop.Expression{num.View()}, []wiop.Expression{den.View()})
 	})

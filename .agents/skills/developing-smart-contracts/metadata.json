@@ -1,7 +1,7 @@
 {
   "name": "developing-smart-contracts",
   "version": "1.0.0",
-  "description": "Solidity smart contract development guidelines for Linea blockchain. Covers NatSpec documentation, naming conventions, file layout, and code style.",
+  "description": "Solidity smart contract development guidelines for Lineth blockchain. Covers NatSpec documentation, naming conventions, file layout, and code style.",
   "author": "linea",
   "license": "AGPL-3.0",
   "keywords": [

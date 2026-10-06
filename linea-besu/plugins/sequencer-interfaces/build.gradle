@@ -8,28 +8,19 @@ buildscript {
   }
 }
 
-repositories {
-  mavenCentral()
-  maven {
-    name = 'linea-besu'
-    url = "https://artifacts.consensys.net/public/linea-besu/maven/"
-  }
-}
-
-java {
-  toolchain {
-    languageVersion = JavaLanguageVersion.of(25)
-  }
-}
+apply plugin: 'lineth.kotlin-common-minimal-conventions'
+apply plugin: 'java-library'
 
 group = 'build.linea'
-description = 'Linea chain security interfaces'
+description = 'Lineth chain security interfaces'
 // publishing.gradle uses project.artifactId when set (or else falling back to project.name)
 ext.artifactId = 'sequencer-interfaces'
 
 jar { enabled = true }
 
 dependencies {
+  api project(':jvm-libs:linea:core:signer-interfaces')
+
   // Besu Plugin API and core dependencies
   compileOnly "org.hyperledger.besu:besu-plugin-api:${rootProject.ext.resolveBesuVersion()}"
   compileOnly "org.hyperledger.besu:besu-evm:${rootProject.ext.resolveBesuVersion()}"
@@ -37,6 +28,16 @@ dependencies {
 }
 
 apply from: rootProject.file("gradle/publishing.gradle")
+
+// This API exposes signer-interfaces types, so both artifacts must pass verification and be
+// staged together when sequencer-interfaces is released.
+tasks.named('build') {
+  dependsOn ':jvm-libs:linea:core:signer-interfaces:build'
+}
+
+tasks.named('publish') {
+  dependsOn ':jvm-libs:linea:core:signer-interfaces:publish'
+}
 
 tasks.withType(GenerateModuleMetadata).configureEach {
   suppressedValidationErrors.add('enforced-platform')

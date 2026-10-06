@@ -112,6 +112,7 @@ class BlockBuildingBeaconBlockImporter(
   private val prevRandaoProvider: PrevRandaoProvider<ULong>,
   private val shouldBuildNextBlock: (BeaconState, ConsensusRoundIdentifier, ULong) -> Boolean,
   private val feeRecipient: ByteArray,
+  private val targetGasLimit: ULong? = null,
 ) : BeaconBlockImporter {
   private val log: Logger = LogManager.getLogger(this.javaClass)
 
@@ -135,18 +136,24 @@ class BlockBuildingBeaconBlockImporter(
         nextBlockTimestamp,
         beaconBlockHeader,
       )
-      executionLayerManager.setHeadAndStartBlockBuilding(
-        headHash = beaconBlock.beaconBlockBody.executionPayload.blockHash,
-        safeHash = finalizationState.safeBlockHash,
-        finalizedHash = finalizationState.finalizedBlockHash,
-        nextBlockTimestamp = nextBlockTimestamp,
-        feeRecipient = feeRecipient,
-        prevRandao = prevRandaoProvider.calculateNextPrevRandao(
-          signee = beaconBlock.beaconBlockBody.executionPayload.blockNumber
-            .inc(),
-          prevRandao = beaconBlock.beaconBlockBody.executionPayload.prevRandao,
-        ),
-      )
+      try {
+        executionLayerManager.setHeadAndStartBlockBuilding(
+          headHash = beaconBlock.beaconBlockBody.executionPayload.blockHash,
+          safeHash = finalizationState.safeBlockHash,
+          finalizedHash = finalizationState.finalizedBlockHash,
+          nextBlockTimestamp = nextBlockTimestamp,
+          feeRecipient = feeRecipient,
+          prevRandao = prevRandaoProvider.calculateNextPrevRandao(
+            signee = beaconBlock.beaconBlockBody.executionPayload.blockNumber
+              .inc(),
+            prevRandao = beaconBlock.beaconBlockBody.executionPayload.prevRandao,
+          ),
+          nextBlockSlotNumber = beaconBlockHeader.number + 1UL,
+          targetGasLimit = targetGasLimit,
+        )
+      } catch (error: Exception) {
+        SafeFuture.failedFuture(error)
+      }
     } else {
       log.info(
         "importing block: elBlockNumber={} clBlockNumber={} clBlockHeader={}",

@@ -20,11 +20,17 @@ PROGRAM_LENGTH := $(call EVAL,$(IN_ORIGIN) - $(PROGRAM_ORIGIN))
 IN_LENGTH      := $(call EVAL,$(HEAP_ORIGIN) - $(IN_ORIGIN))
 
 # ── ELF → ZKC JSON conversion ────────────────────────────────────────────────
-# convert a statically-linked rv64im ELF to the ZKC JSON the interpreter loads
-ELF_TO_JSON_GEN := $(BUILD_COMMON_DIR)../../arithmetization/src/test/scripts/elf_to_json_gen/main.go
+# Convert a statically-linked rv64im ELF to the ZKC JSON the interpreter loads.
+ARITHMETIZATION_DIR ?= $(abspath $(BUILD_COMMON_DIR)../../arithmetization)
+ELF_TO_JSON_CMD     ?= go -C $(ARITHMETIZATION_DIR) tool elf_to_json
 
-# Hex big-endian input or `@path/to/in_bytes`
+# Inline input or `@path` ending in .hex, .ssz, or .bin.
 IN_BYTES ?= ""
+
+# When true, elf_to_json also emits blobs_executable for the
+# predecoding justification pass. Decode table and instruction_base
+# inputs are always emitted.
+PREDECODING_PROOF ?= false
 
 # Already-compiled external ELF to convert (and its derived output JSON path)
 BIN_EXT  ?=
@@ -33,7 +39,10 @@ JSON_EXT ?= $(BIN_EXT).json
 # Support function to generate JSON from an ELF: $(call ELF_TO_JSON,<elf>,<out.json>)
 define ELF_TO_JSON
 	@echo "\nGenerating $(2) from $(1)"
-	@go run $(ELF_TO_JSON_GEN) "$(1)" "$(IN_BYTES)" $(IN_ORIGIN) > "$(2)"
+	@ELF2JSON_PREDECODING_PROOF=$(PREDECODING_PROOF) $(ELF_TO_JSON_CMD) \
+		"$(abspath $(1))" \
+		"$(if $(filter @%,$(IN_BYTES)),@$(abspath $(patsubst @%,%,$(IN_BYTES))),$(IN_BYTES))" \
+		$(IN_ORIGIN) > "$(2)"
 endef
 
 # The following variables

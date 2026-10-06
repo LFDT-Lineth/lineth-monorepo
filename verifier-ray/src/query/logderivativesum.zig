@@ -35,16 +35,21 @@ pub const System = struct {
     queries: []const Query = &.{},
 };
 
-pub fn verify(comptime system: System, ctx: protocol.Context) Error!void {
-    inline for (system.queries) |query| {
-        // Σ_i Z_i[n-1], reading each Z endpoint from the transcript.
+pub fn verify(system: System, ctx: protocol.Context) (Error || protocol.CellError)!void {
+    // Runtime loops over runtime data. When `system` was comptime these were
+    // `inline for`s, so every query and every z_final_ref became straight-line
+    // code — pure .text for what is a short data traversal.
+    for (system.queries) |query| {
+        // Σ_i Z_i[n-1], reading each Z endpoint from the transcript. `cell` is
+        // bounds-checked: the refs are trusted (generated System) but the proof's
+        // round/cells slices are not.
         var sum = ext.Ext.zero();
-        inline for (query.z_final_refs) |ref| {
-            sum = sum.add(ctx.rounds[ref.round].cells[ref.index].toExt());
+        for (query.z_final_refs) |ref| {
+            sum = sum.add((try ctx.cell(ref.round, ref.index)).toExt());
         }
 
         // The result is also read from the transcript, not baked in.
-        const result = ctx.rounds[query.result_ref.round].cells[query.result_ref.index].toExt();
+        const result = (try ctx.cell(query.result_ref.round, query.result_ref.index)).toExt();
 
         // The final-sum identity links the Z endpoints to the claimed result.
         if (!sum.eql(result)) return error.FinalSumMismatch;

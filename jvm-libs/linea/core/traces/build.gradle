@@ -1,9 +1,9 @@
 plugins {
-  id 'net.consensys.zkevm.kotlin-common-conventions'
+  id 'lineth.kotlin-common-conventions'
   id 'java-test-fixtures'
 }
 
-description="Linea Tracing utilities"
+description="Lineth Tracing utilities"
 
 dependencies {
   implementation "io.consensys.tuweni:tuweni-units:${libs.versions.tuweni.get()}"
@@ -11,8 +11,4 @@ dependencies {
   testImplementation project(':jvm-libs:linea:testing:file-system')
   testImplementation "com.sksamuel.hoplite:hoplite-core:${libs.versions.hoplite.get()}"
   testImplementation "com.sksamuel.hoplite:hoplite-toml:${libs.versions.hoplite.get()}"
-}
-
-jar {
-  dependsOn configurations.runtimeClasspath
 }

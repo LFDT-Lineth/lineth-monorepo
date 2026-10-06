@@ -24,16 +24,13 @@
 // is asserted by its own verifier action. See [wiop.MessageBus] for the
 // per-entry semantics.
 //
-// The pass allocates α and β itself, via [Round.NewCoinField] on a fresh
-// (or reused) coin round immediately after the latest participant round.
-// In a sharded protocol the caller is expected to pre-allocate that coin
-// round and register a [Round.RegisterPreSamplingHook] entry on it that
-// calls [Runtime.SetFSState] with shared randomness derived from a
-// cross-shard handoff. The compiler's ensureRoundAfter reuses any
-// pre-existing tail round at the right position, so messagebus's coin
-// allocation lands on the same round the hook is registered on — and every
-// shard's α, β therefore derive from the seeded FS state instead of the
-// local transcript.
+// The pass allocates α and β itself, via [Round.NewCoinField] on the round
+// right after round 0 (see registerSharedRandomness). They are ordinary
+// Fiat-Shamir coins.
+// In a sharded protocol what makes every shard draw the same pair is that
+// round 0 carries the same data on each, so the state the coins are sampled from is identical shard to shard.
+// With [CompileOptions.SharedRandomness] the pass enforces that layout rather
+// than trusting it.
 //
 // Caller order: invoke messagebus.Compile(sys) BEFORE
 // grandproduct.Compile(sys); the latter discharges the GrandProducts this
@@ -46,7 +43,41 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
 )
+
+// PublicInputTag is the base tag under which this pass registers each handle's
+// accumulator cell as a public input. Handles are processed in alphabetical
+// order and the tag is suffixed by that index, so the handles of a shard get
+// MessageBus_0, MessageBus_1, … — retrieve one with
+// sys.LookupPublicInputByTag(PublicInputTag, i). The index is the handle's
+// position in [wiop.System.MessageBusHandles]; since every shard sorts its
+// handles the same way, index i denotes the same handle on every shard, which is
+// what lets the cross-shard layer match up by position. This numbering is why
+// [Compile] is single-invocation per system.
+const PublicInputTag wiop.PublicInputTag = "MessageBus"
+
+// CompileOptions are options for [Compile].
+type CompileOptions struct {
+	// SharedRandomness makes the shard derive α and β from a γ handed to it from
+	// outside the proof instead of from its own Fiat-Shamir transcript, which is
+	// what lets several shards agree on those challenges. It declares γ and the
+	// shard's contribution to it as public inputs, and requires every bus column
+	// to sit on the coin round. γ lives on round 0, so it is absorbed into
+	// Fiat-Shamir before α and β are drawn; see [registerSharedRandomness].
+	//
+	// Off by default: an unsharded protocol has no one to agree with and derives
+	// α and β from its own transcript. Turning it on obliges the prover to supply
+	// γ through [AssignSharedRandomnessSeed] — there is deliberately no default
+	// value, since a γ known in advance would hand the prover α and β before it
+	// commits to its bus columns.
+	//
+	// Setting it on a system with no message-bus entry does nothing: there is no
+	// coin round to seed. Nothing is registered, so [HasSharedRandomness] stays
+	// false and the prover has no γ to supply. A pipeline can therefore turn it on
+	// ahead of the entries it expects and have it engage the moment they arrive.
+	SharedRandomness bool
+}
 
 // Compile reduces every unreduced [wiop.MessageBus] entry in sys to a
 // collection of [wiop.GrandProduct] queries (one per handle) plus one
@@ -54,28 +85,46 @@ import (
 // the expected value (one in the unsharded case). See the package
 // documentation for the full reduction.
 //
+// Set [CompileOptions.SharedRandomness] to make α and β derive from a
+// cross-shard γ rather than from this shard's own traffic.
+//
 // The pass appends up to two fresh interactive rounds to sys.Rounds: a
 // coin round where the shared α and β are declared, and a result round
 // where the [wiop.GrandProduct] result cells and the per-handle verifier
-// action live. Either round may already exist at the right position (e.g.
-// when a sharded protocol pre-allocates the coin round to attach a
-// [Round.RegisterPreSamplingHook]); ensureRoundAfter reuses existing tail
+// action live. Either round may already exist at the right position — a
+// sharded caller declares its bus columns on the coin round, which therefore
+// exists before this pass runs — and ensureRoundAfter reuses existing tail
 // rounds rather than appending duplicates.
+//
+// Compile must be invoked at most once per system: it tags each handle's
+// accumulator public input with the handle's index in this call's alphabetical
+// order (see [PublicInputTag]), so a second batch of entries would restart that
+// numbering at zero — colliding with the already-registered tags, and breaking
+// the property that index i denotes the same handle on every shard. Declare every
+// message-bus entry before calling Compile. Every consumed entry is marked
+// reduced on return, and a repeat call that finds nothing new is a harmless
+// no-op.
 //
 // Panics if the unreduced entries do not all share the same
 // [wiop.MessageBus.OriginShard] — Compile is a per-shard operation and
-// mixing shards in one call is a misuse.
-//
-// Already-reduced entries are skipped; remaining unreduced entries are marked
-// reduced on return.
-func Compile(sys *wiop.System) {
+// mixing shards in one call is a misuse — or if it is called a second time with
+// new entries.
+func Compile(sys *wiop.System, opts ...CompileOptions) {
+	opt := CompileOptions{}
+	if len(opts) > 0 {
+		opt = opts[0]
+	}
+
 	// Collect every unreduced MessageBus entry in declaration order, indexed by
 	// handle. Sort the handles for deterministic round/coin/cell ordering
 	// across runs.
 	byHandle := map[string][]*wiop.MessageBus{}
-	var anyEntry *wiop.MessageBus
+	var anyEntry, anyReduced *wiop.MessageBus
 	for _, mb := range sys.MessageBuses {
 		if mb.IsReduced() {
+			if anyReduced == nil {
+				anyReduced = mb
+			}
 			continue
 		}
 		if anyEntry == nil {
@@ -90,8 +139,36 @@ func Compile(sys *wiop.System) {
 		}
 		byHandle[mb.Handle] = append(byHandle[mb.Handle], mb)
 	}
+
 	if len(byHandle) == 0 {
+		// Nothing left to reduce. A repeat call with no new entries is a
+		// harmless no-op, whether or not a previous call already ran.
+		//
+		// This includes a call that asked for shared randomness: with no entry
+		// there is no coin round, hence no α or β to seed and no cross-shard
+		// check to keep consistent, so the request is vacuous rather than a
+		// misuse. A pipeline may therefore set the option before the bus entries
+		// it anticipates exist, and have it take effect once they do.
 		return
+	}
+
+	alpha, beta := registerSharedRandomness(sys, opt)
+
+	// Compile is single-invocation per system: it numbers each handle's
+	// public-input tag by the handle's index in this call's alphabetical order
+	// (MessageBus_0, MessageBus_1, …). A second batch would restart that
+	// numbering at zero and collide with the tags the first batch registered, and
+	// the index would no longer identify the same handle across shards. Reduced
+	// entries alongside unreduced ones are exactly that second batch, so refuse
+	// it here rather than failing later inside RegisterPublicInputs.
+	if anyReduced != nil {
+		panic(fmt.Sprintf(
+			"wiop/compilers/messagebus: Compile must be invoked at most once per system, but it is being "+
+				"called again with new entries: %q (handle %q) is already reduced while %q (handle %q) is not. "+
+				"Declare every message-bus entry before the single Compile call.",
+			anyReduced.Context().Path(), anyReduced.Handle,
+			anyEntry.Context().Path(), anyEntry.Handle,
+		))
 	}
 	handles := make([]string, 0, len(byHandle))
 	for h := range byHandle {
@@ -100,31 +177,14 @@ func Compile(sys *wiop.System) {
 	sort.Strings(handles)
 
 	compCtx := sys.Context.Childf("message-bus")
-
-	// Allocate the shared (α, β) coins on a fresh — or pre-existing — coin
-	// round immediately after the latest participant round. A sharded
-	// protocol typically pre-allocates this round so it can register a
-	// PreSamplingHook that seeds FS with cross-shard shared randomness;
-	// ensureRoundAfter reuses any tail round already at this position
-	// rather than appending a duplicate.
-
-	// Find the highest-ID round any participant column touches.
-	maxParticipantRound := latestParticipantRound(byHandle)
-	// Pick the slot directly after the participants — allocate a fresh round
-	// if empty, reuse any round already sitting there. The reuse path is what
-	// lands α/β on the *same* round a sharded caller pre-allocated for a
-	// PreSamplingHook, so the hook's SetFSState fires immediately before this
-	// round's coin sampling.
-	coinRound := ensureRoundAfter(sys, maxParticipantRound)
-	// Declare α on that round — sampled by AdvanceRound, after any pre-sampling hook fires.
-	alpha := coinRound.NewCoinField(compCtx.Childf("alpha"))
-	// Declare β on the same round, drawn from the same Fiat–Shamir state as α.
-	beta := coinRound.NewCoinField(compCtx.Childf("beta"))
-
 	// The result round (where GrandProduct cells and the verifier action live)
-	// sits strictly after the coin round so the GrandProduct prover action sees
-	// α and β already sampled.
-	resultRound := ensureRoundAfter(sys, coinRound)
+	// sits strictly after every round the reduction reads: the coins AND all
+	// participants.
+	resultRound := ensureRoundAfter(sys, latestRound(
+		alpha.Round(),
+		beta.Round(),
+		latestUnreducedParticipantRound(sys),
+	))
 
 	// No cross-participant width check: foldDenominator binds each row's width
 	// into its fold via an α^w length sentinel, so participants of one handle
@@ -135,11 +195,18 @@ func Compile(sys *wiop.System) {
 	// accumulator holding this shard's product on that handle (expected 1),
 	// discharged later by grandproduct.Compile.
 	cellByHandle := make(map[string]*wiop.Cell, len(handles))
-	for _, h := range handles {
+	for i, h := range handles {
 		entries := byHandle[h]
 		nums, dens := buildPermutationFactors(alpha, beta, entries)
 		gp := sys.NewGrandProduct(compCtx.Childf("handle-%s", h), nums, dens)
 		cellByHandle[h] = gp.Result
+
+		// Expose this handle's accumulator as a public input, tagged with the
+		// sorted handle index of this loop (fixed at compile time) — so the
+		// public input at that position refers to the same handle on every
+		// shard, which is what lets the cross-shard layer check by position.
+		sys.RegisterPublicInputs(PublicInputTag, gp.Result, i)
+
 	}
 
 	// One in-shard verifier action per handle: this shard's product on the
@@ -177,24 +244,6 @@ func Compile(sys *wiop.System) {
 			mb.MarkAsReduced()
 		}
 	}
-}
-
-// latestParticipantRound returns the [wiop.Round] with the highest ID among
-// the participant columns of every unreduced MessageBus entry, or nil if no
-// entry references a round-bearing leaf.
-func latestParticipantRound(byHandle map[string][]*wiop.MessageBus) *wiop.Round {
-	var best *wiop.Round
-	update := func(r *wiop.Round) {
-		if r != nil && (best == nil || r.ID > best.ID) {
-			best = r
-		}
-	}
-	for _, entries := range byHandle {
-		for _, mb := range entries {
-			update(mb.Round())
-		}
-	}
-	return best
 }
 
 // ensureRoundAfter returns a round with ID > after.ID, reusing the existing
@@ -247,42 +296,26 @@ func buildPermutationFactors(
 // (β + α^w + α^{w-1}·c_0 + … + c_{w-1}, the α^w sentinel letting participants
 // of a handle differ in width). A selected row contributes β + fold(row) and
 // an unselected row contributes the neutral factor 1 (dropping out of the
-// product). With no selector the factor is simply β + fold(row). The selector
-// is assumed {0,1}-valued and zero on padding rows.
+// product), via [grandproduct.SelectorFold]. With no selector the factor is
+// simply β + fold(row). The selector is assumed {0,1}-valued and zero on
+// padding rows; like the permutation compiler, this pass emits no binarity
+// constraint and the caller must constrain the selector itself.
 func permutationFold(alpha, beta *wiop.CoinField, tab wiop.Table) wiop.Expression {
-	fold := foldDenominator(alpha, beta, tab.Columns)
-	if tab.Selector == nil {
-		return fold
-	}
-	sel := wiop.Expression(tab.Selector)
-	one := wiop.NewConstantField(field.NewFromString("1"))
-	return wiop.Add(wiop.Mul(sel, fold), wiop.Sub(one, sel))
+	return grandproduct.SelectorFold(tab.Selector, foldDenominator(alpha, beta, tab.Columns))
 }
 
 // foldDenominator returns the width-binding row fold
 //
 //	β + α^w + α^{w-1}·c_0 + … + α·c_{w-2} + c_{w-1}
 //
-// where w = len(cols). The α^w "length sentinel" makes the encoding injective
-// across widths: two rows fold to the same polynomial in α only if they have
-// the same width AND the same entries, so participants of a handle may safely
-// differ in width — a shorter tuple can no longer alias a longer one with
-// leading zeros. Same-width participants get the same sentinel, so a balanced
-// bus stays balanced.
-//
-// The sentinel is folded in for free. Evaluating the coefficient sequence
-// [1, c_0, …, c_{w-1}] at α by Horner is exactly α^w + α^{w-1}·c_0 + … +
-// c_{w-1}; seeding acc = α + c_0 collapses the leading 1·α + c_0 step, so the
-// sentinel costs one extra addition and NO extra multiplication over the plain
-// RLC. α is always consulted, including the width-1 case (β + α + c_0).
+// where w = len(cols), via [grandproduct.RLCWithSentinel]. The α^w "length
+// sentinel" makes the encoding injective across widths, so participants of a
+// handle may safely differ in width — a shorter tuple can no longer alias a
+// longer one with leading zeros. Same-width participants get the same
+// sentinel, so a balanced bus stays balanced. α is always consulted, including
+// the width-1 case (β + α + c_0).
 func foldDenominator(alpha, beta *wiop.CoinField, cols []*wiop.ColumnView) wiop.Expression {
-	// acc = α + c_0 fuses the first two Horner steps (1·α + c_0), seeding the
-	// coefficient sequence [1, c_0, …] that carries the α^w length sentinel.
-	acc := wiop.Add(alpha, cols[0])
-	for _, c := range cols[1:] {
-		acc = wiop.Add(wiop.Mul(acc, alpha), c)
-	}
-	return wiop.Add(beta, acc)
+	return wiop.Add(beta, grandproduct.RLCWithSentinel(alpha, cols))
 }
 
 // CheckHandleSumInShard is the verifier action that closes the in-shard half

@@ -1,8 +1,6 @@
 # required for `source`
 SHELL := /usr/bin/env bash
 
-VERSION ?= $(shell git rev-parse --short=7 HEAD)
-
 CONSTRAINTS_COMMIT_HASH := c94b73d3aef361b5138986d38f27f21675aef275
 GO_CORSET_VERSION := v1.2.7
 
@@ -31,7 +29,6 @@ DARWIN_ARM64_FLAGS := CGO_ENABLED=1 GOOS="linux" GOARCH="arm64"
 	lib/shnarf-calculator \
 	lib/compressor-and-shnarf-calculator \
 	lib/compressor-and-shnarf-calculator-local \
-	docker \
 	bin/prover \
 	bin/checker \
 	go-corset \
@@ -110,13 +107,6 @@ bin/checker:
 	mkdir -p bin
 	rm -f $@
 	go build -o $@ ./cmd/dev-tools/corset-checker
-
-##
-##	Build the prover docker image
-##
-docker:
-	echo "Building docker image for the prover version ${VERSION}"
-	cd .. && docker buildx build -f prover/Dockerfile --build-context prover=prover/ -t consensys/linea-prover:${VERSION} .
 
 ##
 ## Build compressor library

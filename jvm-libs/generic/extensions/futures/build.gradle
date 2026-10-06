@@ -1,5 +1,5 @@
 plugins {
-  id 'net.consensys.zkevm.kotlin-common-conventions'
+  id 'lineth.kotlin-common-conventions'
   id 'java-library'
 }
 
@@ -8,8 +8,4 @@ description = "Utilities related to futures used in Linea"
 dependencies {
   api "io.vertx:vertx-core"
   testImplementation("io.vertx:vertx-junit5")
-}
-
-jar {
-  dependsOn configurations.runtimeClasspath
 }

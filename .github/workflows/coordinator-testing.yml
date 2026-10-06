@@ -32,7 +32,7 @@ jobs:
     name: Coordinator tests
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: false
       - name: Setup Java and Gradle
@@ -48,21 +48,21 @@ jobs:
           ./gradlew -V coordinator:app:buildNeeded
       - name: Verify generated coordinator config docs are up to date
         run: |
-          ./gradlew -V :coordinator:app:generateConfigDocs
+          ./gradlew -V :coordinator:config:generateConfigDocs
           if ! git diff --exit-code -- \
               docs/tech/components/coordinator-config-reference.md \
               docs/tech/components/coordinator-config-schema.json; then
-            echo "::error::Coordinator config docs are out of date. Run './gradlew :coordinator:app:generateConfigDocs' and commit the changes."
+            echo "::error::Coordinator config docs are out of date. Run './gradlew :coordinator:config:generateConfigDocs' and commit the changes."
             exit 1
           fi
       - name: Login to Docker Hub
         if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 #v3.7.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Pre-pull images for running integration tests
-        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         with:
           max_attempts: 10
           retry_on: error
@@ -81,4 +81,3 @@ jobs:
           path: |
             **/build/jacoco/*.exec
           if-no-files-found: ignore
-

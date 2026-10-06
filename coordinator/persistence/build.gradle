@@ -2,17 +2,13 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 
 plugins {
-  id "net.consensys.zkevm.kotlin-library-conventions"
+  id "lineth.kotlin-library-conventions"
   id "java-test-fixtures"
 }
 
 dependencies {
   api(project(":coordinator:clients:prover-client:serialization"))
   api(project(":coordinator:core-interfaces"))
-
-  implementation(project(":coordinator:clients:prover-client:file-based-client")) {
-    because "ProverResponseIndex is a part of it"
-  }
 
   implementation(project(":jvm-libs:generic:errors"))
   implementation(project(":jvm-libs:generic:extensions:futures"))

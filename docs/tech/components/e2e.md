@@ -11,7 +11,6 @@ The E2E tests validate:
 - Message passing and claiming
 - Rollup submission and finalization
 - Coordinator restart recovery
-- Node fleet consistency
 - Liveness detection
 
 ## Test Coverage
@@ -57,11 +56,6 @@ The E2E tests validate:
 │  ┌──────────────────────────────────────────────────────────────────┐  │
 │  │                   Infrastructure Tests                           │  │
 │  │                                                                  │  │
-│  │  linea-besu-fleet.spec.ts                                        │  │
-│  │  ├── Leader/follower consistency                                 │  │
-│  │  ├── linea_estimateGas matching                                  │  │
-│  │  └── Block sync verification                                     │  │
-│  │                                                                  │  │
 │  │  liveness.spec.ts                                                │  │
 │  │  └── Sequencer downtime detection                                │  │
 │  │                                                                  │  │
@@ -97,7 +91,7 @@ Tests L1↔L2 message sending and automatic claiming by the Postman service.
 **Test: L1 → L2 with fee and calldata**
 1. Generate fresh L1 and L2 accounts with funded balances
 2. Encode calldata targeting `DummyContract.setPayload()` on L2
-3. Call `LineaRollup.sendMessage()` on L1 with fee and calldata
+3. Call `LinethRollup.sendMessage()` on L1 with fee and calldata
 4. Extract `MessageSent` event and capture `messageHash`
 5. Poll L2 `L2MessageService` for `MessageClaimed` event matching the hash
 6. Assert: Message was automatically claimed on L2
@@ -110,7 +104,7 @@ Tests L1↔L2 message sending and automatic claiming by the Postman service.
 1. Generate accounts on both layers
 2. Call `L2MessageService.sendMessage()` on L2
 3. Wait for `L2MessagingBlockAnchored` event on L1 (confirms L2 block was finalized)
-4. Poll L1 `LineaRollup` for `MessageClaimed` event
+4. Poll L1 `LinethRollup` for `MessageClaimed` event
 5. Assert: Message was claimed on L1 after finalization
 
 ---
@@ -134,7 +128,7 @@ Tests the complete token bridge flow in both directions.
 **Test: Bridge L2 → L1**
 1. Generate accounts, mint tokens on L2
 2. Approve `L2TokenBridge`, call `bridgeToken()`
-3. Wait for `MessageClaimed` on L1 LineaRollup
+3. Wait for `MessageClaimed` on L1 LinethRollup
 4. Wait for `NewTokenDeployed` on L1 TokenBridge
 5. Assert: L1 bridged token balance equals bridged amount
 
@@ -152,7 +146,7 @@ Tests the coordinator's blob submission and proof finalization pipeline.
 5. Assert: Rolling hashes match and anchored number is updated
 
 **Test: L1 Data Submission and Finalization**
-1. Get current finalized L2 block number from `LineaRollup.currentL2BlockNumber()`
+1. Get current finalized L2 block number from `LinethRollup.currentL2BlockNumber()`
 2. Wait for `DataSubmittedV3` event (blob submission)
 3. Wait for `DataFinalizedV3` event with `startBlockNumber > currentL2BlockNumber`
 4. Query new state root hash from `stateRootHashes(endBlockNumber)`
@@ -216,23 +210,6 @@ Tests L2-specific transaction validation and execution.
 1. Build type-1 transaction with accessList
 2. Submit with both empty and populated access lists
 3. Assert: Both variants succeed
-
----
-
-### linea-besu-fleet.spec.ts — Node Consistency
-
-Tests that leader and follower nodes return consistent results.
-
-**Test: Leader/Follower Response Matching**
-1. Wait until `currentL2BlockNumber` on L1 is > 1 (finalization occurred)
-2. Call `linea_estimateGas` on leader and follower with identical parameters
-3. Assert: `maxPriorityFeePerGas`, `maxFeePerGas` match exactly
-4. Call `eth_estimateGas` on both nodes
-5. Assert: Gas estimates match
-6. Query `"finalized"` block from both nodes
-7. Assert: Block number and hash match
-8. Query `"latest"` block from both nodes
-9. Assert: Block number and hash match
 
 ---
 
@@ -327,7 +304,6 @@ e2e/
 │   ├── messaging.spec.ts
 │   ├── submission-finalization.spec.ts
 │   ├── restart.spec.ts
-│   ├── linea-besu-fleet.spec.ts
 │   ├── liveness.spec.ts
 │   ├── l2.spec.ts
 │   ├── opcodes.spec.ts
@@ -385,7 +361,7 @@ export const config = {
     chainId: 1337,
   },
   contracts: {
-    lineaRollup: '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9',
+    linethRollup: '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9',
     l2MessageService: '0xe537D669CA013d86EBeF1D64e40fC74CADC91987',
     tokenBridge: {
       l1: '0x...',
@@ -499,7 +475,7 @@ describe('Submission and Finalization', () => {
     
     // Wait for data submission
     const submissionEvent = await waitForEvents(
-      lineaRollup,
+      linethRollup,
       'DataSubmittedV3',
       1,
       { timeout: 120000 }
@@ -509,7 +485,7 @@ describe('Submission and Finalization', () => {
     
     // Wait for finalization
     const finalizationEvent = await waitForEvents(
-      lineaRollup,
+      linethRollup,
       'DataFinalizedV3',
       1,
       { timeout: 300000 }
@@ -531,7 +507,7 @@ describe('Submission and Finalization', () => {
 describe('Coordinator Restart', () => {
   it('should resume blob submission after restart', async () => {
     // Get initial finalized block
-    const initialFinalized = await lineaRollup.currentL2BlockNumber();
+    const initialFinalized = await linethRollup.currentL2BlockNumber();
     
     // Restart coordinator
     await execDockerCommand('docker restart coordinator');
@@ -544,42 +520,12 @@ describe('Coordinator Restart', () => {
     
     // Verify blob submission resumes
     const newFinalized = await awaitUntil(
-      async () => lineaRollup.currentL2BlockNumber(),
+      async () => linethRollup.currentL2BlockNumber(),
       (blockNum) => blockNum > initialFinalized,
       { timeout: 300000, interval: 5000 }
     );
     
     expect(newFinalized).to.be.gt(initialFinalized);
-  });
-});
-```
-
-### Fleet Consistency Test
-
-```typescript
-// linea-besu-fleet.spec.ts
-describe('Fleet Consistency', () => {
-  it('should have consistent linea_estimateGas across nodes', async () => {
-    const tx = {
-      from: account.address,
-      to: testContract.address,
-      data: testContract.interface.encodeFunctionData('doSomething'),
-    };
-    
-    // Get estimate from leader
-    const leaderEstimate = await leaderClient.estimateGas(tx);
-    
-    // Get estimate from follower
-    const followerEstimate = await followerClient.estimateGas(tx);
-    
-    expect(leaderEstimate).to.equal(followerEstimate);
-  });
-  
-  it('should have matching finalized blocks', async () => {
-    const leaderBlock = await leaderProvider.getBlock('finalized');
-    const followerBlock = await followerProvider.getBlock('finalized');
-    
-    expect(leaderBlock.hash).to.equal(followerBlock.hash);
   });
 });
 ```
@@ -592,14 +538,11 @@ cd e2e
 # Install dependencies (generates TypeChain types)
 pnpm install
 
-# Run all tests (except fleet and liveness)
+# Run all tests (except liveness)
 pnpm run test:e2e:local
 
 # Run specific test file
 pnpm run test:e2e:local -- bridge-tokens.spec.ts
-
-# Run fleet tests
-pnpm run test:e2e:fleet:local
 
 # Run liveness tests
 pnpm run test:e2e:liveness:local

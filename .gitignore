@@ -23,6 +23,9 @@
 *.cov.tmp
 *.iws
 *.ipr
+*.class
+*.hprof
+*.local.toml
 
 .classpath
 .DS_Store
@@ -54,6 +57,10 @@
 # Ignore .codex config but commit shared team skills/rules etc.
 .codex/config.toml
 
+
+hs_err_pid*
+replay_pid*
+
 atlassian-ide-plugin.xml
 circuit.bin
 coverage.html
@@ -70,6 +77,7 @@ proving_key.bin
 .externalToolBuilders/
 .gradle/
 .idea/
+.kotlin/
 .next/
 .recommenders/
 .idea_modules/
@@ -185,7 +193,7 @@ contracts/.claude/settings.local.json
 .worktrees/
 e2e/e2e-runtime-report.html
 e2e/e2e-runtime-report-summary.json
-/linea-besu/.besu-resolved
+/linea-besu/besu/.besu-resolved
 .zig-cache/
 arithmetization/src/test/zig/zig-pkg/
 arithmetization/src/test/linker_script.ld
@@ -216,3 +224,7 @@ docker/config/linea-besu-sequencer/deny-list.txt
 docker/config/linea-besu-sequencer/deny-list.txt.lock
 
 **/.venv
+ai-generated
+.claude/worktrees/
+# Local output of arithmetization/src/test/scripts/weekly_zkc_metrics.sh
+.claude/reports/

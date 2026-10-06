@@ -1,4 +1,3 @@
-import java.time.LocalTime
 
 /*
  * Copyright Consensys Software Inc.
@@ -10,7 +9,7 @@ import java.time.LocalTime
  */
 
 plugins {
-  id 'net.consensys.zkevm.kotlin-library-minimal-conventions'
+  id 'lineth.kotlin-library-minimal-conventions'
   alias(libs.plugins.besuPluginLibrary)
   alias(libs.plugins.web3j)
   alias(libs.plugins.web3jSolidity)
@@ -52,7 +51,7 @@ compileJava {
 }
 
 web3j {
-  generatedPackageName = 'linea.plugin.acc.test.tests.web3j.generated'
+  generatedPackageName = 'lineth.plugin.acc.test.tests.web3j.generated'
 }
 
 solcToolchain {
@@ -89,19 +88,30 @@ tasks.register('acceptanceTests', Test) {
   testClassesDirs = sourceSets.test.output.classesDirs
   classpath = sourceSets.test.runtimeClasspath
 
-  inputs.property("integration.date", LocalTime.now()) // so it runs on every invocation
+  // Always run against the freshly started nodes; unlike a LocalTime.now() input this also keeps the
+  // configuration cache reusable.
+  doNotTrackState("Acceptance tests must run on every invocation")
 
   useJUnitPlatform {
     includeTags("AcceptanceTest")
   }
 
-  // A directory hopefully without plugin jar-s. All plugins are already on classpath as project dependencies
-  systemProperty 'besu.plugins.dir', project.buildDir
+  dependsOn tasks.named('prepareSignerTestPlugin')
+  systemProperty 'besu.plugins.dir', layout.buildDirectory.dir('test-plugins').get().asFile
 
   // Configure resource limits
   boolean isCiServer = System.getenv().containsKey("CI")
   maxParallelForks = isCiServer ? Runtime.runtime.availableProcessors() : Math.max(1, Runtime.runtime.availableProcessors() - 2)
   systemProperties["junit.jupiter.execution.parallel.enabled"] = false
+}
+
+def signerTestPluginJar =
+    project("${lineaSequencerProjectPath}:signer-test-plugin").tasks.named('jar', Jar)
+
+tasks.register('prepareSignerTestPlugin', Sync) {
+  dependsOn signerTestPluginJar
+  from signerTestPluginJar.flatMap { it.archiveFile }
+  into layout.buildDirectory.dir('test-plugins')
 }
 
 dependencies {

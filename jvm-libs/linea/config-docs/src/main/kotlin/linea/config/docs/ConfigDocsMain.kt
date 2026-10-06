@@ -36,7 +36,8 @@ object ConfigDocsCheckMain {
 
 /**
  * Entry point for the `generateConfigDocs` Gradle task. Regenerates the committed JSON schema and
- * Markdown reference for the given [ConfigDocsSpec] (named in `args[0]`).
+ * Markdown reference for the given [ConfigDocsSpec] (named in `args[0]`). When the spec declares a
+ * non-null [ConfigDocsSpec.mdxPartialPath], also writes an MDX-safe reference partial there.
  */
 object ConfigDocsGenerateMain {
   @JvmStatic
@@ -49,6 +50,7 @@ object ConfigDocsGenerateMain {
       markdownPath = Path.of(spec.markdownPath),
       markdownTitle = spec.markdownTitle,
       regenerateCommand = spec.regenerateCommand,
+      mdxPartialPath = spec.mdxPartialPath?.let { Path.of(it) },
     )
   }
 }

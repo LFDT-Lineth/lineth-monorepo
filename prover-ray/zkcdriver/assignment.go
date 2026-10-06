@@ -6,6 +6,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/zkc/pkg/ir/air"
 	"github.com/LFDT-Lineth/zkc/pkg/trace"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
@@ -18,16 +19,29 @@ import (
 var _ [1]uint32 = koalabear.Element{}
 var _ [1]uint32 = field.Element{}
 
-// ReadExpandedTraces parses the provided trace file, expands it and returns the
-// corset object holding the expanded traces.
-func AssignFromTrace(run *wiop.Runtime, traces trace.Trace[koalabear.Element], schema air.Schema[koalabear.Element]) {
+// AssignFromTraceShard expands and assigns the trace to the given runtime.
+func AssignFromTraceShard(
+	run *wiop.Runtime,
+	shard trace.Shard[koalabear.Element],
+	schema air.Schema[koalabear.Element],
+	sharedRandomness field.Octuplet,
+) {
+
+	// Only when the system was compiled to expect a γ. The driver does not choose
+	// the compiler options, so it cannot assume the caller asked for shared
+	// randomness — an unsharded protocol, or one whose compilation was skipped
+	// entirely, declares no γ cell to write to.
+	if messagebus.HasSharedRandomness(run.System) {
+		messagebus.AssignSharedRandomnessSeed(run, sharedRandomness)
+	}
+
+	eg := &errgroup.Group{}
 
 	// Parallelize across modules
-	eg := &errgroup.Group{}
-	for modID := range traces.Width() {
+	for modID := range shard.Width() {
 		eg.Go(func() error {
 
-			trMod := traces.Module(modID)
+			trMod := shard.Module(modID)
 			scMod := schema.Module(modID)
 
 			if scMod.IsStatic() {
@@ -46,43 +60,37 @@ func AssignFromTrace(run *wiop.Runtime, traces trace.Trace[koalabear.Element], s
 						sys         = run.System
 						columnIDMap = sys.Annotations[corsetColumnMapAnnotationKey].(map[string]wiop.ObjectID)
 						col         = trMod.Column(uint(id))
-						moduleName  = trMod.Name().String()
-						name        = qualifiedCorsetName(moduleName, col.Name())
+						moduleName  = trMod.Name()
+						name        = qualifiedCorsetName(moduleName, trMod.Descriptor().Columns[id].Name)
 					)
 
 					if _, ok := columnIDMap[name]; !ok {
 						logrus.Debugf("zkcdriver: AssignFromTrace: skipping unknown column %q", name)
 						continue
 					}
-
-					var (
-						wCol    = sys.LookupColumn(columnIDMap[name])
-						padding field.Element
-						data    = col.Data()
-					)
+					wCol := sys.LookupColumn(columnIDMap[name])
 
 					// Use unsafe cast to avoid per-element Bytes()/SetBytes()
 					// round-trip.
-					plain := make([]field.Element, data.Len())
+					plain := make([]field.Element, col.Len())
 					for i := range plain {
-						v := data.Get(uint(i))
+						v := col.Get(uint(i))
 						plain[i] = *(*field.Element)(unsafe.Pointer(&v))
 					}
-
-					// Configure padding value
-					pad := col.Padding()
-					padding = *(*field.Element)(unsafe.Pointer(&pad))
 
 					// Done
 					run.AssignColumn(
 						wCol,
-						&wiop.ConcreteVector{Plain: field.VecFromBase(plain), Padding: padding},
+						&wiop.ConcreteVector{
+							Plain: field.VecFromBase(plain),
+						},
 					)
 				}
 			})
 			return nil
 		})
 	}
+
 	if err := eg.Wait(); err != nil {
 		logrus.Panicf("zkcdriver: AssignFromTrace failed: %v", err)
 	}

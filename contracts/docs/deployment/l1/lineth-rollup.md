@@ -1,0 +1,75 @@
+# LinethRollup
+
+[← Back to index](../README.md)
+
+<br />
+
+## LinethRollup (Fresh Deploy)
+
+Parameters that should be filled either in .env or passed as CLI arguments:
+
+| Parameter name        | Required | Input value | Description |
+| --------------------- | -------- | -------------- | ----------- |
+| VERIFY_CONTRACT    | false    | true\|false | Verifies the deployed contract |
+| \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
+| \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
+| INFURA_API_KEY     | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network.|
+| INITIAL_L2_STATE_ROOT_HASH   | true      | bytes | Initial State Root Hash (shared base) |
+| INITIAL_L2_BLOCK_NUMBER   | true      | uint256 | Initial L2 Block Number (shared base) |
+| L2_GENESIS_TIMESTAMP | true | uint256 | Genesis timestamp (shared base) |
+| L1_SECURITY_COUNCIL  | registry\|env | address | L1 Security Council Address. Read from registry on stable networks; env var used as fallback. |
+| LINETH_ROLLUP_OPERATORS     | registry\|env | address | L1 Operators Addresses (comma-delimited if multiple). Read from registry on stable networks; env var used as fallback. |
+| LINETH_ROLLUP_RATE_LIMIT_PERIOD     | true  | uint256   | L1 Rate Limit Period |
+| LINETH_ROLLUP_RATE_LIMIT_AMOUNT     | true  | uint256   | L1 Rate Limit Amount |
+| VERIFIER_ADDRESS | registry\|env | address | PlonkVerifier contract address. Read from registry on stable networks; env var used as fallback (set automatically when deploying Verifier in same chain). |
+| YIELD_MANAGER_ADDRESS | registry\|env | address | Yield Manager contract address. Read from registry on stable networks; env var used as fallback. |
+| LINETH_ROLLUP_ADDRESS_FILTER | registry\|env | address | AddressFilter contract address. Read from registry on stable networks; env var used as fallback. |
+
+<br />
+
+Base command:
+```shell
+pnpm exec hardhat deploy --network sepolia --tags LinethRollup
+```
+
+Base command with cli arguments:
+```shell
+VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> INITIAL_L2_STATE_ROOT_HASH=<bytes> INITIAL_L2_BLOCK_NUMBER=<value> L2_GENESIS_TIMESTAMP=<value> L1_SECURITY_COUNCIL=<address> LINETH_ROLLUP_OPERATORS=<address> LINETH_ROLLUP_RATE_LIMIT_PERIOD=<value> LINETH_ROLLUP_RATE_LIMIT_AMOUNT=<value> YIELD_MANAGER_ADDRESS=<address> pnpm exec hardhat deploy --network sepolia --tags LinethRollup
+```
+
+(make sure to replace `<value>` `<key>` `<bytes>` `<address>` with actual values).
+
+<br />
+
+## Upgrade Deployments
+
+### LinethRollupWithReinitialization
+
+Deploys a new LinethRollup implementation and generates encoded upgrade calldata with `reinitializeV8`.
+
+| Parameter name | Required | Input value | Description |
+|---|---|---|---|
+| \**DEPLOYER_PRIVATE_KEY* | true | key | Network-specific private key |
+| L1_SECURITY_COUNCIL | registry\|env | address | Security Council address. Read from registry on stable networks; env var used as fallback. |
+| LINETH_ROLLUP_ADDRESS | registry\|env | address | Existing LinethRollup proxy address. Read from registry on stable networks; env var used as fallback. |
+
+```shell
+pnpm exec hardhat deploy --network sepolia --tags LinethRollupWithReinitialization
+```
+
+<br />
+
+### LinethRollupV8WithReinitialization
+
+Deploys a new LinethRollup implementation and generates encoded `upgradeAndCall` calldata for `reinitializeLineaRollupV9`. Submit the printed calldata through the Security Council Safe targeting the ProxyAdmin.
+
+| Parameter name | Required | Input value | Description |
+|---|---|---|---|
+| \**DEPLOYER_PRIVATE_KEY* | true | key | Network-specific private key |
+| LINETH_ROLLUP_ADDRESS | registry\|env | address | Existing LinethRollup proxy address. Read from registry on stable networks; env var used as fallback. |
+| LINETH_ROLLUP_FORCED_TRANSACTION_FEE_IN_WEI | true | uint256 | Forced transaction fee in wei (must be > 0) |
+| LINETH_ROLLUP_ADDRESS_FILTER | registry\|env | address | AddressFilter contract address. Read from registry if present; env var used as fallback. |
+
+```shell
+pnpm exec hardhat deploy --network sepolia --tags LinethRollupV8WithReinitialization
+```

@@ -21,6 +21,7 @@ data class BlocksConflation(
 data class Batch(
   val startBlockNumber: ULong,
   val endBlockNumber: ULong,
+  val proofIndexHash: ByteArray? = null,
 ) {
   init {
     require(startBlockNumber <= endBlockNumber) {
@@ -38,6 +39,23 @@ data class Batch(
   fun toStringSummary(): String {
     return "Batch(startBlockNumber=$startBlockNumber, endBlockNumber=$endBlockNumber)"
   }
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+    other as Batch
+    if (startBlockNumber != other.startBlockNumber) return false
+    if (endBlockNumber != other.endBlockNumber) return false
+    if (!proofIndexHash.contentEquals(other.proofIndexHash)) return false
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = startBlockNumber.hashCode()
+    result = 31 * result + endBlockNumber.hashCode()
+    result = 31 * result + proofIndexHash.contentHashCode()
+    return result
+  }
 }
 
 enum class ConflationTrigger(val triggerPriority: Int) {
@@ -47,11 +65,12 @@ enum class ConflationTrigger(val triggerPriority: Int) {
   // as it is used as conflation, blob and aggregation boundary.
   TARGET_BLOCK_NUMBER(1),
   FORCED_TRANSACTION(2),
-  HARD_FORK(3),
-  DATA_LIMIT(4),
-  TRACES_LIMIT(5),
-  TIME_LIMIT(6),
-  BLOCKS_LIMIT(7),
+  COINBASE_CHANGE(3),
+  HARD_FORK(4),
+  DATA_LIMIT(5),
+  TRACES_LIMIT(6),
+  TIME_LIMIT(7),
+  BLOCKS_LIMIT(8),
 }
 
 data class ConflationCalculationResult(
@@ -74,12 +93,14 @@ data class BlockCounters(
   val blockRLPEncoded: ByteArray,
   val numOfTransactions: UInt = 0u,
   val gasUsed: ULong = 0uL,
+  val coinbase: String,
 ) {
   override fun toString(): String {
     return "BlockCounters(blockNumber=$blockNumber, " +
       "blockTimestamp=$blockTimestamp, " +
       "tracesCounters=$tracesCounters, " +
-      "blockRLPEncoded=${blockRLPEncoded.size}bytes)"
+      "blockRLPEncoded=${blockRLPEncoded.size}bytes, " +
+      "coinbase=$coinbase)"
   }
 
   override fun equals(other: Any?): Boolean {
@@ -94,6 +115,7 @@ data class BlockCounters(
     if (!blockRLPEncoded.contentEquals(other.blockRLPEncoded)) return false
     if (numOfTransactions != other.numOfTransactions) return false
     if (gasUsed != other.gasUsed) return false
+    if (coinbase != other.coinbase) return false
 
     return true
   }
@@ -105,6 +127,7 @@ data class BlockCounters(
     result = 31 * result + blockRLPEncoded.contentHashCode()
     result = 31 * result + numOfTransactions.hashCode()
     result = 31 * result + gasUsed.hashCode()
+    result = 31 * result + coinbase.hashCode()
     return result
   }
 }
