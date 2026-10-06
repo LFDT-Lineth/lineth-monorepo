@@ -71,7 +71,7 @@ echo "==> native runner: emits the dev-zkvm commitment from an extended input"
 # Run the bundled native execution runner on an extended (0x0002) input and check
 # it emits a 34-byte 0x0003 commitment (schema id + keccak256(SSZ(public inputs))).
 # This is the commitment dev-zkvm cross-checks the guest against, and it confirms
-# the runner and its shared libraries (glibc/mcl/secp256k1/crypto) run in the image.
+# the runner and its shared libraries (glibc) run in the image.
 FIXTURE_DIR="$SCRIPT_DIR/../../riscv-guests/l2-execution/test/testdata"
 if ! $DOCKER run --rm \
         --entrypoint /opt/linea/prover-ray/l2-execution-runner \
