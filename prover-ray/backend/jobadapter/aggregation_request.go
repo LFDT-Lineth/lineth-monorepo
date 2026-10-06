@@ -67,7 +67,7 @@ func DecodeAggregationRequest(data []byte) (*AggregationRequest, error) {
 		return nil, decErrf(op, "parsing JSON: %w", err)
 	}
 
-	programVk, err := getFixedHex(env, programVkKey, op, "", programVkByteSize)
+	programVk, err := getFixedHex(env, guestProgramIDKey, op, "", programVkByteSize)
 	if err != nil {
 		return nil, err
 	}

@@ -97,8 +97,8 @@ func TestDecodeRollupRequest_InvalidShape(t *testing.T) {
 		mutate  func(o map[string]any)
 		wantErr string
 	}{
-		{"MissingProgramVk", func(o map[string]any) { delete(o, programVkKey) }, programVkKey},
-		{"ProgramVkWrongLength", func(o map[string]any) { o[programVkKey] = "0x1234" }, programVkKey},
+		{"MissingProgramVk", func(o map[string]any) { delete(o, guestProgramIDKey) }, guestProgramIDKey},
+		{"ProgramVkWrongLength", func(o map[string]any) { o[guestProgramIDKey] = "0x1234" }, guestProgramIDKey},
 		{"MissingProofRequest", func(o map[string]any) { delete(o, proofRequestKey) }, proofRequestKey},
 		{"MissingChainID", func(o map[string]any) { delete(pr(o), chainIDKey) }, chainIDKey},
 		{"MissingConflations", func(o map[string]any) { delete(pr(o), conflationsKey) }, conflationsKey},
