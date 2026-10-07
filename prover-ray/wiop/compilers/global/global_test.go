@@ -124,3 +124,36 @@ func TestCompile_GlobalConstraintWithLagrangeSelector(t *testing.T) {
 		assert.Error(t, sys.Verify(proof, pub), "invalid: (a·b)[pos]=15 must be rejected")
 	})
 }
+
+// TestCompile_SharedSubexpressionsAreLinear runs the quotient argument on a
+// vanishing whose expression is a depth-64 DAG of shared subexpressions:
+// x_{i+1} = x_i + x_i over x_0 = col · L_pos, a tree of 2^64 leaves but only
+// 65 distinct nodes. Compilation, proving and verification must all walk it
+// in time linear in the distinct nodes, and the argument must still accept
+// exactly the witnesses with col[pos] == 0.
+func TestCompile_SharedSubexpressionsAreLinear(t *testing.T) {
+	const size = 8
+	const pos = 3
+
+	build := func() (*wiop.System, *wiop.Column) {
+		sys := wiop.NewSystemf("gl-shared-dag")
+		r0 := sys.NewRound()
+		mod := sys.NewSizedModule(sys.Context.Childf("mod"), size, wiop.PaddingDirectionNone)
+		col := mod.NewColumn(sys.Context.Childf("col"), r0)
+		x := wiop.Mul(col.View(), wiop.NewLagrangeSelector(mod, pos))
+		for range 64 {
+			x = wiop.Add(x, x)
+		}
+		mod.NewVanishingManual(sys.Context.Childf("v"), x)
+		global.Compile(sys)
+		return sys, col
+	}
+
+	sys, col := build()
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, colVec(size, pos, 0)) })
+	require.NoError(t, sys.Verify(proof, pub), "honest: col[pos]=0 must verify")
+
+	sys, col = build()
+	proof, pub = sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, colVec(size, pos, 5)) })
+	assert.Error(t, sys.Verify(proof, pub), "invalid: col[pos]=5 must be rejected")
+}
