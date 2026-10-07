@@ -8,6 +8,13 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      e2e_stack:
+        description: E2E stack to run
+        required: false
+        type: choice
+        options: [zkevm, riscv]
+        default: zkevm
 
 concurrency:
   group: main-${{ github.ref }}
@@ -360,6 +367,8 @@ jobs:
     uses: ./.github/workflows/reusable-run-e2e-tests.yml
     with:
       image_tag: ${{ needs.compute-commit-tags.outputs.commit_tag }}
+      # Push and pull_request events have no inputs, so they use zkEVM.
+      stack: ${{ inputs.e2e_stack || 'zkevm' }}
       linea_besu_package_tag: ${{ needs.docker-build.outputs.linea_besu_package_tag }}
       e2e-tests-logs-dump: true
       has-changes-requiring-e2e-testing: ${{ needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing }}
@@ -369,8 +378,10 @@ jobs:
     needs: [filter-commit-changes, run-e2e-tests]
     # Only run for same-repo PRs: do not checkout and run PR head from forks (avoids untrusted code with contents/packages write).
     # !cancelled() (not always()): don't start a publish after a concurrency cancel.
+    # Only publish after the zkEVM suite; the RISC-V suite does not cover the full besu package.
     if: >
       !cancelled() &&
+      (inputs.e2e_stack || 'zkevm') == 'zkevm' &&
       github.ref != 'refs/heads/main' &&
       (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) &&
       needs.filter-commit-changes.outputs.has-changes-requiring-linea-besu-package-build == 'true' &&

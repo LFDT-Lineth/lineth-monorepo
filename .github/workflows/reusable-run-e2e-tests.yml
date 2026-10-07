@@ -11,6 +11,12 @@ on:
         description: 'The commit tag to use'
         required: true
         type: string
+      stack:
+        description: E2E stack to run
+        required: false
+        type: choice
+        options: [riscv, zkevm]
+        default: riscv
       e2e-tests-with-ssh:
         description: Run end to end tests with ability to ssh into environment
         required: false
@@ -31,6 +37,12 @@ on:
       image_tag:
         required: true
         type: string
+      # Callers (main, component and milestone releases) default to zkEVM. Do not derive this from
+      # github.event_name: in a called workflow it is the caller's event, e.g. a dispatched release.
+      stack:
+        required: false
+        type: string
+        default: zkevm
       linea_besu_package_tag:
         required: false
         type: string
@@ -83,11 +95,12 @@ on:
 
 jobs:
   run-e2e-suite:
-    if: ${{ github.event_name == 'workflow_dispatch' || inputs.has-changes-requiring-e2e-testing == 'true' }}
+    # Direct dispatch leaves has-changes-requiring-e2e-testing unset, so it always runs.
+    if: ${{ inputs.has-changes-requiring-e2e-testing != 'false' }}
     strategy:
       fail-fast: false
       matrix:
-        stack: ${{ fromJSON(github.event_name == 'workflow_dispatch' && '["riscv"]' || '["zkevm"]') }}
+        stack: ["${{ inputs.stack }}"]
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
     steps:
       - name: Checkout
@@ -114,7 +127,7 @@ jobs:
   # Preserve the required check and publish gate for the selected stack.
   run-e2e-tests:
     needs: run-e2e-suite
-    if: ${{ always() && (github.event_name == 'workflow_dispatch' || inputs.has-changes-requiring-e2e-testing == 'true') }}
+    if: ${{ always() && inputs.has-changes-requiring-e2e-testing != 'false' }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     outputs:
       tests_outcome: ${{ needs.run-e2e-suite.result }}

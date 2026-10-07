@@ -82,6 +82,7 @@ execution-proof handoff: a new transaction's payload and witness reach the prove
 (`dev-mock`) answers it, and the coordinator persists the batch as proven. It does not validate a real ZK proof
 or L1 submission/finalization against the V9 stub.
 
-Manual workflow dispatch runs only RISC-V; automatic runs select only zkEVM. Both use the same E2E
-action and preserve the existing required check. Failed runs upload logs, with RISC-V proof
-requests/responses included.
+Each run selects one stack through the `stack` input. Dispatching "Reusable: Run E2E Tests" directly
+defaults to RISC-V; `main` (with an optional `e2e_stack` dispatch input) and release callers default to
+zkEVM. Both use the same E2E action and preserve the existing required check. Failed runs upload logs,
+with RISC-V proof requests/responses included.
