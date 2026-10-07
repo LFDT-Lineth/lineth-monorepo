@@ -16,10 +16,9 @@ include "../../common/constants.zkc"
 // skipped, so the trace never contains output bytes beyond the prefix.
 fn write_output<ram, guest_output_tmp, output_cursor>(offset:Address, size:u64, prefix_count:PrefixCount) -> (new_prefix_count:PrefixCount) {
     // Prefix: the first OUTPUT_PREFIX_LEN bytes of the output, in every mode.
-    var n:PrefixCount = 0
     var room:PrefixCount = OUTPUT_PREFIX_LEN - prefix_count
+    var n:PrefixCount = size < (room as u64) ? size as PrefixCount : room
     if prefix_count < OUTPUT_PREFIX_LEN {
-        n = size < (room as u64) ? size as PrefixCount : room
         for i:PrefixCount = 0; i<n; i = i + 1 {
             var byte_read:u8 = read_8(offset + (i as Address))
             guest_output[(prefix_count + i) as OutputAddress] = byte_read
