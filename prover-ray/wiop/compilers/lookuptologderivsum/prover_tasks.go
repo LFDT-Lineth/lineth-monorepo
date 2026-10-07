@@ -92,7 +92,10 @@ func (t *mAssignmentTask) run(rt *wiop.Runtime, workers int) {
 	for _, it := range t.includings {
 		tTotal += it.module.RuntimeSize(rt)
 	}
-	tEntries := make([]tEntry, 0, tTotal)
+	// Every B row becomes an entry, so each fragment's entries sit at a fixed
+	// offset and are written in parallel.
+	tEntries := make([]tEntry, tTotal)
+	tOffset := 0
 	for frag, it := range t.includings {
 		n := it.module.RuntimeSize(rt)
 		mValues[frag] = make([]field.Element, n)
@@ -111,9 +114,13 @@ func (t *mAssignmentTask) run(rt *wiop.Runtime, workers int) {
 			}
 		}
 
-		for i := 0; i < n; i++ {
-			tEntries = append(tEntries, tEntry{val: hashes[i], frag: uint32(frag), row: uint32(i)})
-		}
+		dst := tEntries[tOffset : tOffset+n]
+		parallel.Execute(n, func(start, stop int) {
+			for i := start; i < stop; i++ {
+				dst[i] = tEntry{val: hashes[i], frag: uint32(frag), row: uint32(i)}
+			}
+		}, workers)
+		tOffset += n
 	}
 
 	// --- Build the A side. Only active rows contribute; the A-side head is the
@@ -135,25 +142,58 @@ func (t *mAssignmentTask) run(rt *wiop.Runtime, workers int) {
 			aSelectorExt = inc.selector.EvaluateVectorAsExt(rt, an)
 		}
 
-		for j := 0; j < an; j++ {
-			if inc.selector != nil {
-				if aSelectorExt[j].IsZero() {
-					continue
-				}
-				// The included-side filter is treated as a 0/1 selector by the
-				// LogDerivativeSum reduction: M is incremented by one per
-				// active row, so any other value would silently break the
-				// honest-prover identity. Abort early with a clear error
-				// instead of letting the verifier reject a malformed proof.
-				if !aSelectorExt[j].IsOne() {
-					panic(fmt.Sprintf(
-						"wiop/compilers/lookuptologderivsum: included filter %q has a non-binary value at row %d: %v",
-						inc.selector.Column.Context.Path(), j, aSelectorExt[j].String(),
-					))
+		// Only active rows become entries. Rows are split into chunks: each
+		// chunk counts its active rows, then writes them at its offset, so
+		// entries keep their row order whatever the number of workers.
+		active := func(j int) bool {
+			if inc.selector == nil {
+				return true
+			}
+			if aSelectorExt[j].IsZero() {
+				return false
+			}
+			// The included-side filter is treated as a 0/1 selector by the
+			// LogDerivativeSum reduction: M is incremented by one per active
+			// row, so any other value would silently break the honest-prover
+			// identity. Abort early with a clear error instead of letting the
+			// verifier reject a malformed proof.
+			if !aSelectorExt[j].IsOne() {
+				panic(fmt.Sprintf(
+					"wiop/compilers/lookuptologderivsum: included filter %q has a non-binary value at row %d: %v",
+					inc.selector.Column.Context.Path(), j, aSelectorExt[j].String(),
+				))
+			}
+			return true
+		}
+		chunks := splitRows(an, workers)
+		counts := make([]int, len(chunks))
+		parallel.Execute(len(chunks), func(start, stop int) {
+			for c := start; c < stop; c++ {
+				for j := chunks[c][0]; j < chunks[c][1]; j++ {
+					if active(j) {
+						counts[c]++
+					}
 				}
 			}
-			sEntries = append(sEntries, sEntry{val: hashes[j], frag: uint32(aFrag), row: uint32(j)})
+		}, workers)
+		base := len(sEntries)
+		offsets := make([]int, len(chunks))
+		for c := range chunks {
+			offsets[c] = base
+			base += counts[c]
 		}
+		sEntries = sEntries[:base]
+		parallel.Execute(len(chunks), func(start, stop int) {
+			for c := start; c < stop; c++ {
+				k := offsets[c]
+				for j := chunks[c][0]; j < chunks[c][1]; j++ {
+					if active(j) {
+						sEntries[k] = sEntry{val: hashes[j], frag: uint32(aFrag), row: uint32(j)}
+						k++
+					}
+				}
+			}
+		}, workers)
 	}
 
 	// --- Join both sides and fill the M vectors.
@@ -207,18 +247,9 @@ func (t *mAssignmentTask) hashJoin(tEntries []tEntry, sEntries []sEntry, mValues
 	// Power-of-two bucket count so we can mask instead of modulo on the hot path.
 	mask := uint32(numBuckets - 1)
 
-	// Partition both sides by bucket. A single pass suffices; buckets are
-	// append-only slices built serially, then joined in parallel.
-	tBuckets := make([][]tEntry, numBuckets)
-	for _, e := range tEntries {
-		b := extHash(&e.val) & mask
-		tBuckets[b] = append(tBuckets[b], e)
-	}
-	sBuckets := make([][]sEntry, numBuckets)
-	for _, e := range sEntries {
-		b := extHash(&e.val) & mask
-		sBuckets[b] = append(sBuckets[b], e)
-	}
+	// Partition both sides by bucket, then join the buckets in parallel.
+	tBuckets := partitionByBucket(tEntries, numBuckets, func(e *tEntry) uint32 { return extHash(&e.val) & mask }, workers)
+	sBuckets := partitionByBucket(sEntries, numBuckets, func(e *sEntry) uint32 { return extHash(&e.val) & mask }, workers)
 
 	parallel.Execute(numBuckets, func(start, stop int) {
 		for b := start; b < stop; b++ {
@@ -251,6 +282,76 @@ func (t *mAssignmentTask) hashJoin(tEntries []tEntry, sEntries []sEntry, mValues
 			}
 		}
 	}, workers)
+}
+
+// splitRows splits [0, n) into at most workers contiguous [start, end) chunks
+// of at least rowsPerChunk rows.
+func splitRows(n, workers int) [][2]int {
+	size := max(rowsPerChunk, (n+workers-1)/max(1, workers))
+	chunks := make([][2]int, 0, (n+size-1)/max(1, size))
+	for start := 0; start < n; start += size {
+		chunks = append(chunks, [2]int{start, min(start+size, n)})
+	}
+	return chunks
+}
+
+// rowsPerChunk is the smallest chunk a worker of the M-assignment handles:
+// below it, splitting costs more than it saves.
+const rowsPerChunk = 8192
+
+// partitionByBucket groups entries by bucket(e) into one flat array and
+// returns each bucket as a sub-slice of it. It is a counting sort: chunks of
+// the input count their entries per bucket in parallel, the counts give every
+// (chunk, bucket) pair its output offset, and the chunks then scatter in
+// parallel. Within a bucket, entries keep their input order.
+func partitionByBucket[E any](entries []E, numBuckets int, bucket func(*E) uint32, workers int) [][]E {
+	chunks := splitRows(len(entries), workers)
+	counts := make([][]int, len(chunks))
+	parallel.Execute(len(chunks), func(start, stop int) {
+		for c := start; c < stop; c++ {
+			counts[c] = make([]int, numBuckets)
+			for i := chunks[c][0]; i < chunks[c][1]; i++ {
+				counts[c][bucket(&entries[i])]++
+			}
+		}
+	}, workers)
+
+	// Bucket b starts after every smaller bucket; within it, chunk c writes
+	// after every earlier chunk.
+	bucketStart := make([]int, numBuckets+1)
+	for b := range numBuckets {
+		total := 0
+		for c := range chunks {
+			total += counts[c][b]
+		}
+		bucketStart[b+1] = bucketStart[b] + total
+	}
+	for b := range numBuckets {
+		next := bucketStart[b]
+		for c := range chunks {
+			n := counts[c][b]
+			counts[c][b] = next
+			next += n
+		}
+	}
+
+	flat := make([]E, len(entries))
+	parallel.Execute(len(chunks), func(start, stop int) {
+		for c := start; c < stop; c++ {
+			pos := counts[c]
+			for i := chunks[c][0]; i < chunks[c][1]; i++ {
+				b := bucket(&entries[i])
+				flat[pos[b]] = entries[i]
+				pos[b]++
+			}
+		}
+	}, workers)
+
+	buckets := make([][]E, numBuckets)
+	for b := range numBuckets {
+		buckets[b] = flat[bucketStart[b]:bucketStart[b+1]:bucketStart[b+1]]
+	}
+	return buckets
 }
 
 // joinEntriesPerBucket is the target number of T and S entries per hash-join
