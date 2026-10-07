@@ -1,6 +1,8 @@
 package fri
 
 import (
+	"runtime"
+
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
@@ -109,17 +111,33 @@ func (table MultiSizeTable) Encode(encoders []*RSEncoder) MultiSizeTable {
 	return encoded
 }
 
-// slabColumns allocates count columns of n elements as sub-slices of one
-// contiguous slab, each capped so a column cannot grow into its neighbor.
+// slabColumns allocates count columns of n elements as sub-slices of a few
+// contiguous slabs, each column capped so it cannot grow into its neighbor.
+//
+// The slabs are allocated concurrently, about one per CPU: Go zeroes a fresh
+// allocation on the allocating goroutine, and a single slab for a wide table
+// spent seconds being zeroed on one core. A slab per CPU keeps that zeroing
+// parallel while avoiding per-column allocations, which contend on the page
+// heap and the kernel fault path.
 func slabColumns[T any](count, n int) [][]T {
 	columns := make([][]T, count)
 	if count == 0 {
 		return columns
 	}
-	slab := make([]T, count*n)
-	for k := range columns {
-		columns[k] = slab[k*n : (k+1)*n : (k+1)*n]
-	}
+	nbSlabs := min(count, runtime.GOMAXPROCS(0))
+	perSlab := (count + nbSlabs - 1) / nbSlabs
+	nbSlabs = (count + perSlab - 1) / perSlab
+	parallel.Execute(nbSlabs, func(start, end int) {
+		for s := start; s < end; s++ {
+			first := s * perSlab
+			last := min(first+perSlab, count)
+			slab := make([]T, (last-first)*n)
+			for k := first; k < last; k++ {
+				o := (k - first) * n
+				columns[k] = slab[o : o+n : o+n]
+			}
+		}
+	}, nbSlabs)
 	return columns
 }
 

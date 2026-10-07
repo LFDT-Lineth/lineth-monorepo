@@ -462,6 +462,18 @@ func buildEncoders(inverseRate, maxSizeIndex uint8) []*fri.RSEncoder {
 	return encoders
 }
 
+// roundEncoders returns the encoder schedule for sizes 2^0 .. 2^maxSizeIndex.
+// At the production rate it is a prefix of the process-wide static schedule,
+// so a commit does not rebuild FFT domains (twiddles and coset tables) for
+// every round of every proof; other rates fall back to [buildEncoders].
+func roundEncoders(inverseRate, maxSizeIndex uint8) []*fri.RSEncoder {
+	if inverseRate == 1<<FRILogInverseRate && maxSizeIndex <= maxCommittableSizeLog2 {
+		_, encoders := staticFRI()
+		return encoders[:int(maxSizeIndex)+1]
+	}
+	return buildEncoders(inverseRate, maxSizeIndex)
+}
+
 // roundMaxSizeIndex returns the largest log2 padded size among a round's
 // Present columns, or 0 when the round owns no committed columns.
 func roundMaxSizeIndex(round *wiop.Round, rt *wiop.Runtime, manifest ColumnManifest) int {
@@ -490,8 +502,8 @@ func commitToRound(
 
 // commitVectors sorts a round's Present columns into a [fri.MultiSizeTable] by
 // padded size (base then extension within each size, in column-declaration
-// order) and FRI-commits it with a freshly-built per-round encoder schedule (a
-// prefix of the global schedule). The column ordering matches [GetLayout]
+// order) and FRI-commits it with the per-round encoder schedule, a prefix of
+// the global one (see [roundEncoders]). The column ordering matches [GetLayout]
 // exactly; elided columns are absent from the committed rows.
 func commitVectors(inverseRate uint8, vectors []paddedColumn, manifest ColumnManifest) *fri.CommitterState {
 
@@ -516,7 +528,7 @@ func commitVectors(inverseRate uint8, vectors []paddedColumn, manifest ColumnMan
 	if maxSizeIndex > 255 {
 		panic("pcs: maxSizeIndex too big")
 	}
-	committerState := fri.Commit(buildEncoders(inverseRate, uint8(maxSizeIndex)), sortedColumns[:maxSizeIndex+1])
+	committerState := fri.Commit(roundEncoders(inverseRate, uint8(maxSizeIndex)), sortedColumns[:maxSizeIndex+1])
 	return &committerState
 }
 
@@ -760,6 +772,10 @@ func initializeBatchClaims(shape fri.Shape) fri.BatchClaimedValues {
 // writeDownVectorBase materializes a base-field column assignment padded up to
 // size, respecting the module's padding direction so the committed polynomial
 // matches the one evalLagrangePadded evaluates.
+//
+// A column that is already size long is returned as is, without a copy: the
+// committed table is only read by the encoder, and the committer state keeps
+// the encoded table, not its input.
 func writeDownVectorBase(concrete *wiop.ConcreteVector, size int, padding wiop.PaddingDirection) []field.Element {
 
 	if !concrete.Plain.IsBase() {
@@ -767,6 +783,9 @@ func writeDownVectorBase(concrete *wiop.ConcreteVector, size int, padding wiop.P
 	}
 
 	plainBase := concrete.Plain.AsBase()
+	if len(plainBase) == size {
+		return plainBase
+	}
 	plain := make([]field.Element, size)
 
 	if padding == wiop.PaddingDirectionLeft {
@@ -788,9 +807,15 @@ func writeDownVectorBase(concrete *wiop.ConcreteVector, size int, padding wiop.P
 // writeDownVectorExt materializes an extension-field column assignment padded up
 // to size, respecting the module's padding direction so the committed polynomial
 // matches the one evalLagrangePadded evaluates.
+//
+// As for [writeDownVectorBase], a column that is already size long is returned
+// without a copy.
 func writeDownVectorExt(concrete *wiop.ConcreteVector, size int, padding wiop.PaddingDirection) []field.Ext {
 
 	plainExt := concrete.Plain.AsExt()
+	if len(plainExt) == size {
+		return plainExt
+	}
 	plain := make([]field.Ext, size)
 	padExt := field.Lift(concrete.Padding)
 
