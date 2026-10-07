@@ -546,6 +546,9 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
             raise Exception("conflation block count is inconsistent with its l2-execution proof range")
         if len(conflation_truncated) == 0:
             raise Exception("rollup proof cannot include an empty conflation")
+        froms = [sender for block in conflation_truncated for sender in block.froms]
+        if hash_address_list(froms) != proof.public_inputs.tx_froms_hash:
+            raise Exception("l2-execution proof txFromsHash does not match DA block senders")
 
         canonical_truncated_rlp = rlp_encode_truncated_blocks(conflation_truncated)
         expected_rlps.append(canonical_truncated_rlp)
@@ -573,15 +576,12 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         rollup_end_block_number,
     )
 
-    concatenated_froms: List[Address] = []
     concatenated_l2_l1_messages: List[Hash32] = []
     concatenated_filtered_addresses: List[Address] = []
-    truncated_froms: List[Address] = []
     truncated_block_hashes = [block.block_hash for block in truncated_blocks]
 
     for verifiable_proof in rollup_input.l2_execution_proofs:
         verify_l2_execution_proof(verifiable_proof.program_vk, verifiable_proof.proof)
-        concatenated_froms.extend(verifiable_proof.proof.tx_froms)
         concatenated_l2_l1_messages.extend(verifiable_proof.proof.l2_l1_messages)
         concatenated_filtered_addresses.extend(verifiable_proof.proof.filtered_addresses)
 
@@ -598,12 +598,6 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     # sorted so the commitment is a pure function of its contents. `Hash32` is a
     # bytes subclass, so `sorted` orders ascending by byte value.
     program_vks = sorted({vp.program_vk for vp in rollup_input.l2_execution_proofs})
-
-    for block in truncated_blocks:
-        truncated_froms.extend(block.froms)
-
-    if concatenated_froms != truncated_froms:
-        raise Exception("l2-execution proof txFroms do not match blob blockData.froms")
 
     first_proof = l2_execution_proofs[0]
     last_proof = l2_execution_proofs[-1]
@@ -694,18 +688,16 @@ def verify_l2_execution_proof(program_vk: Hash32, proof: L2ExecutionProof) -> No
     anchoring). The rollup guest passes the same `program_vk` it bubbles up into
     `exec_vks` / `program_vks`, so the anchored VK is provably the key the
     verification ran against. `L2ExecutionProof.proof` stands in for those
-    recursive-STARK bytes; beyond the recursive verify, the reference only
-    re-checks the hash-preimage bindings (`txFromsHash`, `l2L1MessagesHash`,
-    `filteredAddressesHash`) the rollup proof consumes alongside the PI tuple.
+    recursive-STARK bytes; beyond the recursive verify, the reference re-checks
+    the message and filtered-address preimage bindings. The caller checks
+    `txFromsHash` against the canonical DA block senders.
     """
     # First: the recursive STARK verify against the explicit verify key.
     recursive_stark_verify(program_vk, proof.proof)
-    # The three checks below are PRECOMPILE: keccak256 in production (used
+    # The checks below are PRECOMPILE: keccak256 in production (used
     # to verify the preimage bindings that the rollup proof consumes).
     if hash_digest_list(proof.l2_l1_messages) != proof.public_inputs.l2_l1_messages_hash:
         raise Exception("invalid L2-to-L1 message-list preimage")
-    if hash_address_list(proof.tx_froms) != proof.public_inputs.tx_froms_hash:
-        raise Exception("invalid txFromsHash preimage")
     if hash_address_list(proof.filtered_addresses) != proof.public_inputs.filtered_addresses_hash:
         raise Exception("invalid l2-execution filteredAddressesHash preimage")
 

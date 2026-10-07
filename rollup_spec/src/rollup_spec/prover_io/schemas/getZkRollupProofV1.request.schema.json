@@ -173,7 +173,6 @@
         "startBlockNumber",
         "publicInputs",
         "l2L1Messages",
-        "txFroms",
         "filteredAddresses",
         "programVk"
       ],
@@ -182,7 +181,6 @@
         "startBlockNumber": { "$ref": "#/$defs/uint" },
         "publicInputs": { "$ref": "#/$defs/l2ExecutionPublicInputs" },
         "l2L1Messages": { "type": "array", "items": { "$ref": "#/$defs/hash32" } },
-        "txFroms": { "type": "array", "items": { "$ref": "#/$defs/address" } },
         "filteredAddresses": { "type": "array", "items": { "$ref": "#/$defs/address" } },
         "programVk": { "$ref": "#/$defs/hash32" }
       }

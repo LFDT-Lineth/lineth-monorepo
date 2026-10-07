@@ -114,6 +114,14 @@ for the next proving step or for the Coordinator to submit to L1. L1 hashes
 submitted lists in `_computePublicInput` (§5). The reference leaves `proof` as
 a placeholder (`b""`); see §2.4 and §3.3.
 
+The l2-execution guest emits `txFromsHash` in its public inputs, rather than
+emitting the potentially large `txFroms` sender list. The arithmetization's
+SSZ-encoded guest-output limit is 2^16 bytes; excluding sender preimages keeps
+them from consuming this budget. The rollup guest reconstructs the list from
+its private block inputs and checks the hash (§2.2). The Python reference's
+hash-only guest-output frame remains 34 bytes including its schema ID; the
+embedded execution proof and JSON prover response likewise omit `txFroms`.
+
 **Reference environment.** The Python reference targets **Python 3.11+** (it uses
 `enum.StrEnum`) and pins its dependencies in `rollup_spec/requirements.txt`
 (`remerkleable`, a commit-pinned `ethereum-execution`, `ckzg`, `zstandard`).
@@ -170,7 +178,7 @@ declared outcome is one of the allowed outcomes in §6.5.
 
 * **Inspect the forced transactions**: See the corresponding section.
 
-* **Output**: the public-input tuple above, as part of the guest output consumed by the rollup guest.
+* **Output**: the public-input tuple above (including `txFromsHash`) and the other required rollup-facing outputs (`l2L1Messages`, `filteredAddresses`), without a `txFroms` list. The `proof` bytes are attached by the prover (§2).
 
 ### 2.2 rollup Proof
 
@@ -232,7 +240,6 @@ Each l2-execution proof `Eₑ` (`e ∈ [1, N]`) has:
 | `publicInputs` (`PI_Eₑ`) | The l2-execution PI (§2.1). |
 | `programVk` (`programVk_e`) | The 32-byte verifying key of the exec guest that produced `Eₑ` — the key the recursive verifier checks `Eₑ` against (step 4), emitted into `programVks` (step 9). A guest cannot attest its own VK, so it is carried on the proof, not in `Eₑ`'s own PI. |
 | `l2L1Messages` (`l2L1Messages_e`) | Ordered L2→L1 message-hash list — preimage of `PI_Eₑ.l2L1MessagesHash`. |
-| `txFroms` (`froms_e`) | Sender address list (block-then-transaction order) — preimage of `PI_Eₑ.txFromsHash`. |
 | `filteredAddresses` (`addrs_e`) | Refused-FTX address list (§6.5) — preimage of `PI_Eₑ.filteredAddressesHash`. |
 | `startBlockNumber` | First block number of `Eₑ`'s range — used to verify proof tiling. |
 
@@ -242,7 +249,7 @@ The proven statement binds physical chunk bytes to L1-anchored hashes, then pars
 
 For each conflation `c ∈ [1, N]`, derive its canonical truncated-block RLP (step 1), then parse exactly one frame from the chunk-bound DA stream (step 2) before performing cross-conflation recursion (steps 3–8).
 
-1. **Derive canonical payloads.** Decode each conflation's ordered `blockRlps_c`, apply §3.2 truncation, and RLP-encode the truncated blocks. Check its block count against the paired execution proof range and retain block hashes and sender addresses for subsequent checks.
+1. **Derive canonical payloads.** Decode each conflation's ordered `blockRlps_c`, apply §3.2 truncation, and RLP-encode the truncated blocks. Check its block count against the paired execution proof range and retain block hashes and sender addresses recovered from the full signed transactions for subsequent checks.
 
 2. **Verify and parse chunks.** Check every blob's canonical packing and KZG versioned hash using its original 131072 physical bytes. Start at `startOffset` unpacked payload bytes in the first blob; each nonterminal blob must hold a full payload. Verify the keccak hash of each exact, nonempty `calldataBytes` chunk. Concatenate accessible bytes, parse exactly `N` four-byte big-endian nonzero lengths and complete zstd frames, and fully decompress each against its canonical payload. Require each calldata extent to start and end at frame boundaries with no trailing calldata; only the last blob may have unowned bytes after the final frame. Each touched chunk must contribute owned bytes. Fold the dataRollingHash:
 
@@ -251,11 +258,11 @@ For each conflation `c ∈ [1, N]`, derive its canonical truncated-block RLP (st
    ```
    where `R_0 = parentDataRollingHash` (public input) **if** `startOffset = 0` (a canonical chunk boundary — the guest folds chunk 1 forward normally); if `startOffset > 0` (a mid-blob start), `parentDataRollingHash` is already `R_1` — the guest instead opens its preimage, asserting `Hash(boundaryPrevDataRollingHash, chunks[1]) == parentDataRollingHash`, and continues folding forward from `R_1` for `k ≥ 2`. After all `T` chunks, the outbound `endDataRollingHash = R_T` is emitted in the PI tuple together with the canonical `endOffset`; neither is echoed back as a request input (the coordinator compares the returned values against its own expectation).
 
-3. **Verify sender addresses.** For each l2-execution proof `Eᵢ`, assert:
+3. **Verify sender addresses.** From the canonical full signed transactions in `blockRlps_c`, recover each sender using `recover_sender(chainID, tx)` and group the addresses by the block range of the paired l2-execution proof `Eᵢ`, preserving block-then-transaction order. For each `Eᵢ`, assert:
    ```
-   keccak256(froms_e) == PI_Eᵢ.txFromsHash
+   keccak256(froms_e[0] ‖ … ‖ froms_e[last]) == PI_Eᵢ.txFromsHash
    ```
-   Then assert that `froms_1 ‖ … ‖ froms_N` equals the concatenation of `froms` across all truncated blocks (step 1 input), in canonical block-then-transaction order.
+   where each `froms_e[j]` is a 20-byte address and the empty list hashes as `keccak256(b"")`. The same full block RLPs supply the canonical truncated blocks and block hashes checked in steps 2 and 5, binding these sender hashes to the verified DA stream and execution-proof chain.
 
 4. **Verify the l2-execution proofs.** Recursively verify each `Eᵢ` against `PI_Eᵢ`, using `programVk_e` (private input, above) as the recursive verifier's verifying key for proof `Eᵢ`.
 
@@ -275,7 +282,7 @@ For each conflation `c ∈ [1, N]`, derive its canonical truncated-block RLP (st
 
     Adjacent l2-execution proofs already chain `endBlockHash → parentBlockHash` via step 7 below, so the head-anchor in (b) only needs to look at `PI_E₁.parentBlockHash`.
 
-6. **Build the L2→L1 Merkle trees.** For each `e ∈ [1, N]`, receive the message hash list as a private witness and assert `keccak256(l2L1Messages_e) == PI_E_e.l2L1MessagesHash`. Concatenate all N lists in order. Partition the combined list into consecutive groups of `2^D` leaves (where D is chosen by the guest program, currently 5), one group per tree. Pad the final group with zero-value (0x00…00) leaves to fill it. Each leaf is a 32-byte message hash; internal nodes are `keccak256(left ‖ right)`. Compute the root of each full tree and emit the ordered array `[root_1, …, root_T]` and `l2L1TreeDepth = D` in the public inputs.
+ 6. **Build the L2→L1 Merkle trees.** For each `e ∈ [1, N]`, receive the message hash list as a private witness and assert `keccak256(l2L1Messages_e) == PI_E_e.l2L1MessagesHash`. Concatenate all N lists in order. Partition the combined list into consecutive groups of `2^D` leaves (where D is chosen by the guest program, currently 5), one group per tree. Pad the final group with zero-value (0x00…00) leaves to fill it. Each leaf is a 32-byte message hash; internal nodes are `keccak256(left ‖ right)`. Compute the root of each full tree and emit the ordered array `[root_1, …, root_T]` and `l2L1TreeDepth = D` in the public inputs.
 
 7. **Chain the l2-execution proofs.** For each consecutive pair `(Eᵢ, Eᵢ₊₁)` assert:
    ```
