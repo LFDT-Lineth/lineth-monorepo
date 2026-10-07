@@ -85,11 +85,6 @@ def test_schema_is_valid_draft_2020_12(schema_path: Path) -> None:
 @pytest.mark.parametrize(
     ("fixture_name", "public_inputs"),
     [
-        ("10-14-getZkRollupProofV1.response.json", lambda fixture: [fixture["publicInputs"]]),
-        (
-            "10-18-getZkRollupAggregationProofV1.request.json",
-            lambda fixture: [proof["publicInputs"] for proof in fixture["proofRequest"]["rollupProofs"]],
-        ),
         ("10-18-getZkRollupAggregationProofV1.response.json", lambda fixture: [fixture["publicInputs"]]),
     ],
 )

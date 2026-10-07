@@ -2,8 +2,9 @@
 Tests for the rollup SSZ wire format (`rollup_ssz.py`).
 
 These cover the two properties this codec is responsible for:
-  - round-trip fidelity: the input codec preserves the logical request; the
-    output codec carries public inputs and their hash;
+  - round-trip fidelity: the SSZ codec preserves every field of the logical
+    request/output dataclasses, and (for outputs) the JSON the coordinator
+    would see back out;
   - strict decoding: a wrong schema id, truncated bytes, or trailing bytes are
     all rejected rather than silently accepted or truncated.
 
@@ -25,16 +26,22 @@ from ethereum.crypto.hash import Hash32, keccak256
 from ethereum_types.numeric import U64
 
 from rollup_spec.rollup import ChunkWitness, RollupProof
-from rollup_spec.proof_io_v1 import _decode_rollup_public_input, decode_rollup_request
+from rollup_spec.proof_io_v1 import (
+    _decode_rollup_public_input,
+    decode_rollup_request,
+    encode_rollup_response,
+)
 from rollup_spec.rollup_ssz import (
     decode_rollup_input_ssz,
     decode_rollup_output_ssz,
     encode_rollup_input,
     encode_rollup_output,
+    hash_rollup_public_inputs,
 )
 from rollup_spec.stateless_input import InvalidSsz
 
 _TESTDATA_DIR = Path(rollup_spec.__file__).resolve().parent / "prover_io" / "testdata"
+_PROVER_VERSION = "4.0.0-riscv"
 
 
 def _fixture(name: str) -> Path:
@@ -64,7 +71,7 @@ def _rollup_output_from_response(resp: dict) -> RollupProof:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Round-trip: JSON fixture -> dataclass -> SSZ -> public inputs
+# Round-trip: JSON fixture -> dataclass -> SSZ -> dataclass (-> JSON)
 # ══════════════════════════════════════════════════════════════════════════════
 
 
@@ -83,29 +90,45 @@ def test_rollup_input_round_trips_through_ssz() -> None:
     assert recovered == original
 
 
-def test_rollup_output_frames_public_inputs_and_hash() -> None:
+def test_rollup_output_round_trips_through_ssz_and_back_to_json() -> None:
     response = _load_json("getZkRollupProofV1.response.json")
     original_output = _rollup_output_from_response(response)
 
-    encoded = encode_rollup_output(original_output)
-    pi_bytes = encoded[2:-32]
-    assert encoded[:2] == (0x1801).to_bytes(2, "big")
-    assert pi_bytes[:8] == int(original_output.public_inputs.end_block_number).to_bytes(8, "little")
-    assert encoded[-32:] == keccak256(pi_bytes)
-    assert decode_rollup_output_ssz(encoded) == original_output.public_inputs
+    recovered_output = decode_rollup_output_ssz(encode_rollup_output(original_output))
+    assert recovered_output == original_output.public_inputs
+
+    # The guest never emits `proof`/`programVk` (both host-attached metadata); round-tripping
+    # through the JSON encoder reproduces the original response with `proof` reset to the
+    # placeholder and the fixture's own `programVk` passed back in.
+    rebuilt_response = encode_rollup_response(
+        RollupProof(recovered_output, original_output.start_block_number),
+        prover_version=_PROVER_VERSION,
+        program_vk=_hexbytes(response["programVk"]),
+    )
+    assert rebuilt_response == {**response, "proof": "0x"}
 
 
-def test_rollup_output_rejects_wrong_hash() -> None:
-    encoded = bytearray(_rollup_output_bytes())
-    encoded[-1] ^= 1
-    with pytest.raises(InvalidSsz, match="hash mismatch"):
-        decode_rollup_output_ssz(bytes(encoded))
-
-
-def test_rollup_output_preserves_variable_length_public_inputs() -> None:
+def test_rollup_output_commits_message_order_and_empty_list() -> None:
     proof = _rollup_output_from_response(_load_json("getZkRollupProofV1.response.json"))
-    proof.public_inputs.l2_messaging_blocks_offsets = [3, 8]
-    assert decode_rollup_output_ssz(encode_rollup_output(proof)) == proof.public_inputs
+    original = encode_rollup_output(proof)
+    assert original[:32] == keccak256(original[32:])
+    assert original[:32] == hash_rollup_public_inputs(proof.public_inputs)
+    proof.public_inputs.l2_l1_messages[0] = Hash32(bytes([0x09]) * 32)
+    reordered = encode_rollup_output(proof)
+    assert reordered[:32] != original[:32]
+    proof.public_inputs.l2_l1_messages = []
+    empty = encode_rollup_output(proof)
+    assert decode_rollup_output_ssz(empty).l2_l1_messages == []
+    assert empty[:32] != original[:32]
+    with pytest.raises(InvalidSsz, match="commitment"):
+        decode_rollup_output_ssz(original[:32] + reordered[32:])
+
+
+def test_rollup_output_rejects_rehashed_wrong_schema_id() -> None:
+    encoded = encode_rollup_output(_rollup_output_from_response(_load_json("getZkRollupProofV1.response.json")))
+    wrong_preimage = b"\xff\xfc" + encoded[34:]
+    with pytest.raises(InvalidSsz, match="schema id"):
+        decode_rollup_output_ssz(keccak256(wrong_preimage) + wrong_preimage)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -135,8 +158,10 @@ def test_decode_rejects_wrong_schema_id(decode_fn, encode_bytes, schema_id) -> N
     # Flip the schema id to a value that is neither the expected id nor the
     # other schema id in this module.
     wrong_id = (schema_id ^ 0xFFFF).to_bytes(2, "big")
-    encoded[0:2] = wrong_id
-    with pytest.raises(InvalidSsz, match="schema id"):
+    encoded[32:34] = wrong_id if schema_id == 0x1801 else encoded[32:34]
+    if schema_id != 0x1801:
+        encoded[0:2] = wrong_id
+    with pytest.raises(InvalidSsz, match="schema id|commitment"):
         decode_fn(bytes(encoded))
 
 
@@ -150,7 +175,7 @@ def test_decode_rejects_truncated_bytes(decode_fn, encode_bytes, schema_id) -> N
 @pytest.mark.parametrize("decode_fn, encode_bytes, schema_id", _DECODE_CASES)
 def test_decode_rejects_missing_schema_id(decode_fn, encode_bytes, schema_id) -> None:
     encoded = encode_bytes()
-    with pytest.raises(InvalidSsz, match="schema id"):
+    with pytest.raises(InvalidSsz, match="schema id|commitment"):
         decode_fn(encoded[:1])
 
 
