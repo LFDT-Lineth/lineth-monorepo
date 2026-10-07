@@ -90,4 +90,5 @@ jobs:
           INPUT: test/testdata/block_amsterdam_175k_nopb.ssz
           KECCAK_ACCEL: true
           ZKC_TRACE_FLAGS: "--stats -vv --sharding interpreter:500000"
+          GOMAXPROCS: 10
 
