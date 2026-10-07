@@ -17,13 +17,9 @@ include "../../common/constants.zkc"
 fn write_output<ram, guest_output_tmp, output_cursor>(offset:Address, size:u64, prefix_count:PrefixCount) -> (new_prefix_count:PrefixCount) {
     // Prefix: the first OUTPUT_PREFIX_LEN bytes of the output, in every mode.
     var n:PrefixCount = 0
-    if prefix_count<OUTPUT_PREFIX_LEN {
-        var room:PrefixCount = OUTPUT_PREFIX_LEN - prefix_count
-        if size<(room as u64) {
-            n = size as PrefixCount
-        } else {
-            n = room
-        }
+    var room:PrefixCount = OUTPUT_PREFIX_LEN - prefix_count
+    if prefix_count < OUTPUT_PREFIX_LEN {
+        n = size < (room as u64) ? size as PrefixCount : room
         for i:PrefixCount = 0; i<n; i = i + 1 {
             var byte_read:u8 = read_8(offset + (i as Address))
             guest_output[(prefix_count + i) as OutputAddress] = byte_read
@@ -35,8 +31,8 @@ fn write_output<ram, guest_output_tmp, output_cursor>(offset:Address, size:u64, 
     // Tail: the bytes past the prefix, in OUTPUT_MODE_FULL only. While the
     // output is shorter than OUTPUT_PREFIX_LEN, output_cursor == prefix_count,
     // so bytes j >= n land right after the prefix.
+    var cursor:OutputAddress = output_cursor[0]
     if output_mode[0] == OUTPUT_MODE_FULL {
-        var cursor:OutputAddress = output_cursor[0]
         for j:u64 = n as u64; j<size; j = j + 1 {
             guest_output[cursor + j] = read_8(offset + (j as Address))
         }
