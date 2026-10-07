@@ -91,6 +91,8 @@
 - *(prover)* Empty-codehash check (#3913)
 - *(coordinator)* Preserve Amsterdam execution payload fields (#3949)
 - *(misc)* Make timer stop() await in-flight task execution (#4042)
+- *(linea-besu)* Limit large MODEXP calls to 1 per block (#4128)
+- *(prover)* Segment MODEXP_LARGE by whole instances in limitless (#4127)
 
 ### 🚜 Refactor
 
@@ -184,3 +186,4 @@
 - *(coordinator)* Carve out config module (#4093)
 - *(coordinator)* Arrange config module dependencies (#4100)
 - *(coordinator)* Remove unsupported invalidity proof client (#4101)
+- *(coordinator)* Simplify Risc5 prover DTO mappers (#4121)

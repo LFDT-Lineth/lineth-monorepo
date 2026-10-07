@@ -73,11 +73,11 @@ class FileBasedRollupProverClientTest {
     assertThat(requestFile).exists()
 
     val writtenDto = jsonMapper.readValue(requestFile.toFile(), FileBasedRollupProofRequestDto::class.java)
-    val expectedDto = FileBasedRollupProofRequestDtoMapper(
+    val expectedDto = RollupProofRequestDtoMapper(
       ROLLUP_PROGRAM_ID,
       PROVING_SYSTEM_VERSION,
       CHAIN_ID,
-      l2ExecutionProofTransport,
+      l2ExecutionProofTransport::findResponse,
     ).invoke(request).get()
     assertThat(writtenDto).isEqualTo(expectedDto)
   }

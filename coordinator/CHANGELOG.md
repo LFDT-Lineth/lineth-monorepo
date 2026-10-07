@@ -1,3 +1,8 @@
+## [2.0.1] - 2026-10-06
+
+### ⚙️ Miscellaneous Tasks
+
+- *(coordinator)* Simplify Risc5 prover DTO mappers (#4121)
 ## [2.0.0] - 2026-10-02
 
 ### 🚀 Features
