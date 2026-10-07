@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🚜 Refactor
+
+- *(coordinator)* Select batches insert query by DB schema version (#4145)
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(coordinator)* Make RISC-V rollup prover clients transport-agnostic (#4140)
