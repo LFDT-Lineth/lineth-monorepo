@@ -1,3 +1,8 @@
+## [unreleased]
+
+### ⚙️ Miscellaneous Tasks
+
+- *(coordinator)* Make RISC-V rollup prover clients transport-agnostic (#4140)
 ## [2.0.1] - 2026-10-06
 
 ### ⚙️ Miscellaneous Tasks
