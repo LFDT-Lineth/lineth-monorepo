@@ -7,7 +7,7 @@ name: Arithmetization native zkc benchmark - Keccak (base vs optim)
 # one untimed warm-up (untimed) + N timed iterations for the base variant
 # one untimed warm-up (untimed) + N timed iterations for the optim variant
 # Per-iteration `cache_thrasher` + sleep attempts to keep CPU cache state comparable across timed runs.
-# Launched with zkc exec --field KOALABEAR_16 <input.json> <program.zkc>
+# Launched with zkc trace --field KOALABEAR_16 <input.json> <program.zkc>
 #
 # Benchmark data :
 # In arithmetization/src/test/zkc/keccakf/keccakf_batched.accepts
@@ -162,7 +162,7 @@ jobs:
           # Run fast mode with gogen
           run_gogen_native_keccak() {  # $1=variant (base|opt)  $2=label (warmup|iter#)
             local variant="$1" label="$2" zkc_bin="/tmp/zkc-${1}"
-            "$zkc_bin" generate --fast -vv --field KOALABEAR_16 -o riscv.go "$zkc_prog"
+            "$zkc_bin" generate -vv --field KOALABEAR_16 -o riscv.go "$zkc_prog"
             go build -o riscv-gogen riscv.go
             /usr/bin/time -v ./riscv-gogen < /tmp/keccakf_input.json \
               > "/tmp/bench/logs/keccak_${variant}_${label}.log" 2>&1
@@ -170,12 +170,11 @@ jobs:
 
           TEST_MAKE_DIR="$PWD/arithmetization/src/test"
 
-          # Run in tracing or fast mode via make zkc-exec
-          run_native_keccak() {  # $1=variant (base|opt)  $2=label (warmup|iter#)  optional: --fast
-            local exec_flags="-vv --field KOALABEAR_16"
-            if [[ "${3:-}" == "--fast" ]]; then exec_flags="--fast -vv --field KOALABEAR_16"; fi
-            /usr/bin/time -v env ZKC="/tmp/zkc-${1}" ZKC_EXEC_FLAGS="$exec_flags" \
-              make -C "$TEST_MAKE_DIR" --no-print-directory zkc-exec \
+          # Run in tracing mode via make zkc-trace
+          run_native_keccak() {  # $1=variant (base|opt)  $2=label (warmup|iter#)
+            local trace_flags="-vv --field KOALABEAR_16"
+            /usr/bin/time -v env ZKC="/tmp/zkc-${1}" ZKC_TRACE_FLAGS="$trace_flags" \
+              make -C "$TEST_MAKE_DIR" --no-print-directory zkc-trace \
               JSON=/tmp/keccakf_input.json ZKC_MAIN="$zkc_prog" \
               > "/tmp/bench/logs/keccak_${1}_${2}.log" 2>&1
           }
@@ -183,7 +182,7 @@ jobs:
           ## Loop on variants
           for variant in base opt; do
             log "=== variant: ${variant} ==="
-            reset_state; log "${variant}: warmup (untimed)"; run_native_keccak "$variant" warmup --fast
+            reset_state; log "${variant}: warmup (untimed)"; run_native_keccak "$variant" warmup
             reset_state; log "stats run: ${variant} (untimed)"; run_compile_native_keccak "$variant" warmup
             for i in $(seq 1 "$ITERS"); do
               reset_state; log "${variant}: iter ${i}/${ITERS}"
