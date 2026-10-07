@@ -4,9 +4,25 @@ contract-address = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
 [conflation]
 riscv-starting-block-timestamp-inclusive = 0
 
-[riscv-prover.execution]
-# Execution program-vk is set through Compose.
+# Replaces the shared pre-RISC-V prover config; only the execution prover runs locally.
+# Compose overrides prover.l2-execution.program-id (R5_L2_EXECUTION_PROGRAM_ID); rollup and
+# rollup-aggregation are not proven locally, so their program-ids are placeholders.
+[prover]
+type = "riscv"
+proving-system-version = "riscv-local"
 fork-name = "Amsterdam"
+[prover.l2-execution]
+program-id = "0x0000000000000000000000000000000000000000000000000000000000000000"
+fs-requests-directory = "/data/prover/riscv/execution/requests"
+fs-responses-directory = "/data/prover/riscv/execution/responses"
+[prover.rollup]
+program-id = "0x0000000000000000000000000000000000000000000000000000000000000000"
+fs-requests-directory = "/data/prover/riscv/rollup/requests"
+fs-responses-directory = "/data/prover/riscv/rollup/responses"
+[prover.rollup-aggregation]
+program-id = "0x0000000000000000000000000000000000000000000000000000000000000000"
+fs-requests-directory = "/data/prover/riscv/aggregation/requests"
+fs-responses-directory = "/data/prover/riscv/aggregation/responses"
 
 [l1-submission.blob]
 disabled = true

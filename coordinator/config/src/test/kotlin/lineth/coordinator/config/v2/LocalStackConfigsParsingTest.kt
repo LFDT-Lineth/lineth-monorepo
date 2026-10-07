@@ -49,7 +49,12 @@ class LocalStackConfigsParsingTest {
     ).also { configs ->
       assertThat(configs.protocol.l1.contractAddress).isEqualTo("0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9")
       assertThat(configs.conflation.riscvStartingBlockTimestampInclusive).isEqualTo(Instant.fromEpochSeconds(0))
-      assertThat(configs.riscvProversConfig?.proverA?.execution?.forkName).isEqualTo("Amsterdam")
+      assertThat(configs.proversConfig.currentProver.preRiscvConfig).isNull()
+      configs.proversConfig.currentProver.riscvConfig!!.l2Execution.also { execution ->
+        assertThat(execution.forkName).isEqualTo("Amsterdam")
+        assertThat(execution.fileBased.requestsDirectory)
+          .isEqualTo(Path.of("/data/prover/riscv/execution/requests"))
+      }
       assertThat(configs.l1Submission.disabled).isTrue()
       assertThat(configs.messageAnchoring?.disabled).isTrue()
       assertThat(configs.forcedTransactions?.disabled).isTrue()

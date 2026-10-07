@@ -1,5 +1,5 @@
 # RISC-V overrides for the shared local stack in compose-tracing-v2.yml.
-x-riscv-execution-program-vk: &riscv-execution-program-vk ${R5_L2_EXECUTION_PROGRAM_VK:-0x17d2e0660946012c80c5fe6bbecc2076a6f6f5aa58606efe66a14426d2ffe46f}
+x-riscv-execution-program-id: &riscv-execution-program-id ${R5_L2_EXECUTION_PROGRAM_ID:-0x17d2e0660946012c80c5fe6bbecc2076a6f6f5aa58606efe66a14426d2ffe46f}
 
 services:
   l2-genesis-initialization:
@@ -46,6 +46,8 @@ services:
       - linea
 
   coordinator:
+    # The RISC-V prover config requires coordinator >= 2.0.0.
+    image: ${LINEA_COORDINATOR_IMAGE_NAME:-consensys/linea-coordinator}:${LINEA_COORDINATOR_TAG:-2.0.1-20261006-a95a2ad}
     healthcheck:
       test:
         - CMD-SHELL
@@ -64,6 +66,6 @@ services:
         condition: service_healthy
     environment:
       COORDINATOR_CONFIG_FILES: config/coordinator-config.toml config/coordinator-config-riscv.toml
-      config__override__riscv_prover__execution__program_vk: *riscv-execution-program-vk
+      config__override__prover__l2_execution__program_id: *riscv-execution-program-id
     volumes:
       - ./config/coordinator/coordinator-config-riscv.toml:/opt/consensys/linea/coordinator/config/coordinator-config-riscv.toml:ro

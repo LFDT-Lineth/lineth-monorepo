@@ -19,7 +19,8 @@ const executionDir = resolve(__dirname, "../../tmp/local/prover/riscv/execution"
 const execFileAsync = promisify(execFile);
 
 type ExecutionRequest = {
-  programVk: Hex;
+  // Guest program identifier, treated as opaque while its derivation is being settled.
+  programId: Hex;
   metadata: { startBlockNumber: number; endBlockNumber: number; totalGasUsed: number };
   proofRequest: {
     chainConfig: { chainId: number; forkName: string };
@@ -87,7 +88,7 @@ describe("RISC-V execution stack", () => {
     );
     const { startBlockNumber, endBlockNumber } = request.metadata;
     expect(request.proofRequest.chainConfig).toMatchObject({ chainId: context.getL2ChainId(), forkName: "Amsterdam" });
-    expect(request.programVk).toMatch(/^0x[0-9a-f]{64}$/i);
+    expect(request.programId).toMatch(/^0x[0-9a-f]{64}$/i);
     expect(request.metadata.totalGasUsed).toBeGreaterThan(0);
     const inputs = request.proofRequest.payloads.map((payload) => payload.statelessInput);
     expect(inputs.map((input) => input.newPayloadRequest.executionPayload.blockNumber)).toEqual(
@@ -109,7 +110,7 @@ describe("RISC-V execution stack", () => {
       proverVersion: "riscv-local-dev-mock",
       startBlockNumber,
       publicInputs: { endBlockNumber },
-      programVk: request.programVk,
+      programVk: expect.stringMatching(/^0x[0-9a-f]{64}$/i),
       proof: stringToHex("dev-proof:dev-mock"),
     });
     // A response file alone does not prove that the coordinator consumed it. Status 2 is Batch.Status.Proven.
