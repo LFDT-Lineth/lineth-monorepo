@@ -45,8 +45,7 @@
 //   - optional blobs_executable;
 //   - blobs_data;
 //   - instruction_base;
-//   - decoded;
-//   - output_mode.
+//   - decoded.
 //
 // Values are 0x-prefixed hexadecimal strings. Underscores separate logical
 // fields and records while remaining compatible with ZkC's parser. ELF
@@ -62,11 +61,6 @@
 // ELF2JSON_WRITE_SECTIONS accepts true or false. When true, the command writes
 // <elf-file-without-.elf>.sections containing blob indexes, addresses, sizes,
 // executable flags, and section names.
-//
-// ELF2JSON_OUTPUT_MODE accepts full (the default) or prefix and sets
-// output_mode. With full, guest_output receives the whole guest output, for
-// fast execution. With prefix, it receives only the first 32 bytes, so tracing
-// does not pay for the rest of the output.
 //
 // ELF2JSON_MAX_DECODED_RECORDS overrides the dense-table safety limit. It
 // accepts decimal or 0x-prefixed unsigned integers and protects against very

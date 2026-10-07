@@ -130,9 +130,9 @@ compile: require-src
 #
 # Note: we use opt-level=2 to remove unused code.
 
-# Convert and execute an already compiled external ELF
+# Convert and execute an already compiled external ELF, printing the full guest output (see cmd/guest_exec)
 elf-exec: elf-to-json prepare-zkc
-	$(MAKE) -C $(MAKEFILE_DIR) --no-print-directory zkc-exec JSON=$(JSON_EXT) ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"
+	go -C $(ARITHMETIZATION_DIR) run ./cmd/guest_exec "$(abspath $(JSON_EXT))"
 
 # Convert and trace an already compiled external ELF
 elf-trace: elf-to-json prepare-zkc

@@ -1,40 +1,18 @@
 include "../../riscv/memory.zkc"
 include "../../riscv/ram/read.zkc"
-include "../../common/constants.zkc"
 
-// Copy `size` bytes of guest RAM starting at byte address `offset` to the
-// guest output, returning the advanced prefix count.
-//
-// `prefix_count` (<= OUTPUT_PREFIX_LEN) is how many of the first
-// OUTPUT_PREFIX_LEN output bytes have been written. In every mode, those bytes
-// go to `guest_output` (and `guest_output_tmp`). Arithmetic in this part stays
-// below OUTPUT_PREFIX_LEN and `size` is only compared, so it never overflows.
-//
-// In OUTPUT_MODE_FULL, the remaining bytes are appended to `guest_output`
-// after the prefix, at the position kept in `output_cursor`, so
-// `guest_output` holds the whole output stream. In any other mode this part is
-// skipped, so the trace never contains output bytes beyond the prefix.
-fn write_output<ram, guest_output_tmp, output_cursor>(offset:Address, size:u64, prefix_count:PrefixCount) -> (new_prefix_count:PrefixCount) {
-    // Prefix: the first OUTPUT_PREFIX_LEN bytes of the output, in every mode.
-    var room:PrefixCount = OUTPUT_PREFIX_LEN - prefix_count
-    var n:PrefixCount = size < (room as u64) ? size as PrefixCount : room
-    if prefix_count < OUTPUT_PREFIX_LEN {
-        for i:PrefixCount = 0; i<n; i = i + 1 {
-            var byte_read:u8 = read_8(offset + (i as Address))
-            guest_output[(prefix_count + i) as OutputAddress] = byte_read
-            guest_output_tmp[(prefix_count + i) as u16] = byte_read
-        }
-    }
-    new_prefix_count = prefix_count + n
+// Number of guest output bytes traced into `guest_output`.
+const OUTPUT_COMMITMENT_LEN:OutputAddress = 32
 
-    // Tail: the bytes past the prefix, in OUTPUT_MODE_FULL only. While the
-    // output is shorter than OUTPUT_PREFIX_LEN, output_cursor == prefix_count,
-    // so bytes j >= n land right after the prefix.
-    var cursor:OutputAddress = output_cursor[0]
-    if output_mode[0] == OUTPUT_MODE_FULL {
-        for j:u64 = n as u64; j<size; j = j + 1 {
-            guest_output[cursor + j] = read_8(offset + (j as Address))
-        }
-        output_cursor[0] = cursor + size
+// Copy the first OUTPUT_COMMITMENT_LEN bytes of guest RAM starting at byte address `offset`
+// into the public `guest_output` buffer at `output_write_address`, returning the advanced cursor.
+// The rest of the output is not traced: the host reads it instead (see gopkg/guestoutput).
+fn write_output<ram, guest_output_tmp>(offset:Address, output_write_address:OutputAddress) -> (new_output_write_address:OutputAddress) {
+    new_output_write_address = output_write_address + OUTPUT_COMMITMENT_LEN
+
+    for i:OutputAddress = 0; i<OUTPUT_COMMITMENT_LEN; i = i + 1 {
+        var byte_read:u8 = read_8(offset + (i as Address))
+        guest_output[output_write_address + i] = byte_read
+        guest_output_tmp[output_write_address + i] = byte_read
     }
 }

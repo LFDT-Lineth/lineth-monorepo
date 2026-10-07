@@ -18,10 +18,6 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
 )
 
-// outputModeInput names the input selecting how much of the guest output the
-// R5 interpreter records (see output_mode in src/main/riscv/memory.zkc).
-const outputModeInput = "output_mode"
-
 type inputBytes struct {
 	data    []byte
 	options []elfmapping.DataOption
@@ -124,11 +120,6 @@ Options:
 	for name, data := range decoded.EncodeInputs() {
 		inputs[name] = data
 	}
-	outputMode, err := outputModeFromEnv()
-	if err != nil {
-		return err
-	}
-	inputs[outputModeInput] = []byte{outputMode}
 	return writeJSON(output, inputs)
 }
 
@@ -204,19 +195,6 @@ func decodeOptionsFromEnv() ([]predecoding.Option, error) {
 	return []predecoding.Option{predecoding.WithMaxDecodedRecords(maximum)}, nil
 }
 
-// outputModeFromEnv returns the output_mode byte selected by
-// ELF2JSON_OUTPUT_MODE: 1 for "full" (the default), 0 for "prefix".
-func outputModeFromEnv() (byte, error) {
-	switch value := os.Getenv("ELF2JSON_OUTPUT_MODE"); value {
-	case "", "full":
-		return 1, nil
-	case "prefix":
-		return 0, nil
-	default:
-		return 0, fmt.Errorf("ELF2JSON_OUTPUT_MODE must be full or prefix, got %q", value)
-	}
-}
-
 func mappingOptionsFromEnv(elfPath string) ([]elfmapping.Option, *os.File, error) {
 	includeExecutable, err := boolEnv("ELF2JSON_PREDECODING_PROOF")
 	if err != nil {
@@ -283,10 +261,7 @@ func writeJSON(output io.Writer, inputs map[string][]byte) error {
 	if _, err := fmt.Fprintf(output, "\t%q: \"0x%s\",\n", predecoding.InstructionBaseInput, hex.EncodeToString(inputs[predecoding.InstructionBaseInput])); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintf(output, "\t%q: \"0x%s\",\n", predecoding.DecodedInput, hex.EncodeToString(inputs[predecoding.DecodedInput])); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintf(output, "\t%q: \"0x%s\"\n", outputModeInput, hex.EncodeToString(inputs[outputModeInput])); err != nil {
+	if _, err := fmt.Fprintf(output, "\t%q: \"0x%s\"\n", predecoding.DecodedInput, hex.EncodeToString(inputs[predecoding.DecodedInput])); err != nil {
 		return err
 	}
 	_, err = fmt.Fprintln(output, "}")

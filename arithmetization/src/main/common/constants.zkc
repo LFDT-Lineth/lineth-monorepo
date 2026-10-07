@@ -15,10 +15,6 @@ const MASK_64_ERASE_LAST_BIT:u64 = 0xfffffffffffffffe
 const EXIT_SYSCALL:DoubleWord = 93
 const WRITE_SYSCALL:DoubleWord = 64
 
-// Guest output (see `output_mode` in riscv/memory.zkc)
-const OUTPUT_MODE_FULL:u1 = 1
-const OUTPUT_PREFIX_LEN:PrefixCount = 32
-
 // =======================
 // Predecoding operations
 // =======================
