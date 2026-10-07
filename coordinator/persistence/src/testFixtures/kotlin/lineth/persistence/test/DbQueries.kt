@@ -36,7 +36,10 @@ object DbQueries {
       Batch(
         startBlockNumber = record.getLong("start_block_number").toULong(),
         endBlockNumber = record.getLong("end_block_number").toULong(),
-        proofIndexHash = record.getString("proof_index_hash")?.decodeHex(),
+        // proof_index_hash column only exists from schema v5 onwards
+        proofIndexHash = record.getColumnIndex("proof_index_hash")
+          .takeIf { it >= 0 }
+          ?.let { record.getString(it)?.decodeHex() },
       )
     }
   }
