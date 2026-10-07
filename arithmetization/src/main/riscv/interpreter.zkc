@@ -195,7 +195,7 @@ include "../lib/io/write_output.zkc"
 
 // -- NO PREDECODING PROOF SECTION --
 #[global]
-fn interpreter<registers, ram, keccak_state, poseidon2_state, guest_output_tmp, output_cursor>(clock_cycle:u32, base:Address, pc:Address, prefix_count:PrefixCount) -> ! {
+fn interpreter<registers, ram, keccak_state, poseidon2_state, output_cursor>(clock_cycle:u32, base:Address, pc:Address, prefix_count:PrefixCount) -> ! {
     // -- NO PREDECODING PROOF SECTION END--
 
     var new_prefix_count:PrefixCount
@@ -232,26 +232,10 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state, guest_output_tmp, 
     }
 
     // Termination
-    // Hash the output prefix (the first OUTPUT_PREFIX_LEN bytes of the guest
-    // program output) with keccak and expose the hash in the
-    // `guest_output_hash` public output.
-    // Note that we can reuse the RAM at any address, as the r5 execution is over.
-    for i:PrefixCount = 0; i<new_prefix_count; i = i + 1 {
-        write_8(i as Address, guest_output_tmp[i as u16])
-    }
-    keccak(0, new_prefix_count as u32, 0)
-    guest_output_hash[0] = read_32(0)
-    guest_output_hash[1] = read_32(4)
-    guest_output_hash[2] = read_32(8)
-    guest_output_hash[3] = read_32(12)
-    guest_output_hash[4] = read_32(16)
-    guest_output_hash[5] = read_32(20)
-    guest_output_hash[6] = read_32(24)
-    guest_output_hash[7] = read_32(28)
     done
 }
 
-fn interpreter_a<registers, ram, keccak_state, poseidon2_state, guest_output_tmp, output_cursor>(index:u64, pc:Address, prefix_count:PrefixCount) -> (new_pc:Address, new_prefix_count:PrefixCount) {
+fn interpreter_a<registers, ram, keccak_state, poseidon2_state, output_cursor>(index:u64, pc:Address, prefix_count:PrefixCount) -> (new_pc:Address, new_prefix_count:PrefixCount) {
     var compute_op:ComputeOp
     var imm:DoubleWord
     var rs1:Register
@@ -453,7 +437,7 @@ fn interpreter_a<registers, ram, keccak_state, poseidon2_state, guest_output_tmp
     registers[rd] = result
 }
 
-fn interpreter_b<registers, ram, keccak_state, poseidon2_state, guest_output_tmp, output_cursor>(index:u64, pc:Address, prefix_count:PrefixCount) -> (new_pc:Address, new_prefix_count:PrefixCount) {
+fn interpreter_b<registers, ram, keccak_state, poseidon2_state, output_cursor>(index:u64, pc:Address, prefix_count:PrefixCount) -> (new_pc:Address, new_prefix_count:PrefixCount) {
 
     var compute_op:ComputeOp
     var imm:DoubleWord

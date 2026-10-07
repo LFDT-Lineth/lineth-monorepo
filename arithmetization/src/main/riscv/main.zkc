@@ -20,7 +20,7 @@ include "../lib/poseidon2/ram.zkc"
 // -- Interpreting the riscV proved-transpiled program -- END
 
 // TODO @Ghost
-fn main<registers, ram, keccak_state, poseidon2_state, guest_output_tmp, output_cursor>() {
+fn main<registers, ram, keccak_state, poseidon2_state, output_cursor>() {
     var entry_point:Address
     var blobs_count:u64
     entry_point, blobs_count = entry_point_and_blobs_count[0]

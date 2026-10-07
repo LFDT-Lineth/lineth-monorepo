@@ -7,14 +7,14 @@ include "../../common/constants.zkc"
 //
 // `prefix_count` (<= OUTPUT_PREFIX_LEN) is how many of the first
 // OUTPUT_PREFIX_LEN output bytes have been written. In every mode, those bytes
-// go to `guest_output` (and `guest_output_tmp`). Arithmetic in this part stays
+// go to `guest_output`. Arithmetic in this part stays
 // below OUTPUT_PREFIX_LEN and `size` is only compared, so it never overflows.
 //
 // In OUTPUT_MODE_FULL, the remaining bytes are appended to `guest_output`
 // after the prefix, at the position kept in `output_cursor`, so
 // `guest_output` holds the whole output stream. In any other mode this part is
 // skipped, so the trace never contains output bytes beyond the prefix.
-fn write_output<ram, guest_output_tmp, output_cursor>(offset:Address, size:u64, prefix_count:PrefixCount) -> (new_prefix_count:PrefixCount) {
+fn write_output<ram, output_cursor>(offset:Address, size:u64, prefix_count:PrefixCount) -> (new_prefix_count:PrefixCount) {
     // Prefix: the first OUTPUT_PREFIX_LEN bytes of the output, in every mode.
     var n:PrefixCount = 0
     if prefix_count<OUTPUT_PREFIX_LEN {
@@ -27,7 +27,6 @@ fn write_output<ram, guest_output_tmp, output_cursor>(offset:Address, size:u64, 
         for i:PrefixCount = 0; i<n; i = i + 1 {
             var byte_read:u8 = read_8(offset + (i as Address))
             guest_output[(prefix_count + i) as OutputAddress] = byte_read
-            guest_output_tmp[(prefix_count + i) as u16] = byte_read
         }
     }
     new_prefix_count = prefix_count + n

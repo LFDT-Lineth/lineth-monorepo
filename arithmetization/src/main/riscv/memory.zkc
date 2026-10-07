@@ -30,12 +30,10 @@ memory registers[u48](id:Register) -> (value:DoubleWord)
 // encode the mode as a plain byte (u1 inputs are bit-packed MSB-first).
 pub input output_mode(address:u1) -> (mode:u8)
 pub output guest_output(address:OutputAddress) -> (byte:u8)
-memory guest_output_tmp[u16](address:u16) -> (byte:u8)
 // Number of output bytes written so far. Only touched in OUTPUT_MODE_FULL, so
 // it adds no trace rows otherwise; it lives in memory rather than being
 // threaded through the interpreter to keep every interpreter step narrow.
 memory output_cursor[u48](address:u1) -> (cursor:OutputAddress)
-pub output guest_output_hash(address:u3) -> (word:u32)
 
 // keccak related memory: all keccak working vectors live in ONE memory,
 // in 8-aligned regions (5 slots used per region): state rows, pi buffer
