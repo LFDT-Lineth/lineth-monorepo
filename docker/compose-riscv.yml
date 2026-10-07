@@ -30,14 +30,17 @@ services:
   shomei:
     profiles: !override ["zkevm"]
 
-  riscv-proof-responder:
-    image: busybox:latest
+  prover-ray:
+    container_name: prover-ray
+    hostname: prover-ray
+    image: consensys/lineth-prover-ray:${LINEA_PROVER_RAY_TAG:-0.1.1-20261006-f1f4280}
+    platform: linux/amd64
     profiles: ["riscv"]
-    entrypoint: ["/bin/sh", "/opt/linea/proof-responder.sh"]
     environment:
-      R5_L2_EXECUTION_PROGRAM_VK: *riscv-execution-program-vk
+      CONFIG_FILE: /opt/linea/prover-ray/config/config.toml
+      WORKER_ID: prover-ray-0
     volumes:
-      - ./config/prover/riscv/proof-responder.sh:/opt/linea/proof-responder.sh:ro
+      - ./config/prover/riscv/prover-ray-config.toml:/opt/linea/prover-ray/config/config.toml:ro
       - ../tmp/local/prover/riscv:/data/prover/riscv
     networks:
       - linea

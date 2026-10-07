@@ -85,8 +85,8 @@ pnpm -F e2e run test:riscv:local
 
 The focused suite reuses the local clients, funding and transaction helpers. It checks ETH transfers,
 contract execution with `linea_estimateGas`, sender/recipient denylist rejection and restoration, and the
-execution-proof handoff: a new transaction's payload and witness reach the prover request, the dummy
-responder replies, and the coordinator persists the batch as proven. It does not validate a real ZK proof
+execution-proof handoff: a new transaction's payload and witness reach the prover request, prover-ray
+(`dev-mock`) answers it, and the coordinator persists the batch as proven. It does not validate a real ZK proof
 or L1 submission/finalization against the V9 stub.
 
 Manual workflow dispatch runs only RISC-V; automatic runs select only zkEVM. Both use the same E2E

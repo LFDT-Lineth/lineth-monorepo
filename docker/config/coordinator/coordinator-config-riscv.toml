@@ -5,7 +5,7 @@ contract-address = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
 riscv-starting-block-timestamp-inclusive = 0
 
 [riscv-prover.execution]
-# Execution program-vk is shared with the proof responder through Compose.
+# Execution program-vk is set through Compose.
 fork-name = "Amsterdam"
 
 [l1-submission.blob]

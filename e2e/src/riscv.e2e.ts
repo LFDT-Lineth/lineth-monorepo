@@ -3,7 +3,7 @@ import { execFile } from "node:child_process";
 import { readdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { promisify } from "node:util";
-import { encodeDeployData, encodeFunctionData, keccak256, parseEther } from "viem";
+import { encodeDeployData, encodeFunctionData, keccak256, parseEther, stringToHex } from "viem";
 
 import { withDenyListAddresses } from "./common/test-helpers/deny-list";
 import { awaitUntil, estimateLineaGas, sendTransactionWithRetry } from "./common/utils";
@@ -49,7 +49,7 @@ describe("RISC-V execution stack", () => {
     expect(await client.getBalance({ address: recipient.address })).toBe(balanceBefore + transaction.value);
   });
 
-  it("executes a contract call and persists its dummy execution proof", async () => {
+  it("executes a contract call and persists its dev-mock execution proof", async () => {
     const account = await context.getL2AccountManager().generateAccount();
     const wallet = context.l2WalletClient({ account });
     const deployment = encodeDeployData({ abi: DummyContractAbi, bytecode: DummyContractAbiBytecode });
@@ -69,15 +69,22 @@ describe("RISC-V execution stack", () => {
     expect(await client.readContract({ address, abi: DummyContractAbi, functionName: "age" })).toBe(42n);
 
     // Select the batch containing this run's transaction, so stale proofs cannot satisfy the test.
-    const fileName = await awaitUntil(
+    // prover-ray moves each request to requests-done/ once it has written the response.
+    const archivedName = await awaitUntil(
       async () =>
-        (await readdir(resolve(executionDir, "requests"))).find((name) => {
-          const match = /^(\d+)-(\d+)-.*getZkL2ExecutionProof\.json$/.exec(name);
+        (await readdir(resolve(executionDir, "requests-done"))).find((name) => {
+          const match = /^(\d+)-(\d+)-.*getZkL2ExecutionProof\.json\.(success|failure\.\d+)$/.exec(name);
           return match && BigInt(match[1]) <= receipt.blockNumber && BigInt(match[2]) >= receipt.blockNumber;
         }),
       (name) => name !== undefined,
     );
-    const request: ExecutionRequest = JSON.parse(await readFile(resolve(executionDir, "requests", fileName!), "utf8"));
+    const fileName = archivedName!.replace(/\.(success|failure\.\d+)$/, "");
+    const response = JSON.parse(await readFile(resolve(executionDir, "responses", fileName), "utf8"));
+    expect(response).not.toHaveProperty("error");
+    expect(archivedName).toBe(`${fileName}.success`);
+    const request: ExecutionRequest = JSON.parse(
+      await readFile(resolve(executionDir, "requests-done", archivedName!), "utf8"),
+    );
     const { startBlockNumber, endBlockNumber } = request.metadata;
     expect(request.proofRequest.chainConfig).toMatchObject({ chainId: context.getL2ChainId(), forkName: "Amsterdam" });
     expect(request.programVk).toMatch(/^0x[0-9a-f]{64}$/i);
@@ -98,15 +105,12 @@ describe("RISC-V execution stack", () => {
     expect(input.executionWitness.codes.length).toBeGreaterThan(0);
     expect(input.executionWitness.headers.length).toBeGreaterThan(0);
 
-    const response = await awaitUntil(
-      async () => JSON.parse(await readFile(resolve(executionDir, "responses", fileName!), "utf8")),
-      () => true,
-    );
     expect(response).toMatchObject({
+      proverVersion: "riscv-local-dev-mock",
       startBlockNumber,
       publicInputs: { endBlockNumber },
       programVk: request.programVk,
-      proof: "0x00",
+      proof: stringToHex("dev-proof:dev-mock"),
     });
     // A response file alone does not prove that the coordinator consumed it. Status 2 is Batch.Status.Proven.
     await awaitUntil(

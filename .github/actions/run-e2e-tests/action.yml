@@ -272,7 +272,7 @@ runs:
         docker logs l1-cl-node --since 1h &>> docker_logs/l1-cl-node.txt || true
         docker logs maru --since 1h &>> docker_logs/maru.txt || true
         if [ -d tmp/local/prover/riscv ]; then
-          docker compose -f docker/compose-tracing-v2.yml -f docker/compose-riscv.yml logs --no-color riscv-proof-responder > docker_logs/riscv-proof-responder.txt || true
+          docker logs prover-ray --since 1h &> docker_logs/prover-ray.txt || true
           cp -r tmp/local/prover/riscv docker_logs/riscv-proofs || true
         fi
         docker exec -i -e PGPASSWORD=${POSTGRES_PASSWORD:-postgres} postgres pg_dumpall -U ${POSTGRES_USER:-postgres} > docker_logs/db_dump.sql || true

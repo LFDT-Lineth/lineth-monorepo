@@ -30,7 +30,7 @@ clean-environment:
 start-env-with-riscv:
 	$(MAKE) start-env COMPOSE_FILE="docker/compose-tracing-v2.yml -f docker/compose-riscv.yml" COMPOSE_PROFILES=l1,l2,riscv \
 		START_SERVICES_BEFORE_DEPLOYMENT="l1-cl-node maru postgres" \
-		START_SERVICES_AFTER_DEPLOYMENT="riscv-proof-responder coordinator" \
+		START_SERVICES_AFTER_DEPLOYMENT="prover-ray coordinator" \
 		L1_CONTRACT_VERSION=9 LINETH_PROTOCOL_CONTRACTS_ONLY=true \
 		LINETH_L1_CONTRACT_DEPLOYMENT_TARGET=deploy-lineth-rollup-v9-stub \
 		DEPLOY_FORCED_TRANSACTION_GATEWAY=false
