@@ -341,25 +341,55 @@ func computeCancellationCoset(cancelled []int, n, N int) []field.Element {
 		field.ExpToInt(&roots[i], omega, k)
 	}
 
-	// Iterate over coset points and evaluate the product.
+	// Evaluate the product at every coset point. Points are independent, so
+	// each worker starts from its own x = g · ω_N^start and steps by ω_N.
 	omegaN := field.RootOfUnityBy(N)
 	var g field.Element
 	g.SetUint64(field.MultiplicativeGen)
 
 	cVals := make([]field.Element, N)
-	x := g // x = g · ω_N^0 = g
-	for j := 0; j < N; j++ {
-		var prod field.Element
-		prod.SetOne()
-		for _, root := range roots {
-			var diff field.Element
-			diff.Sub(&x, &root)
-			prod.Mul(&prod, &diff)
+	parallel.Execute(N, func(start, end int) {
+		var x field.Element
+		field.ExpToInt(&x, omegaN, start)
+		x.Mul(&x, &g)
+		for j := start; j < end; j++ {
+			var prod field.Element
+			prod.SetOne()
+			for _, root := range roots {
+				var diff field.Element
+				diff.Sub(&x, &root)
+				prod.Mul(&prod, &diff)
+			}
+			cVals[j] = prod
+			x.Mul(&x, &omegaN)
 		}
-		cVals[j] = prod
-		x.Mul(&x, &omegaN)
-	}
+	})
 	return cVals
+}
+
+// cancellationCosets memoises [computeCancellationCoset] per set of cancelled
+// positions for one (n, N): the vanishings of a bucket mostly cancel the same
+// few rows, and each coset is N elements long. The cosets are only read.
+type cancellationCosets struct {
+	n, N  int
+	byKey map[string][]field.Element
+}
+
+func newCancellationCosets(n, N int) *cancellationCosets {
+	return &cancellationCosets{n: n, N: N, byKey: make(map[string][]field.Element)}
+}
+
+func (c *cancellationCosets) get(cancelled []int) []field.Element {
+	if len(cancelled) == 0 {
+		return nil
+	}
+	key := fmt.Sprint(cancelled)
+	if v, ok := c.byKey[key]; ok {
+		return v
+	}
+	v := computeCancellationCoset(cancelled, c.n, c.N)
+	c.byKey[key] = v
+	return v
 }
 
 // computeLagrangeSelectorCoset returns the base-field evaluation of the
@@ -405,25 +435,35 @@ func computeLagrangeSelectorCoset(position, n, N int) []field.Element {
 	var one field.Element
 	one.SetOne()
 
-	denom := make([]field.Element, N) // x_j − ω^p
-	num := make([]field.Element, N)   // x_j^n − 1
-	x := g
-	xPowN := gPowN
-	for j := 0; j < N; j++ {
-		denom[j].Sub(&x, &omegaP)
-		num[j].Sub(&xPowN, &one)
-		x.Mul(&x, &omegaN)
-		xPowN.Mul(&xPowN, &omegaNPowN)
-	}
-
-	invDenom := make([]field.Element, N)
-	field.VecBatchInvBase(invDenom, denom)
-
+	// Points are independent, so each worker starts from its own
+	// x = g · ω_N^start and x^n = g^n · (ω_N^n)^start, and inverts its own
+	// chunk of denominators.
 	res := make([]field.Element, N)
-	for j := 0; j < N; j++ {
-		res[j].Mul(&numCoef, &num[j])
-		res[j].Mul(&res[j], &invDenom[j])
-	}
+	parallel.Execute(N, func(start, end int) {
+		m := end - start
+		denom := make([]field.Element, m) // x_j − ω^p
+		num := make([]field.Element, m)   // x_j^n − 1
+		var x, xPowN field.Element
+		field.ExpToInt(&x, omegaN, start)
+		x.Mul(&x, &g)
+		field.ExpToInt(&xPowN, omegaNPowN, start)
+		xPowN.Mul(&xPowN, &gPowN)
+		for t := range m {
+			denom[t].Sub(&x, &omegaP)
+			num[t].Sub(&xPowN, &one)
+			x.Mul(&x, &omegaN)
+			xPowN.Mul(&xPowN, &omegaNPowN)
+		}
+
+		invDenom := make([]field.Element, m)
+		field.VecBatchInvBase(invDenom, denom)
+
+		for t := range m {
+			j := start + t
+			res[j].Mul(&numCoef, &num[t])
+			res[j].Mul(&res[j], &invDenom[t])
+		}
+	})
 	return res
 }
 
@@ -511,9 +551,11 @@ func (a *QuotientProverAction) Run(rt *wiop.Runtime) {
 			largeDomain = bkt.largeDomain
 			annInv = bkt.annInv
 		} else {
-			// Dynamic module: compute at runtime.
-			smallDomain = fft.NewDomain(uint64(n))
-			largeDomain = fft.NewDomain(uint64(N))
+			// Dynamic module: compute at runtime. The domains depend only on
+			// the size, so gnark's process-wide domain cache serves them
+			// across buckets and proofs instead of rebuilding the twiddles.
+			smallDomain = fft.NewDomain(uint64(n), fft.WithCache())
+			largeDomain = fft.NewDomain(uint64(N), fft.WithCache())
 			annVals := polynomials.EvalXnMinusOneOnCoset(n, N)
 			annInv = make([]field.Element, ratio)
 			field.VecBatchInvBase(annInv, annVals)
@@ -601,11 +643,13 @@ func (a *QuotientProverAction) Run(rt *wiop.Runtime) {
 				coinPow.Mul(&coinPow, &coinExt)
 			}
 		} else {
-			// Dynamic module: compute cancellation cosets at runtime.
+			// Dynamic module: compute cancellation cosets at runtime, once per
+			// distinct set of cancelled positions in the bucket.
+			cosets := newCancellationCosets(n, N)
 			for _, v := range bkt.vanishings {
 				bound = append(bound, boundEntry{
 					expr:         bindExpr(rt, v.Expression, cosetEvals, cosetEvalsExt, selectorCosets, ratio, N),
-					cancellation: computeCancellationCoset(v.CancelledPositions, n, N),
+					cancellation: cosets.get(v.CancelledPositions),
 					coinPow:      coinPow,
 				})
 				coinPow.Mul(&coinPow, &coinExt)
