@@ -17,12 +17,9 @@ defined, one per guest-facing message:
   - `ROLLUP_AGGREGATION_INPUT_SCHEMA_ID`  (0x1002) — rollup-aggregation guest input
   - `ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID` (0x1802) — rollup-aggregation guest output
 
-The guest output container omits the `proof` field the logical
-`FinalizationSubmission` dataclass carries: a guest cannot attest its own
-proof, so `proof` is attached by the prover layer above and is never part of
-the guest-emitted bytes. Decoding an output frame reconstructs the dataclass
-with `proof=b""`, matching the placeholder `run_rollup_aggregation_guest`
-already emits.
+The guest output frame carries SSZ finalization public inputs followed by the
+keccak256 hash of those SSZ bytes. The prover layer attaches the proof; decoding
+reconstructs a `FinalizationSubmission` with `proof=b""`.
 
 List/vector bounds are conservative powers of two: capacity ceilings for the
 wire format, not the guest's or coordinator's own (tighter) operational
@@ -44,6 +41,8 @@ from .rollup_aggregation import RollupAggregationProofPrivateInput
 from .l2_execution_ssz import (
     MAX_PROOF_BYTES,
     SszAddress,
+    _decode_output,
+    _encode_output,
     _frame,
     _strict_decode,
     _strip_frame,
@@ -175,10 +174,8 @@ def decode_aggregation_input_ssz(data: bytes) -> RollupAggregationProofPrivateIn
 
 def encode_aggregation_output(submission: FinalizationSubmission) -> bytes:
     """
-    Encode the rollup-aggregation guest's own output into framed SSZ bytes
-    (0x1802 schema id). `submission.proof` is deliberately dropped — it is a
-    prover-attached placeholder in `FinalizationSubmission`, never part of the
-    guest-emitted bytes.
+    Encode a 0x1802 frame with SSZ finalization public inputs followed by
+    their keccak256 hash. The prover attaches `submission.proof` separately.
     """
     pi = submission.public_inputs
     fields = {name: getattr(pi, name) for name in SszFinalizationPublicInput.fields()}
@@ -196,7 +193,7 @@ def encode_aggregation_output(submission: FinalizationSubmission) -> bytes:
     fields["l2_l1_roots"] = [bytes(root) for root in pi.l2_l1_roots]
     fields["filtered_addresses"] = [bytes(address) for address in pi.filtered_addresses]
     fields["program_ids"] = [bytes(program_id) for program_id in pi.program_ids]
-    return _frame(ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID, SszFinalizationPublicInput(**fields).encode_bytes())
+    return _encode_output(ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID, SszFinalizationPublicInput(**fields).encode_bytes())
 
 
 def decode_aggregation_output_ssz(data: bytes) -> FinalizationSubmission:
@@ -204,10 +201,11 @@ def decode_aggregation_output_ssz(data: bytes) -> FinalizationSubmission:
     Decode framed SSZ bytes into a `FinalizationSubmission` with `proof=b""`
     (the guest never emits proof bytes; the prover layer attaches them
     separately). Strict: rejects a wrong schema id, truncated bytes, trailing
-    bytes, or non-canonical SSZ.
+    bytes, a mismatched hash, or non-canonical SSZ.
     """
-    payload = _strip_frame(data, ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID, "rollup-aggregation output")
-    view = _strict_decode(payload, SszFinalizationPublicInput)
+    view = _decode_output(
+        data, ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID, "rollup-aggregation output", SszFinalizationPublicInput
+    )
     fields = {name: getattr(view, name) for name in SszFinalizationPublicInput.fields()}
     for name in (
         "end_block_number", "end_block_timestamp", "parent_l1_l2_bridge_rolling_hash_message_number",
