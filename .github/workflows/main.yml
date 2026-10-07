@@ -118,6 +118,7 @@ jobs:
       maru: ${{ steps.filter.outputs.maru }}
       has-changes-requiring-build: ${{ steps.exclusion-filter.outputs.has-changes-requiring-build }}
       has-changes-requiring-linea-besu-package-build: ${{ steps.filter.outputs.linea-sequencer-plugin == 'true' || steps.filter.outputs.tracer == 'true' || steps.filter.outputs.tracer-constraints == 'true' ||  steps.filter.outputs.linea-besu == 'true' || steps.filter.outputs.linea-besu-package == 'true' }}
+      besu-commit-changed: ${{ steps.check_besu_commit.outputs.version_changed == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -263,6 +264,13 @@ jobs:
           # For 'has-changes-requiring-build', it means we have an exclusion list that we can append to.
           predicate-quantifier: "every"
 
+      - name: Check besuCommit change
+        uses: ./.github/actions/check-lib-version-change
+        id: check_besu_commit
+        with:
+          target_lib: besuCommit
+          target_file_path: gradle/libs.versions.toml
+
   compute-commit-tags:
     needs: [filter-commit-changes]
     if: ${{ !cancelled() && needs.filter-commit-changes.result == 'success' }}
@@ -271,12 +279,11 @@ jobs:
   # Runs once before the JVM testing jobs: checks whether the Besu version pinned by
   # besuCommit (gradle/libs.versions.toml) is published to a remote maven repo and, if not,
   # builds the Besu source distribution a single time and shares it as a workflow artifact.
-  # The JVM testing jobs restore it via actions/setup-besu-maven-local instead of each
-  # building Besu from source in parallel.
   prepare-linea-besu-maven:
     needs: [filter-commit-changes, compute-commit-tags]
     if: >
-      !cancelled() && 
+      !cancelled() &&
+      needs.filter-commit-changes.outputs.besu-commit-changed == 'true' &&
       needs.filter-commit-changes.outputs.has-changes-requiring-build == 'true' &&
       needs.compute-commit-tags.outputs.commit_tag != ''
     uses: ./.github/workflows/prepare-linea-besu-maven.yml

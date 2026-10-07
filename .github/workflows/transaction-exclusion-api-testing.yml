@@ -36,7 +36,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup Java and Gradle
         uses: ./.github/actions/setup-java-and-gradle
-      # Restores the Besu distribution prebuilt by prepare-linea-besu-maven (testing.yml) and
+      # Restores the Besu distribution prebuilt by prepare-linea-besu-maven (main.yml) and
       # publishes it to maven local; no-op when the Besu BOM is already in a remote maven repo.
       - name: Setup Besu in maven local
         uses: ./.github/actions/setup-besu-maven-local
