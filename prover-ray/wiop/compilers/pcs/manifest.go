@@ -35,10 +35,16 @@ import (
 //
 // Detection runs over the FULL padded vector (padding included), never over the
 // opened rows, so a column is only dropped when the committed polynomial really
-// is zero / a duplicate. The verifier re-validates the manifest's structure and
-// would reject a manifest that does not match the opened rows (different row
-// width, hence a different root), so a wrong manifest is a prover bug, not a
-// soundness hole.
+// is zero / a duplicate.
+//
+// Soundness rests on the binding stated above:
+//
+//   - the manifest cells are absorbed by [wiop.Runtime.AdvanceRound] in the
+//     same round as the root they describe, before any challenge is drawn, so
+//     they fix the oracle the prover commits to (Zero means the zero
+//     polynomial, Alias(k) means a copy of column k);
+//   - the verifier pins every elided claim to that oracle in
+//     [RecoverBatchClaims].
 
 // Manifest codes. Alias targets are encoded as manifestAliasBase + k.
 const (
