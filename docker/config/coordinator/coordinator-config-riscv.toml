@@ -4,9 +4,7 @@ contract-address = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
 [conflation]
 riscv-starting-block-timestamp-inclusive = 0
 
-# Replaces the shared pre-RISC-V prover config; only the execution prover runs locally.
-# Compose overrides prover.l2-execution.program-id (R5_L2_EXECUTION_PROGRAM_ID); rollup and
-# rollup-aggregation are not proven locally, so their program-ids are placeholders.
+# Execution program-id is set through Compose.
 [prover]
 type = "riscv"
 proving-system-version = "riscv-local"

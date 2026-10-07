@@ -46,7 +46,6 @@ services:
       - linea
 
   coordinator:
-    # The RISC-V prover config requires coordinator >= 2.0.0.
     image: ${LINEA_COORDINATOR_IMAGE_NAME:-consensys/linea-coordinator}:${LINEA_COORDINATOR_TAG:-2.0.1-20261006-a95a2ad}
     healthcheck:
       test:

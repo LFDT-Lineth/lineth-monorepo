@@ -19,7 +19,6 @@ const executionDir = resolve(__dirname, "../../tmp/local/prover/riscv/execution"
 const execFileAsync = promisify(execFile);
 
 type ExecutionRequest = {
-  // Guest program identifier, treated as opaque while its derivation is being settled.
   programId: Hex;
   metadata: { startBlockNumber: number; endBlockNumber: number; totalGasUsed: number };
   proofRequest: {
