@@ -34,9 +34,11 @@ package logderivativesum
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
@@ -260,11 +262,24 @@ type proverAction struct {
 }
 
 // Run implements [wiop.ProverAction].
+//
+// The Z columns are independent of one another, so they are computed
+// concurrently, largest module first to balance the workers. Each entry only
+// writes its own Z column and its own slot of finals; the total is summed
+// afterwards in entry order.
 func (a *proverAction) Run(rt *wiop.Runtime) {
-	var total field.Ext
+	sizes := make([]int, len(a.entries))
+	order := make([]int, len(a.entries))
+	for i, e := range a.entries {
+		sizes[i] = e.zCol.Module.RuntimeSize(rt)
+		order[i] = i
+	}
+	sort.SliceStable(order, func(i, j int) bool { return sizes[order[i]] > sizes[order[j]] })
 
-	for _, e := range a.entries {
-		n := e.zCol.Module.RuntimeSize(rt)
+	finals := make([]field.Ext, len(a.entries))
+	parallel.ExecuteDynamic(len(order), func(k int) {
+		i := order[k]
+		e, n := a.entries[i], sizes[i]
 		z := computeFilteredPrefixSum(rt, e.packed, n)
 
 		rt.AssignColumn(e.zCol, &wiop.ConcreteVector{Plain: field.VecFromExt(z)})
@@ -273,7 +288,12 @@ func (a *proverAction) Run(rt *wiop.Runtime) {
 		// assignment on first read (or at round advance), so no explicit
 		// assignment is needed here.
 
-		total.Add(&total, &z[n-1])
+		finals[i] = z[n-1]
+	})
+
+	var total field.Ext
+	for i := range finals {
+		total.Add(&total, &finals[i])
 	}
 
 	if !rt.HasCellAssignment(a.ld.Result) {

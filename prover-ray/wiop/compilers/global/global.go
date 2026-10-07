@@ -2,6 +2,7 @@ package global
 
 import (
 	"fmt"
+	"runtime"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
@@ -523,17 +524,30 @@ func (a *QuotientProverAction) Run(rt *wiop.Runtime) {
 		// columns); cosetEvalsExt[colID][j] for extension-field columns.
 		// A column populates exactly one of the two maps; expression
 		// evaluators dispatch on Column.IsExtension.
+		// Columns are independent, so they are re-evaluated by a bounded pool of
+		// workers, each writing its own slot, so no shared map is touched
+		// concurrently. Every result is retained for the accumulation below, so
+		// parallelism does not raise peak memory. This step was dominated by
+		// the serial per-element copy, which is why it scales with columns.
+		baseEvals := make([][]field.Element, len(bkt.rootCols))
+		extEvals := make([][]field.Ext, len(bkt.rootCols))
+		parallel.Execute(len(bkt.rootCols), func(start, end int) {
+			for i := start; i < end; i++ {
+				col := bkt.rootCols[i]
+				if col.IsExtension {
+					extEvals[i] = reevalOnLargeCosetExt(rt, col, a.m, n, N, smallDomain, largeDomain)
+				} else {
+					baseEvals[i] = reevalOnLargeCoset(rt, col, a.m, n, N, smallDomain, largeDomain)
+				}
+			}
+		}, runtime.GOMAXPROCS(0))
 		cosetEvals := make(map[wiop.ObjectID][]field.Element, len(bkt.rootCols))
 		cosetEvalsExt := make(map[wiop.ObjectID][]field.Ext, len(bkt.rootCols))
-		for _, col := range bkt.rootCols {
+		for i, col := range bkt.rootCols {
 			if col.IsExtension {
-				cosetEvalsExt[col.Context.ID] = reevalOnLargeCosetExt(
-					rt, col, a.m, n, N, smallDomain, largeDomain,
-				)
+				cosetEvalsExt[col.Context.ID] = extEvals[i]
 			} else {
-				cosetEvals[col.Context.ID] = reevalOnLargeCoset(
-					rt, col, a.m, n, N, smallDomain, largeDomain,
-				)
+				cosetEvals[col.Context.ID] = baseEvals[i]
 			}
 		}
 

@@ -501,8 +501,10 @@ func (cv *ColumnView) EvaluateVectorAsExt(rt *Runtime, n int) []field.Ext {
 //
 // The fold is parallelized over row chunks: rows are independent, and each
 // worker runs the full per-column fold on its own range, so the accumulator
-// chunk stays cache-resident across columns.
-func EvaluateRLCAsExt(rt *Runtime, alpha field.Ext, cvs []*ColumnView, n int) []field.Ext {
+// chunk stays cache-resident across columns. maxWorkers, when given, bounds the
+// number of workers (1 runs inline), for callers that are themselves running
+// in parallel.
+func EvaluateRLCAsExt(rt *Runtime, alpha field.Ext, cvs []*ColumnView, n int, maxWorkers ...int) []field.Ext {
 	if len(cvs) == 0 {
 		panic("wiop: EvaluateRLCAsExt called with no columns")
 	}
@@ -531,7 +533,7 @@ func EvaluateRLCAsExt(rt *Runtime, alpha field.Ext, cvs []*ColumnView, n int) []
 				field.VecScaleAddExtExt(acc[start:stop], alpha, plains[k].AsExt()[start:stop])
 			}
 		}
-	})
+	}, maxWorkers...)
 	return acc
 }
 

@@ -3,6 +3,7 @@ package lookuptologderivsum
 import (
 	"fmt"
 	"runtime"
+	"sort"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
@@ -73,6 +74,12 @@ type sEntry struct {
 
 // Run implements [wiop.ProverAction].
 func (t *mAssignmentTask) Run(rt *wiop.Runtime) {
+	t.run(rt, runtime.GOMAXPROCS(0))
+}
+
+// run fills the M columns using at most workers goroutines for its inner
+// parallel loops; workers == 1 runs the task entirely inline.
+func (t *mAssignmentTask) run(rt *wiop.Runtime, workers int) {
 	// Hashing scalar — fresh per run, independent of the symbolic α used in
 	// the constraint system. Collisions are tolerable: they would yield a
 	// proof the verifier rejects, never a false acceptance.
@@ -95,12 +102,12 @@ func (t *mAssignmentTask) Run(rt *wiop.Runtime) {
 		// selector column (or the constant 1 for an unfiltered fragment).
 		// This matches [wiop.RLCExpression]'s convention so the prover-side hash
 		// agrees with the symbolic RLC under the same scalar.
-		hashes := wiop.EvaluateRLCAsExt(rt, alpha, it.cols, n)
+		hashes := wiop.EvaluateRLCAsExt(rt, alpha, it.cols, n, workers)
 		if t.prependOneOnAOk {
 			if it.selector != nil {
-				scaleAddColumnInPlace(rt, hashes, alpha, it.selector)
+				scaleAddColumnInPlace(rt, hashes, alpha, it.selector, workers)
 			} else {
-				scaleAddOneInPlace(hashes, alpha)
+				scaleAddOneInPlace(hashes, alpha, workers)
 			}
 		}
 
@@ -119,9 +126,9 @@ func (t *mAssignmentTask) Run(rt *wiop.Runtime) {
 	sEntries := make([]sEntry, 0, sTotal)
 	for aFrag, inc := range t.included {
 		an := inc.cols[0].Module().RuntimeSize(rt)
-		hashes := wiop.EvaluateRLCAsExt(rt, alpha, inc.cols, an)
+		hashes := wiop.EvaluateRLCAsExt(rt, alpha, inc.cols, an, workers)
 		if t.prependOneOnAOk {
-			scaleAddOneInPlace(hashes, alpha)
+			scaleAddOneInPlace(hashes, alpha, workers)
 		}
 		var aSelectorExt []field.Ext
 		if inc.selector != nil {
@@ -150,7 +157,7 @@ func (t *mAssignmentTask) Run(rt *wiop.Runtime) {
 	}
 
 	// --- Join both sides and fill the M vectors.
-	t.hashJoin(tEntries, sEntries, mValues)
+	t.hashJoin(tEntries, sEntries, mValues, workers)
 
 	for frag := range t.ms {
 		rt.AssignColumn(t.ms[frag], &wiop.ConcreteVector{Plain: field.VecFromBase(mValues[frag])})
@@ -160,7 +167,7 @@ func (t *mAssignmentTask) Run(rt *wiop.Runtime) {
 // scaleAddColumnInPlace sets hashes[i] = α·hashes[i] + cv[i] in a single pass,
 // consuming the column un-lifted: a base-field column costs one base addition
 // per row on top of the scalar multiplication.
-func scaleAddColumnInPlace(rt *wiop.Runtime, hashes []field.Ext, alpha field.Ext, cv *wiop.ColumnView) {
+func scaleAddColumnInPlace(rt *wiop.Runtime, hashes []field.Ext, alpha field.Ext, cv *wiop.ColumnView, workers int) {
 	plain := cv.EvaluateVector(rt).Plain
 	parallel.Execute(len(hashes), func(start, stop int) {
 		if plain.IsBase() {
@@ -168,18 +175,18 @@ func scaleAddColumnInPlace(rt *wiop.Runtime, hashes []field.Ext, alpha field.Ext
 		} else {
 			field.VecScaleAddExtExt(hashes[start:stop], alpha, plain.AsExt()[start:stop])
 		}
-	})
+	}, workers)
 }
 
 // scaleAddOneInPlace sets hashes[i] = α·hashes[i] + 1 in a single pass; the
 // addition touches only the first base-field coordinate.
-func scaleAddOneInPlace(hashes []field.Ext, alpha field.Ext) {
+func scaleAddOneInPlace(hashes []field.Ext, alpha field.Ext, workers int) {
 	parallel.Execute(len(hashes), func(start, stop int) {
 		for i := start; i < stop; i++ {
 			hashes[i].Mul(&hashes[i], &alpha)
 			hashes[i].B0.A0.Add(&hashes[i].B0.A0, &fieldOne)
 		}
-	})
+	}, workers)
 }
 
 // hashJoin performs the fragment-tagged radix-partitioned hash join. It
@@ -187,9 +194,14 @@ func scaleAddOneInPlace(hashes []field.Ext, alpha field.Ext) {
 // bucket builds a value→(fragment,row) map from T (latest occurrence wins) and
 // increments mValues[frag][row] once per matching S row. Panics if an S row has
 // no match in T (an unsound lookup the honest prover must never produce).
-func (t *mAssignmentTask) hashJoin(tEntries []tEntry, sEntries []sEntry, mValues [][]field.Element) {
+func (t *mAssignmentTask) hashJoin(tEntries []tEntry, sEntries []sEntry, mValues [][]field.Element, workers int) {
+	// Size the partition to the data: about joinEntriesPerBucket entries per
+	// bucket, capped at four buckets per CPU. Small groups then join in a
+	// single bucket instead of spreading a few rows over a thousand maps and
+	// goroutines, which matters when many groups run concurrently (see
+	// [mAssignmentBatch]).
 	numBuckets := 1
-	for numBuckets < runtime.NumCPU()*4 {
+	for numBuckets < runtime.NumCPU()*4 && numBuckets*joinEntriesPerBucket < len(tEntries)+len(sEntries) {
 		numBuckets *= 2
 	}
 	// Power-of-two bucket count so we can mask instead of modulo on the hot path.
@@ -238,6 +250,55 @@ func (t *mAssignmentTask) hashJoin(tEntries []tEntry, sEntries []sEntry, mValues
 				mValues[mFrag][mRow].Add(&mValues[mFrag][mRow], &fieldOne)
 			}
 		}
+	}, workers)
+}
+
+// joinEntriesPerBucket is the target number of T and S entries per hash-join
+// bucket.
+const joinEntriesPerBucket = 4096
+
+// mAssignmentBatch runs the M-assignment tasks of every lookup group sharing a
+// witness round. The tasks are independent -- each reads committed witness
+// columns and writes only its own M columns -- so they run concurrently,
+// largest first to balance the workers. It replaces one prover action per
+// group, which ran the groups one after another.
+//
+// Each task's inner parallel loops get a share of the CPUs proportional to its
+// row count (at least one), so the shares add up to about GOMAXPROCS. Letting
+// every task fan out over all CPUs instead multiplies goroutines by the
+// number of tasks, and the scheduler overhead outweighs the work of the small
+// groups.
+type mAssignmentBatch struct {
+	tasks []*mAssignmentTask
+}
+
+// Run implements [wiop.ProverAction].
+func (b *mAssignmentBatch) Run(rt *wiop.Runtime) {
+	sizes := make([]int, len(b.tasks))
+	order := make([]int, len(b.tasks))
+	for i, t := range b.tasks {
+		for _, it := range t.includings {
+			sizes[i] += it.module.RuntimeSize(rt)
+		}
+		for _, inc := range t.included {
+			sizes[i] += inc.cols[0].Module().RuntimeSize(rt)
+		}
+		order[i] = i
+	}
+	sort.SliceStable(order, func(i, j int) bool { return sizes[order[i]] > sizes[order[j]] })
+
+	cpus := runtime.GOMAXPROCS(0)
+	total := 0
+	for _, sz := range sizes {
+		total += sz
+	}
+	parallel.ExecuteDynamic(len(order), func(k int) {
+		i := order[k]
+		workers := 1
+		if total > 0 {
+			workers = max(1, cpus*sizes[i]/total)
+		}
+		b.tasks[i].run(rt, workers)
 	})
 }
 
