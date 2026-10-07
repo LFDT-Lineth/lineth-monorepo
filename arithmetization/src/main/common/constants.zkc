@@ -16,7 +16,7 @@ const EXIT_SYSCALL:DoubleWord = 93
 const WRITE_SYSCALL:DoubleWord = 64
 
 // Guest output (see `output_mode` in riscv/memory.zkc)
-const OUTPUT_MODE_FULL:u8 = 1
+const OUTPUT_MODE_FULL:u1 = 1
 const OUTPUT_PREFIX_LEN:PrefixCount = 32
 
 // =======================

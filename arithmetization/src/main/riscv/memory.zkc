@@ -28,7 +28,7 @@ memory registers[u48](id:Register) -> (value:DoubleWord)
 // Both modes write the same prefix, so a mode-0 output is always a prefix of
 // the mode-1 output for the same run. The data is u8 (not u1) so that callers
 // encode the mode as a plain byte (u1 inputs are bit-packed MSB-first).
-pub input output_mode(address:u1) -> (mode:u8)
+pub input output_mode(address:u1) -> (mode:u1)
 pub output guest_output(address:OutputAddress) -> (byte:u8)
 memory guest_output_tmp[u16](address:u16) -> (byte:u8)
 // Number of output bytes written so far. Only touched in OUTPUT_MODE_FULL, so
