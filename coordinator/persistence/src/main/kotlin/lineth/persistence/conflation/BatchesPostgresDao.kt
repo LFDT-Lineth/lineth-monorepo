@@ -16,6 +16,7 @@ import kotlin.time.Clock
 
 class BatchesPostgresDao(
   connection: SqlClient,
+  private val schemaVersion: Int,
   private val clock: Clock = Clock.System,
 ) : BatchesDao {
   private val log = LogManager.getLogger(this.javaClass.name)
@@ -38,13 +39,23 @@ class BatchesPostgresDao(
     val batchesTableName = "batches"
   }
 
+  // proof_index_hash column was added in V005
+  private val hasProofIndexHashColumn = schemaVersion >= 5
+
   private val insertSql =
-    """
-      insert into $batchesTableName
-      (created_epoch_milli, start_block_number, end_block_number, status, proof_index_hash)
-      VALUES ($1, $2, $3, $4, $5)
-    """
-      .trimIndent()
+    if (hasProofIndexHashColumn) {
+      """
+        insert into $batchesTableName
+        (created_epoch_milli, start_block_number, end_block_number, status, proof_index_hash)
+        VALUES ($1, $2, $3, $4, $5)
+      """
+    } else {
+      """
+        insert into $batchesTableName
+        (created_epoch_milli, start_block_number, end_block_number, status)
+        VALUES ($1, $2, $3, $4)
+      """
+    }.trimIndent()
 
   private val findHighestConsecutiveEndBlockNumberSql =
     """
@@ -95,13 +106,13 @@ class BatchesPostgresDao(
     val startBlockNumber = batch.startBlockNumber.toLong()
     val endBlockNumber = batch.endBlockNumber.toLong()
     val params =
-      listOf(
-        clock.now().toEpochMilliseconds(),
-        startBlockNumber,
-        endBlockNumber,
-        batchStatusToDbValue(Batch.Status.Proven),
-        batch.proofIndexHash?.encodeHex(),
-      )
+      buildList {
+        add(clock.now().toEpochMilliseconds())
+        add(startBlockNumber)
+        add(endBlockNumber)
+        add(batchStatusToDbValue(Batch.Status.Proven))
+        if (hasProofIndexHashColumn) add(batch.proofIndexHash?.encodeHex())
+      }
     queryLog.log(Level.TRACE, insertSql, params)
     return insertQuery.execute(Tuple.tuple(params))
       .map { }
