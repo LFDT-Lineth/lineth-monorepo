@@ -33,15 +33,18 @@ covers blocks 10-11), disambiguating multiple samples for the same guest program
 | `*-getZkRollupAggregationProofV1.request.json` | `RollupAggregationProofPrivateInput` | `rollup_aggregation.py` | `run_rollup_aggregation_guest` (input) |
 | `*-getZkRollupAggregationProofV1.response.json` | `FinalizationSubmission` | `l1_rollup.py` | `run_rollup_aggregation_guest` (output) |
 
-**Guest output vs prover output.** A guest emits its public-input tuple plus the
-revealed hash preimages (`l2L1Messages`, `txFroms`, `l2L1Roots`,
-`filteredAddresses`). The `proof` bytes are attached by the zkVM/prover layer,
+**Guest output vs prover output.** A guest emits its public-input tuple. The
+l2-execution response includes the revealed hash preimages (`l2L1Messages`,
+`txFroms`, `filteredAddresses`); rollup roots and filtered addresses are public-input
+lists. The `proof` bytes are attached by the zkVM/prover layer,
 not the guest, so they are placeholders (`0x`) in these fixtures; a response
 equals the guest output plus `proof`. The aggregation response is a
-`FinalizationSubmission`: it additionally carries `l2L1Roots`,
-`filteredAddresses`, and `l2MessagingBlocksOffsets` — the preimages the L1
-`finalize_rollup` call consumes as calldata — so it is sufficient for L1
-finalization.
+`FinalizationSubmission`: it carries `l2MessagingBlocksOffsets` in the
+public inputs, which L1 consumes directly for finalization. The aggregation
+proof is the final SNARK-wrapped proof, verified on L1; its own VK is configured
+by the L1 verifier and is not a recursively verified response `programVk`.
+The Coordinator submits the root, filtered-address, and Program ID lists to L1, which
+hashes each list in its public-input calculation.
 
 The JSON field names are not always a 1:1 camel↔snake mapping of the dataclass
 fields; the codec owns the renames and type coercion (see `proof_io_v1.py`). A
@@ -58,9 +61,9 @@ returns it in the response PI), and no `chainId` on the aggregation request.
 
 `tests/test_proof_io_v1.py` imports the guest dataclasses, which pull in the
 native dependencies in `requirements.txt` (`ckzg`, `coincurve` via
-`ethereum-execution`, `lz4`). Those have no wheels for the newest Python and are
-built from source, so use **Python 3.11 or 3.12** and the Xcode command-line
-tools on macOS.
+`ethereum-execution`, `zstandard`). The pinned `ethereum-execution` stack can
+require a source build, so use **Python 3.11 or 3.12** and the Xcode
+command-line tools on macOS.
 
 Prerequisites:
 

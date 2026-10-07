@@ -38,6 +38,7 @@
 - *(coordinator)* Store proof_index_hash in batches table for RISC-V rollup proof assembly (#3973)
 - *(coordinator)* Improve ProverClientFactory (#4000)
 - *(coordinator)* Add new metadata fields in RISC-V request (#3998)
+- *(coordinator)* [**breaking**] Add new fields on riscv proof requests and revise … (#3993)
 
 ### 🐛 Bug Fixes
 
@@ -90,6 +91,8 @@
 - *(prover)* Empty-codehash check (#3913)
 - *(coordinator)* Preserve Amsterdam execution payload fields (#3949)
 - *(misc)* Make timer stop() await in-flight task execution (#4042)
+- *(linea-besu)* Limit large MODEXP calls to 1 per block (#4128)
+- *(prover)* Segment MODEXP_LARGE by whole instances in limitless (#4127)
 
 ### 🚜 Refactor
 
@@ -176,3 +179,11 @@
 - *(misc)* Decrease vertx threadpool sizes for testing (#4047)
 - *(misc)* CI Merge sequencer plugin unit and acceptance jobs (#4048)
 - *(misc)* Maru break down integration tests into smaller chunks (#4049)
+- *(coordinator)* Tidy up move DB sql files to db/coordinator (#4068)
+- *(misc)* Update gradle besu plugin to v0.3.0 (#4072)
+- *(deps)* Refresh dependencies and GitHub Actions (#4088)
+- *(coordinator)* Make vertx instantiation responsibility of CoordinatorAppMain runner (#4090)
+- *(coordinator)* Carve out config module (#4093)
+- *(coordinator)* Arrange config module dependencies (#4100)
+- *(coordinator)* Remove unsupported invalidity proof client (#4101)
+- *(coordinator)* Simplify Risc5 prover DTO mappers (#4121)

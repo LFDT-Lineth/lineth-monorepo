@@ -5,7 +5,7 @@ against its corresponding JSON Schema under `rollup_spec/prover_io/schemas/`.
 
 This test does NOT import the guest dataclasses (only the lightweight,
 dependency-free `rollup_spec` package root, to locate the data), so it has no
-native dependencies (`ckzg`/`coincurve`/`lz4`) — only `jsonschema`. It runs on
+native dependencies (`ckzg`/`coincurve`/`zstandard`) — only `jsonschema`. It runs on
 any Python and is the cheapest way to catch a fixture drifting from its schema.
 
 Fixture <-> schema pairing is by filename convention:
@@ -82,6 +82,34 @@ def test_schema_is_valid_draft_2020_12(schema_path: Path) -> None:
     jsonschema.Draft202012Validator.check_schema(schema)
 
 
+@pytest.mark.parametrize(
+    ("fixture_name", "public_inputs"),
+    [
+        ("10-14-getZkRollupProofV1.response.json", lambda fixture: [fixture["publicInputs"]]),
+        (
+            "10-18-getZkRollupAggregationProofV1.request.json",
+            lambda fixture: [proof["publicInputs"] for proof in fixture["proofRequest"]["rollupProofs"]],
+        ),
+        ("10-18-getZkRollupAggregationProofV1.response.json", lambda fixture: [fixture["publicInputs"]]),
+    ],
+)
+def test_l2_l1_tree_depth_schema_accepts_other_guest_depths(fixture_name, public_inputs) -> None:
+    jsonschema = pytest.importorskip("jsonschema")
+    fixture_path = _FIXTURE_DIR / fixture_name
+    schema = json.loads(_schema_path_for(fixture_path).read_text())
+    fixture = json.loads(fixture_path.read_text())
+    validator = jsonschema.Draft202012Validator(schema)
+
+    for inputs in public_inputs(fixture):
+        inputs["l2L1TreeDepth"] = 4
+    validator.validate(fixture)
+
+    for invalid_depth in (0, -1, 1.5, 2**64):
+        for inputs in public_inputs(fixture):
+            inputs["l2L1TreeDepth"] = invalid_depth
+        assert not validator.is_valid(fixture), f"depth {invalid_depth} must be rejected"
+
+
 @pytest.fixture
 def execution_request_and_validator():
     jsonschema = pytest.importorskip("jsonschema")
@@ -121,3 +149,39 @@ def test_slot_requires_unsigned_integer(execution_request_and_validator, slot) -
     _execution_payloads(request)[0]["slotNumber"] = slot
     errors = list(validator.iter_errors(request))
     assert any(list(error.path)[-1:] == ["slotNumber"] for error in errors)
+
+
+_BLOB_OFFSET_CASES = [
+    ("10-14-getZkRollupProofV1.request.json", ("proofRequest", "startOffset")),
+    ("10-14-getZkRollupProofV1.response.json", ("publicInputs", "startOffset")),
+    ("10-14-getZkRollupProofV1.response.json", ("publicInputs", "endOffset")),
+    ("10-18-getZkRollupAggregationProofV1.request.json", ("proofRequest", "rollupProofs", 0, "publicInputs", "startOffset")),
+    ("10-18-getZkRollupAggregationProofV1.request.json", ("proofRequest", "rollupProofs", 0, "publicInputs", "endOffset")),
+    ("10-18-getZkRollupAggregationProofV1.response.json", ("publicInputs", "startOffset")),
+    ("10-18-getZkRollupAggregationProofV1.response.json", ("publicInputs", "endOffset")),
+]
+
+
+def _validate_blob_offset(fixture_name: str, offset_path: tuple[str | int, ...], value: int) -> None:
+    jsonschema = pytest.importorskip("jsonschema")
+    fixture_path = _FIXTURE_DIR / fixture_name
+    schema = json.loads(_schema_path_for(fixture_path).read_text())
+    validator = jsonschema.Draft202012Validator(schema)
+    fixture = json.loads(fixture_path.read_text())
+    target = fixture
+    for key in offset_path[:-1]:
+        target = target[key]
+    target[offset_path[-1]] = value
+    validator.validate(fixture)
+
+
+@pytest.mark.parametrize(("fixture_name", "offset_path"), _BLOB_OFFSET_CASES)
+def test_blob_offset_schema_accepts_last_payload_position(fixture_name: str, offset_path: tuple[str | int, ...]) -> None:
+    _validate_blob_offset(fixture_name, offset_path, 130046)
+
+
+@pytest.mark.parametrize(("fixture_name", "offset_path"), _BLOB_OFFSET_CASES)
+def test_blob_offset_schema_rejects_position_past_payload(fixture_name: str, offset_path: tuple[str | int, ...]) -> None:
+    jsonschema = pytest.importorskip("jsonschema")
+    with pytest.raises(jsonschema.ValidationError):
+        _validate_blob_offset(fixture_name, offset_path, 130047)

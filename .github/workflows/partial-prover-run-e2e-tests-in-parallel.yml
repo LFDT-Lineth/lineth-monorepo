@@ -37,7 +37,7 @@ jobs:
     name: Run test:partial-prover:${{ matrix.test }} e2e tests
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Download local linea-besu-package docker image
         if: ${{ inputs.linea_besu_package_image_tag == '' }}
@@ -80,7 +80,7 @@ jobs:
           chmod -R a+rw tmp/local/
 
       - name: Spin up fresh environment with besu tracing with retry
-        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         with:
           max_attempts: 10
           retry_on: error

@@ -12,6 +12,9 @@ component_scopes() {
     coordinator)         echo "coordinator|deps|misc" ;;
     maru)                echo "maru|deps|misc" ;;
     prover)               echo "prover|deps|misc" ;;
+    prover-ray)           echo "prover-ray|riscv-guest|deps|misc" ;;
+    riscv-l2-execution)  echo "riscv-guest|deps|misc" ;;
+    riscv-rollup)        echo "riscv-guest|deps|misc" ;;
     postman)              echo "postman|deps|misc" ;;
     tx-exclusion-api)     echo "tx-exclusion-api|deps|misc" ;;
     linea-besu-package)   echo "linea-besu|tracer|sequencer|deps|misc" ;;
@@ -29,6 +32,31 @@ component_include_path() {
     coordinator)       printf '%s\n' "coordinator/**" ;;
     maru)              printf '%s\n' "maru/**" ;;
     prover)            printf '%s\n' "prover/**" ;;
+    prover-ray)
+      printf '%s\n' "prover-ray/**"
+      component_include_path riscv-l2-execution
+      ;;
+    riscv-l2-execution)
+      printf '%s\n' \
+        "riscv-guests/l2-execution/**" \
+        "riscv-guests/guest-common/**" \
+        "riscv-guests/build_common/**" \
+        "riscv-guests/release/**" \
+        "riscv-guests/lineth-accelerators/**" \
+        "riscv-guests/guest-crypto-ctt/**" \
+        "riscv-guests/.zigversion" \
+        "riscv-guests/Makefile"
+      ;;
+    riscv-rollup)
+      printf '%s\n' \
+        "riscv-guests/rollup/**" \
+        "riscv-guests/guest-common/**" \
+        "riscv-guests/build_common/**" \
+        "riscv-guests/release/**" \
+        "riscv-guests/lineth-accelerators/**" \
+        "riscv-guests/.zigversion" \
+        "riscv-guests/Makefile"
+      ;;
     postman)           printf '%s\n' "postman/**" ;;
     tx-exclusion-api)  printf '%s\n' "transaction-exclusion-api/**" ;;
     linea-besu-package)

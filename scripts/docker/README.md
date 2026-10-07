@@ -59,9 +59,7 @@ Once assembled, iterate on the image alone with `SKIP_PREBUILD=true`. Two
 deliberate deviations from CI: the build context stays at `linea-besu/package/tmp`
 instead of CI's `linea-besu/package/linea-besu/.` (identical image — the Dockerfile
 only does `COPY besu /opt/besu/` — but all generated files stay inside `tmp/`,
-which `make -C linea-besu/package clean` removes), and the `-with-fleet` variant is
-not reproduced because it needs a token for the private `Consensys/besu-fleet-plugin`
-repository.
+which `make -C linea-besu/package clean` removes).
 
 ### Variables
 
@@ -123,3 +121,27 @@ upload.
 
 The workflow and the make target hold the per-image recipe independently — when
 you change one, change the other.
+
+## Prover-ray
+
+Run **Prover Ray Release** to publish `consensys/lineth-prover-ray` through the
+shared component release workflow and create a draft release with pull commands.
+Pin the full published tag in local setup. The Docker image targets Linux AMD64.
+
+```bash
+make docker-build-prover-ray
+./prover-ray/scripts/docker-smoke.sh consensys/lineth-prover-ray:local
+```
+
+One image includes the Go prover, native runner, and guest ELF. The runner and
+guest are both compiled from `riscv-guests` at the same commit, so every image
+build checks their compatibility; the smoke test runs one `dev-zkvm` prove that
+cross-checks the guest's commitment against the runner's. Docker installs Nim/LLVM
+in the builder stage to compile the Constantine dependency; these tools are not
+required on the host or in the final runtime image. The coordinator's Program ID
+must match the bundled ELF (Keccak-256 of the complete ELF).
+
+Mount a config at `CONFIG_FILE` with the stack's shared queue paths and select
+`execution.prover_mode = "dev-mock"` or `"dev-zkvm"`. For `dev-zkvm`, set the bundled
+native-runner and guest-ELF paths as shown in `prover-ray/config/config-dev-zkvm.toml`.
+Both modes use the same image and release workflow.

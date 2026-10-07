@@ -52,6 +52,7 @@ DOCKER_IMAGE_TARGETS := \
 	docker-build-maru \
 	docker-build-postman \
 	docker-build-prover \
+	docker-build-prover-ray \
 	docker-build-native-yield-automation-service \
 	docker-build-lido-governance-monitor \
 	docker-build-alltools
@@ -109,6 +110,14 @@ docker-build-prover:
 		--context . \
 		--build-context prover=prover/
 
+# .github/workflows/prover-ray-build-and-publish.yml
+docker-build-prover-ray:
+	$(DOCKER_BUILD) \
+		--image-name consensys/lineth-prover-ray \
+		--dockerfile ./prover-ray/Dockerfile \
+		--context prover-ray \
+		--build-context riscv-guests=riscv-guests/
+
 # .github/workflows/native-yield-automation-service-build-and-publish.yml
 docker-build-native-yield-automation-service:
 	$(DOCKER_BUILD) \
@@ -146,8 +155,6 @@ docker-build-alltools:
 # inside tmp/, which `make -C linea-besu/package clean` already removes rather than
 # leaving an untracked besu/ inside the git-tracked linea-besu/ directory.
 #
-# The `-with-fleet` variant is not reproduced: it needs a token for the private
-# Consensys/besu-fleet-plugin repository.
 docker-build-linea-besu-package:
 	$(call prebuild,$(MAKE) -C linea-besu/package build-besu build-tracer-and-sequencer clean assemble)
 	$(DOCKER_BUILD) \

@@ -20,12 +20,6 @@ pnpm run --filter="e2e..." build
 make start-env-with-tracing-v2-ci
 ```
 
-For **fleet** tests, use the fleet-specific target instead:
-
-```bash
-make start-env-with-tracing-v2-ci-fleet
-```
-
 4. For remote environments (devnet / sepolia), copy `.env.template` to `.env` and fill in the required values.
 
 ### Environment variables
@@ -57,10 +51,9 @@ Run these commands from the monorepo root.
 
 | Command                                                       | Description                                                      |
 |---------------------------------------------------------------|------------------------------------------------------------------|
-| `pnpm -F e2e run test:local`                                 | All tests (excludes fleet and liveness, then runs liveness)     |
+| `pnpm -F e2e run test:local`                                 | All tests (excludes liveness, then runs liveness)     |
 | `pnpm -F e2e run test:local:run "<file.spec.ts>"`            | Run one test suite                                               |
 | `pnpm -F e2e run test:local:run "<file.spec.ts>" -t "<test name>"` | Run one test                                              |
-| `pnpm -F e2e run test:fleet:local`                           | Fleet leader/follower consistency tests                          |
 | `pnpm -F e2e run test:liveness:local`                        | Sequencer liveness tests                                         |
 | `pnpm -F e2e run test:sendbundle:local`                      | sendBundle RPC tests                                             |
 

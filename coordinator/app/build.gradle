@@ -3,14 +3,8 @@ import org.gradle.api.tasks.testing.logging.TestLogEvent
 
 plugins {
   id 'lineth.kotlin-application-conventions'
-  id 'linea.config-docs'
 }
 
-// Config documentation tooling: creates the `configDocs` source set and the
-// checkConfigDocs/generateConfigDocs tasks, driven by the spec below.
-configDocs {
-  spec = 'lineth.coordinator.config.v2.docs.CoordinatorConfigDocsSpec'
-}
 configurations.configureEach {
   exclude group: "org.rocksdb", module: "rocksdbjni"
   exclude group: "org.hyperledger.besu", module: "bls12-381"
@@ -38,46 +32,41 @@ sourceSets {
 }
 
 dependencies {
-  // @ConfigDoc/@ConfigSection annotations applied to the TOML config classes. Compile-time only
-  // (read by the config-docs tooling, never at app runtime) so it stays out of the production jar.
-  compileOnly project(':jvm-libs:linea:config-docs')
+  api project(':jvm-libs:generic:json-rpc')
+  api project(':jvm-libs:generic:http-rest')
+  api project(':jvm-libs:generic:vertx-helper')
+  api project(':jvm-libs:generic:extensions:futures')
+  api project(':jvm-libs:generic:persistence:db')
+  api project(':jvm-libs:linea:web3j-extensions')
+  api project(':jvm-libs:linea:clients:eth-logs-searcher')
+  api project(':jvm-libs:linea:core:metrics')
+  api project(':jvm-libs:linea:metrics:micrometer')
+  api project(':jvm-libs:linea:core:domain-models')
+  api project(':jvm-libs:linea:clients:linea-state-manager')
+  api project(':coordinator:utilities')
+  api project(':coordinator:core')
+  api project(':coordinator:config')
+  api project(':coordinator:extensions-api')
+  api project(':coordinator:clients:shomei-client')
+  api project(':coordinator:clients:traces-generator-api-client')
+  api project(':coordinator:clients:prover-client')
+  api project(':coordinator:clients:smart-contract-client')
+  api project(':coordinator:clients:forced-transactions-client')
+  api project(':coordinator:ethereum:finalization-monitor')
+  api project(':coordinator:ethereum:models-helper')
+  api project(':coordinator:ethereum:blob-submitter')
+  api project(':coordinator:ethereum:message-anchoring')
+  api project(':coordinator:ethereum:forced-transactions')
+  api project(':coordinator:clients:web3signer-client')
+  api project(':coordinator:persistence')
 
-  implementation project(':jvm-libs:generic:json-rpc')
-  implementation project(':jvm-libs:generic:http-rest')
-  implementation project(':jvm-libs:generic:vertx-helper')
-  implementation project(':jvm-libs:generic:extensions:futures')
-  implementation project(':jvm-libs:generic:extensions:hoplite')
-  implementation project(':jvm-libs:generic:persistence:db')
-  implementation project(':jvm-libs:linea:web3j-extensions')
-  implementation project(':jvm-libs:linea:clients:eth-logs-searcher')
-  implementation project(':jvm-libs:linea:core:metrics')
-  implementation project(':jvm-libs:linea:metrics:micrometer')
-  implementation project(':jvm-libs:linea:core:domain-models')
-  implementation project(':jvm-libs:linea:clients:linea-state-manager')
-  implementation project(':coordinator:utilities')
-  implementation project(':coordinator:core')
-  implementation project(':coordinator:extensions-api')
-  implementation project(':coordinator:clients:shomei-client')
-  implementation project(':coordinator:clients:traces-generator-api-client')
-  implementation project(':coordinator:clients:prover-client')
-  implementation project(':coordinator:clients:smart-contract-client')
-  implementation project(':coordinator:clients:forced-transactions-client')
-  implementation project(':coordinator:ethereum:finalization-monitor')
-  implementation project(':coordinator:ethereum:models-helper')
-  implementation project(':coordinator:ethereum:blob-submitter')
-  implementation project(':coordinator:ethereum:message-anchoring')
-  implementation project(':coordinator:ethereum:forced-transactions')
-  implementation project(':coordinator:clients:web3signer-client')
-  implementation project(':coordinator:persistence')
+  api project(':coordinator:ethereum:gas-pricing:static-cap')
+  api project(':coordinator:ethereum:gas-pricing:dynamic-cap')
+  api project(':coordinator:ethereum:gas-pricing')
 
-  implementation project(':coordinator:ethereum:gas-pricing:static-cap')
-  implementation project(':coordinator:ethereum:gas-pricing:dynamic-cap')
-  implementation project(':coordinator:ethereum:gas-pricing')
-
-  implementation "info.picocli:picocli:${libs.versions.picoli.get()}"
+  api "info.picocli:picocli:${libs.versions.picoli.get()}"
   implementation "io.vertx:vertx-web-client"
-  implementation "com.sksamuel.hoplite:hoplite-core:${libs.versions.hoplite.get()}"
-  implementation "com.sksamuel.hoplite:hoplite-toml:${libs.versions.hoplite.get()}"
+  api "com.sksamuel.hoplite:hoplite-core:${libs.versions.hoplite.get()}"
   api("io.netty:netty-transport-native-epoll:${libs.versions.netty.get()}:linux-x86_64") {
     because "It enables native transport for Linux."
     // Note that its version should match netty version used in Vertx

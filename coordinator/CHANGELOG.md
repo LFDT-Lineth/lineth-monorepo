@@ -1,8 +1,14 @@
-## [unreleased]
+## [2.0.1] - 2026-10-06
+
+### ⚙️ Miscellaneous Tasks
+
+- *(coordinator)* Simplify Risc5 prover DTO mappers (#4121)
+## [2.0.0] - 2026-10-02
 
 ### 🚀 Features
 
 - *(coordinator)* Add new metadata fields in RISC-V request (#3998)
+- *(coordinator)* [**breaking**] Add new fields on riscv proof requests and revise … (#3993)
 
 ### 🐛 Bug Fixes
 
@@ -15,6 +21,11 @@
 - *(misc)* Update gradle to v9.8 (#4032)
 - *(misc)* Fix gradle build correctness bugs (#4044)
 - *(misc)* Decrease vertx threadpool sizes for testing (#4047)
+- *(coordinator)* Tidy up move DB sql files to db/coordinator (#4068)
+- *(coordinator)* Make vertx instantiation responsibility of CoordinatorAppMain runner (#4090)
+- *(coordinator)* Carve out config module (#4093)
+- *(coordinator)* Arrange config module dependencies (#4100)
+- *(coordinator)* Remove unsupported invalidity proof client (#4101)
 ## [1.2.0] - 2026-09-23
 
 ### 🚀 Features
