@@ -8,7 +8,6 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/zkc/pkg/ir/air"
-	"github.com/LFDT-Lineth/zkc/pkg/trace"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
@@ -22,7 +21,7 @@ var _ [1]uint32 = field.Element{}
 // AssignFromTraceShard expands and assigns the trace to the given runtime.
 func AssignFromTraceShard(
 	run *wiop.Runtime,
-	shard trace.Shard[koalabear.Element],
+	shard Shard,
 	schema air.Schema[koalabear.Element],
 	sharedRandomness field.Octuplet,
 ) {

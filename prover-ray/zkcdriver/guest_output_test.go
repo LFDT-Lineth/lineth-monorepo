@@ -3,6 +3,7 @@ package zkcdriver_test
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"testing"
 
 	koalafield "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -72,14 +73,12 @@ func TestGuestPublicOutputs(t *testing.T) {
 		assert.NotNil(t, sys.LookupColumn(id), "limb %d must resolve", i)
 	}
 
-	traces := driver.TraceZkcInputs(inputs)
-	if len(traces) > 1 {
-		t.Fatalf("the test fixture is expected to only use a single public inputs")
-	}
-
+	// Trace exactly one shard
+	shard := traceSingleShard(t, driver, inputs)
+	//
 	var got []koalafield.Element
 	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
-		driver.AssignTraceShard(rt, traces[0], koalafield.Octuplet{})
+		driver.AssignTraceShard(rt, shard, koalafield.Octuplet{})
 		got = risc5.GetGuestPublicOutputs(rt)
 	}, wiop.ProveOptions{CheckUnreducedQueries: true})
 
@@ -115,18 +114,17 @@ func TestGuestPublicOutputsWrongLength(t *testing.T) {
 	})
 
 	t.Run("the prover reports the mismatch", func(t *testing.T) {
-		sys, driver, inputs, _ := newGuestOutputSystem(t, zkcPath, inputHex)
-
-		traces := driver.TraceZkcInputs(inputs)
-		if len(traces) > 1 {
-			t.Fatalf("the test fixture is expected to only use a single public inputs")
-		}
-
+		var (
+			sys, driver, inputs, _ = newGuestOutputSystem(t, zkcPath, inputHex)
+			// trace inputs to produce a single shard
+			shard = traceSingleShard(t, driver, inputs)
+		)
+		//
 		assert.PanicsWithValue(t,
 			"risc5: GetGuestPublicOutputs: the guest wrote 7 outputs but the expected output size is 8",
 			func() {
 				sys.Prove(func(rt *wiop.Runtime) {
-					driver.AssignTraceShard(rt, traces[0], koalafield.Octuplet{})
+					driver.AssignTraceShard(rt, shard, koalafield.Octuplet{})
 					risc5.GetGuestPublicOutputs(rt)
 				})
 			})
@@ -150,13 +148,11 @@ func provesAndVerifiesFirstShardOnly(
 		}
 	}()
 
-	traces := driver.TraceZkcInputs(inputs)
-	if len(traces) > 1 {
-		t.Fatalf("the test fixture is expected to only use a single public inputs")
-	}
-
+	// Trace inputs to produce a single shard
+	shard := traceSingleShard(t, driver, inputs)
+	//
 	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
-		driver.AssignTraceShard(rt, traces[0], koalafield.Octuplet{})
+		driver.AssignTraceShard(rt, shard, koalafield.Octuplet{})
 	}, wiop.ProveOptions{CheckUnreducedQueries: true})
 
 	if err := sys.Verify(proof, pub); err != nil {
@@ -165,4 +161,22 @@ func provesAndVerifiesFirstShardOnly(
 	}
 
 	return true
+}
+
+// Trace the given inputs using the given driver, whilst expecting everything to
+// fit into a single shard and, if not, then this test fails.
+func traceSingleShard(tb testing.TB, driver *zkcdriver.ZkCDriver, inputs *zkcdriver.PreReadInputs) zkcdriver.Shard {
+	lazyTrace := driver.TraceZkcInputs(inputs)
+	// Sanity check only a single shard
+	if lazyTrace.Len() > 1 {
+		tb.Fatalf("the test fixture is expected to only use a single public inputs")
+	}
+	// Trace the one shard
+	shard, errs := lazyTrace.Get(0)
+	// Sanity check for errors
+	if len(errs) > 0 {
+		tb.Fatalf("tracing failed %v", errors.Join(errs...))
+	}
+	// Done
+	return shard.Unwrap()
 }

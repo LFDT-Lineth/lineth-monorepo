@@ -39,7 +39,7 @@ var (
 	placeholderSharedRandomness = koalafield.NewOctupletFromStrings([8]string{"1", "0", "0", "0", "0", "0", "0", "0"})
 )
 
-func compileBinaryConstraints(srcPath string) (binfile *constraints.BinaryFile[koalabear.Element], err error) {
+func compileBinaryConstraints(srcPath string) (binfile *zkcdriver.BinaryFile, err error) {
 	// recover panics. ZKC tends to panic when it fails compiling, so we want to catch those and return them as errors.
 	defer func() {
 		r := recover()
@@ -67,7 +67,7 @@ func compileBinaryConstraints(srcPath string) (binfile *constraints.BinaryFile[k
 		}
 		return nil, fmt.Errorf("failed to compile zkc source")
 	}
-	binfile = constraints.NewBinaryFile[koalabear.Element](nil, nil, ir)
+	binfile = constraints.NewBinaryFile[koalabear.Element, vm.Uint32](nil, nil, ir)
 	return binfile, nil
 }
 
@@ -75,7 +75,7 @@ func compileBinaryConstraints(srcPath string) (binfile *constraints.BinaryFile[k
 // given zkcTestCase. The function also sanity-checks the inputs of the testcase.
 func parseTestCase(
 	scenario zkcTestCase,
-	binF *constraints.BinaryFile[koalabear.Element],
+	binF *zkcdriver.BinaryFile,
 	withTraceCheck bool,
 ) (
 	inputs *zkcdriver.PreReadInputs,
@@ -104,7 +104,7 @@ func parseTestCase(
 }
 
 func traceZkc(
-	binFile *constraints.BinaryFile[koalabear.Element],
+	binFile *zkcdriver.BinaryFile,
 	tracingCfg vm.TraceConfig,
 	input map[string][]byte,
 	withCheck bool,
@@ -124,10 +124,10 @@ func traceZkc(
 
 	if withCheck {
 		// check the traces work
-		if errsSchema := binFile.Check(tracingCfg, tr); len(errsSchema) > 0 {
-			errs := make([]error, len(errsSchema))
-			for i, e := range errsSchema {
-				errs[i] = errors.New(e.Message())
+		if failures, errs := binFile.Check(tracingCfg, tr.Unwrap()); len(failures) > 0 || len(errs) > 0 {
+			// failures are constraint failures, whilst errs are internal ZkC problems.
+			for _, e := range failures {
+				errs = append(errs, errors.New(e.Message()))
 			}
 			return nil, fmt.Errorf("constraint check failed: %w", errors.Join(errs...))
 		}
@@ -151,7 +151,7 @@ func proverCompilePipeline(sys *wiop.System) {
 }
 
 // runProveVerify proves and verifies a given test-case, returning an error if the proof fails to verify.
-func runProveVerify(inputs *zkcdriver.PreReadInputs, binFile *constraints.BinaryFile[koalabear.Element], proverCompilePipeline func(*wiop.System)) (err error) {
+func runProveVerify(inputs *zkcdriver.PreReadInputs, binFile *zkcdriver.BinaryFile, proverCompilePipeline func(*wiop.System)) (err error) {
 	// recover panics. ZKC tends to panic when it fails tracing, so we want to catch those and return them as errors.
 	defer func() {
 		if r := recover(); r != nil {
@@ -175,22 +175,20 @@ func runProveVerify(inputs *zkcdriver.PreReadInputs, binFile *constraints.Binary
 	proverCompilePipeline(sys)
 
 	var (
-		traces = driver.TraceZkcInputs(inputs)
-		proofs = make([]wiop.Proof, len(traces))
-		pubs   = make([]wiop.PublicInput, len(traces))
+		lazyTrace = driver.TraceZkcInputs(inputs)
+		proofs    = make([]wiop.Proof, lazyTrace.Len())
+		pubs      = make([]wiop.PublicInput, lazyTrace.Len())
 	)
-
-	for i, shard := range traces {
-
+	// Lazy proof construction for shards.
+	lazyTrace.Apply(func(i uint, shard zkcdriver.Shard) {
 		proofs[i], pubs[i] = sys.Prove(
 			func(rt *wiop.Runtime) {
 				driver.AssignTraceShard(rt, shard, placeholderSharedRandomness)
 			},
 			wiop.ProveOptions{CheckUnreducedQueries: true})
-	}
+	})
 
 	for i := range proofs {
-
 		if err := sys.Verify(proofs[i], pubs[i]); err != nil {
 			return fmt.Errorf("verification failed: %w", err)
 		}

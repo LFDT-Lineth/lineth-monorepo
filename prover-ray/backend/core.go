@@ -321,19 +321,26 @@ func (c *Core) runProve(
 ) (wiop.Proof, wiop.PublicInput, error) {
 	_ = ctx // cancellation not yet propagated into the prover internals
 
-	traces := c.driver.TraceZkcInputs(preRead)
-	if len(traces) > 1 {
+	lazyTrace := c.driver.TraceZkcInputs(preRead)
+	// FIXME: supports only a single shard (for now) --- djp
+	if lazyTrace.Len() > 1 {
 		logrus.Fatalf("expected a single public input")
 	}
-
+	// Materalise first shard
+	shard, errs := lazyTrace.Get(0)
+	// Sanity check for tracing errors
+	if len(errs) > 0 {
+		logrus.Fatalf("tracing failure: %v", errors.Join(errs...))
+	}
+	// Generate proof
 	proof, pub := c.sys.Prove(func(rt *wiop.Runtime) {
-		c.driver.AssignTraceShard(rt, traces[0], field.Octuplet{})
+		c.driver.AssignTraceShard(rt, shard.Unwrap(), field.Octuplet{})
 	})
-
+	// Verify proof
 	if err := c.sys.Verify(proof, pub); err != nil {
 		return wiop.Proof{}, nil, fmt.Errorf("proof verification: %w", err)
 	}
-
+	// Done
 	return proof, pub, nil
 }
 
