@@ -174,13 +174,15 @@ func (c *Core) Prove(ctx context.Context, job Job) Result {
 	}
 }
 
-// proveDevMock returns a placeholder result: success, a marker proof, zero
-// public inputs. It runs no guest and ignores Payload.
+// proveDevMock returns a placeholder result: success, a marker proof, and zero
+// public inputs except EndBlockNumber, which the coordinator needs to identify
+// the proven batch. It runs no guest and ignores Payload.
 func (c *Core) proveDevMock(job Job) Result {
 	return Result{
-		JobID:      job.ID,
-		Status:     ResultStatusOK,
-		ProofBytes: DevMarkerProof(ProverModeDevMock),
+		JobID:        job.ID,
+		Status:       ResultStatusOK,
+		ProofBytes:   DevMarkerProof(ProverModeDevMock),
+		PublicInputs: PublicInputs{EndBlockNumber: job.EndBlock},
 	}
 }
 

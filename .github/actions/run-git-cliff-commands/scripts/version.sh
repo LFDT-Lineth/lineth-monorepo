@@ -71,7 +71,7 @@ if [ -z "${next_tag}" ] || [ "${changed}" = "false" ]; then
   emit_kv changed "false"
   exit 0
 fi
-next_semver="${next_tag#releases/${COMPONENT}/v}"
+next_semver="${next_tag#releases/"${COMPONENT}"/v}"
 if [ -n "${RELEASE_TAG_SUFFIX}" ]; then
   next_tag="${next_tag}-${RELEASE_TAG_SUFFIX}"
   next_semver="${next_semver}-${RELEASE_TAG_SUFFIX}"

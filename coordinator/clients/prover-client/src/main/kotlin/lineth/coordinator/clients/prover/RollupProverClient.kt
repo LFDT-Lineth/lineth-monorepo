@@ -92,16 +92,19 @@ object RollupProofResponseDtoMapper : (
   }
 }
 
-typealias FileBasedRollupProofTransport =
+typealias RollupProofTransport =
   ProverProofTransport<FileBasedRollupProofRequestDto, RollupProofResponseDto, BlockIntervalProofIndex>
 
 /**
- * RISC-V file-based rollup prover client.
- * The request/response transport is injected via file-based transport.
+ * RISC-V rollup prover client. The request/response transport is injected via [transport], so the
+ * same client works whether requests are written as JSON files or sent over REST.
+ *
+ * @param l2ExecutionProofProvider source of the l2-execution proofs inlined into each request; null
+ *   sends only their indexes, for a prover (e.g. the prover gateway) that resolves them itself.
  */
-class FileBasedRollupProverClient(
-  transport: FileBasedRollupProofTransport,
-  l2ExecutionProofTransport: L2ExecutionProofTransport,
+class RollupProverClient(
+  transport: RollupProofTransport,
+  l2ExecutionProofProvider: ProofProvider<L2ExecutionProofResponseDto>?,
   programId: String,
   provingSystemVersion: String,
   chainId: Long,
@@ -110,7 +113,7 @@ class FileBasedRollupProverClient(
       programId,
       provingSystemVersion,
       chainId,
-      l2ExecutionProofTransport::findResponse,
+      l2ExecutionProofProvider,
     ),
   proofResponseDtoMapper: (RollupProofResponseDto) -> RollupProofResponseV1 =
     RollupProofResponseDtoMapper,
@@ -133,6 +136,6 @@ class FileBasedRollupProverClient(
   RollupProverClientV1 {
 
   companion object {
-    val LOG: Logger = LogManager.getLogger(FileBasedRollupProverClient::class.java)
+    val LOG: Logger = LogManager.getLogger(RollupProverClient::class.java)
   }
 }

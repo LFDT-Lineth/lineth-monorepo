@@ -109,7 +109,7 @@ def _sample_proof() -> L2ExecutionProof:
         end_block_hash=Hash32(bytes([0x0B]) * 32),
         end_block_number=U64(1000503),
         end_block_timestamp=U64(1763000123),
-        l2_l1_messages_hash=Hash32(bytes([0x01]) * 32),
+        l2_l1_messages=[Hash32(bytes([0x08]) * 32)],
         parent_l1_l2_bridge_rolling_hash=Hash32(bytes([0x02]) * 32),
         parent_l1_l2_bridge_rolling_hash_message_number=U64(0),
         end_l1_l2_bridge_rolling_hash=Hash32(bytes([0x03]) * 32),
@@ -264,13 +264,13 @@ def test_encode_response_shape_and_values() -> None:
     assert pi["endBlockHash"] == "0x" + ("0b" * 32)
     assert pi["endBlockNumber"] == 1000503
     assert pi["endBlockTimestamp"] == 1763000123
-    assert pi["l2L1MessagesHash"] == "0x" + ("01" * 32)
+    assert pi["l2L1Messages"] == ["0x" + ("08" * 32)]
     assert pi["endL1L2BridgeRollingHashMessageNumber"] == 5
     assert pi["parentFtxNumber"] == 15
     assert pi["endProcessedFtxNumber"] == 18
     assert set(pi.keys()) == {
         "parentBlockHash", "endBlockHash", "endBlockNumber", "endBlockTimestamp",
-        "l2L1MessagesHash", "parentL1L2BridgeRollingHash",
+        "l2L1Messages", "parentL1L2BridgeRollingHash",
         "parentL1L2BridgeRollingHashMessageNumber", "endL1L2BridgeRollingHash",
         "endL1L2BridgeRollingHashMessageNumber", "dynamicChainConfigHash",
         "parentFtxRollingHash", "parentFtxNumber", "endFtxRollingHash",
@@ -328,7 +328,7 @@ def _sample_rollup_public_input() -> RollupPublicInput:
         end_block_hash=Hash32(bytes([0x0B]) * 32),
         start_offset=4,
         end_offset=0,
-        l2_l1_roots=[Hash32(bytes([0x77]) * 32), Hash32(bytes([0x88]) * 32)],
+        l2_l1_messages=[Hash32(bytes([0x08]) * 32)] * 2,
         filtered_addresses=[Address(bytes([0x03]) * 20), Address(bytes([0x04]) * 20)],
         program_vks=[_EXEC_VK],
         block_count=20,
@@ -374,7 +374,7 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     # endBlockNumber is read from the public inputs, not a wrapper field.
     assert int(proof.public_inputs.end_block_number) == 11
     assert bytes(proof.public_inputs.parent_block_hash) == bytes([0x0A]) * 32
-    assert bytes(proof.public_inputs.l2_l1_messages_hash) == bytes([0x01]) * 32
+    assert proof.public_inputs.l2_l1_messages == [Hash32(bytes([0x08]) * 32)]
     assert int(proof.public_inputs.parent_ftx_number) == 15
     assert int(proof.public_inputs.end_processed_ftx_number) == 18
     assert proof.l2_l1_messages == [Hash32(bytes([0x08]) * 32)]
@@ -544,12 +544,12 @@ def test_encode_rollup_response_shape_and_values() -> None:
         "dynamicChainConfigHash", "parentFtxRollingHash", "parentFtxNumber",
         "endFtxRollingHash", "endProcessedFtxNumber",
         "parentDataRollingHash", "endDataRollingHash", "parentBlockHash", "endBlockHash",
-            "startOffset", "endOffset", "l2L1Roots", "l2L1TreeDepth", "filteredAddresses", "programVks",
+            "startOffset", "endOffset", "l2L1Messages", "filteredAddresses", "programVks",
             "blockCount", "l2MessagingBlocksOffsets",
     }
 
     assert out["programVk"] == "0x" + ("bb" * 32)
-    assert pi["l2L1Roots"] == ["0x" + ("77" * 32), "0x" + ("88" * 32)]
+    assert pi["l2L1Messages"] == _expected_rollup_response()["publicInputs"]["l2L1Messages"]
     assert pi["filteredAddresses"] == ["0x" + ("03" * 20), "0x" + ("04" * 20)]
 
 
@@ -574,12 +574,10 @@ def _sample_finalization_submission() -> FinalizationSubmission:
     return FinalizationSubmission(
         public_inputs=FinalizationPublicInput(
             **{name: getattr(rollup_pi, name) for name in FinalizationPublicInput.__dataclass_fields__
-               if name not in ("program_ids", "start_offset", "l2_l1_roots", "filtered_addresses")},
+               if name not in ("program_ids", "start_offset", "l2_l1_roots", "l2_l1_tree_depth", "filtered_addresses")},
             start_offset=0,
-            l2_l1_roots=[
-                Hash32(bytes([0x77]) * 32), Hash32(bytes([0x88]) * 32),
-                Hash32(bytes([0x77]) * 32), Hash32(bytes([0x88]) * 32),
-            ],
+            l2_l1_tree_depth=5,
+            l2_l1_roots=[Hash32(bytes.fromhex(root[2:])) for root in _expected_aggregation_response()["publicInputs"]["l2L1Roots"]],
             filtered_addresses=[Address(bytes([0x01]) * 20), Address(bytes([0x01]) * 20)],
             program_ids=[Hash32(bytes([0x11]) * 32), Hash32(bytes([0x22]) * 32)],
         ),
@@ -600,7 +598,7 @@ def test_decode_aggregation_request_maps_all_fields() -> None:
     assert int(proof.start_block_number) == 10
     # endBlockNumber is read from the public inputs, not a wrapper field.
     assert int(proof.public_inputs.end_block_number) == 11
-    assert proof.public_inputs.l2_l1_roots == [Hash32(bytes([0x77]) * 32), Hash32(bytes([0x88]) * 32)]
+    assert proof.public_inputs.l2_l1_messages == [Hash32(bytes([0x77]) * 32), Hash32(bytes([0x88]) * 32)]
     assert proof.public_inputs.filtered_addresses == [Address(bytes([0x01]) * 20)]
     # §ProgramVK anchoring: the rollup proof's own VK, on the coordinator-
     # populated wrapper, plus its single combined program_vks list (here the
@@ -691,10 +689,7 @@ def test_encode_aggregation_response_is_l1_sufficient() -> None:
     assert "endBlockNumber" not in out
     # The response carries the preimages L1 finalization needs as calldata, so
     # it is sufficient for the L1 verification step.
-    assert out["publicInputs"]["l2L1Roots"] == [
-        "0x" + ("77" * 32), "0x" + ("88" * 32),
-        "0x" + ("77" * 32), "0x" + ("88" * 32),
-    ]
+    assert out["publicInputs"]["l2L1Roots"] == _expected_aggregation_response()["publicInputs"]["l2L1Roots"]
     assert out["publicInputs"]["filteredAddresses"] == ["0x" + ("01" * 20)] * 2
     assert "programVks" not in out
     assert out["publicInputs"]["l2MessagingBlocksOffsets"] == []

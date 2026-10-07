@@ -14,13 +14,13 @@ from rollup_spec.l2_execution import (
     L2ExecutionProofPublicInput,
     VerifiableL2ExecutionProof,
     hash_address_list,
-    hash_digest_list,
 )
 from rollup_spec.rollup import (
     BLOB_PAYLOAD_CAPACITY,
     ChunkWitness,
     ConflationWitness,
     RollupProofPrivateInput,
+    collect_l2_l1_messages,
     pack_blob_payload,
     run_rollup_guest,
 )
@@ -50,10 +50,10 @@ def _calldata(data):
 
 def _input(monkeypatch, chunks, count=1, start_offset=0):
     empty_addresses = hash_address_list([])
-    empty_messages = hash_digest_list([])
+    empty_messages = []
     pi = L2ExecutionProofPublicInput(
         parent_block_hash=ZERO, end_block_hash=ZERO, end_block_number=U64(1),
-        end_block_timestamp=U64(1), l2_l1_messages_hash=empty_messages,
+        end_block_timestamp=U64(1), l2_l1_messages=empty_messages,
         parent_l1_l2_bridge_rolling_hash=ZERO, parent_l1_l2_bridge_rolling_hash_message_number=U64(0),
         end_l1_l2_bridge_rolling_hash=ZERO, end_l1_l2_bridge_rolling_hash_message_number=U64(0),
         dynamic_chain_config_hash=ZERO, parent_ftx_rolling_hash=ZERO, parent_ftx_number=U64(0),
@@ -70,7 +70,8 @@ def _input(monkeypatch, chunks, count=1, start_offset=0):
         previous = Hash32(keccak256(ZERO + chunks[0].chunk_hash))
     return RollupProofPrivateInput(
         previous, start_offset, U64(1), [ConflationWitness([b"block"]) for _ in range(count)],
-        chunks, proofs, boundary_prev_data_rolling_hash=ZERO if start_offset else None,
+        chunks, proofs,
+        boundary_prev_data_rolling_hash=ZERO if start_offset else None,
     )
 
 

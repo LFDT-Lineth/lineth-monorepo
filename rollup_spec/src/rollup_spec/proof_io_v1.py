@@ -300,7 +300,7 @@ def encode_response(proof: L2ExecutionProof, prover_version: str, *, program_vk:
             "endBlockHash": _hx(pi.end_block_hash),
             "endBlockNumber": int(pi.end_block_number),
             "endBlockTimestamp": int(pi.end_block_timestamp),
-            "l2L1MessagesHash": _hx(pi.l2_l1_messages_hash),
+            "l2L1Messages": [_hx(h) for h in pi.l2_l1_messages],
             "parentL1L2BridgeRollingHash": _hx(pi.parent_l1_l2_bridge_rolling_hash),
             "parentL1L2BridgeRollingHashMessageNumber": int(
                 pi.parent_l1_l2_bridge_rolling_hash_message_number
@@ -370,7 +370,8 @@ def _decode_l2_execution_public_input(obj: dict, ctx: str) -> L2ExecutionProofPu
         end_block_hash=h("endBlockHash"),
         end_block_number=n("endBlockNumber"),
         end_block_timestamp=n("endBlockTimestamp"),
-        l2_l1_messages_hash=h("l2L1MessagesHash"),
+        l2_l1_messages=[Hash32(_bytes_from_hex(h, f"{ctx}l2L1Messages[{i}]"))
+                        for i, h in enumerate(_require_list(obj, "l2L1Messages", ctx))],
         parent_l1_l2_bridge_rolling_hash=h("parentL1L2BridgeRollingHash"),
         parent_l1_l2_bridge_rolling_hash_message_number=n("parentL1L2BridgeRollingHashMessageNumber"),
         end_l1_l2_bridge_rolling_hash=h("endL1L2BridgeRollingHash"),
@@ -551,8 +552,6 @@ def _encode_finalization_shared_inputs(pi) -> dict:
         "endBlockHash": _hx(pi.end_block_hash),
         "startOffset": int(pi.start_offset),
         "endOffset": int(pi.end_offset),
-        "l2L1Roots": [_hx(r) for r in pi.l2_l1_roots],
-        "l2L1TreeDepth": pi.l2_l1_tree_depth,
         "filteredAddresses": [_hx(a) for a in pi.filtered_addresses],
         "l2MessagingBlocksOffsets": list(pi.l2_messaging_blocks_offsets),
     }
@@ -561,6 +560,7 @@ def _encode_finalization_shared_inputs(pi) -> dict:
 def _encode_rollup_public_inputs(pi: RollupPublicInput) -> dict:
     return {
         **_encode_finalization_shared_inputs(pi),
+        "l2L1Messages": [_hx(h) for h in pi.l2_l1_messages],
         "programVks": [_hx(v) for v in pi.program_vks],
         "blockCount": pi.block_count,
     }
@@ -639,11 +639,8 @@ def _decode_rollup_public_input(obj: dict, ctx: str) -> RollupPublicInput:
         end_block_hash=h("endBlockHash"),
         start_offset=int(n("startOffset")),
         end_offset=int(n("endOffset")),
-        l2_l1_roots=[
-            Hash32(_bytes_from_hex(r, f"{ctx}l2L1Roots[{i}]"))
-            for i, r in enumerate(_require_list(obj, "l2L1Roots", ctx))
-        ],
-        l2_l1_tree_depth=int(n("l2L1TreeDepth")),
+        l2_l1_messages=[Hash32(_bytes_from_hex(h, f"{ctx}l2L1Messages[{i}]"))
+                        for i, h in enumerate(_require_list(obj, "l2L1Messages", ctx))],
         filtered_addresses=[
             Address(_bytes_from_hex(a, f"{ctx}filteredAddresses[{i}]"))
             for i, a in enumerate(_require_list(obj, "filteredAddresses", ctx))
@@ -733,6 +730,8 @@ def encode_aggregation_response(
         "startBlockNumber": int(start_block_number),
         "publicInputs": {
             **_encode_finalization_shared_inputs(submission.public_inputs),
+            "l2L1Roots": [_hx(r) for r in submission.public_inputs.l2_l1_roots],
+            "l2L1TreeDepth": submission.public_inputs.l2_l1_tree_depth,
             "programIds": [_hx(program_id) for program_id in submission.public_inputs.program_ids],
         },
     }

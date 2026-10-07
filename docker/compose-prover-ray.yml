@@ -14,7 +14,7 @@ services:
   prover-ray:
     container_name: prover-ray
     hostname: prover-ray
-    image: consensys/linea-prover-ray:${LINEA_PROVER_RAY_TAG:-dev}
+    image: consensys/lineth-prover-ray:${LINEA_PROVER_RAY_TAG:-dev}
     platform: linux/amd64
     profiles: [ "l2" ]
     environment:

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Set
+from typing import List, Sequence, Set
 
 from ethereum.crypto.hash import Hash32
 from ethereum.state import Address
@@ -7,8 +7,10 @@ from ethereum.state import Address
 from .l1_rollup import FinalizationPublicInput, FinalizationSubmission
 from .messaging_offsets import rebase_messaging_offsets
 from .rollup import (
+    L2_L1_TREE_DEPTH,
     RollupProof,
     VerifiableRollupProof,
+    build_l2_message_roots,
     recursive_stark_verify,
 )
 
@@ -27,7 +29,7 @@ def run_rollup_aggregation_guest(
 ) -> FinalizationSubmission:
     """
     rollup-aggregation: flat recursion over M rollup proofs with continuity
-    checks and merged L2-to-L1 root/address lists.
+    checks, full-finalization L2-to-L1 trees and merged address lists.
 
     Returns a `FinalizationSubmission`: the guest output (the
     public-input tuple). `proof` is attached by the zkVM/prover
@@ -49,11 +51,6 @@ def run_rollup_aggregation_guest(
 
     first_proof = rollup_proofs[0]
     last_proof = rollup_proofs[-1]
-    depth = first_proof.public_inputs.l2_l1_tree_depth
-    for proof in rollup_proofs:
-        if proof.public_inputs.l2_l1_tree_depth != depth:
-            raise Exception("rollup proofs disagree on L2-to-L1 tree depth")
-    merged_l2_l1_roots: List[Hash32] = []
     merged_filtered_addresses: List[Address] = []
     messaging_offsets: List[int] = []
     program_vk_set: Set[Hash32] = set()
@@ -65,7 +62,6 @@ def run_rollup_aggregation_guest(
             proof.public_inputs.block_count, proof.public_inputs.l2_messaging_blocks_offsets,
             int(first_proof.start_block_number), "rollup", "aggregation",
         ))
-        merged_l2_l1_roots.extend(proof.public_inputs.l2_l1_roots)
         merged_filtered_addresses.extend(proof.public_inputs.filtered_addresses)
         program_vk_set.update(proof.public_inputs.program_vks)
         program_vk_set.add(vp.program_vk)
@@ -76,7 +72,7 @@ def run_rollup_aggregation_guest(
     public_inputs = FinalizationPublicInput(
         end_block_number=last_proof.public_inputs.end_block_number,
         end_block_timestamp=last_proof.public_inputs.end_block_timestamp,
-        l2_l1_roots=merged_l2_l1_roots,
+        l2_l1_roots=pack_l2_l1_messages([proof.public_inputs.l2_l1_messages for proof in rollup_proofs]),
         parent_l1_l2_bridge_rolling_hash=first_proof.public_inputs.parent_l1_l2_bridge_rolling_hash,
         parent_l1_l2_bridge_rolling_hash_message_number=(
             first_proof.public_inputs.parent_l1_l2_bridge_rolling_hash_message_number
@@ -97,7 +93,7 @@ def run_rollup_aggregation_guest(
         end_block_hash=last_proof.public_inputs.end_block_hash,
         start_offset=first_proof.public_inputs.start_offset,
         end_offset=last_proof.public_inputs.end_offset,
-        l2_l1_tree_depth=depth,
+        l2_l1_tree_depth=L2_L1_TREE_DEPTH,
         program_ids=program_ids,
         l2_messaging_blocks_offsets=messaging_offsets,
     )
@@ -106,6 +102,12 @@ def run_rollup_aggregation_guest(
         public_inputs=public_inputs,
         proof=bytes(),  # Placeholder: filled by zkVM prover at layer above
     )
+
+
+def pack_l2_l1_messages(message_lists: Sequence[Sequence[Hash32]]) -> List[Hash32]:
+    """Pack ordered rollup message lists into depth-5 roots, padding only the final tree."""
+    messages = [message for message_list in message_lists for message in message_list]
+    return build_l2_message_roots(messages)
 
 
 def _program_ids_from_verified_vks(program_vks: Set[Hash32]) -> List[Hash32]:
@@ -123,11 +125,14 @@ def verify_rollup_proof(program_vk: Hash32, proof: RollupProof) -> None:
         parameter it checks against (§ProgramVK anchoring); the aggregation guest
         passes the same `program_vk` it bubbles up into `rollup_vks` /
         `program_vks`, so the anchored VK is provably the key the verification
-        ran against. `RollupProof.proof` stands in for the recursive STARK bytes
-        the guest would actually check.
+         ran against. `RollupProof.proof` stands in for the recursive STARK bytes
+         the guest would actually check. The verifier binds the complete PI,
+         including its ordered message list.
     """
-    # First: the recursive STARK verify against the explicit verify key.
-    recursive_stark_verify(program_vk, proof.proof)
+    # First: the recursive STARK verify against the explicit key and full PI hash.
+    from .rollup_ssz import hash_rollup_public_inputs
+
+    recursive_stark_verify(program_vk, proof.proof, hash_rollup_public_inputs(proof.public_inputs))
 
 
 def assert_rollup_proof_continuity(left: RollupProof, right: RollupProof) -> None:

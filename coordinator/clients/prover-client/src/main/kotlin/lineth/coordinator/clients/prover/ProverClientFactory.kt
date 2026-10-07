@@ -28,6 +28,35 @@ fun interface ProofProvider<P> {
 }
 
 /**
+ * Builds a prover client honouring the configured prover switch: when a switch point is set and
+ * both [currentConfig] and [nextConfig] are present, requests are routed per proof through an
+ * [ABProverClientRouter]; otherwise a single client is built from whichever side is configured.
+ *
+ * Public so alternative [ProverClientFactory] implementations route exactly like
+ * [DefaultProverClientFactory].
+ */
+fun <Config, ProofRequest : Any, ProofResponse, TProofIndex : ProofIndex> ProversConfig.buildSwitchAwareClient(
+  currentConfig: Config?,
+  nextConfig: Config?,
+  clientBuilder: (Config) -> ProverClientV2<ProofRequest, ProofResponse, TProofIndex>,
+): ProverClientV2<ProofRequest, ProofResponse, TProofIndex> {
+  val hasSwitchEnabled = switchBlockTimestamp != null || switchBlockNumberInclusive != null
+  val hasBothProversOfSameTypeToSwitch = currentConfig != null && nextConfig != null
+
+  return if (hasSwitchEnabled && hasBothProversOfSameTypeToSwitch) {
+    ABProverClientRouter.create(
+      proverAConfig = currentConfig,
+      proverBConfig = nextConfig,
+      switchBlockNumberInclusive = switchBlockNumberInclusive,
+      switchBlockTimestamp = switchBlockTimestamp,
+      clientBuilder = clientBuilder,
+    )
+  } else {
+    clientBuilder((currentConfig ?: nextConfig)!!)
+  }
+}
+
+/**
  * Builds the prover clients a conflation app needs.
  *
  * Implementors that do not delegate to [DefaultProverClientFactory] must register the
@@ -175,29 +204,12 @@ class DefaultProverClientFactory(
     return config
   }
 
-  /**
-   * Handles the creation of ABProverRouter
-   */
   private fun <Config, ProofRequest : Any, ProofResponse, TProofIndex : ProofIndex> buildClient(
     currentConfig: Config?,
     nextConfig: Config?,
     clientBuilder: (Config) -> ProverClientV2<ProofRequest, ProofResponse, TProofIndex>,
-  ): ProverClientV2<ProofRequest, ProofResponse, TProofIndex> {
-    val hasSwitchEnabled = config.switchBlockTimestamp != null || config.switchBlockNumberInclusive != null
-    val hasBothProversOfSameTypeToSwitch = currentConfig != null && nextConfig != null
-
-    return if (hasSwitchEnabled && hasBothProversOfSameTypeToSwitch) {
-      ABProverClientRouter.create(
-        proverAConfig = currentConfig,
-        proverBConfig = nextConfig,
-        switchBlockNumberInclusive = config.switchBlockNumberInclusive,
-        switchBlockTimestamp = config.switchBlockTimestamp,
-        clientBuilder = clientBuilder,
-      )
-    } else {
-      clientBuilder((currentConfig ?: nextConfig)!!)
-    }
-  }
+  ): ProverClientV2<ProofRequest, ProofResponse, TProofIndex> =
+    config.buildSwitchAwareClient(currentConfig, nextConfig, clientBuilder)
 
   override fun l2ExecutionProverClient(): L2ExecutionProverClientV1 {
     val config = requireRiscvConfig()
@@ -348,10 +360,10 @@ class DefaultProverClientFactory(
   private fun buildFileBasedRollupProverClient(
     proverConfig: FileBasedRiscvProverConfig,
     l2ExecutionProverConfig: FileBasedRiscvProverConfig,
-  ): FileBasedRollupProverClient {
-    return FileBasedRollupProverClient(
+  ): RollupProverClient {
+    return RollupProverClient(
       transport = buildRollupProofTransport(proverConfig),
-      l2ExecutionProofTransport = buildL2ExecutionProofTransport(l2ExecutionProverConfig),
+      l2ExecutionProofProvider = buildL2ExecutionProofTransport(l2ExecutionProverConfig)::findResponse,
       programId = proverConfig.programId,
       provingSystemVersion = proverConfig.provingSystemVersion,
       chainId = chainId.toLong(),
@@ -361,10 +373,10 @@ class DefaultProverClientFactory(
   private fun buildFileBasedRollupAggregationProverClient(
     proverConfig: FileBasedRiscvProverConfig,
     rollupProverConfig: FileBasedRiscvProverConfig,
-  ): FileBasedRollupAggregationProverClient {
-    return FileBasedRollupAggregationProverClient(
+  ): RollupAggregationProverClient {
+    return RollupAggregationProverClient(
       transport = buildRollupAggregationProofTransport(proverConfig),
-      rollupProofTransport = buildRollupProofTransport(rollupProverConfig),
+      rollupProofProvider = buildRollupProofTransport<FileBasedRollupProofRequestDto>(rollupProverConfig)::findResponse,
       programId = proverConfig.programId,
       provingSystemVersion = proverConfig.provingSystemVersion,
     )

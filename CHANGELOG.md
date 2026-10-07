@@ -91,6 +91,8 @@
 - *(prover)* Empty-codehash check (#3913)
 - *(coordinator)* Preserve Amsterdam execution payload fields (#3949)
 - *(misc)* Make timer stop() await in-flight task execution (#4042)
+- *(linea-besu)* Limit large MODEXP calls to 1 per block (#4128)
+- *(prover)* Segment MODEXP_LARGE by whole instances in limitless (#4127)
 
 ### 🚜 Refactor
 
@@ -102,6 +104,7 @@
 - *(coordinator)* L1RelayingAppV1 to better allow RISC-V extension (#3640)
 - *(coordinator)* Restructure chain params in L2 execution proof request (#3848)
 - *(coordinator)* Extract ForcedTransactionsApp from ConflationAppV1, make invalidity proof service injectable (#3856)
+- *(coordinator)* Select batches insert query by DB schema version (#4145)
 
 ### ⚡ Performance
 
@@ -185,3 +188,4 @@
 - *(coordinator)* Arrange config module dependencies (#4100)
 - *(coordinator)* Remove unsupported invalidity proof client (#4101)
 - *(coordinator)* Simplify Risc5 prover DTO mappers (#4121)
+- *(coordinator)* Make RISC-V rollup prover clients transport-agnostic (#4140)
