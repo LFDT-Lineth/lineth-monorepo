@@ -2,13 +2,9 @@ name: 'Setup Besu in Maven Local (artifact fast path)'
 
 description: >
   Restores the Besu artifacts (maven-local tree + source distribution tarball) uploaded by the
-  prepare-linea-besu-maven job in testing.yml, so the Gradle availability checks in
-  linea-besu/besu/build.gradle (isBesuAvailableInMavenLocal + isBesuLocalDistributionAvailable)
-  hit and the test build skips the multi-minute on-demand Besu source build. This action is a
+  prepare-linea-besu-maven job in main.yml. This action is a
   no-op when the Besu BOM for besuCommit (gradle/libs.versions.toml) is already available in a
-  remote maven repo — in that case the existing Gradle logic consumes the remote artifacts as
-  before. If the artifact is missing (e.g. stale run, prepare job raced), it warns and falls
-  back to the existing on-demand build, so this is always safe to run.
+  remote maven repo.
 
 outputs:
   besu_version:
