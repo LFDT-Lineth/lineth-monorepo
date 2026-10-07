@@ -9,6 +9,7 @@
 - *(riscv-guest)* Adding fallback precompile implementations (#3931)
 - *(riscv-guest)* RiscV guests release workflow (#4102)
 - *(riscv-guest)* Setting up the release workflow (#4119)
+- *(riscv-guest)* Changing the output of the guest program to include the plain PI + its hash (#4092)
 
 ### 🐛 Bug Fixes
 

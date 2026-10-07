@@ -1,3 +1,8 @@
+## [unreleased]
+
+### 🚀 Features
+
+- *(riscv-guest)* Changing the output of the guest program to include the plain PI + its hash (#4092)
 ## [0.1.1] - 2026-10-06
 
 ### 🐛 Bug Fixes
