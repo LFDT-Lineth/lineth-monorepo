@@ -529,18 +529,24 @@ func (a *QuotientProverAction) Run(rt *wiop.Runtime) {
 		// concurrently. Every result is retained for the accumulation below, so
 		// parallelism does not raise peak memory. This step was dominated by
 		// the serial per-element copy, which is why it scales with columns.
+		//
+		// The FFTs inside each column worker get an equal share of the CPUs,
+		// at least one: with as many columns as CPUs they run serially, so
+		// the column loop does not multiply goroutines by the FFTs' own.
+		cpus := runtime.GOMAXPROCS(0)
+		fftTasks := max(1, cpus/max(1, len(bkt.rootCols)))
 		baseEvals := make([][]field.Element, len(bkt.rootCols))
 		extEvals := make([][]field.Ext, len(bkt.rootCols))
 		parallel.Execute(len(bkt.rootCols), func(start, end int) {
 			for i := start; i < end; i++ {
 				col := bkt.rootCols[i]
 				if col.IsExtension {
-					extEvals[i] = reevalOnLargeCosetExt(rt, col, a.m, n, N, smallDomain, largeDomain)
+					extEvals[i] = reevalOnLargeCosetExt(rt, col, a.m, n, N, smallDomain, largeDomain, fftTasks)
 				} else {
-					baseEvals[i] = reevalOnLargeCoset(rt, col, a.m, n, N, smallDomain, largeDomain)
+					baseEvals[i] = reevalOnLargeCoset(rt, col, a.m, n, N, smallDomain, largeDomain, fftTasks)
 				}
 			}
-		}, runtime.GOMAXPROCS(0))
+		}, cpus)
 		cosetEvals := make(map[wiop.ObjectID][]field.Element, len(bkt.rootCols))
 		cosetEvalsExt := make(map[wiop.ObjectID][]field.Ext, len(bkt.rootCols))
 		for i, col := range bkt.rootCols {
@@ -666,6 +672,7 @@ func reevalOnLargeCoset(
 	m *wiop.Module,
 	n, N int,
 	smallDomain, largeDomain *fft.Domain,
+	fftTasks int,
 ) []field.Element {
 	cv := rt.GetColumnAssignment(col)
 
@@ -691,7 +698,7 @@ func reevalOnLargeCoset(
 	// two FFTs, so we normalise to natural order in between (BitReverse on
 	// vals[:n] then on vals[:N]) before re-introducing bit-reversal for the
 	// large FFT's DIT input convention.
-	smallDomain.FFTInverse(vals[:n], fft.DIF)
+	smallDomain.FFTInverse(vals[:n], fft.DIF, fft.WithNbTasks(fftTasks))
 	if N != n {
 		gnarkutils.BitReverse(vals[:n])
 		// vals[n:N] is already zero, so vals[:N] is now natural-order
@@ -700,7 +707,7 @@ func reevalOnLargeCoset(
 		gnarkutils.BitReverse(vals[:N])
 	}
 	// FFT on large coset: canonical → coset Lagrange.
-	largeDomain.FFT(vals, fft.DIT, fft.OnCoset())
+	largeDomain.FFT(vals, fft.DIT, fft.OnCoset(), fft.WithNbTasks(fftTasks))
 	return vals
 }
 
@@ -721,6 +728,7 @@ func reevalOnLargeCosetExt(
 	m *wiop.Module,
 	n, N int,
 	smallDomain, largeDomain *fft.Domain,
+	fftTasks int,
 ) []field.Ext {
 	cv := rt.GetColumnAssignment(col)
 
@@ -734,12 +742,12 @@ func reevalOnLargeCosetExt(
 		}
 	}
 
-	smallDomain.FFTInverseExt6(vals[:n], fft.DIF)
+	smallDomain.FFTInverseExt6(vals[:n], fft.DIF, fft.WithNbTasks(fftTasks))
 	if N != n {
 		gnarkutils.BitReverse(vals[:n])
 		gnarkutils.BitReverse(vals[:N])
 	}
-	largeDomain.FFTExt6(vals, fft.DIT, fft.OnCoset())
+	largeDomain.FFTExt6(vals, fft.DIT, fft.OnCoset(), fft.WithNbTasks(fftTasks))
 	return vals
 }
 
