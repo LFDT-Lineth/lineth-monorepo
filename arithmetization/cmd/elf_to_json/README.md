@@ -16,7 +16,7 @@ payload; `.bin` files are mapped raw. Other file suffixes are rejected.
 When `inputOffset` is omitted, it defaults to `0x08800000`.
 
 The output contains `entry_point_and_blobs_count`, `blobs_offset_and_size`,
-`blobs_data`, `instruction_base`, and `decoded`.
+`blobs_data`, `instruction_base`, `decoded`, and `output_mode`.
 
 Environment variables:
 
@@ -24,6 +24,8 @@ Environment variables:
 - `ELF2JSON_WRITE_SECTIONS=true` writes a `.sections` diagnostic file beside
   the ELF.
 - `ELF2JSON_MAX_DECODED_RECORDS` overrides the default dense-table safety cap.
+- `ELF2JSON_OUTPUT_MODE=prefix` records only the first 32 guest output bytes in
+  `guest_output` (cheap tracing); the default, `full`, records the whole output.
 
 ELF mapping is implemented by `gopkg/elfmapping`; instruction decoding and
 packing are implemented by `gopkg/predecoding`.

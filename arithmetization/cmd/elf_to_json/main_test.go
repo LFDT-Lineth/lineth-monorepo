@@ -155,6 +155,20 @@ func TestBoolEnv(t *testing.T) {
 	}
 }
 
+func TestOutputModeFromEnv(t *testing.T) {
+	for value, want := range map[string]byte{"": 1, "full": 1, "prefix": 0} {
+		t.Setenv("ELF2JSON_OUTPUT_MODE", value)
+		got, err := outputModeFromEnv()
+		if err != nil || got != want {
+			t.Fatalf("outputModeFromEnv(%q) = %d, %v, want %d", value, got, err, want)
+		}
+	}
+	t.Setenv("ELF2JSON_OUTPUT_MODE", "invalid")
+	if _, err := outputModeFromEnv(); err == nil {
+		t.Fatal("outputModeFromEnv(invalid) error = nil")
+	}
+}
+
 func TestWriteJSONLegacyLayout(t *testing.T) {
 	inputs := map[string][]byte{
 		elfmapping.EntryPointAndBlobsCountInput: mustDecodeHex(t, "00000000008000000000000000000002"),
@@ -164,6 +178,7 @@ func TestWriteJSONLegacyLayout(t *testing.T) {
 		elfmapping.BlobsDataInput:        []byte{1, 2, 3, 4, 5},
 		predecoding.InstructionBaseInput: mustDecodeHex(t, "0000000000800000"),
 		predecoding.DecodedInput:         []byte{0xaa, 0xbb},
+		outputModeInput:                  []byte{1},
 	}
 	var output bytes.Buffer
 	if err := writeJSON(&output, inputs); err != nil {
@@ -175,7 +190,8 @@ func TestWriteJSONLegacyLayout(t *testing.T) {
 		"\t\"blobs_executable\": \"0x80\",\n" +
 		"\t\"blobs_data\": \"0x01020304____05\",\n" +
 		"\t\"instruction_base\": \"0x0000000000800000\",\n" +
-		"\t\"decoded\": \"0xaabb\"\n" +
+		"\t\"decoded\": \"0xaabb\",\n" +
+		"\t\"output_mode\": \"0x01\"\n" +
 		"}\n"
 	if output.String() != want {
 		t.Fatalf("writeJSON():\n%s\nwant:\n%s", output.String(), want)

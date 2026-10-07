@@ -19,8 +19,22 @@ memory ram[u48](address:Address) -> (word:u32)
 memory registers[u48](id:Register) -> (value:DoubleWord)
 
 // guest program output
+//
+// `output_mode` selects how much of the output `write_output` records:
+//   - OUTPUT_MODE_FULL (1): `guest_output` receives every output byte, of any
+//     size. Meant for fast execution, where it serves as the output log.
+//   - otherwise (0): `guest_output` receives only the first OUTPUT_PREFIX_LEN
+//     bytes, so tracing never pays for the rest of the output.
+// Both modes write the same prefix, so a mode-0 output is always a prefix of
+// the mode-1 output for the same run. The data is u8 (not u1) so that callers
+// encode the mode as a plain byte (u1 inputs are bit-packed MSB-first).
+pub input output_mode(address:u1) -> (mode:u8)
 pub output guest_output(address:OutputAddress) -> (byte:u8)
-memory guest_output_tmp[u16](address:OutputAddress) -> (byte:u8)
+memory guest_output_tmp[u16](address:u16) -> (byte:u8)
+// Number of output bytes written so far. Only touched in OUTPUT_MODE_FULL, so
+// it adds no trace rows otherwise; it lives in memory rather than being
+// threaded through the interpreter to keep every interpreter step narrow.
+memory output_cursor[u48](address:u1) -> (cursor:OutputAddress)
 pub output guest_output_hash(address:u3) -> (word:u32)
 
 // keccak related memory: all keccak working vectors live in ONE memory,

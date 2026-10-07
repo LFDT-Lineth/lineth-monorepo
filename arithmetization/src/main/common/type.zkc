@@ -1,6 +1,6 @@
 type Address = u64
-type OutputAddress = u16
-type OutputSize = u16
+type OutputAddress = u64
+type PrefixCount = u6
 type Instruction = u32
 type Register = u5
 
