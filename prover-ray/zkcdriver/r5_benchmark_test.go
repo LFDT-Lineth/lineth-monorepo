@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"os"
 	"runtime"
 	"testing"
 
@@ -13,14 +12,11 @@ import (
 	koalafield "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
+	minimalelf "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/minimal-elf"
 	"github.com/LFDT-Lineth/zkc/pkg/trace"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/constraints"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
-)
-
-const (
-	r5VerifierPath = "../../verifier-ray/zig-out/bin/verifier-ray"
 )
 
 var (
@@ -64,11 +60,8 @@ func loadR5BenchmarkFixture(b *testing.B) *r5BenchmarkFixture {
 	)
 	b.Helper()
 
-	verifierELF, err := os.ReadFile(r5VerifierPath)
-	if err != nil {
-		b.Skipf("R5 verifier ELF unavailable at %s; run `make -C ../verifier-ray build-r5`: %v", r5VerifierPath, err)
-	}
-	inputs, err := predecoding.PrepareInputs(verifierELF, []byte("foobar"))
+	guestELF, wantOutput := minimalelf.AllInOneElfProgram()
+	inputs, err := predecoding.PrepareInputs(guestELF, nil)
 	if err != nil {
 		b.Fatalf("preparing R5 input: %v", err)
 	}
@@ -76,9 +69,12 @@ func loadR5BenchmarkFixture(b *testing.B) *r5BenchmarkFixture {
 	if err != nil {
 		b.Fatalf("compiling R5 ZKC program: %v", err)
 	}
-	_, expandedTrace, errs := binFile.Trace(inputs, tracingConfig)
+	outputs, expandedTrace, errs := binFile.Trace(inputs, tracingConfig)
 	if len(errs) > 0 {
 		b.Fatalf("tracing R5 fixture: %v", errors.Join(errs...))
+	}
+	if got := outputs["guest_output"]; !bytes.Equal(got, wantOutput) {
+		b.Fatalf("unexpected guest_output: got %x, want %x", got, wantOutput)
 	}
 	serialized, err := binFile.MarshalBinary()
 	if err != nil {
