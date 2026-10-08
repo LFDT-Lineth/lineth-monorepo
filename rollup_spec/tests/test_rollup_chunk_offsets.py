@@ -14,6 +14,7 @@ from rollup_spec.l2_execution import (
     L2ExecutionProofPublicInput,
     VerifiableL2ExecutionProof,
     hash_address_list,
+    merge_filtered_addresses,
 )
 from rollup_spec.rollup import (
     BLOB_PAYLOAD_CAPACITY,
@@ -58,7 +59,7 @@ def _input(monkeypatch, chunks, count=1, start_offset=0):
         end_l1_l2_bridge_rolling_hash=ZERO, end_l1_l2_bridge_rolling_hash_message_number=U64(0),
         dynamic_chain_config_hash=ZERO, parent_ftx_rolling_hash=ZERO, parent_ftx_number=U64(0),
         end_ftx_rolling_hash=ZERO, end_processed_ftx_number=U64(0),
-        filtered_addresses_hash=empty_addresses, tx_froms_hash=empty_addresses, block_count=1,
+        filtered_addresses=[], tx_froms_hash=empty_addresses, block_count=1,
     )
     proofs = [VerifiableL2ExecutionProof(
         L2ExecutionProof(replace(pi, end_block_number=U64(i)), U64(i)), ZERO,
@@ -112,6 +113,12 @@ def test_collect_l2_l1_messages_preserves_execution_order():
     second = [Hash32(i.to_bytes(32, "big")) for i in range(21, 41)]
     assert collect_l2_l1_messages([first, [], second]) == first + second
     assert collect_l2_l1_messages([[], []]) == []
+
+
+def test_merge_filtered_addresses_is_distinct_and_byte_ascending():
+    low, mid, high = (Address(bytes([n]) * 20) for n in (0x01, 0x02, 0xFF))
+    assert merge_filtered_addresses([[high, low, low], [], [mid, high], [low]]) == [low, mid, high]
+    assert merge_filtered_addresses([[], []]) == []
 
 
 def test_rollup_binds_sender_hash_to_each_conflation(monkeypatch):

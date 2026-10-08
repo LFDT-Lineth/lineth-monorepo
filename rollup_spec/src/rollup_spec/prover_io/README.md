@@ -23,7 +23,7 @@ One request/response pair per guest layer (fully-valid fixtures in `testdata/`):
 | Fixture (`testdata/`) | Layer | What it proves |
 |---|---|---|
 | `getZkL2ExecutionProofV1.{request,response}.json` | l2-execution proof (per block range, M ≥ 1 conflated payloads) | EVM state transition for a contiguous range of Engine API `NewPayloadRequest`s; emits the 16-field l2-execution PI tuple. |
-| `getZkRollupProofV1.{request,response}.json` | rollup proof over N ≥ 1 conflations and their touched chunks | Verifies the DA chunks, frames and recursively verified execution proofs, concatenates recursively verified execution PI message lists alongside filtered addresses and stream positions. |
+| `getZkRollupProofV1.{request,response}.json` | rollup proof over N ≥ 1 conflations and their touched chunks | Verifies the DA chunks, frames and recursively verified execution proofs, concatenates recursively verified execution PI message lists, merges their filtered-address lists, and emits stream positions. |
 | `getZkRollupAggregationProofV1.{request,response}.json` | rollup-aggregation proof + emulation (the final proof, SNARK-wrapped for L1) | Recursively verifies all M rollup proofs, concatenates verified rollup PI message lists and builds 32-leaf message trees over the complete finalization with zero-padding only the last tree, merges FTX filtered-address lists and rebased messaging-block offsets, and performs the STARK→SNARK emulation wrap. |
 
 

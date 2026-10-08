@@ -98,7 +98,12 @@
           "$ref": "#/$defs/offset"
         },
         "l2L1Messages": { "type": "array", "items": { "$ref": "#/$defs/hash32" } },
-        "filteredAddresses": { "type": "array", "items": { "$ref": "#/$defs/address" } },
+        "filteredAddresses": {
+          "description": "Distinct, sorted ascending by byte value: the canonical encoding of the set of addresses named by forced transactions refused in this range (order carries no meaning).",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/address" }
+        },
         "programVks": {
           "description": "Distinct, sorted ascending by byte value: the canonical encoding of the set of guest program VKs verified beneath this proof (order carries no meaning).",
           "type": "array",

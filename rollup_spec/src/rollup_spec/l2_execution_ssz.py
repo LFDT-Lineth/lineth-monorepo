@@ -16,8 +16,8 @@ Two schema ids are defined here:
 
 The guest output wire is `keccak256(schema_id || SSZ(public_inputs)) ||
 schema_id || SSZ(public_inputs)`. The decoder validates the hash and returns the
-public-input tuple. `start_block_number` and `filtered_addresses`
-remain proof metadata outside the guest output; the prover attaches `proof`.
+public-input tuple. `start_block_number` remains proof metadata outside the
+guest output; the prover attaches `proof`.
 
 Each payload's `stateless_input_ssz` is carried opaquely — an already
 0x0001-framed vanilla stateless-input byte slice, byte-identical to what a
@@ -161,7 +161,7 @@ class SszL2ExecutionProofPublicInput(Container):
     parent_ftx_number: uint64
     end_ftx_rolling_hash: SszBytes32
     end_processed_ftx_number: uint64
-    filtered_addresses_hash: SszBytes32
+    filtered_addresses: List[SszAddress, MAX_FILTERED_ADDRESSES_PER_EXEC_PROOF]
     tx_froms_hash: SszBytes32
     block_count: uint64
     l2_messaging_blocks_offsets: List[uint16, MAX_PAYLOADS]
@@ -174,7 +174,6 @@ class SszL2ExecutionProof(Container):
     public_inputs: SszL2ExecutionProofPublicInput
     start_block_number: uint64
     proof: ByteList[MAX_PROOF_BYTES]
-    filtered_addresses: List[SszAddress, MAX_FILTERED_ADDRESSES_PER_EXEC_PROOF]
 
 
 class SszVerifiableL2ExecutionProof(Container):
@@ -241,7 +240,7 @@ def _ssz_l2_execution_public_input(pi: L2ExecutionProofPublicInput) -> SszL2Exec
         parent_ftx_number=int(pi.parent_ftx_number),
         end_ftx_rolling_hash=bytes(pi.end_ftx_rolling_hash),
         end_processed_ftx_number=int(pi.end_processed_ftx_number),
-        filtered_addresses_hash=bytes(pi.filtered_addresses_hash),
+        filtered_addresses=[bytes(a) for a in pi.filtered_addresses],
         tx_froms_hash=bytes(pi.tx_froms_hash),
         block_count=int(pi.block_count),
         l2_messaging_blocks_offsets=pi.l2_messaging_blocks_offsets,
@@ -253,7 +252,6 @@ def _ssz_l2_execution_proof(proof: L2ExecutionProof) -> SszL2ExecutionProof:
         public_inputs=_ssz_l2_execution_public_input(proof.public_inputs),
         start_block_number=int(proof.start_block_number),
         proof=bytes(proof.proof),
-        filtered_addresses=[bytes(a) for a in proof.filtered_addresses],
     )
 
 
@@ -332,7 +330,7 @@ def _l2_execution_public_input_from_view(view: Any) -> L2ExecutionProofPublicInp
         parent_ftx_number=U64(int(view.parent_ftx_number)),
         end_ftx_rolling_hash=Hash32(bytes(view.end_ftx_rolling_hash)),
         end_processed_ftx_number=U64(int(view.end_processed_ftx_number)),
-        filtered_addresses_hash=Hash32(bytes(view.filtered_addresses_hash)),
+        filtered_addresses=[Address(bytes(a)) for a in view.filtered_addresses],
         tx_froms_hash=Hash32(bytes(view.tx_froms_hash)),
         block_count=int(view.block_count),
         l2_messaging_blocks_offsets=[int(o) for o in view.l2_messaging_blocks_offsets],
@@ -344,7 +342,6 @@ def _l2_execution_proof_from_view(view: Any) -> L2ExecutionProof:
         public_inputs=_l2_execution_public_input_from_view(view.public_inputs),
         start_block_number=U64(int(view.start_block_number)),
         proof=bytes(view.proof),
-        filtered_addresses=[Address(bytes(a)) for a in view.filtered_addresses],
     )
 
 
@@ -395,7 +392,7 @@ def encode_l2_execution_output(proof: L2ExecutionProof) -> bytes:
     """
     Encode the extended l2-execution guest's own output into its framed wire
     bytes (0x0003 schema id): `keccak256(schema_id || ssz(public_inputs)) ||
-    schema_id || ssz(public_inputs)`. Range metadata and filtered-address lists, and proof bytes travel outside this guest output (see module docstring).
+    schema_id || ssz(public_inputs)`. Range metadata and proof bytes travel outside this guest output (see module docstring).
     """
     preimage = _frame(L2_EXECUTION_OUTPUT_SCHEMA_ID, encode_l2_execution_public_inputs_bytes(proof.public_inputs))
     return keccak256(preimage) + preimage

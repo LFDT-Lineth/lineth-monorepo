@@ -19,7 +19,6 @@ never learn about JSON; the dependency arrow points one way only
 
 Guest output vs prover output: execution and rollup public inputs contain
 ordered message-hash lists; aggregation public inputs contain the final roots.
-Execution also returns the filtered-address preimage.
 The prover-system output prefix commits to the complete schema-framed SSZ
 public input. The zkVM/prover layer attaches `proof`, which is a placeholder
 (`b""`) in this reference. The Coordinator receives the final roots for L1
@@ -315,12 +314,11 @@ def encode_response(proof: L2ExecutionProof, prover_version: str, *, program_vk:
             "parentFtxNumber": int(pi.parent_ftx_number),
             "endFtxRollingHash": _hx(pi.end_ftx_rolling_hash),
             "endProcessedFtxNumber": int(pi.end_processed_ftx_number),
-            "filteredAddressesHash": _hx(pi.filtered_addresses_hash),
+            "filteredAddresses": [_hx(a) for a in pi.filtered_addresses],
             "txFromsHash": _hx(pi.tx_froms_hash),
             "blockCount": pi.block_count,
             "l2MessagingBlocksOffsets": list(pi.l2_messaging_blocks_offsets),
         },
-        "filteredAddresses": [_hx(a) for a in proof.filtered_addresses],
         "programVk": _hx(program_vk),
     }
 
@@ -381,7 +379,10 @@ def _decode_l2_execution_public_input(obj: dict, ctx: str) -> L2ExecutionProofPu
         parent_ftx_number=n("parentFtxNumber"),
         end_ftx_rolling_hash=h("endFtxRollingHash"),
         end_processed_ftx_number=n("endProcessedFtxNumber"),
-        filtered_addresses_hash=h("filteredAddressesHash"),
+        filtered_addresses=[
+            Address(_bytes_from_hex(a, f"{ctx}filteredAddresses[{i}]"))
+            for i, a in enumerate(_require_list(obj, "filteredAddresses", ctx))
+        ],
         tx_froms_hash=h("txFromsHash"),
         block_count=int(n("blockCount")),
         l2_messaging_blocks_offsets=[
@@ -392,17 +393,12 @@ def _decode_l2_execution_public_input(obj: dict, ctx: str) -> L2ExecutionProofPu
 
 
 def _decode_l2_execution_proof(obj: dict, ctx: str) -> VerifiableL2ExecutionProof:
-    filtered_addresses = _require_list(obj, "filteredAddresses", ctx)
     proof = L2ExecutionProof(
         public_inputs=_decode_l2_execution_public_input(
             _require(obj, "publicInputs", ctx), f"{ctx}publicInputs."
         ),
         start_block_number=_u64(_require(obj, "startBlockNumber", ctx), f"{ctx}startBlockNumber"),
         proof=_bytes_from_hex(_require(obj, "proof", ctx), f"{ctx}proof"),
-        filtered_addresses=[
-            Address(_bytes_from_hex(a, f"{ctx}filteredAddresses[{i}]"))
-            for i, a in enumerate(filtered_addresses)
-        ],
     )
     return VerifiableL2ExecutionProof(
         proof=proof,
