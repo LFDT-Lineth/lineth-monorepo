@@ -232,14 +232,13 @@ func VecMulBaseExt(res []Ext, a []Element, b []Ext) {
 	VecMulExtBase(res, b, a)
 }
 
-// VecMulExtExt sets res[i] = a[i] * b[i] over the extension field.
-// Cost: ~24 base multiplications per element (Karatsuba over E2 for E6).
-// All slices must have equal length.
+// VecMulExtExt sets res[i] = a[i] * b[i] over the extension field. On
+// AVX-512 hardware 16 products run at a time, each a tower Karatsuba product
+// of 18 base-field products. res may alias a or b. All slices must have equal
+// length.
 func VecMulExtExt(res, a, b []Ext) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		res[i].Mul(&a[i], &b[i])
-	}
+	vecMulExt(res, a, b)
 }
 
 // VecMulInto sets res[i] = a[i] * b[i] for all i, dispatching to the typed

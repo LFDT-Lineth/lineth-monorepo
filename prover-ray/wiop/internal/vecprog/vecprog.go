@@ -909,9 +909,7 @@ func (w *worker) extOp(nd *node, dst []field.Ext) {
 		for range 2 {
 			switch {
 			case vecExt(&a) && vecExt(&b):
-				for i := range dst {
-					dst[i].Mul(&a.ext[i], &b.ext[i])
-				}
+				field.VecMulExtExt(dst, a.ext, b.ext)
 				return
 			case vecExt(&a) && vecBase(&b):
 				out.MulByElement(a.ext, b.base)
@@ -929,6 +927,11 @@ func (w *worker) extOp(nd *node, dst []field.Ext) {
 			}
 			a, b = b, a
 		}
+	case Square:
+		if vecExt(&a) {
+			field.VecMulExtExt(dst, a.ext, a.ext)
+			return
+		}
 	case Inverse:
 		batchInvertExt(extVector(&a, L, w.tmpExt), dst, w.invExt[:L])
 		return
@@ -937,9 +940,7 @@ func (w *worker) extOp(nd *node, dst []field.Ext) {
 		batchInvertExt(extVector(&b, L, w.tmpExt), inv, w.invExt[:L])
 		switch {
 		case vecExt(&a):
-			for i := range dst {
-				dst[i].Mul(&a.ext[i], &inv[i])
-			}
+			field.VecMulExtExt(dst, a.ext, inv)
 		case vecBase(&a):
 			out.MulByElement(inv, a.base)
 		case a.isBase:
@@ -982,24 +983,80 @@ func batchInvertBase(a, dst, prefix []field.Element) {
 	}
 }
 
-// batchInvertExt is [batchInvertBase] in the extension field.
+// invLanes is the number of interleaved product chains of [batchInvertExt],
+// the width of the vectorised extension product.
+const invLanes = 16
+
+// batchInvertExt writes 1/a[i] into dst[i], and 0 where a[i] is 0. It runs
+// Montgomery's trick as invLanes interleaved chains (chain l takes elements
+// l, l+invLanes, …), so the prefix and suffix products of a block are
+// vectorised extension products, and finishes the at most invLanes-1
+// trailing elements as one more chain; all the chain products are inverted
+// with one field inversion. prefix is scratch of the same length; dst may
+// alias neither a nor prefix.
 func batchInvertExt(a, dst, prefix []field.Ext) {
-	var acc field.Ext
-	acc.SetOne()
+	// dst first holds a with its zeros replaced by one, which the chains
+	// multiply through unchanged.
 	for i := range a {
-		prefix[i] = acc
-		if !a[i].IsZero() {
-			acc.Mul(&acc, &a[i])
+		if a[i].IsZero() {
+			dst[i].SetOne()
+		} else {
+			dst[i] = a[i]
 		}
 	}
-	acc.Inverse(&acc)
-	for i := len(a) - 1; i >= 0; i-- {
+	nz := dst
+	m := len(a) / invLanes * invLanes
+
+	// Forward: prefix[i] is the product of the earlier elements of i's chain;
+	// chain products end up in acc[0:invLanes] and, for the tail, acc[invLanes].
+	var acc [invLanes + 1]field.Ext
+	for l := range acc {
+		acc[l].SetOne()
+	}
+	for j := 0; j < m; j += invLanes {
+		copy(prefix[j:j+invLanes], acc[:invLanes])
+		field.VecMulExtExt(acc[:invLanes], acc[:invLanes], nz[j:j+invLanes])
+	}
+	for i := m; i < len(a); i++ {
+		prefix[i] = acc[invLanes]
+		acc[invLanes].Mul(&acc[invLanes], &nz[i])
+	}
+
+	// Invert every chain product at once.
+	var accPrefix [invLanes + 1]field.Ext
+	var run field.Ext
+	run.SetOne()
+	for l := range acc {
+		accPrefix[l] = run
+		run.Mul(&run, &acc[l])
+	}
+	run.Inverse(&run)
+	for l := len(acc) - 1; l >= 0; l-- {
+		var inv field.Ext
+		inv.Mul(&run, &accPrefix[l])
+		run.Mul(&run, &acc[l])
+		acc[l] = inv
+	}
+
+	// Backward: each element's inverse is its chain's running inverse times
+	// its prefix; nz[i] is read before dst[i] overwrites it.
+	for i := len(a) - 1; i >= m; i-- {
+		var inv field.Ext
+		inv.Mul(&acc[invLanes], &prefix[i])
+		acc[invLanes].Mul(&acc[invLanes], &nz[i])
+		dst[i] = inv
+	}
+	var inv [invLanes]field.Ext
+	for j := m - invLanes; j >= 0; j -= invLanes {
+		field.VecMulExtExt(inv[:], acc[:invLanes], prefix[j:j+invLanes])
+		field.VecMulExtExt(acc[:invLanes], acc[:invLanes], nz[j:j+invLanes])
+		copy(dst[j:j+invLanes], inv[:])
+	}
+
+	for i := range a {
 		if a[i].IsZero() {
 			dst[i] = field.Ext{}
-			continue
 		}
-		dst[i].Mul(&acc, &prefix[i])
-		acc.Mul(&acc, &a[i])
 	}
 }
 

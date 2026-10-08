@@ -233,3 +233,22 @@ func TestPaddedLeavesMatchNaive(t *testing.T) {
 		}
 	}
 }
+
+// The interleaved-chain batch inversion must equal one inversion per element,
+// zeros mapping to zero, for lengths around and across the lane width.
+func TestBatchInvertExtMatchesInverse(t *testing.T) {
+	rng := rand.New(rand.NewPCG(21, 22))
+	for _, n := range []int{0, 1, 5, invLanes - 1, invLanes, invLanes + 1, 3*invLanes + 7, BlockSize} {
+		a := field.VecPseudoRandExt(rng, n)
+		for i := 0; i < n; i += 4 {
+			a[i] = field.Ext{}
+		}
+		dst, prefix := make([]field.Ext, n), make([]field.Ext, n)
+		batchInvertExt(a, dst, prefix)
+		for i := range a {
+			var want field.Ext
+			want.Inverse(&a[i])
+			require.Equal(t, want, dst[i], "n=%d, element %d", n, i)
+		}
+	}
+}
