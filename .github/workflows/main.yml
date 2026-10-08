@@ -292,7 +292,7 @@ jobs:
     needs: [filter-commit-changes, compute-commit-tags, prepare-linea-besu-maven]
     # !cancelled() (not always()): run on need failure/skip, but not after a
     # concurrency cancel supersedes this run.
-    if: ${{ !cancelled() && needs.prepare-linea-besu-maven.result == 'success' }}
+    if: ${{ !cancelled() && (needs.prepare-linea-besu-maven.result == 'success' || needs.prepare-linea-besu-maven.result == 'skipped') }}
     uses: ./.github/workflows/testing.yml
     with:
       commit_tag: ${{ needs.compute-commit-tags.outputs.commit_tag }}
