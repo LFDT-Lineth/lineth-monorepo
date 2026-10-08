@@ -241,7 +241,7 @@ class L2ExecutionProofPublicInput:
     end_block_hash: Hash32
     end_block_number: U64
     end_block_timestamp: U64
-    l2_l1_messages_hash: Hash32
+    l2_l1_messages: List[Hash32]
     parent_l1_l2_bridge_rolling_hash: Hash32
     parent_l1_l2_bridge_rolling_hash_message_number: U64
     end_l1_l2_bridge_rolling_hash: Hash32
@@ -295,12 +295,9 @@ def _decode_payload_stateless_inputs(payloads: Sequence[LinethPayloadInput]) -> 
 @dataclass
 class L2ExecutionProof:
     """
-    An l2-execution proof as the l2-execution guest emits it: the guest
-    *output* (the `public_inputs` tuple + the revealed hash
-    preimages) plus the `proof` bytes the rollup guest recursively verifies.
+    An l2-execution proof with guest public inputs and host range metadata.
 
-    Guest/prover boundary: the guest emits `public_inputs` and the preimage
-    lists only; `proof` is attached by the zkVM/prover layer above — a guest
+    Guest/prover boundary: the guest commits to `public_inputs`; `proof` is attached by the zkVM/prover layer above — a guest
     cannot prove itself — and is a placeholder (`b""`) in this reference.
 
     `end_block_number` is intentionally absent: it is already
@@ -314,7 +311,6 @@ class L2ExecutionProof:
     public_inputs: L2ExecutionProofPublicInput
     start_block_number: U64
     proof: bytes = b""
-    l2_l1_messages: List[Hash32] = field(default_factory=list)
     filtered_addresses: List[Address] = field(default_factory=list)
 
 
@@ -470,7 +466,7 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
         end_block_hash=last_payload.block_hash,
         end_block_number=last_payload.block_number,
         end_block_timestamp=U64(last_payload.timestamp),
-        l2_l1_messages_hash=hash_digest_list(l2_l1_message_hashes),
+        l2_l1_messages=l2_l1_message_hashes,
         parent_l1_l2_bridge_rolling_hash=parent_rolling_hash,
         parent_l1_l2_bridge_rolling_hash_message_number=parent_rolling_hash_number,
         end_l1_l2_bridge_rolling_hash=end_rolling_hash,
@@ -489,7 +485,6 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
     return L2ExecutionProof(
         public_inputs=public_inputs,
         start_block_number=start_block_number,
-        l2_l1_messages=l2_l1_message_hashes,
         filtered_addresses=filtered_addresses,
     )
 

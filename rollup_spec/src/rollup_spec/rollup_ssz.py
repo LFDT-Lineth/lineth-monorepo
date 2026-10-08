@@ -7,15 +7,15 @@ unambiguously. The framing machinery and the embedded l2-execution proof
 containers (`SszVerifiableL2ExecutionProof` and its parts) come from the
 sibling `l2_execution_ssz.py`, mirroring the proof pipeline itself.
 
-Framing: every message is `schema_id (2 bytes, big-endian) || SSZ bytes`.
+Inputs are framed as `schema_id (2 bytes, big-endian) || SSZ bytes`.
 Two schema ids are defined, one per guest-facing message:
 
   - `ROLLUP_INPUT_SCHEMA_ID`  (0x1001) — rollup guest input
   - `ROLLUP_OUTPUT_SCHEMA_ID` (0x1801) — rollup guest output
 
-The guest output frame carries SSZ public inputs followed by their keccak256
-hash. Auxiliary `RollupProof` fields and the prover-attached proof stay off
-wire; the decoder returns the public inputs after verifying the hash.
+The guest output is `keccak256(schema_id || SSZ(public_inputs)) || schema_id
+|| SSZ(public_inputs)`. The prover attaches the proof and range metadata;
+decoding the guest output returns the committed public-input tuple.
 
 Optional modelling: `RollupProofPrivateInput.boundary_prev_data_rolling_hash`
 is the one Optional field in this wire format (required only for a mid-chunk
@@ -32,7 +32,7 @@ limits. Each constant below carries a one-line rationale.
 
 from typing import Any, Optional
 
-from ethereum.crypto.hash import Hash32
+from ethereum.crypto.hash import Hash32, keccak256
 from ethereum.state import Address
 from ethereum_types.numeric import U64
 from remerkleable.basic import boolean, uint16, uint64
@@ -40,10 +40,9 @@ from remerkleable.byte_arrays import ByteList, Bytes32 as SszBytes32
 from remerkleable.complex import Container, List
 
 from .l2_execution_ssz import (
+    MAX_L2_L1_MESSAGES_PER_EXECUTION,
     SszAddress,
     SszVerifiableL2ExecutionProof,
-    _decode_output,
-    _encode_output,
     _frame,
     _ssz_verifiable_l2_execution_proof,
     _strict_decode,
@@ -58,6 +57,7 @@ from .rollup import (
     RollupProofPrivateInput,
     RollupPublicInput,
 )
+from .stateless_input import InvalidSsz
 
 # ── Framing ──────────────────────────────────────────────────────────────────
 ROLLUP_INPUT_SCHEMA_ID = 0x1001
@@ -71,7 +71,8 @@ MAX_BLOCK_RLPS_PER_CONFLATION = 2**12          # full block RLPs (one per block)
 MAX_BYTES_PER_BLOCK_RLP = 2**24                # 16 MiB: a full canonical block RLP including all tx bodies
 MAX_CALLDATA_BYTES_PER_CHUNK = 2**24            # 16 MiB bound for a single calldata submission
 MAX_PROGRAM_VKS = 2**10                        # distinct guest program VKs bubbled into one program_vks set
-MAX_L2_L1_ROOTS = 2**16                        # per-chunk L2->L1 message-tree roots merged into one proof
+MAX_L2_L1_ROOTS = 2**16                        # finalization root list and messaging-offset wire capacity
+MAX_L2_L1_MESSAGES_PER_ROLLUP = MAX_L2_L1_MESSAGES_PER_EXECUTION * MAX_L2_EXECUTION_PROOFS_PER_ROLLUP
 MAX_FILTERED_ADDRESSES = 2**16                 # sanction-list addresses merged at the rollup layer
 
 # ── SSZ wire schema (remerkleable) ───────────────────────────────────────────
@@ -108,8 +109,7 @@ class SszRollupPublicInput(Container):
     end_block_hash: SszBytes32
     start_offset: uint64
     end_offset: uint64
-    l2_l1_tree_depth: uint64
-    l2_l1_roots: List[SszBytes32, MAX_L2_L1_ROOTS]
+    l2_l1_messages: List[SszBytes32, MAX_L2_L1_MESSAGES_PER_ROLLUP]
     filtered_addresses: List[SszAddress, MAX_FILTERED_ADDRESSES]
     program_vks: List[SszBytes32, MAX_PROGRAM_VKS]
     block_count: uint64
@@ -161,8 +161,7 @@ def _ssz_rollup_public_input(pi: RollupPublicInput) -> SszRollupPublicInput:
         end_block_hash=bytes(pi.end_block_hash),
         start_offset=int(pi.start_offset),
         end_offset=int(pi.end_offset),
-        l2_l1_tree_depth=int(pi.l2_l1_tree_depth),
-        l2_l1_roots=[bytes(r) for r in pi.l2_l1_roots],
+        l2_l1_messages=[bytes(h) for h in pi.l2_l1_messages],
         filtered_addresses=[bytes(a) for a in pi.filtered_addresses],
         program_vks=[bytes(v) for v in pi.program_vks],
         block_count=int(pi.block_count),
@@ -225,8 +224,7 @@ def _rollup_public_input_from_view(view: Any) -> RollupPublicInput:
         end_block_hash=Hash32(bytes(view.end_block_hash)),
         start_offset=int(view.start_offset),
         end_offset=int(view.end_offset),
-        l2_l1_tree_depth=int(view.l2_l1_tree_depth),
-        l2_l1_roots=[Hash32(bytes(r)) for r in view.l2_l1_roots],
+        l2_l1_messages=[Hash32(bytes(h)) for h in view.l2_l1_messages],
         filtered_addresses=[Address(bytes(a)) for a in view.filtered_addresses],
         program_vks=[Hash32(bytes(v)) for v in view.program_vks],
         block_count=int(view.block_count) if hasattr(view, "block_count") else 0,
@@ -277,21 +275,30 @@ def decode_rollup_input_ssz(data: bytes) -> RollupProofPrivateInput:
     return _rollup_input_from_view(_strict_decode(payload, SszRollupProofPrivateInput))
 
 
-# ── Rollup output: public inputs and hash ────────────────────────────────────
+# ── Rollup output: dataclass <-> framed SSZ bytes ────────────────────────────
+
+
+def hash_rollup_public_inputs(pi: RollupPublicInput) -> Hash32:
+    return keccak256(_frame(ROLLUP_OUTPUT_SCHEMA_ID, _ssz_rollup_public_input(pi).encode_bytes()))
 
 
 def encode_rollup_output(proof: RollupProof) -> bytes:
     """
-    Encode a 0x1801 frame carrying the SSZ public inputs followed by their
-    keccak256 hash. Auxiliary fields remain available in the logical proof.
+    Encode the rollup guest's own output into framed SSZ bytes (0x1801 schema
+    id). `proof.proof` is deliberately dropped — it is a prover-attached
+    placeholder in `RollupProof`, never part of the guest-emitted bytes.
     """
-    return _encode_output(ROLLUP_OUTPUT_SCHEMA_ID, _ssz_rollup_public_input(proof.public_inputs).encode_bytes())
+    preimage = _frame(ROLLUP_OUTPUT_SCHEMA_ID, _ssz_rollup_public_input(proof.public_inputs).encode_bytes())
+    return keccak256(preimage) + preimage
 
 
 def decode_rollup_output_ssz(data: bytes) -> RollupPublicInput:
     """
-    Decode framed SSZ public inputs, verifying the appended hash. Strict:
-    rejects a wrong schema id, truncated bytes, trailing bytes, or non-canonical SSZ.
+    Decode the guest's committed public inputs. The prover attaches proof bytes
+    and range metadata separately. Strict: rejects invalid commitments, schema
+    ids, and non-canonical SSZ.
     """
-    view = _decode_output(data, ROLLUP_OUTPUT_SCHEMA_ID, "rollup output", SszRollupPublicInput)
-    return _rollup_public_input_from_view(view)
+    if len(data) < 34 or keccak256(data[32:]) != data[:32]:
+        raise InvalidSsz("rollup output: invalid public-input commitment")
+    payload = _strip_frame(data[32:], ROLLUP_OUTPUT_SCHEMA_ID, "rollup output")
+    return _rollup_public_input_from_view(_strict_decode(payload, SszRollupPublicInput))

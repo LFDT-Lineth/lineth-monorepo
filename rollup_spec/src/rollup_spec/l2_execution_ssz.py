@@ -8,20 +8,16 @@ also hosts the framing machinery the sibling guest wire modules import. The
 vanilla per-block payload wire (schema id 0x0001) lives in
 `stateless_input.py`.
 
-Framing: every message is `schema_id (2 bytes, big-endian) || SSZ bytes`.
+Inputs are framed as `schema_id (2 bytes, big-endian) || SSZ bytes`.
 Two schema ids are defined here:
 
   - `L2_EXECUTION_INPUT_SCHEMA_ID`  (0x0002) — extended l2-execution guest input
   - `L2_EXECUTION_OUTPUT_SCHEMA_ID` (0x0003) — extended l2-execution guest output
 
-The guest output wire is `ssz(public_inputs) || keccak256(ssz(public_inputs))`.
-The hash is appended to the SSZ value, rather than being a field of an SSZ
-container. The public inputs include a variable-length messaging-offset list.
-The remaining `L2ExecutionProof` fields (`start_block_number` and the
-`l2_l1_messages`/`filtered_addresses` preimages) are off-chain
-data, never part of this wire format, and `proof` is attached by the prover
-layer above the guest. The output decoder verifies the hash and returns the
-public inputs; `encode_l2_execution_public_inputs_bytes` exposes their SSZ bytes.
+The guest output wire is `keccak256(schema_id || SSZ(public_inputs)) ||
+schema_id || SSZ(public_inputs)`. The decoder validates the hash and returns the
+public-input tuple. `start_block_number` and `filtered_addresses`
+remain proof metadata outside the guest output; the prover attaches `proof`.
 
 Each payload's `stateless_input_ssz` is carried opaquely — an already
 0x0001-framed vanilla stateless-input byte slice, byte-identical to what a
@@ -73,8 +69,8 @@ MAX_FTX_PER_PAYLOAD = 2**16                    # forced transactions declared fo
 MAX_STATELESS_INPUT_BYTES = 2**30              # 1 GiB: one opaque, already-framed vanilla stateless input
 MAX_TX_BYTES = 2**30                           # matches the consensus-layer Transaction ByteList limit
 MAX_PROOF_BYTES = 2**24                        # 16 MiB: generous ceiling on a recursively-verified proof blob
-MAX_L2_L1_MESSAGES_PER_EXEC_PROOF = 2**16      # L2->L1 message hashes emitted by one l2-execution proof
 MAX_FILTERED_ADDRESSES_PER_EXEC_PROOF = 2**16  # sanction-list addresses emitted by one l2-execution proof
+MAX_L2_L1_MESSAGES_PER_EXECUTION = 2**16       # message hashes emitted in one execution range
 
 SszAddress: TypeAlias = ByteVector[20]
 
@@ -108,23 +104,6 @@ def _strict_decode(data: bytes, container: type) -> Any:
         raise InvalidSsz(f"{container.__name__}: {exc}") from exc
     if view.encode_bytes() != data:
         raise InvalidSsz(f"{container.__name__}: input is not the canonical SSZ encoding")
-    return view
-
-
-def _encode_output(schema_id: int, ssz_bytes: bytes) -> bytes:
-    """Frame a guest output with its hash appended outside the SSZ value."""
-    return _frame(schema_id, ssz_bytes + keccak256(ssz_bytes))
-
-
-def _decode_output(data: bytes, schema_id: int, ctx: str, container: type) -> Any:
-    """Decode a guest output and verify the hash of its canonical SSZ bytes."""
-    payload = _strip_frame(data, schema_id, ctx)
-    if len(payload) < 32:
-        raise InvalidSsz(f"{ctx}: missing SSZ hash")
-    ssz_bytes, output_hash = payload[:-32], payload[-32:]
-    view = _strict_decode(ssz_bytes, container)
-    if output_hash != keccak256(ssz_bytes):
-        raise InvalidSsz(f"{ctx}: hash mismatch")
     return view
 
 
@@ -172,7 +151,7 @@ class SszL2ExecutionProofPublicInput(Container):
     end_block_hash: SszBytes32
     end_block_number: uint64
     end_block_timestamp: uint64
-    l2_l1_messages_hash: SszBytes32
+    l2_l1_messages: List[SszBytes32, MAX_L2_L1_MESSAGES_PER_EXECUTION]
     parent_l1_l2_bridge_rolling_hash: SszBytes32
     parent_l1_l2_bridge_rolling_hash_message_number: uint64
     end_l1_l2_bridge_rolling_hash: SszBytes32
@@ -195,7 +174,6 @@ class SszL2ExecutionProof(Container):
     public_inputs: SszL2ExecutionProofPublicInput
     start_block_number: uint64
     proof: ByteList[MAX_PROOF_BYTES]
-    l2_l1_messages: List[SszBytes32, MAX_L2_L1_MESSAGES_PER_EXEC_PROOF]
     filtered_addresses: List[SszAddress, MAX_FILTERED_ADDRESSES_PER_EXEC_PROOF]
 
 
@@ -249,7 +227,7 @@ def _ssz_l2_execution_public_input(pi: L2ExecutionProofPublicInput) -> SszL2Exec
         end_block_hash=bytes(pi.end_block_hash),
         end_block_number=int(pi.end_block_number),
         end_block_timestamp=int(pi.end_block_timestamp),
-        l2_l1_messages_hash=bytes(pi.l2_l1_messages_hash),
+        l2_l1_messages=[bytes(h) for h in pi.l2_l1_messages],
         parent_l1_l2_bridge_rolling_hash=bytes(pi.parent_l1_l2_bridge_rolling_hash),
         parent_l1_l2_bridge_rolling_hash_message_number=int(
             pi.parent_l1_l2_bridge_rolling_hash_message_number
@@ -275,7 +253,6 @@ def _ssz_l2_execution_proof(proof: L2ExecutionProof) -> SszL2ExecutionProof:
         public_inputs=_ssz_l2_execution_public_input(proof.public_inputs),
         start_block_number=int(proof.start_block_number),
         proof=bytes(proof.proof),
-        l2_l1_messages=[bytes(h) for h in proof.l2_l1_messages],
         filtered_addresses=[bytes(a) for a in proof.filtered_addresses],
     )
 
@@ -341,7 +318,7 @@ def _l2_execution_public_input_from_view(view: Any) -> L2ExecutionProofPublicInp
         end_block_hash=Hash32(bytes(view.end_block_hash)),
         end_block_number=U64(int(view.end_block_number)),
         end_block_timestamp=U64(int(view.end_block_timestamp)),
-        l2_l1_messages_hash=Hash32(bytes(view.l2_l1_messages_hash)),
+        l2_l1_messages=[Hash32(bytes(h)) for h in view.l2_l1_messages],
         parent_l1_l2_bridge_rolling_hash=Hash32(bytes(view.parent_l1_l2_bridge_rolling_hash)),
         parent_l1_l2_bridge_rolling_hash_message_number=U64(
             int(view.parent_l1_l2_bridge_rolling_hash_message_number)
@@ -367,7 +344,6 @@ def _l2_execution_proof_from_view(view: Any) -> L2ExecutionProof:
         public_inputs=_l2_execution_public_input_from_view(view.public_inputs),
         start_block_number=U64(int(view.start_block_number)),
         proof=bytes(view.proof),
-        l2_l1_messages=[Hash32(bytes(h)) for h in view.l2_l1_messages],
         filtered_addresses=[Address(bytes(a)) for a in view.filtered_addresses],
     )
 
@@ -400,36 +376,37 @@ def decode_l2_execution_input_ssz(data: bytes) -> L2ExecutionProofPrivateInput:
     return _l2_execution_input_from_view(_strict_decode(payload, SszL2ExecutionProofPrivateInput))
 
 
-# ── Extended guest output: SSZ public inputs and hash ────────────────────────
+# ── Extended guest output: hash commitment and public-input preimage ─────────
 
 
 def encode_l2_execution_public_inputs_bytes(pi: L2ExecutionProofPublicInput) -> bytes:
     """
-    SSZ-encode the public-input tuple with its variable-length offset list to a
-    wire representation — the preimage of the hash the 0x0003 output frame
-    carries, exposed for verifiers/provers and off-chain inspection.
+    SSZ-encode the public-input tuple, including its message and offset lists.
+    The schema-framed encoding is the prover-system commitment preimage.
     """
     return _ssz_l2_execution_public_input(pi).encode_bytes()
+
+
+def hash_l2_execution_public_inputs(pi: L2ExecutionProofPublicInput) -> Hash32:
+    return keccak256(_frame(L2_EXECUTION_OUTPUT_SCHEMA_ID, encode_l2_execution_public_inputs_bytes(pi)))
 
 
 def encode_l2_execution_output(proof: L2ExecutionProof) -> bytes:
     """
     Encode the extended l2-execution guest's own output into its framed wire
-    bytes (0x0003 schema id): `schema_id || ssz(public_inputs) ||
-    keccak256(ssz(public_inputs))`. Auxiliary proof fields remain off wire
-    (see module docstring).
+    bytes (0x0003 schema id): `keccak256(schema_id || ssz(public_inputs)) ||
+    schema_id || ssz(public_inputs)`. Range metadata and filtered-address lists, and proof bytes travel outside this guest output (see module docstring).
     """
-    return _encode_output(
-        L2_EXECUTION_OUTPUT_SCHEMA_ID, encode_l2_execution_public_inputs_bytes(proof.public_inputs)
-    )
+    preimage = _frame(L2_EXECUTION_OUTPUT_SCHEMA_ID, encode_l2_execution_public_inputs_bytes(proof.public_inputs))
+    return keccak256(preimage) + preimage
 
 
 def decode_l2_execution_output_ssz(data: bytes) -> L2ExecutionProofPublicInput:
     """
-    Decode the framed public inputs and verify their appended hash.
-    Strict: rejects a wrong schema id, truncated body, or trailing bytes.
+    Decode the committed public-input tuple, checking the hash, schema id and
+    canonical SSZ representation.
     """
-    view = _decode_output(
-        data, L2_EXECUTION_OUTPUT_SCHEMA_ID, "l2-execution output", SszL2ExecutionProofPublicInput
-    )
-    return _l2_execution_public_input_from_view(view)
+    if len(data) < 34 or keccak256(data[32:]) != data[:32]:
+        raise InvalidSsz("l2-execution output: invalid public-input commitment")
+    payload = _strip_frame(data[32:], L2_EXECUTION_OUTPUT_SCHEMA_ID, "l2-execution output")
+    return _l2_execution_public_input_from_view(_strict_decode(payload, SszL2ExecutionProofPublicInput))
