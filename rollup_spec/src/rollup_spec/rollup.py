@@ -115,6 +115,12 @@ def _trusted_setup():
     return ckzg.load_trusted_setup(str(_TRUSTED_SETUP_PATH), 0)
 
 
+def blob_versioned_hash(blob_bytes: bytes) -> Hash32:
+    """EIP-4844 versioned hash of a physical blob: the `chunkHash` L1 anchors a blob chunk to."""
+    commitment = KZGCommitment(ckzg.blob_to_kzg_commitment(blob_bytes, _trusted_setup()))
+    return kzg_commitment_to_versioned_hash(commitment)
+
+
 @dataclass
 class TruncatedEthereumBlock:
     """
@@ -201,56 +207,66 @@ class ConflationWitness:
     happens *inside* the guest from these full RLPs; there is no separately-
     witnessed truncated form.
 
-    The guest parses the length-prefixed frame from chunk bytes and decompresses
-    it against the canonical truncated-block RLP.
+    The guest parses the conflation's segment from chunk bytes and decompresses
+    its zstd frame against the canonical truncated-block RLP.
     """
     block_rlps: List[bytes]
 
 
-def _truncate_conflation(
-    block_rlps: Sequence[bytes],
+@dataclass
+class CanonicalConflation:
+    """
+    One conflation's DA-side facts derived from its full block RLPs: the canonical
+    truncated-block RLP its zstd frame must decompress to (§3.1), plus each block's
+    hash and header `parent_hash` for the block-hash chain checks (§2.2 step 5).
+    """
+    payload: bytes
+    block_hashes: List[Hash32]
+    parent_hashes: List[Hash32]
+
+
+def derive_canonical_payload(
+    conflation: ConflationWitness,
+    proof: L2ExecutionProof,
     chain_id: U64,
-) -> Tuple[List["TruncatedEthereumBlock"], List[Hash32]]:
+) -> CanonicalConflation:
     """
-    Decode and truncate one conflation's block RLPs (§3.2), capturing each
-    block's header `parent_hash` alongside.
-
-    Returns `(truncated, parent_hashes)`:
-      - `truncated`: the computed `TruncatedEthereumBlock` per block,
-        consumed by downstream steps (block-hash boundary alignment,
-        sender-list cross-check).
-      - `parent_hashes`: each block's `header.parent_hash`. Exposed so
-        `run_rollup_guest` can verify the full block-hash chain (§2.2 step 5):
-        every block's claimed parent must match the previous block's computed
-        hash, anchored at the first l2-execution proof's `parentBlockHash`
-        and at each l2-execution proof's `endBlockHash` boundary. Without
-        this, intermediate blocks inside an l2-execution range would only be
-        bound transitively, leaving room for a malicious prover to swap a
-        non-boundary block as long as its successor's `parent_hash` still
-        pointed to the *original* (un-swapped) block.
+    Truncate one conflation's blocks (§3.2) and cross-check them against its
+    l2-execution proof: block count against the proof's range, recovered senders
+    against `txFromsHash`.
     """
-    truncated: List["TruncatedEthereumBlock"] = []
-    parent_hashes: List[Hash32] = []
-    for rlp_bytes in block_rlps:
-        # Decode once to capture the header's parent_hash; the downstream
-        # `truncate_block_rlp` redoes the decode — small redundancy that
-        # keeps the reference implementation simple.
-        header = decode_block_rlp(rlp_bytes).header
-        parent_hashes.append(Hash32(header.parent_hash))
-        truncated.append(truncate_block_rlp(rlp_bytes, chain_id))
-    return truncated, parent_hashes
+    truncated = [truncate_block_rlp(block_rlp, chain_id) for block_rlp in conflation.block_rlps]
+    parent_hashes = [
+        Hash32(decode_block_rlp(block_rlp).header.parent_hash) for block_rlp in conflation.block_rlps
+    ]
+    expected_block_count = (
+        int(proof.public_inputs.end_block_number) - int(proof.start_block_number) + 1
+    )
+    if len(truncated) != expected_block_count:
+        raise Exception("conflation block count is inconsistent with its l2-execution proof range")
+    if len(truncated) == 0:
+        raise Exception("rollup proof cannot include an empty conflation")
+    froms = [sender for block in truncated for sender in block.froms]
+    if hash_address_list(froms) != proof.public_inputs.tx_froms_hash:
+        raise Exception("l2-execution proof txFromsHash does not match DA block senders")
+
+    return CanonicalConflation(
+        payload=rlp_encode_truncated_blocks(truncated),
+        block_hashes=[block.block_hash for block in truncated],
+        parent_hashes=parent_hashes,
+    )
 
 
-def _validate_conflation_segment(segment: bytes, expected_rlp: bytes) -> None:
-    """Validate the entire witnessed zstd frame against canonical truncation."""
+def _validate_zstd_frame(zstd_frame: bytes, canonical_payload: bytes) -> None:
+    """Check that a segment's zstd frame decompresses exactly to its canonical payload."""
     try:
         decompressed = zstd.ZstdDecompressor().decompress(
-            segment, max_output_size=len(expected_rlp), allow_extra_data=False,
+            zstd_frame, max_output_size=len(canonical_payload), allow_extra_data=False,
         )
     except zstd.ZstdError as exc:
-        raise Exception("compressed segment contains invalid zstd data") from exc
-    if decompressed != expected_rlp:
-        raise Exception("zstd-decompressed segment does not match canonical truncated-block RLP")
+        raise Exception("invalid zstd frame") from exc
+    if decompressed != canonical_payload:
+        raise Exception("decompressed zstd frame does not match canonical truncated-block RLP")
 
 
 def _verified_chunk_payload(chunk: ChunkWitness, index: int) -> bytes:
@@ -264,27 +280,26 @@ def _verified_chunk_payload(chunk: ChunkWitness, index: int) -> bytes:
     if chunk.calldata_bytes:
         raise Exception(f"blob chunk {index} must have empty calldataBytes")
     payload = unpack_blob_payload(chunk.blob_bytes)
-    commitment = KZGCommitment(ckzg.blob_to_kzg_commitment(chunk.blob_bytes, _trusted_setup()))
-    if kzg_commitment_to_versioned_hash(commitment) != chunk.chunk_hash:
+    if blob_versioned_hash(chunk.blob_bytes) != chunk.chunk_hash:
         raise Exception(f"blob chunk {index} computed KZG commitment does not match chunkHash")
     return payload
 
 
-def _parse_frame_ends(stream: bytes, expected_rlps: Sequence[bytes]) -> List[int]:
-    """Parse one length-prefixed zstd frame per conflation; return each frame's end offset."""
+def _parse_segment_ends(stream: bytes, canonical_payloads: Sequence[bytes]) -> List[int]:
+    """Parse one segment per conflation; return each segment's end offset."""
     cursor = 0
-    frame_ends: List[int] = []
-    for expected_rlp in expected_rlps:
+    segment_ends: List[int] = []
+    for canonical_payload in canonical_payloads:
         if len(stream) - cursor < 4:
             raise Exception("DA segment is missing its length prefix")
         length = int.from_bytes(stream[cursor:cursor + 4], "big")
         if length == 0 or length > len(stream) - cursor - 4:
             raise Exception("DA segment length exceeds available chunk bytes")
-        frame_end = cursor + 4 + length
-        _validate_conflation_segment(stream[cursor + 4:frame_end], expected_rlp)
-        cursor = frame_end
-        frame_ends.append(cursor)
-    return frame_ends
+        segment_end = cursor + 4 + length
+        _validate_zstd_frame(stream[cursor + 4:segment_end], canonical_payload)
+        cursor = segment_end
+        segment_ends.append(cursor)
+    return segment_ends
 
 
 def _fold_data_rolling_hash(
@@ -312,15 +327,15 @@ def _fold_data_rolling_hash(
     return data_rolling_hash
 
 
-def _verify_and_fold_chunks(
+def verify_da_chunks(
     chunks: Sequence[ChunkWitness],
-    parent_data_tail_take_bytes: int,
+    canonical_payloads: Sequence[bytes],
     parent_data_rolling_hash: Hash32,
-    boundary_prev_data_rolling_hash: Optional[Hash32],
-    expected_rlps: Sequence[bytes],
+    parent_data_tail_take_bytes: int = 0,
+    boundary_prev_data_rolling_hash: Optional[Hash32] = None,
 ) -> Tuple[Hash32, int]:
     """
-    Bind each chunk to its anchored hash and parse one frame per conflation from their stream.
+    Bind each chunk to its anchored hash and parse one segment per conflation from their stream.
     Returns `(endDataRollingHash, finalDataTailDiscardBytes)`.
     """
     if not chunks:
@@ -338,16 +353,16 @@ def _verify_and_fold_chunks(
         payloads[0] = payloads[0][-take:]
 
     stream = b"".join(payloads)
-    frame_ends = _parse_frame_ends(stream, expected_rlps)
-    consumed = frame_ends[-1]
+    segment_ends = _parse_segment_ends(stream, canonical_payloads)
+    consumed = segment_ends[-1]
 
     chunk_start = 0
     for i, (chunk, payload) in enumerate(zip(chunks, payloads)):
         chunk_end = chunk_start + len(payload)
         if chunk_start >= min(chunk_end, consumed):
             raise Exception(f"chunk {i} must contain owned bytes")
-        if chunk.is_calldata and chunk_end not in frame_ends:
-            raise Exception(f"calldata chunk {i} must end at a frame boundary")
+        if chunk.is_calldata and chunk_end not in segment_ends:
+            raise Exception(f"calldata chunk {i} must end at a segment boundary")
         chunk_start = chunk_end
 
     end_data_rolling_hash = _fold_data_rolling_hash(
@@ -366,7 +381,7 @@ class RollupPublicInput:
     public-input fields rather than folded into the DA accumulator (§3.1).
     `parent_data_tail_take_bytes` / `final_data_tail_discard_bytes` are tail byte counts (§3.4)
     paired with `parent_data_rolling_hash` / `end_data_rolling_hash` at the proof
-    boundaries. The final count is derived from parsed frames.
+    boundaries. The final count is derived from parsed segments.
 
     `program_vks` is the set of guest program VKs verified beneath this proof,
     encoded as a distinct list sorted ascending by byte value.
@@ -409,7 +424,7 @@ class RollupProofPrivateInput:
     `boundary_prev_data_rolling_hash` is required only for a mid-chunk start
     (`parent_data_tail_take_bytes > 0`) — the dataRollingHash value before the first touched chunk, used
     to open its preimage. `end_data_rolling_hash` and `final_data_tail_discard_bytes` are not request inputs:
-    the guest derives them from parsed frame boundaries.
+    the guest derives them from parsed segment boundaries.
 
     `chain_id` is needed for sender recovery during DA truncation (§2.2
     step 2). It is committed transitively via the l2-execution proofs'
@@ -471,7 +486,7 @@ class VerifiableRollupProof:
 def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     """
     rollup: for each conflation, derives the canonical truncated-block RLP from
-    `block_rlps` (§3.1) and matches the parsed frames from physical blobs and
+    `block_rlps` (§3.1) and matches the parsed segments from physical blobs and
     calldata. Unpacks each touched physical blob and recomputes its binding hash
     (dispatched per chunk on the witnessed `is_calldata` flag, §3.1: KZG
     commitment for a blob chunk, keccak256 for a calldata chunk), and checks it
@@ -488,39 +503,21 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     if len(rollup_input.conflations) != len(rollup_input.l2_execution_proofs):
         raise Exception("conflations must pair 1:1 with l2-execution proofs")
 
-    truncated_blocks: List[TruncatedEthereumBlock] = []
-    parent_hashes: List[Hash32] = []
-    expected_rlps: List[bytes] = []
-
-    for conflation, verifiable_proof in zip(
-        rollup_input.conflations, rollup_input.l2_execution_proofs,
-    ):
-        proof = verifiable_proof.proof
-        expected_block_count = (
-            int(proof.public_inputs.end_block_number) - int(proof.start_block_number) + 1
+    canonical_conflations = [
+        derive_canonical_payload(conflation, verifiable_proof.proof, rollup_input.chain_id)
+        for conflation, verifiable_proof in zip(
+            rollup_input.conflations, rollup_input.l2_execution_proofs,
         )
-        conflation_truncated, conflation_parent_hashes = _truncate_conflation(
-            conflation.block_rlps, rollup_input.chain_id,
-        )
-        if len(conflation_truncated) != expected_block_count:
-            raise Exception("conflation block count is inconsistent with its l2-execution proof range")
-        if len(conflation_truncated) == 0:
-            raise Exception("rollup proof cannot include an empty conflation")
-        froms = [sender for block in conflation_truncated for sender in block.froms]
-        if hash_address_list(froms) != proof.public_inputs.tx_froms_hash:
-            raise Exception("l2-execution proof txFromsHash does not match DA block senders")
-
-        canonical_truncated_rlp = rlp_encode_truncated_blocks(conflation_truncated)
-        expected_rlps.append(canonical_truncated_rlp)
-        truncated_blocks.extend(conflation_truncated)
-        parent_hashes.extend(conflation_parent_hashes)
-    end_data_rolling_hash, final_data_tail_discard_bytes = _verify_and_fold_chunks(
+    ]
+    end_data_rolling_hash, final_data_tail_discard_bytes = verify_da_chunks(
         rollup_input.chunks,
-        rollup_input.parent_data_tail_take_bytes,
+        [conflation.payload for conflation in canonical_conflations],
         rollup_input.parent_data_rolling_hash,
+        rollup_input.parent_data_tail_take_bytes,
         rollup_input.boundary_prev_data_rolling_hash,
-        expected_rlps,
     )
+    block_hashes = [h for conflation in canonical_conflations for h in conflation.block_hashes]
+    parent_hashes = [h for conflation in canonical_conflations for h in conflation.parent_hashes]
 
     rollup_start_block_number = int(rollup_input.l2_execution_proofs[0].proof.start_block_number)
     rollup_end_block_number = int(
@@ -536,7 +533,6 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     )
 
     concatenated_filtered_addresses: List[Address] = []
-    truncated_block_hashes = [block.block_hash for block in truncated_blocks]
 
     for verifiable_proof in rollup_input.l2_execution_proofs:
         verify_l2_execution_proof(verifiable_proof.program_vk, verifiable_proof.proof)
@@ -564,9 +560,9 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     last_proof = l2_execution_proofs[-1]
     for proof in l2_execution_proofs:
         boundary_index = int(proof.public_inputs.end_block_number) - rollup_start_block_number
-        if boundary_index < 0 or boundary_index >= len(truncated_block_hashes):
+        if boundary_index < 0 or boundary_index >= len(block_hashes):
             raise Exception("l2-execution proof boundary falls outside the conflation block range")
-        if proof.public_inputs.end_block_hash != truncated_block_hashes[boundary_index]:
+        if proof.public_inputs.end_block_hash != block_hashes[boundary_index]:
             raise Exception("l2-execution proof end block hash does not match conflation data at its boundary")
 
     # Parent-hash continuity across the *entire* block range (§2.2 step 5):
@@ -585,7 +581,7 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
             "blob's first block does not descend from the first l2-execution proof's parentBlockHash"
         )
     for i in range(1, len(parent_hashes)):
-        if parent_hashes[i] != truncated_block_hashes[i - 1]:
+        if parent_hashes[i] != block_hashes[i - 1]:
             raise Exception(
                 f"blob block-hash chain breaks at index {i}: "
                 f"parent_hash != previous block's hash"

@@ -23,13 +23,13 @@ One request/response pair per guest layer (fully-valid fixtures in `testdata/`):
 | Fixture (`testdata/`) | Layer | What it proves |
 |---|---|---|
 | `getZkL2ExecutionProofV1.{request,response}.json` | l2-execution proof (per block range, M ≥ 1 conflated payloads) | EVM state transition for a contiguous range of Engine API `NewPayloadRequest`s; emits the 16-field l2-execution PI tuple. |
-| `getZkRollupProofV1.{request,response}.json` | rollup proof over N ≥ 1 conflations and their touched chunks | Verifies the DA chunks, frames and recursively verified execution proofs, concatenates recursively verified execution PI message lists alongside filtered addresses and stream positions. |
+| `getZkRollupProofV1.{request,response}.json` | rollup proof over N ≥ 1 conflations and their touched chunks | Verifies the DA chunks, segments and recursively verified execution proofs, concatenates recursively verified execution PI message lists alongside filtered addresses and stream positions. |
 | `getZkRollupAggregationProofV1.{request,response}.json` | rollup-aggregation proof + emulation (the final proof, SNARK-wrapped for L1) | Recursively verifies all M rollup proofs, concatenates verified rollup PI message lists and builds 32-leaf message trees over the complete finalization with zero-padding only the last tree, merges FTX filtered-address lists and rebased messaging-block offsets, and performs the STARK→SNARK emulation wrap. |
 
 
 ## Rollup-Proof Generalization: T ≥ 1 chunks in one proof
 
-A single rollup proof can fold `T ≥ 1` mixed blob or calldata chunks. `chunks[]` carries the ordered physical blobs or exact calldata bytes and anchored hashes, `conflations[]` carries the block RLPs, and `l2ExecutionProofs[]` carries the proofs that tile the combined block range, including their ordered PI message lists. The guest unpacks blobs and reads each frame's 4-byte big-endian length from the resulting stream. The public-input tuple covers the entire fold regardless of the number or kinds of chunks touched.
+A single rollup proof can fold `T ≥ 1` mixed blob or calldata chunks. `chunks[]` carries the ordered physical blobs or exact calldata bytes and anchored hashes, `conflations[]` carries the block RLPs, and `l2ExecutionProofs[]` carries the proofs that tile the combined block range, including their ordered PI message lists. The guest unpacks blobs and reads each segment's 4-byte big-endian length from the resulting stream. The public-input tuple covers the entire fold regardless of the number or kinds of chunks touched.
 
 ## Common conventions
 
