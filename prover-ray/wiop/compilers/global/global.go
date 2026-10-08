@@ -10,7 +10,6 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
-	gnarkutils "github.com/consensys/gnark-crypto/utils"
 )
 
 // Compile adds the global-quotient compilation pass to sys. It groups each
@@ -95,10 +94,10 @@ type proverBucket struct {
 	shares   []*wiop.Column // quotient share columns (length = ratio)
 
 	// --- Static-module fields (nil for dynamic modules) ---
-	entries     []proverVanishingEntry // precomputed cancellation cosets
-	smallDomain *fft.Domain            // FFT domain of size n
-	largeDomain *fft.Domain            // FFT domain of size n*ratio
-	annInv      []field.Element        // 1/(g^n · ω_ratio^j − 1) for j = 0..ratio-1
+	entries      []proverVanishingEntry // precomputed cancellation cosets
+	smallDomain  *fft.Domain            // FFT domain of size n
+	cosetDomains []*fft.Domain          // size-n domains shifted to each small coset (see cosetShifts)
+	annInv       []field.Element        // 1/(g^n · ω_ratio^k − 1) for k = 0..ratio-1
 
 	// --- Dynamic-module fields (nil for static modules) ---
 	vanishings []*wiop.Vanishing // raw vanishings for runtime computation
@@ -299,12 +298,10 @@ func buildProverBuckets(rawBuckets []rawBucket, m *wiop.Module) []proverBucket {
 			N := n * ratio
 
 			pb.smallDomain = fft.NewDomain(uint64(n))
-			pb.largeDomain = fft.NewDomain(uint64(N))
+			pb.cosetDomains = newCosetDomains(n, ratio)
 
-			// Precompute annihilator inverses: 1/(g^n · ω_ratio^j − 1) for j=0..ratio-1.
-			annVals := polynomials.EvalXnMinusOneOnCoset(n, N)
-			pb.annInv = make([]field.Element, ratio)
-			field.VecBatchInvBase(pb.annInv, annVals)
+			// Precompute annihilator inverses: 1/(g^n · ω_ratio^k − 1) for k=0..ratio-1.
+			pb.annInv = annihilatorInverses(n, ratio)
 
 			// Precompute cancellation polynomial coset evaluations.
 			pb.entries = make([]proverVanishingEntry, len(bkt.vanishings))
@@ -323,8 +320,8 @@ func buildProverBuckets(rawBuckets []rawBucket, m *wiop.Module) []proverBucket {
 
 // computeCancellationCoset returns the base-field evaluation of the
 // cancellation polynomial C(X) = Π_{k ∈ cancelled} (X − ω_n^{norm(k)}) at
-// all N = n·ratio coset points {g · ω_N^j : j = 0…N-1}. Returns nil when
-// there are no cancelled positions.
+// all N = n·ratio coset points, in the coset-major layout of [cosetShifts].
+// Returns nil when there are no cancelled positions.
 func computeCancellationCoset(cancelled []int, n, N int) []field.Element {
 	if len(cancelled) == 0 {
 		return nil
@@ -342,29 +339,56 @@ func computeCancellationCoset(cancelled []int, n, N int) []field.Element {
 	}
 
 	// Evaluate the product at every coset point. Points are independent, so
-	// each worker starts from its own x = g · ω_N^start and steps by ω_N.
-	omegaN := field.RootOfUnityBy(N)
-	var g field.Element
-	g.SetUint64(field.MultiplicativeGen)
-
+	// each worker starts from its own point and walks the layout.
+	shifts := cosetShifts(n, N/n)
 	cVals := make([]field.Element, N)
 	parallel.Execute(N, func(start, end int) {
-		var x field.Element
-		field.ExpToInt(&x, omegaN, start)
-		x.Mul(&x, &g)
-		for j := start; j < end; j++ {
+		pt := newCosetWalk(shifts, n, start)
+		for t := start; t < end; t++ {
 			var prod field.Element
 			prod.SetOne()
 			for _, root := range roots {
 				var diff field.Element
-				diff.Sub(&x, &root)
+				diff.Sub(&pt.x, &root)
 				prod.Mul(&prod, &diff)
 			}
-			cVals[j] = prod
-			x.Mul(&x, &omegaN)
+			cVals[t] = prod
+			pt.next()
 		}
 	})
 	return cVals
+}
+
+// cosetWalk enumerates the points x_t of the coset-major layout of
+// [cosetShifts] from a given t, one field multiplication per step.
+type cosetWalk struct {
+	shifts []field.Element
+	omega  field.Element // ω_n
+	n      int
+	k, i   int // x = shifts[k]·ω_n^i
+	x      field.Element
+}
+
+func newCosetWalk(shifts []field.Element, n, t int) *cosetWalk {
+	w := &cosetWalk{shifts: shifts, omega: field.RootOfUnityBy(n), n: n, k: t / n, i: t % n}
+	if w.k < len(shifts) {
+		field.ExpToInt(&w.x, w.omega, w.i)
+		w.x.Mul(&w.x, &shifts[w.k])
+	}
+	return w
+}
+
+func (w *cosetWalk) next() {
+	w.i++
+	if w.i < w.n {
+		w.x.Mul(&w.x, &w.omega)
+		return
+	}
+	w.i = 0
+	w.k++
+	if w.k < len(w.shifts) {
+		w.x = w.shifts[w.k]
+	}
 }
 
 // cancellationCosets memoises [computeCancellationCoset] per set of cancelled
@@ -397,17 +421,14 @@ func (c *cancellationCosets) get(cancelled []int) []field.Element {
 //
 //	L_p(X) = ω^p · (X^n − 1) / (n · (X − ω^p))
 //
-// at all N = n·ratio coset points {g · ω_N^j : j = 0…N-1}, where ω =
-// RootOfUnityBy(n), ω_N = RootOfUnityBy(N), g = MultiplicativeGen, and p is
-// `position` normalised into [0, n). This is the polynomial that
-// [wiop.LagrangeSelector] represents (1 at row p, 0 elsewhere on the domain);
-// the same closed form is used pointwise by
-// [wiop.LagrangeSelector.EvaluateOutOfDomain].
+// at all N = n·ratio coset points, in the coset-major layout of
+// [cosetShifts], where ω = RootOfUnityBy(n) and p is `position` normalised
+// into [0, n). This is the polynomial that [wiop.LagrangeSelector] represents
+// (1 at row p, 0 elsewhere on the domain); the same closed form is used
+// pointwise by [wiop.LagrangeSelector.EvaluateOutOfDomain].
 //
-// The coset parametrisation mirrors [computeCancellationCoset] exactly so the
-// result lines up with the FFT-coset evaluations of the witness columns. The
-// denominator never vanishes: a coset point g·ω_N^j is never a pure n-th root
-// of unity, so X − ω^p ≠ 0.
+// The denominator never vanishes: a coset point is never a pure n-th root of
+// unity, so X − ω^p ≠ 0.
 func computeLagrangeSelectorCoset(position, n, N int) []field.Element {
 	// Normalise the anchor into [0, n).
 	p := ((position % n) + n) % n
@@ -423,45 +444,34 @@ func computeLagrangeSelectorCoset(position, n, N int) []field.Element {
 	var numCoef field.Element
 	numCoef.Mul(&omegaP, &nInv)
 
-	omegaN := field.RootOfUnityBy(N)
-	var g field.Element
-	g.SetUint64(field.MultiplicativeGen)
-
-	// x_j^n = (g·ω_N^j)^n = g^n · (ω_N^n)^j cycles with period ratio = N/n,
-	// advanced incrementally to avoid a per-point exponentiation.
-	var gPowN, omegaNPowN field.Element
-	field.ExpToInt(&gPowN, g, n)           // g^n
-	field.ExpToInt(&omegaNPowN, omegaN, n) // ω_N^n
+	// x^n − 1 is constant on each small coset: x^n = s_k^n.
+	shifts := cosetShifts(n, N/n)
+	num := make([]field.Element, len(shifts))
 	var one field.Element
 	one.SetOne()
+	for k := range shifts {
+		field.ExpToInt(&num[k], shifts[k], n)
+		num[k].Sub(&num[k], &one)
+		num[k].Mul(&num[k], &numCoef)
+	}
 
-	// Points are independent, so each worker starts from its own
-	// x = g · ω_N^start and x^n = g^n · (ω_N^n)^start, and inverts its own
-	// chunk of denominators.
+	// Points are independent, so each worker starts from its own point and
+	// inverts its own chunk of denominators.
 	res := make([]field.Element, N)
 	parallel.Execute(N, func(start, end int) {
 		m := end - start
-		denom := make([]field.Element, m) // x_j − ω^p
-		num := make([]field.Element, m)   // x_j^n − 1
-		var x, xPowN field.Element
-		field.ExpToInt(&x, omegaN, start)
-		x.Mul(&x, &g)
-		field.ExpToInt(&xPowN, omegaNPowN, start)
-		xPowN.Mul(&xPowN, &gPowN)
+		denom := make([]field.Element, m) // x_t − ω^p
+		pt := newCosetWalk(shifts, n, start)
 		for t := range m {
-			denom[t].Sub(&x, &omegaP)
-			num[t].Sub(&xPowN, &one)
-			x.Mul(&x, &omegaN)
-			xPowN.Mul(&xPowN, &omegaNPowN)
+			denom[t].Sub(&pt.x, &omegaP)
+			pt.next()
 		}
 
 		invDenom := make([]field.Element, m)
 		field.VecBatchInvBase(invDenom, denom)
 
 		for t := range m {
-			j := start + t
-			res[j].Mul(&numCoef, &num[t])
-			res[j].Mul(&res[j], &invDenom[t])
+			res[start+t].Mul(&num[(start+t)/n], &invDenom[t])
 		}
 	})
 	return res
@@ -541,67 +551,38 @@ func (a *QuotientProverAction) Run(rt *wiop.Runtime) {
 		ratio := bkt.ratio
 		N := n * ratio
 
-		// Get or compute FFT domains and annihilator inverses.
-		var smallDomain, largeDomain *fft.Domain
-		var annInv []field.Element
-
+		// Get or compute FFT domains and annihilator inverses. The large coset
+		// g·H_N is handled as the union of its ratio small cosets s_k·H_n (see
+		// [cosetShifts]): every coset table below is laid out coset-major, point
+		// k·n + i being s_k·ω_n^i.
+		var (
+			smallDomain  *fft.Domain
+			cosetDomains []*fft.Domain
+			annInv       []field.Element
+		)
 		if bkt.smallDomain != nil {
 			// Static module: use precomputed values.
-			smallDomain = bkt.smallDomain
-			largeDomain = bkt.largeDomain
-			annInv = bkt.annInv
+			smallDomain, cosetDomains, annInv = bkt.smallDomain, bkt.cosetDomains, bkt.annInv
 		} else {
 			// Dynamic module: compute at runtime. The domains depend only on
-			// the size, so gnark's process-wide domain cache serves them
-			// across buckets and proofs instead of rebuilding the twiddles.
+			// the size and the shift, so gnark's process-wide domain cache
+			// serves them across buckets and proofs instead of rebuilding the
+			// twiddles.
 			smallDomain = fft.NewDomain(uint64(n), fft.WithCache())
-			largeDomain = fft.NewDomain(uint64(N), fft.WithCache())
-			annVals := polynomials.EvalXnMinusOneOnCoset(n, N)
-			annInv = make([]field.Element, ratio)
-			field.VecBatchInvBase(annInv, annVals)
+			cosetDomains = newCosetDomains(n, ratio)
+			annInv = annihilatorInverses(n, ratio)
 		}
 
-		// --- Evaluate all root columns on the large coset ---
-		// cosetEvals[colID][j] = col evaluated at coset point j (base-field
-		// columns); cosetEvalsExt[colID][j] for extension-field columns.
-		// A column populates exactly one of the two maps; expression
-		// evaluators dispatch on Column.IsExtension.
-		// Columns are independent, so they are re-evaluated by a bounded pool of
-		// workers, each writing its own slot, so no shared map is touched
-		// concurrently. Every result is retained for the accumulation below, so
-		// parallelism does not raise peak memory. This step was dominated by
-		// the serial per-element copy, which is why it scales with columns.
-		//
-		// The FFTs inside each column worker get an equal share of the CPUs,
-		// at least one: with as many columns as CPUs they run serially, so
-		// the column loop does not multiply goroutines by the FFTs' own.
-		cpus := runtime.GOMAXPROCS(0)
-		fftTasks := max(1, cpus/max(1, len(bkt.rootCols)))
-		baseEvals := make([][]field.Element, len(bkt.rootCols))
-		extEvals := make([][]field.Ext, len(bkt.rootCols))
-		parallel.Execute(len(bkt.rootCols), func(start, end int) {
-			for i := start; i < end; i++ {
-				col := bkt.rootCols[i]
-				if col.IsExtension {
-					extEvals[i] = reevalOnLargeCosetExt(rt, col, a.m, n, N, smallDomain, largeDomain, fftTasks)
-				} else {
-					baseEvals[i] = reevalOnLargeCoset(rt, col, a.m, n, N, smallDomain, largeDomain, fftTasks)
-				}
-			}
-		}, cpus)
-		cosetEvals := make(map[wiop.ObjectID][]field.Element, len(bkt.rootCols))
-		cosetEvalsExt := make(map[wiop.ObjectID][]field.Ext, len(bkt.rootCols))
-		for i, col := range bkt.rootCols {
-			if col.IsExtension {
-				cosetEvalsExt[col.Context.ID] = extEvals[i]
-			} else {
-				cosetEvals[col.Context.ID] = baseEvals[i]
-			}
-		}
+		// --- Evaluate all root columns on the cosets ---
+		// cosetEvals[colID] holds a base-field column's evaluations,
+		// cosetEvalsExt[colID] an extension-field column's. A column populates
+		// exactly one of the two maps; expression evaluators dispatch on
+		// Column.IsExtension.
+		cosetEvals, cosetEvalsExt := evalColumnsOnCosets(rt, a.m, bkt.rootCols, smallDomain, cosetDomains)
 
-		// --- Evaluate every distinct Lagrange selector on the large coset ---
+		// --- Evaluate every distinct Lagrange selector on the cosets ---
 		// Selectors are not committed columns, so they are computed analytically
-		// rather than re-FFT'd. selectorCosets[position][j] = L_position(coset_j).
+		// rather than re-FFT'd. selectorCosets[position][t] = L_position(x_t).
 		selectorPositions := make(map[int]struct{})
 		for _, v := range bktVanishings(&bkt) {
 			collectLagrangeSelectorPositions(v.Expression, selectorPositions)
@@ -611,8 +592,8 @@ func (a *QuotientProverAction) Run(rt *wiop.Runtime) {
 			selectorCosets[pos] = computeLagrangeSelectorCoset(pos, n, N)
 		}
 
-		// --- Compute the aggregate extension-field polynomial on the coset ---
-		// aggregate[j] = Σ_i coin^i · P_i(coset_j) · C_i(coset_j)
+		// --- Compute the aggregate extension-field polynomial on the cosets ---
+		// aggregate[t] = Σ_i coin^i · P_i(x_t) · C_i(x_t)
 		//
 		// Reuse scratchAgg if Plan was called; it may contain stale data from
 		// the previous proof run, so clear it before use as an accumulator.
@@ -624,10 +605,9 @@ func (a *QuotientProverAction) Run(rt *wiop.Runtime) {
 		}
 
 		// Bind every vanishing expression once: leaves resolve to their coset
-		// slices and runtime scalars up front, so the per-point evaluation
-		// below involves no map lookups and no runtime access. This is what
-		// makes the parallel workers free of shared-state reads (and of the
-		// runtime mutex).
+		// slices and runtime scalars up front, so the evaluation below involves
+		// no map lookups and no runtime access. This is what makes the parallel
+		// workers free of shared-state reads (and of the runtime mutex).
 		var coinPow field.Ext
 		coinPow.SetOne()
 		var bound []boundEntry
@@ -635,7 +615,7 @@ func (a *QuotientProverAction) Run(rt *wiop.Runtime) {
 			// Static module: use precomputed cancellation cosets.
 			for _, entry := range bkt.entries {
 				bound = append(bound, boundEntry{
-					expr:         bindExpr(rt, entry.v.Expression, cosetEvals, cosetEvalsExt, selectorCosets, ratio, N),
+					expr:         bindExpr(rt, entry.v.Expression, cosetEvals, cosetEvalsExt, selectorCosets, n),
 					cancellation: entry.cancellationCoset,
 					coinPow:      coinPow,
 				})
@@ -648,7 +628,7 @@ func (a *QuotientProverAction) Run(rt *wiop.Runtime) {
 			cosets := newCancellationCosets(n, N)
 			for _, v := range bkt.vanishings {
 				bound = append(bound, boundEntry{
-					expr:         bindExpr(rt, v.Expression, cosetEvals, cosetEvalsExt, selectorCosets, ratio, N),
+					expr:         bindExpr(rt, v.Expression, cosetEvals, cosetEvalsExt, selectorCosets, n),
 					cancellation: cosets.get(v.CancelledPositions),
 					coinPow:      coinPow,
 				})
@@ -656,143 +636,266 @@ func (a *QuotientProverAction) Run(rt *wiop.Runtime) {
 			}
 		}
 
-		// Coset points are independent, so the accumulation is chunked across
-		// CPUs: each worker owns a disjoint aggregate[start:end] range and only
-		// reads the bound entries. Per point, entries accumulate in declaration
-		// order, so the result is identical to a serial evaluation.
-		parallel.Execute(N, func(start, end int) {
-			for i := range bound {
-				bound[i].accumulate(aggregate, start, end)
-			}
-			// --- Divide by annihilator (x^n − 1) at each coset point ---
-			// annihilator at point j is annInv[j % ratio] (already inverted).
-			for j := start; j < end; j++ {
-				aggregate[j].MulByElement(&aggregate[j], &annInv[j%ratio])
-			}
-		})
+		// The bound entries are lowered into one program (shared subexpressions,
+		// folded scalars and linear forms; see [compileQuotientProgram]) that
+		// runs over blocks of coset points in parallel, then divides by the
+		// annihilator (x^n − 1), whose inverse on coset k is annInv[k].
+		compileQuotientProgram(bound, n, ratio).run(aggregate[:N], annInv)
 
-		// --- IFFT on the large coset: coset evals → canonical coefficients ---
-		// FFTInverseExt6 operates directly on the contiguous E6 layout.
-		// In DIF mode it returns coefficients in BIT-REVERSED order across
-		// the full size-N domain.
-		largeDomain.FFTInverseExt6(aggregate[:N], fft.DIF, fft.OnCoset())
-
-		// For ratio == 1 the FFT(DIT) in the loop below consumes bit-reversed
-		// input directly, so we can slice without a prior bit-reverse. For
-		// ratio > 1 the bit-reversal across N interleaves coefficients
-		// across the ratio chunks (for ratio = 2, aggregate[0:n] would hold
-		// the even-indexed coefficients of the size-N polynomial rather
-		// than the contiguous low-degree slice we need to form Q_0). We
-		// bit-reverse to natural order, then bit-reverse each chunk so the
-		// subsequent FFT(DIT) still sees its expected bit-reversed input.
-		// Net effect for ratio > 1: aggregate -> natural, then per-chunk
-		// natural -> bit-reversed -> FFT(DIT) -> natural Lagrange.
-		if ratio > 1 {
-			gnarkutils.BitReverse(aggregate[:N])
-		}
-
-		// --- Split into ratio chunks and FFT each to standard Lagrange form ---
-		for k := range ratio {
-			chunk := make([]field.Ext, n)
-			copy(chunk, aggregate[k*n:(k+1)*n])
-			if ratio > 1 {
-				gnarkutils.BitReverse(chunk)
-			}
-			extFFT(smallDomain, chunk)
-
-			cv := &wiop.ConcreteVector{
-				Plain: field.VecFromExt(chunk),
-			}
-			rt.AssignColumn(bkt.shares[k], cv)
+		// --- Interpolate the quotient into its shares ---
+		for k, share := range cosetsToShares(aggregate[:N], smallDomain, cosetDomains) {
+			rt.AssignColumn(bkt.shares[k], &wiop.ConcreteVector{Plain: field.VecFromExt(share)})
 		}
 	}
 }
 
-// reevalOnLargeCoset evaluates the column col in Lagrange basis on the large
-// coset {g · ω_N^j : j = 0…N-1} using the iFFT → zero-pad → FFT(coset) route.
-func reevalOnLargeCoset(
-	rt *wiop.Runtime,
-	col *wiop.Column,
-	m *wiop.Module,
-	n, N int,
-	smallDomain, largeDomain *fft.Domain,
-	fftTasks int,
-) []field.Element {
-	cv := rt.GetColumnAssignment(col)
+// cosetShifts returns the shifts s_k = g·ω_N^k, k < ratio, of the small cosets
+// s_k·H_n whose union is the large coset g·H_N, N = n·ratio, where g is the
+// multiplicative generator. The quotient handles g·H_N one small coset at a
+// time: a coset table is laid out coset-major, entry t = k·n + i holding the
+// value at x_t = s_k·ω_n^i (the large-coset point of index i·ratio + k).
+//
+// The layout turns every large-coset FFT into ratio independent size-n coset
+// FFTs, so nothing is zero-padded or bit-reversed at size N; a column shift
+// by s rows stays inside each small coset (x_t·ω_n^s); and x_t^n = s_k^n only
+// depends on the coset, so the annihilator is constant per coset.
+func cosetShifts(n, ratio int) []field.Element {
+	var g field.Element
+	g.SetUint64(field.MultiplicativeGen)
+	omegaN := field.RootOfUnityBy(n * ratio)
+	shifts := make([]field.Element, ratio)
+	shifts[0] = g
+	for k := 1; k < ratio; k++ {
+		shifts[k].Mul(&shifts[k-1], &omegaN)
+	}
+	return shifts
+}
 
-	// Build the full n-length standard-domain evaluation.
-	// Use ElementAtN with explicit size to support dynamic modules.
-	vals := make([]field.Element, N) // zero-padded
-	for i := range n {
-		elem := cv.ElementAtN(m.Padding, n, i)
-		if !elem.IsBase() {
+// newCosetDomains returns the size-n FFT domains shifted to each small coset
+// of [cosetShifts].
+func newCosetDomains(n, ratio int) []*fft.Domain {
+	shifts := cosetShifts(n, ratio)
+	domains := make([]*fft.Domain, ratio)
+	for k := range shifts {
+		domains[k] = fft.NewDomain(uint64(n), fft.WithShift(shifts[k]), fft.WithCache())
+	}
+	return domains
+}
+
+// annihilatorInverses returns 1/(x^n − 1) on each small coset of
+// [cosetShifts], where x^n = s_k^n = g^n·ω_ratio^k is constant.
+func annihilatorInverses(n, ratio int) []field.Element {
+	annInv := make([]field.Element, ratio)
+	field.VecBatchInvBase(annInv, polynomials.EvalXnMinusOneOnCoset(n, n*ratio))
+	return annInv
+}
+
+// evalColumnsOnCosets evaluates every column of cols on the small cosets of
+// cosetDomains, in the coset-major layout of [cosetShifts]. A column is
+// interpolated once on H_n, its coefficients being shared by every coset,
+// then evaluated by one size-n coset FFT per coset, written straight into the
+// coset's contiguous slot. Both steps are spread over the CPUs: columns, then
+// (column, coset) pairs, so a bucket with few tall columns keeps every CPU
+// busy; the FFTs share out what is left of the CPUs, at least one each.
+func evalColumnsOnCosets(
+	rt *wiop.Runtime,
+	m *wiop.Module,
+	cols []*wiop.Column,
+	smallDomain *fft.Domain,
+	cosetDomains []*fft.Domain,
+) (map[wiop.ObjectID][]field.Element, map[wiop.ObjectID][]field.Ext) {
+	var (
+		n         = int(smallDomain.Cardinality)
+		ratio     = len(cosetDomains)
+		cpus      = runtime.GOMAXPROCS(0)
+		baseEvals = make([][]field.Element, len(cols))
+		extEvals  = make([][]field.Ext, len(cols))
+	)
+
+	// Interpolation: the coefficients land, bit-reversed, in coset 0's slot.
+	tasks := max(1, cpus/max(1, len(cols)))
+	parallel.ExecuteDynamic(len(cols), func(c int) {
+		col := cols[c]
+		cv := rt.GetColumnAssignment(col)
+		if col.IsExtension {
+			vals := make([]field.Ext, n*ratio)
+			writeColumnExt(cv, m.Padding, vals[:n])
+			smallDomain.FFTInverseExt6(vals[:n], fft.DIF, fft.WithNbTasks(tasks))
+			extEvals[c] = vals
+			return
+		}
+		if !cv.Plain.IsBase() {
 			panic(fmt.Sprintf(
-				"wiop/compilers: global quotient does not support extension-field columns in vanishing expressions; column %q",
+				"wiop/compilers: global quotient does not support extension-field data in base column %q",
 				col.Context.Path(),
 			))
 		}
-		vals[i] = elem.AsBase()
+		vals := make([]field.Element, n*ratio)
+		writeColumnBase(cv, m.Padding, vals[:n])
+		smallDomain.FFTInverse(vals[:n], fft.DIF, fft.WithNbTasks(tasks))
+		baseEvals[c] = vals
+	})
+
+	// Evaluation: coset k > 0 copies the coefficients from coset 0's slot
+	// before coset 0 is evaluated in place, in a second pass. FFT(DIT) takes
+	// the bit-reversed coefficients and returns the natural order.
+	evalOn := func(c, k, tasks int) {
+		if v := extEvals[c]; v != nil {
+			dst := v[k*n : (k+1)*n]
+			if k > 0 {
+				copy(dst, v[:n])
+			}
+			cosetDomains[k].FFTExt6(dst, fft.DIT, fft.OnCoset(), fft.WithNbTasks(tasks))
+			return
+		}
+		v := baseEvals[c]
+		dst := v[k*n : (k+1)*n]
+		if k > 0 {
+			copy(dst, v[:n])
+		}
+		cosetDomains[k].FFT(dst, fft.DIT, fft.OnCoset(), fft.WithNbTasks(tasks))
 	}
-
-	// iFFT on small domain (standard, no coset shift): Lagrange → canonical.
-	// FFTInverse(DIF) leaves the output in bit-reversed-of-n order. When
-	// n == N (ratio == 1) the trailing zero-pad is empty and bit-reversed-of-n
-	// matches bit-reversed-of-N, so FFT(DIT) below consumes the result
-	// directly. For n < N the bit-reversal index space changes between the
-	// two FFTs, so we normalise to natural order in between (BitReverse on
-	// vals[:n] then on vals[:N]) before re-introducing bit-reversal for the
-	// large FFT's DIT input convention.
-	smallDomain.FFTInverse(vals[:n], fft.DIF, fft.WithNbTasks(fftTasks))
-	if N != n {
-		gnarkutils.BitReverse(vals[:n])
-		// vals[n:N] is already zero, so vals[:N] is now natural-order
-		// coefficients of the zero-padded polynomial. Re-bit-reverse to
-		// feed FFT(DIT) which expects bit-reversed input.
-		gnarkutils.BitReverse(vals[:N])
-	}
-	// FFT on large coset: canonical → coset Lagrange.
-	largeDomain.FFT(vals, fft.DIT, fft.OnCoset(), fft.WithNbTasks(fftTasks))
-	return vals
-}
-
-// reevalOnLargeCosetExt is the extension-field counterpart of
-// [reevalOnLargeCoset]. It evaluates an extension-field column on the
-// large coset, using the Ext6 FFT path so the prover can incorporate
-// extension witness columns (e.g. the Z columns produced by the
-// log-derivative compiler) into a quotient bucket.
-//
-// The bit-reversal accounting mirrors the base-field version: the small
-// IFFT(DIF) returns bit-reversed-of-n coefficients in vals[:n] with the
-// trailing zero-pad untouched; if n < N the index space switches between
-// the two FFTs, so we BitReverse twice to normalise the polynomial layout
-// before feeding it to the large FFT(DIT, OnCoset).
-func reevalOnLargeCosetExt(
-	rt *wiop.Runtime,
-	col *wiop.Column,
-	m *wiop.Module,
-	n, N int,
-	smallDomain, largeDomain *fft.Domain,
-	fftTasks int,
-) []field.Ext {
-	cv := rt.GetColumnAssignment(col)
-
-	vals := make([]field.Ext, N) // zero-padded
-	for i := range n {
-		elem := cv.ElementAtN(m.Padding, n, i)
-		if elem.IsBase() {
-			vals[i] = field.Lift(elem.AsBase())
-		} else {
-			vals[i] = elem.AsExt()
+	type item struct{ c, k int }
+	items := make([]item, 0, len(cols)*(ratio-1))
+	for c := range cols {
+		for k := 1; k < ratio; k++ {
+			items = append(items, item{c, k})
 		}
 	}
+	tasks = max(1, cpus/max(1, len(items)))
+	parallel.ExecuteDynamic(len(items), func(i int) { evalOn(items[i].c, items[i].k, tasks) })
+	tasks = max(1, cpus/max(1, len(cols)))
+	parallel.ExecuteDynamic(len(cols), func(c int) { evalOn(c, 0, tasks) })
 
-	smallDomain.FFTInverseExt6(vals[:n], fft.DIF, fft.WithNbTasks(fftTasks))
-	if N != n {
-		gnarkutils.BitReverse(vals[:n])
-		gnarkutils.BitReverse(vals[:N])
+	cosetEvals := make(map[wiop.ObjectID][]field.Element, len(cols))
+	cosetEvalsExt := make(map[wiop.ObjectID][]field.Ext, len(cols))
+	for i, col := range cols {
+		if col.IsExtension {
+			cosetEvalsExt[col.Context.ID] = extEvals[i]
+		} else {
+			cosetEvals[col.Context.ID] = baseEvals[i]
+		}
 	}
-	largeDomain.FFTExt6(vals, fft.DIT, fft.OnCoset(), fft.WithNbTasks(fftTasks))
-	return vals
+	return cosetEvals, cosetEvalsExt
+}
+
+// writeColumnBase writes cv down as its len(out) rows on H_n, padded as the
+// module pads (see [wiop.ConcreteVector.ElementAtN]). The data must be
+// base-field.
+func writeColumnBase(cv *wiop.ConcreteVector, padding wiop.PaddingDirection, out []field.Element) {
+	plain := cv.Plain.AsBase()
+	switch padding {
+	case wiop.PaddingDirectionLeft:
+		gap := len(out) - len(plain)
+		if gap < 0 {
+			copy(out, plain[-gap:])
+			return
+		}
+		field.VecFillBase(out[:gap], cv.Padding)
+		copy(out[gap:], plain)
+	case wiop.PaddingDirectionRight:
+		k := copy(out, plain)
+		field.VecFillBase(out[k:], cv.Padding)
+	default:
+		copy(out, plain[:len(out)])
+	}
+}
+
+// writeColumnExt is [writeColumnBase] into the extension field, lifting
+// base-field data and padding.
+func writeColumnExt(cv *wiop.ConcreteVector, padding wiop.PaddingDirection, out []field.Ext) {
+	n := len(out)
+	start, plainLen := 0, cv.Plain.Len() // rows [start, start+plainLen) hold data
+	switch padding {
+	case wiop.PaddingDirectionLeft:
+		start = n - plainLen
+		field.VecFillExt(out[:max(start, 0)], field.Lift(cv.Padding))
+	case wiop.PaddingDirectionRight:
+		field.VecFillExt(out[min(plainLen, n):], field.Lift(cv.Padding))
+	default:
+		plainLen = n
+	}
+	skip := max(-start, 0) // a Left plain longer than n keeps its last n rows
+	data := out[max(start, 0):min(start+plainLen, n)]
+	if cv.Plain.IsBase() {
+		for i, v := range cv.Plain.AsBase()[skip : skip+len(data)] {
+			data[i] = field.Lift(v)
+		}
+		return
+	}
+	copy(data, cv.Plain.AsExt()[skip:skip+len(data)])
+}
+
+// cosetsToShares interpolates the quotient Q, given by its evaluations on the
+// small cosets in the coset-major layout of [cosetShifts], into its ratio
+// shares in Lagrange form on H_n, Q = Σ_m X^{mn}·Q_m (share m holds the
+// coefficients α_{mn..mn+n-1} of Q).
+//
+// With s_k^n = g^n·ω_ratio^k, the size-n interpolation on coset k yields
+// β_k[r] = Σ_m α_{mn+r}·(g^n·ω_ratio^k)^m, so α_{mn+r} = g^{-nm}·(1/ratio)·
+// Σ_k ω_ratio^{-km}·β_k[r] is a size-ratio inverse DFT across the cosets. The
+// interpolations leave r bit-reversed, which is the order each share's final
+// FFT(DIT) expects. agg is overwritten.
+func cosetsToShares(agg []field.Ext, smallDomain *fft.Domain, cosetDomains []*fft.Domain) [][]field.Ext {
+	var (
+		n     = int(smallDomain.Cardinality)
+		ratio = len(cosetDomains)
+		tasks = max(1, runtime.GOMAXPROCS(0)/ratio)
+	)
+	parallel.Execute(ratio, func(start, end int) {
+		for k := start; k < end; k++ {
+			cosetDomains[k].FFTInverseExt6(agg[k*n:(k+1)*n], fft.DIF, fft.OnCoset(), fft.WithNbTasks(tasks))
+		}
+	}, ratio)
+
+	// coefs[m][k] = g^{-nm}·ω_ratio^{-km}/ratio, with ω_ratio = ω_N^n.
+	var g, gInvN, omegaInv, ratioInv field.Element
+	g.SetUint64(field.MultiplicativeGen)
+	field.ExpToInt(&gInvN, g, n)
+	gInvN.Inverse(&gInvN)
+	field.ExpToInt(&omegaInv, field.RootOfUnityBy(n*ratio), n)
+	omegaInv.Inverse(&omegaInv)
+	ratioInv.SetUint64(uint64(ratio))
+	ratioInv.Inverse(&ratioInv)
+	coefs := make([][]field.Element, ratio)
+	var rowScale field.Element // g^{-nm}/ratio
+	rowScale.Set(&ratioInv)
+	for m := range coefs {
+		coefs[m] = make([]field.Element, ratio)
+		var step field.Element // ω_ratio^{-m}
+		field.ExpToInt(&step, omegaInv, m)
+		coefs[m][0] = rowScale
+		for k := 1; k < ratio; k++ {
+			coefs[m][k].Mul(&coefs[m][k-1], &step)
+		}
+		rowScale.Mul(&rowScale, &gInvN)
+	}
+
+	shares := make([][]field.Ext, ratio)
+	parallel.Execute(ratio, func(start, end int) {
+		for m := start; m < end; m++ {
+			shares[m] = make([]field.Ext, n)
+		}
+	}, ratio)
+	parallel.Execute(n, func(start, end int) {
+		for m, share := range shares {
+			for p := start; p < end; p++ {
+				var acc, term field.Ext
+				for k := range ratio {
+					term.MulByElement(&agg[k*n+p], &coefs[m][k])
+					acc.Add(&acc, &term)
+				}
+				share[p] = acc
+			}
+		}
+	})
+
+	parallel.Execute(ratio, func(start, end int) {
+		for m := start; m < end; m++ {
+			smallDomain.FFTExt6(shares[m], fft.DIT, fft.WithNbTasks(tasks))
+		}
+	}, ratio)
+	return shares
 }
 
 // EvalProverAction self-assigns all LagrangeEval queries for a module.
@@ -1006,17 +1109,14 @@ const (
 )
 
 // boundExpr is a Vanishing expression specialised against one bucket's coset
-// tables: every leaf holds a direct slice or a resolved scalar, so evaluating
-// the expression at a coset point involves no map lookups and no runtime
-// access. Binding happens once per (bucket, expression); evaluation runs N
-// times, from parallel workers.
+// tables: every leaf holds a direct slice or a resolved scalar, so the
+// [quotientProgram] lowered from it involves no map lookups and no runtime
+// access. Binding happens once per (bucket, expression).
 //
-// isBase reports whether the subtree evaluates in the base field. It is the
-// bottom-up equivalent of the structural classification previously done per
-// expression: extension cells, extension column views, and coins make a
-// subtree extension. Mixed nodes evaluate their base operands in base-field
-// arithmetic and lift (or fold via MulByElement) at the boundary, so base
-// sub-expressions never pay extension-field arithmetic.
+// isBase reports whether the subtree evaluates in the base field: extension
+// cells, extension column views, and coins make a subtree extension. Base
+// subtrees are evaluated in base-field arithmetic and only meet the extension
+// field at their boundary.
 type boundExpr struct {
 	kind       boundKind
 	isBase     bool
@@ -1024,26 +1124,26 @@ type boundExpr struct {
 	operands   []boundExpr
 	vecBase    []field.Element // boundVecBase: length-N coset evaluations
 	vecExt     []field.Ext     // boundVecExt: length-N coset evaluations
-	offset     int             // boundVec*: column shift, normalised into [0, N)
+	offset     int             // boundVec*: column shift within a small coset, in [0, n)
 	scalarBase field.Element   // boundScalarBase
 	scalarExt  field.Ext       // boundScalarExt
 }
 
 // bindExpr resolves every leaf of expr against the runtime and the bucket's
-// coset tables. For a ColumnView with shift k, the coset index of point j is
-// (j + k·ratio) mod N; the constant part is folded into offset so evaluation
-// only needs one conditional wrap-around.
+// coset tables. A ColumnView with shift s reads the point x_t·ω_n^s, which is
+// in the same small coset as x_t (see [cosetShifts]): offset is s mod n, the
+// shift within a coset of n points.
 func bindExpr(
 	rt *wiop.Runtime,
 	expr wiop.Expression,
 	cosetEvals map[wiop.ObjectID][]field.Element,
 	cosetEvalsExt map[wiop.ObjectID][]field.Ext,
 	selectorCosets map[int][]field.Element,
-	ratio, N int,
+	n int,
 ) boundExpr {
 	switch e := expr.(type) {
 	case *wiop.ColumnView:
-		offset := ((e.ShiftingOffset*ratio)%N + N) % N
+		offset := ((e.ShiftingOffset % n) + n) % n
 		if e.Column.IsExtension {
 			return boundExpr{kind: boundVecExt, vecExt: cosetEvalsExt[e.Column.Context.ID], offset: offset}
 		}
@@ -1071,7 +1171,7 @@ func bindExpr(
 		operands := make([]boundExpr, len(e.Operands))
 		isBase := true
 		for i, op := range e.Operands {
-			operands[i] = bindExpr(rt, op, cosetEvals, cosetEvalsExt, selectorCosets, ratio, N)
+			operands[i] = bindExpr(rt, op, cosetEvals, cosetEvalsExt, selectorCosets, n)
 			isBase = isBase && operands[i].isBase
 		}
 		return boundExpr{kind: boundOp, isBase: isBase, operator: e.Operator, operands: operands}
@@ -1080,155 +1180,12 @@ func bindExpr(
 	}
 }
 
-// evalBase evaluates a base-field bound expression at coset point j. The
-// caller must guarantee isBase; extension leaves cannot appear below a base
-// node by construction.
-func (e *boundExpr) evalBase(j int) field.Element {
-	switch e.kind {
-	case boundVecBase:
-		idx := j + e.offset
-		if idx >= len(e.vecBase) {
-			idx -= len(e.vecBase)
-		}
-		return e.vecBase[idx]
-	case boundScalarBase:
-		return e.scalarBase
-	}
-	a0 := e.operands[0].evalBase(j)
-	var res field.Element
-	switch e.operator {
-	case wiop.ArithmeticOperatorAdd:
-		a1 := e.operands[1].evalBase(j)
-		res.Add(&a0, &a1)
-	case wiop.ArithmeticOperatorSub:
-		a1 := e.operands[1].evalBase(j)
-		res.Sub(&a0, &a1)
-	case wiop.ArithmeticOperatorMul:
-		a1 := e.operands[1].evalBase(j)
-		res.Mul(&a0, &a1)
-	case wiop.ArithmeticOperatorDiv:
-		a1 := e.operands[1].evalBase(j)
-		var invA1 field.Element
-		invA1.Inverse(&a1)
-		res.Mul(&a0, &invA1)
-	case wiop.ArithmeticOperatorDouble:
-		res.Add(&a0, &a0)
-	case wiop.ArithmeticOperatorSquare:
-		res.Square(&a0)
-	case wiop.ArithmeticOperatorNegate:
-		res.Neg(&a0)
-	case wiop.ArithmeticOperatorInverse:
-		res.Inverse(&a0)
-	default:
-		panic(fmt.Sprintf("wiop/compilers: unknown ArithmeticOperator %v", e.operator))
-	}
-	return res
-}
-
-// evalExt evaluates a bound expression at coset point j in the extension
-// field. Base subtrees are evaluated by [boundExpr.evalBase] and lifted at
-// the boundary; a Mul with one base operand folds it in via MulByElement
-// instead of paying a full extension-field multiplication.
-func (e *boundExpr) evalExt(j int) field.Ext {
-	if e.isBase {
-		return field.Lift(e.evalBase(j))
-	}
-	switch e.kind {
-	case boundVecExt:
-		idx := j + e.offset
-		if idx >= len(e.vecExt) {
-			idx -= len(e.vecExt)
-		}
-		return e.vecExt[idx]
-	case boundScalarExt:
-		return e.scalarExt
-	}
-	var res field.Ext
-	switch e.operator {
-	case wiop.ArithmeticOperatorAdd:
-		a0 := e.operands[0].evalExt(j)
-		a1 := e.operands[1].evalExt(j)
-		res.Add(&a0, &a1)
-	case wiop.ArithmeticOperatorSub:
-		a0 := e.operands[0].evalExt(j)
-		a1 := e.operands[1].evalExt(j)
-		res.Sub(&a0, &a1)
-	case wiop.ArithmeticOperatorMul:
-		if e.operands[0].isBase {
-			b := e.operands[0].evalBase(j)
-			a1 := e.operands[1].evalExt(j)
-			res.MulByElement(&a1, &b)
-		} else if e.operands[1].isBase {
-			b := e.operands[1].evalBase(j)
-			a0 := e.operands[0].evalExt(j)
-			res.MulByElement(&a0, &b)
-		} else {
-			a0 := e.operands[0].evalExt(j)
-			a1 := e.operands[1].evalExt(j)
-			res.Mul(&a0, &a1)
-		}
-	case wiop.ArithmeticOperatorDiv:
-		a0 := e.operands[0].evalExt(j)
-		a1 := e.operands[1].evalExt(j)
-		var inv field.Ext
-		inv.Inverse(&a1)
-		res.Mul(&a0, &inv)
-	case wiop.ArithmeticOperatorDouble:
-		a0 := e.operands[0].evalExt(j)
-		res.Double(&a0)
-	case wiop.ArithmeticOperatorSquare:
-		a0 := e.operands[0].evalExt(j)
-		res.Square(&a0)
-	case wiop.ArithmeticOperatorNegate:
-		a0 := e.operands[0].evalExt(j)
-		res.Neg(&a0)
-	case wiop.ArithmeticOperatorInverse:
-		a0 := e.operands[0].evalExt(j)
-		res.Inverse(&a0)
-	default:
-		panic(fmt.Sprintf("wiop/compilers: unknown ArithmeticOperator %v", e.operator))
-	}
-	return res
-}
-
 // boundEntry pairs one bound Vanishing expression with its cancellation coset
-// and its merging-coin power, ready for per-point accumulation.
+// and its merging-coin power, ready for accumulation.
 type boundEntry struct {
 	expr         boundExpr
 	cancellation []field.Element // nil when the constraint has no cancelled positions
 	coinPow      field.Ext       // coin^i for the i-th constraint of the bucket
-}
-
-// accumulate adds coinPow · P(coset_j) · C(coset_j) into aggregate[j] for
-// every j in [start, end). It dispatches once on the expression's field so
-// the inner loop stays entirely in base or extension arithmetic:
-//
-//   - base expression: pVal·cancellation multiplies in base, then promotes
-//     once into Ext via [field.Ext.MulByElement];
-//   - extension expression: the cancellation is base, so MulByElement folds
-//     it in, then [field.Ext.Mul] applies the coin power.
-func (be *boundEntry) accumulate(aggregate []field.Ext, start, end int) {
-	if be.expr.isBase {
-		for j := start; j < end; j++ {
-			pVal := be.expr.evalBase(j)
-			if be.cancellation != nil {
-				pVal.Mul(&pVal, &be.cancellation[j])
-			}
-			var term field.Ext
-			term.MulByElement(&be.coinPow, &pVal)
-			aggregate[j].Add(&aggregate[j], &term)
-		}
-		return
-	}
-	for j := start; j < end; j++ {
-		pVal := be.expr.evalExt(j)
-		if be.cancellation != nil {
-			pVal.MulByElement(&pVal, &be.cancellation[j])
-		}
-		var term field.Ext
-		term.Mul(&be.coinPow, &pVal)
-		aggregate[j].Add(&aggregate[j], &term)
-	}
 }
 
 // ---------------------------------------------------------------------------
@@ -1299,15 +1256,4 @@ func computeRatio(v *wiop.Vanishing) int {
 		return utils.NextPowerOfTwo(max(1, factor))
 	}
 	return utils.NextPowerOfTwo(max(1, factor-1))
-}
-
-// ---------------------------------------------------------------------------
-// Extension-field FFT helpers
-// ---------------------------------------------------------------------------
-
-// extFFT applies the forward standard-domain FFT to the extension-field slice
-// v. The gnark-crypto FFTExt6 implementation handles the six E6 coordinates
-// directly on the contiguous layout.
-func extFFT(d *fft.Domain, v []field.Ext) {
-	d.FFTExt6(v, fft.DIT)
 }
