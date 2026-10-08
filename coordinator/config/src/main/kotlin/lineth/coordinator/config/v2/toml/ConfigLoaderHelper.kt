@@ -68,7 +68,6 @@ inline fun <reified T : Any> parseConfig(
     .loadConfigOrThrow<T>()
 }
 
-@OptIn(ExperimentalHoplite::class)
 @PublishedApi
 internal fun buildConfigLoader(
   configFiles: List<Path>,
