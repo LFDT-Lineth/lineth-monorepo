@@ -11,7 +11,6 @@
     "startBlockNumber",
     "publicInputs",
     "l2L1Messages",
-    "txFroms",
     "filteredAddresses",
     "programVk"
   ],
@@ -38,7 +37,9 @@
         "endFtxRollingHash",
         "endProcessedFtxNumber",
         "filteredAddressesHash",
-        "txFromsHash"
+        "txFromsHash",
+        "blockCount",
+        "l2MessagingBlocksOffsets"
       ],
       "properties": {
         "parentBlockHash": { "$ref": "#/$defs/hash32" },
@@ -56,16 +57,14 @@
         "endFtxRollingHash": { "$ref": "#/$defs/hash32" },
         "endProcessedFtxNumber": { "$ref": "#/$defs/uint" },
         "filteredAddressesHash": { "$ref": "#/$defs/hash32" },
-        "txFromsHash": { "$ref": "#/$defs/hash32" }
+        "txFromsHash": { "$ref": "#/$defs/hash32" },
+        "blockCount": { "$ref": "#/$defs/uint" },
+        "l2MessagingBlocksOffsets": { "type": "array", "items": { "type": "integer", "minimum": 1, "maximum": 65535 } }
       }
     },
     "l2L1Messages": {
       "type": "array",
       "items": { "$ref": "#/$defs/hash32" }
-    },
-    "txFroms": {
-      "type": "array",
-      "items": { "$ref": "#/$defs/address" }
     },
     "filteredAddresses": {
       "type": "array",

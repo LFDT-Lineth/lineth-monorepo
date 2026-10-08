@@ -10,7 +10,9 @@ data class ProversConfig(
   val switchBlockNumberInclusive: ULong?,
   val switchBlockTimestamp: Instant?,
   val enableRequestFilesCleanup: Boolean = false,
-)
+) {
+  val hasRiscvProverConfig: Boolean = (currentProver.riscvConfig ?: nextProver?.riscvConfig) != null
+}
 
 data class ProverConfig(
   val preRiscvConfig: PreRiscvProverConfig? = null,

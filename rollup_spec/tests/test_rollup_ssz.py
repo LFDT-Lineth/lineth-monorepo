@@ -2,9 +2,8 @@
 Tests for the rollup SSZ wire format (`rollup_ssz.py`).
 
 These cover the two properties this codec is responsible for:
-  - round-trip fidelity: the SSZ codec preserves every field of the logical
-    request/output dataclasses, and (for outputs) the JSON the coordinator
-    would see back out;
+  - round-trip fidelity: the input codec preserves the logical request; the
+    output codec carries public inputs and their hash;
   - strict decoding: a wrong schema id, truncated bytes, or trailing bytes are
     all rejected rather than silently accepted or truncated.
 
@@ -22,15 +21,11 @@ from pathlib import Path
 import pytest
 
 import rollup_spec
-from ethereum.crypto.hash import Hash32
+from ethereum.crypto.hash import Hash32, keccak256
 from ethereum_types.numeric import U64
 
 from rollup_spec.rollup import ChunkWitness, RollupProof
-from rollup_spec.proof_io_v1 import (
-    _decode_rollup_public_input,
-    decode_rollup_request,
-    encode_rollup_response,
-)
+from rollup_spec.proof_io_v1 import _decode_rollup_public_input, decode_rollup_request
 from rollup_spec.rollup_ssz import (
     decode_rollup_input_ssz,
     decode_rollup_output_ssz,
@@ -40,7 +35,6 @@ from rollup_spec.rollup_ssz import (
 from rollup_spec.stateless_input import InvalidSsz
 
 _TESTDATA_DIR = Path(rollup_spec.__file__).resolve().parent / "prover_io" / "testdata"
-_PROVER_VERSION = "4.0.0-riscv"
 
 
 def _fixture(name: str) -> Path:
@@ -70,7 +64,7 @@ def _rollup_output_from_response(resp: dict) -> RollupProof:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Round-trip: JSON fixture -> dataclass -> SSZ -> dataclass (-> JSON)
+# Round-trip: JSON fixture -> dataclass -> SSZ -> public inputs
 # ══════════════════════════════════════════════════════════════════════════════
 
 
@@ -89,22 +83,29 @@ def test_rollup_input_round_trips_through_ssz() -> None:
     assert recovered == original
 
 
-def test_rollup_output_round_trips_through_ssz_and_back_to_json() -> None:
+def test_rollup_output_frames_public_inputs_and_hash() -> None:
     response = _load_json("getZkRollupProofV1.response.json")
     original_output = _rollup_output_from_response(response)
 
-    recovered_output = decode_rollup_output_ssz(encode_rollup_output(original_output))
-    assert recovered_output == original_output
+    encoded = encode_rollup_output(original_output)
+    pi_bytes = encoded[2:-32]
+    assert encoded[:2] == (0x1801).to_bytes(2, "big")
+    assert pi_bytes[:8] == int(original_output.public_inputs.end_block_number).to_bytes(8, "little")
+    assert encoded[-32:] == keccak256(pi_bytes)
+    assert decode_rollup_output_ssz(encoded) == original_output.public_inputs
 
-    # The guest never emits `proof`/`programVk` (both host-attached metadata); round-tripping
-    # through the JSON encoder reproduces the original response with `proof` reset to the
-    # placeholder and the fixture's own `programVk` passed back in.
-    rebuilt_response = encode_rollup_response(
-        recovered_output,
-        prover_version=_PROVER_VERSION,
-        program_vk=_hexbytes(response["programVk"]),
-    )
-    assert rebuilt_response == {**response, "proof": "0x"}
+
+def test_rollup_output_rejects_wrong_hash() -> None:
+    encoded = bytearray(_rollup_output_bytes())
+    encoded[-1] ^= 1
+    with pytest.raises(InvalidSsz, match="hash mismatch"):
+        decode_rollup_output_ssz(bytes(encoded))
+
+
+def test_rollup_output_preserves_variable_length_public_inputs() -> None:
+    proof = _rollup_output_from_response(_load_json("getZkRollupProofV1.response.json"))
+    proof.public_inputs.l2_messaging_blocks_offsets = [3, 8]
+    assert decode_rollup_output_ssz(encode_rollup_output(proof)) == proof.public_inputs
 
 
 # ══════════════════════════════════════════════════════════════════════════════

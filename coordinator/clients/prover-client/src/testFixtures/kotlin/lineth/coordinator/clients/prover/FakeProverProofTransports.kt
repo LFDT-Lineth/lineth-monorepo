@@ -6,7 +6,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 /**
  * Fake [L2ExecutionProofTransport] that always reports the request as submitted and returns a fixed
- * [L2ExecutionProofResponseDto]. Used to drive `FileBasedRollupProverClient`'s request mapper without a real
+ * [L2ExecutionProofResponseDto]. Used to drive `RollupProverClient`'s request mapper without a real
  * l2-execution proof transport.
  */
 class FakeL2ExecutionProofTransport(
@@ -14,7 +14,6 @@ class FakeL2ExecutionProofTransport(
 ) : L2ExecutionProofTransport {
   private val l2ExecutionProofResponseDto = L2ExecutionProofResponseDto(
     startBlockNumber = 1L,
-    proverVersion = RiscvProverClientTestFixtures.PROVER_VERSION,
     proof = byteArrayOf(0x02).encodeHex(),
     publicInputs = RiscvProverClientTestFixtures.l2ExecutionProofPublicInputsDto(2L),
     l2L1Messages = listOf(ByteArray(32) { 0x4a }.encodeHex()),
@@ -57,16 +56,15 @@ class FakeL2ExecutionProofTransport(
 }
 
 /**
- * Fake [FileBasedRollupProofTransport] that always reports the request as submitted and returns a fixed
- * [RollupProofResponseDto]. Used to drive `FileBasedRollupAggregationProverClient`'s request mapper without a real
+ * Fake [RollupProofTransport] that always reports the request as submitted and returns a fixed
+ * [RollupProofResponseDto]. Used to drive `RollupAggregationProverClient`'s request mapper without a real
  * rollup proof transport.
  */
 class FakeRollupProofTransport(
   private val responseProvider: ((BlockIntervalProofIndex) -> RollupProofResponseDto?)? = null,
-) : FileBasedRollupProofTransport {
+) : RollupProofTransport {
   private val rollupProofResponseDto = RollupProofResponseDto(
     startBlockNumber = 1L,
-    proverVersion = RiscvProverClientTestFixtures.PROVER_VERSION,
     proof = byteArrayOf(0x4a).encodeHex(),
     publicInputs = RiscvProverClientTestFixtures.rollupProofPublicInputsDto(2L),
     l2L1Roots = listOf(ByteArray(32) { 0x5a }.encodeHex()),

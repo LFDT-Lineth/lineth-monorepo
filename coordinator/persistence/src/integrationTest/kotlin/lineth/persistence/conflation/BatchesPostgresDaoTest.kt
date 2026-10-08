@@ -19,15 +19,19 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.jupiter.params.ParameterizedClass
+import org.junit.jupiter.params.provider.ValueSource
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.ExecutionException
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 @ExtendWith(VertxExtension::class)
-class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {
+@ParameterizedClass(name = "schemaVersion={0}")
+@ValueSource(ints = [4, 5])
+class BatchesPostgresDaoTest(private val schemaVersion: Int) : CleanDbTestSuiteParallel() {
   init {
-    target = "5"
+    target = schemaVersion.toString()
   }
 
   override val databaseName = DbHelper.generateUniqueDbName("coordinator-tests-batches")
@@ -42,8 +46,9 @@ class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {
   fun beforeEach() {
     batchesDao =
       BatchesPostgresDao(
-        sqlClient,
-        fakeClock,
+        connection = sqlClient,
+        schemaVersion = schemaVersion,
+        clock = fakeClock,
       )
   }
 
@@ -91,8 +96,12 @@ class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {
     assertThat(newlyInsertedRow.getLong("end_block_number")).isEqualTo(batch.endBlockNumber.toLong())
     assertThat(newlyInsertedRow.getInteger("status"))
       .isEqualTo(BatchesPostgresDao.batchStatusToDbValue(Batch.Status.Proven))
-    assertThat(newlyInsertedRow.getString("proof_index_hash"))
-      .isEqualTo(batch.proofIndexHash?.encodeHex())
+    if (schemaVersion >= 5) {
+      assertThat(newlyInsertedRow.getString("proof_index_hash"))
+        .isEqualTo(batch.proofIndexHash?.encodeHex())
+    } else {
+      assertThat(newlyInsertedRow.getColumnIndex("proof_index_hash")).isEqualTo(-1)
+    }
     return dbContent
   }
 

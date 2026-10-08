@@ -126,6 +126,7 @@ class CoordinatorApp(
         delegate =
         BatchesPostgresDao(
           connection = sqlClient,
+          schemaVersion = configs.database.schemaVersion,
         ),
         persistenceRetryer = persistenceRetryer,
       ),

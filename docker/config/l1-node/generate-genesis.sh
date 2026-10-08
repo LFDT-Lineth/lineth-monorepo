@@ -1,4 +1,4 @@
-# Script to modify config files to enable Prague/Electra to run for the local stack
+# Script to modify config files to enable Amsterdam/Gloas (Glamsterdam) to run for the local stack
 # Runs on the 'l1-node-genesis-generator' Docker image entrypoint
 
 original_el_genesis_json_path="/config/genesis.json"
@@ -13,7 +13,7 @@ cp $original_cl_network_config_path $modified_cl_network_config_path
 
 # Although this adds 0s, it is here for flexibility in the event of extension and syntax issues.
 OS=$(uname);
-osaka_time=$(    
+amsterdam_time=$(
     if [ $OS = "Linux" ]; then
         date -d "+0 seconds" +%s;
     elif [ $OS = "Darwin" ]; then
@@ -21,5 +21,5 @@ osaka_time=$(
     fi
 )
 
-sed -i -E 's/"timestamp": "[0-9]+"/"timestamp": "'"$osaka_time"'"/' $modified_el_genesis_json_path
-sed -i 's/\$GENESIS_TIME/'"$osaka_time"'/g' $modified_cl_network_config_path
+sed -i -E 's/"timestamp": "[0-9]+"/"timestamp": "'"$amsterdam_time"'"/' $modified_el_genesis_json_path
+sed -i 's/\$GENESIS_TIME/'"$amsterdam_time"'/g' $modified_cl_network_config_path

@@ -5,7 +5,7 @@ import linea.domain.BlockInterval
 import linea.domain.BlockIntervalProofIndex
 import linea.domain.StartBlockTimestampProvider
 
-internal class BlockIntervalProofIndexProvider<Request>(
+class BlockIntervalProofIndexProvider<Request>(
   private val hashFunction: HashFunction,
 ) : (Request) -> BlockIntervalProofIndex
   where Request : BlockInterval, Request : StartBlockTimestampProvider {

@@ -5,6 +5,7 @@ from dataclasses import replace
 import pytest
 import zstandard as zstd
 from ethereum.crypto.hash import Hash32, keccak256
+from ethereum.state import Address
 from ethereum_types.numeric import U64
 
 from rollup_spec import rollup
@@ -57,7 +58,7 @@ def _input(monkeypatch, chunks, count=1, start_offset=0):
         end_l1_l2_bridge_rolling_hash=ZERO, end_l1_l2_bridge_rolling_hash_message_number=U64(0),
         dynamic_chain_config_hash=ZERO, parent_ftx_rolling_hash=ZERO, parent_ftx_number=U64(0),
         end_ftx_rolling_hash=ZERO, end_processed_ftx_number=U64(0),
-        filtered_addresses_hash=empty_addresses, tx_froms_hash=empty_addresses,
+        filtered_addresses_hash=empty_addresses, tx_froms_hash=empty_addresses, block_count=1,
     )
     proofs = [VerifiableL2ExecutionProof(
         L2ExecutionProof(replace(pi, end_block_number=U64(i)), U64(i)), ZERO,
@@ -103,6 +104,34 @@ def test_calldata_mixed_with_blob_parses_complete_segments(monkeypatch):
     second = _blob(monkeypatch, segment)
     proof = run_rollup_guest(_input(monkeypatch, [first, second], count=2))
     assert proof.public_inputs.end_offset == 0
+
+
+def test_rollup_binds_sender_hash_to_each_conflation(monkeypatch):
+    sender = Address(bytes([0x23]) * 20)
+    rollup_input = _input(monkeypatch, [_calldata(_segment()), _calldata(_segment())], count=2)
+    calls = iter([0, 1])
+
+    def truncated(blocks, chain_id):
+        froms = [sender] if next(calls) == 1 else []
+        return [type("Block", (), {"block_hash": ZERO, "froms": froms})()], [ZERO]
+
+    monkeypatch.setattr(rollup, "_truncate_conflation", truncated)
+    rollup_input.l2_execution_proofs[1].proof.public_inputs.tx_froms_hash = hash_address_list([sender])
+    run_rollup_guest(rollup_input)
+
+
+def test_rollup_rejects_sender_hash_mismatch_for_conflation(monkeypatch):
+    sender = Address(bytes([0x23]) * 20)
+    rollup_input = _input(monkeypatch, [_calldata(_segment()), _calldata(_segment())], count=2)
+    calls = iter([0, 1])
+
+    def truncated(blocks, chain_id):
+        froms = [sender] if next(calls) == 1 else []
+        return [type("Block", (), {"block_hash": ZERO, "froms": froms})()], [ZERO]
+
+    monkeypatch.setattr(rollup, "_truncate_conflation", truncated)
+    with pytest.raises(Exception, match="txFromsHash does not match DA block senders"):
+        run_rollup_guest(rollup_input)
 
 
 def test_calldata_requires_frame_alignment_and_no_trailing_bytes(monkeypatch):

@@ -25,7 +25,7 @@ import java.nio.file.Path
 import kotlin.time.Instant
 
 /**
- * Exercises [FileBasedRollupProverClient] end-to-end over the [FileBasedProverProofTransport]:
+ * Exercises [RollupProverClient] end-to-end over the [FileBasedProverProofTransport]:
  *  - writing a domain request: request -> request DTO -> JSON file;
  *  - reading a response: JSON file -> response DTO -> domain response.
  */
@@ -33,7 +33,7 @@ import kotlin.time.Instant
 class FileBasedRollupProverClientTest {
   private lateinit var config: FileBasedProverConfig
   private lateinit var l2ExecutionProofTransport: L2ExecutionProofTransport
-  private lateinit var client: FileBasedRollupProverClient
+  private lateinit var client: RollupProverClient
 
   @BeforeEach
   fun beforeEach(vertx: Vertx, @TempDir tempDir: Path) {
@@ -51,9 +51,9 @@ class FileBasedRollupProverClientTest {
       responseFileNameProvider = RollupProofFileNameProvider,
     )
     l2ExecutionProofTransport = FakeL2ExecutionProofTransport()
-    client = FileBasedRollupProverClient(
+    client = RollupProverClient(
       transport = transport,
-      l2ExecutionProofTransport = l2ExecutionProofTransport,
+      l2ExecutionProofProvider = l2ExecutionProofTransport::findResponse,
       programId = ROLLUP_PROGRAM_ID,
       provingSystemVersion = PROVING_SYSTEM_VERSION,
       chainId = CHAIN_ID,
@@ -73,11 +73,11 @@ class FileBasedRollupProverClientTest {
     assertThat(requestFile).exists()
 
     val writtenDto = jsonMapper.readValue(requestFile.toFile(), FileBasedRollupProofRequestDto::class.java)
-    val expectedDto = FileBasedRollupProofRequestDtoMapper(
+    val expectedDto = RollupProofRequestDtoMapper(
       ROLLUP_PROGRAM_ID,
       PROVING_SYSTEM_VERSION,
       CHAIN_ID,
-      l2ExecutionProofTransport,
+      l2ExecutionProofTransport::findResponse,
     ).invoke(request).get()
     assertThat(writtenDto).isEqualTo(expectedDto)
   }

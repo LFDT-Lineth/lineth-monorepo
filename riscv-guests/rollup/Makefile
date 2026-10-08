@@ -26,7 +26,7 @@ ZIG_FETCH_FLAGS ?=
 NAME := rollup_guest
 BIN  := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 
-include $(MAKEFILE_DIR)../release/Makefile
+include $(MAKEFILE_DIR)../build_common/release.mk
 
 # Sample fixture input used by exec/debug. The default is generated fresh by `require-input` via
 # `zig build gen-fixture` (this package's own encodeInput over its own test sample) — never checked
