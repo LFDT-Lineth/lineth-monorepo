@@ -60,3 +60,44 @@ func TestCommitIgnoresStalePooledBuffers(t *testing.T) {
 	pooled.Release()
 	require.Nil(t, pooled.Tree)
 }
+
+// Trees large enough to be hashed subtree by subtree must equal a node-by-node
+// reference, with auxiliary leaves on some levels.
+func TestBuildLevelsMatchesNodeByNode(t *testing.T) {
+	for _, logN := range []int{10, 13, 16} {
+		n := 1 << logN
+		leaves := make([][]field.Octuplet, logN+1)
+		random := func(k int) []field.Octuplet {
+			v := make([]field.Octuplet, k)
+			for i := range v {
+				for j := range v[i] {
+					v[i][j].SetUint64(uint64(i*8+j+k) * 0x9e3779b9)
+				}
+			}
+			return v
+		}
+		leaves[logN] = random(n)
+		for _, l := range []int{logN - 1, logN - 4, 3, 0} {
+			leaves[l] = random(1 << l)
+		}
+		tree := NewTree(leaves)
+
+		nodes := make([]field.Octuplet, 2*n-1)
+		copy(nodes[n-1:], leaves[logN])
+		for levelSize := n / 2; levelSize > 0; levelSize /= 2 {
+			l := 0
+			for 1<<l < levelSize {
+				l++
+			}
+			for j := range levelSize {
+				k := levelSize - 1 + j
+				var aux *field.Octuplet
+				if len(leaves[l]) != 0 {
+					aux = &leaves[l][j]
+				}
+				nodes[k] = hashNode(nodes[2*k+1], nodes[2*k+2], aux)
+			}
+		}
+		require.Equal(t, nodes, tree.Nodes, "n=2^%d", logN)
+	}
+}

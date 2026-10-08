@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math/bits"
+	"runtime"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -149,12 +150,41 @@ func allocTree(numLeaves int) *Tree {
 // len(upperLeaves[i]) is 2^i or 0.
 func (t *Tree) buildLevels(upperLeaves [][]field.Octuplet) {
 	n := t.NumLeaves()
-	for levelSize := n / 2; levelSize > 0; levelSize /= 2 {
-		var auxLeaves []field.Octuplet
-		if upperLeaves != nil {
-			auxLeaves = upperLeaves[utils.Log2Ceil(levelSize)]
+	auxLeavesOf := func(levelSize int) []field.Octuplet {
+		if upperLeaves == nil {
+			return nil
 		}
-		hashTreeLevel(t.Nodes, t.Aux, auxLeaves, levelSize)
+		return upperLeaves[utils.Log2Ceil(levelSize)]
+	}
+
+	// The deep levels are hashed subtree by subtree, in one parallel pass:
+	// the nodes of subtree s at a level are the s-th of numSubtrees equal
+	// slices of it, whose children are the s-th slice of the level below, so
+	// each subtree only depends on itself. A worker then hashes whole
+	// subtrees with their nodes in cache, instead of every level waiting for
+	// the previous one to finish over all the CPUs. A level joins the pass
+	// when each subtree holds at least one group of batchLanes nodes of it.
+	numSubtrees := 1
+	for numSubtrees < 4*runtime.GOMAXPROCS(0) && 2*numSubtrees*batchLanes <= n/2 {
+		numSubtrees *= 2
+	}
+	top := n / 2 // the largest level left to the per-level loop below
+	if numSubtrees > 1 && n/2 >= minParallelTreeLevel {
+		floor := numSubtrees * batchLanes
+		parallel.Execute(numSubtrees, func(sStart, sEnd int) {
+			sc := newGroupScratch()
+			for s := sStart; s < sEnd; s++ {
+				for levelSize := n / 2; levelSize >= floor; levelSize /= 2 {
+					groups := levelSize / batchLanes / numSubtrees
+					hashLevelGroups(t.Nodes, t.Aux, auxLeavesOf(levelSize), levelSize, s*groups, (s+1)*groups, sc)
+				}
+			}
+		})
+		top = floor / 2
+	}
+
+	for levelSize := top; levelSize > 0; levelSize /= 2 {
+		hashTreeLevel(t.Nodes, t.Aux, auxLeavesOf(levelSize), levelSize)
 	}
 
 	// as the tree cannot be empty (as per our sanity-checks), the root cannot
@@ -193,59 +223,80 @@ func hashTreeLevel(
 	}
 
 	// Levels are powers of two, so levelSize is a multiple of batchLanes.
-	// Each group of 16 sibling pairs is staged column-major and hashed by one
-	// batched Poseidon2 compression, writing the 16 parents directly into
-	// nodes[k0:k0+16]. Bit-identical to the scalar hashNode loop; with aux
-	// leaves, C(C(left,right),aux) is the same chain with one more block.
+	nbGroups := levelSize / batchLanes
+	if levelSize < minParallelTreeLevel {
+		hashLevelGroups(nodes, aux, leaves, levelSize, 0, nbGroups, newGroupScratch())
+		return
+	}
+	parallel.Execute(nbGroups, func(gStart, gEnd int) {
+		hashLevelGroups(nodes, aux, leaves, levelSize, gStart, gEnd, newGroupScratch())
+	})
+}
+
+// groupScratch stages the 16 sibling pairs (and aux leaves) of one group.
+type groupScratch struct {
+	state, matrix []field.Element
+}
+
+func newGroupScratch() groupScratch {
+	return groupScratch{
+		state:  make([]field.Element, 8*batchLanes),
+		matrix: make([]field.Element, 2*8*batchLanes),
+	}
+}
+
+// hashLevelGroups hashes groups [gStart, gEnd) of batchLanes nodes of the
+// level of levelSize ≥ batchLanes internal nodes. Each group of 16 sibling
+// pairs is staged column-major and hashed by one batched Poseidon2
+// compression, writing the 16 parents directly into nodes[k0:k0+16].
+// Bit-identical to the scalar hashNode loop; with aux leaves,
+// C(C(left,right),aux) is the same chain with one more block.
+func hashLevelGroups(
+	nodes []field.Octuplet,
+	aux []*field.Octuplet,
+	leaves []field.Octuplet,
+	levelSize, gStart, gEnd int,
+	sc groupScratch,
+) {
 	var (
-		nbGroups = levelSize / batchLanes
-		hasAux   = len(leaves) != 0
-		nbSteps  = 1
+		levelStart = levelSize - 1
+		hasAux     = len(leaves) != 0
+		nbSteps    = 1
 	)
 	if hasAux {
 		nbSteps = 2
 	}
-
-	hashGroups := func(gStart, gEnd int) {
-		state := make([]field.Element, 8*batchLanes)
-		matrix := make([]field.Element, nbSteps*8*batchLanes)
-		for g := gStart; g < gEnd; g++ {
-			var (
-				j        = g * batchLanes
-				k0       = levelStart + j
-				children = nodes[2*k0+1 : 2*k0+1+2*batchLanes]
-			)
-			// Stage both buffers in one pass per lane.
-			for lane := range batchLanes {
-				left, right := &children[2*lane], &children[2*lane+1]
-				for pos := range 8 {
-					state[pos*batchLanes+lane] = left[pos]
-					matrix[pos*batchLanes+lane] = right[pos]
-				}
+	state, matrix := sc.state, sc.matrix[:nbSteps*8*batchLanes]
+	for g := gStart; g < gEnd; g++ {
+		var (
+			j        = g * batchLanes
+			k0       = levelStart + j
+			children = nodes[2*k0+1 : 2*k0+1+2*batchLanes]
+		)
+		// Stage both buffers in one pass per lane.
+		for lane := range batchLanes {
+			left, right := &children[2*lane], &children[2*lane+1]
+			for pos := range 8 {
+				state[pos*batchLanes+lane] = left[pos]
+				matrix[pos*batchLanes+lane] = right[pos]
 			}
-			if hasAux {
-				for lane := range batchLanes {
-					auxLeaf := &leaves[j+lane]
-					aux[k0+lane] = auxLeaf
-					for pos := range 8 {
-						matrix[(8+pos)*batchLanes+lane] = auxLeaf[pos]
-					}
-				}
-			}
-			batchPoseidon2.Compressx16ColumnsWithState(
-				state,
-				matrix,
-				nbSteps*8,
-				nodes[k0:k0+batchLanes],
-			)
 		}
+		if hasAux {
+			for lane := range batchLanes {
+				auxLeaf := &leaves[j+lane]
+				aux[k0+lane] = auxLeaf
+				for pos := range 8 {
+					matrix[(8+pos)*batchLanes+lane] = auxLeaf[pos]
+				}
+			}
+		}
+		batchPoseidon2.Compressx16ColumnsWithState(
+			state,
+			matrix,
+			nbSteps*8,
+			nodes[k0:k0+batchLanes],
+		)
 	}
-
-	if levelSize < minParallelTreeLevel {
-		hashGroups(0, nbGroups)
-		return
-	}
-	parallel.Execute(nbGroups, hashGroups)
 }
 
 // Root returns the Merkle root digest. Build must be called first.

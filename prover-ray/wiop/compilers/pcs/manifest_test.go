@@ -277,3 +277,42 @@ func TestColumnElisionShrinksTopSize(t *testing.T) {
 	})
 	require.NoError(t, sys.Verify(proof, pub))
 }
+
+// scanColumns scans columns in chunks: a column is zero only if every chunk
+// is, and equal columns get equal fingerprints, across chunk boundaries and
+// for base and extension columns alike.
+func TestScanColumnsAcrossChunks(t *testing.T) {
+	n := 3*scanChunkSize + 5
+	base := func(f func(i int) uint64) paddedColumn {
+		v := make([]field.Element, n)
+		for i := range v {
+			v[i].SetUint64(f(i))
+		}
+		return paddedColumn{base: v}
+	}
+	lastOnly := func(i int) uint64 {
+		if i == n-1 {
+			return 1
+		}
+		return 0
+	}
+	ramp := func(i int) uint64 { return uint64(i) }
+	ext := make([]field.Ext, n)
+	for i := range ext {
+		ext[i].B2.A1.SetUint64(uint64(i))
+	}
+	vectors := []paddedColumn{
+		base(func(int) uint64 { return 0 }),
+		base(lastOnly),
+		base(ramp),
+		base(ramp),
+		{isExt: true, ext: ext},
+		{isExt: true, ext: append([]field.Ext(nil), ext...)},
+		{isExt: true, ext: make([]field.Ext, n)},
+	}
+	zero, hashes := scanColumns(vectors)
+	require.Equal(t, []bool{true, false, false, false, false, false, true}, zero)
+	require.Equal(t, hashes[2], hashes[3])
+	require.Equal(t, hashes[4], hashes[5])
+	require.NotEqual(t, hashes[1], hashes[2])
+}

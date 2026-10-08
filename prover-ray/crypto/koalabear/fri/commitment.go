@@ -179,19 +179,23 @@ func (table MultiSizeTable) Merkleize() *Tree {
 	// Every table but the bottom is digested as conjugate pairs, one tree
 	// depth shallower than its own size: a table of encoded height s yields
 	// s/2 auxiliary leaves attached at the level holding s/2 nodes.
+	// The tables of the other sizes are independent: they are digested
+	// concurrently, largest first, each over the CPUs as well, so that the
+	// many small ones do not each wait for a parallel pass of their own.
 	upperLeaves := make([][]field.Octuplet, utils.Log2Ceil(size))
-	for i := range bottom {
-		if table[i].NumRows() == 0 {
-			continue
+	var sizes []int
+	for i := bottom - 1; i >= 0; i-- {
+		if table[i].NumRows() != 0 && table[i].Size() > 1 {
+			sizes = append(sizes, i)
 		}
+	}
+	parallel.ExecuteDynamic(len(sizes), func(k int) {
+		i := sizes[k]
 		s := table[i].Size()
-		if s == 1 {
-			continue
-		}
 		digests := make([]field.Octuplet, s/2)
 		hashSizedLeaves(table[i], true, digests)
 		upperLeaves[utils.Log2Ceil(s/2)] = digests
-	}
+	})
 
 	tree.buildLevels(upperLeaves)
 	return tree
