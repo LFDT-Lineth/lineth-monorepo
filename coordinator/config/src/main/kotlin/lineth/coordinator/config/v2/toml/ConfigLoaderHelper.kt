@@ -116,14 +116,14 @@ fun loadSmartContractErrors(
     return Ok(SmartContractErrorCodesConfigFileToml(bundled))
   }
   return loadConfigsAndLogErrors<SmartContractErrorCodesConfigFileToml>(listOf(overrideFile), logger, strict)
-    .map { override ->
+    .map { configOverrides ->
       logger.debug(
         "Smart contract errors: {} entries from bundled mapping, {} entries from override file {}",
         bundled.size,
-        override.smartContractErrors.size,
+        configOverrides.smartContractErrors.size,
         overrideFile,
       )
-      SmartContractErrorCodesConfigFileToml(bundled + override.smartContractErrors)
+      SmartContractErrorCodesConfigFileToml(bundled + configOverrides.smartContractErrors)
     }
 }
 
