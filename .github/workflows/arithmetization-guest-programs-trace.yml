@@ -40,7 +40,7 @@ permissions:
 jobs:
   binary-run-and-zkc-check:
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -82,8 +82,9 @@ jobs:
       #     ZKC_TRACE_FLAGS: "--stats -vv --sharding interpreter:500000"
 
       - name: Trace l2-execution guest program with Amsterdam block 175k sharding 500000, no pb
-        # 175k references the amount of gas used in the block
-        run: make -C riscv-guests/l2-execution trace
+        # 175k references the amount of gas used in the block.
+        # taskset fixes NumCPU() at 8, which is the shard worker-pool size.
+        run: taskset -c 0-7 make -C riscv-guests/l2-execution trace
         timeout-minutes: 45
         env:
           ZKC_REF: "1183cd10e59fe08d4cb5d4184c30bcf041f4512e"
