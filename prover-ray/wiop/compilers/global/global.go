@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"runtime"
 	"sort"
+	"sync"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
@@ -584,11 +585,11 @@ func (q *moduleQuotient) run(rt *wiop.Runtime) {
 	R := q.maxRatio
 
 	// The domains depend only on the size and the shift, so for a dynamic
-	// module gnark's process-wide domain cache serves them across buckets and
-	// proofs instead of rebuilding the twiddles.
+	// module they are served by [cachedDomain] across buckets and proofs
+	// instead of rebuilding the twiddles.
 	smallDomain, cosetDomains := q.smallDomain, q.cosetDomains
 	if smallDomain == nil {
-		smallDomain = fft.NewDomain(uint64(n), fft.WithCache())
+		smallDomain = cachedDomain(n, nil)
 		cosetDomains = newCosetDomains(n, R)
 	}
 
@@ -714,9 +715,38 @@ func newCosetDomains(n, ratio int) []*fft.Domain {
 	shifts := cosetShifts(n, ratio)
 	domains := make([]*fft.Domain, ratio)
 	for k := range shifts {
-		domains[k] = fft.NewDomain(uint64(n), fft.WithShift(shifts[k]), fft.WithCache())
+		domains[k] = cachedDomain(n, &shifts[k])
 	}
 	return domains
+}
+
+// domainKey identifies an FFT domain by its size and shift.
+type domainKey struct {
+	n     int
+	shift field.Element
+}
+
+// domainCache holds every FFT domain the quotient has built. gnark's own
+// domain cache only keeps weak references, so a garbage collection between
+// two proofs made every dynamic module rebuild its twiddles and coset tables,
+// serially, before its columns could be re-evaluated. The domains only depend
+// on (size, shift), of which a system has a handful per module size.
+var domainCache sync.Map // domainKey -> *fft.Domain
+
+// cachedDomain returns the size-n domain with the given shift (the default
+// multiplicative generator when nil), building it once per process.
+func cachedDomain(n int, shift *field.Element) *fft.Domain {
+	key := domainKey{n: n}
+	opts := []fft.DomainOption{}
+	if shift != nil {
+		key.shift = *shift
+		opts = append(opts, fft.WithShift(*shift))
+	}
+	if d, ok := domainCache.Load(key); ok {
+		return d.(*fft.Domain)
+	}
+	d, _ := domainCache.LoadOrStore(key, fft.NewDomain(uint64(n), opts...))
+	return d.(*fft.Domain)
 }
 
 // annihilatorInverses returns 1/(x^n − 1) on each small coset of
