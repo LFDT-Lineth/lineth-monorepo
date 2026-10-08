@@ -22,9 +22,6 @@ const (
 	// publicOutputsAnnotationKey is an annotation holding the arithmetization's
 	// [PublicOutput].
 	publicOutputsAnnotationKey = "corset-public-outputs"
-	// traceRoundActionAnnotationKey is an annotation holding the
-	// [assignTraceRoundAction] registered on [Settings.TraceRound], if any.
-	traceRoundActionAnnotationKey = "zkcdriver-trace-round-action"
 	// guestOutputHashModule is the one public output the prover binds: the memory
 	// holding the keccak digest of the guest program's output.
 	guestOutputHashModule = "guest_output_hash"
@@ -121,9 +118,7 @@ func Define(sys *wiop.System, schema *air.Schema[koalabear.Element], traceRound 
 		}
 
 		// Registered before any compiler pass, so that it runs first in the round.
-		action := &assignTraceRoundAction{Round: traceRound}
-		sys.Rounds[traceRound].RegisterAction(action)
-		sys.Annotations[traceRoundActionAnnotationKey] = action
+		sys.Rounds[traceRound].RegisterAction(&assignTraceRoundAction{Schema: *schema, Round: traceRound})
 	}
 
 	sys.Annotations[corsetColumnMapAnnotationKey] = scanner.ColumnIDs

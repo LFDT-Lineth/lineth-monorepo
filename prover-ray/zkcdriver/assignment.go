@@ -20,9 +20,9 @@ var _ [1]uint32 = koalabear.Element{}
 var _ [1]uint32 = field.Element{}
 
 // AssignFromTraceShard assigns the [ProgramRound] columns of the trace to the
-// given runtime, and hands the shard to the [assignTraceRoundAction] so that
-// the columns of [Settings.TraceRound] are assigned when the runtime reaches
-// that round.
+// given runtime, and stores the shard in the runtime so that the
+// [assignTraceRoundAction] assigns the columns of [Settings.TraceRound] when
+// the runtime reaches that round.
 func AssignFromTraceShard(
 	run *wiop.Runtime,
 	shard trace.Shard[koalabear.Element],
@@ -41,26 +41,31 @@ func AssignFromTraceShard(
 	assignShardRound(run, shard, schema, run.System.Rounds[ProgramRound])
 
 	// The rest of the trace, if any, is assigned by [assignTraceRoundAction]
-	// once the runtime reaches [Settings.TraceRound].
-	if a, ok := run.System.Annotations[traceRoundActionAnnotationKey].(*assignTraceRoundAction); ok {
-		a.Shard = shard
-		a.Schema = schema
-	}
+	// once the runtime reaches [Settings.TraceRound]. The shard is kept in the
+	// runtime, which is proper to each proof, and not in the action, which is
+	// shared by all the proofs over the system.
+	run.SetState(traceShardStateKey, shard)
 }
 
+// traceShardStateKey is the [wiop.Runtime] state key under which
+// [AssignFromTraceShard] stores the shard for [assignTraceRoundAction].
+const traceShardStateKey = "zkcdriver-trace-shard"
+
 // assignTraceRoundAction assigns the columns of [Settings.TraceRound] from the
-// shard set by [AssignFromTraceShard]. It is registered once by [Define] and
-// holds the shard of the proof being run, so proofs over the same system must
-// not run concurrently.
+// shard stored in the runtime by [AssignFromTraceShard]. It is registered once
+// by [Define] and only holds what is fixed for the system.
 type assignTraceRoundAction struct {
-	Shard  trace.Shard[koalabear.Element]
 	Schema air.Schema[koalabear.Element]
 	Round  int
 }
 
 // Run implements [wiop.ProverAction].
 func (a *assignTraceRoundAction) Run(run *wiop.Runtime) {
-	assignShardRound(run, a.Shard, a.Schema, run.System.Rounds[a.Round])
+	shard, ok := run.GetState(traceShardStateKey)
+	if !ok {
+		logrus.Panicf("zkcdriver: assignTraceRoundAction: no trace shard in the runtime, AssignFromTraceShard was not called")
+	}
+	assignShardRound(run, shard.(trace.Shard[koalabear.Element]), a.Schema, run.System.Rounds[a.Round])
 }
 
 // assignShardRound assigns the columns of the shard that belong to the given
