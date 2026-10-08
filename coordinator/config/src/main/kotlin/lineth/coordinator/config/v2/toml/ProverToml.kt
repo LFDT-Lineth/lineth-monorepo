@@ -90,30 +90,62 @@ data class ProverToml(
 
   data class FileBasedProverConfigToml(
     @param:ConfigDoc(
-      description = "Directory the coordinator writes prover request files to.",
+      description = "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. " +
+        "Only `file` is supported for pre_riscv provers.",
+      default = "file",
+    )
+    val transport: String = FileBasedRiscvProverConfig.FILE_TRANSPORT,
+    @param:ConfigDoc(
+      description = "Directory the coordinator writes prover request files to. Required when transport is `file`.",
       example = "/data/prover/v3/execution/requests",
     )
-    val fsRequestsDirectory: String,
+    val fsRequestsDirectory: String? = null,
     @param:ConfigDoc(
-      description = "Directory the coordinator reads prover response files from.",
+      description = "Directory the coordinator reads prover response files from. Required when transport is `file`.",
       example = "/data/prover/v3/execution/responses",
     )
-    val fsResponsesDirectory: String,
+    val fsResponsesDirectory: String? = null,
     @param:ConfigDoc(
       description = "Guest program identifier for the RISC-V prover.",
       example = "0xabcdef1234567890",
     )
     val programId: String? = null,
-  )
+  ) {
+    val isFileTransport: Boolean get() = transport.equals(FileBasedRiscvProverConfig.FILE_TRANSPORT, ignoreCase = true)
+
+    init {
+      require(transport.isNotBlank()) { "transport must not be blank" }
+      if (isFileTransport) {
+        require(fsRequestsDirectory != null && fsResponsesDirectory != null) {
+          "fs-requests-directory and fs-responses-directory are required for transport=" +
+            FileBasedRiscvProverConfig.FILE_TRANSPORT
+        }
+      }
+    }
+  }
 
   private fun toFileBasedProverConfig(proverConfigToml: FileBasedProverConfigToml): FileBasedProverConfig =
     FileBasedProverConfig(
-      requestsDirectory = Path.of(proverConfigToml.fsRequestsDirectory),
-      responsesDirectory = Path.of(proverConfigToml.fsResponsesDirectory),
+      requestsDirectory = Path.of(proverConfigToml.fsRequestsDirectory!!),
+      responsesDirectory = Path.of(proverConfigToml.fsResponsesDirectory!!),
       inprogressProvingSuffixPattern = fsInprogressProvingSuffixPattern,
       inprogressRequestWritingSuffix = fsInprogressRequestWritingSuffix,
       pollingInterval = fsPollingInterval,
       pollingTimeout = fsPollingTimeout,
+    )
+
+  private fun toRiscvProverConfig(
+    blockToml: FileBasedProverConfigToml,
+    programId: String,
+    forkName: String,
+  ): FileBasedRiscvProverConfig =
+    FileBasedRiscvProverConfig(
+      fileBased = if (blockToml.isFileTransport) toFileBasedProverConfig(blockToml) else null,
+      programId = programId,
+      provingSystemVersion = provingSystemVersion!!,
+      forkName = forkName,
+      transport = blockToml.transport,
+      pollingInterval = fsPollingInterval,
     )
 
   private fun toPreRiscvProverConfig(t: ProverToml): PreRiscvProverConfig =
@@ -125,24 +157,10 @@ data class ProverToml(
 
   private fun toProverConfig(t: ProverToml): RiscvProverConfig =
     RiscvProverConfig(
-      l2Execution = FileBasedRiscvProverConfig(
-        fileBased = t.toFileBasedProverConfig(t.l2Execution!!),
-        programId = t.l2Execution.programId!!,
-        provingSystemVersion = t.provingSystemVersion!!,
-        forkName = t.forkName!!,
-      ),
-      rollup = FileBasedRiscvProverConfig(
-        fileBased = t.toFileBasedProverConfig(t.rollup!!),
-        programId = t.rollup.programId!!,
-        provingSystemVersion = t.provingSystemVersion,
-        forkName = t.forkName,
-      ),
-      rollupAggregation = FileBasedRiscvProverConfig(
-        fileBased = t.toFileBasedProverConfig(t.rollupAggregation!!),
-        programId = t.rollupAggregation.programId!!,
-        provingSystemVersion = t.provingSystemVersion,
-        forkName = t.forkName,
-      ),
+      l2Execution = t.toRiscvProverConfig(t.l2Execution!!, t.l2Execution.programId!!, t.forkName!!),
+      rollup = t.toRiscvProverConfig(t.rollup!!, t.rollup.programId!!, t.forkName),
+      rollupAggregation =
+      t.toRiscvProverConfig(t.rollupAggregation!!, t.rollupAggregation.programId!!, t.forkName),
     )
 
   fun validateProverToml(proverToml: ProverToml) {
@@ -153,6 +171,12 @@ data class ProverToml(
             proverToml.blobCompression != null && proverToml.proofAggregation != null,
         ) {
           "Prover type of PRE-RISCV must configure execution, blobCompression, and proofAggregation"
+        }
+        require(
+          listOf(proverToml.execution, proverToml.blobCompression, proverToml.proofAggregation)
+            .all { it.isFileTransport },
+        ) {
+          "Prover type of PRE-RISCV only supports transport=${FileBasedRiscvProverConfig.FILE_TRANSPORT}"
         }
       }
       ProverType.RISCV -> {

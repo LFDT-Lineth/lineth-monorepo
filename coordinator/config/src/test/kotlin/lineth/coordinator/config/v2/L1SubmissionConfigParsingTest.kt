@@ -174,7 +174,7 @@ class L1SubmissionConfigParsingTest {
           ),
           signer =
           SignerConfigToml(
-            type = SignerConfigToml.SignerType.WEB3SIGNER,
+            type = SignerConfig.SignerType.WEB3SIGNER,
             web3j =
             SignerConfigToml.Web3jConfig(
               privateKey = Masked("0x0000000000000000000000000000000000000000000000000000000000000001"),
@@ -219,7 +219,7 @@ class L1SubmissionConfigParsingTest {
           ),
           signer =
           SignerConfigToml(
-            type = SignerConfigToml.SignerType.WEB3SIGNER,
+            type = SignerConfig.SignerType.WEB3SIGNER,
             web3j =
             SignerConfigToml.Web3jConfig(
               privateKey = Masked("0x0000000000000000000000000000000000000000000000000000000000000002"),
@@ -355,7 +355,7 @@ class L1SubmissionConfigParsingTest {
           ),
           signer =
           SignerConfigToml(
-            type = SignerConfigToml.SignerType.WEB3J,
+            type = SignerConfig.SignerType.WEB3J,
             web3j =
             SignerConfigToml.Web3jConfig(
               privateKey = Masked("0x0000000000000000000000000000000000000000000000000000000000000001"),
@@ -383,7 +383,7 @@ class L1SubmissionConfigParsingTest {
           ),
           signer =
           SignerConfigToml(
-            type = SignerConfigToml.SignerType.WEB3SIGNER,
+            type = SignerConfig.SignerType.WEB3SIGNER,
             web3j = null,
             web3signer =
             SignerConfigToml.Web3SignerConfig(
