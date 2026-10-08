@@ -20,23 +20,4 @@ memory registers[u48](id:Register) -> (value:DoubleWord)
 
 // guest program output
 pub output guest_output(address:OutputAddress) -> (byte:u8)
-memory guest_output_tmp[u16](address:OutputAddress) -> (byte:u8)
-pub output guest_output_hash(address:u3) -> (word:u32)
 
-// keccak related memory: all keccak working vectors live in ONE memory,
-// in 8-aligned regions (5 slots used per region): state rows, pi buffer
-// rows, theta's C and D, and the 17-lane padded input block at PIB.
-memory keccak_state[u32](address:u7) -> (state:lane)
-const ROW0:u7 = 0
-const ROW1:u7 = 8
-const ROW2:u7 = 16
-const ROW3:u7 = 24
-const ROW4:u7 = 32
-const B0:u7 = 40
-const B1:u7 = 48
-const B2:u7 = 56
-const B3:u7 = 64
-const B4:u7 = 72
-const C:u7 = 80
-const D:u7 = 88
-const PIB:u7 = 96
