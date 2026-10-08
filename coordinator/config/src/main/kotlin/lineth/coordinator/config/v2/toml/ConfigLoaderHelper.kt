@@ -30,15 +30,18 @@ import java.nio.file.Path
 fun configLoaderBuilder(
   strict: Boolean,
   addDefaultPreprocessors: Boolean,
+  addDefaultPropertySources: Boolean,
 ): ConfigLoaderBuilder {
   return ConfigLoaderBuilder
     .empty()
     .addDefaultDecoders()
     .addDefaultNodeTransformers()
     .addDefaultParamMappers()
-    .addDefaultPropertySources()
     .addDefaultParsers()
-    .apply { if (addDefaultPreprocessors) addDefaultPreprocessors() }
+    .apply { if (addDefaultPropertySources) addDefaultPropertySources() }
+    .apply {
+      if (addDefaultPreprocessors) addDefaultPreprocessors()
+    }
     .withExplicitSealedTypes()
     .addDecoder(BlockParameterTagDecoder())
     .addDecoder(BlockParameterNumberDecoder())
@@ -55,8 +58,9 @@ inline fun <reified T : Any> parseConfig(
   toml: String,
   strict: Boolean = true,
   addDefaultPreprocessors: Boolean = false,
+  addDefaultPropertySources: Boolean = false,
 ): T {
-  return configLoaderBuilder(strict, addDefaultPreprocessors)
+  return configLoaderBuilder(strict, addDefaultPreprocessors, addDefaultPropertySources)
     .addSource(TomlPropertySource(toml))
     .build()
     .loadConfigOrThrow<T>()
@@ -66,8 +70,9 @@ inline fun <reified T : Any> loadConfigsOrError(
   configFiles: List<Path>,
   strict: Boolean,
   addDefaultPreprocessors: Boolean,
+  addDefaultPropertySources: Boolean,
 ): Result<T, String> {
-  val confLoader = configLoaderBuilder(strict, addDefaultPreprocessors)
+  val confLoader = configLoaderBuilder(strict, addDefaultPreprocessors, addDefaultPropertySources)
     .build()
 
   return confLoader
@@ -91,8 +96,14 @@ inline fun <reified T : Any> loadConfigsAndLogErrors(
   logger: Logger = LogManager.getLogger("lineth.coordinator.config"),
   strict: Boolean,
   addDefaultPreprocessors: Boolean,
+  addDefaultPropertySources: Boolean,
 ): Result<T, String> {
-  return loadConfigsOrError<T>(configFiles, strict = strict, addDefaultPreprocessors = addDefaultPreprocessors)
+  return loadConfigsOrError<T>(
+    configFiles,
+    strict = strict,
+    addDefaultPreprocessors = addDefaultPreprocessors,
+    addDefaultPropertySources = addDefaultPropertySources,
+  )
     .also {
       val logLevel = if (strict) Level.WARN else Level.ERROR
       logErrorIfPresent(it, logger, logLevel)
@@ -131,6 +142,7 @@ fun loadSmartContractErrors(
     logger,
     strict,
     addDefaultPreprocessors = false,
+    addDefaultPropertySources = false,
   )
     .map { configOverrides ->
       logger.debug(
@@ -151,17 +163,34 @@ fun loadConfigsOrError(
   smartContractErrorsFile: Path? = null,
   logger: Logger = LogManager.getLogger("lineth.coordinator.config"),
   strict: Boolean = false,
-  addDefaultPreprocessors: Boolean = false,
 ): Result<CoordinatorConfigToml, String> {
   val coordinatorBaseConfigs =
-    loadConfigsAndLogErrors<CoordinatorConfigFilesToml>(coordinatorConfigFiles, logger, strict, addDefaultPreprocessors)
+    loadConfigsAndLogErrors<CoordinatorConfigFilesToml>(
+      coordinatorConfigFiles,
+      logger,
+      strict,
+      addDefaultPreprocessors = true,
+      addDefaultPropertySources = true,
+    )
   val tracesLimitsV4Configs =
     tracesLimitsFileV4?.let {
-      loadConfigsAndLogErrors<TracesLimitsConfigFileV4Toml>(listOf(it), logger, strict, addDefaultPreprocessors = false)
+      loadConfigsAndLogErrors<TracesLimitsConfigFileV4Toml>(
+        listOf(it),
+        logger,
+        strict,
+        addDefaultPreprocessors = false,
+        addDefaultPropertySources = false,
+      )
     }
   val tracesLimitsV5Configs =
     tracesLimitsFileV5?.let {
-      loadConfigsAndLogErrors<TracesLimitsConfigFileV5Toml>(listOf(it), logger, strict, addDefaultPreprocessors = false)
+      loadConfigsAndLogErrors<TracesLimitsConfigFileV5Toml>(
+        listOf(it),
+        logger,
+        strict,
+        addDefaultPreprocessors = false,
+        addDefaultPropertySources = false,
+      )
     }
   val gasPriceCapTimeOfDayMultipliersConfig =
     loadConfigsAndLogErrors<GasPriceCapTimeOfDayMultipliersConfigFileToml>(
@@ -169,6 +198,7 @@ fun loadConfigsOrError(
       logger,
       strict,
       addDefaultPreprocessors = false,
+      addDefaultPropertySources = false,
     )
   val smartContractErrorsConfig =
     loadSmartContractErrors(smartContractErrorsFile, logger, strict)
