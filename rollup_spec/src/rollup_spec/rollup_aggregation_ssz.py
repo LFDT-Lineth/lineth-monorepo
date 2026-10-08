@@ -10,16 +10,19 @@ the sibling `l2_execution_ssz.py`, and the shared `SszRollupPublicInput` contain
 are imported from the sibling `rollup_ssz.py`. Finalization has its own
 public-input container with the proven messaging offsets and no block count.
 
-Framing: exactly like `stateless_input.py::STATELESS_INPUT_SCHEMA_ID`, every
-message is `schema_id (2 bytes, big-endian) || SSZ bytes`. Two schema ids are
-defined, one per guest-facing message:
+Inputs are framed as `schema_id (2 bytes, big-endian) || SSZ bytes`.
+Outputs use `keccak256(schema_id || SSZ(public_inputs)) || schema_id ||
+SSZ(public_inputs)`. Two schema ids are defined, one per guest-facing message:
 
   - `ROLLUP_AGGREGATION_INPUT_SCHEMA_ID`  (0x1002) — rollup-aggregation guest input
   - `ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID` (0x1802) — rollup-aggregation guest output
 
-The guest output frame carries SSZ finalization public inputs followed by the
-keccak256 hash of those SSZ bytes. The prover layer attaches the proof; decoding
-reconstructs a `FinalizationSubmission` with `proof=b""`.
+The guest output container omits the `proof` field the logical
+`FinalizationSubmission` dataclass carries: a guest cannot attest its own
+proof, so `proof` is attached by the prover layer above and is never part of
+the guest-emitted bytes. Decoding an output frame reconstructs the dataclass
+with `proof=b""`, matching the placeholder `run_rollup_aggregation_guest`
+already emits.
 
 List/vector bounds are conservative powers of two: capacity ceilings for the
 wire format, not the guest's or coordinator's own (tighter) operational
@@ -28,7 +31,7 @@ limits. Each constant below carries a one-line rationale.
 
 from typing import Any
 
-from ethereum.crypto.hash import Hash32
+from ethereum.crypto.hash import Hash32, keccak256
 from ethereum.state import Address
 from ethereum_types.numeric import U64
 from remerkleable.basic import uint16, uint64
@@ -36,13 +39,12 @@ from remerkleable.byte_arrays import ByteList, Bytes32 as SszBytes32
 from remerkleable.complex import Container, List
 
 from .l1_rollup import FinalizationPublicInput, FinalizationSubmission
+from .stateless_input import InvalidSsz
 from .rollup import RollupProof, VerifiableRollupProof
 from .rollup_aggregation import RollupAggregationProofPrivateInput
 from .l2_execution_ssz import (
     MAX_PROOF_BYTES,
     SszAddress,
-    _decode_output,
-    _encode_output,
     _frame,
     _strict_decode,
     _strip_frame,
@@ -174,8 +176,10 @@ def decode_aggregation_input_ssz(data: bytes) -> RollupAggregationProofPrivateIn
 
 def encode_aggregation_output(submission: FinalizationSubmission) -> bytes:
     """
-    Encode a 0x1802 frame with SSZ finalization public inputs followed by
-    their keccak256 hash. The prover attaches `submission.proof` separately.
+    Encode the rollup-aggregation guest's own output into framed SSZ bytes
+    (0x1802 schema id). `submission.proof` is deliberately dropped — it is a
+    prover-attached placeholder in `FinalizationSubmission`, never part of the
+    guest-emitted bytes.
     """
     pi = submission.public_inputs
     fields = {name: getattr(pi, name) for name in SszFinalizationPublicInput.fields()}
@@ -193,7 +197,8 @@ def encode_aggregation_output(submission: FinalizationSubmission) -> bytes:
     fields["l2_l1_roots"] = [bytes(root) for root in pi.l2_l1_roots]
     fields["filtered_addresses"] = [bytes(address) for address in pi.filtered_addresses]
     fields["program_ids"] = [bytes(program_id) for program_id in pi.program_ids]
-    return _encode_output(ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID, SszFinalizationPublicInput(**fields).encode_bytes())
+    preimage = _frame(ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID, SszFinalizationPublicInput(**fields).encode_bytes())
+    return keccak256(preimage) + preimage
 
 
 def decode_aggregation_output_ssz(data: bytes) -> FinalizationSubmission:
@@ -201,11 +206,12 @@ def decode_aggregation_output_ssz(data: bytes) -> FinalizationSubmission:
     Decode framed SSZ bytes into a `FinalizationSubmission` with `proof=b""`
     (the guest never emits proof bytes; the prover layer attaches them
     separately). Strict: rejects a wrong schema id, truncated bytes, trailing
-    bytes, a mismatched hash, or non-canonical SSZ.
+    bytes, or non-canonical SSZ.
     """
-    view = _decode_output(
-        data, ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID, "rollup-aggregation output", SszFinalizationPublicInput
-    )
+    if len(data) < 34 or keccak256(data[32:]) != data[:32]:
+        raise InvalidSsz("rollup-aggregation output: invalid public-input commitment")
+    payload = _strip_frame(data[32:], ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID, "rollup-aggregation output")
+    view = _strict_decode(payload, SszFinalizationPublicInput)
     fields = {name: getattr(view, name) for name in SszFinalizationPublicInput.fields()}
     for name in (
         "end_block_number", "end_block_timestamp", "parent_l1_l2_bridge_rolling_hash_message_number",

@@ -28,7 +28,7 @@ runs:
       - name: Install Go
         uses: ./.github/actions/setup-go
         with:
-          go-version: '1.25.7'
+          go-version: '1.27.1'
           cache-dependency-path: "**/*.sum"
           # Preserve the existing opt-out for builds of custom refs.
           cache: ${{ inputs.cache-save }}

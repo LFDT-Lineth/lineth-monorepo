@@ -67,8 +67,7 @@
         "endBlockHash",
         "startOffset",
         "endOffset",
-        "l2L1Roots",
-        "l2L1TreeDepth",
+        "l2L1Messages",
         "filteredAddresses",
         "programVks",
         "blockCount",
@@ -98,11 +97,7 @@
           "description": "Canonical end position in unpacked blob payload bytes: 0 after fully consuming a calldata or blob chunk (including a short terminal blob), positive only inside a shared terminal blob (§3.1).",
           "$ref": "#/$defs/offset"
         },
-        "l2L1TreeDepth": {
-          "description": "Guest-proven depth of each L2-to-L1 message tree; the guest implementation chooses the depth.",
-          "type": "integer", "minimum": 1, "maximum": 18446744073709551615
-        },
-        "l2L1Roots": { "type": "array", "items": { "$ref": "#/$defs/hash32" } },
+        "l2L1Messages": { "type": "array", "items": { "$ref": "#/$defs/hash32" } },
         "filteredAddresses": { "type": "array", "items": { "$ref": "#/$defs/address" } },
         "programVks": {
           "description": "Distinct, sorted ascending by byte value: the canonical encoding of the set of guest program VKs verified beneath this proof (order carries no meaning).",
