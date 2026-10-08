@@ -40,7 +40,7 @@ permissions:
 jobs:
   binary-run-and-zkc-check:
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -90,7 +90,6 @@ jobs:
           INPUT: test/testdata/block_amsterdam_175k_nopb.ssz
           KECCAK_ACCEL: true
           ZKC_TRACE_FLAGS: "--stats -vv --sharding interpreter:500000"
-          GOMAXPROCS: 10
 
       - name: Trace l2-execution guest program with Amsterdam block 2.5M sharding 500000
         # 2.5M references the amount of gas used in the block
@@ -98,7 +97,7 @@ jobs:
         timeout-minutes: 45
         env:
           ZKC_REF: "1183cd10e59fe08d4cb5d4184c30bcf041f4512e"
-          INPUT: test/testdata/block_amsterdam_.ssz
+          INPUT: test/testdata/block_amsterdam_52861_2M.ssz
           KECCAK_ACCEL: true
           ZKC_TRACE_FLAGS: "--stats -vv --sharding interpreter:500000"
 
