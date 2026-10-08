@@ -520,11 +520,11 @@ L1 dynamic gas price cap time-of-day multipliers.
 
 ## smart-contract-errors
 
-Mapping of Lineth smart-contract revert error codes to messages.
+Optional override of the smart-contract revert error codes bundled in the coordinator jar.
 
 | Key | Description | Type | Required | Default | Status |
 | --- | --- | --- | --- | --- | --- |
-| `smart-contract-errors` | Mapping of Lineth smart-contract revert error codes to human-readable messages, used to decode on-chain rejection reasons. | `Map<String, String>` | yes | - | active |
+| `smart-contract-errors` | Optional (override file only): mapping of Lineth smart-contract revert error codes to human-readable messages, merged over the mapping bundled in the coordinator jar (entries in this file win). Used to decode on-chain rejection reasons. | `Map<String, String>` | no | - | active |
 
 ## Deprecated Keys
 
