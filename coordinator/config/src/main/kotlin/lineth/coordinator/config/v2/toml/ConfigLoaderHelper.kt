@@ -26,8 +26,20 @@ import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import java.nio.file.Path
 
-fun ConfigLoaderBuilder.addCoordinatorTomlDecoders(strict: Boolean): ConfigLoaderBuilder {
-  return this
+@OptIn(ExperimentalHoplite::class)
+fun configLoaderBuilder(
+  strict: Boolean,
+  addDefaultPreprocessors: Boolean,
+): ConfigLoaderBuilder {
+  return ConfigLoaderBuilder
+    .empty()
+    .addDefaultDecoders()
+    .addDefaultNodeTransformers()
+    .addDefaultParamMappers()
+    .addDefaultPropertySources()
+    .addDefaultParsers()
+    .apply { if (addDefaultPreprocessors) addDefaultPreprocessors() }
+    .withExplicitSealedTypes()
     .addDecoder(BlockParameterTagDecoder())
     .addDecoder(BlockParameterNumberDecoder())
     .addDecoder(BlockParameterDecoder())
@@ -39,26 +51,24 @@ fun ConfigLoaderBuilder.addCoordinatorTomlDecoders(strict: Boolean): ConfigLoade
     .apply { if (strict) this.strict() }
 }
 
-@OptIn(ExperimentalHoplite::class)
-inline fun <reified T : Any> parseConfig(toml: String, strict: Boolean = true): T {
-  return ConfigLoaderBuilder
-    .default()
-    .withExplicitSealedTypes()
-    .addCoordinatorTomlDecoders(strict)
+inline fun <reified T : Any> parseConfig(
+  toml: String,
+  strict: Boolean = true,
+  addDefaultPreprocessors: Boolean = false,
+): T {
+  return configLoaderBuilder(strict, addDefaultPreprocessors)
     .addSource(TomlPropertySource(toml))
     .build()
     .loadConfigOrThrow<T>()
 }
 
-@OptIn(ExperimentalHoplite::class)
-inline fun <reified T : Any> loadConfigsOrError(configFiles: List<Path>, strict: Boolean): Result<T, String> {
-  val confLoader =
-    ConfigLoaderBuilder
-      .empty()
-      .addDefaults()
-      .withExplicitSealedTypes()
-      .addCoordinatorTomlDecoders(strict)
-      .build()
+inline fun <reified T : Any> loadConfigsOrError(
+  configFiles: List<Path>,
+  strict: Boolean,
+  addDefaultPreprocessors: Boolean,
+): Result<T, String> {
+  val confLoader = configLoaderBuilder(strict, addDefaultPreprocessors)
+    .build()
 
   return confLoader
     .loadConfig<T>(configFiles.reversed().map { it.toAbsolutePath().toString() })
@@ -80,8 +90,9 @@ inline fun <reified T : Any> loadConfigsAndLogErrors(
   configFiles: List<Path>,
   logger: Logger = LogManager.getLogger("lineth.coordinator.config"),
   strict: Boolean,
+  addDefaultPreprocessors: Boolean,
 ): Result<T, String> {
-  return loadConfigsOrError<T>(configFiles, strict = strict)
+  return loadConfigsOrError<T>(configFiles, strict = strict, addDefaultPreprocessors = addDefaultPreprocessors)
     .also {
       val logLevel = if (strict) Level.WARN else Level.ERROR
       logErrorIfPresent(it, logger, logLevel)
@@ -98,7 +109,7 @@ fun loadBundledSmartContractErrors(): SmartContractErrorCodesConfigFileToml {
       "Bundled smart-contract-errors resource $BUNDLED_SMART_CONTRACT_ERRORS_RESOURCE not found on classpath"
     }
       .use { it.readBytes().toString(Charsets.UTF_8) }
-  return parseConfig<SmartContractErrorCodesConfigFileToml>(toml)
+  return parseConfig<SmartContractErrorCodesConfigFileToml>(toml, strict = false)
 }
 
 /**
@@ -115,7 +126,12 @@ fun loadSmartContractErrors(
     logger.debug("Smart contract errors: {} entries from bundled mapping, no override file", bundled.size)
     return Ok(SmartContractErrorCodesConfigFileToml(bundled))
   }
-  return loadConfigsAndLogErrors<SmartContractErrorCodesConfigFileToml>(listOf(overrideFile), logger, strict)
+  return loadConfigsAndLogErrors<SmartContractErrorCodesConfigFileToml>(
+    listOf(overrideFile),
+    logger,
+    strict,
+    addDefaultPreprocessors = false,
+  )
     .map { configOverrides ->
       logger.debug(
         "Smart contract errors: {} entries from bundled mapping, {} entries from override file {}",
@@ -135,22 +151,24 @@ fun loadConfigsOrError(
   smartContractErrorsFile: Path? = null,
   logger: Logger = LogManager.getLogger("lineth.coordinator.config"),
   strict: Boolean = false,
+  addDefaultPreprocessors: Boolean = false,
 ): Result<CoordinatorConfigToml, String> {
   val coordinatorBaseConfigs =
-    loadConfigsAndLogErrors<CoordinatorConfigFilesToml>(coordinatorConfigFiles, logger, strict)
+    loadConfigsAndLogErrors<CoordinatorConfigFilesToml>(coordinatorConfigFiles, logger, strict, addDefaultPreprocessors)
   val tracesLimitsV4Configs =
     tracesLimitsFileV4?.let {
-      loadConfigsAndLogErrors<TracesLimitsConfigFileV4Toml>(listOf(it), logger, strict)
+      loadConfigsAndLogErrors<TracesLimitsConfigFileV4Toml>(listOf(it), logger, strict, addDefaultPreprocessors = false)
     }
   val tracesLimitsV5Configs =
     tracesLimitsFileV5?.let {
-      loadConfigsAndLogErrors<TracesLimitsConfigFileV5Toml>(listOf(it), logger, strict)
+      loadConfigsAndLogErrors<TracesLimitsConfigFileV5Toml>(listOf(it), logger, strict, addDefaultPreprocessors = false)
     }
   val gasPriceCapTimeOfDayMultipliersConfig =
     loadConfigsAndLogErrors<GasPriceCapTimeOfDayMultipliersConfigFileToml>(
       listOf(gasPriceCapTimeOfDayMultipliersFile),
       logger,
       strict,
+      addDefaultPreprocessors = false,
     )
   val smartContractErrorsConfig =
     loadSmartContractErrors(smartContractErrorsFile, logger, strict)
