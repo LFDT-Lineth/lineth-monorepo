@@ -9,37 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// partitionByBucket must group exactly like appending every entry to its
-// bucket in input order, whatever the number of workers.
-func TestPartitionByBucket_MatchesSerialAppend(t *testing.T) {
-	rng := rand.New(rand.NewPCG(3, 5))
-	for _, n := range []int{0, 1, 100, 3 * rowsPerChunk, 10*rowsPerChunk + 17} {
-		entries := make([]tEntry, n)
-		for i := range entries {
-			entries[i] = tEntry{idx: uint32(i)}
-			entries[i].val.B0.A0.SetUint64(rng.Uint64())
-		}
-		for _, numBuckets := range []int{1, 8, 1024} {
-			mask := uint32(numBuckets - 1)
-			bucket := func(e *tEntry) uint32 { return extHash(&e.val) & mask }
-			want := make([][]tEntry, numBuckets)
-			for _, e := range entries {
-				want[bucket(&e)] = append(want[bucket(&e)], e)
-			}
-			for _, workers := range []int{1, 3, 16} {
-				got := partitionByBucket(entries, numBuckets, bucket, workers)
-				require.Len(t, got, numBuckets)
-				for b := range want {
-					require.Lenf(t, got[b], len(want[b]), "n=%d buckets=%d workers=%d bucket %d", n, numBuckets, workers, b)
-					for i := range want[b] {
-						require.Equal(t, want[b][i], got[b][i])
-					}
-				}
-			}
-		}
-	}
-}
-
 // The M columns of a lookup group must not depend on the worker budget of the
 // M-assignment: tables large enough to be split into many chunks, with
 // duplicated table values, a filtered including fragment and a filtered

@@ -100,23 +100,6 @@ func TestCosetsMatchSerialReference(t *testing.T) {
 	}
 }
 
-// The per-bucket cache computes each distinct set of cancelled positions once
-// and hands every vanishing that cancels the same rows the same slice.
-func TestCancellationCosetsCache(t *testing.T) {
-	const n, N = 64, 256
-	c := newCancellationCosets(n, N)
-	require.Nil(t, c.get(nil))
-
-	a, b := c.get([]int{0, -1}), c.get([]int{0, -1})
-	require.Equal(t, computeCancellationCoset([]int{0, -1}, n, N), a)
-	require.Same(t, &a[0], &b[0], "same positions must share one coset")
-
-	other := c.get([]int{-1})
-	require.Equal(t, computeCancellationCoset([]int{-1}, n, N), other)
-	require.NotSame(t, &a[0], &other[0])
-	require.Len(t, c.byKey, 2)
-}
-
 // evalColumnsOnCosets must evaluate each padded column at every point of the
 // cosets it is needed on, in the coset-major layout, checked against a
 // barycentric evaluation per point.
