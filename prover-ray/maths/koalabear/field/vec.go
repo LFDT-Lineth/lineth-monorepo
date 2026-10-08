@@ -241,6 +241,34 @@ func VecMulExtExt(res, a, b []Ext) {
 	vecMulExt(res, a, b)
 }
 
+// VecInnerProdExtExt returns Σᵢ a[i]·b[i] over the extension field. The
+// products are accumulated in invLanes independent lanes combined at the end,
+// so the lane products run vectorised; field addition is associative, so the
+// sum is the one of the in-order accumulation. a and b must have equal
+// length.
+func VecInnerProdExtExt(a, b []Ext) Ext {
+	mustEqualLen2(len(a), len(b))
+	var lanes [invLanes]Ext
+	m := len(a) / invLanes * invLanes
+	var prod [invLanes]Ext
+	for j := 0; j < m; j += invLanes {
+		VecMulExtExt(prod[:], a[j:j+invLanes], b[j:j+invLanes])
+		for l := range lanes {
+			lanes[l].Add(&lanes[l], &prod[l])
+		}
+	}
+	var res Ext
+	for l := range lanes {
+		res.Add(&res, &lanes[l])
+	}
+	for i := m; i < len(a); i++ {
+		var term Ext
+		term.Mul(&a[i], &b[i])
+		res.Add(&res, &term)
+	}
+	return res
+}
+
 // VecMulInto sets res[i] = a[i] * b[i] for all i, dispatching to the typed
 // variant that matches the field types of the operands.
 //

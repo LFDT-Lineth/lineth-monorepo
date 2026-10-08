@@ -72,6 +72,43 @@ func TestBatchInvertExtRoundTrip(t *testing.T) {
 	}
 }
 
+// TestBatchInvertExtIntoMatchesInverse checks the interleaved-chain batch
+// inversion against one inversion per element, zeros mapping to zero, for
+// lengths around and across the lane width, out of place and in place.
+func TestBatchInvertExtIntoMatchesInverse(t *testing.T) {
+	rng := newRng()
+	for _, n := range []int{1, 5, invLanes - 1, invLanes, invLanes + 1, 3*invLanes + 7, 5 * invLanes} {
+		a := make([]Ext, n)
+		for i := range a {
+			a[i] = PseudoRandExt(rng)
+		}
+		for i := 0; i < n; i += 4 {
+			a[i] = Ext{}
+		}
+		want := make([]Ext, n)
+		for i := range a {
+			want[i].Inverse(&a[i])
+		}
+
+		got := make([]Ext, n)
+		BatchInvertExtInto(a, got)
+		for i := range a {
+			if got[i] != want[i] {
+				t.Fatalf("n=%d, element %d: got %v, want %v", n, i, ExtToText(&got[i], 10), ExtToText(&want[i], 10))
+			}
+		}
+
+		inPlace := make([]Ext, n)
+		copy(inPlace, a)
+		BatchInvertExtInto(inPlace, inPlace)
+		for i := range a {
+			if inPlace[i] != want[i] {
+				t.Fatalf("n=%d in place, element %d: got %v, want %v", n, i, ExtToText(&inPlace[i], 10), ExtToText(&want[i], 10))
+			}
+		}
+	}
+}
+
 // TestBatchInvertExtInto exercises the edge cases of BatchInvertExtInto:
 // length mismatch (panic), empty slice (no-op), and zero elements (skipped).
 func TestBatchInvertExtInto(t *testing.T) {

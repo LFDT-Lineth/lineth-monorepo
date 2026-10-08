@@ -265,6 +265,10 @@ func (le *LagrangeEval) evalPolynomialsShared(rt *Runtime, z field.Ext) []field.
 			}
 			acc.MulByElement(&padAcc, &t.pad)
 		}
+		if ds >= de {
+			sums[p] = acc
+			return
+		}
 		if t.data.IsBase() {
 			data := t.data.AsBase()
 			for j := ds; j < de; j++ {
@@ -273,10 +277,8 @@ func (le *LagrangeEval) evalPolynomialsShared(rt *Runtime, z field.Ext) []field.
 			}
 		} else {
 			data := t.data.AsExt()
-			for j := ds; j < de; j++ {
-				term.Mul(&w[j], &data[j-lo])
-				acc.Add(&acc, &term)
-			}
+			inner := field.VecInnerProdExtExt(w[ds:de], data[ds-lo:de-lo])
+			acc.Add(&acc, &inner)
 		}
 		sums[p] = acc
 	})
