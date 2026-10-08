@@ -3,6 +3,11 @@
 ### 🚀 Features
 
 - *(riscv-guest)* Changing the output of the guest program to include the plain PI + its hash (#4092)
+- *(prover-ray)* Reduce Poseidon2 row authentication cost  (#4115)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(prover-ray)* Use minimal-elf guests in R5 tests instead of the verifier-ray (#4118)
 ## [0.1.1] - 2026-10-06
 
 ### 🐛 Bug Fixes
