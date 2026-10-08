@@ -253,86 +253,27 @@ def _validate_conflation_segment(segment: bytes, expected_rlp: bytes) -> None:
         raise Exception("zstd-decompressed segment does not match canonical truncated-block RLP")
 
 
-@dataclass
-class _ChunkStreamExtent:
-    start: int
-    end: int
-    is_calldata: bool
-    chunk_index: int
-
-
-def _owned_blob_bytes(
-    chunk: ChunkWitness, index: int, chunks: Sequence[ChunkWitness], parent_data_tail_take_bytes: int, setup: object,
-) -> bytes:
+def _verified_chunk_payload(chunk: ChunkWitness, index: int) -> bytes:
+    """Check a chunk's physical bytes against its anchored hash; return its unpacked payload."""
+    if chunk.is_calldata:
+        if chunk.blob_bytes:
+            raise Exception(f"calldata chunk {index} must have empty blobBytes")
+        if keccak256(chunk.calldata_bytes) != chunk.chunk_hash:
+            raise Exception(f"calldata chunk {index} computed hash does not match chunkHash")
+        return chunk.calldata_bytes
     if chunk.calldata_bytes:
         raise Exception(f"blob chunk {index} must have empty calldataBytes")
-    try:
-        payload = unpack_blob_payload(chunk.blob_bytes)
-    except ValueError as exc:
-        raise Exception(f"blob chunk {index} has invalid physical blob") from exc
-    if index == 0 and parent_data_tail_take_bytes > 0 and parent_data_tail_take_bytes >= len(payload):
-        raise Exception(f"blob chunk {index} must contain owned bytes")
-    if index < len(chunks) - 1 and not payload:
-        raise Exception(f"blob chunk {index} must contain owned bytes")
-    if index < len(chunks) - 1 and chunks[index + 1].is_blob and len(payload) != BLOB_PAYLOAD_CAPACITY:
-        raise Exception(f"chunk {index} requires a full payload before the next chunk")
-    try:
-        chunk_kzg_commitment = KZGCommitment(
-            ckzg.blob_to_kzg_commitment(chunk.blob_bytes, setup),
-        )
-    except Exception as exc:
-        raise Exception("invalid chunk KZG commitment computation") from exc
-    computed_chunk_hash = Hash32(kzg_commitment_to_versioned_hash(chunk_kzg_commitment))
-    if computed_chunk_hash != chunk.chunk_hash:
-        raise Exception(f"chunk {index} computed KZG commitment does not match chunkHash")
-    if index == 0 and parent_data_tail_take_bytes:
-        return payload[-parent_data_tail_take_bytes:]
+    payload = unpack_blob_payload(chunk.blob_bytes)
+    commitment = KZGCommitment(ckzg.blob_to_kzg_commitment(chunk.blob_bytes, _trusted_setup()))
+    if kzg_commitment_to_versioned_hash(commitment) != chunk.chunk_hash:
+        raise Exception(f"blob chunk {index} computed KZG commitment does not match chunkHash")
     return payload
 
 
-def _owned_calldata_bytes(chunk: ChunkWitness, index: int) -> bytes:
-    if chunk.blob_bytes:
-        raise Exception(f"calldata chunk {index} must have empty blobBytes")
-    data = chunk.calldata_bytes
-    if not data:
-        raise Exception(f"calldata chunk {index} must contain owned bytes")
-    if keccak256(data) != chunk.chunk_hash:
-        raise Exception(f"calldata chunk {index} computed hash does not match chunkHash")
-    return data
-
-
-def _bind_chunk_stream(
-    chunks: Sequence[ChunkWitness],
-    parent_data_tail_take_bytes: int,
-    parent_data_rolling_hash: Hash32,
-    boundary_prev_data_rolling_hash: Optional[Hash32],
-) -> Tuple[bytearray, List[_ChunkStreamExtent], Hash32]:
-    setup = _trusted_setup() if any(chunk.is_blob for chunk in chunks) else None
-    stream = bytearray()
-    extents: List[_ChunkStreamExtent] = []
-    data_rolling_hash = parent_data_rolling_hash
-    for i, chunk in enumerate(chunks):
-        if chunk.is_blob:
-            data = _owned_blob_bytes(chunk, i, chunks, parent_data_tail_take_bytes, setup)
-        else:
-            data = _owned_calldata_bytes(chunk, i)
-        begin = len(stream)
-        stream.extend(data)
-        extents.append(_ChunkStreamExtent(begin, len(stream), chunk.is_calldata, i))
-        if i == 0 and parent_data_tail_take_bytes > 0:
-            if boundary_prev_data_rolling_hash is None:
-                raise Exception("mid-chunk start requires boundaryPrevDataRollingHash")
-            if DataRollingHashWitness(boundary_prev_data_rolling_hash, chunk.chunk_hash).hash() != parent_data_rolling_hash:
-                raise Exception("boundary chunk dataRollingHash preimage does not open parentDataRollingHash")
-            data_rolling_hash = parent_data_rolling_hash
-        else:
-            data_rolling_hash = DataRollingHashWitness(data_rolling_hash, chunk.chunk_hash).hash()
-    return stream, extents, data_rolling_hash
-
-
-def _parse_conflation_frames(stream: bytearray, expected_rlps: Sequence[bytes]) -> Tuple[int, set[int]]:
+def _parse_frame_ends(stream: bytes, expected_rlps: Sequence[bytes]) -> List[int]:
+    """Parse one length-prefixed zstd frame per conflation; return each frame's end offset."""
     cursor = 0
-    boundaries = {0}
+    frame_ends: List[int] = []
     for expected_rlp in expected_rlps:
         if len(stream) - cursor < 4:
             raise Exception("DA segment is missing its length prefix")
@@ -340,71 +281,79 @@ def _parse_conflation_frames(stream: bytearray, expected_rlps: Sequence[bytes]) 
         if length == 0 or length > len(stream) - cursor - 4:
             raise Exception("DA segment length exceeds available chunk bytes")
         frame_end = cursor + 4 + length
-        _validate_conflation_segment(bytes(stream[cursor + 4:frame_end]), expected_rlp)
+        _validate_conflation_segment(stream[cursor + 4:frame_end], expected_rlp)
         cursor = frame_end
-        boundaries.add(cursor)
-    return cursor, boundaries
+        frame_ends.append(cursor)
+    return frame_ends
 
 
-def _validate_chunk_ownership(
+def _fold_data_rolling_hash(
     chunks: Sequence[ChunkWitness],
-    extents: Sequence[_ChunkStreamExtent],
-    cursor: int,
-    boundaries: set[int],
-    stream_length: int,
-) -> None:
-    if chunks[-1].is_calldata and cursor != stream_length:
-        raise Exception("calldata chunk contains trailing bytes")
-    for extent in extents:
-        if extent.start >= cursor:
-            raise Exception(f"chunk {extent.chunk_index} must contain owned bytes")
-        if extent.is_calldata and (
-            (
-                extent.start not in boundaries
-                and (extent.chunk_index == 0 or chunks[extent.chunk_index - 1].is_calldata)
-            )
-            or extent.end not in boundaries
+    parent_data_tail_take_bytes: int,
+    parent_data_rolling_hash: Hash32,
+    boundary_prev_data_rolling_hash: Optional[Hash32],
+) -> Hash32:
+    """
+    Fold the touched chunks into the dataRollingHash (§3.1). After a mid-blob start,
+    parentDataRollingHash already includes the first chunk, so its preimage is opened instead.
+    """
+    unfolded_chunks = chunks
+    if parent_data_tail_take_bytes > 0:
+        if (
+            boundary_prev_data_rolling_hash is None
+            or DataRollingHashWitness(boundary_prev_data_rolling_hash, chunks[0].chunk_hash).hash()
+            != parent_data_rolling_hash
         ):
-            raise Exception(f"calldata chunk {extent.chunk_index} violates segment boundaries")
+            raise Exception("boundaryPrevDataRollingHash does not open parentDataRollingHash")
+        unfolded_chunks = chunks[1:]
+    data_rolling_hash = parent_data_rolling_hash
+    for chunk in unfolded_chunks:
+        data_rolling_hash = DataRollingHashWitness(data_rolling_hash, chunk.chunk_hash).hash()
+    return data_rolling_hash
 
 
 def _verify_and_fold_chunks(
-    parent_data_tail_take_bytes: int,
     chunks: Sequence[ChunkWitness],
+    parent_data_tail_take_bytes: int,
     parent_data_rolling_hash: Hash32,
     boundary_prev_data_rolling_hash: Optional[Hash32],
-    conflation_count: int,
     expected_rlps: Sequence[bytes],
 ) -> Tuple[Hash32, int]:
     """
-    Bind physical chunks to anchored hashes, parse exactly `conflation_count`
-    frames from their stream and fold the rolling hash. Positions index unpacked
-    blob payload bytes; only the terminal blob may contain foreign suffix bytes.
+    Bind each chunk to its anchored hash and parse one frame per conflation from their stream.
+    Returns `(endDataRollingHash, finalDataTailDiscardBytes)`.
     """
     if not chunks:
         raise Exception("rollup proof must touch at least one chunk")
-    if not (0 <= parent_data_tail_take_bytes < BLOB_PAYLOAD_CAPACITY):
-        raise Exception("parentDataTailTakeBytes must be within [0, 130046]")
-    if parent_data_tail_take_bytes > 0 and not chunks[0].is_blob:
-        raise Exception("mid-chunk start (parentDataTailTakeBytes > 0) requires the first chunk to be a blob")
-    if conflation_count != len(expected_rlps) or conflation_count == 0:
-        raise Exception("expected one canonical payload per conflation")
-    stream, extents, data_rolling_hash = _bind_chunk_stream(
-        chunks, parent_data_tail_take_bytes, parent_data_rolling_hash, boundary_prev_data_rolling_hash,
+    payloads = [_verified_chunk_payload(chunk, i) for i, chunk in enumerate(chunks)]
+
+    for i in range(len(chunks) - 1):
+        if chunks[i].is_blob and chunks[i + 1].is_blob and len(payloads[i]) != BLOB_PAYLOAD_CAPACITY:
+            raise Exception(f"blob chunk {i} must hold a full payload before another blob")
+
+    take = parent_data_tail_take_bytes
+    if take > 0:
+        if chunks[0].is_calldata or take >= len(payloads[0]):
+            raise Exception("positive parentDataTailTakeBytes requires a first blob with a longer payload")
+        payloads[0] = payloads[0][-take:]
+
+    stream = b"".join(payloads)
+    frame_ends = _parse_frame_ends(stream, expected_rlps)
+    consumed = frame_ends[-1]
+
+    chunk_start = 0
+    for i, (chunk, payload) in enumerate(zip(chunks, payloads)):
+        chunk_end = chunk_start + len(payload)
+        if chunk_start >= min(chunk_end, consumed):
+            raise Exception(f"chunk {i} must contain owned bytes")
+        if chunk.is_calldata and chunk_end not in frame_ends:
+            raise Exception(f"calldata chunk {i} must end at a frame boundary")
+        chunk_start = chunk_end
+
+    end_data_rolling_hash = _fold_data_rolling_hash(
+        chunks, take, parent_data_rolling_hash, boundary_prev_data_rolling_hash,
     )
-    cursor, boundaries = _parse_conflation_frames(stream, expected_rlps)
-    _validate_chunk_ownership(chunks, extents, cursor, boundaries, len(stream))
-    # A fully consumed blob ends at the canonical zero tail count, even when its
-    # unpacked payload occupies less than the physical blob capacity.
-    trailing = len(stream) - cursor
-    final_data_tail_discard_bytes = trailing
-    if final_data_tail_discard_bytes:
-        last_blob_payload_length = extents[-1].end - extents[-1].start + (
-            parent_data_tail_take_bytes if len(chunks) == 1 else 0
-        )
-        if final_data_tail_discard_bytes >= last_blob_payload_length:
-            raise Exception("finalDataTailDiscardBytes must be less than the last blob payload length")
-    return data_rolling_hash, final_data_tail_discard_bytes
+    return end_data_rolling_hash, len(stream) - consumed
 
 
 @dataclass
@@ -566,11 +515,10 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         truncated_blocks.extend(conflation_truncated)
         parent_hashes.extend(conflation_parent_hashes)
     end_data_rolling_hash, final_data_tail_discard_bytes = _verify_and_fold_chunks(
-        rollup_input.parent_data_tail_take_bytes,
         rollup_input.chunks,
+        rollup_input.parent_data_tail_take_bytes,
         rollup_input.parent_data_rolling_hash,
         rollup_input.boundary_prev_data_rolling_hash,
-        len(rollup_input.conflations),
         expected_rlps,
     )
 

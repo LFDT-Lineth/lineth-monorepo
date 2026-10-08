@@ -174,22 +174,22 @@ def test_rollup_rejects_sender_hash_mismatch_for_conflation(monkeypatch):
 
 def test_calldata_requires_frame_alignment_and_no_trailing_bytes(monkeypatch):
     segment = _segment()
-    with pytest.raises(Exception, match="segment boundaries"):
+    with pytest.raises(Exception, match="frame boundary"):
         run_rollup_guest(_input(monkeypatch, [_calldata(segment[:5]), _calldata(segment[5:])]))
-    with pytest.raises(Exception, match="segment boundaries"):
+    with pytest.raises(Exception, match="frame boundary"):
         run_rollup_guest(_input(monkeypatch, [_calldata(segment[:5]), _blob(monkeypatch, segment[5:])]))
-    with pytest.raises(Exception, match="segment boundaries"):
+    with pytest.raises(Exception, match="frame boundary"):
         run_rollup_guest(_input(monkeypatch, [_blob(monkeypatch, segment[:5]), _calldata(segment[5:10]),
                                               _calldata(segment[10:])]))
-    with pytest.raises(Exception, match="trailing bytes"):
+    with pytest.raises(Exception, match="frame boundary"):
         run_rollup_guest(_input(monkeypatch, [_calldata(segment + b"extra")]))
-    with pytest.raises(Exception, match="trailing bytes"):
+    with pytest.raises(Exception, match="frame boundary"):
         run_rollup_guest(_input(monkeypatch, [_calldata(segment + segment[:5])]))
 
 
 def test_chunk_rejects_invalid_physical_blob_and_wrong_binding_hash(monkeypatch):
     valid = _blob(monkeypatch, _segment())
-    with pytest.raises(Exception, match="invalid physical blob"):
+    with pytest.raises(Exception, match="physical blob"):
         run_rollup_guest(_input(monkeypatch, [replace(valid, blob_bytes=valid.blob_bytes[:-1])]))
     with pytest.raises(Exception, match="chunkHash"):
         run_rollup_guest(_input(monkeypatch, [replace(valid, chunk_hash=ZERO)]))
