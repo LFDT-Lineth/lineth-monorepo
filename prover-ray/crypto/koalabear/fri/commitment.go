@@ -1,6 +1,7 @@
 package fri
 
 import (
+	"math/bits"
 	"runtime"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
@@ -81,29 +82,40 @@ func (table MultiSizeTable) Encode(encoders []*RSEncoder) MultiSizeTable {
 	// Each row's RS encode is an independent per-row FFT writing a disjoint
 	// output slice, so flatten (size, base/ext, row) into work items and encode
 	// them in parallel. gnark's FFT barely parallelizes at these row sizes, so
-	// the parallelism must be across rows; fft.WithNbTasks(1) keeps each FFT
-	// single-threaded so the outer parallelism isn't nested.
+	// the parallelism is mostly across rows.
 	//
 	// Row costs span several orders of magnitude (sizes 2^0 .. 2^22, base or
 	// extension), so the items are pulled dynamically, largest size first and
 	// extension before base within a size: a contiguous split put every one of
-	// the largest rows on the last few workers.
+	// the largest rows on the last few workers. Each row's FFTs get a share of
+	// the CPUs proportional to its share of the work, at least one, so that a
+	// handful of the largest rows do not each run on a single core while the
+	// rest of the table is already done.
 	type encodeItem struct {
 		i, k int
 		ext  bool
+		cost float64
 	}
-	var work []encodeItem
+	var (
+		work  []encodeItem
+		total float64
+	)
 	for i := len(table) - 1; i >= 0; i-- {
+		N := float64(encoders[i].Domain.Cardinality)
+		cost := N * max(1, float64(bits.Len(uint(N))))
 		for k := range table[i].Ext {
-			work = append(work, encodeItem{i: i, k: k, ext: true})
+			work = append(work, encodeItem{i: i, k: k, ext: true, cost: 6 * cost})
+			total += 6 * cost
 		}
 		for k := range table[i].Base {
-			work = append(work, encodeItem{i: i, k: k})
+			work = append(work, encodeItem{i: i, k: k, cost: cost})
+			total += cost
 		}
 	}
-	encodeOpts := []fft.Option{fft.WithNbTasks(1)}
+	cpus := float64(runtime.GOMAXPROCS(0))
 	parallel.ExecuteDynamic(len(work), func(w int) {
 		it := work[w]
+		encodeOpts := []fft.Option{fft.WithNbTasks(max(1, int(cpus*it.cost/total)))}
 		if it.ext {
 			encoders[it.i].EncodeExtInto(table[it.i].Ext[it.k], encoded[it.i].Ext[it.k], encodeOpts...)
 		} else {
