@@ -7,7 +7,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/hugepage"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/bufpool"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 )
@@ -71,13 +71,13 @@ func (table MultiSizeTable) Encode(encoders []*RSEncoder) MultiSizeTable {
 	assertValidMultiEncoder(encoders)
 	encoded := make([]SizedTable, len(table))
 	for i := range table {
-		// One contiguous slab per size, pre-sliced per column: per-column
-		// codeword allocations are large objects that contend on the page heap
-		// and the kernel fault path under 96-way parallelism (measured >90%
-		// system time on a cold one-shot wide commit).
+		// The codewords come from the field pools (see [CommitterState.Release]):
+		// a proof reuses the previous one's, instead of zeroing and faulting
+		// in a few GB of fresh memory per commit. The encoders overwrite every
+		// element.
 		N := int(encoders[i].Domain.Cardinality)
-		encoded[i].Base = slabColumns[field.Element](len(table[i].Base), N)
-		encoded[i].Ext = slabColumns[field.Ext](len(table[i].Ext), N)
+		encoded[i].Base = pooledColumns(&field.BasePool, len(table[i].Base), N)
+		encoded[i].Ext = pooledColumns(&field.ExtPool, len(table[i].Ext), N)
 	}
 
 	// Each row's RS encode is an independent per-row FFT writing a disjoint
@@ -127,35 +127,34 @@ func (table MultiSizeTable) Encode(encoders []*RSEncoder) MultiSizeTable {
 	return encoded
 }
 
-// slabColumns allocates count columns of n elements as sub-slices of a few
-// contiguous slabs, each column capped so it cannot grow into its neighbor.
-//
-// The slabs are allocated concurrently, about one per CPU: Go zeroes a fresh
-// allocation on the allocating goroutine, and a single slab for a wide table
-// spent seconds being zeroed on one core. A slab per CPU keeps that zeroing
-// parallel while avoiding per-column allocations, which contend on the page
-// heap and the kernel fault path.
-func slabColumns[T any](count, n int) [][]T {
+// pooledColumns takes count columns of n elements from pool, in parallel:
+// columns allocated afresh are zeroed by the goroutine allocating them.
+func pooledColumns[T any](pool *bufpool.Pool[T], count, n int) [][]T {
 	columns := make([][]T, count)
-	if count == 0 {
-		return columns
-	}
-	nbSlabs := min(count, runtime.GOMAXPROCS(0))
-	perSlab := (count + nbSlabs - 1) / nbSlabs
-	nbSlabs = (count + perSlab - 1) / perSlab
-	parallel.Execute(nbSlabs, func(start, end int) {
-		for s := start; s < end; s++ {
-			first := s * perSlab
-			last := min(first+perSlab, count)
-			slab := make([]T, (last-first)*n)
-			hugepage.Advise(slab)
-			for k := first; k < last; k++ {
-				o := (k - first) * n
-				columns[k] = slab[o : o+n : o+n]
-			}
+	parallel.Execute(count, func(start, end int) {
+		for k := start; k < end; k++ {
+			columns[k] = pool.Get(n)
 		}
-	}, nbSlabs)
+	})
 	return columns
+}
+
+// Release returns the codewords and the Merkle tree nodes of st to the field
+// pools. st must not be used afterwards, and none of its slices may still be
+// referenced: an opening proof only holds copies.
+func (st *CommitterState) Release() {
+	for _, sized := range st.EncodedTable {
+		for _, col := range sized.Base {
+			field.BasePool.Put(col)
+		}
+		for _, col := range sized.Ext {
+			field.ExtPool.Put(col)
+		}
+	}
+	if st.Tree != nil {
+		field.OctupletPool.Put(st.Tree.Nodes)
+	}
+	st.EncodedTable, st.Tree = nil, nil
 }
 
 // Merkleize merkleizes the table using Poseidon2. Every table but the bottom

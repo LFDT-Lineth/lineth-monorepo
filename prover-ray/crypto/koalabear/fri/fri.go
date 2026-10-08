@@ -572,8 +572,12 @@ func buildTreeExt(layer []field.Ext) *Tree {
 	bottom := t.Nodes[n-1:]
 	parallel.Execute(n, func(start, end int) {
 		for i := start; i < end; i++ {
+			// The whole octuplet is written: the tree's nodes may be a
+			// pooled slice holding stale values.
 			limbs := extLimbs(layer[i])
-			copy(bottom[i][:6], limbs[:])
+			var leaf field.Octuplet
+			copy(leaf[:6], limbs[:])
+			bottom[i] = leaf
 		}
 	})
 	t.buildLevels(nil)

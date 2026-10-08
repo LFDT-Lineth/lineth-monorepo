@@ -299,6 +299,25 @@ type openingProverAction struct{ c *compiled }
 func (a *openingProverAction) Run(rt *wiop.Runtime) {
 	proof := a.c.open(rt)
 	rt.PCSOpeningProof = &proof
+	a.c.releaseCommittedStates(rt)
+}
+
+// releaseCommittedStates returns the codewords and Merkle trees of every
+// interactive round to the field pools for the next proof, and drops them
+// from the runtime. The opening proof only holds copies of the rows and nodes
+// it reveals, so nothing references them once it is built. The precomputed
+// batch's state is shared by every proof and kept.
+func (c *compiled) releaseCommittedStates(rt *wiop.Runtime) {
+	for _, b := range CommittedBatches(rt.System) {
+		if b.IsPrecomp {
+			continue
+		}
+		key := committedStateKey(b.Round.ID)
+		if v, ok := rt.GetState(key); ok && v != nil {
+			v.(*fri.CommitterState).Release()
+			rt.SetState(key, nil)
+		}
+	}
 }
 
 // OpeningVerifierAction replays the opening transcript and checks the proof.
@@ -416,7 +435,7 @@ func (c *compiled) collectCommittedStates(rt *wiop.Runtime, batches []BatchRef) 
 			continue
 		}
 		v, ok := rt.GetState(committedStateKey(b.Round.ID))
-		if !ok {
+		if !ok || v == nil {
 			panic(fmt.Sprintf("pcs: missing committed state for round %d", b.Round.ID))
 		}
 		states[i] = v.(*fri.CommitterState)

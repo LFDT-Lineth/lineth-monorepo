@@ -362,7 +362,7 @@ func computeCancellationCoset(cancelled []int, n, N int) []field.Element {
 	// Evaluate the product at every coset point. Points are independent, so
 	// each worker starts from its own point and walks the layout.
 	shifts := cosetShifts(n, N/n)
-	cVals := make([]field.Element, N)
+	cVals := field.BasePool.Get(N) // every entry is written below
 	parallel.Execute(N, func(start, end int) {
 		pt := newCosetWalk(shifts, n, start)
 		for t := start; t < end; t++ {
@@ -424,6 +424,14 @@ func newCancellationCosets(n, N int) *cancellationCosets {
 	return &cancellationCosets{n: n, N: N, byKey: make(map[string][]field.Element)}
 }
 
+// release returns the cosets to the field pool.
+func (c *cancellationCosets) release() {
+	for _, v := range c.byKey {
+		field.BasePool.Put(v)
+	}
+	c.byKey = nil
+}
+
 func (c *cancellationCosets) get(cancelled []int) []field.Element {
 	if len(cancelled) == 0 {
 		return nil
@@ -478,7 +486,7 @@ func computeLagrangeSelectorCoset(position, n, N int) []field.Element {
 
 	// Points are independent, so each worker starts from its own point and
 	// inverts its own chunk of denominators.
-	res := make([]field.Element, N)
+	res := field.BasePool.Get(N) // every entry is written below
 	parallel.Execute(N, func(start, end int) {
 		m := end - start
 		denom := make([]field.Element, m) // x_t − ω^p
@@ -620,7 +628,22 @@ func (q *moduleQuotient) run(rt *wiop.Runtime) {
 	var cancels *cancellationCosets
 	if q.m.IsDynamic() {
 		cancels = newCancellationCosets(n, n*R)
+		defer cancels.release()
 	}
+
+	// The module's tables only serve its buckets: they go back to the field
+	// pools for the next module and proof once the shares are assigned.
+	defer func() {
+		for _, v := range cosetEvals {
+			field.BasePool.Put(v)
+		}
+		for _, v := range cosetEvalsExt {
+			field.ExtPool.Put(v)
+		}
+		for _, v := range selectorCosets {
+			field.BasePool.Put(v)
+		}
+	}()
 
 	for _, bkt := range q.buckets {
 		ratio := bkt.ratio
@@ -641,11 +664,10 @@ func (q *moduleQuotient) run(rt *wiop.Runtime) {
 		// the previous proof run, so clear it before use as an accumulator.
 		aggregate := bkt.scratchAgg
 		if len(aggregate) < N {
-			aggregate = make([]field.Ext, N)
-			hugepage.Advise(aggregate)
-		} else {
-			clear(aggregate[:N])
+			aggregate = field.ExtPool.Get(N)
+			defer field.ExtPool.Put(aggregate)
 		}
+		clear(aggregate[:N])
 
 		// Bind every vanishing expression once: leaves resolve to their coset
 		// slices and runtime scalars up front, so the evaluation below involves
@@ -790,8 +812,8 @@ func evalColumnsOnCosets(
 		col := cols[c]
 		cv := rt.GetColumnAssignment(col)
 		if col.IsExtension {
-			vals := make([]field.Ext, n*ratio)
-			hugepage.Advise(vals)
+			// Pooled: every coset slot read later is written below.
+			vals := field.ExtPool.Get(n * ratio)
 			writeColumnExt(cv, m.Padding, vals[:n])
 			smallDomain.FFTInverseExt6(vals[:n], fft.DIF, fft.WithNbTasks(tasks))
 			extEvals[c] = vals
@@ -803,8 +825,7 @@ func evalColumnsOnCosets(
 				col.Context.Path(),
 			))
 		}
-		vals := make([]field.Element, n*ratio)
-		hugepage.Advise(vals)
+		vals := field.BasePool.Get(n * ratio)
 		writeColumnBase(cv, m.Padding, vals[:n])
 		smallDomain.FFTInverse(vals[:n], fft.DIF, fft.WithNbTasks(tasks))
 		baseEvals[c] = vals

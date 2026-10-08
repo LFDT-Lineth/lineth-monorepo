@@ -124,3 +124,37 @@ func TestCompile_GlobalConstraintWithLagrangeSelector(t *testing.T) {
 		assert.Error(t, sys.Verify(proof, pub), "invalid: (a·b)[pos]=15 must be rejected")
 	})
 }
+
+// TestCompile_CompletenessWithStalePools reruns the completeness scenarios,
+// with the PCS, after filling the field pools with junk: the quotient's coset
+// tables and the commitments take their buffers from the pools, which hand
+// out stale values, and must not read any before writing it. Every scenario
+// is proven twice, so the second proof also reuses the first one's buffers.
+func TestCompile_CompletenessWithStalePools(t *testing.T) {
+	var junk field.Element
+	junk.SetUint64(0xbad)
+	for l := range 14 {
+		for range 16 {
+			b, e := field.BasePool.Get(1<<l), field.ExtPool.Get(1<<l)
+			o := field.OctupletPool.Get(1 << l)
+			for i := range b {
+				b[i], e[i] = junk, field.Lift(junk)
+				o[i] = field.Octuplet{junk, junk, junk, junk, junk, junk, junk, junk}
+			}
+			field.BasePool.Put(b)
+			field.ExtPool.Put(e)
+			field.OctupletPool.Put(o)
+		}
+	}
+	for _, build := range wioptest.VanishingScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			global.Compile(sc.Sys)
+			pcs.Compile(sc.Sys)
+			for range 2 {
+				proof, pub := sc.Sys.Prove(sc.AssignHonest)
+				require.NoError(t, sc.Sys.Verify(proof, pub))
+			}
+		})
+	}
+}
