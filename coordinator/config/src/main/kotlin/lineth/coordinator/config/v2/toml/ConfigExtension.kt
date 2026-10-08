@@ -47,9 +47,23 @@ inline fun <reified T : Any> loadExtensionConfigs(
   enforceStrict: Boolean = false,
   logger: Logger = LogManager.getLogger("lineth.coordinator.config"),
 ): T {
-  return loadConfigsAndLogErrors<T>(configFiles, logger, strict = true, onlyTopLevelKeys = topLevelKeys)
+  return loadConfigsAndLogErrors<T>(
+    configFiles,
+    logger,
+    strict = true,
+    onlyTopLevelKeys = topLevelKeys,
+    addDefaultPreprocessors = false,
+    addDefaultPropertySources = false,
+  )
     .recoverIf({ !enforceStrict }, {
-      loadConfigsAndLogErrors<T>(configFiles, logger, strict = false, onlyTopLevelKeys = topLevelKeys)
+      loadConfigsAndLogErrors<T>(
+        configFiles,
+        logger,
+        strict = false,
+        onlyTopLevelKeys = topLevelKeys,
+        addDefaultPreprocessors = false,
+        addDefaultPropertySources = false,
+      )
         .getOrElse { throw RuntimeException("Invalid configurations: $it") }
     })
     .getOrElse { throw RuntimeException("Invalid configurations: $it") }
