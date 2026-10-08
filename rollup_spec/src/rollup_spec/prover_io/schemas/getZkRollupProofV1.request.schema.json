@@ -172,7 +172,6 @@
         "proof",
         "startBlockNumber",
         "publicInputs",
-        "l2L1Messages",
         "filteredAddresses",
         "programVk"
       ],
@@ -180,7 +179,6 @@
         "proof": { "$ref": "#/$defs/hex" },
         "startBlockNumber": { "$ref": "#/$defs/uint" },
         "publicInputs": { "$ref": "#/$defs/l2ExecutionPublicInputs" },
-        "l2L1Messages": { "type": "array", "items": { "$ref": "#/$defs/hash32" } },
         "filteredAddresses": { "type": "array", "items": { "$ref": "#/$defs/address" } },
         "programVk": { "$ref": "#/$defs/hash32" }
       }

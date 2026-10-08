@@ -34,9 +34,9 @@ covers blocks 10-11), disambiguating multiple samples for the same guest program
 | `*-getZkRollupAggregationProofV1.response.json` | `FinalizationSubmission` | `l1_rollup.py` | `run_rollup_aggregation_guest` (output) |
 
 **Guest output vs prover output.** A guest emits its public-input tuple. The
-l2-execution response includes the revealed hash preimages (`l2L1Messages`,
-`filteredAddresses`); senders are committed by `txFromsHash` in the execution PI
-and reconstructed from the rollup's block inputs. Rollup roots and filtered addresses are public-input
+l2-execution response includes `l2L1Messages` in its public inputs and the
+revealed `filteredAddresses` preimage; senders are committed by `txFromsHash`
+in the execution PI and reconstructed from the rollup's block inputs. Rollup roots and filtered addresses are public-input
 lists. The `proof` bytes are attached by the zkVM/prover layer,
 not the guest, so they are placeholders (`0x`) in these fixtures; a response
 equals the guest output plus `proof`. The aggregation response is a
