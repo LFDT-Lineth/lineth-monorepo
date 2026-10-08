@@ -22,7 +22,7 @@ pub const ZkcMachine = struct {
         const elf_arg = try std.fmt.allocPrint(alloc, "BIN_EXT={s}", .{self.elf});
         const json_arg = try std.fmt.allocPrint(alloc, "JSON_EXT={s}", .{json_path});
         const makefile_arg = try std.fmt.allocPrint(alloc, "-f{s}", .{self.makefile});
-        const flags = self.flags orelse if (std.mem.eql(u8, self.target, "elf-trace")) "--stats" else "--fast";
+        const flags = self.flags orelse if (std.mem.eql(u8, self.target, "elf-trace")) "--stats" else "--fast --gogen";
         const flags_arg = if (std.mem.eql(u8, self.target, "elf-trace"))
             try std.fmt.allocPrint(alloc, "ZKC_TRACE_FLAGS={s}", .{flags})
         else
