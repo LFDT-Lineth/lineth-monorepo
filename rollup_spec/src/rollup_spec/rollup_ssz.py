@@ -19,7 +19,7 @@ decoding the guest output returns the committed public-input tuple.
 
 Optional modelling: `RollupProofPrivateInput.boundary_prev_data_rolling_hash`
 is the one Optional field in this wire format (required only for a mid-chunk
-start, `parent_data_tail_take > 0`). It is modelled as `List[Bytes32, 1]` — an
+start, `parent_data_tail_take_bytes > 0`). It is modelled as `List[Bytes32, 1]` — an
 SSZ list capped at length 1 — exactly as `stateless_input.py` models its
 optional fork-activation values. Absent is the empty list; present is a
 single-element list. This keeps every field a plain SSZ list/container type
@@ -107,8 +107,8 @@ class SszRollupPublicInput(Container):
     end_data_rolling_hash: SszBytes32
     parent_block_hash: SszBytes32
     end_block_hash: SszBytes32
-    parent_data_tail_take: uint64
-    final_data_tail_discard: uint64
+    parent_data_tail_take_bytes: uint64
+    final_data_tail_discard_bytes: uint64
     l2_l1_messages: List[SszBytes32, MAX_L2_L1_MESSAGES_PER_ROLLUP]
     filtered_addresses: List[SszAddress, MAX_FILTERED_ADDRESSES]
     program_vks: List[SszBytes32, MAX_PROGRAM_VKS]
@@ -119,7 +119,7 @@ class SszRollupPublicInput(Container):
 class SszRollupProofPrivateInput(Container):
     # Field order matches `rollup.py::RollupProofPrivateInput`.
     parent_data_rolling_hash: SszBytes32
-    parent_data_tail_take: uint64
+    parent_data_tail_take_bytes: uint64
     chain_id: uint64
     conflations: List[SszConflationWitness, MAX_CONFLATIONS_PER_ROLLUP]
     chunks: List[SszChunkWitness, MAX_CHUNKS_PER_ROLLUP]
@@ -159,8 +159,8 @@ def _ssz_rollup_public_input(pi: RollupPublicInput) -> SszRollupPublicInput:
         end_data_rolling_hash=bytes(pi.end_data_rolling_hash),
         parent_block_hash=bytes(pi.parent_block_hash),
         end_block_hash=bytes(pi.end_block_hash),
-        parent_data_tail_take=int(pi.parent_data_tail_take),
-        final_data_tail_discard=int(pi.final_data_tail_discard),
+        parent_data_tail_take_bytes=int(pi.parent_data_tail_take_bytes),
+        final_data_tail_discard_bytes=int(pi.final_data_tail_discard_bytes),
         l2_l1_messages=[bytes(h) for h in pi.l2_l1_messages],
         filtered_addresses=[bytes(a) for a in pi.filtered_addresses],
         program_vks=[bytes(v) for v in pi.program_vks],
@@ -173,7 +173,7 @@ def _ssz_rollup_input(private_input: RollupProofPrivateInput) -> SszRollupProofP
     boundary = private_input.boundary_prev_data_rolling_hash
     return SszRollupProofPrivateInput(
         parent_data_rolling_hash=bytes(private_input.parent_data_rolling_hash),
-        parent_data_tail_take=int(private_input.parent_data_tail_take),
+        parent_data_tail_take_bytes=int(private_input.parent_data_tail_take_bytes),
         chain_id=int(private_input.chain_id),
         conflations=[_ssz_conflation_witness(c) for c in private_input.conflations],
         chunks=[
@@ -222,8 +222,8 @@ def _rollup_public_input_from_view(view: Any) -> RollupPublicInput:
         end_data_rolling_hash=Hash32(bytes(view.end_data_rolling_hash)),
         parent_block_hash=Hash32(bytes(view.parent_block_hash)),
         end_block_hash=Hash32(bytes(view.end_block_hash)),
-        parent_data_tail_take=int(view.parent_data_tail_take),
-        final_data_tail_discard=int(view.final_data_tail_discard),
+        parent_data_tail_take_bytes=int(view.parent_data_tail_take_bytes),
+        final_data_tail_discard_bytes=int(view.final_data_tail_discard_bytes),
         l2_l1_messages=[Hash32(bytes(h)) for h in view.l2_l1_messages],
         filtered_addresses=[Address(bytes(a)) for a in view.filtered_addresses],
         program_vks=[Hash32(bytes(v)) for v in view.program_vks],
@@ -239,7 +239,7 @@ def _rollup_input_from_view(view: Any) -> RollupProofPrivateInput:
     )
     return RollupProofPrivateInput(
         parent_data_rolling_hash=Hash32(bytes(view.parent_data_rolling_hash)),
-        parent_data_tail_take=int(view.parent_data_tail_take),
+        parent_data_tail_take_bytes=int(view.parent_data_tail_take_bytes),
         chain_id=U64(int(view.chain_id)),
         conflations=[_conflation_witness_from_view(c) for c in view.conflations],
         chunks=[

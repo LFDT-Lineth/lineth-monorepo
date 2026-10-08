@@ -22,7 +22,7 @@
         "conflations",
         "chunks",
         "parentDataRollingHash",
-        "parentDataTailTake",
+        "parentDataTailTakeBytes",
         "l2ExecutionProofs"
       ],
       "properties": {
@@ -69,15 +69,15 @@
           }
         },
         "parentDataRollingHash": {
-          "description": "The dataRollingHash accumulator value this proof starts from, paired with parentDataTailTake (§2.2, §3.1). If parentDataTailTake = 0, this is R_0 (the accumulator before the first touched chunk, folded forward normally from chunk 1). If parentDataTailTake > 0 (mid-chunk start), this is already R_1 (the accumulator after the first touched chunk), whose preimage is opened via boundaryPrevDataRollingHash before folding continues from chunk 2 (if any).",
+          "description": "The dataRollingHash accumulator value this proof starts from, paired with parentDataTailTakeBytes (§2.2, §3.1). If parentDataTailTakeBytes = 0, this is R_0 (the accumulator before the first touched chunk, folded forward normally from chunk 1). If parentDataTailTakeBytes > 0 (mid-chunk start), this is already R_1 (the accumulator after the first touched chunk), whose preimage is opened via boundaryPrevDataRollingHash before folding continues from chunk 2 (if any).",
           "$ref": "#/$defs/hash32"
         },
-        "parentDataTailTake": {
+        "parentDataTailTakeBytes": {
           "description": "0 at a chunk boundary; positive N takes exactly the last N bytes of the actual unpacked first blob payload, requires N < its length and boundaryPrevDataRollingHash.",
           "$ref": "#/$defs/tailCount"
         },
         "boundaryPrevDataRollingHash": {
-          "description": "Required only when parentDataTailTake > 0 (§3.4): the dataRollingHash value before the first touched chunk, opening its preimage against parentDataRollingHash.",
+          "description": "Required only when parentDataTailTakeBytes > 0 (§3.4): the dataRollingHash value before the first touched chunk, opening its preimage against parentDataRollingHash.",
           "$ref": "#/$defs/hash32"
         },
         "l2ExecutionProofs": {

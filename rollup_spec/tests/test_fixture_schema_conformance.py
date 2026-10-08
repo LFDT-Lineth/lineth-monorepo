@@ -154,13 +154,13 @@ class BlobTailCountCase:
 
 
 _BLOB_TAIL_COUNT_CASES = [
-    BlobTailCountCase("10-14-getZkRollupProofV1.request.json", ("proofRequest", "parentDataTailTake")),
-    BlobTailCountCase("10-14-getZkRollupProofV1.response.json", ("publicInputs", "parentDataTailTake")),
-    BlobTailCountCase("10-14-getZkRollupProofV1.response.json", ("publicInputs", "finalDataTailDiscard")),
-    BlobTailCountCase("10-18-getZkRollupAggregationProofV1.request.json", ("proofRequest", "rollupProofs", 0, "publicInputs", "parentDataTailTake")),
-    BlobTailCountCase("10-18-getZkRollupAggregationProofV1.request.json", ("proofRequest", "rollupProofs", 0, "publicInputs", "finalDataTailDiscard")),
-    BlobTailCountCase("10-18-getZkRollupAggregationProofV1.response.json", ("publicInputs", "parentDataTailTake")),
-    BlobTailCountCase("10-18-getZkRollupAggregationProofV1.response.json", ("publicInputs", "finalDataTailDiscard")),
+    BlobTailCountCase("10-14-getZkRollupProofV1.request.json", ("proofRequest", "parentDataTailTakeBytes")),
+    BlobTailCountCase("10-14-getZkRollupProofV1.response.json", ("publicInputs", "parentDataTailTakeBytes")),
+    BlobTailCountCase("10-14-getZkRollupProofV1.response.json", ("publicInputs", "finalDataTailDiscardBytes")),
+    BlobTailCountCase("10-18-getZkRollupAggregationProofV1.request.json", ("proofRequest", "rollupProofs", 0, "publicInputs", "parentDataTailTakeBytes")),
+    BlobTailCountCase("10-18-getZkRollupAggregationProofV1.request.json", ("proofRequest", "rollupProofs", 0, "publicInputs", "finalDataTailDiscardBytes")),
+    BlobTailCountCase("10-18-getZkRollupAggregationProofV1.response.json", ("publicInputs", "parentDataTailTakeBytes")),
+    BlobTailCountCase("10-18-getZkRollupAggregationProofV1.response.json", ("publicInputs", "finalDataTailDiscardBytes")),
 ]
 
 

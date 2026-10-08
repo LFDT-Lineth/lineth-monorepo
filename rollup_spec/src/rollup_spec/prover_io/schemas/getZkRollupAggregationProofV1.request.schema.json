@@ -65,8 +65,8 @@
         "endDataRollingHash",
         "parentBlockHash",
         "endBlockHash",
-        "parentDataTailTake",
-        "finalDataTailDiscard",
+        "parentDataTailTakeBytes",
+        "finalDataTailDiscardBytes",
         "l2L1Messages",
         "filteredAddresses",
         "programVks",
@@ -89,11 +89,11 @@
         "endDataRollingHash": { "$ref": "#/$defs/hash32" },
         "parentBlockHash": { "$ref": "#/$defs/hash32" },
         "endBlockHash": { "$ref": "#/$defs/hash32" },
-        "parentDataTailTake": {
+        "parentDataTailTakeBytes": {
           "description": "0 at a chunk boundary; positive N takes the final N bytes of the actual unpacked first blob payload, requiring N < its length (§3.1).",
           "$ref": "#/$defs/tailCount"
         },
-        "finalDataTailDiscard": {
+        "finalDataTailDiscardBytes": {
           "description": "Guest-derived unconsumed suffix byte count of the last blob payload: 0 at a fully consumed chunk boundary; positive N requires N < the actual unpacked last blob payload length (§3.1).",
           "$ref": "#/$defs/tailCount"
         },

@@ -50,14 +50,14 @@ def _position_commitment(data_rolling_hash: Hash32, tail_count: int) -> Hash32:
     return keccak256(data_rolling_hash + tail_count.to_bytes(32, "big"))
 
 
-def _base_state(approved_program_ids, parent_data_tail_take: int = 0) -> LinethRollupState:
+def _base_state(approved_program_ids, parent_data_tail_take_bytes: int = 0) -> LinethRollupState:
     """
     An L1 state whose continuity anchors exactly match `_base_submission()`'s
     public inputs, so all other finalization checks pass. `approved_program_ids` is the
     only knob the tests vary.
     """
     return LinethRollupState(
-        current_finalized_position_commitment=_position_commitment(_PARENT_DATA_ROLLING_HASH, parent_data_tail_take),
+        current_finalized_position_commitment=_position_commitment(_PARENT_DATA_ROLLING_HASH, parent_data_tail_take_bytes),
         current_finalized_last_block_hash=_PARENT_BLOCK_HASH,
         current_l2_block_number=U64(1000500),
         current_l2_block_timestamp=U64(1763000000),
@@ -71,7 +71,7 @@ def _base_state(approved_program_ids, parent_data_tail_take: int = 0) -> LinethR
     )
 
 
-def _base_submission(program_ids, parent_data_tail_take: int = 0) -> FinalizationSubmission:
+def _base_submission(program_ids, parent_data_tail_take_bytes: int = 0) -> FinalizationSubmission:
     """
     A finalization submission carrying the single combined `program_ids` list
     nested in the PI (order bound to the proof). Empty `l2_l1_roots` /
@@ -95,8 +95,8 @@ def _base_submission(program_ids, parent_data_tail_take: int = 0) -> Finalizatio
         end_data_rolling_hash=_END_DATA_ROLLING_HASH,
         parent_block_hash=_PARENT_BLOCK_HASH,
         end_block_hash=_END_BLOCK_HASH,
-        parent_data_tail_take=parent_data_tail_take,
-        final_data_tail_discard=_FINAL_DATA_TAIL_DISCARD,
+        parent_data_tail_take_bytes=parent_data_tail_take_bytes,
+        final_data_tail_discard_bytes=_FINAL_DATA_TAIL_DISCARD,
         l2_l1_tree_depth=5,
         l2_l1_roots=[],
         filtered_addresses=[],
@@ -164,9 +164,9 @@ def test_finalize_rollup_succeeds_when_all_program_ids_approved() -> None:
 
 
 def test_finalize_rollup_rejects_chunk_boundary_start_inside_finalized_blob() -> None:
-    parent_data_tail_take = 9
-    state = _base_state(approved_program_ids=set(), parent_data_tail_take=parent_data_tail_take)
-    submission = _base_submission(program_ids=[], parent_data_tail_take=0)
+    parent_data_tail_take_bytes = 9
+    state = _base_state(approved_program_ids=set(), parent_data_tail_take_bytes=parent_data_tail_take_bytes)
+    submission = _base_submission(program_ids=[], parent_data_tail_take_bytes=0)
 
-    with pytest.raises(Exception, match="parentDataTailTake does not match the finalized position"):
-        finalize_rollup(state, submission, _PARENT_DATA_ROLLING_HASH, parent_data_tail_take)
+    with pytest.raises(Exception, match="parentDataTailTakeBytes does not match the finalized position"):
+        finalize_rollup(state, submission, _PARENT_DATA_ROLLING_HASH, parent_data_tail_take_bytes)
