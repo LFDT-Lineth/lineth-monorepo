@@ -579,13 +579,11 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         rollup_end_block_number,
     )
 
-    concatenated_l2_l1_messages: List[Hash32] = []
     concatenated_filtered_addresses: List[Address] = []
     truncated_block_hashes = [block.block_hash for block in truncated_blocks]
 
     for verifiable_proof in rollup_input.l2_execution_proofs:
         verify_l2_execution_proof(verifiable_proof.program_vk, verifiable_proof.proof)
-        concatenated_l2_l1_messages.extend(verifiable_proof.proof.l2_l1_messages)
         concatenated_filtered_addresses.extend(verifiable_proof.proof.filtered_addresses)
 
     concatenated_l2_l1_messages = collect_l2_l1_messages(
@@ -699,16 +697,13 @@ def verify_l2_execution_proof(program_vk: Hash32, proof: L2ExecutionProof) -> No
     anchoring). The rollup guest passes the same `program_vk` it bubbles up into
     `exec_vks` / `program_vks`, so the anchored VK is provably the key the
     verification ran against. `L2ExecutionProof.proof` stands in for those
-    recursive-STARK bytes; beyond the recursive verify, the reference re-checks
-    the message and filtered-address preimage bindings. The caller checks
-    `txFromsHash` against the canonical DA block senders.
+    recursive-STARK bytes; the verifier binds the complete PI, including its
+    ordered message list. Filtered-address preimages are checked separately
+    against the public inputs; the caller checks sender hashes against DA blocks.
     """
     # First: the recursive STARK verify against the explicit verify key.
-    recursive_stark_verify(program_vk, proof.proof)
-    # The checks below are PRECOMPILE: keccak256 in production (used
-    # to verify the preimage bindings that the rollup proof consumes).
-    if hash_digest_list(proof.l2_l1_messages) != proof.public_inputs.l2_l1_messages_hash:
-        raise Exception("invalid L2-to-L1 message-list preimage")
+    recursive_stark_verify(program_vk, proof.proof, hash_l2_execution_public_inputs(proof.public_inputs))
+    # The check below binds the filtered-address preimage consumed by the rollup proof.
     if hash_address_list(proof.filtered_addresses) != proof.public_inputs.filtered_addresses_hash:
         raise Exception("invalid l2-execution filteredAddressesHash preimage")
 
