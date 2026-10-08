@@ -3,6 +3,7 @@ package wiop
 import (
 	"fmt"
 	"math/bits"
+	"sort"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
@@ -122,10 +123,223 @@ func (le *LagrangeEval) Check(rt *Runtime) error {
 // EvaluationPoint, applying the cyclic-shift adjustment for each [ColumnView].
 // It is the shared kernel used by both [Check] and [SelfAssign].
 //
-// Each polynomial is an independent O(n) barycentric evaluation writing its
-// own results slot, so the batch is chunked across CPUs.
+// An extension-field point (the production case: a verifier coin) goes through
+// [LagrangeEval.evalPolynomialsShared], which computes the barycentric weights
+// once per distinct (domain, shifted point) instead of once per polynomial.
 func (le *LagrangeEval) evalPolynomials(rt *Runtime) []field.Gen {
 	evalPoint := le.EvaluationPoint.EvaluateSingle(rt)
+	if !evalPoint.Value.IsBase() {
+		return le.evalPolynomialsShared(rt, evalPoint.Value.AsExt())
+	}
+	return le.evalPolynomialsEach(rt, evalPoint.Value)
+}
+
+// lagrangeChunkSize is the number of rows per work item of
+// [LagrangeEval.evalPolynomialsShared]: small enough to spread a single large
+// domain over every CPU, large enough to amortise the batch inversion.
+const lagrangeChunkSize = 1 << 12
+
+// lagrangeDomain identifies a barycentric weight table: a domain size and the
+// (shift-adjusted) point the polynomials are evaluated at.
+type lagrangeDomain struct {
+	n int
+	z field.Ext
+}
+
+// lagrangeTerm is one polynomial of an [LagrangeEval.evalPolynomialsShared]
+// batch: its data rows sit at [dataStart, dataStart+data.Len()) of the domain,
+// every other row holds pad.
+type lagrangeTerm struct {
+	data      field.Vec
+	pad       field.Element
+	dataStart int
+	domain    int
+}
+
+// evalPolynomialsShared evaluates every polynomial at the extension point z as
+//
+//	P(z') = (z'ⁿ - 1)/n · Σᵢ wᵢ · p[i],   wᵢ = ωⁱ / (z' - ωⁱ),
+//
+// where z' is z adjusted for the view's shift. The weights depend only on
+// (n, z'), which the polynomials of a module share up to a handful of distinct
+// shifts, so the O(n) batch inversion runs once per table rather than once per
+// polynomial. Weight tables and inner products are both split into row chunks
+// pulled dynamically, so a module with a few tall columns still uses every CPU.
+func (le *LagrangeEval) evalPolynomialsShared(rt *Runtime, z field.Ext) []field.Gen {
+	var (
+		domainIdx = make(map[lagrangeDomain]int)
+		domains   []lagrangeDomain
+		terms     = make([]lagrangeTerm, len(le.Polynomials))
+	)
+	for i, pv := range le.Polynomials {
+		var (
+			cv = rt.GetColumnAssignment(pv.Column)
+			m  = pv.Column.Module
+			t  = lagrangeTerm{data: cv.Plain, pad: cv.Padding}
+			d  = lagrangeDomain{n: cv.Plain.Len(), z: z}
+		)
+		if m.Padding != PaddingDirectionNone {
+			d.n = m.RuntimeSize(rt)
+			if m.Padding == PaddingDirectionLeft {
+				t.dataStart = d.n - cv.Plain.Len()
+			}
+		}
+		// C'[j] = C[(j+k) mod n] implies C'(z) = C(ω^k · z).
+		if k := pv.ShiftingOffset; k != 0 {
+			var omegaK field.Element
+			omegaK.ExpInt64(field.RootOfUnityBy(m.RuntimeSize(rt)), int64(k))
+			d.z.MulByElement(&d.z, &omegaK)
+		}
+		idx, ok := domainIdx[d]
+		if !ok {
+			idx = len(domains)
+			domainIdx[d] = idx
+			domains = append(domains, d)
+		}
+		t.domain = idx
+		terms[i] = t
+	}
+
+	type rowChunk struct{ owner, start, end int }
+	chunksOf := func(owner, n int, out []rowChunk) []rowChunk {
+		for s := 0; s < n; s += lagrangeChunkSize {
+			out = append(out, rowChunk{owner, s, min(s+lagrangeChunkSize, n)})
+		}
+		return out
+	}
+
+	// Weight tables, largest domains first.
+	weights := make([][]field.Ext, len(domains))
+	var weightChunks []rowChunk
+	for _, i := range domainsBySizeDesc(domains) {
+		weights[i] = make([]field.Ext, domains[i].n)
+		weightChunks = chunksOf(i, domains[i].n, weightChunks)
+	}
+	parallel.ExecuteDynamic(len(weightChunks), func(c int) {
+		var (
+			it     = weightChunks[c]
+			d      = domains[it.owner]
+			w      = weights[it.owner][it.start:it.end]
+			gen    = field.RootOfUnityBy(d.n)
+			powers = make([]field.Element, len(w))
+			denom  = make([]field.Ext, len(w))
+			omega  field.Element
+		)
+		omega.ExpInt64(gen, int64(it.start))
+		for j := range w {
+			powers[j] = omega
+			denom[j] = d.z
+			denom[j].B0.A0.Sub(&denom[j].B0.A0, &omega) // z' - ω^j
+			omega.Mul(&omega, &gen)
+		}
+		field.BatchInvertExtInto(denom, w)
+		for j := range w {
+			w[j].MulByElement(&w[j], &powers[j])
+		}
+	})
+
+	// Inner products, tallest polynomials first, one partial sum per chunk.
+	var parts []rowChunk
+	for _, i := range termsBySizeDesc(terms, domains) {
+		parts = chunksOf(i, domains[terms[i].domain].n, parts)
+	}
+	sums := make([]field.Ext, len(parts))
+	parallel.ExecuteDynamic(len(parts), func(p int) {
+		var (
+			it        = parts[p]
+			t         = &terms[it.owner]
+			w         = weights[t.domain]
+			lo, hi    = t.dataStart, t.dataStart + t.data.Len()
+			ds, de    = max(it.start, lo), min(it.end, hi)
+			acc, term field.Ext
+		)
+		if !t.pad.IsZero() {
+			var padAcc field.Ext
+			for j := it.start; j < min(it.end, lo); j++ {
+				padAcc.Add(&padAcc, &w[j])
+			}
+			for j := max(it.start, hi); j < it.end; j++ {
+				padAcc.Add(&padAcc, &w[j])
+			}
+			acc.MulByElement(&padAcc, &t.pad)
+		}
+		if t.data.IsBase() {
+			data := t.data.AsBase()
+			for j := ds; j < de; j++ {
+				term.MulByElement(&w[j], &data[j-lo])
+				acc.Add(&acc, &term)
+			}
+		} else {
+			data := t.data.AsExt()
+			for j := ds; j < de; j++ {
+				term.Mul(&w[j], &data[j-lo])
+				acc.Add(&acc, &term)
+			}
+		}
+		sums[p] = acc
+	})
+
+	totals := make([]field.Ext, len(terms))
+	for p, it := range parts {
+		totals[it.owner].Add(&totals[it.owner], &sums[p])
+	}
+
+	// Scale each table's sums by (z'ⁿ - 1)/n.
+	scales := make([]field.Ext, len(domains))
+	for i, d := range domains {
+		var (
+			one  field.Ext
+			invN field.Element
+		)
+		one.SetOne()
+		scales[i] = d.z
+		for range bits.TrailingZeros(uint(d.n)) {
+			scales[i].Square(&scales[i])
+		}
+		scales[i].Sub(&scales[i], &one)
+		invN.SetUint64(uint64(d.n))
+		invN.Inverse(&invN)
+		scales[i].MulByElement(&scales[i], &invN)
+	}
+
+	results := make([]field.Gen, len(terms))
+	for i, t := range terms {
+		if domains[t.domain].n == 0 {
+			results[i] = field.ElemFromExt(field.Ext{})
+			continue
+		}
+		totals[i].Mul(&totals[i], &scales[t.domain])
+		results[i] = field.ElemFromExt(totals[i])
+	}
+	return results
+}
+
+// domainsBySizeDesc returns the indices of domains, largest n first.
+func domainsBySizeDesc(domains []lagrangeDomain) []int {
+	order := make([]int, len(domains))
+	for i := range order {
+		order[i] = i
+	}
+	sort.SliceStable(order, func(a, b int) bool { return domains[order[a]].n > domains[order[b]].n })
+	return order
+}
+
+// termsBySizeDesc returns the indices of terms, largest domain first.
+func termsBySizeDesc(terms []lagrangeTerm, domains []lagrangeDomain) []int {
+	order := make([]int, len(terms))
+	for i := range order {
+		order[i] = i
+	}
+	sort.SliceStable(order, func(a, b int) bool {
+		return domains[terms[order[a]].domain].n > domains[terms[order[b]].domain].n
+	})
+	return order
+}
+
+// evalPolynomialsEach evaluates every polynomial independently at a base-field
+// point. Each polynomial is an O(n) barycentric evaluation writing its own
+// results slot, so the batch is chunked across CPUs.
+func (le *LagrangeEval) evalPolynomialsEach(rt *Runtime, z0 field.Gen) []field.Gen {
 	results := make([]field.Gen, len(le.Polynomials))
 	parallel.Execute(len(le.Polynomials), func(start, end int) {
 		for i := start; i < end; i++ {
@@ -133,7 +347,7 @@ func (le *LagrangeEval) evalPolynomials(rt *Runtime) []field.Gen {
 			// Adjust the evaluation point for the column view's cyclic shift.
 			// C'[j] = C[(j+k) mod n]  implies  C'(z) = C(ω^k · z),
 			// so we evaluate the original column data at ω^k · z instead.
-			z := evalPoint.Value
+			z := z0
 			if k := pv.ShiftingOffset; k != 0 {
 				var (
 					n      = pv.Column.Module.RuntimeSize(rt)

@@ -2,9 +2,11 @@ package pcs
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
@@ -230,14 +232,19 @@ func (c *compiled) buildManifest(round *wiop.Round, vectors []paddedColumn) Colu
 	}
 	present := make(map[bucket][]int)
 
+	// The zero test and the fingerprint read every committed cell, so they run
+	// per column in parallel; only the order-dependent alias decision below
+	// stays serial.
+	zero, hashes := scanColumns(vectors)
+
 next:
 	for i := range vectors {
 		v := &vectors[i]
-		if v.isZero() {
+		if zero[i] {
 			manifest[i] = ManifestZero
 			continue
 		}
-		b := bucket{v.sizeIndex, v.isExt, v.hash()}
+		b := bucket{v.sizeIndex, v.isExt, hashes[i]}
 		for _, k := range present[b] {
 			if vectors[k].equal(v) && c.shiftSubset(round.Columns[i], round.Columns[k], v.sizeIndex) {
 				manifest[i] = ManifestAlias(k)
@@ -259,6 +266,37 @@ next:
 		manifest[c.firstOpenedColumn(round)] = ManifestPresent
 	}
 	return manifest
+}
+
+// scanColumns reports, for every vector, whether it is identically zero and,
+// when it is not, its [paddedColumn.hash] fingerprint. Columns are scanned
+// concurrently, largest first so the tail of the schedule is made of small
+// columns.
+func scanColumns(vectors []paddedColumn) (zero []bool, hashes []uint64) {
+	zero = make([]bool, len(vectors))
+	hashes = make([]uint64, len(vectors))
+	order := make([]int, len(vectors))
+	for i := range order {
+		order[i] = i
+	}
+	sort.SliceStable(order, func(a, b int) bool {
+		return vectors[order[a]].cost() > vectors[order[b]].cost()
+	})
+	parallel.ExecuteDynamic(len(order), func(j int) {
+		i := order[j]
+		if zero[i] = vectors[i].isZero(); !zero[i] {
+			hashes[i] = vectors[i].hash()
+		}
+	})
+	return zero, hashes
+}
+
+// cost is the number of base-field elements the column holds.
+func (p *paddedColumn) cost() int {
+	if p.isExt {
+		return 6 << p.sizeIndex
+	}
+	return 1 << p.sizeIndex
 }
 
 // firstOpenedColumn returns the index of the first column of round that is

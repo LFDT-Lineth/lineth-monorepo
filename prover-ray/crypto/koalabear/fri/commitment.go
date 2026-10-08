@@ -83,28 +83,31 @@ func (table MultiSizeTable) Encode(encoders []*RSEncoder) MultiSizeTable {
 	// them in parallel. gnark's FFT barely parallelizes at these row sizes, so
 	// the parallelism must be across rows; fft.WithNbTasks(1) keeps each FFT
 	// single-threaded so the outer parallelism isn't nested.
+	//
+	// Row costs span several orders of magnitude (sizes 2^0 .. 2^22, base or
+	// extension), so the items are pulled dynamically, largest size first and
+	// extension before base within a size: a contiguous split put every one of
+	// the largest rows on the last few workers.
 	type encodeItem struct {
 		i, k int
 		ext  bool
 	}
 	var work []encodeItem
-	for i := range table {
-		for k := range table[i].Base {
-			work = append(work, encodeItem{i: i, k: k})
-		}
+	for i := len(table) - 1; i >= 0; i-- {
 		for k := range table[i].Ext {
 			work = append(work, encodeItem{i: i, k: k, ext: true})
 		}
+		for k := range table[i].Base {
+			work = append(work, encodeItem{i: i, k: k})
+		}
 	}
 	encodeOpts := []fft.Option{fft.WithNbTasks(1)}
-	parallel.Execute(len(work), func(start, end int) {
-		for w := start; w < end; w++ {
-			it := work[w]
-			if it.ext {
-				encoders[it.i].EncodeExtInto(table[it.i].Ext[it.k], encoded[it.i].Ext[it.k], encodeOpts...)
-			} else {
-				encoders[it.i].EncodeInto(table[it.i].Base[it.k], encoded[it.i].Base[it.k], encodeOpts...)
-			}
+	parallel.ExecuteDynamic(len(work), func(w int) {
+		it := work[w]
+		if it.ext {
+			encoders[it.i].EncodeExtInto(table[it.i].Ext[it.k], encoded[it.i].Ext[it.k], encodeOpts...)
+		} else {
+			encoders[it.i].EncodeInto(table[it.i].Base[it.k], encoded[it.i].Base[it.k], encodeOpts...)
 		}
 	})
 
