@@ -24,10 +24,16 @@ func newSharedRandomnessMessageBusHandle(t *testing.T) *wiop.System {
 	t.Helper()
 	sys := wiop.NewSystemf("mb-sr-codegen")
 	r0 := sys.NewRound()
+	// Bus columns live on the coin round, not on r0. SharedRandomness requires
+	// it: the coin round's commitment is hashed into this shard's contribution to
+	// γ, so a column on any other round would not be bound by the γ that seeds
+	// the α and β the bus is evaluated with. r0 carries γ itself, which is why
+	// the coin round is r0's successor.
+	coinRound := r0.EnsureNext()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), coinRound)
+	colB := modB.NewColumn(sys.Context.Childf("B"), coinRound)
 
 	sys.NewMessageBusSend(sys.Context.Childf("send"), "shard", "route", wiop.NewTable(colA.View()))
 	sys.NewMessageBusReceive(sys.Context.Childf("recv"), "shard", "route", wiop.NewTable(colB.View()))
@@ -120,8 +126,10 @@ func TestWriteSharedRandomnessSystemZigRendersContribution(t *testing.T) {
 	got := out.String()
 	for _, want := range []string{
 		"const shared_randomness = @import",
-		// coin round is round 1, carries no columns so has_commitment = false
-		".commitment_round = .{ .round = 1, .has_commitment = false }",
+		// The coin round is round 1 and carries the bus columns, so it is
+		// committed: has_commitment = true. That commitment is what the verifier
+		// hashes to recompute this shard's contribution to γ.
+		".commitment_round = .{ .round = 1, .has_commitment = true }",
 		"system_0_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{",
 		"system_0_shared_randomness = shared_randomness.System{",
 	} {

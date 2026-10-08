@@ -961,10 +961,16 @@ type messageBusFixtureCase struct {
 func buildMessageBusSharedRandomnessSystem() (*wiop.System, *wiop.Column, *wiop.Column) {
 	sys := wiop.NewSystemf("mb-shared-randomness")
 	r0 := sys.NewRound()
+	// Bus columns live on the coin round, not on r0. SharedRandomness requires
+	// it: the coin round's commitment is hashed into this shard's contribution to
+	// γ, so a column on any other round would not be bound by the γ that seeds
+	// the α and β the bus is evaluated with. r0 carries γ itself, which is why
+	// the coin round is r0's successor.
+	coinRound := r0.EnsureNext()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), coinRound)
+	colB := modB.NewColumn(sys.Context.Childf("B"), coinRound)
 
 	sys.NewMessageBusSend(sys.Context.Childf("send"), "shard", "route", wiop.NewTable(colA.View()))
 	sys.NewMessageBusReceive(sys.Context.Childf("recv"), "shard", "route", wiop.NewTable(colB.View()))
@@ -1004,7 +1010,13 @@ func flippedExtTraceCell(cell runtimeTraceCell) runtimeTraceCell {
 func addMessageBusSharedRandomness(reg func(name string, sys *wiop.System, honest assignFn) error) error {
 	sys, colA, colB := buildMessageBusSharedRandomnessSystem()
 	honest := func(rt *wiop.Runtime) {
+		// γ lives on round 0 and must be written while the runtime is still there.
 		messagebus.AssignSharedRandomnessSeed(rt, octuplet(11, 22, 33, 44, 55, 66, 77, 88))
+		// The bus columns live on the coin round, so step onto it before assigning
+		// them: AssignColumn requires the runtime's current round to be the
+		// column's own. Advancing here is what absorbs γ into the transcript that
+		// α and β are then drawn from.
+		rt.AdvanceRound()
 		rt.AssignColumn(colA, concreteBase(elems(1, 2, 3, 4)))
 		rt.AssignColumn(colB, concreteBase(elems(1, 2, 3, 4)))
 	}

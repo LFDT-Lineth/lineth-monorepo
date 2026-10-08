@@ -33,8 +33,8 @@ from .l2_execution import (
     L2ExecutionProofPublicInput,
     VerifiableL2ExecutionProof,
     hash_address_list,
-    hash_digest_list,
 )
+from .l2_execution_ssz import hash_l2_execution_public_inputs
 from .messaging_offsets import rebase_messaging_offsets
 
 L2_L1_TREE_DEPTH = 5
@@ -408,8 +408,7 @@ class RollupPublicInput:
     the parsed frames), not trusted witness input.
 
     `program_vks` is the set of guest program VKs verified beneath this proof,
-    encoded as a distinct list sorted ascending by byte value. The root and
-    filtered-address lists retain their original order.
+    encoded as a distinct list sorted ascending by byte value.
     """
     end_block_number: U64
     end_block_timestamp: U64
@@ -428,8 +427,7 @@ class RollupPublicInput:
     end_block_hash: Hash32
     start_offset: int
     end_offset: int
-    l2_l1_tree_depth: int = L2_L1_TREE_DEPTH
-    l2_l1_roots: List[Hash32] = field(default_factory=list)
+    l2_l1_messages: List[Hash32] = field(default_factory=list)
     filtered_addresses: List[Address] = field(default_factory=list)
     program_vks: List[Hash32] = field(default_factory=list)
     block_count: int = 0
@@ -517,8 +515,8 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     commitment for a blob chunk, keccak256 for a calldata chunk), and checks it
     against the L1-anchored `chunkHash` — folding the dataRollingHash chain
     across the touched chunks as it goes (§3.4). Recursively verifies the N
-    l2-execution proofs, checks continuity, builds the L2->L1 Merkle-root
-    list, collects FTX outputs, and emits the rollup PI tuple
+    l2-execution proofs, checks continuity, commits the ordered L2->L1 messages,
+    collects FTX outputs, and emits the rollup PI tuple
     (§2.4).
     """
     if len(rollup_input.conflations) == 0:
@@ -576,14 +574,16 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         rollup_end_block_number,
     )
 
-    concatenated_l2_l1_messages: List[Hash32] = []
     concatenated_filtered_addresses: List[Address] = []
     truncated_block_hashes = [block.block_hash for block in truncated_blocks]
 
     for verifiable_proof in rollup_input.l2_execution_proofs:
         verify_l2_execution_proof(verifiable_proof.program_vk, verifiable_proof.proof)
-        concatenated_l2_l1_messages.extend(verifiable_proof.proof.l2_l1_messages)
         concatenated_filtered_addresses.extend(verifiable_proof.proof.filtered_addresses)
+
+    concatenated_l2_l1_messages = collect_l2_l1_messages(
+        [proof.public_inputs.l2_l1_messages for proof in l2_execution_proofs]
+    )
 
     messaging_offsets: List[int] = []
     for proof in l2_execution_proofs:
@@ -633,11 +633,10 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     for left, right in zip(l2_execution_proofs, l2_execution_proofs[1:]):
         assert_l2_execution_continuity(left.public_inputs, right.public_inputs)
 
-    l2_l1_roots = build_l2_message_roots(concatenated_l2_l1_messages)
     public_inputs = RollupPublicInput(
         end_block_number=last_proof.public_inputs.end_block_number,
         end_block_timestamp=last_proof.public_inputs.end_block_timestamp,
-        l2_l1_roots=l2_l1_roots,
+        l2_l1_messages=concatenated_l2_l1_messages,
         parent_l1_l2_bridge_rolling_hash=first_proof.public_inputs.parent_l1_l2_bridge_rolling_hash,
         parent_l1_l2_bridge_rolling_hash_message_number=(
             first_proof.public_inputs.parent_l1_l2_bridge_rolling_hash_message_number
@@ -658,7 +657,6 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         end_block_hash=last_proof.public_inputs.end_block_hash,
         start_offset=rollup_input.start_offset,
         end_offset=end_offset,
-        l2_l1_tree_depth=L2_L1_TREE_DEPTH,
         program_vks=program_vks,
         block_count=rollup_end_block_number - rollup_start_block_number + 1,
         l2_messaging_blocks_offsets=messaging_offsets,
@@ -670,10 +668,16 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     )
 
 
-def recursive_stark_verify(program_vk: Hash32, proof: bytes) -> None:
+def collect_l2_l1_messages(message_lists: Sequence[Sequence[Hash32]]) -> List[Hash32]:
+    """Concatenate message lists in proof and message order."""
+    return [message for messages in message_lists for message in messages]
+
+
+def recursive_stark_verify(program_vk: Hash32, proof: bytes, public_input_hash: Hash32) -> None:
     """PRECOMPILE (production guest): the zkVM in-circuit recursive STARK
-    verifier. Accepts iff `proof` verifies under `program_vk`. Stubbed in this
-    reference; the point is that the SAME `program_vk` passed here is the value
+    verifier. Accepts iff `proof` verifies under `program_vk` against the hash
+    of its full canonical public input. Stubbed in this reference; the point is
+    that the SAME `program_vk` passed here is the value
     the caller emits into `program_vks`, so the anchored VK is provably the
     verification key (no divergence between what is verified and what L1 checks)."""
     return None
@@ -688,16 +692,12 @@ def verify_l2_execution_proof(program_vk: Hash32, proof: L2ExecutionProof) -> No
     anchoring). The rollup guest passes the same `program_vk` it bubbles up into
     `exec_vks` / `program_vks`, so the anchored VK is provably the key the
     verification ran against. `L2ExecutionProof.proof` stands in for those
-    recursive-STARK bytes; beyond the recursive verify, the reference re-checks
-    the message and filtered-address preimage bindings. The caller checks
-    `txFromsHash` against the canonical DA block senders.
+    recursive-STARK bytes; the verifier binds the complete PI, including its
+    ordered message list. Sender and filtered-address preimages are checked
+    separately against the public inputs; sender hashes are checked against DA blocks.
     """
-    # First: the recursive STARK verify against the explicit verify key.
-    recursive_stark_verify(program_vk, proof.proof)
-    # The checks below are PRECOMPILE: keccak256 in production (used
-    # to verify the preimage bindings that the rollup proof consumes).
-    if hash_digest_list(proof.l2_l1_messages) != proof.public_inputs.l2_l1_messages_hash:
-        raise Exception("invalid L2-to-L1 message-list preimage")
+    # First: the recursive STARK verify against the explicit key and full PI hash.
+    recursive_stark_verify(program_vk, proof.proof, hash_l2_execution_public_inputs(proof.public_inputs))
     if hash_address_list(proof.filtered_addresses) != proof.public_inputs.filtered_addresses_hash:
         raise Exception("invalid l2-execution filteredAddressesHash preimage")
 
@@ -732,21 +732,6 @@ def assert_l2_execution_continuity(
         raise Exception("l2-execution FTX rolling-hash continuity failed")
     if left.end_processed_ftx_number != right.parent_ftx_number:
         raise Exception("l2-execution processed-FTX-number continuity failed")
-
-
-def build_l2_messages_tree(msgs: Sequence[Hash32]) -> Tuple[List[Hash32], Hash32]:
-    """
-    Build L2-to-L1 message trees exactly as specified:
-    - Pad the ordered message-hash list with zero Hash32 values until its
-      length is a multiple of 32.
-    - Split the padded list into consecutive 32-leaf chunks.
-    - Merkle-hash each chunk as a complete depth-5 binary tree with keccak.
-    - Flat-hash the ordered roots with keccak256(root_1 || ... || root_n).
-
-    Returns the ordered roots and their flat keccak256 digest.
-    """
-    roots = build_l2_message_roots(msgs)
-    return roots, hash_digest_list(roots)
 
 
 def build_l2_message_roots(msgs: Sequence[Hash32]) -> List[Hash32]:

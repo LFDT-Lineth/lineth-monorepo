@@ -5,8 +5,8 @@ These cover the properties this codec is responsible for:
   - round-trip fidelity: the SSZ codec preserves every field of the logical
     guest-input dataclass, including the nested payloads, forced-transaction
     witnesses, and the opaque per-payload stateless-input byte slices;
-  - output framing: the 0x0003 frame carries the SSZ public-input tuple,
-    including its variable-length offsets, followed by its keccak256 hash;
+  - output commitment: the 0x0003 schema-framed public-input preimage follows
+    its 32-byte keccak256 prefix;
   - strict decoding: a wrong schema id, truncated bytes, or trailing bytes are
     all rejected rather than silently accepted or truncated.
 
@@ -29,6 +29,7 @@ from rollup_spec.l2_execution_ssz import (
     encode_l2_execution_input,
     encode_l2_execution_output,
     encode_l2_execution_public_inputs_bytes,
+    hash_l2_execution_public_inputs,
 )
 from rollup_spec.proof_io_v1 import _decode_l2_execution_public_input, decode_request
 from rollup_spec.stateless_input import InvalidSsz
@@ -53,8 +54,7 @@ def _l2_execution_input():
 
 
 def _l2_execution_proof() -> L2ExecutionProof:
-    """The guest output implied by the response fixture (the preimage lists
-    are irrelevant here: only `public_inputs` reaches the 0x0003 wire)."""
+    """The guest output implied by the response fixture."""
     response = _load_json("getZkL2ExecutionProofV1.response.json")
     return L2ExecutionProof(
         public_inputs=_decode_l2_execution_public_input(response["publicInputs"], "publicInputs."),
@@ -83,45 +83,56 @@ def test_l2_execution_input_fixture_exercises_nested_fields() -> None:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Output: SSZ public inputs and hash in a 0x0003 frame
+# Output: committed 0x0003 public-input preimage
 # ══════════════════════════════════════════════════════════════════════════════
 
 
-def test_l2_execution_output_frames_public_inputs_and_hash() -> None:
-    proof = _l2_execution_proof()
-    encoded = encode_l2_execution_output(proof)
-    pi_bytes = encode_l2_execution_public_inputs_bytes(proof.public_inputs)
-    assert len(encoded) == 2 + len(pi_bytes) + 32
-    assert encoded[:2] == (0x0003).to_bytes(2, "big")
-    assert encoded[2:-32] == pi_bytes
+def test_l2_execution_output_starts_with_hash_then_schema_id() -> None:
+    encoded = encode_l2_execution_output(_l2_execution_proof())
+    assert len(encoded) > 34
+    assert encoded[32:34] == (0x0003).to_bytes(2, "big")
 
 
-def test_l2_execution_output_hash_is_keccak_of_the_public_input_tuple() -> None:
+def test_l2_execution_output_hash_commits_schema_and_public_inputs() -> None:
     proof = _l2_execution_proof()
     encoded = encode_l2_execution_output(proof)
-    pi_bytes = encode_l2_execution_public_inputs_bytes(proof.public_inputs)
-    assert encoded[-32:] == keccak256(pi_bytes)
+    expected = keccak256(encoded[32:])
+    assert encoded[:32] == expected
+    assert encoded[:32] == hash_l2_execution_public_inputs(proof.public_inputs)
     assert decode_l2_execution_output_ssz(encoded) == proof.public_inputs
 
 
-def test_l2_execution_output_preserves_variable_length_offsets() -> None:
+def test_execution_output_commits_ordered_message_list() -> None:
     proof = _l2_execution_proof()
-    proof.public_inputs.l2_messaging_blocks_offsets = [3, 8]
-    encoded = encode_l2_execution_output(proof)
-    assert decode_l2_execution_output_ssz(encoded) == proof.public_inputs
+    original = encode_l2_execution_output(proof)
+    proof.public_inputs.l2_l1_messages = list(reversed(proof.public_inputs.l2_l1_messages)) + [bytes([0x44]) * 32]
+    modified = encode_l2_execution_output(proof)
+    assert modified[:32] != original[:32]
+    tampered = original[:32] + modified[32:]
+    with pytest.raises(InvalidSsz, match="commitment"):
+        decode_l2_execution_output_ssz(tampered)
 
 
-def test_l2_execution_output_rejects_wrong_hash() -> None:
-    encoded = bytearray(_l2_execution_output_bytes())
-    encoded[-1] ^= 1
-    with pytest.raises(InvalidSsz, match="hash mismatch"):
-        decode_l2_execution_output_ssz(bytes(encoded))
-
-
-def test_l2_execution_public_input_empty_offsets_encode_to_380_bytes() -> None:
-    # The PI has a variable-length offset list; this pins the empty-list base.
+def test_l2_execution_public_input_fixture_ssz_length() -> None:
+    # The PI has variable-length message and offset lists.
     proof = _l2_execution_proof()
-    assert len(encode_l2_execution_public_inputs_bytes(proof.public_inputs)) == 380
+    assert len(encode_l2_execution_public_inputs_bytes(proof.public_inputs)) == 384
+
+
+def test_execution_output_commits_empty_message_list() -> None:
+    proof = _l2_execution_proof()
+    populated = encode_l2_execution_output(proof)
+    proof.public_inputs.l2_l1_messages = []
+    empty = encode_l2_execution_output(proof)
+    assert empty[:32] != populated[:32]
+    assert decode_l2_execution_output_ssz(empty).l2_l1_messages == []
+
+
+def test_execution_output_rejects_rehashed_wrong_schema_id() -> None:
+    encoded = encode_l2_execution_output(_l2_execution_proof())
+    wrong_preimage = b"\xff\xfc" + encoded[34:]
+    with pytest.raises(InvalidSsz, match="schema id"):
+        decode_l2_execution_output_ssz(keccak256(wrong_preimage) + wrong_preimage)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -156,8 +167,10 @@ def test_decode_rejects_wrong_schema_id(decode_fn, encode_bytes, schema_id) -> N
     # Flip the schema id to a value that is not any schema id defined across
     # the guest wire modules.
     wrong_id = (schema_id ^ 0xFFFF).to_bytes(2, "big")
-    encoded[0:2] = wrong_id
-    with pytest.raises(InvalidSsz, match="schema id"):
+    encoded[32:34] = wrong_id if schema_id == 0x0003 else encoded[32:34]
+    if schema_id != 0x0003:
+        encoded[0:2] = wrong_id
+    with pytest.raises(InvalidSsz, match="schema id|commitment"):
         decode_fn(bytes(encoded))
 
 
@@ -171,7 +184,7 @@ def test_decode_rejects_truncated_bytes(decode_fn, encode_bytes, schema_id) -> N
 @pytest.mark.parametrize("decode_fn, encode_bytes, schema_id", _DECODE_CASES)
 def test_decode_rejects_missing_schema_id(decode_fn, encode_bytes, schema_id) -> None:
     encoded = encode_bytes()
-    with pytest.raises(InvalidSsz, match="schema id"):
+    with pytest.raises(InvalidSsz, match="schema id|commitment"):
         decode_fn(encoded[:1])
 
 
@@ -192,7 +205,7 @@ def test_input_decode_never_silently_absorbs_a_trailing_byte() -> None:
 
 
 def test_output_decode_rejects_trailing_garbage() -> None:
-    # Trailing bytes displace the hash and must be rejected outright.
+    # Trailing bytes invalidate the committed preimage.
     encoded = _l2_execution_output_bytes()
     with pytest.raises(InvalidSsz):
         decode_l2_execution_output_ssz(encoded + b"\x00")
