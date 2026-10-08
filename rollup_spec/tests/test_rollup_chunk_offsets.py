@@ -20,7 +20,6 @@ from rollup_spec.rollup import (
     ChunkWitness,
     ConflationWitness,
     RollupProofPrivateInput,
-    collect_l2_l1_messages,
     pack_blob_payload,
     run_rollup_guest,
 )
@@ -48,7 +47,7 @@ def _calldata(data):
     return ChunkWitness(Hash32(keccak256(data)), True, calldata_bytes=data)
 
 
-def _input(monkeypatch, chunks, count=1, start_offset=0):
+def _input(monkeypatch, chunks, count=1, parent_data_tail_take=0):
     empty_addresses = hash_address_list([])
     empty_messages = []
     pi = L2ExecutionProofPublicInput(
@@ -66,12 +65,12 @@ def _input(monkeypatch, chunks, count=1, start_offset=0):
     monkeypatch.setattr(rollup, "_truncate_conflation", lambda blocks, chain_id: ([replace_dummy], [ZERO]))
     monkeypatch.setattr(rollup, "rlp_encode_truncated_blocks", lambda blocks: PAYLOAD)
     previous = ZERO
-    if start_offset:
+    if parent_data_tail_take:
         previous = Hash32(keccak256(ZERO + chunks[0].chunk_hash))
     return RollupProofPrivateInput(
-        previous, start_offset, U64(1), [ConflationWitness([b"block"]) for _ in range(count)],
+        previous, parent_data_tail_take, U64(1), [ConflationWitness([b"block"]) for _ in range(count)],
         chunks, proofs,
-        boundary_prev_data_rolling_hash=ZERO if start_offset else None,
+        boundary_prev_data_rolling_hash=ZERO if parent_data_tail_take else None,
     )
 
 
@@ -82,9 +81,9 @@ def test_shared_blob_prefix_and_suffix_are_read_from_same_physical_bytes(monkeyp
     segment = _segment()
     prefix, suffix = b"prior proof", b"next proof"
     chunk = _blob(monkeypatch, prefix + segment + suffix)
-    proof = run_rollup_guest(_input(monkeypatch, [chunk], start_offset=len(prefix)))
-    assert proof.public_inputs.start_offset == len(prefix)
-    assert proof.public_inputs.end_offset == len(prefix) + len(segment)
+    proof = run_rollup_guest(_input(monkeypatch, [chunk], parent_data_tail_take=len(segment) + len(suffix)))
+    assert proof.public_inputs.parent_data_tail_take == len(segment) + len(suffix)
+    assert proof.public_inputs.final_data_tail_discard == len(suffix)
     assert proof.public_inputs.end_data_rolling_hash == proof.public_inputs.parent_data_rolling_hash
 
 
@@ -94,8 +93,8 @@ def test_frame_prefix_or_body_crosses_full_blob_boundary(monkeypatch, split):
     prefix = bytes(BLOB_PAYLOAD_CAPACITY - split)
     first = _blob(monkeypatch, prefix + segment[:split])
     second = _blob(monkeypatch, segment[split:])
-    proof = run_rollup_guest(_input(monkeypatch, [first, second], start_offset=len(prefix)))
-    assert proof.public_inputs.end_offset == 0  # last short blob completely consumed
+    proof = run_rollup_guest(_input(monkeypatch, [first, second], parent_data_tail_take=split))
+    assert proof.public_inputs.final_data_tail_discard == 0  # last short blob completely consumed
     assert proof.public_inputs.end_data_rolling_hash == Hash32(keccak256(proof.public_inputs.parent_data_rolling_hash + second.chunk_hash))
 
 
@@ -106,7 +105,7 @@ def test_frame_prefix_or_body_crosses_short_blob_to_calldata(monkeypatch, split)
     second = _calldata(segment[split:])
     proof = run_rollup_guest(_input(monkeypatch, [first, second]))
     first_fold = keccak256(proof.public_inputs.parent_data_rolling_hash + first.chunk_hash)
-    assert proof.public_inputs.end_offset == 0
+    assert proof.public_inputs.final_data_tail_discard == 0
     assert proof.public_inputs.end_data_rolling_hash == Hash32(keccak256(first_fold + second.chunk_hash))
 
 
@@ -115,7 +114,7 @@ def test_short_blob_to_calldata_can_finish_frame_and_contain_another(monkeypatch
     proof = run_rollup_guest(_input(
         monkeypatch, [_blob(monkeypatch, segment[:7]), _calldata(segment[7:] + segment)], count=2,
     ))
-    assert proof.public_inputs.end_offset == 0
+    assert proof.public_inputs.final_data_tail_discard == 0
 
 
 def test_short_blob_to_calldata_at_segment_boundary(monkeypatch):
@@ -123,7 +122,7 @@ def test_short_blob_to_calldata_at_segment_boundary(monkeypatch):
     first = _blob(monkeypatch, segment)
     second = _calldata(segment)
     proof = run_rollup_guest(_input(monkeypatch, [first, second], count=2))
-    assert proof.public_inputs.end_offset == 0
+    assert proof.public_inputs.final_data_tail_discard == 0
 
 
 def test_shared_blob_prefix_then_calldata_finishes_frame(monkeypatch):
@@ -131,9 +130,9 @@ def test_shared_blob_prefix_then_calldata_finishes_frame(monkeypatch):
     prefix = b"prior proof"
     first = _blob(monkeypatch, prefix + segment[:2])
     second = _calldata(segment[2:])
-    proof = run_rollup_guest(_input(monkeypatch, [first, second], start_offset=len(prefix)))
-    assert proof.public_inputs.start_offset == len(prefix)
-    assert proof.public_inputs.end_offset == 0
+    proof = run_rollup_guest(_input(monkeypatch, [first, second], parent_data_tail_take=2))
+    assert proof.public_inputs.parent_data_tail_take == 2
+    assert proof.public_inputs.final_data_tail_discard == 0
     assert proof.public_inputs.end_data_rolling_hash == Hash32(keccak256(proof.public_inputs.parent_data_rolling_hash + second.chunk_hash))
 
 
@@ -142,7 +141,7 @@ def test_calldata_mixed_with_blob_parses_complete_segments(monkeypatch):
     first = _calldata(segment)
     second = _blob(monkeypatch, segment)
     proof = run_rollup_guest(_input(monkeypatch, [first, second], count=2))
-    assert proof.public_inputs.end_offset == 0
+    assert proof.public_inputs.final_data_tail_discard == 0
 
 
 def test_rollup_binds_sender_hash_to_each_conflation(monkeypatch):

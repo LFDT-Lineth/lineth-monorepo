@@ -36,7 +36,7 @@ _ROLLUP_ID = Hash32(bytes([0xBB]) * 32)
 
 _PARENT_DATA_ROLLING_HASH = Hash32(bytes([0x47]) * 32)
 _END_DATA_ROLLING_HASH = Hash32(bytes([0x8D]) * 32)
-_END_OFFSET = 500
+_FINAL_DATA_TAIL_DISCARD = 500
 _PARENT_BLOCK_HASH = Hash32(bytes([0x46]) * 32)
 _END_BLOCK_HASH = Hash32(bytes([0x9A]) * 32)
 _L1L2_ROLLING_HASH = Hash32(bytes([0x22]) * 32)
@@ -44,20 +44,20 @@ _FTX_ROLLING_HASH = Hash32(bytes([0x44]) * 32)
 _CHAIN_CONFIG_HASH = Hash32(bytes([0xC0]) * 32)
 
 
-def _position_commitment(data_rolling_hash: Hash32, offset: int) -> Hash32:
+def _position_commitment(data_rolling_hash: Hash32, tail_count: int) -> Hash32:
     """The `current_finalized_position_commitment` value sealing a given
-    (dataRollingHash, offset) end position (§3.6)."""
-    return keccak256(data_rolling_hash + offset.to_bytes(32, "big"))
+    (dataRollingHash, tail count) end position (§3.6)."""
+    return keccak256(data_rolling_hash + tail_count.to_bytes(32, "big"))
 
 
-def _base_state(approved_program_ids, previous_offset: int = 0) -> LinethRollupState:
+def _base_state(approved_program_ids, parent_data_tail_take: int = 0) -> LinethRollupState:
     """
     An L1 state whose continuity anchors exactly match `_base_submission()`'s
     public inputs, so all other finalization checks pass. `approved_program_ids` is the
     only knob the tests vary.
     """
     return LinethRollupState(
-        current_finalized_position_commitment=_position_commitment(_PARENT_DATA_ROLLING_HASH, previous_offset),
+        current_finalized_position_commitment=_position_commitment(_PARENT_DATA_ROLLING_HASH, parent_data_tail_take),
         current_finalized_last_block_hash=_PARENT_BLOCK_HASH,
         current_l2_block_number=U64(1000500),
         current_l2_block_timestamp=U64(1763000000),
@@ -71,7 +71,7 @@ def _base_state(approved_program_ids, previous_offset: int = 0) -> LinethRollupS
     )
 
 
-def _base_submission(program_ids, start_offset: int = 0) -> FinalizationSubmission:
+def _base_submission(program_ids, parent_data_tail_take: int = 0) -> FinalizationSubmission:
     """
     A finalization submission carrying the single combined `program_ids` list
     nested in the PI (order bound to the proof). Empty `l2_l1_roots` /
@@ -95,8 +95,8 @@ def _base_submission(program_ids, start_offset: int = 0) -> FinalizationSubmissi
         end_data_rolling_hash=_END_DATA_ROLLING_HASH,
         parent_block_hash=_PARENT_BLOCK_HASH,
         end_block_hash=_END_BLOCK_HASH,
-        start_offset=start_offset,
-        end_offset=_END_OFFSET,
+        parent_data_tail_take=parent_data_tail_take,
+        final_data_tail_discard=_FINAL_DATA_TAIL_DISCARD,
         l2_l1_tree_depth=5,
         l2_l1_roots=[],
         filtered_addresses=[],
@@ -125,7 +125,7 @@ def test_finalization_rejects_out_of_range_or_repeated_messaging_offsets() -> No
 
 
 def _finalize(state: LinethRollupState, submission: FinalizationSubmission) -> None:
-    """`finalize_rollup`, supplying the (dataRollingHash, offset) pair that opens
+    """`finalize_rollup`, supplying the (dataRollingHash, tail count) pair that opens
     `_base_state()`'s position commitment."""
     finalize_rollup(state, submission, _PARENT_DATA_ROLLING_HASH, 0)
 
@@ -151,7 +151,7 @@ def test_finalize_rollup_accepts_multiple_approved_program_ids() -> None:
     # all advanced to the submission's end-of-range values.
     assert state.current_finalized_last_block_hash == _END_BLOCK_HASH
     assert int(state.current_l2_block_number) == 1000520
-    assert state.current_finalized_position_commitment == _position_commitment(_END_DATA_ROLLING_HASH, _END_OFFSET)
+    assert state.current_finalized_position_commitment == _position_commitment(_END_DATA_ROLLING_HASH, _FINAL_DATA_TAIL_DISCARD)
 
 
 def test_finalize_rollup_succeeds_when_all_program_ids_approved() -> None:
@@ -159,14 +159,14 @@ def test_finalize_rollup_succeeds_when_all_program_ids_approved() -> None:
     state = _base_state(approved_program_ids={_EXEC_ID_A, _ROLLUP_ID})
     submission = _base_submission(program_ids=[_EXEC_ID_A, _ROLLUP_ID])
     _finalize(state, submission)  # must not raise
-    assert state.current_finalized_position_commitment == _position_commitment(_END_DATA_ROLLING_HASH, _END_OFFSET)
+    assert state.current_finalized_position_commitment == _position_commitment(_END_DATA_ROLLING_HASH, _FINAL_DATA_TAIL_DISCARD)
     assert int(state.current_l2_block_number) == 1000520
 
 
 def test_finalize_rollup_rejects_chunk_boundary_start_inside_finalized_blob() -> None:
-    previous_offset = 9
-    state = _base_state(approved_program_ids=set(), previous_offset=previous_offset)
-    submission = _base_submission(program_ids=[], start_offset=0)
+    parent_data_tail_take = 9
+    state = _base_state(approved_program_ids=set(), parent_data_tail_take=parent_data_tail_take)
+    submission = _base_submission(program_ids=[], parent_data_tail_take=0)
 
-    with pytest.raises(Exception, match="startOffset does not match the finalized position"):
-        finalize_rollup(state, submission, _PARENT_DATA_ROLLING_HASH, previous_offset)
+    with pytest.raises(Exception, match="parentDataTailTake does not match the finalized position"):
+        finalize_rollup(state, submission, _PARENT_DATA_ROLLING_HASH, parent_data_tail_take)

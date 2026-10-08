@@ -262,7 +262,7 @@ class _ChunkStreamExtent:
 
 
 def _owned_blob_bytes(
-    chunk: ChunkWitness, index: int, chunks: Sequence[ChunkWitness], start_offset: int, setup: object,
+    chunk: ChunkWitness, index: int, chunks: Sequence[ChunkWitness], parent_data_tail_take: int, setup: object,
 ) -> bytes:
     if chunk.calldata_bytes:
         raise Exception(f"blob chunk {index} must have empty calldataBytes")
@@ -270,7 +270,7 @@ def _owned_blob_bytes(
         payload = unpack_blob_payload(chunk.blob_bytes)
     except ValueError as exc:
         raise Exception(f"blob chunk {index} has invalid physical blob") from exc
-    if index == 0 and start_offset >= len(payload):
+    if index == 0 and parent_data_tail_take > 0 and parent_data_tail_take >= len(payload):
         raise Exception(f"blob chunk {index} must contain owned bytes")
     if index < len(chunks) - 1 and not payload:
         raise Exception(f"blob chunk {index} must contain owned bytes")
@@ -285,7 +285,9 @@ def _owned_blob_bytes(
     computed_chunk_hash = Hash32(kzg_commitment_to_versioned_hash(chunk_kzg_commitment))
     if computed_chunk_hash != chunk.chunk_hash:
         raise Exception(f"chunk {index} computed KZG commitment does not match chunkHash")
-    return payload[start_offset:] if index == 0 else payload
+    if index == 0 and parent_data_tail_take:
+        return payload[-parent_data_tail_take:]
+    return payload
 
 
 def _owned_calldata_bytes(chunk: ChunkWitness, index: int) -> bytes:
@@ -301,7 +303,7 @@ def _owned_calldata_bytes(chunk: ChunkWitness, index: int) -> bytes:
 
 def _bind_chunk_stream(
     chunks: Sequence[ChunkWitness],
-    start_offset: int,
+    parent_data_tail_take: int,
     parent_data_rolling_hash: Hash32,
     boundary_prev_data_rolling_hash: Optional[Hash32],
 ) -> Tuple[bytearray, List[_ChunkStreamExtent], Hash32]:
@@ -311,13 +313,13 @@ def _bind_chunk_stream(
     data_rolling_hash = parent_data_rolling_hash
     for i, chunk in enumerate(chunks):
         if chunk.is_blob:
-            data = _owned_blob_bytes(chunk, i, chunks, start_offset, setup)
+            data = _owned_blob_bytes(chunk, i, chunks, parent_data_tail_take, setup)
         else:
             data = _owned_calldata_bytes(chunk, i)
         begin = len(stream)
         stream.extend(data)
         extents.append(_ChunkStreamExtent(begin, len(stream), chunk.is_calldata, i))
-        if i == 0 and start_offset > 0:
+        if i == 0 and parent_data_tail_take > 0:
             if boundary_prev_data_rolling_hash is None:
                 raise Exception("mid-chunk start requires boundaryPrevDataRollingHash")
             if DataRollingHashWitness(boundary_prev_data_rolling_hash, chunk.chunk_hash).hash() != parent_data_rolling_hash:
@@ -367,7 +369,7 @@ def _validate_chunk_ownership(
 
 
 def _verify_and_fold_chunks(
-    start_offset: int,
+    parent_data_tail_take: int,
     chunks: Sequence[ChunkWitness],
     parent_data_rolling_hash: Hash32,
     boundary_prev_data_rolling_hash: Optional[Hash32],
@@ -381,22 +383,28 @@ def _verify_and_fold_chunks(
     """
     if not chunks:
         raise Exception("rollup proof must touch at least one chunk")
-    if not (0 <= start_offset < BLOB_PAYLOAD_CAPACITY):
-        raise Exception("startOffset must be within [0, chunkSize)")
-    if start_offset > 0 and not chunks[0].is_blob:
-        raise Exception("mid-chunk start (startOffset > 0) requires the first chunk to be a blob")
+    if not (0 <= parent_data_tail_take < BLOB_PAYLOAD_CAPACITY):
+        raise Exception("parentDataTailTake must be within [0, 130046]")
+    if parent_data_tail_take > 0 and not chunks[0].is_blob:
+        raise Exception("mid-chunk start (parentDataTailTake > 0) requires the first chunk to be a blob")
     if conflation_count != len(expected_rlps) or conflation_count == 0:
         raise Exception("expected one canonical payload per conflation")
     stream, extents, data_rolling_hash = _bind_chunk_stream(
-        chunks, start_offset, parent_data_rolling_hash, boundary_prev_data_rolling_hash,
+        chunks, parent_data_tail_take, parent_data_rolling_hash, boundary_prev_data_rolling_hash,
     )
     cursor, boundaries = _parse_conflation_frames(stream, expected_rlps)
     _validate_chunk_ownership(chunks, extents, cursor, boundaries, len(stream))
-    # A fully consumed blob ends at the canonical zero offset, even when its
+    # A fully consumed blob ends at the canonical zero tail count, even when its
     # unpacked payload occupies less than the physical blob capacity.
     trailing = len(stream) - cursor
-    end_offset = (start_offset if len(chunks) == 1 else 0) + cursor - extents[-1].start if trailing else 0
-    return data_rolling_hash, end_offset
+    final_data_tail_discard = trailing
+    if final_data_tail_discard:
+        last_blob_payload_length = extents[-1].end - extents[-1].start + (
+            parent_data_tail_take if len(chunks) == 1 else 0
+        )
+        if final_data_tail_discard >= last_blob_payload_length:
+            raise Exception("finalDataTailDiscard must be less than the last blob payload length")
+    return data_rolling_hash, final_data_tail_discard
 
 
 @dataclass
@@ -407,10 +415,9 @@ class RollupPublicInput:
     `parent_block_hash` / `end_block_hash` are execution continuity — the role
     the old 3-input shnarf's `lastBlockHash` used to play — now explicit
     public-input fields rather than folded into the DA accumulator (§3.1).
-    `start_offset` / `end_offset` are the byte positions (§3.4) that pair with
-    `parent_data_rolling_hash` / `end_data_rolling_hash` to form this proof's start and end stream
-    positions; `end_offset` is a derived output (computed from the length of
-    the parsed frames), not trusted witness input.
+    `parent_data_tail_take` / `final_data_tail_discard` are tail byte counts (§3.4)
+    paired with `parent_data_rolling_hash` / `end_data_rolling_hash` at the proof
+    boundaries. The final count is derived from parsed frames.
 
     `program_vks` is the set of guest program VKs verified beneath this proof,
     encoded as a distinct list sorted ascending by byte value.
@@ -430,8 +437,8 @@ class RollupPublicInput:
     end_data_rolling_hash: Hash32
     parent_block_hash: Hash32
     end_block_hash: Hash32
-    start_offset: int
-    end_offset: int
+    parent_data_tail_take: int
+    final_data_tail_discard: int
     l2_l1_messages: List[Hash32] = field(default_factory=list)
     filtered_addresses: List[Address] = field(default_factory=list)
     program_vks: List[Hash32] = field(default_factory=list)
@@ -447,11 +454,12 @@ class RollupProofPrivateInput:
     paired 1:1 with `l2_execution_proofs`), transported across >=1 chunks
     (§3.1).
 
-    `parent_data_rolling_hash` / `start_offset` give this proof's start stream position
-    (§3.4). Boundary foreign bytes reside in the physical blob witness.
+    `parent_data_rolling_hash` / `parent_data_tail_take` identify this proof's parent
+    boundary (§3.4). Positive take N reads the last N bytes of the first blob's
+    actual unpacked payload. Boundary foreign bytes reside in the physical blob witness.
     `boundary_prev_data_rolling_hash` is required only for a mid-chunk start
-    (`start_offset > 0`) — the dataRollingHash value before the first touched chunk, used
-    to open its preimage. `end_data_rolling_hash` and `end_offset` are not request inputs:
+    (`parent_data_tail_take > 0`) — the dataRollingHash value before the first touched chunk, used
+    to open its preimage. `end_data_rolling_hash` and `final_data_tail_discard` are not request inputs:
     the guest derives them from parsed frame boundaries.
 
     `chain_id` is needed for sender recovery during DA truncation (§2.2
@@ -462,7 +470,7 @@ class RollupProofPrivateInput:
     from the l2-execution proofs it recursively verifies.
     """
     parent_data_rolling_hash: Hash32
-    start_offset: int
+    parent_data_tail_take: int
     chain_id: U64
     conflations: List[ConflationWitness]
     chunks: List[ChunkWitness]
@@ -557,8 +565,8 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         expected_rlps.append(canonical_truncated_rlp)
         truncated_blocks.extend(conflation_truncated)
         parent_hashes.extend(conflation_parent_hashes)
-    end_data_rolling_hash, end_offset = _verify_and_fold_chunks(
-        rollup_input.start_offset,
+    end_data_rolling_hash, final_data_tail_discard = _verify_and_fold_chunks(
+        rollup_input.parent_data_tail_take,
         rollup_input.chunks,
         rollup_input.parent_data_rolling_hash,
         rollup_input.boundary_prev_data_rolling_hash,
@@ -660,8 +668,8 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         end_data_rolling_hash=end_data_rolling_hash,
         parent_block_hash=first_proof.public_inputs.parent_block_hash,
         end_block_hash=last_proof.public_inputs.end_block_hash,
-        start_offset=rollup_input.start_offset,
-        end_offset=end_offset,
+        parent_data_tail_take=rollup_input.parent_data_tail_take,
+        final_data_tail_discard=final_data_tail_discard,
         program_vks=program_vks,
         block_count=rollup_end_block_number - rollup_start_block_number + 1,
         l2_messaging_blocks_offsets=messaging_offsets,
