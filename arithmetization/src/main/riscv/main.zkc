@@ -81,6 +81,6 @@ fn main<registers, ram, keccak_state>() {
 
     // -- Interpreting the riscV unproved-transpiled program -- START
     // parameters: clock_cycle, base, pc, output_write_address
-    interpreter!(0, base, entry_point, 0)
+    interpreter!(0, base, entry_point)
     // -- Interpreting the riscV unproved-transpiled program -- END
 }

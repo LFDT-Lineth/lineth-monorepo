@@ -189,15 +189,13 @@ include "../lib/io/write_output.zkc"
 // `interpreter_c` default and behaves as a no-op.
 
 // -- PREDECODING PROOF SECTION --
-// fn interpreter<registers, ram, keccak_state, poseidon2_state>(clock_cycle:u32, base:Address, pc:Address, exec_end:Address, output_write_address:OutputAddress) -> ! {
+// fn interpreter<registers, ram, keccak_state>(clock_cycle:u32, base:Address, pc:Address, exec_end:Address) -> ! {
 // -- PREDECODING PROOF SECTION END--
 
 // -- NO PREDECODING PROOF SECTION --
 #[global]
-fn interpreter<registers, ram, keccak_state>(clock_cycle:u32, base:Address, pc:Address, output_write_address:OutputAddress) -> ! {
+fn interpreter<registers, ram, keccak_state>(clock_cycle:u32, base:Address, pc:Address) -> ! {
     // -- NO PREDECODING PROOF SECTION END--
-
-    var new_output_write_address:OutputAddress
     var new_pc:Address
     var index:u62
     var rem:u2
@@ -215,7 +213,7 @@ fn interpreter<registers, ram, keccak_state>(clock_cycle:u32, base:Address, pc:A
 
     printf "\n----------------------------------------------------------------- PC=%d, clock cycle: %d\n", pc, clock_cycle
     // Execute current instruction
-    new_pc, new_output_write_address = interpreter_a(index as u64, pc, output_write_address)
+    new_pc = interpreter_a(index as u64, pc)
 
     // Check for termination
     if new_pc != MAX_UINT_64 {
@@ -226,14 +224,14 @@ fn interpreter<registers, ram, keccak_state>(clock_cycle:u32, base:Address, pc:A
         // -- Interpreting the riscV proved-transpiled program -- END
 
         // -- Interpreting the riscV unproved-transpiled program -- START
-        interpreter!(clock_cycle + 1, base, new_pc, new_output_write_address)
+        interpreter!(clock_cycle + 1, base, new_pc)
         // -- Interpreting the riscV unproved-transpiled program -- END
     }
     // Termination
     done
 }
 
-fn interpreter_a<registers, ram, keccak_state>(index:u64, pc:Address, output_write_address:OutputAddress) -> (new_pc:Address, new_output_write_address:OutputAddress) {
+fn interpreter_a<registers, ram, keccak_state>(index:u64, pc:Address) -> (new_pc:Address) {
     var compute_op:ComputeOp
     var imm:DoubleWord
     var rs1:Register
@@ -350,8 +348,6 @@ fn interpreter_a<registers, ram, keccak_state>(index:u64, pc:Address, output_wri
             write_64(rs1_plus_imm, v2)
             // Increment PC
             new_pc = (pc + 4) as Address
-            // Copy output address
-            new_output_write_address = output_write_address
             // Early return
             return
         }
@@ -361,8 +357,6 @@ fn interpreter_a<registers, ram, keccak_state>(index:u64, pc:Address, output_wri
             write_8(rs1_plus_imm, (v2 & (0xFF as u64)) as u8)
             // Increment PC
             new_pc = (pc + 4) as Address
-            // Copy output address
-            new_output_write_address = output_write_address
             // Early return
             return
         }
@@ -379,8 +373,6 @@ fn interpreter_a<registers, ram, keccak_state>(index:u64, pc:Address, output_wri
                 // Fall thru
                 new_pc = (pc + 4) as Address
             }
-            // Copy output address
-            new_output_write_address = output_write_address
             // Early return
             return
         }
@@ -393,8 +385,6 @@ fn interpreter_a<registers, ram, keccak_state>(index:u64, pc:Address, output_wri
                 // Fall thru
                 new_pc = (pc + 4) as Address
             }
-            // Copy output address
-            new_output_write_address = output_write_address
             // Early return
             return
         }
@@ -407,8 +397,6 @@ fn interpreter_a<registers, ram, keccak_state>(index:u64, pc:Address, output_wri
                 // Fall thru
                 new_pc = (pc + 4) as Address
             }
-            // Copy output address
-            new_output_write_address = output_write_address
             // Early return
             return
         }
@@ -423,19 +411,17 @@ fn interpreter_a<registers, ram, keccak_state>(index:u64, pc:Address, output_wri
 
         default: {
             // Fall back on expensive function
-            new_pc, new_output_write_address = interpreter_b(index, pc, output_write_address)
+            new_pc = interpreter_b(index, pc)
             return
         }
     }
     // Increment PC
     new_pc = (pc + 4) as Address
-    // Copy output address
-    new_output_write_address = output_write_address
     // write back
     registers[rd] = result
 }
 
-fn interpreter_b<registers, ram, keccak_state>(index:u64, pc:Address, output_write_address:OutputAddress) -> (new_pc:Address, new_output_write_address:OutputAddress) {
+fn interpreter_b<registers, ram, keccak_state>(index:u64, pc:Address) -> (new_pc:Address) {
 
     var compute_op:ComputeOp
     var imm:DoubleWord
@@ -524,8 +510,6 @@ fn interpreter_b<registers, ram, keccak_state>(index:u64, pc:Address, output_wri
             printf "ITYPE_JALR(b) "
             print_i_memory_operands(rd, rs1, imm)
             new_pc = rs1_plus_imm & MASK_64_ERASE_LAST_BIT
-            // Copy output address
-            new_output_write_address = output_write_address
             // Early return
             return
         }
@@ -533,8 +517,6 @@ fn interpreter_b<registers, ram, keccak_state>(index:u64, pc:Address, output_wri
             printf "ITYPE_JALR_WB(b) "
             print_i_memory_operands(rd, rs1, imm)
             new_pc = rs1_plus_imm & MASK_64_ERASE_LAST_BIT
-            // Copy output address
-            new_output_write_address = output_write_address
             // Write back
             registers[rd] = (pc + 4) as DoubleWord
             // Early Return
@@ -543,8 +525,6 @@ fn interpreter_b<registers, ram, keccak_state>(index:u64, pc:Address, output_wri
         case ITYPE_ECALL: {
             printf "ITYPE_ECALL(c)\n"
             new_pc = process_syscall(pc)
-            // Copy output address
-            new_output_write_address = output_write_address
             // Early return
             return
         }
@@ -557,14 +537,12 @@ fn interpreter_b<registers, ram, keccak_state>(index:u64, pc:Address, output_wri
             keccak(v1 as Address, v2 as u32, registers[rd] as Address)
             // Increment PC
             new_pc = (pc + 4) as Address
-            // Copy output address
-            new_output_write_address = output_write_address
             // Early return
             return
         }
         case RTYPE_WRITE_OUTPUT: {
             printf "RTYPE_WRITE_OUTPUT(c) "
-            new_output_write_address = write_output(v1 as Address, v2 as OutputSize, output_write_address)
+            write_output(v1 as Address, v2 as u32)
             // Increment PC
             new_pc = (pc + 4) as Address
             // Early return
@@ -582,8 +560,6 @@ fn interpreter_b<registers, ram, keccak_state>(index:u64, pc:Address, output_wri
                 // Fall thru
                 new_pc = (pc + 4) as Address
             }
-            // Copy output address
-            new_output_write_address = output_write_address
             // Early return
             return
         }
@@ -596,8 +572,6 @@ fn interpreter_b<registers, ram, keccak_state>(index:u64, pc:Address, output_wri
                 // Fall thru
                 new_pc = (pc + 4) as Address
             }
-            // Copy output address
-            new_output_write_address = output_write_address
             // Early return
             return
         }
@@ -610,26 +584,22 @@ fn interpreter_b<registers, ram, keccak_state>(index:u64, pc:Address, output_wri
                 // Fall thru
                 new_pc = (pc + 4) as Address
             }
-            // Copy output address
-            new_output_write_address = output_write_address
             // Early return
             return
         }
         default: {
             // Fall back on expensive function
-            new_pc, new_output_write_address = interpreter_c(index, pc, output_write_address)
+            new_pc = interpreter_c(index, pc)
             return
         }
     }
     // Increment PC
     new_pc = (pc + 4) as Address
-    // Copy output address
-    new_output_write_address = output_write_address
     // write back
     registers[rd] = result
 }
 
-fn interpreter_c<registers, ram, keccak_state>(index:u64, pc:Address, output_write_address:OutputAddress) -> (new_pc:Address, new_output_write_address:OutputAddress) {
+fn interpreter_c<registers, ram, keccak_state>(index:u64, pc:Address) -> (new_pc:Address) {
 
     var compute_op:ComputeOp
     var imm:DoubleWord
@@ -814,8 +784,6 @@ fn interpreter_c<registers, ram, keccak_state>(index:u64, pc:Address, output_wri
             write_16(mem_address, (v2 & (0xFFFF as u64)) as u16)
             // Increment PC
             new_pc = (pc + 4) as Address
-            // Copy output address
-            new_output_write_address = output_write_address
             //
             return
         }
@@ -826,8 +794,6 @@ fn interpreter_c<registers, ram, keccak_state>(index:u64, pc:Address, output_wri
             write_32(mem_address, (v2 & (0xFFFFFFFF as u64)) as u32)
             // Increment PC
             new_pc = (pc + 4) as Address
-            // Copy output address
-            new_output_write_address = output_write_address
             //
             return
         }
@@ -838,8 +804,6 @@ fn interpreter_c<registers, ram, keccak_state>(index:u64, pc:Address, output_wri
             printf "JTYPE_JAL(c) "
             print_j_operands(rd, imm)
             new_pc = signed_sum_of_double_word(pc, imm) as Address
-            // Copy output address
-            new_output_write_address = output_write_address
             //
             return
         }
@@ -847,8 +811,6 @@ fn interpreter_c<registers, ram, keccak_state>(index:u64, pc:Address, output_wri
             printf "JTYPE_JAL_WB(c) "
             print_j_operands(rd, imm)
             new_pc = signed_sum_of_double_word(pc, imm) as Address
-            // Copy output address
-            new_output_write_address = output_write_address
             // Write back
             registers[rd] = signed_sum_of_double_word(pc, 4)
             //
@@ -866,14 +828,11 @@ fn interpreter_c<registers, ram, keccak_state>(index:u64, pc:Address, output_wri
         default: {
             // NO_OP, COMPUTE_INVALID, and unhandled ops advance PC only.
             new_pc = (pc + 4) as Address
-            new_output_write_address = output_write_address
             return
         }
     }
     // Increment PC
     new_pc = (pc + 4) as Address
-    // Copy output address
-    new_output_write_address = output_write_address
     // write back
     registers[rd] = result
 }
