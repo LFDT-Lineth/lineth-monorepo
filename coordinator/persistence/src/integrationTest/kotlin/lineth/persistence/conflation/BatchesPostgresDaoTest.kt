@@ -350,7 +350,12 @@ class BatchesPostgresDaoTest(private val schemaVersion: Int) : CleanDbTestSuiteP
     val result = batchesDao.findBatchesByBlockRange(1L, 5L).get()
 
     assertThat(result).hasSize(1)
-    assertThat(result[0].proofIndexHash).isEqualTo(proofHash)
+    if (schemaVersion >= 5) {
+      assertThat(result[0].proofIndexHash).isEqualTo(proofHash)
+    } else {
+      // schema v4 has no proof_index_hash column, so the hash is neither stored nor returned
+      assertThat(result[0].proofIndexHash).isNull()
+    }
   }
 
   @Test

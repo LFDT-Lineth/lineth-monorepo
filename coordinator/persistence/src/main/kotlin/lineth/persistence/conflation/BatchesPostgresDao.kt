@@ -83,13 +83,21 @@ class BatchesPostgresDao(
       .trimIndent()
 
   private val findBatchesByBlockRangeSql =
-    """
-      SELECT start_block_number, end_block_number, proof_index_hash
-      FROM $batchesTableName
-      WHERE start_block_number >= $1 AND end_block_number <= $2
-      ORDER BY start_block_number ASC
-    """
-      .trimIndent()
+    if (hasProofIndexHashColumn) {
+      """
+        SELECT start_block_number, end_block_number, proof_index_hash
+        FROM $batchesTableName
+        WHERE start_block_number >= $1 AND end_block_number <= $2
+        ORDER BY start_block_number ASC
+      """
+    } else {
+      """
+        SELECT start_block_number, end_block_number
+        FROM $batchesTableName
+        WHERE start_block_number >= $1 AND end_block_number <= $2
+        ORDER BY start_block_number ASC
+      """
+    }.trimIndent()
 
   private val deleteUptoSql =
     """
@@ -167,7 +175,7 @@ class BatchesPostgresDao(
           Batch(
             startBlockNumber = row.getLong("start_block_number").toULong(),
             endBlockNumber = row.getLong("end_block_number").toULong(),
-            proofIndexHash = row.getString("proof_index_hash")?.decodeHex(),
+            proofIndexHash = if (hasProofIndexHashColumn) row.getString("proof_index_hash")?.decodeHex() else null,
           )
         }
       }
