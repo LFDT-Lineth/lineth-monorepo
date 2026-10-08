@@ -92,3 +92,14 @@ jobs:
           ZKC_TRACE_FLAGS: "--stats -vv --sharding interpreter:500000"
           GOMAXPROCS: 10
 
+      - name: Trace l2-execution guest program with Amsterdam block 2.5M sharding 500000
+        # 2.5M references the amount of gas used in the block
+        run: make -C riscv-guests/l2-execution trace
+        timeout-minutes: 45
+        env:
+          ZKC_REF: "1183cd10e59fe08d4cb5d4184c30bcf041f4512e"
+          INPUT: test/testdata/block_amsterdam_.ssz
+          KECCAK_ACCEL: true
+          ZKC_TRACE_FLAGS: "--stats -vv --sharding interpreter:500000"
+
+
