@@ -354,7 +354,14 @@ pub fn Reconstructed(comptime system: System) type {
         /// order), or `no_entry` if the column is elided.
         col_to_entry: [cap]u16 = undefined,
         /// col_code[c] = the validated manifest code of column c (decl order).
-        col_code: [cap]u32 = undefined,
+        /// A borrow of the `Manifest(system)` slice `reconstructWithManifest`
+        /// validated (or an empty slice when the system has no batch
+        /// manifests, read as all-Present), NOT a copy: keeping a per-column
+        /// `[cap]u32` here would double the codes' stack footprint on the R5
+        /// guest. The backing manifest outlives every consumer (both
+        /// `Manifest.codes` in `verifyWithWorkspace` and the ad-hoc
+        /// `&[_]u32{...}` literals in tests).
+        col_code: []const u32 = &.{},
         /// col_size_log2[c] = the resolved size of column c (decl order), also
         /// for elided columns (used to normalize alias shifts).
         col_size_log2: [cap]u8 = undefined,
@@ -448,6 +455,10 @@ pub fn reconstructWithManifest(
     const num_cols = system.columns.len;
     if (num_cols > system.max_entries) return Error.LayoutOverflow;
     if (manifest.len != 0 and manifest.len != num_cols) return Error.ManifestLengthMismatch;
+    // Borrow the validated codes (see Reconstructed.col_code). The checks
+    // below read the same slice through this alias; the borrow is installed
+    // before any use so callers observe a fully-validated manifest.
+    r.col_code = manifest;
 
     // Per-column size_log2, and per-column position within its
     // (size_log2, is_ext) bucket, in declaration order. Prover GetLayout keeps a
@@ -497,11 +508,10 @@ pub fn reconstructWithManifest(
         col_size_log2[c] = sz;
         if (col.batch_idx >= system.num_batches) return Error.LayoutOverflow;
 
-        // Validate and record this column's manifest code. Alias targets are
-        // earlier columns of the same batch, so everything they need
-        // (col_code, col_size_log2) is already filled in.
+        // Validate this column's manifest code. Alias targets are earlier
+        // columns of the same batch, so everything they need (col_code,
+        // col_size_log2) is already validated.
         const code: u32 = if (manifest.len == 0) manifest_present else manifest[c];
-        r.col_code[c] = code;
         switch (code) {
             manifest_present => {},
             manifest_zero => continue,
@@ -540,7 +550,13 @@ pub fn reconstructWithManifest(
     // entry_idx as a running counter and record each entry's origin column.
     // Positions restart at 0 per (batch, size_log2, is_ext); col_position[c] was
     // precomputed above in a single O(columns) pass — exactly prover GetLayout's
-    // running counter, restricted to one batch.
+    // running counter, restricted to one batch. colCodeOf handles the
+    // manifest-less (all-Present) case without touching the empty borrow.
+    const colCodeOf = struct {
+        fn get(m: []const u32, c: usize) u32 {
+            return if (m.len == 0) manifest_present else m[c];
+        }
+    }.get;
     var entry_idx: usize = 0;
     var size: i32 = @intCast(system.max_size_log2);
     while (size >= 0) : (size -= 1) {
@@ -553,7 +569,7 @@ pub fn reconstructWithManifest(
                     if (col.batch_idx != batch) continue;
                     if (col.is_ext != want_ext) continue;
                     if (col_size_log2[c] != size_u8) continue;
-                    if (r.col_code[c] != manifest_present) {
+                    if (colCodeOf(manifest, c) != manifest_present) {
                         r.col_to_entry[c] = no_entry;
                         continue;
                     }
@@ -603,7 +619,9 @@ pub fn routedClaim(
     if (c >= system.columns.len) return error.ClaimMapMismatch;
     const col = system.columns[c];
     if (shift >= col.shifts_len) return error.ClaimMapMismatch;
-    switch (recon.col_code[c]) {
+    // Empty borrow (manifest-less system) reads as all-Present.
+    const code: u32 = if (recon.col_code.len == 0) manifest_present else recon.col_code[c];
+    switch (code) {
         manifest_present => {
             const entry = recon.col_to_entry[c];
             if (entry >= entry_claims.len) return error.ClaimMapMismatch;
@@ -704,7 +722,8 @@ pub fn buildEntryClaims(
         // authenticated claim at the same domain point. prover-ray's
         // RecoverBatchClaims enforces the same equalities.
         for (system.columns, 0..) |col, c| {
-            const code = recon.col_code[c];
+            // Empty borrow (manifest-less system): every column is Present.
+            const code: u32 = if (recon.col_code.len == 0) manifest_present else recon.col_code[c];
             if (code == manifest_present) continue;
             const size_log2 = recon.col_size_log2[c];
             const n: i32 = @as(i32, 1) << @intCast(size_log2);
