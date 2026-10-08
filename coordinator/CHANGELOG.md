@@ -1,3 +1,8 @@
+## [unreleased]
+
+### 🚀 Features
+
+- *(coordinator)* Bundle smart-contract errors in jar and make --smart-contract-errors optional (#4161)
 ## [2.0.2] - 2026-10-07
 
 ### 🚜 Refactor
