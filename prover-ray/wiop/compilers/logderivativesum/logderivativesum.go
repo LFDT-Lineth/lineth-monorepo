@@ -41,6 +41,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/internal/vecprog"
 )
 
 // packingArity is the maximum number of fractions packed into a single Z
@@ -319,88 +320,57 @@ func (a *proverAction) Run(rt *wiop.Runtime) {
 //	Z[i] = Σ_{k≤i, j} F_j[k] · N_j[k] / D_j[k]
 //
 // over the rows of a packed fraction group, skipping rows where the
-// fraction's filter is zero. Each fraction's denominator is batch-inverted
-// once; the inverse is consulted only at active rows so a zero denominator at
-// a filtered-out row is benign.
+// fraction's filter is zero. A zero denominator at a filtered-out row is
+// benign: its inverse is taken as zero and multiplied by the zero filter.
 //
 // Panics if a fraction's denominator is zero on a row where its filter is
 // non-zero, since that input is malformed.
 //
-// workers bounds the goroutines used: the fraction vectors are evaluated
-// concurrently, the denominators are batch-inverted in independent chunks,
-// and the running sum is a two-pass chunked scan (each chunk sums locally,
-// then adds the total of the chunks before it). Field arithmetic is exact, so
-// the result does not depend on workers.
+// The row terms Σ_j F_j·N_j/D_j are computed by one [vecprog] program over
+// every fraction of the group: subexpressions shared by the fractions are
+// computed once, the denominators' random linear combinations become linear
+// forms, and each block of rows takes one batch inversion per denominator,
+// without materialising the fractions' vectors. The running sum is then a
+// two-pass chunked scan (each chunk sums locally, then adds the total of the
+// chunks before it). workers bounds the goroutines used. Field arithmetic is
+// exact, so the result does not depend on workers.
 func computeFilteredPrefixSum(rt *wiop.Runtime, packed []wiop.Fraction, n int, workers int) []field.Ext {
-	type evalFrac struct {
-		filter []field.Ext // nil ⇒ filter is the constant 1 on every row
-		num    []field.Ext
-		den    []field.Ext
-		invDen []field.Ext
-	}
-	fracs := make([]evalFrac, len(packed))
-
-	// Every numerator, denominator and filter is an independent expression.
-	type evalJob struct {
-		j   int
-		dst *[]field.Ext
-		e   wiop.Expression
-	}
-	jobs := make([]evalJob, 0, 3*len(packed))
+	l := wiop.NewRowLowering(rt, n)
+	b := l.B
+	var one field.Ext
+	one.SetOne()
+	rows := make([]field.Ext, n)
 	for j, p := range packed {
-		jobs = append(jobs, evalJob{j, &fracs[j].num, p.Numerator}, evalJob{j, &fracs[j].den, p.Denominator})
+		den := l.Lower(p.Denominator)
+		term := b.Op(vecprog.Div, l.Lower(p.Numerator), den)
+		guard := b.Scalar(one, true)
 		if p.Filter != nil {
-			jobs = append(jobs, evalJob{j, &fracs[j].filter, p.Filter})
+			guard = l.Lower(p.Filter)
+			term = b.Op(vecprog.Mul, term, guard)
 		}
+		b.Check(den, guard, func(i int) {
+			panic(fmt.Sprintf(
+				"wiop/compilers/logderivativesum: zero denominator at row %d for fraction %d "+
+					"with non-zero filter; the filter must mask this row",
+				i, j,
+			))
+		})
+		b.AddTo(term, rows)
 	}
-	parallel.Execute(len(jobs), func(start, end int) {
-		for _, job := range jobs[start:end] {
-			*job.dst = wiop.EvaluateAsExtVec(rt, job.e, n)
-		}
-	}, workers)
+	b.Compile(n, 1, 1).Run(nil, nil, workers)
 
-	// Chunk the rows. Batch inversion leaves zero entries as zero, chunk by
-	// chunk as on the whole vector, so it is safe on vectors that contain
-	// zeros at filtered-out rows.
+	// First pass: each chunk's running sum from zero, and its total.
 	chunk := max(prefixSumMinChunk, (n+workers-1)/workers)
 	nbChunks := (n + chunk - 1) / chunk
 	bounds := func(c int) (int, int) { return c * chunk, min((c+1)*chunk, n) }
-	for j := range fracs {
-		fracs[j].invDen = make([]field.Ext, n)
-	}
-	parallel.Execute(nbChunks*len(fracs), func(start, end int) {
-		for w := start; w < end; w++ {
-			j, c := w/nbChunks, w%nbChunks
-			lo, hi := bounds(c)
-			field.BatchInvertExtInto(fracs[j].den[lo:hi], fracs[j].invDen[lo:hi])
-		}
-	}, workers)
-
-	// First pass: each chunk's running sum from zero, and its total.
-	z := make([]field.Ext, n)
+	z := rows // the running sum overwrites the row terms in place
 	chunkTotals := make([]field.Ext, nbChunks)
 	parallel.Execute(nbChunks, func(start, end int) {
 		for c := start; c < end; c++ {
 			lo, hi := bounds(c)
-			var running, term field.Ext
+			var running field.Ext
 			for i := lo; i < hi; i++ {
-				for j := range fracs {
-					if fracs[j].filter != nil && fracs[j].filter[i].IsZero() {
-						continue
-					}
-					if fracs[j].den[i].IsZero() {
-						panic(fmt.Sprintf(
-							"wiop/compilers/logderivativesum: zero denominator at row %d for fraction %d "+
-								"with non-zero filter; the filter must mask this row",
-							i, j,
-						))
-					}
-					term.Mul(&fracs[j].num[i], &fracs[j].invDen[i])
-					if fracs[j].filter != nil {
-						term.Mul(&term, &fracs[j].filter[i])
-					}
-					running.Add(&running, &term)
-				}
+				running.Add(&running, &rows[i])
 				z[i] = running
 			}
 			chunkTotals[c] = running

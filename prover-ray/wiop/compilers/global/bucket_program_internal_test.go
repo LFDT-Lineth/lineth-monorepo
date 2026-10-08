@@ -7,6 +7,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/internal/vecprog"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,7 +20,7 @@ import (
 // combinations, cancellations, and sizes below, at and across a block.
 func TestQuotientProgram_MatchesTreeEvaluation(t *testing.T) {
 	for _, tc := range []struct{ n, ratio, step int }{
-		{4, 1, 1}, {8, 2, 2}, {75, 4, 1}, {qBlockSize, 1, 4}, {2*qBlockSize + 40, 4, 1}, {1024, 2, 2},
+		{4, 1, 1}, {8, 2, 2}, {75, 4, 1}, {vecprog.BlockSize, 1, 4}, {2*vecprog.BlockSize + 40, 4, 1}, {1024, 2, 2},
 	} {
 		for seed := range uint64(4) {
 			t.Run(fmt.Sprintf("n=%d/ratio=%d/step=%d/seed=%d", tc.n, tc.ratio, tc.step, seed), func(t *testing.T) {
@@ -43,43 +44,11 @@ func TestQuotientProgram_MatchesTreeEvaluation(t *testing.T) {
 				}
 
 				got := make([]field.Ext, N)
-				compileQuotientProgram(entries, tc.n, tc.ratio, tc.step).run(got, annInv)
+				runBucketProgram(entries, tc.n, tc.ratio, tc.step, got, annInv)
 				require.Equal(t, want, got)
 			})
 		}
 	}
-}
-
-// TestQuotientProgram_FoldsHornerForms checks that a log-derivative style
-// constraint, a product of Horner-form random linear combinations each used
-// twice, is lowered without any extension-by-extension product inside the
-// linear combinations and with each combination computed once.
-func TestQuotientProgram_FoldsHornerForms(t *testing.T) {
-	g := newExprGen(rand.New(rand.NewPCG(7, 7)), 64, 1)
-	d1, d2 := g.horner(8), g.horner(8)
-	// d1·d2 − (d1 + d2): each denominator appears twice.
-	expr := op(wiop.ArithmeticOperatorSub,
-		op(wiop.ArithmeticOperatorMul, d1, d2),
-		op(wiop.ArithmeticOperatorAdd, d1, d2))
-	p := compileQuotientProgram([]boundEntry{{expr: expr, coinPow: g.ext()}}, g.n, 1, 1)
-
-	var linear, extMul int
-	for _, st := range p.steps {
-		if st.entry >= 0 {
-			continue
-		}
-		n := &p.nodes[st.node]
-		switch {
-		case n.kind == qLinear:
-			linear++
-		case n.kind == qOp && !n.isBase && n.op == wiop.ArithmeticOperatorMul:
-			extMul++
-		}
-	}
-	// d1 and d2 are two linear steps; d1 + d2 folds into a third. The only
-	// extension product left is d1·d2.
-	require.Equal(t, 3, linear)
-	require.Equal(t, 1, extMul)
 }
 
 // exprGen draws random bound expressions over a fixed set of coset tables of

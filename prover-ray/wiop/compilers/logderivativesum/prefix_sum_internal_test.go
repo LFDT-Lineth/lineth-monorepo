@@ -10,7 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The chunked running sum must be independent of the number of workers: one
+// The running sum must match a row-by-row evaluation of the fractions, and be
+// independent of the number of workers: one
 // worker processes the column as a single chunk, which is the serial
 // algorithm, and any other split must reproduce it exactly -- including rows
 // masked by a filter whose denominator is zero, and chunk counts that do not
@@ -64,10 +65,17 @@ func TestComputeFilteredPrefixSum_IndependentOfWorkers(t *testing.T) {
 			packed := []wiop.Fraction{
 				{Numerator: num1.View(), Denominator: wiop.Add(den1.View(), ext.View())},
 				{Numerator: num2.View(), Denominator: den2.View(), Filter: filter.View()},
+				// Shifted views, an extension product and a subexpression
+				// shared with the first fraction.
+				{
+					Numerator:   wiop.Mul(num2.View().Shift(-1), ext.View()),
+					Denominator: wiop.Add(wiop.Mul(ext.View(), den1.View().Shift(2)), wiop.Add(den1.View(), ext.View())),
+				},
 			}
-			want := computeFilteredPrefixSum(rt, packed, n, 1)
+			serial := computeFilteredPrefixSum(rt, packed, n, 1)
+			require.Equal(t, naiveFilteredPrefixSum(rt, packed, n), serial)
 			for _, workers := range []int{2, 3, 4, 7, 192} {
-				require.Equal(t, want, computeFilteredPrefixSum(rt, packed, n, workers), "workers=%d", workers)
+				require.Equal(t, serial, computeFilteredPrefixSum(rt, packed, n, workers), "workers=%d", workers)
 			}
 		})
 	}
@@ -96,4 +104,35 @@ func TestComputeFilteredPrefixSum_PanicsOnUnmaskedZeroDenominator(t *testing.T) 
 	for _, workers := range []int{1, 4} {
 		require.Panics(t, func() { computeFilteredPrefixSum(rt, packed, n, workers) }, "workers=%d", workers)
 	}
+}
+
+// naiveFilteredPrefixSum evaluates every fraction's vectors in full and sums
+// them row by row.
+func naiveFilteredPrefixSum(rt *wiop.Runtime, packed []wiop.Fraction, n int) []field.Ext {
+	z := make([]field.Ext, n)
+	var running field.Ext
+	nums, dens, filters := make([][]field.Ext, len(packed)), make([][]field.Ext, len(packed)), make([][]field.Ext, len(packed))
+	for j, p := range packed {
+		nums[j] = wiop.EvaluateAsExtVec(rt, p.Numerator, n)
+		dens[j] = wiop.EvaluateAsExtVec(rt, p.Denominator, n)
+		if p.Filter != nil {
+			filters[j] = wiop.EvaluateAsExtVec(rt, p.Filter, n)
+		}
+	}
+	for i := range n {
+		for j := range packed {
+			if filters[j] != nil && filters[j][i].IsZero() {
+				continue
+			}
+			var term field.Ext
+			term.Inverse(&dens[j][i])
+			term.Mul(&term, &nums[j][i])
+			if filters[j] != nil {
+				term.Mul(&term, &filters[j][i])
+			}
+			running.Add(&running, &term)
+		}
+		z[i] = running
+	}
+	return z
 }

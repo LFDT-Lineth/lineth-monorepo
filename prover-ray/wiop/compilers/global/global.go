@@ -10,6 +10,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/internal/vecprog"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 )
 
@@ -672,12 +673,11 @@ func (q *moduleQuotient) run(rt *wiop.Runtime) {
 			}
 		}
 
-		// The bound entries are lowered into one program (shared subexpressions,
-		// folded scalars and linear forms; see [compileQuotientProgram]) that
-		// runs over blocks of coset points in parallel, reading every
-		// (R/ratio)-th of the module's cosets, then divides by the annihilator
-		// (x^n − 1), whose inverse on the bucket's coset k is annInv[k].
-		compileQuotientProgram(bound, n, ratio, R/ratio).run(aggregate[:N], annInv)
+		// The bound entries are lowered into one program that runs over blocks
+		// of coset points in parallel, reading every (R/ratio)-th of the
+		// module's cosets, then divides by the annihilator (x^n − 1), whose
+		// inverse on the bucket's coset k is annInv[k].
+		runBucketProgram(bound, n, ratio, R/ratio, aggregate[:N], annInv)
 
 		// --- Interpolate the quotient into its shares ---
 		for k, share := range cosetsToShares(aggregate[:N], smallDomain, bucketDomains) {
@@ -1159,8 +1159,8 @@ const (
 
 // boundExpr is a Vanishing expression specialised against one bucket's coset
 // tables: every leaf holds a direct slice or a resolved scalar, so the
-// [quotientProgram] lowered from it involves no map lookups and no runtime
-// access. Binding happens once per (bucket, expression).
+// program lowered from it (see [runBucketProgram]) involves no map lookups and
+// no runtime access. Binding happens once per (bucket, expression).
 //
 // isBase reports whether the subtree evaluates in the base field: extension
 // cells, extension column views, and coins make a subtree extension. Base
@@ -1235,6 +1235,39 @@ type boundEntry struct {
 	expr         boundExpr
 	cancellation []field.Element // nil when the constraint has no cancelled positions
 	coinPow      field.Ext       // coin^i for the i-th constraint of the bucket
+}
+
+// runBucketProgram adds Σᵢ coinPowᵢ·Pᵢ·Cᵢ into aggregate over the ratio
+// cosets of n points of a bucket, whose coset k is coset k·step of the
+// tables, then multiplies coset k by annInv[k]. The bound entries are lowered
+// into one [vecprog] program, which shares subexpressions, folds scalars and
+// turns random linear combinations into linear forms.
+func runBucketProgram(bound []boundEntry, n, ratio, step int, aggregate []field.Ext, annInv []field.Element) {
+	b := vecprog.NewBuilder()
+	for i := range bound {
+		b.Accumulate(lowerBound(b, &bound[i].expr), bound[i].cancellation, bound[i].coinPow)
+	}
+	b.Compile(n, ratio, step).Run(aggregate, annInv, 0)
+}
+
+// lowerBound adds e to b and returns its node.
+func lowerBound(b *vecprog.Builder, e *boundExpr) int {
+	switch e.kind {
+	case boundVecBase:
+		return b.Base(e.vecBase, e.offset)
+	case boundVecExt:
+		return b.Ext(e.vecExt, e.offset)
+	case boundScalarBase:
+		return b.Scalar(field.Lift(e.scalarBase), true)
+	case boundScalarExt:
+		return b.Scalar(e.scalarExt, false)
+	}
+	o := wiop.LowerOperator(e.operator)
+	args := make([]int, o.Arity())
+	for i := range args {
+		args[i] = lowerBound(b, &e.operands[i])
+	}
+	return b.Op(o, args...)
 }
 
 // ---------------------------------------------------------------------------
