@@ -136,3 +136,37 @@ func naiveFilteredPrefixSum(rt *wiop.Runtime, packed []wiop.Fraction, n int) []f
 	}
 	return z
 }
+
+// Columns of padded modules are read in place, padding included, and the
+// running sum must still match a row-by-row evaluation.
+func TestComputeFilteredPrefixSum_PaddedModules(t *testing.T) {
+	const n = 1 << 12
+	for _, pd := range []wiop.PaddingDirection{wiop.PaddingDirectionLeft, wiop.PaddingDirectionRight} {
+		t.Run(fmt.Sprintf("pd=%v", pd), func(t *testing.T) {
+			rng := rand.New(rand.NewPCG(uint64(pd), 9))
+			sys := wiop.NewSystemf("prefix-sum-padded")
+			r0 := sys.NewRound()
+			mod := sys.NewSizedModule(sys.Context.Childf("mod"), n, pd)
+			num := mod.NewColumn(sys.Context.Childf("n"), r0)
+			den := mod.NewColumn(sys.Context.Childf("d"), r0)
+			ext := mod.NewExtensionColumn(sys.Context.Childf("e"), r0)
+			rt := wiop.NewRuntime(sys)
+			short := n - 1000
+			d := field.VecPseudoRandBase(rng, short)
+			for i := range d {
+				d[i].SetUint64(1 + rng.Uint64N(1<<30))
+			}
+			var padding field.Element
+			padding.SetUint64(7)
+			rt.AssignColumn(num, &wiop.ConcreteVector{Plain: field.VecFromBase(field.VecPseudoRandBase(rng, short)), Padding: padding})
+			rt.AssignColumn(den, &wiop.ConcreteVector{Plain: field.VecFromBase(d), Padding: padding})
+			rt.AssignColumn(ext, &wiop.ConcreteVector{Plain: field.VecFromExt(field.VecPseudoRandExt(rng, short)), Padding: padding})
+
+			packed := []wiop.Fraction{
+				{Numerator: num.View().Shift(5), Denominator: wiop.Add(den.View(), ext.View().Shift(-2))},
+				{Numerator: ext.View(), Denominator: den.View().Shift(1)},
+			}
+			require.Equal(t, naiveFilteredPrefixSum(rt, packed, n), computeFilteredPrefixSum(rt, packed, n, 4))
+		})
+	}
+}

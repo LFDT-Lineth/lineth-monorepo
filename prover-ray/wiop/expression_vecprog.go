@@ -32,29 +32,20 @@ func LowerOperator(o ArithmeticOperator) vecprog.Op {
 
 // RowLowering lowers expressions evaluated over n rows into one [vecprog]
 // program, as [EvaluateAsExtVec] evaluates them: a column view reads its
-// module's padded assignment at its shift, each column being written down
-// once for all its views. An expression reading a column of a module of
+// module's padded assignment in place, at its shift. An expression reading a column of a module of
 // another size is evaluated by [EvaluateAsExtVec] instead, so that its
 // padding to n rows is unchanged, and enters the program as a table.
 type RowLowering struct {
 	B *vecprog.Builder
 
-	rt       *Runtime
-	n        int
-	baseCols map[*Column][]field.Element
-	extCols  map[*Column][]field.Ext
+	rt *Runtime
+	n  int
 }
 
 // NewRowLowering returns a lowering over the first n rows, building into a
 // fresh builder.
 func NewRowLowering(rt *Runtime, n int) *RowLowering {
-	return &RowLowering{
-		B:        vecprog.NewBuilder(),
-		rt:       rt,
-		n:        n,
-		baseCols: make(map[*Column][]field.Element),
-		extCols:  make(map[*Column][]field.Ext),
-	}
+	return &RowLowering{B: vecprog.NewBuilder(), rt: rt, n: n}
 }
 
 // Lower adds expr to the builder and returns its node.
@@ -91,11 +82,7 @@ func (l *RowLowering) sizedTo(expr Expression) bool {
 func (l *RowLowering) lower(expr Expression) int {
 	switch e := expr.(type) {
 	case *ColumnView:
-		offset := ((e.ShiftingOffset % l.n) + l.n) % l.n
-		if e.Column.IsExtension {
-			return l.B.Ext(l.extColumn(e.Column), offset)
-		}
-		return l.B.Base(l.baseColumn(e.Column), offset)
+		return l.column(e)
 	case *Constant:
 		return l.B.Scalar(field.Lift(e.Value), true)
 	case *Cell:
@@ -139,24 +126,18 @@ func (l *RowLowering) lower(expr Expression) int {
 	return l.B.Ext(table, 0)
 }
 
-// baseColumn returns col's padded assignment over n rows, written once.
-func (l *RowLowering) baseColumn(col *Column) []field.Element {
-	if t, ok := l.baseCols[col]; ok {
-		return t
+// column returns the leaf of a column view: the column's assignment read in
+// place, padded as its module pads (see [ConcreteVector.ElementAtN]), at the
+// view's shift.
+func (l *RowLowering) column(cv *ColumnView) int {
+	offset := ((cv.ShiftingOffset % l.n) + l.n) % l.n
+	a := l.rt.GetColumnAssignment(cv.Column)
+	start := 0
+	if cv.Column.Module.Padding == PaddingDirectionLeft {
+		start = l.n - a.Plain.Len()
 	}
-	t := make([]field.Element, l.n)
-	materializeBase(t, l.rt.GetColumnAssignment(col), col.Module.Padding, l.n)
-	l.baseCols[col] = t
-	return t
-}
-
-// extColumn returns col's padded assignment over n rows, written once.
-func (l *RowLowering) extColumn(col *Column) []field.Ext {
-	if t, ok := l.extCols[col]; ok {
-		return t
+	if a.Plain.IsBase() {
+		return l.B.BasePadded(a.Plain.AsBase(), a.Padding, start, offset)
 	}
-	t := make([]field.Ext, l.n)
-	materializeExt(t, l.rt.GetColumnAssignment(col), col.Module.Padding, l.n)
-	l.extCols[col] = t
-	return t
+	return l.B.ExtPadded(a.Plain.AsExt(), a.Padding, start, offset)
 }

@@ -196,3 +196,40 @@ func TestFoldsHornerForms(t *testing.T) {
 	require.Equal(t, 3, linear)
 	require.Equal(t, 1, extMul)
 }
+
+// A padded leaf must read row (i + offset) mod n of its padded coset: data at
+// rows [start, start+len(data)), the padding value elsewhere, over data placed
+// at the start or the end of the coset or overflowing it, and offsets that
+// wrap within or across blocks.
+func TestPaddedLeavesMatchNaive(t *testing.T) {
+	rng := rand.New(rand.NewPCG(5, 8))
+	for _, n := range []int{8, BlockSize, 3*BlockSize + 40} {
+		for _, layout := range []struct{ dataLen, start int }{
+			{n, 0}, {n / 2, 0}, {n / 2, n - n/2}, {n + 3, -3}, {0, 0},
+		} {
+			t.Run(fmt.Sprintf("n=%d/len=%d/start=%d", n, layout.dataLen, layout.start), func(t *testing.T) {
+				data := field.VecPseudoRandBase(rng, layout.dataLen)
+				dataExt := field.VecPseudoRandExt(rng, layout.dataLen)
+				pad := field.VecPseudoRandBase(rng, 1)[0]
+				row := func(p int) (field.Element, field.Ext) {
+					if j := p - layout.start; j >= 0 && j < layout.dataLen {
+						return data[j], dataExt[j]
+					}
+					return pad, field.Lift(pad)
+				}
+				for _, offset := range []int{0, 1, n - 1, n / 3} {
+					b := NewBuilder()
+					gotBase, gotExt := make([]field.Ext, n), make([]field.Ext, n)
+					b.Store(b.BasePadded(data, pad, layout.start, offset), gotBase)
+					b.Store(b.ExtPadded(dataExt, pad, layout.start, offset), gotExt)
+					b.Compile(n, 1, 1).Run(nil, nil, 3)
+					for i := range n {
+						wb, we := row((i + offset) % n)
+						require.Equal(t, field.Lift(wb), gotBase[i], "base, offset %d, row %d", offset, i)
+						require.Equal(t, we, gotExt[i], "ext, offset %d, row %d", offset, i)
+					}
+				}
+			})
+		}
+	}
+}

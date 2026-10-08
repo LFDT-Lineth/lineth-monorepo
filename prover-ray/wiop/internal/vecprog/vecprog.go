@@ -89,6 +89,9 @@ type node struct {
 	vecBase []field.Element // kVecBase
 	vecExt  []field.Ext     // kVecExt
 	offset  int             // kVec*: offset within a coset, in [0, n)
+	padded  bool            // kVec*: the table is a padded single coset, see BasePadded
+	pad     field.Element   // padded: the value of rows outside the data
+	start   int             // padded: the row of the table's first element
 	atoms   []int           // kLinear, increasing
 	coefs   []field.Ext     // kLinear, aligned with atoms, non-zero
 }
@@ -110,11 +113,16 @@ type key struct {
 
 func (n *node) key() key {
 	k := key{kind: n.kind, isBase: n.isBase, s: n.s, a0: -1, a1: -1}
+	if n.padded {
+		k.a1, k.s, k.hash = n.start, field.Lift(n.pad), 1
+	}
 	switch n.kind {
 	case kVecBase:
 		k.table, k.offset = uintptr(unsafe.Pointer(unsafe.SliceData(n.vecBase))), n.offset
+		k.a0 = len(n.vecBase)
 	case kVecExt:
 		k.table, k.offset = uintptr(unsafe.Pointer(unsafe.SliceData(n.vecExt))), n.offset
+		k.a0 = len(n.vecExt)
 	case kOp:
 		k.op, k.a0 = n.op, n.args[0]
 		if len(n.args) > 1 {
@@ -182,6 +190,23 @@ func (b *Builder) IsBase(id int) bool { return b.nodes[id].isBase }
 // coset.
 func (b *Builder) Base(table []field.Element, offset int) int {
 	return b.intern(node{kind: kVecBase, isBase: true, vecBase: table, offset: offset})
+}
+
+// BasePadded returns the leaf reading, at offset, a single coset of n rows
+// whose rows [start, start+len(data)) hold data and the others hold pad, as a
+// padded column assignment is laid out: the padded rows are never written
+// down. A start below zero drops the first -start data rows.
+func (b *Builder) BasePadded(data []field.Element, pad field.Element, start, offset int) int {
+	return b.intern(node{
+		kind: kVecBase, isBase: true, vecBase: data, offset: offset,
+		padded: true, pad: pad, start: start,
+	})
+}
+
+// ExtPadded is [Builder.BasePadded] for extension data; the padding value is
+// a lifted base element.
+func (b *Builder) ExtPadded(data []field.Ext, pad field.Element, start, offset int) int {
+	return b.intern(node{kind: kVecExt, vecExt: data, offset: offset, padded: true, pad: pad, start: start})
 }
 
 // Ext returns the leaf reading an extension-field table at offset, within
@@ -653,9 +678,14 @@ func (w *worker) runBlock(agg []field.Ext, k, i0, L int) {
 		if idx >= p.n {
 			idx -= p.n
 		}
-		if nd.kind == kVecBase {
+		switch {
+		case nd.padded && nd.kind == kVecBase:
+			w.viewBase[id] = paddedView(nd.vecBase, nd.pad, nd.start, p.n, idx, L, &w.wrapBase[id])
+		case nd.padded:
+			w.viewExt[id] = paddedView(nd.vecExt, field.Lift(nd.pad), nd.start, p.n, idx, L, &w.wrapExt[id])
+		case nd.kind == kVecBase:
 			w.viewBase[id] = wrappedView(nd.vecBase[tableStart:tableStart+p.n], idx, L, &w.wrapBase[id])
-		} else {
+		default:
 			w.viewExt[id] = wrappedView(nd.vecExt[tableStart:tableStart+p.n], idx, L, &w.wrapExt[id])
 		}
 	}
@@ -690,6 +720,39 @@ func wrappedView[T any](table []T, idx, L int, buf *[]T) []T {
 	k := copy(out, table[idx:])
 	copy(out[k:], table)
 	return out
+}
+
+// paddedView returns rows [idx, idx+L) of a padded coset of n rows, cyclically
+// (see [Builder.BasePadded]): a slice of data when the window lies within
+// it, otherwise a copy into *buf with the padded rows filled in.
+func paddedView[T any](data []T, pad T, start, n, idx, L int, buf *[]T) []T {
+	if idx >= start && idx+L <= start+len(data) {
+		return data[idx-start : idx-start+L]
+	}
+	if *buf == nil {
+		*buf = make([]T, BlockSize)
+	}
+	out := (*buf)[:L]
+	for o := 0; o < L; {
+		p := (idx + o) % n
+		length := min(L-o, n-p) // a run of rows that does not wrap
+		dLo, dHi := max(p, start), min(p+length, start+len(data))
+		if dLo >= dHi {
+			fill(out[o:o+length], pad)
+		} else {
+			fill(out[o:o+dLo-p], pad)
+			copy(out[o+dLo-p:o+dHi-p], data[dLo-start:dHi-start])
+			fill(out[o+dHi-p:o+length], pad)
+		}
+		o += length
+	}
+	return out
+}
+
+func fill[T any](v []T, x T) {
+	for i := range v {
+		v[i] = x
+	}
 }
 
 // operand is a node's value over the current block: a scalar or a vector of
