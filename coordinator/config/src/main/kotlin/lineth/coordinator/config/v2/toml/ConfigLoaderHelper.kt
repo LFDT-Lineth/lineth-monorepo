@@ -112,12 +112,12 @@ fun loadSmartContractErrors(
 ): Result<SmartContractErrorCodesConfigFileToml, String> {
   val bundled = loadBundledSmartContractErrors().smartContractErrors
   if (overrideFile == null) {
-    logger.info("Smart contract errors: {} entries from bundled mapping, no override file", bundled.size)
+    logger.debug("Smart contract errors: {} entries from bundled mapping, no override file", bundled.size)
     return Ok(SmartContractErrorCodesConfigFileToml(bundled))
   }
   return loadConfigsAndLogErrors<SmartContractErrorCodesConfigFileToml>(listOf(overrideFile), logger, strict)
     .map { override ->
-      logger.info(
+      logger.debug(
         "Smart contract errors: {} entries from bundled mapping, {} entries from override file {}",
         bundled.size,
         override.smartContractErrors.size,
