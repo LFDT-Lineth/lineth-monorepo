@@ -485,17 +485,38 @@ func denominatorInverses(domainPoints, claimPoints []field.Ext) ([]field.Ext, er
 // means ζ (hence every ζ·ω_n^s claim point) lands on the domain, which is a
 // soundness violation.
 func denomBaseInverses(generator field.Element, n int, zeta field.Ext) ([]field.Ext, error) {
-	denoms := make([]field.Ext, n)
-	pow := field.One()
-	for e := range n {
-		x := field.Lift(pow)
-		denoms[e].Sub(&x, &zeta)
-		if denoms[e].IsZero() {
+	// Positions are independent: each chunk starts from its own power of the
+	// generator and batch-inverts its own denominators, with one field
+	// inversion per chunk.
+	const chunk = 1 << 12
+	inv := make([]field.Ext, n)
+	bad := make([]int, (n+chunk-1)/chunk)
+	parallel.Execute(len(bad), func(first, last int) {
+		denoms := make([]field.Ext, chunk)
+		for c := first; c < last; c++ {
+			lo, hi := c*chunk, min((c+1)*chunk, n)
+			bad[c] = -1
+			var pow field.Element
+			field.ExpToInt(&pow, generator, lo)
+			for e := lo; e < hi; e++ {
+				x := field.Lift(pow)
+				denoms[e-lo].Sub(&x, &zeta)
+				if denoms[e-lo].IsZero() && bad[c] < 0 {
+					bad[c] = e
+				}
+				pow.Mul(&pow, &generator)
+			}
+			if bad[c] < 0 {
+				field.BatchInvertExtInto(denoms[:hi-lo], inv[lo:hi])
+			}
+		}
+	})
+	for _, e := range bad {
+		if e >= 0 {
 			return nil, fmt.Errorf("fri: reconstructLevels: claim point lands on domain position %d", e)
 		}
-		pow.Mul(&pow, &generator)
 	}
-	return field.BatchInvertExt(denoms), nil
+	return inv, nil
 }
 
 // =============================================================================
