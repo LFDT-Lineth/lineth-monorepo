@@ -452,6 +452,16 @@
         "deprecated": false,
         "replacement": null
       },
+      "database.database-name": {
+        "type": "String",
+        "section": false,
+        "required": false,
+        "default": "linea_coordinator",
+        "description": "PostgreSQL database name. Formerly `schema`, still accepted as a deprecated alias.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
       "database.hostname": {
         "type": "String",
         "section": false,
@@ -558,16 +568,6 @@
         "required": false,
         "default": "10",
         "description": "Connection pool size for read-only queries.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "database.schema": {
-        "type": "String",
-        "section": false,
-        "required": false,
-        "default": "linea_coordinator",
-        "description": "PostgreSQL schema (database) name.",
         "example": null,
         "deprecated": false,
         "replacement": null
