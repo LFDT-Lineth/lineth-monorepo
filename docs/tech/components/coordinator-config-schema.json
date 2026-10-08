@@ -4890,14 +4890,14 @@
     }
   },
   "smart-contract-errors": {
-    "description": "Mapping of Lineth smart-contract revert error codes to messages.",
+    "description": "Optional override of the smart-contract revert error codes bundled in the coordinator jar.",
     "keys": {
       "smart-contract-errors": {
         "type": "Map<String, String>",
         "section": false,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "Mapping of Lineth smart-contract revert error codes to human-readable messages, used to decode on-chain rejection reasons.",
+        "description": "Optional (override file only): mapping of Lineth smart-contract revert error codes to human-readable messages, merged over the mapping bundled in the coordinator jar (entries in this file win). Used to decode on-chain rejection reasons.",
         "example": null,
         "deprecated": false,
         "replacement": null

@@ -5,6 +5,7 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.get
 import com.github.michaelbull.result.getOrElse
+import com.github.michaelbull.result.map
 import com.github.michaelbull.result.recoverIf
 import com.sksamuel.hoplite.ConfigLoaderBuilder
 import com.sksamuel.hoplite.ConfigResult
@@ -87,12 +88,51 @@ inline fun <reified T : Any> loadConfigsAndLogErrors(
     }
 }
 
+const val BUNDLED_SMART_CONTRACT_ERRORS_RESOURCE = "/smart-contract-errors.toml"
+
+fun loadBundledSmartContractErrors(): SmartContractErrorCodesConfigFileToml {
+  val toml =
+    requireNotNull(
+      SmartContractErrorCodesConfigFileToml::class.java.getResourceAsStream(BUNDLED_SMART_CONTRACT_ERRORS_RESOURCE),
+    ) {
+      "Bundled smart-contract-errors resource $BUNDLED_SMART_CONTRACT_ERRORS_RESOURCE not found on classpath"
+    }
+      .use { it.readBytes().toString(Charsets.UTF_8) }
+  return parseConfig<SmartContractErrorCodesConfigFileToml>(toml)
+}
+
+/**
+ * Loads the smart contract errors bundled with the coordinator, merged with the optional override file.
+ * Entries from the override file win over the bundled ones.
+ */
+fun loadSmartContractErrors(
+  overrideFile: Path?,
+  logger: Logger = LogManager.getLogger("lineth.coordinator.config"),
+  strict: Boolean,
+): Result<SmartContractErrorCodesConfigFileToml, String> {
+  val bundled = loadBundledSmartContractErrors().smartContractErrors
+  if (overrideFile == null) {
+    logger.info("Smart contract errors: {} entries from bundled mapping, no override file", bundled.size)
+    return Ok(SmartContractErrorCodesConfigFileToml(bundled))
+  }
+  return loadConfigsAndLogErrors<SmartContractErrorCodesConfigFileToml>(listOf(overrideFile), logger, strict)
+    .map { override ->
+      logger.info(
+        "Smart contract errors: {} entries from bundled mapping, {} entries from override file {}",
+        bundled.size,
+        override.smartContractErrors.size,
+        overrideFile,
+      )
+      SmartContractErrorCodesConfigFileToml(bundled + override.smartContractErrors)
+    }
+}
+
 fun loadConfigsOrError(
   coordinatorConfigFiles: List<Path>,
   tracesLimitsFileV4: Path?,
   tracesLimitsFileV5: Path?,
   gasPriceCapTimeOfDayMultipliersFile: Path,
-  smartContractErrorsFile: Path,
+  smartContractErrorsFile: Path? = null,
   logger: Logger = LogManager.getLogger("lineth.coordinator.config"),
   strict: Boolean = false,
 ): Result<CoordinatorConfigToml, String> {
@@ -113,11 +153,7 @@ fun loadConfigsOrError(
       strict,
     )
   val smartContractErrorsConfig =
-    loadConfigsAndLogErrors<SmartContractErrorCodesConfigFileToml>(
-      listOf(smartContractErrorsFile),
-      logger,
-      strict,
-    )
+    loadSmartContractErrors(smartContractErrorsFile, logger, strict)
   val configError =
     listOf(
       coordinatorBaseConfigs,
@@ -149,7 +185,7 @@ fun loadConfigs(
   tracesLimitsFileV4: Path?,
   tracesLimitsFileV5: Path?,
   gasPriceCapTimeOfDayMultipliersFile: Path,
-  smartContractErrorsFile: Path,
+  smartContractErrorsFile: Path? = null,
   logger: Logger = LogManager.getLogger("lineth.coordinator.config"),
   enforceStrict: Boolean = false,
 ): CoordinatorConfig {

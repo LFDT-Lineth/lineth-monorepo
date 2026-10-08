@@ -42,7 +42,7 @@ object CoordinatorConfigDocsSpec : ConfigDocsSpec {
     ),
     ConfigFileRoot(
       label = "smart-contract-errors",
-      description = "Mapping of Lineth smart-contract revert error codes to messages.",
+      description = "Optional override of the smart-contract revert error codes bundled in the coordinator jar.",
       rootClass = SmartContractErrorCodesConfigFileToml::class,
     ),
   )

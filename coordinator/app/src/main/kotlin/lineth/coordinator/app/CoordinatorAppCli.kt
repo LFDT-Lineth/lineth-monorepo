@@ -55,7 +55,7 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
   @CommandLine.Option(
     names = ["--smart-contract-errors"],
     paramLabel = "<FILE>",
-    description = ["Smart contract error codes"],
+    description = ["Optional smart contract error codes, merged over the bundled mapping (file entries win)"],
     arity = "1",
   )
   private val smartContractErrorsFile: File? = null
@@ -92,11 +92,6 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
         printUsage(errorWriter)
         return 1
       }
-      if (smartContractErrorsFile == null) {
-        errorWriter.println("Please provide smart-contract-errors file!")
-        printUsage(errorWriter)
-        return 1
-      }
       if (gasPriceCapTimeOfDayMultipliersFile == null) {
         errorWriter.println("Please provide gas-price-cap-time-of-day-multipliers file!")
         printUsage(errorWriter)
@@ -114,7 +109,7 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
           coordinatorConfigFiles = configFiles.map { it.toPath() },
           tracesLimitsFileV4 = tracesFiles.tracesLimitsV4File?.toPath(),
           tracesLimitsFileV5 = tracesFiles.tracesLimitsV5File?.toPath(),
-          smartContractErrorsFile = smartContractErrorsFile.toPath(),
+          smartContractErrorsFile = smartContractErrorsFile?.toPath(),
           gasPriceCapTimeOfDayMultipliersFile = gasPriceCapTimeOfDayMultipliersFile.toPath(),
           logger = logger,
         )

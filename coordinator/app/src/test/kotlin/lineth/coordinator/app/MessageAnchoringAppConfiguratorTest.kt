@@ -62,7 +62,6 @@ class MessageAnchoringAppConfiguratorTest {
         gasPriceCapTimeOfDayMultipliersFile = Path.of(
           "../../docker/config/common/gas-price-cap-time-of-day-multipliers.toml",
         ),
-        smartContractErrorsFile = Path.of("../../docker/config/common/smart-contract-errors.toml"),
         enforceStrict = true,
       ).copy(
         messageAnchoring = messageAnchoring,
