@@ -22,10 +22,30 @@ const (
 	// publicOutputsAnnotationKey is an annotation holding the arithmetization's
 	// [PublicOutput].
 	publicOutputsAnnotationKey = "corset-public-outputs"
+	// traceRoundActionAnnotationKey is an annotation holding the
+	// [assignTraceRoundAction] registered on [Settings.TraceRound], if any.
+	traceRoundActionAnnotationKey = "zkcdriver-trace-round-action"
 	// guestOutputHashModule is the one public output the prover binds: the memory
 	// holding the keccak digest of the guest program's output.
 	guestOutputHashModule = "guest_output_hash"
+	// programModule is the module committed in [ProgramRound]: the memory
+	// holding the pre-decoded instruction table of the guest program.
+	programModule = "decoded"
 )
+
+// ProgramRound is the round holding the columns of [programModule], which
+// depend only on the guest program. The rest of the trace is in
+// [Settings.TraceRound].
+const ProgramRound = 0
+
+// roundOf returns the round in which the columns of the given corset module
+// are committed.
+func (s *schemaScanner) roundOf(moduleName string) int {
+	if moduleName == programModule {
+		return ProgramRound
+	}
+	return s.TraceRound
+}
 
 // PublicOutput locates the columns of the arithmetization's public output memory
 // — the memory named [guestOutputHashModule], declared with `pub output` and
@@ -62,11 +82,20 @@ type schemaScanner struct {
 	// ColumnIds maps the concatenation of the module name and the column name to the ObjectID of the corresponding
 	// wizard column name.
 	ColumnIDs map[string]wiop.ObjectID
+	// TraceRound is the round of every column outside of [programModule].
+	TraceRound int
 }
 
 // Define registers the arithmetization from a corset air.Schema and trace limits
-// from config.
-func Define(sys *wiop.System, schema *air.Schema[koalabear.Element]) {
+// from config. The columns of [programModule] are put in [ProgramRound] and
+// all the others in traceRound, where the sizes of all dynamic modules are also
+// fed into the Fiat-Shamir transcript.
+func Define(sys *wiop.System, schema *air.Schema[koalabear.Element], traceRound int) {
+
+	for len(sys.Rounds) <= traceRound {
+		sys.NewRound()
+	}
+	sys.DynamicSizeRound = traceRound
 
 	// Collect modules and sort them by name to ensure deterministic processing order
 	modules := schema.Modules().Collect()
@@ -80,10 +109,22 @@ func Define(sys *wiop.System, schema *air.Schema[koalabear.Element]) {
 		Modules:        modules,
 		ModulesIDsWiop: map[string]int{},
 		ColumnIDs:      map[string]wiop.ObjectID{},
+		TraceRound:     traceRound,
 	}
 
 	scanner.scanColumns()
 	scanner.scanConstraints()
+
+	if traceRound != ProgramRound {
+		if _, ok := scanner.ModulesIDsWiop[programModule]; !ok {
+			logrus.Warnf("zkcdriver: Define: no module %q found, round %d is empty", programModule, ProgramRound)
+		}
+
+		// Registered before any compiler pass, so that it runs first in the round.
+		action := &assignTraceRoundAction{Round: traceRound}
+		sys.Rounds[traceRound].RegisterAction(action)
+		sys.Annotations[traceRoundActionAnnotationKey] = action
+	}
 
 	sys.Annotations[corsetColumnMapAnnotationKey] = scanner.ColumnIDs
 	sys.Annotations[publicOutputsAnnotationKey] = scanner.collectPublicOutputs()
@@ -255,7 +296,7 @@ func (s *schemaScanner) scanColumns() {
 
 			col := moduleWIOP.NewColumn(
 				moduleWIOP.Context.Childf("column-%v", colDecl.Name()),
-				s.Sys.Rounds[0],
+				s.Sys.Rounds[s.roundOf(moduleName)],
 			)
 
 			s.ColumnIDs[colQualifiedName] = col.Context.ID

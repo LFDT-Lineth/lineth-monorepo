@@ -19,7 +19,10 @@ import (
 var _ [1]uint32 = koalabear.Element{}
 var _ [1]uint32 = field.Element{}
 
-// AssignFromTraceShard expands and assigns the trace to the given runtime.
+// AssignFromTraceShard assigns the [ProgramRound] columns of the trace to the
+// given runtime, and hands the shard to the [assignTraceRoundAction] so that
+// the columns of [Settings.TraceRound] are assigned when the runtime reaches
+// that round.
 func AssignFromTraceShard(
 	run *wiop.Runtime,
 	shard trace.Shard[koalabear.Element],
@@ -34,6 +37,40 @@ func AssignFromTraceShard(
 	if messagebus.HasSharedRandomness(run.System) {
 		messagebus.AssignSharedRandomnessSeed(run, sharedRandomness)
 	}
+
+	assignShardRound(run, shard, schema, run.System.Rounds[ProgramRound])
+
+	// The rest of the trace, if any, is assigned by [assignTraceRoundAction]
+	// once the runtime reaches [Settings.TraceRound].
+	if a, ok := run.System.Annotations[traceRoundActionAnnotationKey].(*assignTraceRoundAction); ok {
+		a.Shard = shard
+		a.Schema = schema
+	}
+}
+
+// assignTraceRoundAction assigns the columns of [Settings.TraceRound] from the
+// shard set by [AssignFromTraceShard]. It is registered once by [Define] and
+// holds the shard of the proof being run, so proofs over the same system must
+// not run concurrently.
+type assignTraceRoundAction struct {
+	Shard  trace.Shard[koalabear.Element]
+	Schema air.Schema[koalabear.Element]
+	Round  int
+}
+
+// Run implements [wiop.ProverAction].
+func (a *assignTraceRoundAction) Run(run *wiop.Runtime) {
+	assignShardRound(run, a.Shard, a.Schema, run.System.Rounds[a.Round])
+}
+
+// assignShardRound assigns the columns of the shard that belong to the given
+// round, skipping all the others.
+func assignShardRound(
+	run *wiop.Runtime,
+	shard trace.Shard[koalabear.Element],
+	schema air.Schema[koalabear.Element],
+	round *wiop.Round,
+) {
 
 	eg := &errgroup.Group{}
 
@@ -69,6 +106,9 @@ func AssignFromTraceShard(
 						continue
 					}
 					wCol := sys.LookupColumn(columnIDMap[name])
+					if wCol.Round() != round {
+						continue
+					}
 
 					// Use unsafe cast to avoid per-element Bytes()/SetBytes()
 					// round-trip.
