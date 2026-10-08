@@ -78,7 +78,10 @@ func BuildAllInOneHonestRiscvArtifacts() (HonestRiscvArtifacts, error) {
 	}
 
 	// The witness is a real halting guest ELF, not a synthetic verifier fixture.
-	honestInputs, err := predecoding.PrepareInputs(minimalelf.AllInOneElfProgram, nil)
+	// AllInOneElfProgram returns the ELF together with the guest's expected
+	// output; only the ELF bytes are needed to prepare the interpreter inputs.
+	elfBytes, _ := minimalelf.AllInOneElfProgram()
+	honestInputs, err := predecoding.PrepareInputs(elfBytes, nil)
 	if err != nil {
 		return HonestRiscvArtifacts{}, fmt.Errorf("PrepareInput: %w", err)
 	}

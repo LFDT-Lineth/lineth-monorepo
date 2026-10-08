@@ -4,7 +4,7 @@ go 1.25.7
 
 require (
 	github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20260917123943-b75b5ca955d8
-	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20261002114217-b8d8f9452f5b
+	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20261007154412-5bc08621b0fc
 	github.com/stretchr/testify v1.11.1
 )
 
