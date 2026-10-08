@@ -15,11 +15,16 @@ import (
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/compiler/ast"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/compiler/codegen"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/constraints"
+	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 )
 
 const mainDir = "main"
 const zkcExt = ".zkc"
 const predecodingDir = "predecoding"
+
+// BinaryFile provides an instantiation of constraints.BinaryFile suitable for
+// running Koalabear.
+type BinaryFile = constraints.BinaryFile[koalabear.Element, vm.Uint32]
 
 // arithmetizationSourceFiles returns the embedded R5 interpreter source files
 // as a slice of source.File.
@@ -160,7 +165,7 @@ func WithAirValidation() CompileOption {
 //   - The embedded R5 interpreter source files as the root filesystem.
 //   - No metadata or attributes for the compiled binary file.
 //   - No AIR validation.
-func CompiledBinaryFile(opts ...CompileOption) (binfile *constraints.BinaryFile[koalabear.Element], err error) {
+func CompiledBinaryFile(opts ...CompileOption) (binfile *BinaryFile, err error) {
 	cfg := new(compileCfg)
 	for _, opt := range opts {
 		if err := opt(cfg); err != nil {
@@ -191,7 +196,7 @@ func CompiledBinaryFile(opts ...CompileOption) (binfile *constraints.BinaryFile[
 		}
 		return nil, errors.Join(errs...)
 	}
-	binfile = constraints.NewBinaryFile[koalabear.Element](cfg.metadata, cfg.attributes, ir)
+	binfile = constraints.NewBinaryFile[koalabear.Element, vm.Uint32](cfg.metadata, cfg.attributes, ir)
 	if cfg.validateAir {
 		air := binfile.AirConstraints()
 		errs := constraints.Validate(air)
