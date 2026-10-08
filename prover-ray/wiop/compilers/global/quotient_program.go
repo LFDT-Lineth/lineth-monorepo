@@ -376,9 +376,11 @@ func applyExt(o wiop.ArithmeticOperator, a []field.Ext) field.Ext {
 	return res
 }
 
-// quotientProgram is the lowered form of a bucket's bound entries. Its coset
-// tables are laid out coset-major (see [cosetShifts]): ratio small cosets of
-// n points each.
+// quotientProgram is the lowered form of a bucket's bound entries. Its
+// aggregate is laid out coset-major (see [cosetShifts]): ratio small cosets
+// of n points each. The coset tables it reads (columns, selectors,
+// cancellations) are the module's, over step·ratio cosets, of which the
+// bucket's coset k is coset k·step.
 type quotientProgram struct {
 	nodes    []qNode
 	steps    []qStep
@@ -388,6 +390,7 @@ type quotientProgram struct {
 	nbBase   int
 	nbExt    int
 	n, ratio int
+	step     int
 }
 
 // qStep computes node, or accumulates entry when entry >= 0.
@@ -403,11 +406,12 @@ type qEntry struct {
 }
 
 // compileQuotientProgram lowers the bound entries of a bucket of ratio small
-// cosets of n points. Each entry's nodes are scheduled depth first right
-// before its accumulation, and registers are recycled after their last use.
-func compileQuotientProgram(bound []boundEntry, n, ratio int) *quotientProgram {
+// cosets of n points, whose coset k is coset k·step of its tables. Each
+// entry's nodes are scheduled depth first right before its accumulation, and
+// registers are recycled after their last use.
+func compileQuotientProgram(bound []boundEntry, n, ratio, step int) *quotientProgram {
 	b := &qBuilder{index: make(map[qKey][]int)}
-	p := &quotientProgram{n: n, ratio: ratio, entries: make([]qEntry, len(bound))}
+	p := &quotientProgram{n: n, ratio: ratio, step: step, entries: make([]qEntry, len(bound))}
 	for i := range bound {
 		p.entries[i] = qEntry{
 			root:         b.build(&bound[i].expr),
@@ -567,7 +571,7 @@ func (p *quotientProgram) newWorker() *qWorker {
 func (w *qWorker) runBlock(agg []field.Ext, k, i0 int) {
 	p := w.p
 	L := len(agg)
-	cosetStart := k * p.n
+	cosetStart := k * p.step * p.n // the bucket's coset k in the tables
 	for _, id := range p.leaves {
 		n := &p.nodes[id]
 		idx := i0 + n.offset

@@ -3,6 +3,7 @@ package global
 import (
 	"fmt"
 	"runtime"
+	"sort"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
@@ -50,13 +51,18 @@ func Compile(sys *wiop.System) {
 	// quotient share columns have been committed in quotientRound).
 	evalCoin := evalRound.NewCoinField(compCtx.Childf("eval-coin"))
 
+	quotient, eval := &QuotientProverAction{}, &EvalProverAction{}
 	for i, m := range sys.Modules {
 		if len(m.Vanishings) == 0 {
 			continue
 		}
 		mCtx := compCtx.Childf("m%d", i)
-		compileModule(sys, m, mCtx, quotientRound, evalRound, evalCoin)
+		mq, les := compileModule(sys, m, mCtx, quotientRound, evalRound, evalCoin)
+		quotient.modules = append(quotient.modules, mq)
+		eval.lagrangeEvals = append(eval.lagrangeEvals, les...)
 	}
+	quotientRound.RegisterAction(quotient)
+	evalRound.RegisterAction(eval)
 }
 
 // colViewKey is a map key for deduplicating column views (column + shift).
@@ -74,12 +80,32 @@ type rawBucket struct {
 }
 
 // proverVanishingEntry bundles a Vanishing with the precomputed base-field
-// evaluations of its cancellation polynomial on the large coset.
-// cancellationCoset[j] = C(g · ω_{N}^j) where g is the multiplicative
-// generator and N = n · ratio. Only populated for static modules.
+// evaluations of its cancellation polynomial on the module's cosets (see
+// [moduleQuotient]). Only populated for static modules.
 type proverVanishingEntry struct {
 	v                 *wiop.Vanishing
-	cancellationCoset []field.Element // length N = n*ratio; nil if no cancellation
+	cancellationCoset []field.Element // length n*maxRatio; nil if no cancellation
+}
+
+// moduleQuotient holds what the prover needs to compute the quotient shares of
+// one module's ratio buckets.
+//
+// The module's root columns, Lagrange selectors and cancellation polynomials
+// are evaluated once, on the R = maxRatio small cosets of [cosetShifts], and
+// shared by the buckets: a bucket of ratio r reads every (R/r)-th of them,
+// since ω_{Rn}^{R/r} = ω_{rn} makes its cosets a subset. A column is only
+// evaluated on the cosets that the buckets reading it need.
+type moduleQuotient struct {
+	m         *wiop.Module
+	mergeCoin *wiop.CoinField
+	buckets   []proverBucket
+	maxRatio  int
+	rootCols  []*wiop.Column // deduplicated root columns of every bucket
+	colRatios []int          // per root column, the largest ratio of a bucket reading it
+
+	// --- Static-module fields (nil for dynamic modules) ---
+	smallDomain  *fft.Domain   // FFT domain of size n
+	cosetDomains []*fft.Domain // size-n domains shifted to each of the maxRatio cosets
 }
 
 // proverBucket holds all compilation artefacts needed by the prover to compute
@@ -89,14 +115,12 @@ type proverVanishingEntry struct {
 // cancellation cosets) is precomputed at compile time. For dynamic modules,
 // these fields are nil and the data is computed at runtime using RuntimeSize.
 type proverBucket struct {
-	ratio    int
-	rootCols []*wiop.Column // deduplicated root columns from all expressions
-	shares   []*wiop.Column // quotient share columns (length = ratio)
+	ratio  int
+	shares []*wiop.Column // quotient share columns (length = ratio)
 
 	// --- Static-module fields (nil for dynamic modules) ---
 	entries      []proverVanishingEntry // precomputed cancellation cosets
-	smallDomain  *fft.Domain            // FFT domain of size n
-	cosetDomains []*fft.Domain          // size-n domains shifted to each small coset (see cosetShifts)
+	cosetDomains []*fft.Domain          // size-n domains shifted to the bucket's own ratio cosets
 	annInv       []field.Element        // 1/(g^n · ω_ratio^k − 1) for k = 0..ratio-1
 
 	// --- Dynamic-module fields (nil for static modules) ---
@@ -124,7 +148,7 @@ func compileModule(
 	ctx *wiop.ContextFrame,
 	quotientRound, evalRound *wiop.Round,
 	evalCoin *wiop.CoinField,
-) {
+) (*moduleQuotient, []*wiop.LagrangeEval) {
 	// Static modules must be sized before compilation.
 	if !m.IsDynamic() && !m.IsSized() {
 		panic(fmt.Sprintf("wiop/compilers: static module %q must be sized before calling Compile", m.Context.Path()))
@@ -221,22 +245,13 @@ func compileModule(
 		quotientBucketClaims[i] = claimsForBucket
 	}
 
-	// --- Step 8: build prover buckets ---
+	// --- Step 8: build the module's prover data ---
 	// For static modules, precompute size-dependent data (FFT domains, annihilator
-	// inverses, cancellation cosets). For dynamic modules, defer to runtime.
-	proverBuckets := buildProverBuckets(rawBuckets, m)
+	// inverses, cancellation cosets). For dynamic modules, defer to runtime. The
+	// prover actions, one per round for all modules, are registered by Compile.
+	mq := buildModuleQuotient(rawBuckets, m, mergeCoin)
 
-	// --- Step 9: register prover actions ---
-	quotientRound.RegisterAction(&QuotientProverAction{
-		m:         m,
-		mergeCoin: mergeCoin,
-		buckets:   proverBuckets,
-	})
-	evalRound.RegisterAction(&EvalProverAction{
-		lagrangeEvals: allLagrangeEvals,
-	})
-
-	// --- Step 10: register verifier action ---
+	// --- Step 9: register verifier action ---
 	vBuckets := make([]VerifierBucket, len(rawBuckets))
 	for i, bkt := range rawBuckets {
 		vBuckets[i] = VerifierBucket{
@@ -254,68 +269,71 @@ func compileModule(
 		viewKeyToIdx:  viewKeyToIdx,
 		Buckets:       vBuckets,
 	})
+	return mq, allLagrangeEvals
 }
 
-// buildProverBuckets constructs the prover buckets from the raw bucket
-// descriptions. For static modules, size-dependent data (FFT domains,
-// annihilator inverses, cancellation cosets) is precomputed. For dynamic
-// modules, these are left nil and computed at runtime using RuntimeSize.
-func buildProverBuckets(rawBuckets []rawBucket, m *wiop.Module) []proverBucket {
-	result := make([]proverBucket, len(rawBuckets))
+// buildModuleQuotient gathers the module's root columns and constructs the
+// prover buckets from the raw bucket descriptions. For static modules,
+// size-dependent data (FFT domains, annihilator inverses, cancellation cosets)
+// is precomputed. For dynamic modules, these are left nil and computed at
+// runtime using RuntimeSize.
+func buildModuleQuotient(rawBuckets []rawBucket, m *wiop.Module, mergeCoin *wiop.CoinField) *moduleQuotient {
+	q := &moduleQuotient{m: m, mergeCoin: mergeCoin, buckets: make([]proverBucket, len(rawBuckets))}
 
-	// For static modules, get n now; for dynamic, n=0 signals runtime computation.
-	var n int
+	// Collect deduplicated root columns from all expressions, with the largest
+	// ratio of a bucket reading each.
+	colIdx := make(map[wiop.ObjectID]int)
+	for _, bkt := range rawBuckets {
+		q.maxRatio = max(q.maxRatio, bkt.ratio)
+		for _, v := range bkt.vanishings {
+			for _, col := range collectRootColumns(v.Expression) {
+				i, ok := colIdx[col.Context.ID]
+				if !ok {
+					i = len(q.rootCols)
+					colIdx[col.Context.ID] = i
+					q.rootCols = append(q.rootCols, col)
+					q.colRatios = append(q.colRatios, 0)
+				}
+				q.colRatios[i] = max(q.colRatios[i], bkt.ratio)
+			}
+		}
+	}
+
+	var (
+		n       int
+		cancels *cancellationCosets
+	)
 	if !m.IsDynamic() {
 		n = m.Size()
+		q.smallDomain = fft.NewDomain(uint64(n))
+		q.cosetDomains = newCosetDomains(n, q.maxRatio)
+		cancels = newCancellationCosets(n, n*q.maxRatio)
 	}
 
 	for i, bkt := range rawBuckets {
-		ratio := bkt.ratio
-
-		// Collect deduplicated root columns from all expressions.
-		rootColsSeen := make(map[wiop.ObjectID]*wiop.Column)
-		for _, v := range bkt.vanishings {
-			for _, col := range collectRootColumns(v.Expression) {
-				rootColsSeen[col.Context.ID] = col
-			}
-		}
-		rootCols := make([]*wiop.Column, 0, len(rootColsSeen))
-		for _, col := range rootColsSeen {
-			rootCols = append(rootCols, col)
-		}
-
-		pb := proverBucket{
-			ratio:    ratio,
-			rootCols: rootCols,
-			shares:   bkt.shares,
-		}
-
+		pb := proverBucket{ratio: bkt.ratio, shares: bkt.shares}
 		if m.IsDynamic() {
 			// Dynamic module: store vanishings for runtime computation.
 			pb.vanishings = bkt.vanishings
 		} else {
 			// Static module: precompute size-dependent data.
-			N := n * ratio
-
-			pb.smallDomain = fft.NewDomain(uint64(n))
-			pb.cosetDomains = newCosetDomains(n, ratio)
+			pb.cosetDomains = newCosetDomains(n, bkt.ratio)
 
 			// Precompute annihilator inverses: 1/(g^n · ω_ratio^k − 1) for k=0..ratio-1.
-			pb.annInv = annihilatorInverses(n, ratio)
+			pb.annInv = annihilatorInverses(n, bkt.ratio)
 
 			// Precompute cancellation polynomial coset evaluations.
 			pb.entries = make([]proverVanishingEntry, len(bkt.vanishings))
 			for j, v := range bkt.vanishings {
 				pb.entries[j] = proverVanishingEntry{
 					v:                 v,
-					cancellationCoset: computeCancellationCoset(v.CancelledPositions, n, N),
+					cancellationCoset: cancels.get(v.CancelledPositions),
 				}
 			}
 		}
-
-		result[i] = pb
+		q.buckets[i] = pb
 	}
-	return result
+	return q
 }
 
 // computeCancellationCoset returns the base-field evaluation of the
@@ -508,12 +526,12 @@ func bktVanishings(bkt *proverBucket) []*wiop.Vanishing {
 // Prover actions
 // ---------------------------------------------------------------------------
 
-// QuotientProverAction computes the quotient share columns for all ratio
-// buckets of a single module. It runs in quotientRound.
+// QuotientProverAction computes the quotient share columns of every module. It
+// runs in quotientRound. Modules are independent, so they run concurrently,
+// largest first: the many small modules fill the CPUs that the large ones
+// leave idle, instead of each taking its turn.
 type QuotientProverAction struct {
-	m         *wiop.Module
-	mergeCoin *wiop.CoinField
-	buckets   []proverBucket
+	modules []*moduleQuotient
 }
 
 // Plan pre-allocates scratch buffers for each ratio bucket from the planning
@@ -521,75 +539,96 @@ type QuotientProverAction struct {
 // memory on every invocation. For dynamic modules, this is a no-op since the
 // size isn't known until runtime.
 func (a *QuotientProverAction) Plan(ctx *wiop.PlanningContext) {
-	if a.m.IsDynamic() {
-		return // Size not known at plan time for dynamic modules.
-	}
-	n := a.m.Size()
-	for i := range a.buckets {
-		bkt := &a.buckets[i]
-		N := n * bkt.ratio
-		bkt.scratchAgg = ctx.AllocExt(N)
+	for _, q := range a.modules {
+		if q.m.IsDynamic() {
+			continue // Size not known at plan time for dynamic modules.
+		}
+		n := q.m.Size()
+		for i := range q.buckets {
+			bkt := &q.buckets[i]
+			bkt.scratchAgg = ctx.AllocExt(n * bkt.ratio)
+		}
 	}
 }
 
-// Run executes the quotient polynomial computation and assigns quotient share columns.
-// For static modules, uses precomputed domains and scratch buffers. For dynamic
-// modules, computes size-dependent data at runtime using RuntimeSize.
+// Run computes and assigns the quotient share columns of every module.
 func (a *QuotientProverAction) Run(rt *wiop.Runtime) {
-	n := a.m.RuntimeSize(rt)
+	cost := make([]int, len(a.modules))
+	for i, q := range a.modules {
+		cost[i] = q.m.RuntimeSize(rt) * q.maxRatio * len(q.rootCols)
+	}
+	order := make([]int, len(a.modules))
+	for i := range order {
+		order[i] = i
+	}
+	sort.SliceStable(order, func(x, y int) bool { return cost[order[x]] > cost[order[y]] })
+	parallel.ExecuteDynamic(len(order), func(i int) { a.modules[order[i]].run(rt) })
+}
 
-	if !a.m.IsDynamic() && n != a.m.Size() {
+// run computes the quotient polynomial of the module's buckets and assigns
+// their share columns. For static modules, uses precomputed domains and
+// scratch buffers. For dynamic modules, computes size-dependent data at
+// runtime using RuntimeSize.
+func (q *moduleQuotient) run(rt *wiop.Runtime) {
+	n := q.m.RuntimeSize(rt)
+
+	if !q.m.IsDynamic() && n != q.m.Size() {
 		panic(fmt.Sprintf(
 			"wiop/compilers: global quotient prover action called with runtime size %d but module size is %d",
 			n,
-			a.m.Size(),
+			q.m.Size(),
 		))
 	}
-	coinExt := rt.GetCoinValue(a.mergeCoin).Ext
+	coinExt := rt.GetCoinValue(q.mergeCoin).Ext
+	R := q.maxRatio
 
-	for _, bkt := range a.buckets {
+	// The domains depend only on the size and the shift, so for a dynamic
+	// module gnark's process-wide domain cache serves them across buckets and
+	// proofs instead of rebuilding the twiddles.
+	smallDomain, cosetDomains := q.smallDomain, q.cosetDomains
+	if smallDomain == nil {
+		smallDomain = fft.NewDomain(uint64(n), fft.WithCache())
+		cosetDomains = newCosetDomains(n, R)
+	}
+
+	// --- Evaluate all root columns on the cosets ---
+	// cosetEvals[colID] holds a base-field column's evaluations,
+	// cosetEvalsExt[colID] an extension-field column's. A column populates
+	// exactly one of the two maps; expression evaluators dispatch on
+	// Column.IsExtension.
+	cosetEvals, cosetEvalsExt := evalColumnsOnCosets(rt, q.m, q.rootCols, q.colRatios, smallDomain, cosetDomains)
+
+	// --- Evaluate every distinct Lagrange selector on the cosets ---
+	// Selectors are not committed columns, so they are computed analytically
+	// rather than re-FFT'd. selectorCosets[position][t] = L_position(x_t).
+	selectorPositions := make(map[int]struct{})
+	for i := range q.buckets {
+		for _, v := range bktVanishings(&q.buckets[i]) {
+			collectLagrangeSelectorPositions(v.Expression, selectorPositions)
+		}
+	}
+	selectorCosets := make(map[int][]field.Element, len(selectorPositions))
+	for pos := range selectorPositions {
+		selectorCosets[pos] = computeLagrangeSelectorCoset(pos, n, n*R)
+	}
+
+	// Dynamic module: compute cancellation cosets at runtime, once per
+	// distinct set of cancelled positions in the module.
+	var cancels *cancellationCosets
+	if q.m.IsDynamic() {
+		cancels = newCancellationCosets(n, n*R)
+	}
+
+	for _, bkt := range q.buckets {
 		ratio := bkt.ratio
 		N := n * ratio
 
-		// Get or compute FFT domains and annihilator inverses. The large coset
-		// g·H_N is handled as the union of its ratio small cosets s_k·H_n (see
-		// [cosetShifts]): every coset table below is laid out coset-major, point
-		// k·n + i being s_k·ω_n^i.
-		var (
-			smallDomain  *fft.Domain
-			cosetDomains []*fft.Domain
-			annInv       []field.Element
-		)
-		if bkt.smallDomain != nil {
-			// Static module: use precomputed values.
-			smallDomain, cosetDomains, annInv = bkt.smallDomain, bkt.cosetDomains, bkt.annInv
-		} else {
-			// Dynamic module: compute at runtime. The domains depend only on
-			// the size and the shift, so gnark's process-wide domain cache
-			// serves them across buckets and proofs instead of rebuilding the
-			// twiddles.
-			smallDomain = fft.NewDomain(uint64(n), fft.WithCache())
-			cosetDomains = newCosetDomains(n, ratio)
+		// The bucket's own cosets, to interpolate its shares, and annihilator
+		// inverses.
+		bucketDomains, annInv := bkt.cosetDomains, bkt.annInv
+		if bucketDomains == nil {
+			bucketDomains = newCosetDomains(n, ratio)
 			annInv = annihilatorInverses(n, ratio)
-		}
-
-		// --- Evaluate all root columns on the cosets ---
-		// cosetEvals[colID] holds a base-field column's evaluations,
-		// cosetEvalsExt[colID] an extension-field column's. A column populates
-		// exactly one of the two maps; expression evaluators dispatch on
-		// Column.IsExtension.
-		cosetEvals, cosetEvalsExt := evalColumnsOnCosets(rt, a.m, bkt.rootCols, smallDomain, cosetDomains)
-
-		// --- Evaluate every distinct Lagrange selector on the cosets ---
-		// Selectors are not committed columns, so they are computed analytically
-		// rather than re-FFT'd. selectorCosets[position][t] = L_position(x_t).
-		selectorPositions := make(map[int]struct{})
-		for _, v := range bktVanishings(&bkt) {
-			collectLagrangeSelectorPositions(v.Expression, selectorPositions)
-		}
-		selectorCosets := make(map[int][]field.Element, len(selectorPositions))
-		for pos := range selectorPositions {
-			selectorCosets[pos] = computeLagrangeSelectorCoset(pos, n, N)
 		}
 
 		// --- Compute the aggregate extension-field polynomial on the cosets ---
@@ -623,13 +662,10 @@ func (a *QuotientProverAction) Run(rt *wiop.Runtime) {
 				coinPow.Mul(&coinPow, &coinExt)
 			}
 		} else {
-			// Dynamic module: compute cancellation cosets at runtime, once per
-			// distinct set of cancelled positions in the bucket.
-			cosets := newCancellationCosets(n, N)
 			for _, v := range bkt.vanishings {
 				bound = append(bound, boundEntry{
 					expr:         bindExpr(rt, v.Expression, cosetEvals, cosetEvalsExt, selectorCosets, n),
-					cancellation: cosets.get(v.CancelledPositions),
+					cancellation: cancels.get(v.CancelledPositions),
 					coinPow:      coinPow,
 				})
 				coinPow.Mul(&coinPow, &coinExt)
@@ -638,12 +674,13 @@ func (a *QuotientProverAction) Run(rt *wiop.Runtime) {
 
 		// The bound entries are lowered into one program (shared subexpressions,
 		// folded scalars and linear forms; see [compileQuotientProgram]) that
-		// runs over blocks of coset points in parallel, then divides by the
-		// annihilator (x^n − 1), whose inverse on coset k is annInv[k].
-		compileQuotientProgram(bound, n, ratio).run(aggregate[:N], annInv)
+		// runs over blocks of coset points in parallel, reading every
+		// (R/ratio)-th of the module's cosets, then divides by the annihilator
+		// (x^n − 1), whose inverse on the bucket's coset k is annInv[k].
+		compileQuotientProgram(bound, n, ratio, R/ratio).run(aggregate[:N], annInv)
 
 		// --- Interpolate the quotient into its shares ---
-		for k, share := range cosetsToShares(aggregate[:N], smallDomain, cosetDomains) {
+		for k, share := range cosetsToShares(aggregate[:N], smallDomain, bucketDomains) {
 			rt.AssignColumn(bkt.shares[k], &wiop.ConcreteVector{Plain: field.VecFromExt(share)})
 		}
 	}
@@ -690,17 +727,20 @@ func annihilatorInverses(n, ratio int) []field.Element {
 	return annInv
 }
 
-// evalColumnsOnCosets evaluates every column of cols on the small cosets of
-// cosetDomains, in the coset-major layout of [cosetShifts]. A column is
+// evalColumnsOnCosets evaluates every column of cols on the R small cosets of
+// cosetDomains, in the coset-major layout of [cosetShifts]. Column c is only
+// evaluated on the cosets a bucket of ratio colRatios[c] reads, every
+// (R/colRatios[c])-th; its other slots are left zero. A column is
 // interpolated once on H_n, its coefficients being shared by every coset,
 // then evaluated by one size-n coset FFT per coset, written straight into the
 // coset's contiguous slot. Both steps are spread over the CPUs: columns, then
-// (column, coset) pairs, so a bucket with few tall columns keeps every CPU
+// (column, coset) pairs, so a module with few tall columns keeps every CPU
 // busy; the FFTs share out what is left of the CPUs, at least one each.
 func evalColumnsOnCosets(
 	rt *wiop.Runtime,
 	m *wiop.Module,
 	cols []*wiop.Column,
+	colRatios []int,
 	smallDomain *fft.Domain,
 	cosetDomains []*fft.Domain,
 ) (map[wiop.ObjectID][]field.Element, map[wiop.ObjectID][]field.Ext) {
@@ -758,7 +798,8 @@ func evalColumnsOnCosets(
 	type item struct{ c, k int }
 	items := make([]item, 0, len(cols)*(ratio-1))
 	for c := range cols {
-		for k := 1; k < ratio; k++ {
+		step := ratio / colRatios[c]
+		for k := step; k < ratio; k += step {
 			items = append(items, item{c, k})
 		}
 	}
@@ -898,17 +939,25 @@ func cosetsToShares(agg []field.Ext, smallDomain *fft.Domain, cosetDomains []*ff
 	return shares
 }
 
-// EvalProverAction self-assigns all LagrangeEval queries for a module.
-// It runs in evalRound.
+// EvalProverAction self-assigns the LagrangeEval queries of every module. It
+// runs in evalRound. The queries are independent, so they run concurrently,
+// largest first.
 type EvalProverAction struct {
 	lagrangeEvals []*wiop.LagrangeEval
 }
 
-// Run self-assigns all LagrangeEval queries registered for this module.
+// Run self-assigns all LagrangeEval queries registered for the modules.
 func (a *EvalProverAction) Run(rt *wiop.Runtime) {
-	for _, le := range a.lagrangeEvals {
-		le.SelfAssign(rt)
+	cost := make([]int, len(a.lagrangeEvals))
+	for i, le := range a.lagrangeEvals {
+		cost[i] = len(le.Polynomials) * le.Polynomials[0].Column.Module.RuntimeSize(rt)
 	}
+	order := make([]int, len(a.lagrangeEvals))
+	for i := range order {
+		order[i] = i
+	}
+	sort.SliceStable(order, func(x, y int) bool { return cost[order[x]] > cost[order[y]] })
+	parallel.ExecuteDynamic(len(order), func(i int) { a.lagrangeEvals[order[i]].SelfAssign(rt) })
 }
 
 // ---------------------------------------------------------------------------

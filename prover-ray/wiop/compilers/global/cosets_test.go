@@ -118,7 +118,8 @@ func TestCancellationCosetsCache(t *testing.T) {
 }
 
 // evalColumnsOnCosets must evaluate each padded column at every point of the
-// coset-major layout, checked against a barycentric evaluation per point.
+// cosets it is needed on, in the coset-major layout, checked against a
+// barycentric evaluation per point.
 func TestEvalColumnsOnCosets(t *testing.T) {
 	rng := rand.New(rand.NewPCG(3, 4))
 	for _, n := range []int{4, 64} {
@@ -142,7 +143,10 @@ func TestEvalColumnsOnCosets(t *testing.T) {
 					rt.AssignColumn(base, baseCV)
 					rt.AssignColumn(ext, extCV)
 
-					gotBase, gotExt := evalColumnsOnCosets(rt, mod, []*wiop.Column{base, ext},
+					// The extension column is only read by a bucket of half the
+					// ratio: only every other coset is evaluated for it.
+					extRatio := max(1, ratio/2)
+					gotBase, gotExt := evalColumnsOnCosets(rt, mod, []*wiop.Column{base, ext}, []int{ratio, extRatio},
 						fft.NewDomain(uint64(n)), newCosetDomains(n, ratio))
 
 					paddedBase, paddedExt := make([]field.Element, n), make([]field.Ext, n)
@@ -157,7 +161,9 @@ func TestEvalColumnsOnCosets(t *testing.T) {
 						wantBase := polynomials.EvalLagrange(field.VecFromBase(paddedBase), x)
 						wantExt := polynomials.EvalLagrange(field.VecFromExt(paddedExt), x)
 						require.Equal(t, wantBase.AsBase(), gotBase[base.Context.ID][tt], "base, point %d", tt)
-						require.Equal(t, wantExt.AsExt(), gotExt[ext.Context.ID][tt], "ext, point %d", tt)
+						if (tt/n)%(ratio/extRatio) == 0 {
+							require.Equal(t, wantExt.AsExt(), gotExt[ext.Context.ID][tt], "ext, point %d", tt)
+						}
 						pt.next()
 					}
 				})

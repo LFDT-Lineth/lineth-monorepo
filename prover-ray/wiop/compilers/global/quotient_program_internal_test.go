@@ -12,17 +12,18 @@ import (
 
 // TestQuotientProgram_MatchesTreeEvaluation checks that the quotient program
 // produces exactly the aggregate of the point-by-point tree evaluation, on
-// random buckets mixing base and extension tables at wrapping shifts, base and
+// random buckets reading every step-th coset of their tables, mixing base and
+// extension tables at wrapping shifts, base and
 // extension scalars, every operator (divisions and inversions hitting zero
 // included), subtrees shared within and across entries, Horner-form linear
 // combinations, cancellations, and sizes below, at and across a block.
 func TestQuotientProgram_MatchesTreeEvaluation(t *testing.T) {
-	for _, tc := range []struct{ n, ratio int }{
-		{4, 1}, {8, 2}, {75, 4}, {qBlockSize, 1}, {2*qBlockSize + 40, 4}, {1024, 2},
+	for _, tc := range []struct{ n, ratio, step int }{
+		{4, 1, 1}, {8, 2, 2}, {75, 4, 1}, {qBlockSize, 1, 4}, {2*qBlockSize + 40, 4, 1}, {1024, 2, 2},
 	} {
 		for seed := range uint64(4) {
-			t.Run(fmt.Sprintf("n=%d/ratio=%d/seed=%d", tc.n, tc.ratio, seed), func(t *testing.T) {
-				g := newExprGen(rand.New(rand.NewPCG(seed, uint64(tc.n))), tc.n, tc.ratio)
+			t.Run(fmt.Sprintf("n=%d/ratio=%d/step=%d/seed=%d", tc.n, tc.ratio, tc.step, seed), func(t *testing.T) {
+				g := newExprGen(rand.New(rand.NewPCG(seed, uint64(tc.n))), tc.n, tc.ratio*tc.step)
 				entries := make([]boundEntry, 12)
 				for i := range entries {
 					entries[i] = boundEntry{expr: g.entryExpr(), coinPow: g.ext()}
@@ -35,14 +36,14 @@ func TestQuotientProgram_MatchesTreeEvaluation(t *testing.T) {
 				N := tc.n * tc.ratio
 				want := make([]field.Ext, N)
 				for i := range entries {
-					entries[i].accumulate(want, 0, N, tc.n)
+					entries[i].accumulate(want, 0, N, tc.n, tc.step)
 				}
 				for j := range want {
 					want[j].MulByElement(&want[j], &annInv[j/tc.n])
 				}
 
 				got := make([]field.Ext, N)
-				compileQuotientProgram(entries, tc.n, tc.ratio).run(got, annInv)
+				compileQuotientProgram(entries, tc.n, tc.ratio, tc.step).run(got, annInv)
 				require.Equal(t, want, got)
 			})
 		}
@@ -60,7 +61,7 @@ func TestQuotientProgram_FoldsHornerForms(t *testing.T) {
 	expr := op(wiop.ArithmeticOperatorSub,
 		op(wiop.ArithmeticOperatorMul, d1, d2),
 		op(wiop.ArithmeticOperatorAdd, d1, d2))
-	p := compileQuotientProgram([]boundEntry{{expr: expr, coinPow: g.ext()}}, g.n, 1)
+	p := compileQuotientProgram([]boundEntry{{expr: expr, coinPow: g.ext()}}, g.n, 1, 1)
 
 	var linear, extMul int
 	for _, st := range p.steps {
