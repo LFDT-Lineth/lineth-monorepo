@@ -17,7 +17,14 @@
     "proofRequest": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["chainConfig", "parentFtxRollingHash", "parentFtxNumber", "payloads"],
+      "required": [
+        "chainConfig",
+        "parentFtxRollingHash",
+        "parentFtxNumber",
+        "parentL1L2BridgeRollingHash",
+        "parentL1L2BridgeRollingHashMessageNumber",
+        "payloads"
+      ],
       "properties": {
         "chainConfig": {
           "type": "object",
@@ -32,6 +39,8 @@
         },
         "parentFtxRollingHash": { "$ref": "#/$defs/hash32" },
         "parentFtxNumber": { "$ref": "#/$defs/uint" },
+        "parentL1L2BridgeRollingHash": { "$ref": "#/$defs/hash32" },
+        "parentL1L2BridgeRollingHashMessageNumber": { "$ref": "#/$defs/uint" },
         "payloads": {
           "type": "array",
           "minItems": 1,

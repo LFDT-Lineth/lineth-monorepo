@@ -5,12 +5,12 @@ from ethereum.crypto.hash import Hash32, keccak256
 from .fork import (
     BlobTransaction,
     FeeMarketTransaction,
+    Log,
     SetCodeTransaction,
     recover_sender,
     calculate_total_blob_gas,
 )
 from ethereum.state import Address
-from ethereum_types.bytes import Bytes32
 from ethereum_types.numeric import U64, Uint
 
 from .block import (
@@ -28,24 +28,15 @@ from .block import (
 from .stateless_input import decode_stateless_input_ssz
 from .state_transition import (
     L2State,
-    StatelessExecutionResult,
     execute_stateless_input,
 )
 
 BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0 = Hash32(
     bytes.fromhex("e856c2b8bd4eb0027ce32eeaf595c21b0b6b4644b326e5b7bd80a1cf8db72e6c"),
 )
-
-# Storage layout of the L2MessageService contract.
-#
-# The L1->L2 rolling hash lives in the `l1RollingHashes` mapping keyed by message
-# number, with the latest number in `lastAnchoredL1MessageNumber`. These slot
-# indices are extracted from the compiled storage layout of
-# `contracts/src/messaging/l2/L2MessageService.sol`. If that layout changes
-# (including `__gap` slots in any ancestor) they MUST be re-extracted, or the
-# proof reads wrong values and the L1 finalization check fails.
-LAST_ANCHORED_L1_MESSAGE_NUMBER_SLOT: Bytes32 = Bytes32(int(280).to_bytes(32, "big"))
-L1_ROLLING_HASHES_MAPPING_BASE_SLOT: Bytes32 = Bytes32(int(281).to_bytes(32, "big"))
+BRIDGE_L1L2_ROLLING_HASH_UPDATED_TOPIC_0 = Hash32(
+    bytes.fromhex("99b65a4301b38c09fb6a5f27052d73e8372bbe8f6779d678bfe8a41b66cce7ac"),
+)
 
 # Sentinel meaning "no L2MessageService configured" (see `_is_zero_address`).
 ZERO_ADDRESS: Address = Address(b"\x00" * 20)
@@ -57,42 +48,71 @@ def _is_zero_address(address: Address) -> bool:
     return bytes(address) == bytes(ZERO_ADDRESS)
 
 
-def _mapping_slot(base_slot: Bytes32, key: bytes) -> Bytes32:
+@dataclass
+class BridgeLogScan:
+    l2_l1_messages: List[Hash32]
+    l2_messaging_blocks_offsets: List[int]
+    end_l1_l2_bridge_rolling_hash: Hash32
+    end_l1_l2_bridge_rolling_hash_message_number: U64
+
+
+def scan_bridge_logs(
+    l2_message_service_address: Address,
+    parent_l1_l2_bridge_rolling_hash: Hash32,
+    parent_l1_l2_bridge_rolling_hash_message_number: U64,
+    block_logs: Sequence[Sequence[Log]],
+) -> BridgeLogScan:
     """
-    Solidity mapping slot computation: slot = keccak256(key || base_slot).
-    `key` is the abi-encoded mapping key padded to 32 bytes.
-    """
-    padded_key = key.rjust(32, b"\x00") if len(key) < 32 else bytes(key)
-    return Bytes32(keccak256(padded_key + bytes(base_slot)))
+    Collect L2->L1 messages and fold L1->L2 rolling-hash updates from the L2MessageService
+    logs of a block range; `block_logs[i]` holds block i's ordered logs.
 
+    `MessageSent` hashes are returned in log order, with the 1-based offset of every block
+    that emitted at least one. `RollingHashUpdated` events advance the bridge pair seeded
+    from the parent pair; their message numbers must strictly increase.
 
-def read_l1l2_bridge_state(state: L2State, l2_message_service_address: Address) -> Tuple[Hash32, U64]:
-    """
-    Read the L1->L2 bridge rolling hash and its message number from the
-    L2MessageService storage at `state.state_root` (via the EVM state interface;
-    the guest verifies the MPT paths from `ExecutionWitness.state`).
-
-    Two reads: `lastAnchoredL1MessageNumber` at a fixed slot, then
-    `l1RollingHashes[thatNumber]` at `keccak256(uint256_be(number) || base_slot)`.
-
-    When `l2_message_service_address` is the zero address, there is no bridge
-    contract to read: both boundary values are zero. This is a real "no
-    L2MessageService configured" semantic — and it is what lets a vanilla
-    stateless input (which has no L2MessageService account, so its witness never
-    covers these slots) run through the guest unchanged.
+    "No L2MessageService configured" mode: a zero address skips the scan entirely, so
+    nothing is collected and the parent pair passes through unchanged as the end pair.
     """
     if _is_zero_address(l2_message_service_address):
-        return ZERO_HASH, U64(0)
+        return BridgeLogScan(
+            [],
+            [],
+            parent_l1_l2_bridge_rolling_hash,
+            parent_l1_l2_bridge_rolling_hash_message_number,
+        )
 
-    number_bytes = state.storage(l2_message_service_address, LAST_ANCHORED_L1_MESSAGE_NUMBER_SLOT)
-    rolling_hash_number = U64(int.from_bytes(bytes(number_bytes), "big"))
+    l2_l1_messages: List[Hash32] = []
+    messaging_offsets: List[int] = []
+    bridge_rolling_hash = parent_l1_l2_bridge_rolling_hash
+    bridge_message_number = parent_l1_l2_bridge_rolling_hash_message_number
 
-    rolling_hash_slot = _mapping_slot(
-        L1_ROLLING_HASHES_MAPPING_BASE_SLOT,
-        int(rolling_hash_number).to_bytes(32, "big"),
-    )
-    rolling_hash = Hash32(state.storage(l2_message_service_address, rolling_hash_slot))
-    return rolling_hash, rolling_hash_number
+    for block_index, logs in enumerate(block_logs):
+        has_message = False
+        for log in logs:
+            if log.address != l2_message_service_address:
+                continue
+            if log.topics and log.topics[0] == BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0:
+                if len(log.topics) < 4:
+                    raise Exception("MessageSent log is missing its message hash topic")
+                l2_l1_messages.append(Hash32(log.topics[3]))
+                has_message = True
+            elif log.topics and log.topics[0] == BRIDGE_L1L2_ROLLING_HASH_UPDATED_TOPIC_0:
+                if len(log.topics) < 3:
+                    raise Exception("RollingHashUpdated log is missing its topics")
+                topic_number = int.from_bytes(bytes(log.topics[1]), "big")
+                if topic_number > 0xFFFFFFFFFFFFFFFF:
+                    raise Exception("L1-to-L2 rolling-hash message number exceeds uint64")
+                message_number = U64(topic_number)
+                if message_number <= bridge_message_number:
+                    raise Exception("L1-to-L2 rolling-hash message number must increase")
+                bridge_message_number = message_number
+                bridge_rolling_hash = Hash32(log.topics[2])
+        if has_message:
+            if block_index + 1 > 0xFFFF:
+                raise Exception("messaging block offset exceeds uint16")
+            messaging_offsets.append(block_index + 1)
+
+    return BridgeLogScan(l2_l1_messages, messaging_offsets, bridge_rolling_hash, bridge_message_number)
 
 
 def add_to_forced_tx_rolling_hash(
@@ -267,12 +287,14 @@ class L2ExecutionProofPrivateInput:
     first input's witness must end with the parent header whose hash equals
     `executionPayload.parentHash`.
 
-    The L1->L2 rolling-hash boundary values are not separate fields: the guest
-    reads them from L2 state at the parent and end roots (`L2State.storage`), so
-    the witness producer must include those MPT paths in `ExecutionWitness.state`.
+    The parent forced-transaction and L1->L2 bridge rolling-hash values are
+    inputs, anchored by rollup/aggregation continuity and the L1 finalized-pair
+    check.
     """
     parent_ftx_rolling_hash: Hash32
     parent_last_processed_ftx_number: U64
+    parent_l1_l2_bridge_rolling_hash: Hash32
+    parent_l1_l2_bridge_rolling_hash_message_number: U64
     payloads: List[LinethPayloadInput]
     chain_config: ChainConfig
 
@@ -339,7 +361,7 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
     The per-block state transition is delegated to the underlying engine
     (`execute_stateless_input`); this function adds only the Lineth logic on top —
     conflation-level linking, the empty-`executionRequests` policy, forced
-    transactions, L2->L1 messages, and the L1->L2 bridge rolling-hash reads.
+    transactions, L2->L1 messages, and the L1->L2 bridge rolling-hash updates.
     """
     if len(execution_input.payloads) == 0:
         raise Exception("l2-execution proof must cover at least one payload")
@@ -357,19 +379,13 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
     parent_block_hash = first_payload.parent_hash
     start_block_number = first_payload.block_number
     base_fee = Uint(first_payload.base_fee_per_gas)  # asserted constant across the range (§2.1)
-    l2_ms_address = execution_input.chain_config.l2_message_service_address
-    # "No L2MessageService configured" mode: a zero address suppresses both the L1->L2 bridge
-    # boundary reads (handled inside `read_l1l2_bridge_state`) and the L2->L1 message-log scan below.
-    bridge_suppressed = _is_zero_address(l2_ms_address)
 
     current_parent_hash = parent_block_hash
     current_ftx_rolling_hash = execution_input.parent_ftx_rolling_hash
     current_last_processed_ftx_number = execution_input.parent_last_processed_ftx_number
-    l2_l1_message_hashes: List[Hash32] = []
-    messaging_offsets: List[int] = []
+    block_logs: List[Sequence[Log]] = []
     tx_froms: List[Address] = []
     filtered_addresses: List[Address] = []
-    results: List[StatelessExecutionResult] = []
 
     for block_index, (lineth_payload, stateless_input) in enumerate(zip(execution_input.payloads, stateless_inputs)):
         payload = stateless_input.new_payload_request.execution_payload
@@ -402,7 +418,6 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
         # Engine-API payload, and replays the EVM (see its docstring); none of
         # that is re-checked here. It returns the boundary state roots and logs.
         result = execute_stateless_input(stateless_input)
-        results.append(result)
 
         # Lineth PI: recover each transaction sender for `txFromsHash`.
         for tx_rlp in parse_payload_transaction_rlps(payload):
@@ -428,49 +443,29 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
         )
         filtered_addresses.extend(block_filtered_addresses)
 
-        # L2->L1 messages from the block's logs (skipped entirely when no L2MessageService is
-        # configured — see `bridge_suppressed`).
-        if not bridge_suppressed:
-            has_message = False
-            for log in result.block_logs:
-                if log.address != l2_ms_address:
-                    continue
-                if log.topics and log.topics[0] == BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0:
-                    if len(log.topics) < 4:
-                        raise Exception("MessageSent log is missing its message hash topic")
-                    l2_l1_message_hashes.append(Hash32(log.topics[3]))
-                    has_message = True
-            if has_message:
-                if block_index + 1 > 0xFFFF:
-                    raise Exception("messaging block offset exceeds uint16")
-                messaging_offsets.append(block_index + 1)
+        block_logs.append(result.block_logs)
 
         current_parent_hash = payload.block_hash
 
     last_payload = stateless_inputs[-1].new_payload_request.execution_payload
 
-    # L1->L2 bridge rolling-hash boundary reads, by walking the witness MPT
-    # (`L2State`), at the range's parent (pre) and end (post) state roots.
-    parent_rolling_hash, parent_rolling_hash_number = read_l1l2_bridge_state(
-        L2State(state_root=results[0].pre_state_root, witnesses=all_witnesses), l2_ms_address,
+    bridge_scan = scan_bridge_logs(
+        execution_input.chain_config.l2_message_service_address,
+        execution_input.parent_l1_l2_bridge_rolling_hash,
+        execution_input.parent_l1_l2_bridge_rolling_hash_message_number,
+        block_logs,
     )
-    end_rolling_hash, end_rolling_hash_number = read_l1l2_bridge_state(
-        L2State(state_root=results[-1].post_state_root, witnesses=all_witnesses), l2_ms_address,
-    )
-
-    if end_rolling_hash_number < parent_rolling_hash_number:
-        raise Exception("L1-to-L2 rolling-hash message number cannot decrease")
 
     public_inputs = L2ExecutionProofPublicInput(
         parent_block_hash=parent_block_hash,
         end_block_hash=last_payload.block_hash,
         end_block_number=last_payload.block_number,
         end_block_timestamp=U64(last_payload.timestamp),
-        l2_l1_messages=l2_l1_message_hashes,
-        parent_l1_l2_bridge_rolling_hash=parent_rolling_hash,
-        parent_l1_l2_bridge_rolling_hash_message_number=parent_rolling_hash_number,
-        end_l1_l2_bridge_rolling_hash=end_rolling_hash,
-        end_l1_l2_bridge_rolling_hash_message_number=end_rolling_hash_number,
+        l2_l1_messages=bridge_scan.l2_l1_messages,
+        parent_l1_l2_bridge_rolling_hash=execution_input.parent_l1_l2_bridge_rolling_hash,
+        parent_l1_l2_bridge_rolling_hash_message_number=execution_input.parent_l1_l2_bridge_rolling_hash_message_number,
+        end_l1_l2_bridge_rolling_hash=bridge_scan.end_l1_l2_bridge_rolling_hash,
+        end_l1_l2_bridge_rolling_hash_message_number=bridge_scan.end_l1_l2_bridge_rolling_hash_message_number,
         dynamic_chain_config_hash=execution_input.chain_config.hash(base_fee),
         parent_ftx_rolling_hash=execution_input.parent_ftx_rolling_hash,
         parent_ftx_number=execution_input.parent_last_processed_ftx_number,
@@ -479,7 +474,7 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
         filtered_addresses_hash=hash_address_list(filtered_addresses),
         tx_froms_hash=hash_address_list(tx_froms),
         block_count=len(stateless_inputs),
-        l2_messaging_blocks_offsets=messaging_offsets,
+        l2_messaging_blocks_offsets=bridge_scan.l2_messaging_blocks_offsets,
     )
 
     return L2ExecutionProof(

@@ -18,6 +18,8 @@
     },
     "parentFtxRollingHash": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
     "parentFtxNumber": 15,
+    "parentL1L2BridgeRollingHash": "0x0202020202020202020202020202020202020202020202020202020202020202",
+    "parentL1L2BridgeRollingHashMessageNumber": 0,
     "payloads": [
       {
         "statelessInput": {

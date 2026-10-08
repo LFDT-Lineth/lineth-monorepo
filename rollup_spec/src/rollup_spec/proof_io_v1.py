@@ -263,6 +263,16 @@ def decode_request(obj: dict) -> L2ExecutionProofPrivateInput:
             _require(proof_request, "parentFtxNumber", "proofRequest."),
             "proofRequest.parentFtxNumber",
         ),
+        parent_l1_l2_bridge_rolling_hash=Hash32(
+            _bytes_from_hex(
+                _require(proof_request, "parentL1L2BridgeRollingHash", "proofRequest."),
+                "proofRequest.parentL1L2BridgeRollingHash",
+            )
+        ),
+        parent_l1_l2_bridge_rolling_hash_message_number=_u64(
+            _require(proof_request, "parentL1L2BridgeRollingHashMessageNumber", "proofRequest."),
+            "proofRequest.parentL1L2BridgeRollingHashMessageNumber",
+        ),
         chain_config=chain_config,
         payloads=[
             _decode_payload(p, i, int(chain_config.chain_id), fork_name)
