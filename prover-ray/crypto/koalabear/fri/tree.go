@@ -8,6 +8,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/hugepage"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	gnarkposeidon2 "github.com/consensys/gnark-crypto/field/koalabear/poseidon2"
 )
@@ -133,8 +134,10 @@ func allocTree(numLeaves int) *Tree {
 	if numLeaves <= 0 || numLeaves&(numLeaves-1) != 0 {
 		panic("fri: allocTree: number of leaves must be a positive power of two")
 	}
+	nodes := make([]field.Octuplet, 2*numLeaves-1)
+	hugepage.Advise(nodes)
 	return &Tree{
-		Nodes: make([]field.Octuplet, 2*numLeaves-1),
+		Nodes: nodes,
 		Aux:   make([]*field.Octuplet, numLeaves-1),
 	}
 }

@@ -39,6 +39,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/hugepage"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/internal/vecprog"
@@ -340,6 +341,7 @@ func computeFilteredPrefixSum(rt *wiop.Runtime, packed []wiop.Fraction, n int, w
 	var one field.Ext
 	one.SetOne()
 	rows := make([]field.Ext, n)
+	hugepage.Advise(rows)
 	for j, p := range packed {
 		den := l.Lower(p.Denominator)
 		term := b.Op(vecprog.Div, l.Lower(p.Numerator), den)

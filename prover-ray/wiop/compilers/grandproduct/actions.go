@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/hugepage"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/internal/vecprog"
@@ -109,6 +110,7 @@ func computePrefixProduct(rt *wiop.Runtime, zNum, zDen wiop.Expression, n, worke
 		panic(fmt.Sprintf("wiop/compilers/grandproduct: zero denominator at row %d", i))
 	})
 	z := make([]field.Ext, n)
+	hugepage.Advise(z)
 	b.Store(b.Op(vecprog.Div, l.Lower(zNum), den), z)
 	b.Compile(n, 1, 1).Run(nil, nil, workers)
 

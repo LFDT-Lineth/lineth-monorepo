@@ -7,6 +7,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/hugepage"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 )
@@ -147,6 +148,7 @@ func slabColumns[T any](count, n int) [][]T {
 			first := s * perSlab
 			last := min(first+perSlab, count)
 			slab := make([]T, (last-first)*n)
+			hugepage.Advise(slab)
 			for k := first; k < last; k++ {
 				o := (k - first) * n
 				columns[k] = slab[o : o+n : o+n]

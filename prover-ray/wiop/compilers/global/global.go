@@ -9,6 +9,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/hugepage"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/internal/vecprog"
@@ -641,6 +642,7 @@ func (q *moduleQuotient) run(rt *wiop.Runtime) {
 		aggregate := bkt.scratchAgg
 		if len(aggregate) < N {
 			aggregate = make([]field.Ext, N)
+			hugepage.Advise(aggregate)
 		} else {
 			clear(aggregate[:N])
 		}
@@ -789,6 +791,7 @@ func evalColumnsOnCosets(
 		cv := rt.GetColumnAssignment(col)
 		if col.IsExtension {
 			vals := make([]field.Ext, n*ratio)
+			hugepage.Advise(vals)
 			writeColumnExt(cv, m.Padding, vals[:n])
 			smallDomain.FFTInverseExt6(vals[:n], fft.DIF, fft.WithNbTasks(tasks))
 			extEvals[c] = vals
@@ -801,6 +804,7 @@ func evalColumnsOnCosets(
 			))
 		}
 		vals := make([]field.Element, n*ratio)
+		hugepage.Advise(vals)
 		writeColumnBase(cv, m.Padding, vals[:n])
 		smallDomain.FFTInverse(vals[:n], fft.DIF, fft.WithNbTasks(tasks))
 		baseEvals[c] = vals
@@ -946,6 +950,7 @@ func cosetsToShares(agg []field.Ext, smallDomain *fft.Domain, cosetDomains []*ff
 	parallel.Execute(ratio, func(start, end int) {
 		for m := start; m < end; m++ {
 			shares[m] = make([]field.Ext, n)
+			hugepage.Advise(shares[m])
 		}
 	}, ratio)
 	parallel.Execute(n, func(start, end int) {

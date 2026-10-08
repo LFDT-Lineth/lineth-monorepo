@@ -7,6 +7,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/hugepage"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark/frontend"
 )
@@ -213,6 +214,7 @@ func (le *LagrangeEval) evalPolynomialsShared(rt *Runtime, z field.Ext) []field.
 	var weightChunks []rowChunk
 	for _, i := range domainsBySizeDesc(domains) {
 		weights[i] = make([]field.Ext, domains[i].n)
+		hugepage.Advise(weights[i])
 		weightChunks = chunksOf(i, domains[i].n, weightChunks)
 	}
 	parallel.ExecuteDynamic(len(weightChunks), func(c int) {
