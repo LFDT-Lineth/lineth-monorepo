@@ -169,6 +169,9 @@ jobs:
               - '.github/workflows/main.yml'
             prover-ray:
               - 'prover-ray/**'
+              - 'rollup_spec/src/rollup_spec/prover_io/testdata/**'
+              - 'riscv-guests/l2-execution/test/testdata/**'
+              - 'riscv-guests/build_common/linker_script.ld'
               - '.github/workflows/prover-ray-testing.yml'
               - '.github/workflows/main.yml'
             rollup-spec:

@@ -11,10 +11,12 @@ import (
 )
 
 const (
-	programVkKey = "programVk"
-	chainIDKey   = "chainId"
-	forkNameKey  = "forkName"
-	payloadsKey  = "payloads"
+	programVkKey      = "programVk"
+	guestProgramIDKey = "guestProgramId"
+	provingSystemKey  = "provingSystem"
+	chainIDKey        = "chainId"
+	forkNameKey       = "forkName"
+	payloadsKey       = "payloads"
 
 	proofRequestKey            = "proofRequest"
 	chainConfigKey             = "chainConfig"
@@ -68,9 +70,9 @@ type L2ExecutionPayload struct {
 // block. The block range is implied by the payloads (their
 // executionPayload.blockNumber), as in the reference decoder.
 type L2ExecutionRequest struct {
-	// ProgramVk is routing metadata; this decoder validates its shape but
+	// GuestProgramID is routing metadata; this decoder validates its shape but
 	// does not verify it against the configured guest ELF.
-	ProgramVk               []byte
+	GuestProgramID          []byte
 	ChainID                 uint64
 	ForkName                string
 	L2MessageServiceAddress [20]byte
@@ -93,21 +95,9 @@ func DecodeL2ExecutionRequest(data []byte) (*L2ExecutionRequest, error) {
 		return nil, fmt.Errorf("DecodeL2ExecutionRequest: parsing JSON: %w", err)
 	}
 
-	programVkRaw, err := requireField(env, programVkKey, "")
+	guestProgramID, err := validateGuestRequestEnvelope(env)
 	if err != nil {
 		return nil, err
-	}
-	programVk, err := hexString(programVkRaw, programVkKey)
-	if err != nil {
-		return nil, err
-	}
-	if len(programVk) != programVkByteSize {
-		return nil, fmt.Errorf(
-			"DecodeL2ExecutionRequest: %s must be %d bytes, got %d",
-			programVkKey,
-			programVkByteSize,
-			len(programVk),
-		)
 	}
 
 	prRaw, err := requireField(env, proofRequestKey, "")
@@ -166,7 +156,7 @@ func DecodeL2ExecutionRequest(data []byte) (*L2ExecutionRequest, error) {
 	}
 
 	req := &L2ExecutionRequest{
-		ProgramVk:               programVk,
+		GuestProgramID:          guestProgramID,
 		ChainID:                 chainConfig.chainID,
 		ForkName:                chainConfig.forkName,
 		L2MessageServiceAddress: chainConfig.l2MessageServiceAddress,
@@ -176,6 +166,28 @@ func DecodeL2ExecutionRequest(data []byte) (*L2ExecutionRequest, error) {
 	}
 	copy(req.ParentFtxRollingHash[:], parentFtxRollingHash)
 	return req, nil
+}
+
+// validateGuestRequestEnvelope checks the {guestProgramId, provingSystem}
+// routing envelope and rejects a top-level programVk, which belongs on proof
+// responses only. Mirrors proof_io_v1.py::_validate_guest_request_envelope.
+func validateGuestRequestEnvelope(env map[string]json.RawMessage) ([]byte, error) {
+	guestProgramID, err := fixedHexField(env, guestProgramIDKey, "", hashByteSize)
+	if err != nil {
+		return nil, err
+	}
+	provingSystemRaw, err := requireField(env, provingSystemKey, "")
+	if err != nil {
+		return nil, err
+	}
+	var provingSystem string
+	if err := json.Unmarshal(provingSystemRaw, &provingSystem); err != nil || provingSystem == "" {
+		return nil, fmt.Errorf("DecodeL2ExecutionRequest: %s must be a non-empty string", provingSystemKey)
+	}
+	if _, ok := env[programVkKey]; ok {
+		return nil, fmt.Errorf("DecodeL2ExecutionRequest: %s belongs on proof responses, not requests", programVkKey)
+	}
+	return guestProgramID, nil
 }
 
 type decodedChainConfig struct {
