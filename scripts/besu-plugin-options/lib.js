@@ -171,8 +171,7 @@ function renderStarterWrapper(manifest, plugins, partials) {
   const partByPlugin = new Map(partials.map((p) => [p.plugin, p]));
   const lines = [];
   lines.push("---");
-  lines.push("title: Linea-Besu plugin options");
-  lines.push("slug: /stack/reference/linea-besu-plugin-options");
+  lines.push("title: Linea Besu plugin options");
   lines.push("description: Auto-generated reference of Linea-Besu plugin CLI options, grouped by plugin and feature.");
   lines.push("draft: false");
   lines.push("---");

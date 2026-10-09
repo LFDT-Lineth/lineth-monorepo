@@ -76,7 +76,7 @@ automatically. Manual runs validate by default; set the `publish` input to
 Validation generates the ephemeral output, runs the fresh temporary-output
 check, tests MDX safety and completeness, checks Prettier, and uploads the
 output as a workflow artifact. Publication copies only
-`docs/stack/reference/_generated/besu/**` into `Consensys/doc.linea`; any
+`docs/reference/component-configuration/_generated/besu/**` into `Consensys-Incorporated/doc.linea`; any
 changed path outside that subtree fails the job.
 
 Publication uses the `DOC_LINEA_PR_APP_ID` and

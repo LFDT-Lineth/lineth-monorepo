@@ -2,7 +2,7 @@ name: "Maru config docs"
 
 # Generates the committed Maru config reference (Markdown + JSON) and an ephemeral
 # MDX partial, validates they stay in sync, and publishes only
-# docs/stack/reference/_generated/maru/ to Consensys-Incorporated/doc.linea.
+# docs/reference/component-configuration/_generated/maru/ to Consensys-Incorporated/doc.linea.
 #
 # Publishing is release-gated: automatic publishing fires only when a
 # `releases/maru/*` tag is cut, so doc.linea always reflects a released
@@ -130,7 +130,7 @@ jobs:
       - name: Publish Maru config docs to doc.linea
         uses: ./.github/actions/publish-config-docs
         with:
-          docs-namespace: "docs/stack/reference/_generated/maru"
+          docs-namespace: "docs/reference/component-configuration/_generated/maru"
           artifact-name: "maru-config-docs-${{ github.sha }}"
           artifact-namespace: "_generated/maru"
           pr-branch: "ci/maru-config-docs"
@@ -139,7 +139,7 @@ jobs:
           pr-body: |
             Auto-generated Linea Maru TOML config MDX partials from `LFDT-Lineth/lineth-monorepo`.
 
-            This PR updates **only** `docs/stack/reference/_generated/maru/`.
+            This PR updates **only** `docs/reference/component-configuration/_generated/maru/`.
             The shared `_generated/` root and human-owned wrapper are intentionally untouched.
         env:
           DOC_LINEA_PR_APP_ID: ${{ secrets.DOC_LINEA_PR_APP_ID }}

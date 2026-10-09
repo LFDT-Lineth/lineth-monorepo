@@ -2,7 +2,7 @@ name: "Coordinator config docs"
 
 # Generates the committed Coordinator config reference (Markdown + JSON) and an ephemeral
 # MDX partial, validates they stay in sync, and publishes only
-# docs/stack/reference/_generated/coordinator/ to Consensys-Incorporated/doc.linea.
+# docs/reference/component-configuration/_generated/coordinator/ to Consensys-Incorporated/doc.linea.
 #
 # Publishing is release-gated: automatic publishing fires only when a
 # `releases/coordinator/*` tag is cut, so doc.linea always reflects a released
@@ -131,7 +131,7 @@ jobs:
       - name: Publish Coordinator config docs to doc.linea
         uses: ./.github/actions/publish-config-docs
         with:
-          docs-namespace: "docs/stack/reference/_generated/coordinator"
+          docs-namespace: "docs/reference/component-configuration/_generated/coordinator"
           artifact-name: "coordinator-config-docs-${{ github.sha }}"
           artifact-namespace: "_generated/coordinator"
           pr-branch: "ci/coordinator-config-docs"
@@ -140,7 +140,7 @@ jobs:
           pr-body: |
             Auto-generated Linea Coordinator TOML config MDX partials from `LFDT-Lineth/lineth-monorepo`.
 
-            This PR updates **only** `docs/stack/reference/_generated/coordinator/`.
+            This PR updates **only** `docs/reference/component-configuration/_generated/coordinator/`.
             The shared `_generated/` root and human-owned wrapper are intentionally untouched.
         env:
           DOC_LINEA_PR_APP_ID: ${{ secrets.DOC_LINEA_PR_APP_ID }}

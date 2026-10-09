@@ -1,7 +1,7 @@
 name: "Besu plugin options docs"
 
 # Extracts Linea-Besu plugin options with Java reflection, renders ephemeral MDX,
-# and publishes only docs/stack/reference/_generated/besu/ to Consensys-Incorporated/doc.linea.
+# and publishes only docs/reference/component-configuration/_generated/besu/ to Consensys-Incorporated/doc.linea.
 
 permissions:
   contents: read
@@ -183,7 +183,7 @@ jobs:
         run: |
           set -euo pipefail
           SRC="scripts/besu-plugin-options/output/_generated/besu"
-          DEST="doc.linea/docs/stack/reference/_generated/besu"
+          DEST="doc.linea/docs/reference/component-configuration/_generated/besu"
           if ! compgen -G "$SRC/*.mdx" >/dev/null; then
             echo "Refusing to publish: no MDX partials under $SRC" >&2
             exit 1
@@ -195,7 +195,7 @@ jobs:
           invalid=0
           while IFS= read -r -d '' entry; do
             changed_path="${entry:3}"
-            if [[ "$changed_path" != docs/stack/reference/_generated/besu/* ]]; then
+            if [[ "$changed_path" != docs/reference/component-configuration/_generated/besu/* ]]; then
               echo "::error::Refusing to publish changed path outside the Besu namespace: $changed_path"
               invalid=1
             fi
@@ -218,7 +218,7 @@ jobs:
           body: |
             Auto-generated Linea-Besu plugin option MDX partials from `LFDT-Lineth/lineth-monorepo`.
 
-            This PR updates **only** `docs/stack/reference/_generated/besu/`.
+            This PR updates **only** `docs/reference/component-configuration/_generated/besu/`.
             The shared `_generated/` root and human-owned wrapper are intentionally untouched.
           add-paths: |
-            docs/stack/reference/_generated/besu/**
+            docs/reference/component-configuration/_generated/besu/**

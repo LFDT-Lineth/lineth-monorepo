@@ -19,7 +19,7 @@ inputs:
     required: false
     default: 'doc.linea'
   docs-namespace:
-    description: 'Repo-relative directory under the docs checkout that this action is allowed to mutate (e.g. docs/stack/reference/_generated/coordinator).'
+    description: 'Repo-relative directory under the docs checkout that this action is allowed to mutate (e.g. docs/reference/component-configuration/_generated/coordinator).'
     required: true
   artifact-name:
     description: 'Name of the artifact produced by validate-config-docs (e.g. `coordinator-config-docs-<github-sha>`).'

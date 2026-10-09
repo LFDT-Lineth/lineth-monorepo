@@ -113,8 +113,7 @@ function renderPartials(manifest, tracesNote) {
 function renderStarterWrapper(partials) {
   const lines = [];
   lines.push("---");
-  lines.push("title: Lineth prover configuration");
-  lines.push("slug: /stack/reference/linea-prover-options");
+  lines.push("title: Prover options");
   lines.push("description: Auto-generated reference of Lineth prover TOML configuration keys, grouped by section.");
   lines.push("draft: false");
   lines.push("---");

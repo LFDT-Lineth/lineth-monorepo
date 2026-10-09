@@ -766,8 +766,7 @@ function partialComponentName(sectionId: SectionId): string {
 function renderWrapper(partials: { sectionId: SectionId; componentName: string }[]): string {
   const lines: string[] = [];
   lines.push("---");
-  lines.push("title: Linea Postman configuration");
-  lines.push("slug: /reference/component-configuration/linea-postman-options");
+  lines.push("title: Postman options");
   lines.push("description: Auto-generated reference of Linea Postman environment variables, grouped by section.");
   lines.push("draft: false");
   lines.push("---");

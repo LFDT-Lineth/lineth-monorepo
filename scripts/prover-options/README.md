@@ -10,7 +10,7 @@ public-safe TOML config reference MDX partials for [doc.linea](https://docs.line
 Generated artifacts are ephemeral and ignored by Git. Automation writes them only under `output/`,
 and publishing copies only `output/_generated/prover/`.
 It never writes the human-owned wrapper (`templates/linea-prover-options.mdx` here;
-`docs/stack/reference/linea-prover-options.mdx` on doc.linea).
+`docs/reference/component-configuration/prover.mdx` on doc.linea).
 
 ## Partials + wrapper
 
@@ -61,7 +61,7 @@ Workflow: `.github/workflows/prover-config-docs.yml`
    Validation generates artifacts, checks fresh temporary output and wrapper completeness, runs unit tests and
    Prettier, then uploads `output/` for review.
 2. Relevant pushes to `main` validate and publish automatically. Publishing adds provenance, copies only
-   `output/_generated/prover/` to `docs/stack/reference/_generated/prover/`, enforces that no other doc.linea
+   `output/_generated/prover/` to `docs/reference/component-configuration/_generated/prover/`, enforces that no other doc.linea
    path changed, and updates the stable `ci/prover-config-docs` pull-request branch.
 3. `workflow_dispatch` is the recovery path. Its `publish` input defaults to `false`; `publish=true` is accepted
    only from `main` or a `prover-*` tag.

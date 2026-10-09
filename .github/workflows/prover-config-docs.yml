@@ -1,7 +1,7 @@
 name: "Prover config docs"
 
 # Generates public-safe Prover configuration partials for review and publishes
-# only docs/stack/reference/_generated/prover/ to Consensys-Incorporated/doc.linea.
+# only docs/reference/component-configuration/_generated/prover/ to Consensys-Incorporated/doc.linea.
 
 permissions:
   contents: read
@@ -166,7 +166,7 @@ jobs:
         run: |
           set -euo pipefail
           SRC="scripts/prover-options/output/_generated/prover"
-          DEST="doc.linea/docs/stack/reference/_generated/prover"
+          DEST="doc.linea/docs/reference/component-configuration/_generated/prover"
           if [[ -z "$(find "$SRC" -type f -name '*.mdx' -print -quit)" ]]; then
             echo "Refusing to publish: no MDX partials under $SRC" >&2
             exit 1
@@ -186,7 +186,7 @@ jobs:
           )
           for CHANGED_PATH in "${CHANGED_PATHS[@]}"; do
             case "$CHANGED_PATH" in
-              docs/stack/reference/_generated/prover/*) ;;
+              docs/reference/component-configuration/_generated/prover/*) ;;
               *)
                 echo "::error::Refusing to publish changed path outside generated Prover docs: $CHANGED_PATH"
                 exit 1
@@ -208,7 +208,7 @@ jobs:
           body: |
             Auto-generated Linea prover TOML config MDX partials from `LFDT-Lineth/lineth-monorepo`.
 
-            This PR updates **only** `docs/stack/reference/_generated/prover/`.
-            The human-owned wrapper `linea-prover-options.mdx` is intentionally untouched.
+            This PR updates **only** `docs/reference/component-configuration/_generated/prover/`.
+            The human-owned wrapper `prover.mdx` is intentionally untouched.
           add-paths: |
-            docs/stack/reference/_generated/prover/**
+            docs/reference/component-configuration/_generated/prover/**
