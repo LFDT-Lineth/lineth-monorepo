@@ -62,7 +62,7 @@ class HighestUnprovenBlobTracker(initialProvenBlockNumber: ULong) :
 class LatestBlobSubmittedBlockNumberTracker(initialLatestBlockNumber: ULong) :
   MaxLongTracker<BlobSubmittedEvent>(initialLatestBlockNumber.toLong()) {
   override fun convertToLong(trackable: BlobSubmittedEvent): Long {
-    return trackable.blobs.last().endBlockNumber.toLong()
+    return trackable.endBlockNumber.toLong()
   }
 }
 
