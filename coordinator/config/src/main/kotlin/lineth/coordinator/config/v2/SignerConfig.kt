@@ -11,6 +11,8 @@ data class SignerConfig(
   val web3j: Web3jConfig?,
   val web3signer: Web3SignerConfig?,
   val custom: CustomConfig? = null,
+  /** Backend settings of a registered signer type (`type` is none of the built-in ones). */
+  val registered: RegisteredConfig? = null,
 ) {
   init {
     when (type) {
@@ -48,14 +50,47 @@ data class SignerConfig(
           "signerType=$type requires custom config"
         }
       }
+
+      else -> {
+        requireNotNull(registered) {
+          "signerType=$type requires registered config"
+        }
+        require(registered.type == type) {
+          "registered config type=${registered.type} must match signerType=$type"
+        }
+      }
     }
   }
 
-  enum class SignerType {
-    WEB3J,
-    WEB3SIGNER,
-    CUSTOM,
+  /**
+   * Built-in types are [WEB3J], [WEB3SIGNER] and the deprecated [CUSTOM]; any other name is a type registered
+   * by a custom signer factory, configured in the `[..signer.<type>]` table. Names are case-insensitive.
+   */
+  class SignerType(name: String) {
+    val name: String = name.trim().lowercase()
+
+    init {
+      require(this.name.isNotEmpty()) { "signer type must not be blank" }
+    }
+
+    val isBuiltIn: Boolean get() = this in BUILT_IN
+
+    override fun equals(other: Any?): Boolean = other is SignerType && other.name == name
+
+    override fun hashCode(): Int = name.hashCode()
+
+    override fun toString(): String = name.uppercase()
+
+    companion object {
+      val WEB3J = SignerType("web3j")
+      val WEB3SIGNER = SignerType("web3signer")
+      val CUSTOM = SignerType("custom")
+      private val BUILT_IN = setOf(WEB3J, WEB3SIGNER, CUSTOM)
+    }
   }
+
+  /** Settings of a registered signer type: the flat key/value pairs of the `[..signer.<type>]` table. */
+  data class RegisteredConfig(val type: SignerType, val settings: Map<String, Masked>)
 
   data class CustomConfig(val name: String) {
     init {

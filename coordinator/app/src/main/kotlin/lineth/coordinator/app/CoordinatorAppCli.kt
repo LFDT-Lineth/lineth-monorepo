@@ -2,6 +2,7 @@ package lineth.coordinator.app
 
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.coordinator.config.v2.toPrettyLog
+import lineth.coordinator.config.v2.toml.ConfigExtension
 import lineth.coordinator.config.v2.toml.loadConfigs
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -25,9 +26,11 @@ import java.util.concurrent.Callable
   optionListHeading = "%nOptions:%n",
   footerHeading = "%n",
 )
-class CoordinatorAppCli
-internal constructor(private val errorWriter: PrintWriter, private val startAction: StartAction) :
-  Callable<Int> {
+class CoordinatorAppCli<E> internal constructor(
+  private val errorWriter: PrintWriter,
+  private val configExtension: ConfigExtension<E>,
+  private val startAction: StartAction<E>,
+) : Callable<Int> {
   @Parameters(paramLabel = "CONFIG.toml", description = ["Configuration files"])
   private val configFiles: List<File>? = null
 
@@ -112,12 +115,17 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
           smartContractErrorsFile = smartContractErrorsFile?.toPath(),
           gasPriceCapTimeOfDayMultipliersFile = gasPriceCapTimeOfDayMultipliersFile.toPath(),
           logger = logger,
+          ignoredTopLevelKeys = configExtension.topLevelKeys,
         )
+      val extensionConfig = configExtension.load(configFiles.map { it.toPath() }, configs)
 
       if (checkConfigsOnly) {
         logger.info("All configs are valid. Final configs:\n{}", configs.toPrettyLog())
+        if (configExtension.topLevelKeys.isNotEmpty()) {
+          logger.info("Extension configs:\n{}", configExtension.toPrettyLog(extensionConfig))
+        }
       } else {
-        startAction.start(configs)
+        startAction.start(configs, extensionConfig)
       }
       0
     } catch (e: Exception) {
@@ -157,16 +165,19 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
    */
   private val logger: Logger = LogManager.getLogger()
 
-  fun interface StartAction {
-    fun start(configs: CoordinatorConfig)
+  fun interface StartAction<E> {
+    fun start(configs: CoordinatorConfig, extension: E)
   }
 
   companion object {
     const val COMMAND_NAME = "coordinator"
 
-    fun withAction(startAction: StartAction): CoordinatorAppCli {
+    fun withAction(startAction: (CoordinatorConfig) -> Unit): CoordinatorAppCli<Unit> =
+      withExtension(ConfigExtension.None) { configs, _ -> startAction(configs) }
+
+    fun <E> withExtension(configExtension: ConfigExtension<E>, startAction: StartAction<E>): CoordinatorAppCli<E> {
       val errorWriter = PrintWriter(System.err, true, Charset.defaultCharset())
-      return CoordinatorAppCli(errorWriter, startAction)
+      return CoordinatorAppCli(errorWriter, configExtension, startAction)
     }
   }
 }

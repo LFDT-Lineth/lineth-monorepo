@@ -78,6 +78,7 @@ import org.hyperledger.besu.plugin.services.metrics.MetricCategoryRegistry;
  * like registration of metrics categories or check to perform once at startup
  */
 @Slf4j
+@SuppressWarnings("deprecation")
 public abstract class AbstractLineaSharedPrivateOptionsPlugin
     extends AbstractLineaSharedOptionsPlugin {
   protected static BesuConfiguration besuConfiguration;
