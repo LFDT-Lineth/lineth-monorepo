@@ -39,6 +39,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+@SuppressWarnings("deprecation")
 class LineaSendBundleTest {
   private static final long CHAIN_HEAD_BLOCK_NUMBER = 100L;
   private static final long MAX_GAS_LIMIT_PER_TX = 1_000_000L;

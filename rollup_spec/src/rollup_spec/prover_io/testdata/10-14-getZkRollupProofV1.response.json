@@ -19,8 +19,8 @@
     "endDataRollingHash": "0x8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d",
     "parentBlockHash": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
     "endBlockHash": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
-    "startOffset": 4,
-    "endOffset": 0,
+    "parentDataTailTakeBytes": 4,
+    "finalDataTailDiscardBytes": 0,
     "filteredAddresses": [
       "0x0303030303030303030303030303030303030303",
       "0x0404040404040404040404040404040404040404"

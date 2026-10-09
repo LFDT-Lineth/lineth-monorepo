@@ -65,6 +65,7 @@ Coordinator PostgreSQL persistence settings.
 
 | Key | Description | Type | Required | Default | Status |
 | --- | --- | --- | --- | --- | --- |
+| `database.database-name` | PostgreSQL database name. Formerly `schema`, still accepted as a deprecated alias. | `String` | no | `linea_coordinator` | active |
 | `database.hostname` | PostgreSQL hostname used by the coordinator persistence layer. Example: `postgres`. | `String` | yes | - | active |
 | `database.password` | PostgreSQL password. Masked in logs. | `Masked` | yes | - | active |
 | `database.persistence-retries.backoff-delay` | Delay between retry attempts. Example: `PT1S`. | `Duration` | no | `PT1S` | active |
@@ -75,7 +76,6 @@ Coordinator PostgreSQL persistence settings.
 | `database.port` | PostgreSQL port. | `UInt` | no | `5432` | active |
 | `database.read-pipelining-limit` | Maximum number of read queries pipelined on a single connection. | `Int` | no | `10` | active |
 | `database.read-pool-size` | Connection pool size for read-only queries. | `Int` | no | `10` | active |
-| `database.schema` | PostgreSQL schema (database) name. | `String` | no | `linea_coordinator` | active |
 | `database.schema-version` | Expected database schema version; must match a supported migration version. | `Int` | no | `4` | active |
 | `database.transactional-pool-size` | Connection pool size for transactional (read-write) queries. | `Int` | no | `10` | active |
 | `database.username` | PostgreSQL username. Example: `postgres`. | `String` | yes | - | active |
@@ -170,8 +170,9 @@ L1 blob/aggregation submission (data availability and finalization) settings.
 | `l1-submission.aggregation.l1-request-retries.max-retries` | Maximum number of retry attempts. Omit for endless retries. Example: `3`. | `UInt?` | no | - | active |
 | `l1-submission.aggregation.l1-request-retries.timeout` | Overall timeout across all retry attempts. Omit to disable the timeout. Example: `PT10S`. | `Duration?` | no | - | active |
 | `l1-submission.aggregation.max-submissions-per-tick` | Maximum aggregation submissions sent per tick. | `UInt` | no | `1` | active |
-| `l1-submission.aggregation.signer.custom.name` | Logical signer name resolved by the injected signer factory. | `String` | yes | - | active |
-| `l1-submission.aggregation.signer.type` | Signer backend to use: WEB3J, WEB3SIGNER, or CUSTOM. Example: `web3signer`. | `SignerType` | yes | - | active |
+| `l1-submission.aggregation.signer.custom.name` | Logical signer name resolved by the injected signer factory. | `String` | yes | - | deprecated |
+| `l1-submission.aggregation.signer.registered-settings` | Settings of registered signer types, keyed by type then by setting name. Not written directly: the loader collects the `signer.<type>` tables into it. Only the table of the configured type is used. | `Map<String, Map<String, Masked>>` | no | - | active |
+| `l1-submission.aggregation.signer.type` | Signer backend: `web3j`, `web3signer`, or the name of a signer type registered by a custom signer factory, configured in the `signer.<type>` table. Example: `web3signer`. | `SignerType` | yes | - | active |
 | `l1-submission.aggregation.signer.web3j.private-key` | Hex-encoded 32-byte private key used to sign transactions. Masked in logs. | `Masked` | yes | - | active |
 | `l1-submission.aggregation.signer.web3signer.endpoint` | Web3Signer HTTP endpoint. Example: `http://web3signer:9000`. | `URL` | yes | - | active |
 | `l1-submission.aggregation.signer.web3signer.keep-alive` | Whether to keep Web3Signer HTTP connections alive. | `Boolean` | no | `true` | active |
@@ -198,8 +199,9 @@ L1 blob/aggregation submission (data availability and finalization) settings.
 | `l1-submission.blob.l1-request-retries.max-retries` | Maximum number of retry attempts. Omit for endless retries. Example: `3`. | `UInt?` | no | - | active |
 | `l1-submission.blob.l1-request-retries.timeout` | Overall timeout across all retry attempts. Omit to disable the timeout. Example: `PT10S`. | `Duration?` | no | - | active |
 | `l1-submission.blob.max-submission-transactions-per-tick` | Maximum blob submission transactions sent per tick. | `UInt` | no | `2` | active |
-| `l1-submission.blob.signer.custom.name` | Logical signer name resolved by the injected signer factory. | `String` | yes | - | active |
-| `l1-submission.blob.signer.type` | Signer backend to use: WEB3J, WEB3SIGNER, or CUSTOM. Example: `web3signer`. | `SignerType` | yes | - | active |
+| `l1-submission.blob.signer.custom.name` | Logical signer name resolved by the injected signer factory. | `String` | yes | - | deprecated |
+| `l1-submission.blob.signer.registered-settings` | Settings of registered signer types, keyed by type then by setting name. Not written directly: the loader collects the `signer.<type>` tables into it. Only the table of the configured type is used. | `Map<String, Map<String, Masked>>` | no | - | active |
+| `l1-submission.blob.signer.type` | Signer backend: `web3j`, `web3signer`, or the name of a signer type registered by a custom signer factory, configured in the `signer.<type>` table. Example: `web3signer`. | `SignerType` | yes | - | active |
 | `l1-submission.blob.signer.web3j.private-key` | Hex-encoded 32-byte private key used to sign transactions. Masked in logs. | `Masked` | yes | - | active |
 | `l1-submission.blob.signer.web3signer.endpoint` | Web3Signer HTTP endpoint. Example: `http://web3signer:9000`. | `URL` | yes | - | active |
 | `l1-submission.blob.signer.web3signer.keep-alive` | Whether to keep Web3Signer HTTP connections alive. | `Boolean` | no | `true` | active |
@@ -315,8 +317,9 @@ L1 to L2 message anchoring settings.
 | `message-anchoring.l2-request-retries.timeout` | Overall timeout across all retry attempts. Omit to disable the timeout. Example: `PT10S`. | `Duration?` | no | - | active |
 | `message-anchoring.max-messages-to-anchor-per-l2-transaction` | Maximum number of messages anchored in a single L2 transaction. | `UInt` | no | `100` | active |
 | `message-anchoring.message-queue-capacity` | Maximum number of messages buffered awaiting anchoring. | `UInt` | no | `10000` | active |
-| `message-anchoring.signer.custom.name` | Logical signer name resolved by the injected signer factory. | `String` | yes | - | active |
-| `message-anchoring.signer.type` | Signer backend to use: WEB3J, WEB3SIGNER, or CUSTOM. Example: `web3signer`. | `SignerType` | yes | - | active |
+| `message-anchoring.signer.custom.name` | Logical signer name resolved by the injected signer factory. | `String` | yes | - | deprecated |
+| `message-anchoring.signer.registered-settings` | Settings of registered signer types, keyed by type then by setting name. Not written directly: the loader collects the `signer.<type>` tables into it. Only the table of the configured type is used. | `Map<String, Map<String, Masked>>` | no | - | active |
+| `message-anchoring.signer.type` | Signer backend: `web3j`, `web3signer`, or the name of a signer type registered by a custom signer factory, configured in the `signer.<type>` table. Example: `web3signer`. | `SignerType` | yes | - | active |
 | `message-anchoring.signer.web3j.private-key` | Hex-encoded 32-byte private key used to sign transactions. Masked in logs. | `Masked` | yes | - | active |
 | `message-anchoring.signer.web3signer.endpoint` | Web3Signer HTTP endpoint. Example: `http://web3signer:9000`. | `URL` | yes | - | active |
 | `message-anchoring.signer.web3signer.keep-alive` | Whether to keep Web3Signer HTTP connections alive. | `Boolean` | no | `true` | active |
@@ -347,61 +350,63 @@ File-based prover request/response directories and switch-over settings.
 
 | Key | Description | Type | Required | Default | Status |
 | --- | --- | --- | --- | --- | --- |
-| `prover.blob-compression.fs-requests-directory` | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. | `String` | yes | - | active |
-| `prover.blob-compression.fs-responses-directory` | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. | `String` | yes | - | active |
+| `prover.blob-compression.fs-requests-directory` | Directory the coordinator writes prover request files to. Required when transport is `file`. Example: `/data/prover/v3/execution/requests`. | `String?` | no | - | active |
+| `prover.blob-compression.fs-responses-directory` | Directory the coordinator reads prover response files from. Required when transport is `file`. Example: `/data/prover/v3/execution/responses`. | `String?` | no | - | active |
 | `prover.blob-compression.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
 | `prover.enable-request-files-cleanup` | Whether to delete request files after their responses are processed. | `Boolean` | no | `false` | active |
-| `prover.execution.fs-requests-directory` | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. | `String` | yes | - | active |
-| `prover.execution.fs-responses-directory` | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. | `String` | yes | - | active |
+| `prover.execution.fs-requests-directory` | Directory the coordinator writes prover request files to. Required when transport is `file`. Example: `/data/prover/v3/execution/requests`. | `String?` | no | - | active |
+| `prover.execution.fs-responses-directory` | Directory the coordinator reads prover response files from. Required when transport is `file`. Example: `/data/prover/v3/execution/responses`. | `String?` | no | - | active |
 | `prover.execution.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
 | `prover.fork-name` | L2 EVM fork name included in RISC-V execution proof requests (e.g. "amsterdam"). Example: `amsterdam`. | `String?` | no | - | active |
 | `prover.fs-inprogress-proving-suffix-pattern` | Regex matching filenames a prover has claimed and is working on, so the coordinator treats them as in-progress. | `String` | no | `\.inprogress\.prover.*` | active |
 | `prover.fs-inprogress-request-writing-suffix` | Filename suffix appended while the coordinator is still writing a request file, so provers ignore partially-written requests. | `String` | no | `.inprogress_coordinator_writing` | active |
 | `prover.fs-polling-interval` | Interval between scans of the prover response directories for new responses. | `Duration` | no | `PT15S` | active |
 | `prover.fs-polling-timeout` | Maximum time to wait for a prover response before timing out. Defaults to no timeout. | `Duration` | no | `infinite` | active |
-| `prover.l2-execution.fs-requests-directory` | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. | `String` | yes | - | active |
-| `prover.l2-execution.fs-responses-directory` | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. | `String` | yes | - | active |
+| `prover.l2-execution.fs-requests-directory` | Directory the coordinator writes prover request files to. Required when transport is `file`. Example: `/data/prover/v3/execution/requests`. | `String?` | no | - | active |
+| `prover.l2-execution.fs-responses-directory` | Directory the coordinator reads prover response files from. Required when transport is `file`. Example: `/data/prover/v3/execution/responses`. | `String?` | no | - | active |
 | `prover.l2-execution.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
-| `prover.new.blob-compression.fs-requests-directory` | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. | `String` | yes | - | active |
-| `prover.new.blob-compression.fs-responses-directory` | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. | `String` | yes | - | active |
+| `prover.new.blob-compression.fs-requests-directory` | Directory the coordinator writes prover request files to. Required when transport is `file`. Example: `/data/prover/v3/execution/requests`. | `String?` | no | - | active |
+| `prover.new.blob-compression.fs-responses-directory` | Directory the coordinator reads prover response files from. Required when transport is `file`. Example: `/data/prover/v3/execution/responses`. | `String?` | no | - | active |
 | `prover.new.blob-compression.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
 | `prover.new.enable-request-files-cleanup` | Whether to delete request files after their responses are processed. | `Boolean` | no | `false` | active |
-| `prover.new.execution.fs-requests-directory` | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. | `String` | yes | - | active |
-| `prover.new.execution.fs-responses-directory` | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. | `String` | yes | - | active |
+| `prover.new.execution.fs-requests-directory` | Directory the coordinator writes prover request files to. Required when transport is `file`. Example: `/data/prover/v3/execution/requests`. | `String?` | no | - | active |
+| `prover.new.execution.fs-responses-directory` | Directory the coordinator reads prover response files from. Required when transport is `file`. Example: `/data/prover/v3/execution/responses`. | `String?` | no | - | active |
 | `prover.new.execution.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
 | `prover.new.fork-name` | L2 EVM fork name included in RISC-V execution proof requests (e.g. "amsterdam"). Example: `amsterdam`. | `String?` | no | - | active |
 | `prover.new.fs-inprogress-proving-suffix-pattern` | Regex matching filenames a prover has claimed and is working on, so the coordinator treats them as in-progress. | `String` | no | `\.inprogress\.prover.*` | active |
 | `prover.new.fs-inprogress-request-writing-suffix` | Filename suffix appended while the coordinator is still writing a request file, so provers ignore partially-written requests. | `String` | no | `.inprogress_coordinator_writing` | active |
 | `prover.new.fs-polling-interval` | Interval between scans of the prover response directories for new responses. | `Duration` | no | `PT15S` | active |
 | `prover.new.fs-polling-timeout` | Maximum time to wait for a prover response before timing out. Defaults to no timeout. | `Duration` | no | `infinite` | active |
-| `prover.new.l2-execution.fs-requests-directory` | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. | `String` | yes | - | active |
-| `prover.new.l2-execution.fs-responses-directory` | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. | `String` | yes | - | active |
+| `prover.new.l2-execution.fs-requests-directory` | Directory the coordinator writes prover request files to. Required when transport is `file`. Example: `/data/prover/v3/execution/requests`. | `String?` | no | - | active |
+| `prover.new.l2-execution.fs-responses-directory` | Directory the coordinator reads prover response files from. Required when transport is `file`. Example: `/data/prover/v3/execution/responses`. | `String?` | no | - | active |
 | `prover.new.l2-execution.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
-| `prover.new.proof-aggregation.fs-requests-directory` | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. | `String` | yes | - | active |
-| `prover.new.proof-aggregation.fs-responses-directory` | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. | `String` | yes | - | active |
+| `prover.new.proof-aggregation.fs-requests-directory` | Directory the coordinator writes prover request files to. Required when transport is `file`. Example: `/data/prover/v3/execution/requests`. | `String?` | no | - | active |
+| `prover.new.proof-aggregation.fs-responses-directory` | Directory the coordinator reads prover response files from. Required when transport is `file`. Example: `/data/prover/v3/execution/responses`. | `String?` | no | - | active |
 | `prover.new.proof-aggregation.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
 | `prover.new.proving-system-version` | Version for the RISC-V proving system. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
-| `prover.new.rollup-aggregation.fs-requests-directory` | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. | `String` | yes | - | active |
-| `prover.new.rollup-aggregation.fs-responses-directory` | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. | `String` | yes | - | active |
+| `prover.new.rollup-aggregation.fs-requests-directory` | Directory the coordinator writes prover request files to. Required when transport is `file`. Example: `/data/prover/v3/execution/requests`. | `String?` | no | - | active |
+| `prover.new.rollup-aggregation.fs-responses-directory` | Directory the coordinator reads prover response files from. Required when transport is `file`. Example: `/data/prover/v3/execution/responses`. | `String?` | no | - | active |
 | `prover.new.rollup-aggregation.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
-| `prover.new.rollup.fs-requests-directory` | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. | `String` | yes | - | active |
-| `prover.new.rollup.fs-responses-directory` | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. | `String` | yes | - | active |
+| `prover.new.rollup.fs-requests-directory` | Directory the coordinator writes prover request files to. Required when transport is `file`. Example: `/data/prover/v3/execution/requests`. | `String?` | no | - | active |
+| `prover.new.rollup.fs-responses-directory` | Directory the coordinator reads prover response files from. Required when transport is `file`. Example: `/data/prover/v3/execution/responses`. | `String?` | no | - | active |
 | `prover.new.rollup.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
 | `prover.new.switch-block-number-inclusive` | Inclusive L2 block number at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockTimestamp. Example: `1000000`. | `ULong?` | no | - | active |
 | `prover.new.switch-block-timestamp` | Timestamp at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockNumberInclusive. Example: `2024-01-01T00:00:00Z`. | `Instant?` | no | - | active |
+| `prover.new.transport` | Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers. | `String` | no | `file` | active |
 | `prover.new.type` | Prover type: pre_riscv or riscv. | `ProverType` | no | `pre_riscv` | active |
-| `prover.proof-aggregation.fs-requests-directory` | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. | `String` | yes | - | active |
-| `prover.proof-aggregation.fs-responses-directory` | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. | `String` | yes | - | active |
+| `prover.proof-aggregation.fs-requests-directory` | Directory the coordinator writes prover request files to. Required when transport is `file`. Example: `/data/prover/v3/execution/requests`. | `String?` | no | - | active |
+| `prover.proof-aggregation.fs-responses-directory` | Directory the coordinator reads prover response files from. Required when transport is `file`. Example: `/data/prover/v3/execution/responses`. | `String?` | no | - | active |
 | `prover.proof-aggregation.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
 | `prover.proving-system-version` | Version for the RISC-V proving system. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
-| `prover.rollup-aggregation.fs-requests-directory` | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. | `String` | yes | - | active |
-| `prover.rollup-aggregation.fs-responses-directory` | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. | `String` | yes | - | active |
+| `prover.rollup-aggregation.fs-requests-directory` | Directory the coordinator writes prover request files to. Required when transport is `file`. Example: `/data/prover/v3/execution/requests`. | `String?` | no | - | active |
+| `prover.rollup-aggregation.fs-responses-directory` | Directory the coordinator reads prover response files from. Required when transport is `file`. Example: `/data/prover/v3/execution/responses`. | `String?` | no | - | active |
 | `prover.rollup-aggregation.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
-| `prover.rollup.fs-requests-directory` | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. | `String` | yes | - | active |
-| `prover.rollup.fs-responses-directory` | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. | `String` | yes | - | active |
+| `prover.rollup.fs-requests-directory` | Directory the coordinator writes prover request files to. Required when transport is `file`. Example: `/data/prover/v3/execution/requests`. | `String?` | no | - | active |
+| `prover.rollup.fs-responses-directory` | Directory the coordinator reads prover response files from. Required when transport is `file`. Example: `/data/prover/v3/execution/responses`. | `String?` | no | - | active |
 | `prover.rollup.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
 | `prover.switch-block-number-inclusive` | Inclusive L2 block number at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockTimestamp. Example: `1000000`. | `ULong?` | no | - | active |
 | `prover.switch-block-timestamp` | Timestamp at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockNumberInclusive. Example: `2024-01-01T00:00:00Z`. | `Instant?` | no | - | active |
+| `prover.transport` | Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers. | `String` | no | `file` | active |
 | `prover.type` | Prover type: pre_riscv or riscv. | `ProverType` | no | `pre_riscv` | active |
 
 ### `state-manager`
@@ -528,5 +533,12 @@ Optional override of the smart-contract revert error codes bundled in the coordi
 
 ## Deprecated Keys
 
-None.
+| File | Key | Replacement | Description |
+| --- | --- | --- | --- |
+| coordinator | `l1-submission.aggregation.signer.custom` | `signer.<registered-type>` | Named signer settings, resolved by the injected signer factory. |
+| coordinator | `l1-submission.aggregation.signer.custom.name` | `signer.<registered-type>` | Logical signer name resolved by the injected signer factory. |
+| coordinator | `l1-submission.blob.signer.custom` | `signer.<registered-type>` | Named signer settings, resolved by the injected signer factory. |
+| coordinator | `l1-submission.blob.signer.custom.name` | `signer.<registered-type>` | Logical signer name resolved by the injected signer factory. |
+| coordinator | `message-anchoring.signer.custom` | `signer.<registered-type>` | Named signer settings, resolved by the injected signer factory. |
+| coordinator | `message-anchoring.signer.custom.name` | `signer.<registered-type>` | Logical signer name resolved by the injected signer factory. |
 
