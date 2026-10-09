@@ -40,6 +40,7 @@
 - *(coordinator)* Add new metadata fields in RISC-V request (#3998)
 - *(coordinator)* [**breaking**] Add new fields on riscv proof requests and revise … (#3993)
 - *(coordinator)* Bundle smart-contract errors in jar and make --smart-contract-errors optional (#4161)
+- *(coordinator)* Extension config sections and deprecated key aliases (#4162)
 
 ### 🐛 Bug Fixes
 
