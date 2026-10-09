@@ -353,12 +353,10 @@ File-based prover request/response directories and switch-over settings.
 | `prover.blob-compression.fs-requests-directory` | Directory the coordinator writes prover request files to. Required when transport is `file`. Example: `/data/prover/v3/execution/requests`. | `String?` | no | - | active |
 | `prover.blob-compression.fs-responses-directory` | Directory the coordinator reads prover response files from. Required when transport is `file`. Example: `/data/prover/v3/execution/responses`. | `String?` | no | - | active |
 | `prover.blob-compression.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
-| `prover.blob-compression.transport` | Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers. | `String` | no | `file` | active |
 | `prover.enable-request-files-cleanup` | Whether to delete request files after their responses are processed. | `Boolean` | no | `false` | active |
 | `prover.execution.fs-requests-directory` | Directory the coordinator writes prover request files to. Required when transport is `file`. Example: `/data/prover/v3/execution/requests`. | `String?` | no | - | active |
 | `prover.execution.fs-responses-directory` | Directory the coordinator reads prover response files from. Required when transport is `file`. Example: `/data/prover/v3/execution/responses`. | `String?` | no | - | active |
 | `prover.execution.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
-| `prover.execution.transport` | Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers. | `String` | no | `file` | active |
 | `prover.fork-name` | L2 EVM fork name included in RISC-V execution proof requests (e.g. "amsterdam"). Example: `amsterdam`. | `String?` | no | - | active |
 | `prover.fs-inprogress-proving-suffix-pattern` | Regex matching filenames a prover has claimed and is working on, so the coordinator treats them as in-progress. | `String` | no | `\.inprogress\.prover.*` | active |
 | `prover.fs-inprogress-request-writing-suffix` | Filename suffix appended while the coordinator is still writing a request file, so provers ignore partially-written requests. | `String` | no | `.inprogress_coordinator_writing` | active |
@@ -367,16 +365,13 @@ File-based prover request/response directories and switch-over settings.
 | `prover.l2-execution.fs-requests-directory` | Directory the coordinator writes prover request files to. Required when transport is `file`. Example: `/data/prover/v3/execution/requests`. | `String?` | no | - | active |
 | `prover.l2-execution.fs-responses-directory` | Directory the coordinator reads prover response files from. Required when transport is `file`. Example: `/data/prover/v3/execution/responses`. | `String?` | no | - | active |
 | `prover.l2-execution.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
-| `prover.l2-execution.transport` | Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers. | `String` | no | `file` | active |
 | `prover.new.blob-compression.fs-requests-directory` | Directory the coordinator writes prover request files to. Required when transport is `file`. Example: `/data/prover/v3/execution/requests`. | `String?` | no | - | active |
 | `prover.new.blob-compression.fs-responses-directory` | Directory the coordinator reads prover response files from. Required when transport is `file`. Example: `/data/prover/v3/execution/responses`. | `String?` | no | - | active |
 | `prover.new.blob-compression.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
-| `prover.new.blob-compression.transport` | Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers. | `String` | no | `file` | active |
 | `prover.new.enable-request-files-cleanup` | Whether to delete request files after their responses are processed. | `Boolean` | no | `false` | active |
 | `prover.new.execution.fs-requests-directory` | Directory the coordinator writes prover request files to. Required when transport is `file`. Example: `/data/prover/v3/execution/requests`. | `String?` | no | - | active |
 | `prover.new.execution.fs-responses-directory` | Directory the coordinator reads prover response files from. Required when transport is `file`. Example: `/data/prover/v3/execution/responses`. | `String?` | no | - | active |
 | `prover.new.execution.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
-| `prover.new.execution.transport` | Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers. | `String` | no | `file` | active |
 | `prover.new.fork-name` | L2 EVM fork name included in RISC-V execution proof requests (e.g. "amsterdam"). Example: `amsterdam`. | `String?` | no | - | active |
 | `prover.new.fs-inprogress-proving-suffix-pattern` | Regex matching filenames a prover has claimed and is working on, so the coordinator treats them as in-progress. | `String` | no | `\.inprogress\.prover.*` | active |
 | `prover.new.fs-inprogress-request-writing-suffix` | Filename suffix appended while the coordinator is still writing a request file, so provers ignore partially-written requests. | `String` | no | `.inprogress_coordinator_writing` | active |
@@ -385,38 +380,33 @@ File-based prover request/response directories and switch-over settings.
 | `prover.new.l2-execution.fs-requests-directory` | Directory the coordinator writes prover request files to. Required when transport is `file`. Example: `/data/prover/v3/execution/requests`. | `String?` | no | - | active |
 | `prover.new.l2-execution.fs-responses-directory` | Directory the coordinator reads prover response files from. Required when transport is `file`. Example: `/data/prover/v3/execution/responses`. | `String?` | no | - | active |
 | `prover.new.l2-execution.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
-| `prover.new.l2-execution.transport` | Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers. | `String` | no | `file` | active |
 | `prover.new.proof-aggregation.fs-requests-directory` | Directory the coordinator writes prover request files to. Required when transport is `file`. Example: `/data/prover/v3/execution/requests`. | `String?` | no | - | active |
 | `prover.new.proof-aggregation.fs-responses-directory` | Directory the coordinator reads prover response files from. Required when transport is `file`. Example: `/data/prover/v3/execution/responses`. | `String?` | no | - | active |
 | `prover.new.proof-aggregation.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
-| `prover.new.proof-aggregation.transport` | Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers. | `String` | no | `file` | active |
 | `prover.new.proving-system-version` | Version for the RISC-V proving system. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
 | `prover.new.rollup-aggregation.fs-requests-directory` | Directory the coordinator writes prover request files to. Required when transport is `file`. Example: `/data/prover/v3/execution/requests`. | `String?` | no | - | active |
 | `prover.new.rollup-aggregation.fs-responses-directory` | Directory the coordinator reads prover response files from. Required when transport is `file`. Example: `/data/prover/v3/execution/responses`. | `String?` | no | - | active |
 | `prover.new.rollup-aggregation.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
-| `prover.new.rollup-aggregation.transport` | Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers. | `String` | no | `file` | active |
 | `prover.new.rollup.fs-requests-directory` | Directory the coordinator writes prover request files to. Required when transport is `file`. Example: `/data/prover/v3/execution/requests`. | `String?` | no | - | active |
 | `prover.new.rollup.fs-responses-directory` | Directory the coordinator reads prover response files from. Required when transport is `file`. Example: `/data/prover/v3/execution/responses`. | `String?` | no | - | active |
 | `prover.new.rollup.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
-| `prover.new.rollup.transport` | Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers. | `String` | no | `file` | active |
 | `prover.new.switch-block-number-inclusive` | Inclusive L2 block number at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockTimestamp. Example: `1000000`. | `ULong?` | no | - | active |
 | `prover.new.switch-block-timestamp` | Timestamp at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockNumberInclusive. Example: `2024-01-01T00:00:00Z`. | `Instant?` | no | - | active |
+| `prover.new.transport` | Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers. | `String` | no | `file` | active |
 | `prover.new.type` | Prover type: pre_riscv or riscv. | `ProverType` | no | `pre_riscv` | active |
 | `prover.proof-aggregation.fs-requests-directory` | Directory the coordinator writes prover request files to. Required when transport is `file`. Example: `/data/prover/v3/execution/requests`. | `String?` | no | - | active |
 | `prover.proof-aggregation.fs-responses-directory` | Directory the coordinator reads prover response files from. Required when transport is `file`. Example: `/data/prover/v3/execution/responses`. | `String?` | no | - | active |
 | `prover.proof-aggregation.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
-| `prover.proof-aggregation.transport` | Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers. | `String` | no | `file` | active |
 | `prover.proving-system-version` | Version for the RISC-V proving system. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
 | `prover.rollup-aggregation.fs-requests-directory` | Directory the coordinator writes prover request files to. Required when transport is `file`. Example: `/data/prover/v3/execution/requests`. | `String?` | no | - | active |
 | `prover.rollup-aggregation.fs-responses-directory` | Directory the coordinator reads prover response files from. Required when transport is `file`. Example: `/data/prover/v3/execution/responses`. | `String?` | no | - | active |
 | `prover.rollup-aggregation.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
-| `prover.rollup-aggregation.transport` | Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers. | `String` | no | `file` | active |
 | `prover.rollup.fs-requests-directory` | Directory the coordinator writes prover request files to. Required when transport is `file`. Example: `/data/prover/v3/execution/requests`. | `String?` | no | - | active |
 | `prover.rollup.fs-responses-directory` | Directory the coordinator reads prover response files from. Required when transport is `file`. Example: `/data/prover/v3/execution/responses`. | `String?` | no | - | active |
 | `prover.rollup.program-id` | Guest program identifier for the RISC-V prover. Example: `0xabcdef1234567890`. | `String?` | no | - | active |
-| `prover.rollup.transport` | Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers. | `String` | no | `file` | active |
 | `prover.switch-block-number-inclusive` | Inclusive L2 block number at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockTimestamp. Example: `1000000`. | `ULong?` | no | - | active |
 | `prover.switch-block-timestamp` | Timestamp at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockNumberInclusive. Example: `2024-01-01T00:00:00Z`. | `Instant?` | no | - | active |
+| `prover.transport` | Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers. | `String` | no | `file` | active |
 | `prover.type` | Prover type: pre_riscv or riscv. | `ProverType` | no | `pre_riscv` | active |
 
 ### `state-manager`

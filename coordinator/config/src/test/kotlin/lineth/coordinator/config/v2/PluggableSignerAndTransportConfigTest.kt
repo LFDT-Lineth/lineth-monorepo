@@ -122,16 +122,27 @@ class PluggableSignerAndTransportConfigTest {
     """.trimIndent()
 
   @Test
-  fun `riscv proof types can use different transports and skip fs directories`() {
-    val toml = riscvToml + "\n[l2-execution]\nprogram-id = \"0x1\"\ntransport = \"http\"\n"
+  fun `riscv provers can use a non-file transport and skip fs directories`() {
+    val toml = "transport = \"http\"\n" + riscvToml + "\n[l2-execution]\nprogram-id = \"0x1\"\n"
 
     val config = parseConfig<ProverToml>(toml).reified().currentProver.riscvConfig!!
 
-    assertThat(config.l2Execution.transport).isEqualTo("http")
+    assertThat(config.transport).isEqualTo("http")
+    assertThat(config.isFileTransport).isFalse()
     assertThat(config.l2Execution.fileBased).isNull()
-    assertThat(config.l2Execution.isFileTransport).isFalse()
-    assertThatThrownBy { config.l2Execution.requireFileBased() }.hasMessageContaining("transport 'http'")
-    assertThat(config.rollup.isFileTransport).isTrue()
+    assertThat(config.rollup.fileBased).isNull()
+    assertThatThrownBy { config.l2Execution.requireFileBased() }
+      .hasMessageContaining("not supported by the file-based prover client factory")
+  }
+
+  @Test
+  fun `riscv provers default to the file transport`() {
+    val toml = riscvToml + "\n[l2-execution]\nprogram-id = \"0x1\"\nfs-requests-directory = \"/e/req\"\n" +
+      "fs-responses-directory = \"/e/resp\"\n"
+
+    val config = parseConfig<ProverToml>(toml).reified().currentProver.riscvConfig!!
+
+    assertThat(config.isFileTransport).isTrue()
     assertThat(config.rollup.fileBased!!.requestsDirectory).isEqualTo(Path.of("/r/req"))
   }
 
@@ -139,7 +150,7 @@ class PluggableSignerAndTransportConfigTest {
   fun `file transport still requires the fs directories`() {
     val toml = riscvToml + "\n[l2-execution]\nprogram-id = \"0x1\"\n"
 
-    assertThatThrownBy { parseConfig<ProverToml>(toml) }
+    assertThatThrownBy { parseConfig<ProverToml>(toml).reified() }
       .hasMessageContaining("fs-requests-directory and fs-responses-directory are required")
   }
 
@@ -147,8 +158,10 @@ class PluggableSignerAndTransportConfigTest {
   fun `pre riscv provers only support the file transport`() {
     val toml =
       """
-      [execution]
       transport = "http"
+      [execution]
+      fs-requests-directory = "/e/req"
+      fs-responses-directory = "/e/resp"
       [blob-compression]
       fs-requests-directory = "/b/req"
       fs-responses-directory = "/b/resp"
