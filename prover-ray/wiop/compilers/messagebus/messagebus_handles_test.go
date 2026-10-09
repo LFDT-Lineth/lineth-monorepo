@@ -85,6 +85,7 @@ func TestMessageBusHandles(t *testing.T) {
 		handle string
 		send   bool
 	}
+	//nolint:goconst
 	participants := []participant{
 		{"zebra", true},
 		{"apple", true},

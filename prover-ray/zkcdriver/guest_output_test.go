@@ -166,9 +166,12 @@ func provesAndVerifiesFirstShardOnly(
 // Trace the given inputs using the given driver, whilst expecting everything to
 // fit into a single shard and, if not, then this test fails.
 func traceSingleShard(tb testing.TB, driver *zkcdriver.ZkCDriver, inputs *zkcdriver.PreReadInputs) zkcdriver.Shard {
-	lazyTrace := driver.TraceZkcInputs(inputs)
+	// Mark function as test helper
+	tb.Helper()
+	//
+	var lazyTrace = driver.TraceZkcInputs(inputs)
 	// Sanity check only a single shard
-	if lazyTrace.Len() > 1 {
+	if lazyTrace.Len() != 1 {
 		tb.Fatalf("the test fixture is expected to only use a single public inputs")
 	}
 	// Trace the one shard

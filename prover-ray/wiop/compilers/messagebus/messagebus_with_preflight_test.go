@@ -437,6 +437,7 @@ func TestSharedRandomness_CoinsFollowTheSeed(t *testing.T) {
 // the tampered handle: "wire" shares α and β with "route" and must still settle,
 // which is what keeps a break in one handle from smearing into the other.
 func TestSharedRandomness_SeedDerivedFromContributions_Unbalanced(t *testing.T) {
+	//nolint:goconst
 	tampered := []busTraffic{
 		{handle: "route", sent: []uint64{50, 60, 70, 80}, received: []uint64{30, 41, 70, 80}}, // 40 → 41
 		{handle: "wire", sent: []uint64{150, 160, 170, 180}, received: []uint64{130, 140, 170, 180}},

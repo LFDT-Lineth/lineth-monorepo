@@ -80,7 +80,8 @@ func BenchmarkR5Fibonacci(b *testing.B) {
 			height uint
 			width  uint
 		}
-		var mods []modStat
+		var mods = make([]modStat, shard.Width())
+		//
 		for moduleID := range shard.Width() {
 			module := shard.Module(moduleID)
 			rows += uint64(module.Height())
@@ -89,7 +90,7 @@ func BenchmarkR5Fibonacci(b *testing.B) {
 				tallestHeight = module.Height()
 				tallestName = module.Name()
 			}
-			mods = append(mods, modStat{module.Name(), module.Height(), module.Width()})
+			mods[i] = modStat{module.Name(), module.Height(), module.Width()}
 			if module.Name() == "interpreter" {
 				b.Logf("shard %d: interpreter module %d rows x %d cols", i, module.Height(), module.Width())
 				b.ReportMetric(float64(module.Height()), fmt.Sprintf("shard_%d/interp-rows", i))

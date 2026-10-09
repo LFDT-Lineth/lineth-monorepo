@@ -237,6 +237,8 @@ func buildBidirectionalShard(
 //
 // Declared route-then-wire, which is already alphabetical — the same order
 // Compile registers the public inputs in, so index i lines up with handles[i].
+//
+//nolint:goconst
 var (
 	crossShardHandles = []string{"route", "wire"}
 
