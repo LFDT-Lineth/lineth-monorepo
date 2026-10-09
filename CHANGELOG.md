@@ -41,6 +41,7 @@
 - *(coordinator)* [**breaking**] Add new fields on riscv proof requests and revise … (#3993)
 - *(coordinator)* Bundle smart-contract errors in jar and make --smart-contract-errors optional (#4161)
 - *(coordinator)* Extension config sections and deprecated key aliases (#4162)
+- *(coordinator)* Inline pluggable signer types and per-proof-type prover transport (#4164)
 
 ### 🐛 Bug Fixes
 

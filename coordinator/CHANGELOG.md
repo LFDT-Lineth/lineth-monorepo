@@ -3,6 +3,7 @@
 ### 🚀 Features
 
 - *(coordinator)* Extension config sections and deprecated key aliases (#4162)
+- *(coordinator)* Inline pluggable signer types and per-proof-type prover transport (#4164)
 ## [2.1.0] - 2026-10-09
 
 ### 🚀 Features
