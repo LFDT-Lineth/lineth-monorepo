@@ -180,14 +180,18 @@ func runProveVerify(inputs *zkcdriver.PreReadInputs, binFile *zkcdriver.BinaryFi
 		pubs      = make([]wiop.PublicInput, lazyTrace.Len())
 	)
 	// Lazy proof construction for shards.
-	lazyTrace.Apply(func(i uint, shard zkcdriver.Shard) {
+	errs := lazyTrace.Apply(func(i uint, shard zkcdriver.Shard) {
 		proofs[i], pubs[i] = sys.Prove(
 			func(rt *wiop.Runtime) {
 				driver.AssignTraceShard(rt, shard, placeholderSharedRandomness)
 			},
 			wiop.ProveOptions{CheckUnreducedQueries: true})
 	})
-
+	// Sanity check for tracing failures
+	if len(errs) > 0 {
+		return fmt.Errorf("tracing failed: %w", errors.Join(errs...))
+	}
+	// Verify proofs
 	for i := range proofs {
 		if err := sys.Verify(proofs[i], pubs[i]); err != nil {
 			return fmt.Errorf("verification failed: %w", err)

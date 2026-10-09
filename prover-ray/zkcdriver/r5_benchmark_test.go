@@ -87,13 +87,17 @@ func loadR5BenchmarkFixture(b *testing.B) *r5BenchmarkFixture {
 	fixture.traceRows = make([]uint64, fixture.lazyTrace.Len())
 	fixture.traceCells = make([]uint64, fixture.lazyTrace.Len())
 	// Collect per-shard metrics
-	fixture.lazyTrace.Apply(func(i uint, shard zkcdriver.Shard) {
+	errs = fixture.lazyTrace.Apply(func(i uint, shard zkcdriver.Shard) {
 		for moduleID := range shard.Width() {
 			module := shard.Module(moduleID)
 			fixture.traceRows[i] += uint64(module.Height())
 			fixture.traceCells[i] += uint64(module.Height()) * uint64(module.Width())
 		}
 	})
+	// Sanity check for tracing failures
+	if len(errs) > 0 {
+		b.Fatalf("tracing failed: %v", errors.Join(errs...))
+	}
 	//
 	return fixture
 }
@@ -185,12 +189,7 @@ func BenchmarkR5AssignFromExpandedTrace(b *testing.B) {
 	b.ResetTimer()
 
 	for b.Loop() {
-		fixture.lazyTrace.Apply(func(_ uint, shard zkcdriver.Shard) {
-			// FIXME: this would appear to be broken, in that it is storing all
-			// data from all shards in the runtime before progressing.
-			// Unfortunately, this means it is memory consumpion is linear in
-			// the number of shards and is not making use of the lazy tracing
-			// API -- djp.
+		errs := fixture.lazyTrace.Apply(func(_ uint, shard zkcdriver.Shard) {
 			zkcdriver.AssignFromTraceShard(
 				wiop.NewRuntime(fixture.system),
 				shard,
@@ -198,6 +197,10 @@ func BenchmarkR5AssignFromExpandedTrace(b *testing.B) {
 				koalafield.Octuplet{},
 			)
 		})
+		// Sanity check for tracing failures
+		if len(errs) > 0 {
+			b.Fatalf("tracing failed: %v", errors.Join(errs...))
+		}
 	}
 
 	reportR5Work(b, fixture)
@@ -215,12 +218,7 @@ func BenchmarkR5TraceAndAssign(b *testing.B) {
 	for b.Loop() {
 		traces := fixture.driver.TraceZkcInputs(inputs)
 		fixture.lazyTrace = traces
-		fixture.lazyTrace.Apply(func(_ uint, shard zkcdriver.Shard) {
-			// FIXME: this would appear to be broken, in that it is storing all
-			// data from all shards in the runtime before progressing.
-			// Unfortunately, this means it is memory consumpion is linear in
-			// the number of shards and is not making use of the lazy tracing
-			// API -- djp.
+		errs := fixture.lazyTrace.Apply(func(_ uint, shard zkcdriver.Shard) {
 			zkcdriver.AssignFromTraceShard(
 				wiop.NewRuntime(fixture.system),
 				shard,
@@ -228,6 +226,10 @@ func BenchmarkR5TraceAndAssign(b *testing.B) {
 				koalafield.Octuplet{},
 			)
 		})
+		// Sanity check for tracing failures
+		if len(errs) > 0 {
+			b.Fatalf("tracing failed: %v", errors.Join(errs...))
+		}
 	}
 
 	reportR5Work(b, fixture)
@@ -333,11 +335,15 @@ func BenchmarkR5ColdEndToEnd(b *testing.B) {
 			pubs           = make([]wiop.PublicInput, lazyTrace.Len())
 		)
 		// Lazy proof construction for shards.
-		lazyTrace.Apply(func(i uint, shard zkcdriver.Shard) {
+		errs := lazyTrace.Apply(func(i uint, shard zkcdriver.Shard) {
 			proofs[i], pubs[i] = system.Prove(func(rt *wiop.Runtime) {
 				driver.AssignTraceShard(rt, shard, placeholderSharedRandomness)
 			})
 		})
+		// Sanity check for tracing failures
+		if len(errs) > 0 {
+			b.Fatalf("tracing failed: %v", errors.Join(errs...))
+		}
 		//
 		for i := range proofs {
 			if err := system.Verify(proofs[i], pubs[i]); err != nil {

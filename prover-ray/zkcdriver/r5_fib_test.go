@@ -71,7 +71,7 @@ func BenchmarkR5Fibonacci(b *testing.B) {
 	// Process shards lazily
 	//
 	// NOTE: this forces all shards to be fully materialised.
-	lazyTrace.Apply(func(i uint, shard zkcdriver.Shard) {
+	errs = lazyTrace.Apply(func(i uint, shard zkcdriver.Shard) {
 		var rows, cells uint64
 		var tallestName string
 		var tallestHeight uint
@@ -108,6 +108,11 @@ func BenchmarkR5Fibonacci(b *testing.B) {
 		b.ReportMetric(float64(cells), fmt.Sprintf("shard_%d/trace-cells", i))
 		rowLimit = max(rowLimit, log2ceil(tallestHeight))
 	})
+	// Sanity check for tracing failures
+	if len(errs) > 0 {
+		b.Fatalf("tracing failed: %v", errors.Join(errs...))
+	}
+	//
 	b.ReportMetric(float64(numShards), "shards")
 	// Deterministic extrapolation to the cross-zkVM workload: the guest executes
 	// exactly 14+5*N instructions (see FibonacciELF doc), so shard count scales
@@ -134,9 +139,9 @@ func BenchmarkR5Fibonacci(b *testing.B) {
 	step := max(numShards/proveShards, 1)
 	proved := uint(0)
 	for i := uint(0); i < numShards && proved < proveShards; i += step {
-		// FIXME: this forces the ith shard to be retraced --- meaning it will
+		// NOTE: this forces the ith shard to be retraced --- meaning it will
 		// have been traced once during the metric run above, and then again
-		// during the proof run here -- djp
+		// during the proof run here.
 		shard, errs := lazyTrace.Get(i)
 		// sanity check for tracing errors
 		if len(errs) > 0 {
