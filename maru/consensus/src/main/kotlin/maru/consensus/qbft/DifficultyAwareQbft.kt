@@ -19,7 +19,7 @@ import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.DefaultBlockParameter
-import java.lang.Exception
+import org.web3j.protocol.core.methods.response.EthBlock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -52,6 +52,7 @@ class DifficultyAwareQbft(
 
   private var poller: Timer? = null
   private var postTtdProtocol: Protocol? = null
+  private var missingTotalDifficultyReported = false
 
   private fun pollTask() {
     val difficultyAwareQbftConfig = forkSpec.configuration as DifficultyAwareQbftConfig
@@ -73,28 +74,51 @@ class DifficultyAwareQbft(
         return
       }
 
-      val totalDifficulty = latestBlock.totalDifficulty.toLong()
-      log.debug(
-        "Current elBlockNumber={}, totalDifficulty={}, terminalTotalDifficulty={}",
-        latestBlock.number,
-        totalDifficulty,
-        difficultyAwareQbftConfig.terminalTotalDifficulty,
-      )
-
-      if (totalDifficulty >= difficultyAwareQbftConfig.terminalTotalDifficulty.toLong()) {
-        log.info("TTD reached at elBlockNumber={}. Transitioning to post-TTD protocol.", latestBlock.number)
-        val postTtdForkSpec =
-          ForkSpec(
-            timestampSeconds = forkSpec.timestampSeconds,
-            blockTimeSeconds = forkSpec.blockTimeSeconds,
-            configuration = difficultyAwareQbftConfig.postTtdConfig,
-          )
-        transitionToPostTtdProtocol(postTtdForkSpec)
-        stopPoller()
+      if (!isTerminalConditionReached(latestBlock, difficultyAwareQbftConfig)) {
+        return
       }
+
+      log.info("TTD reached at elBlockNumber={}. Transitioning to post-TTD protocol.", latestBlock.number)
+      val postTtdForkSpec =
+        ForkSpec(
+          timestampSeconds = forkSpec.timestampSeconds,
+          blockTimeSeconds = forkSpec.blockTimeSeconds,
+          configuration = difficultyAwareQbftConfig.postTtdConfig,
+        )
+      transitionToPostTtdProtocol(postTtdForkSpec)
+      stopPoller()
     } catch (e: Exception) {
       log.error("Error during EL block polling", e)
     }
+  }
+
+  private fun isTerminalConditionReached(
+    latestBlock: EthBlock.Block,
+    config: DifficultyAwareQbftConfig,
+  ): Boolean {
+    if (latestBlock.totalDifficultyRaw == null) {
+      // Some EL clients (e.g. Besu >= 26.9.0) no longer return totalDifficulty in eth_getBlockBy* responses,
+      // in which case TTD can never be detected and the transition to post-TTD protocol will not happen.
+      if (!missingTotalDifficultyReported) {
+        log.error(
+          "EL returned no totalDifficulty for elBlockNumber={}; cannot detect TTD={} and transition to " +
+            "post-TTD protocol. The EL client may not support totalDifficulty in eth_getBlockByNumber responses.",
+          latestBlock.number,
+          config.terminalTotalDifficulty,
+        )
+        missingTotalDifficultyReported = true
+      }
+      return false
+    }
+
+    val totalDifficulty = latestBlock.totalDifficulty.toLong()
+    log.debug(
+      "Current elBlockNumber={}, totalDifficulty={}, terminalTotalDifficulty={}",
+      latestBlock.number,
+      totalDifficulty,
+      config.terminalTotalDifficulty,
+    )
+    return totalDifficulty >= config.terminalTotalDifficulty.toLong()
   }
 
   @Synchronized

@@ -26,6 +26,10 @@ import javax.net.ssl.TrustManagerFactory
  * Creates a digest signer from coordinator configuration. The returned signer is independent of
  * web3j transaction types, so downstream distributions can add backends without replacing the
  * coordinator's transaction encoding path.
+ *
+ * A factory registers its own signer types by handling [SignerConfig.registered] when the configured type is
+ * neither a built-in one nor [SignerConfig.SignerType.CUSTOM]; its backend settings are the flat key/value pairs
+ * of the `[..signer.<type>]` table, so the type is configured inline like `web3j` and `web3signer`.
  */
 fun interface SignerFactory {
   fun create(
@@ -48,6 +52,12 @@ object DefaultSignerFactory : SignerFactory {
 
       SignerConfig.SignerType.CUSTOM ->
         error("No signer factory is configured for custom signer '${signerConfig.custom!!.name}'")
+
+      else ->
+        error(
+          "No signer factory is registered for signer type '${signerConfig.type.name}'; " +
+            "built-in types are ${SignerConfig.SignerType.WEB3J.name} and ${SignerConfig.SignerType.WEB3SIGNER.name}",
+        )
     }
 }
 

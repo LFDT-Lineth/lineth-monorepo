@@ -1,6 +1,8 @@
 ##
-# Smart contract error codes from:
-# https://www.notion.so/consensys/Smart-Contracts-Error-Code-Registry-bb4bd68f8ddf4b0ba90000d1136e42ef
+# Smart contract error selectors (4-byte revert selector -> error name), bundled with the coordinator.
+# Generated from the contract ABIs with `contracts/scripts/operational/getSmartContractErrorsFromABI.ts`
+# (see the ABI artifacts referenced in the sections below).
+# Operators can add/override entries with the optional `--smart-contract-errors <FILE>` CLI option.
 ##
 
 [smart-contract-errors]
@@ -50,7 +52,7 @@
 
 # Finalization (forced transaction integration)
 # with bytes32 included.
-"d35bb1d1" = "FinalShnarfNotSubmitted" 
+"d35bb1d1" = "FinalShnarfNotSubmitted"
 "ec4f874b" = "AddressIsNotFiltered"
 "b90e2e84" = "FinalizationDataMissingForcedTransaction"
 "eca429d2" = "MissingRollingHashForForcedTransactionNumber"

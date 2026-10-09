@@ -84,10 +84,11 @@ data class GasPriceCapTimeOfDayMultipliersConfigFileToml(
 
 data class SmartContractErrorCodesConfigFileToml(
   @param:ConfigDoc(
-    description = "Mapping of Lineth smart-contract revert error codes to human-readable messages, " +
-      "used to decode on-chain rejection reasons.",
+    description = "Optional (override file only): mapping of Lineth smart-contract revert error codes to " +
+      "human-readable messages, merged over the mapping bundled in the coordinator jar " +
+      "(entries in this file win). Used to decode on-chain rejection reasons.",
   )
-  val smartContractErrors: Map<String, String>,
+  val smartContractErrors: Map<String, String> = emptyMap(),
 )
 
 data class CoordinatorConfigToml(
