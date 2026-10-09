@@ -90,9 +90,7 @@ data class SignerConfig(
   }
 
   /** Settings of a registered signer type: the flat key/value pairs of the `[..signer.<type>]` table. */
-  data class RegisteredConfig(val type: SignerType, val settings: Map<String, String>) {
-    override fun toString(): String = "RegisteredConfig(type=$type, settings=${settings.keys})"
-  }
+  data class RegisteredConfig(val type: SignerType, val settings: Map<String, Masked>)
 
   data class CustomConfig(val name: String) {
     init {

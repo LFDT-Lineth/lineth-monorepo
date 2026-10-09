@@ -1,5 +1,6 @@
 package lineth.coordinator.config.v2
 
+import com.sksamuel.hoplite.Secret
 import lineth.coordinator.config.v2.toml.ProverToml
 import lineth.coordinator.config.v2.toml.loadConfigs
 import lineth.coordinator.config.v2.toml.parseConfig
@@ -56,9 +57,9 @@ class PluggableSignerAndTransportConfigTest {
 
     val blob = configs.l1Submission.blob.signer
     assertThat(blob.type).isEqualTo(SignerConfig.SignerType("kms"))
-    assertThat(blob.registered!!.settings).isEqualTo(mapOf("key-id" to "abc", "region" to "eu-west-1"))
-    assertThat(configs.l1Submission.aggregation.signer.registered!!.settings).isEqualTo(mapOf("slot" to "3"))
-    assertThat(configs.messageAnchoring!!.signer.registered!!.settings).isEqualTo(mapOf("key-id" to "def"))
+    assertThat(blob.registered!!.settings).isEqualTo(mapOf("key-id" to Secret("abc"), "region" to Secret("eu-west-1")))
+    assertThat(configs.l1Submission.aggregation.signer.registered!!.settings).isEqualTo(mapOf("slot" to Secret("3")))
+    assertThat(configs.messageAnchoring!!.signer.registered!!.settings).isEqualTo(mapOf("key-id" to Secret("def")))
   }
 
   @Test
@@ -68,7 +69,7 @@ class PluggableSignerAndTransportConfigTest {
     val overriding = override("[message-anchoring.signer.kms]\nkey-id = \"b\"\n")
 
     assertThat(load(declaring, overriding).messageAnchoring!!.signer.registered!!.settings)
-      .isEqualTo(mapOf("key-id" to "b"))
+      .isEqualTo(mapOf("key-id" to Secret("b")))
   }
 
   @Test

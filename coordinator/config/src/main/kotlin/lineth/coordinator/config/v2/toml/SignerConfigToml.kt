@@ -29,7 +29,7 @@ data class SignerConfigToml(
     description = "Settings of registered signer types, keyed by type then by setting name. Not written directly: " +
       "the loader collects the `signer.<type>` tables into it. Only the table of the configured type is used.",
   )
-  val registeredSettings: Map<String, Map<String, String>> = emptyMap(),
+  val registeredSettings: Map<String, Map<String, Masked>> = emptyMap(),
 ) {
   init {
     when {
