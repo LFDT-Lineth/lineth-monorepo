@@ -275,7 +275,7 @@ trust-store-path = "/tls-files/web3signer-truststore.p12"
 trust-store-password = "changeit"
 
 [forced-transactions]
-disabled = false
+disabled = true
 l1-highest-block-tag = "LATEST"
 processing-tick-interval = "PT5S"
 processing-delay = "PT0S"
@@ -337,7 +337,7 @@ port=5432
 username = "postgres"
 password = "postgres"
 schema = "linea_coordinator"
-schemaVersion = 5
+schema-version = 4
 read-pool-size = 10
 read-pipelining-limit = 10
 transactional-pool-size = 10

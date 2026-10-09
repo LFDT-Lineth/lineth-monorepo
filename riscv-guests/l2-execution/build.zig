@@ -10,10 +10,9 @@ pub fn build(b: *std.Build) void {
     // Keep `-Doptimize` exposed to dependency consumers and default to ReleaseSmall.
     const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseSmall)") orelse .ReleaseSmall;
 
-    // Keccak provider: standard zig keccak (std.crypto) by default; the
-    // arithmetization keccak wrapper (prover-accelerated custom op) when opted in
-    // with -Dkeccak-accel=true. Read by zkvm_provide.zig at comptime.
-    const keccak_accel = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: standard)") orelse false;
+    // Keccak provider: the arithmetization wrapper (prover-accelerated custom op) by default;
+    // -Dkeccak-accel=false selects standard zig keccak. Read by zkvm_provide.zig at comptime.
+    const keccak_accel = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: accelerated)") orelse true;
     const execution_specs_fixtures_link = b.option([]const u8, "execution-specs-fixtures-link", "Path where execution-specs zkevm fixtures are exposed") orelse "/tmp/execution-specs-json-fixtures/fixtures";
     const zkc_smoke_input = b.option([]const u8, "zkc-smoke-input", "Extended SSZ input for the ZkC smoke test") orelse "test/testdata/stateless_input.ssz";
     const host_tools = b.option(bool, "host-tools", "Build native test and helper targets") orelse false;
@@ -500,7 +499,9 @@ pub fn build(b: *std.Build) void {
         l2_execution_runner_exe.root_module.addImport("l2_execution_ssz", l2_execution_ssz_mod);
         l2_execution_runner_exe.root_module.addImport("l2_execution_json", l2_execution_json_mod);
         linkNativeCryptoProvider(l2_execution_runner_exe, provide_native_obj, guest_crypto_host_a);
-        b.installArtifact(l2_execution_runner_exe);
+        const install_runner = b.addInstallArtifact(l2_execution_runner_exe, .{});
+        b.getInstallStep().dependOn(&install_runner.step);
+        b.step("install-runner", "Install the native runner for the prover image").dependOn(&install_runner.step);
 
         const run_l2_execution_runner_step = b.step(
             "l2-execution-runner",

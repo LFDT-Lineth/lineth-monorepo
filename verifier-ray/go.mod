@@ -3,8 +3,8 @@ module github.com/consensys/linea-monorepo/verifier-ray
 go 1.25.7
 
 require (
-	github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20260907081205-20e4172711a4
-	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260917073301-d8400aca3cc0
+	github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20260917123943-b75b5ca955d8
+	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20261007154412-5bc08621b0fc
 	github.com/stretchr/testify v1.11.1
 )
 
@@ -29,7 +29,7 @@ require (
 	github.com/segmentio/encoding v0.3.4 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/spf13/cobra v1.10.2 // indirect
-	github.com/spf13/pflag v1.0.9 // indirect
+	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.lsp.dev/jsonrpc2 v0.10.0 // indirect
 	go.lsp.dev/pkg v0.0.0-20210717090340-384b27a52fb2 // indirect

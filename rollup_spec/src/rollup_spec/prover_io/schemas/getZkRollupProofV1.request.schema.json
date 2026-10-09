@@ -2,15 +2,17 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://linea.build/schemas/getZkRollupProofV1.request.schema.json",
   "title": "getZkRollupProof V1 request",
-  "description": "Coordinator -> prover rollup proof request. The shared, versioned contract for the rollup guest input (RollupProofPrivateInput): a {programVk, proofRequest} envelope embedding the l2-execution proofs it recursively verifies.",
+  "description": "Coordinator -> prover rollup proof request. The shared, versioned contract for the rollup guest input (RollupProofPrivateInput): a {guestProgramId, provingSystem, proofRequest} envelope embedding the l2-execution proofs it recursively verifies.",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "programVk",
+    "guestProgramId",
+    "provingSystem",
     "proofRequest"
   ],
   "properties": {
-    "programVk": { "$ref": "#/$defs/hash32" },
+    "guestProgramId": { "$ref": "#/$defs/hash32" },
+    "provingSystem": { "type": "string", "minLength": 1 },
     "metadata": { "$ref": "#/$defs/metadata" },
     "proofRequest": {
       "type": "object",
@@ -71,7 +73,7 @@
           "$ref": "#/$defs/hash32"
         },
         "startOffset": {
-          "description": "Start position in unpacked blob payload bytes. 0 means a chunk boundary; a positive position inside a shared blob requires boundaryPrevDataRollingHash.",
+          "description": "Start position in unpacked blob payload bytes. 0 means a fully consumed chunk boundary; a positive position inside a shared blob requires boundaryPrevDataRollingHash.",
           "$ref": "#/$defs/offset"
         },
         "boundaryPrevDataRollingHash": {
@@ -127,7 +129,7 @@
         "endBlockHash",
         "endBlockNumber",
         "endBlockTimestamp",
-        "l2L1MessagesHash",
+        "l2L1Messages",
         "parentL1L2BridgeRollingHash",
         "parentL1L2BridgeRollingHashMessageNumber",
         "endL1L2BridgeRollingHash",
@@ -138,14 +140,16 @@
         "endFtxRollingHash",
         "endProcessedFtxNumber",
         "filteredAddressesHash",
-        "txFromsHash"
+        "txFromsHash",
+        "blockCount",
+        "l2MessagingBlocksOffsets"
       ],
       "properties": {
         "parentBlockHash": { "$ref": "#/$defs/hash32" },
         "endBlockHash": { "$ref": "#/$defs/hash32" },
         "endBlockNumber": { "$ref": "#/$defs/uint" },
         "endBlockTimestamp": { "$ref": "#/$defs/uint" },
-        "l2L1MessagesHash": { "$ref": "#/$defs/hash32" },
+        "l2L1Messages": { "type": "array", "items": { "$ref": "#/$defs/hash32" } },
         "parentL1L2BridgeRollingHash": { "$ref": "#/$defs/hash32" },
         "parentL1L2BridgeRollingHashMessageNumber": { "$ref": "#/$defs/uint" },
         "endL1L2BridgeRollingHash": { "$ref": "#/$defs/hash32" },
@@ -156,7 +160,9 @@
         "endFtxRollingHash": { "$ref": "#/$defs/hash32" },
         "endProcessedFtxNumber": { "$ref": "#/$defs/uint" },
         "filteredAddressesHash": { "$ref": "#/$defs/hash32" },
-        "txFromsHash": { "$ref": "#/$defs/hash32" }
+        "txFromsHash": { "$ref": "#/$defs/hash32" },
+        "blockCount": { "$ref": "#/$defs/uint" },
+        "l2MessagingBlocksOffsets": { "type": "array", "items": { "type": "integer", "minimum": 1, "maximum": 65535 } }
       }
     },
     "l2ExecutionProof": {
@@ -166,8 +172,6 @@
         "proof",
         "startBlockNumber",
         "publicInputs",
-        "l2L1Messages",
-        "txFroms",
         "filteredAddresses",
         "programVk"
       ],
@@ -175,8 +179,6 @@
         "proof": { "$ref": "#/$defs/hex" },
         "startBlockNumber": { "$ref": "#/$defs/uint" },
         "publicInputs": { "$ref": "#/$defs/l2ExecutionPublicInputs" },
-        "l2L1Messages": { "type": "array", "items": { "$ref": "#/$defs/hash32" } },
-        "txFroms": { "type": "array", "items": { "$ref": "#/$defs/address" } },
         "filteredAddresses": { "type": "array", "items": { "$ref": "#/$defs/address" } },
         "programVk": { "$ref": "#/$defs/hash32" }
       }

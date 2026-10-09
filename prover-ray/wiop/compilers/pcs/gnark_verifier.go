@@ -21,9 +21,16 @@ func (a *OpeningVerifierAction) CheckGnark(api frontend.API, run *wiop.GnarkRunt
 	if run.PCSOpeningProof == nil {
 		panic("pcs: CheckGnark: the witness carries no PCS opening proof")
 	}
+	// The circuit's FRI layout is structural, while column manifests are
+	// prover-chosen witness data: only all-Present manifests are supported.
+	if !a.c.elisionDisabled {
+		panic("pcs: CheckGnark: requires Compile with CompileOptions{DisableColumnElision: true}")
+	}
 	proof := run.PCSOpeningProof
 	batches := CommittedBatches(run.System)
-	shifts, claims, shapes, zeta := recoverBatchClaimsGnark(run, batches)
+	a.c.assertAllPresentGnark(run, batches)
+	manifests := allPresentManifests(batches)
+	shifts, claims, shapes, zeta := recoverBatchClaimsGnark(run, batches, manifests)
 
 	pcs := newStaticPCS()
 	fs := run.FS()
@@ -38,7 +45,7 @@ func (a *OpeningVerifierAction) CheckGnark(api frontend.API, run *wiop.GnarkRunt
 	foldAlphas = append(foldAlphas, fs.RandomFext())
 
 	fs.UpdateExt(proof.FRIProof.FinalPoly...)
-	queryPositions := fs.RandomManyIntegers(int(pcs.Params.NumQueries), effectiveNWith(staticSizeOf, batches))
+	queryPositions := fs.RandomManyIntegers(int(pcs.Params.NumQueries), effectiveNWith(staticSizeOf, batches, manifests))
 
 	pcs.VerifyGnark(api, fri.GnarkVerifyInputs{
 		Roots:          a.c.collectRootsGnark(run, batches),
@@ -73,7 +80,7 @@ func (c *compiled) collectRootsGnark(run *wiop.GnarkRuntime, batches []BatchRef)
 // ones; the claimed values are proof cells, and the consistency checks the
 // native version performs by comparison (shared evaluation point, duplicate
 // openings) become equality constraints.
-func recoverBatchClaimsGnark(run *wiop.GnarkRuntime, batches []BatchRef) (
+func recoverBatchClaimsGnark(run *wiop.GnarkRuntime, batches []BatchRef, manifests []ColumnManifest) (
 	[]fri.BatchShifts,
 	[]fri.GnarkBatchClaimedValues,
 	[]fri.Shape,
@@ -93,7 +100,7 @@ func recoverBatchClaimsGnark(run *wiop.GnarkRuntime, batches []BatchRef) (
 	)
 
 	for i, b := range batches {
-		layouts[i], shapes[i] = getLayoutWith(b.Round, staticSizeOf)
+		layouts[i], shapes[i] = getLayoutWith(b.Round, staticSizeOf, manifests[i])
 		shifts[i] = initializeBatchShift(shapes[i])
 		claims[i] = initializeGnarkBatchClaims(shapes[i])
 		batchOf[b.Round] = i
@@ -157,4 +164,28 @@ func initializeGnarkBatchClaims(shape fri.Shape) fri.GnarkBatchClaimedValues {
 		}
 	}
 	return batchClaims
+}
+
+// allPresentManifests returns an all-Present manifest for every batch.
+func allPresentManifests(batches []BatchRef) []ColumnManifest {
+	out := make([]ColumnManifest, len(batches))
+	for i, b := range batches {
+		out[i] = allPresentManifest(len(b.Round.Columns))
+	}
+	return out
+}
+
+// assertAllPresentGnark constrains every transported manifest cell to
+// [ManifestPresent], so the circuit's all-Present layout is the one the
+// transcript committed to.
+func (c *compiled) assertAllPresentGnark(run *wiop.GnarkRuntime, batches []BatchRef) {
+	api := run.API()
+	for _, b := range batches {
+		if b.IsPrecomp {
+			continue
+		}
+		for _, cell := range c.manifestCells[b.Round.ID] {
+			api.AssertIsEqualExt(run.GetCellValue(cell), api.ZeroExt())
+		}
+	}
 }

@@ -31,13 +31,13 @@ ZIG_FETCH_FLAGS ?=
 NAME     := evm_execution_guest
 BIN      := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 
+include $(MAKEFILE_DIR)../build_common/release.mk
+
 # Sample fixture input used by exec/debug / zkc-smoke-*
 INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
 
 # Flags forwarded to `zkc exec` by exec / zkc-smoke-exec. Quiet (no per-instruction printf) is zkc's
-# default unless -v/-vv/-vvv raise verbosity. "--fast" skips tracing, the runnability path used while
-# the interpreter does not implement tracing yet. "--check" runs the guest via the interpreter with
-# tracing enabled.
+# default unless -v/-vv/-vvv raise verbosity.
 ZKC_EXEC_FLAGS ?=
 
 # Flags forwarded to `zkc trace` by trace / zkc-smoke-trace.
@@ -50,15 +50,11 @@ EXECUTION_SPECS_FIXTURES_DIR        := $(EXECUTION_SPECS_JSON_FIXTURES_DIR)/fixt
 # If true, generates an objdump of the generated ELF for debugging purposes
 OBJDUMP     ?= false
 
-# If true, build with the arithmetization keccak wrapper (prover-accelerated
-# custom op) instead of the standard zig keccak.
-KECCAK_ACCEL ?= false
-
 # Shared body for zkc-smoke-trace: pass the exact INPUT as the smoke operand.
 # $(1) = zkc makefile target (elf-trace)
 # $(2) = optional extra runner args (e.g. --zkc-flags "...")
 define zkc-smoke-run
-	$(ZIG) build zkc-smoke $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -Dzkc-smoke-input="$(abspath $(INPUT))" $(if $(filter true,$(KECCAK_ACCEL)),-Dkeccak-accel=true) -- \
+	$(ZIG) build zkc-smoke $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -Dzkc-smoke-input="$(abspath $(INPUT))" $(if $(KECCAK_ACCEL),-Dkeccak-accel=$(KECCAK_ACCEL)) -- \
 		--zkc-target "$(1)" \
 		$(2)
 endef
@@ -85,8 +81,8 @@ reference-test: fetch-host
 
 # ZkC twin of reference-test: the corpus logic lives in test/zkc_reference_runner.zig, which runs
 # each block through the guest ELF under zkc (ELF->JSON->zkc exec) instead of in-process. Needs zkc
-# and go on PATH (like exec/debug). ZKC_EXEC_FLAGS picks the `zkc exec` backend (default --fast).
-# Minutes per heavy block; use it to prove the real ELF agrees with the corpus.
+# and go on PATH (like exec/debug). ZKC_EXEC_FLAGS picks the `zkc exec` backend. Minutes per heavy
+# block; use it to prove the real ELF agrees with the corpus.
 reference-test-zkc: fetch-host
 	$(ZIG) build reference-test-zkc $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REFERENCE_ARGS) $(if $(ZKC_EXEC_FLAGS),--zkc-flags "$(ZKC_EXEC_FLAGS)")
 
@@ -114,7 +110,7 @@ clean:
 	rm -rf $(BUILD_CACHE_DIR)
 
 compile:
-	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(filter true,$(KECCAK_ACCEL)),-Dkeccak-accel=true)
+	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(KECCAK_ACCEL),-Dkeccak-accel=$(KECCAK_ACCEL))
 	@if command -v riscv64-unknown-elf-objdump >/dev/null 2>&1; then \
 		if [ "$(OBJDUMP)" = "true" ]; then \
 			echo "\nDisassembling $(BIN)"; \

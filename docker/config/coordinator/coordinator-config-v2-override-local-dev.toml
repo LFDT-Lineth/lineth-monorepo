@@ -45,7 +45,7 @@ l2-highest-block-tag="LATEST"
 anchoring-tick-interval = "PT1S"
 
 [forced-transactions]
-disabled = false
+disabled = true
 processing-batch-size = 10
 sequencer-endpoint = "http://127.0.0.1:8545/"
 
@@ -74,7 +74,7 @@ extra-data-update-endpoint = "http://127.0.0.1:8545/"
 [database]
 hostname = "127.0.0.1"
 port = "5432"
-schema-version = 5
+schema-version = 4
 
 [api]
 observability_port = 9545

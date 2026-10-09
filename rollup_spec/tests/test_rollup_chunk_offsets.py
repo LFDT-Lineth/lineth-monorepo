@@ -5,6 +5,7 @@ from dataclasses import replace
 import pytest
 import zstandard as zstd
 from ethereum.crypto.hash import Hash32, keccak256
+from ethereum.state import Address
 from ethereum_types.numeric import U64
 
 from rollup_spec import rollup
@@ -13,13 +14,13 @@ from rollup_spec.l2_execution import (
     L2ExecutionProofPublicInput,
     VerifiableL2ExecutionProof,
     hash_address_list,
-    hash_digest_list,
 )
 from rollup_spec.rollup import (
     BLOB_PAYLOAD_CAPACITY,
     ChunkWitness,
     ConflationWitness,
     RollupProofPrivateInput,
+    collect_l2_l1_messages,
     pack_blob_payload,
     run_rollup_guest,
 )
@@ -49,15 +50,15 @@ def _calldata(data):
 
 def _input(monkeypatch, chunks, count=1, start_offset=0):
     empty_addresses = hash_address_list([])
-    empty_messages = hash_digest_list([])
+    empty_messages = []
     pi = L2ExecutionProofPublicInput(
         parent_block_hash=ZERO, end_block_hash=ZERO, end_block_number=U64(1),
-        end_block_timestamp=U64(1), l2_l1_messages_hash=empty_messages,
+        end_block_timestamp=U64(1), l2_l1_messages=empty_messages,
         parent_l1_l2_bridge_rolling_hash=ZERO, parent_l1_l2_bridge_rolling_hash_message_number=U64(0),
         end_l1_l2_bridge_rolling_hash=ZERO, end_l1_l2_bridge_rolling_hash_message_number=U64(0),
         dynamic_chain_config_hash=ZERO, parent_ftx_rolling_hash=ZERO, parent_ftx_number=U64(0),
         end_ftx_rolling_hash=ZERO, end_processed_ftx_number=U64(0),
-        filtered_addresses_hash=empty_addresses, tx_froms_hash=empty_addresses,
+        filtered_addresses_hash=empty_addresses, tx_froms_hash=empty_addresses, block_count=1,
     )
     proofs = [VerifiableL2ExecutionProof(
         L2ExecutionProof(replace(pi, end_block_number=U64(i)), U64(i)), ZERO,
@@ -69,7 +70,8 @@ def _input(monkeypatch, chunks, count=1, start_offset=0):
         previous = Hash32(keccak256(ZERO + chunks[0].chunk_hash))
     return RollupProofPrivateInput(
         previous, start_offset, U64(1), [ConflationWitness([b"block"]) for _ in range(count)],
-        chunks, proofs, boundary_prev_data_rolling_hash=ZERO if start_offset else None,
+        chunks, proofs,
+        boundary_prev_data_rolling_hash=ZERO if start_offset else None,
     )
 
 
@@ -103,6 +105,41 @@ def test_calldata_mixed_with_blob_parses_complete_segments(monkeypatch):
     second = _blob(monkeypatch, segment)
     proof = run_rollup_guest(_input(monkeypatch, [first, second], count=2))
     assert proof.public_inputs.end_offset == 0
+
+
+def test_collect_l2_l1_messages_preserves_execution_order():
+    first = [Hash32(i.to_bytes(32, "big")) for i in range(1, 21)]
+    second = [Hash32(i.to_bytes(32, "big")) for i in range(21, 41)]
+    assert collect_l2_l1_messages([first, [], second]) == first + second
+    assert collect_l2_l1_messages([[], []]) == []
+
+
+def test_rollup_binds_sender_hash_to_each_conflation(monkeypatch):
+    sender = Address(bytes([0x23]) * 20)
+    rollup_input = _input(monkeypatch, [_calldata(_segment()), _calldata(_segment())], count=2)
+    calls = iter([0, 1])
+
+    def truncated(blocks, chain_id):
+        froms = [sender] if next(calls) == 1 else []
+        return [type("Block", (), {"block_hash": ZERO, "froms": froms})()], [ZERO]
+
+    monkeypatch.setattr(rollup, "_truncate_conflation", truncated)
+    rollup_input.l2_execution_proofs[1].proof.public_inputs.tx_froms_hash = hash_address_list([sender])
+    run_rollup_guest(rollup_input)
+
+
+def test_rollup_rejects_sender_hash_mismatch_for_conflation(monkeypatch):
+    sender = Address(bytes([0x23]) * 20)
+    rollup_input = _input(monkeypatch, [_calldata(_segment()), _calldata(_segment())], count=2)
+    calls = iter([0, 1])
+
+    def truncated(blocks, chain_id):
+        froms = [sender] if next(calls) == 1 else []
+        return [type("Block", (), {"block_hash": ZERO, "froms": froms})()], [ZERO]
+
+    monkeypatch.setattr(rollup, "_truncate_conflation", truncated)
+    with pytest.raises(Exception, match="txFromsHash does not match DA block senders"):
+        run_rollup_guest(rollup_input)
 
 
 def test_calldata_requires_frame_alignment_and_no_trailing_bytes(monkeypatch):

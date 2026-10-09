@@ -6,7 +6,7 @@ sync-mode="FULL"
 host-allowlist=["*"]
 network-id=31648428
 
-target-gas-limit=30000000
+target-gas-limit=200000000
 min-gas-price=1000000
 tx-pool-min-gas-price=0
 max-peers=10

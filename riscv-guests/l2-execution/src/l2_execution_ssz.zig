@@ -3,8 +3,9 @@
 //! Mirrors the Python reference codec's wire format byte-for-byte: a 2-byte
 //! big-endian schema id (0x0002 for the input, 0x0003 for the output)
 //! followed by the SSZ encoding of the containers below. This codec's
-//! `encode`/`decode` byte layout must match the Python reference's
-//! `encode_bytes` exactly (verified by the golden-vector test).
+//! Input `encode`/`decode` byte layout matches the Python reference's
+//! `encode_bytes` exactly (verified by the golden-vector test). The guest's
+//! output carries the plain public inputs and their hash.
 //!
 //! Each payload's `stateless_input_ssz` is carried opaquely — a zero-copy
 //! slice into the input buffer — and never decoded here; that stays the
@@ -16,13 +17,8 @@
 //!   SszL2ExecutionProofPrivateInput:  92 bytes
 //!   SszLineaPayloadInput:              8 bytes
 //!   SszForcedTransactionWitness:      21 bytes
-//!   SszL2ExecutionProofOutput:        32 bytes  (ONLY `keccak256(public_inputs)` — see
-//!     `hashPublicInputs`/`encodeOutput`; `L2ExecutionProofOutput`'s other fields —
-//!     `start_block_number`, `l2_l1_messages`, `tx_froms`, `filtered_addresses` — are off-chain/
-//!     native-tooling data, never part of this wire format)
-//!   SszL2ExecutionProofPublicInput:  368 bytes  (16 fields, all fixed-size) — never written to the
-//!     wire itself; only its hash is (`encodePublicInputsBytes` exists purely for logging/off-chain
-//!     visibility, e.g. the guest's `zkvm_log` call).
+//!   SszL2ExecutionProofOutput:       400 bytes  (public inputs(368) + keccak256(public inputs)(32))
+//!   SszL2ExecutionProofPublicInput:  368 bytes  (16 fields, all fixed-size)
 
 const std = @import("std");
 const guest_common = @import("guest_common");
@@ -262,9 +258,9 @@ pub fn encodeInput(alloc: std.mem.Allocator, v: L2ExecutionProofPrivateInput) ![
 // ── L2ExecutionProofOutput (the extended guest OUTPUT) ────────────────────────
 // The plain public-input tuple, SSZ-encoded, has no variable fields (368 bytes).
 const PI_FIXED_SIZE: usize = 368;
-// The wire output is ONLY keccak256(public_inputs) — nothing else.
-const OUTPUT_BODY_SIZE: usize = 32;
-/// Total wire-output size: the 0x0003 schema id (2 bytes) + keccak256(public_inputs) (32 bytes).
+// The SSZ output container inlines the fixed-size public inputs, followed by their hash.
+const OUTPUT_BODY_SIZE: usize = PI_FIXED_SIZE + 32;
+/// Total framed output size.
 pub const OUTPUT_SIZE: usize = SCHEMA_ID_SIZE + OUTPUT_BODY_SIZE;
 
 /// Write a 32-byte hash at the cursor and advance it.
@@ -300,18 +296,14 @@ fn encodePublicInputs(out: []u8, pi: L2ExecutionProofPublicInput) void {
     std.debug.assert(pos == PI_FIXED_SIZE);
 }
 
-/// SSZ-encode the plain public-input tuple to its fixed 368-byte wire representation. Exposed for
-/// callers that need the plain tuple outside `encodeOutput`'s hash-only wire output — namely
-/// `hashPublicInputs` below and the guest's pre-hash debug log (`zkvm_log`, see
-/// `evm_execution_guest.zig`).
+/// SSZ-encode the plain public-input tuple to its fixed 368-byte representation.
 pub fn encodePublicInputsBytes(pi: L2ExecutionProofPublicInput) [PI_FIXED_SIZE]u8 {
     var out: [PI_FIXED_SIZE]u8 = undefined;
     encodePublicInputs(&out, pi);
     return out;
 }
 
-/// keccak256 of the SSZ-encoded plain public-input tuple — the single field `encodeOutput` commits
-/// in place of the 16-field tuple itself.
+/// keccak256 of the SSZ-encoded plain public-input tuple.
 pub fn hashPublicInputs(pi: L2ExecutionProofPublicInput) [32]u8 {
     const encoded = encodePublicInputsBytes(pi);
     var out: [32]u8 = undefined;
@@ -319,26 +311,13 @@ pub fn hashPublicInputs(pi: L2ExecutionProofPublicInput) [32]u8 {
     return out;
 }
 
-/// Encode the extended l2-execution guest's ACTUAL wire output: the 0x0003 schema id followed by
-/// ONLY `keccak256(public_inputs)` (see `hashPublicInputs`) — 32 bytes, nothing else. Returns a
-/// fixed-size stack array (no allocator, no error union) since this is the only output shape.
-///
-/// Deliberately NOT zesu's vanilla `Result{out, len, success}` convention (`run.zig`): zesu commits
-/// on failure too, but what it commits is the SSZ hash_tree_root of the WHOLE (untrusted, always
-/// available pre-execution) `NewPayloadRequest` paired with `success=0x00` — a binding commitment
-/// to which specific input was rejected, not to anything execution produced. There is no
-/// input-derived equivalent here that's worth committing on failure: any invalidity is a hard
-/// Zig-error guest rejection (`exit(1)`, nothing written to `write_output`), so `encodeOutput` is
-/// only ever reached after a full, successful `L2ExecutionProofPublicInput` already exists — a
-/// `success` field on this type would be permanently `true` and couldn't mean anything.
-/// `start_block_number` and the `l2_l1_messages`/`tx_froms`/`filtered_addresses` preimages on
-/// `L2ExecutionProofOutput` are NOT part of this wire format; they exist for off-chain/native
-/// tooling only. The plain 16-field
-/// public-input tuple is never written to the wire either; it is only available via
-/// `encodePublicInputsBytes`/`hashPublicInputs`, for logging or off-chain inspection.
+/// Encode the 0x0003 frame containing SSZ(public_inputs) followed by keccak256 of those exact bytes.
+/// Auxiliary preimages on L2ExecutionProofOutput remain available to native tooling.
 pub fn encodeOutput(pi: L2ExecutionProofPublicInput) [OUTPUT_SIZE]u8 {
     var out: [OUTPUT_SIZE]u8 = undefined;
     std.mem.writeInt(u16, out[0..2], OUTPUT_SCHEMA_ID, .big);
-    @memcpy(out[SCHEMA_ID_SIZE..], &hashPublicInputs(pi));
+    const pi_bytes = encodePublicInputsBytes(pi);
+    @memcpy(out[SCHEMA_ID_SIZE..][0..PI_FIXED_SIZE], &pi_bytes);
+    std.crypto.hash.sha3.Keccak256.hash(&pi_bytes, out[SCHEMA_ID_SIZE + PI_FIXED_SIZE ..][0..32], .{});
     return out;
 }

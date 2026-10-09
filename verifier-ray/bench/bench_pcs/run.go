@@ -69,7 +69,7 @@ func main() {
 	// neither.
 	cmd := exec.Command(
 		"go", "-C", arithmetizationDir, "tool", "zkc",
-		"exec", "--fast", "-vvv", r5JSONAbsolute, zkcMainAbsolute,
+		"exec", "-vvv", r5JSONAbsolute, zkcMainAbsolute,
 	)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {

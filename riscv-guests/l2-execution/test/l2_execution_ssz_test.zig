@@ -68,10 +68,8 @@ test "input: encode then decode round-trips every field" {
     }
 }
 
-// `encodeOutput` commits ONLY `keccak256(public_inputs)` — 32 bytes, nothing else — so this asserts
-// internal self-consistency against `hashPublicInputs` directly rather than a byte-exact fixture.
-test "output: encode commits ONLY hashPublicInputs(public_inputs)" {
-    const public_inputs = l2_execution_ssz.L2ExecutionProofPublicInput{
+fn samplePublicInputs() l2_execution_ssz.L2ExecutionProofPublicInput {
+    return .{
         .parent_block_hash = repeat32(0x0a),
         .end_block_hash = repeat32(0x0b),
         .end_block_number = 1000503,
@@ -89,16 +87,24 @@ test "output: encode commits ONLY hashPublicInputs(public_inputs)" {
         .filtered_addresses_hash = repeat32(0x06),
         .tx_froms_hash = repeat32(0x07),
     };
+}
+
+test "output exposes the public inputs followed by their hash" {
+    const public_inputs = samplePublicInputs();
 
     const out = l2_execution_ssz.encodeOutput(public_inputs);
     const encoded = &out;
+    const pi_bytes = l2_execution_ssz.encodePublicInputsBytes(public_inputs);
+    const schema_size = @sizeOf(u16);
+    const pi_end = schema_size + pi_bytes.len;
+    const hash_size = std.crypto.hash.sha3.Keccak256.digest_length;
 
-    // 2(schema) + 32(hash) = 34 bytes total — ONLY the hash, nothing else.
-    try std.testing.expectEqual(@as(usize, 34), encoded.len);
-    try std.testing.expectEqualSlices(u8, &[_]u8{ 0x00, 0x03 }, encoded[0..2]); // OUTPUT_SCHEMA_ID
-
-    const pi_hash = l2_execution_ssz.hashPublicInputs(public_inputs);
-    try std.testing.expectEqualSlices(u8, &pi_hash, encoded[2..34]);
+    try std.testing.expectEqual(schema_size + pi_bytes.len + hash_size, encoded.len);
+    try std.testing.expectEqual(l2_execution_ssz.OUTPUT_SCHEMA_ID, std.mem.readInt(u16, encoded[0..schema_size], .big));
+    try std.testing.expectEqualSlices(u8, &pi_bytes, encoded[schema_size..pi_end]);
+    var pi_hash: [32]u8 = undefined;
+    std.crypto.hash.sha3.Keccak256.hash(encoded[schema_size..pi_end], &pi_hash, .{});
+    try std.testing.expectEqualSlices(u8, &pi_hash, encoded[pi_end..]);
 }
 
 test "input: rejects a body shorter than the fixed head" {

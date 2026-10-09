@@ -73,9 +73,8 @@ fn runL2ExecutionGuest(allocator: std.mem.Allocator, raw_input: []const u8) ![l2
     const decoded = try l2_execution_ssz.decodeInput(allocator, raw_input);
     const result = try l2_execution.runL2Execution(allocator, decoded);
 
-    // Debug visibility for the plain, SSZ-encoded 16-field public-input tuple: `encodeOutput`
-    // below commits only its keccak256 (see `l2_execution_ssz.hashPublicInputs`), so this is the
-    // only place the plain tuple is still observable. `zkvm_log` (zesu's real logging ABI — see
+    // Debug visibility for the plain, SSZ-encoded 16-field public-input tuple, which is also
+    // included in the output alongside its keccak256. `zkvm_log` (zesu's real logging ABI — see
     // zesu/src/zkvm/root.zig — DEFINED as a no-op in `zkvm_provide.zig`, see its doc comment for
     // why) is the standard sink for this; level 0 mirrors zesu's own `std.log`/panic usage.
     const public_inputs_bytes = l2_execution_ssz.encodePublicInputsBytes(result.public_inputs);

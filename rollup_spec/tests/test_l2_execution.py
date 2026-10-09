@@ -12,6 +12,7 @@ Run from the rollup_spec/ directory:  python -m pytest
 
 from pathlib import Path
 
+import pytest
 from ethereum.crypto.hash import Hash32, keccak256
 from ethereum.state import Address
 from ethereum_types.numeric import U64
@@ -139,5 +140,45 @@ def test_run_l2_execution_guest_zero_address_suppresses_bridge_and_messages(monk
     assert int(pi.end_l1_l2_bridge_rolling_hash_message_number) == 0
 
     # L2->L1 message scan skipped despite the matching log present.
-    assert proof.l2_l1_messages == []
-    assert pi.l2_l1_messages_hash == Hash32(keccak256(b""))
+    assert pi.l2_l1_messages == []
+    assert pi.block_count == 1
+    assert pi.l2_messaging_blocks_offsets == []
+
+
+def test_execution_proves_one_offset_for_a_block_with_multiple_message_logs(monkeypatch) -> None:
+    execution_input = _zero_bridge_input(_golden_vanilla_stateless_input_ssz())
+    message_service = Address(bytes([0x11]) * 20)
+    execution_input.chain_config.l2_message_service_address = message_service
+    messages = [Hash32(bytes([value]) * 32) for value in (0xAB, 0xCD)]
+    logs = [
+        Log(message_service, (BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0, ZERO_HASH, ZERO_HASH, message), b"")
+        for message in messages
+    ]
+    monkeypatch.setattr(l2_execution, "execute_stateless_input", lambda _: StatelessExecutionResult(
+        pre_state_root=Hash32(bytes([0x11]) * 32),
+        post_state_root=Hash32(bytes([0x22]) * 32),
+        block_logs=logs,
+    ))
+    monkeypatch.setattr(l2_execution, "parse_payload_transaction_rlps", lambda _: [])
+    monkeypatch.setattr(l2_execution, "read_l1l2_bridge_state", lambda *_: (ZERO_HASH, U64(0)))
+
+    proof = run_l2_execution_guest(execution_input)
+    assert proof.public_inputs.l2_l1_messages == messages
+    assert proof.public_inputs.block_count == 1
+    assert proof.public_inputs.l2_messaging_blocks_offsets == [1]
+
+
+def test_execution_rejects_message_log_missing_hash_topic(monkeypatch) -> None:
+    execution_input = _zero_bridge_input(_golden_vanilla_stateless_input_ssz())
+    message_service = Address(bytes([0x11]) * 20)
+    execution_input.chain_config.l2_message_service_address = message_service
+    log = Log(message_service, (BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0,), b"")
+    monkeypatch.setattr(l2_execution, "execute_stateless_input", lambda _: StatelessExecutionResult(
+        pre_state_root=Hash32(bytes([0x11]) * 32),
+        post_state_root=Hash32(bytes([0x22]) * 32),
+        block_logs=[log],
+    ))
+    monkeypatch.setattr(l2_execution, "parse_payload_transaction_rlps", lambda _: [])
+    monkeypatch.setattr(l2_execution, "read_l1l2_bridge_state", lambda *_: (ZERO_HASH, U64(0)))
+    with pytest.raises(Exception, match="missing its message hash topic"):
+        run_l2_execution_guest(execution_input)

@@ -27,17 +27,17 @@ internal class L2ExecutionProofRequestDtoMapper(
     val payloads = request.executions.map { executionInfo ->
       val statelessInputDto = StatelessInputDto(
         newPayloadRequest = NewPayloadRequestDto(
-          executionPayload = executionInfo.executionPayload.fromDomainObject(),
+          executionPayload = executionInfo.executionPayload.toDto(),
           versionedHashes = emptyList(),
           parentBeaconBlockRoot = executionInfo.parentBeaconBlockRoot.encodeHex(),
           executionRequests = executionInfo.executionRequests.map { it.encodeHex() },
         ),
-        executionWitness = executionInfo.executionWitness.fromDomainObject(),
+        executionWitness = executionInfo.executionWitness.toDto(),
       )
       PayloadInputDto(
         statelessInput = statelessInputDto,
         rollupExtension = RollupExtensionDto(
-          forcedTransactions = executionInfo.forcedTransactions.map { it.fromDomainObject() },
+          forcedTransactions = executionInfo.forcedTransactions.map { it.toDto() },
         ),
       )
     }

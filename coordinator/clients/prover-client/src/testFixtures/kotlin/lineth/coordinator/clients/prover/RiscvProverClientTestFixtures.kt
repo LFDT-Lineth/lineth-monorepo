@@ -171,7 +171,6 @@ object RiscvProverClientTestFixtures {
     startBlockNumber: Long,
     endBlockNumber: Long,
   ): L2ExecutionProofResponseDto = L2ExecutionProofResponseDto(
-    proverVersion = PROVER_VERSION,
     startBlockNumber = startBlockNumber,
     proof = "0xabcd",
     publicInputs = l2ExecutionProofPublicInputsDto(endBlockNumber),
@@ -210,7 +209,6 @@ object RiscvProverClientTestFixtures {
     startBlockNumber: Long,
     endBlockNumber: Long,
   ): RollupProofResponseDto = RollupProofResponseDto(
-    proverVersion = PROVER_VERSION,
     startBlockNumber = startBlockNumber,
     proof = "0xabcd",
     publicInputs = rollupProofPublicInputsDto(endBlockNumber),

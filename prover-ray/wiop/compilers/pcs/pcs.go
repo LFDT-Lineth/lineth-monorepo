@@ -119,17 +119,17 @@ func newStaticPCS() *fri.PCS {
 }
 
 // effectiveN is the FRI top-domain size for this proof's witness: the codeword
-// size of the largest committed column. Query positions are drawn from [0, N),
-// so this must match the size the PCS restricts its schedule to (both derive it
-// from the same committed columns).
-func effectiveN(rt *wiop.Runtime, batches []BatchRef) int {
-	return effectiveNWith(runtimeSizeOf(rt), batches)
+// size of the largest committed (Present) column. Query positions are drawn
+// from [0, N), so this must match the size the PCS restricts its schedule to
+// (both derive it from the same committed columns).
+func effectiveN(rt *wiop.Runtime, batches []BatchRef, manifests []ColumnManifest) int {
+	return effectiveNWith(runtimeSizeOf(rt), batches, manifests)
 }
 
-func effectiveNWith(sizeOf moduleSizeFunc, batches []BatchRef) int {
+func effectiveNWith(sizeOf moduleSizeFunc, batches []BatchRef, manifests []ColumnManifest) int {
 	maxSizeIndex := 0
-	for _, b := range batches {
-		if idx := roundMaxSizeIndexWith(b.Round, sizeOf); idx > maxSizeIndex {
+	for i, b := range batches {
+		if idx := roundMaxSizeIndexWith(b.Round, sizeOf, manifests[i]); idx > maxSizeIndex {
 			maxSizeIndex = idx
 		}
 	}
@@ -167,6 +167,15 @@ type compiled struct {
 	// schedule, so the root is stable across proof runs.
 	precomputed     *fri.CommitterState
 	precomputedRoot field.Octuplet
+	// manifestCells maps each committed interactive round ID to its column
+	// manifest cells, one per column in round.Columns order (see manifest.go).
+	manifestCells map[int][]*wiop.Cell
+	// colShifts maps each committed column to the raw shifting offsets it is
+	// opened at (from every LagrangeEval), collected once at compile time. The
+	// alias rule normalizes them at the runtime padded size.
+	colShifts map[wiop.ObjectID][]int
+	// elisionDisabled forces every manifest to all-Present.
+	elisionDisabled bool
 }
 
 // BatchRef identifies one FRI batch: an interactive round, or the precomputed
@@ -176,35 +185,62 @@ type BatchRef struct {
 	IsPrecomp bool
 }
 
+// CompileOptions tunes [Compile].
+type CompileOptions struct {
+	// DisableColumnElision commits every column as Present. The manifest cells
+	// are still declared and transported (all zero), so the protocol shape does
+	// not depend on the option; only the committed rows do. Useful to measure
+	// the effect of elision or to isolate a regression.
+	DisableColumnElision bool
+}
+
 // Compile wires the polynomial-commitment scheme onto sys. It must run last, after
 // every arithmetization pass has registered its columns and [wiop.LagrangeEval]
 // queries. It is a no-op when no columns are committed.
-func Compile(sys *wiop.System) {
+func Compile(sys *wiop.System, opts ...CompileOptions) {
 	batches := CommittedBatches(sys)
 	if len(batches) == 0 {
 		return
 	}
 
-	c := &compiled{}
+	c := &compiled{
+		manifestCells: make(map[int][]*wiop.Cell),
+		colShifts:     collectColumnShifts(sys),
+	}
+	if len(opts) > 1 {
+		panic(fmt.Errorf("pcs: Compile accepts at most one CompileOptions, got %d", len(opts)))
+	}
+	if len(opts) > 0 {
+		c.elisionDisabled = opts[0].DisableColumnElision
+	}
 
 	// Commit the static precomputed round once, if it owns columns. A throwaway
 	// runtime exposes the (static) precomputed assignments; its encoders are a
 	// prefix of the static schedule so the root is stable across proof runs.
+	// The precomputed round is never elided.
 	if len(sys.PrecomputedRound.Columns) > 0 {
-		st := commitToRound(1<<FRILogInverseRate, &sys.PrecomputedRound.Round, wiop.NewRuntime(sys))
+		pr := &sys.PrecomputedRound.Round
+		st := commitToRound(1<<FRILogInverseRate, pr, wiop.NewRuntime(sys), allPresentManifest(len(pr.Columns)))
 		c.precomputed = st
 		c.precomputedRoot = st.Tree.Root()
 		sys.PrecomputedCommitment = c.precomputedRoot
 	}
 
 	// For each committed interactive round: flag the round as carrying a
-	// commitment (so AdvanceRound absorbs the root), and register the commit
-	// action that computes that root at prove time.
+	// commitment (so AdvanceRound absorbs the root), declare its column manifest
+	// cells, and register the commit action that computes the manifest and the
+	// root at prove time.
+	ctx := sys.Context.Childf("pcs")
 	for _, b := range batches {
 		if b.IsPrecomp {
 			continue
 		}
 		b.Round.HasCommitment = true
+		cells := make([]*wiop.Cell, len(b.Round.Columns))
+		for i := range cells {
+			cells[i] = b.Round.NewCell(ctx.Childf("manifest-r%d-c%d", b.Round.ID, i), false)
+		}
+		c.manifestCells[b.Round.ID] = cells
 		b.Round.RegisterAction(&commitRoundAction{c: c, round: b.Round})
 	}
 
@@ -232,12 +268,27 @@ func CommittedBatches(sys *wiop.System) []BatchRef {
 	return refs
 }
 
+// collectColumnShifts gathers, per committed column, the raw shifting offsets of
+// every LagrangeEval opening of it. Compile runs last, so the LagrangeEval set
+// is complete.
+func collectColumnShifts(sys *wiop.System) map[wiop.ObjectID][]int {
+	out := make(map[wiop.ObjectID][]int)
+	for _, eval := range sys.LagrangeEvals {
+		for _, cv := range eval.Polynomials {
+			id := cv.Column.Context.ID
+			out[id] = append(out[id], cv.ShiftingOffset)
+		}
+	}
+	return out
+}
+
 // =============================================================================
 // Actions
 // =============================================================================
 
-// commitRoundAction FRI-commits one interactive round's columns and records the
-// Merkle root in the runtime (for the Fiat-Shamir transcript) and the full
+// commitRoundAction decides one interactive round's column manifest, writes it
+// into the round's manifest cells, FRI-commits the Present columns and records
+// the Merkle root in the runtime (for the Fiat-Shamir transcript) and the full
 // committed state in the runtime state bag (for the opening action).
 type commitRoundAction struct {
 	c     *compiled
@@ -245,7 +296,13 @@ type commitRoundAction struct {
 }
 
 func (a *commitRoundAction) Run(rt *wiop.Runtime) {
-	st := commitToRound(1<<FRILogInverseRate, a.round, rt)
+	vectors := materializeColumns(a.round, rt)
+	manifest := a.c.buildManifest(a.round, vectors)
+	if err := a.c.validateManifest(a.round, rt, manifest); err != nil {
+		panic(fmt.Errorf("pcs: commit: %w", err))
+	}
+	a.c.assignManifest(a.round, rt, manifest)
+	st := commitVectors(1<<FRILogInverseRate, vectors, manifest)
 	rt.Commitments[a.round.ID] = st.Tree.Root()
 	rt.SetState(committedStateKey(a.round.ID), st)
 }
@@ -274,7 +331,14 @@ func (a *OpeningVerifierAction) Check(rt *wiop.Runtime) error {
 // PCS, seed the DEEP quotient with alpha_DEEP, fold, and open the queries.
 func (c *compiled) open(rt *wiop.Runtime) fri.OpeningProof {
 	batches := CommittedBatches(rt.System)
-	batchShifts, batchClaims, _, evalPoint := RecoverBatchClaims(rt, batches)
+	manifests, err := c.readManifests(rt, batches)
+	if err != nil {
+		panic(fmt.Errorf("pcs: open: %w", err))
+	}
+	batchShifts, batchClaims, _, evalPoint, err := RecoverBatchClaims(rt, batches, manifests)
+	if err != nil {
+		panic(fmt.Errorf("pcs: open: %w", err))
+	}
 
 	pcs := newStaticPCS()
 	states := c.collectCommittedStates(rt, batches)
@@ -308,7 +372,7 @@ func (c *compiled) open(rt *wiop.Runtime) fri.OpeningProof {
 	}
 
 	fs.UpdateExt(state.FinalPoly...)
-	positions := fs.RandomManyIntegers(int(pcs.Params.NumQueries), effectiveN(rt, batches))
+	positions := fs.RandomManyIntegers(int(pcs.Params.NumQueries), effectiveN(rt, batches, manifests))
 	return pcs.Open(state, positions)
 }
 
@@ -316,7 +380,14 @@ func (c *compiled) open(rt *wiop.Runtime) fri.OpeningProof {
 // checks the opening proof against the transported commitments.
 func (c *compiled) verify(rt *wiop.Runtime, proof fri.OpeningProof) error {
 	batches := CommittedBatches(rt.System)
-	batchShifts, batchClaims, shapes, evalPoint := RecoverBatchClaims(rt, batches)
+	manifests, err := c.readManifests(rt, batches)
+	if err != nil {
+		return err
+	}
+	batchShifts, batchClaims, shapes, evalPoint, err := RecoverBatchClaims(rt, batches, manifests)
+	if err != nil {
+		return err
+	}
 
 	pcs := newStaticPCS()
 
@@ -334,7 +405,7 @@ func (c *compiled) verify(rt *wiop.Runtime, proof fri.OpeningProof) error {
 	foldAlphas = append(foldAlphas, fs.RandomFext())
 
 	fs.UpdateExt(proof.FRIProof.FinalPoly...)
-	queryPositions := fs.RandomManyIntegers(int(pcs.Params.NumQueries), effectiveN(rt, batches))
+	queryPositions := fs.RandomManyIntegers(int(pcs.Params.NumQueries), effectiveN(rt, batches, manifests))
 
 	return pcs.Verify(fri.VerifyInputs{
 		Roots:         c.collectRoots(rt, batches),
@@ -407,52 +478,54 @@ func buildEncoders(inverseRate, maxSizeIndex uint8) []*fri.RSEncoder {
 }
 
 // roundMaxSizeIndexWith returns the largest log2 padded size among a round's
-// columns, or 0 when the round owns no columns.
-func roundMaxSizeIndexWith(round *wiop.Round, sizeOf moduleSizeFunc) int {
+// Present columns, or 0 when the round owns no committed columns.
+func roundMaxSizeIndexWith(round *wiop.Round, sizeOf moduleSizeFunc, manifest ColumnManifest) int {
 	maxSizeIndex := 0
-	for _, col := range round.Columns {
-		size := utils.NextPowerOfTwo(sizeOf(col.Module))
-		if idx := utils.Log2Ceil(size); idx > maxSizeIndex {
+	for i, col := range round.Columns {
+		if manifest[i] != ManifestPresent {
+			continue
+		}
+		if idx := columnSizeIndexWith(col, sizeOf); idx > maxSizeIndex {
 			maxSizeIndex = idx
 		}
 	}
 	return maxSizeIndex
 }
 
-// commitToRound sorts a round's columns into a [fri.MultiSizeTable] by padded
-// size (base then extension within each size, in column-declaration order) and
-// FRI-commits it with a freshly-built per-round encoder schedule (a prefix of
-// the global schedule). The column ordering matches [GetLayout] exactly.
-func commitToRound(inverseRate uint8, round *wiop.Round, rt *wiop.Runtime) *fri.CommitterState {
+// commitToRound materializes a round's columns and commits the Present ones
+// (see [commitVectors]).
+func commitToRound(
+	inverseRate uint8,
+	round *wiop.Round,
+	rt *wiop.Runtime,
+	manifest ColumnManifest,
+) *fri.CommitterState {
+	return commitVectors(inverseRate, materializeColumns(round, rt), manifest)
+}
+
+// commitVectors sorts a round's Present columns into a [fri.MultiSizeTable] by
+// padded size (base then extension within each size, in column-declaration
+// order) and FRI-commits it with a freshly-built per-round encoder schedule (a
+// prefix of the global schedule). The column ordering matches [GetLayout]
+// exactly; elided columns are absent from the committed rows.
+func commitVectors(inverseRate uint8, vectors []paddedColumn, manifest ColumnManifest) *fri.CommitterState {
 
 	var (
-		cols          = round.Columns
 		sortedColumns = make(fri.MultiSizeTable, 64)
 		maxSizeIndex  = 0
 	)
 
-	for _, col := range cols {
-
-		size := utils.NextPowerOfTwo(col.Module.RuntimeSize(rt))
-		sizeIndex := utils.Log2Ceil(size)
-		assignment := rt.GetColumnAssignment(col)
-
-		if size != 1<<sizeIndex {
-			panic("wiop: only powers of 2 are supported")
+	for i := range vectors {
+		if manifest[i] != ManifestPresent {
+			continue
 		}
+		v := &vectors[i]
+		maxSizeIndex = max(maxSizeIndex, v.sizeIndex)
 
-		maxSizeIndex = max(maxSizeIndex, sizeIndex)
-
-		if col.IsExtension {
-			sortedColumns[sizeIndex].Ext = append(
-				sortedColumns[sizeIndex].Ext,
-				writeDownVectorExt(assignment, size, col.Module.Padding),
-			)
+		if v.isExt {
+			sortedColumns[v.sizeIndex].Ext = append(sortedColumns[v.sizeIndex].Ext, v.ext)
 		} else {
-			sortedColumns[sizeIndex].Base = append(
-				sortedColumns[sizeIndex].Base,
-				writeDownVectorBase(assignment, size, col.Module.Padding),
-			)
+			sortedColumns[v.sizeIndex].Base = append(sortedColumns[v.sizeIndex].Base, v.base)
 		}
 	}
 	if maxSizeIndex > 255 {
@@ -462,15 +535,24 @@ func commitToRound(inverseRate uint8, round *wiop.Round, rt *wiop.Runtime) *fri.
 	return &committerState
 }
 
-// GetLayout maps each of a round's columns to its [ColumnLocation] and returns
-// the round's [fri.Shape] (per-size base/extension widths). The shape length is
-// maxSizeIndex+1, matching the committed table produced by [commitToRound], and
-// positions are assigned in column-declaration order so both agree.
-func GetLayout(round *wiop.Round, rt *wiop.Runtime) (map[wiop.ObjectID]ColumnLocation, fri.Shape) {
-	return getLayoutWith(round, runtimeSizeOf(rt))
+// GetLayout maps each of a round's Present columns to its [ColumnLocation] and
+// returns the round's [fri.Shape] (per-size base/extension widths). The shape
+// length is maxSizeIndex+1 over the Present columns, matching the committed
+// table produced by [commitVectors], and positions are assigned in
+// column-declaration order so both agree. Elided columns have no location.
+func GetLayout(
+	round *wiop.Round,
+	rt *wiop.Runtime,
+	manifest ColumnManifest,
+) (map[wiop.ObjectID]ColumnLocation, fri.Shape) {
+	return getLayoutWith(round, runtimeSizeOf(rt), manifest)
 }
 
-func getLayoutWith(round *wiop.Round, sizeOf moduleSizeFunc) (map[wiop.ObjectID]ColumnLocation, fri.Shape) {
+func getLayoutWith(
+	round *wiop.Round,
+	sizeOf moduleSizeFunc,
+	manifest ColumnManifest,
+) (map[wiop.ObjectID]ColumnLocation, fri.Shape) {
 
 	var (
 		cols   = round.Columns
@@ -478,14 +560,12 @@ func getLayoutWith(round *wiop.Round, sizeOf moduleSizeFunc) (map[wiop.ObjectID]
 		shape  = make(fri.Shape, 0, 8)
 	)
 
-	for _, col := range cols {
-
-		size := utils.NextPowerOfTwo(sizeOf(col.Module))
-		sizeIndex := utils.Log2Ceil(size)
-
-		if size != 1<<sizeIndex {
-			panic("wiop: only powers of 2 are supported")
+	for i, col := range cols {
+		if manifest[i] != ManifestPresent {
+			continue
 		}
+
+		sizeIndex := columnSizeIndexWith(col, sizeOf)
 
 		for len(shape) <= sizeIndex {
 			shape = append(shape, fri.SizedShape{})
@@ -520,34 +600,65 @@ type claimKey struct {
 	shift    int
 }
 
+// elidedClaim is one LagrangeEval opening of an elided column, checked after
+// every Present column's schedule has been built.
+type elidedClaim struct {
+	batchIdx int
+	code     uint32
+	rawShift int
+	value    field.Ext
+	path     string
+}
+
 // RecoverBatchClaims walks every [wiop.LagrangeEval] and collects, per batch, the
-// shift schedule and claimed evaluations of each opened column at the (single,
-// shared) evaluation point zeta. Shifts are normalized into [0, size); repeated
-// (column, shift) openings are deduplicated and cross-checked for a consistent
-// claimed value. It returns the per-batch shifts, claims and shapes aligned with
-// batches, plus zeta.
-func RecoverBatchClaims(rt *wiop.Runtime, batches []BatchRef) (
+// shift schedule and claimed evaluations of each opened Present column at the
+// (single, shared) evaluation point zeta. Shifts are normalized into [0, size);
+// repeated (column, shift) openings are deduplicated and cross-checked for a
+// consistent claimed value. It returns the per-batch shifts, claims and shapes
+// aligned with batches, plus zeta.
+//
+// Elided columns (see manifest.go) have no FRI claim. Their claim cells are
+// pinned instead: a Zero column's claims must be zero and an aliased column's
+// claims must equal the target column's claim at the same normalized shift,
+// which must be part of the target's schedule. Any violation, or a malformed
+// manifest, is returned as an error.
+func RecoverBatchClaims(rt *wiop.Runtime, batches []BatchRef, manifests []ColumnManifest) (
 	[]fri.BatchShifts,
 	[]fri.BatchClaimedValues,
 	[]fri.Shape,
 	field.Ext,
+	error,
 ) {
 	var (
 		sys       = rt.System
 		layouts   = make([]map[wiop.ObjectID]ColumnLocation, len(batches))
+		colIdx    = make([]map[wiop.ObjectID]int, len(batches))
 		shapes    = make([]fri.Shape, len(batches))
 		shifts    = make([]fri.BatchShifts, len(batches))
 		claims    = make([]fri.BatchClaimedValues, len(batches))
 		batchOf   = make(map[*wiop.Round]int, len(batches))
 		seen      = make(map[claimKey]field.Ext)
+		elided    []elidedClaim
 		evalPoint *field.Ext
 	)
 
+	if len(manifests) != len(batches) {
+		return nil, nil, nil, field.Ext{}, fmt.Errorf("pcs: %d manifests for %d batches", len(manifests), len(batches))
+	}
+
 	for i, b := range batches {
-		layouts[i], shapes[i] = GetLayout(b.Round, rt)
+		if len(manifests[i]) != len(b.Round.Columns) {
+			return nil, nil, nil, field.Ext{}, fmt.Errorf("pcs: round %d manifest has %d entries for %d columns",
+				b.Round.ID, len(manifests[i]), len(b.Round.Columns))
+		}
+		layouts[i], shapes[i] = GetLayout(b.Round, rt, manifests[i])
 		shifts[i] = initializeBatchShift(shapes[i])
 		claims[i] = initializeBatchClaims(shapes[i])
 		batchOf[b.Round] = i
+		colIdx[i] = make(map[wiop.ObjectID]int, len(b.Round.Columns))
+		for j, col := range b.Round.Columns {
+			colIdx[i][col.Context.ID] = j
+		}
 	}
 
 	for _, eval := range sys.LagrangeEvals {
@@ -569,15 +680,28 @@ func RecoverBatchClaims(rt *wiop.Runtime, batches []BatchRef) (
 					colView.Column.Context.Path()))
 			}
 
+			value := rt.GetCellValue(eval.EvaluationClaims[k]).AsExt()
+			ci := colIdx[batchIdx][colView.Column.Context.ID]
+			if code := manifests[batchIdx][ci]; code != ManifestPresent {
+				elided = append(elided, elidedClaim{
+					batchIdx: batchIdx,
+					code:     code,
+					rawShift: colView.ShiftingOffset,
+					value:    value,
+					path:     colView.Column.Context.Path(),
+				})
+				continue
+			}
+
 			loc := layouts[batchIdx][colView.Column.Context.ID]
 			size := 1 << loc.SizeID
 			shift := ((colView.ShiftingOffset % size) + size) % size
-			value := rt.GetCellValue(eval.EvaluationClaims[k]).AsExt()
 
 			key := claimKey{batchIdx, loc.SizeID, loc.IsExt, loc.Position, shift}
 			if prev, dup := seen[key]; dup {
 				if !prev.Equal(&value) {
-					panic("pcs: inconsistent claimed values for the same column and shift")
+					return nil, nil, nil, field.Ext{}, fmt.Errorf(
+						"pcs: inconsistent claimed values for column %q at shift %d", colView.Column.Context.Path(), shift)
 				}
 				continue
 			}
@@ -599,7 +723,39 @@ func RecoverBatchClaims(rt *wiop.Runtime, batches []BatchRef) (
 		panic("pcs: no LagrangeEval queries to open")
 	}
 
-	return shifts, claims, shapes, *evalPoint
+	// Pin the elided columns' claims against the Present schedule built above.
+	for _, e := range elided {
+		if e.code == ManifestZero {
+			if !e.value.IsZero() {
+				return nil, nil, nil, field.Ext{}, fmt.Errorf(
+					"pcs: column %q is elided as zero but claims a non-zero evaluation", e.path)
+			}
+			continue
+		}
+		target, ok := ManifestAliasTarget(e.code)
+		if !ok {
+			return nil, nil, nil, field.Ext{}, fmt.Errorf("pcs: column %q has invalid manifest code %d", e.path, e.code)
+		}
+		round := batches[e.batchIdx].Round
+		if target >= len(round.Columns) || manifests[e.batchIdx][target] != ManifestPresent {
+			return nil, nil, nil, field.Ext{}, fmt.Errorf("pcs: column %q aliases a column that is not present", e.path)
+		}
+		loc := layouts[e.batchIdx][round.Columns[target].Context.ID]
+		size := 1 << loc.SizeID
+		shift := ((e.rawShift % size) + size) % size
+		key := claimKey{e.batchIdx, loc.SizeID, loc.IsExt, loc.Position, shift}
+		prev, opened := seen[key]
+		if !opened {
+			return nil, nil, nil, field.Ext{}, fmt.Errorf(
+				"pcs: column %q is opened at shift %d but its alias target is not", e.path, shift)
+		}
+		if !prev.Equal(&e.value) {
+			return nil, nil, nil, field.Ext{}, fmt.Errorf(
+				"pcs: column %q claims a different evaluation than its alias target at shift %d", e.path, shift)
+		}
+	}
+
+	return shifts, claims, shapes, *evalPoint, nil
 }
 
 func initializeBatchShift(shape fri.Shape) fri.BatchShifts {

@@ -12,7 +12,7 @@ permissions: {}
 
 jobs:
   get-commit-tag:
-    if: github.event.workflow_run.head_repository.fork == true
+    if: github.event.workflow_run.head_repository.fork == true && github.event.workflow_run.conclusion == 'success'
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     name: get-commit-tag
     permissions: {}

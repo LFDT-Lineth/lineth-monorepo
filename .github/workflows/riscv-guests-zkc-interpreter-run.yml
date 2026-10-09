@@ -2,9 +2,9 @@
 #
 # Builds each guest as a statically-linked rv64im ELF (l2-execution with KECCAK_ACCEL=true — the
 # prover-accelerated custom keccak op, the production proving config), converts it to zkc's JSON
-# input, and executes it under zkc in fast mode (--fast). This gate only needs to prove each guest
-# runs, and the trace job validates the production guest path on every PR and push. The weekly
-# metrics workflow collects the detailed tracing measurements.
+# input, and executes it under zkc in fast mode. This gate only needs to prove each guest runs, and
+# the trace job validates the production guest path on every PR and push. The weekly metrics
+# workflow collects the detailed tracing measurements.
 # This is the RISC-V/ZKC counterpart to the host-machine guest tests, which run the
 # guest logic natively (no RISC-V, no zkc). It bridges the riscv-guests/ and arithmetization/ trees —
 # depending on both the guest source AND the interpreter program + ELF->JSON tooling — so it triggers
@@ -187,7 +187,7 @@ jobs:
       - name: Install Go
         uses: ./.github/actions/setup-go
         with:
-          go-version: "1.25.7"
+          go-version: "1.27.1"
           cache-dependency-path: "**/*.sum"
           cache: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
 
@@ -202,7 +202,6 @@ jobs:
           make -C riscv-guests/l2-execution zkc-smoke-external
           ELF=${{ github.workspace }}/riscv-guests/l2-execution/zig-out/evm_execution_guest
           KECCAK_ACCEL=true
-          ZKC_EXEC_FLAGS="--fast"
 
       # The stub guest decodes a freshly-generated sample request and emits the echo/sentinel
       # output. Running it here proves the build -> ELF -> ELF->JSON -> `zkc exec` pipeline
@@ -213,7 +212,6 @@ jobs:
           make -f arithmetization/src/test/Makefile elf-exec
           BIN_EXT=${{ github.workspace }}/riscv-guests/rollup/zig-out/bin/rollup_guest
           IN_BYTES=@${{ github.workspace }}/riscv-guests/rollup/zig-out/sample.request.ssz
-          ZKC_EXEC_FLAGS="--fast"
 
   zkc-interpreter-trace:
     name: l2-execution guest trace in ZKC interpreter (accel)
@@ -235,7 +233,7 @@ jobs:
       - name: Install Go
         uses: ./.github/actions/setup-go
         with:
-          go-version: "1.25.7"
+          go-version: "1.27.1"
           cache-dependency-path: "**/*.sum"
           cache: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
 
@@ -270,7 +268,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: "1.25.7"
+          go-version: "1.27.1"
           cache-dependency-path: "**/*.sum"
 
       # Apply an optional zkc override up front. With no override, go.mod's pinned tool is used.
@@ -282,4 +280,4 @@ jobs:
       - name: Run zkc reference-test
         env:
           REFERENCE_ARGS: ${{ inputs.reference-args }}
-        run: make -C riscv-guests/l2-execution reference-test-zkc KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast"
+        run: make -C riscv-guests/l2-execution reference-test-zkc KECCAK_ACCEL=true

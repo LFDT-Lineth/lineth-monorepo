@@ -19,7 +19,7 @@ ZKC_TESTDATA_SYNC_DST_DIR := zkcdriver/testdata/synced
 # One prover-ray image for all modes; the mode is set per pipeline in the config.
 # DOCKER overridable for rootful/rootless or podman, e.g. DOCKER='sudo docker'.
 DOCKER     ?= docker
-IMAGE_NAME ?= consensys/linea-prover-ray
+IMAGE_NAME ?= consensys/lineth-prover-ray
 IMAGE_TAG  ?= dev
 REPO_ROOT  := $(shell git rev-parse --show-toplevel)
 

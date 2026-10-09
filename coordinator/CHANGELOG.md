@@ -1,4 +1,18 @@
-## [unreleased]
+## [2.0.2] - 2026-10-07
+
+### 🚜 Refactor
+
+- *(coordinator)* Select batches insert query by DB schema version (#4145)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(coordinator)* Make RISC-V rollup prover clients transport-agnostic (#4140)
+## [2.0.1] - 2026-10-06
+
+### ⚙️ Miscellaneous Tasks
+
+- *(coordinator)* Simplify Risc5 prover DTO mappers (#4121)
+## [2.0.0] - 2026-10-02
 
 ### 🚀 Features
 

@@ -7,10 +7,11 @@
 # which runs, in effect:
 #   docker build -f Dockerfile \
 #     --build-context riscv-guests=<repo>/riscv-guests \
-#     -t consensys/linea-prover-ray:dev .
+#     -t consensys/lineth-prover-ray:dev .
 #
 # dev-mock needs only the Go binary. dev-zkvm additionally uses the bundled
-# native runner (glibc, links libmcl.so) and the guest ELF, both built here.
+# native runner (glibc) and the guest ELF, both built here from
+# the same riscv-guests source so they always agree.
 
 ########################################
 # Go builder: the static prover binary
@@ -34,55 +35,44 @@ FROM docker.io/library/debian:bookworm AS zig-builder
 ARG ZIG_VERSION=0.16.0
 # Override if 0.16.0 is not a tagged release (e.g. a nightly under /builds/).
 ARG ZIG_URL=https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz
-ARG BLST_SHA=e7f90de551e8df682f3cc99067d204d8b90d27ad
-ARG MCL_SHA=0499298adcfad3bbcebf77f17700ebbe97166060
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
         ca-certificates curl xz-utils git make build-essential python3 \
-        libsecp256k1-dev libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 # Zig toolchain (pinned; see riscv-guests/l2-execution/build.zig.zon).
 RUN curl -fsSL "${ZIG_URL}" -o /tmp/zig.tar.xz \
     && tar -xJf /tmp/zig.tar.xz -C /opt \
     && ln -s "/opt/zig-x86_64-linux-${ZIG_VERSION}/zig" /usr/local/bin/zig \
     && rm /tmp/zig.tar.xz
-# Native crypto deps (pinned SHAs, mirroring riscv-guests install-native-crypto-deps).
-RUN git clone https://github.com/supranational/blst.git /tmp/blst \
-    && git -C /tmp/blst checkout --detach ${BLST_SHA} \
-    && (cd /tmp/blst && ./build.sh) \
-    && cp /tmp/blst/libblst.a /usr/local/lib/ \
-    && cp /tmp/blst/bindings/blst.h /tmp/blst/bindings/blst_aux.h /usr/local/include/ \
-    && rm -rf /tmp/blst
-RUN git clone https://github.com/herumi/mcl.git /tmp/mcl \
-    && git -C /tmp/mcl checkout --detach ${MCL_SHA} \
-    && make -C /tmp/mcl -j"$(nproc)" \
-    && cp /tmp/mcl/lib/libmcl.so /usr/local/lib/ \
-    && cp -r /tmp/mcl/include/mcl /usr/local/include/ \
-    && ldconfig \
-    && rm -rf /tmp/mcl
 # Build the statically-linked rv64im guest ELF + the native runner. Path deps
 # (build_common, guest-common, lineth-accelerators) are siblings in riscv-guests;
 # the rest are fetched by zig from the network.
+COPY --from=riscv-guests Makefile /riscv-guests/Makefile
+RUN make -C /riscv-guests install-constantine-deps \
+    && rm -rf /var/lib/apt/lists/*
+ENV PATH="/root/.local/bin:${PATH}"
 COPY --from=riscv-guests . /riscv-guests
-# strip the native runner's debug_info (the guest ELF is already stripped); the
+# Strip the native runner's debug_info (the guest ELF is already stripped); the
 # ReleaseSafe build keeps its runtime checks, we just drop symbols for prod size.
-RUN make -C /riscv-guests/l2-execution compile \
+RUN make -C /riscv-guests/l2-execution fetch-host \
+    && make -C /riscv-guests/l2-execution compile \
+    && cd /riscv-guests/l2-execution \
+    && zig build install-runner -Dhost-tools=true --summary all \
     && strip /riscv-guests/l2-execution/zig-out/bin/l2-execution-runner
 
 ########################################
 # Final runtime image: debian:bookworm-slim (glibc 2.36, same release as the
 # builders, with a shell so the CMD expands $CONFIG_FILE and $WORKER_ID like the
-# legacy prover). The native runner links glibc, libstdc++, libmcl, libsecp256k1
-# and libcrypto: the apt ones come from the same bookworm release, and libmcl.so
-# is source-built so it is copied in.
+# legacy prover). The native runner's crypto (Constantine) is linked statically,
+# so it only needs glibc from the base image.
 ########################################
 FROM docker.io/library/debian:bookworm-slim AS final
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update -qq && apt-get install -y --no-install-recommends \
-        libstdc++6 libsecp256k1-1 libssl3 \
-    && rm -rf /var/lib/apt/lists/*
-COPY --from=zig-builder /usr/local/lib/libmcl.so /usr/local/lib/
-RUN ldconfig
+ARG VERSION
+ARG VCS_REF
+ARG BUILD_DATE
+LABEL org.label-schema.version=$VERSION \
+      org.label-schema.vcs-ref=$VCS_REF \
+      org.label-schema.build-date=$BUILD_DATE
 
 # Prover binary (static), native runner, and guest ELF.
 COPY --from=go-builder  /out/prover                                             /opt/linea/prover-ray/prover
