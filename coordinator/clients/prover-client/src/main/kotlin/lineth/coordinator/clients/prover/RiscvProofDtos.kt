@@ -44,7 +44,7 @@ data class L2ExecutionProofPublicInputsDto(
   val txFromsHash: String,
 )
 
-/** The 20-field PI tuple emitted by a rollup / rollup-aggregation proof (rollup_spec §2.4). */
+/** The 20-field PI tuple emitted by a rollup proof, or 21-field when emitted by an aggregation proof (rollup_spec §2.4). */
 data class RollupProofPublicInputsDto(
   val endBlockNumber: Long,
   val endBlockTimestamp: Long,
@@ -66,6 +66,9 @@ data class RollupProofPublicInputsDto(
   val startOffset: Int,
   val endOffset: Int,
   val programVks: List<String>,
+  // Present only in rollup-aggregation proof responses (FinalizationPublicInput field).
+  @get:JsonInclude(JsonInclude.Include.NON_NULL)
+  val l2L1TreeDepth: Int? = null,
 )
 
 data class MetaDataDto(
@@ -407,6 +410,7 @@ fun RollupProofPublicInputsDto.toDomainObject(): RollupProofPublicInputs {
     startOffset = startOffset,
     endOffset = endOffset,
     programVks = programVks.map { it.decodeHex() },
+    l2L1TreeDepth = l2L1TreeDepth,
   )
 }
 

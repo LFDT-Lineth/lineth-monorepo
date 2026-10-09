@@ -5,17 +5,18 @@ import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.SqlClient
 import io.vertx.sqlclient.Tuple
 import linea.domain.Aggregation
+import linea.domain.AggregationG
 import linea.domain.BlobAndBatchCounters
 import linea.domain.BlobCounters
 import linea.domain.BlockIntervals
 import linea.domain.ProofToFinalize
-import linea.domain.toBlockIntervalsString
 import linea.error.DuplicatedRecordException
 import linea.kotlin.decodeHex
 import linea.persistence.db.SQLQueryLogger
 import linea.persistence.db.isDuplicateKeyException
 import lineth.coordinator.clients.prover.serialization.ProofToFinalizeJsonResponse
 import lineth.persistence.AggregationsDao
+import lineth.persistence.AggregationsDaoG
 import net.consensys.linea.async.toSafeFuture
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
@@ -23,15 +24,15 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Clock
 import kotlin.time.Instant
 
-class PostgresAggregationsDao(
+abstract class PostgresAggregationsDaoG<T>(
   connection: SqlClient,
-  private val clock: Clock = Clock.System,
-) : AggregationsDao {
-  private val log = LogManager.getLogger(this.javaClass.name)
-  private val queryLog = SQLQueryLogger(log)
+  private val clock: Clock,
+) : AggregationsDaoG<T> {
+
+  protected val log = LogManager.getLogger(this.javaClass.name)
+  protected val queryLog = SQLQueryLogger(log)
 
   companion object {
-    // Public instead of internal to allow usage in integrationTest source set
     fun aggregationStatusToDbValue(status: Aggregation.Status): Int {
       return when (status) {
         Aggregation.Status.Proven -> 1
@@ -48,6 +49,200 @@ class PostgresAggregationsDao(
     @JvmStatic
     val blobsTable = "blobs"
   }
+
+  protected abstract fun serializeProof(proof: T?): String?
+  protected abstract fun deserializeProof(json: String): T
+  protected abstract fun proofFinalTimestamp(proof: T): Instant
+
+  private val insertQuery =
+    connection.preparedQuery(
+      """
+        insert into $aggregationsTable
+        (start_block_number, end_block_number, status, start_block_timestamp, batch_count, aggregation_proof)
+        VALUES ($1, $2, $3, $4, $5, CAST($6::text as jsonb))
+      """.trimIndent(),
+    )
+
+  private val selectAggregations =
+    connection.preparedQuery(
+      """
+        with previous_ends as (select *,
+          lag(end_block_number, 1) over (order by end_block_number asc) as previous_end_block_number
+          from $aggregationsTable
+          where start_block_number >= $1 and status = $2
+          order by start_block_number asc),
+        first_gapped_aggregation as (select start_block_number
+          from previous_ends
+          where start_block_number > $1 and start_block_number - 1 != previous_end_block_number
+          limit 1)
+
+        select * from previous_ends
+        where EXISTS (select 1 from previous_ends where start_block_number = $1)
+          and (previous_ends.previous_end_block_number = previous_ends.start_block_number - 1 or previous_ends.start_block_number = $1)
+          and ((select count(1) from first_gapped_aggregation) = 0 or previous_ends.start_block_number < (select * from first_gapped_aggregation))
+        limit $3
+      """.trimIndent(),
+    )
+
+  private val findAggregationByEndBlockNumber =
+    connection.preparedQuery(
+      """
+        select * from $aggregationsTable
+        where end_block_number = $1
+        LIMIT 2
+      """.trimIndent(),
+    )
+
+  private val findFirstAggregation =
+    connection.preparedQuery(
+      """
+        select * from $aggregationsTable
+        order by start_block_number asc
+        LIMIT 1
+      """.trimIndent(),
+    )
+
+  private val deleteUptoQuery =
+    connection.preparedQuery(
+      """
+        delete from $aggregationsTable
+        where end_block_number <= $1
+      """.trimIndent(),
+    )
+
+  private val deleteAfterQuery =
+    connection.preparedQuery(
+      """
+        delete from $aggregationsTable
+        where start_block_number >= $1
+      """.trimIndent(),
+    )
+
+  protected fun saveAggregationRecord(aggregation: AggregationG<T>): SafeFuture<Unit> {
+    val startBlockNumber = aggregation.startBlockNumber.toLong()
+    val endBlockNumber = aggregation.endBlockNumber.toLong()
+    val status = aggregationStatusToDbValue(Aggregation.Status.Proven)
+    val batchCount = aggregation.batchCount.toLong()
+    val aggregationProof = serializeProof(aggregation.aggregationProof)
+
+    val params =
+      listOf(
+        startBlockNumber,
+        endBlockNumber,
+        status,
+        clock.now().toEpochMilliseconds(),
+        batchCount,
+        aggregationProof,
+      )
+    queryLog.log(Level.TRACE, insertQuery.toString(), params)
+    return insertQuery.execute(Tuple.tuple(params))
+      .map { }
+      .recover { th ->
+        if (isDuplicateKeyException(th)) {
+          Future.failedFuture(
+            DuplicatedRecordException(
+              "Aggregation startBlockNumber=$startBlockNumber, endBlockNumber=$endBlockNumber " +
+                "batchCount=$batchCount is already persisted!",
+              th,
+            ),
+          )
+        } else {
+          Future.failedFuture(th)
+        }
+      }
+      .toSafeFuture()
+  }
+
+  override fun getProofsToFinalize(
+    fromBlockNumber: Long,
+    finalEndBlockCreatedBefore: Instant,
+    maximumNumberOfProofs: Int,
+  ): SafeFuture<List<T>> {
+    return selectAggregations
+      .execute(
+        Tuple.of(
+          fromBlockNumber,
+          aggregationStatusToDbValue(Aggregation.Status.Proven),
+          maximumNumberOfProofs,
+        ),
+      )
+      .toSafeFuture()
+      .thenApply { rowSet ->
+        rowSet
+          .map { row -> deserializeProof(row.getJsonObject("aggregation_proof").encode()) }
+          .filter { proof -> proofFinalTimestamp(proof) <= finalEndBlockCreatedBefore }
+      }
+  }
+
+  override fun findHighestConsecutiveEndBlockNumber(fromBlockNumber: Long?): SafeFuture<Long?> {
+    return if (fromBlockNumber != null) {
+      SafeFuture.completedFuture(fromBlockNumber)
+    } else {
+      findFirstAggregationStartBlockNumber()
+    }.thenCompose { from ->
+      if (from != null) {
+        selectAggregations
+          .execute(
+            Tuple.of(
+              from,
+              aggregationStatusToDbValue(Aggregation.Status.Proven),
+              Int.MAX_VALUE,
+            ),
+          )
+          .toSafeFuture()
+          .thenApply { rowSet ->
+            rowSet.lastOrNull()?.getLong("end_block_number")
+          }
+      } else {
+        SafeFuture.completedFuture(null)
+      }
+    }
+  }
+
+  override fun findAggregationProofByEndBlockNumber(endBlockNumber: Long): SafeFuture<T?> {
+    return findAggregationByEndBlockNumber
+      .execute(Tuple.of(endBlockNumber))
+      .toSafeFuture()
+      .thenApply { rowSet ->
+        val proofs = rowSet.map { row -> deserializeProof(row.getJsonObject("aggregation_proof").encode()) }
+        if (proofs.size > 1) {
+          throw IllegalStateException(
+            "Multiple aggregations found for endBlockNumber=$endBlockNumber",
+          )
+        } else {
+          proofs.firstOrNull()
+        }
+      }
+  }
+
+  private fun findFirstAggregationStartBlockNumber(): SafeFuture<Long?> {
+    return findFirstAggregation
+      .execute()
+      .toSafeFuture()
+      .thenApply { rowSet ->
+        rowSet.firstOrNull()?.getLong("start_block_number")
+      }
+  }
+
+  override fun deleteAggregationsUpToEndBlockNumber(endBlockNumberInclusive: Long): SafeFuture<Int> {
+    return deleteUptoQuery
+      .execute(Tuple.of(endBlockNumberInclusive))
+      .map { rowSet -> rowSet.rowCount() }
+      .toSafeFuture()
+  }
+
+  override fun deleteAggregationsAfterBlockNumber(startingBlockNumberInclusive: Long): SafeFuture<Int> {
+    return deleteAfterQuery
+      .execute(Tuple.of(startingBlockNumberInclusive))
+      .map { rowSet -> rowSet.rowCount() }
+      .toSafeFuture()
+  }
+}
+
+class PostgresAggregationsDao(
+  connection: SqlClient,
+  clock: Clock = Clock.System,
+) : PostgresAggregationsDaoG<ProofToFinalize>(connection, clock), AggregationsDao {
 
   private val selectBatchesAndBlobsForAggregation = connection.preparedQuery(
     """
@@ -118,71 +313,59 @@ class PostgresAggregationsDao(
     """.trimIndent(),
   )
 
-  private val insertQuery =
-    connection.preparedQuery(
-      """
-        insert into $aggregationsTable
-        (start_block_number, end_block_number, status, start_block_timestamp, batch_count, aggregation_proof)
-        VALUES ($1, $2, $3, $4, $5, CAST($6::text as jsonb))
-      """.trimIndent(),
-    )
+  override fun serializeProof(proof: ProofToFinalize?): String? {
+    return proof?.let { ProofToFinalizeJsonResponse.fromDomainObject(it).toJsonString() }
+  }
 
-  private val selectAggregations =
-    connection.preparedQuery(
-      """
-        with previous_ends as (select *,
-          lag(end_block_number, 1) over (order by end_block_number asc) as previous_end_block_number
-          from $aggregationsTable
-          where start_block_number >= $1 and status = $2
-          order by start_block_number asc),
-        first_gapped_aggregation as (select start_block_number
-          from previous_ends
-          where start_block_number > $1 and start_block_number - 1 != previous_end_block_number
-          limit 1)
+  override fun deserializeProof(json: String): ProofToFinalize {
+    return ProofToFinalizeJsonResponse.fromJsonString(json).toDomainObject()
+  }
 
-        select * from previous_ends
-        where EXISTS (select 1 from previous_ends where start_block_number = $1)
-          and (previous_ends.previous_end_block_number = previous_ends.start_block_number - 1 or previous_ends.start_block_number = $1)
-          and ((select count(1) from first_gapped_aggregation) = 0 or previous_ends.start_block_number < (select * from first_gapped_aggregation))
-        limit $3
-      """.trimIndent(),
-    )
+  override fun proofFinalTimestamp(proof: ProofToFinalize): Instant = proof.finalTimestamp
 
-  private val findAggregationByEndBlockNumber =
-    connection.preparedQuery(
-      """
-        select * from $aggregationsTable
-        where end_block_number = $1
-        LIMIT 2
-      """.trimIndent(),
-    )
+  override fun saveNewAggregation(aggregation: AggregationG<ProofToFinalize>): SafeFuture<Unit> {
+    return saveAggregationRecord(aggregation)
+  }
 
-  private val findFirstAggregation =
-    connection.preparedQuery(
-      """
-        select * from $aggregationsTable
-        order by start_block_number asc
-        LIMIT 1
-      """.trimIndent(),
-    )
+  override fun findConsecutiveProvenBlobs(fromBlockNumber: Long): SafeFuture<List<BlobAndBatchCounters>> {
+    return selectBatchesAndBlobsForAggregation
+      .execute(Tuple.of(fromBlockNumber))
+      .toSafeFuture()
+      .thenApply { rowSet ->
+        val batches: List<BatchRecordWithBlobInfo> = rowSet.map { row -> parseBatchAndBlobRecord(row) }
+        val batchesByBlob: Map<ULong, List<BatchRecordWithBlobInfo>> = batches.groupBy { it.blobStartBlockNumber }
+        val result = batchesByBlob
+          .map { (_, blobBatches) ->
+            val firstBatch = blobBatches.first()
+            val blobCounters = BlobCounters(
+              numberOfBatches = firstBatch.batchesCount,
+              startBlockNumber = firstBatch.blobStartBlockNumber,
+              endBlockNumber = firstBatch.blobEndBlockNumber,
+              startBlockTimestamp = firstBatch.blobStartBlockTimestamp,
+              endBlockTimestamp = firstBatch.blobEndBlockTimestamp,
+              expectedShnarf = firstBatch.blobExpectedShnarf,
+            )
+            BlobAndBatchCounters(
+              blobCounters = blobCounters,
+              executionProofs = BlockIntervals(
+                startingBlockNumber = blobBatches.first().batchStartBlockNumber,
+                upperBoundaries = blobBatches.map { it.batchEndBlockNumber },
+              ),
+            )
+          }
+          .filter {
+            it.blobCounters.endBlockNumber == it.executionProofs.upperBoundaries.last()
+          }
+          .sortedBy { it.blobCounters.startBlockNumber }
+        if (result.isNotEmpty() && result.first().blobCounters.startBlockNumber == fromBlockNumber.toULong()) {
+          result
+        } else {
+          emptyList()
+        }
+      }
+  }
 
-  private val deleteUptoQuery =
-    connection.preparedQuery(
-      """
-        delete from $aggregationsTable
-        where end_block_number <= $1
-      """.trimIndent(),
-    )
-
-  private val deleteAfterQuery =
-    connection.preparedQuery(
-      """
-        delete from $aggregationsTable
-        where start_block_number >= $1
-      """.trimIndent(),
-    )
-
-  private fun parseBatchAnbBlobRecord(record: Row): BatchRecordWithBlobInfo {
+  private fun parseBatchAndBlobRecord(record: Row): BatchRecordWithBlobInfo {
     return BatchRecordWithBlobInfo(
       blobStartBlockNumber = record.getLong("blob_start_block_number").toULong(),
       blobEndBlockNumber = record.getLong("blob_end_block_number").toULong(),
@@ -234,177 +417,5 @@ class PostgresAggregationsDao(
       result = 31 * result + batchEndBlockNumber.hashCode()
       return result
     }
-  }
-
-  override fun findConsecutiveProvenBlobs(fromBlockNumber: Long): SafeFuture<List<BlobAndBatchCounters>> {
-    return selectBatchesAndBlobsForAggregation
-      .execute(Tuple.of(fromBlockNumber))
-      .toSafeFuture()
-      .thenApply { rowSet ->
-        val batches: List<BatchRecordWithBlobInfo> = rowSet.map { row -> parseBatchAnbBlobRecord(row) }
-        val batchesByBlob: Map<ULong, List<BatchRecordWithBlobInfo>> = batches.groupBy { it.blobStartBlockNumber }
-        val result = batchesByBlob
-          .map { (_, batches) ->
-            val firstBatch = batches.first()
-            val blobCounters = BlobCounters(
-              numberOfBatches = firstBatch.batchesCount,
-              startBlockNumber = firstBatch.blobStartBlockNumber,
-              endBlockNumber = firstBatch.blobEndBlockNumber,
-              startBlockTimestamp = firstBatch.blobStartBlockTimestamp,
-              endBlockTimestamp = firstBatch.blobEndBlockTimestamp,
-              expectedShnarf = firstBatch.blobExpectedShnarf,
-            )
-            BlobAndBatchCounters(
-              blobCounters = blobCounters,
-              executionProofs = BlockIntervals(
-                startingBlockNumber = batches.first().batchStartBlockNumber,
-                upperBoundaries = batches.map { it.batchEndBlockNumber },
-              ),
-            )
-          }
-          .filter {
-            it.blobCounters.endBlockNumber == it.executionProofs.upperBoundaries.last()
-          }
-          .sortedBy { it.blobCounters.startBlockNumber }
-        if (result.isNotEmpty() && result.first().blobCounters.startBlockNumber == fromBlockNumber.toULong()) {
-          result
-        } else {
-          emptyList()
-        }
-      }
-  }
-
-  override fun saveNewAggregation(aggregation: Aggregation): SafeFuture<Unit> {
-    val startBlockNumber = aggregation.startBlockNumber.toLong()
-    val endBlockNumber = aggregation.endBlockNumber.toLong()
-    val status = aggregationStatusToDbValue(Aggregation.Status.Proven)
-    val batchCount = aggregation.batchCount.toLong()
-    val aggregationProof = serializeAggregationProof(aggregation.aggregationProof)
-
-    val params =
-      listOf(
-        startBlockNumber,
-        endBlockNumber,
-        status,
-        clock.now().toEpochMilliseconds(),
-        batchCount,
-        aggregationProof,
-      )
-    queryLog.log(Level.TRACE, insertQuery.toString(), params)
-    return insertQuery.execute(Tuple.tuple(params))
-      .map { }
-      .recover { th ->
-        if (isDuplicateKeyException(th)) {
-          Future.failedFuture(
-            DuplicatedRecordException(
-              "Aggregation startBlockNumber=$startBlockNumber, endBlockNumber=$endBlockNumber " +
-                "batchCount=$batchCount is already persisted!",
-              th,
-            ),
-          )
-        } else {
-          Future.failedFuture(th)
-        }
-      }
-      .toSafeFuture()
-  }
-
-  override fun getProofsToFinalize(
-    fromBlockNumber: Long,
-    finalEndBlockCreatedBefore: Instant,
-    maximumNumberOfProofs: Int,
-  ): SafeFuture<List<ProofToFinalize>> {
-    return selectAggregations
-      .execute(
-        Tuple.of(
-          fromBlockNumber,
-          aggregationStatusToDbValue(Aggregation.Status.Proven),
-          maximumNumberOfProofs,
-        ),
-      )
-      .toSafeFuture()
-      .thenApply { rowSet ->
-        rowSet.map(::parseAggregationProofs).filter { proofToFinalize ->
-          proofToFinalize.finalTimestamp <= finalEndBlockCreatedBefore
-        }
-      }
-  }
-
-  override fun findHighestConsecutiveEndBlockNumber(fromBlockNumber: Long?): SafeFuture<Long?> {
-    return if (fromBlockNumber != null) {
-      SafeFuture.completedFuture(fromBlockNumber)
-    } else {
-      findFirstAggregationStartBlockNumber()
-    }.thenCompose { fromBlockNumber ->
-      if (fromBlockNumber != null) {
-        selectAggregations
-          .execute(
-            Tuple.of(
-              fromBlockNumber,
-              aggregationStatusToDbValue(Aggregation.Status.Proven),
-              Int.MAX_VALUE,
-            ),
-          )
-          .toSafeFuture()
-          .thenApply { rowSet ->
-            rowSet.lastOrNull()?.getLong("end_block_number")
-          }
-      } else {
-        SafeFuture.completedFuture(null)
-      }
-    }
-  }
-
-  override fun findAggregationProofByEndBlockNumber(endBlockNumber: Long): SafeFuture<ProofToFinalize?> {
-    return findAggregationByEndBlockNumber
-      .execute(
-        Tuple.of(endBlockNumber),
-      )
-      .toSafeFuture()
-      .thenApply { rowSet ->
-        val aggregationProofs = rowSet.map(::parseAggregationProofs)
-        if (aggregationProofs.size > 1) {
-          // coordinator now cleans up aggregations table on startup before resuming conflation
-          // if this happens, a conflation invariant was broken
-          throw IllegalStateException(
-            "Multiple aggregations found for endBlockNumber=$endBlockNumber " +
-              "aggregations=${aggregationProofs.toBlockIntervalsString()}",
-          )
-        } else {
-          aggregationProofs.firstOrNull()
-        }
-      }
-  }
-
-  private fun findFirstAggregationStartBlockNumber(): SafeFuture<Long?> {
-    return findFirstAggregation
-      .execute()
-      .toSafeFuture()
-      .thenApply { rowSet ->
-        rowSet.firstOrNull()?.getLong("start_block_number")
-      }
-  }
-
-  override fun deleteAggregationsUpToEndBlockNumber(endBlockNumberInclusive: Long): SafeFuture<Int> {
-    return deleteUptoQuery
-      .execute(Tuple.of(endBlockNumberInclusive))
-      .map { rowSet -> rowSet.rowCount() }
-      .toSafeFuture()
-  }
-
-  override fun deleteAggregationsAfterBlockNumber(startingBlockNumberInclusive: Long): SafeFuture<Int> {
-    return deleteAfterQuery
-      .execute(Tuple.of(startingBlockNumberInclusive))
-      .map { rowSet -> rowSet.rowCount() }
-      .toSafeFuture()
-  }
-
-  private fun serializeAggregationProof(proofToFinalize: ProofToFinalize?): String? {
-    return proofToFinalize?.let { ProofToFinalizeJsonResponse.fromDomainObject(proofToFinalize).toJsonString() }
-  }
-
-  private fun parseAggregationProofs(record: Row): ProofToFinalize {
-    val aggregationProofJsonObj = record.getJsonObject("aggregation_proof")
-    return ProofToFinalizeJsonResponse.fromJsonString(aggregationProofJsonObj.encode()).toDomainObject()
   }
 }
