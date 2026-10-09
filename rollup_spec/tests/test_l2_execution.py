@@ -1,184 +1,109 @@
 """
-Tests for the l2-execution guest's "no L2MessageService configured" (zero-address)
-bridge-suppression path.
-
-The zero-address path is what lets a vanilla stateless input (no L2MessageService
-account, witness covering only what execution touched) run through the extended
-guest unchanged — it is the reference-side counterpart of the guest's
-`bridge_suppressed` branch.
+Tests for `scan_bridge_logs`, the l2-execution guest's L2MessageService log handling:
+L2->L1 message collection with 1-based messaging block offsets, the L1->L2 rolling-hash
+pair derived from `RollingHashUpdated` logs, and the "no L2MessageService configured"
+(zero-address) path that leaves the parent pair untouched.
 
 Run from the rollup_spec/ directory:  python -m pytest
 """
 
-from pathlib import Path
-
 import pytest
-from ethereum.crypto.hash import Hash32, keccak256
+from ethereum.crypto.hash import Hash32
 from ethereum.state import Address
 from ethereum_types.numeric import U64
 
-from rollup_spec import l2_execution
-from rollup_spec.block import ChainConfig, LinethPayloadInput
 from rollup_spec.fork import Log
 from rollup_spec.l2_execution import (
+    BRIDGE_L1L2_ROLLING_HASH_UPDATED_TOPIC_0,
     BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0,
     ZERO_ADDRESS,
     ZERO_HASH,
-    L2ExecutionProofPrivateInput,
-    read_l1l2_bridge_state,
-    run_l2_execution_guest,
+    BridgeLogScan,
+    scan_bridge_logs,
 )
-from rollup_spec.proof_io_v1 import decode_request_json
-from rollup_spec.state_transition import (
-    EMPTY_TRIE_ROOT_HASH,
-    L2State,
-    StatelessExecutionResult,
-)
-from rollup_spec.stateless_input import decode_stateless_input_ssz
 
-_TESTDATA_DIR = Path(l2_execution.__file__).resolve().parent / "prover_io" / "testdata"
+_MESSAGE_SERVICE = Address(bytes([0x11]) * 20)
+_PARENT_ROLLING_HASH = Hash32(bytes([0x0B]) * 32)
+_PARENT_MESSAGE_NUMBER = U64(7)
 
 
-def _fixture(name: str) -> Path:
-    """Resolve `<name>.json`, allowing an optional `<startBlock>-<endBlock>-` prefix."""
-    matches = sorted(_TESTDATA_DIR.glob(f"*{name}"))
-    assert matches, f"no fixture matching *{name} in {_TESTDATA_DIR}"
-    assert len(matches) == 1, f"multiple fixtures matching *{name}: {matches}"
-    return matches[0]
+def _message_sent(address: Address, message_hash: Hash32) -> Log:
+    """An L2MessageService `MessageSent` log carrying `message_hash` as its fourth topic."""
+    return Log(address, (BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0, ZERO_HASH, ZERO_HASH, message_hash), b"")
 
 
-def _golden_vanilla_stateless_input_ssz() -> bytes:
-    """A real, valid vanilla stateless-input SSZ slice, from the golden JSON request."""
-    request = _fixture("getZkL2ExecutionProofV1.request.json").read_text()
-    return decode_request_json(request).payloads[0].stateless_input_ssz
-
-
-def _zero_bridge_input(vanilla: bytes) -> L2ExecutionProofPrivateInput:
-    """
-    Test-local setup: a single-payload extended input around a vanilla slice with a
-    zero `l2_message_service_address`, so the guest's bridge-suppression branch runs.
-    `chain_id`/`coinbase` are read off the vanilla input so the conflation invariants
-    (chain-id match, `feeRecipient == coinbase`) hold.
-    """
-    si = decode_stateless_input_ssz(vanilla)
-    return L2ExecutionProofPrivateInput(
-        parent_ftx_rolling_hash=ZERO_HASH,
-        parent_last_processed_ftx_number=U64(0),
-        payloads=[LinethPayloadInput(stateless_input_ssz=vanilla)],
-        chain_config=ChainConfig(
-            l2_message_service_address=ZERO_ADDRESS,
-            coinbase=si.new_payload_request.execution_payload.fee_recipient,
-            chain_id=si.chain_config.chain_id,
+def _rolling_hash_updated(address: Address, message_number: int, rolling_hash: Hash32) -> Log:
+    """An L2MessageService `RollingHashUpdated(uint256 indexed, bytes32 indexed)` log."""
+    return Log(
+        address,
+        (
+            BRIDGE_L1L2_ROLLING_HASH_UPDATED_TOPIC_0,
+            Hash32(message_number.to_bytes(32, "big")),
+            rolling_hash,
         ),
+        b"",
     )
 
 
-# ── read_l1l2_bridge_state: zero-address short-circuit ──────────────────────────
+def _scan(block_logs: list[list[Log]], address: Address = _MESSAGE_SERVICE) -> BridgeLogScan:
+    """Scan `block_logs` against the shared parent bridge pair."""
+    return scan_bridge_logs(address, _PARENT_ROLLING_HASH, _PARENT_MESSAGE_NUMBER, block_logs)
 
 
-def test_read_l1l2_bridge_state_zero_address_returns_zeros_without_state_access() -> None:
-    # A state whose .storage would raise if touched: proves the zero-address guard
-    # short-circuits before any MPT read.
-    class _ExplodingState:
-        def storage(self, *_args, **_kwargs):  # noqa: ANN002, ANN003
-            raise AssertionError("storage() must not be called for the zero address")
-
-    rolling_hash, number = read_l1l2_bridge_state(_ExplodingState(), ZERO_ADDRESS)
-    assert rolling_hash == ZERO_HASH
-    assert int(number) == 0
+# ── zero L2MessageService address ───────────────────────────────────────────────
 
 
-def test_read_l1l2_bridge_state_nonzero_address_still_reads_state() -> None:
-    # Contrast: a non-zero address is NOT suppressed, so the real MPT read runs
-    # (here against an empty-trie state, which proves absence -> zero).
-    state = L2State(state_root=EMPTY_TRIE_ROOT_HASH, witnesses=[])
-    rolling_hash, number = read_l1l2_bridge_state(state, Address(bytes([0x11]) * 20))
-    assert rolling_hash == ZERO_HASH  # empty trie => proof of absence => zero
-    assert int(number) == 0
-
-
-# ── run_l2_execution_guest: full zero-address suppression ───────────────────────
-
-
-def test_run_l2_execution_guest_zero_address_suppresses_bridge_and_messages(monkeypatch) -> None:
-    vanilla = _golden_vanilla_stateless_input_ssz()
-    ext = _zero_bridge_input(vanilla)
-
-    # A block log that WOULD be collected as an L2->L1 message if the scan ran:
-    # its address equals the (zero) configured L2MessageService and topic0 is the
-    # bridge signature. Suppression must skip it entirely.
-    matching_log = Log(
-        address=ZERO_ADDRESS,
-        topics=(
-            BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0,
-            Hash32(b"\x00" * 32),
-            Hash32(b"\x00" * 32),
-            Hash32(bytes([0xAB]) * 32),
-        ),
-        data=b"",
-    )
-
-    def _fake_execute(stateless_input):  # noqa: ANN001, ANN202
-        return StatelessExecutionResult(
-            pre_state_root=Hash32(bytes([0x11]) * 32),
-            post_state_root=Hash32(bytes([0x22]) * 32),
-            block_logs=[matching_log],
-        )
-
-    # Boundary + crypto stubs: mock the delegated engine and skip payload-tx sender
-    # recovery (empty tx list) so the test needs no real EVM or secp256k1.
-    monkeypatch.setattr(l2_execution, "execute_stateless_input", _fake_execute)
-    monkeypatch.setattr(l2_execution, "parse_payload_transaction_rlps", lambda payload: [])
-
-    proof = run_l2_execution_guest(ext)
-    pi = proof.public_inputs
-
-    # All four bridge PI fields pinned to zero.
-    assert pi.parent_l1_l2_bridge_rolling_hash == ZERO_HASH
-    assert int(pi.parent_l1_l2_bridge_rolling_hash_message_number) == 0
-    assert pi.end_l1_l2_bridge_rolling_hash == ZERO_HASH
-    assert int(pi.end_l1_l2_bridge_rolling_hash_message_number) == 0
-
-    # L2->L1 message scan skipped despite the matching log present.
-    assert pi.l2_l1_messages == []
-    assert pi.block_count == 1
-    assert pi.l2_messaging_blocks_offsets == []
-
-
-def test_execution_proves_one_offset_for_a_block_with_multiple_message_logs(monkeypatch) -> None:
-    execution_input = _zero_bridge_input(_golden_vanilla_stateless_input_ssz())
-    message_service = Address(bytes([0x11]) * 20)
-    execution_input.chain_config.l2_message_service_address = message_service
-    messages = [Hash32(bytes([value]) * 32) for value in (0xAB, 0xCD)]
+def test_zero_address_ignores_bridge_logs_and_passes_the_parent_pair_through() -> None:
     logs = [
-        Log(message_service, (BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0, ZERO_HASH, ZERO_HASH, message), b"")
-        for message in messages
+        _message_sent(ZERO_ADDRESS, Hash32(bytes([0xAB]) * 32)),
+        _rolling_hash_updated(ZERO_ADDRESS, 9, Hash32(bytes([0xE1]) * 32)),
     ]
-    monkeypatch.setattr(l2_execution, "execute_stateless_input", lambda _: StatelessExecutionResult(
-        pre_state_root=Hash32(bytes([0x11]) * 32),
-        post_state_root=Hash32(bytes([0x22]) * 32),
-        block_logs=logs,
-    ))
-    monkeypatch.setattr(l2_execution, "parse_payload_transaction_rlps", lambda _: [])
-    monkeypatch.setattr(l2_execution, "read_l1l2_bridge_state", lambda *_: (ZERO_HASH, U64(0)))
 
-    proof = run_l2_execution_guest(execution_input)
-    assert proof.public_inputs.l2_l1_messages == messages
-    assert proof.public_inputs.block_count == 1
-    assert proof.public_inputs.l2_messaging_blocks_offsets == [1]
+    scan = _scan([logs], address=ZERO_ADDRESS)
+
+    assert scan == BridgeLogScan([], [], _PARENT_ROLLING_HASH, _PARENT_MESSAGE_NUMBER)
 
 
-def test_execution_rejects_message_log_missing_hash_topic(monkeypatch) -> None:
-    execution_input = _zero_bridge_input(_golden_vanilla_stateless_input_ssz())
-    message_service = Address(bytes([0x11]) * 20)
-    execution_input.chain_config.l2_message_service_address = message_service
-    log = Log(message_service, (BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0,), b"")
-    monkeypatch.setattr(l2_execution, "execute_stateless_input", lambda _: StatelessExecutionResult(
-        pre_state_root=Hash32(bytes([0x11]) * 32),
-        post_state_root=Hash32(bytes([0x22]) * 32),
-        block_logs=[log],
-    ))
-    monkeypatch.setattr(l2_execution, "parse_payload_transaction_rlps", lambda _: [])
-    monkeypatch.setattr(l2_execution, "read_l1l2_bridge_state", lambda *_: (ZERO_HASH, U64(0)))
-    with pytest.raises(Exception, match="missing its message hash topic"):
-        run_l2_execution_guest(execution_input)
+# ── L2->L1 messages from MessageSent logs ───────────────────────────────────────
+
+
+def test_messages_are_collected_in_order_with_the_one_based_offsets_of_the_blocks_that_emitted_them() -> None:
+    messages = [Hash32(bytes([value]) * 32) for value in (0xAB, 0xAC, 0xCD)]
+
+    scan = _scan([
+        [_message_sent(_MESSAGE_SERVICE, messages[0]), _message_sent(_MESSAGE_SERVICE, messages[1])],
+        [],
+        [_message_sent(_MESSAGE_SERVICE, messages[2])],
+    ])
+
+    assert scan.l2_l1_messages == messages
+    assert scan.l2_messaging_blocks_offsets == [1, 3]
+
+
+# ── L1->L2 rolling-hash pair from RollingHashUpdated logs ───────────────────────
+
+
+def test_bridge_pair_ends_at_the_parent_pair_when_the_range_emits_no_rolling_hash_update() -> None:
+    scan = _scan([[]])
+
+    assert scan.end_l1_l2_bridge_rolling_hash == _PARENT_ROLLING_HASH
+    assert scan.end_l1_l2_bridge_rolling_hash_message_number == _PARENT_MESSAGE_NUMBER
+
+
+def test_bridge_pair_ends_at_the_last_rolling_hash_update_of_a_multi_block_range() -> None:
+    last_rolling_hash = Hash32(bytes([0xE2]) * 32)
+
+    scan = _scan([
+        [_rolling_hash_updated(_MESSAGE_SERVICE, 12, Hash32(bytes([0xE1]) * 32))],
+        [_rolling_hash_updated(_MESSAGE_SERVICE, 15, last_rolling_hash)],
+    ])
+
+    assert scan.end_l1_l2_bridge_rolling_hash == last_rolling_hash
+    assert scan.end_l1_l2_bridge_rolling_hash_message_number == U64(15)
+
+
+def test_rolling_hash_update_must_advance_past_the_current_message_number() -> None:
+    logs = [_rolling_hash_updated(_MESSAGE_SERVICE, int(_PARENT_MESSAGE_NUMBER), Hash32(bytes([0xE1]) * 32))]
+
+    with pytest.raises(Exception, match="message number must increase"):
+        _scan([logs])

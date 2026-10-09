@@ -139,6 +139,8 @@ def test_decode_request_maps_all_fields_and_renames() -> None:
 
     assert bytes(req.parent_ftx_rolling_hash) == bytes([0x0A]) * 32
     assert int(req.parent_last_processed_ftx_number) == 15
+    assert bytes(req.parent_l1_l2_bridge_rolling_hash) == bytes([0x02]) * 32
+    assert int(req.parent_l1_l2_bridge_rolling_hash_message_number) == 0
 
     assert bytes(req.chain_config.l2_message_service_address) == bytes([0x11]) * 20
     assert bytes(req.chain_config.coinbase) == bytes([0x00]) * 20
@@ -213,6 +215,31 @@ def test_non_hex_quantity_is_rejected() -> None:
     req = _valid_request()
     req["proofRequest"]["parentFtxNumber"] = "100"  # decimal string, not int / 0x-hex
     with pytest.raises(ProofIoError, match="parentFtxNumber"):
+        decode_request(req)
+
+
+@pytest.mark.parametrize("key", [
+    "parentL1L2BridgeRollingHash",
+    "parentL1L2BridgeRollingHashMessageNumber",
+])
+def test_missing_parent_bridge_field_is_rejected(key: str) -> None:
+    req = _valid_request()
+    del req["proofRequest"][key]
+    with pytest.raises(ProofIoError, match=key):
+        decode_request(req)
+
+
+def test_malformed_parent_bridge_rolling_hash_is_rejected() -> None:
+    req = _valid_request()
+    req["proofRequest"]["parentL1L2BridgeRollingHash"] = "0xnothex"
+    with pytest.raises(ProofIoError, match="parentL1L2BridgeRollingHash"):
+        decode_request(req)
+
+
+def test_non_hex_parent_bridge_message_number_is_rejected() -> None:
+    req = _valid_request()
+    req["proofRequest"]["parentL1L2BridgeRollingHashMessageNumber"] = "100"  # decimal string, not int / 0x-hex
+    with pytest.raises(ProofIoError, match="parentL1L2BridgeRollingHashMessageNumber"):
         decode_request(req)
 
 

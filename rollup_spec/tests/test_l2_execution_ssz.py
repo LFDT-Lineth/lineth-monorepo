@@ -13,13 +13,14 @@ These cover the properties this codec is responsible for:
 Run from the rollup_spec/ directory:  python -m pytest
 """
 
+import dataclasses
 import json
 from pathlib import Path
 
 import pytest
 
 import rollup_spec
-from ethereum.crypto.hash import keccak256
+from ethereum.crypto.hash import Hash32, keccak256
 from ethereum_types.numeric import U64
 
 from rollup_spec.l2_execution import L2ExecutionProof
@@ -71,6 +72,17 @@ def test_l2_execution_input_round_trips_through_ssz() -> None:
     original = _l2_execution_input()
     recovered = decode_l2_execution_input_ssz(encode_l2_execution_input(original))
     assert recovered == original
+
+
+def test_l2_execution_input_round_trips_the_parent_bridge_pair() -> None:
+    original = dataclasses.replace(
+        _l2_execution_input(),
+        parent_l1_l2_bridge_rolling_hash=Hash32(bytes([0x0B]) * 32),
+        parent_l1_l2_bridge_rolling_hash_message_number=U64(42),
+    )
+    recovered = decode_l2_execution_input_ssz(encode_l2_execution_input(original))
+    assert recovered.parent_l1_l2_bridge_rolling_hash == Hash32(bytes([0x0B]) * 32)
+    assert int(recovered.parent_l1_l2_bridge_rolling_hash_message_number) == 42
 
 
 def test_l2_execution_input_fixture_exercises_nested_fields() -> None:

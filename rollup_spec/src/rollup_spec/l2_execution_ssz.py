@@ -137,6 +137,8 @@ class SszL2ExecutionProofPrivateInput(Container):
     # Wire order: `chain_config` before `payloads` (see module docstring).
     parent_ftx_rolling_hash: SszBytes32
     parent_last_processed_ftx_number: uint64
+    parent_l1_l2_bridge_rolling_hash: SszBytes32
+    parent_l1_l2_bridge_rolling_hash_message_number: uint64
     chain_config: SszChainConfig
     payloads: List[SszLinethPayloadInput, MAX_PAYLOADS]
 
@@ -216,6 +218,10 @@ def _ssz_l2_execution_input(private_input: L2ExecutionProofPrivateInput) -> SszL
     return SszL2ExecutionProofPrivateInput(
         parent_ftx_rolling_hash=bytes(private_input.parent_ftx_rolling_hash),
         parent_last_processed_ftx_number=int(private_input.parent_last_processed_ftx_number),
+        parent_l1_l2_bridge_rolling_hash=bytes(private_input.parent_l1_l2_bridge_rolling_hash),
+        parent_l1_l2_bridge_rolling_hash_message_number=int(
+            private_input.parent_l1_l2_bridge_rolling_hash_message_number
+        ),
         chain_config=_ssz_chain_config(private_input.chain_config),
         payloads=[_ssz_lineth_payload_input(p) for p in private_input.payloads],
     )
@@ -307,6 +313,10 @@ def _l2_execution_input_from_view(view: Any) -> L2ExecutionProofPrivateInput:
     return L2ExecutionProofPrivateInput(
         parent_ftx_rolling_hash=Hash32(bytes(view.parent_ftx_rolling_hash)),
         parent_last_processed_ftx_number=U64(int(view.parent_last_processed_ftx_number)),
+        parent_l1_l2_bridge_rolling_hash=Hash32(bytes(view.parent_l1_l2_bridge_rolling_hash)),
+        parent_l1_l2_bridge_rolling_hash_message_number=U64(
+            int(view.parent_l1_l2_bridge_rolling_hash_message_number)
+        ),
         payloads=[_lineth_payload_input_from_view(p) for p in view.payloads],
         chain_config=_chain_config_from_view(view.chain_config),
     )
