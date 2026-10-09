@@ -33,7 +33,7 @@ import lineth.persistence.ForcedTransactionsDao
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.async.toSafeFutureNonNull
 import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.linea.traces.TracesCountersV2
+import net.consensys.linea.traces.TracesCountersV5
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.Callable
@@ -176,7 +176,7 @@ class ConflationAppV2(
           BlockCounters(
             blockNumber = block.number,
             blockTimestamp = Instant.fromEpochSeconds(block.timestamp.toLong()),
-            tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+            tracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
             blockRLPEncoded = blockRlp,
             numOfTransactions = block.transactions.size.toUInt(),
             gasUsed = block.gasUsed,

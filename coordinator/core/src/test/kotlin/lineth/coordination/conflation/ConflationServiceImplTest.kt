@@ -9,8 +9,8 @@ import lineth.conflation.ZERO_COINBASE
 import lineth.conflation.calculators.BlockConflationCalculator
 import lineth.conflation.calculators.ConflationTriggerCalculatorByBlockLimit
 import lineth.conflation.calculators.GlobalBlockConflationCalculator
-import net.consensys.linea.traces.TracesCountersV2
-import net.consensys.linea.traces.fakeTracesCountersV2
+import net.consensys.linea.traces.TracesCountersV5
+import net.consensys.linea.traces.fakeTracesCountersV5
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.awaitility.Awaitility
@@ -41,7 +41,7 @@ class ConflationServiceImplTest {
           ConflationTriggerCalculatorByBlockLimit(conflationBlockLimit),
         ),
         deferredTriggerConflationCalculators = emptyList(),
-        emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+        emptyTracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
       )
     conflationService = ConflationServiceImpl(
       calculator = conflationCalculator,
@@ -60,7 +60,7 @@ class ConflationServiceImplTest {
       BlockCounters(
         blockNumber = 1UL,
         payload1Time.plus(0.seconds),
-        tracesCounters = fakeTracesCountersV2(40u),
+        tracesCounters = fakeTracesCountersV5(40u),
         blockRLPEncoded = ByteArray(0),
         coinbase = ZERO_COINBASE,
       )
@@ -68,7 +68,7 @@ class ConflationServiceImplTest {
       BlockCounters(
         blockNumber = 2UL,
         payload1Time.plus(2.seconds),
-        tracesCounters = fakeTracesCountersV2(40u),
+        tracesCounters = fakeTracesCountersV5(40u),
         blockRLPEncoded = ByteArray(0),
         coinbase = ZERO_COINBASE,
       )
@@ -76,7 +76,7 @@ class ConflationServiceImplTest {
       BlockCounters(
         blockNumber = 3UL,
         payload1Time.plus(4.seconds),
-        tracesCounters = fakeTracesCountersV2(100u),
+        tracesCounters = fakeTracesCountersV5(100u),
         blockRLPEncoded = ByteArray(0),
         coinbase = ZERO_COINBASE,
       )
@@ -101,7 +101,7 @@ class ConflationServiceImplTest {
             endBlockNumber = 2u,
             conflationTrigger = ConflationTrigger.BLOCKS_LIMIT,
             // these are not counted in conflation, so will be 0
-            tracesCounters = fakeTracesCountersV2(0u),
+            tracesCounters = fakeTracesCountersV5(0u),
           ),
         ),
       ),
@@ -116,7 +116,7 @@ class ConflationServiceImplTest {
     assertThat(numberOfBlocks % numberOfThreads).isEqualTo(0)
     val expectedConflations = numberOfBlocks / conflationBlockLimit.toInt() - 1
     val blocks = (1UL..numberOfBlocks.toULong()).map { createBlock(number = it, gasLimit = 20_000_000UL) }
-    val fixedTracesCounters = fakeTracesCountersV2(moduleTracesCounter)
+    val fixedTracesCounters = fakeTracesCountersV5(moduleTracesCounter)
     val blockTime = Instant.parse("2021-01-01T00:00:00Z")
     val conflationEvents = mutableListOf<BlocksConflation>()
     conflationService.onConflatedBatch { conflationEvent: BlocksConflation ->
@@ -161,7 +161,7 @@ class ConflationServiceImplTest {
   @Test
   fun `if calculator fails, error is propagated`() {
     val moduleTracesCounter = 10u
-    val fixedTracesCounters = fakeTracesCountersV2(moduleTracesCounter)
+    val fixedTracesCounters = fakeTracesCountersV5(moduleTracesCounter)
     val blockTime = Instant.parse("2021-01-01T00:00:00Z")
 
     val expectedException = RuntimeException("Calculator failed!")

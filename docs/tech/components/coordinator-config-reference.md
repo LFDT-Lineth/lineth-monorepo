@@ -499,14 +499,6 @@ Type-2 state proof provider (shnarf/state proof) settings.
 | `type2-state-proof-provider.request-retries.max-retries` | Maximum number of retry attempts. Omit for endless retries. Example: `3`. | `UInt?` | no | - | active |
 | `type2-state-proof-provider.request-retries.timeout` | Overall timeout across all retry attempts. Omit to disable the timeout. Example: `PT10S`. | `Duration?` | no | - | active |
 
-## traces-limits-v4
-
-Per-module trace counter limits for v4 tracing modules.
-
-| Key | Description | Type | Required | Default | Status |
-| --- | --- | --- | --- | --- | --- |
-| `traces-limits` | Per-module trace counter limits (v4 tracing modules). Each entry maps a tracing module name to its maximum trace count. | `Map<TracingModuleV4, UInt>` | yes | - | active |
-
 ## traces-limits-v5
 
 Per-module trace counter limits for v5 tracing modules.

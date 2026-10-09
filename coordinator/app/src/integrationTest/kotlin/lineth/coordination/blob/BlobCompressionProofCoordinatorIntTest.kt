@@ -26,7 +26,7 @@ import linea.persistence.db.test.CleanDbTestSuiteParallel
 import lineth.persistence.BlobsRepository
 import lineth.persistence.conflation.BlobsPostgresDao
 import lineth.persistence.conflation.BlobsRepositoryImpl
-import net.consensys.linea.traces.TracesCountersV2
+import net.consensys.linea.traces.TracesCountersV5
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.waitAtMost
 import org.junit.jupiter.api.BeforeEach
@@ -206,7 +206,7 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
             startBlockNumber = currentBlockNumber,
             endBlockNumber = endBlockNumber,
             conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-            tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+            tracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
           ),
         ),
         compressedData = Random.nextBytes(128),
@@ -237,19 +237,19 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
           startBlockNumber = blobEventStartBlock,
           endBlockNumber = blobEventEndBlock,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+          tracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
         ),
         ConflationCalculationResult(
           startBlockNumber = blobEventEndBlock + 1UL,
           endBlockNumber = blobEventEndBlock + 200UL,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+          tracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
         ),
         ConflationCalculationResult(
           startBlockNumber = blobEventEndBlock + 201UL,
           endBlockNumber = blobEventEndBlock + 300UL,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+          tracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
         ),
       ),
       compressedData = Random.nextBytes(128),
@@ -298,7 +298,7 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
           startBlockNumber = blobEventStartBlock,
           endBlockNumber = blobEventEndBlock,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+          tracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
         ),
       ),
       compressedData = Random.nextBytes(128),

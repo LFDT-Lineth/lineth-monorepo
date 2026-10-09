@@ -2,7 +2,7 @@ package lineth.conflation.calculators
 
 import linea.domain.BlockCounters
 import linea.domain.ConflationTrigger
-import net.consensys.linea.traces.TracesCountersV2
+import net.consensys.linea.traces.TracesCountersV5
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
@@ -70,7 +70,7 @@ class ConflationTriggerCalculatorByCoinbaseTest {
     BlockCounters(
       blockNumber = blockNumber.toULong(),
       blockTimestamp = Instant.parse("2021-01-01T00:00:00.000Z"),
-      tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+      tracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
       blockRLPEncoded = ByteArray(0),
       coinbase = coinbase,
     )

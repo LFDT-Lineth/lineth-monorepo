@@ -4894,21 +4894,6 @@
       }
     }
   },
-  "traces-limits-v4": {
-    "description": "Per-module trace counter limits for v4 tracing modules.",
-    "keys": {
-      "traces-limits": {
-        "type": "Map<TracingModuleV4, UInt>",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Per-module trace counter limits (v4 tracing modules). Each entry maps a tracing module name to its maximum trace count.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      }
-    }
-  },
   "traces-limits-v5": {
     "description": "Per-module trace counter limits for v5 tracing modules.",
     "keys": {

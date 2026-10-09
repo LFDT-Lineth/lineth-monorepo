@@ -5,9 +5,9 @@ import linea.domain.ConflationTrigger
 import lineth.conflation.ZERO_COINBASE
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.linea.traces.TracesCounters
-import net.consensys.linea.traces.TracesCountersV2
-import net.consensys.linea.traces.TracingModuleV2
-import net.consensys.linea.traces.fakeTracesCountersV2
+import net.consensys.linea.traces.TracesCountersV5
+import net.consensys.linea.traces.TracingModuleV5
+import net.consensys.linea.traces.fakeTracesCountersV5
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
@@ -16,7 +16,7 @@ import org.mockito.kotlin.mock
 import kotlin.time.Instant
 
 class ConflationTriggerCalculatorByExecutionTracesTest {
-  private val tracesLimit = fakeTracesCountersV2(100u)
+  private val tracesLimit = fakeTracesCountersV5(100u)
   private val testMeterRegistry = SimpleMeterRegistry()
   private val calculator =
     ConflationTriggerCalculatorByExecutionTraces(
@@ -31,7 +31,7 @@ class ConflationTriggerCalculatorByExecutionTracesTest {
   }
 
   private fun assertCountersEqualTo(expectedTracesCounters: TracesCounters) {
-    val inflightCounters = ConflationCounters.empty(TracesCountersV2.EMPTY_TRACES_COUNT)
+    val inflightCounters = ConflationCounters.empty(TracesCountersV5.EMPTY_TRACES_COUNT)
     calculator.copyCountersTo(inflightCounters)
     assertThat(inflightCounters)
       .isEqualTo(ConflationCounters(tracesCounters = expectedTracesCounters))
@@ -39,67 +39,67 @@ class ConflationTriggerCalculatorByExecutionTracesTest {
 
   @Test
   fun `appendBlock should accumulate counters`() {
-    calculator.appendBlock(blockCounters(fakeTracesCountersV2(10u)))
-    assertCountersEqualTo(fakeTracesCountersV2(10u))
+    calculator.appendBlock(blockCounters(fakeTracesCountersV5(10u)))
+    assertCountersEqualTo(fakeTracesCountersV5(10u))
 
-    calculator.appendBlock(blockCounters(fakeTracesCountersV2(20u)))
-    assertCountersEqualTo(fakeTracesCountersV2(30u))
+    calculator.appendBlock(blockCounters(fakeTracesCountersV5(20u)))
+    assertCountersEqualTo(fakeTracesCountersV5(30u))
 
-    calculator.appendBlock(blockCounters(fakeTracesCountersV2(40u)))
-    assertCountersEqualTo(fakeTracesCountersV2(70u))
+    calculator.appendBlock(blockCounters(fakeTracesCountersV5(40u)))
+    assertCountersEqualTo(fakeTracesCountersV5(70u))
 
     calculator.reset()
-    assertCountersEqualTo(fakeTracesCountersV2(0u))
+    assertCountersEqualTo(fakeTracesCountersV5(0u))
   }
 
   @Test
   fun `appendBlock should throw if counter go over limit when accumulated`() {
-    calculator.appendBlock(blockCounters(fakeTracesCountersV2(10u)))
-    assertThatThrownBy { calculator.appendBlock(blockCounters(fakeTracesCountersV2(91u))) }
+    calculator.appendBlock(blockCounters(fakeTracesCountersV5(10u)))
+    assertThatThrownBy { calculator.appendBlock(blockCounters(fakeTracesCountersV5(91u))) }
       .isInstanceOf(IllegalStateException::class.java)
 
     // it should allow single oversized block
     calculator.reset()
-    calculator.appendBlock(blockCounters(fakeTracesCountersV2(200u)))
+    calculator.appendBlock(blockCounters(fakeTracesCountersV5(200u)))
   }
 
   @Test
   fun `copyCountersTo`() {
-    val inflightConflationCounters = ConflationCounters.empty(TracesCountersV2.EMPTY_TRACES_COUNT)
-    calculator.appendBlock(blockCounters(fakeTracesCountersV2(10u)))
+    val inflightConflationCounters = ConflationCounters.empty(TracesCountersV5.EMPTY_TRACES_COUNT)
+    calculator.appendBlock(blockCounters(fakeTracesCountersV5(10u)))
     calculator.copyCountersTo(inflightConflationCounters)
     assertThat(inflightConflationCounters)
-      .isEqualTo(ConflationCounters(tracesCounters = fakeTracesCountersV2(10u)))
+      .isEqualTo(ConflationCounters(tracesCounters = fakeTracesCountersV5(10u)))
 
-    calculator.appendBlock(blockCounters(fakeTracesCountersV2(20u)))
+    calculator.appendBlock(blockCounters(fakeTracesCountersV5(20u)))
     calculator.copyCountersTo(inflightConflationCounters)
     assertThat(inflightConflationCounters)
-      .isEqualTo(ConflationCounters(tracesCounters = fakeTracesCountersV2(30u)))
+      .isEqualTo(ConflationCounters(tracesCounters = fakeTracesCountersV5(30u)))
 
-    calculator.appendBlock(blockCounters(fakeTracesCountersV2(30u)))
+    calculator.appendBlock(blockCounters(fakeTracesCountersV5(30u)))
     calculator.copyCountersTo(inflightConflationCounters)
     assertThat(inflightConflationCounters)
-      .isEqualTo(ConflationCounters(tracesCounters = fakeTracesCountersV2(60u)))
+      .isEqualTo(ConflationCounters(tracesCounters = fakeTracesCountersV5(60u)))
 
     calculator.reset()
     calculator.copyCountersTo(inflightConflationCounters)
     assertThat(inflightConflationCounters)
-      .isEqualTo(ConflationCounters(tracesCounters = fakeTracesCountersV2(0u)))
+      .isEqualTo(ConflationCounters(tracesCounters = fakeTracesCountersV5(0u)))
   }
 
   @Test
   fun `checkOverflow should return trigger when block is oversized`() {
-    assertThat(calculator.checkOverflow(blockCounters(fakeTracesCountersV2(100u)))).isNull()
-    assertThat(calculator.checkOverflow(blockCounters(fakeTracesCountersV2(101u))))
+    assertThat(calculator.checkOverflow(blockCounters(fakeTracesCountersV5(100u)))).isNull()
+    assertThat(calculator.checkOverflow(blockCounters(fakeTracesCountersV5(101u))))
       .isEqualTo(ConflationTriggerCalculator.OverflowTrigger(ConflationTrigger.TRACES_LIMIT, true))
   }
 
   @Test
   fun `checkOverflow should return trigger accumulated traces overflow`() {
-    calculator.appendBlock(blockCounters(fakeTracesCountersV2(10u)))
-    calculator.appendBlock(blockCounters(fakeTracesCountersV2(89u)))
-    assertThat(calculator.checkOverflow(blockCounters(fakeTracesCountersV2(1u)))).isNull()
-    assertThat(calculator.checkOverflow(blockCounters(fakeTracesCountersV2(2u))))
+    calculator.appendBlock(blockCounters(fakeTracesCountersV5(10u)))
+    calculator.appendBlock(blockCounters(fakeTracesCountersV5(89u)))
+    assertThat(calculator.checkOverflow(blockCounters(fakeTracesCountersV5(1u)))).isNull()
+    assertThat(calculator.checkOverflow(blockCounters(fakeTracesCountersV5(2u))))
       .isEqualTo(ConflationTriggerCalculator.OverflowTrigger(ConflationTrigger.TRACES_LIMIT, false))
   }
 
@@ -107,13 +107,13 @@ class ConflationTriggerCalculatorByExecutionTracesTest {
   fun `module counters incremented when traces overflow`() {
     val overflowingTraces =
       listOf(
-        TracingModuleV2.MMU,
-        TracingModuleV2.ADD,
-        TracingModuleV2.RLP_TXN,
+        TracingModuleV5.MMU,
+        TracingModuleV5.ADD,
+        TracingModuleV5.RLP_TXN,
       )
     val oversizedTraceCounters =
-      TracesCountersV2(
-        TracingModuleV2.entries.associate {
+      TracesCountersV5(
+        TracingModuleV5.entries.associate {
           if (overflowingTraces.contains(it)) {
             it to 101u
           } else {
@@ -122,17 +122,17 @@ class ConflationTriggerCalculatorByExecutionTracesTest {
         },
       )
 
-    TracingModuleV2.entries.forEach { module ->
+    TracingModuleV5.entries.forEach { module ->
       val moduleOverflowCounter =
         testMeterRegistry.get("test.conflation.overflow.evm")
           .tag("module", module.name).counter()
       assertThat(moduleOverflowCounter.count()).isEqualTo(0.0)
     }
-    assertThat(calculator.checkOverflow(blockCounters(fakeTracesCountersV2(100u)))).isNull()
+    assertThat(calculator.checkOverflow(blockCounters(fakeTracesCountersV5(100u)))).isNull()
     assertThat(calculator.checkOverflow(blockCounters(oversizedTraceCounters)))
       .isEqualTo(ConflationTriggerCalculator.OverflowTrigger(ConflationTrigger.TRACES_LIMIT, true))
 
-    TracingModuleV2.entries.forEach { module ->
+    TracingModuleV5.entries.forEach { module ->
       val moduleOverflowCounter =
         testMeterRegistry.get("test.conflation.overflow.evm")
           .tag("module", module.name).counter()
@@ -145,8 +145,8 @@ class ConflationTriggerCalculatorByExecutionTracesTest {
     }
 
     val overflowCounters =
-      TracesCountersV2(
-        TracingModuleV2.entries.associate {
+      TracesCountersV5(
+        TracingModuleV5.entries.associate {
           if (overflowingTraces.contains(it)) {
             it to 99u
           } else {
@@ -155,11 +155,11 @@ class ConflationTriggerCalculatorByExecutionTracesTest {
         },
       )
 
-    calculator.appendBlock(blockCounters(fakeTracesCountersV2(10u)))
+    calculator.appendBlock(blockCounters(fakeTracesCountersV5(10u)))
     assertThat(calculator.checkOverflow(blockCounters(overflowCounters)))
       .isEqualTo(ConflationTriggerCalculator.OverflowTrigger(ConflationTrigger.TRACES_LIMIT, false))
 
-    TracingModuleV2.entries.forEach { module ->
+    TracingModuleV5.entries.forEach { module ->
       val moduleOverflowCounter =
         testMeterRegistry.get("test.conflation.overflow.evm")
           .tag("module", module.name).counter()

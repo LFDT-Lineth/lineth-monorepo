@@ -92,7 +92,7 @@ docker compose -f docker/compose-tracing-v2.yml up -d postgres
 java -Dvertx.configurationFile=docker/config/coordinator/vertx-options.json \
      -Dlog4j2.configurationFile=docker/config/coordinator/log4j2-dev.xml \
      -jar coordinator/app/build/libs/coordinator.jar \
-     --traces-limits-v4 docker/config/common/traces-limits-v4.4.toml \
+     --traces-limits-v5 docker/config/common/traces-limits-v5.toml \
      --gas-price-cap-time-of-day-multipliers docker/config/common/gas-price-cap-time-of-day-multipliers.toml \
      docker/config/coordinator/coordinator-config-v2.toml
 ```
@@ -104,7 +104,7 @@ Note: When running the coordinator standalone, you'll need to ensure that all it
 The coordinator uses several configuration files:
 
 - `docker/config/coordinator/coordinator-config-v2.toml`: Main configuration file
-- `docker/config/common/traces-limits-v4.4.toml`: Traces limits configuration
+- `docker/config/common/traces-limits-v5.toml`: Traces limits configuration
 - Smart contract errors are bundled in the coordinator jar (`coordinator/config/src/main/resources/smart-contract-errors.toml`); pass `--smart-contract-errors <FILE>` only to add or override entries
 - `docker/config/common/gas-price-cap-time-of-day-multipliers.toml`: Gas price cap multipliers
 
