@@ -44,8 +44,6 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 	assert.Equal(t, "0xcafe", resp.ProofHex)
 	assert.Equal(t, uint64(1000501), resp.StartBlockNumber)
 	assert.Equal(t, repeatHex(0xbb), resp.ProgramVk)
-	assert.Empty(t, resp.L2L1Messages)
-	assert.Empty(t, resp.TxFroms)
 	assert.Empty(t, resp.FilteredAddresses)
 
 	pi := resp.PublicInputs
@@ -53,7 +51,7 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 	assert.Equal(t, repeatHex(0x02), pi.EndBlockHash)
 	assert.Equal(t, uint64(1000503), pi.EndBlockNumber)
 	assert.Equal(t, uint64(1763000101), pi.EndBlockTimestamp)
-	assert.Equal(t, repeatHex(0x03), pi.L2L1MessagesHash)
+	assert.Empty(t, pi.L2L1Messages)
 	assert.Equal(t, repeatHex(0x04), pi.ParentL1L2BridgeRollingHash)
 	assert.Equal(t, uint64(11), pi.ParentL1L2BridgeRollingHashMessageNumber)
 	assert.Equal(t, repeatHex(0x05), pi.EndL1L2BridgeRollingHash)

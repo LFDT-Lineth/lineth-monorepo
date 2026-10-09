@@ -18,7 +18,10 @@ import (
 var _ [1]uint32 = koalabear.Element{}
 var _ [1]uint32 = field.Element{}
 
-// AssignFromTraceShard expands and assigns the trace to the given runtime.
+// AssignFromTraceShard assigns the [ProgramRound] columns of the trace to the
+// given runtime, and stores the shard in the runtime so that the
+// [assignTraceRoundAction] assigns the columns of [Settings.TraceRound] when
+// the runtime reaches that round.
 func AssignFromTraceShard(
 	run *wiop.Runtime,
 	shard Shard,
@@ -33,6 +36,45 @@ func AssignFromTraceShard(
 	if messagebus.HasSharedRandomness(run.System) {
 		messagebus.AssignSharedRandomnessSeed(run, sharedRandomness)
 	}
+
+	assignShardRound(run, shard, schema, run.System.Rounds[ProgramRound])
+
+	// The rest of the trace, if any, is assigned by [assignTraceRoundAction]
+	// once the runtime reaches [Settings.TraceRound]. The shard is kept in the
+	// runtime, which is proper to each proof, and not in the action, which is
+	// shared by all the proofs over the system.
+	run.SetState(traceShardStateKey, shard)
+}
+
+// traceShardStateKey is the [wiop.Runtime] state key under which
+// [AssignFromTraceShard] stores the shard for [assignTraceRoundAction].
+const traceShardStateKey = "zkcdriver-trace-shard"
+
+// assignTraceRoundAction assigns the columns of [Settings.TraceRound] from the
+// shard stored in the runtime by [AssignFromTraceShard]. It is registered once
+// by [Define] and only holds what is fixed for the system.
+type assignTraceRoundAction struct {
+	Schema air.Schema[koalabear.Element]
+	Round  int
+}
+
+// Run implements [wiop.ProverAction].
+func (a *assignTraceRoundAction) Run(run *wiop.Runtime) {
+	shard, ok := run.GetState(traceShardStateKey)
+	if !ok {
+		logrus.Panicf("zkcdriver: assignTraceRoundAction: no trace shard in the runtime, AssignFromTraceShard was not called")
+	}
+	assignShardRound(run, shard.(trace.Shard[koalabear.Element]), a.Schema, run.System.Rounds[a.Round])
+}
+
+// assignShardRound assigns the columns of the shard that belong to the given
+// round, skipping all the others.
+func assignShardRound(
+	run *wiop.Runtime,
+	shard trace.Shard[koalabear.Element],
+	schema air.Schema[koalabear.Element],
+	round *wiop.Round,
+) {
 
 	eg := &errgroup.Group{}
 
@@ -68,6 +110,9 @@ func AssignFromTraceShard(
 						continue
 					}
 					wCol := sys.LookupColumn(columnIDMap[name])
+					if wCol.Round() != round {
+						continue
+					}
 
 					// Use unsafe cast to avoid per-element Bytes()/SetBytes()
 					// round-trip.

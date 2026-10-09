@@ -42,6 +42,10 @@ type Shard = trace.Shard[koalabear.Element]
 // Settings specifies the parameters for the arithmetization (a.k.a. the
 // "constraints").
 type Settings struct {
+	// TraceRound is the round holding the trace columns, apart from the
+	// program ones which are in [ProgramRound]. Zero puts the whole trace in
+	// round 0.
+	TraceRound int
 }
 
 // ZkCDriver exposes all the methods relevant for the user to interact with the
@@ -75,7 +79,7 @@ func NewZkCDriver(sys *wiop.System, settings Settings, bin io.Reader) *ZkCDriver
 	// Extract the AIR constraints from the binary file
 	schema := binf.AirConstraints()
 	// Translate air.Schema into prover's internal representation
-	Define(sys, &schema)
+	Define(sys, &schema, settings.TraceRound)
 	// Construct the driver
 	return &ZkCDriver{
 		BinaryFile:    binf,

@@ -98,7 +98,9 @@ func New(cfg Config) (*Core, error) {
 
 	sys := wiop.NewSystemf(wiopSystemName)
 	sys.NewRound()
-	driver := zkcdriver.NewZkCDriver(sys, zkcdriver.Settings{}, binFile)
+
+	// round 0 is reserved for the idential data, variable data per shard goes to round 1
+	driver := zkcdriver.NewZkCDriver(sys, zkcdriver.Settings{TraceRound: 1}, binFile)
 
 	// Must run after the arithmetization is defined, so the guest_output columns
 	// exist, and before the compiler passes, which discharge the openings it

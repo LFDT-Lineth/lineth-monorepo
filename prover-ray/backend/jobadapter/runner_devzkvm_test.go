@@ -84,7 +84,7 @@ func TestRunner_DevZkVM_CrossCheckPasses(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, testProverVersion+"-dev-zkvm", resp.ProverVersion)
 	assert.Equal(t, "0x3e92984e1569f7296de4776ac738531c3a602df8cf2b1734a56f3adb3e111972", resp.PublicInputs.ParentBlockHash)
-	assert.Equal(t, programVk, resp.ProgramVk)
+	assert.Equal(t, guestProgramID, resp.ProgramVk)
 	assert.Equal(t, "0x"+hex.EncodeToString(backend.DevMarkerProof(backend.ProverModeDevZkVM)), resp.ProofHex,
 		"proof is a placeholder marker; the commitment is an internal cross-check artifact")
 }

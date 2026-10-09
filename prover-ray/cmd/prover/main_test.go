@@ -101,7 +101,7 @@ func TestRunProve_DevMock(t *testing.T) {
 	assert.Equal(t, "t-dev-mock", resp["proverVersion"])
 	pi, ok := resp["publicInputs"].(map[string]any)
 	require.True(t, ok)
-	assert.Len(t, pi, 16, "all 16 public-input fields present (placeholder zeros)")
+	assert.Len(t, pi, 18, "all 18 public-input fields present (placeholder zeros)")
 	assert.Equal(t, resp["startBlockNumber"], pi["endBlockNumber"],
 		"single-block request: endBlockNumber must match the request, not stay zero")
 }
