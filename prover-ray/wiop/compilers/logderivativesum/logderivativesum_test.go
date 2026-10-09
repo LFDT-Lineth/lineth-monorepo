@@ -51,14 +51,15 @@ func TestCompile_WioptestSoundness(t *testing.T) {
 }
 
 // TestCompile_WioptestSoundness_TamperZ runs every wioptest scenario with a
-// constant-17 Z column instead of the honest prover output, and pins each
-// Result cell to zero. The final-sum verifier action then rejects the witness
-// because the sum of the (constant-17) Z[n-1] endpoints cannot equal zero.
+// constant-17 Z column and an arbitrary average cell C = 1234567 instead of
+// the honest prover output, and pins each Result cell to Σ n·C over its Z
+// columns. The final-sum verifier action then accepts, so the recurrence must
+// reject the witness: with a constant Z it reads C·zDen = zNum on every row,
+// which holds only if every row's sum of fractions is C.
 //
 // We bypass [proverAction.Run] entirely (no runRound), since the runtime
 // rejects re-assigning a column. Instead we set up the post-prover state
-// manually: Z gets the bogus value and each LogDerivativeSum's Result cell is
-// pinned to zero.
+// manually.
 func TestCompile_WioptestSoundness_TamperZ(t *testing.T) {
 	for _, build := range wioptest.LogDerivativeSumCompilerScenarios() {
 		sc := build()
@@ -106,15 +107,32 @@ func TestCompile_WioptestSoundness_TamperZ(t *testing.T) {
 				rt.AssignColumn(z, &wiop.ConcreteVector{Plain: field.VecFromExt(vals)})
 			}
 
-			// Pin each LogDerivativeSum's Result cell to zero so the
-			// claim-vs-running-sum check fires (the sum of constant-17
-			// Z[n-1] across entries cannot equal zero).
-			for _, ld := range sc.Sys.LogDerivativeSums {
-				rt.AssignCell(ld.Result, field.ElemFromExt(field.Ext{}))
+			// Average cells C and Result cells Σ n·C: the final-sum identity
+			// holds, so only the recurrence can catch the tampered Z.
+			c := field.Lift(field.NewFromString("1234567"))
+			for _, r := range sc.Sys.Rounds {
+				for _, va := range r.VerifierActions {
+					a, ok := va.(*logderivativesum.VerifierAction)
+					if !ok {
+						continue
+					}
+					var result field.Ext
+					for _, e := range a.Entries {
+						rt.AssignCell(e.Average, field.ElemFromExt(c))
+						var n field.Element
+						n.SetUint64(uint64(e.Module().RuntimeSize(rt)))
+						var nc field.Ext
+						nc.MulByElement(&c, &n)
+						result.Add(&result, &nc)
+					}
+					rt.AssignCell(a.LogDerivativeSum.Result, field.ElemFromExt(result))
+				}
 			}
 
-			assert.Error(t, checkAllVerifierActions(rt),
-				"verifier must reject a corrupted Z column")
+			require.NoError(t, checkAllVerifierActions(rt),
+				"the final-sum identity holds for Result = Σ n·C")
+			assert.Error(t, checkAllRecurrences(sc.Sys, rt),
+				"the recurrence must reject a constant Z with an arbitrary average")
 		})
 	}
 }
@@ -165,6 +183,61 @@ func checkAllVerifierActions(rt *wiop.Runtime) error {
 	return nil
 }
 
+// checkAllRecurrences checks every multi-valued vanishing of sys: after
+// Compile, the Z recurrences (and any vanishing of the scenario itself).
+func checkAllRecurrences(sys *wiop.System, rt *wiop.Runtime) error {
+	for _, m := range sys.Modules {
+		for _, v := range m.Vanishings {
+			if !v.Expression.IsMultiValued() {
+				continue
+			}
+			if err := v.Check(rt); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// verifierEntries returns the Z entries of every compiled LogDerivativeSum
+// of sys, read from the registered verifier actions.
+func verifierEntries(t *testing.T, sys *wiop.System) []logderivativesum.ZEntry {
+	t.Helper()
+	var res []logderivativesum.ZEntry
+	for _, r := range sys.Rounds {
+		for _, va := range r.VerifierActions {
+			if a, ok := va.(*logderivativesum.VerifierAction); ok {
+				res = append(res, a.Entries...)
+			}
+		}
+	}
+	require.NotEmpty(t, res, "Compile must register a logderivativesum verifier action")
+	return res
+}
+
+// averageCell returns the average cell of the only Z column of sys.
+func averageCell(t *testing.T, sys *wiop.System) *wiop.Cell {
+	t.Helper()
+	entries := verifierEntries(t, sys)
+	require.Len(t, entries, 1, "the system must have a single Z column")
+	return entries[0].Average
+}
+
+// extVec returns the extension vector of the given small integers (possibly
+// negative).
+func extVec(vals ...int64) []field.Ext {
+	res := make([]field.Ext, len(vals))
+	for i, v := range vals {
+		var x field.Element
+		x.SetInt64(v)
+		res[i] = field.Lift(x)
+	}
+	return res
+}
+
+// extGen returns the extension field.Gen of a small integer.
+func extGen(v int64) field.Gen { return field.ElemFromExt(extVec(v)[0]) }
+
 func findZColumn(t *testing.T, m *wiop.Module, existing []*wiop.Column) *wiop.Column {
 	t.Helper()
 	known := make(map[*wiop.Column]struct{}, len(existing))
@@ -211,8 +284,8 @@ func newSimpleFilteredSum(t *testing.T, n int) (
 // ---- Structural tests ----
 
 // countScalarVanishings returns the number of scalar (non-multi-valued)
-// vanishings on m — i.e. the endpoint openings produced by
-// [wiop.ColumnPosition.Open], as opposed to the multi-valued Z recurrence.
+// vanishings on m, such as local constraints and endpoint openings. The
+// cyclic recurrence needs none.
 func countScalarVanishings(m *wiop.Module) int {
 	n := 0
 	for _, v := range m.Vanishings {
@@ -224,33 +297,49 @@ func countScalarVanishings(m *wiop.Module) int {
 }
 
 func TestCompile_AddsZColumnAndVanishing(t *testing.T) {
-	sys, _, _, _ := newSimpleFilteredSum(t, 8)
+	sys, _, _, ld := newSimpleFilteredSum(t, 8)
 	mod := sys.Modules[0]
 	colsBefore := len(mod.Columns)
 	vansBefore := len(mod.Vanishings)
+	cellsBefore := len(ld.Result.Round().Cells)
 
 	logderivativesum.Compile(sys)
 
 	assert.Len(t, mod.Columns, colsBefore+1,
 		"compile must add exactly one Z column for a single fraction")
-	require.Len(t, mod.Vanishings, vansBefore+3,
-		"compile must add one recurrence plus the two endpoint-opening vanishings")
-	assert.Equal(t, 2, countScalarVanishings(mod),
-		"the Z[0] and Z[n-1] openings are scalar vanishings")
+	require.Len(t, mod.Vanishings, vansBefore+1,
+		"compile must add the cyclic recurrence and no boundary constraint")
+	assert.Equal(t, 0, countScalarVanishings(mod),
+		"the cyclic recurrence needs no local constraint or endpoint opening")
+	assert.Empty(t, mod.Vanishings[vansBefore].CancelledPositions,
+		"the recurrence must hold on every row, row 0 included")
+	assert.Len(t, ld.Result.Round().Cells, cellsBefore+1,
+		"compile must add the Z column's average cell to the result round")
 	assert.True(t, sys.LogDerivativeSums[0].IsReduced(),
 		"the LogDerivativeSum query must be marked reduced after compile")
 }
 
-func TestCompile_SkipsRecurrenceForSizeOne(t *testing.T) {
-	sys, _, _, _ := newSimpleFilteredSum(t, 1)
+// TestCompile_RecurrenceForSizeOne: on a one-row module the recurrence is
+// still registered, since it is what binds the average cell (C·zDen = zNum),
+// and an honest witness verifies.
+func TestCompile_RecurrenceForSizeOne(t *testing.T) {
+	sys, num, filter, ld := newSimpleFilteredSum(t, 1)
 	mod := sys.Modules[0]
 
 	logderivativesum.Compile(sys)
 
-	require.Len(t, mod.Vanishings, 2,
-		"a size-1 module needs no recurrence; only the two endpoint openings remain")
-	assert.Equal(t, 2, countScalarVanishings(mod),
-		"Z[0] and Z[n-1] coincide but each opening is still a scalar vanishing")
+	require.Len(t, mod.Vanishings, 1,
+		"a size-1 module keeps the recurrence, which binds the average cell")
+
+	rt := wiop.NewRuntime(sys)
+	rt.AssignColumn(num, makeVec(7))
+	rt.AssignColumn(filter, makeVec(1))
+	rt.AdvanceRound()
+	runRound(rt)
+
+	require.NoError(t, mod.Vanishings[0].Check(rt), "honest single-row recurrence must hold")
+	require.NoError(t, checkAllVerifierActions(rt), "honest single-row witness must verify")
+	requireGenEqual(t, genFromUint64(7), rt.GetCellValue(ld.Result), "single-row total must be 7")
 }
 
 func TestCompile_Idempotent(t *testing.T) {
@@ -302,10 +391,10 @@ func TestCompile_PacksFractions(t *testing.T) {
 
 	assert.Len(t, mod.Columns, colsBefore+2,
 		"4 fractions must be packed into ⌈4/3⌉ = 2 Z columns")
-	assert.Len(t, mod.Vanishings, 6,
-		"two Z columns: each has its own recurrence vanishing plus two endpoint openings")
-	assert.Equal(t, 4, countScalarVanishings(mod),
-		"each Z column contributes two scalar endpoint openings (Z[0] and Z[n-1])")
+	assert.Len(t, mod.Vanishings, 2,
+		"two Z columns: each has its own cyclic recurrence vanishing")
+	assert.Equal(t, 0, countScalarVanishings(mod),
+		"cyclic Z columns contribute no scalar boundary constraint")
 }
 
 // ---- Completeness tests ----
@@ -490,9 +579,9 @@ func TestCompile_Completeness_BucketsByModule(t *testing.T) {
 	})
 
 	logderivativesum.Compile(sys)
-	// Each module gets one Z column → one recurrence plus two endpoint openings.
-	assert.Len(t, mA.Vanishings, 3)
-	assert.Len(t, mB.Vanishings, 3)
+	// Each module gets one Z column → one cyclic recurrence.
+	assert.Len(t, mA.Vanishings, 1)
+	assert.Len(t, mB.Vanishings, 1)
 
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(cA, makeVec(1, 2, 3, 4)) // sum_A = 10
@@ -528,7 +617,8 @@ func TestCompile_Soundness_WrongResult(t *testing.T) {
 }
 
 // TestCompile_Soundness_WrongZ asserts the recurrence vanishing rejects a Z
-// assignment that does not satisfy the running-sum relation.
+// assignment that does not satisfy the running-sum relation, with the honest
+// average cell.
 func TestCompile_Soundness_WrongZ(t *testing.T) {
 	sys, num, filter, _ := newSimpleFilteredSum(t, 4)
 	mod := sys.Modules[0]
@@ -541,29 +631,23 @@ func TestCompile_Soundness_WrongZ(t *testing.T) {
 	rt.AssignColumn(filter, makeVec(1, 1, 1, 1))
 	rt.AdvanceRound()
 
-	// honest Z would be [2, 4, 6, 8]; constant Z violates Z[i] − Z[i−1] = 2.
-	bogus := []field.Ext{
-		field.Lift(field.NewFromString("1")),
-		field.Lift(field.NewFromString("1")),
-		field.Lift(field.NewFromString("1")),
-		field.Lift(field.NewFromString("1")),
-	}
-	rt.AssignColumn(zCol, &wiop.ConcreteVector{Plain: field.VecFromExt(bogus)})
+	// v = [2, 2, 2, 2] and C = 2, so the honest Z is constant; a jump at row
+	// 1 violates Z[1] − Z[0] = v[1] − C = 0.
+	rt.AssignColumn(zCol, &wiop.ConcreteVector{Plain: field.VecFromExt(extVec(0, 5, 5, 5))})
+	rt.AssignCell(averageCell(t, sys), extGen(2))
 
-	require.Len(t, mod.Vanishings, 3,
-		"one recurrence, the row-0 local constraint, and the endpoint opening")
-	rec := mod.Vanishings[0] // the recurrence is registered before the boundary constraints
-	require.True(t, rec.Expression.IsMultiValued(), "Vanishings[0] must be the recurrence")
-	assert.Error(t, rec.Check(rt),
+	require.Len(t, mod.Vanishings, 1, "the cyclic recurrence is the only constraint")
+	assert.Error(t, mod.Vanishings[0].Check(rt),
 		"recurrence vanishing must reject a Z column that violates the relation")
 }
 
-// TestCompile_Soundness_WrongInitialZ asserts the row-0 local constraint
-// rejects a Z column whose row 0 does not satisfy Z[0]·zDen[0] = zNum[0],
-// even though it satisfies the recurrence. This boundary used to be checked by
-// the verifier action; it is now pinned in-circuit by a local constraint, so
-// the verifier action (final-sum only) no longer sees it.
-func TestCompile_Soundness_WrongInitialZ(t *testing.T) {
+// TestCompile_Soundness_WrongAverage is the soundness core of the cyclic
+// recurrence: an average cell C' that is not the column's total over n (here
+// 3 instead of 2) can be made consistent with Result (n·C' = 12), but then no
+// Z satisfies the recurrence, since its rows sum to Σ v − n·C' ≠ 0 while the
+// left side telescopes to zero. The best attempt, Z[i] = Σ_{k≤i}(v[k] − C'),
+// fails at row 0, where the cycle does not close.
+func TestCompile_Soundness_WrongAverage(t *testing.T) {
 	sys, num, filter, ld := newSimpleFilteredSum(t, 4)
 	mod := sys.Modules[0]
 	witnessColumns := append([]*wiop.Column{}, mod.Columns...)
@@ -575,41 +659,39 @@ func TestCompile_Soundness_WrongInitialZ(t *testing.T) {
 	rt.AssignColumn(filter, makeVec(1, 1, 1, 1))
 	rt.AdvanceRound()
 
-	// Z that satisfies the recurrence (constant difference of 2) but with a
-	// shifted base: Z[0] = 5 instead of 2.
-	shifted := []field.Ext{
-		field.Lift(field.NewFromString("5")),
-		field.Lift(field.NewFromString("7")),
-		field.Lift(field.NewFromString("9")),
-		field.Lift(field.NewFromString("11")),
-	}
-	rt.AssignColumn(zCol, &wiop.ConcreteVector{Plain: field.VecFromExt(shifted)})
+	rt.AssignColumn(zCol, &wiop.ConcreteVector{Plain: field.VecFromExt(extVec(-1, -2, -3, -4))})
+	rt.AssignCell(averageCell(t, sys), extGen(3))
+	rt.AssignCell(ld.Result, extGen(12))
 
-	// The endpoint opening is lazy: it resolves to the (malicious) Z column
-	// value when read, so no explicit assignment is needed here.
-	rt.AssignCell(ld.Result, field.ElemFromExt(shifted[3]))
-
-	// The recurrence (multi-valued) accepts the constant-step Z, and the
-	// final-sum verifier action only compares consistent endpoints to Result —
-	// neither catches the shifted base.
-	rec := mod.Vanishings[0]
-	require.True(t, rec.Expression.IsMultiValued(), "Vanishings[0] must be the recurrence")
-	require.NoError(t, rec.Check(rt), "recurrence must accept a constant-step Z")
 	require.NoError(t, checkAllVerifierActions(rt),
-		"the final-sum verifier action only checks endpoints against Result")
+		"the final-sum identity holds for Result = n·C'")
+	assert.Error(t, mod.Vanishings[0].Check(rt),
+		"the recurrence must reject an average cell that is not the column's total over n")
+}
 
-	// The row-0 local constraint must reject the shifted base.
-	rejected := false
-	for _, v := range mod.Vanishings {
-		if v.Expression.IsMultiValued() {
-			continue
-		}
-		if err := v.Check(rt); err != nil {
-			rejected = true
-		}
-	}
-	assert.True(t, rejected,
-		"the row-0 local constraint must reject a Z whose row-0 value disagrees with zNum[0]/zDen[0]")
+// TestCompile_ZShiftedByConstant documents that the cyclic Z is only defined
+// up to a constant: the recurrence reads differences of Z, and nothing else
+// reads Z. Shifting the honest Z is therefore accepted, and harmless, since
+// the total is carried by the average cell.
+func TestCompile_ZShiftedByConstant(t *testing.T) {
+	sys, num, filter, _ := newSimpleFilteredSum(t, 4)
+	mod := sys.Modules[0]
+	witnessColumns := append([]*wiop.Column{}, mod.Columns...)
+	logderivativesum.Compile(sys)
+	zCol := findZColumn(t, mod, witnessColumns)
+
+	rt := wiop.NewRuntime(sys)
+	rt.AssignColumn(num, makeVec(1, 2, 3, 6))
+	rt.AssignColumn(filter, makeVec(1, 1, 1, 1))
+	rt.AdvanceRound()
+
+	// Total 12, C = 3: the honest Z is [−2, −3, −3, 0]; shift it by 5.
+	rt.AssignColumn(zCol, &wiop.ConcreteVector{Plain: field.VecFromExt(extVec(3, 2, 2, 5))})
+	rt.AssignCell(averageCell(t, sys), extGen(3))
+	rt.AssignCell(sys.LogDerivativeSums[0].Result, extGen(12))
+
+	require.NoError(t, mod.Vanishings[0].Check(rt), "a constant shift of Z satisfies the recurrence")
+	require.NoError(t, checkAllVerifierActions(rt), "and the final-sum identity")
 }
 
 // ---- Dynamic-module coverage ----
@@ -697,27 +779,20 @@ func TestCompile_DynamicModule_RecurrenceCatchesWrongZ(t *testing.T) {
 	logderivativesum.Compile(sys)
 	zCol := findZColumn(t, mod, witnessColumns)
 
-	// Three vanishings per LDS: 1 recurrence + 2 endpoint-opening bindings
-	// (one each for Z[0] and Z[last], registered by ColumnPosition.Open).
-	// The recurrence is always Vanishings[0] (registered before the openings).
-	require.Len(t, mod.Vanishings, 3,
-		"dynamic module must emit the recurrence Vanishing unconditionally plus two endpoint-opening bindings")
+	require.Len(t, mod.Vanishings, 1,
+		"dynamic module must emit the cyclic recurrence and no boundary constraint")
 
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(num, makeVec(2, 2, 2, 2))
 	rt.AssignColumn(filter, makeVec(1, 1, 1, 1))
 	rt.AdvanceRound()
 
-	bogus := []field.Ext{
-		field.Lift(field.NewFromString("1")),
-		field.Lift(field.NewFromString("1")),
-		field.Lift(field.NewFromString("1")),
-		field.Lift(field.NewFromString("1")),
-	}
-	rt.AssignColumn(zCol, &wiop.ConcreteVector{Plain: field.VecFromExt(bogus)})
+	// The honest Z is constant (v = C = 2); a jump at row 1 breaks it.
+	rt.AssignColumn(zCol, &wiop.ConcreteVector{Plain: field.VecFromExt(extVec(0, 5, 5, 5))})
+	rt.AssignCell(averageCell(t, sys), extGen(2))
 
 	assert.Error(t, mod.Vanishings[0].Check(rt),
-		"recurrence Vanishing must reject a constant Z on a dynamic module")
+		"recurrence Vanishing must reject a wrong Z on a dynamic module")
 }
 
 // TestCompile_DynamicModule_Soundness_WrongResult is the dynamic-module
@@ -742,15 +817,11 @@ func TestCompile_DynamicModule_Soundness_WrongResult(t *testing.T) {
 		"a corrupted Result cell on a dynamic-module LDS must be detected by the verifier action")
 }
 
-// TestCompile_DynamicModule_Soundness_WrongInitialZ is the dynamic-module
-// counterpart of [TestCompile_Soundness_WrongInitialZ]: a Z column whose
-// per-row differences satisfy the recurrence but whose row-0 value is
-// shifted away from the honest zNum[0]/zDen[0] must pass the recurrence
-// Vanishing yet be rejected by the row-0 local constraint. This boundary used
-// to be checked by the verifier action; it is now pinned in-circuit by a local
-// constraint, so the verifier action (final-sum only) no longer sees it — on
-// the dynamic-module path just like on the static one.
-func TestCompile_DynamicModule_Soundness_WrongInitialZ(t *testing.T) {
+// TestCompile_DynamicModule_Soundness_WrongAverage is the dynamic-module
+// counterpart of [TestCompile_Soundness_WrongAverage]: n is the runtime size,
+// and an average cell that is not the column's total over n is rejected by the
+// recurrence, though consistent with Result.
+func TestCompile_DynamicModule_Soundness_WrongAverage(t *testing.T) {
 	sys, num, filter, ld := newDynamicFilteredSum(t)
 	mod := sys.Modules[0]
 	witnessColumns := append([]*wiop.Column{}, mod.Columns...)
@@ -762,59 +833,27 @@ func TestCompile_DynamicModule_Soundness_WrongInitialZ(t *testing.T) {
 	rt.AssignColumn(filter, makeVec(1, 1, 1, 1))
 	rt.AdvanceRound()
 
-	// Honest Z = [2, 4, 6, 8]. A constant-step-of-2 sequence starting at 5
-	// satisfies Z[i] − Z[i−1] = 2 but disagrees with Z[0]·zDen[0] = zNum[0].
-	shifted := []field.Ext{
-		field.Lift(field.NewFromString("5")),
-		field.Lift(field.NewFromString("7")),
-		field.Lift(field.NewFromString("9")),
-		field.Lift(field.NewFromString("11")),
-	}
-	rt.AssignColumn(zCol, &wiop.ConcreteVector{Plain: field.VecFromExt(shifted)})
+	rt.AssignColumn(zCol, &wiop.ConcreteVector{Plain: field.VecFromExt(extVec(-1, -2, -3, -4))})
+	rt.AssignCell(averageCell(t, sys), extGen(3))
+	rt.AssignCell(ld.Result, extGen(12))
 
-	// The endpoint opening is lazy: it self-resolves from Z on first read, no
-	// explicit assignment needed.
-	rt.AssignCell(ld.Result, field.ElemFromExt(shifted[3]))
-
-	// The recurrence (multi-valued) accepts the constant-step Z, and the
-	// final-sum verifier action only compares consistent endpoints to Result —
-	// neither catches the shifted base on the dynamic path.
-	rec := mod.Vanishings[0]
-	require.True(t, rec.Expression.IsMultiValued(), "Vanishings[0] must be the recurrence")
-	require.NoError(t, rec.Check(rt), "recurrence must accept a constant-step Z on a dynamic module")
 	require.NoError(t, checkAllVerifierActions(rt),
-		"the final-sum verifier action only checks endpoints against Result")
-
-	// The row-0 local constraint must reject the shifted base.
-	rejected := false
-	for _, v := range mod.Vanishings {
-		if v.Expression.IsMultiValued() {
-			continue
-		}
-		if err := v.Check(rt); err != nil {
-			rejected = true
-		}
-	}
-	assert.True(t, rejected,
-		"the row-0 local constraint must reject a Z whose row-0 value disagrees with zNum[0]/zDen[0] on a dynamic module")
+		"the final-sum identity holds for Result = n·C' with the runtime n")
+	assert.Error(t, mod.Vanishings[0].Check(rt),
+		"the recurrence must reject a wrong average cell on a dynamic module")
 }
 
-// TestCompile_DynamicModule_SizeOne pins down the corner case that drives
-// the [m.IsDynamic() || m.Size() > 1] decision in buildZ: the recurrence
-// Vanishing is emitted at compile time even though the runtime size turns
-// out to be 1, and Vanishing.Check must treat the constraint as vacuous on
-// the single row (cancelled by the Shift(-1) on Z). Both the recurrence
-// and the LDS verifier action must accept an honest single-row witness.
+// TestCompile_DynamicModule_SizeOne: a dynamic module whose runtime size
+// turns out to be 1. The cyclic recurrence then reads C·zDen = zNum on the
+// single row (Z's −1 shift wraps onto itself), and both the recurrence and
+// the LDS verifier action must accept an honest single-row witness.
 func TestCompile_DynamicModule_SizeOne(t *testing.T) {
 	sys, num, filter, _ := newDynamicFilteredSum(t)
 	mod := sys.Modules[0]
 	logderivativesum.Compile(sys)
 
-	// Three vanishings per LDS: 1 recurrence (Vanishings[0]) + 1 row-0 local
-	// constraint + 1 endpoint-opening binding registered by ColumnPosition.Open.
-	require.Len(t, mod.Vanishings, 3,
-		"dynamic module always emits the recurrence Vanishing at compile time, "+
-			"even when the runtime size will turn out to be 1")
+	require.Len(t, mod.Vanishings, 1,
+		"dynamic module emits the cyclic recurrence, whatever its runtime size")
 
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(num, makeVec(7))
@@ -823,8 +862,7 @@ func TestCompile_DynamicModule_SizeOne(t *testing.T) {
 	runRound(rt)
 
 	require.NoError(t, mod.Vanishings[0].Check(rt),
-		"recurrence Vanishing must be vacuous when RuntimeSize == 1 "+
-			"(the only row is cancelled by Z's −1 shift)")
+		"honest recurrence must hold when RuntimeSize == 1")
 	require.NoError(t, checkAllVerifierActions(rt),
 		"honest single-row dynamic-module assignment must verify end-to-end")
 }
