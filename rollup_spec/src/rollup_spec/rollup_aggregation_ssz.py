@@ -103,8 +103,8 @@ class SszFinalizationPublicInput(Container):
     end_data_rolling_hash: SszBytes32
     parent_block_hash: SszBytes32
     end_block_hash: SszBytes32
-    start_offset: uint64
-    end_offset: uint64
+    parent_data_tail_take_bytes: uint64
+    final_data_tail_discard_bytes: uint64
     l2_l1_tree_depth: uint64
     l2_l1_roots: List[SszBytes32, MAX_L2_L1_ROOTS]
     filtered_addresses: List[SszAddress, MAX_FILTERED_ADDRESSES]
@@ -224,7 +224,7 @@ def decode_aggregation_output_ssz(data: bytes) -> FinalizationSubmission:
         "parent_block_hash", "end_block_hash",
     ):
         fields[name] = Hash32(bytes(fields[name]))
-    for name in ("start_offset", "end_offset", "l2_l1_tree_depth"):
+    for name in ("parent_data_tail_take_bytes", "final_data_tail_discard_bytes", "l2_l1_tree_depth"):
         fields[name] = int(fields[name])
     fields["l2_l1_roots"] = [Hash32(bytes(root)) for root in view.l2_l1_roots]
     fields["filtered_addresses"] = [Address(bytes(address)) for address in view.filtered_addresses]

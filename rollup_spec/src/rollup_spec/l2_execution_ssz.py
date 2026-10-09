@@ -14,10 +14,15 @@ Two schema ids are defined here:
   - `L2_EXECUTION_INPUT_SCHEMA_ID`  (0x0002) — extended l2-execution guest input
   - `L2_EXECUTION_OUTPUT_SCHEMA_ID` (0x0003) — extended l2-execution guest output
 
-The guest output wire is `keccak256(schema_id || SSZ(public_inputs)) ||
-schema_id || SSZ(public_inputs)`. The decoder validates the hash and returns the
-public-input tuple. `start_block_number` and `filtered_addresses`
-remain proof metadata outside the guest output; the prover attaches `proof`.
+The guest output wire is hash-only: the 0x0003 body is exactly
+`keccak256(ssz(public_inputs))` — 32 bytes, nothing else (34 bytes framed).
+The remaining `L2ExecutionProof` fields (`start_block_number` and the
+`filtered_addresses` preimage) are off-chain data, never part of this wire
+format, and `proof` is attached by the prover layer above the guest. The hash
+is irreversible, so the output decoder
+returns the public-inputs hash rather than reconstructing a dataclass;
+`encode_l2_execution_public_inputs_bytes` exposes the SSZ
+preimage tuple.
 
 Each payload's `stateless_input_ssz` is carried opaquely — an already
 0x0001-framed vanilla stateless-input byte slice, byte-identical to what a
