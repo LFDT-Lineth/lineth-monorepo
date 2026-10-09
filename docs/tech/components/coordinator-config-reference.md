@@ -65,6 +65,7 @@ Coordinator PostgreSQL persistence settings.
 
 | Key | Description | Type | Required | Default | Status |
 | --- | --- | --- | --- | --- | --- |
+| `database.database-name` | PostgreSQL database name. Formerly `schema`, still accepted as a deprecated alias. | `String` | no | `linea_coordinator` | active |
 | `database.hostname` | PostgreSQL hostname used by the coordinator persistence layer. Example: `postgres`. | `String` | yes | - | active |
 | `database.password` | PostgreSQL password. Masked in logs. | `Masked` | yes | - | active |
 | `database.persistence-retries.backoff-delay` | Delay between retry attempts. Example: `PT1S`. | `Duration` | no | `PT1S` | active |
@@ -75,7 +76,6 @@ Coordinator PostgreSQL persistence settings.
 | `database.port` | PostgreSQL port. | `UInt` | no | `5432` | active |
 | `database.read-pipelining-limit` | Maximum number of read queries pipelined on a single connection. | `Int` | no | `10` | active |
 | `database.read-pool-size` | Connection pool size for read-only queries. | `Int` | no | `10` | active |
-| `database.schema` | PostgreSQL schema (database) name. | `String` | no | `linea_coordinator` | active |
 | `database.schema-version` | Expected database schema version; must match a supported migration version. | `Int` | no | `4` | active |
 | `database.transactional-pool-size` | Connection pool size for transactional (read-write) queries. | `Int` | no | `10` | active |
 | `database.username` | PostgreSQL username. Example: `postgres`. | `String` | yes | - | active |
