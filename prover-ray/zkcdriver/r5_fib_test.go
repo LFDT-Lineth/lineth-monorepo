@@ -2,6 +2,7 @@ package zkcdriver_test
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -13,6 +14,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/proofserialization"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	minimalelf "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/minimal-elf"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 )
@@ -35,7 +37,7 @@ func BenchmarkR5Fibonacci(b *testing.B) {
 	const instrPerShard = 250_000
 	var (
 		n           = fibBenchEnvInt(b, "R5_FIB_N", 1_000_000)
-		proveShards = fibBenchEnvInt(b, "R5_FIB_PROVE", 1)
+		proveShards = uint(fibBenchEnvInt(b, "R5_FIB_PROVE", 1))
 		// Each shard covers 250K interpreter() invocations = 250K executed
 		// RISC-V instructions (see r5_benchmark_test.go's fixture comment).
 		tracingConfig = vm.DEFAULT_TRACE_CONFIG.
@@ -54,20 +56,22 @@ func BenchmarkR5Fibonacci(b *testing.B) {
 	}
 
 	b.Logf("tracing fib(N=%d) sharded", n)
-	outputs, traces, errs := binf.Trace(inputsMap, tracingConfig)
+	outputs, maybeTrace, errs := binf.Trace(inputsMap, tracingConfig)
 	if len(errs) > 0 {
 		b.Fatalf("tracing failed: %v", errs)
-	}
-
-	if got := outputs["guest_output"]; !bytes.Equal(got, wantOutput) {
+	} else if got := outputs["guest_output"]; !bytes.Equal(got, wantOutput) {
 		b.Fatalf("unexpected guest_output: got %x, want %x", got, wantOutput)
 	}
-
+	//
+	lazyTrace := maybeTrace.Unwrap()
 	// Per-shard trace statistics.
-	numShards := len(traces)
+	numShards := lazyTrace.Len()
 	b.Logf("shards: %d (R5_FIB_N=%d, %d interpreter invocations per shard)", numShards, n, instrPerShard)
 	rowLimit := 0
-	for i, shard := range traces {
+	// Process shards lazily
+	//
+	// NOTE: this forces all shards to be fully materialised.
+	errs = lazyTrace.Apply(func(i uint, shard zkcdriver.Shard) {
 		var rows, cells uint64
 		var tallestName string
 		var tallestHeight uint
@@ -76,7 +80,8 @@ func BenchmarkR5Fibonacci(b *testing.B) {
 			height uint
 			width  uint
 		}
-		var mods []modStat
+		var mods = make([]modStat, shard.Width())
+		//
 		for moduleID := range shard.Width() {
 			module := shard.Module(moduleID)
 			rows += uint64(module.Height())
@@ -85,7 +90,7 @@ func BenchmarkR5Fibonacci(b *testing.B) {
 				tallestHeight = module.Height()
 				tallestName = module.Name()
 			}
-			mods = append(mods, modStat{module.Name(), module.Height(), module.Width()})
+			mods[moduleID] = modStat{module.Name(), module.Height(), module.Width()}
 			if module.Name() == "interpreter" {
 				b.Logf("shard %d: interpreter module %d rows x %d cols", i, module.Height(), module.Width())
 				b.ReportMetric(float64(module.Height()), fmt.Sprintf("shard_%d/interp-rows", i))
@@ -103,7 +108,12 @@ func BenchmarkR5Fibonacci(b *testing.B) {
 		b.ReportMetric(float64(rows), fmt.Sprintf("shard_%d/trace-rows", i))
 		b.ReportMetric(float64(cells), fmt.Sprintf("shard_%d/trace-cells", i))
 		rowLimit = max(rowLimit, log2ceil(tallestHeight))
+	})
+	// Sanity check for tracing failures
+	if len(errs) > 0 {
+		b.Fatalf("tracing failed: %v", errors.Join(errs...))
 	}
+	//
 	b.ReportMetric(float64(numShards), "shards")
 	// Deterministic extrapolation to the cross-zkVM workload: the guest executes
 	// exactly 14+5*N instructions (see FibonacciELF doc), so shard count scales
@@ -128,11 +138,18 @@ func BenchmarkR5Fibonacci(b *testing.B) {
 
 	// Prove up to R5_FIB_PROVE shards, spread evenly (first/…/last).
 	step := max(numShards/proveShards, 1)
-	proved := 0
-	for i := 0; i < numShards && proved < proveShards; i += step {
-		shard := traces[i]
+	proved := uint(0)
+	for i := uint(0); i < numShards && proved < proveShards; i += step {
+		// NOTE: this forces the ith shard to be retraced --- meaning it will
+		// have been traced once during the metric run above, and then again
+		// during the proof run here.
+		shard, errs := lazyTrace.Get(i)
+		// sanity check for tracing errors
+		if len(errs) > 0 {
+			b.Fatalf("shard %d failed to trace: %v", i, errors.Join(errs...))
+		}
 		proof, pub := system.Prove(func(rt *wiop.Runtime) {
-			driver.AssignTraceShard(rt, shard, placeholderSharedRandomness)
+			driver.AssignTraceShard(rt, shard.Unwrap(), placeholderSharedRandomness)
 		})
 		sizeBytes := proofserialization.Measure(system, proof, pub).Total
 		if err := system.Verify(proof, pub); err != nil {

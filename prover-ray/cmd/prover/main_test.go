@@ -67,6 +67,7 @@ func TestRun_RejectsInvalidMode(t *testing.T) {
 	cfg := filepath.Join(t.TempDir(), "config.toml")
 	require.NoError(t, os.WriteFile(cfg, []byte(
 		"version = \"t\"\n[execution]\nprover_mode = \"bogus\"\nrequests_root_dir = \"/tmp\"\n"), 0o600))
+	//nolint:goconst
 	err := run([]string{"--config", cfg})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid prover_mode")

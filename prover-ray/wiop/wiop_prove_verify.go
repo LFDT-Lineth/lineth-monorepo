@@ -264,7 +264,7 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 
 		cell := sys.LookupCell(id)
 		if cell == nil {
-			return fmt.Errorf("cell %q not found in system", id)
+			return fmt.Errorf("cell %d not found in system", id)
 		}
 
 		if !rt.HasCellValue(cell) {

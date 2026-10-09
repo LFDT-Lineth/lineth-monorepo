@@ -8,7 +8,6 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/zkc/pkg/ir/air"
-	"github.com/LFDT-Lineth/zkc/pkg/trace"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
@@ -25,7 +24,7 @@ var _ [1]uint32 = field.Element{}
 // the runtime reaches that round.
 func AssignFromTraceShard(
 	run *wiop.Runtime,
-	shard trace.Shard[koalabear.Element],
+	shard Shard,
 	schema air.Schema[koalabear.Element],
 	sharedRandomness field.Octuplet,
 ) {
@@ -65,14 +64,14 @@ func (a *assignTraceRoundAction) Run(run *wiop.Runtime) {
 	if !ok {
 		logrus.Panicf("zkcdriver: assignTraceRoundAction: no trace shard in the runtime, AssignFromTraceShard was not called")
 	}
-	assignShardRound(run, shard.(trace.Shard[koalabear.Element]), a.Schema, run.System.Rounds[a.Round])
+	assignShardRound(run, shard.(Shard), a.Schema, run.System.Rounds[a.Round])
 }
 
 // assignShardRound assigns the columns of the shard that belong to the given
 // round, skipping all the others.
 func assignShardRound(
 	run *wiop.Runtime,
-	shard trace.Shard[koalabear.Element],
+	shard Shard,
 	schema air.Schema[koalabear.Element],
 	round *wiop.Round,
 ) {

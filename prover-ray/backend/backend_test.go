@@ -18,6 +18,7 @@ import (
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/compiler/ast"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/compiler/codegen"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/constraints"
+	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -120,8 +121,8 @@ func compileZKCBin(t *testing.T, srcPath string) string {
 	if len(errs) > 0 {
 		t.Fatalf("zkc ast compile %q: %v", srcPath, errs)
 	}
-
-	binF := constraints.NewBinaryFile[koalabear.Element](nil, nil, ir)
+	// NOTE: For Koalabear we always use a u32 word size for tracing.
+	binF := constraints.NewBinaryFile[koalabear.Element, vm.Uint32](nil, nil, ir)
 	binBytes, err := binF.MarshalBinary()
 	require.NoError(t, err)
 

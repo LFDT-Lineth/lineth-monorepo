@@ -50,6 +50,7 @@ func TestDecodeAggregationRequest_InvalidShape(t *testing.T) {
 	}
 	pi0 := func(o map[string]any) map[string]any { return proof0(o)[publicInputsKey].(map[string]any) }
 
+	//nolint:goconst
 	cases := []struct {
 		name    string
 		mutate  func(o map[string]any)

@@ -238,6 +238,7 @@ func TestEncodeStatelessInput_MalformedInputs(t *testing.T) {
 
 	const notHex = "0xzz"
 
+	//nolint:goconst
 	cases := []struct {
 		name    string
 		mutate  func(o map[string]any)

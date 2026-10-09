@@ -25,7 +25,7 @@ jobs:
     - name: install Go
       uses: ./.github/actions/setup-go
       with:
-        go-version: 1.25.7
+        go-version: 1.27.1
         cache-dependency-path: |
               prover-ray/go.sum
     - uses: ./.github/actions/cache
@@ -44,7 +44,7 @@ jobs:
       uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
       with:
           skip-save-cache: ${{ github.ref != 'refs/heads/main' || startsWith(github.event_name, 'pull_request') }}
-          version: v2.11.3
+          version: v2.13.0
           working-directory: prover-ray
           args: --timeout=5m
     - name: generated files should not be modified
@@ -58,7 +58,7 @@ jobs:
   test:
     strategy:
       matrix:
-        go-version: [1.25.7]
+        go-version: [1.27.1]
     # ~1 min saved vs large
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
     name: Prover testing

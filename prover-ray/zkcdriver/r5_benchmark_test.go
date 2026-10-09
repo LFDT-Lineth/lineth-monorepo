@@ -13,27 +13,24 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	minimalelf "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/minimal-elf"
-	"github.com/LFDT-Lineth/zkc/pkg/trace"
-	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
-	"github.com/LFDT-Lineth/zkc/pkg/zkc/constraints"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 )
 
 var (
-	r5TraceSink trace.Trace[koalabear.Element]
+	r5TraceSink zkcdriver.LazyTrace
 	r5ProofSink []wiop.Proof
 	r5PubSink   []wiop.PublicInput
 )
 
 type r5BenchmarkFixture struct {
-	binFile        *constraints.BinaryFile[koalabear.Element]
-	inputs         map[string][]byte
-	expandedShards []trace.Shard[koalabear.Element]
-	serialized     []byte
-	system         *wiop.System
-	driver         *zkcdriver.ZkCDriver
-	traceRows      []uint64
-	traceCells     []uint64
+	binFile    *zkcdriver.BinaryFile
+	inputs     map[string][]byte
+	lazyTrace  zkcdriver.LazyTrace
+	serialized []byte
+	system     *wiop.System
+	driver     *zkcdriver.ZkCDriver
+	traceRows  []uint64
+	traceCells []uint64
 }
 
 func loadR5BenchmarkFixture(b *testing.B) *r5BenchmarkFixture {
@@ -69,7 +66,7 @@ func loadR5BenchmarkFixture(b *testing.B) *r5BenchmarkFixture {
 	if err != nil {
 		b.Fatalf("compiling R5 ZKC program: %v", err)
 	}
-	outputs, expandedTrace, errs := binFile.Trace(inputs, tracingConfig)
+	outputs, lazyTrace, errs := binFile.Trace(inputs, tracingConfig)
 	if len(errs) > 0 {
 		b.Fatalf("tracing R5 fixture: %v", errors.Join(errs...))
 	}
@@ -81,23 +78,27 @@ func loadR5BenchmarkFixture(b *testing.B) *r5BenchmarkFixture {
 		b.Fatalf("serializing R5 constraints: %v", err)
 	}
 	fixture := &r5BenchmarkFixture{
-		binFile:        binFile,
-		inputs:         inputs,
-		expandedShards: expandedTrace,
-		serialized:     serialized,
+		binFile:    binFile,
+		inputs:     inputs,
+		lazyTrace:  lazyTrace.Unwrap(),
+		serialized: serialized,
 	}
 	// Initialise traceRows/traceCells
-	fixture.traceRows = make([]uint64, len(expandedTrace))
-	fixture.traceCells = make([]uint64, len(expandedTrace))
+	fixture.traceRows = make([]uint64, fixture.lazyTrace.Len())
+	fixture.traceCells = make([]uint64, fixture.lazyTrace.Len())
 	// Collect per-shard metrics
-	for i, shard := range expandedTrace {
+	errs = fixture.lazyTrace.Apply(func(i uint, shard zkcdriver.Shard) {
 		for moduleID := range shard.Width() {
 			module := shard.Module(moduleID)
 			fixture.traceRows[i] += uint64(module.Height())
 			fixture.traceCells[i] += uint64(module.Height()) * uint64(module.Width())
 		}
+	})
+	// Sanity check for tracing failures
+	if len(errs) > 0 {
+		b.Fatalf("tracing failed: %v", errors.Join(errs...))
 	}
-
+	//
 	return fixture
 }
 
@@ -139,14 +140,14 @@ func BenchmarkR5Trace(b *testing.B) {
 	b.ResetTimer()
 
 	for b.Loop() {
-		_, expandedTrace, errs := fixture.binFile.Trace(
+		_, maybeTrace, errs := fixture.binFile.Trace(
 			fixture.inputs,
 			vm.DEFAULT_TRACE_CONFIG,
 		)
 		if len(errs) > 0 {
 			b.Fatalf("tracing R5 program: %v", errors.Join(errs...))
 		}
-		r5TraceSink = expandedTrace
+		r5TraceSink = maybeTrace.Unwrap()
 	}
 	reportR5Work(b, fixture)
 }
@@ -159,21 +160,23 @@ func BenchmarkR5TraceAndCheck(b *testing.B) {
 	b.ResetTimer()
 
 	for b.Loop() {
-		_, expandedTrace, errs := fixture.binFile.Trace(
+		_, maybeTrace, errs := fixture.binFile.Trace(
 			fixture.inputs,
 			vm.DEFAULT_TRACE_CONFIG,
 		)
 		if len(errs) > 0 {
 			b.Fatalf("tracing R5 program: %v", errors.Join(errs...))
+		} else if failures, errs := fixture.binFile.Check(vm.DEFAULT_TRACE_CONFIG, maybeTrace.Unwrap()); len(failures) > 0 || len(errs) > 0 {
+			// failures are constraint failures, whilst errs are internal ZkC problems.
+			for _, e := range failures {
+				errs = append(errs, errors.New(e.Message()))
+			}
+			b.Fatalf("checking R5 trace: %s", errors.Join(errs...))
 		}
-		if failures := fixture.binFile.Check(
-			vm.DEFAULT_TRACE_CONFIG,
-			expandedTrace,
-		); len(failures) > 0 {
-			b.Fatalf("checking R5 trace: %s", failures[0].Message())
-		}
-		r5TraceSink = expandedTrace
+		//
+		r5TraceSink = maybeTrace.Unwrap()
 	}
+	//
 	reportR5Work(b, fixture)
 }
 
@@ -186,13 +189,17 @@ func BenchmarkR5AssignFromExpandedTrace(b *testing.B) {
 	b.ResetTimer()
 
 	for b.Loop() {
-		for _, shard := range fixture.expandedShards {
+		errs := fixture.lazyTrace.Apply(func(_ uint, shard zkcdriver.Shard) {
 			zkcdriver.AssignFromTraceShard(
 				wiop.NewRuntime(fixture.system),
 				shard,
 				fixture.binFile.AirConstraints(),
 				koalafield.Octuplet{},
 			)
+		})
+		// Sanity check for tracing failures
+		if len(errs) > 0 {
+			b.Fatalf("tracing failed: %v", errors.Join(errs...))
 		}
 	}
 
@@ -210,14 +217,18 @@ func BenchmarkR5TraceAndAssign(b *testing.B) {
 
 	for b.Loop() {
 		traces := fixture.driver.TraceZkcInputs(inputs)
-		fixture.expandedShards = traces
-		for _, shard := range traces {
+		fixture.lazyTrace = traces
+		errs := fixture.lazyTrace.Apply(func(_ uint, shard zkcdriver.Shard) {
 			zkcdriver.AssignFromTraceShard(
 				wiop.NewRuntime(fixture.system),
 				shard,
 				fixture.binFile.AirConstraints(),
 				koalafield.Octuplet{},
 			)
+		})
+		// Sanity check for tracing failures
+		if len(errs) > 0 {
+			b.Fatalf("tracing failed: %v", errors.Join(errs...))
 		}
 	}
 
@@ -258,13 +269,13 @@ func BenchmarkR5Prove(b *testing.B) {
 	fixture := loadR5BenchmarkFixture(b)
 	fixture.ensureSystem(b)
 	inputs := &zkcdriver.PreReadInputs{Inputs: fixture.inputs}
-	traces := fixture.driver.TraceZkcInputs(inputs)
+	shard := traceSingleShard(b, fixture.driver, inputs)
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for b.Loop() {
 		proof, pub := fixture.system.Prove(func(rt *wiop.Runtime) {
-			fixture.driver.AssignTraceShard(rt, traces[0], placeholderSharedRandomness)
+			fixture.driver.AssignTraceShard(rt, shard, placeholderSharedRandomness)
 		})
 		r5ProofSink, r5PubSink = []wiop.Proof{proof}, []wiop.PublicInput{pub}
 	}
@@ -279,10 +290,10 @@ func BenchmarkR5Verify(b *testing.B) {
 	fixture := loadR5BenchmarkFixture(b)
 	fixture.ensureSystem(b)
 	inputs := &zkcdriver.PreReadInputs{Inputs: fixture.inputs}
-	traces := fixture.driver.TraceZkcInputs(inputs)
+	shard := traceSingleShard(b, fixture.driver, inputs)
 
 	proof, pub := fixture.system.Prove(func(rt *wiop.Runtime) {
-		fixture.driver.AssignTraceShard(rt, traces[0], placeholderSharedRandomness)
+		fixture.driver.AssignTraceShard(rt, shard, placeholderSharedRandomness)
 	})
 	if err := fixture.system.Verify(proof, pub); err != nil {
 		b.Fatalf("verifying setup proof: %v", err)
@@ -319,17 +330,21 @@ func BenchmarkR5ColdEndToEnd(b *testing.B) {
 		var (
 			system, driver = compileR5BenchmarkSystem(b, fixture.serialized)
 			inputs         = &zkcdriver.PreReadInputs{Inputs: fixture.inputs}
-			traces         = driver.TraceZkcInputs(inputs)
-			proofs         = make([]wiop.Proof, len(traces))
-			pubs           = make([]wiop.PublicInput, len(traces))
+			lazyTrace      = driver.TraceZkcInputs(inputs)
+			proofs         = make([]wiop.Proof, lazyTrace.Len())
+			pubs           = make([]wiop.PublicInput, lazyTrace.Len())
 		)
-
-		for i, shard := range traces {
+		// Lazy proof construction for shards.
+		errs := lazyTrace.Apply(func(i uint, shard zkcdriver.Shard) {
 			proofs[i], pubs[i] = system.Prove(func(rt *wiop.Runtime) {
 				driver.AssignTraceShard(rt, shard, placeholderSharedRandomness)
 			})
+		})
+		// Sanity check for tracing failures
+		if len(errs) > 0 {
+			b.Fatalf("tracing failed: %v", errors.Join(errs...))
 		}
-
+		//
 		for i := range proofs {
 			if err := system.Verify(proofs[i], pubs[i]); err != nil {
 				b.Fatalf("verifying R5 proof: %v", err)

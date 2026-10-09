@@ -128,6 +128,7 @@ func TestDecodeL2ExecutionRequest_InvalidRequestShape(t *testing.T) {
 		}
 	}
 
+	//nolint:goconst
 	cases := []struct {
 		name    string
 		mutate  func(o map[string]any)
