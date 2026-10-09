@@ -12,9 +12,11 @@ import (
 
 const (
 	programVkKey = "programVk"
-	chainIDKey   = "chainId"
-	forkNameKey  = "forkName"
-	payloadsKey  = "payloads"
+	// guestProgramID carries the program ID
+	guestProgramID = "guestProgramId"
+	chainIDKey     = "chainId"
+	forkNameKey    = "forkName"
+	payloadsKey    = "payloads"
 
 	proofRequestKey            = "proofRequest"
 	chainConfigKey             = "chainConfig"
@@ -93,18 +95,18 @@ func DecodeL2ExecutionRequest(data []byte) (*L2ExecutionRequest, error) {
 		return nil, fmt.Errorf("DecodeL2ExecutionRequest: parsing JSON: %w", err)
 	}
 
-	programVkRaw, err := requireField(env, programVkKey, "")
+	programVkRaw, err := requireField(env, guestProgramID, "")
 	if err != nil {
 		return nil, err
 	}
-	programVk, err := hexString(programVkRaw, programVkKey)
+	programVk, err := hexString(programVkRaw, guestProgramID)
 	if err != nil {
 		return nil, err
 	}
 	if len(programVk) != programVkByteSize {
 		return nil, fmt.Errorf(
 			"DecodeL2ExecutionRequest: %s must be %d bytes, got %d",
-			programVkKey,
+			guestProgramID,
 			programVkByteSize,
 			len(programVk),
 		)

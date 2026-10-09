@@ -38,14 +38,12 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 
 	vkArr := filledHash(0xbb)
 	vk := vkArr[:]
-	resp := newExecutionResponse(result, 1000501, "test-version", vk)
+	resp := newExecutionResponse(result, 1000501, 3, "test-version", vk)
 
 	assert.Equal(t, "test-version", resp.ProverVersion)
 	assert.Equal(t, "0xcafe", resp.ProofHex)
 	assert.Equal(t, uint64(1000501), resp.StartBlockNumber)
 	assert.Equal(t, repeatHex(0xbb), resp.ProgramVk)
-	assert.Empty(t, resp.L2L1Messages)
-	assert.Empty(t, resp.TxFroms)
 	assert.Empty(t, resp.FilteredAddresses)
 
 	pi := resp.PublicInputs
@@ -53,7 +51,7 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 	assert.Equal(t, repeatHex(0x02), pi.EndBlockHash)
 	assert.Equal(t, uint64(1000503), pi.EndBlockNumber)
 	assert.Equal(t, uint64(1763000101), pi.EndBlockTimestamp)
-	assert.Equal(t, repeatHex(0x03), pi.L2L1MessagesHash)
+	assert.Empty(t, pi.L2L1Messages)
 	assert.Equal(t, repeatHex(0x04), pi.ParentL1L2BridgeRollingHash)
 	assert.Equal(t, uint64(11), pi.ParentL1L2BridgeRollingHashMessageNumber)
 	assert.Equal(t, repeatHex(0x05), pi.EndL1L2BridgeRollingHash)
@@ -65,10 +63,12 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 	assert.Equal(t, uint64(14), pi.EndProcessedFtxNumber)
 	assert.Equal(t, repeatHex(0x09), pi.FilteredAddressesHash)
 	assert.Equal(t, repeatHex(0x0a), pi.TxFromsHash)
+	assert.Equal(t, uint64(3), pi.BlockCount)
+	assert.Empty(t, pi.L2MessagingBlocksOffsets)
 }
 
 func TestNewExecutionResponse_MatchesReferenceResponseShape(t *testing.T) {
-	raw, err := jsonMarshalObject(newExecutionResponse(backend.Result{}, 42, "test-version", make([]byte, 32)))
+	raw, err := jsonMarshalObject(newExecutionResponse(backend.Result{}, 42, 1, "test-version", make([]byte, 32)))
 	require.NoError(t, err)
 
 	assertResponseShapeMatchesReference(t, raw)
@@ -80,11 +80,11 @@ func TestNewExecutionResponse_MatchesReferenceResponseShape(t *testing.T) {
 func TestNewExecutionResponse_MatchesReferenceResponseValues(t *testing.T) {
 	// This is the target test for the fully wired response path. It is expected
 	// to fail until proof serialization, public-input extraction, and the
-	// l2L1Messages/txFroms/filteredAddresses response arrays are provided by the
-	// backend result.
-	t.Skip("enable after proof serialization, public-input extraction, and l2L1Messages/txFroms/filteredAddresses response arrays are wired")
+	// l2L1Messages/l2MessagingBlocksOffsets/filteredAddresses response arrays
+	// are provided by the backend result.
+	t.Skip("enable after proof serialization, public-input extraction, and l2L1Messages/l2MessagingBlocksOffsets/filteredAddresses response arrays are wired")
 
-	got, err := jsonMarshalObject(newExecutionResponse(backend.Result{}, 1000501, "", make([]byte, 32)))
+	got, err := jsonMarshalObject(newExecutionResponse(backend.Result{}, 1000501, 3, "", make([]byte, 32)))
 	require.NoError(t, err)
 
 	assert.Equal(t, readReferenceResponse(t), got)
