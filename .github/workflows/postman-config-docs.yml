@@ -1,7 +1,7 @@
 name: "Postman config docs"
 
 # Auto-generates Linea Postman env-var config MDX partials and opens a PR
-# into Consensys-Incorporated/doc.linea writing ONLY docs/stack/reference/_generated/postman/.
+# into Consensys-Incorporated/doc.linea writing ONLY docs/reference/component-configuration/_generated/postman/.
 #
 # Triggers automatically when envLoader.ts, schema.ts, or the generator script
 # change on main. Can also be triggered manually via workflow_dispatch.
@@ -94,7 +94,7 @@ jobs:
       - name: Copy only _generated/postman partials
         run: |
           set -euo pipefail
-          DEST="doc.linea/docs/stack/reference/_generated/postman"
+          DEST="doc.linea/docs/reference/component-configuration/_generated/postman"
           SRC="postman/docs/_generated/postman"
           if [[ -z "$(find "$SRC" -type f -name '*.mdx' | head -1)" ]]; then
             echo "Refusing to publish: no MDX partials under $SRC" >&2
@@ -104,13 +104,8 @@ jobs:
           mkdir -p "$DEST"
           cp -R "$SRC/." "$DEST/"
           # Hard invariant: never touch the human-owned wrapper.
-          if git -C doc.linea status --porcelain -- "docs/stack/reference/linea-postman-options.mdx" | grep -q .; then
+          if git -C doc.linea status --porcelain -- "docs/reference/component-configuration/postman.mdx" | grep -q .; then
             echo "Refusing to proceed: wrapper page would be modified." >&2
-            exit 1
-          fi
-          # Also refuse if a component-configuration wrapper path would change.
-          if git -C doc.linea status --porcelain -- "docs/reference/component-configuration/linea-postman-options.mdx" | grep -q .; then
-            echo "Refusing to proceed: component-configuration wrapper would be modified." >&2
             exit 1
           fi
           echo "Staged doc.linea changes (should be under _generated/postman only):"
@@ -133,7 +128,7 @@ jobs:
           body: |
             Auto-generated Linea Postman env-var config MDX partials from `LFDT-Lineth/lineth-monorepo`.
 
-            This PR updates **only** `docs/stack/reference/_generated/postman/`.
-            The human-owned wrapper `linea-postman-options.mdx` is intentionally untouched.
+            This PR updates **only** `docs/reference/component-configuration/_generated/postman/`.
+            The human-owned wrapper `postman.mdx` is intentionally untouched.
           add-paths: |
-            docs/stack/reference/_generated/postman/**
+            docs/reference/component-configuration/_generated/postman/**

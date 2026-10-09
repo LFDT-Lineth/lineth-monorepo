@@ -44,7 +44,7 @@ object MaruConfigDocsSpec : ConfigDocsSpec {
    * Ephemeral MDX partial output path, relative to the repository root. Lives under the
    * `maru/config/build/` directory (gitignored) so it is never committed; the
    * `maru-config-docs` workflow uploads it as an immutable artifact and publishes only
-   * `docs/stack/reference/_generated/maru/` to Consensys/doc.linea.
+   * `docs/reference/component-configuration/_generated/maru/` to Consensys/doc.linea.
    */
   override val mdxPartialPath =
     "maru/config/build/config-docs-mdx/_generated/maru/reference.mdx"

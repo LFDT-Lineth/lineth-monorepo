@@ -10,7 +10,7 @@
 #                       (defaults to the basename of DOCS_NAMESPACE)
 #   DOCS_CHECKOUT       absolute path to the docs repository checkout
 #   DOCS_NAMESPACE      repo-relative directory under the docs checkout that the
-#                       generated partials replace (e.g. docs/stack/reference/_generated/coordinator)
+#                       generated partials replace (e.g. docs/reference/component-configuration/_generated/coordinator)
 set -euo pipefail
 
 if [[ -z "${ARTIFACT_DIR:-}" || -z "${DOCS_CHECKOUT:-}" || -z "${DOCS_NAMESPACE:-}" ]]; then
