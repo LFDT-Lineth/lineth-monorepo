@@ -47,6 +47,10 @@ type System struct {
 	// layout of the flat [PublicInput] vector, and each cell carries a
 	// [PublicInputTag] naming its role — mainly used for inter-shard consistency.
 	PublicInputs []*Cell
+	// DynamicSizeRound is the round at whose end the sizes of all dynamic
+	// modules are fed into the Fiat-Shamir transcript. Dynamic sizes may grow
+	// until that round ends. Defaults to round 0.
+	DynamicSizeRound int
 	// scratchArena backs the [PlanningContext] used by [Materialize]. It is
 	// nil until Materialize is called.
 	scratchArena *arena.VectorArena
