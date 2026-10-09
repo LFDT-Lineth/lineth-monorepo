@@ -39,43 +39,59 @@ class PluggableSignerAndTransportConfigTest {
         override(
           """
           [l1-submission.blob.signer]
-          type = "kms"
-          [l1-submission.blob.signer.kms]
-          key-id = "abc"
-          region = "eu-west-1"
+          type = "someOtherType"
+          [l1-submission.blob.signer.someOtherType]
+          someOtherTypeParam = "someOtherTypeValue"
+          someOtherTypeParam2 = "someOtherTypeValue2"
           [l1-submission.aggregation.signer]
-          type = "Hsm"
-          [l1-submission.aggregation.signer.hsm]
-          slot = 3
+          type = "someOtherType2"
+          [l1-submission.aggregation.signer.someOtherType2]
+          someOtherType2Param = "someOtherType2Value"
           [message-anchoring.signer]
-          type = "kms"
-          [message-anchoring.signer.kms]
-          key-id = "def"
+          type = "someOtherType"
+          [message-anchoring.signer.someOtherType]
+          someOtherTypeParam = "someOtherTypeValue3"
           """.trimIndent(),
         ),
       )
 
-    val blob = configs.l1Submission.blob.signer
-    assertThat(blob.type).isEqualTo(SignerConfig.SignerType("kms"))
-    assertThat(blob.registered!!.settings).isEqualTo(mapOf("key-id" to Secret("abc"), "region" to Secret("eu-west-1")))
-    assertThat(configs.l1Submission.aggregation.signer.registered!!.settings).isEqualTo(mapOf("slot" to Secret("3")))
-    assertThat(configs.messageAnchoring!!.signer.registered!!.settings).isEqualTo(mapOf("key-id" to Secret("def")))
+    configs.l1Submission.blob.signer.also { signerConfig ->
+      assertThat(signerConfig.type).isEqualTo(SignerConfig.SignerType("someOtherType"))
+      assertThat(signerConfig.registered!!.settings).isEqualTo(
+        mapOf(
+          "someOtherTypeParam" to Secret("someOtherTypeValue"),
+          "someOtherTypeParam2" to Secret("someOtherTypeValue2"),
+        ),
+      )
+    }
+    configs.l1Submission.aggregation.signer.also { signerConfig ->
+      assertThat(signerConfig.type).isEqualTo(SignerConfig.SignerType("someOtherType2"))
+      assertThat(signerConfig.registered!!.settings).isEqualTo(
+        mapOf("someOtherType2Param" to Secret("someOtherType2Value")),
+      )
+    }
+    assertThat(
+      configs.messageAnchoring!!.signer.registered!!.settings,
+    ).isEqualTo(mapOf("someOtherTypeParam" to Secret("someOtherTypeValue3")))
   }
 
   @Test
   fun `registered signer settings can be overridden by a higher priority file`() {
     val declaring =
-      override("[message-anchoring.signer]\ntype = \"kms\"\n[message-anchoring.signer.kms]\nkey-id = \"a\"\n")
-    val overriding = override("[message-anchoring.signer.kms]\nkey-id = \"b\"\n")
+      override(
+        "[message-anchoring.signer]\ntype = \"someOtherType\"\n" +
+          "[message-anchoring.signer.someOtherType]\nsomeOtherTypeParam = \"a\"\n",
+      )
+    val overriding = override("[message-anchoring.signer.someOtherType]\nsomeOtherTypeParam = \"b\"\n")
 
     assertThat(load(declaring, overriding).messageAnchoring!!.signer.registered!!.settings)
-      .isEqualTo(mapOf("key-id" to Secret("b")))
+      .isEqualTo(mapOf("someOtherTypeParam" to Secret("b")))
   }
 
   @Test
   fun `registered signer type requires its table`() {
-    assertThatThrownBy { load(override("[message-anchoring.signer]\ntype = \"kms\"\n")) }
-      .hasMessageContaining("requires a [signer.kms] table")
+    assertThatThrownBy { load(override("[message-anchoring.signer]\ntype = \"someOtherType\"\n")) }
+      .hasMessageContaining("requires a [signer.someothertype] table")
   }
 
   @Test
