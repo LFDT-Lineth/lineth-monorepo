@@ -89,13 +89,14 @@ func TestRunProve_SplitTraceRound(t *testing.T) {
 	for i, job := range jobs {
 		inputs, err := c.buildInputs(job)
 		require.NoError(t, err)
-		shard := c.driver.TraceZkcInputs(&zkcdriver.PreReadInputs{Inputs: inputs})[0]
+		shard, errs := c.driver.TraceZkcInputs(&zkcdriver.PreReadInputs{Inputs: inputs}).Get(0)
+		require.Empty(t, errs)
 
 		done.Add(1)
 		go func() {
 			defer done.Done()
 			got[i], pubs[i] = c.sys.Prove(func(rt *wiop.Runtime) {
-				c.driver.AssignTraceShard(rt, shard, field.Octuplet{})
+				c.driver.AssignTraceShard(rt, shard.Unwrap(), field.Octuplet{})
 				assigned.Done()
 				assigned.Wait()
 			})
