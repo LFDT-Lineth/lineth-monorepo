@@ -1,12 +1,13 @@
 package lineth.persistence
 
-import linea.domain.Aggregation
+import linea.clients.RollupAggregationProofResponseV1
 import linea.domain.BlobAndBatchCounters
 import linea.domain.ProofToFinalize
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import kotlin.time.Instant
 
-interface AggregationsRepository {
+interface AggregationsRepositoryG<T> : AggregationsDaoG<T>
+
+interface AggregationsRepository : AggregationsRepositoryG<ProofToFinalize> {
   /**
    * This method should:
    *    1. Get all consecutive blobs starting from `fromBlockNumber`, inclusive, but no more than a defined limit
@@ -23,20 +24,6 @@ interface AggregationsRepository {
    *      * Not sure yet about blockMetaData, we'll revisit it later
    */
   fun findConsecutiveProvenBlobs(fromBlockNumber: Long): SafeFuture<List<BlobAndBatchCounters>>
-
-  fun saveNewAggregation(aggregation: Aggregation): SafeFuture<Unit>
-
-  fun getProofsToFinalize(
-    fromBlockNumber: Long,
-    finalEndBlockCreatedBefore: Instant,
-    maximumNumberOfProofs: Int,
-  ): SafeFuture<List<ProofToFinalize>>
-
-  fun findHighestConsecutiveEndBlockNumber(fromBlockNumber: Long? = null): SafeFuture<Long?>
-
-  fun findAggregationProofByEndBlockNumber(endBlockNumber: Long): SafeFuture<ProofToFinalize?>
-
-  fun deleteAggregationsUpToEndBlockNumber(endBlockNumberInclusive: Long): SafeFuture<Int>
-
-  fun deleteAggregationsAfterBlockNumber(startingBlockNumberInclusive: Long): SafeFuture<Int>
 }
+
+interface AggregationsRepositoryV2 : AggregationsRepositoryG<RollupAggregationProofResponseV1>

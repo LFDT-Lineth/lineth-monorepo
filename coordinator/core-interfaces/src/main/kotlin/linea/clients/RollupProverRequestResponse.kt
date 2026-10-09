@@ -125,6 +125,8 @@ data class RollupProofPublicInputs(
   val startOffset: Int,
   val endOffset: Int,
   val programVks: List<ByteArray>,
+  // Present only in rollup-aggregation proof responses (FinalizationPublicInput field).
+  val l2L1TreeDepth: Int? = null,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -152,6 +154,7 @@ data class RollupProofPublicInputs(
     if (startOffset != other.startOffset) return false
     if (endOffset != other.endOffset) return false
     if (!programVks.byteArrayListEquals(other.programVks)) return false
+    if (l2L1TreeDepth != other.l2L1TreeDepth) return false
 
     return true
   }
@@ -177,6 +180,7 @@ data class RollupProofPublicInputs(
     result = 31 * result + startOffset.hashCode()
     result = 31 * result + endOffset.hashCode()
     result = 31 * result + programVks.byteArrayListHashCode()
+    result = 31 * result + (l2L1TreeDepth ?: 0)
     return result
   }
 }

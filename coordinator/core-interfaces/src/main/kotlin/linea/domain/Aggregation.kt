@@ -1,5 +1,6 @@
 package linea.domain
 
+import linea.clients.RollupAggregationProofResponseV1
 import linea.kotlin.byteArrayListEquals
 import linea.kotlin.byteArrayListHashCode
 import linea.kotlin.encodeHex
@@ -163,12 +164,29 @@ data class ProofToFinalize(
   }
 }
 
+interface AggregationG<T> : BlockInterval {
+  val batchCount: ULong
+  val aggregationProof: T?
+}
+
 data class Aggregation(
   override val startBlockNumber: ULong,
   override val endBlockNumber: ULong,
-  val batchCount: ULong,
-  val aggregationProof: ProofToFinalize?,
-) : BlockInterval {
+  override val batchCount: ULong,
+  override val aggregationProof: ProofToFinalize?,
+) : AggregationG<ProofToFinalize> {
+  enum class Status {
+    Proven,
+    Proving,
+  }
+}
+
+data class AggregationV2(
+  override val startBlockNumber: ULong,
+  override val endBlockNumber: ULong,
+  override val batchCount: ULong,
+  override val aggregationProof: RollupAggregationProofResponseV1?,
+) : AggregationG<RollupAggregationProofResponseV1> {
   enum class Status {
     Proven,
     Proving,

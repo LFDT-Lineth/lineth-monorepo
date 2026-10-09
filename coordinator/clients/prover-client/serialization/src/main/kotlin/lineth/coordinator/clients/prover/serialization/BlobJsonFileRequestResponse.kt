@@ -15,13 +15,13 @@ import linea.domain.BlockIntervals
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 
-internal class ByteArrayDeserializer : JsonDeserializer<ByteArray>() {
+class ByteArrayDeserializer : JsonDeserializer<ByteArray>() {
   override fun deserialize(p: JsonParser, ctxt: DeserializationContext): ByteArray {
     return p.valueAsString.decodeHex()
   }
 }
 
-internal class ByteArraySerializer : JsonSerializer<ByteArray>() {
+class ByteArraySerializer : JsonSerializer<ByteArray>() {
   override fun serialize(value: ByteArray, gen: JsonGenerator, serializers: SerializerProvider) {
     gen.writeString(value.encodeHex())
   }
