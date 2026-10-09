@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
@@ -131,9 +132,13 @@ func BenchmarkR5Fibonacci(b *testing.B) {
 	proved := 0
 	for i := 0; i < numShards && proved < proveShards; i += step {
 		shard := traces[i]
+		proveStart := time.Now()
 		proof, pub := system.Prove(func(rt *wiop.Runtime) {
 			driver.AssignTraceShard(rt, shard, placeholderSharedRandomness)
 		})
+		proveTime := time.Since(proveStart)
+		b.Logf("shard %d: proved in %v", i, proveTime)
+		b.ReportMetric(proveTime.Seconds(), fmt.Sprintf("shard_%d/prove-s", i))
 		sizeBytes := proofserialization.Measure(system, proof, pub).Total
 		if err := system.Verify(proof, pub); err != nil {
 			// Cross-shard consistency is not yet wired (messagebus shared

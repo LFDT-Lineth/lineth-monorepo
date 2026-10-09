@@ -31,7 +31,7 @@ func TestFoldLayerInternally(t *testing.T) {
 
 	prng := rand.New(utils.NewRandSource(1))
 
-	for _, n := range []int{4, 8, 16} {
+	for _, n := range []int{2, 4, 8, 16, 1 << 10} {
 
 		var (
 			kN     = utils.Log2Ceil(n)

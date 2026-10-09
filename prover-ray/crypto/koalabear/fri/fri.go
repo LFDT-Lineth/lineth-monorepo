@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"math/bits"
 	"slices"
+	"sync"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
@@ -14,7 +15,6 @@ import (
 	"github.com/consensys/gnark-crypto/field/koalabear"
 	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
-	gutils "github.com/consensys/gnark-crypto/utils"
 )
 
 // Params holds the FRI configuration and precomputed per-level data.
@@ -572,8 +572,12 @@ func buildTreeExt(layer []field.Ext) *Tree {
 	bottom := t.Nodes[n-1:]
 	parallel.Execute(n, func(start, end int) {
 		for i := start; i < end; i++ {
+			// The whole octuplet is written: the tree's nodes may be a
+			// pooled slice holding stale values.
 			limbs := extLimbs(layer[i])
-			copy(bottom[i][:6], limbs[:])
+			var leaf field.Octuplet
+			copy(leaf[:6], limbs[:])
+			bottom[i] = leaf
 		}
 	})
 	t.buildLevels(nil)
@@ -602,38 +606,63 @@ func foldLayerInternally(layer []field.Ext, alpha field.Ext, domain *fft.Domain)
 	}
 
 	var (
-		half = len(layer) / 2
-		next = make([]field.Ext, half)
+		half        = len(layer) / 2
+		next        = make([]field.Ext, half)
+		invTwiddles = foldTwiddles(domain)
 	)
 
-	// invTwiddles[j] holds (1/2)·x⁻¹ for pair j, where x = g^i is its
-	// natural-order domain point. We build the powers g⁻ⁱ/2 in natural order
-	// then bit-reverse the slice so that index j lines up with the bit-reversed
-	// layout of layer.
-	invTwiddles := make([]field.Element, half)
-	genPowI := field.One()
-	genPowI.Halve()
-	for i := range half {
-		invTwiddles[i] = genPowI
-		genPowI.Mul(&genPowI, &domain.GeneratorInv)
-	}
-	gutils.BitReverse(invTwiddles)
+	// Pairs are independent: the fold is chunked across CPUs.
+	parallel.Execute(half, func(start, end int) {
+		for j := start; j < end; j++ {
+			p, q := layer[2*j], layer[2*j+1]
 
-	for j := range half {
-		p, q := layer[2*j], layer[2*j+1]
+			var sum, diff field.Ext
+			sum.Add(&p, &q)
+			sum.Halve()
 
-		var sum, diff field.Ext
-		sum.Add(&p, &q)
-		sum.Halve()
+			diff.Sub(&p, &q)
+			diff.MulByElement(&diff, &invTwiddles[j])
+			diff.Mul(&diff, &alpha)
 
-		diff.Sub(&p, &q)
-		diff.MulByElement(&diff, &invTwiddles[j])
-		diff.Mul(&diff, &alpha)
-
-		next[j].Add(&sum, &diff)
-	}
+			next[j].Add(&sum, &diff)
+		}
+	})
 
 	return next
+}
+
+// foldTwiddleCache memoises [foldTwiddles] per domain: the twiddles only
+// depend on the domain, which the FRI parameters share across proofs.
+var foldTwiddleCache sync.Map // *fft.Domain -> []field.Element
+
+// foldTwiddles returns, for each pair j of a layer on domain, (1/2)·x⁻¹ where
+// x = g^i is the pair's natural-order domain point: the powers g⁻ⁱ/2 in
+// natural order, bit-reversed so that index j lines up with the bit-reversed
+// layout of the layer. Built in parallel chunks, each from its own power.
+func foldTwiddles(domain *fft.Domain) []field.Element {
+	if t, ok := foldTwiddleCache.Load(domain); ok {
+		return t.([]field.Element)
+	}
+	half := int(domain.Cardinality) / 2
+	natural := make([]field.Element, half)
+	parallel.Execute(half, func(start, end int) {
+		var pow field.Element
+		field.ExpToInt(&pow, domain.GeneratorInv, start)
+		pow.Halve()
+		for i := start; i < end; i++ {
+			natural[i] = pow
+			pow.Mul(&pow, &domain.GeneratorInv)
+		}
+	})
+	twiddles := make([]field.Element, half)
+	logHalf := bits.TrailingZeros(uint(half))
+	parallel.Execute(half, func(start, end int) {
+		for j := start; j < end; j++ {
+			twiddles[j] = natural[bits.Reverse64(uint64(j))>>(64-logHalf)&uint64(half-1)]
+		}
+	})
+	t, _ := foldTwiddleCache.LoadOrStore(domain, twiddles)
+	return t.([]field.Element)
 }
 
 // octupletToExt converts an octuplet into a field extension. It expects its

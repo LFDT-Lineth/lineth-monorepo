@@ -142,10 +142,29 @@ func Compile(sys *wiop.System) {
 		fractions  []wiop.Fraction
 		consumedQs []*wiop.TableRelationQuery
 	)
+	// The M-assignment tasks of the groups sharing a witness round are
+	// registered as one batch, in place of one action per group, so that they
+	// run concurrently. The batches go on after the row-limit checks
+	// registered above, as the individual tasks did.
+	var (
+		batchRounds []*wiop.Round
+		batches     = map[*wiop.Round]*mAssignmentBatch{}
+	)
 	for i, g := range groups {
-		gFractions := compileGroup(g, i, gamma, coinRound, compCtx)
+		gFractions, task := compileGroup(g, i, gamma, coinRound, compCtx)
 		fractions = append(fractions, gFractions...)
 		consumedQs = append(consumedQs, g.queries...)
+
+		b, ok := batches[g.witnessRound]
+		if !ok {
+			b = &mAssignmentBatch{}
+			batches[g.witnessRound] = b
+			batchRounds = append(batchRounds, g.witnessRound)
+		}
+		b.tasks = append(b.tasks, task)
+	}
+	for _, r := range batchRounds {
+		r.RegisterAction(batches[r])
 	}
 
 	ld := sys.NewLogDerivativeSum(compCtx.Childf("aggregated"), fractions)
@@ -376,15 +395,16 @@ func collectGroups(sys *wiop.System) []*lookupGroup {
 
 // compileGroup builds the fraction list for a single B-grouped collection of
 // inclusion queries. It also allocates the group's multiplicity column M on
-// the group's witness round and registers the prover task that fills it
-// there, so M is committed before α and γ are sampled in coinRound.
+// the group's witness round and returns the prover task that fills it, which
+// the caller registers there, so M is committed before α and γ are sampled in
+// coinRound.
 func compileGroup(
 	g *lookupGroup,
 	groupIdx int,
 	gamma *wiop.CoinField,
 	coinRound *wiop.Round,
 	compCtx *wiop.ContextFrame,
-) []wiop.Fraction {
+) ([]wiop.Fraction, *mAssignmentTask) {
 	// groupIdx is the group's position in collectGroups' deterministic output
 	// order, so the derived names are reproducible across runs (unlike a
 	// pointer-based name, which would break serializing or diffing the
@@ -487,16 +507,17 @@ func compileGroup(
 	}
 
 	// The prover task that fills every M with multiplicities once the witness
-	// is in place. Registered on the group's witness round so it runs before
-	// AdvanceRound samples coinRound's α and γ.
-	g.witnessRound.RegisterAction(&mAssignmentTask{
+	// is in place. The caller registers it, batched with the other groups of
+	// the same witness round, on that round so it runs before AdvanceRound
+	// samples coinRound's α and γ.
+	task := &mAssignmentTask{
 		ms:              mCols,
 		includings:      append([]includingTable{}, g.includings...),
 		included:        append([]includedSpec{}, g.included...),
 		prependOneOnAOk: prependOnesToA,
-	})
+	}
 
-	return fractions
+	return fractions, task
 }
 
 // RowLimitVerifierAction enforces, at runtime, that a single subgroup's summed row

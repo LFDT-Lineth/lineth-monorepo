@@ -1,9 +1,13 @@
 package fri
 
 import (
+	"math/bits"
+	"runtime"
+
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/bufpool"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 )
@@ -67,60 +71,90 @@ func (table MultiSizeTable) Encode(encoders []*RSEncoder) MultiSizeTable {
 	assertValidMultiEncoder(encoders)
 	encoded := make([]SizedTable, len(table))
 	for i := range table {
-		// One contiguous slab per size, pre-sliced per column: per-column
-		// codeword allocations are large objects that contend on the page heap
-		// and the kernel fault path under 96-way parallelism (measured >90%
-		// system time on a cold one-shot wide commit).
+		// The codewords come from the field pools (see [CommitterState.Release]):
+		// a proof reuses the previous one's, instead of zeroing and faulting
+		// in a few GB of fresh memory per commit. The encoders overwrite every
+		// element.
 		N := int(encoders[i].Domain.Cardinality)
-		encoded[i].Base = slabColumns[field.Element](len(table[i].Base), N)
-		encoded[i].Ext = slabColumns[field.Ext](len(table[i].Ext), N)
+		encoded[i].Base = pooledColumns(&field.BasePool, len(table[i].Base), N)
+		encoded[i].Ext = pooledColumns(&field.ExtPool, len(table[i].Ext), N)
 	}
 
 	// Each row's RS encode is an independent per-row FFT writing a disjoint
 	// output slice, so flatten (size, base/ext, row) into work items and encode
 	// them in parallel. gnark's FFT barely parallelizes at these row sizes, so
-	// the parallelism must be across rows; fft.WithNbTasks(1) keeps each FFT
-	// single-threaded so the outer parallelism isn't nested.
+	// the parallelism is mostly across rows.
+	//
+	// Row costs span several orders of magnitude (sizes 2^0 .. 2^22, base or
+	// extension), so the items are pulled dynamically, largest size first and
+	// extension before base within a size: a contiguous split put every one of
+	// the largest rows on the last few workers. Each row's FFTs get a share of
+	// the CPUs proportional to its share of the work, at least one, so that a
+	// handful of the largest rows do not each run on a single core while the
+	// rest of the table is already done.
 	type encodeItem struct {
 		i, k int
 		ext  bool
+		cost float64
 	}
-	var work []encodeItem
-	for i := range table {
-		for k := range table[i].Base {
-			work = append(work, encodeItem{i: i, k: k})
-		}
+	var (
+		work  []encodeItem
+		total float64
+	)
+	for i := len(table) - 1; i >= 0; i-- {
+		N := float64(encoders[i].Domain.Cardinality)
+		cost := N * max(1, float64(bits.Len(uint(N))))
 		for k := range table[i].Ext {
-			work = append(work, encodeItem{i: i, k: k, ext: true})
+			work = append(work, encodeItem{i: i, k: k, ext: true, cost: 6 * cost})
+			total += 6 * cost
+		}
+		for k := range table[i].Base {
+			work = append(work, encodeItem{i: i, k: k, cost: cost})
+			total += cost
 		}
 	}
-	encodeOpts := []fft.Option{fft.WithNbTasks(1)}
-	parallel.Execute(len(work), func(start, end int) {
-		for w := start; w < end; w++ {
-			it := work[w]
-			if it.ext {
-				encoders[it.i].EncodeExtInto(table[it.i].Ext[it.k], encoded[it.i].Ext[it.k], encodeOpts...)
-			} else {
-				encoders[it.i].EncodeInto(table[it.i].Base[it.k], encoded[it.i].Base[it.k], encodeOpts...)
-			}
+	cpus := float64(runtime.GOMAXPROCS(0))
+	parallel.ExecuteDynamic(len(work), func(w int) {
+		it := work[w]
+		encodeOpts := []fft.Option{fft.WithNbTasks(max(1, int(cpus*it.cost/total)))}
+		if it.ext {
+			encoders[it.i].EncodeExtInto(table[it.i].Ext[it.k], encoded[it.i].Ext[it.k], encodeOpts...)
+		} else {
+			encoders[it.i].EncodeInto(table[it.i].Base[it.k], encoded[it.i].Base[it.k], encodeOpts...)
 		}
 	})
 
 	return encoded
 }
 
-// slabColumns allocates count columns of n elements as sub-slices of one
-// contiguous slab, each capped so a column cannot grow into its neighbor.
-func slabColumns[T any](count, n int) [][]T {
+// pooledColumns takes count columns of n elements from pool, in parallel:
+// columns allocated afresh are zeroed by the goroutine allocating them.
+func pooledColumns[T any](pool *bufpool.Pool[T], count, n int) [][]T {
 	columns := make([][]T, count)
-	if count == 0 {
-		return columns
-	}
-	slab := make([]T, count*n)
-	for k := range columns {
-		columns[k] = slab[k*n : (k+1)*n : (k+1)*n]
-	}
+	parallel.Execute(count, func(start, end int) {
+		for k := start; k < end; k++ {
+			columns[k] = pool.Get(n)
+		}
+	})
 	return columns
+}
+
+// Release returns the codewords and the Merkle tree nodes of st to the field
+// pools. st must not be used afterwards, and none of its slices may still be
+// referenced: an opening proof only holds copies.
+func (st *CommitterState) Release() {
+	for _, sized := range st.EncodedTable {
+		for _, col := range sized.Base {
+			field.BasePool.Put(col)
+		}
+		for _, col := range sized.Ext {
+			field.ExtPool.Put(col)
+		}
+	}
+	if st.Tree != nil {
+		field.OctupletPool.Put(st.Tree.Nodes)
+	}
+	st.EncodedTable, st.Tree = nil, nil
 }
 
 // Merkleize merkleizes the table using Poseidon2. Every table but the bottom
@@ -145,19 +179,23 @@ func (table MultiSizeTable) Merkleize() *Tree {
 	// Every table but the bottom is digested as conjugate pairs, one tree
 	// depth shallower than its own size: a table of encoded height s yields
 	// s/2 auxiliary leaves attached at the level holding s/2 nodes.
+	// The tables of the other sizes are independent: they are digested
+	// concurrently, largest first, each over the CPUs as well, so that the
+	// many small ones do not each wait for a parallel pass of their own.
 	upperLeaves := make([][]field.Octuplet, utils.Log2Ceil(size))
-	for i := range bottom {
-		if table[i].NumRows() == 0 {
-			continue
+	var sizes []int
+	for i := bottom - 1; i >= 0; i-- {
+		if table[i].NumRows() != 0 && table[i].Size() > 1 {
+			sizes = append(sizes, i)
 		}
+	}
+	parallel.ExecuteDynamic(len(sizes), func(k int) {
+		i := sizes[k]
 		s := table[i].Size()
-		if s == 1 {
-			continue
-		}
 		digests := make([]field.Octuplet, s/2)
 		hashSizedLeaves(table[i], true, digests)
 		upperLeaves[utils.Log2Ceil(s/2)] = digests
-	}
+	})
 
 	tree.buildLevels(upperLeaves)
 	return tree

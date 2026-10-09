@@ -33,8 +33,17 @@ func BatchInvertExt(a []Ext) []Ext {
 	return extensions.BatchInvertE6(a)
 }
 
+// invLanes is the number of interleaved product chains of
+// [BatchInvertExtInto], the width of the vectorised extension product.
+const invLanes = 16
+
 // BatchInvertExtInto computes the inverses of all elements in a and writes the result into res.
 // Use with caution; avoid copies and allocations in parallel contexts.
+//
+// Montgomery's trick runs as invLanes interleaved chains, chain l taking
+// elements l, l+invLanes, …, so the prefix and suffix products of a block
+// are vectorised extension products; the at most invLanes chain products are
+// inverted with a single field inversion. res may alias a.
 func BatchInvertExtInto(a, res []Ext) {
 	if len(a) != len(res) {
 		panic("input and output slices must have the same length")
@@ -43,27 +52,101 @@ func BatchInvertExtInto(a, res []Ext) {
 		return
 	}
 
-	zeroes := make([]bool, len(a))
-	var accumulator Ext
-	accumulator.SetOne()
-
-	for i := 0; i < len(a); i++ {
+	// res first holds a with its zeros replaced by one, which the chains
+	// multiply through unchanged; the zero positions are recorded before the
+	// first write, as res may alias a. zeroes is nil when a has none.
+	aliased := &res[0] == &a[0]
+	var zeroes []bool
+	for i := range a {
 		if a[i].IsZero() {
+			if zeroes == nil {
+				zeroes = make([]bool, len(a))
+			}
 			zeroes[i] = true
-			continue
 		}
-		res[i].Set(&accumulator)
-		accumulator.Mul(&accumulator, &a[i])
+	}
+	if !aliased {
+		for i := range a {
+			if a[i].IsZero() {
+				res[i].SetOne()
+			} else {
+				res[i] = a[i]
+			}
+		}
+	} else {
+		for i := range a {
+			if a[i].IsZero() {
+				res[i].SetOne()
+			}
+		}
+	}
+	nz := res
+	m := len(a) / invLanes * invLanes
+
+	// Forward: prefix[i] is the product of the earlier elements of i's chain;
+	// chain products end up in acc (and, for the tail, acc[invLanes]).
+	prefix := make([]Ext, len(a))
+	var acc [invLanes + 1]Ext
+	for l := range acc {
+		acc[l].SetOne()
+	}
+	for j := 0; j < m; j += invLanes {
+		copy(prefix[j:j+invLanes], acc[:invLanes])
+		VecMulExtExt(acc[:invLanes], acc[:invLanes], nz[j:j+invLanes])
+	}
+	for i := m; i < len(a); i++ {
+		prefix[i] = acc[invLanes]
+		acc[invLanes].Mul(&acc[invLanes], &nz[i])
 	}
 
-	accumulator.Inverse(&accumulator)
+	// Invert every chain product at once (again Montgomery's trick, over the
+	// invLanes+1 products).
+	var accPrefix [invLanes + 1]Ext
+	var run Ext
+	run.SetOne()
+	for l := range acc {
+		accPrefix[l] = run
+		run.Mul(&run, &acc[l])
+	}
+	run.Inverse(&run)
+	for l := len(acc) - 1; l >= 0; l-- {
+		var inv Ext
+		inv.Mul(&run, &accPrefix[l])
+		run.Mul(&run, &acc[l])
+		acc[l] = inv
+	}
 
-	for i := len(a) - 1; i >= 0; i-- {
-		if zeroes[i] {
-			continue
+	// Backward: each element's inverse is its chain's running inverse times
+	// its prefix. When aliased, nz reads res's vectorised range before the
+	// writes of the same range land; the tail keeps the read before the write
+	// element by element.
+	for i := len(a) - 1; i >= m; i-- {
+		var inv Ext
+		inv.Mul(&acc[invLanes], &prefix[i])
+		acc[invLanes].Mul(&acc[invLanes], &nz[i])
+		res[i] = inv
+	}
+	var inv [invLanes]Ext
+	if !aliased {
+		for j := m - invLanes; j >= 0; j -= invLanes {
+			VecMulExtExt(inv[:], acc[:invLanes], prefix[j:j+invLanes])
+			VecMulExtExt(acc[:invLanes], acc[:invLanes], nz[j:j+invLanes])
+			copy(res[j:j+invLanes], inv[:])
 		}
-		res[i].Mul(&res[i], &accumulator)
-		accumulator.Mul(&accumulator, &a[i])
+	} else {
+		for j := m - invLanes; j >= 0; j -= invLanes {
+			var blk [invLanes]Ext
+			copy(blk[:], nz[j:j+invLanes])
+			VecMulExtExt(inv[:], acc[:invLanes], prefix[j:j+invLanes])
+			VecMulExtExt(acc[:invLanes], acc[:invLanes], blk[:])
+			copy(res[j:j+invLanes], inv[:])
+		}
+	}
+
+	for i := range zeroes {
+		if zeroes[i] {
+			res[i] = Ext{}
+		}
 	}
 }
 
