@@ -309,7 +309,7 @@ class DefaultProverClientFactory(
       ResponseDto,
       BlockIntervalProofIndex,
       >(
-      config = proverConfig.fileBased,
+      config = proverConfig.requireFileBased(),
       vertx = vertx,
       fileWriter = FileWriter(vertx, JsonSerialization.proofResponseMapperV1),
       fileReader = FileReader(

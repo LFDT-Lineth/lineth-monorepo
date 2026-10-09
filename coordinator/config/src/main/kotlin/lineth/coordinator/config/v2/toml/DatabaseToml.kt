@@ -27,10 +27,10 @@ data class DatabaseToml(
   @param:ConfigDoc(description = "PostgreSQL password. Masked in logs.")
   val password: Masked,
   @param:ConfigDoc(
-    description = "PostgreSQL schema (database) name.",
+    description = "PostgreSQL database name. Formerly `schema`, still accepted as a deprecated alias.",
     default = "linea_coordinator",
   )
-  val schema: String = "linea_coordinator",
+  val databaseName: String = "linea_coordinator",
   @param:ConfigDoc(
     description = "Expected database schema version; must match a supported migration version.",
     default = "4",
@@ -70,7 +70,7 @@ data class DatabaseToml(
       port = this.port.toInt(),
       username = this.username,
       password = this.password,
-      schema = this.schema,
+      databaseName = this.databaseName,
       schemaVersion = this.schemaVersion,
       readPoolSize = this.readPoolSize,
       readPipeliningLimit = this.readPipeliningLimit,

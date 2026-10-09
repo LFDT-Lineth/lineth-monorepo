@@ -118,6 +118,7 @@ jobs:
       maru: ${{ steps.filter.outputs.maru }}
       has-changes-requiring-build: ${{ steps.exclusion-filter.outputs.has-changes-requiring-build }}
       has-changes-requiring-linea-besu-package-build: ${{ steps.filter.outputs.linea-sequencer-plugin == 'true' || steps.filter.outputs.tracer == 'true' || steps.filter.outputs.tracer-constraints == 'true' ||  steps.filter.outputs.linea-besu == 'true' || steps.filter.outputs.linea-besu-package == 'true' }}
+      besu-commit-changed: ${{ steps.check_besu_commit.outputs.version_changed == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -263,16 +264,35 @@ jobs:
           # For 'has-changes-requiring-build', it means we have an exclusion list that we can append to.
           predicate-quantifier: "every"
 
+      - name: Check besuCommit change
+        uses: ./.github/actions/check-lib-version-change
+        id: check_besu_commit
+        with:
+          target_lib: besuCommit
+          target_file_path: gradle/libs.versions.toml
+
   compute-commit-tags:
     needs: [filter-commit-changes]
     if: ${{ !cancelled() && needs.filter-commit-changes.result == 'success' }}
     uses: ./.github/workflows/reusable-compute-commit-tags.yml
 
-  testing:
+  # Runs once before the JVM testing jobs: checks whether the Besu version pinned by
+  # besuCommit (gradle/libs.versions.toml) is published to a remote maven repo and, if not,
+  # builds the Besu source distribution a single time and shares it as a workflow artifact.
+  prepare-linea-besu-maven:
     needs: [filter-commit-changes, compute-commit-tags]
+    if: >
+      !cancelled() &&
+      needs.filter-commit-changes.outputs.besu-commit-changed == 'true' &&
+      needs.filter-commit-changes.outputs.has-changes-requiring-build == 'true' &&
+      needs.compute-commit-tags.outputs.commit_tag != ''
+    uses: ./.github/workflows/prepare-linea-besu-maven.yml
+
+  testing:
+    needs: [filter-commit-changes, compute-commit-tags, prepare-linea-besu-maven]
     # !cancelled() (not always()): run on need failure/skip, but not after a
     # concurrency cancel supersedes this run.
-    if: ${{ !cancelled() && needs.filter-commit-changes.outputs.has-changes-requiring-build == 'true' && needs.compute-commit-tags.outputs.commit_tag != '' }}
+    if: ${{ !cancelled() && (needs.prepare-linea-besu-maven.result == 'success' || needs.prepare-linea-besu-maven.result == 'skipped') }}
     uses: ./.github/workflows/testing.yml
     with:
       commit_tag: ${{ needs.compute-commit-tags.outputs.commit_tag }}
@@ -299,12 +319,13 @@ jobs:
 
   manual-docker-build-and-e2e-tests:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
-    needs: [compute-commit-tags, get-has-changes-requiring-e2e-testing]
+    needs: [compute-commit-tags, get-has-changes-requiring-e2e-testing, prepare-linea-besu-maven]
     if: >
       !cancelled() &&
       needs.compute-commit-tags.result == 'success' &&
       needs.get-has-changes-requiring-e2e-testing.result == 'success' &&
-      needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing == 'true'
+      needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing == 'true' &&
+      (needs.prepare-linea-besu-maven.result == 'success' || needs.prepare-linea-besu-maven.result == 'skipped')
     environment: ${{ github.ref != 'refs/heads/main' && 'docker-build-and-e2e' || '' }}
     concurrency:
       group: manual-docker-build-and-e2e-tests-${{ github.workflow }}-${{ github.ref }}

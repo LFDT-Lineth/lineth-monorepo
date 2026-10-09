@@ -34,8 +34,8 @@
         "endDataRollingHash",
         "parentBlockHash",
         "endBlockHash",
-        "startOffset",
-        "endOffset",
+        "parentDataTailTakeBytes",
+        "finalDataTailDiscardBytes",
         "l2L1Roots",
         "l2L1TreeDepth",
         "filteredAddresses",
@@ -58,13 +58,13 @@
         "endDataRollingHash": { "$ref": "#/$defs/hash32" },
         "parentBlockHash": { "$ref": "#/$defs/hash32" },
         "endBlockHash": { "$ref": "#/$defs/hash32" },
-        "startOffset": {
-          "description": "Canonical start position in unpacked blob payload bytes: 0 at a fully consumed chunk boundary, positive only inside a shared blob (§3.1).",
-          "$ref": "#/$defs/offset"
+        "parentDataTailTakeBytes": {
+          "description": "0 at a chunk boundary; positive N takes the final N bytes of the actual unpacked first blob payload, requiring N < its length (§3.1).",
+          "$ref": "#/$defs/tailCount"
         },
-        "endOffset": {
-          "description": "Canonical end position in unpacked blob payload bytes: 0 after fully consuming a calldata or blob chunk (including a short terminal blob), positive only inside a shared terminal blob (§3.1).",
-          "$ref": "#/$defs/offset"
+        "finalDataTailDiscardBytes": {
+          "description": "Guest-derived unconsumed suffix byte count of the last blob payload: 0 at a fully consumed chunk boundary; positive N requires N < the actual unpacked last blob payload length (§3.1).",
+          "$ref": "#/$defs/tailCount"
         },
         "l2L1TreeDepth": {
           "description": "Guest-proven depth of each L2-to-L1 message tree; the guest implementation chooses the depth.",
@@ -92,7 +92,7 @@
   },
   "$defs": {
     "uint": { "type": "integer", "minimum": 0 },
-    "offset": { "type": "integer", "minimum": 0, "maximum": 130046 },
+    "tailCount": { "type": "integer", "minimum": 0, "maximum": 130046 },
     "hex": { "type": "string", "pattern": "^0x([0-9a-fA-F]{2})*$" },
     "hash32": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },
     "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" }

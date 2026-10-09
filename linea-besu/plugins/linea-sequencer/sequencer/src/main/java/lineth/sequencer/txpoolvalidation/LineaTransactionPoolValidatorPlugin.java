@@ -35,6 +35,7 @@ import org.hyperledger.besu.plugin.services.transactionpool.TransactionPoolServi
  */
 @Slf4j
 @AutoService(BesuPlugin.class)
+@SuppressWarnings("deprecation")
 public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPlugin {
 
   private ServiceManager serviceManager;
