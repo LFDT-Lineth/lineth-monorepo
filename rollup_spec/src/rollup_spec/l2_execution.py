@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Sequence, Tuple
+from typing import Iterable, List, Sequence, Tuple
 
 from ethereum.crypto.hash import Hash32, keccak256
 from .fork import (
@@ -251,7 +251,7 @@ class L2ExecutionProofPublicInput:
     parent_ftx_number: U64
     end_ftx_rolling_hash: Hash32
     end_processed_ftx_number: U64
-    filtered_addresses_hash: Hash32
+    filtered_addresses: List[Address]
     tx_froms_hash: Hash32
     block_count: int = 0
     l2_messaging_blocks_offsets: List[int] = field(default_factory=list)
@@ -311,7 +311,6 @@ class L2ExecutionProof:
     public_inputs: L2ExecutionProofPublicInput
     start_block_number: U64
     proof: bytes = b""
-    filtered_addresses: List[Address] = field(default_factory=list)
 
 
 @dataclass
@@ -368,7 +367,7 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
     l2_l1_message_hashes: List[Hash32] = []
     messaging_offsets: List[int] = []
     tx_froms: List[Address] = []
-    filtered_addresses: List[Address] = []
+    block_filtered_addresses: List[List[Address]] = []
     results: List[StatelessExecutionResult] = []
 
     for block_index, (lineth_payload, stateless_input) in enumerate(zip(execution_input.payloads, stateless_inputs)):
@@ -416,7 +415,7 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
         # Forced transactions (§6.5): FTX-invalid reads the sender account at this
         # block's parent state root by walking the witness MPT (`L2State`).
         block_parent_state = L2State(state_root=result.pre_state_root, witnesses=all_witnesses)
-        block_filtered_addresses, current_ftx_rolling_hash, current_last_processed_ftx_number = (
+        refused_addresses, current_ftx_rolling_hash, current_last_processed_ftx_number = (
             validate_forced_transactions(
                 current_ftx_rolling_hash,
                 current_last_processed_ftx_number,
@@ -426,7 +425,7 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
                 lineth_payload.rollup_extension.forced_transactions,
             )
         )
-        filtered_addresses.extend(block_filtered_addresses)
+        block_filtered_addresses.append(refused_addresses)
 
         # L2->L1 messages from the block's logs (skipped entirely when no L2MessageService is
         # configured — see `bridge_suppressed`).
@@ -476,7 +475,7 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
         parent_ftx_number=execution_input.parent_last_processed_ftx_number,
         end_ftx_rolling_hash=current_ftx_rolling_hash,
         end_processed_ftx_number=current_last_processed_ftx_number,
-        filtered_addresses_hash=hash_address_list(filtered_addresses),
+        filtered_addresses=merge_filtered_addresses(block_filtered_addresses),
         tx_froms_hash=hash_address_list(tx_froms),
         block_count=len(stateless_inputs),
         l2_messaging_blocks_offsets=messaging_offsets,
@@ -485,7 +484,6 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
     return L2ExecutionProof(
         public_inputs=public_inputs,
         start_block_number=start_block_number,
-        filtered_addresses=filtered_addresses,
     )
 
 
@@ -495,3 +493,8 @@ def hash_digest_list(values: Sequence[Hash32]) -> Hash32:
 
 def hash_address_list(values: Sequence[Address]) -> Hash32:
     return keccak256(b"".join(bytes(value) for value in values))
+
+
+def merge_filtered_addresses(address_lists: Iterable[Iterable[Address]]) -> List[Address]:
+    """Distinct addresses from all lists, sorted ascending by byte value."""
+    return sorted({address for addresses in address_lists for address in addresses})

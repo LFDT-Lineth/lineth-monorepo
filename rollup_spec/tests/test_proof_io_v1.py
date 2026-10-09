@@ -119,7 +119,7 @@ def _sample_proof() -> L2ExecutionProof:
         parent_ftx_number=U64(15),
         end_ftx_rolling_hash=Hash32(bytes([0x05]) * 32),
         end_processed_ftx_number=U64(18),
-        filtered_addresses_hash=Hash32(bytes([0x06]) * 32),
+        filtered_addresses=[Address(bytes([0x09]) * 20)],
         tx_froms_hash=Hash32(bytes([0x07]) * 32),
         block_count=3,
     )
@@ -127,7 +127,6 @@ def _sample_proof() -> L2ExecutionProof:
         public_inputs=pi,
         start_block_number=U64(1000501),
         proof=b"\xde\xad\xbe\xef",
-        filtered_addresses=[Address(bytes([0x09]) * 20)],
     )
 
 
@@ -273,17 +272,16 @@ def test_encode_response_shape_and_values() -> None:
         "parentL1L2BridgeRollingHashMessageNumber", "endL1L2BridgeRollingHash",
         "endL1L2BridgeRollingHashMessageNumber", "dynamicChainConfigHash",
         "parentFtxRollingHash", "parentFtxNumber", "endFtxRollingHash",
-            "endProcessedFtxNumber", "filteredAddressesHash", "txFromsHash",
+            "endProcessedFtxNumber", "filteredAddresses", "txFromsHash",
             "blockCount", "l2MessagingBlocksOffsets",
     }
 
-    assert out["filteredAddresses"] == ["0x" + ("09" * 20)]
+    assert pi["filteredAddresses"] == ["0x" + ("09" * 20)]
     # §ProgramVK anchoring: the exec guest's own VK, carried on the proof
     # (host-attached, not part of publicInputs — a guest cannot attest its own VK).
     assert out["programVk"] == "0x" + ("aa" * 32)
     assert set(out.keys()) == {
-        "proverVersion", "proof", "startBlockNumber", "publicInputs",
-        "filteredAddresses", "programVk",
+        "proverVersion", "proof", "startBlockNumber", "publicInputs", "programVk",
     }
 
 
@@ -375,7 +373,7 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     assert proof.public_inputs.l2_l1_messages == [Hash32(bytes([0x08]) * 32)]
     assert int(proof.public_inputs.parent_ftx_number) == 15
     assert int(proof.public_inputs.end_processed_ftx_number) == 18
-    assert proof.filtered_addresses == [Address(bytes([0x03]) * 20), Address(bytes([0x04]) * 20)]
+    assert proof.public_inputs.filtered_addresses == [Address(bytes([0x03]) * 20), Address(bytes([0x04]) * 20)]
     # §ProgramVK anchoring: the exec proof's VK is read from the request, onto
     # the coordinator-populated wrapper, not the guest-emitted proof itself.
     assert verifiable.program_vk == _EXEC_VK
@@ -575,7 +573,7 @@ def _sample_finalization_submission() -> FinalizationSubmission:
             parent_data_tail_take_bytes=0,
             l2_l1_tree_depth=5,
             l2_l1_roots=[Hash32(bytes.fromhex(root[2:])) for root in _expected_aggregation_response()["publicInputs"]["l2L1Roots"]],
-            filtered_addresses=[Address(bytes([0x01]) * 20), Address(bytes([0x01]) * 20)],
+            filtered_addresses=[Address(bytes([0x01]) * 20)],
             program_ids=[Hash32(bytes([0x11]) * 32), Hash32(bytes([0x22]) * 32)],
         ),
         proof=b"\xde\xad\xbe\xef",
@@ -687,7 +685,7 @@ def test_encode_aggregation_response_is_l1_sufficient() -> None:
     # The response carries the preimages L1 finalization needs as calldata, so
     # it is sufficient for the L1 verification step.
     assert out["publicInputs"]["l2L1Roots"] == _expected_aggregation_response()["publicInputs"]["l2L1Roots"]
-    assert out["publicInputs"]["filteredAddresses"] == ["0x" + ("01" * 20)] * 2
+    assert out["publicInputs"]["filteredAddresses"] == ["0x" + ("01" * 20)]
     assert "programVks" not in out
     assert out["publicInputs"]["l2MessagingBlocksOffsets"] == []
     assert set(out.keys()) == {
