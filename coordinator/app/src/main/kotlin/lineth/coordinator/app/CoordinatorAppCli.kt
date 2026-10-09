@@ -7,7 +7,6 @@ import lineth.coordinator.config.v2.toml.loadConfigs
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import picocli.CommandLine
-import picocli.CommandLine.ArgGroup
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
 import java.io.File
@@ -34,26 +33,13 @@ class CoordinatorAppCli<E> internal constructor(
   @Parameters(paramLabel = "CONFIG.toml", description = ["Configuration files"])
   private val configFiles: List<File>? = null
 
-  @ArgGroup(multiplicity = "1", exclusive = true, validate = true)
-  private var tracesLimitsFiles: TracesLimitsFiles? = null
-
-  class TracesLimitsFiles {
-    @CommandLine.Option(
-      names = ["--traces-limits-v4"],
-      paramLabel = "<FILE>",
-      description = ["Prover traces limits V4 for linea besu"],
-      required = false,
-    )
-    var tracesLimitsV4File: File? = null
-
-    @CommandLine.Option(
-      names = ["--traces-limits-v5"],
-      paramLabel = "<FILE>",
-      description = ["Prover traces limits V5 for linea besu"],
-      required = false,
-    )
-    var tracesLimitsV5File: File? = null
-  }
+  @CommandLine.Option(
+    names = ["--traces-limits-v5"],
+    paramLabel = "<FILE>",
+    description = ["Prover traces limits V5 for linea besu"],
+    arity = "1",
+  )
+  private val tracesLimitsV5File: File? = null
 
   @CommandLine.Option(
     names = ["--smart-contract-errors"],
@@ -86,11 +72,7 @@ class CoordinatorAppCli<E> internal constructor(
         printUsage(errorWriter)
         return 1
       }
-      val tracesFiles = tracesLimitsFiles
-      if (
-        tracesFiles == null ||
-        (tracesFiles.tracesLimitsV4File == null && tracesFiles.tracesLimitsV5File == null)
-      ) {
+      if (tracesLimitsV5File == null) {
         errorWriter.println("Please provide a traces-limits file!")
         printUsage(errorWriter)
         return 1
@@ -110,8 +92,7 @@ class CoordinatorAppCli<E> internal constructor(
       val configs =
         loadConfigs(
           coordinatorConfigFiles = configFiles.map { it.toPath() },
-          tracesLimitsFileV4 = tracesFiles.tracesLimitsV4File?.toPath(),
-          tracesLimitsFileV5 = tracesFiles.tracesLimitsV5File?.toPath(),
+          tracesLimitsFileV5 = tracesLimitsV5File.toPath(),
           smartContractErrorsFile = smartContractErrorsFile?.toPath(),
           gasPriceCapTimeOfDayMultipliersFile = gasPriceCapTimeOfDayMultipliersFile.toPath(),
           logger = logger,

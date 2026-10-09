@@ -78,36 +78,6 @@ private fun add(tc1: TracesCounters, tc2: TracesCounters): Map<TracingModule, UI
   return sum
 }
 
-data class TracesCountersV2(private val countersMap: Map<TracingModuleV2, UInt>) :
-  TracesCountersImpl(countersMap, TracingModuleV2.entries) {
-  companion object {
-    val EMPTY_TRACES_COUNT = TracesCountersV2(TracingModuleV2.entries.associateWith { 0u })
-  }
-
-  override fun add(o: TracesCounters): TracesCountersV2 {
-    val sum = add(this, o)
-    @Suppress("UNCHECKED_CAST")
-    return TracesCountersV2(sum as Map<TracingModuleV2, UInt>)
-  }
-
-  override val emptyTracesCounters = EMPTY_TRACES_COUNT
-}
-
-data class TracesCountersV4(private val countersMap: Map<TracingModuleV4, UInt>) :
-  TracesCountersImpl(countersMap, TracingModuleV4.entries) {
-  companion object {
-    val EMPTY_TRACES_COUNT = TracesCountersV4(TracingModuleV4.entries.associateWith { 0u })
-  }
-
-  override fun add(o: TracesCounters): TracesCountersV4 {
-    val sum = add(this, o)
-    @Suppress("UNCHECKED_CAST")
-    return TracesCountersV4(sum as Map<TracingModuleV4, UInt>)
-  }
-
-  override val emptyTracesCounters = EMPTY_TRACES_COUNT
-}
-
 data class TracesCountersV5(private val countersMap: Map<TracingModuleV5, UInt>) :
   TracesCountersImpl(countersMap, TracingModuleV5.entries) {
   companion object {
