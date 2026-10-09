@@ -75,6 +75,7 @@ internal fun buildConfigLoader(
   ignoredTopLevelKeys: Set<String>,
   onlyTopLevelKeys: Set<String>?,
   deprecatedAliases: List<DeprecatedKeyAlias>,
+  capturedTables: List<UnknownTablesCapture>,
   logger: Logger?,
   addDefaultPreprocessors: Boolean,
   addDefaultPropertySources: Boolean,
@@ -84,6 +85,7 @@ internal fun buildConfigLoader(
     configFiles.reversed().map { file ->
       PropertySource.path(file.toAbsolutePath())
         .withDeprecatedAliases(deprecatedAliases, logger)
+        .withCapturedTables(capturedTables)
         .withoutTopLevelKeys(ignoredTopLevelKeys)
         .let { source -> if (onlyTopLevelKeys != null) source.onlyTopLevelKeys(onlyTopLevelKeys) else source }
     }
@@ -97,6 +99,7 @@ internal fun buildConfigLoader(
  *   so they do not trigger the unknown key handling
  * @param onlyTopLevelKeys when set, only these top-level tables are kept (used to load [ConfigExtension] sections)
  * @param deprecatedAliases renamed keys still accepted from the config files
+ * @param capturedTables tables whose user-named sub-tables are collected instead of reported as unknown keys
  * @param logger used for deprecation warnings; pass it on the strict pass only, as the lenient pass re-reads the files
  */
 inline fun <reified T : Any> loadConfigsOrError(
@@ -107,6 +110,7 @@ inline fun <reified T : Any> loadConfigsOrError(
   ignoredTopLevelKeys: Set<String> = emptySet(),
   onlyTopLevelKeys: Set<String>? = null,
   deprecatedAliases: List<DeprecatedKeyAlias> = emptyList(),
+  capturedTables: List<UnknownTablesCapture> = emptyList(),
   logger: Logger? = null,
 ): Result<T, String> {
   return buildConfigLoader(
@@ -115,6 +119,7 @@ inline fun <reified T : Any> loadConfigsOrError(
     ignoredTopLevelKeys,
     onlyTopLevelKeys,
     deprecatedAliases,
+    capturedTables,
     logger,
     addDefaultPreprocessors,
     addDefaultPropertySources,
@@ -143,6 +148,7 @@ inline fun <reified T : Any> loadConfigsAndLogErrors(
   ignoredTopLevelKeys: Set<String> = emptySet(),
   onlyTopLevelKeys: Set<String>? = null,
   deprecatedAliases: List<DeprecatedKeyAlias> = emptyList(),
+  capturedTables: List<UnknownTablesCapture> = emptyList(),
 ): Result<T, String> {
   return loadConfigsOrError<T>(
     configFiles,
@@ -152,6 +158,7 @@ inline fun <reified T : Any> loadConfigsAndLogErrors(
     ignoredTopLevelKeys = ignoredTopLevelKeys,
     onlyTopLevelKeys = onlyTopLevelKeys,
     deprecatedAliases = deprecatedAliases,
+    capturedTables = capturedTables,
     // the lenient pass re-reads the same files, warn once
     logger = if (strict) logger else null,
   )
@@ -223,6 +230,7 @@ fun loadConfigsOrError(
       strict,
       ignoredTopLevelKeys = ignoredTopLevelKeys,
       deprecatedAliases = coordinatorDeprecatedKeyAliases,
+      capturedTables = coordinatorSignerTableCaptures,
       addDefaultPreprocessors = true,
       addDefaultPropertySources = true,
     )

@@ -1397,10 +1397,10 @@
         "section": true,
         "required": false,
         "default": null,
-        "description": "Named signer settings; required when type is CUSTOM.",
+        "description": "Named signer settings, resolved by the injected signer factory.",
         "example": null,
-        "deprecated": false,
-        "replacement": null
+        "deprecated": true,
+        "replacement": "signer.<registered-type>"
       },
       "l1-submission.aggregation.signer.custom.name": {
         "type": "String",
@@ -1408,6 +1408,16 @@
         "required": true,
         "default": null,
         "description": "Logical signer name resolved by the injected signer factory.",
+        "example": null,
+        "deprecated": true,
+        "replacement": "signer.<registered-type>"
+      },
+      "l1-submission.aggregation.signer.registered-settings": {
+        "type": "Map<String, Map<String, Masked>>",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Settings of registered signer types, keyed by type then by setting name. Not written directly: the loader collects the `signer.<type>` tables into it. Only the table of the configured type is used.",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -1417,7 +1427,7 @@
         "section": false,
         "required": true,
         "default": null,
-        "description": "Signer backend to use: WEB3J, WEB3SIGNER, or CUSTOM.",
+        "description": "Signer backend: `web3j`, `web3signer`, or the name of a signer type registered by a custom signer factory, configured in the `signer.<type>` table.",
         "example": "web3signer",
         "deprecated": false,
         "replacement": null
@@ -1427,7 +1437,7 @@
         "section": true,
         "required": false,
         "default": null,
-        "description": "Local Web3j signer settings; required when type is WEB3J.",
+        "description": "Local Web3j signer settings; required when type is web3j.",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -1447,7 +1457,7 @@
         "section": true,
         "required": false,
         "default": null,
-        "description": "Remote Web3Signer settings; required when type is WEB3SIGNER.",
+        "description": "Remote Web3Signer settings; required when type is web3signer.",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -1767,10 +1777,10 @@
         "section": true,
         "required": false,
         "default": null,
-        "description": "Named signer settings; required when type is CUSTOM.",
+        "description": "Named signer settings, resolved by the injected signer factory.",
         "example": null,
-        "deprecated": false,
-        "replacement": null
+        "deprecated": true,
+        "replacement": "signer.<registered-type>"
       },
       "l1-submission.blob.signer.custom.name": {
         "type": "String",
@@ -1778,6 +1788,16 @@
         "required": true,
         "default": null,
         "description": "Logical signer name resolved by the injected signer factory.",
+        "example": null,
+        "deprecated": true,
+        "replacement": "signer.<registered-type>"
+      },
+      "l1-submission.blob.signer.registered-settings": {
+        "type": "Map<String, Map<String, Masked>>",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Settings of registered signer types, keyed by type then by setting name. Not written directly: the loader collects the `signer.<type>` tables into it. Only the table of the configured type is used.",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -1787,7 +1807,7 @@
         "section": false,
         "required": true,
         "default": null,
-        "description": "Signer backend to use: WEB3J, WEB3SIGNER, or CUSTOM.",
+        "description": "Signer backend: `web3j`, `web3signer`, or the name of a signer type registered by a custom signer factory, configured in the `signer.<type>` table.",
         "example": "web3signer",
         "deprecated": false,
         "replacement": null
@@ -1797,7 +1817,7 @@
         "section": true,
         "required": false,
         "default": null,
-        "description": "Local Web3j signer settings; required when type is WEB3J.",
+        "description": "Local Web3j signer settings; required when type is web3j.",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -1817,7 +1837,7 @@
         "section": true,
         "required": false,
         "default": null,
-        "description": "Remote Web3Signer settings; required when type is WEB3SIGNER.",
+        "description": "Remote Web3Signer settings; required when type is web3signer.",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -3017,10 +3037,10 @@
         "section": true,
         "required": false,
         "default": null,
-        "description": "Named signer settings; required when type is CUSTOM.",
+        "description": "Named signer settings, resolved by the injected signer factory.",
         "example": null,
-        "deprecated": false,
-        "replacement": null
+        "deprecated": true,
+        "replacement": "signer.<registered-type>"
       },
       "message-anchoring.signer.custom.name": {
         "type": "String",
@@ -3028,6 +3048,16 @@
         "required": true,
         "default": null,
         "description": "Logical signer name resolved by the injected signer factory.",
+        "example": null,
+        "deprecated": true,
+        "replacement": "signer.<registered-type>"
+      },
+      "message-anchoring.signer.registered-settings": {
+        "type": "Map<String, Map<String, Masked>>",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Settings of registered signer types, keyed by type then by setting name. Not written directly: the loader collects the `signer.<type>` tables into it. Only the table of the configured type is used.",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -3037,7 +3067,7 @@
         "section": false,
         "required": true,
         "default": null,
-        "description": "Signer backend to use: WEB3J, WEB3SIGNER, or CUSTOM.",
+        "description": "Signer backend: `web3j`, `web3signer`, or the name of a signer type registered by a custom signer factory, configured in the `signer.<type>` table.",
         "example": "web3signer",
         "deprecated": false,
         "replacement": null
@@ -3047,7 +3077,7 @@
         "section": true,
         "required": false,
         "default": null,
-        "description": "Local Web3j signer settings; required when type is WEB3J.",
+        "description": "Local Web3j signer settings; required when type is web3j.",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -3067,7 +3097,7 @@
         "section": true,
         "required": false,
         "default": null,
-        "description": "Remote Web3Signer settings; required when type is WEB3SIGNER.",
+        "description": "Remote Web3Signer settings; required when type is web3signer.",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -3293,21 +3323,21 @@
         "replacement": null
       },
       "prover.blob-compression.fs-requests-directory": {
-        "type": "String",
+        "type": "String?",
         "section": false,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
+        "description": "Directory the coordinator writes prover request files to. Required when transport is `file`.",
         "example": "/data/prover/v3/execution/requests",
         "deprecated": false,
         "replacement": null
       },
       "prover.blob-compression.fs-responses-directory": {
-        "type": "String",
+        "type": "String?",
         "section": false,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
+        "description": "Directory the coordinator reads prover response files from. Required when transport is `file`.",
         "example": "/data/prover/v3/execution/responses",
         "deprecated": false,
         "replacement": null
@@ -3319,6 +3349,16 @@
         "default": null,
         "description": "Guest program identifier for the RISC-V prover.",
         "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.blob-compression.transport": {
+        "type": "String",
+        "section": false,
+        "required": false,
+        "default": "file",
+        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
+        "example": null,
         "deprecated": false,
         "replacement": null
       },
@@ -3343,21 +3383,21 @@
         "replacement": null
       },
       "prover.execution.fs-requests-directory": {
-        "type": "String",
+        "type": "String?",
         "section": false,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
+        "description": "Directory the coordinator writes prover request files to. Required when transport is `file`.",
         "example": "/data/prover/v3/execution/requests",
         "deprecated": false,
         "replacement": null
       },
       "prover.execution.fs-responses-directory": {
-        "type": "String",
+        "type": "String?",
         "section": false,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
+        "description": "Directory the coordinator reads prover response files from. Required when transport is `file`.",
         "example": "/data/prover/v3/execution/responses",
         "deprecated": false,
         "replacement": null
@@ -3369,6 +3409,16 @@
         "default": null,
         "description": "Guest program identifier for the RISC-V prover.",
         "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.execution.transport": {
+        "type": "String",
+        "section": false,
+        "required": false,
+        "default": "file",
+        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
+        "example": null,
         "deprecated": false,
         "replacement": null
       },
@@ -3433,21 +3483,21 @@
         "replacement": null
       },
       "prover.l2-execution.fs-requests-directory": {
-        "type": "String",
+        "type": "String?",
         "section": false,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
+        "description": "Directory the coordinator writes prover request files to. Required when transport is `file`.",
         "example": "/data/prover/v3/execution/requests",
         "deprecated": false,
         "replacement": null
       },
       "prover.l2-execution.fs-responses-directory": {
-        "type": "String",
+        "type": "String?",
         "section": false,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
+        "description": "Directory the coordinator reads prover response files from. Required when transport is `file`.",
         "example": "/data/prover/v3/execution/responses",
         "deprecated": false,
         "replacement": null
@@ -3459,6 +3509,16 @@
         "default": null,
         "description": "Guest program identifier for the RISC-V prover.",
         "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.l2-execution.transport": {
+        "type": "String",
+        "section": false,
+        "required": false,
+        "default": "file",
+        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
+        "example": null,
         "deprecated": false,
         "replacement": null
       },
@@ -3483,21 +3543,21 @@
         "replacement": null
       },
       "prover.new.blob-compression.fs-requests-directory": {
-        "type": "String",
+        "type": "String?",
         "section": false,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
+        "description": "Directory the coordinator writes prover request files to. Required when transport is `file`.",
         "example": "/data/prover/v3/execution/requests",
         "deprecated": false,
         "replacement": null
       },
       "prover.new.blob-compression.fs-responses-directory": {
-        "type": "String",
+        "type": "String?",
         "section": false,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
+        "description": "Directory the coordinator reads prover response files from. Required when transport is `file`.",
         "example": "/data/prover/v3/execution/responses",
         "deprecated": false,
         "replacement": null
@@ -3509,6 +3569,16 @@
         "default": null,
         "description": "Guest program identifier for the RISC-V prover.",
         "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.blob-compression.transport": {
+        "type": "String",
+        "section": false,
+        "required": false,
+        "default": "file",
+        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
+        "example": null,
         "deprecated": false,
         "replacement": null
       },
@@ -3533,21 +3603,21 @@
         "replacement": null
       },
       "prover.new.execution.fs-requests-directory": {
-        "type": "String",
+        "type": "String?",
         "section": false,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
+        "description": "Directory the coordinator writes prover request files to. Required when transport is `file`.",
         "example": "/data/prover/v3/execution/requests",
         "deprecated": false,
         "replacement": null
       },
       "prover.new.execution.fs-responses-directory": {
-        "type": "String",
+        "type": "String?",
         "section": false,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
+        "description": "Directory the coordinator reads prover response files from. Required when transport is `file`.",
         "example": "/data/prover/v3/execution/responses",
         "deprecated": false,
         "replacement": null
@@ -3559,6 +3629,16 @@
         "default": null,
         "description": "Guest program identifier for the RISC-V prover.",
         "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.execution.transport": {
+        "type": "String",
+        "section": false,
+        "required": false,
+        "default": "file",
+        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
+        "example": null,
         "deprecated": false,
         "replacement": null
       },
@@ -3623,21 +3703,21 @@
         "replacement": null
       },
       "prover.new.l2-execution.fs-requests-directory": {
-        "type": "String",
+        "type": "String?",
         "section": false,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
+        "description": "Directory the coordinator writes prover request files to. Required when transport is `file`.",
         "example": "/data/prover/v3/execution/requests",
         "deprecated": false,
         "replacement": null
       },
       "prover.new.l2-execution.fs-responses-directory": {
-        "type": "String",
+        "type": "String?",
         "section": false,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
+        "description": "Directory the coordinator reads prover response files from. Required when transport is `file`.",
         "example": "/data/prover/v3/execution/responses",
         "deprecated": false,
         "replacement": null
@@ -3649,6 +3729,16 @@
         "default": null,
         "description": "Guest program identifier for the RISC-V prover.",
         "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.l2-execution.transport": {
+        "type": "String",
+        "section": false,
+        "required": false,
+        "default": "file",
+        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
+        "example": null,
         "deprecated": false,
         "replacement": null
       },
@@ -3673,21 +3763,21 @@
         "replacement": null
       },
       "prover.new.proof-aggregation.fs-requests-directory": {
-        "type": "String",
+        "type": "String?",
         "section": false,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
+        "description": "Directory the coordinator writes prover request files to. Required when transport is `file`.",
         "example": "/data/prover/v3/execution/requests",
         "deprecated": false,
         "replacement": null
       },
       "prover.new.proof-aggregation.fs-responses-directory": {
-        "type": "String",
+        "type": "String?",
         "section": false,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
+        "description": "Directory the coordinator reads prover response files from. Required when transport is `file`.",
         "example": "/data/prover/v3/execution/responses",
         "deprecated": false,
         "replacement": null
@@ -3699,6 +3789,16 @@
         "default": null,
         "description": "Guest program identifier for the RISC-V prover.",
         "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.proof-aggregation.transport": {
+        "type": "String",
+        "section": false,
+        "required": false,
+        "default": "file",
+        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
+        "example": null,
         "deprecated": false,
         "replacement": null
       },
@@ -3733,21 +3833,21 @@
         "replacement": null
       },
       "prover.new.rollup-aggregation.fs-requests-directory": {
-        "type": "String",
+        "type": "String?",
         "section": false,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
+        "description": "Directory the coordinator writes prover request files to. Required when transport is `file`.",
         "example": "/data/prover/v3/execution/requests",
         "deprecated": false,
         "replacement": null
       },
       "prover.new.rollup-aggregation.fs-responses-directory": {
-        "type": "String",
+        "type": "String?",
         "section": false,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
+        "description": "Directory the coordinator reads prover response files from. Required when transport is `file`.",
         "example": "/data/prover/v3/execution/responses",
         "deprecated": false,
         "replacement": null
@@ -3762,22 +3862,32 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.new.rollup.fs-requests-directory": {
+      "prover.new.rollup-aggregation.transport": {
         "type": "String",
         "section": false,
-        "required": true,
+        "required": false,
+        "default": "file",
+        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.rollup.fs-requests-directory": {
+        "type": "String?",
+        "section": false,
+        "required": false,
         "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
+        "description": "Directory the coordinator writes prover request files to. Required when transport is `file`.",
         "example": "/data/prover/v3/execution/requests",
         "deprecated": false,
         "replacement": null
       },
       "prover.new.rollup.fs-responses-directory": {
-        "type": "String",
+        "type": "String?",
         "section": false,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
+        "description": "Directory the coordinator reads prover response files from. Required when transport is `file`.",
         "example": "/data/prover/v3/execution/responses",
         "deprecated": false,
         "replacement": null
@@ -3789,6 +3899,16 @@
         "default": null,
         "description": "Guest program identifier for the RISC-V prover.",
         "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.rollup.transport": {
+        "type": "String",
+        "section": false,
+        "required": false,
+        "default": "file",
+        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
+        "example": null,
         "deprecated": false,
         "replacement": null
       },
@@ -3833,21 +3953,21 @@
         "replacement": null
       },
       "prover.proof-aggregation.fs-requests-directory": {
-        "type": "String",
+        "type": "String?",
         "section": false,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
+        "description": "Directory the coordinator writes prover request files to. Required when transport is `file`.",
         "example": "/data/prover/v3/execution/requests",
         "deprecated": false,
         "replacement": null
       },
       "prover.proof-aggregation.fs-responses-directory": {
-        "type": "String",
+        "type": "String?",
         "section": false,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
+        "description": "Directory the coordinator reads prover response files from. Required when transport is `file`.",
         "example": "/data/prover/v3/execution/responses",
         "deprecated": false,
         "replacement": null
@@ -3859,6 +3979,16 @@
         "default": null,
         "description": "Guest program identifier for the RISC-V prover.",
         "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.proof-aggregation.transport": {
+        "type": "String",
+        "section": false,
+        "required": false,
+        "default": "file",
+        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
+        "example": null,
         "deprecated": false,
         "replacement": null
       },
@@ -3893,21 +4023,21 @@
         "replacement": null
       },
       "prover.rollup-aggregation.fs-requests-directory": {
-        "type": "String",
+        "type": "String?",
         "section": false,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
+        "description": "Directory the coordinator writes prover request files to. Required when transport is `file`.",
         "example": "/data/prover/v3/execution/requests",
         "deprecated": false,
         "replacement": null
       },
       "prover.rollup-aggregation.fs-responses-directory": {
-        "type": "String",
+        "type": "String?",
         "section": false,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
+        "description": "Directory the coordinator reads prover response files from. Required when transport is `file`.",
         "example": "/data/prover/v3/execution/responses",
         "deprecated": false,
         "replacement": null
@@ -3922,22 +4052,32 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.rollup.fs-requests-directory": {
+      "prover.rollup-aggregation.transport": {
         "type": "String",
         "section": false,
-        "required": true,
+        "required": false,
+        "default": "file",
+        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.rollup.fs-requests-directory": {
+        "type": "String?",
+        "section": false,
+        "required": false,
         "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
+        "description": "Directory the coordinator writes prover request files to. Required when transport is `file`.",
         "example": "/data/prover/v3/execution/requests",
         "deprecated": false,
         "replacement": null
       },
       "prover.rollup.fs-responses-directory": {
-        "type": "String",
+        "type": "String?",
         "section": false,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
+        "description": "Directory the coordinator reads prover response files from. Required when transport is `file`.",
         "example": "/data/prover/v3/execution/responses",
         "deprecated": false,
         "replacement": null
@@ -3949,6 +4089,16 @@
         "default": null,
         "description": "Guest program identifier for the RISC-V prover.",
         "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.rollup.transport": {
+        "type": "String",
+        "section": false,
+        "required": false,
+        "default": "file",
+        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
+        "example": null,
         "deprecated": false,
         "replacement": null
       },

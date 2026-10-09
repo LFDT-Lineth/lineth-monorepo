@@ -1,15 +1,24 @@
 package lineth.coordinator.config.v2.toml
 
+import com.sksamuel.hoplite.ArrayNode
+import com.sksamuel.hoplite.BooleanNode
 import com.sksamuel.hoplite.ConfigFailure
 import com.sksamuel.hoplite.ConfigResult
+import com.sksamuel.hoplite.DoubleNode
+import com.sksamuel.hoplite.LongNode
 import com.sksamuel.hoplite.MapNode
 import com.sksamuel.hoplite.Node
+import com.sksamuel.hoplite.NullNode
 import com.sksamuel.hoplite.PropertySource
 import com.sksamuel.hoplite.PropertySourceContext
+import com.sksamuel.hoplite.StringNode
+import com.sksamuel.hoplite.Undefined
+import com.sksamuel.hoplite.decoder.DotPath
 import com.sksamuel.hoplite.fp.flatMap
 import com.sksamuel.hoplite.fp.invalid
 import com.sksamuel.hoplite.fp.valid
 import org.apache.logging.log4j.Logger
+import kotlin.reflect.full.primaryConstructor
 
 /**
  * Maps a deprecated key path to its replacement, both as dot separated paths (e.g. `database.schema`).
@@ -142,4 +151,90 @@ private fun Node.put(segments: List<String>, value: Node): Node {
     map[existingKey] as? MapNode
       ?: MapNode(map = emptyMap(), pos = pos, path = path.with(existingKey))
   return copy(map = map + (existingKey to child.put(segments.drop(1), value)))
+}
+
+/**
+ * Collects the sub-tables of the table at [path] that are not [knownKeys] under [targetKey], so a table whose
+ * sub-tables are chosen by its users (e.g. `signer.<registered-type>`) is not reported as unknown keys.
+ * Works per file, so a layered file can override the settings of a type declared in another file.
+ */
+data class UnknownTablesCapture(val path: String, val targetKey: String, val knownKeys: Set<String>)
+
+internal fun PropertySource.withCapturedTables(captures: List<UnknownTablesCapture>): PropertySource {
+  if (captures.isEmpty()) return this
+  return TransformedPropertySource(this) { root ->
+    captures.fold<UnknownTablesCapture, Node>(root) { node, capture -> node.capture(capture) }.valid()
+  }
+}
+
+private fun Node.capture(capture: UnknownTablesCapture): Node {
+  val segments = capture.path.split('.')
+  val known = (capture.knownKeys + capture.targetKey).map(::normalizeConfigKey).toSet()
+  return update(segments) { table ->
+    val moved = table.map.filter { (key, value) -> value is MapNode && normalizeConfigKey(key) !in known }
+    if (moved.isEmpty()) {
+      table
+    } else {
+      val targetKey =
+        table.map.keys.firstOrNull { normalizeConfigKey(it) == normalizeConfigKey(capture.targetKey) }
+          ?: capture.targetKey
+      val target =
+        table.map[targetKey] as? MapNode
+          ?: MapNode(map = emptyMap(), pos = table.pos, path = table.path.with(targetKey))
+      // Hoplite derives Map keys from the nodes' sourceKey (their full dotted path), so rebase the moved nodes
+      val rebased =
+        moved.mapValues { (key, node) ->
+          node.rebase(
+            oldPrefix = node.sourceKey ?: "${table.sourceKey}.$key",
+            newPrefix = "${target.sourceKey}.$key",
+            newPath = target.path.with(key),
+          )
+        }
+      table.copy(map = (table.map - moved.keys) + (targetKey to target.copy(map = target.map + rebased)))
+    }
+  }
+}
+
+private fun Node.rebase(oldPrefix: String, newPrefix: String, newPath: DotPath): Node {
+  fun String?.rebased() = this?.let { if (it.startsWith(oldPrefix)) newPrefix + it.removePrefix(oldPrefix) else it }
+  return when (this) {
+    is MapNode ->
+      copy(
+        path = newPath,
+        sourceKey = sourceKey.rebased(),
+        map = map.mapValues { (key, child) -> child.rebase(oldPrefix, newPrefix, newPath.with(key)) },
+      )
+    is ArrayNode ->
+      copy(
+        path = newPath,
+        sourceKey = sourceKey.rebased(),
+        elements = elements.map {
+          it.rebase(oldPrefix, newPrefix, newPath)
+        },
+      )
+    is StringNode -> copy(path = newPath, sourceKey = sourceKey.rebased())
+    is BooleanNode -> copy(path = newPath, sourceKey = sourceKey.rebased())
+    is LongNode -> copy(path = newPath, sourceKey = sourceKey.rebased())
+    is DoubleNode -> copy(path = newPath, sourceKey = sourceKey.rebased())
+    is NullNode -> copy(path = newPath, sourceKey = sourceKey.rebased())
+    Undefined -> this
+  }
+}
+
+private fun Node.update(segments: List<String>, transform: (MapNode) -> MapNode): Node {
+  if (this !is MapNode) return this
+  if (segments.isEmpty()) return transform(this)
+  val head = normalizeConfigKey(segments.first())
+  val key = map.keys.firstOrNull { normalizeConfigKey(it) == head } ?: return this
+  return copy(map = map + (key to map.getValue(key).update(segments.drop(1), transform)))
+}
+
+/** The coordinator tables whose sub-tables are named after pluggable signer types. */
+val coordinatorSignerTableCaptures: List<UnknownTablesCapture> by lazy {
+  val signerKeys = SignerConfigToml::class.primaryConstructor!!.parameters.map { it.name!! }.toSet()
+  listOf(
+    "l1-submission.blob.signer",
+    "l1-submission.aggregation.signer",
+    "message-anchoring.signer",
+  ).map { UnknownTablesCapture(it, targetKey = "registered-settings", knownKeys = signerKeys) }
 }
