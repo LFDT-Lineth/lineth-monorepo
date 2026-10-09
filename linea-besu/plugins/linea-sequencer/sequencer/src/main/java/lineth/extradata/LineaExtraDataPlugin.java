@@ -20,11 +20,11 @@ import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.data.AddedBlockContext;
 import org.hyperledger.besu.plugin.services.BesuEvents;
-import org.hyperledger.besu.plugin.services.BesuEvents.InitialSyncCompletionListener;
 
 /** This plugin registers handlers that are activated when new blocks are imported */
 @Slf4j
 @AutoService(BesuPlugin.class)
+@SuppressWarnings("deprecation")
 public class LineaExtraDataPlugin extends AbstractLineaRequiredPlugin {
   private ServiceManager serviceManager;
 
@@ -65,7 +65,7 @@ public class LineaExtraDataPlugin extends AbstractLineaRequiredPlugin {
       // wait for the initial sync phase to complete before starting parsing extra data
       // to avoid parsing errors
       besuEventsService.addInitialSyncCompletionListener(
-          new InitialSyncCompletionListener() {
+          new BesuEvents.InitialSyncCompletionListener() {
             long blockAddedListenerId = -1;
 
             @Override

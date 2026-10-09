@@ -1,3 +1,13 @@
+## [unreleased]
+
+### 🚀 Features
+
+- *(coordinator)* Extension config sections and deprecated key aliases (#4162)
+## [2.1.0] - 2026-10-09
+
+### 🚀 Features
+
+- *(coordinator)* Bundle smart-contract errors in jar and make --smart-contract-errors optional (#4161)
 ## [2.0.2] - 2026-10-07
 
 ### 🚜 Refactor

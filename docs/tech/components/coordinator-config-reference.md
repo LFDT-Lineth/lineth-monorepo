@@ -171,7 +171,7 @@ L1 blob/aggregation submission (data availability and finalization) settings.
 | `l1-submission.aggregation.l1-request-retries.timeout` | Overall timeout across all retry attempts. Omit to disable the timeout. Example: `PT10S`. | `Duration?` | no | - | active |
 | `l1-submission.aggregation.max-submissions-per-tick` | Maximum aggregation submissions sent per tick. | `UInt` | no | `1` | active |
 | `l1-submission.aggregation.signer.custom.name` | Logical signer name resolved by the injected signer factory. | `String` | yes | - | deprecated |
-| `l1-submission.aggregation.signer.registered-settings` | Settings of registered signer types, keyed by type then by setting name. Not written directly: the loader collects the `signer.<type>` tables into it. Only the table of the configured type is used. | `Map<String, Map<String, String>>` | no | - | active |
+| `l1-submission.aggregation.signer.registered-settings` | Settings of registered signer types, keyed by type then by setting name. Not written directly: the loader collects the `signer.<type>` tables into it. Only the table of the configured type is used. | `Map<String, Map<String, Masked>>` | no | - | active |
 | `l1-submission.aggregation.signer.type` | Signer backend: `web3j`, `web3signer`, or the name of a signer type registered by a custom signer factory, configured in the `signer.<type>` table. Example: `web3signer`. | `SignerType` | yes | - | active |
 | `l1-submission.aggregation.signer.web3j.private-key` | Hex-encoded 32-byte private key used to sign transactions. Masked in logs. | `Masked` | yes | - | active |
 | `l1-submission.aggregation.signer.web3signer.endpoint` | Web3Signer HTTP endpoint. Example: `http://web3signer:9000`. | `URL` | yes | - | active |
@@ -200,7 +200,7 @@ L1 blob/aggregation submission (data availability and finalization) settings.
 | `l1-submission.blob.l1-request-retries.timeout` | Overall timeout across all retry attempts. Omit to disable the timeout. Example: `PT10S`. | `Duration?` | no | - | active |
 | `l1-submission.blob.max-submission-transactions-per-tick` | Maximum blob submission transactions sent per tick. | `UInt` | no | `2` | active |
 | `l1-submission.blob.signer.custom.name` | Logical signer name resolved by the injected signer factory. | `String` | yes | - | deprecated |
-| `l1-submission.blob.signer.registered-settings` | Settings of registered signer types, keyed by type then by setting name. Not written directly: the loader collects the `signer.<type>` tables into it. Only the table of the configured type is used. | `Map<String, Map<String, String>>` | no | - | active |
+| `l1-submission.blob.signer.registered-settings` | Settings of registered signer types, keyed by type then by setting name. Not written directly: the loader collects the `signer.<type>` tables into it. Only the table of the configured type is used. | `Map<String, Map<String, Masked>>` | no | - | active |
 | `l1-submission.blob.signer.type` | Signer backend: `web3j`, `web3signer`, or the name of a signer type registered by a custom signer factory, configured in the `signer.<type>` table. Example: `web3signer`. | `SignerType` | yes | - | active |
 | `l1-submission.blob.signer.web3j.private-key` | Hex-encoded 32-byte private key used to sign transactions. Masked in logs. | `Masked` | yes | - | active |
 | `l1-submission.blob.signer.web3signer.endpoint` | Web3Signer HTTP endpoint. Example: `http://web3signer:9000`. | `URL` | yes | - | active |
@@ -318,7 +318,7 @@ L1 to L2 message anchoring settings.
 | `message-anchoring.max-messages-to-anchor-per-l2-transaction` | Maximum number of messages anchored in a single L2 transaction. | `UInt` | no | `100` | active |
 | `message-anchoring.message-queue-capacity` | Maximum number of messages buffered awaiting anchoring. | `UInt` | no | `10000` | active |
 | `message-anchoring.signer.custom.name` | Logical signer name resolved by the injected signer factory. | `String` | yes | - | deprecated |
-| `message-anchoring.signer.registered-settings` | Settings of registered signer types, keyed by type then by setting name. Not written directly: the loader collects the `signer.<type>` tables into it. Only the table of the configured type is used. | `Map<String, Map<String, String>>` | no | - | active |
+| `message-anchoring.signer.registered-settings` | Settings of registered signer types, keyed by type then by setting name. Not written directly: the loader collects the `signer.<type>` tables into it. Only the table of the configured type is used. | `Map<String, Map<String, Masked>>` | no | - | active |
 | `message-anchoring.signer.type` | Signer backend: `web3j`, `web3signer`, or the name of a signer type registered by a custom signer factory, configured in the `signer.<type>` table. Example: `web3signer`. | `SignerType` | yes | - | active |
 | `message-anchoring.signer.web3j.private-key` | Hex-encoded 32-byte private key used to sign transactions. Masked in logs. | `Masked` | yes | - | active |
 | `message-anchoring.signer.web3signer.endpoint` | Web3Signer HTTP endpoint. Example: `http://web3signer:9000`. | `URL` | yes | - | active |

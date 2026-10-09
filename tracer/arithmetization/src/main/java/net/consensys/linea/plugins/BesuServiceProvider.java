@@ -57,6 +57,7 @@ public class BesuServiceProvider {
     return getBesuService(context, SynchronizationService.class);
   }
 
+  @SuppressWarnings("deprecation")
   public static BesuEvents getBesuEventsService(final ServiceManager context) {
     return getBesuService(context, BesuEvents.class);
   }

@@ -1413,7 +1413,7 @@
         "replacement": "signer.<registered-type>"
       },
       "l1-submission.aggregation.signer.registered-settings": {
-        "type": "Map<String, Map<String, String>>",
+        "type": "Map<String, Map<String, Masked>>",
         "section": false,
         "required": false,
         "default": null,
@@ -1793,7 +1793,7 @@
         "replacement": "signer.<registered-type>"
       },
       "l1-submission.blob.signer.registered-settings": {
-        "type": "Map<String, Map<String, String>>",
+        "type": "Map<String, Map<String, Masked>>",
         "section": false,
         "required": false,
         "default": null,
@@ -3053,7 +3053,7 @@
         "replacement": "signer.<registered-type>"
       },
       "message-anchoring.signer.registered-settings": {
-        "type": "Map<String, Map<String, String>>",
+        "type": "Map<String, Map<String, Masked>>",
         "section": false,
         "required": false,
         "default": null,
