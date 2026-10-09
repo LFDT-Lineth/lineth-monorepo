@@ -3352,16 +3352,6 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.blob-compression.transport": {
-        "type": "String",
-        "section": false,
-        "required": false,
-        "default": "file",
-        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
       "prover.enable-request-files-cleanup": {
         "type": "Boolean",
         "section": false,
@@ -3409,16 +3399,6 @@
         "default": null,
         "description": "Guest program identifier for the RISC-V prover.",
         "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "prover.execution.transport": {
-        "type": "String",
-        "section": false,
-        "required": false,
-        "default": "file",
-        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
-        "example": null,
         "deprecated": false,
         "replacement": null
       },
@@ -3512,16 +3492,6 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.l2-execution.transport": {
-        "type": "String",
-        "section": false,
-        "required": false,
-        "default": "file",
-        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
       "prover.new": {
         "type": "ProverToml?",
         "section": true,
@@ -3572,16 +3542,6 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.new.blob-compression.transport": {
-        "type": "String",
-        "section": false,
-        "required": false,
-        "default": "file",
-        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
       "prover.new.enable-request-files-cleanup": {
         "type": "Boolean",
         "section": false,
@@ -3629,16 +3589,6 @@
         "default": null,
         "description": "Guest program identifier for the RISC-V prover.",
         "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "prover.new.execution.transport": {
-        "type": "String",
-        "section": false,
-        "required": false,
-        "default": "file",
-        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
-        "example": null,
         "deprecated": false,
         "replacement": null
       },
@@ -3732,16 +3682,6 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.new.l2-execution.transport": {
-        "type": "String",
-        "section": false,
-        "required": false,
-        "default": "file",
-        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
       "prover.new.new": {
         "type": "ProverToml?",
         "section": true,
@@ -3789,16 +3729,6 @@
         "default": null,
         "description": "Guest program identifier for the RISC-V prover.",
         "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "prover.new.proof-aggregation.transport": {
-        "type": "String",
-        "section": false,
-        "required": false,
-        "default": "file",
-        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
-        "example": null,
         "deprecated": false,
         "replacement": null
       },
@@ -3862,16 +3792,6 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.new.rollup-aggregation.transport": {
-        "type": "String",
-        "section": false,
-        "required": false,
-        "default": "file",
-        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
       "prover.new.rollup.fs-requests-directory": {
         "type": "String?",
         "section": false,
@@ -3902,16 +3822,6 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.new.rollup.transport": {
-        "type": "String",
-        "section": false,
-        "required": false,
-        "default": "file",
-        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
       "prover.new.switch-block-number-inclusive": {
         "type": "ULong?",
         "section": false,
@@ -3929,6 +3839,16 @@
         "default": null,
         "description": "Timestamp at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockNumberInclusive.",
         "example": "2024-01-01T00:00:00Z",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.transport": {
+        "type": "String",
+        "section": false,
+        "required": false,
+        "default": "file",
+        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
+        "example": null,
         "deprecated": false,
         "replacement": null
       },
@@ -3979,16 +3899,6 @@
         "default": null,
         "description": "Guest program identifier for the RISC-V prover.",
         "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "prover.proof-aggregation.transport": {
-        "type": "String",
-        "section": false,
-        "required": false,
-        "default": "file",
-        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
-        "example": null,
         "deprecated": false,
         "replacement": null
       },
@@ -4052,16 +3962,6 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.rollup-aggregation.transport": {
-        "type": "String",
-        "section": false,
-        "required": false,
-        "default": "file",
-        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
       "prover.rollup.fs-requests-directory": {
         "type": "String?",
         "section": false,
@@ -4092,16 +3992,6 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.rollup.transport": {
-        "type": "String",
-        "section": false,
-        "required": false,
-        "default": "file",
-        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
       "prover.switch-block-number-inclusive": {
         "type": "ULong?",
         "section": false,
@@ -4119,6 +4009,16 @@
         "default": null,
         "description": "Timestamp at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockNumberInclusive.",
         "example": "2024-01-01T00:00:00Z",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.transport": {
+        "type": "String",
+        "section": false,
+        "required": false,
+        "default": "file",
+        "description": "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. Only `file` is supported for pre_riscv provers.",
+        "example": null,
         "deprecated": false,
         "replacement": null
       },
