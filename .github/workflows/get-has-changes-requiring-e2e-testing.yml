@@ -44,6 +44,9 @@ jobs:
               - '**/Dockerfile'
               - 'e2e/src/**'
               - 'e2e/package.json'
+              - 'e2e/jest*.config.ts'
+              - 'Makefile'
+              - '.github/actions/run-e2e-tests/**'
               - 'linea-besu/plugins/linea-sequencer/**'
               - 'tracer/**'
               - 'tracer-constraints/**'
@@ -63,7 +66,7 @@ jobs:
 
           if [[ "$E2E_PATHS_MATCHED" != "true" ]]; then
             echo "No e2e-relevant paths matched"
-            echo "result=false" >> $GITHUB_OUTPUT
+            echo "result=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -101,10 +104,10 @@ jobs:
             fi
 
             echo "✓ e2e-relevant file: $file"
-            echo "result=true" >> $GITHUB_OUTPUT
+            echo "result=true" >> "$GITHUB_OUTPUT"
             exit 0
           done
 
           echo "Only excluded e2e paths, test files, or doc files changed"
-          echo "result=false" >> $GITHUB_OUTPUT
+          echo "result=false" >> "$GITHUB_OUTPUT"
 
