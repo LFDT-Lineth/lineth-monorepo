@@ -11,6 +11,7 @@ on:
       - '.github/actions/setup-zig/**'
       - '.github/workflows/arithmetization-guest-programs-trace.yml'
       - '.github/workflows/arithmetization-*.yml'
+      - "riscv-guests/**"
   push:
     branches:
       - main
@@ -60,3 +61,46 @@ jobs:
           ZKC_MAIN: src/test/zkc/simple_add.zkc
           ZKC_FILES: src/test/zkc/simple_add.zkc
           ZKC_INPUT: src/test/zkc/simple_add.json
+
+      # - name: Trace l2-execution guest program with Amsterdam block 500k sharding 500000
+      #   # 500k references the amount of gas used in the block
+      #   run: make -C riscv-guests/l2-execution trace
+      #   timeout-minutes: 45
+      #   env:
+      #     ZKC_REF: "1183cd10e59fe08d4cb5d4184c30bcf041f4512e"
+      #     INPUT: test/testdata/block_amsterdam_51584_500k.ssz
+      #     KECCAK_ACCEL: true
+      #     ZKC_TRACE_FLAGS: "--stats -vv --sharding interpreter:500000"
+
+      # - name: Trace l2-execution guest program with Amsterdam block 786k sharding 500000, no pb
+      #   # 786k references the amount of gas used in the block
+      #   run: make -C riscv-guests/l2-execution trace
+      #   timeout-minutes: 45
+      #   env:
+      #     ZKC_REF: "1183cd10e59fe08d4cb5d4184c30bcf041f4512e"
+      #     INPUT: test/testdata/block_amsterdam_786k_nopb.ssz
+      #     KECCAK_ACCEL: true
+      #     ZKC_TRACE_FLAGS: "--stats -vv --sharding interpreter:500000"
+
+      - name: Trace l2-execution guest program with Amsterdam block 175k sharding 500000, no pb
+        # 175k references the amount of gas used in the block.
+        # taskset fixes NumCPU() at 8, which is the shard worker-pool size.
+        run: taskset -c 0-15 make -C riscv-guests/l2-execution trace -j 16
+        timeout-minutes: 45
+        env:
+          ZKC_REF: "1183cd10e59fe08d4cb5d4184c30bcf041f4512e"
+          INPUT: test/testdata/block_amsterdam_175k_nopb.ssz
+          KECCAK_ACCEL: true
+          ZKC_TRACE_FLAGS: "--stats -vv --sharding interpreter:500000"
+
+      - name: Trace l2-execution guest program with Amsterdam block 2.5M sharding 500000
+        # 2.5M references the amount of gas used in the block
+        run: taskset -c 0-15 make -C riscv-guests/l2-execution trace
+        timeout-minutes: 45
+        env:
+          ZKC_REF: "1183cd10e59fe08d4cb5d4184c30bcf041f4512e"
+          INPUT: test/testdata/block_amsterdam_52861_2M.ssz
+          KECCAK_ACCEL: true
+          ZKC_TRACE_FLAGS: "--stats -vv --sharding interpreter:500000"
+
+
