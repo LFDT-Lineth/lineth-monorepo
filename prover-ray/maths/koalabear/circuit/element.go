@@ -32,7 +32,7 @@ type Octuplet [8]Element
 // NewElement creates a Var for witness assignment from any value.
 // Use this when initializing circuit struct fields with witness values.
 //
-// For in-circuit constants, use [API.Const] instead.
+// For in-circuit constants, use [KoalaBearAPI.Const] instead.
 func NewElement(v any) Element {
 	switch v := v.(type) {
 	case Element:
@@ -111,7 +111,7 @@ func (o Octuplet) NativeArray() [8]frontend.Variable {
 
 // IsConstantZero returns true if the variable represent a constant value equal
 // to zero.
-func (a *API) IsConstantZero(v Element) bool {
+func (a *KoalaBearAPI) IsConstantZero(v Element) bool {
 
 	if a.IsNative() {
 

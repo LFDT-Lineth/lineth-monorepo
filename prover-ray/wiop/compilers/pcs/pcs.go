@@ -123,14 +123,29 @@ func newStaticPCS() *fri.PCS {
 // from [0, N), so this must match the size the PCS restricts its schedule to
 // (both derive it from the same committed columns).
 func effectiveN(rt *wiop.Runtime, batches []BatchRef, manifests []ColumnManifest) int {
+	return effectiveNWith(runtimeSizeOf(rt), batches, manifests)
+}
+
+func effectiveNWith(sizeOf moduleSizeFunc, batches []BatchRef, manifests []ColumnManifest) int {
 	maxSizeIndex := 0
 	for i, b := range batches {
-		if idx := roundMaxSizeIndex(b.Round, rt, manifests[i]); idx > maxSizeIndex {
+		if idx := roundMaxSizeIndexWith(b.Round, sizeOf, manifests[i]); idx > maxSizeIndex {
 			maxSizeIndex = idx
 		}
 	}
 	return 1 << (maxSizeIndex + FRILogInverseRate)
 }
+
+// moduleSizeFunc resolves a module's domain size. The prover and verifier use
+// the runtime ([runtimeSizeOf]); the verifier circuit, which only supports
+// statically sized modules, uses [staticSizeOf].
+type moduleSizeFunc func(*wiop.Module) int
+
+func runtimeSizeOf(rt *wiop.Runtime) moduleSizeFunc {
+	return func(m *wiop.Module) int { return m.RuntimeSize(rt) }
+}
+
+func staticSizeOf(m *wiop.Module) int { return m.Size() }
 
 // ColumnLocation records where a column sits inside its round's committed batch:
 // the size bucket (SizeID = log2 of the padded column size), the position within
@@ -462,15 +477,15 @@ func buildEncoders(inverseRate, maxSizeIndex uint8) []*fri.RSEncoder {
 	return encoders
 }
 
-// roundMaxSizeIndex returns the largest log2 padded size among a round's
+// roundMaxSizeIndexWith returns the largest log2 padded size among a round's
 // Present columns, or 0 when the round owns no committed columns.
-func roundMaxSizeIndex(round *wiop.Round, rt *wiop.Runtime, manifest ColumnManifest) int {
+func roundMaxSizeIndexWith(round *wiop.Round, sizeOf moduleSizeFunc, manifest ColumnManifest) int {
 	maxSizeIndex := 0
 	for i, col := range round.Columns {
 		if manifest[i] != ManifestPresent {
 			continue
 		}
-		if idx := columnSizeIndex(col, rt); idx > maxSizeIndex {
+		if idx := columnSizeIndexWith(col, sizeOf); idx > maxSizeIndex {
 			maxSizeIndex = idx
 		}
 	}
@@ -530,6 +545,14 @@ func GetLayout(
 	rt *wiop.Runtime,
 	manifest ColumnManifest,
 ) (map[wiop.ObjectID]ColumnLocation, fri.Shape) {
+	return getLayoutWith(round, runtimeSizeOf(rt), manifest)
+}
+
+func getLayoutWith(
+	round *wiop.Round,
+	sizeOf moduleSizeFunc,
+	manifest ColumnManifest,
+) (map[wiop.ObjectID]ColumnLocation, fri.Shape) {
 
 	var (
 		cols   = round.Columns
@@ -542,7 +565,7 @@ func GetLayout(
 			continue
 		}
 
-		sizeIndex := columnSizeIndex(col, rt)
+		sizeIndex := columnSizeIndexWith(col, sizeOf)
 
 		for len(shape) <= sizeIndex {
 			shape = append(shape, fri.SizedShape{})

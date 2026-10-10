@@ -3,6 +3,7 @@ package wiop
 import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/arena"
+	"github.com/consensys/gnark/frontend"
 )
 
 // ProverAction represents a prover-side computation to be performed during protocol
@@ -18,6 +19,20 @@ type VerifierAction interface {
 	// Check executes the verification step against the given [Runtime] and
 	// returns an error if the check fails.
 	Check(*Runtime) error
+}
+
+// GnarkVerifierAction is an optional extension of [VerifierAction] for checks
+// that can also be enforced inside a gnark circuit. [VerifierCircuit] runs
+// CheckGnark in place of Check, with a [GnarkRuntime] mirroring the [Runtime]
+// the native verifier would have built. A verifier action that does not
+// implement this interface cannot be wrapped: [AllocateVerifierCircuit] fails
+// closed rather than silently dropping the check.
+type GnarkVerifierAction interface {
+	VerifierAction
+	// CheckGnark enforces the same predicate as Check, over circuit variables.
+	// It panics on structural problems (a shape the circuit cannot express) and
+	// expresses value mismatches as unsatisfiable constraints.
+	CheckGnark(api frontend.API, run *GnarkRuntime)
 }
 
 // Planner is an optional extension of [ProverAction] for actions that

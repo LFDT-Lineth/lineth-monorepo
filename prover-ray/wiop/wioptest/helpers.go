@@ -7,8 +7,14 @@ import (
 
 const multiModuleScenarioName = "MultiModule"
 
-// baseVec returns a ConcreteVector of length n where every element equals val.
-func baseVec(n int, val uint64) *wiop.ConcreteVector {
+// ConstVec returns a ConcreteVector of length n where every element equals val.
+//
+// A constant column interpolates to a constant polynomial, which makes FRI's
+// deep quotient (f(x) - claim)/(x - zeta) vanish identically: it is zero for
+// every zeta and fold challenge, so a test that proves and verifies such a
+// column through the PCS does not exercise the transcript at all. Prefer a
+// non-constant column in tests that reach the PCS opening.
+func ConstVec(n int, val uint64) *wiop.ConcreteVector {
 	elems := make([]field.Element, n)
 	var e field.Element
 	e.SetUint64(val)

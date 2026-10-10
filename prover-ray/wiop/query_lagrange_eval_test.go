@@ -100,7 +100,7 @@ func TestLagrangeEval_SelfAssign_Check(t *testing.T) {
 	le := sys.NewLagrangeEval(sys.Context.Childf("leEval"), []*wiop.ColumnView{col.View()}, coin)
 
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, baseVec(4, 3))
+	rt.AssignColumn(col, wioptest.ConstVec(4, 3))
 	rt.AdvanceRound() // samples coin, now at r1
 
 	assert.False(t, le.IsAlreadyAssigned(rt))
@@ -126,7 +126,7 @@ func TestLagrangeEval_Check_ColumnNotAssigned(t *testing.T) {
 	_ = le
 
 	rt2 := wiop.NewRuntime(sys2)
-	rt2.AssignColumn(col2, baseVec(4, 1))
+	rt2.AssignColumn(col2, wioptest.ConstVec(4, 1))
 	rt2.AdvanceRound()
 	// Don't assign col2 in a fresh runtime — use a fresh runtime without column assignment.
 	// Actually we just already advanced once. Let's test Check when claim isn't assigned.
@@ -141,7 +141,7 @@ func TestLagrangeEval_Check_Mismatch(t *testing.T) {
 	le := sys.NewLagrangeEval(sys.Context.Childf("leMis"), []*wiop.ColumnView{col.View()}, coin)
 
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, baseVec(4, 5))
+	rt.AssignColumn(col, wioptest.ConstVec(4, 5))
 	rt.AdvanceRound()
 	// Assign wrong value to claim cell
 	rt.AssignCell(le.EvaluationClaims[0], field.ElemFromBase(field.NewFromString("99")))
@@ -241,7 +241,7 @@ func TestLagrangeEval_Check_UnassignedColumn(t *testing.T) {
 	le3 := sys3.NewLagrangeEval(sys3.Context.Childf("le3"), []*wiop.ColumnView{col3.View()}, coin3)
 
 	rt3 := wiop.NewRuntime(sys3)
-	rt3.AssignColumn(col3, baseVec(4, 1))
+	rt3.AssignColumn(col3, wioptest.ConstVec(4, 1))
 	rt3.AdvanceRound()
 	// Now assign claim but skip SelfAssign (claim is unassigned) → Check returns error
 	err := le3.Check(rt3)
@@ -355,7 +355,7 @@ func TestEvalPolynomials_Shift(t *testing.T) {
 	le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{shifted}, coin)
 
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, baseVec(4, 5))
+	rt.AssignColumn(col, wioptest.ConstVec(4, 5))
 	rt.AdvanceRound()
 
 	le.SelfAssign(rt)
