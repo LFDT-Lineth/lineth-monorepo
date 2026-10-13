@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/internal/vecprog"
 )
 
 // GrandProduct is a [Query] that reduces two lists of vector-valued
@@ -75,37 +77,91 @@ func (gp *GrandProduct) Check(rt *Runtime) error {
 
 // compute evaluates ( ∏ numerator entries ) / ( ∏ denominator entries ) over
 // every row of every factor, padding rows included. It is the shared core of
-// [SelfAssign] and [Check]. Panics if the denominator product is zero.
+// [SelfAssign] and [Check]. Panics if the denominator product is zero. The
+// result is base-field when every factor is.
 func (gp *GrandProduct) compute(rt *Runtime) field.Gen {
-	num := field.ElemOne()
-	for _, e := range gp.Numerators {
-		cv := e.EvaluateVector(rt)
-		for i := 0; i < cv.Plain.Len(); i++ {
-			num = num.Mul(genAtVec(cv.Plain, i))
-		}
-	}
-
-	den := field.ElemOne()
-	for _, e := range gp.Denominators {
-		cv := e.EvaluateVector(rt)
-		for i := 0; i < cv.Plain.Len(); i++ {
-			den = den.Mul(genAtVec(cv.Plain, i))
-		}
-	}
-
+	num, numBase := productOverRows(rt, gp.Numerators)
+	den, denBase := productOverRows(rt, gp.Denominators)
 	if den.IsZero() {
 		panic(fmt.Sprintf("wiop: GrandProduct.compute(%s): zero denominator", gp.context.Path()))
 	}
-	return num.Div(den)
+	var res field.Ext
+	res.Inverse(&den)
+	res.Mul(&num, &res)
+	if numBase && denBase {
+		return field.ElemFromBase(res.B0.A0)
+	}
+	return field.ElemFromExt(res)
 }
 
-// genAtVec reads the field element at row i of v as a [field.Gen], preserving
-// its base/extension representation.
-func genAtVec(v field.Vec, i int) field.Gen {
-	if v.IsBase() {
-		return field.ElemFromBase(v.AsBase()[i])
+// productOverRows returns the product of every row of every factor, and
+// whether every factor is base-field. The factors of each module are
+// multiplied row by row by one [vecprog] program, then the rows are
+// multiplied in parallel chunks; field multiplication is exact, so the order
+// does not matter.
+func productOverRows(rt *Runtime, factors []Expression) (field.Ext, bool) {
+	var prod field.Ext
+	prod.SetOne()
+	allBase := true
+	byRows := make(map[int][]Expression)
+	var sizes []int
+	for _, e := range factors {
+		allBase = allBase && !e.IsExtension()
+		n := factorRows(rt, e)
+		if _, ok := byRows[n]; !ok {
+			sizes = append(sizes, n)
+		}
+		byRows[n] = append(byRows[n], e)
 	}
-	return field.ElemFromExt(v.AsExt()[i])
+	for _, n := range sizes {
+		l := NewRowLowering(rt, n)
+		root := -1
+		for _, e := range byRows[n] {
+			id := l.Lower(e)
+			if root < 0 {
+				root = id
+			} else {
+				root = l.B.Op(vecprog.Mul, root, id)
+			}
+		}
+		rows := make([]field.Ext, n)
+		l.B.Store(root, rows)
+		l.B.Compile(n, 1, 1).Run(nil, nil, 0)
+		p := parallelProduct(rows)
+		prod.Mul(&prod, &p)
+	}
+	return prod, allBase
+}
+
+// factorRows returns the number of rows of a vector-valued factor: its
+// module's size, or the length of its evaluation when it has no module.
+func factorRows(rt *Runtime, e Expression) int {
+	if m := e.Module(); m != nil {
+		return m.RuntimeSize(rt)
+	}
+	return e.EvaluateVector(rt).Plain.Len()
+}
+
+// parallelProduct returns the product of v, computed in parallel chunks.
+func parallelProduct(v []field.Ext) field.Ext {
+	const chunk = 1 << 12
+	partials := make([]field.Ext, (len(v)+chunk-1)/chunk)
+	parallel.Execute(len(partials), func(start, end int) {
+		for c := start; c < end; c++ {
+			var acc field.Ext
+			acc.SetOne()
+			for i := c * chunk; i < min((c+1)*chunk, len(v)); i++ {
+				acc.Mul(&acc, &v[i])
+			}
+			partials[c] = acc
+		}
+	})
+	var prod field.Ext
+	prod.SetOne()
+	for i := range partials {
+		prod.Mul(&prod, &partials[i])
+	}
+	return prod
 }
 
 // NewGrandProduct constructs and registers a [GrandProduct] query on sys. A
