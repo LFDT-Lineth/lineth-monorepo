@@ -5,6 +5,7 @@ import (
 	"math/rand/v2"
 	"strings"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
 )
 
@@ -232,14 +233,19 @@ func VecMulBaseExt(res []Ext, a []Element, b []Ext) {
 	VecMulExtBase(res, b, a)
 }
 
-// VecMulExtExt sets res[i] = a[i] * b[i] over the extension field.
-// Cost: ~24 base multiplications per element (Karatsuba over E2 for E6).
-// All slices must have equal length.
+// VecMulExtExt sets res[i] = a[i] * b[i] over the extension field, using
+// gnark-crypto's vectorised E6 product. res may alias a or b. All slices must
+// have equal length.
 func VecMulExtExt(res, a, b []Ext) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		res[i].Mul(&a[i], &b[i])
-	}
+	extensions.VectorE6(res).Mul(a, b)
+}
+
+// VecInnerProdExtExt returns Σᵢ a[i]·b[i] over the extension field, using
+// gnark-crypto's vectorised E6 inner product. a and b must have equal length.
+func VecInnerProdExtExt(a, b []Ext) Ext {
+	mustEqualLen2(len(a), len(b))
+	return extensions.VectorE6(a).InnerProduct(b)
 }
 
 // VecMulInto sets res[i] = a[i] * b[i] for all i, dispatching to the typed
@@ -601,4 +607,78 @@ func VecEqualExt(a, b []Ext) bool {
 		}
 	}
 	return true
+}
+
+// prefixScanMinChunk is the smallest number of elements a worker of
+// [VecPrefixSumExt] or [VecPrefixProductExt] scans: below it, splitting costs
+// more than it saves.
+const prefixScanMinChunk = 4096
+
+// VecPrefixSumExt replaces z by its running sum, z[i] = Σ_{k≤i} z[k], on at
+// most workers goroutines. Field addition is exact, so the result does not
+// depend on workers.
+func VecPrefixSumExt(z []Ext, workers int) { prefixScanExt(z, workers, false) }
+
+// VecPrefixProductExt replaces z by its running product, z[i] = ∏_{k≤i} z[k],
+// on at most workers goroutines. Field multiplication is exact, so the result
+// does not depend on workers.
+func VecPrefixProductExt(z []Ext, workers int) { prefixScanExt(z, workers, true) }
+
+// prefixScanExt is a two-pass chunked scan: each chunk is scanned from the
+// identity, then every chunk but the first is combined with the totals of the
+// chunks before it.
+func prefixScanExt(z []Ext, workers int, mul bool) {
+	// scan replaces v[i] by acc ∘ v[0] ∘ … ∘ v[i] and returns the last one;
+	// shift replaces v[i] by v[i] ∘ offset.
+	scan := func(v []Ext, acc Ext) Ext {
+		if mul {
+			for i := range v {
+				acc.Mul(&acc, &v[i])
+				v[i] = acc
+			}
+		} else {
+			for i := range v {
+				acc.Add(&acc, &v[i])
+				v[i] = acc
+			}
+		}
+		return acc
+	}
+	shift := func(v []Ext, offset *Ext) {
+		if mul {
+			for i := range v {
+				v[i].Mul(&v[i], offset)
+			}
+		} else {
+			for i := range v {
+				v[i].Add(&v[i], offset)
+			}
+		}
+	}
+	var identity Ext
+	if mul {
+		identity.SetOne()
+	}
+
+	n := len(z)
+	size := max(prefixScanMinChunk, (n+workers-1)/max(1, workers))
+	nbChunks := (n + size - 1) / size
+	chunk := func(c int) []Ext { return z[c*size : min((c+1)*size, n)] }
+	offsets := make([]Ext, nbChunks)
+	parallel.Execute(nbChunks, func(start, end int) {
+		for c := start; c < end; c++ {
+			offsets[c] = scan(chunk(c), identity)
+		}
+	}, workers)
+	if nbChunks < 2 {
+		return
+	}
+	// offsets[c] becomes the combination of the totals of chunks 0..c-1.
+	scan(offsets[:nbChunks-1], identity)
+	copy(offsets[1:], offsets[:nbChunks-1])
+	parallel.Execute(nbChunks-1, func(start, end int) {
+		for c := start + 1; c < end+1; c++ {
+			shift(chunk(c), &offsets[c])
+		}
+	}, workers)
 }

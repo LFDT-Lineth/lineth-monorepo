@@ -38,6 +38,17 @@ func TestFibonacciGuest(t *testing.T) {
 	}
 }
 
+// TestMemoryGuest traces minimalelf.MemoryELF at small N and checks the trace
+// and guest output.
+func TestMemoryGuest(t *testing.T) {
+	for _, n := range []int{1, 2, 64, 1000} {
+		t.Run(fmt.Sprintf("N=%d", n), func(t *testing.T) {
+			elf, want := minimalelf.MemoryELF(n)
+			traceAndCheck(t, elf, want)
+		})
+	}
+}
+
 // traceAndCheck traces elf through the embedded R5 arithmetization, checks the
 // trace against every compiled constraint, and compares guest_output to want.
 func traceAndCheck(t *testing.T, elf, want []byte) {

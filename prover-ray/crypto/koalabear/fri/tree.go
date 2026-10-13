@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math/bits"
+	"runtime"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -144,7 +145,7 @@ func NewTree(leaves [][]field.Octuplet) *Tree {
 		}
 	}
 
-	t := allocTree(len(leaves[bottom]))
+	t := allocPooledTree(len(leaves[bottom]))
 	copy(t.Nodes[len(leaves[bottom])-1:], leaves[bottom])
 	t.buildLevels(injections)
 	return t
@@ -163,6 +164,21 @@ func allocTree(numLeaves int) *Tree {
 	}
 }
 
+// allocPooledTree is [allocTree] with its nodes taken from the octuplet pool,
+// for the commitment trees that [CommitterState.Release] gives back. Every
+// node is written by the leaf hashing and buildLevels, so the stale nodes of
+// a pooled slice are fine; its capacity, 2·numLeaves, is the pool's
+// power-of-two class.
+func allocPooledTree(numLeaves int) *Tree {
+	if numLeaves <= 0 || numLeaves&(numLeaves-1) != 0 {
+		panic("fri: allocPooledTree: number of leaves must be a positive power of two")
+	}
+	return &Tree{
+		Nodes:      field.OctupletPool.Get(2 * numLeaves)[:2*numLeaves-1],
+		Injections: make([][][]field.Octuplet, utils.Log2Ceil(numLeaves)),
+	}
+}
+
 // buildLevels computes every internal level bottom-up; Nodes[NumLeaves()-1:]
 // must already hold the bottom leaves. injections, if non-nil, lists the
 // digests injected into each level of internal nodes, in injection order and
@@ -170,18 +186,63 @@ func allocTree(numLeaves int) *Tree {
 // digests.
 func (t *Tree) buildLevels(injections [][][]field.Octuplet) {
 	n := t.NumLeaves()
+	maxSteps := 1
 	for levelSize := n / 2; levelSize > 0; levelSize /= 2 {
 		level := utils.Log2Ceil(levelSize)
 		if injections != nil {
 			t.Injections[level] = injections[level]
 		}
-		hashTreeLevel(t.Nodes, t.Injections[level], levelSize)
+		checkInjections(t.Injections[level], levelSize)
+		maxSteps = max(maxSteps, 1+len(t.Injections[level]))
+	}
+	injectionsOf := func(levelSize int) [][]field.Octuplet {
+		return t.Injections[utils.Log2Ceil(levelSize)]
+	}
+
+	// The deep levels are hashed subtree by subtree, in one parallel pass:
+	// the nodes of subtree s at a level are the s-th of numSubtrees equal
+	// slices of it, whose children are the s-th slice of the level below, so
+	// each subtree only depends on itself. A worker then hashes whole
+	// subtrees with their nodes in cache, instead of every level waiting for
+	// the previous one to finish over all the CPUs. A level joins the pass
+	// when each subtree holds at least one group of batchLanes nodes of it.
+	numSubtrees := 1
+	for numSubtrees < 4*runtime.GOMAXPROCS(0) && 2*numSubtrees*batchLanes <= n/2 {
+		numSubtrees *= 2
+	}
+	top := n / 2 // the largest level left to the per-level loop below
+	if numSubtrees > 1 && n/2 >= minParallelTreeLevel {
+		floor := numSubtrees * batchLanes
+		parallel.Execute(numSubtrees, func(sStart, sEnd int) {
+			sc := newGroupScratch(maxSteps)
+			for s := sStart; s < sEnd; s++ {
+				for levelSize := n / 2; levelSize >= floor; levelSize /= 2 {
+					groups := levelSize / batchLanes / numSubtrees
+					hashLevelGroups(t.Nodes, injectionsOf(levelSize), levelSize, s*groups, (s+1)*groups, sc)
+				}
+			}
+		})
+		top = floor / 2
+	}
+
+	for levelSize := top; levelSize > 0; levelSize /= 2 {
+		hashTreeLevel(t.Nodes, injectionsOf(levelSize), levelSize)
 	}
 
 	// as the tree cannot be empty (as per our sanity-checks), the root cannot
 	// be zero.
 	if n > 1 && t.Nodes[0] == (field.Octuplet{}) {
 		panic("sanity-check failed : the root is zero.")
+	}
+}
+
+// checkInjections panics unless every slice of injections holds exactly one
+// digest per node of a level of levelSize nodes.
+func checkInjections(injections [][]field.Octuplet, levelSize int) {
+	for _, injected := range injections {
+		if len(injected) != levelSize {
+			panic("fri: hashTreeLevel: invalid auxiliary leaf count")
+		}
 	}
 }
 
@@ -196,11 +257,7 @@ func hashTreeLevel(
 	levelSize int,
 ) {
 	levelStart := levelSize - 1
-	for _, injected := range injections {
-		if len(injected) != levelSize {
-			panic("fri: hashTreeLevel: invalid auxiliary leaf count")
-		}
-	}
+	checkInjections(injections, levelSize)
 
 	// Levels smaller than one batch (only the topmost few nodes) are hashed
 	// with the scalar compression.
@@ -217,55 +274,79 @@ func hashTreeLevel(
 	}
 
 	// Levels are powers of two, so levelSize is a multiple of batchLanes.
-	// Each group of 16 sibling pairs is staged column-major and hashed by one
-	// batched Poseidon2 compression, writing the 16 parents directly into
-	// nodes[k0:k0+16]. Bit-identical to the scalar loop: each injection is one
-	// more block of the same C(…C(C(left,right),a_1)…,a_m) chain.
-	var (
-		nbGroups = levelSize / batchLanes
-		nbSteps  = 1 + len(injections)
-	)
-
-	hashGroups := func(gStart, gEnd int) {
-		state := make([]field.Element, 8*batchLanes)
-		matrix := make([]field.Element, nbSteps*8*batchLanes)
-		for g := gStart; g < gEnd; g++ {
-			var (
-				j        = g * batchLanes
-				k0       = levelStart + j
-				children = nodes[2*k0+1 : 2*k0+1+2*batchLanes]
-			)
-			// Stage both buffers in one pass per lane.
-			for lane := range batchLanes {
-				left, right := &children[2*lane], &children[2*lane+1]
-				for pos := range 8 {
-					state[pos*batchLanes+lane] = left[pos]
-					matrix[pos*batchLanes+lane] = right[pos]
-				}
-			}
-			for step, injected := range injections {
-				row := 8 * (1 + step)
-				for lane := range batchLanes {
-					auxLeaf := &injected[j+lane]
-					for pos := range 8 {
-						matrix[(row+pos)*batchLanes+lane] = auxLeaf[pos]
-					}
-				}
-			}
-			batchPoseidon2.Compressx16ColumnsWithState(
-				state,
-				matrix,
-				nbSteps*8,
-				nodes[k0:k0+batchLanes],
-			)
-		}
-	}
-
+	nbGroups := levelSize / batchLanes
+	nbSteps := 1 + len(injections)
 	if levelSize < minParallelTreeLevel {
-		hashGroups(0, nbGroups)
+		hashLevelGroups(nodes, injections, levelSize, 0, nbGroups, newGroupScratch(nbSteps))
 		return
 	}
-	parallel.Execute(nbGroups, hashGroups)
+	parallel.Execute(nbGroups, func(gStart, gEnd int) {
+		hashLevelGroups(nodes, injections, levelSize, gStart, gEnd, newGroupScratch(nbSteps))
+	})
+}
+
+// groupScratch stages the 16 sibling pairs (and injected digests) of one
+// group.
+type groupScratch struct {
+	state, matrix []field.Element
+}
+
+// newGroupScratch returns a scratch for up to maxSteps compression blocks:
+// the right children plus maxSteps-1 injections.
+func newGroupScratch(maxSteps int) groupScratch {
+	return groupScratch{
+		state:  make([]field.Element, 8*batchLanes),
+		matrix: make([]field.Element, maxSteps*8*batchLanes),
+	}
+}
+
+// hashLevelGroups hashes groups [gStart, gEnd) of batchLanes nodes of the
+// level of levelSize ≥ batchLanes internal nodes. Each group of 16 sibling
+// pairs is staged column-major and hashed by one batched Poseidon2
+// compression, writing the 16 parents directly into nodes[k0:k0+16].
+// Bit-identical to the scalar hashNode loop: each injection is one more block
+// of the same C(…C(C(left,right),a_1)…,a_m) chain.
+func hashLevelGroups(
+	nodes []field.Octuplet,
+	injections [][]field.Octuplet,
+	levelSize, gStart, gEnd int,
+	sc groupScratch,
+) {
+	var (
+		levelStart = levelSize - 1
+		nbSteps    = 1 + len(injections)
+	)
+	state, matrix := sc.state, sc.matrix[:nbSteps*8*batchLanes]
+	for g := gStart; g < gEnd; g++ {
+		var (
+			j        = g * batchLanes
+			k0       = levelStart + j
+			children = nodes[2*k0+1 : 2*k0+1+2*batchLanes]
+		)
+		// Stage both buffers in one pass per lane.
+		for lane := range batchLanes {
+			left, right := &children[2*lane], &children[2*lane+1]
+			for pos := range 8 {
+				state[pos*batchLanes+lane] = left[pos]
+				matrix[pos*batchLanes+lane] = right[pos]
+			}
+		}
+		for step, injected := range injections {
+			row := 8 * (1 + step)
+			for lane := range batchLanes {
+				auxLeaf := &injected[j+lane]
+				for pos := range 8 {
+					matrix[(row+pos)*batchLanes+lane] = auxLeaf[pos]
+				}
+			}
+		}
+		batchPoseidon2.Compressx16ColumnsWithState(
+			state,
+			matrix,
+			nbSteps*8,
+			nodes[k0:k0+batchLanes],
+		)
+	}
 }
 
 // Root returns the Merkle root digest. Build must be called first.
