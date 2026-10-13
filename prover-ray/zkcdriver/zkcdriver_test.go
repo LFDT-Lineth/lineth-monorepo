@@ -130,20 +130,20 @@ func traceZkc(
 	return outputs, nil
 }
 
-func proverCompilePipeline(sys *wiop.System) {
+func proverCompilePipeline(sys *wiop.System, opts ...compilers.Option) {
 	// Shared randomness is off for now: the zkc driver's bus columns still live
 	// on round 0, which the shared-randomness path rejects (see #4020).
 	//
 	// XXX: when zkcdriver is updated and puts traces in round 1 then we can remove this wrapper and just call `CompileFull`
 	// everywhere
-	if err := compilers.CompileFull(sys,
-		compilers.ConfigureMessageBus(messagebus.WithoutSharedRandomness())); err != nil {
+	opts = append([]compilers.Option{compilers.ConfigureMessageBus(messagebus.WithoutSharedRandomness())}, opts...)
+	if err := compilers.CompileFull(sys, opts...); err != nil {
 		panic(err)
 	}
 }
 
 // runProveVerify proves and verifies a given test-case, returning an error if the proof fails to verify.
-func runProveVerify(inputs *zkcdriver.PreReadInputs, binFile *zkcdriver.BinaryFile, proverCompilePipeline func(*wiop.System)) (err error) {
+func runProveVerify(inputs *zkcdriver.PreReadInputs, binFile *zkcdriver.BinaryFile, proverCompilePipeline func(*wiop.System, ...compilers.Option)) (err error) {
 	// recover panics. ZKC tends to panic when it fails tracing, so we want to catch those and return them as errors.
 	defer func() {
 		if r := recover(); r != nil {
