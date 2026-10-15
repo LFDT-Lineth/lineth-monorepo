@@ -12,6 +12,7 @@ include "utils/multiplication.zkc"
 include "ram/read.zkc"
 include "ram/write.zkc"
 include "ram/print.zkc"
+include "../lib/keccak/impl.zkc"
 include "../lib/io/write_output.zkc"
 
 // Execute one instruction slot and return the next program counter.
@@ -189,12 +190,12 @@ include "../lib/io/write_output.zkc"
 // `interpreter_c` default and behaves as a no-op.
 
 // -- PREDECODING PROOF SECTION --
-// fn interpreter<registers, ram>(clock_cycle:u32, base:Address, pc:Address, exec_end:Address) -> ! {
+// fn interpreter<registers, ram, keccak_state>(clock_cycle:u32, base:Address, pc:Address, exec_end:Address) -> ! {
 // -- PREDECODING PROOF SECTION END--
 
 // -- NO PREDECODING PROOF SECTION --
 #[global]
-fn interpreter<registers, ram>(clock_cycle:u32, base:Address, pc:Address) -> ! {
+fn interpreter<registers, ram, keccak_state>(clock_cycle:u32, base:Address, pc:Address) -> ! {
     // -- NO PREDECODING PROOF SECTION END--
     var new_pc:Address
     var index:u62
@@ -231,7 +232,7 @@ fn interpreter<registers, ram>(clock_cycle:u32, base:Address, pc:Address) -> ! {
     done
 }
 
-fn interpreter_a<registers, ram>(index:u64, pc:Address) -> (new_pc:Address) {
+fn interpreter_a<registers, ram, keccak_state>(index:u64, pc:Address) -> (new_pc:Address) {
     var compute_op:ComputeOp
     var imm:DoubleWord
     var rs1:Register
@@ -421,7 +422,7 @@ fn interpreter_a<registers, ram>(index:u64, pc:Address) -> (new_pc:Address) {
     registers[rd] = result
 }
 
-fn interpreter_b<registers, ram>(index:u64, pc:Address) -> (new_pc:Address) {
+fn interpreter_b<registers, ram, keccak_state>(index:u64, pc:Address) -> (new_pc:Address) {
 
     var compute_op:ComputeOp
     var imm:DoubleWord
@@ -533,13 +534,12 @@ fn interpreter_b<registers, ram>(index:u64, pc:Address) -> (new_pc:Address) {
             fail
         }
         case RTYPE_KECCAK: {
-            // printf "RTYPE_KECCAK(c) "
-            // keccak(v1 as Address, v2 as u32, registers[rd] as Address)
-            // // Increment PC
-            // new_pc = (pc + 4) as Address
-            // // Early return
-            // return
-            fail "keccak accelerator unsupported for now"
+            printf "RTYPE_KECCAK(c) "
+            keccak(v1 as Address, v2 as u32, registers[rd] as Address)
+            // Increment PC
+            new_pc = (pc + 4) as Address
+            // Early return
+            return
         }
         case RTYPE_WRITE_OUTPUT: {
             printf "RTYPE_WRITE_OUTPUT(c) "
@@ -864,4 +864,3 @@ fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
         }
     }
 }
-
