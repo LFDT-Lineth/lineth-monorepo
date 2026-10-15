@@ -174,8 +174,10 @@ func TestE6ChipRejects(t *testing.T) {
 // s, bound to the transcript as a scalar (packed, so through lane 0 only),
 // used in E6 arithmetic, where its lanes 1..5 count. The program claims
 // v·e = w for w ≠ v·e; the prover picks s' = (v, t1..t5), whose lane 0 is
-// still v, and w = s'·e. Every hash and every E6 row is consistent; only the
-// witness chip's typing of s rejects it.
+// still v, and w = s'·e. Every hash, every E6 row and the bus are consistent.
+// Two checks reject it, each on its own: the witness chip's typing of s (a
+// scalar input), and the strict form of s's window, which reads it zero
+// beyond the packed kind. With both disabled, the false claim verifies.
 func TestScalarLanesBound(t *testing.T) {
 	rnd := rand.New(rand.NewPCG(7, 8))
 	v, e := field.NewElement(11), randE6(rnd)
