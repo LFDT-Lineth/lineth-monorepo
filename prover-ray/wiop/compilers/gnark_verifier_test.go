@@ -1,0 +1,115 @@
+package compilers_test
+
+import (
+	"testing"
+
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
+	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark/backend/witness"
+	"github.com/consensys/gnark/constraint/solver"
+	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/gnark/frontend/cs/scs"
+	"github.com/stretchr/testify/require"
+)
+
+// gnarkVerifier is the verifier circuit of a fully compiled system, compiled
+// once over BN254 so several witnesses can be solved against it.
+type gnarkVerifier struct {
+	sys         *wiop.System
+	template    wiop.Proof
+	templatePub wiop.PublicInput
+	ccs         interface {
+		Solve(witness.Witness, ...solver.Option) (any, error)
+		GetNbConstraints() int
+	}
+}
+
+func compileGnarkVerifier(t *testing.T, sys *wiop.System, template wiop.Proof, pub wiop.PublicInput) *gnarkVerifier {
+	t.Helper()
+	gv := &gnarkVerifier{sys: sys, template: template, templatePub: pub}
+	var err error
+	gv.ccs, err = frontend.Compile(ecc.BN254.ScalarField(), scs.NewBuilder,
+		wiop.AllocateVerifierCircuit(sys, template, pub))
+	require.NoError(t, err, "verifier circuit must compile")
+	return gv
+}
+
+func (gv *gnarkVerifier) solve(t *testing.T, proof wiop.Proof, pub wiop.PublicInput) error {
+	t.Helper()
+	assignment := wiop.AllocateVerifierCircuit(gv.sys, gv.template, gv.templatePub).
+		AssignVerifierCircuit(proof, pub)
+	w, err := frontend.NewWitness(assignment, ecc.BN254.ScalarField())
+	require.NoError(t, err, "assignment must produce a witness")
+	_, err = gv.ccs.Solve(w)
+	return err
+}
+
+// compileGnarkPipeline is [compileFullPipeline] with column elision disabled,
+// which the in-circuit PCS verifier requires.
+func compileGnarkPipeline(sys *wiop.System) {
+	compilePipelineBeforePCS(sys)
+	pcs.Compile(sys, pcs.CompileOptions{DisableColumnElision: true})
+}
+
+// withCell returns a copy of proof whose cell id is shifted by one.
+func withCell(proof wiop.Proof, id wiop.ObjectID) wiop.Proof {
+	cells := make(map[wiop.ObjectID]field.Gen, len(proof.Cells))
+	for k, v := range proof.Cells {
+		cells[k] = v
+	}
+	cells[id] = cells[id].Add(field.ElemFromBase(field.One()))
+	bad := proof
+	bad.Cells = cells
+	return bad
+}
+
+// grandProductResults returns the Result cells of every GrandProduct the
+// grandproduct pass registered a verifier action for.
+func grandProductResults(sys *wiop.System) []*wiop.Cell {
+	var res []*wiop.Cell
+	for _, r := range sys.Rounds {
+		for _, va := range r.VerifierActions {
+			if a, ok := va.(*grandproduct.FinalProductCheck); ok {
+				res = append(res, a.GrandProduct.Result)
+			}
+		}
+	}
+	return res
+}
+
+// TestGnarkVerifier_PermutationScenarios checks that the verifier circuit of
+// a permutation-compiled system accepts exactly the proofs the native verifier
+// accepts: honest proofs pass, while a non-permutation witness or a tampered
+// grand-product Result are rejected.
+func TestGnarkVerifier_PermutationScenarios(t *testing.T) {
+	for _, build := range wioptest.PermutationScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			compileGnarkPipeline(sc.Sys)
+			proof, pub := sc.Sys.Prove(sc.AssignHonest)
+			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
+
+			gv := compileGnarkVerifier(t, sc.Sys, proof, pub)
+			require.NoError(t, gv.solve(t, proof, pub), "honest proof must satisfy the circuit")
+			t.Logf("constraints: %d", gv.ccs.GetNbConstraints())
+
+			invalid := build()
+			compileGnarkPipeline(invalid.Sys)
+			badProof, badPub := invalid.Sys.Prove(invalid.AssignInvalid)
+			require.Error(t, invalid.Sys.Verify(badProof, badPub), "invalid witness must fail natively")
+			require.Error(t, gv.solve(t, badProof, badPub), "invalid witness must not satisfy the circuit")
+
+			results := grandProductResults(sc.Sys)
+			require.NotEmpty(t, results, "grandproduct must register a final-product check")
+			for _, res := range results {
+				bad := withCell(proof, res.Context.ID)
+				require.Error(t, sc.Sys.Verify(bad, pub), "tampered Result must fail natively")
+				require.Error(t, gv.solve(t, bad, pub), "tampered Result must not satisfy the circuit")
+			}
+		})
+	}
+}
