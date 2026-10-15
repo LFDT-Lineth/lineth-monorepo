@@ -84,11 +84,13 @@ func (m *Machine) e6Rows() []e6Row {
 // plus one), consistently: the cell's value, every E6 row reading it, and
 // every E6 row's o, set to its cell's value. The bus balances; the E6
 // constraints must reject.
-func cheatE6(t *testing.T, p *Program, r *Run, addr int) {
+func cheatE6(p *Program, r *Run, addr int) error {
 	var one field.Element
 	one.SetOne()
 	r.values[addr][2].Add(&r.values[addr][2], &one)
-	require.NoError(t, p.trace(r))
+	if err := p.trace(r); err != nil {
+		return err
+	}
 	o := make([][]field.Element, KindE6)
 	for i := range o {
 		o[i] = r.Witness(p, e6Mod, laneName(e6O, i))
@@ -101,6 +103,7 @@ func cheatE6(t *testing.T, p *Program, r *Run, addr int) {
 			o[i][row] = r.values[er.o.addr][i]
 		}
 	}
+	return nil
 }
 
 // TestE6Chip: every E6 operation agrees with Go, and proves.
@@ -116,13 +119,14 @@ func TestE6Chip(t *testing.T) {
 // TestE6ChipRejects: a wrong result, claimed consistently on the bus, or a
 // false assertion, is rejected.
 func TestE6ChipRejects(t *testing.T) {
-	for name, tamper := range map[string]func(t *testing.T, p *Program, r *Run, ops e6Ops){
-		"product":  func(t *testing.T, p *Program, r *Run, ops e6Ops) { cheatE6(t, p, r, ops.mul) },
-		"quotient": func(t *testing.T, p *Program, r *Run, ops e6Ops) { cheatE6(t, p, r, ops.div) },
-		"horner":   func(t *testing.T, p *Program, r *Run, ops e6Ops) { cheatE6(t, p, r, ops.horner) },
+	for name, tamper := range map[string]func(p *Program, r *Run, ops e6Ops) error{
+		"product":  func(p *Program, r *Run, ops e6Ops) error { return cheatE6(p, r, ops.mul) },
+		"quotient": func(p *Program, r *Run, ops e6Ops) error { return cheatE6(p, r, ops.div) },
+		"horner":   func(p *Program, r *Run, ops e6Ops) error { return cheatE6(p, r, ops.horner) },
 		// an intermediate Horner value, which no cell holds
-		"horner step": func(t *testing.T, p *Program, r *Run, ops e6Ops) {
+		"horner step": func(p *Program, r *Run, ops e6Ops) error {
 			r.Witness(p, e6Mod, laneName(e6O, 1))[ops.hornerRow].SetUint64(5)
+			return nil
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -131,7 +135,7 @@ func TestE6ChipRejects(t *testing.T) {
 			require.NoError(t, err)
 			r, err := p.Execute(in)
 			require.NoError(t, err)
-			tamper(t, p, r, ops)
+			require.NoError(t, tamper(p, r, ops))
 			require.Error(t, proveAndVerify(p, r), "tampered trace accepted")
 		})
 	}
