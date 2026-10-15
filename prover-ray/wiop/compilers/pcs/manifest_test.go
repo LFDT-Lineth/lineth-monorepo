@@ -100,11 +100,32 @@ func TestColumnElisionEndToEnd(t *testing.T) {
 
 func TestColumnElisionDisabled(t *testing.T) {
 	s := newElisionSystem()
-	Compile(s.sys, CompileOptions{DisableColumnElision: true})
+	Compile(s.sys, WithoutColumnElision())
 
 	proof, pub := s.prove()
 	require.Equal(t, allPresentManifest(7), s.manifestOf(proof))
 	require.NoError(t, s.sys.Verify(proof, pub))
+}
+
+// TestColumnElisionDisabled_Preconfigured checks that a preconfigured
+// WithoutColumnElision reaches an option-less Compile, and that it cannot be
+// selected once Compile consumed the enabled elision.
+func TestColumnElisionDisabled_Preconfigured(t *testing.T) {
+	t.Run("preconfigured", func(t *testing.T) {
+		s := newElisionSystem()
+		require.NoError(t, Configure(s.sys, WithoutColumnElision()))
+		Compile(s.sys)
+
+		proof, pub := s.prove()
+		require.Equal(t, allPresentManifest(7), s.manifestOf(proof), "elision must stay disabled")
+		require.NoError(t, s.sys.Verify(proof, pub))
+	})
+	t.Run("after consumption", func(t *testing.T) {
+		s := newElisionSystem()
+		Compile(s.sys)
+		require.ErrorContains(t, Configure(s.sys, WithoutColumnElision()), "consumed column elision",
+			"elision cannot be disabled after the PCS pass committed to it")
+	})
 }
 
 // The elided columns' claim cells are not FRI-bound, so the verifier must pin

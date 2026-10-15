@@ -72,8 +72,8 @@ type seededShard struct {
 // SkipInShardCheck so the cross-shard layer owns the balance check — with two
 // deliberate differences.
 //
-// First, it compiles with [messagebus.CompileOptions.SharedRandomness], which is
-// what declares the γ cells and the contribution cells and registers the checker.
+// First, it compiles with the default shared-randomness mode, which declares
+// γ and contribution cells and registers their checker.
 //
 // Second, it runs [pcs.Compile], which registers the per-round commit action that
 // populates [wiop.Runtime.Commitments]. The contribution is the multiset hash of
@@ -120,7 +120,7 @@ func buildSeededBidirectionalShard(
 
 	r1.RegisterAction(&busColumnAssigner{cols: busCols})
 
-	messagebus.Compile(sys, messagebus.CompileOptions{SharedRandomness: true})
+	messagebus.Compile(sys)
 	grandproduct.Compile(sys)
 	localvanishing.Compile(sys)
 	global.Compile(sys)

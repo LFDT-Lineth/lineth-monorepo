@@ -82,6 +82,30 @@ gnark arithmetic circuit. Queries that cannot be expressed in-circuit (e.g.
 `TableRelation`, `LogDerivativeSum`) must be compiled away before the gnark
 layer runs.
 
+### Pass configuration
+
+`compilers.CompileFull` runs every pass in dependency order. Pass settings are
+recorded on the `System` itself, so the full pipeline and a standalone
+sequence of passes observe the same selection:
+
+```go
+compilers.CompileFull(sys,
+    compilers.ConfigurePCS(pcs.WithFRINumQueries(2)),
+    compilers.ConfigureMessageBus(messagebus.WithoutSharedRandomness()),
+)
+
+// Or configure a different System, then run passes separately:
+compilers.Configure(otherSys, compilers.ConfigurePCS(pcs.WithFRINumQueries(2)))
+// ... earlier passes ...
+pcs.Compile(otherSys)
+```
+
+Selections only accumulate: repeating a recorded value is harmless, while a
+divergent one is rejected before the System is mutated. Defaults stay unset
+until the first pass that does work consumes them; from then on the effective
+selection, defaults included, is frozen. `compilers.WithoutPCS()` declares a
+PCS-less System and conflicts with any PCS selection.
+
 ### Object identity
 
 Every registered object (`Column`, `Cell`, `CoinField`) carries a
