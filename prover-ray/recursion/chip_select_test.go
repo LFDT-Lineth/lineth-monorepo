@@ -21,8 +21,8 @@ func selectProgram(check bool) (m *Machine, in []Cell, outs [2]int, zero int) {
 		c[i].SetUint64(uint64(20 + i))
 	}
 	in = []Cell{a, c, ScalarCell(field.One()), {}}
-	ca, cc, one := m.Input(), m.Input(), m.Input()
-	zero = m.Input()
+	ca, cc, one := m.InputDigest(), m.InputDigest(), m.InputScalar()
+	zero = m.InputScalar()
 	outs = [2]int{m.Select(one, ca, cc), m.Select(zero, ca, cc)}
 	if check {
 		m.AssertEq(m.Lanes(outs[0], 0, KindE6), m.Lanes(ca, 0, KindE6))

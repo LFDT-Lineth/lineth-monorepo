@@ -31,7 +31,7 @@ func e6Program() (*Machine, []Cell, e6Ops) {
 	x, y, z := randE6(r), randE6(r), randE6(r)
 	s := field.NewElement(7)
 	in := []Cell{E6Cell(x), E6Cell(y), E6Cell(z), ScalarCell(s)}
-	a, b, c, sc := m.Input(), m.Input(), m.Input(), m.Input()
+	a, b, c, sc := m.InputE6(), m.InputE6(), m.InputE6(), m.InputScalar()
 	var ops e6Ops
 
 	var want field.Ext
@@ -138,7 +138,7 @@ func TestE6ChipRejects(t *testing.T) {
 
 	t.Run("wrong claim", func(t *testing.T) {
 		m := &Machine{}
-		m.AssertEq(m.Input(), m.Input())
+		m.AssertEq(m.InputE6(), m.InputE6())
 		p, err := m.Compile()
 		require.NoError(t, err)
 		rnd := rand.New(rand.NewPCG(3, 4))
@@ -147,10 +147,10 @@ func TestE6ChipRejects(t *testing.T) {
 		require.Error(t, proveAndVerify(p, r), "x = y accepted")
 	})
 	t.Run("lane 6", func(t *testing.T) {
-		// E6 operands have zero lanes 6 and 7: a cell with lane 6 set is
+		// E6 operands have zero lanes 6 and 7: a digest with lane 6 set is
 		// not an E6 value, and an E6 read of it is rejected
 		m := &Machine{}
-		a := m.Input()
+		a := m.InputDigest()
 		m.AssertEq(a, a)
 		p, err := m.Compile()
 		require.NoError(t, err)
@@ -162,10 +162,50 @@ func TestE6ChipRejects(t *testing.T) {
 	})
 	t.Run("zero divisor", func(t *testing.T) {
 		m := &Machine{}
-		m.Div(m.Input(), m.Input())
+		m.Div(m.InputE6(), m.InputE6())
 		p, err := m.Compile()
 		require.NoError(t, err)
 		_, err = p.Execute([]Cell{{}, {}})
 		require.Error(t, err)
 	})
+}
+
+// TestScalarLanesBound is the reviewer's attack on untyped scalars: a scalar
+// s, bound to the transcript as a scalar (packed, so through lane 0 only),
+// used in E6 arithmetic, where its lanes 1..5 count. The program claims
+// v·e = w for w ≠ v·e; the prover picks s' = (v, t1..t5), whose lane 0 is
+// still v, and w = s'·e. Every hash and every E6 row is consistent; only the
+// witness chip's typing of s rejects it.
+func TestScalarLanesBound(t *testing.T) {
+	rnd := rand.New(rand.NewPCG(7, 8))
+	v, e := field.NewElement(11), randE6(rnd)
+	var sp field.Ext // s' = (v, t1..t5)
+	sp.B0.A0 = v
+	sp.B0.A1.SetUint64(1)
+	sp.B2.A1.SetUint64(2)
+	var w field.Ext
+	w.Mul(&sp, &e)
+
+	m := &Machine{}
+	s, ein := m.InputScalar(), m.InputE6()
+	stream, _ := m.Pack([]int{s}, []int{KindScalar})
+	m.AssertEq(stream[0], m.Const(ScalarCell(v))) // s is the transcript's v
+	mul := m.Mul(s, ein)
+	m.AssertEq(mul, m.Const(E6Cell(w)))
+	p, err := m.Compile()
+	require.NoError(t, err)
+
+	in := []Cell{ScalarCell(v), E6Cell(e)}
+	r, err := p.Execute(in)
+	require.NoError(t, err)
+	require.Error(t, proveAndVerify(p, r), "v·e = w accepted, honestly")
+
+	_, err = p.Execute([]Cell{E6Cell(sp), E6Cell(e)})
+	require.Error(t, err, "a scalar input with lanes 1..5 executed")
+
+	// the cheat: s' instead of s, its product, the stream unchanged (lane 0)
+	r.values[s] = E6Cell(sp)
+	r.values[mul] = E6Cell(w)
+	require.NoError(t, p.trace(r))
+	require.Error(t, proveAndVerify(p, r), "v·e = w accepted, with s' = (v, t1..t5)")
 }
