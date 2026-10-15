@@ -190,8 +190,10 @@ func TestScalarLanesBound(t *testing.T) {
 
 	m := &Machine{}
 	s, ein := m.InputScalar(), m.InputE6()
-	stream, _ := m.Pack([]int{s}, []int{KindScalar})
-	m.AssertEq(stream[0], m.Const(ScalarCell(v))) // s is the transcript's v
+	// s is the transcript's v: its single block, left-padded, holds it in
+	// lane 7
+	block := m.Pack([]int{s}, []int{KindScalar})[0]
+	m.AssertEq(m.Lanes(block, CellWidth-1, KindScalar), m.Const(ScalarCell(v)))
 	mul := m.Mul(s, ein)
 	m.AssertEq(mul, m.Const(E6Cell(w)))
 	p, err := m.Compile()
