@@ -92,7 +92,7 @@ jobs:
         timeout-minutes: 45
         env:
           ZKC_REF: ""
-          INPUT: test/testdata/block_amsterdam_52861_2M.ssz
+          INPUT: test/testdata/block_amsterdam_52866_17M.ssz
           KECCAK_ACCEL: false
           ZKC_TRACE_FLAGS: "--stats -vv --sharding interpreter:500000"
 
