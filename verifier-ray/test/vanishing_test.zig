@@ -31,8 +31,8 @@ test "vanishing quotient honest scenarios match prover-ray" {
             .module_sizes = proof.module_sizes,
         });
         // The same honest proof must satisfy the LogDerivativeSum boundary
-        // checks (final-sum == Result). Empty logderiv systems pass trivially.
-        try logderivativesum.verify(case.logderiv, ctx);
+        // checks (Σ n·C == Result). Empty logderiv systems pass trivially.
+        try logderivativesum.verify(case.logderiv, ctx, proof.module_sizes);
     }
 }
 

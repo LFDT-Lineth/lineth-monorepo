@@ -252,7 +252,7 @@ pub fn verifyWithWorkspace(
     });
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.vanishing_done, 0);
 
-    try logderivativesum.verify(systems.logderivativesum, ctx);
+    try logderivativesum.verify(systems.logderivativesum, ctx, proof.module_sizes);
 
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.logderivativesum_done, profiling.snapshot().poseidon2_compress);
 

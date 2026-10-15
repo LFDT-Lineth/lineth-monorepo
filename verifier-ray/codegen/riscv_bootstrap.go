@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
@@ -90,13 +91,20 @@ func BuildAllInOneHonestRiscvArtifacts() (HonestRiscvArtifacts, error) {
 	// Tracing is hoisted out of the assignment closure: it depends only on the
 	// inputs, not on the runtime. This guest fits a single shard.
 	traces := driver.TraceZkcInputs(inputs)
-	if len(traces) != 1 {
-		return HonestRiscvArtifacts{}, fmt.Errorf("expected a single trace shard, got %d", len(traces))
+	if traces.Len() != 1 {
+		return HonestRiscvArtifacts{}, fmt.Errorf("expected a single trace shard, got %d", traces.Len())
+	}
+	shard, errs := traces.Get(0)
+	if len(errs) > 0 {
+		return HonestRiscvArtifacts{}, fmt.Errorf("tracing shard 0: %w", errors.Join(errs...))
+	}
+	if shard.IsEmpty() {
+		return HonestRiscvArtifacts{}, fmt.Errorf("tracing shard 0: no shard")
 	}
 
 	proof, pub := sys.Prove(
 		func(assignRt *wiop.Runtime) {
-			driver.AssignTraceShard(assignRt, traces[0], honestSharedRandomness)
+			driver.AssignTraceShard(assignRt, shard.Unwrap(), honestSharedRandomness)
 		},
 		wiop.ProveOptions{CheckUnreducedQueries: true},
 	)

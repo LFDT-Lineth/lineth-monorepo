@@ -11,16 +11,18 @@ import (
 // LogDerivSystem is the compiled metadata for every LogDerivativeSum query in a
 // wiop.System, in the form the Zig logderivativesum sub-verifier consumes.
 //
-// The Z-recurrence and the L_0 initial condition are ordinary vanishing
-// constraints (registered by the logderivativesum compiler), so they are
-// discharged by the vanishing sub-verifier. What remains for this sub-verifier
-// is the boundary identity the compiler's verifier action enforces:
+// The cyclic Z-recurrence Z[i] − Z[i−1] = v[i] − C (row 0 reading Z[n−1]) is
+// an ordinary vanishing constraint (registered by the logderivativesum
+// compiler), so it is discharged by the vanishing sub-verifier; summed over
+// the rows, it makes n·C the column's total. What remains for this
+// sub-verifier is the identity the compiler's verifier action enforces:
 //
-//	Σ_entries Z[n-1] == Result        (and, for lookups, Result == 0)
+//	Σ_entries n·C == Result        (and, for lookups, Result == 0)
 //
-// All operands are cell references (round, index) that the Zig verifier reads
+// C and Result are cell references (round, index) that the Zig verifier reads
 // from ctx.rounds at verify time, so the check is against the adversary's
-// transcript rather than baked-in honest-prover values.
+// transcript rather than baked-in honest-prover values; n is the static size
+// or the proof-supplied size of a dynamic module.
 type LogDerivSystem struct {
 	SourceName string
 	Queries    []LogDerivQuery
@@ -35,12 +37,19 @@ type ScalarCellRef struct {
 	Index int
 }
 
-// LogDerivQuery is one reduced LogDerivativeSum query: the transcript positions
-// of Z[n-1] for each Z column and the claimed Result.
+// LogDerivEntry is one Z column: the transcript position of its average cell C
+// and the size n of its module.
+type LogDerivEntry struct {
+	AverageRef ScalarCellRef
+	Size       ModuleSize
+}
+
+// LogDerivQuery is one reduced LogDerivativeSum query: its Z columns and the
+// claimed Result.
 type LogDerivQuery struct {
 	SourceName string
-	// ZFinalRefs are the (round, index) positions of Z[n-1] for each Z column.
-	ZFinalRefs []ScalarCellRef
+	// Entries are the Z columns, in the order of the verifier action's entries.
+	Entries []LogDerivEntry
 	// ResultRef is the (round, index) position of the claimed aggregated value.
 	ResultRef ScalarCellRef
 	// ResultIsZero is set for lookup-reduced queries, whose Result must be 0.
@@ -53,17 +62,18 @@ type LogDerivQuery struct {
 // deterministic.
 //
 // Requires global.Compile to have been called after logderivativesum.Compile:
-// the Z-recurrence and L_0 initial condition are ordinary vanishing constraints
-// that global.Compile discharges — without it those constraints go unchecked
-// and the verifier is unsound. Calling global.Compile also appends
-// quotientRound and evalRound after the logderivsum result round, which ensures
-// result/ZFinal cells are never in the last wiop slot (protocol.replay excludes
+// the cyclic Z-recurrences are ordinary vanishing constraints that
+// global.Compile discharges — without it those constraints go unchecked and
+// the verifier is unsound. Calling global.Compile also appends quotientRound
+// and evalRound after the logderivsum result round, which ensures result and
+// average cells are never in the last wiop slot (protocol.replay excludes
 // the last round from ctx.rounds). The check below turns a silent Zig
 // out-of-bounds into a clear Go error at codegen time if global.Compile was
 // accidentally omitted.
 func BuildLogDerivSystem(sys *wiop.System) (LogDerivSystem, error) {
 	out := LogDerivSystem{SourceName: sys.Context.Path()}
 	lastSlot := len(sys.Rounds) - 1
+	dynamicIndices := DynamicModuleIndex(sys)
 
 	// First pass: collect the LogDerivativeSum queries that a lookup reduction
 	// requires to be zero (lookuptologderivsum registers a ResultIsZero action
@@ -92,15 +102,28 @@ func BuildLogDerivSystem(sys *wiop.System) (LogDerivSystem, error) {
 			query := LogDerivQuery{
 				SourceName:   va.LogDerivativeSum.Context().Path(),
 				ResultRef:    ScalarCellRef{Round: resultSlot, Index: va.LogDerivativeSum.Result.Context.ID.Position()},
-				ZFinalRefs:   make([]ScalarCellRef, len(va.Entries)),
+				Entries:      make([]LogDerivEntry, len(va.Entries)),
 				ResultIsZero: resultMustBeZero[va.LogDerivativeSum],
 			}
 			for i, e := range va.Entries {
-				zSlot := e.ZFinal.Context.ID.Slot()
-				if err := checkNotLastSlot("z_final", e.ZFinal.Context.Path(), zSlot, lastSlot); err != nil {
+				cSlot := e.Average.Context.ID.Slot()
+				if err := checkNotLastSlot("average", e.Average.Context.Path(), cSlot, lastSlot); err != nil {
 					return LogDerivSystem{}, err
 				}
-				query.ZFinalRefs[i] = ScalarCellRef{Round: zSlot, Index: e.ZFinal.Context.ID.Position()}
+				var size ModuleSize
+				if m := e.Module(); m.IsDynamic() {
+					idx, ok := dynamicIndices[m]
+					if !ok {
+						return LogDerivSystem{}, fmt.Errorf("codegen: dynamic module %q not found in sys.Modules order", m.Context.Path())
+					}
+					size = ModuleSize{Dynamic: true, DynamicIndex: idx}
+				} else {
+					size = ModuleSize{StaticSize: m.Size()}
+				}
+				query.Entries[i] = LogDerivEntry{
+					AverageRef: ScalarCellRef{Round: cSlot, Index: e.Average.Context.ID.Position()},
+					Size:       size,
+				}
 			}
 			out.Queries = append(out.Queries, query)
 		}

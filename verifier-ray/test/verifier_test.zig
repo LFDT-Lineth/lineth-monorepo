@@ -157,7 +157,7 @@ test "cell ref past the proof's cells slice is rejected, not read OOB" {
     // A query whose result_ref points at cell index 3, but the round supplies
     // only one cell.
     const query = logderivativesum.Query{
-        .z_final_refs = &.{},
+        .entries = &.{},
         .result_ref = .{ .round = 0, .index = 3 },
     };
     const system = logderivativesum.System{ .queries = &.{query} };
@@ -166,15 +166,15 @@ test "cell ref past the proof's cells slice is rejected, not read OOB" {
     const rounds = [_]protocol.RoundMessage{.{ .cells = &cells }};
     const ctx = protocol.Context{ .all_coins = &.{}, .rounds = &rounds };
 
-    try std.testing.expectError(error.CellRefOutOfRange, logderivativesum.verify(system, ctx));
+    try std.testing.expectError(error.CellRefOutOfRange, logderivativesum.verify(system, ctx, &.{}));
 
     // And a ref past the rounds slice entirely.
     const query2 = logderivativesum.Query{
-        .z_final_refs = &.{},
+        .entries = &.{},
         .result_ref = .{ .round = 5, .index = 0 },
     };
     const system2 = logderivativesum.System{ .queries = &.{query2} };
-    try std.testing.expectError(error.CellRefOutOfRange, logderivativesum.verify(system2, ctx));
+    try std.testing.expectError(error.CellRefOutOfRange, logderivativesum.verify(system2, ctx, &.{}));
 }
 
 // A degenerate PCS system/opening: no batches, no layout, no claims. `verify`
