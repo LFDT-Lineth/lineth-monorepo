@@ -61,7 +61,7 @@ const (
 	opAdd
 	opSub
 	opDiv
-	opEq
+	opEqE6
 	opHorner      // args = y, coeffs...
 	opMulAddChain // args = init, as..., bs...
 )
@@ -90,15 +90,21 @@ func (m *Machine) Sub(a, b int) int {
 	return m.addE6(opSub, []int{a, b}, r.o.addr, r)
 }
 
-// Div returns n/d, checked as d·q = n. Executing it fails if d is zero.
+// Div returns n/d, checked as d·q = n. It binds q only if d ≠ 0: with
+// n = d = 0, any q satisfies d·q = n, and although executing it fails if d is
+// zero, a malicious prover can produce that case. Divide only by values that
+// cannot be zero, or are nonzero with high probability (ζ − x for a random ζ).
 func (m *Machine) Div(n, d int) int {
 	r := e6Row{mul: 1, a: m.rd(d), b: m.wr(), o: m.rd(n)}
 	return m.addE6(opDiv, []int{n, d}, r.b.addr, r)
 }
 
-// AssertEq checks that the cells a and b hold the same E6 value.
-func (m *Machine) AssertEq(a, b int) {
-	m.addE6(opEq, []int{a, b}, -1, e6Row{add: 1, a: m.rd(a), o: m.rd(b)})
+// AssertEqE6 checks that the cells a and b hold the same E6 value (lanes
+// 0..5). It reads both as E6 values, with lanes 6, 7 zero: it cannot prove two
+// digests equal (a proof of it does not verify unless their lanes 6, 7 are
+// zero).
+func (m *Machine) AssertEqE6(a, b int) {
+	m.addE6(opEqE6, []int{a, b}, -1, e6Row{add: 1, a: m.rd(a), o: m.rd(b)})
 }
 
 // Horner returns Σ_i coeffs[i]·y^(len−1−i), one row per coefficient: the
@@ -175,7 +181,7 @@ func (m *Machine) execE6(op e6Inst, r *Run) error {
 		}
 		z.Inverse(&d)
 		z.Mul(&z, &n)
-	case opEq:
+	case opEqE6:
 		return nil
 	case opMulAddChain:
 		k := (len(op.args) - 1) / 2

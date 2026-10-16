@@ -37,14 +37,14 @@ func e6Program() (*Machine, []Cell, e6Ops) {
 	var want field.Ext
 	want.Mul(&x, &y)
 	ops.mul = m.Mul(a, b)
-	m.AssertEq(ops.mul, m.Const(E6Cell(want)))
+	m.AssertEqE6(ops.mul, m.Const(E6Cell(want)))
 	want.Add(&x, &y)
-	m.AssertEq(m.Add(a, b), m.Const(E6Cell(want)))
+	m.AssertEqE6(m.Add(a, b), m.Const(E6Cell(want)))
 	want.Sub(&x, &y)
-	m.AssertEq(m.Sub(a, b), m.Const(E6Cell(want)))
+	m.AssertEqE6(m.Sub(a, b), m.Const(E6Cell(want)))
 	want.Div(&x, &y)
 	ops.div = m.Div(a, b)
-	m.AssertEq(ops.div, m.Const(E6Cell(want)))
+	m.AssertEqE6(ops.div, m.Const(E6Cell(want)))
 
 	// x·z² + y·z + z, and a one-coefficient Horner
 	want.Mul(&x, &z)
@@ -53,12 +53,12 @@ func e6Program() (*Machine, []Cell, e6Ops) {
 	want.Add(&want, &z)
 	ops.hornerRow = len(m.e6Rows()) + 1
 	ops.horner = m.Horner(c, []int{a, b, c})
-	m.AssertEq(ops.horner, m.Const(E6Cell(want)))
-	m.AssertEq(m.Horner(c, []int{a}), m.Const(E6Cell(x)))
+	m.AssertEqE6(ops.horner, m.Const(E6Cell(want)))
+	m.AssertEqE6(m.Horner(c, []int{a}), m.Const(E6Cell(x)))
 
 	// a base scalar is its E6 embedding
 	want.MulByElement(&x, &s)
-	m.AssertEq(m.Mul(a, sc), m.Const(E6Cell(want)))
+	m.AssertEqE6(m.Mul(a, sc), m.Const(E6Cell(want)))
 
 	// x^(2^0 + 2^2) by bits 1, 0, 1 of g = x0 (a scalar)
 	bits := []int{m.Const(ScalarCell(field.One())), m.Const(Cell{}), m.Const(ScalarCell(field.One()))}
@@ -67,7 +67,7 @@ func e6Program() (*Machine, []Cell, e6Ops) {
 	g2.Square(&g)
 	g4.Square(&g2)
 	w.Mul(&g, &g4)
-	m.AssertEq(m.PowBits(bits, []field.Element{g, g2, g4}), m.Const(ScalarCell(w)))
+	m.AssertEqE6(m.PowBits(bits, []field.Element{g, g2, g4}), m.Const(ScalarCell(w)))
 	return m, in, ops
 }
 
@@ -142,7 +142,7 @@ func TestE6ChipRejects(t *testing.T) {
 
 	t.Run("wrong claim", func(t *testing.T) {
 		m := &Machine{}
-		m.AssertEq(m.InputE6(), m.InputE6())
+		m.AssertEqE6(m.InputE6(), m.InputE6())
 		p, err := m.Compile()
 		require.NoError(t, err)
 		rnd := rand.New(rand.NewPCG(3, 4))
@@ -155,7 +155,7 @@ func TestE6ChipRejects(t *testing.T) {
 		// not an E6 value, and an E6 read of it is rejected
 		m := &Machine{}
 		a := m.InputDigest()
-		m.AssertEq(a, a)
+		m.AssertEqE6(a, a)
 		p, err := m.Compile()
 		require.NoError(t, err)
 		var c Cell
@@ -197,9 +197,9 @@ func TestScalarLanesBound(t *testing.T) {
 	// s is the transcript's v: its single block, left-padded, holds it in
 	// lane 7
 	block := m.Pack([]int{s}, []int{KindScalar})[0]
-	m.AssertEq(m.Lanes(block, CellWidth-1, KindScalar), m.Const(ScalarCell(v)))
+	m.AssertEqE6(m.Lanes(block, CellWidth-1, KindScalar), m.Const(ScalarCell(v)))
 	mul := m.Mul(s, ein)
-	m.AssertEq(mul, m.Const(E6Cell(w)))
+	m.AssertEqE6(mul, m.Const(E6Cell(w)))
 	p, err := m.Compile()
 	require.NoError(t, err)
 
@@ -248,14 +248,14 @@ func chainProgram() (*Machine, []Cell, []int) {
 		t.Mul(&vals[1+i], &vals[1+k+i])
 		want.Add(&want, &t)
 	}
-	m.AssertEq(sums[k-1], m.Const(E6Cell(want)))
+	m.AssertEqE6(sums[k-1], m.Const(E6Cell(want)))
 	return m, in, sums
 }
 
 // TestMulAddChain: the partial sums agree with Go and prove, in k + 1 rows.
 func TestMulAddChain(t *testing.T) {
 	m, in, sums := chainProgram()
-	require.Len(t, m.e6Rows(), 1+(len(sums)+1)+1+1, "Mul, the chain (k + 1 rows), Mul, AssertEq")
+	require.Len(t, m.e6Rows(), 1+(len(sums)+1)+1+1, "Mul, the chain (k + 1 rows), Mul, AssertEqE6")
 	p, err := m.Compile()
 	require.NoError(t, err)
 	r, err := p.Execute(in)
@@ -292,4 +292,38 @@ func TestMulAddChainRejects(t *testing.T) {
 			require.Error(t, proveAndVerify(p, r), "tampered chain accepted")
 		})
 	}
+}
+
+// TestE6Limits pins the documented limits of Div and AssertEqE6.
+func TestE6Limits(t *testing.T) {
+	// Div binds q only if d ≠ 0: with n = d = 0 (which Execute refuses, but a
+	// prover can write), any q verifies
+	t.Run("Div by zero", func(t *testing.T) {
+		m := &Machine{}
+		n, d := m.InputE6(), m.InputE6()
+		q := m.Div(n, d)
+		p, err := m.Compile()
+		require.NoError(t, err)
+		_, err = p.Execute([]Cell{{}, {}})
+		require.Error(t, err, "a zero divisor executed")
+
+		rnd := rand.New(rand.NewPCG(9, 10))
+		r, err := p.Execute([]Cell{E6Cell(randE6(rnd)), E6Cell(randE6(rnd))})
+		require.NoError(t, err)
+		r.values[n], r.values[d] = Cell{}, Cell{}
+		r.values[q] = E6Cell(randE6(rnd))
+		require.NoError(t, p.trace(r))
+		require.NoError(t, proveAndVerify(p, r), "0/0 = q, for any q")
+	})
+	// AssertEqE6 compares E6 values: two equal digests with nonzero lanes 6,
+	// 7 cannot be proven equal
+	t.Run("AssertEqE6 of digests", func(t *testing.T) {
+		m := &Machine{}
+		m.AssertEqE6(m.InputDigest(), m.InputDigest())
+		p, err := m.Compile()
+		require.NoError(t, err)
+		r, err := p.Execute([]Cell{cell(1), cell(1)})
+		require.NoError(t, err)
+		require.Error(t, proveAndVerify(p, r), "equal digests, read as E6 values")
+	})
 }

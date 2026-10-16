@@ -25,8 +25,8 @@ func selectProgram(check bool) (m *Machine, in []Cell, outs [2]int, zero int) {
 	zero = m.InputScalar()
 	outs = [2]int{m.Select(one, ca, cc), m.Select(zero, ca, cc)}
 	if check {
-		m.AssertEq(m.Lanes(outs[0], 0, KindE6), m.Lanes(ca, 0, KindE6))
-		m.AssertEq(m.Lanes(outs[1], 2, KindE6), m.Lanes(cc, 2, KindE6))
+		m.AssertEqE6(m.Lanes(outs[0], 0, KindE6), m.Lanes(ca, 0, KindE6))
+		m.AssertEqE6(m.Lanes(outs[1], 2, KindE6), m.Lanes(cc, 2, KindE6))
 	} else {
 		cp.Copy(outs[0])
 		cp.Copy(outs[1])
