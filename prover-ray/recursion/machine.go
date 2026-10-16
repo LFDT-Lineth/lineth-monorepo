@@ -20,6 +20,8 @@ const (
 	bitsMod    = "bits"
 	e6Mod      = "e6"
 	selectMod  = "select"
+	tableMod   = "table"
+	lookupMod  = "lookup"
 )
 
 // Machine builds a program for the chips: it allocates addresses, counts the
@@ -44,6 +46,8 @@ type Machine struct {
 	bits    []bitsInst
 	e6Insts []e6Inst
 	selects []selectInst
+	tables  []tableInst
+	lookups []lookupInst
 
 	instrs []instr // every instruction, in execution order
 
@@ -66,6 +70,7 @@ const (
 	instrBits          // Bits: the shifted values and the bits
 	instrE6            // an E6 operation: its result
 	instrSelect        // Select: the selected cell
+	instrLookup        // Lookup: the entry read
 )
 
 func (m *Machine) alloc() int {
@@ -125,7 +130,10 @@ type chip interface {
 }
 
 func (m *Machine) chips() []chip {
-	return append([]chip{witnessChip{m}, constChip{m}, windowChip{m}, bitsChip{m}, e6Chip{m}, selectChip{m}}, m.extra...)
+	return append([]chip{
+		witnessChip{m}, constChip{m}, windowChip{m}, bitsChip{m},
+		e6Chip{m}, selectChip{m}, tableChip{m}, lookupChip{m},
+	}, m.extra...)
 }
 
 // height returns the number of rows of a chip's module: a power of two, at
@@ -144,6 +152,7 @@ func height(n int) int {
 type Program struct {
 	Sys     *wiop.System
 	Bus     *wiop.LogDerivativeSum // nil if no chip accesses the memory
+	Tables  *wiop.LogDerivativeSum // nil if the program has no table
 	m       *Machine
 	modules []*module // the chips with rows, in Machine.chips order
 	chips   []chip
@@ -153,15 +162,16 @@ type Program struct {
 // constraints and bus accesses, the bus, and runs prover-ray's compiler
 // passes down to the PCS. The machine must not be modified afterwards.
 //
-// Rounds: the chips' witness columns are committed in round 0; the bus's
-// coins α and γ are drawn in round 1; its sum is claimed in round 2.
+// Rounds: the chips' witness columns are committed in round 0; the coins α
+// and γ of the memory and of the tables are drawn in round 1; their sums are
+// claimed in round 2.
 func (m *Machine) Compile() (*Program, error) {
 	sys := wiop.NewSystemf("recursion")
 	witnessRound := sys.NewRound()
 	coinRound := witnessRound.EnsureNext()
 	coinRound.EnsureNext()
 	p := &Program{Sys: sys, m: m}
-	bus := &Bus{}
+	bus := newBus()
 	for _, c := range m.chips() {
 		if c.rows() == 0 {
 			continue
@@ -176,7 +186,8 @@ func (m *Machine) Compile() (*Program, error) {
 		p.modules = append(p.modules, mod)
 		p.chips = append(p.chips, c)
 	}
-	p.Bus = bus.build(sys, coinRound)
+	p.Bus = bus.mem.build(sys, coinRound)
+	p.Tables = bus.tables.build(sys, coinRound)
 
 	lookuptologderivsum.Compile(sys)
 	logderivativesum.Compile(sys)
@@ -268,6 +279,8 @@ func (m *Machine) exec(in instr, r *Run) error {
 		return m.execE6(m.e6Insts[in.idx], r)
 	case instrSelect:
 		return m.execSelect(m.selects[in.idx], r)
+	case instrLookup:
+		return m.execLookup(m.lookups[in.idx], r)
 	}
 	return fmt.Errorf("unknown instruction kind %d", in.kind)
 }
