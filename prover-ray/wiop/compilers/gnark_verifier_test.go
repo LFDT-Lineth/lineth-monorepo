@@ -6,6 +6,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/consensys/gnark-crypto/ecc"
@@ -148,6 +149,41 @@ func TestGnarkVerifier_LogDerivativeSumScenarios(t *testing.T) {
 			badProof, badPub := invalid.Sys.Prove(invalid.AssignWitness)
 			require.Error(t, invalid.Sys.Verify(badProof, badPub), "wrong Result must fail natively")
 			require.Error(t, gv.solve(t, badProof, badPub), "wrong Result must not satisfy the circuit")
+		})
+	}
+}
+
+// TestGnarkVerifier_LookupScenarios checks the in-circuit lookup identity.
+// The invalid proof bumps one entry of a multiplicity column M after the
+// prover assigned it: every later value (Z columns, Result) is then derived
+// honestly from the bad M, so the proof is internally consistent and only the
+// Result-is-zero check can reject it.
+func TestGnarkVerifier_LookupScenarios(t *testing.T) {
+	for _, build := range wioptest.LookupScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			compileGnarkPipeline(sc.Sys)
+			proof, pub := sc.Sys.Prove(sc.AssignWitness)
+			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
+
+			gv := compileGnarkVerifier(t, sc.Sys, proof, pub)
+			require.NoError(t, gv.solve(t, proof, pub), "honest proof must satisfy the circuit")
+			t.Logf("constraints: %d", gv.ccs.GetNbConstraints())
+
+			invalid := build()
+			before := snapshotModuleColumns(invalid.Sys)
+			lookuptologderivsum.Compile(invalid.Sys)
+			mCols := newBaseColumns(invalid.Sys, before)
+			require.NotEmpty(t, mCols, "lookuptologderivsum must allocate a multiplicity column")
+			wioptest.Mutator{Column: mCols[0], Row: 0, Tweak: wioptest.AddOne}.Compile(invalid.Sys)
+			compileGnarkPipeline(invalid.Sys)
+			badProof, badPub := invalid.Sys.Prove(invalid.AssignWitness)
+			if invalid.Sys.Verify(badProof, badPub) == nil {
+				// The bumped row is masked by the table's filter, so the
+				// tampered M is still a valid multiplicity assignment.
+				t.Skip("tampered M row does not contribute to the lookup sum")
+			}
+			require.Error(t, gv.solve(t, badProof, badPub), "wrong multiplicity must not satisfy the circuit")
 		})
 	}
 }

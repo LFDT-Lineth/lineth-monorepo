@@ -316,36 +316,3 @@ func TestFullPipeline_NonNativeScenarios(t *testing.T) {
 		})
 	}
 }
-
-// snapshotModuleColumns records, per module, the set of columns present before
-// a compiler pass runs. Pair with [newExtensionColumns] to identify the
-// extension (Z) columns a pass adds.
-func snapshotModuleColumns(sys *wiop.System) map[*wiop.Module]map[*wiop.Column]struct{} {
-	before := make(map[*wiop.Module]map[*wiop.Column]struct{}, len(sys.Modules))
-	for _, m := range sys.Modules {
-		seen := make(map[*wiop.Column]struct{}, len(m.Columns))
-		for _, c := range m.Columns {
-			seen[c] = struct{}{}
-		}
-		before[m] = seen
-	}
-	return before
-}
-
-// newExtensionColumns returns the extension columns added to any module since
-// the snapshot. These are the running-sum / running-product Z columns emitted
-// by the logderivativesum and grandproduct passes.
-func newExtensionColumns(sys *wiop.System, before map[*wiop.Module]map[*wiop.Column]struct{}) []*wiop.Column {
-	var zCols []*wiop.Column
-	for _, m := range sys.Modules {
-		for _, c := range m.Columns {
-			if _, existed := before[m][c]; existed {
-				continue
-			}
-			if c.IsExtension {
-				zCols = append(zCols, c)
-			}
-		}
-	}
-	return zCols
-}
