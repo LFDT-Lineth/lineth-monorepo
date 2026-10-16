@@ -5,6 +5,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/require"
 )
 
@@ -52,12 +53,12 @@ func rampVec(n int, start uint64) *wiop.ConcreteVector {
 
 func (s *elisionSystem) assign(rt *wiop.Runtime) {
 	rt.AssignColumn(s.a, rampVec(4, 10))
-	rt.AssignColumn(s.b, baseVec(4, 0))
+	rt.AssignColumn(s.b, wioptest.ConstVec(4, 0))
 	rt.AssignColumn(s.c, rampVec(4, 10))
 	rt.AssignColumn(s.d, rampVec(4, 10))
 	rt.AssignColumn(s.g, rampVec(4, 20))
 	rt.AssignColumn(s.h, rampVec(4, 20))
-	rt.AssignColumn(s.z, baseVec(4, 0))
+	rt.AssignColumn(s.z, wioptest.ConstVec(4, 0))
 }
 
 // manifestCells returns round 0's manifest cells: Compile appends them after
@@ -217,8 +218,8 @@ func TestColumnElisionKeepsOneColumn(t *testing.T) {
 	Compile(sys)
 
 	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
-		rt.AssignColumn(x, baseVec(4, 0))
-		rt.AssignColumn(y, baseVec(4, 0))
+		rt.AssignColumn(x, wioptest.ConstVec(4, 0))
+		rt.AssignColumn(y, wioptest.ConstVec(4, 0))
 	})
 	cells := r0.Cells[len(r0.Cells)-2:]
 	xCode := proof.Cells[cells[0].Context.ID].AsBase()
@@ -245,8 +246,8 @@ func TestColumnElisionKeepsAnOpenedColumn(t *testing.T) {
 	Compile(sys)
 
 	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
-		rt.AssignColumn(x, baseVec(4, 0))
-		rt.AssignColumn(y, baseVec(4, 0))
+		rt.AssignColumn(x, wioptest.ConstVec(4, 0))
+		rt.AssignColumn(y, wioptest.ConstVec(4, 0))
 	})
 	cells := r0.Cells[len(r0.Cells)-2:]
 	xCode := proof.Cells[cells[0].Context.ID].AsBase()
@@ -273,7 +274,7 @@ func TestColumnElisionShrinksTopSize(t *testing.T) {
 
 	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
 		rt.AssignColumn(x, rampVec(4, 1))
-		rt.AssignColumn(y, baseVec(16, 0))
+		rt.AssignColumn(y, wioptest.ConstVec(16, 0))
 	})
 	require.NoError(t, sys.Verify(proof, pub))
 }

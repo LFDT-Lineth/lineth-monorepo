@@ -24,12 +24,12 @@ func NewLagrangeEvalScenario() *Scenario {
 		Sys:   sys,
 		Query: le,
 		RunHonest: func(rt *wiop.Runtime) {
-			rt.AssignColumn(col, baseVec(4, 3))
+			rt.AssignColumn(col, ConstVec(4, 3))
 			rt.AdvanceRound() // sample coin
 			le.SelfAssign(rt)
 		},
 		RunInvalid: func(rt *wiop.Runtime) {
-			rt.AssignColumn(col, baseVec(4, 3))
+			rt.AssignColumn(col, ConstVec(4, 3))
 			rt.AdvanceRound() // sample coin
 			// Real evaluation is 3; claim 0 instead.
 			rt.AssignCell(le.EvaluationClaims[0], field.ElemZero())
@@ -59,12 +59,12 @@ func NewLogDerivativeSumScenario() *Scenario {
 		Sys:   sys,
 		Query: rr,
 		RunHonest: func(rt *wiop.Runtime) {
-			rt.AssignColumn(col, baseVec(4, 2))
+			rt.AssignColumn(col, ConstVec(4, 2))
 			rt.AdvanceRound()
 			rr.SelfAssign(rt)
 		},
 		RunInvalid: func(rt *wiop.Runtime) {
-			rt.AssignColumn(col, baseVec(4, 2))
+			rt.AssignColumn(col, ConstVec(4, 2))
 			rt.AdvanceRound()
 			// Real result is 8; claim 0 instead.
 			rt.AssignCell(rr.Result, field.ElemZero())
