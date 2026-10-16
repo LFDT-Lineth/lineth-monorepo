@@ -26,13 +26,17 @@ func (a *OpeningVerifierAction) CheckGnark(api frontend.API, run *wiop.GnarkRunt
 	if !a.c.elisionDisabled {
 		panic("pcs: CheckGnark: requires Compile with CompileOptions{DisableColumnElision: true}")
 	}
+	// The circuit has one input tree per batch; the prover must too.
+	if !a.c.rootDedupDisabled {
+		panic("pcs: CheckGnark: requires Compile with CompileOptions{DisableRootDedup: true}")
+	}
 	proof := run.PCSOpeningProof
 	batches := CommittedBatches(run.System)
 	a.c.assertAllPresentGnark(run, batches)
 	manifests := allPresentManifests(batches)
 	shifts, claims, shapes, zeta := recoverBatchClaimsGnark(run, batches, manifests)
 
-	pcs := newStaticPCS()
+	pcs := a.c.newPCS()
 	fs := run.FS()
 
 	// Same transcript as compiled.verify: one fold challenge per round, each

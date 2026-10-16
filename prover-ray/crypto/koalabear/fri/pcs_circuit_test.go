@@ -71,6 +71,7 @@ func newPCSCircuitFixture(t *testing.T) pcsOpenVerifyFixture {
 	require.NoError(t, err)
 	pcs, err := NewPCS(params, makeEncoders(int(params.numRounds()+1), 2))
 	require.NoError(t, err)
+	pcs.DisableRootDedup()
 
 	// build the witness
 	// witness[3] has two rows at the top size so one can be opened at shift 1 below: at shift 0

@@ -48,11 +48,11 @@ func (gv *gnarkVerifier) solve(t *testing.T, proof wiop.Proof, pub wiop.PublicIn
 	return err
 }
 
-// compileGnarkPipeline is [compileFullPipeline] with column elision disabled,
-// which the in-circuit PCS verifier requires.
+// compileGnarkPipeline is [compileFullPipeline] with column elision and root
+// deduplication disabled, which the in-circuit PCS verifier requires.
 func compileGnarkPipeline(sys *wiop.System) {
 	compilePipelineBeforePCS(sys)
-	pcs.Compile(sys, pcs.CompileOptions{DisableColumnElision: true})
+	pcs.Compile(sys, pcs.CompileOptions{DisableColumnElision: true, DisableRootDedup: true})
 }
 
 // withCell returns a copy of proof whose cell id is shifted by one.
@@ -110,6 +110,44 @@ func TestGnarkVerifier_PermutationScenarios(t *testing.T) {
 				require.Error(t, sc.Sys.Verify(bad, pub), "tampered Result must fail natively")
 				require.Error(t, gv.solve(t, bad, pub), "tampered Result must not satisfy the circuit")
 			}
+		})
+	}
+}
+
+// proverHook adapts a function to a [wiop.ProverAction].
+type proverHook func(*wiop.Runtime)
+
+func (h proverHook) Run(rt *wiop.Runtime) { h(rt) }
+
+// TestGnarkVerifier_LogDerivativeSumScenarios checks the in-circuit final-sum
+// identity. The invalid proof is produced by a prover that assigns a wrong
+// extension-valued Result before the query self-assigns it: the proof is internally consistent
+// (the transcript absorbs the wrong value), so only the final-sum check can
+// reject it.
+func TestGnarkVerifier_LogDerivativeSumScenarios(t *testing.T) {
+	for _, build := range wioptest.LogDerivativeSumCompilerScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			compileGnarkPipeline(sc.Sys)
+			proof, pub := sc.Sys.Prove(sc.AssignWitness)
+			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
+
+			gv := compileGnarkVerifier(t, sc.Sys, proof, pub)
+			require.NoError(t, gv.solve(t, proof, pub), "honest proof must satisfy the circuit")
+			t.Logf("constraints: %d", gv.ccs.GetNbConstraints())
+
+			invalid := build()
+			require.NotEmpty(t, invalid.Sys.LogDerivativeSums, "scenario must declare a LogDerivativeSum")
+			// Unlike sc.TamperResult, keep the cell an extension element: the
+			// circuit's witness layout is fixed by the honest proof's field tags.
+			res := invalid.Sys.LogDerivativeSums[0].Result
+			res.Round().RegisterAction(proverHook(func(rt *wiop.Runtime) {
+				rt.AssignCell(res, field.ElemFromExt(field.Uint64ToExt(123456)))
+			}))
+			compileGnarkPipeline(invalid.Sys)
+			badProof, badPub := invalid.Sys.Prove(invalid.AssignWitness)
+			require.Error(t, invalid.Sys.Verify(badProof, badPub), "wrong Result must fail natively")
+			require.Error(t, gv.solve(t, badProof, badPub), "wrong Result must not satisfy the circuit")
 		})
 	}
 }

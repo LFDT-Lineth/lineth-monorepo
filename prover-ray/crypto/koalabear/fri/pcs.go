@@ -148,7 +148,22 @@ type PCS struct {
 	Encoders []*RSEncoder
 	openings []pcsOpening
 	zeta     field.Ext
+	// rootDedupDisabled gives every batch its own input tree, even when two
+	// batches have the same root. See [PCS.DisableRootDedup].
+	rootDedupDisabled bool
 }
+
+// DisableRootDedup stops the prover and verifier from merging batches whose
+// Merkle roots are equal into one input tree. By default such batches share a
+// single cap and a single opening per query, so the opening proof's shape
+// depends on the committed values: two batches committing identical tables
+// (e.g. two all-zero columns of the same size) produce one input tree fewer.
+// With deduplication disabled, every batch gets its own input tree and the
+// shape depends on the batch layout alone, which the gnark verifier requires.
+//
+// Prover and verifier must agree on this setting: it changes the number of
+// input caps and openings in the proof.
+func (pcs *PCS) DisableRootDedup() { pcs.rootDedupDisabled = true }
 
 type pcsOpening struct {
 	layout    layout
@@ -820,10 +835,11 @@ func (pcs *PCS) restrictTo(topSizeLog2 uint8) (*PCS, error) {
 		return nil, err
 	}
 	return &PCS{
-		Params:   restrictedParams,
-		Encoders: pcs.Encoders,
-		openings: pcs.openings,
-		zeta:     pcs.zeta,
+		Params:            restrictedParams,
+		Encoders:          pcs.Encoders,
+		openings:          pcs.openings,
+		zeta:              pcs.zeta,
+		rootDedupDisabled: pcs.rootDedupDisabled,
 	}, nil
 }
 
@@ -1099,17 +1115,23 @@ func revealedInputTables(table MultiSizeTable, info inputCapInfo) []InputCapTabl
 }
 
 func (pcs *PCS) inputOpeningCommitments() []CommitterState {
-	seen := make(map[field.Octuplet]bool)
+	seenRoot := make(map[field.Octuplet]bool)
+	seenBatch := make([]bool, len(pcs.openings))
 	var inputs []CommitterState
 	for sizeLog2 := int(pcs.Params.LogPlainTextSize); sizeLog2 >= 0; sizeLog2-- {
-		for _, opening := range pcs.openings {
+		for batchIdx, opening := range pcs.openings {
 			for _, bundle := range opening.layout {
 				if bundle.SizeLog2 != uint8(sizeLog2) {
 					continue
 				}
 				root := opening.committed.Tree.Root()
-				if !seen[root] {
-					seen[root] = true
+				if pcs.rootDedupDisabled {
+					if !seenBatch[batchIdx] {
+						seenBatch[batchIdx] = true
+						inputs = append(inputs, opening.committed)
+					}
+				} else if !seenRoot[root] {
+					seenRoot[root] = true
 					inputs = append(inputs, opening.committed)
 				}
 				break
@@ -1461,7 +1483,7 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	}
 	orders := batchOrders(layout)
 	positions := in.Challenges.QueryPositions[:pcs.Params.NumQueries]
-	inputRoots, inputIndexByBatch := inputOpeningRoots(layout, orders, in.Roots)
+	inputRoots, inputIndexByBatch := inputOpeningRoots(layout, orders, in.Roots, !pcs.rootDedupDisabled)
 	if len(proof.InputCaps) != len(inputRoots) {
 		return fmt.Errorf("fri: pcs.Verify: got %d input caps, want %d", len(proof.InputCaps), len(inputRoots))
 	}
@@ -1718,7 +1740,11 @@ func (vq verifyQueryCtx) resolve(queryIdx, queryPosition int) (resolvedQuery, er
 	return rq, nil
 }
 
-func inputOpeningRoots(layout layout, orders [][]int, roots []field.Octuplet) (QueryLayerRoots, []int) {
+// inputOpeningRoots assigns each batch its input tree, in order of first
+// appearance in the canonical layout. With dedup set, batches with equal roots
+// share one tree; otherwise every batch gets its own (see
+// [PCS.DisableRootDedup]).
+func inputOpeningRoots(layout layout, orders [][]int, roots []field.Octuplet, dedup bool) (QueryLayerRoots, []int) {
 	indexByBatch := make([]int, len(roots))
 	for i := range indexByBatch {
 		indexByBatch[i] = -1
@@ -1727,8 +1753,11 @@ func inputOpeningRoots(layout layout, orders [][]int, roots []field.Octuplet) (Q
 	inputRoots := make(QueryLayerRoots, 0)
 	for levelIdx := range layout {
 		for _, batchIdx := range orders[levelIdx] {
+			if indexByBatch[batchIdx] >= 0 {
+				continue
+			}
 			root := roots[batchIdx]
-			if idx, ok := indexByRoot[root]; ok {
+			if idx, ok := indexByRoot[root]; ok && dedup {
 				indexByBatch[batchIdx] = idx
 				continue
 			}

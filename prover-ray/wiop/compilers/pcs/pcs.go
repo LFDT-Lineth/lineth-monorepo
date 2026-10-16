@@ -176,6 +176,20 @@ type compiled struct {
 	colShifts map[wiop.ObjectID][]int
 	// elisionDisabled forces every manifest to all-Present.
 	elisionDisabled bool
+	// rootDedupDisabled gives every batch its own FRI input tree (see
+	// [fri.PCS.DisableRootDedup]).
+	rootDedupDisabled bool
+}
+
+// newPCS returns a fresh [fri.PCS] configured with this compilation's
+// options. Prover and verifier both build their PCS through it, so they agree
+// on the opening-proof shape.
+func (c *compiled) newPCS() *fri.PCS {
+	pcs := newStaticPCS()
+	if c.rootDedupDisabled {
+		pcs.DisableRootDedup()
+	}
+	return pcs
 }
 
 // BatchRef identifies one FRI batch: an interactive round, or the precomputed
@@ -192,6 +206,12 @@ type CompileOptions struct {
 	// not depend on the option; only the committed rows do. Useful to measure
 	// the effect of elision or to isolate a regression.
 	DisableColumnElision bool
+	// DisableRootDedup gives every committed batch its own FRI input tree,
+	// even when two batches have the same Merkle root (see
+	// [fri.PCS.DisableRootDedup]). The opening proof's shape then depends on
+	// the batch layout alone, which the gnark verifier requires. Costs one
+	// extra cap and one extra opening per query for each collision.
+	DisableRootDedup bool
 }
 
 // Compile wires the polynomial-commitment scheme onto sys. It must run last, after
@@ -212,6 +232,7 @@ func Compile(sys *wiop.System, opts ...CompileOptions) {
 	}
 	if len(opts) > 0 {
 		c.elisionDisabled = opts[0].DisableColumnElision
+		c.rootDedupDisabled = opts[0].DisableRootDedup
 	}
 
 	// Commit the static precomputed round once, if it owns columns. A throwaway
@@ -340,7 +361,7 @@ func (c *compiled) open(rt *wiop.Runtime) fri.OpeningProof {
 		panic(fmt.Errorf("pcs: open: %w", err))
 	}
 
-	pcs := newStaticPCS()
+	pcs := c.newPCS()
 	states := c.collectCommittedStates(rt, batches)
 	for i := range states {
 		if err := pcs.AddOpening(*states[i], evalPoint, batchShifts[i], batchClaims[i]); err != nil {
@@ -389,7 +410,7 @@ func (c *compiled) verify(rt *wiop.Runtime, proof fri.OpeningProof) error {
 		return err
 	}
 
-	pcs := newStaticPCS()
+	pcs := c.newPCS()
 
 	fs := rt.GetFS()
 

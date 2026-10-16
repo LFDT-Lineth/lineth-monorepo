@@ -67,7 +67,7 @@ func newPCSOnlySystem() (*wiop.System, *wiop.Column, *wiop.LagrangeEval) {
 	zeta := r1.NewCoinField(sys.Context.Childf("zeta"))
 	le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{col.View()}, zeta)
 	r1.RegisterAction(&selfAssignLagrange{le: le})
-	pcs.Compile(sys, pcs.CompileOptions{DisableColumnElision: true})
+	pcs.Compile(sys, pcs.CompileOptions{DisableColumnElision: true, DisableRootDedup: true})
 	return sys, col, le
 }
 
@@ -150,7 +150,7 @@ func TestVerifierCircuit_Vanishing(t *testing.T) {
 		}
 		t.Run(sc.Name, func(t *testing.T) {
 			global.Compile(sc.Sys)
-			pcs.Compile(sc.Sys, pcs.CompileOptions{DisableColumnElision: true})
+			pcs.Compile(sc.Sys, pcs.CompileOptions{DisableColumnElision: true, DisableRootDedup: true})
 			proof, pub := sc.Sys.Prove(sc.AssignHonest)
 			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
 
@@ -158,7 +158,7 @@ func TestVerifierCircuit_Vanishing(t *testing.T) {
 			// native verifier rejects; the circuit must reject it too.
 			invalid := build()
 			global.Compile(invalid.Sys)
-			pcs.Compile(invalid.Sys, pcs.CompileOptions{DisableColumnElision: true})
+			pcs.Compile(invalid.Sys, pcs.CompileOptions{DisableColumnElision: true, DisableRootDedup: true})
 			badProof, badPub := invalid.Sys.Prove(invalid.AssignInvalid)
 			require.Error(t, invalid.Sys.Verify(badProof, badPub), "invalid witness must fail natively")
 
@@ -182,7 +182,7 @@ func TestVerifierCircuit_Vanishing_TamperedProof(t *testing.T) {
 		}
 		t.Run(sc.Name, func(t *testing.T) {
 			global.Compile(sc.Sys)
-			pcs.Compile(sc.Sys, pcs.CompileOptions{DisableColumnElision: true})
+			pcs.Compile(sc.Sys, pcs.CompileOptions{DisableColumnElision: true, DisableRootDedup: true})
 			proof, pub := sc.Sys.Prove(sc.AssignHonest)
 			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
 
