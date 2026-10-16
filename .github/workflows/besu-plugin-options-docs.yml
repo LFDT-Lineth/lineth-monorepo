@@ -20,6 +20,7 @@ on:
       - "settings.gradle"
       - "linea-besu/plugins/besu-plugin-options-docgen/**"
       - "linea-besu/plugins/linea-sequencer/**"
+      - "linea-besu/plugins/sequencer-interfaces/**"
       - "scripts/besu-plugin-options/**"
       - "tracer/arithmetization/**"
   push:
@@ -36,6 +37,7 @@ on:
       - "settings.gradle"
       - "linea-besu/plugins/besu-plugin-options-docgen/**"
       - "linea-besu/plugins/linea-sequencer/**"
+      - "linea-besu/plugins/sequencer-interfaces/**"
       - "scripts/besu-plugin-options/**"
       - "tracer/arithmetization/**"
   workflow_dispatch:

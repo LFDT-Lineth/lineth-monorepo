@@ -46,7 +46,6 @@ linea-besu/plugins/
 │   ├── acceptance-tests/     Acceptance tests (Web3j, REST-assured, Wiremock)
 │   ├── docs/                 Plugin documentation
 │   └── README.md
-├── finalized-tag-updater/    Finalized tag management
 └── state-recovery/           State recovery
     ├── appcore/              Application core
     ├── besu-plugin/          Besu plugin integration
@@ -65,7 +64,6 @@ linea-besu/plugins/
 
 - Plugin changes affect the Besu node runtime — test with acceptance tests before merging
 - License compliance: all dependencies must match `gradle/allowed-licenses.json`
-- Sequencer plugin has its own release workflow (`.github/workflows/linea-sequencer-plugin-release.yml`)
 
 ## Agent Rules (Overrides)
 

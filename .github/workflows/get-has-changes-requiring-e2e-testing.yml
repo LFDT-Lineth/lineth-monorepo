@@ -45,6 +45,7 @@ jobs:
               - 'e2e/src/**'
               - 'e2e/package.json'
               - 'linea-besu/plugins/linea-sequencer/**'
+              - 'linea-besu/plugins/sequencer-interfaces/**'
               - 'tracer/**'
               - 'tracer-constraints/**'
               - 'ts-libs/**/src/**'

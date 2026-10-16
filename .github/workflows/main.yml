@@ -206,6 +206,7 @@ jobs:
               - '.github/workflows/run-smc-tests.yml'
             linea-sequencer-plugin:
               - 'linea-besu/plugins/linea-sequencer/**'
+              - 'linea-besu/plugins/sequencer-interfaces/**'
               - '.github/workflows/linea-sequencer-plugin-testing.yml'
               - 'buildSrc/**'
               - 'gradle/**'

@@ -1,3 +1,8 @@
+## [2.3.2-rc1] - 2026-10-16
+
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Update linea-besu AGENTS.md
 ## [2.3.1] - 2026-10-09
 
 ### 🐛 Bug Fixes
