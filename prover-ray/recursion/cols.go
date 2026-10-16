@@ -184,3 +184,10 @@ func prod(exprs ...wiop.Expression) wiop.Expression {
 	}
 	return res
 }
+
+func (c *cols) setE6(prefix string, row int, x field.Ext) {
+	cell := E6Cell(x)
+	for i := range KindE6 {
+		c.setElem(laneName(prefix, i), row, cell[i])
+	}
+}
