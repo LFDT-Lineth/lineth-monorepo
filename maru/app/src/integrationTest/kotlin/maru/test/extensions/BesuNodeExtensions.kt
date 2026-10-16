@@ -22,12 +22,7 @@ fun BesuNode.latestBlock(includeTransactions: Boolean = false): EthBlock.Block {
   var block: EthBlock.Block? = null
   while (retries > 0 && block == null) {
     try {
-      block = this
-        .nodeRequests()
-        .eth()
-        .ethGetBlockByNumber(DefaultBlockParameter.valueOf("latest"), includeTransactions)
-        .send()
-        .block
+      block = this.getBlockByTag("latest", includeTransactions)
     } catch (e: Exception) {
       // ignore and retry
     }
@@ -47,3 +42,25 @@ fun BesuNode.latestBlockNumber(): ULong =
     .send()
     .blockNumber
     .toULong()
+
+fun BesuNode.getBlockByTag(
+  blockTag: String,
+  includeTransactions: Boolean = false,
+): EthBlock.Block =
+  this
+    .nodeRequests()
+    .eth()
+    .ethGetBlockByNumber(DefaultBlockParameter.valueOf(blockTag), includeTransactions)
+    .send()
+    .block
+
+fun BesuNode.getBlockByNumber(
+  blockNumber: ULong,
+  includeTransactions: Boolean = false,
+): EthBlock.Block =
+  this
+    .nodeRequests()
+    .eth()
+    .ethGetBlockByNumber(DefaultBlockParameter.valueOf(blockNumber.toBigInteger()), includeTransactions)
+    .send()
+    .block

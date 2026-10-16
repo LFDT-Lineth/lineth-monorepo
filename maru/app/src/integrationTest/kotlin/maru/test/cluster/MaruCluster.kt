@@ -196,6 +196,12 @@ class MaruCluster(
   @Synchronized
   fun besuNode(label: String): BesuNode = (node(label).elNode as BesuElNode).besu
 
+  @Synchronized
+  fun besuNode(role: NodeRole): BesuNode = (nodes(role).first().elNode as BesuElNode).besu
+
+  @Synchronized
+  fun nodesWithBesuEl(): List<ClusterNode> = this.nodes.filter { it.elNode is BesuElNode }
+
   private fun startBesuNodes(nodesConfig: List<NodeBuilder.NodeBuildingConfig>) {
     nodesConfig.forEach { nodeStartConfig ->
       (listOf<ElNode?>(nodeStartConfig.elNode) + nodeStartConfig.elFollowers)

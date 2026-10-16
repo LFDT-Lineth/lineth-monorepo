@@ -11,101 +11,68 @@ package maru.app
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import linea.testing.besu.BesuTransactionsHelper
+import maru.test.cluster.MaruCluster
+import maru.test.cluster.NodeRole
+import maru.test.cluster.configureLoggers
+import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.kotlin.await
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Amount
-import org.hyperledger.besu.tests.acceptance.dsl.condition.net.NetConditions
-import org.hyperledger.besu.tests.acceptance.dsl.node.ThreadBesuNodeRunner
-import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.Cluster
-import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.ClusterConfigurationBuilder
-import org.hyperledger.besu.tests.acceptance.dsl.transaction.net.NetTransactions
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.io.TempDir
-import testutils.SingleNodeNetworkStack
-import testutils.maru.MaruFactory
-import testutils.maru.awaitTillMaruHasPeers
-import java.io.File
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
 class MaruFollowerNoElTest {
-  private lateinit var cluster: Cluster
-  private lateinit var validatorStack: SingleNodeNetworkStack
-
-  @TempDir
-  private lateinit var maruFollowerDataDir: File
-  private lateinit var maruFollower: MaruApp
+  private lateinit var cluster: MaruCluster
   private lateinit var transactionsHelper: BesuTransactionsHelper
   private val log = LogManager.getLogger(this.javaClass)
-  private val maruFactory = MaruFactory()
 
   private var validatorApiPort: UInt = 0u
   private var followerApiPort: UInt = 0u
 
   @BeforeEach
   fun setUp() {
+    configureLoggers(
+      rootLevel = Level.WARN,
+      logLevels = listOf("maru" to Level.INFO),
+    )
     transactionsHelper = BesuTransactionsHelper()
-    cluster = Cluster(
-      ClusterConfigurationBuilder().build(),
-      NetConditions(NetTransactions()),
-      ThreadBesuNodeRunner(),
-    )
 
-    validatorStack = SingleNodeNetworkStack(
-      cluster = cluster,
-    ) { ethereumJsonRpcBaseUrl, engineRpcUrl, tmpDir ->
-      maruFactory.buildTestMaruValidatorWithP2pPeering(
-        ethereumJsonRpcUrl = ethereumJsonRpcBaseUrl,
-        engineApiRpc = engineRpcUrl,
-        dataDir = tmpDir,
-        apiPort = 0u,
-        startApiServer = true,
-      )
-    }
+    // The follower has no EL node attached
+    cluster = MaruCluster()
+      .addNode(NodeRole.Sequencer, withBesuEl = true) { nodeBuilder ->
+        nodeBuilder.maruConfig { it.copy(allowEmptyBlocks = false) }
+      }.addNode(NodeRole.Follower) { nodeBuilder ->
+        nodeBuilder
+          .staticPeers(listOf("sequencer"))
+      }.start()
 
-    // Start all Besu nodes together for proper peering
-    validatorStack.maruApp.start().get()
+    validatorApiPort = cluster.maruNode("sequencer").apiPort()
+    followerApiPort = cluster.maruNode("follower").apiPort()
 
-    // Discover actual validator API port
-    validatorApiPort = validatorStack.maruApp.apiPort()
-
-    // Get the validator's p2p port after it's started
-    val validatorP2pPort = validatorStack.p2pPort
-
-    maruFollower = maruFactory.buildTestMaruFollowerWithP2pPeering(
-      ethereumJsonRpcUrl = null,
-      engineApiRpc = null,
-      dataDir = maruFollowerDataDir.toPath(),
-      validatorPortForStaticPeering = validatorP2pPort,
-      syncingConfig = MaruFactory.defaultSyncingConfig,
-      enablePayloadValidation = false,
-      apiPort = 0u,
-      startApiServer = true,
-    )
-
-    maruFollower.start().get()
-
-    // Discover actual follower API port
-    followerApiPort = maruFollower.apiPort()
-
-    log.info("Nodes are peered")
-    maruFollower.awaitTillMaruHasPeers(1u)
-    validatorStack.maruApp.awaitTillMaruHasPeers(1u)
+    log.info("Waiting for nodes to peer")
+    await
+      .atMost(30.seconds.toJavaDuration())
+      .pollInterval(500.milliseconds.toJavaDuration())
+      .until {
+        cluster.maruNode("follower").peersConnected() >= 1u &&
+          cluster.maruNode("sequencer").peersConnected() >= 1u
+      }
   }
 
   @AfterEach
   fun tearDown() {
-    maruFollower.stop().get()
-    validatorStack.maruApp.stop().get()
-    validatorStack.maruApp.close()
-    cluster.close()
+    if (::cluster.isInitialized) {
+      cluster.stop()
+    }
   }
 
   // TODO: Replace with a proper Beacon REST API client
@@ -158,7 +125,7 @@ class MaruFollowerNoElTest {
 
     repeat(blocksToProduce) {
       transactionsHelper.run {
-        validatorStack.besuNode.sendTransactionAndAssertExecution(
+        cluster.besuNode("sequencer").sendTransactionAndAssertExecution(
           logger = log,
           recipient = createAccount("another account"),
           amount = Amount.ether(100),

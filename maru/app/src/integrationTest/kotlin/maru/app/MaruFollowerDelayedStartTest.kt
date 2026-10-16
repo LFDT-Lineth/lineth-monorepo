@@ -8,67 +8,50 @@
  */
 package maru.app
 
-import linea.testing.besu.BesuFactory
 import linea.testing.besu.BesuTransactionsHelper
+import maru.test.cluster.MaruCluster
+import maru.test.cluster.NodeRole
+import maru.test.cluster.configureLoggers
+import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Amount
-import org.hyperledger.besu.tests.acceptance.dsl.condition.net.NetConditions
-import org.hyperledger.besu.tests.acceptance.dsl.node.ThreadBesuNodeRunner
-import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.Cluster
-import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.ClusterConfigurationBuilder
-import org.hyperledger.besu.tests.acceptance.dsl.transaction.net.NetTransactions
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import testutils.Checks.assertMinedBlocks
-import testutils.PeeringNodeNetworkStack
-import testutils.maru.MaruFactory
 
 class MaruFollowerDelayedStartTest {
-  private lateinit var cluster: Cluster
+  private lateinit var cluster: MaruCluster
   private lateinit var transactionsHelper: BesuTransactionsHelper
-  private lateinit var validatorStack: PeeringNodeNetworkStack
-  private lateinit var followerStack: PeeringNodeNetworkStack
   private val log = LogManager.getLogger(this.javaClass)
-  private val maruFactory = MaruFactory()
 
   @BeforeEach
   fun setUp() {
-    transactionsHelper = BesuTransactionsHelper()
-    cluster = Cluster(
-      ClusterConfigurationBuilder().build(),
-      NetConditions(NetTransactions()),
-      ThreadBesuNodeRunner(),
+    configureLoggers(
+      rootLevel = Level.WARN,
+      logLevels = listOf("maru" to Level.INFO),
     )
+    transactionsHelper = BesuTransactionsHelper()
   }
 
   @AfterEach
   fun tearDown() {
-    followerStack.maruApp.stop().get()
-    followerStack.maruApp.close()
-    validatorStack.maruApp.stop().get()
-    validatorStack.maruApp.close()
-    cluster.close()
+    if (::cluster.isInitialized) {
+      cluster.stop()
+    }
   }
 
   @Test
   fun `follower can sync and accept transactions after delayed start`() {
-    validatorStack = PeeringNodeNetworkStack()
-    PeeringNodeNetworkStack.startBesuNodes(cluster, validatorStack)
-
-    val validatorMaruApp =
-      maruFactory.buildTestMaruValidatorWithP2pPeering(
-        ethereumJsonRpcUrl = validatorStack.besuNode.jsonRpcBaseUrl().get(),
-        engineApiRpc = validatorStack.besuNode.engineRpcUrl().get(),
-        dataDir = validatorStack.tmpDir,
-      )
-    validatorStack.setMaruApp(validatorMaruApp)
-    validatorStack.maruApp.start().get()
+    cluster = MaruCluster()
+      .addNode(NodeRole.Sequencer, withBesuEl = true)
+      .start()
+    val validatorBesuNode = cluster.besuNode("sequencer")
 
     val blocksToProduce = 10
     repeat(blocksToProduce) {
       transactionsHelper.run {
-        validatorStack.besuNode.sendTransactionAndAssertExecution(
+        validatorBesuNode.sendTransactionAndAssertExecution(
           logger = log,
           recipient = createAccount("another account"),
           amount = Amount.ether(100),
@@ -76,28 +59,19 @@ class MaruFollowerDelayedStartTest {
       }
     }
 
-    validatorStack.besuNode.assertMinedBlocks(blocksToProduce)
+    validatorBesuNode.assertMinedBlocks(blocksToProduce)
 
-    followerStack = PeeringNodeNetworkStack(
-      besuBuilder = { BesuFactory.buildTestBesu(validator = false) },
-    )
-    cluster.addNode(followerStack.besuNode)
+    // adding a node to a running cluster starts it immediately
+    cluster.addNode(NodeRole.Follower, withBesuEl = true) {
+      it.staticPeers(listOf("sequencer"))
+    }
+    val followerBesuNode = cluster.besuNode("follower")
 
-    val followerMaruApp =
-      maruFactory.buildTestMaruFollowerWithP2pPeering(
-        ethereumJsonRpcUrl = followerStack.besuNode.jsonRpcBaseUrl().get(),
-        engineApiRpc = followerStack.besuNode.engineRpcUrl().get(),
-        dataDir = followerStack.tmpDir,
-        validatorPortForStaticPeering = validatorStack.p2pPort,
-      )
-    followerStack.setMaruApp(followerMaruApp)
-    followerStack.maruApp.start().get()
-
-    followerStack.besuNode.assertMinedBlocks(blocksToProduce)
+    followerBesuNode.assertMinedBlocks(blocksToProduce)
 
     repeat(blocksToProduce) {
       transactionsHelper.run {
-        followerStack.besuNode.sendTransactionAndAssertExecution(
+        followerBesuNode.sendTransactionAndAssertExecution(
           logger = log,
           recipient = createAccount("another account"),
           amount = Amount.ether(100),
@@ -105,7 +79,7 @@ class MaruFollowerDelayedStartTest {
       }
     }
 
-    validatorStack.besuNode.assertMinedBlocks(2 * blocksToProduce)
-    followerStack.besuNode.assertMinedBlocks(2 * blocksToProduce)
+    validatorBesuNode.assertMinedBlocks(2 * blocksToProduce)
+    followerBesuNode.assertMinedBlocks(2 * blocksToProduce)
   }
 }

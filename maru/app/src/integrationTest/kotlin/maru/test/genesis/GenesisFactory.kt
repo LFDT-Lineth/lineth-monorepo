@@ -20,7 +20,7 @@ class GenesisFactory(
   private val log: Logger = LogManager.getLogger(GenesisFactory::class.java),
 ) {
   private val beaconGenesisFactory: MaruGenesisFactory = MaruGenesisFactory()
-  private val besuGenesisFactory: BesuGenesisFactory = BesuGenesisFactory()
+  private val besuGenesisFactory: BesuGenesisFactory = BesuGenesisFactory(blockPeriodSeconds = blockTimeSeconds)
   private lateinit var forkSchedule: ForksSchedule
 
   fun initForkSchedule(

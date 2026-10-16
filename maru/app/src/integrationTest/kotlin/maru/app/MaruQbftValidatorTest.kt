@@ -6,6 +6,8 @@
  *
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
+@file:Suppress("DEPRECATION") // TODO: migrate to maru.test.cluster.MaruCluster
+
 package maru.app
 
 import com.github.michaelbull.result.Ok

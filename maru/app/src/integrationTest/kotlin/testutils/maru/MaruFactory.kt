@@ -65,6 +65,7 @@ import org.hyperledger.besu.plugin.services.MetricsSystem as BesuMetricsSystem
 /**
  * The same MaruFactory should be used per network. Otherwise, validators won't match between Maru instances
  */
+@Deprecated("Please use maru.test.cluster.MaruCluster")
 class MaruFactory(
   validatorPrivateKey: ByteArray = generatePrivateKey(),
   private val shanghaiTimestamp: ULong? = null,
