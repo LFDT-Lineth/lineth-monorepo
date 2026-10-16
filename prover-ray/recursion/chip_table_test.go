@@ -54,7 +54,7 @@ func tableProgram(check bool) tableProg {
 		out := m.Lookup(t, idx)
 		tp.lookups = append(tp.lookups, out)
 		if check {
-			m.AssertEq(out, m.Const(E6Cell(want)))
+			m.AssertEqE6(out, m.Const(E6Cell(want)))
 		} else {
 			cp.Copy(out)
 		}
