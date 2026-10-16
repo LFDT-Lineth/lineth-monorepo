@@ -217,3 +217,79 @@ func TestScalarLanesBound(t *testing.T) {
 	require.NoError(t, p.trace(r))
 	require.Error(t, proveAndVerify(p, r), "v·e = w accepted, with s' = (v, t1..t5)")
 }
+
+// chainProgram computes the partial sums of init + Σ as[i]·bs[i] (k = 5
+// steps, E6 factors, one scalar) with MulAddChain, between two other E6
+// operations, and asserts the last sum equals Go's. It returns the program,
+// its inputs and the partial sums' cells.
+func chainProgram() (*Machine, []Cell, []int) {
+	r := rand.New(rand.NewPCG(5, 6))
+	const k = 5
+	m := &Machine{}
+	vals := make([]field.Ext, 1+2*k)
+	in := make([]Cell, len(vals))
+	cells := make([]int, len(vals))
+	for i := range vals {
+		if i == k { // as[k−1]: a scalar
+			vals[i].B0.A0.SetUint64(7)
+			cells[i] = m.InputScalar()
+		} else {
+			vals[i] = randE6(r)
+			cells[i] = m.InputE6()
+		}
+		in[i] = E6Cell(vals[i])
+	}
+	m.Mul(cells[0], cells[1]) // a row before the chain
+	sums := m.MulAddChain(cells[0], cells[1:1+k], cells[1+k:])
+	m.Mul(sums[2], cells[2]) // and one after, reading a partial sum
+	want := vals[0]
+	for i := range k {
+		var t field.Ext
+		t.Mul(&vals[1+i], &vals[1+k+i])
+		want.Add(&want, &t)
+	}
+	m.AssertEq(sums[k-1], m.Const(E6Cell(want)))
+	return m, in, sums
+}
+
+// TestMulAddChain: the partial sums agree with Go and prove, in k + 1 rows.
+func TestMulAddChain(t *testing.T) {
+	m, in, sums := chainProgram()
+	require.Len(t, m.e6Rows(), 1+(len(sums)+1)+1+1, "Mul, the chain (k + 1 rows), Mul, AssertEq")
+	p, err := m.Compile()
+	require.NoError(t, err)
+	r, err := p.Execute(in)
+	require.NoError(t, err)
+	s := CellE6(in[0])
+	for i := range sums {
+		x, y := CellE6(in[1+i]), CellE6(in[1+len(sums)+i])
+		x.Mul(&x, &y)
+		s.Add(&s, &x)
+		require.Equal(t, E6Cell(s), r.Value(sums[i]), "s_%d", i+1)
+	}
+	require.NoError(t, proveAndVerify(p, r))
+}
+
+// TestMulAddChainRejects: a wrong partial sum, claimed consistently on the
+// bus, or a wrong copy of init (which no cell holds), is rejected.
+func TestMulAddChainRejects(t *testing.T) {
+	for name, tamper := range map[string]func(p *Program, r *Run, sums []int) error{
+		"partial sum": func(p *Program, r *Run, sums []int) error { return cheatE6(p, r, sums[1]) },
+		"last sum":    func(p *Program, r *Run, sums []int) error { return cheatE6(p, r, sums[len(sums)-1]) },
+		// the chain's first row (the row after the first Mul), its copy of init
+		"copy of init": func(p *Program, r *Run, _ []int) error {
+			r.Witness(p, e6Mod, laneName(e6O, 4))[1].SetUint64(5)
+			return nil
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			m, in, sums := chainProgram()
+			p, err := m.Compile()
+			require.NoError(t, err)
+			r, err := p.Execute(in)
+			require.NoError(t, err)
+			require.NoError(t, tamper(p, r, sums))
+			require.Error(t, proveAndVerify(p, r), "tampered chain accepted")
+		})
+	}
+}

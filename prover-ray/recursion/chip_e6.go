@@ -13,6 +13,7 @@ const (
 	e6Add = "add"
 	e6Bs  = "bs"
 	e6Hor = "hor"
+	e6Acc = "acc"
 	// Per operand x ∈ {a, b, o}: addr_x and m_x (e6Addr, e6Mult).
 	e6AddrPrefix = "addr_"
 	e6MultPrefix = "m_"
@@ -34,17 +35,20 @@ const (
 
 // e6Row is one row of the E6 chip:
 //
-//	o = mul·(a·b) + add·a + bs·b + hor·(o[−1]·a)
+//	o = mul·(a·b) + add·a + bs·b + hor·(o[−1]·a) + acc·o[−1]
 //
 // Unused operands are zero; o is computed by the formula, so on a row whose o
-// is read the chip checks the read value.
+// is read the chip checks the read value. The rows using o[−1] (hor, acc)
+// follow the row of their previous value: an instruction's rows are
+// contiguous.
 type e6Row struct {
-	mul, add, bs, hor int64
-	a, b, o           slot
+	mul, add, bs, hor, acc int64
+	a, b, o                slot
 }
 
 // e6Inst is one E6 instruction: its kind, operands, written cell and rows
-// (one, or one per coefficient for Horner).
+// (one, or one per coefficient for Horner, or one per step plus one for
+// MulAddChain, whose rows write their own cells).
 type e6Inst struct {
 	kind int
 	args []int // operand addresses
@@ -58,7 +62,8 @@ const (
 	opSub
 	opDiv
 	opEq
-	opHorner // args = y, coeffs...
+	opHorner      // args = y, coeffs...
+	opMulAddChain // args = init, as..., bs...
 )
 
 func (m *Machine) addE6(kind int, args []int, out int, rows ...e6Row) int {
@@ -113,6 +118,26 @@ func (m *Machine) Horner(y int, coeffs []int) int {
 	return m.addE6(opHorner, append([]int{y}, coeffs...), rows[len(rows)-1].o.addr, rows...)
 }
 
+// MulAddChain returns the partial sums s_1..s_k of s_0 = init,
+// s_(i+1) = s_i + as[i]·bs[i]: a γ-batching, a weighted sum, or a random
+// linear combination. It takes k + 1 rows (a copy of init, then one row per
+// step, o = o[−1] + a·b), where Add(acc, Mul(γ, x)) takes 2 per step.
+func (m *Machine) MulAddChain(init int, as, bs []int) []int {
+	if len(as) != len(bs) || len(as) == 0 {
+		panic(fmt.Sprintf("MulAddChain: %d and %d factors", len(as), len(bs)))
+	}
+	rows := make([]e6Row, 1+len(as))
+	rows[0] = e6Row{add: 1, a: m.rd(init)}
+	outs := make([]int, len(as))
+	for i := range as {
+		rows[1+i] = e6Row{mul: 1, acc: 1, a: m.rd(as[i]), b: m.rd(bs[i]), o: m.wr()}
+		outs[i] = rows[1+i].o.addr
+	}
+	args := append(append([]int{init}, as...), bs...)
+	m.addE6(opMulAddChain, args, -1, rows...)
+	return outs
+}
+
 // PowBits returns Π_i (bits[i] ? gs[i] : 1), for scalar bit cells and
 // constants gs: an exponentiation by bits, such as g^bitrev(index).
 func (m *Machine) PowBits(bits []int, gs []field.Element) int {
@@ -152,6 +177,16 @@ func (m *Machine) execE6(op e6Inst, r *Run) error {
 		z.Mul(&z, &n)
 	case opEq:
 		return nil
+	case opMulAddChain:
+		k := (len(op.args) - 1) / 2
+		z = v(0)
+		for i := range k {
+			x, y := v(1+i), v(1+k+i)
+			x.Mul(&x, &y)
+			z.Add(&z, &x)
+			r.values[op.rows[1+i].o.addr] = E6Cell(z)
+		}
+		return nil
 	case opHorner:
 		y := v(0)
 		for i := 1; i < len(op.args); i++ {
@@ -166,10 +201,10 @@ func (m *Machine) execE6(op e6Inst, r *Run) error {
 
 // e6Chip: one E6 operation per row,
 //
-//	o = mul·(a·b) + add·a + bs·b + hor·(o[−1]·a),
+//	o = mul·(a·b) + add·a + bs·b + hor·(o[−1]·a) + acc·o[−1],
 //
 // over the columns a0..5, b0..5, o0..5. Setup: mul, add, bs (−1, 0 or 1), hor,
-// and per operand x ∈ {a, b, o} addr_x and the signed multiplicity m_x (−1
+// acc (accumulate: o[−1] + a·b, a chain step), and per operand x ∈ {a, b, o} addr_x and the signed multiplicity m_x (−1
 // read, the read count for a write, 0 unused). Bus: one access per operand,
 // with lanes 6 and 7 zero.
 type e6Chip struct{ m *Machine }
@@ -185,7 +220,7 @@ func (c e6Chip) rows() int {
 }
 
 func (c e6Chip) setup(cs *cols) {
-	cs.declare(e6Mul, e6Add, e6Bs, e6Hor)
+	cs.declare(e6Mul, e6Add, e6Bs, e6Hor, e6Acc)
 	for _, x := range e6Operands {
 		cs.declare(e6Addr(x), e6Mult(x))
 	}
@@ -203,6 +238,7 @@ func (c e6Chip) setupRow(cs *cols, row int, r e6Row) {
 	cs.setInt(e6Add, row, r.add)
 	cs.setInt(e6Bs, row, r.bs)
 	cs.setInt(e6Hor, row, r.hor)
+	cs.setInt(e6Acc, row, r.acc)
 	for _, op := range []struct {
 		name string
 		s    slot
@@ -221,9 +257,10 @@ func (c e6Chip) define(m *module, bus *Bus) error {
 		prevO[i] = m.wShift(laneName(e6O, i), -1)
 	}
 	ab, prevA := e6MulExprs(a, b), e6MulExprs(prevO, a)
-	mul, add, bs, hor := m.s(e6Mul), m.s(e6Add), m.s(e6Bs), m.s(e6Hor)
+	mul, add, bs, hor, acc := m.s(e6Mul), m.s(e6Add), m.s(e6Bs), m.s(e6Hor), m.s(e6Acc)
 	for i := range KindE6 {
-		rhs := sum(wiop.Mul(mul, ab[i]), wiop.Mul(add, a[i]), wiop.Mul(bs, b[i]), wiop.Mul(hor, prevA[i]))
+		rhs := sum(wiop.Mul(mul, ab[i]), wiop.Mul(add, a[i]), wiop.Mul(bs, b[i]),
+			wiop.Mul(hor, prevA[i]), wiop.Mul(acc, prevO[i]))
 		m.assertZero(wiop.Sub(o[i], rhs))
 	}
 	for _, x := range e6Operands {
@@ -275,6 +312,9 @@ func traceE6Row(cs *cols, row int, er e6Row, prev field.Ext, r *Run) field.Ext {
 	if er.hor != 0 {
 		t.Mul(&prev, &a)
 		o.Add(&o, &t)
+	}
+	if er.acc != 0 {
+		o.Add(&o, &prev)
 	}
 	cs.setE6(e6A, row, a)
 	cs.setE6(e6B, row, b)
