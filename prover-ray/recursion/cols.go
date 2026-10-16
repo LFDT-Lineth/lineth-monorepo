@@ -143,10 +143,44 @@ func constant(v int64) wiop.Expression {
 	return wiop.NewConstantField(x)
 }
 
+// cellOf pads lanes to a cell tuple with zero lanes.
+func cellOf(lanes ...wiop.Expression) [CellWidth]wiop.Expression {
+	var res [CellWidth]wiop.Expression
+	for i := range res {
+		if i < len(lanes) {
+			res[i] = lanes[i]
+		} else {
+			res[i] = constant(0)
+		}
+	}
+	return res
+}
+
 // cellLanes returns a cell tuple of the 8 given lanes.
 func cellLanes(lanes []wiop.Expression) [CellWidth]wiop.Expression {
 	if len(lanes) != CellWidth {
 		panic(fmt.Sprintf("cellLanes: %d lanes", len(lanes)))
 	}
 	return [CellWidth]wiop.Expression(lanes)
+}
+
+// elemConst returns the constant v, as a scalar expression.
+func elemConst(v field.Element) wiop.Expression { return wiop.NewConstantField(v) }
+
+// sum returns the sum of exprs (at least one).
+func sum(exprs ...wiop.Expression) wiop.Expression {
+	res := exprs[0]
+	for _, e := range exprs[1:] {
+		res = wiop.Add(res, e)
+	}
+	return res
+}
+
+// prod returns the product of exprs (at least one).
+func prod(exprs ...wiop.Expression) wiop.Expression {
+	res := exprs[0]
+	for _, e := range exprs[1:] {
+		res = wiop.Mul(res, e)
+	}
+	return res
 }

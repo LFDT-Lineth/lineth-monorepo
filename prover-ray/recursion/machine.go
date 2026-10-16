@@ -16,6 +16,8 @@ import (
 const (
 	witnessMod = "witness"
 	constMod   = "const"
+	windowMod  = "window"
+	bitsMod    = "bits"
 )
 
 // Machine builds a program for the chips: it allocates addresses, counts the
@@ -34,6 +36,11 @@ type Machine struct {
 	constList []int        // addresses written by the const chip
 	constVal  map[int]Cell // value of every constant
 
+	packs   []packInst
+	lanes   []lanesInst
+	windows []windowInst // the window chip's rows
+	bits    []bitsInst
+
 	instrs []instr // every instruction, in execution order
 
 	// extra are chips added by tests (a chip of their own, with its
@@ -49,7 +56,10 @@ type instr struct {
 }
 
 const (
-	instrFunc = iota // a function of the run (tests' chips)
+	instrFunc  = iota // a function of the run (tests' chips)
+	instrPack         // Pack: the stream cells
+	instrLanes        // Lanes: the output cell
+	instrBits         // Bits: the shifted values and the bits
 )
 
 func (m *Machine) alloc() int {
@@ -109,7 +119,7 @@ type chip interface {
 }
 
 func (m *Machine) chips() []chip {
-	return append([]chip{witnessChip{m}, constChip{m}}, m.extra...)
+	return append([]chip{witnessChip{m}, constChip{m}, windowChip{m}, bitsChip{m}}, m.extra...)
 }
 
 // height returns the number of rows of a chip's module: a power of two, at
@@ -239,6 +249,15 @@ func (m *Machine) exec(in instr, r *Run) error {
 	switch in.kind {
 	case instrFunc:
 		return m.funcs[in.idx](r)
+	case instrPack:
+		m.execPack(m.packs[in.idx], r)
+		return nil
+	case instrLanes:
+		m.execLanes(m.lanes[in.idx], r)
+		return nil
+	case instrBits:
+		m.execBits(m.bits[in.idx], r)
+		return nil
 	}
 	return fmt.Errorf("unknown instruction kind %d", in.kind)
 }
