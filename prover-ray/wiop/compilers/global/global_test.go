@@ -158,3 +158,27 @@ func TestCompile_CompletenessWithStalePools(t *testing.T) {
 		})
 	}
 }
+
+// TestCompile_AllVanishingsReduced checks that a module whose vanishings were
+// all reduced by an earlier pass compiles and proves as a no-op instead of
+// building zero-ratio coset domains. Both a static and a dynamic module are
+// covered, the dynamic one exercising the runtime path.
+func TestCompile_AllVanishingsReduced(t *testing.T) {
+	for _, dynamic := range []bool{false, true} {
+		sys := wiop.NewSystemf("gl-all-reduced")
+		r0 := sys.NewRound()
+		var mod *wiop.Module
+		if dynamic {
+			mod = sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
+		} else {
+			mod = sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
+		}
+		col := mod.NewColumn(sys.Context.Childf("col"), r0)
+		v := mod.NewVanishing(sys.Context.Childf("v"), col.View())
+		v.MarkAsReduced()
+
+		require.NotPanics(t, func() { global.Compile(sys) })
+		proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, colVec(8, 3, 5)) })
+		require.NoError(t, sys.Verify(proof, pub), "dynamic=%v", dynamic)
+	}
+}

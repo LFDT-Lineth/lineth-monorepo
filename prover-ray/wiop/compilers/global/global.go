@@ -60,7 +60,11 @@ func Compile(sys *wiop.System) {
 		}
 		mCtx := compCtx.Childf("m%d", i)
 		mq, les := compileModule(sys, m, mCtx, quotientRound, evalRound, evalCoin)
-		quotient.modules = append(quotient.modules, mq)
+		// A module whose vanishings were all reduced by an earlier pass has no
+		// bucket, hence no quotient to compute.
+		if len(mq.buckets) > 0 {
+			quotient.modules = append(quotient.modules, mq)
+		}
 		eval.lagrangeEvals = append(eval.lagrangeEvals, les...)
 	}
 	quotientRound.RegisterAction(quotient)
@@ -308,7 +312,7 @@ func buildModuleQuotient(rawBuckets []rawBucket, m *wiop.Module, mergeCoin *wiop
 		n       int
 		cancels *cancellationCosets
 	)
-	if !m.IsDynamic() {
+	if !m.IsDynamic() && len(rawBuckets) > 0 {
 		n = m.Size()
 		q.smallDomain = fft.NewDomain(uint64(n))
 		q.cosetDomains = newCosetDomains(n, q.maxRatio)
