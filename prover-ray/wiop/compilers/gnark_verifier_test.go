@@ -187,3 +187,54 @@ func TestGnarkVerifier_LookupScenarios(t *testing.T) {
 		})
 	}
 }
+
+// newMessageBusSystem declares one handle with a send on module A and a
+// receive on module B. The bus balances exactly when B is a reordering of A.
+func newMessageBusSystem() (*wiop.System, *wiop.Column, *wiop.Column) {
+	sys := wiop.NewSystemf("gnark-mb")
+	r0 := sys.NewRound()
+	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
+	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+	sys.NewMessageBusSend(sys.Context.Childf("send-A"), "shard", "ping", wiop.NewTable(colA.View()))
+	sys.NewMessageBusReceive(sys.Context.Childf("recv-B"), "shard", "ping", wiop.NewTable(colB.View()))
+	return sys, colA, colB
+}
+
+// TestGnarkVerifier_MessageBus checks the in-circuit in-shard product check.
+// In the invalid proof the receive side holds a value that was never sent:
+// the prover derives the handle's product honestly from that witness, so the
+// proof is internally consistent and only the product-equals-one check can
+// reject it.
+func TestGnarkVerifier_MessageBus(t *testing.T) {
+	sys, colA, colB := newMessageBusSystem()
+	compileGnarkPipeline(sys)
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+		rt.AssignColumn(colA, vecOf(10, 20, 30, 40))
+		rt.AssignColumn(colB, vecOf(40, 10, 30, 20))
+	})
+	require.NoError(t, sys.Verify(proof, pub), "honest proof must verify natively")
+
+	gv := compileGnarkVerifier(t, sys, proof, pub)
+	require.NoError(t, gv.solve(t, proof, pub), "honest proof must satisfy the circuit")
+	t.Logf("constraints: %d", gv.ccs.GetNbConstraints())
+
+	invalid, badA, badB := newMessageBusSystem()
+	compileGnarkPipeline(invalid)
+	badProof, badPub := invalid.Prove(func(rt *wiop.Runtime) {
+		rt.AssignColumn(badA, vecOf(10, 20, 30, 40))
+		rt.AssignColumn(badB, vecOf(40, 10, 30, 21)) // 21 was never sent
+	})
+	require.Error(t, invalid.Verify(badProof, badPub), "unbalanced bus must fail natively")
+	require.Error(t, gv.solve(t, badProof, badPub), "unbalanced bus must not satisfy the circuit")
+}
+
+// vecOf returns a base-field column assignment holding vals.
+func vecOf(vals ...uint64) *wiop.ConcreteVector {
+	elems := make([]field.Element, len(vals))
+	for i, v := range vals {
+		elems[i].SetUint64(v)
+	}
+	return &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
+}
