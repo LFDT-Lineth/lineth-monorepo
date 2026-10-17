@@ -117,7 +117,36 @@ func scenarios() []scenario {
 				return sys, honest, invalid
 			},
 		},
+		{
+			// One local constraint whose expression reuses a subtree by
+			// pointer: a·(a−1) + a·(a−1)·b, pinned at the first row. The lift
+			// must keep the subtree shared rather than rebuilding it per use.
+			name: "SharedSubexpression_FirstPosition",
+			build: func() (*wiop.System, func(*wiop.Runtime), func(*wiop.Runtime)) {
+				sys := wiop.NewSystemf("lv-dag")
+				r0 := sys.NewRound()
+				mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
+				a := mod.NewColumn(sys.Context.Childf("a"), r0)
+				b := mod.NewColumn(sys.Context.Childf("b"), r0)
+				bin := binarity(a.View())
+				mod.NewLocalConstraint(sys.Context.Childf("lc"), wiop.Add(bin, wiop.Mul(bin, b.View())), 0)
+				honest := func(rt *wiop.Runtime) {
+					rt.AssignColumn(a, makeVec(1, 9, 9, 9))
+					rt.AssignColumn(b, makeVec(5, 9, 9, 9))
+				}
+				invalid := func(rt *wiop.Runtime) {
+					rt.AssignColumn(a, makeVec(2, 9, 9, 9))
+					rt.AssignColumn(b, makeVec(5, 9, 9, 9))
+				}
+				return sys, honest, invalid
+			},
+		},
 	}
+}
+
+// binarity returns x·(x−1), the shape of a boolean constraint.
+func binarity(x wiop.Expression) wiop.Expression {
+	return wiop.Mul(x, wiop.Sub(x, wiop.NewConstantField(field.One())))
 }
 
 func TestCompile_Completeness(t *testing.T) {
@@ -562,4 +591,113 @@ func TestCompile_ExtensionCellAndCoin_RoundTrip(t *testing.T) {
 			rt.AssignCell(cell, extOf(7))
 		}))
 	})
+}
+
+// liftedOperand returns the shifted expression of a vanishing emitted by
+// Compile, i.e. the left operand of its shifted·L_anchor product.
+func liftedOperand(t *testing.T, v *wiop.Vanishing) wiop.Expression {
+	t.Helper()
+	prod, ok := v.Expression.(*wiop.ArithmeticOperation)
+	require.True(t, ok, "lifted vanishing must be a product")
+	require.Equal(t, wiop.ArithmeticOperatorMul, prod.Operator)
+	return prod.Operands[0]
+}
+
+// TestCompile_LiftPreservesSharing checks that the lift re-interns what it
+// rebuilds (issue #4035): structurally identical lifted nodes in one module
+// are one pointer — within a tree, across local constraints at the same
+// anchor or at different anchors, and against the module's global
+// constraints.
+func TestCompile_LiftPreservesSharing(t *testing.T) {
+	sys := wiop.NewSystemf("lv-intern")
+	r0 := sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
+	a := mod.NewColumn(sys.Context.Childf("a"), r0)
+	b := mod.NewColumn(sys.Context.Childf("b"), r0)
+	c := mod.NewColumn(sys.Context.Childf("c"), r0)
+
+	// A global constraint carrying b·(b−1).
+	global := mod.NewVanishing(sys.Context.Childf("g"), binarity(b.View()))
+
+	// Each local constraint gets its own, freshly allocated expression, so
+	// any sharing below comes from the lift rather than from the inputs.
+	sameTree := mod.NewLocalConstraint(sys.Context.Childf("lc-tree"),
+		wiop.Mul(a.View(), a.View()), 0)
+	anchor0 := mod.NewLocalConstraint(sys.Context.Childf("lc-0"),
+		wiop.Add(binarity(c.View()), a.View()), 0)
+	anchor0b := mod.NewLocalConstraint(sys.Context.Childf("lc-0b"),
+		wiop.Sub(binarity(c.View()), a.View()), 0)
+	anchorLast := mod.NewLocalConstraint(sys.Context.Childf("lc-3"),
+		wiop.Mul(binarity(c.View()), a.View()), -1)
+	withGlobal := mod.NewLocalConstraint(sys.Context.Childf("lc-g"),
+		wiop.Add(binarity(b.View()), c.View()), 1)
+
+	locals := []*wiop.Vanishing{sameTree, anchor0, anchor0b, anchorLast, withGlobal}
+	before := len(mod.Vanishings)
+	localvanishing.Compile(sys)
+	lifted := mod.Vanishings[before:]
+	require.Len(t, lifted, len(locals), "expected one lifted vanishing per local constraint")
+
+	// a[0]·a[0] lifts to a·a with both operands the same leaf.
+	sq := liftedOperand(t, lifted[0]).(*wiop.ArithmeticOperation)
+	assert.Same(t, sq.Operands[0], sq.Operands[1],
+		"a repeated leaf must stay one pointer after the lift")
+
+	// c·(c−1) is shared by the three constraints using it, whether they are
+	// pinned at the same anchor (0, 0) or at a different one (−1): the
+	// lifted trees are anchor-relative.
+	bin0 := liftedOperand(t, lifted[1]).(*wiop.ArithmeticOperation).Operands[0]
+	bin0b := liftedOperand(t, lifted[2]).(*wiop.ArithmeticOperation).Operands[0]
+	binLast := liftedOperand(t, lifted[3]).(*wiop.ArithmeticOperation).Operands[0]
+	assert.Same(t, bin0, bin0b, "same-anchor local constraints must share c·(c−1)")
+	assert.Same(t, bin0, binLast, "different-anchor local constraints must share c·(c−1)")
+
+	// b·(b−1) reuses the global constraint's node.
+	binG := liftedOperand(t, lifted[4]).(*wiop.ArithmeticOperation).Operands[0]
+	assert.Same(t, global.Expression, binG,
+		"a lifted subtree must reuse the matching node of a global constraint")
+
+	// Lifted constraints at one anchor share the selector node too.
+	assert.Same(t,
+		lifted[1].Expression.(*wiop.ArithmeticOperation).Operands[1],
+		lifted[2].Expression.(*wiop.ArithmeticOperation).Operands[1],
+		"same-anchor lifted constraints must share L_anchor")
+}
+
+// TestCompile_LiftIsLinearOnDAGs builds a local constraint whose tree size is
+// exponential in its depth but whose distinct node count is linear, and
+// checks that the lift keeps it linear. A tree-walking lift would not
+// terminate in reasonable time here.
+func TestCompile_LiftIsLinearOnDAGs(t *testing.T) {
+	sys := wiop.NewSystemf("lv-dag-depth")
+	r0 := sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
+	a := mod.NewColumn(sys.Context.Childf("a"), r0)
+
+	const depth = 64
+	var e wiop.Expression = a.View()
+	for range depth {
+		e = wiop.Add(e, e) // 2^depth leaves as a tree, depth+1 distinct nodes
+	}
+	mod.NewLocalConstraint(sys.Context.Childf("lc"), e, 0)
+
+	before := len(mod.Vanishings)
+	localvanishing.Compile(sys)
+	require.Len(t, mod.Vanishings, before+1)
+
+	distinct := map[wiop.Expression]struct{}{}
+	var walk func(e wiop.Expression)
+	walk = func(e wiop.Expression) {
+		if _, ok := distinct[e]; ok {
+			return
+		}
+		distinct[e] = struct{}{}
+		if op, ok := e.(*wiop.ArithmeticOperation); ok {
+			for _, operand := range op.Operands {
+				walk(operand)
+			}
+		}
+	}
+	walk(liftedOperand(t, mod.Vanishings[before]))
+	assert.Len(t, distinct, depth+1, "the lifted DAG must have one node per level")
 }
