@@ -33,38 +33,13 @@ func BatchInvertExt(a []Ext) []Ext {
 	return extensions.BatchInvertE6(a)
 }
 
-// BatchInvertExtInto computes the inverses of all elements in a and writes the result into res.
-// Use with caution; avoid copies and allocations in parallel contexts.
+// BatchInvertExtInto computes the inverses of all elements in a and writes
+// the result into res; zeroes map to zero. res may alias a.
 func BatchInvertExtInto(a, res []Ext) {
 	if len(a) != len(res) {
 		panic("input and output slices must have the same length")
 	}
-	if len(a) == 0 {
-		return
-	}
-
-	zeroes := make([]bool, len(a))
-	var accumulator Ext
-	accumulator.SetOne()
-
-	for i := 0; i < len(a); i++ {
-		if a[i].IsZero() {
-			zeroes[i] = true
-			continue
-		}
-		res[i].Set(&accumulator)
-		accumulator.Mul(&accumulator, &a[i])
-	}
-
-	accumulator.Inverse(&accumulator)
-
-	for i := len(a) - 1; i >= 0; i-- {
-		if zeroes[i] {
-			continue
-		}
-		res[i].Mul(&res[i], &accumulator)
-		accumulator.Mul(&accumulator, &a[i])
-	}
+	extensions.BatchInvertE6Into(res, a)
 }
 
 // NewExtFromString only sets the first coordinate of the field extension

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 )
 
@@ -170,10 +171,12 @@ func (st *ProverState) Open(openedPositions []int) Proof {
 		}
 	}
 
-	for k := range st.p.NumQueries {
-		s := openedPositions[k]
-		st.RunningQueries[k] = st.openRunningQueryExt(s, capDepths)
-	}
+	// Queries only read the committed layers, so they are opened concurrently.
+	parallel.Execute(int(st.p.NumQueries), func(start, end int) {
+		for k := start; k < end; k++ {
+			st.RunningQueries[k] = st.openRunningQueryExt(openedPositions[k], capDepths)
+		}
+	})
 
 	return st.Proof
 }

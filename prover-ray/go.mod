@@ -6,7 +6,7 @@ require (
 	github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20261008190112-dc78b74915f1
 	github.com/LFDT-Lineth/zkc v1.2.33
 	github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565
-	github.com/consensys/gnark-crypto v0.22.0
+	github.com/consensys/gnark-crypto v0.22.1-0.20261014224656-bf76cc82bdd1
 	github.com/ethereum/go-ethereum v1.17.0
 	github.com/go-playground/assert/v2 v2.2.0
 	github.com/holiman/uint256 v1.3.2
@@ -35,7 +35,6 @@ require (
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.21 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
-	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/ronanh/intcomp v1.1.1 // indirect
 	github.com/rs/zerolog v1.35.1 // indirect
 	github.com/sagikazarmark/locafero v0.11.0 // indirect
@@ -60,7 +59,6 @@ require (
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/term v0.46.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 tool github.com/LFDT-Lineth/zkc/cmd/zkc
