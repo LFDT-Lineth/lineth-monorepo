@@ -51,13 +51,20 @@ import (
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
 // packingArity is the maximum number of fractions packed into a single Z
-// column. The value matches the linea/logderivativesum compiler.
-const packingArity = 3
+// column, and maxPackedDegree the maximum degree factor of its recurrence
+// (packedDegree). With linear filters, numerators and denominators, 4
+// fractions give degree 5, which costs no more than 3 (degree 4): the
+// recurrence cancels no row, so the global compiler's quotient ratio is
+// NextPowerOfTwo(degree − 1) = 4 for both. Fractions of higher degree pack
+// fewer per column, so that the ratio stays 4.
+const (
+	packingArity    = 4
+	maxPackedDegree = 5
+)
 
 // Compile reduces every [wiop.LogDerivativeSum] query in sys to cyclic Z-column
 // recurrences and their average cells, and registers prover/verifier actions
@@ -119,15 +126,39 @@ func bucketByModule(fractions []wiop.Fraction) []fractionBucket {
 	return buckets
 }
 
-// packFractions splits a list of fractions into groups of at most packingArity.
-func packFractions(fractions []wiop.Fraction) [][]wiop.Fraction {
-	groups := make([][]wiop.Fraction, 0, utils.DivCeil(len(fractions), packingArity))
-	for k := 0; k < len(fractions); k += packingArity {
-		end := k + packingArity
-		if end > len(fractions) {
-			end = len(fractions)
+// packedDegree returns the degree factor of the recurrence of a Z column
+// packing fractions, zNum − (Z − Z<<−1 + C)·zDen (see buildZExpressions):
+//
+//	max(1 + Σ_k deg D_k,  max_j (deg F_j + deg N_j + Σ_(k≠j) deg D_k)).
+func packedDegree(fractions []wiop.Fraction) int {
+	sumDen := 0
+	for _, f := range fractions {
+		sumDen += f.Denominator.DegreeFactor()
+	}
+	deg := 1 + sumDen
+	for _, f := range fractions {
+		num := f.Numerator.DegreeFactor()
+		if f.Filter != nil {
+			num += f.Filter.DegreeFactor()
 		}
-		groups = append(groups, fractions[k:end])
+		deg = max(deg, num+sumDen-f.Denominator.DegreeFactor())
+	}
+	return deg
+}
+
+// packFractions splits a list of fractions into groups, greedily, in order:
+// each group takes the next fractions while it holds at most packingArity of
+// them and its recurrence's degree stays at most maxPackedDegree. A group
+// holds at least one fraction, whatever its degree.
+func packFractions(fractions []wiop.Fraction) [][]wiop.Fraction {
+	var groups [][]wiop.Fraction
+	for len(fractions) > 0 {
+		n := 1
+		for n < min(packingArity, len(fractions)) && packedDegree(fractions[:n+1]) <= maxPackedDegree {
+			n++
+		}
+		groups = append(groups, fractions[:n])
+		fractions = fractions[n:]
 	}
 	return groups
 }

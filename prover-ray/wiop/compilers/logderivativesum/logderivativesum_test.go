@@ -370,31 +370,56 @@ func TestCompile_NoQueries(t *testing.T) {
 	}
 }
 
-// TestCompile_PacksFractions verifies that 4 filtered fractions on the same
-// module are packed into ⌈4/3⌉ = 2 Z columns.
+// TestCompile_PacksFractions checks how the fractions of a module are packed
+// into Z columns: greedily, up to 4 per column while the column's recurrence
+// stays of degree factor at most 5 — 4 fractions of linear numerators and
+// denominators fit one column (degree 5); denominators of degree 2 fit 2 per
+// column (3 would give degree 7).
 func TestCompile_PacksFractions(t *testing.T) {
-	sys := wiop.NewSystemf("ld2-pack")
-	r0 := sys.NewRound()
-	sys.NewRound()
-	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
-	one := wiop.NewConstantVector(mod, field.NewFromString("1"))
-
-	fractions := make([]wiop.Fraction, 4)
-	for i := range fractions {
-		c := mod.NewColumn(sys.Context.Childf("c%d", i), r0)
-		fractions[i] = wiop.Fraction{Numerator: c.View(), Denominator: one}
+	cases := []struct {
+		name        string
+		n           int
+		den         func(mod *wiop.Module, d *wiop.Column) wiop.Expression
+		wantColumns int
+	}{
+		{"4 linear", 4, func(_ *wiop.Module, d *wiop.Column) wiop.Expression { return d.View() }, 1},
+		{"5 linear", 5, func(_ *wiop.Module, d *wiop.Column) wiop.Expression { return d.View() }, 2},
+		{"4 constant denominators", 4, func(mod *wiop.Module, _ *wiop.Column) wiop.Expression {
+			return wiop.NewConstantVector(mod, field.NewFromString("1"))
+		}, 1},
+		{"4 quadratic denominators", 4, func(_ *wiop.Module, d *wiop.Column) wiop.Expression {
+			return wiop.Mul(d.View(), d.View())
+		}, 2},
 	}
-	sys.NewLogDerivativeSum(sys.Context.Childf("ld2"), fractions)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			sys := wiop.NewSystemf("ld2-pack")
+			r0 := sys.NewRound()
+			sys.NewRound()
+			mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
 
-	colsBefore := len(mod.Columns)
-	logderivativesum.Compile(sys)
+			fractions := make([]wiop.Fraction, tc.n)
+			for i := range fractions {
+				c := mod.NewColumn(sys.Context.Childf("c%d", i), r0)
+				d := mod.NewColumn(sys.Context.Childf("d%d", i), r0)
+				fractions[i] = wiop.Fraction{Numerator: c.View(), Denominator: tc.den(mod, d)}
+			}
+			sys.NewLogDerivativeSum(sys.Context.Childf("ld2"), fractions)
 
-	assert.Len(t, mod.Columns, colsBefore+2,
-		"4 fractions must be packed into ⌈4/3⌉ = 2 Z columns")
-	assert.Len(t, mod.Vanishings, 2,
-		"two Z columns: each has its own cyclic recurrence vanishing")
-	assert.Equal(t, 0, countScalarVanishings(mod),
-		"cyclic Z columns contribute no scalar boundary constraint")
+			colsBefore := len(mod.Columns)
+			logderivativesum.Compile(sys)
+
+			assert.Len(t, mod.Columns, colsBefore+tc.wantColumns,
+				"%d fractions must be packed into %d Z columns", tc.n, tc.wantColumns)
+			require.Len(t, mod.Vanishings, tc.wantColumns,
+				"each Z column has its own cyclic recurrence vanishing")
+			for _, v := range mod.Vanishings {
+				assert.LessOrEqual(t, v.Expression.DegreeFactor(), 5,
+					"a packed recurrence must keep the quotient ratio at 4 (degree factor at most 5)")
+				assert.Empty(t, v.CancelledPositions, "the cyclic recurrence cancels no row")
+			}
+		})
+	}
 }
 
 // ---- Completeness tests ----
