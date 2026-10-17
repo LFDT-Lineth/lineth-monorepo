@@ -26,11 +26,9 @@
 //
 // The pass allocates α and β itself, via [Round.NewCoinField] on the round
 // right after round 0 (see registerSharedRandomness). They are ordinary
-// Fiat-Shamir coins.
-// In a sharded protocol what makes every shard draw the same pair is that
-// round 0 carries the same data on each, so the state the coins are sampled from is identical shard to shard.
-// With [CompileOptions.SharedRandomness] the pass enforces that layout rather
-// than trusting it.
+// Fiat-Shamir coins. By default, γ is supplied in round 0 to synchronize
+// challenges across shards and bus columns must live on the coin round.
+// [WithoutSharedRandomness] opts an unsharded protocol out of that layout.
 //
 // Caller order: invoke messagebus.Compile(sys) BEFORE
 // grandproduct.Compile(sys); the latter discharges the GrandProducts this
@@ -57,26 +55,98 @@ import (
 // [Compile] is single-invocation per system.
 const PublicInputTag wiop.PublicInputTag = "MessageBus"
 
-// CompileOptions are options for [Compile].
-type CompileOptions struct {
-	// SharedRandomness makes the shard derive α and β from a γ handed to it from
-	// outside the proof instead of from its own Fiat-Shamir transcript, which is
-	// what lets several shards agree on those challenges. It declares γ and the
-	// shard's contribution to it as public inputs, and requires every bus column
-	// to sit on the coin round. γ lives on round 0, so it is absorbed into
-	// Fiat-Shamir before α and β are drawn; see [registerSharedRandomness].
-	//
-	// Off by default: an unsharded protocol has no one to agree with and derives
-	// α and β from its own transcript. Turning it on obliges the prover to supply
-	// γ through [AssignSharedRandomnessSeed] — there is deliberately no default
-	// value, since a γ known in advance would hand the prover α and β before it
-	// commits to its bus columns.
-	//
-	// Setting it on a system with no message-bus entry does nothing: there is no
-	// coin round to seed. Nothing is registered, so [HasSharedRandomness] stays
-	// false and the prover has no γ to supply. A pipeline can therefore turn it on
-	// ahead of the entries it expects and have it engage the moment they arrive.
-	SharedRandomness bool
+type compileOptions struct {
+	sharedRandomness bool
+}
+
+// configAnnotationKey is the [wiop.System.Annotations] key of the System's
+// recorded [compileOptions], preconfigured by [Configure] or consumed by
+// [Compile]. Absent means no selection yet. Only this package writes it.
+const configAnnotationKey = "compiler.messagebus.config"
+
+// recordedOptions returns the options recorded on sys and whether any are.
+func recordedOptions(sys *wiop.System) (compileOptions, bool) {
+	v, exists := sys.Annotations[configAnnotationKey]
+	if !exists {
+		return compileOptions{}, false
+	}
+	cfg, ok := v.(compileOptions)
+	if !ok {
+		panic(fmt.Sprintf("wiop/compilers/messagebus: annotation %q holds %T, want message-bus options",
+			configAnnotationKey, v))
+	}
+	return cfg, true
+}
+
+// Option configures a [Configure] or [Compile] invocation. [Configure]
+// records a preconfigured selection that a later [Compile] merges with its own
+// local options.
+type Option func(*compileOptions)
+
+// WithoutSharedRandomness derives α and β from the System's own transcript,
+// without a γ public input or a coin-round placement requirement. Use it for
+// unsharded protocols whose bus columns are assigned on round 0.
+func WithoutSharedRandomness() Option {
+	return func(o *compileOptions) { o.sharedRandomness = false }
+}
+
+// merge resolves opts against sys's preconfigured shared-randomness selection
+// without mutating anything. A local selection that conflicts with a recorded
+// one is an error, while a matching one is not a second override. Without
+// any selection, shared randomness is enabled.
+func merge(sys *wiop.System, opts []Option) (compileOptions, error) {
+	cfg := compileOptions{sharedRandomness: true}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+	pre, preSet := recordedOptions(sys)
+	switch {
+	case preSet && len(opts) == 0:
+		cfg = pre
+	case preSet && cfg != pre:
+		return cfg, fmt.Errorf("messagebus: shared randomness %v conflicts with preconfigured %v",
+			cfg.sharedRandomness, pre.sharedRandomness)
+	}
+	return cfg, nil
+}
+
+// Configure validates opts against sys's preconfigured selection and records
+// them, without compiling anything. It is the entry point behind
+// compilers.ConfigureMessageBus. A later [Compile] merges its own local
+// options with this selection: matching values are not a conflict, divergent
+// ones are.
+//
+// [Validate] and [Apply] are its two halves, so that a caller configuring
+// several passes can validate every selection before applying any.
+func Configure(sys *wiop.System, opts ...Option) error {
+	if err := Validate(sys, opts...); err != nil {
+		return err
+	}
+	return Apply(sys, opts...)
+}
+
+// Validate checks opts against sys's preconfigured selection without mutating
+// anything. At least one option is required.
+func Validate(sys *wiop.System, opts ...Option) error {
+	if len(opts) == 0 {
+		return fmt.Errorf("messagebus: Configure requires at least one option")
+	}
+	_, err := merge(sys, opts)
+	return err
+}
+
+// Apply records the [Validate]-checked opts as sys's preconfigured selection.
+// It re-runs the validation, so it never records a conflicting selection.
+func Apply(sys *wiop.System, opts ...Option) error {
+	if len(opts) == 0 {
+		return fmt.Errorf("messagebus: Configure requires at least one option")
+	}
+	cfg, err := merge(sys, opts)
+	if err != nil {
+		return err
+	}
+	sys.Annotations[configAnnotationKey] = cfg
+	return nil
 }
 
 // Compile reduces every unreduced [wiop.MessageBus] entry in sys to a
@@ -85,8 +155,12 @@ type CompileOptions struct {
 // the expected value (one in the unsharded case). See the package
 // documentation for the full reduction.
 //
-// Set [CompileOptions.SharedRandomness] to make α and β derive from a
-// cross-shard γ rather than from this shard's own traffic.
+// Shared randomness is enabled by default when there are bus entries. Supply
+// γ with [AssignSharedRandomnessSeed] before assigning bus columns on the coin
+// round, or explicitly use [WithoutSharedRandomness] for an unsharded layout.
+// The local options are merged with sys's preconfigured selection (recorded
+// by [Configure] or compilers.ConfigureMessageBus); a consuming Compile
+// freezes the merged selection, while a no-op Compile freezes nothing.
 //
 // The pass appends up to two fresh interactive rounds to sys.Rounds: a
 // coin round where the shared α and β are declared, and a result round
@@ -107,12 +181,12 @@ type CompileOptions struct {
 //
 // Panics if the unreduced entries do not all share the same
 // [wiop.MessageBus.OriginShard] — Compile is a per-shard operation and
-// mixing shards in one call is a misuse — or if it is called a second time with
-// new entries.
-func Compile(sys *wiop.System, opts ...CompileOptions) {
-	opt := CompileOptions{}
-	if len(opts) > 0 {
-		opt = opts[0]
+// mixing shards in one call is a misuse — if it is called a second time with
+// new entries, or if the options conflict with the preconfigured selection.
+func Compile(sys *wiop.System, opts ...Option) {
+	opt, err := merge(sys, opts)
+	if err != nil {
+		panic(fmt.Sprintf("wiop/compilers/messagebus: %v", err))
 	}
 
 	// Collect every unreduced MessageBus entry in declaration order, indexed by
@@ -143,16 +217,12 @@ func Compile(sys *wiop.System, opts ...CompileOptions) {
 	if len(byHandle) == 0 {
 		// Nothing left to reduce. A repeat call with no new entries is a
 		// harmless no-op, whether or not a previous call already ran.
-		//
-		// This includes a call that asked for shared randomness: with no entry
+		// This includes a call in shared-randomness mode: with no entry
 		// there is no coin round, hence no α or β to seed and no cross-shard
-		// check to keep consistent, so the request is vacuous rather than a
-		// misuse. A pipeline may therefore set the option before the bus entries
-		// it anticipates exist, and have it take effect once they do.
+		// check to keep consistent. The option is vacuous in that case, so
+		// nothing is consumed.
 		return
 	}
-
-	alpha, beta := registerSharedRandomness(sys, opt)
 
 	// Compile is single-invocation per system: it numbers each handle's
 	// public-input tag by the handle's index in this call's alphabetical order
@@ -170,6 +240,12 @@ func Compile(sys *wiop.System, opts ...CompileOptions) {
 			anyEntry.Context().Path(), anyEntry.Handle,
 		))
 	}
+
+	// Every preflight check passed: freeze the merged selection before
+	// mutating sys, so a later divergent [Configure] is rejected.
+	sys.Annotations[configAnnotationKey] = opt
+	alpha, beta := registerSharedRandomness(sys, opt)
+
 	handles := make([]string, 0, len(byHandle))
 	for h := range byHandle {
 		handles = append(handles, h)

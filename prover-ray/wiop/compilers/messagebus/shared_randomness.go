@@ -5,6 +5,7 @@ import (
 
 	multisethashing "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/multiset_hashing"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/sirupsen/logrus"
 )
@@ -17,17 +18,12 @@ const (
 )
 
 // registerSharedRandomness appends the round carrying α and β — the coins the
-// bus uses — and returns them.
-//
-// With [CompileOptions.SharedRandomness] set it also declares two types of public inputs: γ, the seed
-// every shard shares, and this shard's contribution to it.
-// Round 0 is
-// where  γ has to live: being absorbed into Fiat-Shamir on the way out of that
-// round is what lets the challenges drawn later depend on it.
-//
-// In that mode it also requires every participating bus column to sit on the
-// coin round, and panics otherwise
-func registerSharedRandomness(sys *wiop.System, opt CompileOptions) (alpha, beta *wiop.CoinField) {
+// bus uses — and returns them. By default it also declares two types of public
+// inputs: γ, the seed every shard shares, and this shard's contribution to it.
+// Round 0 carries γ so it is absorbed into Fiat-Shamir before the challenges
+// are drawn. In this mode every bus participant column must live on the coin
+// round; [WithoutSharedRandomness] disables both γ and that placement guard.
+func registerSharedRandomness(sys *wiop.System, opt compileOptions) (alpha, beta *wiop.CoinField) {
 	compCtx := sys.Context.Childf("message-bus")
 	seedRound := sys.Rounds[0]
 	// The coins for the message bus land on the round immediately after the seed — which is also
@@ -38,7 +34,7 @@ func registerSharedRandomness(sys *wiop.System, opt CompileOptions) (alpha, beta
 	alpha = coinRound.NewCoinField(compCtx.Childf("alpha"))
 	beta = coinRound.NewCoinField(compCtx.Childf("beta"))
 
-	if opt.SharedRandomness {
+	if opt.sharedRandomness {
 
 		// Every participating bus column has to be committed on the coin round,
 		if mb, cv := misplacedParticipantColumn(sys, coinRound.ID); mb != nil {
@@ -46,12 +42,12 @@ func registerSharedRandomness(sys *wiop.System, opt CompileOptions) (alpha, beta
 			if r := cv.Round(); r != nil {
 				round = fmt.Sprintf("round %d", r.ID)
 			}
-			panic(fmt.Sprintf(
+			utils.Panic(
 				"wiop/compilers/messagebus: with shared randomness every bus column must live on the coin "+
 					"round %d, but %q (handle %q) reads column %q on %s; a column off the coin round is not "+
 					"covered by this shard's contribution, so γ would not bind it",
 				coinRound.ID, mb.Context().Path(), mb.Handle, cv.Column.Context.Path(), round,
-			))
+			)
 		}
 
 		ctx := sys.Context.Childf("shared-randomness")
@@ -90,7 +86,7 @@ func GetSharedRandomnessSeed(rt *wiop.Runtime) field.Octuplet {
 	for i := range gamma {
 		c, pos := rt.System.LookupPublicInputByTag(SharedRandomnessSeedPI, i)
 		if pos < 0 {
-			panic(fmt.Sprintf("wiop/compilers/messagebus: GetSharedRandomnessSeed: missing gamma-%d", i))
+			utils.Panic("wiop/compilers/messagebus: GetSharedRandomnessSeed: missing gamma-%d", i)
 		}
 		// This calls panics if the cell is not a base-field element. But if it
 		// was correctly registered by [registerSharedRandomness], it must be.
@@ -99,39 +95,35 @@ func GetSharedRandomnessSeed(rt *wiop.Runtime) field.Octuplet {
 	return gamma
 }
 
-// HasSharedRandomness reports whether sys was compiled with
-// [CompileOptions.SharedRandomness] and therefore carries a γ to assign.
-//
-// An assignment path that does not itself choose the compiler options — the zkc
-// driver, say, which is handed a system somebody else compiled — uses this to
-// decide whether [AssignSharedRandomnessSeed] applies. Skipping the assignment
-// when this is false is safe rather than silently degrading: with the option off
-// there is no γ cell, so the shard derives α and β from its own transcript as an
-// unsharded protocol should.
+// HasSharedRandomness reports whether sys was compiled with shared randomness
+// and therefore carries a γ to assign. An assignment path that does not choose
+// compiler options (such as zkcdriver) uses this to decide whether
+// [AssignSharedRandomnessSeed] applies. With [WithoutSharedRandomness] there is
+// no γ cell and α and β derive from the unsharded System's transcript.
 func HasSharedRandomness(sys *wiop.System) bool {
 	_, pos := sys.LookupPublicInputByTag(SharedRandomnessSeedPI, 0)
 	return pos >= 0
 }
 
 // AssignSharedRandomnessSeed writes γ into the public-input cells declared by
-// [CompileOptions.SharedRandomness]. The orchestrator computes γ during the
-// preflight phase — outside any proof, from every shard's data — and hands the
-// same value to each shard; feeding two shards different values silently
-// desynchronizes their α and β and breaks the cross-shard permutation.
+// the default seeded [Compile] mode. The orchestrator computes γ during
+// preflight — outside any proof, from every shard's data — and hands the same
+// value to each shard; feeding two shards different values desynchronizes their
+// α and β and breaks the cross-shard permutation.
 //
 // It must be called while the runtime is on round 0, which is where the cells
 // live ([wiop.Runtime.AssignCell] rejects a cell from any other round).
 //
-// Panics if sys was compiled without the option, since there is then no cell to
-// write to; [HasSharedRandomness] answers that question in advance.
+// Panics if sys was compiled without shared randomness, since there is then no
+// cell to write to; [HasSharedRandomness] answers that question in advance.
 func AssignSharedRandomnessSeed(rt *wiop.Runtime, gamma field.Octuplet) {
 	for i := range NumSharedRandomness {
 		cell, pos := rt.System.LookupPublicInputByTag(SharedRandomnessSeedPI, i)
 		if pos < 0 {
-			panic(fmt.Sprintf("wiop/compilers/messagebus: AssignSharedRandomnessSeed: missing gamma-%d", i))
+			utils.Panic("wiop/compilers/messagebus: AssignSharedRandomnessSeed: missing gamma-%d", i)
 		}
 		if cell.IsExtension() {
-			panic("the shared randomness cell should not be an extension-field value")
+			utils.Panic("the shared randomness cell should not be an extension-field value")
 		}
 		rt.AssignCell(cell, field.ElemFromBase(gamma[i]))
 	}
@@ -167,10 +159,10 @@ func sharedRandomnessContribution(rt *wiop.Runtime) multisethashing.MSetHash {
 func contributionCell(sys *wiop.System, i int) *wiop.Cell {
 	cell, pos := sys.LookupPublicInputByTag(SharedRandomnessSeedContributionPI, i)
 	if pos < 0 {
-		panic(fmt.Sprintf("wiop/compilers/messagebus: missing contribution-%d", i))
+		utils.Panic("wiop/compilers/messagebus: missing contribution-%d", i)
 	}
 	if cell.IsExtension() {
-		panic(fmt.Sprintf("wiop/compilers/messagebus: contribution-%d must not be an extension-field value", i))
+		utils.Panic("wiop/compilers/messagebus: contribution-%d must not be an extension-field value", i)
 	}
 	return cell
 }
