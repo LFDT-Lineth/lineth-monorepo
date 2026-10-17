@@ -117,4 +117,29 @@ describe("Message Mappers", () => {
       expect(message.claimCycleCount).toBe(5);
     });
   });
+
+  describe("mapMessageEntityToMessage with bigint columns read as strings", () => {
+    it("converts claim tx fee strings from the pg driver to bigint", () => {
+      const entity = generateMessageEntity();
+      const message = mapMessageEntityToMessage({
+        ...entity,
+        claimTxMaxFeePerGas: "3819885" as unknown as bigint,
+        claimTxMaxPriorityFeePerGas: "3819878" as unknown as bigint,
+      });
+      expect(message.claimTxMaxFeePerGas).toBe(3819885n);
+      expect(message.claimTxMaxPriorityFeePerGas).toBe(3819878n);
+      expect(((message.claimTxMaxFeePerGas as bigint) * 110n) / 100n).toBe(4201873n);
+    });
+
+    it("keeps missing claim tx fees undefined", () => {
+      const entity = generateMessageEntity();
+      const message = mapMessageEntityToMessage({
+        ...entity,
+        claimTxMaxFeePerGas: null as unknown as bigint,
+        claimTxMaxPriorityFeePerGas: undefined,
+      });
+      expect(message.claimTxMaxFeePerGas).toBeUndefined();
+      expect(message.claimTxMaxPriorityFeePerGas).toBeUndefined();
+    });
+  });
 });
