@@ -114,9 +114,9 @@ def test_execution_output_commits_ordered_message_list() -> None:
 
 
 def test_l2_execution_public_input_fixture_ssz_length() -> None:
-    # The PI has variable-length message and offset lists.
+    # The PI has variable-length message, filtered-address and offset lists.
     proof = _l2_execution_proof()
-    assert len(encode_l2_execution_public_inputs_bytes(proof.public_inputs)) == 384
+    assert len(encode_l2_execution_public_inputs_bytes(proof.public_inputs)) == 376
 
 
 def test_execution_output_commits_empty_message_list() -> None:
