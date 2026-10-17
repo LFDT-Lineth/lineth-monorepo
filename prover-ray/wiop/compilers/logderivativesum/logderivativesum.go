@@ -52,7 +52,10 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/hugepage"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/internal/vecprog"
 )
 
 // packingArity is the maximum number of fractions packed into a single Z
@@ -245,12 +248,22 @@ type proverAction struct {
 }
 
 // Run implements [wiop.ProverAction].
+//
+// The Z columns are independent of one another, so they are computed
+// concurrently, largest module first to balance the workers. Each entry only
+// writes its own Z column, its average cell and its own slot of totals; the
+// totals are summed afterwards in entry order. Each entry's inner loops get a
+// share of the CPUs proportional to its row count (see
+// [parallel.ExecuteLargestFirst]).
 func (a *proverAction) Run(rt *wiop.Runtime) {
-	var total field.Ext
-
-	for _, e := range a.entries {
-		n := e.zCol.Module.RuntimeSize(rt)
-		z := computeFilteredPrefixSum(rt, e.packed, n)
+	sizes := make([]int, len(a.entries))
+	for i, e := range a.entries {
+		sizes[i] = e.zCol.Module.RuntimeSize(rt)
+	}
+	totals := make([]field.Ext, len(a.entries))
+	parallel.ExecuteLargestFirst(sizes, func(i, workers int) {
+		e, n := a.entries[i], sizes[i]
+		z := computeFilteredPrefixSum(rt, e.packed, n, workers)
 		colTotal := z[n-1]
 
 		// C = total/n, and Z[i] = Σ_{k≤i} (v[k] − C) = prefix[i] − (i+1)·C,
@@ -258,21 +271,32 @@ func (a *proverAction) Run(rt *wiop.Runtime) {
 		var nInv field.Element
 		nInv.SetUint64(uint64(n))
 		nInv.Inverse(&nInv)
-		var c, ic field.Ext
+		var c field.Ext
 		c.MulByElement(&colTotal, &nInv)
-		for i := range z {
-			ic.Add(&ic, &c)
-			z[i].Sub(&z[i], &ic)
-		}
+		parallel.Execute(n, func(start, stop int) {
+			var ic field.Ext
+			var s field.Element
+			s.SetUint64(uint64(start))
+			ic.MulByElement(&c, &s)
+			for k := start; k < stop; k++ {
+				ic.Add(&ic, &c)
+				z[k].Sub(&z[k], &ic)
+			}
+		}, workers)
 
 		rt.AssignColumn(e.zCol, &wiop.ConcreteVector{Plain: field.VecFromExt(z)})
 		rt.AssignCell(e.Average, field.ElemFromExt(c))
 
-		total.Add(&total, &colTotal)
+		totals[i] = colTotal
+	})
+
+	var sum field.Ext
+	for i := range totals {
+		sum.Add(&sum, &totals[i])
 	}
 
 	if !rt.HasCellAssignment(a.ld.Result) {
-		rt.AssignCell(a.ld.Result, field.ElemFromExt(total))
+		rt.AssignCell(a.ld.Result, field.ElemFromExt(sum))
 	}
 }
 
@@ -281,54 +305,46 @@ func (a *proverAction) Run(rt *wiop.Runtime) {
 //	Z[i] = Σ_{k≤i, j} F_j[k] · N_j[k] / D_j[k]
 //
 // over the rows of a packed fraction group, skipping rows where the
-// fraction's filter is zero. Each fraction's denominator is batch-inverted
-// once; the inverse is consulted only at active rows so a zero denominator at
-// a filtered-out row is benign.
+// fraction's filter is zero. A zero denominator at a filtered-out row is
+// benign: its inverse is taken as zero and multiplied by the zero filter.
 //
 // Panics if a fraction's denominator is zero on a row where its filter is
 // non-zero, since that input is malformed.
-func computeFilteredPrefixSum(rt *wiop.Runtime, packed []wiop.Fraction, n int) []field.Ext {
-	type evalFrac struct {
-		filter []field.Ext // nil ⇒ filter is the constant 1 on every row
-		num    []field.Ext
-		den    []field.Ext
-		invDen []field.Ext
-	}
-	fracs := make([]evalFrac, len(packed))
+//
+// The row terms Σ_j F_j·N_j/D_j are computed by one [vecprog] program over
+// every fraction of the group: subexpressions shared by the fractions are
+// computed once, the denominators' random linear combinations become linear
+// forms, and each block of rows takes one batch inversion per denominator,
+// without materialising the fractions' vectors. [field.VecPrefixSumExt] then
+// takes their running sum. workers bounds the goroutines used.
+func computeFilteredPrefixSum(rt *wiop.Runtime, packed []wiop.Fraction, n int, workers int) []field.Ext {
+	l := wiop.NewRowLowering(rt, n)
+	b := l.B
+	var one field.Ext
+	one.SetOne()
+	rows := make([]field.Ext, n)
+	hugepage.Advise(rows)
 	for j, p := range packed {
-		fracs[j].num = wiop.EvaluateAsExtVec(rt, p.Numerator, n)
-		fracs[j].den = wiop.EvaluateAsExtVec(rt, p.Denominator, n)
-		// BatchInvertExt silently leaves zero entries as zero; safe to call on
-		// vectors that contain zeros at filtered-out rows.
-		fracs[j].invDen = field.BatchInvertExt(fracs[j].den)
+		den := l.Lower(p.Denominator)
+		term := b.Op(vecprog.Div, l.Lower(p.Numerator), den)
+		guard := b.Scalar(one, true)
 		if p.Filter != nil {
-			fracs[j].filter = wiop.EvaluateAsExtVec(rt, p.Filter, n)
+			guard = l.Lower(p.Filter)
+			term = b.Op(vecprog.Mul, term, guard)
 		}
+		b.Check(den, guard, func(i int) {
+			panic(fmt.Sprintf(
+				"wiop/compilers/logderivativesum: zero denominator at row %d for fraction %d "+
+					"with non-zero filter; the filter must mask this row",
+				i, j,
+			))
+		})
+		b.AddTo(term, rows)
 	}
+	b.Compile(n, 1, 1).Run(nil, nil, workers)
 
-	z := make([]field.Ext, n)
-	var running, term field.Ext
-	for i := 0; i < n; i++ {
-		for j := range fracs {
-			if fracs[j].filter != nil && fracs[j].filter[i].IsZero() {
-				continue
-			}
-			if fracs[j].den[i].IsZero() {
-				panic(fmt.Sprintf(
-					"wiop/compilers/logderivativesum: zero denominator at row %d for fraction %d "+
-						"with non-zero filter; the filter must mask this row",
-					i, j,
-				))
-			}
-			term.Mul(&fracs[j].num[i], &fracs[j].invDen[i])
-			if fracs[j].filter != nil {
-				term.Mul(&term, &fracs[j].filter[i])
-			}
-			running.Add(&running, &term)
-		}
-		z[i] = running
-	}
-	return z
+	field.VecPrefixSumExt(rows, workers)
+	return rows
 }
 
 // VerifierAction enforces the identity that ties the Z columns to the query:
