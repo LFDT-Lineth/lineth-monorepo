@@ -18,7 +18,8 @@ include "memory.zkc"
 // include "../predecoding/executable_region.zkc"
 // -- Interpreting the riscV proved-transpiled program -- END
 
-fn main<registers, ram>() {
+// TODO @Ghost
+fn main<registers, ram, keccak_state>() {
     var entry_point:Address
     var blobs_count:u64
     entry_point, blobs_count = entry_point_and_blobs_count[0]
