@@ -98,23 +98,30 @@ func (in *interner) intern(expr wiop.Expression) wiop.Expression {
 	return expr
 }
 
-// seed registers every node of expr as canonical, bottom-up. A node whose key
-// is already taken by a different pointer is left as is — expr is not
-// rewritten — but its parents are keyed on the canonical operand, so they can
-// only match nodes built from canonical parts. Seeding an interned expression
-// (as zkcdriver produces) registers each of its nodes.
-func (in *interner) seed(expr wiop.Expression, visited map[wiop.Expression]struct{}) {
-	if _, ok := visited[expr]; ok {
-		return
-	}
-	visited[expr] = struct{}{}
-	if ao, ok := expr.(*wiop.ArithmeticOperation); ok {
-		for _, operand := range ao.Operands {
-			in.seed(operand, visited)
-		}
+// seed registers every node of expr, bottom-up, and returns the canonical
+// representative of expr. A node whose key is already taken by a different
+// pointer is left as is — expr is not rewritten — but its parents are keyed on
+// the canonical representatives of their operands, so a parent built from
+// independently allocated but structurally equal parts still matches a lifted
+// node built from canonical parts. visited maps each seeded node to its
+// canonical representative. Seeding an interned expression (as zkcdriver
+// produces) registers each of its nodes.
+func (in *interner) seed(expr wiop.Expression, visited map[wiop.Expression]wiop.Expression) wiop.Expression {
+	if canonical, ok := visited[expr]; ok {
+		return canonical
 	}
 	key := keyOf(expr)
-	if _, ok := in.nodes[key]; !ok {
-		in.nodes[key] = expr
+	if ao, ok := expr.(*wiop.ArithmeticOperation); ok {
+		key.a = in.seed(ao.Operands[0], visited)
+		if len(ao.Operands) > 1 {
+			key.b = in.seed(ao.Operands[1], visited)
+		}
 	}
+	canonical, ok := in.nodes[key]
+	if !ok {
+		in.nodes[key] = expr
+		canonical = expr
+	}
+	visited[expr] = canonical
+	return canonical
 }

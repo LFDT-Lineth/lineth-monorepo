@@ -615,9 +615,15 @@ func TestCompile_LiftPreservesSharing(t *testing.T) {
 	a := mod.NewColumn(sys.Context.Childf("a"), r0)
 	b := mod.NewColumn(sys.Context.Childf("b"), r0)
 	c := mod.NewColumn(sys.Context.Childf("c"), r0)
+	d := mod.NewColumn(sys.Context.Childf("d"), r0)
 
 	// A global constraint carrying b·(b−1).
 	global := mod.NewVanishing(sys.Context.Childf("g"), binarity(b.View()))
+	// A global constraint carrying d·(d−1), built from independently allocated
+	// views as a compiler-generated global may be: it is not canonical, so
+	// seeding must key its parents on the canonical operands.
+	globalNonCanonical := mod.NewVanishing(sys.Context.Childf("g-nc"),
+		wiop.Mul(d.View(), wiop.Sub(d.View(), wiop.NewConstantField(field.One()))))
 
 	// Each local constraint gets its own, freshly allocated expression, so
 	// any sharing below comes from the lift rather than from the inputs.
@@ -631,8 +637,10 @@ func TestCompile_LiftPreservesSharing(t *testing.T) {
 		wiop.Mul(binarity(c.View()), a.View()), -1)
 	withGlobal := mod.NewLocalConstraint(sys.Context.Childf("lc-g"),
 		wiop.Add(binarity(b.View()), c.View()), 1)
+	withNonCanonical := mod.NewLocalConstraint(sys.Context.Childf("lc-g-nc"),
+		binarity(d.View()), 0)
 
-	locals := []*wiop.Vanishing{sameTree, anchor0, anchor0b, anchorLast, withGlobal}
+	locals := []*wiop.Vanishing{sameTree, anchor0, anchor0b, anchorLast, withGlobal, withNonCanonical}
 	before := len(mod.Vanishings)
 	localvanishing.Compile(sys)
 	lifted := mod.Vanishings[before:]
@@ -656,6 +664,10 @@ func TestCompile_LiftPreservesSharing(t *testing.T) {
 	binG := liftedOperand(t, lifted[4]).(*wiop.ArithmeticOperation).Operands[0]
 	assert.Same(t, global.Expression, binG,
 		"a lifted subtree must reuse the matching node of a global constraint")
+
+	// d·(d−1) reuses the root of the non-canonical global constraint.
+	assert.Same(t, globalNonCanonical.Expression, liftedOperand(t, lifted[5]),
+		"a lifted subtree must reuse the matching node of a non-canonical global constraint")
 
 	// Lifted constraints at one anchor share the selector node too.
 	assert.Same(t,

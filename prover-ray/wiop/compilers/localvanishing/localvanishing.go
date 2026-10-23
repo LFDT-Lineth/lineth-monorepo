@@ -121,7 +121,7 @@ func Compile(sys *wiop.System) {
 // unreduced multi-valued vanishing already registered on it.
 func seededInterner(m *wiop.Module) *interner {
 	in := newInterner()
-	visited := make(map[wiop.Expression]struct{})
+	visited := make(map[wiop.Expression]wiop.Expression)
 	for _, v := range m.Vanishings {
 		if v.IsReduced() || !v.Expression.IsMultiValued() {
 			continue

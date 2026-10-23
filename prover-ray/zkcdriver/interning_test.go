@@ -282,8 +282,17 @@ func structuralKey(e wiop.Expression) string {
 		return fmt.Sprintf("at(%d,%d)", e.Column.Context.ID, e.Position)
 	case *wiop.Constant:
 		return fmt.Sprintf("const(%v)", e.Value)
+	case *wiop.LagrangeSelector:
+		// Keys are compared within one module, so the position alone tells
+		// selectors apart: identical bodies lifted at different anchors must
+		// not look structurally equal.
+		return fmt.Sprintf("lagrange(%d)", e.Position)
+	case *wiop.Cell:
+		return fmt.Sprintf("cell(%d)", e.Context.ID)
+	case *wiop.CoinField:
+		return fmt.Sprintf("coin(%d)", e.Context.ID)
 	default:
-		return fmt.Sprintf("%T", e)
+		panic(fmt.Sprintf("structuralKey: unsupported expression type %T", e))
 	}
 }
 
@@ -428,8 +437,9 @@ type liftedSharing struct {
 	// are also reachable from at least one other non-reduced vanishing of the
 	// module, lifted or not.
 	sharedAcross int
-	// leaks counts lifted nodes, leaves included, that denote a value which
-	// already has a different pointer within the module.
+	// leaks counts nodes, leaves included, that denote the same value as a
+	// different pointer of the module's non-reduced vanishings, where at least
+	// one of the two is reachable from a lifted vanishing.
 	leaks int
 }
 
@@ -455,8 +465,9 @@ func measureLiftedSharing(sys *wiop.System) map[string]liftedSharing {
 
 		// owners[node] is the set of vanishing indices that reach node.
 		owners := map[wiop.Expression]map[int]struct{}{}
-		byKey := map[string]wiop.Expression{}
-		leaks := 0
+		// liftedNodes holds every node, leaves included, reachable from a
+		// lifted vanishing.
+		liftedNodes := map[wiop.Expression]struct{}{}
 		for vIdx, v := range module.Vanishings {
 			if v.IsReduced() {
 				continue
@@ -470,12 +481,7 @@ func measureLiftedSharing(sys *wiop.System) map[string]liftedSharing {
 				}
 				seen[e] = struct{}{}
 				if isLifted {
-					key := structuralKey(e)
-					if prev, ok := byKey[key]; ok && prev != e {
-						leaks++
-					} else if !ok {
-						byKey[key] = e
-					}
+					liftedNodes[e] = struct{}{}
 				}
 				op, ok := e.(*wiop.ArithmeticOperation)
 				if !ok {
@@ -490,6 +496,42 @@ func measureLiftedSharing(sys *wiop.System) map[string]liftedSharing {
 				}
 			}
 			walk(v.Expression)
+		}
+
+		// The structural comparison spans every non-reduced vanishing, so a
+		// lifted node duplicating a global one is caught too. Only mismatches
+		// involving a lifted node count: duplicates among the other
+		// vanishings are not localvanishing's doing.
+		byKey := map[string]wiop.Expression{}
+		visited := map[wiop.Expression]struct{}{}
+		leaks := 0
+		var compare func(e wiop.Expression)
+		compare = func(e wiop.Expression) {
+			if _, ok := visited[e]; ok {
+				return
+			}
+			visited[e] = struct{}{}
+			if op, ok := e.(*wiop.ArithmeticOperation); ok {
+				for _, operand := range op.Operands {
+					compare(operand)
+				}
+			}
+			key := structuralKey(e)
+			prev, ok := byKey[key]
+			if !ok {
+				byKey[key] = e
+				return
+			}
+			_, eLifted := liftedNodes[e]
+			_, prevLifted := liftedNodes[prev]
+			if eLifted || prevLifted {
+				leaks++
+			}
+		}
+		for _, v := range module.Vanishings {
+			if !v.IsReduced() {
+				compare(v.Expression)
+			}
 		}
 
 		s := liftedSharing{lifted: len(lifted), leaks: leaks}
