@@ -58,6 +58,10 @@ data class ForkInfo(
         if (forkSpec.configuration is DifficultyAwareQbftConfig) {
           append(" ttd=")
           append((forkSpec.configuration as DifficultyAwareQbftConfig).terminalTotalDifficulty)
+          (forkSpec.configuration as DifficultyAwareQbftConfig).terminalBlockNumber?.let {
+            append(" terminalBlockNumber=")
+            append(it)
+          }
         }
       }.append(" fork=")
       .append(forkSpec.configuration.fork.clFork)

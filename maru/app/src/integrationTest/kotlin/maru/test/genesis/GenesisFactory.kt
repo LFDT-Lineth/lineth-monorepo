@@ -24,6 +24,7 @@ class GenesisFactory(
   fun initForkSchedule(
     sequencersAddresses: List<ByteArray>,
     terminalTotalDifficulty: ULong? = null,
+    terminalBlockNumber: ULong? = null,
     chainForks: Map<Instant, ChainFork> = emptyMap(),
   ) {
     forkSchedule = beaconGenesisFactory
@@ -32,6 +33,7 @@ class GenesisFactory(
         chainId = chainId,
         validators = sequencersAddresses,
         terminalTotalDifficulty = terminalTotalDifficulty,
+        terminalBlockNumber = terminalBlockNumber,
         forks = chainForks,
       )
     besuGenesisFactory.setForkSchedule(forkSchedule)

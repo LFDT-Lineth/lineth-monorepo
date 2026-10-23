@@ -7,6 +7,7 @@
 package maru.test
 
 import linea.kotlin.toULong
+import linea.testing.besu.ethGetBlockByNumber
 import maru.consensus.ChainFork
 import maru.consensus.ClFork
 import maru.consensus.ElFork
@@ -15,13 +16,12 @@ import maru.test.cluster.NodeRole
 import maru.test.cluster.configureLoggers
 import maru.test.extensions.assertNodesAreSyncedUpTo
 import maru.test.extensions.headBeaconBlockNumber
-import maru.test.extensions.latestBlock
+import maru.test.extensions.latestBlockNumber
 import org.apache.logging.log4j.Level
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import kotlin.time.Clock
@@ -90,30 +90,37 @@ class MaruClusterTest {
 
   @Test
   @Order(3)
-  @Disabled // Temporarily disabled this test until we have a proper fix for the removal of totalDifficulty
   fun `should create network starting with all forks and switch post ttd`() {
     val now = Clock.System.now()
     val terminalTotalDifficulty = 20UL
+    // Besu >= 26.9.0 no longer returns totalDifficulty in eth_getBlockBy* responses, so Maru is configured to
+    // switch on terminalBlockNumber instead. QBFT assigns every block difficulty 1 (genesis difficulty is 0x1),
+    // so cumulative totalDifficulty reaches terminalTotalDifficulty exactly at block (terminalTotalDifficulty - 1).
+    val terminalBlockNumber = terminalTotalDifficulty - 1UL
+    // Timestamp-based forks start well after the terminal block is reached, so that the first PoS block can only
+    // have been produced through the DifficultyAwareQbft -> post-TTD QBFT transition, not a timestamp fork switch.
+    val firstTimestampForkTime = now.plus(30.seconds)
     val forkTimeGap = 10.seconds
     cluster = MaruCluster(
       terminalTotalDifficulty = terminalTotalDifficulty,
+      terminalBlockNumber = terminalBlockNumber,
       chainForks = mapOf(
         Instant.fromEpochSeconds(0) to
           ChainFork(
             ClFork.QBFT_PHASE0,
             ElFork.Paris,
           ),
-        now.plus(30.seconds) to
+        firstTimestampForkTime to
           ChainFork(
             ClFork.QBFT_PHASE0,
             ElFork.Shanghai,
           ),
-        now.plus(30.seconds + forkTimeGap) to
+        firstTimestampForkTime.plus(forkTimeGap) to
           ChainFork(
             ClFork.QBFT_PHASE0,
             ElFork.Cancun,
           ),
-        now.plus(30.seconds + 2 * forkTimeGap) to
+        firstTimestampForkTime.plus(2 * forkTimeGap) to
           ChainFork(
             ClFork.QBFT_PHASE0,
             ElFork.Prague,
@@ -122,23 +129,28 @@ class MaruClusterTest {
     ).addNode("sequencer", addBesu = true)
       .start()
 
-    // Besu >= 26.9.0 no longer returns totalDifficulty in eth_getBlockBy* responses, so assert
-    // on the head block number instead. QBFT assigns every block difficulty 1 (genesis
-    // difficulty is 0x1), so cumulative totalDifficulty reaches terminalTotalDifficulty exactly
-    // at block number (terminalTotalDifficulty - 1). Producing blocks at or past that height
-    // proves the chain crossed TTD and kept going post-TTD.
-    val blockNumberAtWhichTtdIsReached = terminalTotalDifficulty - 1UL
+    val sequencerBesu = cluster.besuNode("sequencer")
+    val firstPosBlockNumber = terminalBlockNumber + 1UL
     await()
       .atMost(120.seconds.toJavaDuration())
       .untilAsserted {
-        val headBlock =
-          cluster
-            .besuNode("sequencer")
-            .latestBlock()
-        assertThat(headBlock.number.toULong())
-          .withFailMessage { "Sequencer did not pass ttd=$terminalTotalDifficulty" }
-          .isGreaterThanOrEqualTo(blockNumberAtWhichTtdIsReached)
+        assertThat(sequencerBesu.latestBlockNumber())
+          .withFailMessage { "Sequencer did not produce first PoS block=$firstPosBlockNumber" }
+          .isGreaterThanOrEqualTo(firstPosBlockNumber)
       }
+
+    // terminal block is the last block produced by Besu's QBFT (pre-merge, difficulty 1)
+    val terminalBlock = sequencerBesu.ethGetBlockByNumber(terminalBlockNumber)
+    assertThat(terminalBlock.difficulty.toLong()).isEqualTo(1L)
+
+    // the next block is the first PoS block (difficulty 0), driven by Maru via Engine API
+    val firstPosBlock = sequencerBesu.ethGetBlockByNumber(firstPosBlockNumber)
+    assertThat(firstPosBlock.difficulty.toLong()).isEqualTo(0L)
+    assertThat(firstPosBlock.timestamp.toULong())
+      .withFailMessage {
+        "First PoS block timestamp=${firstPosBlock.timestamp} is not before the first timestamp fork " +
+          "at ${firstTimestampForkTime.epochSeconds}, so it was not produced by the post-TTD transition"
+      }.isLessThan(firstTimestampForkTime.epochSeconds.toULong())
   }
 
   @Test

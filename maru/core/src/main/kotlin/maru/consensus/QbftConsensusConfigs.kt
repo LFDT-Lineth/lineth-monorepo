@@ -21,9 +21,16 @@ data class QbftConsensusConfig(
 data class DifficultyAwareQbftConfig(
   val postTtdConfig: QbftConsensusConfig,
   val terminalTotalDifficulty: ULong,
+  /**
+   * When set, the transition to [postTtdConfig] happens once the latest EL block number is >= this value,
+   * instead of relying on the EL block's totalDifficulty (which some EL clients, e.g. Besu >= 26.9.0, no longer
+   * return in eth_getBlockBy* responses). It should be the number of the block at which TTD is reached.
+   */
+  val terminalBlockNumber: ULong? = null,
 ) : ConsensusConfig {
   override val fork: ChainFork = postTtdConfig.fork
 
   override fun toString(): String =
-    "DifficultyAwareQbftConfig(terminalTotalDifficulty=$terminalTotalDifficulty, postTtdConfig=$postTtdConfig)"
+    "DifficultyAwareQbftConfig(terminalTotalDifficulty=$terminalTotalDifficulty, " +
+      "terminalBlockNumber=$terminalBlockNumber, postTtdConfig=$postTtdConfig)"
 }

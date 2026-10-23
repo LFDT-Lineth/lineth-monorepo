@@ -31,9 +31,12 @@ object QbftConsensusConfigDigester : Serializer<QbftConsensusConfig> {
 object DifficultyAwareQbftConfigDigester : Serializer<DifficultyAwareQbftConfig> {
   override fun serialize(value: DifficultyAwareQbftConfig): ByteArray {
     val postTtdConfigBytes = QbftConsensusConfigDigester.serialize(value.postTtdConfig)
-    val buffer = ByteBuffer.allocate(postTtdConfigBytes.size + 8)
+    // terminalBlockNumber is appended only when set, so digests of existing configs remain unchanged
+    val terminalBlockNumberSize = if (value.terminalBlockNumber != null) 8 else 0
+    val buffer = ByteBuffer.allocate(postTtdConfigBytes.size + 8 + terminalBlockNumberSize)
     buffer.putLong(value.terminalTotalDifficulty.toLong())
     buffer.put(postTtdConfigBytes)
+    value.terminalBlockNumber?.let { buffer.putLong(it.toLong()) }
     return buffer.array()
   }
 }

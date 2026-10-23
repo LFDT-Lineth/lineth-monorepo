@@ -94,13 +94,24 @@ class DifficultyAwareQbft(
     latestBlock: EthBlock.Block,
     config: DifficultyAwareQbftConfig,
   ): Boolean {
+    val terminalBlockNumber = config.terminalBlockNumber
+    if (terminalBlockNumber != null) {
+      log.debug(
+        "Current elBlockNumber={}, terminalBlockNumber={}",
+        latestBlock.number,
+        terminalBlockNumber,
+      )
+      return latestBlock.number >= terminalBlockNumber.toLong().toBigInteger()
+    }
+
     if (latestBlock.totalDifficultyRaw == null) {
       // Some EL clients (e.g. Besu >= 26.9.0) no longer return totalDifficulty in eth_getBlockBy* responses,
       // in which case TTD can never be detected and the transition to post-TTD protocol will not happen.
       if (!missingTotalDifficultyReported) {
         log.error(
           "EL returned no totalDifficulty for elBlockNumber={}; cannot detect TTD={} and transition to " +
-            "post-TTD protocol. The EL client may not support totalDifficulty in eth_getBlockByNumber responses.",
+            "post-TTD protocol. The EL client may not support totalDifficulty in eth_getBlockByNumber responses; " +
+            "set terminalBlockNumber in the difficultyAwareQbft fork config instead.",
           latestBlock.number,
           config.terminalTotalDifficulty,
         )

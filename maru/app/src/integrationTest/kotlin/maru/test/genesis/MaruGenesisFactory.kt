@@ -26,11 +26,15 @@ class MaruGenesisFactory(
     blockTimeSeconds: UInt = 1u,
     forks: Map<Instant, ChainFork> = emptyMap(),
     terminalTotalDifficulty: ULong? = null,
+    terminalBlockNumber: ULong? = null,
   ): ForksSchedule {
     require(blockTimeSeconds in 1u..60u) { "blockTimeSeconds must be between 1 and 60 seconds" }
     require(validators.isNotEmpty()) { "Validators must not be empty" }
     require(terminalTotalDifficulty == null || terminalTotalDifficulty > 0uL) {
       "terminalTotalDifficulty must be greater than 0 or null"
+    }
+    require(terminalBlockNumber == null || terminalTotalDifficulty != null) {
+      "terminalBlockNumber can only be set together with terminalTotalDifficulty"
     }
 
     val validatorsSet = validators.map { Validator(it) }.toSet()
@@ -46,6 +50,7 @@ class MaruGenesisFactory(
               fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Prague),
             ),
             terminalTotalDifficulty = terminalTotalDifficulty,
+            terminalBlockNumber = terminalBlockNumber,
           )
         } else {
           QbftConsensusConfig(
@@ -91,6 +96,7 @@ class MaruGenesisFactory(
                   fork = chainFork,
                 ),
                 terminalTotalDifficulty = terminalTotalDifficulty,
+                terminalBlockNumber = terminalBlockNumber,
               )
             } else {
               QbftConsensusConfig(

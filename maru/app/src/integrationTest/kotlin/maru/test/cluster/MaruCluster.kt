@@ -97,6 +97,7 @@ class MaruCluster(
   chainId: UInt = Random.nextInt(1, Int.MAX_VALUE).toUInt(),
   blockTimeSeconds: UInt = 1u,
   val terminalTotalDifficulty: ULong? = null,
+  val terminalBlockNumber: ULong? = null,
   val chainForks: Map<Instant, ChainFork> =
     mapOf(
       Instant.fromEpochSeconds(0) to ChainFork(clFork = ClFork.QBFT_PHASE0, elFork = ElFork.Prague),
@@ -231,6 +232,7 @@ class MaruCluster(
     genesisFactory.initForkSchedule(
       sequencersAddresses,
       terminalTotalDifficulty,
+      terminalBlockNumber,
       chainForks,
     )
 
