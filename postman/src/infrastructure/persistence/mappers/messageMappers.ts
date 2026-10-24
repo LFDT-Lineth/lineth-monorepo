@@ -3,6 +3,9 @@ import { MessageEntity } from "../entities/Message.entity";
 
 import type { Address, Hash, Hex } from "../../../core/types/primitives";
 
+const toOptionalBigInt = (value: bigint | string | number | null | undefined): bigint | undefined =>
+  value === null || value === undefined ? undefined : BigInt(value);
+
 export const mapMessageToMessageEntity = (message: Message): MessageEntity => {
   return {
     id: message?.id as number,
@@ -32,8 +35,9 @@ export const mapMessageEntityToMessage = (entity: MessageEntity): Message => {
     status: entity.status,
     claimTxCreationDate: entity.claimTxCreationDate,
     claimTxGasLimit: entity.claimTxGasLimit,
-    claimTxMaxFeePerGas: entity.claimTxMaxFeePerGas,
-    claimTxMaxPriorityFeePerGas: entity.claimTxMaxPriorityFeePerGas,
+    // bigint columns come back from the pg driver as strings; the domain (fee bumps, cancel) does bigint arithmetic
+    claimTxMaxFeePerGas: toOptionalBigInt(entity.claimTxMaxFeePerGas),
+    claimTxMaxPriorityFeePerGas: toOptionalBigInt(entity.claimTxMaxPriorityFeePerGas),
     claimTxNonce: entity.claimTxNonce,
     claimTxHash: entity.claimTxHash as Hash | undefined,
     claimNumberOfRetry: entity.claimNumberOfRetry,
