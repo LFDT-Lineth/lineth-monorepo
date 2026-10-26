@@ -14,6 +14,8 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/risc5"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
@@ -56,10 +58,6 @@ type Core struct {
 
 // New loads the circuit binary and the guest ELF, calls [zkcdriver.NewZkCDriver]
 // to define all columns and constraints, and returns a [Core] ready to prove.
-//
-// Compiler passes (rangecheck → lookup → logderiv → localvanishing → global)
-// and wiop.Materialize are not yet wired. They must be added before the
-// system can produce sound proofs.
 func New(cfg Config) (*Core, error) {
 	mode := cfg.Mode
 	if mode == "" {
@@ -111,15 +109,16 @@ func New(cfg Config) (*Core, error) {
 	// Must run after the arithmetization is defined, so the guest_output columns
 	// exist, and before the compiler passes, which discharge the openings it
 	// registers.
-	risc5.RegisterGuestPublicOutputs(sys)
+	risc5.RegisterPublicInputs(sys)
 
-	// Compiler passes go here once the real RISC-V .bin is fully supported:
-	//   compilers.RangeCheck(sys)
-	//   compilers.LookupToLogDerivSum(sys)
-	//   compilers.LogDerivativeSum(sys)
-	//   compilers.LocalVanishing(sys)
-	//   compilers.Global(sys)
-	//   wiop.Materialize(sys)
+	// Shared randomness is off: no preflight computes γ yet.
+	if err := compilers.CompileFull(sys,
+		compilers.ConfigureMessageBus(messagebus.WithoutSharedRandomness()),
+	); err != nil {
+		return nil, fmt.Errorf("compiling the wiop system: %w", err)
+	}
+
+	risc5.CheckPublicInputs(sys)
 
 	return &Core{
 		cfg:     cfg,
