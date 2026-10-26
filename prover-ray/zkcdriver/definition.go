@@ -439,17 +439,14 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 	case *air.BusConstraint[koalabear.Element]:
 		// Iterate receive ports, each of which identifies a set of columns in a
 		// given module (including a selector) which determine the message being
-		// reveived.
+		// revived.
 		for _, recvPort := range cs.Receives {
 
-			table := wiop.Table{
-				Columns:  make([]*wiop.ColumnView, len(recvPort.Registers)),
-				Selector: s.compColumnByCorsetID(recvPort.Module, recvPort.Selector).View(),
+			cols := make([]*wiop.ColumnView, len(recvPort.Registers))
+			for i := range cols {
+				cols[i] = s.compColumnByCorsetID(recvPort.Module, recvPort.Registers[i]).View()
 			}
-
-			for i := range table.Columns {
-				table.Columns[i] = s.compColumnByCorsetID(recvPort.Module, recvPort.Registers[i]).View()
-			}
+			table := wiop.NewFilteredTable(s.compColumnByCorsetID(recvPort.Module, recvPort.Selector).View(), cols...)
 
 			s.Sys.NewMessageBusReceive(s.Sys.Context.Childf("bus-%v", name), "0", name, table)
 		}
@@ -458,14 +455,11 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 		// given module (including a selector) which determine the message being
 		// sent.
 		for _, sendPort := range cs.Sends {
-			table := wiop.Table{
-				Columns:  make([]*wiop.ColumnView, len(sendPort.Registers)),
-				Selector: s.compColumnByCorsetID(sendPort.Module, sendPort.Selector).View(),
+			cols := make([]*wiop.ColumnView, len(sendPort.Registers))
+			for i := range cols {
+				cols[i] = s.compColumnByCorsetID(sendPort.Module, sendPort.Registers[i]).View()
 			}
-
-			for i := range table.Columns {
-				table.Columns[i] = s.compColumnByCorsetID(sendPort.Module, sendPort.Registers[i]).View()
-			}
+			table := wiop.NewFilteredTable(s.compColumnByCorsetID(sendPort.Module, sendPort.Selector).View(), cols...)
 
 			s.Sys.NewMessageBusSend(s.Sys.Context.Childf("bus-%v", name), "0", name, table)
 		}
