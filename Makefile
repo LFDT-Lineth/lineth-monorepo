@@ -4,13 +4,16 @@ include scripts/docker/images.mk
 docker-pull-images-external-to-monorepo:
 		docker compose -f docker/compose-tracing-v2-ci-extension.yml --profile external-to-monorepo pull
 
+CLEANUP_IMAGE ?= busybox:1.37.0@sha256:bdf57e528e45e4433820e045b29b4597825a1c9e38353532d90a01445013f82e
+
 clean-local-folders:
 		$(MAKE) clean-smc-folders
-		# Containers may create root-owned data; clean it through Docker on Linux too.
+		# Containers may create root-owned data; fall back to deleting it through Docker.
 		@if [ -d tmp/local ]; then \
+			rm -rf tmp/local/* 2>/dev/null || \
 			docker run --rm --network none --user 0:0 \
 				--mount "type=bind,source=$(CURDIR)/tmp/local,target=/data" \
-				busybox:latest find /data -mindepth 1 -delete; \
+				$(CLEANUP_IMAGE) find /data -mindepth 1 -delete; \
 		fi
 
 clean-testnet-folders:
