@@ -2,12 +2,10 @@ package backend
 
 import (
 	"bytes"
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
@@ -19,60 +17,41 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// newProgramVKCore returns a [Core] proving elf over the embedded arithmetization.
-func newProgramVKCore(t *testing.T, binBytes, elf []byte) *Core {
-	t.Helper()
-	binPath := filepath.Join(t.TempDir(), "circuit.bin")
-	require.NoError(t, os.WriteFile(binPath, binBytes, 0o600))
-	elfPath := filepath.Join(t.TempDir(), "guest.elf")
-	require.NoError(t, os.WriteFile(elfPath, elf, 0o600))
-
-	c, err := New(Config{CircuitBinPath: binPath, GuestELFPath: elfPath})
-	require.NoError(t, err)
-	return c
-}
-
-// proveProgramVK proves and verifies job on c.
-func proveProgramVK(t *testing.T, c *Core, job Job) (wiop.Proof, wiop.PublicInput) {
-	t.Helper()
-	inputs, err := c.buildInputs(job)
-	require.NoError(t, err)
-	proof, pub, err := c.runProve(context.Background(), &zkcdriver.PreReadInputs{Inputs: inputs})
-	require.NoError(t, err)
-	return proof, pub
-}
-
-func embeddedBinBytes(t *testing.T) []byte {
-	t.Helper()
-	binF, err := embedded.CompiledBinaryFile()
-	require.NoError(t, err)
-	binBytes, err := binF.MarshalBinary()
-	require.NoError(t, err)
-	return binBytes
-}
-
 // TestProgramVK checks that the program VK is the commitment to the program
 // round, is bound to the program only, and cannot be forged.
 func TestProgramVK(t *testing.T) {
-	binBytes := embeddedBinBytes(t)
-	elf, _ := minimal_elf.AllInOneElfProgram()
-	c := newProgramVKCore(t, binBytes, elf)
+	binPath := embeddedZKCBin(t)
 
-	proof, pub := proveProgramVK(t, c, Job{})
+	// newCore returns a [Core] proving elf over the embedded arithmetization.
+	newCore := func(t *testing.T, elf []byte) *Core {
+		elfPath := filepath.Join(t.TempDir(), "guest.elf")
+		require.NoError(t, os.WriteFile(elfPath, elf, 0o600))
+		c, err := New(Config{CircuitBinPath: binPath, GuestELFPath: elfPath})
+		require.NoError(t, err)
+		return c
+	}
+
+	elf, _ := minimal_elf.AllInOneElfProgram()
+	c := newCore(t, elf)
+
+	proof, pub, err := proveJob(c, Job{})
+	require.NoError(t, err)
 	vk := risc5.GetProgramVK(c.sys, pub)
 	assert.Equal(t, proof.Commitments[zkcdriver.ProgramRound], vk)
 	assert.NotEqual(t, field.Octuplet{}, vk, "the program round must be committed")
 
 	t.Run("same program", func(t *testing.T) {
-		other, otherPub := proveProgramVK(t, c, Job{Payload: make([]byte, 1<<12)})
+		other, otherPub, err := proveJob(c, Job{Payload: make([]byte, 1<<12)})
+		require.NoError(t, err)
 		require.NotEqual(t, proof.Commitments[1], other.Commitments[1], "the two executions must differ")
 		assert.Equal(t, vk, risc5.GetProgramVK(c.sys, otherPub))
 	})
 
 	t.Run("other program", func(t *testing.T) {
 		otherElf, _ := minimal_elf.OutputELF(risc5.NumGuestPublicOutputs)
-		other := newProgramVKCore(t, binBytes, otherElf)
-		_, otherPub := proveProgramVK(t, other, Job{})
+		other := newCore(t, otherElf)
+		_, otherPub, err := proveJob(other, Job{})
+		require.NoError(t, err)
 		assert.NotEqual(t, vk, risc5.GetProgramVK(other.sys, otherPub))
 	})
 
@@ -86,25 +65,31 @@ func TestProgramVK(t *testing.T) {
 	})
 }
 
-// TestProgramVKRejectsTraceInProgramRound checks that the program VK is not
-// registered when the trace is in the program round.
-func TestProgramVKRejectsTraceInProgramRound(t *testing.T) {
-	sys := wiop.NewSystemf("program-vk-test")
-	sys.NewRound()
-	zkcdriver.NewZkCDriver(sys, zkcdriver.Settings{}, bytes.NewReader(embeddedBinBytes(t)))
+// TestProgramVKMisuse checks that the program VK registration and the
+// public-input check reject an ill-defined system.
+func TestProgramVKMisuse(t *testing.T) {
+	binBytes, err := os.ReadFile(embeddedZKCBin(t))
+	require.NoError(t, err)
 
-	assert.Panics(t, func() { risc5.RegisterProgramVK(sys) })
-}
+	newSys := func(settings zkcdriver.Settings) *wiop.System {
+		sys := wiop.NewSystemf("program-vk-test")
+		sys.NewRound()
+		zkcdriver.NewZkCDriver(sys, settings, bytes.NewReader(binBytes))
+		return sys
+	}
 
-// TestCheckPublicInputsMissingRegistration checks that [risc5.CheckPublicInputs]
-// catches a system on which [risc5.RegisterPublicInputs] was not called.
-func TestCheckPublicInputsMissingRegistration(t *testing.T) {
-	sys := wiop.NewSystemf("program-vk-test")
-	sys.NewRound()
-	zkcdriver.NewZkCDriver(sys, zkcdriver.Settings{TraceRound: 1}, bytes.NewReader(embeddedBinBytes(t)))
-	require.NoError(t, compilers.CompileFull(sys,
-		compilers.ConfigureMessageBus(messagebus.WithoutSharedRandomness()),
-	))
+	t.Run("trace in program round", func(t *testing.T) {
+		sys := newSys(zkcdriver.Settings{})
+		assert.Panics(t, func() { risc5.RegisterProgramVK(sys) })
+	})
 
-	assert.Panics(t, func() { risc5.CheckPublicInputs(sys) })
+	// CheckPublicInputs catches a system on which RegisterPublicInputs was not
+	// called.
+	t.Run("missing registration", func(t *testing.T) {
+		sys := newSys(zkcdriver.Settings{TraceRound: 1})
+		require.NoError(t, compilers.CompileFull(sys,
+			compilers.ConfigureMessageBus(messagebus.WithoutSharedRandomness()),
+		))
+		assert.Panics(t, func() { risc5.CheckPublicInputs(sys) })
+	})
 }

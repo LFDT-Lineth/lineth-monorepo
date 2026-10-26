@@ -107,8 +107,9 @@ func New(cfg Config) (*Core, error) {
 	driver := zkcdriver.NewZkCDriver(sys, zkcdriver.Settings{TraceRound: 1}, binFile)
 
 	// Must run after the arithmetization is defined, so the guest_output columns
-	// exist, and before the compiler passes, which discharge the openings it
-	// registers.
+	// and the program round exist, and before the compiler passes, which
+	// discharge the guest-output openings and commit the program round that the
+	// program VK cells read.
 	risc5.RegisterPublicInputs(sys)
 
 	// Shared randomness is off: no preflight computes γ yet.
