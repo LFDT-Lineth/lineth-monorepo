@@ -19,7 +19,7 @@ const executionDir = resolve(__dirname, "../../tmp/local/prover/riscv/execution"
 const execFileAsync = promisify(execFile);
 
 type ExecutionRequest = {
-  programId: Hex;
+  guestProgramId: Hex;
   metadata: { startBlockNumber: number; endBlockNumber: number; totalGasUsed: number };
   proofRequest: {
     chainConfig: { chainId: number; forkName: string };
@@ -87,7 +87,7 @@ describe("RISC-V execution stack", () => {
     );
     const { startBlockNumber, endBlockNumber } = request.metadata;
     expect(request.proofRequest.chainConfig).toMatchObject({ chainId: context.getL2ChainId(), forkName: "Amsterdam" });
-    expect(request.programId).toMatch(/^0x[0-9a-f]{64}$/i);
+    expect(request.guestProgramId).toMatch(/^0x[0-9a-f]{64}$/i);
     expect(request.metadata.totalGasUsed).toBeGreaterThan(0);
     const inputs = request.proofRequest.payloads.map((payload) => payload.statelessInput);
     expect(inputs.map((input) => input.newPayloadRequest.executionPayload.blockNumber)).toEqual(
