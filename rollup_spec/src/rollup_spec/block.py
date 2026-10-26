@@ -27,10 +27,11 @@ class SystemContracts:
     Addresses of the system contracts the execution engine calls or reads
     around every block (EIP-4788, EIP-2935, EIP-6110, EIP-7002, EIP-7251,
     EIP-8282). They come from the chain's genesis configuration and are
-    supplied as a proof-range input, so they are committed through
-    `dynamicChainConfigHash`: a prover cannot pick them freely.
+    supplied as a proof-range input. They are NOT part of the
+    `dynamicChainConfigHash` preimage, which is anchored in the L1 verifier's
+    chain configuration.
 
-    Field order is the wire and hash order.
+    Field order is the wire order.
     """
     beacon_roots: Address
     history_storage: Address
@@ -40,21 +41,6 @@ class SystemContracts:
     builder_deposit_request: Address
     builder_exit_request: Address
 
-    def encode(self) -> bytes:
-        """The seven 20-byte addresses concatenated in field order."""
-        return b"".join(
-            bytes(a)
-            for a in (
-                self.beacon_roots,
-                self.history_storage,
-                self.deposit,
-                self.withdrawal_request,
-                self.consolidation_request,
-                self.builder_deposit_request,
-                self.builder_exit_request,
-            )
-        )
-
 
 @dataclass
 class ChainConfig:
@@ -63,9 +49,10 @@ class ChainConfig:
 
     `baseFee` is NOT part of this struct: the guest takes it from a block
     header (the first block in the range) and asserts every other block in
-    the range carries the same `base_fee_per_gas`. `dynamicChainConfigHash`
-    is then computed from `chainID`, `coinbase`, `l2MessageServiceAddress`,
-    that extracted `baseFee`, and the `systemContracts` addresses.
+    the range carries the same `base_fee_per_gas`. The four-input
+    `dynamicChainConfigHash` is then computed from `chainID`, `coinbase`,
+    `l2MessageServiceAddress`, and that extracted `baseFee`;
+    `system_contracts` is excluded from the hash.
     """
     l2_message_service_address: Address
     coinbase: Address
@@ -76,19 +63,16 @@ class ChainConfig:
         """
         Hash the dynamic chain configuration exposed by the l2-execution proof:
 
-            keccak256(uint256_be(chainID) || coinbase || L2MessageServiceContract || uint256_be(baseFee)
-                      || beaconRoots || historyStorage || deposit || withdrawalRequest
-                      || consolidationRequest || builderDepositRequest || builderExitRequest)
+            keccak256(uint256_be(chainID) || coinbase || L2MessageServiceContract || uint256_be(baseFee))
 
         `base_fee` is supplied at hash time by the caller (it is sourced from
-        the block header — see §2.1). System-contract addresses are 20 bytes each.
+        the block header — see §2.1). `system_contracts` is not hashed.
         """
         return keccak256(
             int(self.chain_id).to_bytes(32, "big") +
             bytes(self.coinbase) +
             bytes(self.l2_message_service_address) +
-            int(base_fee).to_bytes(32, "big") +
-            self.system_contracts.encode()
+            int(base_fee).to_bytes(32, "big")
         )
 
 class ForcedTransactionAcceptance(Enum):

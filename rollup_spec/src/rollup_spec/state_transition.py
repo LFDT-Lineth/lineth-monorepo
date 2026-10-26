@@ -52,8 +52,8 @@ def execute_stateless_input(
     """
     Validate and execute one block from its parsed `StatelessInput`.
 
-    `system_contracts` are the proof-range system-contract addresses (committed
-    through `dynamicChainConfigHash`); the engine MUST use them for its
+    `system_contracts` are the proof-range system-contract addresses (not part
+    of the `dynamicChainConfigHash` preimage); the engine MUST use them for its
     pre-/post-block system calls and deposit-log collection rather than any
     built-in per-chain defaults.
 

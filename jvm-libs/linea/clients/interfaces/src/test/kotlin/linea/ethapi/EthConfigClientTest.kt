@@ -36,33 +36,26 @@ class EthConfigClientTest {
   }
 
   @Test
-  fun `uses the scheduled fork when current predates the builder contracts`() {
+  fun `uses the current fork and ignores scheduled ones`() {
+    val other = amsterdamContracts + ("DEPOSIT_CONTRACT_ADDRESS" to "0x" + "11".repeat(20))
     val config = EthConfig(
-      current = fork(pragueContracts),
-      next = fork(amsterdamContracts, activationTime = 100UL),
-      last = fork(amsterdamContracts, activationTime = 100UL),
+      current = fork(amsterdamContracts),
+      next = fork(other, activationTime = 100UL),
+      last = fork(other, activationTime = 100UL),
     )
     assertThat(config.systemContracts(59144UL)).isEqualTo(expected)
   }
 
   @Test
-  fun `rejects when no fork defines every system contract`() {
-    val config = EthConfig(current = fork(pragueContracts), next = null, last = null)
-    assertThatThrownBy { config.systemContracts(59144UL) }
-      .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessageContaining("no fork defining all")
-  }
-
-  @Test
-  fun `rejects system contracts that differ across forks`() {
+  fun `rejects when the current fork does not define every system contract`() {
     val config = EthConfig(
-      current = fork(amsterdamContracts),
-      next = fork(amsterdamContracts + ("DEPOSIT_CONTRACT_ADDRESS" to "0x" + "11".repeat(20)), activationTime = 9UL),
+      current = fork(pragueContracts),
+      next = fork(amsterdamContracts, activationTime = 100UL),
       last = null,
     )
     assertThatThrownBy { config.systemContracts(59144UL) }
       .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessageContaining("different system contracts")
+      .hasMessageContaining("current fork does not define all")
   }
 
   @Test

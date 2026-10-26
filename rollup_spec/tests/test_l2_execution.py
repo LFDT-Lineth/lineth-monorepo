@@ -197,36 +197,33 @@ def test_execution_rejects_message_log_missing_hash_topic(monkeypatch) -> None:
         run_l2_execution_guest(execution_input)
 
 
-# ── dynamicChainConfigHash commits to the system contracts ──────────────────────
+# ── dynamicChainConfigHash excludes the system contracts ────────────────────────
 
 
-def test_chain_config_hash_appends_system_contracts_to_preimage() -> None:
-    config = ChainConfig(
+def _config_with_system_contracts() -> ChainConfig:
+    return ChainConfig(
         l2_message_service_address=Address(bytes([0x11]) * 20),
         coinbase=Address(bytes(20)),
         chain_id=U64(59144),
         system_contracts=_SYSTEM_CONTRACTS,
     )
+
+
+def test_chain_config_hash_preimage_excludes_system_contracts() -> None:
     expected = keccak256(
         (59144).to_bytes(32, "big")
         + bytes(20)
         + bytes([0x11]) * 20
         + (1_000_000_000).to_bytes(32, "big")
-        + b"".join(bytes([b]) * 20 for b in range(0xA1, 0xA8))
     )
-    assert config.hash(1_000_000_000) == expected
+    assert _config_with_system_contracts().hash(1_000_000_000) == expected
 
 
-def test_chain_config_hash_changes_with_any_system_contract() -> None:
+def test_chain_config_hash_ignores_system_contracts() -> None:
     from dataclasses import replace
 
-    config = ChainConfig(
-        l2_message_service_address=Address(bytes([0x11]) * 20),
-        coinbase=Address(bytes(20)),
-        chain_id=U64(59144),
-        system_contracts=_SYSTEM_CONTRACTS,
-    )
+    config = _config_with_system_contracts()
     baseline = config.hash(7)
     for field in SystemContracts.__dataclass_fields__:
         tampered = replace(config, system_contracts=replace(_SYSTEM_CONTRACTS, **{field: Address(bytes(20))}))
-        assert tampered.hash(7) != baseline, field
+        assert tampered.hash(7) == baseline, field

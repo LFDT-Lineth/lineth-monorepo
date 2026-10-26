@@ -43,9 +43,9 @@ pub const MAX_TX_BYTES: usize = 1 << 30; // matches the consensus-layer Transact
 
 // ── Logical values ────────────────────────────────────────────────────────────
 
-/// System-contract addresses handed to the execution engine (field order = wire and hash order,
-/// and matches zesu's `input.SystemContracts`). Supplied by the coordinator from the node's genesis
-/// config and committed through `dynamicChainConfigHash`.
+/// System-contract addresses handed to the execution engine (field order = wire order, and matches
+/// zesu's `input.SystemContracts`). Supplied by the coordinator from the node's genesis config. Not
+/// part of the `dynamicChainConfigHash` preimage, which is anchored in the L1 verifier.
 pub const SystemContracts = struct {
     beacon_roots: [20]u8,
     history_storage: [20]u8,

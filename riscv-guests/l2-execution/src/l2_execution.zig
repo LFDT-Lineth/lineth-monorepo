@@ -94,16 +94,14 @@ fn mappingSlot(base_slot: [32]u8, key: [32]u8) [32]u8 {
 }
 
 /// `ChainConfig.hash(base_fee)`: keccak256(chainID_be32 || coinbase || l2MessageServiceAddress ||
-/// baseFee_be32 || systemContracts), the seven system-contract addresses as 20 bytes each in field
-/// order. Committing the addresses here is what stops a prover from picking them: they are
-/// otherwise plain private inputs that steer the engine's system calls and deposit-log collection.
+/// baseFee_be32). `system_contracts` is deliberately NOT part of the preimage: the hash is anchored
+/// in the L1 verifier's chain configuration.
 fn chainConfigHash(chain_config: l2_execution_ssz.ChainConfig, base_fee: u64) [32]u8 {
-    var buf: [104 + l2_execution_ssz.SystemContracts.ENCODED_SIZE]u8 = undefined;
+    var buf: [104]u8 = undefined;
     @memcpy(buf[0..32], &u64ToSlot32(chain_config.chain_id));
     @memcpy(buf[32..52], &chain_config.coinbase);
     @memcpy(buf[52..72], &chain_config.l2_message_service_address);
     @memcpy(buf[72..104], &u64ToSlot32(base_fee));
-    @memcpy(buf[104..], &chain_config.system_contracts.encode());
     return mpt.keccak256(&buf);
 }
 

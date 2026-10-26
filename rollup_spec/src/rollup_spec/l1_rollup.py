@@ -21,7 +21,7 @@ class PlonkVerifier:
     `contracts/src/verifiers/interfaces/IPlonkVerifier.sol`).
 
     The chain-configuration preimage (`chainId`, `baseFee`, `coinbase`,
-    `l2MessageServiceAddress` and the seven system-contract addresses) is passed to the verifier at deploy time as
+    `l2MessageServiceAddress`) is passed to the verifier at deploy time as
     a `ChainConfigurationParameter[]` array of named bytes32 values (see
     `contracts/deploy/01_deploy_PlonkVerifier.ts`); the constructor hashes
     those values and stores ONLY the digest in `bytes32 immutable

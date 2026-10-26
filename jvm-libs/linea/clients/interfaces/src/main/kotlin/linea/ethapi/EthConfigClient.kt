@@ -28,7 +28,7 @@ data class ForkConfig(
 
 /**
  * System-contract addresses the execution engine uses for the chain, as 0x-prefixed lowercase hex.
- * Field order matches the RISC-V guest input and the `dynamicChainConfigHash` preimage.
+ * Field order matches the RISC-V guest input.
  */
 data class SystemContracts(
   val beaconRoots: String,
@@ -68,23 +68,14 @@ data class SystemContracts(
 }
 
 /**
- * The system contracts for proving [expectedChainId]: taken from every reported fork (current, next, last) that
- * defines all of them, which must agree. A change of system contracts across scheduled forks is rejected rather than
- * guessed at, since every value is committed to by the proofs (`dynamicChainConfigHash`).
+ * The system contracts of the fork currently in effect, for proving [expectedChainId].
+ * Fails when the current fork does not define all of them (e.g. a pre-Amsterdam fork).
  */
 fun EthConfig.systemContracts(expectedChainId: ULong): SystemContracts {
-  val forks = listOfNotNull(current, next, last)
-  forks.forEach { fork ->
-    require(fork.chainId == expectedChainId) {
-      "eth_config chainId=${fork.chainId} does not match expected chainId=$expectedChainId"
-    }
+  require(current.chainId == expectedChainId) {
+    "eth_config chainId=${current.chainId} does not match expected chainId=$expectedChainId"
   }
-  val candidates = forks.mapNotNull { SystemContracts.fromEthConfig(it.systemContracts) }.distinct()
-  require(candidates.isNotEmpty()) {
-    "eth_config reports no fork defining all of ${SystemContracts.ETH_CONFIG_KEYS}"
+  return requireNotNull(SystemContracts.fromEthConfig(current.systemContracts)) {
+    "eth_config current fork does not define all of ${SystemContracts.ETH_CONFIG_KEYS}: ${current.systemContracts}"
   }
-  require(candidates.size == 1) {
-    "eth_config reports different system contracts across forks, which is not supported: $candidates"
-  }
-  return candidates.single()
 }
