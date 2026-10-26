@@ -263,8 +263,8 @@ pub fn build(b: *std.Build) void {
         // module-wiring comment near `l2_execution_ssz_guest_mod` above).
         //
         // These tests exercise the Linea-layer logic — the FTX rolling hash, dynamicChainConfigHash,
-        // hashAddressList/hashDigestList, the L1->L2 bridge storage-slot math, L2->L1 message
-        // extraction, forced-transaction dispatch, and the witness-backed MPT account/storage reads —
+        // hashAddressList/hashDigestList, the L2MessageService log scan (L2->L1 messages and the L1->L2
+        // rolling hash), forced-transaction dispatch, and the witness-backed MPT account reads —
         // against hand-built fixtures and Python-computed expected values (see Readme.md §6.3/§6.5/§2.1).
         // Needs the full zesu import set (MPT, executor types/tx-decode, primitives, accelerators for
         // ecrecover) plus the sibling `l2_execution_ssz` module.

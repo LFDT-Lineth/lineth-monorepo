@@ -162,8 +162,6 @@ object RiscvProverClientTestFixtures {
       endBlockNumber = endBlockNumber,
       endBlockTimestamp = 1763000123,
       l2L1Messages = listOf("0xaa"),
-      parentL1L2BridgeRollingHash = "0x02",
-      parentL1L2BridgeRollingHashMessageNumber = 3,
       endL1L2BridgeRollingHash = "0x04",
       endL1L2BridgeRollingHashMessageNumber = 5,
       dynamicChainConfigHash = "0xc0ffee",
@@ -193,8 +191,6 @@ object RiscvProverClientTestFixtures {
   ): RollupProofPublicInputsDto = RollupProofPublicInputsDto(
     endBlockNumber = endBlockNumber,
     endBlockTimestamp = 1763000457,
-    parentL1L2BridgeRollingHash = "0x11",
-    parentL1L2BridgeRollingHashMessageNumber = 12,
     endL1L2BridgeRollingHash = "0x13",
     endL1L2BridgeRollingHashMessageNumber = 14,
     dynamicChainConfigHash = "0xc0ffee",
@@ -231,8 +227,6 @@ object RiscvProverClientTestFixtures {
   ): FinalizationPublicInputsDto = FinalizationPublicInputsDto(
     endBlockNumber = endBlockNumber,
     endBlockTimestamp = 1763002301,
-    parentL1L2BridgeRollingHash = "0x11",
-    parentL1L2BridgeRollingHashMessageNumber = 12,
     endL1L2BridgeRollingHash = "0x13",
     endL1L2BridgeRollingHashMessageNumber = 14,
     dynamicChainConfigHash = "0xc0ffee",

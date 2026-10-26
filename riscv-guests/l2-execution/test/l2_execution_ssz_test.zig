@@ -74,19 +74,18 @@ const sample_offsets = [_]u16{ 1, 3 };
 
 // Produced by the Python reference codec's `encode_l2_execution_output` for `samplePublicInputs`.
 const sample_output_hex =
-    "f6e73dfae5652c8f2df525094277580e3929c7c0a0be1ac12247a9d3c0419e7f" ++
+    "9fba64a1911307d769659b8ecb64c72d0df2d90d8158241267c55d37bb480030" ++
     "00030a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a" ++
     "0a0a0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b" ++
-    "0b0b37440f00000000003b3f1569000000004401000002020202020202020202" ++
-    "0202020202020202020202020202020202020202020200000000000000000303" ++
-    "0303030303030303030303030303030303030303030303030303030303030500" ++
-    "000000000000c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0" ++
-    "c0c0c0c0c0c00404040404040404040404040404040404040404040404040404" ++
-    "0404040404041000000000000000050505050505050505050505050505050505" ++
-    "0505050505050505050505050505120000000000000064010000070707070707" ++
-    "0707070707070707070707070707070707070707070707070707030000000000" ++
-    "0000780100000808080808080808080808080808080808080808080808080808" ++
-    "080808080808090909090909090909090909090909090909090901000300";
+    "0b0b37440f00000000003b3f1569000000001c01000003030303030303030303" ++
+    "030303030303030303030303030303030303030303030500000000000000c0c0" ++
+    "c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c00404" ++
+    "0404040404040404040404040404040404040404040404040404040404041000" ++
+    "0000000000000505050505050505050505050505050505050505050505050505" ++
+    "05050505050512000000000000003c0100000707070707070707070707070707" ++
+    "0707070707070707070707070707070707070300000000000000500100000808" ++
+    "0808080808080808080808080808080808080808080808080808080808080909" ++
+    "09090909090909090909090909090909090901000300";
 
 fn samplePublicInputs() l2_execution_ssz.L2ExecutionProofPublicInput {
     return .{
@@ -95,8 +94,6 @@ fn samplePublicInputs() l2_execution_ssz.L2ExecutionProofPublicInput {
         .end_block_number = 1000503,
         .end_block_timestamp = 1763000123,
         .l2_l1_messages = &sample_messages,
-        .parent_l1_l2_bridge_rolling_hash = repeat32(0x02),
-        .parent_l1_l2_bridge_rolling_hash_message_number = 0,
         .end_l1_l2_bridge_rolling_hash = repeat32(0x03),
         .end_l1_l2_bridge_rolling_hash_message_number = 5,
         .dynamic_chain_config_hash = repeat32(0xc0),
@@ -126,7 +123,7 @@ test "output is the schema-framed SSZ public inputs preceded by their hash, matc
     try std.testing.expectEqual(l2_execution_ssz.OUTPUT_SCHEMA_ID, std.mem.readInt(u16, out[32..34], .big));
 }
 
-test "output with empty lists is the 324-byte fixed head plus framing" {
+test "output with empty lists is the 284-byte fixed head plus framing" {
     const alloc = std.testing.allocator;
     var pi = samplePublicInputs();
     pi.l2_l1_messages = &.{};
@@ -134,7 +131,7 @@ test "output with empty lists is the 324-byte fixed head plus framing" {
     pi.l2_messaging_blocks_offsets = &.{};
     const out = try l2_execution_ssz.encodeOutput(alloc, pi);
     defer alloc.free(out);
-    try std.testing.expectEqual(@as(usize, 32 + 2 + 324), out.len);
+    try std.testing.expectEqual(@as(usize, 32 + 2 + 284), out.len);
 }
 
 test "hashPublicInputs is the commitment at the head of the output" {

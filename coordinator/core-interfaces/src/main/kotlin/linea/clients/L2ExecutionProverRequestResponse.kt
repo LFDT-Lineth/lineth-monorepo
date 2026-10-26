@@ -155,7 +155,7 @@ data class ForcedTransaction(
 }
 
 /**
- * The 18-field PI tuple emitted by an l2-execution proof (rollup_spec §2.1, `L2ExecutionProofPublicInput`).
+ * The PI tuple emitted by an l2-execution proof (rollup_spec §2.1, `L2ExecutionProofPublicInput`).
  *
  * Domain twin of `lineth.coordinator.clients.prover.L2ExecutionProofPublicInputsDto`. Kept here (rather than reusing
  * the DTO) because this module is depended upon by the prover-client modules, not the other way around. Where the DTO
@@ -167,8 +167,6 @@ data class L2ExecutionProofPublicInputs(
   val endBlockNumber: ULong,
   val endBlockTimestamp: Instant,
   val l2L1Messages: List<ByteArray>,
-  val parentL1L2BridgeRollingHash: ByteArray,
-  val parentL1L2BridgeRollingHashMessageNumber: ULong,
   val endL1L2BridgeRollingHash: ByteArray,
   val endL1L2BridgeRollingHashMessageNumber: ULong,
   val dynamicChainConfigHash: ByteArray,
@@ -192,8 +190,6 @@ data class L2ExecutionProofPublicInputs(
     if (endBlockNumber != other.endBlockNumber) return false
     if (endBlockTimestamp != other.endBlockTimestamp) return false
     if (!l2L1Messages.byteArrayListEquals(other.l2L1Messages)) return false
-    if (!parentL1L2BridgeRollingHash.contentEquals(other.parentL1L2BridgeRollingHash)) return false
-    if (parentL1L2BridgeRollingHashMessageNumber != other.parentL1L2BridgeRollingHashMessageNumber) return false
     if (!endL1L2BridgeRollingHash.contentEquals(other.endL1L2BridgeRollingHash)) return false
     if (endL1L2BridgeRollingHashMessageNumber != other.endL1L2BridgeRollingHashMessageNumber) return false
     if (!dynamicChainConfigHash.contentEquals(other.dynamicChainConfigHash)) return false
@@ -215,8 +211,6 @@ data class L2ExecutionProofPublicInputs(
     result = 31 * result + endBlockNumber.hashCode()
     result = 31 * result + endBlockTimestamp.hashCode()
     result = 31 * result + l2L1Messages.byteArrayListHashCode()
-    result = 31 * result + parentL1L2BridgeRollingHash.contentHashCode()
-    result = 31 * result + parentL1L2BridgeRollingHashMessageNumber.hashCode()
     result = 31 * result + endL1L2BridgeRollingHash.contentHashCode()
     result = 31 * result + endL1L2BridgeRollingHashMessageNumber.hashCode()
     result = 31 * result + dynamicChainConfigHash.contentHashCode()

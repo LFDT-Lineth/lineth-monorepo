@@ -18,7 +18,7 @@
 //!   SszL2ExecutionProofPrivateInput:  92 bytes
 //!   SszLineaPayloadInput:              8 bytes
 //!   SszForcedTransactionWitness:      21 bytes
-//!   SszL2ExecutionProofPublicInput:  324 bytes  (variable-size lists sit behind 4-byte offsets)
+//!   SszL2ExecutionProofPublicInput:  284 bytes  (variable-size lists sit behind 4-byte offsets)
 
 const std = @import("std");
 const guest_common = @import("guest_common");
@@ -79,8 +79,6 @@ pub const L2ExecutionProofPublicInput = struct {
     end_block_number: u64,
     end_block_timestamp: u64,
     l2_l1_messages: []const [32]u8,
-    parent_l1_l2_bridge_rolling_hash: [32]u8,
-    parent_l1_l2_bridge_rolling_hash_message_number: u64,
     end_l1_l2_bridge_rolling_hash: [32]u8,
     end_l1_l2_bridge_rolling_hash_message_number: u64,
     dynamic_chain_config_hash: [32]u8,
@@ -256,8 +254,8 @@ pub fn encodeInput(alloc: std.mem.Allocator, v: L2ExecutionProofPrivateInput) ![
 }
 
 // ── L2ExecutionProofOutput (the extended guest OUTPUT) ────────────────────────
-// Fixed head: the fixed-size fields inline plus a 4-byte offset per list = 324.
-const PI_FIXED_SIZE: usize = 324;
+// Fixed head: the fixed-size fields inline plus a 4-byte offset per list = 284.
+const PI_FIXED_SIZE: usize = 284;
 const HASH_SIZE: usize = 32;
 
 /// Write a 32-byte hash at the cursor and advance it.
@@ -278,7 +276,7 @@ inline fn putOffset(out: []u8, pos: *usize, tail_start: usize) void {
     pos.* += 4;
 }
 
-/// SSZ-encode the public-input tuple: the 324-byte fixed head followed by the three list tails.
+/// SSZ-encode the public-input tuple: the 284-byte fixed head followed by the three list tails.
 pub fn encodePublicInputsBytes(alloc: std.mem.Allocator, pi: L2ExecutionProofPublicInput) ![]u8 {
     if (pi.l2_l1_messages.len > MAX_MESSAGES or
         pi.filtered_addresses.len > MAX_FILTERED or
@@ -298,8 +296,6 @@ pub fn encodePublicInputsBytes(alloc: std.mem.Allocator, pi: L2ExecutionProofPub
     putU64(out, &pos, pi.end_block_number);
     putU64(out, &pos, pi.end_block_timestamp);
     putOffset(out, &pos, messages_start);
-    putHash(out, &pos, pi.parent_l1_l2_bridge_rolling_hash);
-    putU64(out, &pos, pi.parent_l1_l2_bridge_rolling_hash_message_number);
     putHash(out, &pos, pi.end_l1_l2_bridge_rolling_hash);
     putU64(out, &pos, pi.end_l1_l2_bridge_rolling_hash_message_number);
     putHash(out, &pos, pi.dynamic_chain_config_hash);

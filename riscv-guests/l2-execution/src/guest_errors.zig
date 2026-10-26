@@ -29,11 +29,11 @@ pub const ExitCode = enum {
     policy_reject,
     forced_tx_violation,
     /// Witness-data failures: a witness node needed to resolve an MPT proof path is missing from
-    /// the pool, an L1->L2 rolling-hash number read from bridge storage overflows u64 or decreases
-    /// across the conflation, a `MessageSent` log, header-chain RLP, or witness payload fails to
-    /// decode, or a witness miss surfaces through the EVM's witness-backed database during
-    /// delegated per-block execution (`WitnessDbResolution`). A proof of ABSENCE resolves to
-    /// `null`/`0` instead, never here.
+    /// the pool, a `MessageSent` or `RollingHashUpdated` log is malformed or carries a message
+    /// number that overflows u64, header-chain RLP or a witness payload fails to decode, or a
+    /// witness miss surfaces through the EVM's witness-backed database during delegated per-block
+    /// execution (`WitnessDbResolution`). A proof of ABSENCE resolves to `null`/`0` instead, never
+    /// here.
     witness_resolution,
     /// Resource exhaustion: the fixed-size guest heap (a `FixedBufferAllocator`) ran out. Points
     /// at capacity, not logic — the input was too large for the configured heap, so the operator
@@ -80,7 +80,6 @@ pub const linea_errors = error{
     ForcedTxSenderAbsent,
 
     RollingHashNumberOverflow,
-    RollingHashNumberDecreased,
     InvalidBridgeMessageLog,
     InvalidProof,
     InvalidWitness,
@@ -126,7 +125,6 @@ pub fn exitCode(err: anyerror) ExitCode {
         => .forced_tx_violation,
 
         error.RollingHashNumberOverflow,
-        error.RollingHashNumberDecreased,
         error.InvalidBridgeMessageLog,
         error.InvalidProof,
         error.InvalidWitness,
