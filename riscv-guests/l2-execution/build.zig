@@ -121,7 +121,10 @@ pub fn build(b: *std.Build) void {
         // (ReleaseSmall) for the prover toolchain.
         const host_optimize: std.builtin.OptimizeMode =
             if (optimize == .ReleaseSmall) .ReleaseSafe else optimize;
-        const native_target = b.resolveTargetQuery(.{});
+        // Baseline CPU, not the build host's: `l2-execution-runner` ships in the prover-ray image,
+        // so host-specific extensions (e.g. AVX-512 on the build machine) would SIGILL on older
+        // or emulated (Rosetta) x86_64 hosts.
+        const native_target = b.resolveTargetQuery(.{ .cpu_model = .baseline });
         const zlob_dep = b.lazyDependency("zlob", .{ .target = native_target, .optimize = host_optimize }) orelse
             @panic("zlob dependency is required for native test and helper targets");
         const zesu_native = b.dependency("zesu", .{

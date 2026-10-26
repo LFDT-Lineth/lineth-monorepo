@@ -44,6 +44,7 @@
 - *(coordinator)* Inline pluggable signer types and per-proof-type prover transport (#4164)
 - *(coordinator)* RISC-V rollup proof coordinator — chunk assembly + proof submission (#3967)
 - *(coordinator)* Added BlobSubmitterV2 interface and implementation (#3673)
+- *(coordinator)* Generic AggregationsDaoG and AggregationV2 for RISC-V aggregation proofs (#4174)
 
 ### 🐛 Bug Fixes
 
@@ -102,6 +103,7 @@
 - *(coordinator)* Align RISC-V rollup DTOs with rollup_spec (#4262)
 - *(misc)* Moved filtered addresses into the list of the PI (#4166)
 - *(coordinator)* Align RISC-V rollup-aggregation DTOs with rollup_spec (#4263)
+- *(prover)* Handle zero modulus in MODEXP (#4307)
 
 ### 🚜 Refactor
 

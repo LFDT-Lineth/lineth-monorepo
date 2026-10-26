@@ -1,4 +1,8 @@
-## [unreleased]
+## [1.0.8] - 2026-10-26
+
+### 🐛 Bug Fixes
+
+- *(prover)* Handle zero modulus in MODEXP (#4307)
 
 ### ⚙️ Miscellaneous Tasks
 
