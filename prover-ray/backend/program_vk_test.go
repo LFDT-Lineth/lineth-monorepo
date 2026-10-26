@@ -24,6 +24,7 @@ func TestProgramVK(t *testing.T) {
 
 	// newCore returns a [Core] proving elf over the embedded arithmetization.
 	newCore := func(t *testing.T, elf []byte) *Core {
+		t.Helper()
 		elfPath := filepath.Join(t.TempDir(), "guest.elf")
 		require.NoError(t, os.WriteFile(elfPath, elf, 0o600))
 		c, err := New(Config{CircuitBinPath: binPath, GuestELFPath: elfPath})
