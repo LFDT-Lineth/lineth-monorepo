@@ -37,12 +37,10 @@ class LocalStackConfigsParsingTest {
         Path.of("../../docker/config/coordinator/coordinator-config-v2-override-local-dev.toml"),
         Path.of("../../docker/config/coordinator/coordinator-config-riscv.toml"),
       ),
-      tracesLimitsFileV4 = Path.of("../../docker/config/common/traces-limits-v4.4.toml"),
       tracesLimitsFileV5 = Path.of("../../docker/config/common/traces-limits-v5.toml"),
       gasPriceCapTimeOfDayMultipliersFile = Path.of(
         "../../docker/config/common/gas-price-cap-time-of-day-multipliers.toml",
       ),
-      smartContractErrorsFile = Path.of("../../docker/config/common/smart-contract-errors.toml"),
       enforceStrict = true,
     ).also { configs ->
       assertThat(configs.protocol.l1.contractAddress).isEqualTo("0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9")
@@ -50,7 +48,7 @@ class LocalStackConfigsParsingTest {
       assertThat(configs.proversConfig.currentProver.preRiscvConfig).isNull()
       configs.proversConfig.currentProver.riscvConfig!!.l2Execution.also { execution ->
         assertThat(execution.forkName).isEqualTo("Amsterdam")
-        assertThat(execution.fileBased.requestsDirectory)
+        assertThat(execution.fileBased!!.requestsDirectory)
           .isEqualTo(Path.of("/data/prover/riscv/execution/requests"))
       }
       assertThat(configs.l1Submission.disabled).isTrue()
