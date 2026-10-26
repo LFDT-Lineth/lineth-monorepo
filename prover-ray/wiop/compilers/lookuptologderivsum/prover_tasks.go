@@ -114,11 +114,11 @@ func (t *mAssignmentTask) Run(rt *wiop.Runtime) {
 	// upper bound: filtered-out rows are skipped.
 	sTotal := 0
 	for _, inc := range t.included {
-		sTotal += inc.cols[0].Module().RuntimeSize(rt)
+		sTotal += inc.module.RuntimeSize(rt)
 	}
 	sEntries := make([]sEntry, 0, sTotal)
 	for aFrag, inc := range t.included {
-		an := inc.cols[0].Module().RuntimeSize(rt)
+		an := inc.module.RuntimeSize(rt)
 		hashes := wiop.EvaluateRLCAsExt(rt, alpha, inc.cols, an)
 		if t.prependOneOnAOk {
 			scaleAddOneInPlace(hashes, alpha)
@@ -229,9 +229,9 @@ func (t *mAssignmentTask) hashJoin(tEntries []tEntry, sEntries []sEntry, mValues
 				pos, ok := mapM[e.val]
 				if !ok {
 					panic(fmt.Sprintf(
-						"wiop/compilers/lookuptologderivsum: A row %d (fragment %s) has no match "+
+						"wiop/compilers/lookuptologderivsum: A row %d (module %s) has no match "+
 							"in the lookup table",
-						e.row, t.included[e.frag].cols[0].Column.Context.Path(),
+						e.row, t.included[e.frag].module.Context.Path(),
 					))
 				}
 				mFrag, mRow := pos[0], pos[1]
