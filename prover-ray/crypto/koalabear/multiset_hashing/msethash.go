@@ -76,6 +76,7 @@ func (m *MSetHash) update(rem bool, msg ...field.Element) {
 	hsh.WriteElements(msg...)
 
 	for i := 0; i < chunkSize; i++ {
+		hsh.PadBlock()
 		chunk := hsh.SumDigest()
 		if rem {
 			for j := 0; j < blockSize; j++ {
