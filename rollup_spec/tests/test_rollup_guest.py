@@ -18,6 +18,7 @@ from rollup_spec.l2_execution import (
     L2ExecutionProofPublicInput,
     VerifiableL2ExecutionProof,
     hash_address_list,
+    merge_filtered_addresses,
 )
 from rollup_spec.rollup import (
     ConflationWitness,
@@ -87,7 +88,7 @@ def l2_proof(
         end_l1_l2_bridge_rolling_hash=ZERO, end_l1_l2_bridge_rolling_hash_message_number=U64(0),
         dynamic_chain_config_hash=ZERO, parent_ftx_rolling_hash=ZERO, parent_ftx_number=U64(0),
         end_ftx_rolling_hash=ZERO, end_processed_ftx_number=U64(0),
-        filtered_addresses_hash=hash_address_list([]), tx_froms_hash=hash_address_list(list(senders)),
+        filtered_addresses=[], tx_froms_hash=hash_address_list(list(senders)),
         block_count=end - start + 1,
     )
     return L2ExecutionProof(public_inputs, U64(start))
@@ -100,6 +101,12 @@ def test_derived_conflation_lists_block_hash_and_parent_hash():
 
     assert derived.block_hashes == [block.hash]
     assert derived.parent_hashes == [FIRST_PARENT_HASH]
+
+
+def test_merge_filtered_addresses_is_distinct_and_byte_ascending():
+    low, mid, high = (Address(bytes([n]) * 20) for n in (0x01, 0x02, 0xFF))
+    assert merge_filtered_addresses([[high, low, low], [], [mid, high], [low]]) == [low, mid, high]
+    assert merge_filtered_addresses([[], []]) == []
 
 
 def test_tx_froms_hash_omitting_the_block_sender_is_rejected():

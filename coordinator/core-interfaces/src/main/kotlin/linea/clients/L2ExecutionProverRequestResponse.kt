@@ -176,7 +176,7 @@ data class L2ExecutionProofPublicInputs(
   val parentFtxNumber: ULong,
   val endFtxRollingHash: ByteArray,
   val endFtxNumber: ULong,
-  val filteredAddressesHash: ByteArray,
+  val filteredAddresses: List<ByteArray>,
   val txFromsHash: ByteArray,
   val blockCount: ULong,
   val l2MessagingBlocksOffsets: List<ULong>,
@@ -201,7 +201,7 @@ data class L2ExecutionProofPublicInputs(
     if (parentFtxNumber != other.parentFtxNumber) return false
     if (!endFtxRollingHash.contentEquals(other.endFtxRollingHash)) return false
     if (endFtxNumber != other.endFtxNumber) return false
-    if (!filteredAddressesHash.contentEquals(other.filteredAddressesHash)) return false
+    if (!filteredAddresses.byteArrayListEquals(other.filteredAddresses)) return false
     if (!txFromsHash.contentEquals(other.txFromsHash)) return false
     if (blockCount != other.blockCount) return false
     if (l2MessagingBlocksOffsets != other.l2MessagingBlocksOffsets) return false
@@ -224,7 +224,7 @@ data class L2ExecutionProofPublicInputs(
     result = 31 * result + parentFtxNumber.hashCode()
     result = 31 * result + endFtxRollingHash.contentHashCode()
     result = 31 * result + endFtxNumber.hashCode()
-    result = 31 * result + filteredAddressesHash.contentHashCode()
+    result = 31 * result + filteredAddresses.byteArrayListHashCode()
     result = 31 * result + txFromsHash.contentHashCode()
     result = 31 * result + blockCount.hashCode()
     result = 31 * result + l2MessagingBlocksOffsets.hashCode()
@@ -244,7 +244,6 @@ data class L2ExecutionProofResponseV1(
   override val endBlockNumber: ULong,
   val proof: ByteArray,
   val publicInputs: L2ExecutionProofPublicInputs,
-  val filteredAddresses: List<ByteArray>,
   val programVk: ByteArray,
 ) : BlockInterval {
   override fun equals(other: Any?): Boolean {
@@ -257,7 +256,6 @@ data class L2ExecutionProofResponseV1(
     if (endBlockNumber != other.endBlockNumber) return false
     if (!proof.contentEquals(other.proof)) return false
     if (publicInputs != other.publicInputs) return false
-    if (!filteredAddresses.byteArrayListEquals(other.filteredAddresses)) return false
     if (!programVk.contentEquals(other.programVk)) return false
 
     return true
@@ -268,7 +266,6 @@ data class L2ExecutionProofResponseV1(
     result = 31 * result + endBlockNumber.hashCode()
     result = 31 * result + proof.contentHashCode()
     result = 31 * result + publicInputs.hashCode()
-    result = 31 * result + filteredAddresses.byteArrayListHashCode()
     result = 31 * result + programVk.contentHashCode()
     return result
   }

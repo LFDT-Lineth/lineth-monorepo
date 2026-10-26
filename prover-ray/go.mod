@@ -4,7 +4,7 @@ go 1.27.1
 
 require (
 	github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20261021134731-3829cba91ebc
-	github.com/LFDT-Lineth/zkc v1.2.33
+	github.com/LFDT-Lineth/zkc v1.2.34
 	github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565
 	github.com/consensys/gnark-crypto v0.22.0
 	github.com/go-playground/assert/v2 v2.2.0

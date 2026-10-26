@@ -14,7 +14,7 @@
 - Events MUST document all parameters (in order)
 - Errors MUST explain when they are thrown
 - Use `DEPRECATED` in NatSpec docstrings for deprecated items
-- Every contract/interface NatSpec block MUST include `@author Consensys Software Inc.` and `@custom:security-contact security-report@linea.build`
+- Every contract/interface NatSpec block MUST include `@author Consensys Incorporated` and `@custom:security-contact security-report@linea.build`
 - Use `@dev` on any function to document non-straightforward implementations, design choices, or key restrictions that consumers or maintainers should be aware of. This applies to any function visibility.
 
 ## Contract-Level NatSpec
@@ -24,7 +24,7 @@ Every contract and interface MUST include `@author` and `@custom:security-contac
 ```solidity
 /**
  * @title Native yield extension module for the Lineth L1MessageService.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract LinethRollupYieldExtension is LinethRollupBase, ILinethRollupYieldExtension {

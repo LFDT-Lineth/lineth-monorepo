@@ -4,7 +4,7 @@
 
 | Tool | Version |
 |------|---------|
-| Node.js | >= 24.18.0 (see `.nvmrc`) |
+| Node.js | >= 24.22.1 (see `.nvmrc`) |
 | pnpm | >= 12.6.0 |
 | JDK | 21 (for coordinator, Besu plugins) |
 | Docker | 24+ with 16 GB memory, 4+ CPUs |
@@ -16,7 +16,7 @@
 ```bash
 git clone https://github.com/LFDT-Lineth/lineth-monorepo.git
 cd lineth-monorepo
-nvm use          # or install Node 24.18.0
+nvm use          # or install Node 24.22.1
 pnpm install     # installs all workspaces + sets up Husky hooks
 ```
 

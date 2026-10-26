@@ -1,6 +1,4 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
@@ -8,13 +6,13 @@
  */
 package maru.test.cluster
 
+import linea.testing.besu.BesuFactory
 import org.apache.logging.log4j.LogManager
 import org.hyperledger.besu.tests.acceptance.dsl.condition.Condition
 import org.hyperledger.besu.tests.acceptance.dsl.condition.net.NetConditions
 import org.hyperledger.besu.tests.acceptance.dsl.node.BesuNode
 import org.hyperledger.besu.tests.acceptance.dsl.node.BesuNodeRunner
 import org.hyperledger.besu.tests.acceptance.dsl.node.RunnableNode
-import org.hyperledger.besu.tests.acceptance.dsl.node.ThreadBesuNodeRunner
 import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.ClusterConfiguration
 import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.ClusterConfigurationBuilder
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.net.NetTransactions
@@ -23,7 +21,7 @@ import java.net.URI
 class BesuCluster(
   private val clusterConfiguration: ClusterConfiguration = ClusterConfigurationBuilder().build(),
   private val net: NetConditions = NetConditions(NetTransactions()),
-  private val besuNodeRunner: BesuNodeRunner = ThreadBesuNodeRunner(),
+  private val besuNodeRunner: BesuNodeRunner = BesuFactory.buildTestNodeRunner(),
 ) : AutoCloseable {
   val log = LogManager.getLogger(BesuCluster::class.java)
   internal val nodes: MutableMap<String, BesuNode> = HashMap()

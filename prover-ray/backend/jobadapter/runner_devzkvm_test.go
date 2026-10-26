@@ -20,8 +20,8 @@ import (
 var devZkVMCommitment = []byte("guest output")
 
 // devZkVMRunnerJSON is the native runner's --json output for the single-block
-// fixture: the 16 real public inputs plus the revealed preimage arrays.
-const devZkVMRunnerJSON = `{"startBlockNumber":1,"publicInputs":{"parentBlockHash":"0x3e92984e1569f7296de4776ac738531c3a602df8cf2b1734a56f3adb3e111972","endBlockHash":"0x74560e963ebefb718fb712ec6a9b8e37672c85d8e6120898e6018734bc72f842","endBlockNumber":1,"endBlockTimestamp":1000,"l2L1MessagesHash":"0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470","parentL1L2BridgeRollingHash":"0x0000000000000000000000000000000000000000000000000000000000000000","parentL1L2BridgeRollingHashMessageNumber":0,"endL1L2BridgeRollingHash":"0x0000000000000000000000000000000000000000000000000000000000000000","endL1L2BridgeRollingHashMessageNumber":0,"dynamicChainConfigHash":"0x0bf5347e375f112c245569da023a5abf696fa9e2af3dff33b0a085ab2757dd28","parentFtxRollingHash":"0x0000000000000000000000000000000000000000000000000000000000000000","parentFtxNumber":0,"endFtxRollingHash":"0x0000000000000000000000000000000000000000000000000000000000000000","endProcessedFtxNumber":0,"filteredAddressesHash":"0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470","txFromsHash":"0x463172c05a4d389f66ba68c6bc3beab68b6d5d6ce143bb6aa536b9ac49469f1b"},"l2L1Messages":[],"txFroms":["0xd66f224cbd2fabb21b17bb53c56118f32f62ebd6"],"filteredAddresses":[]}`
+// fixture: the start block number and the public inputs.
+const devZkVMRunnerJSON = `{"startBlockNumber":1,"publicInputs":{"parentBlockHash":"0xee93f90395f9384466a618018575f933dca8fa630afbcc6c048b2381a7d72af9","endBlockHash":"0xb6107b07672ca66bd702a53c5105925002037e593f46c8cecba5af3425496d64","endBlockNumber":1,"endBlockTimestamp":12,"l2L1Messages":[],"parentL1L2BridgeRollingHash":"0x0000000000000000000000000000000000000000000000000000000000000000","parentL1L2BridgeRollingHashMessageNumber":0,"endL1L2BridgeRollingHash":"0x0000000000000000000000000000000000000000000000000000000000000000","endL1L2BridgeRollingHashMessageNumber":0,"dynamicChainConfigHash":"0x4c87eca77cb88c24f2de035ddac21297991d5a1946b9e7d6a2b25375037715fa","parentFtxRollingHash":"0x0000000000000000000000000000000000000000000000000000000000000000","parentFtxNumber":0,"endFtxRollingHash":"0x0000000000000000000000000000000000000000000000000000000000000000","endProcessedFtxNumber":0,"filteredAddresses":[],"txFromsHash":"0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470","blockCount":1,"l2MessagingBlocksOffsets":[]}}`
 
 // fakeRunnerJSONSSZ builds a native runner stub that answers --json with the
 // given response shape and --ssz with the given raw wire bytes, so dev-zkvm can
@@ -76,7 +76,7 @@ func TestRunner_DevZkVM_CrossCheckPasses(t *testing.T) {
 	resp, ok := result.ResponseBody.(executionResponse)
 	require.True(t, ok)
 	assert.Equal(t, testProverVersion+"-dev-zkvm", resp.ProverVersion)
-	assert.Equal(t, "0x3e92984e1569f7296de4776ac738531c3a602df8cf2b1734a56f3adb3e111972", resp.PublicInputs.ParentBlockHash)
+	assert.Equal(t, "0xee93f90395f9384466a618018575f933dca8fa630afbcc6c048b2381a7d72af9", resp.PublicInputs.ParentBlockHash)
 	assert.Equal(t, guestProgramID, resp.ProgramVk)
 	assert.Equal(t, "0x"+hex.EncodeToString(backend.DevMarkerProof(backend.ProverModeDevZkVM)), resp.ProofHex,
 		"proof is a placeholder marker; the commitment is an internal cross-check artifact")

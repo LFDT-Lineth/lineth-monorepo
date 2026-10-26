@@ -3,7 +3,7 @@ pragma solidity ^0.8.33;
 
 /**
  * @title ZkEvm rollup interface for pre-existing functions, events and errors.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 interface IZkEvmV2 {

@@ -3,7 +3,7 @@ pragma solidity 0.8.33;
 
 /**
  * @title Interface to define a simple shnarf providing definition.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 interface IProvideShnarf {

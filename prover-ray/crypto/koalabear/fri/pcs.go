@@ -228,6 +228,18 @@ type SizedShape struct {
 	Groups    []GroupShape
 }
 
+// grouped reports whether the shape declares groups at any size, like
+// [MultiSizeTable.grouped]: such a commitment hashes every size, the largest
+// one included, as row pairs.
+func (shape Shape) grouped() bool {
+	for _, sized := range shape {
+		if sized.Groups != nil {
+			return true
+		}
+	}
+	return false
+}
+
 // groups returns the groups of this size (one group of every row by default).
 func (s SizedShape) groups() []GroupShape {
 	return sizeGroups(s.BaseWidth, s.ExtWidth, s.Groups)
@@ -237,7 +249,7 @@ func (s SizedShape) groups() []GroupShape {
 // groups. Batches that share a commitment must agree on it, since the grouping
 // fixes how that commitment's rows were hashed.
 func sameGrouping(a, b Shape) bool {
-	if len(a) != len(b) {
+	if len(a) != len(b) || a.grouped() != b.grouped() {
 		return false
 	}
 	for i := range a {
@@ -1135,7 +1147,7 @@ func (pcs *PCS) openInputCaps(inputs []CommitterState) []InputCap {
 		if err != nil {
 			panic(err)
 		}
-		if info.height != committed.Tree.NumLevel()-1 {
+		if info.treeHeight() != committed.Tree.NumLevel()-1 {
 			panic("fri: openInputCaps: table shape and tree height differ")
 		}
 		if info.depth == 0 {
@@ -1192,22 +1204,35 @@ func openInputTreeOpening(p Params, committed CommitterState, queryPosition int)
 
 func openInputTreeOpeningToDepth(p Params, committed CommitterState, queryPosition, capDepth int) InputTreeOpening {
 	tree := committed.Tree
+	// numLeaves counts the rows of the largest size: the tree leaves, or twice
+	// as many for a grouped table, where a leaf digests a row pair.
+	pairLeaves := committed.EncodedTable.grouped()
 	numLeaves := tree.NumLeaves()
+	if pairLeaves {
+		numLeaves *= 2
+	}
 	codewordSize := 1 << p.LogCodewordSize
 	if numLeaves > codewordSize || codewordSize%numLeaves != 0 {
 		panic("fri: openInputTreeOpening: tree size incompatible with domain size")
 	}
 	leafIndex := queryPosition / (codewordSize / numLeaves)
-	branch := tree.OpenBranchToDepth(leafIndex, capDepth)
-	treeHeight := tree.NumLevel() - 1
-	input := InputTreeOpening{
+	var siblings []field.Octuplet
+	if pairLeaves {
+		// The leaf digests the bottom pair, which is sent below.
+		siblings = tree.OpenBranchToDepth(leafIndex>>1, capDepth).Siblings
+	} else {
 		// The bottom level's own sibling digest is derived from its pair
 		// (below) rather than transmitted.
-		Siblings: branch.Siblings[:len(branch.Siblings)-1],
+		branch := tree.OpenBranchToDepth(leafIndex, capDepth)
+		siblings = branch.Siblings[:len(branch.Siblings)-1]
+	}
+	input := InputTreeOpening{
+		Siblings: siblings,
 		// The last slot is otherwise always vacant (see Merkleize: nothing
 		// shifts to the depth just above the bottom level), so it is
-		// repurposed for the bottom level's own mandatory pair.
-		Leaves: make([]*RowPair, treeHeight),
+		// repurposed for the bottom level's own mandatory pair. With pair
+		// leaves, that is exactly the level the bottom pair enters at.
+		Leaves: make([]*RowPair, bits.TrailingZeros(uint(numLeaves))),
 	}
 	input.Leaves[len(input.Leaves)-1] = &RowPair{
 		openEncodedRowAtSize(committed.EncodedTable, numLeaves, leafIndex),
@@ -1319,8 +1344,14 @@ func writeRowOpeningElements(hasher *poseidon2.MDHasher, row RowOpening) {
 // AuthenticateToCap checks the bottom pair and the retained lower path
 // against an already authenticated input-tree frontier. levelGroups[level]
 // lists the groups of the pair opened at that level, each hashed and injected
-// on its own; a missing or nil entry is the single group of every row.
-func (branch InputTreeOpening) AuthenticateToCap(idx int, frontier []field.Octuplet, levelGroups [][]GroupShape) error {
+// on its own; a missing or nil entry is the single group of every row. idx is
+// the queried row of the largest size. When levelGroups lists groups for the
+// bottom level (a grouped table, see [MultiSizeTable.Merkleize]), the bottom
+// pair is digested group by group into its leaf, like the other pairs;
+// otherwise each of its rows is a leaf.
+func (branch InputTreeOpening) AuthenticateToCap(
+	idx int, frontier []field.Octuplet, levelGroups [][]GroupShape,
+) error {
 	if len(branch.Leaves) == 0 || branch.Leaves[len(branch.Leaves)-1] == nil {
 		return fmt.Errorf("missing bottom level")
 	}
@@ -1340,11 +1371,25 @@ func (branch InputTreeOpening) AuthenticateToCap(idx int, frontier []field.Octup
 	}
 
 	bottom := branch.Leaves[height-1]
-	ancestor := hashRowOpening(bottom[0])
-	sibling := hashRowOpening(bottom[1])
-	ancestor, currPos, err := foldOneLevel(ancestor, sibling, nil, nil, idx)
-	if err != nil {
-		return err
+	var (
+		ancestor field.Octuplet
+		currPos  int
+	)
+	var bottomGroups []GroupShape
+	if height-1 < len(levelGroups) {
+		bottomGroups = levelGroups[height-1]
+	}
+	if bottomGroups != nil {
+		digests, err := hashAuxPairGroups(*bottom, bottomGroups, idx&1 == 0)
+		if err != nil {
+			return fmt.Errorf("bottom level: %w", err)
+		}
+		ancestor, currPos = chainDigests(digests), idx>>1
+	} else {
+		ancestor, currPos, err = foldOneLevel(hashRowOpening(bottom[0]), hashRowOpening(bottom[1]), nil, nil, idx)
+		if err != nil {
+			return err
+		}
 	}
 	for level := height - 2; level >= depth; level-- {
 		siblingIdx := level - depth
@@ -1835,8 +1880,22 @@ type inputCapInfo struct {
 	revealed  []int
 	queryRows []bool
 	// levelGroups[level] lists the groups of the table whose conjugate pairs
-	// are injected at that tree level, nil for a level without one.
+	// are injected at that tree level, nil for a level without one. For a
+	// grouped shape, the last level holds the largest size's groups.
 	levelGroups [][]GroupShape
+	// grouped records a grouped shape, whose largest size is hashed as row
+	// pairs (see [MultiSizeTable.Merkleize]); the tree is then one level
+	// shorter than height.
+	grouped bool
+}
+
+// treeHeight is the height of the input tree: the number of row levels
+// (height), minus one for a grouped shape, whose leaves digest row pairs.
+func (info inputCapInfo) treeHeight() int {
+	if info.grouped {
+		return info.height - 1
+	}
+	return info.height
 }
 
 // inputAuxDepth maps a plaintext table size to the tree level carrying its
@@ -1878,22 +1937,23 @@ func inputCapShapeInfo(p Params, shape Shape) (inputCapInfo, error) {
 	if bottom < 0 {
 		return inputCapInfo{}, fmt.Errorf("shape has no committed size")
 	}
-	if len(shape[bottom].Groups) > 1 {
-		return inputCapInfo{}, fmt.Errorf("the largest size must hold a single group")
-	}
 	height := rateLog + bottom
 	if height <= 0 {
 		return inputCapInfo{}, fmt.Errorf("shape has invalid tree height %d", height)
 	}
-	depth := p.merkleCapDepth(height)
 	info := inputCapInfo{
 		height:      height,
-		depth:       depth,
 		rateLog:     rateLog,
 		queryRows:   make([]bool, height),
 		levelGroups: make([][]GroupShape, height),
+		grouped:     shape.grouped(),
 	}
+	depth := p.merkleCapDepth(info.treeHeight())
+	info.depth = depth
 	info.queryRows[height-1] = true
+	if info.grouped {
+		info.levelGroups[height-1] = shape[bottom].groups()
+	}
 	for sizeLog2, sized := range shape[:bottom] {
 		if sized.BaseWidth+sized.ExtWidth == 0 {
 			continue

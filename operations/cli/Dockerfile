@@ -1,4 +1,4 @@
-ARG NODE_VERSION=lts
+ARG NODE_VERSION=24.22.1
 
 FROM node:${NODE_VERSION}-slim AS base
 
@@ -40,9 +40,9 @@ ARG VERSION
 LABEL org.label-schema.build-date=$BUILD_DATE \
 	org.label-schema.name="linea-alltools" \
 	org.label-schema.description="Lineth operations CLI" \
-	org.label-schema.url="https://consensys.io/" \
+	org.label-schema.url="https://consensys.com/" \
 	org.label-schema.vcs-ref=$VCS_REF \
 	org.label-schema.vcs-url="https://github.com/LFDT-Lineth/lineth-monorepo" \
-	org.label-schema.vendor="ConsenSys" \
+	org.label-schema.vendor="Consensys" \
 	org.label-schema.version=$VERSION \
 	org.label-schema.schema-version="1.0"

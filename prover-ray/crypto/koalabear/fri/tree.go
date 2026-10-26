@@ -276,7 +276,8 @@ func (t *Tree) Root() field.Octuplet {
 // NumLevel returns the number of levels in the tree. It verifies
 // that numNode = 2^numLevel - 1
 func (t *Tree) NumLevel() int {
-	return utils.Log2Ceil(len(t.Nodes))
+	// 2n−1 nodes for n leaves: log2(2n) levels, including n = 1.
+	return utils.Log2Ceil(len(t.Nodes) + 1)
 }
 
 // NumLeaves returns the number of leaves in the tree

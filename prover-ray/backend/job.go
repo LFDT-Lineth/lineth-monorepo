@@ -76,7 +76,7 @@ type PublicInputs struct {
 	ParentFtxNumber                          uint64
 	EndFtxRollingHash                        [32]byte
 	EndProcessedFtxNumber                    uint64
-	FilteredAddressesHash                    [32]byte
+	FilteredAddresses                        [][20]byte
 	TxFromsHash                              [32]byte
 	BlockCount                               uint64
 	L2MessagingBlocksOffsets                 []uint16

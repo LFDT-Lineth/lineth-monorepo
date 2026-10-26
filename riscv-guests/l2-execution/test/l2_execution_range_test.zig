@@ -201,12 +201,13 @@ test "a realistic 2-block range produces every public-input field exactly" {
     try testing.expectEqual(EXPECTED_BLOCK1_TIMESTAMP, output.public_inputs.end_block_timestamp);
 
     // L2->L1 messages, in block order; T2's non-matching-topic0 log is collected by neither.
-    const expected_messages = [_][32]u8{ MESSAGE_HASH_1, MESSAGE_HASH_2 };
-    const expected_messages_hash = try api.hashDigestListFn(alloc, &expected_messages);
-    try testing.expectEqualSlices(u8, &expected_messages_hash, &output.public_inputs.l2_l1_messages_hash);
-    try testing.expectEqual(@as(usize, 2), output.l2_l1_messages.len);
-    try testing.expectEqualSlices(u8, &MESSAGE_HASH_1, &output.l2_l1_messages[0]);
-    try testing.expectEqualSlices(u8, &MESSAGE_HASH_2, &output.l2_l1_messages[1]);
+    try testing.expectEqual(@as(usize, 2), output.public_inputs.l2_l1_messages.len);
+    try testing.expectEqualSlices(u8, &MESSAGE_HASH_1, &output.public_inputs.l2_l1_messages[0]);
+    try testing.expectEqualSlices(u8, &MESSAGE_HASH_2, &output.public_inputs.l2_l1_messages[1]);
+
+    // Both blocks emitted a message: their 1-based block offsets, and the range's block count.
+    try testing.expectEqual(@as(u64, 2), output.public_inputs.block_count);
+    try testing.expectEqualSlices(u16, &.{ 1, 2 }, output.public_inputs.l2_messaging_blocks_offsets);
 
     // L1<->L2 bridge: parent/end numbers and hashes echo exactly what bridgeStorage declared.
     try testing.expectEqual(@as(u64, 5), output.public_inputs.parent_l1_l2_bridge_rolling_hash_message_number);
@@ -230,10 +231,8 @@ test "a realistic 2-block range produces every public-input field exactly" {
     try testing.expectEqual(@as(u64, 2), output.public_inputs.end_processed_ftx_number);
     try testing.expectEqualSlices(u8, &expected_end_ftx_rolling_hash, &output.public_inputs.end_ftx_rolling_hash);
 
-    const expected_filtered_hash = try api.hashAddressListFn(alloc, &.{t4_sender});
-    try testing.expectEqualSlices(u8, &expected_filtered_hash, &output.public_inputs.filtered_addresses_hash);
-    try testing.expectEqual(@as(usize, 1), output.filtered_addresses.len);
-    try testing.expectEqualSlices(u8, &t4_sender, &output.filtered_addresses[0]);
+    try testing.expectEqual(@as(usize, 1), output.public_inputs.filtered_addresses.len);
+    try testing.expectEqualSlices(u8, &t4_sender, &output.public_inputs.filtered_addresses[0]);
 
     // tx_froms, in block-then-transaction order: T1's sender, T2's sender, then T3's sender.
     const expected_tx_froms = [_][20]u8{ t1_sender, t2_sender, t3_sender };
@@ -413,9 +412,8 @@ test "a matching bridge log is ignored while the address stays at its suppressed
 
     const output = try plan.run(alloc);
 
-    try testing.expectEqual(@as(usize, 0), output.l2_l1_messages.len);
-    const expected_empty_hash = try api.hashDigestListFn(alloc, &.{});
-    try testing.expectEqualSlices(u8, &expected_empty_hash, &output.public_inputs.l2_l1_messages_hash);
+    try testing.expectEqual(@as(usize, 0), output.public_inputs.l2_l1_messages.len);
+    try testing.expectEqual(@as(usize, 0), output.public_inputs.l2_messaging_blocks_offsets.len);
     try testing.expectEqual(@as(u64, 0), output.public_inputs.parent_l1_l2_bridge_rolling_hash_message_number);
     try testing.expectEqualSlices(u8, &ZERO_HASH, &output.public_inputs.parent_l1_l2_bridge_rolling_hash);
     try testing.expectEqual(@as(u64, 0), output.public_inputs.end_l1_l2_bridge_rolling_hash_message_number);
@@ -470,12 +468,11 @@ test "an included forced transaction's bridge message reaches the public input" 
 
     const output = try plan.run(alloc);
 
-    const expected_messages = [_][32]u8{ MESSAGE_HASH_1, MESSAGE_HASH_2 };
-    const expected_messages_hash = try api.hashDigestListFn(alloc, &expected_messages);
-    try testing.expectEqual(@as(usize, 2), output.l2_l1_messages.len);
-    try testing.expectEqualSlices(u8, &MESSAGE_HASH_1, &output.l2_l1_messages[0]);
-    try testing.expectEqualSlices(u8, &MESSAGE_HASH_2, &output.l2_l1_messages[1]);
-    try testing.expectEqualSlices(u8, &expected_messages_hash, &output.public_inputs.l2_l1_messages_hash);
+    try testing.expectEqual(@as(usize, 2), output.public_inputs.l2_l1_messages.len);
+    try testing.expectEqualSlices(u8, &MESSAGE_HASH_1, &output.public_inputs.l2_l1_messages[0]);
+    try testing.expectEqualSlices(u8, &MESSAGE_HASH_2, &output.public_inputs.l2_l1_messages[1]);
+    // Both messages come from block 0, which is listed once.
+    try testing.expectEqualSlices(u16, &.{1}, output.public_inputs.l2_messaging_blocks_offsets);
 
     try testing.expectEqual(@as(u64, 1), output.public_inputs.end_processed_ftx_number);
     const expected_end_ftx_rolling_hash = api.addToForcedTxRollingHashFn(ZERO_HASH, mpt.keccak256(forced_bridge_tx_rlp), FTX_DEADLINE, forced_bridge_tx_sender);
@@ -488,7 +485,7 @@ test "an included forced transaction's bridge message reaches the public input" 
     try testing.expectEqualSlices(u8, &ordinary_bridge_tx_sender, &output.tx_froms[0]);
     try testing.expectEqualSlices(u8, &forced_bridge_tx_sender, &output.tx_froms[1]);
 
-    try testing.expectEqual(@as(usize, 0), output.filtered_addresses.len);
+    try testing.expectEqual(@as(usize, 0), output.public_inputs.filtered_addresses.len);
 }
 
 test "a forced transaction failing pre-validation produces no bridge message and no sender entry" {
@@ -538,9 +535,8 @@ test "a forced transaction failing pre-validation produces no bridge message and
 
     const output = try plan.run(alloc);
 
-    try testing.expectEqual(@as(usize, 0), output.l2_l1_messages.len);
-    const expected_empty_hash = try api.hashDigestListFn(alloc, &.{});
-    try testing.expectEqualSlices(u8, &expected_empty_hash, &output.public_inputs.l2_l1_messages_hash);
+    try testing.expectEqual(@as(usize, 0), output.public_inputs.l2_l1_messages.len);
+    try testing.expectEqual(@as(usize, 0), output.public_inputs.l2_messaging_blocks_offsets.len);
 
     // tx_froms feeds L1's own data-availability sender reconstruction — a forced transaction that
     // failed pre-validation and never executed must never contribute a sender there, or L1 would
@@ -599,22 +595,28 @@ test "a range refusing one forced transaction by sender and another by recipient
 
     const output = try plan.run(alloc);
 
-    // One list, two different address kinds, in the block order their refusals happened. L1 hashes
-    // this list and checks every entry against its sanction list, so picking the wrong field for
-    // either refusal hands L1 an address it was never meant to check: a refusal aimed at a
-    // sanctioned recipient would be validated against an unsanctioned sender, and pass.
-    const expected_filtered_addresses = [_][20]u8{ refused_sender, conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS };
-    const expected_filtered_addresses_hash = try api.hashAddressListFn(alloc, &expected_filtered_addresses);
-    try testing.expectEqual(@as(usize, 2), output.filtered_addresses.len);
-    try testing.expectEqualSlices(u8, &refused_sender, &output.filtered_addresses[0]);
-    try testing.expectEqualSlices(u8, &conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS, &output.filtered_addresses[1]);
-    try testing.expectEqualSlices(u8, &expected_filtered_addresses_hash, &output.public_inputs.filtered_addresses_hash);
+    // One list, two different address kinds, sorted ascending by byte value. L1 checks every entry
+    // against its sanction list, so picking the wrong field for either refusal hands L1 an address
+    // it was never meant to check: a refusal aimed at a sanctioned recipient would be validated
+    // against an unsanctioned sender, and pass.
+    var expected_filtered_addresses = [_][20]u8{ refused_sender, conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS };
+    std.mem.sort([20]u8, &expected_filtered_addresses, {}, struct {
+        fn lessThan(_: void, a: [20]u8, b: [20]u8) bool {
+            return std.mem.order(u8, &a, &b) == .lt;
+        }
+    }.lessThan);
+    const filtered = output.public_inputs.filtered_addresses;
+    try testing.expectEqual(@as(usize, 2), filtered.len);
+    try testing.expectEqualSlices(u8, &expected_filtered_addresses[0], &filtered[0]);
+    try testing.expectEqualSlices(u8, &expected_filtered_addresses[1], &filtered[1]);
 
-    // The two kinds land on genuinely different fields: entry 0 differs from its transaction's
-    // recipient, entry 1 differs from its transaction's sender. Swapping the two fields inside the
-    // guest would therefore move both entries, which keeps the assertions above honest.
-    try testing.expect(!std.mem.eql(u8, &output.filtered_addresses[0], &RANGE_TX_TO));
-    try testing.expect(!std.mem.eql(u8, &output.filtered_addresses[1], &refused_recipient_tx_sender));
+    // The two kinds land on genuinely different fields: neither entry is the other refusal's
+    // transaction sender-or-recipient counterpart, so swapping the two fields inside the guest
+    // would change the set, which keeps the assertions above honest.
+    for (filtered) |entry| {
+        try testing.expect(!std.mem.eql(u8, &entry, &RANGE_TX_TO));
+        try testing.expect(!std.mem.eql(u8, &entry, &refused_recipient_tx_sender));
+    }
 }
 
 test "a forced transaction included in the last block advances the L1-to-L2 anchoring state" {

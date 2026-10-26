@@ -2,7 +2,7 @@
   "name": "@lfdt-lineth/shared-utils",
   "version": "1.0.0",
   "description": "",
-  "author": "Consensys Software Inc.",
+  "author": "Consensys Incorporated",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

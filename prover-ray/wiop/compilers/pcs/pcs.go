@@ -121,6 +121,12 @@ func (m merkleCapChoice) resolve(numQueries int) uint8 {
 	return uint8(m.height)
 }
 
+// capped reports whether the selection may cap a tree: an optimal cap, or an
+// explicit height above 0.
+func (m merkleCapChoice) capped() bool {
+	return m.mode == merkleCapOptimal || (m.mode == merkleCapExplicit && m.height > 0)
+}
+
 // config is the PCS configuration recorded on a System. Zero option fields
 // are unset until [Compile] consumes the selection; from then on they hold the
 // effective configuration, defaults included, and are frozen.
@@ -238,13 +244,21 @@ func withMerkleCap(choice merkleCapChoice) Option {
 // WithModuleGroups commits every module as its own group (see
 // [fri.SizedTable.Groups]): within each size, a round's columns are ordered by
 // module, in module declaration order, and each module is hashed with its own
-// leaf header and injected separately into the size's tree level. The hash
-// inputs of a module then do not depend on which other modules share its size,
-// which a size-oblivious recursive verifier needs (#4246).
+// leaf header and injected separately into the size's tree level. A grouped
+// commitment hashes the largest size as row pairs like the others (see
+// [fri.MultiSizeTable.Merkleize]), so it is split into modules too. A module's
+// digest is then H(header, row[2j] ‖ row[2j+1]) whatever the sizes of the
+// other modules, which a size-oblivious recursive verifier needs (#4246).
 //
-// The largest size of a round still forms a single group, since its digests
-// are the tree leaves. Off by default: the module ordering changes the
+// Off by default: the module ordering and the row-pair leaves change the
 // committed layout, so proofs differ from the default layout.
+//
+// Module groups exclude the options that make the committed layout depend on
+// the module sizes or on the witness again: [WithColumnElision] (the group
+// widths and leaf headers would follow each proof's Zero/Alias columns), and a
+// Merkle cap from [WithOptimalMerkleCap] or [WithMerkleCapHeight] above 0 (an
+// input tree would reveal in full the tables above its cap, chosen by size).
+// Combining them is a configuration error.
 func WithModuleGroups() Option {
 	return func(o *compileOptions) { o.moduleGroups = true }
 }
@@ -291,6 +305,12 @@ func merge(sys *wiop.System, opts []Option) (compileOptions, error) {
 	}
 	cfg.elisionEnabled = cfg.elisionEnabled || pre.elisionEnabled
 	cfg.moduleGroups = cfg.moduleGroups || pre.moduleGroups
+	if cfg.moduleGroups && cfg.elisionEnabled {
+		return cfg, fmt.Errorf("pcs: WithModuleGroups conflicts with WithColumnElision")
+	}
+	if cfg.moduleGroups && cfg.merkleCap.capped() {
+		return cfg, fmt.Errorf("pcs: WithModuleGroups conflicts with Merkle cap %v", cfg.merkleCap)
+	}
 	return cfg, nil
 }
 
@@ -901,9 +921,10 @@ func (c *compiled) commitToRound(round *wiop.Round, rt *wiop.Runtime, manifest C
 // padded size, appending them in the commit order of [committedLayout] (base
 // and extension rows kept apart within each size), and FRI-commits it with a
 // freshly-built per-round encoder schedule (a prefix of the global schedule).
-// The table takes the shape's groups. Elided columns are absent from the
-// committed rows. It panics when a Present column exceeds the committable size
-// at c's blowup.
+// The table takes the shape's groups, so with module groups it is a grouped
+// commitment (see [fri.MultiSizeTable.Merkleize]). Elided columns are absent
+// from the committed rows. It panics when a Present column exceeds the
+// committable size at c's blowup.
 func (c *compiled) commitVectors(
 	round *wiop.Round, sizeOf moduleSizeFunc, vectors []paddedColumn, manifest ColumnManifest,
 ) *fri.CommitterState {
@@ -935,10 +956,10 @@ func (c *compiled) commitVectors(
 // order, and the round's [fri.Shape]. The commit order is declaration order,
 // or, with moduleGroups, declaration order stably sorted by module (module
 // declaration order), so every module's rows are consecutive within its size.
-// With moduleGroups, every size but the largest is split into one group per
-// module, in that order; the largest size stays a single group, since its
-// digests are the tree leaves. The shape has maxSizeIndex+1 entries over the
-// Present columns.
+// With moduleGroups, every size is split into one group per module, in that
+// order; a grouped commitment hashes the largest size as row pairs too (see
+// [fri.MultiSizeTable.Merkleize]), so it can be grouped like the others. The
+// shape has maxSizeIndex+1 entries over the Present columns.
 //
 // [commitVectors] and [getLayoutWith] both derive from it, so the committed
 // rows and the column locations always agree.
@@ -987,9 +1008,6 @@ func committedLayout(
 		} else {
 			sized.BaseWidth++
 		}
-	}
-	if len(shape) > 0 {
-		shape[len(shape)-1].Groups = nil
 	}
 	return order, shape
 }

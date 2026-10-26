@@ -115,15 +115,18 @@ func referenceGroupDigest(group SizedTable, j int) field.Octuplet {
 
 // TestMerkleizeInjectsEachGroup checks the grouped tree against its definition:
 // every group of a size is digested with its own header and injected into the
-// size's level in group order. The grouping must change the root.
+// size's level in group order, and the largest size, a single group here, is
+// digested as row pairs into the leaves. The grouping must change the root.
 func TestMerkleizeInjectsEachGroup(t *testing.T) {
 	witness := groupedWitness(rand.New(utils.NewRandSource(5)))
 	encoded := witness.Encode(makeEncoders(4, 2))
 	tree := encoded.Merkleize()
 
 	bottom := encoded[len(encoded)-1]
-	leaves := make([]field.Octuplet, bottom.Size())
-	hashSizedLeaves(bottom, false, leaves)
+	leaves := make([]field.Octuplet, bottom.Size()/2)
+	for j := range leaves {
+		leaves[j] = referenceGroupDigest(bottom, j)
+	}
 	injections := make([][][]field.Octuplet, utils.Log2Ceil(len(leaves)))
 	for i := range len(encoded) - 1 {
 		level := utils.Log2Ceil(encoded[i].Size() / 2)
@@ -143,6 +146,7 @@ func TestMerkleizeInjectsEachGroup(t *testing.T) {
 	copy(want.Nodes[len(leaves)-1:], leaves)
 	want.buildLevels(injections)
 	require.Equal(t, want.Root(), tree.Root(), "grouped root must inject one digest per group")
+	require.Equal(t, bottom.Size()/2, tree.NumLeaves(), "a grouped tree's leaves digest row pairs")
 
 	flat := make(MultiSizeTable, len(encoded))
 	for i := range encoded {
@@ -194,8 +198,8 @@ func TestPCSVerifyGnarkGroupedCommitment(t *testing.T) {
 }
 
 // TestGroupsAreValidated checks that groups must split their size exactly into
-// nonempty groups, and that the largest size holds a single group, at commit
-// and at verification alike.
+// nonempty groups, at every size including the largest, at commit and at
+// verification alike.
 func TestGroupsAreValidated(t *testing.T) {
 	params, err := NewParams(4, 3, 4)
 	require.NoError(t, err)
@@ -205,9 +209,9 @@ func TestGroupsAreValidated(t *testing.T) {
 		"rows left out": func(b Batch) { b[2].Groups = []GroupShape{{BaseWidth: 1, ExtWidth: 1}} },
 		"empty group":   func(b Batch) { b[2].Groups = append(b[2].Groups, GroupShape{}) },
 		"too many rows": func(b Batch) { b[1].Groups = []GroupShape{{BaseWidth: 2}, {ExtWidth: 1}} },
-		"grouped bottom": func(b Batch) {
+		"largest size, rows left out": func(b Batch) {
 			b[3].Ext = append(b[3].Ext, b[3].Ext[0])
-			b[3].Groups = []GroupShape{{ExtWidth: 1}, {ExtWidth: 1}}
+			b[3].Groups = []GroupShape{{ExtWidth: 1}}
 		},
 	}
 	for name, corrupt := range invalid {

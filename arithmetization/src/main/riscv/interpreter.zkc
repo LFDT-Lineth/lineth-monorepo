@@ -197,10 +197,10 @@ include "../lib/io/write_output.zkc"
 fn interpreter<registers, ram>(base:Address, pc:Address) -> ! {
     // -- NO PREDECODING PROOF SECTION END--
     var new_pc:Address
-    var index:u62
+    var index:u32
     var rem:u2
     // determine index of predecoded program
-    index::rem = pc - base
+    index::rem = (pc - base) as u34
     // -- Interpreting the riscV proved-transpiled program -- START
     // Proof of the transpilation step:
     // Note that execution must stay inside the span justified by predecoding, at 4-byte
@@ -213,7 +213,7 @@ fn interpreter<registers, ram>(base:Address, pc:Address) -> ! {
 
     printf "\n----------------------------------------------------------------- PC=%d\n", pc
     // Execute current instruction
-    new_pc = interpreter_a(index as u64, pc)
+    new_pc = interpreter_a(index, pc)
 
     // Check for termination
     if new_pc != MAX_UINT_64 {
@@ -231,7 +231,7 @@ fn interpreter<registers, ram>(base:Address, pc:Address) -> ! {
     done
 }
 
-fn interpreter_a<registers, ram>(index:u64, pc:Address) -> (new_pc:Address) {
+fn interpreter_a<registers, ram>(index:u32, pc:Address) -> (new_pc:Address) {
     var compute_op:ComputeOp
     var imm:DoubleWord
     var rs1:Register
@@ -421,7 +421,7 @@ fn interpreter_a<registers, ram>(index:u64, pc:Address) -> (new_pc:Address) {
     registers[rd] = result
 }
 
-fn interpreter_b<registers, ram>(index:u64, pc:Address) -> (new_pc:Address) {
+fn interpreter_b<registers, ram>(index:u32, pc:Address) -> (new_pc:Address) {
 
     var compute_op:ComputeOp
     var imm:DoubleWord
@@ -600,7 +600,7 @@ fn interpreter_b<registers, ram>(index:u64, pc:Address) -> (new_pc:Address) {
     registers[rd] = result
 }
 
-fn interpreter_c<registers, ram>(index:u64, pc:Address) -> (new_pc:Address) {
+fn interpreter_c<registers, ram>(index:u32, pc:Address) -> (new_pc:Address) {
 
     var compute_op:ComputeOp
     var imm:DoubleWord

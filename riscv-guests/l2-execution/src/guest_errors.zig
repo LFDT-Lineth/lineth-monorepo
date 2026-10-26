@@ -61,6 +61,7 @@ pub const linea_errors = error{
     FeeRecipientMismatch,
     MissingParentHeaderWitness,
     InvalidGenesisParentHash,
+    MessagingBlockOffsetOverflow,
 
     ExecutionRequestsNotSupported,
     BlobTransactionsNotSupported,
@@ -103,6 +104,7 @@ pub fn exitCode(err: anyerror) ExitCode {
         error.FeeRecipientMismatch,
         error.MissingParentHeaderWitness,
         error.InvalidGenesisParentHash,
+        error.MessagingBlockOffsetOverflow,
         => .conflation_invariant,
 
         error.ExecutionRequestsNotSupported,

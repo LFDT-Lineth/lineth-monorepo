@@ -3,7 +3,7 @@ pragma solidity ^0.8.33;
 
 /**
  * @title Library to hash cross-chain messages.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 library MessageHashing {

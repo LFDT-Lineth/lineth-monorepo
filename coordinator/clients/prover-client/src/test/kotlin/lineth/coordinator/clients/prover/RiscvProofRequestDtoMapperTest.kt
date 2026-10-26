@@ -133,13 +133,13 @@ class RiscvProofRequestDtoMapperTest {
     val conflation = ConflationWitness(
       blockRlps = listOf(byteArrayOf(0x0c), byteArrayOf(0x0d)),
     )
-    val chunks = listOf(ByteArray(32) { 0x1e })
+    val chunks = listOf(RiscvProverClientTestFixtures.blobChunkWitness(0x1e))
     val request = RollupProofRequestV1(
       conflations = listOf(conflation),
       l2Executions = l2Executions,
       chunks = chunks,
       parentDataRollingHash = ByteArray(32) { 0x1c },
-      startOffset = 0,
+      parentDataTailTakeBytes = 0,
     )
     val l2ExecutionProofTransport = FakeL2ExecutionProofTransport()
 
@@ -167,13 +167,19 @@ class RiscvProofRequestDtoMapperTest {
               proof = resolved.proof,
               startBlockNumber = resolved.startBlockNumber,
               publicInputs = resolved.publicInputs,
-              filteredAddresses = resolved.filteredAddresses,
               programVk = resolved.programVk,
             )
           },
-          chunks = chunks.map { it.encodeHex() },
+          chunks = chunks.map {
+            ChunkWitnessDto(
+              chunkHash = it.chunkHash.encodeHex(),
+              isCalldata = false,
+              blobBytes = it.blobBytes.encodeHex(),
+              calldataBytes = "0x",
+            )
+          },
           parentDataRollingHash = request.parentDataRollingHash.encodeHex(),
-          startOffset = 0,
+          parentDataTailTakeBytes = 0,
         ),
         metadata = MetaDataDto(
           startBlockNumber = 1000501,
@@ -190,9 +196,9 @@ class RiscvProofRequestDtoMapperTest {
     val request = RollupProofRequestV1(
       conflations = listOf(ConflationWitness(blockRlps = emptyList())),
       l2Executions = listOf(proofIndex),
-      chunks = listOf(ByteArray(32)),
+      chunks = listOf(RiscvProverClientTestFixtures.blobChunkWitness()),
       parentDataRollingHash = ByteArray(32),
-      startOffset = 0,
+      parentDataTailTakeBytes = 0,
     )
     val transport = FakeL2ExecutionProofTransport(responseProvider = { null })
 
@@ -234,8 +240,6 @@ class RiscvProofRequestDtoMapperTest {
               proof = resolved.proof,
               startBlockNumber = resolved.startBlockNumber,
               publicInputs = resolved.publicInputs,
-              l2L1Roots = resolved.l2L1Roots,
-              filteredAddresses = resolved.filteredAddresses,
               programVk = resolved.programVk,
             )
           },

@@ -6,7 +6,7 @@ permissions:
 
 # Runs once, before the testing jobs (see testing.yml). Resolves the Besu version pinned by
 # besuCommit in gradle/libs.versions.toml and, when that version is not yet published to any
-# remote maven repo, builds Besu exactly once via the existing :linea-besu:besu:build task
+# remote maven repo, builds Besu exactly once via the existing :linea-besu:besu:buildAndPublishBesu task
 # (checkout + distTar + publishToMavenLocal) and shares the results with the downstream
 # testing jobs as a workflow artifact (actions/setup-besu-maven-local restores them). Without
 # this job, every JVM testing job would build Besu from source on-demand in parallel, wasting
@@ -98,7 +98,7 @@ jobs:
 
       - name: Build Besu from source and publish to maven local
         if: ${{ steps.check_bom.outputs.bom_available == 'false' }}
-        run: ./gradlew :linea-besu:besu:build -PpublishToMaven=false
+        run: ./gradlew :linea-besu:besu:buildAndPublishBesu -PpublishToMaven=false
         env:
           JAVA_OPTS: -Xmx2g -Dorg.gradle.daemon=false
 

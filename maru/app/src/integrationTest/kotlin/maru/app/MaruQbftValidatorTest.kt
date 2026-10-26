@@ -1,6 +1,4 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
@@ -12,6 +10,7 @@ package maru.app
 
 import com.github.michaelbull.result.Ok
 import linea.kotlin.decodeHex
+import linea.testing.besu.BesuFactory
 import linea.testing.besu.BesuTransactionsHelper
 import linea.testing.besu.startWithRetry
 import maru.consensus.StaticValidatorProvider
@@ -29,7 +28,6 @@ import org.hyperledger.besu.consensus.qbft.core.messagewrappers.Proposal
 import org.hyperledger.besu.consensus.qbft.core.messagewrappers.RoundChange
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Amount
 import org.hyperledger.besu.tests.acceptance.dsl.condition.net.NetConditions
-import org.hyperledger.besu.tests.acceptance.dsl.node.ThreadBesuNodeRunner
 import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.Cluster
 import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.ClusterConfigurationBuilder
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.net.NetTransactions
@@ -57,7 +55,7 @@ class MaruQbftValidatorTest {
     cluster = Cluster(
       ClusterConfigurationBuilder().build(),
       NetConditions(NetTransactions()),
-      ThreadBesuNodeRunner(),
+      BesuFactory.buildTestNodeRunner(),
     )
 
     spyingP2pNetwork = SpyingP2PNetwork(NoOpP2PNetwork)

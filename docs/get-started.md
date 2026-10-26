@@ -2,7 +2,7 @@
 
 ### Requirements:
 
-- Node.js >= 24.18.0 (see `.nvmrc`)
+- Node.js >= 24.22.1 (see `.nvmrc`)
 - Docker v24 or higher
   - Docker should ideally have ~16 GB of Memory and 4+ CPUs to run the entire stack.
 - Docker Compose version v2.19+

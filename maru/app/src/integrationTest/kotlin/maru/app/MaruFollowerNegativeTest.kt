@@ -1,6 +1,4 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
@@ -20,7 +18,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.kotlin.await
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Amount
 import org.hyperledger.besu.tests.acceptance.dsl.condition.net.NetConditions
-import org.hyperledger.besu.tests.acceptance.dsl.node.ThreadBesuNodeRunner
 import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.Cluster
 import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.ClusterConfigurationBuilder
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.net.NetTransactions
@@ -40,7 +37,7 @@ class MaruFollowerNegativeTest {
     Cluster(
       ClusterConfigurationBuilder().build(),
       NetConditions(NetTransactions()),
-      ThreadBesuNodeRunner(),
+      BesuFactory.buildTestNodeRunner(),
     )
 
   private val transactionsHelper: BesuTransactionsHelper = BesuTransactionsHelper()

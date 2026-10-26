@@ -240,14 +240,22 @@ func TestVerifierCircuit_PCSOnly_MerkleCapMismatch(t *testing.T) {
 // TestVerifierCircuit_PCSModuleGroups checks the circuit verifier on a system
 // compiled with module groups: modules A and B share a size and have
 // interleaved columns, so their rows are reordered and committed as two
-// groups, next to a larger module whose size is the tree leaves.
+// groups, either below a larger module or as the largest size of the round,
+// which pair leaves let them split.
 func TestVerifierCircuit_PCSModuleGroups(t *testing.T) {
+	for _, sizes := range [][2]int{{8, 32}, {32, 8}} {
+		verifyModuleGroupsCircuit(t, sizes[0], sizes[1])
+	}
+}
+
+func verifyModuleGroupsCircuit(t *testing.T, sizeAB, sizeBig int) {
+	t.Helper()
 	sys := wiop.NewSystemf("gnark-pcs-groups")
 	r0 := sys.NewRound()
 	r1 := sys.NewRound()
-	a := sys.NewSizedModule(sys.Context.Childf("A"), 8, wiop.PaddingDirectionNone)
-	b := sys.NewSizedModule(sys.Context.Childf("B"), 8, wiop.PaddingDirectionNone)
-	big := sys.NewSizedModule(sys.Context.Childf("Big"), 32, wiop.PaddingDirectionNone)
+	a := sys.NewSizedModule(sys.Context.Childf("A"), sizeAB, wiop.PaddingDirectionNone)
+	b := sys.NewSizedModule(sys.Context.Childf("B"), sizeAB, wiop.PaddingDirectionNone)
+	big := sys.NewSizedModule(sys.Context.Childf("Big"), sizeBig, wiop.PaddingDirectionNone)
 	cols := []*wiop.Column{
 		b.NewColumn(sys.Context.Childf("b0"), r0),
 		a.NewColumn(sys.Context.Childf("a0"), r0),
@@ -265,9 +273,9 @@ func TestVerifierCircuit_PCSModuleGroups(t *testing.T) {
 
 	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
 		for _, col := range cols[:3] {
-			rt.AssignColumn(col, nonConstVec(8))
+			rt.AssignColumn(col, nonConstVec(sizeAB))
 		}
-		rt.AssignColumn(cols[3], nonConstVec(32))
+		rt.AssignColumn(cols[3], nonConstVec(sizeBig))
 	})
 	require.NoError(t, sys.Verify(proof, pub), "honest proof must verify natively")
 

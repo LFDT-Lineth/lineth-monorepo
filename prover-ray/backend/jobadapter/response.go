@@ -13,12 +13,11 @@ import (
 // proof bytes and publicInputs from backend.Result. Those values are
 // provisional until proof serialization and public-input extraction are wired.
 type executionResponse struct {
-	ProverVersion     string                `json:"proverVersion"`
-	ProofHex          string                `json:"proof"`
-	StartBlockNumber  uint64                `json:"startBlockNumber"`
-	PublicInputs      executionPublicInputs `json:"publicInputs"`
-	FilteredAddresses []string              `json:"filteredAddresses"`
-	ProgramVk         string                `json:"programVk"`
+	ProverVersion    string                `json:"proverVersion"`
+	ProofHex         string                `json:"proof"`
+	StartBlockNumber uint64                `json:"startBlockNumber"`
+	PublicInputs     executionPublicInputs `json:"publicInputs"`
+	ProgramVk        string                `json:"programVk"`
 }
 
 type executionPublicInputs struct {
@@ -36,7 +35,7 @@ type executionPublicInputs struct {
 	ParentFtxNumber                          uint64   `json:"parentFtxNumber"`
 	EndFtxRollingHash                        string   `json:"endFtxRollingHash"`
 	EndProcessedFtxNumber                    uint64   `json:"endProcessedFtxNumber"`
-	FilteredAddressesHash                    string   `json:"filteredAddressesHash"`
+	FilteredAddresses                        []string `json:"filteredAddresses"`
 	TxFromsHash                              string   `json:"txFromsHash"`
 	BlockCount                               uint64   `json:"blockCount"`
 	L2MessagingBlocksOffsets                 []uint16 `json:"l2MessagingBlocksOffsets"`
@@ -56,33 +55,26 @@ func newExecutionResponse(
 	result backend.Result, startBlockNumber uint64, proverVersion string, programVk []byte,
 ) executionResponse {
 	return executionResponse{
-		ProverVersion:     proverVersion,
-		ProofHex:          hexBytes(result.ProofBytes),
-		StartBlockNumber:  startBlockNumber,
-		PublicInputs:      publicInputs(result.PublicInputs),
-		FilteredAddresses: []string{},
-		ProgramVk:         hexBytes(programVk),
+		ProverVersion:    proverVersion,
+		ProofHex:         hexBytes(result.ProofBytes),
+		StartBlockNumber: startBlockNumber,
+		PublicInputs:     publicInputs(result.PublicInputs),
+		ProgramVk:        hexBytes(programVk),
 	}
 }
 
 // newExecutionResponseFromNative builds a response from the native runner's
-// output (dev-zkvm): real public inputs and revealed preimage arrays, a
-// placeholder marker proof (dev-zkvm produces no real proof), and the echoed
-// programVk. l2MessagingBlocksOffsets is not emitted by the native runner yet
-// and is returned empty.
+// output (dev-zkvm): the public inputs, a placeholder marker proof (dev-zkvm
+// produces no real proof), and the echoed programVk.
 func newExecutionResponseFromNative(
 	out nativerunner.Output, proverVersion string, programVk []byte,
 ) executionResponse {
-	pi := out.PublicInputs
-	// blockCount is not in the runner output; derive it from the range.
-	pi.BlockCount = out.PublicInputs.EndBlockNumber - out.StartBlockNumber + 1
 	return executionResponse{
-		ProverVersion:     proverVersion,
-		ProofHex:          hexBytes(backend.DevMarkerProof(backend.ProverModeDevZkVM)),
-		StartBlockNumber:  out.StartBlockNumber,
-		PublicInputs:      publicInputs(pi),
-		FilteredAddresses: hexAddressList(out.FilteredAddresses),
-		ProgramVk:         hexBytes(programVk),
+		ProverVersion:    proverVersion,
+		ProofHex:         hexBytes(backend.DevMarkerProof(backend.ProverModeDevZkVM)),
+		StartBlockNumber: out.StartBlockNumber,
+		PublicInputs:     publicInputs(out.PublicInputs),
+		ProgramVk:        hexBytes(programVk),
 	}
 }
 
@@ -118,7 +110,7 @@ func publicInputs(pi backend.PublicInputs) executionPublicInputs {
 		ParentFtxNumber:                          pi.ParentFtxNumber,
 		EndFtxRollingHash:                        hexHash(pi.EndFtxRollingHash),
 		EndProcessedFtxNumber:                    pi.EndProcessedFtxNumber,
-		FilteredAddressesHash:                    hexHash(pi.FilteredAddressesHash),
+		FilteredAddresses:                        hexAddressList(pi.FilteredAddresses),
 		TxFromsHash:                              hexHash(pi.TxFromsHash),
 		BlockCount:                               pi.BlockCount,
 		// non-nil so an empty list marshals to [] not null.

@@ -344,6 +344,10 @@ services:
 
   postgres:
     image: postgres:18.3
+    # Run tini as PID 1 so it reaps orphaned processes (e.g. a pg_isready healthcheck whose shell Docker killed on
+    # timeout). With postgres as PID 1, an orphan exiting non-zero is treated as a crashed backend and the server
+    # restarts, dropping all connections.
+    init: true
     hostname: postgres
     container_name: postgres
     profiles: [ "l2", "debug", "external-to-monorepo", "staterecovery" ]

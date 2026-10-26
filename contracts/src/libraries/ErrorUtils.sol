@@ -5,7 +5,7 @@ import { IGenericErrors } from "../interfaces/IGenericErrors.sol";
 
 /**
  * @title Library for error checking utilities.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 library ErrorUtils {

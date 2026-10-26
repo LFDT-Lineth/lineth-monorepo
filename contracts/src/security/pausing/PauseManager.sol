@@ -6,7 +6,7 @@ import { IPauseManager } from "./interfaces/IPauseManager.sol";
 
 /**
  * @title Contract to manage cross-chain function pausing with limited duration and cooldown mechanic.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract PauseManager is IPauseManager, AccessControlUpgradeable {

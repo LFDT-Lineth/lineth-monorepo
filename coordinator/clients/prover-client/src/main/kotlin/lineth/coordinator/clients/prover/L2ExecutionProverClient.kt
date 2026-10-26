@@ -87,7 +87,6 @@ internal object L2ExecutionProofResponseDtoMapper : (
       endBlockNumber = responseDto.publicInputs.endBlockNumber.toULong(),
       proof = responseDto.proof.decodeHex(),
       publicInputs = responseDto.publicInputs.toDomainObject(),
-      filteredAddresses = responseDto.filteredAddresses.map { it.decodeHex() },
       programVk = responseDto.programVk.decodeHex(),
     )
   }

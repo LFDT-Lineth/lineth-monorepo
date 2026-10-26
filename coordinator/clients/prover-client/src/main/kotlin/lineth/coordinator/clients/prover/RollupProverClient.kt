@@ -16,7 +16,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 /**
  * Maps a [RollupProofRequestV1] domain request to the RISC-V rollup proof request DTO described by
- * `rollup_spec/prover_io/schemas/getZkRollupProofV1.request.schema.json`.
+ * `rollup_spec/src/rollup_spec/prover_io/schemas/getZkRollupProofV1.request.schema.json`.
  */
 class RollupProofRequestDtoMapper(
   private val guestProgramId: String,
@@ -52,11 +52,9 @@ class RollupProofRequestDtoMapper(
             conflations = request.conflations.map { it.toDto() },
             l2ExecutionProofs = l2ExecutionProofResponseDtos.ifEmpty { null },
             l2ExecutionProofIndexes = l2ExecutionProofIndexes,
-            chunks = request.chunks.map { it.encodeHex() },
+            chunks = request.chunks.map { it.toDto() },
             parentDataRollingHash = request.parentDataRollingHash.encodeHex(),
-            startOffset = request.startOffset,
-            opaquePrefixBytes = request.opaquePrefixBytes.takeIf { it.isNotEmpty() }?.encodeHex(),
-            opaqueSuffixBytes = request.opaqueSuffixBytes.takeIf { it.isNotEmpty() }?.encodeHex(),
+            parentDataTailTakeBytes = request.parentDataTailTakeBytes,
             boundaryPrevDataRollingHash = request.boundaryPrevDataRollingHash?.encodeHex(),
           ),
           metadata = MetaDataDto(
@@ -71,7 +69,7 @@ class RollupProofRequestDtoMapper(
 
 /**
  * Maps the deserialized rollup proof response DTO onto the domain [RollupProofResponseV1] described by
- * `rollup_spec/prover_io/schemas/getZkRollupProofV1.response.schema.json`.
+ * `rollup_spec/src/rollup_spec/prover_io/schemas/getZkRollupProofV1.response.schema.json`.
  * The transport is responsible for parsing the JSON (read from a file or returned by a REST call) into
  * [RollupProofResponseDto] before this mapper runs.
  */
@@ -86,8 +84,6 @@ object RollupProofResponseDtoMapper : (
       endBlockNumber = responseDto.publicInputs.endBlockNumber.toULong(),
       proof = responseDto.proof.decodeHex(),
       publicInputs = responseDto.publicInputs.toDomainObject(),
-      l2L1Roots = responseDto.l2L1Roots.map { it.decodeHex() },
-      filteredAddresses = responseDto.filteredAddresses.map { it.decodeHex() },
       programVk = responseDto.programVk.decodeHex(),
     )
   }
