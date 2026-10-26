@@ -4,12 +4,12 @@ go 1.27.1
 
 require (
 	github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20261021134731-3829cba91ebc
-	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20261020132549-9ff51bc01040
+	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20261026134033-a99f13746570
 	github.com/stretchr/testify v1.12.1
 )
 
 require (
-	github.com/LFDT-Lineth/zkc v1.2.33 // indirect
+	github.com/LFDT-Lineth/zkc v1.2.34 // indirect
 	github.com/bits-and-blooms/bitset v1.25.0 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565 // indirect

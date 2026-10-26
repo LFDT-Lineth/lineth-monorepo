@@ -6,6 +6,7 @@ const logderivativesum = @import("query/logderivativesum.zig");
 const grandproduct = @import("query/grandproduct.zig");
 const rowlimit = @import("query/rowlimit.zig");
 const shared_randomness = @import("query/shared_randomness.zig");
+const program_vk = @import("query/program_vk.zig");
 const pcs = @import("query/pcs.zig");
 const fiat_shamir = @import("crypto/fiat_shamir.zig");
 const poseidon2 = @import("crypto/poseidon2.zig");
@@ -113,6 +114,11 @@ pub const Systems = struct {
     /// Empty (`.{}`) for a protocol compiled with the messagebus
     /// WithoutSharedRandomness opt-out, in which case the check is a no-op.
     shared_randomness: shared_randomness.System = .{},
+    /// Program-VK check: the program-VK public-input cells must equal the PCS
+    /// commitment to the program round. Verifier-side counterpart to
+    /// prover-ray's risc5.ProgramVKChecker. Empty (`.{}`) for a protocol that
+    /// does not register the program VK, in which case the check is a no-op.
+    program_vk: program_vk.System = .{},
     /// FRI/PCS opening verifier. MANDATORY: there is no "PCS-disabled" protocol.
     /// `verify` runs PCS first — deriving the opening coins (zeta, fold
     /// challenges, query positions) from the shared Fiat-Shamir transcript and
@@ -425,6 +431,8 @@ pub fn verifyWithWorkspace(
     try rowlimit.verify(systems.rowlimit, proof.module_sizes);
 
     try shared_randomness.verify(systems.shared_randomness, ctx);
+
+    try program_vk.verify(systems.program_vk, ctx);
 
     // TODO(profiling): add a final verify_done marker once more phases run after logderivativesum.
 }

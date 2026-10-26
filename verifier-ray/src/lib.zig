@@ -34,6 +34,7 @@ pub const query = struct {
     pub const grandproduct = @import("query/grandproduct.zig");
     pub const rowlimit = @import("query/rowlimit.zig");
     pub const shared_randomness = @import("query/shared_randomness.zig");
+    pub const program_vk = @import("query/program_vk.zig");
     pub const fri = @import("query/fri.zig");
     pub const pcs = @import("query/pcs.zig");
 };

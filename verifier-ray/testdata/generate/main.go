@@ -1471,6 +1471,7 @@ func writeCompiledHeader(out *bytes.Buffer) {
 	fmt.Fprintln(out, "const grandproduct = verifier_ray.query.grandproduct;")
 	fmt.Fprintln(out, "const rowlimit = verifier_ray.query.rowlimit;")
 	fmt.Fprintln(out, "const shared_randomness = verifier_ray.query.shared_randomness;")
+	fmt.Fprintln(out, "const program_vk = verifier_ray.query.program_vk;")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "pub const RuntimeTraceCell = union(enum) { base: u32, ext: [6]u32 };")
 	fmt.Fprintln(out, "pub const RuntimeTraceRound = struct { commitment: ?[8]u32 = null, cells: []const RuntimeTraceCell };")
@@ -1607,6 +1608,7 @@ func writeVerifyHeader(out *bytes.Buffer, count int) {
 	fmt.Fprintln(out, "const grandproduct = verifier_ray.query.grandproduct;")
 	fmt.Fprintln(out, "const rowlimit = verifier_ray.query.rowlimit;")
 	fmt.Fprintln(out, "const shared_randomness = verifier_ray.query.shared_randomness;")
+	fmt.Fprintln(out, "const program_vk = verifier_ray.query.program_vk;")
 	fmt.Fprintln(out, "const pcs = verifier_ray.query.pcs;")
 	fmt.Fprintln(out, "const fri = verifier_ray.query.fri;")
 	fmt.Fprintln(out, "const verifier = verifier_ray.verifier;")
@@ -1667,8 +1669,8 @@ func writeVerifyCase(out *bytes.Buffer, idx int, tc fixtureCase) {
 	}
 	fmt.Fprintf(
 		out,
-		"const verify_case_%d_systems = verifier.Systems{ .public_input = system_%d_public_input, .vanishing = system_%d, .logderivativesum = system_%d_logderiv, .grandproduct = system_%d_grandproduct, .rowlimit = system_%d_rowlimit, .shared_randomness = system_%d_shared_randomness, .pcs = %s };\n",
-		idx, idx, idx, idx, idx, idx, idx, pcsName,
+		"const verify_case_%d_systems = verifier.Systems{ .public_input = system_%d_public_input, .vanishing = system_%d, .logderivativesum = system_%d_logderiv, .grandproduct = system_%d_grandproduct, .rowlimit = system_%d_rowlimit, .shared_randomness = system_%d_shared_randomness, .program_vk = system_%d_program_vk, .pcs = %s };\n",
+		idx, idx, idx, idx, idx, idx, idx, idx, pcsName,
 	)
 	fmt.Fprintln(out)
 }

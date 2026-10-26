@@ -9,6 +9,7 @@ comptime {
     _ = @import("grandproduct_test.zig");
     _ = @import("rowlimit_test.zig");
     _ = @import("shared_randomness_test.zig");
+    _ = @import("program_vk_test.zig");
     _ = @import("fri_test.zig");
     _ = @import("pcs_test.zig");
     _ = @import("verifier_test.zig");

@@ -57,6 +57,7 @@ func run() error {
 		GrandProductImport:     `@import("verifier_ray").query.grandproduct`,
 		RowLimitImport:         `@import("verifier_ray").query.rowlimit`,
 		SharedRandomnessImport: `@import("verifier_ray").query.shared_randomness`,
+		ProgramVKImport:        `@import("verifier_ray").query.program_vk`,
 		WritePcs:               true,
 		PcsImport:              `@import("verifier_ray").query.pcs`,
 		FriImport:              `@import("verifier_ray").query.fri`,
@@ -67,7 +68,7 @@ func run() error {
 	// Step 2: stitch the sub-verifier systems just written into a single
 	// verifier.Systems value, the top-level struct verifier.verify expects.
 	fmt.Fprintf(&systemBuf,
-		"\nconst verifier = @import(\"verifier_ray\").verifier;\npub const system_0_systems = verifier.Systems{ .public_input = system_0_public_input, .vanishing = system_0, .logderivativesum = system_0_logderiv, .grandproduct = system_0_grandproduct, .rowlimit = system_0_rowlimit, .shared_randomness = system_0_shared_randomness, .pcs = pcs_system_0 };\n",
+		"\nconst verifier = @import(\"verifier_ray\").verifier;\npub const system_0_systems = verifier.Systems{ .public_input = system_0_public_input, .vanishing = system_0, .logderivativesum = system_0_logderiv, .grandproduct = system_0_grandproduct, .rowlimit = system_0_rowlimit, .shared_randomness = system_0_shared_randomness, .program_vk = system_0_program_vk, .pcs = pcs_system_0 };\n",
 	)
 
 	generatedDir := "../../testdata/generated"

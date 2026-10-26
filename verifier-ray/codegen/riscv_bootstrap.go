@@ -65,31 +65,23 @@ func BuildAllInOneHonestRiscvArtifacts() (HonestRiscvArtifacts, error) {
 
 	sys := wiop.NewSystemf("zkc-riscv-system")
 	sys.NewRound()
-	driver := zkcdriver.NewZkCDriver(sys, zkcdriver.Settings{}, bytes.NewReader(compiledConstraints))
-	risc5.RegisterGuestPublicOutputs(sys)
+	// The decoded program goes in zkcdriver.ProgramRound and the rest of the
+	// trace in round 1, as in prover-ray's backend.New: the commitment to the
+	// program round is the program VK.
+	driver := zkcdriver.NewZkCDriver(sys, zkcdriver.Settings{TraceRound: 1}, bytes.NewReader(compiledConstraints))
+	risc5.RegisterPublicInputs(sys)
 
-	// SharedRandomness is deliberately off. It obliges every bus column to sit on
-	// the message-bus coin round, so that the round's commitment — hashed into
-	// this shard's contribution to γ — binds the columns the coins are then used
-	// to evaluate. zkcdriver declares every trace column on round 0
-	// (zkcdriver/definition.go, zkcdriver/native_modules.go), while the coin round
-	// is round 0's successor, so the layouts are incompatible and the option
-	// panics here.
-	//
-	// Turning it on would be vacuous anyway: BuildAllInOneHonestRiscvArtifacts
-	// asserts a single trace shard, and shared randomness exists to make several
-	// shards agree on α and β. With one shard there is no one to agree with, and
-	// the coins are correctly drawn from this shard's own transcript.
-	//
-	// Re-enabling it requires moving the driver's bus columns onto the coin round,
-	// which is blocked on dynamic-module sizing: wiop.Runtime.AssignColumn fixes a
-	// dynamic module's size from its round-0 assignment and panics if a later round
-	// grows it, because the sizes go into round 0's Fiat-Shamir transcript.
+	// SharedRandomness is deliberately off, as in prover-ray's backend.New.
+	// BuildAllInOneHonestRiscvArtifacts asserts a single trace shard, and shared
+	// randomness exists to make several shards agree on α and β. With one shard
+	// there is no one to agree with, and the coins are correctly drawn from this
+	// shard's own transcript.
 	if err := compilers.CompileFull(sys,
 		compilers.ConfigureMessageBus(messagebus.WithoutSharedRandomness()),
 		compilers.ConfigurePCS(pcs.WithColumnElision())); err != nil {
 		return HonestRiscvArtifacts{}, fmt.Errorf("compiling pipeline: %w", err)
 	}
+	risc5.CheckPublicInputs(sys)
 
 	compiledSystem, err := BuildCompiledSystem(sys)
 	if err != nil {

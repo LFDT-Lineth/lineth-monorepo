@@ -10,6 +10,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/risc5"
 )
 
 // UnhandledVerifierActionError reports a registered wiop verifier action that
@@ -70,6 +71,10 @@ func (e *UnhandledVerifierActionError) Error() string {
 //     commitment; present only when messagebus.Compile ran in its default
 //     seeded mode — a shard compiled with messagebus.WithoutSharedRandomness
 //     registers no checker)
+//   - risc5.ProgramVKChecker                    → BuildProgramVKSystem / program_vk
+//     sub-verifier (the program-VK public-input cells == the PCS commitment to
+//     the program round, limb by limb; present only when
+//     risc5.RegisterProgramVK ran)
 //   - pcs.OpeningVerifierAction                 → BuildPcsSystem
 //     (performs no boundary check the Zig side must re-emit — the whole PCS
 //     opening, including the claimed evaluations, is reconstructed at verify
@@ -114,6 +119,8 @@ func verifierActionIsHandled(action wiop.VerifierAction) bool {
 	case *messagebus.CheckHandleSumInShard:
 		return true
 	case *messagebus.SharedRandomnessContributionChecker:
+		return true
+	case *risc5.ProgramVKChecker:
 		return true
 	}
 	return false

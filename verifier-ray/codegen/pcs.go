@@ -314,12 +314,12 @@ func BuildPcsSystem(sys *wiop.System, routing CoinRouting) (PcsSystem, error) {
 		}
 	}
 
-	// Envelope params: the prover's process-wide static FRI schedule. The Zig
+	// Envelope params: the prover's static FRI schedule for sys. The Zig
 	// verifier restricts these to each proof's largest opened size, so ONE baked
 	// System covers every dynamic size. Emitted from the prover's own exported
 	// envelope so it can never drift from what the prover commits with.
-	envelope := pcscompiler.FRIStaticParams()
-	maxSizeLog2 := int(pcscompiler.FRIMaxCommittableSizeLog2())
+	envelope := pcscompiler.FRIStaticParams(sys)
+	maxSizeLog2 := int(pcscompiler.FRIMaxCommittableSizeLog2(sys))
 
 	// Every static column must be sized before pcsShiftClaimCells reads
 	// Module.Size() as a modulus: an unsized module reports size 0, which

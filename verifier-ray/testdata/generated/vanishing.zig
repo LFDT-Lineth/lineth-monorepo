@@ -8,6 +8,7 @@ const logderivativesum = verifier_ray.query.logderivativesum;
 const grandproduct = verifier_ray.query.grandproduct;
 const rowlimit = verifier_ray.query.rowlimit;
 const shared_randomness = verifier_ray.query.shared_randomness;
+const program_vk = verifier_ray.query.program_vk;
 
 pub const RuntimeTraceCell = union(enum) { base: u32, ext: [6]u32 };
 pub const RuntimeTraceRound = struct { commitment: ?[8]u32 = null, cells: []const RuntimeTraceCell };
@@ -72,6 +73,10 @@ const system_0_rowlimit = rowlimit.System{ .checks = &system_0_rowlimit_checks }
 const system_0_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_0_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_0_shared_randomness_contribution_refs };
+// program-vk system: "bool-col"
+const system_0_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_0_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_0_program_vk_refs };
 const scenario_0 = Scenario{
     .name = "BooleanColumn",
     .spec = system_0_spec,
@@ -192,6 +197,10 @@ const system_1_rowlimit = rowlimit.System{ .checks = &system_1_rowlimit_checks }
 const system_1_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_1_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_1_shared_randomness_contribution_refs };
+// program-vk system: "fib"
+const system_1_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_1_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_1_program_vk_refs };
 const scenario_1 = Scenario{
     .name = "Fibonacci",
     .spec = system_1_spec,
@@ -316,6 +325,10 @@ const system_2_rowlimit = rowlimit.System{ .checks = &system_2_rowlimit_checks }
 const system_2_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_2_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_2_shared_randomness_contribution_refs };
+// program-vk system: "geo"
+const system_2_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_2_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_2_program_vk_refs };
 const scenario_2 = Scenario{
     .name = "GeometricProgression",
     .spec = system_2_spec,
@@ -438,6 +451,10 @@ const system_3_rowlimit = rowlimit.System{ .checks = &system_3_rowlimit_checks }
 const system_3_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_3_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_3_shared_randomness_contribution_refs };
+// program-vk system: "ctr"
+const system_3_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_3_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_3_program_vk_refs };
 const scenario_3 = Scenario{
     .name = "ConditionalCounter",
     .spec = system_3_spec,
@@ -567,6 +584,10 @@ const system_4_rowlimit = rowlimit.System{ .checks = &system_4_rowlimit_checks }
 const system_4_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_4_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_4_shared_randomness_contribution_refs };
+// program-vk system: "pyth"
+const system_4_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_4_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_4_program_vk_refs };
 const scenario_4 = Scenario{
     .name = "PythagoreanTriplet",
     .spec = system_4_spec,
@@ -695,6 +716,10 @@ const system_5_rowlimit = rowlimit.System{ .checks = &system_5_rowlimit_checks }
 const system_5_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_5_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_5_shared_randomness_contribution_refs };
+// program-vk system: "dyn-fib"
+const system_5_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_5_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_5_program_vk_refs };
 const scenario_5 = Scenario{
     .name = "DynamicFibonacci",
     .spec = system_5_spec,
@@ -817,6 +842,10 @@ const system_6_rowlimit = rowlimit.System{ .checks = &system_6_rowlimit_checks }
 const system_6_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_6_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_6_shared_randomness_contribution_refs };
+// program-vk system: "const-col"
+const system_6_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_6_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_6_program_vk_refs };
 const scenario_6 = Scenario{
     .name = "ConstantColumn",
     .spec = system_6_spec,
@@ -935,6 +964,10 @@ const system_7_rowlimit = rowlimit.System{ .checks = &system_7_rowlimit_checks }
 const system_7_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_7_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_7_shared_randomness_contribution_refs };
+// program-vk system: "fwd-shift"
+const system_7_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_7_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_7_program_vk_refs };
 const scenario_7 = Scenario{
     .name = "ForwardShiftConstant",
     .spec = system_7_spec,
@@ -1056,6 +1089,10 @@ const system_8_rowlimit = rowlimit.System{ .checks = &system_8_rowlimit_checks }
 const system_8_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_8_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_8_shared_randomness_contribution_refs };
+// program-vk system: "bool-cube"
+const system_8_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_8_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_8_program_vk_refs };
 const scenario_8 = Scenario{
     .name = "BooleanCube",
     .spec = system_8_spec,
@@ -1184,6 +1221,10 @@ const system_9_rowlimit = rowlimit.System{ .checks = &system_9_rowlimit_checks }
 const system_9_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_9_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_9_shared_randomness_contribution_refs };
+// program-vk system: "lin-comb"
+const system_9_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_9_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_9_program_vk_refs };
 const scenario_9 = Scenario{
     .name = "LinearCombination",
     .spec = system_9_spec,
@@ -1312,6 +1353,10 @@ const system_10_rowlimit = rowlimit.System{ .checks = &system_10_rowlimit_checks
 const system_10_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_10_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_10_shared_randomness_contribution_refs };
+// program-vk system: "fib-16"
+const system_10_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_10_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_10_program_vk_refs };
 const scenario_10 = Scenario{
     .name = "LargeFibonacci",
     .spec = system_10_spec,
@@ -1437,6 +1482,10 @@ const system_11_rowlimit = rowlimit.System{ .checks = &system_11_rowlimit_checks
 const system_11_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_11_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_11_shared_randomness_contribution_refs };
+// program-vk system: "same-ratio"
+const system_11_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_11_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_11_program_vk_refs };
 const scenario_11 = Scenario{
     .name = "MultipleVanishingsSameRatio",
     .spec = system_11_spec,
@@ -1562,6 +1611,10 @@ const system_12_rowlimit = rowlimit.System{ .checks = &system_12_rowlimit_checks
 const system_12_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_12_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_12_shared_randomness_contribution_refs };
+// program-vk system: "mixed-ratio"
+const system_12_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_12_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_12_program_vk_refs };
 const scenario_12 = Scenario{
     .name = "MixedRatioVanishings",
     .spec = system_12_spec,
@@ -1700,6 +1753,10 @@ const system_13_rowlimit = rowlimit.System{ .checks = &system_13_rowlimit_checks
 const system_13_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_13_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_13_shared_randomness_contribution_refs };
+// program-vk system: "multi-mod"
+const system_13_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_13_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_13_program_vk_refs };
 const scenario_13 = Scenario{
     .name = "MultiModule",
     .spec = system_13_spec,
@@ -1828,6 +1885,10 @@ const system_14_rowlimit = rowlimit.System{ .checks = &system_14_rowlimit_checks
 const system_14_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_14_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_14_shared_randomness_contribution_refs };
+// program-vk system: "manual-cxl"
+const system_14_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_14_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_14_program_vk_refs };
 const scenario_14 = Scenario{
     .name = "ManualCancellation",
     .spec = system_14_spec,
@@ -1950,6 +2011,10 @@ const system_15_rowlimit = rowlimit.System{ .checks = &system_15_rowlimit_checks
 const system_15_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_15_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_15_shared_randomness_contribution_refs };
+// program-vk system: "pre-sel"
+const system_15_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_15_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_15_program_vk_refs };
 const scenario_15 = Scenario{
     .name = "PrecomputedSelector",
     .spec = system_15_spec,
@@ -2070,6 +2135,10 @@ const system_16_rowlimit = rowlimit.System{ .checks = &system_16_rowlimit_checks
 const system_16_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_16_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_16_shared_randomness_contribution_refs };
+// program-vk system: "cell-leaf"
+const system_16_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_16_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_16_program_vk_refs };
 const scenario_16 = Scenario{
     .name = "CellLeaf",
     .spec = system_16_spec,
@@ -2192,6 +2261,10 @@ const system_17_rowlimit = rowlimit.System{ .checks = &system_17_rowlimit_checks
 const system_17_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_17_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_17_shared_randomness_contribution_refs };
+// program-vk system: "coin-scaled"
+const system_17_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_17_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_17_program_vk_refs };
 const scenario_17 = Scenario{
     .name = "CoinScaled",
     .spec = system_17_spec,
@@ -2320,6 +2393,10 @@ const system_18_rowlimit = rowlimit.System{ .checks = &system_18_rowlimit_checks
 const system_18_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_18_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_18_shared_randomness_contribution_refs };
+// program-vk system: "step3"
+const system_18_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_18_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_18_program_vk_refs };
 const scenario_18 = Scenario{
     .name = "ThreeStepRecurrence",
     .spec = system_18_spec,
@@ -2443,6 +2520,10 @@ const system_19_rowlimit = rowlimit.System{ .checks = &system_19_rowlimit_checks
 const system_19_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_19_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_19_shared_randomness_contribution_refs };
+// program-vk system: "quartic"
+const system_19_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_19_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_19_program_vk_refs };
 const scenario_19 = Scenario{
     .name = "Quartic",
     .spec = system_19_spec,
@@ -2573,6 +2654,10 @@ const system_20_rowlimit = rowlimit.System{ .checks = &system_20_rowlimit_checks
 const system_20_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_20_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_20_shared_randomness_contribution_refs };
+// program-vk system: "dyn-leftpad"
+const system_20_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_20_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_20_program_vk_refs };
 const scenario_20 = Scenario{
     .name = "LeftPadDynamic",
     .spec = system_20_spec,
@@ -2695,6 +2780,10 @@ const system_21_rowlimit = rowlimit.System{ .checks = &system_21_rowlimit_checks
 const system_21_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_21_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_21_shared_randomness_contribution_refs };
+// program-vk system: "cube-shift"
+const system_21_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_21_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_21_program_vk_refs };
 const scenario_21 = Scenario{
     .name = "CubicWithBackShift",
     .spec = system_21_spec,
@@ -2827,6 +2916,10 @@ const system_22_rowlimit = rowlimit.System{ .checks = &system_22_rowlimit_checks
 const system_22_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_22_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_22_shared_randomness_contribution_refs };
+// program-vk system: "mixed-hi-ratio"
+const system_22_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_22_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_22_program_vk_refs };
 const scenario_22 = Scenario{
     .name = "MixedHighRatio",
     .spec = system_22_spec,
@@ -2985,6 +3078,10 @@ const system_23_rowlimit = rowlimit.System{ .checks = &system_23_rowlimit_checks
 const system_23_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_23_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_23_shared_randomness_contribution_refs };
+// program-vk system: "multi-mod-hi-ratio"
+const system_23_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_23_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_23_program_vk_refs };
 const scenario_23 = Scenario{
     .name = "MultiModuleHighRatio",
     .spec = system_23_spec,
@@ -3120,6 +3217,10 @@ const system_24_rowlimit = rowlimit.System{ .checks = &system_24_rowlimit_checks
 const system_24_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_24_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_24_shared_randomness_contribution_refs };
+// program-vk system: "cube-32"
+const system_24_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_24_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_24_program_vk_refs };
 const scenario_24 = Scenario{
     .name = "SizeThirtyTwoCubic",
     .spec = system_24_spec,
@@ -3242,6 +3343,10 @@ const system_25_rowlimit = rowlimit.System{ .checks = &system_25_rowlimit_checks
 const system_25_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_25_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_25_shared_randomness_contribution_refs };
+// program-vk system: "fwd-shift-3"
+const system_25_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_25_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_25_program_vk_refs };
 const scenario_25 = Scenario{
     .name = "LargeForwardShift",
     .spec = system_25_spec,
@@ -3366,6 +3471,10 @@ const system_26_rowlimit = rowlimit.System{ .checks = &system_26_rowlimit_checks
 const system_26_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_26_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_26_shared_randomness_contribution_refs };
+// program-vk system: "two-shift"
+const system_26_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_26_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_26_program_vk_refs };
 const scenario_26 = Scenario{
     .name = "BackAndForwardShift",
     .spec = system_26_spec,
@@ -3488,6 +3597,10 @@ const system_27_rowlimit = rowlimit.System{ .checks = &system_27_rowlimit_checks
 const system_27_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_27_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_27_shared_randomness_contribution_refs };
+// program-vk system: "dyn-quad"
+const system_27_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_27_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_27_program_vk_refs };
 const scenario_27 = Scenario{
     .name = "DynamicQuadratic",
     .spec = system_27_spec,
@@ -3609,6 +3722,10 @@ const system_28_rowlimit = rowlimit.System{ .checks = &system_28_rowlimit_checks
 const system_28_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_28_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_28_shared_randomness_contribution_refs };
+// program-vk system: "quartic-shift"
+const system_28_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_28_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_28_program_vk_refs };
 const scenario_28 = Scenario{
     .name = "QuarticWithBackShift",
     .spec = system_28_spec,
@@ -3743,6 +3860,10 @@ const system_29_rowlimit = rowlimit.System{ .checks = &system_29_rowlimit_checks
 const system_29_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_29_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_29_shared_randomness_contribution_refs };
+// program-vk system: "dyn-fib-multisize"
+const system_29_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_29_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_29_program_vk_refs };
 const scenario_29 = Scenario{
     .name = "DynamicFibonacciMultiSize",
     .spec = system_29_spec,
@@ -3859,6 +3980,10 @@ const system_30_rowlimit = rowlimit.System{ .checks = &system_30_rowlimit_checks
 const system_30_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_30_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_30_shared_randomness_contribution_refs };
+// program-vk system: "dyn-fib-two-modules"
+const system_30_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_30_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_30_program_vk_refs };
 const scenario_30 = Scenario{
     .name = "DynamicFibonacciTwoModules",
     .spec = system_30_spec,
@@ -3971,6 +4096,10 @@ const system_31_rowlimit = rowlimit.System{ .checks = &system_31_rowlimit_checks
 const system_31_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_31_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_31_shared_randomness_contribution_refs };
+// program-vk system: "lds-ones"
+const system_31_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_31_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_31_program_vk_refs };
 const scenario_31 = Scenario{
     .name = "SingleFractionAllOnes",
     .spec = system_31_spec,
@@ -4087,6 +4216,10 @@ const system_32_rowlimit = rowlimit.System{ .checks = &system_32_rowlimit_checks
 const system_32_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_32_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_32_shared_randomness_contribution_refs };
+// program-vk system: "lds-partial"
+const system_32_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_32_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_32_program_vk_refs };
 const scenario_32 = Scenario{
     .name = "PartialFilter",
     .spec = system_32_spec,
@@ -4205,6 +4338,10 @@ const system_33_rowlimit = rowlimit.System{ .checks = &system_33_rowlimit_checks
 const system_33_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_33_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_33_shared_randomness_contribution_refs };
+// program-vk system: "lds-zeros"
+const system_33_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_33_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_33_program_vk_refs };
 const scenario_33 = Scenario{
     .name = "AllZeroFilter",
     .spec = system_33_spec,
@@ -4323,6 +4460,10 @@ const system_34_rowlimit = rowlimit.System{ .checks = &system_34_rowlimit_checks
 const system_34_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_34_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_34_shared_randomness_contribution_refs };
+// program-vk system: "lds-maskzero"
+const system_34_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_34_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_34_program_vk_refs };
 const scenario_34 = Scenario{
     .name = "FilterMasksZeroDenominator",
     .spec = system_34_spec,
@@ -4462,6 +4603,10 @@ const system_35_rowlimit = rowlimit.System{ .checks = &system_35_rowlimit_checks
 const system_35_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_35_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_35_shared_randomness_contribution_refs };
+// program-vk system: "lds-pack"
+const system_35_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_35_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_35_program_vk_refs };
 const scenario_35 = Scenario{
     .name = "Packing4Fractions",
     .spec = system_35_spec,
@@ -4615,6 +4760,10 @@ const system_36_rowlimit = rowlimit.System{ .checks = &system_36_rowlimit_checks
 const system_36_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_36_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_36_shared_randomness_contribution_refs };
+// program-vk system: "lds-multi-mod"
+const system_36_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_36_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_36_program_vk_refs };
 const scenario_36 = Scenario{
     .name = "MultiModuleBucketing",
     .spec = system_36_spec,
@@ -4739,6 +4888,10 @@ const system_37_rowlimit = rowlimit.System{ .checks = &system_37_rowlimit_checks
 const system_37_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_37_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_37_shared_randomness_contribution_refs };
+// program-vk system: "lds-size1"
+const system_37_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_37_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_37_program_vk_refs };
 const scenario_37 = Scenario{
     .name = "SizeOneModule",
     .spec = system_37_spec,
@@ -4885,6 +5038,10 @@ const system_38_rowlimit = rowlimit.System{ .checks = &system_38_rowlimit_checks
 const system_38_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_38_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_38_shared_randomness_contribution_refs };
+// program-vk system: "lds-cond"
+const system_38_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_38_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_38_program_vk_refs };
 const scenario_38 = Scenario{
     .name = "ConditionalLookupShape",
     .spec = system_38_spec,
@@ -5052,6 +5209,10 @@ const system_39_rowlimit = rowlimit.System{ .checks = &system_39_rowlimit_checks
 const system_39_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_39_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_39_shared_randomness_contribution_refs };
+// program-vk system: "lds-many"
+const system_39_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_39_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_39_program_vk_refs };
 const scenario_39 = Scenario{
     .name = "ManyFractions",
     .spec = system_39_spec,
@@ -5188,6 +5349,10 @@ const system_40_rowlimit = rowlimit.System{ .checks = &system_40_rowlimit_checks
 const system_40_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_40_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_40_shared_randomness_contribution_refs };
+// program-vk system: "lds-size2"
+const system_40_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_40_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_40_program_vk_refs };
 const scenario_40 = Scenario{
     .name = "SizeTwoModule",
     .spec = system_40_spec,
@@ -5316,6 +5481,10 @@ const system_41_rowlimit = rowlimit.System{ .checks = &system_41_rowlimit_checks
 const system_41_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_41_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_41_shared_randomness_contribution_refs };
+// program-vk system: "lds-multi-q"
+const system_41_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_41_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_41_program_vk_refs };
 const scenario_41 = Scenario{
     .name = "MultipleQueries",
     .spec = system_41_spec,
@@ -5437,6 +5606,10 @@ const system_42_rowlimit = rowlimit.System{ .checks = &system_42_rowlimit_checks
 const system_42_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_42_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_42_shared_randomness_contribution_refs };
+// program-vk system: "lds-vec-den"
+const system_42_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_42_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_42_program_vk_refs };
 const scenario_42 = Scenario{
     .name = "VectorDenominator",
     .spec = system_42_spec,
@@ -5569,6 +5742,10 @@ const system_43_rowlimit = rowlimit.System{ .checks = &system_43_rowlimit_checks
 const system_43_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_43_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_43_shared_randomness_contribution_refs };
+// program-vk system: "lds-ones-pack"
+const system_43_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_43_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_43_program_vk_refs };
 const scenario_43 = Scenario{
     .name = "AllFiltersOnesPacked",
     .spec = system_43_spec,
@@ -5735,6 +5912,10 @@ const system_44_rowlimit = rowlimit.System{ .checks = &system_44_rowlimit_checks
 const system_44_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_44_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_44_shared_randomness_contribution_refs };
+// program-vk system: "lk-simple"
+const system_44_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_44_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_44_program_vk_refs };
 const scenario_44 = Scenario{
     .name = "SingleColumnNoFilters",
     .spec = system_44_spec,
@@ -5904,6 +6085,10 @@ const system_45_rowlimit = rowlimit.System{ .checks = &system_45_rowlimit_checks
 const system_45_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_45_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_45_shared_randomness_contribution_refs };
+// program-vk system: "lk-filterA"
+const system_45_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_45_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_45_program_vk_refs };
 const scenario_45 = Scenario{
     .name = "FilterOnIncluded",
     .spec = system_45_spec,
@@ -6080,6 +6265,10 @@ const system_46_rowlimit = rowlimit.System{ .checks = &system_46_rowlimit_checks
 const system_46_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_46_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_46_shared_randomness_contribution_refs };
+// program-vk system: "lk-filterT"
+const system_46_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_46_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_46_program_vk_refs };
 const scenario_46 = Scenario{
     .name = "FilterOnIncluding",
     .spec = system_46_spec,
@@ -6258,6 +6447,10 @@ const system_47_rowlimit = rowlimit.System{ .checks = &system_47_rowlimit_checks
 const system_47_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_47_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_47_shared_randomness_contribution_refs };
+// program-vk system: "lk-double"
+const system_47_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_47_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_47_program_vk_refs };
 const scenario_47 = Scenario{
     .name = "DoubleConditional",
     .spec = system_47_spec,
@@ -6437,6 +6630,10 @@ const system_48_rowlimit = rowlimit.System{ .checks = &system_48_rowlimit_checks
 const system_48_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_48_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_48_shared_randomness_contribution_refs };
+// program-vk system: "lk-multi-col"
+const system_48_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_48_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_48_program_vk_refs };
 const scenario_48 = Scenario{
     .name = "MultiColumn",
     .spec = system_48_spec,
@@ -6636,6 +6833,10 @@ const system_49_rowlimit = rowlimit.System{ .checks = &system_49_rowlimit_checks
 const system_49_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_49_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_49_shared_randomness_contribution_refs };
+// program-vk system: "lk-shared"
+const system_49_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_49_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_49_program_vk_refs };
 const scenario_49 = Scenario{
     .name = "SharedTable",
     .spec = system_49_spec,
@@ -6875,6 +7076,10 @@ const system_50_rowlimit = rowlimit.System{ .checks = &system_50_rowlimit_checks
 const system_50_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_50_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_50_shared_randomness_contribution_refs };
+// program-vk system: "lk-distinct"
+const system_50_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_50_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_50_program_vk_refs };
 const scenario_50 = Scenario{
     .name = "DistinctTables",
     .spec = system_50_spec,
@@ -7073,6 +7278,10 @@ const system_51_rowlimit = rowlimit.System{ .checks = &system_51_rowlimit_checks
 const system_51_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_51_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_51_shared_randomness_contribution_refs };
+// program-vk system: "lk-multi-filterT"
+const system_51_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_51_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_51_program_vk_refs };
 const scenario_51 = Scenario{
     .name = "MultiColumnFilterOnIncluding",
     .spec = system_51_spec,
@@ -7246,6 +7455,10 @@ const system_52_rowlimit = rowlimit.System{ .checks = &system_52_rowlimit_checks
 const system_52_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_52_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_52_shared_randomness_contribution_refs };
+// program-vk system: "lk-repeated"
+const system_52_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_52_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_52_program_vk_refs };
 const scenario_52 = Scenario{
     .name = "RepeatedValueInTable",
     .spec = system_52_spec,
@@ -7413,6 +7626,10 @@ const system_53_rowlimit = rowlimit.System{ .checks = &system_53_rowlimit_checks
 const system_53_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_53_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_53_shared_randomness_contribution_refs };
+// program-vk system: "lk-shift-a"
+const system_53_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_53_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_53_program_vk_refs };
 const scenario_53 = Scenario{
     .name = "ShiftedAColumn",
     .spec = system_53_spec,
@@ -7580,6 +7797,10 @@ const system_54_rowlimit = rowlimit.System{ .checks = &system_54_rowlimit_checks
 const system_54_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_54_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_54_shared_randomness_contribution_refs };
+// program-vk system: "lk-shift-b"
+const system_54_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_54_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_54_program_vk_refs };
 const scenario_54 = Scenario{
     .name = "ShiftedBColumn",
     .spec = system_54_spec,
@@ -7775,6 +7996,10 @@ const system_55_rowlimit = rowlimit.System{ .checks = &system_55_rowlimit_checks
 const system_55_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_55_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_55_shared_randomness_contribution_refs };
+// program-vk system: "lk-multi-A"
+const system_55_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_55_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_55_program_vk_refs };
 const scenario_55 = Scenario{
     .name = "MultipleAFragments",
     .spec = system_55_spec,
@@ -7964,6 +8189,10 @@ const system_56_rowlimit = rowlimit.System{ .checks = &system_56_rowlimit_checks
 const system_56_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_56_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_56_shared_randomness_contribution_refs };
+// program-vk system: "lk-w3"
+const system_56_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_56_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_56_program_vk_refs };
 const scenario_56 = Scenario{
     .name = "WidthThree",
     .spec = system_56_spec,
@@ -8139,6 +8368,10 @@ const system_57_rowlimit = rowlimit.System{ .checks = &system_57_rowlimit_checks
 const system_57_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_57_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_57_shared_randomness_contribution_refs };
+// program-vk system: "lk-size1"
+const system_57_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_57_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_57_program_vk_refs };
 const scenario_57 = Scenario{
     .name = "SizeOne",
     .spec = system_57_spec,
@@ -8306,6 +8539,10 @@ const system_58_rowlimit = rowlimit.System{ .checks = &system_58_rowlimit_checks
 const system_58_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_58_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_58_shared_randomness_contribution_refs };
+// program-vk system: "lk-precomp"
+const system_58_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_58_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_58_program_vk_refs };
 const scenario_58 = Scenario{
     .name = "PrecomputedTable",
     .spec = system_58_spec,
@@ -8472,6 +8709,10 @@ const system_59_rowlimit = rowlimit.System{ .checks = &system_59_rowlimit_checks
 const system_59_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_59_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_59_shared_randomness_contribution_refs };
+// program-vk system: "lk-rep-s"
+const system_59_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_59_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_59_program_vk_refs };
 const scenario_59 = Scenario{
     .name = "RepeatedSValues",
     .spec = system_59_spec,
@@ -8641,6 +8882,10 @@ const system_60_rowlimit = rowlimit.System{ .checks = &system_60_rowlimit_checks
 const system_60_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_60_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_60_shared_randomness_contribution_refs };
+// program-vk system: "lk-empty"
+const system_60_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_60_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_60_program_vk_refs };
 const scenario_60 = Scenario{
     .name = "EmptySelected",
     .spec = system_60_spec,
@@ -8853,6 +9098,10 @@ const system_61_rowlimit = rowlimit.System{ .checks = &system_61_rowlimit_checks
 const system_61_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_61_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_61_shared_randomness_contribution_refs };
+// program-vk system: "rc-distinct"
+const system_61_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_61_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_61_program_vk_refs };
 const scenario_61 = Scenario{
     .name = "DistinctBounds",
     .spec = system_61_spec,
@@ -8982,6 +9231,10 @@ const system_62_rowlimit = rowlimit.System{ .checks = &system_62_rowlimit_checks
 const system_62_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_62_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_62_shared_randomness_contribution_refs };
+// program-vk system: "public-input"
+const system_62_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_62_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_62_program_vk_refs };
 const scenario_62 = Scenario{
     .name = "OpenedCellPublicInput",
     .spec = system_62_spec,
@@ -9106,6 +9359,10 @@ const system_63_rowlimit = rowlimit.System{ .checks = &system_63_rowlimit_checks
 const system_63_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_63_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_63_shared_randomness_contribution_refs };
+// program-vk system: "public-input-dyn"
+const system_63_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_63_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_63_program_vk_refs };
 const scenario_63 = Scenario{
     .name = "OpenedCellPublicInputDynamic",
     .spec = system_63_spec,
@@ -9230,6 +9487,10 @@ const system_64_rowlimit = rowlimit.System{ .checks = &system_64_rowlimit_checks
 const system_64_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_64_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_64_shared_randomness_contribution_refs };
+// program-vk system: "lagrange-sel"
+const system_64_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_64_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_64_program_vk_refs };
 const scenario_64 = Scenario{
     .name = "LagrangeSelectorBoundary",
     .spec = system_64_spec,
@@ -9350,6 +9611,10 @@ const system_65_rowlimit = rowlimit.System{ .checks = &system_65_rowlimit_checks
 const system_65_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_65_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_65_shared_randomness_contribution_refs };
+// program-vk system: "lagrange-sel-dyn"
+const system_65_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_65_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_65_program_vk_refs };
 const scenario_65 = Scenario{
     .name = "DynamicLagrangeSelectorBoundary",
     .spec = system_65_spec,
@@ -9546,6 +9811,10 @@ const system_66_rowlimit = rowlimit.System{ .checks = &system_66_rowlimit_checks
 const system_66_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_66_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_66_shared_randomness_contribution_refs };
+// program-vk system: "lk-multi-col-bench"
+const system_66_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_66_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_66_program_vk_refs };
 const scenario_66 = Scenario{
     .name = "MultiColumnBench",
     .spec = system_66_spec,
@@ -9748,6 +10017,10 @@ const system_67_rowlimit = rowlimit.System{ .checks = &system_67_rowlimit_checks
 const system_67_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
 const system_67_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_67_shared_randomness_contribution_refs };
+// program-vk system: "permutation"
+const system_67_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_67_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_67_program_vk_refs };
 const scenario_67 = Scenario{
     .name = "GrandProductPermutation",
     .spec = system_67_spec,
@@ -10310,6 +10583,10 @@ const system_68_shared_randomness_contribution_refs = [_]shared_randomness.Scala
 };
 
 const system_68_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 1, .has_commitment = true }, .contribution_refs = &system_68_shared_randomness_contribution_refs };
+// program-vk system: "mb-shared-randomness"
+const system_68_program_vk_refs = [_]program_vk.ScalarRef{};
+
+const system_68_program_vk = program_vk.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .vk_refs = &system_68_program_vk_refs };
 const scenario_68 = Scenario{
     .name = "SharedRandomnessContribution",
     .spec = system_68_spec,

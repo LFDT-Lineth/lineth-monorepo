@@ -10,4 +10,6 @@ test "riscv_system compiles as verifier.Systems" {
     const systems = riscv_system.system_0_systems;
     try std.testing.expect(systems.pcs.max_entries > 0);
     try std.testing.expect(riscv_system.system_0_spec.total_round_coins > 0);
+    // The real system registers the program VK, so its check is not a no-op.
+    try std.testing.expectEqual(@as(usize, 8), systems.program_vk.vk_refs.len);
 }
