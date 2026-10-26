@@ -86,6 +86,7 @@ pub fn buildEngineeredInput(alloc: std.mem.Allocator) ![]const u8 {
             .chain_id = decoded[0].chain_config.chain_id,
             .coinbase = first_ep.fee_recipient,
             .l2_message_service_address = vanilla_wrap.DUMMY_L2_MESSAGE_SERVICE_ADDRESS,
+            .system_contracts = vanilla_wrap.defaultSystemContracts(decoded[0].chain_config.chain_id),
         },
         .payloads = payloads,
     };

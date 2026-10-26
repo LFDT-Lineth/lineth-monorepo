@@ -147,12 +147,24 @@ data class NewPayloadRequestDto(
   val executionRequests: List<String>,
 )
 
-/** Static chain configuration (preimage inputs of `dynamicChainConfigHash`). */
+/** System-contract addresses handed to the execution engine (not part of the `dynamicChainConfigHash` preimage). */
+data class SystemContractsDto(
+  val beaconRoots: String,
+  val historyStorage: String,
+  val deposit: String,
+  val withdrawalRequest: String,
+  val consolidationRequest: String,
+  val builderDepositRequest: String,
+  val builderExitRequest: String,
+)
+
+/** Static chain configuration (`systemContracts` aside, preimage inputs of `dynamicChainConfigHash`). */
 data class ChainConfigDto(
   val l2MessageServiceAddress: String,
   val coinbase: String,
   val chainId: Long,
   val forkName: String,
+  val systemContracts: SystemContractsDto,
 )
 
 /** A single `debug_executionWitness` entry, one per block in canonical order. */

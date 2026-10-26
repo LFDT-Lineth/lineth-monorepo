@@ -15,7 +15,7 @@
 //!
 //! Container layouts (fixed-head byte sizes — see each *_FIXED_SIZE constant below for the field
 //! breakdown):
-//!   SszL2ExecutionProofPrivateInput:  92 bytes
+//!   SszL2ExecutionProofPrivateInput: 232 bytes
 //!   SszLineaPayloadInput:              8 bytes
 //!   SszForcedTransactionWitness:      21 bytes
 //!   SszL2ExecutionProofPublicInput:  324 bytes  (variable-size lists sit behind 4-byte offsets)
@@ -43,10 +43,52 @@ pub const MAX_TX_BYTES: usize = 1 << 30; // matches the consensus-layer Transact
 
 // ── Logical values ────────────────────────────────────────────────────────────
 
+/// System-contract addresses handed to the execution engine (field order = wire order, and matches
+/// zesu's `input.SystemContracts`). Supplied by the coordinator from the node's genesis config. Not
+/// part of the `dynamicChainConfigHash` preimage, which is anchored in the L1 verifier.
+pub const SystemContracts = struct {
+    beacon_roots: [20]u8,
+    history_storage: [20]u8,
+    deposit: [20]u8,
+    withdrawal_request: [20]u8,
+    consolidation_request: [20]u8,
+    builder_deposit_request: [20]u8,
+    builder_exit_request: [20]u8,
+
+    pub const ENCODED_SIZE: usize = 7 * 20;
+
+    pub fn encode(self: SystemContracts) [ENCODED_SIZE]u8 {
+        var out: [ENCODED_SIZE]u8 = undefined;
+        inline for (std.meta.fields(SystemContracts), 0..) |field, i| {
+            @memcpy(out[i * 20 ..][0..20], &@field(self, field.name));
+        }
+        return out;
+    }
+
+    pub fn decode(bytes: *const [ENCODED_SIZE]u8) SystemContracts {
+        var out: SystemContracts = undefined;
+        inline for (std.meta.fields(SystemContracts), 0..) |field, i| {
+            @memcpy(&@field(out, field.name), bytes[i * 20 ..][0..20]);
+        }
+        return out;
+    }
+
+    /// Copy from any struct with the same field names (e.g. zesu's `input.SystemContracts`),
+    /// without this codec depending on it.
+    pub fn from(src: anytype) SystemContracts {
+        var out: SystemContracts = undefined;
+        inline for (std.meta.fields(SystemContracts)) |field| {
+            @field(out, field.name) = @field(src, field.name);
+        }
+        return out;
+    }
+};
+
 pub const ChainConfig = struct {
     l2_message_service_address: [20]u8,
     coinbase: [20]u8,
     chain_id: u64,
+    system_contracts: SystemContracts,
 };
 
 pub const ForcedTransactionWitness = struct {
@@ -188,8 +230,10 @@ fn encodeLineaPayloadInput(alloc: std.mem.Allocator, v: LineaPayloadInput) ![]u8
 }
 
 // ── L2ExecutionProofPrivateInput (the extended guest INPUT) ──────────────────
-// Fixed head: hash(32) + u64(8) + chain_config(20+20+8=48) + payloads offset(4) = 92.
-const INPUT_FIXED_SIZE: usize = 92;
+// Fixed head: hash(32) + u64(8) + chain_config(20+20+8+140=188) + payloads offset(4) = 232.
+const SYSTEM_CONTRACTS_OFFSET: usize = 88;
+const PAYLOADS_OFFSET_POS: usize = SYSTEM_CONTRACTS_OFFSET + SystemContracts.ENCODED_SIZE;
+const INPUT_FIXED_SIZE: usize = PAYLOADS_OFFSET_POS + 4;
 
 /// Decode the extended l2-execution guest input: the 0x0002 schema id
 /// followed by the SSZ `SszL2ExecutionProofPrivateInput`.
@@ -209,8 +253,9 @@ pub fn decodeInput(alloc: std.mem.Allocator, data: []const u8) !L2ExecutionProof
     var coinbase: [20]u8 = undefined;
     @memcpy(&coinbase, body[60..80]);
     const chain_id = readU64(body, 80);
+    const system_contracts = SystemContracts.decode(body[SYSTEM_CONTRACTS_OFFSET..][0..SystemContracts.ENCODED_SIZE]);
 
-    const off_payloads = readU32(body, 88);
+    const off_payloads = readU32(body, PAYLOADS_OFFSET_POS);
     if (off_payloads != INPUT_FIXED_SIZE or off_payloads > body.len) return error.InvalidSsz;
 
     const payload_slices = try decodeVariableList(alloc, body[off_payloads..], MAX_PAYLOADS);
@@ -226,6 +271,7 @@ pub fn decodeInput(alloc: std.mem.Allocator, data: []const u8) !L2ExecutionProof
             .l2_message_service_address = l2_message_service_address,
             .coinbase = coinbase,
             .chain_id = chain_id,
+            .system_contracts = system_contracts,
         },
         .payloads = payloads,
     };
@@ -249,7 +295,8 @@ pub fn encodeInput(alloc: std.mem.Allocator, v: L2ExecutionProofPrivateInput) ![
     @memcpy(body[40..60], &v.chain_config.l2_message_service_address);
     @memcpy(body[60..80], &v.chain_config.coinbase);
     writeU64(body, 80, v.chain_config.chain_id);
-    writeU32(body, 88, @intCast(INPUT_FIXED_SIZE));
+    @memcpy(body[SYSTEM_CONTRACTS_OFFSET..][0..SystemContracts.ENCODED_SIZE], &v.chain_config.system_contracts.encode());
+    writeU32(body, PAYLOADS_OFFSET_POS, @intCast(INPUT_FIXED_SIZE));
     @memcpy(body[INPUT_FIXED_SIZE..], payloads_bytes);
 
     return out;

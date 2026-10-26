@@ -400,7 +400,7 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
         # `execute_stateless_input` validates the witness header chain, the full
         # Engine-API payload, and replays the EVM (see its docstring); none of
         # that is re-checked here. It returns the boundary state roots and logs.
-        result = execute_stateless_input(stateless_input)
+        result = execute_stateless_input(stateless_input, execution_input.chain_config.system_contracts)
         results.append(result)
 
         # Lineth PI: recover each transaction sender for `txFromsHash`.

@@ -380,6 +380,7 @@ pub fn build(b: *std.Build) void {
             .optimize = host_optimize,
         });
         vanilla_wrap_mod.addImport("zesu_ssz_decode", native_imports.ssz_decode);
+        vanilla_wrap_mod.addImport("zesu_input", native_imports.input);
         vanilla_wrap_mod.addImport("l2_execution_ssz", l2_execution_ssz_mod);
 
         const execution_spec_suite_tests = b.addTest(.{
@@ -545,6 +546,7 @@ pub fn build(b: *std.Build) void {
             tests.root_module.addImport("zesu_ssz_decode", native_imports.ssz_decode);
             tests.root_module.addImport("zesu_allocator", native_imports.allocator);
             tests.root_module.addImport("zesu_mpt", native_imports.mpt);
+            tests.root_module.addImport("zesu_input", native_imports.input);
             linkNativeCryptoProvider(tests, provide_native_obj, guest_crypto_host_a);
 
             test_step.dependOn(&b.addRunArtifact(tests).step);

@@ -88,10 +88,15 @@ fn signHash(msg_hash: [32]u8, private_key: [32]u8) !DerivedSignature {
         1
     else
         return error.FixtureTxSigningFailed;
+    // EIP-2: std's ECDSA does not normalize s, but valid transactions (and zesu since Homestead)
+    // require s <= n/2. (r, n - s) is the same signature with the other recovery parity.
+    const s = std.mem.readInt(u256, signature_bytes[32..64], .big);
+    const secp256k1_n: u256 = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141;
+    const high_s = s > secp256k1_n / 2;
     return .{
         .r = std.mem.readInt(u256, signature_bytes[0..32], .big),
-        .s = std.mem.readInt(u256, signature_bytes[32..64], .big),
-        .y_parity = recid,
+        .s = if (high_s) secp256k1_n - s else s,
+        .y_parity = if (high_s) recid ^ 1 else recid,
     };
 }
 

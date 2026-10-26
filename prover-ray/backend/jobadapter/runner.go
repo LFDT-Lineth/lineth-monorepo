@@ -301,6 +301,7 @@ func buildExtendedInput(req *L2ExecutionRequest) ssz.ExtendedInput {
 			L2MessageServiceAddress: req.L2MessageServiceAddress,
 			Coinbase:                req.Coinbase,
 			ChainID:                 req.ChainID,
+			SystemContracts:         req.SystemContracts,
 		},
 		Payloads: payloads,
 	}
