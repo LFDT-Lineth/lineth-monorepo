@@ -2,7 +2,7 @@
   "name": "operations",
   "version": "1.0.0",
   "description": "Operations scripts",
-  "author": "Consensys Software Inc.",
+  "author": "Consensys Incorporated",
   "license": "(MIT OR Apache-2.0)",
   "scripts": {
     "build": "shx rm -rf dist && tsc -p tsconfig.build.json",
@@ -41,7 +41,7 @@
     "ts-jest": "29.4.14"
   },
   "engines": {
-    "node": ">=24.18.0",
+    "node": ">=24.22.1",
     "pnpm": ">=12.6.0"
   },
   "main": "dist/index.js",

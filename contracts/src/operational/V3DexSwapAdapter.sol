@@ -8,7 +8,7 @@ import { ISwapRouterV3 } from "./interfaces/ISwapRouterV3.sol";
 /**
  * @title V3DexSwapAdapter.
  * @dev A contract for swapping tokens on a decentralized exchange.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 contract V3DexSwapAdapter is IV3DexSwapAdapter {

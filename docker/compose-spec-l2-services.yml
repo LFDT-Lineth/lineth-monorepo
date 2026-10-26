@@ -59,7 +59,7 @@ services:
   sequencer:
     hostname: sequencer
     container_name: sequencer
-    image: ${BESU_PACKAGE_IMAGE_NAME:-consensys/linea-besu-package}:${LINEA_BESU_PACKAGE_TAG:-2.1.1-20260811-0f74f55}
+    image: ${BESU_PACKAGE_IMAGE_NAME:-consensys/linea-besu-package}:${LINEA_BESU_PACKAGE_TAG:-2.3.2-20261026-c6609be}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       l2-genesis-initialization:
@@ -147,7 +147,7 @@ services:
   l2-node-besu:
     hostname: l2-node-besu
     container_name: l2-node-besu
-    image: ${BESU_PACKAGE_IMAGE_NAME:-consensys/linea-besu-package}:${LINEA_BESU_PACKAGE_TAG:-2.1.1-20260811-0f74f55}
+    image: ${BESU_PACKAGE_IMAGE_NAME:-consensys/linea-besu-package}:${LINEA_BESU_PACKAGE_TAG:-2.3.2-20261026-c6609be}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -244,7 +244,7 @@ services:
   coordinator:
     hostname: coordinator
     container_name: coordinator
-    image: ${LINEA_COORDINATOR_IMAGE_NAME:-consensys/linea-coordinator}:${LINEA_COORDINATOR_TAG:-1.1.0-20260728-703923b}
+    image: ${LINEA_COORDINATOR_IMAGE_NAME:-consensys/linea-coordinator}:${LINEA_COORDINATOR_TAG:-2.2.0-20261012-5c0c4ca}
     profiles: [ "l2", "debug" ]
     depends_on:
       l2-genesis-initialization:
@@ -344,6 +344,10 @@ services:
 
   postgres:
     image: postgres:18.3
+    # Run tini as PID 1 so it reaps orphaned processes (e.g. a pg_isready healthcheck whose shell Docker killed on
+    # timeout). With postgres as PID 1, an orphan exiting non-zero is treated as a crashed backend and the server
+    # restarts, dropping all connections.
+    init: true
     hostname: postgres
     container_name: postgres
     profiles: [ "l2", "debug", "external-to-monorepo", "staterecovery" ]
@@ -573,7 +577,7 @@ services:
         ipv4_address: 10.10.10.205
 
   zkbesu-shomei-sr:
-    image: ${BESU_PACKAGE_IMAGE_NAME:-consensys/linea-besu-package}:${LINEA_BESU_PACKAGE_TAG:-2.1.1-20260811-0f74f55}
+    image: ${BESU_PACKAGE_IMAGE_NAME:-consensys/linea-besu-package}:${LINEA_BESU_PACKAGE_TAG:-2.3.2-20261026-c6609be}
     hostname: zkbesu-shomei-sr
     container_name: zkbesu-shomei-sr
     profiles: [ "staterecovery", "external-to-monorepo" ]

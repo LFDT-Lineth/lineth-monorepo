@@ -175,7 +175,7 @@ func (r *Runner) runL2Execution(ctx context.Context, runReq RunRequest) RunResul
 		return failedRunResult(runReq.ID, FailureCodeInternalError, proverErr(result))
 	}
 	return RunResult{
-		ResponseBody: newExecutionResponse(result, startBlock, r.responseVersion(), req.ProgramVk),
+		ResponseBody: newExecutionResponse(result, startBlock, r.responseVersion(), req.GuestProgramID),
 		Status:       RunStatusSuccess,
 	}
 }
@@ -280,7 +280,7 @@ func (r *Runner) runL2ExecutionZkVM(ctx context.Context, runReq RunRequest, req 
 	}
 
 	return RunResult{
-		ResponseBody: newExecutionResponseFromNative(out, r.responseVersion(), req.ProgramVk),
+		ResponseBody: newExecutionResponseFromNative(out, r.responseVersion(), req.GuestProgramID),
 		Status:       RunStatusSuccess,
 	}
 }

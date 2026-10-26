@@ -8,6 +8,8 @@ interface BatchesDao {
 
   fun findHighestConsecutiveEndBlockNumberFromBlockNumber(startingBlockNumberInclusive: Long): SafeFuture<Long?>
 
+  fun findBatchesByBlockRange(startBlockNumber: Long, endBlockNumber: Long): SafeFuture<List<Batch>>
+
   fun deleteBatchesUpToEndBlockNumber(endBlockNumberInclusive: Long): SafeFuture<Int>
 
   fun deleteBatchesAfterBlockNumber(startingBlockNumberInclusive: Long): SafeFuture<Int>

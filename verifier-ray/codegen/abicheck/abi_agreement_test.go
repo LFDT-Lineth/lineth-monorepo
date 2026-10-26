@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	ps "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/proofserialization"
+	verifierraycodegen "github.com/consensys/linea-monorepo/verifier-ray/codegen"
 	"github.com/stretchr/testify/require"
 )
 
@@ -60,6 +61,8 @@ func TestABIAgreement(t *testing.T) {
 		"value.Scalar":            ps.SizeScalar,
 		"?protocol.Commitment":    ps.SizeOptCommitment,
 		"?merkle.RowPair":         ps.SizeOptRowPair,
+		// Written by verifier-ray/codegen's EncodeAggregatorPair, not prover-ray.
+		"verifier.AggregatorInput": verifierraycodegen.AggregatorHeaderSize,
 	}
 
 	// wantOffset maps a pinned (type, field) to the encoder's offset constant.
@@ -106,6 +109,9 @@ func TestABIAgreement(t *testing.T) {
 		{"verifier.Proof", "rounds"}:       ps.OffProofRounds,
 		{"verifier.Proof", "module_sizes"}: ps.OffProofModuleSizes,
 		{"verifier.Proof", "pcs_opening"}:  ps.OffProofPcsOpening,
+
+		{"verifier.AggregatorInput", "a"}: verifierraycodegen.OffAggregatorA,
+		{"verifier.AggregatorInput", "b"}: verifierraycodegen.OffAggregatorB,
 	}
 
 	// These must reference the encoder's constants, not literal copies of the

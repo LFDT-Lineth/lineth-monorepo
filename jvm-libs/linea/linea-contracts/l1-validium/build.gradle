@@ -21,10 +21,12 @@ web3jContractWrappers {
   def contractsDir = layout.settingsDirectory.dir("contracts/abi")
   def validiumV1Abi = contractsDir.file("ValidiumV1.0.abi").asFile.absolutePath
   def validiumV2Abi = contractsDir.file("ValidiumV2.0.abi").asFile.absolutePath
+  def validiumV3Abi = contractsDir.file("ValidiumV3-rc.abi").asFile.absolutePath
 
   contractsPackage = "linea.contract"
   contracts = [
     "$validiumV1Abi": "ValidiumV1",
     "$validiumV2Abi": "ValidiumV2",
+    "$validiumV3Abi": "ValidiumV3",
   ]
 }

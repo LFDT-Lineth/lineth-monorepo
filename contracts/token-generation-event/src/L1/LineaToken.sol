@@ -11,7 +11,7 @@ import { IL2LineaToken } from "../L2/interfaces/IL2LineaToken.sol";
 
 /**
  * @title Contract to manage the Linea Token.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 contract LineaToken is

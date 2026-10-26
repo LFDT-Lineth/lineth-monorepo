@@ -1,8 +1,10 @@
 package minimalelf
 
-// allInOneOutput is what the all-in-one guest writes to guest_output when
-// every check passes.
-const allInOneOutput = "ABC"
+// allInOneOutputLen is the number of bytes the all-in-one guest writes to
+// guest_output when every check passes: the bytes 'A', 'B', 'C', … in order.
+// It exceeds the 32 bytes the prover binds as public inputs, so that only a
+// prefix of the output is bound.
+const allInOneOutputLen = 40
 
 // AllInOneElfProgram returns a minimal valid ELF64 RISC-V binary that
 // exercises the full RV64I + M-extension + custom-precompile surface used by
@@ -10,15 +12,19 @@ const allInOneOutput = "ABC"
 // guest writes to guest_output on success. See [allInOneSectionData] for the
 // program.
 func AllInOneElfProgram() (elf, output []byte) {
-	return Make(DefaultEntryPoint, DefaultSectionAddr, allInOneSectionData()), []byte(allInOneOutput)
+	output = make([]byte, allInOneOutputLen)
+	for i := range output {
+		output[i] = 'A' + byte(i)
+	}
+	return Make(DefaultEntryPoint, DefaultSectionAddr, allInOneSectionData()), output
 }
 
 // allInOneSectionData assembles a tiny valid RISC-V program that exercises
 // the full RV64I + M-extension + custom-precompile surface used by the RISC-V
 // arithmetization in a single guest: memory round-trip (SW/LW),
 // LUI/JAL/JALR/ADD/MUL, all six B-type branch variants (taken and
-// not-taken), SB/LB/SH/LH/SD/LD (with sign extension), the R_POSEIDON2 and
-// R_KECCAK precompiles, R_WRITE_OUTPUT, every I-type ALU immediate (SLTI,
+// not-taken), SB/LB/SH/LH/SD/LD (with sign extension), R_WRITE_OUTPUT,
+// every I-type ALU immediate (SLTI,
 // SLTIU, XORI, ORI, ANDI, SLLI, SRLI, SRAI) plus the RV64 word-width I-type
 // variants (ADDIW, SLLIW, SRLIW, SRAIW), and the RV64 R-type word-width
 // variants (ADDW, SUBW, SLLW, SRLW, SRAW). It halts through the Linux-style
@@ -28,8 +34,8 @@ func AllInOneElfProgram() (elf, output []byte) {
 // s0 is set once via auipc at the top and held as a fixed base for every
 // scratch-memory offset below (each check would otherwise re-auipc at its
 // own, different program-counter position and address a different section of
-// memory than intended). Scratch regions (768, 800, 808, 816, 896, 960, 1088,
-// 1216 bytes past that base) are laid out with enough spacing to stay
+// memory than intended). Scratch regions (768, 800, 808, 816 and 1216 bytes
+// past that base) are laid out with enough spacing to stay
 // non-overlapping and clear of the ~624-byte .text, while remaining within
 // the 12-bit signed immediate range (max 2047) that S-type and I-type
 // instructions can address in one step.
@@ -96,30 +102,17 @@ func allInOneSectionData() []byte {
 	a.ld(t2, s0, 816) // exact round trip, no extension
 	a.bne(t2, t1, "fail")
 
-	// ---- poseidon2: permute all-zero block at base+896, output at base+960 ----
-	a.addi(t1, s0, 960) // output
-	a.addi(t2, s0, 896) // input (still zeroed)
-	a.poseidon2(t1, t2)
-	a.lw(t3, t1, 0)
-	a.lui(t4, 0x35596)
-	a.addi(t4, t4, 407) // expected first output word
-	a.bne(t3, t4, "fail")
-
-	// ---- keccak: empty message, output at base+1088 ----
-	a.addi(t1, s0, 1088) // output
-	a.keccak(t1, s0, zero)
-	a.lw(t3, t1, 0)
-	a.lui(t4, 0x146d)
-	a.addi(t4, t4, 709) // expected first digest word
-	a.bne(t3, t4, "fail")
-
-	// ---- write_output: write allInOneOutput to guest_output, scratch at base+1216 ----
+	// ---- write_output: write 'A', 'B', 'C', … to guest_output, scratch at base+1216 ----
+	a.addi(t1, s0, 1216)                    // cursor
+	a.addi(t2, zero, 'A')                   // byte to write
+	a.addi(t3, zero, 'A'+allInOneOutputLen) // byte past the last one
+	a.label("output_loop")
+	a.sb(t2, t1, 0)
+	a.addi(t1, t1, 1)
+	a.addi(t2, t2, 1)
+	a.bne(t2, t3, "output_loop")
 	a.addi(t1, s0, 1216)
-	for i, c := range []byte(allInOneOutput) {
-		a.addi(t2, zero, int32(c))
-		a.sb(t2, t1, int32(i))
-	}
-	a.addi(t3, zero, int32(len(allInOneOutput)))
+	a.addi(t3, zero, allInOneOutputLen)
 	a.writeOutput(t1, t3)
 
 	// ---- immediate ALU: SLTI, SLTIU, XORI, ORI, ANDI, SLLI, SRLI, SRAI,

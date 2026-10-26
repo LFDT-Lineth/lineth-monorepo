@@ -3,7 +3,7 @@ pragma solidity ^0.8.33;
 
 /**
  * @title Library to perform Poseidon2 hashing with lazy reductions.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  * @notice Optimized version using lazy modular reduction to minimize addmod operations.
  *

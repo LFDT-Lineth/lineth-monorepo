@@ -2,8 +2,10 @@ package wiop
 
 import (
 	"fmt"
+	"math/big"
 	"math/bits"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/circuit"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
@@ -181,4 +183,54 @@ func (ls *LagrangeSelector) EvaluateOutOfDomain(rt *Runtime, x field.Gen) field.
 	denominator := xMinusOmega.Mul(field.ElemFromBase(nElem))
 
 	return numerator.Div(denominator)
+}
+
+// EvaluateOutOfDomainGnark is the in-circuit counterpart of
+// [LagrangeSelector.EvaluateOutOfDomain]. The module must be statically sized.
+//
+// The in-domain guard of the native version becomes vacuous here: at x = ω^pos
+// both numerator and denominator vanish and the division constraint is
+// satisfied by any quotient. x is a verifier coin, so this happens with
+// negligible probability, and the native verifier rejects such a proof anyway.
+func (ls *LagrangeSelector) EvaluateOutOfDomainGnark(run *GnarkRuntime, x circuit.Ext) circuit.Ext {
+	api := run.API()
+	n := ls.module.Size()
+
+	xPowN := x
+	for i := 0; i < bits.TrailingZeros(uint(n)); i++ {
+		xPowN = api.SquareExt(xPowN)
+	}
+	return ls.EvaluateOutOfDomainGnarkAt(api, x, xPowN)
+}
+
+// EvaluateOutOfDomainGnarkAt is [LagrangeSelector.EvaluateOutOfDomainGnark]
+// with x^n supplied by the caller. Callers evaluating several selectors of the
+// same module at the same point should compute the power chain once and use
+// this entry point: x^n costs log2(n) extension squarings, and the domain
+// annihilator x^n−1 is usually needed by the caller anyway.
+//
+// xPowN must be x raised to the module size; passing anything else silently
+// produces a wrong evaluation.
+func (ls *LagrangeSelector) EvaluateOutOfDomainGnarkAt(api *circuit.KoalaBearAPI, x, xPowN circuit.Ext) circuit.Ext {
+	n := ls.module.Size()
+	pos := ls.resolvedRow(n)
+
+	// omegaPos = ω^pos, the domain point at which the selector is 1.
+	var omegaPos field.Element
+	omegaPos.ExpInt64(field.RootOfUnityBy(n), int64(pos))
+
+	// Both scalar factors of the closed form — ω^pos on the numerator and n on
+	// the denominator — are compile-time constants, so they fold into the
+	// single base-field constant ω^pos/n applied to the numerator.
+	var scale, nInv field.Element
+	nInv.SetUint64(uint64(n))
+	nInv.Inverse(&nInv)
+	scale.Mul(&omegaPos, &nInv)
+
+	numerator := api.SubByBaseExt(xPowN, api.One())
+	numerator = api.MulByFpExt(numerator, api.ConstBig(scale.BigInt(new(big.Int))))
+
+	denominator := api.SubByBaseExt(x, api.ConstBig(omegaPos.BigInt(new(big.Int))))
+
+	return api.DivExt(numerator, denominator)
 }

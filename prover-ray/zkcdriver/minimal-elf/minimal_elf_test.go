@@ -57,10 +57,10 @@ func traceAndCheck(t *testing.T, elf, want []byte) {
 		t.Fatalf("could not trace the binary file: %v", errors.Join(errs...))
 	}
 	// check the traces work
-	if errsSchema := binf.Check(zkcCfg, tr); len(errsSchema) > 0 {
-		errs := make([]error, len(errsSchema))
-		for i, e := range errsSchema {
-			errs[i] = errors.New(e.Message())
+	if failures, errs := binf.Check(zkcCfg, tr.Unwrap()); len(failures) > 0 || len(errs) > 0 {
+		// failures are constraint failures, whilst errs are internal ZkC problems.
+		for _, e := range failures {
+			errs = append(errs, errors.New(e.Message()))
 		}
 		t.Fatalf("constraint check failed: %v", errors.Join(errs...))
 	}

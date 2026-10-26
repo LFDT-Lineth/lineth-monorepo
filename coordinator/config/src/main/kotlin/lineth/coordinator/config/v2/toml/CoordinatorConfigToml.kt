@@ -3,9 +3,7 @@ package lineth.coordinator.config.v2.toml
 import linea.config.docs.ConfigDoc
 import linea.config.docs.ConfigSection
 import lineth.coordinator.config.v2.CoordinatorConfig
-import net.consensys.linea.traces.TracesCountersV4
 import net.consensys.linea.traces.TracesCountersV5
-import net.consensys.linea.traces.TracingModuleV4
 import net.consensys.linea.traces.TracingModuleV5
 
 data class CoordinatorConfigFilesToml(
@@ -58,14 +56,6 @@ data class CoordinatorConfigFilesToml(
   }
 }
 
-data class TracesLimitsConfigFileV4Toml(
-  @param:ConfigDoc(
-    description = "Per-module trace counter limits (v4 tracing modules). Each entry maps a " +
-      "tracing module name to its maximum trace count.",
-  )
-  val tracesLimits: Map<TracingModuleV4, UInt>,
-)
-
 data class TracesLimitsConfigFileV5Toml(
   @param:ConfigDoc(
     description = "Per-module trace counter limits (v5 tracing modules). Each entry maps a " +
@@ -93,8 +83,7 @@ data class SmartContractErrorCodesConfigFileToml(
 
 data class CoordinatorConfigToml(
   val configs: CoordinatorConfigFilesToml,
-  val tracesLimitsV4: TracesLimitsConfigFileV4Toml?,
-  val tracesLimitsV5: TracesLimitsConfigFileV5Toml?,
+  val tracesLimitsV5: TracesLimitsConfigFileV5Toml,
   val l1DynamicGasPriceCapTimeOfDayMultipliers: GasPriceCapTimeOfDayMultipliersConfigFileToml? = null,
   val smartContractErrors: SmartContractErrorCodesConfigFileToml? = null,
 ) {
@@ -104,8 +93,7 @@ data class CoordinatorConfigToml(
       conflation =
       configs.conflation.reified(
         defaults = configs.defaults,
-        tracesCountersLimitsV4 = tracesLimitsV4?.let { TracesCountersV4(it.tracesLimits) },
-        tracesCountersLimitsV5 = tracesLimitsV5?.let { TracesCountersV5(it.tracesLimits) },
+        tracesCountersLimitsV5 = TracesCountersV5(tracesLimitsV5.tracesLimits),
       ),
       proversConfig = this.configs.prover.reified(),
       traces = this.configs.traces.reified(),

@@ -10,11 +10,7 @@ import linea.error.ErrorResponse
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponse
 import net.consensys.linea.jsonrpc.JsonRpcSuccessResponse
 import net.consensys.linea.traces.TracesCounters
-import net.consensys.linea.traces.TracesCountersV2
-import net.consensys.linea.traces.TracesCountersV4
 import net.consensys.linea.traces.TracesCountersV5
-import net.consensys.linea.traces.TracingModuleV2
-import net.consensys.linea.traces.TracingModuleV4
 import net.consensys.linea.traces.TracingModuleV5
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -30,18 +26,6 @@ object TracesClientResponsesParser {
 
     return ErrorResponse(errorType, jsonRpcErrorResponse.error.message)
   }
-
-  internal fun parseTracesCounterResponseV2(jsonRpcResponse: JsonRpcSuccessResponse): GetTracesCountersResponse =
-    parseTracesCounterResponse(
-      jsonRpcResponse,
-      ::parseTracesCountersV2,
-    )
-
-  internal fun parseTracesCounterResponseV4(jsonRpcResponse: JsonRpcSuccessResponse): GetTracesCountersResponse =
-    parseTracesCounterResponse(
-      jsonRpcResponse,
-      ::parseTracesCountersV4,
-    )
 
   internal fun parseTracesCounterResponseV5(jsonRpcResponse: JsonRpcSuccessResponse): GetTracesCountersResponse =
     parseTracesCounterResponse(
@@ -60,12 +44,6 @@ object TracesClientResponsesParser {
       result.getString("tracesEngineVersion"),
     )
   }
-
-  internal fun parseTracesCountersV2(tracesCounters: JsonObject): TracesCountersV2 =
-    parseTracesCounters(tracesCounters, TracingModuleV2::class.java, ::TracesCountersV2) as TracesCountersV2
-
-  internal fun parseTracesCountersV4(tracesCounters: JsonObject): TracesCountersV4 =
-    parseTracesCounters(tracesCounters, TracingModuleV4::class.java, ::TracesCountersV4) as TracesCountersV4
 
   internal fun parseTracesCountersV5(tracesCounters: JsonObject): TracesCountersV5 =
     parseTracesCounters(tracesCounters, TracingModuleV5::class.java, ::TracesCountersV5) as TracesCountersV5

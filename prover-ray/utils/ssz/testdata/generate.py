@@ -31,9 +31,12 @@ class NewPayloadRequest(ref.SszNewPayloadRequest):
     execution_requests: EmptyExecutionRequests
 
 
-class StatelessInput(ref.SszStatelessInput):
-    chain_config: uint64
+class StatelessInput(Container):
+    # zesu's SszStatelessInput: payload and witness offsets, then the chain id
+    # inline (a 16-byte fixed region). There is no public_keys field.
     new_payload_request: NewPayloadRequest
+    witness: ref.SszExecutionWitness
+    chain_config: uint64
 
 
 def encode(obj):
@@ -51,9 +54,6 @@ def encode(obj):
         ),
         witness=ref._ssz_execution_witness_from_obj(obj["executionWitness"]),
         chain_config=int(obj["chainConfig"]["chainId"]),
-        public_keys=ref._recover_public_keys(
-            npr["executionPayload"]["transactions"], int(obj["chainConfig"]["chainId"])
-        ),
     )
     return bytes.fromhex("1501") + body.encode_bytes()
 

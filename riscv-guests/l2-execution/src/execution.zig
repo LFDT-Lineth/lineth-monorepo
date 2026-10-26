@@ -17,30 +17,27 @@ const tx_decode = executor.executor_tx_decode;
 const block_validation = executor.executor_block_validation;
 const block_rlp_size = @import("zesu_block_rlp_size");
 
+const block_hash = @import("block_hash.zig");
+
 // Error classification (zesu-error re-namespacing and the exit-code taxonomy) lives in
 // guest_errors; this file only wraps zesu calls with it.
 const guest_errors = @import("guest_errors.zig");
 const zesuErr = guest_errors.zesuErr;
-
-/// Number of RLP header fields between `parent_hash` ([0]) and `number` ([8]): ommers_hash,
-/// beneficiary, state_root, transactions_root, receipts_root, logs_bloom, difficulty. Mirrors the
-/// field skip in zesu's `rlp_decode.decodeParentHeader`.
-const HEADER_FIELDS_BETWEEN_PARENT_HASH_AND_NUMBER = 7;
 
 // Log-preserving stateless-execution seam.
 //
 // Zesu's own `executor.executeStatelessInput`'s `ProofOutput` keeps only a per-receipt
 // `logs_bloom` and drops the actual event logs. Rollup phases need the full logs (address +
 // topics + data) to derive L1 message events, so this file re-runs the SAME preamble and
-// block-execution path but returns the un-projected `Receipt` slice (with `.logs` intact)
+// block-execution path but returns the un-projected `Receipt` slice (with `.logs`) intact
 // alongside the pre/post state roots.
 //
-// `buildEnv`/`finalizeOutputWithLogs` below are adapted from Zesu's private `executor/main.zig`
-// glue (not exposed, so copied). Block/BAL validation and the accessed-entry builder are NOT
-// copied: `executor.executor_block_validation` and `executor.buildAccessedEntries` call zesu's
-// real implementations directly. Withdrawals are never converted/passed through: `l2_execution.zig`
-// rejects any payload with a non-empty withdrawals list before this seam ever runs (Linea is an L2
-// rollup — it has no beacon-chain withdrawals), so `buildEnv` below is always given an empty list.
+// `buildEnv`/`finalizeOutputWithLogs` below and `block_hash.zig` are adapted from Zesu's private
+// `executor/main.zig`/`executor/block_hash.zig` glue (not exposed, so copied). Block validation
+// and the transition itself call zesu's real implementations directly. Withdrawals are never
+// converted/passed through: `l2_execution.zig` rejects any payload with a non-empty withdrawals
+// list before this seam ever runs (Linea is an L2 rollup — it has no beacon-chain withdrawals), so
+// `buildEnv` below is always given an empty list.
 
 /// Log-preserving counterpart of zesu's `output.ProofOutput`: identical roots, but `receipts`
 /// carries the full, un-projected `Receipt` (each with its `[]Log`) instead of the vanilla guest's
@@ -54,17 +51,20 @@ pub const ProofOutputWithLogs = struct {
 };
 
 /// A block's real transition outcome, computed but not yet checked against the payload's own
-/// declared commitments (`state_root`/`receipts_root`/`block_access_list`) — everything
-/// `block_validation.validatePostExecution` needs to run that check, for a caller that instead
-/// needs to DISCOVER what those values genuinely are (test tooling re-deriving them after altering
-/// a block's conditions) rather than verify a claim against them.
+/// declared commitments (`block_hash`/`state_root`/`receipts_root`/`block_access_list`/requests) —
+/// everything `block_validation.validatePostExecution` needs to run that check, for a caller that
+/// instead needs to DISCOVER what those values genuinely are (test tooling re-deriving them after
+/// altering a block's conditions) rather than verify a claim against them.
 pub const ComputedBlock = struct {
     proof: ProofOutputWithLogs,
-    accessed: []const types.AccessedEntry,
     env: types.Env,
     spec: primitives.SpecId,
     total_gas_used: u64,
     blob_gas_used: u64,
+    /// EIP-7928 block access list hash as executed (Amsterdam+), or null before Amsterdam.
+    bal_hash: ?[32]u8,
+    /// EIP-7685 requests hash as executed.
+    requests_hash: [32]u8,
 };
 
 // ─── Private helpers (adapted from Zesu executor/main.zig) ───────────────────────────────────────
@@ -125,7 +125,7 @@ fn finalizeOutputWithLogs(
 // ─── Shared preamble ──────────────────────────────────────────────────────────────────────────────
 
 /// The pieces of `StatelessInput` a block's computation needs, derived once and shared by both
-/// public entry points below: `pre_state_root` (read off the witness-verified parent header, or
+/// public entry points below: `pre_state_root` (the witness-verified parent header's, or
 /// `ep.state_root` at genesis), the block-hash table for the `BLOCKHASH` opcode, and the decoded
 /// parent header `validateBlock` checks the declared base fee/gas limit/timestamp against.
 const Preamble = struct {
@@ -134,106 +134,52 @@ const Preamble = struct {
     parent_header: ?rlp_decode.ParentHeader,
 };
 
-/// A resolvable witness header is required for every non-genesis block: without one, this would
-/// fall back to the payload's OWN claimed (post-execution) state_root as its pre-state root, which
-/// is self-referential and disconnected from the real state behind `ep.parent_hash`. Genesis —
-/// block 0 with an all-zero parent hash — is the only exemption. The witness's headers are also
-/// walked here into a hash chain, verified to terminate at `ep.parent_hash`, so the parent header
-/// `validateBlock` checks against is one this block's own witness actually proves.
+/// A witness header chain is required for every non-genesis block: zesu's
+/// `decodeWitnessHeaders` checks that the headers link into a hash chain ending at
+/// `ep.parent_hash`, that the parent's number is one below the payload's, and takes the pre-state
+/// root from that parent, so it is one this block's own witness actually proves. Genesis — block
+/// 0 with an all-zero parent hash and no headers — is the only exemption: it executes against its
+/// own declared `state_root` with no parent checks.
 fn derivePreamble(alloc: std.mem.Allocator, si: input.StatelessInput) !Preamble {
     const ep = &si.new_payload_request.execution_payload;
 
-    const pre_state_root = rlp_decode.findPreStateRoot(si.witness.headers, ep.block_number) orelse blk: {
+    if (si.witness.headers.len == 0) {
         const is_genesis = ep.block_number == 0 and std.mem.allEqual(u8, &ep.parent_hash, 0);
         if (!is_genesis) return error.MissingParentHeaderWitness;
-        break :blk ep.state_root;
+        return .{ .pre_state_root = ep.state_root, .block_hashes = &.{}, .parent_header = null };
+    }
+
+    const headers = executor.decodeWitnessHeaders(alloc, si.witness.headers, ep.parent_hash, ep.block_number) catch |e| switch (e) {
+        // A header chain that does not link up or anchor at the payload's parent: a witness
+        // failure, kept in the Linea witness category as before.
+        error.InvalidWitness => return error.InvalidWitness,
+        else => return zesuErr(e),
     };
-
-    const HeaderInfo = struct { number: u64, parent_hash: [32]u8, hash: [32]u8 };
-    var header_infos = std.ArrayListUnmanaged(HeaderInfo).empty;
-    defer header_infos.deinit(alloc);
-    // Not deinit'd: `block_hashes.items` is returned as `Preamble.block_hashes` and must outlive
-    // this function, unlike `header_infos` above, which never leaves it. `alloc` is the caller's
-    // arena throughout this codebase's own convention, so this is reclaimed with everything else
-    // when that arena is torn down, not leaked.
-    var block_hashes = std.ArrayListUnmanaged(types.BlockHashEntry).empty;
-    for (si.witness.headers) |hdr_rlp| {
-        const hash = mpt.keccak256(hdr_rlp);
-        const outer = mpt.rlp.decodeItem(hdr_rlp) catch return error.InvalidWitness;
-        var rest = switch (outer.item) {
-            .list => |p| p,
-            .bytes => return error.InvalidWitness,
-        };
-        const parent_hash_result = mpt.rlp.decodeItem(rest) catch return error.InvalidWitness;
-        const parent_hash_bytes = switch (parent_hash_result.item) {
-            .bytes => |b| b,
-            .list => return error.InvalidWitness,
-        };
-        if (parent_hash_bytes.len != 32) return error.InvalidWitness;
-        var parent_hash: [32]u8 = undefined;
-        @memcpy(&parent_hash, parent_hash_bytes);
-        rest = rest[parent_hash_result.consumed..];
-        var skip: usize = 0;
-        while (skip < HEADER_FIELDS_BETWEEN_PARENT_HASH_AND_NUMBER and rest.len > 0) : (skip += 1) {
-            const field_result = mpt.rlp.decodeItem(rest) catch return error.InvalidWitness;
-            rest = rest[field_result.consumed..];
-        }
-        if (rest.len == 0) return error.InvalidWitness;
-        const block_number_result = mpt.rlp.decodeItem(rest) catch return error.InvalidWitness;
-        const block_number_bytes = switch (block_number_result.item) {
-            .bytes => |b| b,
-            .list => return error.InvalidWitness,
-        };
-        if (block_number_bytes.len > 8) return error.InvalidWitness;
-        var number: u64 = 0;
-        for (block_number_bytes) |b| number = (number << 8) | b;
-        try block_hashes.append(alloc, .{ .number = number, .hash = hash });
-        try header_infos.append(alloc, .{ .number = number, .parent_hash = parent_hash, .hash = hash });
-    }
-
-    var parent_header: ?rlp_decode.ParentHeader = null;
-    if (header_infos.items.len > 0) {
-        for (0..header_infos.items.len - 1) |k| {
-            if (!std.mem.eql(u8, &header_infos.items[k].hash, &header_infos.items[k + 1].parent_hash)) {
-                return error.InvalidWitness;
-            }
-        }
-        const last = header_infos.items[header_infos.items.len - 1];
-        if (!std.mem.eql(u8, &last.hash, &ep.parent_hash)) {
-            return error.InvalidWitness;
-        }
-        parent_header = rlp_decode.decodeParentHeader(si.witness.headers[si.witness.headers.len - 1]) catch
-            return error.InvalidWitness;
-    }
-
-    return .{ .pre_state_root = pre_state_root, .block_hashes = block_hashes.items, .parent_header = parent_header };
+    return .{ .pre_state_root = headers.pre_state_root, .block_hashes = headers.block_hashes, .parent_header = headers.parent };
 }
 
 /// Runs a block's real transition and computes its outcome, stopping short of checking that
 /// outcome against the payload's own declared commitments — see `ComputedBlock`'s doc comment.
 /// Every step here (env construction, block validation, `WitnessDatabase`/`Context` wiring,
-/// `transitionWithContext`, access-log draining, root computation) is exactly what
-/// `executeBlockStatelessWithLogs` below needs too; that function is this one plus the one
-/// remaining check, not a second implementation of it.
+/// `transitionWithContext`, root computation) is exactly what `executeStatelessInputWithLogs`
+/// below needs too; that function is this one plus the remaining checks, not a second
+/// implementation of it.
+///
+/// `txs` are the payload's transactions, already decoded from `raw_transactions` by the caller.
 fn computeBlockStatelessWithLogs(
     alloc: std.mem.Allocator,
     pre_state_root: [32]u8,
     node_index: *mpt.NodeIndex,
     req: input.NewPayloadRequest,
+    txs: []types.TxInput,
     witness_codes: []const []const u8,
     block_hashes: []types.BlockHashEntry,
     parent_header: ?rlp_decode.ParentHeader,
-    fork_name: []const u8,
+    spec: primitives.SpecId,
     chain_id: u64,
-    public_keys: []const []const u8,
 ) !ComputedBlock {
-    const ep = &req.execution_payload;
-
-    const spec = hardfork.specForBlock(fork_name, ep.timestamp) orelse return error.UnsupportedFork;
-
     const env = buildEnv(req, block_hashes, &.{}, parent_header, spec);
     block_validation.validateBlock(env, spec) catch |e| return zesuErr(e);
-    const txs = tx_decode.decodeTxsFromInput(alloc, ep.transactions) catch |e| return zesuErr(e);
 
     const witness_db = db_mod.WitnessDatabase.init(alloc, node_index, pre_state_root, witness_codes, block_hashes) catch |e| return zesuErr(e);
     var ctx = context_mod.Context(db_mod.WitnessDatabase).new(
@@ -254,34 +200,67 @@ fn computeBlockStatelessWithLogs(
         spec,
         chain_id,
         hardfork.blockReward(spec),
-        public_keys,
     ) catch |e| return zesuErr(e);
     // A witness miss surfaced through zesu's WitnessDatabase during live execution — the
     // taxonomy's documented "witness-backed database" case — gets its own Linea-layer name so it
     // stays in ExitCode.witness_resolution rather than collapsing to engine_reject like a
     // zesu-internal InvalidWitness.
     if (ctx.ctx_error != .ok) return error.WitnessDbResolution;
-    var access_log = ctx.journaled_state.takeAccessLog();
-    defer access_log.deinit();
-    const accessed = executor.buildAccessedEntries(alloc, access_log, result.alloc, result.deleted_accounts, result.system_address_user_touched) catch |e| return zesuErr(e);
     const proof = finalizeOutputWithLogs(alloc, pre_state_root, result, node_index, spec, ctx.getDb()) catch |e| return zesuErr(e);
 
     return .{
         .proof = proof,
-        .accessed = accessed,
         .env = env,
         .spec = spec,
         .total_gas_used = result.cumulative_gas,
         .blob_gas_used = result.blob_gas_used,
+        .bal_hash = result.bal_hash,
+        .requests_hash = result.requests_hash,
     };
 }
+
+/// The payload's declared commitments that are not header fields of their own, but hashes the
+/// header (and so `block_hash`) commits to: the EIP-7685 requests hash and the EIP-7928 block
+/// access list hash. Mirrors zesu's `executeStatelessInput`.
+const DeclaredHashes = struct { requests_hash: [32]u8, block_access_list_hash: [32]u8 };
+
+fn declaredHashes(alloc: std.mem.Allocator, req: input.NewPayloadRequest) !DeclaredHashes {
+    const er = req.execution_requests;
+    const requests_hash = transition_mod.computeRequestsHash(alloc, er.deposits, er.withdrawals, er.consolidations, er.builder_deposits, er.builder_exits) catch |e| return zesuErr(e);
+    return .{
+        .requests_hash = requests_hash,
+        .block_access_list_hash = mpt.keccak256(req.execution_payload.block_access_list),
+    };
+}
+
+fn resolveSpec(fork_name: []const u8, ep: *const input.ExecutionPayload) !primitives.SpecId {
+    return hardfork.specForBlock(fork_name, ep.timestamp) orelse error.UnsupportedFork;
+}
+
+/// Decode the payload's opaque transaction bytes into `ep.transactions` and return their executor
+/// form. zesu's SSZ decoder leaves `transactions` empty and keeps only `raw_transactions`: a
+/// transaction that fails to decode invalidates the block, not the input, so it is decoded here,
+/// after the block-hash check, like zesu's `executeStatelessInput`. `ep.transactions` must be
+/// populated before `buildEnv`: `block_rlp_size.compute` needs it to line up with
+/// `raw_transactions`.
+fn decodeTransactions(alloc: std.mem.Allocator, ep: *input.ExecutionPayload) ![]types.TxInput {
+    const transactions = try alloc.alloc(input.Transaction, ep.raw_transactions.len);
+    for (ep.raw_transactions, transactions) |raw, *tx| tx.* = rlp_decode.decodeSingleTx(alloc, raw) catch |e| return zesuErr(e);
+    ep.transactions = transactions;
+    return tx_decode.decodeTxsFromInput(alloc, ep.transactions) catch |e| return zesuErr(e);
+}
+
 // ─── Public API ────────────────────────────────────────────────────────────────────────────────
 
 /// High-level, log-preserving stateless execution from a fully-decoded StatelessInput. Mirrors
-/// zesu's `executor.executeStatelessInput` (same preamble: derives `pre_state_root`, builds the
-/// block-hash table, validates the header chain) and its `executeBlockStateless` body (same
-/// WitnessDatabase + Context wiring, same BAL validation), but returns `ProofOutputWithLogs` — full
+/// zesu's `executor.executeStatelessInput` (same block-hash check, same preamble: derives
+/// `pre_state_root`, builds the block-hash table, validates the header chain) and its
+/// `executeBlockStateless` body (same WitnessDatabase + Context wiring, same post-execution
+/// validation of gas, BAL hash, roots and requests hash), but returns `ProofOutputWithLogs` — full
 /// receipts (with `.logs`) instead of the vanilla guest's bloom-only projection.
+///
+/// Blob transactions and versioned hashes are rejected by `l2_execution.zig` before this runs, so
+/// zesu's versioned-hash check is not repeated here.
 ///
 /// `node_index` is caller-built and caller-owned (NOT built here, unlike zesu's own
 /// `executeStatelessInput`): `l2_execution.runL2Execution` already builds ONE `NodeIndex` combining
@@ -290,64 +269,81 @@ fn computeBlockStatelessWithLogs(
 /// subset of what the caller already indexed — would just be duplicate work the guest can't afford
 /// to pay for twice. `computeStateRootDelta` (via `finalizeOutputWithLogs` below) mutates
 /// `node_index` in place (inserting the post-execution trie's updated nodes under their own,
-/// distinct hashes); sharing one evolving index across the whole payload range is correct, not just
-/// cheaper, since it's the same content-addressed trie throughout.
+/// distinct hashes); sharing one evolving index
+/// across the whole payload range is correct, not just cheaper, since it's the same
+/// content-addressed trie throughout.
 pub fn executeStatelessInputWithLogs(
     alloc: std.mem.Allocator,
-    si: input.StatelessInput,
+    si_in: input.StatelessInput,
     fork_name: []const u8,
     node_index: *mpt.NodeIndex,
 ) !ProofOutputWithLogs {
     zesu_allocator.set(alloc);
 
+    var si = si_in;
+    const ep = &si.new_payload_request.execution_payload;
+    // The witness header chain first: an unresolvable parent is a Linea-classified failure
+    // (`MissingParentHeaderWitness`), reported as such even when the payload is also malformed.
     const preamble = try derivePreamble(alloc, si);
+    const spec = try resolveSpec(fork_name, ep);
+    const declared = try declaredHashes(alloc, si.new_payload_request);
+    block_hash.validate(alloc, si.new_payload_request, spec, declared.requests_hash, declared.block_access_list_hash) catch |e| return zesuErr(e);
+    const txs = try decodeTransactions(alloc, ep);
+
     const computed = try computeBlockStatelessWithLogs(
         alloc,
         preamble.pre_state_root,
         node_index,
         si.new_payload_request,
+        txs,
         si.witness.codes,
         preamble.block_hashes,
         preamble.parent_header,
-        fork_name,
+        spec,
         si.chain_config.chain_id,
-        si.public_keys,
     );
 
-    const ep = &si.new_payload_request.execution_payload;
-    block_validation.validatePostExecution(alloc, computed.env, computed.spec, computed.total_gas_used, computed.blob_gas_used, ep.block_access_list, computed.accessed, .{
+    const bal: ?block_validation.BalHashes = if (computed.bal_hash) |h| .{ .computed = h, .expected = declared.block_access_list_hash } else null;
+    block_validation.validatePostExecution(computed.env, computed.spec, computed.total_gas_used, computed.blob_gas_used, bal, .{
         .computed_state_root = computed.proof.post_state_root,
         .expected_state_root = ep.state_root,
         .computed_receipts_root = computed.proof.receipts_root,
         .expected_receipts_root = ep.receipts_root,
     }) catch |e| return zesuErr(e);
+    if (primitives.isEnabledIn(spec, .prague) and !std.mem.eql(u8, &declared.requests_hash, &computed.requests_hash)) {
+        return zesuErr(error.InvalidRequests);
+    }
     return computed.proof;
 }
 
-/// Same computation as `executeStatelessInputWithLogs`, without the final check against the
-/// payload's own declared `state_root`/`receipts_root`/`block_access_list` — for a caller that
-/// needs to discover a block's real outcome (test tooling re-deriving it after altering the block's
-/// conditions, e.g. its base fee) rather than verify a claim against it. Exposed via
+/// Same computation as `executeStatelessInputWithLogs`, without any check against the payload's
+/// own declared `block_hash`/`state_root`/`receipts_root`/`block_access_list`/requests — for a
+/// caller that needs to discover a block's real outcome (test tooling re-deriving it after altering
+/// the block's conditions, e.g. its base fee) rather than verify a claim against it. Exposed via
 /// `l2_execution.test_api`, mirroring `executeStatelessInputWithLogsFn`'s own exposure there.
 pub fn computeStatelessInputWithLogs(
     alloc: std.mem.Allocator,
-    si: input.StatelessInput,
+    si_in: input.StatelessInput,
     fork_name: []const u8,
     node_index: *mpt.NodeIndex,
 ) !ComputedBlock {
     zesu_allocator.set(alloc);
 
+    var si = si_in;
+    const ep = &si.new_payload_request.execution_payload;
+    const spec = try resolveSpec(fork_name, ep);
+    const txs = try decodeTransactions(alloc, ep);
     const preamble = try derivePreamble(alloc, si);
     return computeBlockStatelessWithLogs(
         alloc,
         preamble.pre_state_root,
         node_index,
         si.new_payload_request,
+        txs,
         si.witness.codes,
         preamble.block_hashes,
         preamble.parent_header,
-        fork_name,
+        spec,
         si.chain_config.chain_id,
-        si.public_keys,
     );
 }

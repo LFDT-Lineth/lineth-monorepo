@@ -3,9 +3,9 @@ package net.consensys.linea.traces
 import kotlin.random.Random
 import kotlin.random.nextUInt
 
-fun fakeTracesCountersV2(defaultValue: UInt?, moduleValue: Map<TracingModuleV2, UInt> = emptyMap()): TracesCountersV2 {
-  return TracesCountersV2(
-    TracingModuleV2.entries.associateWith {
+fun fakeTracesCountersV5(defaultValue: UInt?, moduleValue: Map<TracingModuleV5, UInt> = emptyMap()): TracesCountersV5 {
+  return TracesCountersV5(
+    TracingModuleV5.entries.associateWith {
       moduleValue[it] ?: defaultValue ?: Random.nextUInt(0u, UInt.MAX_VALUE)
     },
   )

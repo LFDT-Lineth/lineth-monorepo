@@ -7,8 +7,8 @@
 //   - testdata/generated/riscv_system.zig
 //   - testdata/riscv_proof_image.bin
 //
-// Both artifacts come from the same honest proof, so the committed verifier
-// system and the committed proof image cannot drift onto different synthetic
+// Both artifacts come from the same honest proof, so the generated verifier
+// system and the generated proof image cannot drift onto different synthetic
 // paths.
 //
 // testdata/riscv_proof_image.bin is a distinct file from

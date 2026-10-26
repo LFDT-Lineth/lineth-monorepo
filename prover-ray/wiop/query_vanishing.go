@@ -94,7 +94,7 @@ func (v *Vanishing) Check(rt *Runtime) error {
 }
 
 // CheckGnark implements [GnarkCheckableQuery].
-func (v *Vanishing) CheckGnark(_ frontend.API, _ GnarkRuntime) {
+func (v *Vanishing) CheckGnark(_ frontend.API, _ *GnarkRuntime) {
 	panic("wiop: Vanishing.CheckGnark not yet implemented")
 }
 

@@ -15,12 +15,14 @@
 
 - *(riscv-guest)* Fixing the write_output usage (#3909)
 - *(riscv-guest)* Rename parentProcessedFtxNumber to parentFtxNumber (#4011)
+- *(riscv-guest)* Aligning l2-execution guest program to the recently… (#4297)
 
 ### ⚙️ Miscellaneous Tasks
 
 - *(riscv-guest)* More tests (#3785)
 - *(riscv-guest)* Error codes and their coverage (#3786)
 - *(riscv-guest)* More coverage for the multi block case. Added an … (#3795)
+- *(riscv-guest)* Bump zesu to a72dec7 (#4221)
 ## [0.1.0-debug] - 2026-10-05
 
 ### 🚀 Features

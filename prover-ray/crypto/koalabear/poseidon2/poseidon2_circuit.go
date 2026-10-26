@@ -9,6 +9,12 @@ import (
 	"github.com/consensys/gnark/frontend"
 )
 
+// Deprecated-in-practice: this file computes Poseidon2 directly on
+// frontend.Variable, which is only correct when the circuit's native field is
+// KoalaBear. prover-ray only builds BN254 circuits, where KoalaBear is emulated
+// (see poseidon2_koalagnark.go), so nothing outside the tests uses this file.
+// It is kept for now and is slated for removal in a follow-up.
+
 // GnarkKoalaHasher is an interface implemented by structures that can compute
 // Poseidon2 hashes based on koalabear.
 type GnarkKoalaHasher interface {

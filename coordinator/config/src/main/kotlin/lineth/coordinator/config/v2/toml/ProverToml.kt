@@ -19,6 +19,12 @@ data class ProverToml(
     default = "pre_riscv",
   )
   val type: ProverType = ProverType.PRE_RISCV,
+  @param:ConfigDoc(
+    description = "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. " +
+      "Only `file` is supported for pre_riscv provers.",
+    default = "file",
+  )
+  val transport: String = RiscvProverConfig.FILE_TRANSPORT,
   @param:ConfigSection("Execution (block) prover request/response directories.")
   val execution: FileBasedProverConfigToml? = null,
   @param:ConfigSection("Blob compression prover request/response directories.")
@@ -90,12 +96,6 @@ data class ProverToml(
 
   data class FileBasedProverConfigToml(
     @param:ConfigDoc(
-      description = "Proof transport: `file` or a transport registered through a ProverClientFactoryBuilder. " +
-        "Only `file` is supported for pre_riscv provers.",
-      default = "file",
-    )
-    val transport: String = FileBasedRiscvProverConfig.FILE_TRANSPORT,
-    @param:ConfigDoc(
       description = "Directory the coordinator writes prover request files to. Required when transport is `file`.",
       example = "/data/prover/v3/execution/requests",
     )
@@ -110,18 +110,12 @@ data class ProverToml(
       example = "0xabcdef1234567890",
     )
     val programId: String? = null,
-  ) {
-    val isFileTransport: Boolean get() = transport.equals(FileBasedRiscvProverConfig.FILE_TRANSPORT, ignoreCase = true)
+  )
 
-    init {
-      require(transport.isNotBlank()) { "transport must not be blank" }
-      if (isFileTransport) {
-        require(fsRequestsDirectory != null && fsResponsesDirectory != null) {
-          "fs-requests-directory and fs-responses-directory are required for transport=" +
-            FileBasedRiscvProverConfig.FILE_TRANSPORT
-        }
-      }
-    }
+  val isFileTransport: Boolean get() = transport.equals(RiscvProverConfig.FILE_TRANSPORT, ignoreCase = true)
+
+  init {
+    require(transport.isNotBlank()) { "transport must not be blank" }
   }
 
   private fun toFileBasedProverConfig(proverConfigToml: FileBasedProverConfigToml): FileBasedProverConfig =
@@ -140,11 +134,10 @@ data class ProverToml(
     forkName: String,
   ): FileBasedRiscvProverConfig =
     FileBasedRiscvProverConfig(
-      fileBased = if (blockToml.isFileTransport) toFileBasedProverConfig(blockToml) else null,
+      fileBased = if (isFileTransport) toFileBasedProverConfig(blockToml) else null,
       programId = programId,
       provingSystemVersion = provingSystemVersion!!,
       forkName = forkName,
-      transport = blockToml.transport,
       pollingInterval = fsPollingInterval,
     )
 
@@ -161,7 +154,15 @@ data class ProverToml(
       rollup = t.toRiscvProverConfig(t.rollup!!, t.rollup.programId!!, t.forkName),
       rollupAggregation =
       t.toRiscvProverConfig(t.rollupAggregation!!, t.rollupAggregation.programId!!, t.forkName),
+      transport = t.transport,
     )
+
+  private fun requireFsDirectories(vararg blocks: FileBasedProverConfigToml) {
+    require(blocks.all { it.fsRequestsDirectory != null && it.fsResponsesDirectory != null }) {
+      "fs-requests-directory and fs-responses-directory are required for transport=" +
+        RiscvProverConfig.FILE_TRANSPORT
+    }
+  }
 
   fun validateProverToml(proverToml: ProverToml) {
     when (proverToml.type) {
@@ -172,12 +173,10 @@ data class ProverToml(
         ) {
           "Prover type of PRE-RISCV must configure execution, blobCompression, and proofAggregation"
         }
-        require(
-          listOf(proverToml.execution, proverToml.blobCompression, proverToml.proofAggregation)
-            .all { it.isFileTransport },
-        ) {
-          "Prover type of PRE-RISCV only supports transport=${FileBasedRiscvProverConfig.FILE_TRANSPORT}"
+        require(proverToml.isFileTransport) {
+          "Prover type of PRE-RISCV only supports transport=${RiscvProverConfig.FILE_TRANSPORT}"
         }
+        requireFsDirectories(proverToml.execution, proverToml.blobCompression, proverToml.proofAggregation)
       }
       ProverType.RISCV -> {
         require(
@@ -194,6 +193,9 @@ data class ProverToml(
         }
         require(proverToml.forkName != null && proverToml.provingSystemVersion != null) {
           "Prover type of RISCV must configure forkName and provingSystemVersion"
+        }
+        if (proverToml.isFileTransport) {
+          requireFsDirectories(proverToml.l2Execution, proverToml.rollup, proverToml.rollupAggregation)
         }
       }
     }

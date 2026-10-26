@@ -256,13 +256,11 @@ class StatelessInput:
 
     Forced-transaction metadata is deliberately not here — it rides on
     `LinethPayloadInput.rollup_extension` so the stateless input stays vanilla.
-    `public_keys` is decoded only because it is part of the stateless input; Lineth
-    derives signers via `recover_sender(chainID, tx)`, not from it.
+    Lineth derives signers via `recover_sender(chainID, tx)`.
     """
     new_payload_request: NewPayloadRequest
     witness: "ExecutionWitness"
     chain_config: StatelessChainConfig
-    public_keys: List[bytes] = field(default_factory=list)
 
 
 @dataclass

@@ -5,7 +5,7 @@ from ethereum.state import Address
 from ethereum_types.bytes import Bytes32
 from ethereum_types.numeric import U64, U256, Uint
 from remerkleable.basic import uint64
-from remerkleable.byte_arrays import ByteList, ByteVector, Bytes32 as SszBytes32
+from remerkleable.byte_arrays import ByteList, Bytes32 as SszBytes32
 from remerkleable.complex import Container, List
 
 from . import canonical_ssz as cl
@@ -20,7 +20,6 @@ from .block import (
     StatelessChainConfig,
     StatelessInput,
     WithdrawalRequest,
-    decode_signed_transaction_rlp,
 )
 from .state_transition import ExecutionWitness
 
@@ -34,17 +33,20 @@ STATELESS_INPUT_SCHEMA_ID_SIZE = 2
 # Mirrors execution-specs `stateless_ssz.py` at the pinned commit (see
 # requirements.txt). Re-sync if the pin moves.
 #   https://github.com/ethereum/execution-specs/blob/a456712e04153ebeb17ff892446a01b6ba537f65/src/ethereum/forks/amsterdam/stateless_ssz.py
+# One deliberate divergence from that commit: `public_keys` is not part of the
+# input. Later execution-specs dropped it, and the guest's decoder (zesu) no
+# longer reads it.
 MAX_BLOB_COMMITMENTS_PER_BLOCK = 4096
 MAX_WITNESS_NODES = 2**20
 MAX_WITNESS_CODES = 2**16
 MAX_WITNESS_HEADERS = 256
-MAX_BYTES_PER_WITNESS_NODE = 2**20
-MAX_BYTES_PER_CODE = 2**24
+# Per-item byte limits, also enforced by the guest's decoder (zesu
+# src/stateless/stateless/ssz.zig).
+MAX_BYTES_PER_WITNESS_NODE = 2**10
+MAX_BYTES_PER_CODE = 2**16
 MAX_BYTES_PER_HEADER = 2**10
 MAX_OPTIONAL_FORK_ACTIVATION_VALUES = 1
 MAX_BLOB_SCHEDULES_PER_FORK = 1
-MAX_PUBLIC_KEYS = 2**15
-PUBLIC_KEY_BYTES = 65
 
 
 class InvalidSsz(ValueError):
@@ -120,7 +122,6 @@ class SszStatelessInput(Container):
     new_payload_request: SszNewPayloadRequest
     witness: SszExecutionWitness
     chain_config: SszChainConfig
-    public_keys: List[ByteVector[PUBLIC_KEY_BYTES], MAX_PUBLIC_KEYS]
 
 
 # ── Decode helper ────────────────────────────────────────────────────────────
@@ -254,7 +255,6 @@ def _convert_stateless_input(view: Any) -> StatelessInput:
         new_payload_request=_convert_new_payload_request(view.new_payload_request),
         witness=_convert_execution_witness(view.witness),
         chain_config=_convert_chain_config(view.chain_config),
-        public_keys=[bytes(public_key) for public_key in view.public_keys],
     )
 
 
@@ -390,31 +390,11 @@ def _ssz_chain_config_from_obj(obj: dict) -> SszChainConfig:
     )
 
 
-def _recover_public_keys(transactions: list, chain_id: int) -> list:
-    """
-    Recover each transaction's uncompressed SEC1 public key — the SSZ
-    `public_keys` field — from the signed transactions. The readable request does
-    not carry `publicKeys` (they are derivable from the transactions already in
-    the payload), so the prover middleware recovers them here, mirroring how the
-    guest recovers senders (`recover_sender`). `recover_transaction_public_key`
-    returns the 65-byte `0x04 || x || y` key directly.
-    """
-    keys = []
-    for tx_hex in transactions:
-        tx = decode_signed_transaction_rlp(_hexbytes(tx_hex))
-        keys.append(bytes(fork.recover_transaction_public_key(U64(chain_id), tx)))
-    return keys
-
-
 def _ssz_stateless_input_from_obj(obj: dict) -> SszStatelessInput:
     return SszStatelessInput(
         new_payload_request=_ssz_new_payload_request_from_obj(obj["newPayloadRequest"]),
         witness=_ssz_execution_witness_from_obj(obj["executionWitness"]),
         chain_config=_ssz_chain_config_from_obj(obj["chainConfig"]),
-        public_keys=_recover_public_keys(
-            obj["newPayloadRequest"]["executionPayload"]["transactions"],
-            int(obj["chainConfig"]["chainId"]),
-        ),
     )
 
 

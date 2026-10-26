@@ -15,7 +15,7 @@ import { TransientStorageReentrancyGuardUpgradeable } from "../security/reentran
 
 /**
  * @title Contract to handle native yield operations.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @dev Sole writer to YieldManagerStorageLayout.
  * @custom:security-contact security-report@linea.build
  */

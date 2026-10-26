@@ -41,7 +41,6 @@ class ConfigExtensionLoadingTest {
   ): CoordinatorConfig =
     loadConfigs(
       coordinatorConfigFiles = listOf(baseConfig, localDevOverride) + overrides,
-      tracesLimitsFileV4 = Path.of("../../docker/config/common/traces-limits-v4.4.toml"),
       tracesLimitsFileV5 = Path.of("../../docker/config/common/traces-limits-v5.toml"),
       gasPriceCapTimeOfDayMultipliersFile = Path.of(
         "../../docker/config/common/gas-price-cap-time-of-day-multipliers.toml",

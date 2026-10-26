@@ -17,6 +17,10 @@ class PostgresBatchesRepository(
     return batchesDao.findHighestConsecutiveEndBlockNumberFromBlockNumber(startingBlockNumberInclusive)
   }
 
+  override fun findBatchesByBlockRange(startBlockNumber: Long, endBlockNumber: Long): SafeFuture<List<Batch>> {
+    return batchesDao.findBatchesByBlockRange(startBlockNumber, endBlockNumber)
+  }
+
   override fun deleteBatchesUpToEndBlockNumber(endBlockNumberInclusive: Long): SafeFuture<Int> {
     return batchesDao.deleteBatchesUpToEndBlockNumber(endBlockNumberInclusive)
   }

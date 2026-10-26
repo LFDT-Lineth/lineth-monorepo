@@ -6,7 +6,6 @@ import linea.config.docs.sectionByPackagePrefix
 import lineth.coordinator.config.v2.toml.CoordinatorConfigFilesToml
 import lineth.coordinator.config.v2.toml.GasPriceCapTimeOfDayMultipliersConfigFileToml
 import lineth.coordinator.config.v2.toml.SmartContractErrorCodesConfigFileToml
-import lineth.coordinator.config.v2.toml.TracesLimitsConfigFileV4Toml
 import lineth.coordinator.config.v2.toml.TracesLimitsConfigFileV5Toml
 
 /**
@@ -24,11 +23,6 @@ object CoordinatorConfigDocsSpec : ConfigDocsSpec {
       label = "coordinator",
       description = "Main Coordinator configuration.",
       rootClass = CoordinatorConfigFilesToml::class,
-    ),
-    ConfigFileRoot(
-      label = "traces-limits-v4",
-      description = "Per-module trace counter limits for v4 tracing modules.",
-      rootClass = TracesLimitsConfigFileV4Toml::class,
     ),
     ConfigFileRoot(
       label = "traces-limits-v5",

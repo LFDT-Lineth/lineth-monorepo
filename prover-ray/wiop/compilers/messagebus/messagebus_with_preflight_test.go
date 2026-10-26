@@ -72,8 +72,8 @@ type seededShard struct {
 // SkipInShardCheck so the cross-shard layer owns the balance check — with two
 // deliberate differences.
 //
-// First, it compiles with [messagebus.CompileOptions.SharedRandomness], which is
-// what declares the γ cells and the contribution cells and registers the checker.
+// First, it compiles with the default shared-randomness mode, which declares
+// γ and contribution cells and registers their checker.
 //
 // Second, it runs [pcs.Compile], which registers the per-round commit action that
 // populates [wiop.Runtime.Commitments]. The contribution is the multiset hash of
@@ -120,7 +120,7 @@ func buildSeededBidirectionalShard(
 
 	r1.RegisterAction(&busColumnAssigner{cols: busCols})
 
-	messagebus.Compile(sys, messagebus.CompileOptions{SharedRandomness: true})
+	messagebus.Compile(sys)
 	grandproduct.Compile(sys)
 	localvanishing.Compile(sys)
 	global.Compile(sys)
@@ -243,9 +243,10 @@ func (s *seededShard) busInputSet(t *testing.T) preflight.BusInputSet {
 		table[sizeIndex].Base = append(table[sizeIndex].Base, padded)
 	}
 
+	blowup := uint64(pcs.RSBlowup(s.sys))
 	encoders := make([]*fri.RSEncoder, maxSizeIndex+1)
 	for i := range encoders {
-		enc := fri.NewEncoder(uint64(1<<pcs.FRILogInverseRate)*(1<<i), 1<<i)
+		enc := fri.NewEncoder(blowup*(1<<i), 1<<i)
 		encoders[i] = &enc
 	}
 
@@ -437,6 +438,7 @@ func TestSharedRandomness_CoinsFollowTheSeed(t *testing.T) {
 // the tampered handle: "wire" shares α and β with "route" and must still settle,
 // which is what keeps a break in one handle from smearing into the other.
 func TestSharedRandomness_SeedDerivedFromContributions_Unbalanced(t *testing.T) {
+	//nolint:goconst
 	tampered := []busTraffic{
 		{handle: "route", sent: []uint64{50, 60, 70, 80}, received: []uint64{30, 41, 70, 80}}, // 40 → 41
 		{handle: "wire", sent: []uint64{150, 160, 170, 180}, received: []uint64{130, 140, 170, 180}},

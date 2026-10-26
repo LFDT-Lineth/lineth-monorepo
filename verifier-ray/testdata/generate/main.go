@@ -22,14 +22,10 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	pcscompiler "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/rangecheck"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/consensys/linea-monorepo/verifier-ray/codegen"
 )
@@ -37,13 +33,6 @@ import (
 const koalaModulus = uint64(2_130_706_433)
 
 func main() {
-	// Shrink the FRI query count to 4 for fixtures: the production default (229)
-	// would emit ~229 Merkle branches per opening, ballooning verify.zig to
-	// hundreds of MB and making Zig compilation intractable.
-	//
-	// Four queries is sufficient to test the Merkle capping without ballooning the fixture sizes.
-	pcscompiler.SetFRINumQueriesForTest(4)
-
 	var out bytes.Buffer
 	writeHeader(&out)
 	writeFieldCases(&out)
@@ -547,8 +536,19 @@ type fixtureCase struct {
 	invalidVerifyError string
 	// alt is a second honest proof of the same compiled protocol at a
 	// different dynamic-module size, verified against the same baked
-	// PcsSystem.
+	// PcsSystem. Multi-size cases only: hasAlt is the multi-size predicate.
 	alt *proofFixture
+	// altDifferentStatement is a second honest proof of the same compiled
+	// protocol, at the SAME size, whose public-input statement deliberately
+	// differs from honest's — the one fixture that exercises verifyPair's
+	// "two individually valid proofs, different statements" rejection.
+	altDifferentStatement *proofFixture
+	// altSameStatement is a second honest proof of the same compiled protocol
+	// carrying the SAME public-input statement as honest (as opposed to
+	// altDifferentStatement) — the positive counterpart, pinning that
+	// verifyPair accepts two independently-proven proofs whose statements
+	// genuinely agree, not just when both happen to be empty.
+	altSameStatement *proofFixture
 }
 
 type vanishingProofView struct {
@@ -585,15 +585,16 @@ func buildProofFixture(sys *wiop.System, assign assignFn, source, name, label st
 	}, nil
 }
 
-func compileFullPipeline(sys *wiop.System) {
-	rangecheck.Compile(sys)
-	lookuptologderivsum.Compile(sys)
-	logderivativesum.Compile(sys)
-	localvanishing.Compile(sys)
-	global.Compile(sys)
-	// PCS runs last, after the earlier passes have registered their columns and
-	// LagrangeEval openings.
-	pcscompiler.Compile(sys)
+// compileFullPipeline compiles sys through the canonical
+// compilers.CompileFull pipeline, shrinking the FRI query count to 4 for
+// fixtures: the production default (229) would emit ~229 Merkle branches per
+// opening, ballooning verify.zig to hundreds of MB and making Zig compilation
+// intractable. Four queries is sufficient to test the Merkle capping without
+// ballooning the fixture sizes.
+func compileFullPipeline(sys *wiop.System) error {
+	return compilers.CompileFull(sys,
+		compilers.ConfigurePCS(pcscompiler.WithFRINumQueries(4)),
+	)
 }
 
 func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error) {
@@ -601,7 +602,9 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 	var systems []codegen.CompiledSystem
 
 	add := func(source, name string, sys *wiop.System, honest assignFn, invalid assignFn) error {
-		compileFullPipeline(sys)
+		if err := compileFullPipeline(sys); err != nil {
+			return fmt.Errorf("compile %s/%s: %w", source, name, err)
+		}
 		// Fail closed on any verifier action the codegen does not know how to emit.
 		if err := codegen.AssertAllVerifierActionsHandled(sys); err != nil {
 			return fmt.Errorf("verifier actions %s/%s: %w", source, name, err)
@@ -635,7 +638,9 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 	// addMultiSize emits one baked PcsSystem plus two honest proofs at different
 	// runtime sizes.
 	addMultiSize := func(source, name string, sys *wiop.System, honest, alt assignFn) error {
-		compileFullPipeline(sys)
+		if err := compileFullPipeline(sys); err != nil {
+			return fmt.Errorf("compile %s/%s: %w", source, name, err)
+		}
 		if err := codegen.AssertAllVerifierActionsHandled(sys); err != nil {
 			return fmt.Errorf("verifier actions %s/%s: %w", source, name, err)
 		}
@@ -660,12 +665,10 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		return nil
 	}
 
-	// addPrecompiled is like add, but for a sys the caller has already run its
-	// own compiler pipeline on (mirroring buildMessageBusFixtureCase): it skips
-	// compileFullPipeline, which would be wrong here since the caller's
-	// pipeline order (e.g. grandproduct.Compile before localvanishing.Compile)
-	// does not match compileFullPipeline's rangecheck/lookup/logderivativesum
-	// ordering.
+	// addPrecompiled is like add, but for a sys the caller has already
+	// compiled through compilers.CompileFull itself (mirroring
+	// buildMessageBusFixtureCase): it skips compileFullPipeline, which would
+	// wrongly compile the already-compiled system a second time.
 	addPrecompiled := func(source, name string, sys *wiop.System, honest, invalid assignFn) error {
 		if err := codegen.AssertAllVerifierActionsHandled(sys); err != nil {
 			return fmt.Errorf("verifier actions %s/%s: %w", source, name, err)
@@ -756,6 +759,33 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		invalid.view.publicInputs = append([]runtimeTraceCell(nil), invalid.view.publicInputs...)
 		invalid.view.publicInputs[0] = baseTraceCell(elem(99))
 		cases[last].invalid = &invalid
+
+		// altDifferentStatement is a SECOND HONEST proof — genuinely reproven,
+		// not tampered — whose opened cell is 31 instead of 30. verifyPair's
+		// consistency check must reject (honest, altDifferentStatement) even
+		// though each individually verifies: this is the only fixture that
+		// exercises the "two individually valid proofs, different statements"
+		// rejection path (see verify_pair_test.zig). It is NOT stored in `alt`:
+		// that slot means "different size", and this proof has the same size.
+		altDifferentAssign := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(10, 20, 31, 40))) }
+		altDifferentFixture, err := buildProofFixture(sys, altDifferentAssign, "PublicInput", "OpenedCellPublicInput", "altDifferentStatement")
+		if err != nil {
+			return nil, nil, err
+		}
+		cases[last].altDifferentStatement = &altDifferentFixture
+
+		// altSameStatement is a THIRD independently-proven proof — different
+		// witness rounds/openings from honest (a distinct proving run, not a
+		// copy), but assigned to open the SAME cell value (30). Pins that
+		// verifyPair accepts a pair of genuinely different proofs whose public
+		// statements happen to agree, closing the gap the empty-statement
+		// multi-size cases (which agree only trivially) cannot cover.
+		altSameAssign := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(11, 21, 30, 41))) }
+		altSameFixture, err := buildProofFixture(sys, altSameAssign, "PublicInput", "OpenedCellPublicInput", "altSameStatement")
+		if err != nil {
+			return nil, nil, err
+		}
+		cases[last].altSameStatement = &altSameFixture
 	}
 	// Dynamic-module twin of the public-input scenario. The opened cell is still
 	// carried only in `public_inputs`, but the module size now round-trips
@@ -842,7 +872,10 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 	//    This is the fixture that actually exercises the .grandproduct system
 	//    end-to-end, closing the coverage gap the shared .invalid path leaves.
 	{
-		sys, colA, colB := buildPermutationSystem()
+		sys, colA, colB, err := buildPermutationSystem()
+		if err != nil {
+			return nil, nil, fmt.Errorf("build permutation system: %w", err)
+		}
 		honest := func(rt *wiop.Runtime) {
 			rt.AssignColumn(colA, concreteBase(elems(1, 2, 3, 4)))
 			rt.AssignColumn(colB, concreteBase(elems(4, 3, 2, 1)))
@@ -893,12 +926,14 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		cases[last].invalidVerifyError = "ResultMismatch"
 	}
 
-	// Message-bus + SharedRandomness end-to-end coverage: a real
-	// messagebus.Compile(..., SharedRandomness: true) -> grandproduct.Compile ->
-	// global.Compile -> pcscompiler.Compile pipeline, run through
-	// BuildCompiledSystem and verifier.verify. The invalid fixture flips exactly
-	// one of the 328 shared-randomness contribution limbs in the public-input
-	// statement, which shared_randomness.zig's verify() must now reject.
+	// Message-bus + SharedRandomness end-to-end coverage: the full
+	// messagebus (seeded shared randomness by default) -> grandproduct ->
+	// localvanishing -> global -> pcscompiler pipeline, run through a single
+	// compilers.CompileFull call, BuildCompiledSystem and verifier.verify.
+	// The invalid fixture
+	// flips exactly one of the 328 shared-randomness contribution limbs in the
+	// public-input statement, which shared_randomness.zig's verify() must now
+	// reject.
 	if err := addMessageBusSharedRandomness(func(name string, sys *wiop.System, honest assignFn) error {
 		compiled, err := buildMessageBusFixtureCase(name, sys, honest)
 		if err != nil {
@@ -915,13 +950,16 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 }
 
 // buildPermutationSystem builds a size-4 single-column permutation A ~ B,
-// reduced by grandproduct.Compile directly. Compile order: grandproduct's
-// Z-final endpoint is a scalar (ColumnPosition-based) local opening, so
-// localvanishing.Compile must run BEFORE global.Compile to lift it to a
-// multi-valued vanishing that global.Compile can discharge; pcscompiler.Compile
-// runs last so it sees every committed column and LagrangeEval opening the
-// earlier passes registered.
-func buildPermutationSystem() (*wiop.System, *wiop.Column, *wiop.Column) {
+// reduced by grandproduct.Compile via the canonical compilers.CompileFull
+// pipeline. Compile order: grandproduct's Z-final endpoint is a scalar
+// (ColumnPosition-based) local opening, so localvanishing.Compile must run
+// BEFORE global.Compile to lift it to a multi-valued vanishing that
+// global.Compile can discharge; pcscompiler.Compile runs last so it sees
+// every committed column and LagrangeEval opening the earlier passes
+// registered — the same ordering compilers.CompileFull uses. This system has
+// no message-bus entries, so the messagebus pass is a no-op and the default
+// seeded shared-randomness mode is vacuous for it.
+func buildPermutationSystem() (*wiop.System, *wiop.Column, *wiop.Column, error) {
 	sys := wiop.NewSystemf("permutation")
 	r0 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
@@ -934,11 +972,10 @@ func buildPermutationSystem() (*wiop.System, *wiop.Column, *wiop.Column) {
 		[]wiop.Table{wiop.NewTable(colB.View())},
 	)
 
-	grandproduct.Compile(sys)
-	localvanishing.Compile(sys)
-	global.Compile(sys)
-	pcscompiler.Compile(sys)
-	return sys, colA, colB
+	if err := compileFullPipeline(sys); err != nil {
+		return nil, nil, nil, err
+	}
+	return sys, colA, colB, nil
 }
 
 // messageBusFixtureCase bundles a built fixtureCase with the CompiledSystem it
@@ -950,15 +987,12 @@ type messageBusFixtureCase struct {
 }
 
 // buildMessageBusSharedRandomnessSystem builds a size-4 Send/Receive
-// message-bus handle compiled with messagebus.CompileOptions.SharedRandomness,
-// mirroring codegen's newSharedRandomnessMessageBusHandle test helper but
-// local to the fixture generator. Compile order matters: messagebus.Compile
-// must run before grandproduct.Compile (which needs the message-bus
-// permutation checks registered), and pcscompiler.Compile must run last so it
-// sees every committed column and LagrangeEval opening the earlier passes
-// registered — the same ordering compileFullPipeline uses for the
-// rangecheck/lookup/vanishing pipeline.
-func buildMessageBusSharedRandomnessSystem() (*wiop.System, *wiop.Column, *wiop.Column) {
+// message-bus handle compiled with messagebus's default seeded shared
+// randomness, mirroring codegen's newSharedRandomnessMessageBusHandle test
+// helper but local to the fixture generator. The whole pipeline — messagebus,
+// grandproduct, localvanishing, global, pcscompiler — runs through the single
+// compilers.CompileFull call below.
+func buildMessageBusSharedRandomnessSystem() (*wiop.System, *wiop.Column, *wiop.Column, error) {
 	sys := wiop.NewSystemf("mb-shared-randomness")
 	r0 := sys.NewRound()
 	// Bus columns live on the coin round, not on r0. SharedRandomness requires
@@ -975,16 +1009,10 @@ func buildMessageBusSharedRandomnessSystem() (*wiop.System, *wiop.Column, *wiop.
 	sys.NewMessageBusSend(sys.Context.Childf("send"), "shard", "route", wiop.NewTable(colA.View()))
 	sys.NewMessageBusReceive(sys.Context.Childf("recv"), "shard", "route", wiop.NewTable(colB.View()))
 
-	messagebus.Compile(sys, messagebus.CompileOptions{SharedRandomness: true})
-	grandproduct.Compile(sys)
-	// grandproduct registers a scalar (ColumnPosition-based) local opening for
-	// its z-final endpoint check; localvanishing must lift it to a multi-valued
-	// vanishing BEFORE global.Compile, which is the only pass that can discharge
-	// it (and the only one codegen's vanishing-expression translator supports).
-	localvanishing.Compile(sys)
-	global.Compile(sys)
-	pcscompiler.Compile(sys)
-	return sys, colA, colB
+	if err := compileFullPipeline(sys); err != nil {
+		return nil, nil, nil, err
+	}
+	return sys, colA, colB, nil
 }
 
 // flippedExtTraceCell returns an extension-field trace cell with a value
@@ -1008,7 +1036,10 @@ func flippedExtTraceCell(cell runtimeTraceCell) runtimeTraceCell {
 // scenario with reg, which is responsible for turning (name, sys, honest) into
 // a fixtureCase/CompiledSystem pair and appending it to the caller's slices.
 func addMessageBusSharedRandomness(reg func(name string, sys *wiop.System, honest assignFn) error) error {
-	sys, colA, colB := buildMessageBusSharedRandomnessSystem()
+	sys, colA, colB, err := buildMessageBusSharedRandomnessSystem()
+	if err != nil {
+		return fmt.Errorf("build message-bus shared-randomness system: %w", err)
+	}
 	honest := func(rt *wiop.Runtime) {
 		// γ lives on round 0 and must be written while the runtime is still there.
 		messagebus.AssignSharedRandomnessSeed(rt, octuplet(11, 22, 33, 44, 55, 66, 77, 88))
@@ -1623,6 +1654,17 @@ func writeVerifyCase(out *bytes.Buffer, idx int, tc fixtureCase) {
 	if tc.alt != nil {
 		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_alt", idx), *tc.alt)
 	}
+	// The altDifferentStatement honest proof: same size, different public-input
+	// statement, verified against the SAME System's .pcs.
+	if tc.altDifferentStatement != nil {
+		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_alt_different_statement", idx), *tc.altDifferentStatement)
+	}
+	// The altSameStatement honest proof: an independent proving run whose
+	// public-input statement matches honest's, verified against the SAME
+	// System's .pcs.
+	if tc.altSameStatement != nil {
+		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_alt_same_statement", idx), *tc.altSameStatement)
+	}
 	fmt.Fprintf(
 		out,
 		"const verify_case_%d_systems = verifier.Systems{ .public_input = system_%d_public_input, .vanishing = system_%d, .logderivativesum = system_%d_logderiv, .grandproduct = system_%d_grandproduct, .rowlimit = system_%d_rowlimit, .shared_randomness = system_%d_shared_randomness, .pcs = %s };\n",
@@ -1834,18 +1876,33 @@ func writeVerifyFailingInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
 	fmt.Fprintln(out, "}")
 	fmt.Fprintln(out)
 
-	// getInputAlt returns a case's SECOND-size honest verifier input (multi-size
-	// cases
-	// only); hasAlt gates it. The alt verifier input is checked against the SAME
-	// case systems (verify_case_i_systems.pcs) as the primary proof — the
-	// runtime-size-reconstructed-layout property: one baked System, two sizes.
-	fmt.Fprintln(out, "pub fn getInputAlt(comptime index: usize) verifier.VerifyInput {")
+	// Three optional second-proof getters, each gated by its has<suffix>:
+	//   getInputAlt                   — different dynamic-module SIZE (multi-size
+	//                                   cases only; hasAlt is the multi-size
+	//                                   predicate)
+	//   getInputAltDifferentStatement — same size, different public-input
+	//                                   statement (OpenedCellPublicInput)
+	//   getInputAltSameStatement      — independently re-proven, same statement
+	// All are checked against the SAME case systems (verify_case_i_systems.pcs)
+	// as the primary proof — one baked System verifying a second,
+	// differently-shaped or differently-witnessed proof.
+	writeAltGetter(out, cases, "Alt", "alt", "alt input", func(tc fixtureCase) *proofFixture { return tc.alt })
+	writeAltGetter(out, cases, "AltDifferentStatement", "alt_different_statement", "altDifferentStatement input", func(tc fixtureCase) *proofFixture { return tc.altDifferentStatement })
+	writeAltGetter(out, cases, "AltSameStatement", "alt_same_statement", "altSameStatement input", func(tc fixtureCase) *proofFixture { return tc.altSameStatement })
+}
+
+// writeAltGetter emits a `getInput<suffix>`/`has<suffix>` pair gated by
+// whether `get(tc)` is non-nil for each case. The three pairs differ only in
+// the suffix, the zig identifier field prefix baked into their `_input` const
+// names (written by writeVerifyProof), and the compile-error label.
+func writeAltGetter(out *bytes.Buffer, cases []fixtureCase, suffix, fieldPrefix, missingLabel string, get func(fixtureCase) *proofFixture) {
+	fmt.Fprintf(out, "pub fn getInput%s(comptime index: usize) verifier.VerifyInput {\n", suffix)
 	fmt.Fprintln(out, "    return switch (index) {")
 	for i, tc := range cases {
-		if tc.alt != nil {
-			fmt.Fprintf(out, "        %d => verify_case_%d_alt_input,\n", i, i)
+		if get(tc) != nil {
+			fmt.Fprintf(out, "        %d => verify_case_%d_%s_input,\n", i, i, fieldPrefix)
 		} else {
-			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no alt input\"),\n", i, i, codegen.ZigString(tc.name))
+			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no %s\"),\n", i, i, codegen.ZigString(tc.name), missingLabel)
 		}
 	}
 	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
@@ -1853,14 +1910,15 @@ func writeVerifyFailingInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
 	fmt.Fprintln(out, "}")
 	fmt.Fprintln(out)
 
-	fmt.Fprintln(out, "pub fn hasAlt(comptime index: usize) bool {")
+	fmt.Fprintf(out, "pub fn has%s(comptime index: usize) bool {\n", suffix)
 	fmt.Fprintln(out, "    return switch (index) {")
 	for i, tc := range cases {
-		fmt.Fprintf(out, "        %d => %t,\n", i, tc.alt != nil)
+		fmt.Fprintf(out, "        %d => %t,\n", i, get(tc) != nil)
 	}
 	fmt.Fprintln(out, "        else => false,")
 	fmt.Fprintln(out, "    };")
 	fmt.Fprintln(out, "}")
+	fmt.Fprintln(out)
 }
 
 func vanishingBenchCounts(system codegen.VanishingSystem) (expressionCount, bucketCount, vanishingCount int) {

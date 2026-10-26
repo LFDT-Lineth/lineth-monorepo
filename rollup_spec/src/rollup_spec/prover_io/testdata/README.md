@@ -33,11 +33,12 @@ covers blocks 10-11), disambiguating multiple samples for the same guest program
 | `*-getZkRollupAggregationProofV1.request.json` | `RollupAggregationProofPrivateInput` | `rollup_aggregation.py` | `run_rollup_aggregation_guest` (input) |
 | `*-getZkRollupAggregationProofV1.response.json` | `FinalizationSubmission` | `l1_rollup.py` | `run_rollup_aggregation_guest` (output) |
 
-**Guest output vs prover output.** A guest emits its public-input tuple. The
-l2-execution response includes the revealed `filteredAddresses`; message hashes
-are included in execution and rollup public inputs. Senders are committed by `txFromsHash` in the execution PI
+**Guest output vs prover output.** A guest emits its public-input tuple. Message
+hashes are included in execution and rollup public inputs, and `filteredAddresses`
+is a public-input list at every layer, distinct and sorted ascending by byte value.
+Senders are committed by `txFromsHash` in the execution PI
 and reconstructed from the rollup's block inputs. Rollup emits the ordered message list;
-aggregation emits roots and filtered addresses as public-input lists. The `proof` bytes are attached by the zkVM/prover layer,
+aggregation emits roots as public-input lists. The `proof` bytes are attached by the zkVM/prover layer,
 not the guest, so they are placeholders (`0x`) in these fixtures. The JSON response
 also carries host metadata such as `startBlockNumber`. The aggregation response is a
 `FinalizationSubmission`: it carries `l2MessagingBlocksOffsets` in the

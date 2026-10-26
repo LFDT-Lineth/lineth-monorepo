@@ -3,7 +3,7 @@ pragma solidity ^0.8.33;
 
 /**
  * @title L1 Message Service interface for pre-existing functions, events, structs and errors.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 

@@ -47,7 +47,6 @@ from ethereum.forks.amsterdam.transactions import (
     Transaction,
     decode_transaction,
     recover_sender,
-    recover_transaction_public_key,
 )
 from ethereum.forks.amsterdam.fork import (
     BlockChain,
@@ -134,7 +133,6 @@ __all__ = [
     "Transaction",
     "decode_transaction",
     "recover_sender",
-    "recover_transaction_public_key",
     "BlockChain",
     "apply_body",
     "get_last_256_block_hashes",

@@ -1,8 +1,6 @@
 package codegen
 
 import (
-	"fmt"
-
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
@@ -66,15 +64,11 @@ func BuildRowLimitSystem(sys *wiop.System) (RowLimitSystem, error) {
 	moduleSizes := func(modules []*wiop.Module) ([]ModuleSize, error) {
 		sizes := make([]ModuleSize, len(modules))
 		for i, m := range modules {
-			if m.IsDynamic() {
-				idx, ok := dynamicIndices[m]
-				if !ok {
-					return nil, fmt.Errorf("codegen: dynamic module %q not found in sys.Modules order", m.Context.Path())
-				}
-				sizes[i] = ModuleSize{Dynamic: true, DynamicIndex: idx}
-			} else {
-				sizes[i] = ModuleSize{StaticSize: m.Size()}
+			size, err := moduleSizeOf(m, dynamicIndices)
+			if err != nil {
+				return nil, err
 			}
+			sizes[i] = size
 		}
 		return sizes, nil
 	}

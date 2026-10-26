@@ -4,19 +4,23 @@ const embedded_data = @import("embedded_data");
 const embedded_data_conf = @import("embedded_data_config");
 const riscv_system = @import("riscv_system");
 const lineth_accel = @import("lineth_accelerators");
+const main_config = @import("main_config");
 
 const verifier = verifier_ray.verifier;
 const image_relocation = verifier_ray.image_relocation;
 
 const is_r5_zkvm = verifier_ray.r5_config.is_r5_zkvm;
+const is_aggregator = main_config.aggregator;
 const is_native_os = builtin.target.os.tag == .linux or builtin.target.os.tag == .macos;
 const is_native_arch = builtin.target.cpu.arch == .x86_64 or builtin.target.cpu.arch == .aarch64;
 const is_supported_native = is_native_os and is_native_arch;
 
 const native_input_path: [:0]const u8 = "testdata/riscv_proof_image.bin";
+const native_pair_input_path: [:0]const u8 = "testdata/riscv_proof_pair_image.bin";
 const input_guest_base: usize = 0x08800000;
 
 extern const _in_start: u8;
+extern const _in_end: u8;
 
 // When the input is embedded at build time, the fixture proof is materialized
 // into static (.rodata) memory here so the loaders can hand out a runtime
@@ -49,8 +53,13 @@ pub fn main() noreturn {
         @compileError("native verifier libc path currently supports x86_64/aarch64 Linux and macOS only");
     }
 
-    const input = loadNativeInput();
-    exitNative(runVerifier(input));
+    if (comptime is_aggregator) {
+        const pair = loadNativePairInput();
+        exitNative(runVerifierPair(pair));
+    } else {
+        const input = loadNativeInput();
+        exitNative(runVerifier(input));
+    }
 }
 
 // The main entry point for the R5 zkVM smoke test. This is separate from the
@@ -64,12 +73,18 @@ fn r5_main() callconv(.c) noreturn {
         unreachable;
     }
 
-    // load the input depending on the running mode (embedded by the zkVM or at compile time)
-    const input = loadR5Input();
+    if (comptime is_aggregator) {
+        // the aggregator pair image is linked at `_in_start` by the zkc JSON input writer
+        const pair = loadR5PairInput();
+        exitR5(runVerifierPair(pair));
+    } else {
+        // load the input depending on the running mode (embedded by the zkVM or at compile time)
+        const input = loadR5Input();
 
-    // run the verifier smoke test with the loaded input
-    const res = runVerifier(input);
-    exitR5(res);
+        // run the verifier smoke test with the loaded input
+        const res = runVerifier(input);
+        exitR5(res);
+    }
 }
 
 // We have standard entry point convention for R5 zkvm. Export the symbol so that the linker can find it.
@@ -97,6 +112,27 @@ fn runVerifier(input: *const verifier.VerifyInput) u8 {
     return 0; // success
 }
 
+fn runVerifierPair(pair: verifier.AggregatorInput) u8 {
+    // the aggregator entry point never embeds its input at build time; it always
+    // verifies against the real compiled riscv system.
+    verifier.verifyPairWithWorkspace(
+        riscv_system.system_0_spec,
+        riscv_system.system_0_systems,
+        pair.a.*,
+        pair.b.*,
+        &verifier_workspace,
+    ) catch {
+        // if the verifier fails, return a non-zero exit code
+        return 1;
+    };
+    if (comptime is_r5_zkvm) {
+        var output: [verifier.pairStatementEncodedLen(riscv_system.system_0_public_input.refs.len)]u8 = undefined;
+        verifier.encodePairStatement(pair.a.public_inputs, &output) catch return 1;
+        lineth_accel.write_output(&output, output.len);
+    }
+    return 0; // success
+}
+
 // Native smoke tests use the same binary input image as the R5 linked-memory path.
 // The file is mapped privately at an address chosen by the OS, then its absolute
 // guest pointers are rebased in the copy-on-write mapping. Avoiding std
@@ -114,15 +150,8 @@ extern fn lseek(fd: c_int, offset: i64, whence: c_int) i64;
 extern fn mmap(address: ?*anyopaque, length: usize, protection: c_int, flags: c_int, fd: c_int, offset: i64) *anyopaque;
 extern fn _exit(status: c_int) noreturn;
 
-fn loadNativeInput() *const verifier.VerifyInput {
-    if (comptime !is_supported_native) {
-        @compileError("native verifier libc path currently supports x86_64/aarch64 Linux and macOS only");
-    }
-    if (comptime embedded_data_conf.embed_input) {
-        return &embedded_input;
-    }
-
-    const fd = open(native_input_path.ptr, o_rdonly);
+fn mapNativeImage(path: [:0]const u8) []u8 {
+    const fd = open(path.ptr, o_rdonly);
     if (fd < 0) exitNative(1);
     defer _ = close(fd);
 
@@ -137,8 +166,42 @@ fn loadNativeInput() *const verifier.VerifyInput {
     if (@intFromPtr(buf_addr) == map_failed) exitNative(1);
 
     const buf: [*]u8 = @ptrCast(buf_addr);
-    image_relocation.rebase(buf, img_len, input_guest_base, @intFromPtr(buf_addr));
-    return @ptrCast(@alignCast(buf_addr));
+    return buf[0..img_len];
+}
+
+fn loadNativeInput() *const verifier.VerifyInput {
+    if (comptime !is_supported_native) {
+        @compileError("native verifier libc path currently supports x86_64/aarch64 Linux and macOS only");
+    }
+    if (comptime embedded_data_conf.embed_input) {
+        return &embedded_input;
+    }
+
+    // The image is untrusted. Relocation is memory-safe on any bytes, and the
+    // result is validated at the layout the verifier will read, exactly as
+    // the R5 loader validates it at `_in_start`.
+    const img = mapNativeImage(native_input_path);
+    image_relocation.rebase(img.ptr, img.len, input_guest_base, @intFromPtr(img.ptr));
+    image_relocation.validateImage(img.ptr, img.len, @intFromPtr(img.ptr)) catch exitNative(1);
+    return @ptrCast(@alignCast(img.ptr));
+}
+
+// The aggregator pair image is the two-pointer `AggregatorInput` header (see
+// `verifier.AggregatorInput` / `proof_abi.zig`) followed by its two
+// `VerifyInput` sub-images, all encoded absolute for `input_guest_base`. It is
+// mapped like the single-proof image; the header pointers and each sub-image
+// are rebased relative to their own start addresses.
+fn loadNativePairInput() verifier.AggregatorInput {
+    if (comptime !is_supported_native) {
+        @compileError("native verifier libc path currently supports x86_64/aarch64 Linux and macOS only");
+    }
+
+    // Relocate, then validate at the mapped layout (see `loadNativeInput`).
+    const img = mapNativeImage(native_pair_input_path);
+    image_relocation.rebasePair(img.ptr, img.len, input_guest_base, @intFromPtr(img.ptr)) catch exitNative(1);
+    const base = @intFromPtr(img.ptr);
+    const pair = image_relocation.validatePair(img.ptr, img.len, base) catch exitNative(1);
+    return .{ .a = @ptrFromInt(base + pair.a), .b = @ptrFromInt(base + pair.b) };
 }
 
 fn loadR5Input() *const verifier.VerifyInput {
@@ -150,8 +213,28 @@ fn loadR5Input() *const verifier.VerifyInput {
     }
 
     // The zkc JSON input writer places the proof image bytes directly at
-    // `_in_start`, already relocated for GuestBase.
-    return @ptrCast(@alignCast(&_in_start));
+    // `_in_start`, already relocated for GuestBase. The bytes are untrusted:
+    // validate them before casting.
+    const input_start = @intFromPtr(&_in_start);
+    const input: [*]const u8 = @ptrCast(&_in_start);
+    image_relocation.validateImage(input, @intFromPtr(&_in_end) - input_start, input_start) catch exitR5(1);
+    return @ptrCast(@alignCast(input));
+}
+
+fn loadR5PairInput() verifier.AggregatorInput {
+    if (comptime !is_r5_zkvm) {
+        @compileError("R5 verifier path currently supports only R5 zkVM target");
+    }
+
+    // The zkc JSON input writer places the pair image bytes directly at
+    // `_in_start`, already relocated for GuestBase: a two-pointer
+    // `AggregatorInput` header followed by its two `VerifyInput` sub-images.
+    // The header is untrusted, so `validatePair` reads it as raw integers and
+    // validates both members; only then are the typed pointers formed.
+    const input_start = @intFromPtr(&_in_start);
+    const input: [*]const u8 = @ptrCast(&_in_start);
+    const pair = image_relocation.validatePair(input, @intFromPtr(&_in_end) - input_start, input_start) catch exitR5(1);
+    return .{ .a = @ptrFromInt(input_start + pair.a), .b = @ptrFromInt(input_start + pair.b) };
 }
 
 fn exitNative(code: u8) noreturn {

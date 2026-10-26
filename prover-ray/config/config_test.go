@@ -48,15 +48,77 @@ requests_root_dir = "/tmp"
 	assert.Contains(t, err.Error(), "parsing config")
 }
 
-func TestNewConfigFromFile_MissingRequired(t *testing.T) {
+func TestNewConfigFromFile_MissingMode(t *testing.T) {
+	_, err := NewConfigFromFile(writeConfig(t, `
+version = "t"
+
+[execution]
+requests_root_dir = "/tmp"
+`))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "execution.prover_mode")
+}
+
+func TestNewConfigFromFile_NoQueueFolderForProve(t *testing.T) {
+	cfg, err := NewConfigFromFile(writeConfig(t, `
+version = "t"
+
+[execution]
+prover_mode = "dev-mock"
+
+[rollup]
+prover_mode = "dev-mock"
+`))
+	require.NoError(t, err)
+	assert.True(t, cfg.Rollup.Configured())
+}
+
+func TestNewConfigFromFile_PipelineWithoutMode(t *testing.T) {
 	_, err := NewConfigFromFile(writeConfig(t, `
 version = "t"
 
 [execution]
 prover_mode = "dev-mock"
+
+[rollup]
+requests_root_dir = "/tmp/rollup"
 `))
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "requests_root_dir")
+	assert.Contains(t, err.Error(), "rollup.prover_mode")
+}
+
+func TestValidateQueues(t *testing.T) {
+	const devMock = "dev-mock"
+	tests := map[string]struct {
+		cfg     Config
+		wantErr string
+	}{
+		"execution only": {
+			cfg: Config{Execution: Execution{ProverMode: devMock, RequestsRootDir: "/q"}},
+		},
+		"missing execution folder": {
+			cfg:     Config{Execution: Execution{ProverMode: devMock}},
+			wantErr: "execution.requests_root_dir",
+		},
+		"configured rollup without folder": {
+			cfg: Config{
+				Execution: Execution{ProverMode: devMock, RequestsRootDir: "/q"},
+				Rollup:    Pipeline{ProverMode: devMock},
+			},
+			wantErr: "rollup.requests_root_dir",
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := tc.cfg.ValidateQueues()
+			if tc.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tc.wantErr)
+		})
+	}
 }
 
 func TestNewConfigFromFile_MissingFile(t *testing.T) {

@@ -1,0 +1,39 @@
+include "../memory.zkc"
+
+#[debug]
+fn print_string<ram>(addr:Address, n:DoubleWord) {
+    for i:DoubleWord = 0; i<n; i = i + 1 {
+        print_char(addr + i)
+    }
+    printf "\n"
+}
+
+#[debug]
+fn print_char<ram>(address:Address) {
+    var boffset:u2
+    var woffset:u62
+    var trash:u24
+    var word:u32
+    var value:u8
+    //
+    woffset::boffset = address
+    // read enclosing word
+    word = ram[woffset as u64]
+    //
+    switch boffset {
+        case 0: {
+            trash::value = word
+        }
+        case 1: {
+            trash::value = word >> 8
+        }
+        case 2: {
+            trash::value = word >> 16
+        }
+        default: {
+            trash::value = word >> 24
+        }
+    }
+    // Finally, print the character
+    printf "%c", value
+}

@@ -5,6 +5,7 @@ import io.vertx.sqlclient.SqlClient
 import io.vertx.sqlclient.Tuple
 import linea.domain.Batch
 import linea.error.DuplicatedRecordException
+import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 import linea.persistence.db.SQLQueryLogger
 import linea.persistence.db.isDuplicateKeyException
@@ -81,6 +82,23 @@ class BatchesPostgresDao(
     """
       .trimIndent()
 
+  private val findBatchesByBlockRangeSql =
+    if (hasProofIndexHashColumn) {
+      """
+        SELECT start_block_number, end_block_number, proof_index_hash
+        FROM $batchesTableName
+        WHERE start_block_number >= $1 AND end_block_number <= $2
+        ORDER BY start_block_number ASC
+      """
+    } else {
+      """
+        SELECT start_block_number, end_block_number
+        FROM $batchesTableName
+        WHERE start_block_number >= $1 AND end_block_number <= $2
+        ORDER BY start_block_number ASC
+      """
+    }.trimIndent()
+
   private val deleteUptoSql =
     """
         delete from $batchesTableName
@@ -98,6 +116,7 @@ class BatchesPostgresDao(
   private val findHighestConsecutiveEndBlockNumberQuery = connection.preparedQuery(
     findHighestConsecutiveEndBlockNumberSql,
   )
+  private val findBatchesByBlockRangeQuery = connection.preparedQuery(findBatchesByBlockRangeSql)
   private val insertQuery = connection.preparedQuery(insertSql)
   private val deleteUptoQuery = connection.preparedQuery(deleteUptoSql)
   private val deleteAfterQuery = connection.preparedQuery(deleteAfterSql)
@@ -142,6 +161,23 @@ class BatchesPostgresDao(
       .toSafeFuture()
       .thenApply { rowSet ->
         rowSet.firstOrNull()?.getLong("end_block_number")
+      }
+  }
+
+  override fun findBatchesByBlockRange(startBlockNumber: Long, endBlockNumber: Long): SafeFuture<List<Batch>> {
+    val params = listOf(startBlockNumber, endBlockNumber)
+    queryLog.log(Level.TRACE, findBatchesByBlockRangeSql, params)
+    return findBatchesByBlockRangeQuery
+      .execute(Tuple.tuple(params))
+      .toSafeFuture()
+      .thenApply { rowSet ->
+        rowSet.map { row ->
+          Batch(
+            startBlockNumber = row.getLong("start_block_number").toULong(),
+            endBlockNumber = row.getLong("end_block_number").toULong(),
+            proofIndexHash = if (hasProofIndexHashColumn) row.getString("proof_index_hash")?.decodeHex() else null,
+          )
+        }
       }
   }
 

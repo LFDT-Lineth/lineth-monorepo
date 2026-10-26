@@ -20,7 +20,7 @@ func TestRunner_RunRollup(t *testing.T) {
 	result := runner.Run(context.Background(), RunRequest{
 		ID:   "rollup-1",
 		Type: backend.ProofTypeRollup,
-		Body: readFixture(t, rollupRequestFixture),
+		Body: readSpecFixture(t, referenceRollupRequest),
 	})
 
 	require.Equal(t, RunStatusSuccess, result.Status)
@@ -34,7 +34,7 @@ func TestRunner_RunRollup(t *testing.T) {
 	resp, ok := result.ResponseBody.(rollupResponse)
 	require.True(t, ok)
 	assert.Equal(t, testProverVersion, resp.ProverVersion)
-	assert.Equal(t, "0x31139b3eaece046f5675fe237c36246e7bb2a5acc4cf4b358aef65c6d3771f4d", resp.ProgramVk)
+	assert.Equal(t, repeatHex(0x22), resp.ProgramVk)
 	assert.Equal(t, "0xabcd", resp.ProofHex)
 	assert.Equal(t, uint64(10), resp.StartBlockNumber)
 }
@@ -64,7 +64,7 @@ func TestRunner_RunRollup_ProverFailure(t *testing.T) {
 	require.NoError(t, err)
 
 	result := runner.Run(context.Background(), RunRequest{
-		ID: "rollup-fail", Type: backend.ProofTypeRollup, Body: readFixture(t, rollupRequestFixture),
+		ID: "rollup-fail", Type: backend.ProofTypeRollup, Body: readSpecFixture(t, referenceRollupRequest),
 	})
 
 	assert.Equal(t, RunStatusFailed, result.Status)
@@ -85,7 +85,7 @@ func TestRunner_RunAggregation(t *testing.T) {
 	result := runner.Run(context.Background(), RunRequest{
 		ID:   "agg-1",
 		Type: backend.ProofTypeRollupAggregation,
-		Body: readFixture(t, aggregationRequestFixture),
+		Body: readSpecFixture(t, referenceAggregationRequest),
 	})
 
 	require.Equal(t, RunStatusSuccess, result.Status)

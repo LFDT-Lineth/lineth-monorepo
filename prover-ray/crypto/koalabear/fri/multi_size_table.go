@@ -2,6 +2,7 @@ package fri
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
@@ -25,6 +26,76 @@ type MultiSizeTable []SizedTable
 type SizedTable struct {
 	Base [][]field.Element
 	Ext  [][]field.Ext
+	// Groups optionally splits the rows into groups, each committed with its
+	// own leaf hash (see [MultiSizeTable.Merkleize]). Nil means a single group
+	// holding every row.
+	Groups []GroupShape
+}
+
+// GroupShape is one group of a size: it takes the next BaseWidth base rows and
+// the next ExtWidth extension rows of that size, in order. The groups of a size
+// cover all of its rows, and every group holds at least one row.
+type GroupShape struct {
+	BaseWidth int
+	ExtWidth  int
+}
+
+// sizeGroups returns the groups of a size of the given widths: groups itself,
+// or one group of every row when groups is nil.
+func sizeGroups(baseWidth, extWidth int, groups []GroupShape) []GroupShape {
+	if groups == nil {
+		return []GroupShape{{BaseWidth: baseWidth, ExtWidth: extWidth}}
+	}
+	return groups
+}
+
+// checkGroups reports whether groups splits a size of the given widths: every
+// group is nonempty and together they hold exactly its rows. Nil is the single
+// group and always valid.
+func checkGroups(baseWidth, extWidth int, groups []GroupShape) error {
+	if groups == nil {
+		return nil
+	}
+	var base, ext int
+	for i, g := range groups {
+		if g.BaseWidth < 0 || g.ExtWidth < 0 || g.BaseWidth+g.ExtWidth == 0 {
+			return fmt.Errorf("group %d has widths (%d, %d), want a nonempty group", i, g.BaseWidth, g.ExtWidth)
+		}
+		base += g.BaseWidth
+		ext += g.ExtWidth
+	}
+	if base != baseWidth || ext != extWidth {
+		return fmt.Errorf("groups hold (%d, %d) rows, want (%d, %d)", base, ext, baseWidth, extWidth)
+	}
+	return nil
+}
+
+// grouped reports whether the table declares groups at any size. A grouped
+// table is committed group by group at every size, the largest one included
+// (see [MultiSizeTable.Merkleize]).
+func (table MultiSizeTable) grouped() bool {
+	for i := range table {
+		if table[i].Groups != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// groupViews returns one view of table per group, sharing its rows.
+func (table *SizedTable) groupViews() []SizedTable {
+	groups := sizeGroups(len(table.Base), len(table.Ext), table.Groups)
+	views := make([]SizedTable, len(groups))
+	var base, ext int
+	for i, g := range groups {
+		views[i] = SizedTable{
+			Base: table.Base[base : base+g.BaseWidth],
+			Ext:  table.Ext[ext : ext+g.ExtWidth],
+		}
+		base += g.BaseWidth
+		ext += g.ExtWidth
+	}
+	return views
 }
 
 // checkWellFormedness checks if the multi-size table has valid dimensions. It
@@ -38,6 +109,9 @@ func (table MultiSizeTable) checkWellFormedness() (k int, err error) {
 		size := table[i].Size() // -1 if table[i] is empty
 		if size < 0 && i == len(table)-1 {
 			return 0, errors.New("last entry is empty")
+		}
+		if err := checkGroups(len(table[i].Base), len(table[i].Ext), table[i].Groups); err != nil {
+			return 0, fmt.Errorf("size %d: %w", i, err)
 		}
 
 		if size < 0 {

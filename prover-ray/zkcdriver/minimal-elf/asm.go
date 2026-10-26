@@ -184,14 +184,6 @@ func (a *assembler) ecall()                      { a.emit(opSystem) }
 
 // Lineth precompiles on the custom-1 opcode.
 
-// keccak hashes length bytes at msg and writes the digest to out.
-func (a *assembler) keccak(out, msg, length reg) {
-	a.emit(encRType(opCustom1, 0b000, 0, out, msg, length))
-}
-
-// poseidon2 permutes the state at in and writes the result to out.
-func (a *assembler) poseidon2(out, in reg) { a.emit(encRType(opCustom1, 0b001, 0, out, in, zero)) }
-
 // writeOutput appends size bytes at addr to the guest_output channel.
 func (a *assembler) writeOutput(addr, size reg) {
 	a.emit(encRType(opCustom1, 0b010, 0, zero, addr, size))

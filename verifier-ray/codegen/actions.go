@@ -67,8 +67,9 @@ func (e *UnhandledVerifierActionError) Error() string {
 //   - messagebus.SharedRandomnessContributionChecker → BuildSharedRandomnessSystem /
 //     shared_randomness sub-verifier (this shard's public-input contribution
 //     digest == the multiset hash of the message-bus coin round's own PCS
-//     commitment; present only when the shard was compiled with
-//     messagebus.CompileOptions.SharedRandomness)
+//     commitment; present only when messagebus.Compile ran in its default
+//     seeded mode — a shard compiled with messagebus.WithoutSharedRandomness
+//     registers no checker)
 //   - pcs.OpeningVerifierAction                 → BuildPcsSystem
 //     (performs no boundary check the Zig side must re-emit — the whole PCS
 //     opening, including the claimed evaluations, is reconstructed at verify

@@ -12,4 +12,3 @@
 ### ⚙️ Miscellaneous Tasks
 
 - *(misc)* Rollup zstd kzg clarifications (#3854)
-# Changelog

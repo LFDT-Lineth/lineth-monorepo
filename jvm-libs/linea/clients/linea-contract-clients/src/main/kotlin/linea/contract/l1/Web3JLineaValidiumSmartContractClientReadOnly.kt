@@ -81,7 +81,7 @@ open class Web3JLineaValidiumSmartContractClientReadOnly(
     }
   }
 
-  // CONTRACT_VERSION() exists on both V1 and V2, so the V1 wrapper can read it on either contract.
+  // CONTRACT_VERSION() exists on both V1, V2, and V3, so the V1 wrapper can read it on either contract.
   internal open fun fetchSmartContractVersion(
     blockParameter: BlockParameter = BlockParameter.Tag.LATEST,
   ): SafeFuture<LineaValidiumContractVersion> {
@@ -96,6 +96,7 @@ open class Web3JLineaValidiumSmartContractClientReadOnly(
     when (version.substringBefore('.')) {
       "1" -> LineaValidiumContractVersion.V1
       "2" -> LineaValidiumContractVersion.V2
+      "3" -> LineaValidiumContractVersion.V3
       else -> throw IllegalStateException("Unsupported Validium contract version: $version")
     }
 
@@ -126,17 +127,14 @@ open class Web3JLineaValidiumSmartContractClientReadOnly(
         when (version) {
           // V1 contracts have no forced transactions, so the number is always the initial value (0),
           // mirroring the rollup client's V6/V7 behaviour.
-          LineaValidiumContractVersion.V1 ->
-            FinalizedStateDataProvider.FinalizedStateData(
-              blockNumber = finalizedBlockNumber,
-              forcedTransactionNumber = 0UL,
-            )
-
+          LineaValidiumContractVersion.V1,
           // V2 contracts DO track forced transactions on-chain, but the coordinator does not support
           // forced transactions on validium chains yet (they are disabled at app wiring). Once that
           // support lands, this branch must read the FinalizedStateUpdated event like the rollup
           // client's V8+ path instead of reporting the initial value.
-          LineaValidiumContractVersion.V2 ->
+          LineaValidiumContractVersion.V2,
+          LineaValidiumContractVersion.V3,
+          ->
             FinalizedStateDataProvider.FinalizedStateData(
               blockNumber = finalizedBlockNumber,
               forcedTransactionNumber = 0UL,

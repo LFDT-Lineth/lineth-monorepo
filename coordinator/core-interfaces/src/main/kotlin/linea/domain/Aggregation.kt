@@ -176,13 +176,10 @@ data class Aggregation(
 }
 
 data class FinalizationSubmittedEvent(
-  val aggregationProof: ProofToFinalize,
-  val parentShnarf: ByteArray,
-  val parentL1RollingHash: ByteArray,
-  val parentL1RollingHashMessageNumber: Long,
+  val endBlockNumber: ULong,
+  val endBlockTimestamp: Instant,
   val submissionTimestamp: Instant,
-  val transactionHash: ByteArray,
-) : BlockInterval by aggregationProof {
+) {
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -190,27 +187,21 @@ data class FinalizationSubmittedEvent(
 
     other as FinalizationSubmittedEvent
 
-    if (aggregationProof != other.aggregationProof) return false
-    if (!parentShnarf.contentEquals(other.parentShnarf)) return false
-    if (!parentL1RollingHash.contentEquals(other.parentL1RollingHash)) return false
-    if (parentL1RollingHashMessageNumber != other.parentL1RollingHashMessageNumber) return false
+    if (endBlockNumber != other.endBlockNumber) return false
+    if (endBlockTimestamp != other.endBlockTimestamp) return false
     if (submissionTimestamp != other.submissionTimestamp) return false
-    if (!transactionHash.contentEquals(other.transactionHash)) return false
 
     return true
   }
 
   override fun hashCode(): Int {
-    var result = aggregationProof.hashCode()
-    result = 31 * result + parentShnarf.contentHashCode()
-    result = 31 * result + parentL1RollingHash.contentHashCode()
-    result = 31 * result + parentL1RollingHashMessageNumber.hashCode()
+    var result = endBlockNumber.hashCode()
+    result = 31 * result + endBlockTimestamp.hashCode()
     result = 31 * result + submissionTimestamp.hashCode()
-    result = 31 * result + transactionHash.contentHashCode()
     return result
   }
 
   fun getSubmissionDelay(): Long {
-    return submissionTimestamp.minus(aggregationProof.finalTimestamp).inWholeSeconds
+    return submissionTimestamp.minus(endBlockTimestamp).inWholeSeconds
   }
 }

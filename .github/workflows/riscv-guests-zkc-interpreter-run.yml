@@ -1,14 +1,13 @@
 # L2 execution guest CI pipeline.
 #
-# Builds each guest as a statically-linked rv64im ELF (l2-execution with KECCAK_ACCEL=true — the
-# prover-accelerated custom keccak op, the production proving config), converts it to zkc's JSON
-# input, and executes it under zkc in fast mode. This gate only needs to prove each guest runs, and
-# the trace job validates the production guest path on every PR and push. The weekly metrics
-# workflow collects the detailed tracing measurements.
-# This is the RISC-V/ZKC counterpart to the host-machine guest tests, which run the
-# guest logic natively (no RISC-V, no zkc). It bridges the riscv-guests/ and arithmetization/ trees —
-# depending on both the guest source AND the interpreter program + ELF->JSON tooling — so it triggers
-# on changes to either.
+# Builds each guest as a statically-linked rv64im ELF (l2-execution with KECCAK_ACCEL=false — the
+# production proving config), converts it to zkc's JSON input, and executes it under zkc in fast
+# mode. This gate only needs to prove each guest runs, and the trace job validates the production
+# guest path on every PR and push. The weekly metrics workflow collects the detailed tracing
+# measurements.  This is the RISC-V/ZKC counterpart to the host-machine guest tests, which run the
+# guest logic natively (no RISC-V, no zkc). It bridges the riscv-guests/ and arithmetization/ trees
+# — depending on both the guest source AND the interpreter program + ELF->JSON tooling — so it
+# triggers on changes to either.
 #
 # The production ELF build is the single prerequisite for every automatic L2 guest check. A broken
 # guest build therefore prevents the expensive host reference suite and ZkC execution/trace jobs from
@@ -93,10 +92,10 @@ jobs:
         uses: ./.github/actions/setup-riscv-guests
 
       - name: Build l2-execution guest
-        run: make -C riscv-guests/l2-execution compile KECCAK_ACCEL=true
+        run: make -C riscv-guests/l2-execution compile KECCAK_ACCEL=false
 
       - name: Build rollup guest and sample input
-        run: make -C riscv-guests/rollup compile require-input KECCAK_ACCEL=true
+        run: make -C riscv-guests/rollup compile require-input KECCAK_ACCEL=false
 
       - name: Upload prepared l2-execution ELF
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -197,24 +196,24 @@ jobs:
           ZKC_REF: ${{ inputs.zkc-ref }}
         run: make -C arithmetization prepare-zkc
       # Compare the downloaded production ELF against the native host machine on the committed input.
-      - name: Compare l2-execution guest output under zkc (fast, accel keccak)
+      - name: Compare l2-execution guest output under zkc (fast, but no accel keccak)
         run: >-
           make -C riscv-guests/l2-execution zkc-smoke-external
           ELF=${{ github.workspace }}/riscv-guests/l2-execution/zig-out/evm_execution_guest
-          KECCAK_ACCEL=true
+          KECCAK_ACCEL=false
 
       # The stub guest decodes a freshly-generated sample request and emits the echo/sentinel
       # output. Running it here proves the build -> ELF -> ELF->JSON -> `zkc exec` pipeline
-      # end-to-end for an additional guest program. KECCAK_ACCEL=true matches the production
-      # proving configuration; its keccak use is comptime-only in this stub.
-      - name: Run rollup guest under zkc (fast, accel keccak)
+      # end-to-end for an additional guest program. KECCAK_ACCEL=false matches the (current)
+      # production proving configuration; its keccak use is comptime-only in this stub.
+      - name: Run rollup guest under zkc (fast, but no accel keccak)
         run: >-
           make -f arithmetization/src/test/Makefile elf-exec
           BIN_EXT=${{ github.workspace }}/riscv-guests/rollup/zig-out/bin/rollup_guest
           IN_BYTES=@${{ github.workspace }}/riscv-guests/rollup/zig-out/sample.request.ssz
 
   zkc-interpreter-trace:
-    name: l2-execution guest trace in ZKC interpreter (accel)
+    name: l2-execution guest trace in ZKC interpreter (no accel)
     needs: build-guest-artifacts
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
@@ -242,7 +241,7 @@ jobs:
           ZKC_REF: ${{ inputs.zkc-ref }}
         run: make -C arithmetization prepare-zkc
 
-      - name: Trace l2-execution guest under zkc (accel keccak)
+      - name: Trace l2-execution guest under zkc (no accel keccak)
         run: >-
           make -f arithmetization/src/test/Makefile elf-trace
           BIN_EXT=${{ github.workspace }}/riscv-guests/l2-execution/zig-out/evm_execution_guest
@@ -266,7 +265,7 @@ jobs:
         uses: ./.github/actions/setup-riscv-guests
 
       - name: Install Go
-        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: "1.27.1"
           cache-dependency-path: "**/*.sum"
@@ -280,4 +279,4 @@ jobs:
       - name: Run zkc reference-test
         env:
           REFERENCE_ARGS: ${{ inputs.reference-args }}
-        run: make -C riscv-guests/l2-execution reference-test-zkc KECCAK_ACCEL=true
+        run: make -C riscv-guests/l2-execution reference-test-zkc KECCAK_ACCEL=false

@@ -8,104 +8,143 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 )
 
-// RegisterGuestPublicOutputs registers the guest output hash as the
-// [GuestPublicOutputsPI] public inputs of sys, in address order.
+// RegisterGuestPublicOutputs registers the first [NumGuestPublicOutputs] bytes
+// of the guest output as the [GuestPublicOutputsPI] public inputs of sys, in
+// address order.
 //
-// A hash word might be wider than one field element, so the schema splits it across
-// several limb columns and every limb has to be opened for the word to be
-// recoverable. The public inputs therefore hold [GuestPublicOutputCells] cells where
-// GuestPublicOutputCells = NumGuestOutputs * NumGuestOutputLimbs
+// The guest output memory holds one byte per row, in address order, on the last
+// rows of its module. Its length is up to the guest, so the rows holding its
+// first bytes are not at a fixed position and cannot be opened directly. They
+// are copied instead into a module of [NumGuestPublicOutputs] rows, whose row k
+// holds the address k and is constrained, by an inclusion into the rows of the
+// guest output memory carrying an element, to hold the byte the guest wrote at
+// that address. Addresses being unique in the memory, that byte is the only one
+// the row can hold. The public inputs are then openings of that module, at
+// fixed positions.
+//
+// A guest writing fewer than [NumGuestPublicOutputs] bytes fails the inclusion.
 //
 // Panics if the arithmetization exposes no output memory this package can bind.
 func RegisterGuestPublicOutputs(sys *wiop.System) {
 
-	numOutputs := NumGuestPublicOutputs
-
 	var (
-		dataCols, addressCol = guestOutputColumns(sys)
-		module               = dataCols[0].Module
-		ctx                  = sys.Context.Childf("guest-public-outputs")
-		lastAddress          field.Element
+		output = guestOutput(sys)
+		data   = sys.LookupColumn(output.Data)
+		round  = data.Round()
+		ctx    = sys.Context.Childf("guest-public-outputs")
+		module = sys.NewSizedModule(ctx.Childf("module"), NumGuestPublicOutputs, wiop.PaddingDirectionNone)
 	)
 
-	// add a size constraint: since the module is dynamic (data and size) but here we need its size to be fixed.
-	lastAddress.SetUint64(uint64(numOutputs - 1))
-	module.NewVanishing(
-		ctx.Childf("length"),
-		wiop.Sub(addressCol.At(-1), wiop.NewConstantField(lastAddress)),
+	// The address limbs of row k: k in the least significant limb and zero in
+	// the others. k is below any limb's bound, so it needs no carry.
+	var (
+		// One extra slot each for the data column appended below.
+		addresses       = make([]*wiop.ColumnView, len(output.Address), len(output.Address)+1)
+		targetAddresses = make([]*wiop.ColumnView, len(output.Address), len(output.Address)+1)
 	)
-
-	for k := range numOutputs {
-		for l, dataCol := range dataCols {
-			cell := dataCol.At(k - numOutputs).Open(ctx.Childf("output-%d-limb-%d", k, l))
-			sys.RegisterPublicInputs(GuestPublicOutputsPI, cell, k*len(dataCols)+l)
+	for i, id := range output.Address {
+		limb := make([]field.Element, NumGuestPublicOutputs)
+		if i == len(output.Address)-1 {
+			for k := range limb {
+				limb[k].SetUint64(uint64(k))
+			}
 		}
+		addresses[i] = module.NewPrecomputedColumn(
+			ctx.Childf("address-%d", i),
+			&wiop.ConcreteVector{Plain: field.VecFromBase(limb)},
+		).View()
+		targetAddresses[i] = sys.LookupColumn(id).View()
 	}
+
+	bytes := module.NewColumn(ctx.Childf("bytes"), round)
+
+	sys.NewInclusion(
+		ctx.Childf("inclusion"),
+		[]wiop.Table{wiop.NewTable(append(addresses, bytes.View())...)},
+		[]wiop.Table{wiop.NewFilteredTable(
+			sys.LookupColumn(output.AccessBit).View(),
+			append(targetAddresses, data.View())...,
+		)},
+	)
+
+	for k := range NumGuestPublicOutputs {
+		cell := bytes.At(k).Open(ctx.Childf("output-%d", k))
+		sys.RegisterPublicInputs(GuestPublicOutputsPI, cell, k)
+	}
+
+	// Registered after the action assigning the trace, if any, so that the guest
+	// output memory is assigned by the time it runs.
+	round.RegisterAction(&assignGuestOutputBytes{
+		Bytes:     bytes,
+		Data:      data,
+		AccessBit: sys.LookupColumn(output.AccessBit),
+	})
 }
 
-// GetGuestPublicOutputs returns the guest output hash in address order, read
-// through the public-input cells that [RegisterGuestPublicOutputs] bound to the
-// guest_output_hash columns.
-//
-// Panics if the output length disagrees with [NumGuestPublicOutputs] or if a
-// public input is missing.
-func GetGuestPublicOutputs(rt *wiop.Runtime) []field.Element {
+// assignGuestOutputBytes assigns the column of [NumGuestPublicOutputs] bytes
+// that [RegisterGuestPublicOutputs] binds to the guest output memory.
+type assignGuestOutputBytes struct {
+	Bytes, Data, AccessBit *wiop.Column
+}
 
-	numOutputs := NumGuestPublicOutputs
-	dataCols, addressCol := guestOutputColumns(rt.System)
+// Run implements [wiop.ProverAction]. It panics if the guest wrote fewer than
+// [NumGuestPublicOutputs] bytes, as no assignment could then satisfy the
+// inclusion.
+func (a *assignGuestOutputBytes) Run(rt *wiop.Runtime) {
 
-	// check that the hardcoded value for [NumGuestPublicOutputs] is consistent with the interpreter choice.
-	lastAddress := addressCol.At(-1).EvaluateSingle(rt).Value.AsBase()
+	var (
+		data      = rt.GetColumnAssignment(a.Data).Plain.AsBase()
+		accessBit = rt.GetColumnAssignment(a.AccessBit).Plain.AsBase()
+		// The rows carrying an element are the last ones, as the access bit
+		// is zero on the first row and never goes back to zero once set.
+		first = len(accessBit)
+	)
 
-	if written := lastAddress.Uint64() + 1; written != uint64(numOutputs) {
+	for first > 0 && accessBit[first-1].IsOne() {
+		first--
+	}
+
+	if written := len(accessBit) - first; written < NumGuestPublicOutputs {
 		panic(fmt.Sprintf(
-			"risc5: GetGuestPublicOutputs: the guest wrote %d outputs but the expected output size is %d",
-			written, numOutputs,
+			"risc5: assignGuestOutputBytes: the guest wrote %d output bytes but the first %d are bound as public inputs",
+			written, NumGuestPublicOutputs,
 		))
 	}
 
-	out := make([]field.Element, numOutputs*len(dataCols))
+	bytes := make([]field.Element, NumGuestPublicOutputs)
+	copy(bytes, data[first:])
+	rt.AssignColumn(a.Bytes, &wiop.ConcreteVector{Plain: field.VecFromBase(bytes)})
+}
+
+// GetGuestPublicOutputs returns the first [NumGuestPublicOutputs] bytes of the
+// guest output in address order, one per element, read from the public inputs
+// pub of a proof over sys.
+//
+// Panics if a public input is missing.
+func GetGuestPublicOutputs(sys *wiop.System, pub wiop.PublicInput) []field.Element {
+
+	out := make([]field.Element, NumGuestPublicOutputs)
 	for k := range out {
-		cell, pos := rt.System.LookupPublicInputByTag(GuestPublicOutputsPI, k)
+		_, pos := sys.LookupPublicInputByTag(GuestPublicOutputsPI, k)
 		if pos < 0 {
-			panic(fmt.Sprintf("risc5: GetGuestPublicOutputs: no public input registered for output cell %d", k))
+			panic(fmt.Sprintf("risc5: GetGuestPublicOutputs: no public input registered for output byte %d", k))
 		}
 
-		out[k] = rt.GetCellValue(cell).AsBase()
+		out[k] = pub[pos].AsBase()
 	}
 
 	return out
 }
 
-// GuestPublicOutputLimbs returns the number of columns the schema splits one hash
-// word across.
-func GuestPublicOutputLimbs(sys *wiop.System) int {
-	data, _ := guestOutputColumns(sys)
-	return len(data)
-}
-
-// GuestPublicOutputCells returns how many public inputs
-// [RegisterGuestPublicOutputs] registers: one per limb of each of the
-// [NumGuestPublicOutputs] hash words.
-func GuestPublicOutputCells(sys *wiop.System) int {
-	return NumGuestPublicOutputs * GuestPublicOutputLimbs(sys)
-}
-
 // guestOutput returns the description of the memory carrying the guest output
-// hash together with its resolved columns (see [zkcdriver.PublicOutputs]).
-// It panics if no guest output hash is declared.
-func guestOutputColumns(sys *wiop.System) (data []*wiop.Column, address *wiop.Column) {
+// (see [zkcdriver.PublicOutputs]). It panics if no guest output is declared.
+func guestOutput(sys *wiop.System) zkcdriver.PublicOutput {
 
 	output := zkcdriver.PublicOutputs(sys)
 
 	if output.Name == "" {
-		panic("risc5: guestOutputColumns: the arithmetization exposes no public output to bind the guest output from")
+		panic("risc5: guestOutput: the arithmetization exposes no public output to bind the guest output from")
 	}
 
-	data = make([]*wiop.Column, len(output.Data))
-	for i, id := range output.Data {
-		data[i] = sys.LookupColumn(id)
-	}
-
-	return data, sys.LookupColumn(output.Address)
+	return output
 }

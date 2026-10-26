@@ -23,8 +23,6 @@ import net.consensys.linea.jsonrpc.client.JsonRpcRequestRetryer
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.isSuccess
 import net.consensys.linea.traces.TracesCounters
-import net.consensys.linea.traces.TracesCountersV2
-import net.consensys.linea.traces.TracesCountersV4
 import net.consensys.linea.traces.TracesCountersV5
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -71,8 +69,6 @@ class TracesGeneratorJsonRpcClientV2(
     return executeWithFallback(
       jsonRequest,
       when (config.fallBackTracesCounters) {
-        is TracesCountersV2 -> TracesClientResponsesParser::parseTracesCounterResponseV2
-        is TracesCountersV4 -> TracesClientResponsesParser::parseTracesCounterResponseV4
         is TracesCountersV5 -> TracesClientResponsesParser::parseTracesCounterResponseV5
         else -> throw IllegalStateException("Unsupported TracesCounters version")
       },

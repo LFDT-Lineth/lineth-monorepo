@@ -82,7 +82,7 @@ testdata/riscv_proof_image.bin
 
 ## Running Example Programs
 
-Run the native executable against the committed honest proof image:
+Run the native executable against the generated honest proof image (`make generate-testdata` produces it; `make run` generates it if missing):
 
 ```bash
 make run
@@ -97,7 +97,7 @@ make run-failing-expected
 
 `run-failing` is expected to exit non-zero. `run-failing-expected` wraps it and succeeds only when the failure happens.
 
-Run through `zkc` against the committed honest proof image:
+Run through `zkc` against the generated honest proof image:
 
 ```bash
 make zkc-verify

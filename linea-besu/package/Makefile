@@ -20,7 +20,7 @@ clean-besu-and-maven-local:
 build-besu:
 	cd ../..; \
 	echo "Build besu-eth/besu locally at BESU_COMMIT=$(BESU_COMMIT)" ; \
-	./gradlew :linea-besu:besu:build -PskipDownloadBesuDist=false
+	./gradlew :linea-besu:besu:buildAndPublishBesu -PskipDownloadBesuDist=false
 
 build-tracer-and-sequencer:
 	cd ../..; \

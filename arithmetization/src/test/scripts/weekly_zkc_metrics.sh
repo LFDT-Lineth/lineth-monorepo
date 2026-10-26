@@ -27,7 +27,7 @@ if [ -z "${WZM_CAFFEINATED:-}" ] && command -v caffeinate >/dev/null 2>&1; then
 fi
 
 ZKC_REF="main"; ZKC_SRC=""; TIMEBOX_MIN=60
-RUN_GUEST=true; RUN_TRACE=true; RUN_CHECK=true; KECCAK_ACCEL=true
+RUN_GUEST=true; RUN_TRACE=true; RUN_CHECK=true; KECCAK_ACCEL=false
 OUT=""; REUSE_GUEST=false
 
 usage() {

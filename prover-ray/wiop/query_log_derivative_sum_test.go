@@ -41,7 +41,7 @@ func TestLogDerivativeSum_Sum(t *testing.T) {
 	require.NotNil(t, rr)
 
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, baseVec(4, 2))
+	rt.AssignColumn(col, wioptest.ConstVec(4, 2))
 	rt.AdvanceRound()
 
 	assert.False(t, rr.IsAlreadyAssigned(rt))
@@ -64,7 +64,7 @@ func TestLogDerivativeSum_Check_Mismatch(t *testing.T) {
 	rr := sys.NewLogDerivativeSum(sys.Context.Childf("rrMisQ"), []wiop.Fraction{frac})
 
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, baseVec(4, 1))
+	rt.AssignColumn(col, wioptest.ConstVec(4, 1))
 	rt.AdvanceRound()
 	// assign wrong value
 	rt.AssignCell(rr.Result, field.ElemFromBase(field.NewFromString("99")))
@@ -142,7 +142,7 @@ func TestLogDerivativeSum_ScalarNumVecDen(t *testing.T) {
 	rr := sys.NewLogDerivativeSum(sys.Context.Childf("rr"), []wiop.Fraction{frac})
 
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, baseVec(4, 2))
+	rt.AssignColumn(col, wioptest.ConstVec(4, 2))
 	rt.AdvanceRound()
 	rr.SelfAssign(rt)
 	require.NoError(t, rr.Check(rt))
@@ -161,7 +161,7 @@ func TestLogDerivativeSum_VecNumScalarDen(t *testing.T) {
 	rr := sys.NewLogDerivativeSum(sys.Context.Childf("rr"), []wiop.Fraction{frac})
 
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, baseVec(4, 3))
+	rt.AssignColumn(col, wioptest.ConstVec(4, 3))
 	rt.AdvanceRound()
 	rr.SelfAssign(rt)
 	require.NoError(t, rr.Check(rt))

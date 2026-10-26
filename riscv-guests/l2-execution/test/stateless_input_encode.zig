@@ -16,7 +16,7 @@
 //!     (gets an offset table), each inner blob is raw bytes (`@sizeOf(u8) == 1`, so the library packs
 //!     it with no per-item framing of its own).
 //! Container layouts match the decoder exactly (fixed region sizes):
-//!   SszStatelessInput:    20 bytes  [4+4+8+4]
+//!   SszStatelessInput:    16 bytes  [4+4+8]
 //!   SszNewPayloadRequest: 44 bytes  [4+4+32+4]
 //!   SszExecutionPayload: 540 bytes  (Amsterdam/V4 shape)
 //!   SszExecutionWitness:  12 bytes  [4+4+4]
@@ -89,18 +89,13 @@ const SszChainConfig = struct {
     chain_id: u64,
 };
 
-/// SszStatelessInput's 20-byte fixed region: offsets for variable fields and an inline chain ID.
-/// `public_keys` is a packed list of fixed 65-byte ByteVectors (uncompressed secp256k1, 0x04 prefix
-/// retained) — `[]const [65]u8`, not `[]const []const u8`, so the library packs them with no per-item
-/// offset table, matching the wire's "no framing, just concatenation" convention for fixed-size items.
+/// SszStatelessInput's 16-byte fixed region: offsets for the two variable fields and an inline
+/// chain ID.
 const SszStatelessInput = struct {
     new_payload_request: SszNewPayloadRequest,
     witness: input.ExecutionWitness,
     chain_config: SszChainConfig,
-    public_keys: []const [65]u8,
 };
-
-const PUBKEY_SIZE: usize = 65;
 
 /// Encode a `StatelessInput` into the SSZ `SszStatelessInput` bytes the decoder accepts. The exact
 /// byte-level inverse of `decode`: `decode(alloc, encode(alloc, si))` reproduces `si`.
@@ -110,13 +105,6 @@ const PUBKEY_SIZE: usize = 65;
 /// `fork_name` unread.
 pub fn encode(alloc: std.mem.Allocator, si: input.StatelessInput) ![]u8 {
     const ep = si.new_payload_request.execution_payload;
-
-    const public_keys = try alloc.alloc([PUBKEY_SIZE]u8, si.public_keys.len);
-    defer alloc.free(public_keys);
-    for (si.public_keys, 0..) |key, i| {
-        if (key.len != PUBKEY_SIZE) return error.InvalidPublicKeySize;
-        @memcpy(&public_keys[i], key);
-    }
 
     const body = SszStatelessInput{
         .new_payload_request = .{
@@ -152,7 +140,6 @@ pub fn encode(alloc: std.mem.Allocator, si: input.StatelessInput) ![]u8 {
         .chain_config = .{
             .chain_id = si.chain_config.chain_id,
         },
-        .public_keys = public_keys,
     };
 
     var out: std.ArrayList(u8) = .empty;

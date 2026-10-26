@@ -111,3 +111,69 @@ test "executeStatelessInputWithLogs rejects a non-genesis block with no resolvab
         l2_execution.test_api.executeStatelessInputWithLogsFn(alloc, si, "Amsterdam", &node_index),
     );
 }
+
+// ─── Block-hash binding and raw-transaction policy checks ─────────────────────────────────────────
+
+const executor = @import("zesu_executor");
+
+test "the engine's header encoder reproduces the committed EF fixture's block hash" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    const fixture = try fixtures.loadStatelessBlock(alloc, fixtures.embedded.zkevm_stateless_block);
+    const si = try ssz_decode.decode(alloc, fixture.input);
+    const req = si.new_payload_request;
+    const er = req.execution_requests;
+    const requests_hash = try executor.executor_transition.computeRequestsHash(alloc, er.deposits, er.withdrawals, er.consolidations, er.builder_deposits, er.builder_exits);
+    const bal_hash = mpt.keccak256(req.execution_payload.block_access_list);
+
+    try l2_execution.test_api.block_hash.validate(alloc, req, .amsterdam, requests_hash, bal_hash);
+}
+
+test "executeStatelessInputWithLogs rejects a payload whose fields no longer match its block hash" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+    zesu_allocator.set(alloc);
+
+    const fixture = try fixtures.loadStatelessBlock(alloc, fixtures.embedded.zkevm_stateless_block);
+    var si = try ssz_decode.decode(alloc, fixture.input);
+    // `extra_data` feeds nothing but the header, so changing it leaves execution untouched and
+    // isolates the block-hash binding.
+    si.new_payload_request.execution_payload.extra_data = "tampered";
+
+    var node_index = try mpt.buildNodeIndex(alloc, si.witness.nodes);
+    defer node_index.deinit();
+    try testing.expectError(
+        error.EngineReject,
+        l2_execution.test_api.executeStatelessInputWithLogsFn(alloc, si, si.chain_config.fork_name.?, &node_index),
+    );
+}
+
+test "executeStatelessInputWithLogs rejects a payload whose block access list was altered" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+    zesu_allocator.set(alloc);
+
+    const fixture = try fixtures.loadStatelessBlock(alloc, fixtures.embedded.zkevm_stateless_block);
+    var si = try ssz_decode.decode(alloc, fixture.input);
+    // An empty RLP list is a well-formed but wrong BAL: the header commits to the real one's hash.
+    si.new_payload_request.execution_payload.block_access_list = &.{0xc0};
+
+    var node_index = try mpt.buildNodeIndex(alloc, si.witness.nodes);
+    defer node_index.deinit();
+    try testing.expectError(
+        error.EngineReject,
+        l2_execution.test_api.executeStatelessInputWithLogsFn(alloc, si, si.chain_config.fork_name.?, &node_index),
+    );
+}
+
+test "blob transactions are recognised from their raw EIP-2718 type byte" {
+    const is_blob = l2_execution.test_api.isBlobTransactionFn;
+    try testing.expect(is_blob(&.{ 0x03, 0xf8, 0x00 }));
+    try testing.expect(!is_blob(&.{ 0x02, 0xf8, 0x00 }));
+    try testing.expect(!is_blob(&.{ 0xf8, 0x6b })); // legacy: RLP list prefix
+    try testing.expect(!is_blob(&.{}));
+}

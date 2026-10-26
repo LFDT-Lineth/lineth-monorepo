@@ -1,3 +1,4 @@
+const std = @import("std");
 const protocol = @import("protocol/root.zig");
 const public_input_mod = protocol.public_input;
 const vanishing = @import("query/vanishing.zig");
@@ -10,6 +11,84 @@ const fiat_shamir = @import("crypto/fiat_shamir.zig");
 const poseidon2 = @import("crypto/poseidon2.zig");
 const ext = @import("field/koalabear_ext.zig");
 const profiling = @import("profiling.zig");
+
+// ============================================================================
+// Aggregate statement
+//
+// Let S = (spec, systems) be the compiled inner verifier the aggregator guest
+// is built against (riscv_system.zig, a comptime constant of the ELF), and
+// n = systems.public_input.refs.len. A STATEMENT is
+//
+//     X ∈ F_{p^6}^n
+//
+// the flat public-input vector in prover-ray registration order, every scalar
+// lifted to the extension field (`Scalar.toExt`). The inner relation is
+//
+//     R_S(X, π)  ⇔  verify(S, π, X) accepts
+//
+// X is absorbed into π's Fiat-Shamir transcript by `bindRoundMessages`, so a
+// proof is a proof of exactly one X. The relation `verifyPair` decides is
+//
+//     R_pair(X; πA, πB)  ⇔  R_S(X, πA) ∧ R_S(X, πB)
+//
+// X is the whole claim; πA and πB are witnesses. Everything that travels in a
+// proof rather than in the statement — `module_sizes`, round messages,
+// openings — is private to its own verification and is NOT compared across the
+// pair: two accepted proofs of X with different module sizes are a valid pair.
+// πA == πB is accepted too; the claim is "X is proven", not "proven twice".
+//
+// The guest exposes exactly this claim through its output:
+//
+//     out = pair_statement_domain || BE64(n) || enc(X[0]) || … || enc(X[n-1])
+//
+// with enc = `Ext.toBytes`: the field's canonical encoding, 6 BIG-endian u32
+// limbs (B0.a0, B0.a1, B1.a0, B1.a1, B2.a0, B2.a1), each < p. Every integer in
+// `out` is big-endian; this is deliberately the opposite of the little-endian
+// proof image, because `out` reuses the canonical field bytes that golden
+// tests and Poseidon2 already pin. The domain tag versions the encoding,
+// BE64(n) makes it prefix-free, and the lift to the extension field makes
+// `out` injective on the same equality relation as
+// `checkPublicInputConsistency` — one claim, one encoding.
+// test/verify_pair_test.zig pins the exact bytes independently of `toBytes`.
+//
+// The rest of the claim is bound by the OUTER proof, not by these bytes:
+//   - S: the aggregator ELF embeds it, so the outer program commitment
+//     identifies S. A different inner system is a different outer program.
+//   - πA, πB: read from the guest input region, never exposed.
+//   - how the zkVM commits to `out` (raw `guest_output` bytes, or their keccak
+//     in `guest_output_hash`) is the outer system's choice; it does not change
+//     the claim, only its representation as outer public inputs.
+//
+// So an accepted outer proof reads: "there exist two proofs, each accepted by
+// verifier S, of the one statement X whose canonical encoding is `out`."
+//
+// For the production RISC-V system n = 17: the inner guest's keccak output
+// digest (8 u32 words, 16 limbs) followed by the message-bus accumulator cell.
+// The pair claim is therefore "two accepted inner executions share this output
+// digest and bus state". A chained aggregation (X_A ≠ X_B linked by a
+// predicate, out = f(X_A, X_B)) is a new relation and must take a new domain
+// tag.
+// ============================================================================
+
+pub const pair_statement_domain = "lineth-verifier-pair-v1";
+
+pub fn pairStatementEncodedLen(comptime count: usize) usize {
+    return pair_statement_domain.len + @sizeOf(u64) + count * ext.bytes;
+}
+
+/// Canonical encoding of the aggregate statement (see the header above).
+/// Scalars are normalized to extension-field values so this encoding uses the
+/// same equality relation as `checkPublicInputConsistency`.
+pub fn encodePairStatement(statement: PublicInput, out: []u8) !void {
+    if (out.len != pair_statement_domain.len + @sizeOf(u64) + statement.len * ext.bytes)
+        return error.InvalidPairStatementBuffer;
+    @memcpy(out[0..pair_statement_domain.len], pair_statement_domain);
+    std.mem.writeInt(u64, out[pair_statement_domain.len..][0..@sizeOf(u64)], statement.len, .big);
+    for (statement, 0..) |scalar, i| {
+        const encoded = scalar.toExt().toBytes();
+        @memcpy(out[pair_statement_domain.len + @sizeOf(u64) + i * ext.bytes ..][0..ext.bytes], &encoded);
+    }
+}
 
 /// Compiled verifier metadata for the protocol: the public-input transcript
 /// layout plus one field per sub-verifier.
@@ -31,9 +110,8 @@ pub const Systems = struct {
     /// contribution digest must equal the Poseidon2 sponge hash over every
     /// committed round preceding the message-bus coin round. Verifier-side
     /// counterpart to prover-ray's messagebus.SharedRandomnessContributionChecker.
-    /// Empty (`.{}`) for a protocol compiled without
-    /// messagebus.CompileOptions.SharedRandomness, in which case the check is a
-    /// no-op.
+    /// Empty (`.{}`) for a protocol compiled with the messagebus
+    /// WithoutSharedRandomness opt-out, in which case the check is a no-op.
     shared_randomness: shared_randomness.System = .{},
     /// FRI/PCS opening verifier. MANDATORY: there is no "PCS-disabled" protocol.
     /// `verify` runs PCS first — deriving the opening coins (zeta, fold
@@ -107,6 +185,92 @@ pub const VerifyInput = struct {
     proof: Proof,
     public_inputs: PublicInput = &.{},
 };
+
+/// The root of an aggregator pair image: two pointers to independently encoded
+/// `VerifyInput`s in the same input region, the two-proof analogue of the
+/// single `*const VerifyInput` at the start of a proof image.
+///
+/// The pointers are absolute addresses written by the encoder
+/// (verifier-ray/codegen's `EncodeAggregatorPair`) for one base, so the image
+/// is only valid at that base. The header is never cast straight out of
+/// untrusted memory: both pair loaders in `main.zig` run
+/// `image_relocation.validatePair` on the image at the address it will be read
+/// from, which reads the two words as integers, checks them
+/// (`parsePairHeader`) and validates each member, and only then form these
+/// typed pointers. Layout is pinned in `proof_abi.zig`.
+pub const AggregatorInput = struct {
+    a: *const VerifyInput,
+    b: *const VerifyInput,
+};
+
+/// Decides R_pair (see "Aggregate statement" above): verifies TWO proofs of
+/// the same compiled protocol and checks that their public-input statements
+/// agree. This is the aggregation-shaped entry point: a caller (e.g. a
+/// recursive R5 guest) that attests to a pair of proofs must also attest that
+/// both proofs speak about the same statement — otherwise the pair "both
+/// verify" claim is meaningless, as each proof could be about a different
+/// instance.
+///
+/// The consistency rule is element-wise equality of the two flat statements
+/// (see `checkPublicInputConsistency`) and nothing else: proof-side data such
+/// as `module_sizes` is validated per proof by `verify` and is not part of the
+/// claim. The rule runs BEFORE either verification: it is O(statement length)
+/// while each `verify` is the expensive part, so an inconsistent pair is
+/// rejected without paying for two full verifications.
+///
+/// Both proofs are checked against the SAME comptime `spec`/`systems` by
+/// construction — there is deliberately no two-system variant: cross-system
+/// public-input consistency has no meaning while statement layouts can differ.
+pub fn verifyPair(
+    comptime spec: protocol.Spec,
+    comptime systems: Systems,
+    a: VerifyInput,
+    b: VerifyInput,
+) !void {
+    var workspace: Workspace(systems.public_input) = undefined;
+    return verifyPairWithWorkspace(spec, systems, a, b, &workspace);
+}
+
+/// `verifyPair` with caller-owned scratch (see `Workspace`). The two
+/// verifications run one after the other, so they share one workspace.
+pub fn verifyPairWithWorkspace(
+    comptime spec: protocol.Spec,
+    comptime systems: Systems,
+    a: VerifyInput,
+    b: VerifyInput,
+    workspace: *Workspace(systems.public_input),
+) !void {
+    // Validate both untrusted slice lengths before comparing any elements. The
+    // consistency walk must not let a pair image choose its runtime cost (or
+    // trigger an out-of-bounds read) before verify's normal count check runs.
+    if (a.public_inputs.len != systems.public_input.refs.len or
+        b.public_inputs.len != systems.public_input.refs.len)
+    {
+        return error.InvalidPublicInputCount;
+    }
+    try checkPublicInputConsistency(a.public_inputs, b.public_inputs);
+    try verifyWithWorkspace(spec, systems, a.proof, a.public_inputs, workspace);
+    try verifyWithWorkspace(spec, systems, b.proof, b.public_inputs, workspace);
+}
+
+/// The public-input consistency rule for a proof pair: the two flat statements
+/// must be equal element-wise, in prover-ray registration order. Values are
+/// compared through `Scalar.toExt` so a base-encoded scalar equals its lifted
+/// extension encoding — equality is over field values, not wire representation.
+///
+/// Length inequality is also `InconsistentPublicInputs`: two different lengths
+/// cannot be the same statement. Checking each length against the compiled
+/// spec is the caller's job — `verifyPairWithWorkspace` does it before calling
+/// this, and `verify` does it again via `bindRoundMessages`.
+pub fn checkPublicInputConsistency(
+    a: PublicInput,
+    b: PublicInput,
+) error{InconsistentPublicInputs}!void {
+    if (a.len != b.len) return error.InconsistentPublicInputs;
+    for (a, b) |scalar_a, scalar_b| {
+        if (!scalar_a.toExt().eql(scalar_b.toExt())) return error.InconsistentPublicInputs;
+    }
+}
 
 /// Verifies a proof against the compiled protocol in three steps:
 ///
@@ -252,7 +416,7 @@ pub fn verifyWithWorkspace(
     });
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.vanishing_done, 0);
 
-    try logderivativesum.verify(systems.logderivativesum, ctx);
+    try logderivativesum.verify(systems.logderivativesum, ctx, proof.module_sizes);
 
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.logderivativesum_done, profiling.snapshot().poseidon2_compress);
 

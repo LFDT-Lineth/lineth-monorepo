@@ -2,9 +2,9 @@ from dataclasses import dataclass
 from typing import List, Sequence, Set
 
 from ethereum.crypto.hash import Hash32
-from ethereum.state import Address
 
 from .l1_rollup import FinalizationPublicInput, FinalizationSubmission
+from .l2_execution import merge_filtered_addresses
 from .messaging_offsets import rebase_messaging_offsets
 from .rollup import (
     L2_L1_TREE_DEPTH,
@@ -51,7 +51,6 @@ def run_rollup_aggregation_guest(
 
     first_proof = rollup_proofs[0]
     last_proof = rollup_proofs[-1]
-    merged_filtered_addresses: List[Address] = []
     messaging_offsets: List[int] = []
     program_vk_set: Set[Hash32] = set()
 
@@ -62,9 +61,12 @@ def run_rollup_aggregation_guest(
             proof.public_inputs.block_count, proof.public_inputs.l2_messaging_blocks_offsets,
             int(first_proof.start_block_number), "rollup", "aggregation",
         ))
-        merged_filtered_addresses.extend(proof.public_inputs.filtered_addresses)
         program_vk_set.update(proof.public_inputs.program_vks)
         program_vk_set.add(vp.program_vk)
+
+    filtered_addresses = merge_filtered_addresses(
+        proof.public_inputs.filtered_addresses for proof in rollup_proofs
+    )
 
     # The final proof commits program IDs; the VK-to-ID correspondence is WIP.
     program_ids = _program_ids_from_verified_vks(program_vk_set)
@@ -86,13 +88,13 @@ def run_rollup_aggregation_guest(
         parent_ftx_number=first_proof.public_inputs.parent_ftx_number,
         end_ftx_rolling_hash=last_proof.public_inputs.end_ftx_rolling_hash,
         end_processed_ftx_number=last_proof.public_inputs.end_processed_ftx_number,
-        filtered_addresses=merged_filtered_addresses,
+        filtered_addresses=filtered_addresses,
         parent_data_rolling_hash=first_proof.public_inputs.parent_data_rolling_hash,
         end_data_rolling_hash=last_proof.public_inputs.end_data_rolling_hash,
         parent_block_hash=first_proof.public_inputs.parent_block_hash,
         end_block_hash=last_proof.public_inputs.end_block_hash,
-        start_offset=first_proof.public_inputs.start_offset,
-        end_offset=last_proof.public_inputs.end_offset,
+        parent_data_tail_take_bytes=first_proof.public_inputs.parent_data_tail_take_bytes,
+        final_data_tail_discard_bytes=last_proof.public_inputs.final_data_tail_discard_bytes,
         l2_l1_tree_depth=L2_L1_TREE_DEPTH,
         program_ids=program_ids,
         l2_messaging_blocks_offsets=messaging_offsets,
@@ -136,13 +138,13 @@ def verify_rollup_proof(program_vk: Hash32, proof: RollupProof) -> None:
 
 
 def assert_rollup_proof_continuity(left: RollupProof, right: RollupProof) -> None:
-    # Position-pair continuity (§3.4): both the dataRollingHash and the byte offset must
+    # Boundary continuity (§3.4): both the dataRollingHash and the tail byte count must
     # match at the seam, excluding both byte gaps and overlaps — neither KZG
     # nor block-hash continuity alone can detect either.
     if left.public_inputs.end_data_rolling_hash != right.public_inputs.parent_data_rolling_hash:
         raise Exception("rollup dataRollingHash continuity failed")
-    if left.public_inputs.end_offset != right.public_inputs.start_offset:
-        raise Exception("rollup offset continuity failed")
+    if left.public_inputs.final_data_tail_discard_bytes != right.public_inputs.parent_data_tail_take_bytes:
+        raise Exception("rollup tail-count continuity failed")
     # Execution continuity is now explicit (§2.4) rather than folded into the
     # DA accumulator, since a shared chunk's dataRollingHash fold no longer determines
     # "the last block completing here" on its own.

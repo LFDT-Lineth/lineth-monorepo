@@ -6,7 +6,7 @@ import { IRateLimiter } from "./interfaces/IRateLimiter.sol";
 
 /**
  * @title Rate Limiter by period and amount using the block timestamp.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @notice You can use this control numeric limits over a period using timestamp.
  * @custom:security-contact security-report@linea.build
  */

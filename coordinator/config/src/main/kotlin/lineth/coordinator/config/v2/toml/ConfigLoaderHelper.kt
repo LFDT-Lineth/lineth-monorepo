@@ -215,8 +215,7 @@ fun loadSmartContractErrors(
 
 fun loadConfigsOrError(
   coordinatorConfigFiles: List<Path>,
-  tracesLimitsFileV4: Path?,
-  tracesLimitsFileV5: Path?,
+  tracesLimitsFileV5: Path,
   gasPriceCapTimeOfDayMultipliersFile: Path,
   smartContractErrorsFile: Path? = null,
   logger: Logger = LogManager.getLogger("lineth.coordinator.config"),
@@ -234,26 +233,14 @@ fun loadConfigsOrError(
       addDefaultPreprocessors = true,
       addDefaultPropertySources = true,
     )
-  val tracesLimitsV4Configs =
-    tracesLimitsFileV4?.let {
-      loadConfigsAndLogErrors<TracesLimitsConfigFileV4Toml>(
-        listOf(it),
-        logger,
-        strict,
-        addDefaultPreprocessors = false,
-        addDefaultPropertySources = false,
-      )
-    }
   val tracesLimitsV5Configs =
-    tracesLimitsFileV5?.let {
-      loadConfigsAndLogErrors<TracesLimitsConfigFileV5Toml>(
-        listOf(it),
-        logger,
-        strict,
-        addDefaultPreprocessors = false,
-        addDefaultPropertySources = false,
-      )
-    }
+    loadConfigsAndLogErrors<TracesLimitsConfigFileV5Toml>(
+      listOf(tracesLimitsFileV5),
+      logger,
+      strict,
+      addDefaultPreprocessors = false,
+      addDefaultPropertySources = false,
+    )
   val gasPriceCapTimeOfDayMultipliersConfig =
     loadConfigsAndLogErrors<GasPriceCapTimeOfDayMultipliersConfigFileToml>(
       listOf(gasPriceCapTimeOfDayMultipliersFile),
@@ -267,7 +254,6 @@ fun loadConfigsOrError(
   val configError =
     listOf(
       coordinatorBaseConfigs,
-      tracesLimitsV4Configs,
       tracesLimitsV5Configs,
       gasPriceCapTimeOfDayMultipliersConfig,
       smartContractErrorsConfig,
@@ -282,8 +268,7 @@ fun loadConfigsOrError(
   val finalConfig =
     CoordinatorConfigToml(
       configs = requireNotNull(coordinatorBaseConfigs.get()) { "coordinatorBaseConfigs have errors" },
-      tracesLimitsV4 = tracesLimitsV4Configs?.get(),
-      tracesLimitsV5 = tracesLimitsV5Configs?.get(),
+      tracesLimitsV5 = requireNotNull(tracesLimitsV5Configs.get()) { "tracesLimitsV5Configs have errors" },
       l1DynamicGasPriceCapTimeOfDayMultipliers = gasPriceCapTimeOfDayMultipliersConfig.get(),
       smartContractErrors = smartContractErrorsConfig.get(),
     )
@@ -292,8 +277,7 @@ fun loadConfigsOrError(
 
 fun loadConfigs(
   coordinatorConfigFiles: List<Path>,
-  tracesLimitsFileV4: Path?,
-  tracesLimitsFileV5: Path?,
+  tracesLimitsFileV5: Path,
   gasPriceCapTimeOfDayMultipliersFile: Path,
   smartContractErrorsFile: Path? = null,
   logger: Logger = LogManager.getLogger("lineth.coordinator.config"),
@@ -303,7 +287,6 @@ fun loadConfigs(
   requireNoCoordinatorKeyCollision(ignoredTopLevelKeys)
   return loadConfigsOrError(
     coordinatorConfigFiles = coordinatorConfigFiles,
-    tracesLimitsFileV4 = tracesLimitsFileV4,
     tracesLimitsFileV5 = tracesLimitsFileV5,
     gasPriceCapTimeOfDayMultipliersFile = gasPriceCapTimeOfDayMultipliersFile,
     smartContractErrorsFile = smartContractErrorsFile,
@@ -314,7 +297,6 @@ fun loadConfigs(
     .recoverIf({ !enforceStrict }, {
       loadConfigsOrError(
         coordinatorConfigFiles = coordinatorConfigFiles,
-        tracesLimitsFileV4 = tracesLimitsFileV4,
         tracesLimitsFileV5 = tracesLimitsFileV5,
         gasPriceCapTimeOfDayMultipliersFile = gasPriceCapTimeOfDayMultipliersFile,
         smartContractErrorsFile = smartContractErrorsFile,

@@ -13,6 +13,7 @@ import (
 	"github.com/LFDT-Lineth/zkc/pkg/schema"
 	"github.com/LFDT-Lineth/zkc/pkg/schema/register"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
+	ctrace "github.com/LFDT-Lineth/zkc/pkg/zkc/constraints/trace"
 )
 
 const (
@@ -22,25 +23,46 @@ const (
 	// publicOutputsAnnotationKey is an annotation holding the arithmetization's
 	// [PublicOutput].
 	publicOutputsAnnotationKey = "corset-public-outputs"
-	// guestOutputHashModule is the one public output the prover binds: the memory
-	// holding the keccak digest of the guest program's output.
-	guestOutputHashModule = "guest_output_hash"
+	// guestOutputModule is the one public output the prover binds: the memory
+	// holding the guest program's output, one byte per address.
+	guestOutputModule = "guest_output"
+	// programModule is the module committed in [ProgramRound]: the memory
+	// holding the pre-decoded instruction table of the guest program.
+	programModule = "decoded"
 )
 
+// ProgramRound is the round holding the columns of [programModule], which
+// depend only on the guest program. The rest of the trace is in
+// [Settings.TraceRound].
+const ProgramRound = 0
+
+// roundOf returns the round in which the columns of the given corset module
+// are committed.
+func (s *schemaScanner) roundOf(moduleName string) int {
+	if moduleName == programModule {
+		return ProgramRound
+	}
+	return s.TraceRound
+}
+
 // PublicOutput locates the columns of the arithmetization's public output memory
-// — the memory named [guestOutputHashModule], declared with `pub output` and
+// — the memory named [guestOutputModule], declared with `pub output` and
 // flagged by the schema via IsPublicOutput see [schemaScanner.collectPublicOutputs].
 type PublicOutput struct {
 	// Name is the corset name of the memory. It is empty when the
 	// arithmetization exposes no public output of the described shape.
 	Name string
-	// Address is the memory's address column. The memory's own constraints make
-	// it vanish on padding rows, be zero on the first row carrying an element and
-	// increment from there, so the address on the last row is one less than the
-	// number of elements the memory holds.
-	Address wiop.ObjectID
-	// Data holds the memory's data columns for one address.
-	Data []wiop.ObjectID
+	// Address holds the limbs of the memory's address, most significant first:
+	// an address wider than the field's register width is split by the schema.
+	// The memory's own constraints make it vanish on padding rows, be zero on the
+	// first row carrying an element and increment from there, so the elements
+	// are laid out in address order on the last rows of the module.
+	Address []wiop.ObjectID
+	// Data is the memory's data column, holding one byte per address.
+	Data wiop.ObjectID
+	// AccessBit is the memory's access bit: zero on padding rows and one on the
+	// rows carrying an element.
+	AccessBit wiop.ObjectID
 }
 
 // PublicOutputs returns the public output memory [Define] found in the
@@ -62,11 +84,41 @@ type schemaScanner struct {
 	// ColumnIds maps the concatenation of the module name and the column name to the ObjectID of the corresponding
 	// wizard column name.
 	ColumnIDs map[string]wiop.ObjectID
+	// TraceRound is the round of every column outside of [programModule].
+	TraceRound int
+	// ExprCache interns the expression nodes built by [castExpression], per
+	// module, so that structurally identical subexpressions share one pointer
+	// instead of being re-allocated at every occurrence. See [intern].
+	//
+	// This is a fallback for zkc not deduplicating its own [air.Term] DAG; it
+	// is the designated removal point once zkc interns natively (see
+	// LFDT-Lineth/lineth-monorepo#4038). The map is used for lookup only and
+	// is never iterated, so it does not affect output ordering.
+	//
+	// Removing this structural fallback alone does not complete the native-zkc
+	// migration. ExprCache dedupes the *output*, but every traversal of the
+	// *input* still descends into each occurrence of a term, so a shared
+	// [air.Term] DAG would be expanded as a tree, which is exponential in DAG
+	// depth (a chain of 19 nested Add(t, t) costs ~786K allocations per
+	// conversion). Before relying on native sharing:
+	//   - [castExpression] must keep a per-module map[air.Term]wiop.Expression,
+	//     keyed on the original n-ary term and checked before descending;
+	//   - [collectFromTerm] must memoise visited terms in the same way;
+	//   - the Lisp rendering used to order constraints in [scanConstraints]
+	//     must not expand shared subterms (or must use another ordering key).
+	ExprCache map[schema.ModuleId]map[exprKey]wiop.Expression
 }
 
 // Define registers the arithmetization from a corset air.Schema and trace limits
-// from config.
-func Define(sys *wiop.System, schema *air.Schema[koalabear.Element]) {
+// from config. The columns of [programModule] are put in [ProgramRound] and
+// all the others in traceRound, where the sizes of all dynamic modules are also
+// fed into the Fiat-Shamir transcript.
+func Define(sys *wiop.System, schema *air.Schema[koalabear.Element], traceRound int) {
+
+	for len(sys.Rounds) <= traceRound {
+		sys.NewRound()
+	}
+	sys.DynamicSizeRound = traceRound
 
 	// Collect modules and sort them by name to ensure deterministic processing order
 	modules := schema.Modules().Collect()
@@ -80,10 +132,21 @@ func Define(sys *wiop.System, schema *air.Schema[koalabear.Element]) {
 		Modules:        modules,
 		ModulesIDsWiop: map[string]int{},
 		ColumnIDs:      map[string]wiop.ObjectID{},
+		TraceRound:     traceRound,
+		ExprCache:      newExprCache(),
 	}
 
 	scanner.scanColumns()
 	scanner.scanConstraints()
+
+	if traceRound != ProgramRound {
+		if _, ok := scanner.ModulesIDsWiop[programModule]; !ok {
+			logrus.Warnf("zkcdriver: Define: no module %q found, round %d is empty", programModule, ProgramRound)
+		}
+
+		// Registered before any compiler pass, so that it runs first in the round.
+		sys.Rounds[traceRound].RegisterAction(&assignTraceRoundAction{Schema: *schema, Round: traceRound})
+	}
 
 	sys.Annotations[corsetColumnMapAnnotationKey] = scanner.ColumnIDs
 	sys.Annotations[publicOutputsAnnotationKey] = scanner.collectPublicOutputs()
@@ -115,7 +178,11 @@ func (s *schemaScanner) collectPublicOutputs() PublicOutput {
 			)
 		}
 
-		var address, data []wiop.ObjectID
+		var (
+			address, data []wiop.ObjectID
+			accessBit     wiop.ObjectID
+			hasAccessBit  bool
+		)
 
 		for _, reg := range modDecl.Registers() {
 
@@ -126,34 +193,37 @@ func (s *schemaScanner) collectPublicOutputs() PublicOutput {
 
 			// A memory's address lines are exactly its input registers and its data
 			// lines exactly its output registers, so the two are told apart by
-			// register kind rather than by name. Everything else the memory carries
-			// (the access bit, the address selectors) is computed and of no use here.
+			// register kind rather than by name. Of the computed registers, only the
+			// access bit is of use here; the address selectors are not.
 			//
-			// Only [guestOutputHashModule] is collected. Any other public output
-			// leaves both lists empty and is skipped just below, so no memory becomes
-			// a public input merely by being declared `pub output`.
+			// Only [guestOutputModule] is collected. Any other public output leaves
+			// the lists empty and is skipped just below, so no memory becomes a
+			// public input merely by being declared `pub output`.
 			switch {
-			case reg.IsInput() && moduleName == guestOutputHashModule:
+			case moduleName != guestOutputModule:
+			case reg.IsInput():
 				address = append(address, id)
-			case reg.IsOutput() && moduleName == guestOutputHashModule:
+			case reg.IsOutput():
 				data = append(data, id)
+			case reg.Name() == ctrace.ACCESS_BIT_NAME:
+				accessBit, hasAccessBit = id, true
 			}
 		}
 
-		// A memory addressed by several limbs, or holding nothing at all, is not
-		// describable by [PublicOutput], so it is reported and skipped rather than
-		// half-described. Several data columns are expected: that is a value wider
-		// than the field's register width, split into limbs.
-		if len(address) != 1 || len(data) == 0 {
+		// A memory holding anything other than a single byte column, or lacking
+		// an address or an access bit, is not describable by [PublicOutput], so it
+		// is reported and skipped rather than half-described.
+		if len(address) == 0 || len(data) != 1 || !hasAccessBit {
 			logrus.Warnf(
 				"zkcdriver: collectPublicOutputs: skipping public output %q: "+
-					"has %d address and %d data columns, expected one address and at least one datum",
-				moduleName, len(address), len(data),
+					"has %d address and %d data columns (access bit found: %v), "+
+					"expected at least one address, one datum and an access bit",
+				moduleName, len(address), len(data), hasAccessBit,
 			)
 			continue
 		}
 
-		output = PublicOutput{Name: moduleName, Address: address[0], Data: data}
+		output = PublicOutput{Name: moduleName, Address: address, Data: data[0], AccessBit: accessBit}
 	}
 
 	return output
@@ -255,7 +325,7 @@ func (s *schemaScanner) scanColumns() {
 
 			col := moduleWIOP.NewColumn(
 				moduleWIOP.Context.Childf("column-%v", colDecl.Name()),
-				s.Sys.Rounds[0],
+				s.Sys.Rounds[s.roundOf(moduleName)],
 			)
 
 			s.ColumnIDs[colQualifiedName] = col.Context.ID
@@ -273,13 +343,11 @@ func (s *schemaScanner) collectReferencedColumns() map[string]struct{} {
 	for _, cs := range s.Schema.Constraints().Collect() {
 		switch cs := cs.(type) {
 
-		case air.VanishingConstraint[koalabear.Element]:
-			vc := cs.Unwrap()
-			s.collectFromTerm(vc.Context, vc.Constraint.Term, referenced)
+		case *air.VanishingConstraint[koalabear.Element]:
+			s.collectFromTerm(cs.Context, cs.Constraint.Term, referenced)
 
-		case air.LookupConstraint[koalabear.Element]:
-			lc := cs.Unwrap()
-			for _, frag := range lc.Sources {
+		case *air.LookupConstraint[koalabear.Element]:
+			for _, frag := range cs.Sources {
 				for _, reg := range frag.Registers {
 					s.addColRef(frag.Module, reg, referenced)
 				}
@@ -287,19 +355,13 @@ func (s *schemaScanner) collectReferencedColumns() map[string]struct{} {
 					s.addColRef(frag.Module, frag.Selector.Unwrap(), referenced)
 				}
 			}
-			for _, frag := range lc.Targets {
+			for _, frag := range cs.Targets {
 				for _, reg := range frag.Registers {
 					s.addColRef(frag.Module, reg, referenced)
 				}
 				if frag.HasSelector() {
 					s.addColRef(frag.Module, frag.Selector.Unwrap(), referenced)
 				}
-			}
-
-		case air.RangeConstraint[koalabear.Element]:
-			rc := cs.Unwrap()
-			for i := range rc.Bitwidths {
-				s.addColRef(rc.Context, rc.Sources[i], referenced)
 			}
 		}
 	}
@@ -309,6 +371,10 @@ func (s *schemaScanner) collectReferencedColumns() map[string]struct{} {
 
 // collectFromTerm recursively walks a constraint term and adds every column
 // access it finds to out. It mirrors the structure of castExpression.
+//
+// It does not memoise visited terms, so a shared [air.Term] is re-walked at
+// every occurrence. That is fine for the tree-shaped terms zkc emits today;
+// see [schemaScanner.ExprCache] for what native zkc interning requires.
 func (s *schemaScanner) collectFromTerm(
 	modID schema.ModuleId,
 	term air.Term[koalabear.Element],
@@ -376,6 +442,8 @@ func (s *schemaScanner) scanConstraints() {
 	}
 
 	// Pre-compute Lisp names to avoid O(n²) serialisation inside the comparator.
+	// The rendering expands shared subterms, so it would blow up on a native
+	// zkc DAG; see [schemaScanner.ExprCache].
 	names := make([]string, len(corsetCSS))
 	for i, cs := range corsetCSS {
 		names[i] = cs.Lisp(s.Schema).String(false)
@@ -396,13 +464,11 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 
 	switch cs := corsetCS.(type) {
 
-	case air.BusConstraint[koalabear.Element]:
-
-		var bc = cs.Unwrap()
+	case *air.BusConstraint[koalabear.Element]:
 		// Iterate receive ports, each of which identifies a set of columns in a
 		// given module (including a selector) which determine the message being
 		// reveived.
-		for _, recvPort := range bc.Receives {
+		for _, recvPort := range cs.Receives {
 
 			table := wiop.Table{
 				Columns:  make([]*wiop.ColumnView, len(recvPort.Registers)),
@@ -419,7 +485,7 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 		// Iterate send ports, each of which identifies a set of columns in a
 		// given module (including a selector) which determine the message being
 		// sent.
-		for _, sendPort := range bc.Sends {
+		for _, sendPort := range cs.Sends {
 			table := wiop.Table{
 				Columns:  make([]*wiop.ColumnView, len(sendPort.Registers)),
 				Selector: s.compColumnByCorsetID(sendPort.Module, sendPort.Selector).View(),
@@ -432,11 +498,11 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 			s.Sys.NewMessageBusSend(s.Sys.Context.Childf("bus-%v", name), "0", name, table)
 		}
 
-	case air.LookupConstraint[koalabear.Element]:
+	case *air.LookupConstraint[koalabear.Element]:
 
 		var (
-			cSource                  = cs.Unwrap().Sources[0]
-			cTarget                  = cs.Unwrap().Targets[0]
+			cSource                  = cs.Sources[0]
+			cTarget                  = cs.Targets[0]
 			numCol                   = cSource.Len()
 			wSources                 = make([]*wiop.ColumnView, numCol)
 			wTargets                 = make([]*wiop.ColumnView, numCol)
@@ -452,8 +518,8 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 		}
 
 		// Sanity check for fragment lookup
-		if len(cs.Unwrap().Sources) != 1 {
-			utils.Panic("lookup %q has %d source fragments; only single-fragment lookups are supported", name, len(cs.Unwrap().Sources))
+		if len(cs.Sources) != 1 {
+			utils.Panic("lookup %q has %d source fragments; only single-fragment lookups are supported", name, len(cs.Sources))
 		}
 
 		// this will panic over interleaved columns, we can debug that later
@@ -486,11 +552,10 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 			[]wiop.Table{tableTarget},
 		)
 
-	case air.VanishingConstraint[koalabear.Element]:
+	case *air.VanishingConstraint[koalabear.Element]:
 
 		var (
-			vc     = cs.Unwrap()
-			wExpr  = s.castExpression(vc.Context, vc.Constraint.Term)
+			wExpr  = s.castExpression(cs.Context, cs.Constraint.Term)
 			module = wExpr.Module()
 		)
 
@@ -498,7 +563,7 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 			utils.Panic("wiop: VanishingConstraint has no module : %v", name)
 		}
 
-		if vc.Domain.IsEmpty() {
+		if cs.Domain.IsEmpty() {
 			if !wExpr.IsMultiValued() {
 				utils.Panic("wiop: VanishingConstraint has no domain and no multi-valued expression : %v", name)
 			}
@@ -508,37 +573,24 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 
 		// If the domain is not empty, then the constraint is a local constraint
 		// and the domain is the position of the vanishing vector.
-		position := vc.Domain.Unwrap()
+		position := cs.Domain.Unwrap()
 
+		// The rewrite allocates fresh nodes throughout — [wiop.Column.At] for
+		// every leaf, [wiop.DefaultConstruct] for every compound — so the
+		// result is re-interned to let local constraints pinned at the same
+		// position share their lifted subexpressions. [wiop.EditExpression]
+		// visits bottom-up, which is the order [schemaScanner.intern] requires.
 		wExpr = wiop.EditExpression(wExpr,
 			func(e wiop.Expression, children []wiop.Expression) wiop.Expression {
 				switch e := e.(type) {
 				case *wiop.ColumnView:
-					return e.Column.At(position + e.ShiftingOffset)
+					return s.intern(cs.Context, e.Column.At(position+e.ShiftingOffset))
 				default:
-					return wiop.DefaultConstruct(e, children)
+					return s.intern(cs.Context, wiop.DefaultConstruct(e, children))
 				}
 			})
 
 		module.NewVanishing(module.Context.Childf("local-%v", name), wExpr)
-
-	case air.RangeConstraint[koalabear.Element]:
-
-		rc := cs.Unwrap()
-
-		// Sanity check:  If a RangeConstraint ever has more than one source/bitwidth, the second iteration will panic
-		// because the first iteration already registered that QueryID in the CompiledIOP. In practice
-		// the len is always expected to be either 0 (no-op) or 1 (single pass).
-		if len(rc.Bitwidths) > 1 {
-			utils.Panic("multiple bitwidths for range constraints not supported")
-		}
-
-		for i, bitwidth := range rc.Bitwidths {
-			// Determine bound for this range constraint
-			bound := 1 << bitwidth
-			col := s.compColumnByCorsetID(rc.Context, rc.Sources[i])
-			col.Module.NewRangeCheck(col.Context.Childf("range-%v", name), col, bound)
-		}
 
 	default:
 		utils.Panic("unexpected constraint type: %s", cs.Lisp(s.Schema).String(false))
@@ -547,6 +599,20 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 
 // castExpression turns a corset expression into a [symbolic.Expression] whose
 // variables are [wiop.System] components.
+//
+// Every node it returns is interned per module (see [schemaScanner.intern]):
+// zkc hands out a tree in which structurally identical subexpressions are
+// distinct [air.Term] values, and allocating a fresh [wiop.Expression] for
+// each occurrence would starve every pointer-keyed cache downstream. Leaves
+// are interned too, and necessarily so: [wiop.Column.View] and
+// [wiop.ColumnView.Shift] allocate a new pointer on every call, so without
+// leaf interning no compound key could ever match.
+//
+// Interning dedupes the output only: the recursion still descends into every
+// occurrence of an input term before the lookup. This is linear for today's
+// tree-shaped input but exponential in depth for a shared [air.Term] DAG, so
+// native zkc interning needs an input-term memo here (see
+// [schemaScanner.ExprCache]).
 func (s *schemaScanner) castExpression(context schema.ModuleId, expr air.Term[koalabear.Element]) wiop.Expression {
 
 	switch e := expr.(type) {
@@ -557,13 +623,13 @@ func (s *schemaScanner) castExpression(context schema.ModuleId, expr air.Term[ko
 		for i := range args {
 			args[i] = s.castExpression(context, e.Args[i])
 		}
-		return wiop.Sum(args...)
+		return s.internedSum(context, args...)
 
 	case *air.Sub[koalabear.Element]:
 
 		res := s.castExpression(context, e.Args[0])
 		for i := 1; i < len(e.Args); i++ {
-			res = wiop.Sub(res, s.castExpression(context, e.Args[i]))
+			res = s.intern(context, wiop.Sub(res, s.castExpression(context, e.Args[i])))
 		}
 		return res
 
@@ -573,7 +639,7 @@ func (s *schemaScanner) castExpression(context schema.ModuleId, expr air.Term[ko
 		for i := range args {
 			args[i] = s.castExpression(context, e.Args[i])
 		}
-		return wiop.Product(args...)
+		return s.internedProduct(context, args...)
 
 	case *air.Constant[koalabear.Element]:
 		// @alex: this bit is a bit hacky, because corset's koalabear.Element
@@ -581,11 +647,11 @@ func (s *schemaScanner) castExpression(context schema.ModuleId, expr air.Term[ko
 		// layout. Ideally, both dependencies should converge toward using the
 		// exact same implementation. This would remove this kind of hacky
 		// conversions.
-		return wiop.NewConstantField(field.Element(e.Value))
+		return s.intern(context, wiop.NewConstantField(field.Element(e.Value)))
 
 	case *air.ColumnAccess[koalabear.Element]:
 
-		return s.compColumnByCorsetColumnAccess(context, e)
+		return s.intern(context, s.compColumnByCorsetColumnAccess(context, e))
 
 	default:
 		eStr := fmt.Sprintf("%v", e)

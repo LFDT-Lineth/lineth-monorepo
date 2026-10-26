@@ -43,8 +43,8 @@ def _base_public_input(**overrides) -> RollupPublicInput:
         end_data_rolling_hash=Hash32(bytes([0x8D]) * 32),
         parent_block_hash=Hash32(bytes([0x0A]) * 32),
         end_block_hash=Hash32(bytes([0x0B]) * 32),
-        start_offset=0,
-        end_offset=0,
+        parent_data_tail_take_bytes=0,
+        final_data_tail_discard_bytes=0,
         l2_l1_messages=[],
         filtered_addresses=[],
         program_vks=[],
@@ -57,7 +57,7 @@ def _left_pi(**overrides) -> RollupPublicInput:
     # start-of-range fields by default.
     defaults = dict(
         end_data_rolling_hash=Hash32(bytes([0x8D]) * 32),
-        end_offset=500,
+        final_data_tail_discard_bytes=500,
         end_block_hash=Hash32(bytes([0x0B]) * 32),
         end_l1_l2_bridge_rolling_hash=Hash32(bytes([0x33]) * 32),
         end_l1_l2_bridge_rolling_hash_message_number=U64(4),
@@ -72,7 +72,7 @@ def _left_pi(**overrides) -> RollupPublicInput:
 def _right_pi(**overrides) -> RollupPublicInput:
     defaults = dict(
         parent_data_rolling_hash=Hash32(bytes([0x8D]) * 32),
-        start_offset=500,
+        parent_data_tail_take_bytes=500,
         parent_block_hash=Hash32(bytes([0x0B]) * 32),
         parent_l1_l2_bridge_rolling_hash=Hash32(bytes([0x33]) * 32),
         parent_l1_l2_bridge_rolling_hash_message_number=U64(4),
@@ -142,22 +142,22 @@ def test_data_rolling_hash_mismatch_is_rejected() -> None:
         assert_rollup_proof_continuity(_proof(_left_pi()), right)
 
 
-def test_offset_mismatch_is_rejected() -> None:
-    right = _proof(_right_pi(start_offset=501))
-    with pytest.raises(Exception, match="offset continuity"):
+def test_tail_count_mismatch_is_rejected() -> None:
+    right = _proof(_right_pi(parent_data_tail_take_bytes=501))
+    with pytest.raises(Exception, match="tail-count continuity"):
         assert_rollup_proof_continuity(_proof(_left_pi()), right)
 
 
 def test_canonical_chunk_boundary_handoff_is_accepted() -> None:
-    left = _proof(_left_pi(end_offset=0))
-    right = _proof(_right_pi(start_offset=0))
+    left = _proof(_left_pi(final_data_tail_discard_bytes=0))
+    right = _proof(_right_pi(parent_data_tail_take_bytes=0))
     assert_rollup_proof_continuity(left, right)
 
 
-def test_noncanonical_full_blob_offset_handoff_is_rejected() -> None:
-    left = _proof(_left_pi(end_offset=131072))
-    right = _proof(_right_pi(start_offset=0))
-    with pytest.raises(Exception, match="offset continuity"):
+def test_noncanonical_full_blob_tail_count_handoff_is_rejected() -> None:
+    left = _proof(_left_pi(final_data_tail_discard_bytes=131072))
+    right = _proof(_right_pi(parent_data_tail_take_bytes=0))
+    with pytest.raises(Exception, match="tail-count continuity"):
         assert_rollup_proof_continuity(left, right)
 
 

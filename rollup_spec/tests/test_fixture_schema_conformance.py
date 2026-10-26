@@ -25,6 +25,7 @@ Run from the rollup_spec/ directory:  python -m pytest
 
 import json
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
@@ -146,37 +147,43 @@ def test_slot_requires_unsigned_integer(execution_request_and_validator, slot) -
     assert any(list(error.path)[-1:] == ["slotNumber"] for error in errors)
 
 
-_BLOB_OFFSET_CASES = [
-    ("10-14-getZkRollupProofV1.request.json", ("proofRequest", "startOffset")),
-    ("10-14-getZkRollupProofV1.response.json", ("publicInputs", "startOffset")),
-    ("10-14-getZkRollupProofV1.response.json", ("publicInputs", "endOffset")),
-    ("10-18-getZkRollupAggregationProofV1.request.json", ("proofRequest", "rollupProofs", 0, "publicInputs", "startOffset")),
-    ("10-18-getZkRollupAggregationProofV1.request.json", ("proofRequest", "rollupProofs", 0, "publicInputs", "endOffset")),
-    ("10-18-getZkRollupAggregationProofV1.response.json", ("publicInputs", "startOffset")),
-    ("10-18-getZkRollupAggregationProofV1.response.json", ("publicInputs", "endOffset")),
+@dataclass(frozen=True)
+class BlobTailCountCase:
+    fixture_name: str
+    count_path: tuple[str | int, ...]
+
+
+_BLOB_TAIL_COUNT_CASES = [
+    BlobTailCountCase("10-14-getZkRollupProofV1.request.json", ("proofRequest", "parentDataTailTakeBytes")),
+    BlobTailCountCase("10-14-getZkRollupProofV1.response.json", ("publicInputs", "parentDataTailTakeBytes")),
+    BlobTailCountCase("10-14-getZkRollupProofV1.response.json", ("publicInputs", "finalDataTailDiscardBytes")),
+    BlobTailCountCase("10-18-getZkRollupAggregationProofV1.request.json", ("proofRequest", "rollupProofs", 0, "publicInputs", "parentDataTailTakeBytes")),
+    BlobTailCountCase("10-18-getZkRollupAggregationProofV1.request.json", ("proofRequest", "rollupProofs", 0, "publicInputs", "finalDataTailDiscardBytes")),
+    BlobTailCountCase("10-18-getZkRollupAggregationProofV1.response.json", ("publicInputs", "parentDataTailTakeBytes")),
+    BlobTailCountCase("10-18-getZkRollupAggregationProofV1.response.json", ("publicInputs", "finalDataTailDiscardBytes")),
 ]
 
 
-def _validate_blob_offset(fixture_name: str, offset_path: tuple[str | int, ...], value: int) -> None:
+def _validate_blob_tail_count(case: BlobTailCountCase, value: int) -> None:
     jsonschema = pytest.importorskip("jsonschema")
-    fixture_path = _FIXTURE_DIR / fixture_name
+    fixture_path = _FIXTURE_DIR / case.fixture_name
     schema = json.loads(_schema_path_for(fixture_path).read_text())
     validator = jsonschema.Draft202012Validator(schema)
     fixture = json.loads(fixture_path.read_text())
     target = fixture
-    for key in offset_path[:-1]:
+    for key in case.count_path[:-1]:
         target = target[key]
-    target[offset_path[-1]] = value
+    target[case.count_path[-1]] = value
     validator.validate(fixture)
 
 
-@pytest.mark.parametrize(("fixture_name", "offset_path"), _BLOB_OFFSET_CASES)
-def test_blob_offset_schema_accepts_last_payload_position(fixture_name: str, offset_path: tuple[str | int, ...]) -> None:
-    _validate_blob_offset(fixture_name, offset_path, 130046)
+@pytest.mark.parametrize("case", _BLOB_TAIL_COUNT_CASES)
+def test_blob_tail_count_schema_accepts_maximum(case: BlobTailCountCase) -> None:
+    _validate_blob_tail_count(case, 130046)
 
 
-@pytest.mark.parametrize(("fixture_name", "offset_path"), _BLOB_OFFSET_CASES)
-def test_blob_offset_schema_rejects_position_past_payload(fixture_name: str, offset_path: tuple[str | int, ...]) -> None:
+@pytest.mark.parametrize("case", _BLOB_TAIL_COUNT_CASES)
+def test_blob_tail_count_schema_rejects_above_maximum(case: BlobTailCountCase) -> None:
     jsonschema = pytest.importorskip("jsonschema")
     with pytest.raises(jsonschema.ValidationError):
-        _validate_blob_offset(fixture_name, offset_path, 130047)
+        _validate_blob_tail_count(case, 130047)

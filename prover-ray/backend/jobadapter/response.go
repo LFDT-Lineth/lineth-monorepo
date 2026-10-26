@@ -13,33 +13,32 @@ import (
 // proof bytes and publicInputs from backend.Result. Those values are
 // provisional until proof serialization and public-input extraction are wired.
 type executionResponse struct {
-	ProverVersion     string                `json:"proverVersion"`
-	ProofHex          string                `json:"proof"`
-	StartBlockNumber  uint64                `json:"startBlockNumber"`
-	PublicInputs      executionPublicInputs `json:"publicInputs"`
-	L2L1Messages      []string              `json:"l2L1Messages"`
-	TxFroms           []string              `json:"txFroms"`
-	FilteredAddresses []string              `json:"filteredAddresses"`
-	ProgramVk         string                `json:"programVk"`
+	ProverVersion    string                `json:"proverVersion"`
+	ProofHex         string                `json:"proof"`
+	StartBlockNumber uint64                `json:"startBlockNumber"`
+	PublicInputs     executionPublicInputs `json:"publicInputs"`
+	ProgramVk        string                `json:"programVk"`
 }
 
 type executionPublicInputs struct {
-	ParentBlockHash                          string `json:"parentBlockHash"`
-	EndBlockHash                             string `json:"endBlockHash"`
-	EndBlockNumber                           uint64 `json:"endBlockNumber"`
-	EndBlockTimestamp                        uint64 `json:"endBlockTimestamp"`
-	L2L1MessagesHash                         string `json:"l2L1MessagesHash"`
-	ParentL1L2BridgeRollingHash              string `json:"parentL1L2BridgeRollingHash"`
-	ParentL1L2BridgeRollingHashMessageNumber uint64 `json:"parentL1L2BridgeRollingHashMessageNumber"`
-	EndL1L2BridgeRollingHash                 string `json:"endL1L2BridgeRollingHash"`
-	EndL1L2BridgeRollingHashMessageNumber    uint64 `json:"endL1L2BridgeRollingHashMessageNumber"`
-	DynamicChainConfigHash                   string `json:"dynamicChainConfigHash"`
-	ParentFtxRollingHash                     string `json:"parentFtxRollingHash"`
-	ParentFtxNumber                          uint64 `json:"parentFtxNumber"`
-	EndFtxRollingHash                        string `json:"endFtxRollingHash"`
-	EndProcessedFtxNumber                    uint64 `json:"endProcessedFtxNumber"`
-	FilteredAddressesHash                    string `json:"filteredAddressesHash"`
-	TxFromsHash                              string `json:"txFromsHash"`
+	ParentBlockHash                          string   `json:"parentBlockHash"`
+	EndBlockHash                             string   `json:"endBlockHash"`
+	EndBlockNumber                           uint64   `json:"endBlockNumber"`
+	EndBlockTimestamp                        uint64   `json:"endBlockTimestamp"`
+	L2L1Messages                             []string `json:"l2L1Messages"`
+	ParentL1L2BridgeRollingHash              string   `json:"parentL1L2BridgeRollingHash"`
+	ParentL1L2BridgeRollingHashMessageNumber uint64   `json:"parentL1L2BridgeRollingHashMessageNumber"`
+	EndL1L2BridgeRollingHash                 string   `json:"endL1L2BridgeRollingHash"`
+	EndL1L2BridgeRollingHashMessageNumber    uint64   `json:"endL1L2BridgeRollingHashMessageNumber"`
+	DynamicChainConfigHash                   string   `json:"dynamicChainConfigHash"`
+	ParentFtxRollingHash                     string   `json:"parentFtxRollingHash"`
+	ParentFtxNumber                          uint64   `json:"parentFtxNumber"`
+	EndFtxRollingHash                        string   `json:"endFtxRollingHash"`
+	EndProcessedFtxNumber                    uint64   `json:"endProcessedFtxNumber"`
+	FilteredAddresses                        []string `json:"filteredAddresses"`
+	TxFromsHash                              string   `json:"txFromsHash"`
+	BlockCount                               uint64   `json:"blockCount"`
+	L2MessagingBlocksOffsets                 []uint16 `json:"l2MessagingBlocksOffsets"`
 }
 
 // failureResponseBody is a temporary adapter-owned operational format, not a
@@ -56,33 +55,26 @@ func newExecutionResponse(
 	result backend.Result, startBlockNumber uint64, proverVersion string, programVk []byte,
 ) executionResponse {
 	return executionResponse{
-		ProverVersion:     proverVersion,
-		ProofHex:          hexBytes(result.ProofBytes),
-		StartBlockNumber:  startBlockNumber,
-		PublicInputs:      publicInputs(result.PublicInputs),
-		L2L1Messages:      []string{},
-		TxFroms:           []string{},
-		FilteredAddresses: []string{},
-		ProgramVk:         hexBytes(programVk),
+		ProverVersion:    proverVersion,
+		ProofHex:         hexBytes(result.ProofBytes),
+		StartBlockNumber: startBlockNumber,
+		PublicInputs:     publicInputs(result.PublicInputs),
+		ProgramVk:        hexBytes(programVk),
 	}
 }
 
 // newExecutionResponseFromNative builds a response from the native runner's
-// output (dev-zkvm): real public inputs and revealed preimage arrays, a
-// placeholder marker proof (dev-zkvm produces no real proof), and the echoed
-// programVk.
+// output (dev-zkvm): the public inputs, a placeholder marker proof (dev-zkvm
+// produces no real proof), and the echoed programVk.
 func newExecutionResponseFromNative(
 	out nativerunner.Output, proverVersion string, programVk []byte,
 ) executionResponse {
 	return executionResponse{
-		ProverVersion:     proverVersion,
-		ProofHex:          hexBytes(backend.DevMarkerProof(backend.ProverModeDevZkVM)),
-		StartBlockNumber:  out.StartBlockNumber,
-		PublicInputs:      publicInputs(out.PublicInputs),
-		L2L1Messages:      hexHashList(out.L2L1Messages),
-		TxFroms:           hexAddressList(out.TxFroms),
-		FilteredAddresses: hexAddressList(out.FilteredAddresses),
-		ProgramVk:         hexBytes(programVk),
+		ProverVersion:    proverVersion,
+		ProofHex:         hexBytes(backend.DevMarkerProof(backend.ProverModeDevZkVM)),
+		StartBlockNumber: out.StartBlockNumber,
+		PublicInputs:     publicInputs(out.PublicInputs),
+		ProgramVk:        hexBytes(programVk),
 	}
 }
 
@@ -108,7 +100,7 @@ func publicInputs(pi backend.PublicInputs) executionPublicInputs {
 		EndBlockHash:                             hexHash(pi.EndBlockHash),
 		EndBlockNumber:                           pi.EndBlockNumber,
 		EndBlockTimestamp:                        pi.EndBlockTimestamp,
-		L2L1MessagesHash:                         hexHash(pi.L2L1MessagesHash),
+		L2L1Messages:                             hexHashList(pi.L2L1Messages),
 		ParentL1L2BridgeRollingHash:              hexHash(pi.ParentL1L2BridgeRollingHash),
 		ParentL1L2BridgeRollingHashMessageNumber: pi.ParentL1L2BridgeRollingHashMessageNumber,
 		EndL1L2BridgeRollingHash:                 hexHash(pi.EndL1L2BridgeRollingHash),
@@ -118,8 +110,11 @@ func publicInputs(pi backend.PublicInputs) executionPublicInputs {
 		ParentFtxNumber:                          pi.ParentFtxNumber,
 		EndFtxRollingHash:                        hexHash(pi.EndFtxRollingHash),
 		EndProcessedFtxNumber:                    pi.EndProcessedFtxNumber,
-		FilteredAddressesHash:                    hexHash(pi.FilteredAddressesHash),
+		FilteredAddresses:                        hexAddressList(pi.FilteredAddresses),
 		TxFromsHash:                              hexHash(pi.TxFromsHash),
+		BlockCount:                               pi.BlockCount,
+		// non-nil so an empty list marshals to [] not null.
+		L2MessagingBlocksOffsets: append([]uint16{}, pi.L2MessagingBlocksOffsets...),
 	}
 }
 

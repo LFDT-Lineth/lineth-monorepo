@@ -192,6 +192,10 @@ jobs:
         env:
           COMPONENT: ${{ inputs.component-name }}
           TAG: ${{ steps.prepend-changelog.outputs.next_tag }}
+          # Pin the release tag to the commit that triggered the workflow, not to the
+          # (possibly changelog-update) HEAD the checkout fast-forwarded to. The docker
+          # image is built and named from the same commit, so tag and image stay aligned.
+          TARGET_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           if [ -z "${TAG}" ]; then
@@ -202,7 +206,7 @@ jobs:
             echo "Tag ${TAG} already exists; exit now."
             exit 0
           fi
-          git tag -a "${TAG}" -m "${COMPONENT^} release ${TAG}"
+          git tag -a "${TAG}" -m "${COMPONENT^} release ${TAG}" "${TARGET_SHA}"
           git push origin "${TAG}"
-          echo "Pushed ${TAG} pointing at $(git rev-parse HEAD)"
+          echo "Pushed ${TAG} pointing at ${TARGET_SHA}"
 

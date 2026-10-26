@@ -1,6 +1,4 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
@@ -195,6 +193,12 @@ class MaruCluster(
 
   @Synchronized
   fun besuNode(label: String): BesuNode = (node(label).elNode as BesuElNode).besu
+
+  @Synchronized
+  fun besuNode(role: NodeRole): BesuNode = (nodes(role).first().elNode as BesuElNode).besu
+
+  @Synchronized
+  fun nodesWithBesuEl(): List<ClusterNode> = this.nodes.filter { it.elNode is BesuElNode }
 
   private fun startBesuNodes(nodesConfig: List<NodeBuilder.NodeBuildingConfig>) {
     nodesConfig.forEach { nodeStartConfig ->
