@@ -53,7 +53,10 @@
           "parentFtxNumber": 15,
           "endFtxRollingHash": "0x0505050505050505050505050505050505050505050505050505050505050505",
           "endProcessedFtxNumber": 18,
-          "filteredAddressesHash": "0x0606060606060606060606060606060606060606060606060606060606060606",
+          "filteredAddresses": [
+            "0x0303030303030303030303030303030303030303",
+            "0x0404040404040404040404040404040404040404"
+          ],
           "txFromsHash": "0x0707070707070707070707070707070707070707070707070707070707070707",
           "blockCount": 2,
           "l2MessagingBlocksOffsets": [],
@@ -61,10 +64,6 @@
             "0x0808080808080808080808080808080808080808080808080808080808080808"
           ]
         },
-        "filteredAddresses": [
-          "0x0303030303030303030303030303030303030303",
-          "0x0404040404040404040404040404040404040404"
-        ],
         "programVk": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       },
       {
@@ -84,7 +83,10 @@
           "parentFtxNumber": 18,
           "endFtxRollingHash": "0x0505050505050505050505050505050505050505050505050505050505050505",
           "endProcessedFtxNumber": 18,
-          "filteredAddressesHash": "0x0606060606060606060606060606060606060606060606060606060606060606",
+          "filteredAddresses": [
+            "0x0303030303030303030303030303030303030303",
+            "0x0404040404040404040404040404040404040404"
+          ],
           "txFromsHash": "0x0707070707070707070707070707070707070707070707070707070707070707",
           "blockCount": 3,
           "l2MessagingBlocksOffsets": [],
@@ -92,10 +94,6 @@
             "0x0808080808080808080808080808080808080808080808080808080808080808"
           ]
         },
-        "filteredAddresses": [
-          "0x0303030303030303030303030303030303030303",
-          "0x0404040404040404040404040404040404040404"
-        ],
         "programVk": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       }
     ]

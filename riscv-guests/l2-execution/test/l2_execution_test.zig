@@ -137,7 +137,7 @@ test "extractL2L1Messages collects topics[3] only for matching address+topic0" {
     };
 
     var out = std.ArrayListUnmanaged([32]u8).empty;
-    try api.extractL2L1MessagesFn(alloc, &out, &receipts, l2_ms_address);
+    try testing.expect(try api.extractL2L1MessagesFn(alloc, &out, &receipts, l2_ms_address));
 
     try testing.expectEqual(@as(usize, 1), out.items.len);
     try testing.expectEqualSlices(u8, &message_hash, &out.items[0]);

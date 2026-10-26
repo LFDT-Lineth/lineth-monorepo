@@ -1,3 +1,8 @@
+## [2.3.2] - 2026-10-26
+
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Update copyright holder to Consensys Incorporated (#4244)
 ## [2.3.2-rc1] - 2026-10-16
 
 ### ⚙️ Miscellaneous Tasks

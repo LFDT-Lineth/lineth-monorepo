@@ -2,7 +2,7 @@
 
 /**
  * @title Library for computing the last finalized state on L1.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 pragma solidity ^0.8.33;

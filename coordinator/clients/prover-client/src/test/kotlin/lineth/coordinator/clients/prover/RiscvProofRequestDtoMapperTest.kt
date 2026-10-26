@@ -167,7 +167,6 @@ class RiscvProofRequestDtoMapperTest {
               proof = resolved.proof,
               startBlockNumber = resolved.startBlockNumber,
               publicInputs = resolved.publicInputs,
-              filteredAddresses = resolved.filteredAddresses,
               programVk = resolved.programVk,
             )
           },

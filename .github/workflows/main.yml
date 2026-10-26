@@ -134,6 +134,7 @@ jobs:
             coordinator:
               - 'coordinator/**'
               - 'testdata/**'
+              - 'rollup_spec/src/rollup_spec/prover_io/**'
               - 'buildSrc/**'
               - 'jvm-libs/**'
               - 'gradle/**'

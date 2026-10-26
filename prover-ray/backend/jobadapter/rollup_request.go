@@ -56,11 +56,10 @@ type ChunkWitness struct {
 // EmbeddedL2ExecutionProof is one l2ExecutionProof a rollup request carries for
 // the guest to verify. ProgramVk is its verifying-key hash.
 type EmbeddedL2ExecutionProof struct {
-	Proof             []byte
-	StartBlockNumber  uint64
-	PublicInputs      backend.PublicInputs
-	FilteredAddresses [][20]byte
-	ProgramVk         []byte
+	Proof            []byte
+	StartBlockNumber uint64
+	PublicInputs     backend.PublicInputs
+	ProgramVk        []byte
 }
 
 // RollupRequest is a decoded getZkRollupProofV1 request. Conflations pair 1:1
@@ -279,24 +278,15 @@ func decodeEmbeddedL2ExecutionProof(raw json.RawMessage, op, ctx string) (Embedd
 	if err != nil {
 		return EmbeddedL2ExecutionProof{}, err
 	}
-	filteredRaw, err := getArray(obj, filteredAddressesKey, op, ctx)
-	if err != nil {
-		return EmbeddedL2ExecutionProof{}, err
-	}
-	filtered, err := addressList(filteredRaw, op, ctx+filteredAddressesKey)
-	if err != nil {
-		return EmbeddedL2ExecutionProof{}, err
-	}
 	programVk, err := getFixedHex(obj, programVkKey, op, ctx, programVkByteSize)
 	if err != nil {
 		return EmbeddedL2ExecutionProof{}, err
 	}
 	return EmbeddedL2ExecutionProof{
-		Proof:             proof,
-		StartBlockNumber:  startBlockNumber,
-		PublicInputs:      pi,
-		FilteredAddresses: filtered,
-		ProgramVk:         programVk,
+		Proof:            proof,
+		StartBlockNumber: startBlockNumber,
+		PublicInputs:     pi,
+		ProgramVk:        programVk,
 	}, nil
 }
 
@@ -336,7 +326,6 @@ func decodeEmbeddedPublicInputs(
 	pi.ParentFtxNumber = n("parentFtxNumber")
 	pi.EndFtxRollingHash = h("endFtxRollingHash")
 	pi.EndProcessedFtxNumber = n("endProcessedFtxNumber")
-	pi.FilteredAddressesHash = h("filteredAddressesHash")
 	pi.TxFromsHash = h("txFromsHash")
 	pi.BlockCount = n(blockCountKey)
 	if err != nil {
@@ -362,6 +351,16 @@ func decodeEmbeddedPublicInputs(
 		return pi, err
 	}
 	pi.L2L1Messages = l2L1Messages
+
+	filteredRaw, err := getArray(m, filteredAddressesKey, op, ctx)
+	if err != nil {
+		return pi, err
+	}
+	filtered, err := addressList(filteredRaw, op, ctx+filteredAddressesKey)
+	if err != nil {
+		return pi, err
+	}
+	pi.FilteredAddresses = filtered
 	return pi, nil
 }
 

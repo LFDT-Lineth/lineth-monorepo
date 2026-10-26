@@ -9,6 +9,8 @@
 
 - *(coordinator)* Align RISC-V l2-execution DTOs and request envelope with rollup_spec (#4260)
 - *(coordinator)* Align RISC-V rollup DTOs with rollup_spec (#4262)
+- *(misc)* Moved filtered addresses into the list of the PI (#4166)
+- *(coordinator)* Align RISC-V rollup-aggregation DTOs with rollup_spec (#4263)
 ## [2.2.0] - 2026-10-12
 
 ### 🚀 Features

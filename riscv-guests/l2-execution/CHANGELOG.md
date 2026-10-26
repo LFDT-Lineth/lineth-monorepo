@@ -15,6 +15,7 @@
 
 - *(riscv-guest)* Fixing the write_output usage (#3909)
 - *(riscv-guest)* Rename parentProcessedFtxNumber to parentFtxNumber (#4011)
+- *(riscv-guest)* Aligning l2-execution guest program to the recently… (#4297)
 
 ### ⚙️ Miscellaneous Tasks
 

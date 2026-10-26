@@ -1,7 +1,7 @@
 {
   "name": "@lfdt-lineth/lido-governance-monitor",
   "version": "1.0.0",
-  "author": "Consensys Software Inc.",
+  "author": "Consensys Incorporated",
   "license": "(MIT OR Apache-2.0)",
   "description": "Monitors Lido governance proposals and alerts on high-risk ones",
   "main": "dist/src/index.js",

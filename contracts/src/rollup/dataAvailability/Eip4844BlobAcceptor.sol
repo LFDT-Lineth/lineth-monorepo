@@ -7,7 +7,7 @@ import { EfficientLeftRightKeccak } from "../../libraries/EfficientLeftRightKecc
 import { ShnarfDataAcceptorBase } from "./ShnarfDataAcceptorBase.sol";
 /**
  * @title Contract to manage EIP-4844 blob submission.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract Eip4844BlobAcceptor is LocalShnarfProvider, ShnarfDataAcceptorBase, IAcceptEip4844Blobs {

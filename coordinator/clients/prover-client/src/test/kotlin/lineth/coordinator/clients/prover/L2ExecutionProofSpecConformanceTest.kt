@@ -11,30 +11,23 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
-/** Checks the l2-execution DTOs against the rollup_spec wire contract (see [RollupSpecProverIo]). */
+/**
+ * Checks the l2-execution DTOs against the rollup_spec wire contract (see [RollupSpecProverIo]). Strict fixture
+ * round-trips are covered for all proof types by [RollupSpecFixturesConformanceTest].
+ */
 class L2ExecutionProofSpecConformanceTest {
   private val requestSchema = "getZkL2ExecutionProofV1.request.schema.json"
 
   @Test
-  fun `l2-execution response fixture round-trips through the DTO and maps to the domain`() {
+  fun `l2-execution response fixture maps to the domain`() {
     val json = fixture("10-11-getZkL2ExecutionProofV1.response.json")
 
     val dto = fixtureAs<L2ExecutionProofResponseDto>("10-11-getZkL2ExecutionProofV1.response.json")
 
-    assertThat(toJson(dto)).isEqualTo(json)
     assertThat(dto.proverVersion).isEqualTo(json["proverVersion"].asText())
     val domain = L2ExecutionProofResponseDtoMapper(dto)
     assertThat(domain.endBlockNumber).isEqualTo(json["publicInputs"]["endBlockNumber"].asLong().toULong())
     assertThat(domain.publicInputs.blockCount).isEqualTo(json["publicInputs"]["blockCount"].asLong().toULong())
-  }
-
-  @Test
-  fun `l2-execution request fixture round-trips through the DTO`() {
-    val json = fixture("10-11-getZkL2ExecutionProofV1.request.json")
-
-    val dto = fixtureAs<L2ExecutionProofRequestDto>("10-11-getZkL2ExecutionProofV1.request.json")
-
-    assertThat(toJson(dto)).isEqualTo(json)
   }
 
   @Test

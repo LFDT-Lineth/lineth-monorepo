@@ -6,7 +6,7 @@ import { IPermissionsManager } from "../../../security/access/interfaces/IPermis
 
 /**
  * @title Interface declaring Canonical Token Bridge struct, functions, events and errors.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 interface ITokenBridge {

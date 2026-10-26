@@ -1,3 +1,8 @@
+## [unreleased]
+
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Update copyright holder to Consensys Incorporated (#4244)
 ## [1.0.7] - 2026-10-05
 
 ### 🐛 Bug Fixes
