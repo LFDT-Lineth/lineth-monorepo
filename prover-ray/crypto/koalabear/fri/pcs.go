@@ -99,13 +99,16 @@
 //	for batch b in DECLARATION order:
 //	  for the size-N SizedTable in batch b (skip if absent):
 //	    for row r in g.Base then g.Ext (declaration order):
-//	      emit a deepEntry; consume one alpha_DEEP power for the column.
+//	      emit a deepEntry, with the column's alpha_DEEP power.
 //
-// The alpha_DEEP power counter resets to 0 at each new size. All shifts on a
-// column are carried by its one deepEntry and share that alpha_DEEP power.
+// The alpha_DEEP powers come from deepPowers. Ungrouped commitments number each
+// size on its own, from 0, in the order above; grouped commitments number all
+// the columns once, in module (group ordinal) order, whatever their sizes, so
+// that a module keeps its powers when its size changes. All shifts on a column
+// are carried by its one deepEntry and share that alpha_DEEP power.
 //
 // Decision matrix:
-//   - (i)   per-size reset.
+//   - (i)   per-size numbering, or global numbering for grouped commitments.
 //   - (ii)  per-column batching, all shifts of a column sharing one alpha_DEEP power.
 //   - (iii) empty shift list is an error (every committed row is
 //     opened at least once).
@@ -301,6 +304,9 @@ type deepEntry struct {
 type sizeBundle struct {
 	SizeLog2 uint8
 	Entries  []deepEntry
+	// RunningPower is the power of a weighting the running codeword in the
+	// level, above every entry's AlphaPower (see deepPowers).
+	RunningPower int
 }
 
 type layout []sizeBundle
@@ -327,10 +333,11 @@ func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) {
 		}
 	}
 
+	powers := newDeepPowers(shapes)
+
 	res := make(layout, 0, maxSizeLog2+1)
 	for sizeLog2 := maxSizeLog2; sizeLog2 >= 0; sizeLog2-- {
-		bundle := sizeBundle{SizeLog2: uint8(sizeLog2)}
-		alphaDeepPower := 0
+		bundle := sizeBundle{SizeLog2: uint8(sizeLog2), RunningPower: powers.running[sizeLog2]}
 
 		for batchIdx := range shapes {
 			if sizeLog2 >= len(shapes[batchIdx]) {
@@ -348,10 +355,9 @@ func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) {
 					BatchIdx:   batchIdx,
 					SizeLog2:   uint8(sizeLog2),
 					RowIdx:     rowIdx,
-					AlphaPower: alphaDeepPower,
+					AlphaPower: powers.column(batchIdx, sizeLog2, false, rowIdx),
 					Shifts:     cloneInts(sizedShifts.Base[rowIdx]),
 				})
-				alphaDeepPower++
 			}
 			for rowIdx := range sizedShape.ExtWidth {
 				bundle.Entries = append(bundle.Entries, deepEntry{
@@ -359,10 +365,9 @@ func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) {
 					SizeLog2:   uint8(sizeLog2),
 					RowIdx:     rowIdx,
 					IsExt:      true,
-					AlphaPower: alphaDeepPower,
+					AlphaPower: powers.column(batchIdx, sizeLog2, true, rowIdx),
 					Shifts:     cloneInts(sizedShifts.Ext[rowIdx]),
 				})
-				alphaDeepPower++
 			}
 		}
 
@@ -935,9 +940,10 @@ func (pcs *PCS) shiftedPoint(sizeLog2 uint8, shift int, zeta field.Ext) (field.E
 // DEEP-quotient data (columns and every distinct denominator inverse 1/(x-z),
 // precomputed via one Montgomery batch inversion) that batches into
 //
-//	F(X) = Σ_i alpha_DEEP^i · Σ_j (f_i(X) - y_ij)/(X - z_ij)
+//	F(X) = Σ_i alpha_DEEP^{p(i)} · Σ_j (f_i(X) - y_ij)/(X - z_ij)
 //
-// over input.Domain's bit-reversed evaluation order. alpha_DEEP is not known
+// over input.Domain's bit-reversed evaluation order, p(i) being column i's
+// power (see deepPowers). alpha_DEEP is not known
 // yet (it is the square of this level's own introduction round's fold
 // challenge), so the batched evaluations themselves are computed later, by
 // Level.EvalsAt.
@@ -948,6 +954,14 @@ func (pcs *PCS) reconstructLevels() ([]Level, error) {
 	// the sizes 2^logD down to 2^logFinalPolySize. Iterating it directly makes
 	// it structurally impossible to reach a size below the final-poly floor
 	// (which could never host a FRI level anyway).
+	// The alpha_DEEP powers number the columns of every opening (batch) at
+	// once, as the verifier's canonicalLayout does.
+	shapes := make([]Shape, len(pcs.openings))
+	for b, opening := range pcs.openings {
+		shapes[b] = opening.committed.EncodedTable.Shape()
+	}
+	numbering := newDeepPowers(shapes)
+
 	levels := make([]Level, 0, len(pcs.Params.domainsLight))
 	for di := range pcs.Params.domainsLight {
 		sizeLog2 := int(logD) - di
@@ -961,8 +975,9 @@ func (pcs *PCS) reconstructLevels() ([]Level, error) {
 		r := size >> sizeLog2
 
 		var columns []quotientColumn
+		var powers []int
 		var trees []*Tree
-		for _, opening := range pcs.openings {
+		for b, opening := range pcs.openings {
 			for _, bundle := range opening.layout {
 				if bundle.SizeLog2 != uint8(sizeLog2) {
 					continue
@@ -990,6 +1005,7 @@ func (pcs *PCS) reconstructLevels() ([]Level, error) {
 					}
 					column.Rotations = rotations
 					columns = append(columns, column)
+					powers = append(powers, numbering.column(b, sizeLog2, entry.IsExt, entry.RowIdx))
 				}
 			}
 		}
@@ -1015,6 +1031,8 @@ func (pcs *PCS) reconstructLevels() ([]Level, error) {
 		levels = append(levels, Level{
 			Trees:        trees,
 			Columns:      columns,
+			Powers:       powers,
+			RunningPower: numbering.running[sizeLog2],
 			DenomBaseInv: denomBaseInv,
 		})
 	}
@@ -1475,21 +1493,22 @@ func (branch InputTreeOpening) pairAtLevel(levelSize int) (*RowPair, error) {
 
 // reconstructQueryValueAt combines bundle's columns with running (this
 // level's own round's running-codeword value) at x, the same way EvalsAt
-// combines a level's columns with the prover's running codeword. Entries are
-// walked highest AlphaPower first (canonicalLayout assigns them
-// 0..len(Entries)-1 in order, so that's simply the reverse index order).
+// combines a level's columns with the prover's running codeword:
+// alphaPow[RunningPower]·running + Σ_i alphaPow[AlphaPower_i]·term_i, where
+// alphaPow holds the powers of the level's alphaDeep (see deepPowers).
 func reconstructQueryValueAt(
 	bundle sizeBundle,
 	entryClaims [][]quotientClaim,
 	source inputQuerySource,
 	levelSize int,
-	alphaDeep field.Ext,
+	alphaPow []field.Ext,
 	x field.Ext,
 	sibling bool,
 	running field.Ext,
 ) (field.Ext, error) {
-	value := running
-	for i := len(bundle.Entries) - 1; i >= 0; i-- {
+	var value field.Ext
+	value.Mul(&running, &alphaPow[bundle.RunningPower])
+	for i := range bundle.Entries {
 		entry := bundle.Entries[i]
 		claims := entryClaims[i]
 		pair, err := source.pairAtLevel(entry.BatchIdx, levelSize)
@@ -1505,7 +1524,7 @@ func reconstructQueryValueAt(
 		if err != nil {
 			return field.Ext{}, err
 		}
-		value.Mul(&value, &alphaDeep)
+		term.Mul(&term, &alphaPow[entry.AlphaPower])
 		value.Add(&value, &term)
 	}
 	return value, nil
@@ -1663,6 +1682,16 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 		}
 	}
 
+	// A level's alphaDeep, hence its powers, does not depend on the query.
+	levelPowers := make([][]field.Ext, len(layout))
+	for levelIdx, bundle := range layout {
+		round, err := pcs.roundForSize(bundle.SizeLog2)
+		if err != nil {
+			return err
+		}
+		levelPowers[levelIdx] = powerTable(levelAlphaDeep(round, foldAlphas), bundle.RunningPower)
+	}
+
 	// Each query is authenticated and reconstructed independently (read-only
 	// shared inputs, disjoint writes to resolved[queryIdx]); the per-query work
 	// — dominated by Merkle branch re-hashing — parallelizes cleanly.
@@ -1682,6 +1711,7 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 		shapes:            in.Shapes,
 		foldAlphas:        foldAlphas,
 		finalCodeword:     finalCodeword,
+		levelPowers:       levelPowers,
 	}
 	parallel.Execute(int(pcs.Params.NumQueries), func(start, end int) {
 		for queryIdx := start; queryIdx < end; queryIdx++ {
@@ -1702,6 +1732,21 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	return checkFolds(pcs.Params, resolved, in.Challenges.FoldAlphas, positions)
 }
 
+// levelAlphaDeep returns the alphaDeep of a level introduced at round:
+// FoldAlphas[round]², the square of that same round's fold challenge. At the
+// boundary round (round == numRounds()) no fold challenge exists, so it is the
+// first power of the last fold challenge, distinct from round numRounds()-1's
+// alphaDeep = FoldAlphas[numRounds()-1]². With no fold at all, it is zero.
+func levelAlphaDeep(round uint8, foldAlphas []field.Ext) field.Ext {
+	var alphaDeep field.Ext
+	if int(round) < len(foldAlphas) {
+		alphaDeep.Square(&foldAlphas[round])
+	} else if len(foldAlphas) > 0 {
+		alphaDeep = foldAlphas[len(foldAlphas)-1]
+	}
+	return alphaDeep
+}
+
 // verifyQueryCtx bundles the per-Verify, query-independent inputs so a single
 // query can be authenticated and reconstructed in isolation (see
 // verifyQueryCtx.resolve). All fields are read-only during resolution, which is
@@ -1720,6 +1765,9 @@ type verifyQueryCtx struct {
 	shapes            []Shape
 	foldAlphas        []field.Ext
 	finalCodeword     []field.Ext
+	// levelPowers[l] holds alphaDeep^0 … alphaDeep^RunningPower for level l,
+	// alphaDeep being that level's (see levelAlphaDeep).
+	levelPowers [][]field.Ext
 }
 
 // resolve authenticates one query's Merkle openings and reconstructs its
@@ -1808,25 +1856,16 @@ func (vq verifyQueryCtx) resolve(queryIdx, queryPosition int) (resolvedQuery, er
 		if err = bindInputTreeOpenings(label, source, levelSize, vq.orders[levelIdx], bundle); err != nil {
 			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
 		}
-		var alphaDeep field.Ext
-		if int(round) < len(vq.foldAlphas) {
-			alphaDeep.Square(&vq.foldAlphas[round])
-		} else if len(vq.foldAlphas) > 0 {
-			// Boundary round (round == numRounds()): no fold challenge exists
-			// at this round. Use the first power of the last fold challenge to
-			// batch the bundle's entries; the first power is distinct from round
-			// numRounds()-1's alphaDeep = foldAlphas[numRounds()-1]^2.
-			alphaDeep = vq.foldAlphas[len(vq.foldAlphas)-1]
-		}
 		levelPos := queryPosition >> round
 		entryClaims := vq.layoutClaims[levelIdx]
+		alphaPow := vq.levelPowers[levelIdx]
 		self, err := reconstructQueryValueAt(bundle, entryClaims, source, levelSize,
-			alphaDeep, domainPointExt(domain, levelPos), false, rq.Rounds[round].Self)
+			alphaPow, domainPointExt(domain, levelPos), false, rq.Rounds[round].Self)
 		if err != nil {
 			return resolvedQuery{}, err
 		}
 		sib, err := reconstructQueryValueAt(bundle, entryClaims, source, levelSize,
-			alphaDeep, domainPointExt(domain, levelPos^1), true, rq.Rounds[round].Sibling)
+			alphaPow, domainPointExt(domain, levelPos^1), true, rq.Rounds[round].Sibling)
 		if err != nil {
 			return resolvedQuery{}, err
 		}

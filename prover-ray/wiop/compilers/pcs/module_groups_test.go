@@ -87,10 +87,10 @@ func TestCommittedLayoutModuleGroups(t *testing.T) {
 	layout, shape := getLayoutWith(round, staticSizeOf, manifest, true)
 	require.Len(t, shape, 5, "sizes 2^0..2^4")
 	require.Equal(t, fri.SizedShape{BaseWidth: 3, ExtWidth: 1, Groups: []fri.GroupShape{
-		{BaseWidth: 1, ExtWidth: 1}, // A: a0, a1
-		{BaseWidth: 2},              // B: b0, b1
-	}}, shape[2])
-	require.Equal(t, fri.SizedShape{BaseWidth: 1, Groups: []fri.GroupShape{{BaseWidth: 1}}}, shape[4],
+		{BaseWidth: 1, ExtWidth: 1, Ordinal: 0}, // A: a0, a1
+		{BaseWidth: 2, Ordinal: 1},              // B: b0, b1
+	}}, shape[2], "each group carries its module index as its ordinal")
+	require.Equal(t, fri.SizedShape{BaseWidth: 1, Groups: []fri.GroupShape{{BaseWidth: 1, Ordinal: 2}}}, shape[4],
 		"the largest size is grouped too")
 	require.Equal(t, 0, layout[s.a0.Context.ID].Position, "A's rows come first")
 	require.Equal(t, 1, layout[s.b0.Context.ID].Position)
