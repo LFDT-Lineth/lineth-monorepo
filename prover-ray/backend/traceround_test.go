@@ -71,7 +71,7 @@ func TestRunProve_SplitTraceRound(t *testing.T) {
 	require.NoError(t, err)
 	want := make([]wiop.Proof, len(jobs))
 	for i, job := range jobs {
-		want[i], err = proveJob(fresh, job)
+		want[i], _, err = proveJob(fresh, job)
 		require.NoError(t, err)
 	}
 	require.NotEqual(t, want[0].DynamicSizes, want[1].DynamicSizes, "the two jobs must have different traces")
@@ -114,11 +114,10 @@ func TestRunProve_SplitTraceRound(t *testing.T) {
 }
 
 // proveJob proves and verifies job on c.
-func proveJob(c *Core, job Job) (wiop.Proof, error) {
+func proveJob(c *Core, job Job) (wiop.Proof, wiop.PublicInput, error) {
 	inputs, err := c.buildInputs(job)
 	if err != nil {
-		return wiop.Proof{}, err
+		return wiop.Proof{}, nil, err
 	}
-	proof, _, err := c.runProve(context.Background(), &zkcdriver.PreReadInputs{Inputs: inputs})
-	return proof, err
+	return c.runProve(context.Background(), &zkcdriver.PreReadInputs{Inputs: inputs})
 }
