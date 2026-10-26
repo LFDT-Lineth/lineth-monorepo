@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🐛 Bug Fixes
+
+- *(prover)* Handle zero modulus in MODEXP (#4307)
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(misc)* Update copyright holder to Consensys Incorporated (#4244)
