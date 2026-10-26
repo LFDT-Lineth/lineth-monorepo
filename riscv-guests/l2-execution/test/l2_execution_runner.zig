@@ -11,9 +11,9 @@
 //! `zevm_stateless --ssz`/`--json` CLI.
 //!
 //! Output defaults to SSZ (`l2_execution_ssz.encodeOutput`, schema 0x0003 — byte-identical to
-//! what the guest emits via `write_output`: the plain public inputs followed by their keccak256).
+//! what the guest emits via `write_output`: `keccak256(frame) || frame`, `frame = schema_id || SSZ(public inputs)`).
 //! `--json` switches to the full `getZkL2ExecutionProofV1.response.json`-shaped output instead
-//! (`l2_execution_json`), which also exposes `start_block_number` and the preimage lists.
+//! (`l2_execution_json`), which also exposes `start_block_number`.
 //! `--ssz` is accepted explicitly too, as a no-op.
 
 const std = @import("std");
@@ -90,8 +90,7 @@ pub fn main(init: std.process.Init) !void {
 
     const out_bytes = switch (format) {
         .ssz => blk: {
-            const encoded = l2_execution_ssz.encodeOutput(result.public_inputs);
-            break :blk alloc.dupe(u8, &encoded) catch |err| {
+            break :blk l2_execution_ssz.encodeOutput(alloc, result.public_inputs) catch |err| {
                 std.debug.print("error: failed to allocate SSZ output: {s}\n", .{@errorName(err)});
                 std.process.exit(1);
             };

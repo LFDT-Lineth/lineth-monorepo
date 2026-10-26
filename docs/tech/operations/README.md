@@ -28,10 +28,6 @@ pnpm run build
 # Burn and Bridge (LINEA token)
 ./bin/run.js burn-and-bridge \
   --config ./config.json
-
-# Sync Transactions
-./bin/run.js synctx \
-  --config ./config.json
 ```
 
 > **Note**: The operations CLI uses [oclif](https://oclif.io/). Run `./bin/run.js --help` to see all available commands.

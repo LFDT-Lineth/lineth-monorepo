@@ -1,6 +1,5 @@
 // Package nativerunner runs the native l2-execution-runner on an extended
-// (0x0002) input and parses its --json output into the guest's real public
-// inputs and revealed preimage arrays.
+// (0x0002) input and parses its --json output into the guest's public inputs.
 package nativerunner
 
 import (
@@ -21,7 +20,6 @@ import (
 type Output struct {
 	StartBlockNumber uint64
 	PublicInputs     backend.PublicInputs
-	TxFroms          [][20]byte
 }
 
 // Run writes the extended input to a temp file, runs `<binPath> <file> --json`,
@@ -65,42 +63,33 @@ func run(ctx context.Context, binPath string, extendedInput []byte, flag string)
 	return out, nil
 }
 
-// jsonOutput mirrors the current runner --json shape: getZkL2ExecutionProofV1
-// response minus the prover-attached proverVersion/proof/programVk fields. The
-// runner is behind the spec, so this models what it emits today. Parse() decodes
-// it strictly: when the runner moves to the spec shape, decoding fails here,
-// which signals that Parse() and the captured test data must be updated.
+// jsonOutput mirrors the runner's --json shape: the getZkL2ExecutionProofV1
+// response minus the prover-attached proverVersion/proof/programVk fields.
+// Parse() decodes it strictly, so any field the spec adds or renames fails here.
 type jsonOutput struct {
-	StartBlockNumber  uint64           `json:"startBlockNumber"`
-	PublicInputs      jsonPublicInputs `json:"publicInputs"`
-	L2L1Messages      []string         `json:"l2L1Messages"`
-	TxFroms           []string         `json:"txFroms"`
-	FilteredAddresses []string         `json:"filteredAddresses"`
+	StartBlockNumber uint64           `json:"startBlockNumber"`
+	PublicInputs     jsonPublicInputs `json:"publicInputs"`
 }
 
 type jsonPublicInputs struct {
-	ParentBlockHash                          string `json:"parentBlockHash"`
-	EndBlockHash                             string `json:"endBlockHash"`
-	EndBlockNumber                           uint64 `json:"endBlockNumber"`
-	EndBlockTimestamp                        uint64 `json:"endBlockTimestamp"`
-	ParentL1L2BridgeRollingHash              string `json:"parentL1L2BridgeRollingHash"`
-	ParentL1L2BridgeRollingHashMessageNumber uint64 `json:"parentL1L2BridgeRollingHashMessageNumber"`
-	EndL1L2BridgeRollingHash                 string `json:"endL1L2BridgeRollingHash"`
-	EndL1L2BridgeRollingHashMessageNumber    uint64 `json:"endL1L2BridgeRollingHashMessageNumber"`
-	DynamicChainConfigHash                   string `json:"dynamicChainConfigHash"`
-	ParentFtxRollingHash                     string `json:"parentFtxRollingHash"`
-	ParentFtxNumber                          uint64 `json:"parentFtxNumber"`
-	EndFtxRollingHash                        string `json:"endFtxRollingHash"`
-	EndProcessedFtxNumber                    uint64 `json:"endProcessedFtxNumber"`
-	TxFromsHash                              string `json:"txFromsHash"`
-
-	// Emitted by the current runner but not used by the backend. Listed here
-	// only so the strict decoding in Parse() accepts today's output, because
-	// strict decoding rejects any field not listed in this struct. Remove these
-	// fields (and re-capture the test data) once the runner is updated to the
-	// spec shape and no longer emits them.
-	L2L1MessagesHash      string `json:"l2L1MessagesHash"`
-	FilteredAddressesHash string `json:"filteredAddressesHash"`
+	ParentBlockHash                          string   `json:"parentBlockHash"`
+	EndBlockHash                             string   `json:"endBlockHash"`
+	EndBlockNumber                           uint64   `json:"endBlockNumber"`
+	EndBlockTimestamp                        uint64   `json:"endBlockTimestamp"`
+	L2L1Messages                             []string `json:"l2L1Messages"`
+	ParentL1L2BridgeRollingHash              string   `json:"parentL1L2BridgeRollingHash"`
+	ParentL1L2BridgeRollingHashMessageNumber uint64   `json:"parentL1L2BridgeRollingHashMessageNumber"`
+	EndL1L2BridgeRollingHash                 string   `json:"endL1L2BridgeRollingHash"`
+	EndL1L2BridgeRollingHashMessageNumber    uint64   `json:"endL1L2BridgeRollingHashMessageNumber"`
+	DynamicChainConfigHash                   string   `json:"dynamicChainConfigHash"`
+	ParentFtxRollingHash                     string   `json:"parentFtxRollingHash"`
+	ParentFtxNumber                          uint64   `json:"parentFtxNumber"`
+	EndFtxRollingHash                        string   `json:"endFtxRollingHash"`
+	EndProcessedFtxNumber                    uint64   `json:"endProcessedFtxNumber"`
+	FilteredAddresses                        []string `json:"filteredAddresses"`
+	TxFromsHash                              string   `json:"txFromsHash"`
+	BlockCount                               uint64   `json:"blockCount"`
+	L2MessagingBlocksOffsets                 []uint16 `json:"l2MessagingBlocksOffsets"`
 }
 
 // Parse converts the runner's --json output into an Output.
@@ -144,37 +133,20 @@ func Parse(data []byte) (Output, error) {
 		copy(h.dst[:], b)
 	}
 
-	// l2L1MessagesHash is an unused runner field (see jsonPublicInputs). It is
-	// validated for shape, then discarded.
-	if _, err := decodeFixed(pi.L2L1MessagesHash, 32, "publicInputs.l2L1MessagesHash"); err != nil {
-		return Output{}, err
-	}
-
-	if _, err := decodeFixed(pi.FilteredAddressesHash, 32, "publicInputs.filteredAddressesHash"); err != nil {
-		return Output{}, err
+	out.PublicInputs.BlockCount = pi.BlockCount
+	out.PublicInputs.L2MessagingBlocksOffsets = slices.Clone(pi.L2MessagingBlocksOffsets)
+	if out.PublicInputs.L2MessagingBlocksOffsets == nil {
+		out.PublicInputs.L2MessagingBlocksOffsets = []uint16{}
 	}
 
 	var err error
-	// blockCount and l2MessagingBlocksOffsets are not in the runner output.
-	if out.PublicInputs.L2L1Messages, err = decodeHash32List(j.L2L1Messages, "l2L1Messages"); err != nil {
+	if out.PublicInputs.L2L1Messages, err = decodeHash32List(pi.L2L1Messages, "l2L1Messages"); err != nil {
 		return Output{}, err
 	}
-	if out.TxFroms, err = decodeAddressList(j.TxFroms, "txFroms"); err != nil {
+	if out.PublicInputs.FilteredAddresses, err = decodeAddressList(pi.FilteredAddresses, "filteredAddresses"); err != nil {
 		return Output{}, err
 	}
-	if out.PublicInputs.FilteredAddresses, err = decodeAddressList(j.FilteredAddresses, "filteredAddresses"); err != nil {
-		return Output{}, err
-	}
-	out.PublicInputs.FilteredAddresses = sortedDistinct(out.PublicInputs.FilteredAddresses)
 	return out, nil
-}
-
-// sortedDistinct returns the addresses ascending by byte value without
-// duplicates, the canonical encoding of the filteredAddresses set.
-func sortedDistinct(as [][20]byte) [][20]byte {
-	out := slices.Clone(as)
-	slices.SortFunc(out, func(a, b [20]byte) int { return bytes.Compare(a[:], b[:]) })
-	return slices.CompactFunc(out, func(a, b [20]byte) bool { return a == b })
 }
 
 func decodeFixed(s string, n int, ctx string) ([]byte, error) {

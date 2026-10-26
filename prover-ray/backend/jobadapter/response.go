@@ -64,21 +64,16 @@ func newExecutionResponse(
 }
 
 // newExecutionResponseFromNative builds a response from the native runner's
-// output (dev-zkvm): real public inputs and revealed preimage arrays, a
-// placeholder marker proof (dev-zkvm produces no real proof), and the echoed
-// programVk. l2MessagingBlocksOffsets is not emitted by the native runner yet
-// and is returned empty.
+// output (dev-zkvm): the public inputs, a placeholder marker proof (dev-zkvm
+// produces no real proof), and the echoed programVk.
 func newExecutionResponseFromNative(
 	out nativerunner.Output, proverVersion string, programVk []byte,
 ) executionResponse {
-	pi := out.PublicInputs
-	// blockCount is not in the runner output; derive it from the range.
-	pi.BlockCount = out.PublicInputs.EndBlockNumber - out.StartBlockNumber + 1
 	return executionResponse{
 		ProverVersion:    proverVersion,
 		ProofHex:         hexBytes(backend.DevMarkerProof(backend.ProverModeDevZkVM)),
 		StartBlockNumber: out.StartBlockNumber,
-		PublicInputs:     publicInputs(pi),
+		PublicInputs:     publicInputs(out.PublicInputs),
 		ProgramVk:        hexBytes(programVk),
 	}
 }

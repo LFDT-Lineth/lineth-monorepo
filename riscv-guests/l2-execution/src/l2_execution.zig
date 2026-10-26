@@ -171,21 +171,41 @@ fn readStorage(state_root: [32]u8, address: [20]u8, slot: [32]u8, node_index: *c
 }
 
 /// L2->L1 message extraction: collects `topics[3]` from each receipt log matching the
-/// L2MessageService's `MessageSent` signature.
+/// L2MessageService's `MessageSent` signature. Returns whether any log matched.
 fn extractL2L1Messages(
     alloc: std.mem.Allocator,
     out: *std.ArrayListUnmanaged([32]u8),
     receipts: []const types.Receipt,
     l2_ms_address: [20]u8,
-) !void {
+) !bool {
+    var found = false;
     for (receipts) |receipt| {
         for (receipt.logs) |log| {
             if (!std.mem.eql(u8, &log.address, &l2_ms_address)) continue;
             if (log.topics.len == 0 or !std.mem.eql(u8, &log.topics[0], &BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0)) continue;
             if (log.topics.len < 4) return error.InvalidBridgeMessageLog;
             try out.append(alloc, log.topics[3]);
+            found = true;
         }
     }
+    return found;
+}
+
+fn lessThanAddress(_: void, a: [20]u8, b: [20]u8) bool {
+    return std.mem.order(u8, &a, &b) == .lt;
+}
+
+/// Distinct addresses, sorted ascending by byte value (mirrors `merge_filtered_addresses`).
+fn mergeFilteredAddresses(alloc: std.mem.Allocator, list: *std.ArrayListUnmanaged([20]u8)) ![][20]u8 {
+    std.mem.sort([20]u8, list.items, {}, lessThanAddress);
+    var n: usize = 0;
+    for (list.items) |a| {
+        if (n > 0 and std.mem.eql(u8, &list.items[n - 1], &a)) continue;
+        list.items[n] = a;
+        n += 1;
+    }
+    list.items.len = n;
+    return list.toOwnedSlice(alloc);
 }
 
 const BridgeState = struct { hash: [32]u8, number: u64 };
@@ -320,7 +340,7 @@ fn validateForcedTransactions(
 
 // ─── Top-level guest logic (mirrors run_l2_execution_guest) ───────────────────────────────────────
 
-/// l2-execution: emits the 16-field l2-execution PI for a contiguous block range, translating
+/// l2-execution: emits the l2-execution PI for a contiguous block range, translating
 /// `rollup_spec.l2_execution.run_l2_execution_guest` step by step. Per-block execution is delegated
 /// to `execution.executeStatelessInputWithLogs`; this function adds only the Linea logic on top —
 /// conflation-level linking, the empty-`executionRequests` policy, forced transactions, L2->L1
@@ -378,6 +398,7 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
     var l2_l1_messages = std.ArrayListUnmanaged([32]u8).empty;
     var tx_froms = std.ArrayListUnmanaged([20]u8).empty;
     var filtered_addresses = std.ArrayListUnmanaged([20]u8).empty;
+    var messaging_offsets = std.ArrayListUnmanaged(u16).empty;
 
     var range_pre_state_root: [32]u8 = undefined;
     var range_post_state_root: [32]u8 = undefined;
@@ -478,7 +499,10 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
 
         // L2->L1 messages from the block's logs (skipped entirely when no L2MessageService is
         // configured — see `bridge_suppressed`).
-        if (!bridge_suppressed) try extractL2L1Messages(alloc, &l2_l1_messages, result.receipts, l2_ms_address);
+        if (!bridge_suppressed and try extractL2L1Messages(alloc, &l2_l1_messages, result.receipts, l2_ms_address)) {
+            if (idx + 1 > std.math.maxInt(u16)) return error.MessagingBlockOffsetOverflow;
+            try messaging_offsets.append(alloc, @intCast(idx + 1));
+        }
 
         current_parent_hash = payload.block_hash;
     }
@@ -501,7 +525,7 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
         .end_block_hash = last_payload.block_hash,
         .end_block_number = last_payload.block_number,
         .end_block_timestamp = last_payload.timestamp,
-        .l2_l1_messages_hash = try hashDigestList(alloc, l2_l1_messages.items),
+        .l2_l1_messages = try l2_l1_messages.toOwnedSlice(alloc),
         .parent_l1_l2_bridge_rolling_hash = parent_bridge.hash,
         .parent_l1_l2_bridge_rolling_hash_message_number = parent_bridge.number,
         .end_l1_l2_bridge_rolling_hash = end_bridge.hash,
@@ -511,16 +535,16 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
         .parent_ftx_number = in.parent_last_processed_ftx_number,
         .end_ftx_rolling_hash = current_ftx_rolling_hash,
         .end_processed_ftx_number = current_last_processed_ftx_number,
-        .filtered_addresses_hash = try hashAddressList(alloc, filtered_addresses.items),
+        .filtered_addresses = try mergeFilteredAddresses(alloc, &filtered_addresses),
         .tx_froms_hash = try hashAddressList(alloc, tx_froms.items),
+        .block_count = in.payloads.len,
+        .l2_messaging_blocks_offsets = try messaging_offsets.toOwnedSlice(alloc),
     };
 
     return .{
         .public_inputs = public_inputs,
         .start_block_number = start_block_number,
-        .l2_l1_messages = try l2_l1_messages.toOwnedSlice(alloc),
         .tx_froms = try tx_froms.toOwnedSlice(alloc),
-        .filtered_addresses = try filtered_addresses.toOwnedSlice(alloc),
     };
 }
 

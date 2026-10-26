@@ -23,6 +23,7 @@
 - *(prover-ray)* Fetch guest output module (#4245)
 - *(prover-ray)* Reject column elision and Merkle caps with module groups (#4286)
 - *(misc)* Moved filtered addresses into the list of the PI (#4166)
+- *(riscv-guest)* Aligning l2-execution guest program to the recently… (#4297)
 
 ### 🚜 Refactor
 

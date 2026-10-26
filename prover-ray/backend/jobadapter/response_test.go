@@ -65,21 +65,23 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 	assert.Equal(t, repeatHex(0x0a), pi.TxFromsHash)
 }
 
-// derived blockCount, l2L1Messages from the native output, empty offsets.
+// blockCount, l2L1Messages and offsets pass through from the native output.
 func TestNewExecutionResponseFromNative_PublicInputs(t *testing.T) {
 	out := nativerunner.Output{
 		StartBlockNumber: 1000501,
 		PublicInputs: backend.PublicInputs{
-			EndBlockNumber: 1000503,
-			L2L1Messages:   [][32]byte{filledHash(0x11), filledHash(0x22)},
+			EndBlockNumber:           1000503,
+			L2L1Messages:             [][32]byte{filledHash(0x11), filledHash(0x22)},
+			BlockCount:               3,
+			L2MessagingBlocksOffsets: []uint16{1, 3},
 		},
 	}
 	vk := filledHash(0xbb)
 	resp := newExecutionResponseFromNative(out, "v-dev-zkvm", vk[:])
 
-	assert.Equal(t, uint64(3), resp.PublicInputs.BlockCount, "blockCount = end-start+1")
+	assert.Equal(t, uint64(3), resp.PublicInputs.BlockCount)
 	assert.Equal(t, []string{repeatHex(0x11), repeatHex(0x22)}, resp.PublicInputs.L2L1Messages)
-	assert.Equal(t, []uint16{}, resp.PublicInputs.L2MessagingBlocksOffsets)
+	assert.Equal(t, []uint16{1, 3}, resp.PublicInputs.L2MessagingBlocksOffsets)
 }
 
 func TestNewExecutionResponse_MatchesReferenceResponseShape(t *testing.T) {
