@@ -90,4 +90,32 @@ class ForkSpecDigesterTest {
     assertThat(digest(forkSpecQbftB))
       .isEqualTo(digest(forkSpecQbftB.copy()))
   }
+
+  @Test
+  fun `should take terminal block number from ttd aware qbft config into account`() {
+    val forkSpecQbftA = forkSpec.copy(configuration = qbftTtdAwareConfig)
+    val forkSpecQbftB =
+      forkSpec.copy(
+        configuration = qbftTtdAwareConfig.copy(
+          terminalBlockNumber = 100UL,
+        ),
+      )
+    val forkSpecQbftC =
+      forkSpec.copy(
+        configuration = qbftTtdAwareConfig.copy(
+          terminalBlockNumber = 200UL,
+        ),
+      )
+    assertThat(digest(forkSpecQbftA))
+      .isNotEqualTo(digest(forkSpecQbftB))
+
+    assertThat(digest(forkSpecQbftC))
+      .isNotEqualTo(digest(forkSpecQbftB))
+
+    // assert consistency
+    assertThat(digest(forkSpecQbftA))
+      .isEqualTo(digest(forkSpecQbftA.copy()))
+    assertThat(digest(forkSpecQbftB))
+      .isEqualTo(digest(forkSpecQbftB.copy()))
+  }
 }
