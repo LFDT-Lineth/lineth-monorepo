@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
 
@@ -135,7 +134,6 @@ func TestInclusionSetCache_ConstantsInKey(t *testing.T) {
 		require.True(t, ok)
 	}
 	k1, _ := inclusionSetKey(incOne.B)
-	logrus.Printf("k1 = %+v", k1)
 	k2, _ := inclusionSetKey(incTwo.B)
 	k3, _ := inclusionSetKey(incCol.B)
 	require.NotEqual(t, k1, k2)
@@ -143,7 +141,6 @@ func TestInclusionSetCache_ConstantsInKey(t *testing.T) {
 
 	rt := NewRuntime(sys)
 	rt.AssignColumn(target, constVec(4, 3))
-	logrus.Printf("target = %+v", target.At(0))
 	rt.AssignColumn(tag, constVec(4, 1))
 	rt.AssignColumn(in, constVec(4, 3))
 
