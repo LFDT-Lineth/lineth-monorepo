@@ -144,7 +144,7 @@ data class FinalizationPublicInputs(
  * Mirrors `lineth.coordinator.clients.prover.RollupAggregationProofResponseDto`: the DTO's `String` (hex) fields are
  * `ByteArray` here so a proof response — whether read from a JSON file or returned by a REST endpoint — deserializes
  * into the DTO and maps onto this domain type. L2-to-L1 roots, filtered addresses and messaging-block offsets all live
- * in [publicInputs].
+ * in [publicInputs]. [endBlockNumber] must equal `publicInputs.endBlockNumber`.
  */
 data class RollupAggregationProofResponseV1(
   override val startBlockNumber: ULong,
@@ -152,6 +152,12 @@ data class RollupAggregationProofResponseV1(
   val proof: ByteArray,
   val publicInputs: FinalizationPublicInputs,
 ) : BlockInterval {
+  init {
+    require(endBlockNumber == publicInputs.endBlockNumber) {
+      "endBlockNumber=$endBlockNumber must equal publicInputs.endBlockNumber=${publicInputs.endBlockNumber}"
+    }
+  }
+
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
