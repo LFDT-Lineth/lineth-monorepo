@@ -3,8 +3,8 @@ import linea.domain.BlockCounters
 import linea.domain.ConflationCalculationResult
 import linea.domain.ConflationTrigger
 import lineth.conflation.ZERO_COINBASE
-import net.consensys.linea.traces.TracesCountersV2
-import net.consensys.linea.traces.fakeTracesCountersV2
+import net.consensys.linea.traces.TracesCountersV5
+import net.consensys.linea.traces.fakeTracesCountersV5
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
@@ -24,13 +24,13 @@ class GlobalBlockConflationCalculatorTest {
   private lateinit var calculatorByTraces: ConflationTriggerCalculator
   private lateinit var globalCalculator: GlobalBlockConflationCalculator
   private val lastBlockNumber: ULong = 0uL
-  private val fakeCountersAfterConflation = fakeTracesCountersV2(123u)
+  private val fakeCountersAfterConflation = fakeTracesCountersV5(123u)
   private val fakeDataSizeAfterConflation = 123u
   val block1Counters =
     BlockCounters(
       blockNumber = 1uL,
       blockTimestamp = Instant.parse("2023-12-11T00:00:00.000Z"),
-      tracesCounters = fakeTracesCountersV2(10u),
+      tracesCounters = fakeTracesCountersV5(10u),
       blockRLPEncoded = ByteArray(0),
       coinbase = ZERO_COINBASE,
     )
@@ -38,7 +38,7 @@ class GlobalBlockConflationCalculatorTest {
     BlockCounters(
       blockNumber = 2uL,
       blockTimestamp = Instant.parse("2023-12-11T00:00:02.000Z"),
-      tracesCounters = fakeTracesCountersV2(20u),
+      tracesCounters = fakeTracesCountersV5(20u),
       blockRLPEncoded = ByteArray(0),
       coinbase = ZERO_COINBASE,
     )
@@ -78,7 +78,7 @@ class GlobalBlockConflationCalculatorTest {
         lastBlockNumber = lastBlockNumber,
         syncCalculators = listOf(calculatorByTraces, calculatorByData),
         deferredTriggerConflationCalculators = listOf(calculatorByDealine),
-        emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+        emptyTracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
       )
     conflations = mutableListOf<ConflationCalculationResult>()
     globalCalculator.onConflatedBatch { trigger ->
@@ -94,7 +94,7 @@ class GlobalBlockConflationCalculatorTest {
         lastBlockNumber = lastBlockNumber,
         syncCalculators = listOf(calculatorByTraces, calculatorByData, calculatorByDealine),
         deferredTriggerConflationCalculators = listOf(calculatorByDealine),
-        emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+        emptyTracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
       )
     }.isInstanceOf(IllegalArgumentException::class.java)
       .hasMessageContaining("calculators must not contain duplicates")

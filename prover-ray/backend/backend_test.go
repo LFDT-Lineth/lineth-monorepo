@@ -9,15 +9,9 @@ import (
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
+	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
 	minimal_elf "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/minimal-elf"
-	"github.com/LFDT-Lineth/zkc/pkg/util/field"
-	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
-	"github.com/LFDT-Lineth/zkc/pkg/util/source"
-	"github.com/LFDT-Lineth/zkc/pkg/zkc/compiler"
-	"github.com/LFDT-Lineth/zkc/pkg/zkc/compiler/ast"
-	"github.com/LFDT-Lineth/zkc/pkg/zkc/compiler/codegen"
-	"github.com/LFDT-Lineth/zkc/pkg/zkc/constraints"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -87,41 +81,15 @@ func TestCore_BuildInputs_DoesNotMutateCachedProgram(t *testing.T) {
 	assert.Equal(t, wantDecoded, c.decoded.Decoded)
 }
 
-// zkcTestSrc is a small ZkC source program shared with the zkcdriver tests;
-// compileZKCBin turns it into a bin that NewZkCDriver accepts. It declares a
-// guest_output_hash memory holding a full keccak-256 digest, like every real
-// guest circuit does, because [New] binds that memory as public inputs
-// unconditionally.
-const zkcTestSrc = "../zkcdriver/testdata/guest_output_hash.zkc"
-
-// compileZKCBin compiles a .zkc source into a serialized ZkC binary in the
-// current zkc format, writes it to a temp file, and returns the path. Core.New
-// reads a compiled circuit bin from disk, so tests need one built from source
-// rather than a checked-in artifact that goes stale on every zkc version bump.
-//
-// This mirrors compileBinaryConstraints in zkcdriver's test package; it can be
-// dropped in favor of a shared call once zkcdriver exposes a public compile
-// helper.
-func compileZKCBin(t *testing.T, srcPath string) string {
+// embeddedZKCBin serializes the embedded R5 arithmetization, writes it to a
+// temp file, and returns the path. Core.New reads a compiled circuit bin from
+// disk and binds its guest_output memory as public inputs unconditionally, so
+// the bin must declare one.
+func embeddedZKCBin(t *testing.T) string {
 	t.Helper()
 
-	srcBytes, err := os.ReadFile(srcPath)
+	binF, err := embedded.CompiledBinaryFile()
 	require.NoError(t, err)
-
-	src := source.NewSourceFile(srcPath, srcBytes)
-	zkcField := field.KOALABEAR_16
-	zkcCfg := codegen.DEFAULT_CONFIG
-
-	macroProgram, _, errs := compiler.Compile(zkcField, zkcCfg.GetMaxStaticHeight(), *src)
-	if len(errs) > 0 {
-		t.Fatalf("zkc macro compile %q: %v", srcPath, errs)
-	}
-	ir, errs := ast.Compile(macroProgram, zkcCfg)
-	if len(errs) > 0 {
-		t.Fatalf("zkc ast compile %q: %v", srcPath, errs)
-	}
-
-	binF := constraints.NewBinaryFile[koalabear.Element](nil, nil, ir)
 	binBytes, err := binF.MarshalBinary()
 	require.NoError(t, err)
 
@@ -139,7 +107,7 @@ func TestNew(t *testing.T) {
 	elfPath := filepath.Join(t.TempDir(), "guest.elf")
 	require.NoError(t, os.WriteFile(elfPath, elfBytes, 0o600))
 
-	c, err := New(Config{CircuitBinPath: compileZKCBin(t, zkcTestSrc), GuestELFPath: elfPath})
+	c, err := New(Config{CircuitBinPath: embeddedZKCBin(t), GuestELFPath: elfPath})
 	require.NoError(t, err)
 
 	assert.Len(t, c.program.Blobs, 1, "one loadable section must be precomputed")
@@ -174,7 +142,7 @@ func TestNew_Errors(t *testing.T) {
 	require.NoError(t, os.WriteFile(badELFPath, []byte("not an elf"), 0o600))
 
 	// A valid circuit bin so the guest-ELF cases fail on the ELF, not the bin.
-	binPath := compileZKCBin(t, zkcTestSrc)
+	binPath := embeddedZKCBin(t)
 
 	cases := []struct {
 		name    string

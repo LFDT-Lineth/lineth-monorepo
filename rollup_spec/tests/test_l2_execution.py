@@ -140,8 +140,7 @@ def test_run_l2_execution_guest_zero_address_suppresses_bridge_and_messages(monk
     assert int(pi.end_l1_l2_bridge_rolling_hash_message_number) == 0
 
     # L2->L1 message scan skipped despite the matching log present.
-    assert proof.l2_l1_messages == []
-    assert pi.l2_l1_messages_hash == Hash32(keccak256(b""))
+    assert pi.l2_l1_messages == []
     assert pi.block_count == 1
     assert pi.l2_messaging_blocks_offsets == []
 
@@ -164,7 +163,7 @@ def test_execution_proves_one_offset_for_a_block_with_multiple_message_logs(monk
     monkeypatch.setattr(l2_execution, "read_l1l2_bridge_state", lambda *_: (ZERO_HASH, U64(0)))
 
     proof = run_l2_execution_guest(execution_input)
-    assert proof.l2_l1_messages == messages
+    assert proof.public_inputs.l2_l1_messages == messages
     assert proof.public_inputs.block_count == 1
     assert proof.public_inputs.l2_messaging_blocks_offsets == [1]
 

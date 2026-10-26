@@ -4,11 +4,11 @@
 //   - [Var]: A circuit variable over the KoalaBear base field
 //   - [Ext]: A circuit variable over the degree-6 extension field
 //
-// These types abstract over native and emulated arithmetic, allowing the same
-// circuit code to work in both native KoalaBear circuits and emulated circuits
-// (e.g., BLS12-377).
+// KoalaBear is always emulated in the circuit's field: the gnark circuits only
+// wrap the final proof (KoalaBear-in-BN254), so there is no native KoalaBear
+// mode.
 //
-// The [API] type provides arithmetic operations for both [Element] and [Ext]:
+// The [KoalaBearAPI] type provides arithmetic operations for both [Element] and [Ext]:
 //   - Base field operations: Add, Sub, Mul, MulConst, etc.
 //   - Extension field operations: AddExt, SubExt, MulExt, MulConstExt, etc.
 //

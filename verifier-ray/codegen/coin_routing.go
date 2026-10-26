@@ -24,9 +24,9 @@ type CoinRouting struct {
 	TotalRoundCoins int
 	// DynamicModuleCount is the number of distinct dynamically-sized modules
 	// whose runtime sizes the prover absorbs into the transcript at each round
-	// advance (prover-ray's AdvanceRound). The Zig verifier's replay absorbs the
-	// first DynamicModuleCount entries of module_sizes at every round to stay
-	// byte-exact with the prover. Counted in the same order as the proof's
+	// advance (prover-ray's AdvanceRound). The Zig verifier requires exactly
+	// DynamicModuleCount entries in module_sizes and absorbs all of them at
+	// every round to stay byte-exact with the prover. Counted in the same order as the proof's
 	// module_sizes (VanishingSystem dynamic-module order).
 	DynamicModuleCount int
 }
@@ -95,6 +95,19 @@ func DynamicModuleIndex(sys *wiop.System) map[*wiop.Module]int {
 		idx[m] = i
 	}
 	return idx
+}
+
+// moduleSizeOf describes the size of m: static, or the index of its runtime
+// size in the proof's module_sizes, given dynamicIndices = DynamicModuleIndex.
+func moduleSizeOf(m *wiop.Module, dynamicIndices map[*wiop.Module]int) (ModuleSize, error) {
+	if !m.IsDynamic() {
+		return ModuleSize{StaticSize: m.Size()}, nil
+	}
+	idx, ok := dynamicIndices[m]
+	if !ok {
+		return ModuleSize{}, fmt.Errorf("codegen: dynamic module %q not found in sys.Modules order", m.Context.Path())
+	}
+	return ModuleSize{Dynamic: true, DynamicIndex: idx}, nil
 }
 
 // DynamicModuleSizes returns the runtime size of every dynamic module in sys,

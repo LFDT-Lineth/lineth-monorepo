@@ -17,12 +17,10 @@ class LocalStackConfigsParsingTest {
         Path.of("../../docker/config/coordinator/coordinator-config-v2.toml"),
         Path.of("../../docker/config/coordinator/coordinator-config-v2-override-local-dev.toml"),
       ),
-      tracesLimitsFileV4 = Path.of("../../docker/config/common/traces-limits-v4.4.toml"),
       tracesLimitsFileV5 = Path.of("../../docker/config/common/traces-limits-v5.toml"),
       gasPriceCapTimeOfDayMultipliersFile = Path.of(
         "../../docker/config/common/gas-price-cap-time-of-day-multipliers.toml",
       ),
-      smartContractErrorsFile = Path.of("../../docker/config/common/smart-contract-errors.toml"),
       enforceStrict = true,
     ).also { configs ->
       // just small assertion to ensure that the configs are loaded and overridden correctly

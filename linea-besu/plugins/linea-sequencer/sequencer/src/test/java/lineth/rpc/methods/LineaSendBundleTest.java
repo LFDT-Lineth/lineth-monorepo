@@ -1,5 +1,5 @@
 /*
- * Copyright Consensys Software Inc.
+ * Copyright Consensys Incorporated
  *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
@@ -39,6 +39,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+@SuppressWarnings("deprecation")
 class LineaSendBundleTest {
   private static final long CHAIN_HEAD_BLOCK_NUMBER = 100L;
   private static final long MAX_GAS_LIMIT_PER_TX = 1_000_000L;

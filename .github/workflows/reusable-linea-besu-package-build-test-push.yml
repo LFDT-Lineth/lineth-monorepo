@@ -99,8 +99,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.ref_name }}
-          fetch-depth: 2   # need at least 2 commits so HEAD~1 resolves later would not fail on compute-version-tags
+          # No `ref` override: check out github.sha (the commit that triggered the
+          # workflow) so the docker image is built from — and named after — that commit,
+          # not the branch tip (which may be a later CHANGELOG.md update commit).
+          fetch-depth: 2   # need at least 2 commits so github.sha~1 resolves later would not fail on compute-version-tags
 
       - name: Build plugins and assemble
         id: build-plugins-and-assemble

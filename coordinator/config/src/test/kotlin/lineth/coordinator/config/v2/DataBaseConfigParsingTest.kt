@@ -19,7 +19,7 @@ class DataBaseConfigParsingTest {
       port = "5432"
       username = "someuser"
       password = "somepassword"
-      schema = "linea_coordinator"
+      database-name = "linea_coordinator"
       schema_version = 5
       read_pool_size = 10
       read_pipelining_limit = 11
@@ -37,7 +37,7 @@ class DataBaseConfigParsingTest {
         hostname = "localhost",
         username = "someuser",
         password = Masked("somepassword"),
-        schema = "linea_coordinator",
+        databaseName = "linea_coordinator",
         schemaVersion = 5,
         readPoolSize = 10,
         readPipeliningLimit = 11,
@@ -66,7 +66,7 @@ class DataBaseConfigParsingTest {
         hostname = "localhost",
         username = "someuser",
         password = Masked("somepassword"),
-        schema = "linea_coordinator",
+        databaseName = "linea_coordinator",
         schemaVersion = 4,
         readPoolSize = 10,
         readPipeliningLimit = 10,

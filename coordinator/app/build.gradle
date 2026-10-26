@@ -139,8 +139,6 @@ run {
   args = [
     "--traces-limits-v5",
     "docker/config/common/traces-limits-v5.toml",
-    "--smart-contract-errors",
-    "docker/config/common/smart-contract-errors.toml",
     "--gas-price-cap-time-of-day-multipliers",
     "docker/config/common/gas-price-cap-time-of-day-multipliers.toml",
     "docker/config/coordinator/coordinator-config-v2.toml"

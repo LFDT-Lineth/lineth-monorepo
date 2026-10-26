@@ -48,6 +48,7 @@ jobs:
               - 'Makefile'
               - '.github/actions/run-e2e-tests/**'
               - 'linea-besu/plugins/linea-sequencer/**'
+              - 'linea-besu/plugins/sequencer-interfaces/**'
               - 'tracer/**'
               - 'tracer-constraints/**'
               - 'ts-libs/**/src/**'

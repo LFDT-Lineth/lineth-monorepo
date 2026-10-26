@@ -2,8 +2,8 @@ package lineth.conflation.calculators
 import linea.domain.BlockCounters
 import linea.domain.ConflationTrigger
 import lineth.conflation.ZERO_COINBASE
-import net.consensys.linea.traces.TracesCountersV2
-import net.consensys.linea.traces.fakeTracesCountersV2
+import net.consensys.linea.traces.TracesCountersV5
+import net.consensys.linea.traces.fakeTracesCountersV5
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -232,7 +232,7 @@ class ConflationTriggerCalculatorByHardForkTimestampTest {
   @Test
   fun `copyCountersTo should not modify counters`() {
     val calculator = ConflationTriggerCalculatorByHardForkTimestamp(listOf(hardForkTimestamp), baseTimestamp)
-    val counters = ConflationCounters.empty(TracesCountersV2.EMPTY_TRACES_COUNT)
+    val counters = ConflationCounters.empty(TracesCountersV5.EMPTY_TRACES_COUNT)
     val originalBlockCount = counters.blockCount
 
     calculator.copyCountersTo(counters)
@@ -244,7 +244,7 @@ class ConflationTriggerCalculatorByHardForkTimestampTest {
     return BlockCounters(
       blockNumber = blockNumber.toULong(),
       blockTimestamp = timestamp,
-      tracesCounters = fakeTracesCountersV2(blockNumber.toUInt()),
+      tracesCounters = fakeTracesCountersV5(blockNumber.toUInt()),
       blockRLPEncoded = ByteArray(0),
       coinbase = ZERO_COINBASE,
     )

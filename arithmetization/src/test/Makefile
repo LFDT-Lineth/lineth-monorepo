@@ -40,8 +40,7 @@ ZKC             ?= go -C $(ARITHMETIZATION_DIR) tool zkc
 TEST ?=
 
 # Flags to use when invoking zkc exec via zkc-exec / elf-exec:
-# 	--fast for fast mode (else tracing mode by default)
-ZKC_EXEC_FLAGS ?=--fast
+ZKC_EXEC_FLAGS ?=
 
 # Flags to use when invoking zkc trace via zkc-trace:
 # 	--stats for the trace summary (cells, columns, per-module breakdown)

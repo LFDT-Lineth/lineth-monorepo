@@ -20,6 +20,7 @@ enum class LinethRollupContractVersion : Comparable<LinethRollupContractVersion>
 enum class LineaValidiumContractVersion : Comparable<LineaValidiumContractVersion> {
   V1,
   V2, // forced transactions + address filter (FinalizationDataV4)
+  V3, // RISCV
   ;
 
   companion object {

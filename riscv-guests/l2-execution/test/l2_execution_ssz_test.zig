@@ -68,15 +68,33 @@ test "input: encode then decode round-trips every field" {
     }
 }
 
-// `encodeOutput` commits ONLY `keccak256(public_inputs)` — 32 bytes, nothing else — so this asserts
-// internal self-consistency against `hashPublicInputs` directly rather than a byte-exact fixture.
-test "output: encode commits ONLY hashPublicInputs(public_inputs)" {
-    const public_inputs = l2_execution_ssz.L2ExecutionProofPublicInput{
+const sample_messages = [_][32]u8{repeat32(0x08)};
+const sample_filtered = [_][20]u8{[_]u8{0x09} ** 20};
+const sample_offsets = [_]u16{ 1, 3 };
+
+// Produced by the Python reference codec's `encode_l2_execution_output` for `samplePublicInputs`.
+const sample_output_hex =
+    "f6e73dfae5652c8f2df525094277580e3929c7c0a0be1ac12247a9d3c0419e7f" ++
+    "00030a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a" ++
+    "0a0a0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b" ++
+    "0b0b37440f00000000003b3f1569000000004401000002020202020202020202" ++
+    "0202020202020202020202020202020202020202020200000000000000000303" ++
+    "0303030303030303030303030303030303030303030303030303030303030500" ++
+    "000000000000c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0" ++
+    "c0c0c0c0c0c00404040404040404040404040404040404040404040404040404" ++
+    "0404040404041000000000000000050505050505050505050505050505050505" ++
+    "0505050505050505050505050505120000000000000064010000070707070707" ++
+    "0707070707070707070707070707070707070707070707070707030000000000" ++
+    "0000780100000808080808080808080808080808080808080808080808080808" ++
+    "080808080808090909090909090909090909090909090909090901000300";
+
+fn samplePublicInputs() l2_execution_ssz.L2ExecutionProofPublicInput {
+    return .{
         .parent_block_hash = repeat32(0x0a),
         .end_block_hash = repeat32(0x0b),
         .end_block_number = 1000503,
         .end_block_timestamp = 1763000123,
-        .l2_l1_messages_hash = repeat32(0x01),
+        .l2_l1_messages = &sample_messages,
         .parent_l1_l2_bridge_rolling_hash = repeat32(0x02),
         .parent_l1_l2_bridge_rolling_hash_message_number = 0,
         .end_l1_l2_bridge_rolling_hash = repeat32(0x03),
@@ -86,19 +104,46 @@ test "output: encode commits ONLY hashPublicInputs(public_inputs)" {
         .parent_ftx_number = 16,
         .end_ftx_rolling_hash = repeat32(0x05),
         .end_processed_ftx_number = 18,
-        .filtered_addresses_hash = repeat32(0x06),
+        .filtered_addresses = &sample_filtered,
         .tx_froms_hash = repeat32(0x07),
+        .block_count = 3,
+        .l2_messaging_blocks_offsets = &sample_offsets,
     };
+}
 
-    const out = l2_execution_ssz.encodeOutput(public_inputs);
-    const encoded = &out;
+test "output is the schema-framed SSZ public inputs preceded by their hash, matching the Python reference" {
+    const alloc = std.testing.allocator;
+    const out = try l2_execution_ssz.encodeOutput(alloc, samplePublicInputs());
+    defer alloc.free(out);
 
-    // 2(schema) + 32(hash) = 34 bytes total — ONLY the hash, nothing else.
-    try std.testing.expectEqual(@as(usize, 34), encoded.len);
-    try std.testing.expectEqualSlices(u8, &[_]u8{ 0x00, 0x03 }, encoded[0..2]); // OUTPUT_SCHEMA_ID
+    var expected: [sample_output_hex.len / 2]u8 = undefined;
+    _ = try std.fmt.hexToBytes(&expected, sample_output_hex);
+    try std.testing.expectEqualSlices(u8, &expected, out);
 
-    const pi_hash = l2_execution_ssz.hashPublicInputs(public_inputs);
-    try std.testing.expectEqualSlices(u8, &pi_hash, encoded[2..34]);
+    var frame_hash: [32]u8 = undefined;
+    std.crypto.hash.sha3.Keccak256.hash(out[32..], &frame_hash, .{});
+    try std.testing.expectEqualSlices(u8, &frame_hash, out[0..32]);
+    try std.testing.expectEqual(l2_execution_ssz.OUTPUT_SCHEMA_ID, std.mem.readInt(u16, out[32..34], .big));
+}
+
+test "output with empty lists is the 324-byte fixed head plus framing" {
+    const alloc = std.testing.allocator;
+    var pi = samplePublicInputs();
+    pi.l2_l1_messages = &.{};
+    pi.filtered_addresses = &.{};
+    pi.l2_messaging_blocks_offsets = &.{};
+    const out = try l2_execution_ssz.encodeOutput(alloc, pi);
+    defer alloc.free(out);
+    try std.testing.expectEqual(@as(usize, 32 + 2 + 324), out.len);
+}
+
+test "hashPublicInputs is the commitment at the head of the output" {
+    const alloc = std.testing.allocator;
+    const pi = samplePublicInputs();
+    const out = try l2_execution_ssz.encodeOutput(alloc, pi);
+    defer alloc.free(out);
+    const h = try l2_execution_ssz.hashPublicInputs(alloc, pi);
+    try std.testing.expectEqualSlices(u8, out[0..32], &h);
 }
 
 test "input: rejects a body shorter than the fixed head" {

@@ -25,7 +25,7 @@ jobs:
     - name: install Go
       uses: ./.github/actions/setup-go
       with:
-        go-version: 1.25.7
+        go-version: 1.27.1
         cache-dependency-path: |
               prover-ray/go.sum
     - uses: ./.github/actions/cache
@@ -44,7 +44,7 @@ jobs:
       uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
       with:
           skip-save-cache: ${{ github.ref != 'refs/heads/main' || startsWith(github.event_name, 'pull_request') }}
-          version: v2.11.3
+          version: v2.13.0
           working-directory: prover-ray
           args: --timeout=5m
     - name: generated files should not be modified
@@ -58,7 +58,7 @@ jobs:
   test:
     strategy:
       matrix:
-        go-version: [1.25.7]
+        go-version: [1.27.1]
     # ~1 min saved vs large
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
     name: Prover testing
@@ -90,3 +90,38 @@ jobs:
       working-directory: prover-ray
       run: |
         go test -short -timeout=600s ./...
+
+  ssz-golden:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    name: SSZ golden vectors
+    steps:
+    - name: checkout code
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - name: Set up Python
+      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+      with:
+        python-version: '3.12'
+    - name: Install rollup_spec dependencies
+      working-directory: rollup_spec
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install -r requirements.txt
+    - name: Regenerate SSZ golden vectors
+      run: python prover-ray/utils/ssz/testdata/generate.py
+    # The committed vectors are generated from the spec encoder. If this step
+    # fails, the spec encoder changed: regenerate and update the Go encoder.
+    - name: Golden vectors must match the spec encoder
+      run: |
+        changed=$(git status --porcelain -- \
+          prover-ray/utils/ssz/testdata \
+          prover-ray/backend/jobadapter/testdata/single_block_expected.ssz)
+        if [[ -n "$changed" ]]; then
+          echo "SSZ golden vectors are out of date with the spec encoder."
+          echo "Regenerate:  python prover-ray/utils/ssz/testdata/generate.py"
+          echo "Then update the Go encoder until tests pass:"
+          echo "  cd prover-ray && go test ./utils/ssz ./backend/jobadapter"
+          git diff -- \
+            prover-ray/utils/ssz/testdata \
+            prover-ray/backend/jobadapter/testdata/single_block_expected.ssz
+          exit 1
+        fi

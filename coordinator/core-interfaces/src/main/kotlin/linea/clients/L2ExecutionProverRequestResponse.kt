@@ -155,18 +155,18 @@ data class ForcedTransaction(
 }
 
 /**
- * The 15-field PI tuple emitted by an l2-execution proof (rollup_spec §2.1).
+ * The 18-field PI tuple emitted by an l2-execution proof (rollup_spec §2.1, `L2ExecutionProofPublicInput`).
  *
- * Domain twin of `lineth.coordinator.clients.prover.ExecutionPublicInputsDto`. Kept here (rather than reusing
- * the DTO) because this module is depended upon by the prover-client modules, not the other way around. Field names
- * and types are identical to the DTO so the DTO -> domain mapping is a straight field copy.
+ * Domain twin of `lineth.coordinator.clients.prover.L2ExecutionProofPublicInputsDto`. Kept here (rather than reusing
+ * the DTO) because this module is depended upon by the prover-client modules, not the other way around. Where the DTO
+ * uses `String` (hex) this uses `ByteArray`, and where the DTO uses `Long` this uses `ULong`.
  */
 data class L2ExecutionProofPublicInputs(
   val parentBlockHash: ByteArray,
   val endBlockHash: ByteArray,
   val endBlockNumber: ULong,
   val endBlockTimestamp: Instant,
-  val l2L1MessagesHash: ByteArray,
+  val l2L1Messages: List<ByteArray>,
   val parentL1L2BridgeRollingHash: ByteArray,
   val parentL1L2BridgeRollingHashMessageNumber: ULong,
   val endL1L2BridgeRollingHash: ByteArray,
@@ -176,8 +176,10 @@ data class L2ExecutionProofPublicInputs(
   val parentFtxNumber: ULong,
   val endFtxRollingHash: ByteArray,
   val endFtxNumber: ULong,
-  val filteredAddressesHash: ByteArray,
+  val filteredAddresses: List<ByteArray>,
   val txFromsHash: ByteArray,
+  val blockCount: ULong,
+  val l2MessagingBlocksOffsets: List<ULong>,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -189,7 +191,7 @@ data class L2ExecutionProofPublicInputs(
     if (!endBlockHash.contentEquals(other.endBlockHash)) return false
     if (endBlockNumber != other.endBlockNumber) return false
     if (endBlockTimestamp != other.endBlockTimestamp) return false
-    if (!l2L1MessagesHash.contentEquals(other.l2L1MessagesHash)) return false
+    if (!l2L1Messages.byteArrayListEquals(other.l2L1Messages)) return false
     if (!parentL1L2BridgeRollingHash.contentEquals(other.parentL1L2BridgeRollingHash)) return false
     if (parentL1L2BridgeRollingHashMessageNumber != other.parentL1L2BridgeRollingHashMessageNumber) return false
     if (!endL1L2BridgeRollingHash.contentEquals(other.endL1L2BridgeRollingHash)) return false
@@ -199,8 +201,10 @@ data class L2ExecutionProofPublicInputs(
     if (parentFtxNumber != other.parentFtxNumber) return false
     if (!endFtxRollingHash.contentEquals(other.endFtxRollingHash)) return false
     if (endFtxNumber != other.endFtxNumber) return false
-    if (!filteredAddressesHash.contentEquals(other.filteredAddressesHash)) return false
+    if (!filteredAddresses.byteArrayListEquals(other.filteredAddresses)) return false
     if (!txFromsHash.contentEquals(other.txFromsHash)) return false
+    if (blockCount != other.blockCount) return false
+    if (l2MessagingBlocksOffsets != other.l2MessagingBlocksOffsets) return false
 
     return true
   }
@@ -210,7 +214,7 @@ data class L2ExecutionProofPublicInputs(
     result = 31 * result + endBlockHash.contentHashCode()
     result = 31 * result + endBlockNumber.hashCode()
     result = 31 * result + endBlockTimestamp.hashCode()
-    result = 31 * result + l2L1MessagesHash.contentHashCode()
+    result = 31 * result + l2L1Messages.byteArrayListHashCode()
     result = 31 * result + parentL1L2BridgeRollingHash.contentHashCode()
     result = 31 * result + parentL1L2BridgeRollingHashMessageNumber.hashCode()
     result = 31 * result + endL1L2BridgeRollingHash.contentHashCode()
@@ -220,8 +224,10 @@ data class L2ExecutionProofPublicInputs(
     result = 31 * result + parentFtxNumber.hashCode()
     result = 31 * result + endFtxRollingHash.contentHashCode()
     result = 31 * result + endFtxNumber.hashCode()
-    result = 31 * result + filteredAddressesHash.contentHashCode()
+    result = 31 * result + filteredAddresses.byteArrayListHashCode()
     result = 31 * result + txFromsHash.contentHashCode()
+    result = 31 * result + blockCount.hashCode()
+    result = 31 * result + l2MessagingBlocksOffsets.hashCode()
     return result
   }
 }
@@ -238,9 +244,6 @@ data class L2ExecutionProofResponseV1(
   override val endBlockNumber: ULong,
   val proof: ByteArray,
   val publicInputs: L2ExecutionProofPublicInputs,
-  val l2L1Messages: List<ByteArray>,
-  val txFroms: List<ByteArray>,
-  val filteredAddresses: List<ByteArray>,
   val programVk: ByteArray,
 ) : BlockInterval {
   override fun equals(other: Any?): Boolean {
@@ -253,9 +256,6 @@ data class L2ExecutionProofResponseV1(
     if (endBlockNumber != other.endBlockNumber) return false
     if (!proof.contentEquals(other.proof)) return false
     if (publicInputs != other.publicInputs) return false
-    if (!l2L1Messages.byteArrayListEquals(other.l2L1Messages)) return false
-    if (!txFroms.byteArrayListEquals(other.txFroms)) return false
-    if (!filteredAddresses.byteArrayListEquals(other.filteredAddresses)) return false
     if (!programVk.contentEquals(other.programVk)) return false
 
     return true
@@ -266,9 +266,6 @@ data class L2ExecutionProofResponseV1(
     result = 31 * result + endBlockNumber.hashCode()
     result = 31 * result + proof.contentHashCode()
     result = 31 * result + publicInputs.hashCode()
-    result = 31 * result + l2L1Messages.byteArrayListHashCode()
-    result = 31 * result + txFroms.byteArrayListHashCode()
-    result = 31 * result + filteredAddresses.byteArrayListHashCode()
     result = 31 * result + programVk.contentHashCode()
     return result
   }

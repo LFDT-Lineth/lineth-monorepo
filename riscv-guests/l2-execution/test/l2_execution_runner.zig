@@ -10,12 +10,11 @@
 //! runtime `--json`/`--ssz` choice belongs on this native runner instead, mirroring zesu's
 //! `zevm_stateless --ssz`/`--json` CLI.
 //!
-//! Output defaults to SSZ (`l2_execution_ssz.encodeOutput`, schema 0x0003 — byte-identical to what
-//! the guest would itself emit via `write_output` for the same input: ONLY
-//! `keccak256(public_inputs)`, 32 bytes); `--json` switches to the full
-//! `getZkL2ExecutionProofV1.response.json`-shaped output instead (`l2_execution_json`), which is
-//! the only way to see `start_block_number`/the preimage lists/the plain public-input fields from
-//! this tool. `--ssz` is accepted explicitly too, as a no-op.
+//! Output defaults to SSZ (`l2_execution_ssz.encodeOutput`, schema 0x0003 — byte-identical to
+//! what the guest emits via `write_output`: `keccak256(frame) || frame`, `frame = schema_id || SSZ(public inputs)`).
+//! `--json` switches to the full `getZkL2ExecutionProofV1.response.json`-shaped output instead
+//! (`l2_execution_json`), which also exposes `start_block_number`.
+//! `--ssz` is accepted explicitly too, as a no-op.
 
 const std = @import("std");
 const l2_execution = @import("l2_execution");
@@ -31,7 +30,7 @@ const usage =
     \\usage: l2-execution-runner <input.ssz> [--json | --ssz]
     \\  <input.ssz>  path to an SSZ-encoded, schema-0x0002 extended guest input
     \\  --json       print the output as getZkL2ExecutionProofV1.response.json-shaped JSON
-    \\  --ssz        print the output as SSZ (schema 0x0003, keccak256(public_inputs) only) — the
+    \\  --ssz        print the output as SSZ (schema 0x0003, public inputs + keccak256) — the
     \\               default; accepted explicitly too
     \\
 ;
@@ -91,8 +90,7 @@ pub fn main(init: std.process.Init) !void {
 
     const out_bytes = switch (format) {
         .ssz => blk: {
-            const encoded = l2_execution_ssz.encodeOutput(result.public_inputs);
-            break :blk alloc.dupe(u8, &encoded) catch |err| {
+            break :blk l2_execution_ssz.encodeOutput(alloc, result.public_inputs) catch |err| {
                 std.debug.print("error: failed to allocate SSZ output: {s}\n", .{@errorName(err)});
                 std.process.exit(1);
             };

@@ -6,7 +6,7 @@ import linea.domain.BlockIntervals
 import linea.domain.CompressionProofIndex
 import linea.domain.ConflationCalculationResult
 import linea.domain.ConflationTrigger
-import net.consensys.linea.traces.TracesCountersV2
+import net.consensys.linea.traces.TracesCountersV5
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
@@ -15,7 +15,7 @@ import kotlin.time.Instant
 class InMemoryConsecutiveProvenBlobsProviderTest {
 
   private val instant = Instant.DISTANT_PAST
-  private val traces = TracesCountersV2.EMPTY_TRACES_COUNT
+  private val traces = TracesCountersV5.EMPTY_TRACES_COUNT
 
   @Test
   fun `findConsecutiveProvenBlobs returns empty when nothing was accepted`() {

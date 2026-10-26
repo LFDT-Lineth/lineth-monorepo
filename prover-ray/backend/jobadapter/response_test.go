@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/nativerunner"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,7 +23,6 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 			EndBlockHash:                             filledHash(0x02),
 			EndBlockNumber:                           1000503,
 			EndBlockTimestamp:                        1763000101,
-			L2L1MessagesHash:                         filledHash(0x03),
 			ParentL1L2BridgeRollingHash:              filledHash(0x04),
 			ParentL1L2BridgeRollingHashMessageNumber: 11,
 			EndL1L2BridgeRollingHash:                 filledHash(0x05),
@@ -31,7 +32,7 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 			ParentFtxNumber:                          13,
 			EndFtxRollingHash:                        filledHash(0x08),
 			EndProcessedFtxNumber:                    14,
-			FilteredAddressesHash:                    filledHash(0x09),
+			FilteredAddresses:                        [][20]byte{{0x09}},
 			TxFromsHash:                              filledHash(0x0a),
 		},
 	}
@@ -44,16 +45,13 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 	assert.Equal(t, "0xcafe", resp.ProofHex)
 	assert.Equal(t, uint64(1000501), resp.StartBlockNumber)
 	assert.Equal(t, repeatHex(0xbb), resp.ProgramVk)
-	assert.Empty(t, resp.L2L1Messages)
-	assert.Empty(t, resp.TxFroms)
-	assert.Empty(t, resp.FilteredAddresses)
 
 	pi := resp.PublicInputs
 	assert.Equal(t, repeatHex(0x01), pi.ParentBlockHash)
 	assert.Equal(t, repeatHex(0x02), pi.EndBlockHash)
 	assert.Equal(t, uint64(1000503), pi.EndBlockNumber)
 	assert.Equal(t, uint64(1763000101), pi.EndBlockTimestamp)
-	assert.Equal(t, repeatHex(0x03), pi.L2L1MessagesHash)
+	assert.Empty(t, pi.L2L1Messages)
 	assert.Equal(t, repeatHex(0x04), pi.ParentL1L2BridgeRollingHash)
 	assert.Equal(t, uint64(11), pi.ParentL1L2BridgeRollingHashMessageNumber)
 	assert.Equal(t, repeatHex(0x05), pi.EndL1L2BridgeRollingHash)
@@ -63,8 +61,27 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 	assert.Equal(t, uint64(13), pi.ParentFtxNumber)
 	assert.Equal(t, repeatHex(0x08), pi.EndFtxRollingHash)
 	assert.Equal(t, uint64(14), pi.EndProcessedFtxNumber)
-	assert.Equal(t, repeatHex(0x09), pi.FilteredAddressesHash)
+	assert.Equal(t, []string{"0x09" + strings.Repeat("00", 19)}, pi.FilteredAddresses)
 	assert.Equal(t, repeatHex(0x0a), pi.TxFromsHash)
+}
+
+// blockCount, l2L1Messages and offsets pass through from the native output.
+func TestNewExecutionResponseFromNative_PublicInputs(t *testing.T) {
+	out := nativerunner.Output{
+		StartBlockNumber: 1000501,
+		PublicInputs: backend.PublicInputs{
+			EndBlockNumber:           1000503,
+			L2L1Messages:             [][32]byte{filledHash(0x11), filledHash(0x22)},
+			BlockCount:               3,
+			L2MessagingBlocksOffsets: []uint16{1, 3},
+		},
+	}
+	vk := filledHash(0xbb)
+	resp := newExecutionResponseFromNative(out, "v-dev-zkvm", vk[:])
+
+	assert.Equal(t, uint64(3), resp.PublicInputs.BlockCount)
+	assert.Equal(t, []string{repeatHex(0x11), repeatHex(0x22)}, resp.PublicInputs.L2L1Messages)
+	assert.Equal(t, []uint16{1, 3}, resp.PublicInputs.L2MessagingBlocksOffsets)
 }
 
 func TestNewExecutionResponse_MatchesReferenceResponseShape(t *testing.T) {

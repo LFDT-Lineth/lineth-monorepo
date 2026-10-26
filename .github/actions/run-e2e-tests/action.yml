@@ -138,6 +138,11 @@ runs:
         MARU_TAG: ${{ inputs.maru_tag }}
       run: |
         set -euo pipefail
+        
+        # Export to later steps via GITHUB_ENV to ensure BESU_PACKAGE_IMAGE_NAME
+        # is set as "consensys/linea-besu-package" even when override compose file is used
+        echo "BESU_PACKAGE_IMAGE_NAME=consensys/linea-besu-package" >> "$GITHUB_ENV"
+        
         artifact_dir="$GITHUB_WORKSPACE/${{ inputs.working-directory }}/tmp/artifacts"
         loaded_images="$(mktemp)"
         shopt -s nullglob

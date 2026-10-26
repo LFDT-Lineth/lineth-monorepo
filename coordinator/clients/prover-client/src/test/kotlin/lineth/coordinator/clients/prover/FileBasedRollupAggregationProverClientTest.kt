@@ -22,15 +22,15 @@ import java.nio.file.Path
 import kotlin.time.Instant
 
 /**
- * Exercises [FileBasedRollupAggregationProverClient] end-to-end over the [FileBasedProverProofTransport]:
+ * Exercises [RollupAggregationProverClient] end-to-end over the [FileBasedProverProofTransport]:
  *  - writing a domain request: request -> request DTO -> JSON file;
  *  - reading a response: JSON file -> response DTO -> domain response.
  */
 @ExtendWith(VertxExtension::class)
 class FileBasedRollupAggregationProverClientTest {
   private lateinit var config: FileBasedProverConfig
-  private lateinit var rollupProofTransport: FileBasedRollupProofTransport
-  private lateinit var client: FileBasedRollupAggregationProverClient
+  private lateinit var rollupProofTransport: RollupProofTransport
+  private lateinit var client: RollupAggregationProverClient
 
   @BeforeEach
   fun beforeEach(vertx: Vertx, @TempDir tempDir: Path) {
@@ -48,11 +48,11 @@ class FileBasedRollupAggregationProverClientTest {
       responseFileNameProvider = RollupAggregationProofFileNameProvider,
     )
     rollupProofTransport = FakeRollupProofTransport()
-    client = FileBasedRollupAggregationProverClient(
+    client = RollupAggregationProverClient(
       transport = transport,
-      rollupProofTransport = rollupProofTransport,
-      programId = ROLLUP_AGGREGATION_PROGRAM_ID,
-      provingSystemVersion = PROVING_SYSTEM_VERSION,
+      rollupProofProvider = rollupProofTransport::findResponse,
+      guestProgramId = ROLLUP_AGGREGATION_PROGRAM_ID,
+      provingSystem = PROVING_SYSTEM_VERSION,
     )
   }
 

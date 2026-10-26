@@ -22,7 +22,7 @@ pub const ZkcMachine = struct {
         const elf_arg = try std.fmt.allocPrint(alloc, "BIN_EXT={s}", .{self.elf});
         const json_arg = try std.fmt.allocPrint(alloc, "JSON_EXT={s}", .{json_path});
         const makefile_arg = try std.fmt.allocPrint(alloc, "-f{s}", .{self.makefile});
-        const flags = self.flags orelse if (std.mem.eql(u8, self.target, "elf-trace")) "--stats" else "--fast";
+        const flags = self.flags orelse if (std.mem.eql(u8, self.target, "elf-trace")) "--stats" else "";
         const flags_arg = if (std.mem.eql(u8, self.target, "elf-trace"))
             try std.fmt.allocPrint(alloc, "ZKC_TRACE_FLAGS={s}", .{flags})
         else
@@ -35,7 +35,7 @@ pub const ZkcMachine = struct {
 
         switch (process.term) {
             .exited => |code| {
-                if (code == 0) return .{ .accepted = try parseProtocolOutput(text) };
+                if (code == 0) return .{ .accepted = try parseProtocolOutput(alloc, text) };
                 if (hasProtocolNonzeroGuestExit(text)) return .{ .rejected = null };
                 std.debug.print("--- zkc toolchain failure ---\n{s}\n", .{text});
                 return error.ToolchainFailed;
@@ -46,9 +46,10 @@ pub const ZkcMachine = struct {
 };
 
 const output_prefix = "guest_output = 0x";
+const min_output_size: usize = 34;
 
 // TODO: Consume structured ZkC/prover output once the backend exposes it.
-fn parseProtocolOutput(text: []const u8) !execution_machine.Output {
+fn parseProtocolOutput(alloc: std.mem.Allocator, text: []const u8) !execution_machine.Output {
     const output_assignment = "guest_output =";
     var output_hex: ?[]const u8 = null;
     var lines = std.mem.splitScalar(u8, text, '\n');
@@ -63,9 +64,11 @@ fn parseProtocolOutput(text: []const u8) !execution_machine.Output {
     }
 
     const hex = output_hex orelse return error.MissingGuestOutput;
-    if (hex.len != @sizeOf(execution_machine.Output) * 2) return error.InvalidGuestOutputSize;
-    var output: execution_machine.Output = undefined;
-    _ = std.fmt.hexToBytes(&output, hex) catch return error.InvalidGuestOutput;
+    // The output is variable-length: a 32-byte commitment, a 2-byte schema id, then the SSZ body.
+    if (hex.len % 2 != 0 or hex.len < min_output_size * 2) return error.InvalidGuestOutputSize;
+    const output = try alloc.alloc(u8, hex.len / 2);
+    errdefer alloc.free(output);
+    _ = std.fmt.hexToBytes(output, hex) catch return error.InvalidGuestOutput;
     return output;
 }
 
@@ -84,8 +87,8 @@ fn hasProtocolNonzeroGuestExit(text: []const u8) bool {
 }
 
 pub const testing = struct {
-    pub fn parseOutput(text: []const u8) !execution_machine.Output {
-        return parseProtocolOutput(text);
+    pub fn parseOutput(alloc: std.mem.Allocator, text: []const u8) !execution_machine.Output {
+        return parseProtocolOutput(alloc, text);
     }
 
     pub fn hasNonzeroGuestExit(text: []const u8) bool {

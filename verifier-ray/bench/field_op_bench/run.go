@@ -124,13 +124,13 @@ func main() {
 	}
 
 	fmt.Fprintln(os.Stderr, "running zkc...")
-	// --fast: execute for cycle counts only. The default (tracing) mode lowers
+	// Fast most execution for cycle counts only.  In contrast, tracing mode lowers
 	// the word machine to a field machine for AIR constraints, which currently
 	// panics under KOALABEAR_16 — the 32-bit `instruction` register exceeds the
 	// 16-bit field register width and register splitting (--split) is incomplete
 	// for multi-limb arithmetic. The benchmark only needs cycle counts, so the
 	// trace/AIR path is unnecessary.
-	zkcCmd := exec.Command(zkcBin, "exec", "--fast", r5JSON, zkcMain)
+	zkcCmd := exec.Command(zkcBin, "exec", r5JSON, zkcMain)
 	stdout, err := zkcCmd.StdoutPipe()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)

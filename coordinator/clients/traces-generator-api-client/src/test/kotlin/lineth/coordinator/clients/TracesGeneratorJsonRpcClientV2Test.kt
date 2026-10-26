@@ -33,8 +33,8 @@ import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
-import net.consensys.linea.traces.TracesCountersV2
-import net.consensys.linea.traces.TracingModuleV2
+import net.consensys.linea.traces.TracesCountersV5
+import net.consensys.linea.traces.TracingModuleV5
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -56,16 +56,16 @@ class TracesGeneratorJsonRpcClientV2Test {
   private lateinit var tracesGeneratorClient: TracesGeneratorJsonRpcClientV2
   private lateinit var meterRegistry: SimpleMeterRegistry
   private val tracesCountersValid: Map<String, Long> =
-    TracingModuleV2.values()
+    TracingModuleV5.values()
       .fold(mutableMapOf()) { acc: MutableMap<String, Long>,
-                              evmModule: TracingModuleV2,
+                              evmModule: TracingModuleV5,
         ->
         acc[evmModule.name] = Random.nextUInt(0u, UInt.MAX_VALUE).toLong()
         acc
       }
       .also {
         // add edge case of max UInt
-        it[TracingModuleV2.EXT.name] = UInt.MAX_VALUE.toLong()
+        it[TracingModuleV5.EXT.name] = UInt.MAX_VALUE.toLong()
       }
   private lateinit var fakeTracesServerUri: URL
   private lateinit var vertxHttpJsonRpcClient: JsonRpcClient
@@ -96,7 +96,7 @@ class TracesGeneratorJsonRpcClientV2Test {
       TracesGeneratorJsonRpcClientV2(
         vertxHttpJsonRpcClient,
         TracesGeneratorJsonRpcClientV2.Config(
-          fallBackTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+          fallBackTracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
         ),
       )
   }
@@ -154,9 +154,9 @@ class TracesGeneratorJsonRpcClientV2Test {
       .isCompletedWithValue(
         Ok(
           GetTracesCountersResponse(
-            TracesCountersV2(
+            TracesCountersV5(
               tracesCountersValid
-                .mapKeys { TracingModuleV2.valueOf(it.key) }
+                .mapKeys { TracingModuleV5.valueOf(it.key) }
                 .mapValues { it.value.toUInt() },
             ),
             tracesEngineVersion,
@@ -190,7 +190,7 @@ class TracesGeneratorJsonRpcClientV2Test {
   @Test
   fun `getTracesCounters when response misses EVM module returns error`() {
     val tracesCountersMissingModule =
-      tracesCountersValid.toMutableMap().apply { this.remove(TracingModuleV2.WCP.name) }
+      tracesCountersValid.toMutableMap().apply { this.remove(TracingModuleV5.WCP.name) }
 
     val tracesEngineVersion = "0.0.1"
     val response =
@@ -442,7 +442,7 @@ class TracesGeneratorJsonRpcClientV2Test {
       TracesGeneratorJsonRpcClientV2(
         vertxHttpJsonRpcClient,
         TracesGeneratorJsonRpcClientV2.Config(
-          fallBackTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+          fallBackTracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
         ),
       )
 
@@ -489,7 +489,7 @@ class TracesGeneratorJsonRpcClientV2Test {
         vertxHttpJsonRpcClient,
         TracesGeneratorJsonRpcClientV2.Config(
           ignoreTracesGeneratorErrors = true,
-          fallBackTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+          fallBackTracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
         ),
       )
 
@@ -499,7 +499,7 @@ class TracesGeneratorJsonRpcClientV2Test {
 
     assertThat(result).isInstanceOf(Ok::class.java)
     result as Ok
-    assertThat(result.value.tracesCounters).isEqualTo(TracesCountersV2.EMPTY_TRACES_COUNT)
+    assertThat(result.value.tracesCounters).isEqualTo(TracesCountersV5.EMPTY_TRACES_COUNT)
     assertThat(result.value.tracesEngineVersion).isEqualTo("fallback")
   }
 
@@ -510,7 +510,7 @@ class TracesGeneratorJsonRpcClientV2Test {
       FailingJsonRpcClient(fatalError, failAsynchronously = true),
       TracesGeneratorJsonRpcClientV2.Config(
         ignoreTracesGeneratorErrors = true,
-        fallBackTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+        fallBackTracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
       ),
     )
 
@@ -528,7 +528,7 @@ class TracesGeneratorJsonRpcClientV2Test {
       FailingJsonRpcClient(CompletionException(fatalError), failAsynchronously = true),
       TracesGeneratorJsonRpcClientV2.Config(
         ignoreTracesGeneratorErrors = true,
-        fallBackTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+        fallBackTracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
       ),
     )
 
@@ -546,7 +546,7 @@ class TracesGeneratorJsonRpcClientV2Test {
       FailingJsonRpcClient(fatalError, failAsynchronously = false),
       TracesGeneratorJsonRpcClientV2.Config(
         ignoreTracesGeneratorErrors = true,
-        fallBackTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+        fallBackTracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
       ),
     )
 

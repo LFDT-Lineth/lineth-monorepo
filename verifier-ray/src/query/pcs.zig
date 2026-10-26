@@ -1,3 +1,4 @@
+const std = @import("std");
 const field = @import("../field/koalabear.zig");
 const ext = @import("../field/koalabear_ext.zig");
 const poseidon2 = @import("../crypto/poseidon2.zig");
@@ -40,9 +41,113 @@ pub const Error = merkle.Error || fri.Error || error{
     DynamicModuleSizeBelowMinimum,
     RestrictOutOfRange,
     LayoutOverflow,
+    ManifestLengthMismatch,
+    ManifestCellNotBase,
+    InvalidManifestCode,
+    InvalidAliasTarget,
+    BatchFullyElided,
+    ElidedZeroClaimNonZero,
+    AliasShiftNotInTarget,
+    AliasClaimMismatch,
 };
 
 const InputWidths = struct { base: usize, ext: usize };
+
+// =============================================================================
+// Column manifest (column elision)
+// =============================================================================
+//
+// A committed interactive batch carries, as ordinary transcript cells, one
+// manifest code per column of the batch (prover-ray `pcs/manifest.go`):
+//
+//   manifest_present      the column is committed and opened as usual;
+//   manifest_zero         the column was omitted from the commitment because
+//                         its padded vector is identically zero;
+//   manifest_alias_base+k the column was omitted because its padded vector
+//                         equals that of column k of the SAME batch (k earlier,
+//                         Present, same base/ext kind, same size).
+//
+// The committed rows and the FRI claims cover only the Present columns, so the
+// reconstruction below enumerates only those (an elided column consumes no
+// alpha_DEEP power). The elided columns' own claim cells are still in the
+// transcript; `buildEntryClaims` pins them (zero / equal to the target's
+// authenticated claim) and `routedClaim` serves them to vanishing from the
+// same source, so every LagrangeEval claim cell stays authenticated.
+pub const manifest_present: u32 = 0;
+pub const manifest_zero: u32 = 1;
+pub const manifest_alias_base: u32 = 2;
+
+/// `col_to_entry` value of a column that has no canonical entry (elided).
+pub const no_entry: u16 = std.math.maxInt(u16);
+
+/// Where one interactive batch's manifest cells sit: `cells[cell_start + i]` of
+/// `rounds[round]` is the code of the batch's i-th column, i.e. declaration
+/// index `col_start + i`. Emitted by codegen; `null` for the precomputed batch.
+pub const BatchManifest = struct {
+    round: u8,
+    cell_start: u16,
+    col_start: u16,
+};
+
+/// Runtime per-column manifest codes, in declaration order.
+pub fn Manifest(comptime system: System) type {
+    return struct {
+        const cap = @max(system.columns.len, 1);
+        codes: [cap]u32 = [_]u32{manifest_present} ** cap,
+
+        pub fn slice(self: *const @This()) []const u32 {
+            return self.codes[0..system.columns.len];
+        }
+    };
+}
+
+/// Reads every batch's manifest codes out of the bound round messages. A
+/// System without `batch_manifests` (pre-elision fixtures) reads as all
+/// Present. Structural validation happens in `reconstructWithManifest`.
+pub fn readManifest(comptime system: System, ctx: anytype, out: *Manifest(system)) !void {
+    out.* = .{};
+    if (comptime system.batch_manifests.len == 0) return;
+    comptime if (system.batch_manifests.len != system.num_batches)
+        @compileError("pcs: System.batch_manifests must have one entry per batch");
+    inline for (system.batch_manifests, 0..) |maybe, batch| {
+        if (comptime maybe) |bm| {
+            const count = comptime batchColumnCount(system, batch);
+            for (0..count) |i| {
+                const cell = try ctx.cell(bm.round, @as(usize, bm.cell_start) + i);
+                out.codes[@as(usize, bm.col_start) + i] = switch (cell) {
+                    .base => |b| b.value,
+                    .ext => return Error.ManifestCellNotBase,
+                };
+            }
+        }
+    }
+}
+
+fn batchColumnCount(comptime system: System, comptime batch: usize) usize {
+    comptime {
+        @setEvalBranchQuota(20_000_000);
+        var n: usize = 0;
+        for (system.columns) |col| {
+            if (col.batch_idx == batch) n += 1;
+        }
+        return n;
+    }
+}
+
+/// Declaration index of the first column of each batch (columns are declared
+/// batch-major). `columns.len` for a batch owning no columns.
+fn batchFirstColumn(comptime system: System) [@max(system.num_batches, 1)]usize {
+    comptime {
+        @setEvalBranchQuota(20_000_000);
+        var first = [_]usize{system.columns.len} ** @max(system.num_batches, 1);
+        var c = system.columns.len;
+        while (c > 0) {
+            c -= 1;
+            first[system.columns[c].batch_idx] = c;
+        }
+        return first;
+    }
+}
 
 /// A committed column's size source. `.static` bakes a comptime size_log2 (a
 /// static-module column, whose padded size is fixed at compile time).
@@ -158,6 +263,11 @@ pub const System = struct {
     /// log_plaintext_size` (the buffer depth for rounds/bundles).
     max_entries: usize,
     max_size_log2: u8,
+
+    /// Per-batch manifest cell locators (see "Column manifest" above). Empty
+    /// for systems without column elision (every column Present); otherwise
+    /// one entry per batch, `null` for the precomputed batch.
+    batch_manifests: []const ?BatchManifest = &.{},
 };
 
 pub const OpeningProof = struct {
@@ -205,6 +315,9 @@ pub const VerifyInput = struct {
     /// each one must satisfy the emitted `min_size_log2` bound for every column
     /// that references it.
     module_sizes: []const usize = &.{},
+    /// Per-column manifest codes in declaration order (see `readManifest`).
+    /// Empty means every column is Present.
+    manifest: []const u32 = &.{},
 };
 
 // =============================================================================
@@ -223,9 +336,11 @@ pub fn Reconstructed(comptime system: System) type {
 
         /// restricted FRI params for THIS proof (envelope.restrictTo(top_size)).
         params: fri.Params,
-        /// runtime number of opened columns (== system.columns.len).
+        /// runtime number of opened columns (== the number of Present columns;
+        /// == system.columns.len without elision).
         num_entries: usize,
-        /// runtime max size_log2 across columns (== restricted log_plaintext_size).
+        /// runtime max size_log2 across Present columns (== restricted
+        /// log_plaintext_size).
         top_size: u8,
 
         // Per-entry arrays, canonical order, filled [0, num_entries).
@@ -235,8 +350,28 @@ pub fn Reconstructed(comptime system: System) type {
         entry_row_idx: [cap]u16 = undefined,
         entry_col_decl_idx: [cap]u16 = undefined,
 
-        /// col_to_entry[c] = the canonical entry index of column c (decl order).
+        /// col_to_entry[c] = the canonical entry index of column c (decl
+        /// order), or `no_entry` if the column is elided.
         col_to_entry: [cap]u16 = undefined,
+        /// col_code[c] = the validated manifest code of column c (decl order).
+        /// A borrow of the `Manifest(system)` slice `reconstructWithManifest`
+        /// validated (or an empty slice when the system has no batch
+        /// manifests, read as all-Present), NOT a copy: keeping a per-column
+        /// `[cap]u32` here would double the codes' stack footprint on the R5
+        /// guest. The backing manifest outlives every consumer (both
+        /// `Manifest.codes` in `verifyWithWorkspace` and the ad-hoc
+        /// `&[_]u32{...}` literals in tests).
+        col_code: []const u32 = &.{},
+        /// col_size_log2[c] = the resolved size of column c (decl order), also
+        /// for elided columns (used to normalize alias shifts).
+        col_size_log2: [cap]u8 = undefined,
+
+        /// Declaration index of the Present column an elided column `c` is an
+        /// alias of. Only meaningful when `col_code[c] >= manifest_alias_base`.
+        pub fn aliasTarget(self: *const @This(), c: usize) usize {
+            const first = comptime batchFirstColumn(system);
+            return first[system.columns[c].batch_idx] + (self.col_code[c] - manifest_alias_base);
+        }
     };
 }
 
@@ -281,6 +416,21 @@ fn InputCapInfo(comptime system: System) type {
 /// (size_log2, is_ext) in declaration order) + `canonicalLayout` (size DESC /
 /// batch ASC / base-then-ext / position ASC). Stack-only.
 pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!Reconstructed(system) {
+    return reconstructWithManifest(system, module_sizes, &.{});
+}
+
+/// `reconstruct` with a column manifest (see "Column manifest" above): only
+/// Present columns become canonical entries, exactly as prover-ray's
+/// `GetLayout` / `commitVectors` skip elided columns. `manifest` is empty (all
+/// Present) or has one code per column. The manifest's structure is validated
+/// here: codes in range, alias targets earlier in the same batch, Present, of
+/// the same kind and resolved size, and at least one Present column per batch
+/// that owns columns.
+pub fn reconstructWithManifest(
+    comptime system: System,
+    module_sizes: []const usize,
+    manifest: []const u32,
+) Error!Reconstructed(system) {
     // The `@intCast`es below narrow comptime-bounded quantities into the u16
     // fields of `Reconstructed`. `LayoutOverflow` cannot cover them: it guards
     // `entry_idx` against `max_entries`, which is itself the value that has to
@@ -304,7 +454,11 @@ pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!R
     var r: R = undefined;
     const num_cols = system.columns.len;
     if (num_cols > system.max_entries) return Error.LayoutOverflow;
-    r.num_entries = num_cols;
+    if (manifest.len != 0 and manifest.len != num_cols) return Error.ManifestLengthMismatch;
+    // Borrow the validated codes (see Reconstructed.col_code). The checks
+    // below read the same slice through this alias; the borrow is installed
+    // before any use so callers observe a fully-validated manifest.
+    r.col_code = manifest;
 
     // Per-column size_log2, and per-column position within its
     // (size_log2, is_ext) bucket, in declaration order. Prover GetLayout keeps a
@@ -313,15 +467,19 @@ pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!R
     // by batch and each batch's positions restart at 0. We compute it directly
     // during enumeration instead (see below), but we still need per-column
     // size_log2 first.
-    var col_size_log2: [@max(system.max_entries, 1)]u8 = undefined;
-    // col_position[c] = number of earlier declaration-order columns sharing c's
-    // (batch, size_log2, is_ext) bucket, computed via running per-bucket
-    // counters in a single O(columns) pass (replaces an O(columns^2) rescan).
+    const col_size_log2 = &r.col_size_log2;
+    // col_position[c] = number of earlier declaration-order PRESENT columns
+    // sharing c's (batch, size_log2, is_ext) bucket, computed via running
+    // per-bucket counters in a single O(columns) pass (replaces an O(columns^2)
+    // rescan).
     var col_position: [@max(system.max_entries, 1)]usize = undefined;
     const num_batches_cap = @max(system.num_batches, 1);
     var bucket_count: [num_batches_cap][system.max_size_log2 + 1][2]usize =
         [_][system.max_size_log2 + 1][2]usize{[_][2]usize{[_]usize{ 0, 0 }} ** (system.max_size_log2 + 1)} ** num_batches_cap;
+    var batch_present: [num_batches_cap]bool = [_]bool{false} ** num_batches_cap;
+    const batch_first = comptime batchFirstColumn(system);
     var top_size: u8 = 0;
+    var num_present: usize = 0;
     for (system.columns, 0..) |col, c| {
         const sz: u8 = switch (col.size) {
             .static => |s| s,
@@ -348,22 +506,57 @@ pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!R
         };
         if (sz > system.max_size_log2) return Error.LayoutOverflow;
         col_size_log2[c] = sz;
-        if (sz > top_size) top_size = sz;
-
         if (col.batch_idx >= system.num_batches) return Error.LayoutOverflow;
+
+        // Validate this column's manifest code. Alias targets are earlier
+        // columns of the same batch, so everything they need (col_code,
+        // col_size_log2) is already validated.
+        const code: u32 = if (manifest.len == 0) manifest_present else manifest[c];
+        switch (code) {
+            manifest_present => {},
+            manifest_zero => continue,
+            else => {
+                const k_in_batch: usize = code - manifest_alias_base;
+                const k = batch_first[col.batch_idx] + k_in_batch;
+                if (k >= c) return Error.InvalidAliasTarget;
+                const target = system.columns[k];
+                if (target.batch_idx != col.batch_idx) return Error.InvalidAliasTarget;
+                if (r.col_code[k] != manifest_present) return Error.InvalidAliasTarget;
+                if (target.is_ext != col.is_ext) return Error.InvalidAliasTarget;
+                if (col_size_log2[k] != sz) return Error.InvalidAliasTarget;
+                continue;
+            },
+        }
+
+        // Present: it occupies a canonical slot.
+        num_present += 1;
+        batch_present[col.batch_idx] = true;
+        if (sz > top_size) top_size = sz;
         const ext_idx: usize = if (col.is_ext) 1 else 0;
         const count = &bucket_count[col.batch_idx][sz][ext_idx];
         col_position[c] = count.*;
         count.* += 1;
     }
     r.top_size = top_size;
+    r.num_entries = num_present;
+    // A batch that owns columns must keep at least one (prover-ray never
+    // empties a batch; an empty batch would have no committed rows to open).
+    for (0..system.num_batches) |b| {
+        if (batch_first[b] < num_cols and !batch_present[b]) return Error.BatchFullyElided;
+    }
 
     // Canonical enumeration: size DESC, batch ASC (0..num_batches), base rows
     // then ext rows, position ASC (declaration order within a bucket). We assign
     // entry_idx as a running counter and record each entry's origin column.
     // Positions restart at 0 per (batch, size_log2, is_ext); col_position[c] was
     // precomputed above in a single O(columns) pass — exactly prover GetLayout's
-    // running counter, restricted to one batch.
+    // running counter, restricted to one batch. colCodeOf handles the
+    // manifest-less (all-Present) case without touching the empty borrow.
+    const colCodeOf = struct {
+        fn get(m: []const u32, c: usize) u32 {
+            return if (m.len == 0) manifest_present else m[c];
+        }
+    }.get;
     var entry_idx: usize = 0;
     var size: i32 = @intCast(system.max_size_log2);
     while (size >= 0) : (size -= 1) {
@@ -376,6 +569,10 @@ pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!R
                     if (col.batch_idx != batch) continue;
                     if (col.is_ext != want_ext) continue;
                     if (col_size_log2[c] != size_u8) continue;
+                    if (colCodeOf(manifest, c) != manifest_present) {
+                        r.col_to_entry[c] = no_entry;
+                        continue;
+                    }
 
                     if (entry_idx >= system.max_entries) return Error.LayoutOverflow;
                     r.entry_size_log2[entry_idx] = size_u8;
@@ -389,10 +586,63 @@ pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!R
             }
         }
     }
-    if (entry_idx != num_cols) return Error.LayoutOverflow;
+    if (entry_idx != num_present) return Error.LayoutOverflow;
 
     r.params = system.envelope_params.restrictTo(top_size) catch return Error.RestrictOutOfRange;
     return r;
+}
+
+/// Index of the slot in column `k`'s shift schedule that opens the same domain
+/// point as normalized shift `want` (mod 2^size_log2), or null.
+fn shiftSlotOf(comptime system: System, k: usize, size_log2: u8, want: i32) ?usize {
+    const col = system.columns[k];
+    const n: i32 = @as(i32, 1) << @intCast(size_log2);
+    for (system.all_shifts[col.shifts_start..][0..col.shifts_len], 0..) |s, j| {
+        if (@mod(s, n) == want) return j;
+    }
+    return null;
+}
+
+/// The authenticated claim of column `c` (declaration index) at slot `shift`
+/// of its schedule, for Present AND elided columns: a Present column's claim is
+/// its entry's; a Zero column's claim is 0; an alias's claim is its target's at
+/// the same domain point. `entry_claims` must come from `buildEntryClaims`,
+/// which has already pinned every elided column's own claim cells to these
+/// values.
+pub fn routedClaim(
+    comptime system: System,
+    recon: *const Reconstructed(system),
+    entry_claims: []const []const ext.Ext,
+    c: usize,
+    shift: usize,
+) error{ClaimMapMismatch}!ext.Ext {
+    if (c >= system.columns.len) return error.ClaimMapMismatch;
+    const col = system.columns[c];
+    if (shift >= col.shifts_len) return error.ClaimMapMismatch;
+    // Empty borrow (manifest-less system) reads as all-Present.
+    const code: u32 = if (recon.col_code.len == 0) manifest_present else recon.col_code[c];
+    switch (code) {
+        manifest_present => {
+            const entry = recon.col_to_entry[c];
+            if (entry >= entry_claims.len) return error.ClaimMapMismatch;
+            const claims = entry_claims[entry];
+            if (shift >= claims.len) return error.ClaimMapMismatch;
+            return claims[shift];
+        },
+        manifest_zero => return ext.Ext.zero(),
+        else => {
+            const k = recon.aliasTarget(c);
+            const size_log2 = recon.col_size_log2[c];
+            const n: i32 = @as(i32, 1) << @intCast(size_log2);
+            const want = @mod(system.all_shifts[col.shifts_start + shift], n);
+            const j = shiftSlotOf(system, k, size_log2, want) orelse return error.ClaimMapMismatch;
+            const entry = recon.col_to_entry[k];
+            if (entry >= entry_claims.len) return error.ClaimMapMismatch;
+            const claims = entry_claims[entry];
+            if (j >= claims.len) return error.ClaimMapMismatch;
+            return claims[j];
+        },
+    }
 }
 
 /// Total number of (column, shift) claim slots across every column — the flat
@@ -464,6 +714,32 @@ pub fn buildEntryClaims(
                 next_slot += 1;
             }
             out.entries[e] = out.backing[start..next_slot];
+        }
+
+        // Pin the elided columns' own claim cells. They are not FRI-bound (the
+        // column is absent from the commitment), so they are checked against
+        // what the manifest says they must be: zero, or the target's
+        // authenticated claim at the same domain point. prover-ray's
+        // RecoverBatchClaims enforces the same equalities.
+        for (system.columns, 0..) |col, c| {
+            // Empty borrow (manifest-less system): every column is Present.
+            const code: u32 = if (recon.col_code.len == 0) manifest_present else recon.col_code[c];
+            if (code == manifest_present) continue;
+            const size_log2 = recon.col_size_log2[c];
+            const n: i32 = @as(i32, 1) << @intCast(size_log2);
+            const shifts = system.all_shifts[col.shifts_start..][0..col.shifts_len];
+            const refs = system.all_claim_cells[col.claim_start..][0..col.shifts_len];
+            for (shifts, refs) |s, ref| {
+                const claimed = (try ctx.cell(ref.round, ref.index)).toExt();
+                if (code == manifest_zero) {
+                    if (!claimed.isZero()) return Error.ElidedZeroClaimNonZero;
+                    continue;
+                }
+                const k = recon.aliasTarget(c);
+                const j = shiftSlotOf(system, k, size_log2, @mod(s, n)) orelse return Error.AliasShiftNotInTarget;
+                const target_claims = out.entries[recon.col_to_entry[k]];
+                if (!claimed.eql(target_claims[j])) return Error.AliasClaimMismatch;
+            }
         }
     }
 }
@@ -738,7 +1014,7 @@ fn InputQuerySource(comptime system: System) type {
 // =============================================================================
 
 pub fn verify(comptime system: System, input: VerifyInput) Error!void {
-    const recon = try reconstruct(system, input.module_sizes);
+    const recon = try reconstructWithManifest(system, input.module_sizes, input.manifest);
     const routing = try routeInputRoots(system, &recon, input.roots);
     const params = recon.params;
     const num_entries = recon.num_entries;

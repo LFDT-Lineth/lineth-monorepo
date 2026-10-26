@@ -6,7 +6,7 @@ package linea.config.docs
  * distinguishes them.
  *
  * @property path kebab-case dotted config path, e.g. `database.persistence-retries.max-retries`.
- * @property type rendered Kotlin type, e.g. `UInt?`, `Duration`, `Map<TracingModuleV4, UInt>`.
+ * @property type rendered Kotlin type, e.g. `UInt?`, `Duration`, `Map<TracingModuleV5, UInt>`.
  * @property required true when the parameter has no default and is non-nullable.
  * @property default author-declared rendered default value from `@ConfigDoc.default`, or null
  *   when none was declared (required parameters, or optionals missing a declared default).

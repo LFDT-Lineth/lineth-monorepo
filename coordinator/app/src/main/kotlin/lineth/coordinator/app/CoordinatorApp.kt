@@ -126,6 +126,7 @@ class CoordinatorApp(
         delegate =
         BatchesPostgresDao(
           connection = sqlClient,
+          schemaVersion = configs.database.schemaVersion,
         ),
         persistenceRetryer = persistenceRetryer,
       ),
@@ -407,7 +408,7 @@ class CoordinatorApp(
     Db.applyDbMigrations(
       host = dbConfig.host,
       port = dbConfig.port,
-      database = dbConfig.schema,
+      database = dbConfig.databaseName,
       target = dbConfig.schemaVersion.toString(),
       username = dbConfig.username,
       password = dbConfig.password.value,
@@ -417,7 +418,7 @@ class CoordinatorApp(
       vertx = vertx,
       host = dbConfig.host,
       port = dbConfig.port,
-      database = dbConfig.schema,
+      database = dbConfig.databaseName,
       username = dbConfig.username,
       password = dbConfig.password.value,
       maxPoolSize = dbConfig.transactionalPoolSize,

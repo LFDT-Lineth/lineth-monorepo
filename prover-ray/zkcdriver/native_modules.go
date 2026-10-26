@@ -70,7 +70,7 @@ func (s *schemaScanner) defineNativeExpUnconstrained(mod schema.Module[koalabear
 		colQualifiedName := qualifiedCorsetName(modName, reg.Name())
 		col := moduleWIOP.NewColumn(
 			s.Sys.Context.Childf("col-native-%s", colQualifiedName),
-			s.Sys.Rounds[0],
+			s.Sys.Rounds[s.TraceRound],
 		)
 		s.ColumnIDs[colQualifiedName] = col.Context.ID
 	}
@@ -147,7 +147,7 @@ func (s *schemaScanner) defineNativeMulmod(mod schema.Module[koalabear.Element],
 		colQualifiedName := qualifiedCorsetName(modName, reg.Name())
 		col := moduleWIOP.NewColumn(
 			s.Sys.Context.Childf("col-native-%s", colQualifiedName),
-			s.Sys.Rounds[0],
+			s.Sys.Rounds[s.TraceRound],
 		)
 		limbs[idx] = col
 		s.ColumnIDs[colQualifiedName] = col.Context.ID

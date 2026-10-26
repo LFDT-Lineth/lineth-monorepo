@@ -1,12 +1,14 @@
 # SSZ vectors
 
-`EncodeStatelessInput` targets the decoder in zesu
-[`b5483dda21d72405c50a22cb6406a1231e51a579`](https://github.com/Consensys-Incorporated/zesu/blob/b5483dda21d72405c50a22cb6406a1231e51a579/src/stateless/stateless/ssz.zig),
-pinned by `riscv-guests/l2-execution/build.zig.zon`:
+`EncodeStatelessInput` targets the zesu decoder
+(`src/stateless/stateless/ssz.zig`) at the commit pinned by
+`riscv-guests/l2-execution/build.zig.zon`:
 
 - Inner schema `0x1501`: Amsterdam fork index `0x15`, revision `1`.
-- A 20-byte fixed section: payload offset, witness offset, inline uint64 chain ID,
-  public-keys offset.
+- A 16-byte fixed section: payload offset, witness offset, inline uint64 chain ID.
+  There is no public-keys field.
+- Witness items are bounded per item: 1 KiB per state node and header, 64 KiB
+  per code.
 - Five empty execution-request lists: deposits, withdrawals, consolidations,
   builder deposits and builder exits.
 - The outer L2 execution envelope uses `0x0002`.
@@ -27,9 +29,9 @@ The generator also updates
 
 | Fixture | Bytes | SHA-256 |
 | --- | ---: | --- |
-| payload0 | 841 | `60d903488c8a3a73aa267930359e1f0f48536e67cdcd2b139c1f9207dca792b8` |
-| payload1 | 841 | `1b4bb56d8f189883f3078224e54601a2a5ff63c7da4d76c95b1bf5b0985d966f` |
-| full | 1233 | `82a85fc53decc493859c4e1418915e0d49e52747baef669ab8d1b63bd673331d` |
+| payload0 | 772 | `1c5f4c6d7824e006abfbc13bb5b766b78a7fc61efe2d1bb3e65912b274d2fe3e` |
+| payload1 | 772 | `88d3c88127dd4460668fc9c83a3098b97649aa6888326d55666e8ca392600642` |
+| full | 1099 | `ad56803912126e7d60ed5eee3f89b742ec6908c5fc3f0daef93e50db51cceaaa` |
 
 `payload0` and `payload1` cover single-block coordinator fixture inputs.
 `full` additionally covers withdrawals, versioned hashes, extra data, block access

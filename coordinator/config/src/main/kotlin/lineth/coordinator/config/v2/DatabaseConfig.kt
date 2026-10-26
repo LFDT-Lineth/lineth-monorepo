@@ -10,7 +10,7 @@ data class DatabaseConfig(
   val port: Int,
   val username: String,
   val password: Masked,
-  val schema: String,
+  val databaseName: String,
   val schemaVersion: Int = 4,
   val readPoolSize: Int = 10,
   val readPipeliningLimit: Int = 10,

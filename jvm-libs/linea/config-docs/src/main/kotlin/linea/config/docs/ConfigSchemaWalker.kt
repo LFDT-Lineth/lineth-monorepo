@@ -164,7 +164,7 @@ object ConfigSchemaWalker {
   /** Maps the annotation's `""` "unset" sentinel (and null) to null for the ConfigKey model. */
   private fun String?.orNull(): String? = this?.ifEmpty { null }
 
-  /** Renders a [KType] as a readable string such as `UInt?` or `Map<TracingModuleV4, UInt>`. */
+  /** Renders a [KType] as a readable string such as `UInt?` or `Map<TracingModuleV5, UInt>`. */
   internal fun renderType(type: KType): String {
     val classifier = type.classifier
     val base = when (classifier) {

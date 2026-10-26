@@ -22,11 +22,12 @@ class Web3JLineaValidiumSmartContractClientReadOnlyTest {
   fun `parseContractVersion maps major version prefixes and rejects unsupported versions`() {
     assertThat(client.parseContractVersion("1.0")).isEqualTo(LineaValidiumContractVersion.V1)
     assertThat(client.parseContractVersion("2.0")).isEqualTo(LineaValidiumContractVersion.V2)
-    assertThat(client.parseContractVersion("2.1.0-rc.1")).isEqualTo(LineaValidiumContractVersion.V2)
+    assertThat(client.parseContractVersion("3.0")).isEqualTo(LineaValidiumContractVersion.V3)
+    assertThat(client.parseContractVersion("3.1.0-rc.1")).isEqualTo(LineaValidiumContractVersion.V3)
 
-    assertThatThrownBy { client.parseContractVersion("3.0") }
+    assertThatThrownBy { client.parseContractVersion("4.0") }
       .isInstanceOf(IllegalStateException::class.java)
-      .hasMessageContaining("Unsupported Validium contract version: 3.0")
+      .hasMessageContaining("Unsupported Validium contract version: 4.0")
 
     // "10.0" must not be misread as V1 by a bare "1" prefix. It is unsupported, so reject it.
     assertThatThrownBy { client.parseContractVersion("10.0") }
@@ -62,16 +63,22 @@ class Web3JLineaValidiumSmartContractClientReadOnlyTest {
     assertThat(fakeClient.getVersion().get()).isEqualTo(LineaValidiumContractVersion.V1)
     assertThat(fetchCount).isEqualTo(1)
 
-    // after the refresh interval: refetches and detects the upgrade
+    // after the refresh interval: refetches and detects the upgrade to V2
     fakeClock.advanceBy(2.seconds)
     onChainVersion = LineaValidiumContractVersion.V2
     assertThat(fakeClient.getVersion().get()).isEqualTo(LineaValidiumContractVersion.V2)
     assertThat(fetchCount).isEqualTo(2)
 
+    // after the refresh interval: refetches and detects the upgrade to latest
+    fakeClock.advanceBy(30.seconds)
+    onChainVersion = LineaValidiumContractVersion.latest
+    assertThat(fakeClient.getVersion().get()).isEqualTo(LineaValidiumContractVersion.latest)
+    assertThat(fetchCount).isEqualTo(3)
+
     // at the latest known version: short-circuits forever, even after the interval elapses
     fakeClock.advanceBy(300.seconds)
-    assertThat(fakeClient.getVersion().get()).isEqualTo(LineaValidiumContractVersion.V2)
-    assertThat(fetchCount).isEqualTo(2)
+    assertThat(fakeClient.getVersion().get()).isEqualTo(LineaValidiumContractVersion.latest)
+    assertThat(fetchCount).isEqualTo(3)
   }
 
   @Test

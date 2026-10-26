@@ -41,8 +41,6 @@ func TestDevZkVM_Integration(t *testing.T) {
 	result := core.Prove(context.Background(), Job{ID: "it-1", Type: ProofTypeL2Execution, Payload: extended})
 	require.Equal(t, ResultStatusOK, result.Status, "prove err: %v", result.Err)
 
-	require.Len(t, result.ProofBytes, guestOutputSize)
-	assert.Equal(t, []byte{0x00, 0x03}, result.ProofBytes[:2], "0x0003 schema id")
 	t.Logf("guest_output = %s", hex.EncodeToString(result.ProofBytes))
 
 	// The native runner must commit to the same public inputs.

@@ -33,7 +33,7 @@
       }
     ],
     "parentDataRollingHash": "0x4747474747474747474747474747474747474747474747474747474747474747",
-    "startOffset": 4,
+    "parentDataTailTakeBytes": 60,
     "boundaryPrevDataRollingHash": "0x3939393939393939393939393939393939393939393939393939393939393939",
     "l2ExecutionProofs": [
       {
@@ -44,7 +44,6 @@
           "endBlockHash": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
           "endBlockNumber": 11,
           "endBlockTimestamp": 1763000200,
-          "l2L1MessagesHash": "0x0101010101010101010101010101010101010101010101010101010101010101",
           "parentL1L2BridgeRollingHash": "0x0202020202020202020202020202020202020202020202020202020202020202",
           "parentL1L2BridgeRollingHashMessageNumber": 0,
           "endL1L2BridgeRollingHash": "0x0303030303030303030303030303030303030303030303030303030303030303",
@@ -54,22 +53,17 @@
           "parentFtxNumber": 15,
           "endFtxRollingHash": "0x0505050505050505050505050505050505050505050505050505050505050505",
           "endProcessedFtxNumber": 18,
-          "filteredAddressesHash": "0x0606060606060606060606060606060606060606060606060606060606060606",
+          "filteredAddresses": [
+            "0x0303030303030303030303030303030303030303",
+            "0x0404040404040404040404040404040404040404"
+          ],
           "txFromsHash": "0x0707070707070707070707070707070707070707070707070707070707070707",
           "blockCount": 2,
-          "l2MessagingBlocksOffsets": []
+          "l2MessagingBlocksOffsets": [],
+          "l2L1Messages": [
+            "0x0808080808080808080808080808080808080808080808080808080808080808"
+          ]
         },
-        "l2L1Messages": [
-          "0x0808080808080808080808080808080808080808080808080808080808080808"
-        ],
-        "txFroms": [
-          "0x0101010101010101010101010101010101010101",
-          "0x0202020202020202020202020202020202020202"
-        ],
-        "filteredAddresses": [
-          "0x0303030303030303030303030303030303030303",
-          "0x0404040404040404040404040404040404040404"
-        ],
         "programVk": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       },
       {
@@ -80,7 +74,6 @@
           "endBlockHash": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
           "endBlockNumber": 14,
           "endBlockTimestamp": 1763000210,
-          "l2L1MessagesHash": "0x0101010101010101010101010101010101010101010101010101010101010101",
           "parentL1L2BridgeRollingHash": "0x0202020202020202020202020202020202020202020202020202020202020202",
           "parentL1L2BridgeRollingHashMessageNumber": 0,
           "endL1L2BridgeRollingHash": "0x0303030303030303030303030303030303030303030303030303030303030303",
@@ -90,22 +83,17 @@
           "parentFtxNumber": 18,
           "endFtxRollingHash": "0x0505050505050505050505050505050505050505050505050505050505050505",
           "endProcessedFtxNumber": 18,
-          "filteredAddressesHash": "0x0606060606060606060606060606060606060606060606060606060606060606",
+          "filteredAddresses": [
+            "0x0303030303030303030303030303030303030303",
+            "0x0404040404040404040404040404040404040404"
+          ],
           "txFromsHash": "0x0707070707070707070707070707070707070707070707070707070707070707",
           "blockCount": 3,
-          "l2MessagingBlocksOffsets": []
+          "l2MessagingBlocksOffsets": [],
+          "l2L1Messages": [
+            "0x0808080808080808080808080808080808080808080808080808080808080808"
+          ]
         },
-        "l2L1Messages": [
-          "0x0808080808080808080808080808080808080808080808080808080808080808"
-        ],
-        "txFroms": [
-          "0x0101010101010101010101010101010101010101",
-          "0x0202020202020202020202020202020202020202"
-        ],
-        "filteredAddresses": [
-          "0x0303030303030303030303030303030303030303",
-          "0x0404040404040404040404040404040404040404"
-        ],
         "programVk": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       }
     ]

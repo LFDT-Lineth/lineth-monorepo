@@ -10,51 +10,43 @@ import java.nio.file.Path
 
 data class SignerConfigToml(
   @param:ConfigDoc(
-    description = "Signer backend to use: WEB3J, WEB3SIGNER, or CUSTOM.",
+    description = "Signer backend: `web3j`, `web3signer`, or the name of a signer type registered by a custom " +
+      "signer factory, configured in the `signer.<type>` table.",
     example = "web3signer",
   )
-  val type: SignerType,
-  @param:ConfigSection("Local Web3j signer settings; required when type is WEB3J.")
-  val web3j: Web3jConfig?,
-  @param:ConfigSection("Remote Web3Signer settings; required when type is WEB3SIGNER.")
-  val web3signer: Web3SignerConfig?,
-  @param:ConfigSection("Named signer settings; required when type is CUSTOM.")
+  val type: SignerConfig.SignerType,
+  @param:ConfigSection("Local Web3j signer settings; required when type is web3j.")
+  val web3j: Web3jConfig? = null,
+  @param:ConfigSection("Remote Web3Signer settings; required when type is web3signer.")
+  val web3signer: Web3SignerConfig? = null,
+  @param:ConfigSection(
+    description = "Named signer settings, resolved by the injected signer factory.",
+    deprecated = true,
+    replacement = "signer.<registered-type>",
+  )
   val custom: CustomConfig? = null,
+  @param:ConfigDoc(
+    description = "Settings of registered signer types, keyed by type then by setting name. Not written directly: " +
+      "the loader collects the `signer.<type>` tables into it. Only the table of the configured type is used.",
+  )
+  val registeredSettings: Map<String, Map<String, Masked>> = emptyMap(),
 ) {
   init {
     when {
-      type == SignerType.WEB3J && web3j == null -> {
+      type == SignerConfig.SignerType.WEB3J && web3j == null -> {
         throw IllegalArgumentException("signetType=$type requires web3j config")
       }
 
-      type == SignerType.WEB3SIGNER && web3signer == null -> {
+      type == SignerConfig.SignerType.WEB3SIGNER && web3signer == null -> {
         throw IllegalArgumentException("signetType=$type requires web3signer config")
       }
 
-      type == SignerType.CUSTOM && custom == null -> {
+      type == SignerConfig.SignerType.CUSTOM && custom == null -> {
         throw IllegalArgumentException("signerType=$type requires custom config")
       }
-    }
-  }
 
-  enum class SignerType(val displayName: String) {
-    WEB3J("web3j"),
-    WEB3SIGNER("web3signer"),
-    CUSTOM("custom"),
-    ;
-
-    companion object {
-      fun valueOfIgnoreCase(name: String): SignerType {
-        return SignerType.entries.firstOrNull { it.displayName.equals(name, ignoreCase = true) }
-          ?: throw IllegalArgumentException("Unknown signer type: $name")
-      }
-    }
-
-    fun reified(): SignerConfig.SignerType {
-      return when (this) {
-        WEB3J -> SignerConfig.SignerType.WEB3J
-        WEB3SIGNER -> SignerConfig.SignerType.WEB3SIGNER
-        CUSTOM -> SignerConfig.SignerType.CUSTOM
+      !type.isBuiltIn && registeredSettings.keys.none { it.lowercase() == type.name } -> {
+        throw IllegalArgumentException("signerType=$type requires a [signer.${type.name}] table")
       }
     }
   }
@@ -188,7 +180,7 @@ data class SignerConfigToml(
 
   fun reified(): SignerConfig {
     return SignerConfig(
-      type = type.reified(),
+      type = type,
       web3j = web3j?.let { SignerConfig.Web3jConfig(it.privateKey.value.decodeHex()) },
       web3signer =
       web3signer?.let {
@@ -209,6 +201,15 @@ data class SignerConfigToml(
         )
       },
       custom = custom?.reified(),
+      registered =
+      if (type.isBuiltIn) {
+        null
+      } else {
+        SignerConfig.RegisteredConfig(
+          type = type,
+          settings = registeredSettings.entries.first { it.key.lowercase() == type.name }.value,
+        )
+      },
     )
   }
 }

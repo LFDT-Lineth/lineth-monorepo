@@ -20,6 +20,10 @@ class RetryingBatchesPostgresDao(
     )
   }
 
+  override fun findBatchesByBlockRange(startBlockNumber: Long, endBlockNumber: Long): SafeFuture<List<Batch>> {
+    return persistenceRetryer.retryQuery({ delegate.findBatchesByBlockRange(startBlockNumber, endBlockNumber) })
+  }
+
   override fun deleteBatchesUpToEndBlockNumber(endBlockNumberInclusive: Long): SafeFuture<Int> {
     return persistenceRetryer.retryQuery({ delegate.deleteBatchesUpToEndBlockNumber(endBlockNumberInclusive) })
   }

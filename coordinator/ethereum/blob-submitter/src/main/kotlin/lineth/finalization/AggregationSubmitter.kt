@@ -64,12 +64,9 @@ class AggregationSubmitterImpl(
           gasPriceCaps,
         )
         val aggregationSubmittedEvent = FinalizationSubmittedEvent(
-          aggregationProof = aggregationProof,
-          parentShnarf = parentShnarf,
-          parentL1RollingHash = parentL1RollingHash,
-          parentL1RollingHashMessageNumber = parentL1RollingHashMessageNumber,
+          endBlockNumber = aggregationProof.endBlockNumber,
+          endBlockTimestamp = aggregationProof.finalTimestamp,
           submissionTimestamp = clock.now(),
-          transactionHash = transactionHash.toByteArray(),
         )
         aggregationSubmittedEventConsumer.accept(aggregationSubmittedEvent)
       }

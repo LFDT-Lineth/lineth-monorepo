@@ -90,8 +90,10 @@ pub fn vanillaHasWithdrawals(alloc: std.mem.Allocator, vanilla_stateless_input_s
 pub fn vanillaHasBlobTransaction(alloc: std.mem.Allocator, vanilla_stateless_input_ssz: []const u8) !bool {
     const si = try ssz_decode.decode(alloc, vanilla_stateless_input_ssz);
     if (si.new_payload_request.versioned_hashes.len != 0) return true;
-    for (si.new_payload_request.execution_payload.transactions) |tx| {
-        if (tx.tx_type == 3) return true;
+    // The decoder keeps transactions opaque (`transactions` is empty), so read the EIP-2718 type
+    // byte off each raw transaction, as the guest itself does.
+    for (si.new_payload_request.execution_payload.raw_transactions) |raw| {
+        if (raw.len > 0 and raw[0] == 0x03) return true;
     }
     return false;
 }

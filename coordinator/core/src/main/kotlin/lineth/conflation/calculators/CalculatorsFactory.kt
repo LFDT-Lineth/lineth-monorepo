@@ -10,7 +10,7 @@ import lineth.conflation.SafeBlockProvider
 import lineth.coordination.conflation.ConflationServiceImpl
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.traces.TracesCounters
-import net.consensys.linea.traces.TracesCountersV2
+import net.consensys.linea.traces.TracesCountersV5
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import java.util.concurrent.ConcurrentSkipListSet
@@ -234,7 +234,7 @@ object CalculatorsFactory {
       lastBlockNumber = lastConflatedBlockNumber,
       syncCalculators = syncCalculators + listOf(ConflationTriggerCalculatorByCoinbase()) + extraSyncCalculators,
       deferredTriggerConflationCalculators = emptyList(),
-      emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+      emptyTracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
     )
     val conflationService = ConflationServiceImpl(
       calculator = conflationCalculator,

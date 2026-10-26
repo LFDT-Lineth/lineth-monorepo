@@ -7,7 +7,7 @@ import { InitializationVersionCheck } from "../../common/InitializationVersionCh
 /**
  * @title Linea Canonical Token Bridge
  * @notice Contract to manage cross-chain ERC-20 bridging.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 contract TokenBridge is InitializationVersionCheck, TokenBridgeBase {

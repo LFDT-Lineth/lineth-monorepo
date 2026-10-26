@@ -1,29 +1,24 @@
 module github.com/LFDT-Lineth/lineth-monorepo/prover-ray
 
-go 1.25.7
+go 1.27.1
 
 require (
-	github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20260917123943-b75b5ca955d8
-	github.com/LFDT-Lineth/zkc v1.2.32
+	github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20261021134731-3829cba91ebc
+	github.com/LFDT-Lineth/zkc v1.2.34
 	github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565
-	github.com/consensys/gnark-crypto v0.20.2-0.20260807171631-a71790dd0fe3
-	github.com/ethereum/go-ethereum v1.17.0
+	github.com/consensys/gnark-crypto v0.22.0
 	github.com/go-playground/assert/v2 v2.2.0
-	github.com/holiman/uint256 v1.3.2
+	github.com/pkg/profile v1.7.0
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/viper v1.21.0
-	github.com/stretchr/testify v1.11.1
-	golang.org/x/crypto v0.52.0
-	golang.org/x/sync v0.20.0
+	github.com/stretchr/testify v1.12.1
+	golang.org/x/crypto v0.57.0
+	golang.org/x/sync v0.23.0
 )
 
 require (
-	github.com/ProjectZKM/Ziren/crates/go-runtime/zkvm_runtime v0.0.0-20251001021608-1fe7b43fc4d6 // indirect
-	github.com/bits-and-blooms/bitset v1.24.4 // indirect
+	github.com/bits-and-blooms/bitset v1.25.0 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
-	github.com/crate-crypto/go-eth-kzg v1.4.0 // indirect
-	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
-	github.com/ethereum/c-kzg-4844/v2 v2.1.5 // indirect
 	github.com/felixge/fgprof v0.9.5 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.1 // indirect
@@ -33,6 +28,7 @@ require (
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.21 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
+	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/ronanh/intcomp v1.1.1 // indirect
 	github.com/rs/zerolog v1.35.1 // indirect
 	github.com/sagikazarmark/locafero v0.11.0 // indirect
@@ -44,26 +40,19 @@ require (
 	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	github.com/supranational/blst v0.3.16-0.20250831170142-f48500c1fdbe // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.lsp.dev/jsonrpc2 v0.10.0 // indirect
 	go.lsp.dev/pkg v0.0.0-20210717090340-384b27a52fb2 // indirect
 	go.lsp.dev/protocol v0.12.0 // indirect
 	go.lsp.dev/uri v0.3.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
+	go.uber.org/goleak v1.3.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.21.0 // indirect
-	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/term v0.43.0 // indirect
-	golang.org/x/text v0.37.0 // indirect
-)
-
-require (
-	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/pkg/profile v1.7.0
-	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	golang.org/x/sys v0.45.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/term v0.46.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
 )
 
 tool github.com/LFDT-Lineth/zkc/cmd/zkc

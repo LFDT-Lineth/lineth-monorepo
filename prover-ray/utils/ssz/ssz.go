@@ -12,9 +12,6 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
-
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 )
 
 // Schema prefix: ProtocolFork index followed by schema revision.
@@ -32,7 +29,9 @@ const maxSSZSerializedBytes uint64 = 1<<32 - 1
 
 // SSZ list/vector bounds mirrored from rollup_spec/stateless_input.py and
 // rollup_spec/canonical_ssz.py. The hand-written encoder must reject inputs
-// outside these bounds just like the reference remerkleable encoder does.
+// outside these bounds just like the reference remerkleable encoder does. The
+// per-item witness byte limits are also enforced by the guest's decoder (zesu
+// src/stateless/stateless/ssz.zig), which rejects a longer node, code or header.
 const (
 	maxBytesPerTransaction     = 1 << 30
 	maxBlockAccessListBytes    = 1 << 30
@@ -42,10 +41,9 @@ const (
 	maxWitnessNodes            = 1 << 20
 	maxWitnessCodes            = 1 << 16
 	maxWitnessHeaders          = 256
-	maxBytesPerWitnessNode     = 1 << 20
-	maxBytesPerCode            = 1 << 24
+	maxBytesPerWitnessNode     = 1 << 10
+	maxBytesPerCode            = 1 << 16
 	maxBytesPerHeader          = 1 << 10
-	maxPublicKeys              = 1 << 15
 )
 
 // JSON input model (readable encoder_obj form). The Python reference consumes a
@@ -727,111 +725,6 @@ func sszChainConfigFromObj(obj jsonObj) ([]byte, error) {
 	return sszUint64(chainID), nil
 }
 
-// recoverPublicKey recovers the 65-byte uncompressed SEC1 public key
-// (0x04 || x || y) for a signed transaction, mirroring
-// rollup_spec/fork.py::recover_transaction_public_key. It is the SSZ
-// public_keys field, derived from the transactions already in the payload.
-func recoverPublicKey(txBytes []byte, chainID *big.Int) ([]byte, error) {
-	tx := new(types.Transaction)
-	if err := tx.UnmarshalBinary(txBytes); err != nil {
-		return nil, fmt.Errorf("decoding transaction: %w", err)
-	}
-
-	// Signing-hash selection mirrors the reference
-	// (_signature_recovery_parameters): a pre-EIP-155 legacy transaction signs
-	// over the Homestead hash; an EIP-155 legacy transaction signs over the
-	// payload chain id (its v is validated against it in recoveryID); a typed
-	// transaction signs over its OWN embedded chain id, which the reference
-	// does not check against the payload chain id.
-	var signer types.Signer
-	switch {
-	case tx.Type() == types.LegacyTxType && !tx.Protected():
-		signer = types.HomesteadSigner{}
-	case tx.Type() == types.LegacyTxType:
-		if chainID.Sign() <= 0 {
-			return nil, fmt.Errorf("invalid payload chain id %s", chainID)
-		}
-		signer = types.LatestSignerForChainID(chainID)
-	default:
-		txChainID := tx.ChainId()
-		if txChainID.Sign() <= 0 {
-			return nil, fmt.Errorf("invalid transaction chain id %s", txChainID)
-		}
-		signer = types.LatestSignerForChainID(txChainID)
-	}
-
-	v, r, s := tx.RawSignatureValues()
-	recID, err := recoveryID(tx, v, chainID)
-	if err != nil {
-		return nil, err
-	}
-	// The reference rejects r outside [1, N) and s outside [1, N/2] for every
-	// transaction type; Ecrecover alone does not enforce the s upper bound.
-	if !crypto.ValidateSignatureValues(recID, r, s, true) {
-		return nil, fmt.Errorf("invalid signature values (r or s out of range)")
-	}
-
-	sig := make([]byte, 65)
-	r.FillBytes(sig[0:32])
-	s.FillBytes(sig[32:64])
-	sig[64] = recID
-
-	hash := signer.Hash(tx)
-	pub, err := crypto.Ecrecover(hash[:], sig)
-	if err != nil {
-		return nil, fmt.Errorf("recovering public key: %w", err)
-	}
-	if len(pub) != 65 || pub[0] != 0x04 {
-		return nil, fmt.Errorf("recovered key is not a 65-byte uncompressed SEC1 key")
-	}
-	return pub, nil
-}
-
-// recoveryID normalizes a transaction's v value to the 0/1 secp256k1 recovery
-// id crypto.Ecrecover expects.
-func recoveryID(tx *types.Transaction, v, chainID *big.Int) (byte, error) {
-	if tx.Type() == types.LegacyTxType {
-		if tx.Protected() {
-			// EIP-155: v = 35 + 2*chainId + recid.
-			rec := new(big.Int).Sub(v, big.NewInt(35))
-			rec.Sub(rec, new(big.Int).Mul(chainID, big.NewInt(2)))
-			return smallRecID(rec)
-		}
-		// Pre-EIP-155: v = 27 + recid.
-		return smallRecID(new(big.Int).Sub(v, big.NewInt(27)))
-	}
-	// Typed transactions carry v directly as the y-parity (0 or 1).
-	return smallRecID(v)
-}
-
-func smallRecID(rec *big.Int) (byte, error) {
-	if rec.Sign() < 0 || rec.Cmp(big.NewInt(1)) > 0 {
-		return 0, fmt.Errorf("invalid signature recovery id %s", rec)
-	}
-	return byte(rec.Uint64()), nil
-}
-
-func recoverPublicKeys(transactions []string, chainID uint64) ([][]byte, error) {
-	if err := checkListLen("public_keys", len(transactions), maxPublicKeys); err != nil {
-		return nil, err
-	}
-
-	keys := make([][]byte, len(transactions))
-	payloadChainID := new(big.Int).SetUint64(chainID)
-	for i, tx := range transactions {
-		raw, err := hexToBytes(tx)
-		if err != nil {
-			return nil, fmt.Errorf("transactions[%d]: %w", i, err)
-		}
-		key, err := recoverPublicKey(raw, payloadChainID)
-		if err != nil {
-			return nil, fmt.Errorf("transactions[%d]: %w", i, err)
-		}
-		keys[i] = key
-	}
-	return keys, nil
-}
-
 func sszStatelessInputFromObj(obj jsonObj) ([]byte, error) {
 	nprObj, err := requireObject(obj, "newPayloadRequest")
 	if err != nil {
@@ -860,30 +753,10 @@ func sszStatelessInputFromObj(obj jsonObj) ([]byte, error) {
 		return nil, fmt.Errorf("chainConfig: %w", err)
 	}
 
-	// public_keys are recovered from the payload transactions (the readable
-	// request does not carry them).
-	executionPayloadObj, err := requireObject(nprObj, "executionPayload")
-	if err != nil {
-		return nil, fmt.Errorf("newPayloadRequest: %w", err)
-	}
-	txs, err := requireStringList(executionPayloadObj, "transactions")
-	if err != nil {
-		return nil, fmt.Errorf("public_keys: %w", err)
-	}
-	chainID, err := requireUint64(chainConfigObj, "chainId")
-	if err != nil {
-		return nil, fmt.Errorf("public_keys: %w", err)
-	}
-	keys, err := recoverPublicKeys(txs, chainID)
-	if err != nil {
-		return nil, fmt.Errorf("public_keys: %w", err)
-	}
-
 	return sszContainer(
 		variable(npr),
 		variable(witness),
 		fixed(chainConfig),
-		variable(sszListFixed(keys)),
 	)
 }
 

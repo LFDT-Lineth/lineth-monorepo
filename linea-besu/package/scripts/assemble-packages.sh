@@ -38,6 +38,17 @@ cp $LOCAL_BESU_ZIP_PATH .
 tar -xvf $(basename "$LOCAL_BESU_ZIP_PATH")
 mv besu-$BESU_VERSION ./besu
 
+# tar preserves the archive's mtimes, so every extracted file lands with the same
+# timestamp (often epoch 0 for Gradle distTar output). BuildKit's local-context
+# content dedup keys blobs on (path, mtime, size); a script whose content changed
+# but whose size is identical to the previous build (e.g. bin/besu-untuned) is then
+# NOT re-transferred, and the stale blob is baked into the image even with
+# --no-cache. Touch every extracted file so mtimes differ across builds and the
+# context differ picks up real content changes.
+# Without this line, subsequent image build with besuCommit updated might lead
+# to runtime java.lang.ClassNotFoundException
+find ./besu -exec touch {} +
+
 echo "copying the versions.env to the container as versions.txt"
 cp ../versions.env ./besu/versions.txt
 

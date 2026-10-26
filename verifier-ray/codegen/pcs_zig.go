@@ -66,6 +66,9 @@ type pcsTemplateData struct {
 	WitnessName  string
 	QuotientName string
 	RootsName    string
+	// ManifestsName is the per-batch manifest locator array; emitted only when
+	// the system carries manifests (BatchManifests non-empty).
+	ManifestsName string
 	// Flattened column payloads: every column's shifts / claim cells laid end
 	// to end, with per-column offsets, so ColumnDesc carries u32/u8 offsets
 	// instead of two 16-byte fat pointers.
@@ -126,6 +129,17 @@ func newPcsTemplateData(index int, system PcsSystem, opts PcsZigOptions) pcsTemp
 			checkPcsIndex(b.RoundIndex, u8Max, fmt.Sprintf("batch_roots[%d].round", i))
 		}
 	}
+	if len(system.BatchManifests) > 0 && len(system.BatchManifests) != system.NumBatches {
+		panic(fmt.Sprintf("pcs codegen: %d batch_manifests for %d batches", len(system.BatchManifests), system.NumBatches))
+	}
+	for i, m := range system.BatchManifests {
+		if m == nil {
+			continue
+		}
+		checkPcsIndex(m.Round, u8Max, fmt.Sprintf("batch_manifests[%d].round", i))
+		checkPcsIndex(m.CellStart, u16Max, fmt.Sprintf("batch_manifests[%d].cell_start", i))
+		checkPcsIndex(m.ColStart, u16Max, fmt.Sprintf("batch_manifests[%d].col_start", i))
+	}
 
 	flatShifts := []int{}
 	flatClaims := []PcsCellRef{}
@@ -153,6 +167,7 @@ func newPcsTemplateData(index int, system PcsSystem, opts PcsZigOptions) pcsTemp
 		WitnessName:    opts.ConstPrefix + "witness_map",
 		QuotientName:   opts.ConstPrefix + "quotient_map",
 		RootsName:      opts.ConstPrefix + "batch_roots",
+		ManifestsName:  opts.ConstPrefix + "batch_manifests",
 		ShiftsName:     opts.ConstPrefix + "all_shifts",
 		ClaimCellsName: opts.ConstPrefix + "all_claim_cells",
 		FlatShifts:     flatShifts,
@@ -176,7 +191,11 @@ const {{.RootsName}} = [_]pcs.BatchRoot{
 {{range .System.BatchRoots}}{{if .Precomputed}}    .{ .precomputed = {{octuplet .Root}} },
 {{else}}    .{ .round = {{.RoundIndex}} },
 {{end}}{{end}}};
-
+{{if .System.BatchManifests}}const {{.ManifestsName}} = [_]?pcs.BatchManifest{
+{{range .System.BatchManifests}}{{if .}}    .{ .round = {{.Round}}, .cell_start = {{.CellStart}}, .col_start = {{.ColStart}} },
+{{else}}    null,
+{{end}}{{end}}};
+{{end}}
 const {{.ShiftsName}} = [_]i32{ {{range .FlatShifts}}{{.}}, {{end}}};
 
 const {{.ClaimCellsName}} = [_]pcs.CellRef{ {{range .FlatClaimCells}}.{ .round = {{.Round}}, .index = {{.Index}} }, {{end}}};
@@ -194,7 +213,8 @@ pub const {{.ConstName}} = pcs.System{
     .witness_map = &{{.WitnessName}},
     .quotient_map = &{{.QuotientName}},
     .batch_roots = &{{.RootsName}},
-    .zeta_coin_index = {{.System.ZetaCoinIndex}},
+{{if .System.BatchManifests}}    .batch_manifests = &{{.ManifestsName}},
+{{end}}    .zeta_coin_index = {{.System.ZetaCoinIndex}},
 };
 `
 

@@ -4,7 +4,6 @@ import (
 	"math/big"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/consensys/gnark-crypto/field/koalabear"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
@@ -13,15 +12,10 @@ import (
 // koalabearModulus caches koalabear.Modulus() to avoid repeated allocations.
 var koalabearModulus = koalabear.Modulus()
 
-// Element represents a circuit variable over the KoalaBear base field.
-// It abstracts over native and emulated representations, allowing the same
-// circuit code to work in both native KoalaBear circuits and emulated circuits.
+// Element represents a circuit variable over the KoalaBear base field,
+// emulated in the circuit's field.
 type Element struct {
-	// V is used when the circuit's native field is KoalaBear.
-	// Exported for gnark witness serialization.
-	V frontend.Variable
-
-	// EV is used when KoalaBear is emulated in another field.
+	// EV is the emulated representation.
 	// Exported for gnark witness serialization.
 	EV emulated.Element[emulated.KoalaBear]
 }
@@ -32,7 +26,7 @@ type Octuplet [8]Element
 // NewElement creates a Var for witness assignment from any value.
 // Use this when initializing circuit struct fields with witness values.
 //
-// For in-circuit constants, use [API.Const] instead.
+// For in-circuit constants, use [KoalaBearAPI.Const] instead.
 func NewElement(v any) Element {
 	switch v := v.(type) {
 	case Element:
@@ -43,7 +37,6 @@ func NewElement(v any) Element {
 
 	var res Element
 	res.EV = emulated.ValueOf[emulated.KoalaBear](v)
-	res.V = v
 	return res
 }
 
@@ -61,22 +54,8 @@ func WrapFrontendVariable(v frontend.Variable) Element {
 	}
 
 	var res Element
-	res.V = v
 	res.EV = emulated.Element[emulated.KoalaBear]{Limbs: []frontend.Variable{v}}
 	return res
-}
-
-// Native returns the native frontend.Variable representation.
-// Panics if the variable cannot be represented as a single native variable.
-func (v *Element) Native() frontend.Variable {
-	if v.V != nil {
-		return v.V
-	}
-	if len(v.EV.Limbs) == 1 {
-		return v.EV.Limbs[0]
-	}
-	utils.Panic("unexpected shape for Var: %++v", v)
-	return nil // unreachable
 }
 
 // Emulated returns the emulated element representation.
@@ -86,49 +65,20 @@ func (v *Element) Emulated() *emulated.Element[emulated.KoalaBear] {
 
 // IsEmpty returns true if the Var has not been initialized.
 func (v *Element) IsEmpty() bool {
-	return v.V == nil && len(v.EV.Limbs) == 0
+	return len(v.EV.Limbs) == 0
 }
 
 // Initialize prepares the Var for the given field modulus.
 func (v *Element) Initialize(modulus *big.Int) {
-	if modulus.Cmp(koalabearModulus) == 0 {
-		return
-	}
 	v.EV.Initialize(modulus)
-}
-
-// NativeArray converts an Octuplet to an array of native frontend.Variables.
-func (o Octuplet) NativeArray() [8]frontend.Variable {
-	res := [8]frontend.Variable{}
-	for i := range res {
-		res[i] = o[i].Native()
-		if res[i] == nil {
-			panic("Var is nil")
-		}
-	}
-	return res
 }
 
 // IsConstantZero returns true if the variable represent a constant value equal
 // to zero.
-func (a *API) IsConstantZero(v Element) bool {
-
-	if a.IsNative() {
-
-		if v.V == nil {
-			panic("unexpected, api is native but not the field element")
-		}
-
-		f, ok := a.nativeAPI.Compiler().ConstantValue(v.V)
-		if !ok {
-			return false
-		}
-
-		return f.Sign() == 0
-	}
+func (a *KoalaBearAPI) IsConstantZero(v Element) bool {
 
 	for i := range v.EV.Limbs {
-		g, ok := a.nativeAPI.Compiler().ConstantValue(v.EV.Limbs[i])
+		g, ok := a.frontendAPI.Compiler().ConstantValue(v.EV.Limbs[i])
 		if !ok {
 			return false
 		}

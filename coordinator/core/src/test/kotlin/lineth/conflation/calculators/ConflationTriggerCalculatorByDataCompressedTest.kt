@@ -4,7 +4,7 @@ import linea.blob.BlobCompressor
 import linea.domain.BlockCounters
 import linea.domain.ConflationTrigger
 import lineth.conflation.ZERO_COINBASE
-import net.consensys.linea.traces.fakeTracesCountersV2
+import net.consensys.linea.traces.fakeTracesCountersV5
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
@@ -198,7 +198,7 @@ class ConflationTriggerCalculatorByDataCompressedTest {
   private fun blockCounters(rlpRawData: ByteArray = ByteArray(1)): BlockCounters = BlockCounters(
     blockNumber = 0u,
     blockTimestamp = Instant.parse("2021-01-01T00:00:00Z"),
-    tracesCounters = fakeTracesCountersV2(0u),
+    tracesCounters = fakeTracesCountersV5(0u),
     blockRLPEncoded = rlpRawData,
     coinbase = ZERO_COINBASE,
   )

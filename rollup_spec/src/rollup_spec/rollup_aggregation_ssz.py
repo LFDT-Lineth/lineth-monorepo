@@ -10,9 +10,9 @@ the sibling `l2_execution_ssz.py`, and the shared `SszRollupPublicInput` contain
 are imported from the sibling `rollup_ssz.py`. Finalization has its own
 public-input container with the proven messaging offsets and no block count.
 
-Framing: exactly like `stateless_input.py::STATELESS_INPUT_SCHEMA_ID`, every
-message is `schema_id (2 bytes, big-endian) || SSZ bytes`. Two schema ids are
-defined, one per guest-facing message:
+Inputs are framed as `schema_id (2 bytes, big-endian) || SSZ bytes`.
+Outputs use `keccak256(schema_id || SSZ(public_inputs)) || schema_id ||
+SSZ(public_inputs)`. Two schema ids are defined, one per guest-facing message:
 
   - `ROLLUP_AGGREGATION_INPUT_SCHEMA_ID`  (0x1002) — rollup-aggregation guest input
   - `ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID` (0x1802) — rollup-aggregation guest output
@@ -31,7 +31,7 @@ limits. Each constant below carries a one-line rationale.
 
 from typing import Any
 
-from ethereum.crypto.hash import Hash32
+from ethereum.crypto.hash import Hash32, keccak256
 from ethereum.state import Address
 from ethereum_types.numeric import U64
 from remerkleable.basic import uint16, uint64
@@ -39,6 +39,7 @@ from remerkleable.byte_arrays import ByteList, Bytes32 as SszBytes32
 from remerkleable.complex import Container, List
 
 from .l1_rollup import FinalizationPublicInput, FinalizationSubmission
+from .stateless_input import InvalidSsz
 from .rollup import RollupProof, VerifiableRollupProof
 from .rollup_aggregation import RollupAggregationProofPrivateInput
 from .l2_execution_ssz import (
@@ -102,8 +103,8 @@ class SszFinalizationPublicInput(Container):
     end_data_rolling_hash: SszBytes32
     parent_block_hash: SszBytes32
     end_block_hash: SszBytes32
-    start_offset: uint64
-    end_offset: uint64
+    parent_data_tail_take_bytes: uint64
+    final_data_tail_discard_bytes: uint64
     l2_l1_tree_depth: uint64
     l2_l1_roots: List[SszBytes32, MAX_L2_L1_ROOTS]
     filtered_addresses: List[SszAddress, MAX_FILTERED_ADDRESSES]
@@ -196,7 +197,8 @@ def encode_aggregation_output(submission: FinalizationSubmission) -> bytes:
     fields["l2_l1_roots"] = [bytes(root) for root in pi.l2_l1_roots]
     fields["filtered_addresses"] = [bytes(address) for address in pi.filtered_addresses]
     fields["program_ids"] = [bytes(program_id) for program_id in pi.program_ids]
-    return _frame(ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID, SszFinalizationPublicInput(**fields).encode_bytes())
+    preimage = _frame(ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID, SszFinalizationPublicInput(**fields).encode_bytes())
+    return keccak256(preimage) + preimage
 
 
 def decode_aggregation_output_ssz(data: bytes) -> FinalizationSubmission:
@@ -206,7 +208,9 @@ def decode_aggregation_output_ssz(data: bytes) -> FinalizationSubmission:
     separately). Strict: rejects a wrong schema id, truncated bytes, trailing
     bytes, or non-canonical SSZ.
     """
-    payload = _strip_frame(data, ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID, "rollup-aggregation output")
+    if len(data) < 34 or keccak256(data[32:]) != data[:32]:
+        raise InvalidSsz("rollup-aggregation output: invalid public-input commitment")
+    payload = _strip_frame(data[32:], ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID, "rollup-aggregation output")
     view = _strict_decode(payload, SszFinalizationPublicInput)
     fields = {name: getattr(view, name) for name in SszFinalizationPublicInput.fields()}
     for name in (
@@ -220,7 +224,7 @@ def decode_aggregation_output_ssz(data: bytes) -> FinalizationSubmission:
         "parent_block_hash", "end_block_hash",
     ):
         fields[name] = Hash32(bytes(fields[name]))
-    for name in ("start_offset", "end_offset", "l2_l1_tree_depth"):
+    for name in ("parent_data_tail_take_bytes", "final_data_tail_discard_bytes", "l2_l1_tree_depth"):
         fields[name] = int(fields[name])
     fields["l2_l1_roots"] = [Hash32(bytes(root)) for root in view.l2_l1_roots]
     fields["filtered_addresses"] = [Address(bytes(address)) for address in view.filtered_addresses]

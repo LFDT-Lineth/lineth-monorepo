@@ -59,7 +59,9 @@ class AggregationsPostgresDaoTest : CleanDbTestSuiteParallel() {
       BlobsPostgresDao.Config(maxBlobReturnLimit),
       sqlClient,
     )
-    batchesPostgresDaoImpl = BatchesPostgresDao(sqlClient, fakeClock)
+    batchesPostgresDaoImpl = BatchesPostgresDao(
+      connection = sqlClient, clock = fakeClock, schemaVersion = target.toInt(),
+    )
   }
 
   @AfterEach

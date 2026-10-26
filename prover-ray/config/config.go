@@ -43,8 +43,7 @@ type Pipeline struct {
 	RequestsRootDir string `mapstructure:"requests_root_dir"`
 }
 
-// Configured reports whether the pipeline is set (either field is set). validate
-// then requires both fields when one is present.
+// Configured reports whether the pipeline is set (either field is set).
 func (p Pipeline) Configured() bool {
 	return p.ProverMode != "" || p.RequestsRootDir != ""
 }
@@ -75,12 +74,23 @@ func (c *Config) validate() error {
 	if c.Execution.ProverMode == "" {
 		return fmt.Errorf("execution.prover_mode must be set")
 	}
+	for name, p := range map[string]Pipeline{"rollup": c.Rollup, "aggregation": c.Aggregation} {
+		if p.Configured() && p.ProverMode == "" {
+			return fmt.Errorf("%s.prover_mode must be set when %s is configured", name, name)
+		}
+	}
+	return nil
+}
+
+// ValidateQueues checks that every configured pipeline has a queue folder. Only
+// the queue supervisor needs them.
+func (c *Config) ValidateQueues() error {
 	if c.Execution.RequestsRootDir == "" {
 		return fmt.Errorf("execution.requests_root_dir must be set")
 	}
 	for name, p := range map[string]Pipeline{"rollup": c.Rollup, "aggregation": c.Aggregation} {
-		if p.Configured() && (p.ProverMode == "" || p.RequestsRootDir == "") {
-			return fmt.Errorf("%s: prover_mode and requests_root_dir must be set together", name)
+		if p.Configured() && p.RequestsRootDir == "" {
+			return fmt.Errorf("%s.requests_root_dir must be set when %s is configured", name, name)
 		}
 	}
 	return nil

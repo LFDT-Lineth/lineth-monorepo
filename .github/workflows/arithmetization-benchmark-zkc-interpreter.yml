@@ -88,7 +88,7 @@ on:
         description: 'Run l2-execution guest with zkc keccak-accelerator'
         required: false
         type: boolean
-        default: true
+        default: false
       n_vectors_keccak:
         description: 'First N Keccak test vectors from keccak.all (x4 for number of blocks)'
         required: false
@@ -168,7 +168,7 @@ jobs:
           set -eux
           mkdir -p /tmp/bench/logs
           ZIG_KECCAK_ARGS=()
-          if [[ "${KECCAK_ACCEL:-true}" == "true" ]]; then
+          if [[ "${KECCAK_ACCEL:-false}" == "true" ]]; then
             ZIG_KECCAK_ARGS=(-Dkeccak-accel=true)
           fi
           TEST_DIR="$PWD/arithmetization/src/test"
@@ -235,18 +235,17 @@ jobs:
 
           TEST_MAKE_DIR="$PWD/arithmetization/src/test"
 
-          run_zkc_exec() {  # $1=variant  $2=log path  $3=json  $4=zkc_main  optional: --fast
+          run_zkc_exec() {  # $1=variant  $2=log path  $3=json  $4=zkc_main
             local exec_flags="-vv"
-            if [[ "${5:-}" == "--fast" ]]; then exec_flags="--fast -vv"; fi
             /usr/bin/time -v env ZKC="/tmp/zkc-${1}" ZKC_EXEC_FLAGS="$exec_flags" \
               make -C "$TEST_MAKE_DIR" --no-print-directory zkc-exec \
               JSON="$3" ZKC_MAIN="$4" \
               > "$2" 2>&1
           }
 
-          run_l2_guest() {  # $1=variant (opt|base)  $2=label (warmup|iter#)  optional: --fast
+          run_l2_guest() {  # $1=variant (opt|base)  $2=label (warmup|iter#)
             run_zkc_exec "$1" "/tmp/bench/logs/l2_guest_${1}_${2}.log" "/tmp/l2-guest-${1}.json" \
-              "/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc" "${3:-}"
+              "/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
           }
 
           run_zkc_compile() {  # $1=variant (opt|base)  $2=label (warmup|iter#)
@@ -255,35 +254,24 @@ jobs:
             "/tmp/zkc-${1}" compile --stats --inline "$zkc_main" >"$log" 2>&1 || true
           }
 
-          run_l2_guest() {  # $1=variant (opt|base)  $2=label (warmup|iter#)  optional: --fast
-            run_zkc_exec "$1" "/tmp/bench/logs/l2_guest_${1}_${2}.log" "/tmp/l2-guest-${1}.json" \
-              "/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc" "${3:-}"
-          }
-
-          run_zkc_compile() {  # $1=variant (opt|base)  $2=label (warmup|iter#)
-            local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
-            local log="/tmp/bench/logs/compile_${1}_${2}.log"
-            "/tmp/zkc-${1}" compile --stats --inline "$zkc_main" >"$log" 2>&1 || true
-          }
-
-          run_keccak() {  # $1=variant (opt|base)  $2=label (warmup|iter#)  optional: --fast
+          run_keccak() {  # $1=variant (opt|base)  $2=label (warmup|iter#)
             run_zkc_exec "$1" "/tmp/bench/logs/keccak_${1}_${2}.log" "/tmp/keccak-${1}.json" \
-              "/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc" "${3:-}"
+              "/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
           }
 
-          run_blake() {   # $1=variant  $2=label  optional: --fast. Runs all N vectors, one log file per vector.
+          run_blake() {   # $1=variant  $2=label  Runs all N vectors, one log file per vector.
             local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
             for json in /tmp/bench/json/blake-"${1}"/*.json; do
               local n
               n=$(basename "$json" .json)
-              run_zkc_exec "$1" "/tmp/bench/logs/blake_${1}_${2}_${n}.log" "$json" "$zkc_main" "${3:-}"
+              run_zkc_exec "$1" "/tmp/bench/logs/blake_${1}_${2}_${n}.log" "$json" "$zkc_main"
             done
           }
 
           run_gogen_l2_guest() {  # $1=variant (opt|base)  $2=label (warmup|iter#)
             local zkc_bin="/tmp/zkc-${1}"
             local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
-            "$zkc_bin" generate --fast -vv --field KOALABEAR_16 -o riscv.go "$zkc_main"
+            "$zkc_bin" generate -vv --field KOALABEAR_16 -o riscv.go "$zkc_main"
             go build -o riscv-gogen riscv.go
             /usr/bin/time -v ./riscv-gogen < "/tmp/l2-guest-${1}.json" \
               > "/tmp/bench/logs/l2_guest_${1}_${2}.log" 2>&1
@@ -292,7 +280,7 @@ jobs:
           run_gogen_keccak() {  # $1=variant (opt|base)  $2=label (warmup|iter#)
             local zkc_bin="/tmp/zkc-${1}"
             local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
-            "$zkc_bin" generate --fast -vv --field KOALABEAR_16 -o riscv.go "$zkc_main"
+            "$zkc_bin" generate -vv --field KOALABEAR_16 -o riscv.go "$zkc_main"
             go build -o riscv-gogen riscv.go
             /usr/bin/time -v ./riscv-gogen < "/tmp/keccak-${1}.json" \
               > "/tmp/bench/logs/keccak_${1}_${2}.log" 2>&1
@@ -301,7 +289,7 @@ jobs:
           run_gogen_blake() {   # $1=variant  $2=label. Runs all N vectors, one log file per vector.
             local zkc_bin="/tmp/zkc-${1}"
             local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
-            "$zkc_bin" generate --fast -vv --field KOALABEAR_16 -o riscv.go "$zkc_main"
+            "$zkc_bin" generate -vv --field KOALABEAR_16 -o riscv.go "$zkc_main"
             go build -o riscv-gogen riscv.go
             for json in /tmp/bench/json/blake-"${1}"/*.json; do
               local n
@@ -321,9 +309,9 @@ jobs:
             log "=== workload: ${wl} ==="
             # Untimed warmup: opt then base. Primes the page cache and shared libs
             # so both branches face an already-warm filesystem on iteration 1.
-            reset_state; log "${wl}: warmup opt  (untimed)"; run_${wl} opt  warmup --fast
+            reset_state; log "${wl}: warmup opt  (untimed)"; run_${wl} opt  warmup
             if [[ "${OPTIM_ONLY:-false}" != "true" ]]; then
-              reset_state; log "${wl}: warmup base (untimed)"; run_${wl} base warmup --fast
+              reset_state; log "${wl}: warmup base (untimed)"; run_${wl} base warmup
             fi
             # Timed runs: opt_i, base_i alternating, starting with opt.
             # Run in fast (with gogen) or tracing mode
@@ -334,10 +322,10 @@ jobs:
                  reset_state; log "${wl}: iter ${i}/${ITERS} base"; run_gogen_${wl} base "$i"
                fi
               else
-                # RESTORE to tracing (without --fast) when gogen is supporting native fields
-                reset_state; log "${wl}: iter ${i}/${ITERS} opt"; run_${wl} opt "$i" --fast
+                # RESTORE to tracing when gogen is supporting native fields
+                reset_state; log "${wl}: iter ${i}/${ITERS} opt"; run_${wl} opt "$i"
                 if [[ "${OPTIM_ONLY:-false}" != "true" ]]; then
-                  reset_state; log "${wl}: iter ${i}/${ITERS} base"; run_${wl} base "$i" --fast
+                  reset_state; log "${wl}: iter ${i}/${ITERS} base"; run_${wl} base "$i"
                 fi
               fi
             done
@@ -359,7 +347,7 @@ jobs:
           fast_mode_arg=(-fast-mode=false)
           if [[ "$FAST_MODE" == "true" ]]; then fast_mode_arg=(-fast-mode=true); fi
           l2_keccak_accel=disabled
-          [[ "${KECCAK_ACCEL:-true}" == "true" ]] && l2_keccak_accel=activated
+          [[ "${KECCAK_ACCEL:-false}" == "true" ]] && l2_keccak_accel=activated
           # Resolve the zkc refs at runtime
           zkc_ref_base="${ZKC_REF_BASE_INPUT:-$ZKC_REF}"
           zkc_ref_optim="${ZKC_REF_OPTIM_INPUT:-$ZKC_REF}"

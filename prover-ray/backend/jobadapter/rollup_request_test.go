@@ -3,6 +3,7 @@ package jobadapter
 import (
 	"encoding/hex"
 	"encoding/json"
+	"os"
 	"strings"
 	"testing"
 
@@ -10,7 +11,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const rollupRequestFixture = "10-14-getZkRollupProofV1.request.json"
+const referenceRollupRequest = "../../../rollup_spec/src/rollup_spec/prover_io/testdata/10-14-getZkRollupProofV1.request.json"
+const referenceRollupResponse = "../../../rollup_spec/src/rollup_spec/prover_io/testdata/10-14-getZkRollupProofV1.response.json"
+
+func readSpecFixture(t *testing.T, path string) []byte {
+	t.Helper()
+	b, err := os.ReadFile(path)
+	require.NoError(t, err)
+	return b
+}
 
 func mustHex(t *testing.T, s string) []byte {
 	t.Helper()
@@ -22,16 +31,14 @@ func mustHex(t *testing.T, s string) []byte {
 // TestDecodeRollupRequest_Golden decodes the reference fixture and checks the
 // envelope, chunk objects, boundary hash, and embedded proofs.
 func TestDecodeRollupRequest_Golden(t *testing.T) {
-	req, err := DecodeRollupRequest(readFixture(t, rollupRequestFixture))
+	req, err := DecodeRollupRequest(readSpecFixture(t, referenceRollupRequest))
 	require.NoError(t, err)
 
-	assert.Equal(t,
-		mustHex(t, "0x31139b3eaece046f5675fe237c36246e7bb2a5acc4cf4b358aef65c6d3771f4d"),
-		req.ProgramVk)
+	vk := filledHash(0x22)
+	assert.Equal(t, vk[:], req.ProgramVk)
 	assert.Equal(t, uint64(59144), req.ChainID)
-	assert.Equal(t, uint64(4), req.StartOffset)
-	assert.Equal(t, mustHex(t, "0xabababab"), req.OpaquePrefixBytes)
 	assert.Equal(t, filledHash(0x47), req.ParentDataRollingHash)
+	assert.Equal(t, uint64(60), req.ParentDataTailTakeBytes)
 
 	require.NotNil(t, req.BoundaryPrevDataRollingHash)
 	assert.Equal(t, filledHash(0x39), *req.BoundaryPrevDataRollingHash)
@@ -43,7 +50,8 @@ func TestDecodeRollupRequest_Golden(t *testing.T) {
 	require.Len(t, req.Chunks, 1)
 	assert.Equal(t, filledHash(0x1a), req.Chunks[0].ChunkHash)
 	assert.False(t, req.Chunks[0].IsCalldata)
-	assert.Equal(t, uint64(0), req.Chunks[0].CalldataLength)
+	assert.NotEmpty(t, req.Chunks[0].BlobBytes)
+	assert.Empty(t, req.Chunks[0].CalldataBytes)
 
 	require.Len(t, req.L2ExecutionProofs, 2)
 	p0 := req.L2ExecutionProofs[0]
@@ -53,28 +61,26 @@ func TestDecodeRollupRequest_Golden(t *testing.T) {
 	assert.Equal(t, uint64(11), p0.PublicInputs.EndBlockNumber)
 	assert.Equal(t, uint64(1763000200), p0.PublicInputs.EndBlockTimestamp)
 	assert.Equal(t, filledHash(0xc0), p0.PublicInputs.DynamicChainConfigHash)
-	assert.Len(t, p0.L2L1Messages, 1)
-	assert.Len(t, p0.TxFroms, 2)
-	assert.Len(t, p0.FilteredAddresses, 2)
+	assert.Equal(t, uint64(2), p0.PublicInputs.BlockCount)
+	assert.Len(t, p0.PublicInputs.L2L1Messages, 1)
+	assert.Equal(t, filledHash(0x08), p0.PublicInputs.L2L1Messages[0])
+	assert.Empty(t, p0.PublicInputs.L2MessagingBlocksOffsets)
+	assert.Len(t, p0.PublicInputs.FilteredAddresses, 2)
 
 	assert.Equal(t, uint64(12), req.L2ExecutionProofs[1].StartBlockNumber)
 	assert.Equal(t, uint64(14), req.L2ExecutionProofs[1].PublicInputs.EndBlockNumber)
 }
 
-// TestDecodeRollupRequest_BlobChunkStart verifies the fresh-chunk-start form:
-// startOffset 0 needs no boundary hash and no opaque prefix.
-func TestDecodeRollupRequest_BlobChunkStart(t *testing.T) {
-	obj := unmarshalObject(t, readFixture(t, rollupRequestFixture))
+// TestDecodeRollupRequest_OptionalBoundaryHash verifies boundaryPrevDataRollingHash
+// is optional: absent, it decodes to nil with no cross-check.
+func TestDecodeRollupRequest_OptionalBoundaryHash(t *testing.T) {
+	obj := unmarshalObject(t, readSpecFixture(t, referenceRollupRequest))
 	pr := obj[proofRequestKey].(map[string]any)
-	pr[startOffsetKey] = 0
-	delete(pr, opaquePrefixBytesKey)
 	delete(pr, boundaryPrevDataRollingHashKey)
 
 	req, err := DecodeRollupRequest(marshal(t, obj))
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0), req.StartOffset)
 	assert.Nil(t, req.BoundaryPrevDataRollingHash)
-	assert.Empty(t, req.OpaquePrefixBytes)
 }
 
 func TestDecodeRollupRequest_InvalidJSON(t *testing.T) {
@@ -92,13 +98,14 @@ func TestDecodeRollupRequest_InvalidShape(t *testing.T) {
 	}
 	pi0 := func(o map[string]any) map[string]any { return proof0(o)[publicInputsKey].(map[string]any) }
 
+	//nolint:goconst
 	cases := []struct {
 		name    string
 		mutate  func(o map[string]any)
 		wantErr string
 	}{
-		{"MissingProgramVk", func(o map[string]any) { delete(o, programVkKey) }, programVkKey},
-		{"ProgramVkWrongLength", func(o map[string]any) { o[programVkKey] = "0x1234" }, programVkKey},
+		{"MissingGuestProgramId", func(o map[string]any) { delete(o, guestProgramIDKey) }, guestProgramIDKey},
+		{"GuestProgramIdWrongLength", func(o map[string]any) { o[guestProgramIDKey] = "0x1234" }, guestProgramIDKey},
 		{"MissingProofRequest", func(o map[string]any) { delete(o, proofRequestKey) }, proofRequestKey},
 		{"MissingChainID", func(o map[string]any) { delete(pr(o), chainIDKey) }, chainIDKey},
 		{"MissingConflations", func(o map[string]any) { delete(pr(o), conflationsKey) }, conflationsKey},
@@ -115,40 +122,40 @@ func TestDecodeRollupRequest_InvalidShape(t *testing.T) {
 			"same length"},
 		{"MissingParentDataRollingHash",
 			func(o map[string]any) { delete(pr(o), parentDataRollingHashKey) }, parentDataRollingHashKey},
-		{"MissingStartOffset", func(o map[string]any) { delete(pr(o), startOffsetKey) }, startOffsetKey},
-		{"BoundaryRequiredWhenMidChunk",
-			func(o map[string]any) { delete(pr(o), boundaryPrevDataRollingHashKey) },
-			boundaryPrevDataRollingHashKey},
-		{"OpaquePrefixLengthMismatch",
-			func(o map[string]any) { pr(o)[opaquePrefixBytesKey] = "0xabab" },
-			opaquePrefixBytesKey},
+		{"MissingParentDataTailTakeBytes",
+			func(o map[string]any) { delete(pr(o), parentDataTailTakeBytesKey) }, parentDataTailTakeBytesKey},
 		{"ConflationBlockRlpsEmpty",
 			func(o map[string]any) {
 				pr(o)[conflationsKey].([]any)[0].(map[string]any)[blockRlpsKey] = []any{}
 			},
 			blockRlpsKey},
 		{"MissingChunkHash", func(o map[string]any) { delete(chunk0(o), chunkHashKey) }, chunkHashKey},
-		{"BlobChunkNonZeroCalldata",
-			func(o map[string]any) { chunk0(o)[calldataLengthKey] = 5 },
-			calldataLengthKey},
-		{"CalldataChunkZeroLength",
-			func(o map[string]any) {
-				chunk0(o)[isCalldataKey] = true
-				chunk0(o)[calldataLengthKey] = 0
-			},
-			calldataLengthKey},
 		{"ChunkIsCalldataNotBool",
 			func(o map[string]any) { chunk0(o)[isCalldataKey] = "yes" },
 			isCalldataKey},
+		{"BlobChunkWithCalldataBytes",
+			func(o map[string]any) { chunk0(o)[calldataBytesKey] = "0xdead" },
+			calldataBytesKey},
+		{"BlobChunkEmptyBlob",
+			func(o map[string]any) { chunk0(o)[blobBytesKey] = "0x" },
+			blobBytesKey},
+		{"CalldataChunkEmptyCalldata",
+			func(o map[string]any) { chunk0(o)[isCalldataKey] = true },
+			calldataBytesKey},
 		{"ProofMissingProgramVk", func(o map[string]any) { delete(proof0(o), programVkKey) }, programVkKey},
 		{"ProofMissingProof", func(o map[string]any) { delete(proof0(o), proofKey) }, proofKey},
 		{"ProofPublicInputsMissingField", func(o map[string]any) { delete(pi0(o), "endBlockHash") }, "endBlockHash"},
-		{"ProofMissingL2L1Messages", func(o map[string]any) { delete(proof0(o), l2L1MessagesKey) }, l2L1MessagesKey},
+		{"ProofPublicInputsMissingL2L1Messages",
+			func(o map[string]any) { delete(pi0(o), l2L1MessagesKey) }, l2L1MessagesKey},
+		{"ProofPublicInputsMissingBlockCount",
+			func(o map[string]any) { delete(pi0(o), blockCountKey) }, blockCountKey},
+		{"ProofPublicInputsMissingOffsets",
+			func(o map[string]any) { delete(pi0(o), l2MessagingBlocksOffsetsKey) }, l2MessagingBlocksOffsetsKey},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			obj := unmarshalObject(t, readFixture(t, rollupRequestFixture))
+			obj := unmarshalObject(t, readSpecFixture(t, referenceRollupRequest))
 			tc.mutate(obj)
 			_, err := DecodeRollupRequest(marshal(t, obj))
 			require.Error(t, err)

@@ -1,9 +1,9 @@
-//! SSZ codec for the rollup guest wire format: `SszRollupProofPrivateInput`/`SszRollupOutput`,
+//! SSZ codec for the rollup guest wire format: private input and public inputs plus hash,
 //! schema ids 0x1001/0x1801.
 //!
 //! Frame: 2-byte big-endian schema id || SSZ container bytes (SSZ itself little-endian). This
-//! guest's own tests round-trip both the input and output containers byte-for-byte using this
-//! module's own `encodeInput`/`decodeInput` and `encodeOutput`/`decodeOutput` — there is no
+//! guest's own tests round-trip the input container byte-for-byte using this
+//! module's `encodeInput`/`decodeInput` and check the emitted output bytes — there is no
 //! external fixture to match; `rollup_spec/src/rollup_spec/rollup_ssz.py` is an illustrative
 //! reference implementation of the same schema, not an authority this codec is checked against.
 //!
@@ -131,8 +131,7 @@ pub const RollupPublicInput = struct {
     program_vks: []const [32]u8,
 };
 
-/// The rollup guest's own output: `RollupProof` with `proof` omitted (the prover layer attaches it
-/// separately — a guest cannot attest its own proof).
+/// The rollup business-logic result; the guest writes only public_inputs and their hash.
 pub const RollupOutput = struct {
     public_inputs: RollupPublicInput,
     start_block_number: u64,
@@ -575,37 +574,6 @@ pub fn encodeInput(alloc: std.mem.Allocator, v: RollupProofPrivateInput) ![]u8 {
 // Fixed head: 19 fixed fields (11 hashes * 32 + 8 u64s * 8 = 416) + program_vks offset(4) = 420.
 const ROLLUP_PI_FIXED_SIZE: usize = 420;
 
-fn decodeRollupPublicInput(alloc: std.mem.Allocator, bytes: []const u8) !RollupPublicInput {
-    if (bytes.len < ROLLUP_PI_FIXED_SIZE) return error.InvalidSsz;
-    var pos: usize = 0;
-    var v: RollupPublicInput = undefined;
-    v.end_block_number = getU64(bytes, &pos);
-    v.end_block_timestamp = getU64(bytes, &pos);
-    v.l2_l1_bridge_transaction_tree = getHash(bytes, &pos);
-    v.parent_l1_l2_bridge_rolling_hash = getHash(bytes, &pos);
-    v.parent_l1_l2_bridge_rolling_hash_message_number = getU64(bytes, &pos);
-    v.end_l1_l2_bridge_rolling_hash = getHash(bytes, &pos);
-    v.end_l1_l2_bridge_rolling_hash_message_number = getU64(bytes, &pos);
-    v.dynamic_chain_config_hash = getHash(bytes, &pos);
-    v.parent_ftx_rolling_hash = getHash(bytes, &pos);
-    v.parent_ftx_number = getU64(bytes, &pos);
-    v.end_ftx_rolling_hash = getHash(bytes, &pos);
-    v.end_processed_ftx_number = getU64(bytes, &pos);
-    v.filtered_addresses_hash = getHash(bytes, &pos);
-    v.parent_data_rolling_hash = getHash(bytes, &pos);
-    v.end_data_rolling_hash = getHash(bytes, &pos);
-    v.parent_block_hash = getHash(bytes, &pos);
-    v.end_block_hash = getHash(bytes, &pos);
-    v.start_offset = getU64(bytes, &pos);
-    v.end_offset = getU64(bytes, &pos);
-    std.debug.assert(pos == ROLLUP_PI_FIXED_SIZE - 4);
-
-    const off_vks = readU32(bytes, pos);
-    if (off_vks != ROLLUP_PI_FIXED_SIZE or off_vks > bytes.len) return error.InvalidSsz;
-    v.program_vks = try decodeBytes32List(alloc, bytes[off_vks..], MAX_PROGRAM_VKS);
-    return v;
-}
-
 fn encodeRollupPublicInput(alloc: std.mem.Allocator, v: RollupPublicInput) ![]u8 {
     if (v.program_vks.len > MAX_PROGRAM_VKS) return error.BoundsViolation;
     const vks_bytes = try encodeBytes32List(alloc, v.program_vks);
@@ -640,65 +608,18 @@ fn encodeRollupPublicInput(alloc: std.mem.Allocator, v: RollupPublicInput) ![]u8
     return out;
 }
 
-// ── RollupOutput (the rollup guest OUTPUT) ───────────────────────────────────────────────────────
-// Fixed head: public_inputs offset(4) + start_block_number(8) + l2_l1_roots offset(4) +
-// filtered_addresses offset(4) = 20.
-const OUTPUT_FIXED_SIZE: usize = 4 + 8 + 4 + 4;
+// Framed output: SSZ(public_inputs) followed by its 32-byte keccak256 hash.
+const OUTPUT_HASH_SIZE: usize = 32;
 
-/// Encode the rollup guest's actual wire output: the 0x1801 schema id followed by the SSZ
-/// `SszRollupOutput`.
+/// Encode the 0x1801 frame containing plain SSZ public inputs followed by their keccak256 hash.
+/// Auxiliary business-logic fields stay off wire.
 pub fn encodeOutput(alloc: std.mem.Allocator, v: RollupOutput) ![]u8 {
-    if (v.l2_l1_roots.len > MAX_L2_L1_ROOTS or v.filtered_addresses.len > MAX_FILTERED_ADDRESSES) {
-        return error.BoundsViolation;
-    }
     const pi_bytes = try encodeRollupPublicInput(alloc, v.public_inputs);
-    const roots_bytes = try encodeBytes32List(alloc, v.l2_l1_roots);
-    const filtered_bytes = try encodeAddressList(alloc, v.filtered_addresses);
-
-    const off_roots = try checkedAdd(OUTPUT_FIXED_SIZE, pi_bytes.len);
-    const off_filtered = try checkedAdd(off_roots, roots_bytes.len);
-    const body_len = try checkedAdd(off_filtered, filtered_bytes.len);
-    _ = try sszOffset(body_len);
+    const body_len = try checkedAdd(OUTPUT_HASH_SIZE, pi_bytes.len);
     const frame_len = try checkedAdd(SCHEMA_ID_SIZE, body_len);
     const out = try alloc.alloc(u8, frame_len);
     std.mem.writeInt(u16, out[0..2], OUTPUT_SCHEMA_ID, .big);
-    const body = out[SCHEMA_ID_SIZE..];
-
-    writeU32(body, 0, try sszOffset(OUTPUT_FIXED_SIZE));
-    writeU64(body, 4, v.start_block_number);
-    writeU32(body, 12, try sszOffset(off_roots));
-    writeU32(body, 16, try sszOffset(off_filtered));
-
-    @memcpy(body[OUTPUT_FIXED_SIZE..][0..pi_bytes.len], pi_bytes);
-    @memcpy(body[off_roots..][0..roots_bytes.len], roots_bytes);
-    @memcpy(body[off_filtered..], filtered_bytes);
+    @memcpy(out[SCHEMA_ID_SIZE..][0..pi_bytes.len], pi_bytes);
+    std.crypto.hash.sha3.Keccak256.hash(pi_bytes, out[SCHEMA_ID_SIZE + pi_bytes.len ..][0..OUTPUT_HASH_SIZE], .{});
     return out;
-}
-
-/// Decode a rollup guest output frame. Not used by the guest itself at runtime (it only ever
-/// encodes) — kept so the output codec's byte-exact round-trip can be asserted against
-/// `encodeOutput` in this guest's own tests.
-pub fn decodeOutput(alloc: std.mem.Allocator, data: []const u8) !RollupOutput {
-    if (data.len < SCHEMA_ID_SIZE) return error.MalformedFrame;
-    if (std.mem.readInt(u16, data[0..2], .big) != OUTPUT_SCHEMA_ID) return error.MalformedFrame;
-    const body = data[SCHEMA_ID_SIZE..];
-    if (body.len < OUTPUT_FIXED_SIZE) return error.InvalidSsz;
-
-    const off_pi = readU32(body, 0);
-    const start_block_number = readU64(body, 4);
-    const off_roots = readU32(body, 12);
-    const off_filtered = readU32(body, 16);
-    if (off_pi != OUTPUT_FIXED_SIZE) return error.InvalidSsz;
-    if (off_roots < off_pi or off_filtered < off_roots or off_filtered > body.len) return error.InvalidSsz;
-
-    const public_inputs = try decodeRollupPublicInput(alloc, body[off_pi..off_roots]);
-    const l2_l1_roots = try decodeBytes32List(alloc, body[off_roots..off_filtered], MAX_L2_L1_ROOTS);
-    const filtered_addresses = try decodeAddressList(alloc, body[off_filtered..], MAX_FILTERED_ADDRESSES);
-
-    return .{
-        .public_inputs = public_inputs,
-        .start_block_number = start_block_number,
-        .l2_l1_roots = l2_l1_roots,
-        .filtered_addresses = filtered_addresses,
-    };
 }

@@ -64,6 +64,7 @@ component_include_path() {
         "tracer/**" \
         "tracer-constraints/**" \
         "linea-besu/plugins/linea-sequencer/**" \
+        "linea-besu/plugins/sequencer-interfaces/**" \
         "linea-besu/besu/**" \
         "linea-besu/package/**" \
         "gradle/libs.versions.toml"
@@ -78,6 +79,7 @@ component_include_path() {
         "tracer/**" \
         "tracer-constraints/**" \
         "linea-besu/plugins/linea-sequencer/**" \
+        "linea-besu/plugins/sequencer-interfaces/**" \
         "linea-besu/besu/**" \
         "linea-besu/package/**" \
         "gradle/libs.versions.toml"

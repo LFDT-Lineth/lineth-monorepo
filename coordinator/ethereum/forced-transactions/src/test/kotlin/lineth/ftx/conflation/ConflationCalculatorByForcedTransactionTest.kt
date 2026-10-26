@@ -5,7 +5,7 @@ import linea.domain.ConflationTrigger
 import linea.forcedtx.ForcedTransactionInclusionResult
 import lineth.conflation.calculators.ConflationCounters
 import lineth.conflation.calculators.ConflationTriggerCalculator
-import net.consensys.linea.traces.TracesCountersV4
+import net.consensys.linea.traces.TracesCountersV5
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -46,7 +46,7 @@ class ConflationCalculatorByForcedTransactionTest {
   private fun blockCounters(blockNumber: ULong) = BlockCounters(
     blockNumber = blockNumber,
     blockTimestamp = timestamp,
-    tracesCounters = TracesCountersV4.EMPTY_TRACES_COUNT,
+    tracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
     blockRLPEncoded = ByteArray(0),
     coinbase = "0x0000000000000000000000000000000000000000",
   )
@@ -69,7 +69,7 @@ class ConflationCalculatorByForcedTransactionTest {
   @Test
   fun `copyCountersTo is a no-op`() {
     queue.add(ftx(ftx = 1UL, blockNumber = 10UL, inclusionResult = ForcedTransactionInclusionResult.BadNonce))
-    val counters = ConflationCounters(tracesCounters = TracesCountersV4.EMPTY_TRACES_COUNT)
+    val counters = ConflationCounters(tracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT)
 
     calculator.copyCountersTo(counters)
 

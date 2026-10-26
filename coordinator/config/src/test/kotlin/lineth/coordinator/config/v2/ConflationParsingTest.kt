@@ -198,7 +198,6 @@ class ConflationParsingTest {
   fun `should reify riscvStartingBlockTimestampInclusive into domain config`() {
     val domainConfig = config.reified(
       defaults = DefaultsToml(),
-      tracesCountersLimitsV4 = null,
       tracesCountersLimitsV5 = TracesCountersV5.EMPTY_TRACES_COUNT,
     )
     assertThat(domainConfig.l2EngineEndpoint).isEqualTo("http://l2-node-1:8550".toURL())
@@ -207,7 +206,6 @@ class ConflationParsingTest {
 
     val domainConfigMinimal = configMinimal.copy(l2Endpoint = "http://l2-node:8545".toURL()).reified(
       defaults = DefaultsToml(),
-      tracesCountersLimitsV4 = null,
       tracesCountersLimitsV5 = TracesCountersV5.EMPTY_TRACES_COUNT,
     )
     assertThat(domainConfigMinimal.riscvStartingBlockTimestampInclusive).isNull()

@@ -31,6 +31,10 @@ func TestWritePcsSystemZig(t *testing.T) {
 			{RoundIndex: 0},
 			{Precomputed: true, Root: octupletForTest(1, 2, 3, 4, 5, 6, 7, 8)},
 		},
+		BatchManifests: []*PcsBatchManifest{
+			{Round: 0, CellStart: 4, ColStart: 0},
+			nil,
+		},
 	}
 
 	var buf bytes.Buffer
@@ -45,6 +49,10 @@ func TestWritePcsSystemZig(t *testing.T) {
 		`const witness_map = [_]pcs.ClaimRef{`,
 		`const quotient_map = [_]pcs.ClaimRef{`,
 		`const batch_roots = [_]pcs.BatchRoot{`,
+		`const batch_manifests = [_]?pcs.BatchManifest{`,
+		`    .{ .round = 0, .cell_start = 4, .col_start = 0 },`,
+		`    null,`,
+		`.batch_manifests = &batch_manifests,`,
 		`pub const pcs_system_7 = pcs.System{`,
 		`const all_shifts = [_]i32{ 0, 7, 1, }`,
 		`const all_claim_cells = [_]pcs.CellRef{ .{ .round = 1, .index = 0 }, .{ .round = 1, .index = 1 }, .{ .round = 2, .index = 0 }, }`,
@@ -185,6 +193,45 @@ func TestBuildPcsSystemRecordsMinimumSafeDynamicSize(t *testing.T) {
 	}
 	if pcs.Columns[0].DynamicMinSizeLog2 != 3 {
 		t.Fatalf("pcs.Columns[0].DynamicMinSizeLog2 = %d, want 3", pcs.Columns[0].DynamicMinSizeLog2)
+	}
+}
+
+// The manifest locator must point at the prover's manifest cells: contiguous,
+// in the committed round, one per column, starting at the batch's first
+// declaration index.
+func TestBuildPcsSystemLocatesManifestCells(t *testing.T) {
+	sys := wiop.NewSystemf("manifest-cells")
+	r0 := sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionRight)
+	a := mod.NewColumn(sys.Context.Childf("a"), r0)
+	b := mod.NewColumn(sys.Context.Childf("b"), r0)
+	mod.NewVanishing(sys.Context.Childf("eq"), wiop.Sub(a.View(), b.View()))
+
+	global.Compile(sys)
+	pcscompiler.Compile(sys)
+
+	routing, err := BuildCoinRouting(sys)
+	if err != nil {
+		t.Fatalf("BuildCoinRouting() error = %v", err)
+	}
+	pcs, err := BuildPcsSystem(sys, routing)
+	if err != nil {
+		t.Fatalf("BuildPcsSystem() error = %v", err)
+	}
+	if len(pcs.BatchManifests) != pcs.NumBatches {
+		t.Fatalf("len(BatchManifests) = %d, want %d", len(pcs.BatchManifests), pcs.NumBatches)
+	}
+	cells := pcscompiler.ManifestCells(r0)
+	if len(cells) != 2 {
+		t.Fatalf("ManifestCells(r0) has %d cells, want 2", len(cells))
+	}
+	got := pcs.BatchManifests[0]
+	if got == nil {
+		t.Fatalf("BatchManifests[0] is nil for the interactive batch")
+	}
+	want := PcsBatchManifest{Round: r0.ID, CellStart: cells[0].Context.ID.Position(), ColStart: 0}
+	if *got != want {
+		t.Fatalf("BatchManifests[0] = %+v, want %+v", *got, want)
 	}
 }
 

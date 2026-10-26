@@ -233,10 +233,10 @@ func writeJSON(output io.Writer, inputs map[string][]byte) error {
 	entry := inputs[elfmapping.EntryPointAndBlobsCountInput]
 	metadata := inputs[elfmapping.BlobsOffsetAndSizeInput]
 	data := inputs[elfmapping.BlobsDataInput]
-	if len(entry) != 16 || len(metadata)%16 != 0 {
+	if len(entry) != 12 || len(metadata)%12 != 0 {
 		return fmt.Errorf("invalid encoded ELF input lengths")
 	}
-	metadataRecords := splitHexRecords(metadata, 16, "_")
+	metadataRecords := splitHexRecords(metadata, 12, "_")
 	dataRecords, err := splitBlobData(data, metadata)
 	if err != nil {
 		return err
@@ -285,8 +285,8 @@ func splitHexRecords(data []byte, size int, fieldSeparator string) []string {
 func splitBlobData(data, metadata []byte) ([]string, error) {
 	var records []string
 	for len(metadata) != 0 {
-		size := binary.BigEndian.Uint64(metadata[8:16])
-		metadata = metadata[16:]
+		size := uint64(binary.BigEndian.Uint32(metadata[8:12]))
+		metadata = metadata[12:]
 		if size > uint64(len(data)) {
 			return nil, fmt.Errorf("blob metadata exceeds encoded data")
 		}

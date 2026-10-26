@@ -1,8 +1,7 @@
 # Lineth Type-1 RISC-V Migration
-The rollup guest builds L2-to-L1 message roots at fixed depth 5 (32 leaves).
-The rollup public inputs expose `l2L1TreeDepth`; aggregation checks that all
-input rollup proofs agree and emits that proven depth, which L1 stores with
-each root.
+The rollup guest emits the ordered L2-to-L1 message list. Aggregation builds
+the finalization's L2-to-L1 message roots once, at fixed depth 5 (32 leaves),
+and emits that depth for L1 to store with each root.
 ## The Path to a Type-1 RISC-V Architecture
 
 ---
@@ -62,18 +61,18 @@ The architecture is driven by four principles:
 
 The system is organized around three concurrent, independent streams that converge at finalization time.
 
-**Stream 1 — Data Availability.** The DA layer is a continuous byte stream: each conflation's truncated-block payload is compressed independently as one zstd frame, prefixed by its compressed byte length as a 4-byte big-endian unsigned integer; the resulting length-prefixed segments are concatenated in block order. Fixed-size blob chunks or variable-size calldata chunks transport windows of that stream — chunk boundaries carry no block or conflation semantics, so a block or a conflation may span chunks and several small conflations may share one chunk. Only a blob chunk may be shared between adjacent rollup proofs; calldata chunks are range-aligned. For each submitted chunk, the L1 contract anchors a new dataRollingHash — a cumulative hash that chains the chunk's content to the preceding history. The dataRollingHash chain is the canonical on-chain record of submitted DA data; execution continuity (which blocks the data corresponds to) is carried separately, as explicit public-input fields.
+**Stream 1 — Data Availability.** The DA layer is a continuous byte stream: each conflation's truncated-block payload is compressed independently as one zstd frame, prefixed by its compressed byte length as a 4-byte big-endian unsigned integer; the resulting segments are concatenated in block order. Fixed-size blob chunks or variable-size calldata chunks transport windows of that stream — chunk boundaries carry no block or conflation semantics, so a block or a conflation may span chunks and several small conflations may share one chunk. Only a blob chunk may be shared between adjacent rollup proofs; calldata chunks are range-aligned. For each submitted chunk, the L1 contract anchors a new dataRollingHash — a cumulative hash that chains the chunk's content to the preceding history. The dataRollingHash chain is the canonical on-chain record of submitted DA data; execution continuity (which blocks the data corresponds to) is carried separately, as explicit public-input fields.
 
 
 **Stream 2 — Proving (l2-execution & rollup).** Two leaf-level proof types are produced independently and in parallel:
 
-- **l2-execution proofs** — for each contiguous range of L2 blocks (a *conflation*), a prover generates an l2-execution proof attesting to the EVM state transition, L2→L1 message rolling hash checks, and forced-transaction handling. Multiple l2-execution proofs can be produced in parallel across different block ranges.
-- **rollup proofs** — for `N ≥ 1` consecutive whole conflations, a single rollup proof attests to: (a) for each conflation, parsing frames from verified chunk bytes and validating them against canonical truncated-block RLP derived from the full block RLPs; (b) for every chunk that stream touches — including shared boundary blobs containing neighbouring proof bytes — checking the L1-committed `chunkHash` with the chunk-kind-specific binding, folding the dataRollingHash chain across the touched chunks; and (c) recursive verification of the N l2-execution proofs whose ranges tile the conflations' combined block range. The rollup proof is the smallest unit of aggregation: it folds multiple l2-execution proofs into one and exposes the unified public-input tuple, including ordered root and filtered-address lists.
+- **l2-execution proofs** — for each contiguous range of L2 blocks (a *conflation*), a prover generates an l2-execution proof attesting to the EVM state transition, the ordered L2→L1 message list, and forced-transaction handling. Multiple l2-execution proofs can be produced in parallel across different block ranges.
+- **rollup proofs** — for `N ≥ 1` consecutive whole conflations, a single rollup proof attests to: (a) for each conflation, parsing segments from verified chunk bytes and validating them against canonical truncated-block RLP derived from the full block RLPs; (b) for every chunk that stream touches — including shared boundary blobs containing neighbouring proof bytes — checking the L1-committed `chunkHash` with the chunk-kind-specific binding, folding the dataRollingHash chain across the touched chunks; and (c) recursive verification of the N l2-execution proofs whose ranges tile the conflations' combined block range. The rollup proof folds multiple l2-execution proofs into one and exposes an ordered message list and the canonical filtered-address list.
 
 
 **Stream 3 — rollup-aggregation.** Once all rollup proofs for a target finalization range are available, they are assembled, aggregated, and wrapped for L1 by one rollup-aggregation prover request:
 
-- **rollup-aggregation + emulation** — a single rollup-aggregation prover request runs one guest invocation that recursively verifies all `M` rollup proofs, asserts inter-rollup-proof continuity in software, merges their ordered root and filtered-address lists into the same public-input shape over the full range, and then performs the STARK-to-SNARK emulation wrap (Groth16/Plonk) for L1 submission. The rollup-aggregation topology is flat across the `M` rollup proofs; hierarchical / k-ary aggregation is a future option. There is no separate emulation prover invocation.
+- **rollup-aggregation + emulation** — a single rollup-aggregation prover request runs one guest invocation that recursively verifies all `M` rollup proofs, asserts inter-rollup-proof continuity in software, builds message roots over the full range, merges filtered-address lists, and then performs the STARK-to-SNARK emulation wrap (Groth16/Plonk) for L1 submission. The rollup-aggregation topology is flat across the `M` rollup proofs; hierarchical / k-ary aggregation is a future option. There is no separate emulation prover invocation.
 
 ```
 l2-exec₁ ┐
@@ -99,20 +98,26 @@ checks modeled separately in `l1_rollup.py`:
 | Guest program | Reference entry point | Scope |
 |---|---|---|
 | l2-execution | `l2_execution.py::run_l2_execution_guest` | Replays a contiguous range of Engine API `NewPayloadRequest`s from vanilla stateless inputs plus Lineth rollup-extension fields, validates the EVM state transition, extracts bridge events, processes Lineth forced transactions, and emits the l2-execution PI with message-bearing block offsets. It does not read blobs, verify KZG, or recursively verify other proofs. |
-| rollup | `rollup.py::run_rollup_guest` | For each of `N >= 1` consecutive whole conflations, validates each parsed zstd frame against canonical truncated-block RLP derived from the full block RLPs (§3.1), and concatenates the segments into this proof's own byte stream. For every chunk that stream touches — including shared boundary blobs containing neighbouring proof bytes — computes the KZG commitment and checks its versioned hash against the L1-committed `chunkHash`, folding the dataRollingHash chain across the touched chunks. Recursively verifies the `N` l2-execution proofs that tile the combined conflation range against their supplied `programVk`s, builds ordered L2->L1 root and refused-address lists, and emits them in the rollup PI alongside `programVks`. It does not run the EVM or perform L1 finalization checks. |
-| rollup-aggregation | `rollup_aggregation.py::run_rollup_aggregation_guest` | Recursively verifies the `M` rollup proofs for a finalization range against their supplied `programVk`s, checks proof-to-proof continuity (both the dataRollingHash/offset stream position and the block-hash chain), merges root/address lists in proof order, and commits corresponding `programIds` in the final PI consumed by L1. VK-to-ID correspondence is WIP in the Python reference. It does not inspect raw blocks, raw chunks, or L1 storage. |
+| rollup | `rollup.py::run_rollup_guest` | For each of `N >= 1` consecutive whole conflations, validates each parsed zstd frame against canonical truncated-block RLP derived from the full block RLPs (§3.1), and concatenates the segments into this proof's own byte stream. For every chunk that stream touches — including shared boundary blobs containing neighbouring proof bytes — computes the KZG commitment and checks its versioned hash against the L1-committed `chunkHash`, folding the dataRollingHash chain across the touched chunks. Recursively verifies the `N` l2-execution proofs, concatenates proven execution PI message lists, and emits the combined ordered message list, the canonical refused-address list and `programVks`. It does not run the EVM or perform L1 finalization checks. |
+| rollup-aggregation | `rollup_aggregation.py::run_rollup_aggregation_guest` | Recursively verifies the `M` rollup proofs for a finalization range against their supplied `programVk`s, checks proof-to-proof continuity, concatenates proven rollup PI message lists and builds the final roots and merges filtered-address lists, and commits corresponding `programIds` in the final PI consumed by L1. VK-to-ID correspondence is WIP in the Python reference. It does not inspect raw blocks, raw chunks, or L1 storage. |
 
 
 `l1_rollup.py` models the contract-facing DA chunk anchoring and finalization checks
 against L1 storage. It is intentionally not one of the RISC-V guest programs.
 
-**Guest output vs prover output.** Each guest emits its public inputs and any
-other output needed by the next proving step. The zkVM/prover layer attaches
-`proof` and hashes list fields internally when constructing the recursive or
-on-chain public-input commitment. A prover response retains the guest output
+**Guest output vs prover output.** Each guest emits its public inputs. The zkVM/prover layer attaches
+`proof` and verifies the guest output commitment `keccak256(schemaId ‖ canonical SSZ(PI))` before consuming the public inputs. A prover response retains the guest output
 for the next proving step or for the Coordinator to submit to L1. L1 hashes
 submitted lists in `_computePublicInput` (§5). The reference leaves `proof` as
 a placeholder (`b""`); see §2.4 and §3.3.
+
+The l2-execution guest emits `txFromsHash` in its public inputs, rather than
+emitting the potentially large `txFroms` sender list. The arithmetization's
+SSZ-encoded guest-output limit is 2^16 bytes; excluding sender preimages keeps
+them from consuming this budget. The rollup guest reconstructs the list from
+its private block inputs and checks the hash (§2.2). The Python reference's
+hash-only guest-output frame remains 34 bytes including its schema ID; the
+embedded execution proof and JSON prover response likewise omit `txFroms`.
 
 **Reference environment.** The Python reference targets **Python 3.11+** (it uses
 `enum.StrEnum`) and pins its dependencies in `rollup_spec/requirements.txt`
@@ -133,7 +138,7 @@ declared outcome is one of the allowed outcomes in §6.5.
 | `endBlockHash` | Block hash at the end of this range |
 | `endBlockNumber` | Block number at the end of this range; required for the L1 contract to update `currentL2BlockNumber` and support liveness checks |
 | `endBlockTimestamp` | UNIX timestamp of the last block in this range. Bubbled up unchanged through the rollup and rollup-aggregation proofs (§2.2, §2.3) and stored on L1 in `currentFinalizedState` at finalization, so L1 consumers can read the finalized L2 "wall clock". |
-| `l2L1MessagesHash` | keccak256 of the ordered list of L2→L1 withdrawal message hashes emitted in this range; the number of messages is bounded per l2-execution proof |
+| `l2L1Messages` | Ordered 32-byte L2→L1 withdrawal message hashes emitted in this range; empty if none |
 | `parentL1L2BridgeRollingHash` | Accumulated L1→L2 deposit rolling hash at the start of this range; enables chaining across l2-execution proofs and L1 continuity verification |
 | `parentL1L2BridgeRollingHashMessageNumber` | Message number corresponding to `parentL1L2BridgeRollingHash` |
 | `endL1L2BridgeRollingHash` | Accumulated L1→L2 deposit rolling hash at the end of this range |
@@ -143,16 +148,15 @@ declared outcome is one of the allowed outcomes in §6.5.
 | `parentFtxNumber` | Sequence number of the last forced transaction handled before this range; enables L1 continuity verification at finalization (§6.7) |
 | `endFtxRollingHash` | Forced-transaction rolling hash at the end of this range |
 | `endProcessedFtxNumber` | Sequence number of the last forced transaction handled in this range |
-| `filteredAddressesHash` | keccak256 of the ordered list of addresses whose forced transactions were refused in this range; each entry is either the recovered sender (`fromAddress = recover_sender(signedTxRlp, chainID)`) if refused due to a sanctioned sender, or the recipient (`toAddress`) if refused due to a sanctioned recipient; `keccak256([])` if none |
+| `filteredAddresses` | Addresses named by the forced transactions refused in this range (§6.5) — the recovered sender (`fromAddress = recover_sender(signedTxRlp, chainID)`) for `FILTERED_ADDRESS_FROM`, the decoded recipient (`toAddress`) for `FILTERED_ADDRESS_TO` — encoded as a distinct list sorted ascending by byte value; empty if none |
 | `txFromsHash` | keccak256 of the flat ordered list of sender addresses for all transactions in this range, in block-then-transaction order |
 | `blockCount` | Number of execution-validated blocks covered by this proof |
 | `l2MessagingBlocksOffsets` | Strictly increasing uint16 offsets of blocks with matching validated L2MessageService receipt logs, relative to the parent block (first = 1) |
 
 **Private Inputs (Witness)**
 
-- The complete set of L2 payloads as length-delimited vanilla stateless-input SSZ `StatelessInput` byte slices, one per block in the conflation. The guest decodes each slice into a `NewPayloadRequest`, execution witness, stateless chain config, and optional transaction public keys before reading Lineth's rollup-extension fields. Each request carries `executionPayload`, `versionedHashes`, `parentBeaconBlockRoot`, and typed `executionRequests`. The Lineth wrapper consumes normal transactions from `executionPayload.transactions` as canonical signed transaction bytes, derives each sender with execution-specs `recover_sender(chainID, tx)`, then commits to the ordered list via `txFromsHash`.
+- The complete set of L2 payloads as length-delimited vanilla stateless-input SSZ `StatelessInput` byte slices, one per block in the conflation. The guest decodes each slice into a `NewPayloadRequest`, execution witness, and stateless chain config before reading Lineth's rollup-extension fields. Each request carries `executionPayload`, `versionedHashes`, `parentBeaconBlockRoot`, and typed `executionRequests`. The Lineth wrapper consumes normal transactions from `executionPayload.transactions` as canonical signed transaction bytes, derives each sender with execution-specs `recover_sender(chainID, tx)`, then commits to the ordered list via `txFromsHash`.
 - The stateless execution witness per payload after stateless-input SSZ decode (`state`, `codes`, `headers`, and optional JSON/debug `keys`). `headers` are RLP-encoded parent/ancestor headers ordered by block number and ending at the payload parent; the final header hash must equal `newPayloadRequest.executionPayload.parentHash`, and that parent header carries the state root that anchors `parentBlockHash`. The canonical `SszExecutionWitness` contains `state`, `codes`, and `headers`; an engine's JSON/debug path (e.g. Zesu's `StateWitness`) also carries `keys`, so the logical schema preserves `keys` for decoded debug fixtures. SSZ-encoded `keys` would require a distinct Lineth schema id rather than changing the vanilla stateless-input slice. The `state` MPT node pool must additionally include proof paths for: (a) the L2MessageService's `L1L2RollingHash` and `L1L2RollingHashMessageNumber` slots at both the parent and end state roots — read at proof-range boundaries even when no block in the range writes them; (b) the sender account of any FTX whose declared outcome is *Invalid* (§6.5), at the parent state root of the block where that FTX would have been included.
-- Transaction public keys, ordered by `executionPayload.transactions` index, are part of the vanilla stateless execution input (the SSZ `StatelessInput.public_keys`), not the Lineth rollup extension and not `executionWitness.keys`. They are **not transmitted on the wire**: the readable request omits them and the prover middleware recovers them from the signed transactions when building the guest's SSZ input (`stateless_input.py::_recover_public_keys`). The Lineth logical spec does not derive senders from this field: signer derivation is `recover_sender(chainID, tx)`. `public_keys` is not a witness override; any production optimization that consumes it must produce the same accepted/rejected transaction result and sender address as `recover_sender(chainID, tx)`.
 - The static Lineth proof-range chain config: `L2MessageServiceContract`, `coinBase`, `chainID`. `baseFee` — the fourth input to `dynamicChainConfigHash` — is NOT part of this struct; the guest reads it from the first `NewPayloadRequest.executionPayload.baseFeePerGas` and asserts every subsequent payload in the range carries the same value. `chainID` deliberately duplicates the chain id inside each vanilla `StatelessInput`: the inner copy preserves the unmodified stateless-input boundary, while the outer copy is the Lineth range-level preimage for `dynamicChainConfigHash`. The guest rejects the range if any decoded stateless-input `chainID` differs from this range-level value.
 - The Lineth rollup-extension forced-transaction witnesses for FTXs in the range — see §6
 
@@ -164,13 +168,13 @@ declared outcome is one of the allowed outcomes in §6.5.
 
 * **Enforce sequencer consensus rules**: strictly monotonic timestamps across the range, constant `baseFee` (sourced from the first payload and asserted equal in every subsequent payload), `coinbase` matching the chain configuration, and a contiguous parent-hash chain anchored at `parentBlockHash`. Standard Engine API payload validation is delegated to the state-transition primitive.
 
-* **Extract the canonical L2L1Message** hashes from the block receipt and compute their flat-hash using keccak256.
+* **Extract the canonical L2L1Message** hashes from the block receipt and emit them in receipt order.
 
 * **Read the L1L2RollingHash boundary values.** The L2MessageService contract maintains `L1L2RollingHash` and `L1L2RollingHashMessageNumber` in its storage; they are updated as a side effect of normal EVM execution whenever an L1→L2 message is anchored. The guest reads the four boundary values (`parent`/`end` × `RollingHash`/`MessageNumber`) directly from L2 state at `parentHeader.state_root` and `endBlock.state_root` via the EVM state interface — no separate L1→L2 message witness is consumed. The L1 contract cross-checks the resulting `endL1L2BridgeRollingHash` against its authoritative `l1RollingHash[messageNumber]` chain at finalization (§5).
 
 * **Inspect the forced transactions**: See the corresponding section.
 
-* **Output**: the public-input tuple above, as part of the guest output consumed by the rollup guest.
+* **Output**: the public-input tuple above (including `txFromsHash`, `l2L1Messages` and `filteredAddresses`), without a `txFroms` list. The `proof` bytes are attached by the prover (§2).
 
 ### 2.2 rollup Proof
 
@@ -183,7 +187,7 @@ Chunk boundaries carry no conflation semantics: this proof's own byte range may 
 
 **Public Inputs**
 
-The rollup public-input tuple carries `blockCount` alongside the values forwarded to the final rollup-aggregation PI (§2.4). `(parentDataRollingHash, startOffset)` is this proof's start stream position; `(endDataRollingHash, endOffset)` is its end stream position (§3.1) — `startOffset` is a request input, `endOffset` is derived (the stream is self-describing, so it follows from parsed frame boundaries).
+The rollup public-input tuple carries `blockCount` alongside the values forwarded to the final rollup-aggregation PI (§2.4). `(parentDataRollingHash, parentDataTailTakeBytes)` identifies this proof's parent boundary; `(endDataRollingHash, finalDataTailDiscardBytes)` identifies its final boundary (§3.1) — `parentDataTailTakeBytes` is a request input, `finalDataTailDiscardBytes` is derived (the stream is self-describing, so it follows from parsed segment boundaries).
 
 
 The **l2-execution proof's PI** (§2.1) is *input* to this guest (private witness, step 4 recursive verification), not output. Each rollup PI field and its source:
@@ -192,7 +196,7 @@ The **l2-execution proof's PI** (§2.1) is *input* to this guest (private witnes
 |---|---|
 | `endBlockNumber` | From `PI_Eₙ` |
 | `endBlockTimestamp` | From `PI_Eₙ` |
-| `l2L1Roots` | Ordered roots built in step 6 from the concatenated `l2L1Messages_c` |
+| `l2L1Messages` | Concatenation of the recursively verified `PI_E_c.l2L1Messages` lists in proof order (step 6) |
 | `parentL1L2BridgeRollingHash` | From `PI_E₁` |
 | `parentL1L2BridgeRollingHashMessageNumber` | From `PI_E₁` |
 | `endL1L2BridgeRollingHash` | From `PI_Eₙ` |
@@ -202,18 +206,18 @@ The **l2-execution proof's PI** (§2.1) is *input* to this guest (private witnes
 | `parentFtxNumber` | From `PI_E₁` |
 | `endFtxRollingHash` | From `PI_Eₙ` |
 | `endProcessedFtxNumber` | From `PI_Eₙ` |
-| `filteredAddresses` | Ordered concatenation `addrs_E₁ ‖ … ‖ addrs_Eₙ` (step 8) |
+| `filteredAddresses` | Distinct union of `PI_E_c.filteredAddresses`, sorted ascending by byte value (step 8) |
 | `parentDataRollingHash` | Public input (`R₀`) |
 | `endDataRollingHash` | Computed in step 2 (dataRollingHash chain fold) |
 | `parentBlockHash` | From `PI_E₁` |
 | `endBlockHash` | From `PI_Eₙ` |
-| `startOffset` | Public input |
-| `endOffset` | Computed in step 2: zero at a fully consumed chunk boundary, otherwise the positive consumed-byte offset inside a shared terminal blob |
+| `parentDataTailTakeBytes` | Public input |
+| `finalDataTailDiscardBytes` | Computed in step 2: zero at a fully consumed chunk boundary, otherwise the unconsumed suffix byte count of the shared terminal blob |
 | `programVks` | Set of guest VKs recursively verified (step 9) |
 | `blockCount` | Sum of proven execution proof block counts, checked against the rollup range |
 | `l2MessagingBlocksOffsets` | Proven execution messaging-block offsets rebased into the rollup range |
 
-`parentBlockHash`/`endBlockHash` are explicit fields here — execution continuity no longer folds into the DA accumulator (that was the old 3-input shnarf's `lastBlockHash`), since under shared chunks "the last block completing in chunk k" can depend on two adjacent proofs' witnesses. `l2L1MessagesHash` (step 6) and `txFromsHash` (step 3) are consumed and dropped, as before.
+`parentBlockHash`/`endBlockHash` are explicit fields here — execution continuity no longer folds into the DA accumulator (that was the old 3-input shnarf's `lastBlockHash`), since under shared chunks "the last block completing in chunk k" can depend on two adjacent proofs' witnesses. The verified execution PI message lists are concatenated into the rollup PI. `txFromsHash` (step 3) is consumed and dropped.
 
 **Private Inputs (Witness)**
 
@@ -221,7 +225,7 @@ The **l2-execution proof's PI** (§2.1) is *input* to this guest (private witnes
 |---|---|
 | `blockRlps_c` | The ordered list of canonical full block RLPs published through the DA path for conflation `c` (`blockCount_c` entries: header + tx list [+ withdrawals], EIP-2718 typed transactions in full signed form). The l2-execution proof receives `NewPayloadRequest` inputs; the rollup proof cross-checks these DA blocks against l2-execution public block hashes and `txFromsHash`. The guest derives their truncated form using §3.2 and checks it against each zstd frame decompressed from the verified DA stream. |
 | `chunks` | One `{chunkHash, isCalldata, blobBytes, calldataBytes}` entry per touched chunk. Blob chunks carry exactly 131072 physical bytes (including any foreign boundary payload bytes) and empty calldata bytes. Calldata chunks carry exact submitted bytes and empty blob bytes. The guest verifies KZG or keccak256 against `chunkHash`, respectively. |
-| `boundaryPrevDataRollingHash` | Required only when `startOffset > 0` (§3.1): the dataRollingHash value before the first touched chunk, used to open its preimage |
+| `boundaryPrevDataRollingHash` | Required only when `parentDataTailTakeBytes > 0` (§3.1): the dataRollingHash value before the first touched chunk, used to open its preimage |
 | `E₁ … Eₙ` | The l2-execution proofs, ordered by block range, one per conflation, tiling the combined range. Each `Eₑ` is the structure below. |
 
 Each l2-execution proof `Eₑ` (`e ∈ [1, N]`) has:
@@ -231,31 +235,28 @@ Each l2-execution proof `Eₑ` (`e ∈ [1, N]`) has:
 | `proof` | The recursive STARK proof artifact, verified against `Eₑ.programVk` (step 4). |
 | `publicInputs` (`PI_Eₑ`) | The l2-execution PI (§2.1). |
 | `programVk` (`programVk_e`) | The 32-byte verifying key of the exec guest that produced `Eₑ` — the key the recursive verifier checks `Eₑ` against (step 4), emitted into `programVks` (step 9). A guest cannot attest its own VK, so it is carried on the proof, not in `Eₑ`'s own PI. |
-| `l2L1Messages` (`l2L1Messages_e`) | Ordered L2→L1 message-hash list — preimage of `PI_Eₑ.l2L1MessagesHash`. |
-| `txFroms` (`froms_e`) | Sender address list (block-then-transaction order) — preimage of `PI_Eₑ.txFromsHash`. |
-| `filteredAddresses` (`addrs_e`) | Refused-FTX address list (§6.5) — preimage of `PI_Eₑ.filteredAddressesHash`. |
 | `startBlockNumber` | First block number of `Eₑ`'s range — used to verify proof tiling. |
 
-The proven statement binds physical chunk bytes to L1-anchored hashes, then parses exactly one length-prefixed zstd frame per conflation from their stream. The guest skips `startOffset` unpacked bytes in the first blob, permits frames and length prefixes to cross blob boundaries, and requires each calldata chunk to begin and end on a frame boundary. It fully decompresses each frame against the canonical truncated-block RLP derived from `blockRlps_c`. Every chunk contributes owned bytes; nonterminal blobs carry full payloads. Only the terminal blob may contain unowned suffix bytes. Its `endOffset` is the consumed position when a suffix remains; otherwise it is zero, including for a fully consumed short payload. The existing block-hash and sender checks bind canonical blocks to the recursively verified execution proofs.
+The proven statement binds each chunk's physical bytes to its L1-anchored hash — a blob by its canonical packing and KZG versioned hash, a calldata chunk by `keccak256` — then parses exactly one segment per conflation from the concatenated chunk payloads, fully decompressing each against the canonical truncated-block RLP derived from `blockRlps_c`. Four layout rules govern the stream: (1) a blob followed by another blob holds a full payload; (2) a positive `parentDataTailTakeBytes` requires the first chunk to be a blob with a strictly longer payload, and the stream starts at the last `parentDataTailTakeBytes` bytes of that payload; (3) every chunk owns at least one byte, meaning a byte inside the parsed segments; (4) every calldata chunk ends at a segment boundary. Segments may cross blob-to-blob and blob-to-calldata boundaries. `finalDataTailDiscardBytes` is the number of unconsumed bytes after the last segment. Consequently, a calldata chunk starts mid-segment only right after a blob, terminal calldata leaves no trailing bytes, and each positive tail count is below its blob's payload length (hence at most 130046). The existing block-hash and sender checks bind canonical blocks to the recursively verified execution proofs.
 
 **Statement (RISC-V Guest)**
 
-For each conflation `c ∈ [1, N]`, derive its canonical truncated-block RLP (step 1), then parse exactly one frame from the chunk-bound DA stream (step 2) before performing cross-conflation recursion (steps 3–8).
+For each conflation `c ∈ [1, N]`, derive its canonical truncated-block RLP (step 1), then parse exactly one segment from the chunk-bound DA stream (step 2) before performing cross-conflation recursion (steps 3–8).
 
-1. **Derive canonical payloads.** Decode each conflation's ordered `blockRlps_c`, apply §3.2 truncation, and RLP-encode the truncated blocks. Check its block count against the paired execution proof range and retain block hashes and sender addresses for subsequent checks.
+1. **Derive canonical payloads.** Decode each conflation's ordered `blockRlps_c`, apply §3.2 truncation, and RLP-encode the truncated blocks. Check its block count against the paired execution proof range and retain block hashes and sender addresses recovered from the full signed transactions for subsequent checks.
 
-2. **Verify and parse chunks.** Check every blob's canonical packing and KZG versioned hash using its original 131072 physical bytes. Start at `startOffset` unpacked payload bytes in the first blob; each nonterminal blob must hold a full payload. Verify the keccak hash of each exact, nonempty `calldataBytes` chunk. Concatenate accessible bytes, parse exactly `N` four-byte big-endian nonzero lengths and complete zstd frames, and fully decompress each against its canonical payload. Require each calldata extent to start and end at frame boundaries with no trailing calldata; only the last blob may have unowned bytes after the final frame. Each touched chunk must contribute owned bytes. Fold the dataRollingHash:
+2. **Verify and parse chunks.** Bind every chunk to its `chunkHash` using its exact physical bytes: a blob has empty `calldataBytes`, canonical packing over its 131072 physical bytes, and a KZG versioned hash equal to `chunkHash`; a calldata chunk has empty `blobBytes` and `keccak256(calldataBytes) == chunkHash`. Concatenate the chunk payloads — for a positive `parentDataTailTakeBytes = N`, the first blob contributes only the last `N` bytes of its unpacked payload — parse exactly one four-byte big-endian nonzero length and complete zstd frame per conflation, and fully decompress each against its canonical payload. Enforce the four layout rules: (1) a blob followed by another blob holds a full payload; (2) a positive `parentDataTailTakeBytes = N` requires the first chunk to be a blob with `N < len(payload)`; (3) every chunk owns at least one byte, meaning a byte inside the parsed segments; (4) every calldata chunk ends at a segment boundary. `finalDataTailDiscardBytes` is the number of unconsumed bytes after the last segment. Consequently, a calldata chunk starts mid-segment only right after a blob, terminal calldata leaves no trailing bytes, and each positive tail count is below its blob's payload length (hence at most 130046). Fold the dataRollingHash:
 
    ```
    R_k = Hash(R_{k-1}, chunks[k])
    ```
-   where `R_0 = parentDataRollingHash` (public input) **if** `startOffset = 0` (a canonical chunk boundary — the guest folds chunk 1 forward normally); if `startOffset > 0` (a mid-blob start), `parentDataRollingHash` is already `R_1` — the guest instead opens its preimage, asserting `Hash(boundaryPrevDataRollingHash, chunks[1]) == parentDataRollingHash`, and continues folding forward from `R_1` for `k ≥ 2`. After all `T` chunks, the outbound `endDataRollingHash = R_T` is emitted in the PI tuple together with the canonical `endOffset`; neither is echoed back as a request input (the coordinator compares the returned values against its own expectation).
+   where `R_0 = parentDataRollingHash` (public input) **if** `parentDataTailTakeBytes = 0` (a canonical chunk boundary — the guest folds chunk 1 forward normally); if `parentDataTailTakeBytes > 0` (a mid-blob start), `parentDataRollingHash` is already `R_1` — the guest instead opens its preimage, asserting `Hash(boundaryPrevDataRollingHash, chunks[1]) == parentDataRollingHash`, and continues folding forward from `R_1` for `k ≥ 2`. After all `T` chunks, the outbound `endDataRollingHash = R_T` is emitted in the PI tuple together with the canonical `finalDataTailDiscardBytes`; neither is echoed back as a request input (the coordinator compares the returned values against its own expectation).
 
-3. **Verify sender addresses.** For each l2-execution proof `Eᵢ`, assert:
+3. **Verify sender addresses.** From the canonical full signed transactions in `blockRlps_c`, recover each sender using `recover_sender(chainID, tx)` and group the addresses by the block range of the paired l2-execution proof `Eᵢ`, preserving block-then-transaction order. For each `Eᵢ`, assert:
    ```
-   keccak256(froms_e) == PI_Eᵢ.txFromsHash
+   keccak256(froms_e[0] ‖ … ‖ froms_e[last]) == PI_Eᵢ.txFromsHash
    ```
-   Then assert that `froms_1 ‖ … ‖ froms_N` equals the concatenation of `froms` across all truncated blocks (step 1 input), in canonical block-then-transaction order.
+   where each `froms_e[j]` is a 20-byte address and the empty list hashes as `keccak256(b"")`. The same full block RLPs supply the canonical truncated blocks and block hashes checked in steps 2 and 5, binding these sender hashes to the verified DA stream and execution-proof chain.
 
 4. **Verify the l2-execution proofs.** Recursively verify each `Eᵢ` against `PI_Eᵢ`, using `programVk_e` (private input, above) as the recursive verifier's verifying key for proof `Eᵢ`.
 
@@ -275,7 +276,7 @@ For each conflation `c ∈ [1, N]`, derive its canonical truncated-block RLP (st
 
     Adjacent l2-execution proofs already chain `endBlockHash → parentBlockHash` via step 7 below, so the head-anchor in (b) only needs to look at `PI_E₁.parentBlockHash`.
 
-6. **Build the L2→L1 Merkle trees.** For each `e ∈ [1, N]`, receive the message hash list as a private witness and assert `keccak256(l2L1Messages_e) == PI_E_e.l2L1MessagesHash`. Concatenate all N lists in order. Partition the combined list into consecutive groups of `2^D` leaves (where D is chosen by the guest program, currently 5), one group per tree. Pad the final group with zero-value (0x00…00) leaves to fill it. Each leaf is a 32-byte message hash; internal nodes are `keccak256(left ‖ right)`. Compute the root of each full tree and emit the ordered array `[root_1, …, root_T]` and `l2L1TreeDepth = D` in the public inputs.
+ 6. **Build the L2→L1 Merkle trees.** Concatenate the ordered `PI_Eₑ.l2L1Messages` lists from the recursively verified execution public inputs in proof order. Partition the combined list into consecutive groups of `2^D` leaves (where D is chosen by the guest program, currently 5), one group per tree. Pad the final group with zero-value (0x00…00) leaves to fill it. Each leaf is a 32-byte message hash; internal nodes are `keccak256(left ‖ right)`. Compute the root of each full tree and emit the ordered array `[root_1, …, root_T]` and `l2L1TreeDepth = D` in the public inputs.
 
 7. **Chain the l2-execution proofs.** For each consecutive pair `(Eᵢ, Eᵢ₊₁)` assert:
    ```
@@ -288,7 +289,7 @@ For each conflation `c ∈ [1, N]`, derive its canonical truncated-block RLP (st
    ```
    These checks are agnostic to chunk boundaries — they apply uniformly whether or not a conflation pair happens to share a chunk.
 
-8. **Collect forced-transaction outputs and emit PI.** For each `e ∈ [1, N]`, receive `addrs_e` as a private witness and assert `keccak256(addrs_e) == PI_E_e.filteredAddressesHash`. Concatenate all N lists in order and emit that ordered `filteredAddresses` list directly in the PI. Take `parentFtxRollingHash` and `parentFtxNumber` from `PI_E₁` and `endFtxRollingHash` / `endProcessedFtxNumber` / `endBlockTimestamp` from `PI_Eₙ`. Output the public-input tuple covering the entire `N`-conflation, `T`-chunk range.
+8. **Collect forced-transaction outputs and emit PI.** Merge the recursively verified `PI_E_e.filteredAddresses` lists for `e ∈ [1, N]` into one distinct list sorted ascending by byte value and emit it as `filteredAddresses`. Take `parentFtxRollingHash` and `parentFtxNumber` from `PI_E₁` and `endFtxRollingHash` / `endProcessedFtxNumber` / `endBlockTimestamp` from `PI_Eₙ`. Output the public-input tuple covering the entire `N`-conflation, `T`-chunk range.
 
 9. **Emit `programVks`.** Canonicalize the recursively-verified `programVk_e` for `e ∈ [1, N]` (step 4) into `programVks`: deduplicate and sort ascending by byte value. The aggregation guest consumes these verified VKs when committing corresponding Program IDs (§2.6).
 
@@ -298,16 +299,16 @@ The rollup-aggregation prover request recursively verifies the `M` rollup proofs
 
 **Public Inputs**
 
-The final rollup-aggregation PI (§2.4) carries the rollup proof's boundary values and merged lists, including proven messaging offsets and the common `l2L1TreeDepth`. The rollup PI also carries `blockCount` for range validation; the final PI omits that field.
+The final rollup-aggregation PI (§2.4) carries the rollup proof's boundary values, proven messaging offsets, and the newly built roots and fixed `l2L1TreeDepth = 5`. The rollup PI also carries `blockCount` for range validation; the final PI omits that field.
 
 The final `programIds` correspond to the verified inner guest VKs (§2.6); that correspondence remains WIP.
 
 **Private Inputs (Witness)**
 
-- The `M` rollup proofs `B₁ … Bₘ` (or, in a hierarchical setup, prior rollup-aggregation proofs), ordered by range. Each `Bᵢ` has:
+- The `M` rollup proofs `B₁ … Bₘ`, ordered by range. Each `Bᵢ` has:
   - `proof` — the recursive STARK artifact, verified against `Bᵢ.programVk` (step 1).
-   - `publicInputs` (`PI_Bᵢ`) — the rollup PI (§2.2), including ordered `l2L1Roots` and `filteredAddresses` lists.
-   - `programVk` (`programVk_i`) — the 32-byte verifying key of the rollup guest that produced `Bᵢ` — the key the recursive verifier checks `Bᵢ` against (step 1). As at the rollup level, a guest cannot attest its own VK, so it is carried on the proof.
+  - `publicInputs` (`PI_Bᵢ`) — the rollup PI (§2.2), including the ordered `l2L1Messages` list and the canonical `filteredAddresses` list.
+  - `programVk` (`programVk_i`) — the 32-byte verifying key of the rollup guest that produced `Bᵢ` — the key the recursive verifier checks `Bᵢ` against (step 1). As at the rollup level, a guest cannot attest its own VK, so it is carried on the proof.
   - `startBlockNumber` — first block number of `Bᵢ`'s range — used to verify proof tiling.
 
 **Statement (RISC-V Guest)**
@@ -317,7 +318,7 @@ The final `programIds` correspond to the verified inner guest VKs (§2.6); that 
 2. **Assert continuity** in software, for each consecutive pair `(Bᵢ, Bᵢ₊₁)`:
    ```
    assert_eq!(PI_Bᵢ.endDataRollingHash,                                 PI_Bᵢ₊₁.parentDataRollingHash)
-   assert_eq!(PI_Bᵢ.endOffset,                               PI_Bᵢ₊₁.startOffset)
+   assert_eq!(PI_Bᵢ.finalDataTailDiscardBytes,                               PI_Bᵢ₊₁.parentDataTailTakeBytes)
    assert_eq!(PI_Bᵢ.endBlockHash,                            PI_Bᵢ₊₁.parentBlockHash)
    assert_eq!(PI_Bᵢ.endL1L2BridgeRollingHash,               PI_Bᵢ₊₁.parentL1L2BridgeRollingHash)
    assert_eq!(PI_Bᵢ.endL1L2BridgeRollingHashMessageNumber,  PI_Bᵢ₊₁.parentL1L2BridgeRollingHashMessageNumber)
@@ -325,15 +326,15 @@ The final `programIds` correspond to the verified inner guest VKs (§2.6); that 
    assert_eq!(PI_Bᵢ.endFtxRollingHash,                      PI_Bᵢ₊₁.parentFtxRollingHash)
    assert_eq!(PI_Bᵢ.endProcessedFtxNumber,                  PI_Bᵢ₊₁.parentFtxNumber)
    ```
-   The dataRollingHash and offset are checked as a pair (§3.1) — this excludes both byte gaps and overlaps at the seam, neither of which KZG or block-hash continuity alone can detect. Execution continuity (`endBlockHash`/`parentBlockHash`) is now explicit rather than folded into the DA accumulator, since a shared chunk's dataRollingHash fold no longer determines "the last block completing here" on its own.
+   The dataRollingHash and tail count are checked as a pair (§3.1) — this excludes both byte gaps and overlaps at the seam, neither of which KZG or block-hash continuity alone can detect. Execution continuity (`endBlockHash`/`parentBlockHash`) is now explicit rather than folded into the DA accumulator, since a shared chunk's dataRollingHash fold no longer determines "the last block completing here" on its own.
 
-3. **Merge the L2→L1 root lists.** Concatenate the ordered `PI_Bᵢ.l2L1Roots` arrays in proof order and emit the result directly in the public inputs.
+3. **Build the L2→L1 roots.** Concatenate the recursively verified `PI_Bᵢ.l2L1Messages` lists in proof order, partition the full finalization's messages into groups of 32 leaves, and zero-pad only the final incomplete group. Hash adjacent pairs as `keccak256(left ‖ right)` to depth 5. Emit the ordered roots and `l2L1TreeDepth = 5`; empty messages emit empty roots.
 
-4. **Merge filtered address lists.** Concatenate the ordered `PI_Bᵢ.filteredAddresses` arrays in proof order and emit the result directly in the public inputs.
+4. **Merge filtered address lists.** Merge the `PI_Bᵢ.filteredAddresses` arrays into one distinct list sorted ascending by byte value and emit the result in the public inputs.
 
 5. **Commit `programIds`.** Collect each `PI_Bᵢ.programVks` (§2.2) and the rollup proof's own `programVk_i` across `i ∈ [1, M]`. Establish their correspondence to guest Program IDs, then canonicalize the IDs (deduplicate, sort ascending by byte value) into `programIds` (§2.6). The correspondence proof is WIP; the Python aggregation guest stops at this boundary.
 
-6. **Output** the combined public inputs covering the full range: take `parentDataRollingHash`, `startOffset`, `parentBlockHash`, `parentL1L2BridgeRollingHash`, `parentL1L2BridgeRollingHashMessageNumber`, `parentFtxRollingHash`, `parentFtxNumber`, and `dynamicChainConfigHash` from `PI_B₁`; take `endBlockNumber`, `endBlockTimestamp`, `endL1L2BridgeRollingHash`, `endL1L2BridgeRollingHashMessageNumber`, `endFtxRollingHash`, `endProcessedFtxNumber`, `endDataRollingHash`, `endOffset`, and `endBlockHash` from `PI_Bₘ`; use the ordered lists from steps 3 and 4 and `programIds` from step 5. The first proof's start position (`parentDataRollingHash`/`startOffset`) and the last proof's end position (`endDataRollingHash`/`endOffset`/`endBlockHash`) are exposed here without any internal check — only step 2's `assert_eq!` block checks continuity between *adjacent* rollup proofs; these two boundary values of the whole aggregated range are simply forwarded, and L1 checks them against its own committed state at finalization (§5).
+6. **Output** the combined public inputs covering the full range: take `parentDataRollingHash`, `parentDataTailTakeBytes`, `parentBlockHash`, `parentL1L2BridgeRollingHash`, `parentL1L2BridgeRollingHashMessageNumber`, `parentFtxRollingHash`, `parentFtxNumber`, and `dynamicChainConfigHash` from `PI_B₁`; take `endBlockNumber`, `endBlockTimestamp`, `endL1L2BridgeRollingHash`, `endL1L2BridgeRollingHashMessageNumber`, `endFtxRollingHash`, `endProcessedFtxNumber`, `endDataRollingHash`, `finalDataTailDiscardBytes`, and `endBlockHash` from `PI_Bₘ`; use the ordered roots from step 3, the canonical `filteredAddresses` from step 4, and `programIds` from step 5. The first proof's start position (`parentDataRollingHash`/`parentDataTailTakeBytes`) and the last proof's end position (`endDataRollingHash`/`finalDataTailDiscardBytes`/`endBlockHash`) are exposed here without any internal check — only step 2's `assert_eq!` block checks continuity between *adjacent* rollup proofs; these two boundary values of the whole aggregated range are simply forwarded, and L1 checks them against its own committed state at finalization (§5).
 
 The rollup-aggregation prover request includes the STARK→SNARK emulation wrap after this guest statement, so the response is directly L1-submittable: it is the `FinalizationSubmission` — the PI (including proven `l2MessagingBlocksOffsets`) and prover-attached `proof`; L1 consumes `l2L1Roots` and `filteredAddresses` from the PI (§5). No separate emulation request file or prover invocation exists.
 
@@ -363,16 +364,16 @@ The rollup-aggregation proof's root exposes the following values to the L1 contr
 | 16 | `endDataRollingHash` |
 | 17 | `parentBlockHash` |
 | 18 | `endBlockHash` |
-| 19 | `startOffset` |
-| 20 | `endOffset` |
+| 19 | `parentDataTailTakeBytes` |
+| 20 | `finalDataTailDiscardBytes` |
 | 21 | `programIds` |
 | 22 | `l2MessagingBlocksOffsets` |
 
-Note: The variable-length public-input lists include `l2L1Roots`, `filteredAddresses`, `programIds`, and `l2MessagingBlocksOffsets`. `programIds` is encoded canonically as a distinct, sorted-ascending array; the other lists preserve their order. The prover hashes **each list field internally** when constructing its recursive and on-chain public-input commitment. The Coordinator receives and supplies the lists as contract-facing data; L1's `_computePublicInput` independently hashes the submitted root, filtered-address, and Program ID lists (§5, §5.3). The guest outputs lists, not those hashes.
+Note: The variable-length public-input lists include `l2L1Roots`, `filteredAddresses`, `programIds`, and `l2MessagingBlocksOffsets`. `filteredAddresses` and `programIds` are encoded canonically as distinct, sorted-ascending arrays (§6.5, §2.6); the other lists preserve their order. The prover hashes **each list field internally** when constructing its recursive and on-chain public-input commitment. The Coordinator receives and supplies the lists as contract-facing data; L1's `_computePublicInput` independently hashes the submitted root, filtered-address, and Program ID lists (§5, §5.3). The guest outputs lists, not those hashes.
 
 Note: `parentBlockHash` and `endBlockHash` (fields 17–18) carry execution continuity explicitly. This is a deliberate change from the earlier 3-input shnarf formula, which folded the last block hash into the DA accumulator itself: under shared chunks (§3.1), "the last block completing in a given chunk" can depend on two adjacent proofs' witnesses, so a single proof can no longer always compute that value alone. The Data Rolling Hash (`parentDataRollingHash`/`endDataRollingHash`, fields 15–16) is therefore a pure DA accumulator — `Hash(prevDataRollingHash, chunkHash)` — and execution continuity travels as its own pair of fields, checked independently by the L1 contract (§5).
 
-Note: `startOffset`/`endOffset` (fields 19–20) are the canonical byte positions that pair with `parentDataRollingHash`/`endDataRollingHash` to give this range's start and end stream positions (§3.1). Offset `0` encodes every fully consumed chunk boundary, regardless of whether the chunk is calldata or blob; a positive offset encodes only a position inside a shared blob. They let a blob be shared between adjacent rollup proofs or finalization ranges without wasting space on padding (§5).
+Note: `parentDataTailTakeBytes`/`finalDataTailDiscardBytes` (fields 19–20) are canonical tail byte counts that pair with `parentDataRollingHash`/`endDataRollingHash` to give this range's start and end stream positions (§3.1). Count `0` encodes a chunk boundary, regardless of whether the chunk is calldata or blob; a positive `parentDataTailTakeBytes` takes the last N bytes of the first blob’s actual unpacked payload, and a positive `finalDataTailDiscardBytes` counts the unconsumed suffix of the last blob. Each positive count must be smaller than that blob’s payload length. Adjacent proofs match the counts exactly. They let a blob be shared between adjacent rollup proofs or finalization ranges without wasting space on padding (§5).
 
 ---
 
@@ -437,15 +438,15 @@ Instead of one blob holding exactly the blocks of one conflation, the DA layer i
 stream = [len₁][zstd(conflation₁)] ‖ [len₂][zstd(conflation₂)] ‖ …
 ```
 
-Each `lenᵢ` is the nonzero compressed frame length in bytes (uint32, big-endian), excluding the four prefix bytes. The guest reads it from the verified chunk bytes, checks complete decompression, and uses the prefix plus exact frame bytes for chunk binding and segment-end offsets.
+Each `lenᵢ` is the nonzero byte length of the zstd frame that follows it (uint32, big-endian), so it fixes where each segment ends. The guest reads it from the verified chunk bytes and checks that the zstd frame decompresses completely.
 
 A **chunk** is a transport window over that stream, of one of two kinds. A **blob chunk** is an EIP-4844 blob — fixed-size (`chunkSize = BLOB_BYTES_LENGTH = 4096 × 32 = 131 072` bytes, since EIP-4844 pads every blob to 128 KiB), bound by its KZG commitment / versioned hash. A **calldata chunk** is one calldata submission — variable size (the exact `_compressedData` length the L1 contract hashed), bound by `keccak256`. Chunk boundaries carry no block or conflation semantics — a conflation, or even a single block, may span chunks; several small conflations may share one chunk.
 
-The two kinds differ in whether they can be **shared** across a proof-range boundary. A blob chunk is fixed-size, so a range may begin or end mid-blob, sharing that blob with a neighbouring rollup proof or finalization range; the neighbour's bytes reside in the physical blob witness. A calldata chunk is **range-aligned**: it packs a whole number of conflation segments and shares no bytes with a neighbouring proof, so it is wholly owned by exactly one proof — never shared, never reconstructed from opaque bytes, and never entered at a non-zero `startOffset`.
+The two kinds differ in whether they can be **shared** across a proof-range boundary. A blob chunk is fixed-size, so a range may begin or end mid-blob, sharing that blob with a neighbouring rollup proof or finalization range; the neighbour's bytes reside in the physical blob witness. A calldata chunk is **range-aligned**: it shares no bytes with a neighbouring proof, so it is wholly owned by exactly one proof — never shared, never reconstructed from opaque bytes, and never entered at a non-zero `parentDataTailTakeBytes`. Its first bytes may finish a segment begun in the immediately preceding blob.
 
 **Chunk-kind dispatch is explicit.** Each `chunks` entry carries an `isCalldata` flag and exact physical bytes. The flag selects the in-guest check: a blob chunk requires empty `calldataBytes`, computes its KZG commitment in-guest, versioned-hashes it (`0x01 ‖ sha256(kzgCommitment)[1:]`), and compares against `chunkHash`; a calldata chunk requires nonempty `calldataBytes` and verifies `keccak256` of those exact bytes against `chunkHash`. The flag and bytes are witness data — the anchored `chunkHash` records the binding, not the kind or extent — and need no independent L1 verification because both arms terminate in `recomputed == chunkHash`. The rollup-aggregation request only ever sees the folded stream positions (§2.4), never raw chunks.
 
-The two kinds differ in size, sharing, and boundary rules. Blob frames may cross blob boundaries, while calldata chunks are wholly owned and start and end at parsed frame boundaries. The guest reads verified chunk bytes directly. A shared blob supplies foreign prefix and suffix bytes within the same physical witness.
+The two kinds differ in size, sharing, and boundary rules. Segments may cross blob-to-blob or blob-to-calldata boundaries under four layout rules: a blob followed by another blob holds a full payload; a positive `parentDataTailTakeBytes` starts the stream inside a first blob with a strictly longer payload; every chunk owns at least one byte; every calldata chunk ends at a segment boundary. `finalDataTailDiscardBytes` counts the bytes left unconsumed after the last segment. Consequently, a calldata chunk starts mid-segment only right after a blob, terminal calldata leaves no trailing bytes, and each positive count is below its blob's payload length. The guest reads verified chunk bytes directly. A shared blob supplies foreign prefix and suffix bytes within the same physical witness.
 
 The **dataRollingHash** is a cumulative on-chain accumulator over the ordered sequence of *published chunks only* — a pure DA accumulator, deliberately not carrying execution continuity:
 
@@ -455,7 +456,7 @@ dataRollingHash_i = Hash(dataRollingHash_{i-1}, chunkHash_i)
 
 where `chunkHash` is the blob's versioned hash, or `keccak256(compressedData)` for calldata. This is a 2-input fold, replacing the earlier 3-input `Hash(parentShnarf, lastBlockHash, blobHash)`: under shared chunks, "the last block completing in chunk `i`" can depend on two adjacent proofs' witnesses, so a single proof can no longer always compute a 3-input chain unassisted. Execution continuity (§2.4's `parentBlockHash`/`endBlockHash`) is carried as its own explicit public-input field instead.
 
-A **stream position** is the pair `(R, c)`. At a fully consumed chunk boundary, `R` is the dataRollingHash after folding that chunk and `c = 0`; this is the canonical encoding for the end of every calldata or blob chunk. Inside a shared blob, `R` is the dataRollingHash after folding that blob and `c ∈ (0, chunkSize)` is the number of blob bytes consumed. Thus positive offsets identify only intra-blob positions, while exact offset equality is sufficient to connect proof and finalization ranges. Because the KZG polynomial evaluation is proven inside the zkVM, the evaluation point `X` and claim `Y` never appear on-chain — the L1 contract only checks `chunkHash` against the transaction's `VERSIONED_HASH` (or `keccak256(compressedData)` on the calldata path).
+A **stream boundary** is the pair `(R, c)`. At a chunk boundary, `R` is the dataRollingHash after folding that chunk and `c = 0`; this is the canonical encoding for the end of every calldata or blob chunk. Inside a shared blob, `R` is the dataRollingHash after folding that blob and `c` is the number of unconsumed unpacked payload bytes left for the next proof. The previous proof’s `finalDataTailDiscardBytes` equals the next proof’s `parentDataTailTakeBytes`, which reads precisely those final `c` bytes. Positive counts are only valid for blob boundaries and are strictly smaller than the actual unpacked blob payload length (and at most 130046). Because the KZG polynomial evaluation is proven inside the zkVM, the evaluation point `X` and claim `Y` never appear on-chain — the L1 contract only checks `chunkHash` against the transaction's `VERSIONED_HASH` (or `keccak256(compressedData)` on the calldata path).
 
 ### 3.2 DA Payload
 
@@ -473,7 +474,7 @@ The DA payload must contain the exact inputs required to re-execute the L2 block
 - Intermediate state roots and receipt roots — these are deterministic outputs of execution, not inputs to it. No state root ever appears on-chain; execution continuity is carried by explicit `parentBlockHash`/`endBlockHash` public-input fields (§2.4) rather than by any DA accumulator input.
 - ChainID
 
-**Encoding and compression:** Each conflation is published as a 4-byte big-endian compressed-length prefix followed by one independently compressed zstd frame. The length-prefixed frames concatenate into the DA stream, which blob or calldata chunks transport (§3.1).
+**Encoding and compression:** Each conflation is published as a 4-byte big-endian compressed-length prefix followed by one independently compressed zstd frame. The frame header's content-size field is optional: the guest bounds decompression by the length of the canonical payload (§2.2 step 2). The segments concatenate into the DA stream, which blob or calldata chunks transport (§3.1).
 
 
 ### 3.3 Prover I/O — On-Wire Format
@@ -525,13 +526,13 @@ The L2→L1 bridge state is tracked through an ordered list of fixed-depth Merkl
 
 **How it works across proof levels:**
 
-- **l2-execution proof** — outputs `l2L1MessagesHash`, a flat hash of the bounded ordered list of withdrawal message hashes emitted in its range. The number of messages per l2-execution proof used to be bounded to 16 by design, keeping this commitment cheap but this requirement does not hold anymore.
-- **rollup proof** — receives the per-l2-execution message hash lists as private witnesses, verifies each against the corresponding `l2L1MessagesHash`, concatenates them across all `N` l2-execution proofs, partitions the combined list into consecutive groups of `2^D` leaves (where D is the protocol-level tree depth, currently 5), one group per tree, pads the last group with zero-value leaves, computes the root of each full tree, and outputs the ordered root list. This is the single point where the flat commitment is expanded into a tree structure.
-- **rollup-aggregation proof** — concatenates each rollup proof's public-input root arrays in order and emits the combined list.
+- **l2-execution proof** — outputs `l2L1Messages`, the ordered withdrawal message hashes.
+- **rollup proof** — concatenates recursively verified execution PI message lists in proof order and outputs that list.
+- **rollup-aggregation proof** — concatenates recursively verified rollup PI message lists and packs the result into 32-leaf trees for the complete finalization. A 20-message rollup followed by another 20-message rollup produces a first tree with the first 32 messages and a final zero-padded tree with the remaining 8.
 
 **On-chain storage and withdrawal claims.** At finalization, the Coordinator submits the guest's root list as contract-facing calldata. L1 hashes it in `_computePublicInput` as `keccak256(roots)` before verifying the proof, then stores each root via `l2MerkleRootsDepths[root] = D` exactly as today. Users claim withdrawals identically to the current flow: they provide a `merkleRoot`, `leafIndex`, and `proof[]`; the contract looks up the stored depth and verifies the sparse Merkle proof.
 
-**Leaf position derivability from message number.** Withdrawal messages are assigned monotonically increasing message numbers. Because the finalization anchors the message number range via `parentL1L2BridgeRollingHashMessageNumber` and `endL1L2BridgeRollingHashMessageNumber`, the tree index and leaf index of any message are deterministic: for a message at offset `k` from the start of the finalization range, `treeIndex = k / 2^D` and `leafIndex = k mod 2^D`. This means a user who knows their message number can always locate their leaf without any additional on-chain data.
+**Leaf position within a finalization.** Withdrawal messages are assigned monotonically increasing message numbers. For a message at zero-based offset `k` among the ordered L2→L1 messages in its finalization, `treeIndex = k / 2^D` and `leafIndex = k mod 2^D`. The L1→L2 rolling-hash message-number fields refer to deposits, not withdrawals. Off-chain claim builders obtain the ordered withdrawal message hashes for the finalized block range and reconstruct the trees in finalization order.
 
 **`l2MessagingBlocksOffsets`.** The execution guest derives one strictly increasing uint16 offset for each block containing a L2MessageService MessageSent receipt log. Offsets are relative to the parent block (first block is 1); the execution and rollup PIs also carry `blockCount`. Rollup and aggregation validate ranges and rebase the verified offsets into their own block ranges. The final offset list lives inside the aggregation PI and L1 emits its exact values as big-endian uint16 bytes for `L2MessagingBlockAnchored` events.
 
@@ -549,8 +550,8 @@ separate from the l2-execution, rollup, and rollup-aggregation guest programs.
 
 1. **On chunk submission:** compute `endDataRollingHash = keccak256(parentDataRollingHash, chunkHash)` and anchor it in storage (§5).
 2. **On finalization:** use the Coordinator-submitted lists in `_computePublicInput` (`keccak256(roots)`, `keccak256(filteredAddresses)`, and Program ID list hashing), verify the STARK-to-SNARK proof against that commitment (§2.4, §5.3), then:
-   - Open the position commitment: assert `keccak256(prevDataRollingHash || encodeOffset(prevOffset)) == currentFinalizedPositionCommitment`, where `prevDataRollingHash`/`prevOffset` are supplied as calldata alongside the proof (the previously-finalized end position — §5)
-   - Assert `parentDataRollingHash == prevDataRollingHash` (DA continuity) and `startOffset == prevOffset` (canonical position continuity — §3.1)
+   - Open the boundary commitment: assert `keccak256(calldata.parentDataRollingHash || encodeTailCount(calldata.parentDataTailTakeBytes)) == currentFinalizedPositionCommitment`, where the calldata pair is the previously-finalized end boundary (§5)
+   - Assert `PI.parentDataRollingHash == calldata.parentDataRollingHash` (DA continuity) and `PI.parentDataTailTakeBytes == calldata.parentDataTailTakeBytes` (canonical tail-count continuity — §3.1)
    - Assert `endDataRollingHash` was anchored by a prior chunk submission (DA anchoring — `l1_rollup.py` rejects an un-anchored `endDataRollingHash`)
    - Assert `parentBlockHash == currentFinalizedLastBlockHash` (execution rooting — explicit now that block-hash continuity no longer folds into the DA accumulator; see §3.1)
    - Assert `parentL1L2BridgeRollingHash == currentFinalizedL1L2BridgeRollingHash` and `parentL1L2BridgeRollingHashMessageNumber == currentFinalizedL1L2BridgeRollingHashMessageNumber` (deposit bridge continuity)
@@ -560,8 +561,8 @@ separate from the l2-execution, rollup, and rollup-aggregation guest programs.
    - Assert every ID in the proof's `programIds` set is a member of `approvedProgramIds` (guest-program anchoring); revert otherwise. See §2.6 for the management policy.
     - Store every public-input `l2L1Roots` entry via `l2MerkleRootsDepths[root] = D`; assert every public-input `filteredAddresses` entry is sanctioned
     - Encode the proven `publicInputs.l2MessagingBlocksOffsets` as big-endian uint16 bytes to emit `L2MessagingBlockAnchored` events
-   - Update storage: `blockHashes[endBlockNumber] = finalBlockHash`, `currentFinalizedPositionCommitment = keccak256(endDataRollingHash || encodeOffset(endOffset))`, `currentFinalizedLastBlockHash = endBlockHash`, `currentL2BlockNumber`, `currentFinalizedState = keccak256(l1RollingHashMessageNumber, l1RollingHash, finalForcedTransactionNumber, finalForcedTransactionRollingHash, finalTimestamp)`
-   - Emit `DataFinalizedV4(startBlockNumber, endBlockNumber, endDataRollingHash, endOffset, parentBlockHash, finalBlockHash)` — see §5.4, carrying the end position so the Coordinator and state-recovery tooling can read it from logs rather than replaying finalization calldata
+   - Update storage: `blockHashes[endBlockNumber] = finalBlockHash`, `currentFinalizedPositionCommitment = keccak256(endDataRollingHash || encodeTailCount(finalDataTailDiscardBytes))`, `currentFinalizedLastBlockHash = endBlockHash`, `currentL2BlockNumber`, `currentFinalizedState = keccak256(l1RollingHashMessageNumber, l1RollingHash, finalForcedTransactionNumber, finalForcedTransactionRollingHash, finalTimestamp)`
+   - Emit `DataFinalizedV4(startBlockNumber, endBlockNumber, endDataRollingHash, finalDataTailDiscardBytes, parentBlockHash, finalBlockHash)` — see §5.4, carrying the end position so the Coordinator and state-recovery tooling can read it from logs rather than replaying finalization calldata
 
 3. **Guest-program approval (security-council managed):** maintains `approvedProgramIds`, a combined set of approved guest Program IDs. The proof surfaces them as `programIds` (§2.4); the security council manages membership under the same trust model as `setVerifierAddress` (§2.6).
 
@@ -606,7 +607,7 @@ After the loop the contract anchors `(_parentDataRollingHash, _finalDataRollingH
 
 **Removed from the per-blob calldata.** The previous `BlobSubmission` struct carried five fields (`kzgCommitment`, `kzgProof`, `dataEvaluationClaim`, `snarkHash`, `finalStateRootHash`); all five are deleted — the KZG obligations moved into the compression proof (§2.2), and `finalStateRootHash`'s Type-1 replacement, the per-blob last-block-hash, is *also* deleted: execution continuity is no longer tied to submission at all, since it now travels as an explicit rollup-proof public-input field checked at finalization (§2.4, §5) rather than folded into the DA accumulator.
 
-**Binding to the compression proof.** For each submitted blob, the prover produces a compression proof that attests to (a) correct decompression of each zstd frame covered by the blob's chunk range and its match against the canonical truncated-block encoding, and (b) the EIP-4844 KZG polynomial evaluation against the L1-anchored `chunkHash`. Compared to the prior design, the compression proof is also tasked with aggregating its related l2-execution proofs: it is the smallest unit of aggregation, chains the l2-execution proofs whose block ranges tile its conflations' combined range, and emits the rollup public-input tuple (§2.2). The L1 contract does not verify any of this at submission time — it only anchors the dataRollingHash. The compression proof is verified at finalization (§5) together with the rollup-aggregation proof that assembles the per-conflation compression proofs across the finalization range.
+**Binding to the compression proof.** For each submitted blob, the prover produces a compression proof that attests to (a) correct decompression of each segment covered by the blob's chunk range and its match against the canonical truncated-block encoding, and (b) the EIP-4844 KZG polynomial evaluation against the L1-anchored `chunkHash`. Compared to the prior design, the compression proof is also tasked with aggregating its related l2-execution proofs: it is the smallest unit of aggregation, chains the l2-execution proofs whose block ranges tile its conflations' combined range, and emits the rollup public-input tuple (§2.2). The L1 contract does not verify any of this at submission time — it only anchors the dataRollingHash. The compression proof is verified at finalization (§5) together with the rollup-aggregation proof that assembles the per-conflation compression proofs across the finalization range.
 
 ### 5.2 Calldata Submission Interface
 
@@ -640,7 +641,7 @@ After the computation the contract anchors `(_parentDataRollingHash, _expectedDa
 
 **Removed in-contract computation.** The `_calculateY` routine, `BytesLengthNotMultipleOf32`, and `FirstByteIsNotZero` are removed from the interface; `EmptySubmissionData` is retained. The polynomial evaluation they supported is now proven inside the compression proof against the in-guest computed commitment (§2.2).
 
-**Binding to the compression proof.** Identical to §5.1: for each calldata submission the prover produces a compression proof attesting to (a) correct decompression of each zstd frame covered by `compressedData` and its match against the canonical truncated-block encoding, and (b) the polynomial evaluation against `keccak256(compressedData)`, and the proof aggregates its related l2-execution proofs and emits the rollup public-input tuple (§2.2). The L1 contract only anchors the dataRollingHash at submission time; verification happens at finalization (§5).
+**Binding to the rollup proof.** The rollup guest verifies `keccak256(compressedData)` against the anchored calldata `chunkHash`, then parses the combined chunk stream and checks each complete zstd frame against its canonical truncated-block encoding (§2.2). A calldata submission may finish a segment begun in the immediately preceding blob (which may have a short unpacked payload); calldata must end at a segment boundary and remains wholly owned by one proof. The proof aggregates the related l2-execution proofs and emits the rollup public-input tuple. The L1 contract only anchors the dataRollingHash at submission time; verification happens at finalization (§5).
 
 ### 5.3 Guest Program ID Registry
 
@@ -696,7 +697,7 @@ event DataFinalizedV4(
   uint256 indexed startBlockNumber,
   uint256 indexed endBlockNumber,
   bytes32 indexed dataRollingHash,
-  uint256 endOffset,
+  uint256 finalDataTailDiscardBytes,
   bytes32 parentBlockHash,   // EMPTY_HASH on the first post-upgrade finalization
   bytes32 finalBlockHash
 );
@@ -738,9 +739,9 @@ Five FTX fields are part of the l2-execution proof public input tuple (see §2.1
 | `parentFtxNumber` | Sequence number of the last FTX handled before this range |
 | `endFtxRollingHash` | FTX rolling hash after all FTXs handled in this range |
 | `endProcessedFtxNumber` | Sequence number of the last FTX handled in this range |
-| `filteredAddressesHash` | keccak256 of the ordered list of addresses whose FTX was refused in this range; each entry is the recovered sender (`fromAddress`) for refused-from or the decoded recipient (`toAddress`) for refused-to |
+| `filteredAddresses` | Distinct, sorted-ascending list of addresses named by FTXs refused in this range (§6.5) |
 
-These propagate through the proof tree symmetrically to the L1→L2 bridge fields: the rollup proof chains `endFtxRollingHash == parentFtxRollingHash` and `endProcessedFtxNumber == parentFtxNumber` across consecutive l2-execution proofs (and implicitly across chunk boundaries within a rollup proof); the rollup-aggregation proof adds the same assertions across consecutive rollup proofs; the final public inputs expose all five (fields 9–13 in §2.4).
+These propagate through the proof tree symmetrically to the L1→L2 bridge fields: the rollup proof chains `endFtxRollingHash == parentFtxRollingHash` and `endProcessedFtxNumber == parentFtxNumber` across consecutive l2-execution proofs (and implicitly across chunk boundaries within a rollup proof); the rollup-aggregation proof adds the same assertions across consecutive rollup proofs; the final public inputs expose all five (fields 10–14 in §2.4).
 
 ### 6.5 l2-execution Statement
 
@@ -770,13 +771,15 @@ where `txHash = keccak256(signedTxRlp)` is the standard Ethereum transaction has
   - `FILTERED_ADDRESS_FROM`: sender on the sanction list; `fromAddress` is appended to the filtered address list.
   - `FILTERED_ADDRESS_TO`: recipient on the sanction list; `toAddress` (decoded from `signedTxRlp`; rejected if the FTX is a contract-creation transaction with `to == None`) is appended instead.
 
-After the loop the guest asserts `rollingHash == endFtxRollingHash` and outputs `filteredAddressesHash = keccak256(filtered address list)`.
+After the loop the guest asserts `rollingHash == endFtxRollingHash` and emits the appended addresses as `filteredAddresses`, encoded as a distinct list sorted ascending by byte value.
+
+`filteredAddresses` is a set. L1 checks each entry against its sanction list (§6.7); every refusal in the range names a listed address exactly when every distinct named address is listed. The canonical encoding makes the list a pure function of that set: the rollup and rollup-aggregation proofs merge their inputs' lists into the same form (§2.2 step 8, §2.3 step 4), the public-input commitment binds the exact list, and L1 hashes the Coordinator-submitted list in `_computePublicInput` (§5.3).
 
 ### 6.6 Propagation Through the Proof Tree
 
-- **rollup proof:** asserts `PI_Eᵢ.endFtxRollingHash == PI_Eᵢ₊₁.parentFtxRollingHash` and `PI_Eᵢ.endProcessedFtxNumber == PI_Eᵢ₊₁.parentFtxNumber` across consecutive l2-execution proofs (§2.2 step 7); collects and concatenates filtered address lists into the public-input `filteredAddresses` list (§2.2 step 8).
-- **rollup-aggregation proof:** adds `assert_eq!(PI_Bᵢ.endFtxRollingHash, PI_Bᵢ₊₁.parentFtxRollingHash)` and `assert_eq!(PI_Bᵢ.endProcessedFtxNumber, PI_Bᵢ₊₁.parentFtxNumber)` to the continuity block (§2.3 step 2); merges public-input filtered-address lists across all `M` rollup proofs in order (§2.3 step 4).
-- **Final public inputs:** exposes `parentFtxRollingHash`, `parentFtxNumber`, `endFtxRollingHash`, `endProcessedFtxNumber`, and `filteredAddresses` as fields 9–13 (§2.4).
+- **rollup proof:** asserts `PI_Eᵢ.endFtxRollingHash == PI_Eᵢ₊₁.parentFtxRollingHash` and `PI_Eᵢ.endProcessedFtxNumber == PI_Eᵢ₊₁.parentFtxNumber` across consecutive l2-execution proofs (§2.2 step 7); merges the l2-execution `filteredAddresses` lists into the canonical public-input list (§2.2 step 8).
+- **rollup-aggregation proof:** adds `assert_eq!(PI_Bᵢ.endFtxRollingHash, PI_Bᵢ₊₁.parentFtxRollingHash)` and `assert_eq!(PI_Bᵢ.endProcessedFtxNumber, PI_Bᵢ₊₁.parentFtxNumber)` to the continuity block (§2.3 step 2); merges public-input filtered-address lists across all `M` rollup proofs (canonical merge, §2.3 step 4).
+- **Final public inputs:** exposes `parentFtxRollingHash`, `parentFtxNumber`, `endFtxRollingHash`, `endProcessedFtxNumber`, and `filteredAddresses` as fields 10–14 (§2.4).
 
 ### 6.7 L1 Contract Changes
 
@@ -804,8 +807,8 @@ After the loop the guest asserts `rollingHash == endFtxRollingHash` and outputs 
 | **Compression** | Custom SNARK-friendly LZSS; arithmetization-constrained compression ratio                                             | Standard zstd compiled into RISC-V guest; unconstrained ratio |
 | **Proof interconnection** | Bespoke pi-interconnection circuit in Go/Gnark; gate-level array mapping                                              | rollup proof: recursively verifies N l2-execution proofs across T ≥ 1 mixed chunks and chains them with `assert_eq!` in the RISC-V guest. rollup-aggregation proof: flat recursion over M rollup proofs, same continuity assertions across rollup-proof boundaries |
 
-| **l2-execution public inputs** | Type-2 parameters (timestamps, batch indices, conflation data, dynamic arrays)                                    | See §2.1. Drops state roots (block-hash chain anchors continuity); keeps `endBlockTimestamp`; adds FTX fields (`parent`/`endFtxRollingHash`, `parent`/`endProcessedFtxNumber`, `filteredAddressesHash`) and `txFromsHash` |
-| **L2→L1 tree construction** | l2-execution proof outputs flat hash of bounded message list; pi-interconnection organizes into fixed-depth Merkle trees | Same flat hash at l2-execution level; rollup proof partitions messages into fixed-depth zero-padded trees and emits roots; rollup-aggregation guest concatenates the root arrays; prover commits to each list internally and L1 hashes submitted roots in `_computePublicInput` |
+| **l2-execution public inputs** | Type-2 parameters (timestamps, batch indices, conflation data, dynamic arrays)                                    | See §2.1. Drops state roots (block-hash chain anchors continuity); keeps `endBlockTimestamp`; adds FTX fields (`parent`/`endFtxRollingHash`, `parent`/`endProcessedFtxNumber`, `filteredAddresses`) and `txFromsHash` |
+| **L2→L1 tree construction** | l2-execution proof outputs flat hash of message list; pi-interconnection organizes into fixed-depth Merkle trees | Execution and rollup proofs emit ordered message lists; aggregation concatenates verified PI lists and builds fixed-depth zero-padded trees once over the full finalization; guest outputs commit to the entire PI and L1 hashes submitted roots in `_computePublicInput` |
 | **l2MessagingBlocksOffsets** | Unproven sequencer hint; L1 emits `L2MessagingBlockAnchored` events for off-chain indexing | Offsets are proven from receipt logs, rebased across proofs, and bound in the final PI |
 | **DA payload — intermediate roots** | `blockHash`, `timestamp` and transaction RLP without signature + From                                                 | adding `prevRandao` |
 | **L1 contract** | Complex: precompile calls, dynamic Type-2 input formatting, SNARK-friendly hash routing                               | Verify proof against the finalization commitment, hashing submitted root, filtered-address, and Program ID lists in `_computePublicInput`; check continuity against stored state and update storage slots |
@@ -813,7 +816,7 @@ After the loop the guest asserts `rollingHash == endFtxRollingHash` and outputs 
 | **Guest program anchoring** | The aggregation circuit's own verifying key is deployed via `setVerifierAddress` | Inner proofs are recursively verified using their `programVk`s; the final PI commits corresponding `programIds`, checked against council-managed `approvedProgramIds` at finalization (§2.6, §5). The correspondence proof is WIP. |
 | **rollup-proof granularity** | n/a (no rollup proof existed; compression was a separate proof per blob)                                                | Configurable: one rollup proof can cover `K ≥ 1` mixed chunks (analogous to today's M-block conflation inside an l2-execution proof). `K = 1` is the simplest case; `K > 1` amortizes recursion overhead |
 | **Guest Program ID registry** | n/a | On-chain allowlist of `bytes32` guest Program IDs (distinct from verifier contract addresses). The finalization batch declares the IDs; L1 checks membership and commits the ID list in its public input hash (§5.3). |
-| **Finalization event** | `DataFinalizedV3(startBlockNumber, endBlockNumber, shnarf, parentStateRootHash, finalStateRootHash)` | `DataFinalizedV4(startBlockNumber, endBlockNumber, dataRollingHash, endOffset, parentBlockHash, finalBlockHash)` — single event for all paths; carries the end stream position (§3.1) for log-only recovery; `parentBlockHash` is `EMPTY_HASH` on the first post-upgrade finalization (migration marker) — see §5.4 |
+| **Finalization event** | `DataFinalizedV3(startBlockNumber, endBlockNumber, shnarf, parentStateRootHash, finalStateRootHash)` | `DataFinalizedV4(startBlockNumber, endBlockNumber, dataRollingHash, finalDataTailDiscardBytes, parentBlockHash, finalBlockHash)` — single event for all paths; carries the end stream position (§3.1) for log-only recovery; `parentBlockHash` is `EMPTY_HASH` on the first post-upgrade finalization (migration marker) — see §5.4 |
 | **L1 block hash storage** | n/a | `mapping(uint256 blockNumber => bytes32 blockHash) public blockHashes` — populated at initialization with the genesis block hash and updated on every finalization; drives the migration path selection (§5.4) |
 
 **Guest ID approval (WIP).** V1 requests select a guest with the opaque ELF-derived `guestProgramId` and request-only `provingSystem` string. Responses and nested recursive proofs retain their proving-system-specific `programVk`. The final PI and L1 approval use Program IDs; proving VK-to-ID correspondence across proving systems remains unspecified.

@@ -119,3 +119,79 @@ Each layer validates only what it has the information and authority to check:
 | Proof data | `replay` + `vanishing.verify` (Zig) | The runtime checks, because proof data is the only thing not known until runtime: round count matches the spec (`InvalidRoundCount`), claim slice lengths match (`InvalidClaimCount`), dynamic module sizes are present and valid (`MissingDynamicModuleSize`, `InvalidModuleSize`), and the quotient identity holds (`QuotientIdentityMismatch`). |
 
 Coin index bounds are **not** re-checked in Zig: the codegen guarantees them, and re-validating generated data adds noise without adding safety.
+
+## Aggregate Statement (`verifier.verifyPair`)
+
+The two-proof aggregator (`-Daggregator=true`) is a guest whose claim must be stated as precisely as the single verifier's. The normative text is the "Aggregate statement" header in `src/verifier.zig`; this is the summary.
+
+### Goal
+
+For a fixed verifying key `VK`, the aggregator proves
+
+```
+∃ πA, πB :   Verify(VK, πA, X) = accept
+         ∧   Verify(VK, πB, X) = accept
+```
+
+`X` is the one public statement both inner proofs share; `πA` and `πB` are private witnesses.
+
+### Objects
+
+- **`VK`** is the compiled inner verifier `S = (spec, systems)`: a comptime constant baked into the aggregator ELF, so the outer program commitment pins it. A different `VK` is a different aggregator program.
+- **`X`** is the statement: the flat public-input vector `X ∈ F_{p^6}^n` in prover-ray registration order, every scalar lifted to the extension field (`Scalar.toExt`), with `n = systems.public_input.refs.len`.
+- **`π`** is everything else in a `VerifyInput`: round messages, `module_sizes`, the PCS opening.
+- **`Verify(VK, π, X)`** is `verifier.verify`. `X` is absorbed into `π`'s Fiat-Shamir transcript by `bindRoundMessages`, so a proof is a proof of exactly one `X`.
+
+In relation form:
+
+```
+R_S(X, π)          ⇔  verify(S, π, X) accepts
+R_pair(X; πA, πB)  ⇔  R_S(X, πA)  ∧  R_S(X, πB)          (what verifyPair decides)
+```
+
+### Guest procedure
+
+The pair image carries a statement alongside each proof, `X_A` and `X_B`. `verifyPair` reduces them to the single `X`:
+
+1. Reject unless `|X_A| = |X_B| = n` (`InvalidPublicInputCount`).
+2. Reject unless `X_A = X_B` element-wise, compared as field values rather than wire encodings (`checkPublicInputConsistency`, `InconsistentPublicInputs`). Call the common value `X`.
+3. `Verify(VK, πA, X)`.
+4. `Verify(VK, πB, X)`.
+5. Write `out = "lineth-verifier-pair-v1" || BE64(n) || Ext.toBytes(X[0]) || … || Ext.toBytes(X[n-1])`.
+
+Step 2 runs first because it is O(n), so an inconsistent pair is rejected without paying for two full verifications. `Ext.toBytes` is the field's canonical encoding: 6 **big-endian** `u32` limbs in the order `B0.a0, B0.a1, B1.a0, B1.a1, B2.a0, B2.a1`, each `< p`. Every integer in `out` is big-endian — deliberately unlike the little-endian proof image, because `out` reuses the canonical field bytes already pinned by the golden tests and Poseidon2. The domain tag versions the encoding, `BE64(n)` makes it prefix-free, and the lift to the extension field makes `out` injective on the same equality relation `checkPublicInputConsistency` uses — one claim, one encoding. `test/verify_pair_test.zig` ("matches the documented byte layout") pins the exact bytes without going through `toBytes`.
+
+### What binds what
+
+| Component | Visibility | Bound by |
+|---|---|---|
+| `VK` | public | the outer program commitment: the ELF embeds `S` |
+| `X` | public | `out` (the guest output) |
+| `πA`, `πB` | private | nothing — they are read from the input region and never exposed |
+| how `out` becomes outer public inputs (raw `guest_output` bytes vs. their keccak in `guest_output_hash`) | — | the outer arithmetization; it changes the representation of the claim, not the claim |
+
+An accepted outer proof therefore reads: *there exist two proofs, each accepted by `VK`, of the single statement `X` whose canonical encoding is `out`.*
+
+### Accepted and rejected pairs
+
+Accepted:
+
+- Two independently produced proofs of the same `X`.
+- Two proofs of the same `X` that differ in proof-side data such as `module_sizes`. Proof-side data is validated per proof by `verify` and is **not** compared across the pair.
+- `πA == πB`: the claim is "`X` is proven", not "proven twice".
+
+Rejected:
+
+- Either proof fails `Verify`, in either slot.
+- `X_A ≠ X_B`, even when both proofs are individually valid. This is the case only `verifyPair` can catch: without step 2, a proof of `X` could be paired with any valid proof of an unrelated `X'`, and `out` would bind only one of them.
+- Either statement has the wrong length.
+
+### Production instance
+
+For the compiled RISC-V system `n = 17`: the inner guest's keccak output digest (8 `u32` words as 16 limbs) followed by the message-bus accumulator cell. The pair claim is "two accepted inner executions share this output digest and bus state".
+
+### Non-goals
+
+- **Chained aggregation**: `X_A ≠ X_B` linked by a predicate (e.g. A's post-state is B's pre-state), with `out = f(X_A, X_B)`. That is a different relation and must take a new domain tag.
+- **Cross-`VK` pairs**: statement layouts differ between systems, so equality across them has no meaning. Both proofs are checked against the same comptime `spec`/`systems` by construction.
+- **Outer commitment format**: how the zkVM exposes `out` is the outer system's choice (see the table above).

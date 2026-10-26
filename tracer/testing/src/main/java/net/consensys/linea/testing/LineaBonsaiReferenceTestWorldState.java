@@ -1,5 +1,5 @@
 /*
- * Copyright Consensys Software Inc.
+ * Copyright Consensys Incorporated
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -25,15 +25,15 @@ import org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider;
 import org.hyperledger.besu.ethereum.referencetests.BonsaiReferenceTestWorldState;
 import org.hyperledger.besu.ethereum.referencetests.BonsaiReferenceTestWorldStateStorage;
 import org.hyperledger.besu.ethereum.referencetests.ReferenceTestWorldState;
+import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.code.BonsaiCodeCache;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.storage.BonsaiPreImageProxy;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.storage.BonsaiWorldStateKeyValueStorage;
+import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.trielog.TrieLogAddedEvent;
+import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.trielog.TrieLogManager;
+import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.worldview.PathBasedWorldState;
+import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.worldview.accumulator.PathBasedWorldStateUpdateAccumulator;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.worldview.accumulator.preload.BonsaiCachedMerkleTrieLoader;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.worldview.cache.NoOpBonsaiWorldStateCacheManager;
-import org.hyperledger.besu.ethereum.trie.pathbased.common.code.PathBasedCodeCache;
-import org.hyperledger.besu.ethereum.trie.pathbased.common.trielog.TrieLogAddedEvent;
-import org.hyperledger.besu.ethereum.trie.pathbased.common.trielog.TrieLogManager;
-import org.hyperledger.besu.ethereum.trie.pathbased.common.worldview.PathBasedWorldState;
-import org.hyperledger.besu.ethereum.trie.pathbased.common.worldview.accumulator.PathBasedWorldStateUpdateAccumulator;
 import org.hyperledger.besu.ethereum.worldstate.DataStorageConfiguration;
 import org.hyperledger.besu.evm.internal.EvmConfiguration;
 import org.hyperledger.besu.evm.worldstate.WorldUpdater;
@@ -122,7 +122,7 @@ public class LineaBonsaiReferenceTestWorldState extends BonsaiReferenceTestWorld
 
     final var noOpCachedWorldStorageManager =
         new NoOpBonsaiWorldStateCacheManager(
-            bonsaiWorldStateKeyValueStorage, evmConfiguration, new PathBasedCodeCache());
+            bonsaiWorldStateKeyValueStorage, evmConfiguration, new BonsaiCodeCache());
 
     final var worldState =
         new LineaBonsaiReferenceTestWorldState(

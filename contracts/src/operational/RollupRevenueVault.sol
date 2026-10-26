@@ -10,7 +10,7 @@ import { IRollupRevenueVault } from "./interfaces/IRollupRevenueVault.sol";
 /**
  * @title Upgradeable Rollup Revenue Vault Contract.
  * @notice Accepts rollup revenue, and performs burning operations.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 contract RollupRevenueVault is AccessControlUpgradeable, IRollupRevenueVault {

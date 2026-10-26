@@ -189,11 +189,14 @@ pub const StubEngine = struct {
         const call_index = next_index;
         next_index += 1;
 
-        const pre_state_root = rlp_decode.findPreStateRoot(si.witness.headers, ep.block_number) orelse blk: {
+        // Mirrors the real engine: the pre-state root is the last (parent) witness header's,
+        // with genesis (no headers) executing against its own declared state root.
+        const pre_state_root = if (si.witness.headers.len == 0) blk: {
             const is_genesis = ep.block_number == 0 and std.mem.allEqual(u8, &ep.parent_hash, 0);
             if (!is_genesis) return error.MissingParentHeaderWitness;
             break :blk ep.state_root;
-        };
+        } else (rlp_decode.decodeMinimalHeader(si.witness.headers[si.witness.headers.len - 1]) catch
+            return error.InvalidWitness).state_root;
 
         var receipts = std.ArrayListUnmanaged(types.Receipt).empty;
         if (active) |built| {
@@ -311,7 +314,7 @@ fn buildWorld(alloc: std.mem.Allocator, l2ms_address: ?[20]u8, bridge: BridgeVal
 /// half of `gas_limit` (the EIP-1559 gas target), so a constant `base_fee_per_gas` across the
 /// whole header chain reproduces itself under the real base-fee formula, matching this DSL's
 /// constant-base-fee payload default. Stops right after `base_fee_per_gas` (fields 0-15): the
-/// guest's own header consumers (`rlp_decode.findPreStateRoot`, and `decodeParentHeader` on the
+/// guest's own header consumers (`rlp_decode.decodeMinimalHeader`, and `decodeParentHeader` on the
 /// real execution path) read no field past it, so every later-fork optional field is simply
 /// absent rather than needing invented values for something nothing here checks.
 fn buildHeader(alloc: std.mem.Allocator, parent_hash: [32]u8, number: u64, state_root: [32]u8, timestamp: u64) ![]const u8 {
@@ -520,7 +523,6 @@ pub const ConflationPlan = struct {
                     .chain_id = block.chain_id orelse self.chain_id,
                     .schema_id = @as(u16, block.active_fork_idx orelse AMSTERDAM_FORK_BYTE) << 8 | 0x01,
                 },
-                .public_keys = &.{},
             };
 
             if (self.drop_witness_headers_at) |idx| {

@@ -15,9 +15,8 @@ data class BlockAndNonce(
 
 data class BlobsSubmissionV9(
   val blobs: List<ByteArray>,
-  val blobFinalBlockHashes: List<ByteArray>,
-  val parentShnarf: ByteArray,
-  val finalBlobShnarf: ByteArray,
+  val parentDataRollingHash: ByteArray,
+  val storedDataRollingHash: ByteArray,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -26,50 +25,16 @@ data class BlobsSubmissionV9(
     other as BlobsSubmissionV9
 
     if (!blobs.byteArrayListEquals(other.blobs)) return false
-    if (!blobFinalBlockHashes.byteArrayListEquals(other.blobFinalBlockHashes)) return false
-    if (!parentShnarf.contentEquals(other.parentShnarf)) return false
-    if (!finalBlobShnarf.contentEquals(other.finalBlobShnarf)) return false
+    if (!parentDataRollingHash.contentEquals(other.parentDataRollingHash)) return false
+    if (!storedDataRollingHash.contentEquals(other.storedDataRollingHash)) return false
 
     return true
   }
 
   override fun hashCode(): Int {
     var result = blobs.byteArrayListHashCode()
-    result = 31 * result + blobFinalBlockHashes.byteArrayListHashCode()
-    result = 31 * result + parentShnarf.contentHashCode()
-    result = 31 * result + finalBlobShnarf.contentHashCode()
-    return result
-  }
-}
-
-data class ShnarfDataV9(
-  val parentShnarf: ByteArray,
-  val snarkHash: ByteArray,
-  val finalStateRootHash: ByteArray,
-  val dataEvaluationPoint: ByteArray,
-  val dataEvaluationClaim: ByteArray,
-) {
-  override fun equals(other: Any?): Boolean {
-    if (this === other) return true
-    if (javaClass != other?.javaClass) return false
-
-    other as ShnarfDataV9
-
-    if (!parentShnarf.contentEquals(other.parentShnarf)) return false
-    if (!snarkHash.contentEquals(other.snarkHash)) return false
-    if (!finalStateRootHash.contentEquals(other.finalStateRootHash)) return false
-    if (!dataEvaluationPoint.contentEquals(other.dataEvaluationPoint)) return false
-    if (!dataEvaluationClaim.contentEquals(other.dataEvaluationClaim)) return false
-
-    return true
-  }
-
-  override fun hashCode(): Int {
-    var result = parentShnarf.contentHashCode()
-    result = 31 * result + snarkHash.contentHashCode()
-    result = 31 * result + finalStateRootHash.contentHashCode()
-    result = 31 * result + dataEvaluationPoint.contentHashCode()
-    result = 31 * result + dataEvaluationClaim.contentHashCode()
+    result = 31 * result + parentDataRollingHash.contentHashCode()
+    result = 31 * result + storedDataRollingHash.contentHashCode()
     return result
   }
 }
@@ -77,10 +42,8 @@ data class ShnarfDataV9(
 data class FinalizationDataV9(
   val aggregatedProof: ByteArray,
   val proofType: UInt,
-  val parentStateRootHash: ByteArray,
   val parentBlockHash: ByteArray,
   val endBlockNumber: ULong,
-  val shnarfData: ShnarfDataV9,
   val lastFinalizedTimestamp: Instant,
   val finalTimestamp: Instant,
   val lastFinalizedL1RollingHash: ByteArray,
@@ -92,7 +55,10 @@ data class FinalizationDataV9(
   val finalForcedTransactionNumber: ULong,
   val lastFinalizedForcedTransactionRollingHash: ByteArray,
   val finalBlockHash: ByteArray,
-  val finalBlobHash: ByteArray,
+  val parentDataRollingHash: ByteArray,
+  val endDataRollingHash: ByteArray,
+  val startOffset: ULong,
+  val endOffset: ULong,
   val l2MerkleRoots: List<ByteArray>,
   val filteredAddresses: List<ByteArray>,
   val verifierKeys: List<ByteArray>,
@@ -104,19 +70,17 @@ data class FinalizationDataV9(
 
     other as FinalizationDataV9
 
-    if (proofType != other.proofType) return false
-    if (l2MerkleTreesDepth != other.l2MerkleTreesDepth) return false
     if (!aggregatedProof.contentEquals(other.aggregatedProof)) return false
-    if (!parentStateRootHash.contentEquals(other.parentStateRootHash)) return false
+    if (proofType != other.proofType) return false
     if (!parentBlockHash.contentEquals(other.parentBlockHash)) return false
     if (endBlockNumber != other.endBlockNumber) return false
-    if (shnarfData != other.shnarfData) return false
     if (lastFinalizedTimestamp != other.lastFinalizedTimestamp) return false
     if (finalTimestamp != other.finalTimestamp) return false
     if (!lastFinalizedL1RollingHash.contentEquals(other.lastFinalizedL1RollingHash)) return false
     if (!l1RollingHash.contentEquals(other.l1RollingHash)) return false
     if (lastFinalizedL1RollingHashMessageNumber != other.lastFinalizedL1RollingHashMessageNumber) return false
     if (l1RollingHashMessageNumber != other.l1RollingHashMessageNumber) return false
+    if (l2MerkleTreesDepth != other.l2MerkleTreesDepth) return false
     if (lastFinalizedForcedTransactionNumber != other.lastFinalizedForcedTransactionNumber) return false
     if (finalForcedTransactionNumber != other.finalForcedTransactionNumber) return false
     if (!lastFinalizedForcedTransactionRollingHash.contentEquals(
@@ -126,8 +90,11 @@ data class FinalizationDataV9(
       return false
     }
     if (!finalBlockHash.contentEquals(other.finalBlockHash)) return false
-    if (!finalBlobHash.contentEquals(other.finalBlobHash)) return false
-    if (!l2MerkleRoots.byteArrayListEquals(other.l2MerkleRoots)) return false
+    if (!parentDataRollingHash.contentEquals(other.parentDataRollingHash)) return false
+    if (!endDataRollingHash.contentEquals(other.endDataRollingHash)) return false
+    if (startOffset != other.startOffset) return false
+    if (endOffset != other.endOffset) return false
+    if (l2MerkleRoots != other.l2MerkleRoots) return false
     if (!filteredAddresses.byteArrayListEquals(other.filteredAddresses)) return false
     if (!verifierKeys.byteArrayListEquals(other.verifierKeys)) return false
     if (!l2MessagingBlocksOffsets.contentEquals(other.l2MessagingBlocksOffsets)) return false
@@ -136,24 +103,25 @@ data class FinalizationDataV9(
   }
 
   override fun hashCode(): Int {
-    var result = proofType.toInt()
-    result = 31 * result + l2MerkleTreesDepth.toInt()
-    result = 31 * result + aggregatedProof.contentHashCode()
-    result = 31 * result + parentStateRootHash.contentHashCode()
+    var result = aggregatedProof.contentHashCode()
+    result = 31 * result + proofType.hashCode()
     result = 31 * result + parentBlockHash.contentHashCode()
     result = 31 * result + endBlockNumber.hashCode()
-    result = 31 * result + shnarfData.hashCode()
     result = 31 * result + lastFinalizedTimestamp.hashCode()
     result = 31 * result + finalTimestamp.hashCode()
     result = 31 * result + lastFinalizedL1RollingHash.contentHashCode()
     result = 31 * result + l1RollingHash.contentHashCode()
     result = 31 * result + lastFinalizedL1RollingHashMessageNumber.hashCode()
     result = 31 * result + l1RollingHashMessageNumber.hashCode()
+    result = 31 * result + l2MerkleTreesDepth.hashCode()
     result = 31 * result + lastFinalizedForcedTransactionNumber.hashCode()
     result = 31 * result + finalForcedTransactionNumber.hashCode()
     result = 31 * result + lastFinalizedForcedTransactionRollingHash.contentHashCode()
     result = 31 * result + finalBlockHash.contentHashCode()
-    result = 31 * result + finalBlobHash.contentHashCode()
+    result = 31 * result + parentDataRollingHash.contentHashCode()
+    result = 31 * result + endDataRollingHash.contentHashCode()
+    result = 31 * result + startOffset.hashCode()
+    result = 31 * result + endOffset.hashCode()
     result = 31 * result + l2MerkleRoots.byteArrayListHashCode()
     result = 31 * result + filteredAddresses.byteArrayListHashCode()
     result = 31 * result + verifierKeys.byteArrayListHashCode()
@@ -188,8 +156,22 @@ interface LineaSmartContractClient : LineaSmartContractClientReadOnly {
   ): SafeFuture<String>
 }
 
+interface LinethFinalizationSmartContractClient :
+  LineaSmartContractClient {
+  /**
+   * Finalizes blocks for V9 (RISC-V arithmetization)
+   * @param preflightWithEthCall when true will call eth_call to prevalidate the transaction does not revert
+   */
+  fun finalizeBlocksV9(
+    data: FinalizationDataV9,
+    gasPriceCaps: GasPriceCaps?,
+    preflightWithEthCall: Boolean = true,
+  ): SafeFuture<String>
+}
+
 interface LinethRollupSmartContractClient :
   LinethRollupSmartContractClientReadOnly,
+  LinethFinalizationSmartContractClient,
   LineaSmartContractClient {
   /**
    *  Simulates the sending of a list of blobs to the smart contract, with EIP4844 transaction.
@@ -204,26 +186,19 @@ interface LinethRollupSmartContractClient :
   /**
    * Submits blocks for V9 (RISC-V arithmetization)
    * @param preflightWithEthCall when true will call eth_call to prevalidate the transaction does not revert
+   * @param onlyEthCall when true will only call eth_call without doing the actual transaction submission
    */
   fun submitBlobsV9(
     blobData: BlobsSubmissionV9,
     gasPriceCaps: GasPriceCaps?,
     preflightWithEthCall: Boolean = true,
-  ): SafeFuture<String>
-
-  /**
-   * Finalizes blocks for V9 (RISC-V arithmetization)
-   * @param preflightWithEthCall when true will call eth_call to prevalidate the transaction does not revert
-   */
-  fun finalizeBlocksV9(
-    data: FinalizationDataV9,
-    gasPriceCaps: GasPriceCaps?,
-    preflightWithEthCall: Boolean = true,
+    onlyEthCall: Boolean = false,
   ): SafeFuture<String>
 }
 
 interface LineaValidiumSmartContractClient :
   LineaValidiumSmartContractClientReadOnly,
+  LinethFinalizationSmartContractClient,
   LineaSmartContractClient {
   /**
    *  Simulates the sending of a list of blobs to the smart contract, with EIP4844 transaction.
@@ -234,4 +209,11 @@ interface LineaValidiumSmartContractClient :
    * Submit a list of blobs to the smart contract, with EIP4844 transaction
    */
   fun acceptShnarfData(blobs: List<BlobRecord>, gasPriceCaps: GasPriceCaps?): SafeFuture<String>
+
+  fun acceptDataRollingHash(
+    parentDataRollingHash: ByteArray,
+    storedDataRollingHash: ByteArray,
+    gasPriceCaps: GasPriceCaps?,
+    isEthCall: Boolean = false,
+  ): SafeFuture<String?>
 }

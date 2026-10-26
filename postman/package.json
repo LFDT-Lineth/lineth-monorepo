@@ -1,7 +1,7 @@
 {
   "name": "@lfdt-lineth/postman",
   "version": "1.0.0",
-  "author": "Consensys Software Inc.",
+  "author": "Consensys Incorporated",
   "license": "(MIT OR Apache-2.0)",
   "description": "",
   "main": "dist/src/index.js",

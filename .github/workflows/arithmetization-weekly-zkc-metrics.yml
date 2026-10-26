@@ -144,7 +144,7 @@ jobs:
           # Both halves timed as one task. No `make linker-script`: linker_script.ld is tracked
           # and @embedFile'd by the zig build, so regenerating it risks dirtying the tree.
           /usr/bin/time -v -o "$d/rusage" \
-            make -C "$MEASURE_DIR/riscv-guests/l2-execution" compile KECCAK_ACCEL=true \
+            make -C "$MEASURE_DIR/riscv-guests/l2-execution" compile KECCAK_ACCEL=false \
             > "$d/stdout" 2> "$d/stderr"
           rc=$?
           if [ "$rc" -eq 0 ]; then
@@ -416,7 +416,7 @@ jobs:
       - name: Install Go
         uses: ./.github/actions/setup-go
         with:
-          go-version: '1.25.7'
+          go-version: '1.27.1'
           cache-dependency-path: "**/*.sum"
 
       - name: Prepare run directory

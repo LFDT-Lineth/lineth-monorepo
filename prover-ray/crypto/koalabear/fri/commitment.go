@@ -74,6 +74,7 @@ func (table MultiSizeTable) Encode(encoders []*RSEncoder) MultiSizeTable {
 		N := int(encoders[i].Domain.Cardinality)
 		encoded[i].Base = slabColumns[field.Element](len(table[i].Base), N)
 		encoded[i].Ext = slabColumns[field.Ext](len(table[i].Ext), N)
+		encoded[i].Groups = table[i].Groups
 	}
 
 	// Each row's RS encode is an independent per-row FFT writing a disjoint
@@ -126,12 +127,25 @@ func slabColumns[T any](count, n int) [][]T {
 // Merkleize merkleizes the table using Poseidon2. Every table but the bottom
 // (largest) one is digested as conjugate pairs, one tree depth shallower than
 // its own size, so it folds the same way the bottom table's leaf pairs do.
+//
+// An ungrouped table (no size declares [SizedTable.Groups]) hashes its bottom
+// table one row per leaf.
+//
+// A grouped table digests every group of every size on its own, with its own
+// leaf header, as conjugate row pairs, the bottom table included: a group's
+// digest is H(header, row[2j] ‖ row[2j+1]) whether its size is the largest or
+// not. The group digests of a size are injected into their level in group
+// order, and the bottom table's level becomes the leaves, each one the first
+// group's digest with the other groups' digests chained after it,
+// C(…C(h_1, h_2)…, h_m). The tree is then one level shorter, and the opening
+// proof keeps its shape.
 func (table MultiSizeTable) Merkleize() *Tree {
 
 	bottom := len(table) - 1
 	if table[bottom].NumRows() == 0 {
 		panic("the bottom level must be non-empty")
 	}
+	pairLeaves := table.grouped()
 
 	// Leaf hashing dominates Commit; it is parallel over leaf index and
 	// vectorizes 16-wide with AVX-512, so hashSizedLeaves handles each size.
@@ -139,13 +153,25 @@ func (table MultiSizeTable) Merkleize() *Tree {
 	// which saves allocating and copying a leaf array as large as the encoded
 	// bottom table's height.
 	size := table[bottom].Size()
-	tree := allocTree(size)
-	hashSizedLeaves(table[bottom], false, tree.Nodes[size-1:])
+	numLeaves := size
+	if pairLeaves {
+		if size < 2 {
+			panic("fri: pair leaves need a largest size of at least two encoded rows")
+		}
+		numLeaves = size / 2
+	}
+	tree := allocTree(numLeaves)
+	leaves := tree.Nodes[numLeaves-1:]
+	if pairLeaves {
+		hashPairLeaves(table[bottom].groupViews(), leaves)
+	} else {
+		hashSizedLeaves(table[bottom], false, leaves)
+	}
 
 	// Every table but the bottom is digested as conjugate pairs, one tree
-	// depth shallower than its own size: a table of encoded height s yields
-	// s/2 auxiliary leaves attached at the level holding s/2 nodes.
-	upperLeaves := make([][]field.Octuplet, utils.Log2Ceil(size))
+	// depth shallower than its own size: a table of encoded height s yields,
+	// per group, s/2 auxiliary leaves attached at the level holding s/2 nodes.
+	injections := make([][][]field.Octuplet, utils.Log2Ceil(numLeaves))
 	for i := range bottom {
 		if table[i].NumRows() == 0 {
 			continue
@@ -154,13 +180,45 @@ func (table MultiSizeTable) Merkleize() *Tree {
 		if s == 1 {
 			continue
 		}
-		digests := make([]field.Octuplet, s/2)
-		hashSizedLeaves(table[i], true, digests)
-		upperLeaves[utils.Log2Ceil(s/2)] = digests
+		level := utils.Log2Ceil(s / 2)
+		for _, group := range table[i].groupViews() {
+			digests := make([]field.Octuplet, s/2)
+			hashSizedLeaves(group, true, digests)
+			injections[level] = append(injections[level], digests)
+		}
 	}
 
-	tree.buildLevels(upperLeaves)
+	tree.buildLevels(injections)
 	return tree
+}
+
+// hashPairLeaves writes the pair-leaf digests of the bottom groups into leaves:
+// leaf j is the first group's digest of rows (2j, 2j+1), with the next groups'
+// digests chained after it.
+func hashPairLeaves(groups []SizedTable, leaves []field.Octuplet) {
+	hashSizedLeaves(groups[0], true, leaves)
+	if len(groups) == 1 {
+		return
+	}
+	digests := make([]field.Octuplet, len(leaves))
+	for _, group := range groups[1:] {
+		hashSizedLeaves(group, true, digests)
+		parallel.Execute(len(leaves), func(start, end int) {
+			for j := start; j < end; j++ {
+				leaves[j] = poseidon2.Compress(leaves[j], digests[j])
+			}
+		})
+	}
+}
+
+// chainDigests is the pair-leaf node of one position: the first digest with
+// the others chained after it, C(…C(d_1, d_2)…, d_m).
+func chainDigests(digests []field.Octuplet) field.Octuplet {
+	res := digests[0]
+	for _, d := range digests[1:] {
+		res = poseidon2.Compress(res, d)
+	}
+	return res
 }
 
 // writeRowElements absorbs one row into hasher without resetting or summing,
@@ -185,6 +243,7 @@ func (table MultiSizeTable) Shape() Shape {
 		shape[sizeLog2] = SizedShape{
 			BaseWidth: len(table[sizeLog2].Base),
 			ExtWidth:  len(table[sizeLog2].Ext),
+			Groups:    table[sizeLog2].Groups,
 		}
 	}
 	return shape

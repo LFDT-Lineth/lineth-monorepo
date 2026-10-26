@@ -107,7 +107,7 @@ class MessageAnchoringConfigParsingTest {
         ),
         signer =
         SignerConfigToml(
-          type = SignerConfigToml.SignerType.WEB3J,
+          type = SignerConfig.SignerType.WEB3J,
           web3j =
           SignerConfigToml.Web3jConfig(
             privateKey = Masked("0x0000000000000000000000000000000000000000000000000000000000000001"),
@@ -176,7 +176,7 @@ class MessageAnchoringConfigParsingTest {
         ),
         signer =
         SignerConfigToml(
-          type = SignerConfigToml.SignerType.WEB3J,
+          type = SignerConfig.SignerType.WEB3J,
           web3j =
           SignerConfigToml.Web3jConfig(
             privateKey = Masked("0x0000000000000000000000000000000000000000000000000000000000000001"),

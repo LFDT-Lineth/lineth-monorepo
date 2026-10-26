@@ -6,19 +6,17 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 /**
  * Fake [L2ExecutionProofTransport] that always reports the request as submitted and returns a fixed
- * [L2ExecutionProofResponseDto]. Used to drive `FileBasedRollupProverClient`'s request mapper without a real
+ * [L2ExecutionProofResponseDto]. Used to drive `RollupProverClient`'s request mapper without a real
  * l2-execution proof transport.
  */
 class FakeL2ExecutionProofTransport(
   private val responseProvider: ((BlockIntervalProofIndex) -> L2ExecutionProofResponseDto?)? = null,
 ) : L2ExecutionProofTransport {
   private val l2ExecutionProofResponseDto = L2ExecutionProofResponseDto(
+    proverVersion = RiscvProverClientTestFixtures.PROVER_VERSION,
     startBlockNumber = 1L,
     proof = byteArrayOf(0x02).encodeHex(),
     publicInputs = RiscvProverClientTestFixtures.l2ExecutionProofPublicInputsDto(2L),
-    l2L1Messages = listOf(ByteArray(32) { 0x4a }.encodeHex()),
-    txFroms = listOf(ByteArray(20) { 0x4b }.encodeHex()),
-    filteredAddresses = listOf(ByteArray(20) { 0x4c }.encodeHex()),
     programVk = ByteArray(32) { 0xaa.toByte() }.encodeHex(),
   )
   override fun isRequestAlreadySubmitted(proofIndex: BlockIntervalProofIndex): SafeFuture<Boolean> =
@@ -56,19 +54,18 @@ class FakeL2ExecutionProofTransport(
 }
 
 /**
- * Fake [FileBasedRollupProofTransport] that always reports the request as submitted and returns a fixed
- * [RollupProofResponseDto]. Used to drive `FileBasedRollupAggregationProverClient`'s request mapper without a real
+ * Fake [RollupProofTransport] that always reports the request as submitted and returns a fixed
+ * [RollupProofResponseDto]. Used to drive `RollupAggregationProverClient`'s request mapper without a real
  * rollup proof transport.
  */
 class FakeRollupProofTransport(
   private val responseProvider: ((BlockIntervalProofIndex) -> RollupProofResponseDto?)? = null,
-) : FileBasedRollupProofTransport {
+) : RollupProofTransport {
   private val rollupProofResponseDto = RollupProofResponseDto(
+    proverVersion = RiscvProverClientTestFixtures.PROVER_VERSION,
     startBlockNumber = 1L,
     proof = byteArrayOf(0x4a).encodeHex(),
     publicInputs = RiscvProverClientTestFixtures.rollupProofPublicInputsDto(2L),
-    l2L1Roots = listOf(ByteArray(32) { 0x5a }.encodeHex()),
-    filteredAddresses = listOf(ByteArray(20) { 0x5b }.encodeHex()),
     programVk = ByteArray(32) { 0xbb.toByte() }.encodeHex(),
   )
   override fun isRequestAlreadySubmitted(proofIndex: BlockIntervalProofIndex): SafeFuture<Boolean> =

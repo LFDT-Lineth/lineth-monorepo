@@ -4,6 +4,7 @@ const fixtures = @import("test_pcs_vectors");
 
 const field = verifier_ray.field.koalabear;
 const ext = verifier_ray.field.koalabear_ext;
+const value_mod = verifier_ray.field.value;
 const poseidon2 = verifier_ray.crypto.poseidon2;
 const merkle = verifier_ray.crypto.merkle;
 const pcs = verifier_ray.query.pcs;
@@ -537,6 +538,133 @@ test "reconstruct: accepts a dynamic size below the column's declared min_size_l
     // that `reconstruct` itself no longer rejects the size).
     const recon = try pcs.reconstruct(recon_system, &[_]usize{2});
     try std.testing.expectEqual(@as(u8, 1), recon.entry_size_log2[recon.col_to_entry[0]]);
+}
+
+// ── Column manifest (elision) ────────────────────────────────────────────────
+//
+// Batch 0: [dyn base d0 (shift 0), static-2 base s1 (shifts 0,1), static-2
+// base s2 (shift 1), static-2 base s3 (shift 0)]. Batch 1: one static-3 ext
+// column. Declaration order: d0, s1, s2, s3, e4.
+const manifest_system = pcs.System{
+    .envelope_params = .{ .log_codeword_size = 6, .log_plaintext_size = 5, .num_queries = 1 },
+    .columns = &.{
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 2, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
+    },
+    .all_shifts = &[_]i32{ 0, 0, 1, -3, 0, 0 },
+    .all_claim_cells = &[_]pcs.CellRef{
+        .{ .round = 0, .index = 0 }, .{ .round = 0, .index = 1 }, .{ .round = 0, .index = 2 },
+        .{ .round = 0, .index = 3 }, .{ .round = 0, .index = 4 }, .{ .round = 0, .index = 5 },
+    },
+    .num_batches = 2,
+    .max_entries = 5,
+    .max_size_log2 = 5,
+};
+
+test "reconstructWithManifest: elided columns leave the canonical layout" {
+    // s2 aliases s1 (raw shift -3 normalizes to 1 at size 4, which s1 opens);
+    // s3 is zero. Present: d0, s1, e4.
+    const manifest = [_]u32{ pcs.manifest_present, pcs.manifest_present, pcs.manifest_alias_base + 1, pcs.manifest_zero, pcs.manifest_present };
+    const recon = try pcs.reconstructWithManifest(manifest_system, &[_]usize{16}, &manifest);
+    try std.testing.expectEqual(@as(usize, 3), recon.num_entries);
+    try std.testing.expectEqual(@as(u8, 4), recon.top_size);
+    // size 4: d0; size 3: e4; size 2: s1 (position 0 — s2/s3 take no slot).
+    try std.testing.expectEqual(@as(usize, 0), recon.entry_col_decl_idx[0]);
+    try std.testing.expectEqual(@as(usize, 4), recon.entry_col_decl_idx[1]);
+    try std.testing.expectEqual(@as(usize, 1), recon.entry_col_decl_idx[2]);
+    try std.testing.expectEqual(@as(usize, 0), recon.entry_row_idx[2]);
+    try std.testing.expectEqual(pcs.no_entry, recon.col_to_entry[2]);
+    try std.testing.expectEqual(pcs.no_entry, recon.col_to_entry[3]);
+    try std.testing.expectEqual(@as(usize, 1), recon.aliasTarget(2));
+}
+
+test "reconstructWithManifest: eliding the largest column shrinks top_size" {
+    const manifest = [_]u32{ pcs.manifest_zero, pcs.manifest_present, pcs.manifest_present, pcs.manifest_present, pcs.manifest_present };
+    const recon = try pcs.reconstructWithManifest(manifest_system, &[_]usize{16}, &manifest);
+    try std.testing.expectEqual(@as(usize, 4), recon.num_entries);
+    try std.testing.expectEqual(@as(u8, 3), recon.top_size);
+    try std.testing.expectEqual(@as(u8, 3), recon.params.log_plaintext_size);
+}
+
+test "reconstructWithManifest: rejects malformed manifests" {
+    const sizes = [_]usize{4};
+    // Wrong length.
+    try std.testing.expectError(error.ManifestLengthMismatch, pcs.reconstructWithManifest(manifest_system, &sizes, &[_]u32{0}));
+    // Forward / self alias (s1 -> s2).
+    try std.testing.expectError(error.InvalidAliasTarget, pcs.reconstructWithManifest(manifest_system, &sizes, &[_]u32{ 0, pcs.manifest_alias_base + 2, 0, 0, 0 }));
+    // Alias of an elided column (s3 -> s2, s2 zero).
+    try std.testing.expectError(error.InvalidAliasTarget, pcs.reconstructWithManifest(manifest_system, &sizes, &[_]u32{ 0, 0, pcs.manifest_zero, pcs.manifest_alias_base + 2, 0 }));
+    // Alias across sizes (s2 -> d0 at size 16).
+    try std.testing.expectError(error.InvalidAliasTarget, pcs.reconstructWithManifest(manifest_system, &[_]usize{16}, &[_]u32{ 0, 0, pcs.manifest_alias_base + 0, 0, 0 }));
+    // Alias target index past the batch (s2 -> batch column 7).
+    try std.testing.expectError(error.InvalidAliasTarget, pcs.reconstructWithManifest(manifest_system, &sizes, &[_]u32{ 0, 0, pcs.manifest_alias_base + 7, 0, 0 }));
+    // Every column of batch 1 elided.
+    try std.testing.expectError(error.BatchFullyElided, pcs.reconstructWithManifest(manifest_system, &sizes, &[_]u32{ 0, 0, 0, 0, pcs.manifest_zero }));
+}
+
+const ManifestCellStub = struct {
+    cells: []const value_mod.Scalar,
+    pub fn cell(self: @This(), round: usize, index: usize) error{CellRefOutOfRange}!value_mod.Scalar {
+        if (round != 0 or index >= self.cells.len) return error.CellRefOutOfRange;
+        return self.cells[index];
+    }
+};
+
+fn baseScalar(v: u32) value_mod.Scalar {
+    return .{ .base = field.Element.init(v) };
+}
+
+test "buildEntryClaims pins elided claim cells; routedClaim serves them" {
+    // d0=7 (one shift), s1=[11 at shift 0, 13 at shift 1], s2 aliases s1 at
+    // shift 1 (claim must be 13), s3 is zero (claim must be 0), e4=5.
+    const manifest = [_]u32{ pcs.manifest_present, pcs.manifest_present, pcs.manifest_alias_base + 1, pcs.manifest_zero, pcs.manifest_present };
+    const recon = try pcs.reconstructWithManifest(manifest_system, &[_]usize{4}, &manifest);
+
+    const honest = [_]value_mod.Scalar{ baseScalar(7), baseScalar(11), baseScalar(13), baseScalar(13), baseScalar(0), baseScalar(5) };
+    var claims: pcs.EntryClaims(manifest_system) = .{};
+    try pcs.buildEntryClaims(manifest_system, &recon, ManifestCellStub{ .cells = &honest }, &claims);
+    try std.testing.expectEqual(@as(usize, 3), claims.slice().len);
+
+    // routedClaim: s2 slot 0 (shift -3 ≡ 1) -> s1's shift-1 claim; s3 -> 0.
+    const s2 = try pcs.routedClaim(manifest_system, &recon, claims.slice(), 2, 0);
+    try std.testing.expect(s2.eql(ext.Ext.lift(field.Element.init(13))));
+    const s3 = try pcs.routedClaim(manifest_system, &recon, claims.slice(), 3, 0);
+    try std.testing.expect(s3.isZero());
+    const s1 = try pcs.routedClaim(manifest_system, &recon, claims.slice(), 1, 1);
+    try std.testing.expect(s1.eql(ext.Ext.lift(field.Element.init(13))));
+
+    // Tampered alias claim.
+    var bad_alias = honest;
+    bad_alias[3] = baseScalar(14);
+    try std.testing.expectError(error.AliasClaimMismatch, pcs.buildEntryClaims(manifest_system, &recon, ManifestCellStub{ .cells = &bad_alias }, &claims));
+
+    // Tampered zero claim.
+    var bad_zero = honest;
+    bad_zero[4] = baseScalar(1);
+    try std.testing.expectError(error.ElidedZeroClaimNonZero, pcs.buildEntryClaims(manifest_system, &recon, ManifestCellStub{ .cells = &bad_zero }, &claims));
+
+    // An alias whose shift the target never opens cannot be pinned: column 1
+    // (shift 1) aliases column 0, which is opened at shift 0 only.
+    const narrow_system = pcs.System{
+        .envelope_params = .{ .log_codeword_size = 6, .log_plaintext_size = 5, .num_queries = 1 },
+        .columns = &.{
+            .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+            .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        },
+        .all_shifts = &[_]i32{ 0, 1 },
+        .all_claim_cells = &[_]pcs.CellRef{ .{ .round = 0, .index = 0 }, .{ .round = 0, .index = 1 } },
+        .num_batches = 1,
+        .max_entries = 2,
+        .max_size_log2 = 5,
+    };
+    const narrow_manifest = [_]u32{ pcs.manifest_present, pcs.manifest_alias_base + 0 };
+    const narrow_recon = try pcs.reconstructWithManifest(narrow_system, &.{}, &narrow_manifest);
+    const narrow_cells = [_]value_mod.Scalar{ baseScalar(3), baseScalar(3) };
+    var narrow_claims: pcs.EntryClaims(narrow_system) = .{};
+    try std.testing.expectError(error.AliasShiftNotInTarget, pcs.buildEntryClaims(narrow_system, &narrow_recon, ManifestCellStub{ .cells = &narrow_cells }, &narrow_claims));
 }
 
 // ── Aliased-claim equality binding ────────────────────────────────────────────

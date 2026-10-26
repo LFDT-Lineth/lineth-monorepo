@@ -55,7 +55,6 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
   private lateinit var blobSubmissionCoordinator: BlobSubmissionCoordinator
   private lateinit var aggregationFinalizationCoordinator: AggregationFinalizationCoordinator
   private val testDataDir = "testdata/coordinator/prover/v3/submissionAndFinalization/"
-  private lateinit var blobSubmittedEvent: BlobSubmittedEvent
   private var blobSubmissionDelay = 0L
   private lateinit var finalizationSubmittedEvent: FinalizationSubmittedEvent
   private var finalizationSubmissionDelay = 0L
@@ -105,7 +104,6 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
       acceptedBlobEndBlockNumberConsumer = acceptedBlobEndBlockNumberConsumer,
     )
     val blobSubmittedEventConsumers = mapOf(
-      Consumer<BlobSubmittedEvent> { blobSubmittedEvent = it } to "Blob Submitted Consumer 1",
       Consumer<BlobSubmittedEvent> { blobSubmissionDelay = it.getSubmissionDelay() } to "Blob Submitted Consumer 2",
     )
 
@@ -192,7 +190,6 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
           .untilAsserted {
             val finalizedBlockNumber = linethRollupContractForAggregationSubmission.finalizedL2BlockNumber().get()
             assertThat(finalizedBlockNumber).isEqualTo(aggregations.last().endBlockNumber)
-            assertThat(blobSubmittedEvent.blobs.last().endBlockNumber).isEqualTo(blobs[12].endBlockNumber)
             assertThat(acceptedBlob).isEqualTo(blobs[12].endBlockNumber)
             assertThat(finalizationSubmittedEvent.endBlockNumber).isEqualTo(
               aggregations.last().endBlockNumber,

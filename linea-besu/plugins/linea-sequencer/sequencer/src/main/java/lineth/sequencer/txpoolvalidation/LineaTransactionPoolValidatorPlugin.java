@@ -1,5 +1,5 @@
 /*
- * Copyright Consensys Software Inc.
+ * Copyright Consensys Incorporated
  *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
@@ -35,6 +35,7 @@ import org.hyperledger.besu.plugin.services.transactionpool.TransactionPoolServi
  */
 @Slf4j
 @AutoService(BesuPlugin.class)
+@SuppressWarnings("deprecation")
 public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPlugin {
 
   private ServiceManager serviceManager;

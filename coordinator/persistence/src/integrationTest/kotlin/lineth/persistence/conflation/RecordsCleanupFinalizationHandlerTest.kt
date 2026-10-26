@@ -47,6 +47,7 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
     batchesRepository = PostgresBatchesRepository(
       BatchesPostgresDao(
         connection = sqlClient,
+        schemaVersion = target.toInt(),
         clock = fakeClock,
       ),
     )

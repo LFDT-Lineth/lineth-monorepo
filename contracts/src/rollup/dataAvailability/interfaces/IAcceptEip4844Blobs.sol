@@ -4,7 +4,7 @@ import { IShnarfDataAcceptorBase } from "./IShnarfDataAcceptorBase.sol";
 
 /**
  * @title Interface for defining EIP-4844 blob submission functions, structs and errors.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 interface IAcceptEip4844Blobs is IShnarfDataAcceptorBase {

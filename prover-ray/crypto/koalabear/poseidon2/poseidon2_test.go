@@ -79,7 +79,7 @@ func TestCircuit(t *testing.T) {
 
 	fullWitness, err := frontend.NewWitness(witness, koalabear.Modulus())
 	require.NoError(t, err)
-	err = ccs.IsSolved(fullWitness)
+	_, err = ccs.Solve(fullWitness)
 	require.NoError(t, err)
 
 }

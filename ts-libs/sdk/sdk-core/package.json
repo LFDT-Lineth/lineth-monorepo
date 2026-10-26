@@ -2,7 +2,7 @@
   "name": "@lfdt-lineth/sdk-core",
   "version": "1.0.0",
   "description": "Core utilities for the Linea bridge SDK — Merkle tree, message types, chain and contract helpers",
-  "author": "Consensys Software Inc.",
+  "author": "Consensys Incorporated",
   "license": "(MIT OR Apache-2.0)",
   "repository": {
     "type": "git",

@@ -217,3 +217,25 @@ func TestModule_NewExtensionColumn_NilRoundPanic(t *testing.T) {
 	sys, _, _, mod := newTestSystem(t)
 	assert.Panics(t, func() { mod.NewExtensionColumn(sys.Context.Childf("ext"), nil) })
 }
+
+// TestSystem_PCSMode checks the PCS selection transitions: both selections
+// are idempotent, and each conflicts with the other.
+func TestSystem_PCSMode(t *testing.T) {
+	t.Run("selected", func(t *testing.T) {
+		sys := wiop.NewSystemf("pcs-selected")
+		require.Equal(t, -1, sys.PCSMode(), "a new System is provisional")
+		sys.SelectPCS()
+		sys.SelectPCS()
+		require.Equal(t, 1, sys.PCSMode(), "SelectPCS must select a PCS")
+		require.Panics(t, sys.DeclareNoPCS, "no-PCS must conflict with a selected PCS")
+		require.Equal(t, 1, sys.PCSMode(), "the rejected declaration must keep the PCS")
+	})
+	t.Run("none", func(t *testing.T) {
+		sys := wiop.NewSystemf("pcs-none")
+		sys.DeclareNoPCS()
+		sys.DeclareNoPCS()
+		require.Equal(t, 0, sys.PCSMode(), "DeclareNoPCS must declare no-PCS mode")
+		require.Panics(t, sys.SelectPCS, "a PCS selection must conflict with no-PCS mode")
+		require.Equal(t, 0, sys.PCSMode(), "the rejected selection must keep no-PCS mode")
+	})
+}

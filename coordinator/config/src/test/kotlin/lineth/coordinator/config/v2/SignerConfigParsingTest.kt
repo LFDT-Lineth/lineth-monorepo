@@ -50,7 +50,7 @@ class SignerConfigParsingTest {
       WrapperConfig(
         web3jExample =
         SignerConfigToml(
-          type = SignerConfigToml.SignerType.WEB3J,
+          type = SignerConfig.SignerType.WEB3J,
           web3j =
           SignerConfigToml.Web3jConfig(
             privateKey = Masked("0x0000000000000000000000000000000000000000000000000000000000000001"),
@@ -59,7 +59,7 @@ class SignerConfigParsingTest {
         ),
         web3SignerExample =
         SignerConfigToml(
-          type = SignerConfigToml.SignerType.WEB3SIGNER,
+          type = SignerConfig.SignerType.WEB3SIGNER,
           web3j = null,
           web3signer =
           SignerConfigToml.Web3SignerConfig(
@@ -76,7 +76,7 @@ class SignerConfigParsingTest {
         ),
         web3signerWithTlsExample =
         SignerConfigToml(
-          type = SignerConfigToml.SignerType.WEB3SIGNER,
+          type = SignerConfig.SignerType.WEB3SIGNER,
           web3j = null,
           web3signer =
           SignerConfigToml.Web3SignerConfig(
@@ -99,7 +99,7 @@ class SignerConfigParsingTest {
         ),
         customExample =
         SignerConfigToml(
-          type = SignerConfigToml.SignerType.CUSTOM,
+          type = SignerConfig.SignerType.CUSTOM,
           web3j = null,
           web3signer = null,
           custom = SignerConfigToml.CustomConfig("l1-submitter"),
@@ -131,7 +131,7 @@ class SignerConfigParsingTest {
   fun `custom signer requires non-blank custom config`() {
     assertThatThrownBy {
       SignerConfigToml(
-        type = SignerConfigToml.SignerType.CUSTOM,
+        type = SignerConfig.SignerType.CUSTOM,
         web3j = null,
         web3signer = null,
       )
