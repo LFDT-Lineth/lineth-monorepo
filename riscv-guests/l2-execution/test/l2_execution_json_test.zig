@@ -26,8 +26,6 @@ test "encodeOutputJson matches the Python reference response shape (minus proof/
             .end_block_number = 1000503,
             .end_block_timestamp = 1763000123,
             .l2_l1_messages = &.{repeat(32, 0x08)},
-            .parent_l1_l2_bridge_rolling_hash = repeat(32, 0x02),
-            .parent_l1_l2_bridge_rolling_hash_message_number = 0,
             .end_l1_l2_bridge_rolling_hash = repeat(32, 0x03),
             .end_l1_l2_bridge_rolling_hash_message_number = 5,
             .dynamic_chain_config_hash = repeat(32, 0xc0),
@@ -55,8 +53,6 @@ test "encodeOutputJson matches the Python reference response shape (minus proof/
         "\"endBlockNumber\":1000503," ++
         "\"endBlockTimestamp\":1763000123," ++
         "\"l2L1Messages\":[\"0x0808080808080808080808080808080808080808080808080808080808080808\"]," ++
-        "\"parentL1L2BridgeRollingHash\":\"0x0202020202020202020202020202020202020202020202020202020202020202\"," ++
-        "\"parentL1L2BridgeRollingHashMessageNumber\":0," ++
         "\"endL1L2BridgeRollingHash\":\"0x0303030303030303030303030303030303030303030303030303030303030303\"," ++
         "\"endL1L2BridgeRollingHashMessageNumber\":5," ++
         "\"dynamicChainConfigHash\":\"0xc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0\"," ++

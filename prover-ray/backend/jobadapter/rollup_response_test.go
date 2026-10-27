@@ -9,7 +9,7 @@ import (
 )
 
 // TestNewRollupResponse_MatchesReferenceShape verifies the placeholder rollup
-// response has the exact V1 field shape (including the 22-field PI) and echoes
+// response has the exact V1 field shape (including the PI) and echoes
 // the routing programVk. Values stay placeholder until the guest lands.
 func TestNewRollupResponse_MatchesReferenceShape(t *testing.T) {
 	vk := filledHash(0xbb)

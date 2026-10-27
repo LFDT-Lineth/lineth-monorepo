@@ -1,8 +1,8 @@
 //! Scenario tests for the l2-execution guest's conflation logic, built on the plan DSL.
 //!
 //! One rich happy-path scenario exercises every public-input field at once over a realistic
-//! 2-block range: real signed transactions, L2->L1 bridge messages, L1<->L2 bridge storage, and
-//! forced transactions spanning both blocks — checked against independently-derived expected
+//! 2-block range: real signed transactions, L2->L1 bridge messages, L1->L2 rolling-hash updates,
+//! and forced transactions spanning both blocks — checked against independently-derived expected
 //! values. Fifteen one-mutation scenarios each drift a single field or hook away from a realistic
 //! default range, one per rejection (or, for a handful, one per accepted/observed edge case) the
 //! guest's conflation logic enforces.
@@ -22,11 +22,15 @@ const l2_execution = @import("l2_execution");
 const l2_execution_ssz = @import("l2_execution_ssz");
 const conflation_plan = @import("conflation_plan.zig");
 const tx_fixtures = @import("tx_fixtures");
+const log_fixtures = @import("log_fixtures.zig");
 
 const types = executor.executor_types;
 const api = l2_execution.test_api;
+const makeLog = log_fixtures.makeLog;
+const rollingHashUpdatedLog = log_fixtures.rollingHashUpdatedLog;
 
 const ZERO_HASH: [32]u8 = @splat(0);
+const ZERO_ADDRESS: [20]u8 = @splat(0);
 
 /// The plan DSL's own default base fee. The chain-config hash formula takes it as a separate
 /// argument (it is not itself a `ChainConfig` field), so computing the expected
@@ -91,8 +95,10 @@ const NON_BRIDGE_TOPIC0: [32]u8 = @splat(0x01);
 const MESSAGE_HASH_1: [32]u8 = @splat(0x51);
 const MESSAGE_HASH_2: [32]u8 = @splat(0x52);
 
-const PARENT_BRIDGE_HASH: [32]u8 = @splat(0x11);
-const END_BRIDGE_HASH: [32]u8 = @splat(0x22);
+const ROLLING_HASH_1: [32]u8 = @splat(0x11);
+const ROLLING_HASH_2: [32]u8 = @splat(0x22);
+const ROLLING_HASH_NUMBER_1: u64 = 5;
+const ROLLING_HASH_NUMBER_2: u64 = 7;
 
 /// Comfortably above the plan DSL's own default range (block numbers ~1_000_000/1_000_001), so
 /// both forced transactions below clear their deadline check regardless of which block handles
@@ -101,22 +107,6 @@ const FTX_DEADLINE: u64 = 2_000_000;
 
 /// Mirrors the plan DSL's own base timestamp (1_700_000_000) plus one 12-second block time.
 const EXPECTED_BLOCK1_TIMESTAMP: u64 = 1_700_000_012;
-
-/// A log at a fixed placeholder position (this guest's message extraction only ever inspects
-/// `address`/`topics`), duplicating `topics` onto the allocator like a real per-block execution's
-/// own log construction would.
-fn testLog(alloc: std.mem.Allocator, address: [20]u8, topics: []const [32]u8) !types.Log {
-    return .{
-        .address = address,
-        .topics = try alloc.dupe([32]u8, topics),
-        .data = &.{},
-        .block_number = 0,
-        .tx_hash = ZERO_HASH,
-        .tx_index = 0,
-        .block_hash = ZERO_HASH,
-        .log_index = 0,
-    };
-}
 
 test "a realistic 2-block range produces every public-input field exactly" {
     var arena = std.heap.ArenaAllocator.init(testing.allocator);
@@ -133,9 +123,11 @@ test "a realistic 2-block range produces every public-input field exactly" {
     // FILTERED_ADDRESS_FROM witness.
     const t4_rlp = try buildSignedFixtureTx(alloc, "T4", 3, 4000);
 
-    const msg_log_1 = try testLog(alloc, conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS, &.{ BRIDGE_MESSAGE_SENT_TOPIC0, ZERO_HASH, ZERO_HASH, MESSAGE_HASH_1 });
-    const non_matching_log = try testLog(alloc, conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS, &.{ NON_BRIDGE_TOPIC0, ZERO_HASH, ZERO_HASH, ZERO_HASH });
-    const msg_log_2 = try testLog(alloc, conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS, &.{ BRIDGE_MESSAGE_SENT_TOPIC0, ZERO_HASH, ZERO_HASH, MESSAGE_HASH_2 });
+    const msg_log_1 = try makeLog(alloc, conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS, &.{ BRIDGE_MESSAGE_SENT_TOPIC0, ZERO_HASH, ZERO_HASH, MESSAGE_HASH_1 });
+    const non_matching_log = try makeLog(alloc, conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS, &.{ NON_BRIDGE_TOPIC0, ZERO_HASH, ZERO_HASH, ZERO_HASH });
+    const msg_log_2 = try makeLog(alloc, conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS, &.{ BRIDGE_MESSAGE_SENT_TOPIC0, ZERO_HASH, ZERO_HASH, MESSAGE_HASH_2 });
+    const rolling_log_1 = try rollingHashUpdatedLog(alloc, conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS, ROLLING_HASH_NUMBER_1, ROLLING_HASH_1);
+    const rolling_log_2 = try rollingHashUpdatedLog(alloc, conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS, ROLLING_HASH_NUMBER_2, ROLLING_HASH_2);
 
     // Senders are derived from the tx bytes themselves, not hand-copied literals — see
     // `recoverFixtureSender`'s doc comment above.
@@ -167,8 +159,8 @@ test "a realistic 2-block range produces every public-input field exactly" {
         .deadline = FTX_DEADLINE,
     };
 
-    const block0_logs = [_][]const types.Log{ &.{msg_log_1}, &.{non_matching_log} };
-    const block1_logs = [_][]const types.Log{&.{msg_log_2}};
+    const block0_logs = [_][]const types.Log{ &.{msg_log_1}, &.{ non_matching_log, rolling_log_1 } };
+    const block1_logs = [_][]const types.Log{&.{ msg_log_2, rolling_log_2 }};
     const blocks = [_]conflation_plan.BlockPlan{
         .{
             .signed_tx_rlps = &.{ t1_rlp, t2_rlp },
@@ -181,13 +173,11 @@ test "a realistic 2-block range produces every public-input field exactly" {
             .forced_transactions = &.{ftx2},
         },
     };
-    var plan = conflation_plan.ConflationPlan{
+    const plan = conflation_plan.ConflationPlan{
         .blocks = &blocks,
         .parent_last_processed_ftx_number = 0,
         .l2_message_service_address = conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS,
     };
-    plan.bridgeStorage(.parent, .{ .number = 5, .hash = PARENT_BRIDGE_HASH });
-    plan.bridgeStorage(.end, .{ .number = 7, .hash = END_BRIDGE_HASH });
 
     const built = try plan.build(alloc);
     const output = try plan.run(alloc);
@@ -209,11 +199,9 @@ test "a realistic 2-block range produces every public-input field exactly" {
     try testing.expectEqual(@as(u64, 2), output.public_inputs.block_count);
     try testing.expectEqualSlices(u16, &.{ 1, 2 }, output.public_inputs.l2_messaging_blocks_offsets);
 
-    // L1<->L2 bridge: parent/end numbers and hashes echo exactly what bridgeStorage declared.
-    try testing.expectEqual(@as(u64, 5), output.public_inputs.parent_l1_l2_bridge_rolling_hash_message_number);
-    try testing.expectEqualSlices(u8, &PARENT_BRIDGE_HASH, &output.public_inputs.parent_l1_l2_bridge_rolling_hash);
-    try testing.expectEqual(@as(u64, 7), output.public_inputs.end_l1_l2_bridge_rolling_hash_message_number);
-    try testing.expectEqualSlices(u8, &END_BRIDGE_HASH, &output.public_inputs.end_l1_l2_bridge_rolling_hash);
+    // L1->L2 bridge: both blocks anchored, so the end pair is block 1's (the last) update.
+    try testing.expectEqual(ROLLING_HASH_NUMBER_2, output.public_inputs.end_l1_l2_bridge_rolling_hash_message_number);
+    try testing.expectEqualSlices(u8, &ROLLING_HASH_2, &output.public_inputs.end_l1_l2_bridge_rolling_hash);
 
     // Chain config hash over the range's real address/coinbase/chainId, at the range's base fee.
     const chain_config = l2_execution_ssz.ChainConfig{
@@ -362,48 +350,54 @@ test "an unsupported fork is rejected" {
     try plan.expectReject(arena.allocator(), error.UnsupportedFork);
 }
 
-// Proves `bridgeStorage`'s decoupling: declaring bridge storage no longer forces the address on,
-// so a plan can leave it at its suppressed zero default and the declared values are simply never
-// realized.
-test "bridge storage declared while the address stays at its suppressed zero default is never observed" {
+test "a range with no rolling-hash update reports a zero end pair" {
     var arena = std.heap.ArenaAllocator.init(testing.allocator);
     defer arena.deinit();
-    var plan = conflation_plan.ConflationPlan{};
-    plan.bridgeStorage(.parent, .{ .number = 5, .hash = PARENT_BRIDGE_HASH });
-    plan.bridgeStorage(.end, .{ .number = 7, .hash = END_BRIDGE_HASH });
+    const plan = conflation_plan.ConflationPlan{ .l2_message_service_address = conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS };
 
     const output = try plan.run(arena.allocator());
 
-    try testing.expectEqual(@as(u64, 0), output.public_inputs.parent_l1_l2_bridge_rolling_hash_message_number);
-    try testing.expectEqualSlices(u8, &ZERO_HASH, &output.public_inputs.parent_l1_l2_bridge_rolling_hash);
     try testing.expectEqual(@as(u64, 0), output.public_inputs.end_l1_l2_bridge_rolling_hash_message_number);
     try testing.expectEqualSlices(u8, &ZERO_HASH, &output.public_inputs.end_l1_l2_bridge_rolling_hash);
 }
 
-test "a decreasing bridge message number across the range is rejected" {
-    var arena = std.heap.ArenaAllocator.init(testing.allocator);
-    defer arena.deinit();
-    var plan = conflation_plan.ConflationPlan{ .l2_message_service_address = conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS };
-    plan.bridgeStorage(.parent, .{ .number = 7, .hash = PARENT_BRIDGE_HASH });
-    plan.bridgeStorage(.end, .{ .number = 5, .hash = END_BRIDGE_HASH });
-
-    try plan.expectReject(arena.allocator(), error.RollingHashNumberDecreased);
-}
-
-test "a matching bridge log is ignored while the address stays at its suppressed zero default" {
+test "a rolling-hash update in an early block survives later blocks without one" {
     var arena = std.heap.ArenaAllocator.init(testing.allocator);
     defer arena.deinit();
     const alloc = arena.allocator();
 
-    // A realistic non-zero contract address for the log's own emitting address; the field that
-    // actually stays suppressed at its zero default below is l2_message_service_address.
-    const placeholder_log_address: [20]u8 = @splat(0xdd);
-    // StubEngine attaches declared logs per DECODED transaction, so a real tx must ride in the
-    // block for this log to have anything to attach to.
-    const t_rlp = try buildSignedFixtureTx(alloc, "T12", 0, 1000);
-    const bridge_log = try testLog(alloc, placeholder_log_address, &.{ BRIDGE_MESSAGE_SENT_TOPIC0, ZERO_HASH, ZERO_HASH, MESSAGE_HASH_1 });
+    const t_rlp = try buildSignedFixtureTx(alloc, "RollingHashBlockTx", 0, 1000);
+    const rolling_log = try rollingHashUpdatedLog(alloc, conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS, ROLLING_HASH_NUMBER_1, ROLLING_HASH_1);
+    const block0_logs = [_][]const types.Log{&.{rolling_log}};
+    const blocks = [_]conflation_plan.BlockPlan{
+        .{ .signed_tx_rlps = &.{t_rlp}, .tx_logs = &block0_logs },
+        .{},
+    };
+    const plan = conflation_plan.ConflationPlan{
+        .blocks = &blocks,
+        .l2_message_service_address = conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS,
+    };
 
-    const block0_logs = [_][]const types.Log{&.{bridge_log}};
+    const output = try plan.run(alloc);
+
+    try testing.expectEqual(ROLLING_HASH_NUMBER_1, output.public_inputs.end_l1_l2_bridge_rolling_hash_message_number);
+    try testing.expectEqualSlices(u8, &ROLLING_HASH_1, &output.public_inputs.end_l1_l2_bridge_rolling_hash);
+}
+
+test "matching bridge logs are ignored while the address stays at its suppressed zero default" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    // The logs are emitted by the zero address itself, the very value l2_message_service_address
+    // holds, so only the suppression keeps them out of the public input.
+    // StubEngine attaches declared logs per DECODED transaction, so a real tx must ride in the
+    // block for these logs to have anything to attach to.
+    const t_rlp = try buildSignedFixtureTx(alloc, "T12", 0, 1000);
+    const message_log = try makeLog(alloc, ZERO_ADDRESS, &.{ BRIDGE_MESSAGE_SENT_TOPIC0, ZERO_HASH, ZERO_HASH, MESSAGE_HASH_1 });
+    const rolling_log = try rollingHashUpdatedLog(alloc, ZERO_ADDRESS, ROLLING_HASH_NUMBER_1, ROLLING_HASH_1);
+
+    const block0_logs = [_][]const types.Log{&.{ message_log, rolling_log }};
     const blocks = [_]conflation_plan.BlockPlan{
         .{ .signed_tx_rlps = &.{t_rlp}, .tx_logs = &block0_logs },
         .{},
@@ -415,8 +409,6 @@ test "a matching bridge log is ignored while the address stays at its suppressed
 
     try testing.expectEqual(@as(usize, 0), output.public_inputs.l2_l1_messages.len);
     try testing.expectEqual(@as(usize, 0), output.public_inputs.l2_messaging_blocks_offsets.len);
-    try testing.expectEqual(@as(u64, 0), output.public_inputs.parent_l1_l2_bridge_rolling_hash_message_number);
-    try testing.expectEqualSlices(u8, &ZERO_HASH, &output.public_inputs.parent_l1_l2_bridge_rolling_hash);
     try testing.expectEqual(@as(u64, 0), output.public_inputs.end_l1_l2_bridge_rolling_hash_message_number);
     try testing.expectEqualSlices(u8, &ZERO_HASH, &output.public_inputs.end_l1_l2_bridge_rolling_hash);
 }
@@ -444,8 +436,8 @@ test "an included forced transaction's bridge message reaches the public input" 
     const ordinary_bridge_tx_sender = try recoverFixtureSender(alloc, ordinary_bridge_tx_rlp, RANGE_CHAIN_ID);
     const forced_bridge_tx_sender = try recoverFixtureSender(alloc, forced_bridge_tx_rlp, RANGE_CHAIN_ID);
 
-    const ordinary_bridge_tx_message_log = try testLog(alloc, conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS, &.{ BRIDGE_MESSAGE_SENT_TOPIC0, ZERO_HASH, ZERO_HASH, MESSAGE_HASH_1 });
-    const forced_bridge_tx_message_log = try testLog(alloc, conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS, &.{ BRIDGE_MESSAGE_SENT_TOPIC0, ZERO_HASH, ZERO_HASH, MESSAGE_HASH_2 });
+    const ordinary_bridge_tx_message_log = try makeLog(alloc, conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS, &.{ BRIDGE_MESSAGE_SENT_TOPIC0, ZERO_HASH, ZERO_HASH, MESSAGE_HASH_1 });
+    const forced_bridge_tx_message_log = try makeLog(alloc, conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS, &.{ BRIDGE_MESSAGE_SENT_TOPIC0, ZERO_HASH, ZERO_HASH, MESSAGE_HASH_2 });
     const block0_logs = [_][]const types.Log{ &.{ordinary_bridge_tx_message_log}, &.{forced_bridge_tx_message_log} };
 
     const included_forced_transaction = l2_execution_ssz.ForcedTransactionWitness{
@@ -620,16 +612,14 @@ test "a range refusing one forced transaction by sender and another by recipient
     }
 }
 
-test "a forced transaction included in the last block advances the L1-to-L2 anchoring state" {
+test "a forced transaction in the last block leaves that block's rolling-hash update as the end pair" {
     var arena = std.heap.ArenaAllocator.init(testing.allocator);
     defer arena.deinit();
     const alloc = arena.allocator();
 
-    // A bridge-bound forced transaction riding in the range's LAST block, whose post-state IS the
-    // range's end state — so the anchoring advance this range commits and the forced transaction's
-    // own handling land at the same state boundary, the pairing a range carrying both has to get
-    // right. Which of the two the anchoring advance is attributable to sits on the far side of the
-    // execution seam a plan stubs out, so this scenario pins that pairing rather than a cause.
+    // A bridge-bound forced transaction riding in the range's LAST block beside the transaction
+    // that anchors the L1->L2 rolling hash — the pairing a range carrying both has to get right.
+    const anchoring_tx_rlp = try buildSignedFixtureTx(alloc, "AnchoringTx", 0, 1000);
     const forced_bridge_tx_rlp = try tx_fixtures.buildSignedLegacyTx(alloc, "AnchoringRangeForcedBridgeTx", .{
         .nonce = 0,
         .gas_price = RANGE_TX_GAS_PRICE,
@@ -645,23 +635,25 @@ test "a forced transaction included in the last block advances the L1-to-L2 anch
         .acceptance = api.Acceptance.INCLUDED,
         .deadline = FTX_DEADLINE,
     };
+    const rolling_log = try rollingHashUpdatedLog(alloc, conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS, ROLLING_HASH_NUMBER_2, ROLLING_HASH_2);
+    const last_block_logs = [_][]const types.Log{&.{rolling_log}};
     const blocks = [_]conflation_plan.BlockPlan{
         .{},
-        .{ .signed_tx_rlps = &.{forced_bridge_tx_rlp}, .forced_transactions = &.{forced_transaction} },
+        .{
+            .signed_tx_rlps = &.{ anchoring_tx_rlp, forced_bridge_tx_rlp },
+            .tx_logs = &last_block_logs,
+            .forced_transactions = &.{forced_transaction},
+        },
     };
-    var plan = conflation_plan.ConflationPlan{
+    const plan = conflation_plan.ConflationPlan{
         .blocks = &blocks,
         .l2_message_service_address = conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS,
     };
-    plan.bridgeStorage(.parent, .{ .number = 5, .hash = PARENT_BRIDGE_HASH });
-    plan.bridgeStorage(.end, .{ .number = 7, .hash = END_BRIDGE_HASH });
 
     const output = try plan.run(alloc);
 
-    try testing.expectEqual(@as(u64, 5), output.public_inputs.parent_l1_l2_bridge_rolling_hash_message_number);
-    try testing.expectEqualSlices(u8, &PARENT_BRIDGE_HASH, &output.public_inputs.parent_l1_l2_bridge_rolling_hash);
-    try testing.expectEqual(@as(u64, 7), output.public_inputs.end_l1_l2_bridge_rolling_hash_message_number);
-    try testing.expectEqualSlices(u8, &END_BRIDGE_HASH, &output.public_inputs.end_l1_l2_bridge_rolling_hash);
+    try testing.expectEqual(ROLLING_HASH_NUMBER_2, output.public_inputs.end_l1_l2_bridge_rolling_hash_message_number);
+    try testing.expectEqualSlices(u8, &ROLLING_HASH_2, &output.public_inputs.end_l1_l2_bridge_rolling_hash);
 
     try testing.expectEqual(@as(u64, 1), output.public_inputs.end_processed_ftx_number);
     const expected_end_ftx_rolling_hash = api.addToForcedTxRollingHashFn(ZERO_HASH, mpt.keccak256(forced_bridge_tx_rlp), FTX_DEADLINE, forced_bridge_tx_sender);
