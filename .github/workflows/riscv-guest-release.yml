@@ -40,13 +40,20 @@ jobs:
     needs: compute-release-metadata
     if: needs.compute-release-metadata.outputs.tag_changed == 'true'
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    outputs:
+      guest_dir: ${{ steps.guest-dir.outputs.dir }}
     steps:
+      - name: Resolve guest directory
+        id: guest-dir
+        env:
+          GUEST: ${{ inputs.guest }}
+        run: echo "dir=${GUEST//-/_}" >> "$GITHUB_OUTPUT"
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup guest toolchain
         uses: ./.github/actions/setup-riscv-guests
       - name: Verify Program ID staging
-        run: zig test riscv-guests/build_common/program-id.zig
+        run: zig test riscv-guests/build_common/program_id.zig
       - name: Test and compile selected guest
         env:
           GUEST: ${{ inputs.guest }}
@@ -58,7 +65,7 @@ jobs:
     uses: ./.github/workflows/reusable-component-release-push-tag-changelog.yml
     with:
       component-name: riscv-${{ inputs.guest }}
-      folder-name: riscv-guests/${{ inputs.guest }}
+      folder-name: riscv-guests/${{ needs.preflight.outputs.guest_dir }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }}
     secrets: inherit
 

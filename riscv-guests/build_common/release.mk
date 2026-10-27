@@ -1,7 +1,7 @@
 .PHONY: release-asset
 
 RELEASE_DIR ?= $(MAKEFILE_DIR)../release-assets
-RELEASE_GUEST := $(notdir $(patsubst %/,%,$(MAKEFILE_DIR)))
+RELEASE_GUEST := $(subst _,-,$(notdir $(patsubst %/,%,$(MAKEFILE_DIR))))
 
 release-asset:
 	@set -eu; \

@@ -11,7 +11,7 @@
 
 const std = @import("std");
 const rollup_ssz = @import("rollup_ssz");
-const support = @import("support.zig");
+const support = @import("support");
 
 pub fn main(init: std.process.Init) !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);

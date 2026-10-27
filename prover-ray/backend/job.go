@@ -5,7 +5,7 @@ type ProofType string
 
 const (
 	// ProofTypeL2Execution proves a range of L2 blocks using the
-	// l2-execution guest ELF (riscv-guests/l2-execution/).
+	// l2-execution guest ELF (riscv-guests/l2_execution/).
 	ProofTypeL2Execution ProofType = "l2-execution"
 
 	// ProofTypeRollup proves the compression / data-availability stage

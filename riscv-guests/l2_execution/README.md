@@ -16,20 +16,20 @@ The Zig version, dependency checkout, build manifest, and ZKC helper commands ar
 Run from the parent directory:
 
 ```bash
-make -C l2-execution exec
+make -C l2_execution exec
 ```
 
-`make -C l2-execution compile` writes the guest as a **statically-linked rv64im ELF** to `riscv-guests/l2-execution/zig-out/bin/evm_execution_guest` — the [zkvm-standards](https://github.com/eth-act/zkvm-standards/blob/main/standards/riscv-target/target.md) artifact ("Object Format: ELF, statically linked"), linked via `build_common`'s shared `installGuestElf`. The ZKC interpreter loads the guest (via ELF→JSON); `make -C l2-execution exec` builds it and runs it there — see the [parent README](../README.md#zkc-interpreter-integration). `make test` runs the native Zig tests through the same Constantine-backed crypto providers as the guest (see [Crypto Backends](../README.md#crypto-backends)).
+`make -C l2_execution compile` writes the guest as a **statically-linked rv64im ELF** to `riscv-guests/l2_execution/zig-out/bin/evm_execution_guest` — the [zkvm-standards](https://github.com/eth-act/zkvm-standards/blob/main/standards/riscv-target/target.md) artifact ("Object Format: ELF, statically linked"), linked via `build_common`'s shared `installGuestElf`. The ZKC interpreter loads the guest (via ELF→JSON); `make -C l2_execution exec` builds it and runs it there — see the [parent README](../README.md#zkc-interpreter-integration). `make test` runs the native Zig tests through the same Constantine-backed crypto providers as the guest (see [Crypto Backends](../README.md#crypto-backends)).
 
 ## Compilation
 
-`make -C l2-execution compile` (and `exec`/`debug`) build the guest with the
+`make -C l2_execution compile` (and `exec`/`debug`) build the guest with the
 arithmetization keccak wrapper (the prover-accelerated custom op) by default. Pass
 `KECCAK_ACCEL=false` to build with standard Zig keccak instead:
 
 ```bash
-make -C l2-execution compile                      # arithmetization keccak wrapper
-make -C l2-execution compile KECCAK_ACCEL=false   # standard Zig keccak
+make -C l2_execution compile                      # arithmetization keccak wrapper
+make -C l2_execution compile KECCAK_ACCEL=false   # standard Zig keccak
 ```
 
 Equivalently, running `zig build` directly from this directory (requires the generated linker script; run `make linker-script` once after a clean checkout):
@@ -47,7 +47,7 @@ it in the ZKC interpreter on an SSZ input, from anywhere. Add to `~/.zshrc`:
 agp() {
     local input
     input="$(realpath "$1")" || { echo "agp: no such file: $1" >&2; return 1; }
-    /usr/bin/time -p make -C /path/to/lineth-monorepo/riscv-guests/l2-execution \
+    /usr/bin/time -p make -C /path/to/lineth-monorepo/riscv-guests/l2_execution \
         exec KECCAK_ACCEL=true INPUT="$input" "${@:2}"
 }
 ```

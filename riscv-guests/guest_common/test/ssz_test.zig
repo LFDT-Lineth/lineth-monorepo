@@ -1,4 +1,4 @@
-//! Direct unit tests for guest-common's generic SSZ primitives — the byte-level machinery every
+//! Direct unit tests for guest_common's generic SSZ primitives — the byte-level machinery every
 //! guest's own container-specific codec builds on. l2-execution's own codec tests exercise these
 //! primitives indirectly (through its container decode/encode calls); the tests here isolate the
 //! primitives themselves so a regression here fails at the source, not several layers up.
