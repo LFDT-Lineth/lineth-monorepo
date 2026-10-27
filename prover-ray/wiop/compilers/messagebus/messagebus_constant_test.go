@@ -31,7 +31,7 @@ func buildConstantBus(t *testing.T) (sys *wiop.System, kA, selA, kB, vB *wiop.Co
 	return sys, kA, selA, kB, vB
 }
 
-func TestCompile_Permutation_ConstantEntry_Balanced(t *testing.T) {
+func TestCompile_Bus_ConstantEntry_Balanced(t *testing.T) {
 	sys, kA, selA, kB, vB := buildConstantBus(t)
 	compilePermutationBusWithPCS(sys)
 
@@ -45,7 +45,7 @@ func TestCompile_Permutation_ConstantEntry_Balanced(t *testing.T) {
 		"the sent tuples (2, 7), (4, 7) are exactly the received ones")
 }
 
-func TestCompile_Permutation_ConstantEntry_Unbalanced(t *testing.T) {
+func TestCompile_Bus_ConstantEntry_Unbalanced(t *testing.T) {
 	sys, kA, selA, kB, vB := buildConstantBus(t)
 	compilePermutationBusWithPCS(sys)
 
@@ -60,23 +60,50 @@ func TestCompile_Permutation_ConstantEntry_Unbalanced(t *testing.T) {
 }
 
 // TestSharedRandomness_ConstantEntryIsNotMisplaced checks that the coin-round
-// placement guard skips constant entries: they have no round, and must not be
-// reported as living off the coin round.
+// placement guard skips constant entries: they have no round, so they must
+// neither be reported as living off the coin round nor hide a real column that
+// is.
 func TestSharedRandomness_ConstantEntryIsNotMisplaced(t *testing.T) {
-	sys := wiop.NewSystemf("mb-const-placement")
-	sys.NewRound()
-	r1 := sys.NewRound()
-	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	one := wiop.NewConstantVector(mod, field.One())
+	// build declares a send port (one, a) and a receive port (one, b), with a
+	// on round aRound and b on the coin round (round 1). Round 0 is the seed
+	// round, so the coin round is round 1.
+	build := func(aRound int) (*wiop.System, *wiop.Column) {
+		sys := wiop.NewSystemf("mb-const-placement")
+		sys.NewRound()
+		sys.NewRound()
+		mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
+		one := wiop.NewConstantVector(mod, field.One())
+		a := mod.NewColumn(sys.Context.Childf("a"), sys.Rounds[aRound])
+		b := mod.NewColumn(sys.Context.Childf("b"), sys.Rounds[1])
 
-	send := sys.NewMessageBusSend(
-		sys.Context.Childf("send"), "shard-1", "route",
-		wiop.NewTableEntries(mod, nil, mod.NewColumn(sys.Context.Childf("a"), r1).View(), one))
-	recv := sys.NewMessageBusReceive(
-		sys.Context.Childf("recv"), "shard-1", "route",
-		wiop.NewTableEntries(mod, nil, one, mod.NewColumn(sys.Context.Childf("b"), r1).View()))
-	send.SkipInShardCheck = true
-	recv.SkipInShardCheck = true
+		send := sys.NewMessageBusSend(
+			sys.Context.Childf("send"), "shard-1", "route",
+			wiop.NewTableEntries(mod, nil, one, a.View()))
+		recv := sys.NewMessageBusReceive(
+			sys.Context.Childf("recv"), "shard-1", "route",
+			wiop.NewTableEntries(mod, nil, one, b.View()))
+		send.SkipInShardCheck = true
+		recv.SkipInShardCheck = true
+		return sys, a
+	}
 
-	require.NotPanics(t, func() { messagebus.Compile(sys) })
+	t.Run("constants alone are not misplaced", func(t *testing.T) {
+		sys, _ := build(1)
+		require.NotPanics(t, func() { messagebus.Compile(sys) })
+	})
+
+	t.Run("a misplaced column is reported, not the constant", func(t *testing.T) {
+		sys, a := build(0)
+		defer func() {
+			r := recover()
+			require.NotNil(t, r, "the column on round 0 must trip the placement guard")
+			msg, ok := r.(string)
+			require.True(t, ok, "the guard panics with a string, got %T", r)
+			require.Contains(t, msg, "must live on the coin round")
+			require.Contains(t, msg, a.Context.Path(),
+				"the panic must name the misplaced column, ahead of which sits a constant")
+			require.Contains(t, msg, "round 0")
+		}()
+		messagebus.Compile(sys)
+	})
 }
