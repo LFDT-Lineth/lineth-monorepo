@@ -40,6 +40,8 @@ const tx_signing = executor.executor_tx_signing;
 /// l2-execution guest binary — one conflation = one fork = one exec programVk — so it is NEVER read
 /// from the (prover-controlled) input; see the fork check in `runL2Execution`.
 const GUEST_FORK: []const u8 = "Amsterdam";
+/// `GUEST_FORK` as a zesu spec, for the signature rules of forced-transaction sender recovery.
+const GUEST_SPEC: primitives.SpecId = .amsterdam;
 
 /// L2MessageService's `MessageSent` event topic0 (the L2->L1 bridge message signature).
 const BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0: [32]u8 = .{
@@ -75,7 +77,8 @@ fn u64ToSlot32(n: u64) [32]u8 {
 }
 
 /// `ChainConfig.hash(base_fee)`: keccak256(chainID_be32 || coinbase || l2MessageServiceAddress ||
-/// baseFee_be32).
+/// baseFee_be32). `system_contracts` is deliberately NOT part of the preimage: the hash is anchored
+/// in the L1 verifier's chain configuration.
 fn chainConfigHash(chain_config: l2_execution_ssz.ChainConfig, base_fee: u64) [32]u8 {
     var buf: [104]u8 = undefined;
     @memcpy(buf[0..32], &u64ToSlot32(chain_config.chain_id));
@@ -83,6 +86,15 @@ fn chainConfigHash(chain_config: l2_execution_ssz.ChainConfig, base_fee: u64) [3
     @memcpy(buf[52..72], &chain_config.l2_message_service_address);
     @memcpy(buf[72..104], &u64ToSlot32(base_fee));
     return mpt.keccak256(&buf);
+}
+
+/// The range-level system contracts in zesu's own type (same fields, same order).
+fn zesuSystemContracts(sc: l2_execution_ssz.SystemContracts) input.SystemContracts {
+    var out: input.SystemContracts = .{};
+    inline for (std.meta.fields(l2_execution_ssz.SystemContracts)) |field| {
+        @field(out, field.name) = @field(sc, field.name);
+    }
+    return out;
 }
 
 /// keccak256(prev || txHash || deadline_be32 || from) — §6.3's forced-tx rolling-hash update.
@@ -251,7 +263,7 @@ fn validateForcedTransactions(
 
         const decoded = try tx_decode.decodeTxs(alloc, &.{ftx.signed_tx_rlp});
         const tx = &decoded[0];
-        const from_address = try tx_signing.recoverSender(alloc, tx, chain_id) orelse return error.ForcedTxSenderRecoveryFailed;
+        const from_address = try tx_signing.recoverSender(alloc, tx, chain_id, GUEST_SPEC) orelse return error.ForcedTxSenderRecoveryFailed;
         const tx_hash = mpt.keccak256(ftx.signed_tx_rlp);
 
         // Rolling hash update for EVERY FTX in the range, regardless of outcome.
@@ -352,6 +364,7 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
     // not test scaffolding — but it is also what lets a vanilla EF stateless input (which has no
     // L2MessageService) be dummy-wrapped and run through this guest unchanged.
     const bridge_suppressed = isZeroAddress(l2_ms_address);
+    const system_contracts = zesuSystemContracts(in.chain_config.system_contracts);
 
     var current_parent_hash = parent_block_hash;
     var current_ftx_rolling_hash = in.parent_ftx_rolling_hash;
@@ -433,7 +446,7 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
         // Reuses the SAME combined `node_index` built above (not a fresh per-payload one — see
         // `executeStatelessInputWithLogs`'s doc comment): it's a superset of `si.witness.nodes`
         // alone, so every proof this payload's execution needs is already indexed.
-        const result = try Engine.executeStatelessInputWithLogs(alloc, si, GUEST_FORK, &node_index);
+        const result = try Engine.executeStatelessInputWithLogs(alloc, si, GUEST_FORK, system_contracts, &node_index);
         last_payload = payload;
 
         // Linea PI: each receipt's `.from` is the sender zesu's own transition() already recovered
@@ -499,6 +512,7 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
 
 pub const test_api = if (@import("builtin").is_test) struct {
     pub const chainConfigHashFn = chainConfigHash;
+    pub const zesuSystemContractsFn = zesuSystemContracts;
     pub const addToForcedTxRollingHashFn = addToForcedTxRollingHash;
     pub const hashDigestListFn = hashDigestList;
     pub const hashAddressListFn = hashAddressList;

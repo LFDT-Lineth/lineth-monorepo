@@ -71,6 +71,71 @@ var testCases = []struct {
 			return tab
 		}(),
 	},
+	{
+		// what the arithmetization sends for a MODEXP call with mbs = 0
+		name: "zero_modulus_all_zero",
+		tab: func() [][]*big.Int {
+			tab := make([][]*big.Int, 5)
+			pushModexpToInput(zeroModulusModexp(big.NewInt(0), big.NewInt(0)), tab)
+			return tab
+		}(),
+	},
+	{
+		name: "zero_modulus_256_bits",
+		tab: func() [][]*big.Int {
+			var (
+				tab  = make([][]*big.Int, 5)
+				rng  = sha3.NewCSHAKE128(nil, []byte("256 bits zero modulus modexp testdata"))
+				inst = createRandomModexp(rng, 256)
+			)
+			pushModexpToInput(zeroModulusModexp(inst[0], inst[1]), tab)
+			return tab
+		}(),
+	},
+	{
+		name: "zero_modulus_4096_bits",
+		tab: func() [][]*big.Int {
+			var (
+				tab  = make([][]*big.Int, 5)
+				rng  = sha3.NewCSHAKE128(nil, []byte("4096 bits zero modulus modexp testdata"))
+				inst = createRandomModexp(rng, 4096)
+			)
+			pushModexpToInput(zeroModulusModexp(inst[0], inst[1]), tab)
+			return tab
+		}(),
+	},
+	{
+		// zero and non-zero moduli interleaved, small and large
+		name: "zero_modulus_mixed",
+		tab: func() [][]*big.Int {
+			var (
+				tab = make([][]*big.Int, 5)
+				rng = sha3.NewCSHAKE128(nil, []byte("mixed zero modulus modexp testdata"))
+			)
+			pushModexpToInput(createRandomModexp(rng, 256), tab)
+			pushModexpToInput(zeroModulusModexp(big.NewInt(0), big.NewInt(0)), tab)
+			pushModexpToInput(createRandomModexp(rng, 256), tab)
+			large := createRandomModexp(rng, 4096)
+			pushModexpToInput(zeroModulusModexp(large[0], large[1]), tab)
+			pushModexpToInput(createRandomModexp(rng, 4096), tab)
+			return tab
+		}(),
+	},
+	{
+		// invalid: the result is base^exponent instead of 0 (EIP-198)
+		name: "zero_modulus_wrong_result",
+		tab: func() [][]*big.Int {
+			tab := make([][]*big.Int, 5)
+			pushModexpToInput([4]*big.Int{big.NewInt(2), big.NewInt(3), big.NewInt(0), big.NewInt(8)}, tab)
+			return tab
+		}(),
+	},
+}
+
+// zeroModulusModexp returns a modexp instance with a zero modulus. Its result
+// is zero (EIP-198).
+func zeroModulusModexp(base, exponent *big.Int) [4]*big.Int {
+	return [4]*big.Int{base, exponent, new(big.Int), new(big.Int)}
 }
 
 func createRandomModexp(rng io.Reader, nbBits uint) [4]*big.Int {

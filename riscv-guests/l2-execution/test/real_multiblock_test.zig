@@ -39,7 +39,7 @@ const api = l2_execution.test_api;
 fn recoverSender(alloc: std.mem.Allocator, signed_tx_rlp: []const u8, chain_id: u64) ![20]u8 {
     const decoded = try executor.executor_tx_decode.decodeTxs(alloc, &.{signed_tx_rlp});
     var tx = decoded[0];
-    return (try api.recoverSenderFn(alloc, &tx, chain_id)).?;
+    return (try api.recoverSenderFn(alloc, &tx, chain_id, .amsterdam)).?;
 }
 
 test "a real multi-block EF-corpus range runs through the full guest pipeline (not StubEngine)" {
@@ -109,6 +109,7 @@ test "a real multi-block EF-corpus range runs through the full guest pipeline (n
         .l2_message_service_address = decoded_input.chain_config.l2_message_service_address,
         .coinbase = decoded_input.chain_config.coinbase,
         .chain_id = decoded_input.chain_config.chain_id,
+        .system_contracts = decoded_input.chain_config.system_contracts,
     };
     const expected_chain_config_hash = api.chainConfigHashFn(chain_config, first_payload.base_fee_per_gas);
     try testing.expectEqualSlices(u8, &expected_chain_config_hash, &output.public_inputs.dynamic_chain_config_hash);

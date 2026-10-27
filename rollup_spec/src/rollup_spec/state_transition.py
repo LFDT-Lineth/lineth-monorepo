@@ -7,7 +7,7 @@ from ethereum.state import Account, Address
 from ethereum_rlp import rlp
 from ethereum_types.numeric import U256, Uint
 
-from .block import StatelessInput
+from .block import StatelessInput, SystemContracts
 from .fork import Log
 
 
@@ -44,9 +44,16 @@ class StatelessExecutionResult:
     block_logs: List[Log]      # ordered logs emitted by the block, scanned for L2MessageService events
 
 
-def execute_stateless_input(stateless_input: StatelessInput) -> StatelessExecutionResult:
+def execute_stateless_input(
+    stateless_input: StatelessInput, system_contracts: SystemContracts
+) -> StatelessExecutionResult:
     """
     Validate and execute one block from its parsed `StatelessInput`.
+
+    `system_contracts` are the proof-range system-contract addresses (not part
+    of the `dynamicChainConfigHash` preimage); the engine MUST use them for its
+    pre-/post-block system calls and deposit-log collection rather than any
+    built-in per-chain defaults.
 
     This is the spec's boundary to the underlying stateless block-execution
     engine (for example a Zesu-style guest, imported as a dependency or

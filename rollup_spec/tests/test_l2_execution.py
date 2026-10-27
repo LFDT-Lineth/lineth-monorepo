@@ -13,12 +13,12 @@ Run from the rollup_spec/ directory:  python -m pytest
 from pathlib import Path
 
 import pytest
-from ethereum.crypto.hash import Hash32
+from ethereum.crypto.hash import Hash32, keccak256
 from ethereum.state import Address
 from ethereum_types.numeric import U64
 
 from rollup_spec import l2_execution
-from rollup_spec.block import ChainConfig, LinethPayloadInput
+from rollup_spec.block import ChainConfig, LinethPayloadInput, SystemContracts
 from rollup_spec.fork import Log
 from rollup_spec.l2_execution import (
     BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0,
@@ -38,6 +38,17 @@ _TESTDATA_DIR = Path(l2_execution.__file__).resolve().parent / "prover_io" / "te
 
 _MESSAGE_SERVICE = Address(bytes([0x11]) * 20)
 _OTHER_CONTRACT = Address(bytes([0x22]) * 20)
+
+# Distinct per-field addresses so a field swap anywhere in the pipeline is caught.
+_SYSTEM_CONTRACTS = SystemContracts(
+    beacon_roots=Address(bytes([0xA1]) * 20),
+    history_storage=Address(bytes([0xA2]) * 20),
+    deposit=Address(bytes([0xA3]) * 20),
+    withdrawal_request=Address(bytes([0xA4]) * 20),
+    consolidation_request=Address(bytes([0xA5]) * 20),
+    builder_deposit_request=Address(bytes([0xA6]) * 20),
+    builder_exit_request=Address(bytes([0xA7]) * 20),
+)
 
 
 def _fixture(name: str) -> Path:
@@ -70,6 +81,7 @@ def _zero_bridge_input(vanilla: bytes) -> L2ExecutionProofPrivateInput:
             l2_message_service_address=ZERO_ADDRESS,
             coinbase=si.new_payload_request.execution_payload.fee_recipient,
             chain_id=si.chain_config.chain_id,
+            system_contracts=_SYSTEM_CONTRACTS,
         ),
     )
 
@@ -216,7 +228,8 @@ def test_run_l2_execution_guest_zero_address_suppresses_bridge_and_messages(monk
         _rolling_hash_updated(ZERO_ADDRESS, 3, _hash(0xA1)),
     ]
 
-    def _fake_execute(stateless_input):  # noqa: ANN001, ANN202
+    def _fake_execute(stateless_input, system_contracts):  # noqa: ANN001, ANN202
+        assert system_contracts == _SYSTEM_CONTRACTS
         return StatelessExecutionResult(
             pre_state_root=Hash32(bytes([0x11]) * 32),
             post_state_root=Hash32(bytes([0x22]) * 32),
@@ -249,7 +262,7 @@ def test_execution_emits_messages_offset_and_rolling_hash_pair_of_a_message_serv
         _message_sent(_MESSAGE_SERVICE, _hash(0xCD)),
         _rolling_hash_updated(_MESSAGE_SERVICE, 5, _hash(0xA2)),
     ]
-    monkeypatch.setattr(l2_execution, "execute_stateless_input", lambda _: StatelessExecutionResult(
+    monkeypatch.setattr(l2_execution, "execute_stateless_input", lambda *_: StatelessExecutionResult(
         pre_state_root=Hash32(bytes([0x11]) * 32),
         post_state_root=Hash32(bytes([0x22]) * 32),
         block_logs=logs,
@@ -263,3 +276,35 @@ def test_execution_emits_messages_offset_and_rolling_hash_pair_of_a_message_serv
     assert pi.l2_messaging_blocks_offsets == [1]
     assert pi.end_l1_l2_bridge_rolling_hash == _hash(0xA2)
     assert pi.end_l1_l2_bridge_rolling_hash_message_number == U64(5)
+
+
+# ── dynamicChainConfigHash excludes the system contracts ────────────────────────
+
+
+def _config_with_system_contracts() -> ChainConfig:
+    return ChainConfig(
+        l2_message_service_address=Address(bytes([0x11]) * 20),
+        coinbase=Address(bytes(20)),
+        chain_id=U64(59144),
+        system_contracts=_SYSTEM_CONTRACTS,
+    )
+
+
+def test_chain_config_hash_preimage_excludes_system_contracts() -> None:
+    expected = keccak256(
+        (59144).to_bytes(32, "big")
+        + bytes(20)
+        + bytes([0x11]) * 20
+        + (1_000_000_000).to_bytes(32, "big")
+    )
+    assert _config_with_system_contracts().hash(1_000_000_000) == expected
+
+
+def test_chain_config_hash_ignores_system_contracts() -> None:
+    from dataclasses import replace
+
+    config = _config_with_system_contracts()
+    baseline = config.hash(7)
+    for field in SystemContracts.__dataclass_fields__:
+        tampered = replace(config, system_contracts=replace(_SYSTEM_CONTRACTS, **{field: Address(bytes(20))}))
+        assert tampered.hash(7) == baseline, field

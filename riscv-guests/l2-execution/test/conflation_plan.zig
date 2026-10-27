@@ -160,8 +160,10 @@ pub const StubEngine = struct {
         alloc: std.mem.Allocator,
         si: input.StatelessInput,
         fork_name: []const u8,
+        system_contracts: input.SystemContracts,
         _: *mpt.NodeIndex,
     ) !StubProofOutput {
+        _ = system_contracts;
         const ep = &si.new_payload_request.execution_payload;
         const call_index = next_index;
         next_index += 1;
@@ -181,7 +183,7 @@ pub const StubEngine = struct {
             const block_logs: []const []const types.Log = if (call_index < built.tx_logs.len) built.tx_logs[call_index] else &.{};
 
             for (decoded_txs, 0..) |*tx, tx_idx| {
-                const from = try tx_signing.recoverSender(alloc, tx, si.chain_config.chain_id) orelse
+                const from = try tx_signing.recoverSender(alloc, tx, si.chain_config.chain_id, .amsterdam) orelse
                     return error.StubEngineSenderRecoveryFailed;
                 const logs: []const types.Log = if (tx_idx < block_logs.len) block_logs[tx_idx] else &.{};
                 try receipts.append(alloc, .{
@@ -248,14 +250,16 @@ fn buildWorld(alloc: std.mem.Allocator, accounts: []const Account) !WorldState {
         return .{ .root = mpt.builder.EMPTY_TRIE_HASH, .nodes = &.{} };
     }
 
-    var index = try mpt.buildNodeIndex(alloc, &.{});
+    // Every trie node the chained updates create accumulates here; deduplicated by hash below.
+    var nodes: std.ArrayListUnmanaged([]const u8) = .empty;
     var state_root = mpt.builder.EMPTY_TRIE_HASH;
 
     for (accounts) |account| {
         const account_rlp = try buildAccountRlp(alloc, account.nonce, account.balance, mpt.builder.EMPTY_TRIE_HASH, primitives.KECCAK_EMPTY);
-        try mpt.updateAccountChainedIndexed(alloc, &state_root, mpt.keccak256(&account.address), account_rlp, &index);
+        try mpt.updateAccountChained(alloc, &state_root, mpt.keccak256(&account.address), account_rlp, &.{}, &nodes);
     }
 
+    var index = try mpt.buildNodeIndex(alloc, nodes.items);
     return .{ .root = state_root, .nodes = try collectNodeRlps(alloc, &index) };
 }
 
@@ -314,6 +318,8 @@ pub const ConflationPlan = struct {
 
     chain_id: u64 = 59144,
     coinbase: [20]u8 = DEFAULT_COINBASE,
+    /// Range-level system contracts; zesu's mainnet defaults unless a scenario overrides them.
+    system_contracts: l2_execution_ssz.SystemContracts = l2_execution_ssz.SystemContracts.from(input.SystemContracts{}),
     /// Zero means bridge-suppressed mode: the L2MessageService log scan (L2->L1 messages and the
     /// L1->L2 rolling hash) is skipped.
     l2_message_service_address: [20]u8 = ZERO_ADDRESS,
@@ -351,6 +357,7 @@ pub const ConflationPlan = struct {
             .l2_message_service_address = self.l2_message_service_address,
             .coinbase = self.coinbase,
             .chain_id = self.chain_id,
+            .system_contracts = self.system_contracts,
         };
 
         if (n == 0) {

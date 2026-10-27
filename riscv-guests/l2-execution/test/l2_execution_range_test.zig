@@ -80,7 +80,7 @@ fn buildSignedFixtureTx(alloc: std.mem.Allocator, comptime label: []const u8, no
 fn recoverFixtureSender(alloc: std.mem.Allocator, signed_tx_rlp: []const u8, chain_id: u64) ![20]u8 {
     const decoded = try executor.executor_tx_decode.decodeTxs(alloc, &.{signed_tx_rlp});
     var tx = decoded[0];
-    return (try api.recoverSenderFn(alloc, &tx, chain_id)).?;
+    return (try api.recoverSenderFn(alloc, &tx, chain_id, .amsterdam)).?;
 }
 
 /// L2MessageService's `MessageSent` event topic0, copied from the guest's own constant of the
@@ -208,6 +208,7 @@ test "a realistic 2-block range produces every public-input field exactly" {
         .l2_message_service_address = plan.l2_message_service_address,
         .coinbase = plan.coinbase,
         .chain_id = plan.chain_id,
+        .system_contracts = plan.system_contracts,
     };
     const expected_chain_config_hash = api.chainConfigHashFn(chain_config, RANGE_BASE_FEE);
     try testing.expectEqualSlices(u8, &expected_chain_config_hash, &output.public_inputs.dynamic_chain_config_hash);

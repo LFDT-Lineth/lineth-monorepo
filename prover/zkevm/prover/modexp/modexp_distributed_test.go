@@ -49,6 +49,12 @@ func TestModExpDistributed(t *testing.T) {
 			NbSmallInstances: 10,
 			NbLargeInstances: 1,
 		},
+		{
+			// zero and non-zero moduli interleaved, small and large
+			InputFName:       "testdata/zero_modulus_mixed_input.csv",
+			NbSmallInstances: 3,
+			NbLargeInstances: 2,
+		},
 	}
 
 	for _, tc := range testCases {

@@ -49,6 +49,7 @@ from .block import (
     ForcedTransactionWitness,
     LinethPayloadInput,
     LinethRollupExtension,
+    SystemContracts,
 )
 from .l2_execution import (
     L2ExecutionProof,
@@ -110,11 +111,23 @@ def _strict_decode(data: bytes, container: type) -> Any:
 # ── SSZ wire schema: extended guest input ────────────────────────────────────
 
 
+class SszSystemContracts(Container):
+    # Field order matches `block.py::SystemContracts`.
+    beacon_roots: SszAddress
+    history_storage: SszAddress
+    deposit: SszAddress
+    withdrawal_request: SszAddress
+    consolidation_request: SszAddress
+    builder_deposit_request: SszAddress
+    builder_exit_request: SszAddress
+
+
 class SszChainConfig(Container):
     # Field order matches `block.py::ChainConfig`.
     l2_message_service_address: SszAddress
     coinbase: SszAddress
     chain_id: uint64
+    system_contracts: SszSystemContracts
 
 
 class SszForcedTransactionWitness(Container):
@@ -182,11 +195,19 @@ class SszVerifiableL2ExecutionProof(Container):
 # ── Logical dataclass -> SSZ view converters ─────────────────────────────────
 
 
+_SYSTEM_CONTRACT_FIELDS = tuple(SystemContracts.__dataclass_fields__)
+
+
+def _ssz_system_contracts(contracts: SystemContracts) -> SszSystemContracts:
+    return SszSystemContracts(**{name: bytes(getattr(contracts, name)) for name in _SYSTEM_CONTRACT_FIELDS})
+
+
 def _ssz_chain_config(config: ChainConfig) -> SszChainConfig:
     return SszChainConfig(
         l2_message_service_address=bytes(config.l2_message_service_address),
         coinbase=bytes(config.coinbase),
         chain_id=int(config.chain_id),
+        system_contracts=_ssz_system_contracts(config.system_contracts),
     )
 
 
@@ -261,11 +282,16 @@ def _ssz_verifiable_l2_execution_proof(
 # ── SSZ view -> logical dataclass converters ─────────────────────────────────
 
 
+def _system_contracts_from_view(view: Any) -> SystemContracts:
+    return SystemContracts(**{name: Address(bytes(getattr(view, name))) for name in _SYSTEM_CONTRACT_FIELDS})
+
+
 def _chain_config_from_view(view: Any) -> ChainConfig:
     return ChainConfig(
         l2_message_service_address=Address(bytes(view.l2_message_service_address)),
         coinbase=Address(bytes(view.coinbase)),
         chain_id=U64(int(view.chain_id)),
+        system_contracts=_system_contracts_from_view(view.system_contracts),
     )
 
 

@@ -5,6 +5,7 @@ import linea.domain.ExecutionPayload
 import linea.domain.ProofRequestMetaDataProvider
 import linea.domain.StartBlockTimestampProvider
 import linea.ethapi.ExecutionWitness
+import linea.ethapi.SystemContracts
 import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.kotlin.byteArrayListEquals
 import linea.kotlin.byteArrayListHashCode
@@ -63,6 +64,7 @@ data class L2ExecutionProofRequestV1(
   val executions: List<ExecutionInfo>,
   val chainId: ULong,
   val coinbase: String,
+  val systemContracts: SystemContracts,
   val parentFtxRollingHash: ByteArray,
   val parentFtxNumber: ULong,
 ) : BlockInterval, StartBlockTimestampProvider, ProofRequestMetaDataProvider {
@@ -99,6 +101,7 @@ data class L2ExecutionProofRequestV1(
     if (executions != other.executions) return false
     if (chainId != other.chainId) return false
     if (coinbase != other.coinbase) return false
+    if (systemContracts != other.systemContracts) return false
     if (!parentFtxRollingHash.contentEquals(other.parentFtxRollingHash)) return false
     if (parentFtxNumber != other.parentFtxNumber) return false
 
@@ -109,6 +112,7 @@ data class L2ExecutionProofRequestV1(
     var result = executions.hashCode()
     result = 31 * result + chainId.hashCode()
     result = 31 * result + coinbase.hashCode()
+    result = 31 * result + systemContracts.hashCode()
     result = 31 * result + parentFtxRollingHash.contentHashCode()
     result = 31 * result + parentFtxNumber.hashCode()
     return result
@@ -116,6 +120,7 @@ data class L2ExecutionProofRequestV1(
 
   override fun toString(): String {
     return "L2ExecutionProofRequestV1(executions=$executions, chainId=$chainId, coinbase=$coinbase, " +
+      "systemContracts=$systemContracts, " +
       "parentFtxRollingHash=${parentFtxRollingHash.encodeHex()}, parentFtxNumber=$parentFtxNumber)"
   }
 }

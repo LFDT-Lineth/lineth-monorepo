@@ -1,12 +1,31 @@
 package lineth.persistence
 
-import linea.domain.Aggregation
+import linea.clients.RollupAggregationProofResponseV1
+import linea.domain.AggregationG
 import linea.domain.BlobAndBatchCounters
 import linea.domain.ProofToFinalize
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 
-interface AggregationsDao {
+interface AggregationsDaoG<T> {
+  fun saveNewAggregation(aggregation: AggregationG<T>): SafeFuture<Unit>
+
+  fun getProofsToFinalize(
+    fromBlockNumber: Long,
+    finalEndBlockCreatedBefore: Instant,
+    maximumNumberOfProofs: Int,
+  ): SafeFuture<List<T>>
+
+  fun findHighestConsecutiveEndBlockNumber(fromBlockNumber: Long? = null): SafeFuture<Long?>
+
+  fun findAggregationProofByEndBlockNumber(endBlockNumber: Long): SafeFuture<T?>
+
+  fun deleteAggregationsUpToEndBlockNumber(endBlockNumberInclusive: Long): SafeFuture<Int>
+
+  fun deleteAggregationsAfterBlockNumber(startingBlockNumberInclusive: Long): SafeFuture<Int>
+}
+
+interface AggregationsDao : AggregationsDaoG<ProofToFinalize> {
   /**
    * This method should:
    *    1. Get block number of the last aggregation in `PROVING` or `PROVEN` status. Let's call it
@@ -30,20 +49,6 @@ interface AggregationsDao {
    * If multiple batches/blobs with different versions are proven, selects the most recent version.
    */
   fun findConsecutiveProvenBlobs(fromBlockNumber: Long): SafeFuture<List<BlobAndBatchCounters>>
-
-  fun saveNewAggregation(aggregation: Aggregation): SafeFuture<Unit>
-
-  fun getProofsToFinalize(
-    fromBlockNumber: Long,
-    finalEndBlockCreatedBefore: Instant,
-    maximumNumberOfProofs: Int,
-  ): SafeFuture<List<ProofToFinalize>>
-
-  fun findHighestConsecutiveEndBlockNumber(fromBlockNumber: Long? = null): SafeFuture<Long?>
-
-  fun findAggregationProofByEndBlockNumber(endBlockNumber: Long): SafeFuture<ProofToFinalize?>
-
-  fun deleteAggregationsUpToEndBlockNumber(endBlockNumberInclusive: Long): SafeFuture<Int>
-
-  fun deleteAggregationsAfterBlockNumber(startingBlockNumberInclusive: Long): SafeFuture<Int>
 }
+
+interface AggregationsDaoV2 : AggregationsDaoG<RollupAggregationProofResponseV1>

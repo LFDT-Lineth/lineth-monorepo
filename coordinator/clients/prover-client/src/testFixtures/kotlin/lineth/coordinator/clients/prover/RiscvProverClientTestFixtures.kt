@@ -10,6 +10,7 @@ import linea.clients.RollupProofRequestV1
 import linea.domain.BlockIntervalProofIndex
 import linea.domain.ExecutionPayload
 import linea.ethapi.ExecutionWitness
+import linea.ethapi.SystemContracts
 import linea.forcedtx.ForcedTransactionInclusionResult
 import lineth.coordinator.clients.prover.serialization.JsonSerialization
 import lineth.coordinator.config.v2.FileBasedProverConfig
@@ -33,6 +34,15 @@ object RiscvProverClientTestFixtures {
   const val ROLLUP_AGGREGATION_PROGRAM_ID = "0x8a5fdb137ddae03b9bad034500c0fcee76e1c61d70faca5f32bb7418d73392e1"
   const val L2_MESSAGE_SERVICE_ADDRESS = "0x508ca82df566dcd1b0019d2dedf7e3d6f7ad6dde"
   const val COINBASE = "0x0000000000000000000000000000000000000000"
+  val SYSTEM_CONTRACTS = SystemContracts(
+    beaconRoots = "0x000f3df6d732807ef1319fb7b8bb8522d0beac02",
+    historyStorage = "0x0000f90827f1c53a10cb7a02335b175320002935",
+    deposit = "0x94d4a7449b968b839dcbc64a61f195ca300986ae",
+    withdrawalRequest = "0x66355689a9f067eeb9dc9d899e4192676988279c",
+    consolidationRequest = "0xf0e003f0de2d583ae28fa8cbf66aa096cdace3ff",
+    builderDepositRequest = "0x0000bff46984e3725691fa540a8c7589300d8282",
+    builderExitRequest = "0x000064d678505ad48f8ccb093bc65613800e8282",
+  )
 
   val jsonMapper = JsonSerialization.proofResponseMapperV1
 
@@ -118,6 +128,7 @@ object RiscvProverClientTestFixtures {
     executions = executions,
     chainId = CHAIN_ID.toULong(),
     coinbase = coinbase,
+    systemContracts = SYSTEM_CONTRACTS,
     parentFtxRollingHash = parentFtxRollingHash,
     parentFtxNumber = parentFtxNumber,
   )

@@ -8,6 +8,8 @@ import (
 	"io"
 	"math"
 	"sort"
+
+	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 )
 
 const (
@@ -107,7 +109,7 @@ func PrepareInputs(
 	elfBytes []byte,
 	inputData []byte,
 	options ...Option,
-) (map[string][]byte, error) {
+) (map[string]bit.Array, error) {
 	program, err := Load(bytes.NewReader(elfBytes))
 	if err != nil {
 		return nil, err
@@ -262,7 +264,7 @@ func EncodeInputs(
 	program Program,
 	additional []Blob,
 	options ...Option,
-) (map[string][]byte, error) {
+) (map[string]bit.Array, error) {
 	cfg := config{}
 	for _, option := range options {
 		if option == nil {
@@ -312,13 +314,13 @@ func EncodeInputs(
 		data = append(data, blob.Data...)
 	}
 
-	inputs := map[string][]byte{
-		EntryPointAndBlobsCountInput: entryAndCount,
-		BlobsOffsetAndSizeInput:      offsetsAndSizes,
-		BlobsDataInput:               data,
+	inputs := map[string]bit.Array{
+		EntryPointAndBlobsCountInput: BitArrayFromBytes(entryAndCount...),
+		BlobsOffsetAndSizeInput:      BitArrayFromBytes(offsetsAndSizes...),
+		BlobsDataInput:               BitArrayFromBytes(data...),
 	}
 	if cfg.includeExecutable {
-		inputs[BlobsExecutableInput] = encodeExecutableBits(blobs)
+		inputs[BlobsExecutableInput] = BitArrayFromBytes(encodeExecutableBits(blobs)...)
 	}
 	return inputs, nil
 }
@@ -394,4 +396,10 @@ func validateRanges(blobs []Blob) error {
 		previousAddress, previousEnd, hasPrevious = blob.Address, end, true
 	}
 	return nil
+}
+
+// BitArrayFromBytes constructs a bit array directly from a slice of zero or
+// more bytes, such that every bit of every byte is included in the final array.
+func BitArrayFromBytes(bytes ...byte) bit.Array {
+	return bit.NewArray(bytes, uint(len(bytes)*8), bit.BigEndian)
 }

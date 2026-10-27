@@ -10,12 +10,14 @@
 - *(riscv-guest)* RiscV guests release workflow (#4102)
 - *(riscv-guest)* Setting up the release workflow (#4119)
 - *(riscv-guest)* Changing the output of the guest program to include the plain PI + its hash (#4092)
+- *(riscv-guest)* Bump zesu to 2835883 and pass system contracts at runtime (#4265)
 
 ### 🐛 Bug Fixes
 
 - *(riscv-guest)* Fixing the write_output usage (#3909)
 - *(riscv-guest)* Rename parentProcessedFtxNumber to parentFtxNumber (#4011)
 - *(riscv-guest)* Aligning l2-execution guest program to the recently… (#4297)
+- *(riscv-guest)* Build native runner for baseline CPU (#4308)
 
 ### ⚙️ Miscellaneous Tasks
 

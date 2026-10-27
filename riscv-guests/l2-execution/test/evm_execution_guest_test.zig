@@ -6,6 +6,7 @@ const executor = @import("zesu_executor");
 const ssz_decode = @import("zesu_ssz_decode");
 const zesu_allocator = @import("zesu_allocator");
 const mpt = @import("zesu_mpt");
+const input = @import("zesu_input");
 
 // Proves the log-preserving seam (guest.execution.executeStatelessInputWithLogs, src/execution.zig)
 // computes the SAME pre/post/receipts roots as zesu's vanilla executor.executeStatelessInput on the
@@ -27,7 +28,7 @@ test "executeStatelessInputWithLogs matches vanilla executeStatelessInput's root
 
     var node_index = try mpt.buildNodeIndex(allocator, si.witness.nodes);
     defer node_index.deinit();
-    const with_logs = try guest.execution.executeStatelessInputWithLogs(allocator, si, si.chain_config.fork_name.?, &node_index);
+    const with_logs = try guest.execution.executeStatelessInputWithLogs(allocator, si, si.chain_config.fork_name.?, input.SystemContracts.forChainId(si.chain_config.chain_id), &node_index);
 
     try std.testing.expectEqualSlices(u8, &vanilla.pre_state_root, &with_logs.pre_state_root);
     try std.testing.expectEqualSlices(u8, &vanilla.post_state_root, &with_logs.post_state_root);

@@ -16,6 +16,8 @@
 - *(prover-ray)* Configurable PCS Merkle cap height (opt-in) (#4269)
 - *(prover-ray)* Opt-in module groups in the PCS commitment layout (#4271)
 - *(prover-ray)* Uniform pair leaves for module-grouped commitments (#4272)
+- *(prover-ray)* Minimum size per dynamic module (#4288)
+- *(riscv-guest)* Bump zesu to 2835883 and pass system contracts at runtime (#4265)
 
 ### 🐛 Bug Fixes
 
@@ -24,6 +26,7 @@
 - *(prover-ray)* Reject column elision and Merkle caps with module groups (#4286)
 - *(misc)* Moved filtered addresses into the list of the PI (#4166)
 - *(riscv-guest)* Aligning l2-execution guest program to the recently… (#4297)
+- *(riscv-guest)* Build native runner for baseline CPU (#4308)
 
 ### 🚜 Refactor
 
@@ -31,6 +34,10 @@
 - *(prover-ray)* Configure wiop compilers per system and centralize the full pipeline- #4055 (#4256)
 - *(prover-ray)* Merkle nodes take several injected digests (#4266)
 - *(prover-ray)* Commit each group of a size with its own leaf hash (#4267)
+
+### ⚡ Performance
+
+- *(prover-ray)* Intern compound subexpressions in zkcdriver (#4153)
 
 ### ⚙️ Miscellaneous Tasks
 
