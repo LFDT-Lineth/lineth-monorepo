@@ -44,16 +44,8 @@ class DifficultyAwareQbftConfigDigesterTest {
   }
 
   @Test
-  fun `should take terminalBlockNumber into account`() {
-    assertThat(digest(config.copy(terminalBlockNumber = 999uL)))
-      .isNotEqualTo(digest(config))
-    assertThat(digest(config.copy(terminalBlockNumber = 999uL)))
-      .isNotEqualTo(digest(config.copy(terminalBlockNumber = 1000uL)))
-  }
-
-  @Test
-  fun `should not change digest of configs without terminalBlockNumber`() {
-    // Layout prior to terminalBlockNumber: terminalTotalDifficulty (8 bytes) followed by postTtdConfig bytes.
+  fun `should keep a stable byte layout`() {
+    // Layout: terminalTotalDifficulty (8 bytes) followed by postTtdConfig bytes.
     // Must stay byte-identical so fork ids of existing networks (e.g. Linea mainnet/sepolia) don't change.
     val postTtdConfigBytes = QbftConsensusConfigDigester.serialize(config.postTtdConfig)
     val legacyBytes =

@@ -1,6 +1,4 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
@@ -18,15 +16,10 @@ import maru.consensus.ProtocolFactory
 import maru.consensus.QbftConsensusConfig
 import maru.core.Protocol
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.any
-import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
-import org.web3j.protocol.Web3j
-import org.web3j.protocol.core.Request
-import org.web3j.protocol.core.methods.response.EthBlock
 
 class DifficultyAwareQbftTest {
   private val terminalTotalDifficulty = 10UL
@@ -39,96 +32,83 @@ class DifficultyAwareQbftTest {
       configuration = DifficultyAwareQbftConfig(postTtdConfig, terminalTotalDifficulty),
     )
 
-  private fun web3jReturning(block: EthBlock.Block): Web3j {
-    val ethBlock = EthBlock().apply { result = block }
-    val request = mock<Request<*, EthBlock>>()
-    whenever(request.send()).thenReturn(ethBlock)
-    val web3j = mock<Web3j>()
-    doReturn(request).whenever(web3j).ethGetBlockByNumber(any(), any())
-    return web3j
-  }
+  private val chain = FakeElChain()
+  private val postTtdProtocol = mock<Protocol>()
+  private val timerFactory = TestablePeriodicTimerFactory()
 
-  private fun block(
-    number: Long,
-    totalDifficulty: Long?,
-  ): EthBlock.Block =
-    EthBlock.Block().apply {
-      setNumber("0x" + number.toString(16))
-      setTotalDifficulty(totalDifficulty?.let { "0x" + it.toString(16) })
-    }
-
-  private fun createAndPoll(
-    block: EthBlock.Block,
-    forkSpec: ForkSpec = this.forkSpec,
-  ): Protocol {
-    val postTtdProtocol = mock<Protocol>()
-    val postTtdProtocolFactory =
+  private val protocol =
+    DifficultyAwareQbft(
+      ethereumJsonRpcClient = mock(),
+      postTtdProtocolFactory =
       object : ProtocolFactory {
         override fun create(forkSpec: ForkSpec): Protocol = postTtdProtocol
-      }
-    val timerFactory = TestablePeriodicTimerFactory()
-    val protocol =
-      DifficultyAwareQbft(
-        ethereumJsonRpcClient = web3jReturning(block),
-        postTtdProtocolFactory = postTtdProtocolFactory,
-        forkSpec = forkSpec,
-        timerFactory = timerFactory,
-      )
-    protocol.start()
-    timerFactory.getTimer("DifficultyAwareQbft")!!.runNextTask()
-    return postTtdProtocol
+      },
+      forkSpec = forkSpec,
+      timerFactory = timerFactory,
+      totalDifficultyTracker = TotalDifficultyTracker(chain),
+    ).also { it.start() }
+
+  private fun poll() = timerFactory.getTimer("DifficultyAwareQbft")!!.runNextTask()
+
+  @Test
+  fun `does not transition while total difficulty is below TTD`() {
+    // genesis + 8 blocks of difficulty 1 => TD 9 where TTD is 10
+    chain.extend(List(9) { 1L })
+
+    poll()
+
+    verify(postTtdProtocol, never()).start()
   }
 
   @Test
-  fun `transitions to post-TTD protocol when totalDifficulty reaches TTD`() {
-    val postTtdProtocol = createAndPoll(block(number = 9, totalDifficulty = terminalTotalDifficulty.toLong()))
+  fun `transitions once summed block difficulties reach TTD`() {
+    // genesis + 9 blocks of difficulty 1 => TD 10 at block 9
+    chain.extend(List(10) { 1L })
+
+    poll()
 
     verify(postTtdProtocol).start()
   }
 
   @Test
-  fun `does not transition when totalDifficulty is below TTD`() {
-    val postTtdProtocol = createAndPoll(block(number = 5, totalDifficulty = 6))
-
+  fun `transitions when the chain grows to TTD across polls`() {
+    chain.extend(List(5) { 1L })
+    poll()
     verify(postTtdProtocol, never()).start()
+
+    chain.extend(List(5) { 1L })
+    poll()
+    verify(postTtdProtocol).start()
+
+    // further polls do not start the post-TTD protocol again
+    chain.extend(List(5) { 1L })
+    poll()
+    verify(postTtdProtocol, times(1)).start()
   }
 
   @Test
-  fun `does not transition when EL omits totalDifficulty`() {
-    val postTtdProtocol = createAndPoll(block(number = 100, totalDifficulty = null))
-
+  fun `transitions after a reorg to a heavier chain reaches TTD`() {
+    // Clique-like: TD 8 on fork a
+    chain.extend(listOf(1, 1, 1, 1, 1, 1, 1, 1))
+    poll()
     verify(postTtdProtocol, never()).start()
-  }
 
-  private fun forkSpecWithTerminalBlockNumber(terminalBlockNumber: ULong): ForkSpec =
-    forkSpec.copy(
-      configuration =
-      DifficultyAwareQbftConfig(postTtdConfig, terminalTotalDifficulty, terminalBlockNumber = terminalBlockNumber),
-    )
-
-  @Test
-  fun `transitions when terminalBlockNumber is reached even if EL omits totalDifficulty`() {
-    val postTtdProtocol =
-      createAndPoll(block(number = 9, totalDifficulty = null), forkSpecWithTerminalBlockNumber(9UL))
+    // reorg of the last 3 blocks to in-turn blocks of difficulty 2 => TD 5 + 6 = 11
+    chain.reorg(fromBlockNumber = 5, difficulties = listOf(2, 2, 2), fork = "b")
+    poll()
 
     verify(postTtdProtocol).start()
   }
 
   @Test
-  fun `does not transition when terminalBlockNumber is not reached`() {
-    val postTtdProtocol =
-      createAndPoll(block(number = 8, totalDifficulty = null), forkSpecWithTerminalBlockNumber(9UL))
+  fun `does not transition when a reorg lowers total difficulty below TTD`() {
+    // TD 9 on fork a
+    chain.extend(listOf(1, 2, 2, 2, 2))
+    poll()
 
-    verify(postTtdProtocol, never()).start()
-  }
-
-  @Test
-  fun `terminalBlockNumber takes precedence over totalDifficulty`() {
-    val postTtdProtocol =
-      createAndPoll(
-        block(number = 8, totalDifficulty = terminalTotalDifficulty.toLong()),
-        forkSpecWithTerminalBlockNumber(9UL),
-      )
+    // reorg to out-of-turn blocks => TD 1 + 2 + 1 + 1 + 1 + 1 + 1 + 1 = 9: still below TTD
+    chain.reorg(fromBlockNumber = 2, difficulties = listOf(1, 1, 1, 1, 1, 1), fork = "b")
+    poll()
 
     verify(postTtdProtocol, never()).start()
   }

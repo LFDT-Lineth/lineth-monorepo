@@ -16,8 +16,7 @@ import maru.core.Protocol
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.web3j.protocol.Web3j
-import org.web3j.protocol.core.DefaultBlockParameter
-import org.web3j.protocol.core.methods.response.EthBlock
+import java.math.BigInteger
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -41,16 +40,18 @@ class DifficultyAwareQbftFactory(
 }
 
 class DifficultyAwareQbft(
-  private val ethereumJsonRpcClient: Web3j,
+  ethereumJsonRpcClient: Web3j,
   private val postTtdProtocolFactory: ProtocolFactory,
   private val forkSpec: ForkSpec,
   private val timerFactory: TimerFactory,
+  // EL clients no longer return totalDifficulty in eth_getBlockBy* responses, so it is computed from block difficulties
+  private val totalDifficultyTracker: TotalDifficultyTracker =
+    TotalDifficultyTracker(Web3jElBlockHeaderProvider(ethereumJsonRpcClient)),
 ) : Protocol {
   private val log: Logger = LogManager.getLogger(this.javaClass)
 
   private var poller: Timer? = null
   private var postTtdProtocol: Protocol? = null
-  private var missingTotalDifficultyReported = false
 
   private fun pollTask() {
     val difficultyAwareQbftConfig = forkSpec.configuration as DifficultyAwareQbftConfig
@@ -61,22 +62,28 @@ class DifficultyAwareQbft(
         return
       }
 
-      val latestBlock =
-        ethereumJsonRpcClient
-          .ethGetBlockByNumber(DefaultBlockParameter.valueOf("latest"), false)
-          .send()
-          .block
-
-      if (latestBlock == null) {
+      val chainHead = totalDifficultyTracker.update()
+      if (chainHead == null) {
         log.warn("Failed to retrieve latest block from EL")
         return
       }
 
-      if (!isTerminalConditionReached(latestBlock, difficultyAwareQbftConfig)) {
+      val terminalTotalDifficulty = BigInteger(difficultyAwareQbftConfig.terminalTotalDifficulty.toString())
+      log.debug(
+        "Current elBlockNumber={}, totalDifficulty={}, terminalTotalDifficulty={}",
+        chainHead.blockNumber,
+        chainHead.totalDifficulty,
+        terminalTotalDifficulty,
+      )
+      if (chainHead.totalDifficulty < terminalTotalDifficulty) {
         return
       }
 
-      log.info("TTD reached at elBlockNumber={}. Transitioning to post-TTD protocol.", latestBlock.number)
+      log.info(
+        "TTD reached at elBlockNumber={} totalDifficulty={}. Transitioning to post-TTD protocol.",
+        chainHead.blockNumber,
+        chainHead.totalDifficulty,
+      )
       val postTtdForkSpec =
         ForkSpec(
           timestampSeconds = forkSpec.timestampSeconds,
@@ -88,46 +95,6 @@ class DifficultyAwareQbft(
     } catch (e: Exception) {
       log.error("Error during EL block polling", e)
     }
-  }
-
-  private fun isTerminalConditionReached(
-    latestBlock: EthBlock.Block,
-    config: DifficultyAwareQbftConfig,
-  ): Boolean {
-    val terminalBlockNumber = config.terminalBlockNumber
-    if (terminalBlockNumber != null) {
-      log.debug(
-        "Current elBlockNumber={}, terminalBlockNumber={}",
-        latestBlock.number,
-        terminalBlockNumber,
-      )
-      return latestBlock.number >= terminalBlockNumber.toLong().toBigInteger()
-    }
-
-    if (latestBlock.totalDifficultyRaw == null) {
-      // Some EL clients (e.g. Besu >= 26.9.0) no longer return totalDifficulty in eth_getBlockBy* responses,
-      // in which case TTD can never be detected and the transition to post-TTD protocol will not happen.
-      if (!missingTotalDifficultyReported) {
-        log.error(
-          "EL returned no totalDifficulty for elBlockNumber={}; cannot detect TTD={} and transition to " +
-            "post-TTD protocol. The EL client may not support totalDifficulty in eth_getBlockByNumber responses; " +
-            "set terminalBlockNumber in the difficultyAwareQbft fork config instead.",
-          latestBlock.number,
-          config.terminalTotalDifficulty,
-        )
-        missingTotalDifficultyReported = true
-      }
-      return false
-    }
-
-    val totalDifficulty = latestBlock.totalDifficulty.toLong()
-    log.debug(
-      "Current elBlockNumber={}, totalDifficulty={}, terminalTotalDifficulty={}",
-      latestBlock.number,
-      totalDifficulty,
-      config.terminalTotalDifficulty,
-    )
-    return totalDifficulty >= config.terminalTotalDifficulty.toLong()
   }
 
   @Synchronized

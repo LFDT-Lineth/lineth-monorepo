@@ -81,21 +81,6 @@ class JsonFriendlyForksScheduleTest {
   }
 
   @Test
-  fun difficultyAwareQbftParsesOptionalTerminalBlockNumber() {
-    val config =
-      parseBeaconChainConfig(
-        genesisConfig.replace(
-          "\"terminalTotalDifficulty\": 12",
-          "\"terminalTotalDifficulty\": 12,\n\"terminalBlockNumber\": 11",
-        ),
-      ).domainFriendly()
-    val difficultyAwareQbftConfig =
-      config.forks.single { it.configuration is DifficultyAwareQbftConfig }.configuration as DifficultyAwareQbftConfig
-    assertThat(difficultyAwareQbftConfig.terminalTotalDifficulty).isEqualTo(12UL)
-    assertThat(difficultyAwareQbftConfig.terminalBlockNumber).isEqualTo(11UL)
-  }
-
-  @Test
   fun parserFailsIfSomeConfigurationIsMissing() {
     val invalidConfiguration =
       """

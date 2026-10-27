@@ -70,7 +70,6 @@ object ForkConfigDecoder : Decoder<JsonFriendlyForksSchedule> {
     when (type) {
       "difficultyAwareQbft" -> {
         val terminalTotalDifficulty = obj.getString("terminaltotaldifficulty").toULong()
-        val terminalBlockNumber = obj["terminalblocknumber"].valueOrNull()?.toULong()
         val postTtdQbftSpec = mapObjectToConfiguration("qbft", obj["postttdconfig"]).getUnsafe()
         require(postTtdQbftSpec is QbftConsensusConfig) {
           "DifficultyAwareQbft only supports QBFT as the post TTD protocol"
@@ -79,7 +78,6 @@ object ForkConfigDecoder : Decoder<JsonFriendlyForksSchedule> {
         DifficultyAwareQbftConfig(
           postTtdConfig = postTtdQbftSpec.copy(fork = postTtdQbftSpec.fork.copy(clFork = ClFork.QBFT_PHASE0)),
           terminalTotalDifficulty,
-          terminalBlockNumber,
         ).valid()
       }
 

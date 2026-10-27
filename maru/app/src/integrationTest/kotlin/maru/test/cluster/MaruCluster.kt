@@ -102,7 +102,6 @@ class MaruCluster(
   chainId: UInt = Random.nextInt(1, Int.MAX_VALUE).toUInt(),
   blockTimeSeconds: UInt = 1u,
   val terminalTotalDifficulty: ULong? = null,
-  val terminalBlockNumber: ULong? = null,
   val chainForks: Map<Instant, ChainFork> =
     mapOf(
       Instant.fromEpochSeconds(0) to ChainFork(clFork = ClFork.QBFT_PHASE0, elFork = ElFork.Prague),
@@ -232,15 +231,15 @@ class MaruCluster(
     besuCluster.start(awaitPeerDiscovery = true)
 
     // QBFT EL genesis used in tests has difficulty 0x1 and each block adds 1, so TTD is reached at block (TTD - 1)
-    val terminalBlock = terminalBlockNumber ?: (terminalTotalDifficulty!! - 1UL)
-    log.info("Besu cluster started, awaiting all Besu nodes to reach terminalBlockNumber={}", terminalBlock)
+    val terminalBlock = terminalTotalDifficulty!! - 1UL
+    log.info("Besu cluster started, awaiting all Besu nodes to reach terminal block={}", terminalBlock)
     await
       .pollInterval(500.milliseconds.toJavaDuration())
       .timeout(60.seconds.toJavaDuration())
       .untilAsserted {
         val heads = besuNodes.associate { it.name to it.latestBlockNumber() }
         assertThat(heads.values)
-          .withFailMessage { "Besu nodes did not reach terminalBlockNumber=$terminalBlock: heads=$heads" }
+          .withFailMessage { "Besu nodes did not reach terminal block=$terminalBlock: heads=$heads" }
           .allMatch { it >= terminalBlock }
       }
   }
@@ -262,7 +261,6 @@ class MaruCluster(
     genesisFactory.initForkSchedule(
       sequencersAddresses,
       terminalTotalDifficulty,
-      terminalBlockNumber,
       chainForks,
     )
 

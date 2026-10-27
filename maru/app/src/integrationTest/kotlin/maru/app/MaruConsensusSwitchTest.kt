@@ -104,9 +104,6 @@ class MaruConsensusSwitchTest {
     // Setting TTD = expectedBlocksBeforeSwitch + 1 makes that block the terminal PoW block,
     // and the next block is the first PoS block driven by Maru.
     val ttd = expectedBlocksBeforeSwitch.toULong() + 1UL
-    // Besu >= 26.9.0 no longer returns totalDifficulty in eth_getBlockBy* responses, so Maru switches on the
-    // terminal block number instead, i.e. the block at which TTD is reached.
-    val terminalBlockNumber = ttd - 1UL
     log.info(
       "Setting Prague switch timestamp to $pragueTimestamp, shanghai switch to $shanghaiTimestamp, Cancun switch to " +
         "$cancunTimestamp, current timestamp: $currentTimestamp",
@@ -115,7 +112,6 @@ class MaruConsensusSwitchTest {
     cluster = MaruCluster(
       blockTimeSeconds = 1u,
       terminalTotalDifficulty = ttd,
-      terminalBlockNumber = terminalBlockNumber,
       chainForks = mapOf(
         Instant.fromEpochSeconds(0) to ChainFork(ClFork.QBFT_PHASE0, ElFork.Paris),
         shanghaiTimestamp to ChainFork(ClFork.QBFT_PHASE0, ElFork.Shanghai),

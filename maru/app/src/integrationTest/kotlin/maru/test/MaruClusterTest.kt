@@ -93,9 +93,8 @@ class MaruClusterTest {
   fun `should create network starting with all forks and switch post ttd`() {
     val now = Clock.System.now()
     val terminalTotalDifficulty = 20UL
-    // Besu >= 26.9.0 no longer returns totalDifficulty in eth_getBlockBy* responses, so Maru is configured to
-    // switch on terminalBlockNumber instead. QBFT assigns every block difficulty 1 (genesis difficulty is 0x1),
-    // so cumulative totalDifficulty reaches terminalTotalDifficulty exactly at block (terminalTotalDifficulty - 1).
+    // QBFT assigns every block difficulty 1 (genesis difficulty is 0x1), so cumulative totalDifficulty reaches
+    // terminalTotalDifficulty exactly at block (terminalTotalDifficulty - 1), the terminal block.
     val terminalBlockNumber = terminalTotalDifficulty - 1UL
     // Timestamp-based forks start well after the terminal block is reached, so that the first PoS block can only
     // have been produced through the DifficultyAwareQbft -> post-TTD QBFT transition, not a timestamp fork switch.
@@ -103,7 +102,6 @@ class MaruClusterTest {
     val forkTimeGap = 10.seconds
     cluster = MaruCluster(
       terminalTotalDifficulty = terminalTotalDifficulty,
-      terminalBlockNumber = terminalBlockNumber,
       chainForks = mapOf(
         Instant.fromEpochSeconds(0) to
           ChainFork(
