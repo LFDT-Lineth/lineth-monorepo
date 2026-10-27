@@ -1,6 +1,9 @@
 package fri
 
-import "sort"
+import (
+	"fmt"
+	"sort"
+)
 
 // deepPowers assigns the alpha_DEEP power of every committed column and the
 // power of the running codeword of every level. A level (one per size) enters
@@ -15,27 +18,26 @@ import "sort"
 // order (batch order, then base rows, then extension rows), p(c) = 0, 1, …,
 // and R = C, the level's width.
 //
-// Grouped commitments (see [SizedTable.Groups]: when any shape declares
-// groups, every shape is numbered this way) number all the columns of all the
-// batches once: batch order, then the batch's groups by increasing
+// Grouped commitments (see [SizedTable.Groups]) number all the columns of all
+// the batches once: batch order, then the batch's groups by increasing
 // [GroupShape.Ordinal] whatever their sizes, then within a group its base rows,
-// then its extension rows; R = G, the total number of columns. A size without
-// groups counts as one group of ordinal 0, and groups of equal ordinals are
-// ordered by decreasing size, then in their size's order, so the numbering is
-// always defined. Groups of the same size, joining FRI at the same round, have
-// disjoint powers.
-//
-// With distinct ordinals (the PCS compiler uses the module index), a group's
-// powers depend on the widths and ordinals of the groups, not on their sizes: a
-// module keeps its powers when its size changes, and only its round (hence its
-// a) moves, which a size-oblivious verifier needs.
+// then its extension rows; R = G, the total number of columns. In a grouped
+// commitment (any shape declaring groups), every size with columns, of every
+// batch, must declare its groups, and the ordinals of a batch must be distinct
+// (the PCS compiler uses the module index). A group's powers then depend on the
+// widths and ordinals of the groups, not on their sizes: a module keeps its
+// powers when its size changes, and only its round (hence its a) moves, which a
+// size-oblivious verifier needs. Groups of the same size, joining FRI at the
+// same round, have disjoint powers.
 type deepPowers struct {
 	base, ext [][][]int // [batch][size][row] → power
 	running   []int     // [size] → running power of the level
 }
 
-// newDeepPowers numbers the columns of shapes (see deepPowers).
-func newDeepPowers(shapes []Shape) deepPowers {
+// newDeepPowers numbers the columns of shapes (see deepPowers). It rejects a
+// grouped commitment with a size that does not declare its groups, or with two
+// groups of the same ordinal in one batch.
+func newDeepPowers(shapes []Shape) (deepPowers, error) {
 	grouped := false
 	for _, shape := range shapes {
 		if shape.grouped() {
@@ -74,13 +76,13 @@ func newDeepPowers(shapes []Shape) deepPowers {
 				}
 			}
 		}
-		return d
+		return d, nil
 	}
 
 	// a group of a batch, with where its rows start in its size
 	type group struct {
-		ordinal, size, index, baseStart, extStart int
-		shape                                     GroupShape
+		ordinal, size, baseStart, extStart int
+		shape                              GroupShape
 	}
 	next := 0
 	for b, shape := range shapes {
@@ -89,24 +91,21 @@ func newDeepPowers(shapes []Shape) deepPowers {
 			if sized.BaseWidth+sized.ExtWidth == 0 {
 				continue
 			}
+			if sized.Groups == nil {
+				return deepPowers{}, fmt.Errorf("fri: batch %d size %d declares no groups, in a grouped commitment", b, s)
+			}
 			var base, ext int
-			for i, g := range sized.groups() {
-				groups = append(groups, group{g.Ordinal, s, i, base, ext, g})
+			for _, g := range sized.Groups {
+				groups = append(groups, group{g.Ordinal, s, base, ext, g})
 				base += g.BaseWidth
 				ext += g.ExtWidth
 			}
 		}
-		sort.Slice(groups, func(i, j int) bool {
-			gi, gj := groups[i], groups[j]
-			if gi.ordinal != gj.ordinal {
-				return gi.ordinal < gj.ordinal
+		sort.Slice(groups, func(i, j int) bool { return groups[i].ordinal < groups[j].ordinal })
+		for i, g := range groups {
+			if i > 0 && groups[i-1].ordinal == g.ordinal {
+				return deepPowers{}, fmt.Errorf("fri: batch %d has two groups of ordinal %d", b, g.ordinal)
 			}
-			if gi.size != gj.size {
-				return gi.size > gj.size
-			}
-			return gi.index < gj.index
-		})
-		for _, g := range groups {
 			for k := range g.shape.BaseWidth {
 				d.base[b][g.size][g.baseStart+k] = next
 				next++
@@ -120,7 +119,7 @@ func newDeepPowers(shapes []Shape) deepPowers {
 	for s := range d.running {
 		d.running[s] = next
 	}
-	return d
+	return d, nil
 }
 
 // column returns the power of a committed column.

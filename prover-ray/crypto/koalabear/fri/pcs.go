@@ -154,8 +154,8 @@ type PCS struct {
 }
 
 type pcsOpening struct {
-	layout    layout
 	committed CommitterState
+	shifts    BatchShifts
 	claimed   BatchClaimedValues
 }
 
@@ -333,7 +333,10 @@ func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) {
 		}
 	}
 
-	powers := newDeepPowers(shapes)
+	powers, err := newDeepPowers(shapes)
+	if err != nil {
+		return nil, err
+	}
 
 	res := make(layout, 0, maxSizeLog2+1)
 	for sizeLog2 := maxSizeLog2; sizeLog2 >= 0; sizeLog2-- {
@@ -774,19 +777,20 @@ func (pcs *PCS) AddOpening(
 	if committed.Tree == nil {
 		return fmt.Errorf("fri: AddOpening: commitment has nil tree")
 	}
+	// Validate the opening on its own; the alpha_DEEP powers are assigned over
+	// all the openings at once (see openingsLayout).
 	shape := committed.EncodedTable.Shape()
-	layout, err := canonicalLayout([]Shape{shape}, []BatchShifts{shifts})
-	if err != nil {
+	if _, err := canonicalLayout([]Shape{shape}, []BatchShifts{shifts}); err != nil {
 		return err
 	}
-	if err = validateBatchClaimShape(claimed, shifts, zeta); err != nil {
+	if err := validateBatchClaimShape(claimed, shifts, zeta); err != nil {
 		return fmt.Errorf("fri: AddOpening: %w", err)
 	}
 
 	pcs.zeta = zeta
 	pcs.openings = append(pcs.openings, pcsOpening{
-		layout:    layout,
 		committed: committed,
+		shifts:    shifts,
 		claimed:   claimed,
 	})
 	return nil
@@ -875,25 +879,39 @@ func (l layout) maxSizeLog2() uint8 {
 	return maxIdx
 }
 
+// openingsLayout returns the canonical layout of all the pending openings, the
+// openings being the batches in registration order: the same layout Verify
+// builds from the declared shapes and shifts, so the prover and the verifier
+// share its alpha_DEEP powers (deepEntry.AlphaPower, sizeBundle.RunningPower).
+func (pcs *PCS) openingsLayout() (layout, error) {
+	shapes := make([]Shape, len(pcs.openings))
+	shifts := make([]BatchShifts, len(pcs.openings))
+	for b, opening := range pcs.openings {
+		shapes[b] = opening.committed.EncodedTable.Shape()
+		shifts[b] = opening.shifts
+	}
+	return canonicalLayout(shapes, shifts)
+}
+
 // maxOpeningSizeLog2 returns the largest size (log2) opened across all pending
 // openings, i.e. the top of the FRI schedule this proof actually needs.
-func (pcs *PCS) maxOpeningSizeLog2() uint8 {
-	maxIdx := uint8(0)
-	for _, opening := range pcs.openings {
-		for _, bundle := range opening.layout {
-			if bundle.SizeLog2 > maxIdx {
-				maxIdx = bundle.SizeLog2
-			}
-		}
+func (pcs *PCS) maxOpeningSizeLog2() (uint8, error) {
+	l, err := pcs.openingsLayout()
+	if err != nil {
+		return 0, err
 	}
-	return maxIdx
+	return l.maxSizeLog2(), nil
 }
 
 // restrictToOpenings returns a view of this PCS whose Params are restricted to
 // the largest opened size, sharing the (immutable) encoders and pending
 // openings. Prover-side entry points use it so the fold count tracks the witness.
 func (pcs *PCS) restrictToOpenings() (*PCS, error) {
-	return pcs.restrictTo(pcs.maxOpeningSizeLog2())
+	maxSizeLog2, err := pcs.maxOpeningSizeLog2()
+	if err != nil {
+		return nil, err
+	}
+	return pcs.restrictTo(maxSizeLog2)
 }
 
 // restrictTo returns a view of this PCS with Params restricted to top size
@@ -954,13 +972,12 @@ func (pcs *PCS) reconstructLevels() ([]Level, error) {
 	// the sizes 2^logD down to 2^logFinalPolySize. Iterating it directly makes
 	// it structurally impossible to reach a size below the final-poly floor
 	// (which could never host a FRI level anyway).
-	// The alpha_DEEP powers number the columns of every opening (batch) at
-	// once, as the verifier's canonicalLayout does.
-	shapes := make([]Shape, len(pcs.openings))
-	for b, opening := range pcs.openings {
-		shapes[b] = opening.committed.EncodedTable.Shape()
+	// The canonical layout of all the openings carries every column's
+	// alpha_DEEP power, as in Verify.
+	openingsLayout, err := pcs.openingsLayout()
+	if err != nil {
+		return nil, err
 	}
-	numbering := newDeepPowers(shapes)
 
 	levels := make([]Level, 0, len(pcs.Params.domainsLight))
 	for di := range pcs.Params.domainsLight {
@@ -977,36 +994,41 @@ func (pcs *PCS) reconstructLevels() ([]Level, error) {
 		var columns []quotientColumn
 		var powers []int
 		var trees []*Tree
-		for b, opening := range pcs.openings {
-			for _, bundle := range opening.layout {
-				if bundle.SizeLog2 != uint8(sizeLog2) {
-					continue
+		var runningPower int
+		for _, bundle := range openingsLayout {
+			if bundle.SizeLog2 != uint8(sizeLog2) {
+				continue
+			}
+			runningPower = bundle.RunningPower
+			lastBatch := -1
+			for _, entry := range bundle.Entries {
+				opening := pcs.openings[entry.BatchIdx]
+				if entry.BatchIdx != lastBatch {
+					trees = append(trees, opening.committed.Tree)
+					lastBatch = entry.BatchIdx
 				}
-				trees = append(trees, opening.committed.Tree)
-				for _, entry := range bundle.Entries {
-					column, err := encodedColumnEvals(opening.committed, entry)
-					if err != nil {
-						return nil, err
-					}
-					column.Claims, err = pcs.openingClaimsForEntry(opening, entry)
-					if err != nil {
-						return nil, err
-					}
-					// Precompute the E2 rotation offset and base-field prefactor
-					// of each claim point for Level.EvalsAt, parallel to claims
-					// (entry.Shifts is aligned with claims).
-					rotations := make([]claimRotation, len(entry.Shifts))
-					for i, shift := range entry.Shifts {
-						rot := (r * shift) & (size - 1)
-						rotations[i].Rot = rot
-						// Scale = ω_N^{-rot} = ω_N^{(N-rot) mod N}.
-						expo := (size - rot) & (size - 1)
-						rotations[i].Scale.Exp(domain.generator, big.NewInt(int64(expo)))
-					}
-					column.Rotations = rotations
-					columns = append(columns, column)
-					powers = append(powers, numbering.column(b, sizeLog2, entry.IsExt, entry.RowIdx))
+				column, err := encodedColumnEvals(opening.committed, entry)
+				if err != nil {
+					return nil, err
 				}
+				column.Claims, err = pcs.openingClaimsForEntry(opening, entry)
+				if err != nil {
+					return nil, err
+				}
+				// Precompute the E2 rotation offset and base-field prefactor
+				// of each claim point for Level.EvalsAt, parallel to claims
+				// (entry.Shifts is aligned with claims).
+				rotations := make([]claimRotation, len(entry.Shifts))
+				for i, shift := range entry.Shifts {
+					rot := (r * shift) & (size - 1)
+					rotations[i].Rot = rot
+					// Scale = ω_N^{-rot} = ω_N^{(N-rot) mod N}.
+					expo := (size - rot) & (size - 1)
+					rotations[i].Scale.Exp(domain.generator, big.NewInt(int64(expo)))
+				}
+				column.Rotations = rotations
+				columns = append(columns, column)
+				powers = append(powers, entry.AlphaPower)
 			}
 		}
 		if len(columns) == 0 {
@@ -1032,7 +1054,7 @@ func (pcs *PCS) reconstructLevels() ([]Level, error) {
 			Trees:        trees,
 			Columns:      columns,
 			Powers:       powers,
-			RunningPower: numbering.running[sizeLog2],
+			RunningPower: runningPower,
 			DenomBaseInv: denomBaseInv,
 		})
 	}
@@ -1137,7 +1159,10 @@ func (pcs *PCS) Open(state *ProverState, queryPositions []int) OpeningProof {
 	if err != nil {
 		panic(err)
 	}
-	inputs := restricted.inputOpeningCommitments()
+	inputs, err := restricted.inputOpeningCommitments()
+	if err != nil {
+		panic(err)
+	}
 	return OpeningProof{
 		InputQueries: restricted.openInputQueries(inputs, queryPositions),
 		InputCaps:    restricted.openInputCaps(inputs),
@@ -1195,25 +1220,29 @@ func revealedInputTables(table MultiSizeTable, info inputCapInfo) []InputCapTabl
 	return res
 }
 
-func (pcs *PCS) inputOpeningCommitments() []CommitterState {
+func (pcs *PCS) inputOpeningCommitments() ([]CommitterState, error) {
+	openingsLayout, err := pcs.openingsLayout()
+	if err != nil {
+		return nil, err
+	}
+	// Sizes in decreasing order (canonicalLayout's order), batches in order
+	// within a size: the commitments in order of first appearance.
 	seen := make(map[field.Octuplet]bool)
 	var inputs []CommitterState
-	for sizeLog2 := int(pcs.Params.LogPlainTextSize); sizeLog2 >= 0; sizeLog2-- {
-		for _, opening := range pcs.openings {
-			for _, bundle := range opening.layout {
-				if bundle.SizeLog2 != uint8(sizeLog2) {
-					continue
-				}
-				root := opening.committed.Tree.Root()
-				if !seen[root] {
-					seen[root] = true
-					inputs = append(inputs, opening.committed)
-				}
-				break
+	for _, bundle := range openingsLayout {
+		if int(bundle.SizeLog2) > int(pcs.Params.LogPlainTextSize) {
+			continue
+		}
+		for _, entry := range bundle.Entries {
+			committed := pcs.openings[entry.BatchIdx].committed
+			root := committed.Tree.Root()
+			if !seen[root] {
+				seen[root] = true
+				inputs = append(inputs, committed)
 			}
 		}
 	}
-	return inputs
+	return inputs, nil
 }
 
 func openInputTreeOpening(p Params, committed CommitterState, queryPosition int) InputTreeOpening {
