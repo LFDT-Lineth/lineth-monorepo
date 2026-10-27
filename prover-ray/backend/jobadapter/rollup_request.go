@@ -290,7 +290,7 @@ func decodeEmbeddedL2ExecutionProof(raw json.RawMessage, op, ctx string) (Embedd
 	}, nil
 }
 
-// decodeEmbeddedPublicInputs decodes the 18-field backend.PublicInputs shape
+// decodeEmbeddedPublicInputs decodes the backend.PublicInputs shape
 // embedded in an l2ExecutionProof.
 func decodeEmbeddedPublicInputs(
 	m map[string]json.RawMessage, op, ctx string,
@@ -317,8 +317,6 @@ func decodeEmbeddedPublicInputs(
 	pi.EndBlockHash = h("endBlockHash")
 	pi.EndBlockNumber = n(endBlockNumberKey)
 	pi.EndBlockTimestamp = n("endBlockTimestamp")
-	pi.ParentL1L2BridgeRollingHash = h("parentL1L2BridgeRollingHash")
-	pi.ParentL1L2BridgeRollingHashMessageNumber = n("parentL1L2BridgeRollingHashMessageNumber")
 	pi.EndL1L2BridgeRollingHash = h("endL1L2BridgeRollingHash")
 	pi.EndL1L2BridgeRollingHashMessageNumber = n("endL1L2BridgeRollingHashMessageNumber")
 	pi.DynamicChainConfigHash = h("dynamicChainConfigHash")

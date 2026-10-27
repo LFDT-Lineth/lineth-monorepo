@@ -44,10 +44,10 @@ data class RollupAggregationProofRequestV1(
 }
 
 /**
- * The 22-field PI tuple emitted by a rollup-aggregation proof (rollup_spec §2.4, `FinalizationPublicInput` in
+ * The PI tuple emitted by a rollup-aggregation proof (rollup_spec §2.4, `FinalizationPublicInput` in
  * `l1_rollup.py`) and submitted to L1 finalization.
  *
- * Shares its first 17 scalars with [RollupProofPublicInputs]. Where a rollup proof carries `l2L1Messages`,
+ * Shares its first 15 scalars with [RollupProofPublicInputs]. Where a rollup proof carries `l2L1Messages`,
  * `programVks` and `blockCount`, this carries the guest-built L2-to-L1 message trees ([l2L1Roots], each of depth
  * [l2L1TreeDepth]) and the guest [programIds] that L1 checks against its approved set.
  *
@@ -57,8 +57,6 @@ data class RollupAggregationProofRequestV1(
 data class FinalizationPublicInputs(
   val endBlockNumber: ULong,
   val endBlockTimestamp: Instant,
-  val parentL1L2BridgeMessageRollingHash: ByteArray,
-  val parentL1L2BridgeMessageNumber: ULong,
   val endL1L2BridgeMessageRollingHash: ByteArray,
   val endL1L2BridgeMessageNumber: ULong,
   val dynamicChainConfigHash: ByteArray,
@@ -87,8 +85,6 @@ data class FinalizationPublicInputs(
 
     if (endBlockNumber != other.endBlockNumber) return false
     if (endBlockTimestamp != other.endBlockTimestamp) return false
-    if (!parentL1L2BridgeMessageRollingHash.contentEquals(other.parentL1L2BridgeMessageRollingHash)) return false
-    if (parentL1L2BridgeMessageNumber != other.parentL1L2BridgeMessageNumber) return false
     if (!endL1L2BridgeMessageRollingHash.contentEquals(other.endL1L2BridgeMessageRollingHash)) return false
     if (endL1L2BridgeMessageNumber != other.endL1L2BridgeMessageNumber) return false
     if (!dynamicChainConfigHash.contentEquals(other.dynamicChainConfigHash)) return false
@@ -114,8 +110,6 @@ data class FinalizationPublicInputs(
   override fun hashCode(): Int {
     var result = endBlockNumber.hashCode()
     result = 31 * result + endBlockTimestamp.hashCode()
-    result = 31 * result + parentL1L2BridgeMessageRollingHash.contentHashCode()
-    result = 31 * result + parentL1L2BridgeMessageNumber.hashCode()
     result = 31 * result + endL1L2BridgeMessageRollingHash.contentHashCode()
     result = 31 * result + endL1L2BridgeMessageNumber.hashCode()
     result = 31 * result + dynamicChainConfigHash.contentHashCode()

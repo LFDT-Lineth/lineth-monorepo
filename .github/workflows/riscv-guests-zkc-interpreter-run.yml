@@ -9,9 +9,13 @@
 # — depending on both the guest source AND the interpreter program + ELF->JSON tooling — so it
 # triggers on changes to either.
 #
-# The production ELF build is the single prerequisite for every automatic L2 guest check. A broken
-# guest build therefore prevents the expensive host reference suite and ZkC execution/trace jobs from
-# starting in parallel.
+# Two trigger tiers: a change confined to rollup_spec/src (the Python reference the guests' wire
+# formats and golden vectors derive from) runs only the host unit tests; a change to the guests or
+# the interpreter tooling runs the full pipeline.
+#
+# In the full pipeline the production ELF build is the single prerequisite for every automatic L2
+# guest check. A broken guest build therefore prevents the expensive host reference suite and ZkC
+# execution/trace jobs from starting in parallel.
 name: l2-execution guest pipeline
 
 on:
@@ -19,6 +23,7 @@ on:
     # Intentionally unfiltered by base branch: stacked PRs also need this focused gate.
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
+      - "rollup_spec/src/**"
       - "riscv-guests/**"
       - "arithmetization/src/main/riscv/**" # main.zkc — the interpreter (ZKC_MAIN)
       - "arithmetization/src/main/common/**" # shared constants used by the RISC-V program
@@ -37,6 +42,7 @@ on:
     branches:
       - main
     paths:
+      - "rollup_spec/src/**"
       - "riscv-guests/**"
       - "arithmetization/src/main/riscv/**"
       - "arithmetization/src/main/common/**"
@@ -77,9 +83,47 @@ permissions:
   actions: read
 
 jobs:
+  # `guest` is 'true' when the change touches the guests or the interpreter tooling, and for every
+  # event the path filter cannot evaluate (manual runs).
+  changes:
+    name: Filter commit changes
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    outputs:
+      guest: ${{ (github.event_name != 'pull_request' && github.event_name != 'push') || steps.filter.outputs.guest == 'true' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: false
+
+      - name: Filter commit changes
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          base: ${{ github.ref }}
+          filters: |
+            guest:
+              - "riscv-guests/**"
+              - "arithmetization/src/main/riscv/**"
+              - "arithmetization/src/main/common/**"
+              - "arithmetization/src/main/lib/**"
+              - "arithmetization/src/test/Makefile"
+              - "arithmetization/cmd/elf_to_json/**"
+              - "arithmetization/gopkg/elfmapping/**"
+              - "arithmetization/gopkg/predecoding/**"
+              - "arithmetization/go.mod"
+              - "arithmetization/go.sum"
+              - "arithmetization/Makefile"
+              - ".github/actions/setup-riscv-guests/**"
+              - ".github/actions/setup-zig/**"
+              - ".github/workflows/riscv-guests-zkc-interpreter-run.yml"
+
   build-guest-artifacts:
     name: build guest artifacts (accel)
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    needs: changes
+    if: needs.changes.outputs.guest == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
       - name: Checkout repository
@@ -117,8 +161,9 @@ jobs:
 
   host-tests:
     name: Guest unit tests (host)
-    needs: build-guest-artifacts
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    # Runs after a successful build, or on its own when the build was skipped (spec-only change).
+    needs: [changes, build-guest-artifacts]
+    if: ${{ !cancelled() && needs.changes.result == 'success' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && (needs.build-guest-artifacts.result == 'success' || needs.build-guest-artifacts.result == 'skipped') }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     steps:
       - name: Checkout repository
@@ -139,8 +184,8 @@ jobs:
 
   reference-tests:
     name: l2-execution extended-guest reference-test guards (host)
-    needs: host-tests
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    needs: [changes, host-tests]
+    if: needs.changes.outputs.guest == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     steps:
       - name: Checkout repository

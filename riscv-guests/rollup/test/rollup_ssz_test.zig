@@ -92,7 +92,6 @@ const OUTPUT_FILTERED_ADDRESS_1 = repeat20(0x04);
 const OUTPUT_END_BLOCK_NUMBER: u64 = 14;
 const OUTPUT_END_BLOCK_TIMESTAMP: u64 = 1763000210;
 const OUTPUT_L2_L1_BRIDGE_TRANSACTION_TREE = repeat32(0xbc);
-const OUTPUT_PARENT_L1L2_BRIDGE_ROLLING_HASH = repeat32(0x02);
 const OUTPUT_END_L1L2_BRIDGE_ROLLING_HASH = repeat32(0x03);
 const OUTPUT_DYNAMIC_CHAIN_CONFIG_HASH = repeat32(0xc0);
 const OUTPUT_PARENT_FTX_ROLLING_HASH = repeat32(0x04);
@@ -116,8 +115,6 @@ fn sampleOutput(alloc: std.mem.Allocator) !rollup_ssz.RollupOutput {
             .end_block_number = OUTPUT_END_BLOCK_NUMBER,
             .end_block_timestamp = OUTPUT_END_BLOCK_TIMESTAMP,
             .l2_l1_bridge_transaction_tree = OUTPUT_L2_L1_BRIDGE_TRANSACTION_TREE,
-            .parent_l1_l2_bridge_rolling_hash = OUTPUT_PARENT_L1L2_BRIDGE_ROLLING_HASH,
-            .parent_l1_l2_bridge_rolling_hash_message_number = 0,
             .end_l1_l2_bridge_rolling_hash = OUTPUT_END_L1L2_BRIDGE_ROLLING_HASH,
             .end_l1_l2_bridge_rolling_hash_message_number = 4,
             .dynamic_chain_config_hash = OUTPUT_DYNAMIC_CHAIN_CONFIG_HASH,

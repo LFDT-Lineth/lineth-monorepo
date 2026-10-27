@@ -4,7 +4,7 @@ from typing import List, Sequence, Set
 from ethereum.crypto.hash import Hash32
 
 from .l1_rollup import FinalizationPublicInput, FinalizationSubmission
-from .l2_execution import merge_filtered_addresses
+from .l2_execution import last_non_zero_pair, merge_filtered_addresses
 from .messaging_offsets import rebase_messaging_offsets
 from .rollup import (
     L2_L1_TREE_DEPTH,
@@ -71,18 +71,20 @@ def run_rollup_aggregation_guest(
     # The final proof commits program IDs; the VK-to-ID correspondence is WIP.
     program_ids = _program_ids_from_verified_vks(program_vk_set)
 
+    end_rolling_hash, end_rolling_hash_number = last_non_zero_pair(
+        (
+            proof.public_inputs.end_l1_l2_bridge_rolling_hash,
+            proof.public_inputs.end_l1_l2_bridge_rolling_hash_message_number,
+        )
+        for proof in rollup_proofs
+    )
+
     public_inputs = FinalizationPublicInput(
         end_block_number=last_proof.public_inputs.end_block_number,
         end_block_timestamp=last_proof.public_inputs.end_block_timestamp,
         l2_l1_roots=pack_l2_l1_messages([proof.public_inputs.l2_l1_messages for proof in rollup_proofs]),
-        parent_l1_l2_bridge_rolling_hash=first_proof.public_inputs.parent_l1_l2_bridge_rolling_hash,
-        parent_l1_l2_bridge_rolling_hash_message_number=(
-            first_proof.public_inputs.parent_l1_l2_bridge_rolling_hash_message_number
-        ),
-        end_l1_l2_bridge_rolling_hash=last_proof.public_inputs.end_l1_l2_bridge_rolling_hash,
-        end_l1_l2_bridge_rolling_hash_message_number=(
-            last_proof.public_inputs.end_l1_l2_bridge_rolling_hash_message_number
-        ),
+        end_l1_l2_bridge_rolling_hash=end_rolling_hash,
+        end_l1_l2_bridge_rolling_hash_message_number=end_rolling_hash_number,
         dynamic_chain_config_hash=first_proof.public_inputs.dynamic_chain_config_hash,
         parent_ftx_rolling_hash=first_proof.public_inputs.parent_ftx_rolling_hash,
         parent_ftx_number=first_proof.public_inputs.parent_ftx_number,
@@ -150,13 +152,6 @@ def assert_rollup_proof_continuity(left: RollupProof, right: RollupProof) -> Non
     # "the last block completing here" on its own.
     if left.public_inputs.end_block_hash != right.public_inputs.parent_block_hash:
         raise Exception("rollup block-hash continuity failed")
-    if left.public_inputs.end_l1_l2_bridge_rolling_hash != right.public_inputs.parent_l1_l2_bridge_rolling_hash:
-        raise Exception("rollup L1-to-L2 rolling-hash continuity failed")
-    if (
-        left.public_inputs.end_l1_l2_bridge_rolling_hash_message_number !=
-        right.public_inputs.parent_l1_l2_bridge_rolling_hash_message_number
-    ):
-        raise Exception("rollup L1-to-L2 rolling-hash-number continuity failed")
     if left.public_inputs.dynamic_chain_config_hash != right.public_inputs.dynamic_chain_config_hash:
         raise Exception("rollup dynamic chain configuration continuity failed")
     if left.public_inputs.end_ftx_rolling_hash != right.public_inputs.parent_ftx_rolling_hash:

@@ -165,8 +165,6 @@ class SszL2ExecutionProofPublicInput(Container):
     end_block_number: uint64
     end_block_timestamp: uint64
     l2_l1_messages: List[SszBytes32, MAX_L2_L1_MESSAGES_PER_EXECUTION]
-    parent_l1_l2_bridge_rolling_hash: SszBytes32
-    parent_l1_l2_bridge_rolling_hash_message_number: uint64
     end_l1_l2_bridge_rolling_hash: SszBytes32
     end_l1_l2_bridge_rolling_hash_message_number: uint64
     dynamic_chain_config_hash: SszBytes32
@@ -248,10 +246,6 @@ def _ssz_l2_execution_public_input(pi: L2ExecutionProofPublicInput) -> SszL2Exec
         end_block_number=int(pi.end_block_number),
         end_block_timestamp=int(pi.end_block_timestamp),
         l2_l1_messages=[bytes(h) for h in pi.l2_l1_messages],
-        parent_l1_l2_bridge_rolling_hash=bytes(pi.parent_l1_l2_bridge_rolling_hash),
-        parent_l1_l2_bridge_rolling_hash_message_number=int(
-            pi.parent_l1_l2_bridge_rolling_hash_message_number
-        ),
         end_l1_l2_bridge_rolling_hash=bytes(pi.end_l1_l2_bridge_rolling_hash),
         end_l1_l2_bridge_rolling_hash_message_number=int(
             pi.end_l1_l2_bridge_rolling_hash_message_number
@@ -343,10 +337,6 @@ def _l2_execution_public_input_from_view(view: Any) -> L2ExecutionProofPublicInp
         end_block_number=U64(int(view.end_block_number)),
         end_block_timestamp=U64(int(view.end_block_timestamp)),
         l2_l1_messages=[Hash32(bytes(h)) for h in view.l2_l1_messages],
-        parent_l1_l2_bridge_rolling_hash=Hash32(bytes(view.parent_l1_l2_bridge_rolling_hash)),
-        parent_l1_l2_bridge_rolling_hash_message_number=U64(
-            int(view.parent_l1_l2_bridge_rolling_hash_message_number)
-        ),
         end_l1_l2_bridge_rolling_hash=Hash32(bytes(view.end_l1_l2_bridge_rolling_hash)),
         end_l1_l2_bridge_rolling_hash_message_number=U64(
             int(view.end_l1_l2_bridge_rolling_hash_message_number)

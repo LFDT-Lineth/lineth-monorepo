@@ -993,7 +993,9 @@ func committedLayout(
 		if moduleGroups {
 			module := moduleIndex(col)
 			if last, ok := lastModule[sizeIndex]; !ok || last != module {
-				sized.Groups = append(sized.Groups, fri.GroupShape{})
+				// The module index orders the groups for the alpha_DEEP
+				// powers, so a module's powers do not depend on its size.
+				sized.Groups = append(sized.Groups, fri.GroupShape{Ordinal: module})
 				lastModule[sizeIndex] = module
 			}
 			group := &sized.Groups[len(sized.Groups)-1]

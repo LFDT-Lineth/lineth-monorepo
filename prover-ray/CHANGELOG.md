@@ -27,6 +27,7 @@
 - *(misc)* Moved filtered addresses into the list of the PI (#4166)
 - *(riscv-guest)* Aligning l2-execution guest program to the recently… (#4297)
 - *(riscv-guest)* Build native runner for baseline CPU (#4308)
+- *(misc, riscv-guest, prover, coordinator)* Changing the spec to allow zero rolling hash and message number for the L2 Message Service (#4314)
 
 ### 🚜 Refactor
 

@@ -19,21 +19,19 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 	result := backend.Result{
 		ProofBytes: []byte{0xca, 0xfe},
 		PublicInputs: backend.PublicInputs{
-			ParentBlockHash:                          filledHash(0x01),
-			EndBlockHash:                             filledHash(0x02),
-			EndBlockNumber:                           1000503,
-			EndBlockTimestamp:                        1763000101,
-			ParentL1L2BridgeRollingHash:              filledHash(0x04),
-			ParentL1L2BridgeRollingHashMessageNumber: 11,
-			EndL1L2BridgeRollingHash:                 filledHash(0x05),
-			EndL1L2BridgeRollingHashMessageNumber:    12,
-			DynamicChainConfigHash:                   filledHash(0x06),
-			ParentFtxRollingHash:                     filledHash(0x07),
-			ParentFtxNumber:                          13,
-			EndFtxRollingHash:                        filledHash(0x08),
-			EndProcessedFtxNumber:                    14,
-			FilteredAddresses:                        [][20]byte{{0x09}},
-			TxFromsHash:                              filledHash(0x0a),
+			ParentBlockHash:                       filledHash(0x01),
+			EndBlockHash:                          filledHash(0x02),
+			EndBlockNumber:                        1000503,
+			EndBlockTimestamp:                     1763000101,
+			EndL1L2BridgeRollingHash:              filledHash(0x05),
+			EndL1L2BridgeRollingHashMessageNumber: 12,
+			DynamicChainConfigHash:                filledHash(0x06),
+			ParentFtxRollingHash:                  filledHash(0x07),
+			ParentFtxNumber:                       13,
+			EndFtxRollingHash:                     filledHash(0x08),
+			EndProcessedFtxNumber:                 14,
+			FilteredAddresses:                     [][20]byte{{0x09}},
+			TxFromsHash:                           filledHash(0x0a),
 		},
 	}
 
@@ -52,8 +50,6 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 	assert.Equal(t, uint64(1000503), pi.EndBlockNumber)
 	assert.Equal(t, uint64(1763000101), pi.EndBlockTimestamp)
 	assert.Empty(t, pi.L2L1Messages)
-	assert.Equal(t, repeatHex(0x04), pi.ParentL1L2BridgeRollingHash)
-	assert.Equal(t, uint64(11), pi.ParentL1L2BridgeRollingHashMessageNumber)
 	assert.Equal(t, repeatHex(0x05), pi.EndL1L2BridgeRollingHash)
 	assert.Equal(t, uint64(12), pi.EndL1L2BridgeRollingHashMessageNumber)
 	assert.Equal(t, repeatHex(0x06), pi.DynamicChainConfigHash)
