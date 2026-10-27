@@ -18,6 +18,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	minimalelf "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/minimal-elf"
+	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 )
 
@@ -29,7 +30,7 @@ var (
 
 type r5BenchmarkFixture struct {
 	binFile    *zkcdriver.BinaryFile
-	inputs     map[string][]byte
+	inputs     map[string]bit.Array
 	lazyTrace  zkcdriver.LazyTrace
 	serialized []byte
 	system     *wiop.System
@@ -75,7 +76,7 @@ func loadR5BenchmarkFixture(b *testing.B) *r5BenchmarkFixture {
 	if len(errs) > 0 {
 		b.Fatalf("tracing R5 fixture: %v", errors.Join(errs...))
 	}
-	if got := outputs["guest_output"]; !bytes.Equal(got, wantOutput) {
+	if got := outputs["guest_output"]; !bytes.Equal(got.Bytes(), wantOutput) {
 		b.Fatalf("unexpected guest_output: got %x, want %x", got, wantOutput)
 	}
 	serialized, err := binFile.MarshalBinary()

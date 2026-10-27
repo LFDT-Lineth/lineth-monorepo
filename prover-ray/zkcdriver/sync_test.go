@@ -1,7 +1,6 @@
 package zkcdriver_test
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -109,7 +108,7 @@ func TestZkcIntegrationTestSynced(t *testing.T) {
 						logrus.Panicf("failed to parse test case: %v", err)
 					}
 					for outputName, expectedOutput := range zkcOutputs {
-						if !bytes.Equal(expectedOutput, zkcInput.Inputs[outputName]) {
+						if !expectedOutput.Equals(zkcInput.Inputs[outputName]) {
 							fatalIfNotKnown(
 								t, failures, baseName, l, failReasonOutputMismatch,
 								"output mismatch for %s: expected %x, got %x",
