@@ -178,7 +178,7 @@ func rlcOfTable(alpha *wiop.CoinField, tab wiop.Table) wiop.Expression {
 //	α^w + col[0] + α·col[1] + α²·col[2] + … + α^{w-1}·col[w-1]
 //
 // where w = len(cols). A constant entry enters as a scalar term. The leading α^w is a
-// length sentinel: it makes the fold injective across widths, so rows of different widths 
+// length sentinel: it makes the fold injective across widths, so rows of different widths
 // can never alias — a short tuple never collides with a zero-padded longer one.
 //
 // The sentinel is folded in for free by evaluating the coefficient sequence

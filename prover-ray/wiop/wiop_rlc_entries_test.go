@@ -35,6 +35,10 @@ func TestEvaluateRLCAsExt_ConstantEntries(t *testing.T) {
 		"const last":        {c0.View(), c1.View(), k(13)},
 		"consts around one": {k(14), c1.View(), k(15)},
 		"single const":      {k(16)},
+		"two trailing":      {c0.View(), k(17), k(18)},
+		"run after gap":     {k(19), c0.View(), k(20), k(21), k(22)},
+		"only consts":       {k(23), k(24), k(25)},
+		"view then consts":  {c1.View(), k(26), k(27), k(28)},
 	}
 	alpha := field.RandomElementExt()
 	for name, entries := range cases {
