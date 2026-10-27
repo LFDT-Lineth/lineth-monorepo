@@ -720,14 +720,28 @@ class P2PTest {
     while (System.currentTimeMillis() < startTime + 13000L) { // max 13 seconds to run this test
       assertNetworkIsConnectedToPeer(p2pNetworkImpl1, PEER_ID_NODE_2)
       assertNetworkIsConnectedToPeer(p2pNetworkImpl2, PEER_ID_NODE_1)
-      awaitUntilAsserted { peer1.getStatus()!!.latestBlockNumber == currentBlockNumber }
-      awaitUntilAsserted { peer2.getStatus()!!.latestBlockNumber == currentBlockNumber }
-      if (peer1.getStatus()!!.latestBlockNumber == 5uL) {
+      // A peer's status is null until its first status message arrives, which can be after the connection is up.
+      // Asserting (rather than dereferencing) lets Awaitility retry on a missing status instead of failing on an NPE.
+      // The mocked block number advances on every read, so only require it to have reached the current one.
+      awaitUntilAsserted {
+        assertThat(peer1.getStatus()?.latestBlockNumber?.toLong()).isNotNull().isGreaterThanOrEqualTo(
+          currentBlockNumber.toLong(),
+        )
+      }
+      awaitUntilAsserted {
+        assertThat(peer2.getStatus()?.latestBlockNumber?.toLong()).isNotNull().isGreaterThanOrEqualTo(
+          currentBlockNumber.toLong(),
+        )
+      }
+      if (peer1.getStatus()!!.latestBlockNumber >= 5uL) {
         // we have reached the end of the blocks, so we can stop
         break
       }
       currentBlockNumber++
     }
+    // the mocked block numbers end at 5, so both peers must have received status updates up to it
+    assertThat(peer1.getStatus()?.latestBlockNumber?.toLong()).isEqualTo(5L)
+    awaitUntilAsserted { assertThat(peer2.getStatus()?.latestBlockNumber?.toLong()).isEqualTo(5L) }
   }
 
   @Test
