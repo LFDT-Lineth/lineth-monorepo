@@ -25,7 +25,7 @@
     "viem": "catalog:",
     "express": "catalog:",
     "filtrex": "3.1.0",
-    "pg": "8.23.0",
+    "pg": "8.23.1",
     "prom-client": "catalog:",
     "typeorm": "0.3.31",
     "typeorm-naming-strategies": "4.1.0",
