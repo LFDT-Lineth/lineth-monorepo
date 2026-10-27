@@ -467,7 +467,7 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 	case *air.BusConstraint[koalabear.Element]:
 		// Iterate receive ports, each of which identifies a set of columns in a
 		// given module (including a selector) which determine the message being
-		// revived.
+		// received.
 		for _, recvPort := range cs.Receives {
 
 			cols := make([]*wiop.ColumnView, len(recvPort.Registers))

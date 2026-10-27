@@ -138,7 +138,7 @@ func Product(factors ...Expression) Expression {
 // width is len(entries) plus one when a head is provided; when that effective
 // width is 1, alpha must be nil and the single term is returned directly.
 func RLCOfEntries(alpha *CoinField, head Expression, entries []TableEntry) Expression {
-	exprs := EntryExprs(entries)
+	exprs := entryExprs(entries)
 	if head != nil {
 		exprs = append([]Expression{head}, exprs...)
 	}

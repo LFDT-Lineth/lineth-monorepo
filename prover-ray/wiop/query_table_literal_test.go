@@ -26,3 +26,18 @@ func TestTableStructLiteralRejected(t *testing.T) {
 		sys.NewMessageBusSend(sys.Context.Childf("b"), "shard", "h", bad)
 	})
 }
+
+// TestNewTableEntriesNilTypedSelector checks that a typed-nil selector hits a
+// clear panic instead of a nil dereference or a silent "unfiltered" table.
+func TestNewTableEntriesNilTypedSelector(t *testing.T) {
+	sys := wiop.NewSystemf("nilsel")
+	m := sys.NewSizedModule(sys.Context.Childf("m"), 4, wiop.PaddingDirectionNone)
+	col := m.NewColumn(m.Context.Childf("c"), sys.NewRound())
+
+	require.PanicsWithValue(t, "wiop: Table selector is a nil *Constant", func() {
+		wiop.NewTableEntries(m, (*wiop.Constant)(nil), col.View())
+	})
+	require.Panics(t, func() {
+		wiop.NewTableEntries(m, (*wiop.ColumnView)(nil), col.View())
+	})
+}

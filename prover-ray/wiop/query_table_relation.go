@@ -42,9 +42,9 @@ func EntryConst(e TableEntry) (field.Element, bool) {
 	return field.Element{}, false
 }
 
-// EntryExprs lifts a slice of [TableEntry] into the equivalent slice of
+// entryExprs lifts a slice of [TableEntry] into the equivalent slice of
 // [Expression] so it can be passed to [RLCExpression].
-func EntryExprs(entries []TableEntry) []Expression {
+func entryExprs(entries []TableEntry) []Expression {
 	out := make([]Expression, len(entries))
 	for i, e := range entries {
 		out[i] = e
@@ -116,8 +116,14 @@ func NewTableEntries(m *Module, selector TableEntry, entries ...TableEntry) Tabl
 	switch s := selector.(type) {
 	case nil:
 	case *ColumnView:
+		if s == nil {
+			panic("wiop: Table selector is a nil *ColumnView; pass a nil TableEntry for an unfiltered table")
+		}
 		sel = s
 	case *Constant:
+		if s == nil {
+			panic("wiop: Table selector is a nil *Constant")
+		}
 		checkConstantEntry(m, "selector", s)
 		switch {
 		case s.Value.IsOne():

@@ -229,9 +229,9 @@ func (t *mAssignmentTask) hashJoin(tEntries []tEntry, sEntries []sEntry, mValues
 				pos, ok := mapM[e.val]
 				if !ok {
 					panic(fmt.Sprintf(
-						"wiop/compilers/lookuptologderivsum: A row %d (module %s) has no match "+
+						"wiop/compilers/lookuptologderivsum: A row %d (fragment %d: %s) has no match "+
 							"in the lookup table",
-						e.row, t.included[e.frag].module.Context.Path(),
+						e.row, e.frag, t.included[e.frag].label(),
 					))
 				}
 				mFrag, mRow := pos[0], pos[1]

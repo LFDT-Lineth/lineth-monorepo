@@ -24,6 +24,19 @@ type includedSpec struct {
 	module *wiop.Module
 }
 
+// label identifies the fragment in error messages: the module path plus the
+// path of its first column view, or of the selector when every entry is a
+// constant. A fragment carries at least one of the two, so the label always
+// pins down a column even when a module hosts several lookups.
+func (s includedSpec) label() string {
+	for _, e := range s.cols {
+		if cv, ok := wiop.EntryView(e); ok {
+			return fmt.Sprintf("module %s, first column %s", s.module.Context.Path(), cv.Column.Context.Path())
+		}
+	}
+	return fmt.Sprintf("module %s, selector %s", s.module.Context.Path(), s.selector.Column.Context.Path())
+}
+
 // includingTable captures one lookup-table fragment (B fragment) of a group of
 // Inclusion queries. Two queries with the same canonicalIncludingKeyMulti
 // share the group's includingTables and therefore share its per-fragment

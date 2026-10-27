@@ -1,6 +1,7 @@
 package lookuptologderivsum_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -224,9 +225,13 @@ func TestCompile_SingleColumn_NoMatchPanics(t *testing.T) {
 	rt.AssignColumn(colT, makeVec(10, 20, 30, 40))
 	rt.AssignColumn(colS, makeVec(10, 99, 10, 30)) // 99 is not in T
 
-	assert.Panics(t, func() {
+	var msg string
+	func() {
+		defer func() { msg = fmt.Sprint(recover()) }()
 		runRound(rt) // round 0 — M assignment task
-	}, "M assignment must panic when an active A row has no match in B")
+	}()
+	assert.Contains(t, msg, "A row 1 (fragment 0: module", "M assignment must panic when an active A row has no match in B")
+	assert.Contains(t, msg, "first column", "the panic must name the fragment's column")
 }
 
 // ---- Row limit (compile-time static check) ----
