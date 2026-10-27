@@ -191,6 +191,38 @@ def test_missing_required_field_is_rejected() -> None:
         decode_request(req)
 
 
+def test_system_contracts_are_decoded() -> None:
+    sc = decode_request(_valid_request()).chain_config.system_contracts
+    assert bytes(sc.deposit) == bytes.fromhex("94d4a7449B968b839dcbc64A61F195CA300986ae")
+    assert bytes(sc.withdrawal_request) == bytes.fromhex("66355689a9f067eeb9dc9d899E4192676988279C")
+    assert bytes(sc.consolidation_request) == bytes.fromhex("F0e003F0dE2d583Ae28FA8cBF66aa096CdAce3ff")
+    assert bytes(sc.beacon_roots) == bytes.fromhex("000F3df6D732807Ef1319fB7B8bB8522d0Beac02")
+    assert bytes(sc.history_storage) == bytes.fromhex("0000F90827F1C53a10cb7A02335B175320002935")
+    assert bytes(sc.builder_deposit_request) == bytes.fromhex("0000BFF46984E3725691FA540A8C7589300D8282")
+    assert bytes(sc.builder_exit_request) == bytes.fromhex("000064D678505AD48F8CCB093BC65613800E8282")
+
+
+def test_missing_system_contracts_is_rejected() -> None:
+    req = _valid_request()
+    del req["proofRequest"]["chainConfig"]["systemContracts"]
+    with pytest.raises(ProofIoError, match="systemContracts"):
+        decode_request(req)
+
+
+def test_missing_system_contract_address_is_rejected() -> None:
+    req = _valid_request()
+    del req["proofRequest"]["chainConfig"]["systemContracts"]["builderExitRequest"]
+    with pytest.raises(ProofIoError, match="builderExitRequest"):
+        decode_request(req)
+
+
+def test_short_system_contract_address_is_rejected() -> None:
+    req = _valid_request()
+    req["proofRequest"]["chainConfig"]["systemContracts"]["deposit"] = "0x1234"
+    with pytest.raises(ProofIoError, match="deposit.*20-byte"):
+        decode_request(req)
+
+
 def test_unknown_acceptance_is_rejected() -> None:
     req = _valid_request()
     req["proofRequest"]["payloads"][1]["rollupExtension"]["forcedTransactions"][0]["acceptance"] = "MAYBE"

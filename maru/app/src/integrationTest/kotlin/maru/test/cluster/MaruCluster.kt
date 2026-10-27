@@ -52,6 +52,7 @@ data class ClusterNode(
   val label: String = nodeRole.name,
   val elNode: ElNode?,
   val elFollowers: List<ElNode> = emptyList(),
+  internal val buildingConfig: NodeBuilder.NodeBuildingConfig,
 ) {
   init {
     require(nodeRole != NodeRole.Sequencer || elNode != null) {
@@ -109,6 +110,7 @@ class MaruCluster(
   private val genesisFactory: GenesisFactory = GenesisFactory(chainId, blockTimeSeconds)
   private val nodesBuilders: MutableList<NodeBuilder> = mutableListOf()
   internal val nodes = mutableListOf<ClusterNode>()
+  private val stoppedMaruNodes = mutableSetOf<String>()
   var runningState: RunningState = RunningState.STOPPED
     @Synchronized get
     private set
@@ -256,8 +258,10 @@ class MaruCluster(
   private fun buildClusterNode(
     nodeStartingConfig: NodeBuilder.NodeBuildingConfig,
     bootNodesEnrs: List<String>,
+    restartConfigurator: (MaruConfig) -> MaruConfig = { it },
+    startElNode: Boolean = true,
   ): ClusterNode {
-    startIfBesuNode(nodeStartingConfig.elNode)
+    if (startElNode) startIfBesuNode(nodeStartingConfig.elNode)
     val maruApp =
       createMaru(
         elNode = nodeStartingConfig.elNode,
@@ -269,6 +273,10 @@ class MaruCluster(
         nodeKeyData = nodeStartingConfig.nodeKey,
         nodeRole = nodeStartingConfig.nodeRole,
         forkSchedule = genesisFactory.maruForkSchedule(),
+        overridingP2PNetwork = nodeStartingConfig.overridingP2PNetwork,
+        p2pNetworkFactory = nodeStartingConfig.p2pNetworkFactory,
+        payloadValidationEnabled = nodeStartingConfig.payloadValidationEnabled,
+        maruConfigurator = { restartConfigurator(nodeStartingConfig.maruConfigurator(it)) },
       )
 
     maruApp.start().get()
@@ -280,19 +288,65 @@ class MaruCluster(
         label = nodeStartingConfig.label,
         elNode = nodeStartingConfig.elNode,
         elFollowers = nodeStartingConfig.elFollowers,
+        buildingConfig = nodeStartingConfig,
       )
     return clusterNode
+  }
+
+  /** Stops and closes the Maru app of a node, keeping its EL node, node key and data directory */
+  @Synchronized
+  fun stopMaruNode(label: String) {
+    require(label !in stoppedMaruNodes) { "Maru node label=$label is already stopped" }
+    val maru = maruNode(label)
+    maru.stop().get()
+    maru.close()
+    stoppedMaruNodes += label
+  }
+
+  /**
+   * Starts a new Maru app for a node stopped with [stopMaruNode], reusing its node key, data directory and EL node.
+   * [configurator] allows overriding the node's Maru config, e.g. to restart it with an empty data directory.
+   */
+  @Synchronized
+  fun startMaruNode(
+    label: String,
+    configurator: (MaruConfig) -> MaruConfig = { it },
+  ): MaruApp {
+    require(label in stoppedMaruNodes) { "Maru node label=$label is not stopped" }
+    val restartedNode =
+      buildClusterNode(
+        nodeStartingConfig = node(label).buildingConfig,
+        bootNodesEnrs = getBootnodesEnrs(),
+        restartConfigurator = configurator,
+        startElNode = false,
+      )
+    nodes[nodes.indexOf(node(label))] = restartedNode
+    stoppedMaruNodes -= label
+    return restartedNode.maru
+  }
+
+  @Synchronized
+  fun restartMaruNode(
+    label: String,
+    configurator: (MaruConfig) -> MaruConfig = { it },
+  ): MaruApp {
+    stopMaruNode(label)
+    return startMaruNode(label, configurator)
   }
 
   @Synchronized
   fun stop() {
     this.runningState = RunningState.STOPPING
     nodes.forEach {
-      it.maru.stop().get()
-      it.maru.close()
+      if (it.label !in stoppedMaruNodes) {
+        it.maru.stop().get()
+        it.maru.close()
+      }
       it.elNode?.stop()
     }
-    besuCluster.stop()
+    stoppedMaruNodes.clear()
+    // also shuts down the Besu node runner
+    besuCluster.close()
     this.runningState = RunningState.STOPPED
   }
 
@@ -304,11 +358,14 @@ class MaruCluster(
       maruNode(nodeLabel).p2pNetwork.enr!!
     }
 
-  private fun nodesAddr(nodesLabels: List<String>): List<String> =
-    nodesLabels.map { nodeLabel ->
-      val p2pNetwork = maruNode(nodeLabel).p2pNetwork
-      "/ip4/127.0.0.1/tcp/${p2pNetwork.port}/p2p/${p2pNetwork.nodeId}"
-    }
+  /** The node's P2P multiaddress, e.g. to dial it as a static peer */
+  @Synchronized
+  fun nodeAddr(label: String): String {
+    val p2pNetwork = maruNode(label).p2pNetwork
+    return "/ip4/127.0.0.1/tcp/${p2pNetwork.port}/p2p/${p2pNetwork.nodeId}"
+  }
+
+  private fun nodesAddr(nodesLabels: List<String>): List<String> = nodesLabels.map(::nodeAddr)
 
   private fun startIfBesuNode(elNode: ElNode?) {
     if (elNode is BesuElNode) {

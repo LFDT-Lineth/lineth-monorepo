@@ -22,6 +22,27 @@ BlockTransaction: TypeAlias = bytes | LegacyTransaction
 
 
 @dataclass
+class SystemContracts:
+    """
+    Addresses of the system contracts the execution engine calls or reads
+    around every block (EIP-4788, EIP-2935, EIP-6110, EIP-7002, EIP-7251,
+    EIP-8282). They come from the chain's genesis configuration and are
+    supplied as a proof-range input. They are NOT part of the
+    `dynamicChainConfigHash` preimage, which is anchored in the L1 verifier's
+    chain configuration.
+
+    Field order is the wire order.
+    """
+    beacon_roots: Address
+    history_storage: Address
+    deposit: Address
+    withdrawal_request: Address
+    consolidation_request: Address
+    builder_deposit_request: Address
+    builder_exit_request: Address
+
+
+@dataclass
 class ChainConfig:
     """
     Static chain configuration that does not change across the proof range.
@@ -30,11 +51,13 @@ class ChainConfig:
     header (the first block in the range) and asserts every other block in
     the range carries the same `base_fee_per_gas`. The four-input
     `dynamicChainConfigHash` is then computed from `chainID`, `coinbase`,
-    `l2MessageServiceAddress`, and that extracted `baseFee`.
+    `l2MessageServiceAddress`, and that extracted `baseFee`;
+    `system_contracts` is excluded from the hash.
     """
     l2_message_service_address: Address
     coinbase: Address
     chain_id: U64
+    system_contracts: SystemContracts
 
     def hash(self, base_fee: Uint) -> Hash32:
         """
@@ -43,7 +66,7 @@ class ChainConfig:
             keccak256(uint256_be(chainID) || coinbase || L2MessageServiceContract || uint256_be(baseFee))
 
         `base_fee` is supplied at hash time by the caller (it is sourced from
-        the block header — see §2.1).
+        the block header — see §2.1). `system_contracts` is not hashed.
         """
         return keccak256(
             int(self.chain_id).to_bytes(32, "big") +

@@ -7,6 +7,7 @@ import linea.clients.ProverProofTransport
 import linea.crypto.HashFunction
 import linea.crypto.Sha256HashFunction
 import linea.domain.BlockIntervalProofIndex
+import linea.ethapi.SystemContracts
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 import org.apache.logging.log4j.LogManager
@@ -53,6 +54,7 @@ internal class L2ExecutionProofRequestDtoMapper(
           coinbase = request.coinbase,
           chainId = request.chainId.toLong(),
           forkName = forkName,
+          systemContracts = request.systemContracts.toDto(),
         ),
         payloads = payloads,
       ),
@@ -69,6 +71,16 @@ internal class L2ExecutionProofRequestDtoMapper(
     return SafeFuture.completedFuture(dto)
   }
 }
+
+internal fun SystemContracts.toDto() = SystemContractsDto(
+  beaconRoots = beaconRoots,
+  historyStorage = historyStorage,
+  deposit = deposit,
+  withdrawalRequest = withdrawalRequest,
+  consolidationRequest = consolidationRequest,
+  builderDepositRequest = builderDepositRequest,
+  builderExitRequest = builderExitRequest,
+)
 
 /**
  * Maps the deserialized l2-execution proof response DTO onto the domain [L2ExecutionProofResponseV1]

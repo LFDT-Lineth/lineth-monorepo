@@ -31,15 +31,53 @@ fn repeat(comptime n: usize, byte: u8) [n]u8 {
 // Expected bytes computed with `rollup_spec/.venv/bin/python` against the same formulas in
 // `rollup_spec/src/rollup_spec/l2_execution.py` / `block.py`.
 
-test "chainConfigHash matches Readme.md's §2.1 dynamicChainConfigHash formula" {
-    const chain_config = l2_execution_ssz.ChainConfig{
+fn sampleSystemContracts() l2_execution_ssz.SystemContracts {
+    return .{
+        .beacon_roots = repeat(20, 0xa1),
+        .history_storage = repeat(20, 0xa2),
+        .deposit = repeat(20, 0xa3),
+        .withdrawal_request = repeat(20, 0xa4),
+        .consolidation_request = repeat(20, 0xa5),
+        .builder_deposit_request = repeat(20, 0xa6),
+        .builder_exit_request = repeat(20, 0xa7),
+    };
+}
+
+fn sampleChainConfig() l2_execution_ssz.ChainConfig {
+    return .{
         .l2_message_service_address = repeat(20, 0x11),
         .coinbase = repeat(20, 0x00),
         .chain_id = 59144,
+        .system_contracts = sampleSystemContracts(),
     };
-    const got = api.chainConfigHashFn(chain_config, 1_000_000_000);
+}
+
+test "chainConfigHash matches Readme.md's §2.1 dynamicChainConfigHash formula" {
+    const got = api.chainConfigHashFn(sampleChainConfig(), 1_000_000_000);
     const want = [_]u8{ 0xeb, 0x9a, 0xbc, 0xa2, 0x92, 0x7e, 0x7d, 0x36, 0x99, 0x9c, 0x8d, 0x0a, 0xe3, 0xf4, 0x94, 0xf7, 0xb0, 0x12, 0x0a, 0xde, 0xc4, 0x1f, 0x5c, 0xe1, 0x3a, 0x2b, 0x98, 0xdd, 0xa4, 0x38, 0x50, 0x06 };
     try testing.expectEqualSlices(u8, &want, &got);
+}
+
+test "chainConfigHash excludes the system-contract addresses" {
+    const baseline = api.chainConfigHashFn(sampleChainConfig(), 7);
+    inline for (std.meta.fields(l2_execution_ssz.SystemContracts)) |field| {
+        var tampered = sampleChainConfig();
+        @field(tampered.system_contracts, field.name) = repeat(20, 0x00);
+        const got = api.chainConfigHashFn(tampered, 7);
+        try testing.expectEqualSlices(u8, &baseline, &got);
+    }
+}
+
+test "zesuSystemContracts copies every address into zesu's type" {
+    const sc = sampleSystemContracts();
+    const z = api.zesuSystemContractsFn(sc);
+    try testing.expectEqual(sc.beacon_roots, z.beacon_roots);
+    try testing.expectEqual(sc.history_storage, z.history_storage);
+    try testing.expectEqual(sc.deposit, z.deposit);
+    try testing.expectEqual(sc.withdrawal_request, z.withdrawal_request);
+    try testing.expectEqual(sc.consolidation_request, z.consolidation_request);
+    try testing.expectEqual(sc.builder_deposit_request, z.builder_deposit_request);
+    try testing.expectEqual(sc.builder_exit_request, z.builder_exit_request);
 }
 
 test "addToForcedTxRollingHash matches Readme.md's §6.3 forced-tx rolling-hash formula" {
@@ -252,7 +290,7 @@ fn decodeFixtureTx(alloc: std.mem.Allocator) !types.TxInput {
 fn recoverTxSender(alloc: std.mem.Allocator, signed_tx_rlp: []const u8) ![20]u8 {
     const decoded = try executor.executor_tx_decode.decodeTxs(alloc, &.{signed_tx_rlp});
     var tx = decoded[0];
-    return (try api.recoverSenderFn(alloc, &tx, CHAIN_ID)).?;
+    return (try api.recoverSenderFn(alloc, &tx, CHAIN_ID, .amsterdam)).?;
 }
 
 test "recoverSender recovers the known signer of the signed-tx fixture" {
@@ -261,7 +299,7 @@ test "recoverSender recovers the known signer of the signed-tx fixture" {
     const alloc = arena.allocator();
 
     var tx = try decodeFixtureTx(alloc);
-    const sender = (try api.recoverSenderFn(alloc, &tx, CHAIN_ID)).?;
+    const sender = (try api.recoverSenderFn(alloc, &tx, CHAIN_ID, .amsterdam)).?;
     try testing.expectEqualSlices(u8, &EXPECTED_SENDER, &sender);
 }
 
@@ -767,22 +805,25 @@ test "readL1L2BridgeState reads the number and rolling hash from real L2MessageS
     const number: u64 = 7;
     const hash_value: [32]u8 = repeat(32, 0x77);
 
-    var index = try mpt.buildNodeIndex(alloc, &.{});
-    defer index.deinit();
+    // Every trie node the chained updates create accumulates here; the read-side index is built from it.
+    var nodes: std.ArrayListUnmanaged([]const u8) = .empty;
 
     // The message number.
     var storage_root = EMPTY_TRIE_HASH;
     const number_slot = api.u64ToSlot32Fn(280);
-    try mpt.updateStorageChainedIndexed(alloc, &storage_root, number_slot, @as(u256, number), &index);
+    try mpt.updateStorageChained(alloc, &storage_root, number_slot, @as(u256, number), &.{}, &nodes);
 
     // The rolling hash keyed by that same number.
     const rolling_hash_slot = api.mappingSlotFn(api.u64ToSlot32Fn(281), api.u64ToSlot32Fn(number));
     const hash_as_u256 = std.mem.readInt(u256, &hash_value, .big);
-    try mpt.updateStorageChainedIndexed(alloc, &storage_root, rolling_hash_slot, hash_as_u256, &index);
+    try mpt.updateStorageChained(alloc, &storage_root, rolling_hash_slot, hash_as_u256, &.{}, &nodes);
 
     const account_rlp = try accountLeafValue(alloc, 0, 0, storage_root, KECCAK_EMPTY);
     var state_root = EMPTY_TRIE_HASH;
-    try mpt.updateAccountChainedIndexed(alloc, &state_root, mpt.keccak256(&l2_ms_address), account_rlp, &index);
+    try mpt.updateAccountChained(alloc, &state_root, mpt.keccak256(&l2_ms_address), account_rlp, &.{}, &nodes);
+
+    var index = try mpt.buildNodeIndex(alloc, nodes.items);
+    defer index.deinit();
 
     const bridge_state = try api.readL1L2BridgeStateFn(state_root, l2_ms_address, &index);
     try testing.expectEqualSlices(u8, &hash_value, &bridge_state.hash);
@@ -797,16 +838,18 @@ test "readL1L2BridgeState rejects a message number that overflows u64" {
     const l2_ms_address = repeat(20, 0x22);
     const overflowing_number: u256 = @as(u256, 1) << 64;
 
-    var index = try mpt.buildNodeIndex(alloc, &.{});
-    defer index.deinit();
+    var nodes: std.ArrayListUnmanaged([]const u8) = .empty;
 
     var storage_root = EMPTY_TRIE_HASH;
     const number_slot = api.u64ToSlot32Fn(280);
-    try mpt.updateStorageChainedIndexed(alloc, &storage_root, number_slot, overflowing_number, &index);
+    try mpt.updateStorageChained(alloc, &storage_root, number_slot, overflowing_number, &.{}, &nodes);
 
     const account_rlp = try accountLeafValue(alloc, 0, 0, storage_root, KECCAK_EMPTY);
     var state_root = EMPTY_TRIE_HASH;
-    try mpt.updateAccountChainedIndexed(alloc, &state_root, mpt.keccak256(&l2_ms_address), account_rlp, &index);
+    try mpt.updateAccountChained(alloc, &state_root, mpt.keccak256(&l2_ms_address), account_rlp, &.{}, &nodes);
+
+    var index = try mpt.buildNodeIndex(alloc, nodes.items);
+    defer index.deinit();
 
     try testing.expectError(
         error.RollingHashNumberOverflow,

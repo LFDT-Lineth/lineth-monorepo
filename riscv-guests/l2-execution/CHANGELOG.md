@@ -10,6 +10,7 @@
 - *(riscv-guest)* RiscV guests release workflow (#4102)
 - *(riscv-guest)* Setting up the release workflow (#4119)
 - *(riscv-guest)* Changing the output of the guest program to include the plain PI + its hash (#4092)
+- *(riscv-guest)* Bump zesu to 2835883 and pass system contracts at runtime (#4265)
 
 ### 🐛 Bug Fixes
 

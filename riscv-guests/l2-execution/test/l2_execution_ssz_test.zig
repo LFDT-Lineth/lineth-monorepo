@@ -10,6 +10,19 @@ fn repeat20(byte: u8) [20]u8 {
     return @splat(byte);
 }
 
+// Distinct bytes per field, so a field swap in the codec cannot round-trip.
+fn sampleSystemContracts() l2_execution_ssz.SystemContracts {
+    return .{
+        .beacon_roots = repeat20(0xa1),
+        .history_storage = repeat20(0xa2),
+        .deposit = repeat20(0xa3),
+        .withdrawal_request = repeat20(0xa4),
+        .consolidation_request = repeat20(0xa5),
+        .builder_deposit_request = repeat20(0xa6),
+        .builder_exit_request = repeat20(0xa7),
+    };
+}
+
 // A hand-built input value — readable, diffable Zig source, not an opaque SSZ blob a human can't
 // review or hand-edit when the schema changes. Two payloads, with forced transactions covering a
 // non-empty signed_tx_rlp and a different acceptance outcome, exercise every variable-length branch
@@ -35,6 +48,7 @@ fn sampleInput() l2_execution_ssz.L2ExecutionProofPrivateInput {
             .l2_message_service_address = repeat20(0x11),
             .coinbase = repeat20(0x00),
             .chain_id = 59144,
+            .system_contracts = sampleSystemContracts(),
         },
         .payloads = &payloads,
     };
@@ -54,6 +68,7 @@ test "input: encode then decode round-trips every field" {
     try std.testing.expectEqual(value.chain_config.chain_id, decoded.chain_config.chain_id);
     try std.testing.expectEqualSlices(u8, &value.chain_config.l2_message_service_address, &decoded.chain_config.l2_message_service_address);
     try std.testing.expectEqualSlices(u8, &value.chain_config.coinbase, &decoded.chain_config.coinbase);
+    try std.testing.expectEqual(value.chain_config.system_contracts, decoded.chain_config.system_contracts);
     try std.testing.expectEqual(value.payloads.len, decoded.payloads.len);
 
     for (value.payloads, decoded.payloads) |want, got| {
@@ -66,6 +81,20 @@ test "input: encode then decode round-trips every field" {
             try std.testing.expectEqualSlices(u8, want_ftx.signed_tx_rlp, got_ftx.signed_tx_rlp);
         }
     }
+}
+
+test "input: system contracts sit after chain_id in field order, payloads offset follows" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    const encoded = try l2_execution_ssz.encodeInput(alloc, sampleInput());
+    // schema(2) + hash(32) + u64(8) + l2ms(20) + coinbase(20) + chain_id(8) = 90.
+    for (0..7) |i| {
+        const want: [20]u8 = @splat(@intCast(0xa1 + i));
+        try std.testing.expectEqualSlices(u8, &want, encoded[90 + 20 * i ..][0..20]);
+    }
+    try std.testing.expectEqual(@as(u32, 232), std.mem.readInt(u32, encoded[230..234], .little));
 }
 
 const sample_messages = [_][32]u8{repeat32(0x08)};
@@ -190,11 +219,11 @@ fn nextMultipleOf4(n: usize) usize {
 }
 
 // Offsets that are protocol-fixed (documented in this module's own header comment) rather than
-// attacker-influenced: a 2-byte schema id, then the input's 92-byte fixed head
-// (hash(32)+u64(8)+chain_config(20+20+8)+payloads-offset(4)) — so the payloads-offset field sits at
-// body offset 88, and the payloads variable region always starts right after it.
+// attacker-influenced: a 2-byte schema id, then the input's 232-byte fixed head
+// (hash(32)+u64(8)+chain_config(20+20+8+7*20)+payloads-offset(4)) — so the payloads-offset field
+// sits at body offset 228, and the payloads variable region always starts right after it.
 const SCHEMA_SIZE: usize = 2;
-const INPUT_FIXED_SIZE: usize = 92;
+const INPUT_FIXED_SIZE: usize = 232;
 const PAYLOADS_REGION_START: usize = SCHEMA_SIZE + INPUT_FIXED_SIZE;
 
 /// Locate payload0's and payload1's absolute start offsets in an `encodeInput` buffer, by reading

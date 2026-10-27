@@ -17,6 +17,7 @@
 - *(prover-ray)* Opt-in module groups in the PCS commitment layout (#4271)
 - *(prover-ray)* Uniform pair leaves for module-grouped commitments (#4272)
 - *(prover-ray)* Minimum size per dynamic module (#4288)
+- *(riscv-guest)* Bump zesu to 2835883 and pass system contracts at runtime (#4265)
 
 ### 🐛 Bug Fixes
 

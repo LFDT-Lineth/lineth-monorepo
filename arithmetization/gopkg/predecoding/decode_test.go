@@ -100,14 +100,20 @@ func TestPredecodeRejectsInvalidExecutableRanges(t *testing.T) {
 }
 
 func TestDecodedProgramEncodeInputsReturnsFreshBytes(t *testing.T) {
-	program := DecodedProgram{InstructionBase: 0x11223344, Decoded: []byte{1, 2, 3}}
-	first := program.EncodeInputs()
-	second := program.EncodeInputs()
-	if got := binary.BigEndian.Uint64(first[InstructionBaseInput]); got != program.InstructionBase {
+	var (
+		program       = DecodedProgram{InstructionBase: 0x11223344, Decoded: []byte{1, 2, 3}}
+		first         = program.EncodeInputs()
+		second        = program.EncodeInputs()
+		firstDecoded  = first[DecodedInput]
+		secondDecoded = second[DecodedInput]
+	)
+	//
+	if got := first[InstructionBaseInput]; binary.BigEndian.Uint64(got.Bytes()) != program.InstructionBase {
 		t.Errorf("instruction base = %#x, want %#x", got, program.InstructionBase)
 	}
-	first[DecodedInput][0] = 0xff
-	if second[DecodedInput][0] != 1 || program.Decoded[0] != 1 {
+	//
+	firstDecoded.Bytes()[0] = 0xff
+	if secondDecoded.Bytes()[0] != 1 || program.Decoded[0] != 1 {
 		t.Fatal("EncodeInputs() returned bytes alias cached decoded program")
 	}
 }

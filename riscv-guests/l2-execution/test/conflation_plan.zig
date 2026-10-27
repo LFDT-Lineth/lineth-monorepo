@@ -183,8 +183,10 @@ pub const StubEngine = struct {
         alloc: std.mem.Allocator,
         si: input.StatelessInput,
         fork_name: []const u8,
+        system_contracts: input.SystemContracts,
         node_index: *mpt.NodeIndex,
     ) !StubProofOutput {
+        _ = system_contracts;
         const ep = &si.new_payload_request.execution_payload;
         const call_index = next_index;
         next_index += 1;
@@ -204,7 +206,7 @@ pub const StubEngine = struct {
             const block_logs: []const []const types.Log = if (call_index < built.tx_logs.len) built.tx_logs[call_index] else &.{};
 
             for (decoded_txs, 0..) |*tx, tx_idx| {
-                const from = try tx_signing.recoverSender(alloc, tx, si.chain_config.chain_id) orelse
+                const from = try tx_signing.recoverSender(alloc, tx, si.chain_config.chain_id, .amsterdam) orelse
                     return error.StubEngineSenderRecoveryFailed;
                 const logs: []const types.Log = if (tx_idx < block_logs.len) block_logs[tx_idx] else &.{};
                 try receipts.append(alloc, .{
@@ -280,30 +282,32 @@ fn buildWorld(alloc: std.mem.Allocator, l2ms_address: ?[20]u8, bridge: BridgeVal
         return .{ .root = mpt.builder.EMPTY_TRIE_HASH, .nodes = &.{} };
     }
 
-    var index = try mpt.buildNodeIndex(alloc, &.{});
+    // Every trie node the chained updates create accumulates here; deduplicated by hash below.
+    var nodes: std.ArrayListUnmanaged([]const u8) = .empty;
     var state_root = mpt.builder.EMPTY_TRIE_HASH;
 
     if (l2ms_address) |address| {
         var storage_root = mpt.builder.EMPTY_TRIE_HASH;
         const number_slot = l2_execution.test_api.u64ToSlot32Fn(LAST_ANCHORED_L1_MESSAGE_NUMBER_SLOT);
-        try mpt.updateStorageChainedIndexed(alloc, &storage_root, number_slot, @as(u256, bridge.number), &index);
+        try mpt.updateStorageChained(alloc, &storage_root, number_slot, @as(u256, bridge.number), &.{}, &nodes);
 
         const rolling_hash_slot = l2_execution.test_api.mappingSlotFn(
             l2_execution.test_api.u64ToSlot32Fn(L1_ROLLING_HASHES_MAPPING_BASE_SLOT),
             l2_execution.test_api.u64ToSlot32Fn(bridge.number),
         );
         const hash_value = std.mem.readInt(u256, &bridge.hash, .big);
-        try mpt.updateStorageChainedIndexed(alloc, &storage_root, rolling_hash_slot, hash_value, &index);
+        try mpt.updateStorageChained(alloc, &storage_root, rolling_hash_slot, hash_value, &.{}, &nodes);
 
         const account_rlp = try buildAccountRlp(alloc, 0, 0, storage_root, primitives.KECCAK_EMPTY);
-        try mpt.updateAccountChainedIndexed(alloc, &state_root, mpt.keccak256(&address), account_rlp, &index);
+        try mpt.updateAccountChained(alloc, &state_root, mpt.keccak256(&address), account_rlp, &.{}, &nodes);
     }
 
     for (accounts) |account| {
         const account_rlp = try buildAccountRlp(alloc, account.nonce, account.balance, mpt.builder.EMPTY_TRIE_HASH, primitives.KECCAK_EMPTY);
-        try mpt.updateAccountChainedIndexed(alloc, &state_root, mpt.keccak256(&account.address), account_rlp, &index);
+        try mpt.updateAccountChained(alloc, &state_root, mpt.keccak256(&account.address), account_rlp, &.{}, &nodes);
     }
 
+    var index = try mpt.buildNodeIndex(alloc, nodes.items);
     return .{ .root = state_root, .nodes = try collectNodeRlps(alloc, &index) };
 }
 
@@ -362,6 +366,8 @@ pub const ConflationPlan = struct {
 
     chain_id: u64 = 59144,
     coinbase: [20]u8 = DEFAULT_COINBASE,
+    /// Range-level system contracts; zesu's mainnet defaults unless a scenario overrides them.
+    system_contracts: l2_execution_ssz.SystemContracts = l2_execution_ssz.SystemContracts.from(input.SystemContracts{}),
     /// Zero means bridge-suppressed mode: the L1<->L2 bridge rolling-hash reads and the L2->L1
     /// message scan are both skipped.
     l2_message_service_address: [20]u8 = ZERO_ADDRESS,
@@ -417,6 +423,7 @@ pub const ConflationPlan = struct {
             .l2_message_service_address = self.l2_message_service_address,
             .coinbase = self.coinbase,
             .chain_id = self.chain_id,
+            .system_contracts = self.system_contracts,
         };
 
         if (n == 0) {

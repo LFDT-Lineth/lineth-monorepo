@@ -21,13 +21,22 @@
 //!     L2MessageService account and no post-state witness coverage — cannot satisfy. See
 //!     `l2_execution.zig`'s `bridge_suppressed` handling and its Python mirror in
 //!     `rollup_spec/l2_execution.py`.
+//!   - `chain_config.system_contracts`: zesu's own defaults for the vanilla chain_id
+//!     (`defaultSystemContracts`), i.e. exactly what a vanilla zesu run would use.
 //!   - `parent_ftx_rolling_hash` / `parent_last_processed_ftx_number`: zero — there is no prior
 //!     range, so both start at their genesis values.
 
 const std = @import("std");
 
 const ssz_decode = @import("zesu_ssz_decode");
+const input = @import("zesu_input");
 const l2_execution_ssz = @import("l2_execution_ssz");
+
+/// The system contracts zesu itself assumes for `chain_id` (mainnet addresses, plus known testnet
+/// deposit contracts) — what the EF fixtures were generated against.
+pub fn defaultSystemContracts(chain_id: u64) l2_execution_ssz.SystemContracts {
+    return l2_execution_ssz.SystemContracts.from(input.SystemContracts.forChainId(chain_id));
+}
 
 /// The dummy L2MessageService address: the zero address, `runL2Execution`'s sentinel for "no
 /// L2MessageService configured" (see the file-level doc comment above). Kept as a single named
@@ -58,6 +67,7 @@ pub fn wrapVanillaAsExtended(alloc: std.mem.Allocator, vanilla_stateless_input_s
             .chain_id = si.chain_config.chain_id,
             .coinbase = fee_recipient,
             .l2_message_service_address = DUMMY_L2_MESSAGE_SERVICE_ADDRESS,
+            .system_contracts = defaultSystemContracts(si.chain_config.chain_id),
         },
         .payloads = payloads,
     };

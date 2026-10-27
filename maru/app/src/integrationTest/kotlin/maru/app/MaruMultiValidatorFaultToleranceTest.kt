@@ -26,7 +26,6 @@ class MaruMultiValidatorFaultToleranceTest {
   @BeforeEach
   fun setUp() {
     network = MultiValidatorNetwork()
-    network.startBesuNodes()
   }
 
   @AfterEach
