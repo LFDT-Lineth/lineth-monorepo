@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/consensys/gnark-crypto/field/koalabear/vortex"
 	"github.com/stretchr/testify/require"
 )
 
@@ -87,8 +88,8 @@ func TestResetWithoutPriorSum(t *testing.T) {
 	require.Equal(t, r1, r2, "Reset() must clear the buffer even when SumDigest was not called first")
 }
 
-// TestSumDigestIdempotent checks that calling SumDigest again on an already-flushed hasher is a no-op.
-func TestSumDigestIdempotent(t *testing.T) {
+// TestSumElementIdempotent checks that SumDigest does not change the state.
+func TestSumElementIdempotent(t *testing.T) {
 	vals := randomElems(t, 9)
 
 	h := NewMDHasher()
@@ -99,13 +100,13 @@ func TestSumDigestIdempotent(t *testing.T) {
 	require.Equal(t, r1, r2)
 }
 
-// TestGetStateOctupletNonDestructive checks that GetStateOctuplet does not alter the ongoing hash.
-func TestGetStateOctupletNonDestructive(t *testing.T) {
+// TestSumElementNonDestructive checks that SumDigest does not alter the ongoing hash.
+func TestSumElementNonDestructive(t *testing.T) {
 	vals := randomElems(t, 11)
 
 	h1 := NewMDHasher()
 	h1.WriteElements(vals[:3]...)
-	_ = h1.GetStateOctuplet() // must not consume the buffer
+	_ = h1.SumDigest() // must not consume the buffer
 	h1.WriteElements(vals[3:]...)
 	r1 := h1.SumDigest()
 
@@ -113,7 +114,7 @@ func TestGetStateOctupletNonDestructive(t *testing.T) {
 	h2.WriteElements(vals...)
 	r2 := h2.SumDigest()
 
-	require.Equal(t, r1, r2, "GetStateOctuplet must not consume the buffer")
+	require.Equal(t, r1, r2, "SumDigest must not consume the buffer")
 }
 
 // TestLeftPadding checks that a partial block is left-padded: the element lands at the rightmost position.
@@ -159,48 +160,22 @@ func TestBlockBoundaries(t *testing.T) {
 	}
 }
 
-// TestWriteWriteElementsConsistency checks that Write(canonical bytes) and WriteElements agree.
-func TestWriteWriteElementsConsistency(t *testing.T) {
-	vals := randomElems(t, 10)
-
-	buf := make([]byte, 0, len(vals)*field.Bytes)
-	for _, v := range vals {
-		b := v.Bytes()
-		buf = append(buf, b[:]...)
+// TestCompressMatchesVortex checks that Compress is bit-identical to the
+// previous implementation based on vortex.CompressPoseidon2.
+func TestCompressMatchesVortex(t *testing.T) {
+	for range 16 {
+		l, r := field.RandomOctuplet(), field.RandomOctuplet()
+		require.Equal(t, vortex.CompressPoseidon2(l, r), Compress(l, r))
 	}
-
-	h1 := NewMDHasher()
-	_, err := h1.Write(buf)
-	require.NoError(t, err)
-	r1 := h1.SumDigest()
-
-	h2 := NewMDHasher()
-	h2.WriteElements(vals...)
-	r2 := h2.SumDigest()
-
-	require.Equal(t, r1, r2, "Write(canonical bytes) and WriteElements must produce the same hash")
 }
 
-// TestHashVecMatchesMDHasher checks that HashVec produces the same result as a manual MDHasher.
-func TestHashVecMatchesMDHasher(t *testing.T) {
-	vals := randomElems(t, 17)
-
-	r1 := HashVec(vals...)
-
-	h := NewMDHasher()
-	h.WriteElements(vals...)
-	r2 := h.SumDigest()
-
-	require.Equal(t, r1, r2)
-}
-
-// TestSetGetStateRoundtrip checks that SetStateOctuplet followed by GetStateOctuplet (with empty buffer) is identity.
+// TestSetGetStateRoundtrip checks that SetStateDigest followed by SumDigest (with empty buffer) is identity.
 func TestSetGetStateRoundtrip(t *testing.T) {
 	s := field.RandomOctuplet()
 
 	h := NewMDHasher()
-	h.SetStateOctuplet(s)
-	got := h.GetStateOctuplet()
+	h.SetStateDigest(s)
+	got := h.SumDigest()
 
 	require.Equal(t, s, got)
 }
