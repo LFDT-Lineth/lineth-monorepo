@@ -353,6 +353,56 @@ test "ecrecover rejects malformed signatures" {
     }
 }
 
+// Precompile 0x01 rows (input = hash ‖ v ‖ r ‖ s, result = padded address): geth's high-s ValidKey
+// and its low-s twin, private key 1 over the digests 0, n and 2²⁵⁶ − 1, and boundary rejects.
+const ecrecover_csv = @embedFile("ecrecover_csv");
+
+test "secp256k1 backends match the ecrecover vectors" {
+    var lines = std.mem.splitScalar(u8, ecrecover_csv, '\n');
+    _ = lines.next(); // header
+    while (lines.next()) |line| {
+        if (line.len == 0) continue;
+        var cols = std.mem.splitScalar(u8, line, ',');
+        var input: [128]u8 = undefined;
+        _ = try std.fmt.hexToBytes(&input, cols.next().?);
+        const result = cols.next().?;
+        const msg = input[0..32];
+        try std.testing.expect(std.mem.allEqual(u8, input[32..63], 0) and (input[63] == 27 or input[63] == 28));
+        const sig = input[64..128];
+
+        inline for (secp256k1_backends) |backend| {
+            var pubkey: [64]u8 = undefined;
+            const ok = backend.ecrecover(msg, sig, input[63] - 27, &pubkey);
+            try std.testing.expectEqual(result.len != 0, ok);
+            if (ok) {
+                var expected: [32]u8 = undefined;
+                _ = try std.fmt.hexToBytes(&expected, result);
+                var hash: [32]u8 = undefined;
+                std.crypto.hash.sha3.Keccak256.hash(&pubkey, &hash, .{});
+                try std.testing.expectEqualSlices(u8, expected[12..], hash[12..]);
+
+                var verified = false;
+                backend.secp256k1Verify(msg, sig, &pubkey, &verified);
+                try std.testing.expect(verified);
+            }
+        }
+    }
+}
+
+test "secp256k1 verify reduces R.x mod n" {
+    // R.x = n + 2, so r = 2; Q comes from the recovery formula with that R.
+    const msg = hexArr(32, "000000000000000000000000000000000000000000000000000000000badc0de");
+    const sig = hexArr(64, "0000000000000000000000000000000000000000000000000000000000000002" ++
+        "0000000000000000000000000000000000000000000000000000000012345678");
+    const pubkey = hexArr(64, "5b1975d0e5836265325beaeffed4536bebd7df3ad6af6c19de3a70c079cbb3fc" ++
+        "2c53415b15dcd29229fe04f3c3a7073e30895f982ca3abb8ff17caaad94022ee");
+    inline for (secp256k1_backends) |backend| {
+        var verified = false;
+        backend.secp256k1Verify(&msg, &sig, &pubkey, &verified);
+        try std.testing.expect(verified);
+    }
+}
+
 test "secp256k1 backends agree on arbitrary inputs" {
     var prng = std.Random.DefaultPrng.init(0x5ec9_256b);
     const rng = prng.random();

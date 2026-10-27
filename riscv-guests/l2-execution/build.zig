@@ -239,6 +239,9 @@ pub fn build(b: *std.Build) void {
                 .root_source_file = zesu_native.path(spec[1]),
             });
         }
+        guest_crypto_tests.root_module.addAnonymousImport("ecrecover_csv", .{
+            .root_source_file = b.path("test/testdata/ecrecover.csv"),
+        });
         test_step.dependOn(&b.addRunArtifact(guest_crypto_tests).step);
 
         const guest_common_native_mod = b.dependency("guest_common", .{ .target = native_target, .optimize = host_optimize }).module("guest_common");
