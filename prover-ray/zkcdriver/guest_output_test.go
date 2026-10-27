@@ -51,7 +51,9 @@ func newGuestOutputSystem(t *testing.T, elf []byte, extraActions ...wiop.ProverA
 	}
 	proverCompilePipeline(sys)
 	guestOutput := outputs["guest_output"]
-	return sys, driver, &zkcdriver.PreReadInputs{Inputs: inputs}, guestOutput.Bytes()
+	// Bytes() is nil for a guest that wrote nothing, whereas require.Equal tells
+	// a nil []byte from an empty one; normalise so callers compare by content.
+	return sys, driver, &zkcdriver.PreReadInputs{Inputs: inputs}, append([]byte{}, guestOutput.Bytes()...)
 }
 
 // TestGuestPublicOutputs proves and verifies the all-in-one guest, which writes
