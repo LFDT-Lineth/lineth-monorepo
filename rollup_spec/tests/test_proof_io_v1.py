@@ -110,8 +110,6 @@ def _sample_proof() -> L2ExecutionProof:
         end_block_number=U64(1000503),
         end_block_timestamp=U64(1763000123),
         l2_l1_messages=[Hash32(bytes([0x08]) * 32)],
-        parent_l1_l2_bridge_rolling_hash=Hash32(bytes([0x02]) * 32),
-        parent_l1_l2_bridge_rolling_hash_message_number=U64(0),
         end_l1_l2_bridge_rolling_hash=Hash32(bytes([0x03]) * 32),
         end_l1_l2_bridge_rolling_hash_message_number=U64(5),
         dynamic_chain_config_hash=Hash32(bytes([0xC0]) * 32),
@@ -297,8 +295,7 @@ def test_encode_response_shape_and_values() -> None:
     assert pi["endProcessedFtxNumber"] == 18
     assert set(pi.keys()) == {
         "parentBlockHash", "endBlockHash", "endBlockNumber", "endBlockTimestamp",
-        "l2L1Messages", "parentL1L2BridgeRollingHash",
-        "parentL1L2BridgeRollingHashMessageNumber", "endL1L2BridgeRollingHash",
+        "l2L1Messages", "endL1L2BridgeRollingHash",
         "endL1L2BridgeRollingHashMessageNumber", "dynamicChainConfigHash",
         "parentFtxRollingHash", "parentFtxNumber", "endFtxRollingHash",
             "endProcessedFtxNumber", "filteredAddresses", "txFromsHash",
@@ -338,8 +335,6 @@ def _sample_rollup_public_input() -> RollupPublicInput:
     return RollupPublicInput(
         end_block_number=U64(1000520),
         end_block_timestamp=U64(1763000457),
-        parent_l1_l2_bridge_rolling_hash=Hash32(bytes([0x22]) * 32),
-        parent_l1_l2_bridge_rolling_hash_message_number=U64(0),
         end_l1_l2_bridge_rolling_hash=Hash32(bytes([0x33]) * 32),
         end_l1_l2_bridge_rolling_hash_message_number=U64(7),
         dynamic_chain_config_hash=Hash32(bytes([0xC0]) * 32),
@@ -563,7 +558,6 @@ def test_encode_rollup_response_shape_and_values() -> None:
     assert pi["programVks"] == ["0x" + ("aa" * 32)]
     assert set(pi.keys()) == {
         "endBlockNumber", "endBlockTimestamp",
-        "parentL1L2BridgeRollingHash", "parentL1L2BridgeRollingHashMessageNumber",
         "endL1L2BridgeRollingHash", "endL1L2BridgeRollingHashMessageNumber",
         "dynamicChainConfigHash", "parentFtxRollingHash", "parentFtxNumber",
         "endFtxRollingHash", "endProcessedFtxNumber",
@@ -730,7 +724,6 @@ def test_encode_aggregation_response_is_l1_sufficient() -> None:
     assert pi["programIds"] == ["0x" + ("11" * 32), "0x" + ("22" * 32)]
     assert set(pi.keys()) == {
         "endBlockNumber", "endBlockTimestamp",
-        "parentL1L2BridgeRollingHash", "parentL1L2BridgeRollingHashMessageNumber",
         "endL1L2BridgeRollingHash", "endL1L2BridgeRollingHashMessageNumber",
         "dynamicChainConfigHash", "parentFtxRollingHash", "parentFtxNumber",
         "endFtxRollingHash", "endProcessedFtxNumber",

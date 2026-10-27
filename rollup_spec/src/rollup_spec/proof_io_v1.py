@@ -332,10 +332,6 @@ def encode_response(proof: L2ExecutionProof, prover_version: str, *, program_vk:
             "endBlockNumber": int(pi.end_block_number),
             "endBlockTimestamp": int(pi.end_block_timestamp),
             "l2L1Messages": [_hx(h) for h in pi.l2_l1_messages],
-            "parentL1L2BridgeRollingHash": _hx(pi.parent_l1_l2_bridge_rolling_hash),
-            "parentL1L2BridgeRollingHashMessageNumber": int(
-                pi.parent_l1_l2_bridge_rolling_hash_message_number
-            ),
             "endL1L2BridgeRollingHash": _hx(pi.end_l1_l2_bridge_rolling_hash),
             "endL1L2BridgeRollingHashMessageNumber": int(
                 pi.end_l1_l2_bridge_rolling_hash_message_number
@@ -401,8 +397,6 @@ def _decode_l2_execution_public_input(obj: dict, ctx: str) -> L2ExecutionProofPu
         end_block_timestamp=n("endBlockTimestamp"),
         l2_l1_messages=[Hash32(_bytes_from_hex(h, f"{ctx}l2L1Messages[{i}]"))
                         for i, h in enumerate(_require_list(obj, "l2L1Messages", ctx))],
-        parent_l1_l2_bridge_rolling_hash=h("parentL1L2BridgeRollingHash"),
-        parent_l1_l2_bridge_rolling_hash_message_number=n("parentL1L2BridgeRollingHashMessageNumber"),
         end_l1_l2_bridge_rolling_hash=h("endL1L2BridgeRollingHash"),
         end_l1_l2_bridge_rolling_hash_message_number=n("endL1L2BridgeRollingHashMessageNumber"),
         dynamic_chain_config_hash=h("dynamicChainConfigHash"),
@@ -555,10 +549,6 @@ def _encode_finalization_shared_inputs(pi) -> dict:
     return {
         "endBlockNumber": int(pi.end_block_number),
         "endBlockTimestamp": int(pi.end_block_timestamp),
-        "parentL1L2BridgeRollingHash": _hx(pi.parent_l1_l2_bridge_rolling_hash),
-        "parentL1L2BridgeRollingHashMessageNumber": int(
-            pi.parent_l1_l2_bridge_rolling_hash_message_number
-        ),
         "endL1L2BridgeRollingHash": _hx(pi.end_l1_l2_bridge_rolling_hash),
         "endL1L2BridgeRollingHashMessageNumber": int(
             pi.end_l1_l2_bridge_rolling_hash_message_number
@@ -646,8 +636,6 @@ def _decode_rollup_public_input(obj: dict, ctx: str) -> RollupPublicInput:
     return RollupPublicInput(
         end_block_number=n("endBlockNumber"),
         end_block_timestamp=n("endBlockTimestamp"),
-        parent_l1_l2_bridge_rolling_hash=h("parentL1L2BridgeRollingHash"),
-        parent_l1_l2_bridge_rolling_hash_message_number=n("parentL1L2BridgeRollingHashMessageNumber"),
         end_l1_l2_bridge_rolling_hash=h("endL1L2BridgeRollingHash"),
         end_l1_l2_bridge_rolling_hash_message_number=n("endL1L2BridgeRollingHashMessageNumber"),
         dynamic_chain_config_hash=h("dynamicChainConfigHash"),

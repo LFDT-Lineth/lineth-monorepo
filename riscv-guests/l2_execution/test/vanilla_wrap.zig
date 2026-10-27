@@ -15,12 +15,10 @@
 //!     `FeeRecipientMismatch` check passes.
 //!   - `chain_config.l2_message_service_address`: `DUMMY_L2_MESSAGE_SERVICE_ADDRESS` below, the zero
 //!     address. This is not an arbitrary placeholder: it's the sentinel `runL2Execution` recognizes
-//!     as "no L2MessageService configured" and responds to by suppressing the L1<->L2 bridge reads
-//!     entirely (both boundary rolling hashes and message numbers pinned to zero, no L2->L1 message
-//!     extraction) rather than attempting a witness-backed read that EF fixtures — which carry no
-//!     L2MessageService account and no post-state witness coverage — cannot satisfy. See
-//!     `l2_execution.zig`'s `bridge_suppressed` handling and its Python mirror in
-//!     `rollup_spec/l2_execution.py`.
+//!     as "no L2MessageService configured" and responds to by suppressing the L2MessageService log
+//!     scan entirely (the end rolling hash and message number pinned to zero, no L2->L1 message
+//!     extraction), since EF fixtures carry no L2MessageService. See `l2_execution.zig`'s
+//!     `bridge_suppressed` handling and its Python mirror in `rollup_spec/l2_execution.py`.
 //!   - `chain_config.system_contracts`: zesu's own defaults for the vanilla chain_id
 //!     (`defaultSystemContracts`), i.e. exactly what a vanilla zesu run would use.
 //!   - `parent_ftx_rolling_hash` / `parent_last_processed_ftx_number`: zero — there is no prior

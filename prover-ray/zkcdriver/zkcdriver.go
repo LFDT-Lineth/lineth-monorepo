@@ -9,6 +9,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/zkc/pkg/trace"
+	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 	"github.com/LFDT-Lineth/zkc/pkg/util/collection/typed"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/constraints"
@@ -125,7 +126,7 @@ type PreReadInputs struct {
 	// (non-static) input memory of the ZkC program.  For the RISC-V
 	// interpreter, the inputs will include the full binary of the guest program
 	// (hence, some entries could be 100Mb or more).
-	Inputs map[string][]byte
+	Inputs map[string]bit.Array
 	// Errors arising from parsing the input file.
 	Err error
 	// Name of the input file.

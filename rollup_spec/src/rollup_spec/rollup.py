@@ -33,6 +33,7 @@ from .l2_execution import (
     L2ExecutionProofPublicInput,
     VerifiableL2ExecutionProof,
     hash_address_list,
+    last_non_zero_pair,
     merge_filtered_addresses,
 )
 from .l2_execution_ssz import hash_l2_execution_public_inputs
@@ -390,8 +391,6 @@ class RollupPublicInput:
     """
     end_block_number: U64
     end_block_timestamp: U64
-    parent_l1_l2_bridge_rolling_hash: Hash32
-    parent_l1_l2_bridge_rolling_hash_message_number: U64
     end_l1_l2_bridge_rolling_hash: Hash32
     end_l1_l2_bridge_rolling_hash_message_number: U64
     dynamic_chain_config_hash: Hash32
@@ -593,18 +592,20 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     for left, right in zip(l2_execution_proofs, l2_execution_proofs[1:]):
         assert_l2_execution_continuity(left.public_inputs, right.public_inputs)
 
+    end_rolling_hash, end_rolling_hash_number = last_non_zero_pair(
+        (
+            proof.public_inputs.end_l1_l2_bridge_rolling_hash,
+            proof.public_inputs.end_l1_l2_bridge_rolling_hash_message_number,
+        )
+        for proof in l2_execution_proofs
+    )
+
     public_inputs = RollupPublicInput(
         end_block_number=last_proof.public_inputs.end_block_number,
         end_block_timestamp=last_proof.public_inputs.end_block_timestamp,
         l2_l1_messages=concatenated_l2_l1_messages,
-        parent_l1_l2_bridge_rolling_hash=first_proof.public_inputs.parent_l1_l2_bridge_rolling_hash,
-        parent_l1_l2_bridge_rolling_hash_message_number=(
-            first_proof.public_inputs.parent_l1_l2_bridge_rolling_hash_message_number
-        ),
-        end_l1_l2_bridge_rolling_hash=last_proof.public_inputs.end_l1_l2_bridge_rolling_hash,
-        end_l1_l2_bridge_rolling_hash_message_number=(
-            last_proof.public_inputs.end_l1_l2_bridge_rolling_hash_message_number
-        ),
+        end_l1_l2_bridge_rolling_hash=end_rolling_hash,
+        end_l1_l2_bridge_rolling_hash_message_number=end_rolling_hash_number,
         dynamic_chain_config_hash=first_proof.public_inputs.dynamic_chain_config_hash,
         parent_ftx_rolling_hash=first_proof.public_inputs.parent_ftx_rolling_hash,
         parent_ftx_number=first_proof.public_inputs.parent_ftx_number,
@@ -679,10 +680,6 @@ def assert_l2_execution_continuity(
 ) -> None:
     if left.end_block_hash != right.parent_block_hash:
         raise Exception("l2-execution block-hash continuity failed")
-    if left.end_l1_l2_bridge_rolling_hash != right.parent_l1_l2_bridge_rolling_hash:
-        raise Exception("l2-execution L1-to-L2 rolling-hash continuity failed")
-    if left.end_l1_l2_bridge_rolling_hash_message_number != right.parent_l1_l2_bridge_rolling_hash_message_number:
-        raise Exception("l2-execution L1-to-L2 rolling-hash-number continuity failed")
     if left.dynamic_chain_config_hash != right.dynamic_chain_config_hash:
         raise Exception("l2-execution dynamic chain configuration continuity failed")
     if left.end_ftx_rolling_hash != right.parent_ftx_rolling_hash:

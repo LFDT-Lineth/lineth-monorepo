@@ -24,8 +24,6 @@ fun createRollupAggregationProofResponseV1(
     publicInputs = FinalizationPublicInputs(
       endBlockNumber = endBlockNumber,
       endBlockTimestamp = endBlockTimestamp,
-      parentL1L2BridgeMessageRollingHash = Random.nextBytes(32),
-      parentL1L2BridgeMessageNumber = 1UL,
       endL1L2BridgeMessageRollingHash = Random.nextBytes(32),
       endL1L2BridgeMessageNumber = 2UL,
       dynamicChainConfigHash = Random.nextBytes(32),

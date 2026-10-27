@@ -26,10 +26,6 @@ data class RollupAggregationProofResponseV1JsonResponse(
   val endBlockTimestamp: Long,
   @JsonSerialize(using = ByteArraySerializer::class)
   @JsonDeserialize(using = ByteArrayDeserializer::class)
-  val parentL1L2BridgeMessageRollingHash: ByteArray,
-  val parentL1L2BridgeMessageNumber: Long,
-  @JsonSerialize(using = ByteArraySerializer::class)
-  @JsonDeserialize(using = ByteArrayDeserializer::class)
   val endL1L2BridgeMessageRollingHash: ByteArray,
   val endL1L2BridgeMessageNumber: Long,
   @JsonSerialize(using = ByteArraySerializer::class)
@@ -78,8 +74,6 @@ data class RollupAggregationProofResponseV1JsonResponse(
       publicInputs = FinalizationPublicInputs(
         endBlockNumber = endBlockNumber.toULong(),
         endBlockTimestamp = Instant.fromEpochSeconds(endBlockTimestamp),
-        parentL1L2BridgeMessageRollingHash = parentL1L2BridgeMessageRollingHash,
-        parentL1L2BridgeMessageNumber = parentL1L2BridgeMessageNumber.toULong(),
         endL1L2BridgeMessageRollingHash = endL1L2BridgeMessageRollingHash,
         endL1L2BridgeMessageNumber = endL1L2BridgeMessageNumber.toULong(),
         dynamicChainConfigHash = dynamicChainConfigHash,
@@ -116,8 +110,6 @@ data class RollupAggregationProofResponseV1JsonResponse(
     if (endBlockNumber != other.endBlockNumber) return false
     if (!proof.contentEquals(other.proof)) return false
     if (endBlockTimestamp != other.endBlockTimestamp) return false
-    if (!parentL1L2BridgeMessageRollingHash.contentEquals(other.parentL1L2BridgeMessageRollingHash)) return false
-    if (parentL1L2BridgeMessageNumber != other.parentL1L2BridgeMessageNumber) return false
     if (!endL1L2BridgeMessageRollingHash.contentEquals(other.endL1L2BridgeMessageRollingHash)) return false
     if (endL1L2BridgeMessageNumber != other.endL1L2BridgeMessageNumber) return false
     if (!dynamicChainConfigHash.contentEquals(other.dynamicChainConfigHash)) return false
@@ -145,8 +137,6 @@ data class RollupAggregationProofResponseV1JsonResponse(
     result = 31 * result + endBlockNumber.hashCode()
     result = 31 * result + proof.contentHashCode()
     result = 31 * result + endBlockTimestamp.hashCode()
-    result = 31 * result + parentL1L2BridgeMessageRollingHash.contentHashCode()
-    result = 31 * result + parentL1L2BridgeMessageNumber.hashCode()
     result = 31 * result + endL1L2BridgeMessageRollingHash.contentHashCode()
     result = 31 * result + endL1L2BridgeMessageNumber.hashCode()
     result = 31 * result + dynamicChainConfigHash.contentHashCode()
@@ -186,8 +176,6 @@ data class RollupAggregationProofResponseV1JsonResponse(
         endBlockNumber = response.endBlockNumber.toLong(),
         proof = response.proof,
         endBlockTimestamp = pi.endBlockTimestamp.epochSeconds,
-        parentL1L2BridgeMessageRollingHash = pi.parentL1L2BridgeMessageRollingHash,
-        parentL1L2BridgeMessageNumber = pi.parentL1L2BridgeMessageNumber.toLong(),
         endL1L2BridgeMessageRollingHash = pi.endL1L2BridgeMessageRollingHash,
         endL1L2BridgeMessageNumber = pi.endL1L2BridgeMessageNumber.toLong(),
         dynamicChainConfigHash = pi.dynamicChainConfigHash,

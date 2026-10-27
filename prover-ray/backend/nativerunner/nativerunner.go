@@ -72,24 +72,22 @@ type jsonOutput struct {
 }
 
 type jsonPublicInputs struct {
-	ParentBlockHash                          string   `json:"parentBlockHash"`
-	EndBlockHash                             string   `json:"endBlockHash"`
-	EndBlockNumber                           uint64   `json:"endBlockNumber"`
-	EndBlockTimestamp                        uint64   `json:"endBlockTimestamp"`
-	L2L1Messages                             []string `json:"l2L1Messages"`
-	ParentL1L2BridgeRollingHash              string   `json:"parentL1L2BridgeRollingHash"`
-	ParentL1L2BridgeRollingHashMessageNumber uint64   `json:"parentL1L2BridgeRollingHashMessageNumber"`
-	EndL1L2BridgeRollingHash                 string   `json:"endL1L2BridgeRollingHash"`
-	EndL1L2BridgeRollingHashMessageNumber    uint64   `json:"endL1L2BridgeRollingHashMessageNumber"`
-	DynamicChainConfigHash                   string   `json:"dynamicChainConfigHash"`
-	ParentFtxRollingHash                     string   `json:"parentFtxRollingHash"`
-	ParentFtxNumber                          uint64   `json:"parentFtxNumber"`
-	EndFtxRollingHash                        string   `json:"endFtxRollingHash"`
-	EndProcessedFtxNumber                    uint64   `json:"endProcessedFtxNumber"`
-	FilteredAddresses                        []string `json:"filteredAddresses"`
-	TxFromsHash                              string   `json:"txFromsHash"`
-	BlockCount                               uint64   `json:"blockCount"`
-	L2MessagingBlocksOffsets                 []uint16 `json:"l2MessagingBlocksOffsets"`
+	ParentBlockHash                       string   `json:"parentBlockHash"`
+	EndBlockHash                          string   `json:"endBlockHash"`
+	EndBlockNumber                        uint64   `json:"endBlockNumber"`
+	EndBlockTimestamp                     uint64   `json:"endBlockTimestamp"`
+	L2L1Messages                          []string `json:"l2L1Messages"`
+	EndL1L2BridgeRollingHash              string   `json:"endL1L2BridgeRollingHash"`
+	EndL1L2BridgeRollingHashMessageNumber uint64   `json:"endL1L2BridgeRollingHashMessageNumber"`
+	DynamicChainConfigHash                string   `json:"dynamicChainConfigHash"`
+	ParentFtxRollingHash                  string   `json:"parentFtxRollingHash"`
+	ParentFtxNumber                       uint64   `json:"parentFtxNumber"`
+	EndFtxRollingHash                     string   `json:"endFtxRollingHash"`
+	EndProcessedFtxNumber                 uint64   `json:"endProcessedFtxNumber"`
+	FilteredAddresses                     []string `json:"filteredAddresses"`
+	TxFromsHash                           string   `json:"txFromsHash"`
+	BlockCount                            uint64   `json:"blockCount"`
+	L2MessagingBlocksOffsets              []uint16 `json:"l2MessagingBlocksOffsets"`
 }
 
 // Parse converts the runner's --json output into an Output.
@@ -106,7 +104,6 @@ func Parse(data []byte) (Output, error) {
 	out.StartBlockNumber = j.StartBlockNumber
 	out.PublicInputs.EndBlockNumber = pi.EndBlockNumber
 	out.PublicInputs.EndBlockTimestamp = pi.EndBlockTimestamp
-	out.PublicInputs.ParentL1L2BridgeRollingHashMessageNumber = pi.ParentL1L2BridgeRollingHashMessageNumber
 	out.PublicInputs.EndL1L2BridgeRollingHashMessageNumber = pi.EndL1L2BridgeRollingHashMessageNumber
 	out.PublicInputs.ParentFtxNumber = pi.ParentFtxNumber
 	out.PublicInputs.EndProcessedFtxNumber = pi.EndProcessedFtxNumber
@@ -118,7 +115,6 @@ func Parse(data []byte) (Output, error) {
 	}{
 		{pi.ParentBlockHash, &out.PublicInputs.ParentBlockHash, "parentBlockHash"},
 		{pi.EndBlockHash, &out.PublicInputs.EndBlockHash, "endBlockHash"},
-		{pi.ParentL1L2BridgeRollingHash, &out.PublicInputs.ParentL1L2BridgeRollingHash, "parentL1L2BridgeRollingHash"},
 		{pi.EndL1L2BridgeRollingHash, &out.PublicInputs.EndL1L2BridgeRollingHash, "endL1L2BridgeRollingHash"},
 		{pi.DynamicChainConfigHash, &out.PublicInputs.DynamicChainConfigHash, "dynamicChainConfigHash"},
 		{pi.ParentFtxRollingHash, &out.PublicInputs.ParentFtxRollingHash, "parentFtxRollingHash"},

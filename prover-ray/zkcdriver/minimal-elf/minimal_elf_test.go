@@ -69,7 +69,7 @@ func traceAndCheck(t *testing.T, elf, want []byte) {
 	if !ok {
 		t.Fatalf("expected a %q output, got outputs: %v", "guest_output", outputs)
 	}
-	if !bytes.Equal(got, want) {
+	if !bytes.Equal(got.Bytes(), want) {
 		t.Fatalf("guest_output = %x, want %x", got, want)
 	}
 }

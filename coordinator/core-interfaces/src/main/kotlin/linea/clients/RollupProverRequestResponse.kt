@@ -167,7 +167,7 @@ data class ChunkWitness(
 }
 
 /**
- * The 22-field PI tuple emitted by a rollup proof (rollup_spec §2.4, `RollupPublicInput`).
+ * The PI tuple emitted by a rollup proof (rollup_spec §2.4, `RollupPublicInput`).
  *
  * Domain twin of `lineth.coordinator.clients.prover.RollupProofPublicInputsDto`. Kept here (rather than reusing the
  * DTO) because this module is depended upon by the prover-client modules, not the other way around. Where the DTO
@@ -179,8 +179,6 @@ data class ChunkWitness(
 data class RollupProofPublicInputs(
   val endBlockNumber: ULong,
   val endBlockTimestamp: Instant,
-  val parentL1L2BridgeMessageRollingHash: ByteArray,
-  val parentL1L2BridgeMessageNumber: ULong,
   val endL1L2BridgeMessageRollingHash: ByteArray,
   val endL1L2BridgeMessageNumber: ULong,
   val dynamicChainConfigHash: ByteArray,
@@ -208,8 +206,6 @@ data class RollupProofPublicInputs(
 
     if (endBlockNumber != other.endBlockNumber) return false
     if (endBlockTimestamp != other.endBlockTimestamp) return false
-    if (!parentL1L2BridgeMessageRollingHash.contentEquals(other.parentL1L2BridgeMessageRollingHash)) return false
-    if (parentL1L2BridgeMessageNumber != other.parentL1L2BridgeMessageNumber) return false
     if (!endL1L2BridgeMessageRollingHash.contentEquals(other.endL1L2BridgeMessageRollingHash)) return false
     if (endL1L2BridgeMessageNumber != other.endL1L2BridgeMessageNumber) return false
     if (!dynamicChainConfigHash.contentEquals(other.dynamicChainConfigHash)) return false
@@ -235,8 +231,6 @@ data class RollupProofPublicInputs(
   override fun hashCode(): Int {
     var result = endBlockNumber.hashCode()
     result = 31 * result + endBlockTimestamp.hashCode()
-    result = 31 * result + parentL1L2BridgeMessageRollingHash.contentHashCode()
-    result = 31 * result + parentL1L2BridgeMessageNumber.hashCode()
     result = 31 * result + endL1L2BridgeMessageRollingHash.contentHashCode()
     result = 31 * result + endL1L2BridgeMessageNumber.hashCode()
     result = 31 * result + dynamicChainConfigHash.contentHashCode()
