@@ -12,6 +12,7 @@
 ### 🐛 Bug Fixes
 
 - *(misc, riscv-guest, prover, coordinator)* Changing the spec to allow zero rolling hash and message number for the L2 Message Service (#4314)
+- *(riscv-guest)* Renaming the kebab-case dirs to sneak case, which is more conventional in Zig world (#4320)
 
 ### ⚙️ Miscellaneous Tasks
 
