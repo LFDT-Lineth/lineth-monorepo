@@ -226,7 +226,7 @@ func (t Table) Round() *Round {
 }
 
 // firstView returns the first column view among the entries, or the selector
-// if every entry is a constant (so that the padding length is determined). 
+// if every entry is a constant (so that the padding length is determined).
 // Non-nil for a well-formed Table.
 func (t Table) firstView() *ColumnView {
 	for _, e := range t.Columns {
