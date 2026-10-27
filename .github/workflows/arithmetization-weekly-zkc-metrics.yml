@@ -195,7 +195,7 @@ jobs:
 
       - name: Upload run metadata
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: zkc-metrics-meta
           path: ${{ env.RUN }}/meta.env
@@ -204,7 +204,7 @@ jobs:
 
       - name: Upload guest build measurement
         if: ${{ !cancelled() && steps.guest.conclusion != 'skipped' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: zkc-metrics-guest
           path: ${{ env.RUN }}/guest
@@ -214,7 +214,7 @@ jobs:
       # deliberately not shipped this way, since upload-artifact drops the executable bit.
       - name: Upload guest JSON
         if: ${{ !cancelled() && steps.guest.outcome == 'success' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: zkc-metrics-guest-json
           path: ${{ env.RUN }}/guest.json
@@ -262,7 +262,7 @@ jobs:
 
       - name: Upload measurement
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: zkc-metrics-compile
           path: ${{ env.RUN }}/compile
@@ -329,7 +329,7 @@ jobs:
 
       - name: Upload measurement
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: zkc-metrics-trace
           path: ${{ env.RUN }}/trace
@@ -389,7 +389,7 @@ jobs:
 
       - name: Upload measurement
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: zkc-metrics-check
           path: ${{ env.RUN }}/check
@@ -489,7 +489,7 @@ jobs:
 
       - name: Upload raw measurement logs
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: zkc-weekly-metrics-logs
           path: |
