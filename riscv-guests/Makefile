@@ -10,12 +10,12 @@
 # targets (e.g. l2-execution's EF spec-test, ZKC exec/debug) live in that guest's own Makefile and
 # run directly: `make -C <name> spec-test`.
 #
-# guest-common isn't a guest program itself (no ELF to link, just a shared Zig package other
-# guests consume as a path dependency — the same role lineth-accelerators plays) but is listed
+# guest_common isn't a guest program itself (no ELF to link, just a shared Zig package other
+# guests consume as a path dependency — the same role lineth_accelerators plays) but is listed
 # here anyway so its own unit tests run as part of `make test`, and its build.zig/src/test get the
 # same `zig fmt --check` gate every guest's own sources get.
 
-GUESTS ?= guest-common l2-execution rollup
+GUESTS ?= guest_common l2_execution rollup
 ZIG    ?= zig
 
 # Sources to format: the shared build helper plus each guest's build.zig and hand-written src/ +
@@ -32,14 +32,16 @@ compile test fetch clean:
 		$(MAKE) -C $$g $@ ZIG="$(ZIG)" || exit $$?; \
 	done
 
-# Each guest stages its own ELF using the shared Zig build step.
+# Each guest stages its own ELF using the shared Zig build step. GUEST is the release name
+# (e.g. l2-execution); the guest's directory spells the same name in snake_case.
 RELEASE_DIR ?= $(CURDIR)/release-assets
+GUEST_DIR = $(subst -,_,$(GUEST))
 release-check:
-	$(MAKE) -C $(GUEST) test ZIG="$(ZIG)"
-	$(MAKE) -C $(GUEST) compile ZIG="$(ZIG)"
+	$(MAKE) -C $(GUEST_DIR) test ZIG="$(ZIG)"
+	$(MAKE) -C $(GUEST_DIR) compile ZIG="$(ZIG)"
 
 release-asset:
-	$(MAKE) -C $(GUEST) release-asset RELEASE_DIR="$(abspath $(RELEASE_DIR))" ZIG="$(ZIG)" RELEASE_VERSION="$(RELEASE_VERSION)"
+	$(MAKE) -C $(GUEST_DIR) release-asset RELEASE_DIR="$(abspath $(RELEASE_DIR))" ZIG="$(ZIG)" RELEASE_VERSION="$(RELEASE_VERSION)"
 
 NIM_VERSION := 2.2.10
 CHOOSENIM_VERSION := 0.8.16
@@ -98,5 +100,5 @@ help:
 	@echo "  make clean       # remove each guest's zig-out/ and .zig-cache/"
 	@echo "  make fmt         # format build_common + all guest sources in place (zig fmt)"
 	@echo "  make fmt-check   # verify formatting without writing (the CI gate)"
-	@echo "  make install-constantine-deps    # install nim/nimble/clang for the guest-crypto-ctt build"
+	@echo "  make install-constantine-deps    # install nim/nimble/clang for the guest_crypto_ctt build"
 	@echo ""

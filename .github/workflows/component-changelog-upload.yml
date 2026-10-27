@@ -35,20 +35,20 @@ jobs:
             coordinator:
               - 'coordinator/**'
             riscv-l2-execution:
-              - 'riscv-guests/l2-execution/**'
-              - 'riscv-guests/guest-common/**'
+              - 'riscv-guests/l2_execution/**'
+              - 'riscv-guests/guest_common/**'
               - 'riscv-guests/build_common/**'
               - 'riscv-guests/release/**'
-              - 'riscv-guests/lineth-accelerators/**'
-              - 'riscv-guests/guest-crypto-ctt/**'
+              - 'riscv-guests/lineth_accelerators/**'
+              - 'riscv-guests/guest_crypto_ctt/**'
               - 'riscv-guests/.zigversion'
               - 'riscv-guests/Makefile'
             riscv-rollup:
               - 'riscv-guests/rollup/**'
-              - 'riscv-guests/guest-common/**'
+              - 'riscv-guests/guest_common/**'
               - 'riscv-guests/build_common/**'
               - 'riscv-guests/release/**'
-              - 'riscv-guests/lineth-accelerators/**'
+              - 'riscv-guests/lineth_accelerators/**'
               - 'riscv-guests/.zigversion'
               - 'riscv-guests/Makefile'
             maru:
@@ -59,12 +59,12 @@ jobs:
               - 'prover/**'
             prover-ray:
               - 'prover-ray/**'
-              - 'riscv-guests/l2-execution/**'
-              - 'riscv-guests/guest-common/**'
+              - 'riscv-guests/l2_execution/**'
+              - 'riscv-guests/guest_common/**'
               - 'riscv-guests/build_common/**'
               - 'riscv-guests/release/**'
-              - 'riscv-guests/lineth-accelerators/**'
-              - 'riscv-guests/guest-crypto-ctt/**'
+              - 'riscv-guests/lineth_accelerators/**'
+              - 'riscv-guests/guest_crypto_ctt/**'
               - 'riscv-guests/.zigversion'
               - 'riscv-guests/Makefile'
             tx-exclusion-api:
@@ -105,7 +105,7 @@ jobs:
           - component: coordinator
             folder-name: coordinator
           - component: riscv-l2-execution
-            folder-name: riscv-guests/l2-execution
+            folder-name: riscv-guests/l2_execution
             artifact-name: riscv-l2-execution
           - component: riscv-rollup
             folder-name: riscv-guests/rollup

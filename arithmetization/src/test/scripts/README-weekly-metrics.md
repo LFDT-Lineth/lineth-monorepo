@@ -25,7 +25,7 @@ measures four things and appends one row to each markdown table in
 Costs are not documented here — they are what the tables record.
 
 The workload is the l2-execution guest against
-`riscv-guests/l2-execution/test/testdata/stateless_input.ssz` — the small committed reference
+`riscv-guests/l2_execution/test/testdata/stateless_input.ssz` — the small committed reference
 block, and the guest Makefile's default input.
 
 Steps 3 and 4 are best-effort with their own timeouts. A timeout is recorded as that week's data
@@ -113,11 +113,11 @@ heavy step. Both targets are usable from any other workflow that needs a pinned 
 ```bash
 go -C arithmetization tool zkc compile --stats --order name src/main/riscv/main.zkc
 
-make -C riscv-guests/l2-execution compile KECCAK_ACCEL=true
+make -C riscv-guests/l2_execution compile KECCAK_ACCEL=true
 make -C riscv-guests/build_common elf-to-json \
-     BIN_EXT="$PWD/riscv-guests/l2-execution/zig-out/bin/evm_execution_guest" \
+     BIN_EXT="$PWD/riscv-guests/l2_execution/zig-out/bin/evm_execution_guest" \
      JSON_EXT=/tmp/guest.json \
-     IN_BYTES="@$PWD/riscv-guests/l2-execution/test/testdata/stateless_input.ssz"
+     IN_BYTES="@$PWD/riscv-guests/l2_execution/test/testdata/stateless_input.ssz"
 
 go -C arithmetization tool zkc trace --stats         /tmp/guest.json src/main/riscv/main.zkc
 go -C arithmetization tool zkc trace --stats --check /tmp/guest.json src/main/riscv/main.zkc
@@ -129,7 +129,7 @@ go -C arithmetization tool zkc trace --stats --check /tmp/guest.json src/main/ri
   still exits 0, so pass/fail is read from the `failing …` lines, never from `$?`.
 - **`zkc --version` is not a reliable identity.** Use `go list -m` in the arithmetization module;
   the selected module version records the pinned release or pseudo-version.
-- **`-q` no longer exists in zkc**, so `riscv-guests/l2-execution/Makefile`'s default
+- **`-q` no longer exists in zkc**, so `riscv-guests/l2_execution/Makefile`'s default
   `ZKC_EXEC_FLAGS ?= -q` fails. CI never notices because it always overrides the variable. This
   tooling calls `zkc` directly rather than going through `exec`.
 - **Max degree needs the column label, not just the counts.** zkc leaves the final bucket labelled

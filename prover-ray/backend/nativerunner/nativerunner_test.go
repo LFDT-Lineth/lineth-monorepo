@@ -14,7 +14,7 @@ import (
 )
 
 // realOutput is a verbatim capture of `l2-execution-runner --json` on
-// riscv-guests/l2-execution/test/testdata/stateless_input.ssz; re-capture it when
+// riscv-guests/l2_execution/test/testdata/stateless_input.ssz; re-capture it when
 // the runner's output changes.
 const realOutput = `{"startBlockNumber":1,"publicInputs":{"parentBlockHash":"0xee93f90395f9384466a618018575f933dca8fa630afbcc6c048b2381a7d72af9","endBlockHash":"0xb6107b07672ca66bd702a53c5105925002037e593f46c8cecba5af3425496d64","endBlockNumber":1,"endBlockTimestamp":12,"l2L1Messages":[],"endL1L2BridgeRollingHash":"0x0000000000000000000000000000000000000000000000000000000000000000","endL1L2BridgeRollingHashMessageNumber":0,"dynamicChainConfigHash":"0x4c87eca77cb88c24f2de035ddac21297991d5a1946b9e7d6a2b25375037715fa","parentFtxRollingHash":"0x0000000000000000000000000000000000000000000000000000000000000000","parentFtxNumber":0,"endFtxRollingHash":"0x0000000000000000000000000000000000000000000000000000000000000000","endProcessedFtxNumber":0,"filteredAddresses":[],"txFromsHash":"0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470","blockCount":1,"l2MessagingBlocksOffsets":[]}}`
 

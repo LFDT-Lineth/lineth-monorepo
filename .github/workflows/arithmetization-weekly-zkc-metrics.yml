@@ -144,14 +144,14 @@ jobs:
           # Both halves timed as one task. No `make linker-script`: linker_script.ld is tracked
           # and @embedFile'd by the zig build, so regenerating it risks dirtying the tree.
           /usr/bin/time -v -o "$d/rusage" \
-            make -C "$MEASURE_DIR/riscv-guests/l2-execution" compile KECCAK_ACCEL=false \
+            make -C "$MEASURE_DIR/riscv-guests/l2_execution" compile KECCAK_ACCEL=false \
             > "$d/stdout" 2> "$d/stderr"
           rc=$?
           if [ "$rc" -eq 0 ]; then
             make -C "$MEASURE_DIR/riscv-guests/build_common" elf-to-json \
-              BIN_EXT="$MEASURE_DIR/riscv-guests/l2-execution/zig-out/bin/evm_execution_guest" \
+              BIN_EXT="$MEASURE_DIR/riscv-guests/l2_execution/zig-out/bin/evm_execution_guest" \
               JSON_EXT="$RUN/guest.json" \
-              IN_BYTES="@$MEASURE_DIR/riscv-guests/l2-execution/test/testdata/stateless_input.ssz" \
+              IN_BYTES="@$MEASURE_DIR/riscv-guests/l2_execution/test/testdata/stateless_input.ssz" \
               >> "$d/stdout" 2>> "$d/stderr"
             rc=$?
           fi

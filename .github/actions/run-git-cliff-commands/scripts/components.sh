@@ -38,22 +38,22 @@ component_include_path() {
       ;;
     riscv-l2-execution)
       printf '%s\n' \
-        "riscv-guests/l2-execution/**" \
-        "riscv-guests/guest-common/**" \
+        "riscv-guests/l2_execution/**" \
+        "riscv-guests/guest_common/**" \
         "riscv-guests/build_common/**" \
         "riscv-guests/release/**" \
-        "riscv-guests/lineth-accelerators/**" \
-        "riscv-guests/guest-crypto-ctt/**" \
+        "riscv-guests/lineth_accelerators/**" \
+        "riscv-guests/guest_crypto_ctt/**" \
         "riscv-guests/.zigversion" \
         "riscv-guests/Makefile"
       ;;
     riscv-rollup)
       printf '%s\n' \
         "riscv-guests/rollup/**" \
-        "riscv-guests/guest-common/**" \
+        "riscv-guests/guest_common/**" \
         "riscv-guests/build_common/**" \
         "riscv-guests/release/**" \
-        "riscv-guests/lineth-accelerators/**" \
+        "riscv-guests/lineth_accelerators/**" \
         "riscv-guests/.zigversion" \
         "riscv-guests/Makefile"
       ;;

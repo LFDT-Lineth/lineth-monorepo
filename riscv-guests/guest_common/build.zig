@@ -32,7 +32,7 @@ pub fn build(b: *std.Build) void {
         .optimize = .Debug,
     });
 
-    const test_step = b.step("test", "Run native Zig unit tests for guest-common's shared primitives");
+    const test_step = b.step("test", "Run native Zig unit tests for guest_common's shared primitives");
     const ssz_tests = b.addTest(.{
         .root_module = b.createModule(.{
             .root_source_file = b.path("test/ssz_test.zig"),
