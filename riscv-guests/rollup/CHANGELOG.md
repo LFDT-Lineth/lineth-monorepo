@@ -9,6 +9,10 @@
 - *(riscv-guest)* Setting up the release workflow (#4119)
 - *(riscv-guest)* Changing the output of the guest program to include the plain PI + its hash (#4092)
 
+### 🐛 Bug Fixes
+
+- *(misc, riscv-guest, prover, coordinator)* Changing the spec to allow zero rolling hash and message number for the L2 Message Service (#4314)
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(misc)* Rollup zstd kzg clarifications (#3854)
