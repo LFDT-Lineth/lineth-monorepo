@@ -907,10 +907,24 @@ func (sys *System) newTableRelation(ctx *ContextFrame, kind LookupKind, A, B []T
 	return tr
 }
 
-// validateNonEmpty panics if tables is empty.
+// validateNonEmpty panics if tables is empty or if any fragment was not built
+// by a Table constructor.
 func validateNonEmpty(caller, side string, tables []Table) {
 	if len(tables) == 0 {
 		panic(fmt.Sprintf("wiop: System.%s: %s must have at least one fragment", caller, side))
+	}
+	for i, t := range tables {
+		t.mustBeConstructed(fmt.Sprintf("System.%s: %s fragment %d", caller, side, i))
+	}
+}
+
+// mustBeConstructed panics if t was not built by [NewTable], [NewFilteredTable]
+// or [NewTableEntries]. Columns and Selector are exported, so a struct literal
+// compiles but leaves the unexported module unset, which would otherwise
+// surface as a nil dereference far from the cause.
+func (t Table) mustBeConstructed(what string) {
+	if t.module == nil {
+		panic("wiop: " + what + ": Table must be built with NewTable/NewFilteredTable/NewTableEntries")
 	}
 }
 
