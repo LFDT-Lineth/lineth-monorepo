@@ -16,6 +16,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/risc5"
+	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/sha3"
@@ -212,13 +213,13 @@ func (c *Core) proveDevZkVM(job Job) Result {
 	return Result{
 		JobID:      job.ID,
 		Status:     ResultStatusOK,
-		ProofBytes: guestOutput,
+		ProofBytes: guestOutput.Bytes(),
 	}
 }
 
 // executeGuest runs the guest under ZkC Execute (the no-trace path) and returns
 // its validated 0x0003 output.
-func executeGuest(binf *zkcdriver.BinaryFile, inputs map[string][]byte) ([]byte, error) {
+func executeGuest(binf *zkcdriver.BinaryFile, inputs map[string]bit.Array) (bit.Array, error) {
 	output, errs := binf.Execute(inputs)
 	return classifyGuestOutput(output, errs)
 }
@@ -228,21 +229,21 @@ func executeGuest(binf *zkcdriver.BinaryFile, inputs map[string][]byte) ([]byte,
 // (a recognized [vm.Failure], the guest's own exit on an invalid block) from an
 // internal VM failure (a prover-side bug). A guest that rejects the block writes
 // no output, so a missing guest_output is also a rejection.
-func classifyGuestOutput(output map[string][]byte, errs []error) ([]byte, error) {
+func classifyGuestOutput(output map[string]bit.Array, errs []error) (res bit.Array, err error) {
 	if len(errs) > 0 {
 		var failure *vm.Failure
 		if errors.As(errors.Join(errs...), &failure) {
-			return nil, fmt.Errorf("guest rejected the block (invalid): %s", failure.Message)
+			return res, fmt.Errorf("guest rejected the block (invalid): %s", failure.Message)
 		}
-		return nil, fmt.Errorf("guest VM execution failed: %w", errors.Join(errs...))
+		return res, fmt.Errorf("guest VM execution failed: %w", errors.Join(errs...))
 	}
 
 	out, ok := output[guestOutputMemory]
 	if !ok {
-		return nil, fmt.Errorf("guest wrote no %s output (block likely invalid)", guestOutputMemory)
+		return res, fmt.Errorf("guest wrote no %s output (block likely invalid)", guestOutputMemory)
 	}
-	if err := checkGuestOutputFrame(out); err != nil {
-		return nil, fmt.Errorf("%s does not follow the spec: %w", guestOutputMemory, err)
+	if err = checkGuestOutputFrame(out); err != nil {
+		return res, fmt.Errorf("%s does not follow the spec: %w", guestOutputMemory, err)
 	}
 	return out, nil
 }
@@ -251,22 +252,25 @@ func classifyGuestOutput(output map[string][]byte, errs []error) ([]byte, error)
 // keccak256(0x0003 || public inputs) || 0x0003 || public inputs. The public
 // inputs themselves are checked by the byte-for-byte comparison with the
 // native runner.
-func checkGuestOutputFrame(out []byte) error {
-	if len(out) >= guestOutputHashSize+guestOutputSchemaIDSize {
-		framed := out[guestOutputHashSize:]
-		if bytes.Equal(out[:guestOutputHashSize], keccak256(framed)) {
+func checkGuestOutputFrame(out bit.Array) error {
+	var (
+		outBytes = out.Bytes()
+	)
+	if len(outBytes) >= guestOutputHashSize+guestOutputSchemaIDSize {
+		framed := outBytes[guestOutputHashSize:]
+		if bytes.Equal(outBytes[:guestOutputHashSize], keccak256(framed)) {
 			if got := binary.BigEndian.Uint16(framed); got != guestOutputSchemaID {
 				return fmt.Errorf("schema id is 0x%04x, want 0x%04x", got, guestOutputSchemaID)
 			}
 			return nil
 		}
 	}
-	if hasPreSpecGuestOutputLayout(out) {
+	if hasPreSpecGuestOutputLayout(outBytes) {
 		return errors.New("got 0x0003 || public inputs || keccak256(public inputs), " +
 			"the spec expects keccak256(0x0003 || public inputs) || 0x0003 || public inputs")
 	}
-	if len(out) < guestOutputHashSize+guestOutputSchemaIDSize {
-		return fmt.Errorf("%d bytes, shorter than the hash and schema id", len(out))
+	if len(outBytes) < guestOutputHashSize+guestOutputSchemaIDSize {
+		return fmt.Errorf("%d bytes, shorter than the hash and schema id", len(outBytes))
 	}
 	return errors.New("hash does not match keccak256(0x0003 || public inputs)")
 }
@@ -316,7 +320,7 @@ func (c *Core) proveFull(ctx context.Context, job Job) Result {
 // buildInputs converts a Job's Payload into the guest and memory inputs ZkC
 // expects. ELF mapping and predecoding are cached by [New]; only the per-job
 // guest input data differs.
-func (c *Core) buildInputs(job Job) (map[string][]byte, error) {
+func (c *Core) buildInputs(job Job) (map[string]bit.Array, error) {
 	if err := sanityCheckJobs(job); err != nil {
 		return nil, err
 	}
@@ -328,7 +332,7 @@ func (c *Core) buildInputs(job Job) (map[string][]byte, error) {
 // whole extended (0x0002) input and lets the guest conflate the range; a
 // conflation disagreement surfaces as a cross-check failure, not silent
 // corruption.
-func (c *Core) encodeGuestInputs(job Job) (map[string][]byte, error) {
+func (c *Core) encodeGuestInputs(job Job) (map[string]bit.Array, error) {
 	dataBlobs, err := elfmapping.NewData(
 		elfmapping.DefaultInputOrigin,
 		decodePayload(job),
