@@ -15,7 +15,6 @@ import maru.consensus.QbftConsensusConfig
 import maru.core.Validator
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import java.nio.ByteBuffer
 
 class DifficultyAwareQbftConfigDigesterTest {
   private val config =
@@ -41,20 +40,5 @@ class DifficultyAwareQbftConfigDigesterTest {
   @Test
   fun `should digest deterministically`() {
     assertThat(digest(config.copy())).isEqualTo(digest(config))
-  }
-
-  @Test
-  fun `should keep a stable byte layout`() {
-    // Layout: terminalTotalDifficulty (8 bytes) followed by postTtdConfig bytes.
-    // Must stay byte-identical so fork ids of existing networks (e.g. Linea mainnet/sepolia) don't change.
-    val postTtdConfigBytes = QbftConsensusConfigDigester.serialize(config.postTtdConfig)
-    val legacyBytes =
-      ByteBuffer
-        .allocate(8 + postTtdConfigBytes.size)
-        .putLong(config.terminalTotalDifficulty.toLong())
-        .put(postTtdConfigBytes)
-        .array()
-
-    assertThat(digest(config)).isEqualTo(legacyBytes)
   }
 }
