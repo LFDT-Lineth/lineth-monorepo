@@ -1,3 +1,8 @@
+## [unreleased]
+
+### ⚙️ Miscellaneous Tasks
+
+- *(deps)* Bump the go_modules group across 1 directory with 2 updates (#4258)
 ## [1.0.8] - 2026-10-26
 
 ### 🐛 Bug Fixes
