@@ -65,8 +65,6 @@ fn appendPublicInputs(alloc: std.mem.Allocator, out: *std.ArrayListUnmanaged(u8)
     try appendKeyInt(alloc, out, "endBlockNumber", pi.end_block_number, false);
     try appendKeyInt(alloc, out, "endBlockTimestamp", pi.end_block_timestamp, false);
     try appendKeyHexList(alloc, out, "l2L1Messages", [32]u8, pi.l2_l1_messages);
-    try appendKeyHex(alloc, out, "parentL1L2BridgeRollingHash", &pi.parent_l1_l2_bridge_rolling_hash, false);
-    try appendKeyInt(alloc, out, "parentL1L2BridgeRollingHashMessageNumber", pi.parent_l1_l2_bridge_rolling_hash_message_number, false);
     try appendKeyHex(alloc, out, "endL1L2BridgeRollingHash", &pi.end_l1_l2_bridge_rolling_hash, false);
     try appendKeyInt(alloc, out, "endL1L2BridgeRollingHashMessageNumber", pi.end_l1_l2_bridge_rolling_hash_message_number, false);
     try appendKeyHex(alloc, out, "dynamicChainConfigHash", &pi.dynamic_chain_config_hash, false);

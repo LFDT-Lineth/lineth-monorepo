@@ -21,24 +21,22 @@ type executionResponse struct {
 }
 
 type executionPublicInputs struct {
-	ParentBlockHash                          string   `json:"parentBlockHash"`
-	EndBlockHash                             string   `json:"endBlockHash"`
-	EndBlockNumber                           uint64   `json:"endBlockNumber"`
-	EndBlockTimestamp                        uint64   `json:"endBlockTimestamp"`
-	L2L1Messages                             []string `json:"l2L1Messages"`
-	ParentL1L2BridgeRollingHash              string   `json:"parentL1L2BridgeRollingHash"`
-	ParentL1L2BridgeRollingHashMessageNumber uint64   `json:"parentL1L2BridgeRollingHashMessageNumber"`
-	EndL1L2BridgeRollingHash                 string   `json:"endL1L2BridgeRollingHash"`
-	EndL1L2BridgeRollingHashMessageNumber    uint64   `json:"endL1L2BridgeRollingHashMessageNumber"`
-	DynamicChainConfigHash                   string   `json:"dynamicChainConfigHash"`
-	ParentFtxRollingHash                     string   `json:"parentFtxRollingHash"`
-	ParentFtxNumber                          uint64   `json:"parentFtxNumber"`
-	EndFtxRollingHash                        string   `json:"endFtxRollingHash"`
-	EndProcessedFtxNumber                    uint64   `json:"endProcessedFtxNumber"`
-	FilteredAddresses                        []string `json:"filteredAddresses"`
-	TxFromsHash                              string   `json:"txFromsHash"`
-	BlockCount                               uint64   `json:"blockCount"`
-	L2MessagingBlocksOffsets                 []uint16 `json:"l2MessagingBlocksOffsets"`
+	ParentBlockHash                       string   `json:"parentBlockHash"`
+	EndBlockHash                          string   `json:"endBlockHash"`
+	EndBlockNumber                        uint64   `json:"endBlockNumber"`
+	EndBlockTimestamp                     uint64   `json:"endBlockTimestamp"`
+	L2L1Messages                          []string `json:"l2L1Messages"`
+	EndL1L2BridgeRollingHash              string   `json:"endL1L2BridgeRollingHash"`
+	EndL1L2BridgeRollingHashMessageNumber uint64   `json:"endL1L2BridgeRollingHashMessageNumber"`
+	DynamicChainConfigHash                string   `json:"dynamicChainConfigHash"`
+	ParentFtxRollingHash                  string   `json:"parentFtxRollingHash"`
+	ParentFtxNumber                       uint64   `json:"parentFtxNumber"`
+	EndFtxRollingHash                     string   `json:"endFtxRollingHash"`
+	EndProcessedFtxNumber                 uint64   `json:"endProcessedFtxNumber"`
+	FilteredAddresses                     []string `json:"filteredAddresses"`
+	TxFromsHash                           string   `json:"txFromsHash"`
+	BlockCount                            uint64   `json:"blockCount"`
+	L2MessagingBlocksOffsets              []uint16 `json:"l2MessagingBlocksOffsets"`
 }
 
 // failureResponseBody is a temporary adapter-owned operational format, not a
@@ -96,23 +94,21 @@ func hexAddressList(as [][20]byte) []string {
 
 func publicInputs(pi backend.PublicInputs) executionPublicInputs {
 	return executionPublicInputs{
-		ParentBlockHash:                          hexHash(pi.ParentBlockHash),
-		EndBlockHash:                             hexHash(pi.EndBlockHash),
-		EndBlockNumber:                           pi.EndBlockNumber,
-		EndBlockTimestamp:                        pi.EndBlockTimestamp,
-		L2L1Messages:                             hexHashList(pi.L2L1Messages),
-		ParentL1L2BridgeRollingHash:              hexHash(pi.ParentL1L2BridgeRollingHash),
-		ParentL1L2BridgeRollingHashMessageNumber: pi.ParentL1L2BridgeRollingHashMessageNumber,
-		EndL1L2BridgeRollingHash:                 hexHash(pi.EndL1L2BridgeRollingHash),
-		EndL1L2BridgeRollingHashMessageNumber:    pi.EndL1L2BridgeRollingHashMessageNumber,
-		DynamicChainConfigHash:                   hexHash(pi.DynamicChainConfigHash),
-		ParentFtxRollingHash:                     hexHash(pi.ParentFtxRollingHash),
-		ParentFtxNumber:                          pi.ParentFtxNumber,
-		EndFtxRollingHash:                        hexHash(pi.EndFtxRollingHash),
-		EndProcessedFtxNumber:                    pi.EndProcessedFtxNumber,
-		FilteredAddresses:                        hexAddressList(pi.FilteredAddresses),
-		TxFromsHash:                              hexHash(pi.TxFromsHash),
-		BlockCount:                               pi.BlockCount,
+		ParentBlockHash:                       hexHash(pi.ParentBlockHash),
+		EndBlockHash:                          hexHash(pi.EndBlockHash),
+		EndBlockNumber:                        pi.EndBlockNumber,
+		EndBlockTimestamp:                     pi.EndBlockTimestamp,
+		L2L1Messages:                          hexHashList(pi.L2L1Messages),
+		EndL1L2BridgeRollingHash:              hexHash(pi.EndL1L2BridgeRollingHash),
+		EndL1L2BridgeRollingHashMessageNumber: pi.EndL1L2BridgeRollingHashMessageNumber,
+		DynamicChainConfigHash:                hexHash(pi.DynamicChainConfigHash),
+		ParentFtxRollingHash:                  hexHash(pi.ParentFtxRollingHash),
+		ParentFtxNumber:                       pi.ParentFtxNumber,
+		EndFtxRollingHash:                     hexHash(pi.EndFtxRollingHash),
+		EndProcessedFtxNumber:                 pi.EndProcessedFtxNumber,
+		FilteredAddresses:                     hexAddressList(pi.FilteredAddresses),
+		TxFromsHash:                           hexHash(pi.TxFromsHash),
+		BlockCount:                            pi.BlockCount,
 		// non-nil so an empty list marshals to [] not null.
 		L2MessagingBlocksOffsets: append([]uint16{}, pi.L2MessagingBlocksOffsets...),
 	}

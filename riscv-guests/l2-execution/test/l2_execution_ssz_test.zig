@@ -10,6 +10,19 @@ fn repeat20(byte: u8) [20]u8 {
     return @splat(byte);
 }
 
+// Distinct bytes per field, so a field swap in the codec cannot round-trip.
+fn sampleSystemContracts() l2_execution_ssz.SystemContracts {
+    return .{
+        .beacon_roots = repeat20(0xa1),
+        .history_storage = repeat20(0xa2),
+        .deposit = repeat20(0xa3),
+        .withdrawal_request = repeat20(0xa4),
+        .consolidation_request = repeat20(0xa5),
+        .builder_deposit_request = repeat20(0xa6),
+        .builder_exit_request = repeat20(0xa7),
+    };
+}
+
 // A hand-built input value — readable, diffable Zig source, not an opaque SSZ blob a human can't
 // review or hand-edit when the schema changes. Two payloads, with forced transactions covering a
 // non-empty signed_tx_rlp and a different acceptance outcome, exercise every variable-length branch
@@ -35,6 +48,7 @@ fn sampleInput() l2_execution_ssz.L2ExecutionProofPrivateInput {
             .l2_message_service_address = repeat20(0x11),
             .coinbase = repeat20(0x00),
             .chain_id = 59144,
+            .system_contracts = sampleSystemContracts(),
         },
         .payloads = &payloads,
     };
@@ -54,6 +68,7 @@ test "input: encode then decode round-trips every field" {
     try std.testing.expectEqual(value.chain_config.chain_id, decoded.chain_config.chain_id);
     try std.testing.expectEqualSlices(u8, &value.chain_config.l2_message_service_address, &decoded.chain_config.l2_message_service_address);
     try std.testing.expectEqualSlices(u8, &value.chain_config.coinbase, &decoded.chain_config.coinbase);
+    try std.testing.expectEqual(value.chain_config.system_contracts, decoded.chain_config.system_contracts);
     try std.testing.expectEqual(value.payloads.len, decoded.payloads.len);
 
     for (value.payloads, decoded.payloads) |want, got| {
@@ -68,25 +83,38 @@ test "input: encode then decode round-trips every field" {
     }
 }
 
+test "input: system contracts sit after chain_id in field order, payloads offset follows" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    const encoded = try l2_execution_ssz.encodeInput(alloc, sampleInput());
+    // schema(2) + hash(32) + u64(8) + l2ms(20) + coinbase(20) + chain_id(8) = 90.
+    for (0..7) |i| {
+        const want: [20]u8 = @splat(@intCast(0xa1 + i));
+        try std.testing.expectEqualSlices(u8, &want, encoded[90 + 20 * i ..][0..20]);
+    }
+    try std.testing.expectEqual(@as(u32, 232), std.mem.readInt(u32, encoded[230..234], .little));
+}
+
 const sample_messages = [_][32]u8{repeat32(0x08)};
 const sample_filtered = [_][20]u8{[_]u8{0x09} ** 20};
 const sample_offsets = [_]u16{ 1, 3 };
 
 // Produced by the Python reference codec's `encode_l2_execution_output` for `samplePublicInputs`.
 const sample_output_hex =
-    "f6e73dfae5652c8f2df525094277580e3929c7c0a0be1ac12247a9d3c0419e7f" ++
+    "9fba64a1911307d769659b8ecb64c72d0df2d90d8158241267c55d37bb480030" ++
     "00030a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a" ++
     "0a0a0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b" ++
-    "0b0b37440f00000000003b3f1569000000004401000002020202020202020202" ++
-    "0202020202020202020202020202020202020202020200000000000000000303" ++
-    "0303030303030303030303030303030303030303030303030303030303030500" ++
-    "000000000000c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0" ++
-    "c0c0c0c0c0c00404040404040404040404040404040404040404040404040404" ++
-    "0404040404041000000000000000050505050505050505050505050505050505" ++
-    "0505050505050505050505050505120000000000000064010000070707070707" ++
-    "0707070707070707070707070707070707070707070707070707030000000000" ++
-    "0000780100000808080808080808080808080808080808080808080808080808" ++
-    "080808080808090909090909090909090909090909090909090901000300";
+    "0b0b37440f00000000003b3f1569000000001c01000003030303030303030303" ++
+    "030303030303030303030303030303030303030303030500000000000000c0c0" ++
+    "c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c00404" ++
+    "0404040404040404040404040404040404040404040404040404040404041000" ++
+    "0000000000000505050505050505050505050505050505050505050505050505" ++
+    "05050505050512000000000000003c0100000707070707070707070707070707" ++
+    "0707070707070707070707070707070707070300000000000000500100000808" ++
+    "0808080808080808080808080808080808080808080808080808080808080909" ++
+    "09090909090909090909090909090909090901000300";
 
 fn samplePublicInputs() l2_execution_ssz.L2ExecutionProofPublicInput {
     return .{
@@ -95,8 +123,6 @@ fn samplePublicInputs() l2_execution_ssz.L2ExecutionProofPublicInput {
         .end_block_number = 1000503,
         .end_block_timestamp = 1763000123,
         .l2_l1_messages = &sample_messages,
-        .parent_l1_l2_bridge_rolling_hash = repeat32(0x02),
-        .parent_l1_l2_bridge_rolling_hash_message_number = 0,
         .end_l1_l2_bridge_rolling_hash = repeat32(0x03),
         .end_l1_l2_bridge_rolling_hash_message_number = 5,
         .dynamic_chain_config_hash = repeat32(0xc0),
@@ -126,7 +152,7 @@ test "output is the schema-framed SSZ public inputs preceded by their hash, matc
     try std.testing.expectEqual(l2_execution_ssz.OUTPUT_SCHEMA_ID, std.mem.readInt(u16, out[32..34], .big));
 }
 
-test "output with empty lists is the 324-byte fixed head plus framing" {
+test "output with empty lists is the 284-byte fixed head plus framing" {
     const alloc = std.testing.allocator;
     var pi = samplePublicInputs();
     pi.l2_l1_messages = &.{};
@@ -134,7 +160,7 @@ test "output with empty lists is the 324-byte fixed head plus framing" {
     pi.l2_messaging_blocks_offsets = &.{};
     const out = try l2_execution_ssz.encodeOutput(alloc, pi);
     defer alloc.free(out);
-    try std.testing.expectEqual(@as(usize, 32 + 2 + 324), out.len);
+    try std.testing.expectEqual(@as(usize, 32 + 2 + 284), out.len);
 }
 
 test "hashPublicInputs is the commitment at the head of the output" {
@@ -190,11 +216,11 @@ fn nextMultipleOf4(n: usize) usize {
 }
 
 // Offsets that are protocol-fixed (documented in this module's own header comment) rather than
-// attacker-influenced: a 2-byte schema id, then the input's 92-byte fixed head
-// (hash(32)+u64(8)+chain_config(20+20+8)+payloads-offset(4)) — so the payloads-offset field sits at
-// body offset 88, and the payloads variable region always starts right after it.
+// attacker-influenced: a 2-byte schema id, then the input's 232-byte fixed head
+// (hash(32)+u64(8)+chain_config(20+20+8+7*20)+payloads-offset(4)) — so the payloads-offset field
+// sits at body offset 228, and the payloads variable region always starts right after it.
 const SCHEMA_SIZE: usize = 2;
-const INPUT_FIXED_SIZE: usize = 92;
+const INPUT_FIXED_SIZE: usize = 232;
 const PAYLOADS_REGION_START: usize = SCHEMA_SIZE + INPUT_FIXED_SIZE;
 
 /// Locate payload0's and payload1's absolute start offsets in an `encodeInput` buffer, by reading

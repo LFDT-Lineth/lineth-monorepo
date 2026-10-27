@@ -7,10 +7,7 @@
 //! seam, trusting each payload's own declared outcome instead of running the EVM. `run`/
 //! `expectReject` drive the two together end to end, through the guest's real conflation logic.
 //!
-//! Every block in a plan starts from the same world state (`world0`) except the last, which
-//! transitions to a second world state (`world1`) differing only in the L1<->L2 bridge storage a
-//! scenario declares via `bridgeStorage` — mirroring how a real range conflates N blocks against
-//! one pre-state and commits one post-state.
+//! Every block in a plan shares one world state holding the plan's declared `accounts`.
 
 const std = @import("std");
 
@@ -37,10 +34,10 @@ const ZERO_HASH: [32]u8 = @splat(0);
 /// by default, satisfying the guest's own `FeeRecipientMismatch` check with no per-block effort.
 const DEFAULT_COINBASE: [20]u8 = @splat(0xc0);
 
-/// A realistic L2MessageService address a caller opts into directly when it wants declared bridge
-/// storage to be observable — a plain field assignment (e.g. `.l2_message_service_address =
-/// conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS`), the same way every other override in this
-/// DSL works (`block.base_fee = ...`, `block.fee_recipient = ...`).
+/// A realistic L2MessageService address a caller opts into directly when it wants the guest's
+/// L2MessageService log scan to be active — a plain field assignment (e.g.
+/// `.l2_message_service_address = conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS`), the same
+/// way every other override in this DSL works (`block.base_fee = ...`, `block.fee_recipient = ...`).
 pub const DEFAULT_L2_MESSAGE_SERVICE_ADDRESS: [20]u8 = @splat(0xee);
 
 /// The vanilla wire schema's Amsterdam fork byte.
@@ -53,12 +50,6 @@ const DEFAULT_BASE_FEE: u64 = 1_000_000_000;
 const DEFAULT_BASE_TIMESTAMP: u64 = 1_700_000_000;
 const BLOCK_TIME_SECONDS: u64 = 12;
 
-/// L2MessageService's storage layout: the guest's own layout constants of the same name,
-/// mirrored here since only the slot-address FORMULA (not these raw numbers) is reachable
-/// through `test_api`.
-const LAST_ANCHORED_L1_MESSAGE_NUMBER_SLOT: u64 = 280;
-const L1_ROLLING_HASHES_MAPPING_BASE_SLOT: u64 = 281;
-
 /// One packed dummy deposit-request-sized item — enough to make `execution_requests.deposits`
 /// non-empty regardless of its actual (unparsed, opaque) content.
 const NON_EMPTY_DEPOSIT_BYTES: [192]u8 = @splat(0xde);
@@ -69,23 +60,12 @@ const NON_EMPTY_WITHDRAWALS = [_]input.Withdrawal{
 
 const TWO_DEFAULT_BLOCKS = [_]BlockPlan{ .{}, .{} };
 
-fn isZeroAddress(address: [20]u8) bool {
-    return std.mem.allEqual(u8, &address, 0);
-}
-
 /// Default timestamps: strictly increasing, one realistic block time apart.
 fn defaultTimestamp(block_index: usize) u64 {
     return DEFAULT_BASE_TIMESTAMP + @as(u64, @intCast(block_index)) * BLOCK_TIME_SECONDS;
 }
 
-// ─── Bridge storage ─────────────────────────────────────────────────────────────────────────────
-
-/// The L1->L2 bridge rolling-hash state realized in a world's L2MessageService storage: `number`
-/// at the fixed slot, `hash` at the mapping slot keyed by `number`.
-pub const BridgeValue = struct {
-    number: u64 = 0,
-    hash: [32]u8 = ZERO_HASH,
-};
+// ─── World state ────────────────────────────────────────────────────────────────────────────────
 
 /// An account the chain already holds when a range starts, realized as a real trie leaf at the
 /// declared nonce and balance, carrying the canonical empty code hash and empty storage root — the
@@ -144,9 +124,6 @@ pub const Built = struct {
     blocks_len: usize,
     /// Declared logs, indexed `[block_index][tx_index]`.
     tx_logs: []const []const []const types.Log,
-    /// World1's node RLPs, inserted into the shared `node_index` only when `StubEngine` processes
-    /// the last block — mirroring how the real engine admits post-state nodes mid-conflation.
-    world1_nodes: []const []const u8,
     envelope: l2_execution_ssz.L2ExecutionProofPrivateInput,
     /// The range's parent and end block hashes, exactly as the guest parrots them into
     /// `public_inputs.parent_block_hash`/`end_block_hash` (`payloads[0]`'s parent_hash and
@@ -183,8 +160,10 @@ pub const StubEngine = struct {
         alloc: std.mem.Allocator,
         si: input.StatelessInput,
         fork_name: []const u8,
-        node_index: *mpt.NodeIndex,
+        system_contracts: input.SystemContracts,
+        _: *mpt.NodeIndex,
     ) !StubProofOutput {
+        _ = system_contracts;
         const ep = &si.new_payload_request.execution_payload;
         const call_index = next_index;
         next_index += 1;
@@ -204,7 +183,7 @@ pub const StubEngine = struct {
             const block_logs: []const []const types.Log = if (call_index < built.tx_logs.len) built.tx_logs[call_index] else &.{};
 
             for (decoded_txs, 0..) |*tx, tx_idx| {
-                const from = try tx_signing.recoverSender(alloc, tx, si.chain_config.chain_id) orelse
+                const from = try tx_signing.recoverSender(alloc, tx, si.chain_config.chain_id, .amsterdam) orelse
                     return error.StubEngineSenderRecoveryFailed;
                 const logs: []const types.Log = if (tx_idx < block_logs.len) block_logs[tx_idx] else &.{};
                 try receipts.append(alloc, .{
@@ -226,10 +205,6 @@ pub const StubEngine = struct {
                     .status = 1,
                     .effective_gas_price = 0,
                 });
-            }
-
-            if (built.blocks_len > 0 and call_index == built.blocks_len - 1) {
-                for (built.world1_nodes) |node_rlp| try node_index.put(mpt.keccak256(node_rlp), node_rlp);
             }
         }
 
@@ -267,43 +242,24 @@ fn buildAccountRlp(alloc: std.mem.Allocator, nonce: u64, balance: u256, storage_
     return rlp.encodeList(alloc, &items);
 }
 
-/// A real MPT world state holding one leaf per declared `accounts` entry, plus — whenever
-/// `l2ms_address` is non-null — the L2MessageService's own account, whose storage trie carries
-/// `bridge.number`/`bridge.hash` at the guest's own slot layout; a zero value is naturally omitted
-/// by the trie, matching real EVM "unset slot" semantics. That account is derived here rather than
-/// declared, since a range's bridge storage follows from `bridgeStorage` and the address follows
-/// from the chain config the same range commits to. A `null` `l2ms_address` with an empty account
-/// list (bridge-suppressed mode, with nothing else to realize) yields the canonical empty-trie root
-/// and no nodes at all — genuinely correct MPT semantics for an account-less trie, not a shortcut.
-fn buildWorld(alloc: std.mem.Allocator, l2ms_address: ?[20]u8, bridge: BridgeValue, accounts: []const Account) !WorldState {
-    if (l2ms_address == null and accounts.len == 0) {
+/// A real MPT world state holding one leaf per declared `accounts` entry. An empty account list
+/// yields the canonical empty-trie root and no nodes at all — genuinely correct MPT semantics for
+/// an account-less trie, not a shortcut.
+fn buildWorld(alloc: std.mem.Allocator, accounts: []const Account) !WorldState {
+    if (accounts.len == 0) {
         return .{ .root = mpt.builder.EMPTY_TRIE_HASH, .nodes = &.{} };
     }
 
-    var index = try mpt.buildNodeIndex(alloc, &.{});
+    // Every trie node the chained updates create accumulates here; deduplicated by hash below.
+    var nodes: std.ArrayListUnmanaged([]const u8) = .empty;
     var state_root = mpt.builder.EMPTY_TRIE_HASH;
-
-    if (l2ms_address) |address| {
-        var storage_root = mpt.builder.EMPTY_TRIE_HASH;
-        const number_slot = l2_execution.test_api.u64ToSlot32Fn(LAST_ANCHORED_L1_MESSAGE_NUMBER_SLOT);
-        try mpt.updateStorageChainedIndexed(alloc, &storage_root, number_slot, @as(u256, bridge.number), &index);
-
-        const rolling_hash_slot = l2_execution.test_api.mappingSlotFn(
-            l2_execution.test_api.u64ToSlot32Fn(L1_ROLLING_HASHES_MAPPING_BASE_SLOT),
-            l2_execution.test_api.u64ToSlot32Fn(bridge.number),
-        );
-        const hash_value = std.mem.readInt(u256, &bridge.hash, .big);
-        try mpt.updateStorageChainedIndexed(alloc, &storage_root, rolling_hash_slot, hash_value, &index);
-
-        const account_rlp = try buildAccountRlp(alloc, 0, 0, storage_root, primitives.KECCAK_EMPTY);
-        try mpt.updateAccountChainedIndexed(alloc, &state_root, mpt.keccak256(&address), account_rlp, &index);
-    }
 
     for (accounts) |account| {
         const account_rlp = try buildAccountRlp(alloc, account.nonce, account.balance, mpt.builder.EMPTY_TRIE_HASH, primitives.KECCAK_EMPTY);
-        try mpt.updateAccountChainedIndexed(alloc, &state_root, mpt.keccak256(&account.address), account_rlp, &index);
+        try mpt.updateAccountChained(alloc, &state_root, mpt.keccak256(&account.address), account_rlp, &.{}, &nodes);
     }
 
+    var index = try mpt.buildNodeIndex(alloc, nodes.items);
     return .{ .root = state_root, .nodes = try collectNodeRlps(alloc, &index) };
 }
 
@@ -362,8 +318,10 @@ pub const ConflationPlan = struct {
 
     chain_id: u64 = 59144,
     coinbase: [20]u8 = DEFAULT_COINBASE,
-    /// Zero means bridge-suppressed mode: the L1<->L2 bridge rolling-hash reads and the L2->L1
-    /// message scan are both skipped.
+    /// Range-level system contracts; zesu's mainnet defaults unless a scenario overrides them.
+    system_contracts: l2_execution_ssz.SystemContracts = l2_execution_ssz.SystemContracts.from(input.SystemContracts{}),
+    /// Zero means bridge-suppressed mode: the L2MessageService log scan (L2->L1 messages and the
+    /// L1->L2 rolling hash) is skipped.
     l2_message_service_address: [20]u8 = ZERO_ADDRESS,
     parent_ftx_rolling_hash: [32]u8 = ZERO_HASH,
     parent_last_processed_ftx_number: u64 = 0,
@@ -372,14 +330,8 @@ pub const ConflationPlan = struct {
     /// parent header at all.
     start_block_number: u64 = 1_000_000,
 
-    bridge_parent: ?BridgeValue = null,
-    bridge_end: ?BridgeValue = null,
-    /// The accounts this range's chain already holds, alongside the L2MessageService account
-    /// `buildWorld` derives from `l2_message_service_address` and `bridgeStorage`. Realized
-    /// identically in world0 and world1: an account no block in the range touches keeps the same
-    /// nonce and balance at the range's pre-state and post-state, so realizing it in both worlds is
-    /// the modelling that matches an untouched account, and it leaves the two tries mutually
-    /// consistent.
+    /// The accounts this range's chain already holds. No block in the range touches them, so they
+    /// keep the same nonce and balance at the range's pre-state and post-state.
     accounts: []const Account = &.{},
 
     // ── Post-derivation hooks, applied to the built (not-yet-encoded) value ──
@@ -396,18 +348,6 @@ pub const ConflationPlan = struct {
 
     pub const ParentHashOverride = struct { index: usize, parent_hash: [32]u8 };
 
-    /// Declares this range's L1<->L2 bridge storage at the range's pre-state (`.parent`) or
-    /// post-state (`.end`) — realized as real storage under the L2MessageService's own layout by
-    /// `build()`. These declared values are only realized in the trie if
-    /// `l2_message_service_address` is non-zero at build time — a zero address keeps the range
-    /// suppressed and the declared values are simply never observed.
-    pub fn bridgeStorage(self: *ConflationPlan, which: enum { parent, end }, value: BridgeValue) void {
-        switch (which) {
-            .parent => self.bridge_parent = value,
-            .end => self.bridge_end = value,
-        }
-    }
-
     /// Derives a fully self-consistent, real-MPT/real-header multi-block input, applies any
     /// declared hooks, and encodes every payload's vanilla bytes — everything `run()` needs short
     /// of the outer envelope round-trip.
@@ -417,13 +357,13 @@ pub const ConflationPlan = struct {
             .l2_message_service_address = self.l2_message_service_address,
             .coinbase = self.coinbase,
             .chain_id = self.chain_id,
+            .system_contracts = self.system_contracts,
         };
 
         if (n == 0) {
             return .{
                 .blocks_len = 0,
                 .tx_logs = &.{},
-                .world1_nodes = &.{},
                 .envelope = .{
                     .parent_ftx_rolling_hash = self.parent_ftx_rolling_hash,
                     .parent_last_processed_ftx_number = self.parent_last_processed_ftx_number,
@@ -434,25 +374,13 @@ pub const ConflationPlan = struct {
         }
 
         const genesis = self.start_block_number == 0;
-        const l2ms_for_world: ?[20]u8 = if (isZeroAddress(self.l2_message_service_address)) null else self.l2_message_service_address;
-        const world0_bridge = self.bridge_parent orelse BridgeValue{};
-        const world0 = try buildWorld(alloc, l2ms_for_world, world0_bridge, self.accounts);
-        // Inherits world0's values (no divergence) unless `.end` was declared — "equal to world0
-        // when no bridge storage declared" holds field-by-field, not just in the no-bridge-at-all
-        // case.
-        const world1_bridge = self.bridge_end orelse world0_bridge;
-        const world1 = try buildWorld(alloc, l2ms_for_world, world1_bridge, self.accounts);
+        const world = try buildWorld(alloc, self.accounts);
 
         // ── Headers: a real hash chain. header[i] represents block (start+i); its state_root is
-        // that block's OWN post-state (world0 for every block but the last, world1 for the last)
-        // — exactly mirroring payload[i].state_root, since a header's state_root IS its block's
-        // post-execution root. The range parent header (block start-1, non-genesis only) carries
-        // world0's root: the range's pre-state is, by definition, block `start`'s pre-state.
-        //
-        // Genesis mode's block 0 has no witnessable pre-state at all (the real engine's own
-        // pre_state_root fallback is `payload.state_root` itself whenever no header resolves) —
-        // this DSL derives a distinct world0/world1 pair meaningfully whenever `n > 1`, or
-        // whenever the range starts after genesis.
+        // that block's OWN post-state — exactly mirroring payload[i].state_root, since a header's
+        // state_root IS its block's post-execution root. The range parent header (block start-1,
+        // non-genesis only) carries the same root: the range's pre-state is, by definition, block
+        // `start`'s pre-state.
         var headers = try alloc.alloc([]const u8, n);
         const first_ts = self.blocks[0].timestamp orelse defaultTimestamp(0);
         var range_parent_header: ?[]const u8 = null;
@@ -460,14 +388,13 @@ pub const ConflationPlan = struct {
         var built_end_block_hash: [32]u8 = ZERO_HASH;
         if (!genesis) {
             const parent_ts = if (first_ts >= BLOCK_TIME_SECONDS) first_ts - BLOCK_TIME_SECONDS else 0;
-            range_parent_header = try buildHeader(alloc, ZERO_HASH, self.start_block_number - 1, world0.root, parent_ts);
+            range_parent_header = try buildHeader(alloc, ZERO_HASH, self.start_block_number - 1, world.root, parent_ts);
         }
         var prev_header: ?[]const u8 = range_parent_header;
         for (0..n) |i| {
             const ts = self.blocks[i].timestamp orelse defaultTimestamp(i);
-            const state_root_i = if (i == n - 1) world1.root else world0.root;
             const parent_hash_field = if (prev_header) |h| mpt.keccak256(h) else ZERO_HASH;
-            headers[i] = try buildHeader(alloc, parent_hash_field, self.start_block_number + i, state_root_i, ts);
+            headers[i] = try buildHeader(alloc, parent_hash_field, self.start_block_number + i, world.root, ts);
             prev_header = headers[i];
         }
 
@@ -481,14 +408,13 @@ pub const ConflationPlan = struct {
             const witness_header: ?[]const u8 = if (i == 0) range_parent_header else headers[i - 1];
             const natural_parent_hash = if (witness_header) |h| mpt.keccak256(h) else ZERO_HASH;
             const parent_hash_field = if (i == 0) (self.override_genesis_parent_hash orelse natural_parent_hash) else natural_parent_hash;
-            const state_root_i = if (i == n - 1) world1.root else world0.root;
 
             var si = input.StatelessInput{
                 .new_payload_request = .{
                     .execution_payload = .{
                         .parent_hash = parent_hash_field,
                         .fee_recipient = block.fee_recipient orelse self.coinbase,
-                        .state_root = state_root_i,
+                        .state_root = world.root,
                         .receipts_root = ZERO_HASH,
                         .logs_bloom = @splat(0),
                         .prev_randao = ZERO_HASH,
@@ -515,7 +441,7 @@ pub const ConflationPlan = struct {
                         .{},
                 },
                 .witness = .{
-                    .nodes = world0.nodes,
+                    .nodes = world.nodes,
                     .codes = &.{},
                     .headers = if (witness_header) |h| try ownedSingleHeader(alloc, h) else &.{},
                 },
@@ -547,7 +473,6 @@ pub const ConflationPlan = struct {
         return .{
             .blocks_len = n,
             .tx_logs = tx_logs,
-            .world1_nodes = world1.nodes,
             .envelope = .{
                 .parent_ftx_rolling_hash = self.parent_ftx_rolling_hash,
                 .parent_last_processed_ftx_number = self.parent_last_processed_ftx_number,

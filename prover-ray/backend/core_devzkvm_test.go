@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,10 +23,10 @@ func specFrame(schema uint16, pi []byte) []byte {
 var samplePublicInputs = []byte("public inputs")
 
 func TestClassifyGuestOutput(t *testing.T) {
-	valid := specFrame(guestOutputSchemaID, samplePublicInputs)
+	valid := bitsFromBytes(specFrame(guestOutputSchemaID, samplePublicInputs)...)
 
 	t.Run("valid output is returned", func(t *testing.T) {
-		got, err := classifyGuestOutput(map[string][]byte{guestOutputMemory: valid}, nil)
+		got, err := classifyGuestOutput(map[string]bit.Array{guestOutputMemory: valid}, nil)
 		require.NoError(t, err)
 		assert.Equal(t, valid, got)
 	})
@@ -45,7 +46,7 @@ func TestClassifyGuestOutput(t *testing.T) {
 	})
 
 	t.Run("missing output means the block was rejected", func(t *testing.T) {
-		_, err := classifyGuestOutput(map[string][]byte{"other": {1}}, nil)
+		_, err := classifyGuestOutput(map[string]bit.Array{"other": bitsFromBytes(1)}, nil)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "no guest_output")
 	})
@@ -66,10 +67,14 @@ func TestClassifyGuestOutput(t *testing.T) {
 	}
 	for name, tc := range rejected {
 		t.Run(name, func(t *testing.T) {
-			_, err := classifyGuestOutput(map[string][]byte{guestOutputMemory: tc.out}, nil)
+			_, err := classifyGuestOutput(map[string]bit.Array{guestOutputMemory: bitsFromBytes(tc.out...)}, nil)
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "guest_output does not follow the spec")
 			assert.Contains(t, err.Error(), tc.wantErr)
 		})
 	}
+}
+
+func bitsFromBytes(bytes ...byte) bit.Array {
+	return bit.NewArray(bytes, uint(len(bytes)*8), bit.BigEndian)
 }

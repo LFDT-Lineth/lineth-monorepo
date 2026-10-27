@@ -4,26 +4,25 @@
  *
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
-@file:Suppress("DEPRECATION") // TODO: migrate to maru.test.cluster.MaruCluster
-
 package maru.app
 
 import maru.config.SyncingConfig
+import maru.test.extensions.TestSyncingConfigs
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
+import testutils.Checks.checkAllNodesHaveSameBlocks
 import testutils.Checks.getBlockNumber
 import testutils.ValidatorFollowerNetwork
-import testutils.maru.MaruFactory
 import testutils.maru.awaitTillMaruHasPeers
 import kotlin.time.Duration.Companion.seconds
 
 class MaruFollowerSyncAfterPeersDisconnectTest {
   companion object {
     @JvmStatic
-    fun enumeratingSyncingConfigs(): List<SyncingConfig> = MaruFactory.enumeratingSyncingConfigs()
+    fun enumeratingSyncingConfigs(): List<SyncingConfig> = TestSyncingConfigs.enumerating()
   }
 
   private lateinit var network: ValidatorFollowerNetwork
@@ -31,7 +30,6 @@ class MaruFollowerSyncAfterPeersDisconnectTest {
   @BeforeEach
   fun setUp() {
     network = ValidatorFollowerNetwork()
-    network.startBesuNodes()
   }
 
   @AfterEach
@@ -42,7 +40,7 @@ class MaruFollowerSyncAfterPeersDisconnectTest {
   @ParameterizedTest
   @MethodSource("enumeratingSyncingConfigs")
   fun `Maru follower is able to complete syncing after disconnect peers`(syncingConfig: SyncingConfig) {
-    network.startMaruNodes(syncingConfig)
+    network.start(syncingConfig)
 
     val residueBlocks = 3 // residue of modulo peerChainHeightGranularity i.e. 10
     val blocksToProduce = 20 // a block number dividable by 10
@@ -51,22 +49,22 @@ class MaruFollowerSyncAfterPeersDisconnectTest {
     // This is here mainly to wait until block propagation is complete
     network.checkValidatorAndFollowerBlocks(blocksToProduce)
 
-    val followerP2PNetwork = network.followerStack.maruApp.p2pNetwork
+    val followerP2PNetwork = network.followerMaru.p2pNetwork
     val peers = followerP2PNetwork.getPeers()
     peers.forEach {
       followerP2PNetwork.dropPeer(it)
     }
 
     network.produceBlocks(blocksToProduce + residueBlocks)
-    network.checkNetworkStacksBlocksProduced(2 * blocksToProduce + residueBlocks, network.validatorStack)
-    network.checkNetworkStacksBlocksProduced(blocksToProduce, network.followerStack)
+    checkAllNodesHaveSameBlocks(2 * blocksToProduce + residueBlocks, network.validatorBesu)
+    checkAllNodesHaveSameBlocks(blocksToProduce, network.followerBesu)
     // ensure that the head of follower is at blocksToProduce
-    assertThat(network.followerStack.besuNode.getBlockNumber()).isEqualTo(blocksToProduce)
+    assertThat(network.followerBesu.getBlockNumber()).isEqualTo(blocksToProduce)
 
     peers.forEach {
       followerP2PNetwork.addPeer("${it.address}/p2p/${it.nodeId}")
     }
-    network.followerStack.maruApp.awaitTillMaruHasPeers(1u, pollingInterval = 1.seconds)
+    network.followerMaru.awaitTillMaruHasPeers(1u, pollingInterval = 1.seconds)
     when (syncingConfig.syncTargetSelection) {
       is SyncingConfig.SyncTargetSelection.Highest ->
         network.checkValidatorAndFollowerBlocks(
@@ -77,7 +75,7 @@ class MaruFollowerSyncAfterPeersDisconnectTest {
       is SyncingConfig.SyncTargetSelection.MostFrequent -> {
         network.checkValidatorAndFollowerBlocks(2 * blocksToProduce)
         // ensure that the head of follower is at 2 * blocksToProduce
-        assertThat(network.followerStack.besuNode.getBlockNumber()).isEqualTo(2 * blocksToProduce)
+        assertThat(network.followerBesu.getBlockNumber()).isEqualTo(2 * blocksToProduce)
       }
     }
   }

@@ -65,6 +65,8 @@ pub const ComputedBlock = struct {
     bal_hash: ?[32]u8,
     /// EIP-7685 requests hash as executed.
     requests_hash: [32]u8,
+    /// Block logs bloom as executed.
+    logs_bloom: types.Bloom,
 };
 
 // ─── Private helpers (adapted from Zesu executor/main.zig) ───────────────────────────────────────
@@ -177,6 +179,7 @@ fn computeBlockStatelessWithLogs(
     parent_header: ?rlp_decode.ParentHeader,
     spec: primitives.SpecId,
     chain_id: u64,
+    system_contracts: input.SystemContracts,
 ) !ComputedBlock {
     const env = buildEnv(req, block_hashes, &.{}, parent_header, spec);
     block_validation.validateBlock(env, spec) catch |e| return zesuErr(e);
@@ -199,6 +202,7 @@ fn computeBlockStatelessWithLogs(
         txs,
         spec,
         chain_id,
+        system_contracts,
         hardfork.blockReward(spec),
     ) catch |e| return zesuErr(e);
     // A witness miss surfaced through zesu's WitnessDatabase during live execution — the
@@ -216,6 +220,7 @@ fn computeBlockStatelessWithLogs(
         .blob_gas_used = result.blob_gas_used,
         .bal_hash = result.bal_hash,
         .requests_hash = result.requests_hash,
+        .logs_bloom = result.block_bloom,
     };
 }
 
@@ -276,6 +281,7 @@ pub fn executeStatelessInputWithLogs(
     alloc: std.mem.Allocator,
     si_in: input.StatelessInput,
     fork_name: []const u8,
+    system_contracts: input.SystemContracts,
     node_index: *mpt.NodeIndex,
 ) !ProofOutputWithLogs {
     zesu_allocator.set(alloc);
@@ -301,6 +307,7 @@ pub fn executeStatelessInputWithLogs(
         preamble.parent_header,
         spec,
         si.chain_config.chain_id,
+        system_contracts,
     );
 
     const bal: ?block_validation.BalHashes = if (computed.bal_hash) |h| .{ .computed = h, .expected = declared.block_access_list_hash } else null;
@@ -309,6 +316,8 @@ pub fn executeStatelessInputWithLogs(
         .expected_state_root = ep.state_root,
         .computed_receipts_root = computed.proof.receipts_root,
         .expected_receipts_root = ep.receipts_root,
+        .computed_logs_bloom = computed.logs_bloom,
+        .expected_logs_bloom = ep.logs_bloom,
     }) catch |e| return zesuErr(e);
     if (primitives.isEnabledIn(spec, .prague) and !std.mem.eql(u8, &declared.requests_hash, &computed.requests_hash)) {
         return zesuErr(error.InvalidRequests);
@@ -325,6 +334,7 @@ pub fn computeStatelessInputWithLogs(
     alloc: std.mem.Allocator,
     si_in: input.StatelessInput,
     fork_name: []const u8,
+    system_contracts: input.SystemContracts,
     node_index: *mpt.NodeIndex,
 ) !ComputedBlock {
     zesu_allocator.set(alloc);
@@ -345,5 +355,6 @@ pub fn computeStatelessInputWithLogs(
         preamble.parent_header,
         spec,
         si.chain_config.chain_id,
+        system_contracts,
     );
 }

@@ -121,7 +121,10 @@ pub fn build(b: *std.Build) void {
         // (ReleaseSmall) for the prover toolchain.
         const host_optimize: std.builtin.OptimizeMode =
             if (optimize == .ReleaseSmall) .ReleaseSafe else optimize;
-        const native_target = b.resolveTargetQuery(.{});
+        // Baseline CPU, not the build host's: `l2-execution-runner` ships in the prover-ray image,
+        // so host-specific extensions (e.g. AVX-512 on the build machine) would SIGILL on older
+        // or emulated (Rosetta) x86_64 hosts.
+        const native_target = b.resolveTargetQuery(.{ .cpu_model = .baseline });
         const zlob_dep = b.lazyDependency("zlob", .{ .target = native_target, .optimize = host_optimize }) orelse
             @panic("zlob dependency is required for native test and helper targets");
         const zesu_native = b.dependency("zesu", .{
@@ -263,8 +266,8 @@ pub fn build(b: *std.Build) void {
         // module-wiring comment near `l2_execution_ssz_guest_mod` above).
         //
         // These tests exercise the Linea-layer logic — the FTX rolling hash, dynamicChainConfigHash,
-        // hashAddressList/hashDigestList, the L1->L2 bridge storage-slot math, L2->L1 message
-        // extraction, forced-transaction dispatch, and the witness-backed MPT account/storage reads —
+        // hashAddressList/hashDigestList, the L2MessageService log scan (L2->L1 messages and the L1->L2
+        // rolling hash), forced-transaction dispatch, and the witness-backed MPT account reads —
         // against hand-built fixtures and Python-computed expected values (see Readme.md §6.3/§6.5/§2.1).
         // Needs the full zesu import set (MPT, executor types/tx-decode, primitives, accelerators for
         // ecrecover) plus the sibling `l2_execution_ssz` module.
@@ -377,6 +380,7 @@ pub fn build(b: *std.Build) void {
             .optimize = host_optimize,
         });
         vanilla_wrap_mod.addImport("zesu_ssz_decode", native_imports.ssz_decode);
+        vanilla_wrap_mod.addImport("zesu_input", native_imports.input);
         vanilla_wrap_mod.addImport("l2_execution_ssz", l2_execution_ssz_mod);
 
         const execution_spec_suite_tests = b.addTest(.{
@@ -542,6 +546,7 @@ pub fn build(b: *std.Build) void {
             tests.root_module.addImport("zesu_ssz_decode", native_imports.ssz_decode);
             tests.root_module.addImport("zesu_allocator", native_imports.allocator);
             tests.root_module.addImport("zesu_mpt", native_imports.mpt);
+            tests.root_module.addImport("zesu_input", native_imports.input);
             linkNativeCryptoProvider(tests, provide_native_obj, guest_crypto_host_a);
 
             test_step.dependOn(&b.addRunArtifact(tests).step);

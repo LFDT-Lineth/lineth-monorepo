@@ -33,12 +33,12 @@ test "StubEngine with no active plan matches the real execution seam on the comm
 
     var real_index = try mpt.buildNodeIndex(alloc, si.witness.nodes);
     defer real_index.deinit();
-    const real = try l2_execution.test_api.executeStatelessInputWithLogsFn(alloc, si, si.chain_config.fork_name.?, &real_index);
+    const real = try l2_execution.test_api.executeStatelessInputWithLogsFn(alloc, si, si.chain_config.fork_name.?, input.SystemContracts.forChainId(si.chain_config.chain_id), &real_index);
 
     var stub_index = try mpt.buildNodeIndex(alloc, si.witness.nodes);
     defer stub_index.deinit();
     conflation_plan.StubEngine.active = null;
-    const stub = try conflation_plan.StubEngine.executeStatelessInputWithLogs(alloc, si, si.chain_config.fork_name.?, &stub_index);
+    const stub = try conflation_plan.StubEngine.executeStatelessInputWithLogs(alloc, si, si.chain_config.fork_name.?, input.SystemContracts.forChainId(si.chain_config.chain_id), &stub_index);
 
     try testing.expectEqualSlices(u8, &real.pre_state_root, &stub.pre_state_root);
     try testing.expectEqualSlices(u8, &real.post_state_root, &stub.post_state_root);
@@ -108,7 +108,7 @@ test "executeStatelessInputWithLogs rejects a non-genesis block with no resolvab
     // fork_name is never inspected: rejection happens before the fork lookup that would use it.
     try testing.expectError(
         error.MissingParentHeaderWitness,
-        l2_execution.test_api.executeStatelessInputWithLogsFn(alloc, si, "Amsterdam", &node_index),
+        l2_execution.test_api.executeStatelessInputWithLogsFn(alloc, si, "Amsterdam", input.SystemContracts.forChainId(si.chain_config.chain_id), &node_index),
     );
 }
 
@@ -147,7 +147,7 @@ test "executeStatelessInputWithLogs rejects a payload whose fields no longer mat
     defer node_index.deinit();
     try testing.expectError(
         error.EngineReject,
-        l2_execution.test_api.executeStatelessInputWithLogsFn(alloc, si, si.chain_config.fork_name.?, &node_index),
+        l2_execution.test_api.executeStatelessInputWithLogsFn(alloc, si, si.chain_config.fork_name.?, input.SystemContracts.forChainId(si.chain_config.chain_id), &node_index),
     );
 }
 
@@ -166,7 +166,7 @@ test "executeStatelessInputWithLogs rejects a payload whose block access list wa
     defer node_index.deinit();
     try testing.expectError(
         error.EngineReject,
-        l2_execution.test_api.executeStatelessInputWithLogsFn(alloc, si, si.chain_config.fork_name.?, &node_index),
+        l2_execution.test_api.executeStatelessInputWithLogsFn(alloc, si, si.chain_config.fork_name.?, input.SystemContracts.forChainId(si.chain_config.chain_id), &node_index),
     );
 }
 

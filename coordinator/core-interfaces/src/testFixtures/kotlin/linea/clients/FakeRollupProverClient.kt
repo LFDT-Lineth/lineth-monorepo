@@ -59,8 +59,6 @@ fun dummyRollupProofResponse(proofIndex: BlockIntervalProofIndex): RollupProofRe
     publicInputs = RollupProofPublicInputs(
       endBlockNumber = proofIndex.endBlockNumber,
       endBlockTimestamp = Instant.fromEpochSeconds(0),
-      parentL1L2BridgeMessageNumber = 0UL,
-      parentL1L2BridgeMessageRollingHash = hash,
       endL1L2BridgeMessageNumber = 0UL,
       endL1L2BridgeMessageRollingHash = hash,
       dynamicChainConfigHash = hash,

@@ -63,24 +63,22 @@ const (
 //
 // Count and field names follow the getZkL2ExecutionProofV1 response schema.
 type PublicInputs struct {
-	ParentBlockHash                          [32]byte
-	EndBlockHash                             [32]byte
-	EndBlockNumber                           uint64
-	EndBlockTimestamp                        uint64
-	ParentL1L2BridgeRollingHash              [32]byte
-	ParentL1L2BridgeRollingHashMessageNumber uint64
-	EndL1L2BridgeRollingHash                 [32]byte
-	EndL1L2BridgeRollingHashMessageNumber    uint64
-	DynamicChainConfigHash                   [32]byte
-	ParentFtxRollingHash                     [32]byte
-	ParentFtxNumber                          uint64
-	EndFtxRollingHash                        [32]byte
-	EndProcessedFtxNumber                    uint64
-	FilteredAddresses                        [][20]byte
-	TxFromsHash                              [32]byte
-	BlockCount                               uint64
-	L2MessagingBlocksOffsets                 []uint16
-	L2L1Messages                             [][32]byte
+	ParentBlockHash                       [32]byte
+	EndBlockHash                          [32]byte
+	EndBlockNumber                        uint64
+	EndBlockTimestamp                     uint64
+	EndL1L2BridgeRollingHash              [32]byte
+	EndL1L2BridgeRollingHashMessageNumber uint64
+	DynamicChainConfigHash                [32]byte
+	ParentFtxRollingHash                  [32]byte
+	ParentFtxNumber                       uint64
+	EndFtxRollingHash                     [32]byte
+	EndProcessedFtxNumber                 uint64
+	FilteredAddresses                     [][20]byte
+	TxFromsHash                           [32]byte
+	BlockCount                            uint64
+	L2MessagingBlocksOffsets              []uint16
+	L2L1Messages                          [][32]byte
 }
 
 // Result is the backend's response for a completed [Job].

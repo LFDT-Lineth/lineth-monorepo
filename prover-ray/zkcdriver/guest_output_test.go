@@ -50,8 +50,8 @@ func newGuestOutputSystem(t *testing.T, elf []byte, extraActions ...wiop.ProverA
 		sys.Rounds[0].RegisterAction(a)
 	}
 	proverCompilePipeline(sys)
-
-	return sys, driver, &zkcdriver.PreReadInputs{Inputs: inputs}, outputs["guest_output"]
+	guestOutput := outputs["guest_output"]
+	return sys, driver, &zkcdriver.PreReadInputs{Inputs: inputs}, guestOutput.Bytes()
 }
 
 // TestGuestPublicOutputs proves and verifies the all-in-one guest, which writes

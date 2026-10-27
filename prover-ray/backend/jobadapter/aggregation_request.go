@@ -22,32 +22,30 @@ type EmbeddedRollupProof struct {
 	ProgramVk        []byte
 }
 
-// RollupProofPublicInputs is the 22-field rollup PI of an embedded rollupProof.
+// RollupProofPublicInputs is the rollup PI of an embedded rollupProof.
 // ProgramVks is the sorted, distinct set of VKs verified beneath that proof (a
 // guest output, not the envelope VK).
 type RollupProofPublicInputs struct {
-	EndBlockNumber                           uint64
-	EndBlockTimestamp                        uint64
-	ParentL1L2BridgeRollingHash              [32]byte
-	ParentL1L2BridgeRollingHashMessageNumber uint64
-	EndL1L2BridgeRollingHash                 [32]byte
-	EndL1L2BridgeRollingHashMessageNumber    uint64
-	DynamicChainConfigHash                   [32]byte
-	ParentFtxRollingHash                     [32]byte
-	ParentFtxNumber                          uint64
-	EndFtxRollingHash                        [32]byte
-	EndProcessedFtxNumber                    uint64
-	ParentDataRollingHash                    [32]byte
-	EndDataRollingHash                       [32]byte
-	ParentBlockHash                          [32]byte
-	EndBlockHash                             [32]byte
-	ParentDataTailTakeBytes                  uint64
-	FinalDataTailDiscardBytes                uint64
-	L2L1Messages                             [][32]byte
-	FilteredAddresses                        [][20]byte
-	ProgramVks                               [][32]byte
-	BlockCount                               uint64
-	L2MessagingBlocksOffsets                 []uint16
+	EndBlockNumber                        uint64
+	EndBlockTimestamp                     uint64
+	EndL1L2BridgeRollingHash              [32]byte
+	EndL1L2BridgeRollingHashMessageNumber uint64
+	DynamicChainConfigHash                [32]byte
+	ParentFtxRollingHash                  [32]byte
+	ParentFtxNumber                       uint64
+	EndFtxRollingHash                     [32]byte
+	EndProcessedFtxNumber                 uint64
+	ParentDataRollingHash                 [32]byte
+	EndDataRollingHash                    [32]byte
+	ParentBlockHash                       [32]byte
+	EndBlockHash                          [32]byte
+	ParentDataTailTakeBytes               uint64
+	FinalDataTailDiscardBytes             uint64
+	L2L1Messages                          [][32]byte
+	FilteredAddresses                     [][20]byte
+	ProgramVks                            [][32]byte
+	BlockCount                            uint64
+	L2MessagingBlocksOffsets              []uint16
 }
 
 // AggregationRequest is a decoded getZkRollupAggregationProofV1 request: the
@@ -153,8 +151,6 @@ func decodeRollupProofPublicInputs(
 	}
 	pi.EndBlockNumber = n(endBlockNumberKey)
 	pi.EndBlockTimestamp = n("endBlockTimestamp")
-	pi.ParentL1L2BridgeRollingHash = h("parentL1L2BridgeRollingHash")
-	pi.ParentL1L2BridgeRollingHashMessageNumber = n("parentL1L2BridgeRollingHashMessageNumber")
 	pi.EndL1L2BridgeRollingHash = h("endL1L2BridgeRollingHash")
 	pi.EndL1L2BridgeRollingHashMessageNumber = n("endL1L2BridgeRollingHashMessageNumber")
 	pi.DynamicChainConfigHash = h("dynamicChainConfigHash")

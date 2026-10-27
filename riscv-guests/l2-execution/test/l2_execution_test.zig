@@ -4,8 +4,8 @@
 //! test/l2_execution_ssz_test.zig) are hand-authored codec vectors with dummy witnesses
 //! (`stateRoot=0x1111...`) — real execution cannot reproduce them, so `runL2Execution` is verified
 //! here with focused unit tests instead: deterministic helpers against Python-computed expected
-//! values, message extraction, forced-transaction dispatch, and witness-backed MPT reads against a
-//! hand-built trie.
+//! values, L2MessageService log scanning, forced-transaction dispatch, and witness-backed MPT reads
+//! against a hand-built trie.
 
 const std = @import("std");
 const testing = std.testing;
@@ -16,10 +16,13 @@ const executor = @import("zesu_executor");
 const mpt = @import("zesu_mpt");
 const primitives = @import("zesu_primitives");
 const tx_fixtures = @import("tx_fixtures");
+const log_fixtures = @import("log_fixtures.zig");
 
 const types = executor.executor_types;
 const rlp = executor.executor_rlp_encode;
 const api = l2_execution.test_api;
+const makeLog = log_fixtures.makeLog;
+const rollingHashUpdatedLog = log_fixtures.rollingHashUpdatedLog;
 
 fn repeat(comptime n: usize, byte: u8) [n]u8 {
     var out: [n]u8 = undefined;
@@ -31,15 +34,53 @@ fn repeat(comptime n: usize, byte: u8) [n]u8 {
 // Expected bytes computed with `rollup_spec/.venv/bin/python` against the same formulas in
 // `rollup_spec/src/rollup_spec/l2_execution.py` / `block.py`.
 
-test "chainConfigHash matches Readme.md's §2.1 dynamicChainConfigHash formula" {
-    const chain_config = l2_execution_ssz.ChainConfig{
+fn sampleSystemContracts() l2_execution_ssz.SystemContracts {
+    return .{
+        .beacon_roots = repeat(20, 0xa1),
+        .history_storage = repeat(20, 0xa2),
+        .deposit = repeat(20, 0xa3),
+        .withdrawal_request = repeat(20, 0xa4),
+        .consolidation_request = repeat(20, 0xa5),
+        .builder_deposit_request = repeat(20, 0xa6),
+        .builder_exit_request = repeat(20, 0xa7),
+    };
+}
+
+fn sampleChainConfig() l2_execution_ssz.ChainConfig {
+    return .{
         .l2_message_service_address = repeat(20, 0x11),
         .coinbase = repeat(20, 0x00),
         .chain_id = 59144,
+        .system_contracts = sampleSystemContracts(),
     };
-    const got = api.chainConfigHashFn(chain_config, 1_000_000_000);
+}
+
+test "chainConfigHash matches Readme.md's §2.1 dynamicChainConfigHash formula" {
+    const got = api.chainConfigHashFn(sampleChainConfig(), 1_000_000_000);
     const want = [_]u8{ 0xeb, 0x9a, 0xbc, 0xa2, 0x92, 0x7e, 0x7d, 0x36, 0x99, 0x9c, 0x8d, 0x0a, 0xe3, 0xf4, 0x94, 0xf7, 0xb0, 0x12, 0x0a, 0xde, 0xc4, 0x1f, 0x5c, 0xe1, 0x3a, 0x2b, 0x98, 0xdd, 0xa4, 0x38, 0x50, 0x06 };
     try testing.expectEqualSlices(u8, &want, &got);
+}
+
+test "chainConfigHash excludes the system-contract addresses" {
+    const baseline = api.chainConfigHashFn(sampleChainConfig(), 7);
+    inline for (std.meta.fields(l2_execution_ssz.SystemContracts)) |field| {
+        var tampered = sampleChainConfig();
+        @field(tampered.system_contracts, field.name) = repeat(20, 0x00);
+        const got = api.chainConfigHashFn(tampered, 7);
+        try testing.expectEqualSlices(u8, &baseline, &got);
+    }
+}
+
+test "zesuSystemContracts copies every address into zesu's type" {
+    const sc = sampleSystemContracts();
+    const z = api.zesuSystemContractsFn(sc);
+    try testing.expectEqual(sc.beacon_roots, z.beacon_roots);
+    try testing.expectEqual(sc.history_storage, z.history_storage);
+    try testing.expectEqual(sc.deposit, z.deposit);
+    try testing.expectEqual(sc.withdrawal_request, z.withdrawal_request);
+    try testing.expectEqual(sc.consolidation_request, z.consolidation_request);
+    try testing.expectEqual(sc.builder_deposit_request, z.builder_deposit_request);
+    try testing.expectEqual(sc.builder_exit_request, z.builder_exit_request);
 }
 
 test "addToForcedTxRollingHash matches Readme.md's §6.3 forced-tx rolling-hash formula" {
@@ -75,28 +116,7 @@ test "hashAddressList / hashDigestList match the Python reference implementation
     try testing.expectEqualSlices(u8, &hash_want, &got_hash);
 }
 
-test "mappingSlot matches the Python reference implementation's Solidity mapping-slot formula" {
-    const base_slot = api.u64ToSlot32Fn(281);
-    const key = api.u64ToSlot32Fn(7);
-    const got = api.mappingSlotFn(base_slot, key);
-    const want = [_]u8{ 0x41, 0x92, 0x5a, 0x5f, 0x3a, 0xee, 0x45, 0x64, 0x13, 0x08, 0x42, 0xc8, 0xb6, 0x49, 0x61, 0xf2, 0x2a, 0x92, 0xfe, 0x31, 0x47, 0x84, 0x8f, 0xf9, 0xbf, 0xb3, 0xb4, 0x9b, 0x11, 0x55, 0x63, 0x13 };
-    try testing.expectEqualSlices(u8, &want, &got);
-}
-
-// ─── L2->L1 message extraction ─────────────────────────────────────────────────────────────────────
-
-fn makeLog(alloc: std.mem.Allocator, address: [20]u8, topics: []const [32]u8) !types.Log {
-    return .{
-        .address = address,
-        .topics = try alloc.dupe([32]u8, topics),
-        .data = &.{},
-        .block_number = 1,
-        .tx_hash = repeat(32, 0),
-        .tx_index = 0,
-        .block_hash = repeat(32, 0),
-        .log_index = 0,
-    };
-}
+// ─── L2MessageService log scan ─────────────────────────────────────────────────────────────────────
 
 fn makeReceiptWithLogs(alloc: std.mem.Allocator, logs: []const types.Log) !types.Receipt {
     return .{
@@ -117,7 +137,7 @@ fn makeReceiptWithLogs(alloc: std.mem.Allocator, logs: []const types.Log) !types
     };
 }
 
-test "extractL2L1Messages collects topics[3] only for matching address+topic0" {
+test "scanL2MessageServiceLogs collects MessageSent topics[3] only for matching address+topic0" {
     var arena = std.heap.ArenaAllocator.init(testing.allocator);
     defer arena.deinit();
     const alloc = arena.allocator();
@@ -137,7 +157,8 @@ test "extractL2L1Messages collects topics[3] only for matching address+topic0" {
     };
 
     var out = std.ArrayListUnmanaged([32]u8).empty;
-    try testing.expect(try api.extractL2L1MessagesFn(alloc, &out, &receipts, l2_ms_address));
+    const scan = try api.scanL2MessageServiceLogsFn(alloc, &out, &receipts, l2_ms_address);
+    try testing.expect(scan.has_messages);
 
     try testing.expectEqual(@as(usize, 1), out.items.len);
     try testing.expectEqualSlices(u8, &message_hash, &out.items[0]);
@@ -178,39 +199,29 @@ fn accountLeafValue(alloc: std.mem.Allocator, nonce: u64, balance: u256, storage
     return rlp.encodeList(alloc, &items);
 }
 
-test "witness MPT read: account+storage present, absent address, missing node errors" {
+test "witness MPT read: account present, absent address, missing node errors" {
     var arena = std.heap.ArenaAllocator.init(testing.allocator);
     defer arena.deinit();
     const alloc = arena.allocator();
 
     const address = repeat(20, 0xaa);
     const absent_address = repeat(20, 0xbb);
-    const slot = api.u64ToSlot32Fn(5);
-    const slot_value: u256 = 0x1234;
 
-    const storage_leaf = try buildSingleLeafTrie(alloc, &slot, try rlp.encodeU256(alloc, slot_value));
-
-    const account_value = try accountLeafValue(alloc, 7, 1_000_000, storage_leaf.root, KECCAK_EMPTY);
+    const account_value = try accountLeafValue(alloc, 7, 1_000_000, EMPTY_TRIE_HASH, KECCAK_EMPTY);
     const account_leaf = try buildSingleLeafTrie(alloc, &address, account_value);
 
-    var node_index = try mpt.buildNodeIndex(alloc, &.{ account_leaf.node_rlp, storage_leaf.node_rlp });
+    var node_index = try mpt.buildNodeIndex(alloc, &.{account_leaf.node_rlp});
     defer node_index.deinit();
 
     // Present account: nonce/balance/storage_root round-trip.
     const account = (try api.readAccountFn(account_leaf.root, address, &node_index)).?;
     try testing.expectEqual(@as(u64, 7), account.nonce);
     try testing.expectEqual(@as(u256, 1_000_000), account.balance);
-    try testing.expectEqualSlices(u8, &storage_leaf.root, &account.storage_root);
+    try testing.expectEqualSlices(u8, &EMPTY_TRIE_HASH, &account.storage_root);
 
-    // Present storage slot, reached through the account's storage_root.
-    const value = try api.readStorageFn(account_leaf.root, address, slot, &node_index);
-    try testing.expectEqual(slot_value, value);
-
-    // Proven absence: a different address is NOT an error, just null / zero.
+    // Proven absence: a different address is NOT an error, just null.
     const absent = try api.readAccountFn(account_leaf.root, absent_address, &node_index);
     try testing.expect(absent == null);
-    const absent_storage = try api.readStorageFn(account_leaf.root, absent_address, slot, &node_index);
-    try testing.expectEqual(@as(u256, 0), absent_storage);
 
     // Missing witness node: the SAME root hash, but the node pool doesn't contain it -> error, not
     // absence (this is the semantic WitnessDatabase deliberately does NOT have — see l2_execution.zig).
@@ -252,7 +263,7 @@ fn decodeFixtureTx(alloc: std.mem.Allocator) !types.TxInput {
 fn recoverTxSender(alloc: std.mem.Allocator, signed_tx_rlp: []const u8) ![20]u8 {
     const decoded = try executor.executor_tx_decode.decodeTxs(alloc, &.{signed_tx_rlp});
     var tx = decoded[0];
-    return (try api.recoverSenderFn(alloc, &tx, CHAIN_ID)).?;
+    return (try api.recoverSenderFn(alloc, &tx, CHAIN_ID, .amsterdam)).?;
 }
 
 test "recoverSender recovers the known signer of the signed-tx fixture" {
@@ -261,7 +272,7 @@ test "recoverSender recovers the known signer of the signed-tx fixture" {
     const alloc = arena.allocator();
 
     var tx = try decodeFixtureTx(alloc);
-    const sender = (try api.recoverSenderFn(alloc, &tx, CHAIN_ID)).?;
+    const sender = (try api.recoverSenderFn(alloc, &tx, CHAIN_ID, .amsterdam)).?;
     try testing.expectEqualSlices(u8, &EXPECTED_SENDER, &sender);
 }
 
@@ -735,81 +746,144 @@ test "validateForcedTransactions: BAD_BALANCE dispatch mirrors a type-4 (EIP-770
     );
 }
 
-// ─── extractL2L1Messages: malformed log ────────────────────────────────────────────────────────────
+// ─── scanL2MessageServiceLogs: MessageSent / RollingHashUpdated ────────────────────────────────────
 
-test "extractL2L1Messages rejects a matching log with fewer than 4 topics" {
+const L2_MS_ADDRESS = repeat(20, 0x11);
+const MESSAGE_SENT_TOPIC0 = [_]u8{ 0xe8, 0x56, 0xc2, 0xb8, 0xbd, 0x4e, 0xb0, 0x02, 0x7c, 0xe3, 0x2e, 0xea, 0xf5, 0x95, 0xc2, 0x1b, 0x0b, 0x6b, 0x46, 0x44, 0xb3, 0x26, 0xe5, 0xb7, 0xbd, 0x80, 0xa1, 0xcf, 0x8d, 0xb7, 0x2e, 0x6c };
+
+test "scanL2MessageServiceLogs reports a zero rolling-hash pair when no RollingHashUpdated log is present" {
     var arena = std.heap.ArenaAllocator.init(testing.allocator);
     defer arena.deinit();
     const alloc = arena.allocator();
 
-    const l2_ms_address = repeat(20, 0x11);
-    const bridge_topic0 = [_]u8{ 0xe8, 0x56, 0xc2, 0xb8, 0xbd, 0x4e, 0xb0, 0x02, 0x7c, 0xe3, 0x2e, 0xea, 0xf5, 0x95, 0xc2, 0x1b, 0x0b, 0x6b, 0x46, 0x44, 0xb3, 0x26, 0xe5, 0xb7, 0xbd, 0x80, 0xa1, 0xcf, 0x8d, 0xb7, 0x2e, 0x6c };
+    var messages = std.ArrayListUnmanaged([32]u8).empty;
+    const empty = try api.scanL2MessageServiceLogsFn(alloc, &messages, &.{}, L2_MS_ADDRESS);
+    try testing.expectEqual(@as(u64, 0), empty.rolling_hash.number);
+    try testing.expectEqualSlices(u8, &repeat(32, 0), &empty.rolling_hash.hash);
 
-    // Matching address + topic0, but only 3 topics — one short of topics[3], the message hash.
-    const short_log = try makeLog(alloc, l2_ms_address, &.{ bridge_topic0, repeat(32, 0), repeat(32, 0) });
+    const message_log = try makeLog(alloc, L2_MS_ADDRESS, &.{ MESSAGE_SENT_TOPIC0, repeat(32, 0), repeat(32, 0), repeat(32, 0x99) });
+    const receipts = [_]types.Receipt{try makeReceiptWithLogs(alloc, &.{message_log})};
+    const only_message = try api.scanL2MessageServiceLogsFn(alloc, &messages, &receipts, L2_MS_ADDRESS);
+    try testing.expectEqual(@as(u64, 0), only_message.rolling_hash.number);
+    try testing.expectEqualSlices(u8, &repeat(32, 0), &only_message.rolling_hash.hash);
+}
+
+test "scanL2MessageServiceLogs reports the pair carried by a single RollingHashUpdated log" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    const log = try rollingHashUpdatedLog(alloc, L2_MS_ADDRESS, 7, repeat(32, 0x77));
+    const receipts = [_]types.Receipt{try makeReceiptWithLogs(alloc, &.{log})};
+
+    var messages = std.ArrayListUnmanaged([32]u8).empty;
+    const scan = try api.scanL2MessageServiceLogsFn(alloc, &messages, &receipts, L2_MS_ADDRESS);
+    try testing.expect(!scan.has_messages);
+    try testing.expectEqual(@as(u64, 7), scan.rolling_hash.number);
+    try testing.expectEqualSlices(u8, &repeat(32, 0x77), &scan.rolling_hash.hash);
+}
+
+test "scanL2MessageServiceLogs lets the last RollingHashUpdated log win, within and across receipts" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    const first = try rollingHashUpdatedLog(alloc, L2_MS_ADDRESS, 3, repeat(32, 0x33));
+    const second = try rollingHashUpdatedLog(alloc, L2_MS_ADDRESS, 4, repeat(32, 0x44));
+    const third = try rollingHashUpdatedLog(alloc, L2_MS_ADDRESS, 9, repeat(32, 0x99));
+    const receipts = [_]types.Receipt{
+        try makeReceiptWithLogs(alloc, &.{ first, second }),
+        try makeReceiptWithLogs(alloc, &.{third}),
+    };
+
+    var messages = std.ArrayListUnmanaged([32]u8).empty;
+    const scan = try api.scanL2MessageServiceLogsFn(alloc, &messages, &receipts, L2_MS_ADDRESS);
+    try testing.expectEqual(@as(u64, 9), scan.rolling_hash.number);
+    try testing.expectEqualSlices(u8, &repeat(32, 0x99), &scan.rolling_hash.hash);
+}
+
+test "scanL2MessageServiceLogs ignores RollingHashUpdated logs from other addresses" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    const foreign = try rollingHashUpdatedLog(alloc, repeat(20, 0x22), 7, repeat(32, 0x77));
+    const receipts = [_]types.Receipt{try makeReceiptWithLogs(alloc, &.{foreign})};
+
+    var messages = std.ArrayListUnmanaged([32]u8).empty;
+    const scan = try api.scanL2MessageServiceLogsFn(alloc, &messages, &receipts, L2_MS_ADDRESS);
+    try testing.expectEqual(@as(u64, 0), scan.rolling_hash.number);
+    try testing.expectEqualSlices(u8, &repeat(32, 0), &scan.rolling_hash.hash);
+}
+
+test "scanL2MessageServiceLogs rejects a RollingHashUpdated log with fewer than 3 topics" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    var number_topic: [32]u8 = repeat(32, 0);
+    number_topic[31] = 7;
+    const short_log = try makeLog(alloc, L2_MS_ADDRESS, &.{ mpt.keccak256("RollingHashUpdated(uint256,bytes32)"), number_topic });
     const receipts = [_]types.Receipt{try makeReceiptWithLogs(alloc, &.{short_log})};
 
-    var out = std.ArrayListUnmanaged([32]u8).empty;
+    var messages = std.ArrayListUnmanaged([32]u8).empty;
     try testing.expectError(
         error.InvalidBridgeMessageLog,
-        api.extractL2L1MessagesFn(alloc, &out, &receipts, l2_ms_address),
+        api.scanL2MessageServiceLogsFn(alloc, &messages, &receipts, L2_MS_ADDRESS),
     );
 }
 
-// ─── readL1L2BridgeState: composed reads over a real two-slot storage trie ─────────────────────────
-
-test "readL1L2BridgeState reads the number and rolling hash from real L2MessageService storage" {
+test "scanL2MessageServiceLogs accepts the largest u64 message number and rejects one past it" {
     var arena = std.heap.ArenaAllocator.init(testing.allocator);
     defer arena.deinit();
     const alloc = arena.allocator();
 
-    const l2_ms_address = repeat(20, 0x22);
-    const number: u64 = 7;
-    const hash_value: [32]u8 = repeat(32, 0x77);
+    var messages = std.ArrayListUnmanaged([32]u8).empty;
 
-    var index = try mpt.buildNodeIndex(alloc, &.{});
-    defer index.deinit();
+    const max_log = try rollingHashUpdatedLog(alloc, L2_MS_ADDRESS, std.math.maxInt(u64), repeat(32, 0x77));
+    const max_receipts = [_]types.Receipt{try makeReceiptWithLogs(alloc, &.{max_log})};
+    const scan = try api.scanL2MessageServiceLogsFn(alloc, &messages, &max_receipts, L2_MS_ADDRESS);
+    try testing.expectEqual(@as(u64, std.math.maxInt(u64)), scan.rolling_hash.number);
 
-    // The message number.
-    var storage_root = EMPTY_TRIE_HASH;
-    const number_slot = api.u64ToSlot32Fn(280);
-    try mpt.updateStorageChainedIndexed(alloc, &storage_root, number_slot, @as(u256, number), &index);
-
-    // The rolling hash keyed by that same number.
-    const rolling_hash_slot = api.mappingSlotFn(api.u64ToSlot32Fn(281), api.u64ToSlot32Fn(number));
-    const hash_as_u256 = std.mem.readInt(u256, &hash_value, .big);
-    try mpt.updateStorageChainedIndexed(alloc, &storage_root, rolling_hash_slot, hash_as_u256, &index);
-
-    const account_rlp = try accountLeafValue(alloc, 0, 0, storage_root, KECCAK_EMPTY);
-    var state_root = EMPTY_TRIE_HASH;
-    try mpt.updateAccountChainedIndexed(alloc, &state_root, mpt.keccak256(&l2_ms_address), account_rlp, &index);
-
-    const bridge_state = try api.readL1L2BridgeStateFn(state_root, l2_ms_address, &index);
-    try testing.expectEqualSlices(u8, &hash_value, &bridge_state.hash);
-    try testing.expectEqual(number, bridge_state.number);
-}
-
-test "readL1L2BridgeState rejects a message number that overflows u64" {
-    var arena = std.heap.ArenaAllocator.init(testing.allocator);
-    defer arena.deinit();
-    const alloc = arena.allocator();
-
-    const l2_ms_address = repeat(20, 0x22);
-    const overflowing_number: u256 = @as(u256, 1) << 64;
-
-    var index = try mpt.buildNodeIndex(alloc, &.{});
-    defer index.deinit();
-
-    var storage_root = EMPTY_TRIE_HASH;
-    const number_slot = api.u64ToSlot32Fn(280);
-    try mpt.updateStorageChainedIndexed(alloc, &storage_root, number_slot, overflowing_number, &index);
-
-    const account_rlp = try accountLeafValue(alloc, 0, 0, storage_root, KECCAK_EMPTY);
-    var state_root = EMPTY_TRIE_HASH;
-    try mpt.updateAccountChainedIndexed(alloc, &state_root, mpt.keccak256(&l2_ms_address), account_rlp, &index);
-
+    const overflow_log = try rollingHashUpdatedLog(alloc, L2_MS_ADDRESS, @as(u256, 1) << 64, repeat(32, 0x77));
+    const overflow_receipts = [_]types.Receipt{try makeReceiptWithLogs(alloc, &.{overflow_log})};
     try testing.expectError(
         error.RollingHashNumberOverflow,
-        api.readL1L2BridgeStateFn(state_root, l2_ms_address, &index),
+        api.scanL2MessageServiceLogsFn(alloc, &messages, &overflow_receipts, L2_MS_ADDRESS),
+    );
+}
+
+test "scanL2MessageServiceLogs extracts MessageSent hashes alongside the RollingHashUpdated pair" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    const message_hash = repeat(32, 0x99);
+    const message_log = try makeLog(alloc, L2_MS_ADDRESS, &.{ MESSAGE_SENT_TOPIC0, repeat(32, 0), repeat(32, 0), message_hash });
+    const rolling_log = try rollingHashUpdatedLog(alloc, L2_MS_ADDRESS, 7, repeat(32, 0x77));
+    const receipts = [_]types.Receipt{try makeReceiptWithLogs(alloc, &.{ rolling_log, message_log })};
+
+    var messages = std.ArrayListUnmanaged([32]u8).empty;
+    const scan = try api.scanL2MessageServiceLogsFn(alloc, &messages, &receipts, L2_MS_ADDRESS);
+    try testing.expect(scan.has_messages);
+    try testing.expectEqual(@as(usize, 1), messages.items.len);
+    try testing.expectEqualSlices(u8, &message_hash, &messages.items[0]);
+    try testing.expectEqual(@as(u64, 7), scan.rolling_hash.number);
+    try testing.expectEqualSlices(u8, &repeat(32, 0x77), &scan.rolling_hash.hash);
+}
+
+test "scanL2MessageServiceLogs rejects a MessageSent log with fewer than 4 topics" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    // Matching address + topic0, but only 3 topics — one short of topics[3], the message hash.
+    const short_log = try makeLog(alloc, L2_MS_ADDRESS, &.{ MESSAGE_SENT_TOPIC0, repeat(32, 0), repeat(32, 0) });
+    const receipts = [_]types.Receipt{try makeReceiptWithLogs(alloc, &.{short_log})};
+
+    var messages = std.ArrayListUnmanaged([32]u8).empty;
+    try testing.expectError(
+        error.InvalidBridgeMessageLog,
+        api.scanL2MessageServiceLogsFn(alloc, &messages, &receipts, L2_MS_ADDRESS),
     );
 }

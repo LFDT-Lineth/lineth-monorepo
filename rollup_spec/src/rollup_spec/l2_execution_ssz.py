@@ -49,6 +49,7 @@ from .block import (
     ForcedTransactionWitness,
     LinethPayloadInput,
     LinethRollupExtension,
+    SystemContracts,
 )
 from .l2_execution import (
     L2ExecutionProof,
@@ -110,11 +111,23 @@ def _strict_decode(data: bytes, container: type) -> Any:
 # ── SSZ wire schema: extended guest input ────────────────────────────────────
 
 
+class SszSystemContracts(Container):
+    # Field order matches `block.py::SystemContracts`.
+    beacon_roots: SszAddress
+    history_storage: SszAddress
+    deposit: SszAddress
+    withdrawal_request: SszAddress
+    consolidation_request: SszAddress
+    builder_deposit_request: SszAddress
+    builder_exit_request: SszAddress
+
+
 class SszChainConfig(Container):
     # Field order matches `block.py::ChainConfig`.
     l2_message_service_address: SszAddress
     coinbase: SszAddress
     chain_id: uint64
+    system_contracts: SszSystemContracts
 
 
 class SszForcedTransactionWitness(Container):
@@ -152,8 +165,6 @@ class SszL2ExecutionProofPublicInput(Container):
     end_block_number: uint64
     end_block_timestamp: uint64
     l2_l1_messages: List[SszBytes32, MAX_L2_L1_MESSAGES_PER_EXECUTION]
-    parent_l1_l2_bridge_rolling_hash: SszBytes32
-    parent_l1_l2_bridge_rolling_hash_message_number: uint64
     end_l1_l2_bridge_rolling_hash: SszBytes32
     end_l1_l2_bridge_rolling_hash_message_number: uint64
     dynamic_chain_config_hash: SszBytes32
@@ -184,11 +195,19 @@ class SszVerifiableL2ExecutionProof(Container):
 # ── Logical dataclass -> SSZ view converters ─────────────────────────────────
 
 
+_SYSTEM_CONTRACT_FIELDS = tuple(SystemContracts.__dataclass_fields__)
+
+
+def _ssz_system_contracts(contracts: SystemContracts) -> SszSystemContracts:
+    return SszSystemContracts(**{name: bytes(getattr(contracts, name)) for name in _SYSTEM_CONTRACT_FIELDS})
+
+
 def _ssz_chain_config(config: ChainConfig) -> SszChainConfig:
     return SszChainConfig(
         l2_message_service_address=bytes(config.l2_message_service_address),
         coinbase=bytes(config.coinbase),
         chain_id=int(config.chain_id),
+        system_contracts=_ssz_system_contracts(config.system_contracts),
     )
 
 
@@ -227,10 +246,6 @@ def _ssz_l2_execution_public_input(pi: L2ExecutionProofPublicInput) -> SszL2Exec
         end_block_number=int(pi.end_block_number),
         end_block_timestamp=int(pi.end_block_timestamp),
         l2_l1_messages=[bytes(h) for h in pi.l2_l1_messages],
-        parent_l1_l2_bridge_rolling_hash=bytes(pi.parent_l1_l2_bridge_rolling_hash),
-        parent_l1_l2_bridge_rolling_hash_message_number=int(
-            pi.parent_l1_l2_bridge_rolling_hash_message_number
-        ),
         end_l1_l2_bridge_rolling_hash=bytes(pi.end_l1_l2_bridge_rolling_hash),
         end_l1_l2_bridge_rolling_hash_message_number=int(
             pi.end_l1_l2_bridge_rolling_hash_message_number
@@ -267,11 +282,16 @@ def _ssz_verifiable_l2_execution_proof(
 # ── SSZ view -> logical dataclass converters ─────────────────────────────────
 
 
+def _system_contracts_from_view(view: Any) -> SystemContracts:
+    return SystemContracts(**{name: Address(bytes(getattr(view, name))) for name in _SYSTEM_CONTRACT_FIELDS})
+
+
 def _chain_config_from_view(view: Any) -> ChainConfig:
     return ChainConfig(
         l2_message_service_address=Address(bytes(view.l2_message_service_address)),
         coinbase=Address(bytes(view.coinbase)),
         chain_id=U64(int(view.chain_id)),
+        system_contracts=_system_contracts_from_view(view.system_contracts),
     )
 
 
@@ -317,10 +337,6 @@ def _l2_execution_public_input_from_view(view: Any) -> L2ExecutionProofPublicInp
         end_block_number=U64(int(view.end_block_number)),
         end_block_timestamp=U64(int(view.end_block_timestamp)),
         l2_l1_messages=[Hash32(bytes(h)) for h in view.l2_l1_messages],
-        parent_l1_l2_bridge_rolling_hash=Hash32(bytes(view.parent_l1_l2_bridge_rolling_hash)),
-        parent_l1_l2_bridge_rolling_hash_message_number=U64(
-            int(view.parent_l1_l2_bridge_rolling_hash_message_number)
-        ),
         end_l1_l2_bridge_rolling_hash=Hash32(bytes(view.end_l1_l2_bridge_rolling_hash)),
         end_l1_l2_bridge_rolling_hash_message_number=U64(
             int(view.end_l1_l2_bridge_rolling_hash_message_number)
