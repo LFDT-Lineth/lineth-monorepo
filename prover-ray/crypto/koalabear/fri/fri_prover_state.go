@@ -39,16 +39,18 @@ type ProverState struct {
 	// performed so far and the index of the current running layer.
 	round uint8
 
-	running []field.Ext   // evaluations of layer[round]
-	layers  [][]field.Ext // layers[0..round]; layers[numRounds] is the final polynomial
-	trees   []*Tree       // trees[0..min(round, numRounds-1)]; the final layer has no tree
+	// running holds the evaluations of layer[round], nil for the zero
+	// codeword: the running codeword is zero until the first level joins, and
+	// is never materialized before (see zeroLayerTree).
+	running []field.Ext
+	trees   []layerTree // trees[1..min(round, numRounds-1)]; the final layer has no tree
 }
 
 // NewProverState validates the levels, builds the folding schedule, and seeds
-// the machine with the zero codeword: round 0 always introduces a level (the
-// main degree-D polynomial), which folds in as described in [ProverState.Fold]
-// against this zero seed -- there being no round -1 to fold a real codeword
-// from.
+// the machine with the zero codeword. The first level (at round 0, unless a
+// FixedDomain PCS opens no size at its top) folds in as described in
+// [ProverState.Fold] against this zero seed -- there being no round -1 to fold
+// a real codeword from. The rounds before it fold the zero codeword.
 func NewProverState(p Params, levels []Level) (*ProverState, error) {
 
 	plan, err := buildProvePlan(p, levels)
@@ -57,14 +59,11 @@ func NewProverState(p Params, levels []Level) (*ProverState, error) {
 	}
 
 	st := &ProverState{
-		p:       p,
-		plan:    plan,
-		levels:  levels,
-		running: make([]field.Ext, 1<<p.LogCodewordSize),
-		layers:  make([][]field.Ext, p.numRounds()+1),
-		trees:   make([]*Tree, p.numRounds()),
+		p:      p,
+		plan:   plan,
+		levels: levels,
+		trees:  make([]layerTree, p.numRounds()),
 	}
-	st.layers[0] = st.running
 
 	if p.numRounds() > 1 {
 		st.RoundRoots = make([]field.Octuplet, p.numRounds()-1)
@@ -77,7 +76,7 @@ func NewProverState(p Params, levels []Level) (*ProverState, error) {
 	if p.numRounds() == 0 {
 		if l, ok := plan.levelAtRound[0]; ok {
 			var alphaDeep field.Ext
-			st.running = st.levels[l].EvalsAt(alphaDeep, st.running)
+			st.running = st.levels[l].EvalsAt(alphaDeep, st.runningOrZero())
 		}
 		coeffs := append([]field.Ext(nil), st.running...)
 		p.domains[0].FFTInverseExt6(coeffs, fft.DIT)
@@ -116,16 +115,23 @@ func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 	if l, ok := st.plan.levelAtRound[j]; ok {
 		var alphaDeep field.Ext
 		alphaDeep.Square(&alpha)
-		primary = st.levels[l].EvalsAt(alphaDeep, st.running)
+		primary = st.levels[l].EvalsAt(alphaDeep, st.runningOrZero())
 		if want := 1 << (st.p.LogCodewordSize - j); len(primary) != want {
 			panic(fmt.Sprintf("fri: ProverState.Fold: levels[%d].EvalsAt returned %d values, want %d", l, len(primary), want))
 		}
 	}
 
-	st.running = foldLayerInternally(primary, alpha, st.p.domains[j])
-	st.layers[j+1] = st.running
+	// The zero codeword (nil) folds into the zero codeword.
+	st.running = nil
+	if primary != nil {
+		st.running = foldLayerInternally(primary, alpha, st.p.domains[j])
+	}
 	st.round = j + 1
 
+	if j+1 == st.p.numRounds() && st.running == nil {
+		st.FinalPoly = make([]field.Ext, 1<<st.p.logFinalPolySize)
+		return field.Octuplet{}
+	}
 	if j+1 == st.p.numRounds() {
 		// Final layer: revealed directly, no Merkle commitment, as its
 		// 2^logFinalPolySize coefficients rather than its codeword. The
@@ -144,11 +150,25 @@ func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 		return field.Octuplet{}
 	}
 
-	tree := buildTreeExt(st.running)
+	var tree layerTree
+	if st.running == nil {
+		tree = zeroLayerTree{height: int(st.p.LogCodewordSize - j - 1)}
+	} else {
+		tree = buildTreeExt(st.running)
+	}
 	st.trees[j+1] = tree
 	root := tree.Root()
 	st.RoundRoots[j] = root // root of layer j+1 → RoundRoots[(j+1)-1]
 	return root
+}
+
+// runningOrZero returns the running codeword, materializing the zero codeword
+// at the current round's size when no level has joined yet.
+func (st *ProverState) runningOrZero() []field.Ext {
+	if st.running != nil {
+		return st.running
+	}
+	return make([]field.Ext, 1<<(st.p.LogCodewordSize-st.round))
 }
 
 // Open runs the query phase for the given query positions and returns the

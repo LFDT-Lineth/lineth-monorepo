@@ -403,8 +403,9 @@ type provePlan struct {
 }
 
 // buildProvePlan validates levels and computes the provePlan schedule. It
-// enforces no two levels are introduced at the same folding round, and that
-// exactly one level is introduced at round 0 (i.e. with codeword length 2^p.LogCodewordSize).
+// enforces no two levels are introduced at the same folding round. Round 0
+// may have no level (a FixedDomain PCS whose largest size opened is below its
+// domain): the running codeword is then zero until the first level joins.
 func buildProvePlan(p Params, levels []Level) (provePlan, error) {
 	var plan provePlan
 	if len(levels) == 0 || len(levels) > 255 {
@@ -438,10 +439,6 @@ func buildProvePlan(p Params, levels []Level) (provePlan, error) {
 			return plan, fmt.Errorf("fri: Prove: %w", err)
 		}
 	}
-	if _, ok := plan.levelAtRound[0]; !ok {
-		return plan, fmt.Errorf("fri: Prove: no level introduced at round 0 (there must be a top level)")
-	}
-
 	return plan, nil
 }
 
@@ -724,27 +721,16 @@ func mapExtToOctuplet(exts []field.Ext) []field.Octuplet {
 
 // openRunningQueryExt builds the Merkle opening data for query index s across
 // running extension folding levels. Input-tree openings are carried separately.
+// Each fold halves the layer: s>>j is the bit-reversed position of the query in
+// layer j.
 func (st *ProverState) openRunningQueryExt(s int, capDepths []int) RunningQuery {
 	if st.p.numRounds() <= 1 {
 		return nil
 	}
 	q := make(RunningQuery, st.p.numRounds()-1)
 	for j := uint8(1); j < st.p.numRounds(); j++ {
-
-		var (
-			base = s >> j
-			path = st.trees[j].OpenBranchToDepth(base, capDepths[j])
-		)
-
-		// Each fold halves the layer, so layer j has half the entries of layer
-		// j-1. base = s>>j is the bit-reversed position of the query in layer j.
-		if len(st.layers[j])*2 != len(st.layers[j-1]) {
-			panic("fri: openRunningQueryExt: layers must halve at each round")
-		}
-
-		q[j-1] = path
+		q[j-1] = st.trees[j].OpenBranchToDepth(s>>j, capDepths[j])
 	}
-
 	return q
 }
 

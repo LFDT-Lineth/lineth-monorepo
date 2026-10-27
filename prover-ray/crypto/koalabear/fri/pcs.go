@@ -149,8 +149,17 @@ import (
 type PCS struct {
 	Params   Params
 	Encoders []*RSEncoder
-	openings []pcsOpening
-	zeta     field.Ext
+	// FixedDomain runs FRI over the full Params domain, of plaintext size
+	// 2^Params.LogPlainTextSize, whatever the sizes opened. Otherwise the
+	// schedule is restricted to the largest size opened (see restrictTo).
+	// With FixedDomain, the number of fold rounds, of running-layer roots and
+	// of transcript steps is fixed by Params, which a size-oblivious verifier
+	// needs: when the largest size opened is smaller, the top rounds fold the
+	// zero codeword, whose layers the prover commits at a constant cost (see
+	// zeroLayerTree). The prover and the verifier must agree on it.
+	FixedDomain bool
+	openings    []pcsOpening
+	zeta        field.Ext
 }
 
 type pcsOpening struct {
@@ -842,9 +851,10 @@ func validateBatchClaimShape(claimed BatchClaimedValues, shifts BatchShifts, zet
 // level's batched evaluations are computed later, at fold time (see
 // Level.EvalsAt), once that level's own alphaDeep is known.
 //
-// The FRI schedule is restricted to the largest size actually opened, so the
-// fold count follows the witness rather than the (possibly larger, static)
-// Params: a size-2^k top level folds k times regardless of Params.LogPlainTextSize >= k.
+// Unless FixedDomain is set, the FRI schedule is restricted to the largest
+// size actually opened, so the fold count follows the witness rather than the
+// (possibly larger, static) Params: a size-2^k top level folds k times
+// regardless of Params.LogPlainTextSize >= k.
 func (pcs *PCS) NewProverState() (*ProverState, error) {
 	if len(pcs.openings) == 0 {
 		return nil, fmt.Errorf("fri: NewProverState: AddOpening must be called first")
@@ -915,8 +925,17 @@ func (pcs *PCS) restrictToOpenings() (*PCS, error) {
 }
 
 // restrictTo returns a view of this PCS with Params restricted to top size
-// 2^topSizeLog2, sharing the encoders, openings, and zeta.
+// 2^topSizeLog2, sharing the encoders, openings, and zeta. With FixedDomain,
+// it returns the PCS itself, after checking that 2^topSizeLog2 fits its
+// domain.
 func (pcs *PCS) restrictTo(topSizeLog2 uint8) (*PCS, error) {
+	if pcs.FixedDomain {
+		if topSizeLog2 > pcs.Params.LogPlainTextSize {
+			return nil, fmt.Errorf("fri: size 2^%d exceeds the fixed FRI domain's plaintext size 2^%d",
+				topSizeLog2, pcs.Params.LogPlainTextSize)
+		}
+		return pcs, nil
+	}
 	restrictedParams, err := pcs.Params.restrictTo(topSizeLog2)
 	if err != nil {
 		return nil, err
@@ -1621,7 +1640,8 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 		return err
 	}
 	// Restrict the FRI schedule to the largest opened size so the fold count
-	// tracks the witness rather than the (static) Params; mirrors the prover.
+	// tracks the witness rather than the (static) Params, unless FixedDomain;
+	// mirrors the prover.
 	pcs, err = pcs.restrictTo(layout.maxSizeLog2())
 	if err != nil {
 		return err

@@ -83,6 +83,7 @@ type compileOptions struct {
 	merkleCap      merkleCapChoice
 	elisionEnabled bool
 	moduleGroups   bool
+	fixedFRIDomain bool
 }
 
 // merkleCapMode tells how a System chose its Merkle cap height. The zero value
@@ -263,6 +264,22 @@ func WithModuleGroups() Option {
 	return func(o *compileOptions) { o.moduleGroups = true }
 }
 
+// WithFixedFRIDomain runs FRI over the full domain of the largest committable
+// column, 2^[FRIMaxCommittableSizeLog2] rows at the RS blowup, whatever the
+// sizes of the proof's columns (see [fri.PCS.FixedDomain]). The number of fold
+// rounds, of FRI layer roots and of transcript steps is then fixed by the
+// compiled System, and the query positions are drawn from the full codeword
+// domain, which a size-oblivious recursive verifier needs (#4246). When the
+// largest committed column is smaller, the top rounds fold the zero codeword:
+// the prover commits those layers at a constant cost, but every query opens
+// them.
+//
+// Off by default: proofs differ from the default ones, which fold only as
+// many rounds as their largest committed column needs.
+func WithFixedFRIDomain() Option {
+	return func(o *compileOptions) { o.fixedFRIDomain = true }
+}
+
 // merge resolves opts against sys's recorded PCS configuration without
 // mutating anything. A local value that conflicts with an explicit
 // preconfigured (or consumed) value is an error, while a matching value is
@@ -294,6 +311,9 @@ func merge(sys *wiop.System, opts []Option) (compileOptions, error) {
 	if cfg.moduleGroups && state.consumed && !pre.moduleGroups {
 		return cfg, fmt.Errorf("pcs: WithModuleGroups conflicts with the consumed compile without module groups")
 	}
+	if cfg.fixedFRIDomain && state.consumed && !pre.fixedFRIDomain {
+		return cfg, fmt.Errorf("pcs: WithFixedFRIDomain conflicts with the consumed compile without a fixed FRI domain")
+	}
 	if cfg.friNumQueries == 0 {
 		cfg.friNumQueries = pre.friNumQueries
 	}
@@ -305,6 +325,7 @@ func merge(sys *wiop.System, opts []Option) (compileOptions, error) {
 	}
 	cfg.elisionEnabled = cfg.elisionEnabled || pre.elisionEnabled
 	cfg.moduleGroups = cfg.moduleGroups || pre.moduleGroups
+	cfg.fixedFRIDomain = cfg.fixedFRIDomain || pre.fixedFRIDomain
 	if cfg.moduleGroups && cfg.elisionEnabled {
 		return cfg, fmt.Errorf("pcs: WithModuleGroups conflicts with WithColumnElision")
 	}
@@ -449,6 +470,13 @@ func FRIMaxCommittableSizeLog2(sys *wiop.System) uint8 {
 	return maxCommittableSizeLog2(compiledLogRSBlowup(sys))
 }
 
+// FRIFixedDomain reports whether sys was compiled [WithFixedFRIDomain]. It is
+// false when sys has no PCS opening.
+func FRIFixedDomain(sys *wiop.System) bool {
+	state := configOf(sys)
+	return state.consumed && state.fixedFRIDomain
+}
+
 // FRIStaticParams returns the FRI envelope parameters of sys (sized to
 // [FRIMaxCommittableSizeLog2] at sys's blowup, at the production query count).
 // sys may open fewer queries; see [FRINumQueries]. It panics when sys has no
@@ -473,6 +501,7 @@ func (c *compiled) newPCS() *fri.PCS {
 	if err != nil {
 		utils.Panic("pcs: newPCS: %v", err)
 	}
+	pcs.FixedDomain = c.fixedFRIDomain
 	return pcs
 }
 
@@ -487,14 +516,18 @@ func maxSizeIndex(sizeOf moduleSizeFunc, batches []BatchRef, manifests []ColumnM
 }
 
 // effectiveN is the FRI top-domain size for this proof's witness: the codeword
-// size of the largest committed (Present) column. Query positions are drawn
-// from [0, N), so this must match the size the PCS restricts its schedule to
-// (both derive it from the same committed columns).
+// size of the largest committed (Present) column, or of the largest
+// committable one with a fixed FRI domain. Query positions are drawn from
+// [0, N), so this must match the size the PCS restricts its schedule to (both
+// derive it from the same committed columns).
 func (c *compiled) effectiveN(rt *wiop.Runtime, batches []BatchRef, manifests []ColumnManifest) int {
 	return c.effectiveNWith(runtimeSizeOf(rt), batches, manifests)
 }
 
 func (c *compiled) effectiveNWith(sizeOf moduleSizeFunc, batches []BatchRef, manifests []ColumnManifest) int {
+	if c.fixedFRIDomain {
+		return 1 << (int(c.maxSizeLog2) + int(c.logRSBlowup))
+	}
 	return 1 << (maxSizeIndex(sizeOf, batches, manifests) + int(c.logRSBlowup))
 }
 
@@ -541,8 +574,11 @@ type compiled struct {
 	elisionEnabled bool
 	// moduleGroups commits every module as its own group (see
 	// [WithModuleGroups]).
-	moduleGroups  bool
-	friNumQueries int
+	moduleGroups bool
+	// fixedFRIDomain runs FRI over the full static domain (see
+	// [WithFixedFRIDomain]).
+	fixedFRIDomain bool
+	friNumQueries  int
 	// merkleCapHeight is the resolved [fri.Params.MerkleCapHeight].
 	merkleCapHeight uint8
 	logRSBlowup     uint8
@@ -593,6 +629,7 @@ func Compile(sys *wiop.System, opts ...Option) {
 		colShifts:       collectColumnShifts(sys),
 		elisionEnabled:  cfg.elisionEnabled,
 		moduleGroups:    cfg.moduleGroups,
+		fixedFRIDomain:  cfg.fixedFRIDomain,
 		friNumQueries:   cfg.friNumQueries,
 		merkleCapHeight: cfg.merkleCap.resolve(cfg.friNumQueries),
 		logRSBlowup:     logBlowup,
