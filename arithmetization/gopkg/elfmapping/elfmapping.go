@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math"
 	"sort"
 )
 
@@ -287,15 +288,26 @@ func EncodeInputs(
 		}
 	}
 
+	// The blob count, blob sizes and blobs_data indexes are u32 in the
+	// arithmetization.
+	dataSize := blobDataSize(blobs)
+	if uint64(len(blobs)) > math.MaxUint32 || uint64(dataSize) > math.MaxUint32 {
+		return nil, fmt.Errorf(
+			"%d memory blobs with %d bytes exceed the u32 input limit",
+			len(blobs),
+			dataSize,
+		)
+	}
+
 	entryAndCount := binary.BigEndian.AppendUint64(nil, program.EntryPoint)
-	entryAndCount = binary.BigEndian.AppendUint64(entryAndCount, uint64(len(blobs)))
-	offsetsAndSizes := make([]byte, 0, 16*len(blobs))
-	data := make([]byte, 0, blobDataSize(blobs))
+	entryAndCount = binary.BigEndian.AppendUint32(entryAndCount, uint32(len(blobs)))
+	offsetsAndSizes := make([]byte, 0, 12*len(blobs))
+	data := make([]byte, 0, dataSize)
 	for _, blob := range blobs {
 		offsetsAndSizes = binary.BigEndian.AppendUint64(offsetsAndSizes, blob.Address)
-		offsetsAndSizes = binary.BigEndian.AppendUint64(
+		offsetsAndSizes = binary.BigEndian.AppendUint32(
 			offsetsAndSizes,
-			uint64(len(blob.Data)),
+			uint32(len(blob.Data)),
 		)
 		data = append(data, blob.Data...)
 	}

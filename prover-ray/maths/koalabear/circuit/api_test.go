@@ -5,7 +5,6 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/gnark-crypto/ecc"
-	"github.com/consensys/gnark-crypto/field/koalabear"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/scs"
 	"github.com/stretchr/testify/require"
@@ -67,31 +66,17 @@ func getVarWitness() TestVarCircuit {
 	}
 }
 
-func TestVarNative(t *testing.T) {
-	witness := getVarWitness()
-	var circuit TestVarCircuit
-
-	ccs, err := frontend.CompileU32(koalabear.Modulus(), scs.NewBuilder, &circuit)
-	require.NoError(t, err)
-
-	fullWitness, err := frontend.NewWitness(&witness, koalabear.Modulus())
-	require.NoError(t, err)
-
-	err = ccs.IsSolved(fullWitness)
-	require.NoError(t, err)
-}
-
 func TestVarEmulated(t *testing.T) {
 	witness := getVarWitness()
 	var circuit TestVarCircuit
 
-	ccs, err := frontend.Compile(ecc.BLS12_377.ScalarField(), scs.NewBuilder, &circuit)
+	ccs, err := frontend.Compile(ecc.BN254.ScalarField(), scs.NewBuilder, &circuit)
 	require.NoError(t, err)
 
-	fullWitness, err := frontend.NewWitness(&witness, ecc.BLS12_377.ScalarField())
+	fullWitness, err := frontend.NewWitness(&witness, ecc.BN254.ScalarField())
 	require.NoError(t, err)
 
-	err = ccs.IsSolved(fullWitness)
+	_, err = ccs.Solve(fullWitness)
 	require.NoError(t, err)
 }
 
@@ -165,30 +150,16 @@ func getExtWitness() *TestExtCircuit {
 	}
 }
 
-func TestExtNative(t *testing.T) {
-	witness := getExtWitness()
-	var circuit TestExtCircuit
-
-	ccs, err := frontend.CompileU32(koalabear.Modulus(), scs.NewBuilder, &circuit)
-	require.NoError(t, err)
-
-	fullWitness, err := frontend.NewWitness(witness, koalabear.Modulus())
-	require.NoError(t, err)
-
-	err = ccs.IsSolved(fullWitness)
-	require.NoError(t, err)
-}
-
 func TestExtEmulated(t *testing.T) {
 	witness := getExtWitness()
 	var circuit TestExtCircuit
 
-	ccs, err := frontend.Compile(ecc.BLS12_377.ScalarField(), scs.NewBuilder, &circuit)
+	ccs, err := frontend.Compile(ecc.BN254.ScalarField(), scs.NewBuilder, &circuit)
 	require.NoError(t, err)
 
-	fullWitness, err := frontend.NewWitness(witness, ecc.BLS12_377.ScalarField())
+	fullWitness, err := frontend.NewWitness(witness, ecc.BN254.ScalarField())
 	require.NoError(t, err)
 
-	err = ccs.IsSolved(fullWitness)
+	_, err = ccs.Solve(fullWitness)
 	require.NoError(t, err)
 }

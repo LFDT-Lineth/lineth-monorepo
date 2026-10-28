@@ -25,7 +25,7 @@ teardown() {
   git add snapshot.md
   git commit -q -m init
   COMMITTED_SNAPSHOT_PATHS="snapshot.md" \
-  GRADLE_GENERATE_TASK=":coordinator:app:generateConfigDocs" \
+  GRADLE_GENERATE_TASK=":coordinator:config:generateConfigDocs" \
   COMPONENT_NAME="coordinator" \
   run bash "$SCRIPT_DIR/assert-snapshots-synced.sh"
   [ "$status" -eq 0 ]
@@ -38,12 +38,12 @@ teardown() {
   git commit -q -m init
   printf 'drifted\n' > snapshot.md
   COMMITTED_SNAPSHOT_PATHS="snapshot.md" \
-  GRADLE_GENERATE_TASK=":coordinator:app:generateConfigDocs" \
+  GRADLE_GENERATE_TASK=":coordinator:config:generateConfigDocs" \
   COMPONENT_NAME="coordinator" \
   run bash "$SCRIPT_DIR/assert-snapshots-synced.sh"
   [ "$status" -ne 0 ]
   [[ "$output" == *"out of date"* ]]
-  [[ "$output" == *":coordinator:app:generateConfigDocs"* ]]
+  [[ "$output" == *":coordinator:config:generateConfigDocs"* ]]
 }
 
 @test "fails when COMMITTED_SNAPSHOT_PATHS is empty" {

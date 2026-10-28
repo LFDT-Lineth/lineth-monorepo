@@ -1,6 +1,4 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
@@ -12,8 +10,8 @@ import linea.kotlin.encodeHex
 import linea.kotlin.xor
 import maru.crypto.Hashing
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
 import kotlin.random.Random
-import kotlin.test.Test
 
 class PrevRandaoProviderTest {
   @Test

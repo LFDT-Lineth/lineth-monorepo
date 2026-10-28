@@ -6,6 +6,7 @@ plugins {
 dependencies {
   implementation project(':coordinator:core-interfaces')
   api project(':coordinator:clients:prover-client:serialization')
+  api project(':coordinator:config')
   implementation project(':coordinator:clients:smart-contract-client')
   implementation project(':coordinator:ethereum:models-helper')
   implementation project(':coordinator:utilities')
@@ -32,6 +33,16 @@ dependencies {
   testImplementation testFixtures(project(':coordinator:core-interfaces'))
   testImplementation testFixtures(project(':jvm-libs:linea:clients:interfaces'))
   testImplementation testFixtures(project(':jvm-libs:linea:core:domain-models'))
+  testImplementation testFixtures(project(':jvm-libs:generic:vertx-helper'))
   testImplementation "io.vertx:vertx-junit5"
   testImplementation "org.wiremock:wiremock:${libs.versions.wiremock.get()}"
+  // Draft 2020-12 validation of DTOs against the rollup_spec prover I/O schemas.
+  testImplementation "com.networknt:json-schema-validator:${libs.versions.jsonSchemaValidator.get()}"
+}
+
+tasks.withType(Test).configureEach {
+  // Golden fixtures and JSON Schemas that define the RISC-V prover wire contract.
+  def proverIoDir = rootProject.file("rollup_spec/src/rollup_spec/prover_io")
+  inputs.dir(proverIoDir).withPropertyName("rollupSpecProverIoDir").withPathSensitivity(PathSensitivity.RELATIVE)
+  systemProperty "rollupSpecProverIoDir", proverIoDir.absolutePath
 }

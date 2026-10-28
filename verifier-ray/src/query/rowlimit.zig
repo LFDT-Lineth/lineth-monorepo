@@ -54,8 +54,8 @@ fn sumRows(modules: []const ModuleSize, module_sizes: []const usize) Error!u64 {
 /// size), so this check is what stops a prover from claiming a far larger
 /// dynamic size than it compiled against — one whose accumulators would
 /// overflow the small field the reduced lookup constraints run in.
-pub fn verify(comptime system: System, module_sizes: []const usize) Error!void {
-    inline for (system.checks) |check| {
+pub fn verify(system: System, module_sizes: []const usize) Error!void {
+    for (system.checks) |check| {
         const included_rows = try sumRows(check.included_modules, module_sizes);
         if (included_rows >= check.limit) return error.RowLimitExceeded;
 

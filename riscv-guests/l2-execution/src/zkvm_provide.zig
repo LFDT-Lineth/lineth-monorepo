@@ -51,7 +51,7 @@ const Bls12G1MsmPair = extern struct { point: [96]u8, scalar: [32]u8 };
 const Bls12G2MsmPair = extern struct { point: [192]u8, scalar: [32]u8 };
 const Bls12PairingPair = extern struct { g1: [96]u8, g2: [192]u8 };
 
-// Standard Zig keccak is the default; `-Dkeccak-accel` selects the wrapper.
+// Standard Zig keccak is selected by `-Dkeccak-accel=false`.
 fn keccak256(data: [*]const u8, len: usize, output: *[32]u8) callconv(.c) i32 {
     std.crypto.hash.sha3.Keccak256.hash(data[0..len], output, .{});
     return OK;

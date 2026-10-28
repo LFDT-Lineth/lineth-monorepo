@@ -26,9 +26,7 @@ export type GetMessagesByTransactionHashParameters = {
 export type GetMessagesByTransactionHashReturnType = ExtendedMessage[];
 
 export type GetMessagesByTransactionHashErrorType =
-  | GetTransactionReceiptErrorType
-  | ParseEventLogsErrorType
-  | ChainNotFoundErrorType;
+  GetTransactionReceiptErrorType | ParseEventLogsErrorType | ChainNotFoundErrorType;
 
 /**
  * Returns the details of messages sent in a transaction by its hash.

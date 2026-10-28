@@ -31,8 +31,8 @@ test "vanishing quotient honest scenarios match prover-ray" {
             .module_sizes = proof.module_sizes,
         });
         // The same honest proof must satisfy the LogDerivativeSum boundary
-        // checks (final-sum == Result). Empty logderiv systems pass trivially.
-        try logderivativesum.verify(case.logderiv, ctx);
+        // checks (Σ n·C == Result). Empty logderiv systems pass trivially.
+        try logderivativesum.verify(case.logderiv, ctx, proof.module_sizes);
     }
 }
 
@@ -280,6 +280,77 @@ test "cancelled positions get the same dynamic bounds check" {
         error.QuotientIdentityMismatch,
         vanishing.verify(dynCancelledSystem(-n), input),
     );
+}
+
+// The LogDerivativeSum average cell C is bound by the cyclic recurrence that
+// reads it, zNum − (Z − Z[−1] + C)·zDen == 0, not only by Fiat–Shamir. This
+// test isolates that binding: it replays the transcript on the HONEST proof
+// (so the coins are the honest ones), then adds 1 to an average cell C and n
+// (its module's size) to the query's Result. The logderivativesum check
+// Σ n·C == Result still holds, so it passes; only the recurrence, which reads
+// C, can reject — vanishing.verify must fail with QuotientIdentityMismatch.
+// If the recurrence did not read C, the forged pair would be accepted.
+// Queries whose Result must be zero (lookups) are skipped: adding n would
+// break that check instead.
+test "average cell is bound by the cyclic recurrence" {
+    var checked: usize = 0;
+    inline for (fixtures.scenarios) |case| {
+        for (case.logderiv.queries) |query| {
+            if (query.result_is_zero or query.entries.len == 0) continue;
+            var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+            defer arena.deinit();
+            const a = arena.allocator();
+            const proof = try buildProofData(a, case.honest);
+            var bound = try public_input.bindRoundMessages(case.public_input, proof.proof_rounds, proof.public_inputs);
+            const rounds = bound.rounds();
+            var transcript = fiat_shamir.Transcript.init();
+            const coins = try protocol.replayWithTranscript(&transcript, case.spec, rounds, proof.module_sizes);
+
+            const entry = query.entries[0];
+            const n: usize = switch (entry.size) {
+                .static => |size| size,
+                .dynamic => |idx| proof.module_sizes[idx],
+            };
+            const n_ext = ext.Ext.one().mulByBase(field.Element.init(@intCast(n)));
+
+            // Control: Result alone, shifted by n, is not read by the
+            // vanishing check (only logderivativesum reads it), so the
+            // mismatch below can only come from C.
+            const result_only = try a.dupe(protocol.RoundMessage, rounds);
+            try addToCell(a, result_only, query.result_ref, n_ext);
+            try vanishing.verify(case.system, .{
+                .ctx = .{ .all_coins = &coins, .rounds = result_only },
+                .witness_claims = proof.witness_claims,
+                .quotient_claims = proof.quotient_claims,
+                .module_sizes = proof.module_sizes,
+            });
+
+            const edited = try a.dupe(protocol.RoundMessage, rounds);
+            try addToCell(a, edited, entry.average_ref, ext.Ext.one());
+            try addToCell(a, edited, query.result_ref, n_ext);
+            const ctx = protocol.Context{ .all_coins = &coins, .rounds = edited };
+
+            try logderivativesum.verify(case.logderiv, ctx, proof.module_sizes);
+            try std.testing.expectError(
+                error.QuotientIdentityMismatch,
+                vanishing.verify(case.system, .{
+                    .ctx = ctx,
+                    .witness_claims = proof.witness_claims,
+                    .quotient_claims = proof.quotient_claims,
+                    .module_sizes = proof.module_sizes,
+                }),
+            );
+            checked += 1;
+        }
+    }
+    try std.testing.expect(checked > 0);
+}
+
+// addToCell adds delta to the cell at ref, in a copy of its round's cells.
+fn addToCell(allocator: std.mem.Allocator, rounds: []protocol.RoundMessage, ref: logderivativesum.ScalarRef, delta: ext.Ext) !void {
+    const cells = try allocator.dupe(protocol.Scalar, rounds[ref.round].cells);
+    cells[ref.index] = .{ .ext = cells[ref.index].toExt().add(delta) };
+    rounds[ref.round].cells = cells;
 }
 
 const ProofData = struct {

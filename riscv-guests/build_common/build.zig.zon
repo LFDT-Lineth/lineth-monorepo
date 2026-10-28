@@ -10,5 +10,6 @@
         // Shared statically-linked-ELF link inputs, @embedFile-d by build.zig (installGuestElf).
         "start.s",
         "linker_script.ld",
+        "program-id.zig",
     },
 }

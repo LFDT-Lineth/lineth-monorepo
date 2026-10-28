@@ -1,6 +1,4 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
@@ -18,11 +16,11 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatNoException
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.MessageData
+import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import kotlin.test.Test
 
 class P2PValidatorMulticasterTest {
   private val message = mock<MessageData>()

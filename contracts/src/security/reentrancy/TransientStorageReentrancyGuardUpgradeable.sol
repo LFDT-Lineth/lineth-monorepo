@@ -3,7 +3,7 @@ pragma solidity ^0.8.33;
 
 /**
  * @title Contract that helps prevent reentrant calls.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract TransientStorageReentrancyGuardUpgradeable {

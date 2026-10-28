@@ -15,7 +15,6 @@ describe("discoverTimeoutEligibleSpecFiles", () => {
     writeFileSync(join(srcDir, "l2.spec.ts"), "");
     writeFileSync(join(srcDir, "messaging.spec.ts"), "");
     writeFileSync(join(srcDir, "liveness.spec.ts"), "");
-    writeFileSync(join(srcDir, "linea-besu-fleet.spec.ts"), "");
     writeFileSync(join(nestedDir, "deny-list.spec.ts"), "");
 
     // Act

@@ -41,7 +41,6 @@ An oclif-based CLI tool for recurring protocol operations. Commands use Web3Sign
 
 | Command | Purpose |
 |---------|---------|
-| `synctx` | Synchronize pending transactions from a source node (Geth or Besu) to a target node. Reads the source txpool, diffs against the target, serializes, and broadcasts missing transactions in configurable concurrent batches. Also supports reading from a local JSON file. |
 | `burn-and-bridge` | Execute the `RollupRevenueVault.burnAndBridge()` flow: pay invoice arrears from vault balance, swap remaining ETH to LINEA via Uniswap V3 (with slippage protection), burn 20% of available ETH, and bridge LINEA tokens to L1. |
 | `submit-invoice` | Compute a protocol infrastructure invoice (AWS costs via Cost Explorer + L1 gas costs via Dune Analytics), convert to ETH at current market price, and submit on-chain via `RollupRevenueVault`. Signs via Web3Signer. |
 | `eth-transfer` | Transfer ETH from one address to another, gated by a configurable balance threshold. Uses Web3Signer for signing. Intended for automated reward distribution. |

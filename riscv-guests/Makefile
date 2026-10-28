@@ -23,7 +23,7 @@ ZIG    ?= zig
 # Mirrors the CI `zig fmt --check` invocation (riscv-guests-host-tests.yml) and scales with GUESTS.
 FMT_PATHS := build_common/build.zig $(foreach g,$(GUESTS),$(g)/build.zig $(g)/src $(g)/test)
 
-.PHONY: compile test fetch clean fmt fmt-check help install-constantine-deps
+.PHONY: compile test fetch clean fmt fmt-check help install-constantine-deps release-check release-asset
 
 # Each common target fans out to every guest's own Makefile.
 compile test fetch clean:
@@ -31,6 +31,15 @@ compile test fetch clean:
 		echo "==> make $@ ($$g)"; \
 		$(MAKE) -C $$g $@ ZIG="$(ZIG)" || exit $$?; \
 	done
+
+# Each guest stages its own ELF using the shared Zig build step.
+RELEASE_DIR ?= $(CURDIR)/release-assets
+release-check:
+	$(MAKE) -C $(GUEST) test ZIG="$(ZIG)"
+	$(MAKE) -C $(GUEST) compile ZIG="$(ZIG)"
+
+release-asset:
+	$(MAKE) -C $(GUEST) release-asset RELEASE_DIR="$(abspath $(RELEASE_DIR))" ZIG="$(ZIG)" RELEASE_VERSION="$(RELEASE_VERSION)"
 
 NIM_VERSION := 2.2.10
 CHOOSENIM_VERSION := 0.8.16

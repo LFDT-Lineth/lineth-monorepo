@@ -1,6 +1,4 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
@@ -573,12 +571,15 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
     val overflowBlock = receipts.last().blockNumber.toLong()
 
     assertThat(fittingBlocks)
-      .withFailMessage { "Expected fitting transactions to be mined in a single block, got $fittingBlocks" }
+      .withFailMessage {
+        "Expected ${fittingHashes.size} transactions to be mined in a single block: " +
+          "mined across ${fittingBlocks.size} blocks, blockNumbers=$fittingBlocks"
+      }
       .hasSize(1)
     assertThat(overflowBlock)
       .withFailMessage {
-        "Expected overflow transaction to be mined strictly after the fitting block " +
-          "${fittingBlocks.single()}, got $overflowBlock"
+        "Expected overflow transaction to be mined strictly after the fitting " +
+          "block=${fittingBlocks.single()}, but was mined at block $overflowBlock"
       }
       .isGreaterThan(fittingBlocks.single())
 

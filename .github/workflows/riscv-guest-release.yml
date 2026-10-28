@@ -1,0 +1,118 @@
+name: "Reusable: RISC-V Guest Release"
+
+on:
+  workflow_call:
+    inputs:
+      guest:
+        required: true
+        type: string
+      release_tag_suffix:
+        required: false
+        type: string
+        default: ''
+      pre_release:
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: read
+  pull-requests: write
+
+jobs:
+  check-branch-and-release-tag-suffix:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    steps:
+      - name: Check branch release suffix
+        env:
+          SUFFIX: ${{ inputs.release_tag_suffix }}
+        run: test "$GITHUB_REF_NAME" = main || test -n "$SUFFIX"
+
+  compute-release-metadata:
+    needs: check-branch-and-release-tag-suffix
+    uses: ./.github/workflows/reusable-component-release-metadata.yml
+    with:
+      component-name: riscv-${{ inputs.guest }}
+      release_tag_suffix: ${{ inputs.release_tag_suffix }}
+
+  preflight:
+    needs: compute-release-metadata
+    if: needs.compute-release-metadata.outputs.tag_changed == 'true'
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup guest toolchain
+        uses: ./.github/actions/setup-riscv-guests
+      - name: Verify Program ID staging
+        run: zig test riscv-guests/build_common/program-id.zig
+      - name: Test and compile selected guest
+        env:
+          GUEST: ${{ inputs.guest }}
+        run: make -C riscv-guests release-check GUEST="$GUEST"
+
+  push-tag-and-changelog:
+    needs: [compute-release-metadata, preflight]
+    if: needs.preflight.result == 'success'
+    uses: ./.github/workflows/reusable-component-release-push-tag-changelog.yml
+    with:
+      component-name: riscv-${{ inputs.guest }}
+      folder-name: riscv-guests/${{ inputs.guest }}
+      release_tag_suffix: ${{ inputs.release_tag_suffix }}
+    secrets: inherit
+
+  publish:
+    needs: push-tag-and-changelog
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.push-tag-and-changelog.outputs.release_tag }}
+          persist-credentials: false
+      - name: Verify release tag
+        env:
+          TAG: ${{ needs.push-tag-and-changelog.outputs.release_tag }}
+        run: |
+          test -n "$TAG"
+          test "$(git rev-parse HEAD)" = "$(git rev-list -n 1 "$TAG")"
+      - name: Refuse existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.push-tag-and-changelog.outputs.release_tag }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1 || gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; published assets are immutable" >&2
+            exit 1
+          fi
+      - name: Setup guest toolchain
+        uses: ./.github/actions/setup-riscv-guests
+      - name: Stage release ELF
+        id: artifact
+        env:
+          GUEST: ${{ inputs.guest }}
+          RELEASE_VERSION: ${{ needs.push-tag-and-changelog.outputs.release_version }}
+        run: |
+          test -n "$RELEASE_VERSION"
+          make -C riscv-guests release-asset GUEST="$GUEST" RELEASE_VERSION="$RELEASE_VERSION" RELEASE_DIR="$GITHUB_WORKSPACE/release-assets"
+      - name: Write release notes
+        env:
+          CHANGELOG: ${{ needs.push-tag-and-changelog.outputs.changelog }}
+          ID: ${{ steps.artifact.outputs.program_id }}
+          TAG: ${{ needs.push-tag-and-changelog.outputs.release_tag }}
+          FILENAME: ${{ steps.artifact.outputs.filename }}
+        run: |
+          printf '%s\n' "$CHANGELOG" > "$RUNNER_TEMP/guest-release-notes.md"
+          printf '\n### Guest program\n\nProgram ID (Keccak-256 of complete ELF): `0x%s`\n\nELF: `%s`\n\nSource tag: `%s`\n' "$ID" "$FILENAME" "$TAG" >> "$RUNNER_TEMP/guest-release-notes.md"
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        with:
+          name: RISC-V ${{ inputs.guest }} v${{ needs.push-tag-and-changelog.outputs.release_version }}
+          tag_name: ${{ needs.push-tag-and-changelog.outputs.release_tag }}
+          body_path: ${{ runner.temp }}/guest-release-notes.md
+          files: ${{ steps.artifact.outputs.asset }}
+          draft: ${{ !inputs.pre_release }}
+          prerelease: ${{ inputs.pre_release }}
+          generate_release_notes: false
+          fail_on_unmatched_files: true

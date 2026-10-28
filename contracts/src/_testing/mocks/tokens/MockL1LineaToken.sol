@@ -29,7 +29,7 @@ interface IL2LineaToken {
 
 /**
  * @title Contract to manage the Linea Token.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 contract MockL1LineaToken is ERC20Upgradeable, ERC20BurnableUpgradeable, ERC20PermitUpgradeable {

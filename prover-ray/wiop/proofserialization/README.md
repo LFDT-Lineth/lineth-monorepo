@@ -383,7 +383,10 @@ measures PCS-compiled proofs built from wiop primitives alone.
 
 The table below came from applying it to four ZKC testdata programs, as a one-off
 run to get realistic magnitudes. Each proof went through the full pipeline
-including `pcs.Compile` and was verified before being measured.
+including `pcs.Compile` and was verified before being measured. It predates the
+configurable Merkle cap: every tree was capped at depth 8, which is what
+`pcs.WithOptimalMerkleCap()` selects at 229 queries. The default is now no cap;
+see §11.4a for sizes per cap height.
 
 | program | image | payload | overhead | cells | row data |
 |---|---|---|---|---|---|
@@ -508,10 +511,11 @@ Decomposing `modexp_u256`, whose 41.3 MB of row data is 93% of the image:
 which is `229 queries x 4 input trees x 17 levels x 2 conjugate rows x ~140
 values per row`. Three multipliers stack up:
 
-- **229 queries.** `FRILogInverseRate = 1`, i.e. a blow-up factor of 2. At rate
-  1/2 you need ~229 queries for 128 bits (per the soundcalc reference in
-  `pcs.go`). Systems quoting ~1 MB proofs typically use blow-up 4–8 and 30–80
-  queries — a 3–7× difference on its own.
+- **229 queries.** The default RS blow-up factor is 2 (`defaultRSBlowup`,
+  configurable per System with `pcs.WithRSBlowup`). At rate 1/2 you need ~229
+  queries for 128 bits (per the soundcalc reference in `pcs.go`). Systems
+  quoting ~1 MB proofs typically use blow-up 4–8 and 30–80 queries — a 3–7×
+  difference on its own.
 - **Multi-size openings.** Each query opens one row *per committed size* per tree,
   so the per-query cost is the total committed column count across all sizes, not
   one row.
@@ -546,6 +550,37 @@ wherever an R5 proof already exists. (Note that `arithmetization/.../main.zkc`
 does not currently compile against the pinned `zkc` version; every R5 benchmark
 in `zkcdriver/r5_benchmark_test.go` fails identically, so that is a pre-existing
 arithmetization/`zkc` sync issue and unrelated to serialization.)
+
+### 11.4a Merkle cap height
+
+The cap height is a per-System PCS option: none by default,
+`pcs.WithOptimalMerkleCap()` (8 at 229 queries) or `pcs.WithMerkleCapHeight(h)`.
+Each tree clamps it to its own height − 1, and `pcs.MerkleCapHeight(sys)` exposes
+it so static verifiers can size caps and branches at compile time.
+
+Measured on the same four programs (current circuits, so the h=8 column does
+not match the older table above), 229 queries, blowup 2:
+
+| program | h=0 (default) | h=4 | h=8 (optimal) | h=12 |
+|---|---|---|---|---|
+| `modexp_u64` | 6.04 MiB | 3.14 MiB | 2.63 MiB | 4.07 MiB |
+| `modexp_u256` | 16.26 MiB | 7.39 MiB | 7.16 MiB | 15.22 MiB |
+| `secp256k1_add_u256` | 25.34 MiB | 9.55 MiB | 4.26 MiB | 7.22 MiB |
+| `secp256k1_scalarmul_u256` | 23.22 MiB | 9.47 MiB | 9.26 MiB | 15.11 MiB |
+
+Digest counts are the same for all four programs:
+
+| cap height | branch siblings | round-cap nodes | input-cap nodes |
+|---|---|---|---|
+| 0 | 30,915 | 0 | 0 |
+| 4 | 18,549 | 206 | 64 |
+| 8 | 9,847 | 2,302 | 1,024 |
+| 12 | 4,809 | 20,478 | 16,384 |
+
+Digests explain only part of the gap. The bigger effect is on row data: rows of
+the small committed sizes sit above the frontier, so a cap reveals them once in
+its tables instead of once per query. Past the optimum the cap starts to reveal
+most of each tree, and the image grows again.
 
 ## 11.5 Observations that are not ours to act on
 

@@ -19,6 +19,6 @@ pub const HostMachine = struct {
             if (err == error.OutOfMemory) return err;
             return .{ .rejected = err };
         };
-        return .{ .accepted = l2_execution_ssz.encodeOutput(execution.public_inputs) };
+        return .{ .accepted = try l2_execution_ssz.encodeOutput(alloc, execution.public_inputs) };
     }
 };

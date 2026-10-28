@@ -2,15 +2,17 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://linea.build/schemas/getZkL2ExecutionProofV1.request.schema.json",
   "title": "getZkL2ExecutionProof V1 request",
-  "description": "Coordinator -> prover l2-execution proof request. The shared, versioned contract for the l2-execution guest input (L2ExecutionProofPrivateInput). Each payload carries a SSZ-decoded `statelessInput` mirroring the `StatelessInput` (newPayloadRequest + executionWitness + chainConfig); transaction public keys are recovered by the prover middleware from the signed transactions, not sent on the wire.",
+  "description": "Coordinator -> prover l2-execution proof request. The shared, versioned contract for the l2-execution guest input (L2ExecutionProofPrivateInput). Each payload carries a SSZ-decoded `statelessInput` mirroring the `StatelessInput` (newPayloadRequest + executionWitness + chainConfig).",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "programVk",
+    "guestProgramId",
+    "provingSystem",
     "proofRequest"
   ],
   "properties": {
-    "programVk": { "$ref": "#/$defs/hash32" },
+    "guestProgramId": { "$ref": "#/$defs/hash32" },
+    "provingSystem": { "type": "string", "minLength": 1 },
     "metadata": { "$ref": "#/$defs/metadata" },
     "proofRequest": {
       "type": "object",
@@ -177,7 +179,7 @@
       }
     },
     "statelessInput": {
-      "description": "Mirrors SSZ SszStatelessInput, minus publicKeys: the prover middleware recovers the transaction public keys from the signed transactions, so they are not sent on the wire.",
+      "description": "Mirrors SSZ SszStatelessInput.",
       "type": "object",
       "additionalProperties": false,
       "required": ["newPayloadRequest", "executionWitness"],

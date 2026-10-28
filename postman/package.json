@@ -1,7 +1,7 @@
 {
   "name": "@lfdt-lineth/postman",
   "version": "1.0.0",
-  "author": "Consensys Software Inc.",
+  "author": "Consensys Incorporated",
   "license": "(MIT OR Apache-2.0)",
   "description": "",
   "main": "dist/src/index.js",
@@ -25,9 +25,9 @@
     "viem": "catalog:",
     "express": "catalog:",
     "filtrex": "3.1.0",
-    "pg": "8.22.0",
+    "pg": "8.23.0",
     "prom-client": "catalog:",
-    "typeorm": "0.3.30",
+    "typeorm": "0.3.31",
     "typeorm-naming-strategies": "4.1.0",
     "winston": "catalog:",
     "zod": "catalog:"

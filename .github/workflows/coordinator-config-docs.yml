@@ -31,9 +31,9 @@ on:
       - "buildSrc/src/main/groovy/ConfigDocsExtension.groovy"
       - "buildSrc/src/main/groovy/ConfigDocsPlugin.groovy"
       - "buildSrc/build.gradle"
-      - "coordinator/app/build.gradle"
-      - "coordinator/app/src/configDocs/**"
-      - "coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/**"
+      - "coordinator/config/build.gradle"
+      - "coordinator/config/src/configDocs/**"
+      - "coordinator/config/src/main/kotlin/lineth/coordinator/config/v2/toml/**"
       - "jvm-libs/linea/config-docs/**"
   push:
     branches:
@@ -45,9 +45,9 @@ on:
       - "buildSrc/src/main/groovy/ConfigDocsExtension.groovy"
       - "buildSrc/src/main/groovy/ConfigDocsPlugin.groovy"
       - "buildSrc/build.gradle"
-      - "coordinator/app/build.gradle"
-      - "coordinator/app/src/configDocs/**"
-      - "coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/**"
+      - "coordinator/config/build.gradle"
+      - "coordinator/config/src/configDocs/**"
+      - "coordinator/config/src/main/kotlin/lineth/coordinator/config/v2/toml/**"
       - "jvm-libs/linea/config-docs/**"
     # Automatic publishing fires only when a Coordinator release tag is cut, so docs on
     # doc.linea always describe a released version (not in-flight main changes).
@@ -86,7 +86,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout monorepo
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Java and Gradle
         uses: ./.github/actions/setup-java-and-gradle
@@ -94,15 +94,15 @@ jobs:
       - name: Validate Coordinator config docs
         uses: ./.github/actions/validate-config-docs
         with:
-          gradle-check-task: ":coordinator:app:checkConfigDocs"
-          gradle-generate-task: ":coordinator:app:generateConfigDocs"
-          mdx-partial-path: "coordinator/app/build/config-docs-mdx/_generated/coordinator/reference.mdx"
+          gradle-check-task: ":coordinator:config:checkConfigDocs"
+          gradle-generate-task: ":coordinator:config:generateConfigDocs"
+          mdx-partial-path: "coordinator/config/build/config-docs-mdx/_generated/coordinator/reference.mdx"
           committed-snapshot-paths: >-
             docs/tech/components/coordinator-config-reference.md
             docs/tech/components/coordinator-config-schema.json
           component-name: "coordinator"
           artifact-name: "coordinator-config-docs-${{ github.sha }}"
-          artifact-upload-path: "coordinator/app/build/config-docs-mdx/"
+          artifact-upload-path: "coordinator/config/build/config-docs-mdx/"
           provenance-release-tag-prefix: "releases/coordinator/"
 
   publish-doc-linea:
@@ -126,7 +126,7 @@ jobs:
           exit 1
 
       - name: Checkout monorepo
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Publish Coordinator config docs to doc.linea
         uses: ./.github/actions/publish-config-docs

@@ -141,8 +141,8 @@ describe("Messaging test suite", () => {
 
       const { txHash, receipt } = await sendL2ToL1Message(context, {
         account: l2Account,
-        fee: etherToWei("0.001"),
-        value: etherToWei("0.001"),
+        fee: etherToWei("0.01"),
+        value: etherToWei("0.01"),
         withCalldata: true,
       });
 

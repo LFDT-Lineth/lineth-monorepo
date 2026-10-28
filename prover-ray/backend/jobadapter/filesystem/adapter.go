@@ -1,7 +1,7 @@
 // Package filesystem is the queue supervisor. It watches one request folder per
 // pipeline, picks the next request by end block (earliest first), claims it with
-// an atomic rename tagged by the worker id, runs a prover on it (which writes the
-// response), and archives the request tagged with the prover's exit code. On
+// an atomic rename tagged by the worker id, runs a prover on it, publishes the
+// response, and archives the request tagged with the prover's exit code. On
 // startup it requeues any request left in progress under its own worker id by a
 // previous crashed run.
 package filesystem
@@ -28,17 +28,18 @@ const (
 
 	defaultPollInterval = time.Second
 
-	dirPerm = 0o750
+	dirPerm  = 0o750
+	filePerm = 0o600
 
 	// scorePriorityBase keeps the per-queue priority a tiebreaker below the
 	// end-block term, so end block always dominates the order.
 	scorePriorityBase = 100
 )
 
-// RunProver runs a prover for one request file, writing the response file, and
-// returns its exit code (0 = success). A non-nil error means the prover could not
-// be run at all, which is different from running and failing (a non-zero code).
-type RunProver func(ctx context.Context, requestPath, responsePath string) (exitCode int, err error)
+// RunProver proves one request and returns the response and the exit code. An
+// error means the prover could not run or was cancelled; the request is then
+// retried on the next scan.
+type RunProver func(ctx context.Context, requestName string, request []byte) (response []byte, exitCode int, err error)
 
 // Queue is one pipeline's request folder plus its priority. Priority is only a
 // tiebreaker for requests with the same end block (lower runs first).
@@ -235,16 +236,21 @@ func (a *Adapter) processRequest(ctx context.Context, root, name string) (bool, 
 		return false, fmt.Errorf("jobadapter: claiming %s: %w", name, err)
 	}
 
-	respTmp := filepath.Join(responsesDir(root), name+a.claimSuffix)
-	exitCode, err := a.spawn(ctx, claimed, respTmp)
+	request, err := os.ReadFile(claimed)
 	if err != nil {
-		// The prover could not be run; leave the request for the next scan.
-		_ = os.Remove(respTmp)
 		_ = os.Rename(claimed, src)
-		return false, nil //nolint:nilerr // a prover we cannot spawn is retried next scan, not a fatal error
+		return false, fmt.Errorf("jobadapter: reading %s: %w", name, err)
 	}
 
-	if err := publishResponse(respTmp, filepath.Join(responsesDir(root), name)); err != nil {
+	response, exitCode, err := a.spawn(ctx, name, request)
+	if err != nil {
+		_ = os.Rename(claimed, src)
+		return false, nil //nolint:nilerr // the request is retried on the next scan
+	}
+
+	respTmp := filepath.Join(responsesDir(root), name+a.claimSuffix)
+	if err := publishResponse(response, respTmp, filepath.Join(responsesDir(root), name)); err != nil {
+		_ = os.Remove(respTmp)
 		_ = os.Rename(claimed, src)
 		return false, err
 	}
@@ -255,14 +261,14 @@ func (a *Adapter) processRequest(ctx context.Context, root, name string) (bool, 
 	return true, nil
 }
 
-// publishResponse moves the prover's response into place atomically. A prover that
-// crashed before writing leaves no temp file, which is not an error here.
-func publishResponse(respTmp, respFinal string) error {
-	if _, err := os.Stat(respTmp); err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil
-		}
-		return fmt.Errorf("jobadapter: response %s: %w", respFinal, err)
+// publishResponse writes the response atomically. An empty response, as left
+// by a crashed prover, publishes nothing.
+func publishResponse(response []byte, respTmp, respFinal string) error {
+	if len(response) == 0 {
+		return nil
+	}
+	if err := os.WriteFile(respTmp, response, filePerm); err != nil {
+		return fmt.Errorf("jobadapter: writing response %s: %w", respFinal, err)
 	}
 	if err := os.Rename(respTmp, respFinal); err != nil {
 		return fmt.Errorf("jobadapter: publishing response %s: %w", respFinal, err)

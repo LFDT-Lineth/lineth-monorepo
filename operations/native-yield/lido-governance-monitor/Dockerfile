@@ -2,7 +2,7 @@
 # Apt Get Install Pin Version Not Defined: apt packages are intentionally unpinned.
 # They track the node:slim base image; pinning would break the build on base refresh
 # for negligible security gain on top of --no-install-recommends.
-ARG NODE_VERSION=lts
+ARG NODE_VERSION=24.22.1
 
 FROM node:${NODE_VERSION}-slim AS base
 

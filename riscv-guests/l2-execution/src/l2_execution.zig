@@ -157,21 +157,41 @@ fn readStorage(state_root: [32]u8, address: [20]u8, slot: [32]u8, node_index: *c
 }
 
 /// L2->L1 message extraction: collects `topics[3]` from each receipt log matching the
-/// L2MessageService's `MessageSent` signature.
+/// L2MessageService's `MessageSent` signature. Returns whether any log matched.
 fn extractL2L1Messages(
     alloc: std.mem.Allocator,
     out: *std.ArrayListUnmanaged([32]u8),
     receipts: []const types.Receipt,
     l2_ms_address: [20]u8,
-) !void {
+) !bool {
+    var found = false;
     for (receipts) |receipt| {
         for (receipt.logs) |log| {
             if (!std.mem.eql(u8, &log.address, &l2_ms_address)) continue;
             if (log.topics.len == 0 or !std.mem.eql(u8, &log.topics[0], &BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0)) continue;
             if (log.topics.len < 4) return error.InvalidBridgeMessageLog;
             try out.append(alloc, log.topics[3]);
+            found = true;
         }
     }
+    return found;
+}
+
+fn lessThanAddress(_: void, a: [20]u8, b: [20]u8) bool {
+    return std.mem.order(u8, &a, &b) == .lt;
+}
+
+/// Distinct addresses, sorted ascending by byte value (mirrors `merge_filtered_addresses`).
+fn mergeFilteredAddresses(alloc: std.mem.Allocator, list: *std.ArrayListUnmanaged([20]u8)) ![][20]u8 {
+    std.mem.sort([20]u8, list.items, {}, lessThanAddress);
+    var n: usize = 0;
+    for (list.items) |a| {
+        if (n > 0 and std.mem.eql(u8, &list.items[n - 1], &a)) continue;
+        list.items[n] = a;
+        n += 1;
+    }
+    list.items.len = n;
+    return list.toOwnedSlice(alloc);
 }
 
 const BridgeState = struct { hash: [32]u8, number: u64 };
@@ -180,6 +200,22 @@ const BridgeState = struct { hash: [32]u8, number: u64 };
 /// configured" mode below.
 fn isZeroAddress(address: [20]u8) bool {
     return std.mem.allEqual(u8, &address, 0);
+}
+
+/// True when the last witness header decodes and is numbered one below `block_number`: the
+/// position zesu's `decodeWitnessHeaders` requires the payload's parent header to be in.
+fn lastHeaderIsParent(headers: []const []const u8, block_number: u64) bool {
+    if (headers.len == 0 or block_number == 0) return false;
+    const parent = rlp_decode.decodeMinimalHeader(headers[headers.len - 1]) catch return false;
+    return parent.number == block_number - 1;
+}
+
+/// EIP-4844 transaction type.
+const BLOB_TX_TYPE: u8 = 0x03;
+
+/// True when `raw` is an EIP-2718 typed transaction of type 0x03 (EIP-4844 blob transaction).
+fn isBlobTransaction(raw: []const u8) bool {
+    return raw.len > 0 and raw[0] == BLOB_TX_TYPE;
 }
 
 /// `read_l1l2_bridge_state`: the L1->L2 bridge rolling hash and its message number, read from
@@ -290,7 +326,7 @@ fn validateForcedTransactions(
 
 // ─── Top-level guest logic (mirrors run_l2_execution_guest) ───────────────────────────────────────
 
-/// l2-execution: emits the 16-field l2-execution PI for a contiguous block range, translating
+/// l2-execution: emits the l2-execution PI for a contiguous block range, translating
 /// `rollup_spec.l2_execution.run_l2_execution_guest` step by step. Per-block execution is delegated
 /// to `execution.executeStatelessInputWithLogs`; this function adds only the Linea logic on top —
 /// conflation-level linking, the empty-`executionRequests` policy, forced transactions, L2->L1
@@ -347,6 +383,7 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
     var l2_l1_messages = std.ArrayListUnmanaged([32]u8).empty;
     var tx_froms = std.ArrayListUnmanaged([20]u8).empty;
     var filtered_addresses = std.ArrayListUnmanaged([20]u8).empty;
+    var messaging_offsets = std.ArrayListUnmanaged(u16).empty;
 
     var range_pre_state_root: [32]u8 = undefined;
     var range_post_state_root: [32]u8 = undefined;
@@ -365,22 +402,20 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
         // UNLESS this genuinely is genesis (block 0), which has no parent to prove — theoretically
         // supported (some Lineth deployment could start a range there), but constrained to the
         // standard Ethereum convention (parent_hash == zero) so the exemption can't be (ab)used to
-        // skip the header check for anything other than a real genesis block. `execution.zig`'s own
-        // `pre_state_root` derivation enforces this same resolution for itself outside genuine
-        // genesis, returning `error.MissingParentHeaderWitness` when `rlp_decode.findPreStateRoot`
-        // finds no match — an unresolved fallback to the payload's OWN claimed (post-execution)
-        // state_root would otherwise stand in as its pre-state root, self-referential and completely
-        // disconnected from the real state behind `payload.parent_hash`. Combined with a no-op block,
-        // that would let a forged witness pick an arbitrary starting trie and forge whatever it reads
-        // from it (e.g. the first payload's `readL1L2BridgeState` reads, below, which land straight in
-        // the public output). Checking it here too, before any per-block execution runs, forces
-        // `execution.zig`'s own header-chain verification to run for real (never silently skipped) and
-        // ties `payload.block_number` to the real parent's real number — closing the
-        // block-number-contiguity gap noted below as a side effect, since `findPreStateRoot` only
-        // matches a header that's part of the hash-chain verified back to `payload.parent_hash`.
+        // skip the header check for anything other than a real genesis block. Without a parent
+        // header, the payload's OWN claimed (post-execution) state_root would stand in as its
+        // pre-state root, self-referential and disconnected from the real state behind
+        // `payload.parent_hash`. Combined with a no-op block, that would let a forged witness pick an
+        // arbitrary starting trie and forge whatever it reads from it (e.g. the first payload's
+        // `readL1L2BridgeState` reads, below, which land straight in the public output). Checking it
+        // here, before any per-block execution runs, means the witness's last header is the
+        // payload's parent by number; `execution.zig` (via zesu's `decodeWitnessHeaders`) then
+        // verifies the header chain by hash back to `payload.parent_hash` and takes the pre-state
+        // root from that parent — closing the block-number-contiguity gap noted below as a side
+        // effect.
         if (payload.block_number == 0) {
             if (!std.mem.allEqual(u8, &payload.parent_hash, 0)) return error.InvalidGenesisParentHash;
-        } else if (rlp_decode.findPreStateRoot(si.witness.headers, payload.block_number) == null) {
+        } else if (!lastHeaderIsParent(si.witness.headers, payload.block_number)) {
             return error.MissingParentHeaderWitness;
         }
         // Monotonic timestamps follow from the engine's per-block check (zesu's
@@ -397,10 +432,12 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
         }
 
         // Blob transactions and their Engine API versioned-hash payload are outside the Linea guest
-        // input domain, so reject either representation before delegated execution.
+        // input domain, so reject either representation before delegated execution. zesu's SSZ
+        // decoder leaves `transactions` undecoded, so the type is read off each raw transaction's
+        // EIP-2718 envelope byte (a legacy transaction starts with an RLP list prefix >= 0xc0).
         if (si.new_payload_request.versioned_hashes.len != 0) return error.BlobTransactionsNotSupported;
-        for (payload.transactions) |tx| {
-            if (tx.tx_type == 3) return error.BlobTransactionsNotSupported;
+        for (payload.raw_transactions) |raw| {
+            if (isBlobTransaction(raw)) return error.BlobTransactionsNotSupported;
         }
 
         // ── Lineth policy: no beacon-chain withdrawals — this is an L2 rollup, not L1. Rejected here
@@ -447,7 +484,10 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
 
         // L2->L1 messages from the block's logs (skipped entirely when no L2MessageService is
         // configured — see `bridge_suppressed`).
-        if (!bridge_suppressed) try extractL2L1Messages(alloc, &l2_l1_messages, result.receipts, l2_ms_address);
+        if (!bridge_suppressed and try extractL2L1Messages(alloc, &l2_l1_messages, result.receipts, l2_ms_address)) {
+            if (idx + 1 > std.math.maxInt(u16)) return error.MessagingBlockOffsetOverflow;
+            try messaging_offsets.append(alloc, @intCast(idx + 1));
+        }
 
         current_parent_hash = payload.block_hash;
     }
@@ -470,7 +510,7 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
         .end_block_hash = last_payload.block_hash,
         .end_block_number = last_payload.block_number,
         .end_block_timestamp = last_payload.timestamp,
-        .l2_l1_messages_hash = try hashDigestList(alloc, l2_l1_messages.items),
+        .l2_l1_messages = try l2_l1_messages.toOwnedSlice(alloc),
         .parent_l1_l2_bridge_rolling_hash = parent_bridge.hash,
         .parent_l1_l2_bridge_rolling_hash_message_number = parent_bridge.number,
         .end_l1_l2_bridge_rolling_hash = end_bridge.hash,
@@ -480,16 +520,16 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
         .parent_ftx_number = in.parent_last_processed_ftx_number,
         .end_ftx_rolling_hash = current_ftx_rolling_hash,
         .end_processed_ftx_number = current_last_processed_ftx_number,
-        .filtered_addresses_hash = try hashAddressList(alloc, filtered_addresses.items),
+        .filtered_addresses = try mergeFilteredAddresses(alloc, &filtered_addresses),
         .tx_froms_hash = try hashAddressList(alloc, tx_froms.items),
+        .block_count = in.payloads.len,
+        .l2_messaging_blocks_offsets = try messaging_offsets.toOwnedSlice(alloc),
     };
 
     return .{
         .public_inputs = public_inputs,
         .start_block_number = start_block_number,
-        .l2_l1_messages = try l2_l1_messages.toOwnedSlice(alloc),
         .tx_froms = try tx_froms.toOwnedSlice(alloc),
-        .filtered_addresses = try filtered_addresses.toOwnedSlice(alloc),
     };
 }
 
@@ -518,4 +558,8 @@ pub const test_api = if (@import("builtin").is_test) struct {
     /// rather than verify a claim against it. See `execution.computeStatelessInputWithLogs`.
     pub const computeStatelessInputWithLogsFn = execution.computeStatelessInputWithLogs;
     pub const ComputedBlock = execution.ComputedBlock;
+    /// The engine's block-hash check / header encoder, so test tooling that re-engineers a block
+    /// can re-derive the hash the engine will expect.
+    pub const block_hash = @import("block_hash.zig");
+    pub const isBlobTransactionFn = isBlobTransaction;
 } else struct {};

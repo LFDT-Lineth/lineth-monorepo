@@ -10,6 +10,7 @@ import linea.domain.createBlobRecords
 import linea.domain.toBlockIntervals
 import lineth.persistence.AggregationsRepository
 import lineth.persistence.BlobsRepository
+import lineth.vertx.vertxTestOptions
 import net.consensys.FakeFixedClock
 import net.consensys.linea.async.AsyncFilter
 import org.apache.logging.log4j.LogManager
@@ -73,7 +74,7 @@ class BlobSubmissionCoordinatorTest {
         chunkBlobs(blobsIntervals, aggregations, targetChunkSize = 6)
     })
 
-    vertx = Vertx.vertx()
+    vertx = Vertx.vertx(vertxTestOptions)
     fakeClock = FakeFixedClock()
     log = spy(LogManager.getLogger(BlobSubmissionCoordinator::class.java))
 

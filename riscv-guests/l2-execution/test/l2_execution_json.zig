@@ -2,7 +2,7 @@
 //!
 //! Field names/shapes mirror the Python reference codec's `proof_io_v1.encode_response` —
 //! the same camelCase keys and 0x-hex byte encoding it emits for `getZkL2ExecutionProofV1
-//! .response.json` — MINUS `proverVersion` and `proof`: those are prover-layer metadata the
+//! .response.json` — MINUS `proverVersion`, `proof` and `programVk`: those are prover-layer metadata the
 //! guest never produces (see `l2_execution_ssz.L2ExecutionProofOutput`'s doc comment).
 //!
 //! This is a NATIVE-only convenience: the freestanding zkVM guest always emits SSZ
@@ -51,13 +51,20 @@ fn appendHexList(alloc: std.mem.Allocator, out: *std.ArrayListUnmanaged(u8), com
     }
 }
 
+/// Appends `,"key":["0x<hex>",...]`.
+fn appendKeyHexList(alloc: std.mem.Allocator, out: *std.ArrayListUnmanaged(u8), key: []const u8, comptime T: type, items: []const T) !void {
+    try out.print(alloc, ",\"{s}\":[", .{key});
+    try appendHexList(alloc, out, T, items);
+    try out.appendSlice(alloc, "]");
+}
+
 fn appendPublicInputs(alloc: std.mem.Allocator, out: *std.ArrayListUnmanaged(u8), pi: l2_execution_ssz.L2ExecutionProofPublicInput) !void {
     try out.appendSlice(alloc, "\"publicInputs\":{");
     try appendKeyHex(alloc, out, "parentBlockHash", &pi.parent_block_hash, true);
     try appendKeyHex(alloc, out, "endBlockHash", &pi.end_block_hash, false);
     try appendKeyInt(alloc, out, "endBlockNumber", pi.end_block_number, false);
     try appendKeyInt(alloc, out, "endBlockTimestamp", pi.end_block_timestamp, false);
-    try appendKeyHex(alloc, out, "l2L1MessagesHash", &pi.l2_l1_messages_hash, false);
+    try appendKeyHexList(alloc, out, "l2L1Messages", [32]u8, pi.l2_l1_messages);
     try appendKeyHex(alloc, out, "parentL1L2BridgeRollingHash", &pi.parent_l1_l2_bridge_rolling_hash, false);
     try appendKeyInt(alloc, out, "parentL1L2BridgeRollingHashMessageNumber", pi.parent_l1_l2_bridge_rolling_hash_message_number, false);
     try appendKeyHex(alloc, out, "endL1L2BridgeRollingHash", &pi.end_l1_l2_bridge_rolling_hash, false);
@@ -67,15 +74,21 @@ fn appendPublicInputs(alloc: std.mem.Allocator, out: *std.ArrayListUnmanaged(u8)
     try appendKeyInt(alloc, out, "parentFtxNumber", pi.parent_ftx_number, false);
     try appendKeyHex(alloc, out, "endFtxRollingHash", &pi.end_ftx_rolling_hash, false);
     try appendKeyInt(alloc, out, "endProcessedFtxNumber", pi.end_processed_ftx_number, false);
-    try appendKeyHex(alloc, out, "filteredAddressesHash", &pi.filtered_addresses_hash, false);
+    try appendKeyHexList(alloc, out, "filteredAddresses", [20]u8, pi.filtered_addresses);
     try appendKeyHex(alloc, out, "txFromsHash", &pi.tx_froms_hash, false);
+    try appendKeyInt(alloc, out, "blockCount", pi.block_count, false);
+    try out.appendSlice(alloc, ",\"l2MessagingBlocksOffsets\":[");
+    for (pi.l2_messaging_blocks_offsets, 0..) |o, i| {
+        if (i != 0) try out.appendSlice(alloc, ",");
+        try out.print(alloc, "{d}", .{o});
+    }
+    try out.appendSlice(alloc, "]");
     try out.appendSlice(alloc, "}");
 }
 
 /// Encode `v` as a `getZkL2ExecutionProofV1.response.json`-shaped JSON object, minus the
-/// prover-attached `proverVersion`/`proof` fields (see the file doc comment). Field order matches
-/// `proof_io_v1.encode_response` exactly: `startBlockNumber`, `publicInputs`, `l2L1Messages`,
-/// `txFroms`, `filteredAddresses`.
+/// prover-attached `proverVersion`/`proof`/`programVk` fields (see the file doc comment). Field order
+/// matches `proof_io_v1.encode_response`: `startBlockNumber`, `publicInputs`.
 pub fn encodeOutputJson(alloc: std.mem.Allocator, v: l2_execution_ssz.L2ExecutionProofOutput) ![]u8 {
     var out = std.ArrayListUnmanaged(u8).empty;
     errdefer out.deinit(alloc);
@@ -84,14 +97,7 @@ pub fn encodeOutputJson(alloc: std.mem.Allocator, v: l2_execution_ssz.L2Executio
     try appendKeyInt(alloc, &out, "startBlockNumber", v.start_block_number, true);
     try out.appendSlice(alloc, ",");
     try appendPublicInputs(alloc, &out, v.public_inputs);
-
-    try out.appendSlice(alloc, ",\"l2L1Messages\":[");
-    try appendHexList(alloc, &out, [32]u8, v.l2_l1_messages);
-    try out.appendSlice(alloc, "],\"txFroms\":[");
-    try appendHexList(alloc, &out, [20]u8, v.tx_froms);
-    try out.appendSlice(alloc, "],\"filteredAddresses\":[");
-    try appendHexList(alloc, &out, [20]u8, v.filtered_addresses);
-    try out.appendSlice(alloc, "]}");
+    try out.appendSlice(alloc, "}");
 
     return out.toOwnedSlice(alloc);
 }

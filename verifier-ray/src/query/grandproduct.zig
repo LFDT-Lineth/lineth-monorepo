@@ -44,13 +44,14 @@ pub const System = struct {
     queries: []const Query = &.{},
 };
 
-pub fn verify(comptime system: System, ctx: protocol.Context) (Error || protocol.CellError)!void {
-    inline for (system.queries) |query| {
+pub fn verify(system: System, ctx: protocol.Context) (Error || protocol.CellError)!void {
+    // Runtime loops: see logderivativesum.verify for why these are not inline.
+    for (system.queries) |query| {
         // ∏_i Z_i[n-1], reading each Z endpoint from the transcript. `cell` is
-        // bounds-checked: the refs are trusted (comptime System) but the proof's
+        // bounds-checked: the refs are trusted (generated System) but the proof's
         // round/cells slices are not.
         var prod = ext.Ext.one();
-        inline for (query.z_final_refs) |ref| {
+        for (query.z_final_refs) |ref| {
             prod = prod.mul((try ctx.cell(ref.round, ref.index)).toExt());
         }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright Consensys Software Inc.
+ * Copyright Consensys Incorporated
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -45,9 +45,7 @@ public record StorageSnapshot(String address, String key, String value) {
   }
 
   private static boolean accountExists(final Account account) {
-    // The account exists if it has sent a transaction
-    // or already has its code initialized.
-    return account != null
-        && (account.getNonce() != 0 || !account.getCode().isEmpty() || !account.isStorageEmpty());
+    // The account exists if it has sent a transaction or already has its code initialized.
+    return account != null && (account.getNonce() != 0 || !account.getCode().isEmpty());
   }
 }

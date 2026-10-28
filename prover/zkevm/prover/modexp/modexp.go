@@ -4,7 +4,6 @@ import (
 	"math/big"
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
-	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/emulated"
@@ -68,6 +67,16 @@ type Modexp struct {
 	CurrAccumulator limbs.Limbs[limbs.LittleEndian]
 	// Modulus is the modulus limbs
 	Modulus limbs.Limbs[limbs.LittleEndian]
+	// IsZeroModulus indicates the rows of the instances with a zero modulus.
+	IsZeroModulus ifaces.Column
+	// ModulusSumInverse is the inverse of the sum of the modulus limbs (or
+	// zero). It is the witness for IsZeroModulus.
+	ModulusSumInverse ifaces.Column
+	// EffectiveModulus is the modulus used in the emulated evaluation. It
+	// equals Modulus, except that it is 1 when the modulus is zero: the
+	// result is then 0 (EIP-198) and x mod 1 = 0. Only the first limb is a
+	// separate column, the other limbs are the ones of Modulus.
+	EffectiveModulus limbs.Limbs[limbs.LittleEndian]
 	// Exponent is the exponent limbs. Not used in modexp directly (only its
 	// bits are used), but we use it to check correctness of exponent bits
 	// decomposition.
@@ -106,6 +115,11 @@ func newModexp(comp *wizard.CompiledIOP, name string, module *Module, isActiveFr
 	exponent := limbs.NewLimbs[limbs.LittleEndian](comp, ifaces.ColIDf("%s_EXPONENT", name), nbLimbs, nbRows)
 	exponentBits := limbs.NewLimbs[limbs.LittleEndian](comp, ifaces.ColIDf("%s_EXPONENT_BITS", name), 1, nbRows)
 	base := limbs.NewLimbs[limbs.LittleEndian](comp, ifaces.ColIDf("%s_BASE", name), nbLimbs, nbRows)
+	effectiveModulusLimb0 := comp.InsertCommit(roundNr, ifaces.ColIDf("%s_EFFECTIVE_MODULUS_0", name), nbRows, true)
+	effectiveModulus := limbs.NewLimbsFromRawUnsafe[limbs.LittleEndian](
+		ifaces.ColIDf("%s_EFFECTIVE_MODULUS", name),
+		append([]ifaces.Column{effectiveModulusLimb0}, modulus.GetLimbs()[1:]...),
+	)
 
 	me := &Modexp{
 		InstanceSize:          instanceSize,
@@ -114,6 +128,9 @@ func newModexp(comp *wizard.CompiledIOP, name string, module *Module, isActiveFr
 		PrevAccumulator:       prevAcc,
 		CurrAccumulator:       currAcc,
 		Modulus:               modulus,
+		IsZeroModulus:         comp.InsertCommit(roundNr, ifaces.ColIDf("%s_IS_ZERO_MODULUS", name), nbRows, true),
+		ModulusSumInverse:     comp.InsertCommit(roundNr, ifaces.ColIDf("%s_MODULUS_SUM_INVERSE", name), nbRows, true),
+		EffectiveModulus:      effectiveModulus,
 		Exponent:              exponent,
 		ExponentBits:          exponentBits,
 		Base:                  base,
@@ -132,7 +149,7 @@ func newModexp(comp *wizard.CompiledIOP, name string, module *Module, isActiveFr
 	pragmas.AddModuleRef(me.IsActive, name+"_EMULATED_MODEXP")
 	// register prover action before emulated evaluation so that the limb assignements are available
 	comp.RegisterProverAction(roundNr, me)
-	emulated.NewEval(comp, name+"_EVAL", emulatedLimbSizeBit, modulus, [][]limbs.Limbs[limbs.LittleEndian]{
+	emulated.NewEval(comp, name+"_EVAL", emulatedLimbSizeBit, effectiveModulus, [][]limbs.Limbs[limbs.LittleEndian]{
 		// R_i = R_{i-1}^2 + R_{i-1}^2*e_i*base - R_{i-1}^2*e_i - currAcc
 		{prevAcc, prevAcc}, {prevAcc, prevAcc, exponentBits, base}, {prevAcc, prevAcc, exponentBits}, {currAcc},
 	}, []int{1, 1, -1, -1})
@@ -152,6 +169,9 @@ func newModexp(comp *wizard.CompiledIOP, name string, module *Module, isActiveFr
 	// query that the accumulator transitions are correct (prev_i ==
 	// current_{i-1}) and that accumulator is set to 1 in the first row
 	me.csAccumulatorTransition(comp)
+	// query that IsZeroModulus is set iff the modulus is zero and that the
+	// effective modulus is 1 in that case
+	me.csZeroModulus(comp)
 
 	return me
 }
@@ -379,6 +399,35 @@ func (m *Modexp) csAccumulatorTransition(comp *wizard.CompiledIOP) {
 	}
 }
 
+func (m *Modexp) csZeroModulus(comp *wizard.CompiledIOP) {
+	// The modulus limbs are 16 bits and there are at most 512 of them, so
+	// their sum does not wrap around and is zero iff the modulus is zero.
+	modulusLimbs := make([]any, m.Modulus.NumLimbs())
+	for i, l := range m.Modulus.GetLimbs() {
+		modulusLimbs[i] = l
+	}
+	limbSum := sym.Add(modulusLimbs...)
+	// * IsZeroModulus is zero when the modulus is non-zero
+	comp.InsertGlobal(roundNr, ifaces.QueryIDf("%s_IS_ZERO_MODULUS_NONZERO", m.Name),
+		sym.Mul(m.IsZeroModulus, limbSum),
+	)
+	// * IsZeroModulus is IsActive when the modulus is zero. As the modulus
+	// limbs are zero when inactive, IsZeroModulus is also zero when inactive.
+	comp.InsertGlobal(roundNr, ifaces.QueryIDf("%s_IS_ZERO_MODULUS_ZERO", m.Name),
+		sym.Sub(
+			sym.Add(m.IsZeroModulus, sym.Mul(m.ModulusSumInverse, limbSum)),
+			m.IsActive,
+		),
+	)
+	// * the effective modulus is the modulus, or 1 when the modulus is zero
+	comp.InsertGlobal(roundNr, ifaces.QueryIDf("%s_EFFECTIVE_MODULUS_LIMB_0", m.Name),
+		sym.Sub(
+			m.EffectiveModulus.GetLimbs()[0],
+			sym.Add(m.Modulus.GetLimbs()[0], m.IsZeroModulus),
+		),
+	)
+}
+
 func (m *Modexp) Run(run *wizard.ProverRuntime) {
 	m.assignMasks(run)
 	m.assignLimbs(run)
@@ -423,6 +472,9 @@ func (m *Modexp) assignLimbs(run *wizard.ProverRuntime) {
 		dstExponentBitLimbs = make([]*common.VectorBuilder, m.ExponentBits.NumLimbs())
 		dstExponentLimbs    = make([]*common.VectorBuilder, m.Exponent.NumLimbs())
 		dstBaseLimbs        = make([]*common.VectorBuilder, m.Base.NumLimbs())
+		dstIsZeroModulus    = common.NewVectorBuilder(m.IsZeroModulus)
+		dstModulusSumInv    = common.NewVectorBuilder(m.ModulusSumInverse)
+		dstEffModulusLimb0  = common.NewVectorBuilder(m.EffectiveModulus.GetLimbs()[0])
 	)
 	for i := range dstPrevAccLimbs {
 		dstPrevAccLimbs[i] = common.NewVectorBuilder(m.PrevAccumulator.GetLimbs()[i])
@@ -512,8 +564,20 @@ func (m *Modexp) assignLimbs(run *wizard.ProverRuntime) {
 		if err := emulated.IntLimbRecompose(buf, emulatedLimbSizeBit, modulusBi); err != nil {
 			utils.Panic("could not convert modulus limbs to big.Int: %v", err)
 		}
-		if modulusBi.Sign() == 0 {
-			utils.Panic("modulus is zero, buffer: %v, instMod: %v", buf, vector.Prettify(instMod))
+		// EIP-198: the result is zero when the modulus is zero. We then use
+		// modulus 1 in the emulated evaluation, as x mod 1 = 0.
+		isZeroModulus := modulusBi.Sign() == 0
+		if isZeroModulus {
+			modulusBi.SetInt64(1)
+		}
+		var modulusSumInv, effModulusLimb0 field.Element
+		for j := range instMod {
+			modulusSumInv.Add(&modulusSumInv, &instMod[j])
+		}
+		modulusSumInv.Inverse(&modulusSumInv) // zero if the modulus is zero
+		effModulusLimb0 = instMod[0]
+		if isZeroModulus {
+			effModulusLimb0.SetOne()
 		}
 		for i := range expected {
 			copy(buf[limbs.NbLimbU128*i:], expected[len(expected)-1-i].ToIntegerLimbs())
@@ -608,6 +672,9 @@ func (m *Modexp) assignLimbs(run *wizard.ProverRuntime) {
 			for j := range instMod {
 				dstModulusLimbs[j].PushField(instMod[j])
 			}
+			dstIsZeroModulus.PushBoolean(isZeroModulus)
+			dstModulusSumInv.PushField(modulusSumInv)
+			dstEffModulusLimb0.PushField(effModulusLimb0)
 		}
 		ptr += modexpNumRowsPerInstance
 	}
@@ -633,4 +700,7 @@ func (m *Modexp) assignLimbs(run *wizard.ProverRuntime) {
 	for i := range dstBaseLimbs {
 		dstBaseLimbs[i].PadAndAssign(run)
 	}
+	dstIsZeroModulus.PadAndAssign(run)
+	dstModulusSumInv.PadAndAssign(run)
+	dstEffModulusLimb0.PadAndAssign(run)
 }

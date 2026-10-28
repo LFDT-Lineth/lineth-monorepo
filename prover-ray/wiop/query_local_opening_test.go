@@ -5,6 +5,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -61,7 +62,7 @@ func TestColumnPosition_Open_ExplicitAssignmentWins(t *testing.T) {
 	result := col.At(2).Open(sys.Context.Childf("lo"))
 
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, baseVec(4, 7))
+	rt.AssignColumn(col, wioptest.ConstVec(4, 7))
 
 	var wrong field.Element
 	wrong.SetUint64(9)

@@ -8,29 +8,26 @@ import (
 const (
 	decodeAggregationOp = "DecodeAggregationRequest"
 
-	rollupProofsKey = "rollupProofs"
-	l2L1RootsKey    = "l2L1Roots"
-	programVksKey   = "programVks"
+	rollupProofsKey              = "rollupProofs"
+	programVksKey                = "programVks"
+	finalDataTailDiscardBytesKey = "finalDataTailDiscardBytes"
 )
 
 // EmbeddedRollupProof is one rollupProof an aggregation request carries for the
 // guest to verify. ProgramVk is the rollup proof's own verifying-key hash.
 type EmbeddedRollupProof struct {
-	Proof             []byte
-	StartBlockNumber  uint64
-	PublicInputs      RollupProofPublicInputs
-	L2L1Roots         [][32]byte
-	FilteredAddresses [][20]byte
-	ProgramVk         []byte
+	Proof            []byte
+	StartBlockNumber uint64
+	PublicInputs     RollupProofPublicInputs
+	ProgramVk        []byte
 }
 
-// RollupProofPublicInputs is the 20-field PI of an embedded rollupProof.
+// RollupProofPublicInputs is the 22-field rollup PI of an embedded rollupProof.
 // ProgramVks is the sorted, distinct set of VKs verified beneath that proof (a
 // guest output, not the envelope VK).
 type RollupProofPublicInputs struct {
 	EndBlockNumber                           uint64
 	EndBlockTimestamp                        uint64
-	L2L1BridgeTransactionTree                [32]byte
 	ParentL1L2BridgeRollingHash              [32]byte
 	ParentL1L2BridgeRollingHashMessageNumber uint64
 	EndL1L2BridgeRollingHash                 [32]byte
@@ -40,14 +37,17 @@ type RollupProofPublicInputs struct {
 	ParentFtxNumber                          uint64
 	EndFtxRollingHash                        [32]byte
 	EndProcessedFtxNumber                    uint64
-	FilteredAddressesHash                    [32]byte
 	ParentDataRollingHash                    [32]byte
 	EndDataRollingHash                       [32]byte
 	ParentBlockHash                          [32]byte
 	EndBlockHash                             [32]byte
-	StartOffset                              uint64
-	EndOffset                                uint64
+	ParentDataTailTakeBytes                  uint64
+	FinalDataTailDiscardBytes                uint64
+	L2L1Messages                             [][32]byte
+	FilteredAddresses                        [][20]byte
 	ProgramVks                               [][32]byte
+	BlockCount                               uint64
+	L2MessagingBlocksOffsets                 []uint16
 }
 
 // AggregationRequest is a decoded getZkRollupAggregationProofV1 request: the
@@ -67,7 +67,7 @@ func DecodeAggregationRequest(data []byte) (*AggregationRequest, error) {
 		return nil, decErrf(op, "parsing JSON: %w", err)
 	}
 
-	programVk, err := getFixedHex(env, programVkKey, op, "", programVkByteSize)
+	guestProgramID, err := getFixedHex(env, guestProgramIDKey, op, "", programVkByteSize)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func DecodeAggregationRequest(data []byte) (*AggregationRequest, error) {
 		proofs[i] = p
 	}
 
-	return &AggregationRequest{ProgramVk: programVk, RollupProofs: proofs}, nil
+	return &AggregationRequest{ProgramVk: guestProgramID, RollupProofs: proofs}, nil
 }
 
 func decodeEmbeddedRollupProof(raw json.RawMessage, op, ctx string) (EmbeddedRollupProof, error) {
@@ -118,33 +118,15 @@ func decodeEmbeddedRollupProof(raw json.RawMessage, op, ctx string) (EmbeddedRol
 	if err != nil {
 		return EmbeddedRollupProof{}, err
 	}
-	l2L1RootsRaw, err := getArray(obj, l2L1RootsKey, op, ctx)
-	if err != nil {
-		return EmbeddedRollupProof{}, err
-	}
-	l2L1Roots, err := hash32List(l2L1RootsRaw, op, ctx+l2L1RootsKey)
-	if err != nil {
-		return EmbeddedRollupProof{}, err
-	}
-	filteredRaw, err := getArray(obj, filteredAddressesKey, op, ctx)
-	if err != nil {
-		return EmbeddedRollupProof{}, err
-	}
-	filtered, err := addressList(filteredRaw, op, ctx+filteredAddressesKey)
-	if err != nil {
-		return EmbeddedRollupProof{}, err
-	}
 	programVk, err := getFixedHex(obj, programVkKey, op, ctx, programVkByteSize)
 	if err != nil {
 		return EmbeddedRollupProof{}, err
 	}
 	return EmbeddedRollupProof{
-		Proof:             proof,
-		StartBlockNumber:  startBlockNumber,
-		PublicInputs:      pi,
-		L2L1Roots:         l2L1Roots,
-		FilteredAddresses: filtered,
-		ProgramVk:         programVk,
+		Proof:            proof,
+		StartBlockNumber: startBlockNumber,
+		PublicInputs:     pi,
+		ProgramVk:        programVk,
 	}, nil
 }
 
@@ -171,7 +153,6 @@ func decodeRollupProofPublicInputs(
 	}
 	pi.EndBlockNumber = n(endBlockNumberKey)
 	pi.EndBlockTimestamp = n("endBlockTimestamp")
-	pi.L2L1BridgeTransactionTree = h("l2L1BridgeTransactionTree")
 	pi.ParentL1L2BridgeRollingHash = h("parentL1L2BridgeRollingHash")
 	pi.ParentL1L2BridgeRollingHashMessageNumber = n("parentL1L2BridgeRollingHashMessageNumber")
 	pi.EndL1L2BridgeRollingHash = h("endL1L2BridgeRollingHash")
@@ -181,16 +162,37 @@ func decodeRollupProofPublicInputs(
 	pi.ParentFtxNumber = n("parentFtxNumber")
 	pi.EndFtxRollingHash = h("endFtxRollingHash")
 	pi.EndProcessedFtxNumber = n("endProcessedFtxNumber")
-	pi.FilteredAddressesHash = h("filteredAddressesHash")
 	pi.ParentDataRollingHash = h(parentDataRollingHashKey)
 	pi.EndDataRollingHash = h("endDataRollingHash")
 	pi.ParentBlockHash = h("parentBlockHash")
 	pi.EndBlockHash = h("endBlockHash")
-	pi.StartOffset = n(startOffsetKey)
-	pi.EndOffset = n("endOffset")
+	pi.ParentDataTailTakeBytes = n(parentDataTailTakeBytesKey)
+	pi.FinalDataTailDiscardBytes = n(finalDataTailDiscardBytesKey)
+	pi.BlockCount = n(blockCountKey)
 	if err != nil {
 		return pi, err
 	}
+
+	l2L1MessagesRaw, err := getArray(m, l2L1MessagesKey, op, ctx)
+	if err != nil {
+		return pi, err
+	}
+	l2L1Messages, err := hash32List(l2L1MessagesRaw, op, ctx+l2L1MessagesKey)
+	if err != nil {
+		return pi, err
+	}
+	pi.L2L1Messages = l2L1Messages
+
+	filteredRaw, err := getArray(m, filteredAddressesKey, op, ctx)
+	if err != nil {
+		return pi, err
+	}
+	filtered, err := addressList(filteredRaw, op, ctx+filteredAddressesKey)
+	if err != nil {
+		return pi, err
+	}
+	pi.FilteredAddresses = filtered
+
 	programVksRaw, err := getArray(m, programVksKey, op, ctx)
 	if err != nil {
 		return pi, err
@@ -200,5 +202,16 @@ func decodeRollupProofPublicInputs(
 		return pi, err
 	}
 	pi.ProgramVks = programVks
+
+	offsetsRaw, err := getArray(m, l2MessagingBlocksOffsetsKey, op, ctx)
+	if err != nil {
+		return pi, err
+	}
+	offsets, err := uint16List(offsetsRaw, op, ctx+l2MessagingBlocksOffsetsKey)
+	if err != nil {
+		return pi, err
+	}
+	pi.L2MessagingBlocksOffsets = offsets
+
 	return pi, nil
 }

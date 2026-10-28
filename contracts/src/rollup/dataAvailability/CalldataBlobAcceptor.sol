@@ -8,7 +8,7 @@ import { DataRollingHashAcceptorBase } from "./DataRollingHashAcceptorBase.sol";
 
 /**
  * @title Contract to manage compressed data chunks submitted as calldata.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract CalldataBlobAcceptor is

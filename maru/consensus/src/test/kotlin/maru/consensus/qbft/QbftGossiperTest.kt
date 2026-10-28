@@ -1,6 +1,4 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
@@ -9,9 +7,9 @@
 package maru.consensus.qbft
 
 import org.hyperledger.besu.consensus.qbft.core.types.QbftMessage
+import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verifyNoInteractions
-import kotlin.test.Test
 
 class QbftGossiperTest {
   private val mockQbftMessage = mock<QbftMessage>()

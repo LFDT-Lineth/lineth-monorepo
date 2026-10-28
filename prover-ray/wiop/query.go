@@ -2,11 +2,6 @@ package wiop
 
 import "github.com/consensys/gnark/frontend"
 
-// GnarkRuntime is the execution context passed to circuit-verification methods.
-// It provides access to gnark-variable column assignments and coin values inside
-// an arithmetic circuit.
-type GnarkRuntime interface{}
-
 // Query is the base interface for all verifier predicates in the protocol.
 // A query declares a predicate over committed columns, coins, and cells that
 // the verifier must check.
@@ -48,7 +43,7 @@ type GnarkCheckableQuery interface {
 	// CheckGnark asserts the query predicate inside a gnark circuit. It
 	// accesses gnark-variable assignments via run and enforces the predicate
 	// through api.
-	CheckGnark(api frontend.API, run GnarkRuntime)
+	CheckGnark(api frontend.API, run *GnarkRuntime)
 }
 
 // AssignableQuery is an optional interface implemented by queries that can

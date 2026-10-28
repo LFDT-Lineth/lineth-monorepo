@@ -9,7 +9,3 @@ dependencies {
   api "io.vertx:vertx-core"
   testImplementation("io.vertx:vertx-junit5")
 }
-
-jar {
-  dependsOn configurations.runtimeClasspath
-}

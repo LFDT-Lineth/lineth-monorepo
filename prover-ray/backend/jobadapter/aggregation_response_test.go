@@ -8,22 +8,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const referenceAggregationResponse = "../../../rollup_spec/src/rollup_spec/prover_io/testdata/10-18-getZkRollupAggregationProofV1.response.json"
+
 // TestNewAggregationResponse_MatchesReferenceShape verifies the placeholder
-// aggregation response has the exact V1 field shape (no top-level programVk, but
-// l2MessagingBlocksOffsets present). Values stay placeholder until the guest lands.
+// aggregation response has the exact V1 field shape (no top-level programVk; the
+// revealed arrays live in publicInputs). Values stay placeholder until the guest lands.
 func TestNewAggregationResponse_MatchesReferenceShape(t *testing.T) {
 	resp := newAggregationResponse(backend.Result{ProofBytes: []byte{0xde, 0xad}}, 1000501, "test-version")
 
 	assert.Equal(t, "test-version", resp.ProverVersion)
 	assert.Equal(t, "0xdead", resp.ProofHex)
 	assert.Equal(t, uint64(1000501), resp.StartBlockNumber)
-	assert.Empty(t, resp.L2L1Roots)
-	assert.Empty(t, resp.FilteredAddresses)
-	assert.Empty(t, resp.L2MessagingBlocksOffsets)
+	assert.Empty(t, resp.PublicInputs.L2L1Roots)
+	assert.Empty(t, resp.PublicInputs.FilteredAddresses)
+	assert.Empty(t, resp.PublicInputs.ProgramIDs)
+	assert.Empty(t, resp.PublicInputs.L2MessagingBlocksOffsets)
 
 	raw, err := jsonMarshalObject(resp)
 	require.NoError(t, err)
-	want := unmarshalObject(t, readFixture(t, aggregationResponseFixture))
+	want := unmarshalObject(t, readSpecFixture(t, referenceAggregationResponse))
 	assertJSONShape(t, want, raw, "aggregationResponse")
 	assert.NotContains(t, raw, "programVk")
 	assert.NotContains(t, raw, "status")

@@ -129,9 +129,9 @@ func (run *Runtime) AdvanceRound() {
 		))
 	}
 
-	// Feed the dynamic-sizes for each dynamic module
+	// Feed the dynamic-sizes for each dynamic module, once they are all known.
 	for k, mod := range run.System.Modules {
-		if !mod.isDynamic {
+		if !mod.isDynamic || run.currentRound.ID < run.System.DynamicSizeRound {
 			continue
 		}
 		size, ok := run.dynamicSizes[k]
@@ -207,15 +207,15 @@ func (run *Runtime) AssignColumn(col *Column, v *ConcreteVector) {
 		utils.Panic("wiop: AssignColumn: data length too large for column: %v, size=%v", dataLen, ColumnSizeMaxSupported)
 	}
 
-	if m.IsDynamic() && run.currentRound.ID == 0 {
+	if m.IsDynamic() && run.currentRound.ID <= run.System.DynamicSizeRound {
 		currSize := run.dynamicSizes[m.index]
 		run.dynamicSizes[m.index] = utils.NextPowerOfTwo(max(currSize, dataLen))
 	} else if m.IsDynamic() && dataLen > run.dynamicSizes[m.index] {
 		// This is needed because we need to include the module sizes in the
-		// fiat-shamir transcript of the first-round.
+		// fiat-shamir transcript of round [System.DynamicSizeRound].
 		panic(fmt.Sprintf(
-			"wiop: AssignColumn: data length of a dynamic module may not be updated anymore after round 0: %v -> %v",
-			dataLen, run.dynamicSizes[m.index],
+			"wiop: AssignColumn: data length of a dynamic module may not be updated anymore after round %d: %v -> %v",
+			run.System.DynamicSizeRound, dataLen, run.dynamicSizes[m.index],
 		))
 	} else if m.IsSized() && dataLen > m.Size() {
 		panic(fmt.Sprintf(

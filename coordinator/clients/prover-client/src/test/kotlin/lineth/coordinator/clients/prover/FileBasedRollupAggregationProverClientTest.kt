@@ -3,11 +3,13 @@ package lineth.coordinator.clients.prover
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.domain.BlockIntervalProofIndex
-import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.ROLLUP_AGGREGATION_PROGRAM_VK
+import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.PROVING_SYSTEM_VERSION
+import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.ROLLUP_AGGREGATION_PROGRAM_ID
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.fileBasedProverConfig
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.jsonMapper
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.rollupAggregationProofRequestV1
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.rollupAggregationProofResponseDto
+import lineth.coordinator.config.v2.FileBasedProverConfig
 import lineth.fileio.FileReader
 import lineth.fileio.FileWriter
 import org.assertj.core.api.Assertions.assertThat
@@ -20,15 +22,15 @@ import java.nio.file.Path
 import kotlin.time.Instant
 
 /**
- * Exercises [FileBasedRollupAggregationProverClient] end-to-end over the [FileBasedProverProofTransport]:
+ * Exercises [RollupAggregationProverClient] end-to-end over the [FileBasedProverProofTransport]:
  *  - writing a domain request: request -> request DTO -> JSON file;
  *  - reading a response: JSON file -> response DTO -> domain response.
  */
 @ExtendWith(VertxExtension::class)
 class FileBasedRollupAggregationProverClientTest {
   private lateinit var config: FileBasedProverConfig
-  private lateinit var rollupProofTransport: FileBasedRollupProofTransport
-  private lateinit var client: FileBasedRollupAggregationProverClient
+  private lateinit var rollupProofTransport: RollupProofTransport
+  private lateinit var client: RollupAggregationProverClient
 
   @BeforeEach
   fun beforeEach(vertx: Vertx, @TempDir tempDir: Path) {
@@ -46,10 +48,11 @@ class FileBasedRollupAggregationProverClientTest {
       responseFileNameProvider = RollupAggregationProofFileNameProvider,
     )
     rollupProofTransport = FakeRollupProofTransport()
-    client = FileBasedRollupAggregationProverClient(
+    client = RollupAggregationProverClient(
       transport = transport,
-      rollupProofTransport = rollupProofTransport,
-      programVk = ROLLUP_AGGREGATION_PROGRAM_VK,
+      rollupProofProvider = rollupProofTransport::findResponse,
+      guestProgramId = ROLLUP_AGGREGATION_PROGRAM_ID,
+      provingSystem = PROVING_SYSTEM_VERSION,
     )
   }
 
@@ -63,9 +66,10 @@ class FileBasedRollupAggregationProverClientTest {
     assertThat(requestFile).exists()
 
     val writtenDto = jsonMapper.readValue(requestFile.toFile(), FileBasedRollupAggregationProofRequestDto::class.java)
-    val expectedDto = FileBasedRollupAggregationProofRequestDtoMapper(
-      ROLLUP_AGGREGATION_PROGRAM_VK,
-      rollupProofTransport,
+    val expectedDto = RollupAggregationProofRequestDtoMapper(
+      ROLLUP_AGGREGATION_PROGRAM_ID,
+      PROVING_SYSTEM_VERSION,
+      rollupProofTransport::findResponse,
     ).invoke(request).get()
     assertThat(writtenDto).isEqualTo(expectedDto)
   }

@@ -1,10 +1,5 @@
 [
     {
-      "inputs": [],
-      "stateMutability": "nonpayable",
-      "type": "constructor"
-    },
-    {
       "inputs": [
         {
           "internalType": "address",
@@ -87,6 +82,17 @@
     {
       "inputs": [],
       "name": "DataRollingHashSubmissionIsZeroHash",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "dataTailBytes",
+          "type": "uint256"
+        }
+      ],
+      "name": "DataTailBytesOutOfRange",
       "type": "error"
     },
     {
@@ -200,6 +206,22 @@
         }
       ],
       "name": "InitializedVersionWrong",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "parentDataTailTakeBytes",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "finalDataTailDiscardBytes",
+          "type": "uint256"
+        }
+      ],
+      "name": "InvalidDataTailProgression",
       "type": "error"
     },
     {
@@ -385,17 +407,6 @@
       "type": "error"
     },
     {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "offset",
-          "type": "uint256"
-        }
-      ],
-      "name": "OffsetOutOfRange",
-      "type": "error"
-    },
-    {
       "inputs": [],
       "name": "OnlyNonLivenessRecoveryOperator",
       "type": "error"
@@ -420,6 +431,22 @@
         }
       ],
       "name": "ParentDataRollingHashNotAnchored",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "previousDataTailBytes",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "parentDataTailTakeBytes",
+          "type": "uint256"
+        }
+      ],
+      "name": "ParentDataTailTakeBytesNotContinuous",
       "type": "error"
     },
     {
@@ -504,22 +531,6 @@
         }
       ],
       "name": "SafeCastOverflowedUintDowncast",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "previousOffset",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "startOffset",
-          "type": "uint256"
-        }
-      ],
-      "name": "StartOffsetNotContinuous",
       "type": "error"
     },
     {
@@ -640,7 +651,7 @@
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "endOffset",
+          "name": "finalDataTailDiscardBytes",
           "type": "uint256"
         },
         {
@@ -2127,12 +2138,12 @@
     },
     {
       "inputs": [],
-      "name": "currentDataAvailabilityOffset",
+      "name": "currentDataRollingHash",
       "outputs": [
         {
-          "internalType": "uint256",
+          "internalType": "bytes32",
           "name": "",
-          "type": "uint256"
+          "type": "bytes32"
         }
       ],
       "stateMutability": "view",
@@ -2140,12 +2151,12 @@
     },
     {
       "inputs": [],
-      "name": "currentDataRollingHash",
+      "name": "currentDataTailBytes",
       "outputs": [
         {
-          "internalType": "bytes32",
+          "internalType": "uint256",
           "name": "",
-          "type": "bytes32"
+          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -2339,12 +2350,12 @@
             },
             {
               "internalType": "uint256",
-              "name": "startOffset",
+              "name": "parentDataTailTakeBytes",
               "type": "uint256"
             },
             {
               "internalType": "uint256",
-              "name": "endOffset",
+              "name": "finalDataTailDiscardBytes",
               "type": "uint256"
             },
             {

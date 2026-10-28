@@ -5,6 +5,7 @@ import linea.EthLogsSearcher
 import linea.domain.BlockParameter
 import linea.domain.EthLog
 import linea.kotlin.decodeHex
+import lineth.vertx.vertxTestOptions
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
@@ -53,7 +54,7 @@ class LogsSearcherTest {
 
   @BeforeEach
   fun setUp() {
-    vertx = Vertx.vertx()
+    vertx = Vertx.vertx(vertxTestOptions)
     fakeElClient = FakeEthApiClient(initialLogs.toSet())
     fakeElClient.setLatestBlockTag(initialLogs.last().blockNumber + 1UL)
     searcher = EthLogsSearcherImpl(vertx, fakeElClient)

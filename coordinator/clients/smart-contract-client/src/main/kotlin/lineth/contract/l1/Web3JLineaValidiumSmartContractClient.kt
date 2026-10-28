@@ -2,6 +2,7 @@ package lineth.contract.l1
 
 import linea.contract.ValidiumV1
 import linea.contract.l1.BlockAndNonce
+import linea.contract.l1.FinalizationDataV9
 import linea.contract.l1.LineaValidiumSmartContractClient
 import linea.contract.l1.Web3JLineaValidiumSmartContractClientReadOnly
 import linea.domain.BlobRecord
@@ -102,6 +103,34 @@ class Web3JLineaValidiumSmartContractClient(
       }
   }
 
+  override fun acceptDataRollingHash(
+    parentDataRollingHash: ByteArray,
+    storedDataRollingHash: ByteArray,
+    gasPriceCaps: GasPriceCaps?,
+    isEthCall: Boolean,
+  ): SafeFuture<String?> {
+    return getVersion()
+      .thenCompose { version ->
+        val function = Web3JLineaValidiumFunctionBuilders.buildAcceptDataRollingHashFunction(
+          version,
+          parentDataRollingHash,
+          storedDataRollingHash,
+        )
+        val result: SafeFuture<String?> = if (isEthCall) {
+          web3jContractHelper.executeEthCall(
+            function = function,
+            gasPriceCaps = gasPriceCaps,
+          )
+        } else {
+          web3jContractHelper.sendShnarfDataTransactionAndGetTxHash(
+            function = function,
+            gasPriceCaps = gasPriceCaps,
+          ).thenApply { it }
+        }
+        result
+      }
+  }
+
   override fun finalizeBlocks(
     aggregation: ProofToFinalize,
     aggregationLastBlob: BlobRecord,
@@ -143,6 +172,25 @@ class Web3JLineaValidiumSmartContractClient(
             parentL1RollingHashMessageNumber,
           )
         web3jContractHelper.sendTransactionAfterEthCallAsync(function, BigInteger.ZERO, gasPriceCaps)
+          .thenApply { result -> result.transactionHash }
+      }
+  }
+
+  override fun finalizeBlocksV9(
+    data: FinalizationDataV9,
+    gasPriceCaps: GasPriceCaps?,
+    preflightWithEthCall: Boolean,
+  ): SafeFuture<String> {
+    return getVersion()
+      .thenApply { version ->
+        Web3JLineaValidiumFunctionBuilders.buildFinalizeBlocksFunctionV9(version, data)
+      }
+      .thenCompose { function ->
+        if (preflightWithEthCall) {
+          web3jContractHelper.sendTransactionAfterEthCallAsync(function, BigInteger.ZERO, gasPriceCaps)
+        } else {
+          web3jContractHelper.sendTransactionAsync(function, BigInteger.ZERO, gasPriceCaps)
+        }
           .thenApply { result -> result.transactionHash }
       }
   }

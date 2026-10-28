@@ -33,7 +33,7 @@ import lineth.persistence.ForcedTransactionsDao
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.async.toSafeFutureNonNull
 import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.linea.traces.TracesCountersV2
+import net.consensys.linea.traces.TracesCountersV5
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.Callable
@@ -73,8 +73,11 @@ class ConflationAppV2(
     requireNotNull(configs.conflation.l2EngineEndpoint) {
       "conflation.l2-engine-endpoint must be set to use ConflationAppV2"
     }
-    requireNotNull(configs.riscvProversConfig) {
-      "riscvProversConfig must be set to use ConflationAppV2"
+    require(
+      configs.proversConfig.currentProver.riscvConfig != null ||
+        configs.proversConfig.nextProver?.riscvConfig != null,
+    ) {
+      "riscv proversConfig must be set ether in currentProver or nextProver to use ConflationAppV2"
     }
   }
 
@@ -86,7 +89,7 @@ class ConflationAppV2(
     blockValidator = ::validateLinethBlock,
   )
 
-  private val executionPipeline: ExecutionPipeline = configs.riscvProversConfig!!.let { riscvProversConfig ->
+  private val executionPipeline: ExecutionPipeline = configs.proversConfig.let { riscvProversConfig ->
     val blocksPerBatch = requireNotNull(configs.conflation.blocksLimit) {
       "conflation.blocksLimit must be set when riscv is enabled"
     }
@@ -107,7 +110,7 @@ class ConflationAppV2(
     val conflationCalculator = riscvCalculators.conflationCalculator
     val conflationService = riscvCalculators.conflationService
 
-    val l2ExecutionProverClient = proverClientFactory.executionProverClient()
+    val l2ExecutionProverClient = proverClientFactory.l2ExecutionProverClient()
 
     val web3jService = createWeb3jHttpService(rpcUrl = configs.conflation.l2Endpoint.toString())
     val executionWitnessClient = Web3jExecutionWitnessClient(web3jService)
@@ -139,7 +142,9 @@ class ConflationAppV2(
       vertx = vertx,
       config = ExecutionProofGeneratingCoordinator.Config(
         conflationAndProofGenerationRetryBackoffDelay = configs.conflation.l2RequestRetries.backoffDelay,
-        executionProofPollingInterval = riscvProversConfig.proverA.execution.pollingInterval,
+        executionProofPollingInterval =
+        (riscvProversConfig.currentProver.riscvConfig ?: riscvProversConfig.nextProver?.riscvConfig!!)
+          .l2Execution.pollingInterval,
       ),
       metricsFacade = metricsFacade,
     )
@@ -171,7 +176,7 @@ class ConflationAppV2(
           BlockCounters(
             blockNumber = block.number,
             blockTimestamp = Instant.fromEpochSeconds(block.timestamp.toLong()),
-            tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+            tracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
             blockRLPEncoded = blockRlp,
             numOfTransactions = block.transactions.size.toUInt(),
             gasUsed = block.gasUsed,

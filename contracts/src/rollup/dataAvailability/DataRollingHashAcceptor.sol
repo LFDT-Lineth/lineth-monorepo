@@ -6,7 +6,7 @@ import { DataRollingHashAcceptorBase } from "./DataRollingHashAcceptorBase.sol";
 
 /**
  * @title Contract to manage L2 dataRollingHash anchoring on L1 for rollup proof verification.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract DataRollingHashAcceptor is IAcceptDataRollingHash, DataRollingHashAcceptorBase {

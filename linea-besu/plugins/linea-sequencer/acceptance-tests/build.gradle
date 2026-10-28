@@ -1,7 +1,6 @@
-import java.time.LocalTime
 
 /*
- * Copyright Consensys Software Inc.
+ * Copyright Consensys Incorporated
  *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
@@ -89,7 +88,9 @@ tasks.register('acceptanceTests', Test) {
   testClassesDirs = sourceSets.test.output.classesDirs
   classpath = sourceSets.test.runtimeClasspath
 
-  inputs.property("integration.date", LocalTime.now()) // so it runs on every invocation
+  // Always run against the freshly started nodes; unlike a LocalTime.now() input this also keeps the
+  // configuration cache reusable.
+  doNotTrackState("Acceptance tests must run on every invocation")
 
   useJUnitPlatform {
     includeTags("AcceptanceTest")

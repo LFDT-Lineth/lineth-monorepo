@@ -1,6 +1,5 @@
 //! Spike test: proves that a real, multi-block sequence borrowed from the EF execution-spec-tests
-//! zkevm corpus and engineered into a self-consistent input (see `real_multiblock_fixture_gen.zig`'s
-//! header comment and `engineerHop`'s doc comment for the full mechanism and provenance) runs
+//! zkevm corpus (see `real_multiblock_fixture_gen.zig`'s header comment for provenance) runs
 //! successfully through the l2-execution guest's FULL, REAL pipeline (`l2_execution.runL2Execution`,
 //! delegating per-block execution to `src/execution.zig`'s `executeStatelessInputWithLogs` — NOT
 //! `test/conflation_plan.zig`'s `StubEngine`).
@@ -10,11 +9,11 @@
 //! This is the one test in the suite that drives a genuine multi-block range through the real
 //! per-block engine end to end.
 //!
-//! Builds the engineered input fresh via `real_multiblock_fixture_gen.buildEngineeredInput` on every
+//! Builds the input fresh via `real_multiblock_fixture_gen.buildEngineeredInput` on every
 //! run rather than loading a checked-in file: the corpus JSON it derives from is embedded straight
 //! from the execution-spec-tests dependency tree (wired in `build.zig`), so there is nothing to
-//! regenerate or forget to re-commit — the input is always exactly what the current engineering
-//! logic produces.
+//! regenerate or forget to re-commit — the input is always exactly what the current fixture
+//! and builder produce.
 //!
 //! Deliberately does NOT assert anything about the specific value of any state root: proving EVM
 //! correctness is this repo's existing single-block conformance suite's job
@@ -67,7 +66,7 @@ test "a real multi-block EF-corpus range runs through the full guest pipeline (n
         try testing.expectEqual(prev_number + 1, curr_number);
     }
     for (stateless_inputs) |si| {
-        try testing.expect(si.new_payload_request.execution_payload.transactions.len >= 1);
+        try testing.expect(si.new_payload_request.execution_payload.raw_transactions.len >= 1);
     }
 
     // ── Run the REAL, full guest pipeline ────────────────────────────────────────────────────
@@ -79,12 +78,10 @@ test "a real multi-block EF-corpus range runs through the full guest pipeline (n
     // No error (the call above would have returned one) — end-to-end acceptance.
     try testing.expectEqual(last_payload.block_number, output.public_inputs.end_block_number);
 
-    // parent_block_hash: the first block's ORIGINAL (untouched) parent_hash — the real genesis hash
-    // this range's first block was never modified to point away from.
+    // parent_block_hash: the first block's parent_hash — the real genesis hash.
     try testing.expectEqualSlices(u8, &first_payload.parent_hash, &output.public_inputs.parent_block_hash);
 
-    // end_block_hash: the last block's own self-description (never touched — only ITS parent_hash
-    // was ever spliced to point at the re-hashed second-to-last block).
+    // end_block_hash: the last block's own block hash.
     try testing.expectEqualSlices(u8, &last_payload.block_hash, &output.public_inputs.end_block_hash);
 
     // tx_froms / tx_froms_hash: the real senders recovered from every block's real transactions, in

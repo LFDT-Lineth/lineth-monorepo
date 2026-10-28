@@ -8,6 +8,7 @@
 
 const std = @import("std");
 const input = @import("zesu_input");
+const rlp_decode = @import("zesu_rlp_decode");
 const ssz_decode = @import("zesu_ssz_decode");
 const fixtures = @import("evm_execution_fixtures");
 const stateless_input_encode = @import("stateless_input_encode");
@@ -62,10 +63,6 @@ const HEADER_0 = repeat(90, 0xc1);
 const HEADER_1 = repeat(32, 0xc2);
 const HEADERS = [_][]const u8{ &HEADER_0, &HEADER_1 };
 
-const PUBKEY_0 = repeat(65, 0xd1);
-const PUBKEY_1 = repeat(65, 0xd2);
-const PUBKEYS = [_][]const u8{ &PUBKEY_0, &PUBKEY_1 };
-
 const WITHDRAWALS = [_]input.Withdrawal{
     .{ .index = 1, .validator_index = 2, .address = repeat(20, 0x08), .amount = 32_000_000_000 },
     .{ .index = 2, .validator_index = 3, .address = repeat(20, 0x09), .amount = 1 },
@@ -80,7 +77,7 @@ const EXTRA_DATA = [_]u8{ 0xde, 0xad, 0xbe, 0xef };
 const BLOCK_ACCESS_LIST_BYTES = repeat(16, 0x99);
 
 /// A hand-built `StatelessInput` touching every variable-length branch the wire format has: multiple
-/// transactions, a zero-length witness entry alongside non-empty ones, present public keys, non-empty
+/// transactions, a zero-length witness entry alongside non-empty ones, non-empty
 /// withdrawals/versioned-hashes/execution-requests, and an explicit Amsterdam schema ID.
 fn sampleInput(raw_transactions: []const []const u8) input.StatelessInput {
     return .{
@@ -128,7 +125,6 @@ fn sampleInput(raw_transactions: []const []const u8) input.StatelessInput {
             .chain_id = 59144,
             .schema_id = 0x1501, // Amsterdam
         },
-        .public_keys = &PUBKEYS,
     };
 }
 
@@ -170,13 +166,14 @@ test "encode then decode round-trips every field, covering every variable-length
 
     // Transactions: the raw RLP bytes round-trip byte-exact, and independently decode to exactly the
     // transactions this fixture encodes — proof the raw bytes this encoder wrote are the real thing,
-    // not opaque filler.
+    // not opaque filler. The decoder keeps them opaque (`transactions` stays empty; the engine
+    // decodes them after its block-hash check), so they are decoded here directly.
     try std.testing.expectEqual(@as(usize, 2), ep.raw_transactions.len);
     try std.testing.expectEqualSlices(u8, tx_a_rlp, ep.raw_transactions[0]);
     try std.testing.expectEqualSlices(u8, tx_b_rlp, ep.raw_transactions[1]);
+    try std.testing.expectEqual(@as(usize, 0), ep.transactions.len);
 
-    try std.testing.expectEqual(@as(usize, 2), ep.transactions.len);
-    const tx_a = ep.transactions[0];
+    const tx_a = try rlp_decode.decodeSingleTx(alloc, ep.raw_transactions[0]);
     try std.testing.expectEqual(@as(u64, 7), tx_a.nonce);
     try std.testing.expectEqual(@as(u128, 1_000_000_000), tx_a.gas_price);
     try std.testing.expectEqual(@as(u64, 21_000), tx_a.gas_limit);
@@ -188,7 +185,7 @@ test "encode then decode round-trips every field, covering every variable-length
     try std.testing.expectEqual(TX_A_R, tx_a.r);
     try std.testing.expectEqual(TX_A_S, tx_a.s);
 
-    const tx_b = ep.transactions[1];
+    const tx_b = try rlp_decode.decodeSingleTx(alloc, ep.raw_transactions[1]);
     try std.testing.expectEqual(@as(u64, 0), tx_b.nonce);
     try std.testing.expectEqual(@as(u128, 2_000_000_000), tx_b.gas_price);
     try std.testing.expectEqual(@as(u64, 100_000), tx_b.gas_limit);
@@ -227,8 +224,6 @@ test "encode then decode round-trips every field, covering every variable-length
     try std.testing.expectEqual(value.chain_config.chain_id, decoded.chain_config.chain_id);
     try std.testing.expectEqualStrings("Amsterdam", decoded.chain_config.fork_name.?);
     try std.testing.expectEqual(value.chain_config.schema_id, decoded.chain_config.schema_id);
-
-    try expectByteListListEqual(&PUBKEYS, decoded.public_keys);
 }
 
 test "encode reproduces the EF fixture's real vanilla stateless-input bytes byte-for-byte" {

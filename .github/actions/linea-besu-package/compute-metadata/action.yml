@@ -53,10 +53,6 @@ outputs:
     description: shomei plugin version
     value: ${{ steps.dotenv.outputs.SHOMEI_PLUGIN_VERSION }}
 
-  besu_fleet_version:
-    description: besu fleet plugin version
-    value: ${{ steps.dotenv.outputs.BESU_FLEET_PLUGIN_VERSION }}
-
 runs:
   using: "composite"
   steps:
@@ -72,7 +68,7 @@ runs:
     
     - name: get versions via dotenv
       id: dotenv
-      uses: falti/dotenv-action@fff81fa3263fb96221c521b5e526e57c0c56d760 #v1.2.1
+      uses: falti/dotenv-action@fff81fa3263fb96221c521b5e526e57c0c56d760 # v1.2.1
       with:
         path: linea-besu/package/versions.env
         mode: development

@@ -4,7 +4,7 @@ import linea.domain.BlockHeaderSummary
 import linea.kotlin.ByteArrayExt
 import lineth.conflation.SafeBlockProvider
 import lineth.conflation.ZERO_COINBASE
-import net.consensys.linea.traces.fakeTracesCountersV2
+import net.consensys.linea.traces.fakeTracesCountersV5
 import org.apache.logging.log4j.Logger
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
@@ -195,7 +195,7 @@ class ConflationCalculatorByTimeDeadlineTest {
     return BlockCounters(
       blockNumber = blockNumber,
       blockTimestamp = timestamp,
-      tracesCounters = fakeTracesCountersV2(1u),
+      tracesCounters = fakeTracesCountersV5(1u),
       blockRLPEncoded = ByteArray(0),
       coinbase = ZERO_COINBASE,
     )

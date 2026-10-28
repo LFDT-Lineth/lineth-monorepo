@@ -7,6 +7,7 @@ import linea.ethapi.EthLogsSearcherImpl
 import linea.ethapi.FakeEthApiClient
 import linea.kotlin.decodeHex
 import linea.kotlin.toHexStringUInt256
+import lineth.vertx.vertxTestOptions
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
@@ -22,7 +23,7 @@ class EventBasedContractDeploymentBlockNumberProviderTest {
 
   @BeforeEach
   fun setUp() {
-    vertx = Vertx.vertx()
+    vertx = Vertx.vertx(vertxTestOptions)
     ethApiClient = FakeEthApiClient()
     provider = EventBasedContractDeploymentBlockNumberProvider(
       ethLogsSearcher = EthLogsSearcherImpl(vertx = vertx, ethApiClient = ethApiClient),

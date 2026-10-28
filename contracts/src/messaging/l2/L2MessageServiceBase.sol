@@ -8,7 +8,7 @@ import { PermissionsManager } from "../../security/access/PermissionsManager.sol
 
 /**
  * @title Contract to manage cross-chain messaging on L2.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract L2MessageServiceBase is

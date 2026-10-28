@@ -1,6 +1,4 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
@@ -22,12 +20,12 @@ import maru.executionlayer.manager.PayloadStatus
 import org.apache.tuweni.bytes.Bytes32
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.hyperledger.besu.consensus.common.bft.ConsensusRoundIdentifier
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.random.Random
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import maru.executionlayer.manager.ext.DataGenerators as ExecutionLayerDataGenerators
 
 class FollowerBeaconBlockImporterTest {

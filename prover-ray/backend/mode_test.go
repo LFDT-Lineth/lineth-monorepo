@@ -39,7 +39,8 @@ func TestProve_DevMock_ReturnsPlaceholder(t *testing.T) {
 	assert.Equal(t, "job-1", result.JobID)
 	require.NoError(t, result.Err)
 	assert.Equal(t, []byte("dev-proof:dev-mock"), result.ProofBytes)
-	assert.Equal(t, PublicInputs{}, result.PublicInputs, "public inputs stay zero placeholders")
+	assert.Equal(t, PublicInputs{EndBlockNumber: 14}, result.PublicInputs,
+		"only the batch end block is set; other public inputs stay zero")
 }
 
 func TestProve_UnwiredModes_ReturnBlockerError(t *testing.T) {

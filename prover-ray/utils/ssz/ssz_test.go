@@ -1,6 +1,7 @@
 package ssz
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"os"
 	"strings"
@@ -109,10 +110,11 @@ func TestEncodeStatelessInput_MissingChainConfig(t *testing.T) {
 	assert.Contains(t, err.Error(), "chainConfig")
 }
 
-// TestEncodeStatelessInput_NoTransactions_EmptyPublicKeys verifies that a
-// payload with no transactions encodes successfully with an empty public_keys
-// list (no public key recovery attempted, no panic).
-func TestEncodeStatelessInput_NoTransactions_EmptyPublicKeys(t *testing.T) {
+// TestEncodeStatelessInput_NoTransactions verifies that a payload with no
+// transactions encodes successfully into the guest's SszStatelessInput layout:
+// schema id, then a 16-byte fixed region (payload offset, witness offset, inline
+// chain id) with the payload starting right after it.
+func TestEncodeStatelessInput_NoTransactions(t *testing.T) {
 	noTx := `{
   "newPayloadRequest": {
     "executionPayload": {
@@ -145,8 +147,12 @@ func TestEncodeStatelessInput_NoTransactions_EmptyPublicKeys(t *testing.T) {
 	got, err := EncodeStatelessInput([]byte(noTx))
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(got), 2)
-	assert.Equal(t, byte(0x00), got[0], "schema id high byte")
+	assert.Equal(t, byte(0x15), got[0], "Amsterdam fork index")
 	assert.Equal(t, byte(0x01), got[1], "schema id low byte")
+	body := got[2:]
+	require.GreaterOrEqual(t, len(body), 16)
+	assert.Equal(t, uint32(16), binary.LittleEndian.Uint32(body[0:4]), "new_payload_request offset")
+	assert.Equal(t, uint64(59144), binary.LittleEndian.Uint64(body[8:16]), "inline chain id")
 }
 
 // TestEncodeStatelessInput_UnsupportedFork rejects known but inactive forks.
@@ -238,6 +244,7 @@ func TestEncodeStatelessInput_MalformedInputs(t *testing.T) {
 
 	const notHex = "0xzz"
 
+	//nolint:goconst
 	cases := []struct {
 		name    string
 		mutate  func(o map[string]any)
@@ -300,6 +307,14 @@ func TestEncodeStatelessInput_MalformedInputs(t *testing.T) {
 		{"MissingChainID",
 			func(o map[string]any) { delete(o["chainConfig"].(map[string]any), "chainId") },
 			"missing chainId"},
+		{"NegativeChainID",
+			func(o map[string]any) { o["chainConfig"].(map[string]any)["chainId"] = -1 },
+			"chainId"},
+		{"OverflowChainID",
+			func(o map[string]any) {
+				o["chainConfig"].(map[string]any)["chainId"] = json.Number("18446744073709551616")
+			},
+			"chainId"},
 		{"MissingForkName",
 			func(o map[string]any) { delete(o["chainConfig"].(map[string]any), "forkName") },
 			"missing forkName"},
@@ -318,6 +333,26 @@ func TestEncodeStatelessInput_MalformedInputs(t *testing.T) {
 				npr(o)["executionRequests"] = map[string]any{"consolidations": []any{map[string]any{}}}
 			},
 			"consolidations must be empty"},
+		{"NonEmptyBuilderDeposits",
+			func(o map[string]any) {
+				npr(o)["executionRequests"] = map[string]any{"builderDeposits": []any{map[string]any{}}}
+			},
+			"builderDeposits must be empty"},
+		{"NonEmptyBuilderExits",
+			func(o map[string]any) {
+				npr(o)["executionRequests"] = map[string]any{"builderExits": []any{map[string]any{}}}
+			},
+			"builderExits must be empty"},
+		{"NullBuilderDeposits",
+			func(o map[string]any) {
+				npr(o)["executionRequests"] = map[string]any{"builderDeposits": nil}
+			},
+			"executionRequests.builderDeposits"},
+		{"NullBuilderExits",
+			func(o map[string]any) {
+				npr(o)["executionRequests"] = map[string]any{"builderExits": nil}
+			},
+			"executionRequests.builderExits"},
 		{"NullExecutionRequestsList",
 			func(o map[string]any) {
 				npr(o)["executionRequests"] = map[string]any{"deposits": nil}
@@ -358,9 +393,6 @@ func TestEncodeStatelessInput_MalformedInputs(t *testing.T) {
 			"blockHash"},
 		{"TransactionNotHex",
 			func(o map[string]any) { ep(o)["transactions"] = []any{notHex} },
-			"transactions[0]"},
-		{"TransactionUndecodable",
-			func(o map[string]any) { ep(o)["transactions"] = []any{"0xdead"} },
 			"transactions[0]"},
 		{"WithdrawalAddressWrongLength",
 			func(o map[string]any) {
@@ -418,18 +450,19 @@ func TestEncodeStatelessInput_MalformedInputs(t *testing.T) {
 				witness(o)["headers"] = headers
 			},
 			"headers"},
-		{"TooManyPublicKeys",
+		{"WitnessNodeTooLarge",
 			func(o map[string]any) {
-				transactions := make([]any, maxPublicKeys+1)
-				for i := range transactions {
-					transactions[i] = "0xdead"
-				}
-				ep(o)["transactions"] = transactions
+				witness(o)["state"] = []any{"0x" + strings.Repeat("aa", maxBytesPerWitnessNode+1)}
 			},
-			"public_keys"},
+			"state[0]"},
+		{"WitnessCodeTooLarge",
+			func(o map[string]any) {
+				witness(o)["codes"] = []any{"0x" + strings.Repeat("aa", maxBytesPerCode+1)}
+			},
+			"codes[0]"},
 		{"UnknownForkName",
 			func(o map[string]any) { o["chainConfig"].(map[string]any)["forkName"] = "Foo" },
-			"unknown fork name"},
+			"unsupported fork"},
 	}
 
 	for _, tc := range cases {

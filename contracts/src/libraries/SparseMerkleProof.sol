@@ -5,7 +5,7 @@ import { Poseidon2 } from "./Poseidon2.sol";
 
 /**
  * @title Library to perform SparseMerkleProof actions using the Poseidon2 hashing algorithm.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 library SparseMerkleProof {

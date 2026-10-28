@@ -587,15 +587,21 @@ func pcsSystemLiteral(params fri.Params, logFinalPolySize uint8, layout []pcsSiz
 	var b strings.Builder
 	fmt.Fprintf(&b, "pcs.System{ .envelope_params = fri.Params{ .log_codeword_size = %d, .log_plaintext_size = %d, .log_final_poly_size = %d, .num_queries = %d }, .columns = &.{ ",
 		params.LogCodewordSize, params.LogPlainTextSize, logFinalPolySize, params.NumQueries)
+	flatShifts := []int{}
+	offsets := make([][2]int, 0, len(cols))
+	for _, c := range cols {
+		offsets = append(offsets, [2]int{len(flatShifts), len(c.shifts)})
+		flatShifts = append(flatShifts, c.shifts...)
+	}
 	for i, c := range cols {
 		if i > 0 {
 			b.WriteString(", ")
 		}
-		fmt.Fprintf(&b, ".{ .batch_idx = %d, .is_ext = %t, .size = .{ .static = %d }, .shifts = &[_]isize%s }",
-			c.batchIdx, c.isExt, c.sizeLog2, intArrayLiteral(c.shifts))
+		fmt.Fprintf(&b, ".{ .batch_idx = %d, .is_ext = %t, .size = .{ .static = %d }, .shifts_start = %d, .shifts_len = %d, .claim_start = 0 }",
+			c.batchIdx, c.isExt, c.sizeLog2, offsets[i][0], offsets[i][1])
 	}
-	fmt.Fprintf(&b, " }, .num_batches = %d, .max_entries = %d, .max_size_log2 = %d }",
-		numBatches(layout), len(cols), maxSize)
+	fmt.Fprintf(&b, " }, .all_shifts = &[_]i32%s, .num_batches = %d, .max_entries = %d, .max_size_log2 = %d }",
+		intArrayLiteral(flatShifts), numBatches(layout), len(cols), maxSize)
 	return b.String()
 }
 

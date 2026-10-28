@@ -6,6 +6,7 @@ import linea.clients.ProverFileNameProvider
 import linea.domain.BlockInterval
 import linea.domain.ProofIndex
 import lineth.coordinator.clients.prover.serialization.JsonSerialization
+import lineth.coordinator.config.v2.FileBasedProverConfig
 import lineth.fileio.FileReader
 import lineth.fileio.FileWriter
 import org.assertj.core.api.Assertions.assertThat

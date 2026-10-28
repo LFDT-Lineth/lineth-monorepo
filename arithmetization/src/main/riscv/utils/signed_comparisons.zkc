@@ -3,14 +3,16 @@ include "../../common/type.zkc"
 
 // signed_LT should return true (i.e. 1) iff a < b where a and b are interpreted as signed i64's
 //#[inline]
-fn signed_LT(a:DoubleWord, b:DoubleWord) -> (comparison:Boolean) {
-
-    var a_sign:SignBit
-    var b_sign:SignBit
-
-    a_sign = sign_bit_of_double_word(a)
-    b_sign = sign_bit_of_double_word(b)
-
+fn signed_LT(a:DoubleWord, b:DoubleWord) -> (comparison:u1) {
+    var a_sign:u1
+    var b_sign:u1
+    var a_suffix:u63
+    var b_suffix:u63
+    var tmp:u64
+    // extract sign bits
+    a_sign::a_suffix = a
+    b_sign::b_suffix = b
+    // parity check
     if a_sign != b_sign {
         // different signs case: a < b iff a is negative (a_sign == 1)
         comparison = a_sign
@@ -22,6 +24,7 @@ fn signed_LT(a:DoubleWord, b:DoubleWord) -> (comparison:Boolean) {
         // we have both
         // ∙  2^31 < -1
         // ∙  0x80..00 < 0xff..ff
-        comparison = a<b ? 1:0
+        comparison::tmp = (a - b) as u65
     }
 }
+

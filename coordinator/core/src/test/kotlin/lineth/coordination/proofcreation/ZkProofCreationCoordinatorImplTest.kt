@@ -17,7 +17,7 @@ import linea.kotlin.ByteArrayExt
 import linea.kotlin.encodeHex
 import linea.log4j.configureLoggers
 import lineth.coordination.conflation.BlocksTracesConflated
-import net.consensys.linea.traces.fakeTracesCountersV2
+import net.consensys.linea.traces.fakeTracesCountersV5
 import org.apache.logging.log4j.Level
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -104,7 +104,7 @@ class ZkProofCreationCoordinatorImplTest {
             startBlockNumber = 123UL,
             endBlockNumber = 124UL,
             conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-            tracesCounters = fakeTracesCountersV2(0u),
+            tracesCounters = fakeTracesCountersV5(0u),
           ),
         ),
         traces =

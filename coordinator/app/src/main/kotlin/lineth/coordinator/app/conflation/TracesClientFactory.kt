@@ -52,11 +52,12 @@ object TracesClientFactory {
   ): TracesClients {
     return when {
       configs.common != null -> {
+        val commonConfig = configs.common!!
         val commonClient =
           createTracesClient(
             vertx,
             rpcClientFactory,
-            configs.common,
+            commonConfig,
             configs.ignoreTracesGeneratorErrors,
             fallBackTracesCounters,
             log ?: LogManager.getLogger("clients.traces"),

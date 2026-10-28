@@ -2,6 +2,8 @@ package lineth.contract.l1
 
 import linea.contract.ValidiumV1
 import linea.contract.ValidiumV2
+import linea.contract.ValidiumV3
+import linea.contract.l1.FinalizationDataV9
 import linea.contract.l1.LineaValidiumContractVersion
 import linea.domain.BlobRecord
 import linea.domain.ProofToFinalize
@@ -22,6 +24,10 @@ internal object Web3JLineaValidiumFunctionBuilders {
       LineaValidiumContractVersion.V1,
       LineaValidiumContractVersion.V2,
       -> buildAcceptShnarfDataFunctionV1(blobs)
+      LineaValidiumContractVersion.V3 ->
+        throw UnsupportedOperationException(
+          "version=$version not supported, please use buildAcceptDataRollingHashFunction instead",
+        )
     }
   }
 
@@ -35,10 +41,49 @@ internal object Web3JLineaValidiumFunctionBuilders {
      */
     return Function(
       ValidiumV1.FUNC_ACCEPTSHNARFDATA,
-      Arrays.asList<Type<*>>(
+      listOf<Type<*>>(
         Bytes32(blobs.first().blobCompressionProof!!.prevShnarf),
         Bytes32(blobs.last().blobCompressionProof!!.expectedShnarf),
         Bytes32(blobs.last().blobCompressionProof!!.finalStateRootHash),
+      ),
+      emptyList<TypeReference<*>>(),
+    )
+  }
+
+  fun buildAcceptDataRollingHashFunction(
+    version: LineaValidiumContractVersion,
+    parentDataRollingHash: ByteArray,
+    storedDataRollingHash: ByteArray,
+  ): Function {
+    return when (version) {
+      LineaValidiumContractVersion.V1,
+      LineaValidiumContractVersion.V2,
+      -> throw UnsupportedOperationException(
+        "version=$version not supported, please use buildAcceptShnarfDataFunction instead",
+      )
+
+      LineaValidiumContractVersion.V3 -> buildAcceptDataRollingHashFunctionV1(
+        parentDataRollingHash,
+        storedDataRollingHash,
+      )
+    }
+  }
+
+  fun buildAcceptDataRollingHashFunctionV1(
+    parentDataRollingHash: ByteArray,
+    storedDataRollingHash: ByteArray,
+  ): Function {
+    /**
+     function acceptDataRollingHash(
+     bytes32 _parentDataRollingHash,
+     bytes32 _storedDataRollingHash
+     )
+     */
+    return Function(
+      ValidiumV3.FUNC_ACCEPTDATAROLLINGHASH,
+      listOf<Type<*>>(
+        Bytes32(parentDataRollingHash),
+        Bytes32(storedDataRollingHash),
       ),
       emptyList<TypeReference<*>>(),
     )
@@ -60,7 +105,6 @@ internal object Web3JLineaValidiumFunctionBuilders {
           parentL1RollingHashMessageNumber,
         )
       }
-
       LineaValidiumContractVersion.V2 -> {
         return buildFinalizeBlockFunctionV2(
           aggregationProof,
@@ -69,6 +113,10 @@ internal object Web3JLineaValidiumFunctionBuilders {
           parentL1RollingHashMessageNumber,
         )
       }
+      LineaValidiumContractVersion.V3 ->
+        throw UnsupportedOperationException(
+          "version=$version not supported, please use buildFinalizeBlocksFunctionV3 instead",
+        )
     }
   }
 
@@ -217,6 +265,96 @@ internal object Web3JLineaValidiumFunctionBuilders {
       Arrays.asList<Type<*>>(
         DynamicBytes(aggregationProof.aggregatedProof),
         Uint256(aggregationProof.aggregatedVerifierIndex.toLong()),
+        finalizationData,
+      ),
+      emptyList<TypeReference<*>>(),
+    )
+  }
+
+  fun buildFinalizeBlocksFunctionV9(
+    version: LineaValidiumContractVersion,
+    finalization: FinalizationDataV9,
+  ): Function {
+    return when (version) {
+      LineaValidiumContractVersion.V1 -> {
+        throw UnsupportedOperationException(
+          "version=$version not supported, please use buildFinalizeBlocksFunctionV1 instead",
+        )
+      }
+      LineaValidiumContractVersion.V2 -> {
+        throw UnsupportedOperationException(
+          "version=$version not supported, please use buildFinalizeBlocksFunctionV2 instead",
+        )
+      }
+      LineaValidiumContractVersion.V3 ->
+        buildFinalizeBlocksFunctionV3(finalization)
+    }
+  }
+
+  /**
+   * function finalizeBlocks(
+   *   bytes calldata _aggregatedProof,
+   *   uint256 _proofType,
+   *   FinalizationDataV5 calldata _finalizationData
+   * )
+   */
+  fun buildFinalizeBlocksFunctionV3(
+    finalization: FinalizationDataV9,
+  ): Function {
+    val finalizationData =
+      ValidiumV3.FinalizationDataV5(
+        // parentBlockHash
+        finalization.parentBlockHash,
+        // endBlockNumber
+        finalization.endBlockNumber.toBigInteger(),
+        // lastFinalizedTimestamp
+        finalization.lastFinalizedTimestamp.epochSeconds.toBigInteger(),
+        // finalTimestamp
+        finalization.finalTimestamp.epochSeconds.toBigInteger(),
+        // lastFinalizedL1RollingHash
+        finalization.lastFinalizedL1RollingHash,
+        // l1RollingHash
+        finalization.l1RollingHash,
+        // lastFinalizedL1RollingHashMessageNumber
+        finalization.lastFinalizedL1RollingHashMessageNumber.toBigInteger(),
+        // l1RollingHashMessageNumber
+        finalization.l1RollingHashMessageNumber.toBigInteger(),
+        // l2MerkleTreesDepth
+        finalization.l2MerkleTreesDepth.toBigInteger(),
+        // lastFinalizedForcedTransactionNumber
+        finalization.lastFinalizedForcedTransactionNumber.toBigInteger(),
+        // finalForcedTransactionNumber
+        finalization.finalForcedTransactionNumber.toBigInteger(),
+        // lastFinalizedForcedTransactionRollingHash
+        finalization.lastFinalizedForcedTransactionRollingHash,
+        // finalBlockHash
+        finalization.finalBlockHash,
+        // parentDataRollingHash
+        finalization.parentDataRollingHash,
+        // endDataRollingHash
+        finalization.endDataRollingHash,
+        // startOffset
+        finalization.startOffset.toBigInteger(),
+        // endOffset
+        finalization.endOffset.toBigInteger(),
+        // l2MerkleRoots
+        finalization.l2MerkleRoots,
+        // filteredAddresses
+        finalization.filteredAddresses.mapIndexed { i, address ->
+          require(address.size == 20) { "filteredAddresses[$i] must be 20 bytes (address), got ${address.size}" }
+          address.encodeHex()
+        },
+        // verifierKeys
+        finalization.verifierKeys,
+        // l2MessagingBlocksOffsets
+        finalization.l2MessagingBlocksOffsets,
+      )
+
+    return Function(
+      ValidiumV3.FUNC_FINALIZEBLOCKS,
+      listOf(
+        DynamicBytes(finalization.aggregatedProof),
+        Uint256(finalization.proofType.toLong()),
         finalizationData,
       ),
       emptyList<TypeReference<*>>(),

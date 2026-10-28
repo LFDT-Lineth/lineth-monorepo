@@ -6,8 +6,8 @@ import linea.domain.ConflationTrigger
 import lineth.conflation.ZERO_COINBASE
 import lineth.coordination.blob.FakeBlobCompressor
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
-import net.consensys.linea.traces.TracesCountersV2
-import net.consensys.linea.traces.fakeTracesCountersV2
+import net.consensys.linea.traces.TracesCountersV5
+import net.consensys.linea.traces.fakeTracesCountersV5
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -23,7 +23,7 @@ class GlobalBlobAwareConflationCalculatorFailureTest {
       lastBlockNumber = 0UL,
       syncCalculators = listOf(blobCalculator),
       deferredTriggerConflationCalculators = emptyList(),
-      emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+      emptyTracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
     )
     val calculator = GlobalBlobAwareConflationCalculator(
       conflationCalculator = conflationCalculator,
@@ -35,7 +35,7 @@ class GlobalBlobAwareConflationCalculatorFailureTest {
     val blockCounters = BlockCounters(
       blockNumber = 1UL,
       blockTimestamp = Instant.fromEpochSeconds(1),
-      tracesCounters = fakeTracesCountersV2(1U),
+      tracesCounters = fakeTracesCountersV5(1U),
       blockRLPEncoded = byteArrayOf(1),
       numOfTransactions = 1U,
       gasUsed = 1UL,

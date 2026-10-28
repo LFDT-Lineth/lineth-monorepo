@@ -11,9 +11,6 @@ on:
       release_version:
         required: true
         type: string
-      with_besu_fleet_plugin:
-        required: true
-        type: boolean
     outputs:
       linea_besu_package_tag:
         value: ${{ jobs.build-and-upload-artifact.outputs.linea_besu_package_tag }}
@@ -24,10 +21,6 @@ on:
         required: false
       DOCKERHUB_TOKEN:
         required: false
-      FLEET_GITHUB_APP_ID:
-        required: false
-      FLEET_GITHUB_APP_PRIVATE_KEY:
-        required: false
 
 jobs:
   build-and-upload-artifact:
@@ -37,44 +30,19 @@ jobs:
       dockerimage: ${{ steps.build-plugins-and-assemble.outputs.dockerimage }}
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Build plugins and assemble
         id: build-plugins-and-assemble
         uses: ./.github/actions/linea-besu-package/build-plugins-and-assemble
         with:
           release_version: ${{ inputs.release_version }}
-          with_besu_fleet_plugin: ${{ inputs.with_besu_fleet_plugin }}
-          fleet_github_app_id: ${{ secrets.FLEET_GITHUB_APP_ID }}
-          fleet_github_app_private_key: ${{ secrets.FLEET_GITHUB_APP_PRIVATE_KEY }}
 
       # buildx is set up by the shared docker-build-publish action.
       - name: set docker build args
         run: |
           echo "Building docker tag: ${{ steps.build-plugins-and-assemble.outputs.dockertag }}"
           echo "Building docker image: ${{ steps.build-plugins-and-assemble.outputs.dockerimage }}"
-
-      - name: compute docker tags
-        id: docker-tags
-        env:
-          PRIMARY_IMAGE: consensys/linea-besu-package:${{ steps.build-plugins-and-assemble.outputs.dockertag }}
-          FLEET_IMAGE: consensys/linea-besu-package-with-fleet:${{ steps.build-plugins-and-assemble.outputs.dockertag }}
-          WITH_FLEET: ${{ inputs.with_besu_fleet_plugin }}
-        run: |
-          set -euo pipefail
-          # A single build is published under both names, so the fleet name is
-          # applied to the loaded image rather than built a second time.
-          SAVE_TAGS="${PRIMARY_IMAGE}"
-          FLEET_TAG=""
-          if [[ "${WITH_FLEET}" == "true" ]]; then
-            FLEET_TAG="${FLEET_IMAGE}"
-            SAVE_TAGS="${SAVE_TAGS} ${FLEET_TAG}"
-          fi
-          {
-            echo "primary_image=${PRIMARY_IMAGE}"
-            echo "fleet_tag=${FLEET_TAG}"
-            echo "save_tags=${SAVE_TAGS}"
-          } >> "$GITHUB_OUTPUT"
 
       # VERSION, VCS_REF and BUILD_DATE build args are injected by the shared
       # action (see scripts/docker/README.md), so they are not repeated here.
@@ -90,14 +58,9 @@ jobs:
 
       - name: Save Docker image as artifact
         env:
-          PRIMARY_IMAGE: ${{ steps.docker-tags.outputs.primary_image }}
-          FLEET_TAG: ${{ steps.docker-tags.outputs.fleet_tag }}
-          SAVE_TAGS: ${{ steps.docker-tags.outputs.save_tags }}
+          SAVE_TAGS: consensys/linea-besu-package:${{ steps.build-plugins-and-assemble.outputs.dockertag }}
         run: |
           set -euo pipefail
-          if [[ -n "${FLEET_TAG}" ]]; then
-            docker tag "${PRIMARY_IMAGE}" "${FLEET_TAG}"
-          fi
           docker images
           # SAVE_TAGS is a space-separated list of image references, so it is
           # intentionally unquoted here.

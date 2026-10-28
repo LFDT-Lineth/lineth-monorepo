@@ -2,8 +2,8 @@ package lineth.conflation.calculators
 import linea.domain.BlockCounters
 import linea.domain.ConflationTrigger
 import lineth.conflation.ZERO_COINBASE
-import net.consensys.linea.traces.TracesCountersV2
-import net.consensys.linea.traces.fakeTracesCountersV2
+import net.consensys.linea.traces.TracesCountersV5
+import net.consensys.linea.traces.fakeTracesCountersV5
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -19,7 +19,7 @@ class ConflationTriggerCalculatorByBlockLimitTest {
 
   @Test
   fun `should accumulate blockCounting`() {
-    val counters = ConflationCounters.empty(TracesCountersV2.EMPTY_TRACES_COUNT)
+    val counters = ConflationCounters.empty(TracesCountersV5.EMPTY_TRACES_COUNT)
     calculator.copyCountersTo(counters)
     assertThat(counters.blockCount).isEqualTo(0u)
     calculator.appendBlock(blockCounters(1))
@@ -48,7 +48,7 @@ class ConflationTriggerCalculatorByBlockLimitTest {
     return BlockCounters(
       blockNumber = blockNumber.toULong(),
       blockTimestamp = Instant.parse("2021-01-01T00:00:00.000Z"),
-      tracesCounters = fakeTracesCountersV2(blockNumber.toUInt()),
+      tracesCounters = fakeTracesCountersV5(blockNumber.toUInt()),
       blockRLPEncoded = ByteArray(0),
       coinbase = ZERO_COINBASE,
     )

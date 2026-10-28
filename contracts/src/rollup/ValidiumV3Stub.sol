@@ -6,7 +6,7 @@ import { Validium } from "./Validium.sol";
 /**
  * @title Temporary placeholder Validium contract mirroring Validium with no-op data submission and finalization.
  * @dev acceptDataRollingHash and finalizeBlocks are overridden as no-ops - all other behavior is inherited unchanged from Validium.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 contract ValidiumV3Stub is Validium {

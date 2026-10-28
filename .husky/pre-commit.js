@@ -123,7 +123,7 @@ function main() {
 }
 
 /**
- * Runs `:coordinator:app:checkConfigDocs` when any config schema / config-docs tooling file
+ * Runs `:coordinator:config:checkConfigDocs` when any config schema / config-docs tooling file
  * changed, aborting the commit if a config key is missing @ConfigDoc / @ConfigSection.
  * @param {string[]} _changedFileList
  */
@@ -134,7 +134,7 @@ function checkCoordinatorConfigDocs(_changedFileList) {
 
     console.log("Coordinator config changed, verifying documentation (checkConfigDocs)...");
     try {
-        execSync("./gradlew :coordinator:app:checkConfigDocs", { stdio: 'inherit' });
+        execSync("./gradlew :coordinator:config:checkConfigDocs", { stdio: 'inherit' });
     } catch (error) {
         console.error("checkConfigDocs failed: every config key must have @ConfigDoc / @ConfigSection.");
         console.error("Exiting...");

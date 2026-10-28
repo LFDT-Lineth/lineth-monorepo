@@ -1,4 +1,4 @@
-ARG NODE_VERSION=lts
+ARG NODE_VERSION=24.22.1
 
 FROM node:${NODE_VERSION}-slim AS base
 

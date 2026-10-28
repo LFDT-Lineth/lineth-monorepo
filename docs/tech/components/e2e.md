@@ -11,7 +11,6 @@ The E2E tests validate:
 - Message passing and claiming
 - Rollup submission and finalization
 - Coordinator restart recovery
-- Node fleet consistency
 - Liveness detection
 
 ## Test Coverage
@@ -56,11 +55,6 @@ The E2E tests validate:
 │                                                                        │
 │  ┌──────────────────────────────────────────────────────────────────┐  │
 │  │                   Infrastructure Tests                           │  │
-│  │                                                                  │  │
-│  │  linea-besu-fleet.spec.ts                                        │  │
-│  │  ├── Leader/follower consistency                                 │  │
-│  │  ├── linea_estimateGas matching                                  │  │
-│  │  └── Block sync verification                                     │  │
 │  │                                                                  │  │
 │  │  liveness.spec.ts                                                │  │
 │  │  └── Sequencer downtime detection                                │  │
@@ -219,23 +213,6 @@ Tests L2-specific transaction validation and execution.
 
 ---
 
-### linea-besu-fleet.spec.ts — Node Consistency
-
-Tests that leader and follower nodes return consistent results.
-
-**Test: Leader/Follower Response Matching**
-1. Wait until `currentL2BlockNumber` on L1 is > 1 (finalization occurred)
-2. Call `linea_estimateGas` on leader and follower with identical parameters
-3. Assert: `maxPriorityFeePerGas`, `maxFeePerGas` match exactly
-4. Call `eth_estimateGas` on both nodes
-5. Assert: Gas estimates match
-6. Query `"finalized"` block from both nodes
-7. Assert: Block number and hash match
-8. Query `"latest"` block from both nodes
-9. Assert: Block number and hash match
-
----
-
 ### liveness.spec.ts — Sequencer Uptime Detection
 
 Tests the liveness feed that tracks sequencer downtime.
@@ -327,7 +304,6 @@ e2e/
 │   ├── messaging.spec.ts
 │   ├── submission-finalization.spec.ts
 │   ├── restart.spec.ts
-│   ├── linea-besu-fleet.spec.ts
 │   ├── liveness.spec.ts
 │   ├── l2.spec.ts
 │   ├── opcodes.spec.ts
@@ -554,36 +530,6 @@ describe('Coordinator Restart', () => {
 });
 ```
 
-### Fleet Consistency Test
-
-```typescript
-// linea-besu-fleet.spec.ts
-describe('Fleet Consistency', () => {
-  it('should have consistent linea_estimateGas across nodes', async () => {
-    const tx = {
-      from: account.address,
-      to: testContract.address,
-      data: testContract.interface.encodeFunctionData('doSomething'),
-    };
-    
-    // Get estimate from leader
-    const leaderEstimate = await leaderClient.estimateGas(tx);
-    
-    // Get estimate from follower
-    const followerEstimate = await followerClient.estimateGas(tx);
-    
-    expect(leaderEstimate).to.equal(followerEstimate);
-  });
-  
-  it('should have matching finalized blocks', async () => {
-    const leaderBlock = await leaderProvider.getBlock('finalized');
-    const followerBlock = await followerProvider.getBlock('finalized');
-    
-    expect(leaderBlock.hash).to.equal(followerBlock.hash);
-  });
-});
-```
-
 ## Running Tests
 
 ```bash
@@ -592,14 +538,11 @@ cd e2e
 # Install dependencies (generates TypeChain types)
 pnpm install
 
-# Run all tests (except fleet and liveness)
+# Run all tests (except liveness)
 pnpm run test:e2e:local
 
 # Run specific test file
 pnpm run test:e2e:local -- bridge-tokens.spec.ts
-
-# Run fleet tests
-pnpm run test:e2e:fleet:local
 
 # Run liveness tests
 pnpm run test:e2e:liveness:local

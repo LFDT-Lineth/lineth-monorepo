@@ -2,7 +2,51 @@
 
 ### 🚀 Features
 
+- *(coordinator)* RISC-V rollup proof coordinator — chunk assembly + proof submission (#3967)
+- *(coordinator)* Added BlobSubmitterV2 interface and implementation (#3673)
+
+### 🐛 Bug Fixes
+
+- *(coordinator)* Align RISC-V l2-execution DTOs and request envelope with rollup_spec (#4260)
+- *(coordinator)* Align RISC-V rollup DTOs with rollup_spec (#4262)
+- *(misc)* Moved filtered addresses into the list of the PI (#4166)
+- *(coordinator)* Align RISC-V rollup-aggregation DTOs with rollup_spec (#4263)
+## [2.2.0] - 2026-10-12
+
+### 🚀 Features
+
+- *(coordinator)* Extension config sections and deprecated key aliases (#4162)
+- *(coordinator)* Inline pluggable signer types and per-proof-type prover transport (#4164)
+
+### 🚜 Refactor
+
+- *(coordinator)* Move prover transport from per-proof-type to RiscvProverConfig (#4172)
+- *(coordinator)* Remove TracingModuleV2 and TracingModuleV4 support (#4180)
+## [2.1.0] - 2026-10-09
+
+### 🚀 Features
+
+- *(coordinator)* Bundle smart-contract errors in jar and make --smart-contract-errors optional (#4161)
+## [2.0.2] - 2026-10-07
+
+### 🚜 Refactor
+
+- *(coordinator)* Select batches insert query by DB schema version (#4145)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(coordinator)* Make RISC-V rollup prover clients transport-agnostic (#4140)
+## [2.0.1] - 2026-10-06
+
+### ⚙️ Miscellaneous Tasks
+
+- *(coordinator)* Simplify Risc5 prover DTO mappers (#4121)
+## [2.0.0] - 2026-10-02
+
+### 🚀 Features
+
 - *(coordinator)* Add new metadata fields in RISC-V request (#3998)
+- *(coordinator)* [**breaking**] Add new fields on riscv proof requests and revise … (#3993)
 
 ### 🐛 Bug Fixes
 
@@ -13,6 +57,13 @@
 - *(misc)* Improv JVM flakiness test and gradle configs (#4021)
 - *(coordinator, maru, linea-besu)* Update jvm dependencies: (#4029)
 - *(misc)* Update gradle to v9.8 (#4032)
+- *(misc)* Fix gradle build correctness bugs (#4044)
+- *(misc)* Decrease vertx threadpool sizes for testing (#4047)
+- *(coordinator)* Tidy up move DB sql files to db/coordinator (#4068)
+- *(coordinator)* Make vertx instantiation responsibility of CoordinatorAppMain runner (#4090)
+- *(coordinator)* Carve out config module (#4093)
+- *(coordinator)* Arrange config module dependencies (#4100)
+- *(coordinator)* Remove unsupported invalidity proof client (#4101)
 ## [1.2.0] - 2026-09-23
 
 ### 🚀 Features

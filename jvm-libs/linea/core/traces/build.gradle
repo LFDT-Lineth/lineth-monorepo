@@ -12,7 +12,3 @@ dependencies {
   testImplementation "com.sksamuel.hoplite:hoplite-core:${libs.versions.hoplite.get()}"
   testImplementation "com.sksamuel.hoplite:hoplite-toml:${libs.versions.hoplite.get()}"
 }
-
-jar {
-  dependsOn configurations.runtimeClasspath
-}

@@ -2,11 +2,11 @@ package lineth.coordinator.app
 
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.coordinator.config.v2.toPrettyLog
+import lineth.coordinator.config.v2.toml.ConfigExtension
 import lineth.coordinator.config.v2.toml.loadConfigs
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import picocli.CommandLine
-import picocli.CommandLine.ArgGroup
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
 import java.io.File
@@ -25,37 +25,26 @@ import java.util.concurrent.Callable
   optionListHeading = "%nOptions:%n",
   footerHeading = "%n",
 )
-class CoordinatorAppCli
-internal constructor(private val errorWriter: PrintWriter, private val startAction: StartAction) :
-  Callable<Int> {
+class CoordinatorAppCli<E> internal constructor(
+  private val errorWriter: PrintWriter,
+  private val configExtension: ConfigExtension<E>,
+  private val startAction: StartAction<E>,
+) : Callable<Int> {
   @Parameters(paramLabel = "CONFIG.toml", description = ["Configuration files"])
   private val configFiles: List<File>? = null
 
-  @ArgGroup(multiplicity = "1", exclusive = true, validate = true)
-  private var tracesLimitsFiles: TracesLimitsFiles? = null
-
-  class TracesLimitsFiles {
-    @CommandLine.Option(
-      names = ["--traces-limits-v4"],
-      paramLabel = "<FILE>",
-      description = ["Prover traces limits V4 for linea besu"],
-      required = false,
-    )
-    var tracesLimitsV4File: File? = null
-
-    @CommandLine.Option(
-      names = ["--traces-limits-v5"],
-      paramLabel = "<FILE>",
-      description = ["Prover traces limits V5 for linea besu"],
-      required = false,
-    )
-    var tracesLimitsV5File: File? = null
-  }
+  @CommandLine.Option(
+    names = ["--traces-limits-v5"],
+    paramLabel = "<FILE>",
+    description = ["Prover traces limits V5 for linea besu"],
+    arity = "1",
+  )
+  private val tracesLimitsV5File: File? = null
 
   @CommandLine.Option(
     names = ["--smart-contract-errors"],
     paramLabel = "<FILE>",
-    description = ["Smart contract error codes"],
+    description = ["Optional smart contract error codes, merged over the bundled mapping (file entries win)"],
     arity = "1",
   )
   private val smartContractErrorsFile: File? = null
@@ -83,17 +72,8 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
         printUsage(errorWriter)
         return 1
       }
-      val tracesFiles = tracesLimitsFiles
-      if (
-        tracesFiles == null ||
-        (tracesFiles.tracesLimitsV4File == null && tracesFiles.tracesLimitsV5File == null)
-      ) {
+      if (tracesLimitsV5File == null) {
         errorWriter.println("Please provide a traces-limits file!")
-        printUsage(errorWriter)
-        return 1
-      }
-      if (smartContractErrorsFile == null) {
-        errorWriter.println("Please provide smart-contract-errors file!")
         printUsage(errorWriter)
         return 1
       }
@@ -112,17 +92,21 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
       val configs =
         loadConfigs(
           coordinatorConfigFiles = configFiles.map { it.toPath() },
-          tracesLimitsFileV4 = tracesFiles.tracesLimitsV4File?.toPath(),
-          tracesLimitsFileV5 = tracesFiles.tracesLimitsV5File?.toPath(),
-          smartContractErrorsFile = smartContractErrorsFile.toPath(),
+          tracesLimitsFileV5 = tracesLimitsV5File.toPath(),
+          smartContractErrorsFile = smartContractErrorsFile?.toPath(),
           gasPriceCapTimeOfDayMultipliersFile = gasPriceCapTimeOfDayMultipliersFile.toPath(),
           logger = logger,
+          ignoredTopLevelKeys = configExtension.topLevelKeys,
         )
+      val extensionConfig = configExtension.load(configFiles.map { it.toPath() }, configs)
 
       if (checkConfigsOnly) {
         logger.info("All configs are valid. Final configs:\n{}", configs.toPrettyLog())
+        if (configExtension.topLevelKeys.isNotEmpty()) {
+          logger.info("Extension configs:\n{}", configExtension.toPrettyLog(extensionConfig))
+        }
       } else {
-        startAction.start(configs)
+        startAction.start(configs, extensionConfig)
       }
       0
     } catch (e: Exception) {
@@ -162,16 +146,19 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
    */
   private val logger: Logger = LogManager.getLogger()
 
-  fun interface StartAction {
-    fun start(configs: CoordinatorConfig)
+  fun interface StartAction<E> {
+    fun start(configs: CoordinatorConfig, extension: E)
   }
 
   companion object {
     const val COMMAND_NAME = "coordinator"
 
-    fun withAction(startAction: StartAction): CoordinatorAppCli {
+    fun withAction(startAction: (CoordinatorConfig) -> Unit): CoordinatorAppCli<Unit> =
+      withExtension(ConfigExtension.None) { configs, _ -> startAction(configs) }
+
+    fun <E> withExtension(configExtension: ConfigExtension<E>, startAction: StartAction<E>): CoordinatorAppCli<E> {
       val errorWriter = PrintWriter(System.err, true, Charset.defaultCharset())
-      return CoordinatorAppCli(errorWriter, startAction)
+      return CoordinatorAppCli(errorWriter, configExtension, startAction)
     }
   }
 }

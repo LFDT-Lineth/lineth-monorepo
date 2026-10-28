@@ -75,13 +75,13 @@ jobs:
       zkc_ref: ${{ steps.zkc.outputs.ref }}
     steps:
       - name: Checkout tooling
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: false
 
       - name: Checkout the monorepo commit under measurement
         if: ${{ inputs.monorepo-ref != '' }}
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.monorepo-ref }}
           path: measured
@@ -144,7 +144,7 @@ jobs:
           # Both halves timed as one task. No `make linker-script`: linker_script.ld is tracked
           # and @embedFile'd by the zig build, so regenerating it risks dirtying the tree.
           /usr/bin/time -v -o "$d/rusage" \
-            make -C "$MEASURE_DIR/riscv-guests/l2-execution" compile KECCAK_ACCEL=true \
+            make -C "$MEASURE_DIR/riscv-guests/l2-execution" compile KECCAK_ACCEL=false \
             > "$d/stdout" 2> "$d/stderr"
           rc=$?
           if [ "$rc" -eq 0 ]; then
@@ -232,7 +232,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout tooling
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: false
 
@@ -279,7 +279,7 @@ jobs:
     timeout-minutes: 45
     steps:
       - name: Checkout tooling
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: false
 
@@ -344,7 +344,7 @@ jobs:
     timeout-minutes: 120
     steps:
       - name: Checkout tooling
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: false
 
@@ -408,7 +408,7 @@ jobs:
     steps:
       # fetch-depth: 0 because the commit step rebases onto origin/<branch>; a shallow clone cannot.
       - name: Checkout tooling
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: false
           fetch-depth: 0
@@ -416,7 +416,7 @@ jobs:
       - name: Install Go
         uses: ./.github/actions/setup-go
         with:
-          go-version: '1.25.7'
+          go-version: '1.27.1'
           cache-dependency-path: "**/*.sum"
 
       - name: Prepare run directory

@@ -19,15 +19,19 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.jupiter.params.ParameterizedClass
+import org.junit.jupiter.params.provider.ValueSource
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.ExecutionException
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 @ExtendWith(VertxExtension::class)
-class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {
+@ParameterizedClass(name = "schemaVersion={0}")
+@ValueSource(ints = [4, 5])
+class BatchesPostgresDaoTest(private val schemaVersion: Int) : CleanDbTestSuiteParallel() {
   init {
-    target = "5"
+    target = schemaVersion.toString()
   }
 
   override val databaseName = DbHelper.generateUniqueDbName("coordinator-tests-batches")
@@ -42,8 +46,9 @@ class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {
   fun beforeEach() {
     batchesDao =
       BatchesPostgresDao(
-        sqlClient,
-        fakeClock,
+        connection = sqlClient,
+        schemaVersion = schemaVersion,
+        clock = fakeClock,
       )
   }
 
@@ -91,8 +96,12 @@ class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {
     assertThat(newlyInsertedRow.getLong("end_block_number")).isEqualTo(batch.endBlockNumber.toLong())
     assertThat(newlyInsertedRow.getInteger("status"))
       .isEqualTo(BatchesPostgresDao.batchStatusToDbValue(Batch.Status.Proven))
-    assertThat(newlyInsertedRow.getString("proof_index_hash"))
-      .isEqualTo(batch.proofIndexHash?.encodeHex())
+    if (schemaVersion >= 5) {
+      assertThat(newlyInsertedRow.getString("proof_index_hash"))
+        .isEqualTo(batch.proofIndexHash?.encodeHex())
+    } else {
+      assertThat(newlyInsertedRow.getColumnIndex("proof_index_hash")).isEqualTo(-1)
+    }
     return dbContent
   }
 
@@ -305,6 +314,47 @@ class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {
     assertThat(dbContent.size).isEqualTo(expectedRows.size)
     dbContent.forEachIndexed { index, row ->
       assertThat(row.toJson()).isEqualTo(expectedRows[index].toJson())
+    }
+  }
+
+  @Test
+  fun `findBatchesByBlockRange returns empty list when no batches exist`() {
+    assertThat(batchesDao.findBatchesByBlockRange(1L, 10L).get()).isEmpty()
+  }
+
+  @Test
+  fun `findBatchesByBlockRange returns only batches within range ordered by start block`() {
+    val batches = listOf(
+      createBatch(1, 3),
+      createBatch(4, 7),
+      createBatch(8, 10),
+      createBatch(11, 15),
+    )
+    SafeFuture.collectAll(batches.map { batchesDao.saveNewBatch(it) }.stream()).get()
+
+    val result = batchesDao.findBatchesByBlockRange(4L, 10L).get()
+
+    assertThat(result).hasSize(2)
+    assertThat(result[0].startBlockNumber).isEqualTo(4UL)
+    assertThat(result[0].endBlockNumber).isEqualTo(7UL)
+    assertThat(result[1].startBlockNumber).isEqualTo(8UL)
+    assertThat(result[1].endBlockNumber).isEqualTo(10UL)
+  }
+
+  @Test
+  fun `findBatchesByBlockRange returns proofIndexHash when present`() {
+    val proofHash = ByteArray(32) { it.toByte() }
+    val batch = Batch(startBlockNumber = 1UL, endBlockNumber = 5UL, proofIndexHash = proofHash)
+    batchesDao.saveNewBatch(batch).get()
+
+    val result = batchesDao.findBatchesByBlockRange(1L, 5L).get()
+
+    assertThat(result).hasSize(1)
+    if (schemaVersion >= 5) {
+      assertThat(result[0].proofIndexHash).isEqualTo(proofHash)
+    } else {
+      // schema v4 has no proof_index_hash column, so the hash is neither stored nor returned
+      assertThat(result[0].proofIndexHash).isNull()
     }
   }
 

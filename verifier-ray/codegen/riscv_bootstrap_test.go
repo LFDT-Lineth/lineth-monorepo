@@ -17,7 +17,7 @@ import (
 // own Go-side protocol verification), and that the projected VerifyInput
 // round-trips through Encode/Decode byte-for-byte — it does not call
 // verifier-ray's actual Zig verifier.verify(), which is what
-// test/riscv_proof_image_test.zig covers instead, against the committed
+// test/riscv_proof_image_test.zig covers instead, against the generated
 // fixture testdata/riscv_proof_image.bin (built from the same guest via
 // codegen/generate-riscv-system).
 func TestBuildAllInOneHonestRiscvArtifacts(t *testing.T) {
@@ -34,7 +34,7 @@ func TestBuildAllInOneHonestRiscvArtifacts(t *testing.T) {
 	// own AssertAllVerifierActionsHandled check already passed) inside
 	// BuildAllInOneHonestRiscvArtifacts; this additionally pins the
 	// Go<->native-layout Encode/Decode round trip that
-	// test/riscv_proof_image_test.zig relies on for the committed fixture,
+	// test/riscv_proof_image_test.zig relies on for the generated fixture,
 	// so a codec regression is caught here too.
 	encoded, err := proofserialization.Encode(artifacts.VerifyInput, proofserialization.GuestBase)
 	if err != nil {

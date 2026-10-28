@@ -18,13 +18,19 @@ tasks.register("compileAll") {
 // instead of deleting and re-adding code all the time
 def allowCompilationWarnings = System.getenv('LINEA_DEV_ALLOW_WARNINGS') != null
 
+// download.eclipse.org is unreliable, so fetch the Groovy-Eclipse formatter from a mirror
+def greclipseP2Mirrors = [
+  "https://download.eclipse.org/": "https://mirrors.dotsrc.org/eclipse/",
+  "https://groovy.jfrog.io/": "https://groovy.jfrog.io/",
+]
+
 spotless {
   predeclareDeps()
 }
 
 spotlessPredeclare {
   groovyGradle {
-    greclipse("4.35")
+    greclipse("4.35").withP2Mirrors(greclipseP2Mirrors)
   }
   java {
     removeUnusedImports()
@@ -126,16 +132,8 @@ allprojects {
   }
 
   jacoco {
+    // The jacoco plugin already instruments every Test task (integrationTest, acceptanceTest, ...).
     toolVersion = libs.versions.jacoco.get()
-    if (project.tasks.findByName('integrationTest')) {
-      applyTo integrationTest
-    }
-    if (project.tasks.findByName('acceptanceTest')) {
-      applyTo acceptanceTest
-    }
-    if (project.tasks.findByName('acceptanceTests')) {
-      applyTo acceptanceTests
-    }
   }
 
   jacocoTestReport {
@@ -174,11 +172,6 @@ allprojects {
     maxParallelForks = Math.min(Runtime.runtime.availableProcessors(), 9)
   }
 
-  tasks.withType(Test).matching { it.name == 'integrationTest' }.configureEach {
-    outputs.cacheIf { false }
-    outputs.upToDateWhen { false }
-  }
-
   afterEvaluate { subproject ->
     if (hasJavaOrKotlinPlugins(subproject)) {
       subproject.apply plugin: 'com.diffplug.spotless'
@@ -201,7 +194,7 @@ allprojects {
         // spotless check applied to build.gradle (groovy) files
         groovyGradle {
           target '*.gradle'
-          greclipse("4.35")
+          greclipse("4.35").withP2Mirrors(greclipseP2Mirrors)
           leadingTabsToSpaces(2)
           endWithNewline()
         }
@@ -224,7 +217,7 @@ allprojects {
   }
 }
 
-task jacocoRootReport(type: JacocoReport) {
+tasks.register("jacocoRootReport", JacocoReport) {
   // Define a project list will all subprojects excluding 'tracer' (TODO: fix to include tracer)
   def reportProjects = subprojects.findAll { subproject ->
     // Get the path of the subproject relative to the root dir (e.g., "tracer/lib-a")
@@ -237,15 +230,16 @@ task jacocoRootReport(type: JacocoReport) {
   sourceDirectories.from files(reportProjects.sourceSets.main.allSource.srcDirs)
   classDirectories.from files(reportProjects.sourceSets.main.output)
 
-  // Exclude the tracer folder from the execution data scan (TODO: fix to include tracer)
-  executionData.from fileTree(dir: '.', includes: ['**/jacoco/*.exec'], excludes: ['tracer/**'])
+  // Only look into each report project's build/jacoco dir: scanning the whole repo tree (node_modules included)
+  // is slow and snapshots unrelated files. Missing exec files are ignored by JacocoReport.
+  executionData.from(reportProjects.collect { fileTree(it.layout.buildDirectory.dir('jacoco')).include('*.exec') })
+  // Order after the test tasks writing those files, without pulling them into the task graph.
+  mustRunAfter { reportProjects.collect { it.tasks.withType(Test) }.flatten() }
   reports {
     xml.required = true
-    // xml.enabled = true FIXME: deprecated, breaking latest versions of gradle.
     csv.required = true
     html.outputLocation = file("build/reports/jacocoHtml")
   }
-  onlyIf = { true }
 }
 
 dockerCompose {

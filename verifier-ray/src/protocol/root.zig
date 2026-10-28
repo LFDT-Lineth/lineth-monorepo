@@ -10,6 +10,7 @@ pub const CellError = error{CellRefOutOfRange};
 pub const Error = error{
     InvalidRoundCount,
     MissingDynamicModuleSize,
+    UnexpectedDynamicModuleSize,
     DynamicModuleSizeTooLarge,
 } || CellError;
 
@@ -33,10 +34,10 @@ pub const Spec = struct {
     /// absorbs into the transcript at every round advance (prover-ray's
     /// `Runtime.AdvanceRound`, which feeds `NewElement(size)` for each dynamic
     /// module before the round's commitment/cells). `replayWithTranscript`
-    /// mirrors this by absorbing the first `dynamic_module_count` entries of the
-    /// caller-supplied `module_sizes` at the start of each round. 0 for protocols
-    /// with no dynamic modules, in which case the absorption is a no-op and
-    /// `module_sizes` may be empty.
+    /// mirrors this by absorbing the caller-supplied `module_sizes`, which must
+    /// hold exactly `dynamic_module_count` entries, at the start of each round.
+    /// 0 for protocols with no dynamic modules, in which case the absorption is
+    /// a no-op and `module_sizes` must be empty.
     dynamic_module_count: usize = 0,
     /// Maximum dynamic-module size a proof may declare (prover-ray's
     /// wiop.ColumnSizeMaxSupported). Any module_sizes entry above this is
@@ -92,9 +93,10 @@ pub fn replayWithTranscript(
     comptime spec: Spec,
     rounds: []const RoundMessage,
     /// Runtime sizes of the protocol's dynamically-sized modules, in the prover's
-    /// module order. The first `spec.dynamic_module_count` entries are absorbed
-    /// into the transcript at every round advance, mirroring prover-ray's
-    /// `AdvanceRound`. May be empty when `spec.dynamic_module_count == 0`.
+    /// module order. Must hold exactly `spec.dynamic_module_count` entries; all
+    /// of them are absorbed into the transcript at every round advance,
+    /// mirroring prover-ray's `AdvanceRound`. Empty when
+    /// `spec.dynamic_module_count == 0`.
     module_sizes: []const usize,
 ) Error![spec.total_round_coins]Coin {
     comptime {
@@ -106,8 +108,11 @@ pub fn replayWithTranscript(
     if (rounds.len != spec.round_coin_counts.len - 1) return error.InvalidRoundCount;
 
     // Dynamic-module sizes are absorbed once per round advance, so the caller
-    // must supply at least `dynamic_module_count` of them.
+    // must supply exactly `dynamic_module_count` of them. Extra entries would
+    // never reach the transcript, so accepting them would give one proof
+    // several wire encodings.
     if (module_sizes.len < spec.dynamic_module_count) return error.MissingDynamicModuleSize;
+    if (module_sizes.len > spec.dynamic_module_count) return error.UnexpectedDynamicModuleSize;
 
     for (module_sizes) |size| {
         if (size > spec.column_size_max_supported) return error.DynamicModuleSizeTooLarge;
@@ -121,10 +126,9 @@ pub fn replayWithTranscript(
         // size (as a base-field element) into the transcript. Runs at every round
         // advance, so a size is absorbed once per replayed round — matching the
         // prover exactly, which is what keeps the derived eval coin `r` in sync.
-        if (comptime spec.dynamic_module_count > 0) {
-            for (module_sizes[0..spec.dynamic_module_count]) |size| {
-                transcript.updateElement(field.Element.init(@intCast(size)));
-            }
+        // `module_sizes.len == spec.dynamic_module_count` was checked above.
+        for (module_sizes) |size| {
+            transcript.updateElement(field.Element.init(@intCast(size)));
         }
 
         const message = rounds[round_index - 1];

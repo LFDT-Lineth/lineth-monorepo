@@ -14,31 +14,25 @@ import (
 
 const singleReqName = "1000501-1000501-getZkL2ExecutionProofV1.json"
 
-// fakeProver stands in for the real spawn: it records calls, runs an optional
-// hook (to observe the claim / order), writes a canned response, and returns a
-// configurable exit code or run error. Its run method is a RunProver.
+// fakeProver is a RunProver that records calls, runs an optional hook, and
+// returns a fixed response, exit code or error.
 type fakeProver struct {
 	exitCode int
 	runErr   error
 	response []byte
-	onProve  func(reqPath string)
+	onProve  func(name string, request []byte)
 	calls    int
 }
 
-func (f *fakeProver) run(_ context.Context, reqPath, respPath string) (int, error) {
+func (f *fakeProver) run(_ context.Context, name string, request []byte) ([]byte, int, error) {
 	f.calls++
 	if f.onProve != nil {
-		f.onProve(reqPath)
+		f.onProve(name, request)
 	}
 	if f.runErr != nil {
-		return -1, f.runErr
+		return nil, -1, f.runErr
 	}
-	if f.response != nil {
-		if err := os.WriteFile(respPath, f.response, 0o600); err != nil {
-			return -1, err
-		}
-	}
-	return f.exitCode, nil
+	return f.response, f.exitCode, nil
 }
 
 // newAdapter builds a one-queue adapter over a fresh temp root.
@@ -84,8 +78,8 @@ func TestAdapter_Success(t *testing.T) {
 // TestAdapter_Priority_EndBlock: the earliest end block is processed first.
 func TestAdapter_Priority_EndBlock(t *testing.T) {
 	var order []string
-	prover := &fakeProver{response: []byte("{}"), onProve: func(reqPath string) {
-		order = append(order, filepath.Base(reqPath))
+	prover := &fakeProver{response: []byte("{}"), onProve: func(name string, _ []byte) {
+		order = append(order, name)
 	}}
 	a, root := newAdapter(t, prover)
 	placeRequest(t, root, "10-20-getZkL2ExecutionProofV1.json")
@@ -106,9 +100,9 @@ func TestAdapter_Priority_EndBlock(t *testing.T) {
 // queue runs first.
 func TestAdapter_Priority_QueueTiebreaker(t *testing.T) {
 	var first string
-	prover := &fakeProver{response: []byte("{}"), onProve: func(reqPath string) {
+	prover := &fakeProver{response: []byte("{}"), onProve: func(_ string, request []byte) {
 		if first == "" {
-			first = reqPath
+			first = string(request)
 		}
 	}}
 	high := t.TempDir() // priority 0
@@ -123,12 +117,12 @@ func TestAdapter_Priority_QueueTiebreaker(t *testing.T) {
 	require.NoError(t, err)
 
 	name := "10-14-getZkL2ExecutionProofV1.json"
-	placeRequest(t, low, name)
-	placeRequest(t, high, name)
+	require.NoError(t, os.WriteFile(filepath.Join(low, "requests", name), []byte(`"low"`), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(high, "requests", name), []byte(`"high"`), 0o600))
 
 	_, err = a.processNext(context.Background())
 	require.NoError(t, err)
-	assert.Contains(t, first, high, "the priority-0 queue runs first at equal end block")
+	assert.Equal(t, `"high"`, first, "the priority-0 queue runs first at equal end block")
 }
 
 // TestAdapter_ClaimsBeforeProving: the request is .inprogress by the time the
@@ -136,7 +130,7 @@ func TestAdapter_Priority_QueueTiebreaker(t *testing.T) {
 func TestAdapter_ClaimsBeforeProving(t *testing.T) {
 	var claimed, originalGone bool
 	var root string
-	prover := &fakeProver{onProve: func(_ string) {
+	prover := &fakeProver{onProve: func(_ string, _ []byte) {
 		_, errClaim := os.Stat(filepath.Join(root, "requests", singleReqName+".inprogress.test"))
 		claimed = errClaim == nil
 		_, errOrig := os.Stat(filepath.Join(root, "requests", singleReqName))
@@ -150,6 +144,34 @@ func TestAdapter_ClaimsBeforeProving(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, claimed, "request must be claimed as .inprogress before the prover runs")
 	assert.True(t, originalGone)
+}
+
+func TestAdapter_PassesRequestBytes(t *testing.T) {
+	var gotName string
+	var gotBody []byte
+	prover := &fakeProver{response: []byte("{}"), onProve: func(name string, request []byte) {
+		gotName, gotBody = name, request
+	}}
+	a, root := newAdapter(t, prover)
+	body := []byte(`{"proofRequest":{"payloads":[]}}`)
+	require.NoError(t, os.WriteFile(filepath.Join(root, "requests", singleReqName), body, 0o600))
+
+	_, err := a.processNext(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, singleReqName, gotName)
+	assert.Equal(t, body, gotBody)
+}
+
+func TestAdapter_NoResponseOnCrash(t *testing.T) {
+	a, root := newAdapter(t, &fakeProver{exitCode: 137})
+	placeRequest(t, root, singleReqName)
+
+	processed, err := a.processNext(context.Background())
+	require.NoError(t, err)
+	assert.True(t, processed)
+	assert.NoFileExists(t, filepath.Join(root, "responses", singleReqName))
+	assert.NoFileExists(t, filepath.Join(root, "responses", singleReqName+".inprogress.test"))
+	assert.FileExists(t, filepath.Join(root, "requests-done", singleReqName+".failure.137"))
 }
 
 // TestAdapter_ProveFailure: a non-zero exit archives the request as

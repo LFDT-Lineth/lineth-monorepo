@@ -33,9 +33,13 @@ jobs:
     name: Transaction exclusion api tests
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup Java and Gradle
         uses: ./.github/actions/setup-java-and-gradle
+      # Restores the Besu distribution prebuilt by prepare-linea-besu-maven (main.yml) and
+      # publishes it to maven local; no-op when the Besu BOM is already in a remote maven repo.
+      - name: Setup Besu in maven local
+        uses: ./.github/actions/setup-besu-maven-local
       - name: Run tests with coverage
         if: ${{ inputs.coverage }}
         run: |
@@ -46,7 +50,7 @@ jobs:
           ./gradlew transaction-exclusion-api:app:buildNeeded
       - name: Login to Docker Hub
         if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f #v4.6.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}

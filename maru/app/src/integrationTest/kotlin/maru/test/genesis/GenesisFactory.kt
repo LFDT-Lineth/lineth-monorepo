@@ -1,6 +1,4 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
@@ -20,7 +18,7 @@ class GenesisFactory(
   private val log: Logger = LogManager.getLogger(GenesisFactory::class.java),
 ) {
   private val beaconGenesisFactory: MaruGenesisFactory = MaruGenesisFactory()
-  private val besuGenesisFactory: BesuGenesisFactory = BesuGenesisFactory()
+  private val besuGenesisFactory: BesuGenesisFactory = BesuGenesisFactory(blockPeriodSeconds = blockTimeSeconds)
   private lateinit var forkSchedule: ForksSchedule
 
   fun initForkSchedule(

@@ -318,10 +318,10 @@ func TestEncodeInputsLegacyGolden(t *testing.T) {
 	}
 
 	want := map[string]string{
-		elfmapping.EntryPointAndBlobsCountInput: "00000000008000000000000000000003",
-		elfmapping.BlobsOffsetAndSizeInput: "00000000008000000000000000000004" +
-			"00000000088000000000000000000008" +
-			"00000000088000080000000000000003",
+		elfmapping.EntryPointAndBlobsCountInput: "000000000080000000000003",
+		elfmapping.BlobsOffsetAndSizeInput: "000000000080000000000004" +
+			"000000000880000000000008" +
+			"000000000880000800000003",
 		elfmapping.BlobsDataInput:       "970200000300000000000000aabbcc",
 		elfmapping.BlobsExecutableInput: "80",
 	}
@@ -420,7 +420,7 @@ func TestEncodeInputsAllowsAdjacentAndEmptyBlobs(t *testing.T) {
 	if got := hex.EncodeToString(inputs[elfmapping.BlobsDataInput]); got != "010203" {
 		t.Errorf("blobs_data = %s, want 010203", got)
 	}
-	count := binary.BigEndian.Uint64(inputs[elfmapping.EntryPointAndBlobsCountInput][8:])
+	count := binary.BigEndian.Uint32(inputs[elfmapping.EntryPointAndBlobsCountInput][8:])
 	if count != 3 {
 		t.Errorf("blob count = %d, want 3", count)
 	}

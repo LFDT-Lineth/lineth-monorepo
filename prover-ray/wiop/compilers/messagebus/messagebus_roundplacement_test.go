@@ -58,7 +58,7 @@ func requireGuardPanic(t *testing.T, f func()) {
 func TestSharedRandomness_BusColumnsMustBeOnTheCoinRound(t *testing.T) {
 	compile := func(sys *wiop.System) func() {
 		return func() {
-			messagebus.Compile(sys, messagebus.CompileOptions{SharedRandomness: true})
+			messagebus.Compile(sys)
 		}
 	}
 
@@ -74,4 +74,24 @@ func TestSharedRandomness_BusColumnsMustBeOnTheCoinRound(t *testing.T) {
 		require.NotPanics(t, compile(buildShardWithBusOnRound(t, 2, 1)),
 			"bus columns on the coin round are the supported layout")
 	})
+}
+
+// TestSharedRandomness_DefaultAndOptOut checks the public γ obligation for a
+// bus-bearing System and the explicit unsharded round-0 layout.
+func TestSharedRandomness_DefaultAndOptOut(t *testing.T) {
+	seeded := buildShardWithBusOnRound(t, 2, 1)
+	messagebus.Compile(seeded)
+	require.True(t, messagebus.HasSharedRandomness(seeded),
+		"the default seeded mode must require a γ public input")
+	for i := range messagebus.NumSharedRandomness {
+		_, pos := seeded.LookupPublicInputByTag(messagebus.SharedRandomnessSeedPI, i)
+		require.GreaterOrEqual(t, pos, 0, "γ limb %d must be public", i)
+	}
+
+	unsharded := buildShardWithBusOnRound(t, 1, 0)
+	messagebus.Compile(unsharded, messagebus.WithoutSharedRandomness())
+	require.False(t, messagebus.HasSharedRandomness(unsharded),
+		"the unsharded opt-out must not require γ")
+	_, pos := unsharded.LookupPublicInputByTag(messagebus.SharedRandomnessSeedPI, 0)
+	require.Negative(t, pos, "no γ public input may be registered")
 }

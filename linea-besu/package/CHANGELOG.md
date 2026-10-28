@@ -1,10 +1,28 @@
-## [unreleased]
+## [2.3.2] - 2026-10-26
+
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Update copyright holder to Consensys Incorporated (#4244)
+## [2.3.2-rc1] - 2026-10-16
+
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Update linea-besu AGENTS.md
+## [2.3.1] - 2026-10-09
+
+### 🐛 Bug Fixes
+
+- *(linea-besu)* Limit large MODEXP calls to 1 per block (#4128)
 
 ### ⚙️ Miscellaneous Tasks
 
 - *(misc)* Fix code licence header (#4009)
 - *(coordinator, maru, linea-besu)* Update jvm dependencies: (#4029)
 - *(misc)* Update gradle to v9.8 (#4032)
+- *(misc)* Fix gradle build correctness bugs (#4044)
+- *(misc)* Gradle improve tasks (#4046)
+- *(misc)* CI Merge sequencer plugin unit and acceptance jobs (#4048)
+- *(misc)* Update gradle besu plugin to v0.3.0 (#4072)
 ## [2.3.0] - 2026-09-23
 
 ### 🚀 Features

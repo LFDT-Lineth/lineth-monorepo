@@ -31,6 +31,10 @@ func TestWritePcsSystemZig(t *testing.T) {
 			{RoundIndex: 0},
 			{Precomputed: true, Root: octupletForTest(1, 2, 3, 4, 5, 6, 7, 8)},
 		},
+		BatchManifests: []*PcsBatchManifest{
+			{Round: 0, CellStart: 4, ColStart: 0},
+			nil,
+		},
 	}
 
 	var buf bytes.Buffer
@@ -45,9 +49,15 @@ func TestWritePcsSystemZig(t *testing.T) {
 		`const witness_map = [_]pcs.ClaimRef{`,
 		`const quotient_map = [_]pcs.ClaimRef{`,
 		`const batch_roots = [_]pcs.BatchRoot{`,
+		`const batch_manifests = [_]?pcs.BatchManifest{`,
+		`    .{ .round = 0, .cell_start = 4, .col_start = 0 },`,
+		`    null,`,
+		`.batch_manifests = &batch_manifests,`,
 		`pub const pcs_system_7 = pcs.System{`,
-		`.{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{ 0, 7 }, .claim_cells = &[_]pcs.CellRef{ .{ .round = 1, .index = 0 }, .{ .round = 1, .index = 1 }, } },`,
-		`.{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 1, .min_size_log2 = 3 } }, .shifts = &[_]isize{ 1 }, .claim_cells = &[_]pcs.CellRef{ .{ .round = 2, .index = 0 }, } },`,
+		`const all_shifts = [_]i32{ 0, 7, 1, }`,
+		`const all_claim_cells = [_]pcs.CellRef{ .{ .round = 1, .index = 0 }, .{ .round = 1, .index = 1 }, .{ .round = 2, .index = 0 }, }`,
+		`.{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 2, .claim_start = 0 },`,
+		`.{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 1, .min_size_log2 = 3 } }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },`,
 		`.zeta_coin_index = 5,`,
 	} {
 		if !strings.Contains(out, want) {
@@ -186,6 +196,45 @@ func TestBuildPcsSystemRecordsMinimumSafeDynamicSize(t *testing.T) {
 	}
 }
 
+// The manifest locator must point at the prover's manifest cells: contiguous,
+// in the committed round, one per column, starting at the batch's first
+// declaration index.
+func TestBuildPcsSystemLocatesManifestCells(t *testing.T) {
+	sys := wiop.NewSystemf("manifest-cells")
+	r0 := sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionRight)
+	a := mod.NewColumn(sys.Context.Childf("a"), r0)
+	b := mod.NewColumn(sys.Context.Childf("b"), r0)
+	mod.NewVanishing(sys.Context.Childf("eq"), wiop.Sub(a.View(), b.View()))
+
+	global.Compile(sys)
+	pcscompiler.Compile(sys)
+
+	routing, err := BuildCoinRouting(sys)
+	if err != nil {
+		t.Fatalf("BuildCoinRouting() error = %v", err)
+	}
+	pcs, err := BuildPcsSystem(sys, routing)
+	if err != nil {
+		t.Fatalf("BuildPcsSystem() error = %v", err)
+	}
+	if len(pcs.BatchManifests) != pcs.NumBatches {
+		t.Fatalf("len(BatchManifests) = %d, want %d", len(pcs.BatchManifests), pcs.NumBatches)
+	}
+	cells := pcscompiler.ManifestCells(r0)
+	if len(cells) != 2 {
+		t.Fatalf("ManifestCells(r0) has %d cells, want 2", len(cells))
+	}
+	got := pcs.BatchManifests[0]
+	if got == nil {
+		t.Fatalf("BatchManifests[0] is nil for the interactive batch")
+	}
+	want := PcsBatchManifest{Round: r0.ID, CellStart: cells[0].Context.ID.Position(), ColStart: 0}
+	if *got != want {
+		t.Fatalf("BatchManifests[0] = %+v, want %+v", *got, want)
+	}
+}
+
 // Size 1 is handled through that same minimum-size metadata. Offsets 0 and 1
 // are distinct at size 8 and size 2, but both normalize to the only row at size
 // 1, so the baked dynamic column must carry min_size_log2=1 instead of being
@@ -216,5 +265,65 @@ func TestBuildPcsSystemRecordsMinimumSafeSizeAboveOne(t *testing.T) {
 	}
 	if pcs.Columns[0].DynamicMinSizeLog2 != 1 {
 		t.Fatalf("pcs.Columns[0].DynamicMinSizeLog2 = %d, want 1", pcs.Columns[0].DynamicMinSizeLog2)
+	}
+}
+
+// A generated value that does not fit its verifier field must fail loudly at
+// generation time. The R5 build is ReleaseSmall, where `@intCast` safety checks
+// are compiled out, so a value that slipped through here would be silent UB in
+// the verifier rather than a rejected build.
+func TestPcsZigRejectsOutOfRangeIndices(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		sys  PcsSystem
+		want string
+	}{
+		{
+			name: "batch_idx above u8",
+			sys:  PcsSystem{Columns: []PcsColumnDesc{{BatchIdx: 1 << 8}}},
+			want: "batch_idx is 256",
+		},
+		{
+			name: "shifts_len above u8",
+			sys:  PcsSystem{Columns: []PcsColumnDesc{{Shifts: make([]int, 1<<8)}}},
+			want: "shifts_len is 256",
+		},
+		{
+			name: "claim cell round above u8",
+			sys:  PcsSystem{Columns: []PcsColumnDesc{{ClaimCells: []PcsCellRef{{Round: 1 << 8}}}}},
+			want: "round is 256",
+		},
+		{
+			name: "witness col_decl_idx above u16",
+			sys:  PcsSystem{WitnessMap: []PcsClaimRef{{ColDeclIdx: 1 << 16}}},
+			want: "col_decl_idx is 65536",
+		},
+		{
+			name: "quotient col_decl_idx above u16",
+			sys:  PcsSystem{QuotientMap: []PcsClaimRef{{ColDeclIdx: 1 << 16}}},
+			want: "col_decl_idx is 65536",
+		},
+		{
+			name: "batch root round above u8",
+			sys:  PcsSystem{BatchRoots: []PcsBatchRoot{{Precomputed: false, RoundIndex: 1 << 8}}},
+			want: "round is 256",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			defer func() {
+				r := recover()
+				if r == nil {
+					t.Fatalf("newPcsTemplateData did not panic on an out-of-range %s", tc.name)
+				}
+				msg, ok := r.(string)
+				if !ok {
+					t.Fatalf("panic value = %v (%T), want string", r, r)
+				}
+				if !strings.Contains(msg, tc.want) {
+					t.Fatalf("panic = %q, want substring %q", msg, tc.want)
+				}
+			}()
+			_ = newPcsTemplateData(0, tc.sys, PcsZigOptions{})
+		})
 	}
 }

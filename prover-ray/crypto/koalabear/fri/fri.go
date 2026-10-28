@@ -23,6 +23,13 @@ type Params struct {
 	LogCodewordSize  uint8 // log2 of the codeword domain size
 	LogPlainTextSize uint8 // log2 of the plaintext polynomial size; always numRounds + logFinalPolySize
 	NumQueries       uint  // number of independent queries (controls soundness error ≈ (1-δ)^Q)
+	// MerkleCapHeight is the height of the Merkle cap sent once per committed
+	// tree (input trees and running FRI layers): the proof carries the tree's
+	// 2^MerkleCapHeight frontier nodes and every query branch stops at that
+	// frontier. Each tree clamps it to its own height-1. Zero (the default)
+	// disables capping: branches climb to the root and caps are empty. See
+	// [OptimalMerkleCapHeight].
+	MerkleCapHeight uint8
 
 	logFinalPolySize uint8         // logFinalPolySize = log2(the final polynomial's degree + 1)
 	domains          []*fft.Domain // domains[j] has cardinality 2^(LogCodewordSize-j), generator ωⱼ
@@ -116,6 +123,7 @@ func (p Params) restrictTo(topSizeLog2 uint8) (Params, error) {
 		LogCodewordSize:  p.LogCodewordSize - offset,
 		LogPlainTextSize: topSizeLog2,
 		NumQueries:       p.NumQueries,
+		MerkleCapHeight:  p.MerkleCapHeight,
 		logFinalPolySize: p.logFinalPolySize,
 		domains:          p.domains[offset:],
 	}
@@ -437,7 +445,7 @@ func checkOpeningProofShape(p Params, prf Proof, foldAlphas []field.Ext, positio
 	}
 	for j := uint8(1); j < p.numRounds(); j++ {
 		height := int(p.LogCodewordSize - j)
-		depth := merkleCapDepth(p.NumQueries, height)
+		depth := p.merkleCapDepth(height)
 		if err := prf.RoundCaps[j-1].Validate(depth); err != nil {
 			return fmt.Errorf("fri: pcs.Verify: round %d cap: %w", j, err)
 		}

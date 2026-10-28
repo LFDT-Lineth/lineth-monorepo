@@ -9,6 +9,7 @@ import linea.domain.CompressionProofIndex
 import lineth.coordinator.clients.prover.serialization.BlobCompressionProofJsonRequest
 import lineth.coordinator.clients.prover.serialization.BlobCompressionProofJsonResponse
 import lineth.coordinator.clients.prover.serialization.JsonSerialization
+import lineth.coordinator.config.v2.FileBasedProverConfig
 import lineth.fileio.FileReader
 import lineth.fileio.FileWriter
 import org.apache.logging.log4j.LogManager

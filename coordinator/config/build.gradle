@@ -1,0 +1,30 @@
+plugins {
+  id 'lineth.kotlin-library-conventions'
+  id 'linea.config-docs'
+}
+
+// Config documentation tooling: creates the `configDocs` source set and the
+// checkConfigDocs/generateConfigDocs tasks, driven by the spec below.
+configDocs {
+  spec = 'lineth.coordinator.config.v2.docs.CoordinatorConfigDocsSpec'
+}
+
+dependencies {
+  // @ConfigDoc/@ConfigSection annotations applied to the TOML config classes. Compile-time only
+  // (read by the config-docs tooling, never at app runtime) so it stays out of the production jar.
+  compileOnly project(':jvm-libs:linea:config-docs')
+
+  // `api` because these types appear on the public surface of the config data classes
+  // (e.g. CoordinatorConfig.smartContractErrors, ConflationConfig.tracesLimits) and are used
+  api project(':jvm-libs:linea:core:domain-models')
+  api project(':jvm-libs:linea:core:traces')
+  // FIXME: the blob compressor interfaces shall be moved into dedicated interfaces module
+  api "build.linea:blob-compressor:${libs.versions.blobCompressor.get()}"
+  api "build.linea:blob-shnarf-calculator:${libs.versions.blobShnarfCalculator.get()}"
+
+  implementation project(':jvm-libs:generic:extensions:kotlin')
+  implementation project(':jvm-libs:generic:extensions:hoplite')
+
+  implementation "com.sksamuel.hoplite:hoplite-core:${libs.versions.hoplite.get()}"
+  implementation "com.sksamuel.hoplite:hoplite-toml:${libs.versions.hoplite.get()}"
+}

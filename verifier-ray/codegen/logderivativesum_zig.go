@@ -30,7 +30,8 @@ func WriteLogDerivSystemZig(w io.Writer, index int, system LogDerivSystem) error
 
 func WriteLogDerivSystemZigWithOptions(w io.Writer, index int, system LogDerivSystem, opts LogDerivZigOptions) error {
 	tmpl, err := template.New("logderiv").Funcs(template.FuncMap{
-		"zig": ZigString,
+		"zig":        ZigString,
+		"moduleSize": moduleSizeLiteral,
 	}).Parse(logDerivZigTemplate)
 	if err != nil {
 		return err
@@ -46,13 +47,13 @@ type logDerivTemplateData struct {
 
 const logDerivZigTemplate = `{{if .Options.EmitImport}}const logderivativesum = {{.Options.LogDerivImport}};
 
-{{end}}{{range $q, $query := .System.Queries}}const system_{{$.Index}}_logderiv_query_{{$q}}_zfinal_refs = [_]logderivativesum.ScalarRef{
-{{range $query.ZFinalRefs}}    .{ .round = {{.Round}}, .index = {{.Index}} },
+{{end}}{{range $q, $query := .System.Queries}}const system_{{$.Index}}_logderiv_query_{{$q}}_entries = [_]logderivativesum.Entry{
+{{range $query.Entries}}    .{ .average_ref = .{ .round = {{.AverageRef.Round}}, .index = {{.AverageRef.Index}} }, .size = {{moduleSize .Size}} },
 {{end}}};
 
 {{end}}// logderiv system: "{{zig .System.SourceName}}"
 const system_{{.Index}}_logderiv_queries = [_]logderivativesum.Query{
-{{range $q, $query := .System.Queries}}    .{ .z_final_refs = &system_{{$.Index}}_logderiv_query_{{$q}}_zfinal_refs, .result_ref = .{ .round = {{$query.ResultRef.Round}}, .index = {{$query.ResultRef.Index}} }, .result_is_zero = {{$query.ResultIsZero}} }, // query: "{{zig $query.SourceName}}"
+{{range $q, $query := .System.Queries}}    .{ .entries = &system_{{$.Index}}_logderiv_query_{{$q}}_entries, .result_ref = .{ .round = {{$query.ResultRef.Round}}, .index = {{$query.ResultRef.Index}} }, .result_is_zero = {{$query.ResultIsZero}} }, // query: "{{zig $query.SourceName}}"
 {{end}}};
 
 const system_{{.Index}}_logderiv = logderivativesum.System{ .queries = &system_{{.Index}}_logderiv_queries };

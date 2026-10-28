@@ -2,7 +2,6 @@ package linea.domain
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import kotlin.time.Instant
 
 class DomainEqualityTest {
   @Test
@@ -17,48 +16,6 @@ class DomainEqualityTest {
     assertThat(record).isEqualTo(equalRecord)
     assertThat(record.hashCode()).isEqualTo(equalRecord.hashCode())
     assertThat(record).isNotEqualTo(differentRecord)
-  }
-
-  @Test
-  fun `BlobSubmittedEvent equality compares transaction hash contents`() {
-    val event = BlobSubmittedEvent(
-      blobs = listOf(BlockIntervalData(1UL, 2UL)),
-      endBlockTime = Instant.fromEpochSeconds(10),
-      lastShnarf = byteArrayOf(1),
-      submissionTimestamp = Instant.fromEpochSeconds(20),
-      transactionHash = byteArrayOf(2),
-    )
-    val equalEvent = event.copy(
-      lastShnarf = event.lastShnarf.copyOf(),
-      transactionHash = event.transactionHash.copyOf(),
-    )
-    val differentEvent = event.copy(transactionHash = event.transactionHash.withFirstByteFlipped())
-
-    assertThat(event).isEqualTo(equalEvent)
-    assertThat(event.hashCode()).isEqualTo(equalEvent.hashCode())
-    assertThat(event).isNotEqualTo(differentEvent)
-  }
-
-  @Test
-  fun `FinalizationSubmittedEvent equality compares transaction hash contents`() {
-    val event = FinalizationSubmittedEvent(
-      aggregationProof = createProofToFinalize(firstBlockNumber = 1L, finalBlockNumber = 2L),
-      parentShnarf = byteArrayOf(1),
-      parentL1RollingHash = byteArrayOf(2),
-      parentL1RollingHashMessageNumber = 3L,
-      submissionTimestamp = Instant.fromEpochSeconds(20),
-      transactionHash = byteArrayOf(4),
-    )
-    val equalEvent = event.copy(
-      parentShnarf = event.parentShnarf.copyOf(),
-      parentL1RollingHash = event.parentL1RollingHash.copyOf(),
-      transactionHash = event.transactionHash.copyOf(),
-    )
-    val differentEvent = event.copy(transactionHash = event.transactionHash.withFirstByteFlipped())
-
-    assertThat(event).isEqualTo(equalEvent)
-    assertThat(event.hashCode()).isEqualTo(equalEvent.hashCode())
-    assertThat(event).isNotEqualTo(differentEvent)
   }
 
   private fun ByteArray.withFirstByteFlipped(): ByteArray =

@@ -5,6 +5,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,20 +19,6 @@ func newTestSystem(t *testing.T) (*wiop.System, *wiop.Round, *wiop.Round, *wiop.
 	r1 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
 	return sys, r0, r1, mod
-}
-
-// baseVec builds a PaddingDirectionNone ConcreteVector of length n where each
-// element equals the provided uint64 value.
-func baseVec(n int, val uint64) *wiop.ConcreteVector {
-	elems := make([]field.Element, n)
-	v := field.NewFromString(string(rune('0' + val)))
-	_ = v // zero for val==0 is the zero element
-	var e field.Element
-	e.SetUint64(val)
-	for i := range elems {
-		elems[i] = e
-	}
-	return &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
 }
 
 // ---- Column/Module methods ----
@@ -133,7 +120,7 @@ func TestRuntime_AssignAndGetColumn(t *testing.T) {
 
 	assert.False(t, rt.HasColumnAssignment(col))
 
-	v := baseVec(4, 7)
+	v := wioptest.ConstVec(4, 7)
 	rt.AssignColumn(col, v)
 
 	assert.True(t, rt.HasColumnAssignment(col))
@@ -146,15 +133,15 @@ func TestRuntime_AssignColumn_WrongRoundPanic(t *testing.T) {
 	// col belongs to r1 but runtime starts at r0
 	col := mod.NewColumn(sys.Context.Childf("col"), r1)
 	rt := wiop.NewRuntime(sys)
-	assert.Panics(t, func() { rt.AssignColumn(col, baseVec(4, 0)) })
+	assert.Panics(t, func() { rt.AssignColumn(col, wioptest.ConstVec(4, 0)) })
 }
 
 func TestRuntime_AssignColumn_DoublePanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
 	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, baseVec(4, 1))
-	assert.Panics(t, func() { rt.AssignColumn(col, baseVec(4, 2)) })
+	rt.AssignColumn(col, wioptest.ConstVec(4, 1))
+	assert.Panics(t, func() { rt.AssignColumn(col, wioptest.ConstVec(4, 2)) })
 }
 
 func TestRuntime_GetColumnAssignment_UnassignedPanic(t *testing.T) {
@@ -169,8 +156,8 @@ func TestRuntime_OverrideColumn(t *testing.T) {
 	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	rt := wiop.NewRuntime(sys)
 
-	rt.AssignColumn(col, baseVec(4, 7))
-	replacement := baseVec(4, 9)
+	rt.AssignColumn(col, wioptest.ConstVec(4, 7))
+	replacement := wioptest.ConstVec(4, 9)
 	rt.OverrideColumn(col, replacement)
 
 	assert.Equal(t, replacement, rt.GetColumnAssignment(col),
@@ -181,7 +168,7 @@ func TestRuntime_OverrideColumn_UnassignedPanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
 	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	rt := wiop.NewRuntime(sys)
-	assert.Panics(t, func() { rt.OverrideColumn(col, baseVec(4, 1)) },
+	assert.Panics(t, func() { rt.OverrideColumn(col, wioptest.ConstVec(4, 1)) },
 		"overriding an unassigned column must panic")
 }
 
@@ -268,7 +255,7 @@ func TestRuntime_AdvanceRound_Basic(t *testing.T) {
 	rt := wiop.NewRuntime(sys)
 	assert.Equal(t, r0, rt.CurrentRound())
 
-	rt.AssignColumn(col, baseVec(4, 3))
+	rt.AssignColumn(col, wioptest.ConstVec(4, 3))
 	rt.AdvanceRound()
 	assert.Equal(t, sys.Rounds[1], rt.CurrentRound())
 }
@@ -279,7 +266,7 @@ func TestRuntime_AdvanceRound_WithCoinSampling(t *testing.T) {
 	coin := r1.NewCoinField(sys.Context.Childf("coin"))
 	rt := wiop.NewRuntime(sys)
 
-	rt.AssignColumn(col, baseVec(4, 1))
+	rt.AssignColumn(col, wioptest.ConstVec(4, 1))
 	rt.AdvanceRound()
 
 	// coin must be available after advancing into r1
@@ -301,7 +288,7 @@ func TestRuntime_AdvanceRound_LastRoundPanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
 	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, baseVec(4, 0))
+	rt.AssignColumn(col, wioptest.ConstVec(4, 0))
 	rt.AdvanceRound() // now at r1 (last round)
 	assert.Panics(t, func() { rt.AdvanceRound() })
 }
@@ -311,7 +298,7 @@ func TestRuntime_AdvanceRound_UnassignedCellPanic(t *testing.T) {
 	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	_ = r0.NewCell(sys.Context.Childf("cell"), false) // not assigned
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, baseVec(4, 0))
+	rt.AssignColumn(col, wioptest.ConstVec(4, 0))
 	assert.Panics(t, func() { rt.AdvanceRound() })
 }
 

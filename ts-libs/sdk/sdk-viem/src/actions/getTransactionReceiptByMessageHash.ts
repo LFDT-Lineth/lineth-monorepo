@@ -31,10 +31,7 @@ export type GetTransactionReceiptByMessageHashReturnType<chain extends Chain | u
   GetTransactionReceiptReturnType<chain>;
 
 export type GetTransactionReceiptByMessageHashErrorType =
-  | GetContractEventsErrorType
-  | GetTransactionReceiptErrorType
-  | MessageNotFoundErrorType
-  | ChainNotFoundErrorType;
+  GetContractEventsErrorType | GetTransactionReceiptErrorType | MessageNotFoundErrorType | ChainNotFoundErrorType;
 
 /**
  * Returns the transaction receipt for a message sent by its message hash.

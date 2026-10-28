@@ -13,12 +13,12 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
 import com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
-import io.vertx.core.VertxOptions
 import io.vertx.core.json.JsonObject
 import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.forcedtx.ForcedTransactionRequest
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
+import lineth.vertx.vertxTestOptions
 import net.consensys.linea.async.get
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
@@ -63,7 +63,7 @@ class ForcedTransactionsJsonRpcClientTest {
   fun setup() {
     wiremock = WireMockServer(options().dynamicPort())
     wiremock.start()
-    vertx = Vertx.vertx(VertxOptions().setEventLoopPoolSize(1).setWorkerPoolSize(1))
+    vertx = Vertx.vertx(vertxTestOptions)
 
     fakeServerUri = URI("http://127.0.0.1:" + wiremock.port()).toURL()
     meterRegistry = SimpleMeterRegistry()

@@ -6,7 +6,7 @@ import { LinethRollup } from "./LinethRollup.sol";
 /**
  * @title Temporary placeholder rollup contract mirroring LinethRollup with no-op data submission and finalization.
  * @dev submitBlobs and finalizeBlocks are overridden as no-ops - all other behavior is inherited unchanged from LinethRollup.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 contract LinethRollupV9Stub is LinethRollup {

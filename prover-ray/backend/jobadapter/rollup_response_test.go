@@ -8,11 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const rollupResponseFixture = "10-14-getZkRollupProofV1.response.json"
-const aggregationResponseFixture = "10-18-getZkRollupAggregationProofV1.response.json"
-
 // TestNewRollupResponse_MatchesReferenceShape verifies the placeholder rollup
-// response has the exact V1 field shape (including the 20-field PI) and echoes
+// response has the exact V1 field shape (including the 22-field PI) and echoes
 // the routing programVk. Values stay placeholder until the guest lands.
 func TestNewRollupResponse_MatchesReferenceShape(t *testing.T) {
 	vk := filledHash(0xbb)
@@ -22,13 +19,14 @@ func TestNewRollupResponse_MatchesReferenceShape(t *testing.T) {
 	assert.Equal(t, repeatHex(0xbb), resp.ProgramVk)
 	assert.Equal(t, "0xdead", resp.ProofHex)
 	assert.Equal(t, uint64(1000501), resp.StartBlockNumber)
-	assert.Empty(t, resp.L2L1Roots)
-	assert.Empty(t, resp.FilteredAddresses)
 	assert.Empty(t, resp.PublicInputs.ProgramVks)
+	assert.Empty(t, resp.PublicInputs.FilteredAddresses)
+	assert.Empty(t, resp.PublicInputs.L2L1Messages)
+	assert.Empty(t, resp.PublicInputs.L2MessagingBlocksOffsets)
 
 	raw, err := jsonMarshalObject(resp)
 	require.NoError(t, err)
-	want := unmarshalObject(t, readFixture(t, rollupResponseFixture))
+	want := unmarshalObject(t, readSpecFixture(t, referenceRollupResponse))
 	assertJSONShape(t, want, raw, "rollupResponse")
 	assert.NotContains(t, raw, "status")
 	assert.NotContains(t, raw, "jobId")

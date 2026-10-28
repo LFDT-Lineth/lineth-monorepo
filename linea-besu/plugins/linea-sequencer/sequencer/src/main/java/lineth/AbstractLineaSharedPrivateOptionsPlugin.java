@@ -1,5 +1,5 @@
 /*
- * Copyright Consensys Software Inc.
+ * Copyright Consensys Incorporated
  *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
@@ -78,6 +78,7 @@ import org.hyperledger.besu.plugin.services.metrics.MetricCategoryRegistry;
  * like registration of metrics categories or check to perform once at startup
  */
 @Slf4j
+@SuppressWarnings("deprecation")
 public abstract class AbstractLineaSharedPrivateOptionsPlugin
     extends AbstractLineaSharedOptionsPlugin {
   protected static BesuConfiguration besuConfiguration;

@@ -1,8 +1,5 @@
 package linea
 
-import com.sksamuel.hoplite.ConfigLoaderBuilder
-import com.sksamuel.hoplite.ExperimentalHoplite
-import com.sksamuel.hoplite.addFileSource
 import io.vertx.core.Vertx
 import linea.contract.l1.LinethRollupContractVersion
 import linea.contract.l1.LinethRollupSmartContractClient
@@ -12,7 +9,7 @@ import linea.web3j.SmartContractErrors
 import linea.web3j.gas.StaticGasProvider
 import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import lineth.contract.l1.Web3JLinethRollupSmartContractClient
-import net.consensys.linea.testing.filesystem.findPathTo
+import lineth.coordinator.config.v2.toml.loadBundledSmartContractErrors
 import org.slf4j.LoggerFactory
 import org.web3j.tx.gas.ContractEIP1559GasProvider
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -79,19 +76,7 @@ object MakeFileDelegatedContractsManager : ContractsManager {
   private val log = LoggerFactory.getLogger(MakeFileDelegatedContractsManager::class.java)
   private val vertx: Vertx = Vertx.vertx()
 
-  @OptIn(ExperimentalHoplite::class)
-  val linethRollupContractErrors = findPathTo("config")!!
-    .resolve("common/smart-contract-errors.toml")
-    .let { filePath ->
-      data class ErrorsFile(val smartContractErrors: Map<String, String>)
-      ConfigLoaderBuilder
-        .default()
-        .withExplicitSealedTypes()
-        .addFileSource(filePath.toAbsolutePath().toString())
-        .build()
-        .loadConfigOrThrow<ErrorsFile>()
-        .smartContractErrors
-    }
+  val linethRollupContractErrors = loadBundledSmartContractErrors().smartContractErrors
 
   override fun deployLinethRollup(
     numberOfOperators: Int,
@@ -189,15 +174,5 @@ object MakeFileDelegatedContractsManager : ContractsManager {
 }
 
 fun main() {
-  data class SmartContractErrors(val smartContractErrors: Map<String, String>)
-
-  val linethRollupContractErrors = findPathTo("config")!!
-    .resolve("common/smart-contract-errors.toml")
-    .let { filePath ->
-      ConfigLoaderBuilder.default()
-        .addFileSource(filePath.toAbsolutePath().toString())
-        .build()
-        .loadConfigOrThrow<SmartContractErrors>()
-    }
-  println(linethRollupContractErrors)
+  println(loadBundledSmartContractErrors().smartContractErrors)
 }

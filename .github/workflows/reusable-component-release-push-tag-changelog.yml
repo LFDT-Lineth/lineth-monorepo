@@ -89,7 +89,7 @@ jobs:
           echo "user-id=${user_id}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Use the App token so subsequent `git push` is authenticated as the App.
           token: ${{ (!inputs.upload_changelog && steps.app-token.outputs.token) ||  github.token }}
@@ -114,7 +114,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Install git-cliff
-        uses: taiki-e/install-action@bffeee26d4db9be238a4ea78d8826604ebcb594d #v2.82.5
+        uses: taiki-e/install-action@7623a79cdfecb99d681017af368ca353d9f49bb5 # v2.87.19
         with:
           tool: git-cliff
 
@@ -192,6 +192,10 @@ jobs:
         env:
           COMPONENT: ${{ inputs.component-name }}
           TAG: ${{ steps.prepend-changelog.outputs.next_tag }}
+          # Pin the release tag to the commit that triggered the workflow, not to the
+          # (possibly changelog-update) HEAD the checkout fast-forwarded to. The docker
+          # image is built and named from the same commit, so tag and image stay aligned.
+          TARGET_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           if [ -z "${TAG}" ]; then
@@ -202,7 +206,7 @@ jobs:
             echo "Tag ${TAG} already exists; exit now."
             exit 0
           fi
-          git tag -a "${TAG}" -m "${COMPONENT^} release ${TAG}"
+          git tag -a "${TAG}" -m "${COMPONENT^} release ${TAG}" "${TARGET_SHA}"
           git push origin "${TAG}"
-          echo "Pushed ${TAG} pointing at $(git rev-parse HEAD)"
+          echo "Pushed ${TAG} pointing at ${TARGET_SHA}"
 

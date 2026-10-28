@@ -6,7 +6,7 @@ import { IProvideDataRollingHash } from "./interfaces/IProvideDataRollingHash.so
 
 /**
  * @title Contract to manage shared functions for querying dataRollingHash existence.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract LocalDataRollingHashProvider is IProvideDataRollingHash, LinethRollupBase {

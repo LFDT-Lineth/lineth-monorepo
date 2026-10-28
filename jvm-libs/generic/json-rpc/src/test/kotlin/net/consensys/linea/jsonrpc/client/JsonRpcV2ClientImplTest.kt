@@ -18,13 +18,13 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
-import io.vertx.core.VertxOptions
 import io.vertx.core.json.JsonObject
 import linea.kotlin.decodeHex
 import linea.s11n.jackson.ByteArrayToHexSerializer
 import linea.s11n.jackson.ULongToHexSerializer
 import linea.s11n.jackson.ethByteAsHexSerialisersModule
 import linea.s11n.jackson.ethNumberAsHexSerialisersModule
+import lineth.vertx.vertxTestOptions
 import net.consensys.linea.async.get
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponseException
 import net.consensys.linea.metrics.MetricsFacade
@@ -112,7 +112,7 @@ class JsonRpcV2ClientImplTest {
 
   @BeforeEach
   fun beforeEach() {
-    vertx = Vertx.vertx(VertxOptions().setEventLoopPoolSize(1).setWorkerPoolSize(1))
+    vertx = Vertx.vertx(vertxTestOptions)
     this.meterRegistry = SimpleMeterRegistry()
     val metricsFacade: MetricsFacade = MicrometerMetricsFacade(registry = meterRegistry, "linea")
     this.factory = VertxHttpJsonRpcClientFactory(vertx, metricsFacade)

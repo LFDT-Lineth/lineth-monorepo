@@ -157,9 +157,9 @@ func TestBoolEnv(t *testing.T) {
 
 func TestWriteJSONLegacyLayout(t *testing.T) {
 	inputs := map[string][]byte{
-		elfmapping.EntryPointAndBlobsCountInput: mustDecodeHex(t, "00000000008000000000000000000002"),
-		elfmapping.BlobsOffsetAndSizeInput: mustDecodeHex(t, "00000000008000000000000000000004"+
-			"00000000088000000000000000000001"),
+		elfmapping.EntryPointAndBlobsCountInput: mustDecodeHex(t, "000000000080000000000002"),
+		elfmapping.BlobsOffsetAndSizeInput: mustDecodeHex(t, "000000000080000000000004"+
+			"000000000880000000000001"),
 		elfmapping.BlobsExecutableInput:  []byte{0x80},
 		elfmapping.BlobsDataInput:        []byte{1, 2, 3, 4, 5},
 		predecoding.InstructionBaseInput: mustDecodeHex(t, "0000000000800000"),
@@ -170,8 +170,8 @@ func TestWriteJSONLegacyLayout(t *testing.T) {
 		t.Fatalf("writeJSON() error = %v", err)
 	}
 	want := "{\n" +
-		"\t\"entry_point_and_blobs_count\": \"0x0000000000800000_0000000000000002\",\n" +
-		"\t\"blobs_offset_and_size\": \"0x0000000000800000_0000000000000004____0000000008800000_0000000000000001\",\n" +
+		"\t\"entry_point_and_blobs_count\": \"0x0000000000800000_00000002\",\n" +
+		"\t\"blobs_offset_and_size\": \"0x0000000000800000_00000004____0000000008800000_00000001\",\n" +
 		"\t\"blobs_executable\": \"0x80\",\n" +
 		"\t\"blobs_data\": \"0x01020304____05\",\n" +
 		"\t\"instruction_base\": \"0x0000000000800000\",\n" +

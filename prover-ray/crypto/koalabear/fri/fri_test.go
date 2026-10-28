@@ -1,6 +1,7 @@
 package fri
 
 import (
+	"fmt"
 	"math/big"
 	"math/bits"
 	"math/rand/v2"
@@ -283,36 +284,63 @@ func TestProverStateOpenLoopsOverLevelTrees(t *testing.T) {
 	require.Error(t, fx.verify(foldAlphas, positions, proof))
 }
 
+// TestRunningMerkleCaps checks the running-layer caps across cap heights: the
+// fixture's rounds 1 and 2 have trees of height 3 and 2, so height 2 reaches
+// height-1 on round 1 and height 5 is clamped on both. A verifier configured
+// for another height must reject the proof.
 func TestRunningMerkleCaps(t *testing.T) {
-	prng := rand.New(utils.NewRandSource(20260819))
-	fx := newLDTFixture(t, 4, 3, 2)
-	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 8))
+	for _, capHeight := range []uint8{0, 1, 2, 5} {
+		t.Run(fmt.Sprintf("capHeight=%d", capHeight), func(t *testing.T) {
+			prng := rand.New(utils.NewRandSource(20260819))
+			coeffs := field.VecPseudoRandExt(prng, 8)
+			newFixture := func(capHeight uint8) *ldtFixture {
+				fx := newLDTFixture(t, 4, 3, 2)
+				fx.pcs.Params.MerkleCapHeight = capHeight
+				fx.addLevel(t, 3, coeffs)
+				return fx
+			}
+			fx := newFixture(capHeight)
 
-	foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds())
-	for i := range foldAlphas {
-		foldAlphas[i] = field.PseudoRandExt(prng)
+			foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds())
+			for i := range foldAlphas {
+				foldAlphas[i] = field.PseudoRandExt(prng)
+			}
+			positions := []int{3, 11}
+			proof := fx.open(t, foldAlphas, positions)
+			require.NoError(t, fx.verify(foldAlphas, positions, proof))
+
+			require.Len(t, proof.FRIProof.RoundCaps, int(fx.pcs.Params.numRounds()-1))
+			for j := uint8(1); j < fx.pcs.Params.numRounds(); j++ {
+				height := int(fx.pcs.Params.LogCodewordSize - j)
+				depth := min(int(capHeight), height-1)
+				treeCap := proof.FRIProof.RoundCaps[j-1]
+				require.NoError(t, treeCap.Authenticate(depth, proof.FRIProof.RoundRoots[j-1]))
+				frontier := treeCap.Nodes
+				if depth == 0 {
+					require.Empty(t, frontier, "a depth-zero cap carries no copy of the root")
+					frontier = []field.Octuplet{proof.FRIProof.RoundRoots[j-1]}
+				}
+				for queryIdx, query := range proof.FRIProof.RunningQueries {
+					branch := query[j-1]
+					require.Len(t, branch.Siblings, height-depth)
+					require.NoError(t, branch.AuthenticateToCap(positions[queryIdx]>>j, frontier))
+				}
+			}
+
+			other := newFixture((capHeight + 1) % 3)
+			require.Error(t, other.verify(foldAlphas, positions, proof),
+				"a verifier at another cap height must reject the proof")
+
+			if len(proof.FRIProof.RoundCaps[0].Nodes) == 0 {
+				return
+			}
+			bad := proof
+			bad.FRIProof.RoundCaps = append([]MerkleCap(nil), proof.FRIProof.RoundCaps...)
+			bad.FRIProof.RoundCaps[0].Nodes = append([]field.Octuplet(nil), proof.FRIProof.RoundCaps[0].Nodes...)
+			bad.FRIProof.RoundCaps[0].Nodes[0] = field.PseudoRandOctuplet(prng)
+			require.Error(t, fx.verify(foldAlphas, positions, bad))
+		})
 	}
-	positions := []int{3, 11}
-	proof := fx.open(t, foldAlphas, positions)
-	require.NoError(t, fx.verify(foldAlphas, positions, proof))
-
-	require.Len(t, proof.FRIProof.RoundCaps, int(fx.pcs.Params.numRounds()-1))
-	for j := uint8(1); j < fx.pcs.Params.numRounds(); j++ {
-		depth := merkleCapDepth(fx.pcs.Params.NumQueries, int(fx.pcs.Params.LogCodewordSize-j))
-		treeCap := proof.FRIProof.RoundCaps[j-1]
-		require.NoError(t, treeCap.Authenticate(depth, proof.FRIProof.RoundRoots[j-1]))
-		for queryIdx, query := range proof.FRIProof.RunningQueries {
-			branch := query[j-1]
-			require.Len(t, branch.Siblings, int(fx.pcs.Params.LogCodewordSize-j)-depth)
-			require.NoError(t, branch.AuthenticateToCap(positions[queryIdx]>>j, treeCap.Nodes))
-		}
-	}
-
-	bad := proof
-	bad.FRIProof.RoundCaps = append([]MerkleCap(nil), proof.FRIProof.RoundCaps...)
-	bad.FRIProof.RoundCaps[0].Nodes = append([]field.Octuplet(nil), proof.FRIProof.RoundCaps[0].Nodes...)
-	bad.FRIProof.RoundCaps[0].Nodes[0] = field.PseudoRandOctuplet(prng)
-	require.Error(t, fx.verify(foldAlphas, positions, bad))
 }
 
 func verifierInputsForLevels(levels []Level) []QueryLayerRoots {

@@ -39,26 +39,42 @@ pub const Spec = struct {
 /// Each `rounds[i].cells` slice points into `cell_storage[i]`.
 pub fn BoundRoundMessages(comptime spec: Spec) type {
     const round_count = spec.round_cell_counts.len;
-    const max_cells = comptime maxRoundCellCount(spec);
+    const total_cells = comptime totalRoundCellCount(spec);
     return struct {
         const Self = @This();
-        const cell_cap = @max(max_cells, 1);
+        // One flat buffer sized to the TOTAL number of cells, not
+        // round_count * max_cells. The rectangular form charged every round the
+        // largest round's capacity: on the real RISC-V system that is
+        // 5 x 15,236 = 76,180 cells (2.03 MiB) to hold 17,842 (0.48 MiB), so
+        // 1.56 MiB of it was padding. Each round takes a window at its own
+        // offset instead.
+        const cell_cap = @max(total_cells, 1);
 
         round_commitments: [round_count]?Commitment = undefined,
         cell_counts: [round_count]usize = undefined,
+        cell_offsets: [round_count]usize = undefined,
         rounds_buf: [round_count]RoundMessage = undefined,
-        cell_storage: [round_count][cell_cap]Scalar = undefined,
+        cell_storage: [cell_cap]Scalar = undefined,
 
         pub fn rounds(self: *Self) []const RoundMessage {
             inline for (0..round_count) |round_index| {
+                const start = self.cell_offsets[round_index];
                 self.rounds_buf[round_index] = .{
                     .commitment = self.round_commitments[round_index],
-                    .cells = self.cell_storage[round_index][0..self.cell_counts[round_index]],
+                    .cells = self.cell_storage[start..][0..self.cell_counts[round_index]],
                 };
             }
             return self.rounds_buf[0..];
         }
     };
+}
+
+fn totalRoundCellCount(comptime spec: Spec) usize {
+    comptime {
+        var total: usize = 0;
+        for (spec.round_cell_counts) |count| total += count;
+        return total;
+    }
 }
 
 /// Merges prover-ray-style public inputs into the proof's round messages so the
@@ -71,20 +87,38 @@ pub fn bindRoundMessages(
     rounds: []const RoundMessage,
     public_inputs: []const Scalar,
 ) Error!BoundRoundMessages(spec) {
+    var bound: BoundRoundMessages(spec) = undefined;
+    try bindRoundMessagesInto(spec, &bound, rounds, public_inputs);
+    return bound;
+}
+
+/// Fills a caller-owned workspace rather than returning one by value.
+///
+/// The workspace holds every round cell (17,842 on the real RISC-V system,
+/// 0.48 MiB) and the R5 linker stack is 8 MiB, so returning it by value put the
+/// whole thing — plus a copy at the return — in `verify`'s frame. The R5 entry
+/// point owns it in `.bss` instead and passes a pointer.
+pub fn bindRoundMessagesInto(
+    comptime spec: Spec,
+    bound: *BoundRoundMessages(spec),
+    rounds: []const RoundMessage,
+    public_inputs: []const Scalar,
+) Error!void {
     comptime validateSpec(spec);
 
     if (rounds.len != spec.round_cell_counts.len) return error.InvalidRoundCount;
     if (public_inputs.len != spec.refs.len) return error.InvalidPublicInputCount;
 
-    var bound: BoundRoundMessages(spec) = undefined;
     var public_input_cursor: usize = 0;
+    var cell_cursor: usize = 0;
 
     inline for (0..spec.round_cell_counts.len) |round_index| {
         const proof_round = rounds[round_index];
         const total_cells = spec.round_cell_counts[round_index];
 
-        bound.round_commitments[round_index] = proof_round.commitment;
-        bound.cell_counts[round_index] = total_cells;
+        bound.*.round_commitments[round_index] = proof_round.commitment;
+        bound.*.cell_counts[round_index] = total_cells;
+        bound.*.cell_offsets[round_index] = cell_cursor;
 
         var proof_cell_index: usize = 0;
         for (0..total_cells) |cell_index| {
@@ -93,20 +127,19 @@ pub fn bindRoundMessages(
                 spec.refs[public_input_cursor].index == cell_index)
             {
                 const ref = spec.refs[public_input_cursor];
-                bound.cell_storage[round_index][cell_index] = public_inputs[ref.statement_index];
+                bound.*.cell_storage[cell_cursor + cell_index] = public_inputs[ref.statement_index];
                 public_input_cursor += 1;
                 continue;
             }
 
             if (proof_cell_index >= proof_round.cells.len) return error.InvalidRoundCellCount;
-            bound.cell_storage[round_index][cell_index] = proof_round.cells[proof_cell_index];
+            bound.*.cell_storage[cell_cursor + cell_index] = proof_round.cells[proof_cell_index];
             proof_cell_index += 1;
         }
 
         if (proof_cell_index != proof_round.cells.len) return error.InvalidRoundCellCount;
+        cell_cursor += total_cells;
     }
-
-    return bound;
 }
 
 fn maxRoundCellCount(comptime spec: Spec) usize {

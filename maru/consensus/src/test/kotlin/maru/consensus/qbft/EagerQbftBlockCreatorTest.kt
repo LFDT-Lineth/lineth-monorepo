@@ -1,6 +1,4 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
@@ -42,7 +40,6 @@ import org.hyperledger.besu.consensus.qbft.core.types.QbftBlockHeader
 import org.hyperledger.besu.datatypes.Address
 import org.hyperledger.besu.tests.acceptance.dsl.condition.net.NetConditions
 import org.hyperledger.besu.tests.acceptance.dsl.node.BesuNode
-import org.hyperledger.besu.tests.acceptance.dsl.node.ThreadBesuNodeRunner
 import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.Cluster
 import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.ClusterConfigurationBuilder
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.net.NetTransactions
@@ -92,7 +89,7 @@ class EagerQbftBlockCreatorTest {
     cluster = Cluster(
       ClusterConfigurationBuilder().build(),
       NetConditions(NetTransactions()),
-      ThreadBesuNodeRunner(),
+      BesuFactory.buildTestNodeRunner(),
     )
     besuInstance = BesuFactory.buildTestBesu().also {
       cluster.start(it)

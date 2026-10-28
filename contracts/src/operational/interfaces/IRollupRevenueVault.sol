@@ -4,7 +4,7 @@ pragma solidity 0.8.33;
 /**
  * @title Interface for Rollup Revenue Vault Contract.
  * @notice Accepts rollup revenue, and performs burning operations.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 interface IRollupRevenueVault {

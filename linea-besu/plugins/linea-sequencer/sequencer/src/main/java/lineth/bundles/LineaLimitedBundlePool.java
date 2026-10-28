@@ -1,5 +1,5 @@
 /*
- * Copyright Consensys Software Inc.
+ * Copyright Consensys Incorporated
  *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
@@ -55,6 +55,7 @@ import org.hyperledger.besu.util.Subscribers;
  */
 @AutoService(BesuService.class)
 @Slf4j
+@SuppressWarnings("deprecation")
 public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.BlockAddedListener {
   public static final String BUNDLE_SAVE_FILENAME = "bundles.ndjson";
   private final BlockchainService blockchainService;

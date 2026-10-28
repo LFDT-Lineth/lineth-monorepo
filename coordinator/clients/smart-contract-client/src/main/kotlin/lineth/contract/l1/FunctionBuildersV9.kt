@@ -6,7 +6,6 @@ import linea.contract.l1.FinalizationDataV9
 import linea.kotlin.encodeHex
 import linea.kotlin.toBigInteger
 import org.web3j.abi.TypeReference
-import org.web3j.abi.datatypes.DynamicArray
 import org.web3j.abi.datatypes.DynamicBytes
 import org.web3j.abi.datatypes.Function
 import org.web3j.abi.datatypes.generated.Bytes32
@@ -15,9 +14,8 @@ import org.web3j.abi.datatypes.generated.Uint256
 internal object FunctionBuildersV9 {
   /**
    * function submitBlobs(
-   *   bytes32[] calldata _blobFinalBlockHashes,
-   *   bytes32 _parentShnarf,
-   *   bytes32 _finalBlobShnarf
+   *   bytes32 _parentDataRollingHash,
+   *   bytes32 _storedDataRollingHash
    * )
    */
   fun buildSubmitBlobsFunctionV9(
@@ -26,9 +24,8 @@ internal object FunctionBuildersV9 {
     return Function(
       LinethRollupV9.FUNC_SUBMITBLOBS,
       listOf(
-        DynamicArray(Bytes32::class.java, blobsSubmission.blobFinalBlockHashes.map(::Bytes32)),
-        Bytes32(blobsSubmission.parentShnarf),
-        Bytes32(blobsSubmission.finalBlobShnarf),
+        Bytes32(blobsSubmission.parentDataRollingHash),
+        Bytes32(blobsSubmission.storedDataRollingHash),
       ),
       emptyList<TypeReference<*>>(),
     )
@@ -44,30 +41,12 @@ internal object FunctionBuildersV9 {
   fun buildFinalizeBlocksFunctionV9(
     finalization: FinalizationDataV9,
   ): Function {
-    val shnarfData =
-      LinethRollupV9.ShnarfData(
-        // parentShnarf
-        finalization.shnarfData.parentShnarf,
-        // snarkHash
-        finalization.shnarfData.snarkHash,
-        // finalStateRootHash
-        finalization.shnarfData.finalStateRootHash,
-        // dataEvaluationPoint
-        finalization.shnarfData.dataEvaluationPoint,
-        // dataEvaluationClaim
-        finalization.shnarfData.dataEvaluationClaim,
-      )
-
     val finalizationData =
       LinethRollupV9.FinalizationDataV5(
-        // parentStateRootHash
-        finalization.parentStateRootHash,
         // parentBlockHash
         finalization.parentBlockHash,
         // endBlockNumber
         finalization.endBlockNumber.toBigInteger(),
-        // shnarfData
-        shnarfData,
         // lastFinalizedTimestamp
         finalization.lastFinalizedTimestamp.epochSeconds.toBigInteger(),
         // finalTimestamp
@@ -90,8 +69,14 @@ internal object FunctionBuildersV9 {
         finalization.lastFinalizedForcedTransactionRollingHash,
         // finalBlockHash
         finalization.finalBlockHash,
-        // finalBlobHash
-        finalization.finalBlobHash,
+        // parentDataRollingHash
+        finalization.parentDataRollingHash,
+        // endDataRollingHash
+        finalization.endDataRollingHash,
+        // startOffset
+        finalization.startOffset.toBigInteger(),
+        // endOffset
+        finalization.endOffset.toBigInteger(),
         // l2MerkleRoots
         finalization.l2MerkleRoots,
         // filteredAddresses

@@ -48,7 +48,7 @@ jobs:
       disabled: ${{ steps.metrics.outputs.disabled }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Tracer Test Environment
         uses: ./.github/actions/setup-tracer-environment
@@ -60,7 +60,7 @@ jobs:
         run: ./gradlew :tracer:reference-tests:generateExecutionSpecBlockchainTests -Dorg.gradle.caching=true
 
       - name: Download artifact
-        uses: dawidd6/action-download-artifact@8305c0f1062bb0d184d09ef4493ecb9288447732 # v20
+        uses: dawidd6/action-download-artifact@eab87c9830c39eff17e5a6eadb20bfb4bc880477 # v27
         if: ${{ inputs.failed_module != '' }}
         with:
           name: failedBlockchainReferenceTests.json

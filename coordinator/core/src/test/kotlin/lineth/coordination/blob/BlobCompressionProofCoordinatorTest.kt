@@ -12,7 +12,7 @@ import linea.domain.ConflationCalculationResult
 import linea.domain.ConflationTrigger
 import linea.domain.ShnarfResult
 import net.consensys.FakeFixedClock
-import net.consensys.linea.traces.TracesCountersV2
+import net.consensys.linea.traces.TracesCountersV5
 import org.awaitility.Awaitility
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -113,7 +113,7 @@ class BlobCompressionProofCoordinatorTest {
           startBlockNumber = expectedStartBlock,
           endBlockNumber = expectedEndBlock,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = TracesCountersV2.Companion.EMPTY_TRACES_COUNT,
+          tracesCounters = TracesCountersV5.Companion.EMPTY_TRACES_COUNT,
         ),
       ),
       compressedData = Random.Default.nextBytes(128),
@@ -199,7 +199,7 @@ class BlobCompressionProofCoordinatorTest {
           startBlockNumber = 1uL,
           endBlockNumber = 10uL,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = TracesCountersV2.Companion.EMPTY_TRACES_COUNT,
+          tracesCounters = TracesCountersV5.Companion.EMPTY_TRACES_COUNT,
         ),
       ),
       compressedData = Random.Default.nextBytes(128),
@@ -213,7 +213,7 @@ class BlobCompressionProofCoordinatorTest {
           startBlockNumber = 11uL,
           endBlockNumber = 20uL,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = TracesCountersV2.Companion.EMPTY_TRACES_COUNT,
+          tracesCounters = TracesCountersV5.Companion.EMPTY_TRACES_COUNT,
         ),
       ),
       compressedData = Random.Default.nextBytes(128),

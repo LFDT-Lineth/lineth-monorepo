@@ -69,6 +69,35 @@ make -C l2-execution reference-test ZIG=/path/to/zig REFERENCE_ARGS="--report-on
 
 The runner walks the `blockchain_tests/` tree from the lazy `execution_spec_tests_zkevm` dependency and, for every block, wraps it into a dummy-filled extended input and checks the extended guest's validity verdict against the fixture's own expected `successful_validation` result — see [`extended_vanilla_runner.zig`](l2-execution/test/extended_vanilla_runner.zig). The corpus walking/reporting is reusable ([`spec_runner.zig`](l2-execution/test/spec_runner.zig)); `extended_vanilla_runner.zig` supplies the only adapter that plugs into it today.
 
+## Guest releases
+
+Use the **RISC-V L2 Execution Guest Release** or **RISC-V Rollup Guest Release** workflow in the
+GitHub Actions UI. Releases are independent, using `releases/riscv-l2-execution/v<semver>` and
+`releases/riscv-rollup/v<semver>` tags. On non-main branches, supply a release tag suffix. The
+component changelogs track changes to the guest and its shared build inputs. The release manager
+reviews the resulting draft by default; the pre-release option follows the normal component release
+convention.
+
+The workflow runs that guest's `make test` and `make compile` before creating the changelog commit
+and tag. It checks out the tag to build and stage the released ELF. Reference tests run separately
+and do not gate guest releases. The GitHub Release attaches the complete ELF as
+`<guest>-v<version>-<program-id>.elf` (for example, `l2-execution-v0.0.1-<program-id>.elf`).
+The Program ID is 64 lowercase hexadecimal characters with no `0x` in the filename. Its
+notes give the `0x`-prefixed Program ID: **Keccak-256 of the complete uploaded ELF bytes** (not
+SHA3-256). Published release assets are immutable; use a new tag for a changed binary. Coordinator
+deployment and Program ID selection are handled separately.
+
+To stage a release ELF locally, run `make release-asset GUEST=l2-execution RELEASE_VERSION=0.0.1`
+(or use `GUEST=rollup`) from this directory. From inside a guest directory, use
+`make release-asset RELEASE_VERSION=0.0.1`; the guest name comes from that directory. A release
+version is required, and staging fails if it is missing. Each guest exposes the shared
+`zig build program-id` step;
+`-Drelease-dir=<path>` selects the asset directory. The staged ELF is named
+`l2-execution-v0.0.1-<program-id>.elf`. The step hashes
+the ELF produced by the Zig build graph using the pinned toolchain's Keccak implementation. Zig's
+guest build defaults to accelerated Keccak; ordinary builds can opt out with `KECCAK_ACCEL=false` or
+`-Dkeccak-accel=false`. Release staging uses the Zig build default.
+
 ## Continuous Integration
 
 Two workflows guard the guests.

@@ -164,7 +164,7 @@ func (st *ProverState) Open(openedPositions []int) Proof {
 	if st.p.numRounds() > 1 {
 		st.RoundCaps = make([]MerkleCap, st.p.numRounds()-1)
 		for j := uint8(1); j < st.p.numRounds(); j++ {
-			depth := merkleCapDepth(st.p.NumQueries, int(st.p.LogCodewordSize-j))
+			depth := st.p.merkleCapDepth(int(st.p.LogCodewordSize - j))
 			capDepths[j] = depth
 			st.RoundCaps[j-1] = st.trees[j].OpenCap(depth)
 		}

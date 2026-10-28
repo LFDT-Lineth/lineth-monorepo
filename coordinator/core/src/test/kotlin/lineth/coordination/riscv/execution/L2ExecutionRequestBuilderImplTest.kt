@@ -12,7 +12,7 @@ import linea.ethapi.ExecutionPayloadClient
 import linea.ethapi.ExecutionWitness
 import linea.ethapi.ExecutionWitnessClient
 import lineth.persistence.ftx.FakeForcedTransactionsDao
-import net.consensys.linea.traces.TracesCountersV2
+import net.consensys.linea.traces.TracesCountersV5
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -25,7 +25,7 @@ class L2ExecutionRequestBuilderImplTest {
   )
   private val conflation = BlocksConflation(
     blocks,
-    ConflationCalculationResult(1UL, 2UL, ConflationTrigger.BLOCKS_LIMIT, TracesCountersV2.EMPTY_TRACES_COUNT),
+    ConflationCalculationResult(1UL, 2UL, ConflationTrigger.BLOCKS_LIMIT, TracesCountersV5.EMPTY_TRACES_COUNT),
   )
   private val callOrder = mutableListOf<String>()
   private val payloadRequests = mutableListOf<Block>()

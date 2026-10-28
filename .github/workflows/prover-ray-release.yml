@@ -1,0 +1,37 @@
+name: "Prover Ray Release"
+
+permissions:
+  actions: read
+  contents: write
+  packages: write
+  pull-requests: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag_suffix:
+        description: 'Optional suffix appended to the version/date/commit image tag'
+        required: false
+        type: string
+        default: ''
+      release_tag_suffix:
+        description: 'Custom release tag suffix (must need for non-main release), i.e. release tag would be releases/[component]/v[semver]-[suffix]'
+        required: false
+        type: string
+        default: ''
+
+concurrency:
+  group: prover-ray-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  component-release:
+    uses: ./.github/workflows/reusable-component-release.yml
+    with:
+      component-name: prover-ray
+      folder-name: prover-ray
+      image_tag_suffix: ${{ inputs.image_tag_suffix }}
+      release_tag_suffix: ${{ inputs.release_tag_suffix }}
+      draft_release: true
+      pre_release: false
+    secrets: inherit

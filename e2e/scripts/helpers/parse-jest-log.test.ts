@@ -15,11 +15,11 @@ const RAW_LOG = `pnpm run -F e2e test:local
     PROVER_TAG: 2fc4392
 
 > e2e@1.0.0 test:local /home/runner/_work/lineth-monorepo/lineth-monorepo/e2e
-> pnpm run test:local:run --testPathIgnorePatterns=linea-besu-fleet.spec.ts --testPathIgnorePatterns=liveness.spec.ts && pnpm run test:liveness:local
+> pnpm run test:local:run --testPathIgnorePatterns=liveness.spec.ts && pnpm run test:liveness:local
 
 
 > e2e@1.0.0 test:local:run /home/runner/_work/lineth-monorepo/lineth-monorepo/e2e
-> TEST_ENV=local npx jest --testPathIgnorePatterns=linea-besu-fleet.spec.ts --testPathIgnorePatterns=liveness.spec.ts
+> TEST_ENV=local npx jest --testPathIgnorePatterns=liveness.spec.ts
 
 timestamp=2026-04-01T06:24:19.543Z level=info | message=Configuring once-off prerequisite contracts
 timestamp=2026-04-01T06:24:27.711Z level=info | message=L1 Dummy contract deployed. address=0x610178da211fef7d417bc0e6fed39f05609ad788

@@ -4,13 +4,15 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.domain.BlockIntervalProofIndex
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.CHAIN_ID
-import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.ROLLUP_PROGRAM_VK
+import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.PROVING_SYSTEM_VERSION
+import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.ROLLUP_PROGRAM_ID
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.blockIntervalProofIndex
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.conflationWitness
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.fileBasedProverConfig
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.jsonMapper
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.rollupProofRequestV1
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.rollupProofResponseDto
+import lineth.coordinator.config.v2.FileBasedProverConfig
 import lineth.fileio.FileReader
 import lineth.fileio.FileWriter
 import org.assertj.core.api.Assertions.assertThat
@@ -23,7 +25,7 @@ import java.nio.file.Path
 import kotlin.time.Instant
 
 /**
- * Exercises [FileBasedRollupProverClient] end-to-end over the [FileBasedProverProofTransport]:
+ * Exercises [RollupProverClient] end-to-end over the [FileBasedProverProofTransport]:
  *  - writing a domain request: request -> request DTO -> JSON file;
  *  - reading a response: JSON file -> response DTO -> domain response.
  */
@@ -31,7 +33,7 @@ import kotlin.time.Instant
 class FileBasedRollupProverClientTest {
   private lateinit var config: FileBasedProverConfig
   private lateinit var l2ExecutionProofTransport: L2ExecutionProofTransport
-  private lateinit var client: FileBasedRollupProverClient
+  private lateinit var client: RollupProverClient
 
   @BeforeEach
   fun beforeEach(vertx: Vertx, @TempDir tempDir: Path) {
@@ -49,10 +51,11 @@ class FileBasedRollupProverClientTest {
       responseFileNameProvider = RollupProofFileNameProvider,
     )
     l2ExecutionProofTransport = FakeL2ExecutionProofTransport()
-    client = FileBasedRollupProverClient(
+    client = RollupProverClient(
       transport = transport,
-      l2ExecutionProofTransport = l2ExecutionProofTransport,
-      programVk = ROLLUP_PROGRAM_VK,
+      l2ExecutionProofProvider = l2ExecutionProofTransport::findResponse,
+      guestProgramId = ROLLUP_PROGRAM_ID,
+      provingSystem = PROVING_SYSTEM_VERSION,
       chainId = CHAIN_ID,
     )
   }
@@ -70,10 +73,11 @@ class FileBasedRollupProverClientTest {
     assertThat(requestFile).exists()
 
     val writtenDto = jsonMapper.readValue(requestFile.toFile(), FileBasedRollupProofRequestDto::class.java)
-    val expectedDto = FileBasedRollupProofRequestDtoMapper(
-      ROLLUP_PROGRAM_VK,
+    val expectedDto = RollupProofRequestDtoMapper(
+      ROLLUP_PROGRAM_ID,
+      PROVING_SYSTEM_VERSION,
       CHAIN_ID,
-      l2ExecutionProofTransport,
+      l2ExecutionProofTransport::findResponse,
     ).invoke(request).get()
     assertThat(writtenDto).isEqualTo(expectedDto)
   }

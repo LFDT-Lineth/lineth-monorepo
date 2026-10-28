@@ -9,7 +9,7 @@ import { IMessageService } from "../interfaces/IMessageService.sol";
 
 /**
  * @title Contract to manage cross-chain messaging on L1.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract L1MessageServiceBase is

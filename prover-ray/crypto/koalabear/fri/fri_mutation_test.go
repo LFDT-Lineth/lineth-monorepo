@@ -217,6 +217,7 @@ func TestPCSVerifyRejectsMutations(t *testing.T) {
 	one := field.One()
 	oneExt := field.Lift(one)
 
+	//nolint:goconst
 	tests := []struct {
 		name    string
 		mutate  func(*pcsOpenVerifyFixture)

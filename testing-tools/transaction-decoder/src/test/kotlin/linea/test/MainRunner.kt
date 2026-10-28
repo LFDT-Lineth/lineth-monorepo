@@ -1,6 +1,7 @@
 package linea.test
 
 import io.vertx.core.Vertx
+import lineth.vertx.vertxTestOptions
 import net.consensys.linea.async.get
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
@@ -19,7 +20,7 @@ fun main() {
       "https://linea-sepolia.infura.io/v3/${System.getenv("INFURA_PROJECT_ID")}"
 //    "https://linea-mainnet.infura.io/v3/${System.getenv("INFURA_PROJECT_ID")}"
     }
-  val vertx = Vertx.vertx()
+  val vertx = Vertx.vertx(vertxTestOptions)
   vertx.exceptionHandler { error ->
     println("Unhandled exception: message=${error.message}")
     LogManager.getLogger("vertx").error("Unhandled exception: message={}", error.message, error)

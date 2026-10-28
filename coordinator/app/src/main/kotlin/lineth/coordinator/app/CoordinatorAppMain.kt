@@ -1,6 +1,9 @@
 package lineth.coordinator.app
 
+import io.vertx.core.Vertx
 import lineth.coordinator.config.v2.CoordinatorConfig
+import net.consensys.linea.async.get
+import net.consensys.linea.vertx.loadVertxConfig
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.LoggerContext
 import org.apache.logging.log4j.core.config.Configurator
@@ -29,11 +32,17 @@ class CoordinatorAppMain {
     }
 
     private fun startApp(configs: CoordinatorConfig) {
-      val app = CoordinatorApp(configs)
+      val vertxConfig = loadVertxConfig()
+      log.trace("System properties: {}", System.getProperties())
+      log.debug("Vertx full configs: {}", vertxConfig)
+      val vertx = Vertx.vertx(loadVertxConfig())
+      val app = CoordinatorApp(configs, vertx = vertx)
       Runtime.getRuntime()
         .addShutdownHook(
           Thread {
             app.stop()
+            vertx.close().get()
+            log.info("vertx Stopped")
             if (LogManager.getContext() is LoggerContext) {
               // Disable log4j auto shutdown hook is not used otherwise
               // Messages in App.stop won't appear in the logs

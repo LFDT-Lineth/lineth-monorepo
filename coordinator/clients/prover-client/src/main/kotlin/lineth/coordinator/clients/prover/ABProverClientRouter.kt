@@ -63,29 +63,26 @@ class ABProverClientRouter<ProofRequest : Any, ProofResponse, TProofIndex : Proo
       switchBlockTimestamp: Instant?,
       clientBuilder: (TProverConfig) -> ProverClientV2<ProofRequest, ProofResponse, TProofIndex>,
     ): ProverClientV2<ProofRequest, ProofResponse, TProofIndex> {
-      return when {
-        switchBlockNumberInclusive != null -> {
-          require(proverBConfig != null) {
-            "proverBConfig must be provided when switchBlockNumberInclusive is set"
-          }
-          ABProverClientRouter(
-            proverA = clientBuilder(proverAConfig),
-            proverB = clientBuilder(proverBConfig),
-            switchToProverBPredicate = StartBlockNumberBasedSwitchPredicate(switchBlockNumberInclusive)::invoke,
-          )
-        }
-        switchBlockTimestamp != null -> {
-          require(proverBConfig != null) {
-            "proverBConfig must be provided when switchBlockTimestamp is set"
-          }
-          ABProverClientRouter(
-            proverA = clientBuilder(proverAConfig),
-            proverB = clientBuilder(proverBConfig),
-            switchToProverBPredicate = StartBlockTimestampBasedSwitchPredicate(switchBlockTimestamp)::invoke,
-          )
-        }
-        else -> clientBuilder(proverAConfig)
+      if (switchBlockNumberInclusive == null && switchBlockTimestamp == null) {
+        // no effective switch enabled
+        return clientBuilder(proverAConfig)
       }
+
+      require(proverBConfig != null) {
+        "proverBConfig must be provided when switchBlockNumberInclusive or switchBlockTimestamp is set"
+      }
+
+      val switchPredicate = when {
+        switchBlockNumberInclusive != null -> StartBlockNumberBasedSwitchPredicate(switchBlockNumberInclusive)::invoke
+        switchBlockTimestamp != null -> StartBlockTimestampBasedSwitchPredicate(switchBlockTimestamp)::invoke
+        else -> throw IllegalStateException("switchBlockNumberInclusive or switchBlockTimestamp must be defined")
+      }
+
+      return ABProverClientRouter(
+        proverA = clientBuilder(proverAConfig),
+        proverB = clientBuilder(proverBConfig),
+        switchToProverBPredicate = switchPredicate,
+      )
     }
   }
 

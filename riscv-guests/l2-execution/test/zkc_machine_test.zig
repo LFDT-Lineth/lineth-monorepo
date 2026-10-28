@@ -1,41 +1,47 @@
 const std = @import("std");
-const execution_machine = @import("execution_machine");
 const zkc_machine = @import("zkc_machine");
 
-test "ZkC output protocol accepts one exact-sized output" {
+const min_output_size: usize = 34;
+
+test "ZkC output protocol accepts a variable-length output" {
+    const alloc = std.testing.allocator;
     const output = try zkc_machine.testing.parseOutput(
-        "noise\n  guest_output = 0x" ++ "00" ** @sizeOf(execution_machine.Output) ++ "  \n",
+        alloc,
+        "noise\n  guest_output = 0x" ++ "ab" ** (min_output_size + 3) ++ "  \n",
     );
-    try std.testing.expectEqualSlices(u8, &([_]u8{0} ** @sizeOf(execution_machine.Output)), &output);
+    defer alloc.free(output);
+    try std.testing.expectEqualSlices(u8, &([_]u8{0xab} ** (min_output_size + 3)), output);
 }
 
-test "ZkC output protocol rejects missing malformed wrong-sized and duplicate output" {
-    const output_size = @sizeOf(execution_machine.Output);
-    try std.testing.expectError(error.MissingGuestOutput, zkc_machine.testing.parseOutput("guest completed"));
-    try std.testing.expectError(error.InvalidGuestOutput, zkc_machine.testing.parseOutput("guest_output = missing-prefix"));
+test "ZkC output protocol rejects missing malformed truncated and duplicate output" {
+    const alloc = std.testing.allocator;
+    try std.testing.expectError(error.MissingGuestOutput, zkc_machine.testing.parseOutput(alloc, "guest completed"));
+    try std.testing.expectError(error.InvalidGuestOutput, zkc_machine.testing.parseOutput(alloc, "guest_output = missing-prefix"));
     try std.testing.expectError(
         error.InvalidGuestOutput,
-        zkc_machine.testing.parseOutput("guest_output = 0x" ++ "gg" ** output_size),
+        zkc_machine.testing.parseOutput(alloc, "guest_output = 0x" ++ "gg" ** min_output_size),
     );
     try std.testing.expectError(
         error.InvalidGuestOutputSize,
-        zkc_machine.testing.parseOutput("guest_output = 0x" ++ "00" ** (output_size - 1)),
+        zkc_machine.testing.parseOutput(alloc, "guest_output = 0x" ++ "00" ** (min_output_size - 1)),
     );
     try std.testing.expectError(
         error.InvalidGuestOutputSize,
-        zkc_machine.testing.parseOutput("guest_output = 0x" ++ "00" ** (output_size + 1)),
+        zkc_machine.testing.parseOutput(alloc, "guest_output = 0x" ++ "00" ** min_output_size ++ "0"),
     );
     try std.testing.expectError(
         error.DuplicateGuestOutput,
         zkc_machine.testing.parseOutput(
-            "guest_output = 0x" ++ "00" ** output_size ++
-                "\nguest_output = 0x" ++ "11" ** output_size,
+            alloc,
+            "guest_output = 0x" ++ "00" ** min_output_size ++
+                "\nguest_output = 0x" ++ "11" ** min_output_size,
         ),
     );
     try std.testing.expectError(
         error.DuplicateGuestOutput,
         zkc_machine.testing.parseOutput(
-            "guest_output = 0x" ++ "00" ** output_size ++
+            alloc,
+            "guest_output = 0x" ++ "00" ** min_output_size ++
                 "\nguest_output = missing-prefix",
         ),
     );

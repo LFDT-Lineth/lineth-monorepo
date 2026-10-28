@@ -1,5 +1,5 @@
 /*
- * Copyright Consensys Software Inc.
+ * Copyright Consensys Incorporated
  *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
@@ -24,6 +24,7 @@ import lineth.sequencer.forced.LineaForcedTransactionPool;
 import lineth.utils.TestTransactionFactory;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.ethereum.core.Transaction;
+import org.hyperledger.besu.ethereum.transaction.TransactionInvalidReason;
 import org.hyperledger.besu.plugin.data.AddedBlockContext;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.exception.PluginRpcEndpointException;
@@ -99,7 +100,9 @@ class LineaGetForcedTransactionInclusionStatusTest {
   void execute_returnsBadBalanceStatus() {
     final ForcedTransaction ftx =
         addAndProcessTransaction(
-            TransactionSelectionResult.invalidTransient("UPFRONT_COST_EXCEEDS_BALANCE"), 100L);
+            TransactionSelectionResult.invalidTransient(
+                TransactionInvalidReason.UPFRONT_GAS_COST_EXCEEDS_BALANCE.name()),
+            100L);
 
     final var result = method.execute(request(ftx.forcedTransactionNumber()));
 

@@ -19,6 +19,5 @@ exec java \
   -Dlog4j2.configurationFile=/var/lib/coordinator/log4j2-dev.xml \
   -jar libs/coordinator.jar \
   --traces-limits-v5 /opt/consensys/linea/coordinator/config/traces-limits-v5.toml \
-  --smart-contract-errors /opt/consensys/linea/coordinator/config/smart-contract-errors.toml \
   --gas-price-cap-time-of-day-multipliers /opt/consensys/linea/coordinator/config/gas-price-cap-time-of-day-multipliers.toml \
   /rendered/coordinator-config.toml

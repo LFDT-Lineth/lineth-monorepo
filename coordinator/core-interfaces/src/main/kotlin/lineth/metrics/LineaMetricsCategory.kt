@@ -6,6 +6,7 @@ enum class LineaMetricsCategory : MetricsCategory {
   AGGREGATION,
   BATCH,
   BLOB,
+  ROLLUP,
   FORCED_TRANSACTION,
   CONFLATION,
   GAS_PRICE_CAP,

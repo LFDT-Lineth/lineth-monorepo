@@ -61,27 +61,17 @@ fn guestMain() callconv(.c) noreturn {
         zkvm_log(0, name.ptr, name.len);
         exit(guest_errors.exitCode(err));
     };
-    lineth_accel.write_output(&out, out.len);
+    lineth_accel.write_output(out.ptr, out.len);
     exit(.success);
 }
 
 /// Decode -> execute -> encode, factored out of `guestMain` so the whole pipeline is one `catch`
 /// away from a clean, categorized guest rejection (`guest_errors.exitCode`, Readme.md §2.5).
-/// Returns the output BY VALUE (a small, fixed-size array — see `l2_execution_ssz.encodeOutput`'s
-/// doc comment) rather than an allocator-backed slice: there's nothing for an allocator to do here.
-fn runL2ExecutionGuest(allocator: std.mem.Allocator, raw_input: []const u8) ![l2_execution_ssz.OUTPUT_SIZE]u8 {
+fn runL2ExecutionGuest(allocator: std.mem.Allocator, raw_input: []const u8) ![]u8 {
     const decoded = try l2_execution_ssz.decodeInput(allocator, raw_input);
     const result = try l2_execution.runL2Execution(allocator, decoded);
 
-    // Debug visibility for the plain, SSZ-encoded 16-field public-input tuple: `encodeOutput`
-    // below commits only its keccak256 (see `l2_execution_ssz.hashPublicInputs`), so this is the
-    // only place the plain tuple is still observable. `zkvm_log` (zesu's real logging ABI — see
-    // zesu/src/zkvm/root.zig — DEFINED as a no-op in `zkvm_provide.zig`, see its doc comment for
-    // why) is the standard sink for this; level 0 mirrors zesu's own `std.log`/panic usage.
-    const public_inputs_bytes = l2_execution_ssz.encodePublicInputsBytes(result.public_inputs);
-    zkvm_log(0, &public_inputs_bytes, public_inputs_bytes.len);
-
-    return l2_execution_ssz.encodeOutput(result.public_inputs);
+    return l2_execution_ssz.encodeOutput(allocator, result.public_inputs);
 }
 
 /// zesu's own logging ABI (see zesu/src/zkvm/root.zig's doc comment) — DEFINED (as a no-op, for

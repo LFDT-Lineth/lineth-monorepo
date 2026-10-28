@@ -176,7 +176,7 @@ open class Web3JLinethRollupSmartContractClientReadOnly(
           LinethRollupContractVersion.V8,
           -> contractClientV8AtBlock(blockParameter).blobShnarfExists(shnarf)
           LinethRollupContractVersion.V9 -> // just ensure not regression while WIP
-            contractClientV9AtBlock(blockParameter).blobShnarfExists(shnarf)
+            throw UnsupportedOperationException("isBlobShnarfPresent was deprecated on V9")
         }
           .sendAsync()
           .thenApply { it != BigInteger.ZERO }

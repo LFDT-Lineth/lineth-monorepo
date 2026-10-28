@@ -10,7 +10,3 @@ dependencies {
   testFixturesApi project(":jvm-libs:linea:besu-libs")
   testFixturesApi project(":jvm-libs:generic:extensions:kotlin")
 }
-
-jar {
-  dependsOn configurations.runtimeClasspath
-}

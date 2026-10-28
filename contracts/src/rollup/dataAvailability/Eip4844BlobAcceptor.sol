@@ -8,7 +8,7 @@ import { DataRollingHashAcceptorBase } from "./DataRollingHashAcceptorBase.sol";
 
 /**
  * @title Contract to manage EIP-4844 blob submission.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract Eip4844BlobAcceptor is

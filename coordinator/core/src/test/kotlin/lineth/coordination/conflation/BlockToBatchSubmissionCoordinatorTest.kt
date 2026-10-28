@@ -9,7 +9,7 @@ import linea.domain.createBlock
 import lineth.conflation.AlwaysSafeBlockNumberProvider
 import lineth.conflation.ConflationService
 import lineth.coordination.blockcreation.BlockCreated
-import net.consensys.linea.traces.TracesCountersV2
+import net.consensys.linea.traces.TracesCountersV5
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.assertj.core.api.Assertions
@@ -38,7 +38,7 @@ class BlockToBatchSubmissionCoordinatorTest {
     private val randomBlock = createBlock(number = 100UL)
     private val baseBlock = BlockCreated(randomBlock)
     private val blockRlpEncoded = ByteArray(0)
-    private val tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT
+    private val tracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT
   }
 
   private fun createBlockToBatchSubmissionCoordinator(

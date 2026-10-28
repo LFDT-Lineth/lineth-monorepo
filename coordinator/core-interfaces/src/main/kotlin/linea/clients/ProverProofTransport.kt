@@ -7,11 +7,8 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
  * Transport abstraction used by the generic RISC-V prover client to decouple the prover-client logic from the
  * mechanism used to submit a proof request and to obtain its response.
  *
- * Two concrete strategies exist:
- *  - a file-based one (`FileBasedProverProofTransport`): the request DTO is written to a JSON file and the response
- *    is read back from a JSON file produced by the prover;
- *  - a RESTful one (`RestfulProverProofTransport`): the request DTO is sent as the body of an HTTP POST and the
- *    response is polled via periodic HTTP GET calls.
+ * The concrete strategy is file-based (`FileBasedProverProofTransport`): the request DTO is written to a JSON file
+ * and the response is read back from a JSON file produced by the prover.
  *
  * @param RequestDto the serializable request payload produced by the client's request mapper.
  * @param ResponseDto the deserialized response payload understood by the client's response mapper.
@@ -33,14 +30,12 @@ interface ProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : Proo
   fun isResponseAlreadyExisted(proofIndex: TProofIndex): SafeFuture<Boolean>
 
   /**
-   * Submits the [requestDto] for [proofIndex]. For the file-based transport this writes the JSON request file; for the
-   * RESTful transport this issues the POST call. Implementations should be idempotent.
+   * Submits the [requestDto] for [proofIndex] by writing the JSON request file. Implementations should be idempotent.
    */
   fun submitRequest(proofIndex: TProofIndex, requestDto: RequestDto): SafeFuture<Unit>
 
   /**
-   * Removes the submitted proof requests. For the file-based transport this removes the JSON request files; for the
-   * RESTful transport this issues the POST call of "jobs/dequeue". Implementations should be idempotent.
+   * Removes the submitted proof requests by removing their JSON request files. Implementations should be idempotent.
    */
   fun removeRequests(startBlockNumberGte: Long?): SafeFuture<Unit>
 

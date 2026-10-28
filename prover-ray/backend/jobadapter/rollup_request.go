@@ -3,10 +3,15 @@ package jobadapter
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
 )
 
-// Field keys for the rollup and aggregation requests. Keys in request.go
-// (programVkKey, chainIDKey, proofRequestKey, the byte sizes) are reused.
+// Field keys for the rollup request. Keys in request.go (guestProgramIDKey,
+// chainIDKey, proofRequestKey, the byte sizes) are reused. parentDataRollingHashKey,
+// parentDataTailTakeBytesKey, filteredAddressesKey, l2L1MessagesKey,
+// endBlockNumberKey, blockCountKey, l2MessagingBlocksOffsetsKey, publicInputsKey,
+// proofKey, and startBlockNumberKey are also used by aggregation_request.go.
 const (
 	decodeRollupOp = "DecodeRollupRequest"
 
@@ -14,23 +19,23 @@ const (
 	chunksKey                      = "chunks"
 	l2ExecutionProofsKey           = "l2ExecutionProofs"
 	parentDataRollingHashKey       = "parentDataRollingHash"
-	startOffsetKey                 = "startOffset"
-	opaquePrefixBytesKey           = "opaquePrefixBytes"
-	opaqueSuffixBytesKey           = "opaqueSuffixBytes"
+	parentDataTailTakeBytesKey     = "parentDataTailTakeBytes"
 	boundaryPrevDataRollingHashKey = "boundaryPrevDataRollingHash"
 
-	blockRlpsKey      = "blockRlps"
-	chunkHashKey      = "chunkHash"
-	isCalldataKey     = "isCalldata"
-	calldataLengthKey = "calldataLength"
+	blockRlpsKey     = "blockRlps"
+	chunkHashKey     = "chunkHash"
+	isCalldataKey    = "isCalldata"
+	blobBytesKey     = "blobBytes"
+	calldataBytesKey = "calldataBytes"
 
-	proofKey             = "proof"
-	startBlockNumberKey  = "startBlockNumber"
-	publicInputsKey      = "publicInputs"
-	l2L1MessagesKey      = "l2L1Messages"
-	txFromsKey           = "txFroms"
-	filteredAddressesKey = "filteredAddresses"
-	endBlockNumberKey    = "endBlockNumber"
+	proofKey                    = "proof"
+	startBlockNumberKey         = "startBlockNumber"
+	publicInputsKey             = "publicInputs"
+	l2L1MessagesKey             = "l2L1Messages"
+	filteredAddressesKey        = "filteredAddresses"
+	endBlockNumberKey           = "endBlockNumber"
+	blockCountKey               = "blockCount"
+	l2MessagingBlocksOffsetsKey = "l2MessagingBlocksOffsets"
 )
 
 // ConflationWitness is one conflation: the RLP blocks its paired proof attests.
@@ -38,65 +43,42 @@ type ConflationWitness struct {
 	BlockRlps [][]byte
 }
 
-// ChunkWitness is one touched chunk (rollup §3.1): its L1-anchored binding hash
-// and kind. CalldataLength is 0 for a blob and the exact length for calldata.
+// ChunkWitness is one touched chunk: its L1-anchored binding hash, kind, and
+// serialized bytes. For a calldata chunk CalldataBytes is set and BlobBytes is
+// empty; for a blob chunk BlobBytes is set and CalldataBytes is empty.
 type ChunkWitness struct {
-	ChunkHash      [32]byte
-	IsCalldata     bool
-	CalldataLength uint64
+	ChunkHash     [32]byte
+	IsCalldata    bool
+	BlobBytes     []byte
+	CalldataBytes []byte
 }
 
 // EmbeddedL2ExecutionProof is one l2ExecutionProof a rollup request carries for
 // the guest to verify. ProgramVk is its verifying-key hash.
 type EmbeddedL2ExecutionProof struct {
-	Proof             []byte
-	StartBlockNumber  uint64
-	PublicInputs      L2ExecutionProofPublicInputs
-	L2L1Messages      [][32]byte
-	TxFroms           [][20]byte
-	FilteredAddresses [][20]byte
-	ProgramVk         []byte
-}
-
-// L2ExecutionProofPublicInputs is the 16-field PI of an embedded l2ExecutionProof.
-type L2ExecutionProofPublicInputs struct {
-	ParentBlockHash                          [32]byte
-	EndBlockHash                             [32]byte
-	EndBlockNumber                           uint64
-	EndBlockTimestamp                        uint64
-	L2L1MessagesHash                         [32]byte
-	ParentL1L2BridgeRollingHash              [32]byte
-	ParentL1L2BridgeRollingHashMessageNumber uint64
-	EndL1L2BridgeRollingHash                 [32]byte
-	EndL1L2BridgeRollingHashMessageNumber    uint64
-	DynamicChainConfigHash                   [32]byte
-	ParentFtxRollingHash                     [32]byte
-	ParentFtxNumber                          uint64
-	EndFtxRollingHash                        [32]byte
-	EndProcessedFtxNumber                    uint64
-	FilteredAddressesHash                    [32]byte
-	TxFromsHash                              [32]byte
+	Proof            []byte
+	StartBlockNumber uint64
+	PublicInputs     backend.PublicInputs
+	ProgramVk        []byte
 }
 
 // RollupRequest is a decoded getZkRollupProofV1 request. Conflations pair 1:1
-// with L2ExecutionProofs; BoundaryPrevDataRollingHash is set only when
-// StartOffset > 0 (§3.4).
+// with L2ExecutionProofs. BoundaryPrevDataRollingHash is optional.
 type RollupRequest struct {
-	ProgramVk                   []byte
-	ChainID                     uint64
-	Conflations                 []ConflationWitness
-	Chunks                      []ChunkWitness
-	ParentDataRollingHash       [32]byte
-	StartOffset                 uint64
-	OpaquePrefixBytes           []byte
-	OpaqueSuffixBytes           []byte
+	ProgramVk               []byte
+	ChainID                 uint64
+	Conflations             []ConflationWitness
+	Chunks                  []ChunkWitness
+	ParentDataRollingHash   [32]byte
+	ParentDataTailTakeBytes uint64
+
 	BoundaryPrevDataRollingHash *[32]byte
 	L2ExecutionProofs           []EmbeddedL2ExecutionProof
 }
 
 // DecodeRollupRequest parses a getZkRollupProofV1 request and validates its
-// shape and the flexible-blobs invariants. It does not build guest input bytes:
-// the recursion input format is undecided, so the runner passes a placeholder.
+// shape and the chunk invariants. It does not build guest input bytes: the
+// recursion input format is undecided, so the runner passes a placeholder.
 func DecodeRollupRequest(data []byte) (*RollupRequest, error) {
 	const op = decodeRollupOp
 
@@ -105,7 +87,7 @@ func DecodeRollupRequest(data []byte) (*RollupRequest, error) {
 		return nil, decErrf(op, "parsing JSON: %w", err)
 	}
 
-	programVk, err := getFixedHex(env, programVkKey, op, "", programVkByteSize)
+	guestProgramID, err := getFixedHex(env, guestProgramIDKey, op, "", programVkByteSize)
 	if err != nil {
 		return nil, err
 	}
@@ -154,12 +136,12 @@ func DecodeRollupRequest(data []byte) (*RollupRequest, error) {
 		return nil, err
 	}
 
-	startOffset, err := getU64(proofRequest, startOffsetKey, op, "proofRequest.")
+	parentDataTailTakeBytes, err := getU64(proofRequest, parentDataTailTakeBytesKey, op, "proofRequest.")
 	if err != nil {
 		return nil, err
 	}
 
-	// boundaryPrevDataRollingHash is optional, required only when startOffset > 0.
+	// boundaryPrevDataRollingHash is optional.
 	var boundaryPrev *[32]byte
 	if raw, ok := proofRequest[boundaryPrevDataRollingHashKey]; ok {
 		h, err := hash32Of(raw, op, "proofRequest."+boundaryPrevDataRollingHashKey)
@@ -167,23 +149,6 @@ func DecodeRollupRequest(data []byte) (*RollupRequest, error) {
 			return nil, err
 		}
 		boundaryPrev = &h
-	}
-	if startOffset > 0 && boundaryPrev == nil {
-		return nil, decErrf(op, "proofRequest.%s is required when startOffset > 0", boundaryPrevDataRollingHashKey)
-	}
-
-	// opaquePrefixBytes/opaqueSuffixBytes default to empty (0x) when absent.
-	opaquePrefix, err := optionalHex(proofRequest, opaquePrefixBytesKey, op)
-	if err != nil {
-		return nil, err
-	}
-	if uint64(len(opaquePrefix)) != startOffset {
-		return nil, decErrf(op, "proofRequest.%s length (%d) must equal startOffset (%d)",
-			opaquePrefixBytesKey, len(opaquePrefix), startOffset)
-	}
-	opaqueSuffix, err := optionalHex(proofRequest, opaqueSuffixBytesKey, op)
-	if err != nil {
-		return nil, err
 	}
 
 	conflations := make([]ConflationWitness, len(conflationsRaw))
@@ -214,26 +179,15 @@ func DecodeRollupRequest(data []byte) (*RollupRequest, error) {
 	}
 
 	return &RollupRequest{
-		ProgramVk:                   programVk,
+		ProgramVk:                   guestProgramID,
 		ChainID:                     chainID,
 		Conflations:                 conflations,
 		Chunks:                      chunks,
 		ParentDataRollingHash:       parentDataRollingHash,
-		StartOffset:                 startOffset,
-		OpaquePrefixBytes:           opaquePrefix,
-		OpaqueSuffixBytes:           opaqueSuffix,
+		ParentDataTailTakeBytes:     parentDataTailTakeBytes,
 		BoundaryPrevDataRollingHash: boundaryPrev,
 		L2ExecutionProofs:           proofs,
 	}, nil
-}
-
-// optionalHex decodes a 0x-hex field that defaults to empty bytes when absent.
-func optionalHex(m map[string]json.RawMessage, key, op string) ([]byte, error) {
-	raw, ok := m[key]
-	if !ok {
-		return []byte{}, nil
-	}
-	return hexBytesOf(raw, op, "proofRequest."+key)
 }
 
 func decodeConflationWitness(raw json.RawMessage, op, ctx string) (ConflationWitness, error) {
@@ -272,17 +226,35 @@ func decodeChunkWitness(raw json.RawMessage, op, ctx string) (ChunkWitness, erro
 	if err != nil {
 		return ChunkWitness{}, err
 	}
-	calldataLength, err := getU64(obj, calldataLengthKey, op, ctx)
+	blobBytes, err := getHexBytes(obj, blobBytesKey, op, ctx)
 	if err != nil {
 		return ChunkWitness{}, err
 	}
-	if isCalldata && calldataLength == 0 {
-		return ChunkWitness{}, decErrf(op, "%s%s must be positive for a calldata chunk", ctx, calldataLengthKey)
+	calldataBytes, err := getHexBytes(obj, calldataBytesKey, op, ctx)
+	if err != nil {
+		return ChunkWitness{}, err
 	}
-	if !isCalldata && calldataLength != 0 {
-		return ChunkWitness{}, decErrf(op, "%s%s must be 0 for a blob chunk", ctx, calldataLengthKey)
+	if isCalldata {
+		if len(calldataBytes) == 0 {
+			return ChunkWitness{}, decErrf(op, "%s%s must be non-empty for a calldata chunk", ctx, calldataBytesKey)
+		}
+		if len(blobBytes) != 0 {
+			return ChunkWitness{}, decErrf(op, "%s%s must be empty for a calldata chunk", ctx, blobBytesKey)
+		}
+	} else {
+		if len(blobBytes) == 0 {
+			return ChunkWitness{}, decErrf(op, "%s%s must be non-empty for a blob chunk", ctx, blobBytesKey)
+		}
+		if len(calldataBytes) != 0 {
+			return ChunkWitness{}, decErrf(op, "%s%s must be empty for a blob chunk", ctx, calldataBytesKey)
+		}
 	}
-	return ChunkWitness{ChunkHash: chunkHash, IsCalldata: isCalldata, CalldataLength: calldataLength}, nil
+	return ChunkWitness{
+		ChunkHash:     chunkHash,
+		IsCalldata:    isCalldata,
+		BlobBytes:     blobBytes,
+		CalldataBytes: calldataBytes,
+	}, nil
 }
 
 func decodeEmbeddedL2ExecutionProof(raw json.RawMessage, op, ctx string) (EmbeddedL2ExecutionProof, error) {
@@ -302,31 +274,7 @@ func decodeEmbeddedL2ExecutionProof(raw json.RawMessage, op, ctx string) (Embedd
 	if err != nil {
 		return EmbeddedL2ExecutionProof{}, err
 	}
-	pi, err := decodeL2ExecutionProofPublicInputs(piObj, op, ctx+publicInputsKey+".")
-	if err != nil {
-		return EmbeddedL2ExecutionProof{}, err
-	}
-	l2L1MessagesRaw, err := getArray(obj, l2L1MessagesKey, op, ctx)
-	if err != nil {
-		return EmbeddedL2ExecutionProof{}, err
-	}
-	l2L1Messages, err := hash32List(l2L1MessagesRaw, op, ctx+l2L1MessagesKey)
-	if err != nil {
-		return EmbeddedL2ExecutionProof{}, err
-	}
-	txFromsRaw, err := getArray(obj, txFromsKey, op, ctx)
-	if err != nil {
-		return EmbeddedL2ExecutionProof{}, err
-	}
-	txFroms, err := addressList(txFromsRaw, op, ctx+txFromsKey)
-	if err != nil {
-		return EmbeddedL2ExecutionProof{}, err
-	}
-	filteredRaw, err := getArray(obj, filteredAddressesKey, op, ctx)
-	if err != nil {
-		return EmbeddedL2ExecutionProof{}, err
-	}
-	filtered, err := addressList(filteredRaw, op, ctx+filteredAddressesKey)
+	pi, err := decodeEmbeddedPublicInputs(piObj, op, ctx+publicInputsKey+".")
 	if err != nil {
 		return EmbeddedL2ExecutionProof{}, err
 	}
@@ -335,20 +283,19 @@ func decodeEmbeddedL2ExecutionProof(raw json.RawMessage, op, ctx string) (Embedd
 		return EmbeddedL2ExecutionProof{}, err
 	}
 	return EmbeddedL2ExecutionProof{
-		Proof:             proof,
-		StartBlockNumber:  startBlockNumber,
-		PublicInputs:      pi,
-		L2L1Messages:      l2L1Messages,
-		TxFroms:           txFroms,
-		FilteredAddresses: filtered,
-		ProgramVk:         programVk,
+		Proof:            proof,
+		StartBlockNumber: startBlockNumber,
+		PublicInputs:     pi,
+		ProgramVk:        programVk,
 	}, nil
 }
 
-func decodeL2ExecutionProofPublicInputs(
+// decodeEmbeddedPublicInputs decodes the 18-field backend.PublicInputs shape
+// embedded in an l2ExecutionProof.
+func decodeEmbeddedPublicInputs(
 	m map[string]json.RawMessage, op, ctx string,
-) (L2ExecutionProofPublicInputs, error) {
-	var pi L2ExecutionProofPublicInputs
+) (backend.PublicInputs, error) {
+	var pi backend.PublicInputs
 	var err error
 	h := func(key string) [32]byte {
 		if err != nil {
@@ -370,7 +317,6 @@ func decodeL2ExecutionProofPublicInputs(
 	pi.EndBlockHash = h("endBlockHash")
 	pi.EndBlockNumber = n(endBlockNumberKey)
 	pi.EndBlockTimestamp = n("endBlockTimestamp")
-	pi.L2L1MessagesHash = h("l2L1MessagesHash")
 	pi.ParentL1L2BridgeRollingHash = h("parentL1L2BridgeRollingHash")
 	pi.ParentL1L2BridgeRollingHashMessageNumber = n("parentL1L2BridgeRollingHashMessageNumber")
 	pi.EndL1L2BridgeRollingHash = h("endL1L2BridgeRollingHash")
@@ -380,9 +326,58 @@ func decodeL2ExecutionProofPublicInputs(
 	pi.ParentFtxNumber = n("parentFtxNumber")
 	pi.EndFtxRollingHash = h("endFtxRollingHash")
 	pi.EndProcessedFtxNumber = n("endProcessedFtxNumber")
-	pi.FilteredAddressesHash = h("filteredAddressesHash")
 	pi.TxFromsHash = h("txFromsHash")
-	return pi, err
+	pi.BlockCount = n(blockCountKey)
+	if err != nil {
+		return pi, err
+	}
+
+	offsetsRaw, err := getArray(m, l2MessagingBlocksOffsetsKey, op, ctx)
+	if err != nil {
+		return pi, err
+	}
+	offsets, err := uint16List(offsetsRaw, op, ctx+l2MessagingBlocksOffsetsKey)
+	if err != nil {
+		return pi, err
+	}
+	pi.L2MessagingBlocksOffsets = offsets
+
+	l2L1MessagesRaw, err := getArray(m, l2L1MessagesKey, op, ctx)
+	if err != nil {
+		return pi, err
+	}
+	l2L1Messages, err := hash32List(l2L1MessagesRaw, op, ctx+l2L1MessagesKey)
+	if err != nil {
+		return pi, err
+	}
+	pi.L2L1Messages = l2L1Messages
+
+	filteredRaw, err := getArray(m, filteredAddressesKey, op, ctx)
+	if err != nil {
+		return pi, err
+	}
+	filtered, err := addressList(filteredRaw, op, ctx+filteredAddressesKey)
+	if err != nil {
+		return pi, err
+	}
+	pi.FilteredAddresses = filtered
+	return pi, nil
+}
+
+// uint16List decodes a JSON array of integers into []uint16.
+func uint16List(raw []json.RawMessage, op, prefix string) ([]uint16, error) {
+	out := make([]uint16, len(raw))
+	for i, r := range raw {
+		v, err := uint64Of(r, op, fmt.Sprintf("%s[%d]", prefix, i))
+		if err != nil {
+			return nil, err
+		}
+		if v > 0xffff {
+			return nil, decErrf(op, "%s[%d] must fit in uint16, got %d", prefix, i, v)
+		}
+		out[i] = uint16(v)
+	}
+	return out, nil
 }
 
 func trimDot(ctx string) string {

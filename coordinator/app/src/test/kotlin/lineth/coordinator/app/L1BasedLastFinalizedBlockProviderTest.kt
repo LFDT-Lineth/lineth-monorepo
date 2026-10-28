@@ -3,6 +3,7 @@ package lineth.coordinator.app
 import io.vertx.core.Vertx
 import linea.contract.l1.LineaSmartContractClientReadOnly
 import linea.domain.BlockParameter
+import lineth.vertx.vertxTestOptions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -33,7 +34,7 @@ class L1BasedLastFinalizedBlockProviderTest {
 
     val resumerCalculator =
       L1BasedLastFinalizedBlockProvider(
-        Vertx.vertx(),
+        Vertx.vertx(vertxTestOptions),
         lineaClient,
         consistentNumberOfBlocksOnL1 = 3u,
         numberOfRetries = 50u,

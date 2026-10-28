@@ -6,6 +6,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/require"
 )
 
@@ -162,7 +163,7 @@ func TestLagrangeSelector_DynamicModule(t *testing.T) {
 	for _, n := range []int{4, 8} {
 		rt := wiop.NewRuntime(sys)
 		// Assigning a column fixes the dynamic module's runtime size to n.
-		rt.AssignColumn(col, makeVec(n, 1))
+		rt.AssignColumn(col, wioptest.ConstVec(n, 1))
 
 		vec := ls.EvaluateVector(rt).Plain
 		require.Equalf(t, n, vec.Len(), "n=%d: vector length", n)

@@ -1,6 +1,4 @@
-// Package ssz encodes the rollup_spec Amsterdam SszStatelessInput payload used
-// by prover-ray. It is schema-specific and golden-vector pinned against
-// rollup_spec/stateless_input.py; it is not a general-purpose SSZ library.
+// Package ssz encodes stateless execution inputs for the guest.
 package ssz
 
 import (
@@ -14,41 +12,11 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
-
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 )
 
-// SSZ encoder for the Amsterdam stateless block input (EIP-8025).
-//
-// This is a hand-written port of the reference encoder
-// rollup_spec/src/rollup_spec/stateless_input.py::encode_stateless_input_ssz.
-// The wire schema mirrors execution-specs `stateless_ssz.py` at the pinned
-// commit (a456712e); the container field orders below are byte-for-byte
-// significant and must not be reordered. The golden vector in
-// testdata/stateless_input_payload0.ssz pins the exact output.
-//
-// Input is the readable "encoder_obj" form produced by
-// proof_io_v1.py::_decode_payload: the coordinator's statelessInput with
-// chainConfig injected and executionRequests reduced to {}.
+// Schema prefix: ProtocolFork index followed by schema revision.
+var statelessInputSchemaID = []byte{0x15, 0x01}
 
-// statelessInputSchemaID is the two-byte big-endian schema id every framed
-// stateless input is prefixed with (execution-specs `stateless_ssz.py::SCHEMA_ID`).
-var statelessInputSchemaID = []byte{0x00, 0x01}
-
-// protocolForks mirrors rollup_spec/fork.py::ProtocolFork; the SSZ active_fork
-// value is the index into this ordered list. Amsterdam is index 20 at the
-// pinned execution-specs commit. Re-sync if the pin moves.
-var protocolForks = []string{
-	"Frontier", "Homestead", "DAOFork", "TangerineWhistle", "SpuriousDragon",
-	"Byzantium", "StPetersburg", "Istanbul", "MuirGlacier", "Berlin",
-	"London", "ArrowGlacier", "GrayGlacier", "Paris", "Shanghai",
-	"Cancun", "Prague", "Osaka", "BPO1", "BPO2",
-	"Amsterdam",
-}
-
-// activeFork is the single fork this backend supports, matching
-// rollup_spec/fork.py::ACTIVE_FORK.
 const activeFork = "Amsterdam"
 
 // maxExtraDataBytes bounds extra_data, mirroring
@@ -61,7 +29,9 @@ const maxSSZSerializedBytes uint64 = 1<<32 - 1
 
 // SSZ list/vector bounds mirrored from rollup_spec/stateless_input.py and
 // rollup_spec/canonical_ssz.py. The hand-written encoder must reject inputs
-// outside these bounds just like the reference remerkleable encoder does.
+// outside these bounds just like the reference remerkleable encoder does. The
+// per-item witness byte limits are also enforced by the guest's decoder (zesu
+// src/stateless/stateless/ssz.zig), which rejects a longer node, code or header.
 const (
 	maxBytesPerTransaction     = 1 << 30
 	maxBlockAccessListBytes    = 1 << 30
@@ -71,10 +41,9 @@ const (
 	maxWitnessNodes            = 1 << 20
 	maxWitnessCodes            = 1 << 16
 	maxWitnessHeaders          = 256
-	maxBytesPerWitnessNode     = 1 << 20
-	maxBytesPerCode            = 1 << 24
+	maxBytesPerWitnessNode     = 1 << 10
+	maxBytesPerCode            = 1 << 16
 	maxBytesPerHeader          = 1 << 10
-	maxPublicKeys              = 1 << 15
 )
 
 // JSON input model (readable encoder_obj form). The Python reference consumes a
@@ -613,7 +582,7 @@ func sszExecutionPayloadFromObj(obj jsonObj) ([]byte, error) {
 }
 
 func sszExecutionRequestsFromObj(obj jsonObj) ([]byte, error) {
-	for _, key := range []string{"deposits", "withdrawals", "consolidations"} {
+	for _, key := range []string{"deposits", "withdrawals", "consolidations", "builderDeposits", "builderExits"} {
 		raw, ok := obj[key]
 		if !ok {
 			continue
@@ -633,8 +602,11 @@ func sszExecutionRequestsFromObj(obj jsonObj) ([]byte, error) {
 			return nil, fmt.Errorf("executionRequests.%s must be empty", key)
 		}
 	}
-	// Three empty variable-size lists: deposits | withdrawals | consolidations.
+	// Wire order: deposits, withdrawals, consolidations,
+	// builder_deposits, builder_exits. This rollup requires all five empty.
 	return sszContainer(
+		variable(nil),
+		variable(nil),
 		variable(nil),
 		variable(nil),
 		variable(nil),
@@ -736,26 +708,8 @@ func sszExecutionWitnessFromObj(obj jsonObj) ([]byte, error) {
 	)
 }
 
-// forkIndex resolves a fork name to its SSZ active_fork index, mirroring
-// rollup_spec/fork.py: the name must be a known ProtocolFork and must be the
-// single fork this backend supports (Amsterdam).
-func forkIndex(name string) (uint64, error) {
-	idx := -1
-	for i, f := range protocolForks {
-		if f == name {
-			idx = i
-			break
-		}
-	}
-	if idx < 0 {
-		return 0, fmt.Errorf("unknown fork name %q", name)
-	}
-	if name != activeFork {
-		return 0, fmt.Errorf("unsupported fork %q: this backend supports only %s", name, activeFork)
-	}
-	return uint64(idx), nil //nolint:gosec // idx is a small non-negative index
-}
-
+// sszChainConfigFromObj validates the JSON fork and encodes only the chain ID.
+// Fork identity is carried by the schema prefix.
 func sszChainConfigFromObj(obj jsonObj) ([]byte, error) {
 	chainID, err := requireUint64(obj, "chainId")
 	if err != nil {
@@ -765,140 +719,10 @@ func sszChainConfigFromObj(obj jsonObj) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	idx, err := forkIndex(forkName)
-	if err != nil {
-		return nil, err
+	if forkName != activeFork {
+		return nil, fmt.Errorf("unsupported fork %q: this backend supports only %s", forkName, activeFork)
 	}
-
-	// SszForkActivation: two empty optional (max-length-1) uint64 lists.
-	activation, err := sszContainer(
-		variable(nil), // block_number
-		variable(nil), // timestamp
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// SszForkConfig: fork index | activation | blob_schedule (empty list).
-	forkConfig, err := sszContainer(
-		fixed(sszUint64(idx)),
-		variable(activation),
-		variable(nil), // blob_schedule: empty List[SszBlobSchedule, 1]
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// SszChainConfig: chain_id | active_fork.
-	return sszContainer(
-		fixed(sszUint64(chainID)),
-		variable(forkConfig),
-	)
-}
-
-// recoverPublicKey recovers the 65-byte uncompressed SEC1 public key
-// (0x04 || x || y) for a signed transaction, mirroring
-// rollup_spec/fork.py::recover_transaction_public_key. It is the SSZ
-// public_keys field, derived from the transactions already in the payload.
-func recoverPublicKey(txBytes []byte, chainID *big.Int) ([]byte, error) {
-	tx := new(types.Transaction)
-	if err := tx.UnmarshalBinary(txBytes); err != nil {
-		return nil, fmt.Errorf("decoding transaction: %w", err)
-	}
-
-	// Signing-hash selection mirrors the reference
-	// (_signature_recovery_parameters): a pre-EIP-155 legacy transaction signs
-	// over the Homestead hash; an EIP-155 legacy transaction signs over the
-	// payload chain id (its v is validated against it in recoveryID); a typed
-	// transaction signs over its OWN embedded chain id, which the reference
-	// does not check against the payload chain id.
-	var signer types.Signer
-	switch {
-	case tx.Type() == types.LegacyTxType && !tx.Protected():
-		signer = types.HomesteadSigner{}
-	case tx.Type() == types.LegacyTxType:
-		if chainID.Sign() <= 0 {
-			return nil, fmt.Errorf("invalid payload chain id %s", chainID)
-		}
-		signer = types.LatestSignerForChainID(chainID)
-	default:
-		txChainID := tx.ChainId()
-		if txChainID.Sign() <= 0 {
-			return nil, fmt.Errorf("invalid transaction chain id %s", txChainID)
-		}
-		signer = types.LatestSignerForChainID(txChainID)
-	}
-
-	v, r, s := tx.RawSignatureValues()
-	recID, err := recoveryID(tx, v, chainID)
-	if err != nil {
-		return nil, err
-	}
-	// The reference rejects r outside [1, N) and s outside [1, N/2] for every
-	// transaction type; Ecrecover alone does not enforce the s upper bound.
-	if !crypto.ValidateSignatureValues(recID, r, s, true) {
-		return nil, fmt.Errorf("invalid signature values (r or s out of range)")
-	}
-
-	sig := make([]byte, 65)
-	r.FillBytes(sig[0:32])
-	s.FillBytes(sig[32:64])
-	sig[64] = recID
-
-	hash := signer.Hash(tx)
-	pub, err := crypto.Ecrecover(hash[:], sig)
-	if err != nil {
-		return nil, fmt.Errorf("recovering public key: %w", err)
-	}
-	if len(pub) != 65 || pub[0] != 0x04 {
-		return nil, fmt.Errorf("recovered key is not a 65-byte uncompressed SEC1 key")
-	}
-	return pub, nil
-}
-
-// recoveryID normalizes a transaction's v value to the 0/1 secp256k1 recovery
-// id crypto.Ecrecover expects.
-func recoveryID(tx *types.Transaction, v, chainID *big.Int) (byte, error) {
-	if tx.Type() == types.LegacyTxType {
-		if tx.Protected() {
-			// EIP-155: v = 35 + 2*chainId + recid.
-			rec := new(big.Int).Sub(v, big.NewInt(35))
-			rec.Sub(rec, new(big.Int).Mul(chainID, big.NewInt(2)))
-			return smallRecID(rec)
-		}
-		// Pre-EIP-155: v = 27 + recid.
-		return smallRecID(new(big.Int).Sub(v, big.NewInt(27)))
-	}
-	// Typed transactions carry v directly as the y-parity (0 or 1).
-	return smallRecID(v)
-}
-
-func smallRecID(rec *big.Int) (byte, error) {
-	if rec.Sign() < 0 || rec.Cmp(big.NewInt(1)) > 0 {
-		return 0, fmt.Errorf("invalid signature recovery id %s", rec)
-	}
-	return byte(rec.Uint64()), nil
-}
-
-func recoverPublicKeys(transactions []string, chainID uint64) ([][]byte, error) {
-	if err := checkListLen("public_keys", len(transactions), maxPublicKeys); err != nil {
-		return nil, err
-	}
-
-	keys := make([][]byte, len(transactions))
-	payloadChainID := new(big.Int).SetUint64(chainID)
-	for i, tx := range transactions {
-		raw, err := hexToBytes(tx)
-		if err != nil {
-			return nil, fmt.Errorf("transactions[%d]: %w", i, err)
-		}
-		key, err := recoverPublicKey(raw, payloadChainID)
-		if err != nil {
-			return nil, fmt.Errorf("transactions[%d]: %w", i, err)
-		}
-		keys[i] = key
-	}
-	return keys, nil
+	return sszUint64(chainID), nil
 }
 
 func sszStatelessInputFromObj(obj jsonObj) ([]byte, error) {
@@ -929,41 +753,16 @@ func sszStatelessInputFromObj(obj jsonObj) ([]byte, error) {
 		return nil, fmt.Errorf("chainConfig: %w", err)
 	}
 
-	// public_keys are recovered from the payload transactions (the readable
-	// request does not carry them).
-	executionPayloadObj, err := requireObject(nprObj, "executionPayload")
-	if err != nil {
-		return nil, fmt.Errorf("newPayloadRequest: %w", err)
-	}
-	txs, err := requireStringList(executionPayloadObj, "transactions")
-	if err != nil {
-		return nil, fmt.Errorf("public_keys: %w", err)
-	}
-	chainID, err := requireUint64(chainConfigObj, "chainId")
-	if err != nil {
-		return nil, fmt.Errorf("public_keys: %w", err)
-	}
-	keys, err := recoverPublicKeys(txs, chainID)
-	if err != nil {
-		return nil, fmt.Errorf("public_keys: %w", err)
-	}
-
 	return sszContainer(
 		variable(npr),
 		variable(witness),
-		variable(chainConfig),
-		variable(sszListFixed(keys)),
+		fixed(chainConfig),
 	)
 }
 
-// EncodeStatelessInput SSZ-encodes the coordinator's per-block payload into the
-// byte slice the guest reads at _in_start: the two-byte 0x0001 schema id
-// followed by the SSZ SszStatelessInput. The [u64 LE len] frame is added later
-// by [buildZkcInputs]; this returns the framed SSZ only.
-//
-// The input is the readable encoder_obj form produced by
-// proof_io_v1.py::_decode_payload. Byte-for-byte compatibility with the Python
-// reference encoder is pinned by testdata/stateless_input_payload0.ssz.
+// EncodeStatelessInput encodes a per-block JSON payload as schema-prefixed SSZ.
+// The input includes chainConfig and an empty executionRequests object.
+// The backend adds the transport length prefix when constructing guest inputs.
 func EncodeStatelessInput(payload []byte) ([]byte, error) {
 	obj, err := parseJSONObject(payload, "statelessInput")
 	if err != nil {
@@ -975,7 +774,6 @@ func EncodeStatelessInput(payload []byte) ([]byte, error) {
 		return nil, fmt.Errorf("EncodeStatelessInput: %w", err)
 	}
 
-	// Mirrors the Python reference's schema_id_bytes + raw framing.
 	framed := append([]byte(nil), statelessInputSchemaID...)
 	framed = append(framed, raw...)
 	return framed, nil

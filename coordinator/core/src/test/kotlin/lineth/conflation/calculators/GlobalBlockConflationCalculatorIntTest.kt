@@ -9,8 +9,8 @@ import lineth.conflation.ZERO_COINBASE
 import lineth.coordination.blob.FakeBlobCompressor
 import net.consensys.FakeFixedClock
 import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.linea.traces.TracesCountersV2
-import net.consensys.linea.traces.fakeTracesCountersV2
+import net.consensys.linea.traces.TracesCountersV5
+import net.consensys.linea.traces.fakeTracesCountersV5
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -75,7 +75,7 @@ class GlobalBlockConflationCalculatorIntTest {
 
     calculatorByTraces =
       ConflationTriggerCalculatorByExecutionTraces(
-        tracesCountersLimit = fakeTracesCountersV2(100u),
+        tracesCountersLimit = fakeTracesCountersV5(100u),
         metricsFacade = mock<MetricsFacade>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS),
       )
     calculatorByHardFork =
@@ -93,7 +93,7 @@ class GlobalBlockConflationCalculatorIntTest {
         lastBlockNumber = lastBlockNumber,
         syncCalculators = listOf(calculatorByTraces, calculatorByData, calculatorByHardFork),
         deferredTriggerConflationCalculators = listOf(calculatorByDealine),
-        emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+        emptyTracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
       )
     globalCalculator.onConflatedBatch { trigger ->
       conflations.add(trigger)
@@ -108,7 +108,7 @@ class GlobalBlockConflationCalculatorIntTest {
       BlockCounters(
         blockNumber = 1uL,
         blockTimestamp = fakeClock.now(),
-        tracesCounters = fakeTracesCountersV2(101u),
+        tracesCounters = fakeTracesCountersV5(101u),
         blockRLPEncoded = ByteArray(10),
         coinbase = ZERO_COINBASE,
       )
@@ -116,7 +116,7 @@ class GlobalBlockConflationCalculatorIntTest {
       BlockCounters(
         blockNumber = 2uL,
         blockTimestamp = fakeClock.now(),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(10),
         coinbase = ZERO_COINBASE,
       )
@@ -141,7 +141,7 @@ class GlobalBlockConflationCalculatorIntTest {
       BlockCounters(
         blockNumber = 1uL,
         blockTimestamp = fakeClock.now(),
-        tracesCounters = fakeTracesCountersV2(60u),
+        tracesCounters = fakeTracesCountersV5(60u),
         blockRLPEncoded = ByteArray(10),
         coinbase = ZERO_COINBASE,
       )
@@ -149,7 +149,7 @@ class GlobalBlockConflationCalculatorIntTest {
       BlockCounters(
         blockNumber = 2uL,
         blockTimestamp = fakeClock.now(),
-        tracesCounters = fakeTracesCountersV2(50u),
+        tracesCounters = fakeTracesCountersV5(50u),
         blockRLPEncoded = ByteArray(20),
         coinbase = ZERO_COINBASE,
       )
@@ -174,7 +174,7 @@ class GlobalBlockConflationCalculatorIntTest {
       BlockCounters(
         blockNumber = 1uL,
         blockTimestamp = fakeClock.now(),
-        tracesCounters = fakeTracesCountersV2(50u),
+        tracesCounters = fakeTracesCountersV5(50u),
         blockRLPEncoded = ByteArray(10),
         coinbase = ZERO_COINBASE,
       )
@@ -182,7 +182,7 @@ class GlobalBlockConflationCalculatorIntTest {
       BlockCounters(
         blockNumber = 2uL,
         blockTimestamp = fakeClock.now(),
-        tracesCounters = fakeTracesCountersV2(50u),
+        tracesCounters = fakeTracesCountersV5(50u),
         blockRLPEncoded = ByteArray(20),
         coinbase = ZERO_COINBASE,
       )
@@ -190,7 +190,7 @@ class GlobalBlockConflationCalculatorIntTest {
       BlockCounters(
         blockNumber = 3uL,
         blockTimestamp = fakeClock.now(),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(20),
         coinbase = ZERO_COINBASE,
       )
@@ -216,7 +216,7 @@ class GlobalBlockConflationCalculatorIntTest {
       BlockCounters(
         blockNumber = 1uL,
         blockTimestamp = fakeClock.now(),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(500),
         coinbase = ZERO_COINBASE,
       )
@@ -224,7 +224,7 @@ class GlobalBlockConflationCalculatorIntTest {
       BlockCounters(
         blockNumber = 2uL,
         blockTimestamp = fakeClock.now(),
-        tracesCounters = fakeTracesCountersV2(20u),
+        tracesCounters = fakeTracesCountersV5(20u),
         blockRLPEncoded = ByteArray(480),
         coinbase = ZERO_COINBASE,
       )
@@ -232,7 +232,7 @@ class GlobalBlockConflationCalculatorIntTest {
       BlockCounters(
         blockNumber = 3uL,
         blockTimestamp = fakeClock.now(),
-        tracesCounters = fakeTracesCountersV2(20u),
+        tracesCounters = fakeTracesCountersV5(20u),
         blockRLPEncoded = ByteArray(21),
         coinbase = ZERO_COINBASE,
       )
@@ -257,7 +257,7 @@ class GlobalBlockConflationCalculatorIntTest {
       BlockCounters(
         blockNumber = 1uL,
         blockTimestamp = fakeClock.now() + 9.seconds,
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(10),
         coinbase = ZERO_COINBASE,
       )
@@ -265,7 +265,7 @@ class GlobalBlockConflationCalculatorIntTest {
       BlockCounters(
         blockNumber = 2uL,
         blockTimestamp = fakeClock.now() + 10.seconds,
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(10),
         coinbase = ZERO_COINBASE,
       )
@@ -273,7 +273,7 @@ class GlobalBlockConflationCalculatorIntTest {
       BlockCounters(
         blockNumber = 3uL,
         blockTimestamp = fakeClock.now() + 19.seconds,
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(10),
         coinbase = ZERO_COINBASE,
       )
@@ -281,7 +281,7 @@ class GlobalBlockConflationCalculatorIntTest {
       BlockCounters(
         blockNumber = 4uL,
         blockTimestamp = fakeClock.now() + 30.seconds,
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(10),
         coinbase = ZERO_COINBASE,
       )
@@ -289,7 +289,7 @@ class GlobalBlockConflationCalculatorIntTest {
       BlockCounters(
         blockNumber = 5uL,
         blockTimestamp = fakeClock.now() + 31.seconds,
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(10),
         coinbase = ZERO_COINBASE,
       )
@@ -325,7 +325,7 @@ class GlobalBlockConflationCalculatorIntTest {
       BlockCounters(
         blockNumber = 1uL,
         blockTimestamp = fakeClock.now(),
-        tracesCounters = fakeTracesCountersV2(101u),
+        tracesCounters = fakeTracesCountersV5(101u),
         blockRLPEncoded = ByteArray(100),
         coinbase = ZERO_COINBASE,
       )
@@ -334,7 +334,7 @@ class GlobalBlockConflationCalculatorIntTest {
       BlockCounters(
         blockNumber = 2uL,
         blockTimestamp = fakeClock.now(),
-        tracesCounters = fakeTracesCountersV2(20u),
+        tracesCounters = fakeTracesCountersV5(20u),
         blockRLPEncoded = ByteArray(1_000),
         coinbase = ZERO_COINBASE,
       )
@@ -343,7 +343,7 @@ class GlobalBlockConflationCalculatorIntTest {
       BlockCounters(
         blockNumber = 3uL,
         blockTimestamp = fakeClock.now(),
-        tracesCounters = fakeTracesCountersV2(30u),
+        tracesCounters = fakeTracesCountersV5(30u),
         blockRLPEncoded = ByteArray(300),
         coinbase = ZERO_COINBASE,
       )
@@ -351,7 +351,7 @@ class GlobalBlockConflationCalculatorIntTest {
       BlockCounters(
         blockNumber = 4uL,
         blockTimestamp = fakeClock.now(),
-        tracesCounters = fakeTracesCountersV2(70u),
+        tracesCounters = fakeTracesCountersV5(70u),
         blockRLPEncoded = ByteArray(400),
         coinbase = ZERO_COINBASE,
       )
@@ -360,7 +360,7 @@ class GlobalBlockConflationCalculatorIntTest {
       BlockCounters(
         blockNumber = 5uL,
         blockTimestamp = fakeClock.now() + 9.seconds,
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(100),
         coinbase = ZERO_COINBASE,
       )
@@ -368,7 +368,7 @@ class GlobalBlockConflationCalculatorIntTest {
       BlockCounters(
         blockNumber = 6uL,
         blockTimestamp = fakeClock.now() + 19.seconds,
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(100),
         coinbase = ZERO_COINBASE,
       )
@@ -376,7 +376,7 @@ class GlobalBlockConflationCalculatorIntTest {
       BlockCounters(
         blockNumber = 7uL,
         blockTimestamp = fakeClock.now() + 30.seconds,
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(100),
         coinbase = ZERO_COINBASE,
       )
@@ -384,7 +384,7 @@ class GlobalBlockConflationCalculatorIntTest {
       BlockCounters(
         blockNumber = 8uL,
         blockTimestamp = fakeClock.now() + 31.seconds,
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(100),
         coinbase = ZERO_COINBASE,
       )
@@ -392,7 +392,7 @@ class GlobalBlockConflationCalculatorIntTest {
       BlockCounters(
         blockNumber = 9uL,
         blockTimestamp = fakeClock.now() + 32.seconds,
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(100),
         coinbase = ZERO_COINBASE,
       )

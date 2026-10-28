@@ -1,6 +1,4 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
@@ -11,6 +9,7 @@ package maru.core.ext.metrics
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
+import lineth.vertx.vertxTestOptions
 import maru.metrics.BesuMetricsSystemAdapter
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
@@ -18,7 +17,7 @@ import org.hyperledger.besu.plugin.services.MetricsSystem
 
 object TestMetrics {
   private val TestMeterRegistry: MeterRegistry = SimpleMeterRegistry()
-  private val vertx = Vertx.vertx()
+  private val vertx = Vertx.vertx(vertxTestOptions)
   val TestMetricsFacade: MetricsFacade =
     MicrometerMetricsFacade(
       registry = TestMeterRegistry,

@@ -18,6 +18,7 @@ import linea.kotlin.toHexString
 import linea.kotlin.toHexStringUInt256
 import linea.log4j.configureLoggers
 import linea.web3j.ethapi.createEthApiClient
+import lineth.vertx.vertxTestOptions
 import net.consensys.linea.jsonrpc.JsonRpcError
 import net.consensys.linea.jsonrpc.JsonRpcRequest
 import org.apache.logging.log4j.Level
@@ -48,7 +49,7 @@ class EthLogsSearcherImplIntTest {
 
   @BeforeEach
   fun beforeEach() {
-    vertx = Vertx.vertx()
+    vertx = Vertx.vertx(vertxTestOptions)
     configureLoggers(
       rootLevel = Level.INFO,
       log.name to Level.DEBUG,
@@ -65,7 +66,7 @@ class EthLogsSearcherImplIntTest {
     wireMockServer = WireMockServer(WireMockConfiguration.options().dynamicPort())
     wireMockServer.start()
 
-    vertx = Vertx.vertx()
+    vertx = Vertx.vertx(vertxTestOptions)
     logsClient = EthLogsSearcherImpl(
       vertx,
       ethApiClient = createEthApiClient(
@@ -234,7 +235,7 @@ class EthLogsSearcherImplIntTest {
   @Test
   fun `when eth_getLogs gets a DNS error shall return failed promise`() {
     val randomHostname = "nowhere-${Random.nextBytes(20).encodeHex()}.local"
-    vertx = Vertx.vertx()
+    vertx = Vertx.vertx(vertxTestOptions)
     logsClient = EthLogsSearcherImpl(
       vertx,
       createEthApiClient(

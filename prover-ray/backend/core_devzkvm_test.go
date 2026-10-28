@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"encoding/binary"
 	"fmt"
 	"testing"
 
@@ -9,17 +10,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func validGuestOutput() []byte {
-	out := make([]byte, guestOutputSize)
-	out[0], out[1] = 0x00, 0x03
-	for i := 2; i < guestOutputSize; i++ {
-		out[i] = byte(i)
-	}
-	return out
+// specFrame builds keccak256(schema || pi) || schema || pi, the spec layout.
+func specFrame(schema uint16, pi []byte) []byte {
+	framed := binary.BigEndian.AppendUint16(nil, schema)
+	framed = append(framed, pi...)
+	return append(keccak256(framed), framed...)
 }
 
+// samplePublicInputs stands in for SSZ(public inputs); the frame check does not
+// read them.
+var samplePublicInputs = []byte("public inputs")
+
 func TestClassifyGuestOutput(t *testing.T) {
-	valid := validGuestOutput()
+	valid := specFrame(guestOutputSchemaID, samplePublicInputs)
 
 	t.Run("valid output is returned", func(t *testing.T) {
 		got, err := classifyGuestOutput(map[string][]byte{guestOutputMemory: valid}, nil)
@@ -47,17 +50,26 @@ func TestClassifyGuestOutput(t *testing.T) {
 		assert.Contains(t, err.Error(), "no guest_output")
 	})
 
-	t.Run("wrong length is rejected", func(t *testing.T) {
-		_, err := classifyGuestOutput(map[string][]byte{guestOutputMemory: {0x00, 0x03, 0x01}}, nil)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "3 bytes, want 34")
-	})
+	preSpec := append([]byte{0x00, 0x03}, samplePublicInputs...)
+	preSpec = append(preSpec, keccak256(samplePublicInputs)...)
+	badHash := specFrame(guestOutputSchemaID, samplePublicInputs)
+	badHash[0] ^= 0xff
 
-	t.Run("wrong schema id is rejected", func(t *testing.T) {
-		bad := validGuestOutput()
-		bad[0], bad[1] = 0x00, 0x01
-		_, err := classifyGuestOutput(map[string][]byte{guestOutputMemory: bad}, nil)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "0x0001, want 0x0003")
-	})
+	rejected := map[string]struct {
+		out     []byte
+		wantErr string
+	}{
+		"pre-spec layout": {preSpec, "the spec expects keccak256(0x0003 || public inputs)"},
+		"hash mismatch":   {badHash, "hash does not match"},
+		"wrong schema id": {specFrame(0x0002, samplePublicInputs), "schema id is 0x0002, want 0x0003"},
+		"too short":       {make([]byte, 33), "shorter than the hash and schema id"},
+	}
+	for name, tc := range rejected {
+		t.Run(name, func(t *testing.T) {
+			_, err := classifyGuestOutput(map[string][]byte{guestOutputMemory: tc.out}, nil)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "guest_output does not follow the spec")
+			assert.Contains(t, err.Error(), tc.wantErr)
+		})
+	}
 }

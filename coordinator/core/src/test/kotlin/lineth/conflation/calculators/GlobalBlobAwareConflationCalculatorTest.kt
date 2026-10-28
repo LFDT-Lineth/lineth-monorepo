@@ -15,8 +15,8 @@ import net.consensys.FakeFixedClock
 import net.consensys.linea.metrics.FakeHistogram
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
-import net.consensys.linea.traces.TracesCountersV2
-import net.consensys.linea.traces.fakeTracesCountersV2
+import net.consensys.linea.traces.TracesCountersV5
+import net.consensys.linea.traces.fakeTracesCountersV5
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -190,7 +190,7 @@ class GlobalBlobAwareConflationCalculatorTest {
     calculatorByDataCompressed = ConflationTriggerCalculatorByDataCompressed(blobCompressor = blobCompressor)
     calculatorByTraces =
       ConflationTriggerCalculatorByExecutionTraces(
-        tracesCountersLimit = fakeTracesCountersV2(100u),
+        tracesCountersLimit = fakeTracesCountersV5(100u),
         metricsFacade = mock(defaultAnswer = Mockito.RETURNS_DEEP_STUBS),
       )
     conflationTargetEndBlockNumbers.clear()
@@ -212,7 +212,7 @@ class GlobalBlobAwareConflationCalculatorTest {
           calculatorByTraces, calculatorByDataCompressed, calculatorByTargetBlockNumber, calculatorByTimestampHardFork,
         ),
         deferredTriggerConflationCalculators = listOf(calculatorByDealine),
-        emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+        emptyTracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
       )
     aggregationTargetEndBlockNumbers = ConcurrentSkipListSet<ULong>()
     calculator =
@@ -249,7 +249,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         BlockCounters(
           blockNumber = it,
           blockTimestamp = fakeClockTime.plus(blockTime.times(it.toInt())),
-          tracesCounters = fakeTracesCountersV2(1u),
+          tracesCounters = fakeTracesCountersV5(1u),
           blockRLPEncoded = ByteArray(11),
           numOfTransactions = 1u,
           gasUsed = 10uL,
@@ -265,7 +265,7 @@ class GlobalBlobAwareConflationCalculatorTest {
           startBlockNumber = 1uL,
           endBlockNumber = 4uL,
           conflationTrigger = ConflationTrigger.HARD_FORK,
-          tracesCounters = fakeTracesCountersV2(4u),
+          tracesCounters = fakeTracesCountersV5(4u),
         ),
       ),
     )
@@ -287,7 +287,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         BlockCounters(
           blockNumber = it,
           blockTimestamp = fakeClockTime,
-          tracesCounters = fakeTracesCountersV2(1u),
+          tracesCounters = fakeTracesCountersV5(1u),
           blockRLPEncoded = ByteArray(11),
           numOfTransactions = 1u,
           gasUsed = 10uL,
@@ -303,13 +303,13 @@ class GlobalBlobAwareConflationCalculatorTest {
           startBlockNumber = 1uL,
           endBlockNumber = 5uL,
           conflationTrigger = ConflationTrigger.TARGET_BLOCK_NUMBER,
-          tracesCounters = fakeTracesCountersV2(5u),
+          tracesCounters = fakeTracesCountersV5(5u),
         ),
         ConflationCalculationResult(
           startBlockNumber = 6uL,
           endBlockNumber = 10uL,
           conflationTrigger = ConflationTrigger.TARGET_BLOCK_NUMBER,
-          tracesCounters = fakeTracesCountersV2(5u),
+          tracesCounters = fakeTracesCountersV5(5u),
         ),
       ),
     )
@@ -338,7 +338,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 1uL,
         blockTimestamp = fakeClockTime,
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(11),
         numOfTransactions = 1u,
         gasUsed = 10uL,
@@ -348,7 +348,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 2uL,
         blockTimestamp = block1Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(12),
         numOfTransactions = 1u,
         gasUsed = 10uL,
@@ -358,7 +358,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 3uL,
         blockTimestamp = block2Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(83),
         numOfTransactions = 1u,
         gasUsed = 10uL,
@@ -368,7 +368,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 4uL,
         blockTimestamp = block3Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(44),
         numOfTransactions = 1u,
         gasUsed = 10uL,
@@ -401,13 +401,13 @@ class GlobalBlobAwareConflationCalculatorTest {
           startBlockNumber = 1uL,
           endBlockNumber = 2uL,
           conflationTrigger = ConflationTrigger.DATA_LIMIT,
-          tracesCounters = fakeTracesCountersV2(20u),
+          tracesCounters = fakeTracesCountersV5(20u),
         ),
         ConflationCalculationResult(
           startBlockNumber = 3uL,
           endBlockNumber = 3uL,
           conflationTrigger = ConflationTrigger.DATA_LIMIT,
-          tracesCounters = fakeTracesCountersV2(10u),
+          tracesCounters = fakeTracesCountersV5(10u),
         ),
       ),
     )
@@ -437,7 +437,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 1uL,
         blockTimestamp = fakeClockTime,
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(11),
         coinbase = ZERO_COINBASE,
       )
@@ -445,7 +445,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 2uL,
         blockTimestamp = block1Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(12),
         coinbase = ZERO_COINBASE,
       )
@@ -453,7 +453,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 3uL,
         blockTimestamp = block2Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(90u),
+        tracesCounters = fakeTracesCountersV5(90u),
         blockRLPEncoded = ByteArray(13),
         coinbase = ZERO_COINBASE,
       )
@@ -462,7 +462,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 4uL,
         blockTimestamp = block3Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(200u),
+        tracesCounters = fakeTracesCountersV5(200u),
         blockRLPEncoded = ByteArray(14),
         coinbase = ZERO_COINBASE,
       )
@@ -471,7 +471,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 5uL,
         blockTimestamp = block4Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(15),
         coinbase = ZERO_COINBASE,
       )
@@ -480,7 +480,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 6uL,
         blockTimestamp = block5Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(61),
         coinbase = ZERO_COINBASE,
       )
@@ -489,7 +489,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 7uL,
         blockTimestamp = block6Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(71),
         coinbase = ZERO_COINBASE,
       )
@@ -508,25 +508,25 @@ class GlobalBlobAwareConflationCalculatorTest {
           startBlockNumber = 1uL,
           endBlockNumber = 2uL,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = fakeTracesCountersV2(20u),
+          tracesCounters = fakeTracesCountersV5(20u),
         ),
         ConflationCalculationResult(
           startBlockNumber = 3uL,
           endBlockNumber = 3uL,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = fakeTracesCountersV2(90u),
+          tracesCounters = fakeTracesCountersV5(90u),
         ),
         ConflationCalculationResult(
           startBlockNumber = 4uL,
           endBlockNumber = 4uL,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = fakeTracesCountersV2(200u),
+          tracesCounters = fakeTracesCountersV5(200u),
         ),
         ConflationCalculationResult(
           startBlockNumber = 5uL,
           endBlockNumber = 6uL,
           conflationTrigger = ConflationTrigger.DATA_LIMIT,
-          tracesCounters = fakeTracesCountersV2(20u),
+          tracesCounters = fakeTracesCountersV5(20u),
         ),
       ),
     )
@@ -546,7 +546,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 1uL,
         blockTimestamp = fakeClockTime,
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(11),
         coinbase = ZERO_COINBASE,
       )
@@ -554,7 +554,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 2uL,
         blockTimestamp = block1Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(12),
         coinbase = ZERO_COINBASE,
       )
@@ -562,7 +562,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 3uL,
         blockTimestamp = block2Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(13),
         coinbase = ZERO_COINBASE,
       )
@@ -570,7 +570,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 4uL,
         blockTimestamp = block3Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(14),
         coinbase = ZERO_COINBASE,
       )
@@ -578,7 +578,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 5uL,
         blockTimestamp = block4Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(15),
         coinbase = ZERO_COINBASE,
       )
@@ -588,7 +588,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 6uL,
         blockTimestamp = block5Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(30u),
+        tracesCounters = fakeTracesCountersV5(30u),
         blockRLPEncoded = ByteArray(61),
         coinbase = ZERO_COINBASE,
       )
@@ -597,7 +597,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 7uL,
         blockTimestamp = block6Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(71),
         coinbase = ZERO_COINBASE,
       )
@@ -632,13 +632,13 @@ class GlobalBlobAwareConflationCalculatorTest {
           startBlockNumber = 1uL,
           endBlockNumber = 5uL,
           conflationTrigger = ConflationTrigger.TIME_LIMIT,
-          tracesCounters = fakeTracesCountersV2(50u),
+          tracesCounters = fakeTracesCountersV5(50u),
         ),
         ConflationCalculationResult(
           startBlockNumber = 6uL,
           endBlockNumber = 6uL,
           conflationTrigger = ConflationTrigger.DATA_LIMIT,
-          tracesCounters = fakeTracesCountersV2(30u),
+          tracesCounters = fakeTracesCountersV5(30u),
         ),
       ),
     )
@@ -660,7 +660,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 1uL,
         blockTimestamp = fakeClockTime,
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(11),
         coinbase = ZERO_COINBASE,
       )
@@ -668,7 +668,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 2uL,
         blockTimestamp = block1Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(12),
         coinbase = ZERO_COINBASE,
       )
@@ -676,7 +676,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 3uL,
         blockTimestamp = block2Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(13),
         coinbase = ZERO_COINBASE,
       )
@@ -684,7 +684,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 4uL,
         blockTimestamp = block3Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(14),
         coinbase = ZERO_COINBASE,
       )
@@ -692,7 +692,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 5uL,
         blockTimestamp = block4Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(15),
         coinbase = ZERO_COINBASE,
       )
@@ -701,7 +701,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 6uL,
         blockTimestamp = block5Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(60u),
+        tracesCounters = fakeTracesCountersV5(60u),
         blockRLPEncoded = ByteArray(16),
         coinbase = ZERO_COINBASE,
       )
@@ -711,7 +711,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 7uL,
         blockTimestamp = block6Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(71),
         coinbase = ZERO_COINBASE,
       )
@@ -732,13 +732,13 @@ class GlobalBlobAwareConflationCalculatorTest {
           startBlockNumber = 1uL,
           endBlockNumber = 5uL,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = fakeTracesCountersV2(50u),
+          tracesCounters = fakeTracesCountersV5(50u),
         ),
         ConflationCalculationResult(
           startBlockNumber = 6uL,
           endBlockNumber = 6uL,
           conflationTrigger = ConflationTrigger.DATA_LIMIT,
-          tracesCounters = fakeTracesCountersV2(60u),
+          tracesCounters = fakeTracesCountersV5(60u),
         ),
       ),
     )
@@ -756,7 +756,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 1uL,
         blockTimestamp = fakeClockTime,
-        tracesCounters = fakeTracesCountersV2(50u),
+        tracesCounters = fakeTracesCountersV5(50u),
         blockRLPEncoded = ByteArray(11),
         coinbase = ZERO_COINBASE,
       )
@@ -765,7 +765,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 2uL,
         blockTimestamp = block1Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(100u),
+        tracesCounters = fakeTracesCountersV5(100u),
         blockRLPEncoded = ByteArray(12),
         coinbase = ZERO_COINBASE,
       )
@@ -774,7 +774,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 3uL,
         blockTimestamp = block2Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(90u),
+        tracesCounters = fakeTracesCountersV5(90u),
         blockRLPEncoded = ByteArray(13),
         coinbase = ZERO_COINBASE,
       )
@@ -783,7 +783,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 4uL,
         blockTimestamp = block3Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(100u),
+        tracesCounters = fakeTracesCountersV5(100u),
         blockRLPEncoded = ByteArray(14),
         coinbase = ZERO_COINBASE,
       )
@@ -792,7 +792,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 5uL,
         blockTimestamp = block4Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(50u),
+        tracesCounters = fakeTracesCountersV5(50u),
         blockRLPEncoded = ByteArray(15),
         coinbase = ZERO_COINBASE,
       )
@@ -803,7 +803,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 6uL,
         blockTimestamp = block5Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(60u),
+        tracesCounters = fakeTracesCountersV5(60u),
         blockRLPEncoded = ByteArray(16),
         coinbase = ZERO_COINBASE,
       )
@@ -826,31 +826,31 @@ class GlobalBlobAwareConflationCalculatorTest {
           startBlockNumber = 1uL,
           endBlockNumber = 1uL,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = fakeTracesCountersV2(50u),
+          tracesCounters = fakeTracesCountersV5(50u),
         ),
         ConflationCalculationResult(
           startBlockNumber = 2uL,
           endBlockNumber = 2uL,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = fakeTracesCountersV2(100u),
+          tracesCounters = fakeTracesCountersV5(100u),
         ),
         ConflationCalculationResult(
           startBlockNumber = 3uL,
           endBlockNumber = 3uL,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = fakeTracesCountersV2(90u),
+          tracesCounters = fakeTracesCountersV5(90u),
         ),
         ConflationCalculationResult(
           startBlockNumber = 4uL,
           endBlockNumber = 4uL,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = fakeTracesCountersV2(100u),
+          tracesCounters = fakeTracesCountersV5(100u),
         ),
         ConflationCalculationResult(
           startBlockNumber = 5uL,
           endBlockNumber = 5uL,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = fakeTracesCountersV2(50u),
+          tracesCounters = fakeTracesCountersV5(50u),
         ),
       ),
     )
@@ -872,7 +872,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 1uL,
         blockTimestamp = fakeClockTime,
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(11),
         coinbase = ZERO_COINBASE,
       )
@@ -880,7 +880,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 2uL,
         blockTimestamp = block1Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(12),
         coinbase = ZERO_COINBASE,
       )
@@ -888,7 +888,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 3uL,
         blockTimestamp = block2Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(13),
         coinbase = ZERO_COINBASE,
       )
@@ -896,7 +896,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 4uL,
         blockTimestamp = block3Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(14),
         coinbase = ZERO_COINBASE,
       )
@@ -904,7 +904,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 5uL,
         blockTimestamp = block4Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(15),
         coinbase = ZERO_COINBASE,
       )
@@ -913,7 +913,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 6uL,
         blockTimestamp = block5Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(200u),
+        tracesCounters = fakeTracesCountersV5(200u),
         blockRLPEncoded = ByteArray(16),
         coinbase = ZERO_COINBASE,
       )
@@ -923,7 +923,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 7uL,
         blockTimestamp = block6Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(71),
         coinbase = ZERO_COINBASE,
       )
@@ -944,13 +944,13 @@ class GlobalBlobAwareConflationCalculatorTest {
           startBlockNumber = 1uL,
           endBlockNumber = 5uL,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = fakeTracesCountersV2(50u),
+          tracesCounters = fakeTracesCountersV5(50u),
         ),
         ConflationCalculationResult(
           startBlockNumber = 6uL,
           endBlockNumber = 6uL,
           conflationTrigger = ConflationTrigger.DATA_LIMIT,
-          tracesCounters = fakeTracesCountersV2(200u),
+          tracesCounters = fakeTracesCountersV5(200u),
         ),
       ),
     )
@@ -968,7 +968,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 1uL,
         blockTimestamp = fakeClockTime,
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(11),
         coinbase = ZERO_COINBASE,
       )
@@ -976,7 +976,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 2uL,
         blockTimestamp = block1Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(12),
         coinbase = ZERO_COINBASE,
       )
@@ -984,7 +984,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 3uL,
         blockTimestamp = block2Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(13),
         coinbase = ZERO_COINBASE,
       )
@@ -992,7 +992,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 4uL,
         blockTimestamp = block3Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(14),
         coinbase = ZERO_COINBASE,
       )
@@ -1000,7 +1000,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 5uL,
         blockTimestamp = block4Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(15),
         coinbase = ZERO_COINBASE,
       )
@@ -1011,7 +1011,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 6uL,
         blockTimestamp = block5Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(60u),
+        tracesCounters = fakeTracesCountersV5(60u),
         blockRLPEncoded = ByteArray(61),
         coinbase = ZERO_COINBASE,
       )
@@ -1021,7 +1021,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 7uL,
         blockTimestamp = block6Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(71),
         coinbase = ZERO_COINBASE,
       )
@@ -1042,13 +1042,13 @@ class GlobalBlobAwareConflationCalculatorTest {
           startBlockNumber = 1uL,
           endBlockNumber = 5uL,
           conflationTrigger = ConflationTrigger.DATA_LIMIT,
-          tracesCounters = fakeTracesCountersV2(50u),
+          tracesCounters = fakeTracesCountersV5(50u),
         ),
         ConflationCalculationResult(
           startBlockNumber = 6uL,
           endBlockNumber = 6uL,
           conflationTrigger = ConflationTrigger.DATA_LIMIT,
-          tracesCounters = fakeTracesCountersV2(60u),
+          tracesCounters = fakeTracesCountersV5(60u),
         ),
       ),
     )
@@ -1070,7 +1070,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 1uL,
         blockTimestamp = fakeClockTime,
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(11),
         coinbase = ZERO_COINBASE,
       )
@@ -1078,7 +1078,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 2uL,
         blockTimestamp = block1Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(12),
         coinbase = ZERO_COINBASE,
       )
@@ -1086,7 +1086,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 3uL,
         blockTimestamp = block2Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(13),
         coinbase = ZERO_COINBASE,
       )
@@ -1094,7 +1094,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 4uL,
         blockTimestamp = block3Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(14),
         coinbase = ZERO_COINBASE,
       )
@@ -1102,7 +1102,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 5uL,
         blockTimestamp = block4Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(15),
         coinbase = ZERO_COINBASE,
       )
@@ -1113,7 +1113,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 6uL,
         blockTimestamp = block5Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(200u),
+        tracesCounters = fakeTracesCountersV5(200u),
         blockRLPEncoded = ByteArray(61),
         coinbase = ZERO_COINBASE,
       )
@@ -1123,7 +1123,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 7uL,
         blockTimestamp = block6Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(71),
         coinbase = ZERO_COINBASE,
       )
@@ -1144,13 +1144,13 @@ class GlobalBlobAwareConflationCalculatorTest {
           startBlockNumber = 1uL,
           endBlockNumber = 5uL,
           conflationTrigger = ConflationTrigger.DATA_LIMIT,
-          tracesCounters = fakeTracesCountersV2(50u),
+          tracesCounters = fakeTracesCountersV5(50u),
         ),
         ConflationCalculationResult(
           startBlockNumber = 6uL,
           endBlockNumber = 6uL,
           conflationTrigger = ConflationTrigger.DATA_LIMIT,
-          tracesCounters = fakeTracesCountersV2(200u),
+          tracesCounters = fakeTracesCountersV5(200u),
         ),
       ),
     )
@@ -1172,7 +1172,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 1uL,
         blockTimestamp = fakeClockTime,
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(11),
         coinbase = ZERO_COINBASE,
       )
@@ -1180,7 +1180,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 2uL,
         blockTimestamp = block1Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(12),
         coinbase = ZERO_COINBASE,
       )
@@ -1188,7 +1188,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 3uL,
         blockTimestamp = block2Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(13),
         coinbase = ZERO_COINBASE,
       )
@@ -1196,7 +1196,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 4uL,
         blockTimestamp = block3Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(14),
         coinbase = ZERO_COINBASE,
       )
@@ -1204,7 +1204,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 5uL,
         blockTimestamp = block4Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(15),
         coinbase = ZERO_COINBASE,
       )
@@ -1215,7 +1215,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 6uL,
         blockTimestamp = block5Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(200u),
+        tracesCounters = fakeTracesCountersV5(200u),
         blockRLPEncoded = ByteArray(61),
         coinbase = ZERO_COINBASE,
       )
@@ -1225,7 +1225,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 7uL,
         blockTimestamp = block6Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(71),
         coinbase = ZERO_COINBASE,
       )
@@ -1260,13 +1260,13 @@ class GlobalBlobAwareConflationCalculatorTest {
           startBlockNumber = 1uL,
           endBlockNumber = 5uL,
           conflationTrigger = ConflationTrigger.TIME_LIMIT,
-          tracesCounters = fakeTracesCountersV2(50u),
+          tracesCounters = fakeTracesCountersV5(50u),
         ),
         ConflationCalculationResult(
           startBlockNumber = 6uL,
           endBlockNumber = 6uL,
           conflationTrigger = ConflationTrigger.DATA_LIMIT,
-          tracesCounters = fakeTracesCountersV2(200u),
+          tracesCounters = fakeTracesCountersV5(200u),
         ),
       ),
     )
@@ -1288,7 +1288,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 1uL,
         blockTimestamp = fakeClockTime,
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(11),
         coinbase = ZERO_COINBASE,
       )
@@ -1296,7 +1296,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 2uL,
         blockTimestamp = block1Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(10u),
+        tracesCounters = fakeTracesCountersV5(10u),
         blockRLPEncoded = ByteArray(12),
         coinbase = ZERO_COINBASE,
       )
@@ -1304,7 +1304,7 @@ class GlobalBlobAwareConflationCalculatorTest {
       BlockCounters(
         blockNumber = 3uL,
         blockTimestamp = block2Counters.blockTimestamp.plus(blockTime),
-        tracesCounters = fakeTracesCountersV2(90u),
+        tracesCounters = fakeTracesCountersV5(90u),
         blockRLPEncoded = ByteArray(13),
         coinbase = ZERO_COINBASE,
       )
@@ -1323,7 +1323,7 @@ class GlobalBlobAwareConflationCalculatorTest {
           startBlockNumber = 1uL,
           endBlockNumber = 2uL,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = fakeTracesCountersV2(20u),
+          tracesCounters = fakeTracesCountersV5(20u),
         ),
       ),
     )

@@ -10,10 +10,9 @@ pub fn build(b: *std.Build) void {
     // Keep `-Doptimize` exposed to dependency consumers and default to ReleaseSmall.
     const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseSmall)") orelse .ReleaseSmall;
 
-    // Keccak provider: standard zig keccak (std.crypto) by default; the
-    // arithmetization keccak wrapper (prover-accelerated custom op) when opted in
-    // with -Dkeccak-accel=true. Read by zkvm_provide.zig at comptime.
-    const keccak_accel = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: standard)") orelse false;
+    // Keccak provider: standard zig keccak by default;
+    // -Dkeccak-accel=true selects the arithmetization wrapper (prover-accelerated custom op). Read by zkvm_provide.zig at comptime.
+    const keccak_accel = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: unaccelerated)") orelse false;
     const execution_specs_fixtures_link = b.option([]const u8, "execution-specs-fixtures-link", "Path where execution-specs zkevm fixtures are exposed") orelse "/tmp/execution-specs-json-fixtures/fixtures";
     const zkc_smoke_input = b.option([]const u8, "zkc-smoke-input", "Extended SSZ input for the ZkC smoke test") orelse "test/testdata/stateless_input.ssz";
     const host_tools = b.option(bool, "host-tools", "Build native test and helper targets") orelse false;
@@ -122,7 +121,10 @@ pub fn build(b: *std.Build) void {
         // (ReleaseSmall) for the prover toolchain.
         const host_optimize: std.builtin.OptimizeMode =
             if (optimize == .ReleaseSmall) .ReleaseSafe else optimize;
-        const native_target = b.resolveTargetQuery(.{});
+        // Baseline CPU, not the build host's: `l2-execution-runner` ships in the prover-ray image,
+        // so host-specific extensions (e.g. AVX-512 on the build machine) would SIGILL on older
+        // or emulated (Rosetta) x86_64 hosts.
+        const native_target = b.resolveTargetQuery(.{ .cpu_model = .baseline });
         const zlob_dep = b.lazyDependency("zlob", .{ .target = native_target, .optimize = host_optimize }) orelse
             @panic("zlob dependency is required for native test and helper targets");
         const zesu_native = b.dependency("zesu", .{
@@ -500,7 +502,9 @@ pub fn build(b: *std.Build) void {
         l2_execution_runner_exe.root_module.addImport("l2_execution_ssz", l2_execution_ssz_mod);
         l2_execution_runner_exe.root_module.addImport("l2_execution_json", l2_execution_json_mod);
         linkNativeCryptoProvider(l2_execution_runner_exe, provide_native_obj, guest_crypto_host_a);
-        b.installArtifact(l2_execution_runner_exe);
+        const install_runner = b.addInstallArtifact(l2_execution_runner_exe, .{});
+        b.getInstallStep().dependOn(&install_runner.step);
+        b.step("install-runner", "Install the native runner for the prover image").dependOn(&install_runner.step);
 
         const run_l2_execution_runner_step = b.step(
             "l2-execution-runner",
@@ -557,6 +561,7 @@ pub fn build(b: *std.Build) void {
             });
             stateless_input_encode_tests.root_module.addImport("zesu_input", native_imports.input);
             stateless_input_encode_tests.root_module.addImport("zesu_ssz_decode", native_imports.ssz_decode);
+            stateless_input_encode_tests.root_module.addImport("zesu_rlp_decode", native_imports.rlp_decode);
             stateless_input_encode_tests.root_module.addImport("evm_execution_fixtures", fixtures_mod);
             stateless_input_encode_tests.root_module.addImport("stateless_input_encode", stateless_input_encode_mod);
             stateless_input_encode_tests.root_module.addImport("tx_fixtures", tx_fixtures_mod);

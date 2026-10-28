@@ -4,6 +4,7 @@ import io.vertx.core.Vertx
 import linea.domain.Block
 import linea.domain.toBlockParameter
 import linea.ethapi.EthApiBlockClient
+import lineth.vertx.vertxTestOptions
 import net.consensys.linea.async.AsyncRetryer
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -13,7 +14,7 @@ import kotlin.time.Duration.Companion.milliseconds
 
 class BlocksFetcher(
   val ethApiBlockClient: EthApiBlockClient,
-  val vertx: Vertx = Vertx.vertx(),
+  val vertx: Vertx = Vertx.vertx(vertxTestOptions),
   val pollingChuckSize: UInt = 100U,
   val log: Logger = LogManager.getLogger(BlocksFetcher::class.java),
 ) {

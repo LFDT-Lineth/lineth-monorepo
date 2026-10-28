@@ -1,5 +1,5 @@
 /*
- * Copyright Consensys Software Inc.
+ * Copyright Consensys Incorporated
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -57,6 +57,7 @@ public class BesuServiceProvider {
     return getBesuService(context, SynchronizationService.class);
   }
 
+  @SuppressWarnings("deprecation")
   public static BesuEvents getBesuEventsService(final ServiceManager context) {
     return getBesuService(context, BesuEvents.class);
   }
