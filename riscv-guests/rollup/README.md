@@ -17,10 +17,8 @@ rejects an empty list — see [Guest termination semantics](#guest-termination-s
 | `public_inputs.end_block_number` | last exec proof's `public_inputs.end_block_number` |
 | `public_inputs.end_block_timestamp` | last exec proof's `public_inputs.end_block_timestamp` |
 | `public_inputs.l2_l1_bridge_transaction_tree` | **sentinel** |
-| `public_inputs.parent_l1_l2_bridge_rolling_hash` | first exec proof's `public_inputs.parent_l1_l2_bridge_rolling_hash` |
-| `public_inputs.parent_l1_l2_bridge_rolling_hash_message_number` | first exec proof's `public_inputs.parent_l1_l2_bridge_rolling_hash_message_number` |
-| `public_inputs.end_l1_l2_bridge_rolling_hash` | last exec proof's `public_inputs.end_l1_l2_bridge_rolling_hash` |
-| `public_inputs.end_l1_l2_bridge_rolling_hash_message_number` | last exec proof's `public_inputs.end_l1_l2_bridge_rolling_hash_message_number` |
+| `public_inputs.end_l1_l2_bridge_rolling_hash` | `public_inputs.end_l1_l2_bridge_rolling_hash` of the last exec proof whose message number is non-zero, else zeros |
+| `public_inputs.end_l1_l2_bridge_rolling_hash_message_number` | that exec proof's `public_inputs.end_l1_l2_bridge_rolling_hash_message_number`, else zero |
 | `public_inputs.dynamic_chain_config_hash` | first exec proof's `public_inputs.dynamic_chain_config_hash` |
 | `public_inputs.parent_ftx_rolling_hash` | first exec proof's `public_inputs.parent_ftx_rolling_hash` |
 | `public_inputs.parent_ftx_number` | first exec proof's `public_inputs.parent_ftx_number` |

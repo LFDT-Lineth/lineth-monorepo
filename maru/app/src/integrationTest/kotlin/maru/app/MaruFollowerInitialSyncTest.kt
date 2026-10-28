@@ -4,26 +4,25 @@
  *
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
-@file:Suppress("DEPRECATION") // TODO: migrate to maru.test.cluster.MaruCluster
-
 package maru.app
 
 import maru.config.SyncingConfig
+import maru.test.extensions.TestSyncingConfigs
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
+import testutils.Checks.checkAllNodesHaveSameBlocks
 import testutils.Checks.getBlockNumber
 import testutils.ValidatorFollowerNetwork
-import testutils.maru.MaruFactory
 import testutils.maru.awaitTillMaruHasPeers
 import kotlin.time.Duration.Companion.seconds
 
 class MaruFollowerInitialSyncTest {
   companion object {
     @JvmStatic
-    fun enumeratingSyncingConfigs(): List<SyncingConfig> = MaruFactory.enumeratingSyncingConfigs()
+    fun enumeratingSyncingConfigs(): List<SyncingConfig> = TestSyncingConfigs.enumerating()
   }
 
   private lateinit var network: ValidatorFollowerNetwork
@@ -31,7 +30,6 @@ class MaruFollowerInitialSyncTest {
   @BeforeEach
   fun setUp() {
     network = ValidatorFollowerNetwork()
-    network.startBesuNodes()
   }
 
   @AfterEach
@@ -42,7 +40,7 @@ class MaruFollowerInitialSyncTest {
   @ParameterizedTest
   @MethodSource("enumeratingSyncingConfigs")
   fun `Maru follower is able to complete initial syncing`(syncingConfig: SyncingConfig) {
-    network.startMaruNodes(syncingConfig)
+    network.start(syncingConfig)
 
     network.stopFollowerMaru()
 
@@ -53,10 +51,10 @@ class MaruFollowerInitialSyncTest {
     network.produceBlocks(blocksTotal)
 
     // This is here mainly to wait until block propagation is complete
-    network.checkNetworkStacksBlocksProduced(blocksTotal, network.validatorStack)
+    checkAllNodesHaveSameBlocks(blocksTotal, network.validatorBesu)
 
-    network.startFollowerMaru(syncingConfig)
-    network.followerStack.maruApp.awaitTillMaruHasPeers(1u, pollingInterval = 1.seconds)
+    network.startFollowerMaru()
+    network.followerMaru.awaitTillMaruHasPeers(1u, pollingInterval = 1.seconds)
 
     when (syncingConfig.syncTargetSelection) {
       is SyncingConfig.SyncTargetSelection.Highest ->
@@ -65,7 +63,7 @@ class MaruFollowerInitialSyncTest {
       is SyncingConfig.SyncTargetSelection.MostFrequent -> {
         network.checkValidatorAndFollowerBlocks(blocksToProduceWithoutResidue)
         // ensure that the head of follower is blocksToProduceWithoutResidue
-        assertThat(network.followerStack.besuNode.getBlockNumber()).isEqualTo(blocksToProduceWithoutResidue)
+        assertThat(network.followerBesu.getBlockNumber()).isEqualTo(blocksToProduceWithoutResidue)
       }
     }
   }

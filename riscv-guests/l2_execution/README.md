@@ -1,0 +1,58 @@
+# L2 Execution Guest
+
+This package contains the RISC-V guest program for the Rollup's extended l2-execution proof: the Linea-layer logic (`l2_execution.zig`) on top of per-block stateless execution — conflation of a contiguous block range, forced transactions, the L1<->L2 message bridge, and the public-input tuple. Per-block execution itself is delegated to a log-preserving seam (`execution.zig`) over Zesu's stateless executor, which decodes an SSZ-encoded `StatelessInput` and executes the block.
+
+## Scope
+
+- Decodes the extended `L2ExecutionProofPrivateInput` SSZ envelope (a contiguous run of payloads, each carrying an opaque vanilla `SszStatelessInput` plus forced-transaction witnesses), runs `l2_execution.runL2Execution`, and emits `keccak256(frame) ‖ frame` with `frame = schema_id (0x0003) ‖ SSZ(public inputs)`. The public inputs include the `l2L1Messages`, `filteredAddresses` and `l2MessagingBlocksOffsets` lists.
+- The native Zig tests replay a real execution-spec-tests `tests-zkevm` fixture and hand-built fixtures against Python-oracle-computed expected values (see `Readme.md` §6.3/§6.5/§2.1); `zig build extended-vanilla` reference-tests the EF zkevm corpus against fixture validity, while `zig build zkc-smoke` compares one extended SSZ input under ZkC with the host machine, including the exact accepted output.
+- Does not include blob compression or recursive proof aggregation — those are the rollup/rollup-aggregation guests' concern.
+- Keeps cryptographic precompile/signature acceleration behind Zesu's `accel_impl` boundary. Both the freestanding guest and native tests use Zesu's `extern` backend and define every `zkvm_*` accelerator symbol through `src/zkvm_provide.zig`: keccak from the Lineth wrapper (`-Dkeccak-accel`) or Zig `std.crypto`; SHA-256 and P-256 from Zig `std.crypto`; secp256k1 ecrecover/verify, EIP-2537 BLS12-381, BN254 (EIP-196/197), and EIP-4844 KZG point evaluation from the `guest_crypto` Constantine staticlib; and modexp/RIPEMD-160/BLAKE2f from Zesu's C-free backends.
+
+## Development
+
+The Zig version, dependency checkout, build manifest, and ZKC helper commands are shared by all guests at `riscv-guests/`.
+
+Run from the parent directory:
+
+```bash
+make -C l2_execution exec
+```
+
+`make -C l2_execution compile` writes the guest as a **statically-linked rv64im ELF** to `riscv-guests/l2_execution/zig-out/bin/evm_execution_guest` — the [zkvm-standards](https://github.com/eth-act/zkvm-standards/blob/main/standards/riscv-target/target.md) artifact ("Object Format: ELF, statically linked"), linked via `build_common`'s shared `installGuestElf`. The ZKC interpreter loads the guest (via ELF→JSON); `make -C l2_execution exec` builds it and runs it there — see the [parent README](../README.md#zkc-interpreter-integration). `make test` runs the native Zig tests through the same Constantine-backed crypto providers as the guest (see [Crypto Backends](../README.md#crypto-backends)).
+
+## Compilation
+
+`make -C l2_execution compile` (and `exec`/`debug`) build the guest with the
+arithmetization keccak wrapper (the prover-accelerated custom op) by default. Pass
+`KECCAK_ACCEL=false` to build with standard Zig keccak instead:
+
+```bash
+make -C l2_execution compile                      # arithmetization keccak wrapper
+make -C l2_execution compile KECCAK_ACCEL=false   # standard Zig keccak
+```
+
+Equivalently, running `zig build` directly from this directory (requires the generated linker script; run `make linker-script` once after a clean checkout):
+
+    make linker-script
+    zig build                        # arithmetization keccak wrapper
+    zig build -Dkeccak-accel=false   # standard Zig keccak
+
+## Shell alias
+
+`agp` (accelerated guest program): build this guest with the keccak wrapper and run
+it in the ZKC interpreter on an SSZ input, from anywhere. Add to `~/.zshrc`:
+
+```bash
+agp() {
+    local input
+    input="$(realpath "$1")" || { echo "agp: no such file: $1" >&2; return 1; }
+    /usr/bin/time -p make -C /path/to/lineth-monorepo/riscv-guests/l2_execution \
+        exec KECCAK_ACCEL=true INPUT="$input" "${@:2}"
+}
+```
+
+`realpath` resolves the input against your current directory *before* `make -C`
+switches into the guest directory (and the `|| return` aborts on a bad path
+instead of launching a build with no input); `/usr/bin/time -p` prints wall-clock
+real/user/sys.

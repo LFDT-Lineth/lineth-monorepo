@@ -57,6 +57,7 @@ from .block import (
     ForcedTransactionWitness,
     LinethPayloadInput,
     LinethRollupExtension,
+    SystemContracts,
 )
 from .stateless_input import encode_stateless_input_ssz
 from .l2_execution import (
@@ -151,6 +152,34 @@ def _validate_guest_request_envelope(obj: dict) -> None:
 # ── request: JSON dict -> guest dataclass ─────────────────────────────────────
 
 
+def _address(value: Any, ctx: str) -> Address:
+    raw = _bytes_from_hex(value, ctx)
+    if len(raw) != 20:
+        raise ProofIoError(f"'{ctx}' must be a 20-byte address, got {len(raw)} bytes")
+    return Address(raw)
+
+
+# JSON key -> `SystemContracts` field, in wire order.
+_SYSTEM_CONTRACT_KEYS = {
+    "beaconRoots": "beacon_roots",
+    "historyStorage": "history_storage",
+    "deposit": "deposit",
+    "withdrawalRequest": "withdrawal_request",
+    "consolidationRequest": "consolidation_request",
+    "builderDepositRequest": "builder_deposit_request",
+    "builderExitRequest": "builder_exit_request",
+}
+
+
+def _decode_system_contracts(obj: Any) -> SystemContracts:
+    ctx = "chainConfig.systemContracts."
+    if not isinstance(obj, dict):
+        raise ProofIoError("'chainConfig.systemContracts' must be an object")
+    return SystemContracts(
+        **{field: _address(_require(obj, key, ctx), f"{ctx}{key}") for key, field in _SYSTEM_CONTRACT_KEYS.items()}
+    )
+
+
 def _decode_chain_config(obj: dict) -> ChainConfig:
     return ChainConfig(
         l2_message_service_address=Address(
@@ -160,6 +189,7 @@ def _decode_chain_config(obj: dict) -> ChainConfig:
             _bytes_from_hex(_require(obj, "coinbase", "chainConfig."), "chainConfig.coinbase")
         ),
         chain_id=_u64(_require(obj, "chainId", "chainConfig."), "chainConfig.chainId"),
+        system_contracts=_decode_system_contracts(_require(obj, "systemContracts", "chainConfig.")),
     )
 
 
@@ -237,7 +267,8 @@ def decode_request(obj: dict) -> L2ExecutionProofPrivateInput:
     The request is a `{guestProgramId, provingSystem, proofRequest}` envelope: the guest ID
     is routing metadata and the block range is implied by the payloads. The single
     `proofRequest.chainConfig` carries both the Lineth range-level config
-    (`l2MessageServiceAddress`, `coinbase`, `chainId`) and the `{chainId, forkName}`
+    (`l2MessageServiceAddress`, `coinbase`, `chainId`, `systemContracts`) and the
+    `{chainId, forkName}`
     the per-payload stateless-input SSZ needs; `_decode_payload` reinjects the
     latter when SSZ-encoding each payload's readable `statelessInput`.
     """
@@ -301,10 +332,6 @@ def encode_response(proof: L2ExecutionProof, prover_version: str, *, program_vk:
             "endBlockNumber": int(pi.end_block_number),
             "endBlockTimestamp": int(pi.end_block_timestamp),
             "l2L1Messages": [_hx(h) for h in pi.l2_l1_messages],
-            "parentL1L2BridgeRollingHash": _hx(pi.parent_l1_l2_bridge_rolling_hash),
-            "parentL1L2BridgeRollingHashMessageNumber": int(
-                pi.parent_l1_l2_bridge_rolling_hash_message_number
-            ),
             "endL1L2BridgeRollingHash": _hx(pi.end_l1_l2_bridge_rolling_hash),
             "endL1L2BridgeRollingHashMessageNumber": int(
                 pi.end_l1_l2_bridge_rolling_hash_message_number
@@ -370,8 +397,6 @@ def _decode_l2_execution_public_input(obj: dict, ctx: str) -> L2ExecutionProofPu
         end_block_timestamp=n("endBlockTimestamp"),
         l2_l1_messages=[Hash32(_bytes_from_hex(h, f"{ctx}l2L1Messages[{i}]"))
                         for i, h in enumerate(_require_list(obj, "l2L1Messages", ctx))],
-        parent_l1_l2_bridge_rolling_hash=h("parentL1L2BridgeRollingHash"),
-        parent_l1_l2_bridge_rolling_hash_message_number=n("parentL1L2BridgeRollingHashMessageNumber"),
         end_l1_l2_bridge_rolling_hash=h("endL1L2BridgeRollingHash"),
         end_l1_l2_bridge_rolling_hash_message_number=n("endL1L2BridgeRollingHashMessageNumber"),
         dynamic_chain_config_hash=h("dynamicChainConfigHash"),
@@ -524,10 +549,6 @@ def _encode_finalization_shared_inputs(pi) -> dict:
     return {
         "endBlockNumber": int(pi.end_block_number),
         "endBlockTimestamp": int(pi.end_block_timestamp),
-        "parentL1L2BridgeRollingHash": _hx(pi.parent_l1_l2_bridge_rolling_hash),
-        "parentL1L2BridgeRollingHashMessageNumber": int(
-            pi.parent_l1_l2_bridge_rolling_hash_message_number
-        ),
         "endL1L2BridgeRollingHash": _hx(pi.end_l1_l2_bridge_rolling_hash),
         "endL1L2BridgeRollingHashMessageNumber": int(
             pi.end_l1_l2_bridge_rolling_hash_message_number
@@ -615,8 +636,6 @@ def _decode_rollup_public_input(obj: dict, ctx: str) -> RollupPublicInput:
     return RollupPublicInput(
         end_block_number=n("endBlockNumber"),
         end_block_timestamp=n("endBlockTimestamp"),
-        parent_l1_l2_bridge_rolling_hash=h("parentL1L2BridgeRollingHash"),
-        parent_l1_l2_bridge_rolling_hash_message_number=n("parentL1L2BridgeRollingHashMessageNumber"),
         end_l1_l2_bridge_rolling_hash=h("endL1L2BridgeRollingHash"),
         end_l1_l2_bridge_rolling_hash_message_number=n("endL1L2BridgeRollingHashMessageNumber"),
         dynamic_chain_config_hash=h("dynamicChainConfigHash"),

@@ -90,8 +90,6 @@ class SszRollupAggregationProofPrivateInput(Container):
 class SszFinalizationPublicInput(Container):
     end_block_number: uint64
     end_block_timestamp: uint64
-    parent_l1_l2_bridge_rolling_hash: SszBytes32
-    parent_l1_l2_bridge_rolling_hash_message_number: uint64
     end_l1_l2_bridge_rolling_hash: SszBytes32
     end_l1_l2_bridge_rolling_hash_message_number: uint64
     dynamic_chain_config_hash: SszBytes32
@@ -184,14 +182,14 @@ def encode_aggregation_output(submission: FinalizationSubmission) -> bytes:
     pi = submission.public_inputs
     fields = {name: getattr(pi, name) for name in SszFinalizationPublicInput.fields()}
     for name in (
-        "end_block_number", "end_block_timestamp", "parent_l1_l2_bridge_rolling_hash_message_number",
-        "end_l1_l2_bridge_rolling_hash_message_number", "parent_ftx_number", "end_processed_ftx_number",
+        "end_block_number", "end_block_timestamp", "end_l1_l2_bridge_rolling_hash_message_number",
+        "parent_ftx_number", "end_processed_ftx_number",
     ):
         fields[name] = int(fields[name])
     for name in (
-        "parent_l1_l2_bridge_rolling_hash", "end_l1_l2_bridge_rolling_hash", "dynamic_chain_config_hash",
-        "parent_ftx_rolling_hash", "end_ftx_rolling_hash", "parent_data_rolling_hash", "end_data_rolling_hash",
-        "parent_block_hash", "end_block_hash",
+        "end_l1_l2_bridge_rolling_hash", "dynamic_chain_config_hash", "parent_ftx_rolling_hash",
+        "end_ftx_rolling_hash", "parent_data_rolling_hash", "end_data_rolling_hash", "parent_block_hash",
+        "end_block_hash",
     ):
         fields[name] = bytes(fields[name])
     fields["l2_l1_roots"] = [bytes(root) for root in pi.l2_l1_roots]
@@ -214,14 +212,14 @@ def decode_aggregation_output_ssz(data: bytes) -> FinalizationSubmission:
     view = _strict_decode(payload, SszFinalizationPublicInput)
     fields = {name: getattr(view, name) for name in SszFinalizationPublicInput.fields()}
     for name in (
-        "end_block_number", "end_block_timestamp", "parent_l1_l2_bridge_rolling_hash_message_number",
-        "end_l1_l2_bridge_rolling_hash_message_number", "parent_ftx_number", "end_processed_ftx_number",
+        "end_block_number", "end_block_timestamp", "end_l1_l2_bridge_rolling_hash_message_number",
+        "parent_ftx_number", "end_processed_ftx_number",
     ):
         fields[name] = U64(int(fields[name]))
     for name in (
-        "parent_l1_l2_bridge_rolling_hash", "end_l1_l2_bridge_rolling_hash", "dynamic_chain_config_hash",
-        "parent_ftx_rolling_hash", "end_ftx_rolling_hash", "parent_data_rolling_hash", "end_data_rolling_hash",
-        "parent_block_hash", "end_block_hash",
+        "end_l1_l2_bridge_rolling_hash", "dynamic_chain_config_hash", "parent_ftx_rolling_hash",
+        "end_ftx_rolling_hash", "parent_data_rolling_hash", "end_data_rolling_hash", "parent_block_hash",
+        "end_block_hash",
     ):
         fields[name] = Hash32(bytes(fields[name]))
     for name in ("parent_data_tail_take_bytes", "final_data_tail_discard_bytes", "l2_l1_tree_depth"):

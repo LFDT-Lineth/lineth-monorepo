@@ -2,6 +2,15 @@
 
 ### ⚙️ Miscellaneous Tasks
 
+- *(deps)* Bump the go_modules group across 1 directory with 2 updates (#4258)
+## [1.0.8] - 2026-10-26
+
+### 🐛 Bug Fixes
+
+- *(prover)* Handle zero modulus in MODEXP (#4307)
+
+### ⚙️ Miscellaneous Tasks
+
 - *(misc)* Update copyright holder to Consensys Incorporated (#4244)
 ## [1.0.7] - 2026-10-05
 

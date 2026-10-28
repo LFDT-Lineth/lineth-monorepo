@@ -26,15 +26,13 @@ import kotlin.time.Instant
  * The DTO <-> domain mapping helpers live at the bottom of this file.
  */
 
-/** The 18-field PI tuple emitted by an l2-execution proof (rollup_spec §2.1, `L2ExecutionProofPublicInput`). */
+/** The PI tuple emitted by an l2-execution proof (rollup_spec §2.1, `L2ExecutionProofPublicInput`). */
 data class L2ExecutionProofPublicInputsDto(
   val parentBlockHash: String,
   val endBlockHash: String,
   val endBlockNumber: Long,
   val endBlockTimestamp: Long,
   val l2L1Messages: List<String>,
-  val parentL1L2BridgeRollingHash: String,
-  val parentL1L2BridgeRollingHashMessageNumber: Long,
   val endL1L2BridgeRollingHash: String,
   val endL1L2BridgeRollingHashMessageNumber: Long,
   val dynamicChainConfigHash: String,
@@ -49,12 +47,10 @@ data class L2ExecutionProofPublicInputsDto(
   val l2MessagingBlocksOffsets: List<Long>,
 )
 
-/** The 22-field PI tuple emitted by a rollup proof (rollup_spec §2.4, `RollupPublicInput`). */
+/** The PI tuple emitted by a rollup proof (rollup_spec §2.4, `RollupPublicInput`). */
 data class RollupProofPublicInputsDto(
   val endBlockNumber: Long,
   val endBlockTimestamp: Long,
-  val parentL1L2BridgeRollingHash: String,
-  val parentL1L2BridgeRollingHashMessageNumber: Long,
   val endL1L2BridgeRollingHash: String,
   val endL1L2BridgeRollingHashMessageNumber: Long,
   val dynamicChainConfigHash: String,
@@ -147,12 +143,24 @@ data class NewPayloadRequestDto(
   val executionRequests: List<String>,
 )
 
-/** Static chain configuration (preimage inputs of `dynamicChainConfigHash`). */
+/** System-contract addresses handed to the execution engine (not part of the `dynamicChainConfigHash` preimage). */
+data class SystemContractsDto(
+  val beaconRoots: String,
+  val historyStorage: String,
+  val deposit: String,
+  val withdrawalRequest: String,
+  val consolidationRequest: String,
+  val builderDepositRequest: String,
+  val builderExitRequest: String,
+)
+
+/** Static chain configuration (`systemContracts` aside, preimage inputs of `dynamicChainConfigHash`). */
 data class ChainConfigDto(
   val l2MessageServiceAddress: String,
   val coinbase: String,
   val chainId: Long,
   val forkName: String,
+  val systemContracts: SystemContractsDto,
 )
 
 /** A single `debug_executionWitness` entry, one per block in canonical order. */
@@ -313,14 +321,12 @@ data class FileBasedRollupAggregationProofRequestDto(
 )
 
 /**
- * The 22-field PI tuple emitted by a rollup-aggregation proof and submitted to L1 finalization (rollup_spec §2.4,
- * `FinalizationPublicInput`). Shares its first 17 scalars with [RollupProofPublicInputsDto].
+ * The PI tuple emitted by a rollup-aggregation proof and submitted to L1 finalization (rollup_spec §2.4,
+ * `FinalizationPublicInput`). Shares its first 15 scalars with [RollupProofPublicInputsDto].
  */
 data class FinalizationPublicInputsDto(
   val endBlockNumber: Long,
   val endBlockTimestamp: Long,
-  val parentL1L2BridgeRollingHash: String,
-  val parentL1L2BridgeRollingHashMessageNumber: Long,
   val endL1L2BridgeRollingHash: String,
   val endL1L2BridgeRollingHashMessageNumber: Long,
   val dynamicChainConfigHash: String,
@@ -361,8 +367,6 @@ internal fun L2ExecutionProofPublicInputsDto.toDomainObject(): L2ExecutionProofP
     endBlockNumber = endBlockNumber.toULong(),
     endBlockTimestamp = Instant.fromEpochSeconds(endBlockTimestamp),
     l2L1Messages = l2L1Messages.map { it.decodeHex() },
-    parentL1L2BridgeRollingHash = parentL1L2BridgeRollingHash.decodeHex(),
-    parentL1L2BridgeRollingHashMessageNumber = parentL1L2BridgeRollingHashMessageNumber.toULong(),
     endL1L2BridgeRollingHash = endL1L2BridgeRollingHash.decodeHex(),
     endL1L2BridgeRollingHashMessageNumber = endL1L2BridgeRollingHashMessageNumber.toULong(),
     dynamicChainConfigHash = dynamicChainConfigHash.decodeHex(),
@@ -384,8 +388,6 @@ internal fun L2ExecutionProofPublicInputs.toDto(): L2ExecutionProofPublicInputsD
     endBlockNumber = endBlockNumber.toLong(),
     endBlockTimestamp = endBlockTimestamp.epochSeconds,
     l2L1Messages = l2L1Messages.map { it.encodeHex() },
-    parentL1L2BridgeRollingHash = parentL1L2BridgeRollingHash.encodeHex(),
-    parentL1L2BridgeRollingHashMessageNumber = parentL1L2BridgeRollingHashMessageNumber.toLong(),
     endL1L2BridgeRollingHash = endL1L2BridgeRollingHash.encodeHex(),
     endL1L2BridgeRollingHashMessageNumber = endL1L2BridgeRollingHashMessageNumber.toLong(),
     dynamicChainConfigHash = dynamicChainConfigHash.encodeHex(),
@@ -466,8 +468,6 @@ fun RollupProofPublicInputsDto.toDomainObject(): RollupProofPublicInputs {
   return RollupProofPublicInputs(
     endBlockNumber = endBlockNumber.toULong(),
     endBlockTimestamp = Instant.fromEpochSeconds(endBlockTimestamp),
-    parentL1L2BridgeMessageRollingHash = parentL1L2BridgeRollingHash.decodeHex(),
-    parentL1L2BridgeMessageNumber = parentL1L2BridgeRollingHashMessageNumber.toULong(),
     endL1L2BridgeMessageRollingHash = endL1L2BridgeRollingHash.decodeHex(),
     endL1L2BridgeMessageNumber = endL1L2BridgeRollingHashMessageNumber.toULong(),
     dynamicChainConfigHash = dynamicChainConfigHash.decodeHex(),
@@ -494,8 +494,6 @@ fun FinalizationPublicInputsDto.toDomainObject(): FinalizationPublicInputs {
   return FinalizationPublicInputs(
     endBlockNumber = endBlockNumber.toULong(),
     endBlockTimestamp = Instant.fromEpochSeconds(endBlockTimestamp),
-    parentL1L2BridgeMessageRollingHash = parentL1L2BridgeRollingHash.decodeHex(),
-    parentL1L2BridgeMessageNumber = parentL1L2BridgeRollingHashMessageNumber.toULong(),
     endL1L2BridgeMessageRollingHash = endL1L2BridgeRollingHash.decodeHex(),
     endL1L2BridgeMessageNumber = endL1L2BridgeRollingHashMessageNumber.toULong(),
     dynamicChainConfigHash = dynamicChainConfigHash.decodeHex(),

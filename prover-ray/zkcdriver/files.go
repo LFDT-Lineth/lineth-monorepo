@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 	"github.com/LFDT-Lineth/zkc/pkg/util/collection/typed"
 	zkc_util "github.com/LFDT-Lineth/zkc/pkg/zkc/util"
 	"github.com/sirupsen/logrus"
@@ -105,7 +106,7 @@ func ReadMaybeCompressedFile(path string) (io.ReadCloser, error) {
 
 // ReadZkcInputFile reads a given JSON inputs file which contains byte strings
 // (e.g. in hex) for each input memory declared in the ZkC program.
-func ReadZkcInputFile(f io.ReadCloser) (inputs map[string][]byte, err error) {
+func ReadZkcInputFile(f io.ReadCloser) (inputs map[string]bit.Array, err error) {
 	defer f.Close()
 	// Read the trace file, including any metadata embedded within.
 	readBytes, err := io.ReadAll(f)

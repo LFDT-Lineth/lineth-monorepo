@@ -119,7 +119,7 @@ pub fn installGuestElf(b: *std.Build, root_module: *std.Build.Module, guest_name
     const program_id_tool = b.addExecutable(.{
         .name = "program-id",
         .root_module = b.createModule(.{
-            .root_source_file = b.dependency("build_common", .{}).path("program-id.zig"),
+            .root_source_file = b.dependency("build_common", .{}).path("program_id.zig"),
             .target = b.resolveTargetQuery(.{}),
             .optimize = .Debug,
         }),

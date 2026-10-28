@@ -1,7 +1,7 @@
 const std = @import("std");
 const rollup_ssz = @import("rollup_ssz");
 const rollup = @import("rollup");
-const support = @import("support.zig");
+const support = @import("support");
 const repeat32 = support.repeat32;
 const repeat20 = support.repeat20;
 const sampleInput = support.sampleInput;
@@ -23,15 +23,15 @@ test "run: copied fields echo the mapped source (first/last l2_execution_proofs,
     // last (proof1) sourced fields.
     try std.testing.expectEqual(support.PROOF1_END_BLOCK_NUMBER, pi.end_block_number);
     try std.testing.expectEqual(support.PROOF1_END_BLOCK_TIMESTAMP, pi.end_block_timestamp);
-    try std.testing.expectEqualSlices(u8, &support.PROOF1_END_L1L2_BRIDGE_ROLLING_HASH, &pi.end_l1_l2_bridge_rolling_hash);
-    try std.testing.expectEqual(support.PROOF1_END_L1L2_BRIDGE_ROLLING_HASH_MSG_NUMBER, pi.end_l1_l2_bridge_rolling_hash_message_number);
     try std.testing.expectEqualSlices(u8, &support.PROOF1_END_FTX_ROLLING_HASH, &pi.end_ftx_rolling_hash);
     try std.testing.expectEqual(support.PROOF1_END_PROCESSED_FTX_NUMBER, pi.end_processed_ftx_number);
     try std.testing.expectEqualSlices(u8, &support.PROOF1_END_BLOCK_HASH, &pi.end_block_hash);
 
+    // End rolling-hash pair: proof1 is the last child with a non-zero message number.
+    try std.testing.expectEqualSlices(u8, &support.PROOF1_END_L1L2_BRIDGE_ROLLING_HASH, &pi.end_l1_l2_bridge_rolling_hash);
+    try std.testing.expectEqual(support.PROOF1_END_L1L2_BRIDGE_ROLLING_HASH_MSG_NUMBER, pi.end_l1_l2_bridge_rolling_hash_message_number);
+
     // first (proof0) sourced fields.
-    try std.testing.expectEqualSlices(u8, &support.PROOF0_PARENT_L1L2_BRIDGE_ROLLING_HASH, &pi.parent_l1_l2_bridge_rolling_hash);
-    try std.testing.expectEqual(support.PROOF0_PARENT_L1L2_BRIDGE_ROLLING_HASH_MSG_NUMBER, pi.parent_l1_l2_bridge_rolling_hash_message_number);
     try std.testing.expectEqualSlices(u8, &support.PROOF0_PARENT_FTX_ROLLING_HASH, &pi.parent_ftx_rolling_hash);
     try std.testing.expectEqual(support.PROOF0_PARENT_FTX_NUMBER, pi.parent_ftx_number);
     try std.testing.expectEqualSlices(u8, &support.PROOF0_DYNAMIC_CHAIN_CONFIG_HASH, &pi.dynamic_chain_config_hash);
@@ -52,6 +52,50 @@ test "run: copied fields echo the mapped source (first/last l2_execution_proofs,
     try std.testing.expectEqualSlices(u8, &support.PROOF0_FILTERED_ADDRESS_1, &out.filtered_addresses[1]);
     try std.testing.expectEqualSlices(u8, &support.PROOF1_FILTERED_ADDRESS_0, &out.filtered_addresses[2]);
     try std.testing.expectEqualSlices(u8, &support.PROOF1_FILTERED_ADDRESS_1, &out.filtered_addresses[3]);
+}
+
+// ── End rolling-hash pair: sourced from the last child proof with a non-zero message number ─────
+
+test "run: a trailing child without anchoring keeps the earlier child's end rolling-hash pair" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    var input = try sampleInput(alloc);
+    var proofs = [_]rollup_ssz.VerifiableL2ExecutionProof{
+        input.l2_execution_proofs[0],
+        input.l2_execution_proofs[1],
+    };
+    proofs[1].proof.public_inputs.end_l1_l2_bridge_rolling_hash = repeat32(0);
+    proofs[1].proof.public_inputs.end_l1_l2_bridge_rolling_hash_message_number = 0;
+    input.l2_execution_proofs = &proofs;
+
+    const pi = (try rollup.run(alloc, input)).public_inputs;
+
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_END_L1L2_BRIDGE_ROLLING_HASH, &pi.end_l1_l2_bridge_rolling_hash);
+    try std.testing.expectEqual(support.PROOF0_END_L1L2_BRIDGE_ROLLING_HASH_MSG_NUMBER, pi.end_l1_l2_bridge_rolling_hash_message_number);
+}
+
+test "run: children without anchoring give a zero end rolling-hash pair" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    var input = try sampleInput(alloc);
+    var proofs = [_]rollup_ssz.VerifiableL2ExecutionProof{
+        input.l2_execution_proofs[0],
+        input.l2_execution_proofs[1],
+    };
+    for (&proofs) |*p| {
+        p.proof.public_inputs.end_l1_l2_bridge_rolling_hash = repeat32(0);
+        p.proof.public_inputs.end_l1_l2_bridge_rolling_hash_message_number = 0;
+    }
+    input.l2_execution_proofs = &proofs;
+
+    const pi = (try rollup.run(alloc, input)).public_inputs;
+
+    try std.testing.expectEqualSlices(u8, &repeat32(0), &pi.end_l1_l2_bridge_rolling_hash);
+    try std.testing.expectEqual(@as(u64, 0), pi.end_l1_l2_bridge_rolling_hash_message_number);
 }
 
 test "run: output program_vks are distinct and sorted for unsorted duplicate inputs" {

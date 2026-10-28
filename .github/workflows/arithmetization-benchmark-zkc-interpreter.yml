@@ -19,7 +19,7 @@ name: Arithmetization zkc interpreter benchmark (base vs optim)
 # Benchmark data :
 # -- For L2 Guest
 # Runs the l2-execution guest program with the stateless_input.ssz test vector in
-# riscv-guests/l2-execution/test/testdata/stateless_input.ssz
+# riscv-guests/l2_execution/test/testdata/stateless_input.ssz
 # This test vector is considered a tiny block - it contains 35 keccak calls (when
 # a small block on Mainnet has 1k).
 # Use the input keccak_accel to run the benchmark with the zkc keccak-accelerator.
@@ -189,7 +189,7 @@ jobs:
             wt_test="${wt}/arithmetization/src/test"
             # l2-execution guest: build the rv64im ELF from this worktree, then convert
             # it to ZKC JSON with the committed sample SSZ input.
-            L2_GUEST_DIR="${wt}/riscv-guests/l2-execution"
+            L2_GUEST_DIR="${wt}/riscv-guests/l2_execution"
             BUILD_COMMON_DIR="${wt}/riscv-guests/build_common"
             L2_GUEST_BIN="${L2_GUEST_DIR}/zig-out/bin/evm_execution_guest"
             L2_GUEST_INPUT="${L2_GUEST_DIR}/test/testdata/stateless_input.ssz"

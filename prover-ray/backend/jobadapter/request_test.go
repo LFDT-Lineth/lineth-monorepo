@@ -19,6 +19,15 @@ const invalidNumber = "not-a-number"
 
 const referenceL2ExecutionRequest = "../../../rollup_spec/src/rollup_spec/prover_io/testdata/10-11-getZkL2ExecutionProofV1.request.json"
 
+func hexAddress(t *testing.T, s string) (out [20]byte) {
+	t.Helper()
+	b, err := hex.DecodeString(strings.TrimPrefix(s, "0x"))
+	require.NoError(t, err)
+	require.Len(t, b, 20)
+	copy(out[:], b)
+	return out
+}
+
 func readFixture(t *testing.T, name string) []byte {
 	t.Helper()
 	b, err := os.ReadFile("testdata/" + name)
@@ -37,6 +46,20 @@ func TestDecodeL2ExecutionRequest_SingleBlock(t *testing.T) {
 
 	assert.Equal(t, uint64(59144), req.ChainID)
 	assert.Equal(t, "Amsterdam", req.ForkName)
+	assert.Equal(t, hexAddress(t, "0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02"), req.SystemContracts.BeaconRoots,
+		"beaconRoots")
+	assert.Equal(t, hexAddress(t, "0x0000F90827F1C53a10cb7A02335B175320002935"), req.SystemContracts.HistoryStorage,
+		"historyStorage")
+	assert.Equal(t, hexAddress(t, "0x94d4a7449B968b839dcbc64A61F195CA300986ae"), req.SystemContracts.Deposit,
+		"deposit")
+	assert.Equal(t, hexAddress(t, "0x66355689a9f067eeb9dc9d899E4192676988279C"), req.SystemContracts.WithdrawalRequest,
+		"withdrawalRequest")
+	assert.Equal(t, hexAddress(t, "0xF0e003F0dE2d583Ae28FA8cBF66aa096CdAce3ff"),
+		req.SystemContracts.ConsolidationRequest, "consolidationRequest")
+	assert.Equal(t, hexAddress(t, "0x0000BFF46984E3725691FA540A8C7589300D8282"),
+		req.SystemContracts.BuilderDepositRequest, "builderDepositRequest")
+	assert.Equal(t, hexAddress(t, "0x000064D678505AD48F8CCB093BC65613800E8282"),
+		req.SystemContracts.BuilderExitRequest, "builderExitRequest")
 
 	wantID, err := hex.DecodeString(strings.TrimPrefix(guestProgramID, "0x"))
 	require.NoError(t, err)
@@ -55,7 +78,7 @@ func TestDecodeL2ExecutionRequest_SingleBlock(t *testing.T) {
 func TestDecodeL2ExecutionRequest_Regression_GuestFixture(t *testing.T) {
 	req, err := DecodeL2ExecutionRequest(readFixture(t, "request_guest_fixture.json"))
 	require.NoError(t, err, "decode the guest fixture's JSON request")
-	want, err := os.ReadFile("../../../riscv-guests/l2-execution/test/testdata/stateless_input.ssz")
+	want, err := os.ReadFile("../../../riscv-guests/l2_execution/test/testdata/stateless_input.ssz")
 	require.NoError(t, err, "read the guest's executable SSZ fixture")
 	assert.Equal(t, want, ssz.EncodeExtendedInput(buildExtendedInput(req)),
 		"JSON requests must encode exactly the input accepted by the pinned guest")
@@ -164,6 +187,22 @@ func TestDecodeL2ExecutionRequest_InvalidRequestShape(t *testing.T) {
 		{"BadCoinbase",
 			func(o map[string]any) { chainConfig(o)[coinbaseKey] = "0x1234" },
 			coinbaseKey},
+		{"MissingSystemContracts",
+			func(o map[string]any) { delete(chainConfig(o), systemContractsKey) },
+			systemContractsKey},
+		{"SystemContractsNotObject",
+			func(o map[string]any) { chainConfig(o)[systemContractsKey] = "0x00" },
+			systemContractsKey},
+		{"MissingSystemContractAddress",
+			func(o map[string]any) {
+				delete(chainConfig(o)[systemContractsKey].(map[string]any), "builderExitRequest")
+			},
+			"systemContracts.builderExitRequest"},
+		{"BadSystemContractAddress",
+			func(o map[string]any) {
+				chainConfig(o)[systemContractsKey].(map[string]any)["deposit"] = "0x1234"
+			},
+			"systemContracts.deposit"},
 		{"MissingForkName",
 			func(o map[string]any) { delete(pr(o)["chainConfig"].(map[string]any), forkNameKey) },
 			forkNameKey},
