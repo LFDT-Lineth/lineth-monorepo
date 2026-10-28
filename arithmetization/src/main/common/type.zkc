@@ -1,6 +1,7 @@
 type Address = u64
 type Instruction = u32
 type Register = u5
+type FileDescriptor = u8
 
 type Opcode = u7
 

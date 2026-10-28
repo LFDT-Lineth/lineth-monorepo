@@ -9,6 +9,16 @@ extern var _input_start: u64;
 /// Size of the linker-defined IN memory region (1 GiB).
 const IN_REGION_SIZE: usize = 0x40000000;
 
+/// File descriptor for the logging output channel.  Data written to
+/// this channel does not form part of the guest's public output, and
+/// may not be traced at all.  However, it is made available after
+/// program execution.
+const GUEST_LOG: u64 = 3;
+/// File descriptor for the public output channel.  Data written to
+/// this channel forms the guest's public output and, as such, forms
+/// part of the final proof.
+const GUEST_OUTPUT: u64 = 4;
+
 /// Read the private input from the memory-mapped IN region: hands back a zero-copy slice into
 /// that region via `buf_ptr`/`buf_size`. The input slot's address is this module's own detail —
 /// a guest entry point only ever sees the slice.
@@ -25,22 +35,32 @@ pub fn read_input(buf_ptr: *[*]const u8, buf_size: *usize) void {
     buf_size.* = @intCast(payload_len);
 }
 
-// Append `size` bytes read from the buffer at `output` to the guest's public
-// output. Implemented as the Lineth custom opcode (custom-1); the prover's
-// RISC-V interpreter turns this into a write_output circuit call.
+// Write `size` bytes read from the buffer at `output` to the guest's
+// output and log.  More specifically the first 32 bytes are written
+// to the guest's public output and the remainder are logged.
 //
 // Signature matches the extern zesu declares for the standard `write_output` name:
 //   @extern(*const fn ([*]const u8, usize) callconv(.c) void, .{ .name = "write_output" })
 pub fn write_output(output: [*]const u8, size: usize) callconv(.c) void {
-    // opcode format: opcode(0x2b = custom-1) | funct3(0b010) | funct7(0b0000000) | rd(unused) | rs1(input_offset) | rs2(input_size)
+    // sanity check at least 32 bytes given
+    if (size < 32) @panic("write_output: payload shorter than 32-byte commitment");
+    // Write output then log
+    write_guest_output(GUEST_OUTPUT, output[0..32], 32);
+    write_guest_output(GUEST_LOG, output[32..], size - 32);
+}
+
+// Write `size` bytes read from the buffer at `output` to the given
+// file descriptor.
+pub fn write_guest_output(fd: u64, output: [*]const u8, size: usize) callconv(.c) void {
     asm volatile (
-        \\.insn r 0x2b, 0b010, 0b0000000, x0, %[in], %[size]
+        \\mv a0, %[fd]
+        \\mv a1, %[output]
+        \\mv a2, %[size]
+        \\li a7, 64
+        \\ecall
         :
-        : [in] "r" (@intFromPtr(output)),
+        : [fd] "r" (fd),
+          [output] "r" (@intFromPtr(output)),
           [size] "r" (size),
-          // The opcode READS `size` bytes from *output (rs1) and appends them to the
-          // guest's public output; it writes nothing back to guest memory. output is
-          // passed as an integer (@intFromPtr), so without this memory clobber the
-          // optimizer may drop/reorder the buffer's stores before the opcode reads them.
-        : .{ .memory = true });
+        : .{ .a0 = true, .a1 = true, .a2 = true, .a7 = true, .memory = true });
 }
