@@ -1,26 +1,20 @@
 \begin{table}[htbp]\centering\small
-\caption{KoalaBear with concrete \texttt{koalabear.Element} branches in the permutation's hot loops (\texttt{KoalaBearScalar}).}\label{tab:kbb}
+\caption{KoalaBear, the hot-loop branches before (run 2) and after (run 3) replicating gnark-crypto's internal-matrix diagonal. Each ratio is relative to the \texttt{baseline} of the same run; the baseline column shows run 3.}\label{tab:kbb}
 \begin{adjustbox}{max width=\linewidth}
-\begin{tabular}{lrrrrr|rr}
+\begin{tabular}{lrrrrrr}
 \toprule
-Benchmark & baseline & generic + hot-loop branches & ratio & \texttt{current} & ratio & allocs \texttt{baseline} & allocs generic + hot-loop branches \\ \midrule
-Permutation (width=16) & 570\,ns & 2.03\,\textmu s & 3.56$\times$ & -- & -- & 0 & 0 \\
-Permutation (width=24) & 705\,ns & 2.85\,\textmu s & 4.05$\times$ & -- & -- & 0 & 0 \\
-Compress & 585\,ns & 2.06\,\textmu s & 3.52$\times$ & -- & -- & 0 & 2 \\
-CompressParallel & 4.28\,ns & 156\,ns & 36.5$\times$ & -- & -- & 0 & 2 \\
-MDHasher (n=8) & 728\,ns & 2.09\,\textmu s & 2.87$\times$ & 626\,ns & 0.86$\times$ & 5 & 3 \\
-MDHasher (n=64) & 4.95\,\textmu s & 16.6\,\textmu s & 3.35$\times$ & 4.88\,\textmu s & 0.98$\times$ & 5 & 17 \\
-MDHasher (n=4096) & 309\,\textmu s & 1.06\,ms & 3.43$\times$ & 312\,\textmu s & 1.01$\times$ & 5 & 1\,025 \\
-MDHasher (n=65536) & 4.88\,ms & 16.9\,ms & 3.46$\times$ & 4.94\,ms & 1.01$\times$ & 5 & 16\,385 \\
-MDHasher (n=1048576) & 78.7\,ms & 270\,ms & 3.43$\times$ & 79.6\,ms & 1.01$\times$ & 5 & 262\,145 \\
-FiatShamir (rounds=16, upd=8) & 388\,\textmu s & 1.22\,ms & 3.15$\times$ & 396\,\textmu s & 1.02$\times$ & 254 & 1\,850 \\
-FiatShamir (rounds=16, upd=1024) & 1.61\,ms & 5.4\,ms & 3.35$\times$ & 1.63\,ms & 1.01$\times$ & 254 & 5\,914 \\
-FiatShamir (rounds=16, upd=16384) & 20.1\,ms & 68.9\,ms & 3.43$\times$ & 20.3\,ms & 1.01$\times$ & 256 & 67\,360 \\
-FiatShamir (rounds=256, upd=8) & 6.2\,ms & 19.5\,ms & 3.15$\times$ & 6.31\,ms & 1.02$\times$ & 3\,849 & 29\,447 \\
-FiatShamir (rounds=256, upd=1024) & 25.7\,ms & 86.9\,ms & 3.38$\times$ & 26.1\,ms & 1.01$\times$ & 3\,850 & 94\,478 \\
-FiatShamir (rounds=256, upd=16384) & 321\,ms & 1.1\,s & 3.42$\times$ & 324\,ms & 1.01$\times$ & 3\,880 & 1\,077\,606 \\
-FiatShamir (rounds=4096, upd=8) & 98.6\,ms & 311\,ms & 3.16$\times$ & 101\,ms & 1.02$\times$ & 65\,518 & 475\,147 \\
-FiatShamir (rounds=4096, upd=1024) & 413\,ms & 1.38\,s & 3.34$\times$ & 417\,ms & 1.01$\times$ & 65\,542 & 1\,515\,612 \\
+Benchmark & baseline & branches (initial) & ratio & branches, gnark diagonal & ratio & allocs, gnark diagonal \\ \midrule
+Permutation (width=16) & 570\,ns & 1.92\,\textmu s & 3.37$\times$ & 1.46\,\textmu s & 2.57$\times$ & 0 \\
+Permutation (width=24) & 706\,ns & 2.63\,\textmu s & 3.73$\times$ & 2.08\,\textmu s & 2.94$\times$ & 0 \\
+Compress & 585\,ns & 2.03\,\textmu s & 3.46$\times$ & 1.54\,\textmu s & 2.62$\times$ & 2 \\
+CompressParallel & 4.42\,ns & 170\,ns & 38.6$\times$ & 147\,ns & 33.2$\times$ & 2 \\
+MDHasher (n=64) & 4.97\,\textmu s & 16.2\,\textmu s & 3.26$\times$ & 11.8\,\textmu s & 2.38$\times$ & 17 \\
+MDHasher (n=4096) & 308\,\textmu s & 1.03\,ms & 3.34$\times$ & 792\,\textmu s & 2.57$\times$ & 1\,025 \\
+MDHasher (n=65536) & 4.91\,ms & 16.6\,ms & 3.37$\times$ & 12.6\,ms & 2.57$\times$ & 16\,385 \\
+FiatShamir (rounds=16, upd=8) & 134\,\textmu s & 381\,\textmu s & 2.86$\times$ & 296\,\textmu s & 2.21$\times$ & 698 \\
+FiatShamir (rounds=16, upd=1024) & 1.36\,ms & 4.5\,ms & 3.33$\times$ & 3.45\,ms & 2.54$\times$ & 4\,762 \\
+FiatShamir (rounds=256, upd=8) & 2.11\,ms & 6.1\,ms & 2.89$\times$ & 4.8\,ms & 2.27$\times$ & 11\,013 \\
+FiatShamir (rounds=256, upd=1024) & 21.7\,ms & 71.9\,ms & 3.31$\times$ & 55.4\,ms & 2.56$\times$ & 76\,046 \\
 \bottomrule
 \end{tabular}
 \end{adjustbox}

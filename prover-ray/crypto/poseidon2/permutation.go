@@ -250,16 +250,50 @@ func (h *Permutation[T, PT]) matMulInternal(input []T) {
 			kbMatMulInternalVec(asKB(input), asKB(h.params.InternalDiag))
 			return
 		}
-		kbMatMulInternal(asKB(input), asKB(h.params.InternalDiag))
+		kbMatMulInternal(asKB(input))
 		return
 	}
 	var sum T
 	for i := range input {
 		PT(&sum).Add(&sum, &input[i])
 	}
-	var tmp T
-	for i := range input {
-		PT(&tmp).Mul(&input[i], &h.params.InternalDiag[i])
-		PT(&input[i]).Add(&sum, &tmp)
+	// Multiply by the diagonal with doublings, halvings and shifts instead of
+	// multiplications, as gnark-crypto's matMulInternalInPlace does. The
+	// entries are listed in internalDiag.
+	var t T
+	PT(&input[0]).Sub(&sum, PT(&t).Double(&input[0]))
+	PT(&input[1]).Add(&sum, &input[1])
+	PT(&input[2]).Add(&sum, PT(&t).Double(&input[2]))
+	PT(&t).Set(&input[3])
+	PT(&t).Halve()
+	PT(&input[3]).Add(&sum, &t)
+	PT(&input[4]).Add(&sum, PT(&t).Add(PT(&t).Double(&input[4]), &input[4]))
+	PT(&input[5]).Add(&sum, PT(&t).Double(PT(&t).Double(&input[5])))
+	PT(&t).Set(&input[6])
+	PT(&t).Halve()
+	PT(&input[6]).Sub(&sum, &t)
+	PT(&input[7]).Sub(&sum, PT(&t).Add(PT(&t).Double(&input[7]), &input[7]))
+	PT(&input[8]).Sub(&sum, PT(&t).Double(PT(&t).Double(&input[8])))
+	pos, neg := diagShifts16Pos, diagShifts16Neg
+	if len(input) == 24 {
+		pos, neg = diagShifts24Pos, diagShifts24Neg
+	}
+	i := 9
+	for _, n := range pos {
+		PT(&input[i]).Add(&sum, PT(&t).Mul2ExpNegN(&input[i], n))
+		i++
+	}
+	for _, n := range neg {
+		PT(&input[i]).Sub(&sum, PT(&t).Mul2ExpNegN(&input[i], n))
+		i++
 	}
 }
+
+// Shifts n of the diagonal entries ±2⁻ⁿ from index 9 on: first the positive
+// entries, then the negative ones (see internalDiag).
+var (
+	diagShifts16Pos = []uint32{8, 3, 24}
+	diagShifts16Neg = []uint32{8, 3, 4, 24}
+	diagShifts24Pos = []uint32{8, 2, 3, 4, 5, 6, 24}
+	diagShifts24Neg = []uint32{8, 3, 4, 5, 6, 7, 9, 24}
+)

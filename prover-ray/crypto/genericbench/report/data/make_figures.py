@@ -6,7 +6,10 @@ ratios plotted are recomputed from them.
 
 Usage (from this directory): python3 make_figures.py
 """
+import csv
 import re
+
+import make_tables
 
 from make_parallel_table import load
 
@@ -103,15 +106,20 @@ bar_figure('../fig_generic.tex',
            r'Fully generic code: time relative to each field\'s \texttt{baseline} (Tables~\ref{tab:mid-kb} and \ref{tab:mid-mb}). The vertical line marks parity.',
            'fig:generic', rows, [('kb', 'KoalaBear', 'c1'), ('mb', 'MamaBear', 'c2')], 500)
 
-# Figure 2: KoalaBear before and after the hot-loop branches (same sizes).
-_, kbb = parse_table('../tab_kbb.tex')
-kbbt = dict(kbb)
-rows = [(r, {'baseline': 1.0, 'before': t['fully generic'] / t['baseline'],
-             'after': kbbt[r]['generic + hot-loop branches'] / kbbt[r]['baseline']})
-        for r, t in kb if r in kbbt]
+# Figure 2: the hot-loop branches before and after replicating gnark-crypto's
+# internal-matrix diagonal (runs 3 and 4, same sizes), each against its own
+# run's baseline.
+raw3 = make_tables.load_raw('medium-diag.txt')
+run2 = {r[0]: r for r in csv.reader(open('paths-run2-medians.csv')) if r and not r[0].startswith('#')}
+keys = sorted({(f, k) for f, k, _ in raw3 if 'field=koalabear' in k}, key=lambda k: make_tables.sort_key(*k))
+rows = []
+for fam, key in keys:
+    lab = make_tables.label(fam, key)
+    rows.append((lab, {'baseline': 1.0, 'initial': float(run2[lab][2]) / float(run2[lab][1]),
+                       'diag': raw3[(fam, key, 'generic')][0] / raw3[(fam, key, 'baseline')][0]}))
 bar_figure('../fig_branch.tex',
-           r'KoalaBear, time relative to \texttt{baseline}, before (Table~\ref{tab:mid-kb}) and after (Table~\ref{tab:kbb}) adding the hot-loop branches.',
-           'fig:branch', rows, [('before', 'fully generic', 'c1'), ('after', 'generic + hot-loop branches', 'c2')], 500)
+           r"KoalaBear hot-loop branches, time relative to \texttt{baseline}, before and after replicating gnark-crypto's internal-matrix diagonal (Table~\ref{tab:kbb}).",
+           'fig:branch', rows, [('initial', 'branches (initial)', 'c1'), ('diag', 'branches, gnark diagonal', 'c2')], 50)
 
 # Figure 3: the three KoalaBear paths, plus current.
 _, paths = parse_table('../tab_paths.tex')

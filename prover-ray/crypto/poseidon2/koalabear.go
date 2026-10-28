@@ -102,15 +102,54 @@ func kbMatMulExternal(input []koalabear.Element) {
 	}
 }
 
-func kbMatMulInternal(input, diag []koalabear.Element) {
+// kbMatMulInternal is gnark-crypto's matMulInternalInPlace for KoalaBear: the
+// diagonal is applied with doublings, halvings and shifts.
+func kbMatMulInternal(input []koalabear.Element) {
 	var sum koalabear.Element
-	for i := range input {
+	sum.Set(&input[0])
+	for i := 1; i < len(input); i++ {
 		sum.Add(&sum, &input[i])
 	}
-	var tmp koalabear.Element
-	for i := range input {
-		tmp.Mul(&input[i], &diag[i])
-		input[i].Add(&sum, &tmp)
+	var temp koalabear.Element
+	input[0].Sub(&sum, temp.Double(&input[0]))
+	input[1].Add(&sum, &input[1])
+	input[2].Add(&sum, temp.Double(&input[2]))
+	temp.Set(&input[3]).Halve()
+	input[3].Add(&sum, &temp)
+	input[4].Add(&sum, temp.Double(&input[4]).Add(&temp, &input[4]))
+	input[5].Add(&sum, temp.Double(&input[5]).Double(&temp))
+	temp.Set(&input[6]).Halve()
+	input[6].Sub(&sum, &temp)
+	input[7].Sub(&sum, temp.Double(&input[7]).Add(&temp, &input[7]))
+	input[8].Sub(&sum, temp.Double(&input[8]).Double(&temp))
+	switch len(input) {
+	case 16:
+		// [..., 1/2^8, 1/8, 1/2^24, -1/2^8, -1/8, -1/16, -1/2^24]
+		input[9].Add(&sum, temp.Mul2ExpNegN(&input[9], 8))
+		input[10].Add(&sum, temp.Mul2ExpNegN(&input[10], 3))
+		input[11].Add(&sum, temp.Mul2ExpNegN(&input[11], 24))
+		input[12].Sub(&sum, temp.Mul2ExpNegN(&input[12], 8))
+		input[13].Sub(&sum, temp.Mul2ExpNegN(&input[13], 3))
+		input[14].Sub(&sum, temp.Mul2ExpNegN(&input[14], 4))
+		input[15].Sub(&sum, temp.Mul2ExpNegN(&input[15], 24))
+	case 24:
+		// [..., 1/2^8, 1/4, 1/8, 1/16, 1/32, 1/64, 1/2^24,
+		//  -1/2^8, -1/8, -1/16, -1/32, -1/64, -1/2^7, -1/2^9, -1/2^24]
+		input[9].Add(&sum, temp.Mul2ExpNegN(&input[9], 8))
+		input[10].Add(&sum, temp.Mul2ExpNegN(&input[10], 2))
+		input[11].Add(&sum, temp.Mul2ExpNegN(&input[11], 3))
+		input[12].Add(&sum, temp.Mul2ExpNegN(&input[12], 4))
+		input[13].Add(&sum, temp.Mul2ExpNegN(&input[13], 5))
+		input[14].Add(&sum, temp.Mul2ExpNegN(&input[14], 6))
+		input[15].Add(&sum, temp.Mul2ExpNegN(&input[15], 24))
+		input[16].Sub(&sum, temp.Mul2ExpNegN(&input[16], 8))
+		input[17].Sub(&sum, temp.Mul2ExpNegN(&input[17], 3))
+		input[18].Sub(&sum, temp.Mul2ExpNegN(&input[18], 4))
+		input[19].Sub(&sum, temp.Mul2ExpNegN(&input[19], 5))
+		input[20].Sub(&sum, temp.Mul2ExpNegN(&input[20], 6))
+		input[21].Sub(&sum, temp.Mul2ExpNegN(&input[21], 7))
+		input[22].Sub(&sum, temp.Mul2ExpNegN(&input[22], 9))
+		input[23].Sub(&sum, temp.Mul2ExpNegN(&input[23], 24))
 	}
 }
 

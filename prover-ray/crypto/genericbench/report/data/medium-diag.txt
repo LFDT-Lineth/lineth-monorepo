@@ -1,0 +1,447 @@
+# commit: d7841ac94 + uncommitted: gnark-crypto internal-matrix diagonal replicated
+# go: go version go1.27.1 linux/amd64
+# cpu:  Intel(R) Xeon(R) Platinum 8488C, avx512f yes, 192 threads
+goos: linux
+goarch: amd64
+pkg: github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/genericbench
+cpu: Intel(R) Xeon(R) Platinum 8488C
+BenchmarkPermutation/field=koalabear/width=16/impl=baseline-192         	  421150	       569.0 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=16/impl=baseline-192         	  421579	       569.8 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=16/impl=baseline-192         	  419497	       571.1 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=16/impl=baseline-192         	  417547	       570.2 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=16/impl=baseline-192         	  419998	       569.2 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=16/impl=baseline-192         	  413280	       570.3 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=16/impl=generic-192          	  164726	      1463 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=16/impl=generic-192          	  163356	      1462 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=16/impl=generic-192          	  164467	      1463 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=16/impl=generic-192          	  163142	      1462 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=16/impl=generic-192          	  162728	      1467 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=16/impl=generic-192          	  162315	      1471 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=16/impl=generic-vec-192      	   20725	     11583 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=16/impl=generic-vec-192      	   20689	     11600 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=16/impl=generic-vec-192      	   20677	     11603 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=16/impl=generic-vec-192      	   20701	     11597 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=16/impl=generic-vec-192      	   20678	     11598 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=16/impl=generic-vec-192      	   20658	     11605 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=16/impl=generic-asm-192      	  409636	       574.1 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=16/impl=generic-asm-192      	  420592	       573.7 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=16/impl=generic-asm-192      	  417771	       573.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=16/impl=generic-asm-192      	  414853	       573.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=16/impl=generic-asm-192      	  412698	       573.8 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=16/impl=generic-asm-192      	  416523	       573.8 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=24/impl=baseline-192         	  338989	       705.6 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=24/impl=baseline-192         	  338265	       706.2 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=24/impl=baseline-192         	  341708	       705.6 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=24/impl=baseline-192         	  336980	       706.2 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=24/impl=baseline-192         	  337406	       706.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=24/impl=baseline-192         	  337006	       706.8 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=24/impl=generic-192          	  115069	      2084 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=24/impl=generic-192          	  114550	      2080 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=24/impl=generic-192          	  115272	      2076 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=24/impl=generic-192          	  115362	      2084 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=24/impl=generic-192          	  115023	      2078 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=24/impl=generic-192          	  115782	      2077 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=24/impl=generic-vec-192      	   19417	     12354 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=24/impl=generic-vec-192      	   19483	     12308 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=24/impl=generic-vec-192      	   19458	     12333 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=24/impl=generic-vec-192      	   19429	     12349 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=24/impl=generic-vec-192      	   19449	     12333 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=24/impl=generic-vec-192      	   19468	     12324 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=24/impl=generic-asm-192      	  339337	       704.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=24/impl=generic-asm-192      	  337868	       704.3 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=24/impl=generic-asm-192      	  340039	       704.1 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=24/impl=generic-asm-192      	  337779	       704.7 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=24/impl=generic-asm-192      	  339477	       704.3 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=koalabear/width=24/impl=generic-asm-192      	  341499	       704.1 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=mamabear/width=16/impl=baseline-192          	  115023	      2085 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=mamabear/width=16/impl=baseline-192          	  115678	      2082 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=mamabear/width=16/impl=baseline-192          	  115236	      2082 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=mamabear/width=16/impl=baseline-192          	  114678	      2091 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=mamabear/width=16/impl=baseline-192          	  114553	      2087 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=mamabear/width=16/impl=baseline-192          	  114632	      2087 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=mamabear/width=16/impl=generic-192           	   30183	      7748 ns/op	    2616 B/op	     250 allocs/op
+BenchmarkPermutation/field=mamabear/width=16/impl=generic-192           	   30111	      7964 ns/op	    2616 B/op	     250 allocs/op
+BenchmarkPermutation/field=mamabear/width=16/impl=generic-192           	   31812	      7559 ns/op	    2616 B/op	     250 allocs/op
+BenchmarkPermutation/field=mamabear/width=16/impl=generic-192           	   31924	      7399 ns/op	    2616 B/op	     250 allocs/op
+BenchmarkPermutation/field=mamabear/width=16/impl=generic-192           	   30969	      7687 ns/op	    2616 B/op	     250 allocs/op
+BenchmarkPermutation/field=mamabear/width=16/impl=generic-192           	   30951	      7692 ns/op	    2616 B/op	     250 allocs/op
+BenchmarkPermutation/field=mamabear/width=24/impl=baseline-192          	   70606	      3390 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=mamabear/width=24/impl=baseline-192          	   70804	      3387 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=mamabear/width=24/impl=baseline-192          	   70178	      3394 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=mamabear/width=24/impl=baseline-192          	   70604	      3393 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=mamabear/width=24/impl=baseline-192          	   70600	      3386 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=mamabear/width=24/impl=baseline-192          	   70896	      3386 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPermutation/field=mamabear/width=24/impl=generic-192           	   22342	     11094 ns/op	    3560 B/op	     340 allocs/op
+BenchmarkPermutation/field=mamabear/width=24/impl=generic-192           	   22714	     10685 ns/op	    3560 B/op	     340 allocs/op
+BenchmarkPermutation/field=mamabear/width=24/impl=generic-192           	   23680	     10216 ns/op	    3560 B/op	     340 allocs/op
+BenchmarkPermutation/field=mamabear/width=24/impl=generic-192           	   23042	     10564 ns/op	    3560 B/op	     340 allocs/op
+BenchmarkPermutation/field=mamabear/width=24/impl=generic-192           	   23413	     10576 ns/op	    3560 B/op	     340 allocs/op
+BenchmarkPermutation/field=mamabear/width=24/impl=generic-192           	   21926	     10971 ns/op	    3560 B/op	     340 allocs/op
+BenchmarkCompress/field=koalabear/impl=baseline-192                     	  381694	       587.1 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCompress/field=koalabear/impl=baseline-192                     	  414770	       584.7 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCompress/field=koalabear/impl=baseline-192                     	  410194	       585.2 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCompress/field=koalabear/impl=baseline-192                     	  406548	       585.0 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCompress/field=koalabear/impl=baseline-192                     	  406100	       585.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCompress/field=koalabear/impl=baseline-192                     	  401354	       585.3 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCompress/field=koalabear/impl=generic-192                      	  155695	      1556 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompress/field=koalabear/impl=generic-192                      	  157144	      1533 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompress/field=koalabear/impl=generic-192                      	  158079	      1536 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompress/field=koalabear/impl=generic-192                      	  159967	      1528 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompress/field=koalabear/impl=generic-192                      	  158884	      1545 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompress/field=koalabear/impl=generic-192                      	  159358	      1535 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompress/field=koalabear/impl=generic-vec-192                  	   20564	     11673 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompress/field=koalabear/impl=generic-vec-192                  	   20560	     11659 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompress/field=koalabear/impl=generic-vec-192                  	   20565	     11666 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompress/field=koalabear/impl=generic-vec-192                  	   20564	     11669 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompress/field=koalabear/impl=generic-vec-192                  	   20550	     11683 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompress/field=koalabear/impl=generic-vec-192                  	   20494	     11692 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompress/field=koalabear/impl=generic-asm-192                  	  387919	       648.6 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompress/field=koalabear/impl=generic-asm-192                  	  381982	       667.4 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompress/field=koalabear/impl=generic-asm-192                  	  374702	       672.3 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompress/field=koalabear/impl=generic-asm-192                  	  376376	       656.5 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompress/field=koalabear/impl=generic-asm-192                  	  386406	       653.1 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompress/field=koalabear/impl=generic-asm-192                  	  385023	       648.1 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompress/field=mamabear/impl=baseline-192                      	  111757	      2199 ns/op	     192 B/op	       2 allocs/op
+BenchmarkCompress/field=mamabear/impl=baseline-192                      	  111310	      2199 ns/op	     192 B/op	       2 allocs/op
+BenchmarkCompress/field=mamabear/impl=baseline-192                      	  112513	      2224 ns/op	     192 B/op	       2 allocs/op
+BenchmarkCompress/field=mamabear/impl=baseline-192                      	  112546	      2212 ns/op	     192 B/op	       2 allocs/op
+BenchmarkCompress/field=mamabear/impl=baseline-192                      	  112544	      2206 ns/op	     192 B/op	       2 allocs/op
+BenchmarkCompress/field=mamabear/impl=baseline-192                      	  111031	      2193 ns/op	     192 B/op	       2 allocs/op
+BenchmarkCompress/field=mamabear/impl=generic-192                       	   32404	      7540 ns/op	    2808 B/op	     252 allocs/op
+BenchmarkCompress/field=mamabear/impl=generic-192                       	   31753	      7812 ns/op	    2808 B/op	     252 allocs/op
+BenchmarkCompress/field=mamabear/impl=generic-192                       	   29824	      8103 ns/op	    2808 B/op	     252 allocs/op
+BenchmarkCompress/field=mamabear/impl=generic-192                       	   30933	      7654 ns/op	    2808 B/op	     252 allocs/op
+BenchmarkCompress/field=mamabear/impl=generic-192                       	   29761	      7989 ns/op	    2808 B/op	     252 allocs/op
+BenchmarkCompress/field=mamabear/impl=generic-192                       	   29877	      8016 ns/op	    2808 B/op	     252 allocs/op
+BenchmarkCompressParallel/field=koalabear/impl=baseline-192             	50801094	         4.391 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCompressParallel/field=koalabear/impl=baseline-192             	49508924	         4.450 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCompressParallel/field=koalabear/impl=baseline-192             	50622669	         4.442 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCompressParallel/field=koalabear/impl=baseline-192             	51336906	         4.375 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCompressParallel/field=koalabear/impl=baseline-192             	50254278	         4.400 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCompressParallel/field=koalabear/impl=baseline-192             	50815616	         4.436 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCompressParallel/field=koalabear/impl=generic-192              	 1549873	       150.3 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompressParallel/field=koalabear/impl=generic-192              	 1498022	       161.3 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompressParallel/field=koalabear/impl=generic-192              	 1748592	       145.4 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompressParallel/field=koalabear/impl=generic-192              	 1548300	       148.3 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompressParallel/field=koalabear/impl=generic-192              	 1587357	       142.3 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompressParallel/field=koalabear/impl=generic-192              	 1523976	       144.3 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompressParallel/field=koalabear/impl=generic-vec-192          	  433986	       464.4 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompressParallel/field=koalabear/impl=generic-vec-192          	  426970	       483.8 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompressParallel/field=koalabear/impl=generic-vec-192          	  462634	       481.0 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompressParallel/field=koalabear/impl=generic-vec-192          	  447314	       474.6 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompressParallel/field=koalabear/impl=generic-vec-192          	  642115	       411.3 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompressParallel/field=koalabear/impl=generic-vec-192          	  447460	       474.8 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompressParallel/field=koalabear/impl=generic-asm-192          	 3484236	        78.13 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompressParallel/field=koalabear/impl=generic-asm-192          	 3180291	        66.52 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompressParallel/field=koalabear/impl=generic-asm-192          	 3219199	        74.79 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompressParallel/field=koalabear/impl=generic-asm-192          	 2882940	        90.05 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompressParallel/field=koalabear/impl=generic-asm-192          	 3723210	        83.79 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompressParallel/field=koalabear/impl=generic-asm-192          	 3033885	        76.72 ns/op	      96 B/op	       2 allocs/op
+BenchmarkCompressParallel/field=mamabear/impl=baseline-192              	 1000000	       225.9 ns/op	     192 B/op	       2 allocs/op
+BenchmarkCompressParallel/field=mamabear/impl=baseline-192              	 1000000	       218.3 ns/op	     192 B/op	       2 allocs/op
+BenchmarkCompressParallel/field=mamabear/impl=baseline-192              	 1337085	       217.2 ns/op	     192 B/op	       2 allocs/op
+BenchmarkCompressParallel/field=mamabear/impl=baseline-192              	 1000000	       208.5 ns/op	     192 B/op	       2 allocs/op
+BenchmarkCompressParallel/field=mamabear/impl=baseline-192              	 1000000	       217.1 ns/op	     192 B/op	       2 allocs/op
+BenchmarkCompressParallel/field=mamabear/impl=baseline-192              	 1000000	       211.6 ns/op	     192 B/op	       2 allocs/op
+BenchmarkCompressParallel/field=mamabear/impl=generic-192               	  138410	      1465 ns/op	    2808 B/op	     252 allocs/op
+BenchmarkCompressParallel/field=mamabear/impl=generic-192               	  192356	      1350 ns/op	    2808 B/op	     252 allocs/op
+BenchmarkCompressParallel/field=mamabear/impl=generic-192               	  163383	      1615 ns/op	    2808 B/op	     252 allocs/op
+BenchmarkCompressParallel/field=mamabear/impl=generic-192               	  217149	      1587 ns/op	    2808 B/op	     252 allocs/op
+BenchmarkCompressParallel/field=mamabear/impl=generic-192               	  185010	      1482 ns/op	    2808 B/op	     252 allocs/op
+BenchmarkCompressParallel/field=mamabear/impl=generic-192               	  173652	      1450 ns/op	    2808 B/op	     252 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=baseline-192                	   42542	      5182 ns/op	  49.40 MB/s	     393 B/op	       5 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=baseline-192                	   48685	      4964 ns/op	  51.57 MB/s	     392 B/op	       5 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=baseline-192                	   49155	      4989 ns/op	  51.31 MB/s	     392 B/op	       5 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=baseline-192                	   49161	      4978 ns/op	  51.43 MB/s	     392 B/op	       5 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=baseline-192                	   49304	      4965 ns/op	  51.56 MB/s	     392 B/op	       5 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=baseline-192                	   49218	      4964 ns/op	  51.58 MB/s	     392 B/op	       5 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=current-192                 	   49365	      4867 ns/op	  52.59 MB/s	     256 B/op	       1 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=current-192                 	   49681	      4862 ns/op	  52.65 MB/s	     256 B/op	       1 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=current-192                 	   49766	      4852 ns/op	  52.76 MB/s	     256 B/op	       1 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=current-192                 	   49670	      4870 ns/op	  52.57 MB/s	     256 B/op	       1 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=current-192                 	   49674	      4849 ns/op	  52.80 MB/s	     256 B/op	       1 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=current-192                 	   49930	      4851 ns/op	  52.77 MB/s	     256 B/op	       1 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=generic-192                 	   20446	     11738 ns/op	  21.81 MB/s	    1024 B/op	      17 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=generic-192                 	   20317	     11750 ns/op	  21.79 MB/s	    1024 B/op	      17 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=generic-192                 	   20020	     11860 ns/op	  21.59 MB/s	    1024 B/op	      17 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=generic-192                 	   19750	     11973 ns/op	  21.38 MB/s	    1024 B/op	      17 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=generic-192                 	   19989	     11873 ns/op	  21.56 MB/s	    1024 B/op	      17 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=generic-192                 	   20318	     11782 ns/op	  21.73 MB/s	    1024 B/op	      17 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=generic-vec-192             	    2532	     93158 ns/op	   2.75 MB/s	    1024 B/op	      17 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=generic-vec-192             	    2574	     93082 ns/op	   2.75 MB/s	    1024 B/op	      17 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=generic-vec-192             	    2578	     93131 ns/op	   2.75 MB/s	    1024 B/op	      17 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=generic-vec-192             	    2544	     93018 ns/op	   2.75 MB/s	    1024 B/op	      17 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=generic-vec-192             	    2569	     92942 ns/op	   2.75 MB/s	    1024 B/op	      17 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=generic-vec-192             	    2559	     93144 ns/op	   2.75 MB/s	    1024 B/op	      17 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=generic-asm-192             	   43627	      5312 ns/op	  48.19 MB/s	    1024 B/op	      17 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=generic-asm-192             	   45478	      5234 ns/op	  48.91 MB/s	    1024 B/op	      17 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=generic-asm-192             	   45632	      5283 ns/op	  48.46 MB/s	    1024 B/op	      17 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=generic-asm-192             	   45531	      5280 ns/op	  48.49 MB/s	    1024 B/op	      17 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=generic-asm-192             	   45458	      5250 ns/op	  48.76 MB/s	    1024 B/op	      17 allocs/op
+BenchmarkMDHasher/field=koalabear/n=64/impl=generic-asm-192             	   45460	      5207 ns/op	  49.17 MB/s	    1024 B/op	      17 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=baseline-192              	     788	    307123 ns/op	  53.35 MB/s	   16520 B/op	       5 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=baseline-192              	     787	    306988 ns/op	  53.37 MB/s	   16520 B/op	       5 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=baseline-192              	     788	    307463 ns/op	  53.29 MB/s	   16520 B/op	       5 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=baseline-192              	     783	    308357 ns/op	  53.13 MB/s	   16520 B/op	       5 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=baseline-192              	     786	    307789 ns/op	  53.23 MB/s	   16520 B/op	       5 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=baseline-192              	     783	    311033 ns/op	  52.68 MB/s	   16520 B/op	       5 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=current-192               	     777	    309742 ns/op	  52.90 MB/s	   16384 B/op	       1 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=current-192               	     783	    309833 ns/op	  52.88 MB/s	   16384 B/op	       1 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=current-192               	     770	    312316 ns/op	  52.46 MB/s	   16384 B/op	       1 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=current-192               	     782	    309298 ns/op	  52.97 MB/s	   16384 B/op	       1 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=current-192               	     778	    308543 ns/op	  53.10 MB/s	   16384 B/op	       1 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=current-192               	     774	    314950 ns/op	  52.02 MB/s	   16384 B/op	       1 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=generic-192               	     300	    805836 ns/op	  20.33 MB/s	   65536 B/op	    1025 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=generic-192               	     298	    805566 ns/op	  20.34 MB/s	   65536 B/op	    1025 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=generic-192               	     308	    790809 ns/op	  20.72 MB/s	   65536 B/op	    1025 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=generic-192               	     309	    785324 ns/op	  20.86 MB/s	   65536 B/op	    1025 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=generic-192               	     308	    793373 ns/op	  20.65 MB/s	   65536 B/op	    1025 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=generic-192               	     309	    787521 ns/op	  20.80 MB/s	   65536 B/op	    1025 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=generic-vec-192           	      38	   5958138 ns/op	   2.75 MB/s	   65536 B/op	    1025 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=generic-vec-192           	      38	   5962957 ns/op	   2.75 MB/s	   65536 B/op	    1025 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=generic-vec-192           	      39	   5954176 ns/op	   2.75 MB/s	   65536 B/op	    1025 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=generic-vec-192           	      39	   5968523 ns/op	   2.75 MB/s	   65536 B/op	    1025 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=generic-vec-192           	      39	   5951450 ns/op	   2.75 MB/s	   65536 B/op	    1025 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=generic-vec-192           	      39	   5945038 ns/op	   2.76 MB/s	   65536 B/op	    1025 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=generic-asm-192           	     723	    335128 ns/op	  48.89 MB/s	   65536 B/op	    1025 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=generic-asm-192           	     747	    334959 ns/op	  48.91 MB/s	   65536 B/op	    1025 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=generic-asm-192           	     740	    334008 ns/op	  49.05 MB/s	   65536 B/op	    1025 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=generic-asm-192           	     745	    339478 ns/op	  48.26 MB/s	   65536 B/op	    1025 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=generic-asm-192           	     744	    334462 ns/op	  48.99 MB/s	   65536 B/op	    1025 allocs/op
+BenchmarkMDHasher/field=koalabear/n=4096/impl=generic-asm-192           	     747	    334624 ns/op	  48.96 MB/s	   65536 B/op	    1025 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=baseline-192             	      49	   4900808 ns/op	  53.49 MB/s	  262280 B/op	       5 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=baseline-192             	      48	   4909854 ns/op	  53.39 MB/s	  262280 B/op	       5 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=baseline-192             	      49	   4912698 ns/op	  53.36 MB/s	  262280 B/op	       5 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=baseline-192             	      49	   4915330 ns/op	  53.33 MB/s	  262280 B/op	       5 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=baseline-192             	      48	   4942964 ns/op	  53.03 MB/s	  262280 B/op	       5 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=baseline-192             	      48	   4889762 ns/op	  53.61 MB/s	  262280 B/op	       5 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=current-192              	      46	   4970715 ns/op	  52.74 MB/s	  262144 B/op	       1 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=current-192              	      44	   4989049 ns/op	  52.54 MB/s	  262144 B/op	       1 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=current-192              	      48	   4996738 ns/op	  52.46 MB/s	  262144 B/op	       1 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=current-192              	      45	   4968473 ns/op	  52.76 MB/s	  262144 B/op	       1 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=current-192              	      48	   4946486 ns/op	  53.00 MB/s	  262144 B/op	       1 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=current-192              	      48	   4955722 ns/op	  52.90 MB/s	  262144 B/op	       1 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=generic-192              	      19	  12763754 ns/op	  20.54 MB/s	 1048576 B/op	   16385 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=generic-192              	      18	  12629487 ns/op	  20.76 MB/s	 1048576 B/op	   16385 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=generic-192              	      19	  12652045 ns/op	  20.72 MB/s	 1048576 B/op	   16385 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=generic-192              	      19	  12662059 ns/op	  20.70 MB/s	 1048576 B/op	   16385 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=generic-192              	      18	  12570224 ns/op	  20.85 MB/s	 1048576 B/op	   16385 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=generic-192              	      18	  12498312 ns/op	  20.97 MB/s	 1048576 B/op	   16385 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=generic-vec-192          	       3	  95263985 ns/op	   2.75 MB/s	 1048576 B/op	   16385 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=generic-vec-192          	       3	  95227625 ns/op	   2.75 MB/s	 1048576 B/op	   16385 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=generic-vec-192          	       3	  95312998 ns/op	   2.75 MB/s	 1048576 B/op	   16385 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=generic-vec-192          	       3	  95251783 ns/op	   2.75 MB/s	 1048576 B/op	   16385 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=generic-vec-192          	       3	  95273700 ns/op	   2.75 MB/s	 1048576 B/op	   16385 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=generic-vec-192          	       3	  95306111 ns/op	   2.75 MB/s	 1048576 B/op	   16385 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=generic-asm-192          	      46	   5389857 ns/op	  48.64 MB/s	 1048576 B/op	   16385 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=generic-asm-192          	      45	   5329280 ns/op	  49.19 MB/s	 1048576 B/op	   16385 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=generic-asm-192          	      46	   5338182 ns/op	  49.11 MB/s	 1048576 B/op	   16385 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=generic-asm-192          	      45	   5348184 ns/op	  49.02 MB/s	 1048576 B/op	   16385 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=generic-asm-192          	      45	   5352692 ns/op	  48.97 MB/s	 1048576 B/op	   16385 allocs/op
+BenchmarkMDHasher/field=koalabear/n=65536/impl=generic-asm-192          	      45	   5299127 ns/op	  49.47 MB/s	 1048576 B/op	   16385 allocs/op
+BenchmarkMDHasher/field=mamabear/n=64/impl=baseline-192                 	   14064	     17036 ns/op	  30.05 MB/s	    2048 B/op	      17 allocs/op
+BenchmarkMDHasher/field=mamabear/n=64/impl=baseline-192                 	   13770	     17264 ns/op	  29.66 MB/s	    2048 B/op	      17 allocs/op
+BenchmarkMDHasher/field=mamabear/n=64/impl=baseline-192                 	   14084	     17061 ns/op	  30.01 MB/s	    2048 B/op	      17 allocs/op
+BenchmarkMDHasher/field=mamabear/n=64/impl=baseline-192                 	   14190	     16950 ns/op	  30.21 MB/s	    2048 B/op	      17 allocs/op
+BenchmarkMDHasher/field=mamabear/n=64/impl=baseline-192                 	   13927	     17208 ns/op	  29.75 MB/s	    2048 B/op	      17 allocs/op
+BenchmarkMDHasher/field=mamabear/n=64/impl=baseline-192                 	   14188	     16948 ns/op	  30.21 MB/s	    2048 B/op	      17 allocs/op
+BenchmarkMDHasher/field=mamabear/n=64/impl=generic-192                  	    4393	     58496 ns/op	   8.75 MB/s	   22976 B/op	    2017 allocs/op
+BenchmarkMDHasher/field=mamabear/n=64/impl=generic-192                  	    4456	     58059 ns/op	   8.82 MB/s	   22976 B/op	    2017 allocs/op
+BenchmarkMDHasher/field=mamabear/n=64/impl=generic-192                  	    4159	     58134 ns/op	   8.81 MB/s	   22976 B/op	    2017 allocs/op
+BenchmarkMDHasher/field=mamabear/n=64/impl=generic-192                  	    4322	     58162 ns/op	   8.80 MB/s	   22976 B/op	    2017 allocs/op
+BenchmarkMDHasher/field=mamabear/n=64/impl=generic-192                  	    4406	     58725 ns/op	   8.72 MB/s	   22976 B/op	    2017 allocs/op
+BenchmarkMDHasher/field=mamabear/n=64/impl=generic-192                  	    4422	     58150 ns/op	   8.80 MB/s	   22976 B/op	    2017 allocs/op
+BenchmarkMDHasher/field=mamabear/n=4096/impl=baseline-192               	     212	   1131924 ns/op	  28.95 MB/s	  131072 B/op	    1025 allocs/op
+BenchmarkMDHasher/field=mamabear/n=4096/impl=baseline-192               	     213	   1122631 ns/op	  29.19 MB/s	  131072 B/op	    1025 allocs/op
+BenchmarkMDHasher/field=mamabear/n=4096/impl=baseline-192               	     208	   1130038 ns/op	  29.00 MB/s	  131072 B/op	    1025 allocs/op
+BenchmarkMDHasher/field=mamabear/n=4096/impl=baseline-192               	     213	   1117502 ns/op	  29.32 MB/s	  131072 B/op	    1025 allocs/op
+BenchmarkMDHasher/field=mamabear/n=4096/impl=baseline-192               	     212	   1125052 ns/op	  29.13 MB/s	  131072 B/op	    1025 allocs/op
+BenchmarkMDHasher/field=mamabear/n=4096/impl=baseline-192               	     213	   1119872 ns/op	  29.26 MB/s	  131072 B/op	    1025 allocs/op
+BenchmarkMDHasher/field=mamabear/n=4096/impl=generic-192                	      70	   3663170 ns/op	   8.95 MB/s	 1470466 B/op	  129025 allocs/op
+BenchmarkMDHasher/field=mamabear/n=4096/impl=generic-192                	      64	   3664823 ns/op	   8.94 MB/s	 1470468 B/op	  129025 allocs/op
+BenchmarkMDHasher/field=mamabear/n=4096/impl=generic-192                	      70	   3731541 ns/op	   8.78 MB/s	 1470465 B/op	  129025 allocs/op
+BenchmarkMDHasher/field=mamabear/n=4096/impl=generic-192                	      62	   3663699 ns/op	   8.94 MB/s	 1470466 B/op	  129025 allocs/op
+BenchmarkMDHasher/field=mamabear/n=4096/impl=generic-192                	      72	   3698148 ns/op	   8.86 MB/s	 1470466 B/op	  129025 allocs/op
+BenchmarkMDHasher/field=mamabear/n=4096/impl=generic-192                	      70	   3683323 ns/op	   8.90 MB/s	 1470465 B/op	  129025 allocs/op
+BenchmarkMDHasher/field=mamabear/n=65536/impl=baseline-192              	      13	  18015997 ns/op	  29.10 MB/s	 2097152 B/op	   16385 allocs/op
+BenchmarkMDHasher/field=mamabear/n=65536/impl=baseline-192              	      13	  17964285 ns/op	  29.19 MB/s	 2097152 B/op	   16385 allocs/op
+BenchmarkMDHasher/field=mamabear/n=65536/impl=baseline-192              	      13	  17955415 ns/op	  29.20 MB/s	 2097152 B/op	   16385 allocs/op
+BenchmarkMDHasher/field=mamabear/n=65536/impl=baseline-192              	      13	  17964816 ns/op	  29.18 MB/s	 2097152 B/op	   16385 allocs/op
+BenchmarkMDHasher/field=mamabear/n=65536/impl=baseline-192              	      13	  17908502 ns/op	  29.28 MB/s	 2097152 B/op	   16385 allocs/op
+BenchmarkMDHasher/field=mamabear/n=65536/impl=baseline-192              	      13	  17929253 ns/op	  29.24 MB/s	 2097152 B/op	   16385 allocs/op
+BenchmarkMDHasher/field=mamabear/n=65536/impl=generic-192               	       4	  57861814 ns/op	   9.06 MB/s	23527444 B/op	 2064385 allocs/op
+BenchmarkMDHasher/field=mamabear/n=65536/impl=generic-192               	       4	  57351702 ns/op	   9.14 MB/s	23527484 B/op	 2064385 allocs/op
+BenchmarkMDHasher/field=mamabear/n=65536/impl=generic-192               	       4	  57449569 ns/op	   9.13 MB/s	23527448 B/op	 2064385 allocs/op
+BenchmarkMDHasher/field=mamabear/n=65536/impl=generic-192               	       4	  58052968 ns/op	   9.03 MB/s	23527448 B/op	 2064385 allocs/op
+BenchmarkMDHasher/field=mamabear/n=65536/impl=generic-192               	       4	  58762678 ns/op	   8.92 MB/s	23527452 B/op	 2064385 allocs/op
+BenchmarkMDHasher/field=mamabear/n=65536/impl=generic-192               	       4	  59908740 ns/op	   8.75 MB/s	23527460 B/op	 2064385 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=baseline-192         	    1788	    134890 ns/op	   20994 B/op	     254 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=baseline-192         	    1870	    133004 ns/op	   20988 B/op	     254 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=baseline-192         	    1833	    133025 ns/op	   20990 B/op	     254 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=baseline-192         	    1845	    133852 ns/op	   20990 B/op	     254 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=baseline-192         	    1776	    134651 ns/op	   20995 B/op	     254 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=baseline-192         	    1776	    133515 ns/op	   20995 B/op	     254 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=current-192          	    1809	    133172 ns/op	   18258 B/op	     347 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=current-192          	    1809	    133123 ns/op	   18258 B/op	     347 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=current-192          	    1844	    131759 ns/op	   18256 B/op	     347 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=current-192          	    1854	    130921 ns/op	   18254 B/op	     347 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=current-192          	    1886	    132065 ns/op	   18252 B/op	     347 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=current-192          	    1798	    133261 ns/op	   18259 B/op	     347 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=generic-192          	     823	    297122 ns/op	   35293 B/op	     698 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=generic-192          	     829	    295679 ns/op	   35290 B/op	     698 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=generic-192          	     830	    295234 ns/op	   35291 B/op	     698 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=generic-192          	     828	    296289 ns/op	   35291 B/op	     698 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=generic-192          	     832	    295641 ns/op	   35290 B/op	     698 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=generic-192          	     820	    295698 ns/op	   35294 B/op	     698 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=generic-vec-192      	     100	   2084184 ns/op	   35571 B/op	     698 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=generic-vec-192      	     100	   2082023 ns/op	   35571 B/op	     698 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=generic-vec-192      	     100	   2080434 ns/op	   35573 B/op	     698 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=generic-vec-192      	     100	   2083037 ns/op	   35573 B/op	     698 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=generic-vec-192      	     100	   2082233 ns/op	   35573 B/op	     698 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=generic-vec-192      	     100	   2079922 ns/op	   35573 B/op	     698 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=generic-asm-192      	    1786	    141492 ns/op	   35241 B/op	     698 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=generic-asm-192      	    1779	    140262 ns/op	   35272 B/op	     698 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=generic-asm-192      	    1791	    140675 ns/op	   35241 B/op	     698 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=generic-asm-192      	    1803	    141128 ns/op	   35239 B/op	     698 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=generic-asm-192      	    1796	    141093 ns/op	   35239 B/op	     698 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=8/impl=generic-asm-192      	    1774	    141438 ns/op	   35242 B/op	     698 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=baseline-192      	     175	   1355850 ns/op	   86495 B/op	     254 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=baseline-192      	     175	   1355796 ns/op	   86493 B/op	     254 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=baseline-192      	     175	   1355541 ns/op	   86495 B/op	     254 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=baseline-192      	     175	   1354492 ns/op	   86492 B/op	     254 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=baseline-192      	     178	   1348297 ns/op	   86480 B/op	     254 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=baseline-192      	     178	   1356922 ns/op	   86480 B/op	     254 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=current-192       	     177	   1360325 ns/op	   83780 B/op	     347 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=current-192       	     176	   1366603 ns/op	   83785 B/op	     347 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=current-192       	     176	   1379246 ns/op	   83790 B/op	     347 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=current-192       	     177	   1363981 ns/op	   83779 B/op	     347 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=current-192       	     176	   1366207 ns/op	   83785 B/op	     347 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=current-192       	     177	   1360698 ns/op	   83782 B/op	     347 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=generic-192       	      68	   3450548 ns/op	  297552 B/op	    4762 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=generic-192       	      68	   3449210 ns/op	  297563 B/op	    4762 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=generic-192       	      69	   3447373 ns/op	  297518 B/op	    4762 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=generic-192       	      67	   3444624 ns/op	  297587 B/op	    4762 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=generic-192       	      68	   3441643 ns/op	  297557 B/op	    4762 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=generic-192       	      69	   3432027 ns/op	  297526 B/op	    4762 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=generic-vec-192   	       8	  25848251 ns/op	  301989 B/op	    4763 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=generic-vec-192   	       8	  25980414 ns/op	  301989 B/op	    4763 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=generic-vec-192   	       8	  25925442 ns/op	  301989 B/op	    4763 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=generic-vec-192   	       8	  25843319 ns/op	  301961 B/op	    4762 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=generic-vec-192   	       8	  25775622 ns/op	  301961 B/op	    4762 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=generic-vec-192   	       8	  25873074 ns/op	  301989 B/op	    4763 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=generic-asm-192   	     158	   1489890 ns/op	  296868 B/op	    4762 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=generic-asm-192   	     160	   1484778 ns/op	  297192 B/op	    4762 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=generic-asm-192   	     160	   1485629 ns/op	  297197 B/op	    4762 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=generic-asm-192   	     160	   1484239 ns/op	  297192 B/op	    4762 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=generic-asm-192   	     160	   1478399 ns/op	  297189 B/op	    4762 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=16/update=1024/impl=generic-asm-192   	     157	   1505063 ns/op	  297232 B/op	    4762 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=baseline-192        	     100	   2112336 ns/op	  338682 B/op	    3848 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=baseline-192        	     100	   2125680 ns/op	  338688 B/op	    3848 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=baseline-192        	     100	   2113204 ns/op	  338680 B/op	    3848 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=baseline-192        	     100	   2107889 ns/op	  338680 B/op	    3848 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=baseline-192        	     100	   2124489 ns/op	  338690 B/op	    3848 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=baseline-192        	     100	   2097603 ns/op	  338696 B/op	    3848 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=current-192         	     100	   2136344 ns/op	  297589 B/op	    5381 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=current-192         	     100	   2138593 ns/op	  297591 B/op	    5381 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=current-192         	     100	   2134761 ns/op	  297584 B/op	    5381 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=current-192         	     100	   2129422 ns/op	  297581 B/op	    5381 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=current-192         	     100	   2138542 ns/op	  297584 B/op	    5381 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=current-192         	     100	   2133027 ns/op	  297586 B/op	    5381 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=generic-192         	      49	   4793382 ns/op	  570226 B/op	   11013 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=generic-192         	      46	   4821527 ns/op	  569306 B/op	   11013 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=generic-192         	      50	   4819034 ns/op	  570144 B/op	   11013 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=generic-192         	      46	   4769313 ns/op	  569297 B/op	   11012 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=generic-192         	      49	   4794876 ns/op	  570201 B/op	   11013 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=generic-192         	      50	   4802336 ns/op	  570106 B/op	   11013 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=generic-vec-192     	       7	  33334062 ns/op	  573515 B/op	   11012 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=generic-vec-192     	       6	  33366387 ns/op	  574817 B/op	   11013 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=generic-vec-192     	       6	  33334870 ns/op	  574857 B/op	   11013 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=generic-vec-192     	       6	  33374894 ns/op	  574857 B/op	   11013 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=generic-vec-192     	       7	  33279739 ns/op	  573549 B/op	   11013 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=generic-vec-192     	       7	  33323102 ns/op	  573515 B/op	   11012 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=generic-asm-192     	     100	   2258310 ns/op	  569564 B/op	   11013 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=generic-asm-192     	     100	   2240165 ns/op	  569585 B/op	   11013 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=generic-asm-192     	     100	   2272590 ns/op	  569587 B/op	   11013 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=generic-asm-192     	     100	   2280747 ns/op	  569574 B/op	   11013 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=generic-asm-192     	     100	   2275334 ns/op	  569578 B/op	   11013 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=8/impl=generic-asm-192     	     100	   2311601 ns/op	  569571 B/op	   11013 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=baseline-192     	      10	  21690212 ns/op	 1387801 B/op	    3849 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=baseline-192     	      10	  21705820 ns/op	 1387894 B/op	    3850 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=baseline-192     	      10	  21630658 ns/op	 1387908 B/op	    3851 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=baseline-192     	      10	  21716955 ns/op	 1387993 B/op	    3852 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=baseline-192     	      10	  21689112 ns/op	 1387940 B/op	    3851 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=baseline-192     	      10	  21643562 ns/op	 1387886 B/op	    3850 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=current-192      	      10	  21848426 ns/op	 1346782 B/op	    5383 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=current-192      	      10	  21853460 ns/op	 1346702 B/op	    5382 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=current-192      	      10	  21828909 ns/op	 1346806 B/op	    5384 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=current-192      	      10	  21876828 ns/op	 1346742 B/op	    5382 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=current-192      	      10	  21822064 ns/op	 1346806 B/op	    5384 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=current-192      	      10	  21877751 ns/op	 1346784 B/op	    5383 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=generic-192      	       4	  55477972 ns/op	 4768558 B/op	   76045 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=generic-192      	       4	  55322451 ns/op	 4768626 B/op	   76046 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=generic-192      	       4	  56311203 ns/op	 4768658 B/op	   76047 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=generic-192      	       4	  55405785 ns/op	 4768578 B/op	   76045 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=generic-192      	       4	  55085413 ns/op	 4768678 B/op	   76047 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=generic-192      	       4	  55648643 ns/op	 4768546 B/op	   76044 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=generic-vec-192  	       1	 413042763 ns/op	 4782208 B/op	   76047 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=generic-vec-192  	       1	 412653553 ns/op	 4782208 B/op	   76047 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=generic-vec-192  	       1	 413113425 ns/op	 4781968 B/op	   76042 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=generic-vec-192  	       1	 412532373 ns/op	 4781968 B/op	   76042 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=generic-vec-192  	       1	 412450978 ns/op	 4782208 B/op	   76047 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=generic-vec-192  	       1	 413116434 ns/op	 4781968 B/op	   76042 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=generic-asm-192  	       9	  23762828 ns/op	 4757872 B/op	   76043 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=generic-asm-192  	       9	  23718605 ns/op	 4757886 B/op	   76043 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=generic-asm-192  	       9	  23462236 ns/op	 4758071 B/op	   76046 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=generic-asm-192  	       9	  23691845 ns/op	 4758097 B/op	   76047 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=generic-asm-192  	       9	  23536004 ns/op	 4758056 B/op	   76046 allocs/op
+BenchmarkFiatShamir/field=koalabear/rounds=256/update=1024/impl=generic-asm-192  	       9	  23810119 ns/op	 4758007 B/op	   76045 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=16/update=8/impl=baseline-192          	     595	    413522 ns/op	   59588 B/op	     636 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=16/update=8/impl=baseline-192          	     582	    415846 ns/op	   59505 B/op	     636 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=16/update=8/impl=baseline-192          	     596	    410963 ns/op	   59496 B/op	     636 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=16/update=8/impl=baseline-192          	     598	    411689 ns/op	   59495 B/op	     636 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=16/update=8/impl=baseline-192          	     597	    412450 ns/op	   59495 B/op	     636 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=16/update=8/impl=baseline-192          	     601	    411745 ns/op	   59493 B/op	     636 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=16/update=8/impl=generic-192           	     183	   1301289 ns/op	  522545 B/op	   44636 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=16/update=8/impl=generic-192           	     182	   1311251 ns/op	  522864 B/op	   44636 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=16/update=8/impl=generic-192           	     186	   1297885 ns/op	  522795 B/op	   44636 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=16/update=8/impl=generic-192           	     187	   1301819 ns/op	  522776 B/op	   44636 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=16/update=8/impl=generic-192           	     183	   1302802 ns/op	  522538 B/op	   44636 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=16/update=8/impl=generic-192           	     183	   1309456 ns/op	  522842 B/op	   44636 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=16/update=1024/impl=baseline-192       	      48	   4933180 ns/op	  583894 B/op	    4700 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=16/update=1024/impl=baseline-192       	      49	   4977123 ns/op	  583805 B/op	    4700 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=16/update=1024/impl=baseline-192       	      46	   4893721 ns/op	  582897 B/op	    4700 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=16/update=1024/impl=baseline-192       	      49	   4888796 ns/op	  582673 B/op	    4700 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=16/update=1024/impl=baseline-192       	      46	   4891376 ns/op	  582897 B/op	    4700 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=16/update=1024/impl=baseline-192       	      48	   4939065 ns/op	  583896 B/op	    4700 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=16/update=1024/impl=generic-192        	      14	  16382885 ns/op	 6394605 B/op	  556706 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=16/update=1024/impl=generic-192        	      15	  16063617 ns/op	 6392005 B/op	  556705 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=16/update=1024/impl=generic-192        	      15	  16117997 ns/op	 6395623 B/op	  556705 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=16/update=1024/impl=generic-192        	      14	  15974099 ns/op	 6394624 B/op	  556706 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=16/update=1024/impl=generic-192        	      15	  16208359 ns/op	 6395610 B/op	  556705 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=16/update=1024/impl=generic-192        	      15	  15830776 ns/op	 6391992 B/op	  556705 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=256/update=8/impl=baseline-192         	      36	   6613709 ns/op	  956992 B/op	   10005 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=256/update=8/impl=baseline-192         	      36	   6579666 ns/op	  956973 B/op	   10005 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=256/update=8/impl=baseline-192         	      36	   6617471 ns/op	  956988 B/op	   10005 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=256/update=8/impl=baseline-192         	      36	   6610320 ns/op	  956982 B/op	   10005 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=256/update=8/impl=baseline-192         	      36	   6600492 ns/op	  956954 B/op	   10004 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=256/update=8/impl=baseline-192         	      36	   6629536 ns/op	  956990 B/op	   10005 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=256/update=8/impl=generic-192          	      12	  20814358 ns/op	 8367879 B/op	  714014 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=256/update=8/impl=generic-192          	      12	  20704500 ns/op	 8367814 B/op	  714013 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=256/update=8/impl=generic-192          	      10	  20569182 ns/op	 8366893 B/op	  714012 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=256/update=8/impl=generic-192          	      10	  20465072 ns/op	 8366824 B/op	  714011 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=256/update=8/impl=generic-192          	      12	  20837568 ns/op	 8367851 B/op	  714013 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=256/update=8/impl=generic-192          	      10	  20821893 ns/op	 8372584 B/op	  714018 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=256/update=1024/impl=baseline-192      	       3	  78250332 ns/op	 9328874 B/op	   75039 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=256/update=1024/impl=baseline-192      	       3	  77801279 ns/op	 9328618 B/op	   75034 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=256/update=1024/impl=baseline-192      	       3	  77906346 ns/op	 9328741 B/op	   75037 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=256/update=1024/impl=baseline-192      	       3	  78045933 ns/op	 9328581 B/op	   75033 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=256/update=1024/impl=baseline-192      	       3	  78051620 ns/op	 9328858 B/op	   75039 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=256/update=1024/impl=baseline-192      	       3	  77924650 ns/op	 9328816 B/op	   75037 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=256/update=1024/impl=generic-192       	       1	 255667570 ns/op	102294896 B/op	 8907128 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=256/update=1024/impl=generic-192       	       1	 255348962 ns/op	102295520 B/op	 8907138 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=256/update=1024/impl=generic-192       	       1	 251697205 ns/op	102295296 B/op	 8907130 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=256/update=1024/impl=generic-192       	       1	 256764203 ns/op	102295680 B/op	 8907139 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=256/update=1024/impl=generic-192       	       1	 254348324 ns/op	102294960 B/op	 8907127 allocs/op
+BenchmarkFiatShamir/field=mamabear/rounds=256/update=1024/impl=generic-192       	       1	 252037782 ns/op	102295200 B/op	 8907126 allocs/op
+PASS
+ok  	github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/genericbench	112.395s

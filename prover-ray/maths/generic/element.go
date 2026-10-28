@@ -32,6 +32,10 @@ type Element[T any] interface {
 	Mul(x, y *T) *T
 	Square(x *T) *T
 	Double(x *T) *T
+	// Halve sets z = z/2.
+	Halve()
+	// Mul2ExpNegN sets z = x·2⁻ⁿ.
+	Mul2ExpNegN(x *T, n uint32) *T
 	Neg(x *T) *T
 	// Inverse sets z = x⁻¹, or 0 if x = 0.
 	Inverse(x *T) *T

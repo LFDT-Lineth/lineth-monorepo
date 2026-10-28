@@ -1,0 +1,13 @@
+"# KoalaBear medium-scale run 2 (before the gnark-crypto diagonal was replicated); medians in ns, 3 significant figures, recovered from tab_paths.tex"
+benchmark,baseline,branches,generic-vec,generic-asm,current
+Permutation (width=16),570,1.92e+03,1.16e+04,573,
+Permutation (width=24),706,2.63e+03,1.23e+04,706,
+Compress,586,2.03e+03,1.17e+04,656,
+CompressParallel,4.4,170,471,73.2,
+MDHasher (n=64),4.97e+03,1.62e+04,9.34e+04,5.3e+03,4.88e+03
+MDHasher (n=4096),3.08e+05,1.03e+06,5.98e+06,3.36e+05,3.12e+05
+MDHasher (n=65536),4.92e+06,1.66e+07,9.55e+07,5.34e+06,4.96e+06
+"FiatShamir (rounds=16, upd=8)",1.33e+05,3.81e+05,2.08e+06,1.41e+05,1.33e+05
+"FiatShamir (rounds=16, upd=1024)",1.35e+06,4.5e+06,2.58e+07,1.5e+06,1.37e+06
+"FiatShamir (rounds=256, upd=8)",2.11e+06,6.1e+06,3.32e+07,2.26e+06,2.13e+06
+"FiatShamir (rounds=256, upd=1024)",2.17e+07,7.19e+07,4.13e+08,2.37e+07,2.19e+07

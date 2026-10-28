@@ -50,15 +50,21 @@
     operations are indirect calls that cannot be inlined, and they force local variables onto
     the heap. The generic permutation made 222--340 heap allocations per call.
   \item Branching to concrete KoalaBear code inside the permutation's hot loops removes all
-    allocations from the permutation and makes it about \textbf{2.5$\times$ faster}, but it
-    stays about \textbf{3.5$\times$ slower} than baseline.
+    allocations from the permutation. With gnark-crypto's formulas replicated, it is about
+    \textbf{3.5$\times$ faster} than the fully generic code, but still
+    \textbf{2.6--2.9$\times$ slower} than baseline (2.2--2.6$\times$ for hashing and
+    Fiat--Shamir).
+  \item Where gnark-crypto's scalar code uses a cheaper formula, the generic code now uses
+    the same one, so that the comparison measures genericity rather than different
+    formulas. This applies to the internal matrix (Section~\ref{sec:replicate}). One
+    MamaBear-specific trick is not replicated yet.
   \item Delegating the whole KoalaBear permutation to gnark-crypto's assembly
     (\texttt{generic-asm}) \textbf{matches the baseline} for the permutation itself.
     Batched \texttt{koalabear.Vector} operations inside the hot loops
     (\texttt{generic-vec}) are \textbf{about 20$\times$ slower} and are a dead end.
   \item The remaining gap comes from \textbf{2 heap allocations per compression} in the
     generic \texttt{Compress} function. Under parallel load (\texttt{CompressParallel},
-    192 threads) they make the code up to 18$\times$ slower than baseline, because of
+    192 threads) they make the code about 16$\times$ slower than baseline, because of
     \textbf{garbage collection}: with the GC switched off the gap shrinks to 1.5$\times$.
     Removing these allocations is the next thing to fix.
 \end{itemize}
@@ -89,7 +95,7 @@ Nothing else ran on the machine during the benchmarks.
     branches of Section~\ref{sec:paths}.
 \end{itemize}
 
-\paragraph{Runs.} Three runs, each preceded by \texttt{TestAgreement}, which checks that all
+\paragraph{Runs.} Four runs, each preceded by \texttt{TestAgreement}, which checks that all
 implementations produce bit-identical outputs. It passed every time.
 \begin{center}\small
 \begin{adjustbox}{max width=\linewidth}
@@ -97,8 +103,9 @@ implementations produce bit-identical outputs. It passed every time.
 \toprule
 Run & Code & Sizes & Samples \\ \midrule
 1 (Tables~\ref{tab:mid-kb}, \ref{tab:mid-mb}) & \texttt{3ce6cc6e5}, fully generic & \texttt{full}, minus FS rounds=4096/update=16384 & $6\times500$\,ms \\
-2 (Table~\ref{tab:kbb}) & scalar KoalaBear branches & same as run 1, KoalaBear only & $6\times500$\,ms \\
-3 (Table~\ref{tab:paths}) & \texttt{6b3d84ad3}, all three paths & \texttt{medium}, KoalaBear only & $6\times200$\,ms \\
+2 (Table~\ref{tab:kbb}, ``initial'') & \texttt{6b3d84ad3}, branches and the three paths & \texttt{medium}, KoalaBear only & $6\times200$\,ms \\
+3 (Tables~\ref{tab:kbb}, \ref{tab:paths}) & run 2 + gnark-crypto diagonal replicated & \texttt{medium}, both fields & $6\times200$\,ms \\
+4 (Table~\ref{tab:parallel}) & same code as run 3 & CompressParallel, KoalaBear, 1--192 threads & $6\times200$\,ms \\
 \bottomrule
 \end{tabular}
 \end{adjustbox}
@@ -106,10 +113,10 @@ Run & Code & Sizes & Samples \\ \midrule
 The single skipped FiatShamir case took about 40\,s per operation in the generic code and
 dominated the runtime. Tables report the median of 6 samples. Unless noted otherwise, every
 difference against the baseline is statistically significant according to \texttt{benchstat}
-($p = 0.002$). The exceptions are: \texttt{current} on MDHasher $n=2^{20}$ in run 1
-($p=0.065$), \texttt{current} on FiatShamir rounds=16/update=16384 in run 2 ($p=0.093$), and
-\texttt{current} on FiatShamir rounds=16/update=8 in run 3 ($p=0.39$). All three are
-differences of under 2\% that \texttt{benchstat} could not distinguish from noise.
+($p = 0.002$). The exceptions are \texttt{current} on MDHasher $n=2^{20}$ in run 1
+($p=0.065$), on FiatShamir rounds=16/update=8 in run 3 ($p=0.065$) and on MDHasher $n=4096$
+in run 3 ($p=0.026$). All are differences of under 2\%. Run 2 survives only as the medians
+in \texttt{report/data/paths-run2-medians.csv}; its raw output was lost.
 
 \section{Background: what is benchmarked}
 
@@ -192,7 +199,9 @@ func (h *Permutation[T, PT]) matMulInternal(input []T) {
 For comparison, gnark-crypto's own scalar fallback (used when there is no AVX-512) is
 written for one field and one width. It never multiplies by the diagonal: the diagonal
 entries are small values such as $\pm2$, $\pm\frac12$ or $2^{-8}$, so it uses doublings,
-halvings and shifts instead:
+halvings and shifts instead. Since run 3, the generic code and the KoalaBear branch use
+the same formula (Section~\ref{sec:replicate}); Tables~\ref{tab:mid-kb} and
+\ref{tab:mid-mb} predate that change.
 \begin{lstlisting}[language=Go,caption={gnark-crypto KoalaBear \texttt{matMulInternalInPlace}, width 16 (excerpt).},label=lst:gnark]
 var sum fr.Element
 sum.Set(&input[0])
@@ -230,10 +239,10 @@ func (h *Permutation[T, PT]) matMulInternal(input []T) {
 			kbMatMulInternalVec(asKB(input), asKB(h.params.InternalDiag))
 			return
 		}
-		kbMatMulInternal(asKB(input), asKB(h.params.InternalDiag))
+		kbMatMulInternal(asKB(input))
 		return
 	}
-	// ... fully generic code, unchanged, for every other field ...
+	// ... generic code for every other field ...
 }
 
 // koalabear.go: reinterpret []T as []koalabear.Element, without copying.
@@ -241,35 +250,63 @@ func asKB[T any](s []T) []koalabear.Element {
 	return unsafe.Slice((*koalabear.Element)(unsafe.Pointer(unsafe.SliceData(s))), len(s))
 }
 
-// koalabear.go: the same loop, with direct calls the compiler inlines.
-func kbMatMulInternal(input, diag []koalabear.Element) {
+// koalabear.go: gnark-crypto's code, copied; direct calls the compiler inlines.
+func kbMatMulInternal(input []koalabear.Element) {
 	var sum koalabear.Element // stays on the stack
-	for i := range input {
+	sum.Set(&input[0])
+	for i := 1; i < len(input); i++ {
 		sum.Add(&sum, &input[i])
 	}
-	var tmp koalabear.Element
-	for i := range input {
-		tmp.Mul(&input[i], &diag[i])
-		input[i].Add(&sum, &tmp)
-	}
+	var temp koalabear.Element
+	input[0].Sub(&sum, temp.Double(&input[0]))
+	input[1].Add(&sum, &input[1])
+	// ... as in Listing 2, for width 16 and 24 ...
 }
 \end{lstlisting}
 
 \input{tab_kbb.tex}
 
-\paragraph{Findings.} The permutation is now allocation-free and about 2.5$\times$ faster
-than fully generic, but still 3.6--4.0$\times$ slower than baseline. The remaining gap is
-the AVX-512 assembly: one AVX-512 instruction processes 16 elements at once, which is
-exactly one width-16 state, and gnark-crypto's assembly keeps the whole state in registers
-for all 27 rounds. Scalar Go code cannot do that. The remaining allocations (2 per
-compression) are analysed in Section~\ref{sec:parallel}.
-
 \input{fig_branch.tex}
 
-\paragraph{A cheap further improvement.} \texttt{kbMatMulInternal} still multiplies by every
-diagonal entry. gnark-crypto's scalar code (Listing~\ref{lst:gnark}) replaces those
-multiplications by doublings, halvings and shifts. Doing the same would speed up the scalar
-path, though it cannot close the gap with the assembly.
+\paragraph{Findings.} The permutation is now allocation-free. Its first version (run 2) was
+3.4--3.7$\times$ slower than baseline. With gnark-crypto's internal-matrix formula
+replicated (run 3, Section~\ref{sec:replicate}), it is 2.6--2.9$\times$ slower, and the
+hashing and Fiat--Shamir benchmarks 2.2--2.6$\times$. The remaining gap is the AVX-512
+assembly: one AVX-512 instruction processes 16 elements at once, which is exactly one
+width-16 state, and gnark-crypto's assembly keeps the whole state in registers for all 27
+rounds. Scalar Go code cannot do that. The remaining allocations (2 per compression) are
+analysed in Section~\ref{sec:parallel}.
+
+\subsection{Replicating gnark-crypto's optimisations}\label{sec:replicate}
+
+A comparison with gnark-crypto should measure the cost of genericity, not of different
+formulas. Each helper was therefore checked against gnark-crypto's scalar code for both
+fields:
+\begin{center}\small
+\begin{adjustbox}{max width=\linewidth}
+\begin{tabular}{lll}
+\toprule
+Step & gnark-crypto's scalar code & Our code \\ \midrule
+S-box, round keys, M4, external matrix & same formulas & identical \\
+Internal matrix: diagonal & doublings, \texttt{Halve}, \texttt{Mul2ExpNegN} instead of \texttt{Mul} & replicated in run 3 (generic and KoalaBear branch) \\
+Internal matrix: sum, MamaBear only & raw 64-bit sum, a single reduction at the end (\texttt{sumState}) & \textbf{not replicated} \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{center}
+To replicate the diagonal in the generic code, \texttt{generic.Element} gained two methods
+that both fields already have, \texttt{Halve} and \texttt{Mul2ExpNegN}. The KoalaBear branch
+is a line-by-line copy of gnark-crypto's function. The generic version applies the
+$2^{-n}$ entries in a short loop over a table of shifts rather than unrolling them.
+
+The effect differs by path. The KoalaBear branch became about 24\% faster
+(Table~\ref{tab:kbb}). The fully generic MamaBear permutation did not: 7.69\,\textmu s in
+run 3, compared with 7.27\,\textmu s in run 1, a difference within the noise of those runs.
+In the generic code every field operation is an indirect call, and the formula replaces one
+multiplication by two to four cheaper operations, so the number of calls, which dominates,
+goes up. MamaBear's \texttt{sumState} relies on the field's internal representation and
+cannot be expressed through \texttt{generic.Element}; replicating it needs a MamaBear branch
+or a new interface method.
 
 \section{Results 3: vector operations vs.\ assembly}\label{sec:paths}
 
@@ -320,8 +357,9 @@ func (h *Permutation[T, PT]) Permute(input []T) error {
   \item \texttt{generic-asm} matches the baseline permutation (1.00--1.01$\times$). The
     Compress, MDHasher and FiatShamir benchmarks remain 6--12\% slower than baseline. That
     overhead comes from the generic code around the permutation.
-  \item \texttt{generic-vec} is about 20$\times$ slower than baseline, and about 6$\times$
-    slower than the scalar branch it was meant to improve. A CPU profile shows almost all the
+  \item \texttt{generic-vec} is about 20$\times$ slower than baseline, and about 8$\times$
+    slower than the scalar branch it was meant to improve. (It still multiplies by the
+    diagonal; it was not updated in run 3.) A CPU profile shows almost all the
     time inside the vector routines (75\% in the 21 partial rounds), at about 150\,ns per
     call on 16 elements. The vector routines are designed for long arrays; on a 16-element
     state the cost of each call outweighs the work. The likely cause is the penalty the CPU
@@ -397,12 +435,12 @@ Table~\ref{tab:parallel} shows the key result:
 \begin{itemize}
   \item \textbf{With the GC on}, \texttt{generic-asm} keeps up with baseline only up to
     about 8 threads. It reaches its best time at 32 threads (67\,ns) and then gets
-    \emph{slower} as threads are added (78\,ns at 192). Baseline keeps improving to 4.4\,ns,
-    so the ratio grows from 1.2$\times$ to 18$\times$. The branched scalar path behaves the
-    same way (best 110\,ns at 48 threads, 31$\times$ at 192).
+    \emph{slower} as threads are added (76--86\,ns from 48 threads on). Baseline keeps
+    improving to 4.6\,ns, so the ratio grows from 1.1$\times$ to 16$\times$. The branched
+    scalar path behaves the same way (best 96\,ns at 32 threads, 27$\times$ at 192).
   \item \textbf{With the GC off}, \texttt{generic-asm} scales almost as well as baseline:
-    1.1--1.5$\times$ at every thread count, 6.7\,ns at 192 threads. The scalar path stays at
-    3.3--4.9$\times$, roughly its single-threaded ratio.
+    1.1--1.5$\times$ at every thread count, 7.1\,ns at 192 threads. The scalar path stays at
+    2.6--3.9$\times$, close to its single-threaded ratio.
 \end{itemize}
 So the parallel slowdown is caused almost entirely by \textbf{garbage collection}, not by
 allocation itself and not by the permutation. Allocating without collecting costs
@@ -410,7 +448,8 @@ allocation itself and not by the permutation. Allocating without collecting cost
 
 \subsection{Why garbage collection hurts this much}
 
-A CPU profile of \texttt{generic-asm} at 192 threads (2\,s run) shows:
+A CPU profile of \texttt{generic-asm} at 192 threads (2\,s run, taken before run 3; the
+assembly path does not use the code changed in run 3) shows:
 \begin{itemize}
   \item \textbf{289 GC cycles} during the run with the GC on, about one every 20\,ms. With
     the GC off there were 13, all forced by the test framework between runs.
@@ -467,9 +506,10 @@ The mechanism:
     as it would break concurrent use.
   \item \textbf{Drop \texttt{KoalaBearVector}}, or keep it only as a recorded negative
     result.
-  \item \textbf{For MamaBear} (about 3$\times$, with no assembly available), the overhead is
-    purely the generic code. Closing it means removing the per-operation allocations, for
-    example with concrete branches like KoalaBear's.
+  \item \textbf{For MamaBear} (about 3.5$\times$, with no assembly available), the overhead is
+    purely the generic code. Closing it means concrete branches like KoalaBear's, which would
+    also be the place to replicate gnark-crypto's \texttt{sumState}
+    (Section~\ref{sec:replicate}).
   \item Look into the higher allocation count of \texttt{current} in FiatShamir (about
     2.9$\times$ baseline).
 \end{enumerate}
