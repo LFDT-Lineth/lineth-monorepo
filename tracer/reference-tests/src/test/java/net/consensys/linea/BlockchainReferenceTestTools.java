@@ -588,9 +588,7 @@ public class BlockchainReferenceTestTools {
         new CorsetBlockProcessor(
             protocolSpec.getTransactionProcessor(),
             protocolSpec.getTransactionReceiptFactory(),
-            protocolSpec.getBlockReward(),
             protocolSpec.getMiningBeneficiaryCalculator(),
-            protocolSpec.isSkipZeroBlockRewards(),
             schedule,
             zkTracer);
 
