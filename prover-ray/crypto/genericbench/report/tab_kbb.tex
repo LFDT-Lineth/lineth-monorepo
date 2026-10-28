@@ -1,0 +1,27 @@
+\begin{table}[htbp]\centering\small
+\caption{KoalaBear with concrete \texttt{koalabear.Element} branches in the permutation's hot loops (\texttt{KoalaBearScalar}).}\label{tab:kbb}
+\begin{adjustbox}{max width=\linewidth}
+\begin{tabular}{lrrrrr|rr}
+\toprule
+Benchmark & baseline & \texttt{generic} & ratio & \texttt{current} & ratio & allocs \texttt{baseline} & allocs \texttt{generic} \\ \midrule
+Permutation (width=16) & 570\,ns & 2.03\,\textmu s & 3.56$\times$ & -- & -- & 0 & 0 \\
+Permutation (width=24) & 705\,ns & 2.85\,\textmu s & 4.05$\times$ & -- & -- & 0 & 0 \\
+Compress & 585\,ns & 2.06\,\textmu s & 3.52$\times$ & -- & -- & 0 & 2 \\
+CompressParallel & 4.28\,ns & 156\,ns & 36.5$\times$ & -- & -- & 0 & 2 \\
+MDHasher (n=8) & 728\,ns & 2.09\,\textmu s & 2.87$\times$ & 626\,ns & 0.86$\times$ & 5 & 3 \\
+MDHasher (n=64) & 4.95\,\textmu s & 16.6\,\textmu s & 3.35$\times$ & 4.88\,\textmu s & 0.98$\times$ & 5 & 17 \\
+MDHasher (n=4096) & 309\,\textmu s & 1.06\,ms & 3.43$\times$ & 312\,\textmu s & 1.01$\times$ & 5 & 1\,025 \\
+MDHasher (n=65536) & 4.88\,ms & 16.9\,ms & 3.46$\times$ & 4.94\,ms & 1.01$\times$ & 5 & 16\,385 \\
+MDHasher (n=1048576) & 78.7\,ms & 270\,ms & 3.43$\times$ & 79.6\,ms & 1.01$\times$ & 5 & 262\,145 \\
+FiatShamir (rounds=16, upd=8) & 388\,\textmu s & 1.22\,ms & 3.15$\times$ & 396\,\textmu s & 1.02$\times$ & 254 & 1\,850 \\
+FiatShamir (rounds=16, upd=1024) & 1.61\,ms & 5.4\,ms & 3.35$\times$ & 1.63\,ms & 1.01$\times$ & 254 & 5\,914 \\
+FiatShamir (rounds=16, upd=16384) & 20.1\,ms & 68.9\,ms & 3.43$\times$ & 20.3\,ms & 1.01$\times$ & 256 & 67\,360 \\
+FiatShamir (rounds=256, upd=8) & 6.2\,ms & 19.5\,ms & 3.15$\times$ & 6.31\,ms & 1.02$\times$ & 3\,849 & 29\,447 \\
+FiatShamir (rounds=256, upd=1024) & 25.7\,ms & 86.9\,ms & 3.38$\times$ & 26.1\,ms & 1.01$\times$ & 3\,850 & 94\,478 \\
+FiatShamir (rounds=256, upd=16384) & 321\,ms & 1.1\,s & 3.42$\times$ & 324\,ms & 1.01$\times$ & 3\,880 & 1\,077\,606 \\
+FiatShamir (rounds=4096, upd=8) & 98.6\,ms & 311\,ms & 3.16$\times$ & 101\,ms & 1.02$\times$ & 65\,518 & 475\,147 \\
+FiatShamir (rounds=4096, upd=1024) & 413\,ms & 1.38\,s & 3.34$\times$ & 417\,ms & 1.01$\times$ & 65\,542 & 1\,515\,612 \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}

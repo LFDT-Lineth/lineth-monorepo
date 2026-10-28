@@ -1,0 +1,27 @@
+\begin{table}[htbp]\centering\small
+\caption{MamaBear, fully generic code. The MamaBear baseline is gnark-crypto's (non-assembly) permutation under the generic hasher.}\label{tab:mid-mb}
+\begin{adjustbox}{max width=\linewidth}
+\begin{tabular}{lrrr|rr}
+\toprule
+Benchmark & baseline & \texttt{generic} & ratio & allocs \texttt{baseline} & allocs \texttt{generic} \\ \midrule
+Permutation (width=16) & 2.09\,\textmu s & 7.27\,\textmu s & 3.48$\times$ & 0 & 250 \\
+Permutation (width=24) & 3.39\,\textmu s & 10.1\,\textmu s & 2.98$\times$ & 0 & 340 \\
+Compress & 2.2\,\textmu s & 7.26\,\textmu s & 3.30$\times$ & 2 & 252 \\
+CompressParallel & 211\,ns & 1.42\,\textmu s & 6.72$\times$ & 2 & 252 \\
+MDHasher (n=8) & 2.12\,\textmu s & 6.71\,\textmu s & 3.16$\times$ & 3 & 253 \\
+MDHasher (n=64) & 17.2\,\textmu s & 53.7\,\textmu s & 3.13$\times$ & 17 & 2\,017 \\
+MDHasher (n=4096) & 1.13\,ms & 3.45\,ms & 3.06$\times$ & 1\,025 & 129\,025 \\
+MDHasher (n=65536) & 18\,ms & 54.3\,ms & 3.01$\times$ & 16\,385 & 2\,064\,385 \\
+MDHasher (n=1048576) & 290\,ms & 820\,ms & 2.83$\times$ & 262\,145 & 33\,030\,145 \\
+FiatShamir (rounds=16, upd=8) & 1.29\,ms & 3.82\,ms & 2.95$\times$ & 1\,788 & 141\,789 \\
+FiatShamir (rounds=16, upd=1024) & 5.78\,ms & 17.5\,ms & 3.03$\times$ & 5\,852 & 653\,858 \\
+FiatShamir (rounds=16, upd=16384) & 73.6\,ms & 223\,ms & 3.04$\times$ & 67\,300 & 8\,395\,370 \\
+FiatShamir (rounds=256, upd=8) & 20.6\,ms & 61.2\,ms & 2.97$\times$ & 28\,439 & 2\,268\,465 \\
+FiatShamir (rounds=256, upd=1024) & 92.5\,ms & 279\,ms & 3.02$\times$ & 93\,472 & 10\,461\,576 \\
+FiatShamir (rounds=256, upd=16384) & 1.17\,s & 3.56\,s & 3.03$\times$ & 1\,076\,630 & 134\,325\,810 \\
+FiatShamir (rounds=4096, upd=8) & 330\,ms & 945\,ms & 2.86$\times$ & 458\,573 & 36\,298\,855 \\
+FiatShamir (rounds=4096, upd=1024) & 1.47\,s & 4.31\,s & 2.93$\times$ & 1\,499\,070 & 167\,388\,320 \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}

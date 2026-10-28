@@ -1,0 +1,21 @@
+\begin{table}[htbp]\centering\small
+\caption{KoalaBear, the three code paths side by side (\texttt{medium} scale). \texttt{generic} is the scalar branch.}\label{tab:paths}
+\begin{adjustbox}{max width=\linewidth}
+\begin{tabular}{lrrrrrrrrr|r}
+\toprule
+Benchmark & baseline & \texttt{generic} & ratio & \texttt{generic-vec} & ratio & \texttt{generic-asm} & ratio & \texttt{current} & ratio & allocs \texttt{generic-asm} \\ \midrule
+Permutation (width=16) & 570\,ns & 1.92\,\textmu s & 3.37$\times$ & 11.6\,\textmu s & 20.4$\times$ & 573\,ns & 1.01$\times$ & -- & -- & 0 \\
+Permutation (width=24) & 706\,ns & 2.63\,\textmu s & 3.72$\times$ & 12.3\,\textmu s & 17.4$\times$ & 706\,ns & 1.00$\times$ & -- & -- & 0 \\
+Compress & 586\,ns & 2.03\,\textmu s & 3.46$\times$ & 11.7\,\textmu s & 19.9$\times$ & 656\,ns & 1.12$\times$ & -- & -- & 2 \\
+CompressParallel & 4.4\,ns & 170\,ns & 38.7$\times$ & 471\,ns & 107$\times$ & 73.2\,ns & 16.6$\times$ & -- & -- & 2 \\
+MDHasher (n=64) & 4.97\,\textmu s & 16.2\,\textmu s & 3.26$\times$ & 93.4\,\textmu s & 18.8$\times$ & 5.3\,\textmu s & 1.07$\times$ & 4.88\,\textmu s & 0.98$\times$ & 17 \\
+MDHasher (n=4096) & 308\,\textmu s & 1.03\,ms & 3.35$\times$ & 5.98\,ms & 19.4$\times$ & 336\,\textmu s & 1.09$\times$ & 312\,\textmu s & 1.01$\times$ & 1\,025 \\
+MDHasher (n=65536) & 4.92\,ms & 16.6\,ms & 3.38$\times$ & 95.5\,ms & 19.4$\times$ & 5.34\,ms & 1.09$\times$ & 4.96\,ms & 1.01$\times$ & 16\,385 \\
+FiatShamir (rounds=16, upd=8) & 133\,\textmu s & 381\,\textmu s & 2.86$\times$ & 2.08\,ms & 15.6$\times$ & 141\,\textmu s & 1.06$\times$ & 133\,\textmu s & 1.00$\times$ & 698 \\
+FiatShamir (rounds=16, upd=1024) & 1.35\,ms & 4.5\,ms & 3.33$\times$ & 25.8\,ms & 19.1$\times$ & 1.5\,ms & 1.10$\times$ & 1.37\,ms & 1.01$\times$ & 4\,762 \\
+FiatShamir (rounds=256, upd=8) & 2.11\,ms & 6.1\,ms & 2.89$\times$ & 33.2\,ms & 15.7$\times$ & 2.26\,ms & 1.07$\times$ & 2.13\,ms & 1.01$\times$ & 11\,013 \\
+FiatShamir (rounds=256, upd=1024) & 21.7\,ms & 71.9\,ms & 3.31$\times$ & 413\,ms & 19.0$\times$ & 23.7\,ms & 1.09$\times$ & 21.9\,ms & 1.01$\times$ & 76\,043 \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}

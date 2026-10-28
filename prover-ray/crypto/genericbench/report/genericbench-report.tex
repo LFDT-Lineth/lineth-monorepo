@@ -1,0 +1,276 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[margin=1.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{textcomp}
+\usepackage{booktabs}
+\usepackage{adjustbox}
+\usepackage{amsmath}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+
+\setlist{nosep,leftmargin=*}
+\lstset{basicstyle=\ttfamily\small,columns=fullflexible,frame=single,framerule=0.3pt,
+  rulecolor=\color{gray},breaklines=true,xleftmargin=2pt,xrightmargin=2pt}
+\setlength{\parskip}{0.4em}
+\setlength{\parindent}{0pt}
+\setlength{\emergencystretch}{3em}
+
+\title{Generic vs.\ non-generic Poseidon2 and Fiat--Shamir\\\large Benchmark report, \texttt{prover-ray/crypto/genericbench}}
+\author{}
+\date{28 October 2026}
+
+\begin{document}
+\maketitle
+\vspace{-2em}
+
+\section{Summary}
+
+\begin{itemize}
+  \item The fully generic Poseidon2 code is about \textbf{7--10$\times$ slower} than the
+    non-generic baseline on KoalaBear and about \textbf{3$\times$ slower} on MamaBear.
+    KoalaBear's gap is larger because its baseline uses gnark-crypto's AVX-512 assembly.
+  \item The code the prover runs today (\texttt{current}: the generic hasher and transcript
+    over gnark-crypto's compression) is \textbf{on par with the baseline} (within 2\%).
+    Production is not affected.
+  \item The root cause of the generic overhead is Go's implementation of generics: field
+    operations are indirect calls that cannot be inlined, and they force local variables onto
+    the heap. The generic permutation made 222--340 heap allocations per call.
+  \item Branching to concrete KoalaBear code inside the permutation's hot loops removes all
+    allocations from the permutation and makes it about \textbf{2.5$\times$ faster}, but it
+    stays about \textbf{3.5$\times$ slower} than baseline.
+  \item Delegating the whole KoalaBear permutation to gnark-crypto's assembly
+    (\texttt{generic-asm}) \textbf{matches the baseline} for the permutation itself.
+    Batched \texttt{koalabear.Vector} operations inside the hot loops
+    (\texttt{generic-vec}) are \textbf{about 20$\times$ slower} and are a dead end.
+  \item The remaining gap, which is large under parallel load (\texttt{CompressParallel}),
+    comes from \textbf{2 heap allocations per compression} in the generic
+    \texttt{Compress} function. It is the next thing to fix.
+\end{itemize}
+
+\section{Setup}
+
+\paragraph{Machine.} Intel Xeon Platinum 8488C, 192 cores, AVX-512 available (so the KoalaBear
+baseline runs gnark-crypto's assembly path), Linux amd64, Go 1.27.1, gnark-crypto v0.22.0.
+Nothing else ran on the machine during the benchmarks.
+
+\paragraph{Implementations compared.} Each benchmark name ends in \texttt{impl=\dots}:
+\begin{itemize}
+  \item \texttt{baseline}: non-generic code. For KoalaBear, gnark-crypto's permutation and
+    compression, and the pre-generic MD hasher and transcript (frozen in
+    \texttt{legacy\_test.go}). For MamaBear, which never had a non-generic hasher,
+    gnark-crypto's permutation under the generic hasher and transcript.
+  \item \texttt{current} (KoalaBear only): what the prover runs today.
+  \item \texttt{generic}: everything generic, permutation included. In
+    Tables~\ref{tab:kbb} and \ref{tab:paths} it includes the concrete KoalaBear branches
+    (Section~\ref{sec:branch}).
+  \item \texttt{generic-vec}, \texttt{generic-asm} (KoalaBear only): the two alternative
+    branches of Section~\ref{sec:paths}.
+\end{itemize}
+
+\paragraph{Runs.} Three runs, each preceded by \texttt{TestAgreement}, which checks that all
+implementations produce bit-identical outputs. It passed every time.
+\begin{center}\small
+\begin{adjustbox}{max width=\linewidth}
+\begin{tabular}{llll}
+\toprule
+Run & Code & Sizes & Samples \\ \midrule
+1 (Tables~\ref{tab:mid-kb}, \ref{tab:mid-mb}) & \texttt{3ce6cc6e5}, fully generic & \texttt{full}, minus FS rounds=4096/update=16384 & $6\times500$\,ms \\
+2 (Table~\ref{tab:kbb}) & scalar KoalaBear branches & same as run 1, KoalaBear only & $6\times500$\,ms \\
+3 (Table~\ref{tab:paths}) & \texttt{6b3d84ad3}, all three paths & \texttt{medium}, KoalaBear only & $6\times200$\,ms \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{center}
+The single skipped FiatShamir case took about 40\,s per operation in the generic code and
+dominated the runtime. Tables report the median of 6 samples. Unless noted otherwise, every
+difference against the baseline is statistically significant according to \texttt{benchstat}
+($p = 0.002$). The exceptions are: \texttt{current} on MDHasher $n=2^{20}$ in run 1
+($p=0.065$), \texttt{current} on FiatShamir rounds=16/update=16384 in run 2 ($p=0.093$), and
+\texttt{current} on FiatShamir rounds=16/update=8 in run 3 ($p=0.39$). All three are
+differences of under 2\% that \texttt{benchstat} could not distinguish from noise.
+
+\section{Background: what is benchmarked}
+
+All the benchmarks are built on the \textbf{Poseidon2 permutation}, the core of the Poseidon2
+hash. It takes a fixed-size state of 16 or 24 field elements and scrambles it into another
+state of the same size. It is reversible, hence ``permutation''. It runs 27 rounds (6 full,
+21 partial), each made of three steps:
+\begin{enumerate}
+  \item \textbf{Add round keys}: add fixed constants derived from a seed.
+  \item \textbf{S-box}: cube each element, $x \mapsto x^3$. This is the nonlinear step that
+    gives the hash its security. Full rounds cube every element; partial rounds cube only the
+    first.
+  \item \textbf{Linear mixing}: multiply the state by a fixed matrix, so every element
+    affects every other. Full rounds use the ``external'' matrix built from $4\times4$
+    blocks (M4); partial rounds use the cheaper ``internal'' matrix $\mathbf{1}\mathbf{1}^T
+    + D$.
+\end{enumerate}
+The other benchmark families are built on the permutation:
+\begin{itemize}
+  \item \textbf{Compress}: two 8-element blocks form a width-16 state, which is permuted;
+    the second block is then added back (feed-forward). \textbf{CompressParallel} runs the
+    same with one goroutine per core (192).
+  \item \textbf{MDHasher}: hashes $n$ elements, 8 at a time, with one compression per chunk.
+  \item \textbf{FiatShamir}: a protocol-shaped transcript. Each round absorbs \texttt{upd}
+    elements, samples a digest, samples query indices and derives a named challenge.
+\end{itemize}
+The permutation dominates every benchmark, so its speed carries through to all of them.
+
+\section{Results 1: fully generic code}\label{sec:generic}
+
+\input{tab_mid_kb.tex}
+\input{tab_mid_mb.tex}
+
+\paragraph{How to read the tables.} Each ratio is time relative to \texttt{baseline}:
+$1\times$ is the same speed, $9\times$ means nine times as long, and below $1\times$ is
+faster. The allocs columns give heap allocations per operation.
+
+\paragraph{Findings.}
+\begin{itemize}
+  \item KoalaBear \texttt{generic} is 6.8--10.5$\times$ slower than baseline, and MamaBear
+    \texttt{generic} 2.8--3.5$\times$. Without assembly on the MamaBear side, the MamaBear
+    figure is the better measure of the cost of genericity itself.
+  \item \texttt{current} is on par with baseline: from 14\% faster (MDHasher, $n=8$) to
+    about 2\% slower (FiatShamir). It also makes 80\% fewer allocations in MDHasher, but
+    about 2.9$\times$ more in FiatShamir. The absolute numbers are small (731 vs.\ 254 at
+    16 rounds), but this may deserve a look.
+  \item The generic code allocates heavily: 222--340 allocations per permutation, about 28
+    per absorbed element in the KoalaBear MDHasher, and up to 167 million per FiatShamir
+    operation.
+\end{itemize}
+
+\paragraph{Why the generic code is slow.} Go does not compile a generic function separately
+for every type. It compiles it once per ``GC shape'' (here, every \texttt{[1]uint32}-shaped
+field shares the code) and passes a dictionary of the type's methods. So inside
+\texttt{sBox}, \texttt{matMulM4} and the other helpers, each \texttt{PT(x).Mul},
+\texttt{PT(x).Add}, \dots{} is an \emph{indirect call} through that dictionary. The compiler
+cannot inline it, and it cannot see what the callee does with the pointers it receives, so
+it moves the operands to the heap. That causes both the per-operation call overhead and the
+hundreds of allocations per permutation.
+
+\section{Results 2: branching to concrete KoalaBear code in the hot loops}\label{sec:branch}
+
+Each hot helper of the permutation (\texttt{sBox}, \texttt{addRoundKey},
+\texttt{matMulExternal} with M4, \texttt{matMulInternal}) now starts with
+\texttt{if h.kb \{ \dots; return \}}. The flag \texttt{kb} is computed once in
+\texttt{NewPermutation} by a type check. The KoalaBear branch reinterprets its operands as
+\texttt{[]koalabear.Element} (via \texttt{unsafe}, without copying) and runs concrete loops
+that the compiler can inline and keep on the stack. The check runs once per helper call;
+putting it inside the per-element loops would only add work. Other fields keep the generic
+code.
+
+\input{tab_kbb.tex}
+
+\paragraph{Findings.} The permutation is now allocation-free and about 2.5$\times$ faster
+than fully generic, but still 3.6--4.0$\times$ slower than baseline. The remaining gap is
+the AVX-512 assembly: one AVX-512 instruction processes 16 elements at once, which is
+exactly one width-16 state, and gnark-crypto's assembly keeps the whole state in registers
+for all 27 rounds. Scalar Go code cannot do that. The remaining allocations (2 per
+compression) are analysed in Section~\ref{sec:parallel}.
+
+\section{Results 3: vector operations vs.\ assembly}\label{sec:paths}
+
+Two ways to close the assembly gap were implemented side by side. The choice is made with
+\texttt{SetKoalaBearPath}:
+\begin{itemize}
+  \item \texttt{KoalaBearScalar} (default, column \texttt{generic}): the concrete loops of
+    Section~\ref{sec:branch}.
+  \item \texttt{KoalaBearVector} (\texttt{generic-vec}): the same branches, but the round
+    keys, the full S-box layer and the internal matrix use gnark-crypto's batched
+    \texttt{koalabear.Vector} operations (\texttt{Add}, \texttt{Mul}, \texttt{Sum}), which
+    run AVX-512 loops over slices. M4 and the external matrix stay scalar because they mix
+    neighbouring elements. For width 24, the last 8 elements fall back to scalar code
+    because the vector operations work in blocks of 16.
+  \item \texttt{KoalaBearAsm} (\texttt{generic-asm}): the branch sits at the top of
+    \texttt{Permute} and hands the whole permutation to gnark-crypto's AVX-512 function.
+\end{itemize}
+
+\input{tab_paths.tex}
+
+\paragraph{Findings.}
+\begin{itemize}
+  \item \texttt{generic-asm} matches the baseline permutation (1.00--1.01$\times$). The
+    Compress, MDHasher and FiatShamir benchmarks remain 6--12\% slower than baseline. That
+    overhead comes from the generic code around the permutation.
+  \item \texttt{generic-vec} is about 20$\times$ slower than baseline, and about 6$\times$
+    slower than the scalar branch it was meant to improve. A CPU profile shows almost all the
+    time inside the vector routines (75\% in the 21 partial rounds), at about 150\,ns per
+    call on 16 elements. The vector routines are designed for long arrays; on a 16-element
+    state the cost of each call outweighs the work. The likely cause is the penalty the CPU
+    pays when switching between AVX-512 and ordinary instructions, but this has not been
+    confirmed.
+\end{itemize}
+
+\paragraph{Why the two cannot be combined in one permutation.} Both paths live in the same
+codebase and are compiled into the same binary; nothing conflicts. A given permutation can
+use only one of them, though: the assembly function performs all 27 rounds in a single call,
+so once \texttt{Permute} hands it the state, none of the per-step helpers run and there is
+nowhere for a vector branch to apply. gnark-crypto does not expose the individual rounds of
+its assembly. This is the underlying trade-off: branching as low as possible and matching
+the baseline's speed pull in opposite directions, because the fast code exists only as one
+whole-permutation block.
+
+\section{Why CompressParallel is so slow}\label{sec:parallel}
+
+Even with the assembly permutation, \texttt{CompressParallel} is 16.6$\times$ slower than
+baseline (73\,ns vs.\ 4.4\,ns per compression across 192 cores). A memory profile attributes
+all the allocations to two lines of the generic \texttt{Compress}
+(\texttt{crypto/poseidon2/hasher.go}):
+\begin{lstlisting}
+var x [CompressionWidth]T   // line 26: the 16-element working state
+res := block                // line 32: the 8-element result
+\end{lstlisting}
+These are fixed-size local arrays and should stay on the stack, as they do in gnark-crypto's
+almost identical \texttt{CompressPoseidon2}. They escape for the reason given in
+Section~\ref{sec:generic}: \texttt{x} is passed to \texttt{perm.Permute} and \texttt{res}
+to \texttt{PT(\&res[i]).Add}, both indirect calls the compiler cannot see through, so it
+assumes the pointers may be kept and moves both arrays to the heap.
+
+\begin{itemize}
+  \item \textbf{Single-threaded}, two small allocations per compression cost little:
+    656\,ns vs.\ 586\,ns.
+  \item \textbf{On 192 cores}, the baseline allocates nothing and scales perfectly. The
+    generic version makes about 2 allocations every few nanoseconds across all cores. The
+    allocator, the garbage collector and memory traffic between cores become the
+    bottleneck. The same two allocations account for the 16\,385 allocations of MDHasher at
+    $n=65\,536$.
+\end{itemize}
+
+\section{Recommendations}
+
+\begin{enumerate}
+  \item \textbf{Make \texttt{KoalaBearAsm} the default} when the CPU supports AVX-512 and the
+    parameters are 6 full and 21 partial rounds; otherwise fall back to the scalar branch.
+  \item \textbf{Remove the two allocations in \texttt{Compress}} by applying the same
+    KoalaBear branch there: reinterpret \texttt{x} and \texttt{res} as KoalaBear arrays and
+    do the feed-forward with direct calls. A per-permutation scratch buffer would not work,
+    as it would break concurrent use.
+  \item \textbf{Drop \texttt{KoalaBearVector}}, or keep it only as a recorded negative
+    result.
+  \item \textbf{For MamaBear} (about 3$\times$, with no assembly available), the overhead is
+    purely the generic code. Closing it means removing the per-operation allocations, for
+    example with concrete branches like KoalaBear's.
+  \item Look into the higher allocation count of \texttt{current} in FiatShamir (about
+    2.9$\times$ baseline).
+\end{enumerate}
+
+\appendix
+\section{Reproducing}
+
+From \texttt{prover-ray/}, with \texttt{benchstat} installed
+(\texttt{go install golang.org/x/perf/cmd/benchstat@latest}):
+\begin{lstlisting}
+# all fields, medium scale (a few minutes)
+scripts/bench-generic-poseidon.sh medium <outdir>
+
+# KoalaBear only, as in run 3 (about 80 s)
+go test ./crypto/genericbench/ -run TestAgreement
+GENERIC_BENCH_SCALE=medium go test ./crypto/genericbench/ -run '^$' \
+  -bench '/field=koalabear/' -benchmem -count 6 -benchtime 200ms > raw.txt
+benchstat -col /impl raw.txt
+\end{lstlisting}
+
+\end{document}
