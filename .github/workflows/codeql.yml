@@ -126,7 +126,7 @@ jobs:
       - name: Autobuild
         if: matrix.language != 'actions'
         continue-on-error: ${{ matrix.language == 'java-kotlin' }}
-        uses: github/codeql-action/autobuild@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        uses: github/codeql-action/autobuild@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         env:
           GITHUB_TOKEN: ${{ secrets._GITHUB_TOKEN_RELEASE_ACCESS }}
 
