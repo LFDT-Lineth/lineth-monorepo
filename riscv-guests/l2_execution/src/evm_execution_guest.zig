@@ -8,6 +8,7 @@ const builtin = @import("builtin");
 pub const execution = @import("execution.zig");
 const l2_execution = @import("l2_execution.zig");
 const l2_execution_ssz = @import("l2_execution_ssz");
+const l2_execution_proof = @import("guest_common").l2_execution_proof;
 
 /// Exit-code taxonomy for guest failures (Readme.md §2.5); `pub` for the guest's test suite, like
 /// `execution` above.
@@ -27,7 +28,7 @@ export var guest_allocator: extern struct { ptr: *anyopaque, vtable: *const anyo
 // transactions, the L1<->L2 bridge, the public-input tuple), and emits the SSZ output.
 //
 // The crypto accelerators (zkvm_*) that zesu declares as externs are DEFINED in-guest by
-// zkvm_provide.zig (pulled in below for the riscv64 build), so the statically-linked guest ELF has
+// zkvm_provide (pulled in below for the riscv64 build), so the statically-linked guest ELF has
 // no unresolved zkvm_* externals. The native host build doesn't reference them — it uses zesu's
 // C-backed crypto instead.
 
@@ -71,11 +72,11 @@ fn runL2ExecutionGuest(allocator: std.mem.Allocator, raw_input: []const u8) ![]u
     const decoded = try l2_execution_ssz.decodeInput(allocator, raw_input);
     const result = try l2_execution.runL2Execution(allocator, decoded);
 
-    return l2_execution_ssz.encodeOutput(allocator, result.public_inputs);
+    return l2_execution_proof.encodeOutput(allocator, result.public_inputs);
 }
 
 /// zesu's own logging ABI (see zesu/src/zkvm/root.zig's doc comment) — DEFINED (as a no-op, for
-/// now) in `zkvm_provide.zig` alongside every other `zkvm_*` symbol this statically-linked ELF must
+/// now) in `zkvm_provide` alongside every other `zkvm_*` symbol this statically-linked ELF must
 /// satisfy locally.
 extern fn zkvm_log(level: u8, msg_ptr: [*]const u8, msg_len: usize) void;
 
@@ -86,7 +87,7 @@ comptime {
     if (builtin.cpu.arch == .riscv64) {
         @export(&guestMain, .{ .name = "main" });
         // Pull in the precompile providers for the freestanding guest.
-        _ = @import("zkvm_provide.zig");
+        _ = @import("zkvm_provide");
     }
 }
 

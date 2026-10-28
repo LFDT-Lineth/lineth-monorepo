@@ -42,4 +42,19 @@ pub fn build(b: *std.Build) void {
     });
     ssz_tests.root_module.addImport("guest_common_ssz", ssz_mod);
     test_step.dependOn(&b.addRunArtifact(ssz_tests).step);
+
+    const guest_common_native_mod = b.createModule(.{
+        .root_source_file = b.path("src/root.zig"),
+        .target = native_target,
+        .optimize = .Debug,
+    });
+    const l2_execution_proof_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("test/l2_execution_proof_test.zig"),
+            .target = native_target,
+            .optimize = .Debug,
+        }),
+    });
+    l2_execution_proof_tests.root_module.addImport("guest_common", guest_common_native_mod);
+    test_step.dependOn(&b.addRunArtifact(l2_execution_proof_tests).step);
 }

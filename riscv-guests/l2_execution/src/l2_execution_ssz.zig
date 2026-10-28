@@ -1,30 +1,27 @@
-//! Manual SSZ codec for the extended l2-execution guest wire format.
+//! Manual SSZ codec for the extended l2-execution guest input wire format.
 //!
 //! Mirrors the Python reference codec's wire format byte-for-byte: a 2-byte
-//! big-endian schema id (0x0002 for the input, 0x0003 for the output)
-//! followed by the SSZ encoding of the containers below. This codec's
-//! Input `encode`/`decode` byte layout matches the Python reference's
-//! `encode_bytes` exactly (verified by the golden-vector test).
+//! big-endian schema id (0x0002 for the input) followed by the SSZ encoding of
+//! the containers below. This codec's Input `encode`/`decode` byte layout
+//! matches the Python reference's `encode_bytes` exactly (verified by the
+//! golden-vector test).
 //!
 //! Each payload's `stateless_input_ssz` is carried opaquely — a zero-copy
 //! slice into the input buffer — and never decoded here; that stays the
 //! vanilla stateless-input SSZ decoder's job (e.g. zesu's `ssz_decode.decode`),
 //! invoked one level up once this codec has split the extended envelope apart.
 //!
-//! The guest's output is `keccak256(frame) || frame` with `frame = schema_id || SSZ(public inputs)`.
-//!
 //! Container layouts (fixed-head byte sizes — see each *_FIXED_SIZE constant below for the field
 //! breakdown):
 //!   SszL2ExecutionProofPrivateInput: 232 bytes
 //!   SszLineaPayloadInput:              8 bytes
 //!   SszForcedTransactionWitness:      21 bytes
-//!   SszL2ExecutionProofPublicInput:  284 bytes  (variable-size lists sit behind 4-byte offsets)
 
 const std = @import("std");
 const guest_common = @import("guest_common");
+const l2_execution_proof = guest_common.l2_execution_proof;
 
 pub const INPUT_SCHEMA_ID: u16 = 0x0002;
-pub const OUTPUT_SCHEMA_ID: u16 = 0x0003;
 const SCHEMA_ID_SIZE: usize = 2;
 
 // ── SSZ list/vector bounds ───────────────────────────────────────────────────
@@ -34,10 +31,7 @@ const SCHEMA_ID_SIZE: usize = 2;
 // here only so a decoder can reject a maliciously huge list length early).
 pub const MAX_PAYLOADS: usize = 1 << 16;
 pub const MAX_FTX_PER_PAYLOAD: usize = 1 << 16;
-pub const MAX_MESSAGES: usize = 1 << 16;
 pub const MAX_TX_FROMS: usize = 1 << 16;
-pub const MAX_FILTERED: usize = 1 << 16;
-pub const MAX_MESSAGING_BLOCKS: usize = MAX_PAYLOADS;
 pub const MAX_STATELESS_INPUT_BYTES: usize = 1 << 30;
 pub const MAX_TX_BYTES: usize = 1 << 30; // matches the consensus-layer Transaction ByteList limit
 
@@ -114,30 +108,10 @@ pub const L2ExecutionProofPrivateInput = struct {
     payloads: []const LineaPayloadInput,
 };
 
-/// The l2-execution public input tuple, in wire order.
-pub const L2ExecutionProofPublicInput = struct {
-    parent_block_hash: [32]u8,
-    end_block_hash: [32]u8,
-    end_block_number: u64,
-    end_block_timestamp: u64,
-    l2_l1_messages: []const [32]u8,
-    end_l1_l2_bridge_rolling_hash: [32]u8,
-    end_l1_l2_bridge_rolling_hash_message_number: u64,
-    dynamic_chain_config_hash: [32]u8,
-    parent_ftx_rolling_hash: [32]u8,
-    parent_ftx_number: u64,
-    end_ftx_rolling_hash: [32]u8,
-    end_processed_ftx_number: u64,
-    filtered_addresses: []const [20]u8,
-    tx_froms_hash: [32]u8,
-    block_count: u64,
-    l2_messaging_blocks_offsets: []const u16,
-};
-
 /// The public-input tuple plus the range metadata that travels outside the guest's wire output
 /// (`proof` is attached by the prover layer above the guest).
 pub const L2ExecutionProofOutput = struct {
-    public_inputs: L2ExecutionProofPublicInput,
+    public_inputs: l2_execution_proof.L2ExecutionProofPublicInput,
     start_block_number: u64,
     tx_froms: []const [20]u8,
 };
@@ -298,86 +272,4 @@ pub fn encodeInput(alloc: std.mem.Allocator, v: L2ExecutionProofPrivateInput) ![
     @memcpy(body[INPUT_FIXED_SIZE..], payloads_bytes);
 
     return out;
-}
-
-// ── L2ExecutionProofOutput (the extended guest OUTPUT) ────────────────────────
-// Fixed head: the fixed-size fields inline plus a 4-byte offset per list = 284.
-const PI_FIXED_SIZE: usize = 284;
-const HASH_SIZE: usize = 32;
-
-/// Write a 32-byte hash at the cursor and advance it.
-inline fn putHash(out: []u8, pos: *usize, value: [32]u8) void {
-    @memcpy(out[pos.*..][0..32], &value);
-    pos.* += 32;
-}
-
-/// Write a little-endian u64 at the cursor and advance it.
-inline fn putU64(out: []u8, pos: *usize, value: u64) void {
-    writeU64(out, pos.*, value);
-    pos.* += 8;
-}
-
-/// Write the offset of a variable-size field's tail at the cursor and advance it.
-inline fn putOffset(out: []u8, pos: *usize, tail_start: usize) void {
-    writeU32(out, pos.*, @intCast(tail_start));
-    pos.* += 4;
-}
-
-/// SSZ-encode the public-input tuple: the 284-byte fixed head followed by the three list tails.
-pub fn encodePublicInputsBytes(alloc: std.mem.Allocator, pi: L2ExecutionProofPublicInput) ![]u8 {
-    if (pi.l2_l1_messages.len > MAX_MESSAGES or
-        pi.filtered_addresses.len > MAX_FILTERED or
-        pi.l2_messaging_blocks_offsets.len > MAX_MESSAGING_BLOCKS) return error.BoundsViolation;
-
-    const messages_len = pi.l2_l1_messages.len * 32;
-    const filtered_len = pi.filtered_addresses.len * 20;
-    const out = try alloc.alloc(u8, PI_FIXED_SIZE + messages_len + filtered_len + pi.l2_messaging_blocks_offsets.len * 2);
-
-    const messages_start = PI_FIXED_SIZE;
-    const filtered_start = messages_start + messages_len;
-    const blocks_start = filtered_start + filtered_len;
-
-    var pos: usize = 0;
-    putHash(out, &pos, pi.parent_block_hash);
-    putHash(out, &pos, pi.end_block_hash);
-    putU64(out, &pos, pi.end_block_number);
-    putU64(out, &pos, pi.end_block_timestamp);
-    putOffset(out, &pos, messages_start);
-    putHash(out, &pos, pi.end_l1_l2_bridge_rolling_hash);
-    putU64(out, &pos, pi.end_l1_l2_bridge_rolling_hash_message_number);
-    putHash(out, &pos, pi.dynamic_chain_config_hash);
-    putHash(out, &pos, pi.parent_ftx_rolling_hash);
-    putU64(out, &pos, pi.parent_ftx_number);
-    putHash(out, &pos, pi.end_ftx_rolling_hash);
-    putU64(out, &pos, pi.end_processed_ftx_number);
-    putOffset(out, &pos, filtered_start);
-    putHash(out, &pos, pi.tx_froms_hash);
-    putU64(out, &pos, pi.block_count);
-    putOffset(out, &pos, blocks_start);
-    std.debug.assert(pos == PI_FIXED_SIZE);
-
-    for (pi.l2_l1_messages, 0..) |m, i| @memcpy(out[messages_start + i * 32 ..][0..32], &m);
-    for (pi.filtered_addresses, 0..) |a, i| @memcpy(out[filtered_start + i * 20 ..][0..20], &a);
-    for (pi.l2_messaging_blocks_offsets, 0..) |o, i| std.mem.writeInt(u16, out[blocks_start + i * 2 ..][0..2], o, .little);
-    return out;
-}
-
-/// Encode the 0x0003 output: `keccak256(schema_id || ssz) || schema_id || ssz`.
-pub fn encodeOutput(alloc: std.mem.Allocator, pi: L2ExecutionProofPublicInput) ![]u8 {
-    const body = try encodePublicInputsBytes(alloc, pi);
-    defer alloc.free(body);
-
-    const out = try alloc.alloc(u8, HASH_SIZE + SCHEMA_ID_SIZE + body.len);
-    const frame = out[HASH_SIZE..];
-    std.mem.writeInt(u16, frame[0..2], OUTPUT_SCHEMA_ID, .big);
-    @memcpy(frame[SCHEMA_ID_SIZE..], body);
-    std.crypto.hash.sha3.Keccak256.hash(frame, out[0..HASH_SIZE], .{});
-    return out;
-}
-
-/// keccak256 of the schema-framed SSZ public-input tuple: the commitment at the head of the output.
-pub fn hashPublicInputs(alloc: std.mem.Allocator, pi: L2ExecutionProofPublicInput) ![32]u8 {
-    const out = try encodeOutput(alloc, pi);
-    defer alloc.free(out);
-    return out[0..HASH_SIZE].*;
 }

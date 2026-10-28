@@ -9,8 +9,8 @@ riscv-guests/
   .zigversion          Required Zig development version (shared by all guests)
   Makefile             Top-level orchestrator — fans compile/test/… out to every guest in GUESTS
   build_common/        Shared build helpers (+ the shared standalone-ELF link: start.s, linker_script.ld)
-  lineth_accelerators/ Shared library package: Lineth accelerator wrappers + C headers
-  guest_common/        Shared library package: generic SSZ decode/encode primitives, with its own unit tests
+  lineth_accelerators/ Shared library package: Lineth accelerator wrappers + C headers, and the opt-in zkvm_* crypto providers
+  guest_common/        Shared library package: generic SSZ decode/encode primitives and the l2-execution proof wire contract, with its own unit tests
   l2_execution/        Vanilla EVM execution guest: build.zig + build.zig.zon + Makefile + src/ + test/
   rollup/              Rollup guest stub (echo/sentinel, no proof verification/folding): build.zig + build.zig.zon + Makefile + src/ + test/
 ```
@@ -30,11 +30,11 @@ Set `ZIG=/path/to/zig` when the required Zig binary is not first on `PATH`.
 
 ## Dependencies
 
-Each guest pins its **own** external dependencies in its `build.zig.zon`. For `l2-execution`: **Zesu** (EVM/stateless execution), the **`guest_crypto`** package (the Constantine staticlib backing secp256k1, BLS12-381, BN254, and KZG point evaluation), and the **execution-spec-tests `tests-zkevm` fixtures** (a `lazy` dependency, fetched only for the tests). Every guest also takes `../build_common` as a path dependency for the shared build helpers. `make fetch` pre-fetches a guest's tree.
+Each guest pins its **own** external dependencies in its `build.zig.zon`. For `l2-execution`: **Zesu** (EVM/stateless execution), the **`guest_crypto_ctt`** package (the Constantine staticlib backing secp256k1, BLS12-381, BN254, and KZG point evaluation), and the **execution-spec-tests `tests-zkevm` fixtures** (a `lazy` dependency, fetched only for the tests). `lineth_accelerators` lists Zesu and `guest_crypto_ctt` as `lazy` dependencies behind its `-Dzkvm-provide` option, so consumers that do not opt in never fetch or build them. Every guest also takes `../build_common` as a path dependency for the shared build helpers. `make fetch` pre-fetches a guest's tree.
 
 ## Crypto Backends
 
-The host test and freestanding guest both use Zesu's `extern` crypto backend. Every required `zkvm_*` symbol is provided in-process: Zig `std.crypto` implements SHA-256 and P-256, the `guest_crypto` Constantine static library implements BLS12-381, BN254, and KZG point evaluation, secp256k1 ecrecover/verify come from a switchable backend (see the guest's README), Zesu supplies modexp/RIPEMD-160/BLAKE2f, and keccak uses either Zig `std.crypto` or the custom RISC-V opcode that the prover arithmetizes.
+The host test and freestanding guest both use Zesu's `extern` crypto backend. Every required `zkvm_*` symbol is provided in-process: Zig `std.crypto` implements SHA-256 and P-256, the `guest_crypto_ctt` Constantine static library implements BLS12-381, BN254, and KZG point evaluation, secp256k1 ecrecover/verify come from a switchable backend (Zig `std.crypto` by default, or Constantine), Zesu supplies modexp/RIPEMD-160/BLAKE2f, and keccak uses either Zig `std.crypto` or the custom RISC-V opcode that the prover arithmetizes. The providers live in `lineth_accelerators` as the `zkvm_provide` module (opt-in through `b.dependency("lineth_accelerators", .{ .@"zkvm-provide" = true })`, with `-Dkeccak-accel` and `-Dsecp256k1-backend` selecting the keccak and secp256k1 providers); its `guest_crypto` module holds the Zig bindings.
 
 ## Development
 

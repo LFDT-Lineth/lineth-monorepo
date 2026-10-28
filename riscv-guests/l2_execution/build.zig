@@ -13,18 +13,14 @@ pub fn build(b: *std.Build) void {
     const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseSmall)") orelse .ReleaseSmall;
 
     // Keccak provider: standard zig keccak by default;
-    // -Dkeccak-accel=true selects the arithmetization wrapper (prover-accelerated custom op). Read by zkvm_provide.zig at comptime.
+    // -Dkeccak-accel=true selects the arithmetization wrapper (prover-accelerated custom op). Forwarded to lineth_accelerators' zkvm_provide.
     const keccak_accel = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: unaccelerated)") orelse false;
     // secp256k1 provider (ecrecover and verify): standard zig by default; -Dsecp256k1-backend=constantine
-    // selects the Constantine staticlib. Read by zkvm_provide.zig at comptime.
+    // selects the Constantine staticlib. Forwarded to lineth_accelerators' zkvm_provide.
     const secp256k1_backend = b.option(Secp256k1Backend, "secp256k1-backend", "secp256k1 ecrecover/verify provider: std (default) or constantine") orelse .std;
     const execution_specs_fixtures_link = b.option([]const u8, "execution-specs-fixtures-link", "Path where execution-specs zkevm fixtures are exposed") orelse "/tmp/execution-specs-json-fixtures/fixtures";
     const zkc_smoke_input = b.option([]const u8, "zkc-smoke-input", "Extended SSZ input for the ZkC smoke test") orelse "test/testdata/stateless_input.ssz";
     const host_tools = b.option(bool, "host-tools", "Build native test and helper targets") orelse false;
-    const guest_options = b.addOptions();
-    guest_options.addOption(bool, "keccak_accel", keccak_accel);
-    guest_options.addOption(bool, "is_guest", true);
-    guest_options.addOption(Secp256k1Backend, "secp256k1_backend", secp256k1_backend);
 
     const gp_name = "evm_execution_guest";
     const source = "src/evm_execution_guest.zig";
@@ -35,61 +31,19 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .@"crypto-backend" = .@"extern",
     });
-    const lineth_accel_mod = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("lineth_accelerators");
-
-    // Build guest and host Constantine archives, plus the Zig bindings module.
-    const guest_crypto_dep = b.dependency("guest_crypto", .{});
-    const guest_crypto_riscv_a = guest_crypto_dep.namedLazyPath("riscv_staticlib");
-    const guest_crypto_mod = b.createModule(.{
-        .root_source_file = b.path("src/guest_crypto.zig"),
+    // One dependency instance serves both the accelerator wrappers and the opt-in zkvm_* providers.
+    const lineth_accel_dep = b.dependency("lineth_accelerators", .{
         .target = target,
         .optimize = optimize,
+        .@"zkvm-provide" = true,
+        .@"keccak-accel" = keccak_accel,
+        .@"secp256k1-backend" = secp256k1_backend,
     });
-    const secp256k1_std_mod = b.createModule(.{
-        .root_source_file = b.path("src/secp256k1_std.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
+    const lineth_accel_mod = lineth_accel_dep.module("lineth_accelerators");
+    const provide_mod = lineth_accel_dep.module("zkvm_provide");
     const guest_common_mod = b.dependency("guest_common", .{ .target = target, .optimize = optimize }).module("guest_common");
 
-    const modexp_impl_mod = b.createModule(.{
-        .root_source_file = zesu_guest.path("src/crypto/backends/modexp_impl.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    modexp_impl_mod.addImport("zesu_allocator", zesu_guest.module("zesu_allocator"));
-    const ripemd160_impl_mod = b.createModule(.{
-        .root_source_file = zesu_guest.path("src/crypto/backends/ripemd160_impl.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    const blake2f_impl_mod = b.createModule(.{
-        .root_source_file = zesu_guest.path("src/crypto/backends/blake2f_impl.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    const zesu_crypto_backend_mod = b.createModule(.{
-        .root_source_file = b.path("src/zesu_crypto_backend.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    zesu_crypto_backend_mod.addImport("zesu_modexp_impl", modexp_impl_mod);
-    zesu_crypto_backend_mod.addImport("zesu_ripemd160_impl", ripemd160_impl_mod);
-    zesu_crypto_backend_mod.addImport("zesu_blake2f_impl", blake2f_impl_mod);
     const block_rlp_size_mod = zesu_guest.module("block_rlp_size");
-
-    // Expose the precompile providers as a standalone module for the exported zkvm_* symbols.
-    const provide_mod = b.addModule("zkvm_provide", .{
-        .root_source_file = b.path("src/zkvm_provide.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    provide_mod.addImport("lineth_zkvm_accel", lineth_accel_mod);
-    provide_mod.addImport("zesu_crypto_backend", zesu_crypto_backend_mod);
-    provide_mod.addImport("guest_crypto", guest_crypto_mod);
-    provide_mod.addImport("secp256k1_std", secp256k1_std_mod);
-    provide_mod.addObjectFile(guest_crypto_riscv_a);
-    provide_mod.addOptions("build_options", guest_options);
 
     // Build the SSZ codec for the same target and optimize mode as the guest.
     const l2_execution_ssz_guest_mod = b.createModule(.{
@@ -107,17 +61,15 @@ pub fn build(b: *std.Build) void {
     guest_module.code_model = .medium;
     addExecutionImports(guest_module, zesuImports(zesu_guest), block_rlp_size_mod);
     guest_module.addImport("lineth_zkvm_accel", lineth_accel_mod);
-    guest_module.addImport("zesu_crypto_backend", zesu_crypto_backend_mod);
-    guest_module.addImport("guest_crypto", guest_crypto_mod);
-    guest_module.addImport("secp256k1_std", secp256k1_std_mod);
-    guest_module.addObjectFile(guest_crypto_riscv_a);
+    guest_module.addImport("zkvm_provide", provide_mod);
     guest_module.addImport("l2_execution_ssz", l2_execution_ssz_guest_mod);
-    guest_module.addOptions("build_options", guest_options); // keccak_accel flag, read in zkvm_provide.zig
+    guest_module.addImport("guest_common", guest_common_mod);
     common.clearFreestandingNativeLinkage(b, guest_module);
     common.installGuestElf(b, guest_module, gp_name);
 
     if (host_tools) {
-        const guest_crypto_host_a = guest_crypto_dep.namedLazyPath("host_staticlib");
+        // Constantine is fetched on demand: the archive is absent until the build reruns after the fetch.
+        const guest_crypto_host_a = b.dependency("guest_crypto", .{}).builder.named_lazy_paths.get("host_staticlib") orelse return;
         // ── Native test ───────────────────────────────────────────────────────────
         // Runs `execution.executeStatelessInputWithLogs` (the log-preserving seam `l2_execution.zig`
         // delegates per-block execution to) against a real execution-spec-tests zkevm SSZ fixture on
@@ -161,58 +113,16 @@ pub fn build(b: *std.Build) void {
 
         // FFI tests for the guest-crypto staticlib (test/guest_crypto_test.zig): official EIP-2537
         // vectors and ecrecover round-trips against a textbook signing oracle — all driven through the
-        // same src/guest_crypto.zig bindings the guest uses, linked against the host archive.
-        const guest_crypto_native_mod = b.createModule(.{
-            .root_source_file = b.path("src/guest_crypto.zig"),
+        // same guest_crypto bindings the guest uses, linked against the host archive.
+        const lineth_accel_native_dep = b.dependency("lineth_accelerators", .{
             .target = native_target,
             .optimize = host_optimize,
+            .@"zkvm-provide" = true,
+            .@"secp256k1-backend" = secp256k1_backend,
         });
-        const lineth_accel_native_mod = b.dependency("lineth_accelerators", .{ .target = native_target, .optimize = host_optimize }).module("lineth_accelerators");
-        const modexp_impl_native_mod = b.createModule(.{
-            .root_source_file = zesu_native.path("src/crypto/backends/modexp_impl.zig"),
-            .target = native_target,
-            .optimize = host_optimize,
-        });
-        modexp_impl_native_mod.addImport("zesu_allocator", zesu_native.module("zesu_allocator"));
-        const ripemd160_impl_native_mod = b.createModule(.{
-            .root_source_file = zesu_native.path("src/crypto/backends/ripemd160_impl.zig"),
-            .target = native_target,
-            .optimize = host_optimize,
-        });
-        const blake2f_impl_native_mod = b.createModule(.{
-            .root_source_file = zesu_native.path("src/crypto/backends/blake2f_impl.zig"),
-            .target = native_target,
-            .optimize = host_optimize,
-        });
-        const zesu_crypto_backend_native_mod = b.createModule(.{
-            .root_source_file = b.path("src/zesu_crypto_backend.zig"),
-            .target = native_target,
-            .optimize = host_optimize,
-        });
-        zesu_crypto_backend_native_mod.addImport("zesu_modexp_impl", modexp_impl_native_mod);
-        zesu_crypto_backend_native_mod.addImport("zesu_ripemd160_impl", ripemd160_impl_native_mod);
-        zesu_crypto_backend_native_mod.addImport("zesu_blake2f_impl", blake2f_impl_native_mod);
-        const secp256k1_std_native_mod = b.createModule(.{
-            .root_source_file = b.path("src/secp256k1_std.zig"),
-            .target = native_target,
-            .optimize = host_optimize,
-        });
-        const provide_native_mod = b.createModule(.{
-            .root_source_file = b.path("src/zkvm_provide.zig"),
-            .target = native_target,
-            .optimize = host_optimize,
-        });
-        provide_native_mod.addImport("lineth_zkvm_accel", lineth_accel_native_mod);
-        provide_native_mod.addImport("zesu_crypto_backend", zesu_crypto_backend_native_mod);
-        provide_native_mod.addImport("guest_crypto", guest_crypto_native_mod);
-        provide_native_mod.addImport("secp256k1_std", secp256k1_std_native_mod);
-        provide_native_mod.addObjectFile(guest_crypto_host_a);
-        provide_native_mod.link_libc = true;
-        const native_options = b.addOptions();
-        native_options.addOption(bool, "keccak_accel", false);
-        native_options.addOption(bool, "is_guest", false);
-        native_options.addOption(Secp256k1Backend, "secp256k1_backend", secp256k1_backend);
-        provide_native_mod.addOptions("build_options", native_options);
+        const guest_crypto_native_mod = lineth_accel_native_dep.module("guest_crypto");
+        const secp256k1_std_native_mod = lineth_accel_native_dep.module("secp256k1_std");
+        const provide_native_mod = lineth_accel_native_dep.module("zkvm_provide");
         const provide_native_obj = b.addObject(.{ .name = "zkvm_provide", .root_module = provide_native_mod });
         const guest_crypto_tests = b.addTest(.{
             .root_module = b.createModule(.{
@@ -302,6 +212,7 @@ pub fn build(b: *std.Build) void {
         });
         addExecutionImports(l2_execution_mod, native_imports, block_rlp_size_native_mod);
         l2_execution_mod.addImport("l2_execution_ssz", l2_execution_ssz_mod);
+        l2_execution_mod.addImport("guest_common", guest_common_native_mod);
 
         const execution_machine_mod = b.createModule(.{
             .root_source_file = b.path("test/execution_machine.zig"),
@@ -318,6 +229,7 @@ pub fn build(b: *std.Build) void {
         host_machine_mod.addImport("execution_machine", execution_machine_mod);
         host_machine_mod.addImport("l2_execution", l2_execution_mod);
         host_machine_mod.addImport("l2_execution_ssz", l2_execution_ssz_mod);
+        host_machine_mod.addImport("guest_common", guest_common_native_mod);
 
         const zkc_machine_mod = b.createModule(.{
             .root_source_file = b.path("test/zkc_machine.zig"),
@@ -379,6 +291,7 @@ pub fn build(b: *std.Build) void {
             .optimize = host_optimize,
         });
         l2_execution_json_mod.addImport("l2_execution_ssz", l2_execution_ssz_mod);
+        l2_execution_json_mod.addImport("guest_common", guest_common_native_mod);
 
         const l2_execution_json_tests = b.addTest(.{
             .root_module = b.createModule(.{
@@ -525,6 +438,7 @@ pub fn build(b: *std.Build) void {
         });
         l2_execution_runner_exe.root_module.addImport("l2_execution", l2_execution_mod);
         l2_execution_runner_exe.root_module.addImport("l2_execution_ssz", l2_execution_ssz_mod);
+        l2_execution_runner_exe.root_module.addImport("guest_common", guest_common_native_mod);
         l2_execution_runner_exe.root_module.addImport("l2_execution_json", l2_execution_json_mod);
         linkNativeCryptoProvider(l2_execution_runner_exe, provide_native_obj, guest_crypto_host_a);
         const install_runner = b.addInstallArtifact(l2_execution_runner_exe, .{});

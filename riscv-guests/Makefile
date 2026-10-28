@@ -18,10 +18,10 @@
 GUESTS ?= guest_common l2_execution rollup
 ZIG    ?= zig
 
-# Sources to format: the shared build helper plus each guest's build.zig and hand-written src/ +
+# Sources to format: the shared build helpers plus each guest's build.zig and hand-written src/ +
 # test/ — NOT the whole guest dir, which would walk generated .zig under .zig-cache/ and zig-out/.
 # Mirrors the CI `zig fmt --check` invocation (riscv-guests-host-tests.yml) and scales with GUESTS.
-FMT_PATHS := build_common/build.zig $(foreach g,$(GUESTS),$(g)/build.zig $(g)/src $(g)/test)
+FMT_PATHS := build_common/build.zig lineth_accelerators/build.zig lineth_accelerators/src $(foreach g,$(GUESTS),$(g)/build.zig $(g)/src $(g)/test)
 
 .PHONY: compile test fetch clean fmt fmt-check help install-constantine-deps release-check release-asset
 
