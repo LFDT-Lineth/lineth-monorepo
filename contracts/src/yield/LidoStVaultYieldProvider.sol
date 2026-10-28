@@ -22,7 +22,7 @@ import { PendingPartialWithdrawal } from "../yield/libs/vendor/lido/BeaconTypes.
 
 /**
  * @title Contract to handle native yield operations with Lido Staking Vault.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 contract LidoStVaultYieldProvider is YieldProviderBase, IGenericErrors {

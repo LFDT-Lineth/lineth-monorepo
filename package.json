@@ -1,7 +1,7 @@
 {
   "name": "lineth-monorepo",
   "license": "(MIT OR Apache-2.0)",
-  "author": "Consensys Software Inc.",
+  "author": "Consensys Incorporated",
   "scripts": {
     "build": "pnpm run -r --if-present build",
     "clean": "pnpm run -r --if-present clean && rm -rf node_modules",

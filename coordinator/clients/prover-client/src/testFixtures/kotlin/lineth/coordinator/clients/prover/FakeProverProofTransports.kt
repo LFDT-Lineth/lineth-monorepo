@@ -17,7 +17,6 @@ class FakeL2ExecutionProofTransport(
     startBlockNumber = 1L,
     proof = byteArrayOf(0x02).encodeHex(),
     publicInputs = RiscvProverClientTestFixtures.l2ExecutionProofPublicInputsDto(2L),
-    filteredAddresses = listOf(ByteArray(20) { 0x4c }.encodeHex()),
     programVk = ByteArray(32) { 0xaa.toByte() }.encodeHex(),
   )
   override fun isRequestAlreadySubmitted(proofIndex: BlockIntervalProofIndex): SafeFuture<Boolean> =

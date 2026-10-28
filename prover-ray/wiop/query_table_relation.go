@@ -7,20 +7,70 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
-// Table is an ordered group of same-module column views with an optional row
-// selector. A nil Selector is semantically equivalent to an all-ones column:
-// every row is selected. Table is a value type and carries no identity.
+// TableEntry is one position of a [Table] row. It is either a *[ColumnView] or
+// a vector *[Constant] (see [NewConstantVector]) bound to the table's module.
 //
-// All Columns (and Selector, if non-nil) must reference columns belonging to
-// the same module. This invariant is enforced at construction by [NewTable]
-// and [NewFilteredTable].
+// A constant entry is never committed: it evaluates to its value c on every
+// row of the module, padding rows included, and the reductions fold it into
+// the row's random linear combination as the scalar term αⁱ·c. Note that this
+// differs from a committed column fixed to c on its data rows, whose padding
+// rows take the column's padding value instead: an unfiltered fragment with a
+// constant entry has padding rows carrying c at that position.
+//
+// The interface is sealed: no other type implements it.
+type TableEntry interface {
+	Expression
+	isTableEntry()
+}
+
+func (*ColumnView) isTableEntry() {}
+func (*Constant) isTableEntry()   {}
+
+// EntryView returns e as a *[ColumnView] and true, or nil and false if e is a
+// constant.
+func EntryView(e TableEntry) (*ColumnView, bool) {
+	cv, ok := e.(*ColumnView)
+	return cv, ok
+}
+
+// EntryConst returns the value of e and true if e is a constant, or the zero
+// element and false if e is a column view.
+func EntryConst(e TableEntry) (field.Element, bool) {
+	if c, ok := e.(*Constant); ok {
+		return c.Value, true
+	}
+	return field.Element{}, false
+}
+
+// entryExprs lifts a slice of [TableEntry] into the equivalent slice of
+// [Expression] so it can be passed to [RLCExpression].
+func entryExprs(entries []TableEntry) []Expression {
+	out := make([]Expression, len(entries))
+	for i, e := range entries {
+		out[i] = e
+	}
+	return out
+}
+
+// Table is an ordered group of same-module entries (column views or vector
+// constants, see [TableEntry]) with an optional row selector. A nil Selector
+// is semantically equivalent to an all-ones column: every row is selected.
+// Table is a value type and carries no identity.
+//
+// All Columns (and Selector, if non-nil) must belong to the same module, and
+// at least one of them must be a column view so that the table has a round.
+// These invariants are enforced at construction by [NewTable],
+// [NewFilteredTable] and [NewTableEntries]; a Table must not be built as a
+// struct literal.
 type Table struct {
-	// Columns is the ordered list of column views forming the table. Contains
-	// at least one entry.
-	Columns []*ColumnView
+	// Columns is the ordered list of entries forming the table. Contains at
+	// least one entry.
+	Columns []TableEntry
 	// Selector is an optional binary column marking which rows participate in
 	// the relation (1 = selected, 0 = skipped). Nil means all rows are selected.
 	Selector *ColumnView
+	// module is the module every entry and the selector belong to.
+	module *Module
 }
 
 // NewTable constructs an unfiltered Table (nil Selector) from the given column
@@ -28,7 +78,10 @@ type Table struct {
 //
 // Panics if columns is empty or if they do not all share a module.
 func NewTable(columns ...*ColumnView) Table {
-	return newTable(nil, columns)
+	if len(columns) == 0 {
+		panic("wiop: Table requires at least one column")
+	}
+	return newTable(columns[0].Module(), nil, viewEntries(columns))
 }
 
 // NewFilteredTable constructs a filtered Table with the given selector and
@@ -40,22 +93,101 @@ func NewFilteredTable(selector *ColumnView, columns ...*ColumnView) Table {
 	if selector == nil {
 		panic("wiop: NewFilteredTable requires a non-nil selector; use NewTable for unfiltered tables")
 	}
-	return newTable(selector, columns)
+	return newTable(selector.Module(), selector, viewEntries(columns))
 }
 
-// newTable is the shared constructor used by [NewTable] and [NewFilteredTable].
+// NewTableEntries constructs a Table over module m whose entries may mix column
+// views and vector constants. selector may be nil (unfiltered), a *ColumnView,
+// or a vector *Constant:
+//
+//   - a constant 1 selector selects every row and is normalised to nil;
+//   - a constant 0 selector panics: the fragment would contribute nothing and
+//     must be dropped by the caller instead;
+//   - any other constant selector panics, as selectors must be binary.
+//
+// Panics if entries is empty, if any entry or the selector does not belong to
+// m, if a constant is scalar (see [NewConstantField]), or if neither the
+// entries nor the selector contain a column view.
+func NewTableEntries(m *Module, selector TableEntry, entries ...TableEntry) Table {
+	if m == nil {
+		panic("wiop: NewTableEntries requires a non-nil Module")
+	}
+	var sel *ColumnView
+	switch s := selector.(type) {
+	case nil:
+	case *ColumnView:
+		if s == nil {
+			panic("wiop: Table selector is a nil *ColumnView; pass a nil TableEntry for an unfiltered table")
+		}
+		sel = s
+	case *Constant:
+		if s == nil {
+			panic("wiop: Table selector is a nil *Constant")
+		}
+		checkConstantEntry(m, "selector", s)
+		switch {
+		case s.Value.IsOne():
+			// Always-on selector: same as no selector.
+		case s.Value.IsZero():
+			panic("wiop: Table has a constant-0 selector: the fragment contributes nothing; drop it at the call site")
+		default:
+			panic(fmt.Sprintf("wiop: Table has a non-binary constant selector %s", s.Value.String()))
+		}
+	default:
+		panic(fmt.Sprintf("wiop: Table selector has unsupported type %T", selector))
+	}
+	return newTable(m, sel, entries)
+}
+
+// viewEntries lifts a slice of column views into table entries.
+func viewEntries(columns []*ColumnView) []TableEntry {
+	out := make([]TableEntry, len(columns))
+	for i, cv := range columns {
+		out[i] = cv
+	}
+	return out
+}
+
+// checkConstantEntry panics unless c is a vector constant bound to m.
+func checkConstantEntry(m *Module, what string, c *Constant) {
+	if c.Module() == nil {
+		panic(fmt.Sprintf("wiop: Table %s is a scalar constant; use NewConstantVector to bind it to the table's module", what))
+	}
+	if c.Module() != m {
+		panic(fmt.Sprintf(
+			"wiop: Table %s is a constant over module %q but the table belongs to module %q",
+			what, c.Module().Context.Path(), m.Context.Path(),
+		))
+	}
+}
+
+// newTable is the shared constructor used by every public Table constructor.
 // It validates the module-consistency invariant and builds the Table value.
-func newTable(selector *ColumnView, columns []*ColumnView) Table {
-	if len(columns) == 0 {
+func newTable(m *Module, selector *ColumnView, entries []TableEntry) Table {
+	if len(entries) == 0 {
 		panic("wiop: Table requires at least one column")
 	}
-	m := columns[0].Module()
-	for i, cv := range columns[1:] {
-		if cv.Module() != m {
-			panic(fmt.Sprintf(
-				"wiop: Table column [%d] belongs to module %q but column [0] belongs to module %q; all columns must share a module",
-				i+1, cv.Module().Context.Path(), m.Context.Path(),
-			))
+	hasView := selector != nil
+	for i, e := range entries {
+		switch e := e.(type) {
+		case *ColumnView:
+			if e == nil {
+				panic(fmt.Sprintf("wiop: Table column [%d] is nil", i))
+			}
+			if e.Module() != m {
+				panic(fmt.Sprintf(
+					"wiop: Table column [%d] belongs to module %q but the table belongs to module %q; all columns must share a module",
+					i, e.Module().Context.Path(), m.Context.Path(),
+				))
+			}
+			hasView = true
+		case *Constant:
+			if e == nil {
+				panic(fmt.Sprintf("wiop: Table column [%d] is nil", i))
+			}
+			checkConstantEntry(m, fmt.Sprintf("column [%d]", i), e)
+		default:
+			panic(fmt.Sprintf("wiop: Table column [%d] has unsupported type %T", i, e))
 		}
 	}
 	if selector != nil && selector.Module() != m {
@@ -65,15 +197,22 @@ func newTable(selector *ColumnView, columns []*ColumnView) Table {
 			selector.Module().Context.Path(), m.Context.Path(),
 		))
 	}
-	return Table{Columns: columns, Selector: selector}
+	if !hasView {
+		panic(fmt.Sprintf(
+			"wiop: Table over module %q has only constant entries and no selector; at least one column view is required",
+			m.Context.Path(),
+		))
+	}
+	return Table{Columns: entries, Selector: selector, module: m}
 }
 
-// Module returns the module shared by all columns in this Table. It is always
+// Module returns the module shared by all entries in this Table. It is always
 // non-nil for a well-formed Table.
-func (t Table) Module() *Module { return t.Columns[0].Module() }
+func (t Table) Module() *Module { return t.module }
 
-// Round returns the latest [Round] among all columns (and the Selector, if
-// non-nil) in this Table. Returns nil only for a zero-value Table.
+// Round returns the latest [Round] among all column views (and the Selector,
+// if non-nil) in this Table; constant entries have no round. Returns nil only
+// for a zero-value Table.
 func (t Table) Round() *Round {
 	var best *Round
 	updateBest := func(r *Round) {
@@ -81,13 +220,27 @@ func (t Table) Round() *Round {
 			best = r
 		}
 	}
-	for _, cv := range t.Columns {
-		updateBest(cv.Round())
+	for _, e := range t.Columns {
+		if cv, ok := EntryView(e); ok {
+			updateBest(cv.Round())
+		}
 	}
 	if t.Selector != nil {
 		updateBest(t.Selector.Round())
 	}
 	return best
+}
+
+// firstView returns the first column view among the entries, or the selector
+// if every entry is a constant (so that the padding length is determined).
+// Non-nil for a well-formed Table.
+func (t Table) firstView() *ColumnView {
+	for _, e := range t.Columns {
+		if cv, ok := EntryView(e); ok {
+			return cv
+		}
+	}
+	return t.Selector
 }
 
 // Width returns the number of columns in this Table.
@@ -463,8 +616,8 @@ func inclusionSetKey(tables []Table) (string, bool) {
 		ok  bool
 	)
 	for _, tab := range tables {
-		for _, cv := range tab.Columns {
-			if key, ok = appendColumnViewKey(key, cv); !ok {
+		for _, e := range tab.Columns {
+			if key, ok = appendEntryKey(key, e); !ok {
 				return "", false
 			}
 		}
@@ -477,6 +630,20 @@ func inclusionSetKey(tables []Table) (string, bool) {
 		key = append(key, '|')
 	}
 	return string(key), true
+}
+
+// appendEntryKey appends e's identity to key: a column view as in
+// [appendColumnViewKey], a constant as '#' followed by its value. '#' never
+// occurs in the base-36 encoding of a view, so the two cannot collide, and two
+// tables differing only in a constant get distinct keys.
+func appendEntryKey(key []byte, e TableEntry) ([]byte, bool) {
+	if c, ok := EntryConst(e); ok {
+		key = append(key, '#')
+		key = strconv.AppendUint(key, c.Uint64(), 36)
+		return append(key, ','), true
+	}
+	cv, _ := EntryView(e)
+	return appendColumnViewKey(key, cv)
 }
 
 // appendColumnViewKey appends cv's identity to key, reporting false if cv's
@@ -510,7 +677,7 @@ func inclusionBuildSet(bSet map[field.Ext]struct{}, alpha field.Gen, rt *Runtime
 		return
 	}
 
-	plainLen := rt.GetColumnAssignment(tab.Columns[0].Column).Plain.Len()
+	plainLen := rt.GetColumnAssignment(tab.firstView().Column).Plain.Len()
 	gap := n - plainLen
 	var dataStart int
 	if m.Padding == PaddingDirectionLeft {
@@ -563,7 +730,7 @@ func inclusionCheckSet(bSet map[field.Ext]struct{}, alpha field.Gen, rt *Runtime
 		return nil
 	}
 
-	plainLen := rt.GetColumnAssignment(tab.Columns[0].Column).Plain.Len()
+	plainLen := rt.GetColumnAssignment(tab.firstView().Column).Plain.Len()
 	gap := n - plainLen
 	var dataStart int
 	if m.Padding == PaddingDirectionLeft {
@@ -604,15 +771,26 @@ func inclusionCheckSet(bSet map[field.Ext]struct{}, alpha field.Gen, rt *Runtime
 	return nil
 }
 
-// tableRowHash computes a Horner linear combination of all column values at
+// tableRowHash computes a Horner linear combination of all entry values at
 // logical row idx, using alpha as the mixing scalar. Returns the raw [field.Ext]
 // value for use as a map key.
-func tableRowHash(alpha field.Gen, rt *Runtime, cols []*ColumnView, idx, n int) field.Ext {
+func tableRowHash(alpha field.Gen, rt *Runtime, entries []TableEntry, idx, n int) field.Ext {
 	var acc field.Gen
-	for _, cv := range cols {
-		acc = acc.Mul(alpha).Add(tableElemAt(rt, cv, idx, n))
+	for _, e := range entries {
+		acc = acc.Mul(alpha).Add(tableEntryAt(rt, e, idx, n))
 	}
 	return acc.Ext
+}
+
+// tableEntryAt returns the value of e at logical row idx: [tableElemAt] for a
+// column view, the constant's value for a constant (on every row, padding
+// rows included).
+func tableEntryAt(rt *Runtime, e TableEntry, idx, n int) field.Gen {
+	if c, ok := EntryConst(e); ok {
+		return field.ElemFromBase(c)
+	}
+	cv, _ := EntryView(e)
+	return tableElemAt(rt, cv, idx, n)
 }
 
 // tableElemAt returns the field element at logical row idx in cv's concrete
@@ -624,11 +802,12 @@ func tableElemAt(rt *Runtime, cv *ColumnView, idx, n int) field.Gen {
 }
 
 // tableHasZeroShift reports whether all column views and the selector (if
-// present) in tab have ShiftingOffset == 0. This is the precondition for the
-// padding-row batching optimisations in permutation and inclusion checks.
+// present) in tab have ShiftingOffset == 0; constants have no shift. This is
+// the precondition for the padding-row batching optimisations in permutation
+// and inclusion checks.
 func tableHasZeroShift(tab Table) bool {
-	for _, cv := range tab.Columns {
-		if cv.ShiftingOffset != 0 {
+	for _, e := range tab.Columns {
+		if cv, ok := EntryView(e); ok && cv.ShiftingOffset != 0 {
 			return false
 		}
 	}
@@ -734,10 +913,24 @@ func (sys *System) newTableRelation(ctx *ContextFrame, kind LookupKind, A, B []T
 	return tr
 }
 
-// validateNonEmpty panics if tables is empty.
+// validateNonEmpty panics if tables is empty or if any fragment was not built
+// by a Table constructor.
 func validateNonEmpty(caller, side string, tables []Table) {
 	if len(tables) == 0 {
 		panic(fmt.Sprintf("wiop: System.%s: %s must have at least one fragment", caller, side))
+	}
+	for i, t := range tables {
+		t.mustBeConstructed(fmt.Sprintf("System.%s: %s fragment %d", caller, side, i))
+	}
+}
+
+// mustBeConstructed panics if t was not built by [NewTable], [NewFilteredTable]
+// or [NewTableEntries]. Columns and Selector are exported, so a struct literal
+// compiles but leaves the unexported module unset, which would otherwise
+// surface as a nil dereference far from the cause.
+func (t Table) mustBeConstructed(what string) {
+	if t.module == nil {
+		panic("wiop: " + what + ": Table must be built with NewTable/NewFilteredTable/NewTableEntries")
 	}
 }
 

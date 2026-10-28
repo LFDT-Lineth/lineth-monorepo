@@ -28,7 +28,7 @@ func TestRisc5Arithmetization(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to parse test case: %v", err)
 	}
-	if got := outputs["guest_output"]; !bytes.Equal(got, wantOutput) {
+	if got := outputs["guest_output"]; !bytes.Equal(got.Bytes(), wantOutput) {
 		t.Fatalf("unexpected guest_output: got %x, want %x", got, wantOutput)
 	}
 	driverInputs := &zkcdriver.PreReadInputs{

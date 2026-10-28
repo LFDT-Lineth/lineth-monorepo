@@ -94,6 +94,15 @@ class RiscvProofRequestDtoMapperTest {
             coinbase = coinbase,
             chainId = chainId,
             forkName = forkName,
+            systemContracts = SystemContractsDto(
+              beaconRoots = "0x000f3df6d732807ef1319fb7b8bb8522d0beac02",
+              historyStorage = "0x0000f90827f1c53a10cb7a02335b175320002935",
+              deposit = "0x94d4a7449b968b839dcbc64a61f195ca300986ae",
+              withdrawalRequest = "0x66355689a9f067eeb9dc9d899e4192676988279c",
+              consolidationRequest = "0xf0e003f0de2d583ae28fa8cbf66aa096cdace3ff",
+              builderDepositRequest = "0x0000bff46984e3725691fa540a8c7589300d8282",
+              builderExitRequest = "0x000064d678505ad48f8ccb093bc65613800e8282",
+            ),
           ),
         ),
         metadata = MetaDataDto(
@@ -167,7 +176,6 @@ class RiscvProofRequestDtoMapperTest {
               proof = resolved.proof,
               startBlockNumber = resolved.startBlockNumber,
               publicInputs = resolved.publicInputs,
-              filteredAddresses = resolved.filteredAddresses,
               programVk = resolved.programVk,
             )
           },
@@ -297,6 +305,7 @@ class RiscvProofRequestDtoMapperTest {
     ),
     chainId = chainId.toULong(),
     coinbase = coinbase,
+    systemContracts = RiscvProverClientTestFixtures.SYSTEM_CONTRACTS,
     parentFtxRollingHash = ByteArray(32) { 0x1a },
     parentFtxNumber = 8UL,
   )

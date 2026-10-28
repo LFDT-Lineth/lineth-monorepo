@@ -6,7 +6,7 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 /**
  * @title Upgradeable Withdrawal Queue Predeploy Contract
  * @notice Implementation of EIP-7002 execution layer triggerable withdrawals
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 contract UpgradeableWithdrawalQueuePredeploy is Initializable {

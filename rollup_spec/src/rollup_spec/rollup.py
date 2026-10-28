@@ -33,6 +33,8 @@ from .l2_execution import (
     L2ExecutionProofPublicInput,
     VerifiableL2ExecutionProof,
     hash_address_list,
+    last_non_zero_pair,
+    merge_filtered_addresses,
 )
 from .l2_execution_ssz import hash_l2_execution_public_inputs
 from .messaging_offsets import rebase_messaging_offsets
@@ -384,12 +386,11 @@ class RollupPublicInput:
     boundaries. The final count is derived from parsed segments.
 
     `program_vks` is the set of guest program VKs verified beneath this proof,
-    encoded as a distinct list sorted ascending by byte value.
+    encoded as a distinct list sorted ascending by byte value; `filtered_addresses`
+    is encoded the same way.
     """
     end_block_number: U64
     end_block_timestamp: U64
-    parent_l1_l2_bridge_rolling_hash: Hash32
-    parent_l1_l2_bridge_rolling_hash_message_number: U64
     end_l1_l2_bridge_rolling_hash: Hash32
     end_l1_l2_bridge_rolling_hash_message_number: U64
     dynamic_chain_config_hash: Hash32
@@ -532,11 +533,12 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         rollup_end_block_number,
     )
 
-    concatenated_filtered_addresses: List[Address] = []
-
     for verifiable_proof in rollup_input.l2_execution_proofs:
         verify_l2_execution_proof(verifiable_proof.program_vk, verifiable_proof.proof)
-        concatenated_filtered_addresses.extend(verifiable_proof.proof.filtered_addresses)
+
+    filtered_addresses = merge_filtered_addresses(
+        proof.public_inputs.filtered_addresses for proof in l2_execution_proofs
+    )
 
     concatenated_l2_l1_messages = collect_l2_l1_messages(
         [proof.public_inputs.l2_l1_messages for proof in l2_execution_proofs]
@@ -590,24 +592,26 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     for left, right in zip(l2_execution_proofs, l2_execution_proofs[1:]):
         assert_l2_execution_continuity(left.public_inputs, right.public_inputs)
 
+    end_rolling_hash, end_rolling_hash_number = last_non_zero_pair(
+        (
+            proof.public_inputs.end_l1_l2_bridge_rolling_hash,
+            proof.public_inputs.end_l1_l2_bridge_rolling_hash_message_number,
+        )
+        for proof in l2_execution_proofs
+    )
+
     public_inputs = RollupPublicInput(
         end_block_number=last_proof.public_inputs.end_block_number,
         end_block_timestamp=last_proof.public_inputs.end_block_timestamp,
         l2_l1_messages=concatenated_l2_l1_messages,
-        parent_l1_l2_bridge_rolling_hash=first_proof.public_inputs.parent_l1_l2_bridge_rolling_hash,
-        parent_l1_l2_bridge_rolling_hash_message_number=(
-            first_proof.public_inputs.parent_l1_l2_bridge_rolling_hash_message_number
-        ),
-        end_l1_l2_bridge_rolling_hash=last_proof.public_inputs.end_l1_l2_bridge_rolling_hash,
-        end_l1_l2_bridge_rolling_hash_message_number=(
-            last_proof.public_inputs.end_l1_l2_bridge_rolling_hash_message_number
-        ),
+        end_l1_l2_bridge_rolling_hash=end_rolling_hash,
+        end_l1_l2_bridge_rolling_hash_message_number=end_rolling_hash_number,
         dynamic_chain_config_hash=first_proof.public_inputs.dynamic_chain_config_hash,
         parent_ftx_rolling_hash=first_proof.public_inputs.parent_ftx_rolling_hash,
         parent_ftx_number=first_proof.public_inputs.parent_ftx_number,
         end_ftx_rolling_hash=last_proof.public_inputs.end_ftx_rolling_hash,
         end_processed_ftx_number=last_proof.public_inputs.end_processed_ftx_number,
-        filtered_addresses=concatenated_filtered_addresses,
+        filtered_addresses=filtered_addresses,
         parent_data_rolling_hash=rollup_input.parent_data_rolling_hash,
         end_data_rolling_hash=end_data_rolling_hash,
         parent_block_hash=first_proof.public_inputs.parent_block_hash,
@@ -650,14 +654,10 @@ def verify_l2_execution_proof(program_vk: Hash32, proof: L2ExecutionProof) -> No
     `exec_vks` / `program_vks`, so the anchored VK is provably the key the
     verification ran against. `L2ExecutionProof.proof` stands in for those
     recursive-STARK bytes; the verifier binds the complete PI, including its
-    ordered message list. Filtered-address preimages are checked separately
-    against the public inputs; the caller checks sender hashes against DA blocks.
+    ordered message list. The caller checks sender hashes against DA blocks.
     """
     # First: the recursive STARK verify against the explicit verify key.
     recursive_stark_verify(program_vk, proof.proof, hash_l2_execution_public_inputs(proof.public_inputs))
-    # The check below binds the filtered-address preimage consumed by the rollup proof.
-    if hash_address_list(proof.filtered_addresses) != proof.public_inputs.filtered_addresses_hash:
-        raise Exception("invalid l2-execution filteredAddressesHash preimage")
 
 
 def verify_l2_execution_proof_tiling(
@@ -680,10 +680,6 @@ def assert_l2_execution_continuity(
 ) -> None:
     if left.end_block_hash != right.parent_block_hash:
         raise Exception("l2-execution block-hash continuity failed")
-    if left.end_l1_l2_bridge_rolling_hash != right.parent_l1_l2_bridge_rolling_hash:
-        raise Exception("l2-execution L1-to-L2 rolling-hash continuity failed")
-    if left.end_l1_l2_bridge_rolling_hash_message_number != right.parent_l1_l2_bridge_rolling_hash_message_number:
-        raise Exception("l2-execution L1-to-L2 rolling-hash-number continuity failed")
     if left.dynamic_chain_config_hash != right.dynamic_chain_config_hash:
         raise Exception("l2-execution dynamic chain configuration continuity failed")
     if left.end_ftx_rolling_hash != right.parent_ftx_rolling_hash:

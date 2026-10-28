@@ -56,11 +56,10 @@ type ChunkWitness struct {
 // EmbeddedL2ExecutionProof is one l2ExecutionProof a rollup request carries for
 // the guest to verify. ProgramVk is its verifying-key hash.
 type EmbeddedL2ExecutionProof struct {
-	Proof             []byte
-	StartBlockNumber  uint64
-	PublicInputs      backend.PublicInputs
-	FilteredAddresses [][20]byte
-	ProgramVk         []byte
+	Proof            []byte
+	StartBlockNumber uint64
+	PublicInputs     backend.PublicInputs
+	ProgramVk        []byte
 }
 
 // RollupRequest is a decoded getZkRollupProofV1 request. Conflations pair 1:1
@@ -279,28 +278,19 @@ func decodeEmbeddedL2ExecutionProof(raw json.RawMessage, op, ctx string) (Embedd
 	if err != nil {
 		return EmbeddedL2ExecutionProof{}, err
 	}
-	filteredRaw, err := getArray(obj, filteredAddressesKey, op, ctx)
-	if err != nil {
-		return EmbeddedL2ExecutionProof{}, err
-	}
-	filtered, err := addressList(filteredRaw, op, ctx+filteredAddressesKey)
-	if err != nil {
-		return EmbeddedL2ExecutionProof{}, err
-	}
 	programVk, err := getFixedHex(obj, programVkKey, op, ctx, programVkByteSize)
 	if err != nil {
 		return EmbeddedL2ExecutionProof{}, err
 	}
 	return EmbeddedL2ExecutionProof{
-		Proof:             proof,
-		StartBlockNumber:  startBlockNumber,
-		PublicInputs:      pi,
-		FilteredAddresses: filtered,
-		ProgramVk:         programVk,
+		Proof:            proof,
+		StartBlockNumber: startBlockNumber,
+		PublicInputs:     pi,
+		ProgramVk:        programVk,
 	}, nil
 }
 
-// decodeEmbeddedPublicInputs decodes the 18-field backend.PublicInputs shape
+// decodeEmbeddedPublicInputs decodes the backend.PublicInputs shape
 // embedded in an l2ExecutionProof.
 func decodeEmbeddedPublicInputs(
 	m map[string]json.RawMessage, op, ctx string,
@@ -327,8 +317,6 @@ func decodeEmbeddedPublicInputs(
 	pi.EndBlockHash = h("endBlockHash")
 	pi.EndBlockNumber = n(endBlockNumberKey)
 	pi.EndBlockTimestamp = n("endBlockTimestamp")
-	pi.ParentL1L2BridgeRollingHash = h("parentL1L2BridgeRollingHash")
-	pi.ParentL1L2BridgeRollingHashMessageNumber = n("parentL1L2BridgeRollingHashMessageNumber")
 	pi.EndL1L2BridgeRollingHash = h("endL1L2BridgeRollingHash")
 	pi.EndL1L2BridgeRollingHashMessageNumber = n("endL1L2BridgeRollingHashMessageNumber")
 	pi.DynamicChainConfigHash = h("dynamicChainConfigHash")
@@ -336,7 +324,6 @@ func decodeEmbeddedPublicInputs(
 	pi.ParentFtxNumber = n("parentFtxNumber")
 	pi.EndFtxRollingHash = h("endFtxRollingHash")
 	pi.EndProcessedFtxNumber = n("endProcessedFtxNumber")
-	pi.FilteredAddressesHash = h("filteredAddressesHash")
 	pi.TxFromsHash = h("txFromsHash")
 	pi.BlockCount = n(blockCountKey)
 	if err != nil {
@@ -362,6 +349,16 @@ func decodeEmbeddedPublicInputs(
 		return pi, err
 	}
 	pi.L2L1Messages = l2L1Messages
+
+	filteredRaw, err := getArray(m, filteredAddressesKey, op, ctx)
+	if err != nil {
+		return pi, err
+	}
+	filtered, err := addressList(filteredRaw, op, ctx+filteredAddressesKey)
+	if err != nil {
+		return pi, err
+	}
+	pi.FilteredAddresses = filtered
 	return pi, nil
 }
 

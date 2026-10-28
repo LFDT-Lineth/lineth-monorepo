@@ -1,6 +1,4 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
@@ -28,7 +26,6 @@ class MaruMultiValidatorRestartTest {
   @BeforeEach
   fun setUp() {
     network = MultiValidatorNetwork()
-    network.startBesuNodes()
   }
 
   @AfterEach
@@ -51,7 +48,7 @@ class MaruMultiValidatorRestartTest {
     Thread.sleep(2000)
 
     log.info("Restarting all 4 validators")
-    network.startAllValidators()
+    network.restartAllValidators()
 
     // Wait for ALL 4 validators to reach the target before reading their blocks.
     network.waitForBlockHeight(

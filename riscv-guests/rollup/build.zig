@@ -88,7 +88,7 @@ pub fn build(b: *std.Build) void {
         }),
     });
     rollup_ssz_tests.root_module.addImport("rollup_ssz", rollup_ssz_native_mod);
-    rollup_ssz_tests.root_module.addImport("support.zig", support_mod);
+    rollup_ssz_tests.root_module.addImport("support", support_mod);
     test_step.dependOn(&b.addRunArtifact(rollup_ssz_tests).step);
 
     const rollup_tests = b.addTest(.{
@@ -100,7 +100,7 @@ pub fn build(b: *std.Build) void {
     });
     rollup_tests.root_module.addImport("rollup", rollup_native_mod);
     rollup_tests.root_module.addImport("rollup_ssz", rollup_ssz_native_mod);
-    rollup_tests.root_module.addImport("support.zig", support_mod);
+    rollup_tests.root_module.addImport("support", support_mod);
     test_step.dependOn(&b.addRunArtifact(rollup_tests).step);
 
     // ── Fixture generation ─────────────────────────────────────────────────────────────────────
@@ -118,7 +118,7 @@ pub fn build(b: *std.Build) void {
         }),
     });
     gen_fixture.root_module.addImport("rollup_ssz", rollup_ssz_native_mod);
-    gen_fixture.root_module.addImport("support.zig", support_mod);
+    gen_fixture.root_module.addImport("support", support_mod);
     const gen_fixture_step = b.step("gen-fixture", "Print a sample RollupProofPrivateInput as framed raw bytes on stdout");
     gen_fixture_step.dependOn(&b.addRunArtifact(gen_fixture).step);
 }

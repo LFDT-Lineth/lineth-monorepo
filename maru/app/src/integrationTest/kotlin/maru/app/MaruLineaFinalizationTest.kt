@@ -1,106 +1,101 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
-@file:Suppress("DEPRECATION") // TODO: migrate to maru.test.cluster.MaruCluster
-
 package maru.app
 
 import linea.domain.BlockParameter
 import linea.ethapi.EthApiClient
-import linea.testing.besu.BesuFactory
 import linea.testing.besu.BesuTransactionsHelper
-import linea.testing.besu.ethGetBlockByNumber
 import linea.web3j.ethapi.createEthApiClient
+import maru.config.ApiEndpointConfig
+import maru.config.LineaConfig
+import maru.test.cluster.MaruCluster
+import maru.test.cluster.NodeBuilder
+import maru.test.cluster.NodeRole
+import maru.test.cluster.assertSameCanonicalElChain
+import maru.test.cluster.configureLoggers
+import maru.test.extensions.TestSyncingConfigs
+import maru.test.extensions.withFastPeering
+import maru.test.extensions.withFastQbft
+import maru.test.extensions.withSyncingConfig
+import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.kotlin.await
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Amount
-import org.hyperledger.besu.tests.acceptance.dsl.condition.net.NetConditions
-import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.Cluster
-import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.ClusterConfigurationBuilder
-import org.hyperledger.besu.tests.acceptance.dsl.transaction.net.NetTransactions
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import testutils.FakeL1JsonRpcServer
-import testutils.PeeringNodeNetworkStack
-import testutils.maru.MaruFactory
 import testutils.maru.awaitTillMaruHasPeers
+import java.net.URI
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
 class MaruLineaFinalizationTest {
-  private lateinit var cluster: Cluster
-  private lateinit var validatorStack: PeeringNodeNetworkStack
-  private lateinit var followerStack: PeeringNodeNetworkStack
+  private lateinit var cluster: MaruCluster
   private lateinit var transactionsHelper: BesuTransactionsHelper
   private val log = LogManager.getLogger(this.javaClass)
-  private val maruFactory = MaruFactory()
   private lateinit var fakeL1: FakeL1JsonRpcServer
   private lateinit var validatorEthApiClient: EthApiClient
   private lateinit var followerEthApiClient: EthApiClient
 
+  // Linea finalization against the fake L1, reading L2 blocks from the node's own EL
+  private fun NodeBuilder.withLineaFinalization(): NodeBuilder =
+    maruConfig { config ->
+      config.copy(
+        linea = LineaConfig(
+          contractAddress = ByteArray(20), // dummy address — fake L1 ignores it
+          l1EthApiEndpoint = ApiEndpointConfig(URI.create(fakeL1.url()).toURL()),
+          l1PollingInterval = 100.milliseconds,
+          l2EthApiEndpoint = config.forkTransition.l2EthApiEndpoint!!,
+        ),
+      )
+    }
+
   @BeforeEach
   fun setUp() {
+    configureLoggers(
+      rootLevel = Level.WARN,
+      logLevels = listOf("maru" to Level.INFO),
+    )
     fakeL1 = FakeL1JsonRpcServer().start()
     transactionsHelper = BesuTransactionsHelper()
-    cluster = Cluster(
-      ClusterConfigurationBuilder().build(),
-      NetConditions(NetTransactions()),
-      BesuFactory.buildTestNodeRunner(),
-    )
 
-    validatorStack = PeeringNodeNetworkStack()
-    followerStack = PeeringNodeNetworkStack(
-      besuBuilder = { BesuFactory.buildTestBesu(validator = false) },
-    )
+    cluster = MaruCluster()
+      .addNode(NodeRole.Sequencer, withBesuEl = true) { nodeBuilder ->
+        nodeBuilder
+          .withFastQbft()
+          .withFastPeering()
+          .withSyncingConfig(TestSyncingConfigs.validator)
+          .withLineaFinalization()
+          .maruConfig { it.copy(allowEmptyBlocks = false) }
+      }.addNode(NodeRole.Follower, withBesuEl = true) { nodeBuilder ->
+        nodeBuilder
+          .withFastPeering()
+          .withSyncingConfig(TestSyncingConfigs.default)
+          .staticPeers(listOf("sequencer"))
+          .payloadValidation(true)
+          .withLineaFinalization()
+          .maruConfig { it.copy(allowEmptyBlocks = false) }
+      }.start()
 
-    PeeringNodeNetworkStack.startBesuNodes(cluster, validatorStack, followerStack)
-
-    val validatorMaruApp =
-      maruFactory.buildTestMaruValidatorWithP2pPeering(
-        ethereumJsonRpcUrl = validatorStack.besuNode.jsonRpcBaseUrl().get(),
-        engineApiRpc = validatorStack.besuNode.engineRpcUrl().get(),
-        dataDir = validatorStack.tmpDir,
-        l1EthApiEndpoint = fakeL1.url(),
-      )
-    validatorStack.setMaruApp(validatorMaruApp)
-    validatorStack.maruApp.start().get()
-
-    val validatorP2pPort = validatorStack.p2pPort
-
-    val followerMaruApp =
-      maruFactory.buildTestMaruFollowerWithP2pPeering(
-        ethereumJsonRpcUrl = followerStack.besuNode.jsonRpcBaseUrl().get(),
-        engineApiRpc = followerStack.besuNode.engineRpcUrl().get(),
-        dataDir = followerStack.tmpDir,
-        validatorPortForStaticPeering = validatorP2pPort,
-        l1EthApiEndpoint = fakeL1.url(),
-      )
-    followerStack.setMaruApp(followerMaruApp)
-    followerStack.maruApp.start().get()
-
-    followerStack.maruApp.awaitTillMaruHasPeers(1u)
-    validatorStack.maruApp.awaitTillMaruHasPeers(1u)
-    val validatorGenesis = validatorStack.besuNode.ethGetBlockByNumber("earliest", false)
-    val followerGenesis = followerStack.besuNode.ethGetBlockByNumber("earliest", false)
-
-    assertThat(validatorGenesis).isEqualTo(followerGenesis)
+    cluster.maruNode("follower").awaitTillMaruHasPeers(1u)
+    cluster.maruNode("sequencer").awaitTillMaruHasPeers(1u)
+    cluster.assertSameCanonicalElChain(chainHeight = 0UL)
 
     validatorEthApiClient = createEthApiClient(
-      rpcUrl = validatorStack.besuNode.jsonRpcBaseUrl().get(),
+      rpcUrl = cluster.besuNode("sequencer").jsonRpcBaseUrl().get(),
       log = LogManager.getLogger("clients.l2.test.validator"),
       requestRetryConfig = null,
       vertx = null,
     )
     followerEthApiClient = createEthApiClient(
-      rpcUrl = followerStack.besuNode.jsonRpcBaseUrl().get(),
+      rpcUrl = cluster.besuNode("follower").jsonRpcBaseUrl().get(),
       log = LogManager.getLogger("clients.l2.test.follower"),
       requestRetryConfig = null,
       vertx = null,
@@ -123,12 +118,12 @@ class MaruLineaFinalizationTest {
 
   @AfterEach
   fun tearDown() {
-    followerStack.maruApp.stop().get()
-    validatorStack.maruApp.stop().get()
-    followerStack.maruApp.close()
-    validatorStack.maruApp.close()
-    cluster.close()
-    fakeL1.stop()
+    if (::cluster.isInitialized) {
+      cluster.stop()
+    }
+    if (::fakeL1.isInitialized) {
+      fakeL1.stop()
+    }
   }
 
   @Test
@@ -137,7 +132,7 @@ class MaruLineaFinalizationTest {
 
     repeat(3) {
       transactionsHelper.run {
-        validatorStack.besuNode.sendTransactionAndAssertExecution(
+        cluster.besuNode("sequencer").sendTransactionAndAssertExecution(
           logger = log,
           recipient = createAccount("another account"),
           amount = Amount.ether(1),
@@ -167,7 +162,7 @@ class MaruLineaFinalizationTest {
     // Propagating the Head of the chain further than the Finalization height
     repeat(4) {
       transactionsHelper.run {
-        validatorStack.besuNode.sendTransactionAndAssertExecution(
+        cluster.besuNode("sequencer").sendTransactionAndAssertExecution(
           logger = log,
           recipient = createAccount("another account"),
           amount = Amount.ether(1),

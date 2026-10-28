@@ -30,6 +30,11 @@ object RollupSpecProverIo {
 
   fun fixture(name: String): JsonNode = mapper.readTree(proverIoDir.resolve("testdata/$name").toFile())
 
+  /** Every golden fixture file name under `testdata/`, sorted. */
+  fun fixtureNames(): List<String> = Files.list(proverIoDir.resolve("testdata")).use { files ->
+    files.map { it.fileName.toString() }.filter { it.endsWith(".json") }.sorted().toList()
+  }
+
   inline fun <reified T> fixtureAs(name: String): T = strictMapper.treeToValue(fixture(name), T::class.java)
 
   fun schema(name: String): JsonSchema = Files.newInputStream(proverIoDir.resolve("schemas/$name")).use {

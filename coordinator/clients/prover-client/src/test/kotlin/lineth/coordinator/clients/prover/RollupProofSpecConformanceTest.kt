@@ -11,7 +11,10 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
-/** Checks the rollup DTOs against the rollup_spec wire contract (see [RollupSpecProverIo]). */
+/**
+ * Checks the rollup DTOs against the rollup_spec wire contract (see [RollupSpecProverIo]). Strict fixture round-trips
+ * are covered for all proof types by [RollupSpecFixturesConformanceTest].
+ */
 class RollupProofSpecConformanceTest {
   private val requestSchema = "getZkRollupProofV1.request.schema.json"
   private val l2ExecutionResponse =
@@ -33,12 +36,11 @@ class RollupProofSpecConformanceTest {
   )
 
   @Test
-  fun `rollup response fixture round-trips through the DTO and maps to the domain`() {
+  fun `rollup response fixture maps to the domain`() {
     val json = fixture("10-14-getZkRollupProofV1.response.json")
 
     val dto = fixtureAs<RollupProofResponseDto>("10-14-getZkRollupProofV1.response.json")
 
-    assertThat(toJson(dto)).isEqualTo(json)
     val domain = RollupProofResponseDtoMapper(dto)
     val pi = json["publicInputs"]
     assertThat(domain.endBlockNumber).isEqualTo(pi["endBlockNumber"].asLong().toULong())
@@ -49,12 +51,9 @@ class RollupProofSpecConformanceTest {
   }
 
   @Test
-  fun `rollup request fixture round-trips through the DTO`() {
-    val json = fixture("10-14-getZkRollupProofV1.request.json")
-
+  fun `rollup request fixture covers a mid-chunk start`() {
     val dto = fixtureAs<FileBasedRollupProofRequestDto>("10-14-getZkRollupProofV1.request.json")
 
-    assertThat(toJson(dto)).isEqualTo(json)
     assertThat(dto.proofRequest.parentDataTailTakeBytes).isPositive()
     assertThat(dto.proofRequest.boundaryPrevDataRollingHash).isNotNull()
   }

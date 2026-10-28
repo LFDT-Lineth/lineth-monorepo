@@ -1,5 +1,10 @@
 ## [unreleased]
 
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Update copyright holder to Consensys Incorporated (#4244)
+## [1.0.2] - 2026-10-23
+
 ### 🐛 Bug Fixes
 
 - *(postman)* Use lineaRollupAddress and remove duplicate LineaRollup sources (#3456)

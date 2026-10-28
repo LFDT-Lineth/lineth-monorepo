@@ -1,6 +1,4 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
@@ -44,14 +42,13 @@ object BesuFactory {
    * Vertx defaults (2 * #CPUs event loops, 20 worker and 20 internal blocking threads) are created
    * per Besu node, which starves CI CPUs when running multiple nodes/tests in parallel.
    */
-  fun testVertxOptions(): VertxOptions =
-    VertxOptions()
-      .setEventLoopPoolSize(2)
-      .setWorkerPoolSize(4)
-      .setInternalBlockingPoolSize(4)
-
-  fun buildTestNodeRunner(vertxOptions: VertxOptions = testVertxOptions()): BesuNodeRunner =
-    ThreadBesuNodeRunner(vertxOptions)
+  fun buildTestNodeRunner(): BesuNodeRunner =
+    ThreadBesuNodeRunner(
+      VertxOptions()
+        .setEventLoopPoolSize(2)
+        .setWorkerPoolSize(4)
+        .setInternalBlockingPoolSize(4),
+    )
 
   fun buildTestBesu(
     genesisFile: String = GenesisConfigurationFactory.readGenesisFile(PRAGUE_GENESIS),

@@ -1,108 +1,87 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
-@file:Suppress("DEPRECATION") // TODO: migrate to maru.test.cluster.MaruCluster
-
 package maru.app
 
-import linea.testing.besu.BesuFactory
 import linea.testing.besu.BesuTransactionsHelper
-import maru.p2p.testutils.NetworkUtil.findFreePorts
+import maru.test.cluster.MaruCluster
+import maru.test.cluster.NodeBuilder
+import maru.test.cluster.NodeRole
+import maru.test.cluster.configureLoggers
+import maru.test.extensions.TestSyncingConfigs
+import maru.test.extensions.withFastPeering
+import maru.test.extensions.withFastQbft
+import maru.test.extensions.withSyncingConfig
+import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.awaitility.kotlin.await
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Amount
-import org.hyperledger.besu.tests.acceptance.dsl.condition.net.NetConditions
-import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.Cluster
-import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.ClusterConfigurationBuilder
-import org.hyperledger.besu.tests.acceptance.dsl.transaction.net.NetTransactions
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import testutils.Checks.assertMinedBlocks
-import testutils.PeeringNodeNetworkStack
-import testutils.maru.MaruFactory
 import testutils.maru.awaitTillMaruHasPeers
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
 class MaruValidatorRestartTest {
-  private lateinit var cluster: Cluster
+  private lateinit var cluster: MaruCluster
   private lateinit var transactionsHelper: BesuTransactionsHelper
-  private lateinit var validatorStack: PeeringNodeNetworkStack
-  private lateinit var followerStack: PeeringNodeNetworkStack
-  private val maruFactory = MaruFactory()
   private val log = LogManager.getLogger(this.javaClass)
 
   @BeforeEach
   fun setup() {
-    cluster = Cluster(
-      ClusterConfigurationBuilder().build(),
-      NetConditions(NetTransactions()),
-      BesuFactory.buildTestNodeRunner(),
+    configureLoggers(
+      rootLevel = Level.WARN,
+      logLevels = listOf("maru" to Level.INFO),
     )
     transactionsHelper = BesuTransactionsHelper()
-    validatorStack = PeeringNodeNetworkStack()
-    followerStack = PeeringNodeNetworkStack(
-      besuBuilder = { BesuFactory.buildTestBesu(validator = false) },
-    )
   }
 
   @AfterEach
   fun tearDown() {
-    followerStack.maruApp.stop().get()
-    followerStack.maruApp.close()
-    validatorStack.maruApp.stop().get()
-    validatorStack.maruApp.close()
-    cluster.close()
+    if (::cluster.isInitialized) {
+      cluster.stop()
+    }
   }
+
+  // Fast peering with 10s reputation periods, and syncing one block at a time
+  private fun NodeBuilder.withTestDefaults(): NodeBuilder =
+    withFastPeering(banPeriod = 10.seconds, cooldownPeriod = 10.seconds)
+      .withSyncingConfig(TestSyncingConfigs.validator)
+      .maruConfig { it.copy(allowEmptyBlocks = false) }
 
   @Test
   fun `Maru validator restarted from scratch is able to sync state`() {
-    PeeringNodeNetworkStack.startBesuNodes(cluster, validatorStack, followerStack)
-    val freePorts = findFreePorts(6)
-    val followerMaruApp =
-      maruFactory.buildTestMaruFollowerWithDiscovery(
-        ethereumJsonRpcUrl = followerStack.besuNode.jsonRpcBaseUrl().get(),
-        engineApiRpc = followerStack.besuNode.engineRpcUrl().get(),
-        dataDir = followerStack.tmpDir,
-        p2pPort = freePorts[0],
-        discoveryPort = freePorts[1],
-      )
-    followerStack.setMaruApp(followerMaruApp)
-    followerStack.maruApp.start().get()
-
-    val followerENR =
-      followerStack.maruApp.p2pNetwork.localNodeRecord
-        ?.asEnr()
-
-    val validatorMaruApp =
-      maruFactory.buildTestMaruValidatorWithDiscovery(
-        ethereumJsonRpcUrl = validatorStack.besuNode.jsonRpcBaseUrl().get(),
-        engineApiRpc = validatorStack.besuNode.engineRpcUrl().get(),
-        dataDir = validatorStack.tmpDir,
-        p2pPort = freePorts[2],
-        discoveryPort = freePorts[3],
-        bootnode = followerENR,
-      )
-    validatorStack.setMaruApp(validatorMaruApp)
-    validatorStack.maruApp.start().get()
+    // The follower is started first, as it is the validator's discovery bootnode
+    cluster = MaruCluster()
+      .addNode(NodeRole.Follower, withBesuEl = true) { nodeBuilder ->
+        nodeBuilder
+          .payloadValidation(true)
+          .withTestDefaults()
+      }.addNode(NodeRole.Sequencer, withBesuEl = true) { nodeBuilder ->
+        nodeBuilder.withTestDefaults().withFastQbft()
+        nodeBuilder.bootnodes(listOf("follower"))
+      }.start()
+    val validatorBesuNode = cluster.besuNode("sequencer")
+    val followerBesuNode = cluster.besuNode("follower")
+    val followerMaruApp = cluster.maruNode("follower")
+    val validatorMaruApp = cluster.maruNode("sequencer")
 
     log.info(
-      "Follower: ${followerStack.maruApp.p2pNetwork.nodeId}, validator: ${validatorStack.maruApp.p2pNetwork.nodeId}",
+      "Follower: ${followerMaruApp.p2pNetwork.nodeId}, validator: ${validatorMaruApp.p2pNetwork.nodeId}",
     )
 
-    followerStack.maruApp.awaitTillMaruHasPeers(1u)
-    validatorStack.maruApp.awaitTillMaruHasPeers(1u)
+    followerMaruApp.awaitTillMaruHasPeers(1u)
+    validatorMaruApp.awaitTillMaruHasPeers(1u)
 
     val blocksToProduce = 5
     repeat(blocksToProduce) {
       transactionsHelper.run {
-        validatorStack.besuNode.sendTransactionAndAssertExecution(
+        validatorBesuNode.sendTransactionAndAssertExecution(
           logger = log,
           recipient = createAccount("another account"),
           amount = Amount.ether(100),
@@ -110,37 +89,27 @@ class MaruValidatorRestartTest {
       }
     }
 
-    validatorStack.besuNode.assertMinedBlocks(blocksToProduce)
-    followerStack.besuNode.assertMinedBlocks(blocksToProduce)
+    validatorBesuNode.assertMinedBlocks(blocksToProduce)
+    followerBesuNode.assertMinedBlocks(blocksToProduce)
 
-    validatorStack.maruApp.stop().get()
-    validatorStack.maruApp.close()
+    cluster.stopMaruNode("sequencer")
 
     await
       .timeout(30.seconds.toJavaDuration())
       .pollInterval(1.seconds.toJavaDuration())
-      .until { followerStack.maruApp.peersConnected() == 0u }
+      .until { followerMaruApp.peersConnected() == 0u }
 
-    val newValidatorMaruApp =
-      maruFactory.buildTestMaruValidatorWithDiscovery(
-        ethereumJsonRpcUrl = validatorStack.besuNode.jsonRpcBaseUrl().get(),
-        engineApiRpc = validatorStack.besuNode.engineRpcUrl().get(),
-        dataDir = validatorStack.tmpDir,
-        p2pPort = freePorts[4],
-        discoveryPort = freePorts[5],
-        bootnode = followerENR,
-      )
-    validatorStack.setMaruApp(newValidatorMaruApp)
-    validatorStack.maruApp.start().get()
+    // Same node key, data directory and bootnode, new p2p and discovery ports
+    val newValidatorMaruApp = cluster.startMaruNode("sequencer")
 
     log.info("Restarted validator: ${newValidatorMaruApp.p2pNetwork.nodeId}")
 
-    validatorStack.maruApp.awaitTillMaruHasPeers(1u)
-    followerStack.maruApp.awaitTillMaruHasPeers(1u)
+    newValidatorMaruApp.awaitTillMaruHasPeers(1u)
+    followerMaruApp.awaitTillMaruHasPeers(1u)
 
     repeat(blocksToProduce) {
       transactionsHelper.run {
-        validatorStack.besuNode.sendTransactionAndAssertExecution(
+        validatorBesuNode.sendTransactionAndAssertExecution(
           logger = log,
           recipient = createAccount("another account"),
           amount = Amount.ether(100),
@@ -148,7 +117,7 @@ class MaruValidatorRestartTest {
       }
     }
 
-    validatorStack.besuNode.assertMinedBlocks(2 * blocksToProduce)
-    followerStack.besuNode.assertMinedBlocks(2 * blocksToProduce)
+    validatorBesuNode.assertMinedBlocks(2 * blocksToProduce)
+    followerBesuNode.assertMinedBlocks(2 * blocksToProduce)
   }
 }

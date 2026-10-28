@@ -1,84 +1,59 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
-@file:Suppress("DEPRECATION") // TODO: migrate to maru.test.cluster.MaruCluster
-
 package maru.app
 
-import linea.testing.besu.BesuFactory
 import linea.testing.besu.BesuTransactionsHelper
-import maru.config.QbftConfig
+import maru.test.cluster.MaruCluster
+import maru.test.cluster.NodeRole
+import maru.test.cluster.configureLoggers
+import maru.test.extensions.TestSyncingConfigs
+import maru.test.extensions.withFastQbft
+import maru.test.extensions.withSyncingConfig
+import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Amount
-import org.hyperledger.besu.tests.acceptance.dsl.condition.net.NetConditions
-import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.Cluster
-import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.ClusterConfigurationBuilder
-import org.hyperledger.besu.tests.acceptance.dsl.transaction.net.NetTransactions
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import testutils.Checks.getMinedBlocks
-import testutils.RecordingEngineProxy
-import testutils.SingleNodeNetworkStack
-import testutils.maru.MaruFactory
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 class MaruLongRunningTransactionTest {
-  private lateinit var cluster: Cluster
-  private lateinit var networkParticipantStack: SingleNodeNetworkStack
+  private lateinit var cluster: MaruCluster
   private lateinit var transactionsHelper: BesuTransactionsHelper
   private val log = LogManager.getLogger(this.javaClass)
-  private val maruFactory = MaruFactory()
-  private lateinit var proxy: RecordingEngineProxy
 
   private val expectedMinBuildTime = 1700L
 
   @BeforeEach
   fun setUp() {
-    transactionsHelper = BesuTransactionsHelper()
-    cluster = Cluster(
-      ClusterConfigurationBuilder().build(),
-      NetConditions(NetTransactions()),
-      BesuFactory.buildTestNodeRunner(),
+    configureLoggers(
+      rootLevel = Level.WARN,
+      logLevels = listOf("maru" to Level.INFO),
     )
+    transactionsHelper = BesuTransactionsHelper()
 
-    networkParticipantStack = SingleNodeNetworkStack(
-      cluster = cluster,
-    ) { ethereumJsonRpcBaseUrl, engineRpcUrl, tmpDir ->
-      proxy = RecordingEngineProxy(engineRpcUrl)
-      proxy.start()
-
-      maruFactory.buildTestMaruValidatorWithoutP2pPeering(
-        ethereumJsonRpcUrl = ethereumJsonRpcBaseUrl,
-        engineApiRpc = proxy.url(),
-        dataDir = tmpDir,
-        allowEmptyBlocks = false,
-        syncingConfig = MaruFactory.defaultSyncingConfig.copy(
-          elSyncStatusRefreshInterval = 1000.seconds,
-        ),
-        qbftOptions = QbftConfig(
-          feeRecipient = maruFactory.qbftValidator.address.reversedArray(),
-          minBlockBuildTime = expectedMinBuildTime.milliseconds,
-          roundExpiry = 2.seconds,
-        ),
-      )
-    }
-    networkParticipantStack.maruApp.start().get()
+    // Single validator without P2P peering
+    cluster = MaruCluster()
+      .addNode(NodeRole.Sequencer, withBesuEl = true) { nodeBuilder ->
+        nodeBuilder
+          .withSyncingConfig(TestSyncingConfigs.default.copy(elSyncStatusRefreshInterval = 1000.seconds))
+          .withFastQbft(minBlockBuildTime = expectedMinBuildTime.milliseconds, roundExpiry = 2.seconds)
+          .maruConfig { it.copy(allowEmptyBlocks = false, p2p = null) }
+      }.start()
   }
 
   @AfterEach
   fun tearDown() {
-    networkParticipantStack.maruApp.stop().get()
-    networkParticipantStack.maruApp.close()
-    proxy.stop()
-    cluster.close()
+    if (::cluster.isInitialized) {
+      cluster.stop()
+    }
   }
 
   @Test
@@ -94,12 +69,12 @@ class MaruLongRunningTransactionTest {
 
   private fun mineBlockWithTransaction(expectedBlockNumber: Int) {
     transactionsHelper.run {
-      networkParticipantStack.besuNode.sendTransactionAndAssertExecution(
+      cluster.besuNode("sequencer").sendTransactionAndAssertExecution(
         logger = log,
         recipient = createAccount("another account"),
         amount = Amount.ether(100),
       )
     }
-    assertThat(networkParticipantStack.besuNode.getMinedBlocks(expectedBlockNumber)).hasSize(expectedBlockNumber)
+    assertThat(cluster.besuNode("sequencer").getMinedBlocks(expectedBlockNumber)).hasSize(expectedBlockNumber)
   }
 }

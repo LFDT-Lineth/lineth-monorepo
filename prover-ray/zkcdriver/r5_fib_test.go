@@ -59,7 +59,7 @@ func BenchmarkR5Fibonacci(b *testing.B) {
 	outputs, maybeTrace, errs := binf.Trace(inputsMap, tracingConfig)
 	if len(errs) > 0 {
 		b.Fatalf("tracing failed: %v", errs)
-	} else if got := outputs["guest_output"]; !bytes.Equal(got, wantOutput) {
+	} else if got := outputs["guest_output"]; !bytes.Equal(got.Bytes(), wantOutput) {
 		b.Fatalf("unexpected guest_output: got %x, want %x", got, wantOutput)
 	}
 	//
@@ -130,6 +130,15 @@ func BenchmarkR5Fibonacci(b *testing.B) {
 		b.Fatalf("serializing R5 constraints: %v", err)
 	}
 	system, driver := compileR5BenchmarkSystem(b, serialized)
+
+	// Prove from a trace whose modules are padded to the compiled system's
+	// minimum dynamic size (wiop.Module.MinRuntimeSize), which proving
+	// enforces; the trace above, for the metrics, is not.
+	_, maybeTrace, errs = binf.Trace(inputsMap, zkcdriver.PadToMinSizes(tracingConfig, system))
+	if len(errs) > 0 {
+		b.Fatalf("tracing failed: %v", errors.Join(errs...))
+	}
+	lazyTrace = maybeTrace.Unwrap()
 
 	if limit := int(pcs.FRIMaxCommittableSizeLog2(system)); rowLimit > limit {
 		b.Fatalf("tallest shard module is 2^%d rows, above the 2^%d PCS limit; trace is not provable",

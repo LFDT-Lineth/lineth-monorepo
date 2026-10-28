@@ -5,7 +5,7 @@ import { IL1MessageService } from "../../messaging/l1/interfaces/IL1MessageServi
 
 /**
  * @title Interface for the L1 Linea Token Burner Contract.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 interface IL1LineaTokenBurner {

@@ -130,8 +130,6 @@
         "endBlockNumber",
         "endBlockTimestamp",
         "l2L1Messages",
-        "parentL1L2BridgeRollingHash",
-        "parentL1L2BridgeRollingHashMessageNumber",
         "endL1L2BridgeRollingHash",
         "endL1L2BridgeRollingHashMessageNumber",
         "dynamicChainConfigHash",
@@ -139,7 +137,7 @@
         "parentFtxNumber",
         "endFtxRollingHash",
         "endProcessedFtxNumber",
-        "filteredAddressesHash",
+        "filteredAddresses",
         "txFromsHash",
         "blockCount",
         "l2MessagingBlocksOffsets"
@@ -150,8 +148,6 @@
         "endBlockNumber": { "$ref": "#/$defs/uint" },
         "endBlockTimestamp": { "$ref": "#/$defs/uint" },
         "l2L1Messages": { "type": "array", "items": { "$ref": "#/$defs/hash32" } },
-        "parentL1L2BridgeRollingHash": { "$ref": "#/$defs/hash32" },
-        "parentL1L2BridgeRollingHashMessageNumber": { "$ref": "#/$defs/uint" },
         "endL1L2BridgeRollingHash": { "$ref": "#/$defs/hash32" },
         "endL1L2BridgeRollingHashMessageNumber": { "$ref": "#/$defs/uint" },
         "dynamicChainConfigHash": { "$ref": "#/$defs/hash32" },
@@ -159,7 +155,12 @@
         "parentFtxNumber": { "$ref": "#/$defs/uint" },
         "endFtxRollingHash": { "$ref": "#/$defs/hash32" },
         "endProcessedFtxNumber": { "$ref": "#/$defs/uint" },
-        "filteredAddressesHash": { "$ref": "#/$defs/hash32" },
+        "filteredAddresses": {
+          "description": "Distinct, sorted ascending by byte value: the canonical encoding of the set of addresses named by forced transactions refused in this range (order carries no meaning).",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/address" }
+        },
         "txFromsHash": { "$ref": "#/$defs/hash32" },
         "blockCount": { "$ref": "#/$defs/uint" },
         "l2MessagingBlocksOffsets": { "type": "array", "items": { "type": "integer", "minimum": 1, "maximum": 65535 } }
@@ -172,14 +173,12 @@
         "proof",
         "startBlockNumber",
         "publicInputs",
-        "filteredAddresses",
         "programVk"
       ],
       "properties": {
         "proof": { "$ref": "#/$defs/hex" },
         "startBlockNumber": { "$ref": "#/$defs/uint" },
         "publicInputs": { "$ref": "#/$defs/l2ExecutionPublicInputs" },
-        "filteredAddresses": { "type": "array", "items": { "$ref": "#/$defs/address" } },
         "programVk": { "$ref": "#/$defs/hash32" }
       }
     }
