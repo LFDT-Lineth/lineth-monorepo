@@ -48,10 +48,15 @@ func TestDecodeRollupRequest_Golden(t *testing.T) {
 	assert.Equal(t, mustHex(t, "0xf90215a0"), req.Conflations[0].BlockRlps[0])
 
 	require.Len(t, req.Chunks, 1)
-	assert.Equal(t, filledHash(0x1a), req.Chunks[0].ChunkHash)
+	assert.Equal(t, mustHex(t, "0x01787e92ee92078d97d6eb761e9224d362199ed44889a0543ac63ec6eec40062"),
+		req.Chunks[0].ChunkHash[:])
 	assert.False(t, req.Chunks[0].IsCalldata)
 	assert.NotEmpty(t, req.Chunks[0].BlobBytes)
 	assert.Empty(t, req.Chunks[0].CalldataBytes)
+	assert.Equal(t, mustHex(t, "0xb7a1e1fb958a4b99a2caf2a9b820288febfecf07e4f2a8ce7e1e6cd440f5e7b7"+
+		"67e7643954195a1264dcd090945cbeeb"), req.Chunks[0].KZGCommitment)
+	assert.Equal(t, mustHex(t, "0x8ce30126356d26665f7b0b2f04244c59c1dff059e3c3ceeac0260a615fa92784"+
+		"80261456261a383301bee674cf491b59"), req.Chunks[0].KZGProof)
 
 	require.Len(t, req.L2ExecutionProofs, 2)
 	p0 := req.L2ExecutionProofs[0]
@@ -81,6 +86,27 @@ func TestDecodeRollupRequest_OptionalBoundaryHash(t *testing.T) {
 	req, err := DecodeRollupRequest(marshal(t, obj))
 	require.NoError(t, err)
 	assert.Nil(t, req.BoundaryPrevDataRollingHash)
+}
+
+// TestDecodeRollupRequest_CalldataChunk verifies a calldata chunk decodes with
+// empty blob and KZG fields.
+func TestDecodeRollupRequest_CalldataChunk(t *testing.T) {
+	obj := unmarshalObject(t, readSpecFixture(t, referenceRollupRequest))
+	chunk := obj[proofRequestKey].(map[string]any)[chunksKey].([]any)[0].(map[string]any)
+	chunk[isCalldataKey] = true
+	chunk[blobBytesKey] = "0x"
+	chunk[calldataBytesKey] = "0xdead"
+	chunk[kzgCommitmentKey] = "0x"
+	chunk[kzgProofKey] = "0x"
+
+	req, err := DecodeRollupRequest(marshal(t, obj))
+	require.NoError(t, err)
+	require.Len(t, req.Chunks, 1)
+	assert.True(t, req.Chunks[0].IsCalldata)
+	assert.Equal(t, mustHex(t, "0xdead"), req.Chunks[0].CalldataBytes)
+	assert.Empty(t, req.Chunks[0].BlobBytes)
+	assert.Empty(t, req.Chunks[0].KZGCommitment)
+	assert.Empty(t, req.Chunks[0].KZGProof)
 }
 
 func TestDecodeRollupRequest_InvalidJSON(t *testing.T) {
@@ -142,6 +168,33 @@ func TestDecodeRollupRequest_InvalidShape(t *testing.T) {
 		{"CalldataChunkEmptyCalldata",
 			func(o map[string]any) { chunk0(o)[isCalldataKey] = true },
 			calldataBytesKey},
+		{"MissingKZGCommitment", func(o map[string]any) { delete(chunk0(o), kzgCommitmentKey) }, kzgCommitmentKey},
+		{"MissingKZGProof", func(o map[string]any) { delete(chunk0(o), kzgProofKey) }, kzgProofKey},
+		{"BlobChunkEmptyKZGCommitment", func(o map[string]any) { chunk0(o)[kzgCommitmentKey] = "0x" }, kzgCommitmentKey},
+		{"BlobChunkEmptyKZGProof", func(o map[string]any) { chunk0(o)[kzgProofKey] = "0x" }, kzgProofKey},
+		{"BlobChunkKZGCommitmentWrongLength",
+			func(o map[string]any) { chunk0(o)[kzgCommitmentKey] = "0x" + strings.Repeat("ab", 47) },
+			kzgCommitmentKey},
+		{"BlobChunkKZGProofWrongLength",
+			func(o map[string]any) { chunk0(o)[kzgProofKey] = "0x" + strings.Repeat("ab", 49) },
+			kzgProofKey},
+		{"CalldataChunkWithKZGCommitment",
+			func(o map[string]any) {
+				c := chunk0(o)
+				c[isCalldataKey] = true
+				c[blobBytesKey] = "0x"
+				c[calldataBytesKey] = "0xdead"
+			},
+			kzgCommitmentKey},
+		{"CalldataChunkWithKZGProof",
+			func(o map[string]any) {
+				c := chunk0(o)
+				c[isCalldataKey] = true
+				c[blobBytesKey] = "0x"
+				c[calldataBytesKey] = "0xdead"
+				c[kzgCommitmentKey] = "0x"
+			},
+			kzgProofKey},
 		{"ProofMissingProgramVk", func(o map[string]any) { delete(proof0(o), programVkKey) }, programVkKey},
 		{"ProofMissingProof", func(o map[string]any) { delete(proof0(o), proofKey) }, proofKey},
 		{"ProofPublicInputsMissingField", func(o map[string]any) { delete(pi0(o), "endBlockHash") }, "endBlockHash"},
