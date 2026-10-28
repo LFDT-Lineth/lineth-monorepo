@@ -29,10 +29,9 @@ class OkHttpMinimalJsonRpcLoggerInterceptor(
     return kotlin.runCatching {
       chain.proceed(request)
     }.onSuccess { response ->
-      val responseBody = response.body?.source()
-        ?.apply { request(Long.MAX_VALUE) }
-        ?.buffer?.clone()?.readUtf8()
-        ?: ""
+      val responseBody = response.body.source()
+        .apply { request(Long.MAX_VALUE) }
+        .buffer.clone().readUtf8()
       logger.logResponse(
         endpoint = endpoint,
         responseStatusCode = response.code,

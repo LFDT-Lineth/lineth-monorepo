@@ -15,7 +15,6 @@ import linea.domain.toBesu
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 import linea.rlp.RLP
-import linea.web3j.EthBlockExtended
 import linea.web3j.createWeb3jHttpService
 import linea.web3j.mappers.toDomain
 import org.apache.tuweni.bytes.Bytes32
@@ -36,6 +35,7 @@ import org.junit.jupiter.params.provider.NullSource
 import org.junit.jupiter.params.provider.ValueSource
 import org.web3j.protocol.ObjectMapperFactory
 import org.web3j.protocol.Web3j
+import org.web3j.protocol.core.methods.response.EthBlock
 
 class Web3jExecutionPayloadClientTest {
   private val fixture = JsonObject(javaClass.getResource("/amsterdam-block.json")!!.readText())
@@ -190,6 +190,16 @@ class Web3jExecutionPayloadClientTest {
     assertThat(hashesOnly.parentBeaconBlockRoot).isEqualTo(root)
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = ["0x0", "0x14", "0xffffffffffffffff"])
+  fun `decodes slotNumber from web3j block response`(slotNumber: String) {
+    stub("eth_getBlockByNumber", rpcBlock.copy().put("slotNumber", slotNumber))
+
+    val acquired = requireNotNull(ethClient.ethFindBlockByNumberFullTxs(BlockParameter.fromNumber(20UL)).get())
+
+    assertThat(acquired.slotNumber).isEqualTo(slotNumber.removePrefix("0x").toULong(16))
+  }
+
   @Test
   fun `transaction hash acquisition also retains header metadata`() {
     val json = rpcBlock.copy().put("transactions", block.body.transactions.map { it.hash.bytes.toHexString() })
@@ -256,7 +266,7 @@ class Web3jExecutionPayloadClientTest {
   }
 
   private fun toDomain(json: JsonObject): linea.domain.Block = ObjectMapperFactory.getObjectMapper()
-    .readValue(json.encode(), EthBlockExtended.Block::class.java).toDomain()
+    .readValue(json.encode(), EthBlock.Block::class.java).toDomain()
 
   private fun stubPayloadBody(bal: String?) {
     stub(
