@@ -126,19 +126,19 @@ func Product(factors ...Expression) Expression {
 	return result
 }
 
-// RLCOfViews builds the symbolic random linear combination
+// RLCOfEntries builds the symbolic random linear combination
 //
-//	head + α·cols[0] + α²·cols[1] + …
+//	head + α·entries[0] + α²·entries[1] + …
 //
 // when head != nil, and
 //
-//	cols[0] + α·cols[1] + α²·cols[2] + …
+//	entries[0] + α·entries[1] + α²·entries[2] + …
 //
-// when head == nil. The effective width is len(cols) plus one when a head is
-// provided; when that effective width is 1, alpha must be nil and the single
-// term is returned directly.
-func RLCOfViews(alpha *CoinField, head Expression, cols []*ColumnView) Expression {
-	exprs := ViewExprs(cols)
+// when head == nil. Constant entries enter as scalar terms. The effective
+// width is len(entries) plus one when a head is provided; when that effective
+// width is 1, alpha must be nil and the single term is returned directly.
+func RLCOfEntries(alpha *CoinField, head Expression, entries []TableEntry) Expression {
+	exprs := entryExprs(entries)
 	if head != nil {
 		exprs = append([]Expression{head}, exprs...)
 	}
@@ -173,14 +173,4 @@ func RLCExpression(alpha *CoinField, exprs []Expression) Expression {
 		acc = Add(Mul(alphaExpr, acc), exprs[i])
 	}
 	return acc
-}
-
-// ViewExprs lifts a slice of *ColumnView into the equivalent slice of
-// [Expression] so it can be passed to [RLCExpression].
-func ViewExprs(cols []*ColumnView) []Expression {
-	out := make([]Expression, len(cols))
-	for i, cv := range cols {
-		out[i] = cv
-	}
-	return out
 }

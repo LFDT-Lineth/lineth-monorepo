@@ -491,43 +491,86 @@ func (cv *ColumnView) EvaluateVectorAsExt(rt *Runtime, n int) []field.Ext {
 
 // EvaluateRLCAsExt computes the random linear combination
 //
-//	out[i] = cvs[0][i] + α·cvs[1][i] + α²·cvs[2][i] + …
+//	out[i] = es[0][i] + α·es[1][i] + α²·es[2][i] + …
 //
-// column-wise with Horner's method, folding from the last column down
-// (acc = acc·α + cvs[k]). Only the initial column is lifted to the extension
-// field; the remaining columns are consumed un-lifted, so a base-field column
-// costs one base addition per row on top of the single extension
-// multiplication per column per row. Panics if cvs is empty.
+// entry-wise with Horner's method, folding from the last entry down
+// (acc = acc·α + es[k]). Only the initial entry is lifted to the extension
+// field; the remaining column views are consumed un-lifted, so a base-field
+// column costs one base addition per row on top of the single extension
+// multiplication per entry per row. Constant entries are added as scalars and
+// never materialised as vectors; a trailing run of constants (where the
+// canonical column order puts them) is additionally folded once into a single
+// scalar that seeds the accumulator, costing no per-row multiplication at
+// all. Panics if es is empty.
 //
 // The fold is parallelized over row chunks: rows are independent, and each
-// worker runs the full per-column fold on its own range, so the accumulator
-// chunk stays cache-resident across columns.
-func EvaluateRLCAsExt(rt *Runtime, alpha field.Ext, cvs []*ColumnView, n int) []field.Ext {
-	if len(cvs) == 0 {
+// worker runs the full per-entry fold on its own range, so the accumulator
+// chunk stays cache-resident across entries.
+func EvaluateRLCAsExt(rt *Runtime, alpha field.Ext, es []TableEntry, n int) []field.Ext {
+	if len(es) == 0 {
 		panic("wiop: EvaluateRLCAsExt called with no columns")
 	}
 
-	// Evaluate every column once, up front: EvaluateVector may touch shared
-	// runtime state, so it stays out of the parallel section.
-	plains := make([]field.Vec, len(cvs))
-	for k, cv := range cvs {
-		plains[k] = cv.EvaluateVector(rt).Plain
+	// Evaluate every column view once, up front: EvaluateVector may touch
+	// shared runtime state, so it stays out of the parallel section. Constant
+	// entries leave their plain slot empty and are read from consts.
+	plains := make([]field.Vec, len(es))
+	consts := make([]field.Element, len(es))
+	isConst := make([]bool, len(es))
+	for k, e := range es {
+		if c, ok := EntryConst(e); ok {
+			consts[k], isConst[k] = c, true
+			continue
+		}
+		plains[k] = e.EvaluateVector(rt).Plain
+	}
+
+	// A constant suffix es[j..last] is the same for every row, so Horner folds
+	// it to the single scalar Σ αᵏ⁻ʲ·c_k once, here, and it seeds the
+	// accumulator: this saves last−j extension multiplications per row.
+	last := len(es) - 1
+	j := len(es)
+	for j > 0 && isConst[j-1] {
+		j--
+	}
+	var suffix field.Ext
+	if j <= last {
+		suffix = field.Lift(consts[last])
+		for k := last - 1; k >= j; k-- {
+			suffix.Mul(&suffix, &alpha)
+			suffix.B0.A0.Add(&suffix.B0.A0, &consts[k])
+		}
 	}
 
 	acc := make([]field.Ext, n)
 	parallel.Execute(n, func(start, stop int) {
-		last := plains[len(plains)-1]
-		if last.IsBase() {
-			for i, x := range last.AsBase()[start:stop] {
+		// next is the highest entry still to fold into acc.
+		next := j - 1
+		switch {
+		case j <= last:
+			for i := start; i < stop; i++ {
+				acc[i] = suffix
+			}
+		case plains[last].IsBase():
+			next = last - 1
+			for i, x := range plains[last].AsBase()[start:stop] {
 				acc[start+i] = field.Lift(x)
 			}
-		} else {
-			copy(acc[start:stop], last.AsExt()[start:stop])
+		default:
+			next = last - 1
+			copy(acc[start:stop], plains[last].AsExt()[start:stop])
 		}
-		for k := len(plains) - 2; k >= 0; k-- {
-			if plains[k].IsBase() {
+		for k := next; k >= 0; k-- {
+			switch {
+			case isConst[k]:
+				c := consts[k]
+				for i := start; i < stop; i++ {
+					acc[i].Mul(&acc[i], &alpha)
+					acc[i].B0.A0.Add(&acc[i].B0.A0, &c)
+				}
+			case plains[k].IsBase():
 				field.VecScaleAddExtBase(acc[start:stop], alpha, plains[k].AsBase()[start:stop])
-			} else {
+			default:
 				field.VecScaleAddExtExt(acc[start:stop], alpha, plains[k].AsExt()[start:stop])
 			}
 		}

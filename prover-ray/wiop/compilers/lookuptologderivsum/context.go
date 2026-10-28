@@ -13,11 +13,28 @@ import (
 // row selector. It is the prover-ray equivalent of the (S, sFilter) pair
 // used by the linea/logderivativesum compiler.
 type includedSpec struct {
-	// cols is the ordered list of columns forming the A fragment.
-	cols []*wiop.ColumnView
+	// cols is the ordered list of entries (column views or constants)
+	// forming the A fragment.
+	cols []wiop.TableEntry
 	// selector is the optional A-side filter; nil means the fragment is fully
 	// active.
 	selector *wiop.ColumnView
+	// module is the module owning every entry in cols (and the selector, if
+	// any).
+	module *wiop.Module
+}
+
+// label identifies the fragment in error messages: the module path plus the
+// path of its first column view, or of the selector when every entry is a
+// constant. A fragment carries at least one of the two, so the label always
+// pins down a column even when a module hosts several lookups.
+func (s includedSpec) label() string {
+	for _, e := range s.cols {
+		if cv, ok := wiop.EntryView(e); ok {
+			return fmt.Sprintf("module %s, first column %s", s.module.Context.Path(), cv.Column.Context.Path())
+		}
+	}
+	return fmt.Sprintf("module %s, selector %s", s.module.Context.Path(), s.selector.Column.Context.Path())
 }
 
 // includingTable captures one lookup-table fragment (B fragment) of a group of
@@ -25,8 +42,9 @@ type includedSpec struct {
 // share the group's includingTables and therefore share its per-fragment
 // multiplicity columns M.
 type includingTable struct {
-	// cols is the ordered list of columns forming the B fragment.
-	cols []*wiop.ColumnView
+	// cols is the ordered list of entries (column views or constants)
+	// forming the B fragment.
+	cols []wiop.TableEntry
 	// selector is the optional B-side filter; nil means the table fragment
 	// has no filter.
 	selector *wiop.ColumnView
@@ -66,8 +84,8 @@ func canonicalIncludingKeyMulti(tables []wiop.Table) string {
 // bytes iff every component matches, mirroring the grouping semantics of the
 // linea/logderivativesum compiler's NameTable-based grouping.
 func writeFragmentKey(sb *strings.Builder, tab wiop.Table) {
-	for _, cv := range tab.Columns {
-		fmt.Fprintf(sb, "%p@%d|", cv.Column, cv.ShiftingOffset)
+	for _, e := range tab.Columns {
+		writeEntryKey(sb, e)
 	}
 	sb.WriteByte(';')
 	if tab.Selector != nil {
@@ -77,9 +95,22 @@ func writeFragmentKey(sb *strings.Builder, tab wiop.Table) {
 	}
 }
 
+// writeEntryKey appends the identity of a single table entry to sb: the column
+// pointer address and shift for a column view, the value for a constant. Two
+// fragments that differ only in a constant value therefore get distinct keys
+// and never share multiplicity columns.
+func writeEntryKey(sb *strings.Builder, e wiop.TableEntry) {
+	if c, ok := wiop.EntryConst(e); ok {
+		fmt.Fprintf(sb, "c=%s|", c.String())
+		return
+	}
+	cv, _ := wiop.EntryView(e)
+	fmt.Fprintf(sb, "%p@%d|", cv.Column, cv.ShiftingOffset)
+}
+
 // canonicalColumnOrder returns the permutation that sorts the columns of the
 // given B fragment by their canonical identity: context path first, shifting
-// offset as tie-break. Applying the same permutation to every fragment of a
+// offset as tie-break, constants last (by value). Applying the same permutation to every fragment of a
 // query — all B fragments and all A fragments, which share their width by
 // construction — reorders the lookup tuple uniformly on both sides, so the
 // query's semantics are preserved while queries over the same table with the
@@ -93,7 +124,14 @@ func writeFragmentKey(sb *strings.Builder, tab wiop.Table) {
 // fragments follow it positionally.
 func canonicalColumnOrder(tab wiop.Table) []int {
 	keys := make([]string, len(tab.Columns))
-	for i, cv := range tab.Columns {
+	for i, e := range tab.Columns {
+		if c, ok := wiop.EntryConst(e); ok {
+			// Constants sort after every column path; any permutation applied
+			// to both sides is sound, so only determinism matters here.
+			keys[i] = "\xff#c=" + c.String()
+			continue
+		}
+		cv, _ := wiop.EntryView(e)
 		keys[i] = fmt.Sprintf("%s@%d", cv.Column.Context.Path(), cv.ShiftingOffset)
 	}
 	perm := make([]int, len(tab.Columns))
@@ -116,7 +154,7 @@ func permuteTables(tables []wiop.Table, perm []int) []wiop.Table {
 			out[i] = tab
 			continue
 		}
-		cols := make([]*wiop.ColumnView, len(perm))
+		cols := make([]wiop.TableEntry, len(perm))
 		for j, p := range perm {
 			cols[j] = tab.Columns[p]
 		}
@@ -152,6 +190,7 @@ func (g *lookupGroup) addIncluded(tab wiop.Table) {
 	g.included = append(g.included, includedSpec{
 		cols:     tab.Columns,
 		selector: tab.Selector,
+		module:   tab.Module(),
 	})
 }
 
@@ -195,8 +234,8 @@ func isPrecomputedRound(r *wiop.Round) bool {
 // module. This is already enforced by [wiop.NewTable] / [wiop.NewFilteredTable],
 // but the compiler re-asserts it as a defensive check.
 func allIncludingColumnsShareModule(tab includingTable) bool {
-	for _, cv := range tab.cols {
-		if cv.Column.Module != tab.module {
+	for _, e := range tab.cols {
+		if e.Module() != tab.module {
 			return false
 		}
 	}
