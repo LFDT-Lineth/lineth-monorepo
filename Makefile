@@ -23,6 +23,7 @@ clean-testnet-folders:
 clean-environment:
 		docker compose -f docker/compose-tracing-v2-staterecovery-extension.yml --profile l1 --profile l2 --profile debug --profile staterecovery kill -s 9 || true;
 		docker compose -f docker/compose-tracing-v2-staterecovery-extension.yml --profile l1 --profile l2 --profile debug --profile staterecovery down --remove-orphans || true;
+		docker compose -p lineth down --remove-orphans --timeout 0 || true; # start-env stacks run as project "lineth"
 		$(MAKE) clean-local-folders;
 		$(MAKE) seed-deny-list; # truncate runtime deny-list and drop any stale lockfile from a crashed run
 		docker volume rm linea-local-dev linea-logs || true; # ignore failure if volumes do not exist already
@@ -30,13 +31,19 @@ clean-environment:
 
 .PHONY: start-env-with-riscv
 
+RISCV_PROVER_MODE ?= dev-mock
+export RISCV_PROVER_MODE
+
 start-env-with-riscv:
+	@test -f docker/config/prover/riscv/prover-ray-config.$(RISCV_PROVER_MODE).toml || \
+		{ echo "Unsupported RISCV_PROVER_MODE=$(RISCV_PROVER_MODE) (expected dev-mock or dev-zkvm)"; exit 1; }
 	$(MAKE) start-env COMPOSE_FILE="docker/compose-tracing-v2.yml -f docker/compose-riscv.yml" COMPOSE_PROFILES=l1,l2,riscv \
 		START_SERVICES_BEFORE_DEPLOYMENT="l1-cl-node maru postgres" \
 		START_SERVICES_AFTER_DEPLOYMENT="prover-ray coordinator" \
 		L1_CONTRACT_VERSION=9 LINETH_PROTOCOL_CONTRACTS_ONLY=true \
 		LINETH_L1_CONTRACT_DEPLOYMENT_TARGET=deploy-lineth-rollup-v9-stub \
 		DEPLOY_FORCED_TRANSACTION_GATEWAY=false
+	$(MAKE) deploy-l2-evm-opcode-tester
 
 # Ensure the runtime sequencer deny-list exists (empty) before docker compose
 # bind-mounts it. Gitignored; may be mutated at test time by withDenyListAddresses.

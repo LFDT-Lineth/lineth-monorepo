@@ -37,8 +37,9 @@ make start-env-with-riscv     # Start RISC-V
 make clean-environment        # Stop and clear the shared environment
 ```
 
-The RISC-V stack reuses the shared infrastructure, deploys the V9 stub, and runs
-prover-ray in `dev-mock` mode for execution proofs. L1 proof submission is disabled.
+The RISC-V stack reuses the shared infrastructure, deploys the V9 stub and the EVM
+opcode tester, and runs prover-ray for execution proofs in `RISCV_PROVER_MODE`
+(`dev-mock` by default, or `dev-zkvm` to execute the guest). L1 proof submission is disabled.
 Besu uses the shared sequencer configuration with CLI overrides; Maru loads the
 shared configuration followed by a mode-specific override. Set
 `R5_L2_EXECUTION_PROGRAM_ID` to override the coordinator's execution program ID, and

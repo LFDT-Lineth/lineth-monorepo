@@ -40,13 +40,12 @@ services:
       CONFIG_FILE: /opt/linea/prover-ray/config/config.toml
       WORKER_ID: prover-ray-0
     volumes:
-      - ./config/prover/riscv/prover-ray-config.toml:/opt/linea/prover-ray/config/config.toml:ro
+      - ./config/prover/riscv/prover-ray-config.${RISCV_PROVER_MODE:-dev-mock}.toml:/opt/linea/prover-ray/config/config.toml:ro
       - ../tmp/local/prover/riscv:/data/prover/riscv
     networks:
       - linea
 
   coordinator:
-    image: ${LINEA_COORDINATOR_IMAGE_NAME:-consensys/linea-coordinator}:${LINEA_COORDINATOR_TAG:-2.0.1-20261006-a95a2ad}
     healthcheck:
       test:
         - CMD-SHELL

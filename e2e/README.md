@@ -72,17 +72,22 @@ pnpm -F e2e run test:local:run "opcodes.spec.ts" -t "Should be able to execute a
 ### RISC-V local and CI
 
 ```bash
-make start-env-with-riscv
+make start-env-with-riscv                             # prover-ray in dev-mock (placeholder proofs)
 pnpm -F e2e run test:riscv:local
+
+RISCV_PROVER_MODE=dev-zkvm make start-env-with-riscv  # prover-ray executes the guest
+RISCV_PROVER_MODE=dev-zkvm pnpm -F e2e run test:riscv:local
 ```
 
-The focused suite reuses the local clients, funding and transaction helpers. It checks ETH transfers,
-contract execution with `linea_estimateGas`, sender/recipient denylist rejection and restoration, and the
-execution-proof handoff: a new transaction's payload and witness reach the prover request, prover-ray
-(`dev-mock`) answers it, and the coordinator persists the batch as proven. It does not validate a real ZK proof
-or L1 submission/finalization against the V9 stub.
+The suite reuses the zkEVM `OpcodeTester` contract (deployed by `start-env-with-riscv`) and sends
+`executeAllOpcodes` plus the precompile entry points, so the guest executes every EVM opcode and precompile.
+For each transaction it checks that the prover request carries the block payload and witness, that
+prover-ray wrote a successful response for that batch, and that the coordinator persisted the batch as
+`Proven`. It also checks that batches are proven contiguously from genesis with no prover failures. In
+`dev-zkvm`, the response public inputs come from guest execution and are compared with the chain. Neither
+mode validates a real ZK proof or L1 submission.
 
-Each run selects one stack through the `stack` input. Dispatching "Reusable: Run E2E Tests" directly
-defaults to RISC-V; `main` (with an optional `e2e_stack` dispatch input) and release callers default to
-zkEVM. Both use the same E2E action and preserve the existing required check. Failed runs upload logs,
-with RISC-V proof requests/responses included.
+CI runs this suite only on pushes to `main`, as a separate non-required job. Changes to prover-ray,
+`riscv-guests`, `rollup_spec/src` or `docker/config/prover/riscv` run in `dev-zkvm` with a prover-ray image
+built from the commit; other E2E-relevant changes run in `dev-mock` with the pinned image. Failed runs
+upload logs, including RISC-V proof requests/responses.

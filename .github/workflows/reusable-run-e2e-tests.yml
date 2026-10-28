@@ -17,6 +17,12 @@ on:
         type: choice
         options: [riscv, zkevm]
         default: riscv
+      riscv_prover_mode:
+        description: prover-ray mode for the RISC-V stack (dev-zkvm builds prover-ray from this commit)
+        required: false
+        type: choice
+        options: [dev-mock, dev-zkvm]
+        default: dev-mock
       e2e-tests-with-ssh:
         description: Run end to end tests with ability to ssh into environment
         required: false
@@ -43,6 +49,11 @@ on:
         required: false
         type: string
         default: zkevm
+      # RISC-V only: dev-mock uses the pinned prover-ray image; dev-zkvm builds it from this commit.
+      riscv_prover_mode:
+        required: false
+        type: string
+        default: dev-mock
       linea_besu_package_tag:
         required: false
         type: string
@@ -97,10 +108,6 @@ jobs:
   run-e2e-suite:
     # Direct dispatch leaves has-changes-requiring-e2e-testing unset, so it always runs.
     if: ${{ inputs.has-changes-requiring-e2e-testing != 'false' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        stack: ["${{ inputs.stack }}"]
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
     steps:
       - name: Checkout
@@ -110,7 +117,8 @@ jobs:
         id: run-e2e-tests
         uses: ./.github/actions/run-e2e-tests
         with:
-          stack: ${{ matrix.stack }}
+          stack: ${{ inputs.stack }}
+          riscv_prover_mode: ${{ inputs.riscv_prover_mode }}
           image_tag: ${{ inputs.image_tag }}
           linea_besu_package_tag: ${{ inputs.linea_besu_package_tag }}
           coordinator_tag: ${{ inputs.coordinator_tag }}
