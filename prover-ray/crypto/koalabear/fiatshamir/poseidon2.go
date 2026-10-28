@@ -5,32 +5,24 @@ package fiatshamir
 import (
 	"unsafe"
 
+	gfs "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/fiatshamir"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/types"
-	"golang.org/x/crypto/blake2b"
 )
 
 // https://blog.trailofbits.com/2022/04/18/the-frozen-heart-vulnerability-in-plonk/
 
-// FiatShamir accumulates the transcript of a protocol (e.g. the set of messages
-// sent between the prover and the verifier). The accumulated transcripts can
-// then be used to sample random coins that are obtained by hashing the
-// provided transcript. The hashing is incremental and can be updated at any
-// moment.
+// FiatShamir is the KoalaBear instance of the generic transcript, extended
+// with methods absorbing and sampling degree-6 extension field elements.
+// Update, UpdateVec, RandomDigest, RandomManyIntegers, State and SetState are
+// promoted from the generic transcript.
 type FiatShamir struct {
-	h *poseidon2.MDHasher
+	*gfs.FiatShamir[field.Element, *field.Element]
 }
 
 // NewFiatShamir creates a new FiatShamir transcript accumulator.
 func NewFiatShamir() *FiatShamir {
-	return &FiatShamir{h: poseidon2.NewMDHasher()}
-}
-
-// Update adds base field elements to the transcript.
-func (fs *FiatShamir) Update(vec ...field.Element) {
-	fs.h.WriteElements(vec...)
+	return &FiatShamir{gfs.New[field.Element, *field.Element](poseidon2.Compress)}
 }
 
 // UpdateExt adds extension field elements to the transcript.
@@ -39,7 +31,7 @@ func (fs *FiatShamir) UpdateExt(vec ...field.Ext) {
 		return
 	}
 	vElems := unsafe.Slice((*field.Element)(unsafe.Pointer(&vec[0])), field.ExtensionDegree*len(vec)) //nolint
-	fs.h.WriteElements(vElems...)
+	fs.Update(vElems...)
 }
 
 // UpdateGeneric adds generic field elements to the transcript, dispatching on their type.
@@ -55,13 +47,6 @@ func (fs *FiatShamir) UpdateGeneric(vec ...field.Gen) {
 		} else {
 			fs.UpdateExt(f.Ext)
 		}
-	}
-}
-
-// UpdateVec adds slices of base field elements to the transcript.
-func (fs *FiatShamir) UpdateVec(vecs ...[]field.Element) {
-	for i := range vecs {
-		fs.Update(vecs[i]...)
 	}
 }
 
@@ -89,17 +74,15 @@ func (fs *FiatShamir) UpdateSV(sv field.Vec) {
 	}
 }
 
-// RandomDigest samples a random octuplet from the current transcript state.
-func (fs *FiatShamir) RandomDigest() field.Octuplet {
-	defer fs.safeguardUpdate()
-	return fs.h.SumDigest()
-}
-
 // RandomFext samples a random extension field element from the transcript.
 // Uses the first ExtensionDegree (=6) of the 8 octuplet coordinates; the
 // remaining two are discarded.
 func (fs *FiatShamir) RandomFext() field.Ext {
-	s := fs.RandomDigest() // already calls safeguardUpdate()
+	return octupletToExt(fs.RandomDigest())
+}
+
+// octupletToExt keeps the first ExtensionDegree coordinates of s.
+func octupletToExt(s field.Octuplet) field.Ext {
 	var res field.Ext
 	res.B0.A0 = s[0]
 	res.B0.A1 = s[1]
@@ -107,71 +90,10 @@ func (fs *FiatShamir) RandomFext() field.Ext {
 	res.B1.A1 = s[3]
 	res.B2.A0 = s[4]
 	res.B2.A1 = s[5]
-
 	return res
 }
 
 // RandomFextFromSeed derives a deterministic extension field element from a seed and name.
 func (fs *FiatShamir) RandomFextFromSeed(seed field.Octuplet, name string) field.Ext {
-
-	// The first step encodes the 'name' into a single field element. The
-	// field element is obtained by hashing and taking the modulo of the
-	// result to fit into a field element.
-	nameBytes := []byte(name)
-	hasher, _ := blake2b.New256(nil)
-	hasher.Write(nameBytes)
-	nameBytes = hasher.Sum(nil)
-	nameOctuplet := types.BytesToKoalaOctupletLoose(nameBytes)
-
-	// The seed is then obtained by calling the compression function over
-	// the seed and the encoded name.
-	oldState := fs.State()
-	defer fs.SetState(oldState)
-
-	fs.SetState(seed)
-	fs.h.WriteElements(nameOctuplet[:]...)
-	res := fs.RandomFext()
-	return res
-}
-
-// RandomManyIntegers samples num integers uniformly in [0, upperBound). The function expects
-// upperBound to be a power of two.
-func (fs *FiatShamir) RandomManyIntegers(num, upperBound int) []int {
-
-	if !utils.IsPowerOfTwo(upperBound) {
-		panic("upperBound must be a power of two")
-	}
-
-	var (
-		i   = 0
-		res = make([]int, num)
-	)
-
-	for i < num {
-		// take the remainder mod n of each limb
-		c := fs.RandomDigest() // already calls safeguardUpdate()
-		for j := 0; j < 8; j++ {
-			b := c[j].Bits()
-			res[i] = int(b[0]) % upperBound
-			i++
-			if i >= num {
-				break
-			}
-		}
-	}
-	return res
-}
-
-// SetState replaces the internal hasher state with s.
-func (fs *FiatShamir) SetState(s field.Octuplet) {
-	fs.h.SetStateOctuplet(s)
-}
-
-// State returns the current internal hasher state.
-func (fs *FiatShamir) State() field.Octuplet {
-	return fs.h.GetStateOctuplet()
-}
-
-func (fs *FiatShamir) safeguardUpdate() {
-	fs.Update(field.Zero())
+	return octupletToExt(fs.RandomDigestFromSeed(seed, name))
 }
