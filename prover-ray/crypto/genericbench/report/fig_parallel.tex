@@ -1,0 +1,26 @@
+\begin{figure}[htbp]\centering
+\begin{tikzpicture}
+\begin{axis}[
+  xmode=log, ymode=log, log basis x=2,
+  width=0.92\linewidth, height=8cm,
+  xtick={1,2,4,8,16,32,48,96,144,192}, xticklabels={1,2,4,8,16,32,48,96,144,192},
+  xlabel={threads (\texttt{-cpu})}, ylabel={ns per compression (log scale, lower is better)},
+  label style={font=\small}, tick label style={font=\scriptsize},
+  grid=major, major grid style={gray!20}, axis line style={gray!60},
+  legend style={font=\scriptsize, draw=none, fill=white, fill opacity=0.85, text opacity=1, at={(0.98,0.98)}, anchor=north east},
+  legend cell align=left,
+]
+\addplot[black!70, thick, mark=*, mark size=1.6pt] coordinates {(1,585.1) (2,293.1) (4,146.6) (8,73.44) (16,36.89) (32,18.6) (48,13.2) (96,7.405) (144,5.511) (192,4.424)};
+\addlegendentry{\texttt{baseline}}
+\addplot[c1, thick, mark=square*, mark size=1.6pt] coordinates {(1,644.1) (2,364.4) (4,198.1) (8,100.6) (16,74.06) (32,67.25) (48,73.73) (96,81.44) (144,82.9) (192,78.44)};
+\addlegendentry{\texttt{generic-asm}, GC on}
+\addplot[c1, thick, dashed, mark=square, mark size=1.6pt] coordinates {(1,627.6) (2,318.7) (4,159.2) (8,81.47) (16,41.56) (32,21.21) (48,15.23) (96,9.309) (144,7.791) (192,6.726)};
+\addlegendentry{\texttt{generic-asm}, GC off}
+\addplot[c2, thick, mark=triangle*, mark size=2pt] coordinates {(1,2028) (2,1024) (4,517.6) (8,278) (16,154.9) (32,112.2) (48,109.9) (96,121.2) (144,132) (192,138)};
+\addlegendentry{hot-loop branches, GC on}
+\addplot[c2, thick, dashed, mark=triangle, mark size=2pt] coordinates {(1,2014) (2,1044) (4,509.1) (8,255.4) (16,127) (32,64.36) (48,44) (96,28.51) (144,23.36) (192,21.52)};
+\addlegendentry{hot-loop branches, GC off}
+\end{axis}
+\end{tikzpicture}
+\caption{KoalaBear CompressParallel scaling (Table~\ref{tab:parallel}). Solid: garbage collector on (default); dashed: off. Colour follows the implementation.}\label{fig:parallel}
+\end{figure}

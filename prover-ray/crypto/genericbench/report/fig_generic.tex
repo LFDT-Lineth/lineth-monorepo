@@ -1,0 +1,28 @@
+\begin{figure}[htbp]\centering
+\begin{tikzpicture}
+\begin{axis}[
+  xbar, xmode=log, log basis x=10,
+  width=0.74\linewidth, height=8.3cm,
+  bar width=4.5pt, bar shift auto, enlarge y limits={abs=0.6},
+  ytick={0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}, yticklabels={{FiatShamir (rounds=4096, upd=1024)},{FiatShamir (rounds=4096, upd=8)},{FiatShamir (rounds=256, upd=16384)},{FiatShamir (rounds=256, upd=1024)},{FiatShamir (rounds=256, upd=8)},{FiatShamir (rounds=16, upd=16384)},{FiatShamir (rounds=16, upd=1024)},{FiatShamir (rounds=16, upd=8)},{MDHasher (n=1048576)},{MDHasher (n=65536)},{MDHasher (n=4096)},{MDHasher (n=64)},{MDHasher (n=8)},{CompressParallel},{Compress},{Permutation (width=24)},{Permutation (width=16)}},
+  y tick label style={font=\scriptsize}, x tick label style={font=\scriptsize},
+  xmin=0.5, xmax=500,
+  xtick={0.5,1,2,5,10,20,50,100,200,500},
+  xticklabels={0.5$\times$,1$\times$,2$\times$,5$\times$,10$\times$,20$\times$,50$\times$,100$\times$,200$\times$,500$\times$},
+  xlabel={time relative to \texttt{baseline} (log scale, lower is better)},
+  xlabel style={font=\small},
+  xmajorgrids, major grid style={gray!20}, axis line style={gray!60},
+  ytick style={draw=none},
+  legend style={font=\scriptsize, draw=none, fill=none, at={(0.5,1.01)}, anchor=south, legend columns=-1},
+  legend image code/.code={\draw[#1, draw=none] (0cm,-0.08cm) rectangle (0.3cm,0.08cm);},
+  clip=false,
+]
+\draw[gray!80, thick] (axis cs:1,-0.6) -- (axis cs:1,16.6);
+\addplot+[fill=c1, draw=none] coordinates {(9.088,16) (10.52,15) (8.923,14) (224.4,13) (6.767,12) (7.876,11) (8.182,10) (8.167,9) (8.005,8) (7.191,7) (7.95,6) (8.2,5) (7.217,4) (7.907,3) (8.156,2) (7.116,1) (7.767,0)};
+\addlegendentry{KoalaBear}
+\addplot+[fill=c2, draw=none] coordinates {(3.478,16) (2.979,15) (3.3,14) (6.73,13) (3.165,12) (3.122,11) (3.053,10) (3.017,9) (2.828,8) (2.961,7) (3.028,6) (3.03,5) (2.971,4) (3.016,3) (3.043,2) (2.864,1) (2.932,0)};
+\addlegendentry{MamaBear}
+\end{axis}
+\end{tikzpicture}
+\caption{Fully generic code: time relative to each field\'s \texttt{baseline} (Tables~\ref{tab:mid-kb} and \ref{tab:mid-mb}). The vertical line marks parity.}\label{fig:generic}
+\end{figure}

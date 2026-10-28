@@ -1,9 +1,9 @@
 \begin{table}[htbp]\centering\small
-\caption{KoalaBear, the three code paths side by side (\texttt{medium} scale). \texttt{generic} is the scalar branch.}\label{tab:paths}
+\caption{KoalaBear, the three code paths side by side (\texttt{medium} scale).}\label{tab:paths}
 \begin{adjustbox}{max width=\linewidth}
 \begin{tabular}{lrrrrrrrrr|r}
 \toprule
-Benchmark & baseline & \texttt{generic} & ratio & \texttt{generic-vec} & ratio & \texttt{generic-asm} & ratio & \texttt{current} & ratio & allocs \texttt{generic-asm} \\ \midrule
+Benchmark & baseline & generic + hot-loop branches & ratio & \texttt{generic-vec} & ratio & \texttt{generic-asm} & ratio & \texttt{current} & ratio & allocs \texttt{generic-asm} \\ \midrule
 Permutation (width=16) & 570\,ns & 1.92\,\textmu s & 3.37$\times$ & 11.6\,\textmu s & 20.4$\times$ & 573\,ns & 1.01$\times$ & -- & -- & 0 \\
 Permutation (width=24) & 706\,ns & 2.63\,\textmu s & 3.72$\times$ & 12.3\,\textmu s & 17.4$\times$ & 706\,ns & 1.00$\times$ & -- & -- & 0 \\
 Compress & 586\,ns & 2.03\,\textmu s & 3.46$\times$ & 11.7\,\textmu s & 19.9$\times$ & 656\,ns & 1.12$\times$ & -- & -- & 2 \\

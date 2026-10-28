@@ -3,7 +3,7 @@
 \begin{adjustbox}{max width=\linewidth}
 \begin{tabular}{lrrrrr|rr}
 \toprule
-Benchmark & baseline & \texttt{generic} & ratio & \texttt{current} & ratio & allocs \texttt{baseline} & allocs \texttt{generic} \\ \midrule
+Benchmark & baseline & generic + hot-loop branches & ratio & \texttt{current} & ratio & allocs \texttt{baseline} & allocs generic + hot-loop branches \\ \midrule
 Permutation (width=16) & 570\,ns & 2.03\,\textmu s & 3.56$\times$ & -- & -- & 0 & 0 \\
 Permutation (width=24) & 705\,ns & 2.85\,\textmu s & 4.05$\times$ & -- & -- & 0 & 0 \\
 Compress & 585\,ns & 2.06\,\textmu s & 3.52$\times$ & -- & -- & 0 & 2 \\
