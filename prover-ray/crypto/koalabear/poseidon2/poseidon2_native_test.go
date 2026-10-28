@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	gp2 "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/stretchr/testify/require"
 )
@@ -219,4 +220,15 @@ func TestOrderSensitivity(t *testing.T) {
 	r2 := h2.SumDigest()
 
 	require.NotEqual(t, r1, r2, "permuting inputs must change the hash")
+}
+
+// TestCompressMatchesGenericPermutation checks that the vectorized Compress
+// agrees with the generic Poseidon2 instantiated over KoalaBear.
+func TestCompressMatchesGenericPermutation(t *testing.T) {
+	for range 20 {
+		var a, b field.Octuplet
+		copy(a[:], randomElems(t, BlockSize))
+		copy(b[:], randomElems(t, BlockSize))
+		require.Equal(t, Compress(a, b), gp2.Compress(Permutation(), a, b))
+	}
 }

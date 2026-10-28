@@ -1,40 +1,43 @@
 package poseidon2
 
 import (
-	"fmt"
 	"io"
-	"slices"
 
-	"github.com/consensys/gnark-crypto/hash"
-
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
-	gnarkposeidon2 "github.com/consensys/gnark-crypto/field/koalabear/poseidon2"
 	"github.com/consensys/gnark-crypto/field/koalabear/vortex"
+
+	gp2 "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/poseidon2"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // BlockSize is the number of field elements in a Poseidon2 compression block.
-const BlockSize = 8
+const BlockSize = gp2.BlockSize
 
-// MDHasher Merkle Damgard Hasher using Poseidon2 as compression function
-type MDHasher struct {
-	hash.StateStorer
+// Poseidon2 parameters of the compression permutation over KoalaBear.
+const (
+	Width           = gp2.CompressionWidth
+	NbFullRounds    = 6
+	NbPartialRounds = 21
+)
 
-	// Sponge construction state
-	state field.Octuplet
+// MDHasher Merkle Damgard Hasher using Poseidon2 as compression function. It
+// is the KoalaBear instance of the generic [gp2.MDHasher].
+type MDHasher = gp2.MDHasher[field.Element, *field.Element]
 
-	// data to hash
-	buffer         []field.Element
-	bufferPosition int
-}
+// nativePermutation is the generic Poseidon2 permutation instantiated over
+// KoalaBear with gnark-crypto's default seed. [Compress] uses gnark-crypto's
+// vectorized implementation instead; both are tested to agree.
+var nativePermutation = gp2.NewPermutation(gp2.NewParameters[field.Element](
+	Width, NbFullRounds, NbPartialRounds,
+	gp2.DefaultSeed("koalabear", Width, NbFullRounds, NbPartialRounds),
+))
 
-// NewMDHasher creates a new MDHasher with the given options.
+// Permutation returns the generic Poseidon2 permutation over KoalaBear backing
+// [Compress].
+func Permutation() *gp2.Permutation[field.Element, *field.Element] { return nativePermutation }
+
+// NewMDHasher creates a new MDHasher.
 func NewMDHasher() *MDHasher {
-	h := &MDHasher{
-		StateStorer: gnarkposeidon2.NewMerkleDamgardHasher(),
-		state:       field.Octuplet{},
-	}
-
-	return h
+	return gp2.NewMDHasher[field.Element, *field.Element](Compress)
 }
 
 // HashBytes hashes an array of bytes and returns the result. It assumes the
@@ -57,111 +60,13 @@ func HashWriterTo(w io.WriterTo) []byte {
 }
 
 // Compress calls the compression function of Poseidon2 over state and block.
+// It is equal to gp2.Compress(Permutation(), state, block), computed with
+// gnark-crypto's optimized permutation.
 func Compress(state, block field.Octuplet) field.Octuplet {
 	return vortex.CompressPoseidon2(state, block)
 }
 
-// Reset clears the buffer, and reset state to iv
-func (d *MDHasher) Reset() {
-	d.buffer = d.buffer[:0]
-	d.bufferPosition = 0
-	d.state = field.Octuplet{}
-}
-
-// SetStateOctuplet modifies the state (??)
-func (d *MDHasher) SetStateOctuplet(state field.Octuplet) {
-	d.Reset()
-	d.buffer = d.buffer[:0]
-	d.bufferPosition = 0
-	for i := 0; i < 8; i++ {
-		d.state[i].Set(&state[i])
-	}
-}
-
-// GetStateOctuplet returns the current hash state as an octuplet without consuming the buffer.
-func (d *MDHasher) GetStateOctuplet() field.Octuplet {
-	// State will flush the buffer, take the state and restore the initiat
-	// state of the hasher.
-	oldState := d.state
-	oldBuffer := slices.Clone(d.buffer)
-	oldBufferPosition := d.bufferPosition
-
-	_ = d.SumDigest() // this flushes the hasher
-	res := slices.Clone(d.state[:])
-
-	d.state = oldState
-	d.buffer = oldBuffer
-	d.bufferPosition = oldBufferPosition
-
-	return field.Octuplet(res)
-}
-
-// WriteElements adds a slice of field elements to the running hash.
-func (d *MDHasher) WriteElements(elmts ...field.Element) {
-	d.buffer = append(d.buffer, elmts[:]...)
-}
-
-// SumDigest finalizes the hash and returns the digest as an octuplet.
-func (d *MDHasher) SumDigest() field.Octuplet {
-	for len(d.buffer) != 0 {
-		var buf [BlockSize]field.Element
-
-		// in this case we left pad by zeroes
-		if len(d.buffer) < BlockSize {
-			copy(buf[BlockSize-len(d.buffer):], d.buffer)
-			d.buffer = d.buffer[:0]
-		} else {
-			copy(buf[:], d.buffer)
-			d.buffer = d.buffer[BlockSize:]
-		}
-
-		d.state = vortex.CompressPoseidon2(d.state, buf)
-	}
-
-	return d.state
-}
-
-// Write adds a byte slice to the running hash. The input length must be a multiple of 4.
-func (d *MDHasher) Write(p []byte) (int, error) {
-
-	elemByteSize := field.Bytes // 4 bytes = 1 field element
-
-	if len(p)%elemByteSize != 0 {
-		return 0, fmt.Errorf("input length is not a multiple of 4 byte size")
-	}
-	elems := make([]field.Element, 0, len(p)/elemByteSize)
-
-	for start := 0; start < len(p); start += elemByteSize {
-		chunk := p[start : start+elemByteSize]
-		var elem field.Element
-		if err := elem.SetBytesCanonical(chunk); err != nil {
-			return 0, err
-		}
-		elems = append(elems, elem)
-
-	}
-	d.WriteElements(elems...)
-	return len(p), nil
-}
-
-// State returns the current state of the hasher as a block-sized array.
-func (d *MDHasher) State() [BlockSize]field.Element {
-	return d.GetStateOctuplet()
-}
-
-// Sum computes the poseidon2 hash of msg
-func (d *MDHasher) Sum(msg []byte) []byte {
-	if _, err := d.Write(msg); err != nil {
-		panic(err)
-	}
-	h := d.SumDigest()
-	h32 := field.OctupletToBytes(h)
-	return h32[:]
-}
-
 // HashVec hashes a vector of field elements
 func HashVec(v ...field.Element) (h field.Octuplet) {
-	state := NewMDHasher()
-	state.WriteElements(v...)
-	return state.SumDigest()
+	return gp2.HashVec[field.Element, *field.Element](Compress, v...)
 }
