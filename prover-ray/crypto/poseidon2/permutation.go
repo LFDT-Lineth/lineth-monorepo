@@ -11,7 +11,10 @@ package poseidon2
 import (
 	"errors"
 	"fmt"
+	"unsafe"
 
+	"github.com/consensys/gnark-crypto/field/koalabear"
+	kbposeidon2 "github.com/consensys/gnark-crypto/field/koalabear/poseidon2"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/generic"
@@ -34,6 +37,8 @@ type Parameters[T any, PT generic.Element[T]] struct {
 	RoundKeys [][]T
 	// InternalDiag is the diagonal D of the internal matrix 1·1ᵀ + D.
 	InternalDiag []T
+	// Seed the round keys were derived from.
+	Seed string
 }
 
 // DefaultSeed returns the seed gnark-crypto uses for the given field name
@@ -49,6 +54,7 @@ func NewParameters[T any, PT generic.Element[T]](width, nbFullRounds, nbPartialR
 		NbFullRounds:    nbFullRounds,
 		NbPartialRounds: nbPartialRounds,
 		InternalDiag:    internalDiag[T, PT](width),
+		Seed:            seed,
 	}
 
 	h := sha3.NewLegacyKeccak256()
@@ -113,11 +119,17 @@ func internalDiag[T any, PT generic.Element[T]](width int) []T {
 // Permutation is a Poseidon2 permutation over the field T.
 type Permutation[T any, PT generic.Element[T]] struct {
 	params *Parameters[T, PT]
+	// kb is set when T is koalabear.Element; the hot loops then take the
+	// concrete paths of koalabear.go selected by kbPath.
+	kb     bool
+	kbPath KoalaBearPath
+	// kbAsm is gnark-crypto's permutation, set when kbPath is KoalaBearAsm.
+	kbAsm *kbposeidon2.Permutation
 }
 
 // NewPermutation returns the permutation described by params.
 func NewPermutation[T any, PT generic.Element[T]](params *Parameters[T, PT]) *Permutation[T, PT] {
-	return &Permutation[T, PT]{params: params}
+	return &Permutation[T, PT]{params: params, kb: isKoalaBear[T]()}
 }
 
 // Params returns the parameters of the permutation.
@@ -129,6 +141,9 @@ func (h *Permutation[T, PT]) Permute(input []T) error {
 	if len(input) != p.Width {
 		return ErrInvalidWidth
 	}
+	if h.kbAsm != nil {
+		return h.kbAsm.Permutation(asKB(input))
+	}
 
 	h.matMulExternal(input)
 
@@ -136,25 +151,47 @@ func (h *Permutation[T, PT]) Permute(input []T) error {
 	for r := range p.NbFullRounds + p.NbPartialRounds {
 		h.addRoundKey(r, input)
 		if r >= rf && r < rf+p.NbPartialRounds {
-			sBox[T, PT](&input[0])
+			h.sBox(&input[0])
 			h.matMulInternal(input)
 			continue
 		}
-		for j := range input {
-			sBox[T, PT](&input[j])
-		}
+		h.sBoxFull(input)
 		h.matMulExternal(input)
 	}
 	return nil
 }
 
-func sBox[T any, PT generic.Element[T]](x *T) {
+func (h *Permutation[T, PT]) sBox(x *T) {
+	if h.kb {
+		kbSBox((*koalabear.Element)(unsafe.Pointer(x))) // #nosec G103 -- T is koalabear.Element
+		return
+	}
 	var sq T
 	PT(&sq).Square(x)
 	PT(x).Mul(x, &sq)
 }
 
+// sBoxFull applies the S-box to every element of input.
+func (h *Permutation[T, PT]) sBoxFull(input []T) {
+	if h.kb && h.kbPath == KoalaBearVector {
+		kbSBoxFullVec(asKB(input))
+		return
+	}
+	for j := range input {
+		h.sBox(&input[j])
+	}
+}
+
 func (h *Permutation[T, PT]) addRoundKey(round int, input []T) {
+	if h.kb {
+		keys := asKB(h.params.RoundKeys[round])
+		if h.kbPath == KoalaBearVector && len(keys) > 1 {
+			kbAddRoundKeyVec(asKB(input), keys)
+			return
+		}
+		kbAddRoundKey(asKB(input), keys)
+		return
+	}
 	for i := range h.params.RoundKeys[round] {
 		PT(&input[i]).Add(&input[i], &h.params.RoundKeys[round][i])
 	}
@@ -188,6 +225,10 @@ func matMulM4[T any, PT generic.Element[T]](s []T) {
 
 // matMulExternal multiplies by circ(2M4, M4, ..., M4).
 func (h *Permutation[T, PT]) matMulExternal(input []T) {
+	if h.kb {
+		kbMatMulExternal(asKB(input))
+		return
+	}
 	matMulM4[T, PT](input)
 	var acc [4]T
 	for i := 0; i < len(input); i += 4 {
@@ -204,6 +245,14 @@ func (h *Permutation[T, PT]) matMulExternal(input []T) {
 
 // matMulInternal multiplies by 1·1ᵀ + diag.
 func (h *Permutation[T, PT]) matMulInternal(input []T) {
+	if h.kb {
+		if h.kbPath == KoalaBearVector {
+			kbMatMulInternalVec(asKB(input), asKB(h.params.InternalDiag))
+			return
+		}
+		kbMatMulInternal(asKB(input), asKB(h.params.InternalDiag))
+		return
+	}
 	var sum T
 	for i := range input {
 		PT(&sum).Add(&sum, &input[i])

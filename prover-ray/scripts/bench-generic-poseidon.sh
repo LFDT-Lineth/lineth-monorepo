@@ -2,9 +2,10 @@
 # Benchmarks generic Poseidon2 / Fiat-Shamir against non-generic baselines
 # (crypto/genericbench), for KoalaBear and MamaBear.
 #
-# Usage: scripts/bench-generic-poseidon.sh [small|full] [outdir]
+# Usage: scripts/bench-generic-poseidon.sh [small|medium|full] [outdir]
 #
 #   small  quick local run (default)
+#   medium wider sizes, a few minutes
 #   full   large sizes and repetitions, meant for a dedicated machine
 #
 # Writes <outdir>/raw.txt (go test -bench output, with CPU info) and, when
@@ -18,9 +19,10 @@ cd "$(dirname "$0")/.."
 
 case "$SCALE" in
 small) COUNT=3 BENCHTIME=200ms TIMEOUT=30m ;;
+medium) COUNT=6 BENCHTIME=200ms TIMEOUT=1h ;;
 full) COUNT=10 BENCHTIME=2s TIMEOUT=12h ;;
 *)
-	echo "unknown scale: $SCALE (want small or full)" >&2
+	echo "unknown scale: $SCALE (want small, medium or full)" >&2
 	exit 1
 	;;
 esac

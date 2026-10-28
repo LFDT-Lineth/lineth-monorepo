@@ -79,7 +79,9 @@ one of:
 |------------|---------|
 | `baseline` | Non-generic code. KoalaBear: gnark-crypto's permutation and `vortex.CompressPoseidon2`, and the pre-generic MD hasher / transcript frozen in `legacy_test.go` (from commit `3c01857c7`). MamaBear (never had a non-generic hasher): gnark-crypto's permutation under the generic hasher / transcript. |
 | `current`  | KoalaBear MD hasher / Fiat-Shamir only: what the prover runs today, the generic hasher / transcript over gnark-crypto's compression. Expected to be on par with `baseline`. |
-| `generic`  | Everything generic, permutation included. |
+| `generic`  | Everything generic, permutation included. For KoalaBear the permutation's hot loops branch to concrete `koalabear.Element` code. |
+| `generic-vec` | KoalaBear only: `generic` with `koalabear.Vector` batch operations in the round-key, full S-box and internal-matrix loops. |
+| `generic-asm` | KoalaBear only: `generic` with the whole permutation delegated to gnark-crypto's (AVX-512 assembly). |
 
 Benchmark families:
 
@@ -91,9 +93,11 @@ Benchmark families:
   elements, samples a digest, samples query indices and derives a named
   challenge from a seed.
 
-Sizes come from `GENERIC_BENCH_SCALE` (`small` by default, or `full`), defined
-in `scales` in `bench_test.go`. The script sets the repetitions and
-benchtime (small: 3 × 200 ms, full: 10 × 2 s).
+Sizes come from `GENERIC_BENCH_SCALE` (`small` by default, `medium` or
+`full`), defined in `scales` in `bench_test.go`. The script sets the
+repetitions and benchtime (small: 3 × 200 ms, medium: 6 × 200 ms, full:
+10 × 2 s). `medium` takes a few minutes and is enough for benchstat
+confidence intervals.
 
 ## Running pieces by hand
 

@@ -15,7 +15,7 @@
 //   - generic: everything generic, permutation included.
 //
 // Sizes are selected by GENERIC_BENCH_SCALE: "small" (default, a few seconds
-// locally) or "full" (meant for a dedicated machine). See
+// locally), "medium" (a few minutes) or "full" (meant for a dedicated machine). See
 // scripts/bench-generic-poseidon.sh.
 package genericbench
 
@@ -64,6 +64,13 @@ var scales = map[string]scale{
 		fsUpdateLen: []int{64},
 		fsQueries:   16,
 	},
+	"medium": {
+		widths:      []int{16, 24},
+		msgLens:     []int{64, 4096, 1 << 16},
+		fsRounds:    []int{16, 256},
+		fsUpdateLen: []int{8, 1024},
+		fsQueries:   64,
+	},
 	"full": {
 		widths:      []int{16, 24},
 		msgLens:     []int{8, 64, 4096, 1 << 16, 1 << 20},
@@ -80,7 +87,7 @@ func currentScale(tb testing.TB) scale {
 	}
 	s, ok := scales[name]
 	if !ok {
-		tb.Fatalf("unknown GENERIC_BENCH_SCALE=%q (want small or full)", name)
+		tb.Fatalf("unknown GENERIC_BENCH_SCALE=%q (want small, medium or full)", name)
 	}
 	return s
 }
@@ -167,9 +174,18 @@ func genericTranscript[T any, PT generic.Element[T]](name string, compress gp2.C
 	}
 }
 
+// kbGenericPerm is genericPerm over KoalaBear with the given code path.
+func kbGenericPerm(width int, path gp2.KoalaBearPath) *gp2.Permutation[koalabear.Element, *koalabear.Element] {
+	p := genericPerm[koalabear.Element]("koalabear", width)
+	p.SetKoalaBearPath(path)
+	return p
+}
+
 func koalabearSuite() fieldSuite[koalabear.Element, *koalabear.Element] {
 	type E = koalabear.Element
 	gen := gp2.Compressor(genericPerm[E]("koalabear", gp2.CompressionWidth))
+	genVec := gp2.Compressor(kbGenericPerm(gp2.CompressionWidth, gp2.KoalaBearVector))
+	genAsm := gp2.Compressor(kbGenericPerm(gp2.CompressionWidth, gp2.KoalaBearAsm))
 	return fieldSuite[E, *E]{
 		name: "koalabear",
 		perms: []permImpl[E]{
@@ -177,10 +193,14 @@ func koalabearSuite() fieldSuite[koalabear.Element, *koalabear.Element] {
 				return kbposeidon2.NewPermutation(w, fullRounds, partialRounds).Permutation
 			}},
 			{"generic", func(w int) func([]E) error { return genericPerm[E]("koalabear", w).Permute }},
+			{"generic-vec", func(w int) func([]E) error { return kbGenericPerm(w, gp2.KoalaBearVector).Permute }},
+			{"generic-asm", func(w int) func([]E) error { return kbGenericPerm(w, gp2.KoalaBearAsm).Permute }},
 		},
 		compressors: []compressImpl[E]{
 			{"baseline", kbvortex.CompressPoseidon2},
 			{"generic", gen},
+			{"generic-vec", genVec},
+			{"generic-asm", genAsm},
 		},
 		hashers: []hasherImpl[E]{
 			{"baseline", func(msg []E) [8]E {
@@ -190,6 +210,8 @@ func koalabearSuite() fieldSuite[koalabear.Element, *koalabear.Element] {
 			}},
 			{"current", func(msg []E) [8]E { return kbp2.HashVec(msg...) }},
 			genericHasher[E]("generic", gen),
+			genericHasher[E]("generic-vec", genVec),
+			genericHasher[E]("generic-asm", genAsm),
 		},
 		transcripts: []transcriptImpl[E]{
 			{
@@ -207,6 +229,8 @@ func koalabearSuite() fieldSuite[koalabear.Element, *koalabear.Element] {
 				},
 			},
 			genericTranscript[E]("generic", gen),
+			genericTranscript[E]("generic-vec", genVec),
+			genericTranscript[E]("generic-asm", genAsm),
 		},
 	}
 }
