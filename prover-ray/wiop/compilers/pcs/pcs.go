@@ -274,10 +274,30 @@ func WithModuleGroups() Option {
 // the prover commits those layers at a constant cost, but every query opens
 // them.
 //
+// Every committed dynamic module must then be at least twice the final
+// polynomial's size (2 rows with the default final polynomial): a smaller one
+// would join FRI at the boundary round, after the last fold, where its level is
+// checked and weighted differently, so the verifier would depend on its size
+// again. Proving panics below that size, and verification rejects it. Sized
+// modules are not concerned: their rule is the same in every proof.
+//
 // Off by default: proofs differ from the default ones, which fold only as
 // many rounds as their largest committed column needs.
 func WithFixedFRIDomain() Option {
 	return func(o *compileOptions) { o.fixedFRIDomain = true }
+}
+
+// WithSizeOblivious makes the proof's structure independent of the dynamic
+// module sizes, as a size-oblivious recursive verifier needs (#4246): it is
+// [WithModuleGroups] and [WithFixedFRIDomain] together. Only the heights at
+// which the modules enter the trees and FRI then depend on the sizes. It
+// excludes the options [WithModuleGroups] excludes, and needs every committed
+// dynamic module to be folded by FRI (see [WithFixedFRIDomain]).
+func WithSizeOblivious() Option {
+	return func(o *compileOptions) {
+		o.moduleGroups = true
+		o.fixedFRIDomain = true
+	}
 }
 
 // merge resolves opts against sys's recorded PCS configuration without
@@ -516,8 +536,8 @@ func maxSizeIndex(sizeOf moduleSizeFunc, batches []BatchRef, manifests []ColumnM
 }
 
 // effectiveN is the FRI top-domain size for this proof's witness: the codeword
-// size of the largest committed (Present) column, or of the largest
-// committable one with a fixed FRI domain. Query positions are drawn from
+// size of the largest committed (Present) column, at least the smallest one
+// FRI folds, or of the largest committable one with a fixed FRI domain. Query positions are drawn from
 // [0, N), so this must match the size the PCS restricts its schedule to (both
 // derive it from the same committed columns).
 func (c *compiled) effectiveN(rt *wiop.Runtime, batches []BatchRef, manifests []ColumnManifest) int {
@@ -528,7 +548,11 @@ func (c *compiled) effectiveNWith(sizeOf moduleSizeFunc, batches []BatchRef, man
 	if c.fixedFRIDomain {
 		return 1 << (int(c.maxSizeLog2) + int(c.logRSBlowup))
 	}
-	return 1 << (maxSizeIndex(sizeOf, batches, manifests) + int(c.logRSBlowup))
+	// the PCS keeps at least one fold (see fri.PCS), so the top size is at
+	// least the smallest folded one
+	params, _ := staticFRI(c.logRSBlowup)
+	top := max(maxSizeIndex(sizeOf, batches, manifests), int(params.MinFoldedSizeLog2()))
+	return 1 << (top + int(c.logRSBlowup))
 }
 
 // moduleSizeFunc resolves a module's domain size. The prover and verifier use
@@ -578,7 +602,10 @@ type compiled struct {
 	// fixedFRIDomain runs FRI over the full static domain (see
 	// [WithFixedFRIDomain]).
 	fixedFRIDomain bool
-	friNumQueries  int
+	// minDynamicSizeLog2 is, with fixedFRIDomain, log2 of the smallest size a
+	// committed dynamic module may take (see [compiled.checkDynamicMinSizes]).
+	minDynamicSizeLog2 int
+	friNumQueries      int
 	// merkleCapHeight is the resolved [fri.Params.MerkleCapHeight].
 	merkleCapHeight uint8
 	logRSBlowup     uint8
@@ -634,6 +661,10 @@ func Compile(sys *wiop.System, opts ...Option) {
 		merkleCapHeight: cfg.merkleCap.resolve(cfg.friNumQueries),
 		logRSBlowup:     logBlowup,
 		maxSizeLog2:     maxCommittableSizeLog2(logBlowup),
+	}
+	if c.fixedFRIDomain {
+		params, _ := staticFRI(logBlowup)
+		c.minDynamicSizeLog2 = int(params.MinFoldedSizeLog2())
 	}
 	c.checkStaticSizes(batches)
 	// Freeze the effective configuration before mutating sys; merge
@@ -700,6 +731,31 @@ func (c *compiled) checkStaticSizes(batches []BatchRef) {
 			}
 		}
 	}
+}
+
+// checkDynamicMinSizes returns an error when, with a fixed FRI domain, a
+// committed (Present) column of a dynamic module is smaller than
+// 2^minDynamicSizeLog2: its level would join FRI at the boundary round, after
+// the last fold, where it is checked and weighted differently from the levels
+// that are folded (see [fri.Params.MinFoldedSizeLog2]). A module that may move
+// between the two would make the verifier depend on its size again. Sized
+// modules keep their size, hence their rule, in every proof.
+func (c *compiled) checkDynamicMinSizes(sizeOf moduleSizeFunc, batches []BatchRef, manifests []ColumnManifest) error {
+	if !c.fixedFRIDomain {
+		return nil
+	}
+	for i, b := range batches {
+		for k, col := range b.Round.Columns {
+			if manifests[i][k] != ManifestPresent || !col.Module.IsDynamic() {
+				continue
+			}
+			if idx := columnSizeIndexWith(col, sizeOf); idx < c.minDynamicSizeLog2 {
+				return fmt.Errorf("pcs: dynamic column %q has size 2^%d, below the 2^%d a fixed FRI domain folds",
+					col.Context.Path(), idx, c.minDynamicSizeLog2)
+			}
+		}
+	}
+	return nil
 }
 
 // CommittedBatches returns the canonical batch ordering: every interactive round
@@ -789,6 +845,9 @@ func (c *compiled) open(rt *wiop.Runtime) fri.OpeningProof {
 	if err != nil {
 		panic(fmt.Errorf("pcs: open: %w", err))
 	}
+	if err := c.checkDynamicMinSizes(runtimeSizeOf(rt), batches, manifests); err != nil {
+		panic(fmt.Errorf("pcs: open: %w", err))
+	}
 
 	pcs := c.newPCS()
 	states := c.collectCommittedStates(rt, batches)
@@ -839,6 +898,9 @@ func (c *compiled) verify(rt *wiop.Runtime, proof fri.OpeningProof) error {
 	if idx := maxSizeIndex(runtimeSizeOf(rt), batches, manifests); idx > int(c.maxSizeLog2) {
 		return fmt.Errorf("pcs: committed column size 2^%d exceeds the 2^%d committable at RS blowup %d",
 			idx, c.maxSizeLog2, 1<<c.logRSBlowup)
+	}
+	if err := c.checkDynamicMinSizes(runtimeSizeOf(rt), batches, manifests); err != nil {
+		return err
 	}
 	batchShifts, batchClaims, shapes, evalPoint, err := RecoverBatchClaims(rt, batches, manifests)
 	if err != nil {
