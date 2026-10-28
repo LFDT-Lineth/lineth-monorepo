@@ -320,7 +320,7 @@ static String resolveBesuVersionCached(providers, String besuCommit, File rootDi
 static void updateBesuVersionComment(File versionsToml, String besuCommit, String besuVersion) {
   def baseVersion = besuVersion - ~/-${besuCommit.take(7)}$/
   if (!versionsToml.exists() || !(baseVersion ==~ /\d+\.\d+\.\d+/) || baseVersion == '0.0.0') return
-  def text = versionsToml.text
+    def text = versionsToml.text
   def updated = text.replaceFirst(/(?m)^# Besu version: .*$/, "# Besu version: ${baseVersion}")
   if (updated != text) versionsToml.text = updated
 }
