@@ -1,9 +1,11 @@
 package risc5
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	"github.com/sirupsen/logrus"
@@ -12,6 +14,10 @@ import (
 // NumProgramVK is the number of [ProgramVKPI] cells: one per limb of the
 // commitment to [zkcdriver.ProgramRound].
 const NumProgramVK = len(field.Octuplet{})
+
+// ErrProgramVKMismatch is returned by [ProgramVKChecker] when the public
+// program VK differs from the commitment to [zkcdriver.ProgramRound].
+var ErrProgramVKMismatch = errors.New("risc5: program VK mismatch")
 
 // RegisterProgramVK registers the commitment to [zkcdriver.ProgramRound], which
 // holds the decoded program only, as the [ProgramVKPI] public inputs of sys.
@@ -22,10 +28,10 @@ func RegisterProgramVK(sys *wiop.System) {
 
 	// DynamicSizeRound is the trace round (see [zkcdriver.Define]).
 	if sys.DynamicSizeRound == zkcdriver.ProgramRound {
-		panic(fmt.Sprintf(
+		utils.Panic(
 			"risc5: RegisterProgramVK: the trace is in the program round %d",
 			zkcdriver.ProgramRound,
-		))
+		)
 	}
 
 	var (
@@ -59,10 +65,10 @@ func programCommitment(rt *wiop.Runtime) field.Octuplet {
 func programVKCell(sys *wiop.System, i int) *wiop.Cell {
 	cell, pos := sys.LookupPublicInputByTag(ProgramVKPI, i)
 	if pos < 0 {
-		panic(fmt.Sprintf("risc5: missing program-vk-%d", i))
+		utils.Panic("risc5: missing program-vk-%d", i)
 	}
 	if cell.IsExtension() {
-		panic(fmt.Sprintf("risc5: program-vk-%d must not be an extension-field value", i))
+		utils.Panic("risc5: program-vk-%d must not be an extension-field value", i)
 	}
 	return cell
 }
@@ -75,8 +81,10 @@ type ProgramVKChecker struct{}
 func (*ProgramVKChecker) Check(rt *wiop.Runtime) error {
 	commitment := programCommitment(rt)
 	for i := range commitment {
-		if commitment[i] != rt.GetCellValue(programVKCell(rt.System, i)).AsBase() {
-			return fmt.Errorf("risc5: ProgramVKChecker: mismatch in program-vk-%d", i)
+		//an extension value is rejected
+		v := rt.GetCellValue(programVKCell(rt.System, i))
+		if !v.IsBase() || commitment[i] != v.AsBase() {
+			return fmt.Errorf("%w: program-vk-%d", ErrProgramVKMismatch, i)
 		}
 	}
 	return nil
@@ -85,13 +93,16 @@ func (*ProgramVKChecker) Check(rt *wiop.Runtime) error {
 // GetProgramVK returns the program verification key read from the public
 // inputs pub of a proof over sys.
 //
-// Panics if a public input is missing.
+// Panics if a public input is missing or is an extension-field value.
 func GetProgramVK(sys *wiop.System, pub wiop.PublicInput) field.Octuplet {
 	var vk field.Octuplet
 	for i := range vk {
 		_, pos := sys.LookupPublicInputByTag(ProgramVKPI, i)
 		if pos < 0 {
-			panic(fmt.Sprintf("risc5: GetProgramVK: no public input registered for program-vk-%d", i))
+			utils.Panic("risc5: GetProgramVK: no public input registered for program-vk-%d", i)
+		}
+		if !pub[pos].IsBase() {
+			utils.Panic("risc5: GetProgramVK: program-vk-%d must not be an extension-field value", i)
 		}
 		vk[i] = pub[pos].AsBase()
 	}

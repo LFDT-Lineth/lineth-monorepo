@@ -62,7 +62,14 @@ func TestProgramVK(t *testing.T) {
 		limb := forged[pos].AsBase()
 		limb.SetUint64(limb.Uint64() ^ 1)
 		forged[pos] = field.ElemFromBase(limb)
-		assert.ErrorContains(t, c.sys.Verify(proof, forged), "ProgramVKChecker")
+		assert.ErrorIs(t, c.sys.Verify(proof, forged), risc5.ErrProgramVKMismatch)
+	})
+
+	t.Run("extension", func(t *testing.T) {
+		_, pos := c.sys.LookupPublicInputByTag(risc5.ProgramVKPI, 0)
+		forged := append(wiop.PublicInput(nil), pub...)
+		forged[pos] = field.ElemFromExt(forged[pos].AsExt())
+		assert.ErrorIs(t, c.sys.Verify(proof, forged), risc5.ErrProgramVKMismatch)
 	})
 }
 
