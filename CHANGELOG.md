@@ -209,3 +209,4 @@
 - *(deps)* Bump Node.js to 24.22.1 (#4284)
 - *(misc)* Update copyright holder to Consensys Incorporated (#4244)
 - *(deps)* Bump the go_modules group across 1 directory with 2 updates (#4258)
+- *(deps)* Refresh dependencies (#4323)
