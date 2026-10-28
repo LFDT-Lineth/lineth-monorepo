@@ -861,7 +861,7 @@ fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
                 }
             }
             // indicate all bytes reads
-            registers[10] = a2 as DoubleWord
+            registers[10] = a2
             new_pc = (pc + 4) as Address
         }
         default: {
@@ -887,5 +887,4 @@ fn write_guest_log<ram>(offset:Address, size:Word) {
         guest_log[i] = byte_read
     }
 }
-
 
