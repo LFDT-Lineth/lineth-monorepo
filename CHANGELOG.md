@@ -105,6 +105,7 @@
 - *(coordinator)* Align RISC-V rollup-aggregation DTOs with rollup_spec (#4263)
 - *(prover)* Handle zero modulus in MODEXP (#4307)
 - *(misc, riscv-guest, prover, coordinator)* Changing the spec to allow zero rolling hash and message number for the L2 Message Service (#4314)
+- *(tracer)* Adapt reference tests to Besu block processor API (#4328)
 
 ### 🚜 Refactor
 
