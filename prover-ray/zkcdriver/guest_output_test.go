@@ -111,7 +111,10 @@ func TestGuestPublicOutputsTooShort(t *testing.T) {
 				sys, driver, inputs, written = newGuestOutputSystem(t, elf)
 				shard                        = traceSingleShard(t, driver, inputs)
 			)
-			require.Equal(t, wantWritten, written, "the tracer must agree on what the guest wrote")
+			// bytes.Equal: a guest writing nothing has nil output bytes, and
+			// minimalelf.OutputELF(0) an empty slice
+			require.True(t, bytes.Equal(wantWritten, written),
+				"the tracer must agree on what the guest wrote: %x, want %x", written, wantWritten)
 
 			prove := func() (wiop.Proof, wiop.PublicInput) {
 				return sys.Prove(func(rt *wiop.Runtime) {
