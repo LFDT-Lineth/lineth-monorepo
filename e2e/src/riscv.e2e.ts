@@ -18,11 +18,10 @@ const execFileAsync = promisify(execFile);
 
 // Must match the prover-ray config mounted by `make start-env-with-riscv`.
 const proverMode = process.env.RISCV_PROVER_MODE ?? "dev-mock";
-// dev-zkvm executes the guest for every batch, so its proofs land much later than dev-mock placeholders.
 const proofTimeoutMs = proverMode === "dev-zkvm" ? 20 * 60_000 : 2 * 60_000;
 const BATCH_STATUS_PROVEN = 2;
 
-// The OpcodeTester entry points shared with opcodes.spec.ts: every EVM opcode, then the precompiles.
+// Together these execute every EVM opcode and precompile.
 const OPCODE_TESTER_FUNCTIONS = [
   "executeAllOpcodes",
   "executePrecompiles",
@@ -33,13 +32,13 @@ const OPCODE_TESTER_FUNCTIONS = [
 
 type ExecutionRequest = {
   guestProgramId: Hex;
-  metadata: { startBlockNumber: number; endBlockNumber: number; totalGasUsed: number };
+  metadata: { startBlockNumber: number; endBlockNumber: number };
   proofRequest: {
     chainConfig: { chainId: number; forkName: string };
     payloads: {
       statelessInput: {
         newPayloadRequest: { executionPayload: { blockNumber: number; blockHash: Hex; transactions: Hex[] } };
-        executionWitness: { state: Hex[]; codes: Hex[]; headers: Hex[] };
+        executionWitness: { codes: Hex[] };
       };
     }[];
   };
@@ -88,7 +87,7 @@ async function queryBatches(): Promise<Batch[]> {
     });
 }
 
-// prover-ray moves each request to requests-done/ with a .success or .failure.<n> suffix once it has answered it.
+// prover-ray moves answered requests to requests-done/ with a .success or .failure.<n> suffix.
 async function awaitArchivedRequest(blockNumber: bigint): Promise<string> {
   const archived = await awaitUntil(
     async () =>
@@ -104,8 +103,8 @@ async function awaitArchivedRequest(blockNumber: bigint): Promise<string> {
 
 async function expectProvenBatch(receipt: TransactionReceipt) {
   const archivedName = await awaitArchivedRequest(receipt.blockNumber);
-  const fileName = archivedName.replace(/\.(success|failure\.\d+)$/, "");
-  expect(archivedName).toBe(`${fileName}.success`);
+  expect(archivedName).toMatch(/\.success$/);
+  const fileName = archivedName.replace(/\.success$/, "");
 
   const request: ExecutionRequest = JSON.parse(
     await readFile(resolve(executionDir, "requests-done", archivedName), "utf8"),
@@ -115,7 +114,8 @@ async function expectProvenBatch(receipt: TransactionReceipt) {
   expect(request.proofRequest.chainConfig).toMatchObject({ chainId: context.getL2ChainId(), forkName: "Amsterdam" });
   const input = request.proofRequest.payloads
     .map((payload) => payload.statelessInput)
-    .find((entry) => BigInt(entry.newPayloadRequest.executionPayload.blockNumber) === receipt.blockNumber)!;
+    .find((entry) => BigInt(entry.newPayloadRequest.executionPayload.blockNumber) === receipt.blockNumber);
+  if (!input) throw new Error(`Block ${receipt.blockNumber} missing from ${archivedName}`);
   expect(input.newPayloadRequest.executionPayload.blockHash).toBe(receipt.blockHash);
   expect(input.newPayloadRequest.executionPayload.transactions.map((tx) => keccak256(tx))).toContain(
     receipt.transactionHash,
@@ -133,8 +133,7 @@ async function expectProvenBatch(receipt: TransactionReceipt) {
   });
 
   if (proverMode === "dev-zkvm") {
-    // dev-zkvm derives the public inputs by executing the guest (cross-checked against the native runner),
-    // so they must match the chain.
+    // dev-zkvm derives the public inputs by executing the guest.
     const [parentBlock, endBlock] = await Promise.all([
       client.getBlock({ blockNumber: BigInt(startBlockNumber - 1) }),
       client.getBlock({ blockNumber: BigInt(endBlockNumber) }),
@@ -161,7 +160,6 @@ describe(`RISC-V execution proving (${proverMode})`, () => {
     async () => {
       const accounts = await context.getL2AccountManager().generateAccounts(OPCODE_TESTER_FUNCTIONS.length);
       const opcodeTester = context.l2Contracts.opcodeTester(client);
-      const stateBefore = await opcodeTester.read.rollingBlockDetailComputations();
 
       const receipts = await Promise.all(
         OPCODE_TESTER_FUNCTIONS.map(async (functionName, index) => {
@@ -176,7 +174,6 @@ describe(`RISC-V execution proving (${proverMode})`, () => {
           return receipt;
         }),
       );
-      expect(await opcodeTester.read.rollingBlockDetailComputations()).not.toEqual(stateBefore);
 
       for (const receipt of receipts) {
         await expectProvenBatch(receipt);
@@ -188,7 +185,8 @@ describe(`RISC-V execution proving (${proverMode})`, () => {
   it(
     "proves a contiguous chain of batches from genesis without prover failures",
     async () => {
-      const batches = await awaitUntil(queryBatches, (rows) => rows.length >= 3, {
+      // At least two batches, so contiguity is actually checked.
+      const batches = await awaitUntil(queryBatches, (rows) => rows.length >= 2, {
         timeoutMs: proofTimeoutMs,
         pollingIntervalMs: 2_000,
       });

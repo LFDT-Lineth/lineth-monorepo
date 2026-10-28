@@ -1,28 +1,31 @@
-#!/bin/sh
-set -eu
-
-cd /initialization
-mode=${L2_GENESIS_MODE:-zkevm}
-case "$mode" in
-  zkevm|riscv) ;;
-  *) echo "Unknown L2_GENESIS_MODE: $mode" >&2; exit 1 ;;
-esac
+#!/bin/zsh
+echo "Initialization of timestamp in genesis files for Maru, Besu, and config file for coordinator"
+date
+cd initialization || exit
+cp -T "genesis-maru.json.template" "genesis-maru.json"
+cp -T "genesis-besu.json.template" "genesis-besu.json"
 
 fork_timestamp=$(($(date +%s) + 60))
-if [ "$mode" = riscv ]; then
+
+# RISC-V proves Amsterdam blocks from genesis.
+if [ "$L2_GENESIS_MODE" = "riscv" ]; then
   fork_timestamp=$(date +%s)
-  sed \
-    -e "s/%FORK_TIME%/$fork_timestamp/g" \
+  sed -i 's/"Osaka"/"Amsterdam"/' genesis-maru.json
+  sed -i \
     -e '/"osakaTime": 0,/a\
     "amsterdamTime": 0,\
     "builderDepositRequestContractAddress": "0x0000000000000000000000000000000000009999",\
     "builderExitRequestContractAddress": "0x0000000000000000000000000000000000009999",' \
     -e '/"alloc": {/a\
     "0x0000000000000000000000000000000000009999": {"balance": "0", "code": "00"},' \
-    genesis-besu.json.template > genesis-besu.json
-  sed 's/"Osaka"/"Amsterdam"/' genesis-maru.json.template > genesis-maru.json
-else
-  sed "s/%FORK_TIME%/$fork_timestamp/g" genesis-besu.json.template > genesis-besu.json
-  sed "s/%FORK_TIME%/$fork_timestamp/g" genesis-maru.json.template > genesis-maru.json
+    genesis-besu.json
 fi
-printf '%s\n' "$fork_timestamp" > fork-timestamp.txt
+
+echo "Fork Timestamp: $fork_timestamp"
+sed -i "s/%FORK_TIME%/$fork_timestamp/g" genesis-maru.json
+sed -i "s/%FORK_TIME%/$fork_timestamp/g" genesis-besu.json
+
+echo $fork_timestamp > /initialization/fork-timestamp.txt
+# Right now only Osaka is supported by the tracer, so no need to override forks
+#cp -T "/coordinator/coordinator-config-v2.toml" "coordinator-config-v2-hardforks.toml"
+#sed -i'' "s/^\(timestamp-based-hard-forks[ ]*=[ ]*\).*/\1[${fork_timestamp}]/" coordinator-config-v2-hardforks.toml

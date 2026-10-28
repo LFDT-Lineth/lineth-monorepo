@@ -22,7 +22,7 @@ clean-testnet-folders:
 
 clean-environment:
 		docker compose -f docker/compose-tracing-v2-staterecovery-extension.yml --profile l1 --profile l2 --profile debug --profile staterecovery kill -s 9 || true;
-		docker compose -f docker/compose-tracing-v2-staterecovery-extension.yml --profile l1 --profile l2 --profile debug --profile staterecovery down --remove-orphans || true;
+		docker compose -f docker/compose-tracing-v2-staterecovery-extension.yml --profile l1 --profile l2 --profile debug --profile staterecovery down || true;
 		docker compose -p lineth down --remove-orphans --timeout 0 || true; # start-env stacks run as project "lineth"
 		$(MAKE) clean-local-folders;
 		$(MAKE) seed-deny-list; # truncate runtime deny-list and drop any stale lockfile from a crashed run
@@ -33,16 +33,17 @@ clean-environment:
 
 RISCV_PROVER_MODE ?= dev-mock
 export RISCV_PROVER_MODE
+RISCV_COMPOSE_FILE := docker/compose-tracing-v2.yml -f docker/compose-riscv.yml
 
 start-env-with-riscv:
 	@test -f docker/config/prover/riscv/prover-ray-config.$(RISCV_PROVER_MODE).toml || \
 		{ echo "Unsupported RISCV_PROVER_MODE=$(RISCV_PROVER_MODE) (expected dev-mock or dev-zkvm)"; exit 1; }
-	$(MAKE) start-env COMPOSE_FILE="docker/compose-tracing-v2.yml -f docker/compose-riscv.yml" COMPOSE_PROFILES=l1,l2,riscv \
-		START_SERVICES_BEFORE_DEPLOYMENT="l1-cl-node maru postgres" \
-		START_SERVICES_AFTER_DEPLOYMENT="prover-ray coordinator" \
+	$(MAKE) start-env COMPOSE_FILE="$(RISCV_COMPOSE_FILE)" \
 		L1_CONTRACT_VERSION=9 LINETH_PROTOCOL_CONTRACTS_ONLY=true \
 		LINETH_L1_CONTRACT_DEPLOYMENT_TARGET=deploy-lineth-rollup-v9-stub \
 		DEPLOY_FORCED_TRANSACTION_GATEWAY=false
+	# The coordinator needs the deployed L1 contract, so it starts last.
+	COMPOSE_PROFILES=l1,l2,riscv docker compose -f $(RISCV_COMPOSE_FILE) up -d --no-deps --wait --wait-timeout 600 prover-ray coordinator
 	$(MAKE) deploy-l2-evm-opcode-tester
 
 # Ensure the runtime sequencer deny-list exists (empty) before docker compose
@@ -60,23 +61,16 @@ start-env: L1_CONTRACT_VERSION:=8
 start-env: SKIP_CONTRACTS_DEPLOYMENT:=false
 start-env: SKIP_L1_L2_NODE_HEALTH_CHECK:=false
 start-env: LINETH_PROTOCOL_CONTRACTS_ONLY:=false
-start-env: START_SERVICES_BEFORE_DEPLOYMENT:=
-start-env: START_SERVICES_AFTER_DEPLOYMENT:=
 start-env: LINETH_L1_CONTRACT_DEPLOYMENT_TARGET:=deploy-lineth-rollup-v$(L1_CONTRACT_VERSION)
 start-env:
-	@set -eu; \
-	if [ "$(CLEAN_PREVIOUS_ENV)" = "true" ]; then \
+	@if [ "$(CLEAN_PREVIOUS_ENV)" = "true" ]; then \
 		$(MAKE) clean-environment; \
 	else \
 		echo "Starting stack reusing previous state"; \
 	fi; \
 	mkdir -p tmp/local; \
 	$(MAKE) seed-deny-list; \
-	if [ -n "$(START_SERVICES_BEFORE_DEPLOYMENT)" ]; then \
-		COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f $(COMPOSE_FILE) up -d --wait --wait-timeout 600 $(START_SERVICES_BEFORE_DEPLOYMENT); \
-	else \
-		COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f $(COMPOSE_FILE) up -d; \
-	fi; \
+	COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f $(COMPOSE_FILE) up -d; \
 	while [ "$(SKIP_L1_L2_NODE_HEALTH_CHECK)" = "false" ] && \
 			{ [ "$$(docker compose -f $(COMPOSE_FILE) ps -q l1-el-node | xargs -r docker inspect -f '{{.State.Health.Status}}')" != "healthy" ] || \
 				[ "$$(docker compose -f $(COMPOSE_FILE) ps -q l1-cl-node | xargs -r docker inspect -f '{{.State.Health.Status}}')" != "healthy" ] || \
@@ -84,13 +78,10 @@ start-env:
   			sleep 2; \
   			echo "Checking health status of: l1-el-node, l1-cl-node and l2 sequencer..."; \
   	done
-	@if [ "$(SKIP_CONTRACTS_DEPLOYMENT)" = "true" ]; then \
+	if [ "$(SKIP_CONTRACTS_DEPLOYMENT)" = "true" ]; then \
 		echo "Skipping contracts deployment"; \
 	else \
 		$(MAKE) deploy-contracts L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION) LINETH_PROTOCOL_CONTRACTS_ONLY=$(LINETH_PROTOCOL_CONTRACTS_ONLY) LINETH_L1_CONTRACT_DEPLOYMENT_TARGET=$(LINETH_L1_CONTRACT_DEPLOYMENT_TARGET); \
-	fi
-	@if [ -n "$(START_SERVICES_AFTER_DEPLOYMENT)" ]; then \
-		COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f $(COMPOSE_FILE) up -d --no-deps --wait --wait-timeout 600 $(START_SERVICES_AFTER_DEPLOYMENT); \
 	fi
 
 start-env-with-validium:

@@ -10,9 +10,7 @@ inputs:
     required: false
     default: 'zkevm'
   riscv_prover_mode:
-    description: >
-      prover-ray mode for the RISC-V stack: dev-mock (pinned image, placeholder proofs) or
-      dev-zkvm (prover-ray built from the checked-out commit, executes the guest)
+    description: 'prover-ray mode for the RISC-V stack (dev-mock or dev-zkvm)'
     required: false
     default: 'dev-mock'
   image_tag:
@@ -82,25 +80,15 @@ runs:
       env:
         STACK: ${{ inputs.stack }}
         RISCV_PROVER_MODE: ${{ inputs.riscv_prover_mode }}
-        OVERRIDE_COMPOSE_FILE: ${{ inputs.override-compose-file }}
       run: |
-        case "$RISCV_PROVER_MODE" in
-          dev-mock|dev-zkvm) ;;
-          *) echo "::error::Unknown riscv_prover_mode: $RISCV_PROVER_MODE"; exit 1 ;;
-        esac
         case "$STACK" in
           zkevm)
             echo "test_script=test:local" >> "$GITHUB_OUTPUT"
             echo "test_timeout=6m" >> "$GITHUB_OUTPUT"
             ;;
           riscv)
-            if [ -n "$OVERRIDE_COMPOSE_FILE" ]; then
-              echo "::error::override-compose-file is only supported for the zkEVM stack"
-              exit 1
-            fi
             echo "test_script=test:riscv:local" >> "$GITHUB_OUTPUT"
             echo "RISCV_PROVER_MODE=$RISCV_PROVER_MODE" >> "$GITHUB_ENV"
-            # dev-zkvm runs the guest per batch, so it needs a longer test budget.
             if [ "$RISCV_PROVER_MODE" = "dev-zkvm" ]; then
               echo "test_timeout=40m" >> "$GITHUB_OUTPUT"
             else
@@ -192,8 +180,7 @@ runs:
           elif [ -n "${!env_var:-}" ]; then
             selected_tag="${!env_var}"
           elif [ "$STACK" = "riscv" ]; then
-            # Use the shared Compose release default when no CI image/tag was supplied.
-            continue
+            continue # keep the Compose default tag
           else
             selected_tag="develop"
           fi
@@ -221,7 +208,6 @@ runs:
         command: |
           cd ${{ inputs.working-directory }} && make docker-pull-images-external-to-monorepo
 
-    # dev-zkvm exercises this commit's prover-ray and guest, so build the image instead of using the pinned one.
     - name: Build prover-ray image for dev-zkvm
       if: ${{ inputs.stack == 'riscv' && inputs.riscv_prover_mode == 'dev-zkvm' }}
       shell: bash

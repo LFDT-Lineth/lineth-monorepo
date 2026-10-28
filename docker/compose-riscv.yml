@@ -33,7 +33,7 @@ services:
   prover-ray:
     container_name: prover-ray
     hostname: prover-ray
-    image: consensys/lineth-prover-ray:${LINEA_PROVER_RAY_TAG:-0.1.1-20261006-f1f4280}
+    image: consensys/lineth-prover-ray:${LINEA_PROVER_RAY_TAG:-0.2.0-20261028-abcdec9}
     platform: linux/amd64
     profiles: ["riscv"]
     environment:
@@ -46,6 +46,11 @@ services:
       - linea
 
   coordinator:
+    # First release whose prover requests match prover-ray 0.2.0.
+    image: ${LINEA_COORDINATOR_IMAGE_NAME:-consensys/linea-coordinator}:${LINEA_COORDINATOR_TAG:-2.3.0-20261028-9bfcca4}
+    # Started by start-env-with-riscv once the L1 contract is deployed.
+    profiles: !override ["riscv"]
+    # The coordinator image has no curl, so the base healthcheck never passes.
     healthcheck:
       test:
         - CMD-SHELL

@@ -176,7 +176,6 @@ jobs:
               - 'riscv-guests/build_common/linker_script.ld'
               - '.github/workflows/prover-ray-testing.yml'
               - '.github/workflows/main.yml'
-            # Proving components exercised by the RISC-V E2E suite in dev-zkvm mode.
             riscv-proving:
               - 'prover-ray/**'
               - 'riscv-guests/**'
@@ -398,9 +397,7 @@ jobs:
       has-changes-requiring-e2e-testing: ${{ needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing }}
     secrets: inherit
 
-  # RISC-V execution-proving E2E: runs only on merges to main and is not a required PR check.
-  # Proving changes (prover-ray, guests, prover IO spec) run the guest in dev-zkvm with a prover-ray image
-  # built from this commit; other stack changes (coordinator, sequencer, maru, ...) use dev-mock proofs.
+  # Not a required check. Proving changes run dev-zkvm with prover-ray built from this commit.
   run-riscv-e2e-tests:
     needs:
       [
@@ -427,7 +424,6 @@ jobs:
       stack: riscv
       riscv_prover_mode: ${{ needs.filter-commit-changes.outputs.riscv-proving == 'true' && 'dev-zkvm' || 'dev-mock' }}
       linea_besu_package_tag: ${{ needs.docker-build.outputs.linea_besu_package_tag }}
-      # The job-level condition already gates on changes; the reusable workflow runs when this is unset.
       e2e-tests-logs-dump: true
     secrets: inherit
 
