@@ -3,29 +3,15 @@
 ### 🚀 Features
 
 - *(riscv-guest)* L2 execution guest rollup (#3783)
-- *(riscv-guest)* L2 exec guest coverage test harness (#3784)
 - *(riscv-guest)* Rollup guest program stub with shared SSZ package (#3894)
-- *(riscv-guest)* Added a makefile target to run reference tests wit… (#3906)
 - *(riscv-guest)* Adding fallback precompile implementations (#3931)
 - *(riscv-guest)* RiscV guests release workflow (#4102)
 - *(riscv-guest)* Setting up the release workflow (#4119)
-- *(riscv-guest)* Changing the output of the guest program to include the plain PI + its hash (#4092)
-- *(riscv-guest)* Bump zesu to 2835883 and pass system contracts at runtime (#4265)
 
 ### 🐛 Bug Fixes
 
-- *(riscv-guest)* Fixing the write_output usage (#3909)
-- *(riscv-guest)* Rename parentProcessedFtxNumber to parentFtxNumber (#4011)
-- *(riscv-guest)* Aligning l2-execution guest program to the recently… (#4297)
-- *(riscv-guest)* Build native runner for baseline CPU (#4308)
-- *(misc, riscv-guest, prover, coordinator)* Changing the spec to allow zero rolling hash and message number for the L2 Message Service (#4314)
-
-### ⚙️ Miscellaneous Tasks
-
-- *(riscv-guest)* More tests (#3785)
-- *(riscv-guest)* Error codes and their coverage (#3786)
-- *(riscv-guest)* More coverage for the multi block case. Added an … (#3795)
-- *(riscv-guest)* Bump zesu to a72dec7 (#4221)
+- *(riscv-guest)* Renaming the kebab-case dirs to sneak case, which is more conventional in Zig world (#4320)
+- *(riscv-guest)* Added a build option to choose between crypto backe… (#4293)
 ## [0.1.0-debug] - 2026-10-05
 
 ### 🚀 Features

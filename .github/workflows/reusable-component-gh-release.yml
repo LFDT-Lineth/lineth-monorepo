@@ -215,7 +215,7 @@ jobs:
 
       - name: Download Coordinator config docs artifact
         if: inputs.component-name == 'coordinator' && !inputs.dry_run_release
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: coordinator-config-docs-${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
           path: release/config-docs
@@ -244,7 +244,7 @@ jobs:
           echo "COMPONENT_CAP=${COMPONENT_NAME^}" >> $GITHUB_ENV
 
       - name: gh-release
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           name: ${{ env.COMPONENT_CAP }} v${{ needs.release-push-tag-changelog.outputs.release_version }}
           tag_name: ${{ needs.release-push-tag-changelog.outputs.release_tag }}

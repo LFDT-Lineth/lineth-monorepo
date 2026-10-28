@@ -2,7 +2,15 @@
 
 ### 🚀 Features
 
-- *(riscv-guest)* Changing the output of the guest program to include the plain PI + its hash (#4092)
+- *(prover-ray)* Support constant entries in lookup, permutation and message-bus tables (#4296)
+
+### 🐛 Bug Fixes
+
+- *(riscv-guest)* Added a build option to choose between crypto backe… (#4293)
+## [0.2.0] - 2026-10-28
+
+### 🚀 Features
+
 - *(prover-ray)* Reduce Poseidon2 row authentication cost  (#4115)
 - *(prover-ray)* Update ZkC for LazyTrace API (#4170)
 - *(prover-ray)* Cyclic logderivativesum running sums (#4171)
@@ -18,6 +26,7 @@
 - *(prover-ray)* Uniform pair leaves for module-grouped commitments (#4272)
 - *(prover-ray)* Minimum size per dynamic module (#4288)
 - *(riscv-guest)* Bump zesu to 2835883 and pass system contracts at runtime (#4265)
+- *(prover-ray)* Per-module alpha_DEEP powers for module-grouped comitments (#4313)
 
 ### 🐛 Bug Fixes
 
@@ -26,8 +35,8 @@
 - *(prover-ray)* Reject column elision and Merkle caps with module groups (#4286)
 - *(misc)* Moved filtered addresses into the list of the PI (#4166)
 - *(riscv-guest)* Aligning l2-execution guest program to the recently… (#4297)
-- *(riscv-guest)* Build native runner for baseline CPU (#4308)
 - *(misc, riscv-guest, prover, coordinator)* Changing the spec to allow zero rolling hash and message number for the L2 Message Service (#4314)
+- *(riscv-guest)* Renaming the kebab-case dirs to sneak case, which is more conventional in Zig world (#4320)
 
 ### 🚜 Refactor
 

@@ -136,22 +136,22 @@ jobs:
         uses: ./.github/actions/setup-riscv-guests
 
       - name: Build l2-execution guest
-        run: make -C riscv-guests/l2-execution compile KECCAK_ACCEL=false
+        run: make -C riscv-guests/l2_execution compile KECCAK_ACCEL=false
 
       - name: Build rollup guest and sample input
         run: make -C riscv-guests/rollup compile require-input KECCAK_ACCEL=false
 
       - name: Upload prepared l2-execution ELF
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: l2-execution-accel-${{ github.sha }}
-          path: riscv-guests/l2-execution/zig-out/bin/evm_execution_guest
+          path: riscv-guests/l2_execution/zig-out/bin/evm_execution_guest
           if-no-files-found: error
           overwrite: true
           retention-days: 1
 
       - name: Upload prepared rollup artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: rollup-accel-${{ github.sha }}
           path: riscv-guests/rollup/zig-out
@@ -198,7 +198,7 @@ jobs:
 
       - name: Run extended-guest reference-test guards
         run: make reference-test
-        working-directory: riscv-guests/l2-execution
+        working-directory: riscv-guests/l2_execution
 
   zkc-interpreter-run:
     name: l2-execution guest in ZKC interpreter (accel)
@@ -213,13 +213,13 @@ jobs:
           submodules: false
 
       - name: Download prepared l2-execution artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: l2-execution-accel-${{ github.sha }}
-          path: riscv-guests/l2-execution/zig-out
+          path: riscv-guests/l2_execution/zig-out
 
       - name: Download prepared rollup artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: rollup-accel-${{ github.sha }}
           path: riscv-guests/rollup/zig-out
@@ -243,8 +243,8 @@ jobs:
       # Compare the downloaded production ELF against the native host machine on the committed input.
       - name: Compare l2-execution guest output under zkc (fast, but no accel keccak)
         run: >-
-          make -C riscv-guests/l2-execution zkc-smoke-external
-          ELF=${{ github.workspace }}/riscv-guests/l2-execution/zig-out/evm_execution_guest
+          make -C riscv-guests/l2_execution zkc-smoke-external
+          ELF=${{ github.workspace }}/riscv-guests/l2_execution/zig-out/evm_execution_guest
           KECCAK_ACCEL=false
 
       # The stub guest decodes a freshly-generated sample request and emits the echo/sentinel
@@ -269,10 +269,10 @@ jobs:
           submodules: false
 
       - name: Download prepared l2-execution artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: l2-execution-accel-${{ github.sha }}
-          path: riscv-guests/l2-execution/zig-out
+          path: riscv-guests/l2_execution/zig-out
 
       - name: Install Go
         uses: ./.github/actions/setup-go
@@ -289,8 +289,8 @@ jobs:
       - name: Trace l2-execution guest under zkc (no accel keccak)
         run: >-
           make -f arithmetization/src/test/Makefile elf-trace
-          BIN_EXT=${{ github.workspace }}/riscv-guests/l2-execution/zig-out/evm_execution_guest
-          IN_BYTES=@${{ github.workspace }}/riscv-guests/l2-execution/test/testdata/stateless_input.ssz
+          BIN_EXT=${{ github.workspace }}/riscv-guests/l2_execution/zig-out/evm_execution_guest
+          IN_BYTES=@${{ github.workspace }}/riscv-guests/l2_execution/test/testdata/stateless_input.ssz
           ZKC_TRACE_FLAGS="--stats -vv"
 
   # Manual-only: the emulator is too slow for a per-PR gate. Runs the whole corpus by default;
@@ -324,4 +324,4 @@ jobs:
       - name: Run zkc reference-test
         env:
           REFERENCE_ARGS: ${{ inputs.reference-args }}
-        run: make -C riscv-guests/l2-execution reference-test-zkc KECCAK_ACCEL=false
+        run: make -C riscv-guests/l2_execution reference-test-zkc KECCAK_ACCEL=false
