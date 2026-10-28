@@ -6,7 +6,7 @@
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| Node.js | >= 24.18.0 (see `.nvmrc`) | TypeScript projects |
+| Node.js | >= 24.22.1 (see `.nvmrc`) | TypeScript projects |
 | pnpm | v12.6.0+ | Package management |
 | Docker | v24+ | Container runtime |
 | Docker Compose | v2.19+ | Multi-container orchestration |

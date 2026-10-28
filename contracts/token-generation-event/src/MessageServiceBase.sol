@@ -7,7 +7,7 @@ import { IGenericErrors } from "./interfaces/IGenericErrors.sol";
 
 /**
  * @title Base contract to manage cross-chain messaging.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract MessageServiceBase is Initializable, IGenericErrors {

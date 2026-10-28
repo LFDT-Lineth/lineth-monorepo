@@ -5,6 +5,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -185,7 +186,7 @@ func TestArithmeticOperation_EvaluateSingle_WrongModePanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
 	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, baseVec(4, 1))
+	rt.AssignColumn(col, wioptest.ConstVec(4, 1))
 
 	// col.View() is vector → Add(col.View(), col.View()) is vector
 	v := wiop.Add(col.View(), col.View())
@@ -269,7 +270,7 @@ func TestArithmeticOperation_VectorEval_Add(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
 	col := mod.NewColumn(sys.Context.Childf("colVAdd"), r0)
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, baseVec(4, 3))
+	rt.AssignColumn(col, wioptest.ConstVec(4, 3))
 
 	expr := wiop.Add(col.View(), col.View())
 	cv := expr.(interface {

@@ -23,6 +23,13 @@ type Params struct {
 	LogCodewordSize  uint8 // log2 of the codeword domain size
 	LogPlainTextSize uint8 // log2 of the plaintext polynomial size; always numRounds + logFinalPolySize
 	NumQueries       uint  // number of independent queries (controls soundness error ≈ (1-δ)^Q)
+	// MerkleCapHeight is the height of the Merkle cap sent once per committed
+	// tree (input trees and running FRI layers): the proof carries the tree's
+	// 2^MerkleCapHeight frontier nodes and every query branch stops at that
+	// frontier. Each tree clamps it to its own height-1. Zero (the default)
+	// disables capping: branches climb to the root and caps are empty. See
+	// [OptimalMerkleCapHeight].
+	MerkleCapHeight uint8
 
 	logFinalPolySize uint8         // logFinalPolySize = log2(the final polynomial's degree + 1)
 	domains          []*fft.Domain // domains[j] has cardinality 2^(LogCodewordSize-j), generator ωⱼ
@@ -116,6 +123,7 @@ func (p Params) restrictTo(topSizeLog2 uint8) (Params, error) {
 		LogCodewordSize:  p.LogCodewordSize - offset,
 		LogPlainTextSize: topSizeLog2,
 		NumQueries:       p.NumQueries,
+		MerkleCapHeight:  p.MerkleCapHeight,
 		logFinalPolySize: p.logFinalPolySize,
 		domains:          p.domains[offset:],
 	}
@@ -166,6 +174,13 @@ type Level struct {
 
 	Columns []quotientColumn
 
+	// Powers[c] is the power of alphaDeep weighting Columns[c], and
+	// RunningPower the power weighting the running codeword, above every
+	// Powers[c] (see deepPowers). Nil Powers numbers the columns 0, 1, … in
+	// order, with RunningPower = len(Columns).
+	Powers       []int
+	RunningPower int
+
 	// DenomBaseInv is the single length-N (codeword-domain size) inverse
 	// vector 1/(ω^e − ζ) in natural order (index e = exponent). Every claim
 	// point's inverse column is a scaled rotation of this one vector, so the
@@ -187,7 +202,8 @@ type quotientGroup struct {
 
 // groupPoint is one distinct claim point z = ζ·ω_n^s of a group, carrying its
 // E2 rotation-identity data (see claimRotation) and the group's combined
-// claim Y_z = Σ_{c ∈ group} alphaDeep^c · y_{c,z}.
+// claim Y_z = Σ_{c ∈ group} alphaDeep^{p(c)} · y_{c,z}, p(c) being column c's
+// power (Level.Powers).
 type groupPoint struct {
 	rot           int
 	scale         field.Element
@@ -246,15 +262,18 @@ func groupColumnsByClaimPoints(columns []quotientColumn, alphaPow []field.Ext) [
 }
 
 // EvalsAt returns this level's evaluations, combined with the running codeword.
-// running seeds the ladder, so its contribution is weighted by
-// alphaDeep^len(Columns), and column c (level order) by alphaDeep^c.
+// Column c is weighted by alphaDeep^Powers[c] and running by
+// alphaDeep^RunningPower (see deepPowers; by default, alphaDeep^c and
+// alphaDeep^len(Columns)).
 //
 // The batched DEEP quotient is computed combine-then-divide: the columns of
-// each quotientGroup are first combined into G_g(X) = Σ_{c∈g} alphaDeep^c·f_c(X)
+// each quotientGroup are first combined into G_g(X) = Σ_{c∈g} alphaDeep^{p(c)}·f_c(X)
 // — one multiply-accumulate per (position, column) — and the division happens
 // once per (position, DISTINCT point):
 //
-//	F(X) = running(X)·alphaDeep^C + Σ_g Σ_{z∈g} (G_g(X) − Y_{g,z}) / (X − z)
+//	F(X) = running(X)·alphaDeep^R + Σ_g Σ_{z∈g} (G_g(X) − Y_{g,z}) / (X − z)
+//
+// with p(c) = Powers[c] and R = RunningPower.
 //
 // rather than once per (position, column, claim). The regrouping is exact
 // field arithmetic, so the outputs — and hence roots, fold values, and
@@ -278,13 +297,13 @@ func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
 	mask := len(l.DenomBaseInv) - 1
 	logSize := bits.TrailingZeros(uint(len(l.DenomBaseInv)))
 
+	powers, runningPower := l.powers()
+	table := powerTable(alphaDeep, runningPower)
 	alphaPow := make([]field.Ext, len(l.Columns))
-	alphaPow[0] = field.OneExt()
-	for c := 1; c < len(alphaPow); c++ {
-		alphaPow[c].Mul(&alphaPow[c-1], &alphaDeep)
+	for c, p := range powers {
+		alphaPow[c] = table[p]
 	}
-	var alphaTop field.Ext
-	alphaTop.Mul(&alphaPow[len(alphaPow)-1], &alphaDeep)
+	alphaTop := table[runningPower]
 
 	groups := groupColumnsByClaimPoints(l.Columns, alphaPow)
 
@@ -330,6 +349,28 @@ func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
 		}
 	})
 	return evals
+}
+
+// powers returns the level's column powers and running power (see Level).
+func (l Level) powers() ([]int, int) {
+	if l.Powers != nil {
+		return l.Powers, l.RunningPower
+	}
+	powers := make([]int, len(l.Columns))
+	for c := range powers {
+		powers[c] = c
+	}
+	return powers, len(l.Columns)
+}
+
+// powerTable returns base^0, …, base^n.
+func powerTable(base field.Ext, n int) []field.Ext {
+	res := make([]field.Ext, n+1)
+	res[0] = field.OneExt()
+	for i := 1; i <= n; i++ {
+		res[i].Mul(&res[i-1], &base)
+	}
+	return res
 }
 
 // Proof is the complete multi-degree FRI proof. Level polynomial Merkle roots
@@ -437,7 +478,7 @@ func checkOpeningProofShape(p Params, prf Proof, foldAlphas []field.Ext, positio
 	}
 	for j := uint8(1); j < p.numRounds(); j++ {
 		height := int(p.LogCodewordSize - j)
-		depth := merkleCapDepth(p.NumQueries, height)
+		depth := p.merkleCapDepth(height)
 		if err := prf.RoundCaps[j-1].Validate(depth); err != nil {
 			return fmt.Errorf("fri: pcs.Verify: round %d cap: %w", j, err)
 		}

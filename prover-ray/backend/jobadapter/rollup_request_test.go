@@ -65,7 +65,7 @@ func TestDecodeRollupRequest_Golden(t *testing.T) {
 	assert.Len(t, p0.PublicInputs.L2L1Messages, 1)
 	assert.Equal(t, filledHash(0x08), p0.PublicInputs.L2L1Messages[0])
 	assert.Empty(t, p0.PublicInputs.L2MessagingBlocksOffsets)
-	assert.Len(t, p0.FilteredAddresses, 2)
+	assert.Len(t, p0.PublicInputs.FilteredAddresses, 2)
 
 	assert.Equal(t, uint64(12), req.L2ExecutionProofs[1].StartBlockNumber)
 	assert.Equal(t, uint64(14), req.L2ExecutionProofs[1].PublicInputs.EndBlockNumber)

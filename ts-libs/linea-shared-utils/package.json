@@ -2,7 +2,7 @@
   "name": "@lfdt-lineth/shared-utils",
   "version": "1.0.0",
   "description": "",
-  "author": "Consensys Software Inc.",
+  "author": "Consensys Incorporated",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -37,8 +37,8 @@
     "tsx": "catalog:"
   },
   "dependencies": {
-    "@aws-sdk/client-kms": "3.1141.0",
-    "asn1js": "3.0.10",
+    "@aws-sdk/client-kms": "3.1156.0",
+    "asn1js": "3.1.0",
     "axios": "catalog:",
     "express": "catalog:",
     "neverthrow": "catalog:",

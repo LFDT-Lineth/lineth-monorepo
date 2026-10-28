@@ -1,6 +1,7 @@
 package lineth.coordination.riscv.rollup
 
 import io.vertx.core.Vertx
+import linea.clients.ChunkWitness
 import linea.clients.ConflationWitness
 import linea.clients.RollupProofRequestV1
 import linea.clients.RollupProverClientV1
@@ -320,11 +321,19 @@ class RollupProofGeneratingCoordinator(
     return RollupProofRequestV1(
       conflations = conflations.map { ConflationWitness(it.blocks.map(blockEncoder::encode)) },
       l2Executions = l2Executions,
-      chunks = chunkedData.chunks.map { it.chunkHash },
+      // Blob chunks only. Canonical field-element packing of blobBytes and a KZG versioned-hash chunkHasher are
+      // still to do; until then the guest will reject these chunks even though the request is schema-valid.
+      chunks = chunkedData.chunks.map {
+        ChunkWitness(
+          chunkHash = it.chunkHash,
+          isCalldata = false,
+          blobBytes = it.blobBytes,
+          calldataBytes = ByteArray(0),
+        )
+      },
       parentDataRollingHash = chunkedData.parentDataRollingHash,
-      startOffset = 0,
-      opaquePrefixBytes = ByteArray(0),
-      opaqueSuffixBytes = ByteArray(Constants.Eip4844BlobSize - chunkedData.endOffset),
+      // Proof windows always start at a chunk boundary; the guest derives finalDataTailDiscardBytes itself.
+      parentDataTailTakeBytes = 0,
       boundaryPrevDataRollingHash = null,
     )
   }

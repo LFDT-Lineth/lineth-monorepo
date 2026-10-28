@@ -75,7 +75,7 @@ func mdProgram(n int) (m *Machine, kinds []int, digest int) {
 func TestMDHash(t *testing.T) {
 	for _, n := range []int{1, 2, 3, 6} { // 8, 14, 15 and 45 elements
 		m, kinds, digest := mdProgram(n)
-		p, err := m.Compile()
+		p, err := m.Compile(testPCSOpts...)
 		require.NoError(t, err)
 		in := mdInputs(uint64(n), n)
 		r, err := p.Execute(in)
@@ -103,7 +103,7 @@ func TestMDFiatShamir(t *testing.T) {
 	for _, d := range []int{d1, d2, d3} {
 		cp.Copy(d)
 	}
-	p, err := m.Compile()
+	p, err := m.Compile(testPCSOpts...)
 	require.NoError(t, err)
 	in := mdInputs(9, 3)
 	in[0], in[1] = in[1], in[0] // E6, digest, scalar
@@ -158,7 +158,7 @@ func TestMDHashRejects(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			m, _, digest := mdProgram(3)
-			p, err := m.Compile()
+			p, err := m.Compile(testPCSOpts...)
 			require.NoError(t, err)
 			r, err := p.Execute(mdInputs(3, 3))
 			require.NoError(t, err)
@@ -190,7 +190,7 @@ func BenchmarkP2Execute(b *testing.B) {
 		in[i] = cell(uint64(i))
 	}
 	m.MDHash(blocks)
-	p, err := m.Compile()
+	p, err := m.Compile(testPCSOpts...)
 	require.NoError(b, err)
 	for b.Loop() {
 		if _, err := p.Execute(in); err != nil {

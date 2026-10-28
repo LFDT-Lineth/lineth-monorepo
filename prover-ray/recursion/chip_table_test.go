@@ -70,7 +70,7 @@ func tableProgram(check bool) tableProg {
 // entries, and prove.
 func TestTableLookup(t *testing.T) {
 	tp := tableProgram(true)
-	p, err := tp.m.Compile()
+	p, err := tp.m.Compile(testPCSOpts...)
 	require.NoError(t, err)
 	require.NotNil(t, p.Tables, "the program has tables")
 	r, err := p.Execute(tp.in)
@@ -85,7 +85,7 @@ func TestTableLookup(t *testing.T) {
 		m := &Machine{}
 		tab := m.Table([]int{m.InputE6(), m.InputE6()})
 		m.Lookup(tab, m.InputScalar())
-		p, err := m.Compile()
+		p, err := m.Compile(testPCSOpts...)
 		require.NoError(t, err)
 		_, err = p.Execute([]Cell{{}, {}, ScalarCell(field.NewElement(2))})
 		require.Error(t, err, "index 2 into a table of 2 executed")
@@ -127,7 +127,7 @@ func TestTableLookupRejects(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			tp := tableProgram(false)
-			p, err := tp.m.Compile()
+			p, err := tp.m.Compile(testPCSOpts...)
 			require.NoError(t, err)
 			r, err := p.Execute(tp.in)
 			require.NoError(t, err)
@@ -161,7 +161,7 @@ func TestLookupOutOfTable(t *testing.T) {
 	idx := m.InputScalar()
 	tp.in = append(tp.in, ScalarCell(field.NewElement(1)))
 	m.Lookup(tabA, idx)
-	p, err := m.Compile()
+	p, err := m.Compile(testPCSOpts...)
 	require.NoError(t, err)
 	r, err := p.Execute(tp.in)
 	require.NoError(t, err)
@@ -180,7 +180,7 @@ func TestLookupOutOfTable(t *testing.T) {
 // read is off. The entries' multiplicity is gated by active: rejected.
 func TestTablePaddingEntry(t *testing.T) {
 	tp := tableProgram(false)
-	p, err := tp.m.Compile()
+	p, err := tp.m.Compile(testPCSOpts...)
 	require.NoError(t, err)
 	r, err := p.Execute(tp.in)
 	require.NoError(t, err)

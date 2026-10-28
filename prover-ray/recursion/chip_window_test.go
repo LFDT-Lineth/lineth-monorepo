@@ -91,7 +91,7 @@ func TestWindowChip(t *testing.T) {
 		// the window rows write the Lanes outputs and the last block: the
 		// witness chip only writes the inputs and the stream cells
 		require.Equal(t, len(pp.m.inputs)+len(pp.stream), witnessChip{pp.m}.rows())
-		p, err := pp.m.Compile()
+		p, err := pp.m.Compile(testPCSOpts...)
 		require.NoError(t, err)
 		for _, seed := range []uint64{1, 2} {
 			in := packInputs(seed)
@@ -130,7 +130,7 @@ func TestPackFiatShamir(t *testing.T) {
 		m.PackAt(1, nil, nil),                                              // the safeguard zero only
 		m.PackAt(1, []int{b, c, a}, []int{KindE6, KindDigest, KindScalar}), // 1 + 15
 	}
-	p, err := m.Compile()
+	p, err := m.Compile(testPCSOpts...)
 	require.NoError(t, err)
 
 	rnd := rand.New(rand.NewPCG(3, 4))
@@ -210,7 +210,7 @@ func TestWindowChipRejects(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			pp := packProgram(false, tamper.start)
-			p, err := pp.m.Compile()
+			p, err := pp.m.Compile(testPCSOpts...)
 			require.NoError(t, err)
 			r, err := p.Execute(packInputs(1))
 			require.NoError(t, err)
@@ -232,7 +232,7 @@ func TestPackItemKind(t *testing.T) {
 	m := &Machine{}
 	e := m.InputE6()
 	m.Pack([]int{e}, []int{KindScalar})
-	p, err := m.Compile()
+	p, err := m.Compile(testPCSOpts...)
 	require.NoError(t, err)
 
 	var x Cell

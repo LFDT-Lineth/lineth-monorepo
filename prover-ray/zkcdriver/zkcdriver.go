@@ -9,6 +9,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/zkc/pkg/trace"
+	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 	"github.com/LFDT-Lineth/zkc/pkg/util/collection/typed"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/constraints"
@@ -73,6 +74,9 @@ type ZkCDriver struct {
 	// Metadata embedded in the zkevm.bin file, as needed to check
 	// compatibility.  Guaranteed non-nil.
 	Metadata typed.Map `serde:"omit"`
+	// system is the System the driver defined its columns in, whose dynamic
+	// modules' minimum sizes the tracing pads to (see [PadToMinSizes]).
+	system *wiop.System
 }
 
 // NewZkCDriver is the function that declares all the columns and the constraints of
@@ -100,7 +104,34 @@ func NewZkCDriver(sys *wiop.System, settings Settings, bin io.Reader) *ZkCDriver
 		TracingConfig: tracingConfig,
 		Settings:      &settings,
 		Metadata:      metadata,
+		system:        sys,
 	}
+}
+
+// PadToMinSizes returns cfg with zkc padding every module to at least the
+// largest [wiop.Module.MinRuntimeSize] of sys's dynamic modules, on top of
+// cfg's own padding strategy. Proving rejects a dynamic module below its
+// minimum, and only zkc can grow a module with valid rows: it pads with rows
+// that satisfy the module's constraints, which constant padding need not.
+// zkc's padding strategy sees a module's height, not the module, so every
+// module gets the largest minimum.
+//
+// sys must be compiled: the minimums come from its compiled openings, so a
+// call before compilation under-pads (a module the guest does not use stays at
+// one row, while compilation may give it a logup column of minimum 4), and
+// Prove rejects the trace.
+func PadToMinSizes(cfg vm.TraceConfig, sys *wiop.System) vm.TraceConfig {
+	minRows := uint(1)
+	for _, n := range sys.MinRuntimeSizes() {
+		minRows = max(minRows, uint(n))
+	}
+	if minRows == 1 {
+		return cfg
+	}
+	pad := cfg.PaddingStrategy()
+	return cfg.WithPadding(func(height, multiplier uint) uint {
+		return max(pad(height, multiplier), minRows*multiplier)
+	})
 }
 
 // PreReadInputs holds the result of pre-reading a trace file.
@@ -109,7 +140,7 @@ type PreReadInputs struct {
 	// (non-static) input memory of the ZkC program.  For the RISC-V
 	// interpreter, the inputs will include the full binary of the guest program
 	// (hence, some entries could be 100Mb or more).
-	Inputs map[string][]byte
+	Inputs map[string]bit.Array
 	// Errors arising from parsing the input file.
 	Err error
 	// Name of the input file.
@@ -131,7 +162,9 @@ func PreReadZkcInputs(inputsFile string) *PreReadInputs {
 // TraceZkcInputs returns the lazy trace of the pre-read inputs. Shards are only
 // traced and expanded when requested (see [LazyTrace.Get]); with sharding
 // enabled, this call only runs the fast-mode pass recording one checkpoint per
-// shard. The function panics on errors.
+// shard. The function panics on errors. The
+// driver's System must be compiled before tracing: the trace is padded to its
+// dynamic modules' minimum sizes (see [PadToMinSizes]).
 func (a *ZkCDriver) TraceZkcInputs(preRead *PreReadInputs) trace.LazyTrace[koalabear.Element] {
 
 	assignStart := time.Now()
@@ -159,7 +192,7 @@ func (a *ZkCDriver) TraceZkcInputs(preRead *PreReadInputs) trace.LazyTrace[koala
 	// Attempt to trace the ZkC program using the provided inputs, generating a
 	// fully expanded AIR-compatible trace.
 	tracingStart := time.Now()
-	_, expandedTrace, errs := a.BinaryFile.Trace(inputs, a.TracingConfig)
+	_, expandedTrace, errs := a.BinaryFile.Trace(inputs, PadToMinSizes(a.TracingConfig, a.system))
 
 	if len(errs) > 0 {
 		logrus.Panicf("tracing failed: %v", errors.Join(errs...).Error())

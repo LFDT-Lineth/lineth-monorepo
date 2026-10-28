@@ -4,7 +4,7 @@ pragma solidity 0.8.33;
 /**
  * @title Interface for the V3DexSwapAdapter contract.
  * @dev A contract for swapping tokens on the V3 decentralized exchange.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 interface IV3DexSwapAdapter {

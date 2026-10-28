@@ -1,3 +1,18 @@
+## [unreleased]
+
+### 🐛 Bug Fixes
+
+- *(tracer)* Adapt reference tests to Besu block processor API (#4328)
+## [2.3.2] - 2026-10-26
+
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Update copyright holder to Consensys Incorporated (#4244)
+## [2.3.2-rc1] - 2026-10-16
+
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Update linea-besu AGENTS.md
 ## [2.3.1] - 2026-10-09
 
 ### 🐛 Bug Fixes

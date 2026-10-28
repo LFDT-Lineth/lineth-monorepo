@@ -2,7 +2,7 @@
   "name": "operations",
   "version": "1.0.0",
   "description": "Operations scripts",
-  "author": "Consensys Software Inc.",
+  "author": "Consensys Incorporated",
   "license": "(MIT OR Apache-2.0)",
   "scripts": {
     "build": "shx rm -rf dist && tsc -p tsconfig.build.json",
@@ -16,8 +16,8 @@
     "version": "oclif readme && git add README.md"
   },
   "dependencies": {
-    "@aws-sdk/client-cost-explorer": "3.1141.0",
-    "@duneanalytics/client-sdk": "0.4.2",
+    "@aws-sdk/client-cost-explorer": "3.1156.0",
+    "@duneanalytics/client-sdk": "0.5.1",
     "@oclif/core": "4.14.0",
     "@oclif/plugin-help": "6.3.0",
     "@oclif/plugin-plugins": "5.5.2",
@@ -38,10 +38,10 @@
     "jest-environment-node": "catalog:",
     "jest-mock-extended": "catalog:",
     "shx": "0.4.0",
-    "ts-jest": "29.4.14"
+    "ts-jest": "29.4.15"
   },
   "engines": {
-    "node": ">=24.18.0",
+    "node": ">=24.22.1",
     "pnpm": ">=12.6.0"
   },
   "main": "dist/index.js",

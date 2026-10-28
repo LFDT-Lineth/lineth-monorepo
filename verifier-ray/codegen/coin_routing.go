@@ -97,6 +97,19 @@ func DynamicModuleIndex(sys *wiop.System) map[*wiop.Module]int {
 	return idx
 }
 
+// moduleSizeOf describes the size of m: static, or the index of its runtime
+// size in the proof's module_sizes, given dynamicIndices = DynamicModuleIndex.
+func moduleSizeOf(m *wiop.Module, dynamicIndices map[*wiop.Module]int) (ModuleSize, error) {
+	if !m.IsDynamic() {
+		return ModuleSize{StaticSize: m.Size()}, nil
+	}
+	idx, ok := dynamicIndices[m]
+	if !ok {
+		return ModuleSize{}, fmt.Errorf("codegen: dynamic module %q not found in sys.Modules order", m.Context.Path())
+	}
+	return ModuleSize{Dynamic: true, DynamicIndex: idx}, nil
+}
+
 // DynamicModuleSizes returns the runtime size of every dynamic module in sys,
 // in DynamicModuleOrder — the same order PcsColumnDesc.DynamicIndex and the
 // proof's `module_sizes` slice both reference.

@@ -11,7 +11,7 @@ updates:
     open-pull-requests-limit: 5
     labels: ["dependencies", "github-actions"]
     commit-message:
-      prefix: "deps(actions)"
+      prefix: "ci"
       include: "scope"
     cooldown:
       default-days: 7

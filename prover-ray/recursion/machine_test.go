@@ -5,15 +5,13 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/require"
 )
 
-func init() {
-	// The full pipeline runs the PCS; keep FRI's query count tiny so the
-	// tests stay fast.
-	pcs.SetFRINumQueriesForTest(2)
-}
+// testPCSOpts keeps FRI's query count tiny so the tests stay fast: the full
+// pipeline runs the PCS. The reduced count must not be used in production.
+var testPCSOpts = wioptest.TestingCompileOptions()
 
 // copyMod is the module name of copyChip.
 const copyMod = "copy"
@@ -103,7 +101,7 @@ func proveAndVerify(p *Program, r *Run) error {
 // and verifies; the copies hold their sources' values.
 func TestMachineBus(t *testing.T) {
 	m, outs := busProgram()
-	p, err := m.Compile()
+	p, err := m.Compile(testPCSOpts...)
 	require.NoError(t, err)
 	require.NotNil(t, p.Bus, "the program accesses the memory")
 	for _, seed := range []uint64{1, 5} {
@@ -136,7 +134,7 @@ func TestMachineBusRejects(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			m, _ := busProgram()
-			p, err := m.Compile()
+			p, err := m.Compile(testPCSOpts...)
 			require.NoError(t, err)
 			r, err := p.Execute([]Cell{cell(1), cell(2), cell(3)})
 			require.NoError(t, err)
@@ -185,7 +183,7 @@ func TestMachineConstraints(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			m := &Machine{}
 			m.extra = append(m.extra, counterChip{n: 8})
-			p, err := m.Compile()
+			p, err := m.Compile(testPCSOpts...)
 			require.NoError(t, err)
 			require.Nil(t, p.Bus, "no memory access")
 			r, err := p.Execute(nil)
@@ -206,7 +204,7 @@ func TestMachineConstraints(t *testing.T) {
 func TestCompileDeterministic(t *testing.T) {
 	columns := func() []string {
 		m, _ := busProgram()
-		p, err := m.Compile()
+		p, err := m.Compile(testPCSOpts...)
 		require.NoError(t, err)
 		var res []string
 		for _, mod := range p.modules {
@@ -250,7 +248,7 @@ func kindsProgram() (*Machine, []Cell, int) {
 // mistyped hint), consistently on the bus, is rejected.
 func TestWitnessKinds(t *testing.T) {
 	m, in, _ := kindsProgram()
-	p, err := m.Compile()
+	p, err := m.Compile(testPCSOpts...)
 	require.NoError(t, err)
 	r, err := p.Execute(in)
 	require.NoError(t, err)
@@ -265,7 +263,7 @@ func TestWitnessKinds(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			m, in, _ := kindsProgram()
-			p, err := m.Compile()
+			p, err := m.Compile(testPCSOpts...)
 			require.NoError(t, err)
 			bad := append([]Cell(nil), in...)
 			bad[tamper.input][tamper.lane].SetUint64(5)
@@ -282,7 +280,7 @@ func TestWitnessKinds(t *testing.T) {
 
 	t.Run("E6 hint, lane 6", func(t *testing.T) {
 		m, in, h := kindsProgram()
-		p, err := m.Compile()
+		p, err := m.Compile(testPCSOpts...)
 		require.NoError(t, err)
 		r, err := p.Execute(in)
 		require.NoError(t, err)

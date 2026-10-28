@@ -82,6 +82,59 @@ gnark arithmetic circuit. Queries that cannot be expressed in-circuit (e.g.
 `TableRelation`, `LogDerivativeSum`) must be compiled away before the gnark
 layer runs.
 
+### Pass configuration
+
+`compilers.CompileFull` runs every pass in dependency order. Pass settings are
+recorded on the `System` itself, so the full pipeline and a standalone
+sequence of passes observe the same selection:
+
+```go
+compilers.CompileFull(sys,
+    compilers.ConfigurePCS(pcs.WithFRINumQueries(2)),
+    compilers.ConfigureMessageBus(messagebus.WithoutSharedRandomness()),
+)
+
+// Or configure a different System, then run passes separately:
+compilers.Configure(otherSys, compilers.ConfigurePCS(pcs.WithFRINumQueries(2)))
+// ... earlier passes ...
+pcs.Compile(otherSys)
+```
+
+Selections only accumulate: repeating a recorded value is harmless, while a
+divergent one is rejected before the System is mutated. Defaults stay unset
+until the first pass that does work consumes them; from then on the effective
+selection, defaults included, is frozen. `compilers.WithoutPCS()` declares a
+PCS-less System and conflicts with any PCS selection.
+
+### Verifier circuit
+
+`VerifierCircuit` is the gnark counterpart of `System.Verify`. Its witness is
+a `Proof` plus its `PublicInput`; its constraints replay the Fiat-Shamir
+transcript with an in-circuit Poseidon2 sponge (so every coin is re-derived,
+never trusted) and then run the `CheckGnark` method of every registered
+verifier action. It is meant to be embedded in an outer PLONK circuit over a
+large field (KoalaBear is emulated there) to wrap a wiop proof into a
+pairing-based proof.
+
+Design points:
+
+- A verifier action takes part in the circuit by implementing
+  `GnarkVerifierAction`. `AllocateVerifierCircuit` fails closed: an action
+  without `CheckGnark` makes allocation panic rather than dropping the check.
+  Today the `pcs` opening verifier and the `global` quotient verifier
+  implement it.
+- The circuit is allocated from a template proof. The base/extension tag of
+  a proof cell follows the value (`field.Gen.IsBase`), not the cell
+  declaration, and the tag decides how the transcript absorbs the cell, so
+  the witness layout is fixed from an honest proof and re-checked on every
+  assignment.
+- Structural facts (round layout, batch shapes, Merkle geometry) are
+  compile-time and checked with panics; value facts (roots, claims, fold
+  values) are constraints. FRI query positions are circuit variables, so all
+  position-dependent Merkle and domain-point logic works on their bits.
+- Not supported yet: dynamic-size modules (their sizes change the circuit
+  shape), pre-sampling hooks, and verifier actions other than the two above.
+
 ### Object identity
 
 Every registered object (`Column`, `Cell`, `CoinField`) carries a

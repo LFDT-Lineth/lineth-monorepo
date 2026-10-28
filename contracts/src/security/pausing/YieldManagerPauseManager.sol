@@ -5,7 +5,7 @@ import { PauseManager } from "./PauseManager.sol";
 
 /**
  * @title Contract to manage pausing roles for the YieldManager.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract YieldManagerPauseManager is PauseManager {

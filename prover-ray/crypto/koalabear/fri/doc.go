@@ -31,10 +31,12 @@
 // consistently from one layer to the next.
 //
 // Query branches all pass through the same upper part of a tree, so that part
-// is sent once as a [MerkleCap] rather than repeated in every branch. The cap
-// is authenticated against the root once per tree; each branch is then
-// authenticated only from the frontier down. See merkleCapDepth for how the
-// frontier depth is chosen.
+// can be sent once as a [MerkleCap] rather than repeated in every branch. The
+// cap is authenticated against the root once per tree; each branch is then
+// authenticated only from the frontier down. Params.MerkleCapHeight sets the
+// frontier depth (clamped per tree to height-1); it is zero by default, i.e.
+// no cap, and [OptimalMerkleCapHeight] gives the digest-minimising choice for
+// a query count.
 //
 // # PCS
 //

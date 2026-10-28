@@ -60,7 +60,7 @@ jobs:
         run: ./gradlew :tracer:reference-tests:generateExecutionSpecBlockchainTests -Dorg.gradle.caching=true
 
       - name: Download artifact
-        uses: dawidd6/action-download-artifact@8305c0f1062bb0d184d09ef4493ecb9288447732 # v20
+        uses: dawidd6/action-download-artifact@eab87c9830c39eff17e5a6eadb20bfb4bc880477 # v27
         if: ${{ inputs.failed_module != '' }}
         with:
           name: failedBlockchainReferenceTests.json
@@ -87,28 +87,28 @@ jobs:
 
       - name: Upload artifact
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: failedBlockchainReferenceTests-${{ inputs.zkevm_fork }}.json
           path: ${{ github.workspace }}/tmp/${{ github.head_ref || github.ref_name }}/
 
       - name: Upload test report
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: blockchain-reference-tests-report-${{ inputs.zkevm_fork }}
           path: tracer/reference-tests/build/reports/tests/**/*
 
       - name: Upload jacoco exec spec blockchain tests coverage report
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: jacoco-blockchain-tests-coverage-report-${{ inputs.zkevm_fork }}
           path: tracer/reference-tests/build/reports/jacoco/jacocoReferenceExecutionSpecBlockchainTestsReport/**/*
 
       - name: Upload jacoco blockchain tests exec file
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: jacoco-blockchain-tests-exec-file-${{ inputs.zkevm_fork }}
           path: tracer/reference-tests/build/jacoco/referenceExecutionSpecBlockchainTests.exec

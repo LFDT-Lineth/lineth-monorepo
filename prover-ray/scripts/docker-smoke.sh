@@ -74,7 +74,7 @@ echo "==> native runner: runs in the image"
 # Run the bundled native runner on an extended (0x0002) input. This confirms the
 # runner and its shared libraries (glibc) run in the image. Step 3 checks the
 # output format.
-FIXTURE_DIR="$SCRIPT_DIR/../../riscv-guests/l2-execution/test/testdata"
+FIXTURE_DIR="$SCRIPT_DIR/../../riscv-guests/l2_execution/test/testdata"
 if ! $DOCKER run --rm \
         --entrypoint /opt/linea/prover-ray/l2-execution-runner \
         -v "$FIXTURE_DIR:/in:ro" \

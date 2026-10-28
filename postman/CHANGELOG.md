@@ -1,5 +1,11 @@
 ## [unreleased]
 
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Update copyright holder to Consensys Incorporated (#4244)
+- *(deps)* Refresh dependencies (#4323)
+## [1.0.2] - 2026-10-23
+
 ### 🐛 Bug Fixes
 
 - *(postman)* Use lineaRollupAddress and remove duplicate LineaRollup sources (#3456)
@@ -8,6 +14,7 @@
 
 - *(misc)* Docker image build streamlining (#3790)
 - *(deps)* Refresh dependencies and GitHub Actions (#4088)
+- *(deps)* Bump Node.js to 24.22.1 (#4284)
 ## [1.0.1] - 2026-06-29
 
 ### ⚙️ Miscellaneous Tasks

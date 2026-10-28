@@ -2,7 +2,7 @@
   "name": "@lfdt-lineth/contract-integrity-verifier-viem",
   "version": "1.0.0",
   "description": "Viem adapter for @lfdt-lineth/contract-integrity-verifier",
-  "author": "Consensys Software Inc.",
+  "author": "Consensys Incorporated",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

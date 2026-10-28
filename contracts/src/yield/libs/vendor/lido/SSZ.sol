@@ -7,7 +7,7 @@
 */
 
 /*
- * Extended by Consensys Software Inc. to support validation of the Pending Partial Withdrawals
+ * Extended by Consensys Incorporated to support validation of the Pending Partial Withdrawals
  * Array in the Beacon State. This extension adds functionality for computing SSZ hash tree roots
  * of PendingPartialWithdrawal arrays using progressive merkleization (merkleize_chunks) with
  * mix_in_length as per the SSZ specification.

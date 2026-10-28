@@ -4,7 +4,7 @@ pragma solidity ^0.8.33;
 /**
  * @title Minimal interface for a multisig Safe.
  * @notice Exposes only the subset of the Safe API consumed by operational helpers.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 interface ISafe {

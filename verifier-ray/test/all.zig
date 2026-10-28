@@ -12,8 +12,8 @@ comptime {
     _ = @import("fri_test.zig");
     _ = @import("pcs_test.zig");
     _ = @import("verifier_test.zig");
+    _ = @import("pcs_average_binding_test.zig");
     _ = @import("verify_pair_test.zig");
-    _ = @import("pcs_endpoint_binding_test.zig");
     _ = @import("proof_abi_test.zig");
     _ = @import("image_relocation_test.zig");
     _ = @import("riscv_proof_image_test.zig");

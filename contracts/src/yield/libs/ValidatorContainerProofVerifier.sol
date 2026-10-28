@@ -11,7 +11,7 @@ import { ErrorUtils } from "../../libraries/ErrorUtils.sol";
 
 /**
  * @title ValidatorContainerProofVerifier
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  * @notice Verifies merkle proofs for Validator container against the EIP-4788 beacon root.
  *

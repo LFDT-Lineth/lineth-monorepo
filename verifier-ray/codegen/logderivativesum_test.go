@@ -42,8 +42,11 @@ func TestBuildLogDerivSystemExtractsQuery(t *testing.T) {
 		t.Fatalf("expected exactly one query, got %d", len(ld.Queries))
 	}
 	q := ld.Queries[0]
-	if len(q.ZFinalRefs) != 1 {
-		t.Fatalf("a single fraction packs into one Z column, got %d z-final refs", len(q.ZFinalRefs))
+	if len(q.Entries) != 1 {
+		t.Fatalf("a single fraction packs into one Z column, got %d entries", len(q.Entries))
+	}
+	if want := (ModuleSize{StaticSize: 4}); q.Entries[0].Size != want {
+		t.Fatalf("the Z column's module is static of size 4: got size %+v, want %+v", q.Entries[0].Size, want)
 	}
 	if q.ResultIsZero {
 		t.Fatalf("a plain LogDerivativeSum query must not be marked result-is-zero")
@@ -64,7 +67,8 @@ func TestWriteLogDerivSystemZigRendersQuery(t *testing.T) {
 	got := out.String()
 	for _, want := range []string{
 		"const logderivativesum = @import",
-		"system_0_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{",
+		"system_0_logderiv_query_0_entries = [_]logderivativesum.Entry{",
+		".size = .{ .static = 4 }",
 		"system_0_logderiv_queries = [_]logderivativesum.Query{",
 		".result_ref = .{",
 		".result_is_zero = false",
@@ -74,7 +78,7 @@ func TestWriteLogDerivSystemZigRendersQuery(t *testing.T) {
 			t.Fatalf("generated Zig missing %q:\n%s", want, got)
 		}
 	}
-	// No concrete field values should be emitted for z-finals or result.
+	// No concrete field values should be emitted for averages or result.
 	if strings.Contains(got, "[_][6]u32{") {
 		t.Fatalf("generated Zig must not emit concrete [6]u32 arrays:\n%s", got)
 	}
@@ -108,6 +112,41 @@ func TestBuildLogDerivSystemMarksLookupResultZero(t *testing.T) {
 	}
 	if !ld.Queries[0].ResultIsZero {
 		t.Fatalf("a lookup-reduced query must be marked result-is-zero")
+	}
+}
+
+// TestBuildLogDerivSystemDynamicModuleSize: the column total is n·C with n a
+// dynamic module's runtime size, so the entry must reference the
+// proof-supplied size by the module's dynamic index, not a static size. Two
+// dynamic modules are declared and only the second one is in the sum, so the
+// expected index is the literal 1: a mix-up in the dynamic indices fails.
+func TestBuildLogDerivSystemDynamicModuleSize(t *testing.T) {
+	sys := wiop.NewSystemf("ld-codegen-dyn")
+	r0 := sys.NewRound()
+	sys.NewRound()
+	static := sys.NewSizedModule(sys.Context.Childf("static"), 4, wiop.PaddingDirectionNone)
+	unused := sys.NewDynamicModule(sys.Context.Childf("dyn0"), wiop.PaddingDirectionRight)
+	unused.NewColumn(sys.Context.Childf("u"), r0)
+	dyn := sys.NewDynamicModule(sys.Context.Childf("dyn1"), wiop.PaddingDirectionRight)
+	colS := static.NewColumn(sys.Context.Childf("s"), r0)
+	colD := dyn.NewColumn(sys.Context.Childf("d"), r0)
+	sys.NewLogDerivativeSum(sys.Context.Childf("ld"), []wiop.Fraction{
+		{Numerator: colS.View(), Denominator: wiop.NewConstantVector(static, field.NewFromString("1"))},
+		{Numerator: colD.View(), Denominator: wiop.NewConstantVector(dyn, field.NewFromString("1"))},
+	})
+	logderivativesum.Compile(sys)
+	global.Compile(sys)
+
+	ld, err := BuildLogDerivSystem(sys)
+	if err != nil {
+		t.Fatalf("BuildLogDerivSystem() error = %v", err)
+	}
+	if len(ld.Queries) != 1 || len(ld.Queries[0].Entries) != 2 {
+		t.Fatalf("want one query with one Z column per module, got %+v", ld.Queries)
+	}
+	want := ModuleSize{Dynamic: true, DynamicIndex: 1}
+	if got := ld.Queries[0].Entries[1].Size; got != want {
+		t.Fatalf("the dynamic module's Z column must use its proof-supplied size: got %+v, want %+v", got, want)
 	}
 }
 

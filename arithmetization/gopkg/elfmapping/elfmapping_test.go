@@ -3,7 +3,6 @@ package elfmapping_test
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/hex"
 	"math"
 	"reflect"
 	"testing"
@@ -76,8 +75,8 @@ func TestPrepareInputsWritesLegacySectionsTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PrepareInputs() error = %v", err)
 	}
-	if got := hex.EncodeToString(inputs[elfmapping.BlobsExecutableInput]); got != "80" {
-		t.Errorf("blobs_executable = %s, want 80", got)
+	if got := inputs[elfmapping.BlobsExecutableInput]; got.String() != "80" {
+		t.Errorf("blobs_executable = %s, want 80", got.String())
 	}
 	want := "index, offset,             size,               exec, name\n" +
 		"0    , 0x0000000000800000, 0x0000000000000004, yes, .text\n" +
@@ -318,10 +317,10 @@ func TestEncodeInputsLegacyGolden(t *testing.T) {
 	}
 
 	want := map[string]string{
-		elfmapping.EntryPointAndBlobsCountInput: "00000000008000000000000000000003",
-		elfmapping.BlobsOffsetAndSizeInput: "00000000008000000000000000000004" +
-			"00000000088000000000000000000008" +
-			"00000000088000080000000000000003",
+		elfmapping.EntryPointAndBlobsCountInput: "000000000080000000000003",
+		elfmapping.BlobsOffsetAndSizeInput: "000000000080000000000004" +
+			"000000000880000000000008" +
+			"000000000880000800000003",
 		elfmapping.BlobsDataInput:       "970200000300000000000000aabbcc",
 		elfmapping.BlobsExecutableInput: "80",
 	}
@@ -329,8 +328,8 @@ func TestEncodeInputsLegacyGolden(t *testing.T) {
 		t.Fatalf("len(inputs) = %d, want %d", len(inputs), len(want))
 	}
 	for name, wantHex := range want {
-		if got := hex.EncodeToString(inputs[name]); got != wantHex {
-			t.Errorf("inputs[%q] = %s, want %s", name, got, wantHex)
+		if got := inputs[name]; got.String() != wantHex {
+			t.Errorf("inputs[%q] = %s, want %s", name, got.String(), wantHex)
 		}
 	}
 }
@@ -350,8 +349,8 @@ func TestEncodeInputsDoesNotMutateOrAliasInputs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EncodeInputs() error = %v", err)
 	}
-	if got := hex.EncodeToString(inputs[elfmapping.BlobsDataInput]); got != "01020304" {
-		t.Fatalf("blobs_data = %s, want 01020304", got)
+	if got := inputs[elfmapping.BlobsDataInput]; got.String() != "01020304" {
+		t.Fatalf("blobs_data = %s, want 01020304", got.String())
 	}
 	if _, ok := inputs[elfmapping.BlobsExecutableInput]; ok {
 		t.Error("default EncodeInputs() unexpectedly included blobs_executable")
@@ -365,8 +364,8 @@ func TestEncodeInputsDoesNotMutateOrAliasInputs(t *testing.T) {
 
 	programBlobs[1].Data[0] = 0xff
 	additional[0].Data[0] = 0xff
-	if got := hex.EncodeToString(inputs[elfmapping.BlobsDataInput]); got != "01020304" {
-		t.Errorf("encoded output aliases input data: got %s", got)
+	if got := inputs[elfmapping.BlobsDataInput]; got.String() != "01020304" {
+		t.Errorf("encoded output aliases input data: got %s", got.String())
 	}
 }
 
@@ -417,10 +416,13 @@ func TestEncodeInputsAllowsAdjacentAndEmptyBlobs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EncodeInputs() error = %v", err)
 	}
-	if got := hex.EncodeToString(inputs[elfmapping.BlobsDataInput]); got != "010203" {
-		t.Errorf("blobs_data = %s, want 010203", got)
+	if got := inputs[elfmapping.BlobsDataInput]; got.String() != "010203" {
+		t.Errorf("blobs_data = %s, want 010203", got.String())
 	}
-	count := binary.BigEndian.Uint64(inputs[elfmapping.EntryPointAndBlobsCountInput][8:])
+	var (
+		epAndBlobs = inputs[elfmapping.EntryPointAndBlobsCountInput]
+		count      = binary.BigEndian.Uint32(epAndBlobs.Bytes()[8:])
+	)
 	if count != 3 {
 		t.Errorf("blob count = %d, want 3", count)
 	}

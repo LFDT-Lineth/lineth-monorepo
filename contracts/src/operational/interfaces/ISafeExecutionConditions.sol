@@ -7,7 +7,7 @@ pragma solidity ^0.8.33;
  * @dev The functions are intentionally non-`view` even though they do not mutate state. Multisig UIs (e.g.
  * Safe{Wallet} Transaction Builder) classify `view`/`pure` ABI entries as read-only calls and exclude them when
  * staging batched transactions, so a non-`view` mutability is required for these guards to be usable as a batch call.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 interface ISafeExecutionConditions {

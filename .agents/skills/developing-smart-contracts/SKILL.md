@@ -85,7 +85,7 @@ See [rules/gas-optimization.md](rules/gas-optimization.md) for details.
 function sendMessage(address _to, uint256 _fee) external payable returns (bytes32 messageHash);
 ```
 
-Every contract/interface NatSpec block must include `@author Consensys Software Inc.` and `@custom:security-contact security-report@linea.build`.
+Every contract/interface NatSpec block must include `@author Consensys Incorporated` and `@custom:security-contact security-report@linea.build`.
 
 Consult [rules/natspec.md](rules/natspec.md) for NatSpec docstring rules and examples
 
@@ -114,7 +114,7 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title Brief description.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 contract MessageService is IMessageService, Ownable {

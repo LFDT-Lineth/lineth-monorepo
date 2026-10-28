@@ -33,7 +33,7 @@ import { ImportType } from "../ImportType.sol";
 
 /**
  * @title Brief description.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 interface ISampleContract {
@@ -84,7 +84,7 @@ import { SafeERC20, IERC20 } from "@openzeppelin/contracts/token/ERC20/utils/Saf
 
 /**
  * @title Brief description.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 contract SampleContract is ISampleContract {
@@ -178,7 +178,7 @@ import { Dependency } from "./path/to/Dependency.sol";
 
 /**
  * @title Brief, one-line description.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 ```

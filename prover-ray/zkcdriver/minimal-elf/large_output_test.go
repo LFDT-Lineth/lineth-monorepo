@@ -53,10 +53,12 @@ func TestExecuteLargeGuestOutput(t *testing.T) {
 	t.Logf("executed in %v", time.Since(start))
 
 	got := outputs["guest_output"]
-	if len(got) != size {
-		t.Fatalf("guest_output has %d bytes, want %d", len(got), size)
+	gotBytes := got.Bytes()
+	//
+	if len(gotBytes) != size {
+		t.Fatalf("guest_output has %d bytes, want %d", len(gotBytes), size)
 	}
-	if got[0] != 'A' || got[size-1] != 'Z' {
-		t.Fatalf("guest_output first/last bytes = %q/%q, want 'A'/'Z'", got[0], got[size-1])
+	if gotBytes[0] != 'A' || gotBytes[size-1] != 'Z' {
+		t.Fatalf("guest_output first/last bytes = %q/%q, want 'A'/'Z'", gotBytes[0], gotBytes[size-1])
 	}
 }

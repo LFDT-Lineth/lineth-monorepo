@@ -106,7 +106,7 @@ riscv-test() {
 ```
 
 For the accelerated l2-execution guest helper (`agp`), see the
-[l2-execution guest README](../../../riscv-guests/l2-execution/README.md).
+[l2-execution guest README](../../../riscv-guests/l2_execution/README.md).
 
 ## Usage examples
 
@@ -273,8 +273,8 @@ The ELF-to-JSON helper writes sparse memory blobs in this shape:
 
 ```json
 {
-  "entry_point_and_blobs_count": "0x<entry_point:u64>_<blobs_count:u64>",
-  "blobs_offset_and_size": "0x<blob0_offset:u64>_<blob0_size:u64>____<blob1_offset:u64>_<blob1_size:u64>____...",
+  "entry_point_and_blobs_count": "0x<entry_point:u64>_<blobs_count:u32>",
+  "blobs_offset_and_size": "0x<blob0_offset:u64>_<blob0_size:u32>____<blob1_offset:u64>_<blob1_size:u32>____...",
   "blobs_data": "0x<blob0_bytes>____<blob1_bytes>____..."
 }
 ```

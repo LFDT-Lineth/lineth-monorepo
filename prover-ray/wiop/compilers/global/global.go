@@ -147,6 +147,9 @@ func compileModule(
 			ratioOrder = append(ratioOrder, r)
 		}
 		ratioToEntries[r] = append(ratioToEntries[r], v)
+		// The vanishing is folded into this module's quotient: mark it consumed
+		// so the pipeline's final audit finds only queries no pass reduced.
+		v.MarkAsReduced()
 	}
 
 	// --- Step 2: merging coin in quotientRound ---

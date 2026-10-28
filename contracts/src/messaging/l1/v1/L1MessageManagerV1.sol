@@ -5,7 +5,7 @@ import { IL1MessageManagerV1 } from "./interfaces/IL1MessageManagerV1.sol";
 
 /**
  * @title Contract to manage cross-chain message hashes storage and status on L1.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract L1MessageManagerV1 is IL1MessageManagerV1 {

@@ -5,6 +5,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,8 +16,8 @@ func makeVecEvalSystem(t *testing.T) (*wiop.System, *wiop.Column, *wiop.Column, 
 	c1 := mod.NewColumn(sys.Context.Childf("c1"), r0)
 	c2 := mod.NewColumn(sys.Context.Childf("c2"), r0)
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(c1, baseVec(4, 2)) // all 2
-	rt.AssignColumn(c2, baseVec(4, 3)) // all 3
+	rt.AssignColumn(c1, wioptest.ConstVec(4, 2)) // all 2
+	rt.AssignColumn(c2, wioptest.ConstVec(4, 3)) // all 3
 	return sys, c1, c2, rt
 }
 
