@@ -76,7 +76,7 @@ func NewProverState(p Params, levels []Level) (*ProverState, error) {
 	if p.numRounds() == 0 {
 		if l, ok := plan.levelAtRound[0]; ok {
 			var alphaDeep field.Ext
-			st.running = st.levels[l].EvalsAt(alphaDeep, st.runningOrZero())
+			st.running = st.levels[l].EvalsAt(alphaDeep, st.running)
 		}
 		coeffs := append([]field.Ext(nil), st.running...)
 		p.domains[0].FFTInverseExt6(coeffs, fft.DIT)
@@ -115,7 +115,7 @@ func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 	if l, ok := st.plan.levelAtRound[j]; ok {
 		var alphaDeep field.Ext
 		alphaDeep.Square(&alpha)
-		primary = st.levels[l].EvalsAt(alphaDeep, st.runningOrZero())
+		primary = st.levels[l].EvalsAt(alphaDeep, st.running)
 		if want := 1 << (st.p.LogCodewordSize - j); len(primary) != want {
 			panic(fmt.Sprintf("fri: ProverState.Fold: levels[%d].EvalsAt returned %d values, want %d", l, len(primary), want))
 		}
@@ -160,15 +160,6 @@ func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 	root := tree.Root()
 	st.RoundRoots[j] = root // root of layer j+1 → RoundRoots[(j+1)-1]
 	return root
-}
-
-// runningOrZero returns the running codeword, materializing the zero codeword
-// at the current round's size when no level has joined yet.
-func (st *ProverState) runningOrZero() []field.Ext {
-	if st.running != nil {
-		return st.running
-	}
-	return make([]field.Ext, 1<<(st.p.LogCodewordSize-st.round))
 }
 
 // Open runs the query phase for the given query positions and returns the

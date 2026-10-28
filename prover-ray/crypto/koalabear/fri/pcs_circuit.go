@@ -258,6 +258,9 @@ func (pcs *PCS) VerifyGnark(api frontend.API, in GnarkVerifyInputs, proof GnarkO
 	if err != nil {
 		panic(err)
 	}
+	if err := pcs.checkFoldedSchedule(layout); err != nil {
+		panic(fmt.Sprintf("fri: pcs.VerifyGnark: %v", err))
+	}
 	if len(proof.InputQueries) != int(pcs.Params.NumQueries) {
 		panic(fmt.Sprintf("fri: pcs.VerifyGnark: proof has %d input queries, want %d",
 			len(proof.InputQueries), pcs.Params.NumQueries))

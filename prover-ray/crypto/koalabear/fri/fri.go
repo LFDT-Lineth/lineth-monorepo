@@ -38,6 +38,13 @@ type Params struct {
 
 func (p Params) numRounds() uint8 { return p.LogPlainTextSize - p.logFinalPolySize }
 
+// MinFoldedSizeLog2 is log2 of the smallest plaintext size whose level is
+// folded: a level of size 2^logFinalPolySize joins at the boundary round
+// numRounds, after the last fold, where it is checked to be constant instead
+// (see checkFolds) and weighted by the last fold challenge rather than a
+// squared one (see levelAlphaDeep).
+func (p Params) MinFoldedSizeLog2() uint8 { return p.logFinalPolySize + 1 }
+
 type Option func(c *Params) error
 
 // LogFinalPolySize sets the log2 of the number of coefficients FRI folds down
@@ -264,7 +271,8 @@ func groupColumnsByClaimPoints(columns []quotientColumn, alphaPow []field.Ext) [
 // EvalsAt returns this level's evaluations, combined with the running codeword.
 // Column c is weighted by alphaDeep^Powers[c] and running by
 // alphaDeep^RunningPower (see deepPowers; by default, alphaDeep^c and
-// alphaDeep^len(Columns)).
+// alphaDeep^len(Columns)). A nil running is the zero codeword (see
+// ProverState).
 //
 // The batched DEEP quotient is computed combine-then-divide: the columns of
 // each quotientGroup are first combined into G_g(X) = Σ_{c∈g} alphaDeep^{p(c)}·f_c(X)
@@ -288,10 +296,12 @@ func groupColumnsByClaimPoints(columns []quotientColumn, alphaPow []field.Ext) [
 // scale_z · DenomBaseInv[(e − rot_z) mod N], where e = bitReverse(pos),
 // rot_z = rs mod N, scale_z = ω^{−rs}.
 func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
-	evals := make([]field.Ext, len(running))
 	if len(l.Columns) == 0 {
-		copy(evals, running)
-		return evals
+		return append([]field.Ext(nil), running...)
+	}
+	evals := make([]field.Ext, l.Columns[0].codewordLen())
+	if running != nil && len(running) != len(evals) {
+		panic(fmt.Sprintf("fri: Level.EvalsAt: running codeword has %d values, want %d", len(running), len(evals)))
 	}
 
 	mask := len(l.DenomBaseInv) - 1
@@ -311,7 +321,9 @@ func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
 	// read-only inputs, disjoint writes to evals[start:end]. gbuf is the
 	// chunk-sized G_g scratch, reused across groups.
 	parallel.Execute(len(evals), func(start, end int) {
-		field.VecScaleExtExt(evals[start:end], alphaTop, running[start:end])
+		if running != nil {
+			field.VecScaleExtExt(evals[start:end], alphaTop, running[start:end])
+		}
 
 		gbuf := make([]field.Ext, end-start)
 		for gi := range groups {
