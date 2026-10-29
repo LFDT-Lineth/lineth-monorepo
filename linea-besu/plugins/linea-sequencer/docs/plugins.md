@@ -35,9 +35,10 @@ It is used in:
 |-------------------------------------------------------|----------------------|
 | `--plugin-linea-module-limit-file-path`               | moduleLimitFile.toml |
 | `--plugin-linea-over-line-count-limit-cache-size`     | 10_000               |
-| `--plugin-linea-tracing-end-timestamp`                | not set              |
+| `--plugin-linea-riscv-starting-block-timestamp`       | not set              |
 
-`--plugin-linea-tracing-end-timestamp` is an optional Unix epoch timestamp in seconds. Bespoke
+`--plugin-linea-riscv-starting-block-timestamp` is an optional Unix epoch timestamp in seconds marking
+the switch to RISC-V proving, after which the bespoke tracer's prover capacity limits no longer apply. Bespoke
 tracing and module-line-limit validation are enabled when the next pending block timestamp is
 strictly less than the configured value, and disabled when it is equal to or greater than the
 configured value. A value of `0` disables bespoke tracing for all normal blocks. When the option is

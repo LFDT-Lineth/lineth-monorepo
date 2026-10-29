@@ -58,14 +58,14 @@ class LineaTracerCliOptionsTest {
 
   @Test
   void shouldAcceptZeroTracingCutoff() {
-    parseWithModuleLimits(LineaTracerCliOptions.TRACING_END_TIMESTAMP, "0");
+    parseWithModuleLimits(LineaTracerCliOptions.RISCV_STARTING_BLOCK_TIMESTAMP, "0");
 
     assertThat(tracerCliOptions.toDomainObject().tracingEndTimestamp()).hasValue(0L);
   }
 
   @Test
   void shouldRejectNegativeTracingCutoff() {
-    parseWithModuleLimits(LineaTracerCliOptions.TRACING_END_TIMESTAMP, "-1");
+    parseWithModuleLimits(LineaTracerCliOptions.RISCV_STARTING_BLOCK_TIMESTAMP, "-1");
 
     assertThatExceptionOfType(IllegalArgumentException.class)
         .isThrownBy(tracerCliOptions::toDomainObject)

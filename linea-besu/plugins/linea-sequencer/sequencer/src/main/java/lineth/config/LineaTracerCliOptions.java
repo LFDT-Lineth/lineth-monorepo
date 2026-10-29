@@ -19,7 +19,8 @@ public class LineaTracerCliOptions implements LineaCliOptions {
 
   public static final String MODULE_LIMIT_FILE_PATH = "--plugin-linea-module-limit-file-path";
   public static final String DEFAULT_MODULE_LIMIT_FILE_PATH = "moduleLimitFile.toml";
-  public static final String TRACING_END_TIMESTAMP = "--plugin-linea-tracing-end-timestamp";
+  public static final String RISCV_STARTING_BLOCK_TIMESTAMP =
+      "--plugin-linea-riscv-starting-block-timestamp";
 
   @CommandLine.Option(
       names = {MODULE_LIMIT_FILE_PATH},
@@ -30,10 +31,11 @@ public class LineaTracerCliOptions implements LineaCliOptions {
   private String moduleLimitFilePath = DEFAULT_MODULE_LIMIT_FILE_PATH;
 
   @CommandLine.Option(
-      names = {TRACING_END_TIMESTAMP},
+      names = {RISCV_STARTING_BLOCK_TIMESTAMP},
       paramLabel = "<UNIX_EPOCH_SECONDS>",
       description =
-          "Stop sequencer bespoke tracing at this pending block timestamp (default: unset)")
+          "RISC-V starting block timestamp; sequencer bespoke tracing stops for pending blocks"
+              + " at or after it (default: unset)")
   private Long tracingEndTimestamp;
 
   private LineaTracerCliOptions() {}
@@ -69,7 +71,8 @@ public class LineaTracerCliOptions implements LineaCliOptions {
   @Override
   public LineaTracerLineLimitConfiguration toDomainObject() {
     if (tracingEndTimestamp != null && tracingEndTimestamp < 0) {
-      throw new IllegalArgumentException(TRACING_END_TIMESTAMP + " must be zero or greater");
+      throw new IllegalArgumentException(
+          RISCV_STARTING_BLOCK_TIMESTAMP + " must be zero or greater");
     }
 
     return LineaTracerLineLimitConfiguration.builder()
@@ -86,7 +89,7 @@ public class LineaTracerCliOptions implements LineaCliOptions {
   public String toString() {
     return MoreObjects.toStringHelper(this)
         .add(MODULE_LIMIT_FILE_PATH, moduleLimitFilePath)
-        .add(TRACING_END_TIMESTAMP, tracingEndTimestamp)
+        .add(RISCV_STARTING_BLOCK_TIMESTAMP, tracingEndTimestamp)
         .toString();
   }
 }

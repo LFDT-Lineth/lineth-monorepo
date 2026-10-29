@@ -29,7 +29,7 @@ class BespokeTracingCutoffTest : LineaPluginPoSTestBase() {
       )
       .set("--plugin-linea-limitless-enabled=", "true")
       .set("--plugin-linea-tx-pool-simulation-check-api-enabled=", "true")
-      .set("--plugin-linea-tracing-end-timestamp=", "0")
+      .set("--plugin-linea-riscv-starting-block-timestamp=", "0")
       .build()
   }
 
