@@ -19,9 +19,6 @@ extern var _heap_start: u8;
 // Linker script does not actually constraint the heap to 256 MiB, but this is a reasonable upper bound
 const GUEST_HEAP_SIZE: usize = 256 * 1024 * 1024;
 
-// Expose the guest allocator as ABI-compatible pointer and vtable words for the C shim.
-export var guest_allocator: extern struct { ptr: *anyopaque, vtable: *const anyopaque } = undefined;
-
 // This is the Rollup's extended l2-execution zkVM guest: it decodes the extended
 // `L2ExecutionProofPrivateInput` SSZ envelope, runs `l2_execution.runL2Execution` (the
 // Linea/Rollup-specific layer over per-block stateless execution — conflation, forced
@@ -48,7 +45,7 @@ fn guestMain() callconv(.c) noreturn {
     const heap = @as([*]u8, @ptrCast(&_heap_start))[0..GUEST_HEAP_SIZE];
     var fba = std.heap.FixedBufferAllocator.init(heap);
     const allocator = fba.allocator();
-    guest_allocator = .{ .ptr = allocator.ptr, .vtable = @ptrCast(allocator.vtable) };
+    @import("zkvm_provide").setAllocator(allocator);
 
     var buf_ptr: [*]const u8 = undefined;
     var buf_size: usize = undefined;
