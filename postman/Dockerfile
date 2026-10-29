@@ -59,6 +59,7 @@ WORKDIR /usr/src/app
 # Note: Using slim (Debian/glibc) instead of alpine (musl) for compatibility
 # with the prebuilt native blob_compressor Go library that's dynamically linked against glibc
 COPY --from=builder --chown=node:node /usr/src/app/prod/postman ./postman
+COPY LICENSE-APACHE LICENSE-MIT ./
 
 # Run as non-root user
 USER node
@@ -79,4 +80,5 @@ LABEL org.label-schema.build-date=$BUILD_DATE \
 	org.label-schema.vcs-url="https://github.com/LFDT-Lineth/lineth-monorepo" \
 	org.label-schema.vendor="ConsenSys" \
 	org.label-schema.version=$VERSION \
-	org.label-schema.schema-version="1.0"
+	org.label-schema.schema-version="1.0" \
+	org.opencontainers.image.licenses="MIT OR Apache-2.0"

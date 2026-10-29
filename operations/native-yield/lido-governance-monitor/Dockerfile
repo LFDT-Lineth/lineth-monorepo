@@ -62,6 +62,7 @@ RUN apt-get update \
 # migrations. The writable Prisma cache is chown'd separately below.
 # KICS: Chown Flag Exists.
 COPY --from=builder /usr/src/app/prod/operations/native-yield/lido-governance-monitor ./operations/native-yield/lido-governance-monitor
+COPY LICENSE-APACHE LICENSE-MIT ./
 
 # Copy prompts directory (not included in dist)
 COPY --from=builder /usr/src/app/operations/native-yield/lido-governance-monitor/src/prompts ./operations/native-yield/lido-governance-monitor/src/prompts
@@ -102,4 +103,5 @@ LABEL org.label-schema.build-date=$BUILD_DATE \
 	org.label-schema.vcs-url="https://github.com/LFDT-Lineth/lineth-monorepo" \
 	org.label-schema.vendor="ConsenSys" \
 	org.label-schema.version=$VERSION \
-	org.label-schema.schema-version="1.0"
+	org.label-schema.schema-version="1.0" \
+	org.opencontainers.image.licenses="MIT OR Apache-2.0"

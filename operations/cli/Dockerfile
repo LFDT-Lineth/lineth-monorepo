@@ -29,6 +29,7 @@ WORKDIR /usr/src/app
 USER node
 
 COPY --from=builder /usr/src/app/prod ./
+COPY LICENSE-APACHE LICENSE-MIT ./
 
 ENTRYPOINT ["./bin/run.js"]
 
@@ -45,4 +46,5 @@ LABEL org.label-schema.build-date=$BUILD_DATE \
 	org.label-schema.vcs-url="https://github.com/LFDT-Lineth/lineth-monorepo" \
 	org.label-schema.vendor="Consensys" \
 	org.label-schema.version=$VERSION \
-	org.label-schema.schema-version="1.0"
+	org.label-schema.schema-version="1.0" \
+	org.opencontainers.image.licenses="MIT OR Apache-2.0"

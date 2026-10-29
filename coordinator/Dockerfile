@@ -33,6 +33,7 @@ WORKDIR /opt/consensys/linea/coordinator
 RUN mkdir -p logs /tmp/prover/request /tmp/prover/response
 
 COPY --from=builder /libs/** libs/
+COPY LICENSE-APACHE LICENSE-MIT ./
 
 ARG LINETH_APP_JAR=/opt/consensys/linea/coordinator/libs/coordinator.jar
 ENV LINETH_APP_JAR=$LINETH_APP_JAR
@@ -49,4 +50,5 @@ LABEL org.label-schema.build-date=$BUILD_DATE \
 	org.label-schema.vcs-url="https://github.com/LFDT-Lineth/lineth-monorepo" \
 	org.label-schema.vendor="ConsenSys" \
 	org.label-schema.version=$VERSION \
-	org.label-schema.schema-version="1.0"
+	org.label-schema.schema-version="1.0" \
+	org.opencontainers.image.licenses="MIT OR Apache-2.0"

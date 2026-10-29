@@ -61,4 +61,5 @@ LABEL org.label-schema.build-date=$BUILD_DATE \
       org.label-schema.vcs-url="https://github.com/besu-eth/besu.git" \
       org.label-schema.vendor="Hyperledger" \
       org.label-schema.version=$VERSION \
-      org.label-schema.schema-version="1.0"
+      org.label-schema.schema-version="1.0" \
+      org.opencontainers.image.licenses="Apache-2.0"

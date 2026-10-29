@@ -144,6 +144,18 @@ allprojects {
     exclude '**/generated/**'
   }
 
+  // tracer is licensed under Apache-2.0 only, the rest of the repository under MIT OR Apache-2.0
+  def isTracerProject = project.path == ':tracer' || project.path.startsWith(':tracer:')
+  def licenseFiles = isTracerProject ? ['LICENSE-APACHE'] : [
+    'LICENSE-APACHE',
+    'LICENSE-MIT'
+  ]
+  tasks.withType(Jar).configureEach {
+    metaInf {
+      from(licenseFiles.collect { rootProject.file(it) })
+    }
+  }
+
   tasks.withType(Test).configureEach {
     testLogging {
       events = [
