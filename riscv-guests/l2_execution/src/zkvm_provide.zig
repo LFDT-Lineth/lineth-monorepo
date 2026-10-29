@@ -4,11 +4,13 @@ const std = @import("std");
 const lineth_accel = @import("lineth_zkvm_accel");
 const zesu_crypto_backend = @import("zesu_crypto_backend");
 const guest_crypto = @import("guest_crypto");
+const secp256k1_std = @import("secp256k1_std");
 const build_options = @import("build_options");
 
 // The manifest: every `zkvm_*` symbol zesu references, and where each comes from — keccak is either
 // the Lineth wrapper (prover-accelerated) or the standard zig keccak, selected at build time by
-// -Dkeccak-accel; modexp/ripemd160/blake2f come from zesu_crypto_backend; secp256k1 and the
+// -Dkeccak-accel; modexp/ripemd160/blake2f come from zesu_crypto_backend; secp256k1 is either
+// secp256k1_std or guest_crypto, selected at build time by -Dsecp256k1-backend; the
 // BLS12-381/KZG and bn254 come from guest_crypto.
 comptime {
     if (build_options.keccak_accel) {
@@ -42,6 +44,11 @@ comptime {
     }
 }
 
+const secp256k1 = switch (build_options.secp256k1_backend) {
+    .std => secp256k1_std,
+    .constantine => guest_crypto,
+};
+
 const OK: i32 = 0;
 const ERR: i32 = 1;
 
@@ -67,10 +74,10 @@ fn ripemd160(data: [*]const u8, len: usize, output: *[32]u8) callconv(.c) i32 {
     return OK;
 }
 fn secp256k1_ecrecover(msg: *const [32]u8, sig: *const [64]u8, recid: u8, output: *[64]u8) callconv(.c) i32 {
-    return if (guest_crypto.ecrecover(msg, sig, recid, output)) OK else ERR;
+    return if (secp256k1.ecrecover(msg, sig, recid, output)) OK else ERR;
 }
 fn secp256k1_verify(msg: *const [32]u8, sig: *const [64]u8, pubkey: *const [64]u8, verified: *bool) callconv(.c) i32 {
-    guest_crypto.secp256k1Verify(msg, sig, pubkey, verified);
+    secp256k1.secp256k1Verify(msg, sig, pubkey, verified);
     return OK;
 }
 fn secp256r1_verify(msg: *const [32]u8, sig: *const [64]u8, pubkey: *const [64]u8, verified: *bool) callconv(.c) i32 {

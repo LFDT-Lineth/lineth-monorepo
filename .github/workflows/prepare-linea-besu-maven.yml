@@ -30,7 +30,7 @@ jobs:
       published_remotely: ${{ steps.check_bom.outputs.bom_available }}
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: false
 
@@ -135,7 +135,7 @@ jobs:
 
       - name: Upload Besu maven local and distribution artifact
         if: ${{ steps.check_bom.outputs.bom_available == 'false' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: linea-besu-dist-${{ steps.resolve_besu_version.outputs.besu_version }}
           path: tmp/besu-m2-stage/

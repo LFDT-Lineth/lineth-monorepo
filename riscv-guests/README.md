@@ -34,7 +34,7 @@ Each guest pins its **own** external dependencies in its `build.zig.zon`. For `l
 
 ## Crypto Backends
 
-The host test and freestanding guest both use Zesu's `extern` crypto backend. Every required `zkvm_*` symbol is provided in-process: Zig `std.crypto` implements SHA-256 and P-256, the `guest_crypto` Constantine static library implements secp256k1, BLS12-381, BN254, and KZG point evaluation, Zesu supplies modexp/RIPEMD-160/BLAKE2f, and keccak uses either Zig `std.crypto` or the custom RISC-V opcode that the prover arithmetizes.
+The host test and freestanding guest both use Zesu's `extern` crypto backend. Every required `zkvm_*` symbol is provided in-process: Zig `std.crypto` implements SHA-256 and P-256, the `guest_crypto` Constantine static library implements BLS12-381, BN254, and KZG point evaluation, secp256k1 ecrecover/verify come from a switchable backend (see the guest's README), Zesu supplies modexp/RIPEMD-160/BLAKE2f, and keccak uses either Zig `std.crypto` or the custom RISC-V opcode that the prover arithmetizes.
 
 ## Development
 
