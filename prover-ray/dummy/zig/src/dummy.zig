@@ -5,8 +5,8 @@
 //!
 //! The circuit is fixed and embedded below (`system_0_*`). Its public inputs X
 //! are those of the conglomeration root: the guest-output hash (32 cells), then
-//! the program verification key (8 cells, a placeholder until its encoding is
-//! fixed). A dummy proof has the shape of a ray proof: one round message whose
+//! the program verification key (8 cells, one per limb of the program-round
+//! commitment). A dummy proof has the shape of a ray proof: one round message whose
 //! cells are the witness Y, no commitment, no module sizes, an empty PCS
 //! opening. It is accepted iff, limb by limb over KoalaBear,
 //!

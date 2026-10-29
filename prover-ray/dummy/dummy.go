@@ -32,10 +32,10 @@ const (
 	// NumGuestOutputCells is the number of guest-output public inputs: one per
 	// bound output byte.
 	NumGuestOutputCells = risc5.NumGuestPublicOutputs
-	// NumProgramVKCells is the number of program-VK public inputs. The
-	// encoding of the program VK is not fixed yet; 8 (a Poseidon2 digest) is a
-	// placeholder.
-	NumProgramVKCells = 8
+	// NumProgramVKCells is the number of program-VK public inputs, as the
+	// RISC-V system registers them: one per limb of the program-round
+	// commitment.
+	NumProgramVKCells = risc5.NumProgramVK
 	// NumPublicInputs is the number of public inputs of the dummy circuit.
 	// The Zig verifier (zig/src/dummy.zig) hard-codes the same number.
 	NumPublicInputs = NumGuestOutputCells + NumProgramVKCells
@@ -166,7 +166,7 @@ func (relationCheck) Check(rt *wiop.Runtime) error {
 	for i, x := range rt.System.PublicInputs {
 		want := Witness(rt.GetCellValue(x))
 		got := rt.GetCellValue(y[i])
-		if !want.Ext.Equal(&got.Ext) {
+		if !want.Equal(&got.Ext) {
 			return fmt.Errorf("%w: public input %d", errRelationViolated, i)
 		}
 	}

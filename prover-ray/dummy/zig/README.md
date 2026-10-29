@@ -10,7 +10,7 @@ inputs can produce one.
 Everything is in one file, `src/dummy.zig`: the verifier and the circuit, which
 is fixed and embedded (`system_0_*`). Its public inputs are those of the
 conglomeration root: the guest-output hash (32 cells), then the program
-verification key (8 cells, a placeholder until its encoding is fixed).
+verification key (8 cells, one per limb of the program-round commitment).
 
 ## What it checks
 

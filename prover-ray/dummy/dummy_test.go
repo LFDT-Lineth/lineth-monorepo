@@ -140,7 +140,7 @@ func TestZigFixturesAreUpToDate(t *testing.T) {
 	for name, content := range fixtures {
 		path := filepath.Join(zigTestdata, name)
 		if os.Getenv("UPDATE_DUMMY_FIXTURES") != "" {
-			require.NoError(t, os.WriteFile(path, content, 0o644))
+			require.NoError(t, os.WriteFile(path, content, 0o600))
 			continue
 		}
 		committed, err := os.ReadFile(path)
