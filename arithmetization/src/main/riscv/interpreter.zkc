@@ -509,14 +509,14 @@ fn interpreter_b<registers, ram>(index:u32, pc:Address) -> (new_pc:Address) {
         case ITYPE_JALR: {
             printf "ITYPE_JALR(b) "
             print_i_memory_operands(rd, rs1, imm)
-            new_pc = (rs1_plus_imm & MASK_64_ERASE_LAST_BIT) as Address
+            new_pc = (rs1_plus_imm as Address) & 0xfffffffe
             // Early return
             return
         }
         case ITYPE_JALR_WB: {
             printf "ITYPE_JALR_WB(b) "
             print_i_memory_operands(rd, rs1, imm)
-            new_pc = (rs1_plus_imm & MASK_64_ERASE_LAST_BIT) as Address
+            new_pc = (rs1_plus_imm as Address) & 0xfffffffe
             // Write back
             registers[rd] = (pc + 4) as DoubleWord
             // Early Return

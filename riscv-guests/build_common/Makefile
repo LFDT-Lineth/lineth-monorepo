@@ -9,7 +9,7 @@ SP             ?= 0x00800000
 PROGRAM_ORIGIN ?= 0x00800000
 IN_ORIGIN      ?= 0x08800000
 HEAP_ORIGIN    ?= 0x48800000
-# Heap reserved for the guest allocator; must match the guests' GUEST_HEAP_SIZE.
+# Heap reserved for the guest allocator; guests read its bounds from `_heap_start`/`_heap_end`.
 HEAP_LENGTH    ?= 0x10000000
 
 # Support function to evaluate expressions and format them as hex
