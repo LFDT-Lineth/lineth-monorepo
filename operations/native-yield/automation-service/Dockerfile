@@ -52,7 +52,7 @@ RUN mkdir -p /usr/src/app/ipfs-cache && \
 USER node
 
 COPY --from=builder /usr/src/app/prod/operations/native-yield/automation-service ./operations/native-yield/automation-service
-COPY LICENSE-APACHE LICENSE-MIT ./
+COPY LICENSE-APACHE LICENSE-MIT /licenses/
 
 CMD [ "node", "./operations/native-yield/automation-service/dist/run.js" ]
 

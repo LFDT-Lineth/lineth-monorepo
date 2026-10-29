@@ -31,7 +31,7 @@ FROM alpine:3
 RUN apk add --no-cache bash musl-dev libgcc
 RUN mkdir -p /opt/linea/prover/lib/compressor /app/logs
 
-COPY LICENSE-APACHE LICENSE-MIT /opt/linea/prover/
+COPY LICENSE-APACHE LICENSE-MIT /licenses/
 
 # Copy the blob compressor dictionaries
 COPY --from=go-builder /usr/src/prover/lib/compressor/compressor_dict.bin /opt/linea/prover/lib/compressor/

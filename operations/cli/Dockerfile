@@ -29,7 +29,7 @@ WORKDIR /usr/src/app
 USER node
 
 COPY --from=builder /usr/src/app/prod ./
-COPY LICENSE-APACHE LICENSE-MIT ./
+COPY LICENSE-APACHE LICENSE-MIT /licenses/
 
 ENTRYPOINT ["./bin/run.js"]
 

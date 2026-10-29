@@ -4,7 +4,7 @@ FROM eclipse-temurin:25-jre-noble
 WORKDIR /opt/consensys/maru
 
 COPY --from=libs ./** ./
-COPY --from=licenses LICENSE-APACHE LICENSE-MIT ./
+COPY --from=licenses LICENSE-APACHE LICENSE-MIT /licenses/
 
 ENV LINETH_APP_JAR=/opt/consensys/maru/maru.jar
 

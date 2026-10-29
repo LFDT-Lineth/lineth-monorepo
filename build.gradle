@@ -154,6 +154,16 @@ allprojects {
     metaInf {
       from(licenseFiles.collect { rootProject.file(it) })
     }
+    // shading or exclusions can drop them: check the produced archive
+    doLast { Jar jar ->
+      def entries = new java.util.zip.ZipFile(jar.archiveFile.get().asFile).withCloseable { zip ->
+        zip.entries().collect { it.name } as Set
+      }
+      def missing = licenseFiles.findAll { !entries.contains("META-INF/${it}".toString()) }
+      if (missing) {
+        throw new GradleException("${jar.archiveFile.get().asFile.name} is missing META-INF/${missing.join(', META-INF/')}")
+      }
+    }
   }
 
   tasks.withType(Test).configureEach {

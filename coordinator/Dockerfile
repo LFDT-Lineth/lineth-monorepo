@@ -33,7 +33,7 @@ WORKDIR /opt/consensys/linea/coordinator
 RUN mkdir -p logs /tmp/prover/request /tmp/prover/response
 
 COPY --from=builder /libs/** libs/
-COPY LICENSE-APACHE LICENSE-MIT ./
+COPY LICENSE-APACHE LICENSE-MIT /licenses/
 
 ARG LINETH_APP_JAR=/opt/consensys/linea/coordinator/libs/coordinator.jar
 ENV LINETH_APP_JAR=$LINETH_APP_JAR

@@ -62,7 +62,7 @@ RUN apt-get update \
 # migrations. The writable Prisma cache is chown'd separately below.
 # KICS: Chown Flag Exists.
 COPY --from=builder /usr/src/app/prod/operations/native-yield/lido-governance-monitor ./operations/native-yield/lido-governance-monitor
-COPY LICENSE-APACHE LICENSE-MIT ./
+COPY LICENSE-APACHE LICENSE-MIT /licenses/
 
 # Copy prompts directory (not included in dist)
 COPY --from=builder /usr/src/app/operations/native-yield/lido-governance-monitor/src/prompts ./operations/native-yield/lido-governance-monitor/src/prompts

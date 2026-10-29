@@ -4,7 +4,7 @@ WORKDIR /opt/consensys/linea/transaction-exclusion-api/
 RUN mkdir -p logs
 
 COPY --from=libs ./** libs/
-COPY LICENSE-APACHE LICENSE-MIT ./
+COPY LICENSE-APACHE LICENSE-MIT /licenses/
 
 # Build-time metadata as defined at http://label-schema.org
 ARG BUILD_DATE

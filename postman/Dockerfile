@@ -59,7 +59,7 @@ WORKDIR /usr/src/app
 # Note: Using slim (Debian/glibc) instead of alpine (musl) for compatibility
 # with the prebuilt native blob_compressor Go library that's dynamically linked against glibc
 COPY --from=builder --chown=node:node /usr/src/app/prod/postman ./postman
-COPY LICENSE-APACHE LICENSE-MIT ./
+COPY LICENSE-APACHE LICENSE-MIT /licenses/
 
 # Run as non-root user
 USER node

@@ -80,7 +80,7 @@ LABEL org.label-schema.version=$VERSION \
 COPY --from=go-builder  /out/prover                                             /opt/linea/prover-ray/prover
 COPY --from=zig-builder /riscv-guests/l2_execution/zig-out/bin/l2-execution-runner /opt/linea/prover-ray/l2-execution-runner
 COPY --from=zig-builder /riscv-guests/l2_execution/zig-out/bin/evm_execution_guest /opt/linea/prover-ray/evm_execution_guest
-COPY --from=licenses LICENSE-APACHE LICENSE-MIT /opt/linea/prover-ray/
+COPY --from=licenses LICENSE-APACHE LICENSE-MIT /licenses/
 
 ENV PATH="/opt/linea/prover-ray:${PATH}"
 WORKDIR /opt/linea/prover-ray

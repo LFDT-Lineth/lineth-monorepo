@@ -11,8 +11,7 @@
     "lint:fix": "eslint --fix .",
     "clean": "rimraf dist src/typechain node_modules coverage tsconfig.build.tsbuildinfo",
     "build:pre": "pnpm run typechain",
-    "prepack": "cp ../LICENSE-APACHE . && cp ../LICENSE-MIT . && pnpm run build",
-    "postpublish": "rm -rf LICENSE-APACHE LICENSE-MIT",
+    "prepack": "pnpm run build",
     "build": "pnpm run build:pre && tsc -p tsconfig.build.json",
     "typechain": "typechain --target ethers-v6 --out-dir ./src/contracts/typechain './src/contracts/abis/*.abi'",
     "test": "jest --bail --detectOpenHandles --forceExit"
