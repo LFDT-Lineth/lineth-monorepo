@@ -1,0 +1,9 @@
+# gcharness -impl generic-asm -threads 64 -dur 4s; counters summed over all
+# threads of the process from /proc/<pid>/task/*/{schedstat,status}, sampled
+# 1 s and 3 s into the run (2 s window).
+gogc=100 over 2s: on-cpu 16.2 s (8.1 cores), runqueue wait 0.02 s, timeslices 106286, voluntary ctx sw 106160, involuntary 73
+gogc=off over 2s: on-cpu 114.9 s (57.4 cores), runqueue wait 0.31 s, timeslices 48799, voluntary ctx sw 47981, involuntary 749
+
+# /usr/bin/time, gcharness -threads 64 -dur 3s (whole process)
+gogc=100 minflt=112000 majflt=0 sys=1.86 user=21.85 wall=3.01
+gogc=off minflt=4633175 majflt=0 sys=10.77 user=161.87 wall=3.60

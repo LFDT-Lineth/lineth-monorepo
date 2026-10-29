@@ -1,0 +1,35 @@
+\begin{figure}[htbp]\centering
+\begin{tikzpicture}
+\begin{axis}[xmode=log, log basis x=2, xtick={1,2,4,8,16,32,48,64}, xticklabels={1,2,4,8,16,32,48,64}, xlabel={threads},
+  ylabel={world stopped (\% of wall-clock time)}, ymin=0,
+  legend pos=north west,
+  width=0.48\linewidth, height=6cm,
+  label style={font=\small}, tick label style={font=\scriptsize},
+  grid=major, major grid style={gray!20}, axis line style={gray!60},
+  legend style={font=\scriptsize, draw=none, fill=white, fill opacity=0.85, text opacity=1},
+  legend cell align=left,
+]
+\addplot[c1, thick, mark=square*, mark size=1.6pt] coordinates {(1,0.1) (2,0.5) (4,1.2) (8,3.8) (16,24.3) (32,28.1) (48,46.8) (64,56.1)};
+\addlegendentry{\texttt{generic-asm}}
+\addplot[c2, thick, mark=triangle*, mark size=1.6pt] coordinates {(1,0) (2,0.3) (4,0.8) (8,2.2) (16,19.6) (32,29.9) (48,38.2) (64,50.3)};
+\addlegendentry{hot-loop branches}
+\end{axis}
+\end{tikzpicture}\hfill
+\begin{tikzpicture}
+\begin{axis}[xmode=log, log basis x=2, xtick={1,2,4,8,16,32,48,64}, xticklabels={1,2,4,8,16,32,48,64}, xlabel={threads},
+  ymode=log, ylabel={mean stop-the-world pause (\textmu s, log scale)},
+  legend pos=north west,
+  width=0.48\linewidth, height=6cm,
+  label style={font=\small}, tick label style={font=\scriptsize},
+  grid=major, major grid style={gray!20}, axis line style={gray!60},
+  legend style={font=\scriptsize, draw=none, fill=white, fill opacity=0.85, text opacity=1},
+  legend cell align=left,
+]
+\addplot[c1, thick, mark=square*, mark size=1.6pt] coordinates {(1,4.545) (2,22.27) (4,29.1) (8,46.62) (16,326) (32,504.9) (48,1319) (64,2177)};
+\addlegendentry{\texttt{generic-asm}}
+\addplot[c2, thick, mark=triangle*, mark size=1.6pt] coordinates {(1,7.07) (2,25.23) (4,35.32) (8,49.15) (16,376.3) (32,789.1) (48,1343) (64,2738)};
+\addlegendentry{hot-loop branches}
+\end{axis}
+\end{tikzpicture}
+\caption{Stop-the-world time with the GC on, by number of threads (Table~\ref{tab:gc-scaling}). Both generic paths jump between 8 and 16 threads.}\label{fig:stw}
+\end{figure}

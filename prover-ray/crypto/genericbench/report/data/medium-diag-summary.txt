@@ -2,98 +2,98 @@ goos: linux
 goarch: amd64
 pkg: github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/genericbench
 cpu: Intel(R) Xeon(R) Platinum 8488C
-                                                      │  baseline   │                 generic                 │                generic-vec                 │               generic-asm                │               current               │
-                                                      │   sec/op    │     sec/op      vs base                 │     sec/op      vs base                    │    sec/op      vs base                   │   sec/op     vs base                │
-Permutation/field=koalabear/width=16-192                570.0n ± 0%    1463.0n ±  1%   +156.67% (p=0.002 n=6)   11599.0n ±  0%   +1934.91% (p=0.002 n=6)      573.8n ±  0%     +0.66% (p=0.002 n=6)
-Permutation/field=koalabear/width=24-192                706.2n ± 0%    2079.0n ±  0%   +194.39% (p=0.002 n=6)   12333.0n ±  0%   +1646.39% (p=0.002 n=6)      704.3n ±  0%     -0.27% (p=0.002 n=6)
-Permutation/field=mamabear/width=16-192                 2.086µ ± 0%     7.690µ ±  4%   +268.62% (p=0.002 n=6)
-Permutation/field=mamabear/width=24-192                 3.389µ ± 0%    10.630µ ±  4%   +213.72% (p=0.002 n=6)
-Compress/field=koalabear-192                            585.2n ± 0%    1535.5n ±  1%   +162.37% (p=0.002 n=6)   11671.0n ±  0%   +1894.19% (p=0.002 n=6)      654.8n ±  3%    +11.88% (p=0.002 n=6)
-Compress/field=mamabear-192                             2.203µ ± 1%     7.901µ ±  5%   +258.71% (p=0.002 n=6)
-CompressParallel/field=koalabear-192                    4.418n ± 1%   146.850n ± 10%  +3223.90% (p=0.002 n=6)   474.700n ± 13%  +10644.68% (p=0.002 n=6)     77.425n ± 16%  +1652.49% (p=0.002 n=6)
-CompressParallel/field=mamabear-192                     217.2n ± 4%    1473.5n ± 10%   +578.56% (p=0.002 n=6)
-MDHasher/field=koalabear/n=64-192                       4.971µ ± 4%    11.821µ ±  1%   +137.78% (p=0.002 n=6)    93.107µ ±  0%   +1772.80% (p=0.002 n=6)      5.265µ ±  1%     +5.90% (p=0.002 n=6)     4.857µ ± 0%  -2.30% (p=0.002 n=6)
-MDHasher/field=koalabear/n=4096-192                     307.6µ ± 1%     792.1µ ±  2%   +157.49% (p=0.002 n=6)    5956.2µ ±  0%   +1836.17% (p=0.002 n=6)      334.8µ ±  1%     +8.83% (p=0.002 n=6)     309.8µ ± 2%  +0.70% (p=0.026 n=6)
-MDHasher/field=koalabear/n=65536-192                    4.911m ± 1%    12.641m ±  1%   +157.38% (p=0.002 n=6)    95.269m ±  0%   +1839.80% (p=0.002 n=6)      5.343m ±  1%     +8.79% (p=0.002 n=6)     4.970m ± 1%  +1.19% (p=0.002 n=6)
-MDHasher/field=mamabear/n=64-192                        17.05µ ± 1%     58.16µ ±  1%   +241.12% (p=0.002 n=6)
-MDHasher/field=mamabear/n=4096-192                      1.124m ± 1%     3.674m ±  2%   +226.92% (p=0.002 n=6)
-MDHasher/field=mamabear/n=65536-192                     17.96m ± 0%     57.96m ±  3%   +222.71% (p=0.002 n=6)
-FiatShamir/field=koalabear/rounds=16/update=8-192       133.7µ ± 1%     295.7µ ±  0%   +121.19% (p=0.002 n=6)    2082.1µ ±  0%   +1457.51% (p=0.002 n=6)      141.1µ ±  1%     +5.56% (p=0.002 n=6)     132.6µ ± 1%       ~ (p=0.065 n=6)
-FiatShamir/field=koalabear/rounds=16/update=1024-192    1.356m ± 1%     3.446m ±  0%   +154.19% (p=0.002 n=6)    25.861m ±  0%   +1807.59% (p=0.002 n=6)      1.485m ±  1%     +9.56% (p=0.002 n=6)     1.365m ± 1%  +0.70% (p=0.002 n=6)
-FiatShamir/field=koalabear/rounds=256/update=8-192      2.113m ± 1%     4.799m ±  1%   +127.12% (p=0.002 n=6)    33.334m ±  0%   +1477.76% (p=0.002 n=6)      2.274m ±  2%     +7.63% (p=0.002 n=6)     2.136m ± 0%  +1.08% (p=0.002 n=6)
-FiatShamir/field=koalabear/rounds=256/update=1024-192   21.69m ± 0%     55.44m ±  2%   +155.61% (p=0.002 n=6)    412.85m ±  0%   +1803.43% (p=0.002 n=6)      23.71m ±  1%     +9.29% (p=0.002 n=6)     21.85m ± 0%  +0.74% (p=0.002 n=6)
-FiatShamir/field=mamabear/rounds=16/update=8-192        412.1µ ± 1%    1302.3µ ±  1%   +216.02% (p=0.002 n=6)
-FiatShamir/field=mamabear/rounds=16/update=1024-192     4.913m ± 1%    16.091m ±  2%   +227.48% (p=0.002 n=6)
-FiatShamir/field=mamabear/rounds=256/update=8-192       6.612m ± 0%    20.759m ±  1%   +213.97% (p=0.002 n=6)
-FiatShamir/field=mamabear/rounds=256/update=1024-192    77.99m ± 0%    254.85m ±  1%   +226.79% (p=0.002 n=6)
-geomean                                                 72.27µ          242.4µ         +235.38%                   729.3µ         +2060.15%               ¹    46.47µ          +37.63%               ¹   674.0µ       +0.18%               ¹
+                                                     │  baseline   │                generic                │               generic-vec                │              generic-asm               │               current               │
+                                                     │   sec/op    │    sec/op     vs base                 │    sec/op      vs base                   │    sec/op     vs base                  │   sec/op     vs base                │
+Permutation/field=koalabear/width=16-64                569.8n ± 0%   1464.0n ± 0%   +156.95% (p=0.002 n=6)   11601.0n ± 0%  +1936.16% (p=0.002 n=6)      573.5n ± 0%    +0.67% (p=0.002 n=6)
+Permutation/field=koalabear/width=24-64                705.1n ± 0%   2075.0n ± 0%   +194.26% (p=0.002 n=6)   12398.0n ± 0%  +1658.21% (p=0.002 n=6)      703.8n ± 0%    -0.20% (p=0.009 n=6)
+Permutation/field=mamabear/width=16-64                 2.104µ ± 1%    7.413µ ± 1%   +252.22% (p=0.002 n=6)
+Permutation/field=mamabear/width=24-64                 3.386µ ± 0%   10.352µ ± 1%   +205.71% (p=0.002 n=6)
+Compress/field=koalabear-64                            585.6n ± 3%   1543.0n ± 1%   +163.51% (p=0.002 n=6)   11673.0n ± 0%  +1893.51% (p=0.002 n=6)      652.9n ± 1%   +11.49% (p=0.002 n=6)
+Compress/field=mamabear-64                             2.215µ ± 0%    7.637µ ± 1%   +244.79% (p=0.002 n=6)
+CompressParallel/field=koalabear-64                    12.78n ± 1%   238.40n ± 5%  +1765.41% (p=0.002 n=6)    583.90n ± 6%  +4468.86% (p=0.002 n=6)     105.65n ± 6%  +726.68% (p=0.002 n=6)
+CompressParallel/field=mamabear-64                     293.1n ± 6%   2094.5n ± 3%   +614.48% (p=0.002 n=6)
+MDHasher/field=koalabear/n=64-64                       4.969µ ± 0%   11.780µ ± 0%   +137.09% (p=0.002 n=6)    93.093µ ± 0%  +1773.66% (p=0.002 n=6)      5.314µ ± 1%    +6.95% (p=0.002 n=6)     4.869µ ± 0%  -1.99% (p=0.002 n=6)
+MDHasher/field=koalabear/n=4096-64                     307.6µ ± 0%    790.2µ ± 0%   +156.86% (p=0.002 n=6)    5951.5µ ± 0%  +1834.55% (p=0.002 n=6)      337.9µ ± 1%    +9.85% (p=0.002 n=6)     310.8µ ± 1%  +1.04% (p=0.002 n=6)
+MDHasher/field=koalabear/n=65536-64                    4.913m ± 0%   12.649m ± 1%   +157.47% (p=0.002 n=6)    95.135m ± 0%  +1836.45% (p=0.002 n=6)      5.363m ± 1%    +9.16% (p=0.002 n=6)     4.969m ± 0%  +1.13% (p=0.002 n=6)
+MDHasher/field=mamabear/n=64-64                        17.03µ ± 0%    57.86µ ± 1%   +239.75% (p=0.002 n=6)
+MDHasher/field=mamabear/n=4096-64                      1.136m ± 1%    3.740m ± 1%   +229.23% (p=0.002 n=6)
+MDHasher/field=mamabear/n=65536-64                     18.25m ± 1%    58.34m ± 1%   +219.68% (p=0.002 n=6)
+FiatShamir/field=koalabear/rounds=16/update=8-64       134.4µ ± 1%    298.1µ ± 0%   +121.89% (p=0.002 n=6)    2094.7µ ± 0%  +1458.97% (p=0.002 n=6)      143.6µ ± 1%    +6.86% (p=0.002 n=6)     134.5µ ± 0%       ~ (p=0.699 n=6)
+FiatShamir/field=koalabear/rounds=16/update=1024-64    1.361m ± 0%    3.476m ± 1%   +155.40% (p=0.002 n=6)    25.843m ± 0%  +1798.72% (p=0.002 n=6)      1.497m ± 1%   +10.02% (p=0.002 n=6)     1.374m ± 0%  +0.92% (p=0.002 n=6)
+FiatShamir/field=koalabear/rounds=256/update=8-64      2.133m ± 0%    4.824m ± 1%   +126.12% (p=0.002 n=6)    33.461m ± 0%  +1468.54% (p=0.002 n=6)      2.279m ± 0%    +6.84% (p=0.002 n=6)     2.150m ± 1%  +0.78% (p=0.009 n=6)
+FiatShamir/field=koalabear/rounds=256/update=1024-64   21.81m ± 1%    55.59m ± 1%   +154.86% (p=0.002 n=6)    414.22m ± 0%  +1799.25% (p=0.002 n=6)      23.95m ± 0%    +9.80% (p=0.002 n=6)     21.90m ± 0%       ~ (p=0.093 n=6)
+FiatShamir/field=mamabear/rounds=16/update=8-64        418.8µ ± 0%   1327.0µ ± 1%   +216.84% (p=0.002 n=6)
+FiatShamir/field=mamabear/rounds=16/update=1024-64     4.960m ± 0%   16.256m ± 1%   +227.73% (p=0.002 n=6)
+FiatShamir/field=mamabear/rounds=256/update=8-64       6.689m ± 1%   21.026m ± 1%   +214.36% (p=0.002 n=6)
+FiatShamir/field=mamabear/rounds=256/update=1024-64    78.90m ± 0%   258.72m ± 1%   +227.90% (p=0.002 n=6)
+geomean                                                77.27µ         251.8µ        +225.84%                   744.2µ       +1897.34%               ¹    48.04µ        +28.94%               ¹   677.3µ       +0.34%               ¹
 ¹ benchmark set differs from baseline; geomeans may not be comparable
 
-                                                      │    baseline    │                 generic                  │                generic-vec                │                generic-asm                │                current                │
-                                                      │      B/op      │     B/op       vs base                   │     B/op       vs base                    │     B/op       vs base                    │     B/op      vs base                 │
-Permutation/field=koalabear/width=16-192                  0.000 ± 0%        0.000 ± 0%          ~ (p=1.000 n=6) ¹      0.000 ± 0%         ~ (p=1.000 n=6) ¹        0.000 ± 0%         ~ (p=1.000 n=6) ¹
-Permutation/field=koalabear/width=24-192                  0.000 ± 0%        0.000 ± 0%          ~ (p=1.000 n=6) ¹      0.000 ± 0%         ~ (p=1.000 n=6) ¹        0.000 ± 0%         ~ (p=1.000 n=6) ¹
-Permutation/field=mamabear/width=16-192                 0.000Ki ± 0%      2.555Ki ± 0%          ? (p=0.002 n=6)
-Permutation/field=mamabear/width=24-192                 0.000Ki ± 0%      3.477Ki ± 0%          ? (p=0.002 n=6)
-Compress/field=koalabear-192                               0.00 ± 0%        96.00 ± 0%          ? (p=0.002 n=6)        96.00 ± 0%         ? (p=0.002 n=6)          96.00 ± 0%         ? (p=0.002 n=6)
-Compress/field=mamabear-192                               192.0 ± 0%       2808.0 ± 0%  +1362.50% (p=0.002 n=6)
-CompressParallel/field=koalabear-192                       0.00 ± 0%        96.00 ± 0%          ? (p=0.002 n=6)        96.00 ± 0%         ? (p=0.002 n=6)          96.00 ± 0%         ? (p=0.002 n=6)
-CompressParallel/field=mamabear-192                       192.0 ± 0%       2808.0 ± 0%  +1362.50% (p=0.002 n=6)
-MDHasher/field=koalabear/n=64-192                         392.0 ± 0%       1024.0 ± 0%   +161.22% (p=0.002 n=6)       1024.0 ± 0%  +161.22% (p=0.002 n=6)         1024.0 ± 0%  +161.22% (p=0.002 n=6)         256.0 ± 0%  -34.69% (p=0.002 n=6)
-MDHasher/field=koalabear/n=4096-192                     16.13Ki ± 0%      64.00Ki ± 0%   +296.71% (p=0.002 n=6)      64.00Ki ± 0%  +296.71% (p=0.002 n=6)        64.00Ki ± 0%  +296.71% (p=0.002 n=6)       16.00Ki ± 0%   -0.82% (p=0.002 n=6)
-MDHasher/field=koalabear/n=65536-192                    256.1Ki ± 0%     1024.0Ki ± 0%   +299.79% (p=0.002 n=6)     1024.0Ki ± 0%  +299.79% (p=0.002 n=6)       1024.0Ki ± 0%  +299.79% (p=0.002 n=6)       256.0Ki ± 0%   -0.05% (p=0.002 n=6)
-MDHasher/field=mamabear/n=64-192                        2.000Ki ± 0%     22.438Ki ± 0%  +1021.88% (p=0.002 n=6)
-MDHasher/field=mamabear/n=4096-192                      128.0Ki ± 0%     1436.0Ki ± 0%  +1021.88% (p=0.002 n=6)
-MDHasher/field=mamabear/n=65536-192                     2.000Mi ± 0%     22.438Mi ± 0%  +1021.88% (p=0.002 n=6)
-FiatShamir/field=koalabear/rounds=16/update=8-192       20.50Ki ± 0%      34.46Ki ± 0%    +68.12% (p=0.002 n=6)      34.74Ki ± 0%   +69.46% (p=0.002 n=6)        34.42Ki ± 0%   +67.88% (p=0.002 n=6)       17.83Ki ± 0%  -13.03% (p=0.002 n=6)
-FiatShamir/field=koalabear/rounds=16/update=1024-192    84.47Ki ± 0%     290.58Ki ± 0%   +244.02% (p=0.002 n=6)     294.91Ki ± 0%  +249.15% (p=0.002 n=6)       290.23Ki ± 0%  +243.60% (p=0.002 n=6)       81.82Ki ± 0%   -3.13% (p=0.002 n=6)
-FiatShamir/field=koalabear/rounds=256/update=8-192      330.7Ki ± 0%      556.8Ki ± 0%    +68.33% (p=0.002 n=6)      560.7Ki ± 0%   +69.53% (p=0.002 n=6)        556.2Ki ± 0%   +68.17% (p=0.002 n=6)       290.6Ki ± 0%  -12.14% (p=0.002 n=6)
-FiatShamir/field=koalabear/rounds=256/update=1024-192   1.324Mi ± 0%      4.548Mi ± 0%   +243.58% (p=0.002 n=6)      4.561Mi ± 0%  +244.56% (p=0.002 n=6)        4.538Mi ± 0%  +242.82% (p=0.002 n=6)       1.284Mi ± 0%   -2.96% (p=0.002 n=6)
-FiatShamir/field=mamabear/rounds=16/update=8-192        58.10Ki ± 0%     510.53Ki ± 0%   +778.70% (p=0.002 n=6)
-FiatShamir/field=mamabear/rounds=16/update=1024-192     569.7Ki ± 0%     6244.7Ki ± 0%   +996.19% (p=0.002 n=6)
-FiatShamir/field=mamabear/rounds=256/update=8-192       934.6Ki ± 0%     8171.7Ki ± 0%   +774.40% (p=0.002 n=6)
-FiatShamir/field=mamabear/rounds=256/update=1024-192    8.897Mi ± 0%     97.556Mi ± 0%   +996.56% (p=0.002 n=6)
-geomean                                                              ²                  ?                       ²                  ?                      ³ ²                  ?                      ³ ²   47.81Ki       -10.36%               ³
+                                                     │    baseline    │                 generic                  │                generic-vec                │                generic-asm                │                current                │
+                                                     │      B/op      │     B/op       vs base                   │     B/op       vs base                    │     B/op       vs base                    │     B/op      vs base                 │
+Permutation/field=koalabear/width=16-64                  0.000 ± 0%        0.000 ± 0%          ~ (p=1.000 n=6) ¹      0.000 ± 0%         ~ (p=1.000 n=6) ¹        0.000 ± 0%         ~ (p=1.000 n=6) ¹
+Permutation/field=koalabear/width=24-64                  0.000 ± 0%        0.000 ± 0%          ~ (p=1.000 n=6) ¹      0.000 ± 0%         ~ (p=1.000 n=6) ¹        0.000 ± 0%         ~ (p=1.000 n=6) ¹
+Permutation/field=mamabear/width=16-64                 0.000Ki ± 0%      2.555Ki ± 0%          ? (p=0.002 n=6)
+Permutation/field=mamabear/width=24-64                 0.000Ki ± 0%      3.477Ki ± 0%          ? (p=0.002 n=6)
+Compress/field=koalabear-64                               0.00 ± 0%        96.00 ± 0%          ? (p=0.002 n=6)        96.00 ± 0%         ? (p=0.002 n=6)          96.00 ± 0%         ? (p=0.002 n=6)
+Compress/field=mamabear-64                               192.0 ± 0%       2808.0 ± 0%  +1362.50% (p=0.002 n=6)
+CompressParallel/field=koalabear-64                       0.00 ± 0%        96.00 ± 0%          ? (p=0.002 n=6)        96.00 ± 0%         ? (p=0.002 n=6)          96.00 ± 0%         ? (p=0.002 n=6)
+CompressParallel/field=mamabear-64                       192.0 ± 0%       2808.0 ± 0%  +1362.50% (p=0.002 n=6)
+MDHasher/field=koalabear/n=64-64                         392.0 ± 0%       1024.0 ± 0%   +161.22% (p=0.002 n=6)       1024.0 ± 0%  +161.22% (p=0.002 n=6)         1024.0 ± 0%  +161.22% (p=0.002 n=6)         256.0 ± 0%  -34.69% (p=0.002 n=6)
+MDHasher/field=koalabear/n=4096-64                     16.13Ki ± 0%      64.00Ki ± 0%   +296.71% (p=0.002 n=6)      64.00Ki ± 0%  +296.71% (p=0.002 n=6)        64.00Ki ± 0%  +296.71% (p=0.002 n=6)       16.00Ki ± 0%   -0.82% (p=0.002 n=6)
+MDHasher/field=koalabear/n=65536-64                    256.1Ki ± 0%     1024.0Ki ± 0%   +299.79% (p=0.002 n=6)     1024.0Ki ± 0%  +299.79% (p=0.002 n=6)       1024.0Ki ± 0%  +299.79% (p=0.002 n=6)       256.0Ki ± 0%   -0.05% (p=0.002 n=6)
+MDHasher/field=mamabear/n=64-64                        2.000Ki ± 0%     22.438Ki ± 0%  +1021.88% (p=0.002 n=6)
+MDHasher/field=mamabear/n=4096-64                      128.0Ki ± 0%     1436.0Ki ± 0%  +1021.88% (p=0.002 n=6)
+MDHasher/field=mamabear/n=65536-64                     2.000Mi ± 0%     22.438Mi ± 0%  +1021.88% (p=0.002 n=6)
+FiatShamir/field=koalabear/rounds=16/update=8-64       20.48Ki ± 0%      34.42Ki ± 0%    +68.09% (p=0.002 n=6)      34.58Ki ± 0%   +68.90% (p=0.002 n=6)        34.40Ki ± 0%   +68.03% (p=0.002 n=6)       17.82Ki ± 0%  -12.97% (p=0.002 n=6)
+FiatShamir/field=koalabear/rounds=16/update=1024-64    84.40Ki ± 0%     290.01Ki ± 0%   +243.63% (p=0.002 n=6)     290.57Ki ± 0%  +244.29% (p=0.002 n=6)       289.89Ki ± 0%  +243.49% (p=0.002 n=6)       81.76Ki ± 0%   -3.12% (p=0.002 n=6)
+FiatShamir/field=koalabear/rounds=256/update=8-64      330.6Ki ± 0%      555.9Ki ± 0%    +68.15% (p=0.002 n=6)      558.7Ki ± 0%   +69.00% (p=0.002 n=6)        555.7Ki ± 0%   +68.09% (p=0.002 n=6)       290.2Ki ± 0%  -12.23% (p=0.002 n=6)
+FiatShamir/field=koalabear/rounds=256/update=1024-64   1.321Mi ± 0%      4.536Mi ± 0%   +243.27% (p=0.002 n=6)      4.545Mi ± 0%  +243.95% (p=0.002 n=6)        4.533Mi ± 0%  +243.05% (p=0.002 n=6)       1.281Mi ± 0%   -3.04% (p=0.002 n=6)
+FiatShamir/field=mamabear/rounds=16/update=8-64        58.08Ki ± 0%     510.18Ki ± 0%   +778.38% (p=0.002 n=6)
+FiatShamir/field=mamabear/rounds=16/update=1024-64     569.2Ki ± 0%     6240.2Ki ± 0%   +996.33% (p=0.002 n=6)
+FiatShamir/field=mamabear/rounds=256/update=8-64       933.8Ki ± 0%     8165.9Ki ± 0%   +774.46% (p=0.002 n=6)
+FiatShamir/field=mamabear/rounds=256/update=1024-64    8.893Mi ± 0%     97.486Mi ± 0%   +996.15% (p=0.002 n=6)
+geomean                                                             ²                  ?                       ²                  ?                      ³ ²                  ?                      ³ ²   47.77Ki       -10.38%               ³
 ¹ all samples are equal
 ² summaries must be >0 to compute geomean
 ³ benchmark set differs from baseline; geomeans may not be comparable
 
-                                                      │   baseline    │                   generic                   │                  generic-vec                  │                  generic-asm                  │               current                │
-                                                      │   allocs/op   │   allocs/op     vs base                     │   allocs/op     vs base                       │   allocs/op     vs base                       │  allocs/op   vs base                 │
-Permutation/field=koalabear/width=16-192                 0.000 ± 0%         0.000 ± 0%            ~ (p=1.000 n=6) ¹       0.000 ± 0%            ~ (p=1.000 n=6) ¹         0.000 ± 0%            ~ (p=1.000 n=6) ¹
-Permutation/field=koalabear/width=24-192                 0.000 ± 0%         0.000 ± 0%            ~ (p=1.000 n=6) ¹       0.000 ± 0%            ~ (p=1.000 n=6) ¹         0.000 ± 0%            ~ (p=1.000 n=6) ¹
-Permutation/field=mamabear/width=16-192                    0.0 ± 0%         250.0 ± 0%            ? (p=0.002 n=6)
-Permutation/field=mamabear/width=24-192                    0.0 ± 0%         340.0 ± 0%            ? (p=0.002 n=6)
-Compress/field=koalabear-192                             0.000 ± 0%         2.000 ± 0%            ? (p=0.002 n=6)         2.000 ± 0%            ? (p=0.002 n=6)           2.000 ± 0%            ? (p=0.002 n=6)
-Compress/field=mamabear-192                              2.000 ± 0%       252.000 ± 0%   +12500.00% (p=0.002 n=6)
-CompressParallel/field=koalabear-192                     0.000 ± 0%         2.000 ± 0%            ? (p=0.002 n=6)         2.000 ± 0%            ? (p=0.002 n=6)           2.000 ± 0%            ? (p=0.002 n=6)
-CompressParallel/field=mamabear-192                      2.000 ± 0%       252.000 ± 0%   +12500.00% (p=0.002 n=6)
-MDHasher/field=koalabear/n=64-192                        5.000 ± 0%        17.000 ± 0%     +240.00% (p=0.002 n=6)        17.000 ± 0%     +240.00% (p=0.002 n=6)          17.000 ± 0%     +240.00% (p=0.002 n=6)        1.000 ± 0%  -80.00% (p=0.002 n=6)
-MDHasher/field=koalabear/n=4096-192                      5.000 ± 0%      1025.000 ± 0%   +20400.00% (p=0.002 n=6)      1025.000 ± 0%   +20400.00% (p=0.002 n=6)        1025.000 ± 0%   +20400.00% (p=0.002 n=6)        1.000 ± 0%  -80.00% (p=0.002 n=6)
-MDHasher/field=koalabear/n=65536-192                     5.000 ± 0%     16385.000 ± 0%  +327600.00% (p=0.002 n=6)     16385.000 ± 0%  +327600.00% (p=0.002 n=6)       16385.000 ± 0%  +327600.00% (p=0.002 n=6)        1.000 ± 0%  -80.00% (p=0.002 n=6)
-MDHasher/field=mamabear/n=64-192                         17.00 ± 0%       2017.00 ± 0%   +11764.71% (p=0.002 n=6)
-MDHasher/field=mamabear/n=4096-192                      1.025k ± 0%      129.025k ± 0%   +12487.80% (p=0.002 n=6)
-MDHasher/field=mamabear/n=65536-192                     16.39k ± 0%      2064.39k ± 0%   +12499.24% (p=0.002 n=6)
-FiatShamir/field=koalabear/rounds=16/update=8-192        254.0 ± 0%         698.0 ± 0%     +174.80% (p=0.002 n=6)         698.0 ± 0%     +174.80% (p=0.002 n=6)           698.0 ± 0%     +174.80% (p=0.002 n=6)        347.0 ± 0%  +36.61% (p=0.002 n=6)
-FiatShamir/field=koalabear/rounds=16/update=1024-192     254.0 ± 0%        4762.0 ± 0%    +1774.80% (p=0.002 n=6)        4763.0 ± 0%    +1775.20% (p=0.002 n=6)          4762.0 ± 0%    +1774.80% (p=0.002 n=6)        347.0 ± 0%  +36.61% (p=0.002 n=6)
-FiatShamir/field=koalabear/rounds=256/update=8-192      3.848k ± 0%       11.013k ± 0%     +186.20% (p=0.002 n=6)       11.013k ± 0%     +186.20% (p=0.002 n=6)         11.013k ± 0%     +186.20% (p=0.002 n=6)       5.381k ± 0%  +39.84% (p=0.002 n=6)
-FiatShamir/field=koalabear/rounds=256/update=1024-192   3.850k ± 0%       76.046k ± 0%    +1874.95% (p=0.002 n=6)       76.044k ± 0%    +1874.93% (p=0.002 n=6)         76.046k ± 0%    +1874.95% (p=0.002 n=6)       5.383k ± 0%  +39.80% (p=0.002 n=6)
-FiatShamir/field=mamabear/rounds=16/update=8-192         636.0 ± 0%       44636.0 ± 0%    +6918.24% (p=0.002 n=6)
-FiatShamir/field=mamabear/rounds=16/update=1024-192     4.700k ± 0%      556.705k ± 0%   +11744.79% (p=0.002 n=6)
-FiatShamir/field=mamabear/rounds=256/update=8-192       10.01k ± 0%       714.01k ± 0%    +7036.56% (p=0.002 n=6)
-FiatShamir/field=mamabear/rounds=256/update=1024-192    75.04k ± 0%      8907.13k ± 0%   +11770.32% (p=0.002 n=6)
-geomean                                                             ²                   ?                         ²                   ?                         ³ ²                   ?                         ³ ²    61.91       -39.64%               ³
+                                                     │   baseline    │                   generic                   │                  generic-vec                  │                  generic-asm                  │               current                │
+                                                     │   allocs/op   │   allocs/op     vs base                     │   allocs/op     vs base                       │   allocs/op     vs base                       │  allocs/op   vs base                 │
+Permutation/field=koalabear/width=16-64                 0.000 ± 0%         0.000 ± 0%            ~ (p=1.000 n=6) ¹       0.000 ± 0%            ~ (p=1.000 n=6) ¹         0.000 ± 0%            ~ (p=1.000 n=6) ¹
+Permutation/field=koalabear/width=24-64                 0.000 ± 0%         0.000 ± 0%            ~ (p=1.000 n=6) ¹       0.000 ± 0%            ~ (p=1.000 n=6) ¹         0.000 ± 0%            ~ (p=1.000 n=6) ¹
+Permutation/field=mamabear/width=16-64                    0.0 ± 0%         250.0 ± 0%            ? (p=0.002 n=6)
+Permutation/field=mamabear/width=24-64                    0.0 ± 0%         340.0 ± 0%            ? (p=0.002 n=6)
+Compress/field=koalabear-64                             0.000 ± 0%         2.000 ± 0%            ? (p=0.002 n=6)         2.000 ± 0%            ? (p=0.002 n=6)           2.000 ± 0%            ? (p=0.002 n=6)
+Compress/field=mamabear-64                              2.000 ± 0%       252.000 ± 0%   +12500.00% (p=0.002 n=6)
+CompressParallel/field=koalabear-64                     0.000 ± 0%         2.000 ± 0%            ? (p=0.002 n=6)         2.000 ± 0%            ? (p=0.002 n=6)           2.000 ± 0%            ? (p=0.002 n=6)
+CompressParallel/field=mamabear-64                      2.000 ± 0%       252.000 ± 0%   +12500.00% (p=0.002 n=6)
+MDHasher/field=koalabear/n=64-64                        5.000 ± 0%        17.000 ± 0%     +240.00% (p=0.002 n=6)        17.000 ± 0%     +240.00% (p=0.002 n=6)          17.000 ± 0%     +240.00% (p=0.002 n=6)        1.000 ± 0%  -80.00% (p=0.002 n=6)
+MDHasher/field=koalabear/n=4096-64                      5.000 ± 0%      1025.000 ± 0%   +20400.00% (p=0.002 n=6)      1025.000 ± 0%   +20400.00% (p=0.002 n=6)        1025.000 ± 0%   +20400.00% (p=0.002 n=6)        1.000 ± 0%  -80.00% (p=0.002 n=6)
+MDHasher/field=koalabear/n=65536-64                     5.000 ± 0%     16385.000 ± 0%  +327600.00% (p=0.002 n=6)     16385.000 ± 0%  +327600.00% (p=0.002 n=6)       16385.000 ± 0%  +327600.00% (p=0.002 n=6)        1.000 ± 0%  -80.00% (p=0.002 n=6)
+MDHasher/field=mamabear/n=64-64                         17.00 ± 0%       2017.00 ± 0%   +11764.71% (p=0.002 n=6)
+MDHasher/field=mamabear/n=4096-64                      1.025k ± 0%      129.025k ± 0%   +12487.80% (p=0.002 n=6)
+MDHasher/field=mamabear/n=65536-64                     16.39k ± 0%      2064.39k ± 0%   +12499.24% (p=0.002 n=6)
+FiatShamir/field=koalabear/rounds=16/update=8-64        254.0 ± 0%         698.0 ± 0%     +174.80% (p=0.002 n=6)         698.0 ± 0%     +174.80% (p=0.002 n=6)           698.0 ± 0%     +174.80% (p=0.002 n=6)        347.0 ± 0%  +36.61% (p=0.002 n=6)
+FiatShamir/field=koalabear/rounds=16/update=1024-64     254.0 ± 0%        4763.0 ± 0%    +1775.20% (p=0.002 n=6)        4763.0 ± 0%    +1775.20% (p=0.002 n=6)          4763.0 ± 0%    +1775.20% (p=0.002 n=6)        347.0 ± 0%  +36.61% (p=0.002 n=6)
+FiatShamir/field=koalabear/rounds=256/update=8-64      3.849k ± 0%       11.014k ± 0%     +186.15% (p=0.002 n=6)       11.015k ± 0%     +186.18% (p=0.002 n=6)         11.014k ± 0%     +186.15% (p=0.002 n=6)       5.382k ± 0%  +39.83% (p=0.002 n=6)
+FiatShamir/field=koalabear/rounds=256/update=1024-64   3.853k ± 0%       76.055k ± 0%    +1873.66% (p=0.002 n=6)       76.058k ± 0%    +1873.74% (p=0.002 n=6)         76.055k ± 0%    +1873.66% (p=0.002 n=6)       5.386k ± 0%  +39.77% (p=0.002 n=6)
+FiatShamir/field=mamabear/rounds=16/update=8-64         636.0 ± 0%       44637.0 ± 0%    +6918.40% (p=0.002 n=6)
+FiatShamir/field=mamabear/rounds=16/update=1024-64     4.701k ± 0%      556.715k ± 0%   +11742.48% (p=0.002 n=6)
+FiatShamir/field=mamabear/rounds=256/update=8-64       10.01k ± 0%       714.03k ± 0%    +7035.98% (p=0.002 n=6)
+FiatShamir/field=mamabear/rounds=256/update=1024-64    75.06k ± 0%      8907.28k ± 0%   +11767.36% (p=0.002 n=6)
+geomean                                                            ²                   ?                         ²                   ?                         ³ ²                   ?                         ³ ²    61.92       -39.64%               ³
 ¹ all samples are equal
 ² summaries must be >0 to compute geomean
 ³ benchmark set differs from baseline; geomeans may not be comparable
 
-                                     │   baseline    │               generic                │              generic-vec              │              generic-asm              │                current                │
-                                     │      B/s      │      B/s       vs base               │     B/s       vs base                 │      B/s       vs base                │      B/s       vs base                │
-MDHasher/field=koalabear/n=64-192      49.109Mi ± 4%   20.657Mi ± 1%  -57.94% (p=0.002 n=6)   2.623Mi ± 0%  -94.66% (p=0.002 n=6)     46.372Mi ± 1%  -5.57% (p=0.002 n=6)     50.263Mi ± 0%  +2.35% (p=0.002 n=6)
-MDHasher/field=koalabear/n=4096-192    50.793Mi ± 1%   19.727Mi ± 2%  -61.16% (p=0.002 n=6)   2.623Mi ± 0%  -94.84% (p=0.002 n=6)     46.668Mi ± 1%  -8.12% (p=0.002 n=6)     50.440Mi ± 2%  -0.69% (p=0.026 n=6)
-MDHasher/field=koalabear/n=65536-192   50.902Mi ± 1%   19.779Mi ± 1%  -61.14% (p=0.002 n=6)   2.623Mi ± 0%  -94.85% (p=0.002 n=6)     46.792Mi ± 1%  -8.07% (p=0.002 n=6)     50.306Mi ± 1%  -1.17% (p=0.002 n=6)
-MDHasher/field=mamabear/n=64-192       28.639Mi ± 1%    8.392Mi ± 1%  -70.70% (p=0.002 n=6)
-MDHasher/field=mamabear/n=4096-192     27.809Mi ± 1%    8.507Mi ± 2%  -69.41% (p=0.002 n=6)
-MDHasher/field=mamabear/n=65536-192    27.843Mi ± 0%    8.626Mi ± 3%  -69.02% (p=0.002 n=6)
-geomean                                 37.58Mi         13.06Mi       -65.24%                 2.623Mi       -94.78%               ¹    46.61Mi       -7.26%               ¹    50.34Mi       +0.15%               ¹
+                                    │   baseline    │               generic                │              generic-vec              │              generic-asm              │                current                │
+                                    │      B/s      │      B/s       vs base               │     B/s       vs base                 │      B/s       vs base                │      B/s       vs base                │
+MDHasher/field=koalabear/n=64-64      49.143Mi ± 0%   20.723Mi ± 0%  -57.83% (p=0.002 n=6)   2.623Mi ± 0%  -94.66% (p=0.002 n=6)     45.943Mi ± 1%  -6.51% (p=0.002 n=6)     50.135Mi ± 0%  +2.02% (p=0.002 n=6)
+MDHasher/field=koalabear/n=4096-64    50.793Mi ± 0%   19.770Mi ± 0%  -61.08% (p=0.002 n=6)   2.623Mi ± 0%  -94.84% (p=0.002 n=6)     46.234Mi ± 1%  -8.97% (p=0.002 n=6)     50.263Mi ± 1%  -1.04% (p=0.002 n=6)
+MDHasher/field=koalabear/n=65536-64   50.888Mi ± 0%   19.765Mi ± 1%  -61.16% (p=0.002 n=6)   2.632Mi ± 0%  -94.83% (p=0.002 n=6)     46.616Mi ± 1%  -8.40% (p=0.002 n=6)     50.316Mi ± 0%  -1.12% (p=0.002 n=6)
+MDHasher/field=mamabear/n=64-64       28.677Mi ± 0%    8.440Mi ± 1%  -70.57% (p=0.002 n=6)
+MDHasher/field=mamabear/n=4096-64     27.514Mi ± 1%    8.354Mi ± 1%  -69.64% (p=0.002 n=6)
+MDHasher/field=mamabear/n=65536-64    27.399Mi ± 1%    8.574Mi ± 1%  -68.71% (p=0.002 n=6)
+geomean                                37.42Mi         13.03Mi       -65.18%                 2.626Mi       -94.78%               ¹    46.26Mi       -7.97%               ¹    50.24Mi       -0.06%               ¹
 ¹ benchmark set differs from baseline; geomeans may not be comparable

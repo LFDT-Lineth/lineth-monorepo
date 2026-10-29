@@ -4,17 +4,17 @@
 \begin{tabular}{lrrrrrrrrrr}
 \toprule
 Benchmark & baseline & generic + hot-loop branches & ratio & \texttt{generic-vec} & ratio & \texttt{generic-asm} & ratio & \texttt{current} & ratio & allocs \texttt{generic-asm} \\ \midrule
-Permutation (width=16) & 570\,ns & 1.46\,\textmu s & 2.57$\times$ & 11.6\,\textmu s & 20.3$\times$ & 574\,ns & 1.01$\times$ & -- & -- & 0 \\
-Permutation (width=24) & 706\,ns & 2.08\,\textmu s & 2.94$\times$ & 12.3\,\textmu s & 17.5$\times$ & 704\,ns & 1.00$\times$ & -- & -- & 0 \\
-Compress & 585\,ns & 1.54\,\textmu s & 2.62$\times$ & 11.7\,\textmu s & 19.9$\times$ & 655\,ns & 1.12$\times$ & -- & -- & 2 \\
-CompressParallel & 4.42\,ns & 147\,ns & 33.2$\times$ & 475\,ns & 107$\times$ & 77.4\,ns & 17.5$\times$ & -- & -- & 2 \\
-MDHasher (n=64) & 4.97\,\textmu s & 11.8\,\textmu s & 2.38$\times$ & 93.1\,\textmu s & 18.7$\times$ & 5.26\,\textmu s & 1.06$\times$ & 4.86\,\textmu s & 0.98$\times$ & 17 \\
-MDHasher (n=4096) & 308\,\textmu s & 792\,\textmu s & 2.57$\times$ & 5.96\,ms & 19.4$\times$ & 335\,\textmu s & 1.09$\times$ & 310\,\textmu s & 1.01$\times$ & 1\,025 \\
-MDHasher (n=65536) & 4.91\,ms & 12.6\,ms & 2.57$\times$ & 95.3\,ms & 19.4$\times$ & 5.34\,ms & 1.09$\times$ & 4.97\,ms & 1.01$\times$ & 16\,385 \\
-FiatShamir (rounds=16, upd=8) & 134\,\textmu s & 296\,\textmu s & 2.21$\times$ & 2.08\,ms & 15.6$\times$ & 141\,\textmu s & 1.06$\times$ & 133\,\textmu s & 0.99$\times$ & 698 \\
-FiatShamir (rounds=16, upd=1024) & 1.36\,ms & 3.45\,ms & 2.54$\times$ & 25.9\,ms & 19.1$\times$ & 1.49\,ms & 1.10$\times$ & 1.37\,ms & 1.01$\times$ & 4\,762 \\
-FiatShamir (rounds=256, upd=8) & 2.11\,ms & 4.8\,ms & 2.27$\times$ & 33.3\,ms & 15.8$\times$ & 2.27\,ms & 1.08$\times$ & 2.14\,ms & 1.01$\times$ & 11\,013 \\
-FiatShamir (rounds=256, upd=1024) & 21.7\,ms & 55.4\,ms & 2.56$\times$ & 413\,ms & 19.0$\times$ & 23.7\,ms & 1.09$\times$ & 21.9\,ms & 1.01$\times$ & 76\,046 \\
+Permutation (width=16) & 570\,ns & 1.46\,\textmu s & 2.57$\times$ & 11.6\,\textmu s & 20.4$\times$ & 574\,ns & 1.01$\times$ & -- & -- & 0 \\
+Permutation (width=24) & 705\,ns & 2.08\,\textmu s & 2.94$\times$ & 12.4\,\textmu s & 17.6$\times$ & 704\,ns & 1.00$\times$ & -- & -- & 0 \\
+Compress & 586\,ns & 1.54\,\textmu s & 2.64$\times$ & 11.7\,\textmu s & 19.9$\times$ & 653\,ns & 1.11$\times$ & -- & -- & 2 \\
+CompressParallel & 12.8\,ns & 238\,ns & 18.7$\times$ & 584\,ns & 45.7$\times$ & 106\,ns & 8.27$\times$ & -- & -- & 2 \\
+MDHasher (n=64) & 4.97\,\textmu s & 11.8\,\textmu s & 2.37$\times$ & 93.1\,\textmu s & 18.7$\times$ & 5.31\,\textmu s & 1.07$\times$ & 4.87\,\textmu s & 0.98$\times$ & 17 \\
+MDHasher (n=4096) & 308\,\textmu s & 790\,\textmu s & 2.57$\times$ & 5.95\,ms & 19.3$\times$ & 338\,\textmu s & 1.10$\times$ & 311\,\textmu s & 1.01$\times$ & 1\,025 \\
+MDHasher (n=65536) & 4.91\,ms & 12.6\,ms & 2.57$\times$ & 95.1\,ms & 19.4$\times$ & 5.36\,ms & 1.09$\times$ & 4.97\,ms & 1.01$\times$ & 16\,385 \\
+FiatShamir (rounds=16, upd=8) & 134\,\textmu s & 298\,\textmu s & 2.22$\times$ & 2.09\,ms & 15.6$\times$ & 144\,\textmu s & 1.07$\times$ & 134\,\textmu s & 1.00$\times$ & 698 \\
+FiatShamir (rounds=16, upd=1024) & 1.36\,ms & 3.48\,ms & 2.55$\times$ & 25.8\,ms & 19.0$\times$ & 1.5\,ms & 1.10$\times$ & 1.37\,ms & 1.01$\times$ & 4\,763 \\
+FiatShamir (rounds=256, upd=8) & 2.13\,ms & 4.82\,ms & 2.26$\times$ & 33.5\,ms & 15.7$\times$ & 2.28\,ms & 1.07$\times$ & 2.15\,ms & 1.01$\times$ & 11\,014 \\
+FiatShamir (rounds=256, upd=1024) & 21.8\,ms & 55.6\,ms & 2.55$\times$ & 414\,ms & 19.0$\times$ & 23.9\,ms & 1.10$\times$ & 21.9\,ms & 1.00$\times$ & 76\,055 \\
 \bottomrule
 \end{tabular}
 \end{adjustbox}

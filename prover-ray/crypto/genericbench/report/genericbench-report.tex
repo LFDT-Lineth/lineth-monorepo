@@ -31,7 +31,7 @@
 
 \title{Generic vs.\ non-generic Poseidon2 and Fiat--Shamir\\\large Benchmark report, \texttt{prover-ray/crypto/genericbench}}
 \author{}
-\date{28 October 2026}
+\date{29 October 2026}
 
 \begin{document}
 \maketitle
@@ -44,7 +44,7 @@
     non-generic baseline on KoalaBear and about \textbf{3$\times$ slower} on MamaBear.
     KoalaBear's gap is larger because its baseline uses gnark-crypto's AVX-512 assembly.
   \item The code the prover runs today (\texttt{current}: the generic hasher and transcript
-    over gnark-crypto's compression) is \textbf{on par with the baseline} (within 2\%).
+    over gnark-crypto's compression) is \textbf{on par with the baseline} (within 3\%).
     Production is not affected.
   \item The root cause of the generic overhead is Go's implementation of generics: field
     operations are indirect calls that cannot be inlined, and they force local variables onto
@@ -64,14 +64,18 @@
     (\texttt{generic-vec}) are \textbf{about 20$\times$ slower} and are a dead end.
   \item The remaining gap comes from \textbf{2 heap allocations per compression} in the
     generic \texttt{Compress} function. Under parallel load (\texttt{CompressParallel},
-    192 threads) they make the code about 16$\times$ slower than baseline, because of
-    \textbf{garbage collection}: with the GC switched off the gap shrinks to 1.5$\times$.
+    64 threads) they make the code about 8$\times$ slower than baseline, because of
+    \textbf{garbage collection}: with the GC switched off the gap shrinks to 1.1$\times$.
+    Marking costs almost nothing. The cost is that each of the GC cycles, which come every
+    few milliseconds, stops the world and makes all 64 goroutines wait in turn: with the GC
+    on, the goroutines spend 57\% of their time blocked at the end of the mark phase and run
+    only 15\% of the time.
     Removing these allocations is the next thing to fix.
 \end{itemize}
 
 \section{Setup}
 
-\paragraph{Machine.} Intel Xeon Platinum 8488C, 192 cores, AVX-512 available (so the KoalaBear
+\paragraph{Machine.} Intel Xeon Platinum 8488C, 1 socket, 32 cores / 64 hardware threads, AVX-512 available (so the KoalaBear
 baseline runs gnark-crypto's assembly path), Linux amd64, Go 1.27.1, gnark-crypto v0.22.0.
 Nothing else ran on the machine during the benchmarks.
 
@@ -95,7 +99,7 @@ Nothing else ran on the machine during the benchmarks.
     branches of Section~\ref{sec:paths}.
 \end{itemize}
 
-\paragraph{Runs.} Four runs, each preceded by \texttt{TestAgreement}, which checks that all
+\paragraph{Runs.} Four runs, all on the machine above (29 October 2026), each preceded by \texttt{TestAgreement}, which checks that all
 implementations produce bit-identical outputs. It passed every time.
 \begin{center}\small
 \begin{adjustbox}{max width=\linewidth}
@@ -104,8 +108,8 @@ implementations produce bit-identical outputs. It passed every time.
 Run & Code & Sizes & Samples \\ \midrule
 1 (Tables~\ref{tab:mid-kb}, \ref{tab:mid-mb}) & \texttt{3ce6cc6e5}, fully generic & \texttt{full}, minus FS rounds=4096/update=16384 & $6\times500$\,ms \\
 2 (Table~\ref{tab:kbb}, ``initial'') & \texttt{6b3d84ad3}, branches and the three paths & \texttt{medium}, KoalaBear only & $6\times200$\,ms \\
-3 (Tables~\ref{tab:kbb}, \ref{tab:paths}) & run 2 + gnark-crypto diagonal replicated & \texttt{medium}, both fields & $6\times200$\,ms \\
-4 (Table~\ref{tab:parallel}) & same code as run 3 & CompressParallel, KoalaBear, 1--192 threads & $6\times200$\,ms \\
+3 (Tables~\ref{tab:kbb}, \ref{tab:paths}) & \texttt{d2b2beda4}: run 2 + gnark-crypto diagonal replicated & \texttt{medium}, both fields & $6\times200$\,ms \\
+4 (Table~\ref{tab:parallel}) & same code as run 3 & CompressParallel, KoalaBear, 1--64 threads & $6\times200$\,ms \\
 \bottomrule
 \end{tabular}
 \end{adjustbox}
@@ -113,10 +117,9 @@ Run & Code & Sizes & Samples \\ \midrule
 The single skipped FiatShamir case took about 40\,s per operation in the generic code and
 dominated the runtime. Tables report the median of 6 samples. Unless noted otherwise, every
 difference against the baseline is statistically significant according to \texttt{benchstat}
-($p = 0.002$). The exceptions are \texttt{current} on MDHasher $n=2^{20}$ in run 1
-($p=0.065$), on FiatShamir rounds=16/update=8 in run 3 ($p=0.065$) and on MDHasher $n=4096$
-in run 3 ($p=0.026$). All are differences of under 2\%. Run 2 survives only as the medians
-in \texttt{report/data/paths-run2-medians.csv}; its raw output was lost.
+($p = 0.002$). The exceptions are \texttt{current} on FiatShamir rounds=16/update=8
+($p=0.70$) and rounds=256/update=1024 ($p=0.093$) in run 3, both differences of under 1\%.
+The raw output of every run is in \texttt{report/data/}.
 
 \section{Background: what is benchmarked}
 
@@ -138,7 +141,7 @@ The other benchmark families are built on the permutation:
 \begin{itemize}
   \item \textbf{Compress}: two 8-element blocks form a width-16 state, which is permuted;
     the second block is then added back (feed-forward). \textbf{CompressParallel} runs the
-    same with one goroutine per hardware thread (192 threads on 96 cores).
+    same with one goroutine per hardware thread (64 threads on 32 cores).
   \item \textbf{MDHasher}: hashes $n$ elements, 8 at a time, with one compression per chunk.
   \item \textbf{FiatShamir}: a protocol-shaped transcript. Each round absorbs \texttt{upd}
     elements, samples a digest, samples query indices and derives a named challenge.
@@ -157,11 +160,11 @@ faster. The allocs columns give heap allocations per operation.
 
 \paragraph{Findings.}
 \begin{itemize}
-  \item KoalaBear \texttt{generic} is 6.8--10.5$\times$ slower than baseline, and MamaBear
-    \texttt{generic} 2.8--3.5$\times$. Without assembly on the MamaBear side, the MamaBear
+  \item KoalaBear \texttt{generic} is 5.9--10.3$\times$ slower than baseline, and MamaBear
+    \texttt{generic} 2.8--3.3$\times$. Without assembly on the MamaBear side, the MamaBear
     figure is the better measure of the cost of genericity itself.
-  \item \texttt{current} is on par with baseline: from 14\% faster (MDHasher, $n=8$) to
-    about 2\% slower (FiatShamir). It also makes 80\% fewer allocations in MDHasher, but
+  \item \texttt{current} is on par with baseline: from 21\% faster (MDHasher, $n=8$) to
+    about 3\% slower (FiatShamir). It also makes 80\% fewer allocations in MDHasher, but
     about 2.9$\times$ more in FiatShamir. The absolute numbers are small (731 vs.\ 254 at
     16 rounds), but this may deserve a look.
   \item The generic code allocates heavily: 222--340 allocations per permutation, about 28
@@ -269,7 +272,7 @@ func kbMatMulInternal(input []koalabear.Element) {
 \input{fig_branch.tex}
 
 \paragraph{Findings.} The permutation is now allocation-free. Its first version (run 2) was
-3.4--3.7$\times$ slower than baseline. With gnark-crypto's internal-matrix formula
+3.4--3.8$\times$ slower than baseline. With gnark-crypto's internal-matrix formula
 replicated (run 3, Section~\ref{sec:replicate}), it is 2.6--2.9$\times$ slower, and the
 hashing and Fiat--Shamir benchmarks 2.2--2.6$\times$. The remaining gap is the AVX-512
 assembly: one AVX-512 instruction processes 16 elements at once, which is exactly one
@@ -300,8 +303,8 @@ is a line-by-line copy of gnark-crypto's function. The generic version applies t
 $2^{-n}$ entries in a short loop over a table of shifts rather than unrolling them.
 
 The effect differs by path. The KoalaBear branch became about 24\% faster
-(Table~\ref{tab:kbb}). The fully generic MamaBear permutation did not: 7.69\,\textmu s in
-run 3, compared with 7.27\,\textmu s in run 1, a difference within the noise of those runs.
+(Table~\ref{tab:kbb}). The fully generic MamaBear permutation did not: 7.41\,\textmu s in
+run 3, compared with 6.90\,\textmu s in run 1, a difference within the noise of those runs.
 In the generic code every field operation is an indirect call, and the formula replaces one
 multiplication by two to four cheaper operations, so the number of calls, which dominates,
 goes up. MamaBear's \texttt{sumState} relies on the field's internal representation and
@@ -355,7 +358,7 @@ func (h *Permutation[T, PT]) Permute(input []T) error {
 \paragraph{Findings.}
 \begin{itemize}
   \item \texttt{generic-asm} matches the baseline permutation (1.00--1.01$\times$). The
-    Compress, MDHasher and FiatShamir benchmarks remain 6--12\% slower than baseline. That
+    Compress, MDHasher and FiatShamir benchmarks remain 7--11\% slower than baseline. That
     overhead comes from the generic code around the permutation.
   \item \texttt{generic-vec} is about 20$\times$ slower than baseline, and about 8$\times$
     slower than the scalar branch it was meant to improve. (It still multiplies by the
@@ -378,15 +381,16 @@ whole-permutation block.
 
 \section{Why CompressParallel is so slow}\label{sec:parallel}
 
-Even with the assembly permutation, \texttt{CompressParallel} is about 17$\times$ slower than
-baseline at 192 threads (Table~\ref{tab:paths}). To find out why, it was re-run at 1 to 192
-threads, with the Go garbage collector (GC) on and off, and profiled at 192 threads. The
-machine has 2 sockets of 48 cores, each core running 2 hardware threads, so 192 threads means
-96 physical cores. The data is in \texttt{report/data/}.
+Even with the assembly permutation, \texttt{CompressParallel} is about 8$\times$ slower than
+baseline at 64 threads (Table~\ref{tab:paths}). To find out why, it was re-run at 1 to 64
+threads, with the Go garbage collector (GC) on and off, and profiled at 64 threads. The
+machine has 1 socket of 32 cores, each core running 2 hardware threads, so 64 threads means
+32 physical cores. The data is in \texttt{report/data/}.
 
 \subsection{Where the allocations come from}
 
-A memory profile attributes every allocation to two lines of the generic \texttt{Compress}
+A memory profile (\texttt{report/data/heap/mem-profile.txt}) attributes 99.94\% of the
+allocated bytes to two lines of the generic \texttt{Compress}
 (\texttt{crypto/poseidon2/hasher.go}):
 \begin{lstlisting}[language=Go,caption={Generic \texttt{Compress}. The two marked arrays are moved to the heap.},label=lst:compress]
 func Compress[T any, PT generic.Element[T]](perm *Permutation[T, PT], state, block Octuplet[T]) Octuplet[T] {
@@ -434,51 +438,142 @@ assumes the pointers may be kept and moves both arrays to the heap.
 Table~\ref{tab:parallel} shows the key result:
 \begin{itemize}
   \item \textbf{With the GC on}, \texttt{generic-asm} keeps up with baseline only up to
-    about 8 threads. It reaches its best time at 32 threads (67\,ns) and then gets
-    \emph{slower} as threads are added (76--86\,ns from 48 threads on). Baseline keeps
-    improving to 4.6\,ns, so the ratio grows from 1.1$\times$ to 16$\times$. The branched
-    scalar path behaves the same way (best 96\,ns at 32 threads, 27$\times$ at 192).
-  \item \textbf{With the GC off}, \texttt{generic-asm} scales almost as well as baseline:
-    1.1--1.5$\times$ at every thread count, 7.1\,ns at 192 threads. The scalar path stays at
-    2.6--3.9$\times$, close to its single-threaded ratio.
+    about 4 threads. It reaches its best time at 32 threads (80\,ns) and then gets
+    \emph{slower} as threads are added (90\,ns at 48 threads, 103\,ns at 64). Baseline keeps
+    improving to 12.8\,ns, so the ratio grows from 1.1$\times$ to 8.1$\times$. The branched
+    scalar path behaves the same way (best 142\,ns at 32 threads, 17$\times$ at 64).
+  \item \textbf{With the GC off}, \texttt{generic-asm} scales as well as baseline:
+    1.1$\times$ at every thread count, 14.6\,ns at 64 threads. The scalar path stays at
+    2.6--4.0$\times$, close to its single-threaded ratio.
 \end{itemize}
 So the parallel slowdown is caused almost entirely by \textbf{garbage collection}, not by
 allocation itself and not by the permutation. Allocating without collecting costs
-10--50\% (the remaining gap with the GC off).
+about 10--15\% (the remaining gap with the GC off).
 
-\subsection{Why garbage collection hurts this much}
+\subsection{Heap and GC analysis}\label{sec:heap}
 
-A CPU profile of \texttt{generic-asm} at 192 threads (2\,s run, taken before run 3; the
-assembly path does not use the code changed in run 3) shows:
+The measurements in this section are all for \texttt{generic-asm} on the same code as run 3.
+Data, tools and commands are in \texttt{report/data/heap/}. Five sources were used:
 \begin{itemize}
-  \item \textbf{289 GC cycles} during the run with the GC on, about one every 20\,ms. With
-    the GC off there were 13, all forced by the test framework between runs.
-  \item \textbf{Less than half the CPU in use.} With the GC on, the profile recorded
-    95\,CPU-seconds over the run; with it off, 203\,CPU-seconds over the same duration, and
-    4.1$\times$ more compressions completed. The difference is time threads spent stopped or
-    waiting, which a CPU profile does not show directly.
-  \item Of the CPU time that was used with the GC on, about 7\% went to background
-    marking (\texttt{gcBgMarkWorker}), 4\% to mark assists (\texttt{gcAssistAlloc}),
-    11\% to allocation (\texttt{mallocgc}), and the rest of the runtime share to locking,
-    spinning and scheduling (\texttt{lfstack.pop}, \texttt{futex}, \texttt{procyield},
-    \texttt{schedule}).
+  \item a memory profile of the benchmark (\texttt{mem-profile.txt});
+  \item a small harness (\texttt{gcharness/}) that runs compressions on $N$ goroutines
+    and reads the Go runtime's own GC accounting (\texttt{runtime/metrics}) before and after
+    (\texttt{gc-scaling.tsv}, \texttt{gc-gogc.tsv});
+  \item an execution trace of the benchmark at 64 threads, analysed with
+    \texttt{stw.py} and \texttt{states.py} (\texttt{trace-analysis.txt});
+  \item the kernel's per-thread scheduler counters (\texttt{schedstat.txt});
+  \item the Go~1.27.1 runtime source, to connect what the trace shows to the code.
 \end{itemize}
-The mechanism:
+
+\paragraph{The heap.} The memory profile attributes 99.94\% of allocated bytes to
+\texttt{Compress}: 989\,MB to \texttt{var x} (64-byte objects) and 498\,MB to
+\texttt{res := block} (32-byte objects) in a 2\,s run. The in-use heap is under 1\,MB,
+since every object is garbage as soon as \texttt{Compress} returns. The live heap seen by
+the GC is 1--8\,MB, so the default \texttt{GOGC=100} sets a heap goal of only 4--15\,MB, and
+a cycle starts every few milliseconds (Table~\ref{tab:gc-scaling}).
+
+\input{tab_gc_scaling.tex}
+\input{fig_stw.tex}
+
+\paragraph{Marking costs almost nothing; stopping the world does.} Mark work (assists and
+background workers) stays at about 1\% of CPU at every thread count: with a heap this small,
+there is nothing to mark. What grows is the time with the world stopped. Up to 8 threads it is
+under 4\% of wall-clock time and each pause lasts about 50\,\textmu s. Between 8 and
+16 threads it jumps to 24\%, and at 64 threads the world is stopped \textbf{56\% of the time},
+about 2.2\,ms per pause. This jump is where \texttt{generic-asm} stops improving with more
+threads (90\,ns at 8 threads, 99--106\,ns from 16 to 64).
+
+\paragraph{The threads are asleep, not busy.} The kernel's counters show that with the GC
+on, the process ran on about 8 of the 64 cores on average, against 57 with the GC off. The
+threads sleep on their own (about 53\,000 voluntary context switches per second); they are
+not waiting for a CPU (20\,ms of run-queue wait in 2\,s). So the time is lost to goroutines
+blocked inside the Go runtime. (The runtime's own CPU estimate counts stopped time as busy
+on every thread, so its ``GC pause CPU'' figure overstates the CPU used.)
+
+\paragraph{Where the goroutines block.} The execution trace gives the state of each
+benchmark goroutine over time:
+\begin{center}\small
+\begin{tabular}{rll}
+\toprule
+Share of goroutine time & State & Where \\ \midrule
+57\% & blocked on a semaphore & \texttt{gcMarkDone}, called from \texttt{gcAssistAlloc} \\
+18\% & runnable, preempted & waiting to get a thread back \\
+15\% & running & \\
+7\% & blocked on a semaphore & \texttt{gcStart} \\
+3\% & runnable, just woken & \\
+1\% & waiting for mark work & \texttt{gcParkAssist} \\
+\bottomrule
+\end{tabular}
+\end{center}
+Every one of these waits begins at one of the two allocations in \texttt{Compress}. Read
+against the runtime source, each GC cycle goes like this:
 \begin{enumerate}
-  \item \textbf{The live heap is tiny} (about 4\,MB). With the default \texttt{GOGC=100}, a
-    GC cycle starts whenever the heap doubles, here every \textasciitilde5\,MB allocated.
-  \item \textbf{192 threads allocate fast}: 96 bytes per compression at about 15 million
-    compressions per second is about 1.5\,GB/s, so a new cycle starts every few
-    milliseconds.
-  \item \textbf{Each cycle costs every thread.} A cycle stops the world twice, which means
-    waiting for all 192 threads to reach a safe point. During marking, a quarter of the
-    threads are taken for background mark workers, and threads that allocate are made to
-    help with marking (assists). Synchronising all of this across 192 threads and two
-    sockets dominates.
-  \item \textbf{More threads make it worse.} Adding threads raises the allocation rate, so
-    cycles come more often and each one has more threads to coordinate. Past about 32
-    threads, extra threads add more GC cost than useful work.
+  \item \textbf{Start.} The allocation that crosses the heap goal calls \texttt{gcStart}.
+    With 64 goroutines allocating, many cross it at the same moment. Only one may start the
+    cycle (\texttt{work.startSema}), and the others block (7\%). Starting the cycle stops the
+    world (sweep termination).
+  \item \textbf{Mark.} Goroutines that allocate during marking must do some marking work
+    first (\texttt{gcAssistAlloc}). With almost nothing to mark, the first assists already
+    find the work exhausted. Each of them then calls \texttt{gcMarkDone} to end the phase.
+  \item \textbf{End of marking.} \texttt{gcMarkDone} is serialised by
+    \texttt{work.markDoneSema}. The goroutine holding it flushes every P's buffers
+    (\texttt{forEachP}, which waits for all 64 Ps to reach a safe point) and then stops the
+    world again for mark termination. Meanwhile every other allocating goroutine has
+    reached the same point and waits on the semaphore (57\%).
+  \item \textbf{Restart.} When the world restarts, the waiting goroutines are woken
+    together and queue for the 64 Ps (the 18\% runnable time), and a few milliseconds
+    later the next cycle begins.
 \end{enumerate}
+So with the GC on, each cycle effectively serialises all 64 goroutines twice, and the cycles
+come every few milliseconds. More threads make it worse, because they reach the heap goal
+sooner and there are more of them to stop and to queue.
+
+The trace also shows that the goroutines themselves stop quickly once a stop is requested
+(median 49\,\textmu s, 90th percentile 374\,\textmu s), and that the median stop-the-world
+window lasts 1.5\,ms. The trace does not say what the rest of each window is spent on; in
+the sample examined, about 0.8\,ms of a 1.4\,ms window passes with no events at all. This
+part is not explained.
+
+\input{tab_gogc.tex}
+\input{fig_gogc.tex}
+
+\paragraph{It is the frequency of cycles.} Table~\ref{tab:gogc} raises \texttt{GOGC}, which
+lets the heap grow further before each cycle. The cost falls steadily with the number of
+cycles: from 8.3$\times$ baseline at \texttt{GOGC=100} to 1.9$\times$ at 1600 and
+1.4$\times$ at 6400. With the GC off, only the cost of allocating remains (16\,ns,
+1.3$\times$). Running the benchmark itself with the same settings gives the same picture
+(119, 51, 24 and 15\,ns for \texttt{GOGC} 100, 400, 1600 and off; baseline 12.6\,ns
+throughout).
+
+\subsection{Experiment: an allocation-free \texttt{Compress}}\label{sec:fix}
+
+To confirm that the two allocations are the whole story, \texttt{Compress} was given a
+KoalaBear fast path for \texttt{generic-asm}. When the permutation delegates to
+gnark-crypto's assembly, the state and the result are held as concrete
+\texttt{[16]koalabear.Element} and \texttt{[8]koalabear.Element} arrays, and the feed-forward
+calls \texttt{koalabear.Element.Add} directly. With no indirect calls, escape analysis keeps
+both arrays on the stack.
+\begin{lstlisting}[language=Go,caption={The fast path added at the top of \texttt{Compress} (\texttt{report/data/heap/experiment/}).},label=lst:fastpath]
+if perm.kbAsm != nil {
+	var y [CompressionWidth]koalabear.Element
+	copy(y[:BlockSize], asKB(state[:]))
+	copy(y[BlockSize:], asKB(block[:]))
+	if err := perm.kbAsm.Permutation(y[:]); err != nil {
+		panic(err)
+	}
+	res := block
+	r := asKB(res[:])
+	for i := range r {
+		r[i].Add(&r[i], &y[BlockSize+i])
+	}
+	return res
+}
+\end{lstlisting}
+\texttt{TestAgreement} passes with the change. \texttt{CompressParallel} then makes
+0 allocations and runs at 12.9\,ns per compression at 64 threads with the GC on, against
+12.8\,ns for baseline and 103\,ns without the fix. It tracks baseline at every thread count
+(green line in Figure~\ref{fig:parallel}). The change was not committed; the patch, the
+patched file and the benchmark output are in \texttt{report/data/heap/experiment/}.
 
 \subsection{Caveats}
 \begin{itemize}
@@ -486,13 +581,21 @@ The mechanism:
     so with \texttt{GOGC=100} cycles are much rarer (but each one marks more). The real
     impact depends on the prover's heap and its other allocations. The fix is the same
     either way: make \texttt{Compress} allocation-free.
-  \item Above 96 threads the extra threads are hyperthreads sharing a core. Even baseline
-    gains only 1.7$\times$ from 96 to 192 threads.
-  \item The profiled runs used a 2\,s benchtime and are slower than the table (profiling a
-    192-thread process has overhead). The comparison between GC on and off is between runs
-    with identical settings.
+  \item Above 32 threads the extra threads are hyperthreads sharing a core. Even baseline
+    gains only 1.7$\times$ from 32 to 64 threads.
+  \item The harness runs its own loop rather than the benchmark; at 64 threads it measures
+    106\,ns with the GC on and 16\,ns off, against 103 and 14.6\,ns for the benchmark.
+    Tracing and profiling add overhead, so the traced and profiled runs are a little slower
+    again (105--143\,ns). Comparisons are always between runs with identical settings.
+  \item CPU profiles at 64 threads (\texttt{report/data/profile-64-gc\{on,off\}.txt}) agree
+    with the analysis above: with the GC on, 22 CPU-seconds were sampled in 2.5\,s (about
+    9 threads' worth), against 236 in 4.9\,s with it off. About 10\% of the sampled CPU is
+    in \texttt{mallocgc} and only a few percent in marking.
+  \item One part of each stop-the-world window is not explained by the trace
+    (Section~\ref{sec:heap}). This does not change the conclusion: removing the allocations
+    removes the cycles, so the windows go away too.
   \item The same two allocations account for the 16\,385 allocations of MDHasher at
-    $n=65\,536$, so they also matter single-threaded at a smaller scale (6--12\%).
+    $n=65\,536$, so they also matter single-threaded at a smaller scale (7--11\%).
 \end{itemize}
 
 \section{Recommendations}
@@ -506,7 +609,7 @@ The mechanism:
     as it would break concurrent use.
   \item \textbf{Drop \texttt{KoalaBearVector}}, or keep it only as a recorded negative
     result.
-  \item \textbf{For MamaBear} (about 3.5$\times$, with no assembly available), the overhead is
+  \item \textbf{For MamaBear} (about 3$\times$, with no assembly available), the overhead is
     purely the generic code. Closing it means concrete branches like KoalaBear's, which would
     also be the place to replicate gnark-crypto's \texttt{sumState}
     (Section~\ref{sec:replicate}).

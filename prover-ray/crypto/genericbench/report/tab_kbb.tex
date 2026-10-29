@@ -4,17 +4,17 @@
 \begin{tabular}{lrrrrrr}
 \toprule
 Benchmark & baseline & branches (initial) & ratio & branches, gnark diagonal & ratio & allocs, gnark diagonal \\ \midrule
-Permutation (width=16) & 570\,ns & 1.92\,\textmu s & 3.37$\times$ & 1.46\,\textmu s & 2.57$\times$ & 0 \\
-Permutation (width=24) & 706\,ns & 2.63\,\textmu s & 3.73$\times$ & 2.08\,\textmu s & 2.94$\times$ & 0 \\
-Compress & 585\,ns & 2.03\,\textmu s & 3.46$\times$ & 1.54\,\textmu s & 2.62$\times$ & 2 \\
-CompressParallel & 4.42\,ns & 170\,ns & 38.6$\times$ & 147\,ns & 33.2$\times$ & 2 \\
-MDHasher (n=64) & 4.97\,\textmu s & 16.2\,\textmu s & 3.26$\times$ & 11.8\,\textmu s & 2.38$\times$ & 17 \\
-MDHasher (n=4096) & 308\,\textmu s & 1.03\,ms & 3.34$\times$ & 792\,\textmu s & 2.57$\times$ & 1\,025 \\
-MDHasher (n=65536) & 4.91\,ms & 16.6\,ms & 3.37$\times$ & 12.6\,ms & 2.57$\times$ & 16\,385 \\
-FiatShamir (rounds=16, upd=8) & 134\,\textmu s & 381\,\textmu s & 2.86$\times$ & 296\,\textmu s & 2.21$\times$ & 698 \\
-FiatShamir (rounds=16, upd=1024) & 1.36\,ms & 4.5\,ms & 3.33$\times$ & 3.45\,ms & 2.54$\times$ & 4\,762 \\
-FiatShamir (rounds=256, upd=8) & 2.11\,ms & 6.1\,ms & 2.89$\times$ & 4.8\,ms & 2.27$\times$ & 11\,013 \\
-FiatShamir (rounds=256, upd=1024) & 21.7\,ms & 71.9\,ms & 3.31$\times$ & 55.4\,ms & 2.56$\times$ & 76\,046 \\
+Permutation (width=16) & 570\,ns & 1.93\,\textmu s & 3.39$\times$ & 1.46\,\textmu s & 2.57$\times$ & 0 \\
+Permutation (width=24) & 705\,ns & 2.64\,\textmu s & 3.75$\times$ & 2.08\,\textmu s & 2.94$\times$ & 0 \\
+Compress & 586\,ns & 2.02\,\textmu s & 3.45$\times$ & 1.54\,\textmu s & 2.64$\times$ & 2 \\
+CompressParallel & 12.8\,ns & 271\,ns & 20.8$\times$ & 238\,ns & 18.7$\times$ & 2 \\
+MDHasher (n=64) & 4.97\,\textmu s & 16.4\,\textmu s & 3.28$\times$ & 11.8\,\textmu s & 2.37$\times$ & 17 \\
+MDHasher (n=4096) & 308\,\textmu s & 1.04\,ms & 3.38$\times$ & 790\,\textmu s & 2.57$\times$ & 1\,025 \\
+MDHasher (n=65536) & 4.91\,ms & 16.7\,ms & 3.37$\times$ & 12.6\,ms & 2.57$\times$ & 16\,385 \\
+FiatShamir (rounds=16, upd=8) & 134\,\textmu s & 384\,\textmu s & 2.87$\times$ & 298\,\textmu s & 2.22$\times$ & 698 \\
+FiatShamir (rounds=16, upd=1024) & 1.36\,ms & 4.54\,ms & 3.32$\times$ & 3.48\,ms & 2.55$\times$ & 4\,763 \\
+FiatShamir (rounds=256, upd=8) & 2.13\,ms & 6.12\,ms & 2.86$\times$ & 4.82\,ms & 2.26$\times$ & 11\,014 \\
+FiatShamir (rounds=256, upd=1024) & 21.8\,ms & 72.4\,ms & 3.33$\times$ & 55.6\,ms & 2.55$\times$ & 76\,055 \\
 \bottomrule
 \end{tabular}
 \end{adjustbox}

@@ -4,23 +4,23 @@
 \begin{tabular}{lrrrrr|rrr}
 \toprule
 Benchmark & baseline & fully generic & ratio & \texttt{current} & ratio & allocs \texttt{baseline} & allocs fully generic & allocs \texttt{current} \\ \midrule
-Permutation (width=16) & 570\,ns & 5.18\,\textmu s & 9.09$\times$ & -- & -- & 0 & 222 & -- \\
-Permutation (width=24) & 706\,ns & 7.43\,\textmu s & 10.5$\times$ & -- & -- & 0 & 298 & -- \\
-Compress & 585\,ns & 5.22\,\textmu s & 8.91$\times$ & -- & -- & 0 & 224 & -- \\
-CompressParallel & 4.31\,ns & 967\,ns & 224$\times$ & -- & -- & 0 & 224 & -- \\
-MDHasher (n=8) & 733\,ns & 4.96\,\textmu s & 6.77$\times$ & 627\,ns & 0.86$\times$ & 5 & 225 & 1 \\
-MDHasher (n=64) & 4.99\,\textmu s & 39.3\,\textmu s & 7.87$\times$ & 4.88\,\textmu s & 0.98$\times$ & 5 & 1\,793 & 1 \\
-MDHasher (n=4096) & 308\,\textmu s & 2.52\,ms & 8.20$\times$ & 311\,\textmu s & 1.01$\times$ & 5 & 114\,689 & 1 \\
-MDHasher (n=65536) & 4.91\,ms & 40.1\,ms & 8.16$\times$ & 4.96\,ms & 1.01$\times$ & 5 & 1\,835\,009 & 1 \\
-MDHasher (n=1048576) & 78.2\,ms & 626\,ms & 8.01$\times$ & 78.8\,ms & 1.01$\times$ & 5 & 29\,360\,129 & 1 \\
-FiatShamir (rounds=16, upd=8) & 388\,\textmu s & 2.79\,ms & 7.19$\times$ & 394\,\textmu s & 1.02$\times$ & 254 & 126\,171 & 731 \\
-FiatShamir (rounds=16, upd=1024) & 1.61\,ms & 12.8\,ms & 7.93$\times$ & 1.63\,ms & 1.01$\times$ & 254 & 581\,342 & 731 \\
-FiatShamir (rounds=16, upd=16384) & 20\,ms & 164\,ms & 8.17$\times$ & 20.2\,ms & 1.01$\times$ & 255 & 7\,462\,669 & 732 \\
-FiatShamir (rounds=256, upd=8) & 6.18\,ms & 44.6\,ms & 7.22$\times$ & 6.31\,ms & 1.02$\times$ & 3\,849 & 2\,018\,586 & 11\,526 \\
-FiatShamir (rounds=256, upd=1024) & 25.8\,ms & 204\,ms & 7.92$\times$ & 26\,ms & 1.01$\times$ & 3\,850 & 9\,301\,340 & 11\,528 \\
-FiatShamir (rounds=256, upd=16384) & 320\,ms & 2.61\,s & 8.14$\times$ & 323\,ms & 1.01$\times$ & 3\,874 & 119\,402\,596 & 11\,550 \\
-FiatShamir (rounds=4096, upd=8) & 99.5\,ms & 708\,ms & 7.12$\times$ & 101\,ms & 1.02$\times$ & 65\,518 & 32\,301\,300 & 188\,400 \\
-FiatShamir (rounds=4096, upd=1024) & 412\,ms & 3.2\,s & 7.77$\times$ & 417\,ms & 1.01$\times$ & 65\,536 & 148\,825\,042 & 188\,420 \\
+Permutation (width=16) & 569\,ns & 5.02\,\textmu s & 8.82$\times$ & -- & -- & 0 & 222 & -- \\
+Permutation (width=24) & 705\,ns & 7.25\,\textmu s & 10.3$\times$ & -- & -- & 0 & 298 & -- \\
+Compress & 585\,ns & 5.09\,\textmu s & 8.71$\times$ & -- & -- & 0 & 224 & -- \\
+CompressParallel & 12.6\,ns & 1.32\,\textmu s & 105$\times$ & -- & -- & 0 & 224 & -- \\
+MDHasher (n=8) & 851\,ns & 5.03\,\textmu s & 5.91$\times$ & 668\,ns & 0.79$\times$ & 5 & 225 & 1 \\
+MDHasher (n=64) & 5.04\,\textmu s & 40.1\,\textmu s & 7.94$\times$ & 4.9\,\textmu s & 0.97$\times$ & 5 & 1\,793 & 1 \\
+MDHasher (n=4096) & 308\,\textmu s & 2.54\,ms & 8.23$\times$ & 311\,\textmu s & 1.01$\times$ & 5 & 114\,689 & 1 \\
+MDHasher (n=65536) & 4.92\,ms & 40.7\,ms & 8.27$\times$ & 4.97\,ms & 1.01$\times$ & 5 & 1\,835\,009 & 1 \\
+MDHasher (n=1048576) & 78.6\,ms & 615\,ms & 7.82$\times$ & 79.4\,ms & 1.01$\times$ & 5 & 29\,360\,129 & 1 \\
+FiatShamir (rounds=16, upd=8) & 390\,\textmu s & 2.86\,ms & 7.35$\times$ & 399\,\textmu s & 1.02$\times$ & 254 & 126\,173 & 731 \\
+FiatShamir (rounds=16, upd=1024) & 1.62\,ms & 13\,ms & 8.06$\times$ & 1.64\,ms & 1.01$\times$ & 254 & 581\,351 & 731 \\
+FiatShamir (rounds=16, upd=16384) & 20.1\,ms & 167\,ms & 8.30$\times$ & 20.3\,ms & 1.01$\times$ & 257 & 7\,462\,752 & 734 \\
+FiatShamir (rounds=256, upd=8) & 6.23\,ms & 45.6\,ms & 7.32$\times$ & 6.37\,ms & 1.02$\times$ & 3\,851 & 2\,018\,614 & 11\,528 \\
+FiatShamir (rounds=256, upd=1024) & 25.9\,ms & 208\,ms & 8.01$\times$ & 26.2\,ms & 1.01$\times$ & 3\,856 & 9\,301\,452 & 11\,532 \\
+FiatShamir (rounds=256, upd=16384) & 321\,ms & 2.66\,s & 8.28$\times$ & 324\,ms & 1.01$\times$ & 3\,906 & 119\,403\,792 & 11\,582 \\
+FiatShamir (rounds=4096, upd=8) & 98.7\,ms & 702\,ms & 7.11$\times$ & 101\,ms & 1.03$\times$ & 65\,524 & 32\,301\,470 & 188\,410 \\
+FiatShamir (rounds=4096, upd=1024) & 412\,ms & 3.19\,s & 7.73$\times$ & 417\,ms & 1.01$\times$ & 65\,574 & 148\,825\,871 & 188\,444 \\
 \bottomrule
 \end{tabular}
 \end{adjustbox}

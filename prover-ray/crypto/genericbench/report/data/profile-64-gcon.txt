@@ -1,0 +1,37 @@
+# generic-asm CompressParallel, -cpu 64, benchtime 2s, GC on
+# GC cycles: 332 (gctrace)
+# 21085623	113.2 ns/op
+File: gb.test
+Build ID: b260c463d4d498bbef5df2b8afc58bd160b67e9e
+Type: cpu
+Time: 2026-10-29 03:09:54 UTC
+Duration: 2.51s, Total samples = 21.85s (870.82%)
+Showing nodes accounting for 19.77s, 90.48% of 21.85s total
+Dropped 191 nodes (cum <= 0.11s)
+Showing top 25 nodes out of 81
+      flat  flat%   sum%        cum   cum%
+    13.99s 64.03% 64.03%     13.99s 64.03%  github.com/consensys/gnark-crypto/field/koalabear/poseidon2.permutation16_avx512
+     2.27s 10.39% 74.42%     16.36s 74.87%  github.com/consensys/gnark-crypto/field/koalabear/poseidon2.(*Permutation).Permutation
+     0.41s  1.88% 76.29%      0.41s  1.88%  runtime.procyieldAsm
+     0.33s  1.51% 77.80%      0.33s  1.51%  runtime.(*lfstack).pop
+     0.33s  1.51% 79.31%      0.33s  1.51%  runtime.futex
+     0.32s  1.46% 80.78%      0.32s  1.46%  testing.(*PB).Next (inline)
+     0.24s  1.10% 81.88%     19.11s 87.46%  github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/poseidon2.Compress[go.shape.[1]uint32,go.shape.*github.com/consensys/gnark-crypto/field/koalabear.Element]
+     0.24s  1.10% 82.97%      1.21s  5.54%  runtime.mallocgcSmallNoScanSC4
+     0.22s  1.01% 83.98%      1.23s  5.63%  runtime.mallocgcSmallNoScanSlowPath
+     0.16s  0.73% 84.71%      0.16s  0.73%  github.com/consensys/gnark-crypto/field/koalabear.(*Element).Add
+     0.16s  0.73% 85.45%      0.16s  0.73%  runtime.(*spanInlineMarkBits).init
+     0.15s  0.69% 86.13%      0.35s  1.60%  runtime.gcmarknewobject
+     0.15s  0.69% 86.82%      0.15s  0.69%  runtime.madvise
+     0.12s  0.55% 87.37%     19.68s 90.07%  github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/genericbench.benchCompress[go.shape.[1]uint32,go.shape.*github.com/consensys/gnark-crypto/field/koalabear.Element].func1.1
+     0.12s  0.55% 87.92%     19.24s 88.05%  github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/poseidon2.Compressor[go.shape.[1]uint32,go.shape.*github.com/consensys/gnark-crypto/field/koalabear.Element].func1
+     0.11s   0.5% 88.42%      0.11s   0.5%  runtime.asyncPreempt
+     0.10s  0.46% 88.88%      0.67s  3.07%  runtime.lock2
+     0.08s  0.37% 89.24%      0.32s  1.46%  runtime.(*sweepLocked).sweep
+     0.06s  0.27% 89.52%      1.01s  4.62%  runtime.mallocgcSmallNoScanSC6
+     0.05s  0.23% 89.75%      0.40s  1.83%  runtime.sweepone
+     0.04s  0.18% 89.93%      0.15s  0.69%  runtime.scanblock
+     0.03s  0.14% 90.07%      0.26s  1.19%  runtime.futexsleep
+     0.03s  0.14% 90.21%      0.35s  1.60%  runtime.getempty
+     0.03s  0.14% 90.34%      0.44s  2.01%  runtime.procyield (inline)
+     0.03s  0.14% 90.48%      0.12s  0.55%  runtime.unlock2

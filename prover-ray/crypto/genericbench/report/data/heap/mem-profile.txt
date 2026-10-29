@@ -1,0 +1,51 @@
+# generic-asm CompressParallel, -cpu 64, benchtime 2s, -memprofilerate 4096
+# 
+== sample_index=alloc_space
+Type: alloc_space
+Time: 2026-10-29 03:27:33 UTC
+Showing nodes accounting for 1486.85MB, 99.94% of 1487.73MB total
+Dropped 132 nodes (cum <= 7.44MB)
+      flat  flat%   sum%        cum   cum%
+ 1486.78MB 99.94% 99.94%  1486.78MB 99.94%  github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/poseidon2.Compress[go.shape.[1]uint32,go.shape.*github.com/consensys/gnark-crypto/field/koalabear.Element]
+    0.07MB 0.005% 99.94%  1486.85MB 99.94%  testing.(*B).RunParallel.func1
+         0     0% 99.94%  1486.78MB 99.94%  github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/genericbench.benchCompress[go.shape.[1]uint32,go.shape.*github.com/consensys/gnark-crypto/field/koalabear.Element].func1.1
+         0     0% 99.94%  1486.78MB 99.94%  github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/poseidon2.Compressor[go.shape.[1]uint32,go.shape.*github.com/consensys/gnark-crypto/field/koalabear.Element].func1
+== sample_index=alloc_objects
+Type: alloc_objects
+Time: 2026-10-29 03:27:33 UTC
+Showing nodes accounting for 32522555, 100% of 32526467 total
+Dropped 132 nodes (cum <= 162632)
+      flat  flat%   sum%        cum   cum%
+  32520114   100%   100%   32520114   100%  github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/poseidon2.Compress[go.shape.[1]uint32,go.shape.*github.com/consensys/gnark-crypto/field/koalabear.Element]
+      2441 0.0075%   100%   32522555   100%  testing.(*B).RunParallel.func1
+         0     0%   100%   32520114   100%  github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/genericbench.benchCompress[go.shape.[1]uint32,go.shape.*github.com/consensys/gnark-crypto/field/koalabear.Element].func1.1
+         0     0%   100%   32520114   100%  github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/poseidon2.Compressor[go.shape.[1]uint32,go.shape.*github.com/consensys/gnark-crypto/field/koalabear.Element].func1
+== sample_index=inuse_space
+Type: inuse_space
+Time: 2026-10-29 03:27:33 UTC
+Showing nodes accounting for 770.55kB, 100% of 770.55kB total
+Showing top 6 nodes out of 79
+      flat  flat%   sum%        cum   cum%
+  526.76kB 68.36% 68.36%   526.76kB 68.36%  runtime.mallocgc
+  170.30kB 22.10% 90.46%   170.30kB 22.10%  github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/poseidon2.Compress[go.shape.[1]uint32,go.shape.*github.com/consensys/gnark-crypto/field/koalabear.Element]
+   38.34kB  4.98% 95.44%    38.34kB  4.98%  regexp.(*bitState).reset
+   30.80kB  4.00% 99.44%    30.80kB  4.00%  sync.(*Pool).pinSlow
+    4.35kB  0.56%   100%     4.35kB  0.56%  regexp/syntax.(*compiler).inst
+         0     0%   100%    10.27kB  1.33%  fmt.Fprintf
+== list Compress (alloc_space)
+Total: 1.45GB
+ROUTINE ======================== github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/poseidon2.Compress[go.shape.[1]uint32,go.shape.*github.com/consensys/gnark-crypto/field/koalabear.Element] in /home/ubuntu/lineth-monorepo/prover-ray/crypto/poseidon2/hasher.go
+    1.45GB     1.45GB (flat, cum) 99.94% of Total
+         .          .     25:func Compress[T any, PT generic.Element[T]](perm *Permutation[T, PT], state, block Octuplet[T]) Octuplet[T] {
+  988.55MB   988.55MB     26:	var x [CompressionWidth]T
+         .          .     27:	copy(x[:BlockSize], state[:])
+         .          .     28:	copy(x[BlockSize:], block[:])
+         .          .     29:	if err := perm.Permute(x[:]); err != nil {
+         .          .     30:		panic(err) // can't happen, the width is fixed
+         .          .     31:	}
+  498.23MB   498.23MB     32:	res := block
+         .          .     33:	for i := range res {
+         .          .     34:		PT(&res[i]).Add(&res[i], &x[BlockSize+i])
+         .          .     35:	}
+         .          .     36:	return res
+         .          .     37:}

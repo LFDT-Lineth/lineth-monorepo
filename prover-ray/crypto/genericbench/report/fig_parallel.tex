@@ -3,24 +3,26 @@
 \begin{axis}[
   xmode=log, ymode=log, log basis x=2,
   width=0.92\linewidth, height=8cm,
-  xtick={1,2,4,8,16,32,48,96,144,192}, xticklabels={1,2,4,8,16,32,48,96,144,192},
+  xtick={1,2,4,8,16,32,48,64}, xticklabels={1,2,4,8,16,32,48,64},
   xlabel={threads (\texttt{-cpu})}, ylabel={ns per compression (log scale, lower is better)},
   label style={font=\small}, tick label style={font=\scriptsize},
   grid=major, major grid style={gray!20}, axis line style={gray!60},
   legend style={font=\scriptsize, draw=none, fill=white, fill opacity=0.85, text opacity=1, at={(0.98,0.98)}, anchor=north east},
   legend cell align=left,
 ]
-\addplot[black!70, thick, mark=*, mark size=1.6pt] coordinates {(1,584.8) (2,292.7) (4,146.5) (8,73.39) (16,36.84) (32,18.98) (48,13.95) (96,7.438) (144,5.646) (192,4.627)};
+\addplot[black!70, thick, mark=*, mark size=1.6pt] coordinates {(1,583.5) (2,292.4) (4,146.2) (8,73.31) (16,38.79) (32,21.71) (48,16.05) (64,12.77)};
 \addlegendentry{\texttt{baseline}}
-\addplot[c1, thick, mark=square*, mark size=1.6pt] coordinates {(1,645.2) (2,336.9) (4,178.4) (8,101.2) (16,71.07) (32,67.33) (48,76.31) (96,86.12) (144,83.64) (192,75.78)};
+\addplot[c1, thick, mark=square*, mark size=1.6pt] coordinates {(1,651.7) (2,334.9) (4,172.8) (8,106.5) (16,82.34) (32,80.41) (48,89.97) (64,103.3)};
 \addlegendentry{\texttt{generic-asm}, GC on}
-\addplot[c1, thick, dashed, mark=square, mark size=1.6pt] coordinates {(1,626.1) (2,315.1) (4,159.4) (8,81.5) (16,40.67) (32,21.89) (48,15.2) (96,9.484) (144,7.872) (192,7.093)};
+\addplot[c1, thick, dashed, mark=square, mark size=1.6pt] coordinates {(1,647.4) (2,324.6) (4,157.9) (8,80.82) (16,42.11) (32,23.95) (48,18.05) (64,14.58)};
 \addlegendentry{\texttt{generic-asm}, GC off}
-\addplot[c2, thick, mark=triangle*, mark size=2pt] coordinates {(1,1572) (2,799.1) (4,399.8) (8,214.4) (16,125.5) (32,96.28) (48,98.5) (96,105.7) (144,117.2) (192,122.8)};
+\addplot[c2, thick, mark=triangle*, mark size=2pt] coordinates {(1,1560) (2,785.1) (4,394.5) (8,212.2) (16,143.6) (32,141.8) (48,170) (64,214.3)};
 \addlegendentry{hot-loop branches, GC on}
-\addplot[c2, thick, dashed, mark=triangle, mark size=2pt] coordinates {(1,1620) (2,853.8) (4,399) (8,193.2) (16,99.75) (32,50.52) (48,36.8) (96,23.37) (144,21.74) (192,18.19)};
+\addplot[c2, thick, dashed, mark=triangle, mark size=2pt] coordinates {(1,1620) (2,828.5) (4,397.3) (8,193.1) (16,104.3) (32,58.16) (48,54.31) (64,51.18)};
 \addlegendentry{hot-loop branches, GC off}
+\addplot[c3, thick, mark=diamond*, mark size=2pt] coordinates {(1,591.5) (2,296.4) (4,148.1) (8,74.53) (16,39.33) (32,22.24) (48,16.22) (64,12.91)};
+\addlegendentry{\texttt{generic-asm}, allocation-free \texttt{Compress}, GC on}
 \end{axis}
 \end{tikzpicture}
-\caption{KoalaBear CompressParallel scaling (Table~\ref{tab:parallel}). Solid: garbage collector on (default); dashed: off. Colour follows the implementation.}\label{fig:parallel}
+\caption{KoalaBear CompressParallel scaling (Table~\ref{tab:parallel}). Solid: garbage collector on (default); dashed: off. Colour follows the implementation. Green: \texttt{generic-asm} with the allocation-free \texttt{Compress} of Section~\ref{sec:fix}, which lies on the baseline.}\label{fig:parallel}
 \end{figure}

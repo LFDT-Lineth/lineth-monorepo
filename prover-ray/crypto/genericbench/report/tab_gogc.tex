@@ -1,0 +1,17 @@
+\begin{table}[htbp]\centering\small
+\caption{\texttt{generic-asm} compressions on 64 goroutines for several values of \texttt{GOGC}. The ratio is against \texttt{baseline} at 64 threads (12.8\,ns, Table~\ref{tab:parallel}).}\label{tab:gogc}
+\begin{adjustbox}{max width=\linewidth}
+\begin{tabular}{r|rrrrr}
+\toprule
+\texttt{GOGC} & ns/op & ratio & ms between cycles & heap goal (MB) & STW, \% of wall \\ \midrule
+100 & 107 & 8.3$\times$ & 8.34 & 15.5 & 54.4\% \\
+200 & 74.6 & 5.8$\times$ & 8.81 & 16.7 & 54.2\% \\
+400 & 49.6 & 3.9$\times$ & 11.4 & 33.3 & 45.6\% \\
+800 & 34.4 & 2.7$\times$ & 15.8 & 45.1 & 37.0\% \\
+1600 & 24.6 & 1.9$\times$ & 23.6 & 126 & 25.7\% \\
+6400 & 17.9 & 1.4$\times$ & 65 & 268 & 8.0\% \\
+off & 16.1 & 1.3$\times$ & -- & -- & 0.0\% \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}

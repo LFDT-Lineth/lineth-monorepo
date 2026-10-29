@@ -1,0 +1,36 @@
+diff --git a/prover-ray/crypto/poseidon2/hasher.go b/prover-ray/crypto/poseidon2/hasher.go
+index 54428c2eb..c1f68679e 100644
+--- a/prover-ray/crypto/poseidon2/hasher.go
++++ b/prover-ray/crypto/poseidon2/hasher.go
+@@ -4,6 +4,8 @@ import (
+ 	"fmt"
+ 	"slices"
+ 
++	"github.com/consensys/gnark-crypto/field/koalabear"
++
+ 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/generic"
+ )
+ 
+@@ -23,6 +25,22 @@ type CompressFunc[T any] func(state, block Octuplet[T]) Octuplet[T]
+ // Compress returns P(state ‖ block)[8..16] + block, where P is perm (of width
+ // 16). This matches gnark-crypto's koalabear vortex.CompressPoseidon2.
+ func Compress[T any, PT generic.Element[T]](perm *Permutation[T, PT], state, block Octuplet[T]) Octuplet[T] {
++	if perm.kbAsm != nil {
++		// Concrete KoalaBear types keep x and res on the stack: no indirect
++		// calls through the generic dictionary, so nothing escapes.
++		var y [CompressionWidth]koalabear.Element
++		copy(y[:BlockSize], asKB(state[:]))
++		copy(y[BlockSize:], asKB(block[:]))
++		if err := perm.kbAsm.Permutation(y[:]); err != nil {
++			panic(err)
++		}
++		res := block
++		r := asKB(res[:])
++		for i := range r {
++			r[i].Add(&r[i], &y[BlockSize+i])
++		}
++		return res
++	}
+ 	var x [CompressionWidth]T
+ 	copy(x[:BlockSize], state[:])
+ 	copy(x[BlockSize:], block[:])

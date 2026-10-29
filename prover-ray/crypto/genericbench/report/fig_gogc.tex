@@ -1,0 +1,22 @@
+\begin{figure}[htbp]\centering
+\begin{tikzpicture}
+\begin{axis}[
+  xmode=log, log basis x=2, ymode=log, xtick={100,200,400,800,1600,6400}, xticklabels={100,200,400,800,1600,6400},
+  xlabel={\texttt{GOGC}}, ylabel={ns per compression (log scale)},
+  width=0.7\linewidth, height=6.5cm, ymin=8, ymax=150,
+  ytick={10,20,50,100}, yticklabels={10,20,50,100},
+  label style={font=\small}, tick label style={font=\scriptsize},
+  grid=major, major grid style={gray!20}, axis line style={gray!60},
+  legend style={font=\scriptsize, draw=none, fill=white, fill opacity=0.85, text opacity=1},
+  legend cell align=left, legend pos=north east,
+]
+\addplot[c1, thick, mark=square*, mark size=1.6pt] coordinates {(100,106.8) (200,74.56) (400,49.65) (800,34.43) (1600,24.58) (6400,17.87)};
+\addlegendentry{\texttt{generic-asm}, GC on}
+\addplot[c1, thick, dashed, domain=100:6400] {16.15};
+\addlegendentry{\texttt{generic-asm}, GC off}
+\addplot[black!70, thick, domain=100:6400] {12.8};
+\addlegendentry{\texttt{baseline}}
+\end{axis}
+\end{tikzpicture}
+\caption{\texttt{generic-asm} at 64 threads as \texttt{GOGC} is raised (Table~\ref{tab:gogc}). Fewer GC cycles, lower cost.}\label{fig:gogc}
+\end{figure}

@@ -1,0 +1,37 @@
+# generic-asm CompressParallel, -cpu 64, benchtime 2s, GC off
+# GC cycles: 8 (gctrace)
+# 144225492	16.01 ns/op
+File: gb.test
+Build ID: b260c463d4d498bbef5df2b8afc58bd160b67e9e
+Type: cpu
+Time: 2026-10-29 03:09:57 UTC
+Duration: 4.89s, Total samples = 235.96s (4823.98%)
+Showing nodes accounting for 228.70s, 96.92% of 235.96s total
+Dropped 166 nodes (cum <= 1.18s)
+Showing top 25 nodes out of 27
+      flat  flat%   sum%        cum   cum%
+   169.11s 71.67% 71.67%    169.11s 71.67%  github.com/consensys/gnark-crypto/field/koalabear/poseidon2.permutation16_avx512
+    34.52s 14.63% 86.30%    203.66s 86.31%  github.com/consensys/gnark-crypto/field/koalabear/poseidon2.(*Permutation).Permutation
+     5.05s  2.14% 88.44%    230.96s 97.88%  github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/poseidon2.Compress[go.shape.[1]uint32,go.shape.*github.com/consensys/gnark-crypto/field/koalabear.Element]
+     3.60s  1.53% 89.96%      7.84s  3.32%  runtime.mallocgcSmallNoScanSC4
+     3.32s  1.41% 91.37%      3.32s  1.41%  runtime.memmove
+     3.30s  1.40% 92.77%      3.30s  1.40%  runtime.(*spanInlineMarkBits).init
+     2.03s  0.86% 93.63%      2.03s  0.86%  github.com/consensys/gnark-crypto/field/koalabear.(*Element).Add
+     1.84s  0.78% 94.41%    232.80s 98.66%  github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/poseidon2.Compressor[go.shape.[1]uint32,go.shape.*github.com/consensys/gnark-crypto/field/koalabear.Element].func1
+     1.65s   0.7% 95.11%      2.24s  0.95%  runtime.(*spanSet).push
+     1.43s  0.61% 95.72%      8.57s  3.63%  runtime.mallocgcSmallNoScanSC6
+     0.81s  0.34% 96.06%    233.93s 99.14%  github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/genericbench.benchCompress[go.shape.[1]uint32,go.shape.*github.com/consensys/gnark-crypto/field/koalabear.Element].func1.1
+     0.66s  0.28% 96.34%      9.44s  4.00%  runtime.(*mcache).refill
+     0.40s  0.17% 96.51%    204.17s 86.53%  github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/poseidon2.(*Permutation[go.shape.[1]uint32,go.shape.*github.com/consensys/gnark-crypto/field/koalabear.Element]).Permute
+     0.24s   0.1% 96.61%      2.85s  1.21%  runtime.(*mheap).allocSpan
+     0.22s 0.093% 96.70%      1.65s   0.7%  runtime.(*mheap).initSpan
+     0.19s 0.081% 96.78%      1.29s  0.55%  runtime.(*sweepLocked).sweep
+     0.19s 0.081% 96.86%      1.71s  0.72%  runtime.sweepone
+     0.07s  0.03% 96.89%      9.57s  4.06%  runtime.(*mcache).nextFree
+     0.03s 0.013% 96.91%      6.39s  2.71%  runtime.(*mcentral).cacheSpan
+     0.02s 0.0085% 96.91%      3.33s  1.41%  runtime.(*mspan).initHeapBits
+     0.01s 0.0042% 96.92%      3.31s  1.40%  runtime.(*mspan).initInlineMarkBits (inline)
+     0.01s 0.0042% 96.92%      3.67s  1.56%  runtime.systemstack
+         0     0% 96.92%      6.18s  2.62%  runtime.(*mcentral).grow
+         0     0% 96.92%      2.25s  0.95%  runtime.(*mcentral).uncacheSpan
+         0     0% 96.92%      2.85s  1.21%  runtime.(*mheap).alloc

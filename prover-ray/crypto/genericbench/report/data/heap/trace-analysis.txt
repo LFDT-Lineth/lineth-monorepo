@@ -1,0 +1,32 @@
+# execution trace: generic-asm CompressParallel, -cpu 64, benchtime 300ms (go test -trace); dumped with go tool trace -d=parsed
+## python3 stw.py parsed.txt
+147 STW windows
+STW duration us: median 1550  p90 3320  max 4519  total 246.4 ms
+goroutines stopped per window: median 23
+time until last goroutine stopped, us: median 49  p90 374  max 3950
+where the last goroutine was when it stopped (top frame | first non-runtime frame):
+    58  runtime.mallocgcSmallNoScanSC4 | github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/poseidon2.Compress[...]
+    47  runtime.gcStart | github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/poseidon2.Compress[...]
+     9  github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/poseidon2.Compressor[...].func1 | github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/poseidon2.Compressor[...].func1
+     8  runtime.gcTrigger.test | github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/poseidon2.Compress[...]
+     4  runtime.(*scavengerState).init.func2 | ?
+     2  runtime.(*scavengerState).park | ?
+     1  runtime.gcParkAssist | github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/poseidon2.Compress[...]
+     1  runtime.gcMarkDone | github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/poseidon2.Compress[...]
+
+## python3 states.py parsed.txt
+128 worker goroutines, 32.3 goroutine-seconds over 0.51 s
+ 57.2%  Waiting   sync [runtime.gcMarkDone]
+ 17.5%  Runnable  preempted
+ 14.5%  Running   
+  6.6%  Waiting   sync [runtime.gcStart]
+  2.9%  Runnable  woken
+  1.1%  Waiting   GC mark assist wait for work [runtime.gcParkAssist]
+  0.0%  Waiting   preempted [runtime.mallocgcSmallNoScanSC4]
+  0.0%  Waiting   preempted [github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/poseidon2.Compressor[...].func1]
+  0.0%  Waiting   preempted [runtime.mallocgcSmallNoScanSlowPath]
+  0.0%  Waiting   preempted [github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/poseidon2.(*Permutation[...]).Permute]
+  0.0%  Waiting   preempted [runtime.gcTrigger.test]
+  0.0%  Runnable  runtime.Gosched
+  0.0%  Waiting   preempted [runtime.semrelease1]
+  0.0%  Waiting   preempted [runtime.readyWithTime]
