@@ -262,18 +262,7 @@ pub fn installGuestElf(b: *std.Build, root_module: *std.Build.Module, guest_name
     b.step("program-id", "Stage the versioned guest ELF with its Keccak-256 Program ID").dependOn(&program_id.step);
 }
 
-/// Registers `zig build fmt` (rewrite in place) and `zig build fmt-check` (verify only) over every
-/// Zig source in the calling package. `zig fmt` has no recursive exclude, so the package's own
-/// `zig-pkg/` (fetched dependencies) and `zig-out/` are excluded by exact path.
-pub fn addFmtSteps(b: *std.Build) void {
-    const exclude_paths: []const []const u8 = &.{ "zig-pkg", "zig-out" };
-    const fmt = b.addFmt(.{ .paths = &.{"."}, .exclude_paths = exclude_paths });
-    const fmt_check = b.addFmt(.{ .paths = &.{"."}, .exclude_paths = exclude_paths, .check = true });
-    b.step("fmt", "Format this package's Zig sources in place").dependOn(&fmt.step);
-    b.step("fmt-check", "Verify this package's Zig sources are formatted").dependOn(&fmt_check.step);
-}
-
-/// build_common is consumed via `@import`; its only step of its own is formatting.
+/// build_common is consumed via `@import`; it has no steps of its own.
 pub fn build(b: *std.Build) void {
-    addFmtSteps(b);
+    _ = b;
 }

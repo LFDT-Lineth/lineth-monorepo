@@ -57,7 +57,6 @@ fn findToolCandidates(
 }
 
 pub fn build(b: *std.Build) void {
-    common.addFmtSteps(b);
     const tc = resolveToolchain(b);
     const ctt = b.dependency("constantine", .{});
     // Build the rv64 archive in place and the host archive into Zig output dirs.

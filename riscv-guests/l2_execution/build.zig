@@ -8,7 +8,6 @@ const Secp256k1Backend = enum { std, constantine };
 
 pub fn build(b: *std.Build) void {
     common.requireZigVersion();
-    common.addFmtSteps(b);
 
     const options = Options.parse(b);
     addGuestProgram(b, options);

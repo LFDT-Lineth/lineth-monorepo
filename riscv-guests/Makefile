@@ -17,9 +17,10 @@
 GUESTS ?= guest_common l2_execution rollup
 ZIG    ?= zig
 
-# Every directory holding a build.zig is a Zig package and registers its own `fmt` and `fmt-check`
-# build steps (build_common's addFmtSteps), so a new package is formatted without touching this file.
+# Every directory holding a build.zig is a Zig package, so a new package is formatted without
+# touching this file.
 PACKAGES := $(patsubst %/build.zig,%,$(wildcard */build.zig))
+FMT_EXCLUDES := $(foreach p,$(PACKAGES),--exclude $(p)/zig-pkg --exclude $(p)/zig-out --exclude $(p)/.zig-cache)
 
 .PHONY: compile test fetch clean fmt fmt-check help install-constantine-deps release-check release-asset
 
@@ -81,14 +82,14 @@ install-constantine-deps:
 		echo "Nim $(NIM_VERSION) required, found $$nim_version" >&2; exit 1; \
 	fi
 
-# Formatting spans every package (guests and the non-guest build_common, lineth_accelerators,
-# guest_crypto_ctt), so it fans out over PACKAGES rather than GUESTS. `fmt` rewrites in place;
-# `fmt-check` only verifies — the same gate CI runs.
-fmt fmt-check:
-	@for p in $(PACKAGES); do \
-		echo "==> zig build $@ ($$p)"; \
-		(cd $$p && $(ZIG) build $@) || exit $$?; \
-	done
+# Formatting reads sources only: `zig fmt` covers every package (guests and the non-guest
+# build_common, lineth_accelerators, guest_crypto_ctt) without configuring any build. `fmt` rewrites
+# in place; `fmt-check` only verifies — the same gate CI runs.
+fmt:
+	$(ZIG) fmt $(FMT_EXCLUDES) $(PACKAGES)
+
+fmt-check:
+	$(ZIG) fmt --check $(FMT_EXCLUDES) $(PACKAGES)
 
 help:
 	@echo "riscv-guests — builds every guest in GUESTS=\"$(GUESTS)\""

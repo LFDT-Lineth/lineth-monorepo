@@ -3,7 +3,6 @@ const common = @import("build_common");
 
 pub fn build(b: *std.Build) void {
     common.requireZigVersion();
-    common.addFmtSteps(b);
 
     // Same freestanding rv64im profile every guest targets (shared helper).
     const target = common.standardGuestTarget(b);

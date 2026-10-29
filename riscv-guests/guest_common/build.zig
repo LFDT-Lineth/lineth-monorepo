@@ -6,7 +6,6 @@ const common = @import("build_common");
 
 pub fn build(b: *std.Build) void {
     common.requireZigVersion();
-    common.addFmtSteps(b);
 
     // Same freestanding rv64im ZkC profile as every guest (shared helper); a consumer that passes
     // its own target via b.dependency overrides this default.
