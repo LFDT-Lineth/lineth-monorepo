@@ -185,6 +185,8 @@ class RiscvProofRequestDtoMapperTest {
               isCalldata = false,
               blobBytes = it.blobBytes.encodeHex(),
               calldataBytes = "0x",
+              kzgCommitment = "0x" + "1f".repeat(48),
+              kzgProof = "0x" + "20".repeat(48),
             )
           },
           parentDataRollingHash = request.parentDataRollingHash.encodeHex(),
