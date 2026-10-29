@@ -79,10 +79,10 @@ $(error Unsupported E2E_STACK=$(E2E_STACK) (expected zkevm or riscv))
 endif
 
 e2e-ci-detect-changes:
-	@scripts/e2e/detect-changes.sh "$${E2E_ZKEVM_FILES:-[]}" "$${E2E_RISCV_FILES:-[]}"
+	@.github/actions/run-e2e-tests/scripts/detect-changes.sh "$${E2E_ZKEVM_FILES:-[]}" "$${E2E_RISCV_FILES:-[]}"
 
 e2e-ci-load-images:
-	@E2E_FALLBACK_IMAGE_TAG="$(E2E_FALLBACK_IMAGE_TAG)" scripts/e2e/load-image-artifacts.sh "$(E2E_ARTIFACT_DIR)"
+	@E2E_FALLBACK_IMAGE_TAG="$(E2E_FALLBACK_IMAGE_TAG)" .github/actions/run-e2e-tests/scripts/load-image-artifacts.sh "$(E2E_ARTIFACT_DIR)"
 
 # Skipped when besu-package is provided: its services carry the external-to-monorepo profile,
 # so the pull would fetch an unpublished CI tag or overwrite the loaded artifact.
