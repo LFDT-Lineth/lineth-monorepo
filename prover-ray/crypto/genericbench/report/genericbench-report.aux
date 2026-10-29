@@ -92,4 +92,16 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {8.5}Caveats}{13}{subsection.8.5}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {9}Recommendations}{13}{section.9}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {A}Reproducing}{13}{appendix.A}\protected@file@percent }
-\gdef \@abspage@last{13}
+\@writefile{toc}{\contentsline {section}{\numberline {B}What it means that a variable escapes}{13}{appendix.B}\protected@file@percent }
+\newlabel{sec:escape}{{B}{13}{What it means that a variable escapes}{appendix.B}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.1}Stack vs.\ heap}{14}{subsection.B.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.2}The function where \texttt  {x} escapes: \texttt  {Compress}}{14}{subsection.B.2}\protected@file@percent }
+\newlabel{lst:esccompress}{{10}{14}{Generic \texttt {Compress} (\texttt {crypto/poseidon2/hasher.go})}{lstlisting.10}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {10}{\ignorespaces Generic \texttt  {Compress} (\texttt  {crypto/poseidon2/hasher.go}).}}{14}{lstlisting.10}\protected@file@percent }
+\newlabel{lst:escpermute}{{11}{14}{Generic \texttt {Permute} (\texttt {crypto/poseidon2/permutation.go}, excerpt)}{lstlisting.11}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {11}{\ignorespaces Generic \texttt  {Permute} (\texttt  {crypto/poseidon2/permutation.go}, excerpt).}}{14}{lstlisting.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.3}The same work without escaping: \texttt  {kbCompressAsm}}{15}{subsection.B.3}\protected@file@percent }
+\newlabel{lst:esckbasm}{{12}{15}{\texttt {kbCompressAsm} (\texttt {crypto/poseidon2/koalabear.go}), used by \texttt {generic-asm-static-call}}{lstlisting.12}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {12}{\ignorespaces \texttt  {kbCompressAsm} (\texttt  {crypto/poseidon2/koalabear.go}), used by \texttt  {generic-asm-static-call}.}}{15}{lstlisting.12}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.4}Why it matters for the benchmark}{15}{subsection.B.4}\protected@file@percent }
+\gdef \@abspage@last{15}

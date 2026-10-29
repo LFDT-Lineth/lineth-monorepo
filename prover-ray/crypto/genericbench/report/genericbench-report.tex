@@ -728,4 +728,138 @@ GENERIC_BENCH_SCALE=medium go test ./crypto/genericbench/ -run '^$' \
 benchstat -col /impl raw.txt
 \end{lstlisting}
 
+\section{What it means that a variable escapes}\label{sec:escape}
+
+Escape analysis is how the Go compiler decides, for each local variable, whether it can live
+on the \emph{stack} or must go on the \emph{heap}. A variable \emph{escapes} when it is moved
+to the heap.
+
+\subsection{Stack vs.\ heap}
+
+\begin{itemize}
+  \item \textbf{Stack:} memory that belongs to one function call. It is reserved when the
+    function starts and released when it returns. It costs almost nothing and the garbage
+    collector never sees it.
+  \item \textbf{Heap:} memory that can outlive the function call. Each allocation has a cost,
+    and the garbage collector later has to find and free it.
+\end{itemize}
+
+The compiler keeps a local on the stack only if it can prove that nothing still refers to it
+once the function returns. If it cannot prove that, it moves the variable to the heap. With
+\texttt{-gcflags=-m}, it prints \texttt{moved to heap: x}.
+
+The usual ways a variable escapes:
+\begin{itemize}
+  \item returning a pointer to it;
+  \item storing a pointer to it in a global, a struct field or a channel;
+  \item passing a pointer to it into a function the compiler cannot see into, so it has to
+    assume the worst.
+\end{itemize}
+
+\subsection{The function where \texttt{x} escapes: \texttt{Compress}}
+
+\begin{lstlisting}[language=Go,caption={Generic \texttt{Compress} (\texttt{crypto/poseidon2/hasher.go}).},label=lst:esccompress]
+func Compress[T any, PT generic.Element[T]](perm *Permutation[T, PT], state, block Octuplet[T]) Octuplet[T] {
+	var x [CompressionWidth]T              // local array: 16 elements
+	copy(x[:BlockSize], state[:])
+	copy(x[BlockSize:], block[:])
+	if err := perm.Permute(x[:]); err != nil { // (1) pointer to x leaves Compress
+		panic(err)
+	}
+	res := block                           // local array: 8 elements
+	for i := range res {
+		PT(&res[i]).Add(&res[i], &x[BlockSize+i]) // (2) pointers to res and x go to a PT method
+	}
+	return res
+}
+\end{lstlisting}
+
+\texttt{x} and \texttt{res} are both local arrays, so ideally they would live on the stack.
+But pointers to them leave \texttt{Compress} in two places.
+
+\textbf{(1) \texttt{perm.Permute(x[:])}.} \texttt{x[:]} is a slice: a pointer to
+\texttt{x}'s memory plus a length. So the compiler has to look at what \texttt{Permute} does
+with its \texttt{input} parameter:
+
+\begin{lstlisting}[language=Go,caption={Generic \texttt{Permute} (\texttt{crypto/poseidon2/permutation.go}, excerpt).},label=lst:escpermute]
+func (h *Permutation[T, PT]) Permute(input []T) error {
+	...
+	if h.kbAsm != nil {
+		return h.kbAsm.Permutation(asKB(input)) // branch taken at run time for generic-asm
+	}
+	h.matMulExternal(input)                     // other branches: generic helpers
+	for r := range ... {
+		h.addRoundKey(r, input)
+		...
+		h.sBox(&input[0])                       // e.g. sBox -> PT(x).Mul(x, &sq)
+		...
+	}
+}
+\end{lstlisting}
+
+The non-asm branches pass \texttt{input}, or pointers into it, to helpers that call
+\texttt{PT(...)} methods like \texttt{Mul} and \texttt{Add}. Because \texttt{Compress} and
+\texttt{Permute} are generic, Go compiles one shared version of each for every element type
+with the same memory layout. In that shared version, \texttt{PT} methods are called through
+a lookup table (the generic dictionary). The compiler does not know which concrete method
+will run, so it assumes the method might keep the pointer. It therefore marks \texttt{input}
+as escaping, and since \texttt{x[:]} was passed as \texttt{input}, \texttt{x} is moved to the
+heap.
+
+At run time \texttt{generic-asm} always takes the \texttt{kbAsm} branch, which does not keep
+the pointer. That does not help, because the decision is made once at compile time and
+covers every branch of \texttt{Permute}.
+
+\textbf{(2) \texttt{PT(\&res[i]).Add(\&res[i], \&x[BlockSize+i])}.} This is the same problem
+without a nested call: pointers to \texttt{res} (and to \texttt{x}) go straight to a method
+called through the dictionary. So \texttt{res} is moved to the heap too.
+
+The compiler confirms both (\texttt{-gcflags=-m}):
+\begin{lstlisting}
+crypto/poseidon2/hasher.go:26:6: moved to heap: poseidon2.x
+crypto/poseidon2/hasher.go:32:2: moved to heap: poseidon2.res
+\end{lstlisting}
+That is the 2 allocations (96\,B) per compression for \texttt{generic},
+\texttt{generic-vec} and \texttt{generic-asm}.
+
+\subsection{The same work without escaping: \texttt{kbCompressAsm}}
+
+\begin{lstlisting}[language=Go,caption={\texttt{kbCompressAsm} (\texttt{crypto/poseidon2/koalabear.go}), used by \texttt{generic-asm-static-call}.},label=lst:esckbasm]
+func kbCompressAsm(perm *kbposeidon2.Permutation, state, block []koalabear.Element) {
+	var x [CompressionWidth]koalabear.Element // concrete type
+	copy(x[:BlockSize], state)
+	copy(x[BlockSize:], block)
+	if err := perm.Permutation(x[:]); err != nil { // concrete gnark-crypto method
+		panic(err)
+	}
+	for i := range BlockSize {
+		state[i].Add(&block[i], &x[BlockSize+i]) // concrete koalabear.Element.Add
+	}
+}
+\end{lstlisting}
+
+It does the same steps, but nothing here is generic:
+\begin{itemize}
+  \item \textbf{\texttt{perm.Permutation(x[:])}} is a direct call to a known gnark-crypto
+    method. The compiler analyses it and finds it does not keep \texttt{input}.
+  \item \textbf{\texttt{state[i].Add(...)}} is a direct call to
+    \texttt{koalabear.Element.Add}, which does not keep its arguments either.
+  \item \textbf{No separate \texttt{res} array.} The result goes into \texttt{state}, and
+    \texttt{CompressStaticCall} returns that by value.
+\end{itemize}
+
+The compiler can follow every pointer, so it proves \texttt{x} dies when the function
+returns and keeps it on the stack. The result is 0 allocations, the same as gnark-crypto's
+own \texttt{CompressPoseidon2}.
+
+\subsection{Why it matters for the benchmark}
+
+\begin{itemize}
+  \item \textbf{Single-threaded:} the 2 heap allocations per call cost a few percent.
+  \item \textbf{In \texttt{CompressParallel}:} 64 goroutines allocate constantly. The garbage
+    collector runs all the time, and they compete for it. That is why \texttt{generic-asm}
+    ends up at 103\,ns per compression, against 12.5\,ns for baseline and 14.2\,ns for
+    \texttt{generic-asm-static-call} (Table~\ref{tab:parallel}).
+\end{itemize}
+
 \end{document}
