@@ -1,5 +1,5 @@
 const std = @import("std");
-const execution_machine = @import("execution_machine");
+const execution_machine = @import("execution_machine.zig");
 const spec_runner = @import("spec_runner.zig");
 
 pub fn Suite(comptime Host: type, comptime Candidate: type) type {

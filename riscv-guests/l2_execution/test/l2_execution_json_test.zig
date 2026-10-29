@@ -7,8 +7,8 @@
 //! comment for why).
 
 const std = @import("std");
-const l2_execution_ssz = @import("l2_execution_ssz");
-const l2_execution_json = @import("l2_execution_json");
+const l2_execution_ssz = @import("l2_execution").l2_execution_ssz;
+const l2_execution_json = @import("support").l2_execution_json;
 
 fn repeat(comptime n: usize, byte: u8) [n]u8 {
     var out: [n]u8 = undefined;

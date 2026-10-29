@@ -2,7 +2,7 @@
 //! zkevm corpus (see `real_multiblock_fixture_gen.zig`'s header comment for provenance) runs
 //! successfully through the l2-execution guest's FULL, REAL pipeline (`l2_execution.runL2Execution`,
 //! delegating per-block execution to `src/execution.zig`'s `executeStatelessInputWithLogs` — NOT
-//! `test/conflation_plan.zig`'s `StubEngine`).
+//! `conflation_plan.zig`'s `StubEngine`).
 //!
 //! Every existing multi-block scenario in `test/l2_execution_range_test.zig` runs through
 //! `StubEngine`, which trusts each payload's own declared post-state instead of running the EVM.
@@ -27,9 +27,9 @@ const testing = std.testing;
 const executor = @import("zesu_executor");
 const ssz_decode = @import("zesu_ssz_decode");
 const input = @import("zesu_input");
-const l2_execution = @import("l2_execution");
-const l2_execution_ssz = @import("l2_execution_ssz");
-const fixture_gen = @import("real_multiblock_fixture_gen.zig");
+const l2_execution = @import("l2_execution").l2_execution;
+const l2_execution_ssz = @import("l2_execution").l2_execution_ssz;
+const fixture_gen = @import("support").real_multiblock_fixture_gen;
 
 const api = l2_execution.test_api;
 

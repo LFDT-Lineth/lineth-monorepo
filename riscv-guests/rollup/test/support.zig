@@ -7,7 +7,7 @@
 //! drift apart.
 
 const std = @import("std");
-const rollup_ssz = @import("rollup_ssz");
+const rollup_ssz = @import("rollup").rollup_ssz;
 
 pub fn repeat32(byte: u8) [32]u8 {
     return @splat(byte);

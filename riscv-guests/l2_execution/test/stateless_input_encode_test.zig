@@ -10,9 +10,9 @@ const std = @import("std");
 const input = @import("zesu_input");
 const rlp_decode = @import("zesu_rlp_decode");
 const ssz_decode = @import("zesu_ssz_decode");
-const fixtures = @import("evm_execution_fixtures");
-const stateless_input_encode = @import("stateless_input_encode");
-const tx_fixtures = @import("tx_fixtures");
+const fixtures = @import("support").evm_execution_fixtures;
+const stateless_input_encode = @import("support").stateless_input_encode;
+const tx_fixtures = @import("support").tx_fixtures;
 
 fn repeat(comptime n: usize, byte: u8) [n]u8 {
     var out: [n]u8 = undefined;

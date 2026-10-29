@@ -8,10 +8,10 @@
 //! This is a NATIVE-only convenience: the freestanding zkVM guest always emits SSZ
 //! (`l2_execution_ssz.encodeOutput` + the proving system's `write_output`) and has no argv to
 //! carry a format flag. The SSZ/JSON runtime toggle lives entirely in the native
-//! `l2-execution-runner` host tool, which is the only caller of `encodeOutputJson`.
+//! `l2_execution_runner` host tool, which is the only caller of `encodeOutputJson`.
 
 const std = @import("std");
-const l2_execution_ssz = @import("l2_execution_ssz");
+const l2_execution_ssz = @import("l2_execution").l2_execution_ssz;
 
 const hex_digits = "0123456789abcdef";
 

@@ -16,9 +16,9 @@ const mpt = @import("zesu_mpt");
 const input = @import("zesu_input");
 const primitives = @import("zesu_primitives");
 const rlp_decode = @import("zesu_rlp_decode");
-const l2_execution = @import("l2_execution");
-const l2_execution_ssz = @import("l2_execution_ssz");
-const stateless_input_encode = @import("stateless_input_encode");
+const l2_execution = @import("l2_execution").l2_execution;
+const l2_execution_ssz = @import("l2_execution").l2_execution_ssz;
+const stateless_input_encode = @import("stateless_input_encode.zig");
 
 const types = executor.executor_types;
 const tx_decode = executor.executor_tx_decode;

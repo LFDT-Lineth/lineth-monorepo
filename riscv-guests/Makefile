@@ -5,23 +5,21 @@
 # helpers live in build_common/. This Makefile is deliberately guest-agnostic: it just fans the
 # common lifecycle out to every guest listed in GUESTS.
 #
-# Add a guest: create riscv-guests/<name>/ (build.zig + build.zig.zon + Makefile + src) and append
-# <name> to GUESTS. Only targets that every guest implements are fanned out here; guest-specific
-# targets (e.g. l2-execution's EF spec-test, ZKC exec/debug) live in that guest's own Makefile and
-# run directly: `make -C <name> spec-test`.
+# Add a guest: create riscv-guests/<name>/ (build.zig calling common.addFmtSteps + build.zig.zon +
+# Makefile + src) and append <name> to GUESTS. Only targets that every guest implements are fanned
+# out here; guest-specific targets (e.g. l2-execution's EF spec-test, ZKC exec/debug) live in that
+# guest's own Makefile and run directly: `make -C <name> spec-test`.
 #
 # guest_common isn't a guest program itself (no ELF to link, just a shared Zig package other
 # guests consume as a path dependency — the same role lineth_accelerators plays) but is listed
-# here anyway so its own unit tests run as part of `make test`, and its build.zig/src/test get the
-# same `zig fmt --check` gate every guest's own sources get.
+# here anyway so its own unit tests run as part of `make test`.
 
 GUESTS ?= guest_common l2_execution rollup
 ZIG    ?= zig
 
-# Sources to format: the shared build helper plus each guest's build.zig and hand-written src/ +
-# test/ — NOT the whole guest dir, which would walk generated .zig under .zig-cache/ and zig-out/.
-# Mirrors the CI `zig fmt --check` invocation (riscv-guests-host-tests.yml) and scales with GUESTS.
-FMT_PATHS := build_common/build.zig $(foreach g,$(GUESTS),$(g)/build.zig $(g)/src $(g)/test)
+# Every directory holding a build.zig is a Zig package and registers its own `fmt` and `fmt-check`
+# build steps (build_common's addFmtSteps), so a new package is formatted without touching this file.
+PACKAGES := $(patsubst %/build.zig,%,$(wildcard */build.zig))
 
 .PHONY: compile test fetch clean fmt fmt-check help install-constantine-deps release-check release-asset
 
@@ -83,13 +81,14 @@ install-constantine-deps:
 		echo "Nim $(NIM_VERSION) required, found $$nim_version" >&2; exit 1; \
 	fi
 
-# Formatting spans build_common + all guests, so it lives here (not fanned out). `fmt` rewrites in
-# place; `fmt-check` only verifies — the same gate CI runs.
-fmt:
-	$(ZIG) fmt $(FMT_PATHS)
-
-fmt-check:
-	$(ZIG) fmt --check $(FMT_PATHS)
+# Formatting spans every package (guests and the non-guest build_common, lineth_accelerators,
+# guest_crypto_ctt), so it fans out over PACKAGES rather than GUESTS. `fmt` rewrites in place;
+# `fmt-check` only verifies — the same gate CI runs.
+fmt fmt-check:
+	@for p in $(PACKAGES); do \
+		echo "==> zig build $@ ($$p)"; \
+		(cd $$p && $(ZIG) build $@) || exit $$?; \
+	done
 
 help:
 	@echo "riscv-guests — builds every guest in GUESTS=\"$(GUESTS)\""
@@ -98,7 +97,7 @@ help:
 	@echo "  make test        # run each guest's native host tests"
 	@echo "  make fetch       # pre-fetch each guest's Zig dependencies"
 	@echo "  make clean       # remove each guest's zig-out/ and .zig-cache/"
-	@echo "  make fmt         # format build_common + all guest sources in place (zig fmt)"
+	@echo "  make fmt         # format every package's Zig sources in place (zig build fmt)"
 	@echo "  make fmt-check   # verify formatting without writing (the CI gate)"
 	@echo "  make install-constantine-deps    # install nim/nimble/clang for the guest_crypto_ctt build"
 	@echo ""

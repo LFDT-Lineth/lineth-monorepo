@@ -2,6 +2,7 @@
 //! Tool locations are overridable with `NIM`, `NIMBLE`, and `LLVM_AR`.
 
 const std = @import("std");
+const common = @import("build_common");
 
 const Toolchain = struct {
     nim: []const u8,
@@ -56,6 +57,7 @@ fn findToolCandidates(
 }
 
 pub fn build(b: *std.Build) void {
+    common.addFmtSteps(b);
     const tc = resolveToolchain(b);
     const ctt = b.dependency("constantine", .{});
     // Build the rv64 archive in place and the host archive into Zig output dirs.

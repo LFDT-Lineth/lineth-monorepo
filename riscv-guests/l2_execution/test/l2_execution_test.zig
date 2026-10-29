@@ -10,13 +10,13 @@
 const std = @import("std");
 const testing = std.testing;
 
-const l2_execution = @import("l2_execution");
-const l2_execution_ssz = @import("l2_execution_ssz");
+const l2_execution = @import("l2_execution").l2_execution;
+const l2_execution_ssz = @import("l2_execution").l2_execution_ssz;
 const executor = @import("zesu_executor");
 const mpt = @import("zesu_mpt");
 const primitives = @import("zesu_primitives");
-const tx_fixtures = @import("tx_fixtures");
-const log_fixtures = @import("log_fixtures.zig");
+const tx_fixtures = @import("support").tx_fixtures;
+const log_fixtures = @import("support").log_fixtures;
 
 const types = executor.executor_types;
 const rlp = executor.executor_rlp_encode;

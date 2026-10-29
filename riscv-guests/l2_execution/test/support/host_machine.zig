@@ -1,7 +1,7 @@
 const std = @import("std");
-const execution_machine = @import("execution_machine");
-const l2_execution = @import("l2_execution");
-const l2_execution_ssz = @import("l2_execution_ssz");
+const execution_machine = @import("execution_machine.zig");
+const l2_execution = @import("l2_execution").l2_execution;
+const l2_execution_ssz = @import("l2_execution").l2_execution_ssz;
 
 pub const HostMachine = struct {
     pub fn run(

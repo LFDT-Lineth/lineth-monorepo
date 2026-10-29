@@ -1,7 +1,7 @@
 const std = @import("std");
 const spec_runner = @import("spec_runner.zig");
 const zkevm_fixture = @import("zkevm_fixture.zig");
-const vanilla_wrap = @import("vanilla_wrap");
+const vanilla_wrap = @import("vanilla_wrap.zig");
 
 pub const Policy = enum {
     allow_linea_rejections,
@@ -153,7 +153,7 @@ fn isAllowedRejection(reason: ?anyerror) bool {
 
 test "out of memory while wrapping an invalid fixture aborts the suite" {
     const Machine = struct {
-        fn run(_: *@This(), _: std.process.Init, _: std.mem.Allocator, _: []const u8) !@import("execution_machine").Result {
+        fn run(_: *@This(), _: std.process.Init, _: std.mem.Allocator, _: []const u8) !@import("execution_machine.zig").Result {
             return error.MachineMustNotRun;
         }
     };

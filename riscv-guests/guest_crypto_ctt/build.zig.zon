@@ -4,6 +4,8 @@
     .fingerprint = 0x2b75fa46e7118444,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
+        // Shared build helpers (the formatting steps every package registers).
+        .build_common = .{ .path = "../build_common" },
         // Consensys fork of Constantine with the guest shims and rv64 freestanding build.
         .constantine = .{
             .url = "git+https://github.com/Consensys-Incorporated/constantine#1ad824d5f5eb9f26e2e46f086b56586b8cdacbee",

@@ -1,6 +1,6 @@
 //! Builds a real, multi-block sequence borrowed from the EF execution-spec-tests zkevm corpus into
 //! an input for the l2-execution guest's REAL, full pipeline (`l2_execution.runL2Execution`, not
-//! `test/conflation_plan.zig`'s `StubEngine`) — computed fresh at test run time by
+//! `conflation_plan.zig`'s `StubEngine`) — computed fresh at test run time by
 //! `buildEngineeredInput`, not read from a checked-in file, so it can never go stale relative to the
 //! logic that produces it.
 //!
@@ -22,9 +22,9 @@ const zkevm_fixture = @import("zkevm_fixture.zig");
 const ssz_decode = @import("zesu_ssz_decode");
 const zesu_allocator = @import("zesu_allocator");
 const input = @import("zesu_input");
-const l2_execution = @import("l2_execution");
-const l2_execution_ssz = @import("l2_execution_ssz");
-const vanilla_wrap = @import("vanilla_wrap");
+const l2_execution = @import("l2_execution").l2_execution;
+const l2_execution_ssz = @import("l2_execution").l2_execution_ssz;
+const vanilla_wrap = @import("vanilla_wrap.zig");
 
 /// The chosen corpus test case's own JSON, embedded straight from the execution-spec-tests
 /// dependency tree (wired in `build.zig`, mirroring `evm_execution_fixtures.zig`'s own
