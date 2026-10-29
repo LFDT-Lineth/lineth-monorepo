@@ -5,10 +5,9 @@ from typing import Dict, List, Optional, Sequence, Tuple
 from ethereum.crypto.hash import Hash32, keccak256
 from ethereum.state import Account, Address
 from ethereum_rlp import rlp
-from ethereum_types.bytes import Bytes32
 from ethereum_types.numeric import U256, Uint
 
-from .block import StatelessInput
+from .block import StatelessInput, SystemContracts
 from .fork import Log
 
 
@@ -22,10 +21,9 @@ class ExecutionWitness:
     payload parent. `keys` is not in the SSZ wire format (JSON/debug only),
     defaulted empty.
 
-    The pool must cover every account/slot read — both what block execution
-    touches (served by the underlying engine) and the Lineth-extra reads
-    (L1->L2 rolling-hash slots at the boundary roots, FTX-sender accounts for
-    §6.5 'Invalid').
+    The pool must cover every account read — both what block execution touches
+    (served by the underlying engine) and the Lineth-extra reads (FTX-sender
+    accounts for §6.5 'Invalid').
     """
     state: List[bytes]
     codes: List[bytes]
@@ -43,12 +41,19 @@ class StatelessExecutionResult:
     """
     pre_state_root: Hash32     # parent (pre-execution) state root of the block
     post_state_root: Hash32    # post-execution state root (== executionPayload.stateRoot)
-    block_logs: List[Log]      # ordered logs emitted by the block, for L2->L1 message extraction
+    block_logs: List[Log]      # ordered logs emitted by the block, scanned for L2MessageService events
 
 
-def execute_stateless_input(stateless_input: StatelessInput) -> StatelessExecutionResult:
+def execute_stateless_input(
+    stateless_input: StatelessInput, system_contracts: SystemContracts
+) -> StatelessExecutionResult:
     """
     Validate and execute one block from its parsed `StatelessInput`.
+
+    `system_contracts` are the proof-range system-contract addresses (not part
+    of the `dynamicChainConfigHash` preimage); the engine MUST use them for its
+    pre-/post-block system calls and deposit-log collection rather than any
+    built-in per-chain defaults.
 
     This is the spec's boundary to the underlying stateless block-execution
     engine (for example a Zesu-style guest, imported as a dependency or
@@ -77,10 +82,10 @@ def execute_stateless_input(stateless_input: StatelessInput) -> StatelessExecuti
 # ─── Witness-backed MPT state reads ────────────────────────────────────────────
 #
 # The Lineth layer reads a little L2 state on top of delegated block execution
-# (L1->L2 bridge rolling hash, FTX-sender accounts). Those reads are proven
-# against a state root by walking the witness node pool directly, so the spec
-# stays self-contained and checkable against a fixture rather than depending on
-# the engine to expose its internal state database.
+# (FTX-sender accounts). Those reads are proven against a state root by walking
+# the witness node pool directly, so the spec stays self-contained and checkable
+# against a fixture rather than depending on the engine to expose its internal
+# state database.
 
 # keccak256(rlp.encode(b"")) — the canonical Ethereum "empty trie" root.
 EMPTY_TRIE_ROOT_HASH: Hash32 = Hash32(
@@ -193,22 +198,16 @@ def _mpt_lookup(
         raise Exception(f"unexpected MPT node arity {len(decoded)}")
 
 
-def _decode_account_leaf(leaf_rlp: bytes) -> Tuple[Account, Hash32]:
-    """
-    Decode an account-trie leaf (`RLP([nonce, balance, storageRoot, codeHash])`)
-    into `(Account, storage_root)`. `storage_root` is returned separately
-    because the in-memory `Account` does not expose it (execution-specs
-    materializes storage as a per-account map).
-    """
+def _decode_account_leaf(leaf_rlp: bytes) -> Account:
+    """Decode an account-trie leaf (`RLP([nonce, balance, storageRoot, codeHash])`)."""
     decoded = rlp.decode(leaf_rlp)
     if not isinstance(decoded, list) or len(decoded) != 4:
         raise Exception("account leaf must be RLP([nonce, balance, storageRoot, codeHash])")
-    nonce_b, balance_b, storage_root_b, code_hash_b = (bytes(x) for x in decoded)
+    nonce_b, balance_b, _, code_hash_b = (bytes(x) for x in decoded)
     nonce = Uint(int.from_bytes(nonce_b, "big"))
     balance = U256(int.from_bytes(balance_b, "big"))
-    storage_root = Hash32(storage_root_b.rjust(32, b"\x00"))
     code_hash = Hash32(code_hash_b.rjust(32, b"\x00"))
-    return Account(nonce=nonce, balance=balance, code_hash=code_hash), storage_root
+    return Account(nonce=nonce, balance=balance, code_hash=code_hash)
 
 
 @dataclass
@@ -216,14 +215,13 @@ class L2State:
     """
     Read-only, witness-backed view of L2 state at a state root.
 
-    Exposes the EVM state reads the Lineth layer needs on top of delegated block
-    execution: the L1->L2 bridge rolling hash (`storage`) and forced-tx sender
-    accounts (`account`). Both are served by an explicit MPT inclusion walk over
-    the witness node pool (`witnesses[*].state`) against `state_root`. The
-    production guest performs the same walk on top of its EVM state-database
-    interface (e.g. Zesu's). keccak256 (one call per node, to resolve the next
-    node by hash) is a zkVM-native primitive there; the walk itself is ordinary
-    in-guest code.
+    Exposes the EVM state read the Lineth layer needs on top of delegated block
+    execution: forced-tx sender accounts (`account`), served by an explicit MPT
+    inclusion walk over the witness node pool (`witnesses[*].state`) against
+    `state_root`. The production guest performs the same walk on top of its EVM
+    state-database interface (e.g. Zesu's). keccak256 (one call per node, to
+    resolve the next node by hash) is a zkVM-native primitive there; the walk
+    itself is ordinary in-guest code.
     """
     state_root: Hash32
     witnesses: Sequence["ExecutionWitness"]
@@ -232,38 +230,7 @@ class L2State:
     def _node_index(self) -> Dict[Hash32, bytes]:
         return _build_node_index(self.witnesses)
 
-    def _account_with_storage_root(self, address: Address) -> Optional[Tuple[Account, Hash32]]:
-        leaf = _mpt_lookup(self.state_root, bytes(address), self._node_index)
-        return None if leaf is None else _decode_account_leaf(leaf)
-
     def account(self, address: Address) -> Optional[Account]:
         """Account at `address`, or None if absent (proven by the MPT walk)."""
-        result = self._account_with_storage_root(address)
-        return None if result is None else result[0]
-
-    def storage(self, address: Address, slot: Bytes32) -> Bytes32:
-        """
-        Storage value at (`address`, `slot`), or zero if the account is absent
-        or the slot is unset. Looks up the account leaf for its `storage_root`,
-        then walks the per-account storage trie at `keccak256(slot)`.
-
-        Raises on a malformed leaf: RLP that does not decode to raw bytes is not
-        a valid storage slot, and silently zeroing it would mask witness
-        tampering, so the read is rejected outright.
-        """
-        result = self._account_with_storage_root(address)
-        if result is None:
-            return Bytes32(b"\x00" * 32)
-        _, storage_root = result
-        slot_leaf = _mpt_lookup(storage_root, bytes(slot), self._node_index)
-        if slot_leaf is None:
-            return Bytes32(b"\x00" * 32)
-        # Storage values are RLP(value) where `value` is the big-endian integer
-        # with leading zeros stripped. Left-pad back to 32 bytes.
-        decoded = rlp.decode(slot_leaf)
-        if not isinstance(decoded, (bytes, bytearray)):
-            raise Exception(
-                f"malformed storage leaf at {bytes(address).hex()}/{bytes(slot).hex()}: "
-                f"RLP decode produced {type(decoded).__name__}, expected bytes"
-            )
-        return Bytes32(bytes(decoded).rjust(32, b"\x00"))
+        leaf = _mpt_lookup(self.state_root, bytes(address), self._node_index)
+        return None if leaf is None else _decode_account_leaf(leaf)

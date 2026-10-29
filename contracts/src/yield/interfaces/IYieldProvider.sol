@@ -5,7 +5,7 @@ import { YieldProviderVendor, ProgressOssificationResult, YieldProviderRegistrat
 
 /**
  * @title Interface for a YieldProvider adaptor contract to handle vendor-specific interactions.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 interface IYieldProvider {

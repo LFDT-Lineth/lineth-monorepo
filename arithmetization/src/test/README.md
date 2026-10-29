@@ -106,7 +106,7 @@ riscv-test() {
 ```
 
 For the accelerated l2-execution guest helper (`agp`), see the
-[l2-execution guest README](../../../riscv-guests/l2-execution/README.md).
+[l2-execution guest README](../../../riscv-guests/l2_execution/README.md).
 
 ## Usage examples
 

@@ -10,6 +10,7 @@ import (
 	"sort"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
+	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 )
 
 const DefaultMaxDecodedRecords uint64 = 2_000_000
@@ -712,7 +713,7 @@ func PrepareInputs(
 	elfBytes []byte,
 	inputData []byte,
 	options ...Option,
-) (map[string][]byte, error) {
+) (map[string]bit.Array, error) {
 	cfg, err := applyOptions(options)
 	if err != nil {
 		return nil, err
@@ -752,12 +753,12 @@ type DecodedProgram struct {
 }
 
 // EncodeInputs returns fresh raw input bytes suitable for ZkC input loading.
-func (program DecodedProgram) EncodeInputs() map[string][]byte {
+func (program DecodedProgram) EncodeInputs() map[string]bit.Array {
 	base := binary.BigEndian.AppendUint32(nil, uint32(program.InstructionBase))
 	decoded := append([]byte(nil), program.Decoded...)
-	return map[string][]byte{
-		InstructionBaseInput: base,
-		DecodedInput:         decoded,
+	return map[string]bit.Array{
+		InstructionBaseInput: elfmapping.BitArrayFromBytes(base...),
+		DecodedInput:         elfmapping.BitArrayFromBytes(decoded...),
 	}
 }
 

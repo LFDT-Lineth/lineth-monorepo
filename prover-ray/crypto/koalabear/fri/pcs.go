@@ -99,13 +99,16 @@
 //	for batch b in DECLARATION order:
 //	  for the size-N SizedTable in batch b (skip if absent):
 //	    for row r in g.Base then g.Ext (declaration order):
-//	      emit a deepEntry; consume one alpha_DEEP power for the column.
+//	      emit a deepEntry, with the column's alpha_DEEP power.
 //
-// The alpha_DEEP power counter resets to 0 at each new size. All shifts on a
-// column are carried by its one deepEntry and share that alpha_DEEP power.
+// The alpha_DEEP powers come from deepPowers. Ungrouped commitments number each
+// size on its own, from 0, in the order above; grouped commitments number all
+// the columns once, in module (group ordinal) order, whatever their sizes, so
+// that a module keeps its powers when its size changes. All shifts on a column
+// are carried by its one deepEntry and share that alpha_DEEP power.
 //
 // Decision matrix:
-//   - (i)   per-size reset.
+//   - (i)   per-size numbering, or global numbering for grouped commitments.
 //   - (ii)  per-column batching, all shifts of a column sharing one alpha_DEEP power.
 //   - (iii) empty shift list is an error (every committed row is
 //     opened at least once).
@@ -146,13 +149,22 @@ import (
 type PCS struct {
 	Params   Params
 	Encoders []*RSEncoder
-	openings []pcsOpening
-	zeta     field.Ext
+	// FixedDomain runs FRI over the full Params domain, of plaintext size
+	// 2^Params.LogPlainTextSize, whatever the sizes opened. Otherwise the
+	// schedule is restricted to the largest size opened (see restrictTo).
+	// With FixedDomain, the number of fold rounds, of running-layer roots and
+	// of transcript steps is fixed by Params, which a size-oblivious verifier
+	// needs: when the largest size opened is smaller, the top rounds fold the
+	// zero codeword, whose layers the prover commits at a constant cost (see
+	// zeroLayerTree). The prover and the verifier must agree on it.
+	FixedDomain bool
+	openings    []pcsOpening
+	zeta        field.Ext
 }
 
 type pcsOpening struct {
-	layout    layout
 	committed CommitterState
+	shifts    BatchShifts
 	claimed   BatchClaimedValues
 }
 
@@ -301,6 +313,9 @@ type deepEntry struct {
 type sizeBundle struct {
 	SizeLog2 uint8
 	Entries  []deepEntry
+	// RunningPower is the power of a weighting the running codeword in the
+	// level, above every entry's AlphaPower (see deepPowers).
+	RunningPower int
 }
 
 type layout []sizeBundle
@@ -327,10 +342,14 @@ func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) {
 		}
 	}
 
+	powers, err := newDeepPowers(shapes)
+	if err != nil {
+		return nil, err
+	}
+
 	res := make(layout, 0, maxSizeLog2+1)
 	for sizeLog2 := maxSizeLog2; sizeLog2 >= 0; sizeLog2-- {
-		bundle := sizeBundle{SizeLog2: uint8(sizeLog2)}
-		alphaDeepPower := 0
+		bundle := sizeBundle{SizeLog2: uint8(sizeLog2), RunningPower: powers.running[sizeLog2]}
 
 		for batchIdx := range shapes {
 			if sizeLog2 >= len(shapes[batchIdx]) {
@@ -348,10 +367,9 @@ func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) {
 					BatchIdx:   batchIdx,
 					SizeLog2:   uint8(sizeLog2),
 					RowIdx:     rowIdx,
-					AlphaPower: alphaDeepPower,
+					AlphaPower: powers.column(batchIdx, sizeLog2, false, rowIdx),
 					Shifts:     cloneInts(sizedShifts.Base[rowIdx]),
 				})
-				alphaDeepPower++
 			}
 			for rowIdx := range sizedShape.ExtWidth {
 				bundle.Entries = append(bundle.Entries, deepEntry{
@@ -359,10 +377,9 @@ func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) {
 					SizeLog2:   uint8(sizeLog2),
 					RowIdx:     rowIdx,
 					IsExt:      true,
-					AlphaPower: alphaDeepPower,
+					AlphaPower: powers.column(batchIdx, sizeLog2, true, rowIdx),
 					Shifts:     cloneInts(sizedShifts.Ext[rowIdx]),
 				})
-				alphaDeepPower++
 			}
 		}
 
@@ -769,19 +786,20 @@ func (pcs *PCS) AddOpening(
 	if committed.Tree == nil {
 		return fmt.Errorf("fri: AddOpening: commitment has nil tree")
 	}
+	// Validate the opening on its own; the alpha_DEEP powers are assigned over
+	// all the openings at once (see openingsLayout).
 	shape := committed.EncodedTable.Shape()
-	layout, err := canonicalLayout([]Shape{shape}, []BatchShifts{shifts})
-	if err != nil {
+	if _, err := canonicalLayout([]Shape{shape}, []BatchShifts{shifts}); err != nil {
 		return err
 	}
-	if err = validateBatchClaimShape(claimed, shifts, zeta); err != nil {
+	if err := validateBatchClaimShape(claimed, shifts, zeta); err != nil {
 		return fmt.Errorf("fri: AddOpening: %w", err)
 	}
 
 	pcs.zeta = zeta
 	pcs.openings = append(pcs.openings, pcsOpening{
-		layout:    layout,
 		committed: committed,
+		shifts:    shifts,
 		claimed:   claimed,
 	})
 	return nil
@@ -833,9 +851,10 @@ func validateBatchClaimShape(claimed BatchClaimedValues, shifts BatchShifts, zet
 // level's batched evaluations are computed later, at fold time (see
 // Level.EvalsAt), once that level's own alphaDeep is known.
 //
-// The FRI schedule is restricted to the largest size actually opened, so the
-// fold count follows the witness rather than the (possibly larger, static)
-// Params: a size-2^k top level folds k times regardless of Params.LogPlainTextSize >= k.
+// Unless FixedDomain is set, the FRI schedule is restricted to the largest
+// size actually opened, so the fold count follows the witness rather than the
+// (possibly larger, static) Params: a size-2^k top level folds k times
+// regardless of Params.LogPlainTextSize >= k.
 func (pcs *PCS) NewProverState() (*ProverState, error) {
 	if len(pcs.openings) == 0 {
 		return nil, fmt.Errorf("fri: NewProverState: AddOpening must be called first")
@@ -844,6 +863,13 @@ func (pcs *PCS) NewProverState() (*ProverState, error) {
 	pcs, err := pcs.restrictToOpenings()
 	if err != nil {
 		return nil, err
+	}
+	openingsLayout, err := pcs.openingsLayout()
+	if err != nil {
+		return nil, err
+	}
+	if err := pcs.checkFoldedSchedule(openingsLayout); err != nil {
+		return nil, fmt.Errorf("fri: NewProverState: %w", err)
 	}
 
 	levels, err := pcs.reconstructLevels()
@@ -870,30 +896,82 @@ func (l layout) maxSizeLog2() uint8 {
 	return maxIdx
 }
 
+// checkFoldedSchedule rejects a schedule without any fold (D = 1: Params
+// itself folds nothing, see restrictTo) over more than one column. With no fold
+// there is no fold challenge, so alphaDeep is zero and only the column of
+// power 0 would enter the DEEP combination: the claims of the others would go
+// unchecked.
+func (pcs *PCS) checkFoldedSchedule(l layout) error {
+	if pcs.Params.numRounds() > 0 {
+		return nil
+	}
+	columns := 0
+	for _, bundle := range l {
+		columns += len(bundle.Entries)
+	}
+	if columns > 1 {
+		return fmt.Errorf("fri: %d columns opened with no FRI fold (largest size 2^%d, final polynomial 2^%d): "+
+			"only one can be checked", columns, pcs.Params.LogPlainTextSize, pcs.Params.logFinalPolySize)
+	}
+	return nil
+}
+
+// openingsLayout returns the canonical layout of all the pending openings, the
+// openings being the batches in registration order: the same layout Verify
+// builds from the declared shapes and shifts, so the prover and the verifier
+// share its alpha_DEEP powers (deepEntry.AlphaPower, sizeBundle.RunningPower).
+func (pcs *PCS) openingsLayout() (layout, error) {
+	shapes := make([]Shape, len(pcs.openings))
+	shifts := make([]BatchShifts, len(pcs.openings))
+	for b, opening := range pcs.openings {
+		shapes[b] = opening.committed.EncodedTable.Shape()
+		shifts[b] = opening.shifts
+	}
+	return canonicalLayout(shapes, shifts)
+}
+
 // maxOpeningSizeLog2 returns the largest size (log2) opened across all pending
 // openings, i.e. the top of the FRI schedule this proof actually needs.
-func (pcs *PCS) maxOpeningSizeLog2() uint8 {
-	maxIdx := uint8(0)
-	for _, opening := range pcs.openings {
-		for _, bundle := range opening.layout {
-			if bundle.SizeLog2 > maxIdx {
-				maxIdx = bundle.SizeLog2
-			}
-		}
+func (pcs *PCS) maxOpeningSizeLog2() (uint8, error) {
+	l, err := pcs.openingsLayout()
+	if err != nil {
+		return 0, err
 	}
-	return maxIdx
+	return l.maxSizeLog2(), nil
 }
 
 // restrictToOpenings returns a view of this PCS whose Params are restricted to
 // the largest opened size, sharing the (immutable) encoders and pending
 // openings. Prover-side entry points use it so the fold count tracks the witness.
 func (pcs *PCS) restrictToOpenings() (*PCS, error) {
-	return pcs.restrictTo(pcs.maxOpeningSizeLog2())
+	maxSizeLog2, err := pcs.maxOpeningSizeLog2()
+	if err != nil {
+		return nil, err
+	}
+	return pcs.restrictTo(maxSizeLog2)
 }
 
 // restrictTo returns a view of this PCS with Params restricted to top size
-// 2^topSizeLog2, sharing the encoders, openings, and zeta.
+// 2^topSizeLog2, sharing the encoders, openings, and zeta. With FixedDomain,
+// it returns the PCS itself, after checking that 2^topSizeLog2 fits its
+// domain.
+//
+// The schedule keeps at least one fold when Params has one: a top size at or
+// below the final polynomial's is raised to 2^MinFoldedSizeLog2, so that round
+// 0 folds the zero codeword and the levels join at the boundary round with a
+// nonzero alphaDeep. Without any fold, alphaDeep would be zero and only one
+// column could be checked (see checkFoldedSchedule).
 func (pcs *PCS) restrictTo(topSizeLog2 uint8) (*PCS, error) {
+	if pcs.FixedDomain {
+		if topSizeLog2 > pcs.Params.LogPlainTextSize {
+			return nil, fmt.Errorf("fri: size 2^%d exceeds the fixed FRI domain's plaintext size 2^%d",
+				topSizeLog2, pcs.Params.LogPlainTextSize)
+		}
+		return pcs, nil
+	}
+	if minFolded := pcs.Params.MinFoldedSizeLog2(); topSizeLog2 < minFolded && minFolded <= pcs.Params.LogPlainTextSize {
+		topSizeLog2 = minFolded
+	}
 	restrictedParams, err := pcs.Params.restrictTo(topSizeLog2)
 	if err != nil {
 		return nil, err
@@ -935,9 +1013,10 @@ func (pcs *PCS) shiftedPoint(sizeLog2 uint8, shift int, zeta field.Ext) (field.E
 // DEEP-quotient data (columns and every distinct denominator inverse 1/(x-z),
 // precomputed via one Montgomery batch inversion) that batches into
 //
-//	F(X) = Σ_i alpha_DEEP^i · Σ_j (f_i(X) - y_ij)/(X - z_ij)
+//	F(X) = Σ_i alpha_DEEP^{p(i)} · Σ_j (f_i(X) - y_ij)/(X - z_ij)
 //
-// over input.Domain's bit-reversed evaluation order. alpha_DEEP is not known
+// over input.Domain's bit-reversed evaluation order, p(i) being column i's
+// power (see deepPowers). alpha_DEEP is not known
 // yet (it is the square of this level's own introduction round's fold
 // challenge), so the batched evaluations themselves are computed later, by
 // Level.EvalsAt.
@@ -948,6 +1027,13 @@ func (pcs *PCS) reconstructLevels() ([]Level, error) {
 	// the sizes 2^logD down to 2^logFinalPolySize. Iterating it directly makes
 	// it structurally impossible to reach a size below the final-poly floor
 	// (which could never host a FRI level anyway).
+	// The canonical layout of all the openings carries every column's
+	// alpha_DEEP power, as in Verify.
+	openingsLayout, err := pcs.openingsLayout()
+	if err != nil {
+		return nil, err
+	}
+
 	levels := make([]Level, 0, len(pcs.Params.domainsLight))
 	for di := range pcs.Params.domainsLight {
 		sizeLog2 := int(logD) - di
@@ -961,36 +1047,43 @@ func (pcs *PCS) reconstructLevels() ([]Level, error) {
 		r := size >> sizeLog2
 
 		var columns []quotientColumn
+		var powers []int
 		var trees []*Tree
-		for _, opening := range pcs.openings {
-			for _, bundle := range opening.layout {
-				if bundle.SizeLog2 != uint8(sizeLog2) {
-					continue
+		var runningPower int
+		for _, bundle := range openingsLayout {
+			if bundle.SizeLog2 != uint8(sizeLog2) {
+				continue
+			}
+			runningPower = bundle.RunningPower
+			lastBatch := -1
+			for _, entry := range bundle.Entries {
+				opening := pcs.openings[entry.BatchIdx]
+				if entry.BatchIdx != lastBatch {
+					trees = append(trees, opening.committed.Tree)
+					lastBatch = entry.BatchIdx
 				}
-				trees = append(trees, opening.committed.Tree)
-				for _, entry := range bundle.Entries {
-					column, err := encodedColumnEvals(opening.committed, entry)
-					if err != nil {
-						return nil, err
-					}
-					column.Claims, err = pcs.openingClaimsForEntry(opening, entry)
-					if err != nil {
-						return nil, err
-					}
-					// Precompute the E2 rotation offset and base-field prefactor
-					// of each claim point for Level.EvalsAt, parallel to claims
-					// (entry.Shifts is aligned with claims).
-					rotations := make([]claimRotation, len(entry.Shifts))
-					for i, shift := range entry.Shifts {
-						rot := (r * shift) & (size - 1)
-						rotations[i].Rot = rot
-						// Scale = ω_N^{-rot} = ω_N^{(N-rot) mod N}.
-						expo := (size - rot) & (size - 1)
-						rotations[i].Scale.Exp(domain.generator, big.NewInt(int64(expo)))
-					}
-					column.Rotations = rotations
-					columns = append(columns, column)
+				column, err := encodedColumnEvals(opening.committed, entry)
+				if err != nil {
+					return nil, err
 				}
+				column.Claims, err = pcs.openingClaimsForEntry(opening, entry)
+				if err != nil {
+					return nil, err
+				}
+				// Precompute the E2 rotation offset and base-field prefactor
+				// of each claim point for Level.EvalsAt, parallel to claims
+				// (entry.Shifts is aligned with claims).
+				rotations := make([]claimRotation, len(entry.Shifts))
+				for i, shift := range entry.Shifts {
+					rot := (r * shift) & (size - 1)
+					rotations[i].Rot = rot
+					// Scale = ω_N^{-rot} = ω_N^{(N-rot) mod N}.
+					expo := (size - rot) & (size - 1)
+					rotations[i].Scale.Exp(domain.generator, big.NewInt(int64(expo)))
+				}
+				column.Rotations = rotations
+				columns = append(columns, column)
+				powers = append(powers, entry.AlphaPower)
 			}
 		}
 		if len(columns) == 0 {
@@ -1015,6 +1108,8 @@ func (pcs *PCS) reconstructLevels() ([]Level, error) {
 		levels = append(levels, Level{
 			Trees:        trees,
 			Columns:      columns,
+			Powers:       powers,
+			RunningPower: runningPower,
 			DenomBaseInv: denomBaseInv,
 		})
 	}
@@ -1119,7 +1214,10 @@ func (pcs *PCS) Open(state *ProverState, queryPositions []int) OpeningProof {
 	if err != nil {
 		panic(err)
 	}
-	inputs := restricted.inputOpeningCommitments()
+	inputs, err := restricted.inputOpeningCommitments()
+	if err != nil {
+		panic(err)
+	}
 	return OpeningProof{
 		InputQueries: restricted.openInputQueries(inputs, queryPositions),
 		InputCaps:    restricted.openInputCaps(inputs),
@@ -1177,25 +1275,29 @@ func revealedInputTables(table MultiSizeTable, info inputCapInfo) []InputCapTabl
 	return res
 }
 
-func (pcs *PCS) inputOpeningCommitments() []CommitterState {
+func (pcs *PCS) inputOpeningCommitments() ([]CommitterState, error) {
+	openingsLayout, err := pcs.openingsLayout()
+	if err != nil {
+		return nil, err
+	}
+	// Sizes in decreasing order (canonicalLayout's order), batches in order
+	// within a size: the commitments in order of first appearance.
 	seen := make(map[field.Octuplet]bool)
 	var inputs []CommitterState
-	for sizeLog2 := int(pcs.Params.LogPlainTextSize); sizeLog2 >= 0; sizeLog2-- {
-		for _, opening := range pcs.openings {
-			for _, bundle := range opening.layout {
-				if bundle.SizeLog2 != uint8(sizeLog2) {
-					continue
-				}
-				root := opening.committed.Tree.Root()
-				if !seen[root] {
-					seen[root] = true
-					inputs = append(inputs, opening.committed)
-				}
-				break
+	for _, bundle := range openingsLayout {
+		if int(bundle.SizeLog2) > int(pcs.Params.LogPlainTextSize) {
+			continue
+		}
+		for _, entry := range bundle.Entries {
+			committed := pcs.openings[entry.BatchIdx].committed
+			root := committed.Tree.Root()
+			if !seen[root] {
+				seen[root] = true
+				inputs = append(inputs, committed)
 			}
 		}
 	}
-	return inputs
+	return inputs, nil
 }
 
 func openInputTreeOpening(p Params, committed CommitterState, queryPosition int) InputTreeOpening {
@@ -1475,21 +1577,22 @@ func (branch InputTreeOpening) pairAtLevel(levelSize int) (*RowPair, error) {
 
 // reconstructQueryValueAt combines bundle's columns with running (this
 // level's own round's running-codeword value) at x, the same way EvalsAt
-// combines a level's columns with the prover's running codeword. Entries are
-// walked highest AlphaPower first (canonicalLayout assigns them
-// 0..len(Entries)-1 in order, so that's simply the reverse index order).
+// combines a level's columns with the prover's running codeword:
+// alphaPow[RunningPower]·running + Σ_i alphaPow[AlphaPower_i]·term_i, where
+// alphaPow holds the powers of the level's alphaDeep (see deepPowers).
 func reconstructQueryValueAt(
 	bundle sizeBundle,
 	entryClaims [][]quotientClaim,
 	source inputQuerySource,
 	levelSize int,
-	alphaDeep field.Ext,
+	alphaPow []field.Ext,
 	x field.Ext,
 	sibling bool,
 	running field.Ext,
 ) (field.Ext, error) {
-	value := running
-	for i := len(bundle.Entries) - 1; i >= 0; i-- {
+	var value field.Ext
+	value.Mul(&running, &alphaPow[bundle.RunningPower])
+	for i := range bundle.Entries {
 		entry := bundle.Entries[i]
 		claims := entryClaims[i]
 		pair, err := source.pairAtLevel(entry.BatchIdx, levelSize)
@@ -1505,7 +1608,7 @@ func reconstructQueryValueAt(
 		if err != nil {
 			return field.Ext{}, err
 		}
-		value.Mul(&value, &alphaDeep)
+		term.Mul(&term, &alphaPow[entry.AlphaPower])
 		value.Add(&value, &term)
 	}
 	return value, nil
@@ -1573,10 +1676,14 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 		return err
 	}
 	// Restrict the FRI schedule to the largest opened size so the fold count
-	// tracks the witness rather than the (static) Params; mirrors the prover.
+	// tracks the witness rather than the (static) Params, unless FixedDomain;
+	// mirrors the prover.
 	pcs, err = pcs.restrictTo(layout.maxSizeLog2())
 	if err != nil {
 		return err
+	}
+	if err = pcs.checkFoldedSchedule(layout); err != nil {
+		return fmt.Errorf("fri: pcs.Verify: %w", err)
 	}
 	if err = pcs.checkClaimPointsOutOfDomain(layout, in.Zeta); err != nil {
 		return err
@@ -1663,6 +1770,16 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 		}
 	}
 
+	// A level's alphaDeep, hence its powers, does not depend on the query.
+	levelPowers := make([][]field.Ext, len(layout))
+	for levelIdx, bundle := range layout {
+		round, err := pcs.roundForSize(bundle.SizeLog2)
+		if err != nil {
+			return err
+		}
+		levelPowers[levelIdx] = powerTable(levelAlphaDeep(round, foldAlphas), bundle.RunningPower)
+	}
+
 	// Each query is authenticated and reconstructed independently (read-only
 	// shared inputs, disjoint writes to resolved[queryIdx]); the per-query work
 	// — dominated by Merkle branch re-hashing — parallelizes cleanly.
@@ -1682,6 +1799,7 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 		shapes:            in.Shapes,
 		foldAlphas:        foldAlphas,
 		finalCodeword:     finalCodeword,
+		levelPowers:       levelPowers,
 	}
 	parallel.Execute(int(pcs.Params.NumQueries), func(start, end int) {
 		for queryIdx := start; queryIdx < end; queryIdx++ {
@@ -1702,6 +1820,21 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	return checkFolds(pcs.Params, resolved, in.Challenges.FoldAlphas, positions)
 }
 
+// levelAlphaDeep returns the alphaDeep of a level introduced at round:
+// FoldAlphas[round]², the square of that same round's fold challenge. At the
+// boundary round (round == numRounds()) no fold challenge exists, so it is the
+// first power of the last fold challenge, distinct from round numRounds()-1's
+// alphaDeep = FoldAlphas[numRounds()-1]². With no fold at all, it is zero.
+func levelAlphaDeep(round uint8, foldAlphas []field.Ext) field.Ext {
+	var alphaDeep field.Ext
+	if int(round) < len(foldAlphas) {
+		alphaDeep.Square(&foldAlphas[round])
+	} else if len(foldAlphas) > 0 {
+		alphaDeep = foldAlphas[len(foldAlphas)-1]
+	}
+	return alphaDeep
+}
+
 // verifyQueryCtx bundles the per-Verify, query-independent inputs so a single
 // query can be authenticated and reconstructed in isolation (see
 // verifyQueryCtx.resolve). All fields are read-only during resolution, which is
@@ -1720,6 +1853,9 @@ type verifyQueryCtx struct {
 	shapes            []Shape
 	foldAlphas        []field.Ext
 	finalCodeword     []field.Ext
+	// levelPowers[l] holds alphaDeep^0 … alphaDeep^RunningPower for level l,
+	// alphaDeep being that level's (see levelAlphaDeep).
+	levelPowers [][]field.Ext
 }
 
 // resolve authenticates one query's Merkle openings and reconstructs its
@@ -1808,25 +1944,16 @@ func (vq verifyQueryCtx) resolve(queryIdx, queryPosition int) (resolvedQuery, er
 		if err = bindInputTreeOpenings(label, source, levelSize, vq.orders[levelIdx], bundle); err != nil {
 			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
 		}
-		var alphaDeep field.Ext
-		if int(round) < len(vq.foldAlphas) {
-			alphaDeep.Square(&vq.foldAlphas[round])
-		} else if len(vq.foldAlphas) > 0 {
-			// Boundary round (round == numRounds()): no fold challenge exists
-			// at this round. Use the first power of the last fold challenge to
-			// batch the bundle's entries; the first power is distinct from round
-			// numRounds()-1's alphaDeep = foldAlphas[numRounds()-1]^2.
-			alphaDeep = vq.foldAlphas[len(vq.foldAlphas)-1]
-		}
 		levelPos := queryPosition >> round
 		entryClaims := vq.layoutClaims[levelIdx]
+		alphaPow := vq.levelPowers[levelIdx]
 		self, err := reconstructQueryValueAt(bundle, entryClaims, source, levelSize,
-			alphaDeep, domainPointExt(domain, levelPos), false, rq.Rounds[round].Self)
+			alphaPow, domainPointExt(domain, levelPos), false, rq.Rounds[round].Self)
 		if err != nil {
 			return resolvedQuery{}, err
 		}
 		sib, err := reconstructQueryValueAt(bundle, entryClaims, source, levelSize,
-			alphaDeep, domainPointExt(domain, levelPos^1), true, rq.Rounds[round].Sibling)
+			alphaPow, domainPointExt(domain, levelPos^1), true, rq.Rounds[round].Sibling)
 		if err != nil {
 			return resolvedQuery{}, err
 		}

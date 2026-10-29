@@ -110,25 +110,35 @@ data class ConflationWitness(
 /**
  * One touched DA chunk of a rollup proof (rollup_spec §3.1, `ChunkWitness`).
  *
- * [chunkHash] is the chunk's L1-anchored binding hash: the KZG versioned hash of [blobBytes] for a blob chunk, or
- * `keccak256(calldataBytes)` for a calldata chunk. A blob chunk carries the physical EIP-4844 blob in [blobBytes] and
- * empty [calldataBytes]; a calldata chunk carries the exact submitted bytes in [calldataBytes] and empty [blobBytes].
+ * [chunkHash] is the chunk's L1-anchored binding hash: the KZG versioned hash of [kzgCommitment] for a blob chunk, or
+ * `keccak256(calldataBytes)` for a calldata chunk. A blob chunk carries the physical EIP-4844 blob in [blobBytes], its
+ * 48-byte [kzgCommitment], the 48-byte EIP-4844 blob proof [kzgProof] of [blobBytes] against that commitment, and
+ * empty [calldataBytes]. A calldata chunk carries the exact submitted bytes in [calldataBytes] and empty [blobBytes],
+ * [kzgCommitment] and [kzgProof].
  */
 data class ChunkWitness(
   val chunkHash: ByteArray,
   val isCalldata: Boolean,
   val blobBytes: ByteArray,
   val calldataBytes: ByteArray,
+  val kzgCommitment: ByteArray,
+  val kzgProof: ByteArray,
 ) {
   init {
     if (isCalldata) {
-      require(blobBytes.isEmpty() && calldataBytes.isNotEmpty()) {
-        "calldata chunk must have empty blobBytes and non-empty calldataBytes"
+      require(
+        blobBytes.isEmpty() && calldataBytes.isNotEmpty() && kzgCommitment.isEmpty() && kzgProof.isEmpty(),
+      ) {
+        "calldata chunk must have non-empty calldataBytes and empty blobBytes, kzgCommitment and kzgProof"
       }
     } else {
       require(blobBytes.size == BLOB_BYTES_LENGTH && calldataBytes.isEmpty()) {
         "blob chunk must have exactly $BLOB_BYTES_LENGTH blobBytes and empty calldataBytes, got " +
           "blobBytes.size=${blobBytes.size} calldataBytes.size=${calldataBytes.size}"
+      }
+      require(kzgCommitment.size == KZG_POINT_BYTES_LENGTH && kzgProof.size == KZG_POINT_BYTES_LENGTH) {
+        "blob chunk must have $KZG_POINT_BYTES_LENGTH-byte kzgCommitment and kzgProof, got " +
+          "kzgCommitment.size=${kzgCommitment.size} kzgProof.size=${kzgProof.size}"
       }
     }
   }
@@ -143,6 +153,8 @@ data class ChunkWitness(
     if (isCalldata != other.isCalldata) return false
     if (!blobBytes.contentEquals(other.blobBytes)) return false
     if (!calldataBytes.contentEquals(other.calldataBytes)) return false
+    if (!kzgCommitment.contentEquals(other.kzgCommitment)) return false
+    if (!kzgProof.contentEquals(other.kzgProof)) return false
 
     return true
   }
@@ -152,22 +164,28 @@ data class ChunkWitness(
     result = 31 * result + isCalldata.hashCode()
     result = 31 * result + blobBytes.contentHashCode()
     result = 31 * result + calldataBytes.contentHashCode()
+    result = 31 * result + kzgCommitment.contentHashCode()
+    result = 31 * result + kzgProof.contentHashCode()
     return result
   }
 
   override fun toString(): String {
     return "ChunkWitness(chunkHash=${chunkHash.encodeHex()}, isCalldata=$isCalldata, " +
-      "blobBytes.size=${blobBytes.size}, calldataBytes.size=${calldataBytes.size})"
+      "blobBytes.size=${blobBytes.size}, calldataBytes.size=${calldataBytes.size}, " +
+      "kzgCommitment=${kzgCommitment.encodeHex()}, kzgProof=${kzgProof.encodeHex()})"
   }
 
   companion object {
     /** Physical EIP-4844 blob size: 4096 field elements of 32 bytes. */
     const val BLOB_BYTES_LENGTH = 131072
+
+    /** Compressed BLS12-381 G1 point, the size of a KZG commitment and of a KZG proof. */
+    const val KZG_POINT_BYTES_LENGTH = 48
   }
 }
 
 /**
- * The 22-field PI tuple emitted by a rollup proof (rollup_spec §2.4, `RollupPublicInput`).
+ * The PI tuple emitted by a rollup proof (rollup_spec §2.4, `RollupPublicInput`).
  *
  * Domain twin of `lineth.coordinator.clients.prover.RollupProofPublicInputsDto`. Kept here (rather than reusing the
  * DTO) because this module is depended upon by the prover-client modules, not the other way around. Where the DTO
@@ -179,8 +197,6 @@ data class ChunkWitness(
 data class RollupProofPublicInputs(
   val endBlockNumber: ULong,
   val endBlockTimestamp: Instant,
-  val parentL1L2BridgeMessageRollingHash: ByteArray,
-  val parentL1L2BridgeMessageNumber: ULong,
   val endL1L2BridgeMessageRollingHash: ByteArray,
   val endL1L2BridgeMessageNumber: ULong,
   val dynamicChainConfigHash: ByteArray,
@@ -208,8 +224,6 @@ data class RollupProofPublicInputs(
 
     if (endBlockNumber != other.endBlockNumber) return false
     if (endBlockTimestamp != other.endBlockTimestamp) return false
-    if (!parentL1L2BridgeMessageRollingHash.contentEquals(other.parentL1L2BridgeMessageRollingHash)) return false
-    if (parentL1L2BridgeMessageNumber != other.parentL1L2BridgeMessageNumber) return false
     if (!endL1L2BridgeMessageRollingHash.contentEquals(other.endL1L2BridgeMessageRollingHash)) return false
     if (endL1L2BridgeMessageNumber != other.endL1L2BridgeMessageNumber) return false
     if (!dynamicChainConfigHash.contentEquals(other.dynamicChainConfigHash)) return false
@@ -235,8 +249,6 @@ data class RollupProofPublicInputs(
   override fun hashCode(): Int {
     var result = endBlockNumber.hashCode()
     result = 31 * result + endBlockTimestamp.hashCode()
-    result = 31 * result + parentL1L2BridgeMessageRollingHash.contentHashCode()
-    result = 31 * result + parentL1L2BridgeMessageNumber.hashCode()
     result = 31 * result + endL1L2BridgeMessageRollingHash.contentHashCode()
     result = 31 * result + endL1L2BridgeMessageNumber.hashCode()
     result = 31 * result + dynamicChainConfigHash.contentHashCode()

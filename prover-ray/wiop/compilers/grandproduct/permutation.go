@@ -160,8 +160,8 @@ func SelectorFold(selector *wiop.ColumnView, factor wiop.Expression) wiop.Expres
 // any, is NOT part of the fold — it wraps the whole factor via [SelectorFold].
 //
 // When alpha is nil the whole query is single-width (every fragment width-1),
-// no cross-width aliasing is possible, and the lone column view is returned
-// with no sentinel.
+// no cross-width aliasing is possible, and the lone entry (a column view or a
+// vector constant) is returned with no sentinel.
 func rlcOfTable(alpha *wiop.CoinField, tab wiop.Table) wiop.Expression {
 	cols := tab.Columns
 	if alpha == nil {
@@ -177,9 +177,9 @@ func rlcOfTable(alpha *wiop.CoinField, tab wiop.Table) wiop.Expression {
 //
 //	α^w + col[0] + α·col[1] + α²·col[2] + … + α^{w-1}·col[w-1]
 //
-// where w = len(cols). The leading α^w is a length sentinel: it makes the fold
-// injective across widths, so rows of different widths can never alias — a
-// short tuple never collides with a zero-padded longer one.
+// where w = len(cols). A constant entry enters as a scalar term. The leading α^w is a
+// length sentinel: it makes the fold injective across widths, so rows of different widths
+// can never alias — a short tuple never collides with a zero-padded longer one.
 //
 // The sentinel is folded in for free by evaluating the coefficient sequence
 // [1, col[w-1], …, col[0]] at α via Horner; seeding acc = α + col[w-1]
@@ -188,7 +188,7 @@ func rlcOfTable(alpha *wiop.CoinField, tab wiop.Table) wiop.Expression {
 //
 // Requires a non-nil alpha and at least one column. Exported so the
 // messagebus compiler shares one definition of the sentinel fold.
-func RLCWithSentinel(alpha *wiop.CoinField, cols []*wiop.ColumnView) wiop.Expression {
+func RLCWithSentinel(alpha *wiop.CoinField, cols []wiop.TableEntry) wiop.Expression {
 	if alpha == nil {
 		panic("wiop/compilers/grandproduct: RLCWithSentinel requires a non-nil alpha")
 	}

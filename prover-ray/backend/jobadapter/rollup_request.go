@@ -27,6 +27,10 @@ const (
 	isCalldataKey    = "isCalldata"
 	blobBytesKey     = "blobBytes"
 	calldataBytesKey = "calldataBytes"
+	kzgCommitmentKey = "kzgCommitment"
+	kzgProofKey      = "kzgProof"
+
+	kzgPointByteSize = 48
 
 	proofKey                    = "proof"
 	startBlockNumberKey         = "startBlockNumber"
@@ -44,23 +48,26 @@ type ConflationWitness struct {
 }
 
 // ChunkWitness is one touched chunk: its L1-anchored binding hash, kind, and
-// serialized bytes. For a calldata chunk CalldataBytes is set and BlobBytes is
-// empty; for a blob chunk BlobBytes is set and CalldataBytes is empty.
+// serialized bytes. For a calldata chunk CalldataBytes is set and BlobBytes,
+// KZGCommitment and KZGProof are empty; for a blob chunk BlobBytes is set,
+// CalldataBytes is empty, and KZGCommitment and KZGProof are the 48-byte
+// commitment of BlobBytes and its EIP-4844 blob proof.
 type ChunkWitness struct {
 	ChunkHash     [32]byte
 	IsCalldata    bool
 	BlobBytes     []byte
 	CalldataBytes []byte
+	KZGCommitment []byte
+	KZGProof      []byte
 }
 
 // EmbeddedL2ExecutionProof is one l2ExecutionProof a rollup request carries for
 // the guest to verify. ProgramVk is its verifying-key hash.
 type EmbeddedL2ExecutionProof struct {
-	Proof             []byte
-	StartBlockNumber  uint64
-	PublicInputs      backend.PublicInputs
-	FilteredAddresses [][20]byte
-	ProgramVk         []byte
+	Proof            []byte
+	StartBlockNumber uint64
+	PublicInputs     backend.PublicInputs
+	ProgramVk        []byte
 }
 
 // RollupRequest is a decoded getZkRollupProofV1 request. Conflations pair 1:1
@@ -235,12 +242,26 @@ func decodeChunkWitness(raw json.RawMessage, op, ctx string) (ChunkWitness, erro
 	if err != nil {
 		return ChunkWitness{}, err
 	}
+	kzgCommitment, err := getHexBytes(obj, kzgCommitmentKey, op, ctx)
+	if err != nil {
+		return ChunkWitness{}, err
+	}
+	kzgProof, err := getHexBytes(obj, kzgProofKey, op, ctx)
+	if err != nil {
+		return ChunkWitness{}, err
+	}
 	if isCalldata {
 		if len(calldataBytes) == 0 {
 			return ChunkWitness{}, decErrf(op, "%s%s must be non-empty for a calldata chunk", ctx, calldataBytesKey)
 		}
 		if len(blobBytes) != 0 {
 			return ChunkWitness{}, decErrf(op, "%s%s must be empty for a calldata chunk", ctx, blobBytesKey)
+		}
+		if len(kzgCommitment) != 0 {
+			return ChunkWitness{}, decErrf(op, "%s%s must be empty for a calldata chunk", ctx, kzgCommitmentKey)
+		}
+		if len(kzgProof) != 0 {
+			return ChunkWitness{}, decErrf(op, "%s%s must be empty for a calldata chunk", ctx, kzgProofKey)
 		}
 	} else {
 		if len(blobBytes) == 0 {
@@ -249,12 +270,22 @@ func decodeChunkWitness(raw json.RawMessage, op, ctx string) (ChunkWitness, erro
 		if len(calldataBytes) != 0 {
 			return ChunkWitness{}, decErrf(op, "%s%s must be empty for a blob chunk", ctx, calldataBytesKey)
 		}
+		if len(kzgCommitment) != kzgPointByteSize {
+			return ChunkWitness{}, decErrf(op, "%s%s must be %d bytes for a blob chunk, got %d",
+				ctx, kzgCommitmentKey, kzgPointByteSize, len(kzgCommitment))
+		}
+		if len(kzgProof) != kzgPointByteSize {
+			return ChunkWitness{}, decErrf(op, "%s%s must be %d bytes for a blob chunk, got %d",
+				ctx, kzgProofKey, kzgPointByteSize, len(kzgProof))
+		}
 	}
 	return ChunkWitness{
 		ChunkHash:     chunkHash,
 		IsCalldata:    isCalldata,
 		BlobBytes:     blobBytes,
 		CalldataBytes: calldataBytes,
+		KZGCommitment: kzgCommitment,
+		KZGProof:      kzgProof,
 	}, nil
 }
 
@@ -279,28 +310,19 @@ func decodeEmbeddedL2ExecutionProof(raw json.RawMessage, op, ctx string) (Embedd
 	if err != nil {
 		return EmbeddedL2ExecutionProof{}, err
 	}
-	filteredRaw, err := getArray(obj, filteredAddressesKey, op, ctx)
-	if err != nil {
-		return EmbeddedL2ExecutionProof{}, err
-	}
-	filtered, err := addressList(filteredRaw, op, ctx+filteredAddressesKey)
-	if err != nil {
-		return EmbeddedL2ExecutionProof{}, err
-	}
 	programVk, err := getFixedHex(obj, programVkKey, op, ctx, programVkByteSize)
 	if err != nil {
 		return EmbeddedL2ExecutionProof{}, err
 	}
 	return EmbeddedL2ExecutionProof{
-		Proof:             proof,
-		StartBlockNumber:  startBlockNumber,
-		PublicInputs:      pi,
-		FilteredAddresses: filtered,
-		ProgramVk:         programVk,
+		Proof:            proof,
+		StartBlockNumber: startBlockNumber,
+		PublicInputs:     pi,
+		ProgramVk:        programVk,
 	}, nil
 }
 
-// decodeEmbeddedPublicInputs decodes the 18-field backend.PublicInputs shape
+// decodeEmbeddedPublicInputs decodes the backend.PublicInputs shape
 // embedded in an l2ExecutionProof.
 func decodeEmbeddedPublicInputs(
 	m map[string]json.RawMessage, op, ctx string,
@@ -327,8 +349,6 @@ func decodeEmbeddedPublicInputs(
 	pi.EndBlockHash = h("endBlockHash")
 	pi.EndBlockNumber = n(endBlockNumberKey)
 	pi.EndBlockTimestamp = n("endBlockTimestamp")
-	pi.ParentL1L2BridgeRollingHash = h("parentL1L2BridgeRollingHash")
-	pi.ParentL1L2BridgeRollingHashMessageNumber = n("parentL1L2BridgeRollingHashMessageNumber")
 	pi.EndL1L2BridgeRollingHash = h("endL1L2BridgeRollingHash")
 	pi.EndL1L2BridgeRollingHashMessageNumber = n("endL1L2BridgeRollingHashMessageNumber")
 	pi.DynamicChainConfigHash = h("dynamicChainConfigHash")
@@ -336,7 +356,6 @@ func decodeEmbeddedPublicInputs(
 	pi.ParentFtxNumber = n("parentFtxNumber")
 	pi.EndFtxRollingHash = h("endFtxRollingHash")
 	pi.EndProcessedFtxNumber = n("endProcessedFtxNumber")
-	pi.FilteredAddressesHash = h("filteredAddressesHash")
 	pi.TxFromsHash = h("txFromsHash")
 	pi.BlockCount = n(blockCountKey)
 	if err != nil {
@@ -362,6 +381,16 @@ func decodeEmbeddedPublicInputs(
 		return pi, err
 	}
 	pi.L2L1Messages = l2L1Messages
+
+	filteredRaw, err := getArray(m, filteredAddressesKey, op, ctx)
+	if err != nil {
+		return pi, err
+	}
+	filtered, err := addressList(filteredRaw, op, ctx+filteredAddressesKey)
+	if err != nil {
+		return pi, err
+	}
+	pi.FilteredAddresses = filtered
 	return pi, nil
 }
 

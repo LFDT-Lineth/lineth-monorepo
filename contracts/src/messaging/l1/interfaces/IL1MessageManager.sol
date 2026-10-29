@@ -3,7 +3,7 @@ pragma solidity ^0.8.33;
 
 /**
  * @title L1 Message manager interface for current functions, events and errors.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 interface IL1MessageManager {

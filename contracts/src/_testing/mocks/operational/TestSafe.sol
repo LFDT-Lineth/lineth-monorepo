@@ -7,7 +7,7 @@ import { ISafe } from "../../../operational/interfaces/ISafe.sol";
  * @title Test double for a multisig Safe.
  * @notice Implements the minimal {ISafe} surface and can forward an arbitrary call so tests can assert that
  * downstream conditions rely on `tx.origin` (the EOA) rather than `msg.sender` (this contract).
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 contract TestSafe is ISafe {

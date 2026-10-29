@@ -63,7 +63,7 @@ jobs:
       # directly bypassin the branch-protection or for PR bot GitHub App to create PR with the changelog changes.
       - name: Generate release or PR bot App token
         id: app-token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           app-id: ${{ !inputs.create_pull_request && secrets.RELEASE_BOT_APP_ID || secrets.CREATE_GITHUB_PR_APP_ID }}
           private-key: ${{ !inputs.create_pull_request && secrets.RELEASE_BOT_PRIVATE_KEY || secrets.CREATE_GITHUB_PR_PRIVATE_KEY }}
@@ -99,7 +99,7 @@ jobs:
           git config user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
 
       - name: Install git-cliff
-        uses: taiki-e/install-action@7623a79cdfecb99d681017af368ca353d9f49bb5 # v2.87.19
+        uses: taiki-e/install-action@a4d3f3f761dcd95cce1b72cb61cb6d1963438177 # v2.87.30
         with:
           tool: git-cliff
 
