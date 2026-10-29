@@ -862,4 +862,57 @@ own \texttt{CompressPoseidon2}.
     \texttt{generic-asm-static-call} (Table~\ref{tab:parallel}).
 \end{itemize}
 
+\section{Function closures}\label{sec:closure}
+
+A closure is a function value that captures variables from the place it was defined. It can
+still use those variables later, after the function that created it has returned.
+
+\begin{lstlisting}[language=Go,caption={\texttt{StaticCallCompressor} (\texttt{crypto/poseidon2/hasher.go}).},label=lst:closure]
+func StaticCallCompressor[T any, PT generic.Element[T]](perm *Permutation[T, PT]) CompressFunc[T] {
+	return func(state, block Octuplet[T]) Octuplet[T] {
+		return CompressStaticCall(perm, state, block) // uses perm from the outer function
+	}
+}
+\end{lstlisting}
+
+\begin{itemize}
+  \item The inner \texttt{func(state, block ...) ...} is a function literal, a function
+    without a name.
+  \item It uses \texttt{perm}, which is not one of its own parameters: \texttt{perm} belongs
+    to \texttt{StaticCallCompressor}.
+  \item \texttt{StaticCallCompressor} returns this function. Later, when the benchmark calls
+    \texttt{c.compress(st, blk)}, \texttt{StaticCallCompressor} has long since returned, but
+    the function still has its \texttt{perm}.
+\end{itemize}
+
+\subsection{How Go implements it}
+
+A closure value is a pointer to a small object that holds a pointer to the function's
+compiled code and the captured variables, here \texttt{perm}. Roughly:
+\begin{lstlisting}[language=Go]
+type closure struct {
+	fn   *code               // CompressStaticCall wrapper
+	perm *Permutation[T, PT] // captured
+}
+\end{lstlisting}
+That object has to outlive \texttt{StaticCallCompressor}, so it goes on the heap; the compiler
+reports \texttt{func literal escapes to heap} (Appendix~\ref{sec:escape}). It is allocated
+once, when \texttt{StaticCallCompressor} is called. Every later call reuses it, which is why
+it does not appear in the per-call allocation counts.
+
+\subsection{Why the code uses one}
+
+\texttt{CompressFunc[T]} is defined as \texttt{func(state, block Octuplet[T]) Octuplet[T]},
+which has no room for a \texttt{perm} argument. The closure fixes \texttt{perm} in advance,
+so the result fits that signature.
+\begin{itemize}
+  \item \textbf{What it allows:} the hasher, the transcript and the benchmark can all take
+    any \texttt{CompressFunc}. That includes gnark-crypto's
+    \texttt{kbvortex.CompressPoseidon2}, a plain function with no captured variables, or one
+    of these closures. That is how the benchmark puts baseline and generic implementations
+    in the same \texttt{compressors} list.
+  \item \textbf{The cost:} each call goes through a function pointer, so the compiler cannot
+    inline it. That is a nanosecond or so, small next to a Poseidon2 permutation.
+\end{itemize}
+
 \end{document}
