@@ -2,6 +2,15 @@
 
 ### 🚀 Features
 
+- *(prover-ray)* Support constant entries in lookup, permutation and message-bus tables (#4296)
+
+### 🐛 Bug Fixes
+
+- *(riscv-guest)* Added a build option to choose between crypto backe… (#4293)
+## [0.2.0] - 2026-10-28
+
+### 🚀 Features
+
 - *(prover-ray)* Reduce Poseidon2 row authentication cost  (#4115)
 - *(prover-ray)* Update ZkC for LazyTrace API (#4170)
 - *(prover-ray)* Cyclic logderivativesum running sums (#4171)

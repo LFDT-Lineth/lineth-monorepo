@@ -1,8 +1,12 @@
-//! FFI tests for the Constantine-backed guest crypto bindings.
+//! FFI tests for the Constantine-backed guest crypto bindings, plus secp256k1 tests run against every backend.
 //! Vectors cover EIP-2537, EIP-4844, and secp256k1 recovery.
 
 const std = @import("std");
 const gc = @import("guest_crypto");
+const std_secp = @import("secp256k1_std");
+
+// Both providers behind `-Dsecp256k1-backend` expose the same ecrecover/secp256k1Verify surface.
+const secp256k1_backends = .{ gc, std_secp };
 
 extern fn zkvm_secp256r1_verify(msg: *const [32]u8, sig: *const [64]u8, pubkey: *const [64]u8, verified: *bool) i32;
 
@@ -274,62 +278,160 @@ fn signOnce(d: Scalar, k: Scalar, z: Scalar) ?struct { sig: [64]u8, recid: u8 } 
     return .{ .sig = sig, .recid = if (aff.y.isOdd()) 1 else 0 };
 }
 
-test "ecrecover round-trips signatures back to the signing key, and verify accepts them" {
+const Fixture = struct { msg: [32]u8, sig: [64]u8, recid: u8, pubkey: [64]u8 };
+
+fn signedFixtures() ![5]Fixture {
     const keys = [_]u64{ 1, 2, 0xDEAD_BEEF, 0x0123_4567_89AB_CDEF, 0xFFFF_FFFF_FFFF_FFFF };
     const msgs = [_]u64{ 0xABC, 0x9999, 1, 0x0BAD_C0DE, 0xFEED_FACE_CAFE_BEEF };
-
-    for (keys, msgs) |dv, zv| {
+    var out: [5]Fixture = undefined;
+    for (keys, msgs, &out) |dv, zv, *f| {
         const d = scalarFromU64(dv);
         const z = scalarFromU64(zv);
 
-        const P = try Secp256k1.basePoint.mul(d.toBytes(.little), .little);
-        const Paff = P.affineCoordinates();
-        var expected: [64]u8 = undefined;
-        expected[0..32].* = Paff.x.toBytes(.big);
-        expected[32..].* = Paff.y.toBytes(.big);
+        const Paff = (try Secp256k1.basePoint.mul(d.toBytes(.little), .little)).affineCoordinates();
+        f.pubkey[0..32].* = Paff.x.toBytes(.big);
+        f.pubkey[32..].* = Paff.y.toBytes(.big);
 
         var k = scalarFromU64(2);
         var attempts: usize = 0;
         const found = while (attempts < 256) : (attempts += 1) {
             if (signOnce(d, k, z)) |sg| break sg;
             k = k.add(Scalar.one);
-        } else null;
-        try std.testing.expect(found != null);
+        } else return error.NoSignature;
+        f.msg = z.toBytes(.big);
+        f.sig = found.sig;
+        f.recid = found.recid;
+    }
+    return out;
+}
 
-        const zb = z.toBytes(.big);
-        var out: [64]u8 = undefined;
-        try std.testing.expect(gc.ecrecover(&zb, &found.?.sig, found.?.recid, &out));
-        try std.testing.expectEqualSlices(u8, &expected, &out);
+test "ecrecover round-trips signatures back to the signing key, and verify accepts them" {
+    const fixtures = try signedFixtures();
+    inline for (secp256k1_backends) |backend| {
+        for (fixtures) |f| {
+            var out: [64]u8 = undefined;
+            try std.testing.expect(backend.ecrecover(&f.msg, &f.sig, f.recid, &out));
+            try std.testing.expectEqualSlices(u8, &f.pubkey, &out);
 
-        var verified = false;
-        gc.secp256k1Verify(&zb, &found.?.sig, &expected, &verified);
-        try std.testing.expect(verified);
+            // Ethereum-style 27/28 recovery ids select the same parity.
+            var out27: [64]u8 = undefined;
+            try std.testing.expect(backend.ecrecover(&f.msg, &f.sig, f.recid + 27, &out27));
+            try std.testing.expectEqualSlices(u8, &f.pubkey, &out27);
 
-        var wrong_msg = zb;
-        wrong_msg[0] ^= 0x55;
-        gc.secp256k1Verify(&wrong_msg, &found.?.sig, &expected, &verified);
-        try std.testing.expect(!verified);
+            var verified = false;
+            backend.secp256k1Verify(&f.msg, &f.sig, &f.pubkey, &verified);
+            try std.testing.expect(verified);
+
+            var wrong_msg = f.msg;
+            wrong_msg[0] ^= 0x55;
+            backend.secp256k1Verify(&wrong_msg, &f.sig, &f.pubkey, &verified);
+            try std.testing.expect(!verified);
+        }
     }
 }
 
 test "ecrecover rejects malformed signatures" {
     const z = scalarFromU64(0x1234).toBytes(.big);
-    var out: [64]u8 = undefined;
+    inline for (secp256k1_backends) |backend| {
+        var out: [64]u8 = undefined;
 
-    // r = 0 and s = 0 are invalid.
-    try std.testing.expect(!gc.ecrecover(&z, &([_]u8{0} ** 64), 0, &out));
+        // r = 0 and s = 0 are invalid.
+        try std.testing.expect(!backend.ecrecover(&z, &([_]u8{0} ** 64), 0, &out));
 
-    // r ≥ n (all 0xFF) is non-canonical.
-    var sig_bad_r: [64]u8 = undefined;
-    sig_bad_r[0..32].* = [_]u8{0xFF} ** 32;
-    sig_bad_r[32..].* = scalarFromU64(9).toBytes(.big);
-    try std.testing.expect(!gc.ecrecover(&z, &sig_bad_r, 0, &out));
+        // r ≥ n (all 0xFF) is non-canonical.
+        var sig_bad_r: [64]u8 = undefined;
+        sig_bad_r[0..32].* = [_]u8{0xFF} ** 32;
+        sig_bad_r[32..].* = scalarFromU64(9).toBytes(.big);
+        try std.testing.expect(!backend.ecrecover(&z, &sig_bad_r, 0, &out));
 
-    // Recovery ids outside {0, 1} are invalid.
-    var sig_ok: [64]u8 = undefined;
-    sig_ok[0..32].* = scalarFromU64(7).toBytes(.big);
-    sig_ok[32..].* = scalarFromU64(9).toBytes(.big);
-    try std.testing.expect(!gc.ecrecover(&z, &sig_ok, 2, &out));
+        // Recovery ids outside {0, 1, 27, 28} are invalid.
+        var sig_ok: [64]u8 = undefined;
+        sig_ok[0..32].* = scalarFromU64(7).toBytes(.big);
+        sig_ok[32..].* = scalarFromU64(9).toBytes(.big);
+        try std.testing.expect(!backend.ecrecover(&z, &sig_ok, 2, &out));
+        try std.testing.expect(!backend.ecrecover(&z, &sig_ok, 29, &out));
+    }
+}
+
+// Precompile 0x01 rows (input = hash ‖ v ‖ r ‖ s, result = padded address): geth's high-s ValidKey
+// and its low-s twin, private key 1 over the digests 0, n and 2²⁵⁶ − 1, and boundary rejects.
+const ecrecover_csv = @embedFile("ecrecover_csv");
+
+test "secp256k1 backends match the ecrecover vectors" {
+    var lines = std.mem.splitScalar(u8, ecrecover_csv, '\n');
+    _ = lines.next(); // header
+    while (lines.next()) |line| {
+        if (line.len == 0) continue;
+        var cols = std.mem.splitScalar(u8, line, ',');
+        var input: [128]u8 = undefined;
+        _ = try std.fmt.hexToBytes(&input, cols.next().?);
+        const result = cols.next().?;
+        const msg = input[0..32];
+        try std.testing.expect(std.mem.allEqual(u8, input[32..63], 0) and (input[63] == 27 or input[63] == 28));
+        const sig = input[64..128];
+
+        inline for (secp256k1_backends) |backend| {
+            var pubkey: [64]u8 = undefined;
+            const ok = backend.ecrecover(msg, sig, input[63] - 27, &pubkey);
+            try std.testing.expectEqual(result.len != 0, ok);
+            if (ok) {
+                var expected: [32]u8 = undefined;
+                _ = try std.fmt.hexToBytes(&expected, result);
+                var hash: [32]u8 = undefined;
+                std.crypto.hash.sha3.Keccak256.hash(&pubkey, &hash, .{});
+                try std.testing.expectEqualSlices(u8, expected[12..], hash[12..]);
+
+                var verified = false;
+                backend.secp256k1Verify(msg, sig, &pubkey, &verified);
+                try std.testing.expect(verified);
+            }
+        }
+    }
+}
+
+test "secp256k1 verify reduces R.x mod n" {
+    // R.x = n + 2, so r = 2; Q comes from the recovery formula with that R.
+    const msg = hexArr(32, "000000000000000000000000000000000000000000000000000000000badc0de");
+    const sig = hexArr(64, "0000000000000000000000000000000000000000000000000000000000000002" ++
+        "0000000000000000000000000000000000000000000000000000000012345678");
+    const pubkey = hexArr(64, "5b1975d0e5836265325beaeffed4536bebd7df3ad6af6c19de3a70c079cbb3fc" ++
+        "2c53415b15dcd29229fe04f3c3a7073e30895f982ca3abb8ff17caaad94022ee");
+    inline for (secp256k1_backends) |backend| {
+        var verified = false;
+        backend.secp256k1Verify(&msg, &sig, &pubkey, &verified);
+        try std.testing.expect(verified);
+    }
+}
+
+test "secp256k1 backends agree on arbitrary inputs" {
+    var prng = std.Random.DefaultPrng.init(0x5ec9_256b);
+    const rng = prng.random();
+    const fixtures = try signedFixtures();
+    for (0..200) |i| {
+        // Start from a valid signature and corrupt a random byte in about half the cases.
+        var f = fixtures[i % fixtures.len];
+        if (i % 2 == 1) {
+            const target: []u8 = switch (rng.uintLessThan(u8, 3)) {
+                0 => &f.msg,
+                1 => &f.sig,
+                else => &f.pubkey,
+            };
+            target[rng.uintLessThan(usize, target.len)] ^= @as(u8, 1) << rng.int(u3);
+        }
+
+        var out_c: [64]u8 = undefined;
+        var out_s: [64]u8 = undefined;
+        const ok_c = gc.ecrecover(&f.msg, &f.sig, f.recid, &out_c);
+        const ok_s = std_secp.ecrecover(&f.msg, &f.sig, f.recid, &out_s);
+        try std.testing.expectEqual(ok_c, ok_s);
+        if (ok_c) try std.testing.expectEqualSlices(u8, &out_c, &out_s);
+
+        var ver_c = false;
+        var ver_s = false;
+        gc.secp256k1Verify(&f.msg, &f.sig, &f.pubkey, &ver_c);
+        std_secp.secp256k1Verify(&f.msg, &f.sig, &f.pubkey, &ver_s);
+        try std.testing.expectEqual(ver_c, ver_s);
+    }
 }
 
 // BN254 smoke tests pin the raw EIP-196 layout and return contract.
