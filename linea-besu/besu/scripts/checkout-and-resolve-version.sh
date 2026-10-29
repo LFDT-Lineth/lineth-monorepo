@@ -17,10 +17,10 @@ if [ ! -d "$BESU_DIR/.git" ]; then
   echo "Cloning https://github.com/besu-eth/besu into $BESU_DIR"
   mkdir -p "$(dirname "$BESU_DIR")"
   # Partial clone: skip trees + blobs on the initial fetch so we only download the
-  # commit graph + tag refs. That's all `git describe --tags --abbrev=0 <commit>`
-  # below needs, keeping the version-only resolve fast for published commits. If a
-  # later step (build-dist-and-publish.sh) actually needs source files,
-  # a subsequent git checkout will fetch the needed blobs on demand.
+  # commit graph. `git show <commit>:CHANGELOG.md` below lazily fetches just the
+  # trees + blob it needs, keeping the version-only resolve fast for published
+  # commits. If a later step (build-dist-and-publish.sh) actually needs source
+  # files, a subsequent git checkout will fetch the needed blobs on demand.
   git clone --filter=tree:0 --no-checkout https://github.com/besu-eth/besu.git "$BESU_DIR"
   if [ "$SKIP_CHECKOUT_AFTER_CLONE" != "true" ]; then
     (cd "$BESU_DIR" && git checkout "$BESU_COMMIT")
@@ -29,10 +29,15 @@ else
   (cd "$BESU_DIR" && git reset --hard && git fetch origin && git checkout "$BESU_COMMIT")
 fi
 
-BASE_TAG=$(cd "$BESU_DIR" && git describe --tags --abbrev=0 "$BESU_COMMIT" 2>/dev/null || true)
+# Base version is the latest released version declared in CHANGELOG.md at BESU_COMMIT,
+# i.e. the first "## <version>" heading after "## Unreleased". Release tags are not
+# reliable here as Besu releases are not necessarily tagged on its main branch.
+BASE_VERSION=$(cd "$BESU_DIR" && git show "$BESU_COMMIT:CHANGELOG.md" 2>/dev/null \
+  | awk '/^## [0-9]+\.[0-9]+\.[0-9]+/ { print $2; exit }' || true)
+echo "BASE_VERSION=$BASE_VERSION"
 
-if [ -n "$BASE_TAG" ]; then
-  BESU_VERSION="${BASE_TAG}${VERSION_LABEL}-${SHORT_COMMIT}"
+if [ -n "$BASE_VERSION" ]; then
+  BESU_VERSION="${BASE_VERSION}${VERSION_LABEL}-${SHORT_COMMIT}"
 else
   BESU_VERSION="0.0.0${VERSION_LABEL}-${SHORT_COMMIT}"
 fi
