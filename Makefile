@@ -50,10 +50,13 @@ start-env-with-riscv:
 ## CI e2e entry points, used by .github/actions/run-e2e-tests.
 ## E2E_STACK selects the stack and suite: zkevm (default) or riscv.
 ##
-.PHONY: e2e-ci-fallback-image-tag e2e-ci-build-images e2e-ci-start-env e2e-ci-start-env-with-retry e2e-ci-test
+.PHONY: e2e-ci-detect-changes e2e-ci-load-images e2e-ci-pull-external-images e2e-ci-build-images \
+	e2e-ci-start-env e2e-ci-start-env-with-retry e2e-ci-test
 
 E2E_STACK ?= zkevm
 E2E_IMAGE_TAG ?=
+E2E_ARTIFACT_DIR ?= tmp/artifacts
+E2E_BESU_PACKAGE_PROVIDED ?= false
 OVERRIDE_COMPOSE_FILE ?=
 
 ifeq ($(E2E_STACK),riscv)
@@ -75,9 +78,21 @@ else
 $(error Unsupported E2E_STACK=$(E2E_STACK) (expected zkevm or riscv))
 endif
 
-# Tag for monorepo images without a CI artifact or explicit tag; empty keeps the Compose default.
-e2e-ci-fallback-image-tag:
-	@echo "$(E2E_FALLBACK_IMAGE_TAG)"
+e2e-ci-detect-changes:
+	@scripts/e2e/detect-changes.sh "$${E2E_ZKEVM_FILES:-[]}" "$${E2E_RISCV_FILES:-[]}"
+
+e2e-ci-load-images:
+	@E2E_FALLBACK_IMAGE_TAG="$(E2E_FALLBACK_IMAGE_TAG)" scripts/e2e/load-image-artifacts.sh "$(E2E_ARTIFACT_DIR)"
+
+# Skipped when besu-package is provided: its services carry the external-to-monorepo profile,
+# so the pull would fetch an unpublished CI tag or overwrite the loaded artifact.
+e2e-ci-pull-external-images:
+ifeq ($(E2E_STACK)-$(E2E_BESU_PACKAGE_PROVIDED),zkevm-false)
+	$(MAKE) retry TARGET=docker-pull-images-external-to-monorepo \
+		RETRY_LIMIT=10 RETRY_TIMEOUT=10m RETRY_BACKOFF=30s
+else
+	@echo "Skipping external image pull for E2E_STACK=$(E2E_STACK) E2E_BESU_PACKAGE_PROVIDED=$(E2E_BESU_PACKAGE_PROVIDED)"
+endif
 
 e2e-ci-build-images:
 ifeq ($(E2E_STACK)-$(RISCV_PROVER_MODE),riscv-dev-zkvm)

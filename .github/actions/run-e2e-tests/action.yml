@@ -74,20 +74,6 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    - name: Select stack
-      shell: bash
-      env:
-        STACK: ${{ inputs.stack }}
-        RISCV_PROVER_MODE: ${{ inputs.riscv_prover_mode }}
-        IMAGE_TAG: ${{ inputs.image_tag }}
-      run: |
-        # Stack-specific behaviour lives in the Makefile (e2e-ci-* targets).
-        {
-          echo "E2E_STACK=$STACK"
-          echo "E2E_IMAGE_TAG=$IMAGE_TAG"
-          echo "RISCV_PROVER_MODE=$RISCV_PROVER_MODE"
-        } >> "$GITHUB_ENV"
-
     - name: Setup upterm session
       if: ${{ inputs.e2e-tests-with-ssh == 'true' }}
       uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 # v1
@@ -123,92 +109,45 @@ runs:
         merge-multiple: true
 
     - name: Load Docker image artifacts and select tags
-      id: load_images
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       env:
-        IMAGE_TAG: ${{ inputs.image_tag }}
+        E2E_STACK: ${{ inputs.stack }}
+        E2E_IMAGE_TAG: ${{ inputs.image_tag }}
+        E2E_ARTIFACT_DIR: ${{ github.workspace }}/${{ inputs.working-directory }}/tmp/artifacts
         LINEA_BESU_PACKAGE_TAG: ${{ inputs.linea_besu_package_tag }}
         LINEA_COORDINATOR_TAG: ${{ inputs.coordinator_tag }}
         LINEA_POSTMAN_TAG: ${{ inputs.postman_tag }}
         LINEA_PROVER_TAG: ${{ inputs.prover_tag }}
         LINEA_TRANSACTION_EXCLUSION_API_TAG: ${{ inputs.tx_exclusion_api_tag }}
         MARU_TAG: ${{ inputs.maru_tag }}
-      run: |
-        set -euo pipefail
-        
-        # Export to later steps via GITHUB_ENV to ensure BESU_PACKAGE_IMAGE_NAME
-        # is set as "consensys/linea-besu-package" even when override compose file is used
-        echo "BESU_PACKAGE_IMAGE_NAME=consensys/linea-besu-package" >> "$GITHUB_ENV"
-        
-        artifact_dir="$GITHUB_WORKSPACE/${{ inputs.working-directory }}/tmp/artifacts"
-        loaded_images="$(mktemp)"
-        fallback_tag="$(make -s e2e-ci-fallback-image-tag)"
-        shopt -s nullglob
-        artifacts=("$artifact_dir"/*.tar.gz)
+      run: make -s e2e-ci-load-images >> "$GITHUB_ENV"
 
-        for artifact in "${artifacts[@]}"; do
-          if ! repo_tags="$(
-            tar -xOzf "$artifact" manifest.json 2>/dev/null |
-              jq -er '.[].RepoTags[]?'
-          )"; then
-            echo "Skipping non-Docker artifact ${artifact}."
-            continue
-          fi
-          echo "Loading Docker image artifact ${artifact}..."
-          printf '%s\n' "$repo_tags" >> "$loaded_images"
-          gunzip -c "$artifact" | docker load
-        done
-
-        while read -r env_var image; do
-          image_ref="${image}:${IMAGE_TAG}"
-          if grep -Fqx "$image_ref" "$loaded_images"; then
-            selected_tag="$IMAGE_TAG"
-            if [ "$env_var" = "LINEA_BESU_PACKAGE_TAG" ]; then
-              echo "besu_package_loaded=true" >> "$GITHUB_OUTPUT"
-            fi
-          elif [ -n "${!env_var:-}" ]; then
-            selected_tag="${!env_var}"
-          elif [ -n "$fallback_tag" ]; then
-            selected_tag="$fallback_tag"
-          else
-            continue # keep the Compose default tag
-          fi
-          echo "${env_var}=${selected_tag}" >> "$GITHUB_ENV"
-        done <<'EOF'
-        LINEA_BESU_PACKAGE_TAG consensys/linea-besu-package
-        LINEA_COORDINATOR_TAG consensys/linea-coordinator
-        LINEA_POSTMAN_TAG consensys/linea-postman
-        LINEA_PROVER_TAG consensys/linea-prover
-        LINEA_TRANSACTION_EXCLUSION_API_TAG consensys/linea-transaction-exclusion-api
-        MARU_TAG consensys/maru
-        EOF
-    
     - name: Pull all external-to-monorepo images with retry
-      # Skip when a besu-package artifact/tag is supplied: the besu-package services carry the
-      # external-to-monorepo profile, so this pull would fetch an unpublished CI tag or overwrite
-      # the image just loaded from the artifact. Missing external images are pulled on spin-up.
-      if: ${{ inputs.stack == 'zkevm' && inputs.linea_besu_package_tag == '' && steps.load_images.outputs.besu_package_loaded != 'true' }}
-      uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
-      with:
-        max_attempts: 10
-        retry_on: error
-        retry_wait_seconds: 30
-        timeout_minutes: 10
-        command: |
-          cd ${{ inputs.working-directory }} && make docker-pull-images-external-to-monorepo
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        E2E_STACK: ${{ inputs.stack }}
+      run: make e2e-ci-pull-external-images
 
     - name: Build local images
       shell: bash
       working-directory: ${{ inputs.working-directory }}
+      env:
+        E2E_STACK: ${{ inputs.stack }}
+        E2E_IMAGE_TAG: ${{ inputs.image_tag }}
+        RISCV_PROVER_MODE: ${{ inputs.riscv_prover_mode }}
       run: make e2e-ci-build-images
 
     - name: Spin up fresh environment with retry
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       env:
+        E2E_STACK: ${{ inputs.stack }}
+        E2E_IMAGE_TAG: ${{ inputs.image_tag }}
+        RISCV_PROVER_MODE: ${{ inputs.riscv_prover_mode }}
         OVERRIDE_COMPOSE_FILE: ${{ inputs.override-compose-file }}
-      run: make e2e-ci-start-env-with-retry OVERRIDE_COMPOSE_FILE="$OVERRIDE_COMPOSE_FILE"
+      run: make e2e-ci-start-env-with-retry
 
     - name: List docker containers/images
       if: ${{ always() && inputs.e2e-tests-containers-list == 'true' }}
@@ -222,6 +161,9 @@ runs:
       id: run_e2e_tests
       shell: bash
       working-directory: ${{ inputs.working-directory }}
+      env:
+        E2E_STACK: ${{ inputs.stack }}
+        RISCV_PROVER_MODE: ${{ inputs.riscv_prover_mode }}
       run: make e2e-ci-test
 
     - name: Show e2e tests result

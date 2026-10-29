@@ -51,6 +51,7 @@ jobs:
               - 'e2e/jest*.config.ts'
               - 'Makefile'
               - '.github/actions/run-e2e-tests/**'
+              - 'scripts/e2e/**'
               - 'linea-besu/plugins/linea-sequencer/**'
               - 'linea-besu/plugins/sequencer-interfaces/**'
               - 'ts-libs/**/src/**'
@@ -75,68 +76,6 @@ jobs:
       - name: Evaluate excluding test/doc files and other-stack paths
         id: evaluate
         env:
-          ZKEVM_FILES: ${{ steps.filter.outputs.zkevm_files }}
-          RISCV_FILES: ${{ steps.filter.outputs.riscv_files }}
-        run: |
-          set -euo pipefail
-
-          is_test_or_doc() {
-            local file="$1"
-            # Unit tests, except the e2e tests themselves.
-            [[ "$file" =~ \.(test|spec)\.ts$ && ! "$file" =~ ^e2e/src/ ]] && return 0
-            [[ "$file" =~ _test\.go$ ]] && return 0
-            # Tracer, sequencer and guest test support paths.
-            [[ "$file" =~ ^tracer/(reference-tests|testing)/ ]] && return 0
-            [[ "$file" =~ ^linea-besu/plugins/linea-sequencer/acceptance-tests/ ]] && return 0
-            [[ "$file" =~ ^riscv-guests/[^/]+/test/ ]] && return 0
-            [[ "$file" =~ \.(md|mdx)$ ]] && return 0
-            return 1
-          }
-
-          # Files that only one of the stacks uses.
-          is_riscv_only() {
-            [[ "$1" =~ (^|/)riscv[./] || "$1" =~ [-.]riscv[-.] || "$1" =~ ^(prover-ray|riscv-guests)/ ]]
-          }
-          is_zkevm_only() {
-            [[ "$1" =~ ^e2e/src/.*\.spec\.ts$ || "$1" =~ [-.]zkevm[-.] || "$1" =~ ^docker/config/prover/v3/ ]]
-          }
-
-          # Usage: evaluate <files-json> <skip-fn>; prints the first relevant file.
-          evaluate() {
-            local file
-            while read -r file; do
-              [ -z "$file" ] && continue
-              is_test_or_doc "$file" && continue
-              "$2" "$file" && continue
-              echo "$file"
-              return 0
-            done < <(jq -r '.[]' <<< "${1:-[]}")
-            return 1
-          }
-
-          if file="$(evaluate "$ZKEVM_FILES" is_riscv_only)"; then
-            echo "✓ zkEVM e2e-relevant file: $file"
-            echo "zkevm=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "No zkEVM e2e-relevant files"
-            echo "zkevm=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          if file="$(evaluate "$RISCV_FILES" is_zkevm_only)"; then
-            echo "✓ RISC-V e2e-relevant file: $file"
-            echo "riscv=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "No RISC-V e2e-relevant files"
-            echo "riscv=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          # Prove for real when the prover, the guests or their config changed.
-          mode=dev-mock
-          while read -r file; do
-            if [[ "$file" =~ ^(prover-ray|riscv-guests|docker/config/prover/riscv)/ ]] && ! is_test_or_doc "$file"; then
-              mode=dev-zkvm
-              break
-            fi
-          done < <(jq -r '.[]' <<< "${RISCV_FILES:-[]}")
-          echo "RISC-V prover mode: $mode"
-          echo "riscv_prover_mode=$mode" >> "$GITHUB_OUTPUT"
+          E2E_ZKEVM_FILES: ${{ steps.filter.outputs.zkevm_files }}
+          E2E_RISCV_FILES: ${{ steps.filter.outputs.riscv_files }}
+        run: make -s e2e-ci-detect-changes >> "$GITHUB_OUTPUT"
