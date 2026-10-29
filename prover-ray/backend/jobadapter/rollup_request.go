@@ -27,6 +27,10 @@ const (
 	isCalldataKey    = "isCalldata"
 	blobBytesKey     = "blobBytes"
 	calldataBytesKey = "calldataBytes"
+	kzgCommitmentKey = "kzgCommitment"
+	kzgProofKey      = "kzgProof"
+
+	kzgPointByteSize = 48
 
 	proofKey                    = "proof"
 	startBlockNumberKey         = "startBlockNumber"
@@ -44,13 +48,17 @@ type ConflationWitness struct {
 }
 
 // ChunkWitness is one touched chunk: its L1-anchored binding hash, kind, and
-// serialized bytes. For a calldata chunk CalldataBytes is set and BlobBytes is
-// empty; for a blob chunk BlobBytes is set and CalldataBytes is empty.
+// serialized bytes. For a calldata chunk CalldataBytes is set and BlobBytes,
+// KZGCommitment and KZGProof are empty; for a blob chunk BlobBytes is set,
+// CalldataBytes is empty, and KZGCommitment and KZGProof are the 48-byte
+// commitment of BlobBytes and its EIP-4844 blob proof.
 type ChunkWitness struct {
 	ChunkHash     [32]byte
 	IsCalldata    bool
 	BlobBytes     []byte
 	CalldataBytes []byte
+	KZGCommitment []byte
+	KZGProof      []byte
 }
 
 // EmbeddedL2ExecutionProof is one l2ExecutionProof a rollup request carries for
@@ -234,12 +242,26 @@ func decodeChunkWitness(raw json.RawMessage, op, ctx string) (ChunkWitness, erro
 	if err != nil {
 		return ChunkWitness{}, err
 	}
+	kzgCommitment, err := getHexBytes(obj, kzgCommitmentKey, op, ctx)
+	if err != nil {
+		return ChunkWitness{}, err
+	}
+	kzgProof, err := getHexBytes(obj, kzgProofKey, op, ctx)
+	if err != nil {
+		return ChunkWitness{}, err
+	}
 	if isCalldata {
 		if len(calldataBytes) == 0 {
 			return ChunkWitness{}, decErrf(op, "%s%s must be non-empty for a calldata chunk", ctx, calldataBytesKey)
 		}
 		if len(blobBytes) != 0 {
 			return ChunkWitness{}, decErrf(op, "%s%s must be empty for a calldata chunk", ctx, blobBytesKey)
+		}
+		if len(kzgCommitment) != 0 {
+			return ChunkWitness{}, decErrf(op, "%s%s must be empty for a calldata chunk", ctx, kzgCommitmentKey)
+		}
+		if len(kzgProof) != 0 {
+			return ChunkWitness{}, decErrf(op, "%s%s must be empty for a calldata chunk", ctx, kzgProofKey)
 		}
 	} else {
 		if len(blobBytes) == 0 {
@@ -248,12 +270,22 @@ func decodeChunkWitness(raw json.RawMessage, op, ctx string) (ChunkWitness, erro
 		if len(calldataBytes) != 0 {
 			return ChunkWitness{}, decErrf(op, "%s%s must be empty for a blob chunk", ctx, calldataBytesKey)
 		}
+		if len(kzgCommitment) != kzgPointByteSize {
+			return ChunkWitness{}, decErrf(op, "%s%s must be %d bytes for a blob chunk, got %d",
+				ctx, kzgCommitmentKey, kzgPointByteSize, len(kzgCommitment))
+		}
+		if len(kzgProof) != kzgPointByteSize {
+			return ChunkWitness{}, decErrf(op, "%s%s must be %d bytes for a blob chunk, got %d",
+				ctx, kzgProofKey, kzgPointByteSize, len(kzgProof))
+		}
 	}
 	return ChunkWitness{
 		ChunkHash:     chunkHash,
 		IsCalldata:    isCalldata,
 		BlobBytes:     blobBytes,
 		CalldataBytes: calldataBytes,
+		KZGCommitment: kzgCommitment,
+		KZGProof:      kzgProof,
 	}, nil
 }
 
