@@ -3,7 +3,7 @@
 \begin{axis}[
   xbar, xmode=log, log basis x=10,
   width=0.74\linewidth, height=5.8cm,
-  bar width=2.6pt, bar shift auto, enlarge y limits={abs=0.6},
+  bar width=2.1pt, bar shift auto, enlarge y limits={abs=0.6},
   ytick={0,1,2,3,4,5,6,7,8,9,10}, yticklabels={{FiatShamir (rounds=256, upd=1024)},{FiatShamir (rounds=256, upd=8)},{FiatShamir (rounds=16, upd=1024)},{FiatShamir (rounds=16, upd=8)},{MDHasher (n=65536)},{MDHasher (n=4096)},{MDHasher (n=64)},{CompressParallel},{Compress},{Permutation (width=24)},{Permutation (width=16)}},
   y tick label style={font=\scriptsize}, x tick label style={font=\scriptsize},
   xmin=0.5, xmax=200,
@@ -26,7 +26,9 @@
 \addlegendentry{\texttt{generic-asm}}
 \addplot+[fill=c4, draw=none] coordinates {(0.9799,6) (1.01,5) (1.012,4) (1,3) (1.007,2) (1.009,1) (1.005,0)};
 \addlegendentry{\texttt{current}}
+\addplot+[fill=c5, draw=none] coordinates {(1.014,8) (1.051,7) (0.9825,6) (1.015,5) (1.016,4) (1.006,3) (1.009,2) (1.01,1) (1.018,0)};
+\addlegendentry{\texttt{generic-asm-static-call}}
 \end{axis}
 \end{tikzpicture}
-\caption{KoalaBear code paths, time relative to \texttt{baseline} (Table~\ref{tab:paths}). \texttt{current} exists only for MDHasher and FiatShamir.}\label{fig:paths}
+\caption{KoalaBear code paths, time relative to \texttt{baseline} (Table~\ref{tab:paths}). \texttt{current} exists only for MDHasher and FiatShamir; \texttt{generic-asm-static-call} (run 5, against run 5\textquotesingle s \texttt{baseline}) only changes the compression, so it has no Permutation bars.}\label{fig:paths}
 \end{figure}

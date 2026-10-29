@@ -13,9 +13,9 @@ import make_tables
 
 from make_parallel_table import load
 
-# Categorical slots 1-4 of the dataviz reference palette (light mode), in
+# Categorical slots 1-5 of the dataviz reference palette (light mode), in
 # fixed order.
-COLORS = {'c1': '2a78d6', 'c2': 'eb6834', 'c3': '1baf7a', 'c4': 'eda100'}
+COLORS = {'c1': '2a78d6', 'c2': 'eb6834', 'c3': '1baf7a', 'c4': 'eda100', 'c5': '8f5bd6'}
 
 
 def parse_time(cell):
@@ -59,7 +59,7 @@ def bar_figure(path, caption, label, rows, series, xmax):
                           for i, (_, t) in enumerate(rows) if col in t)
         plots.append(rf'\addplot+[fill={color}, draw=none] coordinates {{{coords}}};'
                      + '\n' + rf'\addlegendentry{{{legend}}}')
-    bar_w = {1: 7, 2: 4.5, 3: 3.2, 4: 2.6}[len(series)]
+    bar_w = {1: 7, 2: 4.5, 3: 3.2, 4: 2.6, 5: 2.1}[len(series)]
     out = rf'''\begin{{figure}}[htbp]\centering
 \begin{{tikzpicture}}
 \begin{{axis}}[
@@ -121,16 +121,23 @@ bar_figure('../fig_branch.tex',
            r"KoalaBear hot-loop branches, time relative to \texttt{baseline}, before and after replicating gnark-crypto's internal-matrix diagonal (Table~\ref{tab:kbb}).",
            'fig:branch', rows, [('initial', 'branches (initial)', 'c1'), ('diag', 'branches, gnark diagonal', 'c2')], 50)
 
-# Figure 3: the three KoalaBear paths, plus current.
+# Figure 3: the three KoalaBear paths, plus current and, from run 5,
+# generic-asm-static-call. The latter is scaled so that its ratio is against
+# run 5's own baseline, as in the table.
 _, paths = parse_table('../tab_paths.tex')
+run5 = make_tables.load_raw('medium-static-call.txt')
+static = {make_tables.label(f, k): v[0] / run5[(f, k, 'baseline')][0]
+          for (f, k, i), v in run5.items() if i == 'generic-asm-static-call'}
 rows = [(r, {'baseline': t['baseline'], 'br': t['generic + hot-loop branches'],
              'vec': t[r'\texttt{generic-vec}'], 'asm': t[r'\texttt{generic-asm}'],
-             **({'cur': t[r'\texttt{current}']} if r'\texttt{current}' in t else {})})
+             **({'cur': t[r'\texttt{current}']} if r'\texttt{current}' in t else {}),
+             **({'sc': static[r] * t['baseline']} if r in static else {})})
         for r, t in paths]
 bar_figure('../fig_paths.tex',
-           r'KoalaBear code paths, time relative to \texttt{baseline} (Table~\ref{tab:paths}). \texttt{current} exists only for MDHasher and FiatShamir.',
+           r'KoalaBear code paths, time relative to \texttt{baseline} (Table~\ref{tab:paths}). \texttt{current} exists only for MDHasher and FiatShamir; \texttt{generic-asm-static-call} (run 5, against run 5\textquotesingle s \texttt{baseline}) only changes the compression, so it has no Permutation bars.',
            'fig:paths', rows, [('br', 'hot-loop branches', 'c1'), ('vec', r'\texttt{generic-vec}', 'c2'),
-                               ('asm', r'\texttt{generic-asm}', 'c3'), ('cur', r'\texttt{current}', 'c4')], 200)
+                               ('asm', r'\texttt{generic-asm}', 'c3'), ('cur', r'\texttt{current}', 'c4'),
+                               ('sc', r'\texttt{generic-asm-static-call}', 'c5')], 200)
 
 # Figure 4: CompressParallel scaling, log-log.
 on = load('compress-parallel-scaling.txt')
