@@ -3,6 +3,7 @@ package minimalelf
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 )
 
 const (
@@ -44,6 +45,16 @@ var MinimalElfProgram = Make(DefaultEntryPoint, DefaultSectionAddr, ValidSection
 //	X+64     64   .text section header
 //	X+128    64   .shstrtab section header
 func Make(entryPoint, sectionAddr uint64, sectionData []byte) []byte {
+	return makeELF(entryPoint, sectionAddr, sectionData, 0, nil)
+}
+
+// makeELF builds the ELF of [Make]. If data is not empty, the PT_LOAD segment
+// also holds a non-executable .rodata section with data at
+// sectionAddr+dataOffset, after the zero-padded .text, and its section header
+// follows the .shstrtab one.
+//
+// Panics if data overlaps .text.
+func makeELF(entryPoint, sectionAddr uint64, sectionData []byte, dataOffset uint64, data []byte) []byte {
 
 	const (
 		ehdrSize = 64
@@ -51,11 +62,23 @@ func Make(entryPoint, sectionAddr uint64, sectionData []byte) []byte {
 		shdrSize = 64
 	)
 
-	// section string table: index 1 = ".text", index 7 = ".shstrtab"
+	// section string table: index 1 = ".text", index 7 = ".shstrtab",
+	// index 17 = ".rodata"
 	shstrtab := []byte("\x00.text\x00.shstrtab\x00") // 17 bytes
+	image, numSections := sectionData, uint16(3)     // NULL + .text + .shstrtab
+	if len(data) > 0 {
+		if dataOffset < uint64(len(sectionData)) {
+			panic(fmt.Sprintf("minimalelf: .rodata offset %d overlaps the %d-byte .text", dataOffset, len(sectionData)))
+		}
+		shstrtab = append(shstrtab, ".rodata\x00"...)
+		image = make([]byte, dataOffset+uint64(len(data)))
+		copy(image, sectionData)
+		copy(image[dataOffset:], data)
+		numSections++
+	}
 
 	textOff := uint64(ehdrSize + phdrSize) // = 120
-	shstrOff := textOff + uint64(len(sectionData))
+	shstrOff := textOff + uint64(len(image))
 	rawEnd := shstrOff + uint64(len(shstrtab))
 	shOff := (rawEnd + 7) &^ 7 // align to 8 bytes
 
@@ -84,22 +107,22 @@ func Make(entryPoint, sectionAddr uint64, sectionData []byte) []byte {
 	w(uint16(phdrSize)) // e_phentsize
 	w(uint16(1))        // e_phnum
 	w(uint16(shdrSize)) // e_shentsize
-	w(uint16(3))        // e_shnum:     NULL + .text + .shstrtab
+	w(numSections)      // e_shnum:     NULL + .text + .shstrtab (+ .rodata)
 	w(uint16(2))        // e_shstrndx:  .shstrtab is section 2
 
 	// PT_LOAD program header (56 bytes)
-	w(uint32(1))                // p_type:   PT_LOAD
-	w(uint32(5))                // p_flags:  PF_R | PF_X
-	w(textOff)                  // p_offset: file offset of .text
-	w(sectionAddr)              // p_vaddr
-	w(sectionAddr)              // p_paddr
-	w(uint64(len(sectionData))) // p_filesz
-	w(uint64(len(sectionData))) // p_memsz
-	w(uint64(0x1000))           // p_align
+	w(uint32(1))          // p_type:   PT_LOAD
+	w(uint32(5))          // p_flags:  PF_R | PF_X
+	w(textOff)            // p_offset: file offset of .text
+	w(sectionAddr)        // p_vaddr
+	w(sectionAddr)        // p_paddr
+	w(uint64(len(image))) // p_filesz
+	w(uint64(len(image))) // p_memsz
+	w(uint64(0x1000))     // p_align
 
 	// section data
-	buf.Write(sectionData) // .text
-	buf.Write(shstrtab)    // .shstrtab
+	buf.Write(image)    // .text (+ padding and .rodata)
+	buf.Write(shstrtab) // .shstrtab
 
 	// padding to shOff
 	for uint64(buf.Len()) < shOff {
@@ -134,6 +157,20 @@ func Make(entryPoint, sectionAddr uint64, sectionData []byte) []byte {
 	w(uint32(0))             // sh_info
 	w(uint64(1))             // sh_addralign
 	w(uint64(0))             // sh_entsize
+
+	if len(data) > 0 {
+		// .rodata section header (index 3)
+		w(uint32(17))               // sh_name:      ".rodata" at shstrtab[17]
+		w(uint32(1))                // sh_type:      SHT_PROGBITS
+		w(uint64(2))                // sh_flags:     SHF_ALLOC
+		w(sectionAddr + dataOffset) // sh_addr
+		w(textOff + dataOffset)     // sh_offset
+		w(uint64(len(data)))        // sh_size
+		w(uint32(0))                // sh_link
+		w(uint32(0))                // sh_info
+		w(uint64(1))                // sh_addralign
+		w(uint64(0))                // sh_entsize
+	}
 
 	return buf.Bytes()
 }
