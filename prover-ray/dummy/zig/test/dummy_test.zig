@@ -5,8 +5,8 @@ const api = @import("api_surface.zig");
 const verifier = dummy.verifier;
 const protocol = dummy.protocol;
 const image_relocation = dummy.image_relocation;
-const Element = dummy.field.Element;
-const Ext = dummy.field.Ext;
+const Element = dummy.field.koalabear.Element;
+const Ext = dummy.field.koalabear_ext.Ext;
 const Scalar = protocol.Scalar;
 
 // ── Verifier ─────────────────────────────────────────────────────────────────
@@ -30,7 +30,7 @@ fn extOf(l: [6]u32) Ext {
 const honest_x = [_]Scalar{ .{ .base = el(5) }, .{ .ext = extOf(.{ 1, 2, 3, 4, 5, 6 }) } };
 const honest_y = [_]Scalar{ .{ .base = el(3125) }, .{ .ext = extOf(.{ 1, 32, 243, 1024, 3125, 7776 }) } };
 const honest_rounds = [_]protocol.RoundMessage{.{ .cells = &honest_y }};
-const empty_opening = verifier.PcsOpening{ .proof = [_]u8{0} ** 96 };
+const empty_opening = verifier.PcsOpening{ .proof = .{ .input_queries = &.{}, .fri_proof = .{ .round_roots = &.{}, .final_poly = &.{}, .running_queries = &.{} } } };
 const honest_proof = verifier.Proof{ .rounds = &honest_rounds, .pcs_opening = empty_opening };
 
 test "an honest proof verifies" {
@@ -45,7 +45,7 @@ test "changing any public input or any limb is rejected" {
     try std.testing.expectError(error.DummyRelationViolated, verifier.verify(spec, systems, honest_proof, &x));
 
     for (0..6) |k| {
-        var l = honest_x[1].ext.limbs();
+        var l = honest_x[1].ext.toUints();
         l[k] += 1;
         x = honest_x;
         x[1] = .{ .ext = extOf(l) };
@@ -184,7 +184,7 @@ test "a bad scalar tag, commitment flag or non-canonical limb is rejected" {
     try std.testing.expectError(error.PointerPastImage, validate(&img));
 
     resetRelocated(&img);
-    std.mem.writeInt(u32, img.buf[pi..][0..4], dummy.field.modulus, .little);
+    std.mem.writeInt(u32, img.buf[pi..][0..4], dummy.field.koalabear.modulus, .little);
     try std.testing.expectError(error.PointerPastImage, validate(&img));
 
     resetRelocated(&img);

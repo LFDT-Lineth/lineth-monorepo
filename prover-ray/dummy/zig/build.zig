@@ -7,10 +7,13 @@ pub fn build(b: *std.Build) void {
     // src/dummy.zig is both the verifier and the (embedded) circuit, so it is
     // exported under the two module names a guest imports from verifier-ray:
     // `verifier_ray` and `riscv_system`.
+    // verifier-ray's library: its field, proof types and image_relocation.
+    const verifier_ray_lib = b.dependency("verifier_ray", .{ .target = target, .optimize = optimize }).module("verifier_ray");
     const dummy_mod = b.addModule("verifier_ray", .{
         .root_source_file = b.path("src/dummy.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{.{ .name = "verifier_ray_lib", .module = verifier_ray_lib }},
     });
     b.modules.put(b.allocator, b.dupe("riscv_system"), dummy_mod) catch @panic("OOM");
 
@@ -46,10 +49,13 @@ pub fn build(b: *std.Build) void {
         .os_tag = .freestanding,
         .abi = .none,
     });
+    // For R5, verifier-ray picks the guest target and its release mode itself.
+    const r5_verifier_ray_lib = b.dependency("verifier_ray", .{ .r5 = true, .release = true }).module("verifier_ray");
     const r5_dummy_mod = b.createModule(.{
         .root_source_file = b.path("src/dummy.zig"),
         .target = r5_target,
         .optimize = .ReleaseSmall,
+        .imports = &.{.{ .name = "verifier_ray_lib", .module = r5_verifier_ray_lib }},
     });
     const r5_lib = b.addLibrary(.{
         .name = "dummy-verifier-r5",

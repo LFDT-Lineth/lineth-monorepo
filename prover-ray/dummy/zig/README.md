@@ -35,7 +35,7 @@ change (see `test/api_surface.zig`):
 
 Dummy proofs are serialized with prover-ray's `proofserialization`, like any
 ray proof. The pair statement uses its own domain tag,
-`lineth-verifier-dummy-pair-v1`. The package depends on Zig std only.
+`lineth-verifier-dummy-pair-v1`. Everything except the check comes from verifier-ray: the KoalaBear field, the proof types (`Proof`, `VerifyInput`, `AggregatorInput`, `RoundMessage`, `Scalar`) and `image_relocation`.
 
 ## Fixtures
 
