@@ -1,0 +1,16 @@
+.{
+    .name = .verifier_ray_dummy,
+    .fingerprint = 0x27fdc0bc624eb85f,
+    .version = "0.1.0",
+    .minimum_zig_version = "0.16.0",
+    // Deliberately no dependencies: the dummy verifier depends on Zig std only.
+    .dependencies = .{},
+    .paths = .{
+        "README.md",
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "test",
+        "testdata",
+    },
+}
