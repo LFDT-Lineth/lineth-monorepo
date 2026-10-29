@@ -1,0 +1,2 @@
+# The root .gitattributes treats every file as text (eol=lf), which corrupts PDFs.
+*.pdf binary
