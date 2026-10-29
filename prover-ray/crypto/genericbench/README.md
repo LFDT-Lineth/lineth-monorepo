@@ -82,6 +82,7 @@ one of:
 | `generic`  | Everything generic, permutation included. For KoalaBear the permutation's hot loops branch to concrete `koalabear.Element` code. |
 | `generic-vec` | KoalaBear only: `generic` with `koalabear.Vector` batch operations in the round-key, full S-box and internal-matrix loops. |
 | `generic-asm` | KoalaBear only: `generic` with the whole permutation delegated to gnark-crypto's (AVX-512 assembly). |
+| `generic-asm-static-call` | KoalaBear only: `generic-asm`, compressing with `poseidon2.CompressStaticCall`, which calls gnark-crypto's permutation statically on concrete arrays and so allocates nothing. |
 
 Benchmark families:
 

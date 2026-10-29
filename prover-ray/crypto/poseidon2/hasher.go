@@ -41,6 +41,24 @@ func Compressor[T any, PT generic.Element[T]](perm *Permutation[T, PT]) Compress
 	return func(state, block Octuplet[T]) Octuplet[T] { return Compress(perm, state, block) }
 }
 
+// CompressStaticCall is [Compress] with a KoalaBear fast path: when perm
+// delegates to gnark-crypto's permutation ([KoalaBearAsm]), the whole
+// compression runs on concrete koalabear.Element arrays with static calls only,
+// so escape analysis keeps them on the stack and nothing is allocated. Other
+// permutations fall back to [Compress].
+func CompressStaticCall[T any, PT generic.Element[T]](perm *Permutation[T, PT], state, block Octuplet[T]) Octuplet[T] {
+	if perm.kbAsm == nil {
+		return Compress(perm, state, block)
+	}
+	kbCompressAsm(perm.kbAsm, asKB(state[:]), asKB(block[:]))
+	return state
+}
+
+// StaticCallCompressor returns perm's [CompressStaticCall] as a [CompressFunc].
+func StaticCallCompressor[T any, PT generic.Element[T]](perm *Permutation[T, PT]) CompressFunc[T] {
+	return func(state, block Octuplet[T]) Octuplet[T] { return CompressStaticCall(perm, state, block) }
+}
+
 // MDHasher is a Merkle-Damgård hasher over the field T using a Poseidon2
 // compression function. Incomplete trailing blocks are left-padded with zeroes.
 type MDHasher[T any, PT generic.Element[T]] struct {

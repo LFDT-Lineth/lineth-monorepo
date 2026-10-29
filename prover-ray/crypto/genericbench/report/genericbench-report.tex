@@ -99,7 +99,7 @@ Nothing else ran on the machine during the benchmarks.
     branches of Section~\ref{sec:paths}.
 \end{itemize}
 
-\paragraph{Runs.} Four runs, all on the machine above (29 October 2026), each preceded by \texttt{TestAgreement}, which checks that all
+\paragraph{Runs.} Six runs, all on the machine above (29 October 2026), each preceded by \texttt{TestAgreement}, which checks that all
 implementations produce bit-identical outputs. It passed every time.
 \begin{center}\small
 \begin{adjustbox}{max width=\linewidth}
@@ -110,6 +110,8 @@ Run & Code & Sizes & Samples \\ \midrule
 2 (Table~\ref{tab:kbb}, ``initial'') & \texttt{6b3d84ad3}, branches and the three paths & \texttt{medium}, KoalaBear only & $6\times200$\,ms \\
 3 (Tables~\ref{tab:kbb}, \ref{tab:paths}) & \texttt{d2b2beda4}: run 2 + gnark-crypto diagonal replicated & \texttt{medium}, both fields & $6\times200$\,ms \\
 4 (Table~\ref{tab:parallel}) & same code as run 3 & CompressParallel, KoalaBear, 1--64 threads & $6\times200$\,ms \\
+5 (Table~\ref{tab:paths}) & run 3 + \texttt{generic-asm-static-call} & \texttt{medium}, KoalaBear, Compress/MDHasher/FiatShamir & $6\times200$\,ms \\
+6 (Table~\ref{tab:parallel}) & same code as run 5 & CompressParallel, KoalaBear, 1--64 threads & $6\times200$\,ms \\
 \bottomrule
 \end{tabular}
 \end{adjustbox}
@@ -644,8 +646,29 @@ if perm.kbAsm != nil {
 \texttt{TestAgreement} passes with the change. \texttt{CompressParallel} then makes
 0 allocations and runs at 12.9\,ns per compression at 64 threads with the GC on, against
 12.8\,ns for baseline and 103\,ns without the fix. It tracks baseline at every thread count
-(green line in Figure~\ref{fig:parallel}). The change was not committed; the patch, the
-patched file and the benchmark output are in \texttt{report/data/heap/experiment/}.
+(green line in Figure~\ref{fig:parallel}). The patch, the patched file and the benchmark
+output of this first experiment are in \texttt{report/data/heap/experiment/}.
+
+\paragraph{\texttt{generic-asm-static-call}.} The fix is now a separate implementation, so that
+\texttt{generic-asm} keeps its measurements. \texttt{poseidon2.CompressStaticCall} is
+\texttt{Compress} with the fast path above, written as a non-generic function: the state,
+the block and the result are concrete \texttt{koalabear.Element} arrays, and every call,
+including the one to gnark-crypto's permutation, is static. It falls back to
+\texttt{Compress} for any permutation other than \texttt{KoalaBearAsm}. This is the same
+reason gnark-crypto's \texttt{CompressPoseidon2} allocates nothing: the compiler can see
+every function the arrays are passed to. The KoalaBear compressor, MD hasher and
+transcript built on it are benchmarked as \texttt{generic-asm-static-call} in runs 5 and 6.
+Baseline and \texttt{generic-asm} were re-run alongside them and moved by at most 3\% from
+runs 3 and 4, so each \texttt{generic-asm-static-call} ratio is taken against the baseline of
+its own run.
+
+It makes 0 allocations per compression (2 for \texttt{generic-asm}) and 1 per MD hash
+instead of $n/4+1$. It is within 2\% of baseline on every single-threaded benchmark
+(Table~\ref{tab:paths}). With the GC on, \texttt{CompressParallel} runs at 14.2\,ns at 64
+threads against 12.5\,ns for baseline, compared with 103\,ns for \texttt{generic-asm}
+(Table~\ref{tab:parallel}). FiatShamir allocations drop by 50--93\% (from 698 to 346 at rounds=16,
+upd=8, and from 76\,066 to 5\,387 at rounds=256, upd=1024). The rest are allocated by the
+transcript itself, not by the compression.
 
 \subsection{Caveats}
 \begin{itemize}

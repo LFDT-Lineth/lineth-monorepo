@@ -20,9 +20,11 @@
 \addlegendentry{hot-loop branches, GC on}
 \addplot[c2, thick, dashed, mark=triangle, mark size=2pt] coordinates {(1,1620) (2,828.5) (4,397.3) (8,193.1) (16,104.3) (32,58.16) (48,54.31) (64,51.18)};
 \addlegendentry{hot-loop branches, GC off}
-\addplot[c3, thick, mark=diamond*, mark size=2pt] coordinates {(1,591.5) (2,296.4) (4,148.1) (8,74.53) (16,39.33) (32,22.24) (48,16.22) (64,12.91)};
-\addlegendentry{\texttt{generic-asm}, allocation-free \texttt{Compress}, GC on}
+\addplot[c3, thick, mark=diamond*, mark size=2pt] coordinates {(1,594.8) (2,297.9) (4,149) (8,74.68) (16,37.91) (32,21.56) (48,17.09) (64,14.18)};
+\addlegendentry{\texttt{generic-asm-static-call}, GC on}
+\addplot[c3, thick, dashed, mark=diamond, mark size=2pt] coordinates {(1,601.5) (2,298.6) (4,149) (8,74.61) (16,37.88) (32,21.74) (48,15.93) (64,12.7)};
+\addlegendentry{\texttt{generic-asm-static-call}, GC off}
 \end{axis}
 \end{tikzpicture}
-\caption{KoalaBear CompressParallel scaling (Table~\ref{tab:parallel}). Solid: garbage collector on (default); dashed: off. Colour follows the implementation. Green: \texttt{generic-asm} with the allocation-free \texttt{Compress} of Section~\ref{sec:fix}, which lies on the baseline.}\label{fig:parallel}
+\caption{KoalaBear CompressParallel scaling (Table~\ref{tab:parallel}). Solid: garbage collector on (default); dashed: off. Colour follows the implementation. Green: \texttt{generic-asm-static-call} (Section~\ref{sec:fix}, run 6), which lies on the baseline with the GC on or off.}\label{fig:parallel}
 \end{figure}

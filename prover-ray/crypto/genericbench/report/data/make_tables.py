@@ -4,6 +4,8 @@ Inputs (in this directory):
   medium-diag.txt          raw `go test -bench` output of run 3 (medium scale,
                            gnark-crypto internal-matrix diagonal replicated)
   paths-run2-medians.csv   medians of run 2 (medium scale, before that change)
+  medium-static-call.txt   raw output of run 5 (medium scale, KoalaBear, adds
+                           generic-asm-static-call)
 
 Usage (from this directory): python3 make_tables.py
 """
@@ -68,6 +70,7 @@ def table(caption, lbl, header, rows):
 
 def main():
     raw = load_raw('medium-diag.txt')
+    run5 = load_raw('medium-static-call.txt')
     run2 = {r[0]: r for r in csv.reader(open('paths-run2-medians.csv')) if r and not r[0].startswith('#')}
     keys = sorted({(fam, key) for fam, key, _ in raw if 'field=koalabear' in key}, key=lambda k: sort_key(*k))
 
@@ -86,11 +89,14 @@ def main():
         ['Benchmark', 'baseline', 'branches (initial)', 'ratio', 'branches, gnark diagonal', 'ratio',
          'allocs, gnark diagonal'], rows))
 
-    # Table 4: every KoalaBear implementation in run 3.
+    # Table 4: every KoalaBear implementation in run 3, plus
+    # generic-asm-static-call from run 5 (ratio against run 5's baseline).
     impls = [('generic', 'generic + hot-loop branches'), ('generic-vec', r'\texttt{generic-vec}'),
              ('generic-asm', r'\texttt{generic-asm}'), ('current', r'\texttt{current}')]
+    static = 'generic-asm-static-call'
     header = ['Benchmark', 'baseline'] + [x for _, name in impls for x in (name, 'ratio')] + \
-             [r'allocs \texttt{generic-asm}']
+             [r'\texttt{generic-asm-static-call}', 'ratio',
+              r'allocs \texttt{generic-asm}', r'allocs \texttt{generic-asm-static-call}']
     rows = []
     for fam, key in keys:
         b = raw[(fam, key, 'baseline')][0]
@@ -98,10 +104,13 @@ def main():
         for impl, _ in impls:
             v = raw.get((fam, key, impl))
             row += [fmt_t(v[0]), fmt_r(v[0] / b)] if v else ['--', '--']
+        v = run5.get((fam, key, static))
+        row += [fmt_t(v[0]), fmt_r(v[0] / run5[(fam, key, 'baseline')][0])] if v else ['--', '--']
         row.append(fmt_a(raw[(fam, key, 'generic-asm')][1]))
+        row.append(fmt_a(v[1]) if v else '--')
         rows.append(row)
     open('../tab_paths.tex', 'w').write(table(
-        r'KoalaBear, all code paths side by side (run 3, \texttt{medium} scale). The hot-loop branches include the gnark-crypto internal-matrix diagonal.',
+        r'KoalaBear, all code paths side by side (run 3, \texttt{medium} scale). The hot-loop branches include the gnark-crypto internal-matrix diagonal. \texttt{generic-asm-static-call} is from run 5 and its ratio is relative to run 5\textquotesingle s \texttt{baseline}; it changes only the compression, so it has no Permutation rows.',
         'tab:paths', header, rows))
     print('wrote tab_kbb.tex, tab_paths.tex')
 

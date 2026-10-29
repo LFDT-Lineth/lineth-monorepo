@@ -180,3 +180,17 @@ func kbMatMulInternalVec(input, diag []koalabear.Element) {
 	v.Mul(v, diag)
 	v.Add(v, sums)
 }
+
+// kbCompressAsm writes the compression of state and block into state, calling
+// gnark-crypto's permutation directly (see [CompressStaticCall]).
+func kbCompressAsm(perm *kbposeidon2.Permutation, state, block []koalabear.Element) {
+	var x [CompressionWidth]koalabear.Element
+	copy(x[:BlockSize], state)
+	copy(x[BlockSize:], block)
+	if err := perm.Permutation(x[:]); err != nil {
+		panic(err) // can't happen, the width is fixed
+	}
+	for i := range BlockSize {
+		state[i].Add(&block[i], &x[BlockSize+i])
+	}
+}

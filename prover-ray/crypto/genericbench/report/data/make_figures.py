@@ -135,8 +135,9 @@ bar_figure('../fig_paths.tex',
 # Figure 4: CompressParallel scaling, log-log.
 on = load('compress-parallel-scaling.txt')
 off = load('compress-parallel-gcoff.txt')
-# generic-asm with the allocation-free Compress (heap/experiment/compress-fastpath.patch)
-fast = load('heap/experiment/compress-parallel-fastpath-gcdefault.txt')
+# generic-asm-static-call (run 6)
+s_on = load('compress-parallel-static-call-gcdefault.txt')
+s_off = load('compress-parallel-static-call-gcoff.txt')
 cpus = sorted({c for _, c in on})
 
 
@@ -151,7 +152,8 @@ lines = [
     line(off, 'generic-asm', 'c1, thick, dashed, mark=square, mark size=1.6pt', r'\texttt{generic-asm}, GC off'),
     line(on, 'generic', 'c2, thick, mark=triangle*, mark size=2pt', r'hot-loop branches, GC on'),
     line(off, 'generic', 'c2, thick, dashed, mark=triangle, mark size=2pt', r'hot-loop branches, GC off'),
-    line(fast, 'generic-asm', 'c3, thick, mark=diamond*, mark size=2pt', r'\texttt{generic-asm}, allocation-free \texttt{Compress}, GC on'),
+    line(s_on, 'generic-asm-static-call', 'c3, thick, mark=diamond*, mark size=2pt', r'\texttt{generic-asm-static-call}, GC on'),
+    line(s_off, 'generic-asm-static-call', 'c3, thick, dashed, mark=diamond, mark size=2pt', r'\texttt{generic-asm-static-call}, GC off'),
 ]
 fig = rf'''\begin{{figure}}[htbp]\centering
 \begin{{tikzpicture}}
@@ -168,7 +170,7 @@ fig = rf'''\begin{{figure}}[htbp]\centering
 {chr(10).join(lines)}
 \end{{axis}}
 \end{{tikzpicture}}
-\caption{{KoalaBear CompressParallel scaling (Table~\ref{{tab:parallel}}). Solid: garbage collector on (default); dashed: off. Colour follows the implementation. Green: \texttt{{generic-asm}} with the allocation-free \texttt{{Compress}} of Section~\ref{{sec:fix}}, which lies on the baseline.}}\label{{fig:parallel}}
+\caption{{KoalaBear CompressParallel scaling (Table~\ref{{tab:parallel}}). Solid: garbage collector on (default); dashed: off. Colour follows the implementation. Green: \texttt{{generic-asm-static-call}} (Section~\ref{{sec:fix}}, run 6), which lies on the baseline with the GC on or off.}}\label{{fig:parallel}}
 \end{{figure}}
 '''
 open('../fig_parallel.tex', 'w').write(fig)

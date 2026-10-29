@@ -1,18 +1,18 @@
 \begin{table}[htbp]\centering\small
-\caption{KoalaBear CompressParallel, nanoseconds per compression (lower is better) by number of threads (\texttt{-cpu}), with the garbage collector on (default) and off (\texttt{GOGC=off}). Ratios are relative to \texttt{baseline} at the same thread count. \texttt{baseline} allocates nothing, so the GC setting does not affect it.}\label{tab:parallel}
+\caption{KoalaBear CompressParallel, nanoseconds per compression (lower is better) by number of threads (\texttt{-cpu}), with the garbage collector on (default) and off (\texttt{GOGC=off}). Ratios are relative to \texttt{baseline} at the same thread count. \texttt{baseline} allocates nothing, so the GC setting does not affect it. \texttt{generic-asm-static-call} comes from run 6 and its ratios are relative to run 6\textquotesingle s \texttt{baseline}, measured with the same GC setting.}\label{tab:parallel}
 \begin{adjustbox}{max width=\linewidth}
-\begin{tabular}{rr|rrrr|rrrr}
+\begin{tabular}{rr|rrrr|rrrr|rrrr}
 \toprule
- & & \multicolumn{4}{c|}{\texttt{generic-asm}} & \multicolumn{4}{c}{generic + hot-loop branches} \\
-Threads & baseline & GC on & ratio & GC off & ratio & GC on & ratio & GC off & ratio \\ \midrule
-1 & 584 & 652 & 1.1$\times$ & 647 & 1.1$\times$ & 1560 & 2.7$\times$ & 1620 & 2.8$\times$ \\
-2 & 292 & 335 & 1.1$\times$ & 325 & 1.1$\times$ & 785 & 2.7$\times$ & 828 & 2.8$\times$ \\
-4 & 146 & 173 & 1.2$\times$ & 158 & 1.1$\times$ & 395 & 2.7$\times$ & 397 & 2.7$\times$ \\
-8 & 73.3 & 106 & 1.5$\times$ & 80.8 & 1.1$\times$ & 212 & 2.9$\times$ & 193 & 2.6$\times$ \\
-16 & 38.8 & 82.3 & 2.1$\times$ & 42.1 & 1.1$\times$ & 144 & 3.7$\times$ & 104 & 2.7$\times$ \\
-32 & 21.7 & 80.4 & 3.7$\times$ & 24.0 & 1.1$\times$ & 142 & 6.5$\times$ & 58.2 & 2.7$\times$ \\
-48 & 16.0 & 90.0 & 5.6$\times$ & 18.1 & 1.1$\times$ & 170 & 11$\times$ & 54.3 & 3.4$\times$ \\
-64 & 12.8 & 103 & 8.1$\times$ & 14.6 & 1.1$\times$ & 214 & 17$\times$ & 51.2 & 4.0$\times$ \\
+ & & \multicolumn{4}{c|}{\texttt{generic-asm}} & \multicolumn{4}{c|}{generic + hot-loop branches} & \multicolumn{4}{c}{\texttt{generic-asm-static-call} (run 6)} \\
+Threads & baseline & GC on & ratio & GC off & ratio & GC on & ratio & GC off & ratio & GC on & ratio & GC off & ratio \\ \midrule
+1 & 584 & 652 & 1.1$\times$ & 647 & 1.1$\times$ & 1560 & 2.7$\times$ & 1620 & 2.8$\times$ & 595 & 1.0$\times$ & 601 & 1.0$\times$ \\
+2 & 292 & 335 & 1.1$\times$ & 325 & 1.1$\times$ & 785 & 2.7$\times$ & 828 & 2.8$\times$ & 298 & 1.0$\times$ & 299 & 1.0$\times$ \\
+4 & 146 & 173 & 1.2$\times$ & 158 & 1.1$\times$ & 395 & 2.7$\times$ & 397 & 2.7$\times$ & 149 & 1.0$\times$ & 149 & 1.0$\times$ \\
+8 & 73.3 & 106 & 1.5$\times$ & 80.8 & 1.1$\times$ & 212 & 2.9$\times$ & 193 & 2.6$\times$ & 74.7 & 1.0$\times$ & 74.6 & 1.0$\times$ \\
+16 & 38.8 & 82.3 & 2.1$\times$ & 42.1 & 1.1$\times$ & 144 & 3.7$\times$ & 104 & 2.7$\times$ & 37.9 & 1.0$\times$ & 37.9 & 1.0$\times$ \\
+32 & 21.7 & 80.4 & 3.7$\times$ & 24.0 & 1.1$\times$ & 142 & 6.5$\times$ & 58.2 & 2.7$\times$ & 21.6 & 1.0$\times$ & 21.7 & 1.0$\times$ \\
+48 & 16.0 & 90.0 & 5.6$\times$ & 18.1 & 1.1$\times$ & 170 & 11$\times$ & 54.3 & 3.4$\times$ & 17.1 & 1.1$\times$ & 15.9 & 1.0$\times$ \\
+64 & 12.8 & 103 & 8.1$\times$ & 14.6 & 1.1$\times$ & 214 & 17$\times$ & 51.2 & 4.0$\times$ & 14.2 & 1.1$\times$ & 12.7 & 1.0$\times$ \\
 \bottomrule
 \end{tabular}
 \end{adjustbox}

@@ -13,6 +13,10 @@
 //     runs today, i.e. the generic hasher/transcript over gnark-crypto's
 //     compression.
 //   - generic: everything generic, permutation included.
+//   - generic-vec, generic-asm (KoalaBear only): generic with koalabear.Vector
+//     hot loops, or with the permutation delegated to gnark-crypto.
+//   - generic-asm-static-call (KoalaBear only): generic-asm, compressing with
+//     poseidon2.CompressStaticCall, which allocates nothing.
 //
 // Sizes are selected by GENERIC_BENCH_SCALE: "small" (default, a few seconds
 // locally), "medium" (a few minutes) or "full" (meant for a dedicated machine). See
@@ -186,6 +190,7 @@ func koalabearSuite() fieldSuite[koalabear.Element, *koalabear.Element] {
 	gen := gp2.Compressor(genericPerm[E]("koalabear", gp2.CompressionWidth))
 	genVec := gp2.Compressor(kbGenericPerm(gp2.CompressionWidth, gp2.KoalaBearVector))
 	genAsm := gp2.Compressor(kbGenericPerm(gp2.CompressionWidth, gp2.KoalaBearAsm))
+	genAsmStatic := gp2.StaticCallCompressor(kbGenericPerm(gp2.CompressionWidth, gp2.KoalaBearAsm))
 	return fieldSuite[E, *E]{
 		name: "koalabear",
 		perms: []permImpl[E]{
@@ -201,6 +206,7 @@ func koalabearSuite() fieldSuite[koalabear.Element, *koalabear.Element] {
 			{"generic", gen},
 			{"generic-vec", genVec},
 			{"generic-asm", genAsm},
+			{"generic-asm-static-call", genAsmStatic},
 		},
 		hashers: []hasherImpl[E]{
 			{"baseline", func(msg []E) [8]E {
@@ -212,6 +218,7 @@ func koalabearSuite() fieldSuite[koalabear.Element, *koalabear.Element] {
 			genericHasher[E]("generic", gen),
 			genericHasher[E]("generic-vec", genVec),
 			genericHasher[E]("generic-asm", genAsm),
+			genericHasher[E]("generic-asm-static-call", genAsmStatic),
 		},
 		transcripts: []transcriptImpl[E]{
 			{
@@ -231,6 +238,7 @@ func koalabearSuite() fieldSuite[koalabear.Element, *koalabear.Element] {
 			genericTranscript[E]("generic", gen),
 			genericTranscript[E]("generic-vec", genVec),
 			genericTranscript[E]("generic-asm", genAsm),
+			genericTranscript[E]("generic-asm-static-call", genAsmStatic),
 		},
 	}
 }
