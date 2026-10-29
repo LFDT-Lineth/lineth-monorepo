@@ -147,6 +147,53 @@ def test_slot_requires_unsigned_integer(execution_request_and_validator, slot) -
     assert any(list(error.path)[-1:] == ["slotNumber"] for error in errors)
 
 
+@pytest.fixture
+def rollup_request_and_validator():
+    jsonschema = pytest.importorskip("jsonschema")
+    schema = json.loads((_SCHEMA_DIR / "getZkRollupProofV1.request.schema.json").read_text())
+    request = json.loads((_FIXTURE_DIR / "10-14-getZkRollupProofV1.request.json").read_text())
+    return request, jsonschema.Draft202012Validator(schema)
+
+
+KZG_FIELDS = ["kzgCommitment", "kzgProof"]
+
+
+@pytest.mark.parametrize("field", KZG_FIELDS)
+@pytest.mark.parametrize("value", ["0x", "0x" + "00" * 47, "0x" + "00" * 49], ids=["empty", "47 bytes", "49 bytes"])
+def test_blob_chunk_kzg_fields_must_be_48_bytes(rollup_request_and_validator, field, value) -> None:
+    request, validator = rollup_request_and_validator
+    request["proofRequest"]["chunks"][0][field] = value
+    assert not validator.is_valid(request)
+
+
+@pytest.mark.parametrize("field", KZG_FIELDS)
+def test_chunk_kzg_fields_are_required(rollup_request_and_validator, field) -> None:
+    request, validator = rollup_request_and_validator
+    del request["proofRequest"]["chunks"][0][field]
+    assert not validator.is_valid(request)
+
+
+@pytest.fixture
+def calldata_chunk_request_and_validator(rollup_request_and_validator):
+    request, validator = rollup_request_and_validator
+    request["proofRequest"]["chunks"][0].update(
+        isCalldata=True, blobBytes="0x", calldataBytes="0x01", kzgCommitment="0x", kzgProof="0x",
+    )
+    return request, validator
+
+
+def test_calldata_chunk_with_empty_kzg_fields_is_valid(calldata_chunk_request_and_validator) -> None:
+    request, validator = calldata_chunk_request_and_validator
+    validator.validate(request)
+
+
+@pytest.mark.parametrize("field", KZG_FIELDS)
+def test_calldata_chunk_kzg_fields_must_be_empty(calldata_chunk_request_and_validator, field) -> None:
+    request, validator = calldata_chunk_request_and_validator
+    request["proofRequest"]["chunks"][0][field] = "0x" + "00" * 48
+    assert not validator.is_valid(request)
+
+
 @dataclass(frozen=True)
 class BlobTailCountCase:
     fixture_name: str

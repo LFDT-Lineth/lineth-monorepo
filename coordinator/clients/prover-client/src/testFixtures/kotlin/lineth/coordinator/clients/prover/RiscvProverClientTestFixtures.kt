@@ -144,6 +144,17 @@ object RiscvProverClientTestFixtures {
     isCalldata = false,
     blobBytes = ByteArray(ChunkWitness.BLOB_BYTES_LENGTH) { fill },
     calldataBytes = ByteArray(0),
+    kzgCommitment = ByteArray(ChunkWitness.KZG_POINT_BYTES_LENGTH) { (fill + 1).toByte() },
+    kzgProof = ByteArray(ChunkWitness.KZG_POINT_BYTES_LENGTH) { (fill + 2).toByte() },
+  )
+
+  fun calldataChunkWitness(fill: Byte = 0x30): ChunkWitness = ChunkWitness(
+    chunkHash = ByteArray(32) { fill },
+    isCalldata = true,
+    blobBytes = ByteArray(0),
+    calldataBytes = ByteArray(64) { fill },
+    kzgCommitment = ByteArray(0),
+    kzgProof = ByteArray(0),
   )
 
   fun rollupProofRequestV1(

@@ -10,8 +10,8 @@ package lineth.utils;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import java.time.Duration;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import kotlin.time.Instant;
 import linea.blob.BlobCompressor;
 import linea.blob.BlobCompressorSelectorByTimestamp;
@@ -40,7 +40,7 @@ public class CachingTransactionCompressor implements TransactionCompressor {
     compressedSizeCache =
         CacheBuilder.newBuilder()
             .maximumSize(cacheSize)
-            .expireAfterAccess(30, TimeUnit.MINUTES)
+            .expireAfterAccess(Duration.ofMinutes(30))
             .build();
   }
 

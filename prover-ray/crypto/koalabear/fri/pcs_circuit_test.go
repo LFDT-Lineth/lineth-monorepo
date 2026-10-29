@@ -71,13 +71,22 @@ func (c *pcsVerifyCircuit) Define(api frontend.API) error {
 // different heights share their VerifyInputs.
 func newPCSCircuitFixture(t *testing.T, capHeight uint8) pcsOpenVerifyFixture {
 	t.Helper()
+	return newPCSCircuitFixtureAt(t, capHeight, 0)
+}
+
+// newPCSCircuitFixtureAt is newPCSCircuitFixture over a FixedDomain PCS whose
+// domain is extraRounds rounds above the witness's largest size, or the
+// restricted PCS of newPCSCircuitFixture for extraRounds = 0.
+func newPCSCircuitFixtureAt(t *testing.T, capHeight uint8, extraRounds uint8) pcsOpenVerifyFixture {
+	t.Helper()
 
 	// prepare the PCS setup
-	params, err := NewParams(4, 3, pcsCircuitNumQueries)
+	params, err := NewParams(4+extraRounds, 3+extraRounds, pcsCircuitNumQueries)
 	require.NoError(t, err)
 	params.MerkleCapHeight = capHeight
 	pcs, err := NewPCS(params, makeEncoders(int(params.numRounds()+1), 2))
 	require.NoError(t, err)
+	pcs.FixedDomain = extraRounds > 0
 
 	// build the witness
 	// witness[3] has two rows at the top size so one can be opened at shift 1 below: at shift 0
@@ -120,6 +129,12 @@ func newPCSCircuitFixture(t *testing.T, capHeight uint8) pcsOpenVerifyFixture {
 			field.UintsToExt(37, 0, 0, 1, 0, 0),
 		},
 		QueryPositions: []int{3, 9, 12, 6},
+	}
+	for i := range extraRounds {
+		challenges.FoldAlphas = append(challenges.FoldAlphas, field.UintsToExt(41+uint64(i), 0, 0, 0, 1, 0))
+		for k := range challenges.QueryPositions {
+			challenges.QueryPositions[k] = 2*challenges.QueryPositions[k] + (int(i)+k)%2
+		}
 	}
 	// compute the opening proof and the claimed values for the verifier
 	proof, claimed := openForTest(t, pcs, openInputs{
@@ -240,6 +255,27 @@ func TestPCSVerifyGnarkMatchesNative(t *testing.T) {
 	template, assignment := circuitFor(fx, fx.proof)
 	require.NoError(t, solvePCSCircuit(t, template, assignment),
 		"honest proof must satisfy the verifier circuit")
+}
+
+// TestPCSVerifyGnarkFixedDomain: the circuit accepts a FixedDomain proof whose
+// witness is two rounds below the domain (the first two rounds fold the zero
+// codeword), and rejects it with a tampered zero-layer opening.
+func TestPCSVerifyGnarkFixedDomain(t *testing.T) {
+	fx := newPCSCircuitFixtureAt(t, pcsCircuitCapHeight, 2)
+	require.Len(t, fx.proof.FRIProof.RoundRoots, 4, "the fixed domain folds five rounds")
+	require.Equal(t, zeroLayerTree{height: 5}.Root(), fx.proof.FRIProof.RoundRoots[0])
+
+	template, assignment := circuitFor(fx, fx.proof)
+	require.NoError(t, solvePCSCircuit(t, template, assignment),
+		"honest fixed-domain proof must satisfy the verifier circuit")
+
+	tampered := fx.proof
+	tampered.FRIProof.RunningQueries = append([]RunningQuery(nil), fx.proof.FRIProof.RunningQueries...)
+	tampered.FRIProof.RunningQueries[0] = append(RunningQuery(nil), fx.proof.FRIProof.RunningQueries[0]...)
+	tampered.FRIProof.RunningQueries[0][0].Leaf[0] = field.NewElement(1)
+	require.Error(t, fx.pcs.Verify(fx.input, tampered))
+	template, assignment = circuitFor(fx, tampered)
+	require.Error(t, solvePCSCircuit(t, template, assignment), "a zero layer's opening must bind")
 }
 
 // capNodeCount is the number of frontier nodes a depth-d cap carries: none at
