@@ -71,6 +71,26 @@ class RollupProofSpecConformanceTest {
   }
 
   @Test
+  fun `blob and calldata chunks built by the mapper are valid against the request schema`() {
+    val request = RiscvProverClientTestFixtures.rollupProofRequestV1(
+      conflations = listOf(ConflationWitness(blockRlps = listOf(byteArrayOf(0x3c)))),
+      chunks = listOf(
+        RiscvProverClientTestFixtures.blobChunkWitness(),
+        RiscvProverClientTestFixtures.calldataChunkWitness(),
+      ),
+    )
+
+    val json = toJson(rollupRequestMapper(withProvider = true).invoke(request).get())
+
+    assertSchemaValid(requestSchema, json)
+    val (blobChunk, calldataChunk) = json["proofRequest"]["chunks"].toList()
+    assertThat(blobChunk["kzgCommitment"].asText()).isEqualTo("0x" + "21".repeat(48))
+    assertThat(blobChunk["kzgProof"].asText()).isEqualTo("0x" + "22".repeat(48))
+    assertThat(calldataChunk["kzgCommitment"].asText()).isEqualTo("0x")
+    assertThat(calldataChunk["kzgProof"].asText()).isEqualTo("0x")
+  }
+
+  @Test
   fun `gateway-mode rollup request sends only indexes and is not a spec request`() {
     val json = toJson(rollupRequestMapper(withProvider = false).invoke(rollupRequest).get())
 
