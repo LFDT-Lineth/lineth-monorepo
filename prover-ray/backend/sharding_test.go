@@ -28,8 +28,8 @@ func TestRunProve_ShardIndexes(t *testing.T) {
 	elfPath := filepath.Join(t.TempDir(), "guest.elf")
 	require.NoError(t, os.WriteFile(elfPath, elf, 0o600))
 
-	// The guest runs ~150 instructions, so this yields 3 shards.
-	const shardSize = 50
+	// The guest runs ~300 instructions, so this yields 3 shards.
+	const shardSize = 100
 
 	prove := func(indexes ...uint) (wiop.Proof, wiop.PublicInput, error) {
 		c, err := New(Config{
@@ -44,10 +44,8 @@ func TestRunProve_ShardIndexes(t *testing.T) {
 		return c.runProve(context.Background(), &zkcdriver.PreReadInputs{Inputs: inputs})
 	}
 
-	// Only the last shard is proved: the guest public outputs are registered
-	// on the last rows of the guest_output module, which only the last shard
-	// fills.
-	_, _, err = prove(2)
+	// Every shard must be provable.
+	_, _, err = prove(0, 1, 2)
 	require.NoError(t, err)
 
 	_, _, err = prove(3)
