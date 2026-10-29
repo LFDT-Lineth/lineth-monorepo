@@ -1,9 +1,5 @@
 // Package nativerunner runs the native l2_execution_runner on an extended
 // (0x0002) input and parses its --json output into the guest's public inputs.
-//
-// TODO: get rid of the prover's dependency on the l2-execution guest's testing
-// infrastructure. l2_execution_runner is one of the guest's test tools, and its
-// --json output is produced by the guest's test support code.
 package nativerunner
 
 import (
