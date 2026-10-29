@@ -1,5 +1,5 @@
 # Fdb version 4
-["pdflatex"] 1793246745.74579 "genericbench-report.tex" "genericbench-report.pdf" "genericbench-report" 1793246747.28841 0
+["pdflatex"] 1793247039.16453 "genericbench-report.tex" "genericbench-report.pdf" "genericbench-report" 1793247040.71859 0
   "/home/ubuntu/texlive/2026/texmf-dist/fonts/enc/dvips/lm/lm-ec.enc" 1254269338 2375 baa924870cfb487815765f9094cf3728 ""
   "/home/ubuntu/texlive/2026/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc" 1202520719 2405 5dcf2c1b967ee25cc46c58cd52244aed ""
   "/home/ubuntu/texlive/2026/texmf-dist/fonts/enc/dvips/lm/lm-mathsy.enc" 1202520719 2840 216e6e45ad352e2456e1149f28885bee ""
@@ -256,9 +256,9 @@
   "fig_parallel.tex" 1793245300.27828 2140 69d9ab89c395555c37c71355641ba80b ""
   "fig_paths.tex" 1793245300.27753 2203 9dba7be8191647b165b0469c46f79618 ""
   "fig_stw.tex" 1793245276.31296 2032 3cfb79dbf60c65ec264eaf0b522d059e ""
-  "genericbench-report.aux" 1793246747.17174 14256 11adba56a4e46a661f459f1ed09d341b "pdflatex"
-  "genericbench-report.out" 1793246747.17174 2890 71a75b1b3255cffd8babbd9d40aa4bc5 "pdflatex"
-  "genericbench-report.tex" 1793245289.39384 33990 654ee721754fc6f1463b8dfc48ed0833 ""
+  "genericbench-report.aux" 1793247040.60157 15189 88a2f83405408de8f588f2cd59b10530 "pdflatex"
+  "genericbench-report.out" 1793247040.60257 3048 460f0d2ac14f33bacd14ff8f5bc73c8d "pdflatex"
+  "genericbench-report.tex" 1793247037.52382 38017 38779f92acc61c3162fb6fac7adff5b6 ""
   "tab_gc_scaling.tex" 1793245276.31254 928 9487a30757543a8c7d8cfe7efe2475c2 ""
   "tab_gogc.tex" 1793245276.31286 814 2034777d53a82167f1b30ecfcc87991f ""
   "tab_kbb.tex" 1793243409.21162 1670 6585f2f6684fdcc17bbe30a09c1f0ddb ""

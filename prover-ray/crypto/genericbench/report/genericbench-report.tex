@@ -148,6 +148,78 @@ The other benchmark families are built on the permutation:
 \end{itemize}
 The permutation dominates every benchmark, so its speed carries through to all of them.
 
+\section{Where AVX-512 is used}\label{sec:avx}
+
+The KoalaBear baseline is fast because gnark-crypto runs the permutation in AVX-512
+assembly. Which of the implementations compared here use that assembly, and where, explains
+most of the results that follow.
+
+\paragraph{How gnark-crypto chooses.} gnark-crypto decides when the permutation is created.
+It uses the assembly when the width is 16 or 24, the rounds are 6 full and 21 partial, and
+the CPU supports AVX-512. Every call to \texttt{Permutation} then goes straight to the
+assembly:
+\begin{lstlisting}[language=Go,caption={gnark-crypto KoalaBear \texttt{poseidon2.go} (v0.22.0, excerpt).},label=lst:avxdispatch]
+// in NewParameters
+p.hasFast16_6_21 = width == 16 && nbFullRounds == 6 && nbPartialRounds == 21 && (cpu.SupportAVX512 || cpu.SupportNEON)
+p.hasFast24_6_21 = width == 24 && nbFullRounds == 6 && nbPartialRounds == 21 && cpu.SupportAVX512
+
+func (h *Permutation) Permutation(input []fr.Element) error {
+	// ...
+	if runtime.GOARCH == "amd64" {
+		if h.params.hasFast16_6_21 {
+			permutation16_avx512(input, h.params.RoundKeys) // all 27 rounds
+			return nil
+		}
+		if h.params.hasFast24_6_21 {
+			permutation24_avx512(input, h.params.RoundKeys)
+			return nil
+		}
+	}
+	// ... scalar Go otherwise
+}
+\end{lstlisting}
+Every benchmark here uses 6 full and 21 partial rounds, and the benchmark machine has
+AVX-512, so on KoalaBear both the width-16 and the width-24 permutation take this path. The
+compression function \texttt{vortex.CompressPoseidon2} calls the same width-16 permutation.
+
+\paragraph{Per implementation.}
+\begin{center}\small
+\begin{adjustbox}{max width=\linewidth}
+\begin{tabular}{lll}
+\toprule
+Implementation & AVX-512 in each permutation? & How \\ \midrule
+KoalaBear \texttt{baseline} & yes & gnark-crypto's assembly, all 27 rounds in one call \\
+\texttt{current} & yes & the same: generic hasher and transcript over gnark-crypto's compression \\
+\texttt{generic-asm} & yes, the same assembly & \texttt{Permute} hands the whole state to gnark-crypto (Listing~\ref{lst:asm}) \\
+\texttt{generic-vec} & partly & round keys, full S-box layer and internal matrix as separate \\
+ & & \texttt{koalabear.Vector} calls on 16 elements each (Listing~\ref{lst:vec}) \\
+\texttt{generic} (fully generic or branched) & no & scalar Go; the Go compiler does not emit AVX-512 itself \\
+MamaBear \texttt{baseline} and \texttt{generic} & no & gnark-crypto has no MamaBear assembly \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{center}
+For \texttt{generic-asm}, only the code around the permutation is generic Go: copying the
+blocks in, the feed-forward additions, and (Section~\ref{sec:parallel}) the two heap
+allocations in \texttt{Compress}. The CPU profile at 64 threads with the GC off confirms it:
+68\% of the samples are in \texttt{permutation16\_avx512}.
+
+\paragraph{One state at a time.} The assembly holds one width-16 state in a single 512-bit
+register (16 lanes of 32 bits) and runs all rounds on it in place. gnark-crypto also has
+versions that permute 16 independent states at once (\texttt{Permutation16x24},
+\texttt{permutation16x16xN\_avx512}), but \texttt{Compress} and everything benchmarked here
+use the one-state version. \textbf{CompressParallel adds no SIMD across calls}: it runs the
+same one-state permutation on many goroutines, so its only parallelism is threads.
+Single-threaded, \texttt{baseline} and \texttt{generic-asm} therefore cost about the same per
+compression (585 and 650\,ns), and the gap under parallel load comes entirely from the
+garbage collector (Section~\ref{sec:parallel}).
+
+\paragraph{Consequences for the comparison.} KoalaBear's \texttt{generic}/\texttt{baseline}
+ratio compares scalar Go with assembly, so it mixes the cost of genericity with the lack of
+SIMD. MamaBear has no assembly on either side, which makes it the better measure of
+genericity alone (Section~\ref{sec:generic}). On a CPU without AVX-512, the KoalaBear
+baseline would also fall back to scalar Go, and every KoalaBear ratio here would be smaller.
+
 \section{Results 1: fully generic code}\label{sec:generic}
 
 \input{tab_mid_kb.tex}
@@ -263,7 +335,7 @@ func kbMatMulInternal(input []koalabear.Element) {
 	var temp koalabear.Element
 	input[0].Sub(&sum, temp.Double(&input[0]))
 	input[1].Add(&sum, &input[1])
-	// ... as in Listing 2, for width 16 and 24 ...
+	// ... as in Listing 3, for width 16 and 24 ...
 }
 \end{lstlisting}
 
@@ -348,7 +420,7 @@ func (h *Permutation[T, PT]) Permute(input []T) error {
 		return h.kbAsm.Permutation(asKB(input)) // gnark-crypto: all 27 rounds in AVX-512
 	}
 	h.matMulExternal(input)
-	// ... rounds, each calling the helpers of Listing 3 ...
+	// ... rounds, each calling the helpers of Listing 4 ...
 }
 \end{lstlisting}
 
