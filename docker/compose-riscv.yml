@@ -10,7 +10,7 @@ services:
     environment:
       LINETH_USE_MARU_OVERRIDE_CONFIG: "false"
     volumes:
-      - ./config/maru/sequencer.riscv.config.overrides.toml:/opt/consensys/maru/configs/config.mode.toml:ro
+      - ./config/maru/sequencer.riscv.config.overrides.toml:/opt/consensys/maru/configs/config.stack.toml:ro
 
   sequencer:
     command:

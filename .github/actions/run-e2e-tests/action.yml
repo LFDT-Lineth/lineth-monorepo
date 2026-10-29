@@ -75,28 +75,18 @@ runs:
   using: 'composite'
   steps:
     - name: Select stack
-      id: stack
       shell: bash
       env:
         STACK: ${{ inputs.stack }}
         RISCV_PROVER_MODE: ${{ inputs.riscv_prover_mode }}
+        IMAGE_TAG: ${{ inputs.image_tag }}
       run: |
-        case "$STACK" in
-          zkevm)
-            echo "test_script=test:local" >> "$GITHUB_OUTPUT"
-            echo "test_timeout=6m" >> "$GITHUB_OUTPUT"
-            ;;
-          riscv)
-            echo "test_script=test:riscv:local" >> "$GITHUB_OUTPUT"
-            echo "RISCV_PROVER_MODE=$RISCV_PROVER_MODE" >> "$GITHUB_ENV"
-            if [ "$RISCV_PROVER_MODE" = "dev-zkvm" ]; then
-              echo "test_timeout=40m" >> "$GITHUB_OUTPUT"
-            else
-              echo "test_timeout=10m" >> "$GITHUB_OUTPUT"
-            fi
-            ;;
-          *) echo "::error::Unknown stack: $STACK"; exit 1 ;;
-        esac
+        # Stack-specific behaviour lives in the Makefile (e2e-ci-* targets).
+        {
+          echo "E2E_STACK=$STACK"
+          echo "E2E_IMAGE_TAG=$IMAGE_TAG"
+          echo "RISCV_PROVER_MODE=$RISCV_PROVER_MODE"
+        } >> "$GITHUB_ENV"
 
     - name: Setup upterm session
       if: ${{ inputs.e2e-tests-with-ssh == 'true' }}
@@ -137,7 +127,6 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       env:
-        STACK: ${{ inputs.stack }}
         IMAGE_TAG: ${{ inputs.image_tag }}
         LINEA_BESU_PACKAGE_TAG: ${{ inputs.linea_besu_package_tag }}
         LINEA_COORDINATOR_TAG: ${{ inputs.coordinator_tag }}
@@ -154,6 +143,7 @@ runs:
         
         artifact_dir="$GITHUB_WORKSPACE/${{ inputs.working-directory }}/tmp/artifacts"
         loaded_images="$(mktemp)"
+        fallback_tag="$(make -s e2e-ci-fallback-image-tag)"
         shopt -s nullglob
         artifacts=("$artifact_dir"/*.tar.gz)
 
@@ -179,10 +169,10 @@ runs:
             fi
           elif [ -n "${!env_var:-}" ]; then
             selected_tag="${!env_var}"
-          elif [ "$STACK" = "riscv" ]; then
-            continue # keep the Compose default tag
+          elif [ -n "$fallback_tag" ]; then
+            selected_tag="$fallback_tag"
           else
-            selected_tag="develop"
+            continue # keep the Compose default tag
           fi
           echo "${env_var}=${selected_tag}" >> "$GITHUB_ENV"
         done <<'EOF'
@@ -208,50 +198,17 @@ runs:
         command: |
           cd ${{ inputs.working-directory }} && make docker-pull-images-external-to-monorepo
 
-    - name: Build prover-ray image for dev-zkvm
-      if: ${{ inputs.stack == 'riscv' && inputs.riscv_prover_mode == 'dev-zkvm' }}
+    - name: Build local images
       shell: bash
       working-directory: ${{ inputs.working-directory }}
-      env:
-        PROVER_RAY_TAG: ${{ inputs.image_tag }}
-      run: |
-        set -euo pipefail
-        make -C prover-ray docker-build IMAGE_TAG="$PROVER_RAY_TAG"
-        echo "LINEA_PROVER_RAY_TAG=$PROVER_RAY_TAG" >> "$GITHUB_ENV"
+      run: make e2e-ci-build-images
 
     - name: Spin up fresh environment with retry
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       env:
-        STACK: ${{ inputs.stack }}
         OVERRIDE_COMPOSE_FILE: ${{ inputs.override-compose-file }}
-      run: |
-        set -euo pipefail
-        # Resolve the optional override compose file (absolute, or relative to working-directory).
-        override_file=""
-        if [ -n "$OVERRIDE_COMPOSE_FILE" ]; then
-          if [ -f "$OVERRIDE_COMPOSE_FILE" ]; then
-            override_file="$(cd "$(dirname "$OVERRIDE_COMPOSE_FILE")" && pwd)/$(basename "$OVERRIDE_COMPOSE_FILE")"
-          else
-            echo "::error::Override compose file not found: $OVERRIDE_COMPOSE_FILE" >&2
-            exit 1
-          fi
-        fi
-
-        if [ "$STACK" = "riscv" ]; then
-          target="start-env-with-riscv CLEAN_PREVIOUS_ENV=false"
-        elif [ -n "$override_file" ]; then
-          target="start-env-with-tracing-v2-ci-override OVERRIDE_COMPOSE_FILE=$override_file CLEAN_PREVIOUS_ENV=false"
-        else
-          target="start-env-with-tracing-v2-ci CLEAN_PREVIOUS_ENV=false"
-        fi
-        echo "Spin-up target: $target"
-        make retry \
-          TARGET="$target" \
-          RETRY_LIMIT=10 \
-          RETRY_TIMEOUT=10m \
-          RETRY_BACKOFF=30s \
-          RETRY_CLEANUP_TARGET=clean-environment
+      run: make e2e-ci-start-env-with-retry OVERRIDE_COMPOSE_FILE="$OVERRIDE_COMPOSE_FILE"
 
     - name: List docker containers/images
       if: ${{ always() && inputs.e2e-tests-containers-list == 'true' }}
@@ -265,11 +222,7 @@ runs:
       id: run_e2e_tests
       shell: bash
       working-directory: ${{ inputs.working-directory }}
-      env:
-        TEST_SCRIPT: ${{ steps.stack.outputs.test_script }}
-        TEST_TIMEOUT: ${{ steps.stack.outputs.test_timeout }}
-      run: |
-        timeout "$TEST_TIMEOUT" pnpm run -F e2e "$TEST_SCRIPT"
+      run: make e2e-ci-test
 
     - name: Show e2e tests result
       if: always()
@@ -296,10 +249,8 @@ runs:
         docker logs l1-el-node --since 1h &>> docker_logs/l1-el-node.txt || true
         docker logs l1-cl-node --since 1h &>> docker_logs/l1-cl-node.txt || true
         docker logs maru --since 1h &>> docker_logs/maru.txt || true
-        if [ -d tmp/local/prover/riscv ]; then
-          docker logs prover-ray --since 1h &> docker_logs/prover-ray.txt || true
-          cp -r tmp/local/prover/riscv docker_logs/riscv-proofs || true
-        fi
+        docker logs prover-ray --since 1h &>> docker_logs/prover-ray.txt || true
+        cp -r tmp/local/prover/riscv docker_logs/riscv-proofs || true
         docker exec -i -e PGPASSWORD=${POSTGRES_PASSWORD:-postgres} postgres pg_dumpall -U ${POSTGRES_USER:-postgres} > docker_logs/db_dump.sql || true
 
     - name: Archive debug logs

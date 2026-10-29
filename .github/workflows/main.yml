@@ -117,7 +117,6 @@ jobs:
       tracer-constraints: ${{ steps.filter.outputs.tracer-constraints }}
       maru: ${{ steps.filter.outputs.maru }}
       has-changes-requiring-build: ${{ steps.exclusion-filter.outputs.has-changes-requiring-build }}
-      riscv-proving: ${{ steps.filter.outputs.riscv-proving }}
       has-changes-requiring-linea-besu-package-build: ${{ steps.filter.outputs.linea-sequencer-plugin == 'true' || steps.filter.outputs.tracer == 'true' || steps.filter.outputs.tracer-constraints == 'true' ||  steps.filter.outputs.linea-besu == 'true' || steps.filter.outputs.linea-besu-package == 'true' }}
       besu-commit-changed: ${{ steps.check_besu_commit.outputs.version_changed == 'true' }}
     steps:
@@ -176,11 +175,6 @@ jobs:
               - 'riscv-guests/build_common/linker_script.ld'
               - '.github/workflows/prover-ray-testing.yml'
               - '.github/workflows/main.yml'
-            riscv-proving:
-              - 'prover-ray/**'
-              - 'riscv-guests/**'
-              - 'rollup_spec/src/**'
-              - 'docker/config/prover/riscv/**'
             rollup-spec:
               - 'rollup_spec/src/**'
               - 'rollup_spec/tests/**'
@@ -397,11 +391,10 @@ jobs:
       has-changes-requiring-e2e-testing: ${{ needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing }}
     secrets: inherit
 
-  # Not a required check. Proving changes run dev-zkvm with prover-ray built from this commit.
+  # Not a required check. Prover-ray/guest changes run dev-zkvm with prover-ray built from this commit.
   run-riscv-e2e-tests:
     needs:
       [
-        filter-commit-changes,
         compute-commit-tags,
         docker-build,
         get-has-changes-requiring-e2e-testing,
@@ -411,10 +404,7 @@ jobs:
       github.event_name == 'push' && github.ref == 'refs/heads/main' &&
       needs.compute-commit-tags.result == 'success' &&
       needs.docker-build.result != 'failure' &&
-      (
-        needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing == 'true' ||
-        needs.filter-commit-changes.outputs.riscv-proving == 'true'
-      )
+      needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-riscv-e2e-testing == 'true'
     concurrency:
       group: run-riscv-e2e-tests-${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: false
@@ -422,7 +412,7 @@ jobs:
     with:
       image_tag: ${{ needs.compute-commit-tags.outputs.commit_tag }}
       stack: riscv
-      riscv_prover_mode: ${{ needs.filter-commit-changes.outputs.riscv-proving == 'true' && 'dev-zkvm' || 'dev-mock' }}
+      riscv_prover_mode: ${{ needs.get-has-changes-requiring-e2e-testing.outputs.riscv-prover-mode }}
       linea_besu_package_tag: ${{ needs.docker-build.outputs.linea_besu_package_tag }}
       e2e-tests-logs-dump: true
     secrets: inherit

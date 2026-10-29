@@ -46,6 +46,60 @@ start-env-with-riscv:
 	COMPOSE_PROFILES=l1,l2,riscv docker compose -f $(RISCV_COMPOSE_FILE) up -d --no-deps --wait --wait-timeout 600 prover-ray coordinator
 	$(MAKE) deploy-l2-evm-opcode-tester
 
+##
+## CI e2e entry points, used by .github/actions/run-e2e-tests.
+## E2E_STACK selects the stack and suite: zkevm (default) or riscv.
+##
+.PHONY: e2e-ci-fallback-image-tag e2e-ci-build-images e2e-ci-start-env e2e-ci-start-env-with-retry e2e-ci-test
+
+E2E_STACK ?= zkevm
+E2E_IMAGE_TAG ?=
+OVERRIDE_COMPOSE_FILE ?=
+
+ifeq ($(E2E_STACK),riscv)
+E2E_START_TARGET := start-env-with-riscv
+E2E_TEST_SCRIPT := test:riscv:local
+E2E_TEST_TIMEOUT := $(if $(filter dev-zkvm,$(RISCV_PROVER_MODE)),40m,10m)
+# Empty: keep the image tags pinned in docker/compose-riscv.yml.
+E2E_FALLBACK_IMAGE_TAG :=
+ifeq ($(RISCV_PROVER_MODE),dev-zkvm)
+# dev-zkvm runs prover-ray built from this commit (see e2e-ci-build-images).
+export LINEA_PROVER_RAY_TAG := $(E2E_IMAGE_TAG)
+endif
+else ifeq ($(E2E_STACK),zkevm)
+E2E_START_TARGET := $(if $(OVERRIDE_COMPOSE_FILE),start-env-with-tracing-v2-ci-override OVERRIDE_COMPOSE_FILE=$(abspath $(OVERRIDE_COMPOSE_FILE)),start-env-with-tracing-v2-ci)
+E2E_TEST_SCRIPT := test:local
+E2E_TEST_TIMEOUT := 6m
+E2E_FALLBACK_IMAGE_TAG := develop
+else
+$(error Unsupported E2E_STACK=$(E2E_STACK) (expected zkevm or riscv))
+endif
+
+# Tag for monorepo images without a CI artifact or explicit tag; empty keeps the Compose default.
+e2e-ci-fallback-image-tag:
+	@echo "$(E2E_FALLBACK_IMAGE_TAG)"
+
+e2e-ci-build-images:
+ifeq ($(E2E_STACK)-$(RISCV_PROVER_MODE),riscv-dev-zkvm)
+	$(MAKE) -C prover-ray docker-build IMAGE_TAG="$(E2E_IMAGE_TAG)"
+else
+	@echo "No local images to build for E2E_STACK=$(E2E_STACK)"
+endif
+
+e2e-ci-start-env:
+	$(MAKE) $(E2E_START_TARGET) CLEAN_PREVIOUS_ENV=false
+
+e2e-ci-start-env-with-retry:
+	@if [ -n "$(OVERRIDE_COMPOSE_FILE)" ] && [ ! -f "$(OVERRIDE_COMPOSE_FILE)" ]; then \
+		echo "Override compose file not found: $(OVERRIDE_COMPOSE_FILE)" >&2; exit 1; \
+	fi
+	$(MAKE) retry \
+		TARGET="e2e-ci-start-env E2E_STACK=$(E2E_STACK) OVERRIDE_COMPOSE_FILE=$(if $(OVERRIDE_COMPOSE_FILE),$(abspath $(OVERRIDE_COMPOSE_FILE)))" \
+		RETRY_LIMIT=10 RETRY_TIMEOUT=10m RETRY_BACKOFF=30s RETRY_CLEANUP_TARGET=clean-environment
+
+e2e-ci-test:
+	timeout $(E2E_TEST_TIMEOUT) pnpm run -F e2e $(E2E_TEST_SCRIPT)
+
 # Ensure the runtime sequencer deny-list exists (empty) before docker compose
 # bind-mounts it. Gitignored; may be mutated at test time by withDenyListAddresses.
 # Also drop any stale lockfile from a crashed previous run, otherwise every
