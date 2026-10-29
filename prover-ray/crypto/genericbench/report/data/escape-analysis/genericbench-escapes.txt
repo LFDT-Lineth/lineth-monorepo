@@ -1,0 +1,345 @@
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/custommod.go:36:6: moved to heap: emulated.target
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/custommod.go:63:15: make([]frontend.Variable, emulated.nbLimbs) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/element.go:101:18: new(big.Int) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/element.go:108:15: make([]frontend.Variable, len(emulated.blimbs)) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/element.go:155:2: moved to heap: emulated.r
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/element.go:156:16: make([]frontend.Variable, len(emulated.e.Limbs)) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/element.go:164:23: new(big.Int) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/element.go:164:36: make(big.nat, 1) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/element.go:164:36: make(big.nat, big.n, big.n + 4) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/element.go:66:6: moved to heap: emulated.bValue
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/element.go:67:2: moved to heap: emulated.bValue
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field.go:200:66: new(big.Int) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field.go:292:13: new(big.Int) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field.go:292:26: make(big.nat, 1) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field.go:292:26: make(big.nat, big.n, big.n + 4) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field.go:307:12: new(big.Int) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field.go:94:25: make(map[[16]byte]int) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_binary.go:17:14: make([]frontend.Variable, (emulated.~r0) * (emulated.~r0)) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_binary.go:65:15: make([]frontend.Variable, emulated.nbLimbs) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_hint.go:259:21: new(big.Int) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_hint.go:263:21: new(big.Int) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_hint.go:325:26: make([]*emulated.Element[go.shape.struct { github.com/consensys/gnark/std/math/emulated/emparams.oneLimbPrimeField }], emulated.nbEmulated1Outputs) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_hint.go:335:26: make([]*emulated.Element[go.shape.struct { github.com/consensys/gnark/std/math/emulated/emparams.oneLimbPrimeField }], emulated.nbEmulated2Outputs) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_mul.go:1038:6: make([]frontend.Variable, 0, emulated.nbToCommit) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_mul.go:1043:18: make([]frontend.Variable, 0, emulated.nbToCommit) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_mul.go:125:18: make([]frontend.Variable, 0, emulated.nbToCommit) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_mul.go:252:2: moved to heap: emulated.mc
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_mul.go:293:2: moved to heap: emulated.mc
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_mul.go:391:14: make([]frontend.Variable, emulated.coefsLen) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_mul.go:437:15: make([]frontend.Variable, len(emulated.at)) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_mul.go:518:20: make([]frontend.Variable, 0, 4 + len(emulated.modulusLimbs) + len(emulated.a.Limbs) + len(emulated.b.Limbs)) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_mul.go:667:34: new(big.Int) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_mul.go:667:47: make(big.nat, 1) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_mul.go:667:47: make(big.nat, big.n, big.n + 4) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_mul.go:681:17: make([]frontend.Variable, len(emulated.a.Limbs)) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_mul.go:751:18: make([]frontend.Variable, emulated.~r0) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_mul.go:921:15: make([][]int, 0, len(emulated.at)) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_mul.go:923:15: make([]int, len(emulated.allElems)) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_mul.go:953:2: moved to heap: emulated.mvc
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_mul.go:994:20: make([]frontend.Variable, 0, emulated.nbHintInputs) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_ops.go:138:15: make([]frontend.Variable, emulated.nbLimbs) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_ops.go:173:15: make([]frontend.Variable, emulated.nbLimbs) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_ops.go:212:15: make([]frontend.Variable, emulated.nbLimbs) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_ops.go:242:32: make([]frontend.Variable, emulated.nbLimbs) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_ops.go:280:32: make([]frontend.Variable, emulated.nbLimbs) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_ops.go:345:32: make([]frontend.Variable, emulated.nbInputs) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_ops.go:351:32: make([]frontend.Variable, emulated.nbLimbs) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_ops.go:371:18: make([]frontend.Variable, emulated.paddedSize) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_ops.go:397:6: moved to heap: emulated.target
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_smallmul.go:382:13: new(big.Int) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_smallmul.go:55:6: make([]frontend.Variable, 0, len(emulated.mc.entries) * 4) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/field_smallmul.go:56:14: make([]frontend.Variable, 0, len(emulated.mc.entries) * 4) escapes to heap
+../../../../go/pkg/mod/github.com/consensys/gnark@v0.14.1-0.20260219004710-bbfb2f70a565/std/math/emulated/subtraction_padding.go:113:16: new(big.Int) escapes to heap
+./maths/generic/element.go:56:6: moved to heap: generic.x
+./maths/generic/element.go:62:6: moved to heap: generic.x
+./maths/generic/element.go:69:6: moved to heap: generic.x
+<autogenerated>:1: make(expr.LinearExpression[go.shape.[1]uint32], len(expr.l)) escapes to heap
+<autogenerated>:1: make(expr.LinearExpression[go.shape.[6]uint64], len(expr.l)) escapes to heap
+crypto/fiatshamir/fiatshamir.go:65:65: moved to heap: fiatshamir.res
+crypto/fiatshamir/fiatshamir.go:66:2: moved to heap: fiatshamir.digest
+crypto/fiatshamir/fiatshamir.go:83:13: make([]int, fiatshamir.num) escapes to heap
+crypto/fiatshamir/fiatshamir.go:88:3: moved to heap: fiatshamir.c
+crypto/koalabear/fiatshamir/poseidon2_circuit.go:83:13: make([]frontend.Variable, 0, num) escapes to heap
+crypto/koalabear/fiatshamir/poseidon2_circuit.go:87:33: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:125:19: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:125:19: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:168:24: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:168:24: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:169:24: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:169:24: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:183:16: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:183:16: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:184:16: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:184:16: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:185:18: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:185:18: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:186:19: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:186:19: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:187:19: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:187:19: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:189:21: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:189:21: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:190:21: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:190:21: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:191:21: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:191:21: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:192:21: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:192:21: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:193:19: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:193:19: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:194:21: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:194:21: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:210:19: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:210:19: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:211:19: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:211:19: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:212:19: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:212:19: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:213:19: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:213:19: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:216:23: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:216:23: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:217:25: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:217:25: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:218:25: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:218:25: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:219:25: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:219:25: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:229:16: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:229:16: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:235:16: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:235:16: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:236:20: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:236:20: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:239:20: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:239:20: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:242:16: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:242:16: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:243:20: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:243:20: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:246:16: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:246:16: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:247:20: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:247:20: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:250:16: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:250:16: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:251:16: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:251:16: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:252:20: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:252:20: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:255:16: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:255:16: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:256:16: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:256:16: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:257:20: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:257:20: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:260:16: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:260:16: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:261:20: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:261:20: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:264:16: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:264:16: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:265:16: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:265:16: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:266:20: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:266:20: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:269:16: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:269:16: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:270:16: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:270:16: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:271:20: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:271:20: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:274:16: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:274:16: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:275:20: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:275:20: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:278:16: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:278:16: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:279:21: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:279:21: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:282:16: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:282:16: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:283:21: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:283:21: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:286:16: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:286:16: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:287:21: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:287:21: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:290:16: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:290:16: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:291:21: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:291:21: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:294:16: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:294:16: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:295:21: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:295:21: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:298:16: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:298:16: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:299:21: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:299:21: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:305:61: new(big.Int) escapes to heap
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:306:21: moved to heap: circuit.x
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:306:21: moved to heap: circuit.y
+crypto/koalabear/poseidon2/poseidon2_koalagnark.go:31:6: moved to heap: res
+crypto/poseidon2/hasher.go:114:41: moved to heap: generic.x
+crypto/poseidon2/hasher.go:118:15: make([]go.shape.[1]uint32, len(poseidon2.p) / poseidon2.elemByteSize) escapes to heap
+crypto/poseidon2/hasher.go:118:15: make([]go.shape.[1]uint64, len(poseidon2.p) / poseidon2.elemByteSize) escapes to heap
+crypto/poseidon2/hasher.go:138:6: moved to heap: generic.x
+crypto/poseidon2/hasher.go:138:82: moved to heap: generic.x
+crypto/poseidon2/hasher.go:141:58: moved to heap: generic.x
+crypto/poseidon2/hasher.go:144:52: moved to heap: poseidon2.o
+crypto/poseidon2/hasher.go:145:13: make([]byte, 0, 8 * (poseidon2.~r0)) escapes to heap
+crypto/poseidon2/hasher.go:145:58: moved to heap: generic.x
+crypto/poseidon2/hasher.go:26:6: moved to heap: poseidon2.x
+crypto/poseidon2/hasher.go:32:2: moved to heap: poseidon2.res
+crypto/poseidon2/permutation.go:110:14: make([]go.shape.[1]uint32, poseidon2.width) escapes to heap
+crypto/poseidon2/permutation.go:110:14: make([]go.shape.[1]uint64, poseidon2.width) escapes to heap
+crypto/poseidon2/permutation.go:112:37: moved to heap: generic.x
+crypto/poseidon2/permutation.go:113:3: moved to heap: poseidon2.inv
+crypto/poseidon2/permutation.go:169:6: moved to heap: poseidon2.sq
+crypto/poseidon2/permutation.go:210:12: moved to heap: poseidon2.t23
+crypto/poseidon2/permutation.go:210:17: moved to heap: poseidon2.t0123
+crypto/poseidon2/permutation.go:210:24: moved to heap: poseidon2.t01123
+crypto/poseidon2/permutation.go:210:32: moved to heap: poseidon2.t01233
+crypto/poseidon2/permutation.go:210:7: moved to heap: poseidon2.t01
+crypto/poseidon2/permutation.go:233:6: moved to heap: poseidon2.acc
+crypto/poseidon2/permutation.go:256:6: moved to heap: poseidon2.sum
+crypto/poseidon2/permutation.go:263:6: moved to heap: poseidon2.t
+crypto/poseidon2/permutation.go:73:20: make([][]go.shape.[1]uint32, poseidon2.nbFullRounds + poseidon2.nbPartialRounds) escapes to heap
+crypto/poseidon2/permutation.go:73:20: make([][]go.shape.[1]uint64, poseidon2.nbFullRounds + poseidon2.nbPartialRounds) escapes to heap
+crypto/poseidon2/permutation.go:79:24: make([]go.shape.[1]uint32, poseidon2.n) escapes to heap
+crypto/poseidon2/permutation.go:79:24: make([]go.shape.[1]uint64, poseidon2.n) escapes to heap
+maths/koalabear/circuit/api.go:101:28: moved to heap: x
+maths/koalabear/circuit/api.go:106:28: moved to heap: x
+maths/koalabear/circuit/api.go:106:31: moved to heap: y
+maths/koalabear/circuit/api.go:111:34: moved to heap: x
+maths/koalabear/circuit/api.go:118:33: moved to heap: x
+maths/koalabear/circuit/api.go:124:19: moved to heap: x
+maths/koalabear/circuit/api.go:128:32: moved to heap: x
+maths/koalabear/circuit/api.go:133:28: moved to heap: x
+maths/koalabear/circuit/api.go:133:31: moved to heap: y
+maths/koalabear/circuit/api.go:140:31: moved to heap: x
+maths/koalabear/circuit/api.go:169:38: moved to heap: x
+maths/koalabear/circuit/api.go:169:41: moved to heap: y
+maths/koalabear/circuit/api.go:174:42: moved to heap: x
+maths/koalabear/circuit/api.go:174:45: moved to heap: y
+maths/koalabear/circuit/api.go:184:40: moved to heap: x
+maths/koalabear/circuit/api.go:200:42: moved to heap: x
+maths/koalabear/circuit/api.go:229:9: moved to heap: r
+maths/koalabear/circuit/api.go:236:13: make([]Element, nbOutputs) escapes to heap
+maths/koalabear/circuit/api.go:80:28: moved to heap: x
+maths/koalabear/circuit/api.go:80:31: moved to heap: y
+maths/koalabear/circuit/api.go:96:28: moved to heap: x
+maths/koalabear/circuit/api.go:96:31: moved to heap: y
+maths/koalabear/circuit/element.go:13:41: make(big.nat, 1) escapes to heap
+maths/koalabear/circuit/element.go:13:41: make(big.nat, big.n, big.n + 4) escapes to heap
+maths/koalabear/circuit/element.go:13:41: new(big.Int) escapes to heap
+maths/koalabear/circuit/element.go:39:47: moved to heap: emulated.bValue
+maths/koalabear/circuit/ext.go:186:13: moved to heap: x
+maths/koalabear/circuit/ext.go:186:13: moved to heap: y
+maths/koalabear/circuit/ext.go:187:18: moved to heap: x
+maths/koalabear/circuit/ext.go:188:12: moved to heap: x
+maths/koalabear/circuit/ext.go:188:12: moved to heap: y
+maths/koalabear/circuit/ext.go:194:21: moved to heap: x
+maths/koalabear/circuit/ext.go:194:21: moved to heap: y
+maths/koalabear/circuit/ext.go:194:44: moved to heap: x
+maths/koalabear/circuit/ext.go:194:44: moved to heap: y
+maths/koalabear/circuit/ext.go:199:21: moved to heap: x
+maths/koalabear/circuit/ext.go:199:21: moved to heap: y
+maths/koalabear/circuit/ext.go:199:44: moved to heap: x
+maths/koalabear/circuit/ext.go:199:44: moved to heap: y
+maths/koalabear/circuit/ext.go:205:13: moved to heap: x
+maths/koalabear/circuit/ext.go:205:13: moved to heap: y
+maths/koalabear/circuit/ext.go:206:13: moved to heap: x
+maths/koalabear/circuit/ext.go:206:13: moved to heap: y
+maths/koalabear/circuit/ext.go:207:12: moved to heap: x
+maths/koalabear/circuit/ext.go:207:12: moved to heap: y
+maths/koalabear/circuit/ext.go:208:13: moved to heap: x
+maths/koalabear/circuit/ext.go:208:13: moved to heap: y
+maths/koalabear/circuit/ext.go:209:13: moved to heap: x
+maths/koalabear/circuit/ext.go:209:13: moved to heap: y
+maths/koalabear/circuit/ext.go:211:14: moved to heap: x
+maths/koalabear/circuit/ext.go:211:14: moved to heap: y
+maths/koalabear/circuit/ext.go:212:13: moved to heap: x
+maths/koalabear/circuit/ext.go:212:13: moved to heap: y
+maths/koalabear/circuit/ext.go:214:19: moved to heap: x
+maths/koalabear/circuit/ext.go:215:13: moved to heap: x
+maths/koalabear/circuit/ext.go:215:13: moved to heap: y
+maths/koalabear/circuit/ext.go:222:15: moved to heap: x
+maths/koalabear/circuit/ext.go:222:15: moved to heap: y
+maths/koalabear/circuit/ext.go:223:15: moved to heap: x
+maths/koalabear/circuit/ext.go:223:15: moved to heap: y
+maths/koalabear/circuit/ext.go:224:21: moved to heap: x
+maths/koalabear/circuit/ext.go:225:16: moved to heap: x
+maths/koalabear/circuit/ext.go:225:16: moved to heap: y
+maths/koalabear/circuit/ext.go:227:12: moved to heap: x
+maths/koalabear/circuit/ext.go:227:12: moved to heap: y
+maths/koalabear/circuit/ext.go:228:17: moved to heap: x
+maths/koalabear/circuit/ext.go:235:12: moved to heap: x
+maths/koalabear/circuit/ext.go:235:12: moved to heap: y
+maths/koalabear/circuit/ext.go:236:12: moved to heap: x
+maths/koalabear/circuit/ext.go:236:12: moved to heap: y
+maths/koalabear/circuit/ext.go:243:17: moved to heap: x
+maths/koalabear/circuit/ext.go:244:17: moved to heap: x
+maths/koalabear/circuit/ext.go:372:19: moved to heap: x
+maths/koalabear/circuit/ext.go:372:19: moved to heap: y
+maths/koalabear/circuit/ext.go:385:19: moved to heap: x
+maths/koalabear/circuit/ext.go:385:19: moved to heap: y
+maths/koalabear/circuit/ext.go:413:16: make([]Element, len(xs)) escapes to heap
+maths/koalabear/circuit/ext.go:453:26: moved to heap: x
+maths/koalabear/circuit/ext.go:453:45: moved to heap: x
+maths/koalabear/circuit/ext.go:454:26: moved to heap: x
+maths/koalabear/circuit/ext.go:454:45: moved to heap: x
+maths/koalabear/circuit/ext.go:455:26: moved to heap: x
+maths/koalabear/circuit/ext.go:455:45: moved to heap: x
+maths/koalabear/circuit/ext.go:479:17: moved to heap: x
+maths/koalabear/circuit/ext.go:479:17: moved to heap: y
+maths/koalabear/circuit/ext.go:480:17: moved to heap: x
+maths/koalabear/circuit/ext.go:480:17: moved to heap: y
+maths/koalabear/circuit/ext.go:481:17: moved to heap: x
+maths/koalabear/circuit/ext.go:481:17: moved to heap: y
+maths/koalabear/circuit/ext.go:482:17: moved to heap: x
+maths/koalabear/circuit/ext.go:482:17: moved to heap: y
+maths/koalabear/circuit/ext.go:483:17: moved to heap: x
+maths/koalabear/circuit/ext.go:483:17: moved to heap: y
+maths/koalabear/circuit/ext.go:484:17: moved to heap: x
+maths/koalabear/circuit/ext.go:484:17: moved to heap: y
+maths/koalabear/circuit/ext.go:525:19: moved to heap: x
+maths/koalabear/circuit/ext.go:525:19: moved to heap: y
+maths/koalabear/circuit/ext.go:525:42: moved to heap: x
+maths/koalabear/circuit/ext.go:525:42: moved to heap: y
+maths/koalabear/circuit/ext.go:526:19: moved to heap: x
+maths/koalabear/circuit/ext.go:526:19: moved to heap: y
+maths/koalabear/circuit/ext.go:526:42: moved to heap: x
+maths/koalabear/circuit/ext.go:526:42: moved to heap: y
+maths/koalabear/circuit/ext.go:527:19: moved to heap: x
+maths/koalabear/circuit/ext.go:527:19: moved to heap: y
+maths/koalabear/circuit/ext.go:527:42: moved to heap: x
+maths/koalabear/circuit/ext.go:527:42: moved to heap: y
+maths/koalabear/circuit/ext.go:607:9: moved to heap: r
+maths/koalabear/circuit/ext.go:619:13: make([]Ext, nbOutputs) escapes to heap
+maths/koalabear/circuit/ext.go:712:43: moved to heap: e
+maths/koalabear/field/ext.go:208:3: moved to heap: z
+maths/koalabear/field/ext.go:237:13: make([]extensions.E6, len(a)) escapes to heap
+maths/koalabear/field/field.go:206:3: moved to heap: f
+maths/koalabear/field/field.go:224:13: make([]koalabear.Element, len(a)) escapes to heap
+maths/koalabear/field/field.go:46:23: new(koalabear.Element) escapes to heap
+maths/koalabear/field/vec.go:463:13: make([]koalabear.Element, len(xs)) escapes to heap
+maths/koalabear/field/vec.go:472:13: make([]koalabear.Element, n) escapes to heap
+maths/koalabear/field/vec.go:481:13: make([]extensions.E6, n) escapes to heap
+maths/koalabear/field/vec.go:491:13: make([]koalabear.Element, size) escapes to heap
+maths/koalabear/field/vec.go:501:13: make([]extensions.E6, size) escapes to heap
+maths/koalabear/field/vec.go:511:13: make([]koalabear.Element, size) escapes to heap
+maths/koalabear/field/vec.go:521:13: make([]extensions.E6, size) escapes to heap
+maths/koalabear/field/vec.go:538:13: make([]koalabear.Element, n) escapes to heap
+utils/parallel/chunky.go:27:2: moved to heap: wg
+utils/parallel/parallel.go:43:6: moved to heap: wg
+utils/parallel/parallel.go:49:3: moved to heap: panicTrace
+utils/parallel/parallel.go:50:3: moved to heap: panicMsg
+utils/parallel/thread_aware.go:24:2: moved to heap: wg
+utils/rand.go:23:24: new(rand.ChaCha8) escapes to heap
+utils/types/field_koalaoctuplet.go:18:2: moved to heap: buf
+utils/types/field_koalaoctuplet.go:35:2: moved to heap: res
+utils/utils.go:110:13: make([]byte, len(ins)) escapes to heap
+utils/utils.go:119:13: make([]int, len(ints)) escapes to heap

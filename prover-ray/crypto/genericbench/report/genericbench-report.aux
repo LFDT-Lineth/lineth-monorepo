@@ -1,0 +1,86 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\providecommand \oddpage@label [2]{}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Summary}{1}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}Setup}{1}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Machine.}{1}{section*.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Implementations compared.}{1}{section*.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Runs.}{1}{section*.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Background: what is benchmarked}{2}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}Results 1: fully generic code}{2}{section.4}\protected@file@percent }
+\newlabel{sec:generic}{{4}{2}{Results 1: fully generic code}{section.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces KoalaBear, fully generic code (before any branching). Ratios are time relative to \texttt  {baseline}.}}{2}{table.caption.4}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{tab:mid-kb}{{1}{2}{KoalaBear, fully generic code (before any branching). Ratios are time relative to \texttt {baseline}}{table.caption.4}{}}
+\@writefile{toc}{\contentsline {paragraph}{How to read the tables.}{2}{section*.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Findings.}{2}{section*.8}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces MamaBear, fully generic code. The MamaBear baseline is gnark-crypto's (non-assembly) permutation under the generic hasher.}}{3}{table.caption.5}\protected@file@percent }
+\newlabel{tab:mid-mb}{{2}{3}{MamaBear, fully generic code. The MamaBear baseline is gnark-crypto's (non-assembly) permutation under the generic hasher}{table.caption.5}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Fully generic code: time relative to each field\'s \texttt  {baseline} (Tables~\ref {tab:mid-kb} and \ref {tab:mid-mb}). The vertical line marks parity.}}{3}{figure.caption.6}\protected@file@percent }
+\newlabel{fig:generic}{{1}{3}{Fully generic code: time relative to each field\'s \texttt {baseline} (Tables~\ref {tab:mid-kb} and \ref {tab:mid-mb}). The vertical line marks parity}{figure.caption.6}{}}
+\@writefile{toc}{\contentsline {paragraph}{Why the generic code is slow.}{4}{section*.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Example: the internal matrix.}{4}{section*.10}\protected@file@percent }
+\newlabel{lst:generic}{{1}{4}{Fully generic \texttt {matMulInternal} (commit \texttt {3ce6cc6e5})}{lstlisting.1}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {1}{\ignorespaces Fully generic \texttt  {matMulInternal} (commit \texttt  {3ce6cc6e5}).}}{4}{lstlisting.1}\protected@file@percent }
+\newlabel{lst:gnark}{{2}{4}{gnark-crypto KoalaBear \texttt {matMulInternalInPlace}, width 16 (excerpt)}{lstlisting.2}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {2}{\ignorespaces gnark-crypto KoalaBear \texttt  {matMulInternalInPlace}, width 16 (excerpt).}}{4}{lstlisting.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Results 2: branching to concrete KoalaBear code in the hot loops}{4}{section.5}\protected@file@percent }
+\newlabel{sec:branch}{{5}{4}{Results 2: branching to concrete KoalaBear code in the hot loops}{section.5}{}}
+\newlabel{lst:branch}{{3}{4}{\texttt {matMulInternal} with the hot-loop branch (\texttt {crypto/poseidon2}). The vector case belongs to Section~\ref {sec:paths}}{lstlisting.3}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {3}{\ignorespaces \texttt  {matMulInternal} with the hot-loop branch (\texttt  {crypto/poseidon2}). The vector case belongs to Section~\ref {sec:paths}.}}{4}{lstlisting.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces KoalaBear, the hot-loop branches before (run 2) and after (run 3) replicating gnark-crypto's internal-matrix diagonal. Each ratio is relative to the \texttt  {baseline} of the same run; the baseline column shows run 3.}}{5}{table.caption.11}\protected@file@percent }
+\newlabel{tab:kbb}{{3}{5}{KoalaBear, the hot-loop branches before (run 2) and after (run 3) replicating gnark-crypto's internal-matrix diagonal. Each ratio is relative to the \texttt {baseline} of the same run; the baseline column shows run 3}{table.caption.11}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces KoalaBear hot-loop branches, time relative to \texttt  {baseline}, before and after replicating gnark-crypto's internal-matrix diagonal (Table~\ref {tab:kbb}).}}{5}{figure.caption.12}\protected@file@percent }
+\newlabel{fig:branch}{{2}{5}{KoalaBear hot-loop branches, time relative to \texttt {baseline}, before and after replicating gnark-crypto's internal-matrix diagonal (Table~\ref {tab:kbb})}{figure.caption.12}{}}
+\@writefile{toc}{\contentsline {paragraph}{Findings.}{5}{section*.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Replicating gnark-crypto's optimisations}{6}{subsection.5.1}\protected@file@percent }
+\newlabel{sec:replicate}{{5.1}{6}{Replicating gnark-crypto's optimisations}{subsection.5.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Results 3: vector operations vs.\ assembly}{6}{section.6}\protected@file@percent }
+\newlabel{sec:paths}{{6}{6}{Results 3: vector operations vs.\ assembly}{section.6}{}}
+\newlabel{lst:vec}{{4}{6}{The vector path: \texttt {matMulInternal} as three batched calls (\texttt {koalabear.go})}{lstlisting.4}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {4}{\ignorespaces The vector path: \texttt  {matMulInternal} as three batched calls (\texttt  {koalabear.go}).}}{6}{lstlisting.4}\protected@file@percent }
+\newlabel{lst:asm}{{5}{6}{The assembly path: the branch sits at the top of \texttt {Permute}, so no helper runs at all (\texttt {permutation.go})}{lstlisting.5}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {5}{\ignorespaces The assembly path: the branch sits at the top of \texttt  {Permute}, so no helper runs at all (\texttt  {permutation.go}).}}{6}{lstlisting.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Findings.}{6}{section*.16}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces KoalaBear, all code paths side by side (run 3, \texttt  {medium} scale). The hot-loop branches include the gnark-crypto internal-matrix diagonal.}}{7}{table.caption.14}\protected@file@percent }
+\newlabel{tab:paths}{{4}{7}{KoalaBear, all code paths side by side (run 3, \texttt {medium} scale). The hot-loop branches include the gnark-crypto internal-matrix diagonal}{table.caption.14}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces KoalaBear code paths, time relative to \texttt  {baseline} (Table~\ref {tab:paths}). \texttt  {current} exists only for MDHasher and FiatShamir.}}{7}{figure.caption.15}\protected@file@percent }
+\newlabel{fig:paths}{{3}{7}{KoalaBear code paths, time relative to \texttt {baseline} (Table~\ref {tab:paths}). \texttt {current} exists only for MDHasher and FiatShamir}{figure.caption.15}{}}
+\@writefile{toc}{\contentsline {paragraph}{Why the two cannot be combined in one permutation.}{7}{section*.17}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}Why CompressParallel is so slow}{7}{section.7}\protected@file@percent }
+\newlabel{sec:parallel}{{7}{7}{Why CompressParallel is so slow}{section.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Where the allocations come from}{7}{subsection.7.1}\protected@file@percent }
+\newlabel{lst:compress}{{6}{7}{Generic \texttt {Compress}. The two marked arrays are moved to the heap}{lstlisting.6}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {6}{\ignorespaces Generic \texttt  {Compress}. The two marked arrays are moved to the heap.}}{7}{lstlisting.6}\protected@file@percent }
+\newlabel{lst:gnarkcompress}{{7}{8}{gnark-crypto \texttt {vortex.CompressPoseidon2}: the same steps, nothing allocated}{lstlisting.7}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {7}{\ignorespaces gnark-crypto \texttt  {vortex.CompressPoseidon2}: the same steps, nothing allocated.}}{8}{lstlisting.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Scaling with the number of threads}{8}{subsection.7.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces KoalaBear CompressParallel, nanoseconds per compression (lower is better) by number of threads (\texttt  {-cpu}), with the garbage collector on (default) and off (\texttt  {GOGC=off}). Ratios are relative to \texttt  {baseline} at the same thread count. \texttt  {baseline} allocates nothing, so the GC setting does not affect it.}}{8}{table.caption.18}\protected@file@percent }
+\newlabel{tab:parallel}{{5}{8}{KoalaBear CompressParallel, nanoseconds per compression (lower is better) by number of threads (\texttt {-cpu}), with the garbage collector on (default) and off (\texttt {GOGC=off}). Ratios are relative to \texttt {baseline} at the same thread count. \texttt {baseline} allocates nothing, so the GC setting does not affect it}{table.caption.18}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces KoalaBear CompressParallel scaling (Table~\ref {tab:parallel}). Solid: garbage collector on (default); dashed: off. Colour follows the implementation. Green: \texttt  {generic-asm} with the allocation-free \texttt  {Compress} of Section~\ref {sec:fix}, which lies on the baseline.}}{9}{figure.caption.19}\protected@file@percent }
+\newlabel{fig:parallel}{{4}{9}{KoalaBear CompressParallel scaling (Table~\ref {tab:parallel}). Solid: garbage collector on (default); dashed: off. Colour follows the implementation. Green: \texttt {generic-asm} with the allocation-free \texttt {Compress} of Section~\ref {sec:fix}, which lies on the baseline}{figure.caption.19}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Heap and GC analysis}{9}{subsection.7.3}\protected@file@percent }
+\newlabel{sec:heap}{{7.3}{9}{Heap and GC analysis}{subsection.7.3}{}}
+\@writefile{toc}{\contentsline {paragraph}{The heap.}{9}{section*.20}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces \texttt  {generic-asm} compressions on $N$ goroutines, GC on, as reported by the Go runtime (\texttt  {runtime/metrics}). Stop-the-world (STW) time is the share of wall-clock time with the world stopped; each GC cycle stops it twice. Mark CPU is assists plus background mark workers, as a share of CPU time.}}{9}{table.caption.21}\protected@file@percent }
+\newlabel{tab:gc-scaling}{{6}{9}{\texttt {generic-asm} compressions on $N$ goroutines, GC on, as reported by the Go runtime (\texttt {runtime/metrics}). Stop-the-world (STW) time is the share of wall-clock time with the world stopped; each GC cycle stops it twice. Mark CPU is assists plus background mark workers, as a share of CPU time}{table.caption.21}{}}
+\@writefile{toc}{\contentsline {paragraph}{Marking costs almost nothing; stopping the world does.}{9}{section*.23}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{The threads are asleep, not busy.}{9}{section*.24}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Stop-the-world time with the GC on, by number of threads (Table~\ref {tab:gc-scaling}). Both generic paths jump between 8 and 16 threads.}}{10}{figure.caption.22}\protected@file@percent }
+\newlabel{fig:stw}{{5}{10}{Stop-the-world time with the GC on, by number of threads (Table~\ref {tab:gc-scaling}). Both generic paths jump between 8 and 16 threads}{figure.caption.22}{}}
+\@writefile{toc}{\contentsline {paragraph}{Where the goroutines block.}{10}{section*.25}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{It is the frequency of cycles.}{10}{section*.28}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces \texttt  {generic-asm} compressions on 64 goroutines for several values of \texttt  {GOGC}. The ratio is against \texttt  {baseline} at 64 threads (12.8\,ns, Table~\ref {tab:parallel}).}}{11}{table.caption.26}\protected@file@percent }
+\newlabel{tab:gogc}{{7}{11}{\texttt {generic-asm} compressions on 64 goroutines for several values of \texttt {GOGC}. The ratio is against \texttt {baseline} at 64 threads (12.8\,ns, Table~\ref {tab:parallel})}{table.caption.26}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces \texttt  {generic-asm} at 64 threads as \texttt  {GOGC} is raised (Table~\ref {tab:gogc}). Fewer GC cycles, lower cost.}}{11}{figure.caption.27}\protected@file@percent }
+\newlabel{fig:gogc}{{6}{11}{\texttt {generic-asm} at 64 threads as \texttt {GOGC} is raised (Table~\ref {tab:gogc}). Fewer GC cycles, lower cost}{figure.caption.27}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.4}Experiment: an allocation-free \texttt  {Compress}}{11}{subsection.7.4}\protected@file@percent }
+\newlabel{sec:fix}{{7.4}{11}{Experiment: an allocation-free \texttt {Compress}}{subsection.7.4}{}}
+\newlabel{lst:fastpath}{{8}{11}{The fast path added at the top of \texttt {Compress} (\texttt {report/data/heap/experiment/})}{lstlisting.8}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {8}{\ignorespaces The fast path added at the top of \texttt  {Compress} (\texttt  {report/data/heap/experiment/}).}}{11}{lstlisting.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.5}Caveats}{11}{subsection.7.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {8}Recommendations}{12}{section.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {A}Reproducing}{12}{appendix.A}\protected@file@percent }
+\gdef \@abspage@last{12}
