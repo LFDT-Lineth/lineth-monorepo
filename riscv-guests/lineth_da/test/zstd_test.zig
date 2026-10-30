@@ -83,6 +83,8 @@ fn expectRejected(result: zstd.Error![]u8) !void {
     if (result) |_| return error.TestUnexpectedSuccess else |_| {}
 }
 
+/// `sha256` is the digest of the frame's decompressed content, taken from an independent decoder
+/// (python-zstandard 0.23).
 const GoldenFrame = struct { frame: []const u8, len: usize, sha256: []const u8 };
 
 const golden_decodable = [_]GoldenFrame{

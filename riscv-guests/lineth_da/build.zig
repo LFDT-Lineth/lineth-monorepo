@@ -20,8 +20,9 @@ const decoder_sources = [_][]const u8{
     "decompress/zstd_decompress_block.c",
 };
 
-/// One section per function and per datum, so the linker keeps only what the guest calls.
-const section_flags = [_][]const u8{ "-ffunction-sections", "-fdata-sections" };
+/// One section per function and per datum, so the linker keeps only what the guest calls; the
+/// portable decoder loops, so no assembly source has to be linked on x86-64.
+const decoder_flags = [_][]const u8{ "-ffunction-sections", "-fdata-sections", "-DZSTD_DISABLE_ASM" };
 
 /// Upstream's decompression regression frames (`tests/golden-decompression*`), embedded in the zstd
 /// test root under their import names: the first group must decode, the second must be rejected.
@@ -139,5 +140,5 @@ fn addPackageSources(b: *std.Build, package: *std.Build.Module, zstd_source: *st
     } else {
         package.link_libc = true;
     }
-    package.addCSourceFiles(.{ .root = zstd_source.path("lib"), .files = &decoder_sources, .flags = &section_flags });
+    package.addCSourceFiles(.{ .root = zstd_source.path("lib"), .files = &decoder_sources, .flags = &decoder_flags });
 }
