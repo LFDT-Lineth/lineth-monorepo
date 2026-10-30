@@ -13,10 +13,11 @@ const l2_execution_ssz = @import("l2_execution_ssz");
 /// `execution` above.
 pub const guest_errors = @import("guest_errors.zig");
 
-// Heap starts at the address defined by the linker script (canonical Lineth layout: `_heap_start` = 0x48800000, grows up).
+// Heap bounds come from the linker script (canonical Lineth layout: `_heap_start` = 0x48800000,
+// grows up to `_heap_end`). build_common/Makefile sets the size via `HEAP_LENGTH` and asserts that
+// the heap ends below the 4 GiB guest address space.
 extern var _heap_start: u8;
-// Linker script does not actually constraint the heap to 256 MiB, but this is a reasonable upper bound
-const GUEST_HEAP_SIZE: usize = 256 * 1024 * 1024;
+extern var _heap_end: u8;
 
 // Expose the guest allocator as ABI-compatible pointer and vtable words for the C shim.
 export var guest_allocator: extern struct { ptr: *anyopaque, vtable: *const anyopaque } = undefined;
@@ -44,7 +45,7 @@ export var guest_allocator: extern struct { ptr: *anyopaque, vtable: *const anyo
 fn guestMain() callconv(.c) noreturn {
     const lineth_accel = @import("lineth_zkvm_accel");
 
-    const heap = @as([*]u8, @ptrCast(&_heap_start))[0..GUEST_HEAP_SIZE];
+    const heap = @as([*]u8, @ptrCast(&_heap_start))[0 .. @intFromPtr(&_heap_end) - @intFromPtr(&_heap_start)];
     var fba = std.heap.FixedBufferAllocator.init(heap);
     const allocator = fba.allocator();
     guest_allocator = .{ .ptr = allocator.ptr, .vtable = @ptrCast(allocator.vtable) };
