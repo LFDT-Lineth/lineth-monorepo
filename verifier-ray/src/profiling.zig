@@ -63,7 +63,8 @@ pub inline fn reset() void {
 /// is formatted at comptime; only the runtime `value` is rendered on the fly.
 ///
 /// This goes through the Linux RISC-V `write(2)` syscall (a7=64), which the zkc
-/// interpreter parses (see arithmetization i_type.zkc `WRITE_SYSCALL`): it reads
+/// interpreter handles in `process_syscall` (arithmetization/src/main/riscv/
+/// interpreter.zkc, `WRITE_SYSCALL` case, fd 1 → `print_string`): it reads
 /// `a2` bytes from the buffer at `a1` and prints each as an ASCII char, followed
 /// by its own newline — so we omit a trailing newline here.
 ///

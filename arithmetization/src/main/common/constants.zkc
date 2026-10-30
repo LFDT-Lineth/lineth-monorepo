@@ -12,8 +12,26 @@ const NEGATIVE_ONE_AS_I32:u32 = 0xffffffff
 const MASK_64_ERASE_LAST_BIT:u64 = 0xfffffffffffffffe
 
 // Syscalls
-const EXIT_SYSCALL:DoubleWord = 93
-const WRITE_SYSCALL:DoubleWord = 64
+
+// STDIN is the standard file descriptor for reading input; however, for the
+// RISC-V interpreter, this is unused.
+const STDIN:FileDescriptor = 0
+// STDOUT is the standard file descriptor for writing output to the terminal.
+// In the RISC-V interpreter, this simply logs debug output.
+const STDOUT:FileDescriptor = 1
+// STDERR is the standard file descriptor for writing error logs to the
+// terminal.  In the RISC-V interpreter, this also logs debug output.
+const STDERR:FileDescriptor = 2
+// GUEST_LOG provides a file descriptor which the guest program can use to log 
+// output which is neither traced, nor part of the public output.  This is useful,
+// for example, for recoding preimage data for a public output hash.
+const GUEST_LOG:FileDescriptor = 3
+// GUEST_OUT provides a file descriptor which the guest program can use to write
+// its "public output".
+const GUEST_OUT:FileDescriptor = 4
+//
+const EXIT_SYSCALL:u8 = 93
+const WRITE_SYSCALL:u8 = 64
 
 // =======================
 // Predecoding operations
@@ -79,7 +97,6 @@ const RTYPE_REMW_WB:ComputeOp = 51
 const RTYPE_REMUW_WB:ComputeOp = 52
 const RTYPE_KECCAK:ComputeOp = 53
 const RTYPE_POSEIDON2:ComputeOp = 54
-const RTYPE_WRITE_OUTPUT:ComputeOp = 55
 
 // S-type ops
 const STYPE_STORE8:ComputeOp = 56
@@ -310,8 +327,6 @@ const FUNCT3_KECCAK:Funct3 = 0b000
 const FUNCT7_KECCAK:Funct7 = 0b0000000
 const FUNCT3_POSEIDON2:Funct3 = 0b001
 const FUNCT7_POSEIDON2:Funct7 = 0b0000000
-const FUNCT3_WRITE_OUTPUT:Funct3 = 0b010
-const FUNCT7_WRITE_OUTPUT:Funct7 = 0b0000000
 
 // Flatten opcode::funct3::funct7 for R-type encoding tags (see check_r_type.zkc).
 // u18 dispatch keys append rd_is_zero: *_FOLD when rd=x0, base name when rd≠0.
@@ -345,8 +360,6 @@ const R_REMW_INST:u17 = (((OPCODE_OP32 as u17) << 10) | ((FUNCT3_REMW as u17) <<
 const R_REMUW_INST:u17 = (((OPCODE_OP32 as u17) << 10) | ((FUNCT3_REMUW as u17) << 7) | (FUNCT7_REMUW as u17))
 const R_KECCAK_INST:u17 = (((OPCODE_CUSTOM1 as u17) << 10) | ((FUNCT3_KECCAK as u17) << 7) | (FUNCT7_KECCAK as u17))
 const R_POSEIDON2_INST:u17 = (((OPCODE_CUSTOM1 as u17) << 10) | ((FUNCT3_POSEIDON2 as u17) << 7) | (FUNCT7_POSEIDON2 as u17))
-const R_WRITE_OUTPUT_INST:u17 = (((OPCODE_CUSTOM1 as u17) << 10) | ((FUNCT3_WRITE_OUTPUT as u17) << 7) | (FUNCT7_WRITE_OUTPUT as u17))
-
 
 // Flatten R_INST::rd_is_zero for single-switch check_r_type dispatch.
 const R_ADD_FOLD:u18 = ((R_ADD_INST as u18) << 1) | (1 as u18)
@@ -554,3 +567,5 @@ const MISC_MEM_TYPE:Type = 7
 //     UNDEFINED_TYPE, // 0b1111111
 // }
 // -- PREDECODING PROOF SECTION END--
+
+

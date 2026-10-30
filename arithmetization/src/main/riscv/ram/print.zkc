@@ -1,15 +1,15 @@
 include "../memory.zkc"
 
 #[debug]
-fn print_string<ram>(addr:Address, n:DoubleWord) {
-    for i:DoubleWord = 0; i<n; i = i + 1 {
+fn print_string<ram>(addr:u64, n:u64) {
+    for i:u64 = 0; i<n; i = i + 1 {
         print_char(addr + i)
     }
     printf "\n"
 }
 
 #[debug]
-fn print_char<ram>(address:Address) {
+fn print_char<ram>(address:u64) {
     var boffset:u2
     var woffset:u62
     var trash:u24

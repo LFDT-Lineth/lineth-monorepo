@@ -36,7 +36,7 @@ export var guest_allocator: extern struct { ptr: *anyopaque, vtable: *const anyo
 /// on failure, exits with `guest_errors.exitCode(err)` — a deterministic, category-stable nonzero
 /// code per Readme.md §2.5 — after logging the failing error's name via `zkvm_log`.
 /// `read_input` is `lineth_zkvm_accel` (the memory-mapped IN region); `write_output` is the
-/// Lineth accelerator's custom-opcode implementation of the zkvm-standards io-interface. Where the
+/// Lineth accelerator's `write`-syscall implementation of the zkvm-standards io-interface. Where the
 /// input lives and how the output surfaces is the proving system's concern, not the guest's.
 ///
 /// This frozen riscv64 binary has no argv, so output format is fixed at build time (always SSZ);

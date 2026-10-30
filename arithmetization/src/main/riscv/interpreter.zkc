@@ -12,7 +12,6 @@ include "utils/multiplication.zkc"
 include "ram/read.zkc"
 include "ram/write.zkc"
 include "ram/print.zkc"
-include "../lib/io/write_output.zkc"
 
 // Execute one instruction slot and return the next program counter.
 //
@@ -405,7 +404,7 @@ fn interpreter_a<registers, ram>(index:u32, pc:Address) -> (new_pc:Address) {
         // =======
         case UTYPE_AUIPC_WB: {
             printf "UTYPE_AUIPC_WB(a) "
-            print_u_operands(rd, (imm >> 12) as Imm20)
+            print_u_operands(rd, imm)
             result = signed_sum_of_double_word(imm, pc) as DoubleWord
         }
 
@@ -540,14 +539,6 @@ fn interpreter_b<registers, ram>(index:u32, pc:Address) -> (new_pc:Address) {
             // // Early return
             // return
             fail "keccak accelerator unsupported for now"
-        }
-        case RTYPE_WRITE_OUTPUT: {
-            printf "RTYPE_WRITE_OUTPUT(c) "
-            write_output(v1 as Address, v2 as u32)
-            // Increment PC
-            new_pc = (pc + 4) as Address
-            // Early return
-            return
         }
         // =======
         // B-type
@@ -822,7 +813,7 @@ fn interpreter_c<registers, ram>(index:u32, pc:Address) -> (new_pc:Address) {
         // =======
         case UTYPE_LUI_WB: {
             printf "UTYPE_LUI_WB(c) "
-            print_u_operands(rd, (imm >> 12) as Imm20)
+            print_u_operands(rd, imm)
             result = imm
         }
 
@@ -839,12 +830,14 @@ fn interpreter_c<registers, ram>(index:u32, pc:Address) -> (new_pc:Address) {
 }
 
 fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
-    var call_num:DoubleWord = registers[17]
+    var call_num:u8 = registers[17] as u8
+    var a0:u8 = registers[10] as u8
+    var a1:DoubleWord = registers[11]
+    var a2:DoubleWord = registers[12]
     //
     switch call_num {
         case EXIT_SYSCALL: {
             printf "ECALL for exit\n"
-            var a0:DoubleWord = registers[10]
             //
             if a0 == 0 {
                 printf "EXIT CODE = 0\n"
@@ -855,13 +848,43 @@ fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
         }
         case WRITE_SYSCALL: {
             printf "ECALL for write\n"
-            print_string(registers[11], registers[12])
-            registers[10] = registers[12]
+            // Dispatch on file descriptor
+            switch a0 {
+                case GUEST_LOG: {
+                    write_guest_log(a1 as u32, a2 as u32)
+                }
+                case GUEST_OUT: {
+                    write_guest_output(a1 as u32, a2 as u32)
+                }
+                default: {
+                    print_string(a1, a2)
+                }
+            }
+            // indicate all bytes reads
+            registers[10] = a2 as u64
             new_pc = (pc + 4) as Address
         }
         default: {
             fail "unsupported system call (%d)", call_num
         }
+    }
+}
+
+// Copy `size` bytes of guest RAM starting at byte address `offset` into the public
+// `guest_output` buffer at `output_write_address`.
+fn write_guest_output<ram>(offset:u32, size:u32) {
+    for i:u32 = 0; i<size; i = i + 1 {
+        var byte_read:u8 = read_8((offset + i) as Address)
+        guest_output[i] = byte_read
+    }
+}
+
+// Copy `size` bytes of guest RAM starting at byte address `offset` into the
+// `guest_log` buffer at `output_write_address`.
+fn write_guest_log<ram>(offset:u32, size:u32) {
+    for i:u32 = 0; i<size; i = i + 1 {
+        var byte_read:u8 = read_8((offset + i) as Address)
+        guest_log[i] = byte_read
     }
 }
 

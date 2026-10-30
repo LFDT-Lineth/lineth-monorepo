@@ -18,6 +18,9 @@ memory ram[u48](address:Address) -> (word:u32)
 // is, the value of all registers at the given moment.
 memory registers[u48](id:Register) -> (value:DoubleWord)
 
-// guest program output
+// public guest program output
 pub output guest_output(address:u32) -> (byte:u8)
+
+// private guest program log
+output guest_log(address:u32) -> (byte:u8)
 
