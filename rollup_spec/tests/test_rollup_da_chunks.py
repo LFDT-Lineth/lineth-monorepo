@@ -16,6 +16,9 @@ PAYLOAD_2 = b"conflation 2"
 SEGMENT_1 = segment(PAYLOAD_1)
 SEGMENT_2 = segment(PAYLOAD_2)
 ZSTD_FRAME_1 = compress_frame(PAYLOAD_1)
+# One last raw block holding b"x", under a frame header with no content size and window descriptor 0x88 (2^27 bytes) or 0x90 (2^28).
+WINDOW_2_27_FRAME = bytes.fromhex("28b52ffd0088090000" + "78")
+WINDOW_2_28_FRAME = bytes.fromhex("28b52ffd0090090000" + "78")
 # The program's dictionary under another dictionary ID.
 OTHER_DICTIONARY = zstd.ZstdCompressionDict(
     zstd_dictionary().as_bytes()[:4]
@@ -164,6 +167,12 @@ def test_zstd_frame_without_a_dictionary_id_decodes_with_the_dictionary(compress
     calldata = calldata_chunk(length_prefixed(compress(PAYLOAD_1)))
 
     assert verify_da_chunks([calldata], [PAYLOAD_1], PARENT) == (data_rolling_hash_after(PARENT, [calldata]), 0)
+
+
+def test_zstd_frame_window_up_to_2_27_bytes_is_accepted():
+    calldata = calldata_chunk(length_prefixed(WINDOW_2_27_FRAME))
+
+    assert verify_da_chunks([calldata], [b"x"], PARENT) == (data_rolling_hash_after(PARENT, [calldata]), 0)
 
 
 # ---- rejected streams ------------------------------------------------------------------------
@@ -336,6 +345,14 @@ REJECTED_STREAMS = [
     rejected(
         "decompressed bytes differ from the canonical payload", "does not match canonical",
         lambda: [calldata_chunk(length_prefixed(compress_frame(b"conflation X")))],
+    ),
+    rejected(
+        "trailing data after a zstd frame without content size", "invalid zstd",
+        lambda: [calldata_chunk(length_prefixed(compress_frame(PAYLOAD_1, write_content_size=False) + b"trailing"))],
+    ),
+    rejected(
+        "frame window beyond 2^27 bytes", "invalid zstd",
+        lambda: [calldata_chunk(length_prefixed(WINDOW_2_28_FRAME))], payloads=(b"x",),
     ),
     rejected(
         "frame compressed against another dictionary", "invalid zstd",
