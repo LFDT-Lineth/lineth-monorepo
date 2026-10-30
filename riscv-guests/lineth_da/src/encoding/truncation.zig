@@ -1,0 +1,329 @@
+//! The truncation of full block RLPs into the blocks of the DA payload. A truncated block keeps
+//! the timestamp, the block hash, the prevRandao, the signature- and chain-id-stripped
+//! transactions and their senders; `encodeBlocks` serializes a conflation's truncated blocks into
+//! the canonical payload its zstd frame decompresses to.
+//!
+//! Full blocks are Amsterdam blocks: `[header, transactions, ommers, withdrawals]` in canonical
+//! RLP, the encoding ending with the block.
+
+const std = @import("std");
+
+const executor = @import("zesu_executor");
+const input = @import("zesu_input");
+const mpt = @import("zesu_mpt");
+const rlp_decode = @import("zesu_rlp_decode");
+const accelerators = @import("zesu_accelerators");
+
+const Allocator = std.mem.Allocator;
+
+const rlp = mpt.rlp;
+const tx_decode = executor.executor_tx_decode;
+const tx_signing = executor.executor_tx_signing;
+
+pub const Hash = [32]u8;
+pub const Address = [20]u8;
+
+pub const Error = error{
+    OutOfMemory,
+    /// The bytes are not a canonical Amsterdam block, or a transaction in it is not a canonical
+    /// transaction of its type.
+    MalformedBlock,
+    /// The sender of a transaction cannot be recovered under the chain ID.
+    SenderRecoveryFailed,
+};
+
+pub const TruncatedBlock = struct {
+    timestamp: u64,
+    /// keccak256 of the block header's RLP.
+    block_hash: Hash,
+    /// The header's parent hash.
+    parent_hash: Hash,
+    prev_randao: Hash,
+    /// The transactions without signature and chain ID.
+    transactions: []const []const u8,
+    froms: []const Address,
+};
+
+/// The truncation of `block_rlp` for the chain `chain_id`. The result is allocated from `output`;
+/// `scratch` holds what the truncation needs along the way and can be reset afterwards. A
+/// rejection leaves its allocations behind, so both allocators are arenas.
+pub fn truncateBlockRlp(output: Allocator, scratch: Allocator, block_rlp: []const u8, chain_id: u64) Error!TruncatedBlock {
+    var block = Reader{ .rest = try singleListPayload(block_rlp) };
+    const header = try block.next();
+    const transactions_payload = try block.list();
+    var ommers = Reader{ .rest = try block.list() };
+    var withdrawals = Reader{ .rest = try block.list() };
+    if (!block.atEnd()) return error.MalformedBlock;
+
+    const header_fields = try parseHeader(try header.listPayload());
+    while (!ommers.atEnd()) _ = try parseHeader(try (try ommers.next()).listPayload());
+    while (!withdrawals.atEnd()) try parseWithdrawal(try (try withdrawals.next()).listPayload());
+
+    const decoded = rlp_decode.decodeTxList(scratch, transactions_payload) catch |err| return decodeFailure(err);
+    const senders_input = tx_decode.decodeTxsFromInput(scratch, decoded) catch |err| return decodeFailure(err);
+
+    const stripped = try output.alloc([]const u8, decoded.len);
+    const froms = try output.alloc(Address, decoded.len);
+    for (decoded, senders_input, stripped, froms) |tx, tx_input, *stripped_tx, *from| {
+        // Blob and set-code transactions name a destination.
+        if (tx.to == null and (tx.tx_type == 3 or tx.tx_type == 4)) return error.MalformedBlock;
+        stripped_tx.* = try strippedTransaction(output, scratch, tx);
+        // An EIP-155 signature commits to its own chain ID, which has to be the chain's.
+        if (tx.tx_type == 0 and tx.chain_id != null and tx.chain_id.? != chain_id) return error.SenderRecoveryFailed;
+        const sender = tx_signing.recoverSender(scratch, &tx_input, chain_id, .amsterdam) catch |err| switch (err) {
+            error.OutOfMemory => return error.OutOfMemory,
+            else => return error.SenderRecoveryFailed,
+        };
+        from.* = sender orelse return error.SenderRecoveryFailed;
+    }
+
+    var block_hash: Hash = undefined;
+    accelerators.keccak256(header.encoded, &block_hash);
+    return .{
+        .timestamp = header_fields.timestamp,
+        .block_hash = block_hash,
+        .parent_hash = header_fields.parent_hash,
+        .prev_randao = header_fields.prev_randao,
+        .transactions = stripped,
+        .froms = froms,
+    };
+}
+
+/// The canonical payload of a conflation's truncated blocks, in the RLP list layout
+/// `[[timestamp, blockHash, prevRandao, [transaction…], [from…]]…]`.
+pub fn encodeBlocks(allocator: Allocator, blocks: []const TruncatedBlock) Allocator.Error![]u8 {
+    var builder: RlpBuilder = .{ .allocator = allocator };
+    errdefer builder.bytes.deinit(allocator);
+    const all_blocks = try builder.openList();
+    for (blocks) |block| {
+        const entry = try builder.openList();
+        try builder.unsigned(block.timestamp);
+        try builder.string(&block.block_hash);
+        try builder.string(&block.prev_randao);
+        const transactions = try builder.openList();
+        for (block.transactions) |transaction| try builder.string(transaction);
+        try builder.closeList(transactions);
+        const froms = try builder.openList();
+        for (block.froms) |from| try builder.string(&from);
+        try builder.closeList(froms);
+        try builder.closeList(entry);
+    }
+    try builder.closeList(all_blocks);
+    return builder.bytes.toOwnedSlice(allocator);
+}
+
+/// The transaction without its signature and chain ID: the legacy field list, or the type byte
+/// and the typed field list.
+fn strippedTransaction(output: Allocator, scratch: Allocator, tx: input.Transaction) Error![]u8 {
+    var builder: RlpBuilder = .{ .allocator = scratch };
+    if (tx.tx_type != 0) try builder.bytes.append(scratch, tx.tx_type);
+    const fields = try builder.openList();
+    try builder.unsigned(tx.nonce);
+    if (tx.tx_type <= 1) {
+        try builder.unsigned(tx.gas_price);
+    } else {
+        try builder.unsigned(tx.gas_priority_fee.?);
+        try builder.unsigned(tx.gas_price);
+    }
+    try builder.unsigned(tx.gas_limit);
+    try builder.string(if (tx.to) |*address| address else &.{});
+    try builder.unsigned(tx.value);
+    try builder.string(tx.data);
+    if (tx.tx_type != 0) {
+        const access_list = try builder.openList();
+        for (tx.access_list) |entry| {
+            const item = try builder.openList();
+            try builder.string(&entry.address);
+            const keys = try builder.openList();
+            for (entry.storage_keys) |key| try builder.string(&key);
+            try builder.closeList(keys);
+            try builder.closeList(item);
+        }
+        try builder.closeList(access_list);
+    }
+    if (tx.tx_type == 3) {
+        try builder.unsigned(tx.max_fee_per_blob_gas);
+        const hashes = try builder.openList();
+        for (tx.blob_hashes) |hash| try builder.string(&hash);
+        try builder.closeList(hashes);
+    }
+    if (tx.tx_type == 4) {
+        const authorizations = try builder.openList();
+        for (tx.authorization_list) |authorization| {
+            const item = try builder.openList();
+            try builder.unsigned(authorization.chain_id);
+            try builder.string(&authorization.address);
+            try builder.unsigned(authorization.nonce);
+            try builder.unsigned(authorization.v);
+            try builder.unsigned(authorization.r);
+            try builder.unsigned(authorization.s);
+            try builder.closeList(item);
+        }
+        try builder.closeList(authorizations);
+    }
+    try builder.closeList(fields);
+    return output.dupe(u8, builder.bytes.items);
+}
+
+const HeaderFields = struct {
+    parent_hash: Hash,
+    timestamp: u64,
+    prev_randao: Hash,
+};
+
+/// The fields of an Amsterdam header's RLP list, all of which have to be present and canonical.
+fn parseHeader(payload: []const u8) Error!HeaderFields {
+    var fields = Reader{ .rest = payload };
+    const parent_hash = (try fields.fixed(32)).*;
+    _ = try fields.fixed(32); // ommers hash
+    _ = try fields.fixed(20); // coinbase
+    _ = try fields.fixed(32); // state root
+    _ = try fields.fixed(32); // transactions root
+    _ = try fields.fixed(32); // receipts root
+    _ = try fields.fixed(256); // logs bloom
+    _ = try fields.integer(); // difficulty
+    _ = try fields.integer(); // number
+    _ = try fields.integer(); // gas limit
+    _ = try fields.integer(); // gas used
+    const timestamp = try fields.unsigned(u64);
+    _ = try fields.string(); // extra data
+    const prev_randao = (try fields.fixed(32)).*;
+    _ = try fields.fixed(8); // nonce
+    _ = try fields.integer(); // base fee per gas
+    _ = try fields.fixed(32); // withdrawals root
+    _ = try fields.unsigned(u64); // blob gas used
+    _ = try fields.unsigned(u64); // excess blob gas
+    _ = try fields.fixed(32); // parent beacon block root
+    _ = try fields.fixed(32); // requests hash
+    _ = try fields.fixed(32); // block access list hash
+    _ = try fields.unsigned(u64); // slot number
+    if (!fields.atEnd()) return error.MalformedBlock;
+    return .{ .parent_hash = parent_hash, .timestamp = timestamp, .prev_randao = prev_randao };
+}
+
+fn parseWithdrawal(payload: []const u8) Error!void {
+    var fields = Reader{ .rest = payload };
+    _ = try fields.unsigned(u64); // index
+    _ = try fields.unsigned(u64); // validator index
+    _ = try fields.fixed(20); // address
+    _ = try fields.unsigned(u256); // amount
+    if (!fields.atEnd()) return error.MalformedBlock;
+}
+
+/// The payload of `encoded`, which is one list and nothing else.
+fn singleListPayload(encoded: []const u8) Error![]const u8 {
+    var reader = Reader{ .rest = encoded };
+    const payload = try (try reader.next()).listPayload();
+    if (!reader.atEnd()) return error.MalformedBlock;
+    return payload;
+}
+
+fn decodeFailure(err: anyerror) Error {
+    return if (err == error.OutOfMemory) error.OutOfMemory else error.MalformedBlock;
+}
+
+/// Reads consecutive canonical RLP items.
+const Reader = struct {
+    rest: []const u8,
+
+    const Item = struct {
+        value: rlp.RlpItem,
+        /// The item's full encoding, header included.
+        encoded: []const u8,
+
+        fn listPayload(item: Item) Error![]const u8 {
+            return switch (item.value) {
+                .list => |payload| payload,
+                .bytes => error.MalformedBlock,
+            };
+        }
+    };
+
+    fn atEnd(self: Reader) bool {
+        return self.rest.len == 0;
+    }
+
+    fn next(self: *Reader) Error!Item {
+        const decoded = rlp.decodeItemCanonical(self.rest) catch return error.MalformedBlock;
+        const encoded = self.rest[0..decoded.consumed];
+        self.rest = self.rest[decoded.consumed..];
+        return .{ .value = decoded.item, .encoded = encoded };
+    }
+
+    fn list(self: *Reader) Error![]const u8 {
+        return (try self.next()).listPayload();
+    }
+
+    fn string(self: *Reader) Error![]const u8 {
+        return switch ((try self.next()).value) {
+            .bytes => |bytes| bytes,
+            .list => error.MalformedBlock,
+        };
+    }
+
+    fn fixed(self: *Reader, comptime len: usize) Error!*const [len]u8 {
+        const bytes = try self.string();
+        if (bytes.len != len) return error.MalformedBlock;
+        return bytes[0..len];
+    }
+
+    /// A non-negative integer of any size: big-endian without leading zero bytes.
+    fn integer(self: *Reader) Error![]const u8 {
+        const bytes = try self.string();
+        if (bytes.len > 0 and bytes[0] == 0) return error.MalformedBlock;
+        return bytes;
+    }
+
+    fn unsigned(self: *Reader, comptime T: type) Error!T {
+        const bytes = try self.integer();
+        if (bytes.len > @sizeOf(T)) return error.MalformedBlock;
+        var value: T = 0;
+        for (bytes) |byte| value = value << 8 | byte;
+        return value;
+    }
+};
+
+/// Writes RLP into a byte buffer; a list's length prefix is inserted when the list is closed.
+const RlpBuilder = struct {
+    allocator: Allocator,
+    bytes: std.ArrayList(u8) = .empty,
+
+    /// The position a list's payload starts at, for `closeList`.
+    const Marker = usize;
+
+    fn string(self: *RlpBuilder, data: []const u8) Allocator.Error!void {
+        if (data.len == 1 and data[0] < 0x80) return self.bytes.append(self.allocator, data[0]);
+        var prefix: [9]u8 = undefined;
+        try self.bytes.appendSlice(self.allocator, lengthPrefix(0x80, data.len, &prefix));
+        try self.bytes.appendSlice(self.allocator, data);
+    }
+
+    fn unsigned(self: *RlpBuilder, value: u256) Allocator.Error!void {
+        var big_endian: [32]u8 = undefined;
+        std.mem.writeInt(u256, &big_endian, value, .big);
+        try self.string(big_endian[@clz(value) / 8 ..]);
+    }
+
+    fn openList(self: *RlpBuilder) Allocator.Error!Marker {
+        return self.bytes.items.len;
+    }
+
+    fn closeList(self: *RlpBuilder, start: Marker) Allocator.Error!void {
+        var prefix: [9]u8 = undefined;
+        try self.bytes.insertSlice(self.allocator, start, lengthPrefix(0xc0, self.bytes.items.len - start, &prefix));
+    }
+
+    /// The prefix of a string (`base` 0x80) or list (`base` 0xc0) of `len` payload bytes.
+    fn lengthPrefix(base: u8, len: usize, out: *[9]u8) []const u8 {
+        if (len <= 55) {
+            out[0] = base + @as(u8, @intCast(len));
+            return out[0..1];
+        }
+        var big_endian: [8]u8 = undefined;
+        std.mem.writeInt(u64, &big_endian, len, .big);
+        const len_len = 8 - @clz(@as(u64, len)) / 8;
+        out[0] = base + 55 + @as(u8, @intCast(len_len));
+        @memcpy(out[1..][0..len_len], big_endian[8 - len_len ..]);
+        return out[0 .. 1 + len_len];
+    }
+};

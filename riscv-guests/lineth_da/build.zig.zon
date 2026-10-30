@@ -7,8 +7,18 @@
         // Shared build helpers (pinned toolchain, the common freestanding rv64im guest target, the
         // standalone-ELF link).
         .build_common = .{ .path = "../build_common" },
-        // zkVM io-interface (read_input/write_output) for the smoke guest.
+        // zkVM io-interface (read_input/write_output) for the smoke guests, and, opt-in through
+        // -Dzkvm-provide, the zkvm_* crypto providers the package's sha256, keccak256 and KZG
+        // point evaluation resolve to.
         .lineth_accelerators = .{ .path = "../lineth_accelerators" },
+        // The Constantine archive behind the host build of the crypto providers (fetched on demand).
+        .guest_crypto = .{ .path = "../guest_crypto_ctt" },
+        // Block and transaction decoding, sender recovery and the crypto accelerator interface of
+        // the truncation and the blob verification. The pin of l2_execution.
+        .zesu = .{
+            .url = "https://github.com/Consensys-Incorporated/zesu/archive/2835883c929407ff7252f7f70924436833d767c7.tar.gz",
+            .hash = "zesu-0.1.0-UtqpADrkRgCDa2Q8oghvNCEGFguQic--Rv8uGWFjwqp2",
+        },
         // facebook/zstd v1.5.6, the unmodified upstream release tarball (sha256
         // 8c29e06cf42aacc1eafc4077ae2ec6c6fcb96a626157e0593d5e82a34fd403c1). Source-only package:
         // build.zig selects the decoder sources for guest and host builds and the compressor
@@ -17,13 +27,20 @@
             .url = "https://github.com/facebook/zstd/releases/download/v1.5.6/zstd-1.5.6.tar.gz",
             .hash = "N-V-__8AAKbffQDMlwdeMxqHyyAcA6AYoVIjJdaqhEYZpGFG",
         },
+        // ethereum/c-kzg-4844 v2.1.5: the official EIP-4844 reference vectors (tests/ directory)
+        // the blob verification tests read. Tests only.
+        .c_kzg_4844 = .{
+            .url = "https://github.com/ethereum/c-kzg-4844/archive/refs/tags/v2.1.5.tar.gz",
+            .hash = "N-V-__8AALYXygU1iU8DU-qtzr7I31mr2vWOmfRVDNFAlTWj",
+            .lazy = true,
+        },
     },
     .paths = .{
         "build.zig",
         "build.zig.zon",
         "src", // production code (compiled into the rv64im object/ELF) and the freestanding C headers
         "dictionaries", // zstd dictionaries embedded by the guests
-        "test", // host-only: unit tests, test support and the smoke guest
+        "test", // host-only: unit tests, test support and the smoke guests
         "tools", // host-only: native programs
     },
 }

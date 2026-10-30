@@ -11,7 +11,7 @@ riscv-guests/
   build_common/        Shared build helpers (+ the shared standalone-ELF link: start.s, linker_script.ld)
   lineth_accelerators/ Shared library package: Lineth accelerator wrappers + C headers, and the opt-in zkvm_* crypto providers
   guest_common/        Shared library package: generic SSZ primitives (`guest_common` module) and the cross-guest wire contracts with their SSZ codecs (`core_serde` module), with its own unit tests
-  lineth_da/           Shared library package: data-availability building blocks (`lineth_da` module) — zstd dictionary decompression over upstream libzstd — with its own unit tests and a freestanding smoke guest
+  lineth_da/           Shared library package: data-availability building blocks (`lineth_da` module) — zstd dictionary decompression over upstream libzstd, the truncation of blocks, the 254-bit blob packing, the dataRollingHash and EIP-4844 blob verification — with its own unit tests and freestanding smoke guests
   l2_execution/        Vanilla EVM execution guest: build.zig + build.zig.zon + Makefile + src/ + test/ + tools/
   rollup/              Rollup guest stub (echo/sentinel, no proof verification/folding): build.zig + build.zig.zon + Makefile + src/ + test/ + tools/
 ```
