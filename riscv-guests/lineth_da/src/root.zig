@@ -2,6 +2,7 @@
 
 pub const zstd = @import("zstd.zig");
 pub const encoding = @import("encoding.zig");
+pub const decompress = @import("decompress.zig");
 
 /// The zstd dictionary the data-availability frames are compressed against.
 pub const dictionary_v2025_04_21 = @embedFile("zstd_dictionary_v2025_04_21");

@@ -2,7 +2,7 @@
 
 Data-availability building blocks for the RISC-V guests, packaged as the `lineth_da` Zig module. `src/root.zig` is the package module, one namespace per source file; guests consume the package as a path dependency.
 
-The `zstd` namespace decompresses frames, the `encoding` namespace holds the byte formats of the DA stream. A guest that uses `encoding` links the `zkvm_*` crypto providers of `lineth_accelerators` (`-Dzkvm-provide=true`), which supply sha256, keccak256, secp256k1 recovery and the KZG point evaluation.
+The `zstd` namespace decompresses frames, the `encoding` namespace holds the byte formats of the DA stream, the `decompress` namespace verifies a stream against the chunks that carry it. A guest that uses `encoding` or `decompress` links the `zkvm_*` crypto providers of `lineth_accelerators` (`-Dzkvm-provide=true`), which supply sha256, keccak256, secp256k1 recovery and the KZG point evaluation.
 
 ## `zstd`
 
@@ -49,6 +49,29 @@ const payload = try encoding.truncation.encodeBlocks(allocator, &.{block}); // t
 **`rolling_hash`** is the dataRollingHash fold, `keccak256(parent ‖ chunkHash)`, with the opening of the boundary preimage for a range that starts inside a chunk.
 
 **`blob_kzg`** verifies an EIP-4844 blob proof without recomputing the commitment: the versioned hash of the commitment (`versionedHash`), the Fiat-Shamir challenge `z` (`computeChallenge`), the blob polynomial's value `y` at `z` by the barycentric formula over the bit-reversed 4096th roots of unity (`evaluate`) and the point-evaluation check of (commitment, `z`, `y`, proof) (`verify`). The field arithmetic is the `bls_scalar` module (`src/bls_scalar.zig`), built for speed in every build mode but a debug one.
+
+## `decompress`
+
+`decompress.verifyDaChunks` verifies the DA stream of a rollup proof against the chunks that carry it. The stream is the segments `[4-byte big-endian nonzero length][zstd frame]`, one per conflation.
+
+```zig
+const verified = try lineth_da.decompress.verifyDaChunks(
+    allocator, decoder, chunks, canonical_payloads,
+    parent_data_rolling_hash, parent_data_tail_take_bytes, boundary_prev_data_rolling_hash,
+);
+defer allocator.free(verified.blobs);
+for (verified.blobs) |opening| {
+    if (!lineth_da.encoding.blob_kzg.verify(opening.blob, opening.commitment, opening.proof)) return error.BlobKzgFailed;
+}
+```
+
+- **Chunk binding.** A `Chunk` is a blob (131072 physical bytes, a 48-byte commitment and a 48-byte proof, no calldata) or a calldata submission (no blob, commitment or proof). A blob is the canonical packing of its payload and the versioned hash of its commitment is the `chunk_hash`; calldata hashes to the `chunk_hash` with keccak256.
+- **Layout.** The chunk payloads concatenate into the stream; a positive `parent_data_tail_take_bytes` makes the first blob contribute only the last that many bytes of its payload. A blob followed by another blob holds a full payload (130047 bytes); a positive tail count needs a first blob with a longer payload; every chunk owns at least one byte inside the parsed segments; every calldata chunk ends at a segment boundary. `final_data_tail_discard_bytes` is the number of stream bytes after the last segment.
+- **Segments.** One segment per entry of `canonical_payloads`: a nonzero length that stays inside the stream, then one complete frame that decompresses with the decoder's dictionary to exactly that payload.
+- **dataRollingHash.** `end_data_rolling_hash` folds the chunk hashes onto `parent_data_rolling_hash`; a positive tail count starts the range inside the first chunk, which the parent hash includes, so `boundary_prev_data_rolling_hash` has to open it.
+- **KZG.** Binding a blob to its commitment is the caller's `blob_kzg.verify` over `Verified.blobs`, the blob chunks in order; the functions are pure and the verification is a separate call.
+- **Categorized errors.** `decompress.Error` names the rejection. Chunk binding: `NoChunks`, `MalformedChunk`, `NonCanonicalBlob`, `ChunkHashMismatch`, `BoundaryPreimageMismatch`. Layout: `PartialBlobBeforeBlob`, `InvalidTailTake`, `MissingSegmentLength`, `InvalidSegmentLength`, `ChunkOwnsNoBytes`, `CalldataEndsMidSegment`. Decompression: `InvalidFrame`, `PayloadMismatch`. And `OutOfMemory`.
+- **Allocator.** The working buffers (the joined stream, one unpacked blob, the decompressed segment) are released before `verifyDaChunks` returns; the caller frees `Verified.blobs`.
 
 ## Dictionary
 
