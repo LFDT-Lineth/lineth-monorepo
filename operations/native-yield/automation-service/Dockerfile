@@ -52,6 +52,7 @@ RUN mkdir -p /usr/src/app/ipfs-cache && \
 USER node
 
 COPY --from=builder /usr/src/app/prod/operations/native-yield/automation-service ./operations/native-yield/automation-service
+COPY LICENSE-APACHE LICENSE-MIT /licenses/
 
 CMD [ "node", "./operations/native-yield/automation-service/dist/run.js" ]
 
@@ -68,4 +69,5 @@ LABEL org.label-schema.build-date=$BUILD_DATE \
 	org.label-schema.vcs-url="https://github.com/LFDT-Lineth/lineth-monorepo" \
 	org.label-schema.vendor="ConsenSys" \
 	org.label-schema.version=$VERSION \
-	org.label-schema.schema-version="1.0"
+	org.label-schema.schema-version="1.0" \
+	org.opencontainers.image.licenses="MIT OR Apache-2.0"

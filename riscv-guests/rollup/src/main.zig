@@ -6,11 +6,11 @@ const rollup = package.rollup;
 const rollup_ssz = package.rollup_ssz;
 const guest_errors = package.guest_errors;
 
-// Heap starts at the address defined by the linker script (canonical Lineth layout: `_heap_start`
-// = 0x48800000, grows up). The linker script does not actually cap the heap at this size; it is a
-// reasonable upper bound for this guest's small, bounded inputs.
+// Heap bounds come from the linker script (canonical Lineth layout: `_heap_start` = 0x48800000,
+// grows up to `_heap_end`). build_common/Makefile sets the size via `HEAP_LENGTH` and asserts that
+// the heap ends below the 4 GiB guest address space.
 extern var _heap_start: u8;
-const GUEST_HEAP_SIZE: usize = 256 * 1024 * 1024;
+extern var _heap_end: u8;
 
 // This is the rollup zkVM guest stub: it decodes `RollupProofPrivateInput`, maps it to
 // `RollupOutput` entirely by echo/sentinel (`rollup.run`), and emits the SSZ output. No proof
@@ -23,7 +23,7 @@ const GUEST_HEAP_SIZE: usize = 256 * 1024 * 1024;
 fn guestMain() callconv(.c) noreturn {
     const zkvm_io = @import("lineth_accelerators");
 
-    const heap = @as([*]u8, @ptrCast(&_heap_start))[0..GUEST_HEAP_SIZE];
+    const heap = @as([*]u8, @ptrCast(&_heap_start))[0 .. @intFromPtr(&_heap_end) - @intFromPtr(&_heap_start)];
     var fba = std.heap.FixedBufferAllocator.init(heap);
     const allocator = fba.allocator();
 

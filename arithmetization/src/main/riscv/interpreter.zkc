@@ -197,10 +197,10 @@ include "../lib/io/write_output.zkc"
 fn interpreter<registers, ram>(base:Address, pc:Address) -> ! {
     // -- NO PREDECODING PROOF SECTION END--
     var new_pc:Address
-    var index:u32
+    var index:u30
     var rem:u2
     // determine index of predecoded program
-    index::rem = (pc - base) as u34
+    index::rem = (pc - base) as u32
     // -- Interpreting the riscV proved-transpiled program -- START
     // Proof of the transpilation step:
     // Note that execution must stay inside the span justified by predecoding, at 4-byte
@@ -213,10 +213,10 @@ fn interpreter<registers, ram>(base:Address, pc:Address) -> ! {
 
     printf "\n----------------------------------------------------------------- PC=%d\n", pc
     // Execute current instruction
-    new_pc = interpreter_a(index, pc)
+    new_pc = interpreter_a(index as u32, pc)
 
     // Check for termination
-    if new_pc != MAX_UINT_64 {
+    if new_pc != MAX_UINT_32 {
         // Execute next instruction
 
         // -- Interpreting the riscV proved-transpiled program -- START
@@ -256,17 +256,17 @@ fn interpreter_a<registers, ram>(index:u32, pc:Address) -> (new_pc:Address) {
         case READ8_ZEXT_WB: {
             printf "READ8_ZEXT_WB(a) "
             print_i_memory_operands(rd, rs1, imm)
-            result = read_8(rs1_plus_imm) as DoubleWord
+            result = read_8(rs1_plus_imm as Address) as DoubleWord
         }
         case READ32_SGN_WB: {
             printf "READ32_SGN_WB(a) "
             print_i_memory_operands(rd, rs1, imm)
-            result = sgn_extension_u32_u64(read_32(rs1_plus_imm))
+            result = sgn_extension_u32_u64(read_32(rs1_plus_imm as Address))
         }
         case READ64_WB: {
             printf "READ64_WB(a) "
             print_i_memory_operands(rd, rs1, imm)
-            result = read_64(rs1_plus_imm) as DoubleWord
+            result = read_64(rs1_plus_imm as Address) as DoubleWord
         }
         // ================
         // I-type
@@ -345,7 +345,7 @@ fn interpreter_a<registers, ram>(index:u32, pc:Address) -> (new_pc:Address) {
         case STYPE_STORE64: {
             printf "STYPE_STORE64(a) "
             print_s_operands(rs2, rs1, imm)
-            write_64(rs1_plus_imm, v2)
+            write_64(rs1_plus_imm as Address, v2)
             // Increment PC
             new_pc = (pc + 4) as Address
             // Early return
@@ -354,7 +354,7 @@ fn interpreter_a<registers, ram>(index:u32, pc:Address) -> (new_pc:Address) {
         case STYPE_STORE8: {
             printf "STYPE_STORE8(a) "
             print_s_operands(rs2, rs1, imm)
-            write_8(rs1_plus_imm, (v2 & (0xFF as u64)) as u8)
+            write_8(rs1_plus_imm as Address, (v2 & (0xFF as u64)) as u8)
             // Increment PC
             new_pc = (pc + 4) as Address
             // Early return
@@ -368,7 +368,7 @@ fn interpreter_a<registers, ram>(index:u32, pc:Address) -> (new_pc:Address) {
             printf "BRANCH_BEQ(a) "
             print_b_operands(rs1, rs2, imm)
             if v1 == v2 {
-                new_pc = signed_sum_of_double_word(pc, imm)
+                new_pc = signed_sum_of_double_word(pc as DoubleWord, imm) as Address
             } else {
                 // Fall thru
                 new_pc = (pc + 4) as Address
@@ -380,7 +380,7 @@ fn interpreter_a<registers, ram>(index:u32, pc:Address) -> (new_pc:Address) {
             printf "BRANCH_BNE(a) "
             print_b_operands(rs1, rs2, imm)
             if v1 != v2 {
-                new_pc = signed_sum_of_double_word(pc, imm)
+                new_pc = signed_sum_of_double_word(pc as DoubleWord, imm) as Address
             } else {
                 // Fall thru
                 new_pc = (pc + 4) as Address
@@ -392,7 +392,7 @@ fn interpreter_a<registers, ram>(index:u32, pc:Address) -> (new_pc:Address) {
             printf "BRANCH_BLTU(a) "
             print_b_operands(rs1, rs2, imm)
             if v1<v2 {
-                new_pc = signed_sum_of_double_word(pc, imm)
+                new_pc = signed_sum_of_double_word(pc as DoubleWord, imm) as Address
             } else {
                 // Fall thru
                 new_pc = (pc + 4) as Address
@@ -406,7 +406,7 @@ fn interpreter_a<registers, ram>(index:u32, pc:Address) -> (new_pc:Address) {
         case UTYPE_AUIPC_WB: {
             printf "UTYPE_AUIPC_WB(a) "
             print_u_operands(rd, (imm >> 12) as Imm20)
-            result = signed_sum_of_double_word(imm, pc) as DoubleWord
+            result = signed_sum_of_double_word(imm, pc as DoubleWord)
         }
 
         default: {
@@ -444,22 +444,22 @@ fn interpreter_b<registers, ram>(index:u32, pc:Address) -> (new_pc:Address) {
         case READ8_SGN_WB: {
             printf "READ8_SGN_WB(b) "
             print_i_memory_operands(rd, rs1, imm)
-            result = sgn_extension_u8_u64(read_8(rs1_plus_imm))
+            result = sgn_extension_u8_u64(read_8(rs1_plus_imm as Address))
         }
         case READ16_SGN_WB: {
             printf "READ16_SGN_WB(b) "
             print_i_memory_operands(rd, rs1, imm)
-            result = sgn_extension_u16_u64(read_16(rs1_plus_imm))
+            result = sgn_extension_u16_u64(read_16(rs1_plus_imm as Address))
         }
         case READ16_ZEXT_WB: {
             printf "READ16_ZEXT_WB(b) "
             print_i_memory_operands(rd, rs1, imm)
-            result = read_16(rs1_plus_imm) as DoubleWord
+            result = read_16(rs1_plus_imm as Address) as DoubleWord
         }
         case READ32_ZEXT_WB: {
             printf "READ32_ZEXT_WB(b) "
             print_i_memory_operands(rd, rs1, imm)
-            result = read_32(rs1_plus_imm) as DoubleWord
+            result = read_32(rs1_plus_imm as Address) as DoubleWord
         }
         case OP_SLTI_WB: {
             printf "OP_SLTI_WB(b) "
@@ -509,14 +509,14 @@ fn interpreter_b<registers, ram>(index:u32, pc:Address) -> (new_pc:Address) {
         case ITYPE_JALR: {
             printf "ITYPE_JALR(b) "
             print_i_memory_operands(rd, rs1, imm)
-            new_pc = rs1_plus_imm & MASK_64_ERASE_LAST_BIT
+            new_pc = (rs1_plus_imm as Address) & 0xfffffffe
             // Early return
             return
         }
         case ITYPE_JALR_WB: {
             printf "ITYPE_JALR_WB(b) "
             print_i_memory_operands(rd, rs1, imm)
-            new_pc = rs1_plus_imm & MASK_64_ERASE_LAST_BIT
+            new_pc = (rs1_plus_imm as Address) & 0xfffffffe
             // Write back
             registers[rd] = (pc + 4) as DoubleWord
             // Early Return
@@ -556,7 +556,7 @@ fn interpreter_b<registers, ram>(index:u32, pc:Address) -> (new_pc:Address) {
             printf "BRANCH_BLT(b) "
             print_b_operands(rs1, rs2, imm)
             if signed_LT(v1, v2) == 1 {
-                new_pc = signed_sum_of_double_word(pc, imm)
+                new_pc = signed_sum_of_double_word(pc as DoubleWord, imm) as Address
             } else {
                 // Fall thru
                 new_pc = (pc + 4) as Address
@@ -568,7 +568,7 @@ fn interpreter_b<registers, ram>(index:u32, pc:Address) -> (new_pc:Address) {
             printf "BRANCH_BGE(b) "
             print_b_operands(rs1, rs2, imm)
             if signed_LT(v1, v2) == 0 {
-                new_pc = signed_sum_of_double_word(pc, imm)
+                new_pc = signed_sum_of_double_word(pc as DoubleWord, imm) as Address
             } else {
                 // Fall thru
                 new_pc = (pc + 4) as Address
@@ -580,7 +580,7 @@ fn interpreter_b<registers, ram>(index:u32, pc:Address) -> (new_pc:Address) {
             printf "BRANCH_BGEU(b) "
             print_b_operands(rs1, rs2, imm)
             if v1 >= v2 {
-                new_pc = signed_sum_of_double_word(pc, imm)
+                new_pc = signed_sum_of_double_word(pc as DoubleWord, imm) as Address
             } else {
                 // Fall thru
                 new_pc = (pc + 4) as Address
@@ -804,16 +804,16 @@ fn interpreter_c<registers, ram>(index:u32, pc:Address) -> (new_pc:Address) {
         case JTYPE_JAL: {
             printf "JTYPE_JAL(c) "
             print_j_operands(rd, imm)
-            new_pc = signed_sum_of_double_word(pc, imm) as Address
+            new_pc = signed_sum_of_double_word(pc as DoubleWord, imm) as Address
             //
             return
         }
         case JTYPE_JAL_WB: {
             printf "JTYPE_JAL_WB(c) "
             print_j_operands(rd, imm)
-            new_pc = signed_sum_of_double_word(pc, imm) as Address
+            new_pc = signed_sum_of_double_word(pc as DoubleWord, imm) as Address
             // Write back
-            registers[rd] = signed_sum_of_double_word(pc, 4)
+            registers[rd] = signed_sum_of_double_word(pc as DoubleWord, 4)
             //
             return
         }
@@ -851,11 +851,11 @@ fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
             } else {
                 fail "EXIT CODE = %d\n", a0
             }
-            new_pc = MAX_UINT_64
+            new_pc = MAX_UINT_32
         }
         case WRITE_SYSCALL: {
             printf "ECALL for write\n"
-            print_string(registers[11], registers[12])
+            print_string(registers[11] as Address, registers[12])
             registers[10] = registers[12]
             new_pc = (pc + 4) as Address
         }

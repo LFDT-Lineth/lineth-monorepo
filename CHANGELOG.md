@@ -45,6 +45,7 @@
 - *(coordinator)* RISC-V rollup proof coordinator — chunk assembly + proof submission (#3967)
 - *(coordinator)* Added BlobSubmitterV2 interface and implementation (#3673)
 - *(coordinator)* Generic AggregationsDaoG and AggregationV2 for RISC-V aggregation proofs (#4174)
+- *(misc)* Adding blob commitment and a proof to Rollup input (#4329)
 
 ### 🐛 Bug Fixes
 
@@ -210,3 +211,4 @@
 - *(misc)* Update copyright holder to Consensys Incorporated (#4244)
 - *(deps)* Bump the go_modules group across 1 directory with 2 updates (#4258)
 - *(deps)* Refresh dependencies (#4323)
+- *(misc)* Ship license files and metadata in all published artifacts (#4336)
