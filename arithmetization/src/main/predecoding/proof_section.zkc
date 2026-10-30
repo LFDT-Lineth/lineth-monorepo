@@ -9,7 +9,7 @@ include "../riscv/utils/sign_extend.zkc"
 
 // from common/inputs.zkc
 // Whether blob i holds executable (SHF_EXECINSTR) section bytes (1) or data (0).
-pub input blobs_executable(i:u64) -> (executable:u1)
+pub input blobs_executable(i:u32) -> (executable:u1)
 
 // from riscv/utils/sign_extend.zkc
 //#[inline]

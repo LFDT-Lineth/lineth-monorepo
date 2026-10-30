@@ -86,6 +86,9 @@ func fn_main() {
 	{
 		start := r3
 		r0 = mem_instruction_base[start+0]
+		if r0 >= 1<<32 {
+			fail("bit overflow (value exceeds u32)")
+		}
 	}
 	// [0.2] jmp 0x1
 	goto L_1_0
@@ -116,12 +119,9 @@ L_4_0:
 	goto L_5_0
 L_5_0:
 	// [5.0] add pc = pc+0x4
-	{
-		lo, hi := bits.Add64(uint64(4), r0, 0)
-		if hi != 0 {
-			fail("bit overflow (value exceeds u64)")
-		}
-		r0 = lo
+	r0 = uint64(4) + r0
+	if r0 >= 1<<32 {
+		fail("bit overflow (value exceeds u32)")
 	}
 	// [5.1] jmp 0x6
 	goto L_6_0
@@ -165,19 +165,20 @@ L_1_0:
 	{
 		start := r13
 		r12 = mem_instruction_base[start+0]
+		if r12 >= 1<<32 {
+			fail("bit overflow (value exceeds u32)")
+		}
 	}
 	// [1.2] sub $11 = pc-$12
 	{
-		alo, ahi := r12, uint64(0)
-		lo, b := bits.Sub64(r0, alo, 0)
-		hi, b := bits.Sub64(uint64(0), ahi, b)
-		if b != 0 {
-			hi &= 1<<1 - 1
+		v, borrow := bits.Sub64(r0, r12, 0)
+		if borrow != 0 {
+			v &= 1<<33 - 1
 		}
-		if hi != 0 {
-			fail("bit overflow (value exceeds u64)")
+		r11 = v
+		if r11 >= 1<<32 {
+			fail("bit overflow (value exceeds u32)")
 		}
-		r11 = lo
 	}
 	// [1.3] $10, $14 = $11 /% 0x4
 	r10 = r11 / uint64(4)
@@ -374,10 +375,9 @@ L_29_0:
 
 // fn_read_instruction_from_blobs corresponds to ZkC function "read_instruction_from_blobs".
 func fn_read_instruction_from_blobs(r0 uint64) uint64 {
-	var r1 uint64 // instruction
-	var r2 uint64 // blobs_count
-	var r3 uint64 // entry_point
-	_ = r3
+	var r1 uint64  // instruction
+	var r2 uint64  // blobs_count
+	var r3 uint64  // entry_point
 	var r4 uint64  // internal_offset
 	var r5 uint64  // i
 	var r6 uint64  // blob_offset
@@ -392,7 +392,13 @@ func fn_read_instruction_from_blobs(r0 uint64) uint64 {
 	{
 		start := (r10) * 2
 		r3 = mem_entry_point_and_blobs_count[start+0]
+		if r3 >= 1<<32 {
+			fail("bit overflow (value exceeds u32)")
+		}
 		r2 = mem_entry_point_and_blobs_count[start+1]
+		if r2 >= 1<<32 {
+			fail("bit overflow (value exceeds u32)")
+		}
 	}
 	// [0.2] jmp 0x1
 	goto L_1_0
@@ -426,7 +432,13 @@ L_5_0:
 	{
 		start := (r5) * 2
 		r6 = mem_blobs_offset_and_size[start+0]
+		if r6 >= 1<<32 {
+			fail("bit overflow (value exceeds u32)")
+		}
 		r7 = mem_blobs_offset_and_size[start+1]
+		if r7 >= 1<<32 {
+			fail("bit overflow (value exceeds u32)")
+		}
 	}
 	// [5.1] jmp 0x6
 	goto L_6_0
@@ -453,12 +465,9 @@ L_7_2:
 	goto L_13_0
 L_8_0:
 	// [8.0] add blob_end = blob_offset+blob_size
-	{
-		lo, hi := bits.Add64(r6, r7, 0)
-		if hi != 0 {
-			fail("bit overflow (value exceeds u64)")
-		}
-		r9 = lo
+	r9 = r6 + r7
+	if r9 >= 1<<32 {
+		fail("bit overflow (value exceeds u32)")
 	}
 	// [8.1] jmp 0x9
 	goto L_9_0
@@ -485,16 +494,14 @@ L_10_2:
 L_11_0:
 	// [11.0] sub $11 = pc-blob_offset
 	{
-		alo, ahi := r6, uint64(0)
-		lo, b := bits.Sub64(r0, alo, 0)
-		hi, b := bits.Sub64(uint64(0), ahi, b)
-		if b != 0 {
-			hi &= 1<<1 - 1
+		v, borrow := bits.Sub64(r0, r6, 0)
+		if borrow != 0 {
+			v &= 1<<33 - 1
 		}
-		if hi != 0 {
-			fail("bit overflow (value exceeds u64)")
+		r11 = v
+		if r11 >= 1<<32 {
+			fail("bit overflow (value exceeds u32)")
 		}
-		r11 = lo
 	}
 	// [11.1] call instruction = load_instruction_word_padded(internal_offset,$11,blob_size)
 	r1 = fn_load_instruction_word_padded(r4, r11, r7)
@@ -505,23 +512,17 @@ L_12_0:
 	return r1
 L_13_0:
 	// [13.0] add internal_offset = internal_offset+blob_size
-	{
-		lo, hi := bits.Add64(r4, r7, 0)
-		if hi != 0 {
-			fail("bit overflow (value exceeds u64)")
-		}
-		r4 = lo
+	r4 = r4 + r7
+	if r4 >= 1<<32 {
+		fail("bit overflow (value exceeds u32)")
 	}
 	// [13.1] jmp 0xe
 	goto L_14_0
 L_14_0:
 	// [14.0] add i = i+0x1
-	{
-		lo, hi := bits.Add64(uint64(1), r5, 0)
-		if hi != 0 {
-			fail("bit overflow (value exceeds u64)")
-		}
-		r5 = lo
+	r5 = uint64(1) + r5
+	if r5 >= 1<<32 {
+		fail("bit overflow (value exceeds u32)")
 	}
 	// [14.1] jmp 0xf
 	goto L_15_0
@@ -586,12 +587,9 @@ L_4_2:
 	goto L_6_0
 L_5_0:
 	// [5.0] add $8 = data_offset+in_blob
-	{
-		lo, hi := bits.Add64(r0, r1, 0)
-		if hi != 0 {
-			fail("bit overflow (value exceeds u64)")
-		}
-		r8 = lo
+	r8 = r0 + r1
+	if r8 >= 1<<32 {
+		fail("bit overflow (value exceeds u32)")
 	}
 	// [5.1] read b0 = blobs_data[$8]
 	{
@@ -605,12 +603,9 @@ L_5_0:
 	goto L_6_0
 L_6_0:
 	// [6.0] add $9 = in_blob+0x1
-	{
-		lo, hi := bits.Add64(uint64(1), r1, 0)
-		if hi != 0 {
-			fail("bit overflow (value exceeds u64)")
-		}
-		r9 = lo
+	r9 = uint64(1) + r1
+	if r9 >= 1<<32 {
+		fail("bit overflow (value exceeds u32)")
 	}
 	// [6.1] skip_if blob_size <= $9 1
 	if !(r2 > r9) {
@@ -623,17 +618,9 @@ L_6_3:
 	goto L_8_0
 L_7_0:
 	// [7.0] add $10 = data_offset+in_blob+0x1
-	{
-		lo, hi := uint64(1), uint64(0)
-		var c uint64
-		lo, c = bits.Add64(lo, r0, 0)
-		hi += c
-		lo, c = bits.Add64(lo, r1, 0)
-		hi += c
-		if hi != 0 {
-			fail("bit overflow (value exceeds u64)")
-		}
-		r10 = lo
+	r10 = uint64(1) + r0 + r1
+	if r10 >= 1<<32 {
+		fail("bit overflow (value exceeds u32)")
 	}
 	// [7.1] read b1 = blobs_data[$10]
 	{
@@ -647,12 +634,9 @@ L_7_0:
 	goto L_8_0
 L_8_0:
 	// [8.0] add $11 = in_blob+0x2
-	{
-		lo, hi := bits.Add64(uint64(2), r1, 0)
-		if hi != 0 {
-			fail("bit overflow (value exceeds u64)")
-		}
-		r11 = lo
+	r11 = uint64(2) + r1
+	if r11 >= 1<<32 {
+		fail("bit overflow (value exceeds u32)")
 	}
 	// [8.1] skip_if blob_size <= $11 1
 	if !(r2 > r11) {
@@ -665,17 +649,9 @@ L_8_3:
 	goto L_10_0
 L_9_0:
 	// [9.0] add $12 = data_offset+in_blob+0x2
-	{
-		lo, hi := uint64(2), uint64(0)
-		var c uint64
-		lo, c = bits.Add64(lo, r0, 0)
-		hi += c
-		lo, c = bits.Add64(lo, r1, 0)
-		hi += c
-		if hi != 0 {
-			fail("bit overflow (value exceeds u64)")
-		}
-		r12 = lo
+	r12 = uint64(2) + r0 + r1
+	if r12 >= 1<<32 {
+		fail("bit overflow (value exceeds u32)")
 	}
 	// [9.1] read b2 = blobs_data[$12]
 	{
@@ -689,12 +665,9 @@ L_9_0:
 	goto L_10_0
 L_10_0:
 	// [10.0] add $13 = in_blob+0x3
-	{
-		lo, hi := bits.Add64(uint64(3), r1, 0)
-		if hi != 0 {
-			fail("bit overflow (value exceeds u64)")
-		}
-		r13 = lo
+	r13 = uint64(3) + r1
+	if r13 >= 1<<32 {
+		fail("bit overflow (value exceeds u32)")
 	}
 	// [10.1] skip_if blob_size <= $13 1
 	if !(r2 > r13) {
@@ -707,17 +680,9 @@ L_10_3:
 	goto L_12_0
 L_11_0:
 	// [11.0] add $14 = data_offset+in_blob+0x3
-	{
-		lo, hi := uint64(3), uint64(0)
-		var c uint64
-		lo, c = bits.Add64(lo, r0, 0)
-		hi += c
-		lo, c = bits.Add64(lo, r1, 0)
-		hi += c
-		if hi != 0 {
-			fail("bit overflow (value exceeds u64)")
-		}
-		r14 = lo
+	r14 = uint64(3) + r0 + r1
+	if r14 >= 1<<32 {
+		fail("bit overflow (value exceeds u32)")
 	}
 	// [11.1] read b3 = blobs_data[$14]
 	{
@@ -757,10 +722,9 @@ L_13_0:
 
 // fn_executable_region_end corresponds to ZkC function "executable_region_end".
 func fn_executable_region_end() uint64 {
-	var r0 uint64 // end
-	var r1 uint64 // blobs_count
-	var r2 uint64 // entry_point
-	_ = r2
+	var r0 uint64  // end
+	var r1 uint64  // blobs_count
+	var r2 uint64  // entry_point
 	var r3 uint64  // max_end
 	var r4 uint64  // i
 	var r5 uint64  // executable
@@ -780,7 +744,13 @@ func fn_executable_region_end() uint64 {
 	{
 		start := (r10) * 2
 		r2 = mem_entry_point_and_blobs_count[start+0]
+		if r2 >= 1<<32 {
+			fail("bit overflow (value exceeds u32)")
+		}
 		r1 = mem_entry_point_and_blobs_count[start+1]
+		if r1 >= 1<<32 {
+			fail("bit overflow (value exceeds u32)")
+		}
 	}
 	// [0.2] jmp 0x1
 	goto L_1_0
@@ -791,6 +761,9 @@ L_1_0:
 	{
 		start := r11
 		r3 = mem_instruction_base[start+0]
+		if r3 >= 1<<32 {
+			fail("bit overflow (value exceeds u32)")
+		}
 	}
 	// [1.2] jmp 0x2
 	goto L_2_0
@@ -835,18 +808,21 @@ L_6_0:
 	{
 		start := (r4) * 2
 		r6 = mem_blobs_offset_and_size[start+0]
+		if r6 >= 1<<32 {
+			fail("bit overflow (value exceeds u32)")
+		}
 		r7 = mem_blobs_offset_and_size[start+1]
+		if r7 >= 1<<32 {
+			fail("bit overflow (value exceeds u32)")
+		}
 	}
 	// [6.1] jmp 0x7
 	goto L_7_0
 L_7_0:
 	// [7.0] add blob_end = blob_offset+blob_size
-	{
-		lo, hi := bits.Add64(r6, r7, 0)
-		if hi != 0 {
-			fail("bit overflow (value exceeds u64)")
-		}
-		r8 = lo
+	r8 = r6 + r7
+	if r8 >= 1<<32 {
+		fail("bit overflow (value exceeds u32)")
 	}
 	// [7.1] jmp 0x8
 	goto L_8_0
@@ -867,12 +843,9 @@ L_9_0:
 	goto L_10_0
 L_10_0:
 	// [10.0] add i = i+0x1
-	{
-		lo, hi := bits.Add64(uint64(1), r4, 0)
-		if hi != 0 {
-			fail("bit overflow (value exceeds u64)")
-		}
-		r4 = lo
+	r4 = uint64(1) + r4
+	if r4 >= 1<<32 {
+		fail("bit overflow (value exceeds u32)")
 	}
 	// [10.1] jmp 0xb
 	goto L_11_0
@@ -900,24 +873,19 @@ L_14_0:
 	r14 = 4
 	// [14.1] sub $13 = $14-rem
 	{
-		alo, ahi := r9, uint64(0)
-		lo, b := bits.Sub64(r14, alo, 0)
-		hi, b := bits.Sub64(uint64(0), ahi, b)
-		if b != 0 {
-			hi &= 1<<1 - 1
+		v, borrow := bits.Sub64(r14, r9, 0)
+		if borrow != 0 {
+			v &= 1<<33 - 1
 		}
-		if hi != 0 {
-			fail("bit overflow (value exceeds u64)")
+		r13 = v
+		if r13 >= 1<<32 {
+			fail("bit overflow (value exceeds u32)")
 		}
-		r13 = lo
 	}
 	// [14.2] add end = max_end+$13
-	{
-		lo, hi := bits.Add64(r3, r13, 0)
-		if hi != 0 {
-			fail("bit overflow (value exceeds u64)")
-		}
-		r0 = lo
+	r0 = r3 + r13
+	if r0 >= 1<<32 {
+		fail("bit overflow (value exceeds u32)")
 	}
 	// [14.3] jmp 0xf
 	goto L_15_0
