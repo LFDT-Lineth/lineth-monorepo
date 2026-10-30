@@ -34,7 +34,7 @@ DISABLE_ACCELERATORS ?= true
 ZKC = go -C ../arithmetization tool zkc
 ELF_TO_JSON = go -C ../arithmetization tool elf_to_json
 
-ci: generate-testdata fmt build-release build-r5-aggregator run-passing run-failing-expected run-aggregator test zkc-verify-passing zkc-verify-failing-expected
+ci: generate-testdata fmt build-release build-r5-aggregator run-passing run-failing-expected run-aggregator test zkc-verify-passing zkc-verify-failing-expected zkc-verify-dummy zkc-verify-dummy-aggregator
 
 help:
 	@printf '%s\n' \
