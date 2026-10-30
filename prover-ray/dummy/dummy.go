@@ -47,10 +47,11 @@ const (
 	SizePairHeader = 16
 )
 
-// NewSystem builds the dummy circuit. Round 0 holds, for each public input, its
-// cell X_i (registered as a public input) followed by its witness cell Y_i.
-// Round 1 is empty and carries the relation check: a proof's round messages
-// cover every round but the last, so the witness must not sit in the last one.
+// NewSystem builds the dummy circuit. Round 0 holds the public-input cells
+// X_0..X_{n-1}, then the witness cells Y_0..Y_{n-1}: X_i is round 0's cell i,
+// as the Zig verifier's embedded `system_0_public_input` says. Round 1 is empty
+// and carries the relation check: a proof's round messages cover every round
+// but the last, so the witness must not sit in the last one.
 func NewSystem() *wiop.System {
 	sys := wiop.NewSystemf("dummy")
 	r0 := sys.NewRound()
@@ -64,6 +65,8 @@ func NewSystem() *wiop.System {
 		}
 		x := r0.NewCell(ctx.Childf("x-%d", i), false)
 		sys.RegisterPublicInputs(tag, x, n)
+	}
+	for i := range NumPublicInputs {
 		r0.NewCell(ctx.Childf("y-%d", i), false)
 	}
 
@@ -116,7 +119,8 @@ func Encode(sys *wiop.System, proof wiop.Proof, pub wiop.PublicInput, base uint6
 
 // EncodePair writes the pair image of two dummy proofs, encoded for base: the
 // two-pointer header, then each proof's image encoded at its own absolute
-// start, as verifier-ray's pair images are laid out.
+// start. It mirrors verifier-ray/codegen's EncodeAggregatorPair, which
+// prover-ray cannot import (verifier-ray's Go module depends on prover-ray).
 func EncodePair(
 	sys *wiop.System,
 	proofA wiop.Proof, pubA wiop.PublicInput,
@@ -134,7 +138,13 @@ func EncodePair(
 		return nil, err
 	}
 
-	img := make([]byte, offB+uint64(len(imgB)))
+	total := offB + uint64(len(imgB))
+	if total > proofserialization.MaxImageSize {
+		return nil, fmt.Errorf("dummy: EncodePair: pair image is %d bytes, exceeds the guest input region's %d",
+			total, proofserialization.MaxImageSize)
+	}
+
+	img := make([]byte, total)
 	binary.LittleEndian.PutUint64(img[0:], base+offA)
 	binary.LittleEndian.PutUint64(img[8:], base+offB)
 	copy(img[offA:], imgA)
@@ -143,19 +153,15 @@ func EncodePair(
 }
 
 // witnessCells returns the witness cells Y, aligned with sys.PublicInputs: the
-// round-0 cells that are not public inputs, in declaration order.
+// round-0 cells after the public inputs.
 func witnessCells(sys *wiop.System) []*wiop.Cell {
-	y := make([]*wiop.Cell, 0, len(sys.PublicInputs))
-	for _, cell := range sys.Rounds[0].Cells {
-		if _, pos := sys.LookupPublicInput(cell.Context.ID); pos < 0 {
-			y = append(y, cell)
-		}
-	}
-	return y
+	return sys.Rounds[0].Cells[NumPublicInputs:]
 }
 
 // relationCheck is the verifier action of the dummy circuit: every witness cell
-// must be the image of its public input.
+// must be the image of its public input. It does not implement
+// [wiop.GnarkVerifierAction]: the dummy is verified in Zig only, and
+// [wiop.AllocateVerifierCircuit] refuses the system.
 type relationCheck struct{}
 
 var errRelationViolated = errors.New("dummy: relation violated")

@@ -110,6 +110,11 @@ pub const verifier = struct {
         // A real ray proof commits to its rounds, so it fails here.
         if (proof.rounds.len != 1 or proof.rounds[0].commitment != null or proof.module_sizes.len != 0)
             return error.NotADummyProof;
+        const opening = proof.pcs_opening.proof;
+        if (opening.input_queries.len != 0 or opening.input_caps.len != 0 or
+            opening.fri_proof.round_roots.len != 0 or opening.fri_proof.round_caps.len != 0 or
+            opening.fri_proof.final_poly.len != 0 or opening.fri_proof.running_queries.len != 0)
+            return error.NotADummyProof;
         if (public_inputs.len != n) return error.InvalidPublicInputCount;
         const y = proof.rounds[0].cells;
         if (y.len != n) return error.InvalidProofLength;

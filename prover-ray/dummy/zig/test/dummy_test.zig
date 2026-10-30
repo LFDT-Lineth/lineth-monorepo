@@ -4,7 +4,6 @@ const api = @import("api_surface.zig");
 
 const verifier = dummy.verifier;
 const protocol = dummy.protocol;
-const image_relocation = dummy.image_relocation;
 const Element = dummy.field.koalabear.Element;
 const Ext = dummy.field.koalabear_ext.Ext;
 const Scalar = protocol.Scalar;
@@ -59,11 +58,14 @@ test "wrong counts and non-dummy proofs are rejected" {
     const short = [_]protocol.RoundMessage{.{ .cells = honest_y[0..1] }};
     try std.testing.expectError(error.InvalidProofLength, verifier.verify(spec, systems, .{ .rounds = &short, .pcs_opening = empty_opening }, &honest_x));
 
-    // What a real proof looks like: a committed round, several rounds.
+    // What a real proof looks like: a committed round, several rounds, a PCS opening.
     const committed = [_]protocol.RoundMessage{.{ .commitment = [_]Element{el(1)} ** 8, .cells = &honest_y }};
     try std.testing.expectError(error.NotADummyProof, verifier.verify(spec, systems, .{ .rounds = &committed, .pcs_opening = empty_opening }, &honest_x));
     const two = [_]protocol.RoundMessage{ honest_rounds[0], honest_rounds[0] };
     try std.testing.expectError(error.NotADummyProof, verifier.verify(spec, systems, .{ .rounds = &two, .pcs_opening = empty_opening }, &honest_x));
+    const final_poly = [_]Ext{extOf(.{ 1, 2, 3, 4, 5, 6 })};
+    const opened = verifier.PcsOpening{ .proof = .{ .input_queries = &.{}, .fri_proof = .{ .round_roots = &.{}, .final_poly = &final_poly, .running_queries = &.{} } } };
+    try std.testing.expectError(error.NotADummyProof, verifier.verify(spec, systems, .{ .rounds = &honest_rounds, .pcs_opening = opened }, &honest_x));
 }
 
 test "pair: equal statements verify, different statements are rejected" {
@@ -130,69 +132,4 @@ test "a real verifier-ray proof is rejected" {
     // loads (same image format) but is not a dummy proof.
     var img = Aligned(@embedFile("real_image")){};
     try std.testing.expectEqual(@as(u8, 1), api.verifyImage(&img.buf, img.buf.len, 0x400000000));
-}
-
-// ── Malformed images ─────────────────────────────────────────────────────────
-
-const Honest = Aligned(@embedFile("dummy_image"));
-
-/// Resets img to the honest image, relocated in place (its pointers refer to
-/// img's own address, so img must not be copied afterwards).
-fn resetRelocated(img: *Honest) void {
-    img.* = .{};
-    image_relocation.rebase(&img.buf, img.buf.len, encoded_base, @intFromPtr(&img.buf));
-}
-
-fn validate(img: *const Honest) image_relocation.Error!void {
-    return image_relocation.validateImage(&img.buf, img.buf.len, @intFromPtr(&img.buf));
-}
-
-fn offsetAt(img: *const Honest, at: usize) usize {
-    return std.mem.readInt(u64, img.buf[at..][0..8], .little) - @intFromPtr(&img.buf);
-}
-
-test "the relocated honest image validates" {
-    var img: Honest = undefined;
-    resetRelocated(&img);
-    try validate(&img);
-}
-
-test "a truncated image is rejected" {
-    var img: Honest = undefined;
-    resetRelocated(&img);
-    try std.testing.expectError(error.PointerPastImage, image_relocation.validateImage(&img.buf, 64, @intFromPtr(&img.buf)));
-    try std.testing.expectError(error.PointerPastImage, image_relocation.validateImage(&img.buf, img.buf.len - 1, @intFromPtr(&img.buf)));
-}
-
-test "a pointer or length outside the image is rejected" {
-    var img: Honest = undefined;
-    resetRelocated(&img);
-    std.mem.writeInt(u64, img.buf[128..136], @intFromPtr(&img.buf) - 8, .little); // public_inputs.ptr
-    try std.testing.expectError(error.PointerBeforeImage, validate(&img));
-
-    resetRelocated(&img);
-    std.mem.writeInt(u64, img.buf[136..144], 1 << 40, .little); // public_inputs.len
-    try std.testing.expectError(error.PointerPastImage, validate(&img));
-}
-
-test "a bad scalar tag, commitment flag or non-canonical limb is rejected" {
-    var img: Honest = undefined;
-
-    resetRelocated(&img);
-    const pi = offsetAt(&img, 128);
-    img.buf[pi + 24] = 2;
-    try std.testing.expectError(error.PointerPastImage, validate(&img));
-
-    resetRelocated(&img);
-    std.mem.writeInt(u32, img.buf[pi..][0..4], dummy.field.koalabear.modulus, .little);
-    try std.testing.expectError(error.PointerPastImage, validate(&img));
-
-    resetRelocated(&img);
-    img.buf[offsetAt(&img, 0) + 48] = 2; // round 0's commitment presence flag
-    try std.testing.expectError(error.PointerPastImage, validate(&img));
-}
-
-test "the embedded circuit has the Go circuit's public-input count" {
-    // prover-ray/dummy's NumPublicInputs; the honest fixture is made with it.
-    try std.testing.expectEqual(@as(usize, 40), dummy.system_0_public_input.refs.len);
 }

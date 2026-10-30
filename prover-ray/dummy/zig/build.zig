@@ -31,8 +31,7 @@ pub fn build(b: *std.Build) void {
     for ([_][]const u8{ "dummy_image", "dummy_image_tampered", "dummy_pair_image", "dummy_pair_image_mismatch" }) |name| {
         test_mod.addAnonymousImport(name, .{ .root_source_file = b.path(b.fmt("testdata/{s}.bin", .{name})) });
     }
-    // A real verifier-ray proof image, to check that the dummy rejects it. Test
-    // data only; the package does not depend on verifier-ray.
+    // A real verifier-ray proof image, to check that the dummy rejects it.
     test_mod.addAnonymousImport("real_image", .{ .root_source_file = b.path("../../../verifier-ray/testdata/proof_image.bin") });
 
     const tests = b.addTest(.{ .root_module = test_mod });
