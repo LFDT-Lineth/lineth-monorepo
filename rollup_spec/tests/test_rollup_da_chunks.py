@@ -8,14 +8,21 @@ import zstandard as zstd
 from ethereum.crypto.hash import keccak256
 from ethereum.crypto.kzg import KZGCommitment, kzg_commitment_to_versioned_hash
 
-from rollup_spec.rollup import BLOB_PAYLOAD_CAPACITY, ChunkWitness, verify_da_chunks
-from tests.da_witness import blob_chunk, calldata_chunk, data_rolling_hash_after, segment
+from rollup_spec.rollup import BLOB_PAYLOAD_CAPACITY, ChunkWitness, verify_da_chunks, zstd_dictionary
+from tests.da_witness import blob_chunk, calldata_chunk, compress_frame, data_rolling_hash_after, segment
 
 PAYLOAD_1 = b"conflation 1"
 PAYLOAD_2 = b"conflation 2"
 SEGMENT_1 = segment(PAYLOAD_1)
 SEGMENT_2 = segment(PAYLOAD_2)
-ZSTD_FRAME_1 = zstd.ZstdCompressor().compress(PAYLOAD_1)
+ZSTD_FRAME_1 = compress_frame(PAYLOAD_1)
+# The program's dictionary under another dictionary ID.
+OTHER_DICTIONARY = zstd.ZstdCompressionDict(
+    zstd_dictionary().as_bytes()[:4]
+    + (zstd_dictionary().dict_id() ^ 1).to_bytes(4, "little")
+    + zstd_dictionary().as_bytes()[8:],
+    dict_type=zstd.DICT_TYPE_FULLDICT,
+)
 # Incompressible, so its segment fills two blobs and spills into a third.
 LARGE_PAYLOAD = random.Random(4844).randbytes(2 * BLOB_PAYLOAD_CAPACITY)
 LARGE_SEGMENT = segment(LARGE_PAYLOAD)
@@ -142,8 +149,19 @@ def test_calldata_only_stream_needs_no_kzg_fields():
 
 @pytest.mark.parametrize("write_content_size", [True, False], ids=["content size written", "content size omitted"])
 def test_zstd_frame_content_size_header_is_optional(write_content_size):
-    zstd_frame = zstd.ZstdCompressor(write_content_size=write_content_size).compress(PAYLOAD_1)
+    zstd_frame = compress_frame(PAYLOAD_1, write_content_size=write_content_size)
     calldata = calldata_chunk(length_prefixed(zstd_frame))
+
+    assert verify_da_chunks([calldata], [PAYLOAD_1], PARENT) == (data_rolling_hash_after(PARENT, [calldata]), 0)
+
+
+@pytest.mark.parametrize(
+    "compress",
+    [lambda payload: compress_frame(payload, write_dict_id=False), lambda payload: zstd.ZstdCompressor().compress(payload)],
+    ids=["dictionary id omitted", "no dictionary"],
+)
+def test_zstd_frame_without_a_dictionary_id_decodes_with_the_dictionary(compress):
+    calldata = calldata_chunk(length_prefixed(compress(PAYLOAD_1)))
 
     assert verify_da_chunks([calldata], [PAYLOAD_1], PARENT) == (data_rolling_hash_after(PARENT, [calldata]), 0)
 
@@ -309,7 +327,7 @@ REJECTED_STREAMS = [
     ),
     rejected(
         "two zstd frames under one length", "invalid zstd",
-        lambda: [calldata_chunk(length_prefixed(ZSTD_FRAME_1 + zstd.ZstdCompressor().compress(PAYLOAD_2)))],
+        lambda: [calldata_chunk(length_prefixed(ZSTD_FRAME_1 + compress_frame(PAYLOAD_2)))],
     ),
     rejected(
         "truncated zstd frame", "invalid zstd",
@@ -317,7 +335,11 @@ REJECTED_STREAMS = [
     ),
     rejected(
         "decompressed bytes differ from the canonical payload", "does not match canonical",
-        lambda: [calldata_chunk(length_prefixed(zstd.ZstdCompressor().compress(b"conflation X")))],
+        lambda: [calldata_chunk(length_prefixed(compress_frame(b"conflation X")))],
+    ),
+    rejected(
+        "frame compressed against another dictionary", "invalid zstd",
+        lambda: [calldata_chunk(length_prefixed(compress_frame(PAYLOAD_1, dictionary=OTHER_DICTIONARY)))],
     ),
 ]
 

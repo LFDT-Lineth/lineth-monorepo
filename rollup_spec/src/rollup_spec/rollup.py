@@ -115,6 +115,22 @@ def trusted_setup():
     return ckzg.load_trusted_setup(str(_TRUSTED_SETUP_PATH), 0)
 
 
+# The zstd dictionary fixed by the rollup guest program: DA frames are compressed against it and
+# decompressed with it. parents[3] is the repo root, as for the trusted setup above.
+_ZSTD_DICTIONARY_PATH = (
+    Path(__file__).resolve().parents[3]
+    / "riscv-guests" / "lineth_da" / "dictionaries" / "v2025-04-21.bin"
+)
+
+
+@lru_cache(maxsize=1)
+def zstd_dictionary() -> zstd.ZstdCompressionDict:
+    """Load the zstd dictionary once on first use; cached for the process lifetime via `lru_cache`."""
+    if not _ZSTD_DICTIONARY_PATH.is_file():
+        raise FileNotFoundError(f"zstd dictionary not found at {_ZSTD_DICTIONARY_PATH}")
+    return zstd.ZstdCompressionDict(_ZSTD_DICTIONARY_PATH.read_bytes(), dict_type=zstd.DICT_TYPE_FULLDICT)
+
+
 @dataclass
 class TruncatedEthereumBlock:
     """
@@ -256,9 +272,9 @@ def derive_canonical_payload(
 
 
 def _validate_zstd_frame(zstd_frame: bytes, canonical_payload: bytes) -> None:
-    """Check that a segment's zstd frame decompresses exactly to its canonical payload."""
+    """Check that a segment's zstd frame decompresses, with the program's dictionary, exactly to its canonical payload."""
     try:
-        decompressed = zstd.ZstdDecompressor().decompress(
+        decompressed = zstd.ZstdDecompressor(dict_data=zstd_dictionary()).decompress(
             zstd_frame, max_output_size=len(canonical_payload), allow_extra_data=False,
         )
     except zstd.ZstdError as exc:

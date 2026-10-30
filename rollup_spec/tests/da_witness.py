@@ -7,12 +7,18 @@ import zstandard as zstd
 from ethereum.crypto.hash import Hash32, keccak256
 from ethereum.crypto.kzg import KZGCommitment, kzg_commitment_to_versioned_hash
 
-from rollup_spec.rollup import ChunkWitness, pack_blob_payload, trusted_setup
+from rollup_spec.rollup import ChunkWitness, pack_blob_payload, trusted_setup, zstd_dictionary
+
+
+def compress_frame(payload: bytes, dictionary: zstd.ZstdCompressionDict | None = None, **parameters) -> bytes:
+    """One zstd frame of `payload`, compressed against the program's dictionary unless another is given."""
+    dictionary = zstd_dictionary() if dictionary is None else dictionary
+    return zstd.ZstdCompressor(dict_data=dictionary, **parameters).compress(payload)
 
 
 def segment(payload: bytes) -> bytes:
     """One DA stream segment: a 4-byte big-endian length followed by one zstd frame of `payload`."""
-    zstd_frame = zstd.ZstdCompressor().compress(payload)
+    zstd_frame = compress_frame(payload)
     return len(zstd_frame).to_bytes(4, "big") + zstd_frame
 
 
