@@ -4,6 +4,10 @@
 
 - *(misc)* Adding blob commitment and a proof to Rollup input (#4329)
 
+### 🐛 Bug Fixes
+
+- *(coordinator)* Enforce end-block invariant in RollupAggregationProofResponseV1 (#4315)
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(misc)* Ship license files and metadata in all published artifacts (#4336)
