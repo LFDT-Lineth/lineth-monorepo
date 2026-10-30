@@ -11,6 +11,7 @@ riscv-guests/
   build_common/        Shared build helpers (+ the shared standalone-ELF link: start.s, linker_script.ld)
   lineth_accelerators/ Shared library package: Lineth accelerator wrappers + C headers, and the opt-in zkvm_* crypto providers
   guest_common/        Shared library package: generic SSZ primitives (`guest_common` module) and the cross-guest wire contracts with their SSZ codecs (`core_serde` module), with its own unit tests
+  lineth_da/           Shared library package: data-availability building blocks (`lineth_da` module) — zstd dictionary decompression over upstream libzstd — with its own unit tests and a freestanding smoke guest
   l2_execution/        Vanilla EVM execution guest: build.zig + build.zig.zon + Makefile + src/ + test/ + tools/
   rollup/              Rollup guest stub (echo/sentinel, no proof verification/folding): build.zig + build.zig.zon + Makefile + src/ + test/ + tools/
 ```
@@ -127,6 +128,7 @@ These need `zkc` and `go` on `PATH`. The interpreter loads a finished ELF — `e
 
 Each guest folder is a complete package: its own dependencies (`build.zig.zon`), compile/test logic (`build.zig`), lifecycle (`Makefile`), production source (`src/`), host-only test code (`test/`) and host programs (`tools/`). Shared build helpers are factored into `build_common/`; the toolchain pin (`.zigversion`) is shared at this level.
 
+- `lineth_da/`: the data-availability library package (zstd dictionary decompression). See `lineth_da/README.md`.
 - `l2_execution/`: the Rollup's extended l2-execution guest. See `l2_execution/README.md`.
 - `rollup/`: the rollup guest stub (echo/sentinel mapping, no proof verification or chunk/conflation folding). See `rollup/README.md`.
 ```

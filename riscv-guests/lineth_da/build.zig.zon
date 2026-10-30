@@ -1,0 +1,29 @@
+.{
+    .name = .lineth_da,
+    .version = "0.0.0",
+    .fingerprint = 0xbe4e7bdc63102eff,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        // Shared build helpers (pinned toolchain, the common freestanding rv64im guest target, the
+        // standalone-ELF link).
+        .build_common = .{ .path = "../build_common" },
+        // zkVM io-interface (read_input/write_output) for the smoke guest.
+        .lineth_accelerators = .{ .path = "../lineth_accelerators" },
+        // facebook/zstd v1.5.6, the unmodified upstream release tarball (sha256
+        // 8c29e06cf42aacc1eafc4077ae2ec6c6fcb96a626157e0593d5e82a34fd403c1). Source-only package:
+        // build.zig selects the decoder sources for guest and host builds and the compressor
+        // sources for host tests and tools.
+        .zstd = .{
+            .url = "https://github.com/facebook/zstd/releases/download/v1.5.6/zstd-1.5.6.tar.gz",
+            .hash = "N-V-__8AAKbffQDMlwdeMxqHyyAcA6AYoVIjJdaqhEYZpGFG",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src", // production code (compiled into the rv64im object/ELF) and the freestanding C headers
+        "dictionaries", // zstd dictionaries embedded by the guests
+        "test", // host-only: unit tests, test support and the smoke guest
+        "tools", // host-only: native programs
+    },
+}
