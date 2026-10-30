@@ -65,6 +65,7 @@ class MaruConsensusSwitchTest {
     besuNode: BesuNode,
     expectedBlocksBeforeSwitch: Int,
     totalBlocksToProduce: Int,
+    shanghaiTimestamp: Instant,
   ) {
     val blockProducedByQbft = besuNode.ethGetBlockByNumber(1UL)
     assertThat(blockProducedByQbft.extraData.decodeHex().size).isGreaterThan(VANILLA_EXTRA_DATA_LENGTH)
@@ -76,6 +77,15 @@ class MaruConsensusSwitchTest {
       blocks.findSwitchBlock()
         ?: error("Could not find a PoS block (difficulty=0) in the mined block list")
     assertThat(parisSwitchBlockIndex).isEqualTo(expectedBlocksBeforeSwitch)
+    // Besu itself stops mining at TTD, so the first PoS block is always right after the terminal block. Assert it
+    // was produced before the Shanghai timestamp fork, i.e. by the DifficultyAwareQbft -> post-TTD transition and
+    // not by the timestamp-based switch to the Shanghai QBFT fork after a stall.
+    val firstPosBlock = blocks[parisSwitchBlockIndex]
+    assertThat(Instant.fromEpochSeconds(firstPosBlock.timestamp.toLong()))
+      .withFailMessage {
+        "First PoS block number=${firstPosBlock.number} timestamp=${firstPosBlock.timestamp} is not before " +
+          "shanghaiTimestamp=$shanghaiTimestamp, so it was not produced by the post-TTD transition"
+      }.isLessThan(shanghaiTimestamp)
 
     blocks.subList(0, parisSwitchBlockIndex).verifyBlockTime()
     blocks.subList(parisSwitchBlockIndex, blocks.size).verifyBlockTime()
@@ -157,11 +167,13 @@ class MaruConsensusSwitchTest {
       besuNode = validatorBesuNode,
       expectedBlocksBeforeSwitch = expectedBlocksBeforeSwitch,
       totalBlocksToProduce = sequencerHead,
+      shanghaiTimestamp = shanghaiTimestamp,
     )
     verifyConsensusSwitch(
       besuNode = followerBesuNode,
       expectedBlocksBeforeSwitch = expectedBlocksBeforeSwitch,
       totalBlocksToProduce = sequencerHead,
+      shanghaiTimestamp = shanghaiTimestamp,
     )
   }
 

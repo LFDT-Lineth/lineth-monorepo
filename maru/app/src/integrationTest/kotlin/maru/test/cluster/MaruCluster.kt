@@ -16,11 +16,16 @@ import maru.test.extensions.latestBlockNumber
 import maru.test.genesis.GenesisFactory
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
+import org.assertj.core.api.Assertions.assertThat
+import org.awaitility.kotlin.await
 import org.hyperledger.besu.tests.acceptance.dsl.node.BesuNode
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.random.Random
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
+import kotlin.time.toJavaDuration
 
 enum class NodeRole {
   Sequencer,
@@ -214,6 +219,31 @@ class MaruCluster(
     log.info("Besu cluster started")
   }
 
+  private fun startBesuNodesAndAwaitPreMergeSync(nodesConfig: List<NodeBuilder.NodeBuildingConfig>) {
+    val besuNodes =
+      nodesConfig
+        .mapNotNull { it.elNode as? BesuElNode }
+        .map { it.besu }
+    if (besuNodes.isEmpty()) {
+      return
+    }
+    besuNodes.forEach { besuCluster.addNode(it) }
+    besuCluster.start(awaitPeerDiscovery = true)
+
+    // QBFT EL genesis used in tests has difficulty 0x1 and each block adds 1, so TTD is reached at block (TTD - 1)
+    val terminalBlock = terminalTotalDifficulty!! - 1UL
+    log.info("Besu cluster started, awaiting all Besu nodes to reach terminal block={}", terminalBlock)
+    await
+      .pollInterval(500.milliseconds.toJavaDuration())
+      .timeout(60.seconds.toJavaDuration())
+      .untilAsserted {
+        val heads = besuNodes.associate { it.name to it.latestBlockNumber() }
+        assertThat(heads.values)
+          .withFailMessage { "Besu nodes did not reach terminal block=$terminalBlock: heads=$heads" }
+          .allMatch { it >= terminalBlock }
+      }
+  }
+
   @Synchronized
   fun start(): MaruCluster {
     if (runningState != RunningState.STOPPED) {
@@ -237,17 +267,26 @@ class MaruCluster(
     // start Besu bootnodes first
     // startBesuNodes(nodesStartConfigs)
 
+    // For networks starting pre-merge, start all Besu nodes before any Maru node, so that non-validator ELs can
+    // full sync the pre-merge chain while it holds only QBFT blocks. Once the sequencer crosses TTD and produces
+    // PoS blocks, a pre-merge Besu node can't full sync from genesis anymore: it decodes the returned PoS headers'
+    // extraData as QBFT extraData, which fails, and keeps retrying the same range forever.
+    val besuNodesPreStarted = terminalTotalDifficulty != null
+    if (besuNodesPreStarted) {
+      startBesuNodesAndAwaitPreMergeSync(nodesStartConfigs)
+    }
+
     // Build Maru nodes after Besu are started and we have their enode URLs
     // 1. we start bootnodes, to be able to get their enrs
     // 2. then we start the remaining nodes
     val (bootnodesStartConfigs, nonBootnodesStartConfigs) = nodesStartConfigs.partition { it.nodeRole.isBootnode() }
     bootnodesStartConfigs.forEach { nodeStartingConfig ->
-      nodes += buildClusterNode(nodeStartingConfig, emptyList())
+      nodes += buildClusterNode(nodeStartingConfig, emptyList(), startElNode = !besuNodesPreStarted)
     }
     val bootNodesEnrs = getBootnodesEnrs()
     log.info("Maru bootnodes started: enrs=$bootNodesEnrs")
     nonBootnodesStartConfigs.forEach { nodeStartingConfig ->
-      nodes += buildClusterNode(nodeStartingConfig, bootNodesEnrs)
+      nodes += buildClusterNode(nodeStartingConfig, bootNodesEnrs, startElNode = !besuNodesPreStarted)
     }
 
     this.runningState = RunningState.RUNNING
