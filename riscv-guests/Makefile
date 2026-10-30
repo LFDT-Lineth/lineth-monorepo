@@ -5,10 +5,10 @@
 # helpers live in build_common/. This Makefile is deliberately guest-agnostic: it just fans the
 # common lifecycle out to every guest listed in GUESTS.
 #
-# Add a guest: create riscv-guests/<name>/ (build.zig calling common.addFmtSteps + build.zig.zon +
-# Makefile + src) and append <name> to GUESTS. Only targets that every guest implements are fanned
-# out here; guest-specific targets (e.g. l2-execution's EF spec-test, ZKC exec/debug) live in that
-# guest's own Makefile and run directly: `make -C <name> spec-test`.
+# Add a guest: create riscv-guests/<name>/ (build.zig + build.zig.zon + Makefile + src) and append
+# <name> to GUESTS. Only targets that every guest implements are fanned out here; guest-specific
+# targets (e.g. l2-execution's EF spec-test, ZKC exec/debug) live in that guest's own Makefile and
+# run directly: `make -C <name> spec-test`.
 #
 # guest_common isn't a guest program itself (no ELF to link, just a shared Zig package other
 # guests consume as a path dependency — the same role lineth_accelerators plays) but is listed
@@ -98,7 +98,7 @@ help:
 	@echo "  make test        # run each guest's native host tests"
 	@echo "  make fetch       # pre-fetch each guest's Zig dependencies"
 	@echo "  make clean       # remove each guest's zig-out/ and .zig-cache/"
-	@echo "  make fmt         # format every package's Zig sources in place (zig build fmt)"
+	@echo "  make fmt         # format every package's Zig sources in place (zig fmt)"
 	@echo "  make fmt-check   # verify formatting without writing (the CI gate)"
 	@echo "  make install-constantine-deps    # install nim/nimble/clang for the guest_crypto_ctt build"
 	@echo ""

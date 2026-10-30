@@ -2,7 +2,6 @@
 //! Tool locations are overridable with `NIM`, `NIMBLE`, and `LLVM_AR`.
 
 const std = @import("std");
-const common = @import("build_common");
 
 const Toolchain = struct {
     nim: []const u8,

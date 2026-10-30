@@ -10,8 +10,7 @@
 //! KZG/compression and recursive proof verification), so that wiring is not common.
 //!
 //! Each guest pulls this in via a `build_common` path dependency in its build.zig.zon plus
-//! `const common = @import("build_common");`. Never built on its own — `build()` only registers the
-//! formatting steps, like every package.
+//! `const common = @import("build_common");`. Never built on its own — `build()` is a no-op.
 
 const std = @import("std");
 const builtin = @import("builtin");
