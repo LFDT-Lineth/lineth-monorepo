@@ -22,7 +22,7 @@
 const std = @import("std");
 const executor = @import("zesu_executor");
 const mpt = @import("zesu_mpt");
-const guest_crypto = @import("l2_execution").guest_crypto;
+const guest_crypto = @import("guest_crypto");
 
 const rlp = executor.executor_rlp_encode;
 

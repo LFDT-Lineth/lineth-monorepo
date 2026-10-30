@@ -2,9 +2,9 @@
 
 const std = @import("std");
 const lineth_accel = @import("lineth_zkvm_accel");
-const zesu_crypto_backend = @import("zesu_crypto_backend.zig");
-const guest_crypto = @import("guest_crypto.zig");
-const secp256k1_std = @import("secp256k1_std.zig");
+const zesu_crypto_backend = @import("zesu_crypto_backend");
+const guest_crypto = @import("guest_crypto");
+const secp256k1_std = @import("secp256k1_std");
 const build_options = @import("build_options");
 
 // The manifest: every `zkvm_*` symbol zesu references, and where each comes from — keccak is either
@@ -41,7 +41,21 @@ comptime {
         @export(&abort, .{ .name = "zkvm_abort" });
         // `write_output` already matches the declared C ABI, so export it directly.
         @export(&lineth_accel.write_output, .{ .name = "write_output" });
+        @export(&guest_allocator, .{ .name = "guest_allocator" });
     }
+}
+
+/// The allocator behind the Constantine archive's C `malloc`/`free`, in `std.mem.Allocator`'s
+/// pointer and vtable layout. Every allocation fails until the guest installs its heap with
+/// `setAllocator`.
+var guest_allocator: extern struct { ptr: *anyopaque, vtable: *const anyopaque } = .{
+    .ptr = std.mem.Allocator.failing.ptr,
+    .vtable = std.mem.Allocator.failing.vtable,
+};
+
+/// Installs the heap the Constantine archive allocates from.
+pub fn setAllocator(allocator: std.mem.Allocator) void {
+    guest_allocator = .{ .ptr = allocator.ptr, .vtable = allocator.vtable };
 }
 
 const secp256k1 = switch (build_options.secp256k1_backend) {

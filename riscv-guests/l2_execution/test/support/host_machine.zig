@@ -2,6 +2,7 @@ const std = @import("std");
 const execution_machine = @import("execution_machine.zig");
 const l2_execution = @import("l2_execution").l2_execution;
 const l2_execution_ssz = @import("l2_execution").l2_execution_ssz;
+const l2_execution_proof = @import("core_serde").l2_execution_proof;
 
 pub const HostMachine = struct {
     pub fn run(
@@ -19,6 +20,6 @@ pub const HostMachine = struct {
             if (err == error.OutOfMemory) return err;
             return .{ .rejected = err };
         };
-        return .{ .accepted = try l2_execution_ssz.encodeOutput(alloc, execution.public_inputs) };
+        return .{ .accepted = try l2_execution_proof.encodeOutput(alloc, execution.public_inputs) };
     }
 };
