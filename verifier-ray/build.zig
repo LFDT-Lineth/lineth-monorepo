@@ -48,6 +48,16 @@ pub fn build(b: *std.Build) void {
         .{ .cwd_relative = riscv_system_path }
     else
         b.path(riscv_system_path);
+    const input_path = b.option(
+        []const u8,
+        "input-path",
+        "Path to the single proof image for the native smoke runner",
+    ) orelse "testdata/riscv_proof_image.bin";
+    const pair_input_path = b.option(
+        []const u8,
+        "pair-input-path",
+        "Path to the aggregator pair proof image for the native smoke runner",
+    ) orelse "testdata/riscv_proof_pair_image.bin";
 
     const target = if (r5)
         common.standardGuestTarget(b)
@@ -133,6 +143,14 @@ pub fn build(b: *std.Build) void {
             .{ .name = "verifier_ray", .module = verifier_mod },
         },
     });
+    const dummy_system_mod = b.addModule("dummy_system", .{
+        .root_source_file = b.path("testdata/generated/dummy_system.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "verifier_ray", .module = verifier_mod },
+        },
+    });
 
     const embedded_data_opts = b.addOptions();
     embedded_data_opts.addOption(usize, "spec_index", embedded_spec);
@@ -141,6 +159,8 @@ pub fn build(b: *std.Build) void {
 
     const main_opts = b.addOptions();
     main_opts.addOption(bool, "aggregator", aggregator);
+    main_opts.addOption([]const u8, "input_path", input_path);
+    main_opts.addOption([]const u8, "pair_input_path", pair_input_path);
     const embedded_data_mod = b.addModule("embedded_data", .{
         .root_source_file = b.path("testdata/generated/verify.zig"),
         .target = target,
@@ -197,6 +217,7 @@ pub fn build(b: *std.Build) void {
                     .{ .name = "test_pcs_vectors", .module = test_pcs_vectors_mod },
                     .{ .name = "test_verify", .module = test_verify_mod },
                     .{ .name = "riscv_system", .module = riscv_system_mod },
+                    .{ .name = "dummy_system", .module = dummy_system_mod },
                 },
             }),
             .filters = test_filters,
