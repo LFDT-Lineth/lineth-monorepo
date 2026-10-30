@@ -10,6 +10,7 @@
 ### 🐛 Bug Fixes
 
 - *(riscv-guest)* Added a build option to choose between crypto backe… (#4293)
+- *(riscv-guest)* Build script refactoring. Introducing a convention … (#4347)
 
 ### ⚡ Performance
 
