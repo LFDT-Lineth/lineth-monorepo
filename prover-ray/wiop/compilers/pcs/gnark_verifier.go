@@ -45,7 +45,8 @@ func (a *OpeningVerifierAction) CheckGnark(api frontend.API, run *wiop.GnarkRunt
 	foldAlphas = append(foldAlphas, fs.RandomFext())
 
 	fs.UpdateExt(proof.FRIProof.FinalPoly...)
-	queryPositions := fs.RandomManyIntegers(int(pcs.Params.NumQueries), effectiveNWith(staticSizeOf, batches, manifests))
+	queryPositions := fs.RandomManyIntegers(int(pcs.Params.NumQueries),
+		a.c.effectiveNWith(staticSizeOf, batches, manifests))
 
 	pcs.VerifyGnark(api, fri.GnarkVerifyInputs{
 		Roots:          a.c.collectRootsGnark(run, batches),
@@ -100,7 +101,7 @@ func recoverBatchClaimsGnark(run *wiop.GnarkRuntime, batches []BatchRef, manifes
 	)
 
 	for i, b := range batches {
-		layouts[i], shapes[i] = getLayoutWith(b.Round, staticSizeOf, manifests[i])
+		layouts[i], shapes[i] = getLayoutWith(b.Round, staticSizeOf, manifests[i], configOf(sys).moduleGroups)
 		shifts[i] = initializeBatchShift(shapes[i])
 		claims[i] = initializeGnarkBatchClaims(shapes[i])
 		batchOf[b.Round] = i

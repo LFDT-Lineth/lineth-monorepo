@@ -58,7 +58,7 @@ Lineth zkEVM monorepo — the principal repository for [Linea](https://linea.bui
 
 | Tool | Version | Notes |
 |------|---------|-------|
-| Node.js | >= 24.18.0 | See `.nvmrc` |
+| Node.js | >= 24.22.1 | See `.nvmrc` |
 | pnpm | >= 12.6.0 | Enforced via `preinstall` |
 | JDK | 25 | Coordinator, Besu plugins, transaction-exclusion-api — enforced by Gradle; JDK 25+ required |
 | Gradle | 9.6+ | use the root ./gradlew <task> (single wrapper for all JVM projects) |

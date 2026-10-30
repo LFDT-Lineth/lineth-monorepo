@@ -1,6 +1,4 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
@@ -30,7 +28,6 @@ class MaruMultiValidatorConvergenceTest {
   @BeforeEach
   fun setUp() {
     network = MultiValidatorNetwork()
-    network.startBesuNodes()
   }
 
   @AfterEach
@@ -84,7 +81,7 @@ class MaruMultiValidatorConvergenceTest {
     // BeaconBlockHeader must stay field-based (round-sensitive); if it were hash-based, headers differing
     // only in round/proposer would collapse into one object under PHASE1 and the QBFT engine would fail to
     // converge (this test would time out at waitForConsecutiveRound0Blocks).
-    network.startAllValidators(network.factoriesWithClFork(ClFork.QBFT_PHASE1))
+    network.startAllValidators(clFork = ClFork.QBFT_PHASE1)
 
     val stableHeight =
       network.waitForConsecutiveRound0Blocks(

@@ -9,7 +9,7 @@ import { IL1LineaToken } from "./interfaces/IL1LineaToken.sol";
 
 /**
  * @title L1 Linea Token Burner Contract.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 contract L1LineaTokenBurner is IL1LineaTokenBurner, IGenericErrors {

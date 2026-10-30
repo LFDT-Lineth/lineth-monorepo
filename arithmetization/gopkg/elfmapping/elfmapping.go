@@ -6,7 +6,10 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math"
 	"sort"
+
+	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 )
 
 const (
@@ -106,7 +109,7 @@ func PrepareInputs(
 	elfBytes []byte,
 	inputData []byte,
 	options ...Option,
-) (map[string][]byte, error) {
+) (map[string]bit.Array, error) {
 	program, err := Load(bytes.NewReader(elfBytes))
 	if err != nil {
 		return nil, err
@@ -261,7 +264,7 @@ func EncodeInputs(
 	program Program,
 	additional []Blob,
 	options ...Option,
-) (map[string][]byte, error) {
+) (map[string]bit.Array, error) {
 	cfg := config{}
 	for _, option := range options {
 		if option == nil {
@@ -287,26 +290,42 @@ func EncodeInputs(
 		}
 	}
 
-	entryAndCount := binary.BigEndian.AppendUint64(nil, program.EntryPoint)
-	entryAndCount = binary.BigEndian.AppendUint64(entryAndCount, uint64(len(blobs)))
-	offsetsAndSizes := make([]byte, 0, 16*len(blobs))
-	data := make([]byte, 0, blobDataSize(blobs))
-	for _, blob := range blobs {
-		offsetsAndSizes = binary.BigEndian.AppendUint64(offsetsAndSizes, blob.Address)
-		offsetsAndSizes = binary.BigEndian.AppendUint64(
+	entryPoint, addresses, err := addressSpace32(program.EntryPoint, blobs)
+	if err != nil {
+		return nil, err
+	}
+
+	// The blob count, blob sizes and blobs_data indexes are u32 in the
+	// arithmetization.
+	dataSize := blobDataSize(blobs)
+	if uint64(len(blobs)) > math.MaxUint32 || uint64(dataSize) > math.MaxUint32 {
+		return nil, fmt.Errorf(
+			"%d memory blobs with %d bytes exceed the u32 input limit",
+			len(blobs),
+			dataSize,
+		)
+	}
+
+	entryAndCount := binary.BigEndian.AppendUint32(nil, entryPoint)
+	entryAndCount = binary.BigEndian.AppendUint32(entryAndCount, uint32(len(blobs)))
+	offsetsAndSizes := make([]byte, 0, 8*len(blobs))
+	data := make([]byte, 0, dataSize)
+	for i, blob := range blobs {
+		offsetsAndSizes = binary.BigEndian.AppendUint32(offsetsAndSizes, addresses[i])
+		offsetsAndSizes = binary.BigEndian.AppendUint32(
 			offsetsAndSizes,
-			uint64(len(blob.Data)),
+			uint32(len(blob.Data)),
 		)
 		data = append(data, blob.Data...)
 	}
 
-	inputs := map[string][]byte{
-		EntryPointAndBlobsCountInput: entryAndCount,
-		BlobsOffsetAndSizeInput:      offsetsAndSizes,
-		BlobsDataInput:               data,
+	inputs := map[string]bit.Array{
+		EntryPointAndBlobsCountInput: BitArrayFromBytes(entryAndCount...),
+		BlobsOffsetAndSizeInput:      BitArrayFromBytes(offsetsAndSizes...),
+		BlobsDataInput:               BitArrayFromBytes(data...),
 	}
 	if cfg.includeExecutable {
-		inputs[BlobsExecutableInput] = encodeExecutableBits(blobs)
+		inputs[BlobsExecutableInput] = BitArrayFromBytes(encodeExecutableBits(blobs)...)
 	}
 	return inputs, nil
 }
@@ -336,6 +355,27 @@ func writeSections(writer io.Writer, blobs []Blob) error {
 		}
 	}
 	return nil
+}
+
+// addressSpace32 returns the entry point and blob addresses as u32. It rejects
+// an entry point or blob address above the 32-bit guest address space of the
+// arithmetization, and a non-empty blob that runs past it.
+func addressSpace32(entryPoint uint64, blobs []Blob) (uint32, []uint32, error) {
+	if entryPoint > math.MaxUint32 {
+		return 0, nil, fmt.Errorf("entry point %#x is outside the 32-bit address space", entryPoint)
+	}
+	addresses := make([]uint32, len(blobs))
+	for i, blob := range blobs {
+		if blob.Address > math.MaxUint32 || uint64(len(blob.Data)) > math.MaxUint32+1-blob.Address {
+			return 0, nil, fmt.Errorf(
+				"memory blob at %#x with %d bytes is outside the 32-bit address space",
+				blob.Address,
+				len(blob.Data),
+			)
+		}
+		addresses[i] = uint32(blob.Address)
+	}
+	return uint32(entryPoint), addresses, nil
 }
 
 func blobDataSize(blobs []Blob) int {
@@ -382,4 +422,10 @@ func validateRanges(blobs []Blob) error {
 		previousAddress, previousEnd, hasPrevious = blob.Address, end, true
 	}
 	return nil
+}
+
+// BitArrayFromBytes constructs a bit array directly from a slice of zero or
+// more bytes, such that every bit of every byte is included in the final array.
+func BitArrayFromBytes(bytes ...byte) bit.Array {
+	return bit.NewArray(bytes, uint(len(bytes)*8), bit.BigEndian)
 }

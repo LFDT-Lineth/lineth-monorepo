@@ -1,7 +1,8 @@
 //! Shared build helpers for the riscv-guests packages — deliberately only the **guest-agnostic**
 //! bits: the pinned toolchain, the common freestanding rv64im target (every guest targets the same
-//! ZkC profile), freestanding-linkage hygiene, the standalone-ELF link (entry stub + memory layout,
-//! shared because every guest links the same way), and small utilities.
+//! ZkC profile), freestanding-linkage hygiene, the package layout (`src/root.zig` is the package
+//! module, `src/main.zig` the guest entry point), the standalone-ELF link (entry stub + memory
+//! layout, shared because every guest links the same way), and small utilities.
 //!
 //! Anything tied to a specific workload stays in the guest that uses it. In particular the zesu /
 //! EVM-execution wiring (executor + SSZ module imports, native crypto linking) lives in
@@ -40,6 +41,131 @@ pub fn standardGuestTarget(b: *std.Build) std.Build.ResolvedTarget {
             .os_tag = .freestanding,
             .abi = .none,
         },
+    });
+}
+
+/// The package module: `src/root.zig` for one target, plus the package's declared dependency
+/// imports. Files under `src/` import each other by relative path, so this one module reaches every
+/// source file; callers create it once per target they build for.
+pub fn createPackageModule(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    imports: []const std.Build.Module.Import,
+) *std.Build.Module {
+    return b.createModule(.{
+        .root_source_file = b.path("src/root.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = imports,
+    });
+}
+
+pub const GuestOptions = struct {
+    /// Name of the installed ELF.
+    name: []const u8,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    /// Modules `src/main.zig` names: the package module and any dependency it uses directly.
+    imports: []const std.Build.Module.Import,
+    code_model: std.builtin.CodeModel = .default,
+};
+
+/// Builds the guest ELF from the entry point `src/main.zig` and installs it via `installGuestElf`.
+/// Call after the package module and its dependency imports are fully wired: the freestanding
+/// linkage pass walks the module graph as it stands.
+pub fn addGuest(b: *std.Build, options: GuestOptions) void {
+    const entry = b.createModule(.{
+        .root_source_file = b.path("src/main.zig"),
+        .target = options.target,
+        .optimize = options.optimize,
+        .imports = options.imports,
+        .code_model = options.code_model,
+    });
+    clearFreestandingNativeLinkage(b, entry);
+    installGuestElf(b, entry, options.name);
+}
+
+/// Package-relative paths of the files directly in `sub_dir` of `b`'s package whose names end in
+/// `suffix`, sorted. A missing `sub_dir` yields an empty list.
+pub fn filesIn(b: *std.Build, sub_dir: []const u8, suffix: []const u8) []const []const u8 {
+    const io = b.graph.io;
+    var dir = b.build_root.handle.openDir(io, sub_dir, .{ .iterate = true }) catch |err| switch (err) {
+        error.FileNotFound => return &.{},
+        else => std.debug.panic("cannot open {s}: {s}", .{ sub_dir, @errorName(err) }),
+    };
+    defer dir.close(io);
+
+    var paths: std.ArrayList([]const u8) = .empty;
+    var it = dir.iterate();
+    while (it.next(io) catch |err| std.debug.panic("cannot scan {s}: {s}", .{ sub_dir, @errorName(err) })) |entry| {
+        if (entry.kind != .file or !std.mem.endsWith(u8, entry.name, suffix)) continue;
+        paths.append(b.allocator, b.pathJoin(&.{ sub_dir, entry.name })) catch @panic("OOM");
+    }
+    std.mem.sort([]const u8, paths.items, {}, struct {
+        fn lessThan(_: void, lhs: []const u8, rhs: []const u8) bool {
+            return std.mem.lessThan(u8, lhs, rhs);
+        }
+    }.lessThan);
+    return paths.items;
+}
+
+/// How native (host) roots are built: the target and optimize mode they compile for, plus the
+/// modules every root imports.
+pub const NativeOptions = struct {
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode = .Debug,
+    imports: []const std.Build.Module.Import = &.{},
+};
+
+pub const TestsOptions = struct {
+    dir: []const u8 = "test",
+    suffix: []const u8 = "_test.zig",
+};
+
+pub const ToolsOptions = struct {
+    dir: []const u8 = "tools",
+};
+
+/// Every `<dir>/*<suffix>` file as a native test root, run by `step`; returned keyed by root path.
+/// Callers add any link inputs to the returned artifacts.
+pub fn addTests(
+    b: *std.Build,
+    step: *std.Build.Step,
+    native: NativeOptions,
+    layout: TestsOptions,
+) std.StringHashMap(*std.Build.Step.Compile) {
+    var tests = std.StringHashMap(*std.Build.Step.Compile).init(b.allocator);
+    for (filesIn(b, layout.dir, layout.suffix)) |root| {
+        const compile = b.addTest(.{ .root_module = nativeRoot(b, root, native) });
+        step.dependOn(&b.addRunArtifact(compile).step);
+        tests.put(root, compile) catch @panic("OOM");
+    }
+    return tests;
+}
+
+/// Every `<dir>/*.zig` file as a native executable named after its file stem; returned keyed by
+/// name. Nothing is installed or run: callers wire the install and run steps they want.
+pub fn addTools(
+    b: *std.Build,
+    native: NativeOptions,
+    layout: ToolsOptions,
+) std.StringHashMap(*std.Build.Step.Compile) {
+    var tools = std.StringHashMap(*std.Build.Step.Compile).init(b.allocator);
+    for (filesIn(b, layout.dir, ".zig")) |root| {
+        const name = std.fs.path.stem(root);
+        const exe = b.addExecutable(.{ .name = name, .root_module = nativeRoot(b, root, native) });
+        tools.put(name, exe) catch @panic("OOM");
+    }
+    return tools;
+}
+
+fn nativeRoot(b: *std.Build, root_file: []const u8, native: NativeOptions) *std.Build.Module {
+    return b.createModule(.{
+        .root_source_file = b.path(root_file),
+        .target = native.target,
+        .optimize = native.optimize,
+        .imports = native.imports,
     });
 }
 
@@ -119,7 +245,7 @@ pub fn installGuestElf(b: *std.Build, root_module: *std.Build.Module, guest_name
     const program_id_tool = b.addExecutable(.{
         .name = "program-id",
         .root_module = b.createModule(.{
-            .root_source_file = b.dependency("build_common", .{}).path("program-id.zig"),
+            .root_source_file = b.dependency("build_common", .{}).path("program_id.zig"),
             .target = b.resolveTargetQuery(.{}),
             .optimize = .Debug,
         }),
@@ -135,7 +261,7 @@ pub fn installGuestElf(b: *std.Build, root_module: *std.Build.Module, guest_name
     b.step("program-id", "Stage the versioned guest ELF with its Keccak-256 Program ID").dependOn(&program_id.step);
 }
 
-/// build_common is consumed via `@import`, never built directly.
+/// build_common is consumed via `@import`; it has no steps of its own.
 pub fn build(b: *std.Build) void {
     _ = b;
 }

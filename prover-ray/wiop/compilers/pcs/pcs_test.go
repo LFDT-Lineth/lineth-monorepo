@@ -257,6 +257,34 @@ func TestConfigure_StandaloneCompile(t *testing.T) {
 	})
 }
 
+// TestConfigure_RSBlowup checks that a preconfigured blowup reaches an
+// option-less Compile, that a divergent local blowup panics before Compile
+// touches the System, and that the consumed default blowup is frozen.
+func TestConfigure_RSBlowup(t *testing.T) {
+	t.Run("consumed", func(t *testing.T) {
+		sys, col, _ := newPCSTestSystem()
+		require.NoError(t, Configure(sys, WithRSBlowup(4)))
+		Compile(sys, WithFRINumQueries(2))
+		require.Equal(t, 4, RSBlowup(sys), "Compile must use the preconfigured blowup")
+		proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, baseVec(4, 3)) })
+		require.NoError(t, sys.Verify(proof, pub), "honest witness must verify")
+	})
+	t.Run("conflict", func(t *testing.T) {
+		sys, _, _ := newPCSTestSystem()
+		numRounds := len(sys.Rounds)
+		require.NoError(t, Configure(sys, WithRSBlowup(4)))
+		require.PanicsWithValue(t, "pcs: RS blowup 8 conflicts with preconfigured 4",
+			func() { Compile(sys, WithRSBlowup(8)) }, "a local blowup must not override the preconfigured one")
+		require.Len(t, sys.Rounds, numRounds, "no opening round may be added")
+	})
+	t.Run("consumed default", func(t *testing.T) {
+		sys, _, _ := newPCSTestSystem()
+		Compile(sys, WithFRINumQueries(2))
+		require.ErrorContains(t, Configure(sys, WithRSBlowup(4)), "RS blowup 4 conflicts with preconfigured 2",
+			"the consumed default blowup must be frozen")
+	})
+}
+
 // TestConfigure_NoOpCompileConsumesNothing checks that a Compile without
 // committed columns leaves the selection open for a later configuration.
 func TestConfigure_NoOpCompileConsumesNothing(t *testing.T) {
@@ -274,4 +302,305 @@ func TestConfigure_RejectsNoPCS(t *testing.T) {
 	sys.DeclareNoPCS()
 	require.ErrorContains(t, Configure(sys, WithFRINumQueries(2)), "no-PCS", "Configure must reject no-PCS")
 	require.Panics(t, func() { Compile(sys) }, "Compile must reject a declared no-PCS System")
+}
+
+// TestCompile_PerSystemRSBlowup checks that each compiled System commits and
+// opens at its own configured blowup, independently of Systems at other
+// blowups compiled and proved concurrently in the same process.
+func TestCompile_PerSystemRSBlowup(t *testing.T) {
+	cases := []struct {
+		name        string
+		opts        []Option
+		want        int
+		wantMaxSize uint8
+	}{
+		{name: "default", want: defaultRSBlowup, wantMaxSize: 22},
+		{name: "four", opts: []Option{WithRSBlowup(4)}, want: 4, wantMaxSize: 22},
+		{name: "eight", opts: []Option{WithRSBlowup(8)}, want: 8, wantMaxSize: 21},
+		{name: "sixteen", opts: []Option{WithRSBlowup(16)}, want: 16, wantMaxSize: 20},
+	}
+	const repetitions = 3
+	for rep := range repetitions {
+		for _, tc := range cases {
+			t.Run(fmt.Sprintf("%s/rep%d", tc.name, rep), func(t *testing.T) {
+				t.Parallel()
+				sys, col, _ := newPCSTestSystem()
+				Compile(sys, append([]Option{WithFRINumQueries(2)}, tc.opts...)...)
+
+				require.Equal(t, tc.want, RSBlowup(sys), "compiled System must record its blowup")
+				require.Equal(t, tc.wantMaxSize, FRIMaxCommittableSizeLog2(sys),
+					"row limit must shrink once blowup·2^22 exceeds the field's 2-adicity")
+				params := FRIStaticParams(sys)
+				require.Equal(t, tc.want, 1<<(params.LogCodewordSize-params.LogPlainTextSize),
+					"FRI envelope must be built at the System's blowup")
+
+				proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+					rt.AssignColumn(col, baseVec(4, 3))
+				})
+				require.NoError(t, sys.Verify(proof, pub), "honest witness must verify")
+			})
+		}
+	}
+}
+
+// TestCompile_RSBlowupBindsProof checks that the blowup is part of what a proof
+// commits to: the same witness commits differently at two blowups, and a proof
+// produced at one blowup is rejected by an otherwise identical System at another.
+func TestCompile_RSBlowupBindsProof(t *testing.T) {
+	prove := func(blowup int) (*wiop.System, wiop.Proof, wiop.PublicInput) {
+		sys, col, _ := newPCSTestSystem()
+		Compile(sys, WithFRINumQueries(2), WithRSBlowup(blowup))
+		proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+			rt.AssignColumn(col, baseVec(4, 3))
+		})
+		return sys, proof, pub
+	}
+	_, proof2, pub2 := prove(2)
+	sys4, proof4, _ := prove(4)
+
+	require.NotEqual(t, proof2.Commitments[0], proof4.Commitments[0],
+		"the same witness must commit to different codewords at different blowups")
+	require.Error(t, sys4.Verify(proof2, pub2),
+		"a blowup-2 proof must not verify against a blowup-4 System")
+}
+
+// TestWithRSBlowup_RejectsInvalid checks that blowups that are not powers of
+// two in [2, maxRSBlowup] are rejected when the option is built.
+func TestWithRSBlowup_RejectsInvalid(t *testing.T) {
+	for _, blowup := range []int{-2, 0, 1, 3, 6, 2 * maxRSBlowup} {
+		t.Run(fmt.Sprint(blowup), func(t *testing.T) {
+			require.Panics(t, func() { WithRSBlowup(blowup) },
+				"blowup %d must be rejected", blowup)
+		})
+	}
+}
+
+// TestCompile_RejectsRepeatedRSBlowup checks that setting the blowup twice is
+// rejected before Compile touches the System.
+func TestCompile_RejectsRepeatedRSBlowup(t *testing.T) {
+	sys, _, _ := newPCSTestSystem()
+	numRounds := len(sys.Rounds)
+
+	require.Panics(t, func() { Compile(sys, WithRSBlowup(4), WithRSBlowup(8)) },
+		"overwriting an already set blowup must be rejected")
+
+	require.Len(t, sys.Rounds, numRounds, "rejected options must not add an opening round")
+	require.False(t, sys.Rounds[0].HasCommitment, "rejected options must not commit columns")
+	require.Zero(t, RSBlowup(sys), "rejected options must not record a blowup")
+}
+
+// tinyRowLimitBlowup leaves a row limit of 2^1 on KoalaBear (2^(24-23)), so
+// row-limit violations are testable with 4-row columns.
+const tinyRowLimitBlowup = 1 << (field.MaxOrderRoot - 1)
+
+// TestCompile_RSBlowupRejectsOversizedStaticColumn checks that a static column
+// above the blowup's row limit is rejected before Compile touches the System.
+func TestCompile_RSBlowupRejectsOversizedStaticColumn(t *testing.T) {
+	sys, _, _ := newPCSTestSystem() // 4-row static column
+	numRounds := len(sys.Rounds)
+
+	require.Panics(t, func() { Compile(sys, WithRSBlowup(tinyRowLimitBlowup)) },
+		"a 4-row column must be rejected when the row limit is 2")
+
+	require.Len(t, sys.Rounds, numRounds, "no opening round may be added")
+	require.False(t, sys.Rounds[0].HasCommitment, "no round may be flagged as committed")
+	require.Zero(t, RSBlowup(sys), "no blowup may be recorded")
+}
+
+// newDynamicPCSTestSystem is [newPCSTestSystem] with the committed column in a
+// dynamic module, compiled at tinyRowLimitBlowup.
+func newDynamicPCSTestSystem() (*wiop.System, *wiop.Column) {
+	sys := wiop.NewSystemf("pcs-dyn-rowlimit")
+	r0 := sys.NewRound()
+	r1 := sys.NewRound()
+	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
+	zeta := r1.NewCoinField(sys.Context.Childf("zeta"))
+	le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{col.View()}, zeta)
+	r1.RegisterAction(&selfAssignLagrange{le: le})
+	Compile(sys, WithFRINumQueries(2), WithRSBlowup(tinyRowLimitBlowup))
+	return sys, col
+}
+
+// TestCompile_RSBlowupRejectsOversizedDynamicColumn checks that the prover
+// refuses to commit a dynamic column above the blowup's row limit.
+func TestCompile_RSBlowupRejectsOversizedDynamicColumn(t *testing.T) {
+	sys, col := newDynamicPCSTestSystem()
+
+	require.PanicsWithValue(t,
+		"pcs: round 0 commits a column of size 2^2, above the 2^1 committable at RS blowup 8388608",
+		func() {
+			sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, baseVec(4, 3)) })
+		}, "a 4-row dynamic column must be rejected when the row limit is 2")
+}
+
+// TestVerify_Regression_ForgedDynamicSizeAboveRowLimit checks that a proof
+// claiming a dynamic size above the blowup's row limit — but within
+// [wiop.ColumnSizeMaxSupported], so System.Verify's own cap lets it through — is
+// rejected with an error rather than a panic while deriving FRI domains.
+func TestVerify_Regression_ForgedDynamicSizeAboveRowLimit(t *testing.T) {
+	sys, col := newDynamicPCSTestSystem()
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, baseVec(2, 3)) })
+	require.NoError(t, sys.Verify(proof, pub), "honest 2-row witness must verify")
+
+	proof.DynamicSizes[0] = 4
+	var err error
+	require.NotPanics(t, func() { err = sys.Verify(proof, pub) }, "a forged size must not panic the verifier")
+	require.ErrorContains(t, err, "exceeds the 2^1 committable", "a forged size above the row limit must be rejected")
+}
+
+// newCapTestSystem is [newPCSTestSystem] over a 16-row column, compiled at two
+// queries with the given cap option. At the default blowup its input tree has
+// height 5 and its running layers heights 4, 3 and 2, so cap heights clamp
+// differently per tree.
+func newCapTestSystem(capOpts ...Option) (*wiop.System, *wiop.Column) {
+	sys := wiop.NewSystemf("pcs-cap")
+	r0 := sys.NewRound()
+	r1 := sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 16, wiop.PaddingDirectionNone)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
+	zeta := r1.NewCoinField(sys.Context.Childf("zeta"))
+	le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{col.View()}, zeta)
+	r1.RegisterAction(&selfAssignLagrange{le: le})
+	Compile(sys, append([]Option{WithFRINumQueries(2)}, capOpts...)...)
+	return sys, col
+}
+
+func proveCapTestSystem(sys *wiop.System, col *wiop.Column) (wiop.Proof, wiop.PublicInput) {
+	elems := make([]field.Element, 16)
+	for i := range elems {
+		elems[i].SetUint64(uint64(i*i + 1))
+	}
+	return sys.Prove(func(rt *wiop.Runtime) {
+		rt.AssignColumn(col, &wiop.ConcreteVector{Plain: field.VecFromBase(elems)})
+	})
+}
+
+// TestCompile_MerkleCapHeight checks that the cap option sets the shape of
+// every cap and branch in the proof: no cap by default, the query-count
+// optimum, explicit heights, and heights clamped to each tree's height-1.
+func TestCompile_MerkleCapHeight(t *testing.T) {
+	const inputTreeHeight = 5
+	runningHeights := []int{4, 3, 2}
+	cases := []struct {
+		name string
+		opts []Option
+		want int
+	}{
+		{name: "no-option", want: 0},
+		{name: "explicit-zero", opts: []Option{WithMerkleCapHeight(0)}, want: 0},
+		{name: "optimal", opts: []Option{WithOptimalMerkleCap()}, want: 1},
+		{name: "two", opts: []Option{WithMerkleCapHeight(2)}, want: 2},
+		{name: "input-height-1", opts: []Option{WithMerkleCapHeight(inputTreeHeight - 1)}, want: inputTreeHeight - 1},
+		{name: "max", opts: []Option{WithMerkleCapHeight(maxMerkleCapHeight)}, want: maxMerkleCapHeight},
+	}
+	capNodes := func(depth int) int {
+		if depth == 0 {
+			return 0
+		}
+		return 1 << depth
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			sys, col := newCapTestSystem(tc.opts...)
+			require.Equal(t, tc.want, MerkleCapHeight(sys), "compiled System must record its cap height")
+
+			proof, pub := proveCapTestSystem(sys, col)
+			require.NoError(t, sys.Verify(proof, pub), "honest witness must verify")
+
+			op := proof.PCSOpeningProof
+			depth := min(tc.want, inputTreeHeight-1)
+			require.Len(t, op.InputCaps, 1)
+			require.Len(t, op.InputCaps[0].Nodes, capNodes(depth), "input cap")
+			for q, query := range op.InputQueries {
+				require.Len(t, query[0].Siblings, inputTreeHeight-1-depth, "query %d input branch", q)
+			}
+			require.Len(t, op.FRIProof.RoundCaps, len(runningHeights))
+			for j, height := range runningHeights {
+				depth := min(tc.want, height-1)
+				require.Len(t, op.FRIProof.RoundCaps[j].Nodes, capNodes(depth), "round %d cap", j+1)
+				for q, query := range op.FRIProof.RunningQueries {
+					require.Len(t, query[j].Siblings, height-depth, "query %d round %d branch", q, j+1)
+				}
+			}
+		})
+	}
+}
+
+// TestCompile_MerkleCapBindsProof checks that the cap height is a property of
+// the System, not of the proof: a proof made at one height is rejected by an
+// otherwise identical System at another, including heights that differ only
+// on the taller trees.
+func TestCompile_MerkleCapBindsProof(t *testing.T) {
+	for _, tc := range []struct{ prover, verifier Option }{
+		{prover: WithMerkleCapHeight(0), verifier: WithMerkleCapHeight(2)},
+		{prover: WithMerkleCapHeight(2), verifier: WithMerkleCapHeight(0)},
+		{prover: WithMerkleCapHeight(3), verifier: WithMerkleCapHeight(4)},
+		{prover: WithOptimalMerkleCap(), verifier: WithMerkleCapHeight(2)},
+	} {
+		proverSys, col := newCapTestSystem(tc.prover)
+		verifierSys, _ := newCapTestSystem(tc.verifier)
+		proof, pub := proveCapTestSystem(proverSys, col)
+		require.NoError(t, proverSys.Verify(proof, pub), "honest proof must verify at its own cap height")
+		require.Error(t, verifierSys.Verify(proof, pub),
+			"cap height %d proof must not verify at cap height %d",
+			MerkleCapHeight(proverSys), MerkleCapHeight(verifierSys))
+	}
+}
+
+// TestWithMerkleCapHeight_RejectsInvalid checks that cap heights outside
+// [0, maxMerkleCapHeight] are rejected when the option is built.
+func TestWithMerkleCapHeight_RejectsInvalid(t *testing.T) {
+	for _, height := range []int{-1, maxMerkleCapHeight + 1} {
+		require.Panics(t, func() { WithMerkleCapHeight(height) }, "cap height %d must be rejected", height)
+	}
+}
+
+// TestCompile_RejectsRepeatedMerkleCap checks that giving two cap options is
+// rejected before Compile touches the System, even when they agree.
+func TestCompile_RejectsRepeatedMerkleCap(t *testing.T) {
+	for _, opts := range [][]Option{
+		{WithMerkleCapHeight(2), WithMerkleCapHeight(2)},
+		{WithOptimalMerkleCap(), WithMerkleCapHeight(1)},
+		{WithMerkleCapHeight(0), WithOptimalMerkleCap()},
+	} {
+		sys, _, _ := newPCSTestSystem()
+		numRounds := len(sys.Rounds)
+		require.Panics(t, func() { Compile(sys, opts...) }, "a second cap option must be rejected")
+		require.Len(t, sys.Rounds, numRounds, "rejected options must not add an opening round")
+		require.Zero(t, MerkleCapHeight(sys), "rejected options must not record a cap height")
+	}
+}
+
+// TestConfigure_MerkleCap checks that a preconfigured cap reaches an
+// option-less Compile, that a matching local option is accepted, that a
+// divergent one panics before Compile touches the System, and that the
+// consumed default (no cap) is frozen.
+func TestConfigure_MerkleCap(t *testing.T) {
+	t.Run("consumed", func(t *testing.T) {
+		sys, _, _ := newPCSTestSystem()
+		require.NoError(t, Configure(sys, WithOptimalMerkleCap()))
+		Compile(sys, WithFRINumQueries(4))
+		require.Equal(t, 2, MerkleCapHeight(sys), "the optimal height must follow the compiled query count")
+	})
+	t.Run("matching", func(t *testing.T) {
+		sys, _, _ := newPCSTestSystem()
+		require.NoError(t, Configure(sys, WithMerkleCapHeight(1)))
+		Compile(sys, WithFRINumQueries(2), WithMerkleCapHeight(1))
+		require.Equal(t, 1, MerkleCapHeight(sys))
+	})
+	t.Run("conflict", func(t *testing.T) {
+		sys, _, _ := newPCSTestSystem()
+		numRounds := len(sys.Rounds)
+		require.NoError(t, Configure(sys, WithOptimalMerkleCap()))
+		require.PanicsWithValue(t, "pcs: Merkle cap height 1 conflicts with preconfigured optimal",
+			func() { Compile(sys, WithMerkleCapHeight(1)) }, "a local cap must not override the preconfigured one")
+		require.Len(t, sys.Rounds, numRounds, "no opening round may be added")
+	})
+	t.Run("consumed default", func(t *testing.T) {
+		sys, _, _ := newPCSTestSystem()
+		Compile(sys, WithFRINumQueries(2))
+		require.ErrorContains(t, Configure(sys, WithOptimalMerkleCap()),
+			"Merkle cap optimal conflicts with preconfigured height 0", "the consumed default cap must be frozen")
+	})
 }

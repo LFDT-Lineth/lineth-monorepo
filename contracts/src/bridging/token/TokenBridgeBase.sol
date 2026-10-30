@@ -25,7 +25,7 @@ import { EfficientLeftRightKeccak } from "../../libraries/EfficientLeftRightKecc
 /**
  * @title Linea Canonical Token Bridge
  * @notice Contract to manage cross-chain ERC-20 bridging.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract TokenBridgeBase is

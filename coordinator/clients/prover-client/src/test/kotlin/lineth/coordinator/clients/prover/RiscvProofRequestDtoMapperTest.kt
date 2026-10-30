@@ -23,7 +23,7 @@ import kotlin.time.Instant
 /**
  * Verifies that the RISC-V proof-request mappers encode every field of a domain request into its request DTO
  * (domain `ByteArray` -> DTO `String` (hex), domain `ULong` -> DTO `Long`) and assemble the request envelope
- * (`programVk`, `metadata` block range, params) correctly. Covers the transport-free mappers; the file-based
+ * (`guestProgramId`, `provingSystem`, `metadata` block range, params) correctly. Covers the transport-free mappers; the file-based
  * mappers (which resolve inlined proofs through a transport) are exercised by the file-based client tests.
  */
 class RiscvProofRequestDtoMapperTest {
@@ -57,8 +57,8 @@ class RiscvProofRequestDtoMapperTest {
 
     assertThat(dto).isEqualTo(
       L2ExecutionProofRequestDto(
-        programId = RiscvProverClientTestFixtures.L2_EXECUTION_PROGRAM_ID,
-        provingSystemVersion = RiscvProverClientTestFixtures.PROVING_SYSTEM_VERSION,
+        guestProgramId = RiscvProverClientTestFixtures.L2_EXECUTION_PROGRAM_ID,
+        provingSystem = RiscvProverClientTestFixtures.PROVING_SYSTEM_VERSION,
         proofRequest = L2ExecutionProofRequestParamsDto(
           parentFtxRollingHash = request.parentFtxRollingHash.encodeHex(),
           parentFtxNumber = request.parentFtxNumber.toLong(),
@@ -94,6 +94,15 @@ class RiscvProofRequestDtoMapperTest {
             coinbase = coinbase,
             chainId = chainId,
             forkName = forkName,
+            systemContracts = SystemContractsDto(
+              beaconRoots = "0x000f3df6d732807ef1319fb7b8bb8522d0beac02",
+              historyStorage = "0x0000f90827f1c53a10cb7a02335b175320002935",
+              deposit = "0x94d4a7449b968b839dcbc64a61f195ca300986ae",
+              withdrawalRequest = "0x66355689a9f067eeb9dc9d899e4192676988279c",
+              consolidationRequest = "0xf0e003f0de2d583ae28fa8cbf66aa096cdace3ff",
+              builderDepositRequest = "0x0000bff46984e3725691fa540a8c7589300d8282",
+              builderExitRequest = "0x000064d678505ad48f8ccb093bc65613800e8282",
+            ),
           ),
         ),
         metadata = MetaDataDto(
@@ -133,13 +142,13 @@ class RiscvProofRequestDtoMapperTest {
     val conflation = ConflationWitness(
       blockRlps = listOf(byteArrayOf(0x0c), byteArrayOf(0x0d)),
     )
-    val chunks = listOf(ByteArray(32) { 0x1e })
+    val chunks = listOf(RiscvProverClientTestFixtures.blobChunkWitness(0x1e))
     val request = RollupProofRequestV1(
       conflations = listOf(conflation),
       l2Executions = l2Executions,
       chunks = chunks,
       parentDataRollingHash = ByteArray(32) { 0x1c },
-      startOffset = 0,
+      parentDataTailTakeBytes = 0,
     )
     val l2ExecutionProofTransport = FakeL2ExecutionProofTransport()
 
@@ -152,8 +161,8 @@ class RiscvProofRequestDtoMapperTest {
 
     assertThat(dto).isEqualTo(
       FileBasedRollupProofRequestDto(
-        programId = RiscvProverClientTestFixtures.ROLLUP_PROGRAM_ID,
-        provingSystemVersion = RiscvProverClientTestFixtures.PROVING_SYSTEM_VERSION,
+        guestProgramId = RiscvProverClientTestFixtures.ROLLUP_PROGRAM_ID,
+        provingSystem = RiscvProverClientTestFixtures.PROVING_SYSTEM_VERSION,
         proofRequest = RollupProofRequestParamsDto(
           chainId = chainId,
           conflations = listOf(
@@ -167,15 +176,21 @@ class RiscvProofRequestDtoMapperTest {
               proof = resolved.proof,
               startBlockNumber = resolved.startBlockNumber,
               publicInputs = resolved.publicInputs,
-              l2L1Messages = resolved.l2L1Messages,
-              txFroms = resolved.txFroms,
-              filteredAddresses = resolved.filteredAddresses,
               programVk = resolved.programVk,
             )
           },
-          chunks = chunks.map { it.encodeHex() },
+          chunks = chunks.map {
+            ChunkWitnessDto(
+              chunkHash = it.chunkHash.encodeHex(),
+              isCalldata = false,
+              blobBytes = it.blobBytes.encodeHex(),
+              calldataBytes = "0x",
+              kzgCommitment = "0x" + "1f".repeat(48),
+              kzgProof = "0x" + "20".repeat(48),
+            )
+          },
           parentDataRollingHash = request.parentDataRollingHash.encodeHex(),
-          startOffset = 0,
+          parentDataTailTakeBytes = 0,
         ),
         metadata = MetaDataDto(
           startBlockNumber = 1000501,
@@ -192,9 +207,9 @@ class RiscvProofRequestDtoMapperTest {
     val request = RollupProofRequestV1(
       conflations = listOf(ConflationWitness(blockRlps = emptyList())),
       l2Executions = listOf(proofIndex),
-      chunks = listOf(ByteArray(32)),
+      chunks = listOf(RiscvProverClientTestFixtures.blobChunkWitness()),
       parentDataRollingHash = ByteArray(32),
-      startOffset = 0,
+      parentDataTailTakeBytes = 0,
     )
     val transport = FakeL2ExecutionProofTransport(responseProvider = { null })
 
@@ -227,8 +242,8 @@ class RiscvProofRequestDtoMapperTest {
 
     assertThat(dto).isEqualTo(
       FileBasedRollupAggregationProofRequestDto(
-        programId = RiscvProverClientTestFixtures.ROLLUP_AGGREGATION_PROGRAM_ID,
-        provingSystemVersion = RiscvProverClientTestFixtures.PROVING_SYSTEM_VERSION,
+        guestProgramId = RiscvProverClientTestFixtures.ROLLUP_AGGREGATION_PROGRAM_ID,
+        provingSystem = RiscvProverClientTestFixtures.PROVING_SYSTEM_VERSION,
         proofRequest = FileBasedRollupAggregationProofRequestParamsDto(
           rollupProofs = rollupProofs.map { proofIndex ->
             val resolved = rollupProofTransport.findResponse(proofIndex).get()!!
@@ -236,8 +251,6 @@ class RiscvProofRequestDtoMapperTest {
               proof = resolved.proof,
               startBlockNumber = resolved.startBlockNumber,
               publicInputs = resolved.publicInputs,
-              l2L1Roots = resolved.l2L1Roots,
-              filteredAddresses = resolved.filteredAddresses,
               programVk = resolved.programVk,
             )
           },
@@ -294,6 +307,7 @@ class RiscvProofRequestDtoMapperTest {
     ),
     chainId = chainId.toULong(),
     coinbase = coinbase,
+    systemContracts = RiscvProverClientTestFixtures.SYSTEM_CONTRACTS,
     parentFtxRollingHash = ByteArray(32) { 0x1a },
     parentFtxNumber = 8UL,
   )

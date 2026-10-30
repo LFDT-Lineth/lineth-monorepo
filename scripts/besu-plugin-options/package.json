@@ -11,11 +11,11 @@
     "prettier:check": "prettier --check \"*.js\" \"output/**/*.mdx\" \"templates/**/*.mdx\" \"output/**/*.json\""
   },
   "engines": {
-    "node": ">=24.18.0",
+    "node": ">=24.22.1",
     "pnpm": ">=12.6.0"
   },
   "packageManager": "pnpm@12.6.0",
   "devDependencies": {
-    "prettier": "3.9.9"
+    "prettier": "3.9.10"
   }
 }

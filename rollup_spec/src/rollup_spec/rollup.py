@@ -9,6 +9,8 @@ import zstandard as zstd
 
 from ethereum.crypto.hash import Hash32, keccak256
 from ethereum.crypto.kzg import (
+    BYTES_PER_COMMITMENT,
+    BYTES_PER_PROOF,
     KZGCommitment,
     kzg_commitment_to_versioned_hash,
 )
@@ -33,6 +35,8 @@ from .l2_execution import (
     L2ExecutionProofPublicInput,
     VerifiableL2ExecutionProof,
     hash_address_list,
+    last_non_zero_pair,
+    merge_filtered_addresses,
 )
 from .l2_execution_ssz import hash_l2_execution_public_inputs
 from .messaging_offsets import rebase_messaging_offsets
@@ -41,9 +45,6 @@ L2_L1_TREE_DEPTH = 5
 ZERO_HASH32 = Hash32(b"\x00" * 32)
 
 # EIP-4844 blob size: FIELD_ELEMENTS_PER_BLOB (4096) × BYTES_PER_FIELD_ELEMENT (32).
-# The KZG commitment is computed over a polynomial defined by exactly this many
-# evaluations, so the byte payload handed to `ckzg.blob_to_kzg_commitment` must
-# be exactly `BLOB_BYTES_LENGTH` bytes.
 BLOB_BYTES_LENGTH = 4096 * 32
 PACKING_BITS_PER_ELEMENT = 254
 BLOB_PAYLOAD_CAPACITY = (4096 * PACKING_BITS_PER_ELEMENT) // 8 - 1
@@ -97,13 +98,12 @@ _TRUSTED_SETUP_PATH = (
 
 
 @lru_cache(maxsize=1)
-def _trusted_setup():
+def trusted_setup():
     """
     Load the EIP-4844 trusted setup once on first use; cached for the
     process lifetime via `lru_cache`. `precompute=0` skips the optional
     FK20 multi-scalar-multiplication precomputation that only matters for
-    `compute_cells_and_kzg_proofs`; we don't need it for the single
-    polynomial evaluation we perform per blob.
+    cell proofs.
     """
     if not _TRUSTED_SETUP_PATH.is_file():
         raise FileNotFoundError(
@@ -113,12 +113,6 @@ def _trusted_setup():
             f"-o {_TRUSTED_SETUP_PATH}` if missing."
         )
     return ckzg.load_trusted_setup(str(_TRUSTED_SETUP_PATH), 0)
-
-
-def blob_versioned_hash(blob_bytes: bytes) -> Hash32:
-    """EIP-4844 versioned hash of a physical blob: the `chunkHash` L1 anchors a blob chunk to."""
-    commitment = KZGCommitment(ckzg.blob_to_kzg_commitment(blob_bytes, _trusted_setup()))
-    return kzg_commitment_to_versioned_hash(commitment)
 
 
 @dataclass
@@ -145,20 +139,22 @@ class ChunkWitness:
     - **Blob chunk** (`is_calldata=False`): `blob_bytes` is exactly 128 KiB of
       physical field elements. Unpacking yields at most
       `BLOB_PAYLOAD_CAPACITY` unpacked bytes, committed as a 128 KiB physical blob, bound by
-      its KZG commitment / versioned hash. A blob chunk may be *shared* with a
-      neighbouring proof across a range boundary (§3.1); its unpacked bytes
-      are divided into a foreign prefix, owned slice and foreign suffix.
+      its KZG commitment / versioned hash. `kzg_commitment` is the 48-byte compressed
+      G1 commitment and `kzg_proof` the 48-byte EIP-4844 blob proof for it. A blob chunk
+      may be *shared* with a neighbouring proof across a range boundary (§3.1); its
+      unpacked bytes are divided into a foreign prefix, owned slice and foreign suffix.
     - **Calldata chunk** (`is_calldata=True`): one calldata submission, bound
       by `keccak256(_compressedData)`. It may complete a segment begun in the
       preceding blob, but must end at a segment boundary. It is *range-aligned*:
       it shares no bytes with a neighbouring proof and carries no foreign bytes.
       `calldata_bytes` contains its exact positive-length
-      submission; blob chunks set this field empty. Calldata sets `blob_bytes` empty.
+      submission; blob chunks set this field empty. Calldata sets `blob_bytes`,
+      `kzg_commitment` and `kzg_proof` empty.
 
     `is_calldata` is witness data: the anchored `chunk_hash` does not by itself
     record which binding applies. It needs no independent L1 verification
-    because the guest confirms it — each arm recomputes the binding hash from
-    the reconstructed bytes and rejects unless it equals `chunk_hash`, so a
+    because the guest confirms it — each arm derives the binding hash from
+    the witnessed bytes and rejects unless it equals `chunk_hash`, so a
     mismatched flag fails the check. The flag selects the check; the hash
     carries the soundness.
     """
@@ -166,6 +162,8 @@ class ChunkWitness:
     is_calldata: bool
     blob_bytes: bytes = b""
     calldata_bytes: bytes = b""
+    kzg_commitment: bytes = b""
+    kzg_proof: bytes = b""
 
     @property
     def is_blob(self) -> bool:
@@ -270,19 +268,42 @@ def _validate_zstd_frame(zstd_frame: bytes, canonical_payload: bytes) -> None:
 
 
 def _verified_chunk_payload(chunk: ChunkWitness, index: int) -> bytes:
-    """Check a chunk's physical bytes against its anchored hash; return its unpacked payload."""
+    """Check a chunk's witnessed bytes against its anchored hash; return its unpacked payload."""
     if chunk.is_calldata:
         if chunk.blob_bytes:
             raise Exception(f"calldata chunk {index} must have empty blobBytes")
+        if chunk.kzg_commitment or chunk.kzg_proof:
+            raise Exception(f"calldata chunk {index} must have empty kzgCommitment and kzgProof")
         if keccak256(chunk.calldata_bytes) != chunk.chunk_hash:
             raise Exception(f"calldata chunk {index} computed hash does not match chunkHash")
         return chunk.calldata_bytes
     if chunk.calldata_bytes:
         raise Exception(f"blob chunk {index} must have empty calldataBytes")
+    if len(chunk.kzg_commitment) != BYTES_PER_COMMITMENT or len(chunk.kzg_proof) != BYTES_PER_PROOF:
+        raise Exception(
+            f"blob chunk {index} kzgCommitment and kzgProof must be {BYTES_PER_COMMITMENT} bytes"
+        )
     payload = unpack_blob_payload(chunk.blob_bytes)
-    if blob_versioned_hash(chunk.blob_bytes) != chunk.chunk_hash:
-        raise Exception(f"blob chunk {index} computed KZG commitment does not match chunkHash")
+    if kzg_commitment_to_versioned_hash(KZGCommitment(chunk.kzg_commitment)) != chunk.chunk_hash:
+        raise Exception(f"blob chunk {index} kzgCommitment versioned hash does not match chunkHash")
     return payload
+
+
+def _verify_blob_kzg_proofs(blob_chunks: Sequence[ChunkWitness]) -> None:
+    """EIP-4844 `verify_blob_kzg_proof_batch` over the touched blob chunks, in chunk order."""
+    if not blob_chunks:
+        return
+    try:
+        valid = ckzg.verify_blob_kzg_proof_batch(
+            b"".join(chunk.blob_bytes for chunk in blob_chunks),
+            b"".join(chunk.kzg_commitment for chunk in blob_chunks),
+            b"".join(chunk.kzg_proof for chunk in blob_chunks),
+            trusted_setup(),
+        )
+    except (RuntimeError, ValueError) as exc:
+        raise Exception("blob KZG proof batch is malformed") from exc
+    if not valid:
+        raise Exception("blob KZG proof batch verification failed")
 
 
 def _parse_segment_ends(stream: bytes, canonical_payloads: Sequence[bytes]) -> List[int]:
@@ -335,12 +356,14 @@ def verify_da_chunks(
     boundary_prev_data_rolling_hash: Optional[Hash32] = None,
 ) -> Tuple[Hash32, int]:
     """
-    Bind each chunk to its anchored hash and parse one segment per conflation from their stream.
+    Bind each chunk to its anchored hash, batch-verify the blob KZG proofs, and parse one
+    segment per conflation from their stream.
     Returns `(endDataRollingHash, finalDataTailDiscardBytes)`.
     """
     if not chunks:
         raise Exception("rollup proof must touch at least one chunk")
     payloads = [_verified_chunk_payload(chunk, i) for i, chunk in enumerate(chunks)]
+    _verify_blob_kzg_proofs([chunk for chunk in chunks if chunk.is_blob])
 
     for i in range(len(chunks) - 1):
         if chunks[i].is_blob and chunks[i + 1].is_blob and len(payloads[i]) != BLOB_PAYLOAD_CAPACITY:
@@ -384,12 +407,11 @@ class RollupPublicInput:
     boundaries. The final count is derived from parsed segments.
 
     `program_vks` is the set of guest program VKs verified beneath this proof,
-    encoded as a distinct list sorted ascending by byte value.
+    encoded as a distinct list sorted ascending by byte value; `filtered_addresses`
+    is encoded the same way.
     """
     end_block_number: U64
     end_block_timestamp: U64
-    parent_l1_l2_bridge_rolling_hash: Hash32
-    parent_l1_l2_bridge_rolling_hash_message_number: U64
     end_l1_l2_bridge_rolling_hash: Hash32
     end_l1_l2_bridge_rolling_hash_message_number: U64
     dynamic_chain_config_hash: Hash32
@@ -487,14 +509,15 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     """
     rollup: for each conflation, derives the canonical truncated-block RLP from
     `block_rlps` (§3.1) and matches the parsed segments from physical blobs and
-    calldata. Unpacks each touched physical blob and recomputes its binding hash
-    (dispatched per chunk on the witnessed `is_calldata` flag, §3.1: KZG
-    commitment for a blob chunk, keccak256 for a calldata chunk), and checks it
-    against the L1-anchored `chunkHash` — folding the dataRollingHash chain
-    across the touched chunks as it goes (§3.4). Recursively verifies the N
-    l2-execution proofs, checks continuity, commits the ordered L2->L1 messages,
-    collects FTX outputs, and emits the rollup PI tuple
-    (§2.4).
+    calldata. Unpacks each touched physical blob and derives its binding hash
+    (dispatched per chunk on the witnessed `is_calldata` flag, §3.1: the
+    versioned hash of the witnessed KZG commitment for a blob chunk, keccak256
+    for a calldata chunk), and checks it against the L1-anchored `chunkHash` —
+    folding the dataRollingHash chain across the touched chunks as it goes
+    (§3.4). Verifies the touched blobs' EIP-4844 KZG proofs as one batch.
+    Recursively verifies the N l2-execution proofs, checks continuity, commits
+    the ordered L2->L1 messages, collects FTX outputs, and emits the rollup PI
+    tuple (§2.4).
     """
     if len(rollup_input.conflations) == 0:
         raise Exception("rollup proof must cover at least one conflation")
@@ -532,11 +555,12 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         rollup_end_block_number,
     )
 
-    concatenated_filtered_addresses: List[Address] = []
-
     for verifiable_proof in rollup_input.l2_execution_proofs:
         verify_l2_execution_proof(verifiable_proof.program_vk, verifiable_proof.proof)
-        concatenated_filtered_addresses.extend(verifiable_proof.proof.filtered_addresses)
+
+    filtered_addresses = merge_filtered_addresses(
+        proof.public_inputs.filtered_addresses for proof in l2_execution_proofs
+    )
 
     concatenated_l2_l1_messages = collect_l2_l1_messages(
         [proof.public_inputs.l2_l1_messages for proof in l2_execution_proofs]
@@ -590,24 +614,26 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     for left, right in zip(l2_execution_proofs, l2_execution_proofs[1:]):
         assert_l2_execution_continuity(left.public_inputs, right.public_inputs)
 
+    end_rolling_hash, end_rolling_hash_number = last_non_zero_pair(
+        (
+            proof.public_inputs.end_l1_l2_bridge_rolling_hash,
+            proof.public_inputs.end_l1_l2_bridge_rolling_hash_message_number,
+        )
+        for proof in l2_execution_proofs
+    )
+
     public_inputs = RollupPublicInput(
         end_block_number=last_proof.public_inputs.end_block_number,
         end_block_timestamp=last_proof.public_inputs.end_block_timestamp,
         l2_l1_messages=concatenated_l2_l1_messages,
-        parent_l1_l2_bridge_rolling_hash=first_proof.public_inputs.parent_l1_l2_bridge_rolling_hash,
-        parent_l1_l2_bridge_rolling_hash_message_number=(
-            first_proof.public_inputs.parent_l1_l2_bridge_rolling_hash_message_number
-        ),
-        end_l1_l2_bridge_rolling_hash=last_proof.public_inputs.end_l1_l2_bridge_rolling_hash,
-        end_l1_l2_bridge_rolling_hash_message_number=(
-            last_proof.public_inputs.end_l1_l2_bridge_rolling_hash_message_number
-        ),
+        end_l1_l2_bridge_rolling_hash=end_rolling_hash,
+        end_l1_l2_bridge_rolling_hash_message_number=end_rolling_hash_number,
         dynamic_chain_config_hash=first_proof.public_inputs.dynamic_chain_config_hash,
         parent_ftx_rolling_hash=first_proof.public_inputs.parent_ftx_rolling_hash,
         parent_ftx_number=first_proof.public_inputs.parent_ftx_number,
         end_ftx_rolling_hash=last_proof.public_inputs.end_ftx_rolling_hash,
         end_processed_ftx_number=last_proof.public_inputs.end_processed_ftx_number,
-        filtered_addresses=concatenated_filtered_addresses,
+        filtered_addresses=filtered_addresses,
         parent_data_rolling_hash=rollup_input.parent_data_rolling_hash,
         end_data_rolling_hash=end_data_rolling_hash,
         parent_block_hash=first_proof.public_inputs.parent_block_hash,
@@ -650,14 +676,10 @@ def verify_l2_execution_proof(program_vk: Hash32, proof: L2ExecutionProof) -> No
     `exec_vks` / `program_vks`, so the anchored VK is provably the key the
     verification ran against. `L2ExecutionProof.proof` stands in for those
     recursive-STARK bytes; the verifier binds the complete PI, including its
-    ordered message list. Filtered-address preimages are checked separately
-    against the public inputs; the caller checks sender hashes against DA blocks.
+    ordered message list. The caller checks sender hashes against DA blocks.
     """
     # First: the recursive STARK verify against the explicit verify key.
     recursive_stark_verify(program_vk, proof.proof, hash_l2_execution_public_inputs(proof.public_inputs))
-    # The check below binds the filtered-address preimage consumed by the rollup proof.
-    if hash_address_list(proof.filtered_addresses) != proof.public_inputs.filtered_addresses_hash:
-        raise Exception("invalid l2-execution filteredAddressesHash preimage")
 
 
 def verify_l2_execution_proof_tiling(
@@ -680,10 +702,6 @@ def assert_l2_execution_continuity(
 ) -> None:
     if left.end_block_hash != right.parent_block_hash:
         raise Exception("l2-execution block-hash continuity failed")
-    if left.end_l1_l2_bridge_rolling_hash != right.parent_l1_l2_bridge_rolling_hash:
-        raise Exception("l2-execution L1-to-L2 rolling-hash continuity failed")
-    if left.end_l1_l2_bridge_rolling_hash_message_number != right.parent_l1_l2_bridge_rolling_hash_message_number:
-        raise Exception("l2-execution L1-to-L2 rolling-hash-number continuity failed")
     if left.dynamic_chain_config_hash != right.dynamic_chain_config_hash:
         raise Exception("l2-execution dynamic chain configuration continuity failed")
     if left.end_ftx_rolling_hash != right.parent_ftx_rolling_hash:

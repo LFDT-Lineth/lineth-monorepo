@@ -236,16 +236,3 @@ func TestCapCircuitRejectsTamperedSibling(t *testing.T) {
 			"circuit must reject a tampered sibling %d", sib)
 	}
 }
-
-// TestMerkleCapDepthMatchesParams pins the depth schedule the circuit assumes
-// structurally: the circuit reads cap sizes from the allocated witness, so it
-// must agree with what the prover emits.
-func TestMerkleCapDepthMatchesParams(t *testing.T) {
-	for _, numQueries := range []uint{1, 2, 3, 4, 8, 16} {
-		for height := 1; height <= 6; height++ {
-			depth := merkleCapDepth(numQueries, height)
-			require.GreaterOrEqual(t, depth, 0)
-			require.LessOrEqual(t, depth, height-1, "cap must leave at least one branch step")
-		}
-	}
-}

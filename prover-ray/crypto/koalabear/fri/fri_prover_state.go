@@ -39,16 +39,18 @@ type ProverState struct {
 	// performed so far and the index of the current running layer.
 	round uint8
 
-	running []field.Ext   // evaluations of layer[round]
-	layers  [][]field.Ext // layers[0..round]; layers[numRounds] is the final polynomial
-	trees   []*Tree       // trees[0..min(round, numRounds-1)]; the final layer has no tree
+	// running holds the evaluations of layer[round], nil for the zero
+	// codeword: the running codeword is zero until the first level joins, and
+	// is never materialized before (see zeroLayerTree).
+	running []field.Ext
+	trees   []layerTree // trees[1..min(round, numRounds-1)]; the final layer has no tree
 }
 
 // NewProverState validates the levels, builds the folding schedule, and seeds
-// the machine with the zero codeword: round 0 always introduces a level (the
-// main degree-D polynomial), which folds in as described in [ProverState.Fold]
-// against this zero seed -- there being no round -1 to fold a real codeword
-// from.
+// the machine with the zero codeword. The first level (at round 0, unless a
+// FixedDomain PCS opens no size at its top) folds in as described in
+// [ProverState.Fold] against this zero seed -- there being no round -1 to fold
+// a real codeword from. The rounds before it fold the zero codeword.
 func NewProverState(p Params, levels []Level) (*ProverState, error) {
 
 	plan, err := buildProvePlan(p, levels)
@@ -57,14 +59,11 @@ func NewProverState(p Params, levels []Level) (*ProverState, error) {
 	}
 
 	st := &ProverState{
-		p:       p,
-		plan:    plan,
-		levels:  levels,
-		running: make([]field.Ext, 1<<p.LogCodewordSize),
-		layers:  make([][]field.Ext, p.numRounds()+1),
-		trees:   make([]*Tree, p.numRounds()),
+		p:      p,
+		plan:   plan,
+		levels: levels,
+		trees:  make([]layerTree, p.numRounds()),
 	}
-	st.layers[0] = st.running
 
 	if p.numRounds() > 1 {
 		st.RoundRoots = make([]field.Octuplet, p.numRounds()-1)
@@ -122,10 +121,17 @@ func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 		}
 	}
 
-	st.running = foldLayerInternally(primary, alpha, st.p.domains[j])
-	st.layers[j+1] = st.running
+	// The zero codeword (nil) folds into the zero codeword.
+	st.running = nil
+	if primary != nil {
+		st.running = foldLayerInternally(primary, alpha, st.p.domains[j])
+	}
 	st.round = j + 1
 
+	if j+1 == st.p.numRounds() && st.running == nil {
+		st.FinalPoly = make([]field.Ext, 1<<st.p.logFinalPolySize)
+		return field.Octuplet{}
+	}
 	if j+1 == st.p.numRounds() {
 		// Final layer: revealed directly, no Merkle commitment, as its
 		// 2^logFinalPolySize coefficients rather than its codeword. The
@@ -144,7 +150,12 @@ func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 		return field.Octuplet{}
 	}
 
-	tree := buildTreeExt(st.running)
+	var tree layerTree
+	if st.running == nil {
+		tree = zeroLayerTree{height: int(st.p.LogCodewordSize - j - 1)}
+	} else {
+		tree = buildTreeExt(st.running)
+	}
 	st.trees[j+1] = tree
 	root := tree.Root()
 	st.RoundRoots[j] = root // root of layer j+1 → RoundRoots[(j+1)-1]
@@ -164,7 +175,7 @@ func (st *ProverState) Open(openedPositions []int) Proof {
 	if st.p.numRounds() > 1 {
 		st.RoundCaps = make([]MerkleCap, st.p.numRounds()-1)
 		for j := uint8(1); j < st.p.numRounds(); j++ {
-			depth := merkleCapDepth(st.p.NumQueries, int(st.p.LogCodewordSize-j))
+			depth := st.p.merkleCapDepth(int(st.p.LogCodewordSize - j))
 			capDepths[j] = depth
 			st.RoundCaps[j-1] = st.trees[j].OpenCap(depth)
 		}

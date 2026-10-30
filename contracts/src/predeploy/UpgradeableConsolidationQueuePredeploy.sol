@@ -6,7 +6,7 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 /**
  * @title Upgradeable Consolidation Queue Predeploy Contract
  * @notice Implementation of EIP-7251 execution layer consolidation request contract
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 contract UpgradeableConsolidationQueuePredeploy is Initializable {

@@ -7,6 +7,7 @@ import linea.clients.ProverProofTransport
 import linea.crypto.HashFunction
 import linea.crypto.Sha256HashFunction
 import linea.domain.BlockIntervalProofIndex
+import linea.ethapi.SystemContracts
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 import org.apache.logging.log4j.LogManager
@@ -15,11 +16,11 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 /**
  * Maps a [L2ExecutionProofRequestV1] domain request to the RISC-V l2-execution proof request DTO described by
- * `rollup_spec/prover_io/schemas/getZkL2ExecutionProofV1.request.schema.json`.
+ * `rollup_spec/src/rollup_spec/prover_io/schemas/getZkL2ExecutionProofV1.request.schema.json`.
  */
 internal class L2ExecutionProofRequestDtoMapper(
-  private val programId: String,
-  private val provingSystemVersion: String,
+  private val guestProgramId: String,
+  private val provingSystem: String,
   private val l2MessageServiceAddress: String,
   private val forkName: String,
 ) : (L2ExecutionProofRequestV1) -> SafeFuture<L2ExecutionProofRequestDto> {
@@ -43,8 +44,8 @@ internal class L2ExecutionProofRequestDtoMapper(
     }
 
     val dto = L2ExecutionProofRequestDto(
-      programId = programId,
-      provingSystemVersion = provingSystemVersion,
+      guestProgramId = guestProgramId,
+      provingSystem = provingSystem,
       proofRequest = L2ExecutionProofRequestParamsDto(
         parentFtxRollingHash = request.parentFtxRollingHash.encodeHex(),
         parentFtxNumber = request.parentFtxNumber.toLong(),
@@ -53,6 +54,7 @@ internal class L2ExecutionProofRequestDtoMapper(
           coinbase = request.coinbase,
           chainId = request.chainId.toLong(),
           forkName = forkName,
+          systemContracts = request.systemContracts.toDto(),
         ),
         payloads = payloads,
       ),
@@ -70,9 +72,19 @@ internal class L2ExecutionProofRequestDtoMapper(
   }
 }
 
+internal fun SystemContracts.toDto() = SystemContractsDto(
+  beaconRoots = beaconRoots,
+  historyStorage = historyStorage,
+  deposit = deposit,
+  withdrawalRequest = withdrawalRequest,
+  consolidationRequest = consolidationRequest,
+  builderDepositRequest = builderDepositRequest,
+  builderExitRequest = builderExitRequest,
+)
+
 /**
  * Maps the deserialized l2-execution proof response DTO onto the domain [L2ExecutionProofResponseV1]
- * described by `rollup_spec/prover_io/schemas/getZkL2ExecutionProofV1.response.schema.json`.
+ * described by `rollup_spec/src/rollup_spec/prover_io/schemas/getZkL2ExecutionProofV1.response.schema.json`.
  * The transport is responsible for parsing the JSON (read from a file or returned by a REST call)
  * into [L2ExecutionProofResponseDto] before this mapper runs.
  */
@@ -87,9 +99,6 @@ internal object L2ExecutionProofResponseDtoMapper : (
       endBlockNumber = responseDto.publicInputs.endBlockNumber.toULong(),
       proof = responseDto.proof.decodeHex(),
       publicInputs = responseDto.publicInputs.toDomainObject(),
-      l2L1Messages = responseDto.l2L1Messages.map { it.decodeHex() },
-      txFroms = responseDto.txFroms.map { it.decodeHex() },
-      filteredAddresses = responseDto.filteredAddresses.map { it.decodeHex() },
       programVk = responseDto.programVk.decodeHex(),
     )
   }
@@ -104,12 +113,12 @@ typealias L2ExecutionProofTransport =
  */
 class L2ExecutionProverClient(
   transport: L2ExecutionProofTransport,
-  programId: String,
-  provingSystemVersion: String,
+  guestProgramId: String,
+  provingSystem: String,
   l2MessageServiceAddress: String,
   forkName: String,
   proofRequestDtoMapper: (L2ExecutionProofRequestV1) -> SafeFuture<L2ExecutionProofRequestDto> =
-    L2ExecutionProofRequestDtoMapper(programId, provingSystemVersion, l2MessageServiceAddress, forkName),
+    L2ExecutionProofRequestDtoMapper(guestProgramId, provingSystem, l2MessageServiceAddress, forkName),
   proofResponseDtoMapper: (L2ExecutionProofResponseDto) -> L2ExecutionProofResponseV1 =
     L2ExecutionProofResponseDtoMapper,
   hashFunction: HashFunction = Sha256HashFunction(),

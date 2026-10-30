@@ -10,6 +10,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
+	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 )
 
 func TestRunHelp(t *testing.T) {
@@ -156,25 +157,25 @@ func TestBoolEnv(t *testing.T) {
 }
 
 func TestWriteJSONLegacyLayout(t *testing.T) {
-	inputs := map[string][]byte{
-		elfmapping.EntryPointAndBlobsCountInput: mustDecodeHex(t, "00000000008000000000000000000002"),
-		elfmapping.BlobsOffsetAndSizeInput: mustDecodeHex(t, "00000000008000000000000000000004"+
-			"00000000088000000000000000000001"),
-		elfmapping.BlobsExecutableInput:  []byte{0x80},
-		elfmapping.BlobsDataInput:        []byte{1, 2, 3, 4, 5},
-		predecoding.InstructionBaseInput: mustDecodeHex(t, "0000000000800000"),
-		predecoding.DecodedInput:         []byte{0xaa, 0xbb},
+	inputs := map[string]bit.Array{
+		elfmapping.EntryPointAndBlobsCountInput: mustDecodeHex(t, "0080000000000002"),
+		elfmapping.BlobsOffsetAndSizeInput: mustDecodeHex(t, "0080000000000004"+
+			"0880000000000001"),
+		elfmapping.BlobsExecutableInput:  elfmapping.BitArrayFromBytes(0x80),
+		elfmapping.BlobsDataInput:        elfmapping.BitArrayFromBytes(1, 2, 3, 4, 5),
+		predecoding.InstructionBaseInput: mustDecodeHex(t, "00800000"),
+		predecoding.DecodedInput:         elfmapping.BitArrayFromBytes(0xaa, 0xbb),
 	}
 	var output bytes.Buffer
 	if err := writeJSON(&output, inputs); err != nil {
 		t.Fatalf("writeJSON() error = %v", err)
 	}
 	want := "{\n" +
-		"\t\"entry_point_and_blobs_count\": \"0x0000000000800000_0000000000000002\",\n" +
-		"\t\"blobs_offset_and_size\": \"0x0000000000800000_0000000000000004____0000000008800000_0000000000000001\",\n" +
+		"\t\"entry_point_and_blobs_count\": \"0x00800000_00000002\",\n" +
+		"\t\"blobs_offset_and_size\": \"0x00800000_00000004____08800000_00000001\",\n" +
 		"\t\"blobs_executable\": \"0x80\",\n" +
 		"\t\"blobs_data\": \"0x01020304____05\",\n" +
-		"\t\"instruction_base\": \"0x0000000000800000\",\n" +
+		"\t\"instruction_base\": \"0x00800000\",\n" +
 		"\t\"decoded\": \"0xaabb\"\n" +
 		"}\n"
 	if output.String() != want {
@@ -182,11 +183,11 @@ func TestWriteJSONLegacyLayout(t *testing.T) {
 	}
 }
 
-func mustDecodeHex(t *testing.T, value string) []byte {
+func mustDecodeHex(t *testing.T, value string) bit.Array {
 	t.Helper()
 	decoded, err := hex.DecodeString(value)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return decoded
+	return elfmapping.BitArrayFromBytes(decoded...)
 }

@@ -7,7 +7,7 @@ import { L2MessageServicePauseManager } from "../../../security/pausing/L2Messag
 
 /**
  * @title Contract to manage cross-chain message hashes storage and statuses on L2.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract L2MessageManagerV1 is Initializable, L2MessageServicePauseManager, IL2MessageManagerV1 {

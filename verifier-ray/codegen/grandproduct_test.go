@@ -33,8 +33,10 @@ func newSinglePermutation(t *testing.T) *wiop.System {
 }
 
 // newSingleMessageBusHandle builds a size-4 Send/Receive pair on one handle,
-// compiled through messagebus.Compile then grandproduct.Compile — which
-// together register one FinalProductCheck and (unless skipInShard) one
+// with both bus columns on round 0, compiled through messagebus.Compile (with
+// shared randomness explicitly opted out — the seeded default requires every
+// bus column on the coin round) then grandproduct.Compile — which together
+// register one FinalProductCheck and (unless skipInShard) one
 // CheckHandleSumInShard, both on the same GrandProduct.
 func newSingleMessageBusHandle(t *testing.T, skipInShard bool) *wiop.System {
 	t.Helper()
@@ -50,7 +52,7 @@ func newSingleMessageBusHandle(t *testing.T, skipInShard bool) *wiop.System {
 	send.SkipInShardCheck = skipInShard
 	recv.SkipInShardCheck = skipInShard
 
-	messagebus.Compile(sys)
+	messagebus.Compile(sys, messagebus.WithoutSharedRandomness())
 	grandproduct.Compile(sys)
 	global.Compile(sys)
 	return sys

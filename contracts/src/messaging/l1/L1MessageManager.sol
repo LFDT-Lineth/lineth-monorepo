@@ -8,7 +8,7 @@ import { EfficientLeftRightKeccak } from "../../libraries/EfficientLeftRightKecc
 
 /**
  * @title Contract to manage cross-chain message rolling hash computation and storage on L1.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract L1MessageManager is L1MessageManagerV1, IL1MessageManager {

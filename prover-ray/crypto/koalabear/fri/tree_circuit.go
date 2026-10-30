@@ -46,12 +46,13 @@ func convertMerkleCap(c MerkleCap, withValues bool) GnarkMerkleCap {
 	return GnarkMerkleCap{Nodes: convertOctuplets(c.Nodes, withValues)}
 }
 
-// recoverCapRootGnark mirrors [MerkleCap.RecoverRoot]. aux carries the cap's
-// auxiliary digests in heap order and may be nil, or hold nil entries, for the
-// levels that have none; the running trees pass nil throughout, while input
-// trees supply digests rebuilt from their revealed tables.
+// recoverCapRootGnark mirrors [capRoot]. injections lists, in heap order, the
+// digests injected into each node above the frontier, in injection order; it
+// may be nil, or hold empty entries, for the nodes that have none. The running
+// trees pass nil throughout, while input trees supply digests rebuilt from
+// their revealed tables.
 func recoverCapRootGnark(
-	api *circuit.KoalaBearAPI, nodes []circuit.Octuplet, aux []*circuit.Octuplet,
+	api *circuit.KoalaBearAPI, nodes []circuit.Octuplet, injections [][]circuit.Octuplet,
 ) circuit.Octuplet {
 	n := len(nodes)
 	if n == 0 {
@@ -60,16 +61,18 @@ func recoverCapRootGnark(
 	if n&(n-1) != 0 {
 		panic(fmt.Sprintf("fri: recoverCapRootGnark: cap has %d nodes, want a power of two", n))
 	}
-	if aux != nil && len(aux) != n-1 {
-		panic(fmt.Sprintf("fri: recoverCapRootGnark: cap has %d auxiliary digests, want %d", len(aux), n-1))
+	if injections != nil && len(injections) != n-1 {
+		panic(fmt.Sprintf("fri: recoverCapRootGnark: cap has %d injection lists, want %d", len(injections), n-1))
 	}
 
 	work := make([]circuit.Octuplet, 2*n-1)
 	copy(work[n-1:], nodes)
 	for i := n - 2; i >= 0; i-- {
 		work[i] = poseidon2.KoalagnarkCompress(api, work[2*i+1], work[2*i+2])
-		if aux != nil && aux[i] != nil {
-			work[i] = poseidon2.KoalagnarkCompress(api, work[i], *aux[i])
+		if injections != nil {
+			for _, injected := range injections[i] {
+				work[i] = poseidon2.KoalagnarkCompress(api, work[i], injected)
+			}
 		}
 	}
 	return work[0]
@@ -117,7 +120,7 @@ func authenticateToCapGnark(
 
 	ancestor := branch.Leaf
 	for i := n - 1; i >= 0; i-- {
-		ancestor = foldOneLevelGnark(api, ancestor, branch.Siblings[i], nil, idxBits[n-1-i])
+		ancestor = foldOneLevelGnark(api, ancestor, branch.Siblings[i], nil, nil, idxBits[n-1-i])
 	}
 	assertOctupletEqual(api, ancestor, selectFrontierNodeGnark(api, frontier, idxBits[n:n+depth]))
 }

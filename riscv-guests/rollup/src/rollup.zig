@@ -5,7 +5,7 @@
 //! own decode/encode bounds, not the rollup's real recursive-proof logic.
 
 const std = @import("std");
-const rollup_ssz = @import("rollup_ssz");
+const rollup_ssz = @import("rollup_ssz.zig");
 
 // ── Sentinels ─────────────────────────────────────────────────────────────────────────────────
 // Each value is keccak256 of its own tag string, computed at comptime — `std.crypto.hash.sha3.
@@ -57,6 +57,14 @@ pub fn run(alloc: std.mem.Allocator, input: rollup_ssz.RollupProofPrivateInput) 
         try filtered_addresses.appendSlice(alloc, p.proof.filtered_addresses);
     }
 
+    var end_bridge_rolling_hash: [32]u8 = @splat(0);
+    var end_bridge_message_number: u64 = 0;
+    for (input.l2_execution_proofs) |p| {
+        if (p.proof.public_inputs.end_l1_l2_bridge_rolling_hash_message_number == 0) continue;
+        end_bridge_rolling_hash = p.proof.public_inputs.end_l1_l2_bridge_rolling_hash;
+        end_bridge_message_number = p.proof.public_inputs.end_l1_l2_bridge_rolling_hash_message_number;
+    }
+
     const l2_l1_roots = try alloc.dupe([32]u8, &[_][32]u8{L2_L1_ROOTS_ELEMENT});
     errdefer alloc.free(l2_l1_roots);
     const owned_filtered_addresses = try filtered_addresses.toOwnedSlice(alloc);
@@ -66,10 +74,8 @@ pub fn run(alloc: std.mem.Allocator, input: rollup_ssz.RollupProofPrivateInput) 
             .end_block_number = last.proof.public_inputs.end_block_number,
             .end_block_timestamp = last.proof.public_inputs.end_block_timestamp,
             .l2_l1_bridge_transaction_tree = L2_L1_BRIDGE_TRANSACTION_TREE,
-            .parent_l1_l2_bridge_rolling_hash = first.proof.public_inputs.parent_l1_l2_bridge_rolling_hash,
-            .parent_l1_l2_bridge_rolling_hash_message_number = first.proof.public_inputs.parent_l1_l2_bridge_rolling_hash_message_number,
-            .end_l1_l2_bridge_rolling_hash = last.proof.public_inputs.end_l1_l2_bridge_rolling_hash,
-            .end_l1_l2_bridge_rolling_hash_message_number = last.proof.public_inputs.end_l1_l2_bridge_rolling_hash_message_number,
+            .end_l1_l2_bridge_rolling_hash = end_bridge_rolling_hash,
+            .end_l1_l2_bridge_rolling_hash_message_number = end_bridge_message_number,
             .dynamic_chain_config_hash = first.proof.public_inputs.dynamic_chain_config_hash,
             .parent_ftx_rolling_hash = first.proof.public_inputs.parent_ftx_rolling_hash,
             .parent_ftx_number = first.proof.public_inputs.parent_ftx_number,

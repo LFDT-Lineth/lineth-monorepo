@@ -148,7 +148,7 @@ class CoordinatorApp(
     )
   private val aggregationsRepository =
     AggregationsRepositoryImpl(
-      aggregationsPostgresDao =
+      aggregationsDao =
       RetryingPostgresAggregationsDao(
         delegate =
         PostgresAggregationsDao(

@@ -80,7 +80,7 @@ func TestPrepareInputsForwardsMappingOptions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PrepareInputs() error = %v", err)
 	}
-	if got := inputs[elfmapping.BlobsExecutableInput]; !bytes.Equal(got, []byte{0x80}) {
+	if got := inputs[elfmapping.BlobsExecutableInput]; !bytes.Equal(got.Bytes(), []byte{0x80}) {
 		t.Errorf("blobs_executable = %x, want 80", got)
 	}
 	if !bytes.Contains(sections.Bytes(), []byte("yes, .text")) {

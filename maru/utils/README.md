@@ -6,7 +6,7 @@ This module contains utility tools for Maru blockchain operations.
 
 ### 1. PrivateKeyGenerator
 
-A utility tool to generate a prefixed private key and corresponding node ID, following the same pattern as used in MaruFactory for validator private keys.
+A utility tool to generate a prefixed private key and corresponding node ID, following the same pattern as used for the validator private keys in the Maru integration tests.
 
 #### Purpose
 Generates cryptographic keys for Maru validators and P2P networking, displaying both the prefixed private key and the corresponding LibP2P node ID.

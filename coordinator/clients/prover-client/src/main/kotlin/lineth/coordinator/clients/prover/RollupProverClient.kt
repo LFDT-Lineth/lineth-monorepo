@@ -16,11 +16,11 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 /**
  * Maps a [RollupProofRequestV1] domain request to the RISC-V rollup proof request DTO described by
- * `rollup_spec/prover_io/schemas/getZkRollupProofV1.request.schema.json`.
+ * `rollup_spec/src/rollup_spec/prover_io/schemas/getZkRollupProofV1.request.schema.json`.
  */
 class RollupProofRequestDtoMapper(
-  private val programId: String,
-  private val provingSystemVersion: String,
+  private val guestProgramId: String,
+  private val provingSystem: String,
   private val chainId: Long,
   private val l2ExecutionProofProvider: ProofProvider<L2ExecutionProofResponseDto>? = null,
 ) : (RollupProofRequestV1) -> SafeFuture<FileBasedRollupProofRequestDto> {
@@ -28,9 +28,10 @@ class RollupProofRequestDtoMapper(
     val l2ExecutionProofFutures = l2ExecutionProofProvider?.let {
       request.l2Executions.map { proofIndex ->
         l2ExecutionProofProvider.findProof(proofIndex).thenApply { response ->
+          // proverVersion is response-only; the embedded l2ExecutionProof schema does not allow it.
           requireNotNull(response) {
             "L2 execution proof response was not found for proofIndex=$proofIndex"
-          }
+          }.copy(proverVersion = null)
         }
       }
     } ?: emptyList()
@@ -44,18 +45,16 @@ class RollupProofRequestDtoMapper(
     return SafeFuture.collectAll(l2ExecutionProofFutures.stream())
       .thenApply { l2ExecutionProofResponseDtos ->
         FileBasedRollupProofRequestDto(
-          programId = programId,
-          provingSystemVersion = provingSystemVersion,
+          guestProgramId = guestProgramId,
+          provingSystem = provingSystem,
           proofRequest = RollupProofRequestParamsDto(
             chainId = chainId,
             conflations = request.conflations.map { it.toDto() },
             l2ExecutionProofs = l2ExecutionProofResponseDtos.ifEmpty { null },
             l2ExecutionProofIndexes = l2ExecutionProofIndexes,
-            chunks = request.chunks.map { it.encodeHex() },
+            chunks = request.chunks.map { it.toDto() },
             parentDataRollingHash = request.parentDataRollingHash.encodeHex(),
-            startOffset = request.startOffset,
-            opaquePrefixBytes = request.opaquePrefixBytes.takeIf { it.isNotEmpty() }?.encodeHex(),
-            opaqueSuffixBytes = request.opaqueSuffixBytes.takeIf { it.isNotEmpty() }?.encodeHex(),
+            parentDataTailTakeBytes = request.parentDataTailTakeBytes,
             boundaryPrevDataRollingHash = request.boundaryPrevDataRollingHash?.encodeHex(),
           ),
           metadata = MetaDataDto(
@@ -70,7 +69,7 @@ class RollupProofRequestDtoMapper(
 
 /**
  * Maps the deserialized rollup proof response DTO onto the domain [RollupProofResponseV1] described by
- * `rollup_spec/prover_io/schemas/getZkRollupProofV1.response.schema.json`.
+ * `rollup_spec/src/rollup_spec/prover_io/schemas/getZkRollupProofV1.response.schema.json`.
  * The transport is responsible for parsing the JSON (read from a file or returned by a REST call) into
  * [RollupProofResponseDto] before this mapper runs.
  */
@@ -85,8 +84,6 @@ object RollupProofResponseDtoMapper : (
       endBlockNumber = responseDto.publicInputs.endBlockNumber.toULong(),
       proof = responseDto.proof.decodeHex(),
       publicInputs = responseDto.publicInputs.toDomainObject(),
-      l2L1Roots = responseDto.l2L1Roots.map { it.decodeHex() },
-      filteredAddresses = responseDto.filteredAddresses.map { it.decodeHex() },
       programVk = responseDto.programVk.decodeHex(),
     )
   }
@@ -105,13 +102,13 @@ typealias RollupProofTransport =
 class RollupProverClient(
   transport: RollupProofTransport,
   l2ExecutionProofProvider: ProofProvider<L2ExecutionProofResponseDto>?,
-  programId: String,
-  provingSystemVersion: String,
+  guestProgramId: String,
+  provingSystem: String,
   chainId: Long,
   proofRequestDtoMapper: (RollupProofRequestV1) -> SafeFuture<FileBasedRollupProofRequestDto> =
     RollupProofRequestDtoMapper(
-      programId,
-      provingSystemVersion,
+      guestProgramId,
+      provingSystem,
       chainId,
       l2ExecutionProofProvider,
     ),

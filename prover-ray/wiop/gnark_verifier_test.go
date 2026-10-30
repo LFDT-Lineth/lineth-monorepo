@@ -1,6 +1,7 @@
 package wiop_test
 
 import (
+	"fmt"
 	"maps"
 	"math/big"
 	"slices"
@@ -135,6 +136,161 @@ func TestVerifierCircuit_PCSOnly(t *testing.T) {
 		bad.Commitments[0] = root
 		require.Error(t, cv.solve(t, bad, pub), "tampered commitment must not satisfy the circuit")
 	})
+}
+
+// TestVerifierCircuit_PCSOnly_RSBlowup checks that the circuit replays the
+// opening at the System's blowup: query positions are drawn from the blowup's
+// codeword domain, so a circuit assuming another rate rejects honest proofs.
+func TestVerifierCircuit_PCSOnly_RSBlowup(t *testing.T) {
+	for _, blowup := range []int{4, 16} {
+		t.Run(fmt.Sprintf("blowup=%d", blowup), func(t *testing.T) {
+			sys := wiop.NewSystemf("gnark-pcs-blowup")
+			r0 := sys.NewRound()
+			r1 := sys.NewRound()
+			mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
+			col := mod.NewColumn(sys.Context.Childf("col"), r0)
+			zeta := r1.NewCoinField(sys.Context.Childf("zeta"))
+			le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{col.View()}, zeta)
+			r1.RegisterAction(&selfAssignLagrange{le: le})
+			pcs.Compile(sys, append(testPCSOptions(), pcs.WithRSBlowup(blowup))...)
+
+			proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, nonConstVec(8)) })
+			require.NoError(t, sys.Verify(proof, pub), "honest proof must verify natively")
+			cv := compileVerifierCircuit(t, sys, proof, pub)
+			require.NoError(t, cv.solve(t, proof, pub), "honest proof must satisfy the circuit")
+		})
+	}
+}
+
+// newPCSOnlyCapSystem is a [newPCSOnlySystem] over a 16-row column, so its
+// Merkle trees are tall enough (input tree of height 5, running layers of
+// height 4, 3 and 2) for distinct cap heights to clamp differently.
+func newPCSOnlyCapSystem(capOpt pcs.Option) (*wiop.System, *wiop.Column) {
+	sys := wiop.NewSystemf("gnark-pcs-cap")
+	r0 := sys.NewRound()
+	r1 := sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 16, wiop.PaddingDirectionNone)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
+	zeta := r1.NewCoinField(sys.Context.Childf("zeta"))
+	le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{col.View()}, zeta)
+	r1.RegisterAction(&selfAssignLagrange{le: le})
+	pcs.Compile(sys, append(testPCSOptions(), capOpt)...)
+	return sys, col
+}
+
+// TestVerifierCircuit_PCSOnly_MerkleCap checks that the circuit verifies
+// honest proofs at every cap height the System can be compiled with: no cap,
+// the query-count optimum, a height below every tree's height-1, and one
+// clamped to height-1 on every tree.
+func TestVerifierCircuit_PCSOnly_MerkleCap(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		opt  pcs.Option
+		want int
+	}{
+		{name: "none", opt: pcs.WithMerkleCapHeight(0), want: 0},
+		{name: "optimal", opt: pcs.WithOptimalMerkleCap(), want: 1},
+		{name: "height=3", opt: pcs.WithMerkleCapHeight(3), want: 3},
+		{name: "height=24", opt: pcs.WithMerkleCapHeight(24), want: 24},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			sys, col := newPCSOnlyCapSystem(tc.opt)
+			require.Equal(t, tc.want, pcs.MerkleCapHeight(sys), "System must record its cap height")
+
+			proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, nonConstVec(16)) })
+			require.NoError(t, sys.Verify(proof, pub), "honest proof must verify natively")
+			cv := compileVerifierCircuit(t, sys, proof, pub)
+			require.NoError(t, cv.solve(t, proof, pub), "honest proof must satisfy the circuit")
+		})
+	}
+}
+
+// TestVerifierCircuit_PCSOnly_MerkleCapMismatch checks that the circuit takes
+// the cap height from the System, not from the proof: a verifier circuit
+// allocated from a proof made at another cap height must not be satisfiable.
+func TestVerifierCircuit_PCSOnly_MerkleCapMismatch(t *testing.T) {
+	verifierSys, _ := newPCSOnlyCapSystem(pcs.WithMerkleCapHeight(0))
+	proverSys, col := newPCSOnlyCapSystem(pcs.WithMerkleCapHeight(3))
+	proof, pub := proverSys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, nonConstVec(16)) })
+	require.NoError(t, proverSys.Verify(proof, pub), "honest proof must verify at its own cap height")
+	require.Error(t, verifierSys.Verify(proof, pub), "a capped proof must fail natively without the cap")
+
+	err := func() (err error) {
+		defer func() {
+			if r := recover(); r != nil {
+				err = fmt.Errorf("circuit definition panicked: %v", r)
+			}
+		}()
+		modulus := ecc.BN254.ScalarField()
+		ccs, err := frontend.Compile(modulus, scs.NewBuilder, wiop.AllocateVerifierCircuit(verifierSys, proof, pub))
+		if err != nil {
+			return err
+		}
+		assignment := wiop.AllocateVerifierCircuit(verifierSys, proof, pub).AssignVerifierCircuit(proof, pub)
+		w, err := frontend.NewWitness(assignment, modulus)
+		if err != nil {
+			return err
+		}
+		_, err = ccs.Solve(w)
+		return err
+	}()
+	require.Error(t, err, "a capped proof must not satisfy the uncapped System's circuit")
+}
+
+// TestVerifierCircuit_PCSModuleGroups checks the circuit verifier on a system
+// compiled with module groups: modules A and B share a size and have
+// interleaved columns, so their rows are reordered and committed as two
+// groups, either below a larger module or as the largest size of the round,
+// which pair leaves let them split.
+func TestVerifierCircuit_PCSModuleGroups(t *testing.T) {
+	for _, sizes := range [][2]int{{8, 32}, {32, 8}} {
+		verifyModuleGroupsCircuit(t, sizes[0], sizes[1])
+	}
+}
+
+// TestVerifierCircuit_PCSFixedFRIDomain checks the circuit verifier on a
+// system compiled with module groups and a fixed FRI domain, whose top rounds
+// fold the zero codeword.
+func TestVerifierCircuit_PCSFixedFRIDomain(t *testing.T) {
+	verifyModuleGroupsCircuit(t, 8, 32, pcs.WithFixedFRIDomain())
+}
+
+func verifyModuleGroupsCircuit(t *testing.T, sizeAB, sizeBig int, opts ...pcs.Option) {
+	t.Helper()
+	sys := wiop.NewSystemf("gnark-pcs-groups")
+	r0 := sys.NewRound()
+	r1 := sys.NewRound()
+	a := sys.NewSizedModule(sys.Context.Childf("A"), sizeAB, wiop.PaddingDirectionNone)
+	b := sys.NewSizedModule(sys.Context.Childf("B"), sizeAB, wiop.PaddingDirectionNone)
+	big := sys.NewSizedModule(sys.Context.Childf("Big"), sizeBig, wiop.PaddingDirectionNone)
+	cols := []*wiop.Column{
+		b.NewColumn(sys.Context.Childf("b0"), r0),
+		a.NewColumn(sys.Context.Childf("a0"), r0),
+		b.NewColumn(sys.Context.Childf("b1"), r0),
+		big.NewColumn(sys.Context.Childf("big"), r0),
+	}
+	views := make([]*wiop.ColumnView, len(cols))
+	for i, col := range cols {
+		views[i] = col.View()
+	}
+	zeta := r1.NewCoinField(sys.Context.Childf("zeta"))
+	le := sys.NewLagrangeEval(sys.Context.Childf("le"), views, zeta)
+	r1.RegisterAction(&selfAssignLagrange{le: le})
+	pcs.Compile(sys, append(append(testPCSOptions(), pcs.WithModuleGroups()), opts...)...)
+
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+		for _, col := range cols[:3] {
+			rt.AssignColumn(col, nonConstVec(sizeAB))
+		}
+		rt.AssignColumn(cols[3], nonConstVec(sizeBig))
+	})
+	require.NoError(t, sys.Verify(proof, pub), "honest proof must verify natively")
+
+	cv := compileVerifierCircuit(t, sys, proof, pub)
+	require.NoError(t, cv.solve(t, proof, pub), "honest proof must satisfy the circuit")
+	bad := cloneProof(proof)
+	bad.Cells[le.EvaluationClaims[1].Context.ID] = field.ElemFromExt(field.Uint64ToExt(7))
+	require.Error(t, cv.solve(t, bad, pub), "tampered claim must not satisfy the circuit")
 }
 
 func TestVerifierCircuit_Vanishing(t *testing.T) {

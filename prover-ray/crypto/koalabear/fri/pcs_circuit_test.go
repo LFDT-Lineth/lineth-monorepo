@@ -1,6 +1,7 @@
 package fri
 
 import (
+	"fmt"
 	"math/rand/v2"
 	"testing"
 
@@ -19,13 +20,16 @@ import (
 // revealed-table reconstruction and the per-tree frontier selection are
 // exercised the way the recursion actually uses them.
 //
-// The query count matters. Cap depth is min(log2(numQueries), height-1), so a
-// one- or two-query fixture gives a depth-0 or depth-1 cap whose frontier
-// selection can be satisfied by coincidence. These fixtures use four queries,
+// The cap height matters. Each tree clamps it to height-1, so a depth-0 or
+// depth-1 cap gives a frontier selection that can be satisfied by coincidence.
+// The default fixture uses four queries at their optimal cap height of 2,
 // putting the input-tree frontier at depth 2 and making the selector bits
-// observable.
+// observable; TestPCSVerifyGnarkCapHeights sweeps the other heights.
 
 const pcsCircuitNumQueries = 4
+
+// pcsCircuitCapHeight is OptimalMerkleCapHeight(pcsCircuitNumQueries).
+const pcsCircuitCapHeight = 2
 
 // pcsVerifyCircuit runs the in-circuit PCS verifier over a witness-carried
 // opening proof.
@@ -60,17 +64,29 @@ func (c *pcsVerifyCircuit) Define(api frontend.API) error {
 }
 
 // newPCSCircuitFixture builds two multi-size witness batches of different
-// heights, opens them at four query positions, and checks the native verifier
-// accepts before any circuit runs. Two batches give two input trees, so the
-// circuit must match each opening to its own cap.
-func newPCSCircuitFixture(t *testing.T) pcsOpenVerifyFixture {
+// heights, opens them at four query positions with the given Merkle cap height,
+// and checks the native verifier accepts before any circuit runs. Two batches
+// give two input trees, so the circuit must match each opening to its own cap.
+// The witness and challenges do not depend on capHeight, so fixtures at
+// different heights share their VerifyInputs.
+func newPCSCircuitFixture(t *testing.T, capHeight uint8) pcsOpenVerifyFixture {
+	t.Helper()
+	return newPCSCircuitFixtureAt(t, capHeight, 0)
+}
+
+// newPCSCircuitFixtureAt is newPCSCircuitFixture over a FixedDomain PCS whose
+// domain is extraRounds rounds above the witness's largest size, or the
+// restricted PCS of newPCSCircuitFixture for extraRounds = 0.
+func newPCSCircuitFixtureAt(t *testing.T, capHeight uint8, extraRounds uint8) pcsOpenVerifyFixture {
 	t.Helper()
 
 	// prepare the PCS setup
-	params, err := NewParams(4, 3, pcsCircuitNumQueries)
+	params, err := NewParams(4+extraRounds, 3+extraRounds, pcsCircuitNumQueries)
 	require.NoError(t, err)
+	params.MerkleCapHeight = capHeight
 	pcs, err := NewPCS(params, makeEncoders(int(params.numRounds()+1), 2))
 	require.NoError(t, err)
+	pcs.FixedDomain = extraRounds > 0
 
 	// build the witness
 	// witness[3] has two rows at the top size so one can be opened at shift 1 below: at shift 0
@@ -113,6 +129,12 @@ func newPCSCircuitFixture(t *testing.T) pcsOpenVerifyFixture {
 			field.UintsToExt(37, 0, 0, 1, 0, 0),
 		},
 		QueryPositions: []int{3, 9, 12, 6},
+	}
+	for i := range extraRounds {
+		challenges.FoldAlphas = append(challenges.FoldAlphas, field.UintsToExt(41+uint64(i), 0, 0, 0, 1, 0))
+		for k := range challenges.QueryPositions {
+			challenges.QueryPositions[k] = 2*challenges.QueryPositions[k] + (int(i)+k)%2
+		}
 	}
 	// compute the opening proof and the claimed values for the verifier
 	proof, claimed := openForTest(t, pcs, openInputs{
@@ -220,7 +242,7 @@ func solvePCSCircuit(t *testing.T, template, assignment *pcsVerifyCircuit) error
 // TestPCSVerifyGnarkMatchesNative is the honest path: the circuit must accept
 // exactly the proof the native verifier accepts.
 func TestPCSVerifyGnarkMatchesNative(t *testing.T) {
-	fx := newPCSCircuitFixture(t)
+	fx := newPCSCircuitFixture(t, pcsCircuitCapHeight)
 
 	// The fixture must actually exercise capping, or this test would pass
 	// against a verifier that ignores caps entirely.
@@ -235,11 +257,125 @@ func TestPCSVerifyGnarkMatchesNative(t *testing.T) {
 		"honest proof must satisfy the verifier circuit")
 }
 
+// TestPCSVerifyGnarkFixedDomain: the circuit accepts a FixedDomain proof whose
+// witness is two rounds below the domain (the first two rounds fold the zero
+// codeword), and rejects it with a tampered zero-layer opening.
+func TestPCSVerifyGnarkFixedDomain(t *testing.T) {
+	fx := newPCSCircuitFixtureAt(t, pcsCircuitCapHeight, 2)
+	require.Len(t, fx.proof.FRIProof.RoundRoots, 4, "the fixed domain folds five rounds")
+	require.Equal(t, zeroLayerTree{height: 5}.Root(), fx.proof.FRIProof.RoundRoots[0])
+
+	template, assignment := circuitFor(fx, fx.proof)
+	require.NoError(t, solvePCSCircuit(t, template, assignment),
+		"honest fixed-domain proof must satisfy the verifier circuit")
+
+	tampered := fx.proof
+	tampered.FRIProof.RunningQueries = append([]RunningQuery(nil), fx.proof.FRIProof.RunningQueries...)
+	tampered.FRIProof.RunningQueries[0] = append(RunningQuery(nil), fx.proof.FRIProof.RunningQueries[0]...)
+	tampered.FRIProof.RunningQueries[0][0].Leaf[0] = field.NewElement(1)
+	require.Error(t, fx.pcs.Verify(fx.input, tampered))
+	template, assignment = circuitFor(fx, tampered)
+	require.Error(t, solvePCSCircuit(t, template, assignment), "a zero layer's opening must bind")
+}
+
+// capNodeCount is the number of frontier nodes a depth-d cap carries: none at
+// depth zero (the frontier is the known root), 2^d otherwise.
+func capNodeCount(depth int) int {
+	if depth == 0 {
+		return 0
+	}
+	return 1 << depth
+}
+
+// TestPCSVerifyGnarkCapHeights sweeps the configured cap height from no cap
+// to beyond every tree's height. The fixture's trees have heights 4 and 3
+// (input) and 3 and 2 (running rounds 1 and 2), so height 3 reaches height-1
+// on the tallest tree and height 8 is clamped to height-1 on every tree.
+func TestPCSVerifyGnarkCapHeights(t *testing.T) {
+	inputHeights := []int{4, 3}
+	for _, capHeight := range []uint8{0, 1, 2, 3, 8} {
+		t.Run(fmt.Sprintf("capHeight=%d", capHeight), func(t *testing.T) {
+			fx := newPCSCircuitFixture(t, capHeight)
+
+			require.Len(t, fx.proof.InputCaps, len(inputHeights))
+			for i, height := range inputHeights {
+				depth := min(int(capHeight), height-1)
+				require.Len(t, fx.proof.InputCaps[i].Nodes, capNodeCount(depth), "input tree %d cap", i)
+				for queryIdx, query := range fx.proof.InputQueries {
+					require.Len(t, query[i].Siblings, height-1-depth, "query %d input tree %d branch", queryIdx, i)
+				}
+			}
+			for j := uint8(1); j < fx.pcs.Params.numRounds(); j++ {
+				height := int(fx.pcs.Params.LogCodewordSize - j)
+				depth := min(int(capHeight), height-1)
+				require.Len(t, fx.proof.FRIProof.RoundCaps[j-1].Nodes, capNodeCount(depth), "round %d cap", j)
+				for queryIdx, query := range fx.proof.FRIProof.RunningQueries {
+					require.Len(t, query[j-1].Siblings, height-depth, "query %d round %d branch", queryIdx, j)
+				}
+			}
+
+			template, assignment := circuitFor(fx, fx.proof)
+			require.NoError(t, solvePCSCircuit(t, template, assignment),
+				"honest proof must satisfy the verifier circuit")
+		})
+	}
+}
+
+// TestPCSVerifyRejectsMismatchedCapHeight checks that the cap height is a
+// verifier parameter, not something read off the proof: an honest proof made
+// at one height must be rejected by a verifier configured for another, both
+// natively and in-circuit. The circuit is allocated from the proof's own
+// shape, as a recursion would if it trusted the prover's geometry.
+func TestPCSVerifyRejectsMismatchedCapHeight(t *testing.T) {
+	for _, tc := range []struct{ prover, verifier uint8 }{
+		{prover: 0, verifier: pcsCircuitCapHeight},
+		{prover: pcsCircuitCapHeight, verifier: 0},
+		{prover: 1, verifier: 3},
+		{prover: 3, verifier: 1},
+	} {
+		t.Run(fmt.Sprintf("prover=%d/verifier=%d", tc.prover, tc.verifier), func(t *testing.T) {
+			proved := newPCSCircuitFixture(t, tc.prover)
+			fx := newPCSCircuitFixture(t, tc.verifier)
+
+			require.Error(t, fx.pcs.Verify(fx.input, proved.proof),
+				"native verifier must reject a proof with another cap shape")
+
+			mismatched := fx
+			mismatched.proof = proved.proof
+			template, assignment := circuitFor(mismatched, proved.proof)
+			require.Error(t, compileAndSolvePCSCircuit(template, assignment),
+				"circuit must reject a proof with another cap shape")
+		})
+	}
+}
+
+// compileAndSolvePCSCircuit is [solvePCSCircuit] for templates that may not
+// compile: a shape mismatch is reported by VerifyGnark while defining the
+// circuit, so compilation failures count as rejection.
+func compileAndSolvePCSCircuit(template, assignment *pcsVerifyCircuit) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("circuit definition panicked: %v", r)
+		}
+	}()
+	modulus := ecc.BN254.ScalarField()
+	ccs, err := frontend.Compile(modulus, scs.NewBuilder, template)
+	if err != nil {
+		return err
+	}
+	w, err := frontend.NewWitness(assignment, modulus)
+	if err != nil {
+		return err
+	}
+	_, err = ccs.Solve(w)
+	return err
+}
+
 // TestPCSVerifyGnarkRejectsTamperedInputCap is the soundness direction for the
 // input-tree cap: corrupting a frontier node must break the circuit, exactly as
 // it breaks the native verifier.
 func TestPCSVerifyGnarkRejectsTamperedInputCap(t *testing.T) {
-	fx := newPCSCircuitFixture(t)
+	fx := newPCSCircuitFixture(t, pcsCircuitCapHeight)
 	prng := rand.New(utils.NewRandSource(4242))
 
 	for tree := range fx.proof.InputCaps {
@@ -265,7 +401,7 @@ func TestPCSVerifyGnarkRejectsTamperedInputCap(t *testing.T) {
 // caps. A depth-zero round cap has no nodes and is skipped by the inner loop:
 // its frontier is the round root itself.
 func TestPCSVerifyGnarkRejectsTamperedRoundCap(t *testing.T) {
-	fx := newPCSCircuitFixture(t)
+	fx := newPCSCircuitFixture(t, pcsCircuitCapHeight)
 	prng := rand.New(utils.NewRandSource(909))
 
 	tamperedAny := false

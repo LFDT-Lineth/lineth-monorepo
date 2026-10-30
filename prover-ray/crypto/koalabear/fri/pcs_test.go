@@ -52,6 +52,7 @@ func TestCanonicalLayout_Order(t *testing.T) {
 				{BatchIdx: 0, SizeLog2: 3, RowIdx: 0, IsExt: true, AlphaPower: 1, Shifts: []int{1}},
 				{BatchIdx: 1, SizeLog2: 3, RowIdx: 0, AlphaPower: 2, Shifts: []int{3}},
 			},
+			RunningPower: 3,
 		},
 		{
 			SizeLog2: 2,
@@ -59,6 +60,7 @@ func TestCanonicalLayout_Order(t *testing.T) {
 				{BatchIdx: 0, SizeLog2: 2, RowIdx: 0, AlphaPower: 0, Shifts: []int{0}},
 				{BatchIdx: 1, SizeLog2: 2, RowIdx: 0, IsExt: true, AlphaPower: 1, Shifts: []int{2, 3}},
 			},
+			RunningPower: 2,
 		},
 	}
 	assert.Equal(t, want, got)
@@ -147,7 +149,7 @@ func TestOpenInputTreeOpeningAlignsMultiSizeRows(t *testing.T) {
 		t.Helper()
 
 		root := tree.Root()
-		require.NoError(t, branch.AuthenticateToCap(query, []field.Octuplet{root}), name)
+		require.NoError(t, branch.AuthenticateToCap(query, []field.Octuplet{root}, nil), name)
 
 		leaf, err := branch.rowAtLevel(len(levelEvals))
 		require.NoError(t, err, name)
@@ -168,6 +170,7 @@ func TestInputCapsAuthenticateRevealedTablesAndQueryBoundary(t *testing.T) {
 	prng := rand.New(utils.NewRandSource(20260819))
 	params, err := NewParams(4, 3, 4)
 	require.NoError(t, err)
+	params.MerkleCapHeight = 2
 	pcs, err := NewPCS(params, makeEncoders(4, 2))
 	require.NoError(t, err)
 	witness := MultiSizeTable{
@@ -194,7 +197,7 @@ func TestInputCapsAuthenticateRevealedTablesAndQueryBoundary(t *testing.T) {
 	require.NotNil(t, branch.Leaves[2], "auxiliary pair below the cap must stay on the query path")
 	numLeaves := 1 << len(branch.Leaves)
 	leafIndex := queryPosition / ((1 << params.LogCodewordSize) / numLeaves)
-	require.NoError(t, branch.AuthenticateToCap(leafIndex, frontier))
+	require.NoError(t, branch.AuthenticateToCap(leafIndex, frontier, nil))
 	base := leafIndex / (numLeaves / len(treeCap.Tables[0].Rows))
 	require.Equal(t, openEncodedRow(committed.EncodedTable[0], base), treeCap.Tables[0].Rows[base])
 	require.Equal(t, openEncodedRow(committed.EncodedTable[0], base^1), treeCap.Tables[0].Rows[base^1])

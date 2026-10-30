@@ -1,6 +1,4 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
@@ -8,7 +6,6 @@
  */
 package maru.app
 
-import linea.testing.besu.startWithRetry
 import maru.p2p.testutils.NetworkUtil.findStablePort
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -22,7 +19,6 @@ class MaruFollowerRecoveryTest {
   @BeforeEach
   fun setUp() {
     network = ValidatorFollowerNetwork()
-    network.startBesuNodes()
   }
 
   @AfterEach
@@ -32,7 +28,7 @@ class MaruFollowerRecoveryTest {
 
   @Test
   fun `Maru follower is able to import blocks after going down`() {
-    network.startMaruNodes()
+    network.start()
 
     val blocksToProduce = 5
     network.produceBlocks(blocksToProduce)
@@ -43,8 +39,8 @@ class MaruFollowerRecoveryTest {
     network.stopFollowerMaru()
     network.startFollowerMaru()
 
-    network.followerStack.maruApp.awaitTillMaruHasPeers(1u)
-    network.validatorStack.maruApp.awaitTillMaruHasPeers(1u)
+    network.followerMaru.awaitTillMaruHasPeers(1u)
+    network.validatorMaru.awaitTillMaruHasPeers(1u)
 
     network.produceBlocks(blocksToProduce)
 
@@ -57,7 +53,7 @@ class MaruFollowerRecoveryTest {
     // never auto-assigns it to another fork's port-0 bind. This makes the stop→restart
     // gap safe
     val validatorP2pPort = findStablePort()
-    network.startMaruNodes(validatorP2pPort = validatorP2pPort)
+    network.start(validatorP2pPort = validatorP2pPort)
 
     val blocksToProduce = 5
     network.produceBlocks(blocksToProduce)
@@ -65,22 +61,10 @@ class MaruFollowerRecoveryTest {
     // This is here mainly to wait until block propagation is complete
     network.checkValidatorAndFollowerBlocks(blocksToProduce)
 
-    val validatorStack = network.validatorStack
-    validatorStack.maruApp.stop().get()
-    validatorStack.maruApp.close()
+    network.restartValidatorMaru()
 
-    validatorStack.setMaruApp(
-      network.maruFactory.buildTestMaruValidatorWithP2pPeering(
-        ethereumJsonRpcUrl = validatorStack.besuNode.jsonRpcBaseUrl().get(),
-        engineApiRpc = validatorStack.besuNode.engineRpcUrl().get(),
-        dataDir = validatorStack.tmpDir,
-        p2pPort = validatorP2pPort,
-      ),
-    )
-    validatorStack.maruApp.start().get()
-
-    network.followerStack.maruApp.awaitTillMaruHasPeers(1u)
-    validatorStack.maruApp.awaitTillMaruHasPeers(1u)
+    network.followerMaru.awaitTillMaruHasPeers(1u)
+    network.validatorMaru.awaitTillMaruHasPeers(1u)
 
     network.produceBlocks(blocksToProduce)
 
@@ -89,7 +73,7 @@ class MaruFollowerRecoveryTest {
 
   @Test
   fun `Maru follower is able to import blocks after its validator el node goes down`() {
-    network.startMaruNodes()
+    network.start()
 
     val blocksToProduce = 5
     network.produceBlocks(blocksToProduce)
@@ -97,9 +81,9 @@ class MaruFollowerRecoveryTest {
     // This is here mainly to wait until block propagation is complete
     network.checkValidatorAndFollowerBlocks(blocksToProduce)
 
-    network.cluster.stop()
+    network.stopBesuNodes()
     Thread.sleep(3000)
-    network.cluster.startWithRetry(network.followerStack.besuNode, network.validatorStack.besuNode)
+    network.startBesuNodes()
 
     network.produceBlocks(blocksToProduce)
 

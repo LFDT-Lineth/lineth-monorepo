@@ -2,7 +2,7 @@
   "name": "@lfdt-lineth/sdk-viem",
   "version": "1.1.0",
   "description": "Viem-based SDK for Linea bridge deposits, withdrawals, claims, and message queries",
-  "author": "Consensys Software Inc.",
+  "author": "Consensys Incorporated",
   "license": "(MIT OR Apache-2.0)",
   "repository": {
     "type": "git",
@@ -48,7 +48,9 @@
     "test": "jest --bail --detectOpenHandles",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
-    "clean": "rimraf dist node_modules coverage"
+    "clean": "rimraf dist node_modules coverage",
+    "prepack": "cp ../../../LICENSE-APACHE ../../../LICENSE-MIT .",
+    "postpack": "rm -f LICENSE-APACHE LICENSE-MIT"
   },
   "dependencies": {
     "@lfdt-lineth/sdk-core": "workspace:*"

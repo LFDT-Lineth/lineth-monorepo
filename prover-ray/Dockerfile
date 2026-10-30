@@ -7,6 +7,7 @@
 # which runs, in effect:
 #   docker build -f Dockerfile \
 #     --build-context riscv-guests=<repo>/riscv-guests \
+#     --build-context licenses=<repo> \
 #     -t consensys/lineth-prover-ray:dev .
 #
 # dev-mock needs only the Go binary. dev-zkvm additionally uses the bundled
@@ -39,13 +40,13 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
         ca-certificates curl xz-utils git make build-essential python3 \
     && rm -rf /var/lib/apt/lists/*
-# Zig toolchain (pinned; see riscv-guests/l2-execution/build.zig.zon).
+# Zig toolchain (pinned; see riscv-guests/l2_execution/build.zig.zon).
 RUN curl -fsSL "${ZIG_URL}" -o /tmp/zig.tar.xz \
     && tar -xJf /tmp/zig.tar.xz -C /opt \
     && ln -s "/opt/zig-x86_64-linux-${ZIG_VERSION}/zig" /usr/local/bin/zig \
     && rm /tmp/zig.tar.xz
 # Build the statically-linked rv64im guest ELF + the native runner. Path deps
-# (build_common, guest-common, lineth-accelerators) are siblings in riscv-guests;
+# (build_common, guest_common, lineth_accelerators) are siblings in riscv-guests;
 # the rest are fetched by zig from the network.
 COPY --from=riscv-guests Makefile /riscv-guests/Makefile
 RUN make -C /riscv-guests install-constantine-deps \
@@ -54,11 +55,11 @@ ENV PATH="/root/.local/bin:${PATH}"
 COPY --from=riscv-guests . /riscv-guests
 # Strip the native runner's debug_info (the guest ELF is already stripped); the
 # ReleaseSafe build keeps its runtime checks, we just drop symbols for prod size.
-RUN make -C /riscv-guests/l2-execution fetch-host \
-    && make -C /riscv-guests/l2-execution compile \
-    && cd /riscv-guests/l2-execution \
+RUN make -C /riscv-guests/l2_execution fetch-host \
+    && make -C /riscv-guests/l2_execution compile \
+    && cd /riscv-guests/l2_execution \
     && zig build install-runner -Dhost-tools=true --summary all \
-    && strip /riscv-guests/l2-execution/zig-out/bin/l2-execution-runner
+    && strip /riscv-guests/l2_execution/zig-out/bin/l2_execution_runner
 
 ########################################
 # Final runtime image: debian:bookworm-slim (glibc 2.36, same release as the
@@ -72,12 +73,14 @@ ARG VCS_REF
 ARG BUILD_DATE
 LABEL org.label-schema.version=$VERSION \
       org.label-schema.vcs-ref=$VCS_REF \
-      org.label-schema.build-date=$BUILD_DATE
+      org.label-schema.build-date=$BUILD_DATE \
+      org.opencontainers.image.licenses="MIT OR Apache-2.0"
 
 # Prover binary (static), native runner, and guest ELF.
 COPY --from=go-builder  /out/prover                                             /opt/linea/prover-ray/prover
-COPY --from=zig-builder /riscv-guests/l2-execution/zig-out/bin/l2-execution-runner /opt/linea/prover-ray/l2-execution-runner
-COPY --from=zig-builder /riscv-guests/l2-execution/zig-out/bin/evm_execution_guest /opt/linea/prover-ray/evm_execution_guest
+COPY --from=zig-builder /riscv-guests/l2_execution/zig-out/bin/l2_execution_runner /opt/linea/prover-ray/l2_execution_runner
+COPY --from=zig-builder /riscv-guests/l2_execution/zig-out/bin/evm_execution_guest /opt/linea/prover-ray/evm_execution_guest
+COPY --from=licenses LICENSE-APACHE LICENSE-MIT /licenses/
 
 ENV PATH="/opt/linea/prover-ray:${PATH}"
 WORKDIR /opt/linea/prover-ray

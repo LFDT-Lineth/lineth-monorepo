@@ -1,5 +1,5 @@
 /*
- * Copyright Consensys Software Inc.
+ * Copyright Consensys Incorporated
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -34,7 +34,6 @@ import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.TransactionReceipt;
 import org.hyperledger.besu.ethereum.mainnet.*;
-import org.hyperledger.besu.ethereum.mainnet.block.access.list.BlockAccessList;
 import org.hyperledger.besu.ethereum.mainnet.systemcall.BlockProcessingContext;
 import org.hyperledger.besu.ethereum.processing.TransactionProcessingResult;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.worldview.BonsaiWorldState;
@@ -53,17 +52,13 @@ public class CorsetBlockProcessor extends MainnetBlockProcessor {
   public CorsetBlockProcessor(
       final MainnetTransactionProcessor transactionProcessor,
       final TransactionReceiptFactory transactionReceiptFactory,
-      final Wei blockReward,
       final MiningBeneficiaryCalculator miningBeneficiaryCalculator,
-      final boolean skipZeroBlockRewards,
       final ProtocolSchedule protocolSchedule,
       final ZkTracer zkTracer) {
     super(
         transactionProcessor,
         transactionReceiptFactory,
-        blockReward,
         miningBeneficiaryCalculator,
-        skipZeroBlockRewards,
         protocolSchedule,
         BalConfiguration.DEFAULT);
     this.protocolSchedule = protocolSchedule;
@@ -71,12 +66,11 @@ public class CorsetBlockProcessor extends MainnetBlockProcessor {
   }
 
   @Override
-  public BlockProcessingResult processBlock(
-      final ProtocolContext protocolContext,
-      final Blockchain blockchain,
-      final MutableWorldState worldState,
-      final Block block,
-      final Optional<BlockAccessList> blockAccessList) {
+  public BlockProcessingResult processBlock(final BlockExecutionContext context) {
+    final ProtocolContext protocolContext = context.getProtocolContext();
+    final Blockchain blockchain = protocolContext.getBlockchain();
+    final MutableWorldState worldState = context.getWorldState();
+    final Block block = context.getBlock();
 
     var blockHeader = block.getHeader();
     var blockBody = block.getBody();
@@ -100,11 +94,22 @@ public class CorsetBlockProcessor extends MainnetBlockProcessor {
             Optional.empty());
     preExecutionProcessor.process(blockProcessingContext, Optional.empty());
 
+    final Address miningBeneficiary = miningBeneficiaryCalculator.calculateBeneficiary(blockHeader);
+
     for (final Transaction transaction : transactions) {
       // Address when we support eip-8037 (likely never by this tracer)
       final long cumulativeStateGasUsed = 0;
-      if (!hasAvailableBlockBudget(
-          blockHeader, transaction, currentGasUsed, cumulativeStateGasUsed, protocolSpec)) {
+      if (!protocolSpec
+          .getBlockGasAccountingStrategy()
+          .hasBlockCapacity(
+              transaction.getGasLimit(),
+              protocolSpec
+                  .getGasCalculator()
+                  .stateGasCostCalculator()
+                  .transactionExecutionGasLimit(),
+              currentGasUsed,
+              cumulativeStateGasUsed,
+              blockHeader.getGasLimit())) {
         return new BlockProcessingResult(Optional.empty(), "provided gas insufficient");
       }
 
@@ -112,8 +117,6 @@ public class CorsetBlockProcessor extends MainnetBlockProcessor {
 
       final BlockHashLookup blockHashLookup =
           new BlockchainBasedBlockHashLookup(blockHeader, blockchain);
-      final Address miningBeneficiary =
-          miningBeneficiaryCalculator.calculateBeneficiary(blockHeader);
 
       Optional<BlockHeader> maybeParentHeader =
           blockchain.getBlockHeader(blockHeader.getParentHash());
@@ -175,8 +178,10 @@ public class CorsetBlockProcessor extends MainnetBlockProcessor {
       }
     }
 
-    if (!rewardCoinbase(worldState, blockHeader, ommers, skipZeroBlockRewards)) {
-      // no need to log, rewardCoinbase logs the error.
+    if (!protocolSpec
+        .getBlockRewardProcessor()
+        .rewardBeneficiaries(worldState, blockHeader, ommers, miningBeneficiary)) {
+      // no need to log, rewardBeneficiaries logs the error.
       if (worldState instanceof BonsaiWorldState) {
         ((BonsaiWorldStateUpdateAccumulator) worldState.updater()).reset();
       }

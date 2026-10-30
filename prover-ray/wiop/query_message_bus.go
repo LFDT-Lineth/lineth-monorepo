@@ -195,6 +195,7 @@ func (sys *System) newMessageBus(
 	if handle == "" {
 		panic("wiop: System.NewMessageBus*: handle must be non-empty")
 	}
+	tab.mustBeConstructed("System.NewMessageBus*")
 	if len(tab.Columns) == 0 {
 		panic("wiop: System.NewMessageBus*: tab must have at least one column")
 	}

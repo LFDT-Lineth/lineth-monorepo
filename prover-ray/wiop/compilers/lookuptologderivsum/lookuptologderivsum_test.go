@@ -1,6 +1,7 @@
 package lookuptologderivsum_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -224,9 +225,13 @@ func TestCompile_SingleColumn_NoMatchPanics(t *testing.T) {
 	rt.AssignColumn(colT, makeVec(10, 20, 30, 40))
 	rt.AssignColumn(colS, makeVec(10, 99, 10, 30)) // 99 is not in T
 
-	assert.Panics(t, func() {
+	var msg string
+	func() {
+		defer func() { msg = fmt.Sprint(recover()) }()
 		runRound(rt) // round 0 — M assignment task
-	}, "M assignment must panic when an active A row has no match in B")
+	}()
+	assert.Contains(t, msg, "A row 1 (fragment 0: module", "M assignment must panic when an active A row has no match in B")
+	assert.Contains(t, msg, "first column", "the panic must name the fragment's column")
 }
 
 // ---- Row limit (compile-time static check) ----
@@ -1509,4 +1514,46 @@ func TestCompile_DuplicateTEntries_FilteredCopy(t *testing.T) {
 
 	assert.Equal(t, []uint64{2, 0, 0, 0}, readM(t, rt, mCol),
 		"the count must go to the active copy, not the later masked one")
+}
+
+// TestCompile_ConstantsInGroupKey checks that the grouping key covers constant
+// entries. Queries over (Tx, 1) and (Tx, 2) read the same column but are
+// different tables, so they must not share an M column; two queries over
+// (Tx, 1), with the constant listed in either position, must.
+func TestCompile_ConstantsInGroupKey(t *testing.T) {
+	sys := wiop.NewSystemf("ll-const-key")
+	r0 := sys.NewRound()
+
+	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
+	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
+	tx := modT.NewColumn(sys.Context.Childf("Tx"), r0)
+	sx := modS.NewColumn(sys.Context.Childf("Sx"), r0)
+
+	cT := func(v uint64) *wiop.Constant { return wiop.NewConstantVector(modT, field.NewElement(v)) }
+	cS := func(v uint64) *wiop.Constant { return wiop.NewConstantVector(modS, field.NewElement(v)) }
+
+	// (Sx, 1) ⊆ (Tx, 1) and (1, Sx) ⊆ (1, Tx): one group.
+	sys.NewInclusion(sys.Context.Childf("inc1"),
+		[]wiop.Table{wiop.NewTableEntries(modS, nil, sx.View(), cS(1))},
+		[]wiop.Table{wiop.NewTableEntries(modT, nil, tx.View(), cT(1))})
+	sys.NewInclusion(sys.Context.Childf("inc1Swapped"),
+		[]wiop.Table{wiop.NewTableEntries(modS, nil, cS(1), sx.View())},
+		[]wiop.Table{wiop.NewTableEntries(modT, nil, cT(1), tx.View())})
+	// (Sx, 2) ⊆ (Tx, 2): a second group.
+	sys.NewInclusion(sys.Context.Childf("inc2"),
+		[]wiop.Table{wiop.NewTableEntries(modS, nil, sx.View(), cS(2))},
+		[]wiop.Table{wiop.NewTableEntries(modT, nil, tx.View(), cT(2))})
+
+	colsBefore := len(modT.Columns)
+	lookuptologderivsum.Compile(sys)
+	assert.Len(t, modT.Columns, colsBefore+2,
+		"(Tx, 1) and (Tx, 2) are distinct tables and need one M column each")
+
+	logderivativesum.Compile(sys)
+
+	rt := wiop.NewRuntime(sys)
+	rt.AssignColumn(tx, makeVec(1, 2, 3, 4))
+	rt.AssignColumn(sx, makeVec(4, 4, 2, 1))
+	driveProtocol(rt)
+	require.NoError(t, checkAllVerifierActions(rt))
 }

@@ -18,7 +18,7 @@ All files in `contracts/src/**/*.sol` and `contracts/test/**`. Skip `contracts/l
 - Verify events document all parameters in order
 - Verify errors explain when they are thrown
 - Check for `DEPRECATED` tags on deprecated items
-- Verify contract/interface has `@title`, `@author Consensys Software Inc.`, `@custom:security-contact security-report@linea.build`
+- Verify contract/interface has `@title`, `@author Consensys Incorporated`, `@custom:security-contact security-report@linea.build`
 
 ## Code Style Checks
 

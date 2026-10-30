@@ -24,7 +24,7 @@ log_level = 4
 [execution]
 prover_mode = "dev-zkvm"
 requests_root_dir = "/opt/linea/prover-ray/requests"
-native_runner_bin = "/opt/linea/prover-ray/l2-execution-runner"
+native_runner_bin = "/opt/linea/prover-ray/l2_execution_runner"
 guest_elf = "/opt/linea/prover-ray/evm_execution_guest"
 `))
 	require.NoError(t, err)
@@ -32,7 +32,7 @@ guest_elf = "/opt/linea/prover-ray/evm_execution_guest"
 	assert.Equal(t, 4, cfg.LogLevel)
 	assert.Equal(t, "dev-zkvm", cfg.Execution.ProverMode)
 	assert.Equal(t, "/opt/linea/prover-ray/requests", cfg.Execution.RequestsRootDir)
-	assert.Equal(t, "/opt/linea/prover-ray/l2-execution-runner", cfg.Execution.NativeRunnerBin)
+	assert.Equal(t, "/opt/linea/prover-ray/l2_execution_runner", cfg.Execution.NativeRunnerBin)
 }
 
 func TestNewConfigFromFile_UnknownKeyRejected(t *testing.T) {

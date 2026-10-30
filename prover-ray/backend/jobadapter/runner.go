@@ -53,7 +53,7 @@ func WithMode(m backend.ProverMode) RunnerOption {
 	return func(r *Runner) { r.mode = m }
 }
 
-// WithNativeRunnerBin sets the path to the native l2-execution-runner binary,
+// WithNativeRunnerBin sets the path to the native l2_execution_runner binary,
 // required by dev-zkvm mode.
 func WithNativeRunnerBin(path string) RunnerOption {
 	return func(r *Runner) { r.nativeRunnerBin = path }
@@ -301,6 +301,7 @@ func buildExtendedInput(req *L2ExecutionRequest) ssz.ExtendedInput {
 			L2MessageServiceAddress: req.L2MessageServiceAddress,
 			Coinbase:                req.Coinbase,
 			ChainID:                 req.ChainID,
+			SystemContracts:         req.SystemContracts,
 		},
 		Payloads: payloads,
 	}

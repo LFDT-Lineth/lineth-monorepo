@@ -1,25 +1,28 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
-@file:Suppress("DEPRECATION") // TODO: migrate to maru.test.cluster.MaruCluster
-
 package maru.app
 
 import com.github.michaelbull.result.Ok
 import linea.kotlin.decodeHex
 import linea.testing.besu.BesuTransactionsHelper
-import linea.testing.besu.startWithRetry
 import maru.consensus.StaticValidatorProvider
 import maru.consensus.qbft.toAddress
 import maru.consensus.validation.QuorumOfSealsVerifier
 import maru.consensus.validation.SCEP256SealVerifier
 import maru.core.Validator
+import maru.crypto.PrivateKeyGenerator
 import maru.p2p.NoOpP2PNetwork
+import maru.test.cluster.MaruCluster
+import maru.test.cluster.NodeRole
+import maru.test.cluster.configureLoggers
+import maru.test.extensions.TestSyncingConfigs
+import maru.test.extensions.withFastQbft
+import maru.test.extensions.withSyncingConfig
+import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.kotlin.await
@@ -28,57 +31,52 @@ import org.hyperledger.besu.consensus.qbft.core.messagewrappers.Prepare
 import org.hyperledger.besu.consensus.qbft.core.messagewrappers.Proposal
 import org.hyperledger.besu.consensus.qbft.core.messagewrappers.RoundChange
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Amount
-import org.hyperledger.besu.tests.acceptance.dsl.condition.net.NetConditions
-import org.hyperledger.besu.tests.acceptance.dsl.node.ThreadBesuNodeRunner
-import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.Cluster
-import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.ClusterConfigurationBuilder
-import org.hyperledger.besu.tests.acceptance.dsl.transaction.net.NetTransactions
+import org.hyperledger.besu.tests.acceptance.dsl.node.BesuNode
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import testutils.Checks.getMinedBlocks
 import testutils.Checks.verifyBlockTime
 import testutils.Checks.verifyBlockTimeWithAGapOn
-import testutils.SingleNodeNetworkStack
 import testutils.SpyingP2PNetwork
-import testutils.maru.MaruFactory
 
 class MaruQbftValidatorTest {
-  private lateinit var cluster: Cluster
-  private lateinit var networkParticipantStack: SingleNodeNetworkStack
+  private lateinit var cluster: MaruCluster
   private lateinit var transactionsHelper: BesuTransactionsHelper
   private val log = LogManager.getLogger(this.javaClass)
   private lateinit var spyingP2pNetwork: SpyingP2PNetwork
-  private val maruFactory = MaruFactory()
+  private val validatorKeyData = PrivateKeyGenerator.generatePrivateKey()
+  private val validator = Validator(validatorKeyData.address)
+
+  private val besuNode: BesuNode
+    get() = cluster.besuNode("sequencer")
 
   @BeforeEach
   fun setUp() {
-    transactionsHelper = BesuTransactionsHelper()
-    cluster = Cluster(
-      ClusterConfigurationBuilder().build(),
-      NetConditions(NetTransactions()),
-      ThreadBesuNodeRunner(),
+    configureLoggers(
+      rootLevel = Level.WARN,
+      logLevels = listOf("maru" to Level.INFO),
     )
+    transactionsHelper = BesuTransactionsHelper()
 
+    // Single validator without P2P peering: QBFT messages are captured by the spying network
     spyingP2pNetwork = SpyingP2PNetwork(NoOpP2PNetwork)
-    networkParticipantStack = SingleNodeNetworkStack(
-      cluster = cluster,
-    ) { ethereumJsonRpcBaseUrl, engineRpcUrl, tmpDir ->
-      maruFactory.buildTestMaruValidatorWithoutP2pPeering(
-        ethereumJsonRpcUrl = ethereumJsonRpcBaseUrl,
-        engineApiRpc = engineRpcUrl,
-        dataDir = tmpDir,
-        overridingP2PNetwork = spyingP2pNetwork,
-      )
-    }
-    networkParticipantStack.maruApp.start().get()
+    cluster = MaruCluster()
+      .addNode(NodeRole.Sequencer, withBesuEl = true) { nodeBuilder ->
+        nodeBuilder
+          .withNodeKey(validatorKeyData.prefixedPrivateKey)
+          .withP2pNetwork(spyingP2pNetwork)
+          .withSyncingConfig(TestSyncingConfigs.validator)
+          .withFastQbft()
+          .maruConfig { it.copy(allowEmptyBlocks = false, p2p = null) }
+      }.start()
   }
 
   @AfterEach
   fun tearDown() {
-    networkParticipantStack.maruApp.stop().get()
-    networkParticipantStack.maruApp.close()
-    cluster.close()
+    if (::cluster.isInitialized) {
+      cluster.stop()
+    }
   }
 
   @Test
@@ -86,7 +84,7 @@ class MaruQbftValidatorTest {
     val blocksToProduce = 10
     repeat(blocksToProduce) {
       transactionsHelper.run {
-        networkParticipantStack.besuNode.sendTransactionAndAssertExecution(
+        besuNode.sendTransactionAndAssertExecution(
           logger = log,
           recipient = createAccount("another account"),
           amount = Amount.ether(100),
@@ -94,11 +92,13 @@ class MaruQbftValidatorTest {
       }
     }
 
-    val blocks = networkParticipantStack.besuNode.getMinedBlocks(blocksToProduce)
+    val blocks = besuNode.getMinedBlocks(blocksToProduce)
     blocks.verifyBlockTime()
     blocks.forEach {
       assertThat(it.miner.decodeHex()).isEqualTo(
-        networkParticipantStack.maruApp.config.qbft!!
+        cluster
+          .maruNode("sequencer")
+          .config.qbft!!
           .feeRecipient,
       )
     }
@@ -142,7 +142,7 @@ class MaruQbftValidatorTest {
     }
 
   private fun allBlocksAreSignedByTheExpectedSigner() {
-    val validatorProvider = StaticValidatorProvider(setOf(Validator(maruFactory.validatorAddress.decodeHex())))
+    val validatorProvider = StaticValidatorProvider(setOf(validator))
     val sealVerifier = SCEP256SealVerifier()
     val sealsVerifier = QuorumOfSealsVerifier(validatorProvider = validatorProvider, sealVerifier)
     spyingP2pNetwork.emittedBlockMessages.forEach { sealedBeaconBlock ->
@@ -177,7 +177,7 @@ class MaruQbftValidatorTest {
     spyingP2pNetwork.emittedQbftMessages.forEach {
       assertThat(it.author)
         .withFailMessage { "Unexpected signer address for message=$it author=${it.author}" }
-        .isEqualTo(maruFactory.qbftValidator.toAddress())
+        .isEqualTo(validator.toAddress())
     }
   }
 
@@ -186,20 +186,20 @@ class MaruQbftValidatorTest {
     val blocksToProduce = 5
     repeat(blocksToProduce) {
       transactionsHelper.run {
-        networkParticipantStack.besuNode.sendTransactionAndAssertExecution(
+        besuNode.sendTransactionAndAssertExecution(
           logger = log,
           recipient = createAccount("another account"),
           amount = Amount.ether(100),
         )
       }
     }
-    cluster.stop()
+    cluster.besuCluster.stopNode(besuNode.name)
     Thread.sleep(3000)
-    cluster.startWithRetry(networkParticipantStack.besuNode)
+    startBesuWithRetry(label = "sequencer")
 
     repeat(blocksToProduce) {
       transactionsHelper.run {
-        networkParticipantStack.besuNode.sendTransactionAndAssertExecution(
+        besuNode.sendTransactionAndAssertExecution(
           logger = log,
           recipient = createAccount("another account"),
           amount = Amount.ether(100),
@@ -207,7 +207,7 @@ class MaruQbftValidatorTest {
       }
     }
 
-    val blocks = networkParticipantStack.besuNode.getMinedBlocks(blocksToProduce * 2)
+    val blocks = besuNode.getMinedBlocks(blocksToProduce * 2)
     blocks.verifyBlockTimeWithAGapOn(blocksToProduce)
   }
 
@@ -216,19 +216,21 @@ class MaruQbftValidatorTest {
     val blocksToProduce = 5
     repeat(blocksToProduce) {
       transactionsHelper.run {
-        networkParticipantStack.besuNode.sendTransactionAndAssertExecution(
+        besuNode.sendTransactionAndAssertExecution(
           logger = log,
           recipient = createAccount("another account"),
           amount = Amount.ether(100),
         )
       }
     }
-    networkParticipantStack.maruApp.stop().get()
+    // Stops and starts the very same Maru instance
+    val maruApp = cluster.maruNode("sequencer")
+    maruApp.stop().get()
     Thread.sleep(3000)
-    networkParticipantStack.maruApp.start().get()
+    maruApp.start().get()
     repeat(blocksToProduce) {
       transactionsHelper.run {
-        networkParticipantStack.besuNode.sendTransactionAndAssertExecution(
+        besuNode.sendTransactionAndAssertExecution(
           logger = log,
           recipient = createAccount("another account"),
           amount = Amount.ether(100),
@@ -236,7 +238,7 @@ class MaruQbftValidatorTest {
       }
     }
 
-    val blocks = networkParticipantStack.besuNode.getMinedBlocks(blocksToProduce * 2)
+    val blocks = besuNode.getMinedBlocks(blocksToProduce * 2)
     blocks.verifyBlockTimeWithAGapOn(blocksToProduce)
   }
 
@@ -245,29 +247,22 @@ class MaruQbftValidatorTest {
     val blocksToProduce = 5
     repeat(blocksToProduce) {
       transactionsHelper.run {
-        networkParticipantStack.besuNode.sendTransactionAndAssertExecution(
+        besuNode.sendTransactionAndAssertExecution(
           logger = log,
           recipient = createAccount("another account"),
           amount = Amount.ether(100),
         )
       }
     }
-    networkParticipantStack.maruApp.stop().get()
-    networkParticipantStack.maruApp.close()
+    cluster.stopMaruNode("sequencer")
 
     Thread.sleep(3000)
-    networkParticipantStack.maruApp =
-      maruFactory.buildTestMaruValidatorWithoutP2pPeering(
-        ethereumJsonRpcUrl = networkParticipantStack.besuNode.jsonRpcBaseUrl().get(),
-        engineApiRpc = networkParticipantStack.besuNode.engineRpcUrl().get(),
-        dataDir = networkParticipantStack.tmpDir,
-      )
     // The difference from the previous test is that BeaconChain is instantiated with the Maru instance and it's not
-    // affected by start and stop
-    networkParticipantStack.maruApp.start().get()
+    // affected by start and stop. The new Maru instance reuses the node key, data directory and Besu node
+    cluster.startMaruNode("sequencer")
     repeat(blocksToProduce) {
       transactionsHelper.run {
-        networkParticipantStack.besuNode.sendTransactionAndAssertExecution(
+        besuNode.sendTransactionAndAssertExecution(
           logger = log,
           recipient = createAccount("another account"),
           amount = Amount.ether(100),
@@ -275,8 +270,28 @@ class MaruQbftValidatorTest {
       }
     }
 
-    val blocks = networkParticipantStack.besuNode.getMinedBlocks(blocksToProduce * 2)
+    val blocks = besuNode.getMinedBlocks(blocksToProduce * 2)
 
     blocks.verifyBlockTimeWithAGapOn(blocksToProduce)
+  }
+
+  // Starts again a Besu node previously stopped in the Besu cluster, retrying as its ports may not be released yet
+  private fun startBesuWithRetry(
+    label: String,
+    maxAttempts: Int = 10,
+  ) {
+    val besuName = cluster.besuNode(label).name
+    val elNode = cluster.elNode(label)!!
+    repeat(maxAttempts) { attempt ->
+      try {
+        elNode.start()
+        return
+      } catch (e: IllegalStateException) {
+        if (attempt == maxAttempts - 1) throw e
+        log.warn("Besu start attempt={} failed, retrying", attempt, e)
+        cluster.besuCluster.stopNode(besuName)
+        Thread.sleep(1000)
+      }
+    }
   }
 }

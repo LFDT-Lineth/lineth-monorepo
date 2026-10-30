@@ -34,6 +34,13 @@ func newLDTFixture(t *testing.T, logN, logD uint8, numQueries uint, opts ...Opti
 
 func (fx *ldtFixture) addLevel(t *testing.T, sizeLog2 uint8, coeffs []field.Ext) {
 	t.Helper()
+	fx.addLevelWith(t, sizeLog2, coeffs, true)
+}
+
+// addLevelWith is addLevel, committing the zero base column next to R only
+// when withBase is set.
+func (fx *ldtFixture) addLevelWith(t *testing.T, sizeLog2 uint8, coeffs []field.Ext, withBase bool) {
+	t.Helper()
 
 	require.Len(t, coeffs, 1<<sizeLog2)
 	target := fx.pcs.Encoders[sizeLog2].EncodeExt(coeffs)
@@ -50,19 +57,17 @@ func (fx *ldtFixture) addLevel(t *testing.T, sizeLog2 uint8, coeffs []field.Ext)
 	}
 
 	table := make(MultiSizeTable, sizeLog2+1)
-	table[sizeLog2] = SizedTable{
-		Base: [][]field.Element{make([]field.Element, size)},
-		Ext:  [][]field.Ext{row},
+	table[sizeLog2] = SizedTable{Ext: [][]field.Ext{row}}
+	shifts := make(BatchShifts, sizeLog2+1)
+	shifts[sizeLog2] = SizedShifts{Ext: [][]int{{0}}}
+	claimed := make(BatchClaimedValues, sizeLog2+1)
+	claimed[sizeLog2] = SizedClaimedValues{Ext: [][]field.Ext{{{}}}}
+	if withBase {
+		table[sizeLog2].Base = [][]field.Element{make([]field.Element, size)}
+		shifts[sizeLog2].Base = [][]int{{0}}
+		claimed[sizeLog2].Base = [][]field.Ext{{{}}}
 	}
 	committed := CommitterState{Tree: table.Merkleize(), EncodedTable: table}
-
-	shifts := make(BatchShifts, sizeLog2+1)
-	shifts[sizeLog2] = SizedShifts{Base: [][]int{{0}}, Ext: [][]int{{0}}}
-	claimed := make(BatchClaimedValues, sizeLog2+1)
-	claimed[sizeLog2] = SizedClaimedValues{
-		Base: [][]field.Ext{{{}}},
-		Ext:  [][]field.Ext{{{}}},
-	}
 
 	require.NoError(t, fx.pcs.AddOpening(committed, field.Ext{}, shifts, claimed))
 

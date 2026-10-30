@@ -20,7 +20,7 @@ import (
 // Gated on RISCV_SPIKE=1: it compiles the R5 arithmetization (~5s) and needs the
 // built guest ELF and native runner:
 //
-//	make -C riscv-guests/l2-execution compile
+//	make -C riscv-guests/l2_execution compile
 //	RISCV_SPIKE=1 go test ./backend -run TestDevZkVM_Integration -v
 func TestDevZkVM_Integration(t *testing.T) {
 	if os.Getenv("RISCV_SPIKE") == "" {
@@ -28,9 +28,9 @@ func TestDevZkVM_Integration(t *testing.T) {
 	}
 
 	const (
-		guestELF  = "../../riscv-guests/l2-execution/zig-out/bin/evm_execution_guest"
-		nativeBin = "../../riscv-guests/l2-execution/zig-out/bin/l2-execution-runner"
-		sszInput  = "../../riscv-guests/l2-execution/test/testdata/stateless_input.ssz"
+		guestELF  = "../../riscv-guests/l2_execution/zig-out/bin/evm_execution_guest"
+		nativeBin = "../../riscv-guests/l2_execution/zig-out/bin/l2_execution_runner"
+		sszInput  = "../../riscv-guests/l2_execution/test/testdata/stateless_input.ssz"
 	)
 
 	core, err := New(Config{Mode: ProverModeDevZkVM, GuestELFPath: guestELF})
