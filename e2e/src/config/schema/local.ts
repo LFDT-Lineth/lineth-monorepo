@@ -6,7 +6,7 @@ import { GenesisBasedAccountManager } from "../accounts/genesis-based-account-ma
 import { localL1Network, localL2Network } from "../chains/constants";
 
 const L1_RPC_URL = new URL("http://localhost:8445");
-const L2_RPC_URL = new URL("http://localhost:9045");
+const L2_RPC_URL = new URL(process.env.LOCAL_L2_RPC_URL || "http://localhost:9045");
 const L2_BESU_NODE_RPC_URL = new URL("http://localhost:9045");
 const L2_BESU_LEADER_NODE_RPC_URL = new URL("http://localhost:9345");
 const L2_BESU_FOLLOWER_NODE_RPC_URL = new URL("http://localhost:9245");

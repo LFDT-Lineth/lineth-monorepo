@@ -232,12 +232,17 @@ data class BlockIntervalDto(
   }
 }
 
-/** One touched DA chunk (rollup_spec §3.1). Blob chunks carry `calldataBytes = "0x"`, calldata chunks `blobBytes = "0x"`. */
+/**
+ * One touched DA chunk (rollup_spec §3.1). Blob chunks carry `calldataBytes = "0x"`; calldata chunks carry
+ * `blobBytes = "0x"`, `kzgCommitment = "0x"` and `kzgProof = "0x"`.
+ */
 data class ChunkWitnessDto(
   val chunkHash: String,
   val isCalldata: Boolean,
   val blobBytes: String,
   val calldataBytes: String,
+  val kzgCommitment: String,
+  val kzgProof: String,
 )
 
 /**
@@ -527,5 +532,7 @@ fun ChunkWitness.toDto(): ChunkWitnessDto {
     isCalldata = isCalldata,
     blobBytes = blobBytes.encodeHex(),
     calldataBytes = calldataBytes.encodeHex(),
+    kzgCommitment = kzgCommitment.encodeHex(),
+    kzgProof = kzgProof.encodeHex(),
   )
 }

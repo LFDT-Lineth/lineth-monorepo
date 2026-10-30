@@ -30,6 +30,7 @@ make start-env-with-tracing-v2-ci
 # Optional: override default genesis file paths (local only)
 # LOCAL_L1_GENESIS=
 # LOCAL_L2_GENESIS=
+# LOCAL_L2_RPC_URL=
 
 # Optional: log level (defaults to "info")
 # LOG_LEVEL=
@@ -39,6 +40,7 @@ Variable meanings:
 
 - `LOCAL_L1_GENESIS`: optional absolute/relative path override for local L1 genesis file.
 - `LOCAL_L2_GENESIS`: optional absolute/relative path override for local L2 genesis file.
+- `LOCAL_L2_RPC_URL`: optional local L2 RPC override (`test:riscv:local` uses the sequencer).
 - `LOG_LEVEL`: optional logger level (for example `debug`, `info`, `warn`, `error`).
 
 ## Run tests
@@ -67,4 +69,12 @@ pnpm -F e2e run test:local:run "opcodes.spec.ts"
 pnpm -F e2e run test:local:run "opcodes.spec.ts" -t "Should be able to execute all opcodes"
 ```
 
+### RISC-V
 
+```bash
+make start-env-with-riscv
+pnpm -F e2e run test:riscv:local
+```
+
+Set `RISCV_PROVER_MODE=dev-zkvm` on both commands to execute the guest instead of returning placeholder proofs.
+CI runs this suite on pushes to `main` only.

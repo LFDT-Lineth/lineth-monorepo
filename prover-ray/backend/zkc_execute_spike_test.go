@@ -29,7 +29,7 @@ func TestDevZkVM_Integration(t *testing.T) {
 
 	const (
 		guestELF  = "../../riscv-guests/l2_execution/zig-out/bin/evm_execution_guest"
-		nativeBin = "../../riscv-guests/l2_execution/zig-out/bin/l2-execution-runner"
+		nativeBin = "../../riscv-guests/l2_execution/zig-out/bin/l2_execution_runner"
 		sszInput  = "../../riscv-guests/l2_execution/test/testdata/stateless_input.ssz"
 	)
 

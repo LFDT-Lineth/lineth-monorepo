@@ -3,10 +3,22 @@
 ### 🚀 Features
 
 - *(prover-ray)* Support constant entries in lookup, permutation and message-bus tables (#4296)
+- *(misc)* Adding blob commitment and a proof to Rollup input (#4329)
+- *(prover-ray)* FRI over a fixed maximum domain (#4322)
+- *(prover-ray)* Register program vk to the public inputs (#4309)
 
 ### 🐛 Bug Fixes
 
 - *(riscv-guest)* Added a build option to choose between crypto backe… (#4293)
+- *(riscv-guest)* Build script refactoring. Introducing a convention … (#4347)
+
+### ⚡ Performance
+
+- *(prover-ray)* Preserve expression sharing through the localvanishing lift (#4155)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Ship license files and metadata in all published artifacts (#4336)
 ## [0.2.0] - 2026-10-28
 
 ### 🚀 Features

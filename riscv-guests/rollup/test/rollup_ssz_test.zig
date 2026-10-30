@@ -1,5 +1,5 @@
 const std = @import("std");
-const rollup_ssz = @import("rollup_ssz");
+const rollup_ssz = @import("rollup").rollup_ssz;
 const support = @import("support");
 const repeat32 = support.repeat32;
 const repeat20 = support.repeat20;

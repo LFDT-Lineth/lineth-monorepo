@@ -26,20 +26,11 @@ pub fn build(b: *std.Build) void {
     // Like every other `b.addTest` artifact in this tree, these run on the native host: a
     // freestanding riscv64 target has no OS to run a `std.testing` binary against.
     const native_target = b.resolveTargetQuery(.{});
-    const ssz_mod = b.createModule(.{
-        .root_source_file = b.path("src/ssz.zig"),
-        .target = native_target,
-        .optimize = .Debug,
-    });
+    const package_native_mod = common.createPackageModule(b, native_target, .Debug, &.{});
 
     const test_step = b.step("test", "Run native Zig unit tests for guest_common's shared primitives");
-    const ssz_tests = b.addTest(.{
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("test/ssz_test.zig"),
-            .target = native_target,
-            .optimize = .Debug,
-        }),
-    });
-    ssz_tests.root_module.addImport("guest_common_ssz", ssz_mod);
-    test_step.dependOn(&b.addRunArtifact(ssz_tests).step);
+    _ = common.addTests(b, test_step, .{
+        .target = native_target,
+        .imports = &.{.{ .name = "guest_common", .module = package_native_mod }},
+    }, .{});
 }

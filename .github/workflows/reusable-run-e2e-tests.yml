@@ -11,6 +11,18 @@ on:
         description: 'The commit tag to use'
         required: true
         type: string
+      stack:
+        description: E2E stack to run
+        required: false
+        type: choice
+        options: [zkevm, riscv]
+        default: zkevm
+      riscv_prover_mode:
+        description: prover-ray mode for the RISC-V stack
+        required: false
+        type: choice
+        options: [dev-mock, dev-zkvm]
+        default: dev-mock
       e2e-tests-with-ssh:
         description: Run end to end tests with ability to ssh into environment
         required: false
@@ -31,6 +43,14 @@ on:
       image_tag:
         required: true
         type: string
+      stack:
+        required: false
+        type: string
+        default: zkevm
+      riscv_prover_mode:
+        required: false
+        type: string
+        default: dev-mock
       linea_besu_package_tag:
         required: false
         type: string
@@ -85,7 +105,8 @@ jobs:
   # Required job
   run-e2e-tests:
     # We can only use conditionals, and not path filters to 'successfully' skip a required job - https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks#handling-skipped-but-required-checks
-    if: ${{ inputs.has-changes-requiring-e2e-testing == 'true' }}
+    # Unset (workflow_dispatch) runs the tests.
+    if: ${{ inputs.has-changes-requiring-e2e-testing != 'false' }}
     outputs:
       tests_outcome: ${{ steps.run-e2e-tests.outputs.tests_outcome }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
@@ -97,6 +118,8 @@ jobs:
         id: run-e2e-tests
         uses: ./.github/actions/run-e2e-tests
         with:
+          stack: ${{ inputs.stack }}
+          riscv_prover_mode: ${{ inputs.riscv_prover_mode }}
           image_tag: ${{ inputs.image_tag }}
           linea_besu_package_tag: ${{ inputs.linea_besu_package_tag }}
           coordinator_tag: ${{ inputs.coordinator_tag }}

@@ -30,7 +30,7 @@ type Execution struct {
 	ProverMode string `mapstructure:"prover_mode"`
 	// RequestsRootDir contains the requests/, responses/, requests-done/ queue.
 	RequestsRootDir string `mapstructure:"requests_root_dir"`
-	// NativeRunnerBin is the native l2-execution-runner binary, required by dev-zkvm.
+	// NativeRunnerBin is the native l2_execution_runner binary, required by dev-zkvm.
 	NativeRunnerBin string `mapstructure:"native_runner_bin"`
 	// GuestELF is the l2-execution guest ELF, required by dev-zkvm.
 	GuestELF string `mapstructure:"guest_elf"`

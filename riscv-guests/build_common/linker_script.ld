@@ -4,7 +4,7 @@ MEMORY {
     STACK  (rw) : ORIGIN = 0x00000000, LENGTH = 0x00800000
     PROGRAM (rx) : ORIGIN = 0x00800000, LENGTH = 0x08000000
     IN      (r)  : ORIGIN = 0x08800000, LENGTH = 0x40000000
-    /* HEAP  (rw) : ORIGIN = 0x48800000, LENGTH = infinite */
+    /* HEAP  (rw) : ORIGIN = 0x48800000, LENGTH = 0x10000000 */
 }
 
 SECTIONS {
@@ -41,4 +41,8 @@ SECTIONS {
 
     /* heap grows upward from this address by program convention */
     _heap_start = 0x48800000;
+    _heap_end = _heap_start + 0x10000000;
+
+    /* the R5 arithmetization has 32-bit guest addresses */
+    ASSERT(_heap_end <= 0x100000000, "guest memory layout exceeds the 4 GiB address space")
 }
