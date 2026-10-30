@@ -304,6 +304,22 @@ fi
 
 "${BUILD_CMD[@]}"
 
+# Every image must ship the license files in /licenses and declare its license.
+# Checked on locally loaded images only: a pushed image is not in the local store.
+if [[ "$PUSH_IMAGE" != "true" && ${#PLATFORM_LIST[@]} -eq 1 ]]; then
+  label="$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.licenses" }}' "$PRIMARY_IMAGE")"
+  [[ -n "$label" ]] || die "${PRIMARY_IMAGE}: missing org.opencontainers.image.licenses label"
+  container="$(docker create "$PRIMARY_IMAGE" true)"
+  for license in LICENSE-APACHE LICENSE-MIT; do
+    if ! docker cp "${container}:/licenses/${license}" - >/dev/null 2>&1; then
+      docker rm "$container" >/dev/null
+      die "${PRIMARY_IMAGE}: missing /licenses/${license}"
+    fi
+  done
+  docker rm "$container" >/dev/null
+  echo "Licenses:  ${label} (/licenses)"
+fi
+
 if [[ -n "$SAVE_TO" ]]; then
   echo "Saving ${PRIMARY_IMAGE} to ${SAVE_TO}"
   docker save "$PRIMARY_IMAGE" | gzip > "$SAVE_TO"
