@@ -100,7 +100,7 @@ compile: require-src
 		riscv64-unknown-elf-gcc -march=rv64im -mabi=lp64 -nostdlib -T$(LINKER_SCRIPT) -o $(BIN) $(SRC); \
 	elif [ "$(EXT)" = ".zig" ]; then \
 		echo "\nGenerating $(BIN) from $(SRC)"; \
-		zig build --build-file $(MAKEFILE_DIR)zig/build.zig -Dpath=$(BASENAME) $(if $(filter true,$(KECCAK_ACCEL)),-Dkeccak-accel=true); \
+		zig build --build-file $(MAKEFILE_DIR)zig/build.zig -Dpath=$(BASENAME) $(if $(filter true,$(KECCAK_ACCEL)),-Dkeccak-accel=true) $(if $(filter true,$(ZKVM_PROVIDE)),-Dzkvm-provide=true); \
 	elif [ "$(EXT)" = ".rs" ]; then \
 		echo "\nGenerating $(BIN) from $(SRC)"; \
 		cargo +nightly rustc \
@@ -279,8 +279,10 @@ vector-exec: require-vector-json-mode prepare-zkc
 # Keccak wrapper targets
 #####################################################################
 
-# Passthrough argument to l2-execution pacakge import `keccak-accel` to enable/disable the zkc accelerated keccak precompile.
+# Passthrough to lineth_accelerators' `keccak-accel`: the zkc accelerated keccak precompile instead of the standard zig keccak.
 KECCAK_ACCEL  ?= false
+# Passthrough to lineth_accelerators' `zkvm-provide`: links the zkvm_* precompile providers the keccak provider programs call.
+ZKVM_PROVIDE  ?= false
 
 KECCAK_ALL_FILE       ?= $(MAKEFILE_DIR)common_inputs/keccak.all
 KECCAK_N_VECTORS      ?= 10
@@ -310,7 +312,8 @@ keccak-rust-exec: keccak-rust-json
 keccak-zig-build:
 	$(MAKE) -f $(MAKEFILE_DIR)Makefile vector-build \
 		KECCAK_N_VECTORS=$(if $(filter -1,$(KECCAK_N_VECTORS)),$(shell awk 'END { print NR }' $(KECCAK_ALL_FILE)),$(KECCAK_N_VECTORS)) \
-		TEST=keccak/keccak_batched_input_native.zig
+		TEST=keccak/keccak_batched_input_native.zig \
+		ZKVM_PROVIDE=true
 
 keccak-zig-json: keccak-zig-build
 	$(MAKE) -f $(MAKEFILE_DIR)Makefile vector-json \

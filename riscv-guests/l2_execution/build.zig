@@ -13,7 +13,7 @@ pub fn build(b: *std.Build) void {
     addGuestProgram(b, options);
     if (!options.host_tools) return;
 
-    const host = Host.init(b, options);
+    const host = Host.init(b, options) orelse return;
     const tools = addHostTools(b, host);
     addWrapSteps(b, tools);
     addZkcSmokeSteps(b, tools, options);
@@ -56,44 +56,44 @@ const Options = struct {
     }
 };
 
-/// The comptime flags `zkvm_provide.zig` reads.
-fn buildOptions(b: *std.Build, keccak_accel: bool, is_guest: bool, backend: Secp256k1Backend) *std.Build.Step.Options {
-    const build_options = b.addOptions();
-    build_options.addOption(bool, "keccak_accel", keccak_accel);
-    build_options.addOption(bool, "is_guest", is_guest);
-    build_options.addOption(Secp256k1Backend, "secp256k1_backend", backend);
-    return build_options;
+/// The accelerator package with its opt-in `zkvm_*` providers. The wrappers and every provider
+/// module come from this one instance, so they share one set of sources and build options.
+fn acceleratorsDependency(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    keccak_accel: bool,
+    secp256k1_backend: Secp256k1Backend,
+) *std.Build.Dependency {
+    return b.dependency("lineth_accelerators", .{
+        .target = target,
+        .optimize = optimize,
+        .@"zkvm-provide" = true,
+        .@"keccak-accel" = keccak_accel,
+        .@"secp256k1-backend" = secp256k1_backend,
+    });
 }
 
-/// The self-contained rv64im guest ELF (execution, crypto, accelerators, input I/O) and the exposed `zkvm_provide` module.
+/// The self-contained rv64im guest ELF (execution, crypto, accelerators, input I/O).
 fn addGuestProgram(b: *std.Build, options: Options) void {
     const zesu = b.dependency("zesu", .{
         .target = options.target,
         .optimize = options.optimize,
         .@"crypto-backend" = .@"extern",
     });
-    const build_options = buildOptions(b, options.keccak_accel, true, options.secp256k1_backend);
-    const deps = Deps.init(b, options.target, options.optimize, zesu, build_options);
-    const archive = b.dependency("guest_crypto", .{}).namedLazyPath("riscv_staticlib");
-
-    // The precompile providers as a standalone module for the exported zkvm_* symbols.
-    const provide = b.addModule("zkvm_provide", .{
-        .root_source_file = b.path("src/zkvm_provide.zig"),
-        .target = options.target,
-        .optimize = options.optimize,
-        .imports = deps.provide,
-    });
-    provide.addObjectFile(archive);
+    const accelerators = acceleratorsDependency(b, options.target, options.optimize, options.keccak_accel, options.secp256k1_backend);
+    const deps = Deps.init(b, options.target, options.optimize, zesu, accelerators);
 
     const package = common.createPackageModule(b, options.target, options.optimize, deps.package);
-    package.addObjectFile(archive);
     common.addGuest(b, .{
         .name = "evm_execution_guest",
         .target = options.target,
         .optimize = options.optimize,
         .imports = &.{
             .{ .name = "l2_execution", .module = package },
-            .{ .name = "lineth_zkvm_accel", .module = deps.lineth_accel },
+            .{ .name = "core_serde", .module = deps.core_serde },
+            .{ .name = "lineth_zkvm_accel", .module = accelerators.module("lineth_accelerators") },
+            .{ .name = "zkvm_provide", .module = accelerators.module("zkvm_provide") },
         },
         .code_model = .medium,
     });
@@ -109,7 +109,9 @@ const Host = struct {
     extended_vanilla_step: *std.Build.Step,
     prep_fixtures_step: *std.Build.Step,
 
-    fn init(b: *std.Build, options: Options) Host {
+    /// Null until the Constantine archive exists: it is fetched on demand and the build reruns once it is.
+    fn init(b: *std.Build, options: Options) ?Host {
+        const archive = b.dependency("guest_crypto", .{}).builder.named_lazy_paths.get("host_staticlib") orelse return null;
         // Host artifacts never build at ReleaseSmall: zig 0.16 -Oz miscompiles zesu's value-semantics
         // hot paths on aarch64 hosts (stack slots of by-value hash-map captures and `self` receivers
         // are recycled while still live), giving SIGSEGVs and wrong results across the EF zkevm
@@ -128,12 +130,12 @@ const Host = struct {
             .optimize = optimize,
             .@"crypto-backend" = .@"extern",
         });
-        const build_options = buildOptions(b, false, false, options.secp256k1_backend);
-        const deps = Deps.init(b, target, optimize, zesu, build_options);
+        const accelerators = acceleratorsDependency(b, target, optimize, false, options.secp256k1_backend);
+        const deps = Deps.init(b, target, optimize, zesu, accelerators);
         const package = common.createPackageModule(b, target, optimize, deps.package);
-        const archive = b.dependency("guest_crypto", .{}).namedLazyPath("host_staticlib");
         const support = supportModule(b, target, optimize, deps, package, zlob);
-        const provider = providerObject(b, target, optimize, deps, archive);
+        // The Constantine-backed `zkvm_*` provider the guest links, as an object for native roots.
+        const provider = b.addObject(.{ .name = "zkvm_provide", .root_module = accelerators.module("zkvm_provide") });
 
         const test_step = b.step("test", "Run native Zig unit tests for the EVM execution guest");
         const extended_vanilla_step = b.step("extended-vanilla", "Reference-test guard: assert the dummy-wrapped extended guest (runL2Execution) agrees with the EF fixture's own expected validity over EF zkevm fixtures");
@@ -146,6 +148,9 @@ const Host = struct {
                 .optimize = optimize,
                 .imports = concatImports(b, &.{ &deps.zesu, &.{
                     .{ .name = "l2_execution", .module = package },
+                    .{ .name = "core_serde", .module = deps.core_serde },
+                    .{ .name = "guest_crypto", .module = accelerators.module("guest_crypto") },
+                    .{ .name = "secp256k1_std", .module = accelerators.module("secp256k1_std") },
                     .{ .name = "support", .module = support },
                     .{ .name = "zlob", .module = zlob.module("zlob") },
                 } }),
@@ -175,6 +180,8 @@ fn supportModule(
         .optimize = optimize,
         .imports = concatImports(b, &.{ &deps.zesu, &.{
             .{ .name = "l2_execution", .module = package },
+            .{ .name = "core_serde", .module = deps.core_serde },
+            .{ .name = "guest_crypto", .module = deps.accelerators.module("guest_crypto") },
             .{ .name = "zlob", .module = zlob.module("zlob") },
         } }),
     });
@@ -184,25 +191,6 @@ fn supportModule(
         support.addImport("ssz", ssz.module("ssz.zig"));
     }
     return support;
-}
-
-/// The Constantine-backed `zkvm_*` provider the guest links, as an object for native roots.
-fn providerObject(
-    b: *std.Build,
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
-    deps: Deps,
-    archive: std.Build.LazyPath,
-) *Compile {
-    const module = b.createModule(.{
-        .root_source_file = b.path("src/zkvm_provide.zig"),
-        .target = target,
-        .optimize = optimize,
-        .imports = deps.provide,
-        .link_libc = true,
-    });
-    module.addObjectFile(archive);
-    return b.addObject(.{ .name = "zkvm_provide", .root_module = module });
 }
 
 /// Builds every `tools/*.zig` executable, each linked against the host crypto provider.
@@ -358,41 +346,29 @@ fn addFixturesLink(b: *std.Build, fixtures: *std.Build.Dependency, step: *std.Bu
 const Deps = struct {
     /// zesu's exposed modules under the `zesu_*` names the sources use.
     zesu: [13]Import,
-    lineth_accel: *std.Build.Module,
+    core_serde: *std.Build.Module,
+    accelerators: *std.Build.Dependency,
     /// Imports of the package module (`src/root.zig`).
     package: []const Import,
-    /// Imports of the `zkvm_provide` module.
-    provide: []const Import,
 
     fn init(
         b: *std.Build,
         target: std.Build.ResolvedTarget,
         optimize: std.builtin.OptimizeMode,
         zesu_dep: *std.Build.Dependency,
-        build_options: *std.Build.Step.Options,
+        accelerators: *std.Build.Dependency,
     ) Deps {
         const zesu = zesuImports(zesu_dep);
-        const lineth_accel = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("lineth_accelerators");
-        const guest_common = b.dependency("guest_common", .{ .target = target, .optimize = optimize }).module("guest_common");
-
-        // zesu's C-free precompile implementations, behind src/zesu_crypto_backend.zig.
-        const modexp = zesuBackendImpl(b, zesu_dep, "modexp_impl", target, optimize);
-        modexp.addImport("zesu_allocator", zesu_dep.module("zesu_allocator"));
-        const ripemd160 = zesuBackendImpl(b, zesu_dep, "ripemd160_impl", target, optimize);
-        const blake2f = zesuBackendImpl(b, zesu_dep, "blake2f_impl", target, optimize);
-
-        const provide = concatImports(b, &.{&.{
-            .{ .name = "lineth_zkvm_accel", .module = lineth_accel },
-            .{ .name = "zesu_modexp_impl", .module = modexp },
-            .{ .name = "zesu_ripemd160_impl", .module = ripemd160 },
-            .{ .name = "zesu_blake2f_impl", .module = blake2f },
-            .{ .name = "build_options", .module = build_options.createModule() },
-        }});
+        const guest_common = b.dependency("guest_common", .{ .target = target, .optimize = optimize });
+        const core_serde = guest_common.module("core_serde");
         return .{
             .zesu = zesu,
-            .lineth_accel = lineth_accel,
-            .package = concatImports(b, &.{ &zesu, provide, &.{.{ .name = "guest_common", .module = guest_common }} }),
-            .provide = provide,
+            .core_serde = core_serde,
+            .accelerators = accelerators,
+            .package = concatImports(b, &.{ &zesu, &.{
+                .{ .name = "guest_common", .module = guest_common.module("guest_common") },
+                .{ .name = "core_serde", .module = core_serde },
+            } }),
         };
     }
 };
@@ -421,20 +397,6 @@ fn zesuImports(zesu: *std.Build.Dependency) [13]Import {
 
 fn concatImports(b: *std.Build, parts: []const []const Import) []const Import {
     return std.mem.concat(b.allocator, Import, parts) catch @panic("OOM");
-}
-
-fn zesuBackendImpl(
-    b: *std.Build,
-    zesu: *std.Build.Dependency,
-    comptime name: []const u8,
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
-) *std.Build.Module {
-    return b.createModule(.{
-        .root_source_file = zesu.path("src/crypto/backends/" ++ name ++ ".zig"),
-        .target = target,
-        .optimize = optimize,
-    });
 }
 
 /// The host crypto provider native tests and tools link against: the Constantine-backed `zkvm_*`

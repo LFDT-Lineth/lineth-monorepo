@@ -4,6 +4,7 @@ const builtin = @import("builtin");
 const package = @import("l2_execution");
 const l2_execution = package.l2_execution;
 const l2_execution_ssz = package.l2_execution_ssz;
+const l2_execution_proof = @import("core_serde").l2_execution_proof;
 // Exit-code taxonomy for guest failures (Readme.md §2.5).
 const guest_errors = package.guest_errors;
 
@@ -13,16 +14,13 @@ const guest_errors = package.guest_errors;
 extern var _heap_start: u8;
 extern var _heap_end: u8;
 
-// Expose the guest allocator as ABI-compatible pointer and vtable words for the C shim.
-export var guest_allocator: extern struct { ptr: *anyopaque, vtable: *const anyopaque } = undefined;
-
 // This is the Rollup's extended l2-execution zkVM guest: it decodes the extended
 // `L2ExecutionProofPrivateInput` SSZ envelope, runs `l2_execution.runL2Execution` (the
 // Linea/Rollup-specific layer over per-block stateless execution — conflation, forced
 // transactions, the L1<->L2 bridge, the public-input tuple), and emits the SSZ output.
 //
 // The crypto accelerators (zkvm_*) that zesu declares as externs are DEFINED in-guest by
-// zkvm_provide.zig (pulled in below for the riscv64 build), so the statically-linked guest ELF has
+// zkvm_provide (pulled in below for the riscv64 build), so the statically-linked guest ELF has
 // no unresolved zkvm_* externals. The native host build doesn't reference them — it uses zesu's
 // C-backed crypto instead.
 
@@ -42,7 +40,7 @@ fn guestMain() callconv(.c) noreturn {
     const heap = @as([*]u8, @ptrCast(&_heap_start))[0 .. @intFromPtr(&_heap_end) - @intFromPtr(&_heap_start)];
     var fba = std.heap.FixedBufferAllocator.init(heap);
     const allocator = fba.allocator();
-    guest_allocator = .{ .ptr = allocator.ptr, .vtable = @ptrCast(allocator.vtable) };
+    @import("zkvm_provide").setAllocator(allocator);
 
     var buf_ptr: [*]const u8 = undefined;
     var buf_size: usize = undefined;
@@ -66,11 +64,11 @@ fn runL2ExecutionGuest(allocator: std.mem.Allocator, raw_input: []const u8) ![]u
     const decoded = try l2_execution_ssz.decodeInput(allocator, raw_input);
     const result = try l2_execution.runL2Execution(allocator, decoded);
 
-    return l2_execution_ssz.encodeOutput(allocator, result.public_inputs);
+    return l2_execution_proof.encodeOutput(allocator, result.public_inputs);
 }
 
 /// zesu's own logging ABI (see zesu/src/zkvm/root.zig's doc comment) — DEFINED (as a no-op, for
-/// now) in `zkvm_provide.zig` alongside every other `zkvm_*` symbol this statically-linked ELF must
+/// now) in `zkvm_provide` alongside every other `zkvm_*` symbol this statically-linked ELF must
 /// satisfy locally.
 extern fn zkvm_log(level: u8, msg_ptr: [*]const u8, msg_len: usize) void;
 
@@ -80,7 +78,7 @@ comptime {
     if (builtin.cpu.arch == .riscv64) {
         @export(&guestMain, .{ .name = "main" });
         // Pull in the precompile providers for the freestanding guest.
-        _ = package.zkvm_provide;
+        _ = @import("zkvm_provide");
     }
 }
 
