@@ -4,9 +4,17 @@ include scripts/docker/images.mk
 docker-pull-images-external-to-monorepo:
 		docker compose -f docker/compose-tracing-v2-ci-extension.yml --profile external-to-monorepo pull
 
+CLEANUP_IMAGE ?= busybox:1.37.0@sha256:bdf57e528e45e4433820e045b29b4597825a1c9e38353532d90a01445013f82e
+
 clean-local-folders:
 		$(MAKE) clean-smc-folders
-		rm -rf tmp/local/* || true # ignore failure if folders do not exist already
+		# Containers may create root-owned data; fall back to deleting it through Docker.
+		@if [ -d tmp/local ]; then \
+			rm -rf tmp/local/* 2>/dev/null || \
+			docker run --rm --network none --user 0:0 \
+				--mount "type=bind,source=$(CURDIR)/tmp/local,target=/data" \
+				$(CLEANUP_IMAGE) find /data -mindepth 1 -delete; \
+		fi
 
 clean-testnet-folders:
 		$(MAKE) clean-smc-folders
@@ -15,10 +23,97 @@ clean-testnet-folders:
 clean-environment:
 		docker compose -f docker/compose-tracing-v2-staterecovery-extension.yml --profile l1 --profile l2 --profile debug --profile staterecovery kill -s 9 || true;
 		docker compose -f docker/compose-tracing-v2-staterecovery-extension.yml --profile l1 --profile l2 --profile debug --profile staterecovery down || true;
+		docker compose -p lineth down --remove-orphans --timeout 0 || true; # start-env stacks run as project "lineth"
 		$(MAKE) clean-local-folders;
 		$(MAKE) seed-deny-list; # truncate runtime deny-list and drop any stale lockfile from a crashed run
 		docker volume rm linea-local-dev linea-logs || true; # ignore failure if volumes do not exist already
 		docker image prune -f || true;
+
+.PHONY: start-env-with-riscv
+
+RISCV_PROVER_MODE ?= dev-mock
+export RISCV_PROVER_MODE
+RISCV_COMPOSE_FILE := docker/compose-tracing-v2.yml -f docker/compose-riscv.yml
+
+start-env-with-riscv:
+	@test -f docker/config/prover/riscv/prover-ray-config.$(RISCV_PROVER_MODE).toml || \
+		{ echo "Unsupported RISCV_PROVER_MODE=$(RISCV_PROVER_MODE) (expected dev-mock or dev-zkvm)"; exit 1; }
+	$(MAKE) start-env COMPOSE_FILE="$(RISCV_COMPOSE_FILE)" \
+		L1_CONTRACT_VERSION=9 LINETH_PROTOCOL_CONTRACTS_ONLY=true \
+		LINETH_L1_CONTRACT_DEPLOYMENT_TARGET=deploy-lineth-rollup-v9-stub \
+		DEPLOY_FORCED_TRANSACTION_GATEWAY=false
+	# The coordinator needs the deployed L1 contract, so it starts last.
+	COMPOSE_PROFILES=l1,l2,riscv docker compose -f $(RISCV_COMPOSE_FILE) up -d --no-deps --wait --wait-timeout 600 prover-ray coordinator
+	$(MAKE) deploy-l2-evm-opcode-tester
+
+##
+## CI e2e entry points, used by .github/actions/run-e2e-tests.
+## E2E_STACK selects the stack and suite: zkevm (default) or riscv.
+##
+.PHONY: e2e-ci-detect-changes e2e-ci-load-images e2e-ci-pull-external-images e2e-ci-build-images \
+	e2e-ci-start-env e2e-ci-start-env-with-retry e2e-ci-test
+
+E2E_STACK ?= zkevm
+E2E_IMAGE_TAG ?=
+E2E_ARTIFACT_DIR ?= tmp/artifacts
+E2E_BESU_PACKAGE_PROVIDED ?= false
+OVERRIDE_COMPOSE_FILE ?=
+
+ifeq ($(E2E_STACK),riscv)
+E2E_START_TARGET := start-env-with-riscv
+E2E_TEST_SCRIPT := test:riscv:local
+E2E_TEST_TIMEOUT := $(if $(filter dev-zkvm,$(RISCV_PROVER_MODE)),40m,10m)
+# Empty: keep the image tags pinned in docker/compose-riscv.yml.
+E2E_FALLBACK_IMAGE_TAG :=
+ifeq ($(RISCV_PROVER_MODE),dev-zkvm)
+# dev-zkvm runs prover-ray built from this commit (see e2e-ci-build-images).
+export LINEA_PROVER_RAY_TAG := $(E2E_IMAGE_TAG)
+endif
+else ifeq ($(E2E_STACK),zkevm)
+E2E_START_TARGET := $(if $(OVERRIDE_COMPOSE_FILE),start-env-with-tracing-v2-ci-override OVERRIDE_COMPOSE_FILE=$(abspath $(OVERRIDE_COMPOSE_FILE)),start-env-with-tracing-v2-ci)
+E2E_TEST_SCRIPT := test:local
+E2E_TEST_TIMEOUT := 6m
+E2E_FALLBACK_IMAGE_TAG := develop
+else
+$(error Unsupported E2E_STACK=$(E2E_STACK) (expected zkevm or riscv))
+endif
+
+e2e-ci-detect-changes:
+	@.github/actions/run-e2e-tests/scripts/detect-changes.sh "$${E2E_ZKEVM_FILES:-[]}" "$${E2E_RISCV_FILES:-[]}"
+
+e2e-ci-load-images:
+	@E2E_FALLBACK_IMAGE_TAG="$(E2E_FALLBACK_IMAGE_TAG)" .github/actions/run-e2e-tests/scripts/load-image-artifacts.sh "$(E2E_ARTIFACT_DIR)"
+
+# Skipped when besu-package is provided: its services carry the external-to-monorepo profile,
+# so the pull would fetch an unpublished CI tag or overwrite the loaded artifact.
+e2e-ci-pull-external-images:
+ifeq ($(E2E_STACK)-$(E2E_BESU_PACKAGE_PROVIDED),zkevm-false)
+	$(MAKE) retry TARGET=docker-pull-images-external-to-monorepo \
+		RETRY_LIMIT=10 RETRY_TIMEOUT=10m RETRY_BACKOFF=30s
+else
+	@echo "Skipping external image pull for E2E_STACK=$(E2E_STACK) E2E_BESU_PACKAGE_PROVIDED=$(E2E_BESU_PACKAGE_PROVIDED)"
+endif
+
+e2e-ci-build-images:
+ifeq ($(E2E_STACK)-$(RISCV_PROVER_MODE),riscv-dev-zkvm)
+	$(MAKE) -C prover-ray docker-build IMAGE_TAG="$(E2E_IMAGE_TAG)"
+else
+	@echo "No local images to build for E2E_STACK=$(E2E_STACK)"
+endif
+
+e2e-ci-start-env:
+	$(MAKE) $(E2E_START_TARGET) CLEAN_PREVIOUS_ENV=false
+
+e2e-ci-start-env-with-retry:
+	@if [ -n "$(OVERRIDE_COMPOSE_FILE)" ] && [ ! -f "$(OVERRIDE_COMPOSE_FILE)" ]; then \
+		echo "Override compose file not found: $(OVERRIDE_COMPOSE_FILE)" >&2; exit 1; \
+	fi
+	$(MAKE) retry \
+		TARGET="e2e-ci-start-env E2E_STACK=$(E2E_STACK) OVERRIDE_COMPOSE_FILE=$(if $(OVERRIDE_COMPOSE_FILE),$(abspath $(OVERRIDE_COMPOSE_FILE)))" \
+		RETRY_LIMIT=10 RETRY_TIMEOUT=10m RETRY_BACKOFF=30s RETRY_CLEANUP_TARGET=clean-environment
+
+e2e-ci-test:
+	timeout $(E2E_TEST_TIMEOUT) pnpm run -F e2e $(E2E_TEST_SCRIPT)
 
 # Ensure the runtime sequencer deny-list exists (empty) before docker compose
 # bind-mounts it. Gitignored; may be mutated at test time by withDenyListAddresses.

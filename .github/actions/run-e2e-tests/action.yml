@@ -5,6 +5,14 @@ description: >
   submodule) before invoking this action.
 
 inputs:
+  stack:
+    description: 'Local stack and test suite (zkevm or riscv)'
+    required: false
+    default: 'zkevm'
+  riscv_prover_mode:
+    description: 'prover-ray mode for the RISC-V stack (dev-mock or dev-zkvm)'
+    required: false
+    default: 'dev-mock'
   image_tag:
     description: 'The commit tag to use'
     required: true
@@ -101,108 +109,45 @@ runs:
         merge-multiple: true
 
     - name: Load Docker image artifacts and select tags
-      id: load_images
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       env:
-        IMAGE_TAG: ${{ inputs.image_tag }}
+        E2E_STACK: ${{ inputs.stack }}
+        E2E_IMAGE_TAG: ${{ inputs.image_tag }}
+        E2E_ARTIFACT_DIR: ${{ github.workspace }}/${{ inputs.working-directory }}/tmp/artifacts
         LINEA_BESU_PACKAGE_TAG: ${{ inputs.linea_besu_package_tag }}
         LINEA_COORDINATOR_TAG: ${{ inputs.coordinator_tag }}
         LINEA_POSTMAN_TAG: ${{ inputs.postman_tag }}
         LINEA_PROVER_TAG: ${{ inputs.prover_tag }}
         LINEA_TRANSACTION_EXCLUSION_API_TAG: ${{ inputs.tx_exclusion_api_tag }}
         MARU_TAG: ${{ inputs.maru_tag }}
-      run: |
-        set -euo pipefail
-        
-        # Export to later steps via GITHUB_ENV to ensure BESU_PACKAGE_IMAGE_NAME
-        # is set as "consensys/linea-besu-package" even when override compose file is used
-        echo "BESU_PACKAGE_IMAGE_NAME=consensys/linea-besu-package" >> "$GITHUB_ENV"
-        
-        artifact_dir="$GITHUB_WORKSPACE/${{ inputs.working-directory }}/tmp/artifacts"
-        loaded_images="$(mktemp)"
-        shopt -s nullglob
-        artifacts=("$artifact_dir"/*.tar.gz)
+      run: make -s e2e-ci-load-images >> "$GITHUB_ENV"
 
-        for artifact in "${artifacts[@]}"; do
-          if ! repo_tags="$(
-            tar -xOzf "$artifact" manifest.json 2>/dev/null |
-              jq -er '.[].RepoTags[]?'
-          )"; then
-            echo "Skipping non-Docker artifact ${artifact}."
-            continue
-          fi
-          echo "Loading Docker image artifact ${artifact}..."
-          printf '%s\n' "$repo_tags" >> "$loaded_images"
-          gunzip -c "$artifact" | docker load
-        done
-
-        while read -r env_var image; do
-          image_ref="${image}:${IMAGE_TAG}"
-          if grep -Fqx "$image_ref" "$loaded_images"; then
-            selected_tag="$IMAGE_TAG"
-            if [ "$env_var" = "LINEA_BESU_PACKAGE_TAG" ]; then
-              echo "besu_package_loaded=true" >> "$GITHUB_OUTPUT"
-            fi
-          elif [ -n "${!env_var:-}" ]; then
-            selected_tag="${!env_var}"
-          else
-            selected_tag="develop"
-          fi
-          echo "${env_var}=${selected_tag}" >> "$GITHUB_ENV"
-        done <<'EOF'
-        LINEA_BESU_PACKAGE_TAG consensys/linea-besu-package
-        LINEA_COORDINATOR_TAG consensys/linea-coordinator
-        LINEA_POSTMAN_TAG consensys/linea-postman
-        LINEA_PROVER_TAG consensys/linea-prover
-        LINEA_TRANSACTION_EXCLUSION_API_TAG consensys/linea-transaction-exclusion-api
-        MARU_TAG consensys/maru
-        EOF
-    
     - name: Pull all external-to-monorepo images with retry
-      # Skip when a besu-package artifact/tag is supplied: the besu-package services carry the
-      # external-to-monorepo profile, so this pull would fetch an unpublished CI tag or overwrite
-      # the image just loaded from the artifact. Missing external images are pulled on spin-up.
-      if: ${{ inputs.linea_besu_package_tag == '' && steps.load_images.outputs.besu_package_loaded != 'true' }}
-      uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
-      with:
-        max_attempts: 10
-        retry_on: error
-        retry_wait_seconds: 30
-        timeout_minutes: 10
-        command: |
-          cd ${{ inputs.working-directory }} && make docker-pull-images-external-to-monorepo
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        E2E_STACK: ${{ inputs.stack }}
+      run: make e2e-ci-pull-external-images
+
+    - name: Build local images
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        E2E_STACK: ${{ inputs.stack }}
+        E2E_IMAGE_TAG: ${{ inputs.image_tag }}
+        RISCV_PROVER_MODE: ${{ inputs.riscv_prover_mode }}
+      run: make e2e-ci-build-images
 
     - name: Spin up fresh environment with retry
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       env:
+        E2E_STACK: ${{ inputs.stack }}
+        E2E_IMAGE_TAG: ${{ inputs.image_tag }}
+        RISCV_PROVER_MODE: ${{ inputs.riscv_prover_mode }}
         OVERRIDE_COMPOSE_FILE: ${{ inputs.override-compose-file }}
-      run: |
-        set -euo pipefail
-        # Resolve the optional override compose file (absolute, or relative to working-directory).
-        override_file=""
-        if [ -n "$OVERRIDE_COMPOSE_FILE" ]; then
-          if [ -f "$OVERRIDE_COMPOSE_FILE" ]; then
-            override_file="$(cd "$(dirname "$OVERRIDE_COMPOSE_FILE")" && pwd)/$(basename "$OVERRIDE_COMPOSE_FILE")"
-          else
-            echo "::error::Override compose file not found: $OVERRIDE_COMPOSE_FILE" >&2
-            exit 1
-          fi
-        fi
-
-        if [ -n "$override_file" ]; then
-          target="start-env-with-tracing-v2-ci-override OVERRIDE_COMPOSE_FILE=$override_file CLEAN_PREVIOUS_ENV=false"
-        else
-          target="start-env-with-tracing-v2-ci CLEAN_PREVIOUS_ENV=false"
-        fi
-        echo "Spin-up target: $target"
-        make retry \
-          TARGET="$target" \
-          RETRY_LIMIT=10 \
-          RETRY_TIMEOUT=10m \
-          RETRY_BACKOFF=30s \
-          RETRY_CLEANUP_TARGET=clean-environment
+      run: make e2e-ci-start-env-with-retry
 
     - name: List docker containers/images
       if: ${{ always() && inputs.e2e-tests-containers-list == 'true' }}
@@ -216,8 +161,10 @@ runs:
       id: run_e2e_tests
       shell: bash
       working-directory: ${{ inputs.working-directory }}
-      run: |
-        timeout 6m pnpm run -F e2e test:local
+      env:
+        E2E_STACK: ${{ inputs.stack }}
+        RISCV_PROVER_MODE: ${{ inputs.riscv_prover_mode }}
+      run: make e2e-ci-test
 
     - name: Show e2e tests result
       if: always()
@@ -244,13 +191,15 @@ runs:
         docker logs l1-el-node --since 1h &>> docker_logs/l1-el-node.txt || true
         docker logs l1-cl-node --since 1h &>> docker_logs/l1-cl-node.txt || true
         docker logs maru --since 1h &>> docker_logs/maru.txt || true
+        docker logs prover-ray --since 1h &>> docker_logs/prover-ray.txt || true
+        cp -r tmp/local/prover/riscv docker_logs/riscv-proofs || true
         docker exec -i -e PGPASSWORD=${POSTGRES_PASSWORD:-postgres} postgres pg_dumpall -U ${POSTGRES_USER:-postgres} > docker_logs/db_dump.sql || true
 
     - name: Archive debug logs
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       if: ${{ failure() && inputs.e2e-tests-logs-dump == 'true' }}
       with:
-        name: end-2-end-debug-logs
+        name: end-2-end-debug-logs${{ inputs.stack == 'riscv' && '-riscv' || '' }}
         if-no-files-found: error
         path: |
           ${{ inputs.working-directory }}/docker_logs/**/*
