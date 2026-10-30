@@ -53,6 +53,11 @@ func collectFields(cfg *config.Config, req *Request) (*CollectedFields, error) {
 		}
 	)
 
+	var err error
+	if cf.GrandparentShnarf, cf.ParentShnarf, err = readParentShnarfPreimage(cfg, req); err != nil {
+		return nil, err
+	}
+
 	cf.ExecutionPI = make([]public_input.Execution, 0, len(req.ExecutionProofs))
 	cf.InvalidityPI = make([]public_input.Invalidity, 0, len(req.InvalidityProofs))
 	cf.InnerCircuitTypes = make([]pi_interconnection.InnerCircuitType, 0, len(req.ExecutionProofs)+len(req.DecompressionProofs)+len(req.InvalidityProofs))
@@ -232,6 +237,31 @@ func collectFields(cfg *config.Config, req *Request) (*CollectedFields, error) {
 	return cf, nil
 }
 
+// readParentShnarfPreimage reads the parent shnarf's keccak preimage from the
+// decompression proof response referenced by req.ParentDecompressionProof.
+// Returns the all-zero genesis preimage if that field is empty.
+func readParentShnarfPreimage(cfg *config.Config, req *Request) (grandparentShnarf string, parentShnarf public_input.ShnarfPreimage, err error) {
+	if req.ParentDecompressionProof == "" {
+		var zero [32]byte
+		emptyHash := utils.HexEncodeToString(zero[:])
+		return emptyHash, public_input.ShnarfPreimage{SnarkHash: emptyHash, X: emptyHash, Y: emptyHash}, nil
+	}
+
+	fpath := path.Join(cfg.DataAvailability.DirTo(), req.ParentDecompressionProof)
+	f := files.MustRead(fpath)
+
+	var dp dataavailability.Response
+	if err = json.NewDecoder(f).Decode(&dp); err != nil {
+		return "", public_input.ShnarfPreimage{}, fmt.Errorf("fields collection, decoding parent decompression proof %s, %w", fpath, err)
+	}
+
+	return dp.PrevShnarf, public_input.ShnarfPreimage{
+		SnarkHash: dp.SnarkHash,
+		X:         dp.ExpectedX,
+		Y:         dp.ExpectedY,
+	}, nil
+}
+
 // Prepare the response without running the actual proof
 // TODO @gbotrel well, this is a bit of a lie, we do run the proof, don't we?
 func CraftResponse(cfg *config.Config, cf *CollectedFields) (resp *Response, err error) {
@@ -289,6 +319,8 @@ func CraftResponse(cfg *config.Config, cf *CollectedFields) (resp *Response, err
 		FinalShnarf:                             cf.FinalShnarf,
 		ParentAggregationFinalShnarf:            cf.ParentAggregationFinalShnarf,
 		ParentStateRootHash:                     cf.ParentStateRootHashContract.Hex(),
+		GrandparentShnarf:                       cf.GrandparentShnarf,
+		ParentShnarf:                            cf.ParentShnarf,
 		ParentAggregationLastBlockTimestamp:     cf.ParentAggregationLastBlockTimestamp,
 		FinalTimestamp:                          cf.FinalTimestamp,
 		LastFinalizedBlockNumber:                cf.LastFinalizedBlockNumber,
@@ -310,8 +342,7 @@ func CraftResponse(cfg *config.Config, cf *CollectedFields) (resp *Response, err
 		CoinBase:             types.EthAddress(cfg.Layer2.CoinBase),
 		L2MessageServiceAddr: types.EthAddress(cfg.Layer2.MsgSvcContract),
 		IsAllowedCircuitID:   uint64(cfg.Aggregation.IsAllowedCircuitID),
-
-		FilteredAddresses: filteredAddrs,
+		FilteredAddresses:    filteredAddrs,
 	}
 
 	resp.AggregatedProofPublicInput = pubInputParts.GetPublicInputHex()

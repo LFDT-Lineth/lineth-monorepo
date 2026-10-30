@@ -321,6 +321,7 @@ class ConflationAppV1(
         consecutiveProvenBlobsProvider = maxBlobEndBlockNumberTracker,
         proofAggregationClient = proofAggregationClient,
         metricsFacade = metricsFacade,
+        blobsRepository = blobsRepository,
       )
   }
 

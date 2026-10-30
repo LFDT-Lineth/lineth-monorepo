@@ -31,6 +31,7 @@ data class AggregationProofRequestDto(
   val parentAggregationLastL1RollingHash: String,
   val parentAggregationLastFtxNumber: Long,
   val parentAggregationLastFtxRollingHash: String,
+  val parentDecompressionProof: String?,
 ) {
   companion object {
     fun fromDomainObject(
@@ -76,6 +77,9 @@ data class AggregationProofRequestDto(
         parentAggregationLastL1RollingHash = proofsToAggregate.parentAggregationLastL1RollingHash.encodeHex(),
         parentAggregationLastFtxNumber = proofsToAggregate.parentAggregationLastFtxNumber.toLong(),
         parentAggregationLastFtxRollingHash = proofsToAggregate.parentAggregationLastFtxRollingHash.encodeHex(),
+        parentDecompressionProof = proofsToAggregate.parentCompressionProofIndex?.let {
+          compressionProofResponseFileNameProvider.getFileName(it)
+        },
       )
     }
   }

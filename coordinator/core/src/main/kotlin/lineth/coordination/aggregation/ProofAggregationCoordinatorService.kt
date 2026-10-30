@@ -16,6 +16,7 @@ import linea.timer.VertxPeriodicPollingService
 import lineth.conflation.calculators.AggregationCalculator
 import lineth.conflation.calculators.AggregationHandler
 import lineth.metrics.LineaMetricsCategory
+import lineth.persistence.BlobsRepository
 import net.consensys.linea.async.AsyncRetryer
 import net.consensys.linea.metrics.MetricsFacade
 import org.apache.logging.log4j.LogManager
@@ -38,6 +39,7 @@ class ProofAggregationCoordinatorService(
   private val consecutiveProvenBlobsProvider: ConsecutiveProvenBlobsProvider,
   private val proofAggregationClient: ProofAggregationProverClientV2,
   private val aggregationL2StateProvider: AggregationL2StateProvider,
+  private val blobsRepository: BlobsRepository,
   private val log: Logger = LogManager.getLogger(ProofAggregationCoordinatorService::class.java),
 ) : AggregationHandler, VertxPeriodicPollingService(
   vertx = vertx,
@@ -239,23 +241,30 @@ class ProofAggregationCoordinatorService(
         )
       }
       .thenCompose { rollingInfo ->
-        invalidityProofProvider.getInvalidityProofs(
+        val invalidityProofsFuture = invalidityProofProvider.getInvalidityProofs(
           ftxStartingNumber = rollingInfo.parentAggregationLastFtxNumber.inc(),
           aggregationStartingBlockNumber = blobsToAggregate.startBlockNumber,
-        ).thenApply { invalidityProofIndexes ->
-          ProofsToAggregate(
-            compressionProofIndexes = compressionProofIndexes,
-            executionProofs = executionProofsIndexes,
-            invalidityProofs = invalidityProofIndexes,
-            parentAggregationLastBlockTimestamp = rollingInfo.parentAggregationLastBlockTimestamp,
-            parentAggregationLastL1RollingHashMessageNumber =
-            rollingInfo.parentAggregationLastL1RollingHashMessageNumber,
-            parentAggregationLastL1RollingHash = rollingInfo.parentAggregationLastL1RollingHash,
-            parentAggregationLastFtxNumber = rollingInfo.parentAggregationLastFtxNumber,
-            parentAggregationLastFtxRollingHash = rollingInfo.parentAggregationLastFtxRollingHash,
-            startBlockTimestamp = aggregationStartBlockTimestamp,
-          )
-        }
+        )
+        val parentCompressionProofIndexFuture = getParentCompressionProofIndex(blobsToAggregate.startBlockNumber)
+
+        SafeFuture.allOf(invalidityProofsFuture, parentCompressionProofIndexFuture)
+          .thenApply {
+            val invalidityProofIndexes = invalidityProofsFuture.get()
+            val parentCompressionProofIndex = parentCompressionProofIndexFuture.get()
+            ProofsToAggregate(
+              compressionProofIndexes = compressionProofIndexes,
+              executionProofs = executionProofsIndexes,
+              invalidityProofs = invalidityProofIndexes,
+              parentAggregationLastBlockTimestamp = rollingInfo.parentAggregationLastBlockTimestamp,
+              parentAggregationLastL1RollingHashMessageNumber =
+              rollingInfo.parentAggregationLastL1RollingHashMessageNumber,
+              parentAggregationLastL1RollingHash = rollingInfo.parentAggregationLastL1RollingHash,
+              parentAggregationLastFtxNumber = rollingInfo.parentAggregationLastFtxNumber,
+              parentAggregationLastFtxRollingHash = rollingInfo.parentAggregationLastFtxRollingHash,
+              parentCompressionProofIndex = parentCompressionProofIndex,
+              startBlockTimestamp = aggregationStartBlockTimestamp,
+            )
+          }
           .thenCompose(proofAggregationClient::createProofRequest)
           .whenException {
             log.debug(
@@ -265,6 +274,35 @@ class ProofAggregationCoordinatorService(
               it,
             )
           }
+      }
+  }
+
+  /**
+   * References the parent blob's compression proof; the prover reads its
+   * response file directly for the keccak preimage. Only identity fields
+   * are read here, not the compression proof itself.
+   */
+  private fun getParentCompressionProofIndex(
+    aggregationStartBlockNumber: ULong,
+  ): SafeFuture<CompressionProofIndex?> {
+    val parentBlobEndBlockNumber = aggregationStartBlockNumber.dec()
+    if (parentBlobEndBlockNumber == 0UL) {
+      return SafeFuture.completedFuture(null)
+    }
+
+    return blobsRepository
+      .findBlobByEndBlockNumber(parentBlobEndBlockNumber.toLong())
+      .thenApply { blobRecord ->
+        blobRecord
+          ?: throw IllegalStateException(
+            "Failed to find the parent blob in db with end block=$parentBlobEndBlockNumber",
+          )
+        CompressionProofIndex(
+          startBlockNumber = blobRecord.startBlockNumber,
+          endBlockNumber = blobRecord.endBlockNumber,
+          hash = blobRecord.expectedShnarf,
+          startBlockTimestamp = blobRecord.startBlockTime,
+        )
       }
   }
 
@@ -281,6 +319,7 @@ class ProofAggregationCoordinatorService(
       consecutiveProvenBlobsProvider: ConsecutiveProvenBlobsProvider,
       proofAggregationClient: ProofAggregationProverClientV2,
       metricsFacade: MetricsFacade,
+      blobsRepository: BlobsRepository,
     ): LongRunningService {
       val proofAggregationService =
         ProofAggregationCoordinatorService(
@@ -299,6 +338,7 @@ class ProofAggregationCoordinatorService(
           consecutiveProvenBlobsProvider = consecutiveProvenBlobsProvider,
           proofAggregationClient = proofAggregationClient,
           aggregationL2StateProvider = aggregationL2StateProvider,
+          blobsRepository = blobsRepository,
         )
 
       return proofAggregationService

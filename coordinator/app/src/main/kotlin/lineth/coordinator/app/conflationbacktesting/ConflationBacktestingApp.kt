@@ -271,6 +271,11 @@ class ConflationBacktestingApp(
   // time and promotes blobs to proven once the compression proof request is submitted.
   private val inMemoryProvenBlobsTracker = InMemoryConsecutiveProvenBlobsProvider()
 
+  // In-memory blobs repository, populated alongside inMemoryProvenBlobsTracker, so that
+  // aggregation requests can look up a previous blob's full compression proof (needed to
+  // open its shnarf).
+  private val inMemoryBlobsRepository = InMemoryBlobsRepository()
+
   private val blobCompressionProofCoordinator = run {
     val parentBlobDataProvider = object : ParentBlobDataProvider {
       override fun getParentBlobShnarfMetaData(
@@ -314,6 +319,7 @@ class ConflationBacktestingApp(
           blobRecord.intervalString(),
         )
         inMemoryProvenBlobsTracker.acceptProvenBlobRecord(proofIndex, blobRecord)
+        inMemoryBlobsRepository.saveNewBlob(blobRecord)
         progressTracker.recordCompressionRequestEndBlock(blobRecord.endBlockNumber)
       },
       log = log,
@@ -366,6 +372,7 @@ class ConflationBacktestingApp(
     consecutiveProvenBlobsProvider = inMemoryProvenBlobsTracker,
     proofAggregationClient = preRiscvProverClientFactory.preRiscvProofAggregationProverClient(),
     metricsFacade = metricsFacade,
+    blobsRepository = inMemoryBlobsRepository,
   )
 
   private val blockToBatchSubmissionCoordinator = BlockToBatchSubmissionCoordinator(
