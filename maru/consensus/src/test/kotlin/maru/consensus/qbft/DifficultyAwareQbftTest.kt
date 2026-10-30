@@ -20,6 +20,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
+import java.math.BigInteger
 
 class DifficultyAwareQbftTest {
   private val terminalTotalDifficulty = 10UL
@@ -45,15 +46,15 @@ class DifficultyAwareQbftTest {
       },
       forkSpec = forkSpec,
       timerFactory = timerFactory,
-      totalDifficultyTracker = TotalDifficultyTracker(chain),
+      headerProvider = chain,
     ).also { it.start() }
 
   private fun poll() = timerFactory.getTimer("DifficultyAwareQbft")!!.runNextTask()
 
   @Test
-  fun `does not transition while total difficulty is below TTD`() {
-    // genesis + 8 blocks of difficulty 1 => TD 9 where TTD is 10
-    chain.extend(List(9) { 1L })
+  fun `does not transition before the terminal block`() {
+    // QBFT: genesis 0x1 + 8 blocks of difficulty 1 => TD 9 where TTD is 10 (terminal block 9)
+    chain.extend(1).extendRepeated(count = 8, difficulty = 1)
 
     poll()
 
@@ -61,9 +62,9 @@ class DifficultyAwareQbftTest {
   }
 
   @Test
-  fun `transitions once summed block difficulties reach TTD`() {
-    // genesis + 9 blocks of difficulty 1 => TD 10 at block 9
-    chain.extend(List(10) { 1L })
+  fun `transitions at the terminal block`() {
+    // QBFT: TD(9) = 1 + 9 = 10 = TTD
+    chain.extend(1).extendRepeated(count = 9, difficulty = 1)
 
     poll()
 
@@ -71,45 +72,97 @@ class DifficultyAwareQbftTest {
   }
 
   @Test
-  fun `transitions when the chain grows to TTD across polls`() {
-    chain.extend(List(5) { 1L })
+  fun `transitions when the chain grows to the terminal block across polls`() {
+    chain.extend(1).extendRepeated(count = 4, difficulty = 1)
     poll()
     verify(postTtdProtocol, never()).start()
 
-    chain.extend(List(5) { 1L })
+    chain.extendRepeated(count = 5, difficulty = 1)
     poll()
     verify(postTtdProtocol).start()
 
     // further polls do not start the post-TTD protocol again
-    chain.extend(List(5) { 1L })
+    chain.extendRepeated(count = 5, difficulty = 0)
     poll()
     verify(postTtdProtocol, times(1)).start()
   }
 
   @Test
-  fun `transitions after a reorg to a heavier chain reaches TTD`() {
-    // Clique-like: TD 8 on fork a
-    chain.extend(listOf(1, 1, 1, 1, 1, 1, 1, 1))
+  fun `waits for block 1 to determine the terminal block`() {
+    chain.extend(1)
     poll()
     verify(postTtdProtocol, never()).start()
 
-    // reorg of the last 3 blocks to in-turn blocks of difficulty 2 => TD 5 + 6 = 11
-    chain.reorg(fromBlockNumber = 5, difficulties = listOf(2, 2, 2), fork = "b")
+    chain.extendRepeated(count = 9, difficulty = 1)
+    poll()
+    verify(postTtdProtocol).start()
+  }
+
+  @Test
+  fun `transitions at the terminal block of a single-signer Clique chain`() {
+    // Clique: genesis 0x1, in-turn blocks of difficulty 2 => TD(4) = 9 < 10, TD(5) = 11 >= 10
+    chain.extend(1).extendRepeated(count = 4, difficulty = 2)
+    poll()
+    verify(postTtdProtocol, never()).start()
+
+    chain.extend(2)
+    poll()
+    verify(postTtdProtocol).start()
+  }
+
+  @Test
+  fun `transitions immediately when restarted after the merge`() {
+    // pre-merge blocks up to the terminal block 9, then post-merge blocks with difficulty 0
+    chain.extend(1).extendRepeated(count = 9, difficulty = 1).extendRepeated(count = 6, difficulty = 0)
+
     poll()
 
     verify(postTtdProtocol).start()
   }
 
   @Test
-  fun `does not transition when a reorg lowers total difficulty below TTD`() {
-    // TD 9 on fork a
-    chain.extend(listOf(1, 2, 2, 2, 2))
+  fun `keeps using the computed terminal block when a block has an unexpected difficulty`() {
+    // block 1 sets the expected difficulty to 1; block 5 has difficulty 2, which is reported but not fatal
+    chain.extend(1).extendRepeated(count = 4, difficulty = 1).extend(2)
     poll()
-
-    // reorg to out-of-turn blocks => TD 1 + 2 + 1 + 1 + 1 + 1 + 1 + 1 = 9: still below TTD
-    chain.reorg(fromBlockNumber = 2, difficulties = listOf(1, 1, 1, 1, 1, 1), fork = "b")
-    poll()
-
     verify(postTtdProtocol, never()).start()
+
+    chain.extendRepeated(count = 4, difficulty = 1)
+    poll()
+    verify(postTtdProtocol).start()
+  }
+
+  @Test
+  fun `switches on the terminal block from an injected calculator`() {
+    val stubCalculator =
+      object : TerminalBlockCalculator {
+        override fun terminalBlock() = TerminalBlock(
+          number = 3UL,
+          genesisDifficulty = BigInteger.ONE,
+          blockDifficulty = null,
+        )
+      }
+    val timerFactory = TestablePeriodicTimerFactory()
+    DifficultyAwareQbft(
+      ethereumJsonRpcClient = mock(),
+      postTtdProtocolFactory =
+      object : ProtocolFactory {
+        override fun create(forkSpec: ForkSpec): Protocol = postTtdProtocol
+      },
+      forkSpec = forkSpec,
+      timerFactory = timerFactory,
+      headerProvider = chain,
+      terminalBlockCalculator = stubCalculator,
+    ).start()
+    val poll = { timerFactory.getTimer("DifficultyAwareQbft")!!.runNextTask() }
+
+    // TTD in the fork config would put the terminal block at 9, but the injected calculator says 3
+    chain.extend(1).extendRepeated(count = 2, difficulty = 1)
+    poll()
+    verify(postTtdProtocol, never()).start()
+
+    chain.extend(1)
+    poll()
+    verify(postTtdProtocol).start()
   }
 }

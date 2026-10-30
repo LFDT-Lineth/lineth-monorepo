@@ -8,52 +8,26 @@ package maru.consensus.qbft
 
 import java.math.BigInteger
 
-/** In-memory EL canonical chain. Blocks are identified by a fork label so reorged blocks get distinct hashes. */
+/** In-memory EL chain: block n has the n-th difficulty added via [extend]. */
 internal class FakeElChain : ElBlockHeaderProvider {
-  val canonical = mutableListOf<ElBlockHeader>()
-  val requestedRanges = mutableListOf<ULongRange>()
+  val difficulties = mutableListOf<BigInteger>()
+  val requestedBlockNumbers = mutableListOf<ULong>()
 
-  /** Invoked before serving each range request, to simulate the canonical chain changing mid-sync. */
-  var beforeRangeRequest: () -> Unit = {}
-
-  fun extend(
-    difficulties: List<Long>,
-    fork: String = "a",
-  ): FakeElChain {
-    difficulties.forEach { difficulty ->
-      val number = canonical.size.toULong()
-      canonical.add(
-        ElBlockHeader(
-          number = number,
-          hash = "0x$fork-$number",
-          parentHash = canonical.lastOrNull()?.hash ?: "0x0",
-          difficulty = BigInteger.valueOf(difficulty),
-        ),
-      )
-    }
+  fun extend(vararg difficulties: Long): FakeElChain {
+    difficulties.forEach { this.difficulties.add(BigInteger.valueOf(it)) }
     return this
   }
 
-  /** Replaces the canonical chain from [fromBlockNumber] with new blocks of the given [difficulties]. */
-  fun reorg(
-    fromBlockNumber: Int,
-    difficulties: List<Long>,
-    fork: String,
-  ) {
-    while (canonical.size > fromBlockNumber) {
-      canonical.removeLast()
-    }
-    extend(difficulties, fork)
-  }
+  fun extendRepeated(
+    count: Int,
+    difficulty: Long,
+  ): FakeElChain = extend(*LongArray(count) { difficulty })
 
-  override fun latestHeader(): ElBlockHeader? = canonical.lastOrNull()
+  override fun latestHeader(): ElBlockHeader? =
+    difficulties.lastIndex.takeIf { it >= 0 }?.let { ElBlockHeader(it.toULong(), difficulties[it]) }
 
-  override fun headersByNumber(
-    fromBlockNumber: ULong,
-    toBlockNumber: ULong,
-  ): List<ElBlockHeader> {
-    beforeRangeRequest()
-    requestedRanges.add(fromBlockNumber..toBlockNumber)
-    return canonical.filter { it.number in fromBlockNumber..toBlockNumber }
+  override fun headerByNumber(blockNumber: ULong): ElBlockHeader? {
+    requestedBlockNumbers.add(blockNumber)
+    return difficulties.getOrNull(blockNumber.toInt())?.let { ElBlockHeader(blockNumber, it) }
   }
 }
