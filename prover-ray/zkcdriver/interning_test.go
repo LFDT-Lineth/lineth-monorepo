@@ -282,8 +282,17 @@ func structuralKey(e wiop.Expression) string {
 		return fmt.Sprintf("at(%d,%d)", e.Column.Context.ID, e.Position)
 	case *wiop.Constant:
 		return fmt.Sprintf("const(%v)", e.Value)
+	case *wiop.LagrangeSelector:
+		// Keys are compared within one module, so the position alone tells
+		// selectors apart: identical bodies lifted at different anchors must
+		// not look structurally equal.
+		return fmt.Sprintf("lagrange(%d)", e.Position)
+	case *wiop.Cell:
+		return fmt.Sprintf("cell(%d)", e.Context.ID)
+	case *wiop.CoinField:
+		return fmt.Sprintf("coin(%d)", e.Context.ID)
 	default:
-		return fmt.Sprintf("%T", e)
+		panic(fmt.Sprintf("structuralKey: unsupported expression type %T", e))
 	}
 }
 
@@ -414,4 +423,161 @@ func runNodeSequenceSubprocess(t *testing.T) string {
 		}
 	}
 	return string(bytes.Join(seq, []byte("\n")))
+}
+
+// liftedSharing measures, for the vanishings that localvanishing emits in one
+// module, how much of their compound structure is shared — within one lifted
+// tree and with the module's other non-reduced vanishings.
+type liftedSharing struct {
+	// lifted is the number of vanishings localvanishing emitted.
+	lifted int
+	// distinct is the number of distinct compound nodes reachable from them.
+	distinct int
+	// sharedAcross counts the distinct compound nodes of the lifted trees that
+	// are also reachable from at least one other non-reduced vanishing of the
+	// module, lifted or not.
+	sharedAcross int
+	// leaks counts nodes, leaves included, that denote the same value as a
+	// different pointer of the module's non-reduced vanishings, where at least
+	// one of the two is reachable from a lifted vanishing.
+	leaks int
+}
+
+// measureLiftedSharing runs localvanishing on sys and reports, per module,
+// the sharing of the lifted trees it emits. It is the measurement point of
+// issue #4035.
+func measureLiftedSharing(sys *wiop.System) map[string]liftedSharing {
+
+	before := make([]int, len(sys.Modules))
+	for i, module := range sys.Modules {
+		before[i] = len(module.Vanishings)
+	}
+
+	localvanishing.Compile(sys)
+
+	out := map[string]liftedSharing{}
+	for i, module := range sys.Modules {
+
+		lifted := module.Vanishings[before[i]:]
+		if len(lifted) == 0 {
+			continue
+		}
+
+		// owners[node] is the set of vanishing indices that reach node.
+		owners := map[wiop.Expression]map[int]struct{}{}
+		// liftedNodes holds every node, leaves included, reachable from a
+		// lifted vanishing.
+		liftedNodes := map[wiop.Expression]struct{}{}
+		for vIdx, v := range module.Vanishings {
+			if v.IsReduced() {
+				continue
+			}
+			isLifted := vIdx >= before[i]
+			seen := map[wiop.Expression]struct{}{}
+			var walk func(e wiop.Expression)
+			walk = func(e wiop.Expression) {
+				if _, ok := seen[e]; ok {
+					return
+				}
+				seen[e] = struct{}{}
+				if isLifted {
+					liftedNodes[e] = struct{}{}
+				}
+				op, ok := e.(*wiop.ArithmeticOperation)
+				if !ok {
+					return
+				}
+				if owners[op] == nil {
+					owners[op] = map[int]struct{}{}
+				}
+				owners[op][vIdx] = struct{}{}
+				for _, operand := range op.Operands {
+					walk(operand)
+				}
+			}
+			walk(v.Expression)
+		}
+
+		// The structural comparison spans every non-reduced vanishing, so a
+		// lifted node duplicating a global one is caught too. Only mismatches
+		// involving a lifted node count: duplicates among the other
+		// vanishings are not localvanishing's doing.
+		byKey := map[string]wiop.Expression{}
+		visited := map[wiop.Expression]struct{}{}
+		leaks := 0
+		var compare func(e wiop.Expression)
+		compare = func(e wiop.Expression) {
+			if _, ok := visited[e]; ok {
+				return
+			}
+			visited[e] = struct{}{}
+			if op, ok := e.(*wiop.ArithmeticOperation); ok {
+				for _, operand := range op.Operands {
+					compare(operand)
+				}
+			}
+			key := structuralKey(e)
+			prev, ok := byKey[key]
+			if !ok {
+				byKey[key] = e
+				return
+			}
+			_, eLifted := liftedNodes[e]
+			_, prevLifted := liftedNodes[prev]
+			if eLifted || prevLifted {
+				leaks++
+			}
+		}
+		for _, v := range module.Vanishings {
+			if !v.IsReduced() {
+				compare(v.Expression)
+			}
+		}
+
+		s := liftedSharing{lifted: len(lifted), leaks: leaks}
+		for _, vs := range owners {
+			liftedOwner := false
+			for vIdx := range vs {
+				if vIdx >= before[i] {
+					liftedOwner = true
+				}
+			}
+			if !liftedOwner {
+				continue
+			}
+			s.distinct++
+			if len(vs) >= 2 {
+				s.sharedAcross++
+			}
+		}
+		out[module.Context.Path()] = s
+	}
+	return out
+}
+
+// TestLiftedVanishingsShareStructure covers issue #4035: the lift that
+// localvanishing applies to each local vanishing must preserve the sharing
+// zkcdriver's interning established. It asserts that no lifted node denotes a
+// value already carried by a different pointer of the module, and that lifted
+// trees share compound nodes with the module's other vanishings.
+func TestLiftedVanishingsShareStructure(t *testing.T) {
+
+	serialized := riscvConstraints(t)
+	sys := buildRiscvSystem(t, serialized)
+
+	var total liftedSharing
+	for path, s := range measureLiftedSharing(sys) {
+		total.lifted += s.lifted
+		total.distinct += s.distinct
+		total.sharedAcross += s.sharedAcross
+		total.leaks += s.leaks
+		t.Logf("lifted: module %-40s %3d lifted %6d distinct %6d shared-across %6d leaks",
+			path, s.lifted, s.distinct, s.sharedAcross, s.leaks)
+	}
+	t.Logf("lifted: TOTAL %d lifted vanishings, %d distinct compound nodes, %d shared with another vanishing, %d leaks",
+		total.lifted, total.distinct, total.sharedAcross, total.leaks)
+
+	require.NotZero(t, total.lifted, "expected the RISC-V system to declare local constraints")
+	assert.Zero(t, total.leaks, "lifted nodes duplicate a value already carried by another pointer")
+	assert.NotZero(t, total.sharedAcross, "no lifted compound node is shared with any other vanishing")
 }
