@@ -272,13 +272,19 @@ fn finishZkcRun(b: *std.Build, run: *std.Build.Step.Run, installed_elf: bool) vo
 
 /// The `test/*_test.zig` suites and the support root's own tests, with the corpus fixtures they embed.
 fn addHostTests(b: *std.Build, host: Host) void {
-    const fixtures = fixturesDependency(b) orelse return;
-    embedFixtures(host.support, fixtures);
-
     const suites = common.addTests(b, host.test_step, host.native, .{});
     host.crypto.linkAll(suites);
     host.crypto.linkAll(common.addTests(b, host.test_step, host.native, .{ .dir = "test/support", .suffix = "root.zig" }));
     addCryptoVectors(b, host.zesu, suites.get("test/guest_crypto_test.zig").?);
+    addCorpusTests(b, host);
+}
+
+/// The suites under test/corpus/ read EF zkevm corpus vectors; they register once the lazy corpus
+/// dependency is fetched.
+fn addCorpusTests(b: *std.Build, host: Host) void {
+    const fixtures = fixturesDependency(b) orelse return;
+    embedFixtures(host.support, fixtures);
+    host.crypto.linkAll(common.addTests(b, host.test_step, host.native, .{ .dir = "test/corpus" }));
 }
 
 /// The EF zkevm corpus; lazy, fetched before the tests build.
