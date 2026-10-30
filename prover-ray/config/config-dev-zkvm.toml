@@ -6,5 +6,5 @@ log_level = 4
 [execution]
 prover_mode = "dev-zkvm"
 requests_root_dir = "/opt/linea/prover-ray/requests"
-native_runner_bin = "/opt/linea/prover-ray/l2-execution-runner"
+native_runner_bin = "/opt/linea/prover-ray/l2_execution_runner"
 guest_elf = "/opt/linea/prover-ray/evm_execution_guest"

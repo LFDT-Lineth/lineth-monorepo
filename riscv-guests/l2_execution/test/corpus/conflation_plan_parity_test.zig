@@ -11,13 +11,13 @@
 const std = @import("std");
 const testing = std.testing;
 
-const fixtures = @import("evm_execution_fixtures");
+const fixtures = @import("support").evm_execution_fixtures;
 const ssz_decode = @import("zesu_ssz_decode");
 const zesu_allocator = @import("zesu_allocator");
 const mpt = @import("zesu_mpt");
 const input = @import("zesu_input");
-const l2_execution = @import("l2_execution");
-const conflation_plan = @import("conflation_plan.zig");
+const l2_execution = @import("l2_execution").l2_execution;
+const conflation_plan = @import("support").conflation_plan;
 
 test "StubEngine with no active plan matches the real execution seam on the committed EF fixture" {
     var arena = std.heap.ArenaAllocator.init(testing.allocator);

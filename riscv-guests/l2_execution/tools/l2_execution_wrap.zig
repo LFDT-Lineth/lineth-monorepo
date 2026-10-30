@@ -1,29 +1,29 @@
-//! `l2-execution-wrap` — native host tool that wraps a VANILLA EF stateless input (schema 0x0001)
+//! `l2_execution_wrap` — native host tool that wraps a VANILLA EF stateless input (schema 0x0001)
 //! into an EXTENDED `L2ExecutionProofPrivateInput` (schema 0x0002) the extended l2-execution guest
 //! reads via `read_input`.
 //!
 //! This is the ZkC-harness counterpart of the in-process `vanilla_wrap.wrapVanillaAsExtended` used
-//! by the host reference-test guard (`test/extended_vanilla_runner.zig`): both share the SAME fill
+//! by the host reference-test guard (`extended_vanilla_runner.zig`): both share the SAME fill
 //! semantics (single payload carrying the vanilla bytes verbatim, empty FTX, zero parent FTX
 //! fields, chain_id/coinbase read off the vanilla payload, and — crucially — a ZERO
 //! l2_message_service_address, which triggers the guest's bridge-suppression branch so the extended
 //! guest runs equivalently to the vanilla stateless engine).
 //!
-//! usage: l2-execution-wrap <vanilla-in.ssz> <extended-out.ssz>
+//! usage: l2_execution_wrap <vanilla-in.ssz> <extended-out.ssz>
 //!
 //! Use it to hand-wrap one corpus input for the ZkC path: wrap a vanilla `.ssz` here, then feed the
 //! extended output to `make exec INPUT=<extended-out.ssz>` to run it through the real guest ELF
 //! under zkc.
 
 const std = @import("std");
-const vanilla_wrap = @import("vanilla_wrap");
+const vanilla_wrap = @import("support").vanilla_wrap;
 
 const usage =
-    \\l2-execution-wrap — wrap a vanilla stateless-input SSZ (schema 0x0001) into an extended
+    \\l2_execution_wrap — wrap a vanilla stateless-input SSZ (schema 0x0001) into an extended
     \\L2ExecutionProofPrivateInput SSZ (schema 0x0002) with dummy rollup fields (zero
     \\l2MessageServiceAddress -> bridge suppression), so the extended guest runs it like vanilla.
     \\
-    \\usage: l2-execution-wrap <vanilla-in.ssz> <extended-out.ssz>
+    \\usage: l2_execution_wrap <vanilla-in.ssz> <extended-out.ssz>
     \\
 ;
 

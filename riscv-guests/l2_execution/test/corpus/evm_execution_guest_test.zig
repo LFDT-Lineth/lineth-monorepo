@@ -1,7 +1,7 @@
 const std = @import("std");
 
-const fixtures = @import("evm_execution_fixtures");
-const guest = @import("evm_execution_guest");
+const fixtures = @import("support").evm_execution_fixtures;
+const guest = @import("l2_execution");
 const executor = @import("zesu_executor");
 const ssz_decode = @import("zesu_ssz_decode");
 const zesu_allocator = @import("zesu_allocator");

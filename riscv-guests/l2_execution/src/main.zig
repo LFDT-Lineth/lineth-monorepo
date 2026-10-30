@@ -1,17 +1,11 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-/// Log-preserving stateless-execution seam (full event logs, unlike zesu's own bloom-only
-/// `executor.executeStatelessInput`). `pub` for `evm_execution_guest_test.zig`'s parity check
-/// against zesu's raw executor; the guest itself reaches this seam only through
-/// `l2_execution.runL2Execution`.
-pub const execution = @import("execution.zig");
-const l2_execution = @import("l2_execution.zig");
-const l2_execution_ssz = @import("l2_execution_ssz");
-
-/// Exit-code taxonomy for guest failures (Readme.md §2.5); `pub` for the guest's test suite, like
-/// `execution` above.
-pub const guest_errors = @import("guest_errors.zig");
+const package = @import("l2_execution");
+const l2_execution = package.l2_execution;
+const l2_execution_ssz = package.l2_execution_ssz;
+// Exit-code taxonomy for guest failures (Readme.md §2.5).
+const guest_errors = package.guest_errors;
 
 // Heap bounds come from the linker script (canonical Lineth layout: `_heap_start` = 0x48800000,
 // grows up to `_heap_end`). build_common/Makefile sets the size via `HEAP_LENGTH` and asserts that
@@ -41,7 +35,7 @@ export var guest_allocator: extern struct { ptr: *anyopaque, vtable: *const anyo
 /// input lives and how the output surfaces is the proving system's concern, not the guest's.
 ///
 /// This frozen riscv64 binary has no argv, so output format is fixed at build time (always SSZ);
-/// the `--json`/`--ssz` toggle lives on the native `l2-execution-runner` tool instead.
+/// the `--json`/`--ssz` toggle lives on the native `l2_execution_runner` tool instead.
 fn guestMain() callconv(.c) noreturn {
     const lineth_accel = @import("lineth_zkvm_accel");
 
@@ -81,13 +75,12 @@ fn runL2ExecutionGuest(allocator: std.mem.Allocator, raw_input: []const u8) ![]u
 extern fn zkvm_log(level: u8, msg_ptr: [*]const u8, msg_len: usize) void;
 
 comptime {
-    // Export `main` only for the freestanding RISC-V guest, which owns its entry point. Native
-    // builds import this as a library (the unit test) and get `main` from std.start — exporting it
-    // here too would be a symbol collision.
+    // Only the freestanding RISC-V guest owns its entry point; every other target takes `main`
+    // from std.start.
     if (builtin.cpu.arch == .riscv64) {
         @export(&guestMain, .{ .name = "main" });
         // Pull in the precompile providers for the freestanding guest.
-        _ = @import("zkvm_provide.zig");
+        _ = package.zkvm_provide;
     }
 }
 

@@ -1,13 +1,13 @@
 //! Runs the extended host guest against execution-spec fixture validity.
 
 const std = @import("std");
-const spec_runner = @import("spec_runner.zig");
-const host_machine = @import("host_machine");
-const execution_spec_suite = @import("execution_spec_suite.zig");
+const spec_runner = @import("support").spec_runner;
+const host_machine = @import("support").host_machine;
+const execution_spec_suite = @import("support").execution_spec_suite;
 
 const label = "extended guest vs execution-spec fixture ground truth";
 const usage =
-    \\usage: extended-vanilla-runner [options] PATH...
+    \\usage: extended_vanilla_runner [options] PATH...
     \\
     \\PATH may be a file or a recursively traversed directory. Operands run in order; files within
     \\directories run lexically. Patterns containing `/` match paths relative to the operand root;
