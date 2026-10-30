@@ -26,6 +26,7 @@ prover/prover-assets/**/**/**/**/*.bin binary
 prover/prover-assets/kzgsrs/* binary
 prover/zkevm/arithmetization/*.bin binary
 verifier-ray/**/*.bin binary
+prover-ray/dummy/zig/testdata/*.bin binary
 
 *.woff2 binary
 

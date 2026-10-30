@@ -38,16 +38,13 @@ pub fn build(b: *std.Build) void {
         @panic("'-Daggregator=true' cannot be combined with '-Dembedded-input'");
     const test_filter = b.option([]const u8, "test-filter", "Skip tests that do not match this filter");
     const test_filters: []const []const u8 = if (test_filter) |f| &.{f} else &.{};
+    // Without it, only the library module (`verifier_ray`) is exported, for
+    // packages that depend on verifier-ray; the executable and the tests need it.
     const riscv_system_path = b.option(
         []const u8,
         "riscv-system",
         "Path to the generated RISC-V verifier system Zig source",
-    ) orelse @panic("'-Driscv-system=<path>' is required");
-    if (riscv_system_path.len == 0) @panic("'-Driscv-system=<path>' must not be empty");
-    const riscv_system_source: std.Build.LazyPath = if (std.fs.path.isAbsolute(riscv_system_path))
-        .{ .cwd_relative = riscv_system_path }
-    else
-        b.path(riscv_system_path);
+    );
 
     const target = if (r5)
         common.standardGuestTarget(b)
@@ -84,6 +81,14 @@ pub fn build(b: *std.Build) void {
     profiling_opts.addOption(bool, "is_enabled", verifier_profiling);
     profiling_opts.addOption(bool, "is_r5_marks", r5_marks_arg);
     verifier_mod.addOptions("profiling_config", profiling_opts);
+
+    // Everything below (the executable and the tests) needs the system.
+    const system_path = riscv_system_path orelse return;
+    if (system_path.len == 0) @panic("'-Driscv-system=<path>' must not be empty");
+    const riscv_system_source: std.Build.LazyPath = if (std.fs.path.isAbsolute(system_path))
+        .{ .cwd_relative = system_path }
+    else
+        b.path(system_path);
 
     const test_vectors_mod = b.addModule("test_vectors", .{
         .root_source_file = b.path("testdata/generated/vectors.zig"),
