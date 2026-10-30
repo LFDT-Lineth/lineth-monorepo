@@ -23,8 +23,8 @@ pub const Error = error{
     OutputTooLarge,
 };
 
-/// The largest window a frame may declare: the limit of libzstd's streaming decoder, so every frame
-/// the guest accepts also decodes in a streaming decoder with default settings.
+/// The largest window a frame may declare: the limit of libzstd's streaming decoder, so every
+/// accepted frame also decodes in a streaming decoder with default settings.
 pub const max_window_size: u64 = (1 << 27) + 1;
 
 const c = struct {

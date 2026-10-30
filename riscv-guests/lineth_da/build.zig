@@ -24,8 +24,8 @@ const decoder_sources = [_][]const u8{
 /// portable decoder loops, so no assembly source has to be linked on x86-64.
 const decoder_flags = [_][]const u8{ "-ffunction-sections", "-fdata-sections", "-DZSTD_DISABLE_ASM" };
 
-/// Upstream's decompression regression frames (`tests/golden-decompression*`), embedded in the zstd
-/// test root under their import names: the first group must decode, the second must be rejected.
+/// Upstream's decompression regression frames, embedded in the zstd test root under their import
+/// names: the first four must decode, the last two must be rejected.
 const golden_frames = [_]struct { import_name: []const u8, path: []const u8 }{
     .{ .import_name = "golden_block_128k", .path = "tests/golden-decompression/block-128k.zst" },
     .{ .import_name = "golden_empty_block", .path = "tests/golden-decompression/empty-block.zst" },
