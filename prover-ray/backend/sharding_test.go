@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	minimal_elf "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/minimal-elf"
@@ -58,4 +59,27 @@ func TestNew_ShardIndexes(t *testing.T) {
 	require.ErrorContains(t, err, "non-zero shard size")
 	_, err = New(Config{ShardSize: 10, ShardIndexes: []uint{3, 1, 3}})
 	require.ErrorContains(t, err, "duplicate shard index 3")
+}
+
+// TestConglomerate checks that conglomerate reduces any number of shard proofs,
+// arriving in any order, to one, and fails if some never arrive.
+func TestConglomerate(t *testing.T) {
+	run := func(n int, arrivals ...uint) (wiop.PublicInput, error) {
+		ch := make(chan shardProof, len(arrivals))
+		for _, i := range arrivals {
+			ch <- shardProof{Index: i, Pub: wiop.PublicInput{field.ElemFromBase(field.NewElement(uint64(i)))}}
+		}
+		close(ch)
+		_, pub, err := conglomerate(ch, n)
+		return pub, err
+	}
+
+	for _, arrivals := range [][]uint{{0}, {2, 0, 1}, {4, 1, 3, 0, 2}, {5, 6, 0, 2, 1, 3, 4}} {
+		pub, err := run(len(arrivals), arrivals...)
+		require.NoError(t, err, "arrivals %v", arrivals)
+		require.Equal(t, wiop.PublicInput{field.ElemZero()}, pub, "arrivals %v", arrivals)
+	}
+
+	_, err := run(3, 1, 0)
+	require.ErrorContains(t, err, "only 2 of 3 shard proofs arrived")
 }

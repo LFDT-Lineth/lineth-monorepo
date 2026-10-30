@@ -400,7 +400,7 @@ type shardProof struct {
 // runProve lazily traces the inputs, proves and verifies the shards of
 // [Core.shardIndexes] one at a time, so that a single shard is materialised at
 // any moment rather than the whole trace, and conglomerates the shard proofs
-// into a single proof.
+// into a single proof as they arrive.
 func (c *Core) runProve(
 	ctx context.Context,
 	preRead *zkcdriver.PreReadInputs,
@@ -424,7 +424,20 @@ func (c *Core) runProve(
 		return wiop.Proof{}, nil, fmt.Errorf("shard index %d out of range, the trace has %d shards", last, lazyTrace.Len())
 	}
 
-	shardProofs := make([]shardProof, 0, len(indexes))
+	// Buffered so that sending never blocks, even if conglomeration fails early.
+	shardProofs := make(chan shardProof, len(indexes))
+	defer close(shardProofs)
+	var (
+		rootProof wiop.Proof
+		rootPub   wiop.PublicInput
+		rootErr   error
+		rootDone  = make(chan struct{})
+	)
+	go func() {
+		defer close(rootDone)
+		rootProof, rootPub, rootErr = conglomerate(shardProofs, len(indexes))
+	}()
+
 	for k, i := range indexes {
 		shard, err := traceShard(lazyTrace, i)
 		if err != nil {
@@ -439,18 +452,71 @@ func (c *Core) runProve(
 		if err != nil {
 			return wiop.Proof{}, nil, fmt.Errorf("shard %d: %w", i, err)
 		}
-		shardProofs = append(shardProofs, shardProof{Index: i, Proof: proof, Pub: pub})
+		shardProofs <- shardProof{Index: i, Proof: proof, Pub: pub}
 	}
-	return conglomerate(shardProofs)
+	<-rootDone
+	return rootProof, rootPub, rootErr
 }
 
-// conglomerate combines the shard proofs into a single proof and public input.
-//
-// Mock: the conglomeration pipeline is not implemented yet, so it returns the
-// first shard proof as is.
-func conglomerate(shardProofs []shardProof) (wiop.Proof, wiop.PublicInput, error) {
-	logrus.Warnf("Running dummy Conglomeration, benchmarks reflect only one shard")
-	return shardProofs[0].Proof, shardProofs[0].Pub, nil
+// conglomerate reduces the n proofs received on shardProofs to one, aggregating
+// any two ready proofs, in any order and tree shape, as soon as they are
+// available (G6 of #4233). n must be at least 1.
+func conglomerate(shardProofs <-chan shardProof, n int) (wiop.Proof, wiop.PublicInput, error) {
+	logrus.Warnf("Running dummy conglomeration, the aggregation steps are mocked")
+	type node struct {
+		proof shardProof
+		err   error
+	}
+	var (
+		ready    []shardProof
+		nodes    = make(chan node, n)
+		received int
+		inFlight int
+	)
+	for {
+		for len(ready) >= 2 {
+			left, right := ready[0], ready[1]
+			ready = ready[2:]
+			inFlight++
+			go func() {
+				proof, err := aggregate(left, right)
+				nodes <- node{proof: proof, err: err}
+			}()
+		}
+		if received == n && inFlight == 0 {
+			return ready[0].Proof, ready[0].Pub, nil
+		}
+		if received == n {
+			shardProofs = nil // all shards arrived, wait for the aggregations only
+		}
+		select {
+		case p, ok := <-shardProofs:
+			if !ok {
+				return wiop.Proof{}, nil, fmt.Errorf("only %d of %d shard proofs arrived", received, n)
+			}
+			received++
+			ready = append(ready, p)
+		case nd := <-nodes:
+			inFlight--
+			if nd.err != nil {
+				return wiop.Proof{}, nil, nd.err
+			}
+			ready = append(ready, nd.proof)
+		}
+	}
+}
+
+// aggregate mocks a 2-to-1 aggregation node: it checks that both children have
+// the same public-input shape and returns the child of the lower shard index.
+func aggregate(left, right shardProof) (shardProof, error) {
+	if len(left.Pub) != len(right.Pub) {
+		return shardProof{}, fmt.Errorf("shards %d and %d have %d and %d public inputs",
+			left.Index, right.Index, len(left.Pub), len(right.Pub))
+	}
+	if right.Index < left.Index {
+		return right, nil
+	}
+	return left, nil
 }
 
 // traceShard traces and expands the ith shard of the lazy trace.
