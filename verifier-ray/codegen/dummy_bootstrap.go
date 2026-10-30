@@ -8,15 +8,16 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/proofserialization"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/risc5"
 )
 
 const (
 	// DummyNumGuestOutputCells is the number of guest-output public inputs:
 	// one per bound output byte.
-	DummyNumGuestOutputCells = 32
+	DummyNumGuestOutputCells = risc5.NumGuestPublicOutputs
 	// DummyNumProgramVKCells is the number of program-VK public inputs:
 	// one per limb of the program-round commitment.
-	DummyNumProgramVKCells = 8
+	DummyNumProgramVKCells = risc5.NumProgramVK
 	// DummyNumPublicInputs is the total number of public inputs of the dummy
 	// circuit, matching the RISC-V conglomeration public-input layout (40 cells).
 	DummyNumPublicInputs = DummyNumGuestOutputCells + DummyNumProgramVKCells
@@ -47,9 +48,9 @@ func NewDummySystem() (*wiop.System, error) {
 
 	var sum wiop.Expression
 	for i := range DummyNumPublicInputs {
-		tag, n := wiop.PublicInputTag("guest_public_outputs"), i
+		tag, n := risc5.GuestPublicOutputsPI, i
 		if i >= DummyNumGuestOutputCells {
-			tag, n = wiop.PublicInputTag("program_vk"), i-DummyNumGuestOutputCells
+			tag, n = risc5.ProgramVKPI, i-DummyNumGuestOutputCells
 		}
 		cell := r0.NewCell(ctx.Childf("x-%d", i), false)
 		sys.RegisterPublicInputs(tag, cell, n)
