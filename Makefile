@@ -62,7 +62,8 @@ OVERRIDE_COMPOSE_FILE ?=
 ifeq ($(E2E_STACK),riscv)
 E2E_START_TARGET := start-env-with-riscv
 E2E_TEST_SCRIPT := test:riscv:local
-E2E_TEST_TIMEOUT := $(if $(filter dev-zkvm,$(RISCV_PROVER_MODE)),40m,10m)
+# Below the 30m job cap so a hung run fails here and still dumps debug logs.
+E2E_TEST_TIMEOUT := $(if $(filter dev-zkvm,$(RISCV_PROVER_MODE)),20m,10m)
 # Empty: keep the image tags pinned in docker/compose-riscv.yml.
 E2E_FALLBACK_IMAGE_TAG :=
 ifeq ($(RISCV_PROVER_MODE),dev-zkvm)
