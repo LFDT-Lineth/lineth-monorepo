@@ -19,9 +19,10 @@ is_riscv_only() {
 is_zkevm_only() {
   [[ "$1" =~ ^e2e/src/.*\.spec\.ts$ || "$1" =~ [-.]zkevm[-.] || "$1" =~ ^docker/config/prover/v3/ ]]
 }
-# The RISC-V suite proves for real when the prover, the guests or their config changed.
+# The RISC-V suite proves for real when the prover or guest code changed; config-only
+# changes (prover-ray/config/*.toml, docker/config/prover/riscv/) run dev-mock.
 is_riscv_proving() {
-  [[ "$1" =~ ^(prover-ray|riscv-guests|docker/config/prover/riscv)/ ]]
+  [[ "$1" =~ ^(prover-ray|riscv-guests)/ && ! "$1" =~ ^prover-ray/config/.*\.toml$ ]]
 }
 
 # Usage: has_match <files-json> <keep-fn>; prints the first non-test file accepted by keep-fn.

@@ -18,7 +18,8 @@ const execFileAsync = promisify(execFile);
 
 // Must match the prover-ray config mounted by `make start-env-with-riscv`.
 const proverMode = process.env.RISCV_PROVER_MODE ?? "dev-mock";
-const proofTimeoutMs = proverMode === "dev-zkvm" ? 20 * 60_000 : 2 * 60_000;
+// dev-zkvm budget keeps the whole suite under the Makefile's 20m E2E_TEST_TIMEOUT.
+const proofTimeoutMs = proverMode === "dev-zkvm" ? 7 * 60_000 : 2 * 60_000;
 const BATCH_STATUS_PROVEN = 2;
 
 // Together these execute every EVM opcode and precompile.
