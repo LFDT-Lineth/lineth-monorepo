@@ -1,3 +1,12 @@
+## [unreleased]
+
+### 🚀 Features
+
+- *(misc)* Adding blob commitment and a proof to Rollup input (#4329)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Ship license files and metadata in all published artifacts (#4336)
 ## [2.3.0] - 2026-10-28
 
 ### 🚀 Features
