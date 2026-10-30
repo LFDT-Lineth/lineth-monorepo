@@ -87,7 +87,7 @@ func BuildAllInOneHonestRiscvArtifacts() (HonestRiscvArtifacts, error) {
 	// grows it, because the sizes go into round 0's Fiat-Shamir transcript.
 	if err := compilers.CompileFull(sys,
 		compilers.ConfigureMessageBus(messagebus.WithoutSharedRandomness()),
-		compilers.ConfigurePCS(pcs.WithColumnElision())); err != nil {
+		compilers.ConfigurePCS(pcs.WithColumnElision(), pcs.WithOptimalMerkleCap())); err != nil {
 		return HonestRiscvArtifacts{}, fmt.Errorf("compiling pipeline: %w", err)
 	}
 

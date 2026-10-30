@@ -65,6 +65,7 @@ func NewDummySystem() (*wiop.System, error) {
 		compilers.ConfigurePCS(
 			pcs.WithFRINumQueries(DummyFRINumQueries),
 			pcs.WithColumnElision(),
+			pcs.WithOptimalMerkleCap(),
 		),
 	); err != nil {
 		return nil, fmt.Errorf("compiling dummy system: %w", err)
