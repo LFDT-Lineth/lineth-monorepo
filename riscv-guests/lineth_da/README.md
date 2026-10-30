@@ -81,15 +81,17 @@ for (verified.blobs) |opening| {
 
 ```bash
 make -C lineth_da test      # native unit tests
-make -C lineth_da compile   # statically-linked rv64im smoke ELFs at zig-out/bin/{zstd,blob,truncation}_smoke
+make -C lineth_da compile   # statically-linked rv64im smoke ELFs at zig-out/bin/{zstd,blob,truncation,decompress}_smoke
 make -C lineth_da exec      # compress README.md with the dictionary, then decompress it under the ZkC interpreter
 make -C lineth_da exec SMOKE=blob INPUT=blob.ssz # verify a blob proof under the ZkC interpreter
+make -C lineth_da exec SMOKE=decompress          # verify a one-blob DA stream of README.md under the ZkC interpreter
 ```
 
 The smoke guests (`test/smoke/`) run one part of the package on the guest target; linking one proves its freestanding object needs no symbol the guest does not define. `zig build -Dsmoke=<name>` links one of them.
 
 - `zstd_smoke` reads a frame with `read_input`, decompresses it against the embedded dictionary and publishes the decompressed bytes through `write_output`; it exits with 0 on success and with 2 to 8 for the `zstd.Error` category. `compress_frame <payload-in> <frame-out> [level]` (`tools/`) produces its input.
 - `blob_smoke` reads the 48-byte commitment, the 48-byte proof and the 131072-byte blob, verifies the proof and publishes the versioned hash; it exits with 0 on success, 2 for an input of the wrong size and 3 for a proof that does not verify.
+- `decompress_smoke` reads the parent dataRollingHash, one conflation's canonical payload and one chunk (a blob or calldata), verifies the stream and publishes the end dataRollingHash and the unconsumed tail count; it exits with 0 on success, 2 for malformed input and with 3 to 9 for the `decompress.Error` category. `da_sample <payload-in> <input-out> [blob|calldata]` (`tools/`) produces its input: the payload compressed against the dictionary, published in one chunk whose commitment is a stand-in derived from the segment.
 - `truncation_smoke` reads a chain ID as 8 big-endian bytes and a full block's RLP, truncates the block, round-trips the encoded payload through the blob packing and publishes the block hash, the parent hash and the payload; it exits with 0 on success and with 2 to 6 for its failure categories.
 
 `truncate_block <chain-id> <block-rlp-file>...` (`tools/`) prints the truncation of full blocks as `ok <timestamp> <block-hash> <parent-hash> <prev-randao> <payload>` lines.

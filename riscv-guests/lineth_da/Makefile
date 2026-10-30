@@ -10,7 +10,9 @@
 #   blob        verifies the EIP-4844 proof of INPUT (48-byte commitment, 48-byte proof, 131072-byte
 #               blob) and publishes the versioned hash;
 #   truncation  truncates INPUT (the chain ID as 8 big-endian bytes, then a full block's RLP) and
-#               publishes the block hash, the parent hash and the canonical payload.
+#               publishes the block hash, the parent hash and the canonical payload;
+#   decompress  verifies the DA stream in INPUT (one conflation in one chunk) and publishes the end
+#               dataRollingHash and the unconsumed tail count (a default INPUT is generated).
 
 .PHONY: fetch test clean compile exec debug require-input
 
@@ -29,17 +31,19 @@ ZIG_HOST_FLAGS ?= -Dhost-tools=true
 # without building or running, so pre-fetching is the dedicated `fetch` target alone.
 ZIG_FETCH_FLAGS ?=
 
-SMOKES := zstd blob truncation
+SMOKES := zstd blob truncation decompress
 SMOKE  ?= zstd
 NAME   := $(SMOKE)_smoke
 BIN    := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 
-# Default exec/debug input of the zstd smoke: SMOKE_PAYLOAD compressed by the compress_frame tool
-# (named `.ssz`, so the ELF->JSON conversion frames it with the 8-byte length prefix `read_input`
-# expects). Pass INPUT=path/to/input.ssz to use something else; the other smokes need it.
+# Default exec/debug input of the zstd and decompress smokes: SMOKE_PAYLOAD compressed by the
+# compress_frame tool, or published as a one-blob DA stream by the da_sample tool (named `.ssz`, so
+# the ELF->JSON conversion frames it with the 8-byte length prefix `read_input` expects). Pass
+# INPUT=path/to/input.ssz to use something else; the other smokes need it.
 SMOKE_PAYLOAD   ?= $(MAKEFILE_DIR)README.md
-GENERATED_INPUT := $(MAKEFILE_DIR)zig-out/sample.frame.ssz
-INPUT           ?= $(if $(filter zstd,$(SMOKE)),$(GENERATED_INPUT))
+GENERATED_INPUT := $(MAKEFILE_DIR)zig-out/sample.$(SMOKE).ssz
+GENERATOR       := $(if $(filter decompress,$(SMOKE)),da_sample,compress_frame)
+INPUT           ?= $(if $(filter zstd decompress,$(SMOKE)),$(GENERATED_INPUT))
 
 # Flags forwarded to `zkc exec` by exec.
 ZKC_EXEC_FLAGS ?=
@@ -76,7 +80,7 @@ compile:
 require-input: compile
 	@if [ "$(INPUT)" = "$(GENERATED_INPUT)" ]; then \
 		$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) && \
-		$(MAKEFILE_DIR)zig-out/bin/compress_frame "$(SMOKE_PAYLOAD)" "$(GENERATED_INPUT)"; \
+		$(MAKEFILE_DIR)zig-out/bin/$(GENERATOR) "$(SMOKE_PAYLOAD)" "$(GENERATED_INPUT)"; \
 	fi
 	@[ -n "$(INPUT)" ] && [ -s "$(INPUT)" ] || { echo "INPUT missing or empty: '$(INPUT)' (set INPUT=path/to/input.ssz)"; exit 1; }
 

@@ -212,6 +212,8 @@ const Smoke = enum {
     blob,
     /// Block truncation and the 254-bit packing of its payload.
     truncation,
+    /// Verification of a DA stream of one conflation in one chunk.
+    decompress,
 };
 
 fn addSmokeGuest(
@@ -220,7 +222,7 @@ fn addSmokeGuest(
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
 ) void {
-    const smoke = b.option(Smoke, "smoke", "Smoke guest to link: zstd (default), blob or truncation") orelse .zstd;
+    const smoke = b.option(Smoke, "smoke", "Smoke guest to link: zstd (default), blob, truncation or decompress") orelse .zstd;
     const accelerators = b.dependency("lineth_accelerators", .{
         .target = target,
         .optimize = optimize,
