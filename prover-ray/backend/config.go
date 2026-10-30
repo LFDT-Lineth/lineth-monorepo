@@ -15,4 +15,14 @@ type Config struct {
 
 	// Mode selects how a Job is proved; empty defaults to [ProverModeFull].
 	Mode ProverMode
+
+	// ShardSize is the number of executed RISC-V instructions per trace shard
+	// (see zkcdriver.Settings.ShardSize). Zero disables sharding: the whole
+	// execution is a single shard.
+	ShardSize uint64
+
+	// ShardIndexes lists the shards this prover proves, each traced lazily and
+	// proved in turn. Empty proves all the shards. Without sharding, only shard
+	// 0 exists.
+	ShardIndexes []uint
 }

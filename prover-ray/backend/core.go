@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"maps"
 	"os"
+	"slices"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
@@ -52,6 +53,10 @@ type Core struct {
 	program elfmapping.Program
 	decoded predecoding.DecodedProgram
 
+	// shardIndexes are the shards [Core.Prove] proves, sorted; empty proves
+	// them all. See [Config.ShardIndexes].
+	shardIndexes []uint
+
 	// binaryFile is the compiled R5 arithmetization, used by dev-zkvm to run the
 	// guest under ZkC Execute (the no-trace path). nil outside dev-zkvm.
 	binaryFile *zkcdriver.BinaryFile
@@ -66,6 +71,10 @@ func New(cfg Config) (*Core, error) {
 	}
 	if !mode.Valid() {
 		return nil, fmt.Errorf("invalid prover mode %q", cfg.Mode)
+	}
+	shardIndexes, err := checkShardIndexes(cfg)
+	if err != nil {
+		return nil, err
 	}
 
 	// dev-mock runs no guest, so it loads no circuit bin or guest ELF.
@@ -105,7 +114,7 @@ func New(cfg Config) (*Core, error) {
 	sys.NewRound()
 
 	// round 0 is reserved for the idential data, variable data per shard goes to round 1
-	driver := zkcdriver.NewZkCDriver(sys, zkcdriver.Settings{TraceRound: 1}, binFile)
+	driver := zkcdriver.NewZkCDriver(sys, zkcdriver.Settings{TraceRound: 1, ShardSize: cfg.ShardSize}, binFile)
 
 	// Must run after the arithmetization is defined, so the guest_output columns
 	// and the program round exist, and before the compiler passes, which
@@ -123,13 +132,29 @@ func New(cfg Config) (*Core, error) {
 	risc5.CheckPublicInputs(sys)
 
 	return &Core{
-		cfg:     cfg,
-		mode:    mode,
-		sys:     sys,
-		driver:  driver,
-		program: program,
-		decoded: decoded,
+		cfg:          cfg,
+		mode:         mode,
+		sys:          sys,
+		driver:       driver,
+		program:      program,
+		decoded:      decoded,
+		shardIndexes: shardIndexes,
 	}, nil
+}
+
+// checkShardIndexes returns a sorted copy of cfg.ShardIndexes, rejecting
+// duplicates and, without sharding, any shard other than 0.
+func checkShardIndexes(cfg Config) ([]uint, error) {
+	indexes := slices.Sorted(slices.Values(cfg.ShardIndexes))
+	for k, i := range indexes {
+		if k > 0 && indexes[k-1] == i {
+			return nil, fmt.Errorf("duplicate shard index %d", i)
+		}
+		if cfg.ShardSize == 0 && i != 0 {
+			return nil, fmt.Errorf("shard index %d requires a non-zero shard size", i)
+		}
+	}
+	return indexes, nil
 }
 
 // newDevZkVM builds an Execute-only Core: the compiled R5 arithmetization plus
@@ -365,33 +390,156 @@ func sanityCheckJobs(job Job) error {
 	return nil
 }
 
-// runProve traces the inputs, assigns the shard, then runs sys.Prove and sys.Verify.
+// shardProof is the verified proof of a single trace shard.
+type shardProof struct {
+	Index uint
+	Proof wiop.Proof
+	Pub   wiop.PublicInput
+}
+
+// runProve lazily traces the inputs, proves and verifies the shards of
+// [Core.shardIndexes] one at a time, so that a single shard is materialised at
+// any moment rather than the whole trace, and conglomerates the shard proofs
+// into a single proof as they arrive.
 func (c *Core) runProve(
 	ctx context.Context,
 	preRead *zkcdriver.PreReadInputs,
 ) (wiop.Proof, wiop.PublicInput, error) {
 	_ = ctx // cancellation not yet propagated into the prover internals
 
+	// With sharding, this only runs the fast-mode pass recording one checkpoint
+	// per shard.
 	lazyTrace := c.driver.TraceZkcInputs(preRead)
-	// Assert exactly one shard (for now)
-	if lazyTrace.Len() != 1 {
-		logrus.Fatalf("expected a single public input")
+	indexes := c.shardIndexes
+	if len(indexes) == 0 {
+		indexes = make([]uint, lazyTrace.Len())
+		for i := range indexes {
+			indexes[i] = uint(i)
+		}
 	}
-	// Materalise first shard
-	shard, errs := lazyTrace.Get(0)
-	// Sanity check for tracing errors
+	if len(indexes) == 0 {
+		return wiop.Proof{}, nil, errors.New("the trace has no shards")
+	}
+	if last := indexes[len(indexes)-1]; last >= lazyTrace.Len() {
+		return wiop.Proof{}, nil, fmt.Errorf("shard index %d out of range, the trace has %d shards", last, lazyTrace.Len())
+	}
+
+	// Buffered so that sending never blocks, even if conglomeration fails early.
+	shardProofs := make(chan shardProof, len(indexes))
+	defer close(shardProofs)
+	var (
+		rootProof wiop.Proof
+		rootPub   wiop.PublicInput
+		rootErr   error
+		rootDone  = make(chan struct{})
+	)
+	go func() {
+		defer close(rootDone)
+		rootProof, rootPub, rootErr = conglomerate(shardProofs, len(indexes))
+	}()
+
+	for k, i := range indexes {
+		shard, err := traceShard(lazyTrace, i)
+		if err != nil {
+			return wiop.Proof{}, nil, err
+		}
+		// Once the last shard is traced, drop the lazy trace so that its
+		// checkpoints can be garbage collected before that shard is proved.
+		if k == len(indexes)-1 {
+			lazyTrace = zkcdriver.LazyTrace{}
+		}
+		proof, pub, err := c.proveShard(shard)
+		if err != nil {
+			return wiop.Proof{}, nil, fmt.Errorf("shard %d: %w", i, err)
+		}
+		shardProofs <- shardProof{Index: i, Proof: proof, Pub: pub}
+	}
+	<-rootDone
+	return rootProof, rootPub, rootErr
+}
+
+// conglomerate reduces the n proofs received on shardProofs to one, aggregating
+// any two ready proofs, in any order and tree shape, as soon as they are
+// available (G6 of #4233). n must be at least 1.
+func conglomerate(shardProofs <-chan shardProof, n int) (wiop.Proof, wiop.PublicInput, error) {
+	logrus.Warnf("Running dummy conglomeration, the aggregation steps are mocked")
+	type node struct {
+		proof shardProof
+		err   error
+	}
+	var (
+		ready    []shardProof
+		nodes    = make(chan node, n)
+		received int
+		inFlight int
+	)
+	for {
+		for len(ready) >= 2 {
+			left, right := ready[0], ready[1]
+			ready = ready[2:]
+			inFlight++
+			go func() {
+				proof, err := aggregate(left, right)
+				nodes <- node{proof: proof, err: err}
+			}()
+		}
+		if received == n && inFlight == 0 {
+			return ready[0].Proof, ready[0].Pub, nil
+		}
+		if received == n {
+			shardProofs = nil // all shards arrived, wait for the aggregations only
+		}
+		select {
+		case p, ok := <-shardProofs:
+			if !ok {
+				return wiop.Proof{}, nil, fmt.Errorf("only %d of %d shard proofs arrived", received, n)
+			}
+			received++
+			ready = append(ready, p)
+		case nd := <-nodes:
+			inFlight--
+			if nd.err != nil {
+				return wiop.Proof{}, nil, nd.err
+			}
+			ready = append(ready, nd.proof)
+		}
+	}
+}
+
+// aggregate mocks a 2-to-1 aggregation node: it checks that both children have
+// the same public-input shape and returns the child of the lower shard index.
+func aggregate(left, right shardProof) (shardProof, error) {
+	if len(left.Pub) != len(right.Pub) {
+		return shardProof{}, fmt.Errorf("shards %d and %d have %d and %d public inputs",
+			left.Index, right.Index, len(left.Pub), len(right.Pub))
+	}
+	if right.Index < left.Index {
+		return right, nil
+	}
+	return left, nil
+}
+
+// traceShard traces and expands the ith shard of the lazy trace.
+func traceShard(lazyTrace zkcdriver.LazyTrace, i uint) (zkcdriver.Shard, error) {
+	shard, errs := lazyTrace.Get(i)
 	if len(errs) > 0 {
-		logrus.Fatalf("tracing failure: %v", errors.Join(errs...))
+		return zkcdriver.Shard{}, fmt.Errorf("tracing shard %d: %w", i, errors.Join(errs...))
 	}
-	// Generate proof
+	if shard.IsEmpty() {
+		return zkcdriver.Shard{}, fmt.Errorf("tracing shard %d: no shard produced", i)
+	}
+	return shard.Unwrap(), nil
+}
+
+// proveShard proves the given shard, then verifies the proof.
+func (c *Core) proveShard(shard zkcdriver.Shard) (wiop.Proof, wiop.PublicInput, error) {
 	proof, pub := c.sys.Prove(func(rt *wiop.Runtime) {
-		c.driver.AssignTraceShard(rt, shard.Unwrap(), field.Octuplet{})
+		c.driver.AssignTraceShard(rt, shard, field.Octuplet{})
 	})
 	// Verify proof
 	if err := c.sys.Verify(proof, pub); err != nil {
 		return wiop.Proof{}, nil, fmt.Errorf("proof verification: %w", err)
 	}
-	// Done
 	return proof, pub, nil
 }
 

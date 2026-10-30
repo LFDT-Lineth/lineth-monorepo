@@ -65,6 +65,9 @@ func (a *assignTraceRoundAction) Run(run *wiop.Runtime) {
 		logrus.Panicf("zkcdriver: assignTraceRoundAction: no trace shard in the runtime, AssignFromTraceShard was not called")
 	}
 	assignShardRound(run, shard.(Shard), a.Schema, run.System.Rounds[a.Round])
+	// All the shard columns are now assigned; drop it so that it can be garbage
+	// collected for the rest of the proof.
+	run.SetState(traceShardStateKey, nil)
 }
 
 // assignShardRound assigns the columns of the shard that belong to the given
