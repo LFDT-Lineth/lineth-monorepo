@@ -19,4 +19,5 @@ comptime {
     _ = @import("riscv_proof_image_test.zig");
     _ = @import("aggregator_image_test.zig");
     _ = @import("riscv_system_test.zig");
+    _ = @import("dummy_system_test.zig");
 }
