@@ -2,9 +2,9 @@
 
 const std = @import("std");
 const lineth_accel = @import("lineth_zkvm_accel");
-const zesu_crypto_backend = @import("zesu_crypto_backend");
-const guest_crypto = @import("guest_crypto");
-const secp256k1_std = @import("secp256k1_std");
+const zesu_crypto_backend = @import("zesu_crypto_backend.zig");
+const guest_crypto = @import("guest_crypto.zig");
+const secp256k1_std = @import("secp256k1_std.zig");
 const build_options = @import("build_options");
 
 // The manifest: every `zkvm_*` symbol zesu references, and where each comes from — keccak is either

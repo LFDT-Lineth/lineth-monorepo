@@ -1,12 +1,12 @@
-//! `l2-execution-runner` — native host tool for the extended l2-execution guest.
+//! `l2_execution_runner` — native host tool for the extended l2-execution guest.
 //!
 //! Reads an SSZ-encoded, extended `L2ExecutionProofPrivateInput` file (schema 0x0002 — the same
 //! wire format the zkVM guest itself reads via `read_input`/`l2_execution_ssz.decodeInput`), runs
 //! `l2_execution.runL2Execution`, and prints the result to stdout.
 //!
 //! This is deliberately the ONLY place an SSZ/JSON output toggle exists for this guest: the
-//! freestanding riscv64 guest (`evm_execution_guest.zig`'s `guestMain`) has no argv — its I/O is
-//! pinned to the proving system's `read_input`/`write_output` ABI, so it always emits SSZ. The
+//! freestanding riscv64 guest has no argv — its I/O is pinned to the proving system's
+//! `read_input`/`write_output` ABI, so it always emits SSZ. The
 //! runtime `--json`/`--ssz` choice belongs on this native runner instead, mirroring zesu's
 //! `zevm_stateless --ssz`/`--json` CLI.
 //!
@@ -17,17 +17,17 @@
 //! `--ssz` is accepted explicitly too, as a no-op.
 
 const std = @import("std");
-const l2_execution = @import("l2_execution");
-const l2_execution_ssz = @import("l2_execution_ssz");
-const l2_execution_json = @import("l2_execution_json");
+const l2_execution = @import("l2_execution").l2_execution;
+const l2_execution_ssz = @import("l2_execution").l2_execution_ssz;
+const l2_execution_json = @import("support").l2_execution_json;
 
 const OutputFormat = enum { ssz, json };
 
 const usage =
-    \\l2-execution-runner — run the extended l2-execution guest logic (runL2Execution) against an
+    \\l2_execution_runner — run the extended l2-execution guest logic (runL2Execution) against an
     \\SSZ-encoded L2ExecutionProofPrivateInput file (schema 0x0002) and print the result to stdout.
     \\
-    \\usage: l2-execution-runner <input.ssz> [--json | --ssz]
+    \\usage: l2_execution_runner <input.ssz> [--json | --ssz]
     \\  <input.ssz>  path to an SSZ-encoded, schema-0x0002 extended guest input
     \\  --json       print the output as getZkL2ExecutionProofV1.response.json-shaped JSON
     \\  --ssz        print the output as SSZ (schema 0x0003, public inputs + keccak256) — the

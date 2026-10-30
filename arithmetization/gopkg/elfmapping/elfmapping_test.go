@@ -317,10 +317,10 @@ func TestEncodeInputsLegacyGolden(t *testing.T) {
 	}
 
 	want := map[string]string{
-		elfmapping.EntryPointAndBlobsCountInput: "000000000080000000000003",
-		elfmapping.BlobsOffsetAndSizeInput: "000000000080000000000004" +
-			"000000000880000000000008" +
-			"000000000880000800000003",
+		elfmapping.EntryPointAndBlobsCountInput: "0080000000000003",
+		elfmapping.BlobsOffsetAndSizeInput: "0080000000000004" +
+			"0880000000000008" +
+			"0880000800000003",
 		elfmapping.BlobsDataInput:       "970200000300000000000000aabbcc",
 		elfmapping.BlobsExecutableInput: "80",
 	}
@@ -388,6 +388,21 @@ func TestEncodeInputsRejectsInvalidRanges(t *testing.T) {
 			blobs:   []elfmapping.Blob{{Address: math.MaxUint64, Data: []byte{1}}},
 			wantErr: "overflows address space",
 		},
+		{
+			name:    "above 4 GiB",
+			blobs:   []elfmapping.Blob{{Address: 1 << 32, Data: []byte{1}}},
+			wantErr: "outside the 32-bit address space",
+		},
+		{
+			name:    "empty above 4 GiB",
+			blobs:   []elfmapping.Blob{{Address: 1 << 32}},
+			wantErr: "outside the 32-bit address space",
+		},
+		{
+			name:    "crosses 4 GiB",
+			blobs:   []elfmapping.Blob{{Address: math.MaxUint32, Data: []byte{1, 2}}},
+			wantErr: "outside the 32-bit address space",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -402,6 +417,13 @@ func TestEncodeInputsRejectsInvalidRanges(t *testing.T) {
 				t.Fatalf("EncodeInputs() error = %v, want containing %q", err, test.wantErr)
 			}
 		})
+	}
+}
+
+func TestEncodeInputsRejectsEntryPointAbove4GiB(t *testing.T) {
+	_, err := elfmapping.EncodeInputs(elfmapping.Program{EntryPoint: 1 << 32}, nil)
+	if err == nil || !bytes.Contains([]byte(err.Error()), []byte("outside the 32-bit address space")) {
+		t.Fatalf("EncodeInputs() error = %v, want containing %q", err, "outside the 32-bit address space")
 	}
 }
 
@@ -421,7 +443,7 @@ func TestEncodeInputsAllowsAdjacentAndEmptyBlobs(t *testing.T) {
 	}
 	var (
 		epAndBlobs = inputs[elfmapping.EntryPointAndBlobsCountInput]
-		count      = binary.BigEndian.Uint32(epAndBlobs.Bytes()[8:])
+		count      = binary.BigEndian.Uint32(epAndBlobs.Bytes()[4:])
 	)
 	if count != 3 {
 		t.Errorf("blob count = %d, want 3", count)

@@ -12,6 +12,7 @@
 
 - *(riscv-guest)* Renaming the kebab-case dirs to sneak case, which is more conventional in Zig world (#4320)
 - *(riscv-guest)* Added a build option to choose between crypto backe… (#4293)
+- *(riscv-guest)* Build script refactoring. Introducing a convention … (#4347)
 ## [0.1.0-debug] - 2026-10-05
 
 ### 🚀 Features

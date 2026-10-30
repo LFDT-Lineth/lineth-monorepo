@@ -1,15 +1,15 @@
 //! Composes execution-spec validity and extended-SSZ differential suites for ZkC.
 
 const std = @import("std");
-const spec_runner = @import("spec_runner.zig");
-const host_machine = @import("host_machine");
-const zkc_machine = @import("zkc_machine");
-const execution_spec_suite = @import("execution_spec_suite.zig");
-const smoke_suite = @import("smoke_suite.zig");
+const spec_runner = @import("support").spec_runner;
+const host_machine = @import("support").host_machine;
+const zkc_machine = @import("support").zkc_machine;
+const execution_spec_suite = @import("support").execution_spec_suite;
+const smoke_suite = @import("support").smoke_suite;
 
 const label = "ZkC guest vs host and execution-spec fixture ground truth";
 const usage =
-    \\usage: zkc-reference-runner [options] PATH...
+    \\usage: zkc_reference_runner [options] PATH...
     \\
     \\PATH may be a file or a recursively traversed directory. Operands run in order; files within
     \\directories run lexically. Patterns containing `/` match paths relative to the operand root;

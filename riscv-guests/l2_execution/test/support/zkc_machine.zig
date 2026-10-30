@@ -1,5 +1,5 @@
 const std = @import("std");
-const execution_machine = @import("execution_machine");
+const execution_machine = @import("execution_machine.zig");
 
 pub const ZkcMachine = struct {
     elf: []const u8,

@@ -2,7 +2,7 @@
 //! `L2ExecutionProofPrivateInput` (schema 0x0002) so the extended l2-execution guest can run on the
 //! same corpus the vanilla guest runs on (the EF execution-spec-tests zkevm fixtures).
 //!
-//! Real wiring: `test/extended_vanilla_runner.zig` calls this in-process (host reference-test
+//! Real wiring: `extended_vanilla_runner.zig` calls this in-process (host reference-test
 //! guard).
 //!
 //! Dummy-fill choices (see `runL2Execution`'s conflation invariants in l2_execution.zig):
@@ -28,7 +28,7 @@ const std = @import("std");
 
 const ssz_decode = @import("zesu_ssz_decode");
 const input = @import("zesu_input");
-const l2_execution_ssz = @import("l2_execution_ssz");
+const l2_execution_ssz = @import("l2_execution").l2_execution_ssz;
 
 /// The system contracts zesu itself assumes for `chain_id` (mainnet addresses, plus known testnet
 /// deposit contracts) — what the EF fixtures were generated against.

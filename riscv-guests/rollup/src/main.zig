@@ -1,17 +1,16 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const rollup_ssz = @import("rollup_ssz");
-const rollup = @import("rollup.zig");
+const package = @import("rollup");
+const rollup = package.rollup;
+const rollup_ssz = package.rollup_ssz;
+const guest_errors = package.guest_errors;
 
-/// Exit-code taxonomy for guest failures; `pub` for this guest's own test suite.
-pub const guest_errors = @import("guest_errors.zig");
-
-// Heap starts at the address defined by the linker script (canonical Lineth layout: `_heap_start`
-// = 0x48800000, grows up). The linker script does not actually cap the heap at this size; it is a
-// reasonable upper bound for this guest's small, bounded inputs.
+// Heap bounds come from the linker script (canonical Lineth layout: `_heap_start` = 0x48800000,
+// grows up to `_heap_end`). build_common/Makefile sets the size via `HEAP_LENGTH` and asserts that
+// the heap ends below the 4 GiB guest address space.
 extern var _heap_start: u8;
-const GUEST_HEAP_SIZE: usize = 256 * 1024 * 1024;
+extern var _heap_end: u8;
 
 // This is the rollup zkVM guest stub: it decodes `RollupProofPrivateInput`, maps it to
 // `RollupOutput` entirely by echo/sentinel (`rollup.run`), and emits the SSZ output. No proof
@@ -24,7 +23,7 @@ const GUEST_HEAP_SIZE: usize = 256 * 1024 * 1024;
 fn guestMain() callconv(.c) noreturn {
     const zkvm_io = @import("lineth_accelerators");
 
-    const heap = @as([*]u8, @ptrCast(&_heap_start))[0..GUEST_HEAP_SIZE];
+    const heap = @as([*]u8, @ptrCast(&_heap_start))[0 .. @intFromPtr(&_heap_end) - @intFromPtr(&_heap_start)];
     var fba = std.heap.FixedBufferAllocator.init(heap);
     const allocator = fba.allocator();
 
@@ -41,18 +40,16 @@ fn guestMain() callconv(.c) noreturn {
 }
 
 /// Decode -> map -> encode, factored out of `guestMain` so the whole pipeline is one `catch` away
-/// from a clean, categorized guest rejection, and so it can be driven directly from a native host
-/// test (it touches no riscv asm and no zkVM io — those are `guestMain`'s own concern).
-pub fn runRollupGuest(allocator: std.mem.Allocator, raw_input: []const u8) ![]const u8 {
+/// from a clean, categorized guest rejection.
+fn runRollupGuest(allocator: std.mem.Allocator, raw_input: []const u8) ![]const u8 {
     const decoded = try rollup_ssz.decodeInput(allocator, raw_input);
     const result = try rollup.run(allocator, decoded);
     return rollup_ssz.encodeOutput(allocator, result) catch return error.OutputEncodeFailed;
 }
 
 comptime {
-    // Export `main` only for the freestanding RISC-V guest, which owns its entry point. Native
-    // builds import this module as a library (the host test calling `runRollupGuest` directly) and
-    // get `main` from std.start — exporting it here too would be a symbol collision.
+    // Only the freestanding RISC-V guest owns its entry point; every other target takes `main`
+    // from std.start.
     if (builtin.cpu.arch == .riscv64) {
         @export(&guestMain, .{ .name = "main" });
     }
