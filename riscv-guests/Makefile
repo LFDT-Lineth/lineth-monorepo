@@ -13,7 +13,7 @@
 # guest_common and lineth_da aren't guest programs themselves (no release ELF to link, just shared
 # Zig packages other guests consume as path dependencies — the same role lineth_accelerators plays)
 # but are listed here anyway so their own unit tests run as part of `make test` (lineth_da's
-# `compile` links its smoke guest).
+# `compile` links its smoke guests).
 
 GUESTS ?= guest_common lineth_da l2_execution rollup
 ZIG    ?= zig
