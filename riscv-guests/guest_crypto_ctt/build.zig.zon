@@ -4,6 +4,8 @@
     .fingerprint = 0x2b75fa46e7118444,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
+        // Shared build helpers: the guest target the allocator shim is built for.
+        .build_common = .{ .path = "../build_common" },
         // Consensys fork of Constantine with the guest shims and rv64 freestanding build. Lazy: only a
         // build that needs an archive fetches it.
         .constantine = .{

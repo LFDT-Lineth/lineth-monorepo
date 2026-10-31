@@ -30,18 +30,19 @@ pub fn requireZigVersion() void {
 }
 
 /// The freestanding rv64im target every guest builds for (the Lineth ZkC interpreter profile:
-/// base RV64I + M, soft-float, no A/C/D/F/Zicsr). Overridable on the CLI like any standard target.
+/// base RV64I + M, soft-float, no A/C/D/F/Zicsr).
+pub const guest_target_query: std.Target.Query = .{
+    .cpu_arch = .riscv64,
+    .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv64 },
+    .cpu_features_add = std.Target.riscv.featureSet(&.{.m}),
+    .cpu_features_sub = std.Target.riscv.featureSet(&.{ .a, .c, .d, .f, .zicsr, .zaamo, .zalrsc }),
+    .os_tag = .freestanding,
+    .abi = .none,
+};
+
+/// The guest target, overridable on the CLI like any standard target.
 pub fn standardGuestTarget(b: *std.Build) std.Build.ResolvedTarget {
-    return b.standardTargetOptions(.{
-        .default_target = .{
-            .cpu_arch = .riscv64,
-            .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv64 },
-            .cpu_features_add = std.Target.riscv.featureSet(&.{.m}),
-            .cpu_features_sub = std.Target.riscv.featureSet(&.{ .a, .c, .d, .f, .zicsr, .zaamo, .zalrsc }),
-            .os_tag = .freestanding,
-            .abi = .none,
-        },
-    });
+    return b.standardTargetOptions(.{ .default_target = guest_target_query });
 }
 
 /// The package module: `src/root.zig` for one target, plus the package's declared dependency

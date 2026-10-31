@@ -2,6 +2,7 @@
 //! Tool locations are overridable with `NIM`, `NIMBLE`, and `LLVM_AR`.
 
 const std = @import("std");
+const common = @import("build_common");
 
 const Toolchain = struct {
     nim: []const u8,
@@ -90,13 +91,7 @@ fn buildRiscv(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath) std.Build.
         .name = "ctt_allocator_rv64",
         .root_module = b.createModule(.{
             .root_source_file = b.path("c_allocator.zig"),
-            .target = b.resolveTargetQuery(.{
-                .cpu_arch = .riscv64,
-                .os_tag = .freestanding,
-                .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv64 },
-                .cpu_features_add = std.Target.riscv.featureSet(&.{.m}),
-                .cpu_features_sub = std.Target.riscv.featureSet(&.{ .a, .c, .d, .f, .zicsr, .zaamo, .zalrsc }),
-            }),
+            .target = b.resolveTargetQuery(common.guest_target_query),
             .optimize = .ReleaseSmall,
         }),
     });
