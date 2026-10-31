@@ -20,6 +20,7 @@ const (
 	lookupMod  = "lookup"
 	p2Mod      = "p2"
 	mdMod      = "md"
+	merkleMod  = "merkle"
 )
 
 // Machine builds a program for the chips: it allocates addresses, counts the
@@ -47,6 +48,7 @@ type Machine struct {
 	tables  []tableInst
 	lookups []lookupInst
 	mds     []mdInst
+	paths   []pathInst
 
 	instrs []instr // every instruction, in execution order
 
@@ -71,6 +73,7 @@ const (
 	instrSelect        // Select: the selected cell
 	instrLookup        // Lookup: the entry read
 	instrMD            // MDHash: the digest (and the compressions, for the P2 core)
+	instrPath          // MerklePath: the compressions, and MerklePathX's [x⁻¹, b0]
 )
 
 func (m *Machine) alloc() int {
@@ -133,7 +136,7 @@ func (m *Machine) chips() []chip {
 	return append([]chip{
 		witnessChip{m}, constChip{m}, windowChip{m}, bitsChip{m},
 		e6Chip{m}, selectChip{m}, tableChip{m}, lookupChip{m},
-		p2Chip{m}, mdChip{m},
+		p2Chip{m}, mdChip{m}, merkleChip{m},
 	}, m.extra...)
 }
 
@@ -285,6 +288,9 @@ func (m *Machine) exec(in instr, r *Run) error {
 		return m.execLookup(m.lookups[in.idx], r)
 	case instrMD:
 		m.execMD(m.mds[in.idx], r)
+		return nil
+	case instrPath:
+		m.execPath(m.paths[in.idx], r)
 		return nil
 	}
 	return fmt.Errorf("unknown instruction kind %d", in.kind)

@@ -87,7 +87,13 @@ type mdChip struct{ m *Machine }
 
 func (c mdChip) name() string { return mdMod }
 
-func (c mdChip) rows() int { return c.m.numPerms() }
+func (c mdChip) rows() int {
+	n := 0
+	for _, d := range c.m.mds {
+		n += len(d.blocks)
+	}
+	return n
+}
 
 func (c mdChip) setup(cs *cols) {
 	cs.declare(mdActive, mdFirst, mdAddrInit, mdAddrBlk, mdAddrOut, mdMultOut)
