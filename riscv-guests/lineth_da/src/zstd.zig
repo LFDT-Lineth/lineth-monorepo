@@ -16,15 +16,15 @@ pub const Error = error{
     TruncatedFrame,
     /// The input continues past the end of the frame.
     TrailingBytes,
-    /// The input is not a zstd frame, the frame declares a window beyond `max_window_size`, or the
-    /// frame's content is corrupt.
+    /// The input is not a zstd frame, the frame declares a window beyond `max_window_size`, the
+    /// frame declares no content size and a window smaller than its content, or the frame's content
+    /// is corrupt.
     MalformedFrame,
     /// The frame decompresses to more bytes than the output buffer holds.
     OutputTooLarge,
 };
 
-/// The largest window a frame may declare: the limit of libzstd's streaming decoder, so every
-/// accepted frame also decodes in a streaming decoder with default settings.
+/// The largest window a frame may declare: the limit of libzstd's streaming decoder.
 pub const max_window_size: u64 = (1 << 27) + 1;
 
 const c = struct {
@@ -48,6 +48,8 @@ const c = struct {
         free: *const fn (state: ?*anyopaque, address: ?*anyopaque) callconv(.c) void,
         state: ?*anyopaque,
     };
+
+    const content_size_unknown: c_ulonglong = std.math.maxInt(c_ulonglong);
 
     const dlm_by_ref: c_int = 1;
     const dct_full_dict: c_int = 2;
@@ -123,7 +125,9 @@ pub const Decoder = struct {
     }
 
     /// Decompresses `frame`, which must be exactly one complete zstd frame, into the front of `out`
-    /// and returns the decompressed bytes. `out.len` bounds the decompressed length.
+    /// and returns the decompressed bytes. `out.len` bounds the decompressed length. A frame that
+    /// declares no content size declares a window covering its content, so that a streaming
+    /// decoder, whose history is the window, decodes it to the same bytes.
     pub fn decompress(self: Decoder, frame: []const u8, out: []u8) Error![]u8 {
         const frame_len = c.ZSTD_findFrameCompressedSize(frame.ptr, frame.len);
         if (c.ZSTD_isError(frame_len) != 0) return switch (c.ZSTD_getErrorCode(frame_len)) {
@@ -144,6 +148,7 @@ pub const Decoder = struct {
             c.error_memory_allocation => error.OutOfMemory,
             else => error.MalformedFrame,
         };
+        if (header.frame_content_size == c.content_size_unknown and header.window_size < len) return error.MalformedFrame;
         return out[0..len];
     }
 };

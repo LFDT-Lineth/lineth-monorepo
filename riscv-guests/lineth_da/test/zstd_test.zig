@@ -251,9 +251,53 @@ test "frames declaring a window beyond 128 MiB are rejected" {
     // no content size, window descriptor 0x88 (2^27) or 0x90 (2^28), one last raw block holding 'x'
     const largest = zstd_magic ++ [_]u8{ 0x00, 0x88, 0x09, 0x00, 0x00, 'x' };
     const beyond = zstd_magic ++ [_]u8{ 0x00, 0x90, 0x09, 0x00, 0x00, 'x' };
+    // the same last raw block under a header that declares the content size 1 and the window 2^28
+    const beyond_with_content_size = zstd_magic ++ [_]u8{ 0x80, 0x90, 0x01, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 'x' };
     var out: [8]u8 = undefined;
     try std.testing.expectEqualStrings("x", try decoder.decompress(&largest, &out));
     try std.testing.expectError(error.MalformedFrame, decoder.decompress(&beyond, &out));
+    try std.testing.expectError(error.MalformedFrame, decoder.decompress(&beyond_with_content_size, &out));
+}
+
+/// A payload whose last bytes repeat its first KiB after 6 KiB of other bytes: a match reaching 7 KiB back.
+fn farMatchPayload() ![]u8 {
+    const payload = try gpa.alloc(u8, 8192);
+    for (payload[0..1024], 0..) |*byte, i| byte.* = @truncate(i);
+    var prng = std.Random.DefaultPrng.init(2025);
+    prng.random().bytes(payload[1024..7168]);
+    @memcpy(payload[7168..], payload[0..1024]);
+    return payload;
+}
+
+test "a frame without content size declares a window covering its content" {
+    const decoder = try zstd.Decoder.init(gpa, dictionary);
+    defer decoder.deinit();
+
+    const payload = try farMatchPayload();
+    defer gpa.free(payload);
+    const out = try gpa.alloc(u8, payload.len);
+    defer gpa.free(out);
+    const frame = try compress(payload, .{ .window_log = 17, .block_len = 1024, .content_size = false });
+    defer gpa.free(frame);
+    try std.testing.expectEqual(@as(u8, 0x38), frame[5]); // the window descriptor: 2^17 bytes
+    try std.testing.expectEqualSlices(u8, payload, try decoder.decompress(frame, out));
+
+    // The same blocks under a header that declares a window of 1 KiB, which the last match exceeds.
+    frame[5] = 0x00;
+    try std.testing.expectError(error.MalformedFrame, decoder.decompress(frame, out));
+}
+
+test "a frame with content size may declare a window below its content" {
+    const decoder = try zstd.Decoder.init(gpa, dictionary);
+    defer decoder.deinit();
+
+    const payload = try farMatchPayload();
+    defer gpa.free(payload);
+    const out = try gpa.alloc(u8, payload.len);
+    defer gpa.free(out);
+    const frame = try compress(payload, .{ .window_log = 10 });
+    defer gpa.free(frame);
+    try std.testing.expectEqualSlices(u8, payload, try decoder.decompress(frame, out));
 }
 
 test "an empty payload decompresses to an empty slice" {
