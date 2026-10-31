@@ -22,8 +22,10 @@ from .fork import (
     SetCodeTransaction,
     Transaction,
     decode_transaction,
+    encode_transaction,
     recover_sender,
 )
+from ethereum.merkle_patricia_trie import Trie, root, trie_set
 from ethereum.state import Address
 from ethereum_rlp import rlp
 from ethereum_types.bytes import Bytes, Bytes32
@@ -121,6 +123,10 @@ _ZSTD_DICTIONARY_PATH = (
     Path(__file__).resolve().parents[3]
     / "riscv-guests" / "lineth_da" / "dictionaries" / "v2025-04-21.bin"
 )
+
+
+# The largest window a DA frame may declare: the limit of libzstd's streaming decoder.
+ZSTD_MAX_WINDOW_SIZE = 2**27 + 1
 
 
 @lru_cache(maxsize=1)
@@ -272,8 +278,17 @@ def derive_canonical_payload(
 
 
 def _validate_zstd_frame(zstd_frame: bytes, canonical_payload: bytes) -> None:
-    """Check that a segment's zstd frame decompresses, with the program's dictionary, exactly to its canonical payload."""
+    """
+    Check that a segment's zstd frame decompresses, with the program's dictionary, exactly to its canonical payload.
+
+    The declared window is at most `ZSTD_MAX_WINDOW_SIZE`. A frame without content size has a window
+    covering its whole content, so that no decoder discards output a match may still reach.
+    """
     try:
+        parameters = zstd.get_frame_parameters(zstd_frame)
+        covers_content = parameters.content_size != zstd.CONTENTSIZE_UNKNOWN or parameters.window_size >= len(canonical_payload)
+        if parameters.window_size > ZSTD_MAX_WINDOW_SIZE or not covers_content:
+            raise zstd.ZstdError("frame window")
         decompressed = zstd.ZstdDecompressor(dict_data=zstd_dictionary()).decompress(
             zstd_frame, max_output_size=len(canonical_payload), allow_extra_data=False,
         )
@@ -795,10 +810,51 @@ def _signature_stripped_tx_bytes(tx: Transaction) -> bytes:
     raise Exception(f"unknown transaction type {type(tx).__name__}")
 
 
+def _transactions_root(transactions: Sequence[Transaction | Bytes]) -> Hash32:
+    """The root of the transactions trie of a block body: key RLP(index), value the transaction's wire form."""
+    trie = Trie(secured=False, default=None)
+    for index, tx_item in enumerate(transactions):
+        trie_set(trie, rlp.encode(Uint(index)), tx_item)
+    return root(trie)
+
+
+def _canonical_transaction(tx_item: Transaction | Bytes) -> Transaction:
+    """
+    Decode one entry of a block's transaction list, which must be a canonical transaction of the
+    form the guest decodes: a legacy list, or a typed transaction of type 1 to 4 in exactly its
+    canonical encoding; integers in the widths the guest decodes them (nonce and gas in 64 bits,
+    fees in 128), and a blob transaction naming at least one blob.
+    """
+    if isinstance(tx_item, (bytes, bytearray)):
+        if len(tx_item) < 2 or tx_item[0] not in (1, 2, 3, 4):
+            raise Exception("transaction is not a canonical typed transaction")
+        decoded_tx = decode_transaction(Bytes(tx_item))
+        if encode_transaction(decoded_tx) != tx_item:
+            raise Exception("transaction is not a canonical typed transaction")
+    else:
+        decoded_tx = tx_item
+
+    if isinstance(decoded_tx, (LegacyTransaction, AccessListTransaction)):
+        fees = [decoded_tx.gas_price]
+    else:
+        fees = [decoded_tx.max_priority_fee_per_gas, decoded_tx.max_fee_per_gas]
+        if isinstance(decoded_tx, BlobTransaction):
+            fees.append(decoded_tx.max_fee_per_blob_gas)
+            if len(decoded_tx.blob_versioned_hashes) == 0:
+                raise Exception("blob transaction names no blob")
+    if int(decoded_tx.nonce) >= 2**64 or int(decoded_tx.gas) >= 2**64 or any(int(fee) >= 2**128 for fee in fees):
+        raise Exception("transaction field exceeds the width the guest decodes")
+    return decoded_tx
+
+
 def truncate_block_rlp(block_rlp: bytes, chain_id: U64) -> TruncatedEthereumBlock:
     """
     Decode the canonical full block RLP and apply the §3.2 DA truncation
     rule, returning a `TruncatedEthereumBlock`.
+
+    The block is accepted only in its canonical encoding, with a body
+    that is the one its header commits to: the transactions hash to the
+    header's `transactions_root`. `chain_id` is positive.
 
     Header-derived fields:
       - `timestamp` and `prev_randao` are taken from the decoded header.
@@ -810,7 +866,13 @@ def truncate_block_rlp(block_rlp: bytes, chain_id: U64) -> TruncatedEthereumBloc
         bytes (see `_signature_stripped_tx_bytes`).
       - `froms[i]` is the sender recovered via `recover_sender(chain_id, tx)`.
     """
+    if int(chain_id) == 0:
+        raise Exception("chain ID must be positive")
     block = decode_block_rlp(block_rlp)
+    if rlp.encode(block) != block_rlp:
+        raise Exception("block RLP is not canonical")
+    if _transactions_root(block.transactions) != block.header.transactions_root:
+        raise Exception("block transactions do not match the header's transactions root")
     bh = block_hash(block.header)
 
     transactions: List[bytes] = []
@@ -818,10 +880,7 @@ def truncate_block_rlp(block_rlp: bytes, chain_id: U64) -> TruncatedEthereumBloc
     for tx_item in block.transactions:
         # `Block.transactions` holds typed (EIP-2718) txs as bytes and
         # legacy txs as decoded `LegacyTransaction` objects.
-        if isinstance(tx_item, (bytes, bytearray)):
-            decoded_tx: Transaction = decode_transaction(Bytes(tx_item))
-        else:
-            decoded_tx = tx_item
+        decoded_tx = _canonical_transaction(tx_item)
         transactions.append(_signature_stripped_tx_bytes(decoded_tx))
         froms.append(recover_sender(chain_id, decoded_tx))
 

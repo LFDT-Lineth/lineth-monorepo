@@ -1,18 +1,16 @@
 """Rollup guest over real signed blocks: canonical payload derivation and an end-to-end rollup."""
 
-from dataclasses import dataclass, replace
+"""Rollup guest over real signed blocks: canonical payload derivation and an end-to-end rollup."""
+
+from dataclasses import dataclass
 from typing import Sequence, Tuple
 
 import pytest
-from coincurve import PrivateKey
 from ethereum.crypto.hash import Hash32, keccak256
-from ethereum.forks.amsterdam.transactions import signing_hash_155
 from ethereum.state import Address
 from ethereum_rlp import rlp
-from ethereum_types.bytes import Bytes8, Bytes20, Bytes32, Bytes256
-from ethereum_types.numeric import U64, U256, Uint
+from ethereum_types.numeric import U64
 
-from rollup_spec.fork import Block, Header, LegacyTransaction
 from rollup_spec.l2_execution import (
     L2ExecutionProof,
     L2ExecutionProofPublicInput,
@@ -28,13 +26,9 @@ from rollup_spec.rollup import (
     run_rollup_guest,
     truncate_block_rlp,
 )
+from tests.blocks import CHAIN_ID, SENDER, ZERO, block, legacy_tx, sign, wire
 from tests.da_witness import blob_chunk, calldata_chunk, data_rolling_hash_after, segment
 
-CHAIN_ID = U64(59144)
-SECRET_KEY = bytes([0x42]) * 32
-SENDER = Address(keccak256(PrivateKey(SECRET_KEY).public_key.format(compressed=False)[1:])[12:])
-
-ZERO = Hash32(bytes(32))
 FIRST_PARENT_HASH = keccak256(b"parent of the first block")
 PARENT_DATA_ROLLING_HASH = keccak256(b"parent dataRollingHash")
 
@@ -48,29 +42,8 @@ class SignedBlock:
 
 def signed_block(number: int, parent_hash: Hash32) -> SignedBlock:
     """An Amsterdam block holding one EIP-155 legacy transaction sent by `SENDER`."""
-    unsigned = LegacyTransaction(
-        nonce=U256(number), gas_price=Uint(7), gas=Uint(21_000), to=Bytes20(b"\x11" * 20),
-        value=U256(1), data=b"", v=U256(0), r=U256(0), s=U256(0),
-    )
-    signature = PrivateKey(SECRET_KEY).sign_recoverable(signing_hash_155(unsigned, CHAIN_ID), hasher=None)
-    tx = replace(
-        unsigned,
-        v=U256(signature[64] + 35 + 2 * int(CHAIN_ID)),
-        r=U256(int.from_bytes(signature[:32], "big")),
-        s=U256(int.from_bytes(signature[32:64], "big")),
-    )
-    root = Bytes32(bytes(32))
-    header = Header(
-        parent_hash=parent_hash, ommers_hash=root, coinbase=Bytes20(bytes(20)), state_root=root,
-        transactions_root=root, receipt_root=root, bloom=Bytes256(bytes(256)), difficulty=Uint(0),
-        number=Uint(number), gas_limit=Uint(30_000_000), gas_used=Uint(21_000),
-        timestamp=U256(1_700_000_000 + number), extra_data=b"", prev_randao=root, nonce=Bytes8(bytes(8)),
-        base_fee_per_gas=Uint(7), withdrawals_root=root, blob_gas_used=U64(0), excess_blob_gas=U64(0),
-        parent_beacon_block_root=root, requests_hash=root, block_access_list_hash=root,
-        slot_number=U64(number),
-    )
-    block = Block(header=header, transactions=(tx,), ommers=(), withdrawals=())
-    return SignedBlock(rlp.encode(block), keccak256(rlp.encode(header)), parent_hash)
+    full_block = block([wire(sign(legacy_tx(number)))], number, parent_hash)
+    return SignedBlock(rlp.encode(full_block), keccak256(rlp.encode(full_block.header)), parent_hash)
 
 
 def l2_proof(

@@ -9,7 +9,14 @@ from ethereum.crypto.hash import keccak256
 from ethereum.crypto.kzg import KZGCommitment, kzg_commitment_to_versioned_hash
 
 from rollup_spec.rollup import BLOB_PAYLOAD_CAPACITY, ChunkWitness, verify_da_chunks, zstd_dictionary
-from tests.da_witness import blob_chunk, calldata_chunk, compress_frame, data_rolling_hash_after, segment
+from tests.da_witness import (
+    blob_chunk,
+    calldata_chunk,
+    compress_frame,
+    compress_frame_in_blocks,
+    data_rolling_hash_after,
+    segment,
+)
 
 PAYLOAD_1 = b"conflation 1"
 PAYLOAD_2 = b"conflation 2"
@@ -19,6 +26,8 @@ ZSTD_FRAME_1 = compress_frame(PAYLOAD_1)
 # One last raw block holding b"x", under a frame header with no content size and window descriptor 0x88 (2^27 bytes) or 0x90 (2^28).
 WINDOW_2_27_FRAME = bytes.fromhex("28b52ffd0088090000" + "78")
 WINDOW_2_28_FRAME = bytes.fromhex("28b52ffd0090090000" + "78")
+# The same last raw block under a header that declares the content size 1 and the window 2^28.
+WINDOW_2_28_CONTENT_SIZE_FRAME = bytes.fromhex("28b52ffd80900100000009000078")
 # The program's dictionary under another dictionary ID.
 OTHER_DICTIONARY = zstd.ZstdCompressionDict(
     zstd_dictionary().as_bytes()[:4]
@@ -45,6 +54,16 @@ SPLITS = pytest.mark.parametrize(
 
 def length_prefixed(zstd_frame: bytes) -> bytes:
     return len(zstd_frame).to_bytes(4, "big") + zstd_frame
+
+
+# A payload whose last bytes repeat its first 1 KiB after 6 KiB of other bytes: a match reaching back 7 KiB.
+REPEATING_HEAD = bytes(range(256)) * 4
+FAR_MATCH_PAYLOAD = REPEATING_HEAD + random.Random(2025).randbytes(6144) + REPEATING_HEAD
+
+
+def with_window_descriptor(zstd_frame: bytes, window_log: int) -> bytes:
+    """`zstd_frame` under a header that declares a window of 2**window_log bytes (byte 5 of a frame without single-segment flag)."""
+    return zstd_frame[:5] + bytes([(window_log - 10) << 3]) + zstd_frame[6:]
 
 
 def large_segment_over_three_blobs() -> list[ChunkWitness]:
@@ -173,6 +192,23 @@ def test_zstd_frame_window_up_to_2_27_bytes_is_accepted():
     calldata = calldata_chunk(length_prefixed(WINDOW_2_27_FRAME))
 
     assert verify_da_chunks([calldata], [b"x"], PARENT) == (data_rolling_hash_after(PARENT, [calldata]), 0)
+
+
+def test_zstd_frame_with_content_size_may_declare_a_window_below_its_content():
+    parameters = zstd.ZstdCompressionParameters.from_level(3, window_log=10)
+    zstd_frame = zstd.ZstdCompressor(dict_data=zstd_dictionary(), compression_params=parameters).compress(FAR_MATCH_PAYLOAD)
+    assert zstd.get_frame_parameters(zstd_frame).window_size < len(FAR_MATCH_PAYLOAD)
+    calldata = calldata_chunk(length_prefixed(zstd_frame))
+
+    assert verify_da_chunks([calldata], [FAR_MATCH_PAYLOAD], PARENT) == (data_rolling_hash_after(PARENT, [calldata]), 0)
+
+
+def test_zstd_frame_without_content_size_declares_a_window_covering_its_content():
+    zstd_frame = compress_frame_in_blocks(FAR_MATCH_PAYLOAD, window_log=17, block_len=1024)
+    assert zstd.get_frame_parameters(zstd_frame).content_size == zstd.CONTENTSIZE_UNKNOWN
+    calldata = calldata_chunk(length_prefixed(zstd_frame))
+
+    assert verify_da_chunks([calldata], [FAR_MATCH_PAYLOAD], PARENT) == (data_rolling_hash_after(PARENT, [calldata]), 0)
 
 
 # ---- rejected streams ------------------------------------------------------------------------
@@ -353,6 +389,17 @@ REJECTED_STREAMS = [
     rejected(
         "frame window beyond 2^27 bytes", "invalid zstd",
         lambda: [calldata_chunk(length_prefixed(WINDOW_2_28_FRAME))], payloads=(b"x",),
+    ),
+    rejected(
+        "frame window beyond 2^27 bytes with content size", "invalid zstd",
+        lambda: [calldata_chunk(length_prefixed(WINDOW_2_28_CONTENT_SIZE_FRAME))], payloads=(b"x",),
+    ),
+    rejected(
+        "frame without content size whose window is below its content", "invalid zstd",
+        lambda: [calldata_chunk(length_prefixed(
+            with_window_descriptor(compress_frame_in_blocks(FAR_MATCH_PAYLOAD, window_log=17, block_len=1024), window_log=10),
+        ))],
+        payloads=(FAR_MATCH_PAYLOAD,),
     ),
     rejected(
         "frame compressed against another dictionary", "invalid zstd",

@@ -16,6 +16,16 @@ def compress_frame(payload: bytes, dictionary: zstd.ZstdCompressionDict | None =
     return zstd.ZstdCompressor(dict_data=dictionary, **parameters).compress(payload)
 
 
+def compress_frame_in_blocks(payload: bytes, window_log: int, block_len: int) -> bytes:
+    """One zstd frame of `payload` without content size, under a window of 2**window_log bytes, one block per `block_len` bytes."""
+    parameters = zstd.ZstdCompressionParameters.from_level(3, window_log=window_log, write_content_size=False)
+    compressor = zstd.ZstdCompressor(dict_data=zstd_dictionary(), compression_params=parameters).compressobj()
+    frame = b""
+    for start in range(0, len(payload), block_len):
+        frame += compressor.compress(payload[start:start + block_len]) + compressor.flush(zstd.COMPRESSOBJ_FLUSH_BLOCK)
+    return frame + compressor.flush()
+
+
 def segment(payload: bytes) -> bytes:
     """One DA stream segment: a 4-byte big-endian length followed by one zstd frame of `payload`."""
     zstd_frame = compress_frame(payload)
