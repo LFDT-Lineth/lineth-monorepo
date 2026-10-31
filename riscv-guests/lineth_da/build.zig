@@ -130,13 +130,23 @@ fn addHostBuild(b: *std.Build, zstd_source: *std.Build.Dependency) void {
         .optimize = .Debug,
     });
 
+    const conflation_sample = b.createModule(.{
+        .root_source_file = b.path("test/conflation_sample.zig"),
+        .target = target,
+        .optimize = .Debug,
+        .imports = &.{
+            .{ .name = "lineth_da", .module = package },
+            .{ .name = "support", .module = support },
+        },
+    });
+
     const native: common.NativeOptions = .{
         .target = target,
         .imports = &.{
             .{ .name = "lineth_da", .module = package },
-            .{ .name = "bls_scalar", .module = importNamed(imports, "bls_scalar") },
             .{ .name = "zstd_compressor", .module = compressor },
             .{ .name = "support", .module = support },
+            .{ .name = "conflation_sample", .module = conflation_sample },
         },
     };
     const test_step = b.step("test", "Run native Zig unit tests for the lineth_da package");
@@ -146,28 +156,29 @@ fn addHostBuild(b: *std.Build, zstd_source: *std.Build.Dependency) void {
             .root_source_file = zstd_source.path(frame.path),
         });
     }
+    const tools = common.addTools(b, native, .{});
     if (b.lazyDependency("c_kzg_4844", .{})) |c_kzg| {
         const vectors = b.addOptions();
         vectors.addOptionPath("tests_dir", c_kzg.path("tests"));
-        tests.get("test/blob_kzg_test.zig").?.root_module.addImport("kzg_vectors", vectors.createModule());
+        const reference_vectors = b.createModule(.{
+            .root_source_file = b.path("test/reference_vectors.zig"),
+            .target = target,
+            .optimize = .Debug,
+            .imports = &.{.{ .name = "kzg_vectors", .module = vectors.createModule() }},
+        });
+        tests.get("test/blob_kzg_test.zig").?.root_module.addImport("reference_vectors", reference_vectors);
+        tools.get("blob_sample").?.root_module.addImport("reference_vectors", reference_vectors);
     }
-
-    const tools = common.addTools(b, native, .{});
 
     // The tests and tools that reach sha256, keccak256, the KZG point evaluation or sender
     // recovery link the host build of the zkvm_* providers.
     if (Crypto.init(b, target)) |crypto| {
         crypto.linkAll(tests);
-        crypto.link(tools.get("truncate_block").?);
+        crypto.linkAll(tools);
     }
 
     var tool_iter = tools.valueIterator();
     while (tool_iter.next()) |tool| b.installArtifact(tool.*);
-}
-
-fn importNamed(imports: []const Import, name: []const u8) *std.Build.Module {
-    for (imports) |import| if (std.mem.eql(u8, import.name, name)) return import.module;
-    unreachable;
 }
 
 /// The host build of the zkvm_* providers: the Constantine-backed provider module as an object and

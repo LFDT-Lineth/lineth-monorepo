@@ -8,7 +8,7 @@
 #   zstd        decompresses INPUT, a zstd frame compressed against the package dictionary, and
 #               publishes the decompressed bytes (a default INPUT is generated);
 #   blob        verifies the EIP-4844 proof of INPUT (48-byte commitment, 48-byte proof, 131072-byte
-#               blob) and publishes the versioned hash;
+#               blob) and publishes the versioned hash (a default INPUT is generated);
 #   truncation  truncates INPUT (the chain ID as 8 big-endian bytes, then a full block's RLP) and
 #               publishes the block hash, the parent hash and the canonical payload;
 #   decompress  verifies the DA stream in INPUT (one conflation in one chunk) and publishes the end
@@ -36,14 +36,18 @@ SMOKE  ?= zstd
 NAME   := $(SMOKE)_smoke
 BIN    := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 
-# Default exec/debug input of the zstd and decompress smokes: SMOKE_PAYLOAD compressed by the
-# compress_frame tool, or published as a one-blob DA stream by the da_sample tool (named `.ssz`, so
-# the ELF->JSON conversion frames it with the 8-byte length prefix `read_input` expects). Pass
-# INPUT=path/to/input.ssz to use something else; the other smokes need it.
-SMOKE_PAYLOAD   ?= $(MAKEFILE_DIR)README.md
+# Default exec/debug input of the zstd, blob and decompress smokes, generated into a `.ssz` file (so
+# the ELF->JSON conversion frames it with the 8-byte length prefix `read_input` expects):
+#   zstd        the canonical payload of a fixed sample conflation, compressed by compress_frame;
+#   blob        a case of the official EIP-4844 reference vectors, written by blob_sample;
+#   decompress  the same payload published as a one-blob DA stream by da_sample.
+# SMOKE_PAYLOAD=path/to/file uses the bytes of a file as the payload instead. Pass
+# INPUT=path/to/input.ssz to use something else; the truncation smoke needs it.
+SMOKE_PAYLOAD   ?=
 GENERATED_INPUT := $(MAKEFILE_DIR)zig-out/sample.$(SMOKE).ssz
-GENERATOR       := $(if $(filter decompress,$(SMOKE)),da_sample,compress_frame)
-INPUT           ?= $(if $(filter zstd decompress,$(SMOKE)),$(GENERATED_INPUT))
+GENERATOR       := $(strip $(if $(filter decompress,$(SMOKE)),da_sample,$(if $(filter blob,$(SMOKE)),blob_sample,compress_frame)))
+GENERATOR_ARGS  := $(if $(filter decompress,$(SMOKE)),blob )$(if $(filter zstd decompress,$(SMOKE)),$(if $(SMOKE_PAYLOAD),"$(SMOKE_PAYLOAD)"))
+INPUT           ?= $(if $(filter zstd blob decompress,$(SMOKE)),$(GENERATED_INPUT))
 
 # Flags forwarded to `zkc exec` by exec.
 ZKC_EXEC_FLAGS ?=
@@ -75,12 +79,12 @@ compile:
 		echo "\nSkipping objdump: riscv64-unknown-elf-objdump is not on PATH"; \
 	fi
 
-# Regenerates the default INPUT from SMOKE_PAYLOAD (a no-op for a user-supplied INPUT= override),
-# then fails early on a still-missing/empty INPUT instead of erroring in the converter.
+# Regenerates the default INPUT (a no-op for a user-supplied INPUT= override), then fails early on a
+# still-missing/empty INPUT instead of erroring in the converter.
 require-input: compile
 	@if [ "$(INPUT)" = "$(GENERATED_INPUT)" ]; then \
 		$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) && \
-		$(MAKEFILE_DIR)zig-out/bin/$(GENERATOR) "$(SMOKE_PAYLOAD)" "$(GENERATED_INPUT)"; \
+		$(MAKEFILE_DIR)zig-out/bin/$(GENERATOR) "$(GENERATED_INPUT)" $(GENERATOR_ARGS); \
 	fi
 	@[ -n "$(INPUT)" ] && [ -s "$(INPUT)" ] || { echo "INPUT missing or empty: '$(INPUT)' (set INPUT=path/to/input.ssz)"; exit 1; }
 

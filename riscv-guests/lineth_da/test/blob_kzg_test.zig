@@ -1,9 +1,9 @@
 const std = @import("std");
 
-const bls_scalar = @import("bls_scalar");
-const kzg_vectors = @import("kzg_vectors");
 const lineth_da = @import("lineth_da");
+const reference_vectors = @import("reference_vectors");
 
+const bls_scalar = lineth_da.bls_scalar;
 const blob_kzg = lineth_da.encoding.blob_kzg;
 
 const Fr = bls_scalar.Fr;
@@ -13,92 +13,14 @@ const io = std.testing.io;
 
 const blob_len = blob_kzg.blob_len;
 
-/// One case of the c-kzg-4844 reference vectors: the decoded input fields (null where the case
-/// omits one) and the expected output.
-const Case = struct {
-    name: []const u8,
-    blob: ?[]u8,
-    commitment: ?[]u8,
-    proof: ?[]u8,
-    output: []const u8,
+const Case = reference_vectors.Case;
 
-    fn deinit(self: Case) void {
-        gpa.free(self.name);
-        for ([_]?[]u8{ self.blob, self.commitment, self.proof }) |bytes| if (bytes) |b| gpa.free(b);
-        gpa.free(self.output);
-    }
-
-    /// The input as the verifier's fixed-size arguments; null for a case whose input has the wrong size.
-    fn blobArray(self: Case) ?*const [blob_len]u8 {
-        return if (self.blob) |bytes| if (bytes.len == blob_len) bytes[0..blob_len] else null else null;
-    }
-
-    fn commitmentArray(self: Case) ?*const [48]u8 {
-        return if (self.commitment) |bytes| if (bytes.len == 48) bytes[0..48] else null else null;
-    }
-
-    fn proofArray(self: Case) ?*const [48]u8 {
-        return if (self.proof) |bytes| if (bytes.len == 48) bytes[0..48] else null else null;
-    }
-};
-
-/// The value of `key: value` in the yaml text, without quotes.
-fn yamlValue(text: []const u8, key: []const u8) ?[]const u8 {
-    var lines = std.mem.splitScalar(u8, text, '\n');
-    while (lines.next()) |line| {
-        const trimmed = std.mem.trim(u8, line, " \r");
-        if (!std.mem.startsWith(u8, trimmed, key) or !std.mem.startsWith(u8, trimmed[key.len..], ": ")) continue;
-        return std.mem.trim(u8, trimmed[key.len + 2 ..], "'");
-    }
-    return null;
-}
-
-fn decodeHex(hex: ?[]const u8) !?[]u8 {
-    const text = hex orelse return null;
-    const digits = if (std.mem.startsWith(u8, text, "0x")) text[2..] else text;
-    const bytes = try gpa.alloc(u8, digits.len / 2);
-    errdefer gpa.free(bytes);
-    _ = try std.fmt.hexToBytes(bytes, digits);
-    return bytes;
-}
-
-fn loadCase(suite_dir: std.Io.Dir, name: []const u8) !Case {
-    const path = try std.fmt.allocPrint(gpa, "{s}/data.yaml", .{name});
-    defer gpa.free(path);
-    const text = try suite_dir.readFileAlloc(io, path, gpa, .limited(1 << 20));
-    defer gpa.free(text);
-    return .{
-        .name = try gpa.dupe(u8, name),
-        .blob = try decodeHex(yamlValue(text, "blob")),
-        .commitment = try decodeHex(yamlValue(text, "commitment")),
-        .proof = try decodeHex(yamlValue(text, "proof")),
-        .output = try gpa.dupe(u8, yamlValue(text, "output") orelse return error.MissingOutput),
-    };
-}
-
-fn openSuite(suite: []const u8) !std.Io.Dir {
-    const path = try std.fmt.allocPrint(gpa, "{s}/{s}/kzg-mainnet", .{ kzg_vectors.tests_dir, suite });
-    defer gpa.free(path);
-    return std.Io.Dir.openDirAbsolute(io, path, .{ .iterate = true });
-}
-
-/// Every case of the suite.
 fn loadSuite(suite: []const u8) !std.ArrayList(Case) {
-    var dir = try openSuite(suite);
-    defer dir.close(io);
-    var cases: std.ArrayList(Case) = .empty;
-    errdefer freeCases(&cases);
-    var it = dir.iterate();
-    while (try it.next(io)) |entry| {
-        if (entry.kind != .directory) continue;
-        try cases.append(gpa, try loadCase(dir, entry.name));
-    }
-    return cases;
+    return reference_vectors.loadSuite(gpa, io, suite);
 }
 
 fn freeCases(cases: *std.ArrayList(Case)) void {
-    for (cases.items) |case| case.deinit();
-    cases.deinit(gpa);
+    reference_vectors.freeCases(gpa, cases);
 }
 
 fn expectCase(case: Case, ok: bool) !void {

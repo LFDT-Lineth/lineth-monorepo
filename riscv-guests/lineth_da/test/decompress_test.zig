@@ -1,15 +1,14 @@
 const std = @import("std");
 
+const conflation_sample = @import("conflation_sample");
 const lineth_da = @import("lineth_da");
 const support = @import("support");
 const zstd_compressor = @import("zstd_compressor");
 
 const decompress = lineth_da.decompress;
 const blob_payload = lineth_da.encoding.blob_payload;
-const truncation = lineth_da.encoding.truncation;
 const zstd = lineth_da.zstd;
-const blocks = support.blocks;
-const rlp = support.rlp;
+const da_stream = support.da_stream;
 
 const Allocator = std.mem.Allocator;
 const Chunk = decompress.Chunk;
@@ -47,35 +46,15 @@ fn versionedHash(commitment: []const u8) Hash {
     return hash;
 }
 
-/// 48 bytes standing in for a commitment or a proof: the stream verification reads a commitment
-/// through its versioned hash, and `blob_kzg` verifies the proof.
-fn kzgBytes(label: u8, seed: []const u8) [48]u8 {
-    var bytes: [64]u8 = undefined;
-    for ([_]u8{ 0, 1 }, 0..) |half, i| {
-        var hasher = std.crypto.hash.sha2.Sha256.init(.{});
-        hasher.update(&.{ label, half });
-        hasher.update(seed);
-        hasher.final(bytes[i * 32 ..][0..32]);
-    }
-    return bytes[0..48].*;
-}
-
 fn compressFrame(a: Allocator, payload: []const u8, options: zstd_compressor.Options) ![]u8 {
     var with_dictionary = options;
     if (with_dictionary.dictionary == null) with_dictionary.dictionary = dictionary;
     return zstd_compressor.compress(a, payload, with_dictionary);
 }
 
-fn lengthPrefixed(a: Allocator, frame: []const u8) ![]u8 {
-    const out = try a.alloc(u8, 4 + frame.len);
-    std.mem.writeInt(u32, out[0..4], @intCast(frame.len), .big);
-    @memcpy(out[4..], frame);
-    return out;
-}
-
 /// One stream segment: the length prefix and the frame of `payload`.
 fn segment(a: Allocator, payload: []const u8) ![]u8 {
-    return lengthPrefixed(a, try compressFrame(a, payload, .{}));
+    return da_stream.lengthPrefixed(a, try compressFrame(a, payload, .{}));
 }
 
 fn concat(a: Allocator, parts: []const []const u8) ![]u8 {
@@ -86,9 +65,9 @@ fn blobChunk(a: Allocator, payload: []const u8) !Chunk {
     const blob = try a.create([blob_payload.blob_len]u8);
     try blob_payload.pack(payload, blob);
     const commitment = try a.create([48]u8);
-    commitment.* = kzgBytes('c', payload);
+    commitment.* = da_stream.standInKzg('c', payload);
     const proof = try a.create([48]u8);
-    proof.* = kzgBytes('p', payload);
+    proof.* = da_stream.standInKzg('p', payload);
     return .{
         .chunk_hash = versionedHash(commitment),
         .is_calldata = false,
@@ -341,7 +320,7 @@ test "frame headers may omit the content size and the dictionary ID, or carry a 
         .{ .checksum = true },
     };
     for (variants) |options| {
-        const calldata = calldataChunk(try lengthPrefixed(a, try compressFrame(a, payload_1, options)));
+        const calldata = calldataChunk(try da_stream.lengthPrefixed(a, try compressFrame(a, payload_1, options)));
 
         try expectAccepted(&.{calldata}, &.{payload_1}, .{}, foldOnto(parent, &.{calldata}), 0);
     }
@@ -357,7 +336,7 @@ test "a frame without a dictionary ID decodes against the dictionary" {
     const payload = dictionary[dictionary.len - 300 ..][0..200];
     const frame = try compressFrame(a, payload, .{ .dictionary_id = false });
     try std.testing.expect(frame.len < payload.len / 2);
-    const calldata = calldataChunk(try lengthPrefixed(a, frame));
+    const calldata = calldataChunk(try da_stream.lengthPrefixed(a, frame));
 
     try expectAccepted(&.{calldata}, &.{payload}, .{}, foldOnto(parent, &.{calldata}), 0);
 }
@@ -371,45 +350,12 @@ test "a frame may declare a window of up to 2^27 bytes" {
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
 
-    const calldata = calldataChunk(try lengthPrefixed(arena.allocator(), &window_2_27_frame));
+    const calldata = calldataChunk(try da_stream.lengthPrefixed(arena.allocator(), &window_2_27_frame));
 
     try expectAccepted(&.{calldata}, &.{"x"}, .{}, foldOnto(parent, &.{calldata}), 0);
 }
 
 // ---- real conflations ------------------------------------------------------------------------
-
-const chain_id = 59144;
-
-fn secretKey(index: u8) [32]u8 {
-    var secret: [32]u8 = undefined;
-    std.crypto.hash.sha2.Sha256.hash(&.{ 'd', 'a', index }, &secret, .{});
-    return secret;
-}
-
-/// The canonical payload of a conflation of `count` random signed blocks, as the rollup guest
-/// derives it: the truncated blocks, RLP encoded.
-fn conflationPayload(a: Allocator, random: std.Random, count: usize) ![]u8 {
-    const kinds = std.enums.values(blocks.Kind);
-    const truncated = try a.alloc(truncation.TruncatedBlock, count);
-    for (truncated, 0..) |*slot, number| {
-        const items = try a.alloc(rlp.Item, 1 + random.uintLessThan(usize, 5));
-        for (items) |*item| {
-            const tx = try blocks.randomTx(a, random, kinds[random.uintLessThan(usize, kinds.len)]);
-            item.* = try blocks.signed(a, tx, chain_id, secretKey(random.uintLessThan(u8, 4)));
-        }
-        const header: blocks.Header = .{
-            .parent_hash = blocks.randomBytes(Hash, random),
-            .prev_randao = blocks.randomBytes(Hash, random),
-            .number = 100 + number,
-            .timestamp = 1_700_000_000 + 12 * number,
-        };
-        var scratch = std.heap.ArenaAllocator.init(gpa);
-        defer scratch.deinit();
-        const committed = try blocks.withTransactions(a, header, items);
-        slot.* = try truncation.truncateBlockRlp(a, scratch.allocator(), try blocks.block(a, committed, items, &.{}), chain_id);
-    }
-    return truncation.encodeBlocks(a, truncated);
-}
 
 test "conflations of signed blocks travel in a blob and calldata" {
     var arena = std.heap.ArenaAllocator.init(gpa);
@@ -418,9 +364,9 @@ test "conflations of signed blocks travel in a blob and calldata" {
     var prng = std.Random.DefaultPrng.init(2026);
 
     const payloads = [_][]const u8{
-        try conflationPayload(a, prng.random(), 3),
-        try conflationPayload(a, prng.random(), 1),
-        try conflationPayload(a, prng.random(), 2),
+        try conflation_sample.conflationPayload(a, prng.random(), 3),
+        try conflation_sample.conflationPayload(a, prng.random(), 1),
+        try conflation_sample.conflationPayload(a, prng.random(), 2),
     };
     var stream: std.ArrayList(u8) = .empty;
     for (payloads) |payload| try stream.appendSlice(a, try segment(a, payload));
@@ -439,8 +385,8 @@ test "a conflation whose blocks differ from the published ones is rejected" {
     const a = arena.allocator();
     var prng = std.Random.DefaultPrng.init(2027);
 
-    const published = try conflationPayload(a, prng.random(), 2);
-    const claimed = try conflationPayload(a, prng.random(), 2);
+    const published = try conflation_sample.conflationPayload(a, prng.random(), 2);
+    const claimed = try conflation_sample.conflationPayload(a, prng.random(), 2);
     const calldata = calldataChunk(try segment(a, published));
 
     try expectRejected(error.PayloadMismatch, &.{calldata}, &.{claimed}, .{});
@@ -718,11 +664,11 @@ test "each segment starts with a nonzero length that stays inside the stream" {
     const frame = try compressFrame(a, payload_1, .{});
 
     try expectRejected(error.MissingSegmentLength, &.{calldataChunk(&.{ 0x00, 0x01 })}, &.{payload_1}, .{});
-    try expectRejected(error.InvalidSegmentLength, &.{calldataChunk(try lengthPrefixed(a, &.{}))}, &.{payload_1}, .{});
-    const too_long = try lengthPrefixed(a, frame);
+    try expectRejected(error.InvalidSegmentLength, &.{calldataChunk(try da_stream.lengthPrefixed(a, &.{}))}, &.{payload_1}, .{});
+    const too_long = try da_stream.lengthPrefixed(a, frame);
     std.mem.writeInt(u32, too_long[0..4], @intCast(frame.len + 1), .big);
     try expectRejected(error.InvalidSegmentLength, &.{calldataChunk(too_long)}, &.{payload_1}, .{});
-    const huge = try lengthPrefixed(a, frame);
+    const huge = try da_stream.lengthPrefixed(a, frame);
     std.mem.writeInt(u32, huge[0..4], std.math.maxInt(u32), .big);
     try expectRejected(error.InvalidSegmentLength, &.{calldataChunk(huge)}, &.{payload_1}, .{});
 }
@@ -753,7 +699,7 @@ test "each segment is one complete frame" {
         &window_2_28_frame,
     };
     for (rejected_frames) |rejected| {
-        try expectRejected(error.InvalidFrame, &.{calldataChunk(try lengthPrefixed(a, rejected))}, &.{payload_1}, .{});
+        try expectRejected(error.InvalidFrame, &.{calldataChunk(try da_stream.lengthPrefixed(a, rejected))}, &.{payload_1}, .{});
     }
 }
 
@@ -767,7 +713,7 @@ test "a frame compressed against another dictionary is rejected" {
     std.mem.writeInt(u32, other[4..8], std.mem.readInt(u32, dictionary[4..8], .little) ^ 1, .little);
     const frame = try compressFrame(a, payload_1, .{ .dictionary = other });
 
-    try expectRejected(error.InvalidFrame, &.{calldataChunk(try lengthPrefixed(a, frame))}, &.{payload_1}, .{});
+    try expectRejected(error.InvalidFrame, &.{calldataChunk(try da_stream.lengthPrefixed(a, frame))}, &.{payload_1}, .{});
 }
 
 test "a frame has to decompress to its conflation's canonical payload" {

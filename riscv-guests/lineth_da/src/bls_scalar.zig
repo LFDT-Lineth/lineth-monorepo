@@ -132,10 +132,6 @@ pub const Fr = struct {
         return (self.limbs[0] | self.limbs[1] | self.limbs[2] | self.limbs[3]) == 0;
     }
 
-    pub fn eql(self: Fr, other: Fr) bool {
-        return std.mem.eql(u64, &self.limbs, &other.limbs);
-    }
-
     pub fn add(self: Fr, other: Fr) Fr {
         var sum: Limbs = undefined;
         var carry: u1 = 0;
@@ -166,10 +162,6 @@ pub const Fr = struct {
             carry = first[1] | second[1];
         }
         return .{ .limbs = difference };
-    }
-
-    pub fn negate(self: Fr) Fr {
-        return zero.sub(self);
     }
 
     pub fn mul(self: Fr, other: Fr) Fr {

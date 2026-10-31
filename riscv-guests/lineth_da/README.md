@@ -48,7 +48,7 @@ const payload = try encoding.truncation.encodeBlocks(allocator, &.{block}); // t
 
 **`rolling_hash`** is the dataRollingHash fold, `keccak256(parent ‖ chunkHash)`, with the opening of the boundary preimage for a range that starts inside a chunk.
 
-**`blob_kzg`** verifies an EIP-4844 blob proof without recomputing the commitment: the versioned hash of the commitment (`versionedHash`), the Fiat-Shamir challenge `z` (`computeChallenge`), the blob polynomial's value `y` at `z` by the barycentric formula over the bit-reversed 4096th roots of unity (`evaluate`) and the point-evaluation check of (commitment, `z`, `y`, proof) (`verify`). The field arithmetic is the `bls_scalar` module (`src/bls_scalar.zig`), built for speed in every build mode but a debug one.
+**`blob_kzg`** verifies an EIP-4844 blob proof without recomputing the commitment: the versioned hash of the commitment (`versionedHash`), the Fiat-Shamir challenge `z` (`computeChallenge`), the blob polynomial's value `y` at `z` by the barycentric formula over the bit-reversed 4096th roots of unity (`evaluate`) and the point-evaluation check of (commitment, `z`, `y`, proof) (`verify`). The field arithmetic is the `bls_scalar` module (`src/bls_scalar.zig`, reachable as `lineth_da.bls_scalar`), optimized in every build mode: ReleaseFast, and ReleaseSafe in a Debug build.
 
 ## `decompress`
 
@@ -82,17 +82,19 @@ for (verified.blobs) |opening| {
 ```bash
 make -C lineth_da test      # native unit tests
 make -C lineth_da compile   # statically-linked rv64im smoke ELFs at zig-out/bin/{zstd,blob,truncation,decompress}_smoke
-make -C lineth_da exec      # compress README.md with the dictionary, then decompress it under the ZkC interpreter
-make -C lineth_da exec SMOKE=blob INPUT=blob.ssz # verify a blob proof under the ZkC interpreter
-make -C lineth_da exec SMOKE=decompress          # verify a one-blob DA stream of README.md under the ZkC interpreter
+make -C lineth_da exec      # compress a sample conflation payload with the dictionary, then decompress it under the ZkC interpreter
+make -C lineth_da exec SMOKE=blob       # verify the proof of a blob of the official reference vectors under the ZkC interpreter
+make -C lineth_da exec SMOKE=decompress # verify a one-blob DA stream of the sample payload under the ZkC interpreter
 ```
 
 The smoke guests (`test/smoke/`) run one part of the package on the guest target; linking one proves its freestanding object needs no symbol the guest does not define. `zig build -Dsmoke=<name>` links one of them.
 
-- `zstd_smoke` reads a frame with `read_input`, decompresses it against the embedded dictionary and publishes the decompressed bytes through `write_output`; it exits with 0 on success and with 2 to 8 for the `zstd.Error` category. `compress_frame <payload-in> <frame-out> [level]` (`tools/`) produces its input.
-- `blob_smoke` reads the 48-byte commitment, the 48-byte proof and the 131072-byte blob, verifies the proof and publishes the versioned hash; it exits with 0 on success, 2 for an input of the wrong size and 3 for a proof that does not verify.
-- `decompress_smoke` reads the parent dataRollingHash, one conflation's canonical payload and one chunk (a blob or calldata), verifies the stream and publishes the end dataRollingHash and the unconsumed tail count; it exits with 0 on success, 2 for malformed input and with 3 to 9 for the `decompress.Error` category. `da_sample <payload-in> <input-out> [blob|calldata]` (`tools/`) produces its input: the payload compressed against the dictionary, published in one chunk whose commitment is a stand-in derived from the segment.
+- `zstd_smoke` reads a frame with `read_input`, decompresses it against the embedded dictionary and publishes the decompressed bytes through `write_output`; it exits with 0 on success and with 2 to 8 for the `zstd.Error` category. `compress_frame <frame-out> [<payload-in> [level]]` (`tools/`) produces its input.
+- `blob_smoke` reads the 48-byte commitment, the 48-byte proof and the 131072-byte blob, verifies the proof and publishes the versioned hash; it exits with 0 on success, 2 for an input of the wrong size and 3 for a proof that does not verify. `blob_sample <input-out>` (`tools/`) produces its input: a case of the official EIP-4844 reference vectors (c-kzg-4844 v2.1.5) whose proof verifies.
+- `decompress_smoke` reads the parent dataRollingHash, one conflation's canonical payload and one chunk (a blob or calldata), verifies the stream and publishes the end dataRollingHash and the unconsumed tail count; it exits with 0 on success, 2 for malformed input and with 3 to 9 for the `decompress.Error` category. `da_sample <input-out> [blob|calldata [<payload-in>]]` (`tools/`) produces its input: the payload compressed against the dictionary, published in one chunk. The commitment and the proof of a blob chunk are stand-ins derived from the segment, which only the chunk binding reads.
 - `truncation_smoke` reads a chain ID as 8 big-endian bytes and a full block's RLP, truncates the block, round-trips the encoded payload through the blob packing and publishes the block hash, the parent hash and the payload; it exits with 0 on success and with 2 to 6 for its failure categories.
+
+Without a `payload-in` file, `compress_frame` and `da_sample` take the canonical payload of a fixed conflation of three signed blocks.
 
 `truncate_block <chain-id> <block-rlp-file>...` (`tools/`) prints the truncation of full blocks as `ok <timestamp> <block-hash> <parent-hash> <prev-randao> <payload>` lines.
 

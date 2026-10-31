@@ -1,6 +1,8 @@
 const std = @import("std");
 
-const bls_scalar = @import("bls_scalar");
+const lineth_da = @import("lineth_da");
+
+const bls_scalar = lineth_da.bls_scalar;
 
 const Fr = bls_scalar.Fr;
 
@@ -88,7 +90,7 @@ test "addition, subtraction, negation and multiplication agree with integer arit
             try std.testing.expectEqual(@as(u256, @intCast((@as(u512, a) + modulus - b) % modulus)), valueOf(fa.sub(fb)));
             try std.testing.expectEqual(mulMod(a, b), valueOf(fa.mul(fb)));
         }
-        try std.testing.expectEqual(@as(u256, @intCast((modulus - a) % modulus)), valueOf(element(a).negate()));
+        try std.testing.expectEqual(@as(u256, @intCast((modulus - a) % modulus)), valueOf(Fr.zero.sub(element(a))));
         try std.testing.expectEqual(mulMod(a, a), valueOf(element(a).square()));
     }
 }
@@ -104,8 +106,8 @@ test "zero and one are the additive and multiplicative identities" {
     try std.testing.expect(!Fr.one.isZero());
     try std.testing.expectEqual(@as(u256, 1), valueOf(Fr.one));
     const a = element(0x1234567890abcdef);
-    try std.testing.expect(a.add(Fr.zero).eql(a));
-    try std.testing.expect(a.mul(Fr.one).eql(a));
+    try std.testing.expectEqual(valueOf(a), valueOf(a.add(Fr.zero)));
+    try std.testing.expectEqual(valueOf(a), valueOf(a.mul(Fr.one)));
     try std.testing.expect(a.sub(a).isZero());
 }
 
@@ -116,7 +118,7 @@ test "powers agree with integer exponentiation" {
         const exponent = prng.random().int(u256);
         try std.testing.expectEqual(powMod(base, exponent), valueOf(element(base).pow(exponent)));
     }
-    try std.testing.expect(element(5).pow(0).eql(Fr.one));
+    try std.testing.expectEqual(@as(u256, 1), valueOf(element(5).pow(0)));
 }
 
 test "the inverse multiplies to one, and zero has none" {
@@ -125,7 +127,7 @@ test "the inverse multiplies to one, and zero has none" {
     samples(prng.random(), &values);
     for (values) |value| {
         if (value == 0) continue;
-        try std.testing.expect(element(value).mul(element(value).inverse()).eql(Fr.one));
+        try std.testing.expectEqual(@as(u256, 1), valueOf(element(value).mul(element(value).inverse())));
     }
     try std.testing.expect(Fr.zero.inverse().isZero());
 }
@@ -134,6 +136,6 @@ test "7 generates the 4096th roots of unity the blob domain uses" {
     // 7 is a non-residue, so its power of (r - 1) / 4096 has the full order 4096: it is a root of
     // unity whose 2048th power is -1.
     const root = Fr.fromInt(7).pow((modulus - 1) / 4096);
-    try std.testing.expect(root.pow(4096).eql(Fr.one));
-    try std.testing.expect(root.pow(2048).eql(Fr.one.negate()));
+    try std.testing.expectEqual(@as(u256, 1), valueOf(root.pow(4096)));
+    try std.testing.expectEqual(modulus - 1, valueOf(root.pow(2048)));
 }
