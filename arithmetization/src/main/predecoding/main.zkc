@@ -1,6 +1,7 @@
 include "predecoding.zkc"
 include "read_instruction.zkc"
 include "executable_region.zkc"
+include "proof_section.zkc"
 include "../common/type.zkc"
 include "../common/inputs.zkc"
 
