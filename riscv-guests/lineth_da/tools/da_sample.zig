@@ -6,8 +6,7 @@
 //! The payload is the file `payload-in`, or the canonical payload of a fixed sample conflation. The
 //! segment is the payload compressed against the package dictionary behind a 4-byte length prefix.
 //! A blob chunk packs it into a blob, anchored by the versioned hash of a commitment derived from
-//! the segment: the commitment and the proof are stand-ins that only the chunk binding reads, so
-//! the blob's KZG proof does not verify.
+//! the segment: the commitment and the proof are stand-ins that only the chunk binding reads.
 
 const std = @import("std");
 

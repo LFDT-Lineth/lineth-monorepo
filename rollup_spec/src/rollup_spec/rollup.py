@@ -282,7 +282,7 @@ def _validate_zstd_frame(zstd_frame: bytes, canonical_payload: bytes) -> None:
     Check that a segment's zstd frame decompresses, with the program's dictionary, exactly to its canonical payload.
 
     The declared window is at most `ZSTD_MAX_WINDOW_SIZE`. A frame without content size has a window
-    covering its whole content, so that no decoder discards output a match may still reach.
+    covering its whole content, so that every decoder keeps all the output a match can reach.
     """
     try:
         parameters = zstd.get_frame_parameters(zstd_frame)
