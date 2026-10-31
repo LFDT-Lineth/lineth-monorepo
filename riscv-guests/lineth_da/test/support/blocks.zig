@@ -1,10 +1,12 @@
 //! Signed transactions and Amsterdam blocks, described field by field and encoded with the test-side
-//! RLP encoder, together with the signature-stripped form of each transaction.
+//! RLP encoder, together with the signature-stripped form of each transaction. A header's
+//! transactions root is the empty list's unless `withTransactions` sets it.
 
 const std = @import("std");
 
 const rlp = @import("rlp.zig");
 const secp256k1 = @import("secp256k1.zig");
+const trie = @import("trie.zig");
 
 const Allocator = std.mem.Allocator;
 const Item = rlp.Item;
@@ -28,19 +30,20 @@ pub const Authorization = struct {
 
 pub const Kind = enum(u8) { legacy = 0, access_list = 1, fee_market = 2, blob = 3, set_code = 4 };
 
-/// A transaction without its signature and chain ID.
+/// A transaction without its signature and chain ID. The integers are written as given, whatever
+/// their width.
 pub const Tx = struct {
     kind: Kind,
-    nonce: u64,
+    nonce: u256,
     /// The gas price of a legacy or access-list transaction, the max fee per gas of the others.
-    gas_price: u128,
-    max_priority_fee_per_gas: u128 = 0,
-    gas_limit: u64,
+    gas_price: u256,
+    max_priority_fee_per_gas: u256 = 0,
+    gas_limit: u256,
     to: ?Address,
     value: u256,
     data: []const u8,
     access_list: []const AccessListEntry = &.{},
-    max_fee_per_blob_gas: u128 = 0,
+    max_fee_per_blob_gas: u256 = 0,
     blob_hashes: []const Hash = &.{},
     authorizations: []const Authorization = &.{},
 };
@@ -187,7 +190,7 @@ pub const Header = struct {
     ommers_hash: Hash = @splat(0x12),
     coinbase: Address = @splat(0x13),
     state_root: Hash = @splat(0x14),
-    transactions_root: Hash = @splat(0x15),
+    transactions_root: Hash = trie.empty_root,
     receipts_root: Hash = @splat(0x16),
     logs_bloom: [256]u8 = @splat(0x17),
     difficulty: u256 = 0,
@@ -207,6 +210,25 @@ pub const Header = struct {
     block_access_list_hash: Hash = @splat(0x1c),
     slot_number: u64 = 5,
 };
+
+/// What the transactions trie holds for an entry of a block's transaction list: a legacy transaction's
+/// own list or a typed transaction's envelope.
+pub fn wireForm(allocator: Allocator, transaction: Item) Allocator.Error![]const u8 {
+    return switch (transaction) {
+        .string => |envelope| envelope,
+        .raw => |bytes| bytes,
+        .list => rlp.encode(allocator, transaction),
+    };
+}
+
+/// `header` with the transactions root of `transactions`, the entries of a block's transaction list.
+pub fn withTransactions(allocator: Allocator, header: Header, transactions: []const Item) Allocator.Error!Header {
+    const wire = try allocator.alloc([]const u8, transactions.len);
+    for (transactions, wire) |transaction, *slot| slot.* = try wireForm(allocator, transaction);
+    var committed = header;
+    committed.transactions_root = try trie.listRoot(allocator, wire);
+    return committed;
+}
 
 pub fn headerItems(allocator: Allocator, header: Header) Allocator.Error![]Item {
     return items(allocator, 23, .{
@@ -304,15 +326,15 @@ pub fn randomTx(allocator: Allocator, random: std.Random, kind: Kind) Allocator.
     return .{
         .kind = kind,
         .nonce = random.int(u64) >> random.uintLessThan(u6, 63),
-        .gas_price = @truncate(randomInt(random, 16)),
-        .max_priority_fee_per_gas = @truncate(randomInt(random, 16)),
+        .gas_price = randomInt(random, 16),
+        .max_priority_fee_per_gas = randomInt(random, 16),
         .gas_limit = random.int(u64) >> random.uintLessThan(u6, 40),
         // Blob and set-code transactions have a destination.
         .to = if (kind == .blob or kind == .set_code or random.boolean()) randomBytes(Address, random) else null,
         .value = randomInt(random, 32),
         .data = data,
         .access_list = entries,
-        .max_fee_per_blob_gas = @truncate(randomInt(random, 16)),
+        .max_fee_per_blob_gas = randomInt(random, 16),
         .blob_hashes = blob_hashes,
         .authorizations = authorizations,
     };

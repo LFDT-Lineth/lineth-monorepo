@@ -40,9 +40,9 @@ fn truncate(arena: Allocator, block_rlp: []const u8, chain: u64) !truncation.Tru
 
 const chain_id = 59144;
 
-/// The one-transaction block of `item` under the default header.
+/// The block whose transaction list is `transactions`, under the default header committing to them.
 fn blockOf(arena: Allocator, transactions: []const Item) ![]u8 {
-    return blocks.block(arena, .{}, transactions, &.{});
+    return blocks.block(arena, try blocks.withTransactions(arena, .{}, transactions), transactions, &.{});
 }
 
 // The transactions of the hand-derived vectors, with the stripped form worked out by hand from
@@ -257,6 +257,19 @@ test "typed transactions commit to their own chain ID and unprotected legacy one
     try std.testing.expectError(error.SenderRecoveryFailed, truncate(a, protected, 1));
 }
 
+/// `presented` under the signature of `signing`: what a sender publishes who signed the one and
+/// presents the other.
+fn presentedWithSignatureOf(a: Allocator, signing: blocks.Tx, presented: blocks.Tx, secret: [32]u8) !Item {
+    const digest = try blocks.signingDigest(a, signing, chain_id, true);
+    const signature = secp256k1.sign(secret, digest);
+    const v: u256 = if (signing.kind == .legacy) @as(u256, chain_id) * 2 + 35 + signature.recovery_id else signature.recovery_id;
+    return blocks.withSignature(a, presented, chain_id, .{
+        .v = v,
+        .r = std.mem.readInt(u256, &signature.r, .big),
+        .s = std.mem.readInt(u256, &signature.s, .big),
+    });
+}
+
 test "a transaction's sender is bound to its signed content" {
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
@@ -265,16 +278,9 @@ test "a transaction's sender is bound to its signed content" {
 
     // The signature of one transaction on another: whoever recovers is not the signer.
     for ([_]blocks.Tx{ legacy_tx, fee_market_tx }) |tx| {
-        const digest = try blocks.signingDigest(a, tx, chain_id, true);
-        const signature = secp256k1.sign(secret, digest);
         var other = tx;
         other.nonce += 1;
-        const v: u256 = if (tx.kind == .legacy) @as(u256, chain_id) * 2 + 35 + signature.recovery_id else signature.recovery_id;
-        const forged = try blocks.withSignature(a, other, chain_id, .{
-            .v = v,
-            .r = std.mem.readInt(u256, &signature.r, .big),
-            .s = std.mem.readInt(u256, &signature.s, .big),
-        });
+        const forged = try presentedWithSignatureOf(a, tx, other, secret);
         const truncated = truncate(a, try blockOf(a, &.{forged}), chain_id) catch |err| {
             try std.testing.expect(err == error.SenderRecoveryFailed);
             continue;
@@ -333,6 +339,28 @@ test "the payload of truncated blocks has the specified RLP layout" {
     defer gpa.free(payload);
     try std.testing.expectEqualSlices(u8, &expected, payload);
 
+    // Two blocks, the second with a long transaction (a string past 55 bytes), two transactions and
+    // two senders: a sibling entry after the first, a long block entry and a long list of blocks.
+    const two_blocks = [_]truncation.TruncatedBlock{ one_block[0], .{
+        .timestamp = 1,
+        .block_hash = hex("dd" ** 32),
+        .parent_hash = hex("00" ** 32),
+        .prev_randao = hex("ee" ** 32),
+        .transactions = &.{ lit("03"), lit("07" ** 56) },
+        .froms = &.{ hex("f1" ** 20), hex("f2" ** 20) },
+    } };
+    const expected_two = hex("f90110" ++ // the list of blocks: 272 bytes
+        "f861" ++ "846553f100" ++ "a0" ++ "aa" ** 32 ++ "a0" ++ "bb" ** 32 ++ "c3820102" ++ "d5" ++ "94" ++ "cc" ** 20 ++ // the first block
+        "f8ab" ++ // the second block: 171 bytes
+        "01" ++ // timestamp
+        "a0" ++ "dd" ** 32 ++ // block hash
+        "a0" ++ "ee" ** 32 ++ // prevRandao
+        "f83b" ++ "03" ++ "b838" ++ "07" ** 56 ++ // transactions: the byte 03 and a string of 56 bytes
+        "ea" ++ "94" ++ "f1" ** 20 ++ "94" ++ "f2" ** 20); // froms: two addresses
+    const payload_two = try truncation.encodeBlocks(gpa, &two_blocks);
+    defer gpa.free(payload_two);
+    try std.testing.expectEqualSlices(u8, &expected_two, payload_two);
+
     const none = try truncation.encodeBlocks(gpa, &.{});
     defer gpa.free(none);
     try std.testing.expectEqualSlices(u8, lit("c0"), none);
@@ -381,8 +409,14 @@ test "the payload of a block is its truncation encoded" {
 const Expected = struct {
     stripped: []const []const u8,
     froms: []const [20]u8,
-    payload: []const u8,
+    /// The block's entry of the payload: `[timestamp, blockHash, prevRandao, [transaction…], [from…]]`.
+    entry: Item,
 };
+
+/// The payload of a conflation whose blocks have the entries `entries`.
+fn payloadOf(a: Allocator, entries: []const Item) ![]u8 {
+    return rlp.encode(a, rlp.list(entries));
+}
 
 fn expectedOf(a: Allocator, header: blocks.Header, txs: []const blocks.Tx, secrets: []const [32]u8) !Expected {
     const stripped = try a.alloc([]const u8, txs.len);
@@ -396,18 +430,14 @@ fn expectedOf(a: Allocator, header: blocks.Header, txs: []const blocks.Tx, secre
         from_items[i] = rlp.string(&froms[i]);
     }
     const hash = try blocks.blockHash(a, header);
-    const entry = [_]Item{
+    const entry = try a.dupe(Item, &.{
         try rlp.int(a, header.timestamp),
-        rlp.string(&hash),
-        rlp.string(&header.prev_randao),
+        rlp.string(try a.dupe(u8, &hash)),
+        rlp.string(try a.dupe(u8, &header.prev_randao)),
         rlp.list(transaction_items),
         rlp.list(from_items),
-    };
-    return .{
-        .stripped = stripped,
-        .froms = froms,
-        .payload = try rlp.encode(a, rlp.list(&.{rlp.list(&entry)})),
-    };
+    });
+    return .{ .stripped = stripped, .froms = froms, .entry = rlp.list(entry) };
 }
 
 test "random blocks truncate to what their fields and signers say" {
@@ -421,35 +451,42 @@ test "random blocks truncate to what their fields and signers say" {
         const a = arena.allocator();
 
         const chain = 1 + (random.int(u64) >> random.uintLessThan(u6, 60));
-        const extra = blocks.randomBytes([8]u8, random);
-        const header: blocks.Header = .{
-            .parent_hash = blocks.randomBytes([32]u8, random),
-            .prev_randao = blocks.randomBytes([32]u8, random),
-            .timestamp = random.int(u64) >> random.uintLessThan(u6, 40),
-            .number = random.int(u64) >> random.uintLessThan(u6, 40),
-            .extra_data = try a.dupe(u8, &extra),
-        };
+        const block_count = 1 + random.uintLessThan(usize, 4);
+        const truncated_blocks = try a.alloc(truncation.TruncatedBlock, block_count);
+        const entries = try a.alloc(Item, block_count);
+        for (truncated_blocks, entries) |*truncated, *entry| {
+            const extra = blocks.randomBytes([8]u8, random);
+            const header: blocks.Header = .{
+                .parent_hash = blocks.randomBytes([32]u8, random),
+                .prev_randao = blocks.randomBytes([32]u8, random),
+                .timestamp = random.int(u64) >> random.uintLessThan(u6, 40),
+                .number = random.int(u64) >> random.uintLessThan(u6, 40),
+                .extra_data = try a.dupe(u8, &extra),
+            };
 
-        const count = random.uintLessThan(usize, 8);
-        const txs = try a.alloc(blocks.Tx, count);
-        const secrets = try a.alloc([32]u8, count);
-        const items = try a.alloc(Item, count);
-        for (txs, secrets, items) |*tx, *secret, *item| {
-            tx.* = try blocks.randomTx(a, random, kinds[random.uintLessThan(usize, kinds.len)]);
-            secret.* = secretKey(random.uintLessThan(u8, 5));
-            item.* = try blocks.signed(a, tx.*, chain, secret.*);
+            const count = random.uintLessThan(usize, 8);
+            const txs = try a.alloc(blocks.Tx, count);
+            const secrets = try a.alloc([32]u8, count);
+            const items = try a.alloc(Item, count);
+            for (txs, secrets, items) |*tx, *secret, *item| {
+                tx.* = try blocks.randomTx(a, random, kinds[random.uintLessThan(usize, kinds.len)]);
+                secret.* = secretKey(random.uintLessThan(u8, 5));
+                item.* = try blocks.signed(a, tx.*, chain, secret.*);
+            }
+
+            const committed = try blocks.withTransactions(a, header, items);
+            truncated.* = try truncate(a, try blocks.block(a, committed, items, &.{}), chain);
+            const expected = try expectedOf(a, committed, txs, secrets);
+
+            try std.testing.expectEqual(header.timestamp, truncated.timestamp);
+            try std.testing.expectEqualSlices(u8, &header.parent_hash, &truncated.parent_hash);
+            try std.testing.expectEqualSlices(u8, &header.prev_randao, &truncated.prev_randao);
+            try std.testing.expectEqual(count, truncated.transactions.len);
+            for (expected.stripped, truncated.transactions) |want, got| try std.testing.expectEqualSlices(u8, want, got);
+            for (expected.froms, truncated.froms) |want, got| try std.testing.expectEqualSlices(u8, &want, &got);
+            entry.* = expected.entry;
         }
-
-        const truncated = try truncate(a, try blocks.block(a, header, items, &.{}), chain);
-        const expected = try expectedOf(a, header, txs, secrets);
-
-        try std.testing.expectEqual(header.timestamp, truncated.timestamp);
-        try std.testing.expectEqualSlices(u8, &header.parent_hash, &truncated.parent_hash);
-        try std.testing.expectEqualSlices(u8, &header.prev_randao, &truncated.prev_randao);
-        try std.testing.expectEqual(count, truncated.transactions.len);
-        for (expected.stripped, truncated.transactions) |want, got| try std.testing.expectEqualSlices(u8, want, got);
-        for (expected.froms, truncated.froms) |want, got| try std.testing.expectEqualSlices(u8, &want, &got);
-        try std.testing.expectEqualSlices(u8, expected.payload, try truncation.encodeBlocks(a, &.{truncated}));
+        try std.testing.expectEqualSlices(u8, try payloadOf(a, entries), try truncation.encodeBlocks(a, truncated_blocks));
     }
 }
 
@@ -495,10 +532,10 @@ test "large blocks keep the transactions and senders in order" {
         item.* = try blocks.signed(a, tx.*, chain_id, secret.*);
     }
     const truncated = try truncate(a, try blockOf(a, items), chain_id);
-    const expected = try expectedOf(a, .{}, txs, secrets);
+    const expected = try expectedOf(a, try blocks.withTransactions(a, .{}, items), txs, secrets);
     for (expected.stripped, truncated.transactions) |want, got| try std.testing.expectEqualSlices(u8, want, got);
     for (expected.froms, truncated.froms) |want, got| try std.testing.expectEqualSlices(u8, &want, &got);
-    try std.testing.expectEqualSlices(u8, expected.payload, try truncation.encodeBlocks(a, &.{truncated}));
+    try std.testing.expectEqualSlices(u8, try payloadOf(a, &.{expected.entry}), try truncation.encodeBlocks(a, &.{truncated}));
 }
 
 // Malformed blocks. Each starts from a well-formed block and alters one thing.
@@ -622,4 +659,208 @@ test "malformed transactions are rejected" {
     creation.to = null;
     const created = try truncate(a, try blockOf(a, &.{try blocks.signed(a, creation, chain_id, secret)}), chain_id);
     try std.testing.expectEqualSlices(u8, try blocks.stripped(a, creation), created.transactions[0]);
+}
+
+// Fields wider than the integers they are held in.
+
+const Field = enum { nonce, gas_limit, gas_price, max_priority_fee_per_gas, max_fee_per_blob_gas };
+
+fn withField(tx: blocks.Tx, field: Field, value: u256) blocks.Tx {
+    var out = tx;
+    switch (field) {
+        .nonce => out.nonce = value,
+        .gas_limit => out.gas_limit = value,
+        .gas_price => out.gas_price = value,
+        .max_priority_fee_per_gas => out.max_priority_fee_per_gas = value,
+        .max_fee_per_blob_gas => out.max_fee_per_blob_gas = value,
+    }
+    return out;
+}
+
+const max_u64: u256 = std.math.maxInt(u64);
+const max_u128: u256 = std.math.maxInt(u128);
+
+/// A field of a transaction with the largest value the guest decodes for it.
+const bounded_fields = [_]struct { tx: blocks.Tx, field: Field, largest: u256 }{
+    .{ .tx = legacy_tx, .field = .nonce, .largest = max_u64 },
+    .{ .tx = legacy_tx, .field = .gas_limit, .largest = max_u64 },
+    .{ .tx = legacy_tx, .field = .gas_price, .largest = max_u128 },
+    .{ .tx = access_list_tx, .field = .nonce, .largest = max_u64 },
+    .{ .tx = access_list_tx, .field = .gas_price, .largest = max_u128 },
+    .{ .tx = fee_market_tx, .field = .nonce, .largest = max_u64 },
+    .{ .tx = fee_market_tx, .field = .gas_limit, .largest = max_u64 },
+    .{ .tx = fee_market_tx, .field = .gas_price, .largest = max_u128 },
+    .{ .tx = fee_market_tx, .field = .max_priority_fee_per_gas, .largest = max_u128 },
+    .{ .tx = blob_tx, .field = .nonce, .largest = max_u64 },
+    .{ .tx = blob_tx, .field = .max_priority_fee_per_gas, .largest = max_u128 },
+    .{ .tx = blob_tx, .field = .max_fee_per_blob_gas, .largest = max_u128 },
+    .{ .tx = set_code_tx, .field = .nonce, .largest = max_u64 },
+    .{ .tx = set_code_tx, .field = .gas_price, .largest = max_u128 },
+};
+
+test "the largest nonce, gas and fees the guest decodes are accepted with their stripped form" {
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    const a = arena.allocator();
+    const secret = secretKey(60);
+
+    for (bounded_fields) |case| {
+        const tx = withField(case.tx, case.field, case.largest);
+        const truncated = try truncate(a, try blockOf(a, &.{try blocks.signed(a, tx, chain_id, secret)}), chain_id);
+        try std.testing.expectEqualSlices(u8, try blocks.stripped(a, tx), truncated.transactions[0]);
+        try std.testing.expectEqualSlices(u8, &secp256k1.addressOf(secret), &truncated.froms[0]);
+    }
+}
+
+test "a field one bit wider than the guest decodes is rejected, whatever the signature covers" {
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    const a = arena.allocator();
+    const secret = secretKey(61);
+
+    for (bounded_fields) |case| {
+        const widest = withField(case.tx, case.field, case.largest);
+        const wider = withField(case.tx, case.field, case.largest + 1);
+        // Signed over its own fields.
+        try std.testing.expectError(error.MalformedBlock, truncate(a, try blockOf(a, &.{try blocks.signed(a, wider, chain_id, secret)}), chain_id));
+        // Signed over the largest value the field can hold, which a clamping decoder would take it for.
+        const lookalike = try presentedWithSignatureOf(a, widest, wider, secret);
+        try std.testing.expectError(error.MalformedBlock, truncate(a, try blockOf(a, &.{lookalike}), chain_id));
+    }
+}
+
+test "a blob transaction without blobs is rejected" {
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    const a = arena.allocator();
+    const secret = secretKey(62);
+
+    var no_blobs = blob_tx;
+    no_blobs.blob_hashes = &.{};
+    try std.testing.expectError(error.MalformedBlock, truncate(a, try blockOf(a, &.{try blocks.signed(a, no_blobs, chain_id, secret)}), chain_id));
+    no_blobs.max_fee_per_blob_gas = 0;
+    try std.testing.expectError(error.MalformedBlock, truncate(a, try blockOf(a, &.{try blocks.signed(a, no_blobs, chain_id, secret)}), chain_id));
+}
+
+test "a transaction that is not in its canonical wire form is rejected" {
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    const a = arena.allocator();
+    const secret = secretKey(63);
+
+    // A legacy transaction carried as a byte string, and bytes after a typed transaction's body.
+    const legacy_bytes = try rlp.encode(a, try blocks.signed(a, legacy_tx, chain_id, secret));
+    try std.testing.expectError(error.MalformedBlock, truncate(a, try blockOf(a, &.{rlp.string(legacy_bytes)}), chain_id));
+    const typed_envelope = (try blocks.signed(a, fee_market_tx, chain_id, secret)).string;
+    const with_trailing = try std.mem.concat(a, u8, &.{ typed_envelope, "junk" });
+    try std.testing.expectError(error.MalformedBlock, truncate(a, try blockOf(a, &.{rlp.string(with_trailing)}), chain_id));
+}
+
+// Blocks whose body is not the one the header commits to.
+
+test "the transactions of a block are the ones its header commits to" {
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    const a = arena.allocator();
+    const secret = secretKey(64);
+
+    var tx_items: [3]Item = undefined;
+    for (&tx_items, 0..) |*item, i| {
+        var tx = fee_market_tx;
+        tx.nonce = i;
+        item.* = try blocks.signed(a, tx, chain_id, secret);
+    }
+    // Another transaction by the same signer, never part of the block.
+    var replacement_tx = fee_market_tx;
+    replacement_tx.nonce = 1;
+    replacement_tx.data = lit("ff");
+    const replacement = try blocks.signed(a, replacement_tx, chain_id, secret);
+
+    const committed = [_]Item{ tx_items[0], tx_items[1] };
+    const header = try blocks.withTransactions(a, .{}, &committed);
+    const accepted = try truncate(a, try blocks.block(a, header, &committed, &.{}), chain_id);
+    try std.testing.expectEqual(2, accepted.transactions.len);
+
+    const bodies = [_][]const Item{
+        &.{ tx_items[0], replacement },
+        &.{ tx_items[1], tx_items[0] },
+        &.{tx_items[0]},
+        &.{ tx_items[0], tx_items[1], tx_items[2] },
+        &.{},
+    };
+    for (bodies) |body| {
+        try std.testing.expectError(error.MalformedBlock, truncate(a, try blocks.block(a, header, body, &.{}), chain_id));
+    }
+    // A header with no transactions commits to the empty list only.
+    try std.testing.expectError(error.MalformedBlock, truncate(a, try blocks.block(a, .{}, &committed, &.{}), chain_id));
+}
+
+// The chain ID.
+
+test "a chain ID of zero is rejected" {
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    const a = arena.allocator();
+    const secret = secretKey(65);
+
+    // Under chain ID 0 an EIP-155 signature would commit to the chain ID in its pre-image.
+    const blocks_under_zero = [_][]const u8{
+        try blockOf(a, &.{try blocks.signed(a, legacy_tx, 0, secret)}),
+        try blockOf(a, &.{try blocks.signedUnprotected(a, legacy_tx, secret)}),
+        try blockOf(a, &.{try blocks.signed(a, fee_market_tx, 0, secret)}),
+        try blockOf(a, &.{}),
+    };
+    for (blocks_under_zero) |block| {
+        try std.testing.expectError(error.SenderRecoveryFailed, truncate(a, block, 0));
+    }
+}
+
+// Declared lengths that wrap around.
+
+/// An item whose long-form header declares a payload length of `maxInt(u64) - 8 + excess`: added to
+/// the header, the length wraps around to a small number.
+fn wrappingLength(first: u8, excess: u3) [9]u8 {
+    var item: [9]u8 = undefined;
+    item[0] = first;
+    std.mem.writeInt(u64, item[1..9], std.math.maxInt(u64) - 8 + @as(u64, excess), .big);
+    return item;
+}
+
+test "an item declaring a length that wraps around is rejected wherever it occurs" {
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    const a = arena.allocator();
+    const secret = secretKey(66);
+
+    // The block itself, a header field, a transaction entry, a legacy transaction's data field and
+    // an access-list entry of a typed transaction.
+    const legacy_fields = (try blocks.signed(a, legacy_tx, chain_id, secret)).list;
+    for ([_]u8{ 0xbf, 0xff }) |first| {
+        for (0..8) |excess| {
+            const wrapping = wrappingLength(first, @intCast(excess));
+            const item = rlp.raw(&wrapping);
+
+            try std.testing.expectError(error.MalformedBlock, truncate(a, &wrapping, chain_id));
+            try std.testing.expectError(error.MalformedBlock, truncate(a, try blockWithHeader(a, try headerWith(a, 8, item)), chain_id));
+            try std.testing.expectError(error.MalformedBlock, truncate(a, try blockOf(a, &.{item}), chain_id));
+
+            const nested = try a.dupe(Item, legacy_fields);
+            nested[5] = item;
+            try std.testing.expectError(error.MalformedBlock, truncate(a, try blockOf(a, &.{rlp.list(nested)}), chain_id));
+
+            const typed_fields = [_]Item{
+                try rlp.int(a, 1),
+                try rlp.int(a, 0),
+                try rlp.int(a, 1),
+                try rlp.int(a, 2),
+                try rlp.int(a, 21_000),
+                rlp.string(lit("11" ** 20)),
+                try rlp.int(a, 0),
+                rlp.string(&.{}),
+                rlp.list(&.{item}),
+            };
+            const envelope = try std.mem.concat(a, u8, &.{ lit("02"), try rlp.encode(a, rlp.list(&typed_fields)) });
+            try std.testing.expectError(error.MalformedBlock, truncate(a, try blockOf(a, &.{rlp.string(envelope)}), chain_id));
+        }
+    }
 }

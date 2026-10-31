@@ -405,7 +405,8 @@ fn conflationPayload(a: Allocator, random: std.Random, count: usize) ![]u8 {
         };
         var scratch = std.heap.ArenaAllocator.init(gpa);
         defer scratch.deinit();
-        slot.* = try truncation.truncateBlockRlp(a, scratch.allocator(), try blocks.block(a, header, items, &.{}), chain_id);
+        const committed = try blocks.withTransactions(a, header, items);
+        slot.* = try truncation.truncateBlockRlp(a, scratch.allocator(), try blocks.block(a, committed, items, &.{}), chain_id);
     }
     return truncation.encodeBlocks(a, truncated);
 }

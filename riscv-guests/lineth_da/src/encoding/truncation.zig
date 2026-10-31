@@ -4,7 +4,8 @@
 //! the canonical payload its zstd frame decompresses to.
 //!
 //! Full blocks are Amsterdam blocks: `[header, transactions, ommers, withdrawals]` in canonical
-//! RLP, the encoding ending with the block.
+//! RLP, the encoding ending with the block, and the transactions are the ones the header's
+//! transactions root commits to.
 
 const std = @import("std");
 
@@ -25,10 +26,10 @@ pub const Address = [20]u8;
 
 pub const Error = error{
     OutOfMemory,
-    /// The bytes are not a canonical Amsterdam block, or a transaction in it is not a canonical
-    /// transaction of its type.
+    /// The bytes are not a canonical Amsterdam block, a transaction in it is not a canonical
+    /// transaction of its type, or the transactions are not the ones the header commits to.
     MalformedBlock,
-    /// The sender of a transaction cannot be recovered under the chain ID.
+    /// The sender of a transaction cannot be recovered under the chain ID, which has to be positive.
     SenderRecoveryFailed,
 };
 
@@ -48,6 +49,8 @@ pub const TruncatedBlock = struct {
 /// `scratch` holds what the truncation needs along the way and can be reset afterwards. A
 /// rejection leaves its allocations behind, so both allocators are arenas.
 pub fn truncateBlockRlp(output: Allocator, scratch: Allocator, block_rlp: []const u8, chain_id: u64) Error!TruncatedBlock {
+    // An EIP-155 signature is over a pre-image that commits to a chain ID, which is positive.
+    if (chain_id == 0) return error.SenderRecoveryFailed;
     var block = Reader{ .rest = try singleListPayload(block_rlp) };
     const header = try block.next();
     const transactions_payload = try block.list();
@@ -59,14 +62,26 @@ pub fn truncateBlockRlp(output: Allocator, scratch: Allocator, block_rlp: []cons
     while (!ommers.atEnd()) _ = try parseHeader(try (try ommers.next()).listPayload());
     while (!withdrawals.atEnd()) try parseWithdrawal(try (try withdrawals.next()).listPayload());
 
+    const wire = try wireTransactions(scratch, transactions_payload);
+    const transactions_root = executor.computeRawTxRoot(scratch, wire) catch |err| return decodeFailure(err);
+    if (!std.mem.eql(u8, &transactions_root, &header_fields.transactions_root)) return error.MalformedBlock;
+
     const decoded = rlp_decode.decodeTxList(scratch, transactions_payload) catch |err| return decodeFailure(err);
     const senders_input = tx_decode.decodeTxsFromInput(scratch, decoded) catch |err| return decodeFailure(err);
+    if (decoded.len != wire.len) return error.MalformedBlock;
 
     const stripped = try output.alloc([]const u8, decoded.len);
     const froms = try output.alloc(Address, decoded.len);
-    for (decoded, senders_input, stripped, froms) |tx, tx_input, *stripped_tx, *from| {
-        // Blob and set-code transactions name a destination.
+    for (decoded, senders_input, wire, stripped, froms) |tx, tx_input, wire_tx, *stripped_tx, *from| {
+        // Blob and set-code transactions name a destination, and a blob transaction a blob.
         if (tx.to == null and (tx.tx_type == 3 or tx.tx_type == 4)) return error.MalformedBlock;
+        if (tx.tx_type == 3 and tx.blob_hashes.len == 0) return error.MalformedBlock;
+        // The decoded fields are the transaction's own when they encode back to its bytes.
+        const hash = tx_signing.txHash(scratch, &tx_input, chain_id) catch |err| return decodeFailure(err);
+        var wire_hash: Hash = undefined;
+        accelerators.keccak256(wire_tx, &wire_hash);
+        if (!std.mem.eql(u8, &hash, &wire_hash)) return error.MalformedBlock;
+
         stripped_tx.* = try strippedTransaction(output, scratch, tx);
         // An EIP-155 signature commits to its own chain ID, which has to be the chain's.
         if (tx.tx_type == 0 and tx.chain_id != null and tx.chain_id.? != chain_id) return error.SenderRecoveryFailed;
@@ -167,6 +182,7 @@ fn strippedTransaction(output: Allocator, scratch: Allocator, tx: input.Transact
 
 const HeaderFields = struct {
     parent_hash: Hash,
+    transactions_root: Hash,
     timestamp: u64,
     prev_randao: Hash,
 };
@@ -178,7 +194,7 @@ fn parseHeader(payload: []const u8) Error!HeaderFields {
     _ = try fields.fixed(32); // ommers hash
     _ = try fields.fixed(20); // coinbase
     _ = try fields.fixed(32); // state root
-    _ = try fields.fixed(32); // transactions root
+    const transactions_root = (try fields.fixed(32)).*;
     _ = try fields.fixed(32); // receipts root
     _ = try fields.fixed(256); // logs bloom
     _ = try fields.integer(); // difficulty
@@ -198,7 +214,7 @@ fn parseHeader(payload: []const u8) Error!HeaderFields {
     _ = try fields.fixed(32); // block access list hash
     _ = try fields.unsigned(u64); // slot number
     if (!fields.atEnd()) return error.MalformedBlock;
-    return .{ .parent_hash = parent_hash, .timestamp = timestamp, .prev_randao = prev_randao };
+    return .{ .parent_hash = parent_hash, .transactions_root = transactions_root, .timestamp = timestamp, .prev_randao = prev_randao };
 }
 
 fn parseWithdrawal(payload: []const u8) Error!void {
@@ -208,6 +224,59 @@ fn parseWithdrawal(payload: []const u8) Error!void {
     _ = try fields.fixed(20); // address
     _ = try fields.unsigned(u256); // amount
     if (!fields.atEnd()) return error.MalformedBlock;
+}
+
+/// The lists a transaction nests: its fields, an access list, an access-list entry and its keys.
+const transaction_depth = 4;
+
+/// The wire form of each entry of a body's transaction list, which is what the transactions trie
+/// holds: a legacy transaction's own list, or a typed transaction's type byte and field list.
+/// Every entry is well formed to the depth of a transaction.
+fn wireTransactions(scratch: Allocator, payload: []const u8) Error![]const []const u8 {
+    var wire: std.ArrayList([]const u8) = .empty;
+    var entries = Reader{ .rest = payload };
+    while (!entries.atEnd()) {
+        const entry = try entries.next();
+        const wire_form, const fields = switch (entry.value) {
+            .list => .{ entry.encoded, entry.encoded },
+            .bytes => |envelope| if (envelope.len < 2) return error.MalformedBlock else .{ envelope, envelope[1..] },
+        };
+        if (!wellFormed(fields, transaction_depth)) return error.MalformedBlock;
+        try wire.append(scratch, wire_form);
+    }
+    return wire.items;
+}
+
+/// Whether `bytes` are consecutive RLP items that nest lists to `depth` at most, each declared
+/// length within the bytes that remain.
+fn wellFormed(bytes: []const u8, depth: usize) bool {
+    var rest = bytes;
+    while (rest.len > 0) {
+        if (!itemFits(rest)) return false;
+        const decoded = rlp.decodeItem(rest) catch return false;
+        switch (decoded.item) {
+            .bytes => {},
+            .list => |payload| if (depth == 0 or !wellFormed(payload, depth - 1)) return false,
+        }
+        rest = rest[decoded.consumed..];
+    }
+    return true;
+}
+
+/// Whether the item `bytes` start with, its header and the payload length the header declares,
+/// fits in `bytes`.
+fn itemFits(bytes: []const u8) bool {
+    if (bytes.len == 0) return false;
+    const first = bytes[0];
+    if (first < 0x80) return true;
+    const is_string = first < 0xc0;
+    const last_short: u8 = if (is_string) 0xb7 else 0xf7;
+    if (first <= last_short) return bytes.len - 1 >= first - (if (is_string) @as(u8, 0x80) else 0xc0);
+    const len_len: usize = first - last_short;
+    if (bytes.len - 1 < len_len) return false;
+    var len: u64 = 0;
+    for (bytes[1..][0..len_len]) |byte| len = len << 8 | byte;
+    return len <= bytes.len - 1 - len_len;
 }
 
 /// The payload of `encoded`, which is one list and nothing else.
@@ -244,6 +313,7 @@ const Reader = struct {
     }
 
     fn next(self: *Reader) Error!Item {
+        if (!itemFits(self.rest)) return error.MalformedBlock;
         const decoded = rlp.decodeItemCanonical(self.rest) catch return error.MalformedBlock;
         const encoded = self.rest[0..decoded.consumed];
         self.rest = self.rest[decoded.consumed..];
