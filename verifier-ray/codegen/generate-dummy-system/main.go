@@ -3,7 +3,6 @@
 // statement, and emits:
 //   - testdata/generated/dummy_system.zig: the verifier's compiled system
 //   - testdata/dummy_proof_image.bin: the single proof image relocated for GuestBase
-//   - testdata/dummy_proof_pair_image.bin: the two-proof aggregator pair image relocated for GuestBase
 package main
 
 import (
@@ -20,9 +19,8 @@ import (
 )
 
 const (
-	generatedDummyZigPath       = "../../testdata/generated/dummy_system.zig"
-	generatedDummyProofPath     = "../../testdata/dummy_proof_image.bin"
-	generatedDummyPairProofPath = "../../testdata/dummy_proof_pair_image.bin"
+	generatedDummyZigPath   = "../../testdata/generated/dummy_system.zig"
+	generatedDummyProofPath = "../../testdata/dummy_proof_image.bin"
 )
 
 func main() {
@@ -64,19 +62,6 @@ func run(zigOnly bool) error {
 		return fmt.Errorf("writing %s: %w", generatedDummyProofPath, err)
 	}
 	fmt.Printf("wrote %s (%d bytes)\n", generatedDummyProofPath, len(proofImage))
-
-	pairImage, err := verifierraycodegen.EncodeAggregatorPair(
-		artifacts.VerifyInput,
-		artifacts.VerifyInput,
-		proofserialization.GuestBase,
-	)
-	if err != nil {
-		return fmt.Errorf("encoding aggregator pair image: %w", err)
-	}
-	if err := os.WriteFile(generatedDummyPairProofPath, pairImage, 0o644); err != nil {
-		return fmt.Errorf("writing %s: %w", generatedDummyPairProofPath, err)
-	}
-	fmt.Printf("wrote %s (%d bytes)\n", generatedDummyPairProofPath, len(pairImage))
 	return nil
 }
 

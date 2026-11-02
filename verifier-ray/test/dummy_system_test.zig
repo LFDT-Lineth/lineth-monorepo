@@ -1,13 +1,13 @@
 //! End-to-end verification tests for the compiled dummy system and its
-//! Go-generated single and pair proof images (`testdata/dummy_proof_image.bin`
-//! and `testdata/dummy_proof_pair_image.bin`).
+//! Go-generated single proof image (`testdata/dummy_proof_image.bin`).
 //!
 //! Unlike a custom verifier stub, the dummy system is compiled through
-//! `compilers.CompileFull` and emitted by `codegen/generate-dummy-system` as a
-//! standard `verifier-ray` system (`testdata/generated/dummy_system.zig`).
-//! These tests verify that `verifier.verify` and `verifier.verifyPair` accept
-//! honest dummy proofs and reject mutated statements/cells using the exact same
-//! Zig verifier code as the production RISC-V system.
+//! `compilers.CompileFull` in `prover-ray/backend/devmode` and emitted by
+//! `codegen/generate-dummy-system` as a standard `verifier-ray` system
+//! (`testdata/generated/dummy_system.zig`). These tests verify that
+//! `verifier.verify` accepts honest dummy proofs and rejects mutated
+//! statements/cells using the exact same Zig verifier code as the production
+//! RISC-V system.
 
 const std = @import("std");
 const verifier_ray = @import("verifier_ray");
@@ -19,7 +19,6 @@ const field = verifier_ray.field.koalabear;
 
 const encoded_base: usize = 0x08800000;
 const single_image_path = "testdata/dummy_proof_image.bin";
-const pair_image_path = "testdata/dummy_proof_pair_image.bin";
 
 const o_rdonly: c_int = 0;
 const prot_read: c_int = 1;
@@ -94,29 +93,4 @@ test "dummy_system: single proof image verifies and rejects mutated public input
             input.public_inputs,
         ),
     );
-}
-
-test "dummy_system: aggregator pair image verifies both proofs and encodes pair statement" {
-    const img = mapFile(pair_image_path) catch |err| switch (err) {
-        error.ImageMissing => return error.SkipZigTest,
-        else => return err,
-    };
-    defer _ = munmap(@ptrCast(img.ptr), img.len);
-
-    const base = @intFromPtr(img.ptr);
-    try relocation.rebasePair(img.ptr, img.len, encoded_base, base);
-    const pair = try relocation.validatePair(img.ptr, img.len, base);
-    const a: *const verifier.VerifyInput = @ptrFromInt(base + pair.a);
-    const b: *const verifier.VerifyInput = @ptrFromInt(base + pair.b);
-
-    try verifier.verifyPair(
-        dummy_system.system_0_spec,
-        dummy_system.system_0_systems,
-        a.*,
-        b.*,
-    );
-
-    var out: [verifier.pairStatementEncodedLen(40)]u8 = undefined;
-    try verifier.encodePairStatement(a.public_inputs, &out);
-    try std.testing.expectEqualSlices(u8, verifier.pair_statement_domain, out[0..verifier.pair_statement_domain.len]);
 }

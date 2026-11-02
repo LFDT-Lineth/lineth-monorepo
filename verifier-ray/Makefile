@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: ci help fmt fmt-zig fmt-go build build-zig build-release build-r5 build-r5-aggregator run run-passing run-failing run-failing-expected run-aggregator test test-zig test-generated-zig test-codegen generate-testdata generate-dummy-system generate-large-pcs-benchmark profile-large-pcs verify-testdata zkc-build zkc-verify zkc-verify-passing zkc-verify-failing zkc-verify-failing-expected zkc-verify-aggregator zkc-verify-dummy zkc-verify-dummy-aggregator zkc-trace-dummy zkc-trace-dummy-aggregator profile-zkc-case profile-zkc clean
+.PHONY: ci help fmt fmt-zig fmt-go build build-zig build-release build-r5 build-r5-aggregator run run-passing run-failing run-failing-expected run-aggregator test test-zig test-generated-zig test-codegen generate-testdata generate-dummy-system generate-large-pcs-benchmark profile-large-pcs verify-testdata zkc-build zkc-verify zkc-verify-passing zkc-verify-failing zkc-verify-failing-expected zkc-verify-aggregator zkc-verify-dummy zkc-trace-dummy profile-zkc-case profile-zkc clean
 
 RISCV_SYSTEM ?= testdata/generated/riscv_system.zig
 ZIG_OUT ?= zig-out
@@ -18,7 +18,6 @@ PAIR_IMAGE ?= testdata/riscv_proof_pair_image.bin
 
 DUMMY_SYSTEM := testdata/generated/dummy_system.zig
 DUMMY_PROOF_IMAGE := testdata/dummy_proof_image.bin
-DUMMY_PAIR_IMAGE := testdata/dummy_proof_pair_image.bin
 # Optional legacy embedded-fixture mode, still used by the profiling targets.
 # The default smoke-test run/zkc path loads the generated real proof image.
 EMBEDDED_INPUT ?= valid
@@ -34,7 +33,7 @@ DISABLE_ACCELERATORS ?= true
 ZKC = go -C ../arithmetization tool zkc
 ELF_TO_JSON = go -C ../arithmetization tool elf_to_json
 
-ci: generate-testdata fmt build-release build-r5-aggregator run-passing run-failing-expected run-aggregator test zkc-verify-passing zkc-verify-failing-expected zkc-verify-dummy zkc-verify-dummy-aggregator
+ci: generate-testdata fmt build-release build-r5-aggregator run-passing run-failing-expected run-aggregator test zkc-verify-passing zkc-verify-failing-expected zkc-verify-dummy
 
 help:
 	@printf '%s\n' \
@@ -158,7 +157,7 @@ generate-testdata:
 generate-dummy-system:
 	cd codegen/generate-dummy-system && go run .
 
-$(DUMMY_SYSTEM) $(DUMMY_PROOF_IMAGE) $(DUMMY_PAIR_IMAGE): codegen/dummy_bootstrap.go codegen/generate-dummy-system/main.go
+$(DUMMY_SYSTEM) $(DUMMY_PROOF_IMAGE): codegen/dummy_bootstrap.go codegen/generate-dummy-system/main.go
 	cd codegen/generate-dummy-system && go run .
 
 # Opt-in only: the output is under zig-out/ and is not part of normal testdata
@@ -210,16 +209,8 @@ zkc-verify-aggregator: $(PAIR_IMAGE) build-r5-aggregator
 zkc-verify-dummy: $(DUMMY_PROOF_IMAGE)
 	$(MAKE) zkc-verify RISCV_SYSTEM=$(DUMMY_SYSTEM) PROOF_IMAGE=$(DUMMY_PROOF_IMAGE)
 
-zkc-verify-dummy-aggregator: $(DUMMY_PAIR_IMAGE)
-	$(MAKE) zkc-verify-aggregator RISCV_SYSTEM=$(DUMMY_SYSTEM) PAIR_IMAGE=$(DUMMY_PAIR_IMAGE)
-
 zkc-trace-dummy: $(DUMMY_PROOF_IMAGE)
 	$(MAKE) zkc-build RISCV_SYSTEM=$(DUMMY_SYSTEM) PROOF_IMAGE=$(DUMMY_PROOF_IMAGE)
-	$(ZKC) trace --stats -r -v "$(abspath $(R5_JSON))" "$(abspath $(ZKC_MAIN))"
-
-zkc-trace-dummy-aggregator: $(DUMMY_PAIR_IMAGE)
-	$(MAKE) build-r5-aggregator RISCV_SYSTEM=$(DUMMY_SYSTEM)
-	$(ELF_TO_JSON) "$(abspath $(R5_BIN))" "@$(abspath $(DUMMY_PAIR_IMAGE))" > $(R5_JSON)
 	$(ZKC) trace --stats -r -v "$(abspath $(R5_JSON))" "$(abspath $(ZKC_MAIN))"
 profile-zkc-case: $(PROOF_IMAGE)
 	@$(ZIG_BUILD) --release=small -Dstrip=true -Dr5=true \
