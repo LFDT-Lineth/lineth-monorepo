@@ -93,9 +93,21 @@ func (v *Vanishing) Check(rt *Runtime) error {
 	return nil
 }
 
-// CheckGnark implements [GnarkCheckableQuery].
-func (v *Vanishing) CheckGnark(_ frontend.API, _ *GnarkRuntime) {
-	panic("wiop: Vanishing.CheckGnark not yet implemented")
+// CheckGnark implements [GnarkCheckableQuery]. For a scalar expression, it
+// asserts in-circuit that the expression evaluates to zero, mirroring
+// [Vanishing.Check].
+//
+// The verifier circuit carries no column values, so a vector expression cannot
+// be checked in-circuit: it must be reduced first by the global compiler.
+// Panics in that case.
+func (v *Vanishing) CheckGnark(_ frontend.API, run *GnarkRuntime) {
+	if v.Expression.IsMultiValued() {
+		panic(fmt.Sprintf(
+			"wiop: Vanishing(%s).CheckGnark: vector expressions are not checkable in-circuit; "+
+				"compile the query away with the global compiler first", v.context.Path()))
+	}
+	api := run.API()
+	api.AssertIsEqualExt(run.EvaluateSingle(v.Expression, nil), api.ZeroExt())
 }
 
 // NewVanishing registers a new [Vanishing] constraint on the module. The
