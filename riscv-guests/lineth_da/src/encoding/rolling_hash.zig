@@ -8,7 +8,7 @@ const accelerators = @import("zesu_accelerators");
 pub const Hash = [32]u8;
 
 pub const Error = error{
-    /// `boundaryPrevDataRollingHash` is absent or does not open the parent hash.
+    /// `boundary_prev` is absent or does not open the parent hash.
     BoundaryPreimageMismatch,
 };
 
@@ -24,7 +24,7 @@ pub fn next(parent: Hash, chunk_hash: Hash) Hash {
 
 /// The hash after folding `chunk_hashes` onto `parent`. A positive `parent_data_tail_take_bytes`
 /// starts the range inside the first chunk, which `parent` already includes: `boundary_prev` must
-/// then open `parent` as the hash before that chunk, and the first chunk is not folded again.
+/// then open `parent` as the hash before that chunk, and the fold resumes at the second chunk.
 pub fn fold(
     parent: Hash,
     chunk_hashes: []const Hash,
