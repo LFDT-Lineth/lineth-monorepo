@@ -6,10 +6,8 @@
     .dependencies = .{
         // Shared build helpers (the freestanding rv64im guest target).
         .build_common = .{ .path = "../../../../riscv-guests/build_common" },
-        // Lineth accelerator wrappers
+        // Lineth accelerator wrappers and the non-accelerated zkvm_* providers
         .lineth_accelerators = .{ .path = "../../../../riscv-guests/lineth_accelerators" },
-        // l2-execution guest for non-accelerated providers
-        .l2_execution = .{ .path = "../../../../riscv-guests/l2_execution" },
     },
     .paths = .{
         "build.zig",

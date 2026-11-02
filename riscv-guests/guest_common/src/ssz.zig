@@ -1,8 +1,8 @@
 //! Generic SSZ decode/encode primitives shared by every riscv-guests SSZ codec: fixed-width
 //! little-endian integer reads/writes and the generic `List[VariableSizeType, N]` offset-table
 //! codec that a container's own variable-field region also follows. Container-specific field
-//! layouts, bounds policies, and schema ids stay in each guest's own codec module — only the
-//! byte-level machinery every one of those codecs builds on lives here.
+//! layouts, bounds policies, and schema ids stay in each codec module — only the byte-level
+//! machinery every one of those codecs builds on lives here.
 //!
 //! `decodeVariableList`/`encodeVariableList` are the byte-level inverse of each other: an offset
 //! table (4 bytes per element, each an absolute offset from the start of the region) followed by
