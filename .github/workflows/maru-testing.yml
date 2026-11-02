@@ -33,11 +33,6 @@ on:
         required: false
         type: string
         default: ''
-    secrets:
-      DOCKERHUB_USERNAME:
-        required: false
-      DOCKERHUB_TOKEN:
-        required: false
 
 concurrency:
   group: maru-testing-${{ github.workflow }}-${{ github.ref }}
@@ -46,9 +41,6 @@ concurrency:
 jobs:
   run-tests:
     env:
-      COMMIT_TAG: ${{ inputs.commit_tag }}
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
     name: maru tests
