@@ -7,7 +7,8 @@ The question: is a zkc ecrecover accelerator cheaper than the two software backe
 - the hardware the benchmark needs.
 
 The implementation and benchmark steps are in [PLAN.md](PLAN.md). The benchmarking method is in
-[RUNNING_L2_EXEC.md](RUNNING_L2_EXEC.md).
+[RUNNING_L2_EXEC.md](RUNNING_L2_EXEC.md). A granular alternative, accelerating only the field
+operations inside a software ecrecover, is analysed in [GRANULAR.md](GRANULAR.md).
 
 All measurements below were taken on 2026-10-29 with zkc v1.2.35, on a 12-core, 16 GB laptop:
 - **std**: a small rv64im test guest running the same Zig code as
@@ -31,7 +32,8 @@ All measurements below were taken on 2026-10-29 with zkc v1.2.35, on a 12-core, 
   - The zkc ecrecover has to be wired in opt-in, through a separate entry point
     `riscv/main_secp256k1.zkc`. Otherwise gogen stops working for every guest.
   - A version that gogen can run is possible (64-bit limbs, no `#[native]`), but it gives up
-    prover-ray's gadget. It would benchmark a design we would not ship.
+    prover-ray's gadget. It would benchmark a design we would not ship. Measured for `mulmod_256`
+    alone: 1,710 columns in that form against 111 native ([GRANULAR.md](GRANULAR.md) §2.2).
   - A real fix needs zkc support (upstream request).
 
 **2. Plain `zkc exec` and sharded `zkc trace` crashed on the PR code. Solved.**
@@ -51,17 +53,28 @@ All measurements below were taken on 2026-10-29 with zkc v1.2.35, on a 12-core, 
 - `zkc trace --stats` counts `mulmod_256` at zkc's own width of 2,684–3,600 columns. prover-ray
   instead commits about 111 columns for it (80 limb columns + 31 carry columns).
 - prover-ray leaves `expmod_unconstrained_256` unconstrained (a hint).
+- The 111-column gadget does not range-check its quotient or carry limbs, and `remainder < mod` is
+  checked only outside the verifier (code reading, [GRANULAR.md](GRANULAR.md) §2.2). Closing that
+  adds about 100 opened felts; to confirm with the prover-ray owners.
 - std and Constantine have no native modules, so they are unaffected. Report both raw cells and
   prover-ray-adjusted cells.
 
-**5. Per-call cells miss a fixed cost. Must be measured (step B0 in PLAN.md).**
+**5. Per-call cells miss a fixed cost. Measured on a harness; confirm with step B0 in PLAN.md.**
 - Every module added to the arithmetization adds committed columns to every shard's proof, even
   shards that never call ecrecover.
 - Estimate from the PR's module widths, using prover-ray's narrow mulmod: about **5K extra
-  columns**, against a system I last measured at about 10.6K columns (Sept 2026).
-- We have not checked whether prover-ray skips modules that have no rows in a shard. If it does
-  not, proof size and recursion cost grow for every block, not just ecrecover-heavy ones.
-- How to measure: compare `zkc compile --stats` for `main.zkc` and `main_secp256k1.zkc`.
+  columns**. Measured through prover-ray's compile pipeline on a harness
+  ([GRANULAR.md](GRANULAR.md) §1), the PR's modules add **5,538 committed columns** and 7,558
+  opened felts.
+- The baseline is smaller than I thought. Today's `main.zkc` commits 3,137 columns, i.e. 6,772
+  opened felts. The ~10.6K columns I measured in Sept 2026 were an older, larger `main.zkc`.
+- Proof size scales with opened felts (1 per base column, 6 per extension column), so the
+  accelerator is **+112% width**: a shard proof grows from ~13.6 MB to ~27.4 MB.
+- prover-ray does not skip modules that have no rows in a shard: every module is committed and
+  opened in every shard proof (see [GRANULAR.md](GRANULAR.md) §1). Proof size and recursion cost
+  therefore grow for every block, not just ecrecover-heavy ones.
+- How to measure: compare `zkc compile --stats` for `main.zkc` and `main_secp256k1.zkc`, then
+  get the opened width from the shape probe ([GRANULAR.md](GRANULAR.md) §7, B0).
 
 **6. Practical constraints. Not blockers.**
 - `riscv-guests/l2_execution/build.zig` always links the Constantine staticlib. Building the guest
@@ -93,9 +106,11 @@ Per ecrecover:
 - **Per block, transfer-heavy (unmeasured estimate).** The guide's numbers put ecrecover at roughly
   half or more of a plain transfer's cost (std ≈ 24 ms per transfer, of which ecrecover is most of
   the 25 ms Constantine–std gap). Blocks like `ether_transfers` would plausibly get **50–90%
-  cheaper**, before the fixed cost in blocker 5.
+  cheaper** in cells. In proof bytes, after the fixed cost in blocker 5, the model in
+  [GRANULAR.md](GRANULAR.md) §4 gives about 0.2–0.3× std.
 - **Per block, opcode-bound.** Blocks like `arithmetic`, `mod` and `keccak` hold one transaction,
-  so there is essentially no change.
+  so cells and time barely change. But every shard proof roughly doubles (blocker 5): about
+  **2.1× std in proof bytes**.
 - **Confidence.** High that zkc is far cheaper per call. Medium on the size of the block-level win,
   which depends on the share of ecrecover in each block and on the fixed width cost.
 
@@ -109,13 +124,15 @@ Per ecrecover:
   - gogen time for std and Constantine.
 - Real block-level effect on the guide's sample blocks, the seven 30M fixtures, the 250- and
   1000-transfer blocks, `ether_transfers`, and an ecrecover-precompile-heavy block. That covers
-  shard counts, total and adjusted cells, trace time and peak memory.
+  shard counts, total and adjusted cells, a proof-size proxy (shards × opened width), trace time
+  and peak memory.
 - Correctness: the guest output must be identical across all three backends on every input.
 - Whether ecrecover-dense shards push zkc modules towards prover-ray's limit of 2^22 rows per module,
-  or push tracer memory too high.
+  or push tracer memory too high. `addmod_256`'s ~19K rows per call cap a shard at ~220
+  ecrecovers.
 - How much each Phase B optimization buys.
-- The fixed width cost (blocker 5, step B0 in PLAN.md), and whether every shard pays it or only
-  shards that call ecrecover.
+- The size of the fixed width cost (blocker 5, step B0 in PLAN.md). Every shard pays it; that is
+  settled from the code.
 
 What the benchmark will **not** tell:
 - a gogen time for zkc (blocker 1);

@@ -14,7 +14,8 @@ instruction proved by zkc modules) cheaper to prove and execute than the two sof
 PR #4293 (`f129577bb7`) added the switch `-Dsecp256k1-backend={std,constantine}`. This plan adds a
 third value, `zkc`, and benchmarks all three with the method of the l2-execution benchmarking guide
 in this directory, [`RUNNING_L2_EXEC.md`](RUNNING_L2_EXEC.md) ("the guide"). It adapts that method
-where it cannot run zkc code.
+where it cannot run zkc code. [`GRANULAR.md`](GRANULAR.md) analyses the alternative of accelerating
+only the field operations inside a software ecrecover, and why this plan's fixed width cost matters.
 
 **Starting point.** PR #3719 (head `fb95caf25`, branch `origin/feat/ecrecover-zkc-precomp`)
 contains a working u256 ecrecover in zkc, but it is wired into an interpreter layout that no longer
@@ -36,7 +37,7 @@ Credit "ported from PR #3719 (fb95caf25)" in each commit message.
 | F3 | `zkc exec --gogen` cannot run the PR code. It rejects any `#[native]` function (`gogen: native function "mulmod_64" unsupported`), any register wider than 128 bits, divisions wider than 64 bits, and memory registers wider than 64 bits. **No zkc ecrecover that uses the native mulmod can run under gogen.** | ran |
 | F4 | The default `zkc exec` (bytecode / "fast mode") and **sharded** `zkc trace` (its checkpoint pass uses the same bytecode interpreter) panic with `unsupported instruction form (4 v 5 limbs)` when **compiling** any program that compares registers with different limb counts. In the PR code the offender is `addmod_256`'s `sum >= (modL as u257)`. Fix: `var m:u257 = modL as u257` and compare against `m`. With that one change the full PR ecrecover runs under `zkc exec` and under `zkc trace -c --sharding …`. | ran |
 | F5 | `zkc compile` (the CI gate `riscv-check-compilation`) hard-errors on modules unreachable from `main`. In the PR library those are `secp256k1_verify_generic`, `assert_on_curve_affine_secp256k1`, `is_on_curve_affine_secp256k1` and `is_equal_affine_secp256k1`. This is the review comment "doesn't compile with latest zkc". `exec` and `trace` do not run this check. | ran |
-| F6 | prover-ray does **not** prove `#[native]` modules with zkc's AIR. `mulmod_<bits>` becomes a NonNative polynomial-identity query: 5L limb columns + (2L−1) carry columns, with L = ⌈bits/16⌉, so **111 columns** for `mulmod_256`. zkc's own AIR uses 2,684–3,600 columns for it. `expmod_unconstrained_<bits>` is left **unconstrained** (4L columns), which makes it a real hint. Register names are an interface and must be kept exactly: `lhsL rhsL modL remainder quotient` / `base exp mod res`. | `prover-ray/zkcdriver/native_modules.go`, `prover-ray/wiop/compilers/nonnative/nonnative.go` |
+| F6 | prover-ray does **not** prove `#[native]` modules with zkc's AIR. `mulmod_<bits>` becomes a NonNative polynomial-identity query: 5L limb columns + (2L−1) carry columns, with L = ⌈bits/16⌉, so **111 columns** for `mulmod_256`. zkc's own AIR uses 2,684–3,600 columns for it. `expmod_unconstrained_<bits>` is left **unconstrained** (4L columns), which makes it a real hint. The gadget does not range-check its quotient or carry limbs, and `remainder < mod` is checked only outside the verifier ([GRANULAR.md](GRANULAR.md) §2.2). Register names are an interface and must be kept exactly: `lhsL rhsL modL remainder quotient` / `base exp mod res`. | `prover-ray/zkcdriver/native_modules.go`, `prover-ray/wiop/compilers/nonnative/nonnative.go` |
 | F7 | `interpreter_c`'s `default` arm turns `COMPUTE_INVALID` and any unhandled op into a **silent no-op**. A mis-wired opcode does not crash. | `arithmetization/src/main/riscv/interpreter.zkc` ~L829 |
 | F8 | The keccak accelerator case on main is `fail "keccak accelerator unsupported for now"`. Always build with `-Dkeccak-accel=false`. | `arithmetization/src/main/riscv/interpreter.zkc:535` |
 | F9 | The R-type ComputeOp range 25–55 is full, so adding one op shifts S/B/J/U. No test cross-checks the Go bases against `constants.zkc`, so a mismatch fails silently. | code reading |
@@ -293,10 +294,16 @@ this cost. Estimate from the PR's module widths: about 5K extra columns with pro
   - the new modules with their widths;
   - the delta again with prover-ray accounting, using the same substitution as
     `summarize_trace.py` (`mulmod_<b>` → 5L+2L−1, `expmod_unconstrained_<b>` → 4L).
-- Find out from prover-ray code (`prover-ray/zkcdriver`, `prover-ray/wiop`) whether a module with
-  no rows in a shard is still committed in that shard's proof. State the answer with file
-  references. This decides whether the delta is paid by every block or only by blocks that use
-  ecrecover.
+- Settled from prover-ray code: a module with no rows in a shard is still committed and opened in
+  that shard's proof, so every block pays the delta (file references in [GRANULAR.md](GRANULAR.md)
+  §1).
+- Convert the delta to committed columns and opened felts, since proof size scales with felts and
+  zkc's own counts are not committed columns. Use prover-ray's compile pipeline, as described in
+  [GRANULAR.md](GRANULAR.md) §7, B0. Run it in `prover-ray/`: verifier-ray pins zkc v1.2.33, which
+  cannot read v1.2.35 binaries.
+- A harness measurement already exists ([GRANULAR.md](GRANULAR.md) §1): +5,538 committed columns and
+  +7,558 opened felts on top of today's `main.zkc` (3,137 columns, 6,772 felts), i.e. +112%. B0
+  confirms it on the real entry points.
 - Check it empirically too: trace the std guest on the committed sample
   `riscv-guests/l2_execution/test/testdata/stateless_input.ssz` against both entry points and
   compare total padded cells.
@@ -330,14 +337,16 @@ this cost. Estimate from the PR's module widths: about 5K extra columns with pro
 - machine and commit;
 - the fixed width cost (B0), and whether every shard pays it;
 - the micro table;
-- the macro table, with ratios zkc/std and constantine/std for exec, steps, shards, cells and
-  adjusted cells;
+- the macro table, with ratios zkc/std and constantine/std for exec, steps, shards, cells,
+  adjusted cells, and a proof-size proxy: shards × (1.83 KB × W + 1.2 MB), with W from B0;
 - the Phase B progression;
 - a one-paragraph verdict.
 
 The verdict counts "zkc is more performant" when per-ecrecover **adjusted cells** and **trace time**
 are lower than std's. State the block-level reduction for transfer-heavy blocks. Weigh it against
-the fixed width cost from B0, especially for opcode-bound blocks that gain nothing per call. Say
+the fixed width cost from B0, especially for opcode-bound blocks that gain nothing per call. Judge
+proof size on the proof-size proxy, not on cells, and compare it with the granular variants in
+[GRANULAR.md](GRANULAR.md) §4. Say
 explicitly that gogen is not applicable to zkc.
 
 ## Phase B: one optimization round (zkc only)
@@ -394,6 +403,9 @@ lazy reduction with a wider native (`mulmod_264`); prover-ray proving time.
   (F9). An unhandled op is a silent no-op (F7).
 - Narrowing `as` is checked. Use `::` splits for limbs and bytes.
 - Changing native module names or register names breaks prover-ray (F6).
+- The NonNative gadget behind `#[native] mulmod_256` lacks range checks on its quotient and carry
+  limbs (F6). Do not rely on it in production until that is fixed, or the prover-ray owners confirm
+  it is safe.
 - Tracing large blocks needs tens of GB. Never run two traces at once on the 91 GB box.
 - Keccak accel is broken on main (F8). Always use `-Dkeccak-accel=false`.
 
