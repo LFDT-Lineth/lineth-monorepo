@@ -46,6 +46,7 @@
 - *(coordinator)* Added BlobSubmitterV2 interface and implementation (#3673)
 - *(coordinator)* Generic AggregationsDaoG and AggregationV2 for RISC-V aggregation proofs (#4174)
 - *(misc)* Adding blob commitment and a proof to Rollup input (#4329)
+- *(maru)* Add support of self-calculating terminal total difficulty (#4295)
 
 ### 🐛 Bug Fixes
 
