@@ -18,6 +18,7 @@ const accelerators = @import("zesu_accelerators");
 const Allocator = std.mem.Allocator;
 
 const rlp = mpt.rlp;
+const rlp_encode = executor.executor_rlp_encode;
 const tx_decode = executor.executor_tx_decode;
 const tx_signing = executor.executor_tx_signing;
 
@@ -112,77 +113,81 @@ pub fn truncateBlockRlp(output: Allocator, scratch: Allocator, block_rlp: []cons
 /// The canonical payload of a conflation's truncated blocks, in the RLP list layout
 /// `[[timestamp, blockHash, prevRandao, [transaction…], [from…]]…]`.
 pub fn encodeBlocks(allocator: Allocator, blocks: []const TruncatedBlock) Allocator.Error![]u8 {
-    var builder: RlpBuilder = .{ .allocator = allocator };
-    errdefer builder.bytes.deinit(allocator);
-    const all_blocks = builder.openList();
+    var arena = std.heap.ArenaAllocator.init(allocator);
+    defer arena.deinit();
+    const scratch = arena.allocator();
+
+    var all_blocks: Items = .{ .allocator = scratch };
     for (blocks) |block| {
-        const entry = builder.openList();
-        try builder.unsigned(block.timestamp);
-        try builder.string(&block.block_hash);
-        try builder.string(&block.prev_randao);
-        const transactions = builder.openList();
-        for (block.transactions) |transaction| try builder.string(transaction);
-        try builder.closeList(transactions);
-        const froms = builder.openList();
-        for (block.froms) |from| try builder.string(&from);
-        try builder.closeList(froms);
-        try builder.closeList(entry);
+        var entry: Items = .{ .allocator = scratch };
+        try entry.uint(block.timestamp);
+        try entry.string(&block.block_hash);
+        try entry.string(&block.prev_randao);
+        var transactions: Items = .{ .allocator = scratch };
+        for (block.transactions) |transaction| try transactions.string(transaction);
+        try entry.list(transactions);
+        var froms: Items = .{ .allocator = scratch };
+        for (block.froms) |from| try froms.string(&from);
+        try entry.list(froms);
+        try all_blocks.list(entry);
     }
-    try builder.closeList(all_blocks);
-    return builder.bytes.toOwnedSlice(allocator);
+    return allocator.dupe(u8, try all_blocks.finish());
 }
 
 /// The transaction without its signature and chain ID: the legacy field list, or the type byte
 /// and the typed field list.
 fn strippedTransaction(output: Allocator, scratch: Allocator, tx: input.Transaction) Error![]u8 {
-    var builder: RlpBuilder = .{ .allocator = scratch };
-    if (tx.tx_type != 0) try builder.bytes.append(scratch, tx.tx_type);
-    const fields = builder.openList();
-    try builder.unsigned(tx.nonce);
+    var fields: Items = .{ .allocator = scratch };
+    try fields.uint(tx.nonce);
     if (tx.tx_type <= 1) {
-        try builder.unsigned(tx.gas_price);
+        try fields.uint(tx.gas_price);
     } else {
-        try builder.unsigned(tx.gas_priority_fee.?);
-        try builder.unsigned(tx.gas_price);
+        try fields.uint(tx.gas_priority_fee.?);
+        try fields.uint(tx.gas_price);
     }
-    try builder.unsigned(tx.gas_limit);
-    try builder.string(if (tx.to) |*address| address else &.{});
-    try builder.unsigned(tx.value);
-    try builder.string(tx.data);
+    try fields.uint(tx.gas_limit);
+    try fields.string(if (tx.to) |*address| address else &.{});
+    try fields.uint(tx.value);
+    try fields.string(tx.data);
     if (tx.tx_type != 0) {
-        const access_list = builder.openList();
+        var access_list: Items = .{ .allocator = scratch };
         for (tx.access_list) |entry| {
-            const item = builder.openList();
-            try builder.string(&entry.address);
-            const keys = builder.openList();
-            for (entry.storage_keys) |key| try builder.string(&key);
-            try builder.closeList(keys);
-            try builder.closeList(item);
+            var keys: Items = .{ .allocator = scratch };
+            for (entry.storage_keys) |key| try keys.string(&key);
+            var item: Items = .{ .allocator = scratch };
+            try item.string(&entry.address);
+            try item.list(keys);
+            try access_list.list(item);
         }
-        try builder.closeList(access_list);
+        try fields.list(access_list);
     }
     if (tx.tx_type == 3) {
-        try builder.unsigned(tx.max_fee_per_blob_gas);
-        const hashes = builder.openList();
-        for (tx.blob_hashes) |hash| try builder.string(&hash);
-        try builder.closeList(hashes);
+        try fields.uint(tx.max_fee_per_blob_gas);
+        var hashes: Items = .{ .allocator = scratch };
+        for (tx.blob_hashes) |hash| try hashes.string(&hash);
+        try fields.list(hashes);
     }
     if (tx.tx_type == 4) {
-        const authorizations = builder.openList();
+        var authorizations: Items = .{ .allocator = scratch };
         for (tx.authorization_list) |authorization| {
-            const item = builder.openList();
-            try builder.unsigned(authorization.chain_id);
-            try builder.string(&authorization.address);
-            try builder.unsigned(authorization.nonce);
-            try builder.unsigned(authorization.v);
-            try builder.unsigned(authorization.r);
-            try builder.unsigned(authorization.s);
-            try builder.closeList(item);
+            var item: Items = .{ .allocator = scratch };
+            try item.uint(authorization.chain_id);
+            try item.string(&authorization.address);
+            try item.uint(authorization.nonce);
+            try item.uint(authorization.v);
+            try item.uint(authorization.r);
+            try item.uint(authorization.s);
+            try authorizations.list(item);
         }
-        try builder.closeList(authorizations);
+        try fields.list(authorizations);
     }
-    try builder.closeList(fields);
-    return output.dupe(u8, builder.bytes.items);
+
+    const encoded = try fields.finish();
+    if (tx.tx_type == 0) return output.dupe(u8, encoded);
+    const stripped = try output.alloc(u8, 1 + encoded.len);
+    stripped[0] = tx.tx_type;
+    @memcpy(stripped[1..], encoded);
+    return stripped;
 }
 
 const HeaderFields = struct {
@@ -410,47 +415,25 @@ const Reader = struct {
     }
 };
 
-/// Writes RLP into a byte buffer; a list's length prefix is inserted when the list is closed.
-const RlpBuilder = struct {
+/// The encoded items of one RLP list, built with zesu's RLP encoder.
+const Items = struct {
     allocator: Allocator,
-    bytes: std.ArrayList(u8) = .empty,
+    encoded: std.ArrayList([]const u8) = .empty,
 
-    /// The position a list's payload starts at, for `closeList`.
-    const Marker = usize;
-
-    fn string(self: *RlpBuilder, data: []const u8) Allocator.Error!void {
-        if (data.len == 1 and data[0] < 0x80) return self.bytes.append(self.allocator, data[0]);
-        var prefix: [9]u8 = undefined;
-        try self.bytes.appendSlice(self.allocator, lengthPrefix(0x80, data.len, &prefix));
-        try self.bytes.appendSlice(self.allocator, data);
+    fn uint(self: *Items, value: u256) Allocator.Error!void {
+        try self.encoded.append(self.allocator, try rlp_encode.encodeU256(self.allocator, value));
     }
 
-    fn unsigned(self: *RlpBuilder, value: u256) Allocator.Error!void {
-        var big_endian: [32]u8 = undefined;
-        std.mem.writeInt(u256, &big_endian, value, .big);
-        try self.string(big_endian[@clz(value) / 8 ..]);
+    fn string(self: *Items, data: []const u8) Allocator.Error!void {
+        try self.encoded.append(self.allocator, try rlp_encode.encodeBytes(self.allocator, data));
     }
 
-    fn openList(self: *RlpBuilder) Marker {
-        return self.bytes.items.len;
+    /// Appends the list of the items of `nested`.
+    fn list(self: *Items, nested: Items) Allocator.Error!void {
+        try self.encoded.append(self.allocator, try nested.finish());
     }
 
-    fn closeList(self: *RlpBuilder, start: Marker) Allocator.Error!void {
-        var prefix: [9]u8 = undefined;
-        try self.bytes.insertSlice(self.allocator, start, lengthPrefix(0xc0, self.bytes.items.len - start, &prefix));
-    }
-
-    /// The prefix of a string (`base` 0x80) or list (`base` 0xc0) of `len` payload bytes.
-    fn lengthPrefix(base: u8, len: usize, out: *[9]u8) []const u8 {
-        if (len <= 55) {
-            out[0] = base + @as(u8, @intCast(len));
-            return out[0..1];
-        }
-        var big_endian: [8]u8 = undefined;
-        std.mem.writeInt(u64, &big_endian, len, .big);
-        const len_len = 8 - @clz(@as(u64, len)) / 8;
-        out[0] = base + 55 + @as(u8, @intCast(len_len));
-        @memcpy(out[1..][0..len_len], big_endian[8 - len_len ..]);
-        return out[0 .. 1 + len_len];
+    fn finish(self: Items) Allocator.Error![]u8 {
+        return rlp_encode.encodeList(self.allocator, self.encoded.items);
     }
 };
