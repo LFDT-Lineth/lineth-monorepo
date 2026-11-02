@@ -203,13 +203,21 @@ def test_zstd_frame_content_size_header_is_optional(write_content_size):
     assert verify_da_chunks([calldata], [PAYLOAD_1], PARENT) == (data_rolling_hash_after(PARENT, [calldata]), 0)
 
 
-@pytest.mark.parametrize(
-    "compress",
-    [lambda payload: compress_frame(payload, write_dict_id=False), lambda payload: zstd.ZstdCompressor().compress(payload)],
-    ids=["dictionary id omitted", "no dictionary"],
-)
-def test_zstd_frame_without_a_dictionary_id_decodes_with_the_dictionary(compress):
-    calldata = calldata_chunk(length_prefixed(compress(PAYLOAD_1)))
+def test_zstd_frame_without_a_dictionary_id_decodes_with_the_dictionary():
+    # Bytes of the dictionary's own content: the frame is a short reference into the dictionary and decodes only against it.
+    payload = zstd_dictionary().as_bytes()[-300:-100]
+    zstd_frame = compress_frame(payload, write_dict_id=False)
+    assert zstd.get_frame_parameters(zstd_frame).dict_id == 0
+    assert len(zstd_frame) < len(payload) // 2
+    with pytest.raises(zstd.ZstdError):
+        zstd.ZstdDecompressor().decompress(zstd_frame)
+    calldata = calldata_chunk(length_prefixed(zstd_frame))
+
+    assert verify_da_chunks([calldata], [payload], PARENT) == (data_rolling_hash_after(PARENT, [calldata]), 0)
+
+
+def test_zstd_frame_compressed_without_a_dictionary_is_accepted():
+    calldata = calldata_chunk(length_prefixed(zstd.ZstdCompressor().compress(PAYLOAD_1)))
 
     assert verify_da_chunks([calldata], [PAYLOAD_1], PARENT) == (data_rolling_hash_after(PARENT, [calldata]), 0)
 
