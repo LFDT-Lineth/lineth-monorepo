@@ -98,7 +98,10 @@ class MaruClusterTest {
     val terminalBlockNumber = terminalTotalDifficulty - 1UL
     // Timestamp-based forks start well after the terminal block is reached, so that the first PoS block can only
     // have been produced through the DifficultyAwareQbft -> post-TTD QBFT transition, not a timestamp fork switch.
-    val firstTimestampForkTime = now.plus(30.seconds)
+    // The pre-merge chain is mined at 1 block per second before Maru starts, hence the window grows with TTD.
+    // The below timestamp is to give more leeway to avoid the first PoS block to be mined after the timestamp, and
+    // It would not increase the test time
+    val firstTimestampForkTime = now.plus((terminalTotalDifficulty.toLong() + 30).seconds)
     val forkTimeGap = 10.seconds
     cluster = MaruCluster(
       terminalTotalDifficulty = terminalTotalDifficulty,
