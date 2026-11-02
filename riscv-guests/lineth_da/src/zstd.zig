@@ -1,6 +1,5 @@
-//! Dictionary-based decompression of single zstd frames over upstream libzstd. The decoder
-//! allocates only through the Zig allocator it is given (libzstd's `ZSTD_customMem`), and only
-//! while it is created.
+//! Dictionary-based decompression of single zstd frames over upstream libzstd's streaming decoder.
+//! The decoder allocates only through the Zig allocator it is given (libzstd's `ZSTD_customMem`).
 
 const std = @import("std");
 
@@ -51,8 +50,13 @@ const c = struct {
 
     const content_size_unknown: c_ulonglong = std.math.maxInt(c_ulonglong);
 
+    const InBuffer = extern struct { src: ?*const anyopaque, size: usize, pos: usize };
+    const OutBuffer = extern struct { dst: ?*anyopaque, size: usize, pos: usize };
+
     const dlm_by_ref: c_int = 1;
     const dct_full_dict: c_int = 2;
+    const reset_session_only: c_int = 1;
+    const d_stable_out_buffer: c_int = 1001;
 
     const error_dictionary_wrong: c_int = 32;
     const error_memory_allocation: c_int = 64;
@@ -74,14 +78,10 @@ const c = struct {
         mem: CustomMem,
     ) ?*DDict;
     extern fn ZSTD_freeDDict(ddict: ?*DDict) usize;
-    extern fn ZSTD_decompress_usingDDict(
-        dctx: *DCtx,
-        dst: *anyopaque,
-        dst_capacity: usize,
-        src: ?*const anyopaque,
-        src_size: usize,
-        ddict: *const DDict,
-    ) usize;
+    extern fn ZSTD_DCtx_refDDict(dctx: *DCtx, ddict: *const DDict) usize;
+    extern fn ZSTD_DCtx_setParameter(dctx: *DCtx, param: c_int, value: c_int) usize;
+    extern fn ZSTD_DCtx_reset(dctx: *DCtx, directive: c_int) usize;
+    extern fn ZSTD_decompressStream(dctx: *DCtx, output: *OutBuffer, input: *InBuffer) usize;
 };
 
 /// The linked libzstd release as `major * 10000 + minor * 100 + patch`.
@@ -102,7 +102,7 @@ pub const Decoder = struct {
         exhausted: bool,
     };
 
-    /// `dictionary` is referenced, not copied: it must outlive the decoder.
+    /// The decoder borrows `dictionary` for its whole lifetime.
     pub fn init(allocator: Allocator, dictionary: []const u8) Error!Decoder {
         const state = try allocator.create(State);
         errdefer allocator.destroy(state);
@@ -114,20 +114,24 @@ pub const Decoder = struct {
         errdefer _ = c.ZSTD_freeDCtx(state.dctx);
         state.ddict = c.ZSTD_createDDict_advanced(dictionary.ptr, dictionary.len, c.dlm_by_ref, c.dct_full_dict, mem) orelse
             return if (state.exhausted) error.OutOfMemory else error.InvalidDictionary;
+        errdefer _ = c.ZSTD_freeDDict(state.ddict);
+        std.debug.assert(c.ZSTD_isError(c.ZSTD_DCtx_refDDict(state.dctx, state.ddict)) == 0);
+        std.debug.assert(c.ZSTD_isError(c.ZSTD_DCtx_setParameter(state.dctx, c.d_stable_out_buffer, 1)) == 0);
         return .{ .state = state };
     }
 
     pub fn deinit(self: Decoder) void {
         const allocator = self.state.allocator;
-        _ = c.ZSTD_freeDDict(self.state.ddict);
         _ = c.ZSTD_freeDCtx(self.state.dctx);
+        _ = c.ZSTD_freeDDict(self.state.ddict);
         allocator.destroy(self.state);
     }
 
     /// Decompresses `frame`, which must be exactly one complete zstd frame, into the front of `out`
     /// and returns the decompressed bytes. `out.len` bounds the decompressed length. A frame that
-    /// declares no content size declares a window covering its content, so that a streaming
-    /// decoder, whose history is the window, decodes it to the same bytes.
+    /// declares its content size decodes in one pass. A frame without content size decodes block by
+    /// block through libzstd's streaming decoder with `out` as its history: each block holds at most
+    /// `min(window, 128 KiB)` bytes and the window covers the content.
     pub fn decompress(self: Decoder, frame: []const u8, out: []u8) Error![]u8 {
         const frame_len = c.ZSTD_findFrameCompressedSize(frame.ptr, frame.len);
         if (c.ZSTD_isError(frame_len) != 0) return switch (c.ZSTD_getErrorCode(frame_len)) {
@@ -140,16 +144,20 @@ pub const Decoder = struct {
 
         // An empty `out` may carry a dangling address; libzstd is handed a valid one for it.
         var placeholder: u8 = undefined;
-        const dst: *anyopaque = if (out.len == 0) &placeholder else out.ptr;
-        const len = c.ZSTD_decompress_usingDDict(self.state.dctx, dst, out.len, frame.ptr, frame.len, self.state.ddict);
-        if (c.ZSTD_isError(len) != 0) return switch (c.ZSTD_getErrorCode(len)) {
+        var output: c.OutBuffer = .{ .dst = if (out.len == 0) &placeholder else out.ptr, .size = out.len, .pos = 0 };
+        var input: c.InBuffer = .{ .src = frame.ptr, .size = frame.len, .pos = 0 };
+        const remaining = c.ZSTD_decompressStream(self.state.dctx, &output, &input);
+        // A rejected frame leaves the stream mid-frame; every call starts a new one.
+        _ = c.ZSTD_DCtx_reset(self.state.dctx, c.reset_session_only);
+        if (c.ZSTD_isError(remaining) != 0) return switch (c.ZSTD_getErrorCode(remaining)) {
             c.error_dictionary_wrong => error.DictionaryMismatch,
             c.error_dst_size_too_small => error.OutputTooLarge,
             c.error_memory_allocation => error.OutOfMemory,
             else => error.MalformedFrame,
         };
-        if (header.frame_content_size == c.content_size_unknown and header.window_size < len) return error.MalformedFrame;
-        return out[0..len];
+        if (remaining != 0 or input.pos != frame.len) return error.MalformedFrame;
+        if (header.frame_content_size == c.content_size_unknown and header.window_size < output.pos) return error.MalformedFrame;
+        return out[0..output.pos];
     }
 };
 

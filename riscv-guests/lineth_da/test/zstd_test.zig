@@ -259,6 +259,59 @@ test "frames declaring a window beyond 128 MiB are rejected" {
     try std.testing.expectError(error.MalformedFrame, decoder.decompress(&beyond_with_content_size, &out));
 }
 
+const BlockKind = enum { raw, rle };
+
+/// A frame of one last block of `len` decoded bytes under a header with no content size and the
+/// window descriptor 0x40 (2^18 bytes): `len` bytes of noise for a raw block, one byte for a
+/// run-length block of `len` copies of it.
+fn lastBlockFrame(kind: BlockKind, len: usize) ![]u8 {
+    const size_and_kind: u32 = @as(u32, @intCast(len)) << 3 | @as(u32, @intFromBool(kind == .rle)) << 1 | 1;
+    var frame: std.ArrayList(u8) = .empty;
+    errdefer frame.deinit(gpa);
+    try frame.appendSlice(gpa, &(zstd_magic ++ [_]u8{ 0x00, 0x40 }));
+    try frame.appendSlice(gpa, std.mem.asBytes(&std.mem.nativeToLittle(u32, size_and_kind))[0..3]);
+    switch (kind) {
+        .raw => {
+            const noise = try randomBytes(len, len);
+            defer gpa.free(noise);
+            try frame.appendSlice(gpa, noise);
+        },
+        .rle => try frame.append(gpa, 'x'),
+    }
+    return frame.toOwnedSlice(gpa);
+}
+
+test "a block beyond 128 KiB is rejected in a frame without content size" {
+    const decoder = try zstd.Decoder.init(gpa, dictionary);
+    defer decoder.deinit();
+
+    const out = try gpa.alloc(u8, 150_000);
+    defer gpa.free(out);
+    for ([_]BlockKind{ .raw, .rle }) |kind| {
+        const largest = try lastBlockFrame(kind, 131_072);
+        defer gpa.free(largest);
+        try std.testing.expectEqual(@as(usize, 131_072), (try decoder.decompress(largest, out)).len);
+
+        const beyond = try lastBlockFrame(kind, 150_000);
+        defer gpa.free(beyond);
+        try std.testing.expectError(error.MalformedFrame, decoder.decompress(beyond, out));
+    }
+}
+
+test "the largest accepted window is 2^27 + 1 bytes" {
+    const decoder = try zstd.Decoder.init(gpa, dictionary);
+    defer decoder.deinit();
+
+    // A single-segment frame declares its content size as its window; one last run-length block
+    // of 128 KiB follows, which an 8-byte output buffer cannot hold.
+    var out: [8]u8 = undefined;
+    var frame = zstd_magic ++ [_]u8{0xe0} ++ ([_]u8{0} ** 8) ++ [_]u8{ 0x03, 0x00, 0x10, 'x' };
+    std.mem.writeInt(u64, frame[5..13], (1 << 27) + 1, .little);
+    try std.testing.expectError(error.OutputTooLarge, decoder.decompress(&frame, &out));
+    std.mem.writeInt(u64, frame[5..13], (1 << 27) + 2, .little);
+    try std.testing.expectError(error.MalformedFrame, decoder.decompress(&frame, &out));
+}
+
 /// A payload whose last bytes repeat its first KiB after 6 KiB of other bytes: a match reaching 7 KiB back.
 fn farMatchPayload() ![]u8 {
     const payload = try gpa.alloc(u8, 8192);
@@ -477,22 +530,55 @@ test "bytes that are not a zstd dictionary are rejected" {
     }
 }
 
-test "decompression allocates only while the decoder is created" {
+test "decompression allocates at most one block buffer" {
     var counting = std.testing.FailingAllocator.init(gpa, .{});
     const decoder = try zstd.Decoder.init(counting.allocator(), dictionary);
     defer decoder.deinit();
-    const allocations = counting.alloc_index;
+    const created = counting.alloc_index;
     try std.testing.expect(counting.allocated_bytes < 1 << 20);
 
     const payload = try transactionLikePayload(300_000, 17);
     defer gpa.free(payload);
-    const frame = try compress(payload, .{});
-    defer gpa.free(frame);
     const out = try gpa.alloc(u8, payload.len);
     defer gpa.free(out);
+
+    // A frame with content size decodes in one pass.
+    const frame = try compress(payload, .{});
+    defer gpa.free(frame);
     try std.testing.expectEqualSlices(u8, payload, try decoder.decompress(frame, out));
     try std.testing.expectError(error.TruncatedFrame, decoder.decompress(frame[0 .. frame.len - 1], out));
-    try std.testing.expectEqual(allocations, counting.alloc_index);
+    try std.testing.expectEqual(created, counting.alloc_index);
+
+    // A frame without content size streams its blocks through one input buffer of 128 KiB at most, kept for the next frames.
+    const streamed = try compress(payload, .{ .content_size = false });
+    defer gpa.free(streamed);
+    const before = counting.allocated_bytes;
+    try std.testing.expectEqualSlices(u8, payload, try decoder.decompress(streamed, out));
+    try std.testing.expectEqual(created + 1, counting.alloc_index);
+    try std.testing.expect(counting.allocated_bytes - before <= (128 << 10) + 64);
+    try std.testing.expectEqualSlices(u8, payload, try decoder.decompress(streamed, out));
+    try std.testing.expectEqual(created + 1, counting.alloc_index);
+}
+
+test "an allocation refused while decompressing is reported as out of memory" {
+    var probe = std.testing.FailingAllocator.init(gpa, .{});
+    const probed = try zstd.Decoder.init(probe.allocator(), dictionary);
+    probed.deinit();
+
+    var failing = std.testing.FailingAllocator.init(gpa, .{ .fail_index = probe.alloc_index });
+    const decoder = try zstd.Decoder.init(failing.allocator(), dictionary);
+    defer decoder.deinit();
+
+    const payload = try transactionLikePayload(5000, 23);
+    defer gpa.free(payload);
+    const out = try gpa.alloc(u8, payload.len);
+    defer gpa.free(out);
+    const streamed = try compress(payload, .{ .content_size = false });
+    defer gpa.free(streamed);
+    try std.testing.expectError(error.OutOfMemory, decoder.decompress(streamed, out));
+    const single_pass = try compress(payload, .{});
+    defer gpa.free(single_pass);
+    try std.testing.expectEqualSlices(u8, payload, try decoder.decompress(single_pass, out));
 }
 
 test "every allocation failure while creating a decoder is reported and leaks nothing" {
