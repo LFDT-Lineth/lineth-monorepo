@@ -98,20 +98,11 @@ fn insideFirstChunk(chunks: []const Chunk, take: u64) Start {
     return .{ .parent = foldOnto(before_first_chunk, chunks[0..1]), .take = take, .boundary = before_first_chunk };
 }
 
-const Outcome = struct {
-    end_data_rolling_hash: Hash,
-    final_data_tail_discard_bytes: u64,
-};
-
 /// Verifies the stream under the package dictionary.
-fn verify(chunks: []const Chunk, payloads: []const []const u8, start: Start) !Outcome {
+fn verify(chunks: []const Chunk, payloads: []const []const u8, start: Start) !decompress.Verified {
     const decoder = try zstd.Decoder.init(gpa, dictionary);
     defer decoder.deinit();
-    const verified = try decompress.verifyDaChunks(gpa, decoder, chunks, payloads, start.parent, start.take, start.boundary);
-    return .{
-        .end_data_rolling_hash = verified.end_data_rolling_hash,
-        .final_data_tail_discard_bytes = verified.final_data_tail_discard_bytes,
-    };
+    return decompress.verifyDaChunks(gpa, decoder, chunks, payloads, start.parent, start.take, start.boundary);
 }
 
 fn expectAccepted(chunks: []const Chunk, payloads: []const []const u8, start: Start, end_hash: Hash, discard: u64) !void {
