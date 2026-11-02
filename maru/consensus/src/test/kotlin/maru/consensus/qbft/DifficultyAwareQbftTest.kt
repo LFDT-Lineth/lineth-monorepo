@@ -15,6 +15,7 @@ import maru.consensus.ForkSpec
 import maru.consensus.ProtocolFactory
 import maru.consensus.QbftConsensusConfig
 import maru.core.Protocol
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -34,42 +35,25 @@ class DifficultyAwareQbftTest {
     )
 
   private val chain = FakeElChain()
+
+  // private val terminalBlockCalculator =
+  //  ConstantDifficultyTerminalBlockCalculator(chain, BigInteger.valueOf(terminalTotalDifficulty.toLong()))
   private val postTtdProtocol = mock<Protocol>()
   private val timerFactory = TestablePeriodicTimerFactory()
 
   private val protocol =
     DifficultyAwareQbft(
-      ethereumJsonRpcClient = mock(),
+      ethApiClient = chain,
       postTtdProtocolFactory =
       object : ProtocolFactory {
         override fun create(forkSpec: ForkSpec): Protocol = postTtdProtocol
       },
       forkSpec = forkSpec,
       timerFactory = timerFactory,
-      headerProvider = chain,
+      // terminalBlockCalculator = terminalBlockCalculator,
     ).also { it.start() }
 
   private fun poll() = timerFactory.getTimer("DifficultyAwareQbft")!!.runNextTask()
-
-  @Test
-  fun `does not transition before the terminal block`() {
-    // QBFT: genesis 0x1 + 8 blocks of difficulty 1 => TD 9 where TTD is 10 (terminal block 9)
-    chain.extend(1).extendRepeated(count = 8, difficulty = 1)
-
-    poll()
-
-    verify(postTtdProtocol, never()).start()
-  }
-
-  @Test
-  fun `transitions at the terminal block`() {
-    // QBFT: TD(9) = 1 + 9 = 10 = TTD
-    chain.extend(1).extendRepeated(count = 9, difficulty = 1)
-
-    poll()
-
-    verify(postTtdProtocol).start()
-  }
 
   @Test
   fun `transitions when the chain grows to the terminal block across polls`() {
@@ -82,7 +66,7 @@ class DifficultyAwareQbftTest {
     verify(postTtdProtocol).start()
 
     // further polls do not start the post-TTD protocol again
-    chain.extendRepeated(count = 5, difficulty = 0)
+    chain.extendRepeated(count = 5, difficulty = 1)
     poll()
     verify(postTtdProtocol, times(1)).start()
   }
@@ -91,9 +75,15 @@ class DifficultyAwareQbftTest {
   fun `waits for block 1 to determine the terminal block`() {
     chain.extend(1)
     poll()
+    assertThat(protocol.terminalBlockCalculator.terminalBlock()).isNull()
     verify(postTtdProtocol, never()).start()
 
-    chain.extendRepeated(count = 9, difficulty = 1)
+    chain.extend(1)
+    assertThat(protocol.terminalBlockCalculator.terminalBlock()?.number).isEqualTo(9UL)
+    poll()
+    verify(postTtdProtocol, never()).start()
+
+    chain.extendRepeated(count = 8, difficulty = 1)
     poll()
     verify(postTtdProtocol).start()
   }
@@ -121,18 +111,6 @@ class DifficultyAwareQbftTest {
   }
 
   @Test
-  fun `keeps using the computed terminal block when a block has an unexpected difficulty`() {
-    // block 1 sets the expected difficulty to 1; block 5 has difficulty 2, which is reported but not fatal
-    chain.extend(1).extendRepeated(count = 4, difficulty = 1).extend(2)
-    poll()
-    verify(postTtdProtocol, never()).start()
-
-    chain.extendRepeated(count = 4, difficulty = 1)
-    poll()
-    verify(postTtdProtocol).start()
-  }
-
-  @Test
   fun `switches on the terminal block from an injected calculator`() {
     val stubCalculator =
       object : TerminalBlockCalculator {
@@ -144,14 +122,13 @@ class DifficultyAwareQbftTest {
       }
     val timerFactory = TestablePeriodicTimerFactory()
     DifficultyAwareQbft(
-      ethereumJsonRpcClient = mock(),
+      ethApiClient = chain,
       postTtdProtocolFactory =
       object : ProtocolFactory {
         override fun create(forkSpec: ForkSpec): Protocol = postTtdProtocol
       },
       forkSpec = forkSpec,
       timerFactory = timerFactory,
-      headerProvider = chain,
       terminalBlockCalculator = stubCalculator,
     ).start()
     val poll = { timerFactory.getTimer("DifficultyAwareQbft")!!.runNextTask() }

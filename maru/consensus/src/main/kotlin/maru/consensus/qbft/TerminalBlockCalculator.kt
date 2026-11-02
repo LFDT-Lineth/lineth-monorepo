@@ -6,42 +6,9 @@
  */
 package maru.consensus.qbft
 
-import org.web3j.protocol.Web3j
-import org.web3j.protocol.core.DefaultBlockParameter
-import org.web3j.protocol.core.methods.response.EthBlock
+import linea.domain.toBlockParameter
+import linea.ethapi.EthApiBlockClient
 import java.math.BigInteger
-
-/** The subset of an EL block header needed to determine the terminal block. */
-data class ElBlockHeader(
-  val number: ULong,
-  val difficulty: BigInteger,
-)
-
-/** Reads canonical EL block headers. */
-interface ElBlockHeaderProvider {
-  fun latestHeader(): ElBlockHeader?
-
-  fun headerByNumber(blockNumber: ULong): ElBlockHeader?
-}
-
-class Web3jElBlockHeaderProvider(
-  private val web3j: Web3j,
-) : ElBlockHeaderProvider {
-  override fun latestHeader(): ElBlockHeader? = getHeader(DefaultBlockParameter.valueOf("latest"))
-
-  override fun headerByNumber(blockNumber: ULong): ElBlockHeader? =
-    getHeader(DefaultBlockParameter.valueOf(BigInteger(blockNumber.toString())))
-
-  private fun getHeader(blockParameter: DefaultBlockParameter): ElBlockHeader? =
-    web3j
-      .ethGetBlockByNumber(blockParameter, false)
-      .send()
-      .block
-      ?.toElBlockHeader()
-
-  private fun EthBlock.Block.toElBlockHeader(): ElBlockHeader =
-    ElBlockHeader(number = number.toLong().toULong(), difficulty = difficulty)
-}
 
 /**
  * The first EL block whose total difficulty reaches TTD.
@@ -74,7 +41,7 @@ interface TerminalBlockCalculator {
  * terminal block is the first n for which it reaches TTD.
  */
 class ConstantDifficultyTerminalBlockCalculator(
-  private val headerProvider: ElBlockHeaderProvider,
+  private val ethApiClient: EthApiBlockClient,
   private val terminalTotalDifficulty: BigInteger,
 ) : TerminalBlockCalculator {
   @Volatile
@@ -82,12 +49,12 @@ class ConstantDifficultyTerminalBlockCalculator(
 
   override fun terminalBlock(): TerminalBlock? {
     terminalBlock?.let { return it }
-    val genesisDifficulty = headerProvider.headerByNumber(0UL)?.difficulty ?: return null
+    val genesisDifficulty = blockDifficulty(0UL) ?: return null
     val computed =
       if (genesisDifficulty >= terminalTotalDifficulty) {
         TerminalBlock(number = 0UL, genesisDifficulty = genesisDifficulty, blockDifficulty = null)
       } else {
-        val blockDifficulty = headerProvider.headerByNumber(1UL)?.difficulty ?: return null
+        val blockDifficulty = blockDifficulty(1UL) ?: return null
         check(blockDifficulty.signum() > 0) {
           "EL block 1 has difficulty 0 (post-merge) while genesis difficulty=$genesisDifficulty is below " +
             "terminalTotalDifficulty=$terminalTotalDifficulty: Maru TTD does not match the EL TTD"
@@ -103,4 +70,11 @@ class ConstantDifficultyTerminalBlockCalculator(
     terminalBlock = computed
     return computed
   }
+
+  private fun blockDifficulty(blockNumber: ULong): BigInteger? =
+    ethApiClient
+      .ethFindBlockByNumberTxHashes(blockNumber.toBlockParameter())
+      .get()
+      ?.difficulty
+      ?.let { BigInteger(it.toString()) }
 }

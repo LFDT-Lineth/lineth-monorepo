@@ -9,9 +9,24 @@ package maru.consensus.qbft
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import java.math.BigInteger
 
 class ConstantDifficultyTerminalBlockCalculatorTest {
+  companion object {
+    @JvmStatic
+    fun constantDifficultyChains(): List<Arguments> =
+      listOf(0L, 1L, 7L, 0x400000000L).flatMap { genesisDifficulty ->
+        listOf(1L, 2L, 3L).flatMap { blockDifficulty ->
+          (1L..20L).map { ttdOffset ->
+            Arguments.of(genesisDifficulty, blockDifficulty, genesisDifficulty + ttdOffset)
+          }
+        }
+      }
+  }
+
   private fun calculator(
     chain: FakeElChain,
     terminalTotalDifficulty: Long,
@@ -55,20 +70,17 @@ class ConstantDifficultyTerminalBlockCalculatorTest {
     assertThat(calculator(chain, terminalTotalDifficulty = 12).terminalBlock()!!.number).isEqualTo(6UL)
   }
 
-  @Test
-  fun `matches summing difficulties block by block for constant difficulty chains`() {
-    for (genesisDifficulty in listOf(0L, 1L, 7L, 0x400000000L)) {
-      for (blockDifficulty in listOf(1L, 2L, 3L)) {
-        for (ttdOffset in 1L..20L) {
-          val terminalTotalDifficulty = genesisDifficulty + ttdOffset
-          val chain = FakeElChain().extend(genesisDifficulty).extendRepeated(count = 30, difficulty = blockDifficulty)
+  @ParameterizedTest(name = "genesisDifficulty={0}, blockDifficulty={1}, terminalTotalDifficulty={2}")
+  @MethodSource("constantDifficultyChains")
+  fun `matches summing difficulties block by block for constant difficulty chains`(
+    genesisDifficulty: Long,
+    blockDifficulty: Long,
+    terminalTotalDifficulty: Long,
+  ) {
+    val chain = FakeElChain().extend(genesisDifficulty).extendRepeated(count = 30, difficulty = blockDifficulty)
 
-          assertThat(calculator(chain, terminalTotalDifficulty).terminalBlock()!!.number)
-            .describedAs("g=$genesisDifficulty d=$blockDifficulty ttd=$terminalTotalDifficulty")
-            .isEqualTo(summedTerminalBlock(chain.difficulties, terminalTotalDifficulty))
-        }
-      }
-    }
+    assertThat(calculator(chain, terminalTotalDifficulty).terminalBlock()!!.number)
+      .isEqualTo(summedTerminalBlock(chain.difficulties, terminalTotalDifficulty))
   }
 
   @Test
