@@ -87,18 +87,64 @@ async function queryBatches(): Promise<Batch[]> {
     });
 }
 
+const FAILURE_SUFFIX = /\.failure\.\d+$/;
+
+class ProverFailureError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ProverFailureError";
+  }
+}
+
+// Retry everything except a prover failure, which no amount of waiting fixes.
+const retryUnlessProverFailed = (error: unknown) => !(error instanceof ProverFailureError);
+
+async function readdirIfExists(dir: string): Promise<string[]> {
+  try {
+    return await readdir(dir);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
+  }
+}
+
+// The coordinator never retries a failed request and waits for it forever, so a single failure
+// stalls every later batch. Fail with prover-ray's error instead of polling until the timeout.
+async function throwOnProverFailure(): Promise<void> {
+  const failed = (await readdirIfExists(resolve(executionDir, "requests-done"))).filter((name) =>
+    FAILURE_SUFFIX.test(name),
+  );
+  if (failed.length === 0) return;
+
+  // prover-ray publishes the response before archiving; a crashed prover publishes none.
+  const responseName = failed[0].replace(FAILURE_SUFFIX, "");
+  const response = await readFile(resolve(executionDir, "responses", responseName), "utf8").catch(
+    () => "<no response body>",
+  );
+  throw new ProverFailureError(
+    `prover-ray failed ${failed.length} request(s), first ${failed[0]}: ${response.slice(0, 2_000)}`,
+  );
+}
+
 // prover-ray moves answered requests to requests-done/ with a .success or .failure.<n> suffix.
 async function awaitArchivedRequest(blockNumber: bigint): Promise<string> {
   const archived = await awaitUntil(
-    async () =>
-      (await readdir(resolve(executionDir, "requests-done"))).find((name) => {
-        const match = /^(\d+)-(\d+)-.*getZkL2ExecutionProof\.json\.(success|failure\.\d+)$/.exec(name);
+    async () => {
+      await throwOnProverFailure();
+      return (await readdirIfExists(resolve(executionDir, "requests-done"))).find((name) => {
+        const match = /^(\d+)-(\d+)-.*getZkL2ExecutionProof\.json\.success$/.exec(name);
         return match !== null && BigInt(match[1]) <= blockNumber && BigInt(match[2]) >= blockNumber;
-      }),
+      });
+    },
     (name) => name !== undefined,
-    { timeoutMs: proofTimeoutMs, pollingIntervalMs: 2_000 },
+    { timeoutMs: proofTimeoutMs, pollingIntervalMs: 2_000, shouldRetry: retryUnlessProverFailed },
   );
   return archived!;
+}
+
+async function queryBatchesOrThrowOnProverFailure(): Promise<Batch[]> {
+  await throwOnProverFailure();
+  return queryBatches();
 }
 
 async function expectProvenBatch(receipt: TransactionReceipt) {
@@ -148,9 +194,10 @@ async function expectProvenBatch(receipt: TransactionReceipt) {
 
   // A response file alone does not prove that the coordinator consumed it.
   await awaitUntil(
-    async () => (await queryBatches()).find((batch) => batch.startBlockNumber === startBlockNumber),
+    async () =>
+      (await queryBatchesOrThrowOnProverFailure()).find((batch) => batch.startBlockNumber === startBlockNumber),
     (batch) => batch?.endBlockNumber === endBlockNumber && batch.status === BATCH_STATUS_PROVEN,
-    { pollingIntervalMs: 1_000 },
+    { pollingIntervalMs: 1_000, shouldRetry: retryUnlessProverFailed },
   );
 }
 
@@ -186,9 +233,10 @@ describe(`RISC-V execution proving (${proverMode})`, () => {
     "proves a contiguous chain of batches from genesis without prover failures",
     async () => {
       // At least two batches, so contiguity is actually checked.
-      const batches = await awaitUntil(queryBatches, (rows) => rows.length >= 2, {
+      const batches = await awaitUntil(queryBatchesOrThrowOnProverFailure, (rows) => rows.length >= 2, {
         timeoutMs: proofTimeoutMs,
         pollingIntervalMs: 2_000,
+        shouldRetry: retryUnlessProverFailed,
       });
       expect(batches[0].startBlockNumber).toBe(1);
       batches.forEach((batch, index) => {
@@ -198,10 +246,7 @@ describe(`RISC-V execution proving (${proverMode})`, () => {
         }
       });
 
-      const failed = (await readdir(resolve(executionDir, "requests-done"))).filter((name) =>
-        /\.failure\.\d+$/.test(name),
-      );
-      expect(failed).toEqual([]);
+      await throwOnProverFailure();
     },
     proofTimeoutMs + 60_000,
   );

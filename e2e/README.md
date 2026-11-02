@@ -77,4 +77,11 @@ pnpm -F e2e run test:riscv:local
 ```
 
 Set `RISCV_PROVER_MODE=dev-zkvm` on both commands to execute the guest instead of returning placeholder proofs.
-CI runs this suite on pushes to `main` only.
+dev-zkvm needs a prover-ray image built from the current checkout, as CI does:
+
+```bash
+make -C prover-ray docker-build IMAGE_TAG=local
+LINEA_PROVER_RAY_TAG=local RISCV_PROVER_MODE=dev-zkvm make start-env-with-riscv
+```
+
+CI runs this suite on pushes to `main` only. A failed prover request fails the suite immediately with the prover's error.
