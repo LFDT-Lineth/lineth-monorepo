@@ -3,5 +3,5 @@ zig-out/
 testdata/generated/riscv_system.zig
 testdata/riscv_proof_image.bin
 testdata/riscv_proof_pair_image.bin
-testdata/generated/dummy_system.zig
-testdata/dummy_proof_image.bin
+testdata/generated/devmode_system.zig
+testdata/devmode_proof_image.bin

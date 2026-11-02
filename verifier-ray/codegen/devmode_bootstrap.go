@@ -9,9 +9,9 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/proofserialization"
 )
 
-// SampleDummyPublicInputs returns deterministic base-field public inputs
-// (1000 + i) for dummy fixture generation and tests.
-func SampleDummyPublicInputs() wiop.PublicInput {
+// SampleDevmodePublicInputs returns deterministic base-field public inputs
+// (1000 + i) for devmode fixture generation and tests.
+func SampleDevmodePublicInputs() wiop.PublicInput {
 	pub := make(wiop.PublicInput, devmode.NumPublicInputs)
 	for i := range pub {
 		var e field.Element
@@ -21,10 +21,10 @@ func SampleDummyPublicInputs() wiop.PublicInput {
 	return pub
 }
 
-// BuildDummyHonestArtifacts compiles the devmode circuit from prover-ray,
+// BuildDevmodeHonestArtifacts compiles the devmode circuit from prover-ray,
 // proves a deterministic 40-cell statement, verifies it in Go, and returns both
 // the extracted CompiledSystem and the projected VerifyInput.
-func BuildDummyHonestArtifacts() (HonestRiscvArtifacts, error) {
+func BuildDevmodeHonestArtifacts() (HonestRiscvArtifacts, error) {
 	sys, err := devmode.NewSystem()
 	if err != nil {
 		return HonestRiscvArtifacts{}, err
@@ -34,12 +34,12 @@ func BuildDummyHonestArtifacts() (HonestRiscvArtifacts, error) {
 		return HonestRiscvArtifacts{}, fmt.Errorf("BuildCompiledSystem: %w", err)
 	}
 
-	proof, pub, err := devmode.Prove(sys, SampleDummyPublicInputs())
+	proof, pub, err := devmode.Prove(sys, SampleDevmodePublicInputs())
 	if err != nil {
 		return HonestRiscvArtifacts{}, fmt.Errorf("devmode.Prove: %w", err)
 	}
 	if err := devmode.Verify(sys, proof, pub); err != nil {
-		return HonestRiscvArtifacts{}, fmt.Errorf("verifying dummy proof: %w", err)
+		return HonestRiscvArtifacts{}, fmt.Errorf("verifying devmode proof: %w", err)
 	}
 	if err := AssertAllVerifierActionsHandled(sys); err != nil {
 		return HonestRiscvArtifacts{}, fmt.Errorf("AssertAllVerifierActionsHandled: %w", err)

@@ -143,8 +143,8 @@ pub fn build(b: *std.Build) void {
             .{ .name = "verifier_ray", .module = verifier_mod },
         },
     });
-    const dummy_system_mod = b.addModule("dummy_system", .{
-        .root_source_file = b.path("testdata/generated/dummy_system.zig"),
+    const devmode_system_mod = b.addModule("devmode_system", .{
+        .root_source_file = b.path("testdata/generated/devmode_system.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{
@@ -217,7 +217,7 @@ pub fn build(b: *std.Build) void {
                     .{ .name = "test_pcs_vectors", .module = test_pcs_vectors_mod },
                     .{ .name = "test_verify", .module = test_verify_mod },
                     .{ .name = "riscv_system", .module = riscv_system_mod },
-                    .{ .name = "dummy_system", .module = dummy_system_mod },
+                    .{ .name = "devmode_system", .module = devmode_system_mod },
                 },
             }),
             .filters = test_filters,

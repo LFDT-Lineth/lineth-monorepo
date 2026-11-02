@@ -9,10 +9,10 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/proofserialization"
 )
 
-func TestBuildDummyHonestArtifacts(t *testing.T) {
-	artifacts, err := BuildDummyHonestArtifacts()
+func TestBuildDevmodeHonestArtifacts(t *testing.T) {
+	artifacts, err := BuildDevmodeHonestArtifacts()
 	if err != nil {
-		t.Fatalf("BuildDummyHonestArtifacts: %v", err)
+		t.Fatalf("BuildDevmodeHonestArtifacts: %v", err)
 	}
 	if len(artifacts.VerifyInput.Proof.Rounds) == 0 {
 		t.Fatal("VerifyInput.Proof.Rounds is empty")
@@ -25,7 +25,7 @@ func TestBuildDummyHonestArtifacts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("proofserialization.Encode: %v", err)
 	}
-	t.Logf("single dummy proof image size: %d bytes", len(encoded))
+	t.Logf("single devmode proof image size: %d bytes", len(encoded))
 
 	decoded, err := proofserialization.Decode(encoded, proofserialization.GuestBase)
 	if err != nil {
@@ -36,12 +36,12 @@ func TestBuildDummyHonestArtifacts(t *testing.T) {
 	}
 }
 
-func TestDummyVerifyRejectsChangedPublicInput(t *testing.T) {
+func TestDevmodeVerifyRejectsChangedPublicInput(t *testing.T) {
 	sys, err := devmode.NewSystem()
 	if err != nil {
 		t.Fatalf("devmode.NewSystem: %v", err)
 	}
-	proof, pub, err := devmode.Prove(sys, SampleDummyPublicInputs())
+	proof, pub, err := devmode.Prove(sys, SampleDevmodePublicInputs())
 	if err != nil {
 		t.Fatalf("devmode.Prove: %v", err)
 	}
@@ -53,12 +53,12 @@ func TestDummyVerifyRejectsChangedPublicInput(t *testing.T) {
 	}
 }
 
-func BenchmarkDummyProve(b *testing.B) {
+func BenchmarkDevmodeProve(b *testing.B) {
 	sys, err := devmode.NewSystem()
 	if err != nil {
 		b.Fatal(err)
 	}
-	pub := SampleDummyPublicInputs()
+	pub := SampleDevmodePublicInputs()
 	b.ResetTimer()
 	for range b.N {
 		if _, _, err := devmode.Prove(sys, pub); err != nil {
@@ -67,12 +67,12 @@ func BenchmarkDummyProve(b *testing.B) {
 	}
 }
 
-func BenchmarkDummyVerify(b *testing.B) {
+func BenchmarkDevmodeVerify(b *testing.B) {
 	sys, err := devmode.NewSystem()
 	if err != nil {
 		b.Fatal(err)
 	}
-	proof, pub, err := devmode.Prove(sys, SampleDummyPublicInputs())
+	proof, pub, err := devmode.Prove(sys, SampleDevmodePublicInputs())
 	if err != nil {
 		b.Fatal(err)
 	}

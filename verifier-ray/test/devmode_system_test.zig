@@ -1,24 +1,24 @@
-//! End-to-end verification tests for the compiled dummy system and its
-//! Go-generated single proof image (`testdata/dummy_proof_image.bin`).
+//! End-to-end verification tests for the compiled devmode system and its
+//! Go-generated single proof image (`testdata/devmode_proof_image.bin`).
 //!
-//! Unlike a custom verifier stub, the dummy system is compiled through
+//! Unlike a custom verifier stub, the devmode system is compiled through
 //! `compilers.CompileFull` in `prover-ray/backend/devmode` and emitted by
-//! `codegen/generate-dummy-system` as a standard `verifier-ray` system
-//! (`testdata/generated/dummy_system.zig`). These tests verify that
-//! `verifier.verify` accepts honest dummy proofs and rejects mutated
+//! `codegen/generate-devmode-system` as a standard `verifier-ray` system
+//! (`testdata/generated/devmode_system.zig`). These tests verify that
+//! `verifier.verify` accepts honest devmode proofs and rejects mutated
 //! statements/cells using the exact same Zig verifier code as the production
 //! RISC-V system.
 
 const std = @import("std");
 const verifier_ray = @import("verifier_ray");
-const dummy_system = @import("dummy_system");
+const devmode_system = @import("devmode_system");
 
 const verifier = verifier_ray.verifier;
 const relocation = verifier_ray.image_relocation;
 const field = verifier_ray.field.koalabear;
 
 const encoded_base: usize = 0x08800000;
-const single_image_path = "testdata/dummy_proof_image.bin";
+const single_image_path = "testdata/devmode_proof_image.bin";
 
 const o_rdonly: c_int = 0;
 const prot_read: c_int = 1;
@@ -48,16 +48,16 @@ fn mapFile(path: [*:0]const u8) ![]u8 {
     return buf[0..img_len];
 }
 
-test "dummy_system: generated spec and systems match 40-cell public-input layout" {
-    const spec = dummy_system.system_0_spec;
-    const systems = dummy_system.system_0_systems;
+test "devmode_system: generated spec and systems match 40-cell public-input layout" {
+    const spec = devmode_system.system_0_spec;
+    const systems = devmode_system.system_0_systems;
 
     try std.testing.expectEqual(@as(usize, 40), systems.public_input.refs.len);
     try std.testing.expectEqual(@as(usize, 1), systems.vanishing.modules.len);
     try std.testing.expectEqual(@as(usize, 0), spec.dynamic_module_count);
 }
 
-test "dummy_system: single proof image verifies and rejects mutated public input" {
+test "devmode_system: single proof image verifies and rejects mutated public input" {
     const img = mapFile(single_image_path) catch |err| switch (err) {
         error.ImageMissing => return error.SkipZigTest,
         else => return err,
@@ -72,8 +72,8 @@ test "dummy_system: single proof image verifies and rejects mutated public input
     try std.testing.expectEqual(@as(usize, 40), input.public_inputs.len);
 
     try verifier.verify(
-        dummy_system.system_0_spec,
-        dummy_system.system_0_systems,
+        devmode_system.system_0_spec,
+        devmode_system.system_0_systems,
         input.proof,
         input.public_inputs,
     );
@@ -87,8 +87,8 @@ test "dummy_system: single proof image verifies and rejects mutated public input
     try std.testing.expectError(
         error.QuotientIdentityMismatch,
         verifier.verify(
-            dummy_system.system_0_spec,
-            dummy_system.system_0_systems,
+            devmode_system.system_0_spec,
+            devmode_system.system_0_systems,
             input.proof,
             input.public_inputs,
         ),

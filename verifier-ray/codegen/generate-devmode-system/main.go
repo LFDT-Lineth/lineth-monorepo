@@ -1,8 +1,8 @@
-// Command generate-dummy-system compiles the minimal devmode arithmetization
+// Command generate-devmode-system compiles the minimal devmode arithmetization
 // circuit from prover-ray/backend/devmode, proves one deterministic 40-cell
 // statement, and emits:
-//   - testdata/generated/dummy_system.zig: the verifier's compiled system
-//   - testdata/dummy_proof_image.bin: the single proof image relocated for GuestBase
+//   - testdata/generated/devmode_system.zig: the verifier's compiled system
+//   - testdata/devmode_proof_image.bin: the single proof image relocated for GuestBase
 package main
 
 import (
@@ -19,16 +19,16 @@ import (
 )
 
 const (
-	generatedDummyZigPath   = "../../testdata/generated/dummy_system.zig"
-	generatedDummyProofPath = "../../testdata/dummy_proof_image.bin"
+	generatedDevmodeZigPath   = "../../testdata/generated/devmode_system.zig"
+	generatedDevmodeProofPath = "../../testdata/devmode_proof_image.bin"
 )
 
 func main() {
-	zigOnly := flag.Bool("zig-only", false, "write only dummy_system.zig (skip proving and proof image emission)")
+	zigOnly := flag.Bool("zig-only", false, "write only devmode_system.zig (skip proving and proof image emission)")
 	flag.Parse()
 
 	if err := run(*zigOnly); err != nil {
-		fmt.Fprintln(os.Stderr, "generate-dummy-system:", err)
+		fmt.Fprintln(os.Stderr, "generate-devmode-system:", err)
 		os.Exit(1)
 	}
 }
@@ -46,9 +46,9 @@ func run(zigOnly bool) error {
 		return writeCompiledZig(compiled)
 	}
 
-	artifacts, err := verifierraycodegen.BuildDummyHonestArtifacts()
+	artifacts, err := verifierraycodegen.BuildDevmodeHonestArtifacts()
 	if err != nil {
-		return fmt.Errorf("building dummy honest artifacts: %w", err)
+		return fmt.Errorf("building devmode honest artifacts: %w", err)
 	}
 	if err := writeCompiledZig(artifacts.CompiledSystem); err != nil {
 		return err
@@ -58,10 +58,10 @@ func run(zigOnly bool) error {
 	if err != nil {
 		return fmt.Errorf("encoding proof image: %w", err)
 	}
-	if err := os.WriteFile(generatedDummyProofPath, proofImage, 0o644); err != nil {
-		return fmt.Errorf("writing %s: %w", generatedDummyProofPath, err)
+	if err := os.WriteFile(generatedDevmodeProofPath, proofImage, 0o644); err != nil {
+		return fmt.Errorf("writing %s: %w", generatedDevmodeProofPath, err)
 	}
-	fmt.Printf("wrote %s (%d bytes)\n", generatedDummyProofPath, len(proofImage))
+	fmt.Printf("wrote %s (%d bytes)\n", generatedDevmodeProofPath, len(proofImage))
 	return nil
 }
 
@@ -90,20 +90,20 @@ func writeCompiledZig(compiled verifierraycodegen.CompiledSystem) error {
 
 	formatted, err := runZigFmt(systemBuf.Bytes())
 	if err != nil {
-		return fmt.Errorf("zig fmt %s: %w", generatedDummyZigPath, err)
+		return fmt.Errorf("zig fmt %s: %w", generatedDevmodeZigPath, err)
 	}
-	if err := os.MkdirAll(filepath.Dir(generatedDummyZigPath), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(generatedDevmodeZigPath), 0o755); err != nil {
 		return fmt.Errorf("creating output directory: %w", err)
 	}
-	if err := os.WriteFile(generatedDummyZigPath, formatted, 0o644); err != nil {
-		return fmt.Errorf("writing %s: %w", generatedDummyZigPath, err)
+	if err := os.WriteFile(generatedDevmodeZigPath, formatted, 0o644); err != nil {
+		return fmt.Errorf("writing %s: %w", generatedDevmodeZigPath, err)
 	}
-	fmt.Println("wrote", generatedDummyZigPath)
+	fmt.Println("wrote", generatedDevmodeZigPath)
 	return nil
 }
 
 func runZigFmt(data []byte) ([]byte, error) {
-	tmp, err := os.CreateTemp("", "verifier-ray-dummy-system-*.zig")
+	tmp, err := os.CreateTemp("", "verifier-ray-devmode-system-*.zig")
 	if err != nil {
 		return nil, err
 	}
