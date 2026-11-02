@@ -88,7 +88,6 @@ fn addGuestProgram(b: *std.Build, options: Options) void {
         .optimize = options.optimize,
         .imports = &.{
             .{ .name = "rollup", .module = package },
-            .{ .name = "core_serde", .module = deps.core_serde },
             .{ .name = "lineth_accelerators", .module = accelerators.module("lineth_accelerators") },
             .{ .name = "zkvm_provide", .module = accelerators.module("zkvm_provide") },
         },
@@ -99,13 +98,13 @@ fn addGuestProgram(b: *std.Build, options: Options) void {
 /// What the native tests and tools of one optimize mode share: the modules they import.
 const Host = struct {
     native: common.NativeOptions,
+    lineth_da: *std.Build.Dependency,
 
     fn init(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) Host {
         const deps = Deps.init(b, target, optimize, true);
         const package = common.createPackageModule(b, target, optimize, deps.package);
         const da_support = deps.lineth_da.module("support");
         const zstd_compressor = deps.lineth_da.module("zstd_compressor");
-        const ef_blocks = deps.lineth_da.module("ef_blocks");
         const support = b.createModule(.{
             .root_source_file = b.path("test/support.zig"),
             .target = target,
@@ -128,6 +127,7 @@ const Host = struct {
             },
         });
         return .{
+            .lineth_da = deps.lineth_da,
             // Tests run on the native host: a freestanding riscv64 target has no OS to run a
             // `std.testing` binary against.
             .native = .{
@@ -138,9 +138,6 @@ const Host = struct {
                     .{ .name = "core_serde", .module = deps.core_serde },
                     .{ .name = "guest_common", .module = deps.guest_common },
                     .{ .name = "lineth_da", .module = deps.lineth_da.module("lineth_da") },
-                    .{ .name = "da_support", .module = da_support },
-                    .{ .name = "zstd_compressor", .module = zstd_compressor },
-                    .{ .name = "ef_blocks", .module = ef_blocks },
                     .{ .name = "support", .module = support },
                     .{ .name = "scenario", .module = scenario },
                 }) catch @panic("OOM"),
@@ -163,12 +160,7 @@ fn addHostTests(b: *std.Build, host: Host, crypto: common.HostCrypto) void {
     crypto.linkAll(common.addTests(b, test_step, host.native, .{}));
 }
 
-/// Writes a framed sample input and the output the statement computes for it, from the same
-/// builders the tests use — `make exec`'s guest input is this package's own encoder output, not an
-/// externally-produced or separately-checked-in fixture. `require-input` in this guest's Makefile
-/// invokes this step with the two paths after `--` to (re)generate the default INPUT and its
-/// expected output on every `make exec`/`debug`/`zkc-smoke-exec`, so nothing here is checked into
-/// git and it can never silently drift from what the current wire format produces.
+/// Runs `gen_fixture` with the arguments after `--`.
 fn addFixtureStep(b: *std.Build, tools: Tools) void {
     const gen_fixture = b.addRunArtifact(tools.get("gen_fixture").?);
     if (b.args) |args| gen_fixture.addArgs(args);
@@ -193,7 +185,10 @@ fn addReferenceStep(b: *std.Build, options: Options, crypto: common.HostCrypto) 
     const host = Host.init(b, options.host_target, .ReleaseSafe);
     const imports = std.mem.concat(b.allocator, Import, &.{
         host.native.imports,
-        &.{.{ .name = "ef_fixtures", .module = paths.createModule() }},
+        &.{
+            .{ .name = "ef_fixtures", .module = paths.createModule() },
+            .{ .name = "ef_blocks", .module = host.lineth_da.module("ef_blocks") },
+        },
     }) catch @panic("OOM");
     const step = b.step("reference-test", "Run the rollup guest over consecutive blocks of the EF zkevm fixtures");
     crypto.linkAll(common.addTests(b, step, .{

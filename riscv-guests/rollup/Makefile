@@ -35,9 +35,9 @@ include $(MAKEFILE_DIR)../build_common/release.mk
 
 # Sample fixture input used by exec/debug and the zkc smoke. The default is generated fresh by
 # `require-input` via `zig build gen-fixture` (this package's own encodeInput over a valid request
-# of one conflation in one blob), together with the output the native statement computes for it —
-# never checked into git, so they can't silently drift from what the current wire format and
-# statement produce. Pass your own INPUT=path/to/file to use something else instead.
+# of one conflation in one blob), together with the output the native statement computes for it,
+# so both always match the current wire format and statement. Pass your own INPUT=path/to/file to
+# use something else instead.
 GENERATED_INPUT  := $(MAKEFILE_DIR)zig-out/sample.request.ssz
 GENERATED_OUTPUT := $(MAKEFILE_DIR)zig-out/sample.output.bin
 INPUT ?= $(GENERATED_INPUT)

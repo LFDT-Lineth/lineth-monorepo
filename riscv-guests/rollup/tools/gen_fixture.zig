@@ -1,17 +1,11 @@
 //! Writes the sample request of the rollup guest and the output the statement computes for it:
-//! `gen_fixture REQUEST_PATH OUTPUT_PATH`. The request is a framed `RollupProofPrivateInput` this
-//! package's own `rollup_ssz.encodeInput` produced from a valid request of one conflation whose
-//! stream is carried by one blob chunk, with the commitment and proof of c-kzg-4844. The output is
-//! the framed public inputs `rollup.runFramed` returns for it, which the guest has to emit too.
-//! Invoked by this guest's own Makefile (`require-input`) to regenerate the default input of
-//! `make exec`/`debug` and the output `make zkc-smoke-exec` compares with on every run; never
-//! checked into git.
+//! `gen_fixture REQUEST_PATH OUTPUT_PATH`. The request is the framed `RollupProofPrivateInput` that
+//! `rollup_ssz.encodeInput` produces for one conflation of three signed blocks, whose stream is
+//! carried by one blob chunk with the commitment and proof of c-kzg-4844. The output is the framed
+//! public inputs `rollup.runFramed` returns for it.
 //!
-//! The request is raw bytes, not hex text: `elf_to_json_gen`'s `@path` input mode dispatches on
-//! file extension — a `.ssz`-suffixed file is read as the raw payload and framed with the 8-byte
-//! length prefix `read_input` requires (`sszInputBlobs`); anything else is placed at the input
-//! offset verbatim, with no length prefix at all. `read_input` always expects that prefix
-//! (matching l2-execution's own convention), so the request path must take the `.ssz` form.
+//! The request is written as raw bytes to a path ending in `.ssz`, the form the length-prefixed
+//! input of the guest is framed from.
 
 const std = @import("std");
 const rollup = @import("rollup");
