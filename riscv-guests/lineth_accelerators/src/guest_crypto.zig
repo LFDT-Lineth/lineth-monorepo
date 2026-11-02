@@ -229,6 +229,11 @@ pub fn initKzgContext() bool {
     return kzgContext() != null;
 }
 
+/// Whether the KZG trusted-setup context exists.
+pub fn kzgContextBuilt() bool {
+    return kzg_ctx != null;
+}
+
 /// Lazily builds the KZG trusted-setup context once.
 fn kzgContext() ?*CttKzgContext {
     if (kzg_ctx) |c| return c;
