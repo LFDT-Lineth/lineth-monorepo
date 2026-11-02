@@ -62,50 +62,13 @@ const readU64 = ssz.readU64;
 const writeU32 = ssz.writeU32;
 const writeU64 = ssz.writeU64;
 
-// ── Cursor reads/writes over the fixed head ───────────────────────────────────
-
-/// Write a 32-byte hash at the cursor and advance it.
-inline fn putHash(out: []u8, pos: *usize, value: [32]u8) void {
-    @memcpy(out[pos.*..][0..32], &value);
-    pos.* += 32;
-}
-
-/// Write a little-endian u64 at the cursor and advance it.
-inline fn putU64(out: []u8, pos: *usize, value: u64) void {
-    writeU64(out, pos.*, value);
-    pos.* += 8;
-}
-
-/// Write the offset of a variable-size field's tail at the cursor and advance it.
-inline fn putOffset(out: []u8, pos: *usize, tail_start: usize) void {
-    writeU32(out, pos.*, @intCast(tail_start));
-    pos.* += 4;
-}
-
-/// Read a 32-byte hash at the cursor and advance it.
-inline fn getHash(bytes: []const u8, pos: *usize) [32]u8 {
-    defer pos.* += 32;
-    return bytes[pos.*..][0..32].*;
-}
-
-/// Read a little-endian u64 at the cursor and advance it.
-inline fn getU64(bytes: []const u8, pos: *usize) u64 {
-    defer pos.* += 8;
-    return readU64(bytes, pos.*);
-}
-
-/// Read the offset of a variable-size field's tail at the cursor and advance it.
-inline fn getOffset(bytes: []const u8, pos: *usize) usize {
-    defer pos.* += 4;
-    return readU32(bytes, pos.*);
-}
-
-/// Alias a region of fixed-size byte-array elements after checking its length against the element size and the bound.
-fn decodeFixedList(comptime T: type, region: []const u8, max_items: usize) ![]const T {
-    if (region.len % @sizeOf(T) != 0) return error.InvalidSsz;
-    if (region.len / @sizeOf(T) > max_items) return error.BoundsViolation;
-    return std.mem.bytesAsSlice(T, region);
-}
+const putHash = ssz.putHash;
+const putU64 = ssz.putU64;
+const putOffset = ssz.putOffset;
+const getHash = ssz.getHash;
+const getU64 = ssz.getU64;
+const getOffset = ssz.getOffset;
+const decodeFixedList = ssz.decodeFixedList;
 
 // ── L2ExecutionProofPublicInput ───────────────────────────────────────────────
 // Fixed head: the fixed-size fields inline plus a 4-byte offset per list = 284.
@@ -146,7 +109,7 @@ pub fn encodePublicInputs(alloc: std.mem.Allocator, pi: L2ExecutionProofPublicIn
 
     for (pi.l2_l1_messages, 0..) |m, i| @memcpy(out[messages_start + i * 32 ..][0..32], &m);
     for (pi.filtered_addresses, 0..) |a, i| @memcpy(out[filtered_start + i * 20 ..][0..20], &a);
-    for (pi.l2_messaging_blocks_offsets, 0..) |o, i| std.mem.writeInt(u16, out[blocks_start + i * 2 ..][0..2], o, .little);
+    ssz.writeU16List(out[blocks_start..], pi.l2_messaging_blocks_offsets);
     return out;
 }
 
@@ -179,11 +142,7 @@ pub fn decodePublicInputs(alloc: std.mem.Allocator, bytes: []const u8) !L2Execut
 
     const l2_l1_messages = try decodeFixedList([32]u8, bytes[messages_start..filtered_start], MAX_MESSAGES);
     const filtered_addresses = try decodeFixedList([20]u8, bytes[filtered_start..blocks_start], MAX_FILTERED);
-    const blocks_region = bytes[blocks_start..];
-    if (blocks_region.len % 2 != 0) return error.InvalidSsz;
-    if (blocks_region.len / 2 > MAX_MESSAGING_BLOCKS) return error.BoundsViolation;
-    const l2_messaging_blocks_offsets = try alloc.alloc(u16, blocks_region.len / 2);
-    for (l2_messaging_blocks_offsets, 0..) |*o, i| o.* = std.mem.readInt(u16, blocks_region[i * 2 ..][0..2], .little);
+    const l2_messaging_blocks_offsets = try ssz.decodeU16List(alloc, bytes[blocks_start..], MAX_MESSAGING_BLOCKS);
 
     return .{
         .parent_block_hash = parent_block_hash,

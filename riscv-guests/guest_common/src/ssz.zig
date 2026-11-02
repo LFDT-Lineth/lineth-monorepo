@@ -1,5 +1,6 @@
 //! Generic SSZ decode/encode primitives shared by every riscv-guests SSZ codec: fixed-width
-//! little-endian integer reads/writes and the generic `List[VariableSizeType, N]` offset-table
+//! little-endian integer reads/writes, the cursor helpers over a container's fixed head, the
+//! `List[FixedSizeType, N]` region decoders and the generic `List[VariableSizeType, N]` offset-table
 //! codec that a container's own variable-field region also follows. Container-specific field
 //! layouts, bounds policies, and schema ids stay in each codec module — only the byte-level
 //! machinery every one of those codecs builds on lives here.
@@ -37,6 +38,67 @@ pub inline fn writeU32(out: []u8, off: usize, value: u32) void {
 /// Writes a little-endian u64 to the in-bounds range `out[off..off + 8]`.
 pub inline fn writeU64(out: []u8, off: usize, value: u64) void {
     std.mem.writeInt(u64, out[off..][0..8], value, .little);
+}
+
+// ── Cursor reads/writes over a container's fixed head ────────────────────────
+
+/// Write a 32-byte hash at the cursor and advance it.
+pub inline fn putHash(out: []u8, pos: *usize, value: [32]u8) void {
+    @memcpy(out[pos.*..][0..32], &value);
+    pos.* += 32;
+}
+
+/// Write a little-endian u64 at the cursor and advance it.
+pub inline fn putU64(out: []u8, pos: *usize, value: u64) void {
+    writeU64(out, pos.*, value);
+    pos.* += 8;
+}
+
+/// Write the offset of a variable-size field's tail at the cursor and advance it.
+pub inline fn putOffset(out: []u8, pos: *usize, tail_start: usize) void {
+    writeU32(out, pos.*, @intCast(tail_start));
+    pos.* += 4;
+}
+
+/// Read a 32-byte hash at the cursor and advance it.
+pub inline fn getHash(bytes: []const u8, pos: *usize) [32]u8 {
+    defer pos.* += 32;
+    return bytes[pos.*..][0..32].*;
+}
+
+/// Read a little-endian u64 at the cursor and advance it.
+pub inline fn getU64(bytes: []const u8, pos: *usize) u64 {
+    defer pos.* += 8;
+    return readU64(bytes, pos.*);
+}
+
+/// Read the offset of a variable-size field's tail at the cursor and advance it.
+pub inline fn getOffset(bytes: []const u8, pos: *usize) usize {
+    defer pos.* += 4;
+    return readU32(bytes, pos.*);
+}
+
+// ── "List[FixedSizeType, N]": the plain concatenation of the elements ─────────
+
+/// Alias a region of fixed-size byte-array elements after checking its length against the element size and the bound.
+pub fn decodeFixedList(comptime T: type, region: []const u8, max_items: usize) ![]const T {
+    if (region.len % @sizeOf(T) != 0) return error.InvalidSsz;
+    if (region.len / @sizeOf(T) > max_items) return error.BoundsViolation;
+    return std.mem.bytesAsSlice(T, region);
+}
+
+/// Decode a region of little-endian u16 elements into a new slice after checking its length against the bound.
+pub fn decodeU16List(alloc: std.mem.Allocator, region: []const u8, max_items: usize) ![]const u16 {
+    if (region.len % 2 != 0) return error.InvalidSsz;
+    if (region.len / 2 > max_items) return error.BoundsViolation;
+    const out = try alloc.alloc(u16, region.len / 2);
+    for (out, 0..) |*item, i| item.* = std.mem.readInt(u16, region[i * 2 ..][0..2], .little);
+    return out;
+}
+
+/// Write the elements as little-endian u16 values at `out[0..items.len * 2]`.
+pub fn writeU16List(out: []u8, items: []const u16) void {
+    for (items, 0..) |item, i| std.mem.writeInt(u16, out[i * 2 ..][0..2], item, .little);
 }
 
 // ── Generic "List[VariableSizeType, N]" codec ────────────────────────────────
