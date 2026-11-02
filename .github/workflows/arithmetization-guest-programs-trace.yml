@@ -77,7 +77,7 @@ jobs:
       - name: Trace l2-execution guest program with Amsterdam block 2M sharding 500000
         # 2M references the amount of gas used in the block
         # taskset fixes NumCPU() at 16, which is the shard worker-pool size.
-        run: make -C riscv-guests/l2_execution trace
+        run: taskset -c 0-23 make -C riscv-guests/l2_execution trace -j 24
         timeout-minutes: 45
         env:
           ZKC_REF: ""
