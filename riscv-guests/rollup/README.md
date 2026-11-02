@@ -62,7 +62,7 @@ A rejected request exits with the category of the step that rejects it (`src/gue
 
 ## Allocation
 
-The guest serves every allocation from one bump allocator over the guest heap and never frees. The same allocator backs the Constantine archive's C `malloc` through `zkvm_provide.setAllocator`, which `src/main.zig` installs before anything runs. A request that needs more than the heap exits with code 16.
+The guest serves every allocation from one bump allocator over the guest heap, which keeps them until the guest exits. The same allocator backs the Constantine archive's C `malloc` through `zkvm_provide.setAllocator`, which `src/main.zig` installs before anything runs. A request that needs more than the heap exits with code 16.
 
 ## Development
 

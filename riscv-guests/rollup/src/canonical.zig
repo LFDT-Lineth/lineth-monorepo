@@ -33,7 +33,8 @@ pub const Conflation = struct {
 
 /// The canonical payload of `conflation` for the chain `chain_id`, and its blocks' hashes and
 /// parent hashes. The blocks are those of `proof`'s range and their recovered senders hash to the
-/// proof's `tx_froms_hash`. Everything is allocated from `allocator`, which is never asked to free.
+/// proof's `tx_froms_hash`. Everything is allocated from `allocator`, a bump allocator whose memory
+/// is reclaimed as a whole.
 pub fn derive(
     allocator: Allocator,
     conflation: rollup_ssz.ConflationWitness,

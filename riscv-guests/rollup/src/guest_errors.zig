@@ -47,7 +47,7 @@ pub const CODE_RECURSION: ExitCode = 12;
 /// Step 5: an l2-execution proof's end block hash differs from the conflation's block at its
 /// boundary, or the blocks do not chain by parent hash from the first proof's parent block hash.
 pub const CODE_BLOCK_HASH_CHAIN: ExitCode = 13;
-/// Step 7: the l2-execution proofs do not tile the block range, or two consecutive proofs break
+/// The l2-execution proofs do not tile the block range, or (step 7) two consecutive proofs break
 /// the continuity of block hash, chain configuration or forced-transaction state.
 pub const CODE_TILING_CONTINUITY: ExitCode = 14;
 /// A proof's block count differs from its range, or its messaging-block offsets are not strictly

@@ -33,8 +33,8 @@ pub const Error = canonical.Error || decompress.Error || lineth_da.zstd.Error ||
 };
 
 /// The public inputs of the rollup proof over `input`, or the error of the first rule it breaks.
-/// Everything is allocated from `allocator`, which is never asked to free; the public inputs alias
-/// that memory.
+/// Everything is allocated from `allocator`, a bump allocator whose memory is reclaimed as a whole;
+/// the public inputs alias it.
 pub fn run(allocator: Allocator, input: rollup_ssz.RollupProofPrivateInput) Error!rollup_proof.RollupPublicInput {
     const proofs = input.l2_execution_proofs;
     if (input.conflations.len == 0 or proofs.len == 0 or input.conflations.len != proofs.len) return error.InvalidRequest;
