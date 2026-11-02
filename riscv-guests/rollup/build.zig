@@ -18,13 +18,16 @@ pub fn build(b: *std.Build) void {
     _ = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: unaccelerated)") orelse false;
 
     // ── Guest: statically-linked rv64im ELF ───────────────────────────────────────────────────
-    // Two path dependencies: guest_common for the SSZ codec primitives, lineth_accelerators for
-    // the zkVM io-interface (read_input/write_output).
-    const guest_common_mod = b.dependency("guest_common", .{ .target = target, .optimize = optimize }).module("guest_common");
+    // Two path dependencies: guest_common for the SSZ codec primitives and the core_serde wire
+    // contracts, lineth_accelerators for the zkVM io-interface (read_input/write_output).
+    const guest_common_dep = b.dependency("guest_common", .{ .target = target, .optimize = optimize });
+    const guest_common_mod = guest_common_dep.module("guest_common");
+    const core_serde_mod = guest_common_dep.module("core_serde");
     const lineth_accel_mod = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("lineth_accelerators");
 
     const package_mod = common.createPackageModule(b, target, optimize, &.{
         .{ .name = "guest_common", .module = guest_common_mod },
+        .{ .name = "core_serde", .module = core_serde_mod },
     });
     common.addGuest(b, .{
         .name = "rollup_guest",
@@ -32,6 +35,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .imports = &.{
             .{ .name = "rollup", .module = package_mod },
+            .{ .name = "core_serde", .module = core_serde_mod },
             .{ .name = "lineth_accelerators", .module = lineth_accel_mod },
         },
     });
@@ -40,11 +44,14 @@ pub fn build(b: *std.Build) void {
     // Like every other `b.addTest` artifact in this tree, these run on the native host: a
     // freestanding riscv64 target has no OS to run a `std.testing` binary against. The entry point
     // (`src/main.zig`) is the only caller of `lineth_accelerators`' io, so the native package
-    // module needs `guest_common` alone.
+    // module needs `guest_common` and `core_serde` alone.
     const native_target = b.resolveTargetQuery(.{});
-    const guest_common_native_mod = b.dependency("guest_common", .{ .target = native_target, .optimize = .Debug }).module("guest_common");
+    const guest_common_native_dep = b.dependency("guest_common", .{ .target = native_target, .optimize = .Debug });
+    const guest_common_native_mod = guest_common_native_dep.module("guest_common");
+    const core_serde_native_mod = guest_common_native_dep.module("core_serde");
     const package_native_mod = common.createPackageModule(b, native_target, .Debug, &.{
         .{ .name = "guest_common", .module = guest_common_native_mod },
+        .{ .name = "core_serde", .module = core_serde_native_mod },
     });
 
     // Shared test-only sample data (`sampleInput`/`repeat32`/`repeat20`), used by the native tests
@@ -53,12 +60,17 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("test/support.zig"),
         .target = native_target,
         .optimize = .Debug,
-        .imports = &.{.{ .name = "rollup", .module = package_native_mod }},
+        .imports = &.{
+            .{ .name = "rollup", .module = package_native_mod },
+            .{ .name = "core_serde", .module = core_serde_native_mod },
+        },
     });
     const native: common.NativeOptions = .{
         .target = native_target,
         .imports = &.{
             .{ .name = "rollup", .module = package_native_mod },
+            .{ .name = "core_serde", .module = core_serde_native_mod },
+            .{ .name = "guest_common", .module = guest_common_native_mod },
             .{ .name = "support", .module = support_mod },
         },
     };

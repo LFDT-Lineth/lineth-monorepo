@@ -5,6 +5,7 @@ const package = @import("rollup");
 const rollup = package.rollup;
 const rollup_ssz = package.rollup_ssz;
 const guest_errors = package.guest_errors;
+const rollup_proof = @import("core_serde").rollup_proof;
 
 // Heap bounds come from the linker script (canonical Lineth layout: `_heap_start` = 0x48800000,
 // grows up to `_heap_end`). build_common/Makefile sets the size via `HEAP_LENGTH` and asserts that
@@ -12,10 +13,9 @@ const guest_errors = package.guest_errors;
 extern var _heap_start: u8;
 extern var _heap_end: u8;
 
-// This is the rollup zkVM guest stub: it decodes `RollupProofPrivateInput`, maps it to
-// `RollupOutput` entirely by echo/sentinel (`rollup.run`), and emits the SSZ output. No proof
-// verification and no chunk/conflation folding happen here; those are the real rollup guest's
-// concern.
+// This is the rollup zkVM guest stub: it decodes `RollupProofPrivateInput`, maps it to the rollup
+// public inputs by echo/sentinel (`rollup.run`), and emits the framed output. Proofs, chunks and
+// conflations pass through unverified.
 
 /// zkVM guest entry. Reads the framed input via `read_input`, runs `runRollupGuest`, and emits the
 /// SSZ output via `write_output`. Exits 0 on success; on failure, exits with
@@ -43,8 +43,8 @@ fn guestMain() callconv(.c) noreturn {
 /// from a clean, categorized guest rejection.
 fn runRollupGuest(allocator: std.mem.Allocator, raw_input: []const u8) ![]const u8 {
     const decoded = try rollup_ssz.decodeInput(allocator, raw_input);
-    const result = try rollup.run(allocator, decoded);
-    return rollup_ssz.encodeOutput(allocator, result) catch return error.OutputEncodeFailed;
+    const public_inputs = try rollup.run(allocator, decoded);
+    return rollup_proof.encodeOutput(allocator, public_inputs) catch return error.OutputEncodeFailed;
 }
 
 comptime {

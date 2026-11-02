@@ -1,615 +1,278 @@
-//! SSZ codec for the rollup guest wire format: private input and public inputs plus hash,
-//! schema ids 0x1001/0x1801.
+//! Wire codec of the rollup guest's input: the `RollupProofPrivateInput` container behind the
+//! 0x1001 schema id. The frame is the 2-byte big-endian schema id followed by the SSZ container
+//! (SSZ itself is little-endian). The decoder accepts only the canonical encoding and the byte-list
+//! fields alias the decoded buffer.
 //!
-//! Frame: 2-byte big-endian schema id || SSZ container bytes (SSZ itself little-endian). This
-//! guest's own tests round-trip the input container byte-for-byte using this
-//! module's `encodeInput`/`decodeInput` and check the emitted output bytes — there is no
-//! external fixture to match; `rollup_spec/src/rollup_spec/rollup_ssz.py` is an illustrative
-//! reference implementation of the same schema, not an authority this codec is checked against.
+//! The already-proven l2-execution proofs the input embeds are core_serde's contract, and so is the
+//! guest's output (`core_serde.rollup_proof`).
 //!
-//! Every `List` field's wire encoding follows plain SSZ: a list of VARIABLE-size elements
-//! (`conflations`, `l2_execution_proofs`) is an offset table over its region — the generic
-//! `guest_common.ssz.decodeVariableList`/`encodeVariableList` every riscv-guests SSZ codec shares.
-//! A list of FIXED-size elements (`chunks`, `program_vks`, `l2_l1_roots`, `filtered_addresses`, the
-//! optional-as-list `boundary_prev_data_rolling_hash`) is just the concatenation of its elements
-//! with no per-element offset table; element count is the region's byte length divided by the
-//! element size (the `decodeBytes32List`/`decodeAddressList` pair below, local to this codec since
-//! guest_common only carries the variable-size-element list convention).
+//! A list of variable-size elements (`conflations`, `chunks`, `l2_execution_proofs`, a conflation's
+//! `block_rlps`) is an offset table over its region (`guest_common.ssz.decodeVariableList`); a list
+//! of fixed-size elements (`boundary_prev_data_rolling_hash`) is the plain concatenation of its
+//! elements.
+//!
+//! Fixed-head sizes (variable-size fields sit behind 4-byte offsets):
+//!   RollupProofPrivateInput:  64 bytes
+//!   ConflationWitness:         4 bytes
+//!   ChunkWitness:             49 bytes
 
 const std = @import("std");
-const guest_common = @import("guest_common");
+const core_serde = @import("core_serde");
+const ssz = @import("guest_common").ssz;
+
+const l2_execution_proof = core_serde.l2_execution_proof;
+const rollup_proof = core_serde.rollup_proof;
 
 pub const INPUT_SCHEMA_ID: u16 = 0x1001;
-pub const OUTPUT_SCHEMA_ID: u16 = 0x1801;
 const SCHEMA_ID_SIZE: usize = 2;
 
-// ── SSZ list/vector bounds (mirrors rollup_ssz.py's MAX_* constants) ─────────────────────────────
+// List bounds of the wire schema: encoders and decoders reject longer lists.
+/// Conflations one rollup proof covers.
 pub const MAX_CONFLATIONS_PER_ROLLUP: usize = 1 << 10;
-pub const MAX_L2_EXECUTION_PROOFS_PER_ROLLUP: usize = 1 << 10;
+/// Paired one to one with the conflations.
+pub const MAX_L2_EXECUTION_PROOFS_PER_ROLLUP: usize = rollup_proof.MAX_L2_EXECUTION_PROOFS_PER_ROLLUP;
+/// Chunks one rollup proof touches.
 pub const MAX_CHUNKS_PER_ROLLUP: usize = 1 << 12;
+/// Full block RLPs (one per block) of one conflation.
 pub const MAX_BLOCK_RLPS_PER_CONFLATION: usize = 1 << 12;
+/// 16 MiB: a full canonical block RLP including all transaction bodies.
 pub const MAX_BYTES_PER_BLOCK_RLP: usize = 1 << 24;
-pub const MAX_PROOF_BYTES: usize = 1 << 24;
-pub const MAX_PROGRAM_VKS: usize = 1 << 10;
-pub const MAX_L2_L1_ROOTS: usize = 1 << 16;
-pub const MAX_FILTERED_ADDRESSES: usize = 1 << 16;
-pub const MAX_L2_L1_MESSAGES_PER_EXEC_PROOF: usize = 1 << 16;
-pub const MAX_TX_FROMS_PER_EXEC_PROOF: usize = 1 << 16;
-pub const MAX_FILTERED_ADDRESSES_PER_EXEC_PROOF: usize = 1 << 16;
-/// `opaque_prefix_bytes`/`opaque_suffix_bytes` are each strictly shorter than one chunk, so the
-/// chunk byte size (4096 32-byte words) is the wire format's bound for both.
+/// 16 MiB: a single calldata submission.
+pub const MAX_CALLDATA_BYTES_PER_CHUNK: usize = 1 << 24;
+/// An EIP-4844 blob: 4096 field elements of 32 bytes.
 pub const BLOB_BYTES_LENGTH: usize = 4096 * 32;
+pub const BYTES_PER_COMMITMENT: usize = 48;
+pub const BYTES_PER_PROOF: usize = 48;
 
-// ── Logical values ────────────────────────────────────────────────────────────────────────────
+// ── Logical values ────────────────────────────────────────────────────────────
 
 pub const ConflationWitness = struct {
-    /// Zero-copy slices into the decoded input buffer.
+    /// The canonical full block RLPs of the conflation, one per block.
     block_rlps: []const []const u8,
 };
 
+/// One touched chunk: its anchored hash, its declared kind and the bytes it is checked against. A
+/// blob carries its physical bytes, commitment and proof; calldata its exact submission.
 pub const ChunkWitness = struct {
     chunk_hash: [32]u8,
     is_calldata: bool,
-    calldata_length: u64,
+    blob_bytes: []const u8 = &.{},
+    calldata_bytes: []const u8 = &.{},
+    kzg_commitment: []const u8 = &.{},
+    kzg_proof: []const u8 = &.{},
 };
 
-/// The l2-execution public-input tuple, in wire order.
-pub const L2ExecutionProofPublicInput = struct {
-    parent_block_hash: [32]u8,
-    end_block_hash: [32]u8,
-    end_block_number: u64,
-    end_block_timestamp: u64,
-    l2_l1_messages_hash: [32]u8,
-    end_l1_l2_bridge_rolling_hash: [32]u8,
-    end_l1_l2_bridge_rolling_hash_message_number: u64,
-    dynamic_chain_config_hash: [32]u8,
-    parent_ftx_rolling_hash: [32]u8,
-    parent_ftx_number: u64,
-    end_ftx_rolling_hash: [32]u8,
-    end_processed_ftx_number: u64,
-    filtered_addresses_hash: [32]u8,
-    tx_froms_hash: [32]u8,
-};
-
-pub const L2ExecutionProof = struct {
-    public_inputs: L2ExecutionProofPublicInput,
-    start_block_number: u64,
-    /// Zero-copy slice into the decoded input buffer.
-    proof: []const u8,
-    l2_l1_messages: []const [32]u8,
-    tx_froms: []const [20]u8,
-    filtered_addresses: []const [20]u8,
-};
-
-pub const VerifiableL2ExecutionProof = struct {
-    proof: L2ExecutionProof,
-    program_vk: [32]u8,
-};
-
-/// The rollup guest's own input: an already-proven contiguous run of l2-execution proofs plus the
-/// conflation/chunk witnesses the real rollup guest would recursively verify and fold (this stub
-/// decodes but never verifies or folds them).
 pub const RollupProofPrivateInput = struct {
     parent_data_rolling_hash: [32]u8,
-    start_offset: u64,
+    parent_data_tail_take_bytes: u64,
     chain_id: u64,
     conflations: []const ConflationWitness,
     chunks: []const ChunkWitness,
-    l2_execution_proofs: []const VerifiableL2ExecutionProof,
-    /// Zero-copy slices into the decoded input buffer.
-    opaque_prefix_bytes: []const u8,
-    opaque_suffix_bytes: []const u8,
-    /// `null` when the wire `boundary_prev_data_rolling_hash` list is empty — the wire format's
-    /// `Optional[Hash32]` modelling (absent is the empty list, present is a single-element list).
+    l2_execution_proofs: []const l2_execution_proof.VerifiableL2ExecutionProof,
+    /// The wire list `boundary_prev_data_rolling_hash` holds at most one element: absent is the
+    /// empty list, present the single hash.
     boundary_prev_data_rolling_hash: ?[32]u8,
 };
 
-/// The rollup/rollup-aggregation public-input tuple, in wire order. Every field but
-/// `program_vks` is fixed-size.
-pub const RollupPublicInput = struct {
-    end_block_number: u64,
-    end_block_timestamp: u64,
-    l2_l1_bridge_transaction_tree: [32]u8,
-    end_l1_l2_bridge_rolling_hash: [32]u8,
-    end_l1_l2_bridge_rolling_hash_message_number: u64,
-    dynamic_chain_config_hash: [32]u8,
-    parent_ftx_rolling_hash: [32]u8,
-    parent_ftx_number: u64,
-    end_ftx_rolling_hash: [32]u8,
-    end_processed_ftx_number: u64,
-    filtered_addresses_hash: [32]u8,
-    parent_data_rolling_hash: [32]u8,
-    end_data_rolling_hash: [32]u8,
-    parent_block_hash: [32]u8,
-    end_block_hash: [32]u8,
-    start_offset: u64,
-    end_offset: u64,
-    program_vks: []const [32]u8,
-};
+const readU32 = ssz.readU32;
+const writeU32 = ssz.writeU32;
+const putHash = ssz.putHash;
+const putU64 = ssz.putU64;
+const putOffset = ssz.putOffset;
+const getHash = ssz.getHash;
+const getU64 = ssz.getU64;
+const getOffset = ssz.getOffset;
 
-/// The rollup business-logic result; the guest writes only public_inputs and their hash.
-pub const RollupOutput = struct {
-    public_inputs: RollupPublicInput,
-    start_block_number: u64,
-    l2_l1_roots: []const [32]u8,
-    filtered_addresses: []const [20]u8,
-};
-
-// ── Primitive reads/writes and the generic "List[VariableSizeType, N]" codec ─────────────────────
-// Little-endian integer reads/writes and the offset-table list codec live in guest_common.ssz:
-// identical machinery every riscv-guests SSZ codec builds on.
-const readU32 = guest_common.ssz.readU32;
-const readU64 = guest_common.ssz.readU64;
-const writeU32 = guest_common.ssz.writeU32;
-const writeU64 = guest_common.ssz.writeU64;
-const decodeVariableList = guest_common.ssz.decodeVariableList;
-
-fn checkedAdd(a: usize, b: usize) !usize {
-    return std.math.add(usize, a, b) catch error.InvalidSsz;
-}
-
-fn checkedMul(a: usize, b: usize) !usize {
-    return std.math.mul(usize, a, b) catch error.InvalidSsz;
-}
-
-fn sszOffset(value: usize) !u32 {
-    if (value > std.math.maxInt(u32)) return error.InvalidSsz;
-    return @intCast(value);
-}
-
-inline fn getHash(bytes: []const u8, pos: *usize) [32]u8 {
-    var out: [32]u8 = undefined;
-    @memcpy(&out, bytes[pos.*..][0..32]);
-    pos.* += 32;
-    return out;
-}
-
-inline fn getU64(bytes: []const u8, pos: *usize) u64 {
-    const v = readU64(bytes, pos.*);
-    pos.* += 8;
-    return v;
-}
-
-inline fn putHash(out: []u8, pos: *usize, value: [32]u8) void {
-    @memcpy(out[pos.*..][0..32], &value);
-    pos.* += 32;
-}
-
-inline fn putU64(out: []u8, pos: *usize, value: u64) void {
-    writeU64(out, pos.*, value);
-    pos.* += 8;
-}
-
-// ── Fixed-size-element list codec ─────────────────────────────────────────────────────────────
-// SSZ encodes `List[FixedSizeType, N]` as the plain concatenation of its elements — no offset
-// table — so element count is the region's byte length divided by the element size.
-
-fn decodeBytes32List(alloc: std.mem.Allocator, data: []const u8, max_items: usize) ![]const [32]u8 {
-    if (data.len % 32 != 0) return error.InvalidSsz;
-    const n = data.len / 32;
-    if (n > max_items) return error.BoundsViolation;
-    const out = try alloc.alloc([32]u8, n);
-    for (0..n) |i| @memcpy(&out[i], data[i * 32 ..][0..32]);
-    return out;
-}
-
-fn encodeBytes32List(alloc: std.mem.Allocator, items: []const [32]u8) ![]u8 {
-    const byte_len = try checkedMul(items.len, 32);
-    const out = try alloc.alloc(u8, byte_len);
-    for (items, 0..) |item, i| @memcpy(out[i * 32 ..][0..32], &item);
-    return out;
-}
-
-fn decodeChunkWitnessList(alloc: std.mem.Allocator, data: []const u8) ![]const ChunkWitness {
-    const element_size = 41;
-    if (data.len % element_size != 0) return error.InvalidSsz;
-    const n = data.len / element_size;
-    if (n > MAX_CHUNKS_PER_ROLLUP) return error.BoundsViolation;
-    const out = try alloc.alloc(ChunkWitness, n);
-    for (0..n) |i| {
-        const start = i * element_size;
-        @memcpy(&out[i].chunk_hash, data[start..][0..32]);
-        out[i].is_calldata = switch (data[start + 32]) {
-            0 => false,
-            1 => true,
-            else => return error.InvalidSsz,
-        };
-        out[i].calldata_length = readU64(data, start + 33);
-    }
-    return out;
-}
-
-fn encodeChunkWitnessList(alloc: std.mem.Allocator, items: []const ChunkWitness) ![]u8 {
-    const element_size = 41;
-    const byte_len = try checkedMul(items.len, element_size);
-    const out = try alloc.alloc(u8, byte_len);
-    for (items, 0..) |item, i| {
-        const start = i * element_size;
-        @memcpy(out[start..][0..32], &item.chunk_hash);
-        out[start + 32] = @intFromBool(item.is_calldata);
-        writeU64(out, start + 33, item.calldata_length);
-    }
-    return out;
-}
-
-fn decodeAddressList(alloc: std.mem.Allocator, data: []const u8, max_items: usize) ![]const [20]u8 {
-    if (data.len % 20 != 0) return error.InvalidSsz;
-    const n = data.len / 20;
-    if (n > max_items) return error.BoundsViolation;
-    const out = try alloc.alloc([20]u8, n);
-    for (0..n) |i| @memcpy(&out[i], data[i * 20 ..][0..20]);
-    return out;
-}
-
-fn encodeAddressList(alloc: std.mem.Allocator, items: []const [20]u8) ![]u8 {
-    const byte_len = try checkedMul(items.len, 20);
-    const out = try alloc.alloc(u8, byte_len);
-    for (items, 0..) |item, i| @memcpy(out[i * 20 ..][0..20], &item);
-    return out;
-}
-
-// ── ConflationWitness ─────────────────────────────────────────────────────────────────────────
-// Fixed head: block_rlps offset(4) = 4 — the only field, so this container is entirely variable.
-const CONFLATION_WITNESS_FIXED_SIZE: usize = 4;
+// ── ConflationWitness ─────────────────────────────────────────────────────────
+// Fixed head: block_rlps offset(4).
+const CONFLATION_FIXED_SIZE: usize = 4;
 
 fn decodeConflationWitness(alloc: std.mem.Allocator, bytes: []const u8) !ConflationWitness {
-    if (bytes.len < CONFLATION_WITNESS_FIXED_SIZE) return error.InvalidSsz;
-    const off = readU32(bytes, 0);
-    if (off != CONFLATION_WITNESS_FIXED_SIZE or off > bytes.len) return error.InvalidSsz;
-    const block_rlps = try decodeVariableList(alloc, bytes[off..], MAX_BLOCK_RLPS_PER_CONFLATION);
-    for (block_rlps) |rlp| {
-        if (rlp.len > MAX_BYTES_PER_BLOCK_RLP) return error.BoundsViolation;
+    if (bytes.len < CONFLATION_FIXED_SIZE) return error.InvalidSsz;
+    if (readU32(bytes, 0) != CONFLATION_FIXED_SIZE) return error.InvalidSsz;
+    const block_rlps = try ssz.decodeVariableList(alloc, bytes[CONFLATION_FIXED_SIZE..], MAX_BLOCK_RLPS_PER_CONFLATION);
+    for (block_rlps) |block_rlp| {
+        if (block_rlp.len > MAX_BYTES_PER_BLOCK_RLP) return error.BoundsViolation;
     }
     return .{ .block_rlps = block_rlps };
 }
 
-// ── L2ExecutionProofPublicInput (14 fixed fields, 328 bytes, no offsets) ─────────────────────────
-const EXEC_PI_FIXED_SIZE: usize = 328;
-
-fn decodeExecPublicInput(bytes: []const u8) !L2ExecutionProofPublicInput {
-    if (bytes.len < EXEC_PI_FIXED_SIZE) return error.InvalidSsz;
-    var pos: usize = 0;
-    var v: L2ExecutionProofPublicInput = undefined;
-    v.parent_block_hash = getHash(bytes, &pos);
-    v.end_block_hash = getHash(bytes, &pos);
-    v.end_block_number = getU64(bytes, &pos);
-    v.end_block_timestamp = getU64(bytes, &pos);
-    v.l2_l1_messages_hash = getHash(bytes, &pos);
-    v.end_l1_l2_bridge_rolling_hash = getHash(bytes, &pos);
-    v.end_l1_l2_bridge_rolling_hash_message_number = getU64(bytes, &pos);
-    v.dynamic_chain_config_hash = getHash(bytes, &pos);
-    v.parent_ftx_rolling_hash = getHash(bytes, &pos);
-    v.parent_ftx_number = getU64(bytes, &pos);
-    v.end_ftx_rolling_hash = getHash(bytes, &pos);
-    v.end_processed_ftx_number = getU64(bytes, &pos);
-    v.filtered_addresses_hash = getHash(bytes, &pos);
-    v.tx_froms_hash = getHash(bytes, &pos);
-    std.debug.assert(pos == EXEC_PI_FIXED_SIZE);
-    return v;
+fn encodeConflationWitness(alloc: std.mem.Allocator, v: ConflationWitness) ![]u8 {
+    if (v.block_rlps.len > MAX_BLOCK_RLPS_PER_CONFLATION) return error.BoundsViolation;
+    for (v.block_rlps) |block_rlp| {
+        if (block_rlp.len > MAX_BYTES_PER_BLOCK_RLP) return error.BoundsViolation;
+    }
+    const block_rlps = try ssz.encodeVariableList(alloc, v.block_rlps);
+    const out = try alloc.alloc(u8, CONFLATION_FIXED_SIZE + block_rlps.len);
+    writeU32(out, 0, CONFLATION_FIXED_SIZE);
+    @memcpy(out[CONFLATION_FIXED_SIZE..], block_rlps);
+    return out;
 }
 
-// ── L2ExecutionProof ──────────────────────────────────────────────────────────────────────────
-// Fixed head: public_inputs(328, inline — itself fully fixed) + start_block_number(8) +
-// proof offset(4) + l2_l1_messages offset(4) + tx_froms offset(4) + filtered_addresses offset(4).
-const EXEC_PROOF_FIXED_SIZE: usize = EXEC_PI_FIXED_SIZE + 8 + 4 + 4 + 4 + 4;
+// ── ChunkWitness ──────────────────────────────────────────────────────────────
+// Fixed head: chunk_hash(32) + is_calldata(1) + four byte-list offsets(4 each) = 49.
+const CHUNK_FIXED_SIZE: usize = 32 + 1 + 4 * 4;
 
-fn decodeL2ExecutionProof(alloc: std.mem.Allocator, bytes: []const u8) !L2ExecutionProof {
-    if (bytes.len < EXEC_PROOF_FIXED_SIZE) return error.InvalidSsz;
-    const public_inputs = try decodeExecPublicInput(bytes[0..EXEC_PI_FIXED_SIZE]);
-    const start_block_number = readU64(bytes, EXEC_PI_FIXED_SIZE);
-    const off_proof = readU32(bytes, EXEC_PI_FIXED_SIZE + 8);
-    const off_messages = readU32(bytes, EXEC_PI_FIXED_SIZE + 12);
-    const off_tx_froms = readU32(bytes, EXEC_PI_FIXED_SIZE + 16);
-    const off_filtered = readU32(bytes, EXEC_PI_FIXED_SIZE + 20);
-    if (off_proof != EXEC_PROOF_FIXED_SIZE) return error.InvalidSsz;
-    if (off_messages < off_proof or off_tx_froms < off_messages or off_filtered < off_tx_froms) {
-        return error.InvalidSsz;
-    }
-    if (off_filtered > bytes.len) return error.InvalidSsz;
+fn decodeChunkWitness(bytes: []const u8) !ChunkWitness {
+    if (bytes.len < CHUNK_FIXED_SIZE) return error.InvalidSsz;
+    var pos: usize = 0;
+    const chunk_hash = getHash(bytes, &pos);
+    const is_calldata = switch (bytes[pos]) {
+        0 => false,
+        1 => true,
+        else => return error.InvalidSsz,
+    };
+    pos += 1;
+    const blob_start = getOffset(bytes, &pos);
+    const calldata_start = getOffset(bytes, &pos);
+    const commitment_start = getOffset(bytes, &pos);
+    const proof_start = getOffset(bytes, &pos);
+    std.debug.assert(pos == CHUNK_FIXED_SIZE);
 
-    const proof = bytes[off_proof..off_messages];
-    if (proof.len > MAX_PROOF_BYTES) return error.BoundsViolation;
-    const l2_l1_messages = try decodeBytes32List(alloc, bytes[off_messages..off_tx_froms], MAX_L2_L1_MESSAGES_PER_EXEC_PROOF);
-    const tx_froms = try decodeAddressList(alloc, bytes[off_tx_froms..off_filtered], MAX_TX_FROMS_PER_EXEC_PROOF);
-    const filtered_addresses = try decodeAddressList(alloc, bytes[off_filtered..], MAX_FILTERED_ADDRESSES_PER_EXEC_PROOF);
+    // The first tail starts right behind the fixed head and every tail ends where the next begins.
+    if (blob_start != CHUNK_FIXED_SIZE or calldata_start < blob_start or commitment_start < calldata_start or
+        proof_start < commitment_start or proof_start > bytes.len) return error.InvalidSsz;
+
+    const blob_bytes = bytes[blob_start..calldata_start];
+    const calldata_bytes = bytes[calldata_start..commitment_start];
+    const kzg_commitment = bytes[commitment_start..proof_start];
+    const kzg_proof = bytes[proof_start..];
+    if (blob_bytes.len > BLOB_BYTES_LENGTH or calldata_bytes.len > MAX_CALLDATA_BYTES_PER_CHUNK or
+        kzg_commitment.len > BYTES_PER_COMMITMENT or kzg_proof.len > BYTES_PER_PROOF) return error.BoundsViolation;
 
     return .{
-        .public_inputs = public_inputs,
-        .start_block_number = start_block_number,
-        .proof = proof,
-        .l2_l1_messages = l2_l1_messages,
-        .tx_froms = tx_froms,
-        .filtered_addresses = filtered_addresses,
+        .chunk_hash = chunk_hash,
+        .is_calldata = is_calldata,
+        .blob_bytes = blob_bytes,
+        .calldata_bytes = calldata_bytes,
+        .kzg_commitment = kzg_commitment,
+        .kzg_proof = kzg_proof,
     };
 }
 
-// ── VerifiableL2ExecutionProof ────────────────────────────────────────────────────────────────
-// Fixed head: proof offset(4) + program_vk(32, inline) = 36.
-const VERIFIABLE_EXEC_PROOF_FIXED_SIZE: usize = 36;
+fn encodeChunkWitness(alloc: std.mem.Allocator, v: ChunkWitness) ![]u8 {
+    if (v.blob_bytes.len > BLOB_BYTES_LENGTH or v.calldata_bytes.len > MAX_CALLDATA_BYTES_PER_CHUNK or
+        v.kzg_commitment.len > BYTES_PER_COMMITMENT or v.kzg_proof.len > BYTES_PER_PROOF) return error.BoundsViolation;
 
-fn decodeVerifiableL2ExecutionProof(alloc: std.mem.Allocator, bytes: []const u8) !VerifiableL2ExecutionProof {
-    if (bytes.len < VERIFIABLE_EXEC_PROOF_FIXED_SIZE) return error.InvalidSsz;
-    const off_proof = readU32(bytes, 0);
-    if (off_proof != VERIFIABLE_EXEC_PROOF_FIXED_SIZE or off_proof > bytes.len) return error.InvalidSsz;
-    var program_vk: [32]u8 = undefined;
-    @memcpy(&program_vk, bytes[4..36]);
-    const proof = try decodeL2ExecutionProof(alloc, bytes[off_proof..]);
-    return .{ .proof = proof, .program_vk = program_vk };
+    const calldata_start = CHUNK_FIXED_SIZE + v.blob_bytes.len;
+    const commitment_start = calldata_start + v.calldata_bytes.len;
+    const proof_start = commitment_start + v.kzg_commitment.len;
+    const out = try alloc.alloc(u8, proof_start + v.kzg_proof.len);
+
+    var pos: usize = 0;
+    putHash(out, &pos, v.chunk_hash);
+    out[pos] = @intFromBool(v.is_calldata);
+    pos += 1;
+    putOffset(out, &pos, CHUNK_FIXED_SIZE);
+    putOffset(out, &pos, calldata_start);
+    putOffset(out, &pos, commitment_start);
+    putOffset(out, &pos, proof_start);
+    std.debug.assert(pos == CHUNK_FIXED_SIZE);
+    @memcpy(out[CHUNK_FIXED_SIZE..][0..v.blob_bytes.len], v.blob_bytes);
+    @memcpy(out[calldata_start..][0..v.calldata_bytes.len], v.calldata_bytes);
+    @memcpy(out[commitment_start..][0..v.kzg_commitment.len], v.kzg_commitment);
+    @memcpy(out[proof_start..], v.kzg_proof);
+    return out;
 }
 
-// ── RollupProofPrivateInput (the rollup guest INPUT) ─────────────────────────────────────────────
-// Fixed head: parent_data_rolling_hash(32) + start_offset(8) + chain_id(8) + 6 offsets(4 each).
-const INPUT_FIXED_SIZE: usize = 32 + 8 + 8 + 4 * 6;
+// ── RollupProofPrivateInput ───────────────────────────────────────────────────
+// Fixed head: parent_data_rolling_hash(32) + parent_data_tail_take_bytes(8) + chain_id(8) + four
+// list offsets(4 each) = 64.
+const INPUT_FIXED_SIZE: usize = 32 + 8 + 8 + 4 * 4;
 
-/// Decode the rollup guest input: the 0x1001 schema id followed by the SSZ
-/// `SszRollupProofPrivateInput`. Strict: rejects a wrong schema id, a too-short frame, a
-/// misaligned/out-of-order/out-of-bounds offset, or a list exceeding its wire-format bound.
+/// Decode the rollup guest input: the 0x1001 schema id followed by the SSZ container. A missing or
+/// different schema id is `error.MalformedFrame`; a container that is not the canonical encoding is
+/// `error.InvalidSsz`; a list or byte field beyond its bound is `error.BoundsViolation`.
 pub fn decodeInput(alloc: std.mem.Allocator, data: []const u8) !RollupProofPrivateInput {
     if (data.len < SCHEMA_ID_SIZE) return error.MalformedFrame;
-    if (std.mem.readInt(u16, data[0..2], .big) != INPUT_SCHEMA_ID) return error.MalformedFrame;
+    if (std.mem.readInt(u16, data[0..SCHEMA_ID_SIZE], .big) != INPUT_SCHEMA_ID) return error.MalformedFrame;
 
     const body = data[SCHEMA_ID_SIZE..];
     if (body.len < INPUT_FIXED_SIZE) return error.InvalidSsz;
 
-    var parent_data_rolling_hash: [32]u8 = undefined;
-    @memcpy(&parent_data_rolling_hash, body[0..32]);
-    const start_offset = readU64(body, 32);
-    const chain_id = readU64(body, 40);
+    var pos: usize = 0;
+    const parent_data_rolling_hash = getHash(body, &pos);
+    const parent_data_tail_take_bytes = getU64(body, &pos);
+    const chain_id = getU64(body, &pos);
+    const conflations_start = getOffset(body, &pos);
+    const chunks_start = getOffset(body, &pos);
+    const proofs_start = getOffset(body, &pos);
+    const boundary_start = getOffset(body, &pos);
+    std.debug.assert(pos == INPUT_FIXED_SIZE);
 
-    const off_conflations = readU32(body, 48);
-    const off_chunks = readU32(body, 52);
-    const off_proofs = readU32(body, 56);
-    const off_prefix = readU32(body, 60);
-    const off_suffix = readU32(body, 64);
-    const off_boundary = readU32(body, 68);
+    // The first tail starts right behind the fixed head and every tail ends where the next begins.
+    if (conflations_start != INPUT_FIXED_SIZE or chunks_start < conflations_start or proofs_start < chunks_start or
+        boundary_start < proofs_start or boundary_start > body.len) return error.InvalidSsz;
 
-    if (off_conflations != INPUT_FIXED_SIZE) return error.InvalidSsz;
-    if (off_chunks < off_conflations or off_proofs < off_chunks or off_prefix < off_proofs or
-        off_suffix < off_prefix or off_boundary < off_suffix)
-    {
-        return error.InvalidSsz;
-    }
-    if (off_boundary > body.len) return error.InvalidSsz;
+    const conflation_regions = try ssz.decodeVariableList(alloc, body[conflations_start..chunks_start], MAX_CONFLATIONS_PER_ROLLUP);
+    const conflations = try alloc.alloc(ConflationWitness, conflation_regions.len);
+    for (conflations, conflation_regions) |*conflation, region| conflation.* = try decodeConflationWitness(alloc, region);
 
-    const conflation_slices = try decodeVariableList(alloc, body[off_conflations..off_chunks], MAX_CONFLATIONS_PER_ROLLUP);
-    const conflations = try alloc.alloc(ConflationWitness, conflation_slices.len);
-    for (conflation_slices, 0..) |slice, i| conflations[i] = try decodeConflationWitness(alloc, slice);
+    const chunk_regions = try ssz.decodeVariableList(alloc, body[chunks_start..proofs_start], MAX_CHUNKS_PER_ROLLUP);
+    const chunks = try alloc.alloc(ChunkWitness, chunk_regions.len);
+    for (chunks, chunk_regions) |*chunk, region| chunk.* = try decodeChunkWitness(region);
 
-    const chunks = try decodeChunkWitnessList(alloc, body[off_chunks..off_proofs]);
+    const proof_regions = try ssz.decodeVariableList(alloc, body[proofs_start..boundary_start], MAX_L2_EXECUTION_PROOFS_PER_ROLLUP);
+    const l2_execution_proofs = try alloc.alloc(l2_execution_proof.VerifiableL2ExecutionProof, proof_regions.len);
+    for (l2_execution_proofs, proof_regions) |*proof, region| proof.* = try l2_execution_proof.decodeVerifiableProof(alloc, region);
 
-    const proof_slices = try decodeVariableList(alloc, body[off_proofs..off_prefix], MAX_L2_EXECUTION_PROOFS_PER_ROLLUP);
-    const l2_execution_proofs = try alloc.alloc(VerifiableL2ExecutionProof, proof_slices.len);
-    for (proof_slices, 0..) |slice, i| l2_execution_proofs[i] = try decodeVerifiableL2ExecutionProof(alloc, slice);
-
-    const opaque_prefix_bytes = body[off_prefix..off_suffix];
-    if (opaque_prefix_bytes.len > BLOB_BYTES_LENGTH) return error.BoundsViolation;
-    const opaque_suffix_bytes = body[off_suffix..off_boundary];
-    if (opaque_suffix_bytes.len > BLOB_BYTES_LENGTH) return error.BoundsViolation;
-
-    const boundary_list = try decodeBytes32List(alloc, body[off_boundary..], 1);
-    const boundary_prev_data_rolling_hash: ?[32]u8 = if (boundary_list.len == 1) boundary_list[0] else null;
+    const boundary = try ssz.decodeFixedList([32]u8, body[boundary_start..], 1);
 
     return .{
         .parent_data_rolling_hash = parent_data_rolling_hash,
-        .start_offset = start_offset,
+        .parent_data_tail_take_bytes = parent_data_tail_take_bytes,
         .chain_id = chain_id,
         .conflations = conflations,
         .chunks = chunks,
         .l2_execution_proofs = l2_execution_proofs,
-        .opaque_prefix_bytes = opaque_prefix_bytes,
-        .opaque_suffix_bytes = opaque_suffix_bytes,
-        .boundary_prev_data_rolling_hash = boundary_prev_data_rolling_hash,
+        .boundary_prev_data_rolling_hash = if (boundary.len == 1) boundary[0] else null,
     };
 }
 
-fn encodeExecPublicInput(alloc: std.mem.Allocator, v: L2ExecutionProofPublicInput) ![]u8 {
-    const out = try alloc.alloc(u8, EXEC_PI_FIXED_SIZE);
-    var pos: usize = 0;
-    putHash(out, &pos, v.parent_block_hash);
-    putHash(out, &pos, v.end_block_hash);
-    putU64(out, &pos, v.end_block_number);
-    putU64(out, &pos, v.end_block_timestamp);
-    putHash(out, &pos, v.l2_l1_messages_hash);
-    putHash(out, &pos, v.end_l1_l2_bridge_rolling_hash);
-    putU64(out, &pos, v.end_l1_l2_bridge_rolling_hash_message_number);
-    putHash(out, &pos, v.dynamic_chain_config_hash);
-    putHash(out, &pos, v.parent_ftx_rolling_hash);
-    putU64(out, &pos, v.parent_ftx_number);
-    putHash(out, &pos, v.end_ftx_rolling_hash);
-    putU64(out, &pos, v.end_processed_ftx_number);
-    putHash(out, &pos, v.filtered_addresses_hash);
-    putHash(out, &pos, v.tx_froms_hash);
-    std.debug.assert(pos == EXEC_PI_FIXED_SIZE);
-    return out;
-}
-
-fn encodeL2ExecutionProof(alloc: std.mem.Allocator, v: L2ExecutionProof) ![]u8 {
-    if (v.proof.len > MAX_PROOF_BYTES or
-        v.l2_l1_messages.len > MAX_L2_L1_MESSAGES_PER_EXEC_PROOF or
-        v.tx_froms.len > MAX_TX_FROMS_PER_EXEC_PROOF or
-        v.filtered_addresses.len > MAX_FILTERED_ADDRESSES_PER_EXEC_PROOF)
-    {
-        return error.BoundsViolation;
-    }
-
-    const pi_bytes = try encodeExecPublicInput(alloc, v.public_inputs);
-    const messages_bytes = try encodeBytes32List(alloc, v.l2_l1_messages);
-    const tx_froms_bytes = try encodeAddressList(alloc, v.tx_froms);
-    const filtered_bytes = try encodeAddressList(alloc, v.filtered_addresses);
-
-    const off_proof = EXEC_PROOF_FIXED_SIZE;
-    const off_messages = try checkedAdd(off_proof, v.proof.len);
-    const off_tx_froms = try checkedAdd(off_messages, messages_bytes.len);
-    const off_filtered = try checkedAdd(off_tx_froms, tx_froms_bytes.len);
-    const total_len = try checkedAdd(off_filtered, filtered_bytes.len);
-    _ = try sszOffset(total_len);
-
-    const out = try alloc.alloc(u8, total_len);
-    @memcpy(out[0..EXEC_PI_FIXED_SIZE], pi_bytes);
-    var pos: usize = EXEC_PI_FIXED_SIZE;
-    putU64(out, &pos, v.start_block_number);
-    writeU32(out, pos, try sszOffset(off_proof));
-    pos += 4;
-    writeU32(out, pos, try sszOffset(off_messages));
-    pos += 4;
-    writeU32(out, pos, try sszOffset(off_tx_froms));
-    pos += 4;
-    writeU32(out, pos, try sszOffset(off_filtered));
-    pos += 4;
-    std.debug.assert(pos == EXEC_PROOF_FIXED_SIZE);
-    @memcpy(out[off_proof..][0..v.proof.len], v.proof);
-    @memcpy(out[off_messages..][0..messages_bytes.len], messages_bytes);
-    @memcpy(out[off_tx_froms..][0..tx_froms_bytes.len], tx_froms_bytes);
-    @memcpy(out[off_filtered..], filtered_bytes);
-    return out;
-}
-
-fn encodeVerifiableL2ExecutionProof(alloc: std.mem.Allocator, v: VerifiableL2ExecutionProof) ![]u8 {
-    const proof_bytes = try encodeL2ExecutionProof(alloc, v.proof);
-    const total_len = try checkedAdd(VERIFIABLE_EXEC_PROOF_FIXED_SIZE, proof_bytes.len);
-    _ = try sszOffset(total_len);
-    const out = try alloc.alloc(u8, total_len);
-    writeU32(out, 0, try sszOffset(VERIFIABLE_EXEC_PROOF_FIXED_SIZE));
-    @memcpy(out[4..36], &v.program_vk);
-    @memcpy(out[36..], proof_bytes);
-    return out;
-}
-
-fn encodeConflationWitness(alloc: std.mem.Allocator, v: ConflationWitness) ![]u8 {
-    if (v.block_rlps.len > MAX_BLOCK_RLPS_PER_CONFLATION) return error.BoundsViolation;
-    for (v.block_rlps) |rlp| {
-        if (rlp.len > MAX_BYTES_PER_BLOCK_RLP) return error.BoundsViolation;
-    }
-    const list_bytes = try guest_common.ssz.encodeVariableList(alloc, v.block_rlps);
-    const total_len = try checkedAdd(CONFLATION_WITNESS_FIXED_SIZE, list_bytes.len);
-    _ = try sszOffset(total_len);
-    const out = try alloc.alloc(u8, total_len);
-    writeU32(out, 0, try sszOffset(CONFLATION_WITNESS_FIXED_SIZE));
-    @memcpy(out[CONFLATION_WITNESS_FIXED_SIZE..], list_bytes);
-    return out;
-}
-
-/// Encode the rollup guest input: the 0x1001 schema id followed by the SSZ
-/// `SszRollupProofPrivateInput`. Not used by the guest itself at runtime (it only ever decodes) —
-/// kept so the input codec's byte-exact round-trip can be asserted against `decodeInput` in this
-/// guest's own tests, from literal readable Zig values rather than an externally-produced fixture.
+/// Encode the rollup guest input: inverse of `decodeInput`. `alloc` is an arena that owns the
+/// scratch buffers of the regions.
 pub fn encodeInput(alloc: std.mem.Allocator, v: RollupProofPrivateInput) ![]u8 {
     if (v.conflations.len > MAX_CONFLATIONS_PER_ROLLUP or
         v.chunks.len > MAX_CHUNKS_PER_ROLLUP or
-        v.l2_execution_proofs.len > MAX_L2_EXECUTION_PROOFS_PER_ROLLUP or
-        v.opaque_prefix_bytes.len > BLOB_BYTES_LENGTH or
-        v.opaque_suffix_bytes.len > BLOB_BYTES_LENGTH)
-    {
-        return error.BoundsViolation;
-    }
+        v.l2_execution_proofs.len > MAX_L2_EXECUTION_PROOFS_PER_ROLLUP) return error.BoundsViolation;
 
-    const conflation_blobs = try alloc.alloc([]const u8, v.conflations.len);
-    for (v.conflations, 0..) |c, i| conflation_blobs[i] = try encodeConflationWitness(alloc, c);
-    const conflations_bytes = try guest_common.ssz.encodeVariableList(alloc, conflation_blobs);
+    const conflation_regions = try alloc.alloc([]const u8, v.conflations.len);
+    for (conflation_regions, v.conflations) |*region, conflation| region.* = try encodeConflationWitness(alloc, conflation);
+    const conflations = try ssz.encodeVariableList(alloc, conflation_regions);
 
-    const chunks_bytes = try encodeChunkWitnessList(alloc, v.chunks);
+    const chunk_regions = try alloc.alloc([]const u8, v.chunks.len);
+    for (chunk_regions, v.chunks) |*region, chunk| region.* = try encodeChunkWitness(alloc, chunk);
+    const chunks = try ssz.encodeVariableList(alloc, chunk_regions);
 
-    const proof_blobs = try alloc.alloc([]const u8, v.l2_execution_proofs.len);
-    for (v.l2_execution_proofs, 0..) |p, i| proof_blobs[i] = try encodeVerifiableL2ExecutionProof(alloc, p);
-    const proofs_bytes = try guest_common.ssz.encodeVariableList(alloc, proof_blobs);
+    const proof_regions = try alloc.alloc([]const u8, v.l2_execution_proofs.len);
+    for (proof_regions, v.l2_execution_proofs) |*region, proof| region.* = try l2_execution_proof.encodeVerifiableProof(alloc, proof);
+    const proofs = try ssz.encodeVariableList(alloc, proof_regions);
 
-    var boundary_buf: [1][32]u8 = undefined;
-    const boundary_slice: []const [32]u8 = if (v.boundary_prev_data_rolling_hash) |h| blk: {
-        boundary_buf[0] = h;
-        break :blk boundary_buf[0..1];
-    } else &.{};
-    const boundary_bytes = try encodeBytes32List(alloc, boundary_slice);
+    const boundary_len: usize = if (v.boundary_prev_data_rolling_hash == null) 0 else 32;
 
-    const off_conflations = INPUT_FIXED_SIZE;
-    const off_chunks = try checkedAdd(off_conflations, conflations_bytes.len);
-    const off_proofs = try checkedAdd(off_chunks, chunks_bytes.len);
-    const off_prefix = try checkedAdd(off_proofs, proofs_bytes.len);
-    const off_suffix = try checkedAdd(off_prefix, v.opaque_prefix_bytes.len);
-    const off_boundary = try checkedAdd(off_suffix, v.opaque_suffix_bytes.len);
-    const body_len = try checkedAdd(off_boundary, boundary_bytes.len);
-    _ = try sszOffset(body_len);
+    const chunks_start = INPUT_FIXED_SIZE + conflations.len;
+    const proofs_start = chunks_start + chunks.len;
+    const boundary_start = proofs_start + proofs.len;
+    const body_len = boundary_start + boundary_len;
+    // Every offset is a u32.
+    if (body_len > std.math.maxInt(u32)) return error.InvalidSsz;
 
-    const frame_len = try checkedAdd(SCHEMA_ID_SIZE, body_len);
-    const out = try alloc.alloc(u8, frame_len);
-    std.mem.writeInt(u16, out[0..2], INPUT_SCHEMA_ID, .big);
+    const out = try alloc.alloc(u8, SCHEMA_ID_SIZE + body_len);
+    std.mem.writeInt(u16, out[0..SCHEMA_ID_SIZE], INPUT_SCHEMA_ID, .big);
     const body = out[SCHEMA_ID_SIZE..];
 
     var pos: usize = 0;
     putHash(body, &pos, v.parent_data_rolling_hash);
-    putU64(body, &pos, v.start_offset);
+    putU64(body, &pos, v.parent_data_tail_take_bytes);
     putU64(body, &pos, v.chain_id);
-    writeU32(body, pos, try sszOffset(off_conflations));
-    pos += 4;
-    writeU32(body, pos, try sszOffset(off_chunks));
-    pos += 4;
-    writeU32(body, pos, try sszOffset(off_proofs));
-    pos += 4;
-    writeU32(body, pos, try sszOffset(off_prefix));
-    pos += 4;
-    writeU32(body, pos, try sszOffset(off_suffix));
-    pos += 4;
-    writeU32(body, pos, try sszOffset(off_boundary));
-    pos += 4;
+    putOffset(body, &pos, INPUT_FIXED_SIZE);
+    putOffset(body, &pos, chunks_start);
+    putOffset(body, &pos, proofs_start);
+    putOffset(body, &pos, boundary_start);
     std.debug.assert(pos == INPUT_FIXED_SIZE);
-
-    @memcpy(body[off_conflations..][0..conflations_bytes.len], conflations_bytes);
-    @memcpy(body[off_chunks..][0..chunks_bytes.len], chunks_bytes);
-    @memcpy(body[off_proofs..][0..proofs_bytes.len], proofs_bytes);
-    @memcpy(body[off_prefix..][0..v.opaque_prefix_bytes.len], v.opaque_prefix_bytes);
-    @memcpy(body[off_suffix..][0..v.opaque_suffix_bytes.len], v.opaque_suffix_bytes);
-    @memcpy(body[off_boundary..], boundary_bytes);
-
-    return out;
-}
-
-// ── RollupPublicInput (only `program_vks` is variable) ────────────────────────────────
-// Fixed head: 17 fixed fields (10 hashes * 32 + 7 u64s * 8 = 376) + program_vks offset(4) = 380.
-const ROLLUP_PI_FIXED_SIZE: usize = 380;
-
-fn encodeRollupPublicInput(alloc: std.mem.Allocator, v: RollupPublicInput) ![]u8 {
-    if (v.program_vks.len > MAX_PROGRAM_VKS) return error.BoundsViolation;
-    const vks_bytes = try encodeBytes32List(alloc, v.program_vks);
-    const total_len = try checkedAdd(ROLLUP_PI_FIXED_SIZE, vks_bytes.len);
-    _ = try sszOffset(total_len);
-    const out = try alloc.alloc(u8, total_len);
-
-    var pos: usize = 0;
-    putU64(out, &pos, v.end_block_number);
-    putU64(out, &pos, v.end_block_timestamp);
-    putHash(out, &pos, v.l2_l1_bridge_transaction_tree);
-    putHash(out, &pos, v.end_l1_l2_bridge_rolling_hash);
-    putU64(out, &pos, v.end_l1_l2_bridge_rolling_hash_message_number);
-    putHash(out, &pos, v.dynamic_chain_config_hash);
-    putHash(out, &pos, v.parent_ftx_rolling_hash);
-    putU64(out, &pos, v.parent_ftx_number);
-    putHash(out, &pos, v.end_ftx_rolling_hash);
-    putU64(out, &pos, v.end_processed_ftx_number);
-    putHash(out, &pos, v.filtered_addresses_hash);
-    putHash(out, &pos, v.parent_data_rolling_hash);
-    putHash(out, &pos, v.end_data_rolling_hash);
-    putHash(out, &pos, v.parent_block_hash);
-    putHash(out, &pos, v.end_block_hash);
-    putU64(out, &pos, v.start_offset);
-    putU64(out, &pos, v.end_offset);
-    writeU32(out, pos, try sszOffset(ROLLUP_PI_FIXED_SIZE));
-    pos += 4;
-    std.debug.assert(pos == ROLLUP_PI_FIXED_SIZE);
-    @memcpy(out[ROLLUP_PI_FIXED_SIZE..], vks_bytes);
-    return out;
-}
-
-// Framed output: SSZ(public_inputs) followed by its 32-byte keccak256 hash.
-const OUTPUT_HASH_SIZE: usize = 32;
-
-/// Encode the 0x1801 frame containing plain SSZ public inputs followed by their keccak256 hash.
-/// Auxiliary business-logic fields stay off wire.
-pub fn encodeOutput(alloc: std.mem.Allocator, v: RollupOutput) ![]u8 {
-    const pi_bytes = try encodeRollupPublicInput(alloc, v.public_inputs);
-    const body_len = try checkedAdd(OUTPUT_HASH_SIZE, pi_bytes.len);
-    const frame_len = try checkedAdd(SCHEMA_ID_SIZE, body_len);
-    const out = try alloc.alloc(u8, frame_len);
-    std.mem.writeInt(u16, out[0..2], OUTPUT_SCHEMA_ID, .big);
-    @memcpy(out[SCHEMA_ID_SIZE..][0..pi_bytes.len], pi_bytes);
-    std.crypto.hash.sha3.Keccak256.hash(pi_bytes, out[SCHEMA_ID_SIZE + pi_bytes.len ..][0..OUTPUT_HASH_SIZE], .{});
+    @memcpy(body[INPUT_FIXED_SIZE..][0..conflations.len], conflations);
+    @memcpy(body[chunks_start..][0..chunks.len], chunks);
+    @memcpy(body[proofs_start..][0..proofs.len], proofs);
+    if (v.boundary_prev_data_rolling_hash) |hash| @memcpy(body[boundary_start..][0..32], &hash);
     return out;
 }

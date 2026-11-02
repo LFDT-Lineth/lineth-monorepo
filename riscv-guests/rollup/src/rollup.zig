@@ -1,17 +1,19 @@
-//! Rollup guest business logic: `RollupProofPrivateInput -> RollupOutput`, entirely by echo or
-//! sentinel. Every output field is either copied from a defined place in the input, or set to a
-//! fixed sentinel constant — nothing is derived from the input itself (no hashing or accumulator
-//! folding of request data, no proof verification). This guest exercises the wire format and its
-//! own decode/encode bounds, not the rollup's real recursive-proof logic.
+//! Rollup guest business logic: `RollupProofPrivateInput -> RollupPublicInput`, by echo or sentinel.
+//! Every output field is either derived from the l2-execution proofs and the request fields the
+//! way the specification derives it, or set to a fixed sentinel constant: the data-availability
+//! tail fields, the data rolling hash and the messaging offsets are sentinels.
 
 const std = @import("std");
+const core_serde = @import("core_serde");
 const rollup_ssz = @import("rollup_ssz.zig");
+
+const rollup_proof = core_serde.rollup_proof;
 
 // ── Sentinels ─────────────────────────────────────────────────────────────────────────────────
 // Each value is keccak256 of its own tag string, computed at comptime — `std.crypto.hash.sha3.
 // Keccak256` is pure Zig (the legacy 0x01-delimiter variant, i.e. Ethereum's keccak256, not NIST
 // SHA3's 0x06 delimiter), so there is nothing precomputed or pinned to fall out of sync with its
-// source string. u64 sentinels take the hash's first 8 bytes, big-endian.
+// source string. Integer sentinels take the hash's leading bytes, big-endian.
 
 const Keccak256 = std.crypto.hash.sha3.Keccak256;
 
@@ -22,99 +24,91 @@ fn sentinelHash(comptime tag: []const u8) [32]u8 {
     return out;
 }
 
-fn sentinelU64(comptime tag: []const u8) u64 {
-    return std.mem.readInt(u64, sentinelHash(tag)[0..8], .big);
+fn sentinelInt(comptime T: type, comptime tag: []const u8) T {
+    return std.mem.readInt(T, sentinelHash(tag)[0..@sizeOf(T)], .big);
 }
 
-pub const L2_L1_BRIDGE_TRANSACTION_TREE: [32]u8 = sentinelHash("lineth.stub.rollup.l2L1BridgeTransactionTree");
 pub const END_DATA_ROLLING_HASH: [32]u8 = sentinelHash("lineth.stub.rollup.endDataRollingHash");
-pub const FILTERED_ADDRESSES_HASH: [32]u8 = sentinelHash("lineth.stub.rollup.filteredAddressesHash");
-pub const END_OFFSET: u64 = sentinelU64("lineth.stub.rollup.endOffset");
-pub const L2_L1_ROOTS_ELEMENT: [32]u8 = sentinelHash("lineth.stub.rollup.l2L1Roots");
+pub const FINAL_DATA_TAIL_DISCARD_BYTES: u64 = sentinelInt(u64, "lineth.stub.rollup.finalDataTailDiscardBytes");
+pub const L2_MESSAGING_BLOCKS_OFFSET: u16 = sentinelInt(u16, "lineth.stub.rollup.l2MessagingBlocksOffset");
 
 /// Runs the rollup guest's echo/sentinel mapping over a decoded input. Requires at least one
 /// `l2_execution_proofs` element — "first"/"last" source every per-proof field.
-pub fn run(alloc: std.mem.Allocator, input: rollup_ssz.RollupProofPrivateInput) !rollup_ssz.RollupOutput {
+pub fn run(alloc: std.mem.Allocator, input: rollup_ssz.RollupProofPrivateInput) !rollup_proof.RollupPublicInput {
     if (input.l2_execution_proofs.len == 0) return error.EmptyProofs;
-    const first = input.l2_execution_proofs[0];
-    const last = input.l2_execution_proofs[input.l2_execution_proofs.len - 1];
+    const first = input.l2_execution_proofs[0].proof.public_inputs;
+    const last = input.l2_execution_proofs[input.l2_execution_proofs.len - 1].proof.public_inputs;
 
-    var filtered_address_count: usize = 0;
-    for (input.l2_execution_proofs) |p| {
-        if (filtered_address_count > rollup_ssz.MAX_FILTERED_ADDRESSES) return error.BoundsViolation;
-        const remaining = rollup_ssz.MAX_FILTERED_ADDRESSES - filtered_address_count;
-        if (p.proof.filtered_addresses.len > remaining) return error.BoundsViolation;
-        filtered_address_count += p.proof.filtered_addresses.len;
-    }
-
-    const program_vks = try dedupSortedProgramVks(alloc, input.l2_execution_proofs);
-    errdefer alloc.free(program_vks);
-
-    var filtered_addresses: std.ArrayListUnmanaged([20]u8) = .empty;
-    defer filtered_addresses.deinit(alloc);
-    try filtered_addresses.ensureTotalCapacityPrecise(alloc, filtered_address_count);
-    for (input.l2_execution_proofs) |p| {
-        try filtered_addresses.appendSlice(alloc, p.proof.filtered_addresses);
-    }
-
+    const program_vks = try alloc.alloc([32]u8, input.l2_execution_proofs.len);
+    var message_count: usize = 0;
+    var address_count: usize = 0;
+    var block_count: u64 = 0;
     var end_bridge_rolling_hash: [32]u8 = @splat(0);
     var end_bridge_message_number: u64 = 0;
-    for (input.l2_execution_proofs) |p| {
-        if (p.proof.public_inputs.end_l1_l2_bridge_rolling_hash_message_number == 0) continue;
-        end_bridge_rolling_hash = p.proof.public_inputs.end_l1_l2_bridge_rolling_hash;
-        end_bridge_message_number = p.proof.public_inputs.end_l1_l2_bridge_rolling_hash_message_number;
+    for (input.l2_execution_proofs, program_vks) |*p, *vk| {
+        vk.* = p.program_vk;
+        message_count += p.proof.public_inputs.l2_l1_messages.len;
+        address_count += p.proof.public_inputs.filtered_addresses.len;
+        block_count += p.proof.public_inputs.block_count;
+        if (p.proof.public_inputs.end_l1_l2_bridge_rolling_hash_message_number != 0) {
+            end_bridge_rolling_hash = p.proof.public_inputs.end_l1_l2_bridge_rolling_hash;
+            end_bridge_message_number = p.proof.public_inputs.end_l1_l2_bridge_rolling_hash_message_number;
+        }
     }
 
-    const l2_l1_roots = try alloc.dupe([32]u8, &[_][32]u8{L2_L1_ROOTS_ELEMENT});
-    errdefer alloc.free(l2_l1_roots);
-    const owned_filtered_addresses = try filtered_addresses.toOwnedSlice(alloc);
+    const l2_l1_messages = try alloc.alloc([32]u8, message_count);
+    const all_addresses = try alloc.alloc([20]u8, address_count);
+    var message_pos: usize = 0;
+    var address_pos: usize = 0;
+    for (input.l2_execution_proofs) |p| {
+        const pi = p.proof.public_inputs;
+        @memcpy(l2_l1_messages[message_pos..][0..pi.l2_l1_messages.len], pi.l2_l1_messages);
+        message_pos += pi.l2_l1_messages.len;
+        @memcpy(all_addresses[address_pos..][0..pi.filtered_addresses.len], pi.filtered_addresses);
+        address_pos += pi.filtered_addresses.len;
+    }
+
+    const filtered_addresses = sortedDistinct(20, all_addresses);
+    if (filtered_addresses.len > rollup_proof.MAX_FILTERED_ADDRESSES) return error.BoundsViolation;
 
     return .{
-        .public_inputs = .{
-            .end_block_number = last.proof.public_inputs.end_block_number,
-            .end_block_timestamp = last.proof.public_inputs.end_block_timestamp,
-            .l2_l1_bridge_transaction_tree = L2_L1_BRIDGE_TRANSACTION_TREE,
-            .end_l1_l2_bridge_rolling_hash = end_bridge_rolling_hash,
-            .end_l1_l2_bridge_rolling_hash_message_number = end_bridge_message_number,
-            .dynamic_chain_config_hash = first.proof.public_inputs.dynamic_chain_config_hash,
-            .parent_ftx_rolling_hash = first.proof.public_inputs.parent_ftx_rolling_hash,
-            .parent_ftx_number = first.proof.public_inputs.parent_ftx_number,
-            .end_ftx_rolling_hash = last.proof.public_inputs.end_ftx_rolling_hash,
-            .end_processed_ftx_number = last.proof.public_inputs.end_processed_ftx_number,
-            .filtered_addresses_hash = FILTERED_ADDRESSES_HASH,
-            .parent_data_rolling_hash = input.parent_data_rolling_hash,
-            .end_data_rolling_hash = END_DATA_ROLLING_HASH,
-            .parent_block_hash = first.proof.public_inputs.parent_block_hash,
-            .end_block_hash = last.proof.public_inputs.end_block_hash,
-            .start_offset = input.start_offset,
-            .end_offset = END_OFFSET,
-            .program_vks = program_vks,
-        },
-        .start_block_number = first.proof.start_block_number,
-        .l2_l1_roots = l2_l1_roots,
-        .filtered_addresses = owned_filtered_addresses,
+        .end_block_number = last.end_block_number,
+        .end_block_timestamp = last.end_block_timestamp,
+        .end_l1_l2_bridge_rolling_hash = end_bridge_rolling_hash,
+        .end_l1_l2_bridge_rolling_hash_message_number = end_bridge_message_number,
+        .dynamic_chain_config_hash = first.dynamic_chain_config_hash,
+        .parent_ftx_rolling_hash = first.parent_ftx_rolling_hash,
+        .parent_ftx_number = first.parent_ftx_number,
+        .end_ftx_rolling_hash = last.end_ftx_rolling_hash,
+        .end_processed_ftx_number = last.end_processed_ftx_number,
+        .parent_data_rolling_hash = input.parent_data_rolling_hash,
+        .end_data_rolling_hash = END_DATA_ROLLING_HASH,
+        .parent_block_hash = first.parent_block_hash,
+        .end_block_hash = last.end_block_hash,
+        .parent_data_tail_take_bytes = input.parent_data_tail_take_bytes,
+        .final_data_tail_discard_bytes = FINAL_DATA_TAIL_DISCARD_BYTES,
+        .l2_l1_messages = l2_l1_messages,
+        .filtered_addresses = filtered_addresses,
+        .program_vks = sortedDistinct(32, program_vks),
+        .block_count = block_count,
+        .l2_messaging_blocks_offsets = try alloc.dupe(u16, &.{L2_MESSAGING_BLOCKS_OFFSET}),
     };
 }
 
-fn lessThanBytes32(_: void, a: [32]u8, b: [32]u8) bool {
-    return std.mem.order(u8, &a, &b) == .lt;
-}
-
-/// Every `l2_execution_proofs` element's `program_vk`, deduplicated and sorted ascending bytewise.
-fn dedupSortedProgramVks(alloc: std.mem.Allocator, proofs: []const rollup_ssz.VerifiableL2ExecutionProof) ![]const [32]u8 {
-    if (proofs.len == 0) return alloc.alloc([32]u8, 0);
-
-    const vks = try alloc.alloc([32]u8, proofs.len);
-    errdefer alloc.free(vks);
-    for (proofs, 0..) |p, i| vks[i] = p.program_vk;
-    std.mem.sort([32]u8, vks, {}, lessThanBytes32);
+/// The distinct elements of `items`, sorted ascending bytewise, in place at the head of `items`.
+fn sortedDistinct(comptime n: usize, items: [][n]u8) []const [n]u8 {
+    std.mem.sort([n]u8, items, {}, struct {
+        fn lessThan(_: void, a: [n]u8, b: [n]u8) bool {
+            return std.mem.order(u8, &a, &b) == .lt;
+        }
+    }.lessThan);
 
     var unique_count: usize = 0;
-    for (vks) |vk| {
-        if (unique_count == 0 or !std.mem.eql(u8, &vk, &vks[unique_count - 1])) {
-            vks[unique_count] = vk;
+    for (items) |item| {
+        if (unique_count == 0 or !std.mem.eql(u8, &item, &items[unique_count - 1])) {
+            items[unique_count] = item;
             unique_count += 1;
         }
     }
-    return try alloc.realloc(vks, unique_count);
+    return items[0..unique_count];
 }

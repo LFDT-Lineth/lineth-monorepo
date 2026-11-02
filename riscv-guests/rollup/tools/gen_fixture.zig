@@ -1,4 +1,4 @@
-//! Prints, as raw bytes on stdout, a framed `SszRollupProofPrivateInput` this package's own
+//! Prints, as raw bytes on stdout, a framed `RollupProofPrivateInput` this package's own
 //! `rollup_ssz.encodeInput` produced from `support.sampleInput` — the same sample the tests use.
 //! Invoked by this guest's own Makefile (`require-input`) to regenerate `make exec`/`debug`'s
 //! default input (named `.ssz`, raw bytes) on every run; never checked into git.
