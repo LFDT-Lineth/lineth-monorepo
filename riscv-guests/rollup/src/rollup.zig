@@ -1,98 +1,166 @@
-//! Rollup guest business logic: `RollupProofPrivateInput -> RollupPublicInput`, by echo or sentinel.
-//! Every output field is either derived from the l2-execution proofs and the request fields the
-//! way the specification derives it, or set to a fixed sentinel constant: the data-availability
-//! tail fields, the data rolling hash and the messaging offsets are sentinels.
+//! The rollup guest statement: `RollupProofPrivateInput -> RollupPublicInput`. One rollup proof
+//! covers N consecutive whole conflations, each paired with its l2-execution proof, over the chunks
+//! of the data-availability stream that carries their compressed payloads.
+//!
+//! The steps run in this order: the canonical payload of every conflation and its binding to the
+//! paired proof (`canonical`), the chunks bound to their hashes and the stream parsed and
+//! decompressed against the canonical payloads (`lineth_da.decompress`), the tiling of the proofs,
+//! the recursive verification of every proof (`recursion`), the continuity between the proofs and
+//! the binding of the proofs to the conflations' blocks (`chain`), and the assembly of the public
+//! inputs.
 
 const std = @import("std");
+const lineth_da = @import("lineth_da");
 const core_serde = @import("core_serde");
+const canonical = @import("canonical.zig");
+const chain = @import("chain.zig");
+const messaging_offsets = @import("messaging_offsets.zig");
+const recursion = @import("recursion.zig");
 const rollup_ssz = @import("rollup_ssz.zig");
 
+const Allocator = std.mem.Allocator;
+const decompress = lineth_da.decompress;
+const l2_execution_proof = core_serde.l2_execution_proof;
 const rollup_proof = core_serde.rollup_proof;
 
-// ── Sentinels ─────────────────────────────────────────────────────────────────────────────────
-// Each value is keccak256 of its own tag string, computed at comptime — `std.crypto.hash.sha3.
-// Keccak256` is pure Zig (the legacy 0x01-delimiter variant, i.e. Ethereum's keccak256, not NIST
-// SHA3's 0x06 delimiter), so there is nothing precomputed or pinned to fall out of sync with its
-// source string. Integer sentinels take the hash's leading bytes, big-endian.
+pub const Error = canonical.Error || decompress.Error || lineth_da.zstd.Error || chain.Error || messaging_offsets.Error ||
+    recursion.Error || error{
+    /// The request has no conflation or no proof, or the conflations and the proofs are not paired
+    /// one to one.
+    InvalidRequest,
+    /// The public inputs exceed a bound of their wire schema.
+    BoundsViolation,
+};
 
-const Keccak256 = std.crypto.hash.sha3.Keccak256;
+/// The public inputs of the rollup proof over `input`, or the error of the first rule it breaks.
+/// Everything is allocated from `allocator`, which is never asked to free; the public inputs alias
+/// that memory.
+pub fn run(allocator: Allocator, input: rollup_ssz.RollupProofPrivateInput) Error!rollup_proof.RollupPublicInput {
+    const proofs = input.l2_execution_proofs;
+    if (input.conflations.len == 0 or proofs.len == 0 or input.conflations.len != proofs.len) return error.InvalidRequest;
 
-fn sentinelHash(comptime tag: []const u8) [32]u8 {
-    @setEvalBranchQuota(10_000); // one Keccak-f[1600] permutation (24 rounds) exceeds the default 1000
-    var out: [32]u8 = undefined;
-    Keccak256.hash(tag, &out, .{});
-    return out;
-}
-
-fn sentinelInt(comptime T: type, comptime tag: []const u8) T {
-    return std.mem.readInt(T, sentinelHash(tag)[0..@sizeOf(T)], .big);
-}
-
-pub const END_DATA_ROLLING_HASH: [32]u8 = sentinelHash("lineth.stub.rollup.endDataRollingHash");
-pub const FINAL_DATA_TAIL_DISCARD_BYTES: u64 = sentinelInt(u64, "lineth.stub.rollup.finalDataTailDiscardBytes");
-pub const L2_MESSAGING_BLOCKS_OFFSET: u16 = sentinelInt(u16, "lineth.stub.rollup.l2MessagingBlocksOffset");
-
-/// Runs the rollup guest's echo/sentinel mapping over a decoded input. Requires at least one
-/// `l2_execution_proofs` element — "first"/"last" source every per-proof field.
-pub fn run(alloc: std.mem.Allocator, input: rollup_ssz.RollupProofPrivateInput) !rollup_proof.RollupPublicInput {
-    if (input.l2_execution_proofs.len == 0) return error.EmptyProofs;
-    const first = input.l2_execution_proofs[0].proof.public_inputs;
-    const last = input.l2_execution_proofs[input.l2_execution_proofs.len - 1].proof.public_inputs;
-
-    const program_vks = try alloc.alloc([32]u8, input.l2_execution_proofs.len);
-    var message_count: usize = 0;
-    var address_count: usize = 0;
-    var block_count: u64 = 0;
-    var end_bridge_rolling_hash: [32]u8 = @splat(0);
-    var end_bridge_message_number: u64 = 0;
-    for (input.l2_execution_proofs, program_vks) |*p, *vk| {
-        vk.* = p.program_vk;
-        message_count += p.proof.public_inputs.l2_l1_messages.len;
-        address_count += p.proof.public_inputs.filtered_addresses.len;
-        block_count += p.proof.public_inputs.block_count;
-        if (p.proof.public_inputs.end_l1_l2_bridge_rolling_hash_message_number != 0) {
-            end_bridge_rolling_hash = p.proof.public_inputs.end_l1_l2_bridge_rolling_hash;
-            end_bridge_message_number = p.proof.public_inputs.end_l1_l2_bridge_rolling_hash_message_number;
-        }
+    const conflations = try allocator.alloc(canonical.Conflation, proofs.len);
+    const payloads = try allocator.alloc([]const u8, proofs.len);
+    for (input.conflations, proofs, conflations, payloads) |witness, verifiable, *conflation, *payload| {
+        conflation.* = try canonical.derive(allocator, witness, verifiable.proof, input.chain_id);
+        payload.* = conflation.payload;
     }
 
-    const l2_l1_messages = try alloc.alloc([32]u8, message_count);
-    const all_addresses = try alloc.alloc([20]u8, address_count);
+    const verified = try verifyDataAvailability(allocator, input, payloads);
+
+    const first = proofs[0].proof;
+    const last = proofs[proofs.len - 1].proof;
+    const range_start = first.start_block_number;
+    const range_end = last.public_inputs.end_block_number;
+
+    try chain.verifyTiling(proofs);
+    for (proofs) |verifiable| try recursion.verifyL2ExecutionProof(allocator, verifiable);
+
+    const block_hashes = try concatHashes(allocator, conflations, .block_hashes);
+    const parent_hashes = try concatHashes(allocator, conflations, .parent_hashes);
+    try chain.verifyEndBlockHashes(proofs, range_start, block_hashes);
+    try chain.verifyParentHashChain(first.public_inputs.parent_block_hash, parent_hashes, block_hashes);
+    for (proofs[0 .. proofs.len - 1], proofs[1..]) |left, right| {
+        try chain.verifyContinuity(left.proof.public_inputs, right.proof.public_inputs);
+    }
+
+    var message_count: usize = 0;
+    var address_count: usize = 0;
+    var offset_count: usize = 0;
+    for (proofs) |verifiable| {
+        const pi = verifiable.proof.public_inputs;
+        message_count += pi.l2_l1_messages.len;
+        address_count += pi.filtered_addresses.len;
+        offset_count += pi.l2_messaging_blocks_offsets.len;
+    }
+    const l2_l1_messages = try allocator.alloc([32]u8, message_count);
+    const all_addresses = try allocator.alloc([20]u8, address_count);
+    const offsets = try allocator.alloc(u16, offset_count);
+    const program_vks = try allocator.alloc([32]u8, proofs.len);
     var message_pos: usize = 0;
     var address_pos: usize = 0;
-    for (input.l2_execution_proofs) |p| {
-        const pi = p.proof.public_inputs;
+    var offset_pos: usize = 0;
+    var end_bridge_rolling_hash: [32]u8 = @splat(0);
+    var end_bridge_message_number: u64 = 0;
+    for (proofs, program_vks) |verifiable, *program_vk| {
+        const pi = verifiable.proof.public_inputs;
         @memcpy(l2_l1_messages[message_pos..][0..pi.l2_l1_messages.len], pi.l2_l1_messages);
         message_pos += pi.l2_l1_messages.len;
         @memcpy(all_addresses[address_pos..][0..pi.filtered_addresses.len], pi.filtered_addresses);
         address_pos += pi.filtered_addresses.len;
+        const proof_offsets = offsets[offset_pos..][0..pi.l2_messaging_blocks_offsets.len];
+        try messaging_offsets.rebase(verifiable.proof, range_start, proof_offsets);
+        offset_pos += proof_offsets.len;
+        program_vk.* = verifiable.program_vk;
+        if (pi.end_l1_l2_bridge_rolling_hash_message_number != 0) {
+            end_bridge_rolling_hash = pi.end_l1_l2_bridge_rolling_hash;
+            end_bridge_message_number = pi.end_l1_l2_bridge_rolling_hash_message_number;
+        }
     }
-
     const filtered_addresses = sortedDistinct(20, all_addresses);
     if (filtered_addresses.len > rollup_proof.MAX_FILTERED_ADDRESSES) return error.BoundsViolation;
 
     return .{
-        .end_block_number = last.end_block_number,
-        .end_block_timestamp = last.end_block_timestamp,
+        .end_block_number = range_end,
+        .end_block_timestamp = last.public_inputs.end_block_timestamp,
         .end_l1_l2_bridge_rolling_hash = end_bridge_rolling_hash,
         .end_l1_l2_bridge_rolling_hash_message_number = end_bridge_message_number,
-        .dynamic_chain_config_hash = first.dynamic_chain_config_hash,
-        .parent_ftx_rolling_hash = first.parent_ftx_rolling_hash,
-        .parent_ftx_number = first.parent_ftx_number,
-        .end_ftx_rolling_hash = last.end_ftx_rolling_hash,
-        .end_processed_ftx_number = last.end_processed_ftx_number,
+        .dynamic_chain_config_hash = first.public_inputs.dynamic_chain_config_hash,
+        .parent_ftx_rolling_hash = first.public_inputs.parent_ftx_rolling_hash,
+        .parent_ftx_number = first.public_inputs.parent_ftx_number,
+        .end_ftx_rolling_hash = last.public_inputs.end_ftx_rolling_hash,
+        .end_processed_ftx_number = last.public_inputs.end_processed_ftx_number,
         .parent_data_rolling_hash = input.parent_data_rolling_hash,
-        .end_data_rolling_hash = END_DATA_ROLLING_HASH,
-        .parent_block_hash = first.parent_block_hash,
-        .end_block_hash = last.end_block_hash,
+        .end_data_rolling_hash = verified.end_data_rolling_hash,
+        .parent_block_hash = first.public_inputs.parent_block_hash,
+        .end_block_hash = last.public_inputs.end_block_hash,
         .parent_data_tail_take_bytes = input.parent_data_tail_take_bytes,
-        .final_data_tail_discard_bytes = FINAL_DATA_TAIL_DISCARD_BYTES,
+        .final_data_tail_discard_bytes = verified.final_data_tail_discard_bytes,
         .l2_l1_messages = l2_l1_messages,
         .filtered_addresses = filtered_addresses,
         .program_vks = sortedDistinct(32, program_vks),
-        .block_count = block_count,
-        .l2_messaging_blocks_offsets = try alloc.dupe(u16, &.{L2_MESSAGING_BLOCKS_OFFSET}),
+        .block_count = range_end - range_start + 1,
+        .l2_messaging_blocks_offsets = offsets,
     };
+}
+
+/// The chunks bound to their hashes and the stream they carry parsed and decompressed against the
+/// canonical `payloads`.
+fn verifyDataAvailability(allocator: Allocator, input: rollup_ssz.RollupProofPrivateInput, payloads: []const []const u8) Error!decompress.Verified {
+    const chunks = try allocator.alloc(decompress.Chunk, input.chunks.len);
+    for (input.chunks, chunks) |witness, *chunk| chunk.* = .{
+        .chunk_hash = witness.chunk_hash,
+        .is_calldata = witness.is_calldata,
+        .blob_bytes = witness.blob_bytes,
+        .calldata_bytes = witness.calldata_bytes,
+        .kzg_commitment = witness.kzg_commitment,
+        .kzg_proof = witness.kzg_proof,
+    };
+    const decoder = try lineth_da.zstd.Decoder.init(allocator, lineth_da.dictionary_v2025_04_21);
+    defer decoder.deinit();
+    return decompress.verifyDaChunks(
+        allocator,
+        decoder,
+        chunks,
+        payloads,
+        input.parent_data_rolling_hash,
+        input.parent_data_tail_take_bytes,
+        input.boundary_prev_data_rolling_hash,
+    );
+}
+
+/// The hashes `field` names of every conflation, in order.
+fn concatHashes(allocator: Allocator, conflations: []const canonical.Conflation, comptime field: enum { block_hashes, parent_hashes }) Allocator.Error![]const [32]u8 {
+    var total: usize = 0;
+    for (conflations) |conflation| total += @field(conflation, @tagName(field)).len;
+    const hashes = try allocator.alloc([32]u8, total);
+    var next: usize = 0;
+    for (conflations) |conflation| {
+        const part = @field(conflation, @tagName(field));
+        @memcpy(hashes[next..][0..part.len], part);
+        next += part.len;
+    }
+    return hashes;
 }
 
 /// The distinct elements of `items`, sorted ascending bytewise, in place at the head of `items`.

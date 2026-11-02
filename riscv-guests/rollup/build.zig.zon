@@ -6,20 +6,33 @@
     .dependencies = .{
         // Shared build helpers for all riscv-guests packages (sibling path dependency).
         .build_common = .{ .path = "../build_common" },
-        // Lineth zkVM accelerator wrappers (sibling path dependency): only `write_output` (the
-        // zkvm-standards io-interface custom opcode) is used — this guest runs no EVM and needs no
-        // other precompile accelerator.
+        // Lineth zkVM accelerator wrappers (sibling path dependency): the io-interface
+        // (read_input/write_output) and, through -Dzkvm-provide, the zkvm_* crypto providers that
+        // data-availability verification and sender recovery resolve to.
         .lineth_accelerators = .{ .path = "../lineth_accelerators" },
         // Generic riscv-guests utilities (sibling path dependency): the SSZ decode/encode
         // primitives `rollup_ssz.zig`'s container codec builds on, and the l2-execution proof and
         // rollup proof wire contracts.
         .guest_common = .{ .path = "../guest_common" },
+        // Data-availability building blocks (sibling path dependency): block truncation, the blob
+        // packing and verification, the dictionary-based zstd decompression and the verification
+        // of a DA stream against its chunks. With -Dhost-tools it also exposes the modules that
+        // build real DA streams for tests.
+        .lineth_da = .{ .path = "../lineth_da" },
+        // The Ethereum Foundation's execution-spec zkevm fixtures (tests-zkevm@v21.0.5): real
+        // Amsterdam blocks, from which the reference test builds rollup inputs. Fetched by the
+        // reference-test step only; the same release as l2_execution's and lineth_da's.
+        .execution_spec_tests_zkevm = .{
+            .url = "https://github.com/ethereum/execution-specs/releases/download/tests-zkevm%40v21.0.5/fixtures_zkevm.tar.gz",
+            .hash = "N-V-__8AAP____8QQM74OJJCR9wJFoeW57RJWnar5YNlvr3T",
+            .lazy = true,
+        },
     },
     .paths = .{
         "build.zig",
         "build.zig.zon",
         "src", // production guest code (compiled into the rv64im object/ELF)
-        "test", // host-only: unit tests and the shared sample-input builder
+        "test", // host-only: unit tests, test support and the reference tests
         "tools", // host-only: fixture generator
     },
 }

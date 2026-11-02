@@ -1,6 +1,7 @@
-//! Shared test-only fixtures for the rollup guest: one `sampleInput`, used by the round-trip test,
-//! the malformed-input tests, the business-logic tests, and `tools/gen_fixture.zig` — so there is
-//! exactly one place that defines what a valid `RollupProofPrivateInput` looks like for testing.
+//! Shared test-only fixtures for the wire codec of the rollup guest: one `sampleInput`, used by the
+//! round-trip test and the malformed-input tests, so there is exactly one place that defines what a
+//! `RollupProofPrivateInput` with every field populated looks like on the wire. Its values are
+//! wire-format filler: the conflations, chunks and proofs do not agree with each other.
 //!
 //! Every field value below is a named constant, and every test asserting against it references the
 //! same constant rather than retyping the literal — the builder and its assertions cannot silently
@@ -25,9 +26,8 @@ pub const CHAIN_ID: u64 = 59144;
 pub const BOUNDARY_PREV_DATA_ROLLING_HASH = repeat32(0x39);
 
 // ── Conflation block RLPs ─────────────────────────────────────────────────────────────────────
-// RLP-shaped filler (a valid "long list" / "32-byte string" prefix), not real RLP — this guest
-// never parses `block_rlps` (a zero-copy passthrough field), so only byte identity across
-// encode/decode matters here.
+// RLP-shaped filler (a valid "long list" / "32-byte string" prefix), not real RLP: the codec carries
+// `block_rlps` as bytes, so only byte identity across encode/decode matters here.
 pub const CONFLATION_0_BLOCK_RLP_0 = [_]u8{ 0xf9, 0x02, 0x15, 0xa0 };
 pub const CONFLATION_0_BLOCK_RLP_1 = [_]u8{ 0xf9, 0x02, 0x16, 0xb1 };
 pub const CONFLATION_1_BLOCK_RLP_0 = [_]u8{ 0xf9, 0x02, 0x15, 0xaa };

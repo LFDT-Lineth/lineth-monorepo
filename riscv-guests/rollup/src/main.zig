@@ -6,6 +6,7 @@ const rollup = package.rollup;
 const rollup_ssz = package.rollup_ssz;
 const guest_errors = package.guest_errors;
 const rollup_proof = @import("core_serde").rollup_proof;
+const zkvm_provide = @import("zkvm_provide");
 
 // Heap bounds come from the linker script (canonical Lineth layout: `_heap_start` = 0x48800000,
 // grows up to `_heap_end`). build_common/Makefile sets the size via `HEAP_LENGTH` and asserts that
@@ -13,19 +14,25 @@ const rollup_proof = @import("core_serde").rollup_proof;
 extern var _heap_start: u8;
 extern var _heap_end: u8;
 
-// This is the rollup zkVM guest stub: it decodes `RollupProofPrivateInput`, maps it to the rollup
-// public inputs by echo/sentinel (`rollup.run`), and emits the framed output. Proofs, chunks and
-// conflations pass through unverified.
+// The rollup zkVM guest: it decodes `RollupProofPrivateInput`, runs the rollup statement over it
+// (`rollup.run`) and emits the framed public inputs. The crypto accelerators (zkvm_*) the data
+// availability and block decoding declare as externs are defined in-guest by zkvm_provide, so the
+// statically-linked guest ELF has no unresolved zkvm_* externals.
 
 /// zkVM guest entry. Reads the framed input via `read_input`, runs `runRollupGuest`, and emits the
 /// SSZ output via `write_output`. Exits 0 on success; on failure, exits with
-/// `guest_errors.exitCode(err)` — a deterministic, category-stable nonzero code.
+/// `guest_errors.exitCode(err)` — a deterministic, category-stable nonzero code. `read_input` and
+/// `write_output` are the zkvm-standards io-interface: where the input lives and how the output
+/// surfaces is the proving system's concern, not the guest's.
 fn guestMain() callconv(.c) noreturn {
     const zkvm_io = @import("lineth_accelerators");
 
+    // A bump allocator without synchronization: the rv64im target has no atomic instructions, which
+    // std's ArenaAllocator relies on.
     const heap = @as([*]u8, @ptrCast(&_heap_start))[0 .. @intFromPtr(&_heap_end) - @intFromPtr(&_heap_start)];
     var fba = std.heap.FixedBufferAllocator.init(heap);
     const allocator = fba.allocator();
+    zkvm_provide.setAllocator(allocator);
 
     var buf_ptr: [*]const u8 = undefined;
     var buf_size: usize = undefined;
@@ -39,7 +46,7 @@ fn guestMain() callconv(.c) noreturn {
     exit(0);
 }
 
-/// Decode -> map -> encode, factored out of `guestMain` so the whole pipeline is one `catch` away
+/// Decode -> run -> encode, factored out of `guestMain` so the whole pipeline is one `catch` away
 /// from a clean, categorized guest rejection.
 fn runRollupGuest(allocator: std.mem.Allocator, raw_input: []const u8) ![]const u8 {
     const decoded = try rollup_ssz.decodeInput(allocator, raw_input);
@@ -52,6 +59,8 @@ comptime {
     // from std.start.
     if (builtin.cpu.arch == .riscv64) {
         @export(&guestMain, .{ .name = "main" });
+        // Pull in the precompile providers for the freestanding guest.
+        _ = zkvm_provide;
     }
 }
 
