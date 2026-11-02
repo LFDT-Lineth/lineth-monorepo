@@ -1,7 +1,5 @@
 """Rollup guest over real signed blocks: canonical payload derivation and an end-to-end rollup."""
 
-"""Rollup guest over real signed blocks: canonical payload derivation and an end-to-end rollup."""
-
 from dataclasses import dataclass
 from typing import Sequence, Tuple
 

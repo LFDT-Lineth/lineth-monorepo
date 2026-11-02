@@ -3,6 +3,7 @@
 from dataclasses import replace
 
 import pytest
+from ethereum.exceptions import InvalidSignatureError
 from ethereum_rlp import rlp
 from ethereum_types.bytes import Bytes
 from ethereum_types.numeric import U64, U256, Uint
@@ -21,6 +22,7 @@ from tests.blocks import (
     SENDER,
     block,
     block_rlp,
+    header,
     legacy_tx,
     sign,
     typed_tx,
@@ -119,7 +121,23 @@ REJECTED_BLOCKS = [
         id="typed nonce of 2^64",
     ),
     pytest.param(
-        lambda: block_rlp([wire(sign(legacy_tx(gas=Uint(2**64))))]), "exceeds the width", id="gas of 2^64",
+        lambda: block_rlp([wire(sign(legacy_tx(gas=Uint(2**64))))]), "exceeds the width", id="legacy gas of 2^64",
+    ),
+    pytest.param(
+        lambda: block_rlp([wire(sign(typed_tx(AccessListTransaction, gas=Uint(2**64))))]), "exceeds the width",
+        id="access-list gas of 2^64",
+    ),
+    pytest.param(
+        lambda: block_rlp([wire(sign(typed_tx(FeeMarketTransaction, gas=Uint(2**64))))]), "exceeds the width",
+        id="fee-market gas of 2^64",
+    ),
+    pytest.param(
+        lambda: block_rlp([wire(sign(typed_tx(BlobTransaction, gas=Uint(2**64))))]), "exceeds the width",
+        id="blob gas of 2^64",
+    ),
+    pytest.param(
+        lambda: block_rlp([wire(sign(typed_tx(SetCodeTransaction, gas=Uint(2**64))))]), "exceeds the width",
+        id="set-code gas of 2^64",
     ),
     pytest.param(
         lambda: block_rlp([wire(sign(legacy_tx(gas_price=Uint(2**128))))]), "exceeds the width", id="legacy gas price of 2^128",
@@ -129,8 +147,24 @@ REJECTED_BLOCKS = [
         id="max fee of 2^128",
     ),
     pytest.param(
+        lambda: block_rlp([wire(sign(typed_tx(BlobTransaction, max_fee_per_gas=Uint(2**128))))]), "exceeds the width",
+        id="blob max fee of 2^128",
+    ),
+    pytest.param(
+        lambda: block_rlp([wire(sign(typed_tx(AccessListTransaction, gas_price=Uint(2**128))))]), "exceeds the width",
+        id="access-list gas price of 2^128",
+    ),
+    pytest.param(
+        lambda: block_rlp([wire(sign(typed_tx(SetCodeTransaction, max_fee_per_gas=Uint(2**128))))]), "exceeds the width",
+        id="set-code max fee of 2^128",
+    ),
+    pytest.param(
         lambda: block_rlp([wire(sign(typed_tx(FeeMarketTransaction, max_priority_fee_per_gas=Uint(2**128))))]),
         "exceeds the width", id="max priority fee of 2^128",
+    ),
+    pytest.param(
+        lambda: block_rlp([wire(sign(typed_tx(SetCodeTransaction, max_priority_fee_per_gas=Uint(2**128))))]),
+        "exceeds the width", id="set-code max priority fee of 2^128",
     ),
     pytest.param(
         lambda: block_rlp([wire(sign(typed_tx(BlobTransaction, max_fee_per_blob_gas=U256(2**128))))]), "exceeds the width",
@@ -154,12 +188,27 @@ def test_block_that_is_not_canonical_or_does_not_carry_its_committed_transaction
 def test_largest_nonce_and_fees_the_guest_decodes_are_accepted():
     largest = [
         sign(legacy_tx(2**64 - 1, gas=Uint(2**64 - 1), gas_price=Uint(2**128 - 1))),
-        sign(typed_tx(BlobTransaction, nonce=2**64 - 1, max_fee_per_gas=Uint(2**128 - 1), max_priority_fee_per_gas=Uint(2**128 - 1), max_fee_per_blob_gas=U256(2**128 - 1))),
+        sign(typed_tx(AccessListTransaction, nonce=2**64 - 1, gas=Uint(2**64 - 1), gas_price=Uint(2**128 - 1))),
+        sign(typed_tx(FeeMarketTransaction, nonce=2**64 - 1, gas=Uint(2**64 - 1), max_fee_per_gas=Uint(2**128 - 1), max_priority_fee_per_gas=Uint(2**128 - 1))),
+        sign(typed_tx(BlobTransaction, nonce=2**64 - 1, gas=Uint(2**64 - 1), max_fee_per_gas=Uint(2**128 - 1), max_priority_fee_per_gas=Uint(2**128 - 1), max_fee_per_blob_gas=U256(2**128 - 1))),
+        sign(typed_tx(SetCodeTransaction, nonce=2**64 - 1, gas=Uint(2**64 - 1), max_fee_per_gas=Uint(2**128 - 1), max_priority_fee_per_gas=Uint(2**128 - 1))),
     ]
 
     truncated = truncate_block_rlp(block_rlp([wire(tx) for tx in largest]), CHAIN_ID)
 
-    assert truncated.froms == [SENDER, SENDER]
+    assert truncated.froms == [SENDER] * len(largest)
+
+
+def test_ommer_timestamp_is_a_256_bit_integer_and_the_block_timestamp_a_64_bit_one():
+    genuine = block([wire(sign(legacy_tx(1)))])
+    for timestamp in [2**64, 2**256 - 1]:
+        with_ommer = replace(genuine, ommers=(replace(header(5), timestamp=U256(timestamp)),))
+
+        assert truncate_block_rlp(rlp.encode(with_ommer), CHAIN_ID) == truncate_block_rlp(rlp.encode(genuine), CHAIN_ID)
+
+    beyond_64_bits = replace(genuine, header=replace(genuine.header, timestamp=U256(2**64)))
+    with pytest.raises(OverflowError):
+        truncate_block_rlp(rlp.encode(beyond_64_bits), CHAIN_ID)
 
 
 def test_chain_id_zero_is_rejected():
@@ -168,5 +217,8 @@ def test_chain_id_zero_is_rejected():
 
 
 def test_eip_155_signature_of_another_chain_is_rejected():
-    with pytest.raises(Exception):
-        truncate_block_rlp(block_rlp([wire(sign(legacy_tx(), chain_id=U64(1)))]), CHAIN_ID)
+    other_chain = block_rlp([wire(sign(legacy_tx(), chain_id=U64(1)))])
+
+    assert truncate_block_rlp(other_chain, U64(1)).froms == [SENDER]
+    with pytest.raises(InvalidSignatureError):
+        truncate_block_rlp(other_chain, CHAIN_ID)

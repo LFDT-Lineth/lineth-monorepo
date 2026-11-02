@@ -578,6 +578,7 @@ test "a header with a missing, extra or misshapen field is rejected" {
     const cases = [_]struct { index: usize, replacement: Item }{
         .{ .index = 0, .replacement = rlp.string(&short_hash) }, // parent hash
         .{ .index = 6, .replacement = rlp.string(&long_bloom) }, // logs bloom
+        .{ .index = 11, .replacement = try rlp.int(a, 1 << 64) }, // timestamp of 2^64
         .{ .index = 11, .replacement = rlp.string(&wide_timestamp) }, // timestamp beyond 64 bits
         .{ .index = 11, .replacement = rlp.list(&.{}) }, // timestamp as a list
         .{ .index = 13, .replacement = rlp.string(&short_hash) }, // prevRandao
@@ -619,6 +620,18 @@ test "a block body with ommers or withdrawals of the wrong shape is rejected" {
     try std.testing.expectError(error.MalformedBlock, truncate(a, try rlp.encode(a, try blocks.blockItem(a, header_items, &.{}, &.{rlp.string(&.{1})}, &.{})), chain_id));
     try std.testing.expectError(error.MalformedBlock, truncate(a, try rlp.encode(a, try blocks.blockItem(a, header_items, &.{}, &.{rlp.list(header_items[0..22])}, &.{})), chain_id));
     _ = try truncate(a, try rlp.encode(a, try blocks.blockItem(a, header_items, &.{}, &.{rlp.list(header_items)}, &.{})), chain_id);
+
+    // An ommer's timestamp is a 256-bit integer, where the block's own is a 64-bit one.
+    const base = try truncate(a, try blocks.block(a, .{}, &.{}, &.{}), chain_id);
+    for ([_]u256{ 1 << 64, std.math.maxInt(u256) }) |timestamp| {
+        const ommer = try headerWith(a, 11, try rlp.int(a, timestamp));
+        const truncated = try truncate(a, try rlp.encode(a, try blocks.blockItem(a, header_items, &.{}, &.{rlp.list(ommer)}, &.{})), chain_id);
+        try std.testing.expectEqual(base.timestamp, truncated.timestamp);
+        try std.testing.expectEqualSlices(u8, &base.block_hash, &truncated.block_hash);
+    }
+    const wide_timestamp = [_]u8{1} ** 33;
+    const wide_ommer = try headerWith(a, 11, rlp.string(&wide_timestamp));
+    try std.testing.expectError(error.MalformedBlock, truncate(a, try rlp.encode(a, try blocks.blockItem(a, header_items, &.{}, &.{rlp.list(wide_ommer)}, &.{})), chain_id));
 
     // Withdrawals have four fields.
     const three_fields = rlp.list(&.{ rlp.string(&.{1}), rlp.string(&.{2}), rlp.string(lit("c3" ** 20)) });
@@ -686,16 +699,21 @@ const bounded_fields = [_]struct { tx: blocks.Tx, field: Field, largest: u256 }{
     .{ .tx = legacy_tx, .field = .gas_limit, .largest = max_u64 },
     .{ .tx = legacy_tx, .field = .gas_price, .largest = max_u128 },
     .{ .tx = access_list_tx, .field = .nonce, .largest = max_u64 },
+    .{ .tx = access_list_tx, .field = .gas_limit, .largest = max_u64 },
     .{ .tx = access_list_tx, .field = .gas_price, .largest = max_u128 },
     .{ .tx = fee_market_tx, .field = .nonce, .largest = max_u64 },
     .{ .tx = fee_market_tx, .field = .gas_limit, .largest = max_u64 },
     .{ .tx = fee_market_tx, .field = .gas_price, .largest = max_u128 },
     .{ .tx = fee_market_tx, .field = .max_priority_fee_per_gas, .largest = max_u128 },
     .{ .tx = blob_tx, .field = .nonce, .largest = max_u64 },
+    .{ .tx = blob_tx, .field = .gas_limit, .largest = max_u64 },
+    .{ .tx = blob_tx, .field = .gas_price, .largest = max_u128 },
     .{ .tx = blob_tx, .field = .max_priority_fee_per_gas, .largest = max_u128 },
     .{ .tx = blob_tx, .field = .max_fee_per_blob_gas, .largest = max_u128 },
     .{ .tx = set_code_tx, .field = .nonce, .largest = max_u64 },
+    .{ .tx = set_code_tx, .field = .gas_limit, .largest = max_u64 },
     .{ .tx = set_code_tx, .field = .gas_price, .largest = max_u128 },
+    .{ .tx = set_code_tx, .field = .max_priority_fee_per_gas, .largest = max_u128 },
 };
 
 test "the largest nonce, gas and fees the guest decodes are accepted with their stripped form" {

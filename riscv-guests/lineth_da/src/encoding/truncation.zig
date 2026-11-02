@@ -59,6 +59,8 @@ pub fn truncateBlockRlp(output: Allocator, scratch: Allocator, block_rlp: []cons
     if (!block.atEnd()) return error.MalformedBlock;
 
     const header_fields = try parseHeader(try header.listPayload());
+    // The block's own timestamp is a 64-bit integer, an ommer's a 256-bit one.
+    const timestamp = std.math.cast(u64, header_fields.timestamp) orelse return error.MalformedBlock;
     while (!ommers.atEnd()) _ = try parseHeader(try (try ommers.next()).listPayload());
     while (!withdrawals.atEnd()) try parseWithdrawal(try (try withdrawals.next()).listPayload());
 
@@ -95,7 +97,7 @@ pub fn truncateBlockRlp(output: Allocator, scratch: Allocator, block_rlp: []cons
     var block_hash: Hash = undefined;
     accelerators.keccak256(header.encoded, &block_hash);
     return .{
-        .timestamp = header_fields.timestamp,
+        .timestamp = timestamp,
         .block_hash = block_hash,
         .parent_hash = header_fields.parent_hash,
         .prev_randao = header_fields.prev_randao,
@@ -109,16 +111,16 @@ pub fn truncateBlockRlp(output: Allocator, scratch: Allocator, block_rlp: []cons
 pub fn encodeBlocks(allocator: Allocator, blocks: []const TruncatedBlock) Allocator.Error![]u8 {
     var builder: RlpBuilder = .{ .allocator = allocator };
     errdefer builder.bytes.deinit(allocator);
-    const all_blocks = try builder.openList();
+    const all_blocks = builder.openList();
     for (blocks) |block| {
-        const entry = try builder.openList();
+        const entry = builder.openList();
         try builder.unsigned(block.timestamp);
         try builder.string(&block.block_hash);
         try builder.string(&block.prev_randao);
-        const transactions = try builder.openList();
+        const transactions = builder.openList();
         for (block.transactions) |transaction| try builder.string(transaction);
         try builder.closeList(transactions);
-        const froms = try builder.openList();
+        const froms = builder.openList();
         for (block.froms) |from| try builder.string(&from);
         try builder.closeList(froms);
         try builder.closeList(entry);
@@ -132,7 +134,7 @@ pub fn encodeBlocks(allocator: Allocator, blocks: []const TruncatedBlock) Alloca
 fn strippedTransaction(output: Allocator, scratch: Allocator, tx: input.Transaction) Error![]u8 {
     var builder: RlpBuilder = .{ .allocator = scratch };
     if (tx.tx_type != 0) try builder.bytes.append(scratch, tx.tx_type);
-    const fields = try builder.openList();
+    const fields = builder.openList();
     try builder.unsigned(tx.nonce);
     if (tx.tx_type <= 1) {
         try builder.unsigned(tx.gas_price);
@@ -145,11 +147,11 @@ fn strippedTransaction(output: Allocator, scratch: Allocator, tx: input.Transact
     try builder.unsigned(tx.value);
     try builder.string(tx.data);
     if (tx.tx_type != 0) {
-        const access_list = try builder.openList();
+        const access_list = builder.openList();
         for (tx.access_list) |entry| {
-            const item = try builder.openList();
+            const item = builder.openList();
             try builder.string(&entry.address);
-            const keys = try builder.openList();
+            const keys = builder.openList();
             for (entry.storage_keys) |key| try builder.string(&key);
             try builder.closeList(keys);
             try builder.closeList(item);
@@ -158,14 +160,14 @@ fn strippedTransaction(output: Allocator, scratch: Allocator, tx: input.Transact
     }
     if (tx.tx_type == 3) {
         try builder.unsigned(tx.max_fee_per_blob_gas);
-        const hashes = try builder.openList();
+        const hashes = builder.openList();
         for (tx.blob_hashes) |hash| try builder.string(&hash);
         try builder.closeList(hashes);
     }
     if (tx.tx_type == 4) {
-        const authorizations = try builder.openList();
+        const authorizations = builder.openList();
         for (tx.authorization_list) |authorization| {
-            const item = try builder.openList();
+            const item = builder.openList();
             try builder.unsigned(authorization.chain_id);
             try builder.string(&authorization.address);
             try builder.unsigned(authorization.nonce);
@@ -183,7 +185,7 @@ fn strippedTransaction(output: Allocator, scratch: Allocator, tx: input.Transact
 const HeaderFields = struct {
     parent_hash: Hash,
     transactions_root: Hash,
-    timestamp: u64,
+    timestamp: u256,
     prev_randao: Hash,
 };
 
@@ -201,7 +203,7 @@ fn parseHeader(payload: []const u8) Error!HeaderFields {
     _ = try fields.integer(); // number
     _ = try fields.integer(); // gas limit
     _ = try fields.integer(); // gas used
-    const timestamp = try fields.unsigned(u64);
+    const timestamp = try fields.unsigned(u256);
     _ = try fields.string(); // extra data
     const prev_randao = (try fields.fixed(32)).*;
     _ = try fields.fixed(8); // nonce
@@ -374,7 +376,7 @@ const RlpBuilder = struct {
         try self.string(big_endian[@clz(value) / 8 ..]);
     }
 
-    fn openList(self: *RlpBuilder) Allocator.Error!Marker {
+    fn openList(self: *RlpBuilder) Marker {
         return self.bytes.items.len;
     }
 
