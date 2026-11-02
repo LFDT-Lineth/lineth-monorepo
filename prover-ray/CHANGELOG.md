@@ -6,6 +6,7 @@
 - *(misc)* Adding blob commitment and a proof to Rollup input (#4329)
 - *(prover-ray)* FRI over a fixed maximum domain (#4322)
 - *(prover-ray)* Register program vk to the public inputs (#4309)
+- *(riscv-guest)* Refactoring to enable further Rollup GP development (#4342)
 
 ### 🐛 Bug Fixes
 
