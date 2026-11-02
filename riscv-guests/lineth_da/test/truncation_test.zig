@@ -604,20 +604,32 @@ test "a header with a missing, extra or misshapen field is rejected" {
     const short_hash = [_]u8{0x11} ** 31;
     const long_bloom = [_]u8{0x17} ** 257;
     const short_nonce = [_]u8{0} ** 7;
-    const wide_timestamp = [_]u8{1} ** 9;
+    const nine_bytes = [_]u8{1} ** 9;
     const cases = [_]struct { index: usize, replacement: Item }{
         .{ .index = 0, .replacement = rlp.string(&short_hash) }, // parent hash
         .{ .index = 6, .replacement = rlp.string(&long_bloom) }, // logs bloom
         .{ .index = 11, .replacement = try rlp.int(a, 1 << 64) }, // timestamp of 2^64
-        .{ .index = 11, .replacement = rlp.string(&wide_timestamp) }, // timestamp beyond 64 bits
+        .{ .index = 11, .replacement = rlp.string(&nine_bytes) }, // timestamp beyond 64 bits
         .{ .index = 11, .replacement = rlp.list(&.{}) }, // timestamp as a list
         .{ .index = 13, .replacement = rlp.string(&short_hash) }, // prevRandao
         .{ .index = 14, .replacement = rlp.string(&short_nonce) }, // nonce
-        .{ .index = 22, .replacement = rlp.string(&wide_timestamp) }, // slot number
+        .{ .index = 17, .replacement = rlp.string(&nine_bytes) }, // blob gas used
+        .{ .index = 18, .replacement = rlp.string(&nine_bytes) }, // excess blob gas
+        .{ .index = 22, .replacement = rlp.string(&nine_bytes) }, // slot number
     };
     for (cases) |case| {
         try std.testing.expectError(error.MalformedBlock, truncate(a, try blockWithHeader(a, try headerWith(a, case.index, case.replacement)), chain_id));
     }
+}
+
+test "the largest blob gas used, excess blob gas and slot number of a header are accepted" {
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    const a = arena.allocator();
+
+    const largest: blocks.Header = .{ .blob_gas_used = std.math.maxInt(u64), .excess_blob_gas = std.math.maxInt(u64), .slot_number = std.math.maxInt(u64) };
+    const truncated = try truncate(a, try blocks.block(a, largest, &.{}, &.{}), chain_id);
+    try std.testing.expectEqualSlices(u8, &(try blocks.blockHash(a, largest)), &truncated.block_hash);
 }
 
 test "non-canonical RLP is rejected wherever it occurs" {
@@ -672,6 +684,38 @@ test "a block body with ommers or withdrawals of the wrong shape is rejected" {
     try std.testing.expectError(error.MalformedBlock, truncate(a, try rlp.encode(a, three_parts), chain_id));
     const five_parts = rlp.list(&.{ rlp.list(header_items), rlp.list(&.{}), rlp.list(&.{}), rlp.list(&.{}), rlp.list(&.{}) });
     try std.testing.expectError(error.MalformedBlock, truncate(a, try rlp.encode(a, five_parts), chain_id));
+}
+
+/// The block whose one withdrawal has the fields `fields`.
+fn blockWithWithdrawal(a: Allocator, fields: []const Item) ![]u8 {
+    return rlp.encode(a, try blocks.blockItem(a, try blocks.headerItems(a, .{}), &.{}, &.{}, &.{rlp.list(fields)}));
+}
+
+test "a withdrawal's fields are held in the widths of their types" {
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    const a = arena.allocator();
+
+    const address = rlp.string(lit("c3" ** 20));
+    const largest = [_]Item{ try rlp.int(a, std.math.maxInt(u64)), try rlp.int(a, std.math.maxInt(u64)), address, try rlp.int(a, std.math.maxInt(u256)) };
+    _ = try truncate(a, try blockWithWithdrawal(a, &largest), chain_id);
+
+    const nine_bytes = [_]u8{1} ** 9;
+    const short_address = [_]u8{0xc3} ** 19;
+    const long_address = [_]u8{0xc3} ** 21;
+    const wide_amount = [_]u8{1} ** 33;
+    const cases = [_]struct { index: usize, replacement: Item }{
+        .{ .index = 0, .replacement = rlp.string(&nine_bytes) }, // index
+        .{ .index = 1, .replacement = rlp.string(&nine_bytes) }, // validator index
+        .{ .index = 2, .replacement = rlp.string(&short_address) },
+        .{ .index = 2, .replacement = rlp.string(&long_address) },
+        .{ .index = 3, .replacement = rlp.string(&wide_amount) }, // amount
+    };
+    for (cases) |case| {
+        var fields = largest;
+        fields[case.index] = case.replacement;
+        try std.testing.expectError(error.MalformedBlock, truncate(a, try blockWithWithdrawal(a, &fields), chain_id));
+    }
 }
 
 test "malformed transactions are rejected" {
