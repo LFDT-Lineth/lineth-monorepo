@@ -78,3 +78,7 @@ pnpm -F e2e run test:riscv:local
 
 Set `RISCV_PROVER_MODE=dev-zkvm` on both commands to execute the guest instead of returning placeholder proofs.
 CI runs this suite on pushes to `main` only.
+
+To extend the stack from another repository, set `OVERRIDE_COMPOSE_FILE=<path>` on `make start-env-with-riscv` to layer a
+compose file on top of `docker/compose-riscv.yml`, and `E2E_JEST_CONFIG=<absolute path>` on `test:riscv:local` to run a
+different jest config. The `run-e2e-tests` action exposes them as `override-compose-file` and `jest-config`.

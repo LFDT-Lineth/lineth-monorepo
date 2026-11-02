@@ -33,7 +33,8 @@ clean-environment:
 
 RISCV_PROVER_MODE ?= dev-mock
 export RISCV_PROVER_MODE
-RISCV_COMPOSE_FILE := docker/compose-tracing-v2.yml -f docker/compose-riscv.yml
+# OVERRIDE_COMPOSE_FILE (absolute, or relative to this directory) is layered on top of compose-riscv.yml.
+RISCV_COMPOSE_FILE = docker/compose-tracing-v2.yml -f docker/compose-riscv.yml$(if $(OVERRIDE_COMPOSE_FILE), -f $(abspath $(OVERRIDE_COMPOSE_FILE)))
 
 start-env-with-riscv:
 	@test -f docker/config/prover/riscv/prover-ray-config.$(RISCV_PROVER_MODE).toml || \
@@ -49,6 +50,8 @@ start-env-with-riscv:
 ##
 ## CI e2e entry points, used by .github/actions/run-e2e-tests.
 ## E2E_STACK selects the stack and suite: zkevm (default) or riscv.
+## OVERRIDE_COMPOSE_FILE layers a compose file on top of either stack.
+## E2E_JEST_CONFIG replaces the RISC-V jest config (riscv only).
 ##
 .PHONY: e2e-ci-detect-changes e2e-ci-load-images e2e-ci-pull-external-images e2e-ci-build-images \
 	e2e-ci-start-env e2e-ci-start-env-with-retry e2e-ci-test
@@ -112,8 +115,17 @@ e2e-ci-start-env-with-retry:
 		TARGET="e2e-ci-start-env E2E_STACK=$(E2E_STACK) OVERRIDE_COMPOSE_FILE=$(if $(OVERRIDE_COMPOSE_FILE),$(abspath $(OVERRIDE_COMPOSE_FILE)))" \
 		RETRY_LIMIT=10 RETRY_TIMEOUT=10m RETRY_BACKOFF=30s RETRY_CLEANUP_TARGET=clean-environment
 
+E2E_JEST_CONFIG ?=
+
 e2e-ci-test:
-	timeout $(E2E_TEST_TIMEOUT) pnpm run -F e2e $(E2E_TEST_SCRIPT)
+ifneq ($(E2E_JEST_CONFIG),)
+ifneq ($(E2E_STACK),riscv)
+	@echo "E2E_JEST_CONFIG is only supported with E2E_STACK=riscv" >&2; exit 1
+endif
+	@test -f "$(E2E_JEST_CONFIG)" || { echo "E2E jest config not found: $(E2E_JEST_CONFIG)" >&2; exit 1; }
+endif
+	$(if $(E2E_JEST_CONFIG),E2E_JEST_CONFIG="$(abspath $(E2E_JEST_CONFIG))") \
+		timeout $(E2E_TEST_TIMEOUT) pnpm run -F e2e $(E2E_TEST_SCRIPT)
 
 # Ensure the runtime sequencer deny-list exists (empty) before docker compose
 # bind-mounts it. Gitignored; may be mutated at test time by withDenyListAddresses.
