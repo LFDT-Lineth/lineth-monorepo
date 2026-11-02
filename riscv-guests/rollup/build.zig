@@ -12,7 +12,7 @@ pub fn build(b: *std.Build) void {
     addGuestProgram(b, options);
     if (!options.host_tools) return;
 
-    const crypto = hostCrypto(b, options) orelse return;
+    const crypto = common.HostCrypto.forTarget(b, options.host_target, options.crypto) orelse return;
     const unit = Host.init(b, options.host_target, .Debug);
     const tools = addHostTools(b, unit, crypto);
     addHostTests(b, unit, crypto);
@@ -93,14 +93,6 @@ fn addGuestProgram(b: *std.Build, options: Options) void {
         },
         .code_model = .medium,
     });
-}
-
-/// The host build of the `zkvm_*` providers, which native tests and tools link. Null until the
-/// Constantine archive exists: it is fetched on demand and the build reruns once it is.
-fn hostCrypto(b: *std.Build, options: Options) ?common.HostCrypto {
-    // Optimized: the compiler's own linker crashes on a debug-built provider object.
-    const accelerators = common.acceleratorsDependency(b, options.host_target, .ReleaseSafe, options.crypto.native());
-    return common.HostCrypto.init(b, accelerators);
 }
 
 /// What the native tests and tools of one optimize mode share: the modules they import.

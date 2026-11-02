@@ -184,8 +184,8 @@ pub const Secp256k1Backend = enum { std, constantine };
 /// The `-D` options that select the crypto providers behind the guests' `zkvm_*` symbols.
 pub const CryptoOptions = struct {
     /// Keccak provider: the arithmetization wrapper (prover-accelerated custom op) or standard zig keccak.
-    keccak_accel: bool,
-    secp256k1_backend: Secp256k1Backend,
+    keccak_accel: bool = false,
+    secp256k1_backend: Secp256k1Backend = .std,
 
     pub fn parse(b: *std.Build) CryptoOptions {
         const keccak_accel = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: unaccelerated)") orelse false;
@@ -221,6 +221,13 @@ pub fn acceleratorsDependency(
 pub const HostCrypto = struct {
     provider: *std.Build.Step.Compile,
     constantine: std.Build.LazyPath,
+
+    /// The host crypto of `target`, built from the accelerator package with the native form of
+    /// `crypto`. The provider is compiled optimized: the compiler's own linker crashes on a
+    /// debug-built provider object. Null while the Constantine archive is not fetched, as `init`.
+    pub fn forTarget(b: *std.Build, target: std.Build.ResolvedTarget, crypto: CryptoOptions) ?HostCrypto {
+        return init(b, acceleratorsDependency(b, target, .ReleaseSafe, crypto.native()));
+    }
 
     /// `accelerators` is the `lineth_accelerators` dependency built with `-Dzkvm-provide` for the
     /// native target, which publishes the Constantine archive of its provider as

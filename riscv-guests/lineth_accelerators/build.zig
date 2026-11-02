@@ -21,8 +21,6 @@
 const std = @import("std");
 const common = @import("build_common");
 
-const Secp256k1Backend = enum { std, constantine };
-
 pub fn build(b: *std.Build) void {
     common.requireZigVersion();
 
@@ -36,7 +34,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseSmall)") orelse .ReleaseSmall;
     const zkvm_provide = b.option(bool, "zkvm-provide", "Expose the zkvm_provide, guest_crypto and secp256k1_std modules (fetches zesu, builds Constantine)") orelse false;
     const keccak_accel = b.option(bool, "keccak-accel", "zkvm_provide exports the arithmetization keccak wrapper instead of standard zig keccak (default: unaccelerated)") orelse false;
-    const secp256k1_backend = b.option(Secp256k1Backend, "secp256k1-backend", "zkvm_provide's secp256k1 ecrecover/verify provider: std (default) or constantine") orelse .std;
+    const secp256k1_backend = b.option(common.Secp256k1Backend, "secp256k1-backend", "zkvm_provide's secp256k1 ecrecover/verify provider: std (default) or constantine") orelse .std;
 
     const accelerators = b.addModule("lineth_accelerators", .{
         .root_source_file = b.path("src/root.zig"),
@@ -59,7 +57,7 @@ fn addCryptoProviders(
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     keccak_accel: bool,
-    secp256k1_backend: Secp256k1Backend,
+    secp256k1_backend: common.Secp256k1Backend,
 ) void {
     const is_guest = target.result.os.tag == .freestanding;
 
@@ -82,7 +80,7 @@ fn addCryptoProviders(
     const provide_options = b.addOptions();
     provide_options.addOption(bool, "keccak_accel", keccak_accel);
     provide_options.addOption(bool, "is_guest", is_guest);
-    provide_options.addOption(Secp256k1Backend, "secp256k1_backend", secp256k1_backend);
+    provide_options.addOption(common.Secp256k1Backend, "secp256k1_backend", secp256k1_backend);
 
     const provide = b.addModule("zkvm_provide", .{
         .root_source_file = b.path("src/zkvm_provide.zig"),

@@ -74,7 +74,7 @@ pub fn build(b: *std.Build) void {
 
     const host_tools = b.option(bool, "host-tools", "Build the native tests and tools: fetches the reference vectors and builds the host crypto providers") orelse false;
     const reference_tests = b.option(bool, "reference-tests", "With host-tools, also run the truncation reference test over the EF zkevm fixtures, which fetches them (default: true)") orelse true;
-    if (host_tools) addHostBuild(b, zstd, target, reference_tests);
+    if (host_tools) addHostBuild(b, zstd, target, optimize, reference_tests);
 }
 
 /// libzstd for one target: the release's sources and its C declarations translated for Zig.
@@ -134,18 +134,26 @@ fn hostPackage(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.bu
 
 /// The native tests and tools run on the host: a freestanding riscv64 target has no OS to run a
 /// `std.testing` binary against. The test-side encoders and signers (`support`) and the zstd
-/// compressor (`zstd_compressor`) are modules of the package for the tests of its consumers. When
-/// the package itself is built for a native target, the compressor shares its libzstd declarations,
+/// compressor (`zstd_compressor`) are modules of the package for the tests of its consumers; they
+/// are compiled at the package's `optimize`, where ReleaseSmall becomes ReleaseSafe. When the
+/// package itself is built for a native target, the compressor shares its libzstd declarations,
 /// which one compilation can hold only once.
-fn addHostBuild(b: *std.Build, package_zstd: Zstd, package_target: std.Build.ResolvedTarget, reference_tests: bool) void {
+fn addHostBuild(
+    b: *std.Build,
+    package_zstd: Zstd,
+    package_target: std.Build.ResolvedTarget,
+    package_optimize: std.builtin.OptimizeMode,
+    reference_tests: bool,
+) void {
     const target = b.resolveTargetQuery(.{});
+    const optimize: std.builtin.OptimizeMode = if (package_optimize == .ReleaseSmall) .ReleaseSafe else package_optimize;
     const zstd = if (package_target.result.os.tag == .freestanding) Zstd.init(b, target) else package_zstd;
     const package = hostPackage(b, target, .Debug, zstd);
 
     const compressor = b.addModule("zstd_compressor", .{
         .root_source_file = b.path("test/zstd_compressor.zig"),
         .target = target,
-        .optimize = .Debug,
+        .optimize = optimize,
         .imports = &.{.{ .name = "zstd_c", .module = zstd.declarations }},
     });
     compressor.addCSourceFiles(.{ .root = zstd.source.path("lib"), .files = &compressor_sources });
@@ -153,13 +161,13 @@ fn addHostBuild(b: *std.Build, package_zstd: Zstd, package_target: std.Build.Res
     const support = b.addModule("support", .{
         .root_source_file = b.path("test/support/root.zig"),
         .target = target,
-        .optimize = .Debug,
+        .optimize = optimize,
     });
 
     const conflation_sample = b.createModule(.{
         .root_source_file = b.path("test/conflation_sample.zig"),
         .target = target,
-        .optimize = .Debug,
+        .optimize = optimize,
         .imports = &.{
             .{ .name = "lineth_da", .module = package },
             .{ .name = "support", .module = support },
@@ -226,14 +234,8 @@ fn addKzgReferences(
 }
 
 /// Every native test and tool links the host build of the zkvm_* providers.
-/// Optimized: the compiler's own linker crashes on a debug-built provider object.
 fn linkHostCrypto(b: *std.Build, target: std.Build.ResolvedTarget, artifacts: []const std.StringHashMap(*std.Build.Step.Compile)) void {
-    const accelerators = b.dependency("lineth_accelerators", .{
-        .target = target,
-        .optimize = .ReleaseSafe,
-        .@"zkvm-provide" = true,
-    });
-    const crypto = common.HostCrypto.init(b, accelerators) orelse return;
+    const crypto = common.HostCrypto.forTarget(b, target, .{}) orelse return;
     for (artifacts) |group| crypto.linkAll(group);
 }
 
@@ -317,11 +319,7 @@ fn addSmokeGuest(
     optimize: std.builtin.OptimizeMode,
 ) void {
     const smoke = b.option(Smoke, "smoke", "Smoke guest to link: zstd (default), blob, truncation or decompress") orelse .zstd;
-    const accelerators = b.dependency("lineth_accelerators", .{
-        .target = target,
-        .optimize = optimize,
-        .@"zkvm-provide" = true,
-    });
+    const accelerators = common.acceleratorsDependency(b, target, optimize, .{});
     var imports: std.ArrayList(Import) = .empty;
     imports.appendSlice(b.allocator, &.{
         .{ .name = "lineth_da", .module = package },
