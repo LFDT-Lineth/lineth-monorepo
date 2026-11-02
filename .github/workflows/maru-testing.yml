@@ -7,9 +7,6 @@ permissions:
 on:
   workflow_call:
     inputs:
-      commit_tag:
-        required: true
-        type: string
       # 0 = test methods run sequentially (default). N > 1 = up to N methods of a test class run
       # concurrently inside its fork JVM (-PmaruItMethodParallel=N, see maru/app/build.gradle).
       maru_it_method_parallel:
