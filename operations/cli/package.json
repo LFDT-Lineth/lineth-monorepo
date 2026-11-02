@@ -25,7 +25,7 @@
     "date-fns": "4.4.0",
     "date-fns-tz": "3.2.0",
     "neverthrow": "catalog:",
-    "node-forge": "1.4.0",
+    "node-forge": "1.4.1",
     "viem": "catalog:"
   },
   "devDependencies": {
