@@ -8,6 +8,8 @@ package maru.consensus.qbft
 
 import linea.domain.toBlockParameter
 import linea.ethapi.EthApiBlockClient
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 import java.math.BigInteger
 
 /**
@@ -44,17 +46,25 @@ class ConstantDifficultyTerminalBlockCalculator(
   private val ethApiClient: EthApiBlockClient,
   private val terminalTotalDifficulty: BigInteger,
 ) : TerminalBlockCalculator {
+  private val log: Logger = LogManager.getLogger(this.javaClass)
+
   @Volatile
   private var terminalBlock: TerminalBlock? = null
 
   override fun terminalBlock(): TerminalBlock? {
     terminalBlock?.let { return it }
-    val genesisDifficulty = blockDifficulty(0UL) ?: return null
+    val genesisDifficulty = blockDifficulty(0UL) ?: run {
+      log.debug("EL block 0 returns null")
+      return null
+    }
     val computed =
       if (genesisDifficulty >= terminalTotalDifficulty) {
         TerminalBlock(number = 0UL, genesisDifficulty = genesisDifficulty, blockDifficulty = null)
       } else {
-        val blockDifficulty = blockDifficulty(1UL) ?: return null
+        val blockDifficulty = blockDifficulty(1UL) ?: run {
+          log.debug("EL block 1 returns null")
+          return null
+        }
         check(blockDifficulty.signum() > 0) {
           "EL block 1 has difficulty 0 (post-merge) while genesis difficulty=$genesisDifficulty is below " +
             "terminalTotalDifficulty=$terminalTotalDifficulty: Maru TTD does not match the EL TTD"

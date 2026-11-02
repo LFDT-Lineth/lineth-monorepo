@@ -15,13 +15,11 @@ import maru.consensus.ForkSpec
 import maru.consensus.ProtocolFactory
 import maru.consensus.QbftConsensusConfig
 import maru.core.Protocol
-import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
-import java.math.BigInteger
 
 class DifficultyAwareQbftTest {
   private val terminalTotalDifficulty = 10UL
@@ -36,8 +34,6 @@ class DifficultyAwareQbftTest {
 
   private val chain = FakeElChain()
 
-  // private val terminalBlockCalculator =
-  //  ConstantDifficultyTerminalBlockCalculator(chain, BigInteger.valueOf(terminalTotalDifficulty.toLong()))
   private val postTtdProtocol = mock<Protocol>()
   private val timerFactory = TestablePeriodicTimerFactory()
 
@@ -50,7 +46,6 @@ class DifficultyAwareQbftTest {
       },
       forkSpec = forkSpec,
       timerFactory = timerFactory,
-      // terminalBlockCalculator = terminalBlockCalculator,
     ).also { it.start() }
 
   private fun poll() = timerFactory.getTimer("DifficultyAwareQbft")!!.runNextTask()
@@ -72,23 +67,6 @@ class DifficultyAwareQbftTest {
   }
 
   @Test
-  fun `waits for block 1 to determine the terminal block`() {
-    chain.extend(1)
-    poll()
-    assertThat(protocol.terminalBlockCalculator.terminalBlock()).isNull()
-    verify(postTtdProtocol, never()).start()
-
-    chain.extend(1)
-    assertThat(protocol.terminalBlockCalculator.terminalBlock()?.number).isEqualTo(9UL)
-    poll()
-    verify(postTtdProtocol, never()).start()
-
-    chain.extendRepeated(count = 8, difficulty = 1)
-    poll()
-    verify(postTtdProtocol).start()
-  }
-
-  @Test
   fun `transitions at the terminal block of a single-signer Clique chain`() {
     // Clique: genesis 0x1, in-turn blocks of difficulty 2 => TD(4) = 9 < 10, TD(5) = 11 >= 10
     chain.extend(1).extendRepeated(count = 4, difficulty = 2)
@@ -107,39 +85,6 @@ class DifficultyAwareQbftTest {
 
     poll()
 
-    verify(postTtdProtocol).start()
-  }
-
-  @Test
-  fun `switches on the terminal block from an injected calculator`() {
-    val stubCalculator =
-      object : TerminalBlockCalculator {
-        override fun terminalBlock() = TerminalBlock(
-          number = 3UL,
-          genesisDifficulty = BigInteger.ONE,
-          blockDifficulty = null,
-        )
-      }
-    val timerFactory = TestablePeriodicTimerFactory()
-    DifficultyAwareQbft(
-      ethApiClient = chain,
-      postTtdProtocolFactory =
-      object : ProtocolFactory {
-        override fun create(forkSpec: ForkSpec): Protocol = postTtdProtocol
-      },
-      forkSpec = forkSpec,
-      timerFactory = timerFactory,
-      terminalBlockCalculator = stubCalculator,
-    ).start()
-    val poll = { timerFactory.getTimer("DifficultyAwareQbft")!!.runNextTask() }
-
-    // TTD in the fork config would put the terminal block at 9, but the injected calculator says 3
-    chain.extend(1).extendRepeated(count = 2, difficulty = 1)
-    poll()
-    verify(postTtdProtocol, never()).start()
-
-    chain.extend(1)
-    poll()
     verify(postTtdProtocol).start()
   }
 }

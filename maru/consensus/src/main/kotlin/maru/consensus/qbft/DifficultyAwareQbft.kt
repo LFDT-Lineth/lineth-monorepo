@@ -47,7 +47,7 @@ class DifficultyAwareQbft(
   private val forkSpec: ForkSpec,
   private val timerFactory: TimerFactory,
   // EL clients no longer return totalDifficulty in eth_getBlockBy* responses, so the terminal block is derived from TTD
-  internal val terminalBlockCalculator: TerminalBlockCalculator =
+  private val terminalBlockCalculator: TerminalBlockCalculator =
     ConstantDifficultyTerminalBlockCalculator(
       ethApiClient = ethApiClient,
       terminalTotalDifficulty =
@@ -78,7 +78,7 @@ class DifficultyAwareQbft(
       val terminalBlock = terminalBlockCalculator.terminalBlock()
       if (terminalBlock == null) {
         log.debug(
-          "Waiting for EL blocks 0 and 1 to determine the terminal block: elBlockNumber={}",
+          "Waiting for the terminal block to be determined: elBlockNumber={}",
           latestBlock.number,
         )
         return
