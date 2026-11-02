@@ -45,30 +45,46 @@ pub const ZkcMachine = struct {
     }
 };
 
-const output_prefix = "guest_output = 0x";
+const guest_output_prefix = "guest_output = 0x";
+const guest_log_prefix = "guest_log = 0x";
 const min_output_size: usize = 34;
 
 // TODO: Consume structured ZkC/prover output once the backend exposes it.
 fn parseProtocolOutput(alloc: std.mem.Allocator, text: []const u8) !execution_machine.Output {
-    const output_assignment = "guest_output =";
-    var output_hex: ?[]const u8 = null;
+    const guest_output_assignment = "guest_output =";
+    const guest_log_assignment = "guest_log =";
+    var guest_output_hex: ?[]const u8 = null;
+    var guest_log_hex: ?[]const u8 = null;
     var lines = std.mem.splitScalar(u8, text, '\n');
     while (lines.next()) |raw_line| {
         const line = std.mem.trim(u8, raw_line, " \t\r");
-        if (!std.mem.startsWith(u8, line, output_assignment)) continue;
-        if (output_hex != null) return error.DuplicateGuestOutput;
-        if (!std.mem.startsWith(u8, line, output_prefix)) return error.InvalidGuestOutput;
-        const remainder = line[output_prefix.len..];
-        if (std.mem.indexOfScalar(u8, remainder, '=') != null) return error.DuplicateGuestOutput;
-        output_hex = remainder;
+        if (std.mem.startsWith(u8, line, guest_output_assignment)) {
+            if (guest_output_hex != null) return error.DuplicateGuestOutput;
+            if (!std.mem.startsWith(u8, line, guest_output_prefix)) return error.InvalidGuestOutput;
+            const remainder = line[guest_output_prefix.len..];
+            if (std.mem.indexOfScalar(u8, remainder, '=') != null) return error.DuplicateGuestOutput;
+            guest_output_hex = remainder;
+        } else if (std.mem.startsWith(u8, line, guest_log_assignment)) {
+            if (guest_log_hex != null) return error.DuplicateGuestLog;
+            if (!std.mem.startsWith(u8, line, guest_log_prefix)) return error.InvalidGuestLog;
+            const remainder = line[guest_log_prefix.len..];
+            if (std.mem.indexOfScalar(u8, remainder, '=') != null) return error.DuplicateGuestLog;
+            guest_log_hex = remainder;
+        }
     }
-
-    const hex = output_hex orelse return error.MissingGuestOutput;
-    // The output is variable-length: a 32-byte commitment, a 2-byte schema id, then the SSZ body.
-    if (hex.len % 2 != 0 or hex.len < min_output_size * 2) return error.InvalidGuestOutputSize;
-    const output = try alloc.alloc(u8, hex.len / 2);
+    const output_hex = guest_output_hex orelse return error.MissingGuestOutput;
+    const log_hex = guest_log_hex orelse return error.MissingGuestLog;
+    // Each half must be whole bytes on its own; an odd split would otherwise misalign the join.
+    if (output_hex.len % 2 != 0) return error.InvalidGuestOutputSize;
+    if (log_hex.len % 2 != 0) return error.InvalidGuestLogSize;
+    // `write_output` puts the 32-byte commitment in guest_output and the rest (2-byte schema id,
+    // then the SSZ body) in guest_log; rejoin them to match the host machine's encodeOutput bytes.
+    const output = try alloc.alloc(u8, (output_hex.len + log_hex.len) / 2);
     errdefer alloc.free(output);
-    _ = std.fmt.hexToBytes(output, hex) catch return error.InvalidGuestOutput;
+    if (output.len < min_output_size) return error.InvalidGuestOutputLogSize;
+    const split = output_hex.len / 2;
+    _ = std.fmt.hexToBytes(output[0..split], output_hex) catch return error.InvalidGuestOutput;
+    _ = std.fmt.hexToBytes(output[split..], log_hex) catch return error.InvalidGuestLog;
     return output;
 }
 
