@@ -7,7 +7,7 @@
 # guest SMOKE (zstd, blob, truncation or decompress) under the ZKC interpreter. The default INPUT is
 # generated for zstd, blob and decompress; truncation needs INPUT=path/to/input.ssz.
 
-.PHONY: fetch test clean compile exec debug require-input
+.PHONY: fetch fetch-host test clean compile exec debug require-input
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -20,8 +20,9 @@ BUILD_CACHE_DIR ?= $(MAKEFILE_DIR).zig-cache
 ZIG_BUILD_FLAGS ?= --cache-dir $(BUILD_CACHE_DIR) --summary all
 # The native tests and tools: they fetch the reference vectors and build the host crypto providers.
 ZIG_HOST_FLAGS ?= -Dhost-tools=true
-# NOTE: `zig build --fetch=all` fetches the dependency tree, lazy dependencies included, and exits
-# without building or running, so pre-fetching is the dedicated `fetch` target alone.
+# NOTE: `zig build --fetch` fetches the dependency tree and EXITS without building or running, so it
+# must NOT be passed to build/test targets. Pre-fetching is the dedicated `fetch` and `fetch-host`
+# targets; `fetch-host` adds the lazy dependencies of the native tests and tools.
 ZIG_FETCH_FLAGS ?=
 
 SMOKES := zstd blob truncation decompress
@@ -49,9 +50,12 @@ ZKC_EXEC_FLAGS ?=
 OBJDUMP ?= false
 
 fetch:
+	$(ZIG) build $(ZIG_BUILD_FLAGS) --fetch
+
+fetch-host:
 	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) --fetch=all
 
-test:
+test: fetch-host
 	$(ZIG) build test $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS)
 
 clean:
