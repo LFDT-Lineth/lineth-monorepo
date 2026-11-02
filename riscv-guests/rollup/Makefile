@@ -8,7 +8,7 @@
 # run itself (ELF->JSON via elf_to_json_gen, then zkc) is owned by
 # arithmetization/src/test/Makefile; `exec`/`debug` build that ELF and hand it over.
 
-.PHONY: fetch fetch-host test reference-test clean compile exec debug require-input
+.PHONY: fetch test reference-test clean compile exec debug require-input
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -24,8 +24,8 @@ ZIG_HOST_FLAGS ?= -Dhost-tools=true
 # The reference test reads the blocks of the EF zkevm fixtures, a download of 3.4 GB.
 ZIG_REFERENCE_FLAGS ?= -Dreference-tests=true
 # NOTE: `zig build --fetch` fetches the dependency tree and EXITS without building or running, so
-# it must NOT be passed to build/test targets. Pre-fetching is the dedicated `fetch` and `fetch-host`
-# targets.
+# it must NOT be passed to build/test targets. Pre-fetching is the dedicated `fetch` target; a build
+# fetches the lazy dependencies of the steps it runs on demand.
 ZIG_FETCH_FLAGS ?=
 
 NAME := rollup_guest
@@ -48,17 +48,14 @@ ZKC_EXEC_FLAGS ?=
 OBJDUMP ?= false
 
 fetch:
-	$(ZIG) build $(ZIG_BUILD_FLAGS) --fetch
+	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_REFERENCE_FLAGS) --fetch=all
 
-fetch-host:
-	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) --fetch
-
-test: fetch-host
+test:
 	$(ZIG) build test $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS)
 
 # The rollup guest statement over valid requests built from consecutive real blocks of the EF zkevm
 # corpus, in calldata and blob chunks, and over tampered copies of them.
-reference-test: fetch-host
+reference-test:
 	$(ZIG) build reference-test $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_REFERENCE_FLAGS) $(ZIG_FETCH_FLAGS)
 
 clean:

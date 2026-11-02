@@ -74,7 +74,8 @@ pub fn build(b: *std.Build) void {
 
     // Consumers of the package build the guest side only.
     const host_tools = b.option(bool, "host-tools", "Build the native tests and tools: fetches the reference vectors and builds the host crypto providers") orelse false;
-    if (host_tools) addHostBuild(b, zstd, target);
+    const reference_tests = b.option(bool, "reference-tests", "With host-tools, also run the truncation reference test over the EF zkevm fixtures, which fetches them (default: true)") orelse true;
+    if (host_tools) addHostBuild(b, zstd, target, reference_tests);
 }
 
 /// libzstd for one target: the release's sources and its C declarations translated for Zig.
@@ -137,7 +138,7 @@ fn hostPackage(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.bu
 /// compressor (`zstd_compressor`) are modules of the package for the tests of its consumers. When
 /// the package itself is built for a native target, the compressor shares its libzstd declarations,
 /// which one compilation can hold only once.
-fn addHostBuild(b: *std.Build, package_zstd: Zstd, package_target: std.Build.ResolvedTarget) void {
+fn addHostBuild(b: *std.Build, package_zstd: Zstd, package_target: std.Build.ResolvedTarget, reference_tests: bool) void {
     const target = b.resolveTargetQuery(.{});
     const zstd = if (package_target.result.os.tag == .freestanding) Zstd.init(b, target) else package_zstd;
     const package = hostPackage(b, target, .Debug, zstd);
@@ -180,8 +181,8 @@ fn addHostBuild(b: *std.Build, package_zstd: Zstd, package_target: std.Build.Res
     addGoldenFrames(tests, zstd.source);
     const tools = common.addTools(b, native, .{});
     addKzgReferences(b, target, tests, tools, support);
-    const reference_tests = addReferenceTests(b, test_step, target, zstd);
-    linkHostCrypto(b, target, &.{ tests, tools, reference_tests });
+    const reference = if (reference_tests) addReferenceTests(b, test_step, target, zstd) else std.StringHashMap(*std.Build.Step.Compile).init(b.allocator);
+    linkHostCrypto(b, target, &.{ tests, tools, reference });
 
     var tool_iter = tools.valueIterator();
     while (tool_iter.next()) |tool| b.installArtifact(tool.*);

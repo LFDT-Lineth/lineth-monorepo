@@ -84,7 +84,7 @@ const Deps = struct {
     fn init(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, host_tools: bool) Deps {
         const guest_common = b.dependency("guest_common", .{ .target = target, .optimize = optimize });
         const lineth_da = if (host_tools)
-            b.dependency("lineth_da", .{ .target = target, .optimize = optimize, .@"host-tools" = true })
+            b.dependency("lineth_da", .{ .target = target, .optimize = optimize, .@"host-tools" = true, .@"reference-tests" = false })
         else
             b.dependency("lineth_da", .{ .target = target, .optimize = optimize });
         return .{
