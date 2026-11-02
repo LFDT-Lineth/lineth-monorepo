@@ -12,10 +12,9 @@
 
 const std = @import("std");
 const ssz = @import("guest_common").ssz;
+const output_frame = @import("output_frame.zig");
 
 pub const OUTPUT_SCHEMA_ID: u16 = 0x0003;
-const SCHEMA_ID_SIZE: usize = 2;
-const HASH_SIZE: usize = 32;
 
 // List bounds of the wire schema: encoders and decoders reject longer lists.
 /// Blocks (one payload each) in one l2-execution proof range; the guest input's payload list
@@ -230,18 +229,12 @@ pub fn decodeVerifiableProof(alloc: std.mem.Allocator, bytes: []const u8) !Verif
 pub fn encodeOutput(alloc: std.mem.Allocator, pi: L2ExecutionProofPublicInput) ![]u8 {
     const body = try encodePublicInputs(alloc, pi);
     defer alloc.free(body);
-
-    const out = try alloc.alloc(u8, HASH_SIZE + SCHEMA_ID_SIZE + body.len);
-    const frame = out[HASH_SIZE..];
-    std.mem.writeInt(u16, frame[0..2], OUTPUT_SCHEMA_ID, .big);
-    @memcpy(frame[SCHEMA_ID_SIZE..], body);
-    std.crypto.hash.sha3.Keccak256.hash(frame, out[0..HASH_SIZE], .{});
-    return out;
+    return output_frame.encode(alloc, OUTPUT_SCHEMA_ID, body);
 }
 
 /// keccak256 of the schema-framed SSZ public-input tuple: the commitment at the head of the output.
 pub fn hashPublicInputs(alloc: std.mem.Allocator, pi: L2ExecutionProofPublicInput) ![32]u8 {
-    const out = try encodeOutput(alloc, pi);
-    defer alloc.free(out);
-    return out[0..HASH_SIZE].*;
+    const body = try encodePublicInputs(alloc, pi);
+    defer alloc.free(body);
+    return output_frame.commitment(OUTPUT_SCHEMA_ID, body);
 }

@@ -11,10 +11,9 @@
 const std = @import("std");
 const ssz = @import("guest_common").ssz;
 const l2_execution_proof = @import("l2_execution_proof.zig");
+const output_frame = @import("output_frame.zig");
 
 pub const OUTPUT_SCHEMA_ID: u16 = 0x1801;
-const SCHEMA_ID_SIZE: usize = 2;
-const HASH_SIZE: usize = 32;
 
 // List bounds of the wire schema: encoders and decoders reject longer lists.
 /// L2-execution proofs, one per conflation, in one rollup proof.
@@ -174,30 +173,18 @@ pub fn decodePublicInputs(alloc: std.mem.Allocator, bytes: []const u8) !RollupPu
 pub fn encodeOutput(alloc: std.mem.Allocator, pi: RollupPublicInput) ![]u8 {
     const body = try encodePublicInputs(alloc, pi);
     defer alloc.free(body);
-
-    const out = try alloc.alloc(u8, HASH_SIZE + SCHEMA_ID_SIZE + body.len);
-    const frame = out[HASH_SIZE..];
-    std.mem.writeInt(u16, frame[0..2], OUTPUT_SCHEMA_ID, .big);
-    @memcpy(frame[SCHEMA_ID_SIZE..], body);
-    std.crypto.hash.sha3.Keccak256.hash(frame, out[0..HASH_SIZE], .{});
-    return out;
+    return output_frame.encode(alloc, OUTPUT_SCHEMA_ID, body);
 }
 
 /// Decode a 0x1801 output into its public inputs. The leading commitment is the keccak256 of the
 /// frame and the frame leads with the schema id; a failing check is `error.MalformedFrame`.
 pub fn decodeOutput(alloc: std.mem.Allocator, bytes: []const u8) !RollupPublicInput {
-    if (bytes.len < HASH_SIZE + SCHEMA_ID_SIZE) return error.MalformedFrame;
-    const frame = bytes[HASH_SIZE..];
-    var commitment: [HASH_SIZE]u8 = undefined;
-    std.crypto.hash.sha3.Keccak256.hash(frame, &commitment, .{});
-    if (!std.mem.eql(u8, &commitment, bytes[0..HASH_SIZE])) return error.MalformedFrame;
-    if (std.mem.readInt(u16, frame[0..2], .big) != OUTPUT_SCHEMA_ID) return error.MalformedFrame;
-    return decodePublicInputs(alloc, frame[SCHEMA_ID_SIZE..]);
+    return decodePublicInputs(alloc, try output_frame.decode(bytes, OUTPUT_SCHEMA_ID));
 }
 
 /// keccak256 of the schema-framed SSZ public-input tuple: the commitment at the head of the output.
 pub fn hashPublicInputs(alloc: std.mem.Allocator, pi: RollupPublicInput) ![32]u8 {
-    const out = try encodeOutput(alloc, pi);
-    defer alloc.free(out);
-    return out[0..HASH_SIZE].*;
+    const body = try encodePublicInputs(alloc, pi);
+    defer alloc.free(body);
+    return output_frame.commitment(OUTPUT_SCHEMA_ID, body);
 }
