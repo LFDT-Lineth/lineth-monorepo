@@ -47,14 +47,14 @@ A rejected request exits with the category of the step that rejects it (`src/gue
 | 2 | the schema id of the frame is missing or wrong |
 | 3 | the SSZ body is not the canonical encoding |
 | 4 | a list or byte field exceeds its bound |
-| 5 | the request has no conflation or proof, or they do not pair one to one |
+| 5 | the request has no conflation, chunk or proof, or the conflations and proofs do not pair one to one |
 | 6 | the output encoder rejected the public inputs: a list exceeds the bound of the output's wire schema |
 | 7 | blocks and senders: a block is not accepted, a sender is not recoverable, the block count differs from the proof's range, the senders do not hash to `txFromsHash` |
 | 8 | chunk binding: a chunk contradicts its kind, is not the canonical packing, does not hash to its `chunkHash`, or the boundary preimage does not open the parent dataRollingHash |
 | 9 | a blob's EIP-4844 proof does not open its commitment |
 | 10 | stream layout: a layout rule is broken, or a segment's length is missing, zero or beyond the stream |
 | 11 | decompression: a segment is not one complete frame of the dictionary, or decompresses to another payload |
-| 12 | recursion: a proof is rejected by the recursive verifier |
+| 12 | recursion: a proof is rejected by the recursive verifier, or its public input is beyond a bound of its wire schema |
 | 13 | block-hash chain: an end block hash or a parent hash does not match the conflations' blocks |
 | 14 | tiling and continuity between consecutive proofs |
 | 15 | messaging offsets: the block count differs from the range, or an offset is out of order, out of range or exceeds 16 bits once rebased |

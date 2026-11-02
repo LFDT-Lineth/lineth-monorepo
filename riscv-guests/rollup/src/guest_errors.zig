@@ -21,8 +21,8 @@ pub const CODE_MALFORMED_SSZ: ExitCode = 3;
 /// A list or byte field decoded to more elements/bytes than its wire-format bound (the `MAX_*`
 /// constants) allows.
 pub const CODE_BOUNDS_VIOLATION: ExitCode = 4;
-/// The request has no conflation or no l2-execution proof, or its conflations and proofs are not
-/// paired one to one.
+/// The request has no conflation, chunk or l2-execution proof, or its conflations and proofs are
+/// not paired one to one.
 pub const CODE_MALFORMED_REQUEST: ExitCode = 5;
 /// The output value was computed but its SSZ encoder rejected it: a list beyond the bound of the
 /// output's wire schema.
@@ -42,7 +42,8 @@ pub const CODE_STREAM_LAYOUT: ExitCode = 10;
 /// Step 2: a segment's bytes are not one complete zstd frame of the dictionary, or the frame
 /// decompresses to other bytes than the conflation's canonical payload.
 pub const CODE_DECOMPRESSION: ExitCode = 11;
-/// Step 4: an l2-execution proof is rejected by the recursive verifier.
+/// Step 4: an l2-execution proof is rejected by the recursive verifier, or its public input is
+/// beyond a bound of its wire schema.
 pub const CODE_RECURSION: ExitCode = 12;
 /// Step 5: an l2-execution proof's end block hash differs from the conflation's block at its
 /// boundary, or the blocks do not chain by parent hash from the first proof's parent block hash.
@@ -62,14 +63,15 @@ pub fn exitCode(err: anyerror) ExitCode {
         error.MalformedFrame => CODE_MALFORMED_FRAME,
         error.InvalidSsz => CODE_MALFORMED_SSZ,
         error.BoundsViolation => CODE_BOUNDS_VIOLATION,
-        error.InvalidRequest => CODE_MALFORMED_REQUEST,
+        error.InvalidRequest,
+        error.NoChunks,
+        => CODE_MALFORMED_REQUEST,
         error.OutputEncodeFailed => CODE_OUTPUT_ENCODE_FAILED,
         error.MalformedBlock,
         error.SenderRecoveryFailed,
         error.BlockCountMismatch,
         error.SendersHashMismatch,
         => CODE_BLOCK_BINDING,
-        error.NoChunks,
         error.MalformedChunk,
         error.NonCanonicalBlob,
         error.ChunkHashMismatch,

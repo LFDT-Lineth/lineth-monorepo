@@ -26,13 +26,22 @@ pub const Error = canonical.Error || decompress.Error || chain.Error || messagin
     /// The request has no conflation or no proof, or the conflations and the proofs are not paired
     /// one to one.
     InvalidRequest,
-    /// The public inputs exceed a bound of their wire schema.
-    BoundsViolation,
 };
+
+/// The framed output for the framed input `raw_input`: the statement over the decoded input, its
+/// public inputs encoded. Everything is allocated from `allocator`.
+pub fn runFramed(allocator: Allocator, raw_input: []const u8) ![]const u8 {
+    const decoded = try rollup_ssz.decodeInput(allocator, raw_input);
+    const public_inputs = try run(allocator, decoded);
+    return rollup_proof.encodeOutput(allocator, public_inputs) catch |err| switch (err) {
+        error.OutOfMemory => error.OutOfMemory,
+        error.BoundsViolation => error.OutputEncodeFailed,
+    };
+}
 
 /// The public inputs of the rollup proof over `input`, or the error of the first rule it breaks.
 /// Everything is allocated from `allocator`, a bump allocator whose memory is reclaimed as a whole;
-/// the public inputs alias it.
+/// the public inputs alias it. Their lists are bounded by the wire schema of the output.
 pub fn run(allocator: Allocator, input: rollup_ssz.RollupProofPrivateInput) Error!rollup_proof.RollupPublicInput {
     const proofs = input.l2_execution_proofs;
     if (input.conflations.len == 0 or proofs.len == 0 or input.conflations.len != proofs.len) return error.InvalidRequest;
@@ -95,8 +104,6 @@ pub fn run(allocator: Allocator, input: rollup_ssz.RollupProofPrivateInput) Erro
             end_bridge_message_number = pi.end_l1_l2_bridge_rolling_hash_message_number;
         }
     }
-    const filtered_addresses = sortedDistinct(20, all_addresses);
-    if (filtered_addresses.len > rollup_proof.MAX_FILTERED_ADDRESSES) return error.BoundsViolation;
 
     return .{
         .end_block_number = range_end,
@@ -115,7 +122,7 @@ pub fn run(allocator: Allocator, input: rollup_ssz.RollupProofPrivateInput) Erro
         .parent_data_tail_take_bytes = input.parent_data_tail_take_bytes,
         .final_data_tail_discard_bytes = verified.final_data_tail_discard_bytes,
         .l2_l1_messages = l2_l1_messages,
-        .filtered_addresses = filtered_addresses,
+        .filtered_addresses = sortedDistinct(20, all_addresses),
         .program_vks = sortedDistinct(32, program_vks),
         .block_count = range_end - range_start + 1,
         .l2_messaging_blocks_offsets = offsets,

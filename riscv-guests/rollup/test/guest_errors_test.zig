@@ -11,9 +11,9 @@ fn ErrorsOf(comptime function: anytype) type {
     return @typeInfo(@typeInfo(@TypeOf(function)).@"fn".return_type.?).error_union.error_set;
 }
 
-/// Every error the guest's pipeline can end in: those of decoding the input, of the statement and
-/// the output encoder's rejection.
-const guest_error_sets = [_]type{ ErrorsOf(rollup.rollup_ssz.decodeInput), rollup.rollup.Error, error{OutputEncodeFailed} };
+/// Every error the guest's pipeline can end in: decoding the input, the statement and encoding the
+/// output.
+const guest_error_sets = [_]type{ErrorsOf(rollup.rollup.runFramed)};
 
 fn expectCode(code: u64, err: anyerror) !void {
     try std.testing.expectEqual(code, guest_errors.exitCode(err));
@@ -23,13 +23,13 @@ test "every rejection of the statement exits with the category of its step" {
     try expectCode(2, error.MalformedFrame);
     try expectCode(3, error.InvalidSsz);
     try expectCode(4, error.BoundsViolation);
-    try expectCode(5, error.InvalidRequest);
+    for ([_]anyerror{ error.InvalidRequest, error.NoChunks }) |err| try expectCode(5, err);
     try expectCode(6, error.OutputEncodeFailed);
 
     // Blocks and senders.
     for ([_]anyerror{ error.MalformedBlock, error.SenderRecoveryFailed, error.BlockCountMismatch, error.SendersHashMismatch }) |err| try expectCode(7, err);
     // Chunk binding.
-    for ([_]anyerror{ error.NoChunks, error.MalformedChunk, error.NonCanonicalBlob, error.ChunkHashMismatch, error.BoundaryPreimageMismatch }) |err| try expectCode(8, err);
+    for ([_]anyerror{ error.MalformedChunk, error.NonCanonicalBlob, error.ChunkHashMismatch, error.BoundaryPreimageMismatch }) |err| try expectCode(8, err);
     try expectCode(9, error.BlobKzgMismatch);
     // Stream layout and segments.
     for ([_]anyerror{

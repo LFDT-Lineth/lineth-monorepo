@@ -11,6 +11,7 @@ const scenario = @import("scenario");
 const guest_errors = rollup.guest_errors;
 const l2_execution_proof = core_serde.l2_execution_proof;
 const messaging_offsets = rollup.messaging_offsets;
+const rollup_ssz = rollup.rollup_ssz;
 
 const Address = scenario.Address;
 const Allocator = std.mem.Allocator;
@@ -147,14 +148,14 @@ test "a chain ID other than the one the legacy transactions were signed under is
 
 // ── The chunks and their blobs (step 2) ──────────────────────────────────────────────────────────
 
-test "a request without chunks is rejected" {
+test "a request without chunks is malformed" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
     const a = arena.allocator();
 
     var request = try requestOf(a, &.{1}, .{});
     request.chunks = &.{};
-    try expectRejected(error.NoChunks, guest_errors.CODE_CHUNK_BINDING, a, request);
+    try expectRejected(error.NoChunks, guest_errors.CODE_MALFORMED_REQUEST, a, request);
 }
 
 test "a blob that does not hash to its chunk hash is rejected" {
@@ -341,6 +342,18 @@ test "a block that does not descend from the block before it is rejected" {
     try expectRejected(error.ParentHashMismatch, guest_errors.CODE_BLOCK_HASH_CHAIN, a, request);
 }
 
+test "a proof whose public input is beyond a bound of its wire schema is rejected by the recursive verifier" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+
+    const offsets = try a.alloc(u16, l2_execution_proof.MAX_MESSAGING_BLOCKS + 1);
+    @memset(offsets, 1);
+    var request = try requestOf(a, &.{ 1, 1 }, .{});
+    request.proofs[0].proof.public_inputs.l2_messaging_blocks_offsets = offsets;
+    try expectRejected(error.RecursiveProofRejected, guest_errors.CODE_RECURSION, a, request);
+}
+
 test "a proof that does not start from the block hash its predecessor ends with is rejected" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
@@ -448,7 +461,7 @@ fn ascendingAddresses(a: Allocator, count: usize) ![]Address {
     return addresses;
 }
 
-test "more distinct filtered addresses than the output holds are rejected" {
+test "more distinct filtered addresses than the output holds are rejected by the output encoder" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
     const a = arena.allocator();
@@ -458,7 +471,10 @@ test "more distinct filtered addresses than the output holds are rejected" {
     var request = try requestOf(a, &.{ 1, 1 }, .{});
     request.proofs[0].proof.public_inputs.filtered_addresses = addresses[0..max];
     request.proofs[1].proof.public_inputs.filtered_addresses = addresses[max..];
-    try expectRejected(error.BoundsViolation, guest_errors.CODE_BOUNDS_VIOLATION, a, request);
+
+    const frame = try rollup_ssz.encodeInput(a, request.input());
+    try std.testing.expectError(error.OutputEncodeFailed, rollup.rollup.runFramed(a, frame));
+    try std.testing.expectEqual(guest_errors.CODE_OUTPUT_ENCODE_FAILED, guest_errors.exitCode(error.OutputEncodeFailed));
 }
 
 test "the same maximal list of filtered addresses in two proofs is accepted as one list" {
