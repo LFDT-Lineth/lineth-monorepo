@@ -23,16 +23,21 @@ permissions:
 on:
   # Auto-run on pushes to the experiment branch (with the input defaults below: methods N=2,
   # single iteration), so the workflow is exercised and its runs are visible without dispatch.
-  push:
-    branches:
-      - maru-method-level-parallel-experiment
+  # push:
+  #   branches:
+  #     - maru-method-level-parallel-experiment
   workflow_dispatch:
     inputs:
       method_parallel:
-        description: 'Value for -PmaruItMethodParallel (0 = methods sequential, 2 = up to 2 concurrent methods per class)'
+        description: 'Value for -PmaruItMethodParallel (0 = methods sequential, 2 = up to 2 concurrent methods per class). N=4 with default forks oversubscribes the runner and flakes; keep 2, or pair 4 with max_forks=6'
         required: false
         type: string
         default: '2'
+      max_forks:
+        description: 'Value for -PmaruItMaxForks (0 = default min(nCpu, 9)). Reduce when raising method_parallel, e.g. 6 with method_parallel=4'
+        required: false
+        type: string
+        default: '0'
       iterations:
         description: 'JSON array of iteration indexes; each entry repeats the suite as a parallel matrix job, e.g. [1,2,3]'
         required: false
@@ -43,7 +48,8 @@ jobs:
   run:
     uses: ./.github/workflows/maru-testing.yml
     with:
-      maru_it_method_parallel: ${{ inputs.method_parallel || 4 }}
+      maru_it_method_parallel: ${{ inputs.method_parallel || '2' }}
+      maru_it_max_forks: ${{ inputs.max_forks || '0' }}
       maru_it_iterations: ${{ inputs.iterations || '[1]' }}
       upload_coverage: false
       artifact_suffix: '-method-parallel'

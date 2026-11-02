@@ -13,6 +13,12 @@ on:
         required: false
         type: string
         default: '0'
+      # 0 = default maxParallelForks min(nCpu, 9). N > 0 = override fork count
+      # (-PmaruItMaxForks=N, see maru/app/build.gradle).
+      maru_it_max_forks:
+        required: false
+        type: string
+        default: '0'
       # JSON array of iteration indexes; each entry repeats the full suite as a separate matrix job.
       # Use "[1,2,3,4,5,6,7,8,9,10]" for flake-hunting runs.
       maru_it_iterations:
@@ -64,10 +70,14 @@ jobs:
       - name: Run integration tests
         env:
           MARU_IT_METHOD_PARALLEL: ${{ inputs.maru_it_method_parallel }}
+          MARU_IT_MAX_FORKS: ${{ inputs.maru_it_max_forks }}
         run: |
           EXTRA_ARGS=""
           if [ "$MARU_IT_METHOD_PARALLEL" != "0" ]; then
-            EXTRA_ARGS="-PmaruItMethodParallel=$MARU_IT_METHOD_PARALLEL"
+            EXTRA_ARGS="$EXTRA_ARGS -PmaruItMethodParallel=$MARU_IT_METHOD_PARALLEL"
+          fi
+          if [ "$MARU_IT_MAX_FORKS" != "0" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS -PmaruItMaxForks=$MARU_IT_MAX_FORKS"
           fi
           ./gradlew maru:app:integrationTest $EXTRA_ARGS
       - name: Store reports
