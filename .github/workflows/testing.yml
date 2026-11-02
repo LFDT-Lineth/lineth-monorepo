@@ -138,19 +138,6 @@ jobs:
     if: ${{ inputs.maru_changed == 'true' }}
     secrets: inherit
 
-  # TEMPORARY experiment for #4178: runs the maru integration suite 10 times with method-level
-  # concurrency enabled (-PmaruItMethodParallel=2) to collect flake-rate data. Remove this job
-  # (or drop the inputs) before closing the issue / undrafting the PR.
-  maru-method-parallel-experiment:
-    uses: ./.github/workflows/maru-testing.yml
-    if: ${{ inputs.maru_changed == 'true' }}
-    with:
-      maru_it_method_parallel: '2'
-      maru_it_iterations: '[1,2,3,4,5,6,7,8,9,10]'
-      upload_coverage: false
-      artifact_suffix: '-method-parallel'
-    secrets: inherit
-
   # Run Jacoco report after all JVM tests complete
   jacoco-report:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med

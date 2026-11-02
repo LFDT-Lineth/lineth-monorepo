@@ -1,0 +1,41 @@
+name: maru-it-method-parallel-experiment
+
+# TEMPORARY experiment for #4178: runs the maru integration suite with method-level concurrency
+# (-PmaruItMethodParallel) to collect flake-rate data. Dispatch-only so CI cost is controlled at
+# trigger time — fire it once per data point, e.g. 10 sequential runs spaced out:
+#   for i in {1..10}; do
+#     gh workflow run maru-it-method-parallel-experiment.yml --ref <branch>
+#     sleep 1200
+#   done
+# Delete this file when the issue closes.
+#
+# Note: a workflow_dispatch workflow only becomes dispatchable after this file exists on the
+# default branch; until then it can be triggered with: gh workflow run ... --ref <this-branch>
+
+permissions:
+  contents: read
+  actions: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      method_parallel:
+        description: 'Value for -PmaruItMethodParallel (0 = methods sequential, 2 = up to 2 concurrent methods per class)'
+        required: false
+        type: string
+        default: '2'
+      iterations:
+        description: 'JSON array of iteration indexes; each entry repeats the suite as a parallel matrix job, e.g. [1,2,3]'
+        required: false
+        type: string
+        default: '[1]'
+
+jobs:
+  run:
+    uses: ./.github/workflows/maru-testing.yml
+    with:
+      maru_it_method_parallel: ${{ inputs.method_parallel }}
+      maru_it_iterations: ${{ inputs.iterations }}
+      upload_coverage: false
+      artifact_suffix: '-method-parallel'
+    secrets: inherit
