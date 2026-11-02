@@ -241,12 +241,13 @@ fn cKzgModule(
         .aarch64, .x86_64 => true,
         else => false,
     };
+    // The C sources and the assembly select the same field-arithmetic variants by the portable macro.
     const blst_flags: []const []const u8 = if (has_assembly)
         &.{ "-O2", "-fno-sanitize=undefined", "-D__BLST_PORTABLE__" }
     else
         &.{ "-O2", "-fno-sanitize=undefined", "-D__BLST_PORTABLE__", "-D__BLST_NO_ASM__" };
     module.addCSourceFile(.{ .file = blst.path("src/server.c"), .flags = blst_flags });
-    if (has_assembly) module.addAssemblyFile(blst.path("build/assembly.S"));
+    if (has_assembly) module.addCSourceFile(.{ .file = blst.path("build/assembly.S"), .flags = blst_flags });
     return module;
 }
 

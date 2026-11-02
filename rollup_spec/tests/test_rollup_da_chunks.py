@@ -259,6 +259,10 @@ def test_zstd_frame_window_of_exactly_2_27_plus_1_bytes_is_accepted():
     assert verify_da_chunks([calldata], [b"x" * ZSTD_MAX_WINDOW_SIZE], PARENT) == (data_rolling_hash_after(PARENT, [calldata]), 0)
 
 
+def test_zstd_frame_one_byte_beyond_the_largest_window_declares_that_window():
+    assert zstd.get_frame_parameters(single_segment_rle_frame(ZSTD_MAX_WINDOW_SIZE + 1)).window_size == ZSTD_MAX_WINDOW_SIZE + 1
+
+
 # ---- rejected streams ------------------------------------------------------------------------
 
 
