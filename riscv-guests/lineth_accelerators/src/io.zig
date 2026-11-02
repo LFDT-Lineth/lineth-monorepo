@@ -53,14 +53,11 @@ pub fn write_output(output: [*]const u8, size: usize) callconv(.c) void {
 // file descriptor.
 pub fn write_guest_output(fd: u64, output: [*]const u8, size: usize) callconv(.c) void {
     asm volatile (
-        \\mv a0, %[fd]
-        \\mv a1, %[output]
-        \\mv a2, %[size]
         \\li a7, 64
         \\ecall
         :
-        : [fd] "r" (fd),
-          [output] "r" (@intFromPtr(output)),
-          [size] "r" (size),
-        : .{ .a0 = true, .a1 = true, .a2 = true, .a7 = true, .memory = true });
+        : [fd] "{a0}" (fd),
+          [output] "{a1}" (@intFromPtr(output)),
+          [size] "{a2}" (size),
+        : .{ .a0 = true, .a7 = true, .memory = true });
 }
