@@ -109,8 +109,7 @@ jobs:
     if: ${{ inputs.has-changes-requiring-e2e-testing != 'false' }}
     outputs:
       tests_outcome: ${{ steps.run-e2e-tests.outputs.tests_outcome }}
-    # RISC-V runs the guest under ZkC in prover-ray (dev-zkvm), which needs the larger runner.
-    runs-on: ${{ inputs.stack == 'riscv' && 'gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl' || 'gha-lfdt-lineth-ss-ubuntu-24-amd64-xl' }}
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
     timeout-minutes: ${{ inputs.stack == 'riscv' && 75 || 360 }}
     steps:
       - name: Checkout
