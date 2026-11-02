@@ -43,8 +43,8 @@ jobs:
   run:
     uses: ./.github/workflows/maru-testing.yml
     with:
-      maru_it_method_parallel: ${{ inputs.method_parallel }}
-      maru_it_iterations: ${{ inputs.iterations }}
+      maru_it_method_parallel: ${{ inputs.method_parallel || 4 }}
+      maru_it_iterations: ${{ inputs.iterations || '[1]' }}
       upload_coverage: false
       artifact_suffix: '-method-parallel'
     secrets: inherit
