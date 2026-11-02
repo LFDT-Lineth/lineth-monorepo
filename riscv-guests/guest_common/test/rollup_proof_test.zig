@@ -102,6 +102,13 @@ fn keccak256(bytes: []const u8) [32]u8 {
 
 // ── Public inputs: layout and round-trips ─────────────────────────────────────
 
+test "the bounds are those of the wire schema" {
+    try std.testing.expectEqual(@as(usize, 1 << 26), rollup_proof.MAX_L2_L1_MESSAGES);
+    try std.testing.expectEqual(@as(usize, 1 << 16), rollup_proof.MAX_FILTERED_ADDRESSES);
+    try std.testing.expectEqual(@as(usize, 1 << 10), rollup_proof.MAX_PROGRAM_VKS);
+    try std.testing.expectEqual(@as(usize, 1 << 16), rollup_proof.MAX_MESSAGING_BLOCKS_OFFSETS);
+}
+
 test "public inputs: encoding is the fixed head in wire order followed by the list tails" {
     const alloc = std.testing.allocator;
     const encoded = try rollup_proof.encodePublicInputs(alloc, samplePublicInputs());
