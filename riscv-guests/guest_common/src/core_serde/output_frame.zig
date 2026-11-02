@@ -9,8 +9,7 @@ const schema_id_size: usize = 2;
 
 extern fn zkvm_keccak256(data: [*]const u8, len: usize, output: *[commitment_size]u8) i32;
 
-/// keccak256 of `data`: the guest's `zkvm_keccak256` accelerator on the freestanding target, whose
-/// provider every guest links, and std's implementation on every other target.
+/// keccak256 of `data`.
 fn keccak256(data: []const u8, digest: *[commitment_size]u8) void {
     if (builtin.os.tag == .freestanding) {
         _ = zkvm_keccak256(data.ptr, data.len, digest);
