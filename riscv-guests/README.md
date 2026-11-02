@@ -13,7 +13,7 @@ riscv-guests/
   guest_common/        Shared library package: generic SSZ primitives (`guest_common` module) and the cross-guest wire contracts with their SSZ codecs (`core_serde` module), with its own unit tests
   lineth_da/           Shared library package: data-availability building blocks (`lineth_da` module) — zstd dictionary decompression over upstream libzstd, the truncation of blocks, the 254-bit blob packing, the dataRollingHash, EIP-4844 blob verification and the verification of a DA stream against its chunks — with its own unit tests and freestanding smoke guests
   l2_execution/        Vanilla EVM execution guest: build.zig + build.zig.zon + Makefile + src/ + test/ + tools/
-  rollup/              Rollup guest stub (echo/sentinel, no proof verification/folding): build.zig + build.zig.zon + Makefile + src/ + test/ + tools/
+  rollup/              Rollup guest: the rollup statement over conflations, DA chunks and l2-execution proofs: build.zig + build.zig.zon + Makefile + src/ + test/ + tools/
 ```
 
 Within a guest, `src/` holds **only the production code that ships in the rv64im object/ELF**. `src/root.zig` is the package module — one namespace per source file, which the files inside `src/` reach through relative imports — and `src/main.zig` is the guest entry point that exports `main`; the installed binary keeps the guest's own name (`evm_execution_guest`, `rollup_guest`). Host-only code lives beside it: unit tests and their helpers in `test/` (committed sample/test data in `test/testdata/`; `lineth_da`'s `test/smoke/` holds freestanding smoke guests that link for the guest target) and native programs in `tools/`. The split mirrors what `build.zig` builds: `build_common`'s `createPackageModule` and `addGuest` turn `src/` into the package module and the ELF; `zig build test` / `extended-vanilla` compile `test/` and `tools/` against the package module. (Automated tests pull their EF fixtures from the lazy `execution_spec_tests_zkevm` dependency, not from committed data — `test/testdata/` is just the manual ZkC-run samples.)
@@ -31,7 +31,7 @@ Set `ZIG=/path/to/zig` when the required Zig binary is not first on `PATH`.
 
 ## Dependencies
 
-Each guest pins its **own** external dependencies in its `build.zig.zon`. For `l2-execution`: **Zesu** (EVM/stateless execution) and the **execution-spec-tests `tests-zkevm` fixtures** (a `lazy` dependency, fetched only for the tests). `lineth_accelerators` lists Zesu and the **`guest_crypto_ctt`** package (the Constantine staticlib backing secp256k1, BLS12-381, BN254, and KZG point evaluation; Constantine itself is a `lazy` dependency fetched by builds that use an archive) as `lazy` dependencies behind its `-Dzkvm-provide` option, so consumers that do not opt in never fetch or build them; it publishes the archive of its target as the named lazy path `zkvm_provide_archive`, which `build_common.HostCrypto` links into native tests and tools. `l2_execution`, `lineth_da` and `lineth_accelerators` pin the same Zesu commit, so the pin moves in all three at once; `l2_execution` and `lineth_da` pin the same `tests-zkevm` fixtures release. Every guest also takes `../build_common` as a path dependency for the shared build helpers. `make fetch` pre-fetches a guest's tree.
+Each guest pins its **own** external dependencies in its `build.zig.zon`. For `l2-execution`: **Zesu** (EVM/stateless execution) and the **execution-spec-tests `tests-zkevm` fixtures** (a `lazy` dependency, fetched only for the tests). `lineth_accelerators` lists Zesu and the **`guest_crypto_ctt`** package (the Constantine staticlib backing secp256k1, BLS12-381, BN254, and KZG point evaluation; Constantine itself is a `lazy` dependency fetched by builds that use an archive) as `lazy` dependencies behind its `-Dzkvm-provide` option, so consumers that do not opt in never fetch or build them; it publishes the archive of its target as the named lazy path `zkvm_provide_archive`, which `build_common.HostCrypto` links into native tests and tools. `l2_execution`, `lineth_da` and `lineth_accelerators` pin the same Zesu commit, so the pin moves in all three at once; `l2_execution`, `lineth_da` and `rollup` pin the same `tests-zkevm` fixtures release; `rollup` takes the data-availability library (`lineth_da`) as a path dependency and builds its test-side modules with `-Dhost-tools`. Every guest also takes `../build_common` as a path dependency for the shared build helpers. `make fetch` pre-fetches a guest's tree.
 
 ## Crypto Backends
 
@@ -57,9 +57,9 @@ make -C l2_execution compile ZIG=/path/to/zig IN_ORIGIN=0x08800000   # override 
 
 `make -C l2_execution compile` builds the guest as a **statically-linked rv64im ELF** under `<guest>/zig-out/bin/` — the [zkvm-standards](https://github.com/eth-act/zkvm-standards/blob/main/standards/riscv-target/target.md) artifact ("Object Format: ELF, statically linked"). `make test` runs the native Zig unit tests through the same crypto providers.
 
-### Reference tests (l2-execution only — full EF zkevm fixture suite)
+### Reference tests (full EF zkevm fixture suite)
 
-l2-execution is the Rollup's extended guest, not a vanilla EVM-execution guest — the EF stateless-fixture suite is used as a reference test: it asserts the dummy-wrapped extended guest (`runL2Execution`) agrees with the fixture's own expected validity verdict on block validity (the reference-test corpus is the source of truth — no second, independently re-run implementation needed), so `reference-test` is an **l2-execution target**, not an orchestrated one (a rollup/aggregation guest has no equivalent). `make test` is the fast single-fixture smoke test; the full suite:
+l2-execution is the Rollup's extended guest, not a vanilla EVM-execution guest — the EF stateless-fixture suite is used as a reference test: it asserts the dummy-wrapped extended guest (`runL2Execution`) agrees with the fixture's own expected validity verdict on block validity (the reference-test corpus is the source of truth — no second, independently re-run implementation needed), so `reference-test` is a **per-guest target**, not an orchestrated one. The rollup guest has its own (`make -C rollup reference-test`): it builds valid rollup requests from the consecutive blocks of the same corpus and asserts acceptance and the rejection of tampered copies. For l2-execution, `make test` is the fast single-fixture smoke test; the full suite:
 
 ```bash
 make -C l2_execution reference-test ZIG=/path/to/zig
@@ -107,7 +107,7 @@ Two workflows guard the guests.
 [`riscv-guests-host-tests.yml`](../.github/workflows/riscv-guests-host-tests.yml) runs on every PR touching `riscv-guests/**`, with two parallel host-machine jobs:
 
 - **Guest unit tests** — `make fmt-check` (`zig fmt --check` over every package's sources) plus the orchestrated `make test` (every guest in `GUESTS`).
-- **l2-execution extended-guest reference-test guards** — the full EF fixture suite via `make reference-test` (fail-hard; ~2,900 files / ~23k blocks, minutes on a warm cache).
+- **l2-execution extended-guest reference-test guards** — the full EF fixture suite via `make reference-test` (fail-hard; ~2,900 files / ~23k blocks, minutes on a warm cache), then the rollup guest's `make reference-test`, which builds rollup requests from the consecutive blocks of the same corpus (minutes on a warm cache).
 
 [`riscv-guests-zkc-interpreter-run.yml`](../.github/workflows/riscv-guests-zkc-interpreter-run.yml) runs the complementary guest **under zkc**: it builds the l2-execution guest with the prover-accelerated keccak op (`KECCAK_ACCEL=true`) and executes it on the committed sample input via `make -C l2_execution exec ZKC_EXEC_FLAGS="--fast"` (the ELF → JSON → `zkc` path described below). Fast mode (`--fast`) skips tracing, which is not implemented yet — a far lighter path (tens of MB, seconds). It triggers on `riscv-guests/**` **and** the interpreter program + tooling it depends on under `arithmetization/` (the `main.zkc` program, the zkc stdlib, the keccak wrapper, and `elf_to_json`), and tracks the `zkc` `main` branch by default (override with the `zkc-ref` workflow input). This is a *runnability* gate — output-correctness over the full corpus is the host reference-test suite's job above.
 
@@ -130,5 +130,5 @@ Each guest folder is a complete package: its own dependencies (`build.zig.zon`),
 
 - `lineth_da/`: the data-availability library package: zstd dictionary decompression, the truncation of blocks, the 254-bit blob packing, the dataRollingHash, EIP-4844 blob verification and the verification of a DA stream against its chunks. See `lineth_da/README.md`.
 - `l2_execution/`: the Rollup's extended l2-execution guest. See `l2_execution/README.md`.
-- `rollup/`: the rollup guest stub (echo/sentinel mapping, no proof verification or chunk/conflation folding). See `rollup/README.md`.
+- `rollup/`: the rollup guest: block truncation, DA stream verification, recursion and chain checks, and the rollup public inputs. See `rollup/README.md`.
 ```

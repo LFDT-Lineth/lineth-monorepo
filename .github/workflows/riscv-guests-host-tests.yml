@@ -2,7 +2,8 @@
 #   - host-tests: `make test` — the top-level orchestrator fans the native unit tests out to every
 #     guest in GUESTS (single-fixture smoke test, delegated-accel integration test, …).
 #   - reference-tests: after the unit tests, `make reference-test` runs the dummy-wrap-vs-fixture-truth
-#     guard (extended_vanilla_runner.zig) over the Amsterdam EF corpus.
+#     guard (extended_vanilla_runner.zig) over the Amsterdam EF corpus, and the rollup guest statement
+#     over rollup requests built from its consecutive blocks.
 # Both run the guest logic natively (no RISC-V, no ZKC); running the guest through the ZKC
 # interpreter is covered separately, by its own dedicated workflow.
 name: riscv-guests host tests
@@ -51,3 +52,7 @@ jobs:
       - name: Run extended-guest reference-test guards
         run: make reference-test
         working-directory: riscv-guests/l2_execution
+
+      - name: Run rollup guest reference-test over consecutive EF blocks
+        run: make reference-test
+        working-directory: riscv-guests/rollup
