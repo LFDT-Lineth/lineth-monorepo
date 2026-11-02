@@ -96,7 +96,6 @@ class ProverFailureError extends Error {
   }
 }
 
-// Retry everything except a prover failure, which no amount of waiting fixes.
 const retryUnlessProverFailed = (error: unknown) => !(error instanceof ProverFailureError);
 
 async function readdirIfExists(dir: string): Promise<string[]> {
@@ -108,15 +107,12 @@ async function readdirIfExists(dir: string): Promise<string[]> {
   }
 }
 
-// The coordinator never retries a failed request and waits for it forever, so a single failure
-// stalls every later batch. Fail with prover-ray's error instead of polling until the timeout.
 async function throwOnProverFailure(): Promise<void> {
   const failed = (await readdirIfExists(resolve(executionDir, "requests-done"))).filter((name) =>
     FAILURE_SUFFIX.test(name),
   );
   if (failed.length === 0) return;
 
-  // prover-ray publishes the response before archiving; a crashed prover publishes none.
   const responseName = failed[0].replace(FAILURE_SUFFIX, "");
   const response = await readFile(resolve(executionDir, "responses", responseName), "utf8").catch(
     () => "<no response body>",

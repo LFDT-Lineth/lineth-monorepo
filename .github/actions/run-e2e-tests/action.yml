@@ -172,8 +172,6 @@ runs:
       run: |
         echo "E2E_TESTS_RESULT: ${{ steps.run_e2e_tests.outcome }}"
 
-    # RISC-V also dumps on cancel (manual or job timeout), its usual way to end when stuck. zkEVM
-    # skips it there, as superseded PR pushes cancel it.
     - name: Dump logs
       if: ${{ (failure() || (cancelled() && inputs.stack == 'riscv')) && inputs.e2e-tests-logs-dump == 'true' }}
       shell: bash

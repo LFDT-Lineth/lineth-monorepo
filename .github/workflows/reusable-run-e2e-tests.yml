@@ -110,7 +110,6 @@ jobs:
     outputs:
       tests_outcome: ${{ steps.run-e2e-tests.outputs.tests_outcome }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
-    # RISC-V safety net: above setup (~10m) plus the 40m dev-zkvm test timeout, so that timeout fires first.
     timeout-minutes: ${{ inputs.stack == 'riscv' && 75 || 360 }}
     steps:
       - name: Checkout

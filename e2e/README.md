@@ -84,4 +84,4 @@ make -C prover-ray docker-build IMAGE_TAG=local
 LINEA_PROVER_RAY_TAG=local RISCV_PROVER_MODE=dev-zkvm make start-env-with-riscv
 ```
 
-CI runs this suite on pushes to `main` only. A failed prover request fails the suite immediately with the prover's error.
+CI runs this suite on pushes to `main` only.
