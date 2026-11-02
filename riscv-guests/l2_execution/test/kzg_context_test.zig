@@ -1,5 +1,5 @@
 //! The KZG trusted-setup context of the guest crypto bindings. It lives in a test binary of its
-//! own, so the context starts unbuilt: no point evaluation of another test has built it lazily.
+//! own, so the context starts unbuilt.
 
 const std = @import("std");
 const gc = @import("guest_crypto");

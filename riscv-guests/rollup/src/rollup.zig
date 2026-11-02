@@ -42,7 +42,7 @@ pub fn runFramed(allocator: Allocator, raw_input: []const u8) ![]const u8 {
 
 /// The public inputs of the rollup proof over `input`, or the error of the first rule it breaks.
 /// Everything is allocated from `allocator`, a bump allocator whose memory is reclaimed as a whole;
-/// the public inputs alias it. Their lists are bounded by the wire schema of the output.
+/// the public inputs alias it. The output encoder rejects a list beyond its wire schema's bound.
 pub fn run(allocator: Allocator, input: rollup_ssz.RollupProofPrivateInput) Error!rollup_proof.RollupPublicInput {
     const proofs = input.l2_execution_proofs;
     if (input.conflations.len == 0 or proofs.len == 0 or input.conflations.len != proofs.len) return error.InvalidRequest;

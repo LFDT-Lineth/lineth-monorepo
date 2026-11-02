@@ -10,8 +10,8 @@ const chain = @import("chain.zig");
 const l2_execution_proof = core_serde.l2_execution_proof;
 
 pub const Error = error{
-    /// The proof's block count differs from its range, an offset does not lie strictly above the
-    /// one before it within the range, or a rebased offset exceeds 16 bits.
+    /// The proof's `block_count` differs from its block range, an offset does not lie strictly
+    /// above the one before it within the range, or a rebased offset exceeds 16 bits.
     InvalidMessagingOffsets,
 };
 

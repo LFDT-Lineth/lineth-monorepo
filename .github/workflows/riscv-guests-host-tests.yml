@@ -37,7 +37,7 @@ jobs:
         working-directory: riscv-guests
 
   reference-tests:
-    name: l2-execution extended-guest reference-test guards (host)
+    name: "EF reference-test guards (host): l2-execution and rollup"
     needs: host-tests
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     steps:
@@ -49,7 +49,7 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-riscv-guests
 
-      - name: Run extended-guest reference-test guards
+      - name: Run l2-execution extended-guest reference-test guards
         run: make reference-test
         working-directory: riscv-guests/l2_execution
 

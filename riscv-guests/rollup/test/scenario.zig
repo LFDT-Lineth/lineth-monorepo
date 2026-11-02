@@ -1,8 +1,8 @@
 //! Builders of valid rollup requests for the tests and the fixture generator. Conflations of signed
 //! blocks, their canonical payloads compressed against the dictionary into the DA stream, the stream
 //! cut into blob and calldata chunks with the commitments and proofs of c-kzg-4844, and the
-//! l2-execution proofs that tie them together are all computed with the test-side encoders, without
-//! the rollup package.
+//! l2-execution proofs that tie them together are all computed with the test-side encoders of
+//! `lineth_da` and put into the wire types of `rollup_ssz`.
 
 const std = @import("std");
 

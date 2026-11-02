@@ -17,6 +17,7 @@ pub fn build(b: *std.Build) void {
     const tools = addHostTools(b, unit, crypto);
     addHostTests(b, unit, crypto);
     addFixtureStep(b, tools);
+    addZkcSmokeStep(b, tools);
     if (options.reference_tests) addReferenceStep(b, options, crypto);
 }
 
@@ -148,10 +149,11 @@ const Host = struct {
     }
 };
 
-/// Every `tools/*.zig` executable, each linked against the host crypto provider.
+/// Every `tools/*.zig` executable. `gen_fixture` runs the statement and links the host crypto
+/// provider.
 fn addHostTools(b: *std.Build, host: Host, crypto: common.HostCrypto) Tools {
     const tools = common.addTools(b, host.native, .{});
-    crypto.linkAll(tools);
+    crypto.link(tools.get("gen_fixture").?);
     return tools;
 }
 
@@ -161,14 +163,24 @@ fn addHostTests(b: *std.Build, host: Host, crypto: common.HostCrypto) void {
     crypto.linkAll(common.addTests(b, test_step, host.native, .{}));
 }
 
-/// Prints a framed sample input as raw bytes on stdout, from the same builders the tests use —
-/// `make exec`'s guest input is this package's own encoder output, not an externally-produced
-/// or separately-checked-in fixture. `require-input` in this guest's Makefile invokes this step
-/// to (re)generate the default INPUT on every `make exec`/`debug`, so nothing here is checked
-/// into git and it can never silently drift from what the current wire format produces.
+/// Writes a framed sample input and the output the statement computes for it, from the same
+/// builders the tests use — `make exec`'s guest input is this package's own encoder output, not an
+/// externally-produced or separately-checked-in fixture. `require-input` in this guest's Makefile
+/// invokes this step with the two paths after `--` to (re)generate the default INPUT and its
+/// expected output on every `make exec`/`debug`/`zkc-smoke-exec`, so nothing here is checked into
+/// git and it can never silently drift from what the current wire format produces.
 fn addFixtureStep(b: *std.Build, tools: Tools) void {
-    const gen_fixture_step = b.step("gen-fixture", "Print a sample RollupProofPrivateInput as framed raw bytes on stdout");
-    gen_fixture_step.dependOn(&b.addRunArtifact(tools.get("gen_fixture").?).step);
+    const gen_fixture = b.addRunArtifact(tools.get("gen_fixture").?);
+    if (b.args) |args| gen_fixture.addArgs(args);
+    b.step("gen-fixture", "Write a sample RollupProofPrivateInput and its expected output to the paths after `--`").dependOn(&gen_fixture.step);
+}
+
+/// Runs the guest ELF under zkc and compares its output with the native statement's; the options
+/// of `zkc_smoke` follow `--`.
+fn addZkcSmokeStep(b: *std.Build, tools: Tools) void {
+    const zkc_smoke = b.addRunArtifact(tools.get("zkc_smoke").?);
+    if (b.args) |args| zkc_smoke.addArgs(args);
+    b.step("zkc-smoke", "Run a guest ELF under zkc and compare its output with the native statement's").dependOn(&zkc_smoke.step);
 }
 
 /// The `test/reference/*_test.zig` suites over the Amsterdam blocks of the EF zkevm fixtures, run

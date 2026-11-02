@@ -51,8 +51,8 @@ pub const CODE_BLOCK_HASH_CHAIN: ExitCode = 13;
 /// The l2-execution proofs do not tile the block range, or (step 7) two consecutive proofs break
 /// the continuity of block hash, chain configuration or forced-transaction state.
 pub const CODE_TILING_CONTINUITY: ExitCode = 14;
-/// A proof's block count differs from its range, or its messaging-block offsets are not strictly
-/// increasing within the range or do not fit the rebased 16-bit offset.
+/// A proof's `block_count` differs from its block range, or its messaging-block offsets are not
+/// strictly increasing within the range or do not fit the rebased 16-bit offset.
 pub const CODE_MESSAGING_OFFSETS: ExitCode = 15;
 /// An allocator refused a request within the guest's fixed heap.
 pub const CODE_OUT_OF_MEMORY: ExitCode = 16;
