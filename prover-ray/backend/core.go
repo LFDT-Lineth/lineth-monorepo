@@ -440,7 +440,7 @@ func (c *Core) runProve(
 	}
 	go func() {
 		defer close(rootDone)
-		root, rootErr = conglomerate(shardProofs, len(indexes), c.busPositions(), isRoot)
+		root, rootErr = conglomerate(shardProofs, len(indexes), c.piLayout(), isRoot)
 	}()
 
 	for k, i := range indexes {
@@ -463,17 +463,29 @@ func (c *Core) runProve(
 	return root.Proof, root.Pub, rootErr
 }
 
-// busPositions returns the position, in the public inputs, of the product on
-// each message-bus handle.
-func (c *Core) busPositions() []int {
-	var positions []int
-	for h := 0; ; h++ {
-		_, pos := c.sys.LookupPublicInputByTag(messagebus.PublicInputTag, h)
-		if pos < 0 {
-			return positions
-		}
-		positions = append(positions, pos)
+// piLayout holds the positions, in the public inputs, of the values aggregation
+// combines: the product on each message-bus handle, and the program VK and
+// guest output, which all the shards share.
+type piLayout struct {
+	bus, programVK, guestOutput []int
+}
+
+// piLayout returns the public-input layout of the shard proofs.
+func (c *Core) piLayout() piLayout {
+	return piLayout{
+		bus:         c.piPositions(messagebus.PublicInputTag, len(c.sys.MessageBusHandles())),
+		programVK:   c.piPositions(risc5.ProgramVKPI, risc5.NumProgramVK),
+		guestOutput: c.piPositions(risc5.GuestPublicOutputsPI, risc5.NumGuestPublicOutputs),
 	}
+}
+
+// piPositions returns the positions of the n public inputs tagged tag.
+func (c *Core) piPositions(tag wiop.PublicInputTag, n int) []int {
+	positions := make([]int, n)
+	for k := range positions {
+		_, positions[k] = c.sys.LookupPublicInputByTag(tag, k)
+	}
+	return positions
 }
 
 // checkBusBalanced checks that the product over all shards on each message-bus
@@ -493,7 +505,7 @@ func checkBusBalanced(bus []field.Gen) error {
 // signal that the n proofs cover all the shards, marks the last aggregation as
 // the root, where the root checks run; a single shard gets a root node of its
 // own.
-func conglomerate(shardProofs <-chan shardProof, n int, busPos []int, isRoot bool) (shardProof, error) {
+func conglomerate(shardProofs <-chan shardProof, n int, layout piLayout, isRoot bool) (shardProof, error) {
 	logrus.Warnf("Running dummy conglomeration, the aggregation steps are mocked")
 	type node struct {
 		proof shardProof
@@ -512,13 +524,13 @@ func conglomerate(shardProofs <-chan shardProof, n int, busPos []int, isRoot boo
 			ready = ready[2:]
 			inFlight++
 			go func() {
-				proof, err := aggregate(isRoot && last, busPos, left, right)
+				proof, err := aggregate(isRoot && last, layout, left, right)
 				nodes <- node{proof: proof, err: err}
 			}()
 		}
 		if received == n && inFlight == 0 {
 			if isRoot && n == 1 {
-				return aggregate(true, busPos, ready[0])
+				return aggregate(true, layout, ready[0])
 			}
 			return ready[0], nil
 		}
@@ -543,22 +555,34 @@ func conglomerate(shardProofs <-chan shardProof, n int, busPos []int, isRoot boo
 }
 
 // aggregate mocks an aggregation node over one or two children: it checks that
-// the children have the same public-input shape and returns the child of the
-// lower shard index, with the product of the children's products at the
-// message-bus positions busPos of its public inputs. The root node also runs
-// the root checks: the message bus balancing.
-func aggregate(isRoot bool, busPos []int, children ...shardProof) (shardProof, error) {
-	node := children[0]
-	bus := make([]field.Gen, len(busPos))
-	for h, pos := range busPos {
-		bus[h] = node.Pub[pos]
+// the children have the same public-input shape, program VK  and guest
+// output, and returns the child of the lower shard index, with the product
+// of the children's products at the message-bus positions of its public
+// inputs. The root node also runs the root checks: the message bus balancing.
+func aggregate(isRoot bool, layout piLayout, children ...shardProof) (shardProof, error) {
+	first := children[0]
+	node := first
+	bus := make([]field.Gen, len(layout.bus))
+	for h, pos := range layout.bus {
+		bus[h] = first.Pub[pos]
 	}
 	for _, child := range children[1:] {
-		if len(child.Pub) != len(node.Pub) {
+		if len(child.Pub) != len(first.Pub) {
 			return shardProof{}, fmt.Errorf("shards %d and %d have public inputs of different shapes",
-				node.Index, child.Index)
+				first.Index, child.Index)
 		}
-		for h, pos := range busPos {
+		for _, shared := range []struct {
+			name      string
+			positions []int
+		}{{"program VK", layout.programVK}, {"guest output", layout.guestOutput}} {
+			for _, pos := range shared.positions {
+				if diff := child.Pub[pos].Sub(first.Pub[pos]); !diff.IsZero() {
+					return shardProof{}, fmt.Errorf("shards %d and %d have different %s",
+						first.Index, child.Index, shared.name)
+				}
+			}
+		}
+		for h, pos := range layout.bus {
 			bus[h] = bus[h].Mul(child.Pub[pos])
 		}
 		if child.Index < node.Index {
@@ -566,7 +590,7 @@ func aggregate(isRoot bool, busPos []int, children ...shardProof) (shardProof, e
 		}
 	}
 	node.Pub = slices.Clone(node.Pub)
-	for h, pos := range busPos {
+	for h, pos := range layout.bus {
 		node.Pub[pos] = bus[h]
 	}
 	if isRoot {

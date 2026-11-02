@@ -66,10 +66,10 @@ func TestNew_ShardIndexes(t *testing.T) {
 // checks that product at the root, and fails if some proofs never arrive.
 func TestConglomerate(t *testing.T) {
 	elem := func(v uint) field.Gen { return field.ElemFromBase(field.NewElement(uint64(v))) }
-	// The public inputs of shard i are (i, its bus product); the bus is at position 1.
-	busPos := []int{1}
+	// The public inputs of a shard are (its bus product, program VK, guest output).
+	layout := piLayout{bus: []int{0}, programVK: []int{1}, guestOutput: []int{2}}
 	shard := func(i uint, bus field.Gen) shardProof {
-		return shardProof{Index: i, Pub: wiop.PublicInput{elem(i), bus}}
+		return shardProof{Index: i, Pub: wiop.PublicInput{bus, elem(7), elem(9)}}
 	}
 	send := func(isRoot bool, n int, shards ...shardProof) (shardProof, error) {
 		ch := make(chan shardProof, len(shards))
@@ -77,7 +77,7 @@ func TestConglomerate(t *testing.T) {
 			ch <- s
 		}
 		close(ch)
-		return conglomerate(ch, n, busPos, isRoot)
+		return conglomerate(ch, n, layout, isRoot)
 	}
 	run := func(n int, isRoot bool, arrivals ...uint) (shardProof, error) {
 		shards := make([]shardProof, len(arrivals))
@@ -94,8 +94,8 @@ func TestConglomerate(t *testing.T) {
 		for i := range arrivals {
 			factorial = factorial.Mul(elem(uint(i) + 1))
 		}
-		require.Equal(t, elem(0), root.Pub[0], "arrivals %v", arrivals)
-		diff := root.Pub[1].Sub(factorial)
+		require.Equal(t, uint(0), root.Index, "arrivals %v", arrivals)
+		diff := root.Pub[0].Sub(factorial)
 		require.True(t, diff.IsZero(), "arrivals %v", arrivals)
 	}
 
@@ -110,6 +110,14 @@ func TestConglomerate(t *testing.T) {
 	require.ErrorContains(t, err, "does not balance across the shards")
 	_, err = run(3, false, 0, 1, 2)
 	require.NoError(t, err)
+
+	// Shards of another program or with another output are rejected at any node.
+	otherVK, otherOutput := shard(1, elem(2)), shard(1, elem(2))
+	otherVK.Pub[1], otherOutput.Pub[2] = elem(8), elem(8)
+	_, err = send(false, 2, shard(0, elem(1)), otherVK)
+	require.ErrorContains(t, err, "shards 0 and 1 have different program VK")
+	_, err = send(false, 2, shard(0, elem(1)), otherOutput)
+	require.ErrorContains(t, err, "shards 0 and 1 have different guest output")
 
 	_, err = run(3, false, 1, 0)
 	require.ErrorContains(t, err, "only 2 of 3 shard proofs arrived")
