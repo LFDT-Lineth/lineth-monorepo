@@ -92,6 +92,13 @@ func NewZkCDriver(sys *wiop.System, settings Settings, bin io.Reader) *ZkCDriver
 	schema := binf.AirConstraints()
 	// Translate air.Schema into prover's internal representation
 	Define(sys, &schema, settings.TraceRound)
+	// With sharding, a bus message and its answer can land in different shards,
+	// so the bus balances only across shards: conglomeration checks it.
+	if settings.ShardSize > 0 {
+		for _, mb := range sys.MessageBuses {
+			mb.SkipInShardCheck = true
+		}
+	}
 	// With sharding, tracing only runs a fast-mode pass recording a checkpoint
 	// per shard; each shard is then traced on demand from its checkpoint.
 	tracingConfig := vm.DEFAULT_TRACE_CONFIG

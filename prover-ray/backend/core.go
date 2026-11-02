@@ -122,7 +122,8 @@ func New(cfg Config) (*Core, error) {
 	// program VK cells read.
 	risc5.RegisterPublicInputs(sys)
 
-	// Shared randomness is off: no preflight computes γ yet.
+	// Shared randomness is off: no preflight computes γ yet. Unsound: the bus
+	// coins then depend on round 0 only, not on the trace.
 	if err := compilers.CompileFull(sys,
 		compilers.ConfigureMessageBus(messagebus.WithoutSharedRandomness()),
 	); err != nil {
@@ -428,14 +429,18 @@ func (c *Core) runProve(
 	shardProofs := make(chan shardProof, len(indexes))
 	defer close(shardProofs)
 	var (
-		rootProof wiop.Proof
-		rootPub   wiop.PublicInput
-		rootErr   error
-		rootDone  = make(chan struct{})
+		root     shardProof
+		rootErr  error
+		rootDone = make(chan struct{})
 	)
+	// The root checks apply only if this prover covers all the shards.
+	isRoot := len(indexes) == int(lazyTrace.Len())
+	if !isRoot {
+		logrus.Warnf("Proving %d of %d shards, the message bus is not checked across shards", len(indexes), lazyTrace.Len())
+	}
 	go func() {
 		defer close(rootDone)
-		rootProof, rootPub, rootErr = conglomerate(shardProofs, len(indexes))
+		root, rootErr = conglomerate(shardProofs, len(indexes), c.busPositions(), isRoot)
 	}()
 
 	for k, i := range indexes {
@@ -455,13 +460,40 @@ func (c *Core) runProve(
 		shardProofs <- shardProof{Index: i, Proof: proof, Pub: pub}
 	}
 	<-rootDone
-	return rootProof, rootPub, rootErr
+	return root.Proof, root.Pub, rootErr
+}
+
+// busPositions returns the position, in the public inputs, of the product on
+// each message-bus handle.
+func (c *Core) busPositions() []int {
+	var positions []int
+	for h := 0; ; h++ {
+		_, pos := c.sys.LookupPublicInputByTag(messagebus.PublicInputTag, h)
+		if pos < 0 {
+			return positions
+		}
+		positions = append(positions, pos)
+	}
+}
+
+// checkBusBalanced checks that the product over all shards on each message-bus
+// handle is one.
+func checkBusBalanced(bus []field.Gen) error {
+	for h, p := range bus {
+		if diff := p.Sub(field.ElemOne()); !diff.IsZero() {
+			return fmt.Errorf("message-bus handle %d does not balance across the shards: product is %v", h, p)
+		}
+	}
+	return nil
 }
 
 // conglomerate reduces the n proofs received on shardProofs to one, aggregating
 // any two ready proofs, in any order and tree shape, as soon as they are
-// available (G6 of #4233). n must be at least 1.
-func conglomerate(shardProofs <-chan shardProof, n int) (wiop.Proof, wiop.PublicInput, error) {
+// available. n must be at least 1. isRoot, the orchestrator's
+// signal that the n proofs cover all the shards, marks the last aggregation as
+// the root, where the root checks run; a single shard gets a root node of its
+// own.
+func conglomerate(shardProofs <-chan shardProof, n int, busPos []int, isRoot bool) (shardProof, error) {
 	logrus.Warnf("Running dummy conglomeration, the aggregation steps are mocked")
 	type node struct {
 		proof shardProof
@@ -476,15 +508,19 @@ func conglomerate(shardProofs <-chan shardProof, n int) (wiop.Proof, wiop.Public
 	for {
 		for len(ready) >= 2 {
 			left, right := ready[0], ready[1]
+			last := received == n && inFlight == 0 && len(ready) == 2
 			ready = ready[2:]
 			inFlight++
 			go func() {
-				proof, err := aggregate(left, right)
+				proof, err := aggregate(isRoot && last, busPos, left, right)
 				nodes <- node{proof: proof, err: err}
 			}()
 		}
 		if received == n && inFlight == 0 {
-			return ready[0].Proof, ready[0].Pub, nil
+			if isRoot && n == 1 {
+				return aggregate(true, busPos, ready[0])
+			}
+			return ready[0], nil
 		}
 		if received == n {
 			shardProofs = nil // all shards arrived, wait for the aggregations only
@@ -492,31 +528,53 @@ func conglomerate(shardProofs <-chan shardProof, n int) (wiop.Proof, wiop.Public
 		select {
 		case p, ok := <-shardProofs:
 			if !ok {
-				return wiop.Proof{}, nil, fmt.Errorf("only %d of %d shard proofs arrived", received, n)
+				return shardProof{}, fmt.Errorf("only %d of %d shard proofs arrived", received, n)
 			}
 			received++
 			ready = append(ready, p)
 		case nd := <-nodes:
 			inFlight--
 			if nd.err != nil {
-				return wiop.Proof{}, nil, nd.err
+				return shardProof{}, nd.err
 			}
 			ready = append(ready, nd.proof)
 		}
 	}
 }
 
-// aggregate mocks a 2-to-1 aggregation node: it checks that both children have
-// the same public-input shape and returns the child of the lower shard index.
-func aggregate(left, right shardProof) (shardProof, error) {
-	if len(left.Pub) != len(right.Pub) {
-		return shardProof{}, fmt.Errorf("shards %d and %d have %d and %d public inputs",
-			left.Index, right.Index, len(left.Pub), len(right.Pub))
+// aggregate mocks an aggregation node over one or two children: it checks that
+// the children have the same public-input shape and returns the child of the
+// lower shard index, with the product of the children's products at the
+// message-bus positions busPos of its public inputs. The root node also runs
+// the root checks: the message bus balancing.
+func aggregate(isRoot bool, busPos []int, children ...shardProof) (shardProof, error) {
+	node := children[0]
+	bus := make([]field.Gen, len(busPos))
+	for h, pos := range busPos {
+		bus[h] = node.Pub[pos]
 	}
-	if right.Index < left.Index {
-		return right, nil
+	for _, child := range children[1:] {
+		if len(child.Pub) != len(node.Pub) {
+			return shardProof{}, fmt.Errorf("shards %d and %d have public inputs of different shapes",
+				node.Index, child.Index)
+		}
+		for h, pos := range busPos {
+			bus[h] = bus[h].Mul(child.Pub[pos])
+		}
+		if child.Index < node.Index {
+			node = child
+		}
 	}
-	return left, nil
+	node.Pub = slices.Clone(node.Pub)
+	for h, pos := range busPos {
+		node.Pub[pos] = bus[h]
+	}
+	if isRoot {
+		if err := checkBusBalanced(bus); err != nil {
+			return shardProof{}, err
+		}
+	}
+	return node, nil
 }
 
 // traceShard traces and expands the ith shard of the lazy trace.

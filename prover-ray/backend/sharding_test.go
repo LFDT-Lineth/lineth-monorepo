@@ -62,24 +62,55 @@ func TestNew_ShardIndexes(t *testing.T) {
 }
 
 // TestConglomerate checks that conglomerate reduces any number of shard proofs,
-// arriving in any order, to one, and fails if some never arrive.
+// arriving in any order, to one carrying the product of their bus products,
+// checks that product at the root, and fails if some proofs never arrive.
 func TestConglomerate(t *testing.T) {
-	run := func(n int, arrivals ...uint) (wiop.PublicInput, error) {
-		ch := make(chan shardProof, len(arrivals))
-		for _, i := range arrivals {
-			ch <- shardProof{Index: i, Pub: wiop.PublicInput{field.ElemFromBase(field.NewElement(uint64(i)))}}
+	elem := func(v uint) field.Gen { return field.ElemFromBase(field.NewElement(uint64(v))) }
+	// The public inputs of shard i are (i, its bus product); the bus is at position 1.
+	busPos := []int{1}
+	shard := func(i uint, bus field.Gen) shardProof {
+		return shardProof{Index: i, Pub: wiop.PublicInput{elem(i), bus}}
+	}
+	send := func(isRoot bool, n int, shards ...shardProof) (shardProof, error) {
+		ch := make(chan shardProof, len(shards))
+		for _, s := range shards {
+			ch <- s
 		}
 		close(ch)
-		_, pub, err := conglomerate(ch, n)
-		return pub, err
+		return conglomerate(ch, n, busPos, isRoot)
+	}
+	run := func(n int, isRoot bool, arrivals ...uint) (shardProof, error) {
+		shards := make([]shardProof, len(arrivals))
+		for k, i := range arrivals {
+			shards[k] = shard(i, elem(i+1))
+		}
+		return send(isRoot, n, shards...)
 	}
 
 	for _, arrivals := range [][]uint{{0}, {2, 0, 1}, {4, 1, 3, 0, 2}, {5, 6, 0, 2, 1, 3, 4}} {
-		pub, err := run(len(arrivals), arrivals...)
+		root, err := run(len(arrivals), false, arrivals...)
 		require.NoError(t, err, "arrivals %v", arrivals)
-		require.Equal(t, wiop.PublicInput{field.ElemZero()}, pub, "arrivals %v", arrivals)
+		factorial := elem(1)
+		for i := range arrivals {
+			factorial = factorial.Mul(elem(uint(i) + 1))
+		}
+		require.Equal(t, elem(0), root.Pub[0], "arrivals %v", arrivals)
+		diff := root.Pub[1].Sub(factorial)
+		require.True(t, diff.IsZero(), "arrivals %v", arrivals)
 	}
 
-	_, err := run(3, 1, 0)
+	// The bus products 1, 2 and 1/2 balance; 1, 2 and 3 do not.
+	_, err := send(true, 3, shard(0, elem(1)), shard(1, elem(2)), shard(2, elem(2).Inverse()))
+	require.NoError(t, err)
+	_, err = run(3, true, 0, 1, 2)
+	require.ErrorContains(t, err, "does not balance across the shards")
+	_, err = run(1, true, 0) // a single shard, with bus product 1, is its own root
+	require.NoError(t, err)
+	_, err = run(1, true, 1)
+	require.ErrorContains(t, err, "does not balance across the shards")
+	_, err = run(3, false, 0, 1, 2)
+	require.NoError(t, err)
+
+	_, err = run(3, false, 1, 0)
 	require.ErrorContains(t, err, "only 2 of 3 shard proofs arrived")
 }
