@@ -5,8 +5,8 @@
 //!
 //! The payload is the file `payload-in`, or the canonical payload of a fixed sample conflation. The
 //! segment is the payload compressed against the package dictionary behind a 4-byte length prefix.
-//! A blob chunk packs it into a blob, anchored by the versioned hash of a commitment derived from
-//! the segment: the commitment and the proof are stand-ins that only the chunk binding reads.
+//! A blob chunk packs it into a blob, anchored by the versioned hash of the blob's commitment and
+//! carrying the commitment and the blob proof computed by c-kzg-4844.
 
 const std = @import("std");
 
@@ -17,7 +17,6 @@ const zstd_compressor = @import("zstd_compressor");
 
 const blob_payload = lineth_da.encoding.blob_payload;
 const da_stream = support.da_stream;
-const Sha256 = std.crypto.hash.sha2.Sha256;
 
 const usage = "usage: da_sample <input-out> [blob|calldata [<payload-in>]]\n";
 
@@ -72,21 +71,16 @@ fn build(allocator: std.mem.Allocator, input: *std.ArrayList(u8), payload: []con
         return;
     }
 
-    const commitment = da_stream.standInKzg('c', segment);
-    const proof = da_stream.standInKzg('p', segment);
-    var hash: [32]u8 = undefined;
-    Sha256.hash(&commitment, &hash, .{});
-    hash[0] = 0x01; // the versioned hash of the commitment
-
     const blob = try allocator.create([blob_payload.blob_len]u8);
     defer allocator.destroy(blob);
     blob_payload.pack(segment, blob) catch {
         std.debug.print("error: the segment of {d} bytes does not fit one blob\n", .{segment.len});
         std.process.exit(1);
     };
+    const opening = support.kzg.open(blob);
     try input.append(allocator, 0);
-    try input.appendSlice(allocator, &hash);
-    try input.appendSlice(allocator, &commitment);
-    try input.appendSlice(allocator, &proof);
+    try input.appendSlice(allocator, &da_stream.versionedHash(&opening.commitment));
+    try input.appendSlice(allocator, &opening.commitment);
+    try input.appendSlice(allocator, &opening.proof);
     try input.appendSlice(allocator, blob);
 }

@@ -7,7 +7,8 @@
 //! Output: the end dataRollingHash and the tail count as 8 big-endian bytes.
 //!
 //! Exit codes: 0 verified; 2 input malformed; 3 out of memory; 4 chunk malformed; 5 blob not
-//! canonical; 6 chunk hash mismatch; 7 stream layout; 8 frame invalid; 9 payload mismatch.
+//! canonical; 6 chunk hash mismatch; 7 stream layout; 8 frame invalid; 9 payload mismatch; 10 blob
+//! KZG proof does not verify.
 
 const std = @import("std");
 const builtin = @import("builtin");
@@ -84,6 +85,7 @@ fn exitCode(err: decompress.Error) u32 {
         error.NoChunks, error.MalformedChunk => 4,
         error.NonCanonicalBlob => 5,
         error.ChunkHashMismatch, error.BoundaryPreimageMismatch => 6,
+        error.BlobKzgMismatch => 10,
         error.PartialBlobBeforeBlob,
         error.InvalidTailTake,
         error.MissingSegmentLength,

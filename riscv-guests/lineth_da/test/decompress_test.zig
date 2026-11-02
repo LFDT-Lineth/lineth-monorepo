@@ -38,14 +38,6 @@ fn keccak(bytes: []const u8) Hash {
     return hash;
 }
 
-/// `0x01 ‖ sha256(commitment)[1..]`.
-fn versionedHash(commitment: []const u8) Hash {
-    var hash: Hash = undefined;
-    std.crypto.hash.sha2.Sha256.hash(commitment, &hash, .{});
-    hash[0] = 0x01;
-    return hash;
-}
-
 fn compressFrame(a: Allocator, payload: []const u8, options: zstd_compressor.Options) ![]u8 {
     var with_dictionary = options;
     if (with_dictionary.dictionary == null) with_dictionary.dictionary = dictionary;
@@ -61,19 +53,26 @@ fn concat(a: Allocator, parts: []const []const u8) ![]u8 {
     return std.mem.concat(a, u8, parts);
 }
 
+/// The blob chunk packing `payload`, with the commitment and the blob proof of c-kzg-4844.
 fn blobChunk(a: Allocator, payload: []const u8) !Chunk {
     const blob = try a.create([blob_payload.blob_len]u8);
     try blob_payload.pack(payload, blob);
-    const commitment = try a.create([48]u8);
-    commitment.* = da_stream.standInKzg('c', payload);
-    const proof = try a.create([48]u8);
-    proof.* = da_stream.standInKzg('p', payload);
+    const opening = support.kzg.open(blob);
+    return chunkOf(a, blob, opening.commitment, opening.proof);
+}
+
+/// A blob chunk anchored by the versioned hash of `commitment`, whatever the blob and the proof.
+fn chunkOf(a: Allocator, blob: *const [blob_payload.blob_len]u8, commitment: [48]u8, proof: [48]u8) !Chunk {
+    const commitment_bytes = try a.create([48]u8);
+    commitment_bytes.* = commitment;
+    const proof_bytes = try a.create([48]u8);
+    proof_bytes.* = proof;
     return .{
-        .chunk_hash = versionedHash(commitment),
+        .chunk_hash = da_stream.versionedHash(commitment_bytes),
         .is_calldata = false,
         .blob_bytes = blob,
-        .kzg_commitment = commitment,
-        .kzg_proof = proof,
+        .kzg_commitment = commitment_bytes,
+        .kzg_proof = proof_bytes,
     };
 }
 
@@ -104,24 +103,11 @@ const Outcome = struct {
     final_data_tail_discard_bytes: u64,
 };
 
-/// Verifies the stream under the package dictionary and checks that the returned blobs are the
-/// witness' blob chunks, in order.
+/// Verifies the stream under the package dictionary.
 fn verify(chunks: []const Chunk, payloads: []const []const u8, start: Start) !Outcome {
     const decoder = try zstd.Decoder.init(gpa, dictionary);
     defer decoder.deinit();
     const verified = try decompress.verifyDaChunks(gpa, decoder, chunks, payloads, start.parent, start.take, start.boundary);
-    defer gpa.free(verified.blobs);
-
-    var blob_chunks: usize = 0;
-    for (chunks) |chunk| {
-        if (chunk.is_calldata) continue;
-        const opening = verified.blobs[blob_chunks];
-        try std.testing.expectEqualSlices(u8, chunk.blob_bytes, opening.blob);
-        try std.testing.expectEqualSlices(u8, chunk.kzg_commitment, opening.commitment);
-        try std.testing.expectEqualSlices(u8, chunk.kzg_proof, opening.proof);
-        blob_chunks += 1;
-    }
-    try std.testing.expectEqual(blob_chunks, verified.blobs.len);
     return .{
         .end_data_rolling_hash = verified.end_data_rolling_hash,
         .final_data_tail_discard_bytes = verified.final_data_tail_discard_bytes,
@@ -576,6 +562,72 @@ test "a blob has to be the canonical packing of its payload" {
     forged[blob_payload.blob_len - 1] = 1;
     chunk.blob_bytes = forged;
     try expectRejected(error.NonCanonicalBlob, &.{chunk}, &.{payload_1}, .{});
+}
+
+test "a blob has to be the one its commitment commits to" {
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    const a = arena.allocator();
+    const own = try segment(a, payload_1);
+    const other = try blobChunk(a, try segment(a, payload_2));
+    const other_commitment = other.kzg_commitment[0..48].*;
+    const other_proof = other.kzg_proof[0..48].*;
+
+    // The blob of the stream under a commitment and a proof of another blob, anchored by the
+    // versioned hash of that commitment: every binding holds, and the blob is not the committed one.
+    const own_blob = (try blobChunk(a, own)).blob_bytes[0..blob_payload.blob_len];
+    try expectRejected(error.BlobKzgMismatch, &.{try chunkOf(a, own_blob, other_commitment, other_proof)}, &.{payload_1}, .{});
+
+    // The commitment of the blob under the proof of another blob.
+    const genuine = try blobChunk(a, own);
+    try expectRejected(error.BlobKzgMismatch, &.{try chunkOf(a, own_blob, genuine.kzg_commitment[0..48].*, other_proof)}, &.{payload_1}, .{});
+
+    // A proof that is no curve point.
+    try expectRejected(error.BlobKzgMismatch, &.{try chunkOf(a, own_blob, genuine.kzg_commitment[0..48].*, @splat(0xff))}, &.{payload_1}, .{});
+}
+
+test "the proof of every blob is verified" {
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    const a = arena.allocator();
+
+    // Incompressible, so the segment fills two blobs and spills into a third.
+    var prng = std.Random.DefaultPrng.init(4844);
+    const large = try a.alloc(u8, 2 * capacity);
+    prng.random().bytes(large);
+    const own = try segment(a, large);
+    const chunks = [_]Chunk{
+        try blobChunk(a, own[0..capacity]),
+        try blobChunk(a, own[capacity .. 2 * capacity]),
+        try blobChunk(a, own[2 * capacity ..]),
+    };
+
+    for (0..chunks.len) |wrong| {
+        var forged = chunks;
+        forged[wrong].kzg_proof = chunks[(wrong + 1) % chunks.len].kzg_proof;
+        try expectRejected(error.BlobKzgMismatch, &forged, &.{large}, .{});
+    }
+}
+
+test "blob proofs are checked after the chunk binding and before the layout" {
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    const a = arena.allocator();
+    const first = try segment(a, payload_1);
+    const second = try segment(a, payload_2);
+
+    // A short blob before a blob, the first of which carries the proof of the second.
+    var short = try blobChunk(a, first);
+    const next = try blobChunk(a, second);
+    short.kzg_proof = next.kzg_proof;
+    try expectRejected(error.BlobKzgMismatch, &.{ short, next }, &.{ payload_1, payload_2 }, .{});
+
+    // The same, with a chunk of the second blob that is no canonical packing: the binding comes first.
+    var forged = next;
+    const bytes = try a.dupe(u8, next.blob_bytes);
+    bytes[0] |= 0x40;
+    forged.blob_bytes = bytes;
+    try expectRejected(error.NonCanonicalBlob, &.{ short, forged }, &.{ payload_1, payload_2 }, .{});
 }
 
 test "a chunk's bytes have to match its anchored hash" {

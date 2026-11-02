@@ -1,10 +1,11 @@
 //! Verification of a rollup proof's data-availability stream against the chunks that carry it.
 //!
 //! The stream is the segments `[4-byte big-endian nonzero length][zstd frame]`, one per
-//! conflation, in order. Its chunks are blobs (bound by the versioned hash of their KZG commitment)
-//! and calldata submissions (bound by keccak256). A blob contributes its unpacked payload, a
-//! calldata chunk its bytes; the concatenation is the stream, and each segment's frame
-//! decompresses, with the decoder's dictionary, to the canonical payload of its conflation.
+//! conflation, in order. Its chunks are blobs (bound by the versioned hash of their KZG commitment
+//! and the EIP-4844 proof of the blob against it) and calldata submissions (bound by keccak256). A
+//! blob contributes its unpacked payload, a calldata chunk its bytes; the concatenation is the
+//! stream, and each segment's frame decompresses, with the decoder's dictionary, to the canonical
+//! payload of its conflation.
 
 const std = @import("std");
 
@@ -35,6 +36,8 @@ pub const Error = error{
     /// The versioned hash of a blob's commitment, or the keccak256 of a calldata chunk's bytes,
     /// differs from the chunk's hash.
     ChunkHashMismatch,
+    /// A blob's EIP-4844 proof does not open its commitment to the blob.
+    BlobKzgMismatch,
     /// `boundary_prev_data_rolling_hash` is missing or opens a hash other than the parent hash.
     BoundaryPreimageMismatch,
 
@@ -78,20 +81,10 @@ pub const Chunk = struct {
     kzg_proof: []const u8 = &.{},
 };
 
-/// The arguments of `blob_kzg.verify` for one blob chunk.
-pub const BlobOpening = struct {
-    blob: *const [blob_kzg.blob_len]u8,
-    commitment: *const [blob_kzg.commitment_len]u8,
-    proof: *const [blob_kzg.proof_len]u8,
-};
-
 pub const Verified = struct {
     end_data_rolling_hash: Hash,
     /// The bytes left in the stream after the last segment.
     final_data_tail_discard_bytes: u64,
-    /// The blob chunks in chunk order, referencing the witness bytes. The caller frees the slice.
-    /// A blob is bound to its commitment once `blob_kzg.verify` accepts its opening.
-    blobs: []const BlobOpening,
 };
 
 /// Verifies the DA stream carried by `chunks`: one segment per entry of `canonical_payloads`.
@@ -99,7 +92,8 @@ pub const Verified = struct {
 /// - Each chunk is bound to its `chunk_hash`: a blob has no calldata, a 48-byte commitment and
 ///   proof and the canonical packing of its payload, and the versioned hash of its commitment is
 ///   the `chunk_hash`; a calldata chunk has no blob, commitment or proof, and its keccak256 is the
-///   `chunk_hash`.
+///   `chunk_hash`. Once every chunk is bound, each blob's EIP-4844 proof opens its commitment to
+///   the blob.
 /// - Layout: a blob followed by another blob holds a full payload; a positive
 ///   `parent_data_tail_take_bytes` requires a first blob with a longer payload, and the stream
 ///   starts at the last `parent_data_tail_take_bytes` bytes of it; every chunk owns at least one
@@ -109,7 +103,7 @@ pub const Verified = struct {
 ///   starts the range inside the first chunk, which the parent hash includes, so
 ///   `boundary_prev_data_rolling_hash` has to open it.
 ///
-/// `allocator` serves the working buffers, released before returning, and the result's `blobs`.
+/// `allocator` serves the working buffers, released before returning.
 pub fn verifyDaChunks(
     allocator: Allocator,
     decoder: zstd.Decoder,
@@ -122,35 +116,30 @@ pub fn verifyDaChunks(
     if (chunks.len == 0) return error.NoChunks;
 
     var capacity: usize = 0;
-    var blob_count: usize = 0;
     for (chunks) |chunk| {
-        if (chunk.is_calldata) {
-            capacity += chunk.calldata_bytes.len;
-        } else {
-            capacity += blob_payload.payload_capacity;
-            blob_count += 1;
-        }
+        capacity += if (chunk.is_calldata) chunk.calldata_bytes.len else blob_payload.payload_capacity;
     }
     const joined = try allocator.alloc(u8, capacity);
     defer allocator.free(joined);
     const payload_lens = try allocator.alloc(usize, chunks.len);
     defer allocator.free(payload_lens);
-    const blobs = try allocator.alloc(BlobOpening, blob_count);
-    errdefer allocator.free(blobs);
     const unpacked = try allocator.create([blob_payload.stream_len]u8);
     defer allocator.destroy(unpacked);
 
     var joined_len: usize = 0;
-    var blobs_found: usize = 0;
     for (chunks, payload_lens) |chunk, *payload_len| {
-        const bound = try bindChunk(chunk, unpacked);
-        if (bound.opening) |opening| {
-            blobs[blobs_found] = opening;
-            blobs_found += 1;
+        const payload = try bindChunk(chunk, unpacked);
+        @memcpy(joined[joined_len..][0..payload.len], payload);
+        joined_len += payload.len;
+        payload_len.* = payload.len;
+    }
+
+    for (chunks) |chunk| {
+        if (chunk.is_calldata) continue;
+        const blob = chunk.blob_bytes[0..blob_kzg.blob_len];
+        if (!blob_kzg.verify(blob, chunk.kzg_commitment[0..blob_kzg.commitment_len], chunk.kzg_proof[0..blob_kzg.proof_len])) {
+            return error.BlobKzgMismatch;
         }
-        @memcpy(joined[joined_len..][0..bound.payload.len], bound.payload);
-        joined_len += bound.payload.len;
-        payload_len.* = bound.payload.len;
     }
 
     for (chunks[0 .. chunks.len - 1], chunks[1..], payload_lens[0 .. chunks.len - 1]) |chunk, following, payload_len| {
@@ -188,39 +177,27 @@ pub fn verifyDaChunks(
     return .{
         .end_data_rolling_hash = try rolling_hash.fold(parent_data_rolling_hash, chunk_hashes, take, boundary_prev_data_rolling_hash),
         .final_data_tail_discard_bytes = stream.len - consumed,
-        .blobs = blobs,
     };
 }
 
-const Bound = struct {
-    /// What the chunk contributes to the stream.
-    payload: []const u8,
-    /// Set for a blob chunk.
-    opening: ?BlobOpening,
-};
-
-/// Binds `chunk` to its hash. A blob's payload is written into `unpacked`.
-fn bindChunk(chunk: Chunk, unpacked: *[blob_payload.stream_len]u8) Error!Bound {
+/// Binds `chunk` to its hash and returns what it contributes to the stream. A blob's payload is
+/// written into `unpacked`.
+fn bindChunk(chunk: Chunk, unpacked: *[blob_payload.stream_len]u8) Error![]const u8 {
     if (chunk.is_calldata) {
         if (chunk.blob_bytes.len != 0 or chunk.kzg_commitment.len != 0 or chunk.kzg_proof.len != 0) return error.MalformedChunk;
         var hash: Hash = undefined;
         accelerators.keccak256(chunk.calldata_bytes, &hash);
         if (!std.mem.eql(u8, &hash, &chunk.chunk_hash)) return error.ChunkHashMismatch;
-        return .{ .payload = chunk.calldata_bytes, .opening = null };
+        return chunk.calldata_bytes;
     }
 
     if (chunk.calldata_bytes.len != 0 or
         chunk.kzg_commitment.len != blob_kzg.commitment_len or
         chunk.kzg_proof.len != blob_kzg.proof_len or
         chunk.blob_bytes.len != blob_kzg.blob_len) return error.MalformedChunk;
-    const opening: BlobOpening = .{
-        .blob = chunk.blob_bytes[0..blob_kzg.blob_len],
-        .commitment = chunk.kzg_commitment[0..blob_kzg.commitment_len],
-        .proof = chunk.kzg_proof[0..blob_kzg.proof_len],
-    };
-    const payload = blob_payload.unpack(opening.blob, unpacked) catch return error.NonCanonicalBlob;
-    if (!std.mem.eql(u8, &blob_kzg.versionedHash(opening.commitment), &chunk.chunk_hash)) return error.ChunkHashMismatch;
-    return .{ .payload = payload, .opening = opening };
+    const payload = blob_payload.unpack(chunk.blob_bytes[0..blob_kzg.blob_len], unpacked) catch return error.NonCanonicalBlob;
+    if (!std.mem.eql(u8, &blob_kzg.versionedHash(chunk.kzg_commitment[0..blob_kzg.commitment_len]), &chunk.chunk_hash)) return error.ChunkHashMismatch;
+    return payload;
 }
 
 /// Parses one segment per canonical payload from the front of `stream`, writing each segment's end

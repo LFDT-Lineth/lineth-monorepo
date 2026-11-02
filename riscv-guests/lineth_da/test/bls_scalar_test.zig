@@ -1,12 +1,15 @@
 const std = @import("std");
 
 const lineth_da = @import("lineth_da");
+const support = @import("support");
 
 const bls_scalar = lineth_da.bls_scalar;
 
 const Fr = bls_scalar.Fr;
 
-const modulus = bls_scalar.modulus;
+const modulus = support.scalar_field.modulus;
+const mulMod = support.scalar_field.mulMod;
+const powMod = support.scalar_field.powMod;
 
 fn bytesOf(value: u256) [32]u8 {
     var bytes: [32]u8 = undefined;
@@ -22,21 +25,6 @@ fn element(value: u256) Fr {
     return Fr.fromBytes(&bytesOf(value)).?;
 }
 
-fn mulMod(a: u256, b: u256) u256 {
-    return @intCast(@as(u512, a) * b % modulus);
-}
-
-fn powMod(base: u256, exponent: u256) u256 {
-    var result: u256 = 1;
-    var power = base;
-    var rest = exponent;
-    while (rest > 0) : (rest >>= 1) {
-        if (rest & 1 == 1) result = mulMod(result, power);
-        power = mulMod(power, power);
-    }
-    return result;
-}
-
 /// Values near the edges of the field and random ones.
 fn samples(random: std.Random, out: []u256) void {
     const edges = [_]u256{ 0, 1, 2, modulus - 1, modulus - 2, modulus / 2, modulus / 2 + 1, 1 << 64, 1 << 192, (1 << 254) - 1 };
@@ -46,9 +34,7 @@ fn samples(random: std.Random, out: []u256) void {
 }
 
 test "the modulus is the BLS12-381 scalar field order" {
-    // r = x^4 - x^2 + 1 for the BLS parameter x = -0xd201000000010000.
-    const x: u256 = 0xd201000000010000;
-    try std.testing.expectEqual(x * x * x * x - x * x + 1, modulus);
+    try std.testing.expectEqual(modulus, bls_scalar.modulus);
 }
 
 test "an element reads back as the value it was made from" {

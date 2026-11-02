@@ -2,6 +2,7 @@ const std = @import("std");
 
 const lineth_da = @import("lineth_da");
 const reference_vectors = @import("reference_vectors");
+const support = @import("support");
 
 const bls_scalar = lineth_da.bls_scalar;
 const blob_kzg = lineth_da.encoding.blob_kzg;
@@ -58,6 +59,34 @@ test "blob proofs verify exactly as the reference vectors say" {
     try std.testing.expectEqual(20, rejected);
 }
 
+/// A blob of 4096 random field elements, each below 2^248.
+fn randomBlob(seed: u64) *[blob_len]u8 {
+    const blob = gpa.create([blob_len]u8) catch @panic("out of memory");
+    var prng = std.Random.DefaultPrng.init(seed);
+    prng.random().bytes(blob);
+    for (0..blob_len / 32) |index| blob[index * 32] = 0;
+    return blob;
+}
+
+test "proofs computed by c-kzg-4844 verify for their blob only" {
+    const blob = randomBlob(1);
+    defer gpa.destroy(blob);
+    const other = randomBlob(2);
+    defer gpa.destroy(other);
+    const opening = support.kzg.open(blob);
+    const other_opening = support.kzg.open(other);
+
+    try std.testing.expect(blob_kzg.verify(blob, &opening.commitment, &opening.proof));
+
+    // The blob, the commitment and the proof each have to be the ones of the opening.
+    try std.testing.expect(!blob_kzg.verify(other, &opening.commitment, &opening.proof));
+    try std.testing.expect(!blob_kzg.verify(blob, &other_opening.commitment, &opening.proof));
+    try std.testing.expect(!blob_kzg.verify(blob, &opening.commitment, &other_opening.proof));
+    var changed = blob.*;
+    changed[blob_len - 1] ^= 1;
+    try std.testing.expect(!blob_kzg.verify(&changed, &opening.commitment, &opening.proof));
+}
+
 test "challenges match the reference vectors" {
     var cases = try loadSuite("compute_challenge");
     defer freeCases(&cases);
@@ -83,22 +112,9 @@ test "the versioned hash of a commitment is 0x01 followed by its sha256 without 
 }
 
 // Roots of unity and powers by plain integer arithmetic, independent of the scalar-field module.
-const modulus = bls_scalar.modulus;
-
-fn mulMod(a: u256, b: u256) u256 {
-    return @intCast(@as(u512, a) * b % modulus);
-}
-
-fn powMod(base: u256, exponent: u256) u256 {
-    var result: u256 = 1;
-    var power = base;
-    var rest = exponent;
-    while (rest > 0) : (rest >>= 1) {
-        if (rest & 1 == 1) result = mulMod(result, power);
-        power = mulMod(power, power);
-    }
-    return result;
-}
+const modulus = support.scalar_field.modulus;
+const mulMod = support.scalar_field.mulMod;
+const powMod = support.scalar_field.powMod;
 
 /// The 4096th roots of unity ω^k of EIP-4844's domain, for ω = 7^((r - 1) / 4096).
 fn rootTable() !*[4096]u256 {

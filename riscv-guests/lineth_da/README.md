@@ -60,19 +60,15 @@ const verified = try lineth_da.decompress.verifyDaChunks(
     allocator, decoder, chunks, canonical_payloads,
     parent_data_rolling_hash, parent_data_tail_take_bytes, boundary_prev_data_rolling_hash,
 );
-defer allocator.free(verified.blobs);
-for (verified.blobs) |opening| {
-    if (!lineth_da.encoding.blob_kzg.verify(opening.blob, opening.commitment, opening.proof)) return error.BlobKzgFailed;
-}
 ```
 
 - **Chunk binding.** A `Chunk` is a blob (131072 physical bytes, a 48-byte commitment and a 48-byte proof, no calldata) or a calldata submission (no blob, commitment or proof). A blob is the canonical packing of its payload and the versioned hash of its commitment is the `chunk_hash`; calldata hashes to the `chunk_hash` with keccak256.
 - **Layout.** The chunk payloads concatenate into the stream; a positive `parent_data_tail_take_bytes` makes the first blob contribute only the last that many bytes of its payload. A blob followed by another blob holds a full payload (130047 bytes); a positive tail count needs a first blob with a longer payload; every chunk owns at least one byte inside the parsed segments; every calldata chunk ends at a segment boundary. `final_data_tail_discard_bytes` is the number of stream bytes after the last segment.
 - **Segments.** One segment per entry of `canonical_payloads`: a nonzero length that stays inside the stream, then one complete frame that decompresses with the decoder's dictionary to exactly that payload.
 - **dataRollingHash.** `end_data_rolling_hash` folds the chunk hashes onto `parent_data_rolling_hash`; a positive tail count starts the range inside the first chunk, which the parent hash includes, so `boundary_prev_data_rolling_hash` has to open it.
-- **KZG.** Binding a blob to its commitment is the caller's `blob_kzg.verify` over `Verified.blobs`, the blob chunks in order; the functions are pure and the verification is a separate call.
-- **Categorized errors.** `decompress.Error` names the rejection. Chunk binding: `NoChunks`, `MalformedChunk`, `NonCanonicalBlob`, `ChunkHashMismatch`, `BoundaryPreimageMismatch`. Layout: `PartialBlobBeforeBlob`, `InvalidTailTake`, `MissingSegmentLength`, `InvalidSegmentLength`, `ChunkOwnsNoBytes`, `CalldataEndsMidSegment`. Decompression: `InvalidFrame`, `PayloadMismatch`. And `OutOfMemory`.
-- **Allocator.** The working buffers (the joined stream, one unpacked blob, the decompressed segment) are released before `verifyDaChunks` returns; the caller frees `Verified.blobs`.
+- **KZG.** Once every chunk is bound, each blob's EIP-4844 proof is verified against the blob and its commitment (`blob_kzg.verify`), in chunk order and before the layout is parsed: a blob is bound to its commitment, and so to the data L1 anchors.
+- **Categorized errors.** `decompress.Error` names the rejection. Chunk binding: `NoChunks`, `MalformedChunk`, `NonCanonicalBlob`, `ChunkHashMismatch`, `BlobKzgMismatch`, `BoundaryPreimageMismatch`. Layout: `PartialBlobBeforeBlob`, `InvalidTailTake`, `MissingSegmentLength`, `InvalidSegmentLength`, `ChunkOwnsNoBytes`, `CalldataEndsMidSegment`. Decompression: `InvalidFrame`, `PayloadMismatch`. And `OutOfMemory`.
+- **Allocator.** The working buffers (the joined stream, one unpacked blob, the decompressed segment) are released before `verifyDaChunks` returns.
 
 ## Dictionary
 
@@ -92,11 +88,11 @@ The smoke guests (`test/smoke/`) run one part of the package on the guest target
 
 - `zstd_smoke` reads a frame with `read_input`, decompresses it against the embedded dictionary and publishes the decompressed bytes through `write_output`; it exits with 0 on success and with 2 to 8 for the `zstd.Error` category. `compress_frame <frame-out> [<payload-in> [level]]` (`tools/`) produces its input.
 - `blob_smoke` reads the 48-byte commitment, the 48-byte proof and the 131072-byte blob, verifies the proof and publishes the versioned hash; it exits with 0 on success, 2 for an input of the wrong size and 3 for a proof that does not verify. `blob_sample <input-out>` (`tools/`) produces its input: a case of the official EIP-4844 reference vectors (c-kzg-4844 v2.1.5) whose proof verifies.
-- `decompress_smoke` reads the parent dataRollingHash, one conflation's canonical payload and one chunk (a blob or calldata), verifies the stream and publishes the end dataRollingHash and the unconsumed tail count; it exits with 0 on success, 2 for malformed input and with 3 to 9 for the `decompress.Error` category. `da_sample <input-out> [blob|calldata [<payload-in>]]` (`tools/`) produces its input: the payload compressed against the dictionary, published in one chunk. The commitment and the proof of a blob chunk are stand-ins derived from the segment, which only the chunk binding reads.
+- `decompress_smoke` reads the parent dataRollingHash, one conflation's canonical payload and one chunk (a blob or calldata), verifies the stream and publishes the end dataRollingHash and the unconsumed tail count; it exits with 0 on success, 2 for malformed input and with 3 to 10 for the `decompress.Error` category. `da_sample <input-out> [blob|calldata [<payload-in>]]` (`tools/`) produces its input: the payload compressed against the dictionary, published in one chunk. A blob chunk carries the commitment and the blob proof that c-kzg-4844 computes, so the run verifies the blob's proof.
 - `truncation_smoke` reads a chain ID as 8 big-endian bytes and a full block's RLP, truncates the block, round-trips the encoded payload through the blob packing and publishes the block hash, the parent hash and the payload; it exits with 0 on success and with 2 to 6 for its failure categories.
 
 Without a `payload-in` file, `compress_frame` and `da_sample` take the canonical payload of a fixed conflation of three signed blocks.
 
 `truncate_block <chain-id> <block-rlp-file>...` (`tools/`) prints the truncation of full blocks as `ok <timestamp> <block-hash> <parent-hash> <prev-randao> <payload>` lines.
 
-The native tests and tools are built with `-Dhost-tools=true`, which `make test` passes: the tests read the official EIP-4844 reference vectors (`tests/` of c-kzg-4844 v2.1.5, a lazy dependency) and link the host build of the crypto providers, which builds the Constantine archive. A package that depends on `lineth_da` builds the guest side only.
+The native tests and tools are built with `-Dhost-tools=true`, which `make test` passes: the tests read the official EIP-4844 reference vectors (`tests/` of c-kzg-4844 v2.1.5, a lazy dependency), compute blob commitments and proofs with c-kzg-4844 over blst (also a lazy dependency) and link the host build of the crypto providers, which builds the Constantine archive. A package that depends on `lineth_da` builds the guest side only.

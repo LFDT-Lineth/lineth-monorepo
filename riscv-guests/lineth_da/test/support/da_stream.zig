@@ -13,15 +13,10 @@ pub fn lengthPrefixed(allocator: Allocator, frame: []const u8) Allocator.Error![
     return out;
 }
 
-/// 48 bytes derived from `seed` under `label`, standing in for a commitment or a proof: a chunk
-/// binding reads a commitment through its versioned hash, and only a blob verification reads a proof.
-pub fn standInKzg(label: u8, seed: []const u8) [48]u8 {
-    var bytes: [64]u8 = undefined;
-    for ([_]u8{ 0, 1 }, 0..) |half, i| {
-        var hasher = Sha256.init(.{});
-        hasher.update(&.{ label, half });
-        hasher.update(seed);
-        hasher.final(bytes[i * 32 ..][0..32]);
-    }
-    return bytes[0..48].*;
+/// `0x01 ‖ sha256(commitment)[1..]`: the hash L1 anchors a blob by.
+pub fn versionedHash(commitment: *const [48]u8) [32]u8 {
+    var hash: [32]u8 = undefined;
+    Sha256.hash(commitment, &hash, .{});
+    hash[0] = 0x01;
+    return hash;
 }

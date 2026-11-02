@@ -155,16 +155,23 @@ fn addHostBuild(b: *std.Build, zstd_source: *std.Build.Dependency) void {
     }
     const tools = common.addTools(b, native, .{});
     if (b.lazyDependency("c_kzg_4844", .{})) |c_kzg| {
-        const vectors = b.addOptions();
-        vectors.addOptionPath("tests_dir", c_kzg.path("tests"));
+        const paths = b.addOptions();
+        paths.addOptionPath("tests_dir", c_kzg.path("tests"));
+        paths.addOptionPath("trusted_setup", c_kzg.path("src/trusted_setup.txt"));
+        const paths_module = paths.createModule();
         const reference_vectors = b.createModule(.{
             .root_source_file = b.path("test/reference_vectors.zig"),
             .target = target,
             .optimize = .Debug,
-            .imports = &.{.{ .name = "kzg_vectors", .module = vectors.createModule() }},
+            .imports = &.{.{ .name = "c_kzg_paths", .module = paths_module }},
         });
         tests.get("test/blob_kzg_test.zig").?.root_module.addImport("reference_vectors", reference_vectors);
         tools.get("blob_sample").?.root_module.addImport("reference_vectors", reference_vectors);
+
+        if (b.lazyDependency("blst", .{})) |blst| {
+            support.addImport("c_kzg", cKzgModule(b, target, c_kzg, blst));
+            support.addImport("c_kzg_paths", paths_module);
+        }
     }
 
     // Every native test and tool links the host build of the zkvm_* providers.
@@ -181,6 +188,38 @@ fn addHostBuild(b: *std.Build, zstd_source: *std.Build.Dependency) void {
 
     var tool_iter = tools.valueIterator();
     while (tool_iter.next()) |tool| b.installArtifact(tool.*);
+}
+
+/// c-kzg-4844 over blst, translated for Zig: the library that commits to blobs and proves them for
+/// the native tests and tools. blst's portable build runs on every CPU of the target architecture.
+fn cKzgModule(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    c_kzg: *std.Build.Dependency,
+    blst: *std.Build.Dependency,
+) *std.Build.Module {
+    const translated = b.addTranslateC(.{
+        .root_source_file = c_kzg.path("src/ckzg.h"),
+        .target = target,
+        .optimize = .Debug,
+    });
+    translated.addIncludePath(c_kzg.path("src"));
+    translated.addIncludePath(blst.path("bindings"));
+    const module = translated.createModule();
+    module.addIncludePath(c_kzg.path("src"));
+    module.addIncludePath(blst.path("bindings"));
+    module.addCSourceFile(.{ .file = c_kzg.path("src/ckzg.c"), .flags = &.{ "-O2", "-fno-sanitize=undefined" } });
+    const has_assembly = switch (target.result.cpu.arch) {
+        .aarch64, .x86_64 => true,
+        else => false,
+    };
+    const blst_flags: []const []const u8 = if (has_assembly)
+        &.{ "-O2", "-fno-sanitize=undefined", "-D__BLST_PORTABLE__" }
+    else
+        &.{ "-O2", "-fno-sanitize=undefined", "-D__BLST_PORTABLE__", "-D__BLST_NO_ASM__" };
+    module.addCSourceFile(.{ .file = blst.path("src/server.c"), .flags = blst_flags });
+    if (has_assembly) module.addAssemblyFile(blst.path("build/assembly.S"));
+    return module;
 }
 
 /// The smoke guests: freestanding rv64im programs that run one part of the package on the guest

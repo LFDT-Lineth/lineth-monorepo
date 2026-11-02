@@ -3,7 +3,7 @@
 
 const std = @import("std");
 
-const kzg_vectors = @import("kzg_vectors");
+const c_kzg_paths = @import("c_kzg_paths");
 
 const Allocator = std.mem.Allocator;
 
@@ -74,7 +74,7 @@ fn loadCase(allocator: Allocator, io: std.Io, suite_dir: std.Io.Dir, name: []con
 
 /// Every case of the suite, such as `verify_blob_kzg_proof`; release them with `freeCases`.
 pub fn loadSuite(allocator: Allocator, io: std.Io, suite: []const u8) !std.ArrayList(Case) {
-    const path = try std.fmt.allocPrint(allocator, "{s}/{s}/kzg-mainnet", .{ kzg_vectors.tests_dir, suite });
+    const path = try std.fmt.allocPrint(allocator, "{s}/{s}/kzg-mainnet", .{ c_kzg_paths.tests_dir, suite });
     defer allocator.free(path);
     var dir = try std.Io.Dir.openDirAbsolute(io, path, .{ .iterate = true });
     defer dir.close(io);
