@@ -133,11 +133,12 @@ fn hostPackage(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.bu
 }
 
 /// The native tests and tools run on the host: a freestanding riscv64 target has no OS to run a
-/// `std.testing` binary against. The test-side encoders and signers (`support`) and the zstd
-/// compressor (`zstd_compressor`) are modules of the package for the tests of its consumers; they
-/// are compiled at the package's `optimize`, where ReleaseSmall becomes ReleaseSafe. When the
-/// package itself is built for a native target, the compressor shares its libzstd declarations,
-/// which one compilation can hold only once.
+/// `std.testing` binary against. The test-side encoders and signers (`support`), the zstd
+/// compressor (`zstd_compressor`) and the reader of the EF fixtures' blocks (`ef_blocks`) are
+/// modules of the package for the tests of its consumers; they are compiled at the package's
+/// `optimize`, where ReleaseSmall becomes ReleaseSafe. When the package itself is built for a
+/// native target, the compressor shares its libzstd declarations, which one compilation can hold
+/// only once.
 fn addHostBuild(
     b: *std.Build,
     package_zstd: Zstd,
@@ -160,6 +161,12 @@ fn addHostBuild(
 
     const support = b.addModule("support", .{
         .root_source_file = b.path("test/support/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const ef_blocks = b.addModule("ef_blocks", .{
+        .root_source_file = b.path("test/ef_blocks.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -188,7 +195,7 @@ fn addHostBuild(
     addGoldenFrames(tests, zstd.source);
     const tools = common.addTools(b, native, .{});
     addKzgReferences(b, target, tests, tools, support);
-    const reference = addReferenceTests(b, test_step, target, zstd, reference_tests);
+    const reference = addReferenceTests(b, test_step, target, zstd, ef_blocks, reference_tests);
     linkHostCrypto(b, target, &.{ tests, tools, reference });
 
     var tool_iter = tools.valueIterator();
@@ -247,6 +254,7 @@ fn addReferenceTests(
     test_step: *std.Build.Step,
     target: std.Build.ResolvedTarget,
     zstd: Zstd,
+    ef_blocks: *std.Build.Module,
     enabled: bool,
 ) std.StringHashMap(*std.Build.Step.Compile) {
     const none = std.StringHashMap(*std.Build.Step.Compile).init(b.allocator);
@@ -262,6 +270,7 @@ fn addReferenceTests(
         .imports = &.{
             .{ .name = "lineth_da", .module = package },
             .{ .name = "ef_fixtures", .module = paths.createModule() },
+            .{ .name = "ef_blocks", .module = ef_blocks },
         },
     }, .{ .dir = "test/reference" });
 }

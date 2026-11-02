@@ -104,6 +104,7 @@ const Host = struct {
         const package = common.createPackageModule(b, target, optimize, deps.package);
         const da_support = deps.lineth_da.module("support");
         const zstd_compressor = deps.lineth_da.module("zstd_compressor");
+        const ef_blocks = deps.lineth_da.module("ef_blocks");
         const support = b.createModule(.{
             .root_source_file = b.path("test/support.zig"),
             .target = target,
@@ -138,6 +139,7 @@ const Host = struct {
                     .{ .name = "lineth_da", .module = deps.lineth_da.module("lineth_da") },
                     .{ .name = "da_support", .module = da_support },
                     .{ .name = "zstd_compressor", .module = zstd_compressor },
+                    .{ .name = "ef_blocks", .module = ef_blocks },
                     .{ .name = "support", .module = support },
                     .{ .name = "scenario", .module = scenario },
                 }) catch @panic("OOM"),
