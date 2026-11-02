@@ -88,6 +88,16 @@ def set_code_with_nine_byte_nonce() -> Bytes:
     return Bytes(b"\x04" + rlp.encode(fields))
 
 
+def legacy_with_v(v: int) -> LegacyTransaction:
+    """A legacy transaction under a valid r and s whose `v` is `v`."""
+    return replace(sign(legacy_tx()), v=U256(v))
+
+
+# Neither 27, 28 nor 35 or 36 above twice the chain ID: values below the EIP-155 range, the neighbours of the chain's values, a
+# chain ID beyond 64 bits, and the widest 256-bit integer.
+INVALID_LEGACY_V = [0, 1, 26, 29, 34, 2 * int(CHAIN_ID) + 34, 2 * int(CHAIN_ID) + 37, 2 * 2**64 + 35, 2**256 - 1]
+
+
 def unsigned_fee_market_envelope_of_type(type_byte: int) -> Bytes:
     return Bytes(bytes([type_byte]) + wire(sign(typed_tx(FeeMarketTransaction)))[1:])
 
@@ -176,6 +186,10 @@ REJECTED_BLOCKS = [
     ),
     pytest.param(swapped_body, "transactions root", id="transaction swapped for another one by the same sender"),
     pytest.param(dropped_transaction, "transactions root", id="transaction missing from the body"),
+    *[
+        pytest.param(lambda v=v: block_rlp([wire(legacy_with_v(v))]), "bad v", id=f"legacy v of {v}")
+        for v in INVALID_LEGACY_V
+    ],
 ]
 
 

@@ -30,7 +30,9 @@ pub const Error = error{
     /// The bytes are not a canonical Amsterdam block, a transaction in it is not a canonical
     /// transaction of its type, or the transactions are not the ones the header commits to.
     MalformedBlock,
-    /// The sender of a transaction cannot be recovered under the chain ID, which has to be positive.
+    /// A transaction's signature does not recover a sender under the chain ID, which has to be
+    /// positive: its r or s is out of range, or the `v` of a legacy transaction is none of 27, 28
+    /// and 35 or 36 above twice the chain ID.
     SenderRecoveryFailed,
 };
 
@@ -73,6 +75,7 @@ pub fn truncateBlockRlp(output: Allocator, scratch: Allocator, block_rlp: []cons
     const transactions_root = executor.computeRawTxRoot(decoding, wire) catch return refusals.failure(error.MalformedBlock);
     if (!std.mem.eql(u8, &transactions_root, &header_fields.transactions_root)) return error.MalformedBlock;
 
+    try checkLegacySignatureValues(transactions_payload, chain_id);
     const decoded = rlp_decode.decodeTxList(decoding, transactions_payload) catch return refusals.failure(error.MalformedBlock);
     const senders_input = tx_decode.decodeTxsFromInput(decoding, decoded) catch return refusals.failure(error.MalformedBlock);
     if (decoded.len != wire.len) return error.MalformedBlock;
@@ -90,8 +93,6 @@ pub fn truncateBlockRlp(output: Allocator, scratch: Allocator, block_rlp: []cons
         if (!std.mem.eql(u8, &hash, &wire_hash)) return error.MalformedBlock;
 
         stripped_tx.* = try strippedTransaction(output, scratch, tx);
-        // An EIP-155 signature commits to its own chain ID, which has to be the chain's.
-        if (tx.tx_type == 0 and tx.chain_id != null and tx.chain_id.? != chain_id) return error.SenderRecoveryFailed;
         const sender = tx_signing.recoverSender(decoding, &tx_input, chain_id, .amsterdam) catch return refusals.failure(error.SenderRecoveryFailed);
         from.* = sender orelse return error.SenderRecoveryFailed;
     }
@@ -228,6 +229,23 @@ fn parseWithdrawal(payload: []const u8) Error!void {
     _ = try fields.fixed(20); // address
     _ = try fields.unsigned(u256); // amount
     if (!fields.atEnd()) return error.MalformedBlock;
+}
+
+/// The `v` of a legacy transaction is 27 or 28 for an unprotected signature, and 35 or 36 above
+/// twice the chain ID for an EIP-155 one, which commits to the chain ID.
+fn checkLegacySignatureValues(transactions_payload: []const u8, chain_id: u64) Error!void {
+    const protected: u256 = 35 + 2 * @as(u256, chain_id);
+    var entries = Reader{ .rest = transactions_payload };
+    while (!entries.atEnd()) {
+        const fields_payload = switch ((try entries.next()).value) {
+            .list => |payload| payload,
+            .bytes => continue,
+        };
+        var fields = Reader{ .rest = fields_payload };
+        for (0..6) |_| _ = try fields.next();
+        const v = try fields.unsigned(u256);
+        if (v != 27 and v != 28 and v != protected and v != protected + 1) return error.SenderRecoveryFailed;
+    }
 }
 
 /// The lists a transaction nests: its fields, an access list, an access-list entry and its keys.

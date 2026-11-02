@@ -318,6 +318,36 @@ test "signatures outside the accepted range do not recover a sender" {
     }
 }
 
+test "a legacy transaction whose v is none of 27, 28 and the chain's EIP-155 values is rejected" {
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    const a = arena.allocator();
+
+    const digest = try blocks.signingDigest(a, legacy_tx, chain_id, true);
+    const signature = secp256k1.sign(secretKey(46), digest);
+    const r = std.mem.readInt(u256, &signature.r, .big);
+    const s = std.mem.readInt(u256, &signature.s, .big);
+
+    const protected: u256 = 2 * @as(u256, chain_id) + 35;
+    const rejected = [_]u256{
+        0,
+        1,
+        26,
+        29,
+        34,
+        // The values of the neighbouring chain IDs.
+        protected - 1,
+        protected + 2,
+        // Beyond the chain IDs of a 64-bit integer, and the widest integer there is.
+        2 * (@as(u256, 1) << 64) + 35,
+        std.math.maxInt(u256),
+    };
+    for (rejected) |v| {
+        const forged = try blocks.withSignature(a, legacy_tx, chain_id, .{ .v = v, .r = r, .s = s });
+        try std.testing.expectError(error.SenderRecoveryFailed, truncate(a, try blockOf(a, &.{forged}), chain_id));
+    }
+}
+
 test "the payload of truncated blocks has the specified RLP layout" {
     // One block: [[timestamp, blockHash, prevRandao, [transaction…], [from…]]], worked out by hand.
     const one_block = [_]truncation.TruncatedBlock{.{
