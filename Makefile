@@ -33,7 +33,7 @@ clean-environment:
 
 RISCV_PROVER_MODE ?= dev-mock
 export RISCV_PROVER_MODE
-RISCV_COMPOSE_FILE := docker/compose-tracing-v2.yml -f docker/compose-riscv.yml
+RISCV_COMPOSE_FILE = docker/compose-tracing-v2.yml -f docker/compose-riscv.yml$(if $(OVERRIDE_COMPOSE_FILE), -f $(abspath $(OVERRIDE_COMPOSE_FILE)))
 
 start-env-with-riscv:
 	@test -f docker/config/prover/riscv/prover-ray-config.$(RISCV_PROVER_MODE).toml || \
