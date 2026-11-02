@@ -15,3 +15,7 @@ updates:
       include: "scope"
     cooldown:
       default-days: 7
+    groups:
+      # all github/codeql-action steps must use the same version
+      codeql-action:
+        patterns: ["github/codeql-action*"]

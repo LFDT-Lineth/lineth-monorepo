@@ -4,6 +4,7 @@
 
 - *(misc)* Update copyright holder to Consensys Incorporated (#4244)
 - *(deps)* Refresh dependencies (#4323)
+- *(misc)* Ship license files and metadata in all published artifacts (#4336)
 ## [1.0.2] - 2026-10-23
 
 ### 🐛 Bug Fixes

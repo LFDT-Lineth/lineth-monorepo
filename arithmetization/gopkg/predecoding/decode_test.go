@@ -82,11 +82,11 @@ func TestPredecodeRejectsInvalidExecutableRanges(t *testing.T) {
 			wantErr: "overflows address space",
 		},
 		{
-			name: "alignment overflow",
+			name: "above 4 GiB",
 			blobs: []elfmapping.Blob{{
-				Address: math.MaxUint64 - 4, Data: []byte{1, 2}, Executable: true,
+				Address: math.MaxUint32 - 4, Data: []byte{1, 2}, Executable: true,
 			}},
-			wantErr: "aligning executable span",
+			wantErr: "outside the 32-bit address space",
 		},
 	}
 	for _, test := range tests {
@@ -108,7 +108,7 @@ func TestDecodedProgramEncodeInputsReturnsFreshBytes(t *testing.T) {
 		secondDecoded = second[DecodedInput]
 	)
 	//
-	if got := first[InstructionBaseInput]; binary.BigEndian.Uint64(got.Bytes()) != program.InstructionBase {
+	if got := first[InstructionBaseInput]; uint64(binary.BigEndian.Uint32(got.Bytes())) != program.InstructionBase {
 		t.Errorf("instruction base = %#x, want %#x", got, program.InstructionBase)
 	}
 	//

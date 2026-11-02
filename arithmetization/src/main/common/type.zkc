@@ -1,4 +1,4 @@
-type Address = u64
+type Address = u32
 type Instruction = u32
 type Register = u5
 

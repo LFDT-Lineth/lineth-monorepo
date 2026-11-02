@@ -1,0 +1,6 @@
+version = "riscv-local"
+log_level = 4
+
+[execution]
+prover_mode = "dev-mock"
+requests_root_dir = "/data/prover/riscv/execution"

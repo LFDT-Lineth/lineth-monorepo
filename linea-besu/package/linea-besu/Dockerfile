@@ -26,6 +26,7 @@ USER besu
 WORKDIR /opt/besu
 
 COPY --chown=besu:besu besu /opt/besu/
+COPY besu/licenses/lineth/ /licenses/
 
 # Expose services ports
 # 8545 HTTP JSON-RPC
@@ -51,6 +52,7 @@ ENTRYPOINT ["besu"]
 HEALTHCHECK --start-period=5s --interval=5s --timeout=1s --retries=10 CMD bash -c "[ -f /tmp/pid ]"
 
 # Build-time metadata as defined at http://label-schema.org
+# Besu and the tracer plugin are Apache-2.0 only, so the image is Apache-2.0 (Lineth code is MIT OR Apache-2.0).
 ARG BUILD_DATE
 ARG VCS_REF
 LABEL org.label-schema.build-date=$BUILD_DATE \
@@ -61,4 +63,5 @@ LABEL org.label-schema.build-date=$BUILD_DATE \
       org.label-schema.vcs-url="https://github.com/besu-eth/besu.git" \
       org.label-schema.vendor="Hyperledger" \
       org.label-schema.version=$VERSION \
-      org.label-schema.schema-version="1.0"
+      org.label-schema.schema-version="1.0" \
+      org.opencontainers.image.licenses="Apache-2.0"

@@ -5,7 +5,7 @@
 
 const std = @import("std");
 
-const ssz = @import("guest_common_ssz");
+const ssz = @import("guest_common").ssz;
 
 test "readU32/writeU32 round-trip, little-endian" {
     var buf: [4]u8 = undefined;

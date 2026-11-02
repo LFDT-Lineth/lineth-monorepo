@@ -14,10 +14,12 @@ Run from the rollup_spec/ directory:  python -m pytest
 import json
 from pathlib import Path
 
+import ckzg
 import pytest
 
 import rollup_spec
 from ethereum.crypto.hash import Hash32
+from ethereum.crypto.kzg import KZGCommitment, kzg_commitment_to_versioned_hash
 from ethereum.state import Address
 from ethereum_types.numeric import U64
 
@@ -27,7 +29,7 @@ from rollup_spec.l2_execution import (
     L2ExecutionProof,
     L2ExecutionProofPublicInput,
 )
-from rollup_spec.rollup import RollupProof, RollupPublicInput
+from rollup_spec.rollup import RollupProof, RollupPublicInput, trusted_setup
 from rollup_spec.proof_io_v1 import (
     ProofIoError,
     decode_aggregation_request,
@@ -381,10 +383,11 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     assert req.conflations[1].block_rlps == [bytes.fromhex("f90215aa"), bytes.fromhex("f90216bb")]
 
     assert len(req.chunks) == 1
-    assert bytes(req.chunks[0].chunk_hash) == bytes([0x1A]) * 32
     assert req.chunks[0].is_calldata is False
     assert req.chunks[0].calldata_bytes == b""
     assert len(req.chunks[0].blob_bytes) == 131072
+    assert len(req.chunks[0].kzg_commitment) == 48
+    assert len(req.chunks[0].kzg_proof) == 48
 
     assert len(req.l2_execution_proofs) == 2
     verifiable = req.l2_execution_proofs[0]
@@ -452,15 +455,24 @@ def test_decode_rollup_request_malformed_chunk_hash_is_rejected() -> None:
         decode_rollup_request(req)
 
 
+def test_rollup_request_fixture_blob_chunk_carries_a_valid_blob_kzg_proof() -> None:
+    chunk = decode_rollup_request(_valid_rollup_request()).chunks[0]
+
+    assert kzg_commitment_to_versioned_hash(KZGCommitment(chunk.kzg_commitment)) == chunk.chunk_hash
+    assert ckzg.verify_blob_kzg_proof(chunk.blob_bytes, chunk.kzg_commitment, chunk.kzg_proof, trusted_setup())
+
+
 def test_decode_rollup_request_is_calldata_true_decodes() -> None:
     req = _valid_rollup_request()
-    req["proofRequest"]["chunks"][0]["isCalldata"] = True
-    req["proofRequest"]["chunks"][0]["calldataBytes"] = "0x" + "01" * 131073
-    req["proofRequest"]["chunks"][0]["blobBytes"] = "0x"
+    req["proofRequest"]["chunks"][0].update(
+        isCalldata=True, calldataBytes="0x" + "01" * 131073, blobBytes="0x", kzgCommitment="0x", kzgProof="0x",
+    )
     out = decode_rollup_request(req)
     assert out.chunks[0].is_calldata is True
     assert out.chunks[0].calldata_bytes == bytes([1]) * 131073
     assert out.chunks[0].blob_bytes == b""
+    assert out.chunks[0].kzg_commitment == b""
+    assert out.chunks[0].kzg_proof == b""
 
 
 @pytest.mark.parametrize("blob_hex", [None, "0x", "0x00"])
@@ -481,7 +493,27 @@ def test_calldata_chunk_requires_empty_physical_blob() -> None:
         decode_rollup_request(req)
 
 
-@pytest.mark.parametrize("field", ["isCalldata", "calldataBytes"])
+@pytest.mark.parametrize("field", ["kzgCommitment", "kzgProof"])
+@pytest.mark.parametrize("hex_value", ["0x", "0x00", "0x" + "00" * 47, "0x" + "00" * 49])
+def test_blob_chunk_requires_48_byte_kzg_fields(field, hex_value) -> None:
+    req = _valid_rollup_request()
+    req["proofRequest"]["chunks"][0][field] = hex_value
+    with pytest.raises(ProofIoError, match=f"{field}.*48 bytes"):
+        decode_rollup_request(req)
+
+
+@pytest.mark.parametrize("field", ["kzgCommitment", "kzgProof"])
+def test_calldata_chunk_requires_empty_kzg_fields(field) -> None:
+    req = _valid_rollup_request()
+    req["proofRequest"]["chunks"][0].update(
+        isCalldata=True, calldataBytes="0x01", blobBytes="0x", kzgCommitment="0x", kzgProof="0x",
+    )
+    req["proofRequest"]["chunks"][0][field] = "0x" + "00" * 48
+    with pytest.raises(ProofIoError, match=f"{field}.*empty for calldata"):
+        decode_rollup_request(req)
+
+
+@pytest.mark.parametrize("field", ["isCalldata", "calldataBytes", "kzgCommitment", "kzgProof"])
 def test_decode_rollup_request_missing_chunk_field_is_rejected(field) -> None:
     req = _valid_rollup_request()
     del req["proofRequest"]["chunks"][0][field]

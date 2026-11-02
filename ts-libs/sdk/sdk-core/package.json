@@ -46,7 +46,9 @@
     "test": "jest --bail --detectOpenHandles",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
-    "clean": "rimraf dist node_modules coverage"
+    "clean": "rimraf dist node_modules coverage",
+    "prepack": "cp ../../../LICENSE-APACHE ../../../LICENSE-MIT .",
+    "postpack": "rm -f LICENSE-APACHE LICENSE-MIT"
   },
   "devDependencies": {
     "@lfdt-lineth/eslint-config": "workspace:*",

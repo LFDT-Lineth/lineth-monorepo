@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const l2_execution_ssz = @import("l2_execution_ssz");
+const l2_execution_ssz = @import("l2_execution").l2_execution_ssz;
 
 fn repeat32(byte: u8) [32]u8 {
     return @splat(byte);

@@ -76,7 +76,7 @@ echo "==> native runner: runs in the image"
 # output format.
 FIXTURE_DIR="$SCRIPT_DIR/../../riscv-guests/l2_execution/test/testdata"
 if ! $DOCKER run --rm \
-        --entrypoint /opt/linea/prover-ray/l2-execution-runner \
+        --entrypoint /opt/linea/prover-ray/l2_execution_runner \
         -v "$FIXTURE_DIR:/in:ro" \
         "$IMAGE" /in/stateless_input.ssz --ssz > "$WORK/commitment.bin" 2>/dev/null; then
     echo "FAIL: native runner failed to run (missing library or exec error)"
@@ -101,7 +101,7 @@ log_level = 4
 [execution]
 prover_mode = "dev-zkvm"
 requests_root_dir = "/data"
-native_runner_bin = "/opt/linea/prover-ray/l2-execution-runner"
+native_runner_bin = "/opt/linea/prover-ray/l2_execution_runner"
 guest_elf = "/opt/linea/prover-ray/evm_execution_guest"
 TOML
 if ! $DOCKER run --rm \

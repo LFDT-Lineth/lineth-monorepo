@@ -1,5 +1,5 @@
 const std = @import("std");
-const zkc_machine = @import("zkc_machine");
+const zkc_machine = @import("support").zkc_machine;
 
 const min_output_size: usize = 34;
 

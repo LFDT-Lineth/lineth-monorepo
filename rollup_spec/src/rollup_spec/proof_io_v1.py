@@ -48,6 +48,7 @@ import json
 from typing import Any
 
 from ethereum.crypto.hash import Hash32
+from ethereum.crypto.kzg import BYTES_PER_COMMITMENT, BYTES_PER_PROOF
 from ethereum.state import Address
 from ethereum_types.numeric import U64
 
@@ -452,7 +453,8 @@ def _decode_chunk_witness(obj: dict, ctx: str) -> ChunkWitness:
     `chunkHash` is the anchored binding hash (a KZG versioned hash for a blob
     chunk, `keccak256(_compressedData)` for a calldata chunk — §3.1).
     `isCalldata` selects the in-guest check. `calldataBytes` contains the exact
-    submitted bytes for calldata and is empty for a blob.
+    submitted bytes for calldata and is empty for a blob. A blob carries its
+    48-byte `kzgCommitment` and `kzgProof`; calldata leaves both empty.
     """
     chunk_hash = Hash32(_bytes_from_hex(_require(obj, "chunkHash", ctx), f"{ctx}chunkHash"))
     is_calldata = _require(obj, "isCalldata", ctx)
@@ -468,11 +470,22 @@ def _decode_chunk_witness(obj: dict, ctx: str) -> ChunkWitness:
         raise ProofIoError(f"'{ctx}calldataBytes' must be nonempty for calldata")
     if not is_calldata and calldata_bytes:
         raise ProofIoError(f"'{ctx}calldataBytes' must be empty for a blob")
+    kzg_fields = {
+        name: _bytes_from_hex(_require(obj, name, ctx), f"{ctx}{name}")
+        for name in ("kzgCommitment", "kzgProof")
+    }
+    for name, expected_length in (("kzgCommitment", BYTES_PER_COMMITMENT), ("kzgProof", BYTES_PER_PROOF)):
+        if is_calldata and kzg_fields[name]:
+            raise ProofIoError(f"'{ctx}{name}' must be empty for calldata")
+        if not is_calldata and len(kzg_fields[name]) != expected_length:
+            raise ProofIoError(f"'{ctx}{name}' must be exactly {expected_length} bytes for a blob")
     return ChunkWitness(
         chunk_hash=chunk_hash,
         is_calldata=is_calldata,
         blob_bytes=blob_bytes,
         calldata_bytes=calldata_bytes,
+        kzg_commitment=kzg_fields["kzgCommitment"],
+        kzg_proof=kzg_fields["kzgProof"],
     )
 
 
