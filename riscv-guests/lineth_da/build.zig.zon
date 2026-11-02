@@ -11,8 +11,6 @@
         // -Dzkvm-provide, the zkvm_* crypto providers the package's sha256, keccak256 and KZG
         // point evaluation resolve to.
         .lineth_accelerators = .{ .path = "../lineth_accelerators" },
-        // The Constantine archive behind the host build of the crypto providers (fetched on demand).
-        .guest_crypto = .{ .path = "../guest_crypto_ctt" },
         // Block and transaction decoding, sender recovery and the crypto accelerator interface of
         // the truncation and the blob verification.
         .zesu = .{

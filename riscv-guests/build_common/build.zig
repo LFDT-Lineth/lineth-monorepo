@@ -184,10 +184,11 @@ pub const HostCrypto = struct {
     constantine: std.Build.LazyPath,
 
     /// `accelerators` is the `lineth_accelerators` dependency built with `-Dzkvm-provide` for the
-    /// native target. Null until the Constantine archive exists: it is fetched on demand and the
-    /// build reruns once it is.
+    /// native target, which publishes the Constantine archive of its provider as
+    /// `zkvm_provide_archive`. Null until that archive exists: it is fetched on demand and the build
+    /// reruns once it is.
     pub fn init(b: *std.Build, accelerators: *std.Build.Dependency) ?HostCrypto {
-        const constantine = b.dependency("guest_crypto", .{}).builder.named_lazy_paths.get("host_staticlib") orelse return null;
+        const constantine = accelerators.builder.named_lazy_paths.get("zkvm_provide_archive") orelse return null;
         return .{
             .provider = b.addObject(.{ .name = "zkvm_provide", .root_module = accelerators.module("zkvm_provide") }),
             .constantine = constantine,

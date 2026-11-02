@@ -49,7 +49,9 @@ pub fn build(b: *std.Build) void {
 
 /// The `zkvm_provide`, `guest_crypto` and `secp256k1_std` modules for `target`. The freestanding
 /// guest target links the rv64 Constantine archive and exports the guest-only `zkvm_*` symbols;
-/// every other target links the host archive and libc. The modules exist from the first configure
+/// every other target links the host archive and libc. The archive that `zkvm_provide` links is also
+/// published as the named lazy path `zkvm_provide_archive`, for a consumer that compiles the
+/// provider to an object and links the archive itself. The modules exist from the first configure
 /// pass on; the lazy dependencies are wired in once fetched, after which the build reruns.
 fn addCryptoProviders(
     b: *std.Build,
@@ -110,7 +112,9 @@ fn addCryptoProviders(
     const constantine = b.lazyDependency("guest_crypto_ctt", .{}) orelse return;
     const archive_name = if (is_guest) "riscv_staticlib" else "host_staticlib";
     // The archives exist once Constantine is fetched.
-    provide.addObjectFile(constantine.builder.named_lazy_paths.get(archive_name) orelse return);
+    const archive = constantine.builder.named_lazy_paths.get(archive_name) orelse return;
+    provide.addObjectFile(archive);
+    b.addNamedLazyPath("zkvm_provide_archive", archive);
 }
 
 /// One of zesu's C-free precompile implementations, behind `zesu_crypto_backend`.
