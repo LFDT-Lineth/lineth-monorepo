@@ -130,17 +130,35 @@ tasks.register('integrationTest',  Test) {
   testClassesDirs = sourceSets.integrationTest.output.classesDirs
 
   jvmArgs '-XX:+UseZGC'
-  maxHeapSize = "2048m"
-  // Limit concurrency to max(2, nCpu/2) and run one test class per JVM (forkEvery = 1) so each class is
-  // fully isolated (own statics, singletons, ForkJoinPool, log4j2 context). This overrides the root
-  // build.gradle default. The concurrency cap lives at the process
-  // level, so methods within a fork run sequentially (same_thread), overriding the root's concurrent mode.
-  // nCpu/2 is empirical headroom for cold JVM+Besu startup bursts: each class spins up several Besu+Maru
-  // nodes with real P2P, and over-subscribing the host makes timing-sensitive peer-discovery awaits flake.
-  maxParallelForks = Math.max(2, Runtime.runtime.availableProcessors().intdiv(2))
+  // Opt-in method-level concurrency: -PmaruItMethodParallel=N runs up to N test methods of a class
+  // concurrently inside its fork JVM (classes stay isolated one-per-JVM via forkEvery = 1). Default 1
+  // keeps methods sequential. Heap is raised for concurrent runs since a fork then hosts several
+  // clusters at once.
+  def methodParallel = (project.findProperty("maruItMethodParallel") ?: "1").toString().toInteger()
+  // Opt-in fork-count override for experiments: -PmaruItMaxForks=9 (default 0 = formula below).
+  def maxForksOverride = (project.findProperty("maruItMaxForks") ?: "0").toString().toInteger()
+  maxHeapSize = methodParallel > 1 ? "3072m" : "2048m"
+  // Run one test class per JVM (forkEvery = 1) so each class is fully isolated (own statics,
+  // singletons, ForkJoinPool, log4j2 context). This overrides the root build.gradle default.
+  // The concurrency cap lives at the process level, so methods within a fork run sequentially
+  // (same_thread) unless maruItMethodParallel > 1.
+  // Default min(nCpu, 9): measured on a 12-core host, 9 forks cut the suite from 9m10s (6 forks)
+  // to 5m20s with zero flakes. The cap of 9 keeps headroom for cold JVM+Besu startup bursts:
+  // each class spins up several Besu+Maru nodes with real P2P, and over-subscribing the host
+  // (e.g. 9 forks x 4 concurrent methods) makes timing-sensitive assertions flake.
+  maxParallelForks = maxForksOverride > 0 ?
+      maxForksOverride : Math.min(Runtime.runtime.availableProcessors(), 9)
   forkEvery = 1
-  systemProperties["junit.jupiter.execution.parallel.mode.default"] = "same_thread"
   systemProperties["junit.jupiter.execution.parallel.mode.classes.default"] = "same_thread"
+  if (methodParallel > 1) {
+    systemProperties["junit.jupiter.execution.parallel.enabled"] = "true"
+    systemProperties["junit.jupiter.execution.parallel.mode.default"] = "concurrent"
+    systemProperties["junit.jupiter.execution.parallel.config.strategy"] = "fixed"
+    systemProperties["junit.jupiter.execution.parallel.config.fixed.parallelism"] = methodParallel.toString()
+    systemProperties["junit.jupiter.execution.parallel.config.fixed.max-pool-size"] = methodParallel.toString()
+  } else {
+    systemProperties["junit.jupiter.execution.parallel.mode.default"] = "same_thread"
+  }
 
   // Isolate each test's logs into their own file under build/integrationTest-logs/. PerTestLoggingExtension
   // (auto-registered, see src/integrationTest/resources) tags each test thread via the log4j2 ThreadContext

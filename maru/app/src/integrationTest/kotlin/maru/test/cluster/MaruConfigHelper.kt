@@ -21,6 +21,7 @@ import maru.config.SyncingConfig
 import maru.config.SyncingConfig.SyncTargetSelection
 import maru.config.ValidatorElNode
 import maru.crypto.PrivateKeyGenerator
+import org.apache.logging.log4j.LogManager
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -63,6 +64,13 @@ fun initPersistence(
 ) {
   if (!Files.exists(persistence.privateKeyPath.parent)) Files.createDirectory(persistence.privateKeyPath.parent)
   Files.writeString(persistence.privateKeyPath, nodeKeyData.prefixedPrivateKey.encodeHex())
+  // Diagnostics for concurrent test runs: records which address was written to which key file, so a
+  // signer/genesis validator-set mismatch can be traced back to the file and the intended key.
+  LogManager.getLogger("maru.test.cluster.MaruConfigHelper").info(
+    "initPersistence: wrote key address={} to {}",
+    nodeKeyData.address.encodeHex(false),
+    persistence.privateKeyPath,
+  )
 }
 
 internal fun setQbftConfigIfSequencer(

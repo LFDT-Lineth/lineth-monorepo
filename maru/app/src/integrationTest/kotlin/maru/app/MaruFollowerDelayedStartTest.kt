@@ -12,11 +12,14 @@ import maru.test.cluster.NodeRole
 import maru.test.cluster.configureLoggers
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
+import org.awaitility.kotlin.await
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Amount
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import testutils.Checks.assertMinedBlocks
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 
 class MaruFollowerDelayedStartTest {
   private lateinit var cluster: MaruCluster
@@ -67,7 +70,23 @@ class MaruFollowerDelayedStartTest {
 
     followerBesuNode.assertMinedBlocks(blocksToProduce)
 
-    repeat(blocksToProduce) {
+    // The follower's Besu EL can hold the blocks while still reporting "not in sync" (txpool stays
+    // disabled until the sync flag flips), and that lag grows under CPU contention from parallel test
+    // forks. Retry the first send until the EL accepts it; failed sends never enter the pool.
+    await
+      .atMost(120.seconds.toJavaDuration())
+      .pollInterval(1.seconds.toJavaDuration())
+      .ignoreExceptions()
+      .untilAsserted {
+        transactionsHelper.run {
+          followerBesuNode.sendTransactionAndAssertExecution(
+            logger = log,
+            recipient = createAccount("another account"),
+            amount = Amount.ether(100),
+          )
+        }
+      }
+    repeat(blocksToProduce - 1) {
       transactionsHelper.run {
         followerBesuNode.sendTransactionAndAssertExecution(
           logger = log,

@@ -75,6 +75,10 @@ object PrivateKeyGenerator {
     )
   }
 
+  // Key derivation goes through libp2p/BouncyCastle internals whose thread safety we cannot fully
+  // audit. Concurrent test methods generate keys in parallel (e.g. two MultiValidatorNetwork
+  // instances starting in the same fork JVM), so serialize derivation to rule out torn KeyData.
+  @Synchronized
   fun getKeyData(privateKey: ByteArray): KeyData {
     // Sometimes keyPair has 1 byte more so we just take the last 32 bytes ¯\_(ツ)_/¯
     val normalizedPrivateKey = ensureKeyIsExactly32BytesLong(privateKey)
@@ -107,11 +111,13 @@ object PrivateKeyGenerator {
     return NodeKey(keyPairSecurityModule)
   }
 
+  @Synchronized
   fun getKeyDataByPrefixedKey(prefixedPrivateKey: ByteArray): KeyData {
     val privateKeyTyped = unmarshalPrivateKey(prefixedPrivateKey)
     return getKeyData(privateKeyTyped.raw())
   }
 
+  @Synchronized
   fun generatePrivateKey(): KeyData {
     val (privKey, pubKey) = generateKeyPair(KeyType.SECP256K1)
     return getKeyData(privKey.raw())
