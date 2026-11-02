@@ -42,6 +42,8 @@ permissions:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
   binary-run-and-zkc-check:
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
@@ -90,8 +92,14 @@ concurrency:
           KECCAK_ACCEL: false
           ZKC_TRACE_FLAGS: "--stats -vv --sharding interpreter:500000"
 
-      
-
-
-
+  notify:
+    needs: binary-run-and-zkc-check
+    if: ${{ always() && github.ref == 'refs/heads/main' && contains(needs.*.result, 'failure') }}
+    uses: ./.github/workflows/slack-notify-failed-jobs.yml
+    with:
+      title: "Tracer guest programs trace workflow Failed"
+      run_id: ${{ github.run_id }}
+    secrets:
+      channel_id: ${{ secrets.SLACK_ENGINEERING_ALERTS_CHANNEL_ID }}
+      slack_bot_token: ${{ secrets.SLACK_GITHUB_ACTIONS_ALERTS_BOT_TOKEN }}
 
