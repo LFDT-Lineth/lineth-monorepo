@@ -1,6 +1,5 @@
-//! Sample conflations: the canonical payload of blocks with signed random transactions, derived the
-//! way the rollup guest derives it from full blocks: each block truncated, the truncated blocks RLP
-//! encoded.
+//! Sample conflations: the canonical payload of blocks with signed random transactions: each block
+//! truncated by `encoding.truncation`, the truncated blocks encoded by `encodeBlocks`.
 
 const std = @import("std");
 

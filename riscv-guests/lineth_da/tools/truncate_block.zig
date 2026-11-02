@@ -1,4 +1,4 @@
-//! `truncate_block` — truncates full block RLPs the way the rollup guest does.
+//! `truncate_block` — truncates full block RLPs with `encoding.truncation` and prints their canonical payload.
 //!
 //! usage: truncate_block <chain-id> <block-rlp-file>...
 //!

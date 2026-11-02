@@ -70,7 +70,7 @@ pub const GuestOptions = struct {
     root_source_file: []const u8 = "src/main.zig",
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
-    /// Modules `src/main.zig` names: the package module and any dependency it uses directly.
+    /// Modules the entry point (`root_source_file`) names: the package module and any dependency it uses directly.
     imports: []const std.Build.Module.Import,
     code_model: std.builtin.CodeModel = .default,
 };

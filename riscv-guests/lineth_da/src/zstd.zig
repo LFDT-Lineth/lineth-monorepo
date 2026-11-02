@@ -28,8 +28,8 @@ pub const max_window_size: u64 = (1 << 27) + 1;
 
 const c = @import("zstd_c");
 
-/// `ZSTD_CONTENTSIZE_UNKNOWN`, the content size of a frame that declares none: a macro whose
-/// unsigned wrap-around the C translation does not evaluate.
+/// `ZSTD_CONTENTSIZE_UNKNOWN`, the content size of a frame that declares none: the largest 64-bit
+/// value, which the header spells as the wrap-around `0ULL - 1`.
 const content_size_unknown = std.math.maxInt(c_ulonglong);
 
 /// The linked libzstd release as `major * 10000 + minor * 100 + patch`.
