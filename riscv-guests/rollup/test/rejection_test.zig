@@ -311,6 +311,17 @@ test "proofs that leave a gap between their ranges are rejected" {
     try expectRejected(error.TilingBroken, guest_errors.CODE_TILING_CONTINUITY, a, request);
 }
 
+test "proofs whose ranges overlap are rejected" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+
+    var request = try requestOf(a, &.{ 2, 1 }, .{});
+    request.proofs[1].proof.start_block_number -= 1;
+    request.proofs[1].proof.public_inputs.end_block_number -= 1;
+    try expectRejected(error.TilingBroken, guest_errors.CODE_TILING_CONTINUITY, a, request);
+}
+
 test "a proof whose end block hash is not the hash of its last block is rejected" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
@@ -338,6 +349,17 @@ test "a block that does not descend from the block before it is rejected" {
 
     // Every proof, hash and segment agrees with the blocks, whose second one has another parent.
     const specs = [_]scenario.ConflationSpec{ .{ .blocks = 3, .detached_block = 1 }, .{} };
+    const request = try scenario.build(a, try scenario.conflations(a, .{}, &specs), .{});
+    try expectRejected(error.ParentHashMismatch, guest_errors.CODE_BLOCK_HASH_CHAIN, a, request);
+}
+
+test "a conflation whose first block does not descend from the last block of the conflation before it is rejected" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+
+    // The proofs continue each other, so only the parent hashes of the blocks reject the request.
+    const specs = [_]scenario.ConflationSpec{ .{ .blocks = 2 }, .{ .blocks = 2, .detached_block = 0 } };
     const request = try scenario.build(a, try scenario.conflations(a, .{}, &specs), .{});
     try expectRejected(error.ParentHashMismatch, guest_errors.CODE_BLOCK_HASH_CHAIN, a, request);
 }

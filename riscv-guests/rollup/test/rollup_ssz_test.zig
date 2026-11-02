@@ -368,6 +368,10 @@ test "decodeInput: rejects a chunk whose byte-list offsets are not the canonical
     std.mem.writeInt(u32, commitment_backwards[commitment_offset_pos..][0..4], chunk_head_size + 2, .little);
     try expectDecodeError(error.InvalidSsz, try frameOfChunks(alloc, &.{commitment_backwards}));
 
+    const proof_backwards = try alloc.dupe(u8, chunk);
+    std.mem.writeInt(u32, proof_backwards[proof_offset_pos..][0..4], chunk_head_size + 3 + 2 - 1, .little);
+    try expectDecodeError(error.InvalidSsz, try frameOfChunks(alloc, &.{proof_backwards}));
+
     const proof_past_end = try alloc.dupe(u8, chunk);
     std.mem.writeInt(u32, proof_past_end[proof_offset_pos..][0..4], @intCast(chunk.len + 1), .little);
     try expectDecodeError(error.InvalidSsz, try frameOfChunks(alloc, &.{proof_past_end}));
