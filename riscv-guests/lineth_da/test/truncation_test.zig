@@ -674,6 +674,28 @@ test "malformed transactions are rejected" {
     try std.testing.expectEqualSlices(u8, try blocks.stripped(a, creation), created.transactions[0]);
 }
 
+test "a heap too small for a valid block is reported as exhausted whichever step runs out" {
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    const a = arena.allocator();
+
+    var items: [vectors.len]Item = undefined;
+    for (vectors, &items, 0..) |vector, *item, i| item.* = try blocks.signed(a, vector.tx, chain_id, secretKey(@intCast(70 + i)));
+    const block = try blockOf(a, &items);
+
+    var buffer: [1 << 20]u8 = undefined;
+    var size: usize = 0;
+    const truncated = while (size <= buffer.len) : (size += 16) {
+        var heap = std.heap.FixedBufferAllocator.init(buffer[0..size]);
+        break truncation.truncateBlockRlp(a, heap.allocator(), block, chain_id) catch |err| {
+            try std.testing.expect(err == error.OutOfMemory);
+            continue;
+        };
+    } else return error.TestUnexpectedResult;
+    try std.testing.expect(size > 0);
+    try std.testing.expectEqual(vectors.len, truncated.transactions.len);
+}
+
 // Fields wider than the integers they are held in.
 
 const Field = enum { nonce, gas_limit, gas_price, max_priority_fee_per_gas, max_fee_per_blob_gas };

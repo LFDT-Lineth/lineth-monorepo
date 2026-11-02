@@ -25,6 +25,7 @@ pub const Hash = [32]u8;
 pub const Address = [20]u8;
 
 pub const Error = error{
+    /// An allocator refused a request, whichever step made it.
     OutOfMemory,
     /// The bytes are not a canonical Amsterdam block, a transaction in it is not a canonical
     /// transaction of its type, or the transactions are not the ones the header commits to.
@@ -64,12 +65,16 @@ pub fn truncateBlockRlp(output: Allocator, scratch: Allocator, block_rlp: []cons
     while (!ommers.atEnd()) _ = try parseHeader(try (try ommers.next()).listPayload());
     while (!withdrawals.atEnd()) try parseWithdrawal(try (try withdrawals.next()).listPayload());
 
+    // zesu reports a request its allocator refuses as a rejected encoding; the record tells the two apart.
+    var refusals: Refusals = .{ .backing = scratch };
+    const decoding = refusals.allocator();
+
     const wire = try wireTransactions(scratch, transactions_payload);
-    const transactions_root = executor.computeRawTxRoot(scratch, wire) catch |err| return decodeFailure(err);
+    const transactions_root = executor.computeRawTxRoot(decoding, wire) catch return refusals.failure(error.MalformedBlock);
     if (!std.mem.eql(u8, &transactions_root, &header_fields.transactions_root)) return error.MalformedBlock;
 
-    const decoded = rlp_decode.decodeTxList(scratch, transactions_payload) catch |err| return decodeFailure(err);
-    const senders_input = tx_decode.decodeTxsFromInput(scratch, decoded) catch |err| return decodeFailure(err);
+    const decoded = rlp_decode.decodeTxList(decoding, transactions_payload) catch return refusals.failure(error.MalformedBlock);
+    const senders_input = tx_decode.decodeTxsFromInput(decoding, decoded) catch return refusals.failure(error.MalformedBlock);
     if (decoded.len != wire.len) return error.MalformedBlock;
 
     const stripped = try output.alloc([]const u8, decoded.len);
@@ -79,7 +84,7 @@ pub fn truncateBlockRlp(output: Allocator, scratch: Allocator, block_rlp: []cons
         if (tx.to == null and (tx.tx_type == 3 or tx.tx_type == 4)) return error.MalformedBlock;
         if (tx.tx_type == 3 and tx.blob_hashes.len == 0) return error.MalformedBlock;
         // The decoded fields are the transaction's own when they encode back to its bytes.
-        const hash = tx_signing.txHash(scratch, &tx_input, chain_id) catch |err| return decodeFailure(err);
+        const hash = tx_signing.txHash(decoding, &tx_input, chain_id) catch return refusals.failure(error.MalformedBlock);
         var wire_hash: Hash = undefined;
         accelerators.keccak256(wire_tx, &wire_hash);
         if (!std.mem.eql(u8, &hash, &wire_hash)) return error.MalformedBlock;
@@ -87,10 +92,7 @@ pub fn truncateBlockRlp(output: Allocator, scratch: Allocator, block_rlp: []cons
         stripped_tx.* = try strippedTransaction(output, scratch, tx);
         // An EIP-155 signature commits to its own chain ID, which has to be the chain's.
         if (tx.tx_type == 0 and tx.chain_id != null and tx.chain_id.? != chain_id) return error.SenderRecoveryFailed;
-        const sender = tx_signing.recoverSender(scratch, &tx_input, chain_id, .amsterdam) catch |err| switch (err) {
-            error.OutOfMemory => return error.OutOfMemory,
-            else => return error.SenderRecoveryFailed,
-        };
+        const sender = tx_signing.recoverSender(decoding, &tx_input, chain_id, .amsterdam) catch return refusals.failure(error.SenderRecoveryFailed);
         from.* = sender orelse return error.SenderRecoveryFailed;
     }
 
@@ -289,9 +291,44 @@ fn singleListPayload(encoded: []const u8) Error![]const u8 {
     return payload;
 }
 
-fn decodeFailure(err: anyerror) Error {
-    return if (err == error.OutOfMemory) error.OutOfMemory else error.MalformedBlock;
-}
+/// An allocator that records whether its backing allocator refused a request.
+const Refusals = struct {
+    backing: Allocator,
+    refused: bool = false,
+
+    const vtable: Allocator.VTable = .{ .alloc = alloc, .resize = resize, .remap = remap, .free = free };
+
+    fn allocator(self: *Refusals) Allocator {
+        return .{ .ptr = self, .vtable = &vtable };
+    }
+
+    /// `rejection` unless a request was refused, which is `error.OutOfMemory`.
+    fn failure(self: Refusals, rejection: Error) Error {
+        return if (self.refused) error.OutOfMemory else rejection;
+    }
+
+    fn alloc(context: *anyopaque, len: usize, alignment: std.mem.Alignment, ret_addr: usize) ?[*]u8 {
+        const self: *Refusals = @ptrCast(@alignCast(context));
+        const memory = self.backing.rawAlloc(len, alignment, ret_addr);
+        if (memory == null) self.refused = true;
+        return memory;
+    }
+
+    fn resize(context: *anyopaque, memory: []u8, alignment: std.mem.Alignment, new_len: usize, ret_addr: usize) bool {
+        const self: *Refusals = @ptrCast(@alignCast(context));
+        return self.backing.rawResize(memory, alignment, new_len, ret_addr);
+    }
+
+    fn remap(context: *anyopaque, memory: []u8, alignment: std.mem.Alignment, new_len: usize, ret_addr: usize) ?[*]u8 {
+        const self: *Refusals = @ptrCast(@alignCast(context));
+        return self.backing.rawRemap(memory, alignment, new_len, ret_addr);
+    }
+
+    fn free(context: *anyopaque, memory: []u8, alignment: std.mem.Alignment, ret_addr: usize) void {
+        const self: *Refusals = @ptrCast(@alignCast(context));
+        self.backing.rawFree(memory, alignment, ret_addr);
+    }
+};
 
 /// Reads consecutive canonical RLP items.
 const Reader = struct {
