@@ -27,6 +27,7 @@ const ssz_decode = @import("zesu_ssz_decode");
 const zesu_allocator = @import("zesu_allocator");
 const rlp_decode = @import("zesu_rlp_decode");
 const l2_execution_ssz = @import("l2_execution_ssz.zig");
+const guest_common = @import("guest_common");
 const l2_execution_proof = @import("core_serde").l2_execution_proof;
 
 const execution = @import("execution.zig");
@@ -183,20 +184,9 @@ fn scanL2MessageServiceLogs(
     return scan;
 }
 
-fn lessThanAddress(_: void, a: [20]u8, b: [20]u8) bool {
-    return std.mem.order(u8, &a, &b) == .lt;
-}
-
 /// Distinct addresses, sorted ascending by byte value (mirrors `merge_filtered_addresses`).
 fn mergeFilteredAddresses(alloc: std.mem.Allocator, list: *std.ArrayListUnmanaged([20]u8)) ![][20]u8 {
-    std.mem.sort([20]u8, list.items, {}, lessThanAddress);
-    var n: usize = 0;
-    for (list.items) |a| {
-        if (n > 0 and std.mem.eql(u8, &list.items[n - 1], &a)) continue;
-        list.items[n] = a;
-        n += 1;
-    }
-    list.items.len = n;
+    list.items.len = guest_common.lists.sortedDistinct(20, list.items).len;
     return list.toOwnedSlice(alloc);
 }
 

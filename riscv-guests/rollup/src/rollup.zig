@@ -12,6 +12,7 @@
 const std = @import("std");
 const lineth_da = @import("lineth_da");
 const core_serde = @import("core_serde");
+const guest_common = @import("guest_common");
 const canonical = @import("canonical.zig");
 const chain = @import("chain.zig");
 const messaging_offsets = @import("messaging_offsets.zig");
@@ -122,8 +123,8 @@ pub fn run(allocator: Allocator, input: rollup_ssz.RollupProofPrivateInput) Erro
         .parent_data_tail_take_bytes = input.parent_data_tail_take_bytes,
         .final_data_tail_discard_bytes = verified.final_data_tail_discard_bytes,
         .l2_l1_messages = l2_l1_messages,
-        .filtered_addresses = sortedDistinct(20, all_addresses),
-        .program_vks = sortedDistinct(32, program_vks),
+        .filtered_addresses = guest_common.lists.sortedDistinct(20, all_addresses),
+        .program_vks = guest_common.lists.sortedDistinct(32, program_vks),
         .block_count = range_end - range_start + 1,
         .l2_messaging_blocks_offsets = offsets,
     };
@@ -161,22 +162,4 @@ fn concatHashes(allocator: Allocator, conflations: []const canonical.Conflation,
         next += part.len;
     }
     return hashes;
-}
-
-/// The distinct elements of `items`, sorted ascending bytewise, in place at the head of `items`.
-fn sortedDistinct(comptime n: usize, items: [][n]u8) []const [n]u8 {
-    std.mem.sort([n]u8, items, {}, struct {
-        fn lessThan(_: void, a: [n]u8, b: [n]u8) bool {
-            return std.mem.order(u8, &a, &b) == .lt;
-        }
-    }.lessThan);
-
-    var unique_count: usize = 0;
-    for (items) |item| {
-        if (unique_count == 0 or !std.mem.eql(u8, &item, &items[unique_count - 1])) {
-            items[unique_count] = item;
-            unique_count += 1;
-        }
-    }
-    return items[0..unique_count];
 }

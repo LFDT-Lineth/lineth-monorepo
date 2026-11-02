@@ -1,3 +1,4 @@
 //! Generic primitives shared by riscv-guests programs. Pure `std`, freestanding-safe.
 
 pub const ssz = @import("ssz.zig");
+pub const lists = @import("lists.zig");
