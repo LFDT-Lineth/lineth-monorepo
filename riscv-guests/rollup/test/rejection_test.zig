@@ -433,18 +433,20 @@ test "an offset beyond the proof's blocks is rejected" {
     try expectRejected(error.InvalidMessagingOffsets, guest_errors.CODE_MESSAGING_OFFSETS, a, request);
 }
 
-test "an offset that does not fit 16 bits once rebased is rejected" {
+test "an offset rebases to 65535 but not to 65536" {
     var pi = std.mem.zeroes(l2_execution_proof.L2ExecutionProofPublicInput);
-    pi.end_block_number = 70_001;
+    pi.end_block_number = 65_536;
     pi.block_count = 2;
-    pi.l2_messaging_blocks_offsets = &.{ 1, 2 };
-    const proof_at_70_000: l2_execution_proof.L2ExecutionProof = .{ .public_inputs = pi, .start_block_number = 70_000, .proof = &.{} };
+    pi.l2_messaging_blocks_offsets = &.{1};
+    // The proof starts at block 65535, which is 65534 blocks after the first block of the rollup proof.
+    var proof: l2_execution_proof.L2ExecutionProof = .{ .public_inputs = pi, .start_block_number = 65_535, .proof = &.{} };
 
-    // Relative to block 1 the offsets are 70000 and 70001, relative to block 69000 they are 1001 and 1002.
     var out: [2]u16 = undefined;
-    try std.testing.expectError(error.InvalidMessagingOffsets, messaging_offsets.rebase(proof_at_70_000, 1, &out));
-    try messaging_offsets.rebase(proof_at_70_000, 69_000, &out);
-    try std.testing.expectEqualSlices(u16, &.{ 1001, 1002 }, &out);
+    try messaging_offsets.rebase(proof, 1, out[0..1]);
+    try std.testing.expectEqual(@as(u16, 65_535), out[0]);
+
+    proof.public_inputs.l2_messaging_blocks_offsets = &.{ 1, 2 };
+    try std.testing.expectError(error.InvalidMessagingOffsets, messaging_offsets.rebase(proof, 1, &out));
 }
 
 // ── Bounds and resources ─────────────────────────────────────────────────────────────────────────

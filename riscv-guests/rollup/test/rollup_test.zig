@@ -117,8 +117,12 @@ fn threeProofs() [3]scenario.ProofSpec {
     };
 }
 
+fn threeRequest(a: Allocator, conflations: []const scenario.Conflation, proofs: []const scenario.ProofSpec) !scenario.Request {
+    return scenario.build(a, conflations, .{ .proofs = proofs });
+}
+
 fn threeConflations(a: Allocator, proofs: []const scenario.ProofSpec) !scenario.Request {
-    return scenario.build(a, try scenario.conflations(a, .{}, &three_conflations), .{ .proofs = proofs });
+    return threeRequest(a, try scenario.conflations(a, .{}, &three_conflations), proofs);
 }
 
 test "the public inputs of three conflations combine their proofs" {
@@ -127,11 +131,16 @@ test "the public inputs of three conflations combine their proofs" {
     const a = arena.allocator();
 
     const proofs = threeProofs();
-    const pi = try run(a, try threeConflations(a, &proofs));
+    const conflations = try scenario.conflations(a, .{}, &three_conflations);
+    const pi = try run(a, try threeRequest(a, conflations, &proofs));
 
     // Blocks 100 to 105.
     try std.testing.expectEqual(@as(u64, 105), pi.end_block_number);
     try std.testing.expectEqual(@as(u64, 6), pi.block_count);
+    // The chain ends with the last conflation's last block and descends from the first conflation's parent.
+    try std.testing.expectEqual(conflations[2].end_timestamp, pi.end_block_timestamp);
+    try std.testing.expectEqualSlices(u8, &conflations[2].end_hash, &pi.end_block_hash);
+    try std.testing.expectEqualSlices(u8, &conflations[0].parent_hash, &pi.parent_block_hash);
     try std.testing.expectEqualSlices(u8, &scenario.ftxHash(0), &pi.parent_ftx_rolling_hash);
     try std.testing.expectEqual(@as(u64, 10), pi.parent_ftx_number);
     try std.testing.expectEqualSlices(u8, &scenario.ftxHash(3), &pi.end_ftx_rolling_hash);
