@@ -58,6 +58,13 @@ pub fn setAllocator(allocator: std.mem.Allocator) void {
     guest_allocator = .{ .ptr = allocator.ptr, .vtable = allocator.vtable };
 }
 
+/// Builds the KZG trusted-setup context from the heap `setAllocator` installed. Called before any
+/// other allocation, it takes the same first bytes of the heap whatever the input. False when the
+/// heap refuses it.
+pub fn initKzg() bool {
+    return guest_crypto.initKzgContext();
+}
+
 const secp256k1 = switch (build_options.secp256k1_backend) {
     .std => secp256k1_std,
     .constantine => guest_crypto,

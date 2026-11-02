@@ -24,8 +24,8 @@ pub const CODE_BOUNDS_VIOLATION: ExitCode = 4;
 /// The request has no conflation or no l2-execution proof, or its conflations and proofs are not
 /// paired one to one.
 pub const CODE_MALFORMED_REQUEST: ExitCode = 5;
-/// The output value was computed but its SSZ encoding failed (allocator exhaustion within the
-/// guest's fixed heap).
+/// The output value was computed but its SSZ encoder rejected it: a list beyond the bound of the
+/// output's wire schema.
 pub const CODE_OUTPUT_ENCODE_FAILED: ExitCode = 6;
 /// Steps 1 and 3: a full block RLP is not an accepted block or its sender cannot be recovered, a
 /// conflation's block count differs from its proof's range, or the senders do not hash to the

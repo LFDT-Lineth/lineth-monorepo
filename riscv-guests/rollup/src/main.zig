@@ -33,6 +33,9 @@ fn guestMain() callconv(.c) noreturn {
     var fba = std.heap.FixedBufferAllocator.init(heap);
     const allocator = fba.allocator();
     zkvm_provide.setAllocator(allocator);
+    // The KZG trusted-setup context is built before any input-dependent allocation, so it takes the
+    // same heap prefix for every input.
+    if (!zkvm_provide.initKzg()) exit(guest_errors.exitCode(error.OutOfMemory));
 
     var buf_ptr: [*]const u8 = undefined;
     var buf_size: usize = undefined;
@@ -51,7 +54,10 @@ fn guestMain() callconv(.c) noreturn {
 fn runRollupGuest(allocator: std.mem.Allocator, raw_input: []const u8) ![]const u8 {
     const decoded = try rollup_ssz.decodeInput(allocator, raw_input);
     const public_inputs = try rollup.run(allocator, decoded);
-    return rollup_proof.encodeOutput(allocator, public_inputs) catch return error.OutputEncodeFailed;
+    return rollup_proof.encodeOutput(allocator, public_inputs) catch |err| switch (err) {
+        error.OutOfMemory => error.OutOfMemory,
+        else => error.OutputEncodeFailed,
+    };
 }
 
 comptime {

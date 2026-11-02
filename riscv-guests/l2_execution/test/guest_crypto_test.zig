@@ -249,6 +249,11 @@ test "kzg point evaluation: official vector verifies" {
     try std.testing.expect(gc.kzgPointEvalVerify(&kzg_commitment, &kzg_z, &kzg_y, &kzg_proof));
 }
 
+test "kzg context: the embedded trusted setup builds on request and serves the official vector" {
+    try std.testing.expect(gc.initKzgContext());
+    try std.testing.expect(gc.kzgPointEvalVerify(&kzg_commitment, &kzg_z, &kzg_y, &kzg_proof));
+}
+
 test "kzg point evaluation: tampered claimed value fails verification" {
     var y_bad = kzg_y;
     y_bad[31] ^= 0x01;
