@@ -236,5 +236,5 @@ pub fn encodeOutput(alloc: std.mem.Allocator, pi: L2ExecutionProofPublicInput) !
 pub fn hashPublicInputs(alloc: std.mem.Allocator, pi: L2ExecutionProofPublicInput) ![32]u8 {
     const body = try encodePublicInputs(alloc, pi);
     defer alloc.free(body);
-    return output_frame.commitment(OUTPUT_SCHEMA_ID, body);
+    return output_frame.commitment(alloc, OUTPUT_SCHEMA_ID, body);
 }

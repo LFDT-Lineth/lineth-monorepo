@@ -186,5 +186,5 @@ pub fn decodeOutput(alloc: std.mem.Allocator, bytes: []const u8) !RollupPublicIn
 pub fn hashPublicInputs(alloc: std.mem.Allocator, pi: RollupPublicInput) ![32]u8 {
     const body = try encodePublicInputs(alloc, pi);
     defer alloc.free(body);
-    return output_frame.commitment(OUTPUT_SCHEMA_ID, body);
+    return output_frame.commitment(alloc, OUTPUT_SCHEMA_ID, body);
 }
