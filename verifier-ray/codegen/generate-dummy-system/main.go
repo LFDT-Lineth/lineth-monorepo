@@ -1,5 +1,6 @@
-// Command generate-dummy-system compiles the minimal dummy arithmetization
-// circuit, proves one deterministic 40-cell statement, and emits:
+// Command generate-dummy-system compiles the minimal devmode arithmetization
+// circuit from prover-ray/backend/devmode, proves one deterministic 40-cell
+// statement, and emits:
 //   - testdata/generated/dummy_system.zig: the verifier's compiled system
 //   - testdata/dummy_proof_image.bin: the single proof image relocated for GuestBase
 //   - testdata/dummy_proof_pair_image.bin: the two-proof aggregator pair image relocated for GuestBase
@@ -13,6 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/devmode"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/proofserialization"
 	verifierraycodegen "github.com/consensys/linea-monorepo/verifier-ray/codegen"
 )
@@ -35,9 +37,9 @@ func main() {
 
 func run(zigOnly bool) error {
 	if zigOnly {
-		sys, err := verifierraycodegen.NewDummySystem()
+		sys, err := devmode.NewSystem()
 		if err != nil {
-			return fmt.Errorf("NewDummySystem: %w", err)
+			return fmt.Errorf("devmode.NewSystem: %w", err)
 		}
 		compiled, err := verifierraycodegen.BuildCompiledSystem(sys)
 		if err != nil {
