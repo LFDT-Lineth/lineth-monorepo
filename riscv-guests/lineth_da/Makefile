@@ -4,15 +4,8 @@
 # Makefile fans `compile`/`test`/`fetch`/`clean` out to this file. The package is a library;
 # `compile` links its freestanding rv64im smoke guests, the proof that the package module and the
 # crypto and C libraries behind it build and link on the guest target. `exec`/`debug` run the smoke
-# guest SMOKE under the ZKC interpreter:
-#   zstd        decompresses INPUT, a zstd frame compressed against the package dictionary, and
-#               publishes the decompressed bytes (a default INPUT is generated);
-#   blob        verifies the EIP-4844 proof of INPUT (48-byte commitment, 48-byte proof, 131072-byte
-#               blob) and publishes the versioned hash (a default INPUT is generated);
-#   truncation  truncates INPUT (the chain ID as 8 big-endian bytes, then a full block's RLP) and
-#               publishes the block hash, the parent hash and the canonical payload;
-#   decompress  verifies the DA stream in INPUT (one conflation in one chunk) and publishes the end
-#               dataRollingHash and the unconsumed tail count (a default INPUT is generated).
+# guest SMOKE (zstd, blob, truncation or decompress) under the ZKC interpreter. The default INPUT is
+# generated for zstd, blob and decompress; truncation needs INPUT=path/to/input.ssz.
 
 .PHONY: fetch test clean compile exec debug require-input
 

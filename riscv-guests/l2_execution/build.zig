@@ -102,7 +102,7 @@ fn addGuestProgram(b: *std.Build, options: Options) void {
 /// What native tests and tools share: build settings, the host crypto provider, the support module and the named test and fixture steps.
 const Host = struct {
     native: common.NativeOptions,
-    crypto: Crypto,
+    crypto: common.HostCrypto,
     zesu: *std.Build.Dependency,
     support: *std.Build.Module,
     test_step: *std.Build.Step,
@@ -111,7 +111,6 @@ const Host = struct {
 
     /// Null until the Constantine archive exists: it is fetched on demand and the build reruns once it is.
     fn init(b: *std.Build, options: Options) ?Host {
-        const archive = b.dependency("guest_crypto", .{}).builder.named_lazy_paths.get("host_staticlib") orelse return null;
         // Host artifacts never build at ReleaseSmall: zig 0.16 -Oz miscompiles zesu's value-semantics
         // hot paths on aarch64 hosts (stack slots of by-value hash-map captures and `self` receivers
         // are recycled while still live), giving SIGSEGVs and wrong results across the EF zkevm
@@ -123,6 +122,8 @@ const Host = struct {
         // so host-specific extensions (e.g. AVX-512 on the build machine) would SIGILL on older
         // or emulated (Rosetta) x86_64 hosts.
         const target = b.resolveTargetQuery(.{ .cpu_model = .baseline });
+        const accelerators = acceleratorsDependency(b, target, optimize, false, options.secp256k1_backend);
+        const crypto = common.HostCrypto.init(b, accelerators) orelse return null;
         const zlob = b.lazyDependency("zlob", .{ .target = target, .optimize = optimize }) orelse
             @panic("zlob dependency is required for native test and helper targets");
         const zesu = b.dependency("zesu", .{
@@ -130,12 +131,9 @@ const Host = struct {
             .optimize = optimize,
             .@"crypto-backend" = .@"extern",
         });
-        const accelerators = acceleratorsDependency(b, target, optimize, false, options.secp256k1_backend);
         const deps = Deps.init(b, target, optimize, zesu, accelerators);
         const package = common.createPackageModule(b, target, optimize, deps.package);
         const support = supportModule(b, target, optimize, deps, package, zlob);
-        // The Constantine-backed `zkvm_*` provider the guest links, as an object for native roots.
-        const provider = b.addObject(.{ .name = "zkvm_provide", .root_module = accelerators.module("zkvm_provide") });
 
         const test_step = b.step("test", "Run native Zig unit tests for the EVM execution guest");
         const extended_vanilla_step = b.step("extended-vanilla", "Reference-test guard: assert the dummy-wrapped extended guest (runL2Execution) agrees with the EF fixture's own expected validity over EF zkevm fixtures");
@@ -155,7 +153,7 @@ const Host = struct {
                     .{ .name = "zlob", .module = zlob.module("zlob") },
                 } }),
             },
-            .crypto = .{ .provider = provider, .constantine = archive },
+            .crypto = crypto,
             .zesu = zesu,
             .support = support,
             .test_step = test_step,
@@ -398,21 +396,3 @@ fn zesuImports(zesu: *std.Build.Dependency) [13]Import {
 fn concatImports(b: *std.Build, parts: []const []const Import) []const Import {
     return std.mem.concat(b.allocator, Import, parts) catch @panic("OOM");
 }
-
-/// The host crypto provider native tests and tools link against: the Constantine-backed `zkvm_*`
-/// object plus the Constantine archive.
-const Crypto = struct {
-    provider: *std.Build.Step.Compile,
-    constantine: std.Build.LazyPath,
-
-    fn link(crypto: Crypto, step: *std.Build.Step.Compile) void {
-        step.root_module.addObject(crypto.provider);
-        step.root_module.addObjectFile(crypto.constantine);
-        step.root_module.link_libc = true;
-    }
-
-    fn linkAll(crypto: Crypto, artifacts: std.StringHashMap(*std.Build.Step.Compile)) void {
-        var it = artifacts.valueIterator();
-        while (it.next()) |artifact| crypto.link(artifact.*);
-    }
-};

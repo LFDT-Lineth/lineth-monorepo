@@ -56,12 +56,9 @@ const compressor_sources = [_][]const u8{
 pub fn build(b: *std.Build) void {
     common.requireZigVersion();
 
-    // Same freestanding rv64im ZkC profile as every guest (shared helper); a consumer that passes
-    // its own target via b.dependency overrides this default.
+    // All guests target the same freestanding rv64im profile.
     const target = common.standardGuestTarget(b);
-    // Use b.option directly (not standardOptimizeOption) so the `-Doptimize` enum option stays
-    // exposed — consumers set it through `b.dependency(..., .{ .optimize = ... })` — while still
-    // defaulting to ReleaseSmall.
+    // Keep `-Doptimize` exposed to dependency consumers and default to ReleaseSmall.
     const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseSmall)") orelse .ReleaseSmall;
 
     const zstd_source = b.dependency("zstd", .{});
@@ -109,8 +106,8 @@ fn scalarModule(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.b
     });
 }
 
-/// The native tests and tools. Like every other `b.addTest` artifact in this tree, these run on
-/// the native host: a freestanding riscv64 target has no OS to run a `std.testing` binary against.
+/// The native tests and tools run on the host: a freestanding riscv64 target has no OS to run a
+/// `std.testing` binary against.
 fn addHostBuild(b: *std.Build, zstd_source: *std.Build.Dependency) void {
     const target = b.resolveTargetQuery(.{});
     const imports = packageImports(b, target, .Debug);
@@ -170,9 +167,14 @@ fn addHostBuild(b: *std.Build, zstd_source: *std.Build.Dependency) void {
         tools.get("blob_sample").?.root_module.addImport("reference_vectors", reference_vectors);
     }
 
-    // The tests and tools that reach sha256, keccak256, the KZG point evaluation or sender
-    // recovery link the host build of the zkvm_* providers.
-    if (Crypto.init(b, target)) |crypto| {
+    // Every native test and tool links the host build of the zkvm_* providers.
+    // Optimized: the compiler's own linker crashes on a debug-built provider object.
+    const accelerators = b.dependency("lineth_accelerators", .{
+        .target = target,
+        .optimize = .ReleaseSafe,
+        .@"zkvm-provide" = true,
+    });
+    if (common.HostCrypto.init(b, accelerators)) |crypto| {
         crypto.linkAll(tests);
         crypto.linkAll(tools);
     }
@@ -180,39 +182,6 @@ fn addHostBuild(b: *std.Build, zstd_source: *std.Build.Dependency) void {
     var tool_iter = tools.valueIterator();
     while (tool_iter.next()) |tool| b.installArtifact(tool.*);
 }
-
-/// The host build of the zkvm_* providers: the Constantine-backed provider module as an object and
-/// the Constantine archive it needs, linked into native roots.
-const Crypto = struct {
-    provider: *std.Build.Step.Compile,
-    constantine: std.Build.LazyPath,
-
-    /// Null until the Constantine archive exists: it is fetched on demand and the build reruns once it is.
-    fn init(b: *std.Build, target: std.Build.ResolvedTarget) ?Crypto {
-        const constantine = b.dependency("guest_crypto", .{}).builder.named_lazy_paths.get("host_staticlib") orelse return null;
-        // Optimized: the compiler's own linker crashes on a debug-built provider object.
-        const accelerators = b.dependency("lineth_accelerators", .{
-            .target = target,
-            .optimize = .ReleaseSafe,
-            .@"zkvm-provide" = true,
-        });
-        return .{
-            .provider = b.addObject(.{ .name = "zkvm_provide", .root_module = accelerators.module("zkvm_provide") }),
-            .constantine = constantine,
-        };
-    }
-
-    fn link(crypto: Crypto, artifact: *std.Build.Step.Compile) void {
-        artifact.root_module.addObject(crypto.provider);
-        artifact.root_module.addObjectFile(crypto.constantine);
-        artifact.root_module.link_libc = true;
-    }
-
-    fn linkAll(crypto: Crypto, artifacts: std.StringHashMap(*std.Build.Step.Compile)) void {
-        var it = artifacts.valueIterator();
-        while (it.next()) |artifact| crypto.link(artifact.*);
-    }
-};
 
 /// The smoke guests: freestanding rv64im programs that run one part of the package on the guest
 /// target. Each is its own ELF, named `<smoke>_smoke`; `-Dsmoke` selects the one `zig build` links.
@@ -248,15 +217,14 @@ fn addSmokeGuest(
     // the zkvm_* symbols the package declares.
     if (smoke != .zstd) imports.append(b.allocator, .{ .name = "zkvm_provide", .module = accelerators.module("zkvm_provide") }) catch @panic("OOM");
 
-    const module = b.createModule(.{
-        .root_source_file = b.path(b.fmt("test/smoke/{s}_smoke.zig", .{@tagName(smoke)})),
+    common.addGuest(b, .{
+        .name = b.fmt("{s}_smoke", .{@tagName(smoke)}),
+        .root_source_file = b.fmt("test/smoke/{s}_smoke.zig", .{@tagName(smoke)}),
         .target = target,
         .optimize = optimize,
         .imports = imports.items,
         .code_model = .medium,
     });
-    common.clearFreestandingNativeLinkage(b, module);
-    common.installGuestElf(b, module, b.fmt("{s}_smoke", .{@tagName(smoke)}));
 }
 
 /// Wires the package module's embedded dictionary and the libzstd decoder behind its `zstd`
