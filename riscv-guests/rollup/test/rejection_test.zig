@@ -509,13 +509,28 @@ test "a maximal list of distinct filtered addresses split between two proofs is 
     try std.testing.expectEqualSlices(Address, addresses, pi.filtered_addresses);
 }
 
-test "an allocator that refuses a request ends the run in the out-of-memory category" {
+test "an allocator that refuses any one request ends the run in the out-of-memory category" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
     const a = arena.allocator();
 
-    const request = try requestOf(a, &.{1}, .{});
-    var failing = std.testing.FailingAllocator.init(a, .{ .fail_index = 1 });
-    try std.testing.expectError(error.OutOfMemory, rollup.rollup.run(failing.allocator(), request.input()));
-    try std.testing.expectEqual(guest_errors.CODE_OUT_OF_MEMORY, guest_errors.exitCode(error.OutOfMemory));
+    // One blob and one calldata chunk: the run decodes, binds, verifies and decompresses both and
+    // encodes the output.
+    const request = try requestOf(a, &.{ 2, 1 }, .{ .chunks = &.{ .{ .own = .{ .bytes = 20 } }, .{ .kind = .calldata } } });
+    const frame = try rollup_ssz.encodeInput(a, request.input());
+    const expected = try core_serde.rollup_proof.encodeOutput(a, try rollup.rollup.run(a, request.input()));
+
+    var fail_index: usize = 0;
+    while (true) : (fail_index += 1) {
+        var run_arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+        defer run_arena.deinit();
+        var failing = std.testing.FailingAllocator.init(run_arena.allocator(), .{ .fail_index = fail_index });
+        const output = rollup.rollup.runFramed(failing.allocator(), frame) catch |err| {
+            try std.testing.expectEqual(guest_errors.CODE_OUT_OF_MEMORY, guest_errors.exitCode(err));
+            continue;
+        };
+        try std.testing.expectEqualSlices(u8, expected, output);
+        break;
+    }
+    try std.testing.expect(fail_index > 0);
 }
