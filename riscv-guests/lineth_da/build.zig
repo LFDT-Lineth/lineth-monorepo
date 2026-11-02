@@ -72,7 +72,6 @@ pub fn build(b: *std.Build) void {
     addPackageSources(b, package, zstd);
     if (target.result.os.tag == .freestanding) addSmokeGuest(b, package, target, optimize);
 
-    // Consumers of the package build the guest side only.
     const host_tools = b.option(bool, "host-tools", "Build the native tests and tools: fetches the reference vectors and builds the host crypto providers") orelse false;
     const reference_tests = b.option(bool, "reference-tests", "With host-tools, also run the truncation reference test over the EF zkevm fixtures, which fetches them (default: true)") orelse true;
     if (host_tools) addHostBuild(b, zstd, target, reference_tests);
@@ -181,7 +180,7 @@ fn addHostBuild(b: *std.Build, package_zstd: Zstd, package_target: std.Build.Res
     addGoldenFrames(tests, zstd.source);
     const tools = common.addTools(b, native, .{});
     addKzgReferences(b, target, tests, tools, support);
-    const reference = if (reference_tests) addReferenceTests(b, test_step, target, zstd) else std.StringHashMap(*std.Build.Step.Compile).init(b.allocator);
+    const reference = addReferenceTests(b, test_step, target, zstd, reference_tests);
     linkHostCrypto(b, target, &.{ tests, tools, reference });
 
     var tool_iter = tools.valueIterator();
@@ -239,14 +238,17 @@ fn linkHostCrypto(b: *std.Build, target: std.Build.ResolvedTarget, artifacts: []
 }
 
 /// The `test/reference/*_test.zig` suites, run by `test` once the EF zkevm fixtures, which are
-/// fetched on demand, are available. They are compiled optimized: the corpus is gigabytes of JSON.
+/// fetched on demand, are available; none when `enabled` is false. They are compiled optimized: the
+/// corpus is gigabytes of JSON.
 fn addReferenceTests(
     b: *std.Build,
     test_step: *std.Build.Step,
     target: std.Build.ResolvedTarget,
     zstd: Zstd,
+    enabled: bool,
 ) std.StringHashMap(*std.Build.Step.Compile) {
     const none = std.StringHashMap(*std.Build.Step.Compile).init(b.allocator);
+    if (!enabled) return none;
     const fixtures = b.lazyDependency("execution_spec_tests_zkevm", .{}) orelse return none;
 
     const paths = b.addOptions();

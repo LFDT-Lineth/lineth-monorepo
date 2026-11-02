@@ -4,7 +4,6 @@ const common = @import("build_common");
 const Import = std.Build.Module.Import;
 const Compile = std.Build.Step.Compile;
 const Tools = std.StringHashMap(*Compile);
-const Secp256k1Backend = enum { std, constantine };
 
 pub fn build(b: *std.Build) void {
     common.requireZigVersion();
@@ -26,10 +25,7 @@ pub fn build(b: *std.Build) void {
 const Options = struct {
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
-    /// Keccak provider: the arithmetization wrapper (prover-accelerated custom op) or standard zig keccak.
-    keccak_accel: bool,
-    /// secp256k1 ecrecover/verify provider: standard zig or the Constantine staticlib.
-    secp256k1_backend: Secp256k1Backend,
+    crypto: common.CryptoOptions,
     fixtures_link: []const u8,
     zkc_smoke_input: []const u8,
     host_tools: bool,
@@ -39,40 +35,19 @@ const Options = struct {
         const target = common.standardGuestTarget(b);
         // Keep `-Doptimize` exposed to dependency consumers and default to ReleaseSmall.
         const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseSmall)") orelse .ReleaseSmall;
-        const keccak_accel = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: unaccelerated)") orelse false;
-        const secp256k1_backend = b.option(Secp256k1Backend, "secp256k1-backend", "secp256k1 ecrecover/verify provider: std (default) or constantine") orelse .std;
         const fixtures_link = b.option([]const u8, "execution-specs-fixtures-link", "Path where execution-specs zkevm fixtures are exposed") orelse "/tmp/execution-specs-json-fixtures/fixtures";
         const zkc_smoke_input = b.option([]const u8, "zkc-smoke-input", "Extended SSZ input for the ZkC smoke test") orelse "test/testdata/stateless_input.ssz";
         const host_tools = b.option(bool, "host-tools", "Build native test and helper targets") orelse false;
         return .{
             .target = target,
             .optimize = optimize,
-            .keccak_accel = keccak_accel,
-            .secp256k1_backend = secp256k1_backend,
+            .crypto = common.CryptoOptions.parse(b),
             .fixtures_link = fixtures_link,
             .zkc_smoke_input = zkc_smoke_input,
             .host_tools = host_tools,
         };
     }
 };
-
-/// The accelerator package with its opt-in `zkvm_*` providers. The wrappers and every provider
-/// module come from this one instance, so they share one set of sources and build options.
-fn acceleratorsDependency(
-    b: *std.Build,
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
-    keccak_accel: bool,
-    secp256k1_backend: Secp256k1Backend,
-) *std.Build.Dependency {
-    return b.dependency("lineth_accelerators", .{
-        .target = target,
-        .optimize = optimize,
-        .@"zkvm-provide" = true,
-        .@"keccak-accel" = keccak_accel,
-        .@"secp256k1-backend" = secp256k1_backend,
-    });
-}
 
 /// The self-contained rv64im guest ELF (execution, crypto, accelerators, input I/O).
 fn addGuestProgram(b: *std.Build, options: Options) void {
@@ -81,7 +56,7 @@ fn addGuestProgram(b: *std.Build, options: Options) void {
         .optimize = options.optimize,
         .@"crypto-backend" = .@"extern",
     });
-    const accelerators = acceleratorsDependency(b, options.target, options.optimize, options.keccak_accel, options.secp256k1_backend);
+    const accelerators = common.acceleratorsDependency(b, options.target, options.optimize, options.crypto);
     const deps = Deps.init(b, options.target, options.optimize, zesu, accelerators);
 
     const package = common.createPackageModule(b, options.target, options.optimize, deps.package);
@@ -122,7 +97,7 @@ const Host = struct {
         // so host-specific extensions (e.g. AVX-512 on the build machine) would SIGILL on older
         // or emulated (Rosetta) x86_64 hosts.
         const target = b.resolveTargetQuery(.{ .cpu_model = .baseline });
-        const accelerators = acceleratorsDependency(b, target, optimize, false, options.secp256k1_backend);
+        const accelerators = common.acceleratorsDependency(b, target, optimize, options.crypto.native());
         const crypto = common.HostCrypto.init(b, accelerators) orelse return null;
         const zlob = b.lazyDependency("zlob", .{ .target = target, .optimize = optimize }) orelse
             @panic("zlob dependency is required for native test and helper targets");

@@ -4,7 +4,6 @@ const common = @import("build_common");
 const Import = std.Build.Module.Import;
 const Compile = std.Build.Step.Compile;
 const Tools = std.StringHashMap(*Compile);
-const Secp256k1Backend = enum { std, constantine };
 
 pub fn build(b: *std.Build) void {
     common.requireZigVersion();
@@ -25,10 +24,7 @@ pub fn build(b: *std.Build) void {
 const Options = struct {
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
-    /// Keccak provider: the arithmetization wrapper (prover-accelerated custom op) or standard zig keccak.
-    keccak_accel: bool,
-    /// secp256k1 ecrecover/verify provider: standard zig or the Constantine staticlib.
-    secp256k1_backend: Secp256k1Backend,
+    crypto: common.CryptoOptions,
     host_tools: bool,
     reference_tests: bool,
     host_target: std.Build.ResolvedTarget,
@@ -38,39 +34,18 @@ const Options = struct {
         const target = common.standardGuestTarget(b);
         // Keep `-Doptimize` exposed to dependency consumers and default to ReleaseSmall.
         const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseSmall)") orelse .ReleaseSmall;
-        const keccak_accel = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: unaccelerated)") orelse false;
-        const secp256k1_backend = b.option(Secp256k1Backend, "secp256k1-backend", "secp256k1 ecrecover/verify provider: std (default) or constantine") orelse .std;
         const host_tools = b.option(bool, "host-tools", "Build native test and helper targets") orelse false;
         const reference_tests = b.option(bool, "reference-tests", "Wire the reference-test step over the EF zkevm fixtures (fetches them)") orelse false;
         return .{
             .target = target,
             .optimize = optimize,
-            .keccak_accel = keccak_accel,
-            .secp256k1_backend = secp256k1_backend,
+            .crypto = common.CryptoOptions.parse(b),
             .host_tools = host_tools,
             .reference_tests = reference_tests,
             .host_target = b.resolveTargetQuery(.{}),
         };
     }
 };
-
-/// The accelerator package with its opt-in `zkvm_*` providers. The wrappers and every provider
-/// module come from this one instance, so they share one set of sources and build options.
-fn acceleratorsDependency(
-    b: *std.Build,
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
-    keccak_accel: bool,
-    secp256k1_backend: Secp256k1Backend,
-) *std.Build.Dependency {
-    return b.dependency("lineth_accelerators", .{
-        .target = target,
-        .optimize = optimize,
-        .@"zkvm-provide" = true,
-        .@"keccak-accel" = keccak_accel,
-        .@"secp256k1-backend" = secp256k1_backend,
-    });
-}
 
 /// What the sources of the package import by name, for one target.
 const Deps = struct {
@@ -103,7 +78,7 @@ const Deps = struct {
 /// The self-contained rv64im guest ELF (rollup statement, data-availability verification, crypto,
 /// input I/O).
 fn addGuestProgram(b: *std.Build, options: Options) void {
-    const accelerators = acceleratorsDependency(b, options.target, options.optimize, options.keccak_accel, options.secp256k1_backend);
+    const accelerators = common.acceleratorsDependency(b, options.target, options.optimize, options.crypto);
     const deps = Deps.init(b, options.target, options.optimize, false);
     const package = common.createPackageModule(b, options.target, options.optimize, deps.package);
     common.addGuest(b, .{
@@ -124,14 +99,13 @@ fn addGuestProgram(b: *std.Build, options: Options) void {
 /// Constantine archive exists: it is fetched on demand and the build reruns once it is.
 fn hostCrypto(b: *std.Build, options: Options) ?common.HostCrypto {
     // Optimized: the compiler's own linker crashes on a debug-built provider object.
-    const accelerators = acceleratorsDependency(b, options.host_target, .ReleaseSafe, false, options.secp256k1_backend);
+    const accelerators = common.acceleratorsDependency(b, options.host_target, .ReleaseSafe, options.crypto.native());
     return common.HostCrypto.init(b, accelerators);
 }
 
 /// What the native tests and tools of one optimize mode share: the modules they import.
 const Host = struct {
     native: common.NativeOptions,
-    deps: Deps,
 
     fn init(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) Host {
         const deps = Deps.init(b, target, optimize, true);
@@ -176,7 +150,6 @@ const Host = struct {
                     .{ .name = "scenario", .module = scenario },
                 }) catch @panic("OOM"),
             },
-            .deps = deps,
         };
     }
 };
