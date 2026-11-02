@@ -18,8 +18,10 @@
 
 const std = @import("std");
 const core_serde = @import("core_serde");
+const lineth_da = @import("lineth_da");
 const ssz = @import("guest_common").ssz;
 
+const blob_kzg = lineth_da.encoding.blob_kzg;
 const l2_execution_proof = core_serde.l2_execution_proof;
 const rollup_proof = core_serde.rollup_proof;
 
@@ -40,9 +42,9 @@ pub const MAX_BYTES_PER_BLOCK_RLP: usize = 1 << 24;
 /// 16 MiB: a single calldata submission.
 pub const MAX_CALLDATA_BYTES_PER_CHUNK: usize = 1 << 24;
 /// An EIP-4844 blob: 4096 field elements of 32 bytes.
-pub const BLOB_BYTES_LENGTH: usize = 4096 * 32;
-pub const BYTES_PER_COMMITMENT: usize = 48;
-pub const BYTES_PER_PROOF: usize = 48;
+pub const BLOB_BYTES_LENGTH = lineth_da.encoding.blob_payload.blob_len;
+pub const BYTES_PER_COMMITMENT = blob_kzg.commitment_len;
+pub const BYTES_PER_PROOF = blob_kzg.proof_len;
 
 // ── Logical values ────────────────────────────────────────────────────────────
 
@@ -53,14 +55,7 @@ pub const ConflationWitness = struct {
 
 /// One touched chunk: its anchored hash, its declared kind and the bytes it is checked against. A
 /// blob carries its physical bytes, commitment and proof; calldata its exact submission.
-pub const ChunkWitness = struct {
-    chunk_hash: [32]u8,
-    is_calldata: bool,
-    blob_bytes: []const u8 = &.{},
-    calldata_bytes: []const u8 = &.{},
-    kzg_commitment: []const u8 = &.{},
-    kzg_proof: []const u8 = &.{},
-};
+pub const ChunkWitness = lineth_da.decompress.Chunk;
 
 pub const RollupProofPrivateInput = struct {
     parent_data_rolling_hash: [32]u8,

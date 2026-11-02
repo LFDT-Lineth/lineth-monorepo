@@ -5,9 +5,9 @@
 //! The steps run in this order: the canonical payload of every conflation and its binding to the
 //! paired proof (`canonical`), the chunks bound to their hashes and the stream parsed and
 //! decompressed against the canonical payloads (`lineth_da.decompress`), the tiling of the proofs,
-//! the recursive verification of every proof (`recursion`), the continuity between the proofs and
-//! the binding of the proofs to the conflations' blocks (`chain`), and the assembly of the public
-//! inputs.
+//! the recursive verification of every proof (`recursion`), the binding of the proofs to the
+//! conflations' blocks and the continuity between the proofs (`chain`), and the assembly of the
+//! public inputs.
 
 const std = @import("std");
 const lineth_da = @import("lineth_da");
@@ -20,11 +20,9 @@ const rollup_ssz = @import("rollup_ssz.zig");
 
 const Allocator = std.mem.Allocator;
 const decompress = lineth_da.decompress;
-const l2_execution_proof = core_serde.l2_execution_proof;
 const rollup_proof = core_serde.rollup_proof;
 
-pub const Error = canonical.Error || decompress.Error || lineth_da.zstd.Error || chain.Error || messaging_offsets.Error ||
-    recursion.Error || error{
+pub const Error = canonical.Error || decompress.Error || chain.Error || messaging_offsets.Error || recursion.Error || error{
     /// The request has no conflation or no proof, or the conflations and the proofs are not paired
     /// one to one.
     InvalidRequest,
@@ -127,21 +125,16 @@ pub fn run(allocator: Allocator, input: rollup_ssz.RollupProofPrivateInput) Erro
 /// The chunks bound to their hashes and the stream they carry parsed and decompressed against the
 /// canonical `payloads`.
 fn verifyDataAvailability(allocator: Allocator, input: rollup_ssz.RollupProofPrivateInput, payloads: []const []const u8) Error!decompress.Verified {
-    const chunks = try allocator.alloc(decompress.Chunk, input.chunks.len);
-    for (input.chunks, chunks) |witness, *chunk| chunk.* = .{
-        .chunk_hash = witness.chunk_hash,
-        .is_calldata = witness.is_calldata,
-        .blob_bytes = witness.blob_bytes,
-        .calldata_bytes = witness.calldata_bytes,
-        .kzg_commitment = witness.kzg_commitment,
-        .kzg_proof = witness.kzg_proof,
+    const decoder = lineth_da.zstd.Decoder.init(allocator, lineth_da.dictionary_v2025_04_21) catch |err| switch (err) {
+        error.OutOfMemory => return error.OutOfMemory,
+        // The embedded dictionary is a well-formed zstd dictionary.
+        error.InvalidDictionary => unreachable,
     };
-    const decoder = try lineth_da.zstd.Decoder.init(allocator, lineth_da.dictionary_v2025_04_21);
     defer decoder.deinit();
     return decompress.verifyDaChunks(
         allocator,
         decoder,
-        chunks,
+        input.chunks,
         payloads,
         input.parent_data_rolling_hash,
         input.parent_data_tail_take_bytes,

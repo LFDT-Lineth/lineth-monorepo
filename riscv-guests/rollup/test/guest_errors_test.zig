@@ -2,7 +2,18 @@
 
 const std = @import("std");
 
-const guest_errors = @import("rollup").guest_errors;
+const rollup = @import("rollup");
+
+const guest_errors = rollup.guest_errors;
+
+/// The errors of a function that returns an error union.
+fn ErrorsOf(comptime function: anytype) type {
+    return @typeInfo(@typeInfo(@TypeOf(function)).@"fn".return_type.?).error_union.error_set;
+}
+
+/// Every error the guest's pipeline can end in: those of decoding the input, of the statement and
+/// the output encoder's rejection.
+const guest_error_sets = [_]type{ ErrorsOf(rollup.rollup_ssz.decodeInput), rollup.rollup.Error, error{OutputEncodeFailed} };
 
 fn expectCode(code: u64, err: anyerror) !void {
     try std.testing.expectEqual(code, guest_errors.exitCode(err));
@@ -38,6 +49,18 @@ test "every rejection of the statement exits with the category of its step" {
     try expectCode(16, error.OutOfMemory);
 }
 
+test "every error the guest returns exits with a named category" {
+    comptime {
+        for (guest_error_sets) |Set| {
+            for (@typeInfo(Set).error_set.?) |e| {
+                if (guest_errors.exitCode(@field(Set, e.name)) == guest_errors.CODE_UNKNOWN) {
+                    @compileError("the guest returns '" ++ e.name ++ "', which exits with the unknown category: add an arm to guest_errors.exitCode");
+                }
+            }
+        }
+    }
+}
+
 test "an error the guest does not name exits with the unknown category" {
-    try expectCode(1, error.InvalidDictionary);
+    try expectCode(1, error.NotAnErrorOfTheGuest);
 }

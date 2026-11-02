@@ -51,7 +51,7 @@ pub const Decoder = struct {
     };
 
     /// The decoder borrows `dictionary` for its whole lifetime.
-    pub fn init(allocator: Allocator, dictionary: []const u8) Error!Decoder {
+    pub fn init(allocator: Allocator, dictionary: []const u8) error{ OutOfMemory, InvalidDictionary }!Decoder {
         const state = try allocator.create(State);
         errdefer allocator.destroy(state);
         state.exhausted = false;

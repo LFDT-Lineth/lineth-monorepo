@@ -56,40 +56,6 @@ pub const CODE_MESSAGING_OFFSETS: ExitCode = 15;
 /// An allocator refused a request within the guest's fixed heap.
 pub const CODE_OUT_OF_MEMORY: ExitCode = 16;
 
-/// Every error a rollup guest function deliberately returns, in `exitCode`'s arm order.
-pub const rollup_errors = error{
-    MalformedFrame,
-    InvalidSsz,
-    BoundsViolation,
-    InvalidRequest,
-    OutputEncodeFailed,
-    MalformedBlock,
-    SenderRecoveryFailed,
-    BlockCountMismatch,
-    SendersHashMismatch,
-    NoChunks,
-    MalformedChunk,
-    NonCanonicalBlob,
-    ChunkHashMismatch,
-    BoundaryPreimageMismatch,
-    BlobKzgMismatch,
-    PartialBlobBeforeBlob,
-    InvalidTailTake,
-    MissingSegmentLength,
-    InvalidSegmentLength,
-    ChunkOwnsNoBytes,
-    CalldataEndsMidSegment,
-    InvalidFrame,
-    PayloadMismatch,
-    RecursiveProofRejected,
-    EndBlockHashMismatch,
-    ParentHashMismatch,
-    TilingBroken,
-    ContinuityBroken,
-    InvalidMessagingOffsets,
-    OutOfMemory,
-};
-
 /// Maps a guest failure to its deterministic, category-stable exit code.
 pub fn exitCode(err: anyerror) ExitCode {
     return switch (err) {
