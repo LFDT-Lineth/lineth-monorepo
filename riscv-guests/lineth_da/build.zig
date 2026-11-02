@@ -74,7 +74,7 @@ pub fn build(b: *std.Build) void {
 
     // Consumers of the package build the guest side only.
     const host_tools = b.option(bool, "host-tools", "Build the native tests and tools: fetches the reference vectors and builds the host crypto providers") orelse false;
-    if (host_tools) addHostBuild(b);
+    if (host_tools) addHostBuild(b, zstd, target);
 }
 
 /// libzstd for one target: the release's sources and its C declarations translated for Zig.
@@ -133,13 +133,16 @@ fn hostPackage(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.bu
 }
 
 /// The native tests and tools run on the host: a freestanding riscv64 target has no OS to run a
-/// `std.testing` binary against.
-fn addHostBuild(b: *std.Build) void {
+/// `std.testing` binary against. The test-side encoders and signers (`support`) and the zstd
+/// compressor (`zstd_compressor`) are modules of the package for the tests of its consumers. When
+/// the package itself is built for a native target, the compressor shares its libzstd declarations,
+/// which one compilation can hold only once.
+fn addHostBuild(b: *std.Build, package_zstd: Zstd, package_target: std.Build.ResolvedTarget) void {
     const target = b.resolveTargetQuery(.{});
-    const zstd = Zstd.init(b, target);
+    const zstd = if (package_target.result.os.tag == .freestanding) Zstd.init(b, target) else package_zstd;
     const package = hostPackage(b, target, .Debug, zstd);
 
-    const compressor = b.createModule(.{
+    const compressor = b.addModule("zstd_compressor", .{
         .root_source_file = b.path("test/zstd_compressor.zig"),
         .target = target,
         .optimize = .Debug,
@@ -147,7 +150,7 @@ fn addHostBuild(b: *std.Build) void {
     });
     compressor.addCSourceFiles(.{ .root = zstd.source.path("lib"), .files = &compressor_sources });
 
-    const support = b.createModule(.{
+    const support = b.addModule("support", .{
         .root_source_file = b.path("test/support/root.zig"),
         .target = target,
         .optimize = .Debug,
