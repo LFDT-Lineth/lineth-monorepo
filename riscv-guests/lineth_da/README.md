@@ -27,6 +27,8 @@ const bytes = try decoder.decompress(frame, out_buffer); // out_buffer.len bound
 | freestanding rv64im (guest) | decoder only | none: `src/freestanding_c` supplies the two headers libzstd includes (`string.h`, `stdlib.h`); the `mem*` routines come from Zig's compiler runtime and libzstd's default allocation path reports exhaustion |
 | native (tests, tools) | decoder, and the single-threaded compressor behind `test/zstd_compressor.zig` | the host libc |
 
+The C declarations the package and the compressor use (types, constants, signatures) are translated from libzstd's own headers, `zstd.h` with `ZSTD_STATIC_LINKING_ONLY` and `zstd_errors.h`, once per target by `build.zig` and imported as `zstd_c`.
+
 The decoder sources are compiled with `-ffunction-sections -fdata-sections`, so the linker keeps only what the guest calls, and with `-DZSTD_DISABLE_ASM`, so the portable decoder loops replace libzstd's x86-64 assembly on every target.
 
 ## `encoding`

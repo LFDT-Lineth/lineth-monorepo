@@ -2,36 +2,7 @@
 
 const std = @import("std");
 
-const c = struct {
-    const CCtx = opaque {};
-
-    const InBuffer = extern struct { src: ?*const anyopaque, size: usize, pos: usize };
-    const OutBuffer = extern struct { dst: ?*anyopaque, size: usize, pos: usize };
-
-    const param_compression_level: c_int = 100;
-    const param_window_log: c_int = 101;
-    const param_content_size_flag: c_int = 200;
-    const param_checksum_flag: c_int = 201;
-    const param_dict_id_flag: c_int = 202;
-
-    const end_flush: c_int = 1;
-    const end_frame: c_int = 2;
-
-    extern fn ZSTD_isError(code: usize) c_uint;
-    extern fn ZSTD_compressBound(src_size: usize) usize;
-    extern fn ZSTD_createCCtx() ?*CCtx;
-    extern fn ZSTD_freeCCtx(cctx: ?*CCtx) usize;
-    extern fn ZSTD_CCtx_setParameter(cctx: *CCtx, param: c_int, value: c_int) usize;
-    extern fn ZSTD_CCtx_loadDictionary(cctx: *CCtx, dict: ?*const anyopaque, dict_size: usize) usize;
-    extern fn ZSTD_compress2(
-        cctx: *CCtx,
-        dst: ?*anyopaque,
-        dst_capacity: usize,
-        src: ?*const anyopaque,
-        src_size: usize,
-    ) usize;
-    extern fn ZSTD_compressStream2(cctx: *CCtx, output: *OutBuffer, input: *InBuffer, end_op: c_int) usize;
-};
+const c = @import("zstd_c");
 
 pub const Options = struct {
     level: i32 = 3,
@@ -54,11 +25,11 @@ pub const Options = struct {
 pub fn compress(allocator: std.mem.Allocator, payload: []const u8, options: Options) ![]u8 {
     const cctx = c.ZSTD_createCCtx() orelse return error.OutOfMemory;
     defer _ = c.ZSTD_freeCCtx(cctx);
-    try check(c.ZSTD_CCtx_setParameter(cctx, c.param_compression_level, options.level));
-    try check(c.ZSTD_CCtx_setParameter(cctx, c.param_content_size_flag, @intFromBool(options.content_size)));
-    try check(c.ZSTD_CCtx_setParameter(cctx, c.param_checksum_flag, @intFromBool(options.checksum)));
-    try check(c.ZSTD_CCtx_setParameter(cctx, c.param_dict_id_flag, @intFromBool(options.dictionary_id)));
-    if (options.window_log != 0) try check(c.ZSTD_CCtx_setParameter(cctx, c.param_window_log, options.window_log));
+    try check(c.ZSTD_CCtx_setParameter(cctx, c.ZSTD_c_compressionLevel, options.level));
+    try check(c.ZSTD_CCtx_setParameter(cctx, c.ZSTD_c_contentSizeFlag, @intFromBool(options.content_size)));
+    try check(c.ZSTD_CCtx_setParameter(cctx, c.ZSTD_c_checksumFlag, @intFromBool(options.checksum)));
+    try check(c.ZSTD_CCtx_setParameter(cctx, c.ZSTD_c_dictIDFlag, @intFromBool(options.dictionary_id)));
+    if (options.window_log != 0) try check(c.ZSTD_CCtx_setParameter(cctx, c.ZSTD_c_windowLog, options.window_log));
     if (options.dictionary) |dictionary| try check(c.ZSTD_CCtx_loadDictionary(cctx, dictionary.ptr, dictionary.len));
 
     const block_overhead = 32;
@@ -73,21 +44,21 @@ pub fn compress(allocator: std.mem.Allocator, payload: []const u8, options: Opti
     return allocator.realloc(out, len);
 }
 
-fn compressInBlocks(cctx: *c.CCtx, out: []u8, payload: []const u8, block_len: usize) !usize {
-    var output: c.OutBuffer = .{ .dst = out.ptr, .size = out.len, .pos = 0 };
+fn compressInBlocks(cctx: *c.ZSTD_CCtx, out: []u8, payload: []const u8, block_len: usize) !usize {
+    var output: c.ZSTD_outBuffer = .{ .dst = out.ptr, .size = out.len, .pos = 0 };
     var start: usize = 0;
     while (start < payload.len) : (start += block_len) {
         const chunk = payload[start..@min(start + block_len, payload.len)];
-        var input: c.InBuffer = .{ .src = chunk.ptr, .size = chunk.len, .pos = 0 };
+        var input: c.ZSTD_inBuffer = .{ .src = chunk.ptr, .size = chunk.len, .pos = 0 };
         while (true) {
-            const pending = c.ZSTD_compressStream2(cctx, &output, &input, c.end_flush);
+            const pending = c.ZSTD_compressStream2(cctx, &output, &input, c.ZSTD_e_flush);
             try check(pending);
             if (pending == 0) break;
         }
     }
-    var rest: c.InBuffer = .{ .src = null, .size = 0, .pos = 0 };
+    var rest: c.ZSTD_inBuffer = .{ .src = null, .size = 0, .pos = 0 };
     while (true) {
-        const pending = c.ZSTD_compressStream2(cctx, &output, &rest, c.end_frame);
+        const pending = c.ZSTD_compressStream2(cctx, &output, &rest, c.ZSTD_e_end);
         try check(pending);
         if (pending == 0) break;
     }

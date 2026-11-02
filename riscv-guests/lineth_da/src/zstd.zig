@@ -26,63 +26,11 @@ pub const Error = error{
 /// The largest window a frame may declare: the limit of libzstd's streaming decoder.
 pub const max_window_size: u64 = (1 << 27) + 1;
 
-const c = struct {
-    const DCtx = opaque {};
-    const DDict = opaque {};
+const c = @import("zstd_c");
 
-    const FrameHeader = extern struct {
-        frame_content_size: c_ulonglong,
-        window_size: c_ulonglong,
-        block_size_max: c_uint,
-        frame_type: c_int,
-        header_size: c_uint,
-        dict_id: c_uint,
-        checksum_flag: c_uint,
-        reserved1: c_uint,
-        reserved2: c_uint,
-    };
-
-    const CustomMem = extern struct {
-        alloc: *const fn (state: ?*anyopaque, size: usize) callconv(.c) ?*anyopaque,
-        free: *const fn (state: ?*anyopaque, address: ?*anyopaque) callconv(.c) void,
-        state: ?*anyopaque,
-    };
-
-    const content_size_unknown: c_ulonglong = std.math.maxInt(c_ulonglong);
-
-    const InBuffer = extern struct { src: ?*const anyopaque, size: usize, pos: usize };
-    const OutBuffer = extern struct { dst: ?*anyopaque, size: usize, pos: usize };
-
-    const dlm_by_ref: c_int = 1;
-    const dct_full_dict: c_int = 2;
-    const reset_session_only: c_int = 1;
-    const d_stable_out_buffer: c_int = 1001;
-
-    const error_dictionary_wrong: c_int = 32;
-    const error_memory_allocation: c_int = 64;
-    const error_dst_size_too_small: c_int = 70;
-    const error_src_size_wrong: c_int = 72;
-
-    extern fn ZSTD_versionNumber() c_uint;
-    extern fn ZSTD_isError(code: usize) c_uint;
-    extern fn ZSTD_getErrorCode(code: usize) c_int;
-    extern fn ZSTD_findFrameCompressedSize(src: ?*const anyopaque, src_size: usize) usize;
-    extern fn ZSTD_getFrameHeader(header: *FrameHeader, src: ?*const anyopaque, src_size: usize) usize;
-    extern fn ZSTD_createDCtx_advanced(mem: CustomMem) ?*DCtx;
-    extern fn ZSTD_freeDCtx(dctx: ?*DCtx) usize;
-    extern fn ZSTD_createDDict_advanced(
-        dict: ?*const anyopaque,
-        dict_size: usize,
-        load_method: c_int,
-        content_type: c_int,
-        mem: CustomMem,
-    ) ?*DDict;
-    extern fn ZSTD_freeDDict(ddict: ?*DDict) usize;
-    extern fn ZSTD_DCtx_refDDict(dctx: *DCtx, ddict: *const DDict) usize;
-    extern fn ZSTD_DCtx_setParameter(dctx: *DCtx, param: c_int, value: c_int) usize;
-    extern fn ZSTD_DCtx_reset(dctx: *DCtx, directive: c_int) usize;
-    extern fn ZSTD_decompressStream(dctx: *DCtx, output: *OutBuffer, input: *InBuffer) usize;
-};
+/// `ZSTD_CONTENTSIZE_UNKNOWN`, the content size of a frame that declares none: a macro whose
+/// unsigned wrap-around the C translation does not evaluate.
+const content_size_unknown = std.math.maxInt(c_ulonglong);
 
 /// The linked libzstd release as `major * 10000 + minor * 100 + patch`.
 pub fn version() u32 {
@@ -96,8 +44,8 @@ pub const Decoder = struct {
 
     const State = struct {
         allocator: Allocator,
-        dctx: *c.DCtx,
-        ddict: *c.DDict,
+        dctx: *c.ZSTD_DCtx,
+        ddict: *c.ZSTD_DDict,
         /// Set when the allocator refused a request from libzstd.
         exhausted: bool,
     };
@@ -109,14 +57,14 @@ pub const Decoder = struct {
         state.exhausted = false;
         state.allocator = allocator;
 
-        const mem: c.CustomMem = .{ .alloc = allocate, .free = release, .state = state };
+        const mem: c.ZSTD_customMem = .{ .customAlloc = allocate, .customFree = release, .@"opaque" = state };
         state.dctx = c.ZSTD_createDCtx_advanced(mem) orelse return error.OutOfMemory;
         errdefer _ = c.ZSTD_freeDCtx(state.dctx);
-        state.ddict = c.ZSTD_createDDict_advanced(dictionary.ptr, dictionary.len, c.dlm_by_ref, c.dct_full_dict, mem) orelse
+        state.ddict = c.ZSTD_createDDict_advanced(dictionary.ptr, dictionary.len, c.ZSTD_dlm_byRef, c.ZSTD_dct_fullDict, mem) orelse
             return if (state.exhausted) error.OutOfMemory else error.InvalidDictionary;
         errdefer _ = c.ZSTD_freeDDict(state.ddict);
         std.debug.assert(c.ZSTD_isError(c.ZSTD_DCtx_refDDict(state.dctx, state.ddict)) == 0);
-        std.debug.assert(c.ZSTD_isError(c.ZSTD_DCtx_setParameter(state.dctx, c.d_stable_out_buffer, 1)) == 0);
+        std.debug.assert(c.ZSTD_isError(c.ZSTD_DCtx_setParameter(state.dctx, c.ZSTD_d_stableOutBuffer, 1)) == 0);
         return .{ .state = state };
     }
 
@@ -135,28 +83,28 @@ pub const Decoder = struct {
     pub fn decompress(self: Decoder, frame: []const u8, out: []u8) Error![]u8 {
         const frame_len = c.ZSTD_findFrameCompressedSize(frame.ptr, frame.len);
         if (c.ZSTD_isError(frame_len) != 0) return switch (c.ZSTD_getErrorCode(frame_len)) {
-            c.error_src_size_wrong => error.TruncatedFrame,
+            c.ZSTD_error_srcSize_wrong => error.TruncatedFrame,
             else => error.MalformedFrame,
         };
         if (frame_len < frame.len) return error.TrailingBytes;
-        var header: c.FrameHeader = undefined;
-        if (c.ZSTD_getFrameHeader(&header, frame.ptr, frame.len) != 0 or header.window_size > max_window_size) return error.MalformedFrame;
+        var header: c.ZSTD_frameHeader = undefined;
+        if (c.ZSTD_getFrameHeader(&header, frame.ptr, frame.len) != 0 or header.windowSize > max_window_size) return error.MalformedFrame;
 
         // An empty `out` may carry a dangling address; libzstd is handed a valid one for it.
         var placeholder: u8 = undefined;
-        var output: c.OutBuffer = .{ .dst = if (out.len == 0) &placeholder else out.ptr, .size = out.len, .pos = 0 };
-        var input: c.InBuffer = .{ .src = frame.ptr, .size = frame.len, .pos = 0 };
+        var output: c.ZSTD_outBuffer = .{ .dst = if (out.len == 0) &placeholder else out.ptr, .size = out.len, .pos = 0 };
+        var input: c.ZSTD_inBuffer = .{ .src = frame.ptr, .size = frame.len, .pos = 0 };
         const remaining = c.ZSTD_decompressStream(self.state.dctx, &output, &input);
         // A rejected frame leaves the stream mid-frame; every call starts a new one.
-        _ = c.ZSTD_DCtx_reset(self.state.dctx, c.reset_session_only);
+        _ = c.ZSTD_DCtx_reset(self.state.dctx, c.ZSTD_reset_session_only);
         if (c.ZSTD_isError(remaining) != 0) return switch (c.ZSTD_getErrorCode(remaining)) {
-            c.error_dictionary_wrong => error.DictionaryMismatch,
-            c.error_dst_size_too_small => error.OutputTooLarge,
-            c.error_memory_allocation => error.OutOfMemory,
+            c.ZSTD_error_dictionary_wrong => error.DictionaryMismatch,
+            c.ZSTD_error_dstSize_tooSmall => error.OutputTooLarge,
+            c.ZSTD_error_memory_allocation => error.OutOfMemory,
             else => error.MalformedFrame,
         };
         if (remaining != 0 or input.pos != frame.len) return error.MalformedFrame;
-        if (header.frame_content_size == c.content_size_unknown and header.window_size < output.pos) return error.MalformedFrame;
+        if (header.frameContentSize == content_size_unknown and header.windowSize < output.pos) return error.MalformedFrame;
         return out[0..output.pos];
     }
 };

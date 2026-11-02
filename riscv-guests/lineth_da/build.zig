@@ -1,7 +1,7 @@
 //! Builds the `lineth_da` package module (data-availability building blocks for the guests).
 //! `zig build` links a freestanding rv64im smoke guest (`-Dsmoke` selects it), which proves the
-//! package module and the libraries behind it build and link on the guest target; `zig build test`
-//! runs the native unit tests.
+//! package module and the libraries behind it build and link on the guest target;
+//! `zig build test -Dhost-tools=true` (what `make test` runs) runs the native unit tests.
 
 const std = @import("std");
 const common = @import("build_common");
@@ -61,26 +61,44 @@ pub fn build(b: *std.Build) void {
     // Keep `-Doptimize` exposed to dependency consumers and default to ReleaseSmall.
     const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseSmall)") orelse .ReleaseSmall;
 
-    const zstd_source = b.dependency("zstd", .{});
-
     // ── Package module for consumers and the smoke guest ─────────────────────────────────────
+    const zstd = Zstd.init(b, target);
     const package = b.addModule("lineth_da", .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
-        .imports = packageImports(b, target, optimize),
+        .imports = packageImports(b, target, optimize, zstd),
     });
-    addPackageSources(b, package, zstd_source);
+    addPackageSources(b, package, zstd);
     if (target.result.os.tag == .freestanding) addSmokeGuest(b, package, target, optimize);
 
     // Consumers of the package build the guest side only.
     const host_tools = b.option(bool, "host-tools", "Build the native tests and tools: fetches the reference vectors and builds the host crypto providers") orelse false;
-    if (host_tools) addHostBuild(b, zstd_source);
+    if (host_tools) addHostBuild(b);
 }
 
+/// libzstd for one target: the release's sources and its C declarations translated for Zig.
+const Zstd = struct {
+    source: *std.Build.Dependency,
+    declarations: *std.Build.Module,
+
+    /// Translates `zstd.h`, with the declarations of its static-linking section, and `zstd_errors.h`.
+    fn init(b: *std.Build, target: std.Build.ResolvedTarget) Zstd {
+        const source = b.dependency("zstd", .{});
+        const translated = b.addTranslateC(.{
+            .root_source_file = b.addWriteFiles().add("zstd_c.h", "#include <zstd.h>\n#include <zstd_errors.h>\n"),
+            .target = target,
+            .optimize = .Debug,
+        });
+        translated.addIncludePath(source.path("lib"));
+        translated.defineCMacro("ZSTD_STATIC_LINKING_ONLY", null);
+        return .{ .source = source, .declarations = translated.createModule() };
+    }
+};
+
 /// What `src/` imports by name, for one target: the zesu modules under the `zesu_*` names the
-/// sources use, and the scalar-field arithmetic.
-fn packageImports(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) []const Import {
+/// sources use, the scalar-field arithmetic and the declarations of libzstd.
+fn packageImports(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, zstd: Zstd) []const Import {
     const zesu = b.dependency("zesu", .{
         .target = target,
         .optimize = optimize,
@@ -93,6 +111,7 @@ fn packageImports(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std
         .{ .name = "zesu_mpt", .module = zesu.module("mpt") },
         .{ .name = "zesu_rlp_decode", .module = zesu.module("rlp_decode") },
         .{ .name = "bls_scalar", .module = scalarModule(b, target, optimize) },
+        .{ .name = "zstd_c", .module = zstd.declarations },
     }) catch @panic("OOM");
 }
 
@@ -106,20 +125,27 @@ fn scalarModule(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.b
     });
 }
 
+/// The package module for a native target, with its sources attached.
+fn hostPackage(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, zstd: Zstd) *std.Build.Module {
+    const package = common.createPackageModule(b, target, optimize, packageImports(b, target, optimize, zstd));
+    addPackageSources(b, package, zstd);
+    return package;
+}
+
 /// The native tests and tools run on the host: a freestanding riscv64 target has no OS to run a
 /// `std.testing` binary against.
-fn addHostBuild(b: *std.Build, zstd_source: *std.Build.Dependency) void {
+fn addHostBuild(b: *std.Build) void {
     const target = b.resolveTargetQuery(.{});
-    const imports = packageImports(b, target, .Debug);
-    const package = common.createPackageModule(b, target, .Debug, imports);
-    addPackageSources(b, package, zstd_source);
+    const zstd = Zstd.init(b, target);
+    const package = hostPackage(b, target, .Debug, zstd);
 
     const compressor = b.createModule(.{
         .root_source_file = b.path("test/zstd_compressor.zig"),
         .target = target,
         .optimize = .Debug,
+        .imports = &.{.{ .name = "zstd_c", .module = zstd.declarations }},
     });
-    compressor.addCSourceFiles(.{ .root = zstd_source.path("lib"), .files = &compressor_sources });
+    compressor.addCSourceFiles(.{ .root = zstd.source.path("lib"), .files = &compressor_sources });
 
     const support = b.createModule(.{
         .root_source_file = b.path("test/support/root.zig"),
@@ -148,49 +174,64 @@ fn addHostBuild(b: *std.Build, zstd_source: *std.Build.Dependency) void {
     };
     const test_step = b.step("test", "Run native Zig unit tests for the lineth_da package");
     const tests = common.addTests(b, test_step, native, .{});
+    addGoldenFrames(tests, zstd.source);
+    const tools = common.addTools(b, native, .{});
+    addKzgReferences(b, target, tests, tools, support);
+    const reference_tests = addReferenceTests(b, test_step, target, zstd);
+    linkHostCrypto(b, target, &.{ tests, tools, reference_tests });
+
+    var tool_iter = tools.valueIterator();
+    while (tool_iter.next()) |tool| b.installArtifact(tool.*);
+}
+
+/// Upstream's decompression regression frames, embedded in the zstd test root.
+fn addGoldenFrames(tests: std.StringHashMap(*std.Build.Step.Compile), zstd_source: *std.Build.Dependency) void {
     for (golden_frames) |frame| {
         tests.get("test/zstd_test.zig").?.root_module.addAnonymousImport(frame.import_name, .{
             .root_source_file = zstd_source.path(frame.path),
         });
     }
-    const tools = common.addTools(b, native, .{});
-    if (b.lazyDependency("c_kzg_4844", .{})) |c_kzg| {
-        const paths = b.addOptions();
-        paths.addOptionPath("tests_dir", c_kzg.path("tests"));
-        paths.addOptionPath("trusted_setup", c_kzg.path("src/trusted_setup.txt"));
-        const paths_module = paths.createModule();
-        const reference_vectors = b.createModule(.{
-            .root_source_file = b.path("test/reference_vectors.zig"),
-            .target = target,
-            .optimize = .Debug,
-            .imports = &.{.{ .name = "c_kzg_paths", .module = paths_module }},
-        });
-        tests.get("test/blob_kzg_test.zig").?.root_module.addImport("reference_vectors", reference_vectors);
-        tools.get("blob_sample").?.root_module.addImport("reference_vectors", reference_vectors);
+}
 
-        if (b.lazyDependency("blst", .{})) |blst| {
-            support.addImport("c_kzg", cKzgModule(b, target, c_kzg, blst));
-            support.addImport("c_kzg_paths", paths_module);
-        }
-    }
+/// The official EIP-4844 reference vectors for the blob tests and the blob_sample tool, and, with
+/// the c-kzg-4844 library over blst, the commitments and proofs of the test support. Each is wired
+/// in once its lazy dependency is fetched.
+fn addKzgReferences(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    tests: std.StringHashMap(*std.Build.Step.Compile),
+    tools: std.StringHashMap(*std.Build.Step.Compile),
+    support: *std.Build.Module,
+) void {
+    const c_kzg = b.lazyDependency("c_kzg_4844", .{}) orelse return;
+    const paths = b.addOptions();
+    paths.addOptionPath("tests_dir", c_kzg.path("tests"));
+    paths.addOptionPath("trusted_setup", c_kzg.path("src/trusted_setup.txt"));
+    const paths_module = paths.createModule();
+    const reference_vectors = b.createModule(.{
+        .root_source_file = b.path("test/reference_vectors.zig"),
+        .target = target,
+        .optimize = .Debug,
+        .imports = &.{.{ .name = "c_kzg_paths", .module = paths_module }},
+    });
+    tests.get("test/blob_kzg_test.zig").?.root_module.addImport("reference_vectors", reference_vectors);
+    tools.get("blob_sample").?.root_module.addImport("reference_vectors", reference_vectors);
 
-    const reference_tests = addReferenceTests(b, test_step, target, zstd_source);
+    const blst = b.lazyDependency("blst", .{}) orelse return;
+    support.addImport("c_kzg", cKzgModule(b, target, c_kzg, blst));
+    support.addImport("c_kzg_paths", paths_module);
+}
 
-    // Every native test and tool links the host build of the zkvm_* providers.
-    // Optimized: the compiler's own linker crashes on a debug-built provider object.
+/// Every native test and tool links the host build of the zkvm_* providers.
+/// Optimized: the compiler's own linker crashes on a debug-built provider object.
+fn linkHostCrypto(b: *std.Build, target: std.Build.ResolvedTarget, artifacts: []const std.StringHashMap(*std.Build.Step.Compile)) void {
     const accelerators = b.dependency("lineth_accelerators", .{
         .target = target,
         .optimize = .ReleaseSafe,
         .@"zkvm-provide" = true,
     });
-    if (common.HostCrypto.init(b, accelerators)) |crypto| {
-        crypto.linkAll(tests);
-        crypto.linkAll(tools);
-        crypto.linkAll(reference_tests);
-    }
-
-    var tool_iter = tools.valueIterator();
-    while (tool_iter.next()) |tool| b.installArtifact(tool.*);
+    const crypto = common.HostCrypto.init(b, accelerators) orelse return;
+    for (artifacts) |group| crypto.linkAll(group);
 }
 
 /// The `test/reference/*_test.zig` suites, run by `test` once the EF zkevm fixtures, which are
@@ -199,15 +240,14 @@ fn addReferenceTests(
     b: *std.Build,
     test_step: *std.Build.Step,
     target: std.Build.ResolvedTarget,
-    zstd_source: *std.Build.Dependency,
+    zstd: Zstd,
 ) std.StringHashMap(*std.Build.Step.Compile) {
     const none = std.StringHashMap(*std.Build.Step.Compile).init(b.allocator);
     const fixtures = b.lazyDependency("execution_spec_tests_zkevm", .{}) orelse return none;
 
     const paths = b.addOptions();
     paths.addOptionPath("amsterdam_blocks", fixtures.path("blockchain_tests/for_amsterdam"));
-    const package = common.createPackageModule(b, target, .ReleaseSafe, packageImports(b, target, .ReleaseSafe));
-    addPackageSources(b, package, zstd_source);
+    const package = hostPackage(b, target, .ReleaseSafe, zstd);
     return common.addTests(b, test_step, .{
         .target = target,
         .optimize = .ReleaseSafe,
@@ -298,7 +338,7 @@ fn addSmokeGuest(
 /// Wires the package module's embedded dictionary and the libzstd decoder behind its `zstd`
 /// namespace. The freestanding target compiles the C library against the headers in
 /// `src/freestanding_c`; every other target uses its libc.
-fn addPackageSources(b: *std.Build, package: *std.Build.Module, zstd_source: *std.Build.Dependency) void {
+fn addPackageSources(b: *std.Build, package: *std.Build.Module, zstd: Zstd) void {
     package.addAnonymousImport("zstd_dictionary_v2025_04_21", .{
         .root_source_file = b.path("dictionaries/v2025-04-21.bin"),
     });
@@ -307,5 +347,5 @@ fn addPackageSources(b: *std.Build, package: *std.Build.Module, zstd_source: *st
     } else {
         package.link_libc = true;
     }
-    package.addCSourceFiles(.{ .root = zstd_source.path("lib"), .files = &decoder_sources, .flags = &decoder_flags });
+    package.addCSourceFiles(.{ .root = zstd.source.path("lib"), .files = &decoder_sources, .flags = &decoder_flags });
 }
