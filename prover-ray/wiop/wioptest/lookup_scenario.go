@@ -50,6 +50,12 @@ func LookupScenarios() []func() *LookupScenario {
 		NewLookupPrecomputedTableScenario,
 		NewLookupRepeatedSValuesScenario,
 		NewLookupEmptySelectedScenario,
+		NewLookupConstOnAScenario,
+		NewLookupConstOnBScenario,
+		NewLookupConstBothSidesScenario,
+		NewLookupConstMultiFragmentBScenario,
+		NewLookupConstOnlyFilteredAScenario,
+		NewLookupConstPaddedFilteredAScenario,
 	}
 }
 
@@ -83,5 +89,8 @@ func LookupSoundnessScenarios() []func() *LookupSoundnessScenario {
 		NewLookupMultiColumnPartialMatchScenario,
 		NewLookupMaskedRowMatchScenario,
 		NewLookupNonBinaryFilterScenario,
+		NewLookupConstWrongValueScenario,
+		NewLookupConstMissingTupleScenario,
+		NewLookupConstPaddingUnfilteredAScenario,
 	}
 }

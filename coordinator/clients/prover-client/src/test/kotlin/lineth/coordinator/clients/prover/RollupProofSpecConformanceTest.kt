@@ -11,7 +11,10 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
-/** Checks the rollup DTOs against the rollup_spec wire contract (see [RollupSpecProverIo]). */
+/**
+ * Checks the rollup DTOs against the rollup_spec wire contract (see [RollupSpecProverIo]). Strict fixture round-trips
+ * are covered for all proof types by [RollupSpecFixturesConformanceTest].
+ */
 class RollupProofSpecConformanceTest {
   private val requestSchema = "getZkRollupProofV1.request.schema.json"
   private val l2ExecutionResponse =
@@ -33,12 +36,11 @@ class RollupProofSpecConformanceTest {
   )
 
   @Test
-  fun `rollup response fixture round-trips through the DTO and maps to the domain`() {
+  fun `rollup response fixture maps to the domain`() {
     val json = fixture("10-14-getZkRollupProofV1.response.json")
 
     val dto = fixtureAs<RollupProofResponseDto>("10-14-getZkRollupProofV1.response.json")
 
-    assertThat(toJson(dto)).isEqualTo(json)
     val domain = RollupProofResponseDtoMapper(dto)
     val pi = json["publicInputs"]
     assertThat(domain.endBlockNumber).isEqualTo(pi["endBlockNumber"].asLong().toULong())
@@ -49,12 +51,9 @@ class RollupProofSpecConformanceTest {
   }
 
   @Test
-  fun `rollup request fixture round-trips through the DTO`() {
-    val json = fixture("10-14-getZkRollupProofV1.request.json")
-
+  fun `rollup request fixture covers a mid-chunk start`() {
     val dto = fixtureAs<FileBasedRollupProofRequestDto>("10-14-getZkRollupProofV1.request.json")
 
-    assertThat(toJson(dto)).isEqualTo(json)
     assertThat(dto.proofRequest.parentDataTailTakeBytes).isPositive()
     assertThat(dto.proofRequest.boundaryPrevDataRollingHash).isNotNull()
   }
@@ -69,6 +68,26 @@ class RollupProofSpecConformanceTest {
     // parentDataTailTakeBytes = 0, so the optional boundary hash is omitted rather than written as null.
     assertThat(proofRequest.has("boundaryPrevDataRollingHash")).isFalse()
     assertThat(proofRequest["l2ExecutionProofs"][0].has("proverVersion")).isFalse()
+  }
+
+  @Test
+  fun `blob and calldata chunks built by the mapper are valid against the request schema`() {
+    val request = RiscvProverClientTestFixtures.rollupProofRequestV1(
+      conflations = listOf(ConflationWitness(blockRlps = listOf(byteArrayOf(0x3c)))),
+      chunks = listOf(
+        RiscvProverClientTestFixtures.blobChunkWitness(),
+        RiscvProverClientTestFixtures.calldataChunkWitness(),
+      ),
+    )
+
+    val json = toJson(rollupRequestMapper(withProvider = true).invoke(request).get())
+
+    assertSchemaValid(requestSchema, json)
+    val (blobChunk, calldataChunk) = json["proofRequest"]["chunks"].toList()
+    assertThat(blobChunk["kzgCommitment"].asText()).isEqualTo("0x" + "21".repeat(48))
+    assertThat(blobChunk["kzgProof"].asText()).isEqualTo("0x" + "22".repeat(48))
+    assertThat(calldataChunk["kzgCommitment"].asText()).isEqualTo("0x")
+    assertThat(calldataChunk["kzgProof"].asText()).isEqualTo("0x")
   }
 
   @Test

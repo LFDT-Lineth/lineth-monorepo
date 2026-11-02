@@ -7,7 +7,7 @@ import { IPermissionsManager } from "./interfaces/IPermissionsManager.sol";
 
 /**
  * @title Contract to manage permissions initialization.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract PermissionsManager is AccessControlUpgradeable, IPermissionsManager, IGenericErrors {

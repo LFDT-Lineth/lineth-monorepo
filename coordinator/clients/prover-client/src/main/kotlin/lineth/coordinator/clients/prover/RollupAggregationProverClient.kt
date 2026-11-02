@@ -15,7 +15,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 /**
  * Maps a [RollupAggregationProofRequestV1] domain request to the RISC-V rollup-aggregation proof request DTO
- * described by `rollup_spec/prover_io/schemas/getZkRollupAggregationProofV1.request.schema.json`.
+ * described by `rollup_spec/src/rollup_spec/prover_io/schemas/getZkRollupAggregationProofV1.request.schema.json`.
  *
  * When rollupProofProvider is null, it will provide only rollup indexes and prover gateway will fill in the proof
  */
@@ -65,7 +65,7 @@ class RollupAggregationProofRequestDtoMapper(
 
 /**
  * Maps the deserialized rollup-aggregation proof response DTO onto the domain [RollupAggregationProofResponseV1]
- * described by `rollup_spec/prover_io/schemas/getZkRollupAggregationProofV1.response.schema.json`.
+ * described by `rollup_spec/src/rollup_spec/prover_io/schemas/getZkRollupAggregationProofV1.response.schema.json`.
  * The transport is responsible for parsing the JSON (read from a file or returned by a REST call) into
  * [RollupAggregationProofResponseDto] before this mapper runs.
  */
@@ -79,9 +79,6 @@ object RollupAggregationProofResponseDtoMapper :
       endBlockNumber = responseDto.publicInputs.endBlockNumber.toULong(),
       proof = responseDto.proof.decodeHex(),
       publicInputs = responseDto.publicInputs.toDomainObject(),
-      l2L1Roots = responseDto.l2L1Roots.map { it.decodeHex() },
-      filteredAddresses = responseDto.filteredAddresses.map { it.decodeHex() },
-      l2MessagingBlocksOffsets = responseDto.l2MessagingBlocksOffsets.map { it.toULong() },
     )
   }
 }

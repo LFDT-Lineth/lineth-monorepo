@@ -6,7 +6,7 @@ import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol"
 
 /**
  * @title Soulbound ERC-20 contract for Primary Explicit Multiplier tokens.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 contract PrimaryExplicitMultiplier is ERC20, AccessControl {

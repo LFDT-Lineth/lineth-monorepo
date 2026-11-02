@@ -9,7 +9,6 @@ const MAX_UINT_32_AS_U64:u64 = 0xffffffff
 const OVERFLOW_DIVIDEND:u64 = 0x8000000000000000
 const NEGATIVE_ONE_AS_I64:u64 = 0xffffffffffffffff
 const NEGATIVE_ONE_AS_I32:u32 = 0xffffffff
-const MASK_64_ERASE_LAST_BIT:u64 = 0xfffffffffffffffe
 
 // Syscalls
 const EXIT_SYSCALL:DoubleWord = 93

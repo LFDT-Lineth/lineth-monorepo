@@ -11,6 +11,7 @@ import linea.domain.toExecutionPayload
 import linea.ethapi.ExecutionPayloadClient
 import linea.ethapi.ExecutionWitness
 import linea.ethapi.ExecutionWitnessClient
+import linea.ethapi.SystemContracts
 import lineth.persistence.ftx.FakeForcedTransactionsDao
 import net.consensys.linea.traces.TracesCountersV5
 import org.assertj.core.api.Assertions.assertThat
@@ -32,6 +33,15 @@ class L2ExecutionRequestBuilderImplTest {
   private val witnessRequests = mutableListOf<BlockParameter>()
   private val payloadFutures = blocks.map { SafeFuture<ExecutionPayload>() }
   private val witnessFutures = blocks.map { SafeFuture<ExecutionWitness?>() }
+  private val systemContracts = SystemContracts(
+    beaconRoots = "0x" + "a1".repeat(20),
+    historyStorage = "0x" + "a2".repeat(20),
+    deposit = "0x" + "a3".repeat(20),
+    withdrawalRequest = "0x" + "a4".repeat(20),
+    consolidationRequest = "0x" + "a5".repeat(20),
+    builderDepositRequest = "0x" + "a6".repeat(20),
+    builderExitRequest = "0x" + "a7".repeat(20),
+  )
   private val builder = L2ExecutionRequestBuilderImpl(
     executionPayloadClient = object : ExecutionPayloadClient {
       override fun getExecutionPayload(block: Block): SafeFuture<ExecutionPayload> {
@@ -49,6 +59,7 @@ class L2ExecutionRequestBuilderImplTest {
     },
     forcedTransactionsDao = FakeForcedTransactionsDao(),
     chainId = 59144UL,
+    systemContracts = systemContracts,
   )
 
   @Test
@@ -73,6 +84,7 @@ class L2ExecutionRequestBuilderImplTest {
     assertThat(payloadRequests).containsExactlyElementsOf(blocks)
     assertThat(witnessRequests).containsExactlyElementsOf(blocks.map { BlockParameter.fromHash(it.hash) })
     assertThat(request.chainId).isEqualTo(59144UL)
+    assertThat(request.systemContracts).isEqualTo(systemContracts)
     assertThat(request.parentFtxNumber).isEqualTo(0UL)
     assertThat(request.executions[0].parentBeaconBlockRoot).isEqualTo(blocks[0].parentBeaconBlockRoot)
     assertThat(request.executions[1].parentBeaconBlockRoot).isEqualTo(ByteArray(32))

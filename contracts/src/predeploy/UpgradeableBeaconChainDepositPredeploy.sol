@@ -6,7 +6,7 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 /**
  * @title Upgradeable Beacon Chain Deposit Contract
  * @notice Implementation of Beacon Chain Deposit contract - https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/deposit-contract.md
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 contract UpgradeableBeaconChainDepositPredeploy is Initializable {

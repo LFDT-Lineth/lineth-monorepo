@@ -17,19 +17,22 @@ func groupedWitness(prng *rand.Rand) Batch {
 	return Batch{
 		{
 			Base:   [][]field.Element{field.VecPseudoRandBase(prng, 1), field.VecPseudoRandBase(prng, 1)},
-			Groups: []GroupShape{{BaseWidth: 1}, {BaseWidth: 1}},
+			Groups: []GroupShape{{BaseWidth: 1, Ordinal: 0}, {BaseWidth: 1, Ordinal: 1}},
 		},
 		{
 			Base:   [][]field.Element{field.VecPseudoRandBase(prng, 2)},
 			Ext:    [][]field.Ext{field.VecPseudoRandExt(prng, 2)},
-			Groups: []GroupShape{{BaseWidth: 1}, {ExtWidth: 1}},
+			Groups: []GroupShape{{BaseWidth: 1, Ordinal: 2}, {ExtWidth: 1, Ordinal: 3}},
 		},
 		{
 			Base:   [][]field.Element{field.VecPseudoRandBase(prng, 4), field.VecPseudoRandBase(prng, 4)},
 			Ext:    [][]field.Ext{field.VecPseudoRandExt(prng, 4)},
-			Groups: []GroupShape{{BaseWidth: 1, ExtWidth: 1}, {BaseWidth: 1}},
+			Groups: []GroupShape{{BaseWidth: 1, ExtWidth: 1, Ordinal: 4}, {BaseWidth: 1, Ordinal: 5}},
 		},
-		{Ext: [][]field.Ext{field.VecPseudoRandExt(prng, 8)}},
+		{
+			Ext:    [][]field.Ext{field.VecPseudoRandExt(prng, 8)},
+			Groups: []GroupShape{{ExtWidth: 1, Ordinal: 6}},
+		},
 	}
 }
 
@@ -177,11 +180,13 @@ func TestPCSVerifyGroupedCommitment(t *testing.T) {
 	require.Error(t, fx.pcs.Verify(withShapes(flat, flat), fx.proof), "an ungrouped shape must not verify")
 
 	swapped := append(Shape(nil), fx.input.Shapes[0]...)
-	swapped[2].Groups = []GroupShape{{BaseWidth: 1}, {BaseWidth: 1, ExtWidth: 1}}
+	swapped[2].Groups = []GroupShape{{BaseWidth: 1, Ordinal: 4}, {BaseWidth: 1, ExtWidth: 1, Ordinal: 5}}
 	require.Error(t, fx.pcs.Verify(withShapes(swapped, swapped), fx.proof), "another grouping must not verify")
 
-	require.ErrorContains(t, fx.pcs.Verify(withShapes(fx.input.Shapes[0], flat), fx.proof),
+	require.ErrorContains(t, fx.pcs.Verify(withShapes(fx.input.Shapes[0], swapped), fx.proof),
 		"groups its rows differently")
+	require.ErrorContains(t, fx.pcs.Verify(withShapes(fx.input.Shapes[0], flat), fx.proof),
+		"declares no groups", "a grouped and an ungrouped batch cannot be numbered together")
 }
 
 // TestPCSVerifyGnarkGroupedCommitment is the circuit counterpart: the circuit

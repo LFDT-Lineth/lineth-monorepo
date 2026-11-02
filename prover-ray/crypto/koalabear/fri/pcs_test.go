@@ -52,6 +52,7 @@ func TestCanonicalLayout_Order(t *testing.T) {
 				{BatchIdx: 0, SizeLog2: 3, RowIdx: 0, IsExt: true, AlphaPower: 1, Shifts: []int{1}},
 				{BatchIdx: 1, SizeLog2: 3, RowIdx: 0, AlphaPower: 2, Shifts: []int{3}},
 			},
+			RunningPower: 3,
 		},
 		{
 			SizeLog2: 2,
@@ -59,6 +60,7 @@ func TestCanonicalLayout_Order(t *testing.T) {
 				{BatchIdx: 0, SizeLog2: 2, RowIdx: 0, AlphaPower: 0, Shifts: []int{0}},
 				{BatchIdx: 1, SizeLog2: 2, RowIdx: 0, IsExt: true, AlphaPower: 1, Shifts: []int{2, 3}},
 			},
+			RunningPower: 2,
 		},
 	}
 	assert.Equal(t, want, got)

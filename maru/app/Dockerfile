@@ -4,6 +4,7 @@ FROM eclipse-temurin:25-jre-noble
 WORKDIR /opt/consensys/maru
 
 COPY --from=libs ./** ./
+COPY --from=licenses LICENSE-APACHE LICENSE-MIT /licenses/
 
 ENV LINETH_APP_JAR=/opt/consensys/maru/maru.jar
 
@@ -19,4 +20,5 @@ LABEL org.label-schema.build-date=$BUILD_DATE \
 	org.label-schema.vcs-url="https://github.com/LFDT-Lineth/lineth-monorepo" \
 	org.label-schema.vendor="ConsenSys" \
 	org.label-schema.version=$VERSION \
-	org.label-schema.schema-version="1.0"
+	org.label-schema.schema-version="1.0" \
+	org.opencontainers.image.licenses="MIT OR Apache-2.0"

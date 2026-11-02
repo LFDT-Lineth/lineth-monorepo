@@ -2,7 +2,7 @@
   "name": "@lfdt-lineth/sdk-core",
   "version": "1.0.0",
   "description": "Core utilities for the Linea bridge SDK — Merkle tree, message types, chain and contract helpers",
-  "author": "Consensys Software Inc.",
+  "author": "Consensys Incorporated",
   "license": "(MIT OR Apache-2.0)",
   "repository": {
     "type": "git",
@@ -46,7 +46,9 @@
     "test": "jest --bail --detectOpenHandles",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
-    "clean": "rimraf dist node_modules coverage"
+    "clean": "rimraf dist node_modules coverage",
+    "prepack": "cp ../../../LICENSE-APACHE ../../../LICENSE-MIT .",
+    "postpack": "rm -f LICENSE-APACHE LICENSE-MIT"
   },
   "devDependencies": {
     "@lfdt-lineth/eslint-config": "workspace:*",

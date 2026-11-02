@@ -2,7 +2,7 @@
 
 `EncodeStatelessInput` targets the zesu decoder
 (`src/stateless/stateless/ssz.zig`) at the commit pinned by
-`riscv-guests/l2-execution/build.zig.zon`:
+`riscv-guests/l2_execution/build.zig.zon`:
 
 - Inner schema `0x1501`: Amsterdam fork index `0x15`, revision `1`.
 - A 16-byte fixed section: payload offset, witness offset, inline uint64 chain ID.
@@ -42,7 +42,7 @@ serialization, not valid block execution.
 ## Executable guest fixture
 
 `backend/jobadapter/testdata/request_guest_fixture.json` is the JSON form of
-`riscv-guests/l2-execution/test/testdata/stateless_input.ssz`, including its real
+`riscv-guests/l2_execution/test/testdata/stateless_input.ssz`, including its real
 witness data.
 `TestDecodeL2ExecutionRequest_Regression_GuestFixture` checks that the entire
 JSON-to-SSZ path reproduces the guest fixture byte for byte, independently of the

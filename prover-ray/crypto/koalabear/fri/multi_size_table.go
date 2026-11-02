@@ -38,6 +38,12 @@ type SizedTable struct {
 type GroupShape struct {
 	BaseWidth int
 	ExtWidth  int
+	// Ordinal orders the groups of a table across all its sizes, for the
+	// alpha_DEEP powers of a grouped commitment (see deepPowers): the groups
+	// of a table are numbered by increasing Ordinal, whatever their sizes, so
+	// a group's powers do not depend on the sizes. The ordinals of a table
+	// are distinct (the PCS compiler uses the module index).
+	Ordinal int
 }
 
 // sizeGroups returns the groups of a size of the given widths: groups itself,

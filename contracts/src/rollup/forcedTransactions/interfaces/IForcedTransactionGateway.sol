@@ -3,7 +3,7 @@ pragma solidity ^0.8.33;
 
 /**
  * @title Interface to manage forced transactions on L1.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 interface IForcedTransactionGateway {

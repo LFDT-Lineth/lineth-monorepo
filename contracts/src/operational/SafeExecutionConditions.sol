@@ -11,7 +11,7 @@ import { ISafeExecutionConditions } from "./interfaces/ISafeExecutionConditions.
  * causing the enclosing Safe transaction to revert atomically.
  * @dev The functions are intentionally non-`view`: multisig UIs exclude `view`/`pure` ABI entries when staging
  * batched transactions, so non-`view` mutability is required for these guards to be selectable as a batch call.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 contract SafeExecutionConditions is ISafeExecutionConditions {

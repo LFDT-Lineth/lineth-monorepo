@@ -321,14 +321,17 @@ class RollupProofGeneratingCoordinator(
     return RollupProofRequestV1(
       conflations = conflations.map { ConflationWitness(it.blocks.map(blockEncoder::encode)) },
       l2Executions = l2Executions,
-      // Blob chunks only. Canonical field-element packing of blobBytes and a KZG versioned-hash chunkHasher are
-      // still to do; until then the guest will reject these chunks even though the request is schema-valid.
+      // Blob chunks only. Canonical field-element packing of blobBytes, a KZG versioned-hash chunkHasher, and the
+      // blob's KZG commitment and proof are still to do; until then the guest will reject these chunks even though
+      // the request is schema-valid.
       chunks = chunkedData.chunks.map {
         ChunkWitness(
           chunkHash = it.chunkHash,
           isCalldata = false,
           blobBytes = it.blobBytes,
           calldataBytes = ByteArray(0),
+          kzgCommitment = ByteArray(ChunkWitness.KZG_POINT_BYTES_LENGTH),
+          kzgProof = ByteArray(ChunkWitness.KZG_POINT_BYTES_LENGTH),
         )
       },
       parentDataRollingHash = chunkedData.parentDataRollingHash,

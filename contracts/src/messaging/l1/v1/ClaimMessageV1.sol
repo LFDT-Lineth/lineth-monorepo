@@ -7,7 +7,7 @@ import { MessageHashing } from "../../libraries/MessageHashing.sol";
 
 /**
  * @title Contract to manage pre-existing cross-chain messaging-claiming function.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract ClaimMessageV1 is IClaimMessageV1, L1MessageServiceBase {

@@ -4,7 +4,7 @@ import { IShnarfDataAcceptorBase } from "./IShnarfDataAcceptorBase.sol";
 
 /**
  * @title Interface to define a simple shnarf acceptance definition.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 interface IAcceptShnarfData is IShnarfDataAcceptorBase {

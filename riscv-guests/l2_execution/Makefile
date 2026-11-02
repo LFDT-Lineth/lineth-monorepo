@@ -1,0 +1,137 @@
+# l2-execution guest — self-contained lifecycle.
+#
+# This folder is its own Zig package (build.zig + build.zig.zon). The riscv-guests/ top-level
+# Makefile fans `compile`/`test`/`fetch`/`clean` out to this file for every guest; guest-specific
+# targets (reference-test, the ZKC fixture-exec/fixture-debug below) live here, not in the
+# orchestrator.
+#
+# Scope split: building + host-testing is proving-system-AGNOSTIC and lives here (`compile` links the
+# statically-linked rv64im ELF — the zkvm-standards artifact — via build_common). Only the ZKC run
+# itself (ELF->JSON via elf_to_json, then zkc) is owned by
+# arithmetization/src/test/Makefile; fixture-exec/fixture-debug build that ELF and hand it over.
+
+.PHONY: fetch fetch-host test reference-test reference-test-zkc zkc-smoke-exec zkc-smoke-external zkc-smoke-trace prep-execution-specs-json-fixtures clean compile exec debug require-input require-elf
+
+MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+
+# The arithmetization test Makefile defines ZKC run (elf-to-json and zkc exec)
+ARITHMETIZATION_TESTING_MAKEFILE ?= $(MAKEFILE_DIR)../../arithmetization/src/test/Makefile
+
+ZIG ?= zig
+
+BUILD_CACHE_DIR ?= $(MAKEFILE_DIR).zig-cache
+ZIG_BUILD_FLAGS ?= --cache-dir $(BUILD_CACHE_DIR) --summary all
+ZIG_HOST_FLAGS ?= -Dhost-tools=true
+# NOTE: `zig build --fetch` fetches the dependency tree and EXITS without building or running, so it
+# must NOT be passed to build/test targets. Pre-fetching is the dedicated `fetch` target.
+ZIG_FETCH_FLAGS ?=
+
+
+# Name and ELF generated of the guest program (@TODO: check if we need that)
+NAME     := evm_execution_guest
+BIN      := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
+
+include $(MAKEFILE_DIR)../build_common/release.mk
+
+# Sample fixture input used by exec/debug / zkc-smoke-*
+INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
+
+# Flags forwarded to `zkc exec` by exec / zkc-smoke-exec. Quiet (no per-instruction printf) is zkc's
+# default unless -v/-vv/-vvv raise verbosity.
+ZKC_EXEC_FLAGS ?=
+
+# Flags forwarded to `zkc trace` by trace / zkc-smoke-trace.
+ZKC_TRACE_FLAGS ?= --stats
+
+# Parameters for execution-spec zkevm fixtures.
+EXECUTION_SPECS_JSON_FIXTURES_DIR   := /tmp/execution-specs-json-fixtures
+EXECUTION_SPECS_FIXTURES_DIR        := $(EXECUTION_SPECS_JSON_FIXTURES_DIR)/fixtures
+
+# If true, generates an objdump of the generated ELF for debugging purposes
+OBJDUMP     ?= false
+
+# Shared body for zkc-smoke-trace: pass the exact INPUT as the smoke operand.
+# $(1) = zkc makefile target (elf-trace)
+# $(2) = optional extra runner args (e.g. --zkc-flags "...")
+define zkc-smoke-run
+	$(ZIG) build zkc-smoke $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -Dzkc-smoke-input="$(abspath $(INPUT))" $(if $(KECCAK_ACCEL),-Dkeccak-accel=$(KECCAK_ACCEL)) $(if $(SECP256K1_BACKEND),-Dsecp256k1-backend=$(SECP256K1_BACKEND)) -- \
+		--zkc-target "$(1)" \
+		$(2)
+endef
+
+# ── Proving-system-agnostic guest lifecycle ─────────────────────────────────
+fetch:
+	$(ZIG) build $(ZIG_BUILD_FLAGS) --fetch
+
+fetch-host:
+	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) --fetch=all
+
+test: fetch-host
+	$(ZIG) build test $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS)
+
+# Permanent reference-test guard for the extended guest, run against the EF zkevm corpus on the
+# host (see extended_vanilla_runner.zig): asserts the dummy-wrapped extended guest (runL2Execution,
+# delegating per-block execution to execution.executeStatelessInputWithLogs) agrees with the EF
+# fixture's own expected validity verdict, cheaply on the host instead of compiling to riscv64 and
+# executing the real guest ELF via ZkC. Scoped to --fork Amsterdam to keep runtime bounded; narrow
+# further with REFERENCE_ARGS.
+REFERENCE_ARGS ?= --fork Amsterdam
+reference-test: fetch-host
+	$(ZIG) build extended-vanilla $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REFERENCE_ARGS)
+
+# ZkC twin of reference-test: the corpus logic lives in tools/zkc_reference_runner.zig, which runs
+# each block through the guest ELF under zkc (ELF->JSON->zkc exec) instead of in-process. Needs zkc
+# and go on PATH (like exec/debug). ZKC_EXEC_FLAGS picks the `zkc exec` backend. Minutes per heavy
+# block; use it to prove the real ELF agrees with the corpus.
+reference-test-zkc: fetch-host
+	$(ZIG) build reference-test-zkc $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REFERENCE_ARGS) $(if $(ZKC_EXEC_FLAGS),--zkc-flags "$(ZKC_EXEC_FLAGS)")
+
+# Build the local guest ELF, then compare it through the prebuilt-ELF smoke target.
+zkc-smoke-exec: require-input compile
+	$(MAKE) zkc-smoke-external ELF="$(BIN)" INPUT="$(INPUT)" ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"
+
+# Smoke a prebuilt production ELF under ZkC and compare its result with the host machine.
+ELF ?=
+zkc-smoke-external: require-input require-elf fetch-host
+	$(ZIG) build zkc-smoke-external $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -- \
+		--elf "$(abspath $(ELF))" \
+		"$(abspath $(INPUT))" \
+		$(if $(ZKC_EXEC_FLAGS),--zkc-flags "$(ZKC_EXEC_FLAGS)")
+
+zkc-smoke-trace: require-input fetch-host
+	$(call zkc-smoke-run,elf-trace,--zkc-flags "$(ZKC_TRACE_FLAGS)")
+
+# Re-uses logic from build.zig to download execution-spec JSON fixtures under $(EXECUTION_SPECS_FIXTURES_DIR).
+prep-execution-specs-json-fixtures: fetch-host
+	$(ZIG) build prep-execution-specs-json-fixtures $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -Dexecution-specs-fixtures-link="$(EXECUTION_SPECS_FIXTURES_DIR)"
+
+clean:
+	rm -rf $(MAKEFILE_DIR)zig-out/
+	rm -rf $(BUILD_CACHE_DIR)
+
+compile:
+	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(KECCAK_ACCEL),-Dkeccak-accel=$(KECCAK_ACCEL)) $(if $(SECP256K1_BACKEND),-Dsecp256k1-backend=$(SECP256K1_BACKEND))
+	@if command -v riscv64-unknown-elf-objdump >/dev/null 2>&1; then \
+		if [ "$(OBJDUMP)" = "true" ]; then \
+			echo "\nDisassembling $(BIN)"; \
+			LANG=C riscv64-unknown-elf-objdump -D -s --line-numbers $(BIN) > $(BIN).objdump; \
+		fi \
+	else \
+		echo "\nSkipping objdump: riscv64-unknown-elf-objdump is not on PATH"; \
+	fi
+
+# Fail early on a missing/empty INPUT instead of building then erroring in the converter.
+require-input:
+	@[ -n "$(INPUT)" ] && [ -f "$(INPUT)" ] || { echo "INPUT not found: '$(INPUT)' (set INPUT=path/to/input.ssz)"; exit 1; }
+
+require-elf:
+	@[ -n "$(ELF)" ] && [ -f "$(ELF)" ] || { echo "ELF not found: '$(ELF)' (set ELF=path/to/evm_execution_guest)"; exit 1; }
+
+exec: require-input compile
+	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-exec BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)" ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"
+
+trace: require-input compile
+	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-trace BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)" ZKC_TRACE_FLAGS="$(ZKC_TRACE_FLAGS)"
+
+debug: require-input compile
+	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-debug BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)" ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"

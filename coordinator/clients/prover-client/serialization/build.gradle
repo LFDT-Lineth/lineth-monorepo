@@ -9,4 +9,6 @@ dependencies {
   api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
   api(project(":jvm-libs:generic:extensions:kotlin"))
   api(project(":coordinator:core-interfaces"))
+
+  testImplementation(testFixtures(project(":coordinator:core-interfaces")))
 }

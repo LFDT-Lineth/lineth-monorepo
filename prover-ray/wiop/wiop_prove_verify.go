@@ -87,6 +87,14 @@ func (sys *System) Prove(assign func(rt *Runtime), proveOpts ...ProveOptions) (P
 			a.Run(rt)
 		}
 
+		// The dynamic sizes are final once this round's actions have run:
+		// none may be below its module's minimum (see Module.MinRuntimeSize).
+		if rt.currentRound.ID == sys.DynamicSizeRound {
+			if err := rt.CheckMinRuntimeSizes(); err != nil {
+				panic(err)
+			}
+		}
+
 		if rt.currentRound.ID == len(sys.Rounds)-1 {
 			break
 		}
@@ -175,8 +183,9 @@ func (sys *System) Prove(assign func(rt *Runtime), proveOpts ...ProveOptions) (P
 // actions read the re-derived coins and the cells.
 //
 // Verify also checks that the provided dynamic-module sizes are non-zero powers
-// of two no greater than [ColumnSizeMaxSupported], and that the proof carries
-// exactly one size per dynamic module.
+// of two no greater than [ColumnSizeMaxSupported] and no smaller than the
+// module's [Module.MinRuntimeSize], and that the proof carries exactly one size
+// per dynamic module.
 //
 // It returns an error if the proof contains a cell that the system does not
 // declare, or that the replay never consumed.
@@ -303,6 +312,13 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 		}
 
 		rt.dynamicSizes[k] = v
+	}
+
+	// Below its minimum, a module's shifts could coincide modulo its size, and
+	// the proof would not have the shape the verifier expects
+	// (Module.MinRuntimeSize).
+	if err := sys.checkMinRuntimeSizes(rt.dynamicSizes); err != nil {
+		return err
 	}
 
 	// Reject sizes for modules that are not dynamic modules of the system. This

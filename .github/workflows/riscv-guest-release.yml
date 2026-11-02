@@ -40,13 +40,20 @@ jobs:
     needs: compute-release-metadata
     if: needs.compute-release-metadata.outputs.tag_changed == 'true'
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    outputs:
+      guest_dir: ${{ steps.guest-dir.outputs.dir }}
     steps:
+      - name: Resolve guest directory
+        id: guest-dir
+        env:
+          GUEST: ${{ inputs.guest }}
+        run: echo "dir=${GUEST//-/_}" >> "$GITHUB_OUTPUT"
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup guest toolchain
         uses: ./.github/actions/setup-riscv-guests
       - name: Verify Program ID staging
-        run: zig test riscv-guests/build_common/program-id.zig
+        run: zig test riscv-guests/build_common/program_id.zig
       - name: Test and compile selected guest
         env:
           GUEST: ${{ inputs.guest }}
@@ -58,7 +65,7 @@ jobs:
     uses: ./.github/workflows/reusable-component-release-push-tag-changelog.yml
     with:
       component-name: riscv-${{ inputs.guest }}
-      folder-name: riscv-guests/${{ inputs.guest }}
+      folder-name: riscv-guests/${{ needs.preflight.outputs.guest_dir }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }}
     secrets: inherit
 
@@ -106,7 +113,7 @@ jobs:
           printf '%s\n' "$CHANGELOG" > "$RUNNER_TEMP/guest-release-notes.md"
           printf '\n### Guest program\n\nProgram ID (Keccak-256 of complete ELF): `0x%s`\n\nELF: `%s`\n\nSource tag: `%s`\n' "$ID" "$FILENAME" "$TAG" >> "$RUNNER_TEMP/guest-release-notes.md"
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           name: RISC-V ${{ inputs.guest }} v${{ needs.push-tag-and-changelog.outputs.release_version }}
           tag_name: ${{ needs.push-tag-and-changelog.outputs.release_tag }}

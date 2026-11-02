@@ -3,7 +3,7 @@ pragma solidity ^0.8.33;
 
 /**
  * @title LivenessRecovery interface for current functions, structs, events and errors.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 interface ILivenessRecovery {

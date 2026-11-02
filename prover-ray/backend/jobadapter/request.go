@@ -22,6 +22,7 @@ const (
 	chainConfigKey             = "chainConfig"
 	l2MessageServiceAddressKey = "l2MessageServiceAddress"
 	coinbaseKey                = "coinbase"
+	systemContractsKey         = "systemContracts"
 	parentFtxRollingHashKey    = "parentFtxRollingHash"
 	parentFtxNumberKey         = "parentFtxNumber"
 	statelessInputKey          = "statelessInput"
@@ -77,6 +78,7 @@ type L2ExecutionRequest struct {
 	ForkName                string
 	L2MessageServiceAddress [20]byte
 	Coinbase                [20]byte
+	SystemContracts         ssz.SystemContracts
 	ParentFtxRollingHash    [32]byte
 	ParentFtxNumber         uint64
 	Payloads                []L2ExecutionPayload
@@ -161,6 +163,7 @@ func DecodeL2ExecutionRequest(data []byte) (*L2ExecutionRequest, error) {
 		ForkName:                chainConfig.forkName,
 		L2MessageServiceAddress: chainConfig.l2MessageServiceAddress,
 		Coinbase:                chainConfig.coinbase,
+		SystemContracts:         chainConfig.systemContracts,
 		ParentFtxNumber:         parentFtxNumber,
 		Payloads:                payloads,
 	}
@@ -195,6 +198,37 @@ type decodedChainConfig struct {
 	forkName                string
 	l2MessageServiceAddress [20]byte
 	coinbase                [20]byte
+	systemContracts         ssz.SystemContracts
+}
+
+// decodeSystemContracts reads proofRequest.chainConfig.systemContracts: all
+// seven addresses are required. Mirrors proof_io_v1.py::_decode_system_contracts.
+func decodeSystemContracts(raw json.RawMessage) (ssz.SystemContracts, error) {
+	const ctx = "proofRequest.chainConfig.systemContracts."
+	obj, err := object(raw, strings.TrimSuffix(ctx, "."))
+	if err != nil {
+		return ssz.SystemContracts{}, err
+	}
+	var sc ssz.SystemContracts
+	for _, f := range []struct {
+		key string
+		dst *[20]byte
+	}{
+		{"beaconRoots", &sc.BeaconRoots},
+		{"historyStorage", &sc.HistoryStorage},
+		{"deposit", &sc.Deposit},
+		{"withdrawalRequest", &sc.WithdrawalRequest},
+		{"consolidationRequest", &sc.ConsolidationRequest},
+		{"builderDepositRequest", &sc.BuilderDepositRequest},
+		{"builderExitRequest", &sc.BuilderExitRequest},
+	} {
+		addr, err := fixedHexField(obj, f.key, ctx, addressByteSize)
+		if err != nil {
+			return ssz.SystemContracts{}, err
+		}
+		copy(f.dst[:], addr)
+	}
+	return sc, nil
 }
 
 func decodeChainConfig(raw json.RawMessage) (decodedChainConfig, error) {
@@ -229,7 +263,16 @@ func decodeChainConfig(raw json.RawMessage) (decodedChainConfig, error) {
 		return decodedChainConfig{}, fmt.Errorf("DecodeL2ExecutionRequest: proofRequest.chainConfig.forkName: %w", err)
 	}
 
-	cfg := decodedChainConfig{chainID: chainID, forkName: forkName}
+	systemContractsRaw, err := requireField(chainConfig, systemContractsKey, "proofRequest.chainConfig.")
+	if err != nil {
+		return decodedChainConfig{}, err
+	}
+	systemContracts, err := decodeSystemContracts(systemContractsRaw)
+	if err != nil {
+		return decodedChainConfig{}, err
+	}
+
+	cfg := decodedChainConfig{chainID: chainID, forkName: forkName, systemContracts: systemContracts}
 	copy(cfg.l2MessageServiceAddress[:], l2msgSvc)
 	copy(cfg.coinbase[:], coinbase)
 	return cfg, nil

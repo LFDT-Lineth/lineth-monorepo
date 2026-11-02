@@ -1,6 +1,4 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
@@ -19,7 +17,6 @@ class MaruFollowerTest {
   @BeforeEach
   fun setUp() {
     network = ValidatorFollowerNetwork()
-    network.startBesuNodes()
   }
 
   @AfterEach
@@ -29,7 +26,7 @@ class MaruFollowerTest {
 
   @Test
   fun `Maru follower is able to import blocks`() {
-    network.startMaruNodes()
+    network.start()
 
     val blocksToProduce = 5
     network.produceBlocks(blocksToProduce)
@@ -39,7 +36,7 @@ class MaruFollowerTest {
 
   @Test
   fun `Maru follower is able to import blocks with payload validation disabled`() {
-    network.startMaruNodes(payloadValidationEnabled = false)
+    network.start(payloadValidationEnabled = false)
 
     val blocksToProduce = 5
     network.produceBlocks(blocksToProduce)

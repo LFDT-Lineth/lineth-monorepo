@@ -1,7 +1,7 @@
 {
   "name": "@lfdt-lineth/native-yield-automation-service",
   "version": "1.0.0",
-  "author": "Consensys Software Inc.",
+  "author": "Consensys Incorporated",
   "license": "(MIT OR Apache-2.0)",
   "description": "",
   "main": "dist/src/index.js",
@@ -15,9 +15,9 @@
     "test": "jest --bail --detectOpenHandles --forceExit"
   },
   "dependencies": {
-    "@apollo/client": "4.3.1",
+    "@apollo/client": "4.3.5",
     "@lfdt-lineth/shared-utils": "workspace:*",
-    "@lidofinance/lsv-cli": "1.8.0",
+    "@lidofinance/lsv-cli": "1.9.0",
     "dotenv": "catalog:",
     "neverthrow": "catalog:",
     "viem": "catalog:",

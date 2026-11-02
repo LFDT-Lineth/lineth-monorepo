@@ -6,7 +6,7 @@ import { LocalShnarfProvider } from "./dataAvailability/LocalShnarfProvider.sol"
 
 /**
  * @title Contract to manage Validium cross-chain messaging on L1 and proof verification.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 contract Validium is LinethRollupBase, LocalShnarfProvider, ShnarfDataAcceptor {

@@ -31,6 +31,8 @@ func PermutationScenarios() []func() *PermutationScenario {
 		NewPermutationSingleColumnScenario,
 		NewPermutationMultiColumnScenario,
 		NewPermutationMultiFragmentScenario,
+		NewPermutationConstScenario,
+		NewPermutationConstOnlyFilteredScenario,
 	}
 }
 

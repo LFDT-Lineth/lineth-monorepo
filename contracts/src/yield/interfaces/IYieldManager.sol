@@ -8,7 +8,7 @@ import { ProgressOssificationResult, YieldProviderVendor } from "./YieldTypes.so
 
 /**
  * @title Contract to handle native yield operations.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 interface IYieldManager {

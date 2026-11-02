@@ -5,7 +5,7 @@ import { PendingPartialWithdrawal } from "../libs/vendor/lido/BeaconTypes.sol";
 
 /**
  * @title Interface for ValidatorContainerProofVerifier.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 interface IValidatorContainerProofVerifier {

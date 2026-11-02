@@ -258,6 +258,9 @@ func (pcs *PCS) VerifyGnark(api frontend.API, in GnarkVerifyInputs, proof GnarkO
 	if err != nil {
 		panic(err)
 	}
+	if err := pcs.checkFoldedSchedule(layout); err != nil {
+		panic(fmt.Sprintf("fri: pcs.VerifyGnark: %v", err))
+	}
 	if len(proof.InputQueries) != int(pcs.Params.NumQueries) {
 		panic(fmt.Sprintf("fri: pcs.VerifyGnark: proof has %d input queries, want %d",
 			len(proof.InputQueries), pcs.Params.NumQueries))
@@ -327,6 +330,7 @@ func (pcs *PCS) VerifyGnark(api frontend.API, in GnarkVerifyInputs, proof GnarkO
 		shapes:            in.Shapes,
 		foldAlphas:        in.FoldAlphas,
 		finalPoly:         proof.FRIProof.FinalPoly,
+		levelPowers:       pcs.levelPowersGnark(kapi, layout, in.FoldAlphas),
 	}
 
 	resolved := make([]gnarkResolvedQuery, pcs.Params.NumQueries)
@@ -504,6 +508,9 @@ type gnarkVerifyQueryCtx struct {
 	shapes            []Shape
 	foldAlphas        []circuit.Ext
 	finalPoly         []circuit.Ext
+	// levelPowers[l] holds alphaDeep^0 … alphaDeep^RunningPower for level l
+	// (see verifyQueryCtx.levelPowers).
+	levelPowers [][]circuit.Ext
 }
 
 // resolve mirrors [verifyQueryCtx.resolve] for one query whose position is
@@ -571,24 +578,15 @@ func (vq gnarkVerifyQueryCtx) resolve(queryIdx int, posBits []frontend.Variable)
 		levelSize := int(domain.cardinality)
 		bindInputTreeOpeningsGnark(inputSource, levelSize, vq.orders[levelIdx], bundle, vq.shapes)
 
-		var alphaDeep circuit.Ext
-		switch {
-		case int(round) < len(vq.foldAlphas):
-			alphaDeep = api.SquareExt(vq.foldAlphas[round])
-		case len(vq.foldAlphas) > 0:
-			alphaDeep = vq.foldAlphas[len(vq.foldAlphas)-1]
-		default:
-			alphaDeep = api.ZeroExt()
-		}
-
+		alphaPow := vq.levelPowers[levelIdx]
 		xSelf := domainPointGnark(api, domain, posBits[round:])
 		xSib := api.NegExt(xSelf)
 		entryClaims := vq.layoutClaims[levelIdx]
 		rq.Aux[round] = gnarkInputPair{
 			Self: reconstructQueryValueAtGnark(api, bundle, entryClaims, inputSource,
-				levelSize, alphaDeep, xSelf, false, rq.Rounds[round].Self),
+				levelSize, alphaPow, xSelf, false, rq.Rounds[round].Self),
 			Sibling: reconstructQueryValueAtGnark(api, bundle, entryClaims, inputSource,
-				levelSize, alphaDeep, xSib, true, rq.Rounds[round].Sibling),
+				levelSize, alphaPow, xSib, true, rq.Rounds[round].Sibling),
 		}
 	}
 
@@ -638,6 +636,35 @@ func checkFoldsGnark(api *circuit.KoalaBearAPI, p Params, resolved []gnarkResolv
 // Query reconstruction
 // =============================================================================
 
+// levelPowersGnark mirrors the levelPowers of [PCS.Verify]: for every level,
+// the powers alphaDeep^0 … alphaDeep^RunningPower of its alphaDeep (see
+// levelAlphaDeep), computed once for all queries.
+func (pcs *PCS) levelPowersGnark(api *circuit.KoalaBearAPI, l layout, foldAlphas []circuit.Ext) [][]circuit.Ext {
+	res := make([][]circuit.Ext, len(l))
+	for levelIdx, bundle := range l {
+		round, err := pcs.roundForSize(bundle.SizeLog2)
+		if err != nil {
+			panic(err)
+		}
+		var alphaDeep circuit.Ext
+		switch {
+		case int(round) < len(foldAlphas):
+			alphaDeep = api.SquareExt(foldAlphas[round])
+		case len(foldAlphas) > 0:
+			alphaDeep = foldAlphas[len(foldAlphas)-1]
+		default:
+			alphaDeep = api.ZeroExt()
+		}
+		table := make([]circuit.Ext, bundle.RunningPower+1)
+		table[0] = api.OneExt()
+		for i := 1; i < len(table); i++ {
+			table[i] = api.MulExt(table[i-1], alphaDeep)
+		}
+		res[levelIdx] = table
+	}
+	return res
+}
+
 // reconstructQueryValueAtGnark mirrors [reconstructQueryValueAt].
 func reconstructQueryValueAtGnark(
 	api *circuit.KoalaBearAPI,
@@ -645,13 +672,13 @@ func reconstructQueryValueAtGnark(
 	entryClaims [][]gnarkQuotientClaim,
 	source gnarkInputQuerySource,
 	levelSize int,
-	alphaDeep circuit.Ext,
+	alphaPow []circuit.Ext,
 	x circuit.Ext,
 	sibling bool,
 	running circuit.Ext,
 ) circuit.Ext {
-	value := running
-	for i := len(bundle.Entries) - 1; i >= 0; i-- {
+	value := api.MulExt(running, alphaPow[bundle.RunningPower])
+	for i := range bundle.Entries {
 		entry := bundle.Entries[i]
 		pair := source.pairAtLevel(entry.BatchIdx, levelSize)
 		row := pair[0]
@@ -660,8 +687,7 @@ func reconstructQueryValueAtGnark(
 		}
 		entryValue := rowValueGnark(api, row, entry)
 		term := quotientAtValueGnark(api, entryValue, x, entryClaims[i])
-		value = api.MulExt(value, alphaDeep)
-		value = api.AddExt(value, term)
+		value = api.AddExt(value, api.MulExt(term, alphaPow[entry.AlphaPower]))
 	}
 	return value
 }
