@@ -3,7 +3,7 @@ pragma solidity 0.8.33;
 
 /**
  * @title Simplified L1 Linea Token Interface.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 interface IL1LineaToken {

@@ -134,6 +134,7 @@ jobs:
             coordinator:
               - 'coordinator/**'
               - 'testdata/**'
+              - 'rollup_spec/src/rollup_spec/prover_io/**'
               - 'buildSrc/**'
               - 'jvm-libs/**'
               - 'gradle/**'
@@ -170,7 +171,7 @@ jobs:
             prover-ray:
               - 'prover-ray/**'
               - 'rollup_spec/src/**'
-              - 'riscv-guests/l2-execution/test/testdata/**'
+              - 'riscv-guests/l2_execution/test/testdata/**'
               - 'riscv-guests/build_common/linker_script.ld'
               - '.github/workflows/prover-ray-testing.yml'
               - '.github/workflows/main.yml'
@@ -206,6 +207,7 @@ jobs:
               - '.github/workflows/run-smc-tests.yml'
             linea-sequencer-plugin:
               - 'linea-besu/plugins/linea-sequencer/**'
+              - 'linea-besu/plugins/sequencer-interfaces/**'
               - '.github/workflows/linea-sequencer-plugin-testing.yml'
               - 'buildSrc/**'
               - 'gradle/**'
@@ -389,6 +391,32 @@ jobs:
       has-changes-requiring-e2e-testing: ${{ needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing }}
     secrets: inherit
 
+  # Not a required check. Prover-ray/guest changes run dev-zkvm with prover-ray built from this commit.
+  run-riscv-e2e-tests:
+    needs:
+      [
+        compute-commit-tags,
+        docker-build,
+        get-has-changes-requiring-e2e-testing,
+      ]
+    if: >
+      !cancelled() &&
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      needs.compute-commit-tags.result == 'success' &&
+      needs.docker-build.result != 'failure' &&
+      needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-riscv-e2e-testing == 'true'
+    concurrency:
+      group: run-riscv-e2e-tests-${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/reusable-run-e2e-tests.yml
+    with:
+      image_tag: ${{ needs.compute-commit-tags.outputs.commit_tag }}
+      stack: riscv
+      riscv_prover_mode: ${{ needs.get-has-changes-requiring-e2e-testing.outputs.riscv-prover-mode }}
+      linea_besu_package_tag: ${{ needs.docker-build.outputs.linea_besu_package_tag }}
+      e2e-tests-logs-dump: true
+    secrets: inherit
+
   publish-linea-besu-after-run-tests-success:
     needs: [filter-commit-changes, run-e2e-tests]
     # Only run for same-repo PRs: do not checkout and run PR head from forks (avoids untrusted code with contents/packages write).
@@ -458,6 +486,7 @@ jobs:
         manual-docker-build-and-e2e-tests,
         docker-build,
         run-e2e-tests,
+        run-riscv-e2e-tests,
         cleanup-deployments,
       ]
     if: ${{ always() && github.ref == 'refs/heads/main' && contains(needs.*.result, 'failure') }}

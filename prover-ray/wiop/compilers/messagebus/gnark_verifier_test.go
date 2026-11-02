@@ -19,12 +19,11 @@ import (
 // shared randomness is accepted by the verifier circuit on an honest proof,
 // and rejected when the prover publishes a forged contribution limb.
 func TestGnarkVerifier_SharedRandomness(t *testing.T) {
-	// The in-circuit PCS verifier requires column elision and root dedup off.
-	gnarkPCS := pcs.CompileOptions{DisableColumnElision: true, DisableRootDedup: true}
+	// The in-circuit PCS verifier requires root dedup off.
 	shard1 := buildSeededBidirectionalShard(
-		t, "shard-1-gnark", "shard-1", crossShardTrafficShard1, gnarkPCS)
+		t, "shard-1-gnark", "shard-1", crossShardTrafficShard1, pcs.WithoutRootDedup())
 	shard2 := buildSeededBidirectionalShard(
-		t, "shard-2-gnark", "shard-2", crossShardTrafficShard2, gnarkPCS)
+		t, "shard-2-gnark", "shard-2", crossShardTrafficShard2, pcs.WithoutRootDedup())
 	g := preflight.Run(busInputSets(t, shard1, shard2))
 
 	_, proof, pub := shard1.runProve(t, g)

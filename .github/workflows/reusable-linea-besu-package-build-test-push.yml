@@ -99,8 +99,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.ref_name }}
-          fetch-depth: 2   # need at least 2 commits so HEAD~1 resolves later would not fail on compute-version-tags
+          # No `ref` override: check out github.sha (the commit that triggered the
+          # workflow) so the docker image is built from — and named after — that commit,
+          # not the branch tip (which may be a later CHANGELOG.md update commit).
+          fetch-depth: 2   # need at least 2 commits so github.sha~1 resolves later would not fail on compute-version-tags
 
       - name: Build plugins and assemble
         id: build-plugins-and-assemble
@@ -204,7 +206,7 @@ jobs:
 
       - name: release - publish artifacts and release notes
         id: release_publish
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           name: Linea Besu ${{ inputs.release_version && format('v{0}', inputs.release_version) }}
           tag_name: ${{ inputs.release_tag }}

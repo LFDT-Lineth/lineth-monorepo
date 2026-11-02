@@ -5,8 +5,10 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/consensys/gnark-crypto/ecc"
@@ -49,11 +51,13 @@ func (gv *gnarkVerifier) solve(t *testing.T, proof wiop.Proof, pub wiop.PublicIn
 	return err
 }
 
-// compileGnarkPipeline is [compileFullPipeline] with column elision and root
-// deduplication disabled, which the in-circuit PCS verifier requires.
-func compileGnarkPipeline(sys *wiop.System) {
-	compilePipelineBeforePCS(sys)
-	pcs.Compile(sys, pcs.CompileOptions{DisableColumnElision: true, DisableRootDedup: true})
+// compileGnarkPipeline is [compilers.CompileFull] with root deduplication
+// disabled, which the in-circuit PCS verifier requires. Extra options are
+// appended, e.g. to opt a round-0 bus out of shared randomness.
+func compileGnarkPipeline(t *testing.T, sys *wiop.System, extra ...compilers.Option) {
+	t.Helper()
+	opts := append(wioptest.TestingCompileOptions(), compilers.ConfigurePCS(pcs.WithoutRootDedup()))
+	require.NoError(t, compilers.CompileFull(sys, append(opts, extra...)...))
 }
 
 // withCell returns a copy of proof whose cell id is shifted by one.
@@ -90,7 +94,7 @@ func TestGnarkVerifier_PermutationScenarios(t *testing.T) {
 	for _, build := range wioptest.PermutationScenarios() {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
-			compileGnarkPipeline(sc.Sys)
+			compileGnarkPipeline(t, sc.Sys)
 			proof, pub := sc.Sys.Prove(sc.AssignHonest)
 			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
 
@@ -99,7 +103,7 @@ func TestGnarkVerifier_PermutationScenarios(t *testing.T) {
 			t.Logf("constraints: %d", gv.ccs.GetNbConstraints())
 
 			invalid := build()
-			compileGnarkPipeline(invalid.Sys)
+			compileGnarkPipeline(t, invalid.Sys)
 			badProof, badPub := invalid.Sys.Prove(invalid.AssignInvalid)
 			require.Error(t, invalid.Sys.Verify(badProof, badPub), "invalid witness must fail natively")
 			require.Error(t, gv.solve(t, badProof, badPub), "invalid witness must not satisfy the circuit")
@@ -129,7 +133,7 @@ func TestGnarkVerifier_LogDerivativeSumScenarios(t *testing.T) {
 	for _, build := range wioptest.LogDerivativeSumCompilerScenarios() {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
-			compileGnarkPipeline(sc.Sys)
+			compileGnarkPipeline(t, sc.Sys)
 			proof, pub := sc.Sys.Prove(sc.AssignWitness)
 			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
 
@@ -145,7 +149,7 @@ func TestGnarkVerifier_LogDerivativeSumScenarios(t *testing.T) {
 			res.Round().RegisterAction(proverHook(func(rt *wiop.Runtime) {
 				rt.AssignCell(res, field.ElemFromExt(field.Uint64ToExt(123456)))
 			}))
-			compileGnarkPipeline(invalid.Sys)
+			compileGnarkPipeline(t, invalid.Sys)
 			badProof, badPub := invalid.Sys.Prove(invalid.AssignWitness)
 			require.Error(t, invalid.Sys.Verify(badProof, badPub), "wrong Result must fail natively")
 			require.Error(t, gv.solve(t, badProof, badPub), "wrong Result must not satisfy the circuit")
@@ -162,7 +166,7 @@ func TestGnarkVerifier_LookupScenarios(t *testing.T) {
 	for _, build := range wioptest.LookupScenarios() {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
-			compileGnarkPipeline(sc.Sys)
+			compileGnarkPipeline(t, sc.Sys)
 			proof, pub := sc.Sys.Prove(sc.AssignWitness)
 			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
 
@@ -176,7 +180,7 @@ func TestGnarkVerifier_LookupScenarios(t *testing.T) {
 			mCols := newBaseColumns(invalid.Sys, before)
 			require.NotEmpty(t, mCols, "lookuptologderivsum must allocate a multiplicity column")
 			wioptest.Mutator{Column: mCols[0], Row: 0, Tweak: wioptest.AddOne}.Compile(invalid.Sys)
-			compileGnarkPipeline(invalid.Sys)
+			compileGnarkPipeline(t, invalid.Sys)
 			badProof, badPub := invalid.Sys.Prove(invalid.AssignWitness)
 			if invalid.Sys.Verify(badProof, badPub) == nil {
 				// The bumped row is masked by the table's filter, so the
@@ -202,6 +206,10 @@ func newMessageBusSystem() (*wiop.System, *wiop.Column, *wiop.Column) {
 	return sys, colA, colB
 }
 
+// noSharedRandomness opts the round-0 bus of [newMessageBusSystem] out of
+// shared randomness, which needs every bus column on the coin round.
+var noSharedRandomness = compilers.ConfigureMessageBus(messagebus.WithoutSharedRandomness())
+
 // TestGnarkVerifier_MessageBus checks the in-circuit in-shard product check.
 // In the invalid proof the receive side holds a value that was never sent:
 // the prover derives the handle's product honestly from that witness, so the
@@ -209,7 +217,7 @@ func newMessageBusSystem() (*wiop.System, *wiop.Column, *wiop.Column) {
 // reject it.
 func TestGnarkVerifier_MessageBus(t *testing.T) {
 	sys, colA, colB := newMessageBusSystem()
-	compileGnarkPipeline(sys)
+	compileGnarkPipeline(t, sys, noSharedRandomness)
 	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
 		rt.AssignColumn(colA, vecOf(10, 20, 30, 40))
 		rt.AssignColumn(colB, vecOf(40, 10, 30, 20))
@@ -221,7 +229,7 @@ func TestGnarkVerifier_MessageBus(t *testing.T) {
 	t.Logf("constraints: %d", gv.ccs.GetNbConstraints())
 
 	invalid, badA, badB := newMessageBusSystem()
-	compileGnarkPipeline(invalid)
+	compileGnarkPipeline(t, invalid, noSharedRandomness)
 	badProof, badPub := invalid.Prove(func(rt *wiop.Runtime) {
 		rt.AssignColumn(badA, vecOf(10, 20, 30, 40))
 		rt.AssignColumn(badB, vecOf(40, 10, 30, 21)) // 21 was never sent

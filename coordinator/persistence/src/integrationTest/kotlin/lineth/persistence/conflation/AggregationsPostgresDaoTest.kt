@@ -759,7 +759,7 @@ class AggregationsPostgresDaoTest : CleanDbTestSuiteParallel() {
     assertThat(newlyInsertedRow.getLong("end_block_number"))
       .isEqualTo(aggregation.endBlockNumber.toLong())
     assertThat(newlyInsertedRow.getInteger("status"))
-      .isEqualTo(PostgresAggregationsDao.aggregationStatusToDbValue(Aggregation.Status.Proven))
+      .isEqualTo(PostgresAggregationsDaoG.aggregationStatusToDbValue(Aggregation.Status.Proven))
     assertThat(newlyInsertedRow.getLong("batch_count"))
       .isEqualTo(aggregation.batchCount.toLong())
     return dbContent

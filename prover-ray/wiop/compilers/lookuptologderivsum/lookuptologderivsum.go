@@ -204,7 +204,7 @@ func registerRowLimitChecks(groups []*lookupGroup) {
 		// exact per-side module partitioning without reaching into lookupGroup.
 		includedModules := make([]*wiop.Module, len(g.included))
 		for i, inc := range g.included {
-			includedModules[i] = inc.cols[0].Module()
+			includedModules[i] = inc.module
 		}
 		includingsModules := make([]*wiop.Module, len(g.includings))
 		for i, it := range g.includings {
@@ -450,7 +450,7 @@ func compileGroup(
 				bHead = wiop.NewConstantVector(it.module, field.One())
 			}
 		}
-		bRLC := wiop.RLCOfViews(alpha, bHead, it.cols)
+		bRLC := wiop.RLCOfEntries(alpha, bHead, it.cols)
 
 		mCol := it.module.NewColumn(
 			gCtx.Childf("M-%d", frag),
@@ -468,13 +468,13 @@ func compileGroup(
 	for _, inc := range g.included {
 		var sHead wiop.Expression
 		if prependOnesToA {
-			sHead = wiop.NewConstantVector(inc.cols[0].Module(), field.One())
+			sHead = wiop.NewConstantVector(inc.module, field.One())
 		}
-		sRLC := wiop.RLCOfViews(alpha, sHead, inc.cols)
+		sRLC := wiop.RLCOfEntries(alpha, sHead, inc.cols)
 		sDen := wiop.Add(gamma, sRLC)
 		// Numerator is the constant 1 broadcast over the A fragment's module
 		// so the fraction is vector-valued on the A side.
-		oneNum := wiop.NewConstantVector(inc.cols[0].Module(), field.One())
+		oneNum := wiop.NewConstantVector(inc.module, field.One())
 		var filter wiop.Expression
 		if inc.selector != nil {
 			filter = inc.selector

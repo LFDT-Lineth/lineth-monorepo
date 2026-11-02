@@ -9,6 +9,8 @@ SP             ?= 0x00800000
 PROGRAM_ORIGIN ?= 0x00800000
 IN_ORIGIN      ?= 0x08800000
 HEAP_ORIGIN    ?= 0x48800000
+# Heap reserved for the guest allocator; guests read its bounds from `_heap_start`/`_heap_end`.
+HEAP_LENGTH    ?= 0x10000000
 
 # Support function to evaluate expressions and format them as hex
 EVAL = $(shell printf "0x%08x" $$(( $(1) )))
@@ -51,6 +53,7 @@ endef
 # PROGRAM_ORIGIN
 # IN_ORIGIN
 # HEAP_ORIGIN
+# HEAP_LENGTH
 # in arithmetization/src/test/Makefile have default values but can be overriden.
 # Generate the linker script with the specified memory layout
 linker-script:
@@ -62,7 +65,7 @@ linker-script:
 		'    STACK  (rw) : ORIGIN = $(STACK_ORIGIN), LENGTH = $(STACK_LENGTH)' \
 		'    PROGRAM (rx) : ORIGIN = $(PROGRAM_ORIGIN), LENGTH = $(PROGRAM_LENGTH)' \
 		'    IN      (r)  : ORIGIN = $(IN_ORIGIN), LENGTH = $(IN_LENGTH)' \
-		'    /* HEAP  (rw) : ORIGIN = $(HEAP_ORIGIN), LENGTH = infinite */' \
+		'    /* HEAP  (rw) : ORIGIN = $(HEAP_ORIGIN), LENGTH = $(HEAP_LENGTH) */' \
 		'}' \
 		'' \
 		'SECTIONS {' \
@@ -99,6 +102,10 @@ linker-script:
 		'' \
 		'    /* heap grows upward from this address by program convention */' \
 		'    _heap_start = $(HEAP_ORIGIN);' \
+		'    _heap_end = _heap_start + $(HEAP_LENGTH);' \
+		'' \
+		'    /* the R5 arithmetization has 32-bit guest addresses */' \
+		'    ASSERT(_heap_end <= 0x100000000, "guest memory layout exceeds the 4 GiB address space")' \
 		'}' \
 		> $(LINKER_SCRIPT)
 

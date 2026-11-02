@@ -343,16 +343,16 @@ class ProverClientFactoryTest {
     assertThat(requestFilePath(currentFileConfig, beforeSwitchProofIndex)).exists()
     assertThat(requestFilePath(nextFileConfig, beforeSwitchProofIndex)).doesNotExist()
     val beforeSwitchDto = requestDtoFromFile(currentFileConfig, beforeSwitchProofIndex)
-    assertThat(beforeSwitchDto.programId).isEqualTo(currentProgramId)
-    assertThat(beforeSwitchDto.provingSystemVersion).isEqualTo(currentProvingSystemVersion)
+    assertThat(beforeSwitchDto.guestProgramId).isEqualTo(currentProgramId)
+    assertThat(beforeSwitchDto.provingSystem).isEqualTo(currentProvingSystemVersion)
 
     val atSwitchProofIndex =
       client.createProofRequest(l2ExecutionRequestAt(switchBlockNumberInclusive)).get()
     assertThat(requestFilePath(nextFileConfig, atSwitchProofIndex)).exists()
     assertThat(requestFilePath(currentFileConfig, atSwitchProofIndex)).doesNotExist()
     val atSwitchDto = requestDtoFromFile(nextFileConfig, atSwitchProofIndex)
-    assertThat(atSwitchDto.programId).isEqualTo(nextProgramId)
-    assertThat(atSwitchDto.provingSystemVersion).isEqualTo(nextProvingSystemVersion)
+    assertThat(atSwitchDto.guestProgramId).isEqualTo(nextProgramId)
+    assertThat(atSwitchDto.provingSystem).isEqualTo(nextProvingSystemVersion)
   }
 
   // --- current (pre-RISC-V) to next (RISC-V) prover-type switching ---

@@ -223,7 +223,7 @@ func (c *compiled) shiftSubset(alias, target *wiop.Column, sizeIndex int) bool {
 func (c *compiled) buildManifest(round *wiop.Round, vectors []paddedColumn) ColumnManifest {
 	n := len(vectors)
 	manifest := allPresentManifest(n)
-	if c.elisionDisabled || n == 0 {
+	if !c.elisionEnabled || n == 0 {
 		return manifest
 	}
 

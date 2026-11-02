@@ -1071,23 +1071,23 @@ const scenario_8 = Scenario{
                 },
             },
             .{
-                .commitment = .{ 762338119, 446513851, 12326636, 1318695438, 871600213, 2059323765, 231223925, 1153755771 },
+                .commitment = .{ 866526238, 2080437051, 1518571164, 721429618, 575956087, 1565608249, 1207100586, 195523352 },
                 .cells = &.{
                     .{ .base = 0 },
-                    .{ .base = 1 },
+                    .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 1908591638, 1399010315, 1453821015, 937618602, 966798734, 1442017313 } },
-                    .{ .ext = .{ 1009824518, 882429187, 896131862, 1299757867, 1307052900, 1958534153 } },
+                    .{ .ext = .{ 704089070, 325876224, 2019116078, 857382409, 601265232, 942211259 } },
+                    .{ .ext = .{ 708698876, 81469056, 1570132236, 1812375427, 150316308, 768229423 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{.{ 1908591638, 1399010315, 1453821015, 937618602, 966798734, 1442017313 }},
-        .quotient_claims = &.{ .{ 1009824518, 882429187, 896131862, 1299757867, 1307052900, 1958534153 }, .{ 0, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{.{ 704089070, 325876224, 2019116078, 857382409, 601265232, 942211259 }},
+        .quotient_claims = &.{ .{ 708698876, 81469056, 1570132236, 1812375427, 150316308, 768229423 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
     .invalid = .{
@@ -1446,10 +1446,10 @@ const scenario_11 = Scenario{
     .honest = .{
         .rounds = &.{
             .{
-                .commitment = .{ 1864415844, 1879578313, 1945880812, 32315281, 1316253683, 1645635206, 597413601, 2117246426 },
+                .commitment = .{ 1480970943, 1921251513, 1963234098, 797123209, 1866640612, 231591065, 225809986, 1751363393 },
                 .cells = &.{
                     .{ .base = 0 },
-                    .{ .base = 2 },
+                    .{ .base = 0 },
                 },
             },
             .{
@@ -1716,15 +1716,15 @@ const scenario_13 = Scenario{
                 },
             },
             .{
-                .commitment = .{ 1403994921, 332016449, 213454705, 2076378349, 2097287789, 1458577511, 1858197035, 1974691290 },
+                .commitment = .{ 427124621, 449979274, 1986777291, 441913930, 1475095869, 2097867101, 174865188, 504159728 },
                 .cells = &.{
                     .{ .base = 0 },
-                    .{ .base = 1 },
+                    .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 687107313, 1875360090, 360315738, 617987577, 2040524932, 163470924 } },
+                    .{ .ext = .{ 1648634669, 1091361218, 1261771608, 623760586, 1968413474, 544909187 } },
                     .{ .ext = .{ 1598029825, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 7, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
@@ -1732,7 +1732,7 @@ const scenario_13 = Scenario{
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 687107313, 1875360090, 360315738, 617987577, 2040524932, 163470924 }, .{ 7, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{ .{ 1648634669, 1091361218, 1261771608, 623760586, 1968413474, 544909187 }, .{ 7, 0, 0, 0, 0, 0 } },
         .quotient_claims = &.{ .{ 1598029825, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
@@ -1746,24 +1746,24 @@ const scenario_13 = Scenario{
                 },
             },
             .{
-                .commitment = .{ 1371121776, 807980924, 1258569626, 194579222, 1140067540, 558191161, 1662594412, 835614817 },
+                .commitment = .{ 1136260634, 1917306567, 2002377817, 660628666, 560460219, 1426851636, 1942000245, 1964034542 },
                 .cells = &.{
                     .{ .base = 0 },
-                    .{ .base = 1 },
+                    .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 1923998581, 1985473806, 1457974392, 71439505, 741153511, 1832110775 } },
-                    .{ .ext = .{ 1262032647, 1708603280, 1512741616, 69821471, 1157265480, 220752298 } },
+                    .{ .ext = .{ 1813833005, 1291389977, 1001478008, 389486834, 1063174109, 540790332 } },
+                    .{ .ext = .{ 288783659, 518388733, 1575594286, 1020783279, 1509154069, 1273563591 } },
                     .{ .ext = .{ 7, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 1923998581, 1985473806, 1457974392, 71439505, 741153511, 1832110775 }, .{ 7, 0, 0, 0, 0, 0 } },
-        .quotient_claims = &.{ .{ 1262032647, 1708603280, 1512741616, 69821471, 1157265480, 220752298 }, .{ 0, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{ .{ 1813833005, 1291389977, 1001478008, 389486834, 1063174109, 540790332 }, .{ 7, 0, 0, 0, 0, 0 } },
+        .quotient_claims = &.{ .{ 288783659, 518388733, 1575594286, 1020783279, 1509154069, 1273563591 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
 };
@@ -2458,18 +2458,18 @@ const scenario_19 = Scenario{
                 },
             },
             .{
-                .commitment = .{ 1497031220, 1946819743, 1974840560, 1504878130, 2037001963, 1939164965, 897613770, 304649413 },
+                .commitment = .{ 1345308973, 549878846, 1780843358, 280062440, 2011490589, 761086271, 972397182, 2111651981 },
                 .cells = &.{
                     .{ .base = 0 },
                     .{ .base = 0 },
-                    .{ .base = 1 },
-                    .{ .base = 1 },
+                    .{ .base = 0 },
+                    .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 751173382, 972134545, 360349072, 226106115, 38666937, 1642980316 } },
-                    .{ .ext = .{ 2106785668, 1551420489, 180174536, 1178406274, 1084686685, 821490158 } },
+                    .{ .ext = .{ 1494623817, 1644170788, 1356229990, 304533055, 1787828677, 351664130 } },
+                    .{ .ext = .{ 1413157669, 822085394, 678114995, 1217619744, 1959267555, 175832065 } },
                     .{ .ext = .{ 1997537281, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
@@ -2477,8 +2477,8 @@ const scenario_19 = Scenario{
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{.{ 751173382, 972134545, 360349072, 226106115, 38666937, 1642980316 }},
-        .quotient_claims = &.{ .{ 2106785668, 1551420489, 180174536, 1178406274, 1084686685, 821490158 }, .{ 1997537281, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{.{ 1494623817, 1644170788, 1356229990, 304533055, 1787828677, 351664130 }},
+        .quotient_claims = &.{ .{ 1413157669, 822085394, 678114995, 1217619744, 1959267555, 175832065 }, .{ 1997537281, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
     .invalid = .{
@@ -2710,10 +2710,10 @@ const scenario_21 = Scenario{
                 },
             },
             .{
-                .commitment = .{ 189036795, 1071247459, 1439070151, 1228733349, 1855205606, 699505250, 471010310, 1535870852 },
+                .commitment = .{ 1968261315, 1376768046, 781874447, 851494170, 1066841758, 503886942, 1642303602, 1369298609 },
                 .cells = &.{
                     .{ .base = 0 },
-                    .{ .base = 1 },
+                    .{ .base = 0 },
                 },
             },
             .{
@@ -2842,22 +2842,22 @@ const scenario_22 = Scenario{
                 },
             },
             .{
-                .commitment = .{ 1813337744, 602239865, 556798850, 2082986108, 37392764, 1556388096, 1241936213, 1549891937 },
+                .commitment = .{ 1316296199, 257675405, 1123157309, 1331367194, 326952724, 1816336391, 1022919772, 448437660 },
                 .cells = &.{
                     .{ .base = 0 },
-                    .{ .base = 1 },
                     .{ .base = 0 },
                     .{ .base = 0 },
-                    .{ .base = 1 },
-                    .{ .base = 1 },
+                    .{ .base = 0 },
+                    .{ .base = 0 },
+                    .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 1842706474, 1113450273, 2049426332, 419332912, 2117596807, 1214689929 } },
-                    .{ .ext = .{ 993353227, 1876392393, 512356583, 104833228, 1062075810, 1901702307 } },
+                    .{ .ext = .{ 1252775704, 1456855667, 1003356544, 316817373, 272061939, 2097897548 } },
+                    .{ .ext = .{ 1911223751, 896890525, 250839136, 1677234168, 600692093, 524474387 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 521845781, 1622078353, 1024713166, 209666456, 2124151620, 1672698181 } },
+                    .{ .ext = .{ 226880396, 1793781050, 501678272, 1223761903, 1201384186, 1048948774 } },
                     .{ .ext = .{ 1997537281, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
@@ -2865,8 +2865,8 @@ const scenario_22 = Scenario{
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{.{ 1842706474, 1113450273, 2049426332, 419332912, 2117596807, 1214689929 }},
-        .quotient_claims = &.{ .{ 993353227, 1876392393, 512356583, 104833228, 1062075810, 1901702307 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 521845781, 1622078353, 1024713166, 209666456, 2124151620, 1672698181 }, .{ 1997537281, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{.{ 1252775704, 1456855667, 1003356544, 316817373, 272061939, 2097897548 }},
+        .quotient_claims = &.{ .{ 1911223751, 896890525, 250839136, 1677234168, 600692093, 524474387 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 226880396, 1793781050, 501678272, 1223761903, 1201384186, 1048948774 }, .{ 1997537281, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
     .invalid = .{
@@ -3001,28 +3001,28 @@ const scenario_23 = Scenario{
                 },
             },
             .{
-                .commitment = .{ 317206813, 1798545931, 1577257047, 317049214, 559048809, 1264033582, 1247541266, 695633179 },
+                .commitment = .{ 1776117796, 1709285043, 1265052230, 148709365, 710996247, 1038120778, 1450914180, 277689783 },
                 .cells = &.{
                     .{ .base = 0 },
-                    .{ .base = 1 },
                     .{ .base = 0 },
-                    .{ .base = 1 },
+                    .{ .base = 0 },
+                    .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 1966205260, 217338303, 43169813, 448454784, 317226375, 988026685 } },
-                    .{ .ext = .{ 2089581140, 587011184, 1608822278, 112113696, 611983202, 1845036496 } },
+                    .{ .ext = .{ 970085603, 468075380, 2010811472, 1411612716, 646753944, 1967416975 } },
+                    .{ .ext = .{ 242521401, 117018845, 502702868, 352903179, 161688486, 1024530852 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 1818675722, 1672741038, 1091351025, 2044650123, 1462486756, 632912249 } },
-                    .{ .ext = .{ 987345539, 1483538476, 1870867581, 1043839139, 365621689, 1756257887 } },
+                    .{ .ext = .{ 511502160, 1255594184, 1542995331, 187692653, 972325441, 1669515293 } },
+                    .{ .ext = .{ 1725905365, 313898546, 918425441, 1644952988, 1841111185, 2015408648 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 1966205260, 217338303, 43169813, 448454784, 317226375, 988026685 }, .{ 1818675722, 1672741038, 1091351025, 2044650123, 1462486756, 632912249 } },
-        .quotient_claims = &.{ .{ 2089581140, 587011184, 1608822278, 112113696, 611983202, 1845036496 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 987345539, 1483538476, 1870867581, 1043839139, 365621689, 1756257887 }, .{ 0, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{ .{ 970085603, 468075380, 2010811472, 1411612716, 646753944, 1967416975 }, .{ 511502160, 1255594184, 1542995331, 187692653, 972325441, 1669515293 } },
+        .quotient_claims = &.{ .{ 242521401, 117018845, 502702868, 352903179, 161688486, 1024530852 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1725905365, 313898546, 918425441, 1644952988, 1841111185, 2015408648 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
     .invalid = .{
@@ -3035,28 +3035,28 @@ const scenario_23 = Scenario{
                 },
             },
             .{
-                .commitment = .{ 1944280329, 1936002862, 798550674, 1711745923, 588850728, 573426578, 1408310439, 70992863 },
+                .commitment = .{ 1699391055, 56575318, 33178881, 2100558659, 1980958935, 2015726210, 1759515045, 1310216375 },
                 .cells = &.{
                     .{ .base = 0 },
-                    .{ .base = 1 },
+                    .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 1173053497, 144294562, 1970492206, 1327227570, 1064652031, 536462318 } },
-                    .{ .ext = .{ 1358616591, 1101426857, 1557976268, 1397160109, 798839616, 1199468796 } },
+                    .{ .ext = .{ 1762045165, 133221356, 1382509202, 2033488499, 1612731799, 580348267 } },
+                    .{ .ext = .{ 1505864508, 33305339, 1410980517, 1041048733, 935859558, 677763675 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 103747414, 73762179, 34098391, 2123903439, 562873463, 1556190060 } },
-                    .{ .ext = .{ 806498846, 145851672, 1235934504, 2109351187, 260437790, 1278872686 } },
-                    .{ .ext = .{ 24379637, 22604140, 711333744, 1070223179, 1607647335, 1567193897 } },
+                    .{ .ext = .{ 1398302167, 722631528, 1323607807, 643395331, 670965736, 1560181252 } },
+                    .{ .ext = .{ 1600077693, 1787567313, 1905862000, 520183050, 1298324253, 1675744292 } },
+                    .{ .ext = .{ 1542437792, 776207527, 2076521197, 591044616, 739437646, 1958359074 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 1173053497, 144294562, 1970492206, 1327227570, 1064652031, 536462318 }, .{ 103747414, 73762179, 34098391, 2123903439, 562873463, 1556190060 } },
-        .quotient_claims = &.{ .{ 1358616591, 1101426857, 1557976268, 1397160109, 798839616, 1199468796 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 806498846, 145851672, 1235934504, 2109351187, 260437790, 1278872686 }, .{ 24379637, 22604140, 711333744, 1070223179, 1607647335, 1567193897 } },
+        .witness_claims = &.{ .{ 1762045165, 133221356, 1382509202, 2033488499, 1612731799, 580348267 }, .{ 1398302167, 722631528, 1323607807, 643395331, 670965736, 1560181252 } },
+        .quotient_claims = &.{ .{ 1505864508, 33305339, 1410980517, 1041048733, 935859558, 677763675 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1600077693, 1787567313, 1905862000, 520183050, 1298324253, 1675744292 }, .{ 1542437792, 776207527, 2076521197, 591044616, 739437646, 1958359074 } },
         .module_sizes = &.{},
     },
 };
@@ -3135,23 +3135,23 @@ const scenario_24 = Scenario{
                 },
             },
             .{
-                .commitment = .{ 499482923, 1971315203, 1684656775, 360032859, 1923914928, 1408341614, 1186741341, 553300751 },
+                .commitment = .{ 604488282, 2123561776, 1585273052, 825574020, 15669815, 2101624837, 525420544, 566123022 },
                 .cells = &.{
                     .{ .base = 0 },
-                    .{ .base = 1 },
+                    .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 1545364876, 1970254624, 1643548668, 2121268417, 1928799352, 1562981476 } },
-                    .{ .ext = .{ 1984371044, 492563656, 410887167, 2128346929, 482199838, 390745369 } },
+                    .{ .ext = .{ 1269453208, 1112520080, 1152165928, 454735296, 1479800114, 217876686 } },
+                    .{ .ext = .{ 1915393127, 278130020, 288041482, 113683824, 1435303245, 1119822388 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{.{ 1545364876, 1970254624, 1643548668, 2121268417, 1928799352, 1562981476 }},
-        .quotient_claims = &.{ .{ 1984371044, 492563656, 410887167, 2128346929, 482199838, 390745369 }, .{ 0, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{.{ 1269453208, 1112520080, 1152165928, 454735296, 1479800114, 217876686 }},
+        .quotient_claims = &.{ .{ 1915393127, 278130020, 288041482, 113683824, 1435303245, 1119822388 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
     .invalid = .{
@@ -3624,12 +3624,12 @@ const scenario_28 = Scenario{
                 },
             },
             .{
-                .commitment = .{ 189036795, 1071247459, 1439070151, 1228733349, 1855205606, 699505250, 471010310, 1535870852 },
+                .commitment = .{ 431367539, 1354396557, 283616214, 629717593, 1852447696, 47833214, 324420378, 1852462147 },
                 .cells = &.{
                     .{ .base = 0 },
-                    .{ .base = 1 },
-                    .{ .base = 1 },
-                    .{ .base = 1 },
+                    .{ .base = 0 },
+                    .{ .base = 0 },
+                    .{ .base = 0 },
                 },
             },
             .{
@@ -3914,31 +3914,22 @@ pub const system_31_public_input = protocol.public_input.Spec{
 
 // scenario: "lds-ones"
 
+// expression: "z-recurrence-b0-k0"
 const system_31_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "num"
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 4 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 5 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 4 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
     .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 9 } },
-    .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 1 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 13 } },
 };
 
 const system_31_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 6, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 10, .cancelled_positions = &.{} },
-    // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 8, .cancelled_positions = &.{} },
 };
 
 const system_31_module_0_buckets = [_]vanishing.Bucket{
@@ -3958,13 +3949,13 @@ const system_31 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
-const system_31_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 1, .index = 1 },
+const system_31_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 1, .index = 1 }, .size = .{ .static = 4 } },
 };
 
 // logderiv system: "lds-ones"
 const system_31_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_31_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-ones/ld"
+    .{ .entries = &system_31_logderiv_query_0_entries, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-ones/ld"
 };
 
 const system_31_logderiv = logderivativesum.System{ .queries = &system_31_logderiv_queries };
@@ -3995,31 +3986,31 @@ const scenario_31 = Scenario{
                 },
             },
             .{
-                .commitment = .{ 2043210751, 804906967, 1747227206, 1169678018, 1637362480, 524154119, 1087046834, 1019337203 },
+                .commitment = .{ 299446213, 1761290655, 794264310, 1290409544, 1168025150, 1109668544, 1327775739, 1928515143 },
                 .cells = &.{
                     .{ .ext = .{ 24, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 24, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 6, 0, 0, 0, 0, 0 } },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 1095981068, 2046364588, 1457039792, 1246894190, 2122938550, 1184981761, 1077603088, 1135852755 },
+                .commitment = .{ 1509928159, 1022636522, 1305278804, 2031476728, 1362609465, 930316236, 283521955, 21146661 },
                 .cells = &.{
                     .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 190919881, 535201414, 2080487896, 1655798432, 355278580, 105427271 } },
-                    .{ .ext = .{ 810316745, 1309011581, 1550829233, 1626863640, 1850149573, 2089383633 } },
-                    .{ .ext = .{ 1036104977, 584510454, 1315965025, 460438295, 1079251268, 505063096 } },
-                    .{ .ext = .{ 200932412, 333447459, 1227731039, 29559806, 184121868, 1207088882 } },
+                    .{ .ext = .{ 1925098102, 362909032, 1974652664, 1497428395, 577110900, 2026862531 } },
+                    .{ .ext = .{ 2098440654, 1488891646, 1520266573, 353746713, 1975476029, 399770635 } },
+                    .{ .ext = .{ 173342558, 1125982614, 1676320342, 987024751, 1398365129, 503614537 } },
+                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 190919881, 535201414, 2080487896, 1655798432, 355278580, 105427271 }, .{ 810316745, 1309011581, 1550829233, 1626863640, 1850149573, 2089383633 }, .{ 1036104977, 584510454, 1315965025, 460438295, 1079251268, 505063096 } },
-        .quotient_claims = &.{.{ 200932412, 333447459, 1227731039, 29559806, 184121868, 1207088882 }},
+        .witness_claims = &.{ .{ 1925098102, 362909032, 1974652664, 1497428395, 577110900, 2026862531 }, .{ 2098440654, 1488891646, 1520266573, 353746713, 1975476029, 399770635 }, .{ 173342558, 1125982614, 1676320342, 987024751, 1398365129, 503614537 } },
+        .quotient_claims = &.{.{ 0, 0, 0, 0, 0, 0 }},
         .module_sizes = &.{},
     },
 };
@@ -4031,12 +4022,13 @@ pub const system_32_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_32_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 2, 3, 3, 7 },
+    .round_cell_counts = &[_]usize{ 2, 3, 1, 5 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-partial"
 
+// expression: "z-recurrence-b0-k0"
 const system_32_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "flt"
     .{ .column_claim = 1 }, // col: "num"
@@ -4044,34 +4036,20 @@ const system_32_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .column_claim = 3 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 4 } },
+    .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 7 } },
-    .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 3 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 13 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 9 } },
 };
 
 const system_32_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 8, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 12, .cancelled_positions = &.{} },
-};
-
-const system_32_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 16, .cancelled_positions = &.{} },
+    .{ .expression = 10, .cancelled_positions = &.{} },
 };
 
 const system_32_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 1, .vanishings = &system_32_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 2, .vanishings = &system_32_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
 };
 
 const system_32_modules = [_]vanishing.Module{
@@ -4084,16 +4062,16 @@ const system_32 = vanishing.System{
     .modules = &system_32_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 4,
-    .total_quotient_claims = 3,
+    .total_quotient_claims = 1,
 };
 
-const system_32_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 1, .index = 1 },
+const system_32_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 1, .index = 1 }, .size = .{ .static = 4 } },
 };
 
 // logderiv system: "lds-partial"
 const system_32_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_32_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-partial/ld"
+    .{ .entries = &system_32_logderiv_query_0_entries, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-partial/ld"
 };
 
 const system_32_logderiv = logderivativesum.System{ .queries = &system_32_logderiv_queries };
@@ -4125,36 +4103,32 @@ const scenario_32 = Scenario{
                 },
             },
             .{
-                .commitment = .{ 1553722914, 1328012185, 1153601217, 745957868, 1099095511, 1220870108, 189490451, 1368210208 },
+                .commitment = .{ 984552696, 1070496476, 1744080591, 848003617, 1022541903, 761438206, 1600277728, 34876663 },
                 .cells = &.{
                     .{ .ext = .{ 10, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 10, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 1065353219, 0, 0, 0, 0, 0 } },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 246574287, 671577814, 1223020803, 973521542, 1257821580, 1735355042, 86153943, 2088294961 },
+                .commitment = .{ 1243801194, 672119228, 2080986231, 147301294, 717688647, 493446355, 935122617, 480154441 },
                 .cells = &.{
-                    .{ .base = 0 },
-                    .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 44965297, 1742917672, 865671993, 222189370, 49424042, 1122063168 } },
-                    .{ .ext = .{ 1993114247, 1505710590, 1775329860, 2103434768, 999483121, 393142646 } },
-                    .{ .ext = .{ 1514622033, 1277732869, 809913148, 197260773, 324049784, 1419161069 } },
-                    .{ .ext = .{ 170092007, 19893535, 427870846, 156721189, 1676848761, 1075846109 } },
-                    .{ .ext = .{ 616729195, 1982334578, 321801736, 687229269, 884250537, 819835459 } },
-                    .{ .ext = .{ 1951646848, 540250850, 1052746111, 1154763331, 647131739, 365867567 } },
-                    .{ .ext = .{ 534765568, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 1779258474, 1881696, 710095087, 1379293573, 1971301700, 1656649541 } },
+                    .{ .ext = .{ 1755469231, 1808986765, 1065417823, 2018328595, 1619893082, 461812490 } },
+                    .{ .ext = .{ 713019971, 1976432535, 887335283, 1575278937, 1317383192, 702413556 } },
+                    .{ .ext = .{ 1949913911, 1334669814, 937023499, 454456250, 21573994, 1391907636 } },
+                    .{ .ext = .{ 1929374366, 1948383108, 1137609912, 318078842, 880671167, 15555819 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 44965297, 1742917672, 865671993, 222189370, 49424042, 1122063168 }, .{ 1993114247, 1505710590, 1775329860, 2103434768, 999483121, 393142646 }, .{ 1514622033, 1277732869, 809913148, 197260773, 324049784, 1419161069 }, .{ 170092007, 19893535, 427870846, 156721189, 1676848761, 1075846109 } },
-        .quotient_claims = &.{ .{ 616729195, 1982334578, 321801736, 687229269, 884250537, 819835459 }, .{ 1951646848, 540250850, 1052746111, 1154763331, 647131739, 365867567 }, .{ 534765568, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{ .{ 1779258474, 1881696, 710095087, 1379293573, 1971301700, 1656649541 }, .{ 1755469231, 1808986765, 1065417823, 2018328595, 1619893082, 461812490 }, .{ 713019971, 1976432535, 887335283, 1575278937, 1317383192, 702413556 }, .{ 1949913911, 1334669814, 937023499, 454456250, 21573994, 1391907636 } },
+        .quotient_claims = &.{.{ 1929374366, 1948383108, 1137609912, 318078842, 880671167, 15555819 }},
         .module_sizes = &.{},
     },
 };
@@ -4166,12 +4140,13 @@ pub const system_33_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_33_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 2, 3, 3, 7 },
+    .round_cell_counts = &[_]usize{ 2, 3, 1, 5 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-zeros"
 
+// expression: "z-recurrence-b0-k0"
 const system_33_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "flt"
     .{ .column_claim = 1 }, // col: "num"
@@ -4179,34 +4154,20 @@ const system_33_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .column_claim = 3 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 4 } },
+    .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 7 } },
-    .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 3 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 13 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 9 } },
 };
 
 const system_33_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 8, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 12, .cancelled_positions = &.{} },
-};
-
-const system_33_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 16, .cancelled_positions = &.{} },
+    .{ .expression = 10, .cancelled_positions = &.{} },
 };
 
 const system_33_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 1, .vanishings = &system_33_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 2, .vanishings = &system_33_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
 };
 
 const system_33_modules = [_]vanishing.Module{
@@ -4219,16 +4180,16 @@ const system_33 = vanishing.System{
     .modules = &system_33_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 4,
-    .total_quotient_claims = 3,
+    .total_quotient_claims = 1,
 };
 
-const system_33_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 1, .index = 1 },
+const system_33_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 1, .index = 1 }, .size = .{ .static = 4 } },
 };
 
 // logderiv system: "lds-zeros"
 const system_33_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_33_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-zeros/ld"
+    .{ .entries = &system_33_logderiv_query_0_entries, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-zeros/ld"
 };
 
 const system_33_logderiv = logderivativesum.System{ .queries = &system_33_logderiv_queries };
@@ -4253,34 +4214,30 @@ const scenario_33 = Scenario{
     .honest = .{
         .rounds = &.{
             .{
-                .commitment = .{ 1896832532, 1653359162, 1478003325, 414831515, 382187101, 1503885880, 239692559, 1048659245 },
+                .commitment = .{ 1821722367, 1705260624, 2094493806, 1340682580, 310796252, 1832098018, 791462389, 751555453 },
                 .cells = &.{
                     .{ .base = 0 },
-                    .{ .base = 1 },
-                },
-            },
-            .{
-                .commitment = .{ 1509928159, 1022636522, 1305278804, 2031476728, 1362609465, 930316236, 283521955, 21146661 },
-                .cells = &.{
-                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .base = 0 },
                 },
             },
             .{
                 .commitment = .{ 1509928159, 1022636522, 1305278804, 2031476728, 1362609465, 930316236, 283521955, 21146661 },
                 .cells = &.{
+                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .base = 0 },
-                    .{ .base = 1 },
-                    .{ .base = 1 },
+                },
+            },
+            .{
+                .commitment = .{ 1509928159, 1022636522, 1305278804, 2031476728, 1362609465, 930316236, 283521955, 21146661 },
+                .cells = &.{
+                    .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 1170060397, 1849684591, 1542412926, 494089668, 1221712498, 40805472 } },
-                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 517229018, 1139951403, 1121415832, 2021800975, 248275434, 1991791584 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
@@ -4288,8 +4245,8 @@ const scenario_33 = Scenario{
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 1170060397, 1849684591, 1542412926, 494089668, 1221712498, 40805472 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
-        .quotient_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 517229018, 1139951403, 1121415832, 2021800975, 248275434, 1991791584 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
+        .quotient_claims = &.{.{ 0, 0, 0, 0, 0, 0 }},
         .module_sizes = &.{},
     },
 };
@@ -4301,12 +4258,13 @@ pub const system_34_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_34_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 3, 3, 3, 8 },
+    .round_cell_counts = &[_]usize{ 3, 3, 1, 6 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-maskzero"
 
+// expression: "z-recurrence-b0-k0"
 const system_34_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "flt"
     .{ .column_claim = 1 }, // col: "num"
@@ -4314,34 +4272,20 @@ const system_34_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .column_claim = 3 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 4 } },
+    .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
     .{ .column_claim = 4 }, // col: "den"
-    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 7 } },
-    .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 3 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 13 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 9 } },
 };
 
 const system_34_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 8, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 12, .cancelled_positions = &.{} },
-};
-
-const system_34_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 16, .cancelled_positions = &.{} },
+    .{ .expression = 10, .cancelled_positions = &.{} },
 };
 
 const system_34_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 1, .vanishings = &system_34_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 2, .vanishings = &system_34_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
 };
 
 const system_34_modules = [_]vanishing.Module{
@@ -4354,16 +4298,16 @@ const system_34 = vanishing.System{
     .modules = &system_34_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 5,
-    .total_quotient_claims = 3,
+    .total_quotient_claims = 1,
 };
 
-const system_34_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 1, .index = 1 },
+const system_34_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 1, .index = 1 }, .size = .{ .static = 4 } },
 };
 
 // logderiv system: "lds-maskzero"
 const system_34_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_34_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-maskzero/ld"
+    .{ .entries = &system_34_logderiv_query_0_entries, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-maskzero/ld"
 };
 
 const system_34_logderiv = logderivativesum.System{ .queries = &system_34_logderiv_queries };
@@ -4396,37 +4340,33 @@ const scenario_34 = Scenario{
                 },
             },
             .{
-                .commitment = .{ 1412435407, 331198873, 1458652304, 243035214, 652590045, 400344593, 543245367, 467143527 },
+                .commitment = .{ 1937702364, 487492547, 244269989, 1246010412, 415706576, 2071804793, 747750183, 1837968342 },
                 .cells = &.{
                     .{ .ext = .{ 4, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 4, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 1, 0, 0, 0, 0, 0 } },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 817471831, 67265353, 1528324650, 887403194, 950251530, 402259986, 1175639093, 350828657 },
+                .commitment = .{ 1899025940, 1422418967, 742698326, 648726946, 2112652605, 1683222013, 84930599, 1935605101 },
                 .cells = &.{
-                    .{ .base = 0 },
-                    .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 1236203005, 990929463, 685951847, 119962374, 299072236, 995063253 } },
-                    .{ .ext = .{ 579753935, 1867539330, 397137155, 330981871, 1312146385, 920769833 } },
-                    .{ .ext = .{ 879911027, 357079624, 1698829214, 801584366, 1631314888, 279321200 } },
-                    .{ .ext = .{ 391425108, 84183287, 1429363278, 2098340311, 204634184, 568751890 } },
-                    .{ .ext = .{ 756792325, 2043883341, 61882076, 776862366, 1610557060, 709767981 } },
-                    .{ .ext = .{ 2069746794, 1517333099, 13596351, 489990193, 1747464411, 1588755180 } },
-                    .{ .ext = .{ 240332553, 1829721380, 2032820587, 192483530, 495261511, 1661217438 } },
-                    .{ .ext = .{ 818909226, 473656535, 1667731610, 2064658462, 1243171445, 1819611411 } },
+                    .{ .ext = .{ 1437929137, 80702037, 1853263754, 1364449513, 157346161, 1100308557 } },
+                    .{ .ext = .{ 779155825, 673677797, 1467394737, 349663073, 456296163, 970072720 } },
+                    .{ .ext = .{ 1437929137, 80702037, 1853263754, 1364449513, 157346161, 1100308557 } },
+                    .{ .ext = .{ 692777297, 2050004396, 277442679, 766256920, 1973360272, 1030397876 } },
+                    .{ .ext = .{ 188404639, 70176864, 1915229789, 1663183007, 1624663752, 617295890 } },
+                    .{ .ext = .{ 1598029800, 0, 0, 0, 0, 0 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 1236203005, 990929463, 685951847, 119962374, 299072236, 995063253 }, .{ 579753935, 1867539330, 397137155, 330981871, 1312146385, 920769833 }, .{ 879911027, 357079624, 1698829214, 801584366, 1631314888, 279321200 }, .{ 391425108, 84183287, 1429363278, 2098340311, 204634184, 568751890 }, .{ 756792325, 2043883341, 61882076, 776862366, 1610557060, 709767981 } },
-        .quotient_claims = &.{ .{ 2069746794, 1517333099, 13596351, 489990193, 1747464411, 1588755180 }, .{ 240332553, 1829721380, 2032820587, 192483530, 495261511, 1661217438 }, .{ 818909226, 473656535, 1667731610, 2064658462, 1243171445, 1819611411 } },
+        .witness_claims = &.{ .{ 1437929137, 80702037, 1853263754, 1364449513, 157346161, 1100308557 }, .{ 779155825, 673677797, 1467394737, 349663073, 456296163, 970072720 }, .{ 1437929137, 80702037, 1853263754, 1364449513, 157346161, 1100308557 }, .{ 692777297, 2050004396, 277442679, 766256920, 1973360272, 1030397876 }, .{ 188404639, 70176864, 1915229789, 1663183007, 1624663752, 617295890 } },
+        .quotient_claims = &.{.{ 1598029800, 0, 0, 0, 0, 0 }},
         .module_sizes = &.{},
     },
 };
@@ -4438,75 +4378,53 @@ pub const system_35_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_35_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 4, 5, 5, 13 },
+    .round_cell_counts = &[_]usize{ 4, 3, 4, 10 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-pack"
 
+// expression: "z-recurrence-b0-k0"
 const system_35_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "c0"
     .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
     .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 1 } },
     .{ .column_claim = 1 }, // col: "c1"
-    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 1 } },
     .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 1 } },
-    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 1 } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 8 } },
     .{ .column_claim = 2 }, // col: "c2"
-    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 1 } },
-    .{ .op = .{ .operator = .mul, .lhs = 9, .rhs = 1 } },
-    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 10 } },
-    .{ .column_claim = 3 }, // col: "z-b0-k0"
-    .{ .column_claim = 4 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .lhs = 12, .rhs = 13 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 1 } },
+    .{ .op = .{ .operator = .add, .lhs = 9, .rhs = 13 } },
+    .{ .column_claim = 3 }, // col: "c3"
     .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 1 } },
-    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 16 } },
-    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 17 } },
-    .{ .column_claim = 5 }, // col: "c3"
-    .{ .column_claim = 6 }, // col: "z-b0-k1"
-    .{ .column_claim = 7 }, // col: "z-b0-k1"
+    .{ .op = .{ .operator = .mul, .lhs = 16, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 17, .rhs = 1 } },
+    .{ .op = .{ .operator = .add, .lhs = 14, .rhs = 18 } },
+    .{ .column_claim = 4 }, // col: "z-b0-k0"
+    .{ .column_claim = 5 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 20, .rhs = 21 } },
-    .{ .op = .{ .operator = .mul, .lhs = 22, .rhs = 1 } },
-    .{ .op = .{ .operator = .sub, .lhs = 19, .rhs = 23 } },
-    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 16 } },
-    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 25 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 26, .rhs = 27 } },
-    .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 29, .rhs = 12 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 30, .rhs = 31 } },
-    .{ .op = .{ .operator = .mul, .lhs = 20, .rhs = 1 } },
-    .{ .op = .{ .operator = .sub, .lhs = 19, .rhs = 33 } },
-    .{ .op = .{ .operator = .mul, .lhs = 34, .rhs = 27 } },
-    .{ .cell_value = .{ .round = 1, .index = 2 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 36, .rhs = 20 } },
-    .{ .op = .{ .operator = .mul, .lhs = 37, .rhs = 31 } },
+    .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 22, .rhs = 23 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 25, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 26, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 24, .rhs = 27 } },
+    .{ .op = .{ .operator = .sub, .lhs = 19, .rhs = 28 } },
 };
 
 const system_35_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 18, .cancelled_positions = &.{0} },
-};
-
-const system_35_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "z-recurrence-b0-k1"
-    .{ .expression = 24, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 28, .cancelled_positions = &.{} },
-    // expression: "global"
-    .{ .expression = 32, .cancelled_positions = &.{} },
-    // expression: "global"
-    .{ .expression = 35, .cancelled_positions = &.{} },
-    // expression: "global"
-    .{ .expression = 38, .cancelled_positions = &.{} },
+    .{ .expression = 29, .cancelled_positions = &.{} },
 };
 
 const system_35_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 4, .vanishings = &system_35_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 1, .vanishings = &system_35_module_0_bucket_1_vanishings, .quotient_claim_offset = 4 },
 };
 
 const system_35_modules = [_]vanishing.Module{
@@ -4518,18 +4436,17 @@ const system_35_modules = [_]vanishing.Module{
 const system_35 = vanishing.System{
     .modules = &system_35_modules,
     .dynamic_module_count = 0,
-    .total_witness_claims = 8,
-    .total_quotient_claims = 5,
+    .total_witness_claims = 6,
+    .total_quotient_claims = 4,
 };
 
-const system_35_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 1, .index = 1 },
-    .{ .round = 1, .index = 2 },
+const system_35_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 1, .index = 1 }, .size = .{ .static = 4 } },
 };
 
 // logderiv system: "lds-pack"
 const system_35_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_35_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-pack/ld"
+    .{ .entries = &system_35_logderiv_query_0_entries, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-pack/ld"
 };
 
 const system_35_logderiv = logderivativesum.System{ .queries = &system_35_logderiv_queries };
@@ -4563,46 +4480,40 @@ const scenario_35 = Scenario{
                 },
             },
             .{
-                .commitment = .{ 66455112, 1696003579, 1266887373, 684595540, 1591969680, 1670861546, 1969548069, 1098481858 },
+                .commitment = .{ 1935647079, 1738997972, 299266277, 1996299252, 1655036624, 1021959048, 1112991183, 1483041443 },
                 .cells = &.{
                     .{ .ext = .{ 136, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 78, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 58, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 34, 0, 0, 0, 0, 0 } },
+                    .{ .base = 0 },
+                },
+            },
+            .{
+                .commitment = .{ 89202317, 1471744030, 237177680, 1559842232, 1600855048, 457379845, 725402522, 833775382 },
+                .cells = &.{
+                    .{ .base = 0 },
+                    .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 744669926, 180134302, 841629427, 38240626, 1578099254, 973851305, 1518375813, 1471941298 },
                 .cells = &.{
-                    .{ .base = 0 },
-                    .{ .base = 1 },
-                    .{ .base = 1 },
-                    .{ .base = 1 },
-                    .{ .base = 0 },
-                },
-            },
-            .{
-                .cells = &.{
-                    .{ .ext = .{ 1401508938, 1695332493, 1995041390, 1014216574, 872603680, 1738998019 } },
-                    .{ .ext = .{ 1401508942, 1695332493, 1995041390, 1014216574, 872603680, 1738998019 } },
-                    .{ .ext = .{ 1401508946, 1695332493, 1995041390, 1014216574, 872603680, 1738998019 } },
-                    .{ .ext = .{ 2040424519, 1049993893, 1279583811, 344729218, 697479177, 1473309411 } },
-                    .{ .ext = .{ 119017150, 1725181661, 1941625692, 1732112389, 1484500114, 975863226 } },
-                    .{ .ext = .{ 1401508950, 1695332493, 1995041390, 1014216574, 872603680, 1738998019 } },
-                    .{ .ext = .{ 1948916323, 1838654788, 1471914026, 416052077, 821203200, 1618848691 } },
-                    .{ .ext = .{ 770007131, 439035181, 649925754, 565256093, 786759210, 1258551631 } },
-                    .{ .ext = .{ 1065353236, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 1643726511, 154418403, 753850013, 624805649, 481399783, 474677307 } },
+                    .{ .ext = .{ 1643726515, 154418403, 753850013, 624805649, 481399783, 474677307 } },
+                    .{ .ext = .{ 1643726519, 154418403, 753850013, 624805649, 481399783, 474677307 } },
+                    .{ .ext = .{ 1643726523, 154418403, 753850013, 624805649, 481399783, 474677307 } },
+                    .{ .ext = .{ 147898375, 302343024, 2016071294, 947817707, 822248818, 2089210959 } },
+                    .{ .ext = .{ 2095818073, 1815375845, 1131377675, 579301544, 1027356119, 190501731 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 1114515339, 383697474, 1013253990, 1346055376, 1537138137, 1060956910 } },
+                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 1401508938, 1695332493, 1995041390, 1014216574, 872603680, 1738998019 }, .{ 1401508942, 1695332493, 1995041390, 1014216574, 872603680, 1738998019 }, .{ 1401508946, 1695332493, 1995041390, 1014216574, 872603680, 1738998019 }, .{ 2040424519, 1049993893, 1279583811, 344729218, 697479177, 1473309411 }, .{ 119017150, 1725181661, 1941625692, 1732112389, 1484500114, 975863226 }, .{ 1401508950, 1695332493, 1995041390, 1014216574, 872603680, 1738998019 }, .{ 1948916323, 1838654788, 1471914026, 416052077, 821203200, 1618848691 }, .{ 770007131, 439035181, 649925754, 565256093, 786759210, 1258551631 } },
-        .quotient_claims = &.{ .{ 1065353236, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1114515339, 383697474, 1013253990, 1346055376, 1537138137, 1060956910 } },
+        .witness_claims = &.{ .{ 1643726511, 154418403, 753850013, 624805649, 481399783, 474677307 }, .{ 1643726515, 154418403, 753850013, 624805649, 481399783, 474677307 }, .{ 1643726519, 154418403, 753850013, 624805649, 481399783, 474677307 }, .{ 1643726523, 154418403, 753850013, 624805649, 481399783, 474677307 }, .{ 147898375, 302343024, 2016071294, 947817707, 822248818, 2089210959 }, .{ 2095818073, 1815375845, 1131377675, 579301544, 1027356119, 190501731 } },
+        .quotient_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
 };
@@ -4614,43 +4525,35 @@ pub const system_36_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_36_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 3, 5, 4, 11 },
+    .round_cell_counts = &[_]usize{ 3, 5, 2, 9 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-multi-mod"
 
+// expression: "z-recurrence-b0-k0"
 const system_36_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "cA"
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 4 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 5 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 4 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
     .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 9 } },
-    .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 1 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 13 } },
 };
 
 const system_36_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 6, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 10, .cancelled_positions = &.{} },
-    // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 8, .cancelled_positions = &.{} },
 };
 
 const system_36_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 1, .vanishings = &system_36_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
 };
 
+// expression: "z-recurrence-b1-k0"
 const system_36_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "fB"
     .{ .column_claim = 1 }, // col: "cB"
@@ -4658,34 +4561,20 @@ const system_36_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 2 }, // col: "z-b1-k0"
     .{ .column_claim = 3 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 4 } },
+    .{ .cell_value = .{ .round = 1, .index = 2 } }, // cell: "z-average-b1-k0"
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 7 } },
-    .{ .cell_value = .{ .round = 1, .index = 2 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 3 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 13 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 9 } },
 };
 
 const system_36_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 8, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 12, .cancelled_positions = &.{} },
-};
-
-const system_36_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 16, .cancelled_positions = &.{} },
+    .{ .expression = 10, .cancelled_positions = &.{} },
 };
 
 const system_36_module_1_buckets = [_]vanishing.Bucket{
     .{ .ratio = 1, .vanishings = &system_36_module_1_bucket_0_vanishings, .quotient_claim_offset = 1 },
-    .{ .ratio = 2, .vanishings = &system_36_module_1_bucket_1_vanishings, .quotient_claim_offset = 2 },
 };
 
 const system_36_modules = [_]vanishing.Module{
@@ -4700,17 +4589,17 @@ const system_36 = vanishing.System{
     .modules = &system_36_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 7,
-    .total_quotient_claims = 4,
+    .total_quotient_claims = 2,
 };
 
-const system_36_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 1, .index = 1 },
-    .{ .round = 1, .index = 2 },
+const system_36_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 1, .index = 1 }, .size = .{ .static = 4 } },
+    .{ .average_ref = .{ .round = 1, .index = 2 }, .size = .{ .static = 4 } },
 };
 
 // logderiv system: "lds-multi-mod"
 const system_36_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_36_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-multi-mod/ld"
+    .{ .entries = &system_36_logderiv_query_0_entries, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-multi-mod/ld"
 };
 
 const system_36_logderiv = logderivativesum.System{ .queries = &system_36_logderiv_queries };
@@ -4743,43 +4632,39 @@ const scenario_36 = Scenario{
                 },
             },
             .{
-                .commitment = .{ 779032667, 18416623, 1904956879, 1669453497, 1232684285, 273400425, 532845581, 939119185 },
+                .commitment = .{ 569945061, 1926175485, 1587213889, 1446480071, 867815209, 1497288762, 572579855, 954311659 },
                 .cells = &.{
                     .{ .ext = .{ 21, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 10, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 11, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 1065353219, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 532676611, 0, 0, 0, 0, 0 } },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 1909210042, 925466175, 635508519, 1163907445, 837759500, 1373737453, 1789097946, 1720007720 },
+                .commitment = .{ 1210685223, 1720731770, 1430402681, 287380115, 1618068560, 378758422, 605265049, 696725632 },
                 .cells = &.{
-                    .{ .base = 0 },
-                    .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 1704187642, 254152543, 1268073776, 127868206, 1656897230, 2085094898 } },
-                    .{ .ext = .{ 1635988276, 560608381, 1145899580, 1111116699, 1701984193, 2004554180 } },
-                    .{ .ext = .{ 509595943, 1195605157, 2035005223, 1895912464, 860386538, 1796219606 } },
-                    .{ .ext = .{ 1240657693, 2008910427, 557036965, 373864026, 238321760, 1587299807 } },
-                    .{ .ext = .{ 243515378, 644592205, 1182005318, 1269393654, 1303454657, 959365682 } },
-                    .{ .ext = .{ 1704187646, 254152543, 1268073776, 127868206, 1656897230, 2085094898 } },
-                    .{ .ext = .{ 1357887972, 1171075555, 410257495, 2009249337, 1641526688, 578508952 } },
-                    .{ .ext = .{ 1442432648, 1353490514, 1020536329, 1027920904, 1191277535, 57416255 } },
-                    .{ .ext = .{ 574881940, 702521136, 1530717853, 955199699, 527204704, 2043883483 } },
-                    .{ .ext = .{ 1313973506, 406423591, 2055151596, 1911097656, 1862992978, 416377133 } },
-                    .{ .ext = .{ 94601488, 448978794, 4866970, 1057292724, 35111875, 115490433 } },
+                    .{ .ext = .{ 1499253238, 400322886, 714167586, 1793319283, 239212345, 33609502 } },
+                    .{ .ext = .{ 550846092, 292915718, 70650001, 27570771, 1000993473, 1547331249 } },
+                    .{ .ext = .{ 116946073, 2023299265, 1487188848, 364957921, 761781128, 1513721747 } },
+                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 47520759, 1386348092, 1527823909, 130644068, 1088731735, 443302460 } },
+                    .{ .ext = .{ 1499253242, 400322886, 714167586, 1793319283, 239212345, 33609502 } },
+                    .{ .ext = .{ 48363944, 784802523, 294548917, 784145595, 1214512998, 2073496344 } },
+                    .{ .ext = .{ 1553845175, 1207934568, 1582278201, 201784901, 318286889, 2071195285 } },
+                    .{ .ext = .{ 213196378, 682248031, 96108722, 676848693, 1800939326, 1827204006 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 1704187642, 254152543, 1268073776, 127868206, 1656897230, 2085094898 }, .{ 1635988276, 560608381, 1145899580, 1111116699, 1701984193, 2004554180 }, .{ 509595943, 1195605157, 2035005223, 1895912464, 860386538, 1796219606 }, .{ 243515378, 644592205, 1182005318, 1269393654, 1303454657, 959365682 }, .{ 1704187646, 254152543, 1268073776, 127868206, 1656897230, 2085094898 }, .{ 1357887972, 1171075555, 410257495, 2009249337, 1641526688, 578508952 }, .{ 1442432648, 1353490514, 1020536329, 1027920904, 1191277535, 57416255 } },
-        .quotient_claims = &.{ .{ 1240657693, 2008910427, 557036965, 373864026, 238321760, 1587299807 }, .{ 574881940, 702521136, 1530717853, 955199699, 527204704, 2043883483 }, .{ 1313973506, 406423591, 2055151596, 1911097656, 1862992978, 416377133 }, .{ 94601488, 448978794, 4866970, 1057292724, 35111875, 115490433 } },
+        .witness_claims = &.{ .{ 1499253238, 400322886, 714167586, 1793319283, 239212345, 33609502 }, .{ 550846092, 292915718, 70650001, 27570771, 1000993473, 1547331249 }, .{ 116946073, 2023299265, 1487188848, 364957921, 761781128, 1513721747 }, .{ 47520759, 1386348092, 1527823909, 130644068, 1088731735, 443302460 }, .{ 1499253242, 400322886, 714167586, 1793319283, 239212345, 33609502 }, .{ 48363944, 784802523, 294548917, 784145595, 1214512998, 2073496344 }, .{ 1553845175, 1207934568, 1582278201, 201784901, 318286889, 2071195285 } },
+        .quotient_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 213196378, 682248031, 96108722, 676848693, 1800939326, 1827204006 } },
         .module_sizes = &.{},
     },
 };
@@ -4791,30 +4676,28 @@ pub const system_37_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_37_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 1, 3, 1, 3 },
+    .round_cell_counts = &[_]usize{ 1, 3, 1, 4 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-size1"
 
+// expression: "z-recurrence-b0-k0"
 const system_37_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "num"
     .{ .column_claim = 1 }, // col: "z-b0-k0"
+    .{ .column_claim = 2 }, // col: "z-b0-k0"
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 2 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 3 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 5 } },
-    .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 7, .rhs = 1 } },
-    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
 };
 
 const system_37_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 6, .cancelled_positions = &.{} },
-    // expression: "global"
-    .{ .expression = 9, .cancelled_positions = &.{} },
+    // expression: "z-recurrence-b0-k0"
+    .{ .expression = 8, .cancelled_positions = &.{} },
 };
 
 const system_37_module_0_buckets = [_]vanishing.Bucket{
@@ -4830,17 +4713,17 @@ const system_37_modules = [_]vanishing.Module{
 const system_37 = vanishing.System{
     .modules = &system_37_modules,
     .dynamic_module_count = 0,
-    .total_witness_claims = 2,
+    .total_witness_claims = 3,
     .total_quotient_claims = 1,
 };
 
-const system_37_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 1, .index = 1 },
+const system_37_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 1, .index = 1 }, .size = .{ .static = 1 } },
 };
 
 // logderiv system: "lds-size1"
 const system_37_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_37_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-size1/ld"
+    .{ .entries = &system_37_logderiv_query_0_entries, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-size1/ld"
 };
 
 const system_37_logderiv = logderivativesum.System{ .queries = &system_37_logderiv_queries };
@@ -4871,7 +4754,7 @@ const scenario_37 = Scenario{
                 },
             },
             .{
-                .commitment = .{ 796203622, 231908022, 731191397, 571402934, 1193763995, 1284513177, 393998546, 370635376 },
+                .commitment = .{ 2066816440, 1251002353, 1739592788, 365120622, 445688483, 1162635539, 2126865213, 1891784736 },
                 .cells = &.{
                     .{ .ext = .{ 17, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 17, 0, 0, 0, 0, 0 } },
@@ -4887,13 +4770,14 @@ const scenario_37 = Scenario{
             .{
                 .cells = &.{
                     .{ .ext = .{ 17, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 17, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 17, 0, 0, 0, 0, 0 }, .{ 17, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{ .{ 17, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
         .quotient_claims = &.{.{ 0, 0, 0, 0, 0, 0 }},
         .module_sizes = &.{},
     },
@@ -4906,12 +4790,13 @@ pub const system_38_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_38_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 4, 5, 6, 14 },
+    .round_cell_counts = &[_]usize{ 4, 5, 2, 10 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-cond"
 
+// expression: "z-recurrence-b0-k0"
 const system_38_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "filterS"
     .{ .constant = .{ .value = 1 } },
@@ -4919,74 +4804,47 @@ const system_38_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 4 } },
+    .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
     .{ .constant = .{ .value = 7 } },
     .{ .column_claim = 3 }, // col: "S"
-    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 7 } },
-    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 8 } },
-    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 9 } },
-    .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 3 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 13 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 8 } },
-    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 15 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 16, .rhs = 17 } },
+    .{ .op = .{ .operator = .add, .lhs = 8, .rhs = 9 } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 10 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 11 } },
 };
 
 const system_38_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 10, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
-};
-
-const system_38_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 18, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_38_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 1, .vanishings = &system_38_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 2, .vanishings = &system_38_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
 };
 
+// expression: "z-recurrence-b1-k0"
 const system_38_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M"
     .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .column_claim = 2 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
+    .{ .cell_value = .{ .round = 1, .index = 2 } }, // cell: "z-average-b1-k0"
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
     .{ .constant = .{ .value = 7 } },
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
-    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
-    .{ .cell_value = .{ .round = 1, .index = 2 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
-    .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
-    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 9 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 10 } },
 };
 
 const system_38_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 9, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
-};
-
-const system_38_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
+    .{ .expression = 11, .cancelled_positions = &.{} },
 };
 
 const system_38_module_1_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_38_module_1_bucket_0_vanishings, .quotient_claim_offset = 3 },
-    .{ .ratio = 2, .vanishings = &system_38_module_1_bucket_1_vanishings, .quotient_claim_offset = 4 },
+    .{ .ratio = 1, .vanishings = &system_38_module_1_bucket_0_vanishings, .quotient_claim_offset = 1 },
 };
 
 const system_38_modules = [_]vanishing.Module{
@@ -5001,17 +4859,17 @@ const system_38 = vanishing.System{
     .modules = &system_38_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 8,
-    .total_quotient_claims = 6,
+    .total_quotient_claims = 2,
 };
 
-const system_38_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 1, .index = 1 },
-    .{ .round = 1, .index = 2 },
+const system_38_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 1, .index = 1 }, .size = .{ .static = 4 } },
+    .{ .average_ref = .{ .round = 1, .index = 2 }, .size = .{ .static = 2 } },
 };
 
 // logderiv system: "lds-cond"
 const system_38_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_38_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-cond/ld"
+    .{ .entries = &system_38_logderiv_query_0_entries, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-cond/ld"
 };
 
 const system_38_logderiv = logderivativesum.System{ .queries = &system_38_logderiv_queries };
@@ -5045,48 +4903,40 @@ const scenario_38 = Scenario{
                 },
             },
             .{
-                .commitment = .{ 1620439460, 50151641, 1230539567, 711658894, 1521065063, 736180395, 234886043, 303154389 },
+                .commitment = .{ 1659832655, 1878361326, 1496049266, 1199126990, 1940754198, 1643943713, 2044561551, 2026407775 },
                 .cells = &.{
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 524553000, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 1606153433, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 131138250, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 1868429933, 0, 0, 0, 0, 0 } },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 1054175585, 1315320879, 865383489, 1229487077, 1382673290, 1733326392, 1976406816, 1012163495 },
+                .commitment = .{ 1802161245, 1086994037, 32905788, 1245197341, 134822076, 1464319668, 720565901, 701404061 },
                 .cells = &.{
                     .{ .base = 0 },
                     .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 1 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 292488770, 1893574147, 455375949, 1544462853, 1766598733, 697303573 } },
-                    .{ .ext = .{ 1695943965, 172763001, 277935668, 189119023, 1527073040, 5496535 } },
-                    .{ .ext = .{ 1780874729, 2073386015, 1816867301, 1776921423, 12559885, 1594246500 } },
-                    .{ .ext = .{ 892869566, 625495027, 595204910, 2004584160, 1125181500, 700279952 } },
-                    .{ .ext = .{ 1064743151, 181541987, 384750210, 1613298336, 1733739336, 787485492 } },
-                    .{ .ext = .{ 396955535, 1766143970, 527680819, 451273563, 1184811863, 1571084615 } },
-                    .{ .ext = .{ 1545287872, 214678324, 914026559, 1977606330, 757305980, 216207239 } },
-                    .{ .ext = .{ 1775663393, 239887010, 1303279552, 1362105954, 885821225, 349391843 } },
-                    .{ .ext = .{ 803853160, 2060676084, 1074165303, 1470919324, 1611109255, 407515704 } },
-                    .{ .ext = .{ 1303642963, 70030349, 1056541130, 659787109, 519597178, 1723190729 } },
-                    .{ .ext = .{ 1419723997, 1862542766, 1882149511, 1293885491, 1795319915, 767494436 } },
-                    .{ .ext = .{ 1639082030, 23604082, 1783381650, 8932099, 1934541155, 1322552004 } },
-                    .{ .ext = .{ 1378312475, 890277344, 1620060041, 1546591877, 831713488, 1018789260 } },
-                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 1123180288, 206787078, 1301630784, 1791975729, 733597627, 1031963562 } },
+                    .{ .ext = .{ 1196035067, 1401861863, 1917377273, 1500811447, 2008993379, 2120495156 } },
+                    .{ .ext = .{ 635683470, 1203887813, 587919227, 121255443, 330494012, 1924373948 } },
+                    .{ .ext = .{ 757553276, 713727431, 1557239003, 1428550516, 146301512, 1540194293 } },
+                    .{ .ext = .{ 106821859, 293020102, 513929705, 1928549793, 1557483175, 844736678 } },
+                    .{ .ext = .{ 1228667411, 559667516, 978912507, 1063795936, 352485024, 465224563 } },
+                    .{ .ext = .{ 943879803, 1142600143, 705595863, 1424015268, 264316804, 911982539 } },
+                    .{ .ext = .{ 1950445820, 988106290, 1425110570, 706691165, 1866389629, 1218723894 } },
+                    .{ .ext = .{ 497564518, 795444139, 864407095, 15572805, 736562626, 1739873669 } },
+                    .{ .ext = .{ 1687389517, 0, 0, 0, 0, 0 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 292488770, 1893574147, 455375949, 1544462853, 1766598733, 697303573 }, .{ 1695943965, 172763001, 277935668, 189119023, 1527073040, 5496535 }, .{ 1780874729, 2073386015, 1816867301, 1776921423, 12559885, 1594246500 }, .{ 892869566, 625495027, 595204910, 2004584160, 1125181500, 700279952 }, .{ 1775663393, 239887010, 1303279552, 1362105954, 885821225, 349391843 }, .{ 803853160, 2060676084, 1074165303, 1470919324, 1611109255, 407515704 }, .{ 1303642963, 70030349, 1056541130, 659787109, 519597178, 1723190729 }, .{ 1419723997, 1862542766, 1882149511, 1293885491, 1795319915, 767494436 } },
-        .quotient_claims = &.{ .{ 1064743151, 181541987, 384750210, 1613298336, 1733739336, 787485492 }, .{ 396955535, 1766143970, 527680819, 451273563, 1184811863, 1571084615 }, .{ 1545287872, 214678324, 914026559, 1977606330, 757305980, 216207239 }, .{ 1639082030, 23604082, 1783381650, 8932099, 1934541155, 1322552004 }, .{ 1378312475, 890277344, 1620060041, 1546591877, 831713488, 1018789260 }, .{ 0, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{ .{ 1123180288, 206787078, 1301630784, 1791975729, 733597627, 1031963562 }, .{ 1196035067, 1401861863, 1917377273, 1500811447, 2008993379, 2120495156 }, .{ 635683470, 1203887813, 587919227, 121255443, 330494012, 1924373948 }, .{ 757553276, 713727431, 1557239003, 1428550516, 146301512, 1540194293 }, .{ 1228667411, 559667516, 978912507, 1063795936, 352485024, 465224563 }, .{ 943879803, 1142600143, 705595863, 1424015268, 264316804, 911982539 }, .{ 1950445820, 988106290, 1425110570, 706691165, 1866389629, 1218723894 }, .{ 497564518, 795444139, 864407095, 15572805, 736562626, 1739873669 } },
+        .quotient_claims = &.{ .{ 106821859, 293020102, 513929705, 1928549793, 1557483175, 844736678 }, .{ 1687389517, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
 };
@@ -5098,7 +4948,7 @@ pub const system_39_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_39_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 7, 7, 5, 18 },
+    .round_cell_counts = &[_]usize{ 7, 5, 4, 15 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -5109,92 +4959,61 @@ const system_39_module_0_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
     .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 1 } },
     .{ .column_claim = 1 }, // col: "c1"
-    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 1 } },
     .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 1 } },
-    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 1 } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 8 } },
     .{ .column_claim = 2 }, // col: "c2"
-    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 1 } },
-    .{ .op = .{ .operator = .mul, .lhs = 9, .rhs = 1 } },
-    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 10 } },
-    .{ .column_claim = 3 }, // col: "z-b0-k0"
-    .{ .column_claim = 4 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .lhs = 12, .rhs = 13 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 1 } },
+    .{ .op = .{ .operator = .add, .lhs = 9, .rhs = 13 } },
+    .{ .column_claim = 3 }, // col: "c3"
     .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 1 } },
-    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 16 } },
-    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 17 } },
-    .{ .column_claim = 5 }, // col: "c3"
-    .{ .op = .{ .operator = .mul, .lhs = 19, .rhs = 1 } },
-    .{ .op = .{ .operator = .mul, .lhs = 20, .rhs = 1 } },
-    .{ .column_claim = 6 }, // col: "c4"
-    .{ .op = .{ .operator = .mul, .lhs = 22, .rhs = 1 } },
-    .{ .op = .{ .operator = .mul, .lhs = 23, .rhs = 1 } },
-    .{ .op = .{ .operator = .add, .lhs = 21, .rhs = 24 } },
-    .{ .column_claim = 7 }, // col: "c5"
+    .{ .op = .{ .operator = .mul, .lhs = 16, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 17, .rhs = 1 } },
+    .{ .op = .{ .operator = .add, .lhs = 14, .rhs = 18 } },
+    .{ .column_claim = 4 }, // col: "z-b0-k0"
+    .{ .column_claim = 5 }, // col: "z-b0-k0"
+    .{ .op = .{ .operator = .sub, .lhs = 20, .rhs = 21 } },
+    .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 22, .rhs = 23 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 25, .rhs = 1 } },
     .{ .op = .{ .operator = .mul, .lhs = 26, .rhs = 1 } },
-    .{ .op = .{ .operator = .mul, .lhs = 27, .rhs = 1 } },
-    .{ .op = .{ .operator = .add, .lhs = 25, .rhs = 28 } },
-    .{ .column_claim = 8 }, // col: "z-b0-k1"
-    .{ .column_claim = 9 }, // col: "z-b0-k1"
-    .{ .op = .{ .operator = .sub, .lhs = 30, .rhs = 31 } },
-    .{ .op = .{ .operator = .mul, .lhs = 32, .rhs = 16 } },
-    .{ .op = .{ .operator = .sub, .lhs = 29, .rhs = 33 } },
-    .{ .column_claim = 10 }, // col: "c6"
-    .{ .column_claim = 11 }, // col: "z-b0-k2"
-    .{ .column_claim = 12 }, // col: "z-b0-k2"
-    .{ .op = .{ .operator = .sub, .lhs = 36, .rhs = 37 } },
+    .{ .op = .{ .operator = .mul, .lhs = 24, .rhs = 27 } },
+    .{ .op = .{ .operator = .sub, .lhs = 19, .rhs = 28 } },
+    .{ .column_claim = 6 }, // col: "c4"
+    .{ .op = .{ .operator = .mul, .lhs = 30, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 31, .rhs = 1 } },
+    .{ .column_claim = 7 }, // col: "c5"
+    .{ .op = .{ .operator = .mul, .lhs = 33, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 34, .rhs = 1 } },
+    .{ .op = .{ .operator = .add, .lhs = 32, .rhs = 35 } },
+    .{ .column_claim = 8 }, // col: "c6"
+    .{ .op = .{ .operator = .mul, .lhs = 37, .rhs = 1 } },
     .{ .op = .{ .operator = .mul, .lhs = 38, .rhs = 1 } },
-    .{ .op = .{ .operator = .sub, .lhs = 35, .rhs = 39 } },
-    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 16 } },
-    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 41 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 42, .rhs = 43 } },
-    .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 45, .rhs = 12 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 46, .rhs = 47 } },
-    .{ .op = .{ .operator = .mul, .lhs = 30, .rhs = 16 } },
-    .{ .op = .{ .operator = .sub, .lhs = 29, .rhs = 49 } },
-    .{ .op = .{ .operator = .mul, .lhs = 50, .rhs = 43 } },
-    .{ .cell_value = .{ .round = 1, .index = 2 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 52, .rhs = 30 } },
-    .{ .op = .{ .operator = .mul, .lhs = 53, .rhs = 47 } },
-    .{ .op = .{ .operator = .mul, .lhs = 36, .rhs = 1 } },
-    .{ .op = .{ .operator = .sub, .lhs = 35, .rhs = 55 } },
-    .{ .op = .{ .operator = .mul, .lhs = 56, .rhs = 43 } },
-    .{ .cell_value = .{ .round = 1, .index = 3 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 58, .rhs = 36 } },
-    .{ .op = .{ .operator = .mul, .lhs = 59, .rhs = 47 } },
+    .{ .op = .{ .operator = .add, .lhs = 36, .rhs = 39 } },
+    .{ .column_claim = 9 }, // col: "z-b0-k1"
+    .{ .column_claim = 10 }, // col: "z-b0-k1"
+    .{ .op = .{ .operator = .sub, .lhs = 41, .rhs = 42 } },
+    .{ .cell_value = .{ .round = 1, .index = 2 } }, // cell: "z-average-b0-k1"
+    .{ .op = .{ .operator = .add, .lhs = 43, .rhs = 44 } },
+    .{ .op = .{ .operator = .mul, .lhs = 45, .rhs = 26 } },
+    .{ .op = .{ .operator = .sub, .lhs = 40, .rhs = 46 } },
 };
 
 const system_39_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 18, .cancelled_positions = &.{0} },
+    .{ .expression = 29, .cancelled_positions = &.{} },
     // expression: "z-recurrence-b0-k1"
-    .{ .expression = 34, .cancelled_positions = &.{0} },
-};
-
-const system_39_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "z-recurrence-b0-k2"
-    .{ .expression = 40, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 44, .cancelled_positions = &.{} },
-    // expression: "global"
-    .{ .expression = 48, .cancelled_positions = &.{} },
-    // expression: "global"
-    .{ .expression = 51, .cancelled_positions = &.{} },
-    // expression: "global"
-    .{ .expression = 54, .cancelled_positions = &.{} },
-    // expression: "global"
-    .{ .expression = 57, .cancelled_positions = &.{} },
-    // expression: "global"
-    .{ .expression = 60, .cancelled_positions = &.{} },
+    .{ .expression = 47, .cancelled_positions = &.{} },
 };
 
 const system_39_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 4, .vanishings = &system_39_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 1, .vanishings = &system_39_module_0_bucket_1_vanishings, .quotient_claim_offset = 4 },
 };
 
 const system_39_modules = [_]vanishing.Module{
@@ -5206,19 +5025,18 @@ const system_39_modules = [_]vanishing.Module{
 const system_39 = vanishing.System{
     .modules = &system_39_modules,
     .dynamic_module_count = 0,
-    .total_witness_claims = 13,
-    .total_quotient_claims = 5,
+    .total_witness_claims = 11,
+    .total_quotient_claims = 4,
 };
 
-const system_39_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 1, .index = 1 },
-    .{ .round = 1, .index = 2 },
-    .{ .round = 1, .index = 3 },
+const system_39_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 1, .index = 1 }, .size = .{ .static = 4 } },
+    .{ .average_ref = .{ .round = 1, .index = 2 }, .size = .{ .static = 4 } },
 };
 
 // logderiv system: "lds-many"
 const system_39_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_39_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-many/ld"
+    .{ .entries = &system_39_logderiv_query_0_entries, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-many/ld"
 };
 
 const system_39_logderiv = logderivativesum.System{ .queries = &system_39_logderiv_queries };
@@ -5243,65 +5061,59 @@ const scenario_39 = Scenario{
     .honest = .{
         .rounds = &.{
             .{
-                .commitment = .{ 1851404181, 2024546324, 1886437042, 2025225489, 2085333450, 929591227, 778155642, 1479823408 },
+                .commitment = .{ 413334012, 1967921103, 346026650, 251054303, 1070489712, 1546475517, 1166138886, 121427478 },
                 .cells = &.{
                     .{ .base = 0 },
-                    .{ .base = 2 },
-                    .{ .base = 2 },
-                    .{ .base = 2 },
-                    .{ .base = 2 },
-                    .{ .base = 2 },
-                    .{ .base = 2 },
+                    .{ .base = 0 },
+                    .{ .base = 0 },
+                    .{ .base = 0 },
+                    .{ .base = 0 },
+                    .{ .base = 0 },
+                    .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 891752131, 1698375100, 301049956, 597676287, 694521231, 488666257, 1150701951, 1800161353 },
+                .commitment = .{ 1889820813, 2114912582, 1301652942, 165637350, 190160530, 2045169151, 1268161003, 908166394 },
                 .cells = &.{
                     .{ .ext = .{ 70, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 30, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 30, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 10, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 1065353224, 0, 0, 0, 0, 0 } },
                     .{ .base = 0 },
-                    .{ .base = 2 },
-                    .{ .base = 0 },
-                },
-            },
-            .{
-                .commitment = .{ 1775288584, 183049146, 1052911244, 76149666, 1043985464, 1643730071, 1571180087, 1464540403 },
-                .cells = &.{
-                    .{ .base = 0 },
-                    .{ .base = 1 },
-                    .{ .base = 1 },
-                    .{ .base = 1 },
                     .{ .base = 0 },
                 },
             },
             .{
+                .commitment = .{ 89202317, 1471744030, 237177680, 1559842232, 1600855048, 457379845, 725402522, 833775382 },
                 .cells = &.{
-                    .{ .ext = .{ 520668205, 700191794, 1293270482, 656136190, 1000379187, 821846914 } },
-                    .{ .ext = .{ 520668205, 700191794, 1293270482, 656136190, 1000379187, 821846914 } },
-                    .{ .ext = .{ 520668205, 700191794, 1293270482, 656136190, 1000379187, 821846914 } },
-                    .{ .ext = .{ 2008923830, 81773540, 1733654307, 1445416116, 1510944092, 1260326553 } },
-                    .{ .ext = .{ 1543994081, 1904532482, 1530853420, 1377664661, 1023269448, 142062265 } },
-                    .{ .ext = .{ 520668205, 700191794, 1293270482, 656136190, 1000379187, 821846914 } },
-                    .{ .ext = .{ 520668205, 700191794, 1293270482, 656136190, 1000379187, 821846914 } },
-                    .{ .ext = .{ 520668205, 700191794, 1293270482, 656136190, 1000379187, 821846914 } },
-                    .{ .ext = .{ 2008923830, 81773540, 1733654307, 1445416116, 1510944092, 1260326553 } },
-                    .{ .ext = .{ 1543994081, 1904532482, 1530853420, 1377664661, 1023269448, 142062265 } },
-                    .{ .ext = .{ 520668205, 700191794, 1293270482, 656136190, 1000379187, 821846914 } },
-                    .{ .ext = .{ 2090112232, 1447728802, 577884769, 481805372, 1924118986, 420108851 } },
-                    .{ .ext = .{ 1935135649, 2055315116, 1220519951, 1879692509, 341089816, 757589566 } },
-                    .{ .ext = .{ 1489199661, 132180717, 1464128912, 1186628960, 708193998, 1036204647 } },
+                    .{ .base = 0 },
+                    .{ .base = 0 },
+                    .{ .base = 0 },
+                    .{ .base = 0 },
+                },
+            },
+            .{
+                .cells = &.{
+                    .{ .ext = .{ 851065847, 492694087, 1661058857, 1921210520, 2103252018, 1076039912 } },
+                    .{ .ext = .{ 851065847, 492694087, 1661058857, 1921210520, 2103252018, 1076039912 } },
+                    .{ .ext = .{ 851065847, 492694087, 1661058857, 1921210520, 2103252018, 1076039912 } },
+                    .{ .ext = .{ 851065847, 492694087, 1661058857, 1921210520, 2103252018, 1076039912 } },
+                    .{ .ext = .{ 195578442, 43791143, 1775191747, 78309975, 1095707454, 1230136952 } },
+                    .{ .ext = .{ 1052727930, 203721228, 1523075618, 916293627, 1205525114, 1187390170 } },
+                    .{ .ext = .{ 851065847, 492694087, 1661058857, 1921210520, 2103252018, 1076039912 } },
+                    .{ .ext = .{ 851065847, 492694087, 1661058857, 1921210520, 2103252018, 1076039912 } },
+                    .{ .ext = .{ 851065847, 492694087, 1661058857, 1921210520, 2103252018, 1076039912 } },
+                    .{ .ext = .{ 1212037048, 1630873182, 798717202, 1656762306, 1887133807, 922602714 } },
+                    .{ .ext = .{ 1854899164, 152790921, 76953497, 154543612, 1969497052, 1955895844 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 955675851, 372458925, 1503411111, 1458146201, 1404665282, 71829732 } },
+                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 520668205, 700191794, 1293270482, 656136190, 1000379187, 821846914 }, .{ 520668205, 700191794, 1293270482, 656136190, 1000379187, 821846914 }, .{ 520668205, 700191794, 1293270482, 656136190, 1000379187, 821846914 }, .{ 2008923830, 81773540, 1733654307, 1445416116, 1510944092, 1260326553 }, .{ 1543994081, 1904532482, 1530853420, 1377664661, 1023269448, 142062265 }, .{ 520668205, 700191794, 1293270482, 656136190, 1000379187, 821846914 }, .{ 520668205, 700191794, 1293270482, 656136190, 1000379187, 821846914 }, .{ 520668205, 700191794, 1293270482, 656136190, 1000379187, 821846914 }, .{ 2008923830, 81773540, 1733654307, 1445416116, 1510944092, 1260326553 }, .{ 1543994081, 1904532482, 1530853420, 1377664661, 1023269448, 142062265 }, .{ 520668205, 700191794, 1293270482, 656136190, 1000379187, 821846914 }, .{ 2090112232, 1447728802, 577884769, 481805372, 1924118986, 420108851 }, .{ 1935135649, 2055315116, 1220519951, 1879692509, 341089816, 757589566 } },
-        .quotient_claims = &.{ .{ 1489199661, 132180717, 1464128912, 1186628960, 708193998, 1036204647 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 955675851, 372458925, 1503411111, 1458146201, 1404665282, 71829732 } },
+        .witness_claims = &.{ .{ 851065847, 492694087, 1661058857, 1921210520, 2103252018, 1076039912 }, .{ 851065847, 492694087, 1661058857, 1921210520, 2103252018, 1076039912 }, .{ 851065847, 492694087, 1661058857, 1921210520, 2103252018, 1076039912 }, .{ 851065847, 492694087, 1661058857, 1921210520, 2103252018, 1076039912 }, .{ 195578442, 43791143, 1775191747, 78309975, 1095707454, 1230136952 }, .{ 1052727930, 203721228, 1523075618, 916293627, 1205525114, 1187390170 }, .{ 851065847, 492694087, 1661058857, 1921210520, 2103252018, 1076039912 }, .{ 851065847, 492694087, 1661058857, 1921210520, 2103252018, 1076039912 }, .{ 851065847, 492694087, 1661058857, 1921210520, 2103252018, 1076039912 }, .{ 1212037048, 1630873182, 798717202, 1656762306, 1887133807, 922602714 }, .{ 1854899164, 152790921, 76953497, 154543612, 1969497052, 1955895844 } },
+        .quotient_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
 };
@@ -5319,31 +5131,22 @@ pub const system_40_public_input = protocol.public_input.Spec{
 
 // scenario: "lds-size2"
 
+// expression: "z-recurrence-b0-k0"
 const system_40_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "num"
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 4 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 5 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 4 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
     .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 9 } },
-    .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 1 } },
-    .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 13 } },
 };
 
 const system_40_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 6, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 10, .cancelled_positions = &.{} },
-    // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 8, .cancelled_positions = &.{} },
 };
 
 const system_40_module_0_buckets = [_]vanishing.Bucket{
@@ -5363,13 +5166,13 @@ const system_40 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
-const system_40_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 1, .index = 1 },
+const system_40_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 1, .index = 1 }, .size = .{ .static = 2 } },
 };
 
 // logderiv system: "lds-size2"
 const system_40_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_40_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-size2/ld"
+    .{ .entries = &system_40_logderiv_query_0_entries, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-size2/ld"
 };
 
 const system_40_logderiv = logderivativesum.System{ .queries = &system_40_logderiv_queries };
@@ -5400,31 +5203,31 @@ const scenario_40 = Scenario{
                 },
             },
             .{
-                .commitment = .{ 599880932, 1074001546, 2014446895, 2084936580, 420210980, 1537079255, 1741485814, 1434565311 },
+                .commitment = .{ 204695094, 86485897, 977094810, 1562166702, 17757701, 239734653, 1333651930, 632425173 },
                 .cells = &.{
                     .{ .ext = .{ 8, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 8, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 4, 0, 0, 0, 0, 0 } },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 1301731427, 26974837, 1690196765, 1326497751, 232650846, 344900958, 1858069480, 380334300 },
+                .commitment = .{ 1890487238, 325457829, 2108008314, 1359227396, 1984289192, 335995508, 1903042652, 629632950 },
                 .cells = &.{
                     .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 679206147, 275084964, 493650375, 1909305267, 1760051923, 407696525 } },
-                    .{ .ext = .{ 1698015363, 687712410, 168772721, 1577203518, 1204070158, 2084594529 } },
-                    .{ .ext = .{ 432691081, 1442994023, 1961933712, 553502915, 926636275, 46111904 } },
-                    .{ .ext = .{ 2949710, 714683503, 718788930, 1881041309, 1037459438, 1699978540 } },
+                    .{ .ext = .{ 741534551, 422722562, 1759999465, 539695445, 1486916914, 125159121 } },
+                    .{ .ext = .{ 370767273, 211361281, 1945352949, 1335200939, 743458457, 1127932777 } },
+                    .{ .ext = .{ 1759939159, 1919345152, 185353484, 795505494, 1387247976, 1002773656 } },
+                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 679206147, 275084964, 493650375, 1909305267, 1760051923, 407696525 }, .{ 1698015363, 687712410, 168772721, 1577203518, 1204070158, 2084594529 }, .{ 432691081, 1442994023, 1961933712, 553502915, 926636275, 46111904 } },
-        .quotient_claims = &.{.{ 2949710, 714683503, 718788930, 1881041309, 1037459438, 1699978540 }},
+        .witness_claims = &.{ .{ 741534551, 422722562, 1759999465, 539695445, 1486916914, 125159121 }, .{ 370767273, 211361281, 1945352949, 1335200939, 743458457, 1127932777 }, .{ 1759939159, 1919345152, 185353484, 795505494, 1387247976, 1002773656 } },
+        .quotient_claims = &.{.{ 0, 0, 0, 0, 0, 0 }},
         .module_sizes = &.{},
     },
 };
@@ -5447,44 +5250,26 @@ const system_41_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .cell_value = .{ .round = 1, .index = 2 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 4 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .column_claim = 3 }, // col: "c2"
     .{ .column_claim = 4 }, // col: "z-b0-k0"
     .{ .column_claim = 5 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .lhs = 8, .rhs = 9 } },
-    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 4 } },
-    .{ .op = .{ .operator = .sub, .lhs = 7, .rhs = 11 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 4 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
-    .{ .cell_value = .{ .round = 1, .index = 2 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 17, .rhs = 1 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 18, .rhs = 19 } },
-    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 4 } },
-    .{ .op = .{ .operator = .sub, .lhs = 7, .rhs = 21 } },
-    .{ .op = .{ .operator = .mul, .lhs = 22, .rhs = 15 } },
-    .{ .cell_value = .{ .round = 1, .index = 3 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 24, .rhs = 8 } },
-    .{ .op = .{ .operator = .mul, .lhs = 25, .rhs = 19 } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 11 } },
+    .{ .cell_value = .{ .round = 1, .index = 3 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 12, .rhs = 13 } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 15 } },
 };
 
 const system_41_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 6, .cancelled_positions = &.{0} },
+    .{ .expression = 8, .cancelled_positions = &.{} },
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 12, .cancelled_positions = &.{0} },
-    // expression: "global"
     .{ .expression = 16, .cancelled_positions = &.{} },
-    // expression: "global"
-    .{ .expression = 20, .cancelled_positions = &.{} },
-    // expression: "global"
-    .{ .expression = 23, .cancelled_positions = &.{} },
-    // expression: "global"
-    .{ .expression = 26, .cancelled_positions = &.{} },
 };
 
 const system_41_module_0_buckets = [_]vanishing.Bucket{
@@ -5504,18 +5289,18 @@ const system_41 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
-const system_41_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 1, .index = 2 },
+const system_41_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 1, .index = 2 }, .size = .{ .static = 4 } },
 };
 
-const system_41_logderiv_query_1_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 1, .index = 3 },
+const system_41_logderiv_query_1_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 1, .index = 3 }, .size = .{ .static = 4 } },
 };
 
 // logderiv system: "lds-multi-q"
 const system_41_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_41_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-multi-q/ld1"
-    .{ .z_final_refs = &system_41_logderiv_query_1_zfinal_refs, .result_ref = .{ .round = 1, .index = 1 }, .result_is_zero = false }, // query: "lds-multi-q/ld2"
+    .{ .entries = &system_41_logderiv_query_0_entries, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-multi-q/ld1"
+    .{ .entries = &system_41_logderiv_query_1_entries, .result_ref = .{ .round = 1, .index = 1 }, .result_is_zero = false }, // query: "lds-multi-q/ld2"
 };
 
 const system_41_logderiv = logderivativesum.System{ .queries = &system_41_logderiv_queries };
@@ -5547,37 +5332,37 @@ const scenario_41 = Scenario{
                 },
             },
             .{
-                .commitment = .{ 1388883595, 1157309717, 670696032, 817741175, 1229889826, 241484620, 383663478, 1736256976 },
+                .commitment = .{ 1839789963, 407443332, 1037252155, 476919246, 752643248, 258632771, 758010423, 1264483304 },
                 .cells = &.{
                     .{ .ext = .{ 10, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 26, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 10, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 26, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 1065353219, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 1065353223, 0, 0, 0, 0, 0 } },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 388865638, 1586517498, 1017927424, 1160013875, 1503703660, 771433484, 738319842, 6839126 },
+                .commitment = .{ 1509928159, 1022636522, 1305278804, 2031476728, 1362609465, 930316236, 283521955, 21146661 },
                 .cells = &.{
                     .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 102849973, 1423457144, 1416370045, 1387366162, 535623086, 1208253819 } },
-                    .{ .ext = .{ 663698705, 833492683, 538753041, 706085287, 1852801029, 1609200785 } },
-                    .{ .ext = .{ 1003419621, 40991410, 1463756383, 2074477556, 629620646, 1421164121 } },
-                    .{ .ext = .{ 102849977, 1423457144, 1416370045, 1387366162, 535623086, 1208253819 } },
-                    .{ .ext = .{ 1075098597, 135201960, 1942820355, 1994137069, 1864586940, 50096762 } },
-                    .{ .ext = .{ 418367785, 2056795227, 1500325677, 953482242, 393597455, 1494407546 } },
-                    .{ .ext = .{ 534725549, 324590436, 1361947075, 1877984240, 403126931, 624423102 } },
+                    .{ .ext = .{ 1795389130, 1187987810, 1455262751, 685947348, 154196916, 1890490589 } },
+                    .{ .ext = .{ 99247884, 744160126, 2025865262, 1834894219, 1191394859, 493831391 } },
+                    .{ .ext = .{ 1499918406, 1686878749, 570602511, 1148946871, 1037197943, 734047235 } },
+                    .{ .ext = .{ 1795389134, 1187987810, 1455262751, 685947348, 154196916, 1890490589 } },
+                    .{ .ext = .{ 99247884, 744160126, 2025865262, 1834894219, 1191394859, 493831391 } },
+                    .{ .ext = .{ 1499918406, 1686878749, 570602511, 1148946871, 1037197943, 734047235 } },
+                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 102849973, 1423457144, 1416370045, 1387366162, 535623086, 1208253819 }, .{ 663698705, 833492683, 538753041, 706085287, 1852801029, 1609200785 }, .{ 1003419621, 40991410, 1463756383, 2074477556, 629620646, 1421164121 }, .{ 102849977, 1423457144, 1416370045, 1387366162, 535623086, 1208253819 }, .{ 1075098597, 135201960, 1942820355, 1994137069, 1864586940, 50096762 }, .{ 418367785, 2056795227, 1500325677, 953482242, 393597455, 1494407546 } },
-        .quotient_claims = &.{.{ 534725549, 324590436, 1361947075, 1877984240, 403126931, 624423102 }},
+        .witness_claims = &.{ .{ 1795389130, 1187987810, 1455262751, 685947348, 154196916, 1890490589 }, .{ 99247884, 744160126, 2025865262, 1834894219, 1191394859, 493831391 }, .{ 1499918406, 1686878749, 570602511, 1148946871, 1037197943, 734047235 }, .{ 1795389134, 1187987810, 1455262751, 685947348, 154196916, 1890490589 }, .{ 99247884, 744160126, 2025865262, 1834894219, 1191394859, 493831391 }, .{ 1499918406, 1686878749, 570602511, 1148946871, 1037197943, 734047235 } },
+        .quotient_claims = &.{.{ 0, 0, 0, 0, 0, 0 }},
         .module_sizes = &.{},
     },
 };
@@ -5589,45 +5374,32 @@ pub const system_42_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_42_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 2, 3, 3, 7 },
+    .round_cell_counts = &[_]usize{ 2, 3, 1, 5 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-vec-den"
 
+// expression: "z-recurrence-b0-k0"
 const system_42_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "num"
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
     .{ .column_claim = 3 }, // col: "den"
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 4 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 5 } },
-    .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 7, .rhs = 1 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 9 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 4 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 11 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 13 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
 };
 
 const system_42_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 6, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 10, .cancelled_positions = &.{} },
-};
-
-const system_42_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 8, .cancelled_positions = &.{} },
 };
 
 const system_42_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 1, .vanishings = &system_42_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 2, .vanishings = &system_42_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
 };
 
 const system_42_modules = [_]vanishing.Module{
@@ -5640,16 +5412,16 @@ const system_42 = vanishing.System{
     .modules = &system_42_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 4,
-    .total_quotient_claims = 3,
+    .total_quotient_claims = 1,
 };
 
-const system_42_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 1, .index = 1 },
+const system_42_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 1, .index = 1 }, .size = .{ .static = 4 } },
 };
 
 // logderiv system: "lds-vec-den"
 const system_42_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_42_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-vec-den/ld"
+    .{ .entries = &system_42_logderiv_query_0_entries, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-vec-den/ld"
 };
 
 const system_42_logderiv = logderivativesum.System{ .queries = &system_42_logderiv_queries };
@@ -5681,36 +5453,32 @@ const scenario_42 = Scenario{
                 },
             },
             .{
-                .commitment = .{ 1156884836, 2088254499, 1957196611, 1015910099, 1430645806, 244992375, 1849978790, 813250143 },
+                .commitment = .{ 1512492245, 765267966, 782764281, 2002959536, 2023696865, 1167176332, 1948176775, 475100343 },
                 .cells = &.{
                     .{ .ext = .{ 13, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 13, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 1598029828, 0, 0, 0, 0, 0 } },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 707460564, 1404597178, 1330239936, 1922406087, 1835182571, 1374469156, 121984506, 405005196 },
+                .commitment = .{ 704739787, 38377398, 181575946, 185730433, 75506844, 1726206445, 46577454, 1663811147 },
                 .cells = &.{
-                    .{ .base = 0 },
-                    .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 403124729, 1105958935, 792219596, 81524135, 1410331628, 1369115879 } },
-                    .{ .ext = .{ 1013786494, 1525358601, 1801789380, 1290170512, 2023136601, 755111797 } },
-                    .{ .ext = .{ 1677598036, 27153833, 1843509378, 92918613, 533304297, 462698614 } },
-                    .{ .ext = .{ 72241592, 1615219299, 1240674125, 1132600066, 1354717119, 31908887 } },
-                    .{ .ext = .{ 407338195, 1652392408, 26107566, 2040678208, 1423961325, 182866254 } },
-                    .{ .ext = .{ 1899290829, 946859978, 958237301, 367394277, 848899217, 1844266022 } },
-                    .{ .ext = .{ 901466852, 272927937, 1036548206, 267502863, 1401328259, 871573643 } },
+                    .{ .ext = .{ 1999410205, 1527216584, 144291789, 2125341034, 1378469321, 1899628341 } },
+                    .{ .ext = .{ 251426612, 656629053, 1613381007, 1738027782, 1983847450, 573272713 } },
+                    .{ .ext = .{ 1289441780, 815918547, 1231611127, 1534483134, 679615341, 581955213 } },
+                    .{ .ext = .{ 1482715665, 1387749049, 273226732, 1693292033, 87576765, 775760212 } },
+                    .{ .ext = .{ 338575876, 1065538917, 1961972700, 1861194915, 900155384, 1759276510 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 403124729, 1105958935, 792219596, 81524135, 1410331628, 1369115879 }, .{ 1013786494, 1525358601, 1801789380, 1290170512, 2023136601, 755111797 }, .{ 1677598036, 27153833, 1843509378, 92918613, 533304297, 462698614 }, .{ 72241592, 1615219299, 1240674125, 1132600066, 1354717119, 31908887 } },
-        .quotient_claims = &.{ .{ 407338195, 1652392408, 26107566, 2040678208, 1423961325, 182866254 }, .{ 1899290829, 946859978, 958237301, 367394277, 848899217, 1844266022 }, .{ 901466852, 272927937, 1036548206, 267502863, 1401328259, 871573643 } },
+        .witness_claims = &.{ .{ 1999410205, 1527216584, 144291789, 2125341034, 1378469321, 1899628341 }, .{ 251426612, 656629053, 1613381007, 1738027782, 1983847450, 573272713 }, .{ 1289441780, 815918547, 1231611127, 1534483134, 679615341, 581955213 }, .{ 1482715665, 1387749049, 273226732, 1693292033, 87576765, 775760212 } },
+        .quotient_claims = &.{.{ 338575876, 1065538917, 1961972700, 1861194915, 900155384, 1759276510 }},
         .module_sizes = &.{},
     },
 };
@@ -5722,12 +5490,13 @@ pub const system_43_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_43_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 4, 3, 7, 13 },
+    .round_cell_counts = &[_]usize{ 4, 3, 4, 10 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-ones-pack"
 
+// expression: "z-recurrence-b0-k0"
 const system_43_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "flt"
     .{ .column_claim = 1 }, // col: "n1"
@@ -5748,39 +5517,21 @@ const system_43_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 4 }, // col: "z-b0-k0"
     .{ .column_claim = 5 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 16, .rhs = 17 } },
+    .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 18, .rhs = 19 } },
     .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 3 } },
-    .{ .op = .{ .operator = .mul, .lhs = 19, .rhs = 3 } },
-    .{ .op = .{ .operator = .mul, .lhs = 18, .rhs = 20 } },
-    .{ .op = .{ .operator = .sub, .lhs = 15, .rhs = 21 } },
-    .{ .op = .{ .operator = .mul, .lhs = 16, .rhs = 20 } },
+    .{ .op = .{ .operator = .mul, .lhs = 21, .rhs = 3 } },
+    .{ .op = .{ .operator = .mul, .lhs = 20, .rhs = 22 } },
     .{ .op = .{ .operator = .sub, .lhs = 15, .rhs = 23 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 24, .rhs = 25 } },
-    .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 27, .rhs = 16 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 28, .rhs = 29 } },
 };
 
 const system_43_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 22, .cancelled_positions = &.{0} },
-};
-
-const system_43_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 26, .cancelled_positions = &.{} },
-};
-
-const system_43_module_0_bucket_2_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 30, .cancelled_positions = &.{} },
+    .{ .expression = 24, .cancelled_positions = &.{} },
 };
 
 const system_43_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 4, .vanishings = &system_43_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 2, .vanishings = &system_43_module_0_bucket_1_vanishings, .quotient_claim_offset = 4 },
-    .{ .ratio = 1, .vanishings = &system_43_module_0_bucket_2_vanishings, .quotient_claim_offset = 6 },
 };
 
 const system_43_modules = [_]vanishing.Module{
@@ -5793,16 +5544,16 @@ const system_43 = vanishing.System{
     .modules = &system_43_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 6,
-    .total_quotient_claims = 7,
+    .total_quotient_claims = 4,
 };
 
-const system_43_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 1, .index = 1 },
+const system_43_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 1, .index = 1 }, .size = .{ .static = 4 } },
 };
 
 // logderiv system: "lds-ones-pack"
 const system_43_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_43_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-ones-pack/ld"
+    .{ .entries = &system_43_logderiv_query_0_entries, .result_ref = .{ .round = 1, .index = 0 }, .result_is_zero = false }, // query: "lds-ones-pack/ld"
 };
 
 const system_43_logderiv = logderivativesum.System{ .queries = &system_43_logderiv_queries };
@@ -5827,31 +5578,28 @@ const scenario_43 = Scenario{
     .honest = .{
         .rounds = &.{
             .{
-                .commitment = .{ 345821974, 1950402041, 118500576, 1608295480, 1900558333, 1170385081, 576856920, 1157804133 },
+                .commitment = .{ 992248826, 112849144, 389105081, 1502093501, 744967386, 78584529, 1915394723, 189574401 },
                 .cells = &.{
                     .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
-                    .{ .base = 2 },
-                },
-            },
-            .{
-                .commitment = .{ 736056928, 305438335, 2024721446, 1515121095, 1164155865, 1442797537, 1364537031, 1776957385 },
-                .cells = &.{
-                    .{ .ext = .{ 24, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 24, 0, 0, 0, 0, 0 } },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 1447818278, 1476941925, 1980670095, 1556415540, 1525796028, 657988337, 609404381, 547483784 },
+                .commitment = .{ 1509928159, 1022636522, 1305278804, 2031476728, 1362609465, 930316236, 283521955, 21146661 },
+                .cells = &.{
+                    .{ .ext = .{ 24, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 6, 0, 0, 0, 0, 0 } },
+                    .{ .base = 0 },
+                },
+            },
+            .{
+                .commitment = .{ 89202317, 1471744030, 237177680, 1559842232, 1600855048, 457379845, 725402522, 833775382 },
                 .cells = &.{
                     .{ .base = 0 },
-                    .{ .base = 1 },
-                    .{ .base = 1 },
-                    .{ .base = 1 },
                     .{ .base = 0 },
-                    .{ .base = 1 },
+                    .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
@@ -5861,21 +5609,18 @@ const scenario_43 = Scenario{
                     .{ .ext = .{ 1, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 2, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 3, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 1106659835, 714741616, 1993219078, 267385206, 490413947, 124235085 } },
-                    .{ .ext = .{ 1179475932, 1915655792, 1119234465, 445023160, 1264725673, 395416369 } },
-                    .{ .ext = .{ 6, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 1882461158, 529699957, 1822688107, 808320898, 1368479499, 1660318176 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 1763937904, 1614417109, 1964648685, 134195706, 1051622095, 668292823 } },
+                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 1, 0, 0, 0, 0, 0 }, .{ 2, 0, 0, 0, 0, 0 }, .{ 3, 0, 0, 0, 0, 0 }, .{ 1106659835, 714741616, 1993219078, 267385206, 490413947, 124235085 }, .{ 1179475932, 1915655792, 1119234465, 445023160, 1264725673, 395416369 } },
-        .quotient_claims = &.{ .{ 6, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1882461158, 529699957, 1822688107, 808320898, 1368479499, 1660318176 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1763937904, 1614417109, 1964648685, 134195706, 1051622095, 668292823 } },
+        .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 1, 0, 0, 0, 0, 0 }, .{ 2, 0, 0, 0, 0, 0 }, .{ 3, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
+        .quotient_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
 };
@@ -5887,85 +5632,59 @@ pub const system_44_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_44_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 3, 0, 5, 6, 13 },
+    .round_cell_counts = &[_]usize{ 3, 0, 5, 2, 9 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-simple"
 
+// expression: "z-recurrence-b0-k0"
 const system_44_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
+    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
-    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
-    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
-    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 9 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 10 } },
 };
 
 const system_44_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 9, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
-};
-
-const system_44_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
+    .{ .expression = 11, .cancelled_positions = &.{} },
 };
 
 const system_44_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 1, .vanishings = &system_44_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 2, .vanishings = &system_44_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
 };
 
+// expression: "z-recurrence-b1-k0"
 const system_44_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "z-average-b1-k0"
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
-    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 9 } },
 };
 
 const system_44_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 8, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 12, .cancelled_positions = &.{} },
-};
-
-const system_44_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 16, .cancelled_positions = &.{} },
+    .{ .expression = 10, .cancelled_positions = &.{} },
 };
 
 const system_44_module_1_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_44_module_1_bucket_0_vanishings, .quotient_claim_offset = 3 },
-    .{ .ratio = 2, .vanishings = &system_44_module_1_bucket_1_vanishings, .quotient_claim_offset = 4 },
+    .{ .ratio = 1, .vanishings = &system_44_module_1_bucket_0_vanishings, .quotient_claim_offset = 1 },
 };
 
 const system_44_modules = [_]vanishing.Module{
@@ -5980,17 +5699,17 @@ const system_44 = vanishing.System{
     .modules = &system_44_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 7,
-    .total_quotient_claims = 6,
+    .total_quotient_claims = 2,
 };
 
-const system_44_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 2, .index = 1 },
-    .{ .round = 2, .index = 2 },
+const system_44_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 2, .index = 1 }, .size = .{ .static = 4 } },
+    .{ .average_ref = .{ .round = 2, .index = 2 }, .size = .{ .static = 4 } },
 };
 
 // logderiv system: "lk-simple"
 const system_44_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_44_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-simple/lookuptologderiv/aggregated"
+    .{ .entries = &system_44_logderiv_query_0_entries, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-simple/lookuptologderiv/aggregated"
 };
 
 const system_44_logderiv = logderivativesum.System{ .queries = &system_44_logderiv_queries };
@@ -6036,47 +5755,39 @@ const scenario_44 = Scenario{
                 .cells = &.{},
             },
             .{
-                .commitment = .{ 619449909, 287733415, 54476518, 882045398, 1364459398, 1346769368, 1425206216, 853405255 },
+                .commitment = .{ 49017452, 1307715367, 1390532589, 1999078101, 832308895, 473740408, 471406598, 826763315 },
                 .cells = &.{
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 320895053, 1047432755, 72836961, 1852542157, 1151226932, 456512966 } },
-                    .{ .ext = .{ 1809811380, 1083273678, 2057869472, 278164276, 979479501, 1674193467 } },
+                    .{ .ext = .{ 1678253588, 794534797, 1616239065, 2061165364, 287806733, 1179481458 } },
+                    .{ .ext = .{ 452452845, 1336171636, 514467368, 69541069, 1842899700, 951224975 } },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 252653988, 1272525002, 562064649, 1664580612, 1352163174, 1559539451, 1169074679, 187859220 },
+                .commitment = .{ 46327102, 1571079285, 1703167514, 365335488, 100195180, 1633657743, 418328429, 15941532 },
                 .cells = &.{
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 428900294, 406960235, 595601052, 801330482, 33976870, 875502380 } },
-                    .{ .ext = .{ 560049247, 954795254, 1321764036, 700956998, 1167506052, 1208697836 } },
-                    .{ .ext = .{ 47990487, 1036823181, 1576377080, 1766596262, 1292703292, 1531017040 } },
-                    .{ .ext = .{ 1697211574, 1545831518, 1205066948, 615918413, 1774565149, 913268103 } },
-                    .{ .ext = .{ 99444160, 916453171, 1747683249, 549483434, 1902355644, 1334224894 } },
-                    .{ .ext = .{ 556593272, 1028553776, 1648898344, 1904786857, 1279152697, 1837784160 } },
-                    .{ .ext = .{ 342763018, 180196008, 1971574013, 1316128799, 1485685353, 207354018 } },
-                    .{ .ext = .{ 89209900, 1533499512, 781904614, 447516179, 1170101540, 1394369388 } },
-                    .{ .ext = .{ 530767810, 1170731572, 1231741559, 1107656093, 1304496734, 824855836 } },
-                    .{ .ext = .{ 334993625, 1548261257, 1526954853, 1366598496, 1094313845, 800558687 } },
-                    .{ .ext = .{ 1006796418, 1769720746, 2118740534, 375368826, 2125841966, 1757608121 } },
-                    .{ .ext = .{ 1741433872, 854365111, 1565430518, 1567243995, 1186335079, 1655380678 } },
-                    .{ .ext = .{ 1097324872, 1396727980, 216988194, 2014619930, 1095062598, 1951045335 } },
+                    .{ .ext = .{ 1796021322, 960338722, 425092601, 1541817340, 1513300371, 43046960 } },
+                    .{ .ext = .{ 1259384187, 91593774, 1572342626, 1571155992, 491813893, 231707055 } },
+                    .{ .ext = .{ 1916724292, 1022026443, 1510323395, 1264132463, 1210857275, 1828275596 } },
+                    .{ .ext = .{ 1456484545, 275284920, 1631091615, 68095358, 242865348, 584776063 } },
+                    .{ .ext = .{ 799958140, 517290572, 2109999654, 248360518, 1440361481, 1014729806 } },
+                    .{ .ext = .{ 1642951094, 523039874, 59791661, 1489560555, 79223858, 804199061 } },
+                    .{ .ext = .{ 856389426, 2109608414, 960723089, 1965161062, 1519647751, 771598231 } },
+                    .{ .ext = .{ 490757535, 298495318, 72863508, 430463358, 1150073584, 1854833251 } },
+                    .{ .ext = .{ 680483002, 804164034, 219505147, 367934480, 2114219149, 1860730537 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 428900294, 406960235, 595601052, 801330482, 33976870, 875502380 }, .{ 560049247, 954795254, 1321764036, 700956998, 1167506052, 1208697836 }, .{ 47990487, 1036823181, 1576377080, 1766596262, 1292703292, 1531017040 }, .{ 1697211574, 1545831518, 1205066948, 615918413, 1774565149, 913268103 }, .{ 89209900, 1533499512, 781904614, 447516179, 1170101540, 1394369388 }, .{ 530767810, 1170731572, 1231741559, 1107656093, 1304496734, 824855836 }, .{ 334993625, 1548261257, 1526954853, 1366598496, 1094313845, 800558687 } },
-        .quotient_claims = &.{ .{ 99444160, 916453171, 1747683249, 549483434, 1902355644, 1334224894 }, .{ 556593272, 1028553776, 1648898344, 1904786857, 1279152697, 1837784160 }, .{ 342763018, 180196008, 1971574013, 1316128799, 1485685353, 207354018 }, .{ 1006796418, 1769720746, 2118740534, 375368826, 2125841966, 1757608121 }, .{ 1741433872, 854365111, 1565430518, 1567243995, 1186335079, 1655380678 }, .{ 1097324872, 1396727980, 216988194, 2014619930, 1095062598, 1951045335 } },
+        .witness_claims = &.{ .{ 1796021322, 960338722, 425092601, 1541817340, 1513300371, 43046960 }, .{ 1259384187, 91593774, 1572342626, 1571155992, 491813893, 231707055 }, .{ 1916724292, 1022026443, 1510323395, 1264132463, 1210857275, 1828275596 }, .{ 1456484545, 275284920, 1631091615, 68095358, 242865348, 584776063 }, .{ 1642951094, 523039874, 59791661, 1489560555, 79223858, 804199061 }, .{ 856389426, 2109608414, 960723089, 1965161062, 1519647751, 771598231 }, .{ 490757535, 298495318, 72863508, 430463358, 1150073584, 1854833251 } },
+        .quotient_claims = &.{ .{ 799958140, 517290572, 2109999654, 248360518, 1440361481, 1014729806 }, .{ 680483002, 804164034, 219505147, 367934480, 2114219149, 1860730537 } },
         .module_sizes = &.{},
     },
 };
@@ -6088,50 +5799,38 @@ pub const system_45_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_45_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 4, 0, 5, 6, 14 },
+    .round_cell_counts = &[_]usize{ 4, 0, 5, 2, 10 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-filterA"
 
+// expression: "z-recurrence-b0-k0"
 const system_45_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
+    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
-    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
-    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
-    .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
-    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 9 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 10 } },
 };
 
 const system_45_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 9, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
-};
-
-const system_45_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
+    .{ .expression = 11, .cancelled_positions = &.{} },
 };
 
 const system_45_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 1, .vanishings = &system_45_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 2, .vanishings = &system_45_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
 };
 
+// expression: "z-recurrence-b1-k0"
 const system_45_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "filterS"
     .{ .constant = .{ .value = 1 } },
@@ -6139,36 +5838,22 @@ const system_45_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .column_claim = 2 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 4 } },
+    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "z-average-b1-k0"
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "S"
-    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 7 } },
-    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 8 } },
-    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 9 } },
-    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 3 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 13 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 8 } },
-    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 15 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 16, .rhs = 17 } },
+    .{ .op = .{ .operator = .add, .lhs = 8, .rhs = 9 } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 10 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 11 } },
 };
 
 const system_45_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 10, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
-};
-
-const system_45_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 18, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_45_module_1_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_45_module_1_bucket_0_vanishings, .quotient_claim_offset = 3 },
-    .{ .ratio = 2, .vanishings = &system_45_module_1_bucket_1_vanishings, .quotient_claim_offset = 4 },
+    .{ .ratio = 1, .vanishings = &system_45_module_1_bucket_0_vanishings, .quotient_claim_offset = 1 },
 };
 
 const system_45_modules = [_]vanishing.Module{
@@ -6183,17 +5868,17 @@ const system_45 = vanishing.System{
     .modules = &system_45_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 8,
-    .total_quotient_claims = 6,
+    .total_quotient_claims = 2,
 };
 
-const system_45_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 2, .index = 1 },
-    .{ .round = 2, .index = 2 },
+const system_45_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 2, .index = 1 }, .size = .{ .static = 2 } },
+    .{ .average_ref = .{ .round = 2, .index = 2 }, .size = .{ .static = 4 } },
 };
 
 // logderiv system: "lk-filterA"
 const system_45_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_45_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-filterA/lookuptologderiv/aggregated"
+    .{ .entries = &system_45_logderiv_query_0_entries, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-filterA/lookuptologderiv/aggregated"
 };
 
 const system_45_logderiv = logderivativesum.System{ .queries = &system_45_logderiv_queries };
@@ -6240,22 +5925,18 @@ const scenario_45 = Scenario{
                 .cells = &.{},
             },
             .{
-                .commitment = .{ 574187687, 219539709, 2117083035, 671093186, 330454242, 624159141, 1206877603, 1970963211 },
+                .commitment = .{ 969874436, 46799907, 1760341220, 1681430651, 1796592339, 2117304862, 1310615760, 1011267419 },
                 .cells = &.{
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 1180718953, 1757215131, 1439384727, 670057866, 616203857, 656696957 } },
-                    .{ .ext = .{ 949987480, 373491302, 691321706, 1460648567, 1514502576, 1474009476 } },
+                    .{ .ext = .{ 1655712693, 1943960782, 1785045580, 335028933, 1373455145, 1393701695 } },
+                    .{ .ext = .{ 237496870, 1158726042, 1238183643, 897838750, 378625644, 368502369 } },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 2083434212, 2011743261, 2098342534, 493229247, 928506869, 341020772, 863106398, 880703303 },
+                .commitment = .{ 943841590, 442030802, 1722497763, 1030593989, 1315890015, 1910995153, 305366512, 1640378010 },
                 .cells = &.{
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 1 },
-                    .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
@@ -6263,25 +5944,21 @@ const scenario_45 = Scenario{
             .{
                 .cells = &.{
                     .{ .ext = .{ 1, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 475969352, 365424077, 1516591296, 406902152, 63519180, 892680436 } },
-                    .{ .ext = .{ 266630469, 2027541801, 1573898623, 1854305303, 1488833181, 883019000 } },
-                    .{ .ext = .{ 1643112762, 82481116, 756713969, 1849605386, 492748067, 428466563 } },
-                    .{ .ext = .{ 1697003620, 825102180, 1277094855, 326730164, 1614998238, 566158410 } },
-                    .{ .ext = .{ 871564425, 1305958882, 1124719753, 123925038, 2024012784, 1256758462 } },
-                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 1545366296, 1023949732, 658945699, 425317159, 944867453, 367776220 } },
-                    .{ .ext = .{ 354996039, 773052649, 1890125079, 161748469, 1998493218, 2041686998 } },
-                    .{ .ext = .{ 898991150, 88093156, 1789741667, 1998554513, 638504112, 1047414314 } },
-                    .{ .ext = .{ 1084436747, 879497167, 299092375, 383550082, 1175822757, 64759056 } },
-                    .{ .ext = .{ 200974559, 1678381000, 132683752, 400674258, 1366315053, 779921743 } },
-                    .{ .ext = .{ 1851153079, 267620972, 1886683341, 624275645, 270369046, 717843728 } },
-                    .{ .ext = .{ 760892657, 1477763783, 1729116466, 1376679753, 1775752019, 1447055784 } },
+                    .{ .ext = .{ 1149669057, 1565715857, 838943518, 363885404, 1549443707, 832179300 } },
+                    .{ .ext = .{ 1017911984, 1387486974, 1157822527, 892235252, 143956085, 1023827917 } },
+                    .{ .ext = .{ 1268291271, 1289467472, 47127098, 150287638, 1991413226, 576096765 } },
+                    .{ .ext = .{ 184373040, 1981775557, 1461004493, 2019190414, 2074879661, 757210353 } },
+                    .{ .ext = .{ 860807611, 1538010303, 427985875, 213386908, 2071720114, 670018361 } },
+                    .{ .ext = .{ 1590374832, 1633030138, 834041464, 227677967, 1217548679, 1261276930 } },
+                    .{ .ext = .{ 91369562, 2034436813, 63246150, 461400759, 2007513306, 1267466797 } },
+                    .{ .ext = .{ 6770617, 755630544, 148571426, 101263142, 80600366, 667599565 } },
+                    .{ .ext = .{ 1475115124, 905852787, 328405956, 1451126160, 883315820, 364721259 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 475969352, 365424077, 1516591296, 406902152, 63519180, 892680436 }, .{ 266630469, 2027541801, 1573898623, 1854305303, 1488833181, 883019000 }, .{ 1643112762, 82481116, 756713969, 1849605386, 492748067, 428466563 }, .{ 1545366296, 1023949732, 658945699, 425317159, 944867453, 367776220 }, .{ 354996039, 773052649, 1890125079, 161748469, 1998493218, 2041686998 }, .{ 898991150, 88093156, 1789741667, 1998554513, 638504112, 1047414314 }, .{ 1084436747, 879497167, 299092375, 383550082, 1175822757, 64759056 } },
-        .quotient_claims = &.{ .{ 1697003620, 825102180, 1277094855, 326730164, 1614998238, 566158410 }, .{ 871564425, 1305958882, 1124719753, 123925038, 2024012784, 1256758462 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 200974559, 1678381000, 132683752, 400674258, 1366315053, 779921743 }, .{ 1851153079, 267620972, 1886683341, 624275645, 270369046, 717843728 }, .{ 760892657, 1477763783, 1729116466, 1376679753, 1775752019, 1447055784 } },
+        .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 1149669057, 1565715857, 838943518, 363885404, 1549443707, 832179300 }, .{ 1017911984, 1387486974, 1157822527, 892235252, 143956085, 1023827917 }, .{ 1268291271, 1289467472, 47127098, 150287638, 1991413226, 576096765 }, .{ 860807611, 1538010303, 427985875, 213386908, 2071720114, 670018361 }, .{ 1590374832, 1633030138, 834041464, 227677967, 1217548679, 1261276930 }, .{ 91369562, 2034436813, 63246150, 461400759, 2007513306, 1267466797 }, .{ 6770617, 755630544, 148571426, 101263142, 80600366, 667599565 } },
+        .quotient_claims = &.{ .{ 184373040, 1981775557, 1461004493, 2019190414, 2074879661, 757210353 }, .{ 1475115124, 905852787, 328405956, 1451126160, 883315820, 364721259 } },
         .module_sizes = &.{},
     },
 };
@@ -6293,92 +5970,66 @@ pub const system_46_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_46_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 4, 0, 5, 6, 14 },
+    .round_cell_counts = &[_]usize{ 4, 0, 5, 2, 10 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-filterT"
 
+// expression: "z-recurrence-b0-k0"
 const system_46_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
+    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 9 } },
     .{ .column_claim = 4 }, // col: "filterT"
-    .{ .op = .{ .operator = .add, .lhs = 8, .rhs = 9 } },
-    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 10 } },
-    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 11 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 12 } },
-    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 14, .rhs = 2 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
-    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 11 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 18 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 19, .rhs = 20 } },
+    .{ .op = .{ .operator = .add, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 13 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
 };
 
 const system_46_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 13, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
-};
-
-const system_46_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 21, .cancelled_positions = &.{} },
+    .{ .expression = 15, .cancelled_positions = &.{} },
 };
 
 const system_46_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 1, .vanishings = &system_46_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 2, .vanishings = &system_46_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
 };
 
+// expression: "z-recurrence-b1-k0"
 const system_46_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "z-average-b1-k0"
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
-    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 0 } },
-    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 8 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 9 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 10 } },
-    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 12, .rhs = 1 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 13, .rhs = 14 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 9 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 16 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 17, .rhs = 18 } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .add, .lhs = 9, .rhs = 0 } },
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 10 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 11 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 12 } },
 };
 
 const system_46_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 11, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 15, .cancelled_positions = &.{} },
-};
-
-const system_46_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 19, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_46_module_1_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_46_module_1_bucket_0_vanishings, .quotient_claim_offset = 3 },
-    .{ .ratio = 2, .vanishings = &system_46_module_1_bucket_1_vanishings, .quotient_claim_offset = 4 },
+    .{ .ratio = 1, .vanishings = &system_46_module_1_bucket_0_vanishings, .quotient_claim_offset = 1 },
 };
 
 const system_46_modules = [_]vanishing.Module{
@@ -6393,17 +6044,17 @@ const system_46 = vanishing.System{
     .modules = &system_46_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 8,
-    .total_quotient_claims = 6,
+    .total_quotient_claims = 2,
 };
 
-const system_46_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 2, .index = 1 },
-    .{ .round = 2, .index = 2 },
+const system_46_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 2, .index = 1 }, .size = .{ .static = 4 } },
+    .{ .average_ref = .{ .round = 2, .index = 2 }, .size = .{ .static = 4 } },
 };
 
 // logderiv system: "lk-filterT"
 const system_46_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_46_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-filterT/lookuptologderiv/aggregated"
+    .{ .entries = &system_46_logderiv_query_0_entries, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-filterT/lookuptologderiv/aggregated"
 };
 
 const system_46_logderiv = logderivativesum.System{ .queries = &system_46_logderiv_queries };
@@ -6450,48 +6101,40 @@ const scenario_46 = Scenario{
                 .cells = &.{},
             },
             .{
-                .commitment = .{ 409037231, 2111300232, 1181865987, 235881669, 991646693, 1010508229, 1197690029, 1679897187 },
+                .commitment = .{ 1424827536, 1339300293, 180653886, 1419354964, 1163519843, 627065992, 1520490468, 2103594269 },
                 .cells = &.{
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 2794603, 1142169013, 1863945099, 1572783100, 56301449, 764740522 } },
-                    .{ .ext = .{ 2127911830, 988537420, 266761334, 557923333, 2074404984, 1365965911 } },
+                    .{ .ext = .{ 533375259, 1883572078, 998662883, 393195775, 1612105187, 1256538347 } },
+                    .{ .ext = .{ 1597331174, 247134355, 1132043550, 1737510658, 518601246, 874168086 } },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 1799999420, 1245222942, 872867326, 1818120240, 320888318, 1561866029, 1236113063, 1513552802 },
+                .commitment = .{ 1363640913, 537599848, 1707536593, 1617116540, 1976767027, 922679877, 2020699918, 409881669 },
                 .cells = &.{
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 1071839837, 1084748337, 380872003, 315419367, 1969051811, 645797002 } },
-                    .{ .ext = .{ 181403977, 117658721, 1078509262, 1499805373, 1620983431, 609560214 } },
-                    .{ .ext = .{ 1904467250, 1240221329, 754794596, 1844078373, 34677661, 2073777612 } },
-                    .{ .ext = .{ 1437257811, 15264763, 1075443252, 1073057379, 122322586, 1914465571 } },
-                    .{ .ext = .{ 1601273135, 1607727385, 1255789218, 1223062900, 2049879122, 322898501 } },
-                    .{ .ext = .{ 943774464, 1381673469, 1082640873, 1637211845, 610603439, 1963298569 } },
-                    .{ .ext = .{ 162144272, 935663639, 859767368, 490514422, 1551762615, 839938222 } },
-                    .{ .ext = .{ 619017689, 668202731, 1724729208, 669947135, 1350293451, 801170238 } },
-                    .{ .ext = .{ 862848064, 2068785568, 1687195692, 1296385443, 414246421, 1894930965 } },
-                    .{ .ext = .{ 955653488, 364037606, 1975875619, 779916269, 1121750253, 1580757294 } },
-                    .{ .ext = .{ 1032920134, 968377614, 226346418, 553609598, 808273110, 1032427856 } },
-                    .{ .ext = .{ 1787631732, 63225103, 2127703845, 1430639607, 995221249, 999462980 } },
-                    .{ .ext = .{ 1830385634, 1842096631, 1593002641, 484208743, 2099365370, 324740622 } },
-                    .{ .ext = .{ 1881797835, 209211461, 276163677, 454490342, 844890272, 1193154173 } },
+                    .{ .ext = .{ 276199086, 527415902, 2126351925, 874305008, 1425475141, 1037751692 } },
+                    .{ .ext = .{ 295764768, 1508825949, 309997451, 527754251, 1769101588, 1837553814 } },
+                    .{ .ext = .{ 973692492, 1343256598, 1329758312, 2091824482, 1391820136, 2067350215 } },
+                    .{ .ext = .{ 1879799257, 265902437, 1738657707, 1367669460, 165385872, 1756112131 } },
+                    .{ .ext = .{ 138099543, 263707951, 2128529179, 437152504, 1778090787, 518875846 } },
+                    .{ .ext = .{ 368448994, 1698287992, 1092594544, 282839486, 1113512927, 833518798 } },
+                    .{ .ext = .{ 1029240564, 1169390338, 1781659063, 2088459303, 425730465, 957206426 } },
+                    .{ .ext = .{ 1095572623, 155095172, 976997812, 1715748907, 899984277, 1641281583 } },
+                    .{ .ext = .{ 749711023, 1624333356, 21772540, 2020594259, 1395450027, 1203360839 } },
+                    .{ .ext = .{ 518058080, 2112006570, 162318076, 989973703, 822790222, 901860211 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 1071839837, 1084748337, 380872003, 315419367, 1969051811, 645797002 }, .{ 181403977, 117658721, 1078509262, 1499805373, 1620983431, 609560214 }, .{ 1904467250, 1240221329, 754794596, 1844078373, 34677661, 2073777612 }, .{ 1437257811, 15264763, 1075443252, 1073057379, 122322586, 1914465571 }, .{ 1601273135, 1607727385, 1255789218, 1223062900, 2049879122, 322898501 }, .{ 862848064, 2068785568, 1687195692, 1296385443, 414246421, 1894930965 }, .{ 955653488, 364037606, 1975875619, 779916269, 1121750253, 1580757294 }, .{ 1032920134, 968377614, 226346418, 553609598, 808273110, 1032427856 } },
-        .quotient_claims = &.{ .{ 943774464, 1381673469, 1082640873, 1637211845, 610603439, 1963298569 }, .{ 162144272, 935663639, 859767368, 490514422, 1551762615, 839938222 }, .{ 619017689, 668202731, 1724729208, 669947135, 1350293451, 801170238 }, .{ 1787631732, 63225103, 2127703845, 1430639607, 995221249, 999462980 }, .{ 1830385634, 1842096631, 1593002641, 484208743, 2099365370, 324740622 }, .{ 1881797835, 209211461, 276163677, 454490342, 844890272, 1193154173 } },
+        .witness_claims = &.{ .{ 276199086, 527415902, 2126351925, 874305008, 1425475141, 1037751692 }, .{ 295764768, 1508825949, 309997451, 527754251, 1769101588, 1837553814 }, .{ 973692492, 1343256598, 1329758312, 2091824482, 1391820136, 2067350215 }, .{ 1879799257, 265902437, 1738657707, 1367669460, 165385872, 1756112131 }, .{ 138099543, 263707951, 2128529179, 437152504, 1778090787, 518875846 }, .{ 1029240564, 1169390338, 1781659063, 2088459303, 425730465, 957206426 }, .{ 1095572623, 155095172, 976997812, 1715748907, 899984277, 1641281583 }, .{ 749711023, 1624333356, 21772540, 2020594259, 1395450027, 1203360839 } },
+        .quotient_claims = &.{ .{ 368448994, 1698287992, 1092594544, 282839486, 1113512927, 833518798 }, .{ 518058080, 2112006570, 162318076, 989973703, 822790222, 901860211 } },
         .module_sizes = &.{},
     },
 };
@@ -6503,54 +6146,42 @@ pub const system_47_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_47_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 5, 0, 5, 6, 15 },
+    .round_cell_counts = &[_]usize{ 5, 0, 5, 2, 11 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-double"
 
+// expression: "z-recurrence-b0-k0"
 const system_47_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
+    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 9 } },
     .{ .column_claim = 4 }, // col: "filterT"
-    .{ .op = .{ .operator = .add, .lhs = 8, .rhs = 9 } },
-    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 10 } },
-    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 11 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 12 } },
-    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 14, .rhs = 2 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
-    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 11 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 18 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 19, .rhs = 20 } },
+    .{ .op = .{ .operator = .add, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 13 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
 };
 
 const system_47_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 13, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
-};
-
-const system_47_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 21, .cancelled_positions = &.{} },
+    .{ .expression = 15, .cancelled_positions = &.{} },
 };
 
 const system_47_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 1, .vanishings = &system_47_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 2, .vanishings = &system_47_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
 };
 
+// expression: "z-recurrence-b1-k0"
 const system_47_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "filterS"
     .{ .constant = .{ .value = 1 } },
@@ -6558,39 +6189,25 @@ const system_47_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .column_claim = 2 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 4 } },
+    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "z-average-b1-k0"
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 3 }, // col: "S"
-    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 8 } },
-    .{ .op = .{ .operator = .add, .lhs = 9, .rhs = 1 } },
-    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 10 } },
-    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 11 } },
-    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 12 } },
-    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 14, .rhs = 3 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 11 } },
-    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 18 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 19, .rhs = 20 } },
+    .{ .op = .{ .operator = .mul, .lhs = 9, .rhs = 10 } },
+    .{ .op = .{ .operator = .add, .lhs = 11, .rhs = 1 } },
+    .{ .op = .{ .operator = .add, .lhs = 8, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 13 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 14 } },
 };
 
 const system_47_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 13, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
-};
-
-const system_47_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 21, .cancelled_positions = &.{} },
+    .{ .expression = 15, .cancelled_positions = &.{} },
 };
 
 const system_47_module_1_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_47_module_1_bucket_0_vanishings, .quotient_claim_offset = 3 },
-    .{ .ratio = 2, .vanishings = &system_47_module_1_bucket_1_vanishings, .quotient_claim_offset = 4 },
+    .{ .ratio = 1, .vanishings = &system_47_module_1_bucket_0_vanishings, .quotient_claim_offset = 1 },
 };
 
 const system_47_modules = [_]vanishing.Module{
@@ -6605,17 +6222,17 @@ const system_47 = vanishing.System{
     .modules = &system_47_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 9,
-    .total_quotient_claims = 6,
+    .total_quotient_claims = 2,
 };
 
-const system_47_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 2, .index = 1 },
-    .{ .round = 2, .index = 2 },
+const system_47_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 2, .index = 1 }, .size = .{ .static = 4 } },
+    .{ .average_ref = .{ .round = 2, .index = 2 }, .size = .{ .static = 4 } },
 };
 
 // logderiv system: "lk-double"
 const system_47_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_47_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-double/lookuptologderiv/aggregated"
+    .{ .entries = &system_47_logderiv_query_0_entries, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-double/lookuptologderiv/aggregated"
 };
 
 const system_47_logderiv = logderivativesum.System{ .queries = &system_47_logderiv_queries };
@@ -6650,62 +6267,54 @@ const scenario_47 = Scenario{
     .honest = .{
         .rounds = &.{
             .{
-                .commitment = .{ 1091908792, 1891979519, 1635314922, 928909899, 149968450, 779775735, 13842331, 1628217697 },
+                .commitment = .{ 1704291796, 739533932, 62619361, 1318628009, 557016774, 266494561, 299011082, 1301963715 },
                 .cells = &.{
                     .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
-                    .{ .base = 3 },
-                    .{ .base = 3 },
+                    .{ .base = 0 },
+                    .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{},
             },
             .{
-                .commitment = .{ 1811992683, 41330801, 1537463024, 1266031334, 450391833, 1439465178, 578856843, 1449960927 },
+                .commitment = .{ 356802607, 1490354159, 1961521946, 2052517362, 1868553462, 1472292820, 1389879505, 1274303653 },
                 .cells = &.{
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 1386096675, 546297305, 106270829, 399855597, 1810745786, 787664792 } },
-                    .{ .ext = .{ 744609758, 1584409128, 2024435604, 1730850836, 319960647, 1343041641 } },
+                    .{ .ext = .{ 1941617548, 716111857, 1295421931, 517933860, 197078367, 843206163 } },
+                    .{ .ext = .{ 189088885, 1414594576, 835284502, 1612772573, 1933628066, 1287500270 } },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 1552092634, 1701646620, 1254028662, 874366082, 1706265741, 836749450, 1970925503, 1389585125 },
+                .commitment = .{ 1512681632, 103786283, 196381253, 1442515590, 1788247525, 1539165627, 95607536, 616215448 },
                 .cells = &.{
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 176891189, 412122019, 967249916, 93876415, 2038302357, 2024755296 } },
-                    .{ .ext = .{ 1901617228, 1127984878, 1732821933, 391667214, 608625540, 398707645 } },
-                    .{ .ext = .{ 1371946882, 130792212, 1476329131, 306177069, 716821880, 89886402 } },
-                    .{ .ext = .{ 1410883691, 112193850, 803122146, 579686450, 410469003, 66946004 } },
-                    .{ .ext = .{ 176891189, 412122019, 967249916, 93876415, 2038302357, 2024755296 } },
-                    .{ .ext = .{ 781500154, 70272011, 105402722, 1776886911, 1644947728, 973921891 } },
-                    .{ .ext = .{ 1690306422, 1332968120, 823496885, 902669017, 1734753082, 1120061803 } },
-                    .{ .ext = .{ 1801580366, 62189110, 2044058614, 1704182292, 222330287, 2114348677 } },
-                    .{ .ext = .{ 176891189, 412122019, 967249916, 93876415, 2038302357, 2024755296 } },
-                    .{ .ext = .{ 229089205, 1002721555, 397884500, 1739039219, 1522080893, 1731998788 } },
-                    .{ .ext = .{ 758759551, 1999914221, 654377302, 1824529364, 1413884553, 2040820031 } },
-                    .{ .ext = .{ 1392370103, 1265965662, 2004135845, 482802907, 870905528, 1255831278 } },
-                    .{ .ext = .{ 217535062, 1056103200, 2129094512, 233869417, 221297538, 1594157754 } },
-                    .{ .ext = .{ 358012779, 976936859, 1648203514, 2044777601, 1232992537, 1264335827 } },
-                    .{ .ext = .{ 1961441431, 1342820883, 996636938, 1528552683, 1542327903, 56030810 } },
+                    .{ .ext = .{ 1820677561, 1275699098, 474374063, 2027425972, 668815083, 256553634 } },
+                    .{ .ext = .{ 1485501316, 1989864450, 686341087, 1018859022, 1324047195, 1233391098 } },
+                    .{ .ext = .{ 627907054, 2090092797, 1511148877, 1116615166, 1616950808, 710824000 } },
+                    .{ .ext = .{ 1803145534, 102655874, 919152588, 1490055156, 894047041, 220378182 } },
+                    .{ .ext = .{ 1820677561, 1275699098, 474374063, 2027425972, 668815083, 256553634 } },
+                    .{ .ext = .{ 1985261005, 1072217393, 692734911, 1097798038, 868894839, 1566228813 } },
+                    .{ .ext = .{ 1820677561, 1275699098, 474374063, 2027425972, 668815083, 256553634 } },
+                    .{ .ext = .{ 645205117, 140841983, 1444365346, 1111847411, 806659238, 897315335 } },
+                    .{ .ext = .{ 1502799379, 40613636, 619557556, 1014091267, 513755625, 1419882433 } },
+                    .{ .ext = .{ 668836083, 1747342218, 77334870, 215013150, 982623819, 2055534330 } },
+                    .{ .ext = .{ 735452168, 986257457, 744197468, 247884471, 1081484629, 320325173 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 176891189, 412122019, 967249916, 93876415, 2038302357, 2024755296 }, .{ 1901617228, 1127984878, 1732821933, 391667214, 608625540, 398707645 }, .{ 1371946882, 130792212, 1476329131, 306177069, 716821880, 89886402 }, .{ 1410883691, 112193850, 803122146, 579686450, 410469003, 66946004 }, .{ 176891189, 412122019, 967249916, 93876415, 2038302357, 2024755296 }, .{ 176891189, 412122019, 967249916, 93876415, 2038302357, 2024755296 }, .{ 229089205, 1002721555, 397884500, 1739039219, 1522080893, 1731998788 }, .{ 758759551, 1999914221, 654377302, 1824529364, 1413884553, 2040820031 }, .{ 1392370103, 1265965662, 2004135845, 482802907, 870905528, 1255831278 } },
-        .quotient_claims = &.{ .{ 781500154, 70272011, 105402722, 1776886911, 1644947728, 973921891 }, .{ 1690306422, 1332968120, 823496885, 902669017, 1734753082, 1120061803 }, .{ 1801580366, 62189110, 2044058614, 1704182292, 222330287, 2114348677 }, .{ 217535062, 1056103200, 2129094512, 233869417, 221297538, 1594157754 }, .{ 358012779, 976936859, 1648203514, 2044777601, 1232992537, 1264335827 }, .{ 1961441431, 1342820883, 996636938, 1528552683, 1542327903, 56030810 } },
+        .witness_claims = &.{ .{ 1820677561, 1275699098, 474374063, 2027425972, 668815083, 256553634 }, .{ 1485501316, 1989864450, 686341087, 1018859022, 1324047195, 1233391098 }, .{ 627907054, 2090092797, 1511148877, 1116615166, 1616950808, 710824000 }, .{ 1803145534, 102655874, 919152588, 1490055156, 894047041, 220378182 }, .{ 1820677561, 1275699098, 474374063, 2027425972, 668815083, 256553634 }, .{ 1820677561, 1275699098, 474374063, 2027425972, 668815083, 256553634 }, .{ 645205117, 140841983, 1444365346, 1111847411, 806659238, 897315335 }, .{ 1502799379, 40613636, 619557556, 1014091267, 513755625, 1419882433 }, .{ 668836083, 1747342218, 77334870, 215013150, 982623819, 2055534330 } },
+        .quotient_claims = &.{ .{ 1985261005, 1072217393, 692734911, 1097798038, 868894839, 1566228813 }, .{ 735452168, 986257457, 744197468, 247884471, 1081484629, 320325173 } },
         .module_sizes = &.{},
     },
 };
@@ -6717,93 +6326,67 @@ pub const system_48_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_48_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 5, 0, 5, 6, 15 },
+    .round_cell_counts = &[_]usize{ 5, 0, 5, 2, 11 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-multi-col"
 
+// expression: "z-recurrence-b0-k0"
 const system_48_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
+    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 3 }, // col: "Ty"
-    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 9 } },
     .{ .column_claim = 4 }, // col: "Tx"
-    .{ .op = .{ .operator = .add, .lhs = 8, .rhs = 9 } },
-    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 10 } },
-    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 11 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 12 } },
-    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 14, .rhs = 2 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
-    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 11 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 18 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 19, .rhs = 20 } },
+    .{ .op = .{ .operator = .add, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 13 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
 };
 
 const system_48_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 13, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
-};
-
-const system_48_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 21, .cancelled_positions = &.{} },
+    .{ .expression = 15, .cancelled_positions = &.{} },
 };
 
 const system_48_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 1, .vanishings = &system_48_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 2, .vanishings = &system_48_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
 };
 
+// expression: "z-recurrence-b1-k0"
 const system_48_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "z-average-b1-k0"
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 2 }, // col: "Sy"
-    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 8 } },
     .{ .column_claim = 3 }, // col: "Sx"
-    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
-    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 9 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 10 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 11 } },
-    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 13, .rhs = 1 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 10 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 17 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 18, .rhs = 19 } },
+    .{ .op = .{ .operator = .add, .lhs = 9, .rhs = 10 } },
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 12 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
 };
 
 const system_48_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 12, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 16, .cancelled_positions = &.{} },
-};
-
-const system_48_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 20, .cancelled_positions = &.{} },
+    .{ .expression = 14, .cancelled_positions = &.{} },
 };
 
 const system_48_module_1_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_48_module_1_bucket_0_vanishings, .quotient_claim_offset = 3 },
-    .{ .ratio = 2, .vanishings = &system_48_module_1_bucket_1_vanishings, .quotient_claim_offset = 4 },
+    .{ .ratio = 1, .vanishings = &system_48_module_1_bucket_0_vanishings, .quotient_claim_offset = 1 },
 };
 
 const system_48_modules = [_]vanishing.Module{
@@ -6818,17 +6401,17 @@ const system_48 = vanishing.System{
     .modules = &system_48_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 9,
-    .total_quotient_claims = 6,
+    .total_quotient_claims = 2,
 };
 
-const system_48_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 2, .index = 1 },
-    .{ .round = 2, .index = 2 },
+const system_48_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 2, .index = 1 }, .size = .{ .static = 4 } },
+    .{ .average_ref = .{ .round = 2, .index = 2 }, .size = .{ .static = 4 } },
 };
 
 // logderiv system: "lk-multi-col"
 const system_48_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_48_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-multi-col/lookuptologderiv/aggregated"
+    .{ .entries = &system_48_logderiv_query_0_entries, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-multi-col/lookuptologderiv/aggregated"
 };
 
 const system_48_logderiv = logderivativesum.System{ .queries = &system_48_logderiv_queries };
@@ -6876,49 +6459,41 @@ const scenario_48 = Scenario{
                 .cells = &.{},
             },
             .{
-                .commitment = .{ 2064989732, 1568657208, 301802641, 506047033, 414038523, 1432717673, 777824028, 2008826577 },
+                .commitment = .{ 791861704, 1461246873, 691808786, 1996394503, 881498281, 214797603, 1708797816, 641765149 },
                 .cells = &.{
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 1954250366, 316935010, 1151148185, 55921837, 2042122329, 130005962 } },
-                    .{ .ext = .{ 176456067, 1813771423, 979558248, 2074784596, 88584104, 2000700471 } },
+                    .{ .ext = .{ 1553915808, 1144586969, 1885816871, 1612010284, 2108560407, 1097854707 } },
+                    .{ .ext = .{ 576790625, 986119464, 244889562, 518696149, 22146026, 1032851726 } },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 2083361310, 752102657, 386680407, 395599120, 1679989962, 640576088, 786731442, 399462312 },
+                .commitment = .{ 348964191, 303937823, 1151296457, 413314908, 915552209, 1341986773, 390018651, 1978503964 },
                 .cells = &.{
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 309835295, 915965680, 1235959085, 856963577, 17079102, 1695251357 } },
-                    .{ .ext = .{ 253173643, 762366564, 1666495100, 1630638452, 219172461, 1054912345 } },
-                    .{ .ext = .{ 1773326678, 1714062317, 1748545279, 1220709565, 842186479, 1256257125 } },
-                    .{ .ext = .{ 1392067896, 449718886, 1053787268, 64860417, 737450011, 1013868901 } },
-                    .{ .ext = .{ 1843771936, 1749537035, 957661300, 219556685, 712956931, 740598820 } },
-                    .{ .ext = .{ 1150898963, 1369205029, 1052657730, 2070330724, 621448505, 1009280327 } },
-                    .{ .ext = .{ 2074402343, 557896647, 1179629015, 1396217770, 862017853, 638331522 } },
-                    .{ .ext = .{ 902602583, 531360813, 1735368167, 2078229824, 963411708, 133013790 } },
-                    .{ .ext = .{ 1726246249, 1184129830, 1462325156, 314536788, 1565344118, 1782647075 } },
-                    .{ .ext = .{ 1013622486, 495493694, 830882687, 2053139484, 724117808, 715398163 } },
-                    .{ .ext = .{ 943570601, 834551370, 1295692347, 255082945, 178165728, 827342928 } },
-                    .{ .ext = .{ 733568990, 83455137, 342639878, 1090861511, 870099146, 935016866 } },
-                    .{ .ext = .{ 828171335, 797921636, 42626139, 1514614622, 1021415033, 657435137 } },
-                    .{ .ext = .{ 1889560789, 626903382, 337044054, 1045263997, 1405339815, 941326166 } },
-                    .{ .ext = .{ 968675174, 864166511, 990741848, 1936840943, 253151654, 1562521112 } },
+                    .{ .ext = .{ 1792942261, 1506393657, 1945092689, 595003938, 435931349, 1784646783 } },
+                    .{ .ext = .{ 496233892, 2003580114, 1262089287, 103364589, 185274477, 527604687 } },
+                    .{ .ext = .{ 590276945, 722258251, 420095780, 1680126385, 1251980052, 900536440 } },
+                    .{ .ext = .{ 1181140712, 1040218598, 1836792438, 2084863294, 1445702334, 2092302101 } },
+                    .{ .ext = .{ 1396537931, 956304433, 1035961817, 634627616, 570711520, 848442140 } },
+                    .{ .ext = .{ 445599711, 1433478694, 119838798, 195077375, 2090278673, 2124290270 } },
+                    .{ .ext = .{ 874012979, 1329987606, 1656787914, 1887521978, 524396718, 239419311 } },
+                    .{ .ext = .{ 1192785757, 723411321, 1973111324, 540519958, 375966109, 701949621 } },
+                    .{ .ext = .{ 1964251819, 1848980235, 882091261, 1678334789, 78091711, 89372443 } },
+                    .{ .ext = .{ 1687919685, 1250251240, 727421056, 1659327982, 647021101, 1926573034 } },
+                    .{ .ext = .{ 6907018, 1008011924, 1336933307, 569044148, 419369075, 1219620347 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 309835295, 915965680, 1235959085, 856963577, 17079102, 1695251357 }, .{ 253173643, 762366564, 1666495100, 1630638452, 219172461, 1054912345 }, .{ 1773326678, 1714062317, 1748545279, 1220709565, 842186479, 1256257125 }, .{ 1392067896, 449718886, 1053787268, 64860417, 737450011, 1013868901 }, .{ 1843771936, 1749537035, 957661300, 219556685, 712956931, 740598820 }, .{ 1726246249, 1184129830, 1462325156, 314536788, 1565344118, 1782647075 }, .{ 1013622486, 495493694, 830882687, 2053139484, 724117808, 715398163 }, .{ 943570601, 834551370, 1295692347, 255082945, 178165728, 827342928 }, .{ 733568990, 83455137, 342639878, 1090861511, 870099146, 935016866 } },
-        .quotient_claims = &.{ .{ 1150898963, 1369205029, 1052657730, 2070330724, 621448505, 1009280327 }, .{ 2074402343, 557896647, 1179629015, 1396217770, 862017853, 638331522 }, .{ 902602583, 531360813, 1735368167, 2078229824, 963411708, 133013790 }, .{ 828171335, 797921636, 42626139, 1514614622, 1021415033, 657435137 }, .{ 1889560789, 626903382, 337044054, 1045263997, 1405339815, 941326166 }, .{ 968675174, 864166511, 990741848, 1936840943, 253151654, 1562521112 } },
+        .witness_claims = &.{ .{ 1792942261, 1506393657, 1945092689, 595003938, 435931349, 1784646783 }, .{ 496233892, 2003580114, 1262089287, 103364589, 185274477, 527604687 }, .{ 590276945, 722258251, 420095780, 1680126385, 1251980052, 900536440 }, .{ 1181140712, 1040218598, 1836792438, 2084863294, 1445702334, 2092302101 }, .{ 1396537931, 956304433, 1035961817, 634627616, 570711520, 848442140 }, .{ 874012979, 1329987606, 1656787914, 1887521978, 524396718, 239419311 }, .{ 1192785757, 723411321, 1973111324, 540519958, 375966109, 701949621 }, .{ 1964251819, 1848980235, 882091261, 1678334789, 78091711, 89372443 }, .{ 1687919685, 1250251240, 727421056, 1659327982, 647021101, 1926573034 } },
+        .quotient_claims = &.{ .{ 445599711, 1433478694, 119838798, 195077375, 2090278673, 2124290270 }, .{ 6907018, 1008011924, 1336933307, 569044148, 419369075, 1219620347 } },
         .module_sizes = &.{},
     },
 };
@@ -6930,122 +6505,83 @@ pub const system_49_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_49_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 4, 0, 7, 9, 19 },
+    .round_cell_counts = &[_]usize{ 4, 0, 7, 3, 13 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-shared"
 
+// expression: "z-recurrence-b0-k0"
 const system_49_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
+    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
-    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
-    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
-    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 9 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 10 } },
 };
 
 const system_49_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 9, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
-};
-
-const system_49_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
+    .{ .expression = 11, .cancelled_positions = &.{} },
 };
 
 const system_49_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 1, .vanishings = &system_49_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 2, .vanishings = &system_49_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
 };
 
+// expression: "z-recurrence-b1-k0"
 const system_49_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "z-average-b1-k0"
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S1"
-    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
-    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 9 } },
 };
 
 const system_49_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 8, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 12, .cancelled_positions = &.{} },
-};
-
-const system_49_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 16, .cancelled_positions = &.{} },
+    .{ .expression = 10, .cancelled_positions = &.{} },
 };
 
 const system_49_module_1_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_49_module_1_bucket_0_vanishings, .quotient_claim_offset = 3 },
-    .{ .ratio = 2, .vanishings = &system_49_module_1_bucket_1_vanishings, .quotient_claim_offset = 4 },
+    .{ .ratio = 1, .vanishings = &system_49_module_1_bucket_0_vanishings, .quotient_claim_offset = 1 },
 };
 
+// expression: "z-recurrence-b2-k0"
 const system_49_module_2_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b2-k0"
     .{ .column_claim = 1 }, // col: "z-b2-k0"
     .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .cell_value = .{ .round = 2, .index = 3 } }, // cell: "z-average-b2-k0"
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S2"
-    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
-    .{ .cell_value = .{ .round = 2, .index = 3 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
-    .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 9 } },
 };
 
 const system_49_module_2_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b2-k0"
-    .{ .expression = 8, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 12, .cancelled_positions = &.{} },
-};
-
-const system_49_module_2_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 16, .cancelled_positions = &.{} },
+    .{ .expression = 10, .cancelled_positions = &.{} },
 };
 
 const system_49_module_2_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_49_module_2_bucket_0_vanishings, .quotient_claim_offset = 6 },
-    .{ .ratio = 2, .vanishings = &system_49_module_2_bucket_1_vanishings, .quotient_claim_offset = 7 },
+    .{ .ratio = 1, .vanishings = &system_49_module_2_bucket_0_vanishings, .quotient_claim_offset = 2 },
 };
 
 const system_49_modules = [_]vanishing.Module{
@@ -7062,18 +6598,18 @@ const system_49 = vanishing.System{
     .modules = &system_49_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 10,
-    .total_quotient_claims = 9,
+    .total_quotient_claims = 3,
 };
 
-const system_49_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 2, .index = 1 },
-    .{ .round = 2, .index = 2 },
-    .{ .round = 2, .index = 3 },
+const system_49_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 2, .index = 1 }, .size = .{ .static = 4 } },
+    .{ .average_ref = .{ .round = 2, .index = 2 }, .size = .{ .static = 4 } },
+    .{ .average_ref = .{ .round = 2, .index = 3 }, .size = .{ .static = 2 } },
 };
 
 // logderiv system: "lk-shared"
 const system_49_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_49_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-shared/lookuptologderiv/aggregated"
+    .{ .entries = &system_49_logderiv_query_0_entries, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-shared/lookuptologderiv/aggregated"
 };
 
 const system_49_logderiv = logderivativesum.System{ .queries = &system_49_logderiv_queries };
@@ -7121,58 +6657,46 @@ const scenario_49 = Scenario{
                 .cells = &.{},
             },
             .{
-                .commitment = .{ 1158359593, 981270629, 921133699, 91262709, 289229360, 801849931, 607035936, 615736722 },
+                .commitment = .{ 1019036151, 1015882137, 198583043, 538252533, 1585405643, 1295673311, 104079276, 1342281722 },
                 .cells = &.{
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 218564031, 640670316, 923194140, 450264622, 323198941, 1480970624 } },
-                    .{ .ext = .{ 2113408320, 1497313779, 565796014, 1027658310, 895498920, 2023295630 } },
-                    .{ .ext = .{ 1929440515, 2123428771, 641716279, 652783501, 912008572, 757146612 } },
+                    .{ .ext = .{ 587317616, 160167579, 230798535, 1177919372, 1678829560, 370242656 } },
+                    .{ .ext = .{ 528352080, 907005053, 1206802220, 1322267794, 223874730, 1571177124 } },
+                    .{ .ext = .{ 2030073474, 2127067602, 1386211356, 1391744967, 456004286, 378573306 } },
                     .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 222550118, 1678903280, 834710755, 1374480339, 1279504438, 1670706105, 1999124353, 1581590825 },
+                .commitment = .{ 2088581823, 1003433448, 235209662, 1836317515, 817698087, 1368921492, 1332058827, 582901054 },
                 .cells = &.{
                     .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 1 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 893608177, 868723436, 2067405086, 985792312, 1942836483, 1054539138 } },
-                    .{ .ext = .{ 262020400, 510453535, 1396988657, 663793745, 1644271403, 1219087253 } },
-                    .{ .ext = .{ 771874289, 1746184241, 874353316, 1956468128, 185433076, 356653505 } },
-                    .{ .ext = .{ 683638805, 2101453589, 2031502376, 526868875, 395680167, 1421866753 } },
-                    .{ .ext = .{ 1137710007, 1276035619, 1115259621, 1455531608, 1558354477, 1483025436 } },
-                    .{ .ext = .{ 520696605, 1864005931, 987988487, 623771816, 111641282, 1211274167 } },
-                    .{ .ext = .{ 1456774972, 410400281, 1634492123, 777728680, 1182901495, 672312481 } },
-                    .{ .ext = .{ 889852621, 248614967, 471667255, 530864055, 325007418, 532557147 } },
-                    .{ .ext = .{ 866944655, 1477357803, 534214686, 1775857475, 616606717, 1125756335 } },
-                    .{ .ext = .{ 22037374, 1828846965, 1580820291, 1886715734, 829388572, 575409762 } },
-                    .{ .ext = .{ 488996515, 67751771, 70860282, 1471902042, 516361035, 1328457799 } },
-                    .{ .ext = .{ 1848477469, 988925346, 1182089780, 2023346762, 1335229416, 1927938718 } },
-                    .{ .ext = .{ 694845039, 1715393138, 2018748933, 417697353, 1287952564, 1545349023 } },
-                    .{ .ext = .{ 848048294, 500034768, 1519062206, 382920443, 69105149, 732070325 } },
-                    .{ .ext = .{ 544519521, 2062506402, 1020666747, 1108168223, 86833144, 1701355336 } },
-                    .{ .ext = .{ 521373815, 465400957, 84988610, 1570298354, 711363117, 1580146050 } },
-                    .{ .ext = .{ 1005902383, 502265549, 1569836041, 987821408, 575212758, 1441157865 } },
-                    .{ .ext = .{ 316926045, 829997577, 519076013, 1774954382, 1866727822, 133405961 } },
-                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 1920481643, 559733259, 1953582506, 2127535741, 1621226194, 1205270822 } },
+                    .{ .ext = .{ 1398325913, 57652604, 317721549, 1088967982, 489904735, 927875284 } },
+                    .{ .ext = .{ 1865944532, 403242441, 857938535, 1531581090, 1546399451, 929454110 } },
+                    .{ .ext = .{ 1587769816, 1051833377, 1754098053, 352198345, 2118043923, 80252094 } },
+                    .{ .ext = .{ 92503927, 1353365560, 134366701, 1728534390, 2063169451, 1127410750 } },
+                    .{ .ext = .{ 2118880466, 1447448585, 1653684907, 548148736, 567635119, 1262087083 } },
+                    .{ .ext = .{ 1392339372, 2081337242, 231890694, 932688365, 1497103762, 1762070817 } },
+                    .{ .ext = .{ 1376162001, 1577969075, 770358176, 1332677116, 1686019763, 1674762732 } },
+                    .{ .ext = .{ 497262679, 643126428, 277214385, 755727007, 2029702276, 1645344823 } },
+                    .{ .ext = .{ 2085392618, 1192047091, 437551226, 322451231, 2016333674, 899757227 } },
+                    .{ .ext = .{ 1739780507, 1381410572, 74250092, 1254815400, 1033004627, 397948516 } },
+                    .{ .ext = .{ 1430968805, 1364539400, 1734184201, 806947618, 1192079695, 84328350 } },
+                    .{ .ext = .{ 50492272, 2047656716, 1702406276, 636492577, 1798959959, 2034297017 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 893608177, 868723436, 2067405086, 985792312, 1942836483, 1054539138 }, .{ 262020400, 510453535, 1396988657, 663793745, 1644271403, 1219087253 }, .{ 771874289, 1746184241, 874353316, 1956468128, 185433076, 356653505 }, .{ 683638805, 2101453589, 2031502376, 526868875, 395680167, 1421866753 }, .{ 889852621, 248614967, 471667255, 530864055, 325007418, 532557147 }, .{ 866944655, 1477357803, 534214686, 1775857475, 616606717, 1125756335 }, .{ 22037374, 1828846965, 1580820291, 1886715734, 829388572, 575409762 }, .{ 848048294, 500034768, 1519062206, 382920443, 69105149, 732070325 }, .{ 544519521, 2062506402, 1020666747, 1108168223, 86833144, 1701355336 }, .{ 521373815, 465400957, 84988610, 1570298354, 711363117, 1580146050 } },
-        .quotient_claims = &.{ .{ 1137710007, 1276035619, 1115259621, 1455531608, 1558354477, 1483025436 }, .{ 520696605, 1864005931, 987988487, 623771816, 111641282, 1211274167 }, .{ 1456774972, 410400281, 1634492123, 777728680, 1182901495, 672312481 }, .{ 488996515, 67751771, 70860282, 1471902042, 516361035, 1328457799 }, .{ 1848477469, 988925346, 1182089780, 2023346762, 1335229416, 1927938718 }, .{ 694845039, 1715393138, 2018748933, 417697353, 1287952564, 1545349023 }, .{ 1005902383, 502265549, 1569836041, 987821408, 575212758, 1441157865 }, .{ 316926045, 829997577, 519076013, 1774954382, 1866727822, 133405961 }, .{ 0, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{ .{ 1920481643, 559733259, 1953582506, 2127535741, 1621226194, 1205270822 }, .{ 1398325913, 57652604, 317721549, 1088967982, 489904735, 927875284 }, .{ 1865944532, 403242441, 857938535, 1531581090, 1546399451, 929454110 }, .{ 1587769816, 1051833377, 1754098053, 352198345, 2118043923, 80252094 }, .{ 2118880466, 1447448585, 1653684907, 548148736, 567635119, 1262087083 }, .{ 1392339372, 2081337242, 231890694, 932688365, 1497103762, 1762070817 }, .{ 1376162001, 1577969075, 770358176, 1332677116, 1686019763, 1674762732 }, .{ 2085392618, 1192047091, 437551226, 322451231, 2016333674, 899757227 }, .{ 1739780507, 1381410572, 74250092, 1254815400, 1033004627, 397948516 }, .{ 1430968805, 1364539400, 1734184201, 806947618, 1192079695, 84328350 } },
+        .quotient_claims = &.{ .{ 92503927, 1353365560, 134366701, 1728534390, 2063169451, 1127410750 }, .{ 497262679, 643126428, 277214385, 755727007, 2029702276, 1645344823 }, .{ 50492272, 2047656716, 1702406276, 636492577, 1798959959, 2034297017 } },
         .module_sizes = &.{},
     },
 };
@@ -7184,160 +6708,108 @@ pub const system_50_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_50_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 6, 0, 9, 12, 26 },
+    .round_cell_counts = &[_]usize{ 6, 0, 9, 4, 18 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-distinct"
 
+// expression: "z-recurrence-b0-k0"
 const system_50_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
+    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T1"
-    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
-    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
-    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
-    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 9 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 10 } },
 };
 
 const system_50_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 9, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
-};
-
-const system_50_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
+    .{ .expression = 11, .cancelled_positions = &.{} },
 };
 
 const system_50_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 1, .vanishings = &system_50_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 2, .vanishings = &system_50_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
 };
 
+// expression: "z-recurrence-b2-k0"
 const system_50_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b2-k0"
     .{ .column_claim = 2 }, // col: "z-b2-k0"
     .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
+    .{ .cell_value = .{ .round = 2, .index = 3 } }, // cell: "z-average-b2-k0"
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T2"
-    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
-    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
-    .{ .cell_value = .{ .round = 2, .index = 3 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
-    .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
-    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 9 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 10 } },
 };
 
 const system_50_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b2-k0"
-    .{ .expression = 9, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
-};
-
-const system_50_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
+    .{ .expression = 11, .cancelled_positions = &.{} },
 };
 
 const system_50_module_1_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_50_module_1_bucket_0_vanishings, .quotient_claim_offset = 3 },
-    .{ .ratio = 2, .vanishings = &system_50_module_1_bucket_1_vanishings, .quotient_claim_offset = 4 },
+    .{ .ratio = 1, .vanishings = &system_50_module_1_bucket_0_vanishings, .quotient_claim_offset = 1 },
 };
 
+// expression: "z-recurrence-b1-k0"
 const system_50_module_2_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "z-average-b1-k0"
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S1"
-    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
-    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
-    .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 9 } },
 };
 
 const system_50_module_2_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 8, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 12, .cancelled_positions = &.{} },
-};
-
-const system_50_module_2_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 16, .cancelled_positions = &.{} },
+    .{ .expression = 10, .cancelled_positions = &.{} },
 };
 
 const system_50_module_2_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_50_module_2_bucket_0_vanishings, .quotient_claim_offset = 6 },
-    .{ .ratio = 2, .vanishings = &system_50_module_2_bucket_1_vanishings, .quotient_claim_offset = 7 },
+    .{ .ratio = 1, .vanishings = &system_50_module_2_bucket_0_vanishings, .quotient_claim_offset = 2 },
 };
 
+// expression: "z-recurrence-b3-k0"
 const system_50_module_3_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b3-k0"
     .{ .column_claim = 1 }, // col: "z-b3-k0"
     .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .cell_value = .{ .round = 2, .index = 4 } }, // cell: "z-average-b3-k0"
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S2"
-    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
-    .{ .cell_value = .{ .round = 2, .index = 4 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
-    .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 9 } },
 };
 
 const system_50_module_3_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b3-k0"
-    .{ .expression = 8, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 12, .cancelled_positions = &.{} },
-};
-
-const system_50_module_3_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 16, .cancelled_positions = &.{} },
+    .{ .expression = 10, .cancelled_positions = &.{} },
 };
 
 const system_50_module_3_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_50_module_3_bucket_0_vanishings, .quotient_claim_offset = 9 },
-    .{ .ratio = 2, .vanishings = &system_50_module_3_bucket_1_vanishings, .quotient_claim_offset = 10 },
+    .{ .ratio = 1, .vanishings = &system_50_module_3_bucket_0_vanishings, .quotient_claim_offset = 3 },
 };
 
 const system_50_modules = [_]vanishing.Module{
@@ -7356,19 +6828,19 @@ const system_50 = vanishing.System{
     .modules = &system_50_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 14,
-    .total_quotient_claims = 12,
+    .total_quotient_claims = 4,
 };
 
-const system_50_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 2, .index = 1 },
-    .{ .round = 2, .index = 2 },
-    .{ .round = 2, .index = 3 },
-    .{ .round = 2, .index = 4 },
+const system_50_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 2, .index = 1 }, .size = .{ .static = 4 } },
+    .{ .average_ref = .{ .round = 2, .index = 2 }, .size = .{ .static = 2 } },
+    .{ .average_ref = .{ .round = 2, .index = 3 }, .size = .{ .static = 2 } },
+    .{ .average_ref = .{ .round = 2, .index = 4 }, .size = .{ .static = 2 } },
 };
 
 // logderiv system: "lk-distinct"
 const system_50_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_50_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-distinct/lookuptologderiv/aggregated"
+    .{ .entries = &system_50_logderiv_query_0_entries, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-distinct/lookuptologderiv/aggregated"
 };
 
 const system_50_logderiv = logderivativesum.System{ .queries = &system_50_logderiv_queries };
@@ -7412,12 +6884,12 @@ const scenario_50 = Scenario{
     .honest = .{
         .rounds = &.{
             .{
-                .commitment = .{ 924784964, 986109993, 983750151, 1292579055, 793631059, 1071112374, 1287442228, 839424121 },
+                .commitment = .{ 1754147886, 1941086424, 1829369810, 469818490, 940355173, 841647506, 1397444639, 1200537460 },
                 .cells = &.{
                     .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
-                    .{ .base = 3 },
+                    .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
@@ -7426,13 +6898,13 @@ const scenario_50 = Scenario{
                 .cells = &.{},
             },
             .{
-                .commitment = .{ 2081066072, 972894731, 2064152420, 791754026, 1007023051, 422922498, 99312540, 1874572404 },
+                .commitment = .{ 95166875, 257476734, 768191437, 585846729, 1060228667, 323554649, 1463196693, 159774604 },
                 .cells = &.{
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 1619534732, 1676829214, 1040096423, 750086613, 1925500413, 1706903890 } },
-                    .{ .ext = .{ 511171701, 453877219, 1090610010, 1380619820, 205206020, 423802543 } },
-                    .{ .ext = .{ 54454020, 177949703, 1103713022, 1762588231, 219286101, 996548452 } },
-                    .{ .ext = .{ 2076252413, 1952756730, 1026993411, 368118202, 1911420332, 1134157981 } },
+                    .{ .ext = .{ 40897742, 979516149, 1987622400, 553333922, 467003160, 2106626045 } },
+                    .{ .ext = .{ 2048910949, 171674135, 286168066, 1024038589, 1196700113, 48160776 } },
+                    .{ .ext = .{ 995190314, 901104358, 1172123649, 163020998, 273110563, 333535747 } },
+                    .{ .ext = .{ 1135516119, 1229602075, 958582784, 1967685435, 1857595870, 1797170686 } },
                     .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
@@ -7440,56 +6912,40 @@ const scenario_50 = Scenario{
                 },
             },
             .{
-                .commitment = .{ 1981770699, 1583046116, 1249225947, 721317633, 1678870405, 501516373, 595783209, 771213674 },
+                .commitment = .{ 974210817, 1430469950, 31777304, 850912915, 1814313234, 1306177333, 127816892, 47269975 },
                 .cells = &.{
                     .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 1 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 1 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 1 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 519397952, 1477637911, 936572898, 1047338023, 1137049596, 653949429 } },
-                    .{ .ext = .{ 2108180748, 1500565302, 2116935367, 748983030, 155402735, 2114086644 } },
-                    .{ .ext = .{ 1479647923, 758766144, 1930279478, 2003237691, 2071384496, 1629891854 } },
-                    .{ .ext = .{ 671707936, 142462007, 1486967225, 1830862743, 1439129932, 775663987 } },
-                    .{ .ext = .{ 1074007286, 1961078283, 768610321, 135398071, 1443333038, 1515792800 } },
-                    .{ .ext = .{ 1857363524, 437503542, 1971802321, 433130546, 1067138146, 76275070 } },
-                    .{ .ext = .{ 909698884, 30203212, 2022333790, 661874147, 1784866297, 361218941 } },
+                    .{ .ext = .{ 1489209593, 1073446577, 1200768842, 1811157304, 1912982898, 373350918 } },
+                    .{ .ext = .{ 4759275, 507885483, 55553828, 474895720, 1882237632, 940223248 } },
+                    .{ .ext = .{ 571522703, 1213583503, 604860019, 252232989, 2048880368, 1500714378 } },
+                    .{ .ext = .{ 998477160, 1395255495, 685481353, 1824647448, 1577224140, 1985970661 } },
+                    .{ .ext = .{ 1586912685, 1866072216, 1854122843, 1352582870, 109192499, 966634950 } },
                     .{ .ext = .{ 1, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 1404532136, 1692809324, 1866982367, 1662853995, 912159745, 240356561 } },
-                    .{ .ext = .{ 1709349632, 1119573880, 1601970142, 996962651, 1544395573, 1318562708 } },
-                    .{ .ext = .{ 1895558721, 418732860, 1856984924, 411736235, 244193807, 1777578151 } },
-                    .{ .ext = .{ 1783060303, 1988120360, 804702981, 1001688053, 1736162827, 1671369614 } },
-                    .{ .ext = .{ 2104295125, 1458419266, 1507289212, 760996578, 809552803, 1546592449 } },
-                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 625412392, 325960214, 193469534, 1666081397, 1717799898, 1587409890 } },
-                    .{ .ext = .{ 1446565525, 1858817955, 1608630909, 253231685, 1306077893, 319499063 } },
-                    .{ .ext = .{ 1657535594, 83746572, 1223679558, 82347247, 474980048, 1633939490 } },
-                    .{ .ext = .{ 677535565, 595494156, 653449876, 1747214668, 774031709, 1082503082 } },
-                    .{ .ext = .{ 1450438628, 1622800426, 1202456218, 1990067762, 349263915, 449330187 } },
-                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 726174297, 437897109, 263724066, 467852438, 1218546688, 1890349872 } },
-                    .{ .ext = .{ 421356801, 1011132553, 528736291, 1133743782, 586310860, 812143725 } },
-                    .{ .ext = .{ 1895558721, 418732860, 1856984924, 411736235, 244193807, 1777578151 } },
-                    .{ .ext = .{ 338154266, 820355232, 1558054699, 2022559636, 1959861867, 1729213640 } },
-                    .{ .ext = .{ 26411308, 672287167, 623417221, 1369709855, 1321153630, 584113984 } },
-                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 2017627620, 2042091315, 816689493, 1941855544, 923342827, 1092123683 } },
+                    .{ .ext = .{ 56423043, 1071023250, 1204590339, 1354774737, 1503364145, 1828587595 } },
+                    .{ .ext = .{ 99539654, 2029550012, 671617368, 151612878, 235091698, 947671827 } },
+                    .{ .ext = .{ 1428624366, 114158641, 920789249, 767118709, 2015788352, 1147526456 } },
+                    .{ .ext = .{ 785272231, 495116525, 1226400787, 1141343376, 1544961199, 797776105 } },
+                    .{ .ext = .{ 1058731864, 1983959822, 797551814, 1765326845, 1692167004, 394809148 } },
+                    .{ .ext = .{ 872190494, 832051289, 1838888620, 1734887722, 1751583486, 615675652 } },
+                    .{ .ext = .{ 1394389486, 1352992707, 1063168113, 1367518581, 410685535, 1272320365 } },
+                    .{ .ext = .{ 113078813, 88615118, 1314016940, 188850889, 1207363606, 1038582750 } },
+                    .{ .ext = .{ 2074283390, 1059683183, 926116094, 775931696, 627342288, 302118838 } },
+                    .{ .ext = .{ 99539654, 2029550012, 671617368, 151612878, 235091698, 947671827 } },
+                    .{ .ext = .{ 702082067, 2016547792, 1209917184, 1363587724, 114918081, 983179977 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 519397952, 1477637911, 936572898, 1047338023, 1137049596, 653949429 }, .{ 2108180748, 1500565302, 2116935367, 748983030, 155402735, 2114086644 }, .{ 1479647923, 758766144, 1930279478, 2003237691, 2071384496, 1629891854 }, .{ 671707936, 142462007, 1486967225, 1830862743, 1439129932, 775663987 }, .{ 1, 0, 0, 0, 0, 0 }, .{ 1404532136, 1692809324, 1866982367, 1662853995, 912159745, 240356561 }, .{ 1709349632, 1119573880, 1601970142, 996962651, 1544395573, 1318562708 }, .{ 1895558721, 418732860, 1856984924, 411736235, 244193807, 1777578151 }, .{ 625412392, 325960214, 193469534, 1666081397, 1717799898, 1587409890 }, .{ 1446565525, 1858817955, 1608630909, 253231685, 1306077893, 319499063 }, .{ 1657535594, 83746572, 1223679558, 82347247, 474980048, 1633939490 }, .{ 726174297, 437897109, 263724066, 467852438, 1218546688, 1890349872 }, .{ 421356801, 1011132553, 528736291, 1133743782, 586310860, 812143725 }, .{ 1895558721, 418732860, 1856984924, 411736235, 244193807, 1777578151 } },
-        .quotient_claims = &.{ .{ 1074007286, 1961078283, 768610321, 135398071, 1443333038, 1515792800 }, .{ 1857363524, 437503542, 1971802321, 433130546, 1067138146, 76275070 }, .{ 909698884, 30203212, 2022333790, 661874147, 1784866297, 361218941 }, .{ 1783060303, 1988120360, 804702981, 1001688053, 1736162827, 1671369614 }, .{ 2104295125, 1458419266, 1507289212, 760996578, 809552803, 1546592449 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 677535565, 595494156, 653449876, 1747214668, 774031709, 1082503082 }, .{ 1450438628, 1622800426, 1202456218, 1990067762, 349263915, 449330187 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 338154266, 820355232, 1558054699, 2022559636, 1959861867, 1729213640 }, .{ 26411308, 672287167, 623417221, 1369709855, 1321153630, 584113984 }, .{ 0, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{ .{ 1489209593, 1073446577, 1200768842, 1811157304, 1912982898, 373350918 }, .{ 4759275, 507885483, 55553828, 474895720, 1882237632, 940223248 }, .{ 571522703, 1213583503, 604860019, 252232989, 2048880368, 1500714378 }, .{ 998477160, 1395255495, 685481353, 1824647448, 1577224140, 1985970661 }, .{ 1, 0, 0, 0, 0, 0 }, .{ 2017627620, 2042091315, 816689493, 1941855544, 923342827, 1092123683 }, .{ 56423043, 1071023250, 1204590339, 1354774737, 1503364145, 1828587595 }, .{ 99539654, 2029550012, 671617368, 151612878, 235091698, 947671827 }, .{ 785272231, 495116525, 1226400787, 1141343376, 1544961199, 797776105 }, .{ 1058731864, 1983959822, 797551814, 1765326845, 1692167004, 394809148 }, .{ 872190494, 832051289, 1838888620, 1734887722, 1751583486, 615675652 }, .{ 113078813, 88615118, 1314016940, 188850889, 1207363606, 1038582750 }, .{ 2074283390, 1059683183, 926116094, 775931696, 627342288, 302118838 }, .{ 99539654, 2029550012, 671617368, 151612878, 235091698, 947671827 } },
+        .quotient_claims = &.{ .{ 1586912685, 1866072216, 1854122843, 1352582870, 109192499, 966634950 }, .{ 1428624366, 114158641, 920789249, 767118709, 2015788352, 1147526456 }, .{ 1394389486, 1352992707, 1063168113, 1367518581, 410685535, 1272320365 }, .{ 702082067, 2016547792, 1209917184, 1363587724, 114918081, 983179977 } },
         .module_sizes = &.{},
     },
 };
@@ -7501,98 +6957,72 @@ pub const system_51_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_51_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 6, 0, 5, 6, 16 },
+    .round_cell_counts = &[_]usize{ 6, 0, 5, 2, 12 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-multi-filterT"
 
+// expression: "z-recurrence-b0-k0"
 const system_51_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
+    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 3 }, // col: "Ty"
-    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 9 } },
     .{ .column_claim = 4 }, // col: "Tx"
-    .{ .op = .{ .operator = .add, .lhs = 8, .rhs = 9 } },
-    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 10 } },
+    .{ .op = .{ .operator = .add, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 12 } },
     .{ .column_claim = 5 }, // col: "filterT"
-    .{ .op = .{ .operator = .add, .lhs = 11, .rhs = 12 } },
-    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 13 } },
-    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 14 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 15 } },
-    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 17, .rhs = 2 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 18, .rhs = 19 } },
-    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 14 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 21 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 22, .rhs = 23 } },
+    .{ .op = .{ .operator = .add, .lhs = 13, .rhs = 14 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 15 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 16 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 17 } },
 };
 
 const system_51_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 16, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 20, .cancelled_positions = &.{} },
-};
-
-const system_51_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 18, .cancelled_positions = &.{} },
 };
 
 const system_51_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 1, .vanishings = &system_51_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 2, .vanishings = &system_51_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
 };
 
+// expression: "z-recurrence-b1-k0"
 const system_51_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "z-average-b1-k0"
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 2 }, // col: "Sy"
-    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 8 } },
     .{ .column_claim = 3 }, // col: "Sx"
-    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
-    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 9 } },
-    .{ .op = .{ .operator = .add, .lhs = 10, .rhs = 0 } },
-    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 11 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 12 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
-    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 15, .rhs = 1 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 16, .rhs = 17 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 12 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 19 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 20, .rhs = 21 } },
+    .{ .op = .{ .operator = .add, .lhs = 9, .rhs = 10 } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 11 } },
+    .{ .op = .{ .operator = .add, .lhs = 12, .rhs = 0 } },
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 13 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 14 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 15 } },
 };
 
 const system_51_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 14, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 18, .cancelled_positions = &.{} },
-};
-
-const system_51_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_51_module_1_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_51_module_1_bucket_0_vanishings, .quotient_claim_offset = 3 },
-    .{ .ratio = 2, .vanishings = &system_51_module_1_bucket_1_vanishings, .quotient_claim_offset = 4 },
+    .{ .ratio = 1, .vanishings = &system_51_module_1_bucket_0_vanishings, .quotient_claim_offset = 1 },
 };
 
 const system_51_modules = [_]vanishing.Module{
@@ -7607,17 +7037,17 @@ const system_51 = vanishing.System{
     .modules = &system_51_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 10,
-    .total_quotient_claims = 6,
+    .total_quotient_claims = 2,
 };
 
-const system_51_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 2, .index = 1 },
-    .{ .round = 2, .index = 2 },
+const system_51_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 2, .index = 1 }, .size = .{ .static = 4 } },
+    .{ .average_ref = .{ .round = 2, .index = 2 }, .size = .{ .static = 4 } },
 };
 
 // logderiv system: "lk-multi-filterT"
 const system_51_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_51_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-multi-filterT/lookuptologderiv/aggregated"
+    .{ .entries = &system_51_logderiv_query_0_entries, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-multi-filterT/lookuptologderiv/aggregated"
 };
 
 const system_51_logderiv = logderivativesum.System{ .queries = &system_51_logderiv_queries };
@@ -7666,50 +7096,42 @@ const scenario_51 = Scenario{
                 .cells = &.{},
             },
             .{
-                .commitment = .{ 2083855070, 1749666422, 1645551891, 1991486973, 1524703351, 617109065, 419409927, 2099389785 },
+                .commitment = .{ 934903806, 1567418343, 1335333294, 535731142, 343011240, 1577011125, 925332251, 630424283 },
                 .cells = &.{
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 1239975756, 1101359494, 560855696, 508461953, 1094474183, 1765536276 } },
-                    .{ .ext = .{ 890730677, 1029346939, 1569850737, 1622244480, 1036232250, 365170157 } },
+                    .{ .ext = .{ 309993939, 1340693090, 140213924, 1725145313, 806295154, 441384069 } },
+                    .{ .ext = .{ 1820712494, 790013343, 1990492509, 405561120, 1324411279, 1689322364 } },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 1172174129, 741805641, 697221909, 1612899216, 888816157, 188705774, 805468251, 630726051 },
+                .commitment = .{ 153558385, 1885641717, 2048336772, 588735212, 1218187737, 1207087790, 500820267, 1944183062 },
                 .cells = &.{
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 1145709535, 1351328723, 247884269, 1275217923, 296530604, 737693125 } },
-                    .{ .ext = .{ 1012748231, 685963627, 1582005521, 610408510, 2043647273, 502820716 } },
-                    .{ .ext = .{ 153723095, 354779014, 1442216699, 670835507, 711048960, 1099169735 } },
-                    .{ .ext = .{ 703985932, 1695711422, 1336518487, 197220414, 1058963166, 1424510163 } },
-                    .{ .ext = .{ 1254378756, 1555452124, 1065798468, 2031630, 1890852688, 1843334480 } },
-                    .{ .ext = .{ 742383201, 646853953, 1139784880, 1607195990, 1606095186, 1253116709 } },
-                    .{ .ext = .{ 147046397, 144918806, 413828931, 1809293111, 196488107, 571216250 } },
-                    .{ .ext = .{ 549771549, 76576497, 1866403834, 1669205227, 1478990549, 1549629841 } },
-                    .{ .ext = .{ 1943204946, 320671588, 927085224, 1448772692, 188487174, 50077567 } },
-                    .{ .ext = .{ 90222863, 1285421433, 1607526949, 1133495682, 761853323, 1050059378 } },
-                    .{ .ext = .{ 709403820, 1975831686, 1677262362, 1325461369, 2014337418, 1068230886 } },
-                    .{ .ext = .{ 872968959, 2091602063, 1054972167, 51092198, 1965015033, 2087630086 } },
-                    .{ .ext = .{ 1578791399, 2126795996, 318567860, 857391793, 2114137293, 1913328155 } },
-                    .{ .ext = .{ 439684193, 1056673914, 1500058250, 1759883230, 738609065, 1288328371 } },
-                    .{ .ext = .{ 457795061, 753313664, 489043271, 1433286690, 1912399174, 16336189 } },
-                    .{ .ext = .{ 1396494511, 2114977731, 1185802536, 1516023462, 257184573, 348499002 } },
+                    .{ .ext = .{ 9983362, 2030696134, 2118011407, 938172799, 1334998429, 1352270415 } },
+                    .{ .ext = .{ 53262564, 25493569, 624274928, 37457016, 947673447, 1515612727 } },
+                    .{ .ext = .{ 292224006, 1290009073, 751583488, 1806081238, 1204688649, 508728705 } },
+                    .{ .ext = .{ 1820499985, 898467010, 1011310019, 2074005189, 2118626581, 1302345864 } },
+                    .{ .ext = .{ 1985969142, 161799429, 1786775211, 1356569109, 1177424655, 1365851175 } },
+                    .{ .ext = .{ 1280656688, 1565536685, 1435031503, 417548229, 1455070060, 1908789906 } },
+                    .{ .ext = .{ 1426410638, 113483153, 957058157, 1695145567, 1379159221, 340196496 } },
+                    .{ .ext = .{ 279631620, 138910908, 2129267885, 1872503489, 1235091616, 836272715 } },
+                    .{ .ext = .{ 2027146205, 1553365835, 1421175629, 1435567429, 1458412065, 106174369 } },
+                    .{ .ext = .{ 1304256534, 1949842593, 1462726131, 2093134893, 1797803201, 2021582208 } },
+                    .{ .ext = .{ 556566940, 2112620049, 785484543, 2126949279, 818992250, 1054440794 } },
+                    .{ .ext = .{ 1998737440, 1380035186, 1963938719, 120754762, 1670834951, 1522657523 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 1145709535, 1351328723, 247884269, 1275217923, 296530604, 737693125 }, .{ 1012748231, 685963627, 1582005521, 610408510, 2043647273, 502820716 }, .{ 153723095, 354779014, 1442216699, 670835507, 711048960, 1099169735 }, .{ 703985932, 1695711422, 1336518487, 197220414, 1058963166, 1424510163 }, .{ 1254378756, 1555452124, 1065798468, 2031630, 1890852688, 1843334480 }, .{ 742383201, 646853953, 1139784880, 1607195990, 1606095186, 1253116709 }, .{ 90222863, 1285421433, 1607526949, 1133495682, 761853323, 1050059378 }, .{ 709403820, 1975831686, 1677262362, 1325461369, 2014337418, 1068230886 }, .{ 872968959, 2091602063, 1054972167, 51092198, 1965015033, 2087630086 }, .{ 1578791399, 2126795996, 318567860, 857391793, 2114137293, 1913328155 } },
-        .quotient_claims = &.{ .{ 147046397, 144918806, 413828931, 1809293111, 196488107, 571216250 }, .{ 549771549, 76576497, 1866403834, 1669205227, 1478990549, 1549629841 }, .{ 1943204946, 320671588, 927085224, 1448772692, 188487174, 50077567 }, .{ 439684193, 1056673914, 1500058250, 1759883230, 738609065, 1288328371 }, .{ 457795061, 753313664, 489043271, 1433286690, 1912399174, 16336189 }, .{ 1396494511, 2114977731, 1185802536, 1516023462, 257184573, 348499002 } },
+        .witness_claims = &.{ .{ 9983362, 2030696134, 2118011407, 938172799, 1334998429, 1352270415 }, .{ 53262564, 25493569, 624274928, 37457016, 947673447, 1515612727 }, .{ 292224006, 1290009073, 751583488, 1806081238, 1204688649, 508728705 }, .{ 1820499985, 898467010, 1011310019, 2074005189, 2118626581, 1302345864 }, .{ 1985969142, 161799429, 1786775211, 1356569109, 1177424655, 1365851175 }, .{ 1280656688, 1565536685, 1435031503, 417548229, 1455070060, 1908789906 }, .{ 279631620, 138910908, 2129267885, 1872503489, 1235091616, 836272715 }, .{ 2027146205, 1553365835, 1421175629, 1435567429, 1458412065, 106174369 }, .{ 1304256534, 1949842593, 1462726131, 2093134893, 1797803201, 2021582208 }, .{ 556566940, 2112620049, 785484543, 2126949279, 818992250, 1054440794 } },
+        .quotient_claims = &.{ .{ 1426410638, 113483153, 957058157, 1695145567, 1379159221, 340196496 }, .{ 1998737440, 1380035186, 1963938719, 120754762, 1670834951, 1522657523 } },
         .module_sizes = &.{},
     },
 };
@@ -7721,85 +7143,59 @@ pub const system_52_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_52_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 3, 0, 5, 6, 13 },
+    .round_cell_counts = &[_]usize{ 3, 0, 5, 2, 9 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-repeated"
 
+// expression: "z-recurrence-b0-k0"
 const system_52_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
+    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
-    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
-    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
-    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 9 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 10 } },
 };
 
 const system_52_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 9, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
-};
-
-const system_52_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
+    .{ .expression = 11, .cancelled_positions = &.{} },
 };
 
 const system_52_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 1, .vanishings = &system_52_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 2, .vanishings = &system_52_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
 };
 
+// expression: "z-recurrence-b1-k0"
 const system_52_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "z-average-b1-k0"
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
-    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 9 } },
 };
 
 const system_52_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 8, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 12, .cancelled_positions = &.{} },
-};
-
-const system_52_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 16, .cancelled_positions = &.{} },
+    .{ .expression = 10, .cancelled_positions = &.{} },
 };
 
 const system_52_module_1_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_52_module_1_bucket_0_vanishings, .quotient_claim_offset = 3 },
-    .{ .ratio = 2, .vanishings = &system_52_module_1_bucket_1_vanishings, .quotient_claim_offset = 4 },
+    .{ .ratio = 1, .vanishings = &system_52_module_1_bucket_0_vanishings, .quotient_claim_offset = 1 },
 };
 
 const system_52_modules = [_]vanishing.Module{
@@ -7814,17 +7210,17 @@ const system_52 = vanishing.System{
     .modules = &system_52_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 7,
-    .total_quotient_claims = 6,
+    .total_quotient_claims = 2,
 };
 
-const system_52_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 2, .index = 1 },
-    .{ .round = 2, .index = 2 },
+const system_52_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 2, .index = 1 }, .size = .{ .static = 4 } },
+    .{ .average_ref = .{ .round = 2, .index = 2 }, .size = .{ .static = 4 } },
 };
 
 // logderiv system: "lk-repeated"
 const system_52_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_52_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-repeated/lookuptologderiv/aggregated"
+    .{ .entries = &system_52_logderiv_query_0_entries, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-repeated/lookuptologderiv/aggregated"
 };
 
 const system_52_logderiv = logderivativesum.System{ .queries = &system_52_logderiv_queries };
@@ -7859,10 +7255,10 @@ const scenario_52 = Scenario{
     .honest = .{
         .rounds = &.{
             .{
-                .commitment = .{ 1776014610, 1666314005, 55890614, 1609449149, 1462248632, 646491969, 1984520333, 50259130 },
+                .commitment = .{ 27575202, 489261812, 399988726, 1763253494, 1287175670, 81190769, 1260047582, 1955985077 },
                 .cells = &.{
                     .{ .base = 0 },
-                    .{ .base = 2 },
+                    .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
@@ -7870,47 +7266,39 @@ const scenario_52 = Scenario{
                 .cells = &.{},
             },
             .{
-                .commitment = .{ 1315872460, 845878120, 1252487751, 1258672380, 1333994329, 985937022, 1295864449, 22763124 },
+                .commitment = .{ 1042254523, 1577379747, 1266040276, 753331354, 1196682795, 1813432947, 1198914826, 1308252712 },
                 .cells = &.{
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 358448225, 1200928588, 1360897930, 591403501, 2074134748, 1996214511 } },
-                    .{ .ext = .{ 1772258208, 929777845, 769808503, 1539302932, 56571685, 134491922 } },
+                    .{ .ext = .{ 1969496359, 1876730163, 1463948958, 1031759347, 46116504, 1088005164 } },
+                    .{ .ext = .{ 161210074, 253976270, 666757475, 1098947086, 2084589929, 1042701269 } },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 613739142, 1282441515, 1813861741, 1879785925, 954041989, 994331879, 1212881872, 1517151905 },
+                .commitment = .{ 1006777794, 2091587204, 2111234006, 1649489725, 1584663367, 1635326492, 1676680522, 1812137558 },
                 .cells = &.{
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 1872768141, 321513505, 2124151265, 62561928, 2004204532, 923626777 } },
-                    .{ .ext = .{ 538837477, 17767973, 1379269484, 654721838, 1396280747, 1997121903 } },
-                    .{ .ext = .{ 1232916405, 1318013175, 1265241157, 1986671908, 1040859586, 108607522 } },
-                    .{ .ext = .{ 1779840983, 1846710157, 288470401, 597952719, 370319660, 97929642 } },
-                    .{ .ext = .{ 491594565, 832312964, 727838451, 339101461, 746027417, 681990964 } },
-                    .{ .ext = .{ 1564290074, 760855840, 1450998563, 836559970, 1588864990, 412261895 } },
-                    .{ .ext = .{ 680725576, 556518484, 682504554, 1444175503, 847523622, 1782679392 } },
-                    .{ .ext = .{ 1139989672, 1560671690, 1773425830, 835969328, 2083959155, 1204572155 } },
-                    .{ .ext = .{ 1095914340, 1103090240, 849231742, 1844523024, 968952947, 1459994857 } },
-                    .{ .ext = .{ 1779840983, 1846710157, 288470401, 597952719, 370319660, 97929642 } },
-                    .{ .ext = .{ 305745247, 67571968, 1183578910, 2017575789, 1073869437, 1880134973 } },
-                    .{ .ext = .{ 1700368022, 117903965, 2046143620, 1812942303, 1813974511, 1212264467 } },
-                    .{ .ext = .{ 636737387, 1590167276, 1340014970, 1974266475, 1528003828, 1357712884 } },
+                    .{ .ext = .{ 127037658, 82512422, 1101185374, 155452985, 1530754686, 1350000012 } },
+                    .{ .ext = .{ 567751837, 452124786, 1027693809, 951561034, 698821356, 1791060486 } },
+                    .{ .ext = .{ 1706579388, 260435185, 1811513080, 1389642482, 812938770, 1618649269 } },
+                    .{ .ext = .{ 132171362, 816545049, 886669457, 468425872, 1481561953, 1108640039 } },
+                    .{ .ext = .{ 1555214405, 1481496348, 1256482301, 242711648, 1092330279, 302858214 } },
+                    .{ .ext = .{ 405167613, 515199352, 109689431, 1098729881, 925078768, 2027493131 } },
+                    .{ .ext = .{ 82315583, 163889596, 254689602, 612384775, 96280538, 1356687078 } },
+                    .{ .ext = .{ 132171362, 816545049, 886669457, 468425872, 1481561953, 1108640039 } },
+                    .{ .ext = .{ 1258479164, 1513965289, 1797209036, 946476906, 55513721, 2130612363 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 1872768141, 321513505, 2124151265, 62561928, 2004204532, 923626777 }, .{ 538837477, 17767973, 1379269484, 654721838, 1396280747, 1997121903 }, .{ 1232916405, 1318013175, 1265241157, 1986671908, 1040859586, 108607522 }, .{ 1779840983, 1846710157, 288470401, 597952719, 370319660, 97929642 }, .{ 1139989672, 1560671690, 1773425830, 835969328, 2083959155, 1204572155 }, .{ 1095914340, 1103090240, 849231742, 1844523024, 968952947, 1459994857 }, .{ 1779840983, 1846710157, 288470401, 597952719, 370319660, 97929642 } },
-        .quotient_claims = &.{ .{ 491594565, 832312964, 727838451, 339101461, 746027417, 681990964 }, .{ 1564290074, 760855840, 1450998563, 836559970, 1588864990, 412261895 }, .{ 680725576, 556518484, 682504554, 1444175503, 847523622, 1782679392 }, .{ 305745247, 67571968, 1183578910, 2017575789, 1073869437, 1880134973 }, .{ 1700368022, 117903965, 2046143620, 1812942303, 1813974511, 1212264467 }, .{ 636737387, 1590167276, 1340014970, 1974266475, 1528003828, 1357712884 } },
+        .witness_claims = &.{ .{ 127037658, 82512422, 1101185374, 155452985, 1530754686, 1350000012 }, .{ 567751837, 452124786, 1027693809, 951561034, 698821356, 1791060486 }, .{ 1706579388, 260435185, 1811513080, 1389642482, 812938770, 1618649269 }, .{ 132171362, 816545049, 886669457, 468425872, 1481561953, 1108640039 }, .{ 405167613, 515199352, 109689431, 1098729881, 925078768, 2027493131 }, .{ 82315583, 163889596, 254689602, 612384775, 96280538, 1356687078 }, .{ 132171362, 816545049, 886669457, 468425872, 1481561953, 1108640039 } },
+        .quotient_claims = &.{ .{ 1555214405, 1481496348, 1256482301, 242711648, 1092330279, 302858214 }, .{ 1258479164, 1513965289, 1797209036, 946476906, 55513721, 2130612363 } },
         .module_sizes = &.{},
     },
 };
@@ -7922,85 +7310,59 @@ pub const system_53_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_53_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 3, 0, 5, 6, 13 },
+    .round_cell_counts = &[_]usize{ 3, 0, 5, 2, 9 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-shift-a"
 
+// expression: "z-recurrence-b0-k0"
 const system_53_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
+    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
-    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
-    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
-    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 9 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 10 } },
 };
 
 const system_53_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 9, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
-};
-
-const system_53_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
+    .{ .expression = 11, .cancelled_positions = &.{} },
 };
 
 const system_53_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 1, .vanishings = &system_53_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 2, .vanishings = &system_53_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
 };
 
+// expression: "z-recurrence-b1-k0"
 const system_53_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "z-average-b1-k0"
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 8 } },
     .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 9 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
-    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 13, .rhs = 1 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_53_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 8, .cancelled_positions = &.{ -1, 0 } },
-    // expression: "global"
-    .{ .expression = 12, .cancelled_positions = &.{} },
-};
-
-const system_53_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 16, .cancelled_positions = &.{} },
+    .{ .expression = 10, .cancelled_positions = &.{} },
 };
 
 const system_53_module_1_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 2, .vanishings = &system_53_module_1_bucket_0_vanishings, .quotient_claim_offset = 3 },
-    .{ .ratio = 1, .vanishings = &system_53_module_1_bucket_1_vanishings, .quotient_claim_offset = 5 },
+    .{ .ratio = 1, .vanishings = &system_53_module_1_bucket_0_vanishings, .quotient_claim_offset = 1 },
 };
 
 const system_53_modules = [_]vanishing.Module{
@@ -8015,17 +7377,17 @@ const system_53 = vanishing.System{
     .modules = &system_53_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 7,
-    .total_quotient_claims = 6,
+    .total_quotient_claims = 2,
 };
 
-const system_53_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 2, .index = 1 },
-    .{ .round = 2, .index = 2 },
+const system_53_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 2, .index = 1 }, .size = .{ .static = 4 } },
+    .{ .average_ref = .{ .round = 2, .index = 2 }, .size = .{ .static = 4 } },
 };
 
 // logderiv system: "lk-shift-a"
 const system_53_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_53_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-shift-a/lookuptologderiv/aggregated"
+    .{ .entries = &system_53_logderiv_query_0_entries, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-shift-a/lookuptologderiv/aggregated"
 };
 
 const system_53_logderiv = logderivativesum.System{ .queries = &system_53_logderiv_queries };
@@ -8071,22 +7433,18 @@ const scenario_53 = Scenario{
                 .cells = &.{},
             },
             .{
-                .commitment = .{ 885722958, 937670621, 656523339, 1164151518, 136884516, 424963622, 1452929446, 333654149 },
+                .commitment = .{ 1650444095, 2089042888, 567315946, 1878232506, 835754065, 1027656623, 874946661, 234198908 },
                 .cells = &.{
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 512502257, 1527900148, 597037160, 1021924217, 1906020741, 1792317798 } },
-                    .{ .ext = .{ 1618204176, 602806285, 1533669273, 1108782216, 224685692, 338388635 } },
+                    .{ .ext = .{ 1726155389, 381975037, 149259290, 1853510879, 2074535010, 1513432666 } },
+                    .{ .ext = .{ 404551044, 1748731396, 1981447143, 277195554, 56171423, 617273767 } },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 419140903, 1190867818, 262492452, 798077061, 239930560, 2003781880, 733267591, 1713485294 },
+                .commitment = .{ 233952541, 875041187, 412385025, 2112515791, 379057571, 955413423, 1711774857, 1976795865 },
                 .cells = &.{
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
@@ -8094,24 +7452,20 @@ const scenario_53 = Scenario{
             .{
                 .cells = &.{
                     .{ .ext = .{ 1, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 1087039376, 1020907088, 779009221, 2048942478, 1481159448, 364864110 } },
-                    .{ .ext = .{ 1738339645, 418418065, 1121108562, 1416944746, 1999176356, 972457921 } },
-                    .{ .ext = .{ 514029757, 1986947796, 608329328, 418251532, 1030725486, 459596584 } },
-                    .{ .ext = .{ 1670615779, 131171215, 389242631, 1951381381, 2047833139, 232427753 } },
-                    .{ .ext = .{ 1761869523, 473217534, 1191800937, 1764283067, 2062013161, 1218076629 } },
-                    .{ .ext = .{ 488990441, 1125173481, 1863854482, 463081815, 1109391539, 784831668 } },
-                    .{ .ext = .{ 1043667057, 1109799345, 1351697212, 81763955, 649546985, 1765842323 } },
-                    .{ .ext = .{ 392366788, 1712288368, 1009597871, 713761687, 131530077, 1158248512 } },
-                    .{ .ext = .{ 514029757, 1986947796, 608329328, 418251532, 1030725486, 459596584 } },
-                    .{ .ext = .{ 855499758, 624899347, 1739254315, 1502154996, 916965908, 54571489 } },
-                    .{ .ext = .{ 1344048437, 553762436, 391834219, 1340401685, 946971652, 1821440983 } },
-                    .{ .ext = .{ 1430396605, 434691312, 2049484289, 2034227570, 679547954, 2118443743 } },
+                    .{ .ext = .{ 1581033933, 15674457, 1341850195, 1746392520, 1748097014, 1926637313 } },
+                    .{ .ext = .{ 2128931551, 1005393838, 1037086862, 1634171957, 646601025, 1960517976 } },
+                    .{ .ext = .{ 721360901, 1946645050, 309794362, 1322702055, 1639192859, 1790022040 } },
+                    .{ .ext = .{ 213763652, 960783919, 1840573099, 1842738398, 1138633843, 1590640772 } },
+                    .{ .ext = .{ 549672500, 2115031976, 788856238, 384313913, 382609419, 204069120 } },
+                    .{ .ext = .{ 1774882, 1125312595, 1093619571, 496534476, 1484105408, 170188457 } },
+                    .{ .ext = .{ 721360901, 1946645050, 309794362, 1322702055, 1639192859, 1790022040 } },
+                    .{ .ext = .{ 1916942781, 1169922514, 290133334, 287968035, 992072590, 540065661 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 1087039376, 1020907088, 779009221, 2048942478, 1481159448, 364864110 }, .{ 1738339645, 418418065, 1121108562, 1416944746, 1999176356, 972457921 }, .{ 514029757, 1986947796, 608329328, 418251532, 1030725486, 459596584 }, .{ 1043667057, 1109799345, 1351697212, 81763955, 649546985, 1765842323 }, .{ 392366788, 1712288368, 1009597871, 713761687, 131530077, 1158248512 }, .{ 514029757, 1986947796, 608329328, 418251532, 1030725486, 459596584 } },
-        .quotient_claims = &.{ .{ 1670615779, 131171215, 389242631, 1951381381, 2047833139, 232427753 }, .{ 1761869523, 473217534, 1191800937, 1764283067, 2062013161, 1218076629 }, .{ 488990441, 1125173481, 1863854482, 463081815, 1109391539, 784831668 }, .{ 855499758, 624899347, 1739254315, 1502154996, 916965908, 54571489 }, .{ 1344048437, 553762436, 391834219, 1340401685, 946971652, 1821440983 }, .{ 1430396605, 434691312, 2049484289, 2034227570, 679547954, 2118443743 } },
+        .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 1581033933, 15674457, 1341850195, 1746392520, 1748097014, 1926637313 }, .{ 2128931551, 1005393838, 1037086862, 1634171957, 646601025, 1960517976 }, .{ 721360901, 1946645050, 309794362, 1322702055, 1639192859, 1790022040 }, .{ 549672500, 2115031976, 788856238, 384313913, 382609419, 204069120 }, .{ 1774882, 1125312595, 1093619571, 496534476, 1484105408, 170188457 }, .{ 721360901, 1946645050, 309794362, 1322702055, 1639192859, 1790022040 } },
+        .quotient_claims = &.{ .{ 213763652, 960783919, 1840573099, 1842738398, 1138633843, 1590640772 }, .{ 1916942781, 1169922514, 290133334, 287968035, 992072590, 540065661 } },
         .module_sizes = &.{},
     },
 };
@@ -8123,112 +7477,84 @@ pub const system_54_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_54_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 3, 0, 5, 6, 14 },
+    .round_cell_counts = &[_]usize{ 3, 0, 5, 2, 9 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-shift-b"
 
+// expression: "z-recurrence-b0-k0"
 const system_54_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
+    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
-    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
-    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
-    .{ .column_claim = 4 }, // col: "T"
-    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 14 } },
-    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 15 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 16 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 17, .rhs = 18 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 9 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 10 } },
 };
 
 const system_54_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 9, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
-};
-
-const system_54_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 19, .cancelled_positions = &.{} },
+    .{ .expression = 11, .cancelled_positions = &.{} },
 };
 
 const system_54_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 1, .vanishings = &system_54_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 2, .vanishings = &system_54_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
 };
 
+// expression: "z-recurrence-b1-k0"
 const system_54_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "z-average-b1-k0"
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
-    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 9 } },
 };
 
 const system_54_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 8, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 12, .cancelled_positions = &.{} },
-};
-
-const system_54_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 16, .cancelled_positions = &.{} },
+    .{ .expression = 10, .cancelled_positions = &.{} },
 };
 
 const system_54_module_1_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_54_module_1_bucket_0_vanishings, .quotient_claim_offset = 3 },
-    .{ .ratio = 2, .vanishings = &system_54_module_1_bucket_1_vanishings, .quotient_claim_offset = 4 },
+    .{ .ratio = 1, .vanishings = &system_54_module_1_bucket_0_vanishings, .quotient_claim_offset = 1 },
 };
 
 const system_54_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_54_module_0_expressions, .buckets = &system_54_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_54_module_1_expressions, .buckets = &system_54_module_1_buckets, .witness_claim_offset = 5, .merge_coin_index = 2, .eval_coin_index = 3 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_54_module_1_expressions, .buckets = &system_54_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "lk-shift-b"
 const system_54 = vanishing.System{
     .modules = &system_54_modules,
     .dynamic_module_count = 0,
-    .total_witness_claims = 8,
-    .total_quotient_claims = 6,
+    .total_witness_claims = 7,
+    .total_quotient_claims = 2,
 };
 
-const system_54_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 2, .index = 1 },
-    .{ .round = 2, .index = 2 },
+const system_54_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 2, .index = 1 }, .size = .{ .static = 4 } },
+    .{ .average_ref = .{ .round = 2, .index = 2 }, .size = .{ .static = 4 } },
 };
 
 // logderiv system: "lk-shift-b"
 const system_54_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_54_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-shift-b/lookuptologderiv/aggregated"
+    .{ .entries = &system_54_logderiv_query_0_entries, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-shift-b/lookuptologderiv/aggregated"
 };
 
 const system_54_logderiv = logderivativesum.System{ .queries = &system_54_logderiv_queries };
@@ -8274,22 +7600,18 @@ const scenario_54 = Scenario{
                 .cells = &.{},
             },
             .{
-                .commitment = .{ 1412428773, 406032566, 417350988, 1495300228, 2099339992, 1804151725, 637970772, 1703789695 },
+                .commitment = .{ 1023419750, 190789869, 1986060601, 514253541, 1656035219, 599654331, 1847566441, 559101980 },
                 .cells = &.{
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 177726720, 557708269, 671741884, 1960040611, 1493013596, 70055080 } },
-                    .{ .ext = .{ 1952979713, 1572998164, 1458964549, 170665822, 637692837, 2060651353 } },
+                    .{ .ext = .{ 44431680, 1737456892, 167935471, 1022686761, 373253399, 17513770 } },
+                    .{ .ext = .{ 2086274753, 393249541, 1962770962, 1108019672, 1757453034, 2113192663 } },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 369521234, 649705147, 557251269, 1522076957, 1113204796, 1386869650, 300168428, 2101591338 },
+                .commitment = .{ 1268563967, 703129915, 1506570877, 1454322038, 836649830, 156063251, 317073284, 572663855 },
                 .cells = &.{
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
@@ -8297,25 +7619,20 @@ const scenario_54 = Scenario{
             .{
                 .cells = &.{
                     .{ .ext = .{ 1, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 1463684533, 505972825, 1256641998, 767105960, 1142829031, 404345213 } },
-                    .{ .ext = .{ 1932059024, 1467467390, 1364944044, 493591312, 2032207451, 1983046573 } },
-                    .{ .ext = .{ 322472692, 1987072424, 1032320077, 409752126, 1524644209, 1644270362 } },
-                    .{ .ext = .{ 322472692, 1987072424, 1032320077, 409752126, 1524644209, 1644270362 } },
-                    .{ .ext = .{ 1582214680, 928748945, 1226681101, 1558437614, 1167885308, 665626697 } },
-                    .{ .ext = .{ 1312938107, 1276234474, 808792225, 301663428, 1979814574, 1097926571 } },
-                    .{ .ext = .{ 646102963, 903734911, 859424381, 2025153911, 1218119790, 1010390787 } },
-                    .{ .ext = .{ 667021900, 1624733608, 874064435, 1363600473, 987877402, 1726361220 } },
-                    .{ .ext = .{ 198647409, 663239043, 765762389, 1637115121, 98498982, 147659860 } },
-                    .{ .ext = .{ 322472692, 1987072424, 1032320077, 409752126, 1524644209, 1644270362 } },
-                    .{ .ext = .{ 286686034, 18805829, 401762811, 2022061002, 727770011, 1451489107 } },
-                    .{ .ext = .{ 817768326, 854471959, 1321914208, 1829043005, 150891859, 1032779862 } },
-                    .{ .ext = .{ 1484603470, 1226971522, 1271282052, 105552522, 912586643, 1120315646 } },
+                    .{ .ext = .{ 1285728280, 1332953846, 1746858083, 58304016, 659502592, 1800433294 } },
+                    .{ .ext = .{ 726702945, 1982547974, 1145310381, 671873861, 2047443378, 1870551465 } },
+                    .{ .ext = .{ 129413386, 1341934083, 608881126, 1471514193, 1145945479, 54656930 } },
+                    .{ .ext = .{ 2066920806, 1793522320, 301089922, 576998268, 1410962585, 1684615642 } },
+                    .{ .ext = .{ 844978153, 797752587, 383848350, 2072402417, 1471203841, 330273139 } },
+                    .{ .ext = .{ 1404003488, 148158459, 985396052, 1458832572, 83263055, 260154968 } },
+                    .{ .ext = .{ 129413386, 1341934083, 608881126, 1471514193, 1145945479, 54656930 } },
+                    .{ .ext = .{ 63785627, 337184113, 1829616511, 1553708165, 719743848, 446090791 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 1463684533, 505972825, 1256641998, 767105960, 1142829031, 404345213 }, .{ 1932059024, 1467467390, 1364944044, 493591312, 2032207451, 1983046573 }, .{ 322472692, 1987072424, 1032320077, 409752126, 1524644209, 1644270362 }, .{ 322472692, 1987072424, 1032320077, 409752126, 1524644209, 1644270362 }, .{ 667021900, 1624733608, 874064435, 1363600473, 987877402, 1726361220 }, .{ 198647409, 663239043, 765762389, 1637115121, 98498982, 147659860 }, .{ 322472692, 1987072424, 1032320077, 409752126, 1524644209, 1644270362 } },
-        .quotient_claims = &.{ .{ 1582214680, 928748945, 1226681101, 1558437614, 1167885308, 665626697 }, .{ 1312938107, 1276234474, 808792225, 301663428, 1979814574, 1097926571 }, .{ 646102963, 903734911, 859424381, 2025153911, 1218119790, 1010390787 }, .{ 286686034, 18805829, 401762811, 2022061002, 727770011, 1451489107 }, .{ 817768326, 854471959, 1321914208, 1829043005, 150891859, 1032779862 }, .{ 1484603470, 1226971522, 1271282052, 105552522, 912586643, 1120315646 } },
+        .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 1285728280, 1332953846, 1746858083, 58304016, 659502592, 1800433294 }, .{ 726702945, 1982547974, 1145310381, 671873861, 2047443378, 1870551465 }, .{ 129413386, 1341934083, 608881126, 1471514193, 1145945479, 54656930 }, .{ 844978153, 797752587, 383848350, 2072402417, 1471203841, 330273139 }, .{ 1404003488, 148158459, 985396052, 1458832572, 83263055, 260154968 }, .{ 129413386, 1341934083, 608881126, 1471514193, 1145945479, 54656930 } },
+        .quotient_claims = &.{ .{ 2066920806, 1793522320, 301089922, 576998268, 1410962585, 1684615642 }, .{ 63785627, 337184113, 1829616511, 1553708165, 719743848, 446090791 } },
         .module_sizes = &.{},
     },
 };
@@ -8327,122 +7644,83 @@ pub const system_55_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_55_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 4, 0, 7, 9, 19 },
+    .round_cell_counts = &[_]usize{ 4, 0, 7, 3, 13 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-multi-A"
 
+// expression: "z-recurrence-b0-k0"
 const system_55_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
+    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
-    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
-    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
-    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 9 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 10 } },
 };
 
 const system_55_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 9, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
-};
-
-const system_55_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
+    .{ .expression = 11, .cancelled_positions = &.{} },
 };
 
 const system_55_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 1, .vanishings = &system_55_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 2, .vanishings = &system_55_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
 };
 
+// expression: "z-recurrence-b1-k0"
 const system_55_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "z-average-b1-k0"
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S1"
-    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
-    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 9 } },
 };
 
 const system_55_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 8, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 12, .cancelled_positions = &.{} },
-};
-
-const system_55_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 16, .cancelled_positions = &.{} },
+    .{ .expression = 10, .cancelled_positions = &.{} },
 };
 
 const system_55_module_1_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_55_module_1_bucket_0_vanishings, .quotient_claim_offset = 3 },
-    .{ .ratio = 2, .vanishings = &system_55_module_1_bucket_1_vanishings, .quotient_claim_offset = 4 },
+    .{ .ratio = 1, .vanishings = &system_55_module_1_bucket_0_vanishings, .quotient_claim_offset = 1 },
 };
 
+// expression: "z-recurrence-b2-k0"
 const system_55_module_2_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b2-k0"
     .{ .column_claim = 1 }, // col: "z-b2-k0"
     .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .cell_value = .{ .round = 2, .index = 3 } }, // cell: "z-average-b2-k0"
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S2"
-    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
-    .{ .cell_value = .{ .round = 2, .index = 3 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
-    .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 9 } },
 };
 
 const system_55_module_2_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b2-k0"
-    .{ .expression = 8, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 12, .cancelled_positions = &.{} },
-};
-
-const system_55_module_2_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 16, .cancelled_positions = &.{} },
+    .{ .expression = 10, .cancelled_positions = &.{} },
 };
 
 const system_55_module_2_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_55_module_2_bucket_0_vanishings, .quotient_claim_offset = 6 },
-    .{ .ratio = 2, .vanishings = &system_55_module_2_bucket_1_vanishings, .quotient_claim_offset = 7 },
+    .{ .ratio = 1, .vanishings = &system_55_module_2_bucket_0_vanishings, .quotient_claim_offset = 2 },
 };
 
 const system_55_modules = [_]vanishing.Module{
@@ -8459,18 +7737,18 @@ const system_55 = vanishing.System{
     .modules = &system_55_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 10,
-    .total_quotient_claims = 9,
+    .total_quotient_claims = 3,
 };
 
-const system_55_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 2, .index = 1 },
-    .{ .round = 2, .index = 2 },
-    .{ .round = 2, .index = 3 },
+const system_55_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 2, .index = 1 }, .size = .{ .static = 4 } },
+    .{ .average_ref = .{ .round = 2, .index = 2 }, .size = .{ .static = 4 } },
+    .{ .average_ref = .{ .round = 2, .index = 3 }, .size = .{ .static = 2 } },
 };
 
 // logderiv system: "lk-multi-A"
 const system_55_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_55_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-multi-A/lookuptologderiv/aggregated"
+    .{ .entries = &system_55_logderiv_query_0_entries, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-multi-A/lookuptologderiv/aggregated"
 };
 
 const system_55_logderiv = logderivativesum.System{ .queries = &system_55_logderiv_queries };
@@ -8518,58 +7796,46 @@ const scenario_55 = Scenario{
                 .cells = &.{},
             },
             .{
-                .commitment = .{ 794444959, 1206759169, 1271711462, 1795765494, 1903487827, 565060044, 220341033, 1390977401 },
+                .commitment = .{ 74310010, 1860169481, 492218326, 2101614832, 1755894377, 10796420, 1527147309, 593235771 },
                 .cells = &.{
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 26475012, 560165753, 1851394488, 1964053202, 1533577077, 320624495 } },
-                    .{ .ext = .{ 89005623, 1834621598, 793882134, 270346097, 2118445562, 1315566555 } },
-                    .{ .ext = .{ 2015225798, 1866625515, 1616136244, 2027013567, 609390227, 494515383 } },
+                    .{ .ext = .{ 6618753, 1738071263, 462848622, 1556366517, 1981424094, 612832732 } },
+                    .{ .ext = .{ 554928014, 1524008616, 1263823750, 1665616349, 1594964607, 861568247 } },
+                    .{ .ext = .{ 1007612899, 1998665974, 808068122, 2078860000, 1370048330, 1312610908 } },
                     .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 944187913, 1000680597, 516467027, 935230384, 2089750523, 400628032, 498939843, 34788559 },
+                .commitment = .{ 9641477, 679335088, 1867986651, 1304236151, 1921057406, 1153208006, 200529158, 106151195 },
                 .cells = &.{
                     .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 1 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 423063570, 1349150729, 1461453753, 730361817, 1011864742, 435617587 } },
-                    .{ .ext = .{ 1707214868, 1936217468, 1800733443, 1456082422, 1354769316, 650026383 } },
-                    .{ .ext = .{ 2048306248, 244770914, 1803222461, 1916927268, 465917503, 1460036162 } },
-                    .{ .ext = .{ 2090650940, 2101864126, 792769160, 1748618106, 1952469276, 806464691 } },
-                    .{ .ext = .{ 1805709262, 195344327, 1967380649, 1168740285, 1029399009, 1090071970 } },
-                    .{ .ext = .{ 629820210, 1819642728, 63365153, 2130522362, 1278080625, 1969357926 } },
-                    .{ .ext = .{ 1949243926, 1876047233, 417756216, 1304207300, 680392272, 699964612 } },
-                    .{ .ext = .{ 1793807318, 653999661, 875558258, 2124842968, 1831103556, 565702497 } },
-                    .{ .ext = .{ 916528852, 345740484, 758332458, 1422041235, 1172217097, 1355894210 } },
-                    .{ .ext = .{ 557277347, 1186598477, 1835644457, 856894996, 922189139, 2010683673 } },
-                    .{ .ext = .{ 283612880, 962821548, 791507124, 1670193895, 1424668822, 612078526 } },
-                    .{ .ext = .{ 1457297583, 1547163732, 1843128349, 1073296938, 1959311247, 1793958941 } },
-                    .{ .ext = .{ 342629504, 1929204460, 1130368359, 1641245562, 1428633158, 1069954632 } },
-                    .{ .ext = .{ 1555341425, 1928938273, 1617239340, 7311186, 819358688, 553496159 } },
-                    .{ .ext = .{ 2111547128, 1665560377, 1045446865, 255947507, 1439847939, 2117909277 } },
-                    .{ .ext = .{ 1713974871, 2109093900, 549301124, 136052593, 1316870133, 928756479 } },
-                    .{ .ext = .{ 240801683, 499665521, 313435983, 1698197574, 1276909909, 1304007850 } },
-                    .{ .ext = .{ 316062914, 1279405083, 1553779426, 129535811, 1453402503, 262910990 } },
-                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 797215600, 1827073484, 584394405, 1700903938, 281959209, 343867475 } },
+                    .{ .ext = .{ 223321798, 829318166, 1609737609, 146629564, 497146453, 1924030909 } },
+                    .{ .ext = .{ 2024287374, 1358090039, 2058061446, 1167253010, 2074880648, 1711898008 } },
+                    .{ .ext = .{ 1778839873, 1307666145, 1036693903, 1857880581, 1452515680, 1542621332 } },
+                    .{ .ext = .{ 438044646, 1775315755, 884332035, 2097297648, 877762345, 788326828 } },
+                    .{ .ext = .{ 167771930, 830399934, 146423123, 359980805, 992186555, 1826876875 } },
+                    .{ .ext = .{ 1467969856, 1894965465, 1164783322, 137724857, 1324071772, 1770638247 } },
+                    .{ .ext = .{ 1286333313, 256910042, 1849672538, 1595248912, 1046574134, 462486815 } },
+                    .{ .ext = .{ 2089594451, 822311490, 672098780, 340419995, 9219547, 2082780471 } },
+                    .{ .ext = .{ 1062616340, 555831625, 21558017, 997752507, 1576810806, 1128024762 } },
+                    .{ .ext = .{ 1712139949, 1304081969, 216923822, 1551751918, 833663697, 1866960816 } },
+                    .{ .ext = .{ 1839542884, 1656051607, 490794697, 1252289335, 1509813824, 572805183 } },
+                    .{ .ext = .{ 1089542847, 776742238, 1192409195, 2093989960, 1398840350, 59982859 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 423063570, 1349150729, 1461453753, 730361817, 1011864742, 435617587 }, .{ 1707214868, 1936217468, 1800733443, 1456082422, 1354769316, 650026383 }, .{ 2048306248, 244770914, 1803222461, 1916927268, 465917503, 1460036162 }, .{ 2090650940, 2101864126, 792769160, 1748618106, 1952469276, 806464691 }, .{ 1793807318, 653999661, 875558258, 2124842968, 1831103556, 565702497 }, .{ 916528852, 345740484, 758332458, 1422041235, 1172217097, 1355894210 }, .{ 557277347, 1186598477, 1835644457, 856894996, 922189139, 2010683673 }, .{ 1555341425, 1928938273, 1617239340, 7311186, 819358688, 553496159 }, .{ 2111547128, 1665560377, 1045446865, 255947507, 1439847939, 2117909277 }, .{ 1713974871, 2109093900, 549301124, 136052593, 1316870133, 928756479 } },
-        .quotient_claims = &.{ .{ 1805709262, 195344327, 1967380649, 1168740285, 1029399009, 1090071970 }, .{ 629820210, 1819642728, 63365153, 2130522362, 1278080625, 1969357926 }, .{ 1949243926, 1876047233, 417756216, 1304207300, 680392272, 699964612 }, .{ 283612880, 962821548, 791507124, 1670193895, 1424668822, 612078526 }, .{ 1457297583, 1547163732, 1843128349, 1073296938, 1959311247, 1793958941 }, .{ 342629504, 1929204460, 1130368359, 1641245562, 1428633158, 1069954632 }, .{ 240801683, 499665521, 313435983, 1698197574, 1276909909, 1304007850 }, .{ 316062914, 1279405083, 1553779426, 129535811, 1453402503, 262910990 }, .{ 0, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{ .{ 797215600, 1827073484, 584394405, 1700903938, 281959209, 343867475 }, .{ 223321798, 829318166, 1609737609, 146629564, 497146453, 1924030909 }, .{ 2024287374, 1358090039, 2058061446, 1167253010, 2074880648, 1711898008 }, .{ 1778839873, 1307666145, 1036693903, 1857880581, 1452515680, 1542621332 }, .{ 167771930, 830399934, 146423123, 359980805, 992186555, 1826876875 }, .{ 1467969856, 1894965465, 1164783322, 137724857, 1324071772, 1770638247 }, .{ 1286333313, 256910042, 1849672538, 1595248912, 1046574134, 462486815 }, .{ 1062616340, 555831625, 21558017, 997752507, 1576810806, 1128024762 }, .{ 1712139949, 1304081969, 216923822, 1551751918, 833663697, 1866960816 }, .{ 1839542884, 1656051607, 490794697, 1252289335, 1509813824, 572805183 } },
+        .quotient_claims = &.{ .{ 438044646, 1775315755, 884332035, 2097297648, 877762345, 788326828 }, .{ 2089594451, 822311490, 672098780, 340419995, 9219547, 2082780471 }, .{ 1089542847, 776742238, 1192409195, 2093989960, 1398840350, 59982859 } },
         .module_sizes = &.{},
     },
 };
@@ -8581,99 +7847,73 @@ pub const system_56_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_56_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 7, 0, 5, 6, 17 },
+    .round_cell_counts = &[_]usize{ 7, 0, 5, 2, 13 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-w3"
 
+// expression: "z-recurrence-b0-k0"
 const system_56_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
+    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 3 }, // col: "Tz"
-    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 9 } },
     .{ .column_claim = 4 }, // col: "Ty"
-    .{ .op = .{ .operator = .add, .lhs = 8, .rhs = 9 } },
-    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 10 } },
+    .{ .op = .{ .operator = .add, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 12 } },
     .{ .column_claim = 5 }, // col: "Tx"
-    .{ .op = .{ .operator = .add, .lhs = 11, .rhs = 12 } },
-    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 13 } },
-    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 14 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 15 } },
-    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 17, .rhs = 2 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 18, .rhs = 19 } },
-    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 14 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 21 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 22, .rhs = 23 } },
+    .{ .op = .{ .operator = .add, .lhs = 13, .rhs = 14 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 15 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 16 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 17 } },
 };
 
 const system_56_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 16, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 20, .cancelled_positions = &.{} },
-};
-
-const system_56_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 18, .cancelled_positions = &.{} },
 };
 
 const system_56_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 1, .vanishings = &system_56_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 2, .vanishings = &system_56_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
 };
 
+// expression: "z-recurrence-b1-k0"
 const system_56_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "z-average-b1-k0"
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 2 }, // col: "Sz"
-    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 8 } },
     .{ .column_claim = 3 }, // col: "Sy"
-    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
-    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 9 } },
+    .{ .op = .{ .operator = .add, .lhs = 9, .rhs = 10 } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 11 } },
     .{ .column_claim = 4 }, // col: "Sx"
-    .{ .op = .{ .operator = .add, .lhs = 10, .rhs = 11 } },
-    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 12 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 13 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 14 } },
-    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 16, .rhs = 1 } },
-    .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .lhs = 17, .rhs = 18 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 13 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 20 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 21, .rhs = 22 } },
+    .{ .op = .{ .operator = .add, .lhs = 12, .rhs = 13 } },
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 14 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 15 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 16 } },
 };
 
 const system_56_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 15, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 19, .cancelled_positions = &.{} },
-};
-
-const system_56_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 23, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_56_module_1_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_56_module_1_bucket_0_vanishings, .quotient_claim_offset = 3 },
-    .{ .ratio = 2, .vanishings = &system_56_module_1_bucket_1_vanishings, .quotient_claim_offset = 4 },
+    .{ .ratio = 1, .vanishings = &system_56_module_1_bucket_0_vanishings, .quotient_claim_offset = 1 },
 };
 
 const system_56_modules = [_]vanishing.Module{
@@ -8688,17 +7928,17 @@ const system_56 = vanishing.System{
     .modules = &system_56_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 11,
-    .total_quotient_claims = 6,
+    .total_quotient_claims = 2,
 };
 
-const system_56_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 2, .index = 1 },
-    .{ .round = 2, .index = 2 },
+const system_56_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 2, .index = 1 }, .size = .{ .static = 4 } },
+    .{ .average_ref = .{ .round = 2, .index = 2 }, .size = .{ .static = 2 } },
 };
 
 // logderiv system: "lk-w3"
 const system_56_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_56_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-w3/lookuptologderiv/aggregated"
+    .{ .entries = &system_56_logderiv_query_0_entries, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-w3/lookuptologderiv/aggregated"
 };
 
 const system_56_logderiv = logderivativesum.System{ .queries = &system_56_logderiv_queries };
@@ -8748,51 +7988,43 @@ const scenario_56 = Scenario{
                 .cells = &.{},
             },
             .{
-                .commitment = .{ 896386335, 882081274, 1483977139, 86963636, 722492122, 620125319, 2113040196, 549315437 },
+                .commitment = .{ 1040006278, 569979956, 874032493, 1046102999, 727831678, 1078773858, 1397922738, 547405604 },
                 .cells = &.{
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 173704175, 980532160, 772684849, 1179522909, 210632569, 341609881 } },
-                    .{ .ext = .{ 1957002258, 1150174273, 1358021584, 951183524, 1920073864, 1789096552 } },
+                    .{ .ext = .{ 576102652, 245133040, 1791201037, 1892910552, 1650687967, 1683432295 } },
+                    .{ .ext = .{ 978501129, 1640440353, 679010792, 475591762, 960036932, 894548276 } },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 245458185, 241747820, 879550630, 524373986, 603055662, 1166733304, 911942726, 1292203218 },
+                .commitment = .{ 680151961, 1443615755, 903413250, 1565949410, 1461381465, 759878960, 1829092986, 373838027 },
                 .cells = &.{
                     .{ .base = 0 },
                     .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 1 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 669234490, 2047274442, 1142313611, 1674318251, 1875845862, 659703117 } },
-                    .{ .ext = .{ 553392951, 1605778205, 1697798248, 795348905, 617731661, 1267247422 } },
-                    .{ .ext = .{ 1015639860, 445463222, 1525205805, 1899404438, 1343298625, 1519296101 } },
-                    .{ .ext = .{ 1580044134, 650705240, 355545748, 1667392403, 1709821777, 453643909 } },
-                    .{ .ext = .{ 584145700, 65070524, 887837148, 2084375030, 384052821, 1536858894 } },
-                    .{ .ext = .{ 58414570, 432648339, 941066288, 208437503, 677617212, 579827176 } },
-                    .{ .ext = .{ 666075013, 1316292619, 1668817317, 1943895727, 274841905, 1110768431 } },
-                    .{ .ext = .{ 1617687633, 2127531325, 1103353959, 1367343782, 1887780304, 1457231594 } },
-                    .{ .ext = .{ 1990872357, 1312752459, 1594236803, 1552518656, 1703488175, 647268490 } },
-                    .{ .ext = .{ 766552318, 1872418811, 2026894282, 1606780654, 742163471, 254196133 } },
-                    .{ .ext = .{ 863098411, 1846808470, 355907615, 2074999356, 562621869, 1100087581 } },
-                    .{ .ext = .{ 903989052, 286400546, 200556129, 41328745, 619116100, 1349345112 } },
-                    .{ .ext = .{ 1368822765, 1733205201, 1511550116, 1069486091, 61911610, 1413358371 } },
-                    .{ .ext = .{ 1202235493, 812532450, 1855720158, 746160539, 6191161, 780547767 } },
-                    .{ .ext = .{ 803166098, 593175231, 943682137, 1988923095, 805600592, 400613743 } },
-                    .{ .ext = .{ 924208661, 172082061, 1347708951, 307867974, 1579836649, 1043948157 } },
-                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 1990380347, 403863735, 177053613, 1886961119, 1612320244, 507143031 } },
+                    .{ .ext = .{ 991621286, 1510922765, 1761754750, 1846225717, 1322579941, 1075124894 } },
+                    .{ .ext = .{ 65955687, 1384117312, 1815302296, 1034370509, 1477757188, 1398392655 } },
+                    .{ .ext = .{ 739484145, 1962967212, 1354795401, 1029917573, 1406970191, 1843225672 } },
+                    .{ .ext = .{ 1139301631, 1474720581, 774691470, 2020627547, 779908949, 1462746427 } },
+                    .{ .ext = .{ 753142093, 786683988, 77469147, 415133398, 1569485398, 359345286 } },
+                    .{ .ext = .{ 881247969, 230938703, 879051254, 1376789461, 940632559, 493619246 } },
+                    .{ .ext = .{ 1302123136, 1739584448, 792428989, 1155228209, 1157137817, 114800186 } },
+                    .{ .ext = .{ 1653437072, 1319734640, 1684046965, 1099776515, 1528949593, 686545133 } },
+                    .{ .ext = .{ 1368949507, 601725636, 1493775589, 1186151555, 893720588, 883577719 } },
+                    .{ .ext = .{ 349965594, 1764737710, 1640872062, 1183968372, 941654632, 1579852275 } },
+                    .{ .ext = .{ 461137846, 176473771, 1442511066, 1396820697, 1372589323, 1223338444 } },
+                    .{ .ext = .{ 1777960915, 1605589103, 363000676, 590807719, 1218628530, 1456213454 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 669234490, 2047274442, 1142313611, 1674318251, 1875845862, 659703117 }, .{ 553392951, 1605778205, 1697798248, 795348905, 617731661, 1267247422 }, .{ 1015639860, 445463222, 1525205805, 1899404438, 1343298625, 1519296101 }, .{ 1580044134, 650705240, 355545748, 1667392403, 1709821777, 453643909 }, .{ 584145700, 65070524, 887837148, 2084375030, 384052821, 1536858894 }, .{ 58414570, 432648339, 941066288, 208437503, 677617212, 579827176 }, .{ 766552318, 1872418811, 2026894282, 1606780654, 742163471, 254196133 }, .{ 863098411, 1846808470, 355907615, 2074999356, 562621869, 1100087581 }, .{ 903989052, 286400546, 200556129, 41328745, 619116100, 1349345112 }, .{ 1368822765, 1733205201, 1511550116, 1069486091, 61911610, 1413358371 }, .{ 1202235493, 812532450, 1855720158, 746160539, 6191161, 780547767 } },
-        .quotient_claims = &.{ .{ 666075013, 1316292619, 1668817317, 1943895727, 274841905, 1110768431 }, .{ 1617687633, 2127531325, 1103353959, 1367343782, 1887780304, 1457231594 }, .{ 1990872357, 1312752459, 1594236803, 1552518656, 1703488175, 647268490 }, .{ 803166098, 593175231, 943682137, 1988923095, 805600592, 400613743 }, .{ 924208661, 172082061, 1347708951, 307867974, 1579836649, 1043948157 }, .{ 0, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{ .{ 1990380347, 403863735, 177053613, 1886961119, 1612320244, 507143031 }, .{ 991621286, 1510922765, 1761754750, 1846225717, 1322579941, 1075124894 }, .{ 65955687, 1384117312, 1815302296, 1034370509, 1477757188, 1398392655 }, .{ 739484145, 1962967212, 1354795401, 1029917573, 1406970191, 1843225672 }, .{ 1139301631, 1474720581, 774691470, 2020627547, 779908949, 1462746427 }, .{ 753142093, 786683988, 77469147, 415133398, 1569485398, 359345286 }, .{ 1302123136, 1739584448, 792428989, 1155228209, 1157137817, 114800186 }, .{ 1653437072, 1319734640, 1684046965, 1099776515, 1528949593, 686545133 }, .{ 1368949507, 601725636, 1493775589, 1186151555, 893720588, 883577719 }, .{ 349965594, 1764737710, 1640872062, 1183968372, 941654632, 1579852275 }, .{ 461137846, 176473771, 1442511066, 1396820697, 1372589323, 1223338444 } },
+        .quotient_claims = &.{ .{ 881247969, 230938703, 879051254, 1376789461, 940632559, 493619246 }, .{ 1777960915, 1605589103, 363000676, 590807719, 1218628530, 1456213454 } },
         .module_sizes = &.{},
     },
 };
@@ -8804,96 +8036,84 @@ pub const system_57_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_57_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 3, 0, 5, 6, 11 },
+    .round_cell_counts = &[_]usize{ 3, 0, 5, 2, 9 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-size1"
 
+// expression: "z-recurrence-b0-k0"
 const system_57_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
+    .{ .column_claim = 2 }, // col: "z-b0-k0"
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
+    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
     .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 2 }, // col: "T"
-    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
-    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 5 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 6 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 8 } },
-    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
-    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 8 } },
+    .{ .column_claim = 3 }, // col: "T"
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 9 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 10 } },
 };
 
 const system_57_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 9, .cancelled_positions = &.{} },
-};
-
-const system_57_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 12, .cancelled_positions = &.{} },
-};
-
-const system_57_module_0_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 2, .vanishings = &system_57_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 1, .vanishings = &system_57_module_0_bucket_1_vanishings, .quotient_claim_offset = 2 },
-};
-
-const system_57_module_1_expressions = [_]vanishing.ExprNode{
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 1 }, // col: "S"
-    .{ .op = .{ .operator = .add, .lhs = 2, .rhs = 3 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 4 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 5 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 7 } },
-    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
-    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 7 } },
-};
-
-const system_57_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 8, .cancelled_positions = &.{} },
-};
-
-const system_57_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
+    // expression: "z-recurrence-b0-k0"
     .{ .expression = 11, .cancelled_positions = &.{} },
 };
 
+const system_57_module_0_buckets = [_]vanishing.Bucket{
+    .{ .ratio = 1, .vanishings = &system_57_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
+};
+
+// expression: "z-recurrence-b1-k0"
+const system_57_module_1_expressions = [_]vanishing.ExprNode{
+    .{ .constant = .{ .value = 1 } },
+    .{ .column_claim = 0 }, // col: "z-b1-k0"
+    .{ .column_claim = 1 }, // col: "z-b1-k0"
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "z-average-b1-k0"
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
+    .{ .coin_value = 0 }, // coin: "gamma"
+    .{ .column_claim = 2 }, // col: "S"
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 9 } },
+};
+
+const system_57_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
+    // expression: "z-recurrence-b1-k0"
+    .{ .expression = 10, .cancelled_positions = &.{} },
+};
+
 const system_57_module_1_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 2, .vanishings = &system_57_module_1_bucket_0_vanishings, .quotient_claim_offset = 3 },
-    .{ .ratio = 1, .vanishings = &system_57_module_1_bucket_1_vanishings, .quotient_claim_offset = 5 },
+    .{ .ratio = 1, .vanishings = &system_57_module_1_bucket_0_vanishings, .quotient_claim_offset = 1 },
 };
 
 const system_57_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 1 }, .expressions = &system_57_module_0_expressions, .buckets = &system_57_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 1 }, .expressions = &system_57_module_1_expressions, .buckets = &system_57_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 3 },
+    .{ .size = .{ .static = 1 }, .expressions = &system_57_module_1_expressions, .buckets = &system_57_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "lk-size1"
 const system_57 = vanishing.System{
     .modules = &system_57_modules,
     .dynamic_module_count = 0,
-    .total_witness_claims = 5,
-    .total_quotient_claims = 6,
+    .total_witness_claims = 7,
+    .total_quotient_claims = 2,
 };
 
-const system_57_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 2, .index = 1 },
-    .{ .round = 2, .index = 2 },
+const system_57_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 2, .index = 1 }, .size = .{ .static = 1 } },
+    .{ .average_ref = .{ .round = 2, .index = 2 }, .size = .{ .static = 1 } },
 };
 
 // logderiv system: "lk-size1"
 const system_57_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_57_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-size1/lookuptologderiv/aggregated"
+    .{ .entries = &system_57_logderiv_query_0_entries, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-size1/lookuptologderiv/aggregated"
 };
 
 const system_57_logderiv = logderivativesum.System{ .queries = &system_57_logderiv_queries };
@@ -8928,10 +8148,10 @@ const scenario_57 = Scenario{
     .honest = .{
         .rounds = &.{
             .{
-                .commitment = .{ 2091189000, 1473889856, 1713281462, 458770530, 2002927452, 341496150, 1382135440, 2058989093 },
+                .commitment = .{ 1618405036, 2045748274, 6044757, 2114225103, 323102844, 280039477, 1287444758, 1127427102 },
                 .cells = &.{
                     .{ .base = 0 },
-                    .{ .base = 2 },
+                    .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
@@ -8939,45 +8159,39 @@ const scenario_57 = Scenario{
                 .cells = &.{},
             },
             .{
-                .commitment = .{ 50296277, 1749892632, 845858636, 824415195, 112294123, 30892, 1122712034, 1714723866 },
+                .commitment = .{ 604097249, 559283356, 2086483521, 302913181, 1542865692, 2097152418, 398311024, 1493051191 },
                 .cells = &.{
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 2034954273, 1065294680, 281758864, 1753291249, 1518431221, 986284134 } },
-                    .{ .ext = .{ 95752160, 1065411753, 1848947569, 377415184, 612275212, 1144422299 } },
+                    .{ .ext = .{ 1876326911, 549628935, 1226125559, 672564833, 1750572763, 1230096584 } },
+                    .{ .ext = .{ 254379522, 1581077498, 904580874, 1458141600, 380133670, 900609849 } },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 2066816440, 1251002353, 1739592788, 365120622, 445688483, 1162635539, 2126865213, 1891784736 },
+                .commitment = .{ 604097249, 559283356, 2086483521, 302913181, 1542865692, 2097152418, 398311024, 1493051191 },
                 .cells = &.{
                     .{ .base = 0 },
-                    .{ .base = 1 },
-                    .{ .base = 1 },
-                    .{ .base = 1 },
-                    .{ .base = 1 },
-                    .{ .base = 1 },
+                    .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{
                     .{ .ext = .{ 1, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 2034954273, 1065294680, 281758864, 1753291249, 1518431221, 986284134 } },
+                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 42, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 95752160, 1065411753, 1848947569, 377415184, 612275212, 1144422299 } },
                     .{ .ext = .{ 42, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 2034954273, 1065294680, 281758864, 1753291249, 1518431221, 986284134 }, .{ 42, 0, 0, 0, 0, 0 }, .{ 95752160, 1065411753, 1848947569, 377415184, 612275212, 1144422299 }, .{ 42, 0, 0, 0, 0, 0 } },
-        .quotient_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 42, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 42, 0, 0, 0, 0, 0 } },
+        .quotient_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
 };
@@ -8989,85 +8203,59 @@ pub const system_58_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_58_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 2, 0, 5, 6, 13 },
+    .round_cell_counts = &[_]usize{ 2, 0, 5, 2, 9 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-precomp"
 
+// expression: "z-recurrence-b0-k0"
 const system_58_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
+    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
-    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
-    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
-    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 9 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 10 } },
 };
 
 const system_58_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 9, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
-};
-
-const system_58_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
+    .{ .expression = 11, .cancelled_positions = &.{} },
 };
 
 const system_58_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 1, .vanishings = &system_58_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 2, .vanishings = &system_58_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
 };
 
+// expression: "z-recurrence-b1-k0"
 const system_58_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "z-average-b1-k0"
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
-    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 9 } },
 };
 
 const system_58_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 8, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 12, .cancelled_positions = &.{} },
-};
-
-const system_58_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 16, .cancelled_positions = &.{} },
+    .{ .expression = 10, .cancelled_positions = &.{} },
 };
 
 const system_58_module_1_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_58_module_1_bucket_0_vanishings, .quotient_claim_offset = 3 },
-    .{ .ratio = 2, .vanishings = &system_58_module_1_bucket_1_vanishings, .quotient_claim_offset = 4 },
+    .{ .ratio = 1, .vanishings = &system_58_module_1_bucket_0_vanishings, .quotient_claim_offset = 1 },
 };
 
 const system_58_modules = [_]vanishing.Module{
@@ -9082,17 +8270,17 @@ const system_58 = vanishing.System{
     .modules = &system_58_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 7,
-    .total_quotient_claims = 6,
+    .total_quotient_claims = 2,
 };
 
-const system_58_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 2, .index = 1 },
-    .{ .round = 2, .index = 2 },
+const system_58_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 2, .index = 1 }, .size = .{ .static = 4 } },
+    .{ .average_ref = .{ .round = 2, .index = 2 }, .size = .{ .static = 4 } },
 };
 
 // logderiv system: "lk-precomp"
 const system_58_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_58_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-precomp/lookuptologderiv/aggregated"
+    .{ .entries = &system_58_logderiv_query_0_entries, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-precomp/lookuptologderiv/aggregated"
 };
 
 const system_58_logderiv = logderivativesum.System{ .queries = &system_58_logderiv_queries };
@@ -9137,22 +8325,18 @@ const scenario_58 = Scenario{
                 .cells = &.{},
             },
             .{
-                .commitment = .{ 1550351552, 746724728, 761016566, 774780339, 74974458, 1435012532, 985351991, 615347530 },
+                .commitment = .{ 2129094359, 278982619, 1267002849, 120188482, 1632491744, 1143879620, 1664865034, 268423280 },
                 .cells = &.{
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 1352120345, 427613275, 366024519, 1990874647, 1658607577, 1367848787 } },
-                    .{ .ext = .{ 778586088, 1703093158, 1764681914, 139831786, 472098856, 762857646 } },
+                    .{ .ext = .{ 1936059911, 639579927, 624182738, 1030395270, 2012681719, 874638805 } },
+                    .{ .ext = .{ 194646522, 1491126506, 1506523695, 1100311163, 118024714, 1256067628 } },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 465906622, 349623894, 1185066941, 705942775, 1925272906, 186010894, 341262337, 1301077905 },
+                .commitment = .{ 1529068255, 334349096, 1709008724, 634787351, 22584739, 1729658230, 61585334, 1761340204 },
                 .cells = &.{
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
@@ -9160,24 +8344,20 @@ const scenario_58 = Scenario{
             .{
                 .cells = &.{
                     .{ .ext = .{ 1, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 1344136499, 1330806355, 627768362, 1927581547, 1816249530, 209127268 } },
-                    .{ .ext = .{ 234103269, 1745958241, 67622360, 917355293, 962858497, 2009868200 } },
-                    .{ .ext = .{ 1252323399, 298770939, 1681397560, 1108758920, 1666717994, 577506650 } },
-                    .{ .ext = .{ 1926387924, 467882556, 707845096, 686798333, 1963484341, 187719530 } },
-                    .{ .ext = .{ 1714355086, 1909654971, 30486071, 1367021722, 347273469, 995631690 } },
-                    .{ .ext = .{ 1179262573, 794105534, 573961058, 1960451582, 1550210972, 582898098 } },
-                    .{ .ext = .{ 786569934, 799900078, 1502938071, 203124886, 314456903, 1921579165 } },
-                    .{ .ext = .{ 1896603164, 384748192, 2063084073, 1213351140, 1167847936, 120838233 } },
-                    .{ .ext = .{ 1252323399, 298770939, 1681397560, 1108758920, 1666717994, 577506650 } },
-                    .{ .ext = .{ 10115259, 12397319, 756332002, 1399298908, 1481945033, 1856818326 } },
-                    .{ .ext = .{ 416351347, 221051462, 2100220362, 763684711, 1783432964, 1135074743 } },
-                    .{ .ext = .{ 951443860, 1336600899, 1556745375, 170254851, 580495461, 1547808335 } },
+                    .{ .ext = .{ 90127213, 2064402861, 2040094018, 1759243957, 1759299032, 623568983 } },
+                    .{ .ext = .{ 1570132013, 146011616, 969732071, 1586393746, 378871979, 816184536 } },
+                    .{ .ext = .{ 1267946617, 1450393792, 1380021746, 1039923823, 373539658, 319456341 } },
+                    .{ .ext = .{ 1443851182, 309469056, 693480959, 1192549543, 1862007767, 1970291391 } },
+                    .{ .ext = .{ 2040579220, 66303572, 90612415, 371462476, 371407401, 1507137450 } },
+                    .{ .ext = .{ 560574420, 1984694817, 1160974362, 544312687, 1751834454, 1314521897 } },
+                    .{ .ext = .{ 1267946617, 1450393792, 1380021746, 1039923823, 373539658, 319456341 } },
+                    .{ .ext = .{ 686855251, 1821237377, 1437225474, 938156890, 268698666, 160415042 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 1344136499, 1330806355, 627768362, 1927581547, 1816249530, 209127268 }, .{ 234103269, 1745958241, 67622360, 917355293, 962858497, 2009868200 }, .{ 1252323399, 298770939, 1681397560, 1108758920, 1666717994, 577506650 }, .{ 786569934, 799900078, 1502938071, 203124886, 314456903, 1921579165 }, .{ 1896603164, 384748192, 2063084073, 1213351140, 1167847936, 120838233 }, .{ 1252323399, 298770939, 1681397560, 1108758920, 1666717994, 577506650 } },
-        .quotient_claims = &.{ .{ 1926387924, 467882556, 707845096, 686798333, 1963484341, 187719530 }, .{ 1714355086, 1909654971, 30486071, 1367021722, 347273469, 995631690 }, .{ 1179262573, 794105534, 573961058, 1960451582, 1550210972, 582898098 }, .{ 10115259, 12397319, 756332002, 1399298908, 1481945033, 1856818326 }, .{ 416351347, 221051462, 2100220362, 763684711, 1783432964, 1135074743 }, .{ 951443860, 1336600899, 1556745375, 170254851, 580495461, 1547808335 } },
+        .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 90127213, 2064402861, 2040094018, 1759243957, 1759299032, 623568983 }, .{ 1570132013, 146011616, 969732071, 1586393746, 378871979, 816184536 }, .{ 1267946617, 1450393792, 1380021746, 1039923823, 373539658, 319456341 }, .{ 2040579220, 66303572, 90612415, 371462476, 371407401, 1507137450 }, .{ 560574420, 1984694817, 1160974362, 544312687, 1751834454, 1314521897 }, .{ 1267946617, 1450393792, 1380021746, 1039923823, 373539658, 319456341 } },
+        .quotient_claims = &.{ .{ 1443851182, 309469056, 693480959, 1192549543, 1862007767, 1970291391 }, .{ 686855251, 1821237377, 1437225474, 938156890, 268698666, 160415042 } },
         .module_sizes = &.{},
     },
 };
@@ -9189,85 +8369,59 @@ pub const system_59_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_59_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 3, 0, 5, 6, 13 },
+    .round_cell_counts = &[_]usize{ 3, 0, 5, 2, 9 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-rep-s"
 
+// expression: "z-recurrence-b0-k0"
 const system_59_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
+    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
-    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
-    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
-    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 9 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 10 } },
 };
 
 const system_59_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 9, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
-};
-
-const system_59_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
+    .{ .expression = 11, .cancelled_positions = &.{} },
 };
 
 const system_59_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 1, .vanishings = &system_59_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 2, .vanishings = &system_59_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
 };
 
+// expression: "z-recurrence-b1-k0"
 const system_59_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "z-average-b1-k0"
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
-    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 9 } },
 };
 
 const system_59_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 8, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 12, .cancelled_positions = &.{} },
-};
-
-const system_59_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 16, .cancelled_positions = &.{} },
+    .{ .expression = 10, .cancelled_positions = &.{} },
 };
 
 const system_59_module_1_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_59_module_1_bucket_0_vanishings, .quotient_claim_offset = 3 },
-    .{ .ratio = 2, .vanishings = &system_59_module_1_bucket_1_vanishings, .quotient_claim_offset = 4 },
+    .{ .ratio = 1, .vanishings = &system_59_module_1_bucket_0_vanishings, .quotient_claim_offset = 1 },
 };
 
 const system_59_modules = [_]vanishing.Module{
@@ -9282,17 +8436,17 @@ const system_59 = vanishing.System{
     .modules = &system_59_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 7,
-    .total_quotient_claims = 6,
+    .total_quotient_claims = 2,
 };
 
-const system_59_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 2, .index = 1 },
-    .{ .round = 2, .index = 2 },
+const system_59_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 2, .index = 1 }, .size = .{ .static = 4 } },
+    .{ .average_ref = .{ .round = 2, .index = 2 }, .size = .{ .static = 4 } },
 };
 
 // logderiv system: "lk-rep-s"
 const system_59_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_59_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-rep-s/lookuptologderiv/aggregated"
+    .{ .entries = &system_59_logderiv_query_0_entries, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-rep-s/lookuptologderiv/aggregated"
 };
 
 const system_59_logderiv = logderivativesum.System{ .queries = &system_59_logderiv_queries };
@@ -9338,47 +8492,39 @@ const scenario_59 = Scenario{
                 .cells = &.{},
             },
             .{
-                .commitment = .{ 794998644, 1217798987, 1985480939, 1599792061, 1321413472, 1976556985, 942157810, 1727457002 },
+                .commitment = .{ 362155305, 51320508, 61644039, 1160755291, 1195296980, 1062850648, 747278214, 920809359 },
                 .cells = &.{
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 220192354, 544593388, 864039560, 1775509671, 745655894, 897156753 } },
-                    .{ .ext = .{ 1910514079, 1586113045, 1266666873, 355196762, 1385050539, 1233549680 } },
+                    .{ .ext = .{ 1120401305, 136148347, 216009890, 976554026, 1251767190, 1822319013 } },
+                    .{ .ext = .{ 1010305128, 1994558086, 1914696543, 1154152407, 878939243, 308387420 } },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 2096994630, 1231504749, 1118831784, 932149511, 701712000, 42579118, 941830623, 1977678804 },
+                .commitment = .{ 1778729443, 1702258433, 1157593033, 1182667384, 954093142, 1342169278, 332169661, 495734400 },
                 .cells = &.{
                     .{ .base = 0 },
                     .{ .base = 0 },
-                    .{ .base = 1 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 1 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 660376559, 1334479083, 496441245, 1146406265, 293387927, 1974789992 } },
-                    .{ .ext = .{ 220192354, 544593388, 864039560, 1775509671, 745655894, 897156753 } },
-                    .{ .ext = .{ 220192354, 544593388, 864039560, 1775509671, 745655894, 897156753 } },
-                    .{ .ext = .{ 372371254, 747946651, 553052970, 1921177535, 1816669722, 1112288824 } },
-                    .{ .ext = .{ 2130706432, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 73795809, 1476626529, 263389994, 1617647346, 1187775072, 392927904 } },
+                    .{ .ext = .{ 206212202, 362679930, 1097173810, 1034370600, 1555039003, 784674329 } },
+                    .{ .ext = .{ 1269330616, 1564932592, 41591427, 942898980, 809928540, 94744393 } },
+                    .{ .ext = .{ 2015323396, 1553649817, 1322699834, 1279047784, 1556075991, 1328322064 } },
+                    .{ .ext = .{ 315775215, 314245559, 167111838, 1623098679, 1473871102, 492077397 } },
+                    .{ .ext = .{ 825959355, 1105995002, 1900091478, 1366308813, 372072375, 119723430 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 719538357, 832503019, 209621210, 988043415, 453112155, 995797289 } },
-                    .{ .ext = .{ 1763878638, 1590794399, 1762173626, 721117943, 1803611604, 1084162745 } },
+                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 10, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 1885302183, 289521174, 1163572357, 901275871, 940588041, 370942739 } },
-                    .{ .ext = .{ 1960771382, 537121154, 25224019, 1165075496, 1400395933, 2078873852 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 660376559, 1334479083, 496441245, 1146406265, 293387927, 1974789992 }, .{ 220192354, 544593388, 864039560, 1775509671, 745655894, 897156753 }, .{ 220192354, 544593388, 864039560, 1775509671, 745655894, 897156753 }, .{ 372371254, 747946651, 553052970, 1921177535, 1816669722, 1112288824 }, .{ 719538357, 832503019, 209621210, 988043415, 453112155, 995797289 }, .{ 1763878638, 1590794399, 1762173626, 721117943, 1803611604, 1084162745 }, .{ 10, 0, 0, 0, 0, 0 } },
-        .quotient_claims = &.{ .{ 2130706432, 0, 0, 0, 0, 0 }, .{ 73795809, 1476626529, 263389994, 1617647346, 1187775072, 392927904 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1885302183, 289521174, 1163572357, 901275871, 940588041, 370942739 }, .{ 1960771382, 537121154, 25224019, 1165075496, 1400395933, 2078873852 }, .{ 0, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{ .{ 206212202, 362679930, 1097173810, 1034370600, 1555039003, 784674329 }, .{ 1269330616, 1564932592, 41591427, 942898980, 809928540, 94744393 }, .{ 2015323396, 1553649817, 1322699834, 1279047784, 1556075991, 1328322064 }, .{ 315775215, 314245559, 167111838, 1623098679, 1473871102, 492077397 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 10, 0, 0, 0, 0, 0 } },
+        .quotient_claims = &.{ .{ 825959355, 1105995002, 1900091478, 1366308813, 372072375, 119723430 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
 };
@@ -9390,50 +8536,38 @@ pub const system_60_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_60_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 4, 0, 5, 6, 14 },
+    .round_cell_counts = &[_]usize{ 4, 0, 5, 2, 10 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-empty"
 
+// expression: "z-recurrence-b0-k0"
 const system_60_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
+    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
-    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
-    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
-    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 9 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 10 } },
 };
 
 const system_60_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 9, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
-};
-
-const system_60_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
+    .{ .expression = 11, .cancelled_positions = &.{} },
 };
 
 const system_60_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 1, .vanishings = &system_60_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 2, .vanishings = &system_60_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
 };
 
+// expression: "z-recurrence-b1-k0"
 const system_60_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "filterS"
     .{ .constant = .{ .value = 1 } },
@@ -9441,36 +8575,22 @@ const system_60_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .column_claim = 2 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 4 } },
+    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "z-average-b1-k0"
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "S"
-    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 7 } },
-    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 8 } },
-    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 9 } },
-    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 3 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 13 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 8 } },
-    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 15 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 16, .rhs = 17 } },
+    .{ .op = .{ .operator = .add, .lhs = 8, .rhs = 9 } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 10 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 11 } },
 };
 
 const system_60_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 10, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
-};
-
-const system_60_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 18, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_60_module_1_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_60_module_1_bucket_0_vanishings, .quotient_claim_offset = 3 },
-    .{ .ratio = 2, .vanishings = &system_60_module_1_bucket_1_vanishings, .quotient_claim_offset = 4 },
+    .{ .ratio = 1, .vanishings = &system_60_module_1_bucket_0_vanishings, .quotient_claim_offset = 1 },
 };
 
 const system_60_modules = [_]vanishing.Module{
@@ -9485,17 +8605,17 @@ const system_60 = vanishing.System{
     .modules = &system_60_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 8,
-    .total_quotient_claims = 6,
+    .total_quotient_claims = 2,
 };
 
-const system_60_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 2, .index = 1 },
-    .{ .round = 2, .index = 2 },
+const system_60_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 2, .index = 1 }, .size = .{ .static = 4 } },
+    .{ .average_ref = .{ .round = 2, .index = 2 }, .size = .{ .static = 4 } },
 };
 
 // logderiv system: "lk-empty"
 const system_60_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_60_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-empty/lookuptologderiv/aggregated"
+    .{ .entries = &system_60_logderiv_query_0_entries, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-empty/lookuptologderiv/aggregated"
 };
 
 const system_60_logderiv = logderivativesum.System{ .queries = &system_60_logderiv_queries };
@@ -9530,36 +8650,32 @@ const scenario_60 = Scenario{
     .honest = .{
         .rounds = &.{
             .{
-                .commitment = .{ 1330347915, 893341275, 182902408, 805240833, 655380362, 553334380, 1065208409, 1223912388 },
+                .commitment = .{ 1062230092, 606144463, 2043202518, 647463255, 1080904118, 784156295, 908353842, 78771534 },
                 .cells = &.{
                     .{ .base = 0 },
                     .{ .base = 0 },
-                    .{ .base = 1 },
-                    .{ .base = 1 },
+                    .{ .base = 0 },
+                    .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{},
             },
             .{
-                .commitment = .{ 1509928159, 1022636522, 1305278804, 2031476728, 1362609465, 930316236, 283521955, 21146661 },
+                .commitment = .{ 1275975592, 71531730, 219058983, 1065229348, 580944419, 1232921032, 683520727, 838936790 },
                 .cells = &.{
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .base = 0 },
-                    .{ .base = 1 },
+                    .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 1509928159, 1022636522, 1305278804, 2031476728, 1362609465, 930316236, 283521955, 21146661 },
+                .commitment = .{ 1275975592, 71531730, 219058983, 1065229348, 580944419, 1232921032, 683520727, 838936790 },
                 .cells = &.{
                     .{ .base = 0 },
-                    .{ .base = 1 },
-                    .{ .base = 1 },
-                    .{ .base = 1 },
-                    .{ .base = 1 },
-                    .{ .base = 1 },
+                    .{ .base = 0 },
                 },
             },
             .{
@@ -9567,23 +8683,19 @@ const scenario_60 = Scenario{
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 376136529, 539189036, 615893818, 621204076, 1549954864, 619089304 } },
+                    .{ .ext = .{ 756723730, 1429822254, 1988332609, 310557878, 463433493, 188156422 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 716579299, 83432542, 116220525, 875815499, 1382040549, 803798894 } },
-                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 1392345446, 1067388795, 1616509397, 1202528308, 796798607, 1522343945 } },
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 376136529, 539189036, 615893818, 621204076, 1549954864, 619089304 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 716579299, 83432542, 116220525, 875815499, 1382040549, 803798894 } },
-        .quotient_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 756723730, 1429822254, 1988332609, 310557878, 463433493, 188156422 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1392345446, 1067388795, 1616509397, 1202528308, 796798607, 1522343945 } },
+        .quotient_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
 };
@@ -9595,12 +8707,13 @@ pub const system_61_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_61_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 4, 0, 7, 13, 25 },
+    .round_cell_counts = &[_]usize{ 4, 0, 7, 4, 16 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "rc-distinct"
 
+// expression: "z-recurrence-b1-k0"
 const system_61_module_0_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -9614,114 +8727,70 @@ const system_61_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 2 }, // col: "z-b1-k0"
     .{ .column_claim = 3 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 10 } },
+    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "z-average-b1-k0"
+    .{ .op = .{ .operator = .add, .lhs = 11, .rhs = 12 } },
     .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 3 } },
-    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
-    .{ .op = .{ .operator = .sub, .lhs = 8, .rhs = 13 } },
-    .{ .op = .{ .operator = .mul, .lhs = 9, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 13, .rhs = 14 } },
     .{ .op = .{ .operator = .sub, .lhs = 8, .rhs = 15 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 16, .rhs = 17 } },
-    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 19, .rhs = 9 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 20, .rhs = 21 } },
 };
 
 const system_61_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 14, .cancelled_positions = &.{0} },
-};
-
-const system_61_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 18, .cancelled_positions = &.{} },
-};
-
-const system_61_module_0_bucket_2_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_61_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 2, .vanishings = &system_61_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 4, .vanishings = &system_61_module_0_bucket_1_vanishings, .quotient_claim_offset = 2 },
-    .{ .ratio = 1, .vanishings = &system_61_module_0_bucket_2_vanishings, .quotient_claim_offset = 6 },
 };
 
+// expression: "z-recurrence-b0-k0"
 const system_61_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
+    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "range-col-b4"
-    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
-    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
-    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
-    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 9 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 10 } },
 };
 
 const system_61_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 9, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
-};
-
-const system_61_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
+    .{ .expression = 11, .cancelled_positions = &.{} },
 };
 
 const system_61_module_1_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_61_module_1_bucket_0_vanishings, .quotient_claim_offset = 7 },
-    .{ .ratio = 2, .vanishings = &system_61_module_1_bucket_1_vanishings, .quotient_claim_offset = 8 },
+    .{ .ratio = 1, .vanishings = &system_61_module_1_bucket_0_vanishings, .quotient_claim_offset = 2 },
 };
 
+// expression: "z-recurrence-b2-k0"
 const system_61_module_2_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b2-k0"
     .{ .column_claim = 2 }, // col: "z-b2-k0"
     .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
+    .{ .cell_value = .{ .round = 2, .index = 3 } }, // cell: "z-average-b2-k0"
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "range-col-b8"
-    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
-    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
-    .{ .cell_value = .{ .round = 2, .index = 3 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
-    .{ .lagrange_selector = 7 },
-    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
-    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 9 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 10 } },
 };
 
 const system_61_module_2_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b2-k0"
-    .{ .expression = 9, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
-};
-
-const system_61_module_2_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
+    .{ .expression = 11, .cancelled_positions = &.{} },
 };
 
 const system_61_module_2_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_61_module_2_bucket_0_vanishings, .quotient_claim_offset = 10 },
-    .{ .ratio = 2, .vanishings = &system_61_module_2_bucket_1_vanishings, .quotient_claim_offset = 11 },
+    .{ .ratio = 1, .vanishings = &system_61_module_2_bucket_0_vanishings, .quotient_claim_offset = 3 },
 };
 
 const system_61_modules = [_]vanishing.Module{
@@ -9738,18 +8807,18 @@ const system_61 = vanishing.System{
     .modules = &system_61_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 12,
-    .total_quotient_claims = 13,
+    .total_quotient_claims = 4,
 };
 
-const system_61_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 2, .index = 1 },
-    .{ .round = 2, .index = 2 },
-    .{ .round = 2, .index = 3 },
+const system_61_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 2, .index = 1 }, .size = .{ .static = 4 } },
+    .{ .average_ref = .{ .round = 2, .index = 2 }, .size = .{ .static = 4 } },
+    .{ .average_ref = .{ .round = 2, .index = 3 }, .size = .{ .static = 8 } },
 };
 
 // logderiv system: "rc-distinct"
 const system_61_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_61_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "rc-distinct/lookuptologderiv/aggregated"
+    .{ .entries = &system_61_logderiv_query_0_entries, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "rc-distinct/lookuptologderiv/aggregated"
 };
 
 const system_61_logderiv = logderivativesum.System{ .queries = &system_61_logderiv_queries };
@@ -9805,29 +8874,20 @@ const scenario_61 = Scenario{
                 .cells = &.{},
             },
             .{
-                .commitment = .{ 240456138, 550909092, 294484401, 1170442569, 962569042, 1659253333, 1657927465, 471583430 },
+                .commitment = .{ 1232082067, 397447726, 1586121200, 1893254968, 537485634, 1924705952, 205095405, 2112284366 },
                 .cells = &.{
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 1741804449, 922567773, 846493807, 1672047317, 1608248408, 988854533 } },
-                    .{ .ext = .{ 1513414887, 1077832890, 715926001, 2096153564, 692278551, 1046270192 } },
-                    .{ .ext = .{ 1006193530, 130305770, 568286625, 493211985, 1960885907, 95581708 } },
+                    .{ .ext = .{ 2033480937, 1828671768, 744300060, 2016041654, 402062102, 1845243458 } },
+                    .{ .ext = .{ 911030330, 1334811439, 1777011325, 524038391, 705746246, 261567548 } },
+                    .{ .ext = .{ 1723804016, 1614318046, 1935403957, 1926019627, 1576802259, 1077300930 } },
                     .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 1485521898, 1370846121, 978176490, 66743146, 1933142525, 1604211341, 1522841739, 648410616 },
+                .commitment = .{ 33050724, 1497770080, 1660863817, 469547083, 1068282871, 1889652404, 162002451, 181361727 },
                 .cells = &.{
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 1 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
@@ -9836,37 +8896,28 @@ const scenario_61 = Scenario{
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 1334018694, 492149973, 1844706571, 752428108, 403397576, 1633471269 } },
-                    .{ .ext = .{ 1295335320, 1620941789, 1797676410, 864217165, 1077452290, 71688529 } },
-                    .{ .ext = .{ 2053372312, 1188441095, 500263672, 2059987275, 1936465305, 372518126 } },
-                    .{ .ext = .{ 434862556, 1516194841, 1263089429, 52599146, 1094175896, 420431351 } },
-                    .{ .ext = .{ 529022131, 1219331369, 1055963770, 1495560251, 2067311564, 1774002904 } },
-                    .{ .ext = .{ 544374877, 543739230, 1342724310, 1107402048, 167092298, 794353395 } },
-                    .{ .ext = .{ 1342638814, 526734672, 1736579233, 2022860171, 1143768982, 116730100 } },
-                    .{ .ext = .{ 1749179574, 572552347, 2074345863, 2121626820, 94362444, 471768553 } },
-                    .{ .ext = .{ 2077806443, 483311830, 1183076721, 1965072889, 993707768, 2102115100 } },
-                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 1437945340, 496671810, 1206209632, 1088471429, 214651693, 1141442020 } },
+                    .{ .ext = .{ 786729383, 2096369461, 472336275, 1192516179, 715825662, 2016575358 } },
+                    .{ .ext = .{ 1928192025, 668217255, 1052673832, 1353298984, 991630561, 364709902 } },
+                    .{ .ext = .{ 1706562475, 812494612, 1621534792, 1299475396, 1652338117, 1560296857 } },
+                    .{ .ext = .{ 725540418, 393970939, 536739168, 1121518783, 377682059, 1693527226 } },
+                    .{ .ext = .{ 1693416377, 306917706, 1540122594, 1858120913, 1870425857, 1688529063 } },
+                    .{ .ext = .{ 1969609153, 374010622, 372718122, 1622163098, 416316319, 1214318832 } },
                     .{ .ext = .{ 1, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 1620064485, 320194187, 985583562, 1421972512, 694684499, 2062395597 } },
-                    .{ .ext = .{ 1919688100, 1700790888, 436923693, 1105289351, 97753621, 1363935067 } },
-                    .{ .ext = .{ 1295335320, 1620941789, 1797676410, 864217165, 1077452290, 71688529 } },
-                    .{ .ext = .{ 2020960059, 1943209670, 287395392, 1872617376, 1539198679, 1078153526 } },
-                    .{ .ext = .{ 1159542363, 393175627, 314766228, 1034359074, 524886674, 1436313705 } },
-                    .{ .ext = .{ 361297032, 328022761, 2055897374, 639477989, 1108703108, 316925887 } },
-                    .{ .ext = .{ 1880223693, 992116092, 1462529415, 1920774406, 1770502354, 170830279 } },
-                    .{ .ext = .{ 1085300745, 382610028, 1482342075, 1487922821, 1833950031, 1894875312 } },
-                    .{ .ext = .{ 122794542, 792676818, 2099242111, 865909316, 478006169, 856953873 } },
-                    .{ .ext = .{ 1421978419, 243904018, 1682881984, 1213843736, 2084333702, 1731799966 } },
-                    .{ .ext = .{ 1051804833, 508127533, 2546708, 1342027246, 1624407958, 2107998875 } },
-                    .{ .ext = .{ 1105202318, 769029000, 1033194695, 655234032, 1373668862, 759661134 } },
-                    .{ .ext = .{ 514410650, 1358994100, 653659163, 1189836435, 1796171453, 1634130821 } },
+                    .{ .ext = .{ 1985849434, 723832688, 285573624, 302433142, 2073023909, 1295010323 } },
+                    .{ .ext = .{ 1054825708, 1489866086, 2013547508, 715349975, 149042157, 818008073 } },
+                    .{ .ext = .{ 1928192025, 668217255, 1052673832, 1353298984, 991630561, 364709902 } },
+                    .{ .ext = .{ 92796950, 1938355489, 1063383242, 931350346, 1591832469, 685662780 } },
+                    .{ .ext = .{ 1975012138, 884011450, 1241652291, 1587357167, 351699483, 739065352 } },
+                    .{ .ext = .{ 333633148, 252917329, 1511854163, 2073047196, 1835608888, 113281257 } },
+                    .{ .ext = .{ 877461285, 1420609626, 512386671, 1722116009, 64448476, 2109276385 } },
+                    .{ .ext = .{ 1921496493, 1295976280, 1667090535, 1462517187, 2099350423, 1389777447 } },
+                    .{ .ext = .{ 1612784080, 1042257386, 1868705887, 270108746, 824634518, 371248942 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 1334018694, 492149973, 1844706571, 752428108, 403397576, 1633471269 }, .{ 1295335320, 1620941789, 1797676410, 864217165, 1077452290, 71688529 }, .{ 2053372312, 1188441095, 500263672, 2059987275, 1936465305, 372518126 }, .{ 434862556, 1516194841, 1263089429, 52599146, 1094175896, 420431351 }, .{ 1, 0, 0, 0, 0, 0 }, .{ 1620064485, 320194187, 985583562, 1421972512, 694684499, 2062395597 }, .{ 1919688100, 1700790888, 436923693, 1105289351, 97753621, 1363935067 }, .{ 1295335320, 1620941789, 1797676410, 864217165, 1077452290, 71688529 }, .{ 1880223693, 992116092, 1462529415, 1920774406, 1770502354, 170830279 }, .{ 1085300745, 382610028, 1482342075, 1487922821, 1833950031, 1894875312 }, .{ 122794542, 792676818, 2099242111, 865909316, 478006169, 856953873 }, .{ 1421978419, 243904018, 1682881984, 1213843736, 2084333702, 1731799966 } },
-        .quotient_claims = &.{ .{ 529022131, 1219331369, 1055963770, 1495560251, 2067311564, 1774002904 }, .{ 544374877, 543739230, 1342724310, 1107402048, 167092298, 794353395 }, .{ 1342638814, 526734672, 1736579233, 2022860171, 1143768982, 116730100 }, .{ 1749179574, 572552347, 2074345863, 2121626820, 94362444, 471768553 }, .{ 2077806443, 483311830, 1183076721, 1965072889, 993707768, 2102115100 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1437945340, 496671810, 1206209632, 1088471429, 214651693, 1141442020 }, .{ 2020960059, 1943209670, 287395392, 1872617376, 1539198679, 1078153526 }, .{ 1159542363, 393175627, 314766228, 1034359074, 524886674, 1436313705 }, .{ 361297032, 328022761, 2055897374, 639477989, 1108703108, 316925887 }, .{ 1051804833, 508127533, 2546708, 1342027246, 1624407958, 2107998875 }, .{ 1105202318, 769029000, 1033194695, 655234032, 1373668862, 759661134 }, .{ 514410650, 1358994100, 653659163, 1189836435, 1796171453, 1634130821 } },
+        .witness_claims = &.{ .{ 786729383, 2096369461, 472336275, 1192516179, 715825662, 2016575358 }, .{ 1928192025, 668217255, 1052673832, 1353298984, 991630561, 364709902 }, .{ 1706562475, 812494612, 1621534792, 1299475396, 1652338117, 1560296857 }, .{ 725540418, 393970939, 536739168, 1121518783, 377682059, 1693527226 }, .{ 1, 0, 0, 0, 0, 0 }, .{ 1985849434, 723832688, 285573624, 302433142, 2073023909, 1295010323 }, .{ 1054825708, 1489866086, 2013547508, 715349975, 149042157, 818008073 }, .{ 1928192025, 668217255, 1052673832, 1353298984, 991630561, 364709902 }, .{ 1975012138, 884011450, 1241652291, 1587357167, 351699483, 739065352 }, .{ 333633148, 252917329, 1511854163, 2073047196, 1835608888, 113281257 }, .{ 877461285, 1420609626, 512386671, 1722116009, 64448476, 2109276385 }, .{ 1921496493, 1295976280, 1667090535, 1462517187, 2099350423, 1389777447 } },
+        .quotient_claims = &.{ .{ 1693416377, 306917706, 1540122594, 1858120913, 1870425857, 1688529063 }, .{ 1969609153, 374010622, 372718122, 1622163098, 416316319, 1214318832 }, .{ 92796950, 1938355489, 1063383242, 931350346, 1591832469, 685662780 }, .{ 1612784080, 1042257386, 1868705887, 270108746, 824634518, 371248942 } },
         .module_sizes = &.{},
     },
 };
@@ -10366,111 +9417,85 @@ pub const system_66_spec = protocol.Spec{
     .dynamic_module_count = 0,
 };
 pub const system_66_public_input = protocol.public_input.Spec{
-    .round_cell_counts = &[_]usize{ 11, 0, 5, 6, 21 },
+    .round_cell_counts = &[_]usize{ 11, 0, 5, 2, 17 },
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-multi-col-bench"
 
+// expression: "z-recurrence-b0-k0"
 const system_66_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
+    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "z-average-b0-k0"
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 3 }, // col: "T4"
-    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 9 } },
     .{ .column_claim = 4 }, // col: "T3"
-    .{ .op = .{ .operator = .add, .lhs = 8, .rhs = 9 } },
-    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 10 } },
+    .{ .op = .{ .operator = .add, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 12 } },
     .{ .column_claim = 5 }, // col: "T2"
-    .{ .op = .{ .operator = .add, .lhs = 11, .rhs = 12 } },
-    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 13 } },
+    .{ .op = .{ .operator = .add, .lhs = 13, .rhs = 14 } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 15 } },
     .{ .column_claim = 6 }, // col: "T1"
-    .{ .op = .{ .operator = .add, .lhs = 14, .rhs = 15 } },
-    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 16 } },
+    .{ .op = .{ .operator = .add, .lhs = 16, .rhs = 17 } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 18 } },
     .{ .column_claim = 7 }, // col: "T0"
-    .{ .op = .{ .operator = .add, .lhs = 17, .rhs = 18 } },
-    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 19 } },
-    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 20 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 21 } },
-    .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 23, .rhs = 2 } },
-    .{ .lagrange_selector = 1023 },
-    .{ .op = .{ .operator = .mul, .lhs = 24, .rhs = 25 } },
-    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 20 } },
-    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 27 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 28, .rhs = 29 } },
+    .{ .op = .{ .operator = .add, .lhs = 19, .rhs = 20 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 21 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 22 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 23 } },
 };
 
 const system_66_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 22, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 26, .cancelled_positions = &.{} },
-};
-
-const system_66_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 30, .cancelled_positions = &.{} },
+    .{ .expression = 24, .cancelled_positions = &.{} },
 };
 
 const system_66_module_0_buckets = [_]vanishing.Bucket{
     .{ .ratio = 1, .vanishings = &system_66_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 2, .vanishings = &system_66_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
 };
 
+// expression: "z-recurrence-b1-k0"
 const system_66_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "z-average-b1-k0"
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 2 }, // col: "S4"
-    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 8 } },
     .{ .column_claim = 3 }, // col: "S3"
-    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
-    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 9 } },
+    .{ .op = .{ .operator = .add, .lhs = 9, .rhs = 10 } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 11 } },
     .{ .column_claim = 4 }, // col: "S2"
-    .{ .op = .{ .operator = .add, .lhs = 10, .rhs = 11 } },
-    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 12 } },
+    .{ .op = .{ .operator = .add, .lhs = 12, .rhs = 13 } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 14 } },
     .{ .column_claim = 5 }, // col: "S1"
-    .{ .op = .{ .operator = .add, .lhs = 13, .rhs = 14 } },
-    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 15 } },
+    .{ .op = .{ .operator = .add, .lhs = 15, .rhs = 16 } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 17 } },
     .{ .column_claim = 6 }, // col: "S0"
-    .{ .op = .{ .operator = .add, .lhs = 16, .rhs = 17 } },
-    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 18 } },
-    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 19 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 20 } },
-    .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .op = .{ .operator = .sub, .lhs = 22, .rhs = 1 } },
-    .{ .lagrange_selector = 1023 },
-    .{ .op = .{ .operator = .mul, .lhs = 23, .rhs = 24 } },
-    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 19 } },
-    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 26 } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .lhs = 27, .rhs = 28 } },
+    .{ .op = .{ .operator = .add, .lhs = 18, .rhs = 19 } },
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 20 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 21 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 22 } },
 };
 
 const system_66_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 21, .cancelled_positions = &.{0} },
-    // expression: "global"
-    .{ .expression = 25, .cancelled_positions = &.{} },
-};
-
-const system_66_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
-    // expression: "global"
-    .{ .expression = 29, .cancelled_positions = &.{} },
+    .{ .expression = 23, .cancelled_positions = &.{} },
 };
 
 const system_66_module_1_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_66_module_1_bucket_0_vanishings, .quotient_claim_offset = 3 },
-    .{ .ratio = 2, .vanishings = &system_66_module_1_bucket_1_vanishings, .quotient_claim_offset = 4 },
+    .{ .ratio = 1, .vanishings = &system_66_module_1_bucket_0_vanishings, .quotient_claim_offset = 1 },
 };
 
 const system_66_modules = [_]vanishing.Module{
@@ -10485,17 +9510,17 @@ const system_66 = vanishing.System{
     .modules = &system_66_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 15,
-    .total_quotient_claims = 6,
+    .total_quotient_claims = 2,
 };
 
-const system_66_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
-    .{ .round = 2, .index = 1 },
-    .{ .round = 2, .index = 2 },
+const system_66_logderiv_query_0_entries = [_]logderivativesum.Entry{
+    .{ .average_ref = .{ .round = 2, .index = 1 }, .size = .{ .static = 1024 } },
+    .{ .average_ref = .{ .round = 2, .index = 2 }, .size = .{ .static = 1024 } },
 };
 
 // logderiv system: "lk-multi-col-bench"
 const system_66_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_66_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-multi-col-bench/lookuptologderiv/aggregated"
+    .{ .entries = &system_66_logderiv_query_0_entries, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-multi-col-bench/lookuptologderiv/aggregated"
 };
 
 const system_66_logderiv = logderivativesum.System{ .queries = &system_66_logderiv_queries };
@@ -10549,55 +9574,47 @@ const scenario_66 = Scenario{
                 .cells = &.{},
             },
             .{
-                .commitment = .{ 1726286637, 2008238564, 1746388461, 1842213255, 614343039, 1534681702, 821073789, 635395174 },
+                .commitment = .{ 1914929313, 90148135, 400776467, 1610657750, 1359498301, 980643240, 1189801946, 782066656 },
                 .cells = &.{
                     .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
-                    .{ .ext = .{ 2060820553, 524254341, 551551594, 811928522, 1283901551, 189312114 } },
-                    .{ .ext = .{ 69885880, 1606452092, 1579154839, 1318777911, 846804882, 1941394319 } },
+                    .{ .ext = .{ 1980822889, 1854476256, 845330433, 113154371, 1900994995, 1893683756 } },
+                    .{ .ext = .{ 149883544, 276230177, 1285376000, 2017552062, 229711438, 237022677 } },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
-                .commitment = .{ 1213098638, 445989648, 1611285187, 1908495876, 2111300009, 366066018, 1519934907, 122575788 },
+                .commitment = .{ 457484790, 412858565, 2014926766, 2057964358, 938410286, 1123382006, 1195488078, 976057495 },
                 .cells = &.{
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
-                    .{ .base = 0 },
                     .{ .base = 0 },
                     .{ .base = 0 },
                 },
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 1405613427, 1563132509, 215430137, 1006801597, 107758841, 120818161 } },
-                    .{ .ext = .{ 1884238688, 1163235640, 1978127698, 343115568, 1375753834, 1397116061 } },
-                    .{ .ext = .{ 62094922, 745868617, 1830665141, 2109643277, 1533216713, 291853334 } },
-                    .{ .ext = .{ 651683848, 1787414939, 734863696, 1136117139, 129409636, 964736440 } },
-                    .{ .ext = .{ 651683847, 1787414939, 734863696, 1136117139, 129409636, 964736440 } },
-                    .{ .ext = .{ 651683846, 1787414939, 734863696, 1136117139, 129409636, 964736440 } },
-                    .{ .ext = .{ 651683845, 1787414939, 734863696, 1136117139, 129409636, 964736440 } },
-                    .{ .ext = .{ 651683844, 1787414939, 734863696, 1136117139, 129409636, 964736440 } },
-                    .{ .ext = .{ 837027432, 935257339, 1184694926, 351586174, 1126001292, 1722031518 } },
-                    .{ .ext = .{ 704658929, 1819340726, 1166757563, 558086785, 335342526, 1757476705 } },
-                    .{ .ext = .{ 1354086055, 1574006043, 494441799, 1778957685, 1066038641, 1876455712 } },
-                    .{ .ext = .{ 97283972, 1639214597, 244360206, 1581795554, 1576813090, 1996848281 } },
-                    .{ .ext = .{ 1509065053, 1145939352, 1931536, 326228773, 987312704, 695620774 } },
-                    .{ .ext = .{ 399333471, 1376527839, 486611510, 1061847578, 16489303, 2064295594 } },
-                    .{ .ext = .{ 399333470, 1376527839, 486611510, 1061847578, 16489303, 2064295594 } },
-                    .{ .ext = .{ 399333469, 1376527839, 486611510, 1061847578, 16489303, 2064295594 } },
-                    .{ .ext = .{ 399333468, 1376527839, 486611510, 1061847578, 16489303, 2064295594 } },
-                    .{ .ext = .{ 399333467, 1376527839, 486611510, 1061847578, 16489303, 2064295594 } },
-                    .{ .ext = .{ 683739157, 96537262, 1489277901, 114139552, 488043032, 680158388 } },
-                    .{ .ext = .{ 543716727, 445512119, 652738871, 2122436170, 366498396, 1509258566 } },
-                    .{ .ext = .{ 770802052, 1494200130, 706527990, 136122351, 1477239344, 1134239845 } },
+                    .{ .ext = .{ 1881321822, 996064784, 239757853, 713063874, 141767265, 1623497378 } },
+                    .{ .ext = .{ 412468707, 2057958535, 1452550116, 1703951242, 106189315, 1809567143 } },
+                    .{ .ext = .{ 1153541423, 2093629203, 1378571916, 1907795931, 1789271790, 1146279699 } },
+                    .{ .ext = .{ 1725466852, 1187403285, 1348653901, 1744935195, 334216831, 1645346195 } },
+                    .{ .ext = .{ 1725466851, 1187403285, 1348653901, 1744935195, 334216831, 1645346195 } },
+                    .{ .ext = .{ 1725466850, 1187403285, 1348653901, 1744935195, 334216831, 1645346195 } },
+                    .{ .ext = .{ 1725466849, 1187403285, 1348653901, 1744935195, 334216831, 1645346195 } },
+                    .{ .ext = .{ 1725466848, 1187403285, 1348653901, 1744935195, 334216831, 1645346195 } },
+                    .{ .ext = .{ 1315008748, 1230955530, 549994243, 1082697091, 748073636, 730525054 } },
+                    .{ .ext = .{ 2099782808, 1216219086, 860808394, 61713443, 176986883, 1398295118 } },
+                    .{ .ext = .{ 297653110, 79153967, 1398668734, 1297581674, 1268584639, 1078456259 } },
+                    .{ .ext = .{ 1804198914, 495216029, 936177712, 1048533701, 404627310, 1772920528 } },
+                    .{ .ext = .{ 1804198913, 495216029, 936177712, 1048533701, 404627310, 1772920528 } },
+                    .{ .ext = .{ 1804198912, 495216029, 936177712, 1048533701, 404627310, 1772920528 } },
+                    .{ .ext = .{ 1804198911, 495216029, 936177712, 1048533701, 404627310, 1772920528 } },
+                    .{ .ext = .{ 1804198910, 495216029, 936177712, 1048533701, 404627310, 1772920528 } },
+                    .{ .ext = .{ 584332548, 484210222, 1935326483, 828950508, 1892310721, 1265245773 } },
                 },
             },
         },
         .public_inputs = &.{},
-        .witness_claims = &.{ .{ 1405613427, 1563132509, 215430137, 1006801597, 107758841, 120818161 }, .{ 1884238688, 1163235640, 1978127698, 343115568, 1375753834, 1397116061 }, .{ 62094922, 745868617, 1830665141, 2109643277, 1533216713, 291853334 }, .{ 651683848, 1787414939, 734863696, 1136117139, 129409636, 964736440 }, .{ 651683847, 1787414939, 734863696, 1136117139, 129409636, 964736440 }, .{ 651683846, 1787414939, 734863696, 1136117139, 129409636, 964736440 }, .{ 651683845, 1787414939, 734863696, 1136117139, 129409636, 964736440 }, .{ 651683844, 1787414939, 734863696, 1136117139, 129409636, 964736440 }, .{ 97283972, 1639214597, 244360206, 1581795554, 1576813090, 1996848281 }, .{ 1509065053, 1145939352, 1931536, 326228773, 987312704, 695620774 }, .{ 399333471, 1376527839, 486611510, 1061847578, 16489303, 2064295594 }, .{ 399333470, 1376527839, 486611510, 1061847578, 16489303, 2064295594 }, .{ 399333469, 1376527839, 486611510, 1061847578, 16489303, 2064295594 }, .{ 399333468, 1376527839, 486611510, 1061847578, 16489303, 2064295594 }, .{ 399333467, 1376527839, 486611510, 1061847578, 16489303, 2064295594 } },
-        .quotient_claims = &.{ .{ 837027432, 935257339, 1184694926, 351586174, 1126001292, 1722031518 }, .{ 704658929, 1819340726, 1166757563, 558086785, 335342526, 1757476705 }, .{ 1354086055, 1574006043, 494441799, 1778957685, 1066038641, 1876455712 }, .{ 683739157, 96537262, 1489277901, 114139552, 488043032, 680158388 }, .{ 543716727, 445512119, 652738871, 2122436170, 366498396, 1509258566 }, .{ 770802052, 1494200130, 706527990, 136122351, 1477239344, 1134239845 } },
+        .witness_claims = &.{ .{ 1881321822, 996064784, 239757853, 713063874, 141767265, 1623497378 }, .{ 412468707, 2057958535, 1452550116, 1703951242, 106189315, 1809567143 }, .{ 1153541423, 2093629203, 1378571916, 1907795931, 1789271790, 1146279699 }, .{ 1725466852, 1187403285, 1348653901, 1744935195, 334216831, 1645346195 }, .{ 1725466851, 1187403285, 1348653901, 1744935195, 334216831, 1645346195 }, .{ 1725466850, 1187403285, 1348653901, 1744935195, 334216831, 1645346195 }, .{ 1725466849, 1187403285, 1348653901, 1744935195, 334216831, 1645346195 }, .{ 1725466848, 1187403285, 1348653901, 1744935195, 334216831, 1645346195 }, .{ 2099782808, 1216219086, 860808394, 61713443, 176986883, 1398295118 }, .{ 297653110, 79153967, 1398668734, 1297581674, 1268584639, 1078456259 }, .{ 1804198914, 495216029, 936177712, 1048533701, 404627310, 1772920528 }, .{ 1804198913, 495216029, 936177712, 1048533701, 404627310, 1772920528 }, .{ 1804198912, 495216029, 936177712, 1048533701, 404627310, 1772920528 }, .{ 1804198911, 495216029, 936177712, 1048533701, 404627310, 1772920528 }, .{ 1804198910, 495216029, 936177712, 1048533701, 404627310, 1772920528 } },
+        .quotient_claims = &.{ .{ 1315008748, 1230955530, 549994243, 1082697091, 748073636, 730525054 }, .{ 584332548, 484210222, 1935326483, 828950508, 1892310721, 1265245773 } },
         .module_sizes = &.{},
     },
 };
@@ -11305,10 +10322,10 @@ const scenario_68 = Scenario{
                 .cells = &.{},
             },
             .{
-                .commitment = .{ 1851404181, 2024546324, 1886437042, 2025225489, 2085333450, 929591227, 778155642, 1479823408 },
+                .commitment = .{ 1073254811, 2107462023, 428169355, 1418641445, 1508777045, 1804033781, 1972090736, 19875260 },
                 .cells = &.{
                     .{ .base = 0 },
-                    .{ .base = 2 },
+                    .{ .base = 0 },
                 },
             },
             .{
@@ -11321,7 +10338,7 @@ const scenario_68 = Scenario{
                 },
             },
             .{
-                .commitment = .{ 852757147, 487145011, 841712120, 496779226, 937374848, 2110162754, 714582078, 1597749337 },
+                .commitment = .{ 2009916298, 512816662, 2017122031, 509284690, 1472187220, 2072021809, 1197363461, 161958068 },
                 .cells = &.{
                     .{ .base = 0 },
                     .{ .base = 0 },
@@ -11331,16 +10348,16 @@ const scenario_68 = Scenario{
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 75507767, 1610421022, 737086781, 1146187139, 1283689676, 418262922 } },
-                    .{ .ext = .{ 925996794, 152412128, 983467096, 1523028042, 86096268, 1635606828 } },
-                    .{ .ext = .{ 1544859103, 468328992, 186032306, 1752495648, 1131959497, 30088268 } },
-                    .{ .ext = .{ 561238644, 1238806825, 323286258, 1812495986, 515002565, 1372788916 } },
-                    .{ .ext = .{ 1844343197, 1450777413, 707785711, 1275949423, 1704538046, 1449816571 } },
-                    .{ .ext = .{ 1544859103, 468328992, 186032306, 1752495648, 1131959497, 30088268 } },
-                    .{ .ext = .{ 78930573, 2062053156, 1122727734, 782259085, 495967922, 291584481 } },
-                    .{ .ext = .{ 871616703, 518686763, 1140154942, 1354581856, 1024677297, 1703042630 } },
-                    .{ .ext = .{ 1987785309, 561961040, 1383095532, 506682271, 2076011445, 303192525 } },
-                    .{ .ext = .{ 1169005901, 1211537767, 1319336793, 215849784, 1190873865, 1435346187 } },
+                    .{ .ext = .{ 2008555943, 1545499224, 1939912083, 1115537477, 824675705, 692973756 } },
+                    .{ .ext = .{ 28933860, 1162542615, 991024390, 1251276355, 1284439987, 750738542 } },
+                    .{ .ext = .{ 1494976752, 188413444, 1406862112, 1153189260, 1047804, 1675560247 } },
+                    .{ .ext = .{ 1195470853, 1953960912, 1547544469, 876851486, 1797117878, 1940104253 } },
+                    .{ .ext = .{ 46239222, 1715210445, 999541392, 662094464, 405858428, 1840289153 } },
+                    .{ .ext = .{ 1494976752, 188413444, 1406862112, 1153189260, 1047804, 1675560247 } },
+                    .{ .ext = .{ 1353834058, 1445612185, 943113531, 280879561, 1718246595, 1733297618 } },
+                    .{ .ext = .{ 565196596, 459559119, 1306922354, 925175368, 1767577840, 685283122 } },
+                    .{ .ext = .{ 506473896, 503803129, 1206816869, 1902168503, 1491129048, 624650196 } },
+                    .{ .ext = .{ 1971237235, 1096021635, 1521021872, 1056781793, 245372889, 1613248814 } },
                 },
             },
         },
@@ -11353,338 +10370,338 @@ const scenario_68 = Scenario{
             .{ .base = 66 },
             .{ .base = 77 },
             .{ .base = 88 },
-            .{ .base = 835071416 },
-            .{ .base = 1867416886 },
-            .{ .base = 456126499 },
-            .{ .base = 1593312723 },
-            .{ .base = 141678876 },
-            .{ .base = 1040236005 },
-            .{ .base = 1682000058 },
-            .{ .base = 702777375 },
-            .{ .base = 177254708 },
-            .{ .base = 1835884517 },
-            .{ .base = 569920292 },
-            .{ .base = 576982584 },
-            .{ .base = 812263731 },
-            .{ .base = 1881516204 },
-            .{ .base = 166824025 },
-            .{ .base = 739315231 },
-            .{ .base = 484439776 },
-            .{ .base = 247590165 },
-            .{ .base = 321400202 },
-            .{ .base = 1629663866 },
-            .{ .base = 685406514 },
-            .{ .base = 1704157519 },
-            .{ .base = 769146153 },
-            .{ .base = 1007872106 },
-            .{ .base = 743655487 },
-            .{ .base = 1852662247 },
-            .{ .base = 889246332 },
-            .{ .base = 1034475284 },
-            .{ .base = 758062643 },
-            .{ .base = 1063598357 },
-            .{ .base = 1272608089 },
-            .{ .base = 574400182 },
-            .{ .base = 552247483 },
-            .{ .base = 408578965 },
-            .{ .base = 151543373 },
-            .{ .base = 1495552731 },
-            .{ .base = 149209495 },
-            .{ .base = 800052565 },
-            .{ .base = 1741262359 },
-            .{ .base = 1916825876 },
-            .{ .base = 1741628858 },
-            .{ .base = 487843828 },
-            .{ .base = 1549060099 },
-            .{ .base = 2055886041 },
-            .{ .base = 1805064007 },
-            .{ .base = 1841227961 },
-            .{ .base = 1913572792 },
-            .{ .base = 812781639 },
-            .{ .base = 61537961 },
-            .{ .base = 2026651446 },
-            .{ .base = 1053558269 },
-            .{ .base = 1998217056 },
-            .{ .base = 516770064 },
-            .{ .base = 750119694 },
-            .{ .base = 1575323749 },
-            .{ .base = 581160128 },
-            .{ .base = 1234053572 },
-            .{ .base = 32785038 },
-            .{ .base = 1092574583 },
-            .{ .base = 940668610 },
-            .{ .base = 342251287 },
-            .{ .base = 1240660469 },
-            .{ .base = 1524762035 },
-            .{ .base = 67223459 },
-            .{ .base = 1395021741 },
-            .{ .base = 793091978 },
-            .{ .base = 2129801996 },
-            .{ .base = 1113662527 },
-            .{ .base = 768460976 },
-            .{ .base = 1159574789 },
-            .{ .base = 365588761 },
-            .{ .base = 965368962 },
-            .{ .base = 1265279995 },
-            .{ .base = 1770132104 },
-            .{ .base = 737144591 },
-            .{ .base = 718423043 },
-            .{ .base = 2056709688 },
-            .{ .base = 246397111 },
-            .{ .base = 1845960033 },
-            .{ .base = 84798436 },
-            .{ .base = 1189840275 },
-            .{ .base = 513575988 },
-            .{ .base = 579379183 },
-            .{ .base = 1619269248 },
-            .{ .base = 503810422 },
-            .{ .base = 143278578 },
-            .{ .base = 1744397368 },
-            .{ .base = 45882884 },
-            .{ .base = 1877585774 },
-            .{ .base = 514105736 },
-            .{ .base = 1632986182 },
-            .{ .base = 1339903481 },
-            .{ .base = 1346716135 },
-            .{ .base = 1608536497 },
-            .{ .base = 153122621 },
-            .{ .base = 958763872 },
-            .{ .base = 629193710 },
-            .{ .base = 1558911447 },
-            .{ .base = 1203058611 },
-            .{ .base = 1586837318 },
-            .{ .base = 1141213106 },
-            .{ .base = 927677159 },
-            .{ .base = 1208746714 },
-            .{ .base = 1640902224 },
-            .{ .base = 658212681 },
-            .{ .base = 1865914834 },
-            .{ .base = 828157109 },
-            .{ .base = 1878292209 },
-            .{ .base = 876569135 },
-            .{ .base = 881912576 },
-            .{ .base = 683461272 },
-            .{ .base = 1053658007 },
-            .{ .base = 2016596785 },
-            .{ .base = 2055109964 },
-            .{ .base = 1028998569 },
-            .{ .base = 2021807700 },
-            .{ .base = 1279185363 },
-            .{ .base = 1573330542 },
-            .{ .base = 1513742023 },
-            .{ .base = 366028833 },
-            .{ .base = 1967925130 },
-            .{ .base = 1952066592 },
-            .{ .base = 2042712997 },
-            .{ .base = 2008269835 },
-            .{ .base = 1386194723 },
-            .{ .base = 1893752310 },
-            .{ .base = 1298316599 },
-            .{ .base = 405440123 },
-            .{ .base = 722321144 },
-            .{ .base = 518755347 },
-            .{ .base = 548456253 },
-            .{ .base = 66441950 },
-            .{ .base = 1132164406 },
-            .{ .base = 614304289 },
-            .{ .base = 1961082144 },
-            .{ .base = 186589898 },
-            .{ .base = 1215049429 },
-            .{ .base = 1464968234 },
-            .{ .base = 1241434135 },
-            .{ .base = 1415401689 },
-            .{ .base = 549591924 },
-            .{ .base = 577993742 },
-            .{ .base = 1241657782 },
-            .{ .base = 1651469213 },
-            .{ .base = 2030435518 },
-            .{ .base = 1467535714 },
-            .{ .base = 757146539 },
-            .{ .base = 1965460183 },
-            .{ .base = 749023031 },
-            .{ .base = 1829671130 },
-            .{ .base = 1173571125 },
-            .{ .base = 1215062784 },
-            .{ .base = 1068037012 },
-            .{ .base = 1138551129 },
-            .{ .base = 1514302922 },
-            .{ .base = 1624377499 },
-            .{ .base = 1039737990 },
-            .{ .base = 1033345007 },
-            .{ .base = 1648048910 },
-            .{ .base = 802962902 },
-            .{ .base = 1512245956 },
-            .{ .base = 1667708699 },
-            .{ .base = 1075736425 },
-            .{ .base = 1468048404 },
-            .{ .base = 1610373464 },
-            .{ .base = 467435896 },
-            .{ .base = 443913041 },
-            .{ .base = 2094586422 },
-            .{ .base = 757464176 },
-            .{ .base = 1237107898 },
-            .{ .base = 147341380 },
-            .{ .base = 1683122952 },
-            .{ .base = 1710947147 },
-            .{ .base = 579208866 },
-            .{ .base = 111759273 },
-            .{ .base = 1610849179 },
-            .{ .base = 104056596 },
-            .{ .base = 569581888 },
-            .{ .base = 1448893679 },
-            .{ .base = 1634324124 },
-            .{ .base = 898947878 },
-            .{ .base = 251931674 },
-            .{ .base = 2009618466 },
-            .{ .base = 551387221 },
-            .{ .base = 829489930 },
-            .{ .base = 548642992 },
-            .{ .base = 74695349 },
-            .{ .base = 1304322113 },
-            .{ .base = 740423468 },
-            .{ .base = 326517576 },
-            .{ .base = 1613922690 },
-            .{ .base = 36230792 },
-            .{ .base = 1638477893 },
-            .{ .base = 1897878529 },
-            .{ .base = 1345706217 },
-            .{ .base = 1890896460 },
-            .{ .base = 2037954796 },
-            .{ .base = 440098558 },
-            .{ .base = 1127820801 },
-            .{ .base = 354590809 },
-            .{ .base = 1924600874 },
-            .{ .base = 1817290838 },
-            .{ .base = 878424320 },
-            .{ .base = 611405861 },
-            .{ .base = 1049259392 },
-            .{ .base = 1949759366 },
-            .{ .base = 1364607484 },
-            .{ .base = 992996827 },
-            .{ .base = 1925895196 },
-            .{ .base = 1961697465 },
-            .{ .base = 1794464255 },
-            .{ .base = 144551273 },
-            .{ .base = 122356099 },
-            .{ .base = 676047767 },
-            .{ .base = 47941668 },
-            .{ .base = 1521728314 },
-            .{ .base = 1620384092 },
-            .{ .base = 804222657 },
-            .{ .base = 1153117442 },
-            .{ .base = 276592337 },
-            .{ .base = 1763030680 },
-            .{ .base = 387901170 },
-            .{ .base = 834324140 },
-            .{ .base = 1294229739 },
-            .{ .base = 1948353527 },
-            .{ .base = 1115137423 },
-            .{ .base = 2054629727 },
-            .{ .base = 150042164 },
-            .{ .base = 1148418272 },
-            .{ .base = 1029643105 },
-            .{ .base = 2088024160 },
-            .{ .base = 171489356 },
-            .{ .base = 1488535202 },
-            .{ .base = 1634975335 },
-            .{ .base = 1503577508 },
-            .{ .base = 1853746660 },
-            .{ .base = 1234790900 },
-            .{ .base = 1263001510 },
-            .{ .base = 129077703 },
-            .{ .base = 428184637 },
-            .{ .base = 19903750 },
-            .{ .base = 1858120926 },
-            .{ .base = 345234714 },
-            .{ .base = 871829952 },
-            .{ .base = 265809585 },
-            .{ .base = 747218497 },
-            .{ .base = 2036316464 },
-            .{ .base = 1424774282 },
-            .{ .base = 376923809 },
-            .{ .base = 1433011195 },
-            .{ .base = 406244368 },
-            .{ .base = 105899141 },
-            .{ .base = 1958058967 },
-            .{ .base = 1629027151 },
-            .{ .base = 425753377 },
-            .{ .base = 1646839386 },
-            .{ .base = 539173948 },
-            .{ .base = 1018486090 },
-            .{ .base = 1932521179 },
-            .{ .base = 679193758 },
-            .{ .base = 1093214025 },
-            .{ .base = 1481576834 },
-            .{ .base = 99533662 },
-            .{ .base = 1220239505 },
-            .{ .base = 1346299421 },
-            .{ .base = 490724608 },
-            .{ .base = 1375334664 },
-            .{ .base = 1062820628 },
-            .{ .base = 180144083 },
-            .{ .base = 1601904555 },
-            .{ .base = 603390881 },
-            .{ .base = 636866670 },
-            .{ .base = 60086188 },
-            .{ .base = 1865973691 },
-            .{ .base = 892000141 },
-            .{ .base = 904984186 },
-            .{ .base = 237755044 },
-            .{ .base = 1559009897 },
-            .{ .base = 348519945 },
-            .{ .base = 979925741 },
-            .{ .base = 321531639 },
-            .{ .base = 1898203617 },
-            .{ .base = 597579746 },
-            .{ .base = 618304107 },
-            .{ .base = 707438925 },
-            .{ .base = 67423537 },
-            .{ .base = 1186457571 },
-            .{ .base = 959504347 },
-            .{ .base = 331592111 },
-            .{ .base = 1059395219 },
-            .{ .base = 2045185374 },
-            .{ .base = 180345358 },
-            .{ .base = 1460043224 },
-            .{ .base = 244547095 },
-            .{ .base = 1658382559 },
-            .{ .base = 1561496900 },
-            .{ .base = 344746918 },
-            .{ .base = 396786013 },
-            .{ .base = 779098635 },
-            .{ .base = 1017768385 },
-            .{ .base = 955479798 },
-            .{ .base = 2035503147 },
-            .{ .base = 2125947835 },
-            .{ .base = 289458019 },
-            .{ .base = 1597475743 },
-            .{ .base = 219573231 },
-            .{ .base = 101173303 },
-            .{ .base = 1974458286 },
-            .{ .base = 1950250158 },
-            .{ .base = 1173371697 },
-            .{ .base = 365101631 },
-            .{ .base = 1651662632 },
-            .{ .base = 352089483 },
-            .{ .base = 1111772906 },
-            .{ .base = 891430280 },
-            .{ .base = 1102844839 },
-            .{ .base = 370681119 },
-            .{ .base = 1015512094 },
-            .{ .base = 849008286 },
-            .{ .base = 353466651 },
-            .{ .base = 318337270 },
-            .{ .base = 984197009 },
-            .{ .base = 1034471446 },
-            .{ .base = 873932285 },
-            .{ .base = 1927645070 },
-            .{ .base = 1291650768 },
-            .{ .base = 813021533 },
-            .{ .base = 870615459 },
+            .{ .base = 1267483552 },
+            .{ .base = 2091165414 },
+            .{ .base = 305722396 },
+            .{ .base = 228952029 },
+            .{ .base = 1495767593 },
+            .{ .base = 1312201187 },
+            .{ .base = 919780104 },
+            .{ .base = 366575469 },
+            .{ .base = 864860542 },
+            .{ .base = 529803891 },
+            .{ .base = 538987643 },
+            .{ .base = 727530610 },
+            .{ .base = 1642608921 },
+            .{ .base = 240767116 },
+            .{ .base = 1390170251 },
+            .{ .base = 48340596 },
+            .{ .base = 906182202 },
+            .{ .base = 1166087781 },
+            .{ .base = 768344984 },
+            .{ .base = 227323262 },
+            .{ .base = 685196352 },
+            .{ .base = 2064192623 },
+            .{ .base = 1714414769 },
+            .{ .base = 29032547 },
+            .{ .base = 1488381643 },
+            .{ .base = 1970020135 },
+            .{ .base = 1519024566 },
+            .{ .base = 2051668466 },
+            .{ .base = 1600720866 },
+            .{ .base = 1900153206 },
+            .{ .base = 1718027942 },
+            .{ .base = 276270809 },
+            .{ .base = 1339773374 },
+            .{ .base = 195392297 },
+            .{ .base = 841318162 },
+            .{ .base = 1699224190 },
+            .{ .base = 1076785793 },
+            .{ .base = 1454907973 },
+            .{ .base = 1014866394 },
+            .{ .base = 1750822750 },
+            .{ .base = 1822495472 },
+            .{ .base = 1093978658 },
+            .{ .base = 879615453 },
+            .{ .base = 1393702144 },
+            .{ .base = 108908923 },
+            .{ .base = 962570349 },
+            .{ .base = 709775421 },
+            .{ .base = 2111995978 },
+            .{ .base = 285092932 },
+            .{ .base = 397619722 },
+            .{ .base = 1609014482 },
+            .{ .base = 659949517 },
+            .{ .base = 1885618442 },
+            .{ .base = 1824710526 },
+            .{ .base = 1299085204 },
+            .{ .base = 936100785 },
+            .{ .base = 520827140 },
+            .{ .base = 620312849 },
+            .{ .base = 2047885825 },
+            .{ .base = 978533305 },
+            .{ .base = 1946775382 },
+            .{ .base = 601857430 },
+            .{ .base = 740047042 },
+            .{ .base = 381471981 },
+            .{ .base = 1022546171 },
+            .{ .base = 231461701 },
+            .{ .base = 949453038 },
+            .{ .base = 1760012546 },
+            .{ .base = 1001431205 },
+            .{ .base = 1985721884 },
+            .{ .base = 362496126 },
+            .{ .base = 1072063415 },
+            .{ .base = 1805703055 },
+            .{ .base = 1464592628 },
+            .{ .base = 1575835951 },
+            .{ .base = 148056128 },
+            .{ .base = 137268847 },
+            .{ .base = 2103596088 },
+            .{ .base = 697744343 },
+            .{ .base = 1713401932 },
+            .{ .base = 376750884 },
+            .{ .base = 809143779 },
+            .{ .base = 1049455615 },
+            .{ .base = 632625700 },
+            .{ .base = 807876961 },
+            .{ .base = 1562880285 },
+            .{ .base = 1852357218 },
+            .{ .base = 922015029 },
+            .{ .base = 447372891 },
+            .{ .base = 2079119136 },
+            .{ .base = 912719500 },
+            .{ .base = 774560351 },
+            .{ .base = 497454796 },
+            .{ .base = 619235387 },
+            .{ .base = 706466620 },
+            .{ .base = 882008982 },
+            .{ .base = 565010852 },
+            .{ .base = 592337675 },
+            .{ .base = 655117262 },
+            .{ .base = 884092132 },
+            .{ .base = 270108950 },
+            .{ .base = 1949763726 },
+            .{ .base = 697606081 },
+            .{ .base = 1300748201 },
+            .{ .base = 1810616902 },
+            .{ .base = 435316014 },
+            .{ .base = 368704809 },
+            .{ .base = 1442528713 },
+            .{ .base = 1282593222 },
+            .{ .base = 93198331 },
+            .{ .base = 134733192 },
+            .{ .base = 1801674369 },
+            .{ .base = 534323823 },
+            .{ .base = 938602720 },
+            .{ .base = 1074607477 },
+            .{ .base = 875541982 },
+            .{ .base = 66372129 },
+            .{ .base = 1142524867 },
+            .{ .base = 969763024 },
+            .{ .base = 946637414 },
+            .{ .base = 175343990 },
+            .{ .base = 1525911467 },
+            .{ .base = 1050318600 },
+            .{ .base = 380760530 },
+            .{ .base = 1449348672 },
+            .{ .base = 1005575485 },
+            .{ .base = 2063588785 },
+            .{ .base = 674972084 },
+            .{ .base = 2108436524 },
+            .{ .base = 893356039 },
+            .{ .base = 1019050912 },
+            .{ .base = 613043858 },
+            .{ .base = 91628319 },
+            .{ .base = 2009309453 },
+            .{ .base = 1083088969 },
+            .{ .base = 1818785828 },
+            .{ .base = 1286821238 },
+            .{ .base = 699467618 },
+            .{ .base = 749631668 },
+            .{ .base = 770877375 },
+            .{ .base = 249631601 },
+            .{ .base = 544991499 },
+            .{ .base = 684637517 },
+            .{ .base = 359222211 },
+            .{ .base = 822872301 },
+            .{ .base = 1647950332 },
+            .{ .base = 943694053 },
+            .{ .base = 176935082 },
+            .{ .base = 1420812668 },
+            .{ .base = 1381455444 },
+            .{ .base = 1841113426 },
+            .{ .base = 20472289 },
+            .{ .base = 350513012 },
+            .{ .base = 356653030 },
+            .{ .base = 934702406 },
+            .{ .base = 1429726870 },
+            .{ .base = 1313774816 },
+            .{ .base = 2083603396 },
+            .{ .base = 1621579853 },
+            .{ .base = 297777433 },
+            .{ .base = 1327032679 },
+            .{ .base = 236804442 },
+            .{ .base = 1124049858 },
+            .{ .base = 586868056 },
+            .{ .base = 1138629119 },
+            .{ .base = 1519347451 },
+            .{ .base = 81077201 },
+            .{ .base = 345541336 },
+            .{ .base = 651265341 },
+            .{ .base = 59728563 },
+            .{ .base = 358948709 },
+            .{ .base = 507042896 },
+            .{ .base = 1880047717 },
+            .{ .base = 1283992949 },
+            .{ .base = 1160207923 },
+            .{ .base = 1156970394 },
+            .{ .base = 899741613 },
+            .{ .base = 371634830 },
+            .{ .base = 1173318312 },
+            .{ .base = 874882449 },
+            .{ .base = 673660163 },
+            .{ .base = 1848186328 },
+            .{ .base = 72657049 },
+            .{ .base = 1560901624 },
+            .{ .base = 1401932147 },
+            .{ .base = 189804803 },
+            .{ .base = 411440739 },
+            .{ .base = 1574625820 },
+            .{ .base = 1081915707 },
+            .{ .base = 2105952140 },
+            .{ .base = 523882748 },
+            .{ .base = 1422500193 },
+            .{ .base = 1856638950 },
+            .{ .base = 30647298 },
+            .{ .base = 1710158263 },
+            .{ .base = 1551503057 },
+            .{ .base = 1324569125 },
+            .{ .base = 437968825 },
+            .{ .base = 1756652094 },
+            .{ .base = 1718819382 },
+            .{ .base = 1524928392 },
+            .{ .base = 1185691031 },
+            .{ .base = 1892684166 },
+            .{ .base = 1618654309 },
+            .{ .base = 1123517869 },
+            .{ .base = 1993387082 },
+            .{ .base = 1736453246 },
+            .{ .base = 1291384761 },
+            .{ .base = 636444936 },
+            .{ .base = 866180581 },
+            .{ .base = 13156264 },
+            .{ .base = 142725053 },
+            .{ .base = 1806681860 },
+            .{ .base = 1030733522 },
+            .{ .base = 54080257 },
+            .{ .base = 966159572 },
+            .{ .base = 1394946086 },
+            .{ .base = 1815832572 },
+            .{ .base = 1504942179 },
+            .{ .base = 488669629 },
+            .{ .base = 1178069177 },
+            .{ .base = 1799448522 },
+            .{ .base = 172867820 },
+            .{ .base = 1270292186 },
+            .{ .base = 951283935 },
+            .{ .base = 1887518101 },
+            .{ .base = 1846745439 },
+            .{ .base = 1709017086 },
+            .{ .base = 1711285266 },
+            .{ .base = 1288761743 },
+            .{ .base = 1503415680 },
+            .{ .base = 1344015380 },
+            .{ .base = 88069985 },
+            .{ .base = 229795340 },
+            .{ .base = 1408969834 },
+            .{ .base = 1503007656 },
+            .{ .base = 1269640852 },
+            .{ .base = 1468723990 },
+            .{ .base = 138611865 },
+            .{ .base = 1813412269 },
+            .{ .base = 1517604890 },
+            .{ .base = 1401229335 },
+            .{ .base = 1527628785 },
+            .{ .base = 226453100 },
+            .{ .base = 503377806 },
+            .{ .base = 202439504 },
+            .{ .base = 1513908055 },
+            .{ .base = 476169640 },
+            .{ .base = 1655515390 },
+            .{ .base = 1725951924 },
+            .{ .base = 1732883313 },
+            .{ .base = 704066019 },
+            .{ .base = 272259327 },
+            .{ .base = 2034062858 },
+            .{ .base = 925835315 },
+            .{ .base = 1873596690 },
+            .{ .base = 1813723746 },
+            .{ .base = 746495672 },
+            .{ .base = 629640604 },
+            .{ .base = 855754650 },
+            .{ .base = 1238658230 },
+            .{ .base = 239850304 },
+            .{ .base = 1003959909 },
+            .{ .base = 890785399 },
+            .{ .base = 451419495 },
+            .{ .base = 1116488035 },
+            .{ .base = 581167844 },
+            .{ .base = 1971555710 },
+            .{ .base = 2055011768 },
+            .{ .base = 1136180188 },
+            .{ .base = 2112542159 },
+            .{ .base = 1311484416 },
+            .{ .base = 978014324 },
+            .{ .base = 763753997 },
+            .{ .base = 1751664320 },
+            .{ .base = 2103940324 },
+            .{ .base = 955672193 },
+            .{ .base = 756238495 },
+            .{ .base = 2096722120 },
+            .{ .base = 987021792 },
+            .{ .base = 1755162632 },
+            .{ .base = 310888564 },
+            .{ .base = 384066022 },
+            .{ .base = 1652065805 },
+            .{ .base = 106082317 },
+            .{ .base = 1083183424 },
+            .{ .base = 1156901494 },
+            .{ .base = 500424550 },
+            .{ .base = 1364884313 },
+            .{ .base = 71551791 },
+            .{ .base = 779493999 },
+            .{ .base = 1942462591 },
+            .{ .base = 617218833 },
+            .{ .base = 673336372 },
+            .{ .base = 1796860387 },
+            .{ .base = 1533915352 },
+            .{ .base = 64789114 },
+            .{ .base = 416810356 },
+            .{ .base = 2095267421 },
+            .{ .base = 920242538 },
+            .{ .base = 1722548363 },
+            .{ .base = 1058107242 },
+            .{ .base = 922536576 },
+            .{ .base = 1136304207 },
+            .{ .base = 124088538 },
+            .{ .base = 573333708 },
+            .{ .base = 36976248 },
+            .{ .base = 969841392 },
+            .{ .base = 136927577 },
+            .{ .base = 2009672958 },
+            .{ .base = 1376141209 },
+            .{ .base = 1747436950 },
+            .{ .base = 1460002993 },
+            .{ .base = 1643723851 },
+            .{ .base = 295868916 },
+            .{ .base = 1337095652 },
+            .{ .base = 721160394 },
+            .{ .base = 160347937 },
+            .{ .base = 81700179 },
+            .{ .base = 441804617 },
+            .{ .base = 740968408 },
+            .{ .base = 1547005614 },
+            .{ .base = 1633521823 },
+            .{ .base = 738910687 },
+            .{ .base = 1692364289 },
+            .{ .base = 308824732 },
+            .{ .base = 1906472089 },
+            .{ .base = 510218977 },
             .{ .ext = .{ 1, 0, 0, 0, 0, 0 } },
         },
-        .witness_claims = &.{ .{ 75507767, 1610421022, 737086781, 1146187139, 1283689676, 418262922 }, .{ 925996794, 152412128, 983467096, 1523028042, 86096268, 1635606828 }, .{ 1544859103, 468328992, 186032306, 1752495648, 1131959497, 30088268 }, .{ 1844343197, 1450777413, 707785711, 1275949423, 1704538046, 1449816571 }, .{ 1544859103, 468328992, 186032306, 1752495648, 1131959497, 30088268 }, .{ 78930573, 2062053156, 1122727734, 782259085, 495967922, 291584481 } },
-        .quotient_claims = &.{ .{ 561238644, 1238806825, 323286258, 1812495986, 515002565, 1372788916 }, .{ 871616703, 518686763, 1140154942, 1354581856, 1024677297, 1703042630 }, .{ 1987785309, 561961040, 1383095532, 506682271, 2076011445, 303192525 }, .{ 1169005901, 1211537767, 1319336793, 215849784, 1190873865, 1435346187 } },
+        .witness_claims = &.{ .{ 2008555943, 1545499224, 1939912083, 1115537477, 824675705, 692973756 }, .{ 28933860, 1162542615, 991024390, 1251276355, 1284439987, 750738542 }, .{ 1494976752, 188413444, 1406862112, 1153189260, 1047804, 1675560247 }, .{ 46239222, 1715210445, 999541392, 662094464, 405858428, 1840289153 }, .{ 1494976752, 188413444, 1406862112, 1153189260, 1047804, 1675560247 }, .{ 1353834058, 1445612185, 943113531, 280879561, 1718246595, 1733297618 } },
+        .quotient_claims = &.{ .{ 1195470853, 1953960912, 1547544469, 876851486, 1797117878, 1940104253 }, .{ 565196596, 459559119, 1306922354, 925175368, 1767577840, 685283122 }, .{ 506473896, 503803129, 1206816869, 1902168503, 1491129048, 624650196 }, .{ 1971237235, 1096021635, 1521021872, 1056781793, 245372889, 1613248814 } },
         .module_sizes = &.{},
     },
     .invalid = .{
@@ -11693,10 +10710,10 @@ const scenario_68 = Scenario{
                 .cells = &.{},
             },
             .{
-                .commitment = .{ 1851404181, 2024546324, 1886437042, 2025225489, 2085333450, 929591227, 778155642, 1479823408 },
+                .commitment = .{ 1073254811, 2107462023, 428169355, 1418641445, 1508777045, 1804033781, 1972090736, 19875260 },
                 .cells = &.{
                     .{ .base = 0 },
-                    .{ .base = 2 },
+                    .{ .base = 0 },
                 },
             },
             .{
@@ -11709,7 +10726,7 @@ const scenario_68 = Scenario{
                 },
             },
             .{
-                .commitment = .{ 852757147, 487145011, 841712120, 496779226, 937374848, 2110162754, 714582078, 1597749337 },
+                .commitment = .{ 2009916298, 512816662, 2017122031, 509284690, 1472187220, 2072021809, 1197363461, 161958068 },
                 .cells = &.{
                     .{ .base = 0 },
                     .{ .base = 0 },
@@ -11719,16 +10736,16 @@ const scenario_68 = Scenario{
             },
             .{
                 .cells = &.{
-                    .{ .ext = .{ 75507767, 1610421022, 737086781, 1146187139, 1283689676, 418262922 } },
-                    .{ .ext = .{ 925996794, 152412128, 983467096, 1523028042, 86096268, 1635606828 } },
-                    .{ .ext = .{ 1544859103, 468328992, 186032306, 1752495648, 1131959497, 30088268 } },
-                    .{ .ext = .{ 561238644, 1238806825, 323286258, 1812495986, 515002565, 1372788916 } },
-                    .{ .ext = .{ 1844343197, 1450777413, 707785711, 1275949423, 1704538046, 1449816571 } },
-                    .{ .ext = .{ 1544859103, 468328992, 186032306, 1752495648, 1131959497, 30088268 } },
-                    .{ .ext = .{ 78930573, 2062053156, 1122727734, 782259085, 495967922, 291584481 } },
-                    .{ .ext = .{ 871616703, 518686763, 1140154942, 1354581856, 1024677297, 1703042630 } },
-                    .{ .ext = .{ 1987785309, 561961040, 1383095532, 506682271, 2076011445, 303192525 } },
-                    .{ .ext = .{ 1169005901, 1211537767, 1319336793, 215849784, 1190873865, 1435346187 } },
+                    .{ .ext = .{ 2008555943, 1545499224, 1939912083, 1115537477, 824675705, 692973756 } },
+                    .{ .ext = .{ 28933860, 1162542615, 991024390, 1251276355, 1284439987, 750738542 } },
+                    .{ .ext = .{ 1494976752, 188413444, 1406862112, 1153189260, 1047804, 1675560247 } },
+                    .{ .ext = .{ 1195470853, 1953960912, 1547544469, 876851486, 1797117878, 1940104253 } },
+                    .{ .ext = .{ 46239222, 1715210445, 999541392, 662094464, 405858428, 1840289153 } },
+                    .{ .ext = .{ 1494976752, 188413444, 1406862112, 1153189260, 1047804, 1675560247 } },
+                    .{ .ext = .{ 1353834058, 1445612185, 943113531, 280879561, 1718246595, 1733297618 } },
+                    .{ .ext = .{ 565196596, 459559119, 1306922354, 925175368, 1767577840, 685283122 } },
+                    .{ .ext = .{ 506473896, 503803129, 1206816869, 1902168503, 1491129048, 624650196 } },
+                    .{ .ext = .{ 1971237235, 1096021635, 1521021872, 1056781793, 245372889, 1613248814 } },
                 },
             },
         },
@@ -11741,338 +10758,338 @@ const scenario_68 = Scenario{
             .{ .base = 66 },
             .{ .base = 77 },
             .{ .base = 88 },
-            .{ .base = 835071417 },
-            .{ .base = 1867416886 },
-            .{ .base = 456126499 },
-            .{ .base = 1593312723 },
-            .{ .base = 141678876 },
-            .{ .base = 1040236005 },
-            .{ .base = 1682000058 },
-            .{ .base = 702777375 },
-            .{ .base = 177254708 },
-            .{ .base = 1835884517 },
-            .{ .base = 569920292 },
-            .{ .base = 576982584 },
-            .{ .base = 812263731 },
-            .{ .base = 1881516204 },
-            .{ .base = 166824025 },
-            .{ .base = 739315231 },
-            .{ .base = 484439776 },
-            .{ .base = 247590165 },
-            .{ .base = 321400202 },
-            .{ .base = 1629663866 },
-            .{ .base = 685406514 },
-            .{ .base = 1704157519 },
-            .{ .base = 769146153 },
-            .{ .base = 1007872106 },
-            .{ .base = 743655487 },
-            .{ .base = 1852662247 },
-            .{ .base = 889246332 },
-            .{ .base = 1034475284 },
-            .{ .base = 758062643 },
-            .{ .base = 1063598357 },
-            .{ .base = 1272608089 },
-            .{ .base = 574400182 },
-            .{ .base = 552247483 },
-            .{ .base = 408578965 },
-            .{ .base = 151543373 },
-            .{ .base = 1495552731 },
-            .{ .base = 149209495 },
-            .{ .base = 800052565 },
-            .{ .base = 1741262359 },
-            .{ .base = 1916825876 },
-            .{ .base = 1741628858 },
-            .{ .base = 487843828 },
-            .{ .base = 1549060099 },
-            .{ .base = 2055886041 },
-            .{ .base = 1805064007 },
-            .{ .base = 1841227961 },
-            .{ .base = 1913572792 },
-            .{ .base = 812781639 },
-            .{ .base = 61537961 },
-            .{ .base = 2026651446 },
-            .{ .base = 1053558269 },
-            .{ .base = 1998217056 },
-            .{ .base = 516770064 },
-            .{ .base = 750119694 },
-            .{ .base = 1575323749 },
-            .{ .base = 581160128 },
-            .{ .base = 1234053572 },
-            .{ .base = 32785038 },
-            .{ .base = 1092574583 },
-            .{ .base = 940668610 },
-            .{ .base = 342251287 },
-            .{ .base = 1240660469 },
-            .{ .base = 1524762035 },
-            .{ .base = 67223459 },
-            .{ .base = 1395021741 },
-            .{ .base = 793091978 },
-            .{ .base = 2129801996 },
-            .{ .base = 1113662527 },
-            .{ .base = 768460976 },
-            .{ .base = 1159574789 },
-            .{ .base = 365588761 },
-            .{ .base = 965368962 },
-            .{ .base = 1265279995 },
-            .{ .base = 1770132104 },
-            .{ .base = 737144591 },
-            .{ .base = 718423043 },
-            .{ .base = 2056709688 },
-            .{ .base = 246397111 },
-            .{ .base = 1845960033 },
-            .{ .base = 84798436 },
-            .{ .base = 1189840275 },
-            .{ .base = 513575988 },
-            .{ .base = 579379183 },
-            .{ .base = 1619269248 },
-            .{ .base = 503810422 },
-            .{ .base = 143278578 },
-            .{ .base = 1744397368 },
-            .{ .base = 45882884 },
-            .{ .base = 1877585774 },
-            .{ .base = 514105736 },
-            .{ .base = 1632986182 },
-            .{ .base = 1339903481 },
-            .{ .base = 1346716135 },
-            .{ .base = 1608536497 },
-            .{ .base = 153122621 },
-            .{ .base = 958763872 },
-            .{ .base = 629193710 },
-            .{ .base = 1558911447 },
-            .{ .base = 1203058611 },
-            .{ .base = 1586837318 },
-            .{ .base = 1141213106 },
-            .{ .base = 927677159 },
-            .{ .base = 1208746714 },
-            .{ .base = 1640902224 },
-            .{ .base = 658212681 },
-            .{ .base = 1865914834 },
-            .{ .base = 828157109 },
-            .{ .base = 1878292209 },
-            .{ .base = 876569135 },
-            .{ .base = 881912576 },
-            .{ .base = 683461272 },
-            .{ .base = 1053658007 },
-            .{ .base = 2016596785 },
-            .{ .base = 2055109964 },
-            .{ .base = 1028998569 },
-            .{ .base = 2021807700 },
-            .{ .base = 1279185363 },
-            .{ .base = 1573330542 },
-            .{ .base = 1513742023 },
-            .{ .base = 366028833 },
-            .{ .base = 1967925130 },
-            .{ .base = 1952066592 },
-            .{ .base = 2042712997 },
-            .{ .base = 2008269835 },
-            .{ .base = 1386194723 },
-            .{ .base = 1893752310 },
-            .{ .base = 1298316599 },
-            .{ .base = 405440123 },
-            .{ .base = 722321144 },
-            .{ .base = 518755347 },
-            .{ .base = 548456253 },
-            .{ .base = 66441950 },
-            .{ .base = 1132164406 },
-            .{ .base = 614304289 },
-            .{ .base = 1961082144 },
-            .{ .base = 186589898 },
-            .{ .base = 1215049429 },
-            .{ .base = 1464968234 },
-            .{ .base = 1241434135 },
-            .{ .base = 1415401689 },
-            .{ .base = 549591924 },
-            .{ .base = 577993742 },
-            .{ .base = 1241657782 },
-            .{ .base = 1651469213 },
-            .{ .base = 2030435518 },
-            .{ .base = 1467535714 },
-            .{ .base = 757146539 },
-            .{ .base = 1965460183 },
-            .{ .base = 749023031 },
-            .{ .base = 1829671130 },
-            .{ .base = 1173571125 },
-            .{ .base = 1215062784 },
-            .{ .base = 1068037012 },
-            .{ .base = 1138551129 },
-            .{ .base = 1514302922 },
-            .{ .base = 1624377499 },
-            .{ .base = 1039737990 },
-            .{ .base = 1033345007 },
-            .{ .base = 1648048910 },
-            .{ .base = 802962902 },
-            .{ .base = 1512245956 },
-            .{ .base = 1667708699 },
-            .{ .base = 1075736425 },
-            .{ .base = 1468048404 },
-            .{ .base = 1610373464 },
-            .{ .base = 467435896 },
-            .{ .base = 443913041 },
-            .{ .base = 2094586422 },
-            .{ .base = 757464176 },
-            .{ .base = 1237107898 },
-            .{ .base = 147341380 },
-            .{ .base = 1683122952 },
-            .{ .base = 1710947147 },
-            .{ .base = 579208866 },
-            .{ .base = 111759273 },
-            .{ .base = 1610849179 },
-            .{ .base = 104056596 },
-            .{ .base = 569581888 },
-            .{ .base = 1448893679 },
-            .{ .base = 1634324124 },
-            .{ .base = 898947878 },
-            .{ .base = 251931674 },
-            .{ .base = 2009618466 },
-            .{ .base = 551387221 },
-            .{ .base = 829489930 },
-            .{ .base = 548642992 },
-            .{ .base = 74695349 },
-            .{ .base = 1304322113 },
-            .{ .base = 740423468 },
-            .{ .base = 326517576 },
-            .{ .base = 1613922690 },
-            .{ .base = 36230792 },
-            .{ .base = 1638477893 },
-            .{ .base = 1897878529 },
-            .{ .base = 1345706217 },
-            .{ .base = 1890896460 },
-            .{ .base = 2037954796 },
-            .{ .base = 440098558 },
-            .{ .base = 1127820801 },
-            .{ .base = 354590809 },
-            .{ .base = 1924600874 },
-            .{ .base = 1817290838 },
-            .{ .base = 878424320 },
-            .{ .base = 611405861 },
-            .{ .base = 1049259392 },
-            .{ .base = 1949759366 },
-            .{ .base = 1364607484 },
-            .{ .base = 992996827 },
-            .{ .base = 1925895196 },
-            .{ .base = 1961697465 },
-            .{ .base = 1794464255 },
-            .{ .base = 144551273 },
-            .{ .base = 122356099 },
-            .{ .base = 676047767 },
-            .{ .base = 47941668 },
-            .{ .base = 1521728314 },
-            .{ .base = 1620384092 },
-            .{ .base = 804222657 },
-            .{ .base = 1153117442 },
-            .{ .base = 276592337 },
-            .{ .base = 1763030680 },
-            .{ .base = 387901170 },
-            .{ .base = 834324140 },
-            .{ .base = 1294229739 },
-            .{ .base = 1948353527 },
-            .{ .base = 1115137423 },
-            .{ .base = 2054629727 },
-            .{ .base = 150042164 },
-            .{ .base = 1148418272 },
-            .{ .base = 1029643105 },
-            .{ .base = 2088024160 },
-            .{ .base = 171489356 },
-            .{ .base = 1488535202 },
-            .{ .base = 1634975335 },
-            .{ .base = 1503577508 },
-            .{ .base = 1853746660 },
-            .{ .base = 1234790900 },
-            .{ .base = 1263001510 },
-            .{ .base = 129077703 },
-            .{ .base = 428184637 },
-            .{ .base = 19903750 },
-            .{ .base = 1858120926 },
-            .{ .base = 345234714 },
-            .{ .base = 871829952 },
-            .{ .base = 265809585 },
-            .{ .base = 747218497 },
-            .{ .base = 2036316464 },
-            .{ .base = 1424774282 },
-            .{ .base = 376923809 },
-            .{ .base = 1433011195 },
-            .{ .base = 406244368 },
-            .{ .base = 105899141 },
-            .{ .base = 1958058967 },
-            .{ .base = 1629027151 },
-            .{ .base = 425753377 },
-            .{ .base = 1646839386 },
-            .{ .base = 539173948 },
-            .{ .base = 1018486090 },
-            .{ .base = 1932521179 },
-            .{ .base = 679193758 },
-            .{ .base = 1093214025 },
-            .{ .base = 1481576834 },
-            .{ .base = 99533662 },
-            .{ .base = 1220239505 },
-            .{ .base = 1346299421 },
-            .{ .base = 490724608 },
-            .{ .base = 1375334664 },
-            .{ .base = 1062820628 },
-            .{ .base = 180144083 },
-            .{ .base = 1601904555 },
-            .{ .base = 603390881 },
-            .{ .base = 636866670 },
-            .{ .base = 60086188 },
-            .{ .base = 1865973691 },
-            .{ .base = 892000141 },
-            .{ .base = 904984186 },
-            .{ .base = 237755044 },
-            .{ .base = 1559009897 },
-            .{ .base = 348519945 },
-            .{ .base = 979925741 },
-            .{ .base = 321531639 },
-            .{ .base = 1898203617 },
-            .{ .base = 597579746 },
-            .{ .base = 618304107 },
-            .{ .base = 707438925 },
-            .{ .base = 67423537 },
-            .{ .base = 1186457571 },
-            .{ .base = 959504347 },
-            .{ .base = 331592111 },
-            .{ .base = 1059395219 },
-            .{ .base = 2045185374 },
-            .{ .base = 180345358 },
-            .{ .base = 1460043224 },
-            .{ .base = 244547095 },
-            .{ .base = 1658382559 },
-            .{ .base = 1561496900 },
-            .{ .base = 344746918 },
-            .{ .base = 396786013 },
-            .{ .base = 779098635 },
-            .{ .base = 1017768385 },
-            .{ .base = 955479798 },
-            .{ .base = 2035503147 },
-            .{ .base = 2125947835 },
-            .{ .base = 289458019 },
-            .{ .base = 1597475743 },
-            .{ .base = 219573231 },
-            .{ .base = 101173303 },
-            .{ .base = 1974458286 },
-            .{ .base = 1950250158 },
-            .{ .base = 1173371697 },
-            .{ .base = 365101631 },
-            .{ .base = 1651662632 },
-            .{ .base = 352089483 },
-            .{ .base = 1111772906 },
-            .{ .base = 891430280 },
-            .{ .base = 1102844839 },
-            .{ .base = 370681119 },
-            .{ .base = 1015512094 },
-            .{ .base = 849008286 },
-            .{ .base = 353466651 },
-            .{ .base = 318337270 },
-            .{ .base = 984197009 },
-            .{ .base = 1034471446 },
-            .{ .base = 873932285 },
-            .{ .base = 1927645070 },
-            .{ .base = 1291650768 },
-            .{ .base = 813021533 },
-            .{ .base = 870615459 },
+            .{ .base = 1267483553 },
+            .{ .base = 2091165414 },
+            .{ .base = 305722396 },
+            .{ .base = 228952029 },
+            .{ .base = 1495767593 },
+            .{ .base = 1312201187 },
+            .{ .base = 919780104 },
+            .{ .base = 366575469 },
+            .{ .base = 864860542 },
+            .{ .base = 529803891 },
+            .{ .base = 538987643 },
+            .{ .base = 727530610 },
+            .{ .base = 1642608921 },
+            .{ .base = 240767116 },
+            .{ .base = 1390170251 },
+            .{ .base = 48340596 },
+            .{ .base = 906182202 },
+            .{ .base = 1166087781 },
+            .{ .base = 768344984 },
+            .{ .base = 227323262 },
+            .{ .base = 685196352 },
+            .{ .base = 2064192623 },
+            .{ .base = 1714414769 },
+            .{ .base = 29032547 },
+            .{ .base = 1488381643 },
+            .{ .base = 1970020135 },
+            .{ .base = 1519024566 },
+            .{ .base = 2051668466 },
+            .{ .base = 1600720866 },
+            .{ .base = 1900153206 },
+            .{ .base = 1718027942 },
+            .{ .base = 276270809 },
+            .{ .base = 1339773374 },
+            .{ .base = 195392297 },
+            .{ .base = 841318162 },
+            .{ .base = 1699224190 },
+            .{ .base = 1076785793 },
+            .{ .base = 1454907973 },
+            .{ .base = 1014866394 },
+            .{ .base = 1750822750 },
+            .{ .base = 1822495472 },
+            .{ .base = 1093978658 },
+            .{ .base = 879615453 },
+            .{ .base = 1393702144 },
+            .{ .base = 108908923 },
+            .{ .base = 962570349 },
+            .{ .base = 709775421 },
+            .{ .base = 2111995978 },
+            .{ .base = 285092932 },
+            .{ .base = 397619722 },
+            .{ .base = 1609014482 },
+            .{ .base = 659949517 },
+            .{ .base = 1885618442 },
+            .{ .base = 1824710526 },
+            .{ .base = 1299085204 },
+            .{ .base = 936100785 },
+            .{ .base = 520827140 },
+            .{ .base = 620312849 },
+            .{ .base = 2047885825 },
+            .{ .base = 978533305 },
+            .{ .base = 1946775382 },
+            .{ .base = 601857430 },
+            .{ .base = 740047042 },
+            .{ .base = 381471981 },
+            .{ .base = 1022546171 },
+            .{ .base = 231461701 },
+            .{ .base = 949453038 },
+            .{ .base = 1760012546 },
+            .{ .base = 1001431205 },
+            .{ .base = 1985721884 },
+            .{ .base = 362496126 },
+            .{ .base = 1072063415 },
+            .{ .base = 1805703055 },
+            .{ .base = 1464592628 },
+            .{ .base = 1575835951 },
+            .{ .base = 148056128 },
+            .{ .base = 137268847 },
+            .{ .base = 2103596088 },
+            .{ .base = 697744343 },
+            .{ .base = 1713401932 },
+            .{ .base = 376750884 },
+            .{ .base = 809143779 },
+            .{ .base = 1049455615 },
+            .{ .base = 632625700 },
+            .{ .base = 807876961 },
+            .{ .base = 1562880285 },
+            .{ .base = 1852357218 },
+            .{ .base = 922015029 },
+            .{ .base = 447372891 },
+            .{ .base = 2079119136 },
+            .{ .base = 912719500 },
+            .{ .base = 774560351 },
+            .{ .base = 497454796 },
+            .{ .base = 619235387 },
+            .{ .base = 706466620 },
+            .{ .base = 882008982 },
+            .{ .base = 565010852 },
+            .{ .base = 592337675 },
+            .{ .base = 655117262 },
+            .{ .base = 884092132 },
+            .{ .base = 270108950 },
+            .{ .base = 1949763726 },
+            .{ .base = 697606081 },
+            .{ .base = 1300748201 },
+            .{ .base = 1810616902 },
+            .{ .base = 435316014 },
+            .{ .base = 368704809 },
+            .{ .base = 1442528713 },
+            .{ .base = 1282593222 },
+            .{ .base = 93198331 },
+            .{ .base = 134733192 },
+            .{ .base = 1801674369 },
+            .{ .base = 534323823 },
+            .{ .base = 938602720 },
+            .{ .base = 1074607477 },
+            .{ .base = 875541982 },
+            .{ .base = 66372129 },
+            .{ .base = 1142524867 },
+            .{ .base = 969763024 },
+            .{ .base = 946637414 },
+            .{ .base = 175343990 },
+            .{ .base = 1525911467 },
+            .{ .base = 1050318600 },
+            .{ .base = 380760530 },
+            .{ .base = 1449348672 },
+            .{ .base = 1005575485 },
+            .{ .base = 2063588785 },
+            .{ .base = 674972084 },
+            .{ .base = 2108436524 },
+            .{ .base = 893356039 },
+            .{ .base = 1019050912 },
+            .{ .base = 613043858 },
+            .{ .base = 91628319 },
+            .{ .base = 2009309453 },
+            .{ .base = 1083088969 },
+            .{ .base = 1818785828 },
+            .{ .base = 1286821238 },
+            .{ .base = 699467618 },
+            .{ .base = 749631668 },
+            .{ .base = 770877375 },
+            .{ .base = 249631601 },
+            .{ .base = 544991499 },
+            .{ .base = 684637517 },
+            .{ .base = 359222211 },
+            .{ .base = 822872301 },
+            .{ .base = 1647950332 },
+            .{ .base = 943694053 },
+            .{ .base = 176935082 },
+            .{ .base = 1420812668 },
+            .{ .base = 1381455444 },
+            .{ .base = 1841113426 },
+            .{ .base = 20472289 },
+            .{ .base = 350513012 },
+            .{ .base = 356653030 },
+            .{ .base = 934702406 },
+            .{ .base = 1429726870 },
+            .{ .base = 1313774816 },
+            .{ .base = 2083603396 },
+            .{ .base = 1621579853 },
+            .{ .base = 297777433 },
+            .{ .base = 1327032679 },
+            .{ .base = 236804442 },
+            .{ .base = 1124049858 },
+            .{ .base = 586868056 },
+            .{ .base = 1138629119 },
+            .{ .base = 1519347451 },
+            .{ .base = 81077201 },
+            .{ .base = 345541336 },
+            .{ .base = 651265341 },
+            .{ .base = 59728563 },
+            .{ .base = 358948709 },
+            .{ .base = 507042896 },
+            .{ .base = 1880047717 },
+            .{ .base = 1283992949 },
+            .{ .base = 1160207923 },
+            .{ .base = 1156970394 },
+            .{ .base = 899741613 },
+            .{ .base = 371634830 },
+            .{ .base = 1173318312 },
+            .{ .base = 874882449 },
+            .{ .base = 673660163 },
+            .{ .base = 1848186328 },
+            .{ .base = 72657049 },
+            .{ .base = 1560901624 },
+            .{ .base = 1401932147 },
+            .{ .base = 189804803 },
+            .{ .base = 411440739 },
+            .{ .base = 1574625820 },
+            .{ .base = 1081915707 },
+            .{ .base = 2105952140 },
+            .{ .base = 523882748 },
+            .{ .base = 1422500193 },
+            .{ .base = 1856638950 },
+            .{ .base = 30647298 },
+            .{ .base = 1710158263 },
+            .{ .base = 1551503057 },
+            .{ .base = 1324569125 },
+            .{ .base = 437968825 },
+            .{ .base = 1756652094 },
+            .{ .base = 1718819382 },
+            .{ .base = 1524928392 },
+            .{ .base = 1185691031 },
+            .{ .base = 1892684166 },
+            .{ .base = 1618654309 },
+            .{ .base = 1123517869 },
+            .{ .base = 1993387082 },
+            .{ .base = 1736453246 },
+            .{ .base = 1291384761 },
+            .{ .base = 636444936 },
+            .{ .base = 866180581 },
+            .{ .base = 13156264 },
+            .{ .base = 142725053 },
+            .{ .base = 1806681860 },
+            .{ .base = 1030733522 },
+            .{ .base = 54080257 },
+            .{ .base = 966159572 },
+            .{ .base = 1394946086 },
+            .{ .base = 1815832572 },
+            .{ .base = 1504942179 },
+            .{ .base = 488669629 },
+            .{ .base = 1178069177 },
+            .{ .base = 1799448522 },
+            .{ .base = 172867820 },
+            .{ .base = 1270292186 },
+            .{ .base = 951283935 },
+            .{ .base = 1887518101 },
+            .{ .base = 1846745439 },
+            .{ .base = 1709017086 },
+            .{ .base = 1711285266 },
+            .{ .base = 1288761743 },
+            .{ .base = 1503415680 },
+            .{ .base = 1344015380 },
+            .{ .base = 88069985 },
+            .{ .base = 229795340 },
+            .{ .base = 1408969834 },
+            .{ .base = 1503007656 },
+            .{ .base = 1269640852 },
+            .{ .base = 1468723990 },
+            .{ .base = 138611865 },
+            .{ .base = 1813412269 },
+            .{ .base = 1517604890 },
+            .{ .base = 1401229335 },
+            .{ .base = 1527628785 },
+            .{ .base = 226453100 },
+            .{ .base = 503377806 },
+            .{ .base = 202439504 },
+            .{ .base = 1513908055 },
+            .{ .base = 476169640 },
+            .{ .base = 1655515390 },
+            .{ .base = 1725951924 },
+            .{ .base = 1732883313 },
+            .{ .base = 704066019 },
+            .{ .base = 272259327 },
+            .{ .base = 2034062858 },
+            .{ .base = 925835315 },
+            .{ .base = 1873596690 },
+            .{ .base = 1813723746 },
+            .{ .base = 746495672 },
+            .{ .base = 629640604 },
+            .{ .base = 855754650 },
+            .{ .base = 1238658230 },
+            .{ .base = 239850304 },
+            .{ .base = 1003959909 },
+            .{ .base = 890785399 },
+            .{ .base = 451419495 },
+            .{ .base = 1116488035 },
+            .{ .base = 581167844 },
+            .{ .base = 1971555710 },
+            .{ .base = 2055011768 },
+            .{ .base = 1136180188 },
+            .{ .base = 2112542159 },
+            .{ .base = 1311484416 },
+            .{ .base = 978014324 },
+            .{ .base = 763753997 },
+            .{ .base = 1751664320 },
+            .{ .base = 2103940324 },
+            .{ .base = 955672193 },
+            .{ .base = 756238495 },
+            .{ .base = 2096722120 },
+            .{ .base = 987021792 },
+            .{ .base = 1755162632 },
+            .{ .base = 310888564 },
+            .{ .base = 384066022 },
+            .{ .base = 1652065805 },
+            .{ .base = 106082317 },
+            .{ .base = 1083183424 },
+            .{ .base = 1156901494 },
+            .{ .base = 500424550 },
+            .{ .base = 1364884313 },
+            .{ .base = 71551791 },
+            .{ .base = 779493999 },
+            .{ .base = 1942462591 },
+            .{ .base = 617218833 },
+            .{ .base = 673336372 },
+            .{ .base = 1796860387 },
+            .{ .base = 1533915352 },
+            .{ .base = 64789114 },
+            .{ .base = 416810356 },
+            .{ .base = 2095267421 },
+            .{ .base = 920242538 },
+            .{ .base = 1722548363 },
+            .{ .base = 1058107242 },
+            .{ .base = 922536576 },
+            .{ .base = 1136304207 },
+            .{ .base = 124088538 },
+            .{ .base = 573333708 },
+            .{ .base = 36976248 },
+            .{ .base = 969841392 },
+            .{ .base = 136927577 },
+            .{ .base = 2009672958 },
+            .{ .base = 1376141209 },
+            .{ .base = 1747436950 },
+            .{ .base = 1460002993 },
+            .{ .base = 1643723851 },
+            .{ .base = 295868916 },
+            .{ .base = 1337095652 },
+            .{ .base = 721160394 },
+            .{ .base = 160347937 },
+            .{ .base = 81700179 },
+            .{ .base = 441804617 },
+            .{ .base = 740968408 },
+            .{ .base = 1547005614 },
+            .{ .base = 1633521823 },
+            .{ .base = 738910687 },
+            .{ .base = 1692364289 },
+            .{ .base = 308824732 },
+            .{ .base = 1906472089 },
+            .{ .base = 510218977 },
             .{ .ext = .{ 1, 0, 0, 0, 0, 0 } },
         },
-        .witness_claims = &.{ .{ 75507767, 1610421022, 737086781, 1146187139, 1283689676, 418262922 }, .{ 925996794, 152412128, 983467096, 1523028042, 86096268, 1635606828 }, .{ 1544859103, 468328992, 186032306, 1752495648, 1131959497, 30088268 }, .{ 1844343197, 1450777413, 707785711, 1275949423, 1704538046, 1449816571 }, .{ 1544859103, 468328992, 186032306, 1752495648, 1131959497, 30088268 }, .{ 78930573, 2062053156, 1122727734, 782259085, 495967922, 291584481 } },
-        .quotient_claims = &.{ .{ 561238644, 1238806825, 323286258, 1812495986, 515002565, 1372788916 }, .{ 871616703, 518686763, 1140154942, 1354581856, 1024677297, 1703042630 }, .{ 1987785309, 561961040, 1383095532, 506682271, 2076011445, 303192525 }, .{ 1169005901, 1211537767, 1319336793, 215849784, 1190873865, 1435346187 } },
+        .witness_claims = &.{ .{ 2008555943, 1545499224, 1939912083, 1115537477, 824675705, 692973756 }, .{ 28933860, 1162542615, 991024390, 1251276355, 1284439987, 750738542 }, .{ 1494976752, 188413444, 1406862112, 1153189260, 1047804, 1675560247 }, .{ 46239222, 1715210445, 999541392, 662094464, 405858428, 1840289153 }, .{ 1494976752, 188413444, 1406862112, 1153189260, 1047804, 1675560247 }, .{ 1353834058, 1445612185, 943113531, 280879561, 1718246595, 1733297618 } },
+        .quotient_claims = &.{ .{ 1195470853, 1953960912, 1547544469, 876851486, 1797117878, 1940104253 }, .{ 565196596, 459559119, 1306922354, 925175368, 1767577840, 685283122 }, .{ 506473896, 503803129, 1206816869, 1902168503, 1491129048, 624650196 }, .{ 1971237235, 1096021635, 1521021872, 1056781793, 245372889, 1613248814 } },
         .module_sizes = &.{},
     },
 };

@@ -30,10 +30,12 @@ runs:
           commit_sha="${{ github.event.pull_request.head.sha }}"
           last_sha="${{ github.event.before }}"
         else
-          # Use HEAD instead of GITHUB_SHA because we want the latest commit hash
-          # after a potential CHANGELOG.md update commit pushed earlier in the run.
-          commit_sha="HEAD"
-          last_sha="HEAD~1"
+          # Use GITHUB_SHA (the commit that triggered the workflow), NOT HEAD: the
+          # release tag and the docker image must be pinned to that commit, even when
+          # a CHANGELOG.md update commit was pushed onto the branch earlier in the run
+          # (which would otherwise make HEAD resolve to the changelog commit instead).
+          commit_sha="${{ github.sha }}"
+          last_sha="${{ github.sha }}~1"
         fi
 
         COMMIT_TAG=$(git rev-parse --short=7 "${commit_sha}")

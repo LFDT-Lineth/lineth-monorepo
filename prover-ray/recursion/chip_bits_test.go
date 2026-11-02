@@ -41,7 +41,7 @@ func bitsInputs() []Cell {
 // shifted values and bits, and prove.
 func TestBitsChip(t *testing.T) {
 	m, outs := bitsProgram(true)
-	p, err := m.Compile()
+	p, err := m.Compile(testPCSOpts...)
 	require.NoError(t, err)
 	r, err := p.Execute(bitsInputs())
 	require.NoError(t, err)
@@ -90,7 +90,7 @@ func TestBitsChipRejects(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			m, _ := bitsProgram(tamper.check)
-			p, err := m.Compile()
+			p, err := m.Compile(testPCSOpts...)
 			require.NoError(t, err)
 			r, err := p.Execute(bitsInputs())
 			require.NoError(t, err)

@@ -1,4 +1,4 @@
-type Address = u64
+type Address = u32
 type Instruction = u32
 type Register = u5
 
@@ -27,7 +27,7 @@ type DoubleWordMO = u63
 type UnsignedWord = u32
 type UnsignedDoubleWord = u64
 
-type Length = u64
+type Length = u32
 type Offset = u64
 
 // Unified semantic compute op (see compute_ops.zkc).

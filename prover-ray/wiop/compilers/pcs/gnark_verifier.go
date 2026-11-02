@@ -23,12 +23,12 @@ func (a *OpeningVerifierAction) CheckGnark(api frontend.API, run *wiop.GnarkRunt
 	}
 	// The circuit's FRI layout is structural, while column manifests are
 	// prover-chosen witness data: only all-Present manifests are supported.
-	if !a.c.elisionDisabled {
-		panic("pcs: CheckGnark: requires Compile with CompileOptions{DisableColumnElision: true}")
+	if a.c.elisionEnabled {
+		panic("pcs: CheckGnark: all-Present manifests only: compile without WithColumnElision")
 	}
 	// The circuit has one input tree per batch; the prover must too.
 	if !a.c.rootDedupDisabled {
-		panic("pcs: CheckGnark: requires Compile with CompileOptions{DisableRootDedup: true}")
+		panic("pcs: CheckGnark: requires Compile with WithoutRootDedup")
 	}
 	proof := run.PCSOpeningProof
 	batches := CommittedBatches(run.System)
@@ -49,7 +49,8 @@ func (a *OpeningVerifierAction) CheckGnark(api frontend.API, run *wiop.GnarkRunt
 	foldAlphas = append(foldAlphas, fs.RandomFext())
 
 	fs.UpdateExt(proof.FRIProof.FinalPoly...)
-	queryPositions := fs.RandomManyIntegers(int(pcs.Params.NumQueries), effectiveNWith(staticSizeOf, batches, manifests))
+	queryPositions := fs.RandomManyIntegers(int(pcs.Params.NumQueries),
+		a.c.effectiveNWith(staticSizeOf, batches, manifests))
 
 	pcs.VerifyGnark(api, fri.GnarkVerifyInputs{
 		Roots:          a.c.collectRootsGnark(run, batches),
@@ -104,7 +105,7 @@ func recoverBatchClaimsGnark(run *wiop.GnarkRuntime, batches []BatchRef, manifes
 	)
 
 	for i, b := range batches {
-		layouts[i], shapes[i] = getLayoutWith(b.Round, staticSizeOf, manifests[i])
+		layouts[i], shapes[i] = getLayoutWith(b.Round, staticSizeOf, manifests[i], configOf(sys).moduleGroups)
 		shifts[i] = initializeBatchShift(shapes[i])
 		claims[i] = initializeGnarkBatchClaims(shapes[i])
 		batchOf[b.Round] = i

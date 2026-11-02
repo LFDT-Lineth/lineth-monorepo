@@ -3,7 +3,7 @@ pragma solidity ^0.8.33;
 
 /**
  * @title Contract to fill space in storage to maintain storage layout.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract StorageFiller39 {

@@ -33,13 +33,14 @@ covers blocks 10-11), disambiguating multiple samples for the same guest program
 | `*-getZkRollupAggregationProofV1.request.json` | `RollupAggregationProofPrivateInput` | `rollup_aggregation.py` | `run_rollup_aggregation_guest` (input) |
 | `*-getZkRollupAggregationProofV1.response.json` | `FinalizationSubmission` | `l1_rollup.py` | `run_rollup_aggregation_guest` (output) |
 
-**Guest output vs prover output.** A guest emits its public-input tuple. The
-l2-execution response includes `l2L1Messages` in its public inputs and the
-revealed `filteredAddresses` preimage; senders are committed by `txFromsHash`
-in the execution PI and reconstructed from the rollup's block inputs. Rollup roots and filtered addresses are public-input
-lists. The `proof` bytes are attached by the zkVM/prover layer,
-not the guest, so they are placeholders (`0x`) in these fixtures; a response
-equals the guest output plus `proof`. The aggregation response is a
+**Guest output vs prover output.** A guest emits its public-input tuple. Message
+hashes are included in execution and rollup public inputs, and `filteredAddresses`
+is a public-input list at every layer, distinct and sorted ascending by byte value.
+Senders are committed by `txFromsHash` in the execution PI
+and reconstructed from the rollup's block inputs. Rollup emits the ordered message list;
+aggregation emits roots as public-input lists. The `proof` bytes are attached by the zkVM/prover layer,
+not the guest, so they are placeholders (`0x`) in these fixtures. The JSON response
+also carries host metadata such as `startBlockNumber`. The aggregation response is a
 `FinalizationSubmission`: it carries `l2MessagingBlocksOffsets` in the
 public inputs, which L1 consumes directly for finalization. The aggregation
 proof is the final SNARK-wrapped proof, verified on L1; its own VK is configured
@@ -57,6 +58,10 @@ recovery). Derivable duplication is deliberately kept off the wire: no top-level
 `endBlockNumber` (it is in `publicInputs`), no `endShnarf` echo on the rollup
 request (only `parentShnarf` is sent; the guest recomputes `endShnarf` and
 returns it in the response PI), and no `chainId` on the aggregation request.
+
+The rollup request's blob chunk carries the real EIP-4844 `kzgCommitment` and
+`kzgProof` of its `blobBytes`, and its `chunkHash` is that commitment's versioned
+hash; calldata chunks leave both fields empty.
 
 ## Running the tests locally
 

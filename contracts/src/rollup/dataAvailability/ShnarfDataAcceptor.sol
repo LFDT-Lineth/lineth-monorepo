@@ -6,7 +6,7 @@ import { ShnarfDataAcceptorBase } from "./ShnarfDataAcceptorBase.sol";
 
 /**
  * @title Contract to manage L2 shnarf data submission on L1 for rollup proof verification.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract ShnarfDataAcceptor is IAcceptShnarfData, ShnarfDataAcceptorBase {

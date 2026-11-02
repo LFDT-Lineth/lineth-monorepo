@@ -1,5 +1,5 @@
 /*
- * Copyright Consensys Software Inc.
+ * Copyright Consensys Incorporated
  *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
@@ -10,8 +10,8 @@ package lineth.utils;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import java.time.Duration;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import kotlin.time.Instant;
 import linea.blob.BlobCompressor;
 import linea.blob.BlobCompressorSelectorByTimestamp;
@@ -40,7 +40,7 @@ public class CachingTransactionCompressor implements TransactionCompressor {
     compressedSizeCache =
         CacheBuilder.newBuilder()
             .maximumSize(cacheSize)
-            .expireAfterAccess(30, TimeUnit.MINUTES)
+            .expireAfterAccess(Duration.ofMinutes(30))
             .build();
   }
 

@@ -172,13 +172,16 @@ class RollupProofGeneratingCoordinatorTest {
     val request = rollupProverClient.requests.first()
     assertThat(request.startBlockNumber).isEqualTo(1UL)
     assertThat(request.endBlockNumber).isEqualTo(6UL)
-    assertThat(request.startOffset).isEqualTo(0)
+    assertThat(request.parentDataTailTakeBytes).isEqualTo(0)
+    assertThat(request.boundaryPrevDataRollingHash).isNull()
     assertThat(request.chunks).hasSize(1)
-    assertThat(request.chunks.first()).isEqualTo(fakeChunkHash)
+    val chunk = request.chunks.first()
+    assertThat(chunk.chunkHash).isEqualTo(fakeChunkHash)
+    assertThat(chunk.isCalldata).isFalse()
+    // partial chunk is zero-padded to a full blob
+    assertThat(chunk.blobBytes).hasSize(Constants.Eip4844BlobSize)
+    assertThat(chunk.calldataBytes).isEmpty()
     assertThat(request.parentDataRollingHash).isEqualTo(genesisDataRollingHash)
-    assertThat(request.opaquePrefixBytes).isEmpty()
-    // partial chunk has segmentSize * 2 bytes used; suffix pads to BLOB_SIZE
-    assertThat(request.opaqueSuffixBytes).hasSize(Constants.Eip4844BlobSize - segmentSize * conflationsPerRollupProof)
     assertThat(request.l2Executions).hasSize(2)
     assertThat(request.l2Executions[0].startBlockNumber).isEqualTo(1UL)
     assertThat(request.l2Executions[0].endBlockNumber).isEqualTo(3UL)
@@ -259,7 +262,6 @@ class RollupProofGeneratingCoordinatorTest {
     val request = rollupProverClient.requests.first()
     // One full chunk sealed, no partial — endOffset on the full chunk is BLOB_SIZE
     assertThat(request.chunks).hasSize(1)
-    assertThat(request.opaqueSuffixBytes).isEmpty()
     assertThat(handledProofs).hasSize(1)
     assertThat(handledProofs.first().second.endOffset).isEqualTo(Constants.Eip4844BlobSize)
   }

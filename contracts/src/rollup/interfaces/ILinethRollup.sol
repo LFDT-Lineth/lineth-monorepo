@@ -4,7 +4,7 @@ pragma solidity ^0.8.33;
 import { ILinethRollupBase } from "./ILinethRollupBase.sol";
 /**
  * @title LinethRollup interface for current functions, structs, events and errors.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 interface ILinethRollup is ILinethRollupBase {

@@ -62,7 +62,7 @@ Every public/external function, event, and error MUST have NatSpec:
 - `@notice` on every public/external function
 - `@param` for every parameter (in signature order)
 - `@return` for every return value (named)
-- `@author Consensys Software Inc.` and `@custom:security-contact security-report@linea.build` on every contract/interface
+- `@author Consensys Incorporated` and `@custom:security-contact security-report@linea.build` on every contract/interface
 - `@dev` for non-obvious implementation details
 - `DEPRECATED` in NatSpec for deprecated items
 

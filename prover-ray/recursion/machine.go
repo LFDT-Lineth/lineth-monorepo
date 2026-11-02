@@ -5,11 +5,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
 )
 
 // Module names of the chips.
@@ -165,13 +161,13 @@ type Program struct {
 }
 
 // Compile builds the chips' modules, their setup (precomputed) columns,
-// constraints and bus accesses, the bus, and runs prover-ray's compiler
-// passes down to the PCS. The machine must not be modified afterwards.
+// constraints and bus accesses, the bus, and runs prover-ray's full compiler
+// pipeline down to the PCS. The machine must not be modified afterwards.
 //
 // Rounds: the chips' witness columns are committed in round 0; the coins α
 // and γ of the memory, the tables and the permutations are drawn in round 1;
 // their sums are claimed in round 2.
-func (m *Machine) Compile() (*Program, error) {
+func (m *Machine) Compile(opts ...compilers.Option) (*Program, error) {
 	sys := wiop.NewSystemf("recursion")
 	witnessRound := sys.NewRound()
 	coinRound := witnessRound.EnsureNext()
@@ -196,11 +192,9 @@ func (m *Machine) Compile() (*Program, error) {
 	p.Tables = bus.tables.build(sys, coinRound)
 	p.P2 = bus.p2.build(sys, coinRound)
 
-	lookuptologderivsum.Compile(sys)
-	logderivativesum.Compile(sys)
-	localvanishing.Compile(sys)
-	global.Compile(sys)
-	pcs.Compile(sys)
+	if err := compilers.CompileFull(sys, opts...); err != nil {
+		return nil, fmt.Errorf("recursion: %w", err)
+	}
 	return p, nil
 }
 

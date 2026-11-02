@@ -5,7 +5,6 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/require"
 )
 
@@ -53,12 +52,12 @@ func rampVec(n int, start uint64) *wiop.ConcreteVector {
 
 func (s *elisionSystem) assign(rt *wiop.Runtime) {
 	rt.AssignColumn(s.a, rampVec(4, 10))
-	rt.AssignColumn(s.b, wioptest.ConstVec(4, 0))
+	rt.AssignColumn(s.b, baseVec(4, 0))
 	rt.AssignColumn(s.c, rampVec(4, 10))
 	rt.AssignColumn(s.d, rampVec(4, 10))
 	rt.AssignColumn(s.g, rampVec(4, 20))
 	rt.AssignColumn(s.h, rampVec(4, 20))
-	rt.AssignColumn(s.z, wioptest.ConstVec(4, 0))
+	rt.AssignColumn(s.z, baseVec(4, 0))
 }
 
 // manifestCells returns round 0's manifest cells: Compile appends them after
@@ -84,7 +83,7 @@ func (s *elisionSystem) prove() (wiop.Proof, wiop.PublicInput) {
 
 func TestColumnElisionEndToEnd(t *testing.T) {
 	s := newElisionSystem()
-	Compile(s.sys)
+	Compile(s.sys, WithColumnElision())
 
 	proof, pub := s.prove()
 	require.Equal(t, ColumnManifest{
@@ -99,13 +98,44 @@ func TestColumnElisionEndToEnd(t *testing.T) {
 	require.NoError(t, s.sys.Verify(proof, pub))
 }
 
-func TestColumnElisionDisabled(t *testing.T) {
+// TestColumnElisionOffByDefault checks that an option-less Compile commits
+// every column as Present: elision is opt-in.
+func TestColumnElisionOffByDefault(t *testing.T) {
 	s := newElisionSystem()
-	Compile(s.sys, CompileOptions{DisableColumnElision: true})
+	Compile(s.sys)
 
 	proof, pub := s.prove()
 	require.Equal(t, allPresentManifest(7), s.manifestOf(proof))
 	require.NoError(t, s.sys.Verify(proof, pub))
+}
+
+// TestColumnElision_Preconfigured checks that a preconfigured WithColumnElision
+// reaches an option-less Compile, and that it cannot be selected once Compile
+// consumed a compile without elision.
+func TestColumnElision_Preconfigured(t *testing.T) {
+	t.Run("preconfigured", func(t *testing.T) {
+		s := newElisionSystem()
+		require.NoError(t, Configure(s.sys, WithColumnElision()))
+		Compile(s.sys)
+
+		proof, pub := s.prove()
+		require.Equal(t, ColumnManifest{
+			ManifestPresent,  // a
+			ManifestZero,     // b
+			ManifestAlias(0), // c -> a
+			ManifestPresent,  // d: opened at shift 1, a is not
+			ManifestPresent,  // g
+			ManifestAlias(4), // h -> g
+			ManifestZero,     // z
+		}, s.manifestOf(proof), "elision must stay enabled")
+		require.NoError(t, s.sys.Verify(proof, pub))
+	})
+	t.Run("after consumption", func(t *testing.T) {
+		s := newElisionSystem()
+		Compile(s.sys)
+		require.ErrorContains(t, Configure(s.sys, WithColumnElision()), "consumed compile without column elision",
+			"elision cannot be enabled after the PCS pass committed without it")
+	})
 }
 
 // The elided columns' claim cells are not FRI-bound, so the verifier must pin
@@ -115,7 +145,7 @@ func TestColumnElisionRejectsTamperedElidedClaims(t *testing.T) {
 
 	t.Run("zero column claims non-zero", func(t *testing.T) {
 		s := newElisionSystem()
-		Compile(s.sys)
+		Compile(s.sys, WithColumnElision())
 		proof, pub := s.prove()
 		proof.Cells[s.le.EvaluationClaims[1].Context.ID] = one // b
 		require.Error(t, s.sys.Verify(proof, pub))
@@ -123,7 +153,7 @@ func TestColumnElisionRejectsTamperedElidedClaims(t *testing.T) {
 
 	t.Run("alias claims differ from target", func(t *testing.T) {
 		s := newElisionSystem()
-		Compile(s.sys)
+		Compile(s.sys, WithColumnElision())
 		proof, pub := s.prove()
 		proof.Cells[s.le.EvaluationClaims[2].Context.ID] = one // c
 		require.Error(t, s.sys.Verify(proof, pub))
@@ -131,7 +161,7 @@ func TestColumnElisionRejectsTamperedElidedClaims(t *testing.T) {
 
 	t.Run("shifted alias claims differ from target", func(t *testing.T) {
 		s := newElisionSystem()
-		Compile(s.sys)
+		Compile(s.sys, WithColumnElision())
 		proof, pub := s.prove()
 		proof.Cells[s.le.EvaluationClaims[6].Context.ID] = one // h at shift 1
 		require.Error(t, s.sys.Verify(proof, pub))
@@ -145,7 +175,7 @@ func TestColumnElisionRejectsTamperedManifest(t *testing.T) {
 
 	t.Run("alias target out of range", func(t *testing.T) {
 		s := newElisionSystem()
-		Compile(s.sys)
+		Compile(s.sys, WithColumnElision())
 		proof, pub := s.prove()
 		setCode(s, proof, 2, ManifestAlias(9))
 		require.Error(t, s.sys.Verify(proof, pub))
@@ -153,7 +183,7 @@ func TestColumnElisionRejectsTamperedManifest(t *testing.T) {
 
 	t.Run("forward alias", func(t *testing.T) {
 		s := newElisionSystem()
-		Compile(s.sys)
+		Compile(s.sys, WithColumnElision())
 		proof, pub := s.prove()
 		setCode(s, proof, 0, ManifestAlias(3))
 		require.Error(t, s.sys.Verify(proof, pub))
@@ -161,7 +191,7 @@ func TestColumnElisionRejectsTamperedManifest(t *testing.T) {
 
 	t.Run("alias of an elided column", func(t *testing.T) {
 		s := newElisionSystem()
-		Compile(s.sys)
+		Compile(s.sys, WithColumnElision())
 		proof, pub := s.prove()
 		setCode(s, proof, 6, ManifestAlias(1)) // z -> b (Zero)
 		require.Error(t, s.sys.Verify(proof, pub))
@@ -169,7 +199,7 @@ func TestColumnElisionRejectsTamperedManifest(t *testing.T) {
 
 	t.Run("alias whose shift is not opened on the target", func(t *testing.T) {
 		s := newElisionSystem()
-		Compile(s.sys)
+		Compile(s.sys, WithColumnElision())
 		proof, pub := s.prove()
 		setCode(s, proof, 3, ManifestAlias(0)) // d (shift 1) -> a (shift 0 only)
 		require.Error(t, s.sys.Verify(proof, pub))
@@ -177,7 +207,7 @@ func TestColumnElisionRejectsTamperedManifest(t *testing.T) {
 
 	t.Run("present column declared zero", func(t *testing.T) {
 		s := newElisionSystem()
-		Compile(s.sys)
+		Compile(s.sys, WithColumnElision())
 		proof, pub := s.prove()
 		// The committed rows still contain a; the verifier's narrower layout no
 		// longer matches the opened rows, and the claim pin fails too.
@@ -187,7 +217,7 @@ func TestColumnElisionRejectsTamperedManifest(t *testing.T) {
 
 	t.Run("elided column declared present", func(t *testing.T) {
 		s := newElisionSystem()
-		Compile(s.sys)
+		Compile(s.sys, WithColumnElision())
 		proof, pub := s.prove()
 		setCode(s, proof, 1, ManifestPresent) // b was committed as Zero
 		require.Error(t, s.sys.Verify(proof, pub))
@@ -195,7 +225,7 @@ func TestColumnElisionRejectsTamperedManifest(t *testing.T) {
 
 	t.Run("every column elided", func(t *testing.T) {
 		s := newElisionSystem()
-		Compile(s.sys)
+		Compile(s.sys, WithColumnElision())
 		proof, pub := s.prove()
 		for i := range s.r0.Columns {
 			setCode(s, proof, i, ManifestZero)
@@ -215,11 +245,11 @@ func TestColumnElisionKeepsOneColumn(t *testing.T) {
 	zeta := r1.NewCoinField(sys.Context.Childf("zeta"))
 	le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{x.View(), y.View()}, zeta)
 	r1.RegisterAction(&selfAssignLagrange{le: le})
-	Compile(sys)
+	Compile(sys, WithColumnElision())
 
 	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
-		rt.AssignColumn(x, wioptest.ConstVec(4, 0))
-		rt.AssignColumn(y, wioptest.ConstVec(4, 0))
+		rt.AssignColumn(x, baseVec(4, 0))
+		rt.AssignColumn(y, baseVec(4, 0))
 	})
 	cells := r0.Cells[len(r0.Cells)-2:]
 	xCode := proof.Cells[cells[0].Context.ID].AsBase()
@@ -243,11 +273,11 @@ func TestColumnElisionKeepsAnOpenedColumn(t *testing.T) {
 	zeta := r1.NewCoinField(sys.Context.Childf("zeta"))
 	le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{y.View()}, zeta)
 	r1.RegisterAction(&selfAssignLagrange{le: le})
-	Compile(sys)
+	Compile(sys, WithColumnElision())
 
 	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
-		rt.AssignColumn(x, wioptest.ConstVec(4, 0))
-		rt.AssignColumn(y, wioptest.ConstVec(4, 0))
+		rt.AssignColumn(x, baseVec(4, 0))
+		rt.AssignColumn(y, baseVec(4, 0))
 	})
 	cells := r0.Cells[len(r0.Cells)-2:]
 	xCode := proof.Cells[cells[0].Context.ID].AsBase()
@@ -270,11 +300,11 @@ func TestColumnElisionShrinksTopSize(t *testing.T) {
 	zeta := r1.NewCoinField(sys.Context.Childf("zeta"))
 	le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{x.View(), y.View()}, zeta)
 	r1.RegisterAction(&selfAssignLagrange{le: le})
-	Compile(sys)
+	Compile(sys, WithColumnElision())
 
 	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
 		rt.AssignColumn(x, rampVec(4, 1))
-		rt.AssignColumn(y, wioptest.ConstVec(16, 0))
+		rt.AssignColumn(y, baseVec(16, 0))
 	})
 	require.NoError(t, sys.Verify(proof, pub))
 }

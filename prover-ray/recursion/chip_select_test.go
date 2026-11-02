@@ -36,7 +36,7 @@ func selectProgram(check bool) (m *Machine, in []Cell, outs [2]int, zero int) {
 
 func TestSelectChip(t *testing.T) {
 	m, in, outs, _ := selectProgram(true)
-	p, err := m.Compile()
+	p, err := m.Compile(testPCSOpts...)
 	require.NoError(t, err)
 	r, err := p.Execute(in)
 	require.NoError(t, err)
@@ -71,7 +71,7 @@ func TestSelectChipRejects(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			m, in, outs, zero := selectProgram(false)
-			p, err := m.Compile()
+			p, err := m.Compile(testPCSOpts...)
 			require.NoError(t, err)
 			r, err := p.Execute(in)
 			require.NoError(t, err)

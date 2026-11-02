@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       image-tag-suffix:
-        description: 'Custom image tag suffix, i.e. docker image tag would be [semver]-[YYYYMMDD]-[commit]-[suffix], if not given, would be [semver]-[YYYYMMDD]-[commit]'
+        description: 'Custom docker image tag suffix, i.e. docker image tag would be [semver]-[YYYYMMDD]-[commit]-[suffix], if not given, would be [semver]-[YYYYMMDD]-[commit]'
         required: false
         type: string
         default: ''
@@ -31,8 +31,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.ref_name }}
-          fetch-depth: 2   # need at least 2 commits so HEAD~1 resolves later would not fail on compute-version-tags
+          # No `ref` override: check out github.sha (the commit that triggered the
+          # workflow) so the computed docker tag embeds that commit's short SHA, not the
+          # branch tip (which may be a later CHANGELOG.md update commit).
+          fetch-depth: 2   # need at least 2 commits so github.sha~1 resolves later would not fail on compute-version-tags
 
       - name: Compute version tags
         id: compute_version_tags

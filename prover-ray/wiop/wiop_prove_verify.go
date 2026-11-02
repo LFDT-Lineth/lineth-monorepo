@@ -87,6 +87,14 @@ func (sys *System) Prove(assign func(rt *Runtime), proveOpts ...ProveOptions) (P
 			a.Run(rt)
 		}
 
+		// The dynamic sizes are final once this round's actions have run:
+		// none may be below its module's minimum (see Module.MinRuntimeSize).
+		if rt.currentRound.ID == sys.DynamicSizeRound {
+			if err := rt.CheckMinRuntimeSizes(); err != nil {
+				panic(err)
+			}
+		}
+
 		if rt.currentRound.ID == len(sys.Rounds)-1 {
 			break
 		}
@@ -175,8 +183,9 @@ func (sys *System) Prove(assign func(rt *Runtime), proveOpts ...ProveOptions) (P
 // actions read the re-derived coins and the cells.
 //
 // Verify also checks that the provided dynamic-module sizes are non-zero powers
-// of two no greater than [ColumnSizeMaxSupported], and that the proof carries
-// exactly one size per dynamic module.
+// of two no greater than [ColumnSizeMaxSupported] and no smaller than the
+// module's [Module.MinRuntimeSize], and that the proof carries exactly one size
+// per dynamic module.
 //
 // It returns an error if the proof contains a cell that the system does not
 // declare, or that the replay never consumed.
@@ -305,6 +314,13 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 		rt.dynamicSizes[k] = v
 	}
 
+	// Below its minimum, a module's shifts could coincide modulo its size, and
+	// the proof would not have the shape the verifier expects
+	// (Module.MinRuntimeSize).
+	if err := sys.checkMinRuntimeSizes(rt.dynamicSizes); err != nil {
+		return err
+	}
+
 	// Reject sizes for modules that are not dynamic modules of the system. This
 	// is checked against sys.Modules and not rt.dynamicSizes, because the latter
 	// was seeded from proof.DynamicSizes above and would accept anything.
@@ -329,6 +345,63 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 	return nil
 }
 
+// UnreducedQueries returns every query of the System that no compiler pass
+// has consumed yet ([Query.IsReduced] is false), in a canonical order: per
+// module — vanishings, range checks, non-native queries — then system-wide —
+// Lagrange evaluations, table relations, log-derivative sums, grand products,
+// message buses.
+//
+// After the full compiler pipeline every query must be reduced: an unreduced
+// query is a predicate no verifier action ever checks. compilers.CompileFull
+// enforces this on return; standalone pass sequences may use this to audit
+// their result.
+func (sys *System) UnreducedQueries() []Query {
+	var out []Query
+	for _, m := range sys.Modules {
+		for _, q := range m.Vanishings {
+			if !q.IsReduced() {
+				out = append(out, q)
+			}
+		}
+		for _, q := range m.RangeChecks {
+			if !q.IsReduced() {
+				out = append(out, q)
+			}
+		}
+		for _, q := range m.NonNatives {
+			if !q.IsReduced() {
+				out = append(out, q)
+			}
+		}
+	}
+	for _, q := range sys.LagrangeEvals {
+		if !q.IsReduced() {
+			out = append(out, q)
+		}
+	}
+	for _, q := range sys.TableRelations {
+		if !q.IsReduced() {
+			out = append(out, q)
+		}
+	}
+	for _, q := range sys.LogDerivativeSums {
+		if !q.IsReduced() {
+			out = append(out, q)
+		}
+	}
+	for _, q := range sys.GrandProducts {
+		if !q.IsReduced() {
+			out = append(out, q)
+		}
+	}
+	for _, q := range sys.MessageBuses {
+		if !q.IsReduced() {
+			out = append(out, q)
+		}
+	}
+	return out
+}
+
 // checkUnreducedQueries calls [Query.Check] on every query that has not yet
 // been consumed by a compiler pass (i.e. [Query.IsReduced] returns false). It
 // is intended for pre-compilation testing: it directly validates that the
@@ -336,60 +409,19 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 //
 // Returns the first error encountered, or nil if all unreduced queries pass.
 func (sys *System) checkUnreducedQueries(rt *Runtime) error {
-	check := func(q Query) error {
-		if q.IsReduced() {
-			return nil
-		}
-		return q.Check(rt)
-	}
-
-	for _, m := range sys.Modules {
-		for _, q := range m.Vanishings {
-			if err := check(q); err != nil {
-				return err
-			}
-		}
-		for _, q := range m.RangeChecks {
-			if err := check(q); err != nil {
-				return err
-			}
-		}
-		for _, q := range m.NonNatives {
-			if err := check(q); err != nil {
-				return err
-			}
-		}
-	}
-	for _, q := range sys.LagrangeEvals {
-		if err := check(q); err != nil {
-			return err
-		}
-	}
 	// The table relations share one B-side set cache for the whole pass. On
 	// lookup-heavy systems this is the difference between rebuilding a
 	// range-check target once and rebuilding it once per query that ranges over
 	// it, which is otherwise the bulk of this function's cost.
 	inclCache := newInclusionSetCache()
-	for _, q := range sys.TableRelations {
-		if q.IsReduced() {
+	for _, q := range sys.UnreducedQueries() {
+		if tr, ok := q.(*TableRelationQuery); ok {
+			if err := tr.checkWith(rt, inclCache); err != nil {
+				return err
+			}
 			continue
 		}
-		if err := q.checkWith(rt, inclCache); err != nil {
-			return err
-		}
-	}
-	for _, q := range sys.LogDerivativeSums {
-		if err := check(q); err != nil {
-			return err
-		}
-	}
-	for _, q := range sys.GrandProducts {
-		if err := check(q); err != nil {
-			return err
-		}
-	}
-	for _, q := range sys.MessageBuses {
-		if err := check(q); err != nil {
+		if err := q.Check(rt); err != nil {
 			return err
 		}
 	}

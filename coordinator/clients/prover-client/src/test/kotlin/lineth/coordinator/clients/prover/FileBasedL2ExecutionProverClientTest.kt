@@ -52,8 +52,8 @@ class FileBasedL2ExecutionProverClientTest {
     )
     client = L2ExecutionProverClient(
       transport = transport,
-      programId = L2_EXECUTION_PROGRAM_ID,
-      provingSystemVersion = PROVING_SYSTEM_VERSION,
+      guestProgramId = L2_EXECUTION_PROGRAM_ID,
+      provingSystem = PROVING_SYSTEM_VERSION,
       l2MessageServiceAddress = L2_MESSAGE_SERVICE_ADDRESS,
       forkName = FORK_NAME,
     )
@@ -64,8 +64,8 @@ class FileBasedL2ExecutionProverClientTest {
     assertThatThrownBy {
       L2ExecutionProverClient(
         transport = transport,
-        programId = L2_EXECUTION_PROGRAM_ID,
-        provingSystemVersion = PROVING_SYSTEM_VERSION,
+        guestProgramId = L2_EXECUTION_PROGRAM_ID,
+        provingSystem = PROVING_SYSTEM_VERSION,
         l2MessageServiceAddress = "",
         forkName = FORK_NAME,
       )

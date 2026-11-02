@@ -13,7 +13,7 @@ import { MessageServiceBase } from "../MessageServiceBase.sol";
 
 /**
  * @title Contract to manage the L2 Linea Token.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 contract L2LineaToken is

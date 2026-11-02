@@ -7,7 +7,7 @@ import { IZkEvmV2 } from "./interfaces/IZkEvmV2.sol";
 
 /**
  * @title Contract to manage cross-chain L1 rollup proving.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract ZkEvmV2 is AccessControlUpgradeable, L1MessageServiceBase, IZkEvmV2 {

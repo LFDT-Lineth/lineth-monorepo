@@ -68,7 +68,7 @@ REPO_ROOT=$(cd "$SCRIPT_DIR/../../../.." && pwd)
 cd "$REPO_ROOT" || exit 2
 
 ZKC_MAIN="arithmetization/src/main/riscv/main.zkc"
-GUEST_DIR="riscv-guests/l2-execution"
+GUEST_DIR="riscv-guests/l2_execution"
 GUEST_ELF="$GUEST_DIR/zig-out/bin/evm_execution_guest"
 GUEST_SSZ="$GUEST_DIR/test/testdata/stateless_input.ssz"
 # Must stay a ./-relative package path: these helpers build in GOPATH mode

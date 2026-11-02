@@ -106,7 +106,7 @@ riscv-test() {
 ```
 
 For the accelerated l2-execution guest helper (`agp`), see the
-[l2-execution guest README](../../../riscv-guests/l2-execution/README.md).
+[l2-execution guest README](../../../riscv-guests/l2_execution/README.md).
 
 ## Usage examples
 
@@ -233,6 +233,7 @@ riscv-test compile <name>.<ext> VERIFY_ELF=true
 | `PROGRAM_ORIGIN`             | `SP`                                                                                   | Program start address                                                                                                                         |
 | `IN_ORIGIN`                  | `PROGRAM_ORIGIN + 0x08000000`                                                          | Input region start address; `_in_start` is generated from this value                                                                          |
 | `HEAP_ORIGIN`                | `IN_ORIGIN + 0x40000000`                                                               | Heap start address; `_heap_start` is generated from this value                                                                                |
+| `HEAP_LENGTH`                | `0x10000000`                                                                           | Heap size, matching the guests' `GUEST_HEAP_SIZE`; `_heap_end` is generated from it and the linker asserts `_heap_end <= 2^32`                |
 | `OBJDUMP`                    | `false`                                                                                | Set to `true` to generate an objdump file for each compiled ELF                                                                               |
 | `VERIFY_ELF`                 | `false`                                                                                | Set to `true` to verify ELF entry point, origins, lengths, stack and heap symbols match default ones                                          |
 | `ACT4_BUILD_MODE`            | `host`                                                                                 | Build ACT4 ELFs with `host` or `docker`                                                                                                       |
@@ -273,8 +274,8 @@ The ELF-to-JSON helper writes sparse memory blobs in this shape:
 
 ```json
 {
-  "entry_point_and_blobs_count": "0x<entry_point:u64>_<blobs_count:u64>",
-  "blobs_offset_and_size": "0x<blob0_offset:u64>_<blob0_size:u64>____<blob1_offset:u64>_<blob1_size:u64>____...",
+  "entry_point_and_blobs_count": "0x<entry_point:u32>_<blobs_count:u32>",
+  "blobs_offset_and_size": "0x<blob0_offset:u32>_<blob0_size:u32>____<blob1_offset:u32>_<blob1_size:u32>____...",
   "blobs_data": "0x<blob0_bytes>____<blob1_bytes>____..."
 }
 ```
@@ -357,9 +358,32 @@ ___________________________________________ 0x00800000 ≡ SP * = _stack_start =
 ___________________________________________ 0x08800000 ≡ _program_end = IN_ORIGIN * = _in_start
  IN:      ↓ 1 GiB: IN_LENGTH
 ___________________________________________ 0x48800000 ≡ _in_end = HEAP_ORIGIN * = _heap_start
- HEAP:    ↓ until address-space overflows
+ HEAP:    ↓ 256 MiB HEAP_LENGTH *
+___________________________________________ 0x58800000 ≡ _heap_end
+ (unused)
+___________________________________________ 0x100000000 = 2^32, end of the guest address space
 
 * = Parameters to optionally set, others are derived (all have default values).
 ≡ = Default values.
 The order of memory regions is fixed.
 ```
+
+### Guest address space
+
+Guest addresses are 32-bit: every byte a guest loads, stores or jumps to must lie below 2^32. This is a
+contract for guest toolchains, not only a property of the default layout:
+
+- Registers and ALU results stay 64-bit, as RV64 requires. Only effective addresses are narrowed: the
+  `rs1 + imm` of a load, store or `jalr`, and the `pc`.
+- An access whose last byte reaches 2^32 or above makes the trace unprovable. This includes a misaligned
+  access that starts below 2^32 and crosses it, a sign-extended pointer such as `lui x, 0x80000`
+  (`0xFFFFFFFF80000000` on RV64), and a negative offset below address 0. Nothing wraps around.
+- The ELF loader rejects an entry point or a segment outside the 32-bit address space.
+- The linker script asserts `_heap_end <= 2^32`, so a layout change that pushes the heap past 4 GiB fails at
+  link time.
+- The guests use the `medium` (`medany`) code model, which reaches a linked symbol only within ±2 GiB of the
+  code that references it. With code at `0x00800000`, symbols such as `_heap_start` must therefore lie
+  below about 2 GiB. Memory above that is only reachable through pointers computed at run time.
+
+`HEAP_LENGTH` must match the guests' `GUEST_HEAP_SIZE`: the guest allocator owns that buffer, and an
+allocation beyond it fails inside the guest rather than touching a higher address.

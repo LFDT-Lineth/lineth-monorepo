@@ -5,7 +5,7 @@ import { YieldProviderVendor } from "./interfaces/YieldTypes.sol";
 
 /**
  * @title Shared storage layout for the YieldManager and YieldProvider contracts.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @dev Exposes the ERC-7201 storage schema consumed by `YieldManager` and the YieldProviders that it
         delegatecalls into.
  * @dev It is expected that the YieldManager performs the lion's share of state mutations, and YieldProviders
