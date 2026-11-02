@@ -38,6 +38,13 @@ fn truncate(arena: Allocator, block_rlp: []const u8, chain: u64) !truncation.Tru
     return truncation.truncateBlockRlp(arena, scratch.allocator(), block_rlp, chain);
 }
 
+/// The payload of `truncated_blocks`, allocated from `output`.
+fn encode(output: Allocator, truncated_blocks: []const truncation.TruncatedBlock) ![]u8 {
+    var scratch = std.heap.ArenaAllocator.init(gpa);
+    defer scratch.deinit();
+    return truncation.encodeBlocks(output, scratch.allocator(), truncated_blocks);
+}
+
 const chain_id = 59144;
 
 /// The block whose transaction list is `transactions`, under the default header committing to them.
@@ -365,7 +372,7 @@ test "the payload of truncated blocks has the specified RLP layout" {
         "a0" ++ "bb" ** 32 ++ // prevRandao
         "c3" ++ "820102" ++ // transactions: one string of the two bytes 0102
         "d5" ++ "94" ++ "cc" ** 20); // froms: one address
-    const payload = try truncation.encodeBlocks(gpa, &one_block);
+    const payload = try encode(gpa, &one_block);
     defer gpa.free(payload);
     try std.testing.expectEqualSlices(u8, &expected, payload);
 
@@ -387,11 +394,11 @@ test "the payload of truncated blocks has the specified RLP layout" {
         "a0" ++ "ee" ** 32 ++ // prevRandao
         "f83b" ++ "03" ++ "b838" ++ "07" ** 56 ++ // transactions: the byte 03 and a string of 56 bytes
         "ea" ++ "94" ++ "f1" ** 20 ++ "94" ++ "f2" ** 20); // froms: two addresses
-    const payload_two = try truncation.encodeBlocks(gpa, &two_blocks);
+    const payload_two = try encode(gpa, &two_blocks);
     defer gpa.free(payload_two);
     try std.testing.expectEqualSlices(u8, &expected_two, payload_two);
 
-    const none = try truncation.encodeBlocks(gpa, &.{});
+    const none = try encode(gpa, &.{});
     defer gpa.free(none);
     try std.testing.expectEqualSlices(u8, lit("c0"), none);
 
@@ -404,7 +411,7 @@ test "the payload of truncated blocks has the specified RLP layout" {
         .transactions = &.{},
         .froms = &.{},
     }};
-    const empty_payload = try truncation.encodeBlocks(gpa, &empty_block);
+    const empty_payload = try encode(gpa, &empty_block);
     defer gpa.free(empty_payload);
     try std.testing.expectEqualSlices(u8, lit("f847" ++ "f845" ++ "80" ++ "a0" ++ "aa" ** 32 ++ "a0" ++ "bb" ** 32 ++ "c0" ++ "c0"), empty_payload);
 }
@@ -420,7 +427,7 @@ test "the payload of a block is its truncation encoded" {
         try blocks.signed(a, legacy_tx, chain_id, secret),
     });
     const truncated = try truncate(a, block, chain_id);
-    const payload = try truncation.encodeBlocks(a, &.{truncated});
+    const payload = try encode(a, &.{truncated});
 
     // [[timestamp, hash, randao, [tx strings], [froms]]] built with the test-side encoder.
     const transaction_items = [_]Item{ rlp.string(truncated.transactions[0]), rlp.string(truncated.transactions[1]) };
@@ -516,7 +523,7 @@ test "random blocks truncate to what their fields and signers say" {
             for (expected.froms, truncated.froms) |want, got| try std.testing.expectEqualSlices(u8, &want, &got);
             entry.* = expected.entry;
         }
-        try std.testing.expectEqualSlices(u8, try payloadOf(a, entries), try truncation.encodeBlocks(a, truncated_blocks));
+        try std.testing.expectEqualSlices(u8, try payloadOf(a, entries), try encode(a, truncated_blocks));
     }
 }
 
@@ -565,7 +572,7 @@ test "large blocks keep the transactions and senders in order" {
     const expected = try expectedOf(a, try blocks.withTransactions(a, .{}, items), txs, secrets);
     for (expected.stripped, truncated.transactions) |want, got| try std.testing.expectEqualSlices(u8, want, got);
     for (expected.froms, truncated.froms) |want, got| try std.testing.expectEqualSlices(u8, &want, &got);
-    try std.testing.expectEqualSlices(u8, try payloadOf(a, &.{expected.entry}), try truncation.encodeBlocks(a, &.{truncated}));
+    try std.testing.expectEqualSlices(u8, try payloadOf(a, &.{expected.entry}), try encode(a, &.{truncated}));
 }
 
 // Malformed blocks. Each starts from a well-formed block and alters one thing.

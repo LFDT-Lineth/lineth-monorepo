@@ -43,7 +43,9 @@ pub fn conflationPayload(a: Allocator, random: std.Random, count: usize) ![]u8 {
         const committed = try blocks.withTransactions(a, header, items);
         slot.* = try truncation.truncateBlockRlp(a, scratch.allocator(), try blocks.block(a, committed, items, &.{}), chain_id);
     }
-    return truncation.encodeBlocks(a, truncated);
+    var payload_scratch = std.heap.ArenaAllocator.init(a);
+    defer payload_scratch.deinit();
+    return truncation.encodeBlocks(a, payload_scratch.allocator(), truncated);
 }
 
 /// The payload of a fixed conflation of three blocks.

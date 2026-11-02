@@ -111,12 +111,9 @@ pub fn truncateBlockRlp(output: Allocator, scratch: Allocator, block_rlp: []cons
 }
 
 /// The canonical payload of a conflation's truncated blocks, in the RLP list layout
-/// `[[timestamp, blockHash, prevRandao, [transaction…], [from…]]…]`.
-pub fn encodeBlocks(allocator: Allocator, blocks: []const TruncatedBlock) Allocator.Error![]u8 {
-    var arena = std.heap.ArenaAllocator.init(allocator);
-    defer arena.deinit();
-    const scratch = arena.allocator();
-
+/// `[[timestamp, blockHash, prevRandao, [transaction…], [from…]]…]`. The result is allocated from
+/// `output`; `scratch` holds the encodings of the nested lists and can be reset afterwards.
+pub fn encodeBlocks(output: Allocator, scratch: Allocator, blocks: []const TruncatedBlock) Allocator.Error![]u8 {
     var all_blocks: Items = .{ .allocator = scratch };
     for (blocks) |block| {
         var entry: Items = .{ .allocator = scratch };
@@ -131,7 +128,7 @@ pub fn encodeBlocks(allocator: Allocator, blocks: []const TruncatedBlock) Alloca
         try entry.list(froms);
         try all_blocks.list(entry);
     }
-    return allocator.dupe(u8, try all_blocks.finish());
+    return output.dupe(u8, try all_blocks.finish());
 }
 
 /// The transaction without its signature and chain ID: the legacy field list, or the type byte

@@ -43,7 +43,7 @@ fn describe(output: std.mem.Allocator, scratch: std.mem.Allocator, block_rlp: []
     const block = truncation.truncateBlockRlp(output, scratch, block_rlp, chain_id) catch |err| {
         return std.fmt.allocPrint(output, "reject {s}\n", .{@errorName(err)});
     };
-    const payload = try truncation.encodeBlocks(output, &.{block});
+    const payload = try truncation.encodeBlocks(output, scratch, &.{block});
     return std.fmt.allocPrint(output, "ok {d} {x} {x} {x} {x}\n", .{
         block.timestamp,
         &block.block_hash,

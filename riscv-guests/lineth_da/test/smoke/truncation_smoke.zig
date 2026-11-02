@@ -35,7 +35,7 @@ fn smokeMain() callconv(.c) noreturn {
         error.SenderRecoveryFailed => 4,
         error.OutOfMemory => 5,
     });
-    const payload = truncation.encodeBlocks(allocator, &.{block}) catch accelerators.zkvm_exit(5);
+    const payload = truncation.encodeBlocks(allocator, allocator, &.{block}) catch accelerators.zkvm_exit(5);
 
     var blob: [blob_payload.blob_len]u8 = undefined;
     var stream: [blob_payload.stream_len]u8 = undefined;
