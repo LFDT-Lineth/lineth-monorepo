@@ -57,7 +57,8 @@ fn findToolCandidates(
 
 pub fn build(b: *std.Build) void {
     const tc = resolveToolchain(b);
-    const ctt = b.dependency("constantine", .{});
+    // Fetched on demand, by builds that use one of the archives.
+    const ctt = b.lazyDependency("constantine", .{}) orelse return;
     // Build the rv64 archive in place and the host archive into Zig output dirs.
     const tree = ctt.path(".");
 

@@ -99,7 +99,7 @@ func shouldUseNoOp(instrType, rd, localOp, opcode uint32) bool {
 			return false
 		}
 		switch localOp {
-		case rtypeOpKeccak, rtypeOpPoseidon2, rtypeOpWriteOutput:
+		case rtypeOpKeccak, rtypeOpPoseidon2:
 			return false
 		default:
 			return true
@@ -166,38 +166,37 @@ func itypeOpForRd(localOp, rd uint32) uint32 {
 
 // R-type semantic micro-op local indices. Unified value = computeRTypeBase + index.
 const (
-	rtypeOpAddWB       = 0
-	rtypeOpSubWB       = 1
-	rtypeOpSllWB       = 2
-	rtypeOpSltWB       = 3
-	rtypeOpSltuWB      = 4
-	rtypeOpXorWB       = 5
-	rtypeOpSrlWB       = 6
-	rtypeOpSraWB       = 7
-	rtypeOpOrWB        = 8
-	rtypeOpAndWB       = 9
-	rtypeOpMulWB       = 10
-	rtypeOpMulhWB      = 11
-	rtypeOpMulhsuWB    = 12
-	rtypeOpMulhuWB     = 13
-	rtypeOpDivWB       = 14
-	rtypeOpDivuWB      = 15
-	rtypeOpRemWB       = 16
-	rtypeOpRemuWB      = 17
-	rtypeOpAddwWB      = 18
-	rtypeOpSubwWB      = 19
-	rtypeOpSllwWB      = 20
-	rtypeOpSrlwWB      = 21
-	rtypeOpSrawWB      = 22
-	rtypeOpMulwWB      = 23
-	rtypeOpDivwWB      = 24
-	rtypeOpDivuwWB     = 25
-	rtypeOpRemwWB      = 26
-	rtypeOpRemuwWB     = 27
-	rtypeOpKeccak      = 28
-	rtypeOpPoseidon2   = 29
-	rtypeOpWriteOutput = 30
-	rtypeInvalid       = 63
+	rtypeOpAddWB     = 0
+	rtypeOpSubWB     = 1
+	rtypeOpSllWB     = 2
+	rtypeOpSltWB     = 3
+	rtypeOpSltuWB    = 4
+	rtypeOpXorWB     = 5
+	rtypeOpSrlWB     = 6
+	rtypeOpSraWB     = 7
+	rtypeOpOrWB      = 8
+	rtypeOpAndWB     = 9
+	rtypeOpMulWB     = 10
+	rtypeOpMulhWB    = 11
+	rtypeOpMulhsuWB  = 12
+	rtypeOpMulhuWB   = 13
+	rtypeOpDivWB     = 14
+	rtypeOpDivuWB    = 15
+	rtypeOpRemWB     = 16
+	rtypeOpRemuWB    = 17
+	rtypeOpAddwWB    = 18
+	rtypeOpSubwWB    = 19
+	rtypeOpSllwWB    = 20
+	rtypeOpSrlwWB    = 21
+	rtypeOpSrawWB    = 22
+	rtypeOpMulwWB    = 23
+	rtypeOpDivwWB    = 24
+	rtypeOpDivuwWB   = 25
+	rtypeOpRemwWB    = 26
+	rtypeOpRemuwWB   = 27
+	rtypeOpKeccak    = 28
+	rtypeOpPoseidon2 = 29
+	rtypeInvalid     = 63
 )
 
 func rtypeOpForRd(localOp, rd uint32) uint32 {
@@ -513,8 +512,6 @@ func decodeRTypeSemantic(opcode, funct3, funct7 uint32) (computeOp uint32) {
 			return rtypeOpKeccak
 		case 0b001:
 			return rtypeOpPoseidon2
-		case 0b010:
-			return rtypeOpWriteOutput
 		default:
 			return rtypeInvalid
 		}

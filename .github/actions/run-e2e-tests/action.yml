@@ -59,6 +59,10 @@ inputs:
       "start-env-with-tracing-v2-ci" is used.
     required: false
     default: ''
+  jest-config:
+    description: 'Optional absolute path to a jest config replacing e2e/jest.riscv.config.ts (riscv only)'
+    required: false
+    default: ''
   dockerhub_username:
     required: false
     default: ''
@@ -164,6 +168,7 @@ runs:
       env:
         E2E_STACK: ${{ inputs.stack }}
         RISCV_PROVER_MODE: ${{ inputs.riscv_prover_mode }}
+        E2E_JEST_CONFIG: ${{ inputs.jest-config }}
       run: make e2e-ci-test
 
     - name: Show e2e tests result

@@ -4,10 +4,12 @@
     .fingerprint = 0x2b75fa46e7118444,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
-        // Consensys fork of Constantine with the guest shims and rv64 freestanding build.
+        // Consensys fork of Constantine with the guest shims and rv64 freestanding build. Lazy: only a
+        // build that needs an archive fetches it.
         .constantine = .{
             .url = "git+https://github.com/Consensys-Incorporated/constantine#1ad824d5f5eb9f26e2e46f086b56586b8cdacbee",
             .hash = "N-V-__8AANg56QYpt2yF5fKW084TpZeHPpLbhCqTHC5-gIgN",
+            .lazy = true,
         },
     },
     .paths = .{

@@ -7,6 +7,7 @@
 - *(riscv-guest)* Adding fallback precompile implementations (#3931)
 - *(riscv-guest)* RiscV guests release workflow (#4102)
 - *(riscv-guest)* Setting up the release workflow (#4119)
+- *(riscv-guest)* Refactoring to enable further Rollup GP development (#4342)
 
 ### 🐛 Bug Fixes
 
