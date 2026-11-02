@@ -1,7 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 import { execFile } from "node:child_process";
-import { readdir, readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { posix } from "node:path";
 import { promisify } from "node:util";
 import { encodeFunctionData, keccak256, stringToHex } from "viem";
 
@@ -13,7 +12,9 @@ import type { Hex, TransactionReceipt } from "viem";
 
 const context = createTestContext();
 const client = context.l2PublicClient({ type: L2RpcEndpoint.Sequencer });
-const executionDir = resolve(__dirname, "../../tmp/local/prover/riscv/execution");
+// prover-ray (root) writes owner-only files, so read them inside its container; the host user can't.
+const PROVER_CONTAINER = "prover-ray";
+const executionDir = "/data/prover/riscv/execution";
 const execFileAsync = promisify(execFile);
 
 // Must match the prover-ray config mounted by `make start-env-with-riscv`.
@@ -98,25 +99,29 @@ class ProverFailureError extends Error {
 
 const retryUnlessProverFailed = (error: unknown) => !(error instanceof ProverFailureError);
 
-async function readdirIfExists(dir: string): Promise<string[]> {
-  try {
-    return await readdir(dir);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
-    throw error;
-  }
+async function proverExec(script: string, path: string): Promise<string> {
+  const { stdout } = await execFileAsync("docker", ["exec", PROVER_CONTAINER, "sh", "-c", script, "sh", path], {
+    timeout: 10_000,
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  return stdout;
+}
+
+async function readdirIfExists(subdir: string): Promise<string[]> {
+  const stdout = await proverExec('if [ -d "$1" ]; then ls -1A "$1"; fi', posix.join(executionDir, subdir));
+  return stdout.split("\n").filter((name) => name.length > 0);
+}
+
+async function readExecutionFile(subdir: string, name: string): Promise<string> {
+  return proverExec('cat "$1"', posix.join(executionDir, subdir, name));
 }
 
 async function throwOnProverFailure(): Promise<void> {
-  const failed = (await readdirIfExists(resolve(executionDir, "requests-done"))).filter((name) =>
-    FAILURE_SUFFIX.test(name),
-  );
+  const failed = (await readdirIfExists("requests-done")).filter((name) => FAILURE_SUFFIX.test(name));
   if (failed.length === 0) return;
 
   const responseName = failed[0].replace(FAILURE_SUFFIX, "");
-  const response = await readFile(resolve(executionDir, "responses", responseName), "utf8").catch(
-    () => "<no response body>",
-  );
+  const response = await readExecutionFile("responses", responseName).catch(() => "<no response body>");
   throw new ProverFailureError(
     `prover-ray failed ${failed.length} request(s), first ${failed[0]}: ${response.slice(0, 2_000)}`,
   );
@@ -127,7 +132,7 @@ async function awaitArchivedRequest(blockNumber: bigint): Promise<string> {
   const archived = await awaitUntil(
     async () => {
       await throwOnProverFailure();
-      return (await readdirIfExists(resolve(executionDir, "requests-done"))).find((name) => {
+      return (await readdirIfExists("requests-done")).find((name) => {
         const match = /^(\d+)-(\d+)-.*getZkL2ExecutionProof\.json\.success$/.exec(name);
         return match !== null && BigInt(match[1]) <= blockNumber && BigInt(match[2]) >= blockNumber;
       });
@@ -148,9 +153,7 @@ async function expectProvenBatch(receipt: TransactionReceipt) {
   expect(archivedName).toMatch(/\.success$/);
   const fileName = archivedName.replace(/\.success$/, "");
 
-  const request: ExecutionRequest = JSON.parse(
-    await readFile(resolve(executionDir, "requests-done", archivedName), "utf8"),
-  );
+  const request: ExecutionRequest = JSON.parse(await readExecutionFile("requests-done", archivedName));
   const { startBlockNumber, endBlockNumber } = request.metadata;
   expect(request.guestProgramId).toMatch(/^0x[0-9a-f]{64}$/i);
   expect(request.proofRequest.chainConfig).toMatchObject({ chainId: context.getL2ChainId(), forkName: "Amsterdam" });
@@ -164,7 +167,7 @@ async function expectProvenBatch(receipt: TransactionReceipt) {
   );
   expect(input.executionWitness.codes.length).toBeGreaterThan(0);
 
-  const response: ExecutionResponse = JSON.parse(await readFile(resolve(executionDir, "responses", fileName), "utf8"));
+  const response: ExecutionResponse = JSON.parse(await readExecutionFile("responses", fileName));
   expect(response).not.toHaveProperty("error");
   expect(response).toMatchObject({
     proverVersion: `riscv-local-${proverMode}`,

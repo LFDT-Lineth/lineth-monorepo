@@ -192,7 +192,8 @@ runs:
         docker logs l1-cl-node --since 1h &>> docker_logs/l1-cl-node.txt || true
         docker logs maru --since 1h &>> docker_logs/maru.txt || true
         docker logs prover-ray --since 1h &>> docker_logs/prover-ray.txt || true
-        cp -r tmp/local/prover/riscv docker_logs/riscv-proofs || true
+        # prover-ray writes these as root with owner-only modes; copy through the daemon instead.
+        docker cp prover-ray:/data/prover/riscv docker_logs/riscv-proofs || true
         docker exec -i -e PGPASSWORD=${POSTGRES_PASSWORD:-postgres} postgres pg_dumpall -U ${POSTGRES_USER:-postgres} > docker_logs/db_dump.sql || true
 
     - name: Archive debug logs
