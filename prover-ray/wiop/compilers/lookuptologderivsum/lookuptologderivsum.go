@@ -15,7 +15,8 @@
 //   - α — used only when the lookup is multi-column, to fold every row
 //     into a single field element via random linear combination.
 //
-//   - γ — used to randomise the denominators (γ + RLC(row)).
+//   - γ — used to randomise the denominators (γ + RLC(row)); sampled per group
+//     so fractions of different groups cannot cancel each other.
 //
 //   - Emit fractions
 //
@@ -126,10 +127,6 @@ func Compile(sys *wiop.System) {
 
 	compCtx := sys.Context.Childf("lookuptologderiv")
 
-	// γ is shared across every group: a single random extension coin is
-	// enough to randomise every denominator in the aggregated query.
-	gamma := coinRound.NewCoinField(compCtx.Childf("gamma"))
-
 	// Register one row-limit check per lookup query, before the group loop
 	// below registers any M-assignment task on the same witness round. The
 	// check runs first (registration order), so the prover fails fast — it
@@ -143,7 +140,7 @@ func Compile(sys *wiop.System) {
 		consumedQs []*wiop.TableRelationQuery
 	)
 	for i, g := range groups {
-		gFractions := compileGroup(g, i, gamma, coinRound, compCtx)
+		gFractions := compileGroup(g, i, coinRound, compCtx)
 		fractions = append(fractions, gFractions...)
 		consumedQs = append(consumedQs, g.queries...)
 	}
@@ -381,7 +378,6 @@ func collectGroups(sys *wiop.System) []*lookupGroup {
 func compileGroup(
 	g *lookupGroup,
 	groupIdx int,
-	gamma *wiop.CoinField,
 	coinRound *wiop.Round,
 	compCtx *wiop.ContextFrame,
 ) []wiop.Fraction {
@@ -390,6 +386,16 @@ func compileGroup(
 	// pointer-based name, which would break serializing or diffing the
 	// compiled system).
 	gCtx := compCtx.Childf("group-%d", groupIdx)
+
+	// γ is sampled per group, never shared. Every group's fractions are summed
+	// into one LogDerivativeSum checked only for a zero total, so with a
+	// shared γ and no α (single-column, unfiltered groups) the denominators
+	// γ+v of two groups over different tables are identical: a prover could
+	// put v ∈ T2 \ T1 into a lookup on T1 and absorb it with T2's M, making
+	// the total vanish identically in γ. Independent γ's make each group's
+	// rational function independent, so cross-group cancellation only
+	// happens with negligible probability.
+	gamma := coinRound.NewCoinField(gCtx.Childf("gamma"))
 
 	// All B fragments share the same column width (enforced at construction by
 	// wiop.NewInclusion). Take the first fragment's width as the reference and
