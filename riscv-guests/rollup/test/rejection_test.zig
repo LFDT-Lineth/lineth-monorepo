@@ -1,5 +1,6 @@
 //! The requests the rollup guest rejects: every rule of the statement broken in an otherwise valid
-//! request, with the error it is rejected by and the exit-code category of that error.
+//! request, with the error it is rejected by and the exit-code category of that error; and the
+//! requests at the edge of an output bound, which it accepts.
 
 const std = @import("std");
 
@@ -11,6 +12,7 @@ const guest_errors = rollup.guest_errors;
 const l2_execution_proof = core_serde.l2_execution_proof;
 const messaging_offsets = rollup.messaging_offsets;
 
+const Address = scenario.Address;
 const Allocator = std.mem.Allocator;
 const Request = scenario.Request;
 
@@ -83,6 +85,17 @@ test "a conflation without blocks is rejected" {
 
     var request = try requestOf(a, &.{1}, .{});
     request.conflations[0].block_rlps = &.{};
+    try expectRejected(error.BlockCountMismatch, guest_errors.CODE_BLOCK_BINDING, a, request);
+}
+
+test "a conflation without blocks is rejected even when its proof's range is empty" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+
+    var request = try requestOf(a, &.{1}, .{});
+    request.conflations[0].block_rlps = &.{};
+    request.proofs[0].proof.public_inputs.end_block_number = request.proofs[0].proof.start_block_number - 1;
     try expectRejected(error.BlockCountMismatch, guest_errors.CODE_BLOCK_BINDING, a, request);
 }
 
@@ -423,21 +436,61 @@ test "an offset that does not fit 16 bits once rebased is rejected" {
 
 // ── Bounds and resources ─────────────────────────────────────────────────────────────────────────
 
+const max_filtered_addresses = core_serde.rollup_proof.MAX_FILTERED_ADDRESSES;
+
+/// `count` distinct addresses in ascending order.
+fn ascendingAddresses(a: Allocator, count: usize) ![]Address {
+    const addresses = try a.alloc(Address, count);
+    for (addresses, 0..) |*address, i| {
+        address.* = @splat(0);
+        std.mem.writeInt(u32, address[0..4], @intCast(i), .big);
+    }
+    return addresses;
+}
+
 test "more distinct filtered addresses than the output holds are rejected" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
     const a = arena.allocator();
 
-    const max = core_serde.rollup_proof.MAX_FILTERED_ADDRESSES;
-    const addresses = try a.alloc([20]u8, max + 1);
-    for (addresses, 0..) |*address, i| {
-        address.* = @splat(0);
-        std.mem.writeInt(u32, address[0..4], @intCast(i), .big);
-    }
+    const max = max_filtered_addresses;
+    const addresses = try ascendingAddresses(a, max + 1);
     var request = try requestOf(a, &.{ 1, 1 }, .{});
     request.proofs[0].proof.public_inputs.filtered_addresses = addresses[0..max];
     request.proofs[1].proof.public_inputs.filtered_addresses = addresses[max..];
     try expectRejected(error.BoundsViolation, guest_errors.CODE_BOUNDS_VIOLATION, a, request);
+}
+
+test "the same maximal list of filtered addresses in two proofs is accepted as one list" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+
+    const max = max_filtered_addresses;
+    const addresses = try ascendingAddresses(a, max);
+    const descending = try a.alloc(Address, max);
+    for (descending, 0..) |*address, i| address.* = addresses[max - 1 - i];
+    var request = try requestOf(a, &.{ 1, 1 }, .{});
+    request.proofs[0].proof.public_inputs.filtered_addresses = descending;
+    request.proofs[1].proof.public_inputs.filtered_addresses = addresses;
+
+    const pi = try rollup.rollup.run(a, request.input());
+    try std.testing.expectEqualSlices(Address, addresses, pi.filtered_addresses);
+}
+
+test "a maximal list of distinct filtered addresses split between two proofs is accepted" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+
+    const max = max_filtered_addresses;
+    const addresses = try ascendingAddresses(a, max);
+    var request = try requestOf(a, &.{ 1, 1 }, .{});
+    request.proofs[0].proof.public_inputs.filtered_addresses = addresses[max / 2 ..];
+    request.proofs[1].proof.public_inputs.filtered_addresses = addresses[0 .. max / 2];
+
+    const pi = try rollup.rollup.run(a, request.input());
+    try std.testing.expectEqualSlices(Address, addresses, pi.filtered_addresses);
 }
 
 test "an allocator that refuses a request ends the run in the out-of-memory category" {

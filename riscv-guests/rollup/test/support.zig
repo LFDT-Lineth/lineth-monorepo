@@ -2,10 +2,6 @@
 //! round-trip test and the malformed-input tests, so there is exactly one place that defines what a
 //! `RollupProofPrivateInput` with every field populated looks like on the wire. Its values are
 //! wire-format filler: the conflations, chunks and proofs do not agree with each other.
-//!
-//! Every field value below is a named constant, and every test asserting against it references the
-//! same constant rather than retyping the literal — the builder and its assertions cannot silently
-//! drift apart.
 
 const std = @import("std");
 const rollup_ssz = @import("rollup").rollup_ssz;
@@ -15,7 +11,7 @@ pub fn repeat32(byte: u8) [32]u8 {
     return @splat(byte);
 }
 
-pub fn repeat20(byte: u8) [20]u8 {
+fn repeat20(byte: u8) [20]u8 {
     return @splat(byte);
 }
 
@@ -28,67 +24,65 @@ pub const BOUNDARY_PREV_DATA_ROLLING_HASH = repeat32(0x39);
 // ── Conflation block RLPs ─────────────────────────────────────────────────────────────────────
 // RLP-shaped filler (a valid "long list" / "32-byte string" prefix), not real RLP: the codec carries
 // `block_rlps` as bytes, so only byte identity across encode/decode matters here.
-pub const CONFLATION_0_BLOCK_RLP_0 = [_]u8{ 0xf9, 0x02, 0x15, 0xa0 };
-pub const CONFLATION_0_BLOCK_RLP_1 = [_]u8{ 0xf9, 0x02, 0x16, 0xb1 };
-pub const CONFLATION_1_BLOCK_RLP_0 = [_]u8{ 0xf9, 0x02, 0x15, 0xaa };
-pub const CONFLATION_1_BLOCK_RLP_1 = [_]u8{ 0xf9, 0x02, 0x16, 0xbb };
+const CONFLATION_0_BLOCK_RLP_0 = [_]u8{ 0xf9, 0x02, 0x15, 0xa0 };
+const CONFLATION_0_BLOCK_RLP_1 = [_]u8{ 0xf9, 0x02, 0x16, 0xb1 };
+const CONFLATION_1_BLOCK_RLP_0 = [_]u8{ 0xf9, 0x02, 0x15, 0xaa };
+const CONFLATION_1_BLOCK_RLP_1 = [_]u8{ 0xf9, 0x02, 0x16, 0xbb };
 
 // ── Chunks ────────────────────────────────────────────────────────────────────────────────────
 // A blob of `rollup_ssz.BLOB_BYTES_LENGTH` bytes where byte `i` is `i % BLOB_BYTE_PERIOD`, with its
 // commitment and proof, and a calldata submission.
 pub const BLOB_CHUNK_HASH = repeat32(0x1a);
-pub const BLOB_BYTE_PERIOD = 251;
+const BLOB_BYTE_PERIOD = 251;
 pub const BLOB_KZG_COMMITMENT = [_]u8{0xc1} ** rollup_ssz.BYTES_PER_COMMITMENT;
 pub const BLOB_KZG_PROOF = [_]u8{0xb2} ** rollup_ssz.BYTES_PER_PROOF;
 pub const CALLDATA_CHUNK_HASH = repeat32(0x2a);
 pub const CALLDATA_BYTES = [_]u8{ 0xca, 0x11, 0xda, 0x7a, 0x01 };
 
 // ── l2_execution_proofs[0] ────────────────────────────────────────────────────────────────────
-// Shared with proof1 — both carry the same VK so the output's `program_vks` has something to
-// actually collapse.
-pub const SHARED_PROGRAM_VK = repeat32(0xaa);
+const SHARED_PROGRAM_VK = repeat32(0xaa);
 
-pub const PROOF0_START_BLOCK_NUMBER: u64 = 10;
-pub const PROOF0_PROOF_BYTES = [_]u8{ 0xab, 0xcd, 0xef };
-pub const PROOF0_PARENT_BLOCK_HASH = repeat32(0x0a);
-pub const PROOF0_END_BLOCK_HASH = repeat32(0x0b);
-pub const PROOF0_END_BLOCK_NUMBER: u64 = 11;
-pub const PROOF0_END_BLOCK_TIMESTAMP: u64 = 1763000200;
-pub const PROOF0_END_L1L2_BRIDGE_ROLLING_HASH = repeat32(0x03);
-pub const PROOF0_END_L1L2_BRIDGE_ROLLING_HASH_MSG_NUMBER: u64 = 4;
-pub const PROOF0_DYNAMIC_CHAIN_CONFIG_HASH = repeat32(0xc0);
-pub const PROOF0_PARENT_FTX_ROLLING_HASH = repeat32(0x04);
-pub const PROOF0_PARENT_FTX_NUMBER: u64 = 15;
-pub const PROOF0_END_FTX_ROLLING_HASH = repeat32(0x05);
-pub const PROOF0_END_PROCESSED_FTX_NUMBER: u64 = 18;
-pub const PROOF0_TX_FROMS_HASH = repeat32(0x08);
-pub const PROOF0_L2_L1_MESSAGE_0 = repeat32(0x08);
-pub const PROOF0_L2_L1_MESSAGE_1 = repeat32(0x18);
-pub const PROOF0_FILTERED_ADDRESS_0 = repeat20(0x04);
-pub const PROOF0_FILTERED_ADDRESS_1 = repeat20(0x03);
-pub const PROOF0_BLOCK_COUNT: u64 = 2;
-pub const PROOF0_MESSAGING_BLOCKS_OFFSETS = [_]u16{ 1, 2 };
+const PROOF0_START_BLOCK_NUMBER: u64 = 10;
+const PROOF0_PROOF_BYTES = [_]u8{ 0xab, 0xcd, 0xef };
+const PROOF0_PARENT_BLOCK_HASH = repeat32(0x0a);
+const PROOF0_END_BLOCK_HASH = repeat32(0x0b);
+const PROOF0_END_BLOCK_NUMBER: u64 = 11;
+const PROOF0_END_BLOCK_TIMESTAMP: u64 = 1763000200;
+const PROOF0_END_L1L2_BRIDGE_ROLLING_HASH = repeat32(0x03);
+const PROOF0_END_L1L2_BRIDGE_ROLLING_HASH_MSG_NUMBER: u64 = 4;
+const PROOF0_DYNAMIC_CHAIN_CONFIG_HASH = repeat32(0xc0);
+const PROOF0_PARENT_FTX_ROLLING_HASH = repeat32(0x04);
+const PROOF0_PARENT_FTX_NUMBER: u64 = 15;
+const PROOF0_END_FTX_ROLLING_HASH = repeat32(0x05);
+const PROOF0_END_PROCESSED_FTX_NUMBER: u64 = 18;
+const PROOF0_TX_FROMS_HASH = repeat32(0x08);
+const PROOF0_L2_L1_MESSAGE_0 = repeat32(0x08);
+const PROOF0_L2_L1_MESSAGE_1 = repeat32(0x18);
+const PROOF0_FILTERED_ADDRESS_0 = repeat20(0x04);
+const PROOF0_FILTERED_ADDRESS_1 = repeat20(0x03);
+const PROOF0_BLOCK_COUNT: u64 = 2;
+const PROOF0_MESSAGING_BLOCKS_OFFSETS = [_]u16{ 1, 2 };
 
 // ── l2_execution_proofs[1] ────────────────────────────────────────────────────────────────────
-pub const PROOF1_START_BLOCK_NUMBER: u64 = 12;
-pub const PROOF1_PROOF_BYTES = [_]u8{ 0xab, 0xcd, 0xff };
-pub const PROOF1_PARENT_BLOCK_HASH = repeat32(0x0b);
-pub const PROOF1_END_BLOCK_HASH = repeat32(0x0c);
-pub const PROOF1_END_BLOCK_NUMBER: u64 = 14;
-pub const PROOF1_END_BLOCK_TIMESTAMP: u64 = 1763000210;
-pub const PROOF1_END_L1L2_BRIDGE_ROLLING_HASH = repeat32(0x13);
-pub const PROOF1_END_L1L2_BRIDGE_ROLLING_HASH_MSG_NUMBER: u64 = 6;
-pub const PROOF1_DYNAMIC_CHAIN_CONFIG_HASH = repeat32(0xc0);
-pub const PROOF1_PARENT_FTX_ROLLING_HASH = repeat32(0x05);
-pub const PROOF1_PARENT_FTX_NUMBER: u64 = 18;
-pub const PROOF1_END_FTX_ROLLING_HASH = repeat32(0x06);
-pub const PROOF1_END_PROCESSED_FTX_NUMBER: u64 = 19;
-pub const PROOF1_TX_FROMS_HASH = repeat32(0x09);
-pub const PROOF1_L2_L1_MESSAGE_0 = repeat32(0x28);
-pub const PROOF1_FILTERED_ADDRESS_0 = repeat20(0x03);
-pub const PROOF1_FILTERED_ADDRESS_1 = repeat20(0x05);
-pub const PROOF1_BLOCK_COUNT: u64 = 3;
-pub const PROOF1_MESSAGING_BLOCKS_OFFSETS = [_]u16{3};
+const PROOF1_START_BLOCK_NUMBER: u64 = 12;
+const PROOF1_PROOF_BYTES = [_]u8{ 0xab, 0xcd, 0xff };
+const PROOF1_PARENT_BLOCK_HASH = repeat32(0x0b);
+const PROOF1_END_BLOCK_HASH = repeat32(0x0c);
+const PROOF1_END_BLOCK_NUMBER: u64 = 14;
+const PROOF1_END_BLOCK_TIMESTAMP: u64 = 1763000210;
+const PROOF1_END_L1L2_BRIDGE_ROLLING_HASH = repeat32(0x13);
+const PROOF1_END_L1L2_BRIDGE_ROLLING_HASH_MSG_NUMBER: u64 = 6;
+const PROOF1_DYNAMIC_CHAIN_CONFIG_HASH = repeat32(0xc0);
+const PROOF1_PARENT_FTX_ROLLING_HASH = repeat32(0x05);
+const PROOF1_PARENT_FTX_NUMBER: u64 = 18;
+const PROOF1_END_FTX_ROLLING_HASH = repeat32(0x06);
+const PROOF1_END_PROCESSED_FTX_NUMBER: u64 = 19;
+const PROOF1_TX_FROMS_HASH = repeat32(0x09);
+const PROOF1_L2_L1_MESSAGE_0 = repeat32(0x28);
+const PROOF1_FILTERED_ADDRESS_0 = repeat20(0x03);
+const PROOF1_FILTERED_ADDRESS_1 = repeat20(0x05);
+const PROOF1_BLOCK_COUNT: u64 = 3;
+const PROOF1_MESSAGING_BLOCKS_OFFSETS = [_]u16{3};
 
 /// The sample's first l2-execution proof.
 pub fn sampleProof0(alloc: std.mem.Allocator) !l2_execution_proof.VerifiableL2ExecutionProof {
@@ -120,7 +114,7 @@ pub fn sampleProof0(alloc: std.mem.Allocator) !l2_execution_proof.VerifiableL2Ex
 }
 
 /// The sample's second l2-execution proof.
-pub fn sampleProof1(alloc: std.mem.Allocator) !l2_execution_proof.VerifiableL2ExecutionProof {
+fn sampleProof1(alloc: std.mem.Allocator) !l2_execution_proof.VerifiableL2ExecutionProof {
     return .{
         .program_vk = SHARED_PROGRAM_VK,
         .proof = .{

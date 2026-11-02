@@ -164,6 +164,34 @@ test "trailing proofs without a bridge anchor keep the earlier proof's pair" {
     try std.testing.expectEqual(@as(u64, 4), pi.end_l1_l2_bridge_rolling_hash_message_number);
 }
 
+test "a hash without a message number is not a bridge anchor" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+
+    var proofs = threeProofs();
+    proofs[2].bridge_rolling_hash = hashOf(0x13);
+    proofs[2].bridge_message_number = 0;
+    const pi = try run(a, try threeConflations(a, &proofs));
+
+    try std.testing.expectEqualSlices(u8, &hashOf(0x03), &pi.end_l1_l2_bridge_rolling_hash);
+    try std.testing.expectEqual(@as(u64, 4), pi.end_l1_l2_bridge_rolling_hash_message_number);
+}
+
+test "a message number without a hash is a bridge anchor" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+
+    var proofs = threeProofs();
+    proofs[2].bridge_rolling_hash = hashOf(0);
+    proofs[2].bridge_message_number = 6;
+    const pi = try run(a, try threeConflations(a, &proofs));
+
+    try std.testing.expectEqualSlices(u8, &hashOf(0), &pi.end_l1_l2_bridge_rolling_hash);
+    try std.testing.expectEqual(@as(u64, 6), pi.end_l1_l2_bridge_rolling_hash_message_number);
+}
+
 test "proofs without a bridge anchor give a zero pair" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
