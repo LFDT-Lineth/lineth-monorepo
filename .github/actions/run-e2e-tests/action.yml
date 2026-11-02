@@ -53,16 +53,14 @@ inputs:
   override-compose-file:
     description: >
       Optional path to a custom override compose file (absolute, or relative to
-      working-directory), and the step fails if the file does not exist. For zkevm it is
-      merged on top of docker/compose-tracing-v2-ci-extension.yml and the environment is
-      started by make command "start-env-with-tracing-v2-ci-override" (default
-      "start-env-with-tracing-v2-ci"). For riscv it is merged on top of docker/compose-riscv.yml.
+      working-directory) merged on top of docker/compose-tracing-v2-ci-extension.yml.
+      When set, the environment is started by make command "start-env-with-tracing-v2-ci-override"
+      and the step fails if the file does not exist. When empty, the default
+      "start-env-with-tracing-v2-ci" is used.
     required: false
     default: ''
   jest-config:
-    description: >
-      Optional jest config (absolute, or relative to working-directory) replacing
-      e2e/jest.riscv.config.ts. RISC-V stack only.
+    description: 'Optional absolute path to a jest config replacing e2e/jest.riscv.config.ts (riscv only)'
     required: false
     default: ''
   dockerhub_username:
