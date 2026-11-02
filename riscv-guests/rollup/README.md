@@ -4,7 +4,7 @@ The RISC-V guest program of the rollup proof (`rollup_spec/Readme.md` §2.2). It
 
 ## Statement
 
-One rollup proof covers N consecutive whole conflations, each paired with its l2-execution proof, over the chunks (blobs and calldata submissions) of the data-availability stream that carries their compressed payloads. `src/rollup.zig` runs the steps of §2.2 in the order of the Python reference (`rollup.py`, `run_rollup_guest`):
+One rollup proof covers N consecutive whole conflations, each paired with its l2-execution proof, over the chunks (blobs and calldata submissions) of the data-availability stream that carries their compressed payloads. `src/rollup.zig` runs the steps of §2.2:
 
 1. **Canonical payloads** (`src/canonical.zig`). Every conflation's full block RLPs are truncated and encoded into the payload its zstd frame decompresses to (`lineth_da.encoding.truncation`); the block count has to match the paired proof's range, and the senders recovered from the signed transactions have to hash to the proof's `txFromsHash` (step 3).
 2. **Data availability** (`lineth_da.decompress`). Every chunk is bound to its `chunkHash`, every blob's EIP-4844 proof opens its commitment to the blob, the stream is parsed under the four layout rules into one segment per conflation, every segment's zstd frame decompresses with the embedded dictionary `v2025-04-21` to its conflation's canonical payload, and the dataRollingHash folds over the chunks. `endDataRollingHash` and `finalDataTailDiscardBytes` come out of it.
@@ -48,7 +48,7 @@ A rejected request exits with the category of the step that rejects it (`src/gue
 | 3 | the SSZ body is not the canonical encoding |
 | 4 | a list or byte field exceeds its bound |
 | 5 | the request has no conflation or proof, or they do not pair one to one |
-| 6 | the output could not be encoded |
+| 6 | the output encoder rejected the public inputs: a list exceeds the bound of the output's wire schema |
 | 7 | blocks and senders: a block is not accepted, a sender is not recoverable, the block count differs from the proof's range, the senders do not hash to `txFromsHash` |
 | 8 | chunk binding: a chunk contradicts its kind, is not the canonical packing, does not hash to its `chunkHash`, or the boundary preimage does not open the parent dataRollingHash |
 | 9 | a blob's EIP-4844 proof does not open its commitment |
@@ -58,11 +58,11 @@ A rejected request exits with the category of the step that rejects it (`src/gue
 | 13 | block-hash chain: an end block hash or a parent hash does not match the conflations' blocks |
 | 14 | tiling and continuity between consecutive proofs |
 | 15 | messaging offsets: the block count differs from the range, or an offset is out of order, out of range or exceeds 16 bits once rebased |
-| 16 | an allocation exceeds the guest heap |
+| 16 | an allocation exceeds the guest heap, whether it builds the KZG context, decodes the input, runs the statement or encodes the output |
 
 ## Allocation
 
-The guest serves every allocation from one bump allocator over the guest heap, which keeps them until the guest exits. The same allocator backs the Constantine archive's C `malloc` through `zkvm_provide.setAllocator`, which `src/main.zig` installs before anything runs. A request that needs more than the heap exits with code 16.
+The guest serves every allocation from one bump allocator over the guest heap, which keeps them until the guest exits. The same allocator backs the Constantine archive's C `malloc` through `zkvm_provide.setAllocator`, which `src/main.zig` installs before anything runs. The KZG trusted-setup context of the blob verification is built right after, before the input is read, so it takes the same heap prefix for every request. A request that needs more than the heap exits with code 16.
 
 ## Development
 
