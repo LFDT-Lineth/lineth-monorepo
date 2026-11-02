@@ -35,6 +35,14 @@
             .hash = "N-V-__8AALYXygU1iU8DU-qtzr7I31mr2vWOmfRVDNFAlTWj",
             .lazy = true,
         },
+        // The Ethereum Foundation's execution-spec zkevm fixtures (tests-zkevm@v21.0.5, the release
+        // l2_execution pins): real Amsterdam blocks with their hashes and senders, which the
+        // reference test truncates. Host builds only.
+        .execution_spec_tests_zkevm = .{
+            .url = "https://github.com/ethereum/execution-specs/releases/download/tests-zkevm%40v21.0.5/fixtures_zkevm.tar.gz",
+            .hash = "N-V-__8AAP____8QQM74OJJCR9wJFoeW57RJWnar5YNlvr3T",
+            .lazy = true,
+        },
         // supranational/blst at the commit c-kzg-4844 v2.1.5 pins as its submodule: the BLS12-381
         // library under c-kzg-4844. Host builds only.
         .blst = .{

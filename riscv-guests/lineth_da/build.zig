@@ -174,6 +174,8 @@ fn addHostBuild(b: *std.Build, zstd_source: *std.Build.Dependency) void {
         }
     }
 
+    const reference_tests = addReferenceTests(b, test_step, target, zstd_source);
+
     // Every native test and tool links the host build of the zkvm_* providers.
     // Optimized: the compiler's own linker crashes on a debug-built provider object.
     const accelerators = b.dependency("lineth_accelerators", .{
@@ -184,10 +186,36 @@ fn addHostBuild(b: *std.Build, zstd_source: *std.Build.Dependency) void {
     if (common.HostCrypto.init(b, accelerators)) |crypto| {
         crypto.linkAll(tests);
         crypto.linkAll(tools);
+        crypto.linkAll(reference_tests);
     }
 
     var tool_iter = tools.valueIterator();
     while (tool_iter.next()) |tool| b.installArtifact(tool.*);
+}
+
+/// The `test/reference/*_test.zig` suites, run by `test` once the EF zkevm fixtures, which are
+/// fetched on demand, are available. They are compiled optimized: the corpus is gigabytes of JSON.
+fn addReferenceTests(
+    b: *std.Build,
+    test_step: *std.Build.Step,
+    target: std.Build.ResolvedTarget,
+    zstd_source: *std.Build.Dependency,
+) std.StringHashMap(*std.Build.Step.Compile) {
+    const none = std.StringHashMap(*std.Build.Step.Compile).init(b.allocator);
+    const fixtures = b.lazyDependency("execution_spec_tests_zkevm", .{}) orelse return none;
+
+    const paths = b.addOptions();
+    paths.addOptionPath("amsterdam_blocks", fixtures.path("blockchain_tests/for_amsterdam"));
+    const package = common.createPackageModule(b, target, .ReleaseSafe, packageImports(b, target, .ReleaseSafe));
+    addPackageSources(b, package, zstd_source);
+    return common.addTests(b, test_step, .{
+        .target = target,
+        .optimize = .ReleaseSafe,
+        .imports = &.{
+            .{ .name = "lineth_da", .module = package },
+            .{ .name = "ef_fixtures", .module = paths.createModule() },
+        },
+    }, .{ .dir = "test/reference" });
 }
 
 /// c-kzg-4844 over blst, translated for Zig: the library that commits to blobs and proves them for
