@@ -71,6 +71,19 @@ fun initPersistence(
     nodeKeyData.address.encodeHex(false),
     persistence.privateKeyPath,
   )
+  // Tripwire for a rare flake seen under concurrent test methods ("Local validator signer address
+  // ... is not present in any configured validator set" during MaruCluster.start()): the signer key
+  // MaruAppFactory read back from this file did not match the genesis validator set built from the
+  // same in-memory keys. Note that GeneratingFilePrivateKeySource (teku, used by MaruAppFactory to
+  // load this file) uses File.createNewFile() as an exists-check, whose javadoc documents races —
+  // if it mis-sees the file as absent it generates and OVERWRITES it with a fresh key. If this check
+  // fails, a concurrent writer replaced the content right after our write; if the old error recurs
+  // without this check failing, the file was missing/foreign at read time instead.
+  val expected = Files.readString(persistence.privateKeyPath).trim()
+  check(expected == nodeKeyData.prefixedPrivateKey.encodeHex()) {
+    "Private key file ${persistence.privateKeyPath} does not contain the key just written " +
+      "(expected address=${nodeKeyData.address.encodeHex(false)}); concurrent overwrite suspected"
+  }
 }
 
 internal fun setQbftConfigIfSequencer(

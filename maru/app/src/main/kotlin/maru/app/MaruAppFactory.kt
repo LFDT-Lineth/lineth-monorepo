@@ -75,6 +75,7 @@ import net.consensys.linea.metrics.Tag
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.linea.vertx.VertxFactory
 import org.apache.logging.log4j.LogManager
+import org.apache.tuweni.bytes.Bytes
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.http.HttpService
 import tech.pegasys.teku.networking.p2p.network.config.GeneratingFilePrivateKeySource
@@ -543,20 +544,21 @@ class MaruAppFactory(
       }
 
     private fun getOrGeneratePrivateKey(privateKeyPath: Path): ByteArray {
-      if (!privateKeyPath
-          .toFile()
-          .exists()
-      ) {
-        log.info(
-          "Private key file {} does not exist. A new private key will be generated and stored in that location.",
-          privateKeyPath.toString(),
-        )
-      } else {
+      if (privateKeyPath.toFile().exists()) {
         log.info("Maru is using private key defined in file={}", privateKeyPath.toString())
+        // Plain read instead of GeneratingFilePrivateKeySource: that teku class uses
+        // File.createNewFile() as its exists-check, whose javadoc-documented race can make a
+        // concurrent caller see an existing file as absent — then it generates a fresh key and
+        // OVERWRITES the file, and the node starts with an identity foreign to its configured
+        // validator set. A missing file here now fails loudly instead of being silently regenerated.
+        return Bytes.fromHexString(Files.readString(privateKeyPath).trim()).toArray()
       }
 
+      log.info(
+        "Private key file {} does not exist. A new private key will be generated and stored in that location.",
+        privateKeyPath.toString(),
+      )
       ensureDirectoryExists(privateKeyPath.parent)
-
       return GeneratingFilePrivateKeySource(privateKeyPath.toString()).privateKeyBytes.toArray()
     }
 
