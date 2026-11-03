@@ -110,6 +110,7 @@ jobs:
     outputs:
       tests_outcome: ${{ steps.run-e2e-tests.outputs.tests_outcome }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
+    timeout-minutes: ${{ inputs.stack == 'riscv' && 75 || 360 }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
