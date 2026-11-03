@@ -146,6 +146,15 @@ test "a chain ID other than the one the legacy transactions were signed under is
     try expectRejected(error.SenderRecoveryFailed, guest_errors.CODE_BLOCK_BINDING, a, request);
 }
 
+test "a block that carries a blob transaction is rejected" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+
+    const request = try scenario.build(a, try scenario.conflations(a, .{ .kinds = &.{.blob} }, &.{.{ .blocks = 2 }}), .{});
+    try expectRejected(error.MalformedBlock, guest_errors.CODE_BLOCK_BINDING, a, request);
+}
+
 // ── The chunks and their blobs (step 2) ──────────────────────────────────────────────────────────
 
 test "a request without chunks is malformed" {

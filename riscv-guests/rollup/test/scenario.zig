@@ -62,7 +62,7 @@ pub const ChainOptions = struct {
     parent_hash: Hash = @splat(0x01),
     seed: u64 = 2026,
     /// The kinds the transactions are drawn from.
-    kinds: []const blocks.Kind = std.enums.values(blocks.Kind),
+    kinds: []const blocks.Kind = &blocks.accepted_kinds,
 };
 
 pub const ConflationSpec = struct {

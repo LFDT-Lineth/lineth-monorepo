@@ -183,7 +183,9 @@ test "requests built from consecutive blocks of the fixtures are accepted and th
 
         var run: std.ArrayList(Fact) = .empty;
         for (case.blocks, 0..) |block, position| {
-            if (block) |fact| {
+            // The fixture's rejected blocks and the blocks with a blob transaction end a run.
+            const usable: ?Fact = if (block) |fact| (if (fact.blob_transaction) null else fact) else null;
+            if (usable) |fact| {
                 // A run ends where the next block does not continue it.
                 if (run.items.len > 0) {
                     const previous = run.items[run.items.len - 1];
@@ -194,7 +196,7 @@ test "requests built from consecutive blocks of the fixtures are accepted and th
                 }
                 try run.append(a, fact);
             }
-            if (block == null or position + 1 == case.blocks.len) {
+            if (usable == null or position + 1 == case.blocks.len) {
                 try finishRun(a, scratch_arena.allocator(), &index, case.chain_id, run.items, &tally, &failures, case.path, case.name);
                 run.clearRetainingCapacity();
             }
