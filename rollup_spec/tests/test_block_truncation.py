@@ -38,7 +38,7 @@ EIP_155_STRIPPED = bytes.fromhex(
     "e9098504a817c800825208943535353535353535353535353535353535353535880de0b6b3a764000080"
 )
 
-TRANSACTION_KINDS = [AccessListTransaction, FeeMarketTransaction, BlobTransaction, SetCodeTransaction]
+TRANSACTION_KINDS = [AccessListTransaction, FeeMarketTransaction, SetCodeTransaction]
 
 
 def test_eip_155_example_is_stripped_and_its_sender_recovered():
@@ -56,7 +56,7 @@ def test_block_of_every_transaction_type_keeps_its_transactions_in_order_with_th
     truncated = truncate_block_rlp(block_rlp([wire(tx) for tx in transactions]), CHAIN_ID)
 
     assert truncated.froms == [SENDER] * len(transactions)
-    assert [stripped[0] for stripped in truncated.transactions[1:]] == [1, 2, 3, 4]
+    assert [stripped[0] for stripped in truncated.transactions[1:]] == [1, 2, 4]
     assert truncated.transactions[0][0] >= 0xC0
     assert truncated.transactions[0] == rlp.encode([Uint(0), Uint(7), Uint(21_000), RECIPIENT, Uint(1), b""])
 
@@ -120,6 +120,14 @@ REJECTED_BLOCKS = [
         id="transaction type beyond 4",
     ),
     pytest.param(
+        lambda: block_rlp([envelope(sign(typed_tx(BlobTransaction)))]), "not a canonical typed transaction",
+        id="blob transaction",
+    ),
+    pytest.param(
+        lambda: block_rlp([wire(sign(legacy_tx(0))), envelope(sign(typed_tx(BlobTransaction, nonce=1)))]),
+        "not a canonical typed transaction", id="blob transaction after a legacy one",
+    ),
+    pytest.param(
         lambda: block_rlp([set_code_with_nine_byte_nonce()]), "SetCodeTransaction.nonce",
         id="nine-byte nonce of a set-code transaction",
     ),
@@ -142,10 +150,6 @@ REJECTED_BLOCKS = [
         id="fee-market gas of 2^64",
     ),
     pytest.param(
-        lambda: block_rlp([wire(sign(typed_tx(BlobTransaction, gas=Uint(2**64))))]), "exceeds the width",
-        id="blob gas of 2^64",
-    ),
-    pytest.param(
         lambda: block_rlp([wire(sign(typed_tx(SetCodeTransaction, gas=Uint(2**64))))]), "exceeds the width",
         id="set-code gas of 2^64",
     ),
@@ -155,10 +159,6 @@ REJECTED_BLOCKS = [
     pytest.param(
         lambda: block_rlp([wire(sign(typed_tx(FeeMarketTransaction, max_fee_per_gas=Uint(2**128))))]), "exceeds the width",
         id="max fee of 2^128",
-    ),
-    pytest.param(
-        lambda: block_rlp([wire(sign(typed_tx(BlobTransaction, max_fee_per_gas=Uint(2**128))))]), "exceeds the width",
-        id="blob max fee of 2^128",
     ),
     pytest.param(
         lambda: block_rlp([wire(sign(typed_tx(AccessListTransaction, gas_price=Uint(2**128))))]), "exceeds the width",
@@ -175,14 +175,6 @@ REJECTED_BLOCKS = [
     pytest.param(
         lambda: block_rlp([wire(sign(typed_tx(SetCodeTransaction, max_priority_fee_per_gas=Uint(2**128))))]),
         "exceeds the width", id="set-code max priority fee of 2^128",
-    ),
-    pytest.param(
-        lambda: block_rlp([wire(sign(typed_tx(BlobTransaction, max_fee_per_blob_gas=U256(2**128))))]), "exceeds the width",
-        id="max blob fee of 2^128",
-    ),
-    pytest.param(
-        lambda: block_rlp([wire(sign(typed_tx(BlobTransaction, blob_versioned_hashes=())))]), "names no blob",
-        id="blob transaction without blobs",
     ),
     pytest.param(swapped_body, "transactions root", id="transaction swapped for another one by the same sender"),
     pytest.param(dropped_transaction, "transactions root", id="transaction missing from the body"),
@@ -204,7 +196,6 @@ def test_largest_nonce_and_fees_the_guest_decodes_are_accepted():
         sign(legacy_tx(2**64 - 1, gas=Uint(2**64 - 1), gas_price=Uint(2**128 - 1))),
         sign(typed_tx(AccessListTransaction, nonce=2**64 - 1, gas=Uint(2**64 - 1), gas_price=Uint(2**128 - 1))),
         sign(typed_tx(FeeMarketTransaction, nonce=2**64 - 1, gas=Uint(2**64 - 1), max_fee_per_gas=Uint(2**128 - 1), max_priority_fee_per_gas=Uint(2**128 - 1))),
-        sign(typed_tx(BlobTransaction, nonce=2**64 - 1, gas=Uint(2**64 - 1), max_fee_per_gas=Uint(2**128 - 1), max_priority_fee_per_gas=Uint(2**128 - 1), max_fee_per_blob_gas=U256(2**128 - 1))),
         sign(typed_tx(SetCodeTransaction, nonce=2**64 - 1, gas=Uint(2**64 - 1), max_fee_per_gas=Uint(2**128 - 1), max_priority_fee_per_gas=Uint(2**128 - 1))),
     ]
 

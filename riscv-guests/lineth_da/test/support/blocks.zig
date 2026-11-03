@@ -30,6 +30,9 @@ pub const Authorization = struct {
 
 pub const Kind = enum(u8) { legacy = 0, access_list = 1, fee_market = 2, blob = 3, set_code = 4 };
 
+/// The kinds a block's transactions may be of; a blob transaction is encoded to be rejected.
+pub const accepted_kinds = [_]Kind{ .legacy, .access_list, .fee_market, .set_code };
+
 /// A transaction without its signature and chain ID. The integers are written as given, whatever
 /// their width.
 pub const Tx = struct {

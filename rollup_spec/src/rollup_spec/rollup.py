@@ -16,7 +16,6 @@ from ethereum.crypto.kzg import (
 )
 from .fork import (
     AccessListTransaction,
-    BlobTransaction,
     FeeMarketTransaction,
     LegacyTransaction,
     SetCodeTransaction,
@@ -796,12 +795,6 @@ def _signature_stripped_tx_bytes(tx: Transaction) -> bytes:
             tx.nonce, tx.max_priority_fee_per_gas, tx.max_fee_per_gas, tx.gas,
             tx.to, tx.value, tx.data, tx.access_list,
         ])
-    if isinstance(tx, BlobTransaction):
-        return b"\x03" + rlp.encode([
-            tx.nonce, tx.max_priority_fee_per_gas, tx.max_fee_per_gas, tx.gas,
-            tx.to, tx.value, tx.data, tx.access_list,
-            tx.max_fee_per_blob_gas, tx.blob_versioned_hashes,
-        ])
     if isinstance(tx, SetCodeTransaction):
         return b"\x04" + rlp.encode([
             tx.nonce, tx.max_priority_fee_per_gas, tx.max_fee_per_gas, tx.gas,
@@ -821,12 +814,12 @@ def _transactions_root(transactions: Sequence[Transaction | Bytes]) -> Hash32:
 def _canonical_transaction(tx_item: Transaction | Bytes) -> Transaction:
     """
     Decode one entry of a block's transaction list, which must be a canonical transaction of the
-    form the guest decodes: a legacy list, or a typed transaction of type 1 to 4 in exactly its
+    form the guest decodes: a legacy list, or a typed transaction of type 1, 2 or 4 in exactly its
     canonical encoding; integers in the widths the guest decodes them (nonce and gas in 64 bits,
-    fees in 128), and a blob transaction naming at least one blob.
+    fees in 128).
     """
     if isinstance(tx_item, (bytes, bytearray)):
-        if len(tx_item) < 2 or tx_item[0] not in (1, 2, 3, 4):
+        if len(tx_item) < 2 or tx_item[0] not in (1, 2, 4):
             raise Exception("transaction is not a canonical typed transaction")
         decoded_tx = decode_transaction(Bytes(tx_item))
         if encode_transaction(decoded_tx) != tx_item:
@@ -838,10 +831,6 @@ def _canonical_transaction(tx_item: Transaction | Bytes) -> Transaction:
         fees = [decoded_tx.gas_price]
     else:
         fees = [decoded_tx.max_priority_fee_per_gas, decoded_tx.max_fee_per_gas]
-        if isinstance(decoded_tx, BlobTransaction):
-            fees.append(decoded_tx.max_fee_per_blob_gas)
-            if len(decoded_tx.blob_versioned_hashes) == 0:
-                raise Exception("blob transaction names no blob")
     if int(decoded_tx.nonce) >= 2**64 or int(decoded_tx.gas) >= 2**64 or any(int(fee) >= 2**128 for fee in fees):
         raise Exception("transaction field exceeds the width the guest decodes")
     return decoded_tx

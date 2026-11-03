@@ -126,19 +126,6 @@ const blob_tx: blocks.Tx = .{
     .max_fee_per_blob_gas = 1_000_000,
     .blob_hashes = &.{hex("01" ++ "66" ** 31)},
 };
-const blob_stripped = hex("03" ++ // type
-    "f845" ++ // list of 69 bytes
-    "03" ++ // nonce
-    "01" ++ // max priority fee
-    "64" ++ // max fee 100
-    "830186a0" ++ // gas 100000
-    "94" ++ "55" ** 20 ++ // to
-    "80" ++ // value 0
-    "80" ++ // data
-    "c0" ++ // empty access list
-    "830f4240" ++ // max fee per blob gas 1000000
-    "e1" ++ "a0" ++ "01" ++ "66" ** 31); // one blob versioned hash
-
 const set_code_tx: blocks.Tx = .{
     .kind = .set_code,
     .nonce = 4,
@@ -166,7 +153,6 @@ const vectors = [_]struct { tx: blocks.Tx, stripped: []const u8 }{
     .{ .tx = legacy_tx, .stripped = &legacy_stripped },
     .{ .tx = access_list_tx, .stripped = &access_list_stripped },
     .{ .tx = fee_market_tx, .stripped = &fee_market_stripped },
-    .{ .tx = blob_tx, .stripped = &blob_stripped },
     .{ .tx = set_code_tx, .stripped = &set_code_stripped },
 };
 
@@ -480,7 +466,7 @@ fn expectedOf(a: Allocator, header: blocks.Header, txs: []const blocks.Tx, secre
 test "random blocks truncate to what their fields and signers say" {
     var prng = std.Random.DefaultPrng.init(2026);
     const random = prng.random();
-    const kinds = std.enums.values(blocks.Kind);
+    const kinds = blocks.accepted_kinds;
 
     for (0..60) |_| {
         var arena = std.heap.ArenaAllocator.init(gpa);
@@ -530,7 +516,7 @@ test "random blocks truncate to what their fields and signers say" {
 test "the stripped transactions do not depend on who signed them" {
     var prng = std.Random.DefaultPrng.init(2027);
     const random = prng.random();
-    const kinds = std.enums.values(blocks.Kind);
+    const kinds = blocks.accepted_kinds;
 
     for (0..20) |_| {
         var arena = std.heap.ArenaAllocator.init(gpa);
@@ -731,7 +717,7 @@ test "malformed transactions are rejected" {
     const a = arena.allocator();
     const secret = secretKey(45);
 
-    // A transaction type beyond the five, the zero type and an envelope too short to hold a body.
+    // A transaction type beyond 4, the zero type and an envelope too short to hold a body.
     for ([_][]const u8{ lit("05c0"), lit("00c0"), lit("01"), lit("ff00") }) |envelope| {
         try std.testing.expectError(error.MalformedBlock, truncate(a, try blockOf(a, &.{rlp.string(envelope)}), chain_id));
     }
@@ -741,13 +727,11 @@ test "malformed transactions are rejected" {
     const body = signed_item.string[1..];
     try std.testing.expectError(error.MalformedBlock, truncate(a, try blockOf(a, &.{rlp.string(try std.mem.concat(a, u8, &.{ lit("02"), body[0 .. body.len - 1] }))}), chain_id));
 
-    // Blob and set-code transactions have a destination.
-    for ([_]blocks.Tx{ blob_tx, set_code_tx }) |tx| {
-        var without_destination = tx;
-        without_destination.to = null;
-        const block = try blockOf(a, &.{try blocks.signed(a, without_destination, chain_id, secret)});
-        try std.testing.expectError(error.MalformedBlock, truncate(a, block, chain_id));
-    }
+    // A set-code transaction has a destination.
+    var without_destination = set_code_tx;
+    without_destination.to = null;
+    const without_destination_block = try blockOf(a, &.{try blocks.signed(a, without_destination, chain_id, secret)});
+    try std.testing.expectError(error.MalformedBlock, truncate(a, without_destination_block, chain_id));
     // Contract creation is for the other types.
     var creation = fee_market_tx;
     creation.to = null;
@@ -779,7 +763,7 @@ test "a heap too small for a valid block is reported as exhausted whichever step
 
 // Fields wider than the integers they are held in.
 
-const Field = enum { nonce, gas_limit, gas_price, max_priority_fee_per_gas, max_fee_per_blob_gas };
+const Field = enum { nonce, gas_limit, gas_price, max_priority_fee_per_gas };
 
 fn withField(tx: blocks.Tx, field: Field, value: u256) blocks.Tx {
     var out = tx;
@@ -788,7 +772,6 @@ fn withField(tx: blocks.Tx, field: Field, value: u256) blocks.Tx {
         .gas_limit => out.gas_limit = value,
         .gas_price => out.gas_price = value,
         .max_priority_fee_per_gas => out.max_priority_fee_per_gas = value,
-        .max_fee_per_blob_gas => out.max_fee_per_blob_gas = value,
     }
     return out;
 }
@@ -808,11 +791,6 @@ const bounded_fields = [_]struct { tx: blocks.Tx, field: Field, largest: u256 }{
     .{ .tx = fee_market_tx, .field = .gas_limit, .largest = max_u64 },
     .{ .tx = fee_market_tx, .field = .gas_price, .largest = max_u128 },
     .{ .tx = fee_market_tx, .field = .max_priority_fee_per_gas, .largest = max_u128 },
-    .{ .tx = blob_tx, .field = .nonce, .largest = max_u64 },
-    .{ .tx = blob_tx, .field = .gas_limit, .largest = max_u64 },
-    .{ .tx = blob_tx, .field = .gas_price, .largest = max_u128 },
-    .{ .tx = blob_tx, .field = .max_priority_fee_per_gas, .largest = max_u128 },
-    .{ .tx = blob_tx, .field = .max_fee_per_blob_gas, .largest = max_u128 },
     .{ .tx = set_code_tx, .field = .nonce, .largest = max_u64 },
     .{ .tx = set_code_tx, .field = .gas_limit, .largest = max_u64 },
     .{ .tx = set_code_tx, .field = .gas_price, .largest = max_u128 },
@@ -850,17 +828,26 @@ test "a field one bit wider than the guest decodes is rejected, whatever the sig
     }
 }
 
-test "a blob transaction without blobs is rejected" {
+test "a blob transaction is rejected wherever it stands in the block" {
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
     const a = arena.allocator();
     const secret = secretKey(62);
 
-    var no_blobs = blob_tx;
-    no_blobs.blob_hashes = &.{};
-    try std.testing.expectError(error.MalformedBlock, truncate(a, try blockOf(a, &.{try blocks.signed(a, no_blobs, chain_id, secret)}), chain_id));
-    no_blobs.max_fee_per_blob_gas = 0;
-    try std.testing.expectError(error.MalformedBlock, truncate(a, try blockOf(a, &.{try blocks.signed(a, no_blobs, chain_id, secret)}), chain_id));
+    const accepted = try blocks.signed(a, fee_market_tx, chain_id, secret);
+    const blob = try blocks.signed(a, blob_tx, chain_id, secret);
+    try std.testing.expectEqual(1, (try truncate(a, try blockOf(a, &.{accepted}), chain_id)).transactions.len);
+
+    try std.testing.expectError(error.MalformedBlock, truncate(a, try blockOf(a, &.{blob}), chain_id));
+    try std.testing.expectError(error.MalformedBlock, truncate(a, try blockOf(a, &.{ accepted, blob }), chain_id));
+    try std.testing.expectError(error.MalformedBlock, truncate(a, try blockOf(a, &.{ blob, accepted }), chain_id));
+
+    var prng = std.Random.DefaultPrng.init(2029);
+    for (0..20) |_| {
+        const random_blob = try blocks.randomTx(a, prng.random(), .blob);
+        const item = try blocks.signed(a, random_blob, chain_id, secret);
+        try std.testing.expectError(error.MalformedBlock, truncate(a, try blockOf(a, &.{ accepted, item }), chain_id));
+    }
 }
 
 test "a transaction that is not in its canonical wire form is rejected" {

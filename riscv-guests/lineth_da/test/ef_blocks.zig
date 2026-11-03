@@ -19,6 +19,8 @@ pub const Fact = struct {
     timestamp: u64,
     /// The sender of every transaction, in order.
     senders: []const Address,
+    /// Whether a transaction of the block is an EIP-4844 blob transaction (type 3).
+    blob_transaction: bool,
 };
 
 /// One case of a fixture file.
@@ -41,6 +43,7 @@ const Header = struct {
 };
 
 const Transaction = struct {
+    type: []const u8 = "0x00",
     sender: []const u8,
 };
 
@@ -123,7 +126,11 @@ fn factOf(arena: Allocator, block: Block) !?Fact {
     const header = block.blockHeader orelse return error.FixtureWithoutHeader;
     const transactions = block.transactions orelse &.{};
     const senders = try arena.alloc(Address, transactions.len);
-    for (transactions, senders) |transaction, *sender| sender.* = try decodeHex(20, transaction.sender);
+    var blob_transaction = false;
+    for (transactions, senders) |transaction, *sender| {
+        sender.* = try decodeHex(20, transaction.sender);
+        if (try std.fmt.parseInt(u8, transaction.type, 0) == 3) blob_transaction = true;
+    }
     return .{
         .rlp = try decodeHexAlloc(arena, rlp_text),
         .hash = try decodeHex(32, header.hash),
@@ -132,6 +139,7 @@ fn factOf(arena: Allocator, block: Block) !?Fact {
         .number = try std.fmt.parseInt(u64, header.number, 0),
         .timestamp = try std.fmt.parseInt(u64, header.timestamp, 0),
         .senders = senders,
+        .blob_transaction = blob_transaction,
     };
 }
 
