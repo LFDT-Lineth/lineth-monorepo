@@ -49,8 +49,8 @@ type Job struct {
 	// empty proves them all. Without sharding ([Config.ShardSize] zero) only
 	// shard 0 exists. The shard count depends on the guest input and is only
 	// known after the job's fast-mode pass, so an index past the end fails the
-	// job. Conglomerating the shard proofs into one proof is not implemented
-	// yet: in full mode, a sharded job fails with [ErrNotImplemented].
+	// job. A strict subset of the shards yields [ResultStatusNode], not a final
+	// proof.
 	ShardIndexes []uint
 }
 
@@ -60,6 +60,10 @@ type ResultStatus string
 const (
 	ResultStatusOK     ResultStatus = "ok"
 	ResultStatusFailed ResultStatus = "failed"
+	// ResultStatusNode is a proof of a strict subset of the trace's shards: a
+	// conglomeration node to be aggregated elsewhere, not a final proof.
+	// ProofBytes and PublicInputs are empty; Node and NumShards are set.
+	ResultStatusNode ResultStatus = "node"
 )
 
 // PublicInputs carries the 16 public output fields of the coordinator
@@ -97,10 +101,16 @@ type Result struct {
 	// ProofBytes is the proof output for the mode. For full it is the serialized
 	// wiop.Proof (wire format not yet decided); for dev-zkvm it is the guest's
 	// 0x0003 output from the ZkC Execute run, which the runner cross-checks
-	// against the native runner. nil when Status is ResultStatusFailed.
+	// against the native runner. nil when Status is not ResultStatusOK.
 	ProofBytes []byte
 
 	PublicInputs PublicInputs
+
+	// Node is the non-root conglomeration node when Status is
+	// ResultStatusNode, and NumShards the trace's shard count, so that the
+	// party aggregating the nodes can tell when their coverage is complete.
+	Node      *Node
+	NumShards uint
 
 	// Err is non-nil when Status is ResultStatusFailed.
 	Err error
