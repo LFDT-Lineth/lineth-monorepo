@@ -11,6 +11,7 @@ on:
       - '.github/actions/setup-zig/**'
       - '.github/workflows/arithmetization-guest-programs-trace.yml'
       - '.github/workflows/arithmetization-*.yml'
+      - 'riscv-guests/**'
   push:
     branches:
       - main
@@ -20,6 +21,7 @@ on:
      - '.github/actions/setup-zig/**'
      - '.github/workflows/arithmetization-guest-programs-trace.yml'
      - '.github/workflows/arithmetization-*.yml'
+     - 'riscv-guests/**'
   workflow_call:
     inputs:
       zkc-ref:
@@ -37,10 +39,15 @@ permissions:
   contents: read
   actions: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   binary-run-and-zkc-check:
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -60,3 +67,39 @@ jobs:
           ZKC_MAIN: src/test/zkc/simple_add.zkc
           ZKC_FILES: src/test/zkc/simple_add.zkc
           ZKC_INPUT: src/test/zkc/simple_add.json
+
+      - name: Trace l2-execution guest program with Amsterdam block 175k sharding 500000
+        # 175k references the amount of gas used in the block
+        # taskset fixes NumCPU() at 16, which is the shard worker-pool size.
+        # no check on this run
+        run: taskset -c 0-15 make -C riscv-guests/l2_execution trace -j 16
+        timeout-minutes: 10
+        env:
+          ZKC_REF: ""
+          INPUT: test/testdata/block_amsterdam_175k.ssz
+          KECCAK_ACCEL: false
+          ZKC_TRACE_FLAGS: "--stats -vv --sharding interpreter:500000"
+      
+      - name: Trace l2-execution guest program with Amsterdam block 500k sharding 500000
+        # 500k references the amount of gas used in the block
+        # taskset fixes NumCPU() at 16, which is the shard worker-pool size.
+        # no check on this run
+        run: taskset -c 0-15 make -C riscv-guests/l2_execution trace -j 16
+        timeout-minutes: 15
+        env:
+          ZKC_REF: ""
+          INPUT: test/testdata/block_amsterdam_51584_500k.ssz
+          KECCAK_ACCEL: false
+          ZKC_TRACE_FLAGS: "--stats -vv --sharding interpreter:500000"
+
+  notify:
+    needs: binary-run-and-zkc-check
+    if: ${{ always() && github.ref == 'refs/heads/main' && contains(needs.*.result, 'failure') }}
+    uses: ./.github/workflows/slack-notify-failed-jobs.yml
+    with:
+      title: "Tracer guest programs trace workflow Failed"
+      run_id: ${{ github.run_id }}
+    secrets:
+      channel_id: ${{ secrets.SLACK_ENGINEERING_ALERTS_CHANNEL_ID }}
+      slack_bot_token: ${{ secrets.SLACK_GITHUB_ACTIONS_ALERTS_BOT_TOKEN }}
+

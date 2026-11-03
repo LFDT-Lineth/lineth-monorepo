@@ -31,8 +31,11 @@ Note. We use '.' to represent '0'.
 |---------------------|:------:|----------|--------|-----------|
 | keccak              |   🟢   | custom-1 | 0b000  | 0b0000000 |
 | poseidon2           |   🟢   | custom-1 | 0b001  | 0b0000000 |
-| write_output        |   🟡   | custom-1 | 0b010  | 0b0000000 |
 | ecrecover           |   🔴   | custom-1 |        |           |
 | poly_eval           |   🔴   | custom-1 |        |           |
 | ...                 |   🔴   | custom-1 |        |           |
 |---------------------|--------|----------|--------|-----------|
+
+Guest output is not a precompile: `write_output` issues the Linux `write` syscall (`a7=64`) with
+fd 4 (`GUEST_OUT`, public output) or fd 3 (`GUEST_LOG`, private log). See `process_syscall` in
+`../riscv/interpreter.zkc`.
