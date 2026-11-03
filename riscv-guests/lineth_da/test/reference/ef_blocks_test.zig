@@ -1,6 +1,6 @@
 //! The truncation of the blocks of the Ethereum Foundation's zkevm fixtures: every block that the
 //! fixtures accept is truncated to the hash, the parent hash, the prevRandao, the timestamp and the
-//! senders the fixtures list for it.
+//! senders the fixtures list for it, except a block with a blob transaction, which is rejected.
 
 const std = @import("std");
 
@@ -20,6 +20,7 @@ const Header = struct {
 };
 
 const Transaction = struct {
+    type: []const u8 = "0x00",
     sender: []const u8,
 };
 
@@ -49,6 +50,21 @@ fn expectFixtureValue(comptime len: usize, expected: []const u8, actual: *const 
     try std.testing.expectEqualSlices(u8, &bytes, actual);
 }
 
+const blob_transaction_type = 3;
+
+fn hasBlobTransaction(block: Block) !bool {
+    for (block.transactions orelse &.{}) |transaction| {
+        if (try std.fmt.parseInt(u8, transaction.type, 0) == blob_transaction_type) return true;
+    }
+    return false;
+}
+
+/// Truncates `block`, which carries a blob transaction, and expects its rejection.
+fn checkRejected(arena: std.mem.Allocator, scratch: std.mem.Allocator, chain_id: u64, block: Block) !void {
+    const block_rlp = try decodeHex(arena, block.rlp.?);
+    try std.testing.expectError(error.MalformedBlock, truncation.truncateBlockRlp(arena, scratch, block_rlp, chain_id));
+}
+
 /// Truncates `block` and compares the result with the facts the fixture lists for it.
 fn checkBlock(arena: std.mem.Allocator, scratch: std.mem.Allocator, chain_id: u64, block: Block) !void {
     const header = block.blockHeader orelse return error.FixtureWithoutHeader;
@@ -72,7 +88,8 @@ test "every block the fixtures accept truncates to the facts they list" {
     var walker = try dir.walk(gpa);
     defer walker.deinit();
 
-    var blocks: usize = 0;
+    var truncated: usize = 0;
+    var rejected: usize = 0;
     var skipped: usize = 0;
     var failures: usize = 0;
     while (try walker.next(io)) |entry| {
@@ -92,8 +109,13 @@ test "every block the fixtures accept truncates to the facts they list" {
                     skipped += 1;
                     continue;
                 }
-                blocks += 1;
-                checkBlock(arena.allocator(), scratch.allocator(), chain_id, block) catch |err| {
+                const blob = try hasBlobTransaction(block);
+                if (blob) rejected += 1 else truncated += 1;
+                const checked = if (blob)
+                    checkRejected(arena.allocator(), scratch.allocator(), chain_id, block)
+                else
+                    checkBlock(arena.allocator(), scratch.allocator(), chain_id, block);
+                checked catch |err| {
                     failures += 1;
                     if (failures <= 20) std.debug.print("{s}: {s}: {s}\n", .{ entry.path, name, @errorName(err) });
                 };
@@ -101,7 +123,8 @@ test "every block the fixtures accept truncates to the facts they list" {
             }
         }
     }
-    std.debug.print("{d} blocks truncated, {d} invalid or undecodable blocks skipped\n", .{ blocks, skipped });
-    try std.testing.expect(blocks > 1000);
+    std.debug.print("{d} blocks truncated, {d} blocks with a blob transaction rejected, {d} invalid or undecodable blocks skipped\n", .{ truncated, rejected, skipped });
+    try std.testing.expect(truncated > 1000);
+    try std.testing.expect(rejected > 0);
     try std.testing.expectEqual(0, failures);
 }

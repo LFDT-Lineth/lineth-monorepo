@@ -28,8 +28,9 @@ pub const Address = [20]u8;
 pub const Error = error{
     /// An allocator refused a request, whichever step made it.
     OutOfMemory,
-    /// The bytes are not a canonical Amsterdam block, a transaction in it is not a canonical
-    /// transaction of its type, or the transactions are not the ones the header commits to.
+    /// The bytes are not a canonical Amsterdam block, a transaction in it is of a type outside
+    /// legacy, access-list, fee-market and set-code (a blob transaction included) or is not a
+    /// canonical transaction of its type, or the transactions are not the ones the header commits to.
     MalformedBlock,
     /// A transaction's signature does not recover a sender under the chain ID, which has to be
     /// positive: its r or s is out of range, or the `v` of a legacy transaction is none of 27, 28
@@ -84,9 +85,8 @@ pub fn truncateBlockRlp(output: Allocator, scratch: Allocator, block_rlp: []cons
     const stripped = try output.alloc([]const u8, decoded.len);
     const froms = try output.alloc(Address, decoded.len);
     for (decoded, senders_input, wire, stripped, froms) |tx, tx_input, wire_tx, *stripped_tx, *from| {
-        // Blob and set-code transactions name a destination, and a blob transaction a blob.
-        if (tx.to == null and (tx.tx_type == 3 or tx.tx_type == 4)) return error.MalformedBlock;
-        if (tx.tx_type == 3 and tx.blob_hashes.len == 0) return error.MalformedBlock;
+        // A set-code transaction names a destination.
+        if (tx.to == null and tx.tx_type == 4) return error.MalformedBlock;
         // The decoded fields are the transaction's own when they encode back to its bytes.
         const hash = tx_signing.txHash(decoding, &tx_input, chain_id) catch return refusals.failure(error.MalformedBlock);
         var wire_hash: Hash = undefined;
@@ -157,12 +157,6 @@ fn strippedTransaction(output: Allocator, scratch: Allocator, tx: input.Transact
             try access_list.list(item);
         }
         try fields.list(access_list);
-    }
-    if (tx.tx_type == 3) {
-        try fields.uint(tx.max_fee_per_blob_gas);
-        var hashes: Items = .{ .allocator = scratch };
-        for (tx.blob_hashes) |hash| try hashes.string(&hash);
-        try fields.list(hashes);
     }
     if (tx.tx_type == 4) {
         var authorizations: Items = .{ .allocator = scratch };
@@ -254,8 +248,8 @@ fn checkLegacySignatureValues(transactions_payload: []const u8, chain_id: u64) E
 const transaction_depth = 4;
 
 /// The wire form of each entry of a body's transaction list, which is what the transactions trie
-/// holds: a legacy transaction's own list, or a typed transaction's type byte and field list.
-/// Every entry is well formed to the depth of a transaction.
+/// holds: a legacy transaction's own list, or the type byte and field list of an access-list,
+/// fee-market or set-code transaction. Every entry is well formed to the depth of a transaction.
 fn wireTransactions(scratch: Allocator, payload: []const u8) Error![]const []const u8 {
     var wire: std.ArrayList([]const u8) = .empty;
     var entries = Reader{ .rest = payload };
@@ -263,12 +257,17 @@ fn wireTransactions(scratch: Allocator, payload: []const u8) Error![]const []con
         const entry = try entries.next();
         const wire_form, const fields = switch (entry.value) {
             .list => .{ entry.encoded, entry.encoded },
-            .bytes => |envelope| if (envelope.len < 2) return error.MalformedBlock else .{ envelope, envelope[1..] },
+            .bytes => |envelope| if (envelope.len < 2 or !isEnvelopeType(envelope[0])) return error.MalformedBlock else .{ envelope, envelope[1..] },
         };
         if (!wellFormed(fields, transaction_depth)) return error.MalformedBlock;
         try wire.append(scratch, wire_form);
     }
     return wire.items;
+}
+
+/// Whether `type_byte` is the EIP-2718 type of an access-list (1), fee-market (2) or set-code (4) transaction.
+fn isEnvelopeType(type_byte: u8) bool {
+    return type_byte == 1 or type_byte == 2 or type_byte == 4;
 }
 
 /// Whether `bytes` are consecutive RLP items that nest lists to `depth` at most, each declared

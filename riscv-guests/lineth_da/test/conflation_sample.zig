@@ -24,7 +24,7 @@ fn secretKey(index: u8) [32]u8 {
 /// The canonical payload of a conflation of `count` blocks, each with one to five signed random
 /// transactions, drawn from `random`.
 pub fn conflationPayload(a: Allocator, random: std.Random, count: usize) ![]u8 {
-    const kinds = std.enums.values(blocks.Kind);
+    const kinds = blocks.accepted_kinds;
     const truncated = try a.alloc(truncation.TruncatedBlock, count);
     for (truncated, 0..) |*slot, number| {
         const items = try a.alloc(rlp.Item, 1 + random.uintLessThan(usize, 5));
