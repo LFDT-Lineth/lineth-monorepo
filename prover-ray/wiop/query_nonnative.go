@@ -19,11 +19,12 @@ var _ Query = (*NonNative)(nil)
 // little-endian sequence of limb columns of NbBitsPerLimb bits each.
 //
 // The query is only declarative, the user must run the compiler pass in package
-// wiop/compilers/nonnative to reduce it to a Schwartz-Zippel polynomial
-// identity checked at a shared random point.
+// wiop/compilers/nonnative to reduce it to per-coefficient polynomial
+// identities over limb digits.
 //
-// The compiler pass allocates the carry columns and samples the coin itself so that
-// multiple [NonNative] queries can share the same coin.
+// The compiler pass allocates the digit and carry columns. It also
+// range-checks every limb into [0, 2^NbBitsPerLimb): an assignment with a
+// wider limb is rejected even if the integer relation holds.
 //
 // The query is checkable via limb composition, but it doesn't enforce the
 // soundness of the proof against a malicious prover. The compiler pass reduces
@@ -56,9 +57,9 @@ func (q *NonNative) Round() *Round { return q.InputRound }
 //
 //	Left*Right = Quotient*Modulus + Result.
 //
-// It does not rely on the vanishing relation the compiler produces (no coin
-// exists yet at this stage); it recomposes each operand from its limbs and
-// checks the relation directly over big.Int arithmetic.
+// It does not rely on the identities the compiler produces; it recomposes each
+// operand from its limbs and checks the relation directly over big.Int
+// arithmetic.
 //
 // It is a convenience runtime check only; soundness against a malicious prover is
 // established by compiling the system using nonnative and global compilers.
