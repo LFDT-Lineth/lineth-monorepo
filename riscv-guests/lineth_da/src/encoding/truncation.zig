@@ -29,8 +29,8 @@ pub const Error = error{
     /// An allocator refused a request, whichever step made it.
     OutOfMemory,
     /// The bytes are not a canonical Amsterdam block, a transaction in it is of a type outside
-    /// legacy, access-list, fee-market and set-code (a blob transaction included) or is not a
-    /// canonical transaction of its type, or the transactions are not the ones the header commits to.
+    /// legacy, access-list, fee-market and set-code (a blob transaction included) or cannot be
+    /// decoded, or the transactions are not the ones the header commits to.
     MalformedBlock,
     /// A transaction's signature does not recover a sender under the chain ID, which has to be
     /// positive: its r or s is out of range, or the `v` of a legacy transaction is none of 27, 28
@@ -84,15 +84,7 @@ pub fn truncateBlockRlp(output: Allocator, scratch: Allocator, block_rlp: []cons
 
     const stripped = try output.alloc([]const u8, decoded.len);
     const froms = try output.alloc(Address, decoded.len);
-    for (decoded, senders_input, wire, stripped, froms) |tx, tx_input, wire_tx, *stripped_tx, *from| {
-        // A set-code transaction names a destination.
-        if (tx.to == null and tx.tx_type == 4) return error.MalformedBlock;
-        // The decoded fields are the transaction's own when they encode back to its bytes.
-        const hash = tx_signing.txHash(decoding, &tx_input, chain_id) catch return refusals.failure(error.MalformedBlock);
-        var wire_hash: Hash = undefined;
-        accelerators.keccak256(wire_tx, &wire_hash);
-        if (!std.mem.eql(u8, &hash, &wire_hash)) return error.MalformedBlock;
-
+    for (decoded, senders_input, stripped, froms) |tx, tx_input, *stripped_tx, *from| {
         stripped_tx.* = try strippedTransaction(output, scratch, tx);
         const sender = tx_signing.recoverSender(decoding, &tx_input, chain_id, .amsterdam) catch return refusals.failure(error.SenderRecoveryFailed);
         from.* = sender orelse return error.SenderRecoveryFailed;

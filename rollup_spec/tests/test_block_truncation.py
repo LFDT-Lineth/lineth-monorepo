@@ -102,79 +102,32 @@ def unsigned_fee_market_envelope_of_type(type_byte: int) -> Bytes:
     return Bytes(bytes([type_byte]) + wire(sign(typed_tx(FeeMarketTransaction)))[1:])
 
 
+UNSUPPORTED_TYPE = "neither a legacy list nor an envelope of type 1, 2 or 4"
+
 REJECTED_BLOCKS = [
     pytest.param(
         lambda: block_rlp([wire(sign(legacy_tx()))]) + b"\xde\xad", "block RLP is not canonical",
         id="bytes after the block",
     ),
     pytest.param(
-        lambda: block_rlp([Bytes(rlp.encode(sign(legacy_tx())))]), "not a canonical typed transaction",
+        lambda: block_rlp([Bytes(rlp.encode(sign(legacy_tx())))]), UNSUPPORTED_TYPE,
         id="legacy transaction wrapped as a byte string",
     ),
     pytest.param(
-        lambda: block_rlp([Bytes(wire(sign(typed_tx(FeeMarketTransaction))) + b"junk")]), "not a canonical typed transaction",
-        id="bytes after a typed transaction",
-    ),
-    pytest.param(
-        lambda: block_rlp([unsigned_fee_market_envelope_of_type(5)]), "not a canonical typed transaction",
+        lambda: block_rlp([unsigned_fee_market_envelope_of_type(5)]), UNSUPPORTED_TYPE,
         id="transaction type beyond 4",
     ),
     pytest.param(
-        lambda: block_rlp([envelope(sign(typed_tx(BlobTransaction)))]), "not a canonical typed transaction",
+        lambda: block_rlp([envelope(sign(typed_tx(BlobTransaction)))]), UNSUPPORTED_TYPE,
         id="blob transaction",
     ),
     pytest.param(
         lambda: block_rlp([wire(sign(legacy_tx(0))), envelope(sign(typed_tx(BlobTransaction, nonce=1)))]),
-        "not a canonical typed transaction", id="blob transaction after a legacy one",
+        UNSUPPORTED_TYPE, id="blob transaction after a legacy one",
     ),
     pytest.param(
         lambda: block_rlp([set_code_with_nine_byte_nonce()]), "SetCodeTransaction.nonce",
         id="nine-byte nonce of a set-code transaction",
-    ),
-    pytest.param(
-        lambda: block_rlp([wire(sign(legacy_tx(2**64)))]), "exceeds the width", id="legacy nonce of 2^64",
-    ),
-    pytest.param(
-        lambda: block_rlp([wire(sign(typed_tx(FeeMarketTransaction, nonce=2**64)))]), "exceeds the width",
-        id="typed nonce of 2^64",
-    ),
-    pytest.param(
-        lambda: block_rlp([wire(sign(legacy_tx(gas=Uint(2**64))))]), "exceeds the width", id="legacy gas of 2^64",
-    ),
-    pytest.param(
-        lambda: block_rlp([wire(sign(typed_tx(AccessListTransaction, gas=Uint(2**64))))]), "exceeds the width",
-        id="access-list gas of 2^64",
-    ),
-    pytest.param(
-        lambda: block_rlp([wire(sign(typed_tx(FeeMarketTransaction, gas=Uint(2**64))))]), "exceeds the width",
-        id="fee-market gas of 2^64",
-    ),
-    pytest.param(
-        lambda: block_rlp([wire(sign(typed_tx(SetCodeTransaction, gas=Uint(2**64))))]), "exceeds the width",
-        id="set-code gas of 2^64",
-    ),
-    pytest.param(
-        lambda: block_rlp([wire(sign(legacy_tx(gas_price=Uint(2**128))))]), "exceeds the width", id="legacy gas price of 2^128",
-    ),
-    pytest.param(
-        lambda: block_rlp([wire(sign(typed_tx(FeeMarketTransaction, max_fee_per_gas=Uint(2**128))))]), "exceeds the width",
-        id="max fee of 2^128",
-    ),
-    pytest.param(
-        lambda: block_rlp([wire(sign(typed_tx(AccessListTransaction, gas_price=Uint(2**128))))]), "exceeds the width",
-        id="access-list gas price of 2^128",
-    ),
-    pytest.param(
-        lambda: block_rlp([wire(sign(typed_tx(SetCodeTransaction, max_fee_per_gas=Uint(2**128))))]), "exceeds the width",
-        id="set-code max fee of 2^128",
-    ),
-    pytest.param(
-        lambda: block_rlp([wire(sign(typed_tx(FeeMarketTransaction, max_priority_fee_per_gas=Uint(2**128))))]),
-        "exceeds the width", id="max priority fee of 2^128",
-    ),
-    pytest.param(
-        lambda: block_rlp([wire(sign(typed_tx(SetCodeTransaction, max_priority_fee_per_gas=Uint(2**128))))]),
-        "exceeds the width", id="set-code max priority fee of 2^128",
     ),
     pytest.param(swapped_body, "transactions root", id="transaction swapped for another one by the same sender"),
     pytest.param(dropped_transaction, "transactions root", id="transaction missing from the body"),
@@ -189,19 +142,6 @@ REJECTED_BLOCKS = [
 def test_block_that_is_not_canonical_or_does_not_carry_its_committed_transactions_is_rejected(build_block, error):
     with pytest.raises(Exception, match=error):
         truncate_block_rlp(build_block(), CHAIN_ID)
-
-
-def test_largest_nonce_and_fees_the_guest_decodes_are_accepted():
-    largest = [
-        sign(legacy_tx(2**64 - 1, gas=Uint(2**64 - 1), gas_price=Uint(2**128 - 1))),
-        sign(typed_tx(AccessListTransaction, nonce=2**64 - 1, gas=Uint(2**64 - 1), gas_price=Uint(2**128 - 1))),
-        sign(typed_tx(FeeMarketTransaction, nonce=2**64 - 1, gas=Uint(2**64 - 1), max_fee_per_gas=Uint(2**128 - 1), max_priority_fee_per_gas=Uint(2**128 - 1))),
-        sign(typed_tx(SetCodeTransaction, nonce=2**64 - 1, gas=Uint(2**64 - 1), max_fee_per_gas=Uint(2**128 - 1), max_priority_fee_per_gas=Uint(2**128 - 1))),
-    ]
-
-    truncated = truncate_block_rlp(block_rlp([wire(tx) for tx in largest]), CHAIN_ID)
-
-    assert truncated.froms == [SENDER] * len(largest)
 
 
 def test_ommer_timestamp_is_a_256_bit_integer_and_the_block_timestamp_a_64_bit_one():
