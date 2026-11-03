@@ -55,7 +55,7 @@ const payload = try encoding.truncation.encodeBlocks(output, scratch, &.{block})
 
 **`rolling_hash`** is the dataRollingHash fold, `keccak256(parent ‖ chunkHash)`, with the opening of the boundary preimage for a range that starts inside a chunk.
 
-**`blob_kzg`** verifies an EIP-4844 blob proof without recomputing the commitment: the versioned hash of the commitment (`versionedHash`), the Fiat-Shamir challenge `z` (`computeChallenge`), the blob polynomial's value `y` at `z` by the barycentric formula over the bit-reversed 4096th roots of unity (`evaluate`) and the point-evaluation check of (commitment, `z`, `y`, proof) (`verify`). The field arithmetic is Constantine's BLS12-381 scalar field: `ctt_bls12_381_fr_*`, called through `src/encoding/scalar_field.zig` and defined by the archive of the `zkvm_provide` providers, which every consumer links for sha256 and the point evaluation.
+**`blob_kzg`** verifies an EIP-4844 blob proof without recomputing the commitment: the versioned hash of the commitment (`versionedHash`), the Fiat-Shamir challenge `z` (`computeChallenge`), the blob polynomial's value `y` at `z` by the barycentric formula over the bit-reversed 4096th roots of unity and the point-evaluation check of (commitment, `z`, `y`, proof) (`verify`). The field arithmetic is Constantine's BLS12-381 scalar field: `ctt_bls12_381_fr_*`, called through `src/encoding/scalar_field.zig` and defined by the archive of the `zkvm_provide` providers, which every consumer links for sha256 and the point evaluation.
 
 ## `decompress`
 

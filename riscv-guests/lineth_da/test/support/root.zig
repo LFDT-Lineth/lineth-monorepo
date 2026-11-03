@@ -9,4 +9,3 @@ pub const secp256k1 = @import("secp256k1.zig");
 pub const blocks = @import("blocks.zig");
 pub const da_stream = @import("da_stream.zig");
 pub const kzg = @import("kzg.zig");
-pub const scalar_field = @import("scalar_field.zig");

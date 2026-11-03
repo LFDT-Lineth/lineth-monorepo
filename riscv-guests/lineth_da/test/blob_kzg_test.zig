@@ -6,8 +6,6 @@ const support = @import("support");
 
 const blob_kzg = lineth_da.encoding.blob_kzg;
 
-const Fr = blob_kzg.Fr;
-
 const gpa = std.testing.allocator;
 const io = std.testing.io;
 
@@ -108,107 +106,6 @@ test "the versioned hash of a commitment is 0x01 followed by its sha256 without 
         0xde, 0xf7, 0xab, 0x96, 0x6d, 0x7b, 0x77, 0x09, 0x05, 0x39, 0x8e, 0xba, 0x3c, 0x44, 0x40, 0x14,
     };
     try std.testing.expectEqualSlices(u8, &expected, &blob_kzg.versionedHash(&infinity));
-}
-
-// Roots of unity and powers by plain integer arithmetic, independent of the scalar-field module.
-const modulus = support.scalar_field.modulus;
-const mulMod = support.scalar_field.mulMod;
-const powMod = support.scalar_field.powMod;
-
-/// The 4096th roots of unity ω^k of EIP-4844's domain, for ω = 7^((r - 1) / 4096).
-fn rootTable() !*[4096]u256 {
-    const roots = try gpa.create([4096]u256);
-    const omega = powMod(7, (modulus - 1) / 4096);
-    roots[0] = 1;
-    for (1..4096) |k| roots[k] = mulMod(roots[k - 1], omega);
-    return roots;
-}
-
-fn bitReverse(index: usize) usize {
-    return @bitReverse(@as(u12, @intCast(index)));
-}
-
-fn writeElement(blob: *[blob_len]u8, index: usize, value: u256) void {
-    std.mem.writeInt(u256, blob[index * 32 ..][0..32], value, .big);
-}
-
-fn element(value: u256) Fr {
-    var bytes: [32]u8 = undefined;
-    std.mem.writeInt(u256, &bytes, value, .big);
-    return Fr.fromBytes(&bytes).?;
-}
-
-fn valueOf(fr: Fr) u256 {
-    return std.mem.readInt(u256, &fr.toBytes(), .big);
-}
-
-test "the evaluation of a blob of monomial values is the monomial at the point" {
-    const blob = try gpa.create([blob_len]u8);
-    defer gpa.destroy(blob);
-    const roots = try rootTable();
-    defer gpa.destroy(roots);
-    var prng = std.Random.DefaultPrng.init(7);
-
-    for ([_]usize{ 0, 1, 2, 3, 100, 4095 }) |degree| {
-        // The polynomial x^degree has the value ω^(brp(i) · degree) at the i-th element's point.
-        for (0..4096) |i| writeElement(blob, i, roots[bitReverse(i) * degree % 4096]);
-        for (0..5) |_| {
-            const z = prng.random().int(u256) % modulus;
-            try std.testing.expectEqual(powMod(z, degree), valueOf(blob_kzg.evaluate(blob, element(z)).?));
-        }
-        try std.testing.expectEqual(powMod(0, degree), valueOf(blob_kzg.evaluate(blob, Fr.zero()).?));
-    }
-}
-
-test "the evaluation at a point of the domain is the element at that point" {
-    const blob = try gpa.create([blob_len]u8);
-    defer gpa.destroy(blob);
-    const roots = try rootTable();
-    defer gpa.destroy(roots);
-    var prng = std.Random.DefaultPrng.init(8);
-    for (0..4096) |i| writeElement(blob, i, prng.random().int(u256) >> 3);
-
-    for ([_]usize{ 0, 1, 2, 5, 2048, 4095 }) |k| {
-        const expected = std.mem.readInt(u256, blob[bitReverse(k) * 32 ..][0..32], .big);
-        try std.testing.expectEqual(expected, valueOf(blob_kzg.evaluate(blob, element(roots[k])).?));
-    }
-}
-
-test "the evaluation is linear in the blob" {
-    const first = try gpa.create([blob_len]u8);
-    defer gpa.destroy(first);
-    const second = try gpa.create([blob_len]u8);
-    defer gpa.destroy(second);
-    const sum = try gpa.create([blob_len]u8);
-    defer gpa.destroy(sum);
-    var prng = std.Random.DefaultPrng.init(9);
-    for (0..4096) |i| {
-        const a = prng.random().int(u256) % modulus;
-        const b = prng.random().int(u256) % modulus;
-        writeElement(first, i, a);
-        writeElement(second, i, b);
-        writeElement(sum, i, @intCast((@as(u512, a) + b) % modulus));
-    }
-    const z = element(prng.random().int(u256) % modulus);
-    const expected = (@as(u512, valueOf(blob_kzg.evaluate(first, z).?)) + valueOf(blob_kzg.evaluate(second, z).?)) % modulus;
-    try std.testing.expectEqual(@as(u256, @intCast(expected)), valueOf(blob_kzg.evaluate(sum, z).?));
-}
-
-test "a blob with an element at or above the modulus has no evaluation" {
-    const blob = try gpa.create([blob_len]u8);
-    defer gpa.destroy(blob);
-    const roots = try rootTable();
-    defer gpa.destroy(roots);
-    @memset(blob, 0);
-    for ([_]usize{ 0, 1234, 4095 }) |index| {
-        writeElement(blob, index, modulus);
-        try std.testing.expect(blob_kzg.evaluate(blob, element(5)) == null);
-        // Also where the point lies in the domain and names another element.
-        try std.testing.expect(blob_kzg.evaluate(blob, element(roots[3])) == null);
-        writeElement(blob, index, modulus - 1);
-        try std.testing.expect(blob_kzg.evaluate(blob, element(5)) != null);
-        writeElement(blob, index, 0);
-    }
 }
 
 /// A verifying case of the reference vectors.

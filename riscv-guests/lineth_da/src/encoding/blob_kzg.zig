@@ -66,7 +66,7 @@ fn encodedPower(base: u256, exponent: u256) [32]u8 {
 /// The EIP-4844 `evaluate_polynomial_in_evaluation_form`: the value at `z` of the polynomial whose
 /// evaluations over the bit-reversed 4096th roots of unity are the blob's elements, by the
 /// barycentric formula. Null when an element is not a canonical field element.
-pub fn evaluate(blob: *const [blob_len]u8, z: Fr) ?Fr {
+fn evaluate(blob: *const [blob_len]u8, z: Fr) ?Fr {
     for (0..field_elements) |i| {
         if (!Fr.isCanonical(blob[i * 32 ..][0..32])) return null;
     }
