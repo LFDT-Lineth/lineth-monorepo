@@ -21,7 +21,7 @@ BUILD_CACHE_DIR ?= $(MAKEFILE_DIR).zig-cache
 ZIG_BUILD_FLAGS ?= --cache-dir $(BUILD_CACHE_DIR) --summary all
 # The native tests and tools: they fetch the DA test dependencies and build the host crypto providers.
 ZIG_HOST_FLAGS ?= -Dhost-tools=true
-ZIG_FIXTURES_FLAGS = -Dzkevm-fixtures="$(ZKEVM_FIXTURES_DIR)"
+ZIG_FIXTURES_FLAGS ?= -Dzkevm-fixtures="$(ZKEVM_FIXTURES_DIR)"
 # NOTE: `zig build --fetch` fetches the dependency tree and EXITS without building or running, so
 # it must NOT be passed to build/test targets. Pre-fetching is the dedicated `fetch` target; a build
 # fetches the lazy dependencies of the steps it runs on demand.

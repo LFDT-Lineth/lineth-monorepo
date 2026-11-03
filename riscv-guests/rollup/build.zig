@@ -177,10 +177,14 @@ fn addZkcSmokeStep(b: *std.Build, tools: Tools) void {
 }
 
 /// The `test/reference/*_test.zig` suites over the Amsterdam blocks of the EF zkevm fixtures, run
-/// by the `reference-test` step, which registers when `-Dzkevm-fixtures` is given. They are
-/// compiled optimized: the corpus is gigabytes of JSON.
+/// by the `reference-test` step; without `-Dzkevm-fixtures` the step fails with the flag to pass.
+/// They are compiled optimized: the corpus is gigabytes of JSON.
 fn addReferenceStep(b: *std.Build, options: Options, crypto: common.HostCrypto) void {
-    const fixtures = options.zkevm_fixtures orelse return;
+    const step = b.step("reference-test", "Run the rollup guest over consecutive blocks of the EF zkevm fixtures");
+    const fixtures = options.zkevm_fixtures orelse {
+        step.dependOn(&b.addFail("needs -Dzkevm-fixtures=<dir>; use `make -C riscv-guests/rollup reference-test`").step);
+        return;
+    };
     const paths = b.addOptions();
     paths.addOptionPath("amsterdam_blocks", fixtures.path(b, "blockchain_tests/for_amsterdam"));
 
@@ -192,7 +196,6 @@ fn addReferenceStep(b: *std.Build, options: Options, crypto: common.HostCrypto) 
             .{ .name = "ef_blocks", .module = host.lineth_da.module("ef_blocks") },
         },
     }) catch @panic("OOM");
-    const step = b.step("reference-test", "Run the rollup guest over consecutive blocks of the EF zkevm fixtures");
     crypto.linkAll(common.addTests(b, step, .{
         .target = host.native.target,
         .optimize = host.native.optimize,
