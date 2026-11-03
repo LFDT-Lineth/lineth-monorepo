@@ -13,7 +13,7 @@ var (
 )
 
 // TrimPools trims every pool (see [bufpool.Pool.Trim]): the buffers of the
-// sizes no request asked for since the previous call are dropped.
+// sizes no request asked for during the last few calls are dropped.
 func TrimPools() {
 	BasePool.Trim()
 	ExtPool.Trim()

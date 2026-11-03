@@ -164,11 +164,11 @@ func allocTree(numLeaves int) *Tree {
 	}
 }
 
-// allocPooledTree is [allocTree] with its nodes taken from the octuplet pool,
-// for the commitment trees that [CommitterState.Release] gives back. Every
-// node is written by the leaf hashing and buildLevels, so the stale nodes of
-// a pooled slice are fine; its capacity, 2·numLeaves, is the pool's
-// power-of-two class.
+// allocPooledTree is [allocTree] with its nodes taken from the octuplet pool.
+// The commitment trees go back to it through [CommitterState.Release]; other
+// trees are left to the garbage collector. Every node is written by the leaf
+// hashing and buildLevels, so the stale nodes of a pooled slice are fine; its
+// capacity, 2·numLeaves, is the pool's power-of-two class.
 func allocPooledTree(numLeaves int) *Tree {
 	if numLeaves <= 0 || numLeaves&(numLeaves-1) != 0 {
 		panic("fri: allocPooledTree: number of leaves must be a positive power of two")

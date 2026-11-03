@@ -25,7 +25,9 @@ func newPooledTestSystem(n int) (*wiop.System, *wiop.Column) {
 
 // A proof following another one reuses its codewords and Merkle nodes, which
 // the opening returned to the field pools holding stale values. It must be
-// exactly the proof produced from freshly allocated buffers, and verify.
+// exactly the proof produced from freshly allocated buffers, and verify; and
+// the earlier proof, whose buffers were reused, must be left unchanged, so it
+// holds no reference into them.
 func TestCompileReusesPooledBuffers(t *testing.T) {
 	const n = 1 << 12
 	drainPools := func() {
@@ -44,4 +46,10 @@ func TestCompileReusesPooledBuffers(t *testing.T) {
 	want, wantPub := fresh.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(freshCol, baseVec(n, 5)) })
 	require.Equal(t, want, proofB, "a proof on pooled buffers must equal a fresh one")
 	require.Equal(t, wantPub, pubB)
+
+	drainPools()
+	freshA, freshACol := newPooledTestSystem(n)
+	wantA, _ := freshA.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(freshACol, baseVec(n, 3)) })
+	require.Equal(t, wantA, proofA, "a proof must not change when a later proof reuses its buffers")
+	require.NoError(t, sys.Verify(proofA, pubA))
 }

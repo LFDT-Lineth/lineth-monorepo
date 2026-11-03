@@ -23,10 +23,16 @@ import (
 // that class released at once. [Pool.Trim] drops the classes that went
 // unrequested, and [Pool.Drain] gives all the memory back.
 type Pool[T any] struct {
-	mu        sync.Mutex
-	free      [bits.UintSize][][]T
-	requested [bits.UintSize]bool // per class, requested since the last Trim
+	mu   sync.Mutex
+	free [bits.UintSize][][]T
+	idle [bits.UintSize]uint8 // per class, Trims since its last Get, up to trimAfter
 }
+
+// trimAfter is the number of Trims in a row a capacity class must go
+// unrequested before [Pool.Trim] drops it. A class used every few Trims --
+// by proofs of several systems run in turn, or by proofs run concurrently,
+// each trimming the shared pool -- is kept.
+const trimAfter = 4
 
 // Get returns a slice of length n, from the released slices of the same
 // capacity class when there is one; its elements are unspecified.
@@ -36,7 +42,7 @@ func (p *Pool[T]) Get(n int) []T {
 	}
 	class := bits.Len(uint(n - 1))
 	p.mu.Lock()
-	p.requested[class] = true
+	p.idle[class] = 0
 	if k := len(p.free[class]); k > 0 {
 		v := p.free[class][k-1]
 		p.free[class][k-1] = nil
@@ -51,7 +57,8 @@ func (p *Pool[T]) Get(n int) []T {
 }
 
 // Put releases v for reuse. v must have been returned by [Pool.Get] and no
-// longer be used; other slices are ignored.
+// longer be used. A slice whose capacity is not a power of two is ignored;
+// any other one is kept and handed out again.
 func (p *Pool[T]) Put(v []T) {
 	c := cap(v)
 	if c == 0 || c&(c-1) != 0 {
@@ -64,16 +71,18 @@ func (p *Pool[T]) Put(v []T) {
 }
 
 // Trim drops the released slices of every capacity class that no [Pool.Get]
-// requested since the previous Trim, so the garbage collector can reclaim
-// them. Called once per proof, it keeps only the classes the last proof used.
+// requested during the last trimAfter Trims, so the garbage collector can
+// reclaim them. Slices in use are never touched.
 func (p *Pool[T]) Trim() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	for i := range p.free {
-		if !p.requested[i] {
+		if p.idle[i] < trimAfter {
+			p.idle[i]++
+		}
+		if p.idle[i] >= trimAfter {
 			p.free[i] = nil
 		}
-		p.requested[i] = false
 	}
 }
 

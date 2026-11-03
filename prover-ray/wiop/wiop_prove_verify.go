@@ -102,7 +102,7 @@ func (sys *System) Prove(assign func(rt *Runtime), proveOpts ...ProveOptions) (P
 		rt.AdvanceRound()
 	}
 
-	// The pooled buffers of sizes this proof did not use are dropped, so that
+	// The pooled buffers of sizes no recent proof used are dropped, so that
 	// the pools follow the sizes of the latest proofs.
 	field.TrimPools()
 

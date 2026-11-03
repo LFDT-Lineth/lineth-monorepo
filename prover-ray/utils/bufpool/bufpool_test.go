@@ -33,19 +33,31 @@ func TestPoolReusesByCapacityClass(t *testing.T) {
 	}
 }
 
-// Trim must drop the released slices of the classes no Get requested since
-// the previous Trim, and keep those of the classes requested.
+// Trim must keep the classes requested during the last trimAfter Trims, and
+// drop a class only once it went unrequested for trimAfter Trims in a row.
 func TestPoolTrimDropsUnrequestedClasses(t *testing.T) {
 	var p Pool[uint32]
 	small, large := p.Get(4), p.Get(1024)
 	p.Put(small)
 	p.Put(large)
-	p.Trim() // both classes were requested: both kept
-	if s := p.Get(4); &s[0] != &small[0] {
-		t.Fatal("Trim must keep a class requested since the previous Trim")
+	for i := range trimAfter - 1 {
+		p.Trim()
+		s := p.Get(4) // the small class stays in use
+		if &s[0] != &small[0] {
+			t.Fatalf("Trim %d dropped a class requested since the previous Trim", i)
+		}
+		p.Put(s)
 	}
-	p.Trim() // only the small class was requested since: the large one goes
+	// The large class was last requested trimAfter-1 Trims ago: still kept.
+	if l := p.Get(1024); &l[0] != &large[0] {
+		t.Fatal("Trim dropped a class requested within the last trimAfter Trims")
+	} else {
+		p.Put(l)
+	}
+	for range trimAfter {
+		p.Trim()
+	}
 	if l := p.Get(1024); &l[0] == &large[0] {
-		t.Fatal("Trim must drop a class not requested since the previous Trim")
+		t.Fatal("Trim must drop a class unrequested for trimAfter Trims")
 	}
 }

@@ -1168,9 +1168,10 @@ func (pcs *PCS) roundForSize(sizeLog2 uint8) (uint8, error) {
 
 // encodedColumnEvals aliases the entry's codeword from the committed table into
 // a quotientColumn (populating exactly one of EvalsExt / EvalsBase). The
-// committed table is never mutated after Commit, and both consumers of these
-// slices — Level.EvalsAt during folding and the query phase — read them
-// read-only, so aliasing rather than copying is safe. This avoids allocating a
+// committed table is not mutated until [CommitterState.Release] returns it to
+// the pools, after the opening, and both consumers of these slices --
+// Level.EvalsAt during folding and the query phase -- only read them during
+// the opening, so aliasing rather than copying is safe. This avoids allocating a
 // fresh 4N-length []E6 per column (and, for base columns, widening every
 // element to E6) — the dominant cost of reconstructLevels. EvalsAt lifts base
 // elements to E6 on the stack as it reads them.
