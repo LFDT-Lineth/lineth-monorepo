@@ -166,13 +166,23 @@ func PreReadZkcInputs(inputsFile string) *PreReadInputs {
 	return &PreReadInputs{Inputs: inputs, Err: err, InputsFile: inputsFile}
 }
 
-// TraceZkcInputs returns the lazy trace of the pre-read inputs. Shards are only
-// traced and expanded when requested (see [LazyTrace.Get]); with sharding
-// enabled, this call only runs the fast-mode pass recording one checkpoint per
-// shard. The function panics on errors. The
-// driver's System must be compiled before tracing: the trace is padded to its
-// dynamic modules' minimum sizes (see [PadToMinSizes]).
+// TraceZkcInputs is [ZkCDriver.TryTraceZkcInputs] panicking on error.
 func (a *ZkCDriver) TraceZkcInputs(preRead *PreReadInputs) trace.LazyTrace[koalabear.Element] {
+	lazyTrace, err := a.TryTraceZkcInputs(preRead)
+	if err != nil {
+		logrus.Panicf("tracing failed: %v", err)
+	}
+	return lazyTrace
+}
+
+// TryTraceZkcInputs returns the lazy trace of the pre-read inputs, or the
+// tracing errors joined; a guest rejection is a [vm.Failure] in that chain.
+// Shards are only traced and expanded when requested (see [LazyTrace.Get]);
+// with sharding enabled, this call only runs the fast-mode pass recording one
+// checkpoint per shard. The driver's System must be compiled before tracing:
+// the trace is padded to its dynamic modules' minimum sizes (see
+// [PadToMinSizes]).
+func (a *ZkCDriver) TryTraceZkcInputs(preRead *PreReadInputs) (trace.LazyTrace[koalabear.Element], error) {
 
 	assignStart := time.Now()
 	var (
@@ -202,11 +212,11 @@ func (a *ZkCDriver) TraceZkcInputs(preRead *PreReadInputs) trace.LazyTrace[koala
 	_, expandedTrace, errs := a.BinaryFile.Trace(inputs, PadToMinSizes(a.TracingConfig, a.system))
 
 	if len(errs) > 0 {
-		logrus.Panicf("tracing failed: %v", errors.Join(errs...).Error())
+		return trace.LazyTrace[koalabear.Element]{}, errors.Join(errs...)
 	}
 	logrus.Infof("[bootstrapper] tracing: %v", time.Since(tracingStart))
 
-	return expandedTrace.Unwrap()
+	return expandedTrace.Unwrap(), nil
 }
 
 // AssignTraceShard assigns arithmetization columns using a pre-read trace.

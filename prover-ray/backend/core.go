@@ -57,10 +57,6 @@ type Core struct {
 	program elfmapping.Program
 	decoded predecoding.DecodedProgram
 
-	// shardIndexes are the shards [Core.Prove] proves, sorted; empty proves
-	// them all. See [Config.ShardIndexes].
-	shardIndexes []uint
-
 	// binaryFile is the compiled R5 arithmetization, used by dev-zkvm to run the
 	// guest under ZkC Execute (the no-trace path). nil outside dev-zkvm.
 	binaryFile *zkcdriver.BinaryFile
@@ -76,11 +72,6 @@ func New(cfg Config) (*Core, error) {
 	if !mode.Valid() {
 		return nil, fmt.Errorf("invalid prover mode %q", cfg.Mode)
 	}
-	shardIndexes, err := checkShardIndexes(cfg)
-	if err != nil {
-		return nil, err
-	}
-
 	// dev-mock runs no guest, so it loads no circuit bin or guest ELF.
 	if !mode.needsArtifacts() {
 		return &Core{cfg: cfg, mode: mode}, nil
@@ -137,25 +128,24 @@ func New(cfg Config) (*Core, error) {
 	risc5.CheckPublicInputs(sys)
 
 	return &Core{
-		cfg:          cfg,
-		mode:         mode,
-		sys:          sys,
-		driver:       driver,
-		program:      program,
-		decoded:      decoded,
-		shardIndexes: shardIndexes,
+		cfg:     cfg,
+		mode:    mode,
+		sys:     sys,
+		driver:  driver,
+		program: program,
+		decoded: decoded,
 	}, nil
 }
 
-// checkShardIndexes returns a sorted copy of cfg.ShardIndexes, rejecting
-// duplicates and, without sharding, any shard other than 0.
-func checkShardIndexes(cfg Config) ([]uint, error) {
-	indexes := slices.Sorted(slices.Values(cfg.ShardIndexes))
+// checkShardIndexes returns a sorted copy of the shard indexes, rejecting
+// duplicates and, without sharding (shardSize zero), any shard other than 0.
+func checkShardIndexes(indexes []uint, shardSize uint64) ([]uint, error) {
+	indexes = slices.Sorted(slices.Values(indexes))
 	for k, i := range indexes {
 		if k > 0 && indexes[k-1] == i {
 			return nil, fmt.Errorf("duplicate shard index %d", i)
 		}
-		if cfg.ShardSize == 0 && i != 0 {
+		if shardSize == 0 && i != 0 {
 			return nil, fmt.Errorf("shard index %d requires a non-zero shard size", i)
 		}
 	}
@@ -263,11 +253,7 @@ func executeGuest(binf *zkcdriver.BinaryFile, inputs map[string]bit.Array) (bit.
 // the schema id and public inputs it commits to.
 func classifyGuestOutput(output map[string]bit.Array, errs []error) (res bit.Array, err error) {
 	if len(errs) > 0 {
-		var failure *vm.Failure
-		if errors.As(errors.Join(errs...), &failure) {
-			return res, fmt.Errorf("guest rejected the block (invalid): %s", failure.Message)
-		}
-		return res, fmt.Errorf("guest VM execution failed: %w", errors.Join(errs...))
+		return res, guestError(errors.Join(errs...))
 	}
 
 	out, ok := output[guestOutputMemory]
@@ -286,6 +272,17 @@ func classifyGuestOutput(output map[string]bit.Array, errs []error) (res bit.Arr
 	}
 	frame := slices.Concat(out.Bytes(), log.Bytes())
 	return bit.NewArray(frame, uint(len(frame)*8), bit.BigEndian), nil
+}
+
+// guestError distinguishes a guest block rejection (a recognized [vm.Failure],
+// the guest's own exit on an invalid block) from an internal VM failure (a
+// prover-side bug) in the errors of a ZkC execution or tracing.
+func guestError(err error) error {
+	var failure *vm.Failure
+	if errors.As(err, &failure) {
+		return fmt.Errorf("guest rejected the block (invalid): %s", failure.Message)
+	}
+	return fmt.Errorf("guest VM execution failed: %w", err)
 }
 
 // checkGuestOutputFrame checks the spec frame of the guest output: hash is
@@ -318,12 +315,19 @@ func (c *Core) proveFull(ctx context.Context, job Job) Result {
 		return failResult(job.ID, fmt.Errorf("building inputs: %w", err))
 	}
 
-	proof, pub, err := c.runProve(ctx, &zkcdriver.PreReadInputs{Inputs: inputs})
+	nodes, numShards, err := c.runProve(ctx, &zkcdriver.PreReadInputs{Inputs: inputs}, job.ShardIndexes)
 	if err != nil {
 		return failResult(job.ID, err)
 	}
+	// Conglomerating shard proofs into one proof is not implemented yet. Only
+	// an unsharded trace, whose single shard proof is the final proof, is
+	// supported: with sharding the in-shard message-bus check is off, so even a
+	// one-shard trace is not proved until conglomerated.
+	if c.cfg.ShardSize > 0 {
+		return failResult(job.ID, fmt.Errorf("conglomerating %d of %d shard proofs: %w", len(nodes), numShards, ErrNotImplemented))
+	}
 	//nolint (until SerializeProof implemented)
-	proofBytes, err := SerializeProof(proof, pub)
+	proofBytes, err := SerializeProof(nodes[0].Proof, nodes[0].Pub)
 	//nolint (whilst SerializeProof unimplemented)
 	if err != nil {
 		return failResult(job.ID, fmt.Errorf("serializing proof: %w", err))
@@ -340,7 +344,7 @@ func (c *Core) proveFull(ctx context.Context, job Job) Result {
 // expects. ELF mapping and predecoding are cached by [New]; only the per-job
 // guest input data differs.
 func (c *Core) buildInputs(job Job) (map[string]bit.Array, error) {
-	if err := sanityCheckJobs(job); err != nil {
+	if err := sanityCheckJobs(job, c.cfg.ShardSize); err != nil {
 		return nil, err
 	}
 	return c.encodeGuestInputs(job)
@@ -368,7 +372,11 @@ func (c *Core) encodeGuestInputs(job Job) (map[string]bit.Array, error) {
 	return inputs, nil
 }
 
-func sanityCheckJobs(job Job) error {
+func sanityCheckJobs(job Job, shardSize uint64) error {
+	if _, err := checkShardIndexes(job.ShardIndexes, shardSize); err != nil {
+		return fmt.Errorf("shard indexes: %w", err)
+	}
+
 	// Inverted ranges are malformed input.
 	if job.EndBlock < job.StartBlock {
 		return fmt.Errorf("invalid block range [%d, %d]: EndBlock < StartBlock",
@@ -384,62 +392,60 @@ func sanityCheckJobs(job Job) error {
 	return nil
 }
 
-// shardProof is the verified proof of a single trace shard.
-type shardProof struct {
-	Index uint
-	Proof wiop.Proof
-	Pub   wiop.PublicInput
+// Node is a proof over a set of trace shards: a shard proof, whose Coverage is
+// its single shard index. Conglomeration will aggregate nodes into nodes
+// covering the union of their children's, with the same public-input layout.
+type Node struct {
+	Coverage []uint
+	Proof    wiop.Proof
+	Pub      wiop.PublicInput
 }
 
-// runProve lazily traces the inputs, proves and verifies the shards of
-// [Core.shardIndexes] one at a time, so that a single shard is materialised at
-// any moment rather than the whole trace, and conglomerates the shard proofs
-// into a single proof as they arrive.
+// runProve lazily traces the inputs, then proves and verifies the shards of
+// shardIndexes (all of them if empty) one at a time, so that a single shard is
+// materialised at any moment rather than the whole trace. It returns the
+// shard proofs, in shard order, and the trace's shard count. With sharding,
+// the in-shard message-bus check is off and the bus balances only across
+// shards: the shard proofs are then not a proof of the execution until
+// conglomerated.
 func (c *Core) runProve(
 	ctx context.Context,
 	preRead *zkcdriver.PreReadInputs,
-) (wiop.Proof, wiop.PublicInput, error) {
-	_ = ctx // cancellation not yet propagated into the prover internals
+	shardIndexes []uint,
+) ([]Node, uint, error) {
 
 	// With sharding, this only runs the fast-mode pass recording one checkpoint
 	// per shard.
-	lazyTrace := c.driver.TraceZkcInputs(preRead)
-	indexes := c.shardIndexes
+	lazyTrace, err := c.driver.TryTraceZkcInputs(preRead)
+	if err != nil {
+		return nil, 0, fmt.Errorf("tracing: %w", guestError(err))
+	}
+	numShards := lazyTrace.Len()
+	indexes := slices.Sorted(slices.Values(shardIndexes))
 	if len(indexes) == 0 {
-		indexes = make([]uint, lazyTrace.Len())
+		indexes = make([]uint, numShards)
 		for i := range indexes {
 			indexes[i] = uint(i)
 		}
 	}
 	if len(indexes) == 0 {
-		return wiop.Proof{}, nil, errors.New("the trace has no shards")
+		return nil, 0, errors.New("the trace has no shards")
 	}
-	if last := indexes[len(indexes)-1]; last >= lazyTrace.Len() {
-		return wiop.Proof{}, nil, fmt.Errorf("shard index %d out of range, the trace has %d shards", last, lazyTrace.Len())
+	if last := indexes[len(indexes)-1]; last >= numShards {
+		return nil, 0, fmt.Errorf("shard index %d out of range, the trace has %d shards", last, numShards)
+	}
+	if len(indexes) != int(numShards) {
+		logrus.Infof("Proving %d of %d shards", len(indexes), numShards)
 	}
 
-	// Buffered so that sending never blocks, even if conglomeration fails early.
-	shardProofs := make(chan shardProof, len(indexes))
-	defer close(shardProofs)
-	var (
-		root     shardProof
-		rootErr  error
-		rootDone = make(chan struct{})
-	)
-	// The root checks apply only if this prover covers all the shards.
-	isRoot := len(indexes) == int(lazyTrace.Len())
-	if !isRoot {
-		logrus.Warnf("Proving %d of %d shards, the message bus is not checked across shards", len(indexes), lazyTrace.Len())
-	}
-	go func() {
-		defer close(rootDone)
-		root, rootErr = conglomerate(shardProofs, len(indexes), c.piLayout(), isRoot)
-	}()
-
+	nodes := make([]Node, 0, len(indexes))
 	for k, i := range indexes {
+		if err := ctx.Err(); err != nil {
+			return nil, 0, fmt.Errorf("before shard %d: %w", i, err)
+		}
 		shard, err := traceShard(lazyTrace, i)
 		if err != nil {
-			return wiop.Proof{}, nil, err
+			return nil, 0, err
 		}
 		// Once the last shard is traced, drop the lazy trace so that its
 		// checkpoints can be garbage collected before that shard is proved.
@@ -448,150 +454,11 @@ func (c *Core) runProve(
 		}
 		proof, pub, err := c.proveShard(shard)
 		if err != nil {
-			return wiop.Proof{}, nil, fmt.Errorf("shard %d: %w", i, err)
+			return nil, 0, fmt.Errorf("shard %d: %w", i, err)
 		}
-		shardProofs <- shardProof{Index: i, Proof: proof, Pub: pub}
+		nodes = append(nodes, Node{Coverage: []uint{i}, Proof: proof, Pub: pub})
 	}
-	<-rootDone
-	return root.Proof, root.Pub, rootErr
-}
-
-// piLayout holds the positions, in the public inputs, of the values aggregation
-// combines: the product on each message-bus handle, and the program VK and
-// guest output, which all the shards share.
-type piLayout struct {
-	bus, programVK, guestOutput []int
-}
-
-// piLayout returns the public-input layout of the shard proofs.
-func (c *Core) piLayout() piLayout {
-	return piLayout{
-		bus:         c.piPositions(messagebus.PublicInputTag, len(c.sys.MessageBusHandles())),
-		programVK:   c.piPositions(risc5.ProgramVKPI, risc5.NumProgramVK),
-		guestOutput: c.piPositions(risc5.GuestPublicOutputsPI, risc5.NumGuestPublicOutputs),
-	}
-}
-
-// piPositions returns the positions of the n public inputs tagged tag.
-func (c *Core) piPositions(tag wiop.PublicInputTag, n int) []int {
-	positions := make([]int, n)
-	for k := range positions {
-		_, positions[k] = c.sys.LookupPublicInputByTag(tag, k)
-	}
-	return positions
-}
-
-// checkBusBalanced checks that the product over all shards on each message-bus
-// handle is one.
-func checkBusBalanced(bus []field.Gen) error {
-	for h, p := range bus {
-		if diff := p.Sub(field.ElemOne()); !diff.IsZero() {
-			return fmt.Errorf("message-bus handle %d does not balance across the shards: product is %v", h, p)
-		}
-	}
-	return nil
-}
-
-// conglomerate reduces the n proofs received on shardProofs to one, aggregating
-// any two ready proofs, in any order and tree shape, as soon as they are
-// available. n must be at least 1. isRoot, the orchestrator's
-// signal that the n proofs cover all the shards, marks the last aggregation as
-// the root, where the root checks run; a single shard gets a root node of its
-// own.
-func conglomerate(shardProofs <-chan shardProof, n int, layout piLayout, isRoot bool) (shardProof, error) {
-	logrus.Warnf("Running dummy conglomeration, the aggregation steps are mocked")
-	type node struct {
-		proof shardProof
-		err   error
-	}
-	var (
-		ready    []shardProof
-		nodes    = make(chan node, n)
-		received int
-		inFlight int
-	)
-	for {
-		for len(ready) >= 2 {
-			left, right := ready[0], ready[1]
-			last := received == n && inFlight == 0 && len(ready) == 2
-			ready = ready[2:]
-			inFlight++
-			go func() {
-				proof, err := aggregate(isRoot && last, layout, left, right)
-				nodes <- node{proof: proof, err: err}
-			}()
-		}
-		if received == n && inFlight == 0 {
-			if isRoot && n == 1 {
-				return aggregate(true, layout, ready[0])
-			}
-			return ready[0], nil
-		}
-		if received == n {
-			shardProofs = nil // all shards arrived, wait for the aggregations only
-		}
-		select {
-		case p, ok := <-shardProofs:
-			if !ok {
-				return shardProof{}, fmt.Errorf("only %d of %d shard proofs arrived", received, n)
-			}
-			received++
-			ready = append(ready, p)
-		case nd := <-nodes:
-			inFlight--
-			if nd.err != nil {
-				return shardProof{}, nd.err
-			}
-			ready = append(ready, nd.proof)
-		}
-	}
-}
-
-// aggregate mocks an aggregation node over one or two children: it checks that
-// the children have the same public-input shape, program VK  and guest
-// output, and returns the child of the lower shard index, with the product
-// of the children's products at the message-bus positions of its public
-// inputs. The root node also runs the root checks: the message bus balancing.
-func aggregate(isRoot bool, layout piLayout, children ...shardProof) (shardProof, error) {
-	first := children[0]
-	node := first
-	bus := make([]field.Gen, len(layout.bus))
-	for h, pos := range layout.bus {
-		bus[h] = first.Pub[pos]
-	}
-	for _, child := range children[1:] {
-		if len(child.Pub) != len(first.Pub) {
-			return shardProof{}, fmt.Errorf("shards %d and %d have public inputs of different shapes",
-				first.Index, child.Index)
-		}
-		for _, shared := range []struct {
-			name      string
-			positions []int
-		}{{"program VK", layout.programVK}, {"guest output", layout.guestOutput}} {
-			for _, pos := range shared.positions {
-				if diff := child.Pub[pos].Sub(first.Pub[pos]); !diff.IsZero() {
-					return shardProof{}, fmt.Errorf("shards %d and %d have different %s",
-						first.Index, child.Index, shared.name)
-				}
-			}
-		}
-		for h, pos := range layout.bus {
-			bus[h] = bus[h].Mul(child.Pub[pos])
-		}
-		if child.Index < node.Index {
-			node = child
-		}
-	}
-	node.Pub = slices.Clone(node.Pub)
-	for h, pos := range layout.bus {
-		node.Pub[pos] = bus[h]
-	}
-	if isRoot {
-		if err := checkBusBalanced(bus); err != nil {
-			return shardProof{}, err
-		}
-	}
-	return node, nil
+	return nodes, numShards, nil
 }
 
 // traceShard traces and expands the ith shard of the lazy trace.

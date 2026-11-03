@@ -19,10 +19,10 @@ type Config struct {
 	// ShardSize is the number of executed RISC-V instructions per trace shard
 	// (see zkcdriver.Settings.ShardSize). Zero disables sharding: the whole
 	// execution is a single shard.
+	//
+	// Sharding is not production-ready. With a non-zero ShardSize the in-shard
+	// message-bus check is off and the bus balances only across shards, which
+	// only conglomeration can check; in full mode, until it lands, every
+	// sharded job fails with [ErrNotImplemented]. Leave it zero in production.
 	ShardSize uint64
-
-	// ShardIndexes lists the shards this prover proves, each traced lazily and
-	// proved in turn. Empty proves all the shards. Without sharding, only shard
-	// 0 exists.
-	ShardIndexes []uint
 }
