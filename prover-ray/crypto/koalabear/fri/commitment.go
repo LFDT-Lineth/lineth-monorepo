@@ -70,10 +70,9 @@ func (table MultiSizeTable) Encode(encoders []*RSEncoder) MultiSizeTable {
 	assertValidMultiEncoder(encoders)
 	encoded := make([]SizedTable, len(table))
 	for i := range table {
-		// The codewords come from the field pools (see [CommitterState.Release]):
-		// a proof reuses the previous one's, instead of zeroing and faulting
-		// in a few GB of fresh memory per commit. The encoders overwrite every
-		// element.
+		// The codewords come from the field pools, to which
+		// [CommitterState.Release] returns them, so that commits reuse their
+		// memory. They hold stale values; the encoders overwrite every element.
 		N := int(encoders[i].Domain.Cardinality)
 		encoded[i].Base = pooledColumns(&field.BasePool, len(table[i].Base), N)
 		encoded[i].Ext = pooledColumns(&field.ExtPool, len(table[i].Ext), N)

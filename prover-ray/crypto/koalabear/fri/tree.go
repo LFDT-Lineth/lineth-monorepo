@@ -202,10 +202,10 @@ func (t *Tree) buildLevels(injections [][][]field.Octuplet) {
 	// The deep levels are hashed subtree by subtree, in one parallel pass:
 	// the nodes of subtree s at a level are the s-th of numSubtrees equal
 	// slices of it, whose children are the s-th slice of the level below, so
-	// each subtree only depends on itself. A worker then hashes whole
-	// subtrees with their nodes in cache, instead of every level waiting for
-	// the previous one to finish over all the CPUs. A level joins the pass
-	// when each subtree holds at least one group of batchLanes nodes of it.
+	// each subtree only depends on itself. A worker hashes whole subtrees,
+	// their nodes staying in cache, with no synchronisation between levels.
+	// A level joins the pass when each subtree holds at least one group of
+	// batchLanes nodes of it.
 	numSubtrees := 1
 	for numSubtrees < 4*runtime.GOMAXPROCS(0) && 2*numSubtrees*batchLanes <= n/2 {
 		numSubtrees *= 2
@@ -241,7 +241,7 @@ func (t *Tree) buildLevels(injections [][][]field.Octuplet) {
 func checkInjections(injections [][]field.Octuplet, levelSize int) {
 	for _, injected := range injections {
 		if len(injected) != levelSize {
-			panic("fri: hashTreeLevel: invalid auxiliary leaf count")
+			panic("fri: buildLevels: invalid auxiliary leaf count")
 		}
 	}
 }
@@ -249,15 +249,14 @@ func checkInjections(injections [][]field.Octuplet, levelSize int) {
 // hashTreeLevel computes the complete level of levelSize internal nodes at
 // heap positions [levelSize-1, 2*levelSize-1). Children belong to
 // already-computed lower levels, so the writes are independent. Every slice of
-// injections holds exactly one digest per node of this level; they are
-// chained into each node in order.
+// injections holds exactly one digest per node of this level (checked by
+// [Tree.buildLevels]); they are chained into each node in order.
 func hashTreeLevel(
 	nodes []field.Octuplet,
 	injections [][]field.Octuplet,
 	levelSize int,
 ) {
 	levelStart := levelSize - 1
-	checkInjections(injections, levelSize)
 
 	// Levels smaller than one batch (only the topmost few nodes) are hashed
 	// with the scalar compression.

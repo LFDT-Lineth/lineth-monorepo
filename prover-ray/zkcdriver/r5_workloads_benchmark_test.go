@@ -84,9 +84,11 @@ func loadR5Workload(b *testing.B, w r5Workload) *r5WorkloadFixture {
 	if err != nil {
 		b.Fatalf("%s: preparing inputs: %v", w.name, err)
 	}
-	cfg := vm.DEFAULT_TRACE_CONFIG.
+	// Modules are padded to their minimum sizes, as the driver's own tracing
+	// does (see [zkcdriver.PadToMinSizes]).
+	cfg := zkcdriver.PadToMinSizes(vm.DEFAULT_TRACE_CONFIG.
 		WithSharding(vm.NewShardingStrategy("interpreter", r5WorkloadInstrPerShard)).
-		WithParallelism(true)
+		WithParallelism(true), r5WorkloadSystem)
 	outputs, traces, errs := binf.Trace(inputs, cfg)
 	if len(errs) > 0 {
 		b.Fatalf("%s: tracing: %v", w.name, errors.Join(errs...))

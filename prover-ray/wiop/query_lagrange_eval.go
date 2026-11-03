@@ -125,7 +125,8 @@ func (le *LagrangeEval) Check(rt *Runtime) error {
 //
 // An extension-field point (the production case: a verifier coin) goes through
 // [LagrangeEval.evalPolynomialsShared], which computes the barycentric weights
-// once per distinct (domain, shifted point) instead of once per polynomial.
+// once per distinct (domain, shifted point) and shares them between the
+// polynomials.
 func (le *LagrangeEval) evalPolynomials(rt *Runtime) []field.Gen {
 	evalPoint := le.EvaluationPoint.EvaluateSingle(rt)
 	if !evalPoint.Value.IsBase() {

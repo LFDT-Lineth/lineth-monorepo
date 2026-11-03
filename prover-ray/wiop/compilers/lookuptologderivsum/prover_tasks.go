@@ -13,9 +13,9 @@ import (
 )
 
 // mAssignmentTask is the prover-side task that fills the multiplicity columns
-// M for one [lookupGroup]. It is registered in the group's witness round and
-// runs after the witness columns of every B fragment and every A fragment in
-// the group have been committed.
+// M for one [lookupGroup]. The tasks of the groups sharing a witness round
+// run together, in the [mAssignmentBatch] registered on that round, after the
+// witness columns of every B and A fragment have been assigned.
 //
 // The lookup table is the union of the group's B fragments; the task emits one
 // M column per fragment (t.ms is index-aligned with t.includings). It hashes
@@ -61,11 +61,6 @@ type mAssignmentTask struct {
 type tEntry struct {
 	val field.Ext
 	idx uint32
-}
-
-// Run implements [wiop.ProverAction].
-func (t *mAssignmentTask) Run(rt *wiop.Runtime) {
-	t.run(rt, runtime.GOMAXPROCS(0))
 }
 
 // run fills the M columns using at most workers goroutines for its inner
@@ -222,8 +217,8 @@ const (
 // rowHasher hashes the rows of a fragment into one extension element each:
 // hashes[i] = cols[0][i] + α·cols[1][i] + …, then, with a head,
 // head[i] + α·hashes[i], matching [wiop.RLCExpression]'s convention. The
-// powers of α are precomputed, so each column costs an extension-by-base
-// multiply-accumulate per row instead of an extension multiplication.
+// powers of α are precomputed, so each column costs one extension-by-base
+// multiply-accumulate per row.
 type rowHasher struct {
 	cols     []*columnReader
 	coefs    []field.Ext // coefs[k] multiplies cols[k]
@@ -400,11 +395,10 @@ type lookupTable struct {
 
 func buildTable(tEntries []tEntry, workers int) *lookupTable {
 	// Size the partition to the data: about joinEntriesPerBucket entries per
-	// bucket, capped at four buckets per CPU. Small tables then build a single
-	// map instead of spreading a few rows over a thousand maps and goroutines,
-	// which matters when many groups run concurrently (see [mAssignmentBatch]).
+	// bucket, capped at four buckets per CPU, so that a small table builds a
+	// single map: many groups run concurrently (see [mAssignmentBatch]).
 	numBuckets := 1
-	for numBuckets < runtime.NumCPU()*4 && numBuckets*joinEntriesPerBucket < len(tEntries) {
+	for numBuckets < runtime.GOMAXPROCS(0)*4 && numBuckets*joinEntriesPerBucket < len(tEntries) {
 		numBuckets *= 2
 	}
 	// Power-of-two bucket count so we can mask instead of modulo on the hot path.
@@ -558,8 +552,8 @@ func partitionByBucket[E any](entries []E, numBuckets int, bucket func(*E) uint3
 	return buckets
 }
 
-// joinEntriesPerBucket is the target number of T and S entries per hash-join
-// bucket.
+// joinEntriesPerBucket is the target number of lookup-table entries per
+// hash-join bucket.
 const joinEntriesPerBucket = 4096
 
 // mAssignmentBatch runs the M-assignment tasks of every lookup group sharing a

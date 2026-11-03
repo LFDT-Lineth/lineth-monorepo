@@ -18,13 +18,14 @@ import (
 // zero value is ready to use and safe for concurrent use.
 //
 // Slices from [Pool.Get] hold stale values: a caller must write every element
-// before reading it. The pool keeps every released slice; its footprint is
-// bounded by the largest set of slices in use at once, since released slices
-// are handed out again before new ones are allocated. [Pool.Drain] gives the
-// memory back.
+// before reading it. Released slices are only handed out again within their
+// capacity class, so the pool keeps, per class, the largest set of slices of
+// that class released at once. [Pool.Trim] drops the classes that went
+// unrequested, and [Pool.Drain] gives all the memory back.
 type Pool[T any] struct {
-	mu   sync.Mutex
-	free [bits.UintSize][][]T
+	mu        sync.Mutex
+	free      [bits.UintSize][][]T
+	requested [bits.UintSize]bool // per class, requested since the last Trim
 }
 
 // Get returns a slice of length n, from the released slices of the same
@@ -35,6 +36,7 @@ func (p *Pool[T]) Get(n int) []T {
 	}
 	class := bits.Len(uint(n - 1))
 	p.mu.Lock()
+	p.requested[class] = true
 	if k := len(p.free[class]); k > 0 {
 		v := p.free[class][k-1]
 		p.free[class][k-1] = nil
@@ -59,6 +61,20 @@ func (p *Pool[T]) Put(v []T) {
 	p.mu.Lock()
 	p.free[class] = append(p.free[class], v[:c])
 	p.mu.Unlock()
+}
+
+// Trim drops the released slices of every capacity class that no [Pool.Get]
+// requested since the previous Trim, so the garbage collector can reclaim
+// them. Called once per proof, it keeps only the classes the last proof used.
+func (p *Pool[T]) Trim() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for i := range p.free {
+		if !p.requested[i] {
+			p.free[i] = nil
+		}
+		p.requested[i] = false
+	}
 }
 
 // Drain drops every released slice, so the garbage collector can reclaim

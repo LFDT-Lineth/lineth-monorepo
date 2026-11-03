@@ -32,3 +32,20 @@ func TestPoolReusesByCapacityClass(t *testing.T) {
 		t.Fatal("Drain must drop released slices")
 	}
 }
+
+// Trim must drop the released slices of the classes no Get requested since
+// the previous Trim, and keep those of the classes requested.
+func TestPoolTrimDropsUnrequestedClasses(t *testing.T) {
+	var p Pool[uint32]
+	small, large := p.Get(4), p.Get(1024)
+	p.Put(small)
+	p.Put(large)
+	p.Trim() // both classes were requested: both kept
+	if s := p.Get(4); &s[0] != &small[0] {
+		t.Fatal("Trim must keep a class requested since the previous Trim")
+	}
+	p.Trim() // only the small class was requested since: the large one goes
+	if l := p.Get(1024); &l[0] == &large[0] {
+		t.Fatal("Trim must drop a class not requested since the previous Trim")
+	}
+}

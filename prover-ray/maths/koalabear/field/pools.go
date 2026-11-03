@@ -11,3 +11,11 @@ var (
 	ExtPool      bufpool.Pool[Ext]
 	OctupletPool bufpool.Pool[Octuplet]
 )
+
+// TrimPools trims every pool (see [bufpool.Pool.Trim]): the buffers of the
+// sizes no request asked for since the previous call are dropped.
+func TrimPools() {
+	BasePool.Trim()
+	ExtPool.Trim()
+	OctupletPool.Trim()
+}
