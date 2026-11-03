@@ -20,7 +20,7 @@ BUILD_CACHE_DIR ?= $(MAKEFILE_DIR).zig-cache
 ZIG_BUILD_FLAGS ?= --cache-dir $(BUILD_CACHE_DIR) --summary all
 # The native tests and tools: they fetch the reference vectors and build the host crypto providers.
 ZIG_HOST_FLAGS ?= -Dhost-tools=true
-ZIG_FIXTURES_FLAGS = -Dzkevm-fixtures="$(ZKEVM_FIXTURES_DIR)"
+ZIG_FIXTURES_FLAGS ?= -Dzkevm-fixtures="$(ZKEVM_FIXTURES_DIR)"
 # NOTE: `zig build --fetch` fetches the dependency tree and exits without building or running, so
 # pre-fetching is the dedicated `fetch` and `fetch-host` targets alone; `fetch-host` adds the lazy
 # dependencies of the native tests and tools.
