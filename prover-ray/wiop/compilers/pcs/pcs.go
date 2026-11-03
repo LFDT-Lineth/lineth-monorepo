@@ -1385,7 +1385,7 @@ func initializeBatchClaims(shape fri.Shape) fri.BatchClaimedValues {
 
 // writeDownVectorBase materializes a base-field column assignment padded up to
 // size, respecting the module's padding direction so the committed polynomial
-// matches the one evalLagrangePadded evaluates.
+// matches the one LagrangeEval evaluates.
 //
 // A column that is already size long is returned as is, without a copy: the
 // committed table is only read by the encoder, and the committer state keeps
@@ -1420,7 +1420,7 @@ func writeDownVectorBase(concrete *wiop.ConcreteVector, size int, padding wiop.P
 
 // writeDownVectorExt materializes an extension-field column assignment padded up
 // to size, respecting the module's padding direction so the committed polynomial
-// matches the one evalLagrangePadded evaluates.
+// matches the one LagrangeEval evaluates.
 //
 // As for [writeDownVectorBase], a column that is already size long is returned
 // without a copy.

@@ -11,7 +11,9 @@ package hugepage
 
 import "unsafe"
 
-// hugePageSize is the transparent huge page size on amd64 and arm64.
+// hugePageSize is the transparent huge page size with 4 KiB base pages:
+// amd64, and arm64 kernels built with 4 KiB pages. With larger base pages
+// the huge pages are larger, and the advice covers fewer of them.
 const hugePageSize = 2 << 20
 
 // Advise advises the kernel to back the huge pages entirely inside v with

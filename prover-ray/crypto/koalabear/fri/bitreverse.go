@@ -19,8 +19,9 @@ func bitReverse[T any](v []T) {
 func bitReverseCopy[T any](dst, src []T) {
 	n := uint64(len(src))
 	if n < 1<<16 || runtime.GOARCH == "arm64" {
-		// Small: the gnark kernels (COBRA tiling on amd64) win, and the
-		// parallel dispatch would dominate.
+		// The serial gnark copy (COBRA tiling on amd64) below 2^16 elements,
+		// where the parallel dispatch would dominate, and at every size on
+		// arm64.
 		gutils.BitReverseCopy(dst, src)
 		return
 	}
