@@ -13,11 +13,11 @@ const fibonacciMaxN = 0x7FFFF7FF
 // FibonacciELF returns a minimal valid ELF64 RISC-V binary computing fib(N)
 // mod 2^64 (wrapping u64 addition), writing the 8-byte little-endian result
 // to guest_output and exiting 0, together with that expected output. N must
-// be in [0, 0x7FFFF7FF]. The dynamic instruction count is 14 + 5*N (6 setup
-// + guard, 5 per loop iteration, 7 epilogue), which makes the program useful
+// be in [0, 0x7FFFF7FF]. The dynamic instruction count is 18 + 5*N (6 setup
+// + guard, 5 per loop iteration, 11 epilogue), which makes the program useful
 // as a predictable sharding benchmark: at 500K interpreter invocations per
 // shard, N = 4M (the cross-zkVM Fibonacci workload) yields 40 full shards
-// plus a 14-instruction tail shard.
+// plus an 18-instruction tail shard.
 //
 // The result is stored in scratch memory 768 bytes past the auipc base,
 // clear of the 76-byte .text, as in [allInOneSectionData].

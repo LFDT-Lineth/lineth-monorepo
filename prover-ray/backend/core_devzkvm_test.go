@@ -23,12 +23,12 @@ func specFrame(schema uint16, pi []byte) []byte {
 var samplePublicInputs = []byte("public inputs")
 
 func TestClassifyGuestOutput(t *testing.T) {
-	valid := bitsFromBytes(specFrame(guestOutputSchemaID, samplePublicInputs)...)
+	valid := specFrame(guestOutputSchemaID, samplePublicInputs)
 
 	t.Run("valid output is returned", func(t *testing.T) {
-		got, err := classifyGuestOutput(map[string]bit.Array{guestOutputMemory: valid}, nil)
+		got, err := classifyGuestOutput(guestOutputs(valid), nil)
 		require.NoError(t, err)
-		assert.Equal(t, valid, got)
+		assert.Equal(t, bitsFromBytes(valid...), got)
 	})
 
 	t.Run("guest rejection is distinguished from a VM bug", func(t *testing.T) {
@@ -67,7 +67,7 @@ func TestClassifyGuestOutput(t *testing.T) {
 	}
 	for name, tc := range rejected {
 		t.Run(name, func(t *testing.T) {
-			_, err := classifyGuestOutput(map[string]bit.Array{guestOutputMemory: bitsFromBytes(tc.out...)}, nil)
+			_, err := classifyGuestOutput(guestOutputs(tc.out), nil)
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "guest_output does not follow the spec")
 			assert.Contains(t, err.Error(), tc.wantErr)
@@ -77,4 +77,14 @@ func TestClassifyGuestOutput(t *testing.T) {
 
 func bitsFromBytes(bytes ...byte) bit.Array {
 	return bit.NewArray(bytes, uint(len(bytes)*8), bit.BigEndian)
+}
+
+// guestOutputs splits frame as the guest writes it: the first
+// guestOutputHashSize bytes to guest_output and the rest to guest_log.
+func guestOutputs(frame []byte) map[string]bit.Array {
+	split := min(len(frame), guestOutputHashSize)
+	return map[string]bit.Array{
+		guestOutputMemory: bitsFromBytes(frame[:split]...),
+		guestLogMemory:    bitsFromBytes(frame[split:]...),
+	}
 }

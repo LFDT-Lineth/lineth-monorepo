@@ -30,9 +30,13 @@ var ErrNotImplemented = errors.New("not yet implemented")
 // wiopSystemName names the wiop constraint system built in [New].
 const wiopSystemName = "lineth-riscv"
 
-// guestOutputMemory is the ZkC Execute output-map key carrying the guest's
-// wire output.
-const guestOutputMemory = "guest_output"
+// guestOutputMemory and guestLogMemory are the ZkC Execute output-map keys
+// carrying the guest's wire output: the hash in the former, the schema id and
+// public inputs in the latter.
+const (
+	guestOutputMemory = "guest_output"
+	guestLogMemory    = "guest_log"
+)
 
 // Spec frame of the l2-execution guest output.
 const (
@@ -242,10 +246,16 @@ func classifyGuestOutput(output map[string]bit.Array, errs []error) (res bit.Arr
 	if !ok {
 		return res, fmt.Errorf("guest wrote no %s output (block likely invalid)", guestOutputMemory)
 	}
-	if err = checkGuestOutputFrame(out); err != nil {
+	log, ok := output[guestLogMemory]
+	if !ok {
+		return res, fmt.Errorf("guest wrote no %s output (block likely invalid)", guestLogMemory)
+	}
+	frame := append(out.Bytes(), log.Bytes()...)
+	res = bit.NewArray(frame, uint(len(frame)*8), bit.BigEndian)
+	if err = checkGuestOutputFrame(res); err != nil {
 		return res, fmt.Errorf("%s does not follow the spec: %w", guestOutputMemory, err)
 	}
-	return out, nil
+	return res, nil
 }
 
 // checkGuestOutputFrame checks the spec frame of the guest output,

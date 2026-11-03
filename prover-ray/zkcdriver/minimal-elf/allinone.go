@@ -23,7 +23,7 @@ func AllInOneElfProgram() (elf, output []byte) {
 // the full RV64I + M-extension + custom-precompile surface used by the RISC-V
 // arithmetization in a single guest: memory round-trip (SW/LW),
 // LUI/JAL/JALR/ADD/MUL, all six B-type branch variants (taken and
-// not-taken), SB/LB/SH/LH/SD/LD (with sign extension), R_WRITE_OUTPUT,
+// not-taken), SB/LB/SH/LH/SD/LD (with sign extension), the write syscall,
 // every I-type ALU immediate (SLTI,
 // SLTIU, XORI, ORI, ANDI, SLLI, SRLI, SRAI) plus the RV64 word-width I-type
 // variants (ADDIW, SLLIW, SRLIW, SRAIW), and the RV64 R-type word-width
@@ -42,7 +42,7 @@ func AllInOneElfProgram() (elf, output []byte) {
 func allInOneSectionData() []byte {
 	a := newAssembler()
 
-	a.addi(a7, zero, 93) // exit syscall number, set once
+	a.addi(a7, zero, 93) // exit syscall number
 	a.auipc(s0, 0)       // s0 = fixed base for every scratch offset below
 
 	// ---- memory round trip: store/load word at base+768 ----
@@ -203,11 +203,14 @@ func allInOneSectionData() []byte {
 	a.addi(t5, zero, -1)
 	a.bne(t0, t5, "fail")
 
-	// ---- exit(0) on success, exit(1) on any failed check ----
+	// ---- exit(0) on success, exit(1) on any failed check; a7 is reset as
+	// writeOutput clobbers it ----
 	a.addi(a0, zero, 0)
+	a.addi(a7, zero, 93)
 	a.ecall()
 	a.label("fail")
 	a.addi(a0, zero, 1)
+	a.addi(a7, zero, 93)
 	a.ecall()
 
 	// add_mul: t3 = (t0+t1)*3, t4 = the expected value (0x1005*3 = 0x300F).
