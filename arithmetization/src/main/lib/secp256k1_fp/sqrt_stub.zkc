@@ -1,0 +1,6 @@
+include "../../common/type.zkc"
+
+// Stub: the secp256k1 sqrt accelerator is not compiled into this entry point.
+fn secp256k1_fp_sqrt<ram>(a_addr:Address, out_addr:Address) {
+    fail "secp256k1 field accelerator (sqrt) not compiled in (use riscv/main_fieldaccel*.zkc) a=%x out=%x", a_addr, out_addr
+}

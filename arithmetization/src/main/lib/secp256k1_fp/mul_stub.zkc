@@ -1,0 +1,10 @@
+include "../../common/type.zkc"
+
+// Stub: the secp256k1 mul accelerator is not compiled into this entry point.
+fn secp256k1_fp_mul<ram>(a_addr:Address, b_addr:Address, out_addr:Address) {
+    fail "secp256k1 field accelerator (mul) not compiled in (use riscv/main_fieldaccel*.zkc) a=%x b=%x out=%x", a_addr, b_addr, out_addr
+}
+
+fn secp256k1_fp_sq<ram>(a_addr:Address, out_addr:Address) {
+    fail "secp256k1 field accelerator (sq) not compiled in (use riscv/main_fieldaccel*.zkc) a=%x out=%x", a_addr, out_addr
+}
