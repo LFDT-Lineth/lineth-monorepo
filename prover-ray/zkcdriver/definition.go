@@ -13,7 +13,6 @@ import (
 	"github.com/LFDT-Lineth/zkc/pkg/schema"
 	"github.com/LFDT-Lineth/zkc/pkg/schema/register"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
-	ctrace "github.com/LFDT-Lineth/zkc/pkg/zkc/constraints/trace"
 )
 
 const (
@@ -60,9 +59,6 @@ type PublicOutput struct {
 	Address []wiop.ObjectID
 	// Data is the memory's data column, holding one byte per address.
 	Data wiop.ObjectID
-	// AccessBit is the memory's access bit: zero on padding rows and one on the
-	// rows carrying an element.
-	AccessBit wiop.ObjectID
 }
 
 // PublicOutputs returns the public output memory [Define] found in the
@@ -178,11 +174,7 @@ func (s *schemaScanner) collectPublicOutputs() PublicOutput {
 			)
 		}
 
-		var (
-			address, data []wiop.ObjectID
-			accessBit     wiop.ObjectID
-			hasAccessBit  bool
-		)
+		var address, data []wiop.ObjectID
 
 		for _, reg := range modDecl.Registers() {
 
@@ -193,8 +185,8 @@ func (s *schemaScanner) collectPublicOutputs() PublicOutput {
 
 			// A memory's address lines are exactly its input registers and its data
 			// lines exactly its output registers, so the two are told apart by
-			// register kind rather than by name. Of the computed registers, only the
-			// access bit is of use here; the address selectors are not.
+			// register kind rather than by name. The computed registers, the access
+			// bit and the address selectors, are of no use here.
 			//
 			// Only [guestOutputModule] is collected. Any other public output leaves
 			// the lists empty and is skipped just below, so no memory becomes a
@@ -205,25 +197,22 @@ func (s *schemaScanner) collectPublicOutputs() PublicOutput {
 				address = append(address, id)
 			case reg.IsOutput():
 				data = append(data, id)
-			case reg.Name() == ctrace.ACCESS_BIT_NAME:
-				accessBit, hasAccessBit = id, true
 			}
 		}
 
 		// A memory holding anything other than a single byte column, or lacking
-		// an address or an access bit, is not describable by [PublicOutput], so it
-		// is reported and skipped rather than half-described.
-		if len(address) == 0 || len(data) != 1 || !hasAccessBit {
+		// an address, is not describable by [PublicOutput], so it is reported and
+		// skipped rather than half-described.
+		if len(address) == 0 || len(data) != 1 {
 			logrus.Warnf(
 				"zkcdriver: collectPublicOutputs: skipping public output %q: "+
-					"has %d address and %d data columns (access bit found: %v), "+
-					"expected at least one address, one datum and an access bit",
-				moduleName, len(address), len(data), hasAccessBit,
+					"has %d address and %d data columns, expected at least one address and one datum",
+				moduleName, len(address), len(data),
 			)
 			continue
 		}
 
-		output = PublicOutput{Name: moduleName, Address: address, Data: data[0], AccessBit: accessBit}
+		output = PublicOutput{Name: moduleName, Address: address, Data: data[0]}
 	}
 
 	return output

@@ -2,9 +2,8 @@ package minimalelf
 
 // allInOneOutputLen is the number of bytes the all-in-one guest writes to
 // guest_output when every check passes: the bytes 'A', 'B', 'C', … in order.
-// It exceeds the 32 bytes the prover binds as public inputs, so that only a
-// prefix of the output is bound.
-const allInOneOutputLen = 40
+// It is exactly the 32 bytes the prover binds as public inputs.
+const allInOneOutputLen = 32
 
 // AllInOneElfProgram returns a minimal valid ELF64 RISC-V binary that
 // exercises the full RV64I + M-extension + custom-precompile surface used by

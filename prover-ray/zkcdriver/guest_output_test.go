@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
@@ -56,21 +55,20 @@ func newGuestOutputSystem(t *testing.T, elf []byte, extraActions ...wiop.ProverA
 	return sys, driver, &zkcdriver.PreReadInputs{Inputs: inputs}, append([]byte{}, guestOutput.Bytes()...)
 }
 
-// TestGuestPublicOutputs proves and verifies the all-in-one guest, which writes
-// more bytes than are bound, and checks that the public inputs carry the first
-// [risc5.NumGuestPublicOutputs] bytes it wrote, in order.
+// TestGuestPublicOutputs proves and verifies the all-in-one guest and checks
+// that the public inputs carry the [risc5.NumGuestPublicOutputs] bytes it
+// wrote, in order.
 func TestGuestPublicOutputs(t *testing.T) {
 	elf, wantWritten := minimalelf.AllInOneElfProgram()
 	sys, driver, inputs, written := newGuestOutputSystem(t, elf)
 
 	require.Equal(t, wantWritten, written, "the tracer must agree on what the guest wrote")
-	require.Greater(t, len(written), risc5.NumGuestPublicOutputs,
-		"the guest must write more bytes than are bound, so that only a prefix is")
+	require.Len(t, written, risc5.NumGuestPublicOutputs, "the guest must write exactly the bound bytes")
 
 	output := zkcdriver.PublicOutputs(sys)
 	assert.Equal(t, "guest_output", output.Name)
 	require.Len(t, output.Address, 2, "a u32 address is split across two 16-bit limbs")
-	for i, id := range append(output.Address, output.Data, output.AccessBit) {
+	for i, id := range append(output.Address, output.Data) {
 		assert.NotNil(t, sys.LookupColumn(id), "column %d must resolve", i)
 	}
 
@@ -100,36 +98,27 @@ func TestGuestPublicOutputsRejectsForgedByte(t *testing.T) {
 		"a public output byte that differs from the guest output must not verify")
 }
 
-// TestGuestPublicOutputsTooShort checks that the prover panics on a guest
-// writing fewer than [risc5.NumGuestPublicOutputs] bytes, which no assignment
-// could bind, down to a guest writing nothing and up to one byte short, and that
-// a guest writing exactly [risc5.NumGuestPublicOutputs] bytes is bound.
-func TestGuestPublicOutputsTooShort(t *testing.T) {
-	for _, n := range []int{0, risc5.NumGuestPublicOutputs - 1, risc5.NumGuestPublicOutputs} {
-		t.Run(fmt.Sprintf("n=%d", n), func(t *testing.T) {
-			elf, wantWritten := minimalelf.OutputELF(n)
+// TestGuestPublicOutputsExactLength checks that a guest writing exactly
+// [risc5.NumGuestPublicOutputs] bytes is bound, and that one writing fewer,
+// down to nothing, or more does not produce a proof that verifies.
+func TestGuestPublicOutputsExactLength(t *testing.T) {
+	const n = risc5.NumGuestPublicOutputs
+	for _, written := range []int{0, n - 1, n, n + 1} {
+		t.Run(fmt.Sprintf("n=%d", written), func(t *testing.T) {
+			elf, wantWritten := minimalelf.OutputELF(written)
+			sys, driver, inputs, got := newGuestOutputSystem(t, elf)
+			require.Equal(t, wantWritten, got, "the tracer must agree on what the guest wrote")
 
-			var (
-				sys, driver, inputs, written = newGuestOutputSystem(t, elf)
-				shard                        = traceSingleShard(t, driver, inputs)
-			)
-			require.Equal(t, wantWritten, written, "the tracer must agree on what the guest wrote")
-
-			prove := func() (wiop.Proof, wiop.PublicInput) {
-				return sys.Prove(func(rt *wiop.Runtime) {
-					driver.AssignTraceShard(rt, shard, koalafield.Octuplet{})
-				})
-			}
-
-			if n < risc5.NumGuestPublicOutputs {
-				assert.PanicsWithValue(t,
-					fmt.Sprintf("risc5: assignGuestOutputBytes: the guest wrote %d output bytes "+
-						"but the first %d are bound as public inputs", n, risc5.NumGuestPublicOutputs),
-					func() { prove() })
+			if written != n {
+				assert.False(t, provesAndVerifiesFirstShardOnly(t, sys, driver, inputs),
+					"a guest output of %d bytes must not verify", written)
 				return
 			}
 
-			proof, pub := prove()
+			shard := traceSingleShard(t, driver, inputs)
+			proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+				driver.AssignTraceShard(rt, shard, koalafield.Octuplet{})
+			})
 			require.NoError(t, sys.Verify(proof, pub))
 			want := make([]koalafield.Element, n)
 			for k := range want {
@@ -145,22 +134,12 @@ func TestGuestPublicOutputsTooShort(t *testing.T) {
 type forgeGuestOutputByte struct{}
 
 func (forgeGuestOutputByte) Run(rt *wiop.Runtime) {
-	for _, mod := range rt.System.Modules {
-		if !strings.Contains(mod.Context.Path(), "guest-public-outputs") {
-			continue
-		}
-		for _, col := range mod.Columns {
-			if col.Round() == &rt.System.PrecomputedRound.Round {
-				continue
-			}
-			forged := rt.GetColumnAssignment(col).Plain.AsBase()
-			forged = append([]koalafield.Element(nil), forged...)
-			forged[0].SetUint64(forged[0].Uint64() ^ 1)
-			rt.OverrideColumn(col, &wiop.ConcreteVector{Plain: koalafield.VecFromBase(forged)})
-			return
-		}
-	}
-	panic("forgeGuestOutputByte: no guest public output column found")
+	col := rt.System.LookupColumn(zkcdriver.PublicOutputs(rt.System).Data)
+	forged := rt.GetColumnAssignment(col).Plain.AsBase()
+	forged = append([]koalafield.Element(nil), forged...)
+	first := len(forged) - risc5.NumGuestPublicOutputs
+	forged[first].SetUint64(forged[first].Uint64() ^ 1)
+	rt.OverrideColumn(col, &wiop.ConcreteVector{Plain: koalafield.VecFromBase(forged)})
 }
 
 // provesAndVerifiesFirstShardOnly reports whether sys produces a proof that verifies. A
