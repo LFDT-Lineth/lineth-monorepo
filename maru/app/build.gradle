@@ -167,6 +167,11 @@ tasks.register('integrationTest',  Test) {
   // the Besu/Maru worker threads a test spawns inherit its tag and log to the same file.
   systemProperties["log4j2.isThreadContextMapInheritable"] = "true"
 
+  logger.lifecycle(
+    "integrationTest: availableProcessors=${Runtime.runtime.availableProcessors()}, " +
+      "maxParallelForks=$maxParallelForks"
+  )
+
   testLogging {
     events TestLogEvent.FAILED,
         TestLogEvent.SKIPPED,
