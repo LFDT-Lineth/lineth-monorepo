@@ -691,10 +691,13 @@ func (q *moduleQuotient) run(rt *wiop.Runtime) {
 			}
 			panic(fmt.Sprintf("wiop/compilers: unsupported expression type %T in the quotient", expr))
 		}
+		// One lowering for the whole bucket: a subexpression shared between
+		// its vanishings is lowered once.
+		lowering := wiop.NewExpressionLowering(rt, b, leaf)
 		var coinPow field.Ext
 		coinPow.SetOne()
 		accumulate := func(v *wiop.Vanishing, cancellation []field.Element) {
-			b.Accumulate(wiop.LowerExpression(rt, b, v.Expression, leaf), cancellation, coinPow)
+			b.Accumulate(lowering.Lower(v.Expression), cancellation, coinPow)
 			coinPow.Mul(&coinPow, &coinExt)
 		}
 		if bkt.entries != nil {

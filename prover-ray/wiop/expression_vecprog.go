@@ -40,12 +40,18 @@ type RowLowering struct {
 
 	rt *Runtime
 	n  int
+	// lowering and sized memoise lower and sizedTo per node, so that a
+	// subexpression shared by pointer is visited once across all Lower calls.
+	lowering *ExpressionLowering
+	sized    map[*ArithmeticOperation]bool
 }
 
 // NewRowLowering returns a lowering over the first n rows, building into a
 // fresh builder.
 func NewRowLowering(rt *Runtime, n int) *RowLowering {
-	return &RowLowering{B: vecprog.NewBuilder(), rt: rt, n: n}
+	l := &RowLowering{B: vecprog.NewBuilder(), rt: rt, n: n, sized: make(map[*ArithmeticOperation]bool)}
+	l.lowering = NewExpressionLowering(rt, l.B, l.leaf)
+	return l
 }
 
 // Lower adds expr to the builder and returns its node.
@@ -69,20 +75,44 @@ func (l *RowLowering) sizedTo(expr Expression) bool {
 	case *Cell, *CoinField:
 		return true
 	case *ArithmeticOperation:
+		if ok, done := l.sized[e]; done {
+			return ok
+		}
+		ok := true
 		for _, op := range e.Operands {
 			if !l.sizedTo(op) {
-				return false
+				ok = false
+				break
 			}
 		}
-		return true
+		l.sized[e] = ok
+		return ok
 	}
 	return !expr.IsMultiValued()
 }
 
-// LowerExpression adds expr to b and returns its node. Constants, cells,
-// coins and arithmetic operations are lowered here, reading their values from
-// rt; every other leaf (column views, selectors, ...) is lowered by leaf.
-func LowerExpression(rt *Runtime, b *vecprog.Builder, expr Expression, leaf func(Expression) int) int {
+// ExpressionLowering lowers expressions into one [vecprog] builder.
+// Constants, cells, coins and arithmetic operations are lowered here, reading
+// their values from rt; every other leaf (column views, selectors, ...) is
+// lowered by leaf. Each distinct arithmetic node is lowered once across all
+// Lower calls, so a subexpression shared by pointer -- within an expression or
+// between the expressions of a program -- costs one visit, and lowering is
+// linear in the distinct nodes rather than in the size of the trees.
+type ExpressionLowering struct {
+	rt   *Runtime
+	b    *vecprog.Builder
+	leaf func(Expression) int
+	memo map[*ArithmeticOperation]int
+}
+
+// NewExpressionLowering returns a lowering into b.
+func NewExpressionLowering(rt *Runtime, b *vecprog.Builder, leaf func(Expression) int) *ExpressionLowering {
+	return &ExpressionLowering{rt: rt, b: b, leaf: leaf, memo: make(map[*ArithmeticOperation]int)}
+}
+
+// Lower adds expr to the builder and returns its node.
+func (l *ExpressionLowering) Lower(expr Expression) int {
+	rt, b := l.rt, l.b
 	switch e := expr.(type) {
 	case *Constant:
 		return b.Scalar(field.Lift(e.Value), true)
@@ -98,18 +128,23 @@ func LowerExpression(rt *Runtime, b *vecprog.Builder, expr Expression, leaf func
 	case *CoinField:
 		return b.Scalar(rt.GetCoinValue(e).AsExt(), false)
 	case *ArithmeticOperation:
+		if id, ok := l.memo[e]; ok {
+			return id
+		}
 		o := lowerOperator(e.Operator)
 		args := make([]int, o.Arity())
 		for i := range args {
-			args[i] = LowerExpression(rt, b, e.Operands[i], leaf)
+			args[i] = l.Lower(e.Operands[i])
 		}
-		return b.Op(o, args...)
+		id := b.Op(o, args...)
+		l.memo[e] = id
+		return id
 	}
-	return leaf(expr)
+	return l.leaf(expr)
 }
 
 func (l *RowLowering) lower(expr Expression) int {
-	return LowerExpression(l.rt, l.B, expr, l.leaf)
+	return l.lowering.Lower(expr)
 }
 
 // leaf lowers a vector or single-valued leaf of a sized expression.
