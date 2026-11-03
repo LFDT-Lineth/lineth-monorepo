@@ -6,8 +6,8 @@ package minimalelf
 const allInOneOutputLen = 32
 
 // AllInOneElfProgram returns a minimal valid ELF64 RISC-V binary that
-// exercises the full RV64I + M-extension + custom-precompile surface used by
-// the RISC-V arithmetization in a single guest, together with the bytes the
+// exercises the full RV64I + M-extension surface used by the RISC-V
+// arithmetization in a single guest, together with the bytes the
 // guest writes to guest_output on success. See [allInOneSectionData] for the
 // program.
 func AllInOneElfProgram() (elf, output []byte) {
@@ -19,10 +19,10 @@ func AllInOneElfProgram() (elf, output []byte) {
 }
 
 // allInOneSectionData assembles a tiny valid RISC-V program that exercises
-// the full RV64I + M-extension + custom-precompile surface used by the RISC-V
+// the full RV64I + M-extension surface used by the RISC-V
 // arithmetization in a single guest: memory round-trip (SW/LW),
 // LUI/JAL/JALR/ADD/MUL, all six B-type branch variants (taken and
-// not-taken), SB/LB/SH/LH/SD/LD (with sign extension), R_WRITE_OUTPUT,
+// not-taken), SB/LB/SH/LH/SD/LD (with sign extension), the write syscall,
 // every I-type ALU immediate (SLTI,
 // SLTIU, XORI, ORI, ANDI, SLLI, SRLI, SRAI) plus the RV64 word-width I-type
 // variants (ADDIW, SLLIW, SRLIW, SRAIW), and the RV64 R-type word-width
@@ -35,14 +35,13 @@ func AllInOneElfProgram() (elf, output []byte) {
 // own, different program-counter position and address a different section of
 // memory than intended). Scratch regions (768, 800, 808, 816 and 1216 bytes
 // past that base) are laid out with enough spacing to stay
-// non-overlapping and clear of the ~624-byte .text, while remaining within
+// non-overlapping and clear of the ~600-byte .text, while remaining within
 // the 12-bit signed immediate range (max 2047) that S-type and I-type
 // instructions can address in one step.
 func allInOneSectionData() []byte {
 	a := newAssembler()
 
-	a.addi(a7, zero, 93) // exit syscall number, set once
-	a.auipc(s0, 0)       // s0 = fixed base for every scratch offset below
+	a.auipc(s0, 0) // s0 = fixed base for every scratch offset below
 
 	// ---- memory round trip: store/load word at base+768 ----
 	a.addi(t1, zero, 42)
@@ -202,11 +201,14 @@ func allInOneSectionData() []byte {
 	a.addi(t5, zero, -1)
 	a.bne(t0, t5, "fail")
 
-	// ---- exit(0) on success, exit(1) on any failed check ----
+	// ---- exit(0) on success, exit(1) on any failed check; a7 is set on each
+	// path as writeOutput clobbers it ----
 	a.addi(a0, zero, 0)
+	a.addi(a7, zero, 93)
 	a.ecall()
 	a.label("fail")
 	a.addi(a0, zero, 1)
+	a.addi(a7, zero, 93)
 	a.ecall()
 
 	// add_mul: t3 = (t0+t1)*3, t4 = the expected value (0x1005*3 = 0x300F).
