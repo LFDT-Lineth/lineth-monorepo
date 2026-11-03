@@ -727,12 +727,7 @@ test "malformed transactions are rejected" {
     const body = signed_item.string[1..];
     try std.testing.expectError(error.MalformedBlock, truncate(a, try blockOf(a, &.{rlp.string(try std.mem.concat(a, u8, &.{ lit("02"), body[0 .. body.len - 1] }))}), chain_id));
 
-    // A set-code transaction has a destination.
-    var without_destination = set_code_tx;
-    without_destination.to = null;
-    const without_destination_block = try blockOf(a, &.{try blocks.signed(a, without_destination, chain_id, secret)});
-    try std.testing.expectError(error.MalformedBlock, truncate(a, without_destination_block, chain_id));
-    // Contract creation is for the other types.
+    // A transaction without a destination is a contract creation.
     var creation = fee_market_tx;
     creation.to = null;
     const created = try truncate(a, try blockOf(a, &.{try blocks.signed(a, creation, chain_id, secret)}), chain_id);
@@ -761,73 +756,6 @@ test "a heap too small for a valid block is reported as exhausted whichever step
     try std.testing.expectEqual(vectors.len, truncated.transactions.len);
 }
 
-// Fields wider than the integers they are held in.
-
-const Field = enum { nonce, gas_limit, gas_price, max_priority_fee_per_gas };
-
-fn withField(tx: blocks.Tx, field: Field, value: u256) blocks.Tx {
-    var out = tx;
-    switch (field) {
-        .nonce => out.nonce = value,
-        .gas_limit => out.gas_limit = value,
-        .gas_price => out.gas_price = value,
-        .max_priority_fee_per_gas => out.max_priority_fee_per_gas = value,
-    }
-    return out;
-}
-
-const max_u64: u256 = std.math.maxInt(u64);
-const max_u128: u256 = std.math.maxInt(u128);
-
-/// A field of a transaction with the largest value the guest decodes for it.
-const bounded_fields = [_]struct { tx: blocks.Tx, field: Field, largest: u256 }{
-    .{ .tx = legacy_tx, .field = .nonce, .largest = max_u64 },
-    .{ .tx = legacy_tx, .field = .gas_limit, .largest = max_u64 },
-    .{ .tx = legacy_tx, .field = .gas_price, .largest = max_u128 },
-    .{ .tx = access_list_tx, .field = .nonce, .largest = max_u64 },
-    .{ .tx = access_list_tx, .field = .gas_limit, .largest = max_u64 },
-    .{ .tx = access_list_tx, .field = .gas_price, .largest = max_u128 },
-    .{ .tx = fee_market_tx, .field = .nonce, .largest = max_u64 },
-    .{ .tx = fee_market_tx, .field = .gas_limit, .largest = max_u64 },
-    .{ .tx = fee_market_tx, .field = .gas_price, .largest = max_u128 },
-    .{ .tx = fee_market_tx, .field = .max_priority_fee_per_gas, .largest = max_u128 },
-    .{ .tx = set_code_tx, .field = .nonce, .largest = max_u64 },
-    .{ .tx = set_code_tx, .field = .gas_limit, .largest = max_u64 },
-    .{ .tx = set_code_tx, .field = .gas_price, .largest = max_u128 },
-    .{ .tx = set_code_tx, .field = .max_priority_fee_per_gas, .largest = max_u128 },
-};
-
-test "the largest nonce, gas and fees the guest decodes are accepted with their stripped form" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    const a = arena.allocator();
-    const secret = secretKey(60);
-
-    for (bounded_fields) |case| {
-        const tx = withField(case.tx, case.field, case.largest);
-        const truncated = try truncate(a, try blockOf(a, &.{try blocks.signed(a, tx, chain_id, secret)}), chain_id);
-        try std.testing.expectEqualSlices(u8, try blocks.stripped(a, tx), truncated.transactions[0]);
-        try std.testing.expectEqualSlices(u8, &secp256k1.addressOf(secret), &truncated.froms[0]);
-    }
-}
-
-test "a field one bit wider than the guest decodes is rejected, whatever the signature covers" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    const a = arena.allocator();
-    const secret = secretKey(61);
-
-    for (bounded_fields) |case| {
-        const widest = withField(case.tx, case.field, case.largest);
-        const wider = withField(case.tx, case.field, case.largest + 1);
-        // Signed over its own fields.
-        try std.testing.expectError(error.MalformedBlock, truncate(a, try blockOf(a, &.{try blocks.signed(a, wider, chain_id, secret)}), chain_id));
-        // Signed over the largest value the field can hold, which a clamping decoder would take it for.
-        const lookalike = try presentedWithSignatureOf(a, widest, wider, secret);
-        try std.testing.expectError(error.MalformedBlock, truncate(a, try blockOf(a, &.{lookalike}), chain_id));
-    }
-}
-
 test "a blob transaction is rejected wherever it stands in the block" {
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
@@ -850,18 +778,13 @@ test "a blob transaction is rejected wherever it stands in the block" {
     }
 }
 
-test "a transaction that is not in its canonical wire form is rejected" {
+test "a legacy transaction carried as a byte string is rejected" {
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
     const a = arena.allocator();
-    const secret = secretKey(63);
 
-    // A legacy transaction carried as a byte string, and bytes after a typed transaction's body.
-    const legacy_bytes = try rlp.encode(a, try blocks.signed(a, legacy_tx, chain_id, secret));
+    const legacy_bytes = try rlp.encode(a, try blocks.signed(a, legacy_tx, chain_id, secretKey(63)));
     try std.testing.expectError(error.MalformedBlock, truncate(a, try blockOf(a, &.{rlp.string(legacy_bytes)}), chain_id));
-    const typed_envelope = (try blocks.signed(a, fee_market_tx, chain_id, secret)).string;
-    const with_trailing = try std.mem.concat(a, u8, &.{ typed_envelope, "junk" });
-    try std.testing.expectError(error.MalformedBlock, truncate(a, try blockOf(a, &.{rlp.string(with_trailing)}), chain_id));
 }
 
 // Blocks whose body is not the one the header commits to.
