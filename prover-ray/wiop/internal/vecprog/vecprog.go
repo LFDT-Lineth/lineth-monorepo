@@ -309,7 +309,12 @@ func (b *Builder) Op(o Op, args ...int) int {
 		return b.Scalar(applyExt(o, vals), false)
 	}
 	if allScalar {
-		// Over a parameter: evaluated once per run, before the points.
+		// Over a parameter: evaluated once per run, before the points. The
+		// operands of a commutative operation are ordered, so that equal
+		// scalars built in either order share a node.
+		if (o == Add || o == Mul) && args[0] > args[1] {
+			args[0], args[1] = args[1], args[0]
+		}
 		return b.intern(node{kind: kScalarOp, isBase: allBase, op: o, args: args})
 	}
 	if allBase {
@@ -409,11 +414,28 @@ func (b *Builder) coefNode(c coef) int {
 	return b.Scalar(c.v, false)
 }
 
-// coefOp applies o to two coefficients: in the field when both are
-// constants, as a scalar node evaluated per run otherwise.
+// coefOp applies o (Add or Mul) to two coefficients: in the field when both
+// are constants, as a scalar node evaluated per run otherwise. Adding zero
+// and multiplying by one return the other coefficient, and multiplying by
+// zero returns zero, so that a linear form over parameters merges with every
+// other one of equal coefficients, as it does over constants.
 func (b *Builder) coefOp(o Op, x, y coef) coef {
 	if x.id < 0 && y.id < 0 {
 		return constCoef(applyExt(o, []field.Ext{x.v, y.v}))
+	}
+	var one field.Ext
+	one.SetOne()
+	switch {
+	case o == Add && x.isZero():
+		return y
+	case o == Add && y.isZero():
+		return x
+	case o == Mul && (x.isZero() || y.isZero()):
+		return constCoef(field.Ext{})
+	case o == Mul && x.id < 0 && x.v == one:
+		return y
+	case o == Mul && y.id < 0 && y.v == one:
+		return x
 	}
 	return b.coefOf(b.Op(o, b.coefNode(x), b.coefNode(y)))
 }

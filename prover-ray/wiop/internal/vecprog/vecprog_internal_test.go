@@ -508,3 +508,25 @@ func TestRunRejectsMissingBindings(t *testing.T) {
 	require.Panics(t, func() { p.RunWith(bind, make([]field.Ext, n-1), nil, 1) }, "short aggregate")
 	require.NotPanics(t, func() { p.RunWith(bind, make([]field.Ext, n), nil, 1) })
 }
+
+// Linear forms whose coefficients are parameters must merge as they do over
+// constants: the same coefficient built in either order, or multiplied by
+// one, gives the same node.
+func TestParamCoefficientsMergeLikeConstants(t *testing.T) {
+	b := NewBuilder()
+	x := b.Base(make([]field.Element, 4), 0)
+	alpha := b.Param(0, false)
+	var two, one field.Ext
+	two.B0.A0.SetUint64(2)
+	two.B1.A0.SetUint64(1) // an extension constant, so its products are linear forms
+	one.SetOne()
+	c2, c1 := b.Scalar(two, false), b.Scalar(one, false)
+
+	left := b.Op(Mul, c2, b.Op(Mul, alpha, x))  // coefficient α·2
+	right := b.Op(Mul, alpha, b.Op(Mul, c2, x)) // coefficient 2·α
+	require.Equal(t, kLinear, b.nodes[left].kind)
+	require.Equal(t, left, right, "α·2 and 2·α must give the same linear form")
+
+	ax := b.Op(Mul, alpha, x)
+	require.Equal(t, ax, b.Op(Mul, c1, ax), "multiplying by one must keep the node")
+}
