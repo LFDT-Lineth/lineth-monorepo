@@ -4,8 +4,10 @@ description: >
   in riscv-guests/.zigversion, plus Nim and LLVM for the Constantine crypto backend.
 
 inputs:
-  zkevm-fixtures:
-    description: 'Cache the EF zkevm fixtures that the corpus and reference tests read.'
+  needs-zkevm-fixtures:
+    description: >
+      Whether the job reads the EF zkevm fixtures (corpus and reference tests). When true, the job's
+      ZKEVM_FIXTURES_DIR is a cached copy, restored on every ref and saved only from main.
     default: 'false'
 
 runs:
@@ -41,12 +43,12 @@ runs:
 
     # The Makefiles fetch the fixtures into ZKEVM_FIXTURES_DIR, the directory cached here.
     - name: Set EF zkevm fixtures directory
-      if: ${{ inputs.zkevm-fixtures == 'true' }}
+      if: ${{ inputs.needs-zkevm-fixtures == 'true' }}
       shell: bash
       run: echo "ZKEVM_FIXTURES_DIR=$RUNNER_TEMP/zkevm-fixtures" >> "$GITHUB_ENV"
 
     - name: Cache EF zkevm fixtures
-      if: ${{ inputs.zkevm-fixtures == 'true' }}
+      if: ${{ inputs.needs-zkevm-fixtures == 'true' }}
       uses: ./.github/actions/cache
       with:
         path: ${{ env.ZKEVM_FIXTURES_DIR }}
