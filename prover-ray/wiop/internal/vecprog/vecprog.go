@@ -27,6 +27,14 @@
 // points; a table leaf is read cyclically within a coset at a fixed offset,
 // and may hold step·ratio cosets, of which the program's coset k is coset
 // k·step. A plain vector of n rows is the case ratio = step = 1.
+//
+// A program can also be built once and run many times on different data: a
+// [Builder.Param] is a scalar and a [Builder.BaseSlot] or [Builder.ExtSlot] a
+// table whose value is only given to [Program.RunWith], in [Bindings].
+// Subtrees and linear-form coefficients over parameters are not folded at
+// build time but evaluated once per run, before the points; the program
+// itself is never written after [Builder.Compile], so it may be run
+// concurrently with different bindings.
 package vecprog
 
 import (
@@ -73,11 +81,13 @@ func (o Op) Arity() int {
 type kind uint8
 
 const (
-	kScalar  kind = iota // build-time value, in B0.A0 when isBase
-	kVecBase             // base-field table, read at an offset
-	kVecExt              // extension-field table, read at an offset
-	kOp                  // arithmetic node over other nodes
-	kLinear              // s + Σ coefs[i]·atoms[i], atoms base-valued
+	kScalar   kind = iota // build-time value, in B0.A0 when isBase
+	kVecBase              // base-field table, read at an offset
+	kVecExt               // extension-field table, read at an offset
+	kOp                   // arithmetic node over other nodes
+	kLinear               // c + Σ coefs[i]·atoms[i], atoms base-valued
+	kParam                // scalar given at run time, in Bindings.Params[slot]
+	kScalarOp             // arithmetic node over scalars, one of them a kParam
 )
 
 // node is a hash-consed node of a program.
@@ -86,16 +96,30 @@ type node struct {
 	isBase  bool
 	op      Op
 	args    []int           // kOp
-	s       field.Ext       // kScalar: the value; kLinear: the constant term
+	s       field.Ext       // kScalar: the value
 	vecBase []field.Element // kVecBase
 	vecExt  []field.Ext     // kVecExt
 	offset  int             // kVec*: offset within a coset, in [0, n)
 	padded  bool            // kVec*: the table is a padded single coset, see BasePadded
 	pad     field.Element   // padded: the value of rows outside the data
 	start   int             // padded: the row of the table's first element
+	slotted bool            // kVec*: the table is Bindings.Base/Ext[slot]
+	slot    int             // kParam, slotted kVec*: the index in Bindings
+	c       coef            // kLinear: the constant term
 	atoms   []int           // kLinear, increasing
-	coefs   []field.Ext     // kLinear, aligned with atoms, non-zero
+	coefs   []coef          // kLinear, aligned with atoms, not constant zeros
 }
+
+// coef is a scalar of a linear form: the constant v, or the value of the
+// scalar node id (a kParam or kScalarOp) when id >= 0.
+type coef struct {
+	id int
+	v  field.Ext
+}
+
+func constCoef(v field.Ext) coef { return coef{id: -1, v: v} }
+
+func (c coef) isZero() bool { return c.id < 0 && c.v.IsZero() }
 
 // key identifies a node up to structural equality: leaves by table identity
 // and offset, scalars by value, inner nodes by their (already interned)
@@ -117,7 +141,18 @@ func (n *node) key() key {
 	if n.padded {
 		k.a1, k.s, k.hash = n.start, field.Lift(n.pad), 1
 	}
+	if n.slotted {
+		k.a0, k.offset, k.hash = n.slot, n.offset, 2
+		return k
+	}
 	switch n.kind {
+	case kParam:
+		k.a0 = n.slot
+	case kScalarOp:
+		k.op, k.a0 = n.op, n.args[0]
+		if len(n.args) > 1 {
+			k.a1 = n.args[1]
+		}
 	case kVecBase:
 		k.table, k.offset = uintptr(unsafe.Pointer(unsafe.SliceData(n.vecBase))), n.offset
 		k.a0 = len(n.vecBase)
@@ -132,13 +167,19 @@ func (n *node) key() key {
 	case kLinear:
 		h := fnv.New64a()
 		var buf [8]byte
-		for i, a := range n.atoms {
-			binary.LittleEndian.PutUint64(buf[:], uint64(a))
+		writeCoef := func(c coef) {
+			binary.LittleEndian.PutUint64(buf[:], uint64(c.id))
 			h.Write(buf[:])
-			for _, limb := range asLimbs(n.coefs[i : i+1]) {
+			for _, limb := range asLimbs([]field.Ext{c.v}) {
 				binary.LittleEndian.PutUint32(buf[:4], limb[0])
 				h.Write(buf[:4])
 			}
+		}
+		writeCoef(n.c)
+		for i, a := range n.atoms {
+			binary.LittleEndian.PutUint64(buf[:], uint64(a))
+			h.Write(buf[:])
+			writeCoef(n.coefs[i])
 		}
 		k.hash = h.Sum64()
 	}
@@ -148,7 +189,7 @@ func (n *node) key() key {
 // equal reports whether two nodes of the same key are the same linear form;
 // other kinds are fully determined by their key.
 func (n *node) equal(m *node) bool {
-	return n.kind != kLinear || (slices.Equal(n.atoms, m.atoms) && slices.Equal(n.coefs, m.coefs))
+	return n.kind != kLinear || (n.c == m.c && slices.Equal(n.atoms, m.atoms) && slices.Equal(n.coefs, m.coefs))
 }
 
 // deps returns the nodes n reads.
@@ -182,6 +223,13 @@ func (b *Builder) intern(n node) int {
 	b.nodes = append(b.nodes, n)
 	b.index[key] = append(b.index[key], id)
 	return id
+}
+
+// isScalar reports whether node id has the same value at every point: a
+// constant, a parameter, or an operation over those.
+func (b *Builder) isScalar(id int) bool {
+	k := b.nodes[id].kind
+	return k == kScalar || k == kParam || k == kScalarOp
 }
 
 // Base returns the leaf reading a base-field table at offset, within each
@@ -218,6 +266,24 @@ func (b *Builder) Scalar(v field.Ext, isBase bool) int {
 	return b.intern(node{kind: kScalar, isBase: isBase, s: v})
 }
 
+// Param returns the scalar Bindings.Params[slot] of each run; when isBase,
+// the bound value must be a lifted base element.
+func (b *Builder) Param(slot int, isBase bool) int {
+	return b.intern(node{kind: kParam, isBase: isBase, slot: slot})
+}
+
+// BaseSlot returns the leaf reading, at offset within each coset, the
+// base-field table Bindings.Base[slot] of each run.
+func (b *Builder) BaseSlot(slot, offset int) int {
+	return b.intern(node{kind: kVecBase, isBase: true, slotted: true, slot: slot, offset: offset})
+}
+
+// ExtSlot returns the leaf reading, at offset within each coset, the
+// extension-field table Bindings.Ext[slot] of each run.
+func (b *Builder) ExtSlot(slot, offset int) int {
+	return b.intern(node{kind: kVecExt, slotted: true, slot: slot, offset: offset})
+}
+
 // Op returns o applied to args, folding scalars and linear forms. Nodes of
 // a base-valued operation are evaluated in the base field; mixed operations
 // lift their base operands at the boundary.
@@ -226,12 +292,13 @@ func (b *Builder) Op(o Op, args ...int) int {
 		panic(fmt.Sprintf("vecprog: operator %d takes %d operands, got %d", o, o.Arity(), len(args)))
 	}
 	args = slices.Clone(args)
-	allScalar, allBase := true, true
+	allConst, allScalar, allBase := true, true, true
 	for _, a := range args {
-		allScalar = allScalar && b.nodes[a].kind == kScalar
+		allConst = allConst && b.nodes[a].kind == kScalar
+		allScalar = allScalar && b.isScalar(a)
 		allBase = allBase && b.nodes[a].isBase
 	}
-	if allScalar {
+	if allConst {
 		vals := make([]field.Ext, len(args))
 		for i, a := range args {
 			vals[i] = b.nodes[a].s
@@ -240,6 +307,10 @@ func (b *Builder) Op(o Op, args ...int) int {
 			return b.Scalar(field.Lift(applyBase(o, liftedBases(vals))), true)
 		}
 		return b.Scalar(applyExt(o, vals), false)
+	}
+	if allScalar {
+		// Over a parameter: evaluated once per run, before the points.
+		return b.intern(node{kind: kScalarOp, isBase: allBase, op: o, args: args})
 	}
 	if allBase {
 		return b.intern(node{kind: kOp, isBase: true, op: o, args: args})
@@ -250,14 +321,14 @@ func (b *Builder) Op(o Op, args ...int) int {
 		if b.linearizable(args[0]) && b.linearizable(args[1]) {
 			r := b.linForm(args[1])
 			if o == Sub {
-				r.scale(extMinusOne())
+				b.scale(&r, constCoef(extMinusOne()))
 			}
-			return b.linear(b.linForm(args[0]).plus(r))
+			return b.linear(b.plus(b.linForm(args[0]), r))
 		}
 	case Negate:
 		if b.linearizable(args[0]) {
 			l := b.linForm(args[0])
-			l.scale(extMinusOne())
+			b.scale(&l, constCoef(extMinusOne()))
 			return b.linear(l)
 		}
 	case Double:
@@ -266,15 +337,15 @@ func (b *Builder) Op(o Op, args ...int) int {
 			var two field.Ext
 			two.SetOne()
 			two.Double(&two)
-			l.scale(two)
+			b.scale(&l, constCoef(two))
 			return b.linear(l)
 		}
 	case Mul:
 		for k := range 2 {
 			s, other := args[k], args[1-k]
-			if b.nodes[s].kind == kScalar && b.linearizable(other) {
+			if b.isScalar(s) && b.linearizable(other) {
 				l := b.linForm(other)
-				l.scale(b.nodes[s].s)
+				b.scale(&l, b.coefOf(s))
 				return b.linear(l)
 			}
 		}
@@ -287,53 +358,80 @@ func (b *Builder) Op(o Op, args ...int) int {
 // linear form).
 func (b *Builder) linearizable(id int) bool {
 	n := &b.nodes[id]
-	return n.kind == kScalar || n.isBase || n.kind == kLinear
+	return b.isScalar(id) || n.isBase || n.kind == kLinear
 }
 
 // linForm returns a fresh copy of node id as a linear form; id must be
 // linearizable.
 func (b *Builder) linForm(id int) linForm {
 	n := &b.nodes[id]
-	switch n.kind {
-	case kScalar:
-		return linForm{c: n.s}
-	case kLinear:
-		return linForm{c: n.s, atoms: slices.Clone(n.atoms), coefs: slices.Clone(n.coefs)}
+	switch {
+	case b.isScalar(id):
+		return linForm{c: b.coefOf(id)}
+	case n.kind == kLinear:
+		return linForm{c: n.c, atoms: slices.Clone(n.atoms), coefs: slices.Clone(n.coefs)}
 	}
 	var one field.Ext
 	one.SetOne()
-	return linForm{atoms: []int{id}, coefs: []field.Ext{one}}
+	return linForm{c: constCoef(field.Ext{}), atoms: []int{id}, coefs: []coef{constCoef(one)}}
 }
 
-// linear interns l without its zero terms, as a scalar when none is left.
+// linear interns l without its constant zero terms, as a scalar when none is
+// left.
 func (b *Builder) linear(l linForm) int {
-	n := node{kind: kLinear, s: l.c}
+	n := node{kind: kLinear, c: l.c}
 	for i := range l.atoms {
-		if !l.coefs[i].IsZero() {
+		if !l.coefs[i].isZero() {
 			n.atoms = append(n.atoms, l.atoms[i])
 			n.coefs = append(n.coefs, l.coefs[i])
 		}
 	}
 	if len(n.atoms) == 0 {
-		return b.Scalar(l.c, false)
+		return b.coefNode(l.c)
 	}
 	return b.intern(n)
 }
 
+// coefOf returns scalar node id as a coefficient: its value when it is a
+// constant.
+func (b *Builder) coefOf(id int) coef {
+	if n := &b.nodes[id]; n.kind == kScalar {
+		return constCoef(n.s)
+	}
+	return coef{id: id}
+}
+
+// coefNode returns the scalar node of c.
+func (b *Builder) coefNode(c coef) int {
+	if c.id >= 0 {
+		return c.id
+	}
+	return b.Scalar(c.v, false)
+}
+
+// coefOp applies o to two coefficients: in the field when both are
+// constants, as a scalar node evaluated per run otherwise.
+func (b *Builder) coefOp(o Op, x, y coef) coef {
+	if x.id < 0 && y.id < 0 {
+		return constCoef(applyExt(o, []field.Ext{x.v, y.v}))
+	}
+	return b.coefOf(b.Op(o, b.coefNode(x), b.coefNode(y)))
+}
+
 // linForm is c + Σ coefs[i]·atoms[i] during construction, atoms increasing.
 type linForm struct {
-	c     field.Ext
+	c     coef
 	atoms []int
-	coefs []field.Ext
+	coefs []coef
 }
 
 // plus returns l + r, merging the atoms of both.
-func (l linForm) plus(r linForm) linForm {
+func (b *Builder) plus(l, r linForm) linForm {
 	out := linForm{
+		c:     b.coefOp(Add, l.c, r.c),
 		atoms: make([]int, 0, len(l.atoms)+len(r.atoms)),
-		coefs: make([]field.Ext, 0, len(l.atoms)+len(r.atoms)),
+		coefs: make([]coef, 0, len(l.atoms)+len(r.atoms)),
 	}
-	out.c.Add(&l.c, &r.c)
 	i, j := 0, 0
 	for i < len(l.atoms) || j < len(r.atoms) {
 		switch {
@@ -344,9 +442,8 @@ func (l linForm) plus(r linForm) linForm {
 			out.atoms, out.coefs = append(out.atoms, r.atoms[j]), append(out.coefs, r.coefs[j])
 			j++
 		default:
-			var sum field.Ext
-			sum.Add(&l.coefs[i], &r.coefs[j])
-			out.atoms, out.coefs = append(out.atoms, l.atoms[i]), append(out.coefs, sum)
+			out.atoms = append(out.atoms, l.atoms[i])
+			out.coefs = append(out.coefs, b.coefOp(Add, l.coefs[i], r.coefs[j]))
 			i++
 			j++
 		}
@@ -355,10 +452,10 @@ func (l linForm) plus(r linForm) linForm {
 }
 
 // scale multiplies l by s in place.
-func (l *linForm) scale(s field.Ext) {
-	l.c.Mul(&l.c, &s)
+func (b *Builder) scale(l *linForm, s coef) {
+	l.c = b.coefOp(Mul, l.c, s)
 	for i := range l.coefs {
-		l.coefs[i].Mul(&l.coefs[i], &s)
+		l.coefs[i] = b.coefOp(Mul, l.coefs[i], s)
 	}
 }
 
@@ -448,16 +545,32 @@ type sink struct {
 	root         int
 	guard        int // sinkCheck
 	cancellation []field.Element
-	coef         field.Ext
-	dst          []field.Ext
-	onZero       func(t int)
+	// cancelSlotted: the cancellation is Bindings.Base[cancelSlot].
+	cancelSlotted bool
+	cancelSlot    int
+	coef          coef
+	dst           []field.Ext
+	onZero        func(t int)
 }
 
 // Accumulate adds coef · root · cancellation into the aggregate passed to
 // [Program.Run]; a nil cancellation stands for 1. The cancellation is laid
 // out like the tables.
 func (b *Builder) Accumulate(root int, cancellation []field.Element, coef field.Ext) {
-	b.sinks = append(b.sinks, sink{kind: sinkAccumulate, root: root, cancellation: cancellation, coef: coef})
+	b.sinks = append(b.sinks, sink{kind: sinkAccumulate, root: root, cancellation: cancellation, coef: constCoef(coef)})
+}
+
+// AccumulateBy is [Builder.Accumulate] with the coefficient a scalar node,
+// such as a power of a [Builder.Param], and the cancellation the table
+// Bindings.Base[cancelSlot] of each run (none when cancelSlot < 0).
+func (b *Builder) AccumulateBy(root, cancelSlot, coef int) {
+	if !b.isScalar(coef) {
+		panic("vecprog: AccumulateBy: the coefficient must be a scalar node")
+	}
+	b.sinks = append(b.sinks, sink{
+		kind: sinkAccumulate, root: root, coef: b.coefOf(coef),
+		cancelSlotted: cancelSlot >= 0, cancelSlot: cancelSlot,
+	})
 }
 
 // Store writes root, in the extension field, into dst (one entry per point).
@@ -479,16 +592,49 @@ func (b *Builder) Check(root, guard int, onZero func(t int)) {
 
 // Program is the lowered form of a builder's sinks.
 type Program struct {
-	nodes       []node
-	steps       []step
-	reg         []int // computed node -> register of its kind
-	leaves      []int // kVec* nodes read by the program
-	sinks       []sink
-	nbBase      int
-	nbExt       int
-	n, ratio    int
-	stride      int  // table entries between the program's consecutive cosets
-	accumulates bool // some sink is an Accumulate
+	nodes    []node
+	steps    []step
+	reg      []int // computed node -> register of its kind
+	leaves   []int // kVec* nodes read by the program
+	sinks    []sink
+	nbBase   int
+	nbExt    int
+	n, ratio int
+	stride   int // table entries between the program's consecutive cosets
+	// accumulates: some sink is an Accumulate. bound: the program reads
+	// Bindings (a slotted table or a parameter).
+	accumulates, bound bool
+	// scalars holds the value of every constant node; perRun lists, in
+	// increasing order, the parameter-dependent scalar nodes evaluated by
+	// each run on a copy of it.
+	scalars []field.Ext
+	perRun  []int
+}
+
+// Bindings are the data of one run of a program: the tables of its slotted
+// leaves and the values of its parameters, indexed by slot.
+type Bindings struct {
+	Base   [][]field.Element
+	Ext    [][]field.Ext
+	Params []field.Ext
+}
+
+// Stats counts the nodes of a compiled program.
+type Stats struct {
+	Leaves  int // table leaves read
+	Steps   int // nodes computed at every point
+	Scalars int // parameter-dependent scalars computed once per run
+}
+
+// Stats returns the node counts of p.
+func (p *Program) Stats() Stats {
+	st := Stats{Leaves: len(p.leaves), Scalars: len(p.perRun)}
+	for _, s := range p.steps {
+		if s.sink < 0 {
+			st.Steps++
+		}
+	}
+	return st
 }
 
 // step computes node, or runs sink when sink >= 0.
@@ -503,6 +649,16 @@ type step struct {
 // use.
 func (b *Builder) Compile(n, ratio, cosetStep int) *Program {
 	p := &Program{nodes: b.nodes, sinks: b.sinks, n: n, ratio: ratio, stride: cosetStep * n}
+	p.scalars = make([]field.Ext, len(p.nodes))
+	for id := range p.nodes {
+		switch nd := &p.nodes[id]; nd.kind {
+		case kScalar:
+			p.scalars[id] = nd.s
+		case kParam, kScalarOp:
+			p.perRun = append(p.perRun, id)
+			p.bound = true
+		}
+	}
 
 	emitted := make([]bool, len(p.nodes))
 	var emit func(id int)
@@ -514,6 +670,7 @@ func (b *Builder) Compile(n, ratio, cosetStep int) *Program {
 		nd := &p.nodes[id]
 		switch nd.kind {
 		case kVecBase, kVecExt:
+			p.bound = p.bound || nd.slotted
 			if nd.padded {
 				dataLen := len(nd.vecBase) + len(nd.vecExt)
 				if nd.start+dataLen > n {
@@ -522,7 +679,7 @@ func (b *Builder) Compile(n, ratio, cosetStep int) *Program {
 			}
 			p.leaves = append(p.leaves, id)
 			return
-		case kScalar:
+		case kScalar, kParam, kScalarOp:
 			return
 		}
 		for _, a := range nd.deps() {
@@ -532,6 +689,7 @@ func (b *Builder) Compile(n, ratio, cosetStep int) *Program {
 	}
 	for i := range p.sinks {
 		p.accumulates = p.accumulates || p.sinks[i].kind == sinkAccumulate
+		p.bound = p.bound || p.sinks[i].cancelSlotted
 		emit(p.sinks[i].root)
 		if p.sinks[i].kind == sinkCheck {
 			emit(p.sinks[i].guard)
@@ -603,12 +761,47 @@ func (b *Builder) Compile(n, ratio, cosetStep int) *Program {
 // workers goroutines (all CPUs when workers ≤ 0). A block never straddles
 // two cosets.
 func (p *Program) Run(aggregate []field.Ext, scale []field.Element, workers int) {
+	p.RunWith(nil, aggregate, scale, workers)
+}
+
+// RunWith is [Program.Run] with the slotted tables and parameters of bind
+// (nil when the program has neither). The parameter-dependent scalars are
+// evaluated once, before the points.
+func (p *Program) RunWith(bind *Bindings, aggregate []field.Ext, scale []field.Element, workers int) {
 	if p.accumulates && len(aggregate) < p.ratio*p.n {
 		panic(fmt.Sprintf("vecprog: Run: aggregate has %d entries, the program accumulates into %d", len(aggregate), p.ratio*p.n))
+	}
+	if p.bound && bind == nil {
+		panic("vecprog: Run: the program reads slotted tables or parameters; use RunWith")
+	}
+	scalars := p.scalars
+	if len(p.perRun) > 0 {
+		scalars = slices.Clone(p.scalars)
+		for _, id := range p.perRun {
+			nd := &p.nodes[id]
+			if nd.kind == kParam {
+				scalars[id] = bind.Params[nd.slot]
+				continue
+			}
+			var vals [2]field.Ext
+			for i, a := range nd.args {
+				vals[i] = scalars[a]
+			}
+			if nd.isBase {
+				var bases [2]field.Element
+				for i := range nd.args {
+					bases[i] = vals[i].B0.A0
+				}
+				scalars[id] = field.Lift(applyBase(nd.op, bases[:len(nd.args)]))
+			} else {
+				scalars[id] = applyExt(nd.op, vals[:len(nd.args)])
+			}
+		}
 	}
 	perCoset := (p.n + BlockSize - 1) / BlockSize
 	work := func(first, last int) {
 		w := p.newWorker()
+		w.bind, w.scalars = bind, scalars
 		for blk := first; blk < last; blk++ {
 			k, i0 := blk/perCoset, (blk%perCoset)*BlockSize
 			L := min(BlockSize, p.n-i0)
@@ -634,6 +827,8 @@ func (p *Program) Run(aggregate []field.Ext, scale []field.Element, workers int)
 // worker holds one worker's registers and leaf views.
 type worker struct {
 	p        *Program
+	bind     *Bindings
+	scalars  []field.Ext // value of every scalar node in this run
 	baseRegs [][]field.Element
 	extRegs  [][]field.Ext
 	// Per-block view of each leaf, indexed by node; wrap holds the leaf's copy
@@ -687,6 +882,12 @@ func (w *worker) runBlock(agg []field.Ext, k, i0, L int) {
 			idx -= p.n
 		}
 		switch {
+		case nd.slotted && nd.kind == kVecBase:
+			table := w.bind.Base[nd.slot]
+			w.viewBase[id] = wrappedView(table[tableStart:tableStart+p.n], idx, L, &w.wrapBase[id])
+		case nd.slotted:
+			table := w.bind.Ext[nd.slot]
+			w.viewExt[id] = wrappedView(table[tableStart:tableStart+p.n], idx, L, &w.wrapExt[id])
 		case nd.padded && nd.kind == kVecBase:
 			w.viewBase[id] = paddedView(nd.vecBase, nd.pad, nd.start, p.n, idx, L, &w.wrapBase[id])
 		case nd.padded:
@@ -793,8 +994,8 @@ func (o *operand) extAt(i int) field.Ext {
 func (w *worker) operand(id, L int) operand {
 	nd := &w.p.nodes[id]
 	switch nd.kind {
-	case kScalar:
-		return operand{scalar: true, isBase: nd.isBase, s: nd.s}
+	case kScalar, kParam, kScalarOp:
+		return operand{scalar: true, isBase: nd.isBase, s: w.scalars[id]}
 	case kVecBase:
 		return operand{isBase: true, base: w.viewBase[id]}
 	case kVecExt:
@@ -820,14 +1021,24 @@ func extVector(o *operand, L int, buf []field.Ext) []field.Ext {
 }
 
 func (w *worker) linear(nd *node, dst []field.Ext) {
+	c := w.coef(nd.c)
 	for i := range dst {
-		dst[i] = nd.s
+		dst[i] = c
 	}
 	acc := extensions.VectorE6(dst)
 	for i, a := range nd.atoms {
 		atom := w.operand(a, len(dst))
-		acc.ScalarMulAccByElement(atom.base, &nd.coefs[i])
+		coef := w.coef(nd.coefs[i])
+		acc.ScalarMulAccByElement(atom.base, &coef)
 	}
+}
+
+// coef returns the value of c in this run.
+func (w *worker) coef(c coef) field.Ext {
+	if c.id >= 0 {
+		return w.scalars[c.id]
+	}
+	return c.v
 }
 
 func (w *worker) baseOp(nd *node, dst []field.Element) {
@@ -1110,7 +1321,10 @@ func (w *worker) sink(sk *sink, agg []field.Ext, tablePos, point, L int) {
 		}
 	}
 	var cancel []field.Element
-	if sk.cancellation != nil {
+	switch {
+	case sk.cancelSlotted:
+		cancel = w.bind.Base[sk.cancelSlot][tablePos : tablePos+L]
+	case sk.cancellation != nil:
 		cancel = sk.cancellation[tablePos : tablePos+L]
 	}
 	if root.isBase {
@@ -1120,7 +1334,8 @@ func (w *worker) sink(sk *sink, agg []field.Ext, tablePos, point, L int) {
 			tmp.Mul(vals, cancel)
 			vals = tmp
 		}
-		acc.ScalarMulAccByElement(vals, &sk.coef)
+		coef := w.coef(sk.coef)
+		acc.ScalarMulAccByElement(vals, &coef)
 		return
 	}
 	vals := root.ext
@@ -1129,7 +1344,8 @@ func (w *worker) sink(sk *sink, agg []field.Ext, tablePos, point, L int) {
 		tmp.MulByElement(vals, cancel)
 		vals = tmp
 	}
-	acc.ScalarMulAcc(vals, &sk.coef)
+	coef := w.coef(sk.coef)
+	acc.ScalarMulAcc(vals, &coef)
 }
 
 // asLimbs views extension elements as their contiguous base-field limbs.

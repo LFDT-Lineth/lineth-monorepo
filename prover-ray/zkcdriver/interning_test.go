@@ -581,3 +581,49 @@ func TestLiftedVanishingsShareStructure(t *testing.T) {
 	assert.Zero(t, total.leaks, "lifted nodes duplicate a value already carried by another pointer")
 	assert.NotZero(t, total.sharedAcross, "no lifted compound node is shared with any other vanishing")
 }
+
+// TestQuotientProgramsEvaluateDistinctNodes reports, per quotient bucket of
+// the real RISC-V system, what #4036 removes: the nodes of the vanishings
+// walked as trees (what binding them without memoisation visited per proof),
+// the distinct nodes, and the nodes of the compiled program that every proof
+// evaluates. Dynamic modules are compiled at 2^20 rows; the counts barely
+// depend on the size.
+//
+// As in [TestInterningSharesCompoundSubexpressions], only that sharing is
+// exploited is asserted; the numbers are logged.
+func TestQuotientProgramsEvaluateDistinctNodes(t *testing.T) {
+
+	serialized := riscvConstraints(t)
+	sys := buildRiscvSystem(t, serialized)
+	localvanishing.Compile(sys)
+	global.Compile(sys)
+
+	var action *global.QuotientProverAction
+	for _, r := range sys.Rounds {
+		for _, act := range r.ProverActions {
+			if a, ok := act.(*global.QuotientProverAction); ok {
+				action = a
+			}
+		}
+	}
+	require.NotNil(t, action, "global.Compile registered no quotient prover action")
+
+	var tree uint64
+	var distinct, steps, leaves, scalars int
+	for _, st := range action.Stats(1 << 20) {
+		tree += st.TreeNodes
+		distinct += st.DistinctNodes
+		steps += st.ProgramSteps
+		leaves += st.ProgramLeaves
+		scalars += st.ProgramScalars
+		t.Logf("bucket %-40s ratio %d: %4d vanishings, %9d tree nodes, %7d distinct, program %6d steps %5d leaves %5d scalars",
+			st.Module, st.Ratio, st.Vanishings, st.TreeNodes, st.DistinctNodes,
+			st.ProgramSteps, st.ProgramLeaves, st.ProgramScalars)
+		assert.LessOrEqualf(t, uint64(st.DistinctNodes), st.TreeNodes, "bucket %s ratio %d", st.Module, st.Ratio)
+		assert.LessOrEqualf(t, st.ProgramSteps+st.ProgramLeaves, st.DistinctNodes,
+			"bucket %s ratio %d: the program computes more nodes than the vanishings have", st.Module, st.Ratio)
+	}
+	t.Logf("TOTAL: %d tree nodes, %d distinct (%.1f%% removed), program %d steps + %d leaves per point, %d scalars per proof",
+		tree, distinct, 100*(1-float64(distinct)/float64(tree)), steps, leaves, scalars)
+	assert.Less(t, uint64(distinct), tree, "no subexpression is shared: the quotient evaluates pure trees")
+}

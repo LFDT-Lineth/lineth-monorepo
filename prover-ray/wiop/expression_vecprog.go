@@ -94,7 +94,9 @@ func (l *RowLowering) sizedTo(expr Expression) bool {
 // ExpressionLowering lowers expressions into one [vecprog] builder.
 // Constants, cells, coins and arithmetic operations are lowered here, reading
 // their values from rt; every other leaf (column views, selectors, ...) is
-// lowered by leaf. Each distinct arithmetic node is lowered once across all
+// lowered by leaf. With a nil rt, cells and coins are lowered by leaf too,
+// typically as a [vecprog.Builder.Param], so that the program can be built
+// without a runtime and run on every proof. Each distinct arithmetic node is lowered once across all
 // Lower calls, so a subexpression shared by pointer -- within an expression or
 // between the expressions of a program -- costs one visit: lowering is linear
 // in the distinct nodes.
@@ -117,6 +119,9 @@ func (l *ExpressionLowering) Lower(expr Expression) int {
 	case *Constant:
 		return b.Scalar(field.Lift(e.Value), true)
 	case *Cell:
+		if rt == nil {
+			return l.leaf(expr)
+		}
 		v := rt.GetCellValue(e)
 		if e.IsExtension() {
 			return b.Scalar(v.AsExt(), false)
@@ -126,6 +131,9 @@ func (l *ExpressionLowering) Lower(expr Expression) int {
 		}
 		return b.Scalar(field.Lift(v.AsBase()), true)
 	case *CoinField:
+		if rt == nil {
+			return l.leaf(expr)
+		}
 		return b.Scalar(rt.GetCoinValue(e).AsExt(), false)
 	case *ArithmeticOperation:
 		if id, ok := l.memo[e]; ok {

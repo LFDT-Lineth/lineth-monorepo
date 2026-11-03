@@ -342,3 +342,133 @@ func TestInternSeparatesNodesThatDiffer(t *testing.T) {
 	require.Equal(t, first, again, "an identical linear form is merged")
 	require.NotEqual(t, first, form(s2, s1), "linear forms with different coefficients are distinct")
 }
+
+// A program built once over parameters and slotted tables must give, on every
+// run, exactly what a program built with those values as constants and those
+// tables as leaves gives: accumulate sinks with a parameter-dependent
+// coefficient, Horner forms with parameter coefficients, and subtrees over
+// parameters only included.
+func TestParamsAndSlotsMatchConstants(t *testing.T) {
+	const n, ratio = 3*BlockSize + 5, 2
+	rng := rand.New(rand.NewPCG(11, 13))
+	g := newTreeGen(rng, n, n*ratio)
+
+	// build lowers the same trees with every scalar leaf either a constant
+	// (params == nil) or Params[i], and every table either a direct leaf
+	// (slotted == false) or a slot.
+	type leafRef struct {
+		base []field.Element
+		ext  []field.Ext
+	}
+	var scalarLeaves []*tree
+	var tableLeaves []leafRef
+	var collect func(tr *tree)
+	collect = func(tr *tree) {
+		switch {
+		case tr.s != nil:
+			scalarLeaves = append(scalarLeaves, tr)
+		case tr.base != nil || tr.ext != nil:
+			tableLeaves = append(tableLeaves, leafRef{tr.base, tr.ext})
+		}
+		for _, a := range tr.args {
+			collect(a)
+		}
+	}
+	trees := make([]*tree, 6)
+	for i := range trees {
+		trees[i] = g.tree(5)
+		collect(trees[i])
+	}
+	scalarIdx := map[*tree]int{}
+	for i, tr := range scalarLeaves {
+		scalarIdx[tr] = i
+	}
+	baseSlot, extSlot := map[*field.Element]int{}, map[*field.Ext]int{}
+	for _, l := range tableLeaves {
+		if l.base != nil {
+			if _, ok := baseSlot[&l.base[0]]; !ok {
+				baseSlot[&l.base[0]] = len(baseSlot)
+			}
+		} else if _, ok := extSlot[&l.ext[0]]; !ok {
+			extSlot[&l.ext[0]] = len(extSlot)
+		}
+	}
+
+	var build func(b *Builder, tr *tree, params bool) int
+	build = func(b *Builder, tr *tree, params bool) int {
+		switch {
+		case tr.s != nil && params:
+			return b.Param(scalarIdx[tr], tr.isBase)
+		case tr.s != nil:
+			return b.Scalar(*tr.s, tr.isBase)
+		case tr.base != nil && params:
+			return b.BaseSlot(baseSlot[&tr.base[0]], tr.offset)
+		case tr.base != nil:
+			return b.Base(tr.base, tr.offset)
+		case tr.ext != nil && params:
+			return b.ExtSlot(extSlot[&tr.ext[0]], tr.offset)
+		case tr.ext != nil:
+			return b.Ext(tr.ext, tr.offset)
+		}
+		args := make([]int, len(tr.args))
+		for k, a := range tr.args {
+			args[k] = build(b, a, params)
+		}
+		return b.Op(tr.op, args...)
+	}
+	// coin is the accumulation coefficient: Params[len(scalarLeaves)].
+	coinSlot := len(scalarLeaves)
+	run := func(p *Program, bind *Bindings) []field.Ext {
+		agg := make([]field.Ext, n*ratio)
+		p.RunWith(bind, agg, nil, 0)
+		return agg
+	}
+
+	b := NewBuilder()
+	coinPow := b.Scalar(field.Lift(field.One()), true)
+	coin := b.Param(coinSlot, false)
+	for _, tr := range trees {
+		b.AccumulateBy(build(b, tr, true), -1, coinPow)
+		coinPow = b.Op(Mul, coinPow, coin)
+	}
+	cached := b.Compile(n, ratio, 1)
+
+	for runIdx := range 2 {
+		// Fresh values for every parameter and table.
+		bind := &Bindings{Params: make([]field.Ext, coinSlot+1)}
+		for i, tr := range scalarLeaves {
+			if tr.isBase {
+				*tr.s = field.Lift(field.VecPseudoRandBase(rng, 1)[0])
+			} else {
+				*tr.s = field.VecPseudoRandExt(rng, 1)[0]
+			}
+			bind.Params[i] = *tr.s
+		}
+		coinVal := field.VecPseudoRandExt(rng, 1)[0]
+		bind.Params[coinSlot] = coinVal
+		bind.Base = make([][]field.Element, len(baseSlot))
+		bind.Ext = make([][]field.Ext, len(extSlot))
+		for _, tbl := range g.base {
+			copy(tbl, field.VecPseudoRandBase(rng, len(tbl)))
+			if s, ok := baseSlot[&tbl[0]]; ok {
+				bind.Base[s] = tbl
+			}
+		}
+		for _, tbl := range g.ext {
+			copy(tbl, field.VecPseudoRandExt(rng, len(tbl)))
+			if s, ok := extSlot[&tbl[0]]; ok {
+				bind.Ext[s] = tbl
+			}
+		}
+
+		fresh := NewBuilder()
+		var pow field.Ext
+		pow.SetOne()
+		for _, tr := range trees {
+			fresh.Accumulate(build(fresh, tr, false), nil, pow)
+			pow.Mul(&pow, &coinVal)
+		}
+		want := run(fresh.Compile(n, ratio, 1), nil)
+		require.Equal(t, want, run(cached, bind), "run %d", runIdx)
+	}
+}

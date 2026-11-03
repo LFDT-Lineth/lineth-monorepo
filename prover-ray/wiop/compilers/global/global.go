@@ -11,7 +11,6 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/hugepage"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/internal/vecprog"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 )
 
@@ -135,6 +134,10 @@ type proverBucket struct {
 	// Pre-allocated scratch slices populated by Plan; nil until Plan is called.
 	// When non-nil, Run uses these instead of allocating fresh memory.
 	scratchAgg []field.Ext // aggregate[j], length N = n*ratio
+
+	// programs holds the bucket's quotient programs by module size, built on
+	// first use (or by Plan) and reused by every later proof at that size.
+	programs *programCache
 }
 
 // VerifierBucket holds everything the verifier needs for one ratio bucket.
@@ -320,7 +323,7 @@ func buildModuleQuotient(rawBuckets []rawBucket, m *wiop.Module, mergeCoin *wiop
 	}
 
 	for i, bkt := range rawBuckets {
-		pb := proverBucket{ratio: bkt.ratio, shares: bkt.shares}
+		pb := proverBucket{ratio: bkt.ratio, shares: bkt.shares, programs: newProgramCache()}
 		if m.IsDynamic() {
 			// Dynamic module: store vanishings for runtime computation.
 			pb.vanishings = bkt.vanishings
@@ -549,9 +552,11 @@ type QuotientProverAction struct {
 }
 
 // Plan pre-allocates scratch buffers for each ratio bucket from the planning
-// arena. For static modules, Run uses these slices instead of allocating fresh
-// memory on every invocation. For dynamic modules, this is a no-op since the
-// size isn't known until runtime.
+// arena, and builds the bucket's quotient program. For static modules, Run
+// uses these instead of allocating fresh memory and building the program on
+// the first proof. For dynamic modules, this is a no-op since the size isn't
+// known until runtime: their programs are built by the first proof at each
+// size.
 func (a *QuotientProverAction) Plan(ctx *wiop.PlanningContext) {
 	for _, q := range a.modules {
 		if q.m.IsDynamic() {
@@ -561,6 +566,7 @@ func (a *QuotientProverAction) Plan(ctx *wiop.PlanningContext) {
 		for i := range q.buckets {
 			bkt := &q.buckets[i]
 			bkt.scratchAgg = ctx.AllocExt(n * bkt.ratio)
+			q.program(bkt, n)
 		}
 	}
 }
@@ -588,7 +594,6 @@ func (q *moduleQuotient) run(rt *wiop.Runtime) {
 			q.m.Size(),
 		))
 	}
-	coinExt := rt.GetCoinValue(q.mergeCoin).Ext
 	R := q.maxRatio
 
 	// The domains depend only on the size and the shift, so for a dynamic
@@ -643,7 +648,8 @@ func (q *moduleQuotient) run(rt *wiop.Runtime) {
 		}
 	}()
 
-	for _, bkt := range q.buckets {
+	for bi := range q.buckets {
+		bkt := &q.buckets[bi]
 		ratio := bkt.ratio
 		N := n * ratio
 
@@ -667,46 +673,19 @@ func (q *moduleQuotient) run(rt *wiop.Runtime) {
 		}
 		clear(aggregate[:N])
 
-		// Every vanishing expression is lowered into one program, its leaves
-		// reading the bucket's coset tables. The program runs over blocks of
-		// coset points in parallel, reading every (R/ratio)-th of the module's
-		// cosets, then divides by the annihilator (x^n − 1), whose inverse on
-		// the bucket's coset k is annInv[k].
-		b := vecprog.NewBuilder()
-		leaf := func(expr wiop.Expression) int {
-			switch e := expr.(type) {
-			case *wiop.ColumnView:
-				// A shift s reads the point x_t·ω_n^s, in the same small coset
-				// as x_t (see [cosetShifts]).
-				offset := ((e.ShiftingOffset % n) + n) % n
-				if e.Column.IsExtension {
-					return b.Ext(cosetEvalsExt[e.Column.Context.ID], offset)
-				}
-				return b.Base(cosetEvals[e.Column.Context.ID], offset)
-			case *wiop.LagrangeSelector:
-				return b.Base(selectorCosets[e.Position], 0)
+		// The bucket's program is built once per module size; a run only binds
+		// this proof's tables and scalars to it. It reads every (R/ratio)-th
+		// of the module's cosets, then divides by the annihilator (x^n − 1),
+		// whose inverse on the bucket's coset k is annInv[k].
+		prog := q.program(bkt, n)
+		cancellation := func(j int) []field.Element {
+			if bkt.entries != nil {
+				return bkt.entries[j].cancellationCoset
 			}
-			panic(fmt.Sprintf("wiop/compilers: unsupported expression type %T in the quotient", expr))
+			return cancels.get(bkt.vanishings[j].CancelledPositions)
 		}
-		// One lowering for the whole bucket: a subexpression shared between
-		// its vanishings is lowered once.
-		lowering := wiop.NewExpressionLowering(rt, b, leaf)
-		var coinPow field.Ext
-		coinPow.SetOne()
-		accumulate := func(v *wiop.Vanishing, cancellation []field.Element) {
-			b.Accumulate(lowering.Lower(v.Expression), cancellation, coinPow)
-			coinPow.Mul(&coinPow, &coinExt)
-		}
-		if bkt.entries != nil {
-			for _, entry := range bkt.entries {
-				accumulate(entry.v, entry.cancellationCoset)
-			}
-		} else {
-			for _, v := range bkt.vanishings {
-				accumulate(v, cancels.get(v.CancelledPositions))
-			}
-		}
-		b.Compile(n, ratio, R/ratio).Run(aggregate[:N], annInv, 0)
+		bind := prog.bind(rt, cosetEvals, cosetEvalsExt, selectorCosets, cancellation)
+		prog.prog.RunWith(bind, aggregate[:N], annInv, 0)
 
 		// --- Interpolate the quotient into its shares ---
 		for k, share := range cosetsToShares(aggregate[:N], smallDomain, bucketDomains) {
