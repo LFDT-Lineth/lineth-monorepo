@@ -43,6 +43,11 @@ on:
         required: false
         type: string
         default: '[1]'
+      run_unit_tests:
+        description: 'Value to determine if unit tests should run'
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   run:
@@ -55,5 +60,5 @@ jobs:
       artifact_suffix: '-method-parallel'
       # The experiment measures the integration suite only; unit tests run in the regular PR pipeline.
       # Skipping them here also keeps their (unrelated) load-sensitive flakes out of the data.
-      run_unit_tests: false
+      run_unit_tests: ${{ inputs.run_unit_tests }}
     secrets: inherit
