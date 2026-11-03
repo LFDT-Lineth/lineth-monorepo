@@ -53,7 +53,7 @@ jobs:
       - name: Setup guest toolchain
         uses: ./.github/actions/setup-riscv-guests
         with:
-          zkevm-fixtures: ${{ inputs.guest == 'l2-execution' }}
+          needs-zkevm-fixtures: ${{ inputs.guest == 'l2-execution' }}
       - name: Verify Program ID staging
         run: zig test riscv-guests/build_common/program_id.zig
       - name: Test and compile selected guest
