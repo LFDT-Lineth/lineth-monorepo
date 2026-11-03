@@ -530,3 +530,36 @@ func TestParamCoefficientsMergeLikeConstants(t *testing.T) {
 	ax := b.Op(Mul, alpha, x)
 	require.Equal(t, ax, b.Op(Mul, c1, ax), "multiplying by one must keep the node")
 }
+
+// Multiplying a linear form by zero yields the constant zero, and adding a
+// parameter to a linear form with a zero constant term keeps the parameter
+// itself as the new constant term, with no scalar node built for 0 + α.
+func TestParamCoefficientsFoldZero(t *testing.T) {
+	b := NewBuilder()
+	x := b.Base(make([]field.Element, 4), 0)
+	alpha := b.Param(0, false)
+	ax := b.Op(Mul, alpha, x) // α·x, constant term 0
+
+	zero := b.Op(Mul, b.Scalar(field.Ext{}, false), ax)
+	require.Equal(t, kScalar, b.nodes[zero].kind)
+	require.True(t, b.nodes[zero].s.IsZero(), "0·(α·x) must fold to zero")
+
+	before := len(b.nodes)
+	sum := b.Op(Add, ax, alpha) // α·x + α
+	require.Equal(t, kLinear, b.nodes[sum].kind)
+	require.Equal(t, coef{id: alpha}, b.nodes[sum].c, "0 + α must be α itself")
+	require.Equal(t, before+1, len(b.nodes), "only the new linear form may be built")
+}
+
+// Compile evaluates per run only the scalars the program reads: a scalar
+// built for an intermediate linear form and then discarded is not.
+func TestCompileEvaluatesOnlyReadScalars(t *testing.T) {
+	b := NewBuilder()
+	x := b.Base(make([]field.Element, 8), 0)
+	alpha, beta := b.Param(0, false), b.Param(1, false)
+	b.Op(Mul, alpha, b.Op(Mul, beta, x)) // builds the linear forms β·x and (α·β)·x and the coefficient α·β; none is sunk
+	root := b.Op(Mul, alpha, x)
+	b.AccumulateBy(root, -1, b.Scalar(field.Lift(field.One()), true))
+	p := b.Compile(8, 1, 1)
+	require.Equal(t, 1, p.Stats().Scalars, "only α is read")
+}

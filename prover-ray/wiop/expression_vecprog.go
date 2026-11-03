@@ -99,8 +99,7 @@ func (l *RowLowering) sizedTo(expr Expression) bool {
 // without a runtime and run on every proof. Each distinct arithmetic node is
 // lowered once across all Lower calls, so a subexpression shared by pointer
 // -- within an expression or between the expressions of a program -- costs
-// one visit: lowering is linear
-// in the distinct nodes.
+// one visit: lowering is linear in the distinct nodes.
 type ExpressionLowering struct {
 	rt   *Runtime
 	b    *vecprog.Builder

@@ -31,10 +31,11 @@
 // A program can also be built once and run many times on different data: a
 // [Builder.Param] is a scalar and a [Builder.BaseSlot] or [Builder.ExtSlot] a
 // table whose value is only given to [Program.RunWith], in [Bindings].
-// Subtrees and linear-form coefficients over parameters are not folded at
-// build time but evaluated once per run, before the points; the program
-// itself is never written after [Builder.Compile], so it may be run
-// concurrently with different bindings.
+// Subtrees and linear-form coefficients over parameters are kept as scalar
+// nodes, simplified only by exact identities (adding zero, multiplying by zero
+// or one, ordering the operands of a commutative operation), and evaluated
+// once per run, before the points; the program itself is never written after
+// [Builder.Compile], so it may be run concurrently with different bindings.
 package vecprog
 
 import (
@@ -417,8 +418,8 @@ func (b *Builder) coefNode(c coef) int {
 // coefOp applies o (Add or Mul) to two coefficients: in the field when both
 // are constants, as a scalar node evaluated per run otherwise. Adding zero
 // and multiplying by one return the other coefficient, and multiplying by
-// zero returns zero, so that a linear form over parameters merges with every
-// other one of equal coefficients, as it does over constants.
+// zero returns zero, so that linear forms over parameters with equal
+// coefficients built in different orders merge, as they do over constants.
 func (b *Builder) coefOp(o Op, x, y coef) coef {
 	if x.id < 0 && y.id < 0 {
 		return constCoef(applyExt(o, []field.Ext{x.v, y.v}))
@@ -633,6 +634,56 @@ type Program struct {
 	perRun  []int
 }
 
+// collectPerRun lists in perRun, in increasing order, the parameter-dependent
+// scalars the steps and sinks read, directly or through other scalars: the
+// builder also holds scalars that only served intermediate linear forms.
+func (p *Program) collectPerRun() {
+	used := make([]bool, len(p.nodes))
+	var mark func(id int)
+	mark = func(id int) {
+		nd := &p.nodes[id]
+		if used[id] || (nd.kind != kParam && nd.kind != kScalarOp) {
+			return
+		}
+		used[id] = true
+		for _, a := range nd.args {
+			mark(a)
+		}
+	}
+	markCoef := func(c coef) {
+		if c.id >= 0 {
+			mark(c.id)
+		}
+	}
+	for _, st := range p.steps {
+		if st.sink >= 0 {
+			sk := &p.sinks[st.sink]
+			mark(sk.root)
+			if sk.kind == sinkCheck {
+				mark(sk.guard)
+			}
+			markCoef(sk.coef)
+			continue
+		}
+		nd := &p.nodes[st.node]
+		for _, a := range nd.args {
+			mark(a)
+		}
+		if nd.kind == kLinear {
+			markCoef(nd.c)
+			for _, c := range nd.coefs {
+				markCoef(c)
+			}
+		}
+	}
+	for id, u := range used {
+		if u {
+			p.perRun = append(p.perRun, id)
+		}
+	}
+	p.bound = p.bound || len(p.perRun) > 0
+}
+
 // Bindings are the data of one run of a program: the tables of its slotted
 // leaves and the values of its parameters, indexed by slot.
 type Bindings struct {
@@ -673,12 +724,8 @@ func (b *Builder) Compile(n, ratio, cosetStep int) *Program {
 	p := &Program{nodes: b.nodes, sinks: b.sinks, n: n, ratio: ratio, stride: cosetStep * n}
 	p.scalars = make([]field.Ext, len(p.nodes))
 	for id := range p.nodes {
-		switch nd := &p.nodes[id]; nd.kind {
-		case kScalar:
+		if nd := &p.nodes[id]; nd.kind == kScalar {
 			p.scalars[id] = nd.s
-		case kParam, kScalarOp:
-			p.perRun = append(p.perRun, id)
-			p.bound = true
 		}
 	}
 
@@ -718,6 +765,7 @@ func (b *Builder) Compile(n, ratio, cosetStep int) *Program {
 		}
 		p.steps = append(p.steps, step{node: p.sinks[i].root, sink: i})
 	}
+	p.collectPerRun()
 
 	reads := func(st step) []int {
 		if st.sink < 0 {
