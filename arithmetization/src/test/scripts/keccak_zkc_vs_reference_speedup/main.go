@@ -159,6 +159,7 @@ func singleCommand(timeBin string, accel bool, vectorFile, jsonDir string) []str
 		"vector-json",
 		"vector-exec",
 		"TEST=keccak/keccak_with_provider_single_input.zig",
+		"ZKVM_PROVIDE=true",
 		"VECTOR_FILE=" + vectorFile,
 		"VECTOR_N_VECTORS=1",
 		"VECTOR_JSON_MODE=per-vector",

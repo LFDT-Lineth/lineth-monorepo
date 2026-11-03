@@ -178,7 +178,7 @@ runs:
         echo "E2E_TESTS_RESULT: ${{ steps.run_e2e_tests.outcome }}"
 
     - name: Dump logs
-      if: ${{ failure() && inputs.e2e-tests-logs-dump == 'true' }}
+      if: ${{ (failure() || (cancelled() && inputs.stack == 'riscv')) && inputs.e2e-tests-logs-dump == 'true' }}
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: |
@@ -197,12 +197,13 @@ runs:
         docker logs l1-cl-node --since 1h &>> docker_logs/l1-cl-node.txt || true
         docker logs maru --since 1h &>> docker_logs/maru.txt || true
         docker logs prover-ray --since 1h &>> docker_logs/prover-ray.txt || true
-        cp -r tmp/local/prover/riscv docker_logs/riscv-proofs || true
+        # prover-ray writes these as root with owner-only modes; copy through the daemon instead.
+        docker cp prover-ray:/data/prover/riscv docker_logs/riscv-proofs || true
         docker exec -i -e PGPASSWORD=${POSTGRES_PASSWORD:-postgres} postgres pg_dumpall -U ${POSTGRES_USER:-postgres} > docker_logs/db_dump.sql || true
 
     - name: Archive debug logs
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-      if: ${{ failure() && inputs.e2e-tests-logs-dump == 'true' }}
+      if: ${{ (failure() || (cancelled() && inputs.stack == 'riscv')) && inputs.e2e-tests-logs-dump == 'true' }}
       with:
         name: end-2-end-debug-logs${{ inputs.stack == 'riscv' && '-riscv' || '' }}
         if-no-files-found: error

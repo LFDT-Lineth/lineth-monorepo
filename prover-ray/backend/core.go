@@ -31,9 +31,13 @@ var ErrNotImplemented = errors.New("not yet implemented")
 // wiopSystemName names the wiop constraint system built in [New].
 const wiopSystemName = "lineth-riscv"
 
-// guestOutputMemory is the ZkC Execute output-map key carrying the guest's
-// wire output.
-const guestOutputMemory = "guest_output"
+// guestOutputMemory and guestLogMemory are the ZkC Execute output-map keys
+// carrying the guest's wire output: the hash in the former, the schema id and
+// public inputs in the latter.
+const (
+	guestOutputMemory = "guest_output"
+	guestLogMemory    = "guest_log"
+)
 
 // Spec frame of the l2-execution guest output.
 const (
@@ -254,7 +258,9 @@ func executeGuest(binf *zkcdriver.BinaryFile, inputs map[string]bit.Array) (bit.
 // validated 0x0003 output or an error that distinguishes a guest block rejection
 // (a recognized [vm.Failure], the guest's own exit on an invalid block) from an
 // internal VM failure (a prover-side bug). A guest that rejects the block writes
-// no output, so a missing guest_output is also a rejection.
+// no output, so a missing guest_output is also a rejection. The guest_output
+// must be exactly the hash, the only bytes the proof binds, and the guest_log
+// the schema id and public inputs it commits to.
 func classifyGuestOutput(output map[string]bit.Array, errs []error) (res bit.Array, err error) {
 	if len(errs) > 0 {
 		var failure *vm.Failure
@@ -268,48 +274,35 @@ func classifyGuestOutput(output map[string]bit.Array, errs []error) (res bit.Arr
 	if !ok {
 		return res, fmt.Errorf("guest wrote no %s output (block likely invalid)", guestOutputMemory)
 	}
-	if err = checkGuestOutputFrame(out); err != nil {
+	if n := len(out.Bytes()); n != guestOutputHashSize {
+		return res, fmt.Errorf("guest wrote %d bytes to %s, want the %d-byte hash", n, guestOutputMemory, guestOutputHashSize)
+	}
+	log, ok := output[guestLogMemory]
+	if !ok {
+		return res, fmt.Errorf("guest wrote the hash but no %s (schema id and public inputs)", guestLogMemory)
+	}
+	if err = checkGuestOutputFrame(out.Bytes(), log.Bytes()); err != nil {
 		return res, fmt.Errorf("%s does not follow the spec: %w", guestOutputMemory, err)
 	}
-	return out, nil
+	frame := slices.Concat(out.Bytes(), log.Bytes())
+	return bit.NewArray(frame, uint(len(frame)*8), bit.BigEndian), nil
 }
 
-// checkGuestOutputFrame checks the spec frame of the guest output,
-// keccak256(0x0003 || public inputs) || 0x0003 || public inputs. The public
-// inputs themselves are checked by the byte-for-byte comparison with the
+// checkGuestOutputFrame checks the spec frame of the guest output: hash is
+// keccak256(0x0003 || public inputs) and framed is 0x0003 || public inputs. The
+// public inputs themselves are checked by the byte-for-byte comparison with the
 // native runner.
-func checkGuestOutputFrame(out bit.Array) error {
-	var (
-		outBytes = out.Bytes()
-	)
-	if len(outBytes) >= guestOutputHashSize+guestOutputSchemaIDSize {
-		framed := outBytes[guestOutputHashSize:]
-		if bytes.Equal(outBytes[:guestOutputHashSize], keccak256(framed)) {
-			if got := binary.BigEndian.Uint16(framed); got != guestOutputSchemaID {
-				return fmt.Errorf("schema id is 0x%04x, want 0x%04x", got, guestOutputSchemaID)
-			}
-			return nil
-		}
+func checkGuestOutputFrame(hash, framed []byte) error {
+	if len(framed) < guestOutputSchemaIDSize {
+		return fmt.Errorf("%d bytes after the hash, shorter than the schema id", len(framed))
 	}
-	if hasPreSpecGuestOutputLayout(outBytes) {
-		return errors.New("got 0x0003 || public inputs || keccak256(public inputs), " +
-			"the spec expects keccak256(0x0003 || public inputs) || 0x0003 || public inputs")
+	if !bytes.Equal(hash, keccak256(framed)) {
+		return errors.New("hash does not match keccak256(0x0003 || public inputs)")
 	}
-	if len(outBytes) < guestOutputHashSize+guestOutputSchemaIDSize {
-		return fmt.Errorf("%d bytes, shorter than the hash and schema id", len(outBytes))
+	if got := binary.BigEndian.Uint16(framed); got != guestOutputSchemaID {
+		return fmt.Errorf("schema id is 0x%04x, want 0x%04x", got, guestOutputSchemaID)
 	}
-	return errors.New("hash does not match keccak256(0x0003 || public inputs)")
-}
-
-// hasPreSpecGuestOutputLayout reports whether out is 0x0003 || x || keccak256(x),
-// the layout the guest wrote before the spec put the hash first.
-func hasPreSpecGuestOutputLayout(out []byte) bool {
-	if len(out) < guestOutputSchemaIDSize+guestOutputHashSize ||
-		binary.BigEndian.Uint16(out) != guestOutputSchemaID {
-		return false
-	}
-	body := out[guestOutputSchemaIDSize : len(out)-guestOutputHashSize]
-	return bytes.Equal(out[len(out)-guestOutputHashSize:], keccak256(body))
+	return nil
 }
 
 func keccak256(b []byte) []byte {

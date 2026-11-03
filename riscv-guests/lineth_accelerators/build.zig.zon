@@ -6,6 +6,14 @@
     .dependencies = .{
         // Shared build helpers (pinned toolchain + the common freestanding rv64im guest target).
         .build_common = .{ .path = "../build_common" },
+        // Fetched for -Dzkvm-provide: the zesu crypto backend and the Constantine archive that the
+        // zkvm_* providers are built from.
+        .zesu = .{
+            .url = "https://github.com/Consensys-Incorporated/zesu/archive/2835883c929407ff7252f7f70924436833d767c7.tar.gz",
+            .hash = "zesu-0.1.0-UtqpADrkRgCDa2Q8oghvNCEGFguQic--Rv8uGWFjwqp2",
+            .lazy = true,
+        },
+        .guest_crypto_ctt = .{ .path = "../guest_crypto_ctt", .lazy = true },
     },
     .paths = .{
         "build.zig",

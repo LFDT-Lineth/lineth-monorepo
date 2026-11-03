@@ -25,7 +25,8 @@
             .lazy = true,
         },
         // Generic riscv-guests utilities (sibling path dependency): the SSZ decode/encode
-        // primitives l2_execution_ssz.zig's container codec builds on.
+        // primitives l2_execution_ssz.zig's container codec builds on, and the l2-execution proof
+        // wire contract.
         .guest_common = .{ .path = "../guest_common" },
         // A generic SSZ serialize/deserialize library over plain Zig structs, targeting the same
         // Zig version this package pins. Test-only: gives the test-side vanilla StatelessInput

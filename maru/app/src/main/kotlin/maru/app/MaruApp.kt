@@ -13,6 +13,7 @@ import linea.crypto.Signer
 import linea.kotlin.encodeHex
 import linea.teku.Web3JClient
 import linea.timer.TimerFactory
+import linea.web3j.ethapi.createEthApiClient
 import maru.api.ApiServer
 import maru.config.MaruConfig
 import maru.consensus.ForkSpec
@@ -291,7 +292,7 @@ class MaruApp internal constructor(
     forkTransitionSubscriptionManager.addSyncSubscriber(p2pNetwork::handleForkTransition)
     val difficultyAwareQbftFactory =
       DifficultyAwareQbftFactory(
-        ethereumJsonRpcClient = l2EthWeb3j,
+        ethApiClient = l2EthWeb3j?.let { createEthApiClient(web3jClient = it) },
         postTtdProtocolFactory = qbftFactory,
         timerFactory = timerFactory,
       )
