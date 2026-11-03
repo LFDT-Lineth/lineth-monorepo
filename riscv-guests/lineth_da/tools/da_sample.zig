@@ -1,16 +1,17 @@
 //! `da_sample` — builds the input of the `decompress` smoke guest: a payload as the canonical
 //! payload of one conflation, published as one segment in one chunk.
 //!
-//! usage: da_sample <input-out> [blob|calldata [<payload-in>]]
+//! usage: da_sample <input-out> <fixtures-dir> [blob|calldata [<payload-in>]]
 //!
-//! The payload is the file `payload-in`, or the canonical payload of a fixed sample conflation. The
+//! The payload is the file `payload-in`, or the canonical payload of the first three valid blocks of
+//! the EF zkevm fixtures in `fixtures-dir`, the directory that holds `blockchain_tests/`. The
 //! segment is the payload compressed against the package dictionary behind a 4-byte length prefix.
 //! A blob chunk packs it into a blob, anchored by the versioned hash of the blob's commitment and
 //! carrying the commitment and the blob proof computed by c-kzg-4844.
 
 const std = @import("std");
 
-const conflation_sample = @import("conflation_sample");
+const ef_conflations = @import("ef_conflations");
 const lineth_da = @import("lineth_da");
 const support = @import("support");
 const zstd_compressor = @import("zstd_compressor");
@@ -18,29 +19,33 @@ const zstd_compressor = @import("zstd_compressor");
 const blob_payload = lineth_da.encoding.blob_payload;
 const da_stream = support.da_stream;
 
-const usage = "usage: da_sample <input-out> [blob|calldata [<payload-in>]]\n";
+const usage = "usage: da_sample <input-out> <fixtures-dir> [blob|calldata [<payload-in>]]\n";
 
 pub fn main(init: std.process.Init) !void {
     const arena = init.arena.allocator();
     const args = try init.minimal.args.toSlice(arena);
-    if (args.len < 2 or args.len > 4) {
-        std.debug.print("error: expected <input-out> [blob|calldata [<payload-in>]]\n{s}", .{usage});
+    if (args.len < 3 or args.len > 5) {
+        std.debug.print("error: expected <input-out> <fixtures-dir> [blob|calldata [<payload-in>]]\n{s}", .{usage});
         std.process.exit(2);
     }
-    const as_blob = if (args.len >= 3) blk: {
-        if (std.mem.eql(u8, args[2], "blob")) break :blk true;
-        if (std.mem.eql(u8, args[2], "calldata")) break :blk false;
-        std.debug.print("error: chunk kind '{s}' is neither blob nor calldata\n{s}", .{ args[2], usage });
+    const as_blob = if (args.len >= 4) blk: {
+        if (std.mem.eql(u8, args[3], "blob")) break :blk true;
+        if (std.mem.eql(u8, args[3], "calldata")) break :blk false;
+        std.debug.print("error: chunk kind '{s}' is neither blob nor calldata\n{s}", .{ args[3], usage });
         std.process.exit(2);
     } else true;
 
-    const payload = if (args.len == 4)
-        std.Io.Dir.cwd().readFileAlloc(init.io, args[3], arena, .limited(1 << 30)) catch |err| {
-            std.debug.print("error: cannot read '{s}': {s}\n", .{ args[3], @errorName(err) });
+    const payload = if (args.len == 5)
+        std.Io.Dir.cwd().readFileAlloc(init.io, args[4], arena, .limited(1 << 30)) catch |err| {
+            std.debug.print("error: cannot read '{s}': {s}\n", .{ args[4], @errorName(err) });
             std.process.exit(1);
         }
-    else
-        try conflation_sample.fixedConflationPayload(arena);
+    else blk: {
+        const corpus_dir = try std.fs.path.join(arena, &.{ args[2], "blockchain_tests", "for_amsterdam" });
+        var blocks = try ef_conflations.Blocks.open(init.gpa, init.io, corpus_dir);
+        defer blocks.deinit();
+        break :blk try blocks.conflationPayload(arena, 3);
+    };
 
     var input: std.ArrayList(u8) = .empty;
     defer input.deinit(init.gpa);

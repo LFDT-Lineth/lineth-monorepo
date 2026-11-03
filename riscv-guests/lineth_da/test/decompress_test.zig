@@ -1,19 +1,29 @@
 const std = @import("std");
 
-const conflation_sample = @import("conflation_sample");
+const da_chunks = @import("da_chunks");
 const lineth_da = @import("lineth_da");
 const support = @import("support");
-const zstd_compressor = @import("zstd_compressor");
 const zstd_frames = @import("zstd_frames");
 
-const decompress = lineth_da.decompress;
 const blob_payload = lineth_da.encoding.blob_payload;
-const zstd = lineth_da.zstd;
 const da_stream = support.da_stream;
 
 const Allocator = std.mem.Allocator;
-const Chunk = decompress.Chunk;
-const Hash = decompress.Hash;
+const Chunk = da_chunks.Chunk;
+const Hash = da_chunks.Hash;
+const Start = da_chunks.Start;
+
+const blobChunk = da_chunks.blobChunk;
+const calldataChunk = da_chunks.calldataChunk;
+const chunkOf = da_chunks.chunkOf;
+const concat = da_chunks.concat;
+const expectAccepted = da_chunks.expectAccepted;
+const expectRejected = da_chunks.expectRejected;
+const foldOnto = da_chunks.foldOnto;
+const insideFirstChunk = da_chunks.insideFirstChunk;
+const keccak = da_chunks.keccak;
+const packageFrame = da_chunks.packageFrame;
+const segment = da_chunks.segment;
 
 const gpa = std.testing.allocator;
 const dictionary = lineth_da.dictionary_v2025_04_21;
@@ -22,8 +32,8 @@ const capacity = blob_payload.payload_capacity;
 const payload_1 = "conflation 1";
 const payload_2 = "conflation 2";
 
-const parent: Hash = @splat(0x10);
-const before_first_chunk: Hash = @splat(0x20);
+const parent = da_chunks.parent;
+const before_first_chunk = da_chunks.before_first_chunk;
 const wrong_hash: Hash = @splat(0x30);
 
 const foreign_prefix = "segments owned by the previous proof";
@@ -33,93 +43,11 @@ const foreign_suffix = "segments owned by the next proof";
 const inside_length_prefix = 2;
 const inside_body = 7;
 
-fn keccak(bytes: []const u8) Hash {
-    var hash: Hash = undefined;
-    std.crypto.hash.sha3.Keccak256.hash(bytes, &hash, .{});
-    return hash;
-}
-
-/// The frame the package's compressor produces.
-fn packageFrame(a: Allocator, payload: []const u8) ![]u8 {
-    return zstd_compressor.compress(a, payload, dictionary);
-}
-
 /// A frame in the form `options` select, against the package dictionary unless they name another.
 fn compressFrame(a: Allocator, payload: []const u8, options: zstd_frames.Options) ![]u8 {
     var with_dictionary = options;
     if (with_dictionary.dictionary == null) with_dictionary.dictionary = dictionary;
     return zstd_frames.compress(a, payload, with_dictionary);
-}
-
-/// One stream segment: the length prefix and the frame of `payload`.
-fn segment(a: Allocator, payload: []const u8) ![]u8 {
-    return da_stream.lengthPrefixed(a, try packageFrame(a, payload));
-}
-
-fn concat(a: Allocator, parts: []const []const u8) ![]u8 {
-    return std.mem.concat(a, u8, parts);
-}
-
-/// The blob chunk packing `payload`, with the commitment and the blob proof of c-kzg-4844.
-fn blobChunk(a: Allocator, payload: []const u8) !Chunk {
-    const blob = try a.create([blob_payload.blob_len]u8);
-    try blob_payload.pack(payload, blob);
-    const opening = support.kzg.open(blob);
-    return chunkOf(a, blob, opening.commitment, opening.proof);
-}
-
-/// A blob chunk anchored by the versioned hash of `commitment`, whatever the blob and the proof.
-fn chunkOf(a: Allocator, blob: *const [blob_payload.blob_len]u8, commitment: [48]u8, proof: [48]u8) !Chunk {
-    const commitment_bytes = try a.create([48]u8);
-    commitment_bytes.* = commitment;
-    const proof_bytes = try a.create([48]u8);
-    proof_bytes.* = proof;
-    return .{
-        .chunk_hash = da_stream.versionedHash(commitment_bytes),
-        .is_calldata = false,
-        .blob_bytes = blob,
-        .kzg_commitment = commitment_bytes,
-        .kzg_proof = proof_bytes,
-    };
-}
-
-fn calldataChunk(bytes: []const u8) Chunk {
-    return .{ .chunk_hash = keccak(bytes), .is_calldata = true, .calldata_bytes = bytes };
-}
-
-/// The dataRollingHash after folding `chunks` onto `from`.
-fn foldOnto(from: Hash, chunks: []const Chunk) Hash {
-    var hash = from;
-    for (chunks) |chunk| hash = keccak(&(hash ++ chunk.chunk_hash));
-    return hash;
-}
-
-const Start = struct {
-    parent: Hash = parent,
-    take: u64 = 0,
-    boundary: ?Hash = null,
-};
-
-/// The start of a range inside the first chunk, which the parent hash already folds.
-fn insideFirstChunk(chunks: []const Chunk, take: u64) Start {
-    return .{ .parent = foldOnto(before_first_chunk, chunks[0..1]), .take = take, .boundary = before_first_chunk };
-}
-
-/// Verifies the stream under the package dictionary.
-fn verify(chunks: []const Chunk, payloads: []const []const u8, start: Start) !decompress.Verified {
-    const decoder = try zstd.Decoder.init(gpa, dictionary);
-    defer decoder.deinit();
-    return decompress.verifyDaChunks(gpa, decoder, chunks, payloads, start.parent, start.take, start.boundary);
-}
-
-fn expectAccepted(chunks: []const Chunk, payloads: []const []const u8, start: Start, end_hash: Hash, discard: u64) !void {
-    const outcome = try verify(chunks, payloads, start);
-    try std.testing.expectEqualSlices(u8, &end_hash, &outcome.end_data_rolling_hash);
-    try std.testing.expectEqual(discard, outcome.final_data_tail_discard_bytes);
-}
-
-fn expectRejected(expected: anyerror, chunks: []const Chunk, payloads: []const []const u8, start: Start) !void {
-    try std.testing.expectError(expected, verify(chunks, payloads, start));
 }
 
 // ---- accepted layouts ------------------------------------------------------------------------
@@ -337,43 +265,6 @@ test "a frame may declare a window of up to 2^27 bytes" {
     const calldata = calldataChunk(try da_stream.lengthPrefixed(arena.allocator(), &window_2_27_frame));
 
     try expectAccepted(&.{calldata}, &.{"x"}, .{}, foldOnto(parent, &.{calldata}), 0);
-}
-
-// ---- real conflations ------------------------------------------------------------------------
-
-test "conflations of signed blocks travel in a blob and calldata" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    const a = arena.allocator();
-    var prng = std.Random.DefaultPrng.init(2026);
-
-    const payloads = [_][]const u8{
-        try conflation_sample.conflationPayload(a, prng.random(), 3),
-        try conflation_sample.conflationPayload(a, prng.random(), 1),
-        try conflation_sample.conflationPayload(a, prng.random(), 2),
-    };
-    var stream: std.ArrayList(u8) = .empty;
-    for (payloads) |payload| try stream.appendSlice(a, try segment(a, payload));
-
-    // The blob ends inside the second segment; calldata finishes it and carries the third.
-    const first_end = (try segment(a, payloads[0])).len;
-    const split = first_end + 9;
-    const chunks = [_]Chunk{ try blobChunk(a, stream.items[0..split]), calldataChunk(stream.items[split..]) };
-
-    try expectAccepted(&chunks, &payloads, .{}, foldOnto(parent, &chunks), 0);
-}
-
-test "a conflation whose blocks differ from the published ones is rejected" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    const a = arena.allocator();
-    var prng = std.Random.DefaultPrng.init(2027);
-
-    const published = try conflation_sample.conflationPayload(a, prng.random(), 2);
-    const claimed = try conflation_sample.conflationPayload(a, prng.random(), 2);
-    const calldata = calldataChunk(try segment(a, published));
-
-    try expectRejected(error.PayloadMismatch, &.{calldata}, &.{claimed}, .{});
 }
 
 // ---- layouts built at random -----------------------------------------------------------------
