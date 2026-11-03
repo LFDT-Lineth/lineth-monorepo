@@ -193,6 +193,7 @@ func (s *schemaScanner) defineNativeMulmod(mod schema.Module[koalabear.Element],
 		s.Sys.Context.Childf("nonnative-%s", modName),
 		nbBitsPerLimb,
 		leftLimbs, rightLimbs, modulusLimbs, resultLimbs, quotientLimbs,
+		nil,
 	)
 
 	return nil

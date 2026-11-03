@@ -37,6 +37,15 @@
 // Result + p (p has small 16-bit limbs and then only shifts a small carry).
 // 16-bit limbs are therefore checked with 8-bit digits.
 //
+// # Selector
+//
+// With a selector s, the prover assigns zero digits and zero carries on
+// inactive rows, which satisfies every coefficient identity and range check.
+// Only the constraints reading the query's own columns are gated: the limb
+// recompositions are multiplied by s. Limbs are therefore always split into
+// digit columns when a selector is present, so that the unconstrained limbs of
+// inactive rows are never range-checked. s is constrained to be boolean.
+//
 // The resulting [wiop.Vanishing] and [wiop.RangeCheck] queries are left for the
 // downstream passes to reduce; this package does not itself assert them
 // against the transcript beyond registering them.
@@ -181,9 +190,12 @@ func (l layout) maxCoefficient() *big.Int {
 type compiledQuery struct {
 	query *wiop.NonNative
 	layout
+	// split is set when limbs get their own digit columns: when a limb holds
+	// several digits, or when a selector gates the limb recompositions.
+	split bool
 	// digits[op] holds the little-endian base-2^digitBits digits of operand op.
 	// Limb i is recomposed from digits[op][i*digitsPerLimb : (i+1)*digitsPerLimb].
-	// When digitsPerLimb is 1, digits[op] are the operand's limb columns.
+	// When split is false, digits[op] are the operand's limb columns.
 	digits [nbOperands][]*wiop.Column
 	// carry holds the biased carries, one per coefficient of the product
 	// polynomial except the leading one (whose carry is zero).
@@ -195,6 +207,12 @@ type compiledQuery struct {
 func newCompiledQuery(q *wiop.NonNative, ctx *wiop.ContextFrame) *compiledQuery {
 	m := q.Module
 	c := &compiledQuery{query: q, layout: newLayout(q)}
+	c.split = c.digitsPerLimb > 1 || q.Selector != nil
+
+	if q.Selector != nil {
+		s := q.Selector.View()
+		m.NewVanishing(ctx.Childf("selector-boolean"), wiop.Mul(s, wiop.Sub(s, constant(1))))
+	}
 
 	limbs := operands(q)
 	for op := range nbOperands {
@@ -213,15 +231,22 @@ func newCompiledQuery(q *wiop.NonNative, ctx *wiop.ContextFrame) *compiledQuery 
 	return c
 }
 
+// gate restricts e to the active rows.
+func (c *compiledQuery) gate(e wiop.Expression) wiop.Expression {
+	if c.query.Selector == nil {
+		return e
+	}
+	return wiop.Mul(c.query.Selector.View(), e)
+}
+
 // newDigits returns the range-checked digit columns of an operand with the
-// given limbs. When a limb holds several digits, it allocates the digits and
-// constrains every limb to recompose from them; otherwise the limbs are the
-// digits.
+// given limbs. When limbs are split, it allocates the digits and constrains
+// every limb to recompose from them; otherwise the limbs are the digits.
 func (c *compiledQuery) newDigits(ctx *wiop.ContextFrame, limbs []*wiop.Column) []*wiop.Column {
 	m := c.query.Module
 	digitBound := 1 << c.digitBits
 	digits := limbs
-	if c.digitsPerLimb > 1 {
+	if c.split {
 		digits = make([]*wiop.Column, c.nbDigits)
 		for j := range digits {
 			digits[j] = m.NewColumn(ctx.Childf("digit-%d", j), c.query.InputRound)
@@ -229,7 +254,7 @@ func (c *compiledQuery) newDigits(ctx *wiop.ContextFrame, limbs []*wiop.Column) 
 		for i, limb := range limbs {
 			m.NewVanishing(
 				ctx.Childf("recompose-%d", i),
-				wiop.Sub(limb.View(), c.limbFromDigits(digits, i)),
+				c.gate(wiop.Sub(limb.View(), c.limbFromDigits(digits, i))),
 			)
 		}
 	}
@@ -311,7 +336,8 @@ func constant(v uint64) *wiop.Constant {
 }
 
 // proverAction assigns a query's digit and carry columns from the runtime
-// assignments of its operand limbs.
+// assignments of its operand limbs. Inactive rows get zero digits and zero
+// (biased) carries.
 type proverAction struct {
 	c *compiledQuery
 }
@@ -323,8 +349,13 @@ func (a *proverAction) Run(rt *wiop.Runtime) {
 	nbLimbs := len(c.query.Result)
 	digitMask := uint64(1)<<c.digitBits - 1
 	bias := int64(c.carryBias())
-	split := c.digitsPerLimb > 1
+	var biasElem field.Element
+	biasElem.SetUint64(uint64(bias))
 
+	var selector *wiop.ConcreteVector
+	if c.query.Selector != nil {
+		selector = rt.GetColumnAssignment(c.query.Selector)
+	}
 	limbs := operands(c.query)
 	var limbVecs [nbOperands][]*wiop.ConcreteVector
 	var digitVals [nbOperands][][]field.Element
@@ -333,7 +364,7 @@ func (a *proverAction) Run(rt *wiop.Runtime) {
 		for i, col := range limbs[op] {
 			limbVecs[op][i] = rt.GetColumnAssignment(col)
 		}
-		if split {
+		if c.split {
 			digitVals[op] = newColumnValues(c.nbDigits, nbRows)
 		}
 	}
@@ -349,13 +380,21 @@ func (a *proverAction) Run(rt *wiop.Runtime) {
 		carries := make([]int64, len(c.carry))
 
 		for row := start; row < stop; row++ {
+			if selector != nil {
+				if s := selector.ElementAtN(m.Padding, nbRows, row).AsBase(); s.IsZero() {
+					for k := range carryVals {
+						carryVals[k][row] = biasElem
+					}
+					continue
+				}
+			}
 			for op := range nbOperands {
 				for i, v := range limbVecs[op] {
 					limb := v.ElementAtN(m.Padding, nbRows, row).AsBase()
 					rowLimbs[op][i] = limb.Uint64()
 					splitDigits(rowLimbs[op][i], uint(c.digitBits), digitMask, rowDigits[op][i*c.digitsPerLimb:(i+1)*c.digitsPerLimb])
 				}
-				if split {
+				if c.split {
 					for j, d := range rowDigits[op] {
 						digitVals[op][j][row].SetUint64(d)
 					}
@@ -368,7 +407,7 @@ func (a *proverAction) Run(rt *wiop.Runtime) {
 		}
 	})
 
-	if split {
+	if c.split {
 		for op := range nbOperands {
 			assignColumns(rt, c.digits[op], digitVals[op])
 		}

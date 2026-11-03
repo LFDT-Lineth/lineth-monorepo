@@ -28,23 +28,24 @@ type NonNativeScenario struct {
 	// independent Sys.
 	Sys *wiop.System
 	// AssignHonest assigns the operand limb columns with a witness satisfying
-	// Left*Right = Quotient*Modulus + Result on every row.
+	// Left*Right = Quotient*Modulus + Result on every active row.
 	AssignHonest func(rt *wiop.Runtime)
 	// AssignInvalid assigns operand limb columns that violate the relation on
-	// at least one row.
+	// at least one active row.
 	AssignInvalid func(rt *wiop.Runtime)
 }
 
 // NonNativeScenarios returns factory functions for the built-in NonNative
 // compiler-integration fixtures: one per representative input width, plus a
 // handful of exceptional-input fixtures (zero/maximal/undersized modulus,
-// unreduced operands).
+// unreduced operands, inactive rows).
 func NonNativeScenarios() []func() *NonNativeScenario {
 	return []func() *NonNativeScenario{
 		NewNonNativeU64Scenario,
 		NewNonNativeU128Scenario,
 		NewNonNativeU256Scenario,
 		NewNonNativeModulusZeroScenario,
+		NewNonNativeSelectorScenario,
 		NewNonNativeModulusMaxScenario,
 		NewNonNativeModulusSmallScenario,
 		NewNonNativeUnreducedOperandsScenario,
@@ -82,6 +83,31 @@ func NewNonNativeModulusZeroScenario() *NonNativeScenario {
 	moduli := []*big.Int{big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0)}
 	quotientOverride := []*big.Int{big.NewInt(42), nil, nil, nil}
 	return newNonNativeScenario("NonNativeModulusZero", 64, lefts, rights, moduli, quotientOverride)
+}
+
+// NewNonNativeSelectorScenario returns a NonNative fixture with a selector
+// column, whose inactive rows hold witnesses that no active row could:
+//
+//   - row 1: Modulus = 0, Left*Right = Result, Quotient = 42;
+//   - row 2: Result = 2^70, whose top 16-bit limb is out of range, and the
+//     relation does not hold.
+//
+// Rows 0 and 3 are active and honest. AssignInvalid perturbs the Result of
+// row 3.
+func NewNonNativeSelectorScenario() *NonNativeScenario {
+	garbage := new(big.Int).Lsh(big.NewInt(1), 70)
+	return newNonNativeFixture(nonNativeFixture{
+		name:             "NonNativeSelector",
+		nbBits:           64,
+		lefts:            []*big.Int{big.NewInt(99991), big.NewInt(100019), big.NewInt(5), big.NewInt(69999)},
+		rights:           []*big.Int{big.NewInt(99989), big.NewInt(100021), big.NewInt(7), big.NewInt(3)},
+		moduli:           []*big.Int{big.NewInt(100000), big.NewInt(0), big.NewInt(3), big.NewInt(70000)},
+		quotientOverride: []*big.Int{nil, big.NewInt(42), nil, nil},
+		selector:         []uint64{1, 0, 0, 1},
+		tamperHonest: func(v *nonNativeRows) {
+			v.quotients[2], v.results[2] = big.NewInt(0), garbage
+		},
+	})
 }
 
 // NewNonNativeModulusMaxScenario returns a NonNative fixture where Modulus
@@ -233,45 +259,80 @@ func newNonNativeRandomScenario(name string, nbBits int) *NonNativeScenario {
 }
 
 // newNonNativeScenario builds a NonNative fixture for a given operand width
-// from explicit per-row Left/Right/Modulus values. Quotient and Result are
-// derived: Quotient, Result = Left*Right / Modulus, Left*Right % Modulus, or,
-// when Modulus is zero, Quotient = 0, Result = Left*Right (Quotient*Modulus
-// is then zero regardless of Quotient, so the relation degenerates to
-// Left*Right = Result; every row's Left*Right must therefore fit within
-// nbBits bits in that case).
-//
-// quotientOverride, if non-nil, replaces the derived Quotient for any row
-// whose entry is itself non-nil; Result is then recomputed as
-// Left*Right - Quotient*Modulus so the relation still holds for that row.
-// This is only meaningful for demonstration purposes when Modulus is zero,
-// where any Quotient value keeps Quotient*Modulus at zero. Pass nil to derive
-// every row's Quotient normally.
+// from explicit per-row Left/Right/Modulus values, with every row active.
+// Quotient and Result are derived by [decomposeRows].
 //
 // AssignInvalid perturbs the last row's Result by ±1, violating the relation
-// on exactly that row while keeping it within [0, Modulus) (or non-negative,
-// when Modulus is zero).
+// on exactly that row.
 func newNonNativeScenario(name string, nbBits int, lefts, rights, moduli,
 	quotientOverride []*big.Int) *NonNativeScenario {
-	nbRows := len(lefts)
-	nbLimbs := (nbBits + nonNativeBitsPerLimb - 1) / nonNativeBitsPerLimb
+	return newNonNativeFixture(nonNativeFixture{
+		name:             name,
+		nbBits:           nbBits,
+		lefts:            lefts,
+		rights:           rights,
+		moduli:           moduli,
+		quotientOverride: quotientOverride,
+	})
+}
 
-	quotients := make([]*big.Int, nbRows)
-	results := make([]*big.Int, nbRows)
-	for i := range nbRows {
-		product := new(big.Int).Mul(lefts[i], rights[i])
-		switch {
-		case quotientOverride != nil && quotientOverride[i] != nil:
-			quotients[i] = new(big.Int).Set(quotientOverride[i])
-			results[i] = new(big.Int).Sub(product, new(big.Int).Mul(quotients[i], moduli[i]))
-		case moduli[i].Sign() == 0:
-			quotients[i] = big.NewInt(0)
-			results[i] = product
-		default:
-			quotients[i], results[i] = new(big.Int).QuoRem(product, moduli[i], new(big.Int))
+// nonNativeFixture describes the rows of a NonNative fixture.
+type nonNativeFixture struct {
+	name                  string
+	nbBits                int
+	lefts, rights, moduli []*big.Int
+	// quotientOverride is passed to [decomposeRows].
+	quotientOverride []*big.Int
+	// selector, if non-nil, gives the query a selector column with these
+	// per-row values.
+	selector []uint64
+	// tamperHonest, if non-nil, edits the derived honest rows.
+	tamperHonest func(v *nonNativeRows)
+	// tamperInvalid, if non-nil, edits a copy of the honest rows into the
+	// invalid witness. By default the last row's Result is perturbed by ±1.
+	tamperInvalid func(v *nonNativeRows)
+}
+
+// nonNativeRows holds the per-row operand values of a NonNative witness.
+type nonNativeRows struct {
+	lefts, rights, moduli, quotients, results []*big.Int
+	selector                                  []uint64
+}
+
+func (v *nonNativeRows) clone() *nonNativeRows {
+	cloneInts := func(xs []*big.Int) []*big.Int {
+		out := make([]*big.Int, len(xs))
+		for i, x := range xs {
+			out[i] = new(big.Int).Set(x)
 		}
+		return out
 	}
+	return &nonNativeRows{
+		lefts:     cloneInts(v.lefts),
+		rights:    cloneInts(v.rights),
+		moduli:    cloneInts(v.moduli),
+		quotients: cloneInts(v.quotients),
+		results:   cloneInts(v.results),
+		selector:  append([]uint64(nil), v.selector...),
+	}
+}
 
-	sys := wiop.NewSystemf("%s", name)
+// perturbLastResult moves the last row's Result by ±1, staying non-negative.
+func perturbLastResult(v *nonNativeRows) {
+	last := v.results[len(v.results)-1]
+	if last.Sign() == 0 {
+		last.Add(last, big.NewInt(1))
+	} else {
+		last.Sub(last, big.NewInt(1))
+	}
+}
+
+// newNonNativeFixture builds the [NonNativeScenario] described by f.
+func newNonNativeFixture(f nonNativeFixture) *NonNativeScenario {
+	nbRows := len(f.lefts)
+	nbLimbs := (f.nbBits + nonNativeBitsPerLimb - 1) / nonNativeBitsPerLimb
+
+	sys := wiop.NewSystemf("%s", f.name)
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), nbRows, wiop.PaddingDirectionNone)
 
@@ -287,58 +348,93 @@ func newNonNativeScenario(name string, nbBits int, lefts, rights, moduli,
 	mods := newLimbCols("modulus")
 	res := newLimbCols("result")
 	quo := newLimbCols("quotient")
+	var selector *wiop.Column
+	if f.selector != nil {
+		selector = mod.NewColumn(sys.Context.Childf("selector"), r0)
+	}
 
-	mod.NewNonNative(sys.Context.Childf("nn"), nonNativeBitsPerLimb, left, right, mods, res, quo)
+	mod.NewNonNative(sys.Context.Childf("nn"), nonNativeBitsPerLimb, left, right, mods, res, quo, selector)
 
-	// tamperRow < 0 assigns the honest results; otherwise result[tamperRow]
-	// is perturbed by ±1 (staying non-negative) to violate the relation on
-	// exactly that row.
-	assign := func(rt *wiop.Runtime, tamperRow int) {
-		assignLimbColumns(rt, left, lefts, nbLimbs)
-		assignLimbColumns(rt, right, rights, nbLimbs)
-		assignLimbColumns(rt, mods, moduli, nbLimbs)
-		assignLimbColumns(rt, quo, quotients, nbLimbs)
-
-		resultsToAssign := results
-		if tamperRow >= 0 {
-			resultsToAssign = make([]*big.Int, nbRows)
-			copy(resultsToAssign, results)
-			tampered := new(big.Int).Set(results[tamperRow])
-			if tampered.Sign() == 0 {
-				tampered.Add(tampered, big.NewInt(1))
-			} else {
-				tampered.Sub(tampered, big.NewInt(1))
+	assign := func(rt *wiop.Runtime, v *nonNativeRows) {
+		assignLimbColumns(rt, left, v.lefts, nbLimbs)
+		assignLimbColumns(rt, right, v.rights, nbLimbs)
+		assignLimbColumns(rt, mods, v.moduli, nbLimbs)
+		assignLimbColumns(rt, quo, v.quotients, nbLimbs)
+		assignLimbColumns(rt, res, v.results, nbLimbs)
+		if selector != nil {
+			sel := make([]field.Element, nbRows)
+			for row, b := range v.selector {
+				sel[row].SetUint64(b)
 			}
-			resultsToAssign[tamperRow] = tampered
+			rt.AssignColumn(selector, &wiop.ConcreteVector{Plain: field.VecFromBase(sel)})
 		}
-		assignLimbColumns(rt, res, resultsToAssign, nbLimbs)
+	}
+
+	honest := &nonNativeRows{lefts: f.lefts, rights: f.rights, moduli: f.moduli, selector: f.selector}
+	honest.quotients, honest.results = decomposeRows(f.lefts, f.rights, f.moduli, f.quotientOverride)
+	if f.tamperHonest != nil {
+		f.tamperHonest(honest)
+	}
+	invalid := honest.clone()
+	if f.tamperInvalid != nil {
+		f.tamperInvalid(invalid)
+	} else {
+		perturbLastResult(invalid)
 	}
 
 	return &NonNativeScenario{
-		Name: name,
-		Sys:  sys,
-		AssignHonest: func(rt *wiop.Runtime) {
-			assign(rt, -1)
-		},
-		AssignInvalid: func(rt *wiop.Runtime) {
-			assign(rt, nbRows-1)
-		},
+		Name:          f.name,
+		Sys:           sys,
+		AssignHonest:  func(rt *wiop.Runtime) { assign(rt, honest) },
+		AssignInvalid: func(rt *wiop.Runtime) { assign(rt, invalid) },
 	}
 }
 
+// decomposeRows derives, for every row, Quotient, Result = Left*Right / Modulus,
+// Left*Right % Modulus, or, when Modulus is zero, Quotient = 0,
+// Result = Left*Right (Quotient*Modulus is then zero regardless of Quotient,
+// so the relation degenerates to Left*Right = Result; every row's Left*Right
+// must therefore fit within the operand width in that case).
+//
+// quotientOverride, if non-nil, replaces the derived Quotient for any row
+// whose entry is itself non-nil; Result is then recomputed as
+// Left*Right - Quotient*Modulus so the relation still holds for that row.
+// Pass nil to derive every row's Quotient normally.
+func decomposeRows(lefts, rights, moduli, quotientOverride []*big.Int) (quotients, results []*big.Int) {
+	quotients = make([]*big.Int, len(lefts))
+	results = make([]*big.Int, len(lefts))
+	for i := range lefts {
+		product := new(big.Int).Mul(lefts[i], rights[i])
+		switch {
+		case quotientOverride != nil && quotientOverride[i] != nil:
+			quotients[i] = new(big.Int).Set(quotientOverride[i])
+			results[i] = new(big.Int).Sub(product, new(big.Int).Mul(quotients[i], moduli[i]))
+		case moduli[i].Sign() == 0:
+			quotients[i] = big.NewInt(0)
+			results[i] = product
+		default:
+			quotients[i], results[i] = new(big.Int).QuoRem(product, moduli[i], new(big.Int))
+		}
+	}
+	return quotients, results
+}
+
 // splitLimbs decomposes a into nbLimbs little-endian limbs of
-// nonNativeBitsPerLimb bits each.
+// nonNativeBitsPerLimb bits each. The top limb takes every remaining bit, so a
+// value of nbLimbs*nonNativeBitsPerLimb bits or more gets an out-of-range top
+// limb.
 func splitLimbs(a *big.Int, nbLimbs int) []field.Element {
 	els := make([]field.Element, nbLimbs)
 	mask := new(big.Int).Lsh(big.NewInt(1), uint(nonNativeBitsPerLimb))
 	mask.Sub(mask, big.NewInt(1))
 	rem := new(big.Int).Set(a)
-	for i := range nbLimbs {
+	for i := range nbLimbs - 1 {
 		var limb big.Int
 		limb.And(rem, mask)
 		els[i].SetBigInt(&limb)
 		rem.Rsh(rem, uint(nonNativeBitsPerLimb))
 	}
+	els[nbLimbs-1].SetBigInt(rem)
 	return els
 }
 
