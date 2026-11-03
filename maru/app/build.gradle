@@ -168,9 +168,9 @@ tasks.register('integrationTest',  Test) {
   systemProperties["log4j2.isThreadContextMapInheritable"] = "true"
 
   logger.lifecycle(
-    "integrationTest: availableProcessors=${Runtime.runtime.availableProcessors()}, " +
+      "integrationTest: availableProcessors=${Runtime.runtime.availableProcessors()}, " +
       "maxParallelForks=$maxParallelForks"
-  )
+      )
 
   testLogging {
     events TestLogEvent.FAILED,
