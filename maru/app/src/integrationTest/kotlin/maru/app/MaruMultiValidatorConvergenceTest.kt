@@ -12,9 +12,16 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.parallel.Execution
+import org.junit.jupiter.api.parallel.ExecutionMode
 import testutils.MultiValidatorNetwork
 import kotlin.time.Duration.Companion.seconds
 
+// Method-level concurrency is disabled for MultiValidatorNetwork-based tests: two concurrent network
+// startups in one fork JVM produced a torn key identity (genesis address vs signer key) twice on CI.
+// The corruption layer is unidentified; PrivateKeyGenerator self-checks at birth if it recurs.
+// Classes still run in parallel forks (one class per JVM), so this only serializes methods in-class.
+@Execution(ExecutionMode.SAME_THREAD)
 class MaruMultiValidatorConvergenceTest {
   companion object {
     /** Number of consecutive round-0 blocks required to declare convergence / stable production. */

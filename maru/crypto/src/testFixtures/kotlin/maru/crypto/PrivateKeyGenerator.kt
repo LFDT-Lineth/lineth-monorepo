@@ -88,13 +88,26 @@ object PrivateKeyGenerator {
     val peerId = PeerId.fromPubKey(privateKeyTyped.publicKey())
     val libP2PNodeId = LibP2PNodeId(peerId)
     val nodeKey = createNodeKey(normalizedPrivateKey)
-    return KeyData(
-      privateKey = privateKeyTyped.raw(),
-      prefixedPrivateKey = marshalPrivateKey(privateKeyTyped),
-      address = signingAddress,
-      peerId = libP2PNodeId,
-      nodeKey = nodeKey,
-    )
+    val keyData =
+      KeyData(
+        privateKey = privateKeyTyped.raw(),
+        prefixedPrivateKey = marshalPrivateKey(privateKeyTyped),
+        address = signingAddress,
+        peerId = libP2PNodeId,
+        nodeKey = nodeKey,
+      )
+    // Self-consistency invariant: a torn KeyData (address derived from one key, prefixedPrivateKey
+    // holding another) was observed under concurrent test execution, surfacing downstream as
+    // "validator signer not in configured validator set". Every primitive here is individually
+    // pure, so if this ever fires the corruption is in a layer we could not audit (native/JVM-global
+    // state) — fail at birth with both sides visible instead of letting it propagate.
+    val addressFromPrefixedKey =
+      SecpCrypto.privateKeyToAddress(SecpCrypto.privateKeyBytesWithoutPrefix(keyData.prefixedPrivateKey))
+    require(keyData.address.contentEquals(addressFromPrefixedKey)) {
+      "Torn KeyData detected: address=${keyData.address.encodeHex(false)} but " +
+        "prefixedPrivateKey maps to address=${addressFromPrefixedKey.encodeHex(false)}"
+    }
+    return keyData
   }
 
   private fun ensureKeyIsExactly32BytesLong(privateKey: ByteArray): ByteArray =
