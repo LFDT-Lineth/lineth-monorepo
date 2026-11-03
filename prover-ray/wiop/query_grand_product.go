@@ -78,7 +78,8 @@ func (gp *GrandProduct) Check(rt *Runtime) error {
 // compute evaluates ( ∏ numerator entries ) / ( ∏ denominator entries ) over
 // every row of every factor, padding rows included. It is the shared core of
 // [SelfAssign] and [Check]. Panics if the denominator product is zero. The
-// result is base-field when every factor is.
+// result is base-field when every factor is declared base; it panics when the
+// ratio of such factors is an extension value, so that no limb is dropped.
 func (gp *GrandProduct) compute(rt *Runtime) field.Gen {
 	num, numBase := productOverRows(rt, gp.Numerators)
 	den, denBase := productOverRows(rt, gp.Denominators)
@@ -89,6 +90,9 @@ func (gp *GrandProduct) compute(rt *Runtime) field.Gen {
 	res.Inverse(&den)
 	res.Mul(&num, &res)
 	if numBase && denBase {
+		if res != field.Lift(res.B0.A0) {
+			panic(fmt.Sprintf("wiop: GrandProduct.compute(%s): base-field factors hold extension-field values", gp.context.Path()))
+		}
 		return field.ElemFromBase(res.B0.A0)
 	}
 	return field.ElemFromExt(res)

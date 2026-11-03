@@ -19,8 +19,9 @@
 // scalar are folded or redistributed. These are field identities, so the
 // results are exactly those of a point-by-point evaluation of the trees.
 // Divisions and inversions (where 0⁻¹ = 0 is not an identity) are kept as
-// they are; they are evaluated by one batch inversion per block, which gives
-// the same values, zero included.
+// they are. A vector divisor or inverse is evaluated by one batch inversion
+// per block, a base-field division by a scalar element by element; both give
+// the same values as the trees, zero included.
 //
 // The points of a program are laid out as ratio blocks ("cosets") of n
 // points; a table leaf is read cyclically within a coset at a fixed offset,
@@ -597,7 +598,8 @@ func (b *Builder) Compile(n, ratio, cosetStep int) *Program {
 
 // Run evaluates the program on every point. Accumulate sinks add into
 // aggregate (nil when there are none), which is then multiplied by scale[k]
-// on coset k when scale is not nil. The blocks are spread over up to
+// on coset k when scale is not nil: the whole aggregate is scaled, so it is
+// expected to start at zero. The blocks are spread over up to
 // workers goroutines (all CPUs when workers ≤ 0). A block never straddles
 // two cosets.
 func (p *Program) Run(aggregate []field.Ext, scale []field.Element, workers int) {
