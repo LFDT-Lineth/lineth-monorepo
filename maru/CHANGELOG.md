@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🚀 Features
+
+- *(maru)* Add support of self-calculating terminal total difficulty (#4295)
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(misc)* Maru use root gradle configs (#4031)

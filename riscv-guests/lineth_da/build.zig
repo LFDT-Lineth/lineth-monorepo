@@ -1,7 +1,8 @@
 //! Builds the `lineth_da` package module (data-availability building blocks for the guests).
 //! `zig build` links a freestanding rv64im smoke guest (`-Dsmoke` selects it), which proves the
 //! package module and the libraries behind it build and link on the guest target;
-//! `zig build test -Dhost-tools=true` (what `make test` runs) runs the native unit tests.
+//! `zig build test -Dhost-tools=true` runs the native unit tests, and `-Dzkevm-fixtures=<dir>` adds
+//! the reference tests over the EF zkevm corpus (what `make test` runs).
 
 const std = @import("std");
 const common = @import("build_common");
@@ -74,7 +75,8 @@ pub fn build(b: *std.Build) void {
 
     const host_tools = b.option(bool, "host-tools", "Build the native tests and tools: fetches the reference vectors and builds the host crypto providers") orelse false;
     const reference_tests = b.option(bool, "reference-tests", "With host-tools, also run the truncation reference test over the EF zkevm fixtures, which fetches them (default: true)") orelse true;
-    if (host_tools) addHostBuild(b, zstd, target, optimize, reference_tests);
+    const zkevm_fixtures = b.option(std.Build.LazyPath, "zkevm-fixtures", "Directory holding the EF zkevm fixtures; enables the reference tests over its blocks");
+    if (host_tools) addHostBuild(b, zstd, target, optimize, reference_tests, zkevm_fixtures);
 }
 
 /// libzstd for one target: the release's sources and its C declarations translated for Zig.
@@ -145,6 +147,7 @@ fn addHostBuild(
     package_target: std.Build.ResolvedTarget,
     package_optimize: std.builtin.OptimizeMode,
     reference_tests: bool,
+    zkevm_fixtures: ?std.Build.LazyPath,
 ) void {
     const target = b.resolveTargetQuery(.{});
     const optimize: std.builtin.OptimizeMode = if (package_optimize == .ReleaseSmall) .ReleaseSafe else package_optimize;
@@ -195,7 +198,7 @@ fn addHostBuild(
     addGoldenFrames(tests, zstd.source);
     const tools = common.addTools(b, native, .{});
     addKzgReferences(b, target, tests, tools, support);
-    const reference = addReferenceTests(b, test_step, target, zstd, ef_blocks, reference_tests);
+    const reference = addReferenceTests(b, test_step, target, zstd, ef_blocks, reference_tests, zkevm_fixtures);
     linkHostCrypto(b, target, &.{ tests, tools, reference });
 
     var tool_iter = tools.valueIterator();
@@ -246,9 +249,8 @@ fn linkHostCrypto(b: *std.Build, target: std.Build.ResolvedTarget, artifacts: []
     for (artifacts) |group| crypto.linkAll(group);
 }
 
-/// The `test/reference/*_test.zig` suites, run by `test` once the EF zkevm fixtures, which are
-/// fetched on demand, are available; none when `enabled` is false. They are compiled optimized: the
-/// corpus is gigabytes of JSON.
+/// The `test/reference/*_test.zig` suites, run by `test` when `-Dzkevm-fixtures` is given; none
+/// when `enabled` is false. They are compiled optimized: the corpus is gigabytes of JSON.
 fn addReferenceTests(
     b: *std.Build,
     test_step: *std.Build.Step,
@@ -256,13 +258,14 @@ fn addReferenceTests(
     zstd: Zstd,
     ef_blocks: *std.Build.Module,
     enabled: bool,
+    zkevm_fixtures: ?std.Build.LazyPath,
 ) std.StringHashMap(*std.Build.Step.Compile) {
     const none = std.StringHashMap(*std.Build.Step.Compile).init(b.allocator);
     if (!enabled) return none;
-    const fixtures = b.lazyDependency("execution_spec_tests_zkevm", .{}) orelse return none;
+    const fixtures = zkevm_fixtures orelse return none;
 
     const paths = b.addOptions();
-    paths.addOptionPath("amsterdam_blocks", fixtures.path("blockchain_tests/for_amsterdam"));
+    paths.addOptionPath("amsterdam_blocks", fixtures.path(b, "blockchain_tests/for_amsterdam"));
     const package = hostPackage(b, target, .ReleaseSafe, zstd);
     return common.addTests(b, test_step, .{
         .target = target,

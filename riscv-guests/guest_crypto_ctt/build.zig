@@ -86,7 +86,6 @@ fn buildRiscv(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath) std.Build.
     task.addArgs(&.{ tc.nimble, tc.nim, tc.llvm_ar, tc.llvm_nm });
     const archive = out.join(b.allocator, "libconstantine.riscv64.a") catch @panic("oom");
 
-    // Match the guest's rv64im soft-float ABI.
     const allocator_obj = b.addObject(.{
         .name = "ctt_allocator_rv64",
         .root_module = b.createModule(.{

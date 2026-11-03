@@ -175,6 +175,8 @@ jobs:
 
       - name: Setup RISC-V guests environment
         uses: ./.github/actions/setup-riscv-guests
+        with:
+          zkevm-fixtures: 'true'
 
       - name: Check Zig formatting
         run: make fmt-check
@@ -197,6 +199,8 @@ jobs:
 
       - name: Setup RISC-V guests environment
         uses: ./.github/actions/setup-riscv-guests
+        with:
+          zkevm-fixtures: 'true'
 
       - name: Run l2-execution extended-guest reference-test guards
         run: make reference-test
@@ -315,6 +319,8 @@ jobs:
 
       - name: Setup RISC-V guests environment (Zig + caches)
         uses: ./.github/actions/setup-riscv-guests
+        with:
+          zkevm-fixtures: 'true'
 
       - name: Install Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0

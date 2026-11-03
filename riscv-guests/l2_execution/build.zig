@@ -17,8 +17,8 @@ pub fn build(b: *std.Build) void {
     addWrapSteps(b, tools);
     addZkcSmokeSteps(b, tools, options);
     addRunnerSteps(b, tools);
-    addHostTests(b, host);
-    addReferenceSteps(b, host, tools, options);
+    addHostTests(b, host, options);
+    addReferenceSteps(b, tools, options);
 }
 
 /// Every `-D` option of this package, read once.
@@ -26,7 +26,8 @@ const Options = struct {
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     crypto: common.CryptoOptions,
-    fixtures_link: []const u8,
+    /// Directory holding the EF zkevm fixtures; its `blockchain_tests/` is the corpus.
+    zkevm_fixtures: ?std.Build.LazyPath,
     zkc_smoke_input: []const u8,
     host_tools: bool,
 
@@ -35,14 +36,14 @@ const Options = struct {
         const target = common.standardGuestTarget(b);
         // Keep `-Doptimize` exposed to dependency consumers and default to ReleaseSmall.
         const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseSmall)") orelse .ReleaseSmall;
-        const fixtures_link = b.option([]const u8, "execution-specs-fixtures-link", "Path where execution-specs zkevm fixtures are exposed") orelse "/tmp/execution-specs-json-fixtures/fixtures";
+        const zkevm_fixtures = b.option(std.Build.LazyPath, "zkevm-fixtures", "Directory holding the EF zkevm fixtures; enables the corpus suites and reference steps");
         const zkc_smoke_input = b.option([]const u8, "zkc-smoke-input", "Extended SSZ input for the ZkC smoke test") orelse "test/testdata/stateless_input.ssz";
         const host_tools = b.option(bool, "host-tools", "Build native test and helper targets") orelse false;
         return .{
             .target = target,
             .optimize = optimize,
             .crypto = common.CryptoOptions.parse(b),
-            .fixtures_link = fixtures_link,
+            .zkevm_fixtures = zkevm_fixtures,
             .zkc_smoke_input = zkc_smoke_input,
             .host_tools = host_tools,
         };
@@ -74,15 +75,13 @@ fn addGuestProgram(b: *std.Build, options: Options) void {
     });
 }
 
-/// What native tests and tools share: build settings, the host crypto provider, the support module and the named test and fixture steps.
+/// What native tests and tools share: build settings, the host crypto provider, the support module and the test step.
 const Host = struct {
     native: common.NativeOptions,
     crypto: common.HostCrypto,
     zesu: *std.Build.Dependency,
     support: *std.Build.Module,
     test_step: *std.Build.Step,
-    extended_vanilla_step: *std.Build.Step,
-    prep_fixtures_step: *std.Build.Step,
 
     /// Null until the Constantine archive exists: it is fetched on demand and the build reruns once it is.
     fn init(b: *std.Build, options: Options) ?Host {
@@ -111,8 +110,6 @@ const Host = struct {
         const support = supportModule(b, target, optimize, deps, package, zlob);
 
         const test_step = b.step("test", "Run native Zig unit tests for the EVM execution guest");
-        const extended_vanilla_step = b.step("extended-vanilla", "Reference-test guard: assert the dummy-wrapped extended guest (runL2Execution) agrees with the EF fixture's own expected validity over EF zkevm fixtures");
-        const prep_fixtures_step = b.step("prep-execution-specs-json-fixtures", "Expose EF zkevm stateless fixtures for external runners");
         return .{
             // Tests run on the native host: a freestanding riscv64 target has no OS to run a
             // `std.testing` binary against.
@@ -132,8 +129,6 @@ const Host = struct {
             .zesu = zesu,
             .support = support,
             .test_step = test_step,
-            .extended_vanilla_step = extended_vanilla_step,
-            .prep_fixtures_step = prep_fixtures_step,
         };
     }
 };
@@ -232,35 +227,29 @@ fn finishZkcRun(b: *std.Build, run: *std.Build.Step.Run, installed_elf: bool) vo
 }
 
 /// The `test/*_test.zig` suites and the support root's own tests, with the corpus fixtures they embed.
-fn addHostTests(b: *std.Build, host: Host) void {
+fn addHostTests(b: *std.Build, host: Host, options: Options) void {
     const suites = common.addTests(b, host.test_step, host.native, .{});
     host.crypto.linkAll(suites);
     host.crypto.linkAll(common.addTests(b, host.test_step, host.native, .{ .dir = "test/support", .suffix = "root.zig" }));
     addCryptoVectors(b, host.zesu, suites.get("test/guest_crypto_test.zig").?);
-    addCorpusTests(b, host);
+    addCorpusTests(b, host, options);
 }
 
-/// The suites under test/corpus/ read EF zkevm corpus vectors; they register once the lazy corpus
-/// dependency is fetched.
-fn addCorpusTests(b: *std.Build, host: Host) void {
-    const fixtures = fixturesDependency(b) orelse return;
-    embedFixtures(host.support, fixtures);
+/// The suites under test/corpus/ read EF zkevm corpus vectors; they register when `-Dzkevm-fixtures` is given.
+fn addCorpusTests(b: *std.Build, host: Host, options: Options) void {
+    const fixtures = options.zkevm_fixtures orelse return;
+    embedFixtures(b, host.support, fixtures);
     host.crypto.linkAll(common.addTests(b, host.test_step, host.native, .{ .dir = "test/corpus" }));
 }
 
-/// The EF zkevm corpus; lazy, fetched before the tests build.
-fn fixturesDependency(b: *std.Build) ?*std.Build.Dependency {
-    return b.lazyDependency("execution_spec_tests_zkevm", .{});
-}
-
-/// Embeds two corpus vectors straight from the dependency tree (no committed copy). The empty-block
+/// Embeds two corpus vectors straight from the fixtures directory (no committed copy). The empty-block
 /// vector has no transactions, so only keccak is exercised of the native crypto backend.
-fn embedFixtures(support: *std.Build.Module, fixtures: *std.Build.Dependency) void {
+fn embedFixtures(b: *std.Build, support: *std.Build.Module, fixtures: std.Build.LazyPath) void {
     support.addAnonymousImport("zkevm_stateless_block.json", .{
-        .root_source_file = fixtures.path("blockchain_tests/for_amsterdam/amsterdam/eip7928_block_level_access_lists/block_access_lists/bal_empty_block_no_coinbase.json"),
+        .root_source_file = fixtures.path(b, "blockchain_tests/for_amsterdam/amsterdam/eip7928_block_level_access_lists/block_access_lists/bal_empty_block_no_coinbase.json"),
     });
     support.addAnonymousImport("slotnum_distinct_per_block.json", .{
-        .root_source_file = fixtures.path("blockchain_tests/for_amsterdam/amsterdam/eip7843_slotnum/slotnum/slotnum_distinct_per_block.json"),
+        .root_source_file = fixtures.path(b, "blockchain_tests/for_amsterdam/amsterdam/eip7843_slotnum/slotnum/slotnum_distinct_per_block.json"),
     });
 }
 
@@ -280,10 +269,10 @@ fn addCryptoVectors(b: *std.Build, zesu: *std.Build.Dependency, guest_crypto_tes
     }
 }
 
-/// The reference tests over the EF corpus: `extended-vanilla`, `reference-test-zkc` and the fixture link.
-fn addReferenceSteps(b: *std.Build, host: Host, tools: Tools, options: Options) void {
-    const fixtures = fixturesDependency(b) orelse return;
-    const corpus = fixtures.path("blockchain_tests");
+/// The reference tests over the EF corpus, registered when `-Dzkevm-fixtures` is given: `extended-vanilla` and `reference-test-zkc`.
+fn addReferenceSteps(b: *std.Build, tools: Tools, options: Options) void {
+    const fixtures = options.zkevm_fixtures orelse return;
+    const corpus = fixtures.path(b, "blockchain_tests");
 
     // The dummy-wrapped extended input must get the fixture's own validity verdict from
     // `l2_execution.runL2Execution`; that one comparison exercises the delegated execution seam
@@ -291,28 +280,13 @@ fn addReferenceSteps(b: *std.Build, host: Host, tools: Tools, options: Options) 
     const extended = b.addRunArtifact(tools.get("extended_vanilla_runner").?);
     extended.addDirectoryArg(corpus);
     if (b.args) |extra| extended.addArgs(extra);
-    host.extended_vanilla_step.dependOn(&extended.step);
+    b.step("extended-vanilla", "Reference-test guard: assert the dummy-wrapped extended guest (runL2Execution) agrees with the EF fixture's own expected validity over EF zkevm fixtures").dependOn(&extended.step);
 
     // The corpus through the installed guest ELF under zkc (needs zkc and go on PATH).
     const zkc = b.addRunArtifact(tools.get("zkc_reference_runner").?);
     zkc.addDirectoryArg(corpus);
     finishZkcRun(b, zkc, true);
     b.step("reference-test-zkc", "Run the EF zkevm corpus through the guest ELF under zkc (needs zkc+go on PATH)").dependOn(&zkc.step);
-
-    addFixturesLink(b, fixtures, host.prep_fixtures_step, options.fixtures_link);
-}
-
-/// Symlinks the EF fixtures at `link`, replacing any previous link.
-fn addFixturesLink(b: *std.Build, fixtures: *std.Build.Dependency, step: *std.Build.Step, link: []const u8) void {
-    const mkdir_parent = b.addSystemCommand(&.{ "mkdir", "-p", std.fs.path.dirname(link) orelse "." });
-    const remove_old = b.addSystemCommand(&.{ "rm", "-rf", link });
-    remove_old.step.dependOn(&mkdir_parent.step);
-
-    const symlink = b.addSystemCommand(&.{ "ln", "-s" });
-    symlink.addDirectoryArg(fixtures.path("."));
-    symlink.addArg(link);
-    symlink.step.dependOn(&remove_old.step);
-    step.dependOn(&symlink.step);
 }
 
 /// What l2_execution's source files import by name, for one target.
