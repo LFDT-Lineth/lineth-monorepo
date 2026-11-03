@@ -14,8 +14,8 @@ import (
 //
 // The guest output memory holds one byte per row, in address order, on the last
 // rows of its module. The guest writes exactly [NumGuestPublicOutputs] bytes to
-// it, so byte k is on row k-NumGuestPublicOutputs from the end and is opened
-// there. A local constraint on each address limb pins the length: the last row
+// it, so byte k is on row k-NumGuestPublicOutputs, counted from the end (-1
+// being the last row), and is opened there. A local constraint on each address limb pins the length: the last row
 // holds the address NumGuestPublicOutputs-1, which no padding row does, and the
 // addresses start at zero and increment by one, so that row is the last of
 // exactly NumGuestPublicOutputs element rows.

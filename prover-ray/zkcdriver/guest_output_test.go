@@ -84,12 +84,13 @@ func TestGuestPublicOutputs(t *testing.T) {
 		want[k].SetUint64(uint64(written[k]))
 	}
 	assert.Equal(t, want, risc5.GetGuestPublicOutputs(sys, pub),
-		"the public inputs must carry the first bytes the guest wrote")
+		"the public inputs must carry the bytes the guest wrote")
 }
 
-// TestGuestPublicOutputsRejectsForgedByte checks that the bound bytes are the
-// ones of the guest output memory: a prover changing one of them after the
-// honest assignment must not produce a proof that verifies.
+// TestGuestPublicOutputsRejectsForgedByte checks that the public inputs are
+// bound to the guest output memory: a prover claiming a byte other than the one
+// at its opened row, the memory being left honest, must not produce a proof
+// that verifies.
 func TestGuestPublicOutputsRejectsForgedByte(t *testing.T) {
 	elf, _ := minimalelf.AllInOneElfProgram()
 	sys, driver, inputs, _ := newGuestOutputSystem(t, elf, forgeGuestOutputByte{})
@@ -99,11 +100,13 @@ func TestGuestPublicOutputsRejectsForgedByte(t *testing.T) {
 }
 
 // TestGuestPublicOutputsExactLength checks that a guest writing exactly
-// [risc5.NumGuestPublicOutputs] bytes is bound, and that one writing fewer,
-// down to nothing, or more does not produce a proof that verifies.
+// [risc5.NumGuestPublicOutputs] bytes is bound, and that the honest proof of
+// one writing a byte fewer or more fails the last-address constraint. Shorter
+// guests are not listed: their memory has fewer rows than are opened, so they
+// are rejected before that constraint is reached.
 func TestGuestPublicOutputsExactLength(t *testing.T) {
 	const n = risc5.NumGuestPublicOutputs
-	for _, written := range []int{0, n - 1, n, n + 1} {
+	for _, written := range []int{n - 1, n, n + 1} {
 		t.Run(fmt.Sprintf("n=%d", written), func(t *testing.T) {
 			elf, wantWritten := minimalelf.OutputELF(written)
 			sys, driver, inputs, got := newGuestOutputSystem(t, elf)
@@ -129,17 +132,16 @@ func TestGuestPublicOutputsExactLength(t *testing.T) {
 	}
 }
 
-// forgeGuestOutputByte flips the low bit of the first byte bound by
-// [risc5.RegisterGuestPublicOutputs], once it has been assigned honestly.
+// forgeGuestOutputByte flips the low bit of the first public input registered
+// by [risc5.RegisterGuestPublicOutputs], once it has been opened honestly. The
+// guest output memory is left untouched, so only the opening can catch it.
 type forgeGuestOutputByte struct{}
 
 func (forgeGuestOutputByte) Run(rt *wiop.Runtime) {
-	col := rt.System.LookupColumn(zkcdriver.PublicOutputs(rt.System).Data)
-	forged := rt.GetColumnAssignment(col).Plain.AsBase()
-	forged = append([]koalafield.Element(nil), forged...)
-	first := len(forged) - risc5.NumGuestPublicOutputs
-	forged[first].SetUint64(forged[first].Uint64() ^ 1)
-	rt.OverrideColumn(col, &wiop.ConcreteVector{Plain: koalafield.VecFromBase(forged)})
+	cell, _ := rt.System.LookupPublicInputByTag(risc5.GuestPublicOutputsPI, 0)
+	forged := rt.GetCellValue(cell).AsBase()
+	forged.SetUint64(forged.Uint64() ^ 1)
+	rt.OverrideCell(cell, koalafield.ElemFromBase(forged))
 }
 
 // provesAndVerifiesFirstShardOnly reports whether sys produces a proof that verifies. A

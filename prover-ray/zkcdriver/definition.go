@@ -185,12 +185,10 @@ func (s *schemaScanner) collectPublicOutputs() PublicOutput {
 
 			// A memory's address lines are exactly its input registers and its data
 			// lines exactly its output registers, so the two are told apart by
-			// register kind rather than by name. The computed registers, the access
-			// bit and the address selectors, are of no use here.
+			// register kind rather than by name.
 			//
 			// Only [guestOutputModule] is collected. Any other public output leaves
-			// the lists empty and is skipped just below, so no memory becomes a
-			// public input merely by being declared `pub output`.
+			// the lists empty and is skipped.
 			switch {
 			case moduleName != guestOutputModule:
 			case reg.IsInput():

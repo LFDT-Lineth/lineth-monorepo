@@ -21,7 +21,7 @@ const (
 
 	// NumGuestPublicOutputs = 32 because the guest output is exactly 32 bytes:
 	// the commitment the guest writes to its public output, one byte per row.
-	// The rest of what the guest writes goes to its private log.
+	// Anything else the guest emits goes to its private log, not to its output.
 	NumGuestPublicOutputs = 32
 
 	// NumSharedRandomness is the number of shared randomness cells. 8 because
