@@ -11,7 +11,7 @@
 //!
 //! Builds the input fresh via `real_multiblock_fixture_gen.buildEngineeredInput` on every
 //! run rather than loading a checked-in file: the corpus JSON it derives from is embedded straight
-//! from the execution-spec-tests dependency tree (wired in `build.zig`), so there is nothing to
+//! from the EF zkevm fixtures directory (`-Dzkevm-fixtures`), so there is nothing to
 //! regenerate or forget to re-commit — the input is always exactly what the current fixture
 //! and builder produce.
 //!
