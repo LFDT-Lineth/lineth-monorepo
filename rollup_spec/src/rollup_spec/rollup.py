@@ -21,7 +21,6 @@ from .fork import (
     SetCodeTransaction,
     Transaction,
     decode_transaction,
-    encode_transaction,
     recover_sender,
 )
 from ethereum.merkle_patricia_trie import Trie, root, trie_set
@@ -811,29 +810,16 @@ def _transactions_root(transactions: Sequence[Transaction | Bytes]) -> Hash32:
     return root(trie)
 
 
-def _canonical_transaction(tx_item: Transaction | Bytes) -> Transaction:
+def _decode_block_transaction(tx_item: Transaction | Bytes) -> Transaction:
     """
-    Decode one entry of a block's transaction list, which must be a canonical transaction of the
-    form the guest decodes: a legacy list, or a typed transaction of type 1, 2 or 4 in exactly its
-    canonical encoding; integers in the widths the guest decodes them (nonce and gas in 64 bits,
-    fees in 128).
+    Decode one entry of a block's transaction list: a legacy list, or an envelope of type 1, 2 or 4,
+    the types the truncation strips.
     """
     if isinstance(tx_item, (bytes, bytearray)):
         if len(tx_item) < 2 or tx_item[0] not in (1, 2, 4):
-            raise Exception("transaction is not a canonical typed transaction")
-        decoded_tx = decode_transaction(Bytes(tx_item))
-        if encode_transaction(decoded_tx) != tx_item:
-            raise Exception("transaction is not a canonical typed transaction")
-    else:
-        decoded_tx = tx_item
-
-    if isinstance(decoded_tx, (LegacyTransaction, AccessListTransaction)):
-        fees = [decoded_tx.gas_price]
-    else:
-        fees = [decoded_tx.max_priority_fee_per_gas, decoded_tx.max_fee_per_gas]
-    if int(decoded_tx.nonce) >= 2**64 or int(decoded_tx.gas) >= 2**64 or any(int(fee) >= 2**128 for fee in fees):
-        raise Exception("transaction field exceeds the width the guest decodes")
-    return decoded_tx
+            raise Exception("transaction is neither a legacy list nor an envelope of type 1, 2 or 4")
+        return decode_transaction(Bytes(tx_item))
+    return tx_item
 
 
 def truncate_block_rlp(block_rlp: bytes, chain_id: U64) -> TruncatedEthereumBlock:
@@ -869,7 +855,7 @@ def truncate_block_rlp(block_rlp: bytes, chain_id: U64) -> TruncatedEthereumBloc
     for tx_item in block.transactions:
         # `Block.transactions` holds typed (EIP-2718) txs as bytes and
         # legacy txs as decoded `LegacyTransaction` objects.
-        decoded_tx = _canonical_transaction(tx_item)
+        decoded_tx = _decode_block_transaction(tx_item)
         transactions.append(_signature_stripped_tx_bytes(decoded_tx))
         froms.append(recover_sender(chain_id, decoded_tx))
 
