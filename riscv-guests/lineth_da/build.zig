@@ -99,7 +99,7 @@ const Zstd = struct {
 };
 
 /// What `src/` imports by name, for one target: the zesu modules under the `zesu_*` names the
-/// sources use, the scalar-field arithmetic and the declarations of libzstd.
+/// sources use and the declarations of libzstd.
 fn packageImports(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, zstd: Zstd) []const Import {
     const zesu = b.dependency("zesu", .{
         .target = target,
@@ -112,19 +112,8 @@ fn packageImports(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std
         .{ .name = "zesu_input", .module = zesu.module("input") },
         .{ .name = "zesu_mpt", .module = zesu.module("mpt") },
         .{ .name = "zesu_rlp_decode", .module = zesu.module("rlp_decode") },
-        .{ .name = "bls_scalar", .module = scalarModule(b, target, optimize) },
         .{ .name = "zstd_c", .module = zstd.declarations },
     }) catch @panic("OOM");
-}
-
-/// The scalar-field arithmetic, optimized for speed in every build, with safety checks in a debug
-/// one: it is the inner loop of the blob evaluation.
-fn scalarModule(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) *std.Build.Module {
-    return b.createModule(.{
-        .root_source_file = b.path("src/bls_scalar.zig"),
-        .target = target,
-        .optimize = if (optimize == .Debug) .ReleaseSafe else .ReleaseFast,
-    });
 }
 
 /// The package module for a native target, with its sources attached.

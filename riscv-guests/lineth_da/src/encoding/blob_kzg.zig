@@ -1,15 +1,15 @@
 //! EIP-4844 blob KZG proof verification without recomputing the commitment: the Fiat-Shamir
 //! challenge z and the blob polynomial's evaluation y at z are derived from the blob, and the
 //! point-evaluation check binds (commitment, z, y) to the proof. sha256 and the check come from
-//! the zkvm accelerator interface.
+//! the zkvm accelerator interface; the field arithmetic is Constantine's.
 
 const std = @import("std");
 
 const accelerators = @import("zesu_accelerators");
-const bls_scalar = @import("bls_scalar");
 const blob_payload = @import("blob_payload.zig");
+const scalar_field = @import("scalar_field.zig");
 
-const Fr = bls_scalar.Fr;
+pub const Fr = scalar_field.Fr;
 
 pub const blob_len = blob_payload.blob_len;
 const field_elements = blob_payload.field_elements;
@@ -40,6 +40,29 @@ pub fn computeChallenge(blob: *const [blob_len]u8, commitment: *const [commitmen
     return Fr.fromBytesReduced(&digest);
 }
 
+/// The EIP-4844 primitive root of the scalar field, whose power of (r - 1) / 4096 generates the
+/// 4096th roots of unity.
+const primitive_root = 7;
+
+/// The canonical big-endian encodings of the step ω = 7^((r - 1) / 4096) between consecutive roots
+/// of unity and of 4096^-1.
+const root_step_bytes = encodedPower(primitive_root, (scalar_field.modulus - 1) / field_elements);
+const inverse_width_bytes = encodedPower(field_elements, scalar_field.modulus - 2);
+
+fn encodedPower(base: u256, exponent: u256) [32]u8 {
+    @setEvalBranchQuota(10_000);
+    var result: u256 = 1;
+    var square = base;
+    var rest = exponent;
+    while (rest > 0) : (rest >>= 1) {
+        if (rest & 1 == 1) result = @intCast(@as(u512, result) * square % scalar_field.modulus);
+        square = @intCast(@as(u512, square) * square % scalar_field.modulus);
+    }
+    var bytes: [32]u8 = undefined;
+    std.mem.writeInt(u256, &bytes, result, .big);
+    return bytes;
+}
+
 /// The EIP-4844 `evaluate_polynomial_in_evaluation_form`: the value at `z` of the polynomial whose
 /// evaluations over the bit-reversed 4096th roots of unity are the blob's elements, by the
 /// barycentric formula. Null when an element is not a canonical field element.
@@ -51,10 +74,10 @@ pub fn evaluate(blob: *const [blob_len]u8, z: Fr) ?Fr {
     // y = (z^n - 1) / n * sum_k f_k w^k / (z - w^k), for the roots w^k in natural order and f_k
     // the element at their bit-reversed position. The sum is accumulated as one fraction
     // numerator / denominator, so a single inversion remains.
-    const root_step = Fr.fromInt(primitive_root).pow((bls_scalar.modulus - 1) / field_elements);
-    var root = Fr.one;
-    var numerator = Fr.zero;
-    var denominator = Fr.one;
+    const root_step = Fr.fromBytes(&root_step_bytes).?;
+    var root = Fr.one();
+    var numerator = Fr.zero();
+    var denominator = Fr.one();
     for (0..field_elements) |k| {
         const index: usize = @bitReverse(@as(u12, @intCast(k)));
         const element = Fr.fromBytes(blob[index * 32 ..][0..32]).?;
@@ -66,13 +89,12 @@ pub fn evaluate(blob: *const [blob_len]u8, z: Fr) ?Fr {
         root = root.mul(root_step);
     }
 
-    const inverse_width = Fr.fromInt(field_elements).inverse();
-    return numerator.mul(denominator.inverse()).mul(z.pow(field_elements).sub(Fr.one)).mul(inverse_width);
+    // z^4096 by 12 squarings.
+    var z_power = z;
+    for (0..std.math.log2_int(usize, field_elements)) |_| z_power.squareInPlace();
+    const inverse_width = Fr.fromBytes(&inverse_width_bytes).?;
+    return numerator.mul(denominator.inverse()).mul(z_power.sub(Fr.one())).mul(inverse_width);
 }
-
-/// The EIP-4844 primitive root of the scalar field, whose power of (r - 1) / 4096 generates the
-/// 4096th roots of unity.
-const primitive_root = 7;
 
 /// Whether `proof` opens `commitment` to the blob's evaluation at the blob's challenge, i.e.
 /// whether `commitment` commits to `blob`. A blob with a non-canonical element, an invalid

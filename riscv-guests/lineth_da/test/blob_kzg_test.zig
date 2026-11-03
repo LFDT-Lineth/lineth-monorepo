@@ -4,10 +4,9 @@ const lineth_da = @import("lineth_da");
 const reference_vectors = @import("reference_vectors");
 const support = @import("support");
 
-const bls_scalar = lineth_da.bls_scalar;
 const blob_kzg = lineth_da.encoding.blob_kzg;
 
-const Fr = bls_scalar.Fr;
+const Fr = blob_kzg.Fr;
 
 const gpa = std.testing.allocator;
 const io = std.testing.io;
@@ -157,7 +156,7 @@ test "the evaluation of a blob of monomial values is the monomial at the point" 
             const z = prng.random().int(u256) % modulus;
             try std.testing.expectEqual(powMod(z, degree), valueOf(blob_kzg.evaluate(blob, element(z)).?));
         }
-        try std.testing.expectEqual(powMod(0, degree), valueOf(blob_kzg.evaluate(blob, Fr.zero).?));
+        try std.testing.expectEqual(powMod(0, degree), valueOf(blob_kzg.evaluate(blob, Fr.zero()).?));
     }
 }
 
