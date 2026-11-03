@@ -18,7 +18,7 @@ pub fn build(b: *std.Build) void {
     addHostTests(b, unit, crypto);
     addFixtureStep(b, tools);
     addZkcSmokeStep(b, tools);
-    if (options.reference_tests) addReferenceStep(b, options, crypto);
+    addReferenceStep(b, options, crypto);
 }
 
 /// Every `-D` option of this package, read once.
@@ -27,7 +27,8 @@ const Options = struct {
     optimize: std.builtin.OptimizeMode,
     crypto: common.CryptoOptions,
     host_tools: bool,
-    reference_tests: bool,
+    /// Directory holding the EF zkevm fixtures; its `blockchain_tests/` is the corpus.
+    zkevm_fixtures: ?std.Build.LazyPath,
     host_target: std.Build.ResolvedTarget,
 
     fn parse(b: *std.Build) Options {
@@ -36,13 +37,13 @@ const Options = struct {
         // Keep `-Doptimize` exposed to dependency consumers and default to ReleaseSmall.
         const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseSmall)") orelse .ReleaseSmall;
         const host_tools = b.option(bool, "host-tools", "Build native test and helper targets") orelse false;
-        const reference_tests = b.option(bool, "reference-tests", "Wire the reference-test step over the EF zkevm fixtures (fetches them)") orelse false;
+        const zkevm_fixtures = b.option(std.Build.LazyPath, "zkevm-fixtures", "Directory holding the EF zkevm fixtures; enables the reference-test step");
         return .{
             .target = target,
             .optimize = optimize,
             .crypto = common.CryptoOptions.parse(b),
             .host_tools = host_tools,
-            .reference_tests = reference_tests,
+            .zkevm_fixtures = zkevm_fixtures,
             .host_target = b.resolveTargetQuery(.{}),
         };
     }
@@ -60,7 +61,7 @@ const Deps = struct {
     fn init(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, host_tools: bool) Deps {
         const guest_common = b.dependency("guest_common", .{ .target = target, .optimize = optimize });
         const lineth_da = if (host_tools)
-            b.dependency("lineth_da", .{ .target = target, .optimize = optimize, .@"host-tools" = true, .@"reference-tests" = false })
+            b.dependency("lineth_da", .{ .target = target, .optimize = optimize, .@"host-tools" = true })
         else
             b.dependency("lineth_da", .{ .target = target, .optimize = optimize });
         return .{
@@ -176,11 +177,12 @@ fn addZkcSmokeStep(b: *std.Build, tools: Tools) void {
 }
 
 /// The `test/reference/*_test.zig` suites over the Amsterdam blocks of the EF zkevm fixtures, run
-/// by the `reference-test` step. They are compiled optimized: the corpus is gigabytes of JSON.
+/// by the `reference-test` step, which registers when `-Dzkevm-fixtures` is given. They are
+/// compiled optimized: the corpus is gigabytes of JSON.
 fn addReferenceStep(b: *std.Build, options: Options, crypto: common.HostCrypto) void {
-    const fixtures = b.lazyDependency("execution_spec_tests_zkevm", .{}) orelse return;
+    const fixtures = options.zkevm_fixtures orelse return;
     const paths = b.addOptions();
-    paths.addOptionPath("amsterdam_blocks", fixtures.path("blockchain_tests/for_amsterdam"));
+    paths.addOptionPath("amsterdam_blocks", fixtures.path(b, "blockchain_tests/for_amsterdam"));
 
     const host = Host.init(b, options.host_target, .ReleaseSafe);
     const imports = std.mem.concat(b.allocator, Import, &.{

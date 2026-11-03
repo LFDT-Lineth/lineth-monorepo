@@ -19,14 +19,6 @@
         // of a DA stream against its chunks. With -Dhost-tools it also exposes the modules that
         // build real DA streams for tests.
         .lineth_da = .{ .path = "../lineth_da" },
-        // The Ethereum Foundation's execution-spec zkevm fixtures (tests-zkevm@v21.0.5): real
-        // Amsterdam blocks, from which the reference test builds rollup inputs. Fetched by the
-        // reference-test step only.
-        .execution_spec_tests_zkevm = .{
-            .url = "https://github.com/ethereum/execution-specs/releases/download/tests-zkevm%40v21.0.5/fixtures_zkevm.tar.gz",
-            .hash = "N-V-__8AAP____8QQM74OJJCR9wJFoeW57RJWnar5YNlvr3T",
-            .lazy = true,
-        },
     },
     .paths = .{
         "build.zig",

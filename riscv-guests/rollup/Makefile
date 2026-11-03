@@ -21,8 +21,7 @@ BUILD_CACHE_DIR ?= $(MAKEFILE_DIR).zig-cache
 ZIG_BUILD_FLAGS ?= --cache-dir $(BUILD_CACHE_DIR) --summary all
 # The native tests and tools: they fetch the DA test dependencies and build the host crypto providers.
 ZIG_HOST_FLAGS ?= -Dhost-tools=true
-# The reference test reads the blocks of the EF zkevm fixtures, a download of 3.4 GB.
-ZIG_REFERENCE_FLAGS ?= -Dreference-tests=true
+ZIG_FIXTURES_FLAGS = -Dzkevm-fixtures="$(ZKEVM_FIXTURES_DIR)"
 # NOTE: `zig build --fetch` fetches the dependency tree and EXITS without building or running, so
 # it must NOT be passed to build/test targets. Pre-fetching is the dedicated `fetch` target; a build
 # fetches the lazy dependencies of the steps it runs on demand.
@@ -32,6 +31,7 @@ NAME := rollup_guest
 BIN  := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 
 include $(MAKEFILE_DIR)../build_common/release.mk
+include $(MAKEFILE_DIR)../build_common/zkevm_fixtures.mk
 
 # Sample fixture input used by exec/debug and the zkc smoke. The default is generated fresh by
 # `require-input` via `zig build gen-fixture` (this package's own encodeInput over a valid request
@@ -54,15 +54,15 @@ ZKC_EXEC_FLAGS ?=
 OBJDUMP ?= false
 
 fetch:
-	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_REFERENCE_FLAGS) --fetch=all
+	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) --fetch=all
 
 test:
 	$(ZIG) build test $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS)
 
 # The rollup guest statement over valid requests built from consecutive real blocks of the EF zkevm
 # corpus, in calldata and blob chunks, and over tampered copies of them.
-reference-test:
-	$(ZIG) build reference-test $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_REFERENCE_FLAGS) $(ZIG_FETCH_FLAGS)
+reference-test: zkevm-fixtures
+	$(ZIG) build reference-test $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FIXTURES_FLAGS) $(ZIG_FETCH_FLAGS)
 
 clean:
 	rm -rf $(MAKEFILE_DIR)zig-out/
