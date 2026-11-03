@@ -258,7 +258,10 @@ fn addReferenceTests(
     zkevm_fixtures: ?std.Build.LazyPath,
 ) std.StringHashMap(*std.Build.Step.Compile) {
     const none = std.StringHashMap(*std.Build.Step.Compile).init(b.allocator);
-    const fixtures = zkevm_fixtures orelse return none;
+    const fixtures = zkevm_fixtures orelse {
+        if (b.pkg_hash.len == 0) std.log.warn("test/reference skipped: pass -Dzkevm-fixtures=<dir> (`make test` does)", .{});
+        return none;
+    };
 
     const paths = b.addOptions();
     paths.addOptionPath("amsterdam_blocks", fixtures.path(b, "blockchain_tests/for_amsterdam"));

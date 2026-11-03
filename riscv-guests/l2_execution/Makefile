@@ -10,7 +10,7 @@
 # itself (ELF->JSON via elf_to_json, then zkc) is owned by
 # arithmetization/src/test/Makefile; fixture-exec/fixture-debug build that ELF and hand it over.
 
-.PHONY: fetch fetch-host test reference-test reference-test-zkc zkc-smoke-exec zkc-smoke-external zkc-smoke-trace prep-execution-specs-json-fixtures clean compile exec debug require-input require-elf
+.PHONY: fetch fetch-host test reference-test reference-test-zkc zkc-smoke-exec zkc-smoke-external zkc-smoke-trace link-zkevm-fixtures clean compile exec debug require-input require-elf
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -22,7 +22,6 @@ ZIG ?= zig
 BUILD_CACHE_DIR ?= $(MAKEFILE_DIR).zig-cache
 ZIG_BUILD_FLAGS ?= --cache-dir $(BUILD_CACHE_DIR) --summary all
 ZIG_HOST_FLAGS ?= -Dhost-tools=true
-ZIG_FIXTURES_FLAGS = -Dzkevm-fixtures="$(ZKEVM_FIXTURES_DIR)"
 # NOTE: `zig build --fetch` fetches the dependency tree and EXITS without building or running, so it
 # must NOT be passed to build/test targets. Pre-fetching is the dedicated `fetch` target.
 ZIG_FETCH_FLAGS ?=
@@ -35,6 +34,8 @@ BIN      := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 include $(MAKEFILE_DIR)../build_common/release.mk
 include $(MAKEFILE_DIR)../build_common/zkevm_fixtures.mk
 
+ZIG_FIXTURES_FLAGS ?= -Dzkevm-fixtures="$(ZKEVM_FIXTURES_DIR)"
+
 # Sample fixture input used by exec/debug / zkc-smoke-*
 INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
 
@@ -45,9 +46,8 @@ ZKC_EXEC_FLAGS ?=
 # Flags forwarded to `zkc trace` by trace / zkc-smoke-trace.
 ZKC_TRACE_FLAGS ?= --stats
 
-# Parameters for execution-spec zkevm fixtures.
-EXECUTION_SPECS_JSON_FIXTURES_DIR   := /tmp/execution-specs-json-fixtures
-EXECUTION_SPECS_FIXTURES_DIR        := $(EXECUTION_SPECS_JSON_FIXTURES_DIR)/fixtures
+# Symlink to ZKEVM_FIXTURES_DIR at a fixed path, for external runners.
+ZKEVM_FIXTURES_LINK ?= /tmp/execution-specs-json-fixtures/fixtures
 
 # If true, generates an objdump of the generated ELF for debugging purposes
 OBJDUMP     ?= false
@@ -68,7 +68,7 @@ fetch:
 fetch-host:
 	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) --fetch=all
 
-test: fetch-host zkevm-fixtures
+test: fetch-host fetch-zkevm-fixtures
 	$(ZIG) build test $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FIXTURES_FLAGS) $(ZIG_FETCH_FLAGS)
 
 # Permanent reference-test guard for the extended guest, run against the EF zkevm corpus on the
@@ -78,14 +78,14 @@ test: fetch-host zkevm-fixtures
 # executing the real guest ELF via ZkC. Scoped to --fork Amsterdam to keep runtime bounded; narrow
 # further with REFERENCE_ARGS.
 REFERENCE_ARGS ?= --fork Amsterdam
-reference-test: fetch-host zkevm-fixtures
+reference-test: fetch-host fetch-zkevm-fixtures
 	$(ZIG) build extended-vanilla $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FIXTURES_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REFERENCE_ARGS)
 
 # ZkC twin of reference-test: the corpus logic lives in tools/zkc_reference_runner.zig, which runs
 # each block through the guest ELF under zkc (ELF->JSON->zkc exec) instead of in-process. Needs zkc
 # and go on PATH (like exec/debug). ZKC_EXEC_FLAGS picks the `zkc exec` backend. Minutes per heavy
 # block; use it to prove the real ELF agrees with the corpus.
-reference-test-zkc: fetch-host zkevm-fixtures
+reference-test-zkc: fetch-host fetch-zkevm-fixtures
 	$(ZIG) build reference-test-zkc $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FIXTURES_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REFERENCE_ARGS) $(if $(ZKC_EXEC_FLAGS),--zkc-flags "$(ZKC_EXEC_FLAGS)")
 
 # Build the local guest ELF, then compare it through the prebuilt-ELF smoke target.
@@ -103,10 +103,10 @@ zkc-smoke-external: require-input require-elf fetch-host
 zkc-smoke-trace: require-input fetch-host
 	$(call zkc-smoke-run,elf-trace,--zkc-flags "$(ZKC_TRACE_FLAGS)")
 
-# Links $(EXECUTION_SPECS_FIXTURES_DIR) to the shared zkevm fixtures for external runners.
-prep-execution-specs-json-fixtures: zkevm-fixtures
-	mkdir -p $(EXECUTION_SPECS_JSON_FIXTURES_DIR)
-	ln -sfn "$(ZKEVM_FIXTURES_DIR)" $(EXECUTION_SPECS_FIXTURES_DIR)
+link-zkevm-fixtures: fetch-zkevm-fixtures
+	mkdir -p "$(dir $(ZKEVM_FIXTURES_LINK))"
+	rm -rf "$(ZKEVM_FIXTURES_LINK)"
+	ln -s "$(abspath $(ZKEVM_FIXTURES_DIR))" "$(ZKEVM_FIXTURES_LINK)"
 
 clean:
 	rm -rf $(MAKEFILE_DIR)zig-out/

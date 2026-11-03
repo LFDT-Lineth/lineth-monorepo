@@ -106,10 +106,6 @@ UNSUPPORTED_TYPE = "neither a legacy list nor an envelope of type 1, 2 or 4"
 
 REJECTED_BLOCKS = [
     pytest.param(
-        lambda: block_rlp([wire(sign(legacy_tx()))]) + b"\xde\xad", "block RLP is not canonical",
-        id="bytes after the block",
-    ),
-    pytest.param(
         lambda: block_rlp([Bytes(rlp.encode(sign(legacy_tx())))]), UNSUPPORTED_TYPE,
         id="legacy transaction wrapped as a byte string",
     ),
@@ -139,7 +135,7 @@ REJECTED_BLOCKS = [
 
 
 @pytest.mark.parametrize("build_block, error", REJECTED_BLOCKS)
-def test_block_that_is_not_canonical_or_does_not_carry_its_committed_transactions_is_rejected(build_block, error):
+def test_block_with_an_unsupported_or_uncommitted_transaction_is_rejected(build_block, error):
     with pytest.raises(Exception, match=error):
         truncate_block_rlp(build_block(), CHAIN_ID)
 
@@ -154,11 +150,6 @@ def test_ommer_timestamp_is_a_256_bit_integer_and_the_block_timestamp_a_64_bit_o
     beyond_64_bits = replace(genuine, header=replace(genuine.header, timestamp=U256(2**64)))
     with pytest.raises(OverflowError):
         truncate_block_rlp(rlp.encode(beyond_64_bits), CHAIN_ID)
-
-
-def test_chain_id_zero_is_rejected():
-    with pytest.raises(Exception, match="chain ID must be positive"):
-        truncate_block_rlp(block_rlp([wire(sign(legacy_tx()))]), U64(0))
 
 
 def test_eip_155_signature_of_another_chain_is_rejected():

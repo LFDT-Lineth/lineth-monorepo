@@ -827,9 +827,8 @@ def truncate_block_rlp(block_rlp: bytes, chain_id: U64) -> TruncatedEthereumBloc
     Decode the canonical full block RLP and apply the §3.2 DA truncation
     rule, returning a `TruncatedEthereumBlock`.
 
-    The block is accepted only in its canonical encoding, with a body
-    that is the one its header commits to: the transactions hash to the
-    header's `transactions_root`. `chain_id` is positive.
+    The block's transactions are the ones its header commits to: they hash
+    to the header's `transactions_root`.
 
     Header-derived fields:
       - `timestamp` and `prev_randao` are taken from the decoded header.
@@ -841,11 +840,7 @@ def truncate_block_rlp(block_rlp: bytes, chain_id: U64) -> TruncatedEthereumBloc
         bytes (see `_signature_stripped_tx_bytes`).
       - `froms[i]` is the sender recovered via `recover_sender(chain_id, tx)`.
     """
-    if int(chain_id) == 0:
-        raise Exception("chain ID must be positive")
     block = decode_block_rlp(block_rlp)
-    if rlp.encode(block) != block_rlp:
-        raise Exception("block RLP is not canonical")
     if _transactions_root(block.transactions) != block.header.transactions_root:
         raise Exception("block transactions do not match the header's transactions root")
     bh = block_hash(block.header)

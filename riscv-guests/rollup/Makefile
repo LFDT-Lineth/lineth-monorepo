@@ -61,7 +61,7 @@ test:
 
 # The rollup guest statement over valid requests built from consecutive real blocks of the EF zkevm
 # corpus, in calldata and blob chunks, and over tampered copies of them.
-reference-test: zkevm-fixtures
+reference-test: fetch-zkevm-fixtures
 	$(ZIG) build reference-test $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FIXTURES_FLAGS) $(ZIG_FETCH_FLAGS)
 
 clean:

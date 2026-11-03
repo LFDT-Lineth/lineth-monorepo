@@ -237,7 +237,10 @@ fn addHostTests(b: *std.Build, host: Host, options: Options) void {
 
 /// The suites under test/corpus/ read EF zkevm corpus vectors; they register when `-Dzkevm-fixtures` is given.
 fn addCorpusTests(b: *std.Build, host: Host, options: Options) void {
-    const fixtures = options.zkevm_fixtures orelse return;
+    const fixtures = options.zkevm_fixtures orelse {
+        std.log.warn("test/corpus skipped: pass -Dzkevm-fixtures=<dir> (`make test` does)", .{});
+        return;
+    };
     embedFixtures(b, host.support, fixtures);
     host.crypto.linkAll(common.addTests(b, host.test_step, host.native, .{ .dir = "test/corpus" }));
 }
@@ -269,9 +272,17 @@ fn addCryptoVectors(b: *std.Build, zesu: *std.Build.Dependency, guest_crypto_tes
     }
 }
 
-/// The reference tests over the EF corpus, registered when `-Dzkevm-fixtures` is given: `extended-vanilla` and `reference-test-zkc`.
+/// The reference tests over the EF corpus, `extended-vanilla` and `reference-test-zkc`; without
+/// `-Dzkevm-fixtures` both steps fail with the flag to pass.
 fn addReferenceSteps(b: *std.Build, tools: Tools, options: Options) void {
-    const fixtures = options.zkevm_fixtures orelse return;
+    const extended_step = b.step("extended-vanilla", "Reference-test guard: assert the dummy-wrapped extended guest (runL2Execution) agrees with the EF fixture's own expected validity over EF zkevm fixtures");
+    const zkc_step = b.step("reference-test-zkc", "Run the EF zkevm corpus through the guest ELF under zkc (needs zkc+go on PATH)");
+    const fixtures = options.zkevm_fixtures orelse {
+        const fail = b.addFail("needs -Dzkevm-fixtures=<dir>; use `make -C riscv-guests/l2_execution reference-test` (or reference-test-zkc)");
+        extended_step.dependOn(&fail.step);
+        zkc_step.dependOn(&fail.step);
+        return;
+    };
     const corpus = fixtures.path(b, "blockchain_tests");
 
     // The dummy-wrapped extended input must get the fixture's own validity verdict from
@@ -280,13 +291,13 @@ fn addReferenceSteps(b: *std.Build, tools: Tools, options: Options) void {
     const extended = b.addRunArtifact(tools.get("extended_vanilla_runner").?);
     extended.addDirectoryArg(corpus);
     if (b.args) |extra| extended.addArgs(extra);
-    b.step("extended-vanilla", "Reference-test guard: assert the dummy-wrapped extended guest (runL2Execution) agrees with the EF fixture's own expected validity over EF zkevm fixtures").dependOn(&extended.step);
+    extended_step.dependOn(&extended.step);
 
     // The corpus through the installed guest ELF under zkc (needs zkc and go on PATH).
     const zkc = b.addRunArtifact(tools.get("zkc_reference_runner").?);
     zkc.addDirectoryArg(corpus);
     finishZkcRun(b, zkc, true);
-    b.step("reference-test-zkc", "Run the EF zkevm corpus through the guest ELF under zkc (needs zkc+go on PATH)").dependOn(&zkc.step);
+    zkc_step.dependOn(&zkc.step);
 }
 
 /// What l2_execution's source files import by name, for one target.
