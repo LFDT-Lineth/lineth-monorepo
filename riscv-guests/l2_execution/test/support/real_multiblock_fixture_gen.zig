@@ -27,8 +27,8 @@ const l2_execution_ssz = @import("l2_execution").l2_execution_ssz;
 const vanilla_wrap = @import("vanilla_wrap.zig");
 
 /// The chosen corpus test case's own JSON, embedded straight from the EF zkevm fixtures
-/// directory (`-Dzkevm-fixtures`, like the `zkevm_stateless_block.json` embed) — no committed copy of either the corpus JSON or the
-/// input it produces. Four consecutive valid blocks (numbers 1-4), each carrying one real
+/// directory (`-Dzkevm-fixtures`, like the `zkevm_stateless_block.json` embed); the input is built
+/// from it at test time. Four consecutive valid blocks (numbers 1-4), each carrying one real
 /// signed transaction, no withdrawals, no EIP-7685 execution requests, and — since the transaction
 /// only ever reads `SLOTNUM`/`NUMBER` into storage — no dependency on any block's hash, making
 /// every block's witness carry exactly its own immediate parent header (no deeper ancestor chain to

@@ -52,7 +52,7 @@ runs:
       uses: ./.github/actions/cache
       with:
         path: ${{ env.ZKEVM_FIXTURES_DIR }}
-        key: riscv-guests-zkevm-fixtures-${{ hashFiles('riscv-guests/build_common/zkevm_fixtures.mk') }}
+        key: riscv-guests-zkevm-fixtures-${{ hashFiles('riscv-guests/build_common/zkevm_fixtures_pin.mk') }}
 
     # Compile cache (the Makefiles pass --cache-dir <guest>/.zig-cache). Restoring it turns the
     # multi-minute zesu graph rebuild into a no-op; zig's cache is content-addressed, so a stale

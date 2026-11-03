@@ -58,7 +58,7 @@ fetch-host:
 
 include $(MAKEFILE_DIR)../build_common/zkevm_fixtures.mk
 
-test: fetch-host zkevm-fixtures
+test: fetch-host fetch-zkevm-fixtures
 	$(ZIG) build test $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FIXTURES_FLAGS) $(ZIG_FETCH_FLAGS)
 
 clean:
