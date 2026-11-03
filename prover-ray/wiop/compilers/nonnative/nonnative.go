@@ -37,12 +37,20 @@
 // Result + p (p has small 16-bit limbs and then only shifts a small carry).
 // 16-bit limbs are therefore checked with 8-bit digits.
 //
+// # Reduced result
+//
+// The identity alone admits (Quotient-1, Result+Modulus) next to the canonical
+// pair. Matching [wiop.NonNative.Check], the compiler also enforces
+// Result < Modulus, and thereby Modulus != 0, on every active row (see
+// [reducedCheck]).
+//
 // # Selector
 //
-// With a selector s, the prover assigns zero digits and zero carries on
-// inactive rows, which satisfies every coefficient identity and range check.
-// Only the constraints reading the query's own columns are gated: the limb
-// recompositions are multiplied by s. Limbs are therefore always split into
+// With a selector s, the prover assigns zero digits, gap and borrows and zero
+// carries on inactive rows, which satisfies every coefficient identity and
+// range check. Only the constraints reading the query's own columns are
+// gated: the limb recompositions are multiplied by s, and the "+1" of
+// Result + W + 1 = Modulus becomes "+s". Limbs are therefore always split into
 // digit columns when a selector is present, so that the unconstrained limbs of
 // inactive rows are never range-checked. s is constrained to be boolean.
 //
@@ -200,10 +208,32 @@ type compiledQuery struct {
 	// carry holds the biased carries, one per coefficient of the product
 	// polynomial except the leading one (whose carry is zero).
 	carry []*wiop.Column
+	// reduced enforces Result < Modulus.
+	reduced reducedCheck
 }
 
-// newCompiledQuery allocates the digit and carry columns of q and registers
-// their range checks and constraints.
+// reducedCheck enforces Result < Modulus on every active row, as
+// Result + W + 1 = Modulus for a range-checked gap W, compared limb by limb.
+// With b = NbBitsPerLimb, n limbs and s the selector (constant 1 without one):
+//
+//	result_i + s*[i=0] + gap_i + borrow_{i-1} = modulus_i + 2^b * borrow_i
+//	borrow_i * (borrow_i - 1) = 0                       for i < n-1
+//
+// where result_i, modulus_i and gap_i are recomposed from their digits,
+// borrow_{-1} = 0 and no borrow leaves the top limb. Both sides stay below
+// 2^(b+1) < p, so the limb identities are integer identities chaining to
+// Result + W + 1 = Modulus on active rows. On inactive rows every term is
+// zero.
+type reducedCheck struct {
+	// gap holds the digits of W = Modulus - Result - 1, laid out like the
+	// operand digits.
+	gap []*wiop.Column
+	// borrow holds the limb borrows of Modulus - Result - 1, except the top one.
+	borrow []*wiop.Column
+}
+
+// newCompiledQuery allocates the digit, carry and reduced-result columns of q
+// and registers their range checks and constraints.
 func newCompiledQuery(q *wiop.NonNative, ctx *wiop.ContextFrame) *compiledQuery {
 	m := q.Module
 	c := &compiledQuery{query: q, layout: newLayout(q)}
@@ -228,7 +258,17 @@ func newCompiledQuery(q *wiop.NonNative, ctx *wiop.ContextFrame) *compiledQuery 
 	for k, coeff := range c.identityCoefficients() {
 		m.NewVanishing(ctx.Childf("identity-%d", k), coeff)
 	}
+
+	c.reduced = c.newReducedCheck(ctx.Childf("reduced"))
 	return c
+}
+
+// active returns the selector, or the constant 1 if the query has none.
+func (c *compiledQuery) active() wiop.Expression {
+	if c.query.Selector == nil {
+		return constant(1)
+	}
+	return c.query.Selector.View()
 }
 
 // gate restricts e to the active rows.
@@ -311,6 +351,44 @@ func (c *compiledQuery) identityCoefficients() []wiop.Expression {
 	return out
 }
 
+// newReducedCheck allocates the columns of the [reducedCheck] and registers
+// its constraints.
+func (c *compiledQuery) newReducedCheck(ctx *wiop.ContextFrame) reducedCheck {
+	q := c.query
+	m := q.Module
+	nbLimbs := len(q.Result)
+	r := reducedCheck{
+		gap:    make([]*wiop.Column, c.nbDigits),
+		borrow: make([]*wiop.Column, nbLimbs-1),
+	}
+	for j := range r.gap {
+		r.gap[j] = m.NewColumn(ctx.Childf("gap-digit-%d", j), q.InputRound)
+		m.NewRangeCheck(ctx.Childf("gap-range-%d", j), r.gap[j], 1<<c.digitBits)
+	}
+	one := constant(1)
+	for i := range r.borrow {
+		b := m.NewColumn(ctx.Childf("borrow-%d", i), q.InputRound)
+		r.borrow[i] = b
+		m.NewVanishing(ctx.Childf("borrow-boolean-%d", i), wiop.Mul(b.View(), wiop.Sub(b.View(), one)))
+	}
+
+	limbRadix := constant(uint64(1) << q.NbBitsPerLimb)
+	for i := range nbLimbs {
+		lhs := wiop.Add(c.limbFromDigits(c.digits[opResult], i), c.limbFromDigits(r.gap, i))
+		if i == 0 {
+			lhs = wiop.Add(lhs, c.active())
+		} else {
+			lhs = wiop.Add(lhs, r.borrow[i-1].View())
+		}
+		rhs := c.limbFromDigits(c.digits[opModulus], i)
+		if i < len(r.borrow) {
+			rhs = wiop.Add(rhs, wiop.Mul(limbRadix, r.borrow[i].View()))
+		}
+		m.NewVanishing(ctx.Childf("limb-%d", i), wiop.Sub(lhs, rhs))
+	}
+	return r
+}
+
 // polyEval builds the coefficient-basis polynomial Σ_i coeffs[i] * x^i as a
 // symbolic expression using Horner's rule.
 func polyEval(coeffs []wiop.Expression, x wiop.Expression) wiop.Expression {
@@ -335,9 +413,9 @@ func constant(v uint64) *wiop.Constant {
 	return wiop.NewConstantField(e)
 }
 
-// proverAction assigns a query's digit and carry columns from the runtime
-// assignments of its operand limbs. Inactive rows get zero digits and zero
-// (biased) carries.
+// proverAction assigns a query's digit, carry and reduced-result columns from
+// the runtime assignments of its operand limbs. Inactive rows get zero digits,
+// gap and borrows and zero (biased) carries.
 type proverAction struct {
 	c *compiledQuery
 }
@@ -369,6 +447,8 @@ func (a *proverAction) Run(rt *wiop.Runtime) {
 		}
 	}
 	carryVals := newColumnValues(len(c.carry), nbRows)
+	gapVals := newColumnValues(c.nbDigits, nbRows)
+	borrowVals := newColumnValues(nbLimbs-1, nbRows)
 
 	parallel.Execute(nbRows, func(start, stop int) {
 		var rowLimbs, rowDigits [nbOperands][]uint64
@@ -378,6 +458,8 @@ func (a *proverAction) Run(rt *wiop.Runtime) {
 		}
 		scratch := newCarryScratch(c.nbDigits)
 		carries := make([]int64, len(c.carry))
+		gap := make([]uint64, nbLimbs)
+		borrows := make([]uint64, nbLimbs)
 
 		for row := start; row < stop; row++ {
 			if selector != nil {
@@ -404,6 +486,16 @@ func (a *proverAction) Run(rt *wiop.Runtime) {
 			for k, carry := range carries {
 				carryVals[k][row].SetUint64(uint64(carry + bias))
 			}
+
+			gapRow(rowLimbs[opModulus], rowLimbs[opResult], uint(c.query.NbBitsPerLimb), gap, borrows)
+			for i, w := range gap {
+				for d := range c.digitsPerLimb {
+					gapVals[i*c.digitsPerLimb+d][row].SetUint64((w >> (d * c.digitBits)) & digitMask)
+				}
+			}
+			for i := range borrowVals {
+				borrowVals[i][row].SetUint64(borrows[i])
+			}
 		}
 	})
 
@@ -413,12 +505,33 @@ func (a *proverAction) Run(rt *wiop.Runtime) {
 		}
 	}
 	assignColumns(rt, c.carry, carryVals)
+	assignColumns(rt, c.reduced.gap, gapVals)
+	assignColumns(rt, c.reduced.borrow, borrowVals)
 }
 
 // splitDigits writes the little-endian digits of limb into out.
 func splitDigits(limb uint64, digitBits uint, digitMask uint64, out []uint64) {
 	for d := range out {
 		out[d] = (limb >> (uint(d) * digitBits)) & digitMask
+	}
+}
+
+// gapRow computes into gap the limbs of W = modulus - result - 1, and into
+// borrows the borrow out of each limb, for one active row of the
+// [reducedCheck]. When result >= modulus (including modulus = 0) no honest
+// witness exists; W then wraps modulo 2^(limbBits*nbLimbs) and only the
+// dropped top borrow fails the check.
+func gapRow(modulus, result []uint64, limbBits uint, gap, borrows []uint64) {
+	borrow := uint64(1) // the "+ 1" enters as an initial borrow
+	for i := range gap {
+		diff := int64(modulus[i]) - int64(result[i]) - int64(borrow)
+		borrow = 0
+		if diff < 0 {
+			diff += int64(1) << limbBits
+			borrow = 1
+		}
+		gap[i] = uint64(diff)
+		borrows[i] = borrow
 	}
 }
 

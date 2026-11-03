@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/zkc/pkg/schema"
 	"github.com/LFDT-Lineth/zkc/pkg/schema/register"
@@ -189,12 +190,55 @@ func (s *schemaScanner) defineNativeMulmod(mod schema.Module[koalabear.Element],
 		}
 	}
 
+	// zkc gives native modules no active-row selector: it allocates no $ret
+	// for #[native] functions and looks them up unfiltered (see
+	// https://github.com/LFDT-Lineth/zkc/issues/2025). Every row is therefore
+	// active, and [nativeMulmodPaddingFixup] makes the all-zero padding rows
+	// valid. Once zkc exposes a selector for #[native] functions, pass it here
+	// and drop the fixup.
 	moduleWIOP.NewNonNative(
 		s.Sys.Context.Childf("nonnative-%s", modName),
 		nbBitsPerLimb,
 		leftLimbs, rightLimbs, modulusLimbs, resultLimbs, quotientLimbs,
 		nil,
 	)
+	s.TraceFixups = append(s.TraceFixups, &nativeMulmodPaddingFixup{modulus: modulusLimbs})
 
 	return nil
+}
+
+// nativeMulmodPaddingFixup sets Modulus to 1 on every row of a native mulmod
+// module where it is zero. The [wiop.NonNative] query of the module requires
+// Result < Modulus on every row, which the all-zero padding rows of the trace
+// violate, while 0*0 = 0*1 + 0 satisfies it. The rewritten rows remain valid
+// mulmod calls, so the unfiltered call lookups into the module stay sound. An
+// actual call with a zero modulus, which the library functions reject, has no
+// matching row and cannot be proven.
+type nativeMulmodPaddingFixup struct {
+	// modulus holds the little-endian modulus limbs; limb 0 is rewritten.
+	modulus []*wiop.Column
+}
+
+// Run implements [wiop.ProverAction].
+func (f *nativeMulmodPaddingFixup) Run(rt *wiop.Runtime) {
+	m := f.modulus[0].Module
+	nbRows := m.RuntimeSize(rt)
+	limbs := make([]*wiop.ConcreteVector, len(f.modulus))
+	for i, col := range f.modulus {
+		limbs[i] = rt.GetColumnAssignment(col)
+	}
+	limb0 := make([]field.Element, nbRows)
+	for row := range limb0 {
+		zero := true
+		for _, limb := range limbs {
+			v := limb.ElementAtN(m.Padding, nbRows, row).AsBase()
+			zero = zero && v.IsZero()
+		}
+		if zero {
+			limb0[row].SetOne()
+		} else {
+			limb0[row] = limbs[0].ElementAtN(m.Padding, nbRows, row).AsBase()
+		}
+	}
+	rt.OverrideColumn(f.modulus[0], &wiop.ConcreteVector{Plain: field.VecFromBase(limb0)})
 }

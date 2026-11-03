@@ -103,6 +103,10 @@ type schemaScanner struct {
 	//   - the Lisp rendering used to order constraints in [scanConstraints]
 	//     must not expand shared subterms (or must use another ordering key).
 	ExprCache map[schema.ModuleId]map[exprKey]wiop.Expression
+	// TraceFixups are prover actions of [TraceRound] that rewrite trace columns
+	// once they are assigned. [Define] registers them right after the trace
+	// assignment, before any compiler pass.
+	TraceFixups []wiop.ProverAction
 }
 
 // Define registers the arithmetization from a corset air.Schema and trace limits
@@ -142,6 +146,9 @@ func Define(sys *wiop.System, schema *air.Schema[koalabear.Element], traceRound 
 
 		// Registered before any compiler pass, so that it runs first in the round.
 		sys.Rounds[traceRound].RegisterAction(&assignTraceRoundAction{Schema: *schema, Round: traceRound})
+	}
+	for _, a := range scanner.TraceFixups {
+		sys.Rounds[traceRound].RegisterAction(a)
 	}
 
 	sys.Annotations[corsetColumnMapAnnotationKey] = scanner.ColumnIDs

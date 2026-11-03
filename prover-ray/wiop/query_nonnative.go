@@ -13,10 +13,11 @@ var _ Query = (*NonNative)(nil)
 // NonNative is a [Query] asserting that a set of limb-decomposed columns
 // satisfy, on every active row, the non-native modular multiplication relation
 //
-//	Left * Right = Quotient * Modulus + Result
+//	Left * Right = Quotient * Modulus + Result,   0 <= Result < Modulus
 //
 // where each of Left, Right, Modulus, Result and Quotient is represented as a
-// little-endian sequence of limb columns of NbBitsPerLimb bits each.
+// little-endian sequence of limb columns of NbBitsPerLimb bits each. Result
+// is reduced, so an active row with a zero Modulus has no valid witness.
 //
 // A row is active when Selector is 1 on it, or always when Selector is nil.
 // Inactive rows are unconstrained.
@@ -62,7 +63,7 @@ func (q *NonNative) Round() *Round { return q.InputRound }
 
 // Check verifies, on every active row, that the limb-composed operands satisfy
 //
-//	Left*Right = Quotient*Modulus + Result,
+//	Left*Right = Quotient*Modulus + Result,   0 <= Result < Modulus,
 //
 // and that Selector, if any, is boolean.
 //
@@ -143,7 +144,7 @@ func (q *NonNative) Check(rt *Runtime) error {
 				q.context.Path(), row, product.String(), expected.String(),
 			)
 		}
-		if mod.Sign() != 0 && res.Cmp(mod) >= 0 {
+		if res.Cmp(mod) >= 0 {
 			return fmt.Errorf(
 				"wiop: NonNative(%s).Check: row %d: result (%s) is not reduced modulo modulus (%s)",
 				q.context.Path(), row, res.String(), mod.String(),
@@ -183,7 +184,7 @@ func composeLimbsRow(cols []*ConcreteVector, nbBitsPerLimb, nbRows, row int, pd 
 
 // NewNonNative constructs and registers a [NonNative] query on module, asserting
 //
-//	Left*Right = Quotient*Modulus + Result
+//	Left*Right = Quotient*Modulus + Result,   0 <= Result < Modulus
 //
 // over limb-decomposed columns, each limb with nbBitsPerLimb bits, in
 // little-endian ordering, on every row where selector is 1. A nil selector

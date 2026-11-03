@@ -28,7 +28,8 @@ type NonNativeScenario struct {
 	// independent Sys.
 	Sys *wiop.System
 	// AssignHonest assigns the operand limb columns with a witness satisfying
-	// Left*Right = Quotient*Modulus + Result on every active row.
+	// Left*Right = Quotient*Modulus + Result, 0 <= Result < Modulus on every
+	// active row.
 	AssignHonest func(rt *wiop.Runtime)
 	// AssignInvalid assigns operand limb columns that violate the relation on
 	// at least one active row.
@@ -37,19 +38,18 @@ type NonNativeScenario struct {
 
 // NonNativeScenarios returns factory functions for the built-in NonNative
 // compiler-integration fixtures: one per representative input width, plus a
-// handful of exceptional-input fixtures (zero/maximal/undersized modulus,
-// unreduced operands, inactive rows).
+// handful of exceptional-input fixtures (maximal/undersized modulus,
+// unreduced operands, unreduced result, inactive rows).
 func NonNativeScenarios() []func() *NonNativeScenario {
 	return []func() *NonNativeScenario{
 		NewNonNativeU64Scenario,
 		NewNonNativeU128Scenario,
 		NewNonNativeU256Scenario,
-		NewNonNativeModulusZeroScenario,
 		NewNonNativeSelectorScenario,
 		NewNonNativeModulusMaxScenario,
 		NewNonNativeModulusSmallScenario,
 		NewNonNativeUnreducedOperandsScenario,
-		NewNonNativeNonUniqueDecompositionScenario,
+		NewNonNativeUnreducedResultScenario,
 	}
 }
 
@@ -71,20 +71,6 @@ func NewNonNativeU256Scenario() *NonNativeScenario {
 	return newNonNativeRandomScenario("NonNativeU256", 256)
 }
 
-// NewNonNativeModulusZeroScenario returns a NonNative fixture where Modulus
-// is zero on every row. Since Quotient*Modulus is then always zero
-// regardless of Quotient, the relation degenerates to Left*Right = Result.
-// Every operand spans at least two limbs (>= 2^16). Row 0 additionally
-// assigns a non-zero Quotient (Quotient is zero on the other rows) to
-// demonstrate that, when Modulus is zero, Quotient can take any value.
-func NewNonNativeModulusZeroScenario() *NonNativeScenario {
-	lefts := []*big.Int{big.NewInt(100003), big.NewInt(100019), big.NewInt(100043), big.NewInt(100057)}
-	rights := []*big.Int{big.NewInt(100007), big.NewInt(100021), big.NewInt(100049), big.NewInt(100069)}
-	moduli := []*big.Int{big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0)}
-	quotientOverride := []*big.Int{big.NewInt(42), nil, nil, nil}
-	return newNonNativeScenario("NonNativeModulusZero", 64, lefts, rights, moduli, quotientOverride)
-}
-
 // NewNonNativeSelectorScenario returns a NonNative fixture with a selector
 // column, whose inactive rows hold witnesses that no active row could:
 //
@@ -92,8 +78,8 @@ func NewNonNativeModulusZeroScenario() *NonNativeScenario {
 //   - row 2: Result = 2^70, whose top 16-bit limb is out of range, and the
 //     relation does not hold.
 //
-// Rows 0 and 3 are active and honest. AssignInvalid perturbs the Result of
-// row 3.
+// Rows 0 and 3 are active and honest. AssignInvalid activates row 1, where a
+// zero Modulus leaves no Result < Modulus.
 func NewNonNativeSelectorScenario() *NonNativeScenario {
 	garbage := new(big.Int).Lsh(big.NewInt(1), 70)
 	return newNonNativeFixture(nonNativeFixture{
@@ -106,6 +92,9 @@ func NewNonNativeSelectorScenario() *NonNativeScenario {
 		selector:         []uint64{1, 0, 0, 1},
 		tamperHonest: func(v *nonNativeRows) {
 			v.quotients[2], v.results[2] = big.NewInt(0), garbage
+		},
+		tamperInvalid: func(v *nonNativeRows) {
+			v.selector[1] = 1
 		},
 	})
 }
@@ -188,37 +177,36 @@ func NewNonNativeUnreducedOperandsScenario() *NonNativeScenario {
 	return newNonNativeScenario("NonNativeUnreducedOperands", 64, lefts, rights, moduli, nil)
 }
 
-// NewNonNativeNonUniqueDecompositionScenario documents a known limitation of
-// the compiled [wiop.NonNative] protocol: it enforces only the algebraic
-// identity Left*Right = Quotient*Modulus + Result, not that Result is the
-// unique, canonical remainder (0 <= Result < Modulus). Given any valid
-// decomposition, the pair (Quotient-1, Result+Modulus) satisfies the exact same
-// identity:
+// NewNonNativeUnreducedResultScenario returns a NonNative fixture whose
+// invalid witness is a non-canonical decomposition: given a valid
+// decomposition, the pair (Quotient-1, Result+Modulus) satisfies the same
+// identity
 //
 //	(Quotient-1)*Modulus + (Result+Modulus) = Quotient*Modulus + Result
 //
-// — and is therefore accepted by the compiled proof just as readily as the
-// canonical pair, even though [wiop.NonNative.Check] (a non-cryptographic,
-// convenience check only) does reject it as "not reduced".
-//
-// This is fine for uses that only care about the algebraic relation; it only
-// matters when a caller needs Result to be canonical, e.g. when parsing or
-// hashing it downstream. Such callers must add their own range check binding
-// Result < Modulus — the nonnative compiler does not provide one.
+// but Result+Modulus >= Modulus, which the compiled query must reject.
 //
 // Two limbs, 16 bits/limb:
 //
 //   - left = 99991, right = 99989, modulus = 100000
-//   - canonical: quotient = 99980, result = 99
+//   - honest: quotient = 99980, result = 99
 //     (99991*99989 = 99980*100000 + 99)
-//   - alternate: quotient = 99979, result = 100099 = 99+100000
-//     (99991*99989 = 99979*100000 + 100099 too, but 100099 >= modulus)
-func NewNonNativeNonUniqueDecompositionScenario() *NonNativeScenario {
+//   - invalid on row 1: quotient = 99979, result = 100099 = 99+100000
+func NewNonNativeUnreducedResultScenario() *NonNativeScenario {
 	lefts := []*big.Int{big.NewInt(99991), big.NewInt(99991)}
 	rights := []*big.Int{big.NewInt(99989), big.NewInt(99989)}
 	moduli := []*big.Int{big.NewInt(100000), big.NewInt(100000)}
-	quotientOverride := []*big.Int{big.NewInt(99980), big.NewInt(99979)}
-	return newNonNativeScenario("NonNativeNonUniqueDecomposition", 64, lefts, rights, moduli, quotientOverride)
+	return newNonNativeFixture(nonNativeFixture{
+		name:   "NonNativeUnreducedResult",
+		nbBits: 64,
+		lefts:  lefts,
+		rights: rights,
+		moduli: moduli,
+		tamperInvalid: func(v *nonNativeRows) {
+			v.quotients[1].Sub(v.quotients[1], big.NewInt(1))
+			v.results[1].Add(v.results[1], v.moduli[1])
+		},
+	})
 }
 
 // newNonNativeRandomScenario builds a NonNative fixture for a given operand
