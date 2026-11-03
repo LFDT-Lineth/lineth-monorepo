@@ -51,8 +51,20 @@ func TestClassifyGuestOutput(t *testing.T) {
 		assert.Contains(t, err.Error(), "no guest_output")
 	})
 
-	preSpec := append([]byte{0x00, 0x03}, samplePublicInputs...)
-	preSpec = append(preSpec, keccak256(samplePublicInputs)...)
+	t.Run("a single blob in guest_output is not the split frame", func(t *testing.T) {
+		out := map[string]bit.Array{guestOutputMemory: bitsFromBytes(valid...)}
+		_, err := classifyGuestOutput(out, nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), fmt.Sprintf("guest wrote %d bytes to guest_output, want the 32-byte hash", len(valid)))
+	})
+
+	t.Run("hash without guest_log is reported", func(t *testing.T) {
+		out := map[string]bit.Array{guestOutputMemory: bitsFromBytes(valid[:guestOutputHashSize]...)}
+		_, err := classifyGuestOutput(out, nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "guest wrote the hash but no guest_log")
+	})
+
 	badHash := specFrame(guestOutputSchemaID, samplePublicInputs)
 	badHash[0] ^= 0xff
 
@@ -60,10 +72,9 @@ func TestClassifyGuestOutput(t *testing.T) {
 		out     []byte
 		wantErr string
 	}{
-		"pre-spec layout": {preSpec, "the spec expects keccak256(0x0003 || public inputs)"},
 		"hash mismatch":   {badHash, "hash does not match"},
 		"wrong schema id": {specFrame(0x0002, samplePublicInputs), "schema id is 0x0002, want 0x0003"},
-		"too short":       {make([]byte, 33), "shorter than the hash and schema id"},
+		"too short":       {make([]byte, 33), "shorter than the schema id"},
 	}
 	for name, tc := range rejected {
 		t.Run(name, func(t *testing.T) {

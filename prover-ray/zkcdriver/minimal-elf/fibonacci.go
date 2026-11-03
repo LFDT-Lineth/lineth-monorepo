@@ -20,7 +20,7 @@ const fibonacciMaxN = 0x7FFFF7FF
 // plus an 18-instruction tail shard.
 //
 // The result is stored in scratch memory 768 bytes past the auipc base,
-// clear of the 76-byte .text, as in [allInOneSectionData].
+// clear of the 92-byte .text, as in [allInOneSectionData].
 func FibonacciELF(n int) (elf, output []byte) {
 	if n < 0 || n > fibonacciMaxN {
 		panic(fmt.Sprintf("minimalelf: FibonacciELF N=%d outside [0, %d]", n, fibonacciMaxN))
