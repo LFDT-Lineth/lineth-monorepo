@@ -26,6 +26,8 @@ jobs:
 
       - name: Setup Environment
         uses: ./.github/actions/setup-riscv-guests
+        with:
+          zkevm-fixtures: 'true'
 
       - name: Check Zig formatting
         run: make fmt-check
@@ -47,6 +49,8 @@ jobs:
 
       - name: Setup Environment
         uses: ./.github/actions/setup-riscv-guests
+        with:
+          zkevm-fixtures: 'true'
 
       - name: Run extended-guest reference-test guards
         run: make reference-test
