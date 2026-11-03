@@ -3,6 +3,7 @@ package wiop
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	field "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
@@ -198,6 +199,19 @@ type ArithmeticOperation struct {
 	// prog is the compiled bytecode representation of this subtree. It is
 	// nil until the first call to EvaluateVector.
 	prog *compiledProgram
+	// isExtensionCache and degreeFactorCache memoise IsExtension and
+	// DegreeFactor, which are otherwise recomputed by a walk that re-descends
+	// into every shared subexpression. Zero means "not computed yet";
+	// otherwise isExtensionCache is 1 (false) or 2 (true) and
+	// degreeFactorCache holds the factor plus one. They are written only
+	// after a successful computation, so a panicking call (DegreeFactor on a
+	// Div) caches nothing. Degree is deliberately not memoised: it depends on
+	// the module size, which may not be known yet.
+	isExtensionCache  atomic.Int32
+	degreeFactorCache atomic.Int64
+	// singleOnce guards singleProg, the compiled form used by EvaluateSingle.
+	singleOnce sync.Once
+	singleProg *scalarProgram
 }
 
 // NewArithmeticOperation constructs an ArithmeticOperation, enforcing the
@@ -219,12 +233,22 @@ func NewArithmeticOperation(op ArithmeticOperator, operands ...Expression) *Arit
 // IsExtension implements [Expression]. Returns true if any operand involves
 // an extended-domain column or cell.
 func (a *ArithmeticOperation) IsExtension() bool {
+	if c := a.isExtensionCache.Load(); c != 0 {
+		return c == 2
+	}
+	res := false
 	for _, o := range a.Operands {
 		if o.IsExtension() {
-			return true
+			res = true
+			break
 		}
 	}
-	return false
+	if res {
+		a.isExtensionCache.Store(2)
+	} else {
+		a.isExtensionCache.Store(1)
+	}
+	return res
 }
 
 // IsMultiValued implements [Expression]. Returns true if any operand is
@@ -256,11 +280,16 @@ func (a *ArithmeticOperation) Degree() int {
 // DegreeFactor implements [Expression]. Combines the degree factors of the
 // operands using the operator's own degree-combination rule.
 func (a *ArithmeticOperation) DegreeFactor() int {
+	if c := a.degreeFactorCache.Load(); c != 0 {
+		return int(c - 1)
+	}
 	factors := make([]int, len(a.Operands))
 	for i, o := range a.Operands {
 		factors[i] = o.DegreeFactor()
 	}
-	return a.Operator.combineDegreeFactor(factors)
+	res := a.Operator.combineDegreeFactor(factors)
+	a.degreeFactorCache.Store(int64(res) + 1)
+	return res
 }
 
 // Size implements [Expression]. Returns the size of the first vector-valued
@@ -307,33 +336,15 @@ func (a *ArithmeticOperation) EvaluateVector(rt *Runtime) ConcreteVector {
 
 // EvaluateSingle implements [Expression].
 // Panics if IsMultiValued() is true.
+//
+// On the first call the subtree is compiled into a [scalarProgram] listing its
+// distinct nodes, so that each shared subexpression is evaluated once per call.
 func (a *ArithmeticOperation) EvaluateSingle(rt *Runtime) ConcreteField {
 	if a.IsMultiValued() {
 		panic("wiop: EvaluateSingle() called on a vector ArithmeticOperation; check IsMultiValued() first")
 	}
-	eval := func(i int) field.Gen { return a.Operands[i].EvaluateSingle(rt).Value }
-	var v field.Gen
-	switch a.Operator {
-	case ArithmeticOperatorAdd:
-		v = eval(0).Add(eval(1))
-	case ArithmeticOperatorSub:
-		v = eval(0).Sub(eval(1))
-	case ArithmeticOperatorMul:
-		v = eval(0).Mul(eval(1))
-	case ArithmeticOperatorDiv:
-		v = eval(0).Div(eval(1))
-	case ArithmeticOperatorDouble:
-		e := eval(0)
-		v = e.Add(e)
-	case ArithmeticOperatorSquare:
-		v = eval(0).Square()
-	case ArithmeticOperatorNegate:
-		v = eval(0).Neg()
-	case ArithmeticOperatorInverse:
-		v = eval(0).Inverse()
-	default:
-		panic(fmt.Sprintf("wiop: ArithmeticOperation.EvaluateSingle: unknown operator %v", a.Operator))
-	}
+	a.singleOnce.Do(func() { a.singleProg = compileScalar(a) })
+	v := a.singleProg.evaluate(rt)
 	return ConcreteField{Value: v, promise: a}
 }
 
@@ -515,4 +526,76 @@ func EvaluateAsExtVec(rt *Runtime, expr Expression, n int) []field.Ext {
 		out[i] = pad
 	}
 	return out
+}
+
+// scalarProgram is the compiled form of a scalar [ArithmeticOperation]
+// subtree used by EvaluateSingle: its distinct nodes (by pointer) in
+// post-order, so that operands always precede the nodes reading them.
+type scalarProgram struct {
+	nodes []scalarNode
+}
+
+// scalarNode is a leaf, evaluated through its own EvaluateSingle, or an
+// operator over earlier nodes.
+type scalarNode struct {
+	leaf     Expression // nil for an operator node
+	operator ArithmeticOperator
+	operands [2]int // indices into scalarProgram.nodes; -1 when absent
+}
+
+func compileScalar(root *ArithmeticOperation) *scalarProgram {
+	p := &scalarProgram{}
+	index := map[Expression]int{}
+	var visit func(e Expression) int
+	visit = func(e Expression) int {
+		if i, ok := index[e]; ok {
+			return i
+		}
+		n := scalarNode{operands: [2]int{-1, -1}}
+		if op, ok := e.(*ArithmeticOperation); ok {
+			n.operator = op.Operator
+			for k, o := range op.Operands {
+				n.operands[k] = visit(o)
+			}
+		} else {
+			n.leaf = e
+		}
+		p.nodes = append(p.nodes, n)
+		index[e] = len(p.nodes) - 1
+		return len(p.nodes) - 1
+	}
+	visit(root)
+	return p
+}
+
+func (p *scalarProgram) evaluate(rt *Runtime) field.Gen {
+	vals := make([]field.Gen, len(p.nodes))
+	for i, n := range p.nodes {
+		if n.leaf != nil {
+			vals[i] = n.leaf.EvaluateSingle(rt).Value
+			continue
+		}
+		a0 := vals[n.operands[0]]
+		switch n.operator {
+		case ArithmeticOperatorAdd:
+			vals[i] = a0.Add(vals[n.operands[1]])
+		case ArithmeticOperatorSub:
+			vals[i] = a0.Sub(vals[n.operands[1]])
+		case ArithmeticOperatorMul:
+			vals[i] = a0.Mul(vals[n.operands[1]])
+		case ArithmeticOperatorDiv:
+			vals[i] = a0.Div(vals[n.operands[1]])
+		case ArithmeticOperatorDouble:
+			vals[i] = a0.Add(a0)
+		case ArithmeticOperatorSquare:
+			vals[i] = a0.Square()
+		case ArithmeticOperatorNegate:
+			vals[i] = a0.Neg()
+		case ArithmeticOperatorInverse:
+			vals[i] = a0.Inverse()
+		default:
+			panic(fmt.Sprintf("wiop: ArithmeticOperation.EvaluateSingle: unknown operator %v", n.operator))
+		}
+	}
+	return vals[len(vals)-1]
 }
