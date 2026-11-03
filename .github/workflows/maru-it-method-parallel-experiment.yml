@@ -53,4 +53,7 @@ jobs:
       maru_it_iterations: ${{ inputs.iterations || '[1]' }}
       upload_coverage: false
       artifact_suffix: '-method-parallel'
+      # The experiment measures the integration suite only; unit tests run in the regular PR pipeline.
+      # Skipping them here also keeps their (unrelated) load-sensitive flakes out of the data.
+      run_unit_tests: false
     secrets: inherit

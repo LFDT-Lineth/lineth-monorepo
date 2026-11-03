@@ -19,6 +19,12 @@ on:
         required: false
         type: string
         default: '0'
+      # False skips the unit-test phase (buildNeeded) and runs only the integration suite.
+      # Experiment runs use this so unrelated load-sensitive unit tests don't pollute flake data.
+      run_unit_tests:
+        required: false
+        type: boolean
+        default: true
       # JSON array of iteration indexes; each entry repeats the full suite as a separate matrix job.
       # Use "[1,2,3,4,5,6,7,8,9,10]" for flake-hunting runs.
       maru_it_iterations:
@@ -65,6 +71,7 @@ jobs:
       - name: Setup Besu in maven local
         uses: ./.github/actions/setup-besu-maven-local
       - name: Build maru and Unit tests
+        if: ${{ inputs.run_unit_tests }}
         run: |
           ./gradlew -V maru:app:buildNeeded
       - name: Run integration tests
