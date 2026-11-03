@@ -1,13 +1,11 @@
 //! Runs a rollup guest ELF under zkc on a request and compares the output it prints with the
 //! expected output byte for byte: `zkc_smoke --elf PATH --input PATH --expected PATH --makefile
-//! PATH [--zkc-flags TEXT]`. The makefile is arithmetization's, which defines the zkc run.
+//! PATH [--zkc-flags TEXT]`. The makefile is arithmetization's, which defines the zkc run. zkc
+//! prints the output's 32-byte commitment as `guest_output` and the frame after it as `guest_log`.
 
 const std = @import("std");
 
 const usage = "usage: zkc_smoke --elf PATH --input PATH --expected PATH --makefile PATH [--zkc-flags TEXT]\n";
-
-const output_assignment = "guest_output =";
-const output_prefix = "guest_output = 0x";
 
 pub fn main(init: std.process.Init) !void {
     const arena = init.arena.allocator();
@@ -55,7 +53,9 @@ pub fn main(init: std.process.Init) !void {
         else => return error.ZkcCrashed,
     }
 
-    const actual = try parseGuestOutput(arena, text);
+    const commitment = try reportedBytes(arena, text, "guest_output");
+    const frame = try reportedBytes(arena, text, "guest_log");
+    const actual = try std.mem.concat(arena, u8, &.{ commitment, frame });
     if (!std.mem.eql(u8, expected, actual)) {
         const common = std.mem.indexOfDiff(u8, expected, actual) orelse @min(expected.len, actual.len);
         std.debug.print(
@@ -67,22 +67,24 @@ pub fn main(init: std.process.Init) !void {
     std.debug.print("the guest output equals the native one ({d} bytes)\n", .{actual.len});
 }
 
-/// The bytes of the `guest_output = 0x...` line of zkc's report; exactly one such line holds an
-/// even number of hex digits.
-fn parseGuestOutput(arena: std.mem.Allocator, text: []const u8) ![]u8 {
+/// The bytes of the `<name> = 0x...` line of zkc's report; exactly one such line holds an even
+/// number of hex digits.
+fn reportedBytes(arena: std.mem.Allocator, text: []const u8, comptime name: []const u8) ![]u8 {
+    const assignment = name ++ " =";
+    const prefix = name ++ " = 0x";
     var hex: ?[]const u8 = null;
     var lines = std.mem.splitScalar(u8, text, '\n');
     while (lines.next()) |raw_line| {
         const line = std.mem.trim(u8, raw_line, " \t\r");
-        if (!std.mem.startsWith(u8, line, output_assignment)) continue;
-        if (hex != null) return error.DuplicateGuestOutput;
-        if (!std.mem.startsWith(u8, line, output_prefix)) return error.InvalidGuestOutput;
-        hex = line[output_prefix.len..];
+        if (!std.mem.startsWith(u8, line, assignment)) continue;
+        if (hex != null) return error.DuplicateReportLine;
+        if (!std.mem.startsWith(u8, line, prefix)) return error.InvalidReportLine;
+        hex = line[prefix.len..];
     }
-    const digits = hex orelse return error.MissingGuestOutput;
-    if (digits.len % 2 != 0) return error.InvalidGuestOutput;
+    const digits = hex orelse return error.MissingReportLine;
+    if (digits.len % 2 != 0) return error.InvalidReportLine;
     const bytes = try arena.alloc(u8, digits.len / 2);
-    _ = std.fmt.hexToBytes(bytes, digits) catch return error.InvalidGuestOutput;
+    _ = std.fmt.hexToBytes(bytes, digits) catch return error.InvalidReportLine;
     return bytes;
 }
 
