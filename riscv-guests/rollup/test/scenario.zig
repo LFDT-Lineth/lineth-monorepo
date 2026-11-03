@@ -256,11 +256,11 @@ pub fn build(a: Allocator, conflations_in: []const Conflation, options: Options)
     for (conflations_in, segments, segment_ends, 0..) |conflation, *segment, *segment_end, index| {
         const fault: SegmentFault = if (index < options.segment_faults.len) options.segment_faults[index] else .none;
         const frame = switch (fault) {
-            .none => try zstd_compressor.compress(a, conflation.payload, .{ .dictionary = dictionary }),
+            .none => try zstd_compressor.compress(a, conflation.payload, dictionary),
             .other_payload => blk: {
                 const other = try a.dupe(u8, conflation.payload);
                 other[other.len - 1] ^= 0x01;
-                break :blk try zstd_compressor.compress(a, other, .{ .dictionary = dictionary });
+                break :blk try zstd_compressor.compress(a, other, dictionary);
             },
             .not_a_frame => try a.dupe(u8, "these bytes are not a zstd frame"),
         };

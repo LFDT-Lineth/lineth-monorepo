@@ -38,7 +38,7 @@ const golden_frames = [_]struct { import_name: []const u8, path: []const u8 }{
     .{ .import_name = "golden_error_zero_seq_extraneous", .path = "tests/golden-decompression-errors/zeroSeq_extraneous.zst" },
 };
 
-/// libzstd sources of the single-threaded compressor, linked into native tests and tools only.
+/// libzstd sources of the single-threaded compressor, linked into the native `zstd_compressor` module only.
 const compressor_sources = [_][]const u8{
     "compress/fse_compress.c",
     "compress/hist.c",
@@ -142,12 +142,20 @@ fn addHostBuild(
     const package = hostPackage(b, target, .Debug, zstd);
 
     const compressor = b.addModule("zstd_compressor", .{
-        .root_source_file = b.path("test/zstd_compressor.zig"),
+        .root_source_file = b.path("src/zstd_compressor.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{.{ .name = "zstd_c", .module = zstd.declarations }},
     });
     compressor.addCSourceFiles(.{ .root = zstd.source.path("lib"), .files = &compressor_sources });
+
+    // Frames in every form the guest decodes or must reject, for the tests of the decoder.
+    const zstd_frames = b.createModule(.{
+        .root_source_file = b.path("test/support/zstd_frames.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{.{ .name = "zstd_c", .module = zstd.declarations }},
+    });
 
     const support = b.addModule("support", .{
         .root_source_file = b.path("test/support/root.zig"),
@@ -161,23 +169,24 @@ fn addHostBuild(
         .optimize = optimize,
     });
 
-    const conflation_sample = b.createModule(.{
-        .root_source_file = b.path("test/conflation_sample.zig"),
-        .target = target,
+    const shared: SharedModules = .{
+        .compressor = compressor,
+        .zstd_frames = zstd_frames,
+        .support = support,
+        .ef_blocks = ef_blocks,
         .optimize = optimize,
-        .imports = &.{
-            .{ .name = "lineth_da", .module = package },
-            .{ .name = "support", .module = support },
-        },
-    });
+    };
+    const readers = shared.readersOf(b, target, package);
 
     const native: common.NativeOptions = .{
         .target = target,
         .imports = &.{
             .{ .name = "lineth_da", .module = package },
             .{ .name = "zstd_compressor", .module = compressor },
+            .{ .name = "zstd_frames", .module = zstd_frames },
             .{ .name = "support", .module = support },
-            .{ .name = "conflation_sample", .module = conflation_sample },
+            .{ .name = "ef_conflations", .module = readers.ef_conflations },
+            .{ .name = "da_chunks", .module = readers.da_chunks },
         },
     };
     const test_step = b.step("test", "Run native Zig unit tests for the lineth_da package");
@@ -185,12 +194,50 @@ fn addHostBuild(
     addGoldenFrames(tests, zstd.source);
     const tools = common.addTools(b, native, .{});
     addKzgReferences(b, target, tests, tools, support);
-    const reference = addReferenceTests(b, test_step, target, zstd, ef_blocks, zkevm_fixtures);
-    linkHostCrypto(b, target, &.{ tests, tools, reference });
+    const reference_tests = addReferenceTests(b, test_step, target, zstd, shared, zkevm_fixtures);
+    linkHostCrypto(b, target, &.{ tests, tools, reference_tests });
 
     var tool_iter = tools.valueIterator();
     while (tool_iter.next()) |tool| b.installArtifact(tool.*);
 }
+
+/// The test-side modules that are independent of the package, shared by every instance of it.
+const SharedModules = struct {
+    compressor: *std.Build.Module,
+    zstd_frames: *std.Build.Module,
+    support: *std.Build.Module,
+    ef_blocks: *std.Build.Module,
+    optimize: std.builtin.OptimizeMode,
+
+    /// The test-side modules that read `package`, which are one per instance of it: the conflations
+    /// of real blocks, and the chunks of a DA stream.
+    fn readersOf(self: SharedModules, b: *std.Build, target: std.Build.ResolvedTarget, package: *std.Build.Module) struct {
+        ef_conflations: *std.Build.Module,
+        da_chunks: *std.Build.Module,
+    } {
+        return .{
+            .ef_conflations = b.createModule(.{
+                .root_source_file = b.path("test/support/ef_conflations.zig"),
+                .target = target,
+                .optimize = self.optimize,
+                .imports = &.{
+                    .{ .name = "lineth_da", .module = package },
+                    .{ .name = "ef_blocks", .module = self.ef_blocks },
+                },
+            }),
+            .da_chunks = b.createModule(.{
+                .root_source_file = b.path("test/support/da_chunks.zig"),
+                .target = target,
+                .optimize = self.optimize,
+                .imports = &.{
+                    .{ .name = "lineth_da", .module = package },
+                    .{ .name = "support", .module = self.support },
+                    .{ .name = "zstd_compressor", .module = self.compressor },
+                },
+            }),
+        };
+    }
+};
 
 /// Upstream's decompression regression frames, embedded in the zstd test root.
 fn addGoldenFrames(tests: std.StringHashMap(*std.Build.Step.Compile), zstd_source: *std.Build.Dependency) void {
@@ -217,7 +264,7 @@ fn addKzgReferences(
     paths.addOptionPath("trusted_setup", c_kzg.path("src/trusted_setup.txt"));
     const paths_module = paths.createModule();
     const reference_vectors = b.createModule(.{
-        .root_source_file = b.path("test/reference_vectors.zig"),
+        .root_source_file = b.path("test/support/reference_vectors.zig"),
         .target = target,
         .optimize = .Debug,
         .imports = &.{.{ .name = "c_kzg_paths", .module = paths_module }},
@@ -243,7 +290,7 @@ fn addReferenceTests(
     test_step: *std.Build.Step,
     target: std.Build.ResolvedTarget,
     zstd: Zstd,
-    ef_blocks: *std.Build.Module,
+    shared: SharedModules,
     zkevm_fixtures: ?std.Build.LazyPath,
 ) std.StringHashMap(*std.Build.Step.Compile) {
     const none = std.StringHashMap(*std.Build.Step.Compile).init(b.allocator);
@@ -255,13 +302,19 @@ fn addReferenceTests(
     const paths = b.addOptions();
     paths.addOptionPath("amsterdam_blocks", fixtures.path(b, "blockchain_tests/for_amsterdam"));
     const package = hostPackage(b, target, .ReleaseSafe, zstd);
+    const readers = shared.readersOf(b, target, package);
     return common.addTests(b, test_step, .{
         .target = target,
         .optimize = .ReleaseSafe,
         .imports = &.{
             .{ .name = "lineth_da", .module = package },
             .{ .name = "ef_fixtures", .module = paths.createModule() },
-            .{ .name = "ef_blocks", .module = ef_blocks },
+            .{ .name = "ef_blocks", .module = shared.ef_blocks },
+            .{ .name = "zstd_compressor", .module = shared.compressor },
+            .{ .name = "zstd_frames", .module = shared.zstd_frames },
+            .{ .name = "support", .module = shared.support },
+            .{ .name = "ef_conflations", .module = readers.ef_conflations },
+            .{ .name = "da_chunks", .module = readers.da_chunks },
         },
     }, .{ .dir = "test/reference" });
 }
