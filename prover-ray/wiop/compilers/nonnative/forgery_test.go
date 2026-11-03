@@ -19,8 +19,9 @@ import (
 // breaks a digit layout whose coefficients can wrap modulo the field modulus
 // p: on row 0 the prover claims Result + p, re-solves the carries over the
 // field so that the polynomial identity still vanishes coefficient-wise, and
-// keeps every other column honest. The forged witness satisfies the identity
-// (asserted below), so only the digit and carry range checks can reject it.
+// re-solves the Result < Modulus witness, keeping every other column honest.
+// The forged witness satisfies the identity (asserted below) and Result + p
+// stays below Modulus, so only the digit and carry range checks can reject it.
 //
 // With 16-bit digits the forged carries stay below 2^18 and Result + p has
 // valid 16-bit limbs, so such a witness used to be accepted.
@@ -36,6 +37,8 @@ func TestFullPipeline_RejectsResultOffByFieldModulus(t *testing.T) {
 			forge := &forgeResultPlusModulus{query: q}
 			hook := func(*wiop.System) error {
 				forge.carry = compiledColumns(q.Module, "/carry/limb-")
+				forge.gapDigits = compiledColumns(q.Module, "/reduced/gap-digit-")
+				forge.borrows = compiledColumns(q.Module, "/reduced/borrow-")
 				// Limbs are their own digits when the compiler does not split them.
 				if forge.resultDigits = compiledColumns(q.Module, "/result/digit-"); len(forge.resultDigits) == 0 {
 					forge.resultDigits = q.Result
@@ -49,9 +52,10 @@ func TestFullPipeline_RejectsResultOffByFieldModulus(t *testing.T) {
 			)...))
 			require.NotEmpty(t, forge.resultDigits, "result digit columns not found")
 			require.NotEmpty(t, forge.carry, "carry columns not found")
+			require.NotEmpty(t, forge.gapDigits, "gap digit columns not found")
 
 			err := proveAndVerify(sc.Sys, sc.AssignHonest)
-			require.True(t, forge.forged, "Result + p must fit the result limbs")
+			require.True(t, forge.forged, "Result + p must fit the result limbs and stay below Modulus")
 			require.True(t, forge.identityHolds, "the forged witness must satisfy the identity modulo p")
 			assert.Error(t, err, "full pipeline must reject Result + p")
 		})
@@ -95,6 +99,8 @@ type forgeResultPlusModulus struct {
 	query        *wiop.NonNative
 	resultDigits []*wiop.Column
 	carry        []*wiop.Column
+	gapDigits    []*wiop.Column
+	borrows      []*wiop.Column
 
 	forged        bool
 	identityHolds bool
@@ -110,7 +116,8 @@ func (f *forgeResultPlusModulus) Run(rt *wiop.Runtime) {
 	oldDigits := readRow(rt, f.resultDigits, row)
 	forged := composeRow(rt, q.Result, row, limbBits)
 	forged.Add(forged, field.Modulus())
-	if forged.BitLen() > len(q.Result)*int(limbBits) {
+	modulus := composeRow(rt, q.Modulus, row, limbBits)
+	if forged.Cmp(modulus) >= 0 {
 		return
 	}
 	newLimbs := splitBits(forged, len(q.Result), limbBits)
@@ -144,6 +151,20 @@ func (f *forgeResultPlusModulus) Run(rt *wiop.Runtime) {
 	overrideRow(rt, q.Result, row, newLimbs)
 	overrideRow(rt, f.resultDigits, row, newDigits)
 	overrideRow(rt, f.carry, row, carries)
+
+	// Result + W + 1 = Modulus, with the limb borrows of that addition.
+	gap := new(big.Int).Sub(modulus, forged)
+	gap.Sub(gap, big.NewInt(1))
+	overrideRow(rt, f.gapDigits, row, splitBits(gap, len(f.gapDigits), digitBits))
+	borrows := make([]field.Element, len(f.borrows))
+	for i := range borrows {
+		low := new(big.Int).Lsh(big.NewInt(1), limbBits*uint(i+1))
+		sum := new(big.Int).Mod(forged, low)
+		sum.Add(sum, new(big.Int).Mod(gap, low))
+		sum.Add(sum, big.NewInt(1))
+		borrows[i].SetBigInt(sum.Rsh(sum, limbBits*uint(i+1)))
+	}
+	overrideRow(rt, f.borrows, row, borrows)
 	f.forged = true
 }
 

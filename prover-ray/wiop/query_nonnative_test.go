@@ -70,13 +70,10 @@ func TestNonNative_Check_BoundaryValues(t *testing.T) {
 			wantErr: true, wantErrSubstring: "not reduced",
 		},
 		{
-			// modulus=0 makes quotient*modulus always zero regardless of
-			// quotient, so the relation degenerates to left*right=result.
-			name: "modulus zero: honest", left: 3, right: 4, modulus: 0, quo: 999, result: 12,
-		},
-		{
-			name: "modulus zero: invalid", left: 3, right: 4, modulus: 0, quo: 0, result: 13,
-			wantErr: true, wantErrSubstring: "left*right",
+			// left*right = quotient*modulus + result holds, but no result is
+			// below a zero modulus.
+			name: "invalid: modulus zero", left: 3, right: 4, modulus: 0, quo: 999, result: 12,
+			wantErr: true, wantErrSubstring: "not reduced",
 		},
 		{
 			name: "zero operands", left: 0, right: 0, modulus: 5, quo: 0, result: 0,
