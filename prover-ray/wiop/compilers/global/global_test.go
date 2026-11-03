@@ -160,9 +160,9 @@ func TestCompile_CompletenessWithStalePools(t *testing.T) {
 }
 
 // TestCompile_AllVanishingsReduced checks that a module whose vanishings were
-// all reduced by an earlier pass compiles and proves as a no-op instead of
-// building zero-ratio coset domains. Both a static and a dynamic module are
-// covered, the dynamic one exercising the runtime path.
+// all reduced by an earlier pass compiles, proves and verifies, its quotient
+// having no bucket. Both a static and a dynamic module are covered, the
+// dynamic one exercising the runtime path.
 func TestCompile_AllVanishingsReduced(t *testing.T) {
 	for _, dynamic := range []bool{false, true} {
 		sys := wiop.NewSystemf("gl-all-reduced")
@@ -181,4 +181,51 @@ func TestCompile_AllVanishingsReduced(t *testing.T) {
 		proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, colVec(8, 3, 5)) })
 		require.NoError(t, sys.Verify(proof, pub), "dynamic=%v", dynamic)
 	}
+}
+
+// TestCompile_MixedRatiosShareColumns runs one module whose vanishings fall in
+// buckets of ratio 1, 2 and 4, all reading the same column at shifts -1, 0
+// and +1: every bucket reads its own subset of the module's cosets of that
+// column, at offsets that wrap within a coset. The argument must accept the
+// constant witness and reject one wrong row.
+func TestCompile_MixedRatiosShareColumns(t *testing.T) {
+	const size = 16
+	build := func() (*wiop.System, *wiop.Column) {
+		sys := wiop.NewSystemf("gl-mixed-ratios")
+		r0 := sys.NewRound()
+		mod := sys.NewSizedModule(sys.Context.Childf("mod"), size, wiop.PaddingDirectionNone)
+		col := mod.NewColumn(sys.Context.Childf("col"), r0)
+		d := func(shift int) wiop.Expression {
+			return wiop.Sub(col.View().Shift(shift), wiop.NewConstantField(field.NewElement(7)))
+		}
+		// Degree 1 with one cancelled row: ratio 1.
+		mod.NewVanishing(sys.Context.Childf("r1"), wiop.Add(d(0), wiop.Sub(d(-1), d(-1))))
+		// Degree 3 with one cancelled row: ratio 2.
+		mod.NewVanishing(sys.Context.Childf("r2"), wiop.Mul(wiop.Add(d(0), d(-1)), wiop.Mul(d(0), d(0))))
+		// Degree 5 with one cancelled row: ratio 4.
+		d2 := wiop.Mul(d(0), d(0))
+		mod.NewVanishing(sys.Context.Childf("r4"), wiop.Mul(wiop.Add(d(0), d(1)), wiop.Mul(d2, d2)))
+		global.Compile(sys)
+		pcs.Compile(sys)
+		return sys, col
+	}
+	witness := func(bad bool) *wiop.ConcreteVector {
+		v := colVec(size, 5, 7)
+		elems := v.Plain.AsBase()
+		for i := range elems {
+			elems[i].SetUint64(7)
+		}
+		if bad {
+			elems[5].SetUint64(8)
+		}
+		return v
+	}
+
+	sys, col := build()
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, witness(false)) })
+	require.NoError(t, sys.Verify(proof, pub), "honest witness must verify")
+
+	sys, col = build()
+	proof, pub = sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, witness(true)) })
+	assert.Error(t, sys.Verify(proof, pub), "a wrong row must be rejected")
 }

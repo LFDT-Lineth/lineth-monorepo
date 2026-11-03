@@ -595,8 +595,8 @@ func (q *moduleQuotient) run(rt *wiop.Runtime) {
 	R := q.maxRatio
 
 	// The domains depend only on the size and the shift, so for a dynamic
-	// module they are served by [cachedDomain] across buckets and proofs
-	// instead of rebuilding the twiddles.
+	// module they are served by [cachedDomain], shared across buckets and
+	// proofs.
 	smallDomain, cosetDomains := q.smallDomain, q.cosetDomains
 	if smallDomain == nil {
 		smallDomain = cachedDomain(n, nil)
@@ -611,8 +611,8 @@ func (q *moduleQuotient) run(rt *wiop.Runtime) {
 	cosetEvals, cosetEvalsExt := evalColumnsOnCosets(rt, q.m, q.rootCols, q.colRatios, smallDomain, cosetDomains)
 
 	// --- Evaluate every distinct Lagrange selector on the cosets ---
-	// Selectors are not committed columns, so they are computed analytically
-	// rather than re-FFT'd. selectorCosets[position][t] = L_position(x_t).
+	// Selectors are not committed columns: they are computed in closed form.
+	// selectorCosets[position][t] = L_position(x_t).
 	selectorPositions := make(map[int]struct{})
 	for i := range q.buckets {
 		for _, v := range bktVanishings(&q.buckets[i]) {
@@ -793,12 +793,13 @@ func annihilatorInverses(n, ratio int) []field.Element {
 // evalColumnsOnCosets evaluates every column of cols on the R small cosets of
 // cosetDomains, in the coset-major layout of [cosetShifts]. Column c is only
 // evaluated on the cosets a bucket of ratio colRatios[c] reads, every
-// (R/colRatios[c])-th; its other slots are left zero. A column is
-// interpolated once on H_n, its coefficients being shared by every coset,
-// then evaluated by one size-n coset FFT per coset, written straight into the
-// coset's contiguous slot. Both steps are spread over the CPUs: columns, then
-// (column, coset) pairs, so a module with few tall columns keeps every CPU
-// busy; the FFTs share out what is left of the CPUs, at least one each.
+// (R/colRatios[c])-th; its other slots are left unwritten, holding stale
+// pool data, and no bucket reads them. A column is interpolated once on H_n,
+// its coefficients being shared by every coset, then evaluated by one size-n
+// coset FFT per coset, written straight into the coset's contiguous slot.
+// Both steps are spread over the CPUs: columns, then (column, coset) pairs, so
+// a module with few tall columns keeps every CPU busy; the FFTs share out
+// what is left of the CPUs, at least one each.
 func evalColumnsOnCosets(
 	rt *wiop.Runtime,
 	m *wiop.Module,

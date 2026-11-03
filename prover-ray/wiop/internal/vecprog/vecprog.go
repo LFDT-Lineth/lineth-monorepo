@@ -2,9 +2,9 @@
 // elements, many expressions and many points at a time.
 //
 // The expressions are lowered into one straight-line program that runs over
-// blocks of points, instead of walking every expression tree once per point
-// or materialising every intermediate as a full-length vector. Three rewrites
-// make it cheaper than the trees it replaces, all decided once at build time:
+// blocks of points: each operation is applied to a block before the next
+// one, and intermediates only live for a block. Three rewrites, all decided
+// once at build time, reduce the work per point:
 //
 //   - hash-consing: structurally equal subtrees, within an expression or
 //     across the expressions of a program, are computed once per point;
@@ -12,8 +12,8 @@
 //   - linear forms: an extension-valued subtree that is affine in base-valued
 //     subtrees with scalar coefficients, such as the Horner form
 //     α + β·(c₁ + β·(c₂ + …)) of a random linear combination, becomes
-//     c + Σ coefᵢ·atomᵢ. Each term then costs an extension-by-base product
-//     instead of a full extension multiplication.
+//     c + Σ coefᵢ·atomᵢ. Each term then costs one extension-by-base
+//     product.
 //
 // Only additions, subtractions, negations, doublings and multiplications by a
 // scalar are folded or redistributed. These are field identities, so the
@@ -182,9 +182,6 @@ func (b *Builder) intern(n node) int {
 	b.index[key] = append(b.index[key], id)
 	return id
 }
-
-// IsBase reports whether node id is base-field valued.
-func (b *Builder) IsBase(id int) bool { return b.nodes[id].isBase }
 
 // Base returns the leaf reading a base-field table at offset, within each
 // coset.
@@ -481,15 +478,16 @@ func (b *Builder) Check(root, guard int, onZero func(t int)) {
 
 // Program is the lowered form of a builder's sinks.
 type Program struct {
-	nodes    []node
-	steps    []step
-	reg      []int // computed node -> register of its kind
-	leaves   []int // kVec* nodes read by the program
-	sinks    []sink
-	nbBase   int
-	nbExt    int
-	n, ratio int
-	stride   int // table entries between the program's consecutive cosets
+	nodes       []node
+	steps       []step
+	reg         []int // computed node -> register of its kind
+	leaves      []int // kVec* nodes read by the program
+	sinks       []sink
+	nbBase      int
+	nbExt       int
+	n, ratio    int
+	stride      int  // table entries between the program's consecutive cosets
+	accumulates bool // some sink is an Accumulate
 }
 
 // step computes node, or runs sink when sink >= 0.
@@ -515,6 +513,12 @@ func (b *Builder) Compile(n, ratio, cosetStep int) *Program {
 		nd := &p.nodes[id]
 		switch nd.kind {
 		case kVecBase, kVecExt:
+			if nd.padded {
+				dataLen := len(nd.vecBase) + len(nd.vecExt)
+				if nd.start+dataLen > n {
+					panic(fmt.Sprintf("vecprog: padded leaf with %d rows from row %d overflows a coset of %d", dataLen, nd.start, n))
+				}
+			}
 			p.leaves = append(p.leaves, id)
 			return
 		case kScalar:
@@ -526,6 +530,7 @@ func (b *Builder) Compile(n, ratio, cosetStep int) *Program {
 		p.steps = append(p.steps, step{node: id, sink: -1})
 	}
 	for i := range p.sinks {
+		p.accumulates = p.accumulates || p.sinks[i].kind == sinkAccumulate
 		emit(p.sinks[i].root)
 		if p.sinks[i].kind == sinkCheck {
 			emit(p.sinks[i].guard)
@@ -596,6 +601,9 @@ func (b *Builder) Compile(n, ratio, cosetStep int) *Program {
 // workers goroutines (all CPUs when workers ≤ 0). A block never straddles
 // two cosets.
 func (p *Program) Run(aggregate []field.Ext, scale []field.Element, workers int) {
+	if p.accumulates && len(aggregate) < p.ratio*p.n {
+		panic(fmt.Sprintf("vecprog: Run: aggregate has %d entries, the program accumulates into %d", len(aggregate), p.ratio*p.n))
+	}
 	perCoset := (p.n + BlockSize - 1) / BlockSize
 	work := func(first, last int) {
 		w := p.newWorker()

@@ -304,3 +304,40 @@ func TestBatchInvertExtMatchesInverse(t *testing.T) {
 		}
 	}
 }
+
+// Hash-consing must merge only identical nodes: a padded leaf differs from
+// another over the same data by its start, its padding or its offset, and a
+// linear form from another over the same atoms by a coefficient.
+func TestInternSeparatesNodesThatDiffer(t *testing.T) {
+	b := NewBuilder()
+	data := make([]field.Element, 4)
+	var pad, pad2 field.Element
+	pad2.SetUint64(2)
+
+	leaf := b.BasePadded(data, pad, 0, 0)
+	require.Equal(t, leaf, b.BasePadded(data, pad, 0, 0), "an identical leaf is merged")
+	others := []int{
+		b.BasePadded(data, pad, 1, 0),
+		b.BasePadded(data, pad2, 0, 0),
+		b.BasePadded(data, pad, 0, 1),
+		b.Base(data, 0),
+	}
+	seen := map[int]bool{leaf: true}
+	for i, id := range others {
+		require.False(t, seen[id], "leaf %d was merged with a different one", i)
+		seen[id] = true
+	}
+
+	x, y := b.Base(data, 0), b.Base(data, 1)
+	s1, s2 := field.Ext{}, field.Ext{}
+	s1.B0.A0.SetUint64(3)
+	s2.B0.A0.SetUint64(5)
+	s1.B1.A0.SetUint64(1) // extension coefficients, so the sums are linear forms
+	s2.B1.A0.SetUint64(1)
+	form := func(a, c field.Ext) int {
+		return b.Op(Add, b.Op(Mul, b.Scalar(a, false), x), b.Op(Mul, b.Scalar(c, false), y))
+	}
+	require.Equal(t, kLinear, b.nodes[form(s1, s2)].kind)
+	require.Equal(t, form(s1, s2), form(s1, s2), "an identical linear form is merged")
+	require.NotEqual(t, form(s1, s2), form(s2, s1), "linear forms with different coefficients are distinct")
+}

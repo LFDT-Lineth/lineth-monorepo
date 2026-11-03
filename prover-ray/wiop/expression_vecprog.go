@@ -31,10 +31,10 @@ func lowerOperator(o ArithmeticOperator) vecprog.Op {
 }
 
 // RowLowering lowers expressions evaluated over n rows into one [vecprog]
-// program, as [EvaluateAsExtVec] evaluates them: a column view reads its
-// module's padded assignment in place, at its shift. An expression reading a column of a module of
-// another size is evaluated by [EvaluateAsExtVec] instead, so that its
-// padding to n rows is unchanged, and enters the program as a table.
+// program, with the values [EvaluateAsExtVec] gives them: a column view reads
+// its module's padded assignment in place, at its shift. An expression
+// reading a column of a module of another size enters the program as a
+// table, evaluated by [EvaluateAsExtVec] with its own padding to n rows.
 type RowLowering struct {
 	B *vecprog.Builder
 
@@ -96,8 +96,8 @@ func (l *RowLowering) sizedTo(expr Expression) bool {
 // their values from rt; every other leaf (column views, selectors, ...) is
 // lowered by leaf. Each distinct arithmetic node is lowered once across all
 // Lower calls, so a subexpression shared by pointer -- within an expression or
-// between the expressions of a program -- costs one visit, and lowering is
-// linear in the distinct nodes rather than in the size of the trees.
+// between the expressions of a program -- costs one visit: lowering is linear
+// in the distinct nodes.
 type ExpressionLowering struct {
 	rt   *Runtime
 	b    *vecprog.Builder
