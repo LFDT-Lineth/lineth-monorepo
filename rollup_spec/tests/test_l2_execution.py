@@ -278,6 +278,50 @@ def test_execution_emits_messages_offset_and_rolling_hash_pair_of_a_message_serv
     assert pi.end_l1_l2_bridge_rolling_hash_message_number == U64(5)
 
 
+# ── run_l2_execution_guest: no blob transactions ────────────────────────────────
+
+
+class _ReachedExecution(Exception):
+    pass
+
+
+def _input_probing_execution(monkeypatch, versioned_hashes=(), extra_transactions=()) -> L2ExecutionProofPrivateInput:
+    """
+    A single-payload input around the golden vanilla slice, decoded with `versioned_hashes` and
+    `extra_transactions` added, whose delegated execution raises `_ReachedExecution`.
+    """
+    vanilla = _golden_vanilla_stateless_input_ssz()
+    stateless_input = decode_stateless_input_ssz(vanilla)
+    stateless_input.new_payload_request.versioned_hashes = list(versioned_hashes)
+    stateless_input.new_payload_request.execution_payload.transactions.extend(extra_transactions)
+
+    def _reach_execution(*_):  # noqa: ANN002, ANN202
+        raise _ReachedExecution
+
+    monkeypatch.setattr(l2_execution, "decode_stateless_input_ssz", lambda _: stateless_input)
+    monkeypatch.setattr(l2_execution, "execute_stateless_input", _reach_execution)
+    return _zero_bridge_input(vanilla)
+
+
+def test_payload_without_blob_transactions_reaches_execution(monkeypatch) -> None:
+    with pytest.raises(_ReachedExecution):
+        run_l2_execution_guest(_input_probing_execution(monkeypatch))
+
+
+@pytest.mark.parametrize(
+    "versioned_hashes, extra_transactions",
+    [
+        pytest.param([_hash(0x01)], [], id="blob versioned hash"),
+        pytest.param([], [b"\x03" + bytes(31)], id="type-3 transaction"),
+    ],
+)
+def test_payload_with_a_blob_transaction_is_rejected_before_execution(monkeypatch, versioned_hashes, extra_transactions) -> None:
+    execution_input = _input_probing_execution(monkeypatch, versioned_hashes, extra_transactions)
+
+    with pytest.raises(Exception, match="blob transactions are not supported"):
+        run_l2_execution_guest(execution_input)
+
+
 # ── dynamicChainConfigHash excludes the system contracts ────────────────────────
 
 
