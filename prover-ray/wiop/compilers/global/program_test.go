@@ -6,6 +6,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/require"
 )
@@ -79,4 +80,67 @@ func TestQuotientPrograms_OnePerDynamicSize(t *testing.T) {
 
 	prove(8)
 	requireSamePrograms(t, both, global.BuiltPrograms(sys))
+}
+
+// The quotient programs built by one proof must not keep anything of it: a
+// second proof of a different witness on the same system -- other columns,
+// so other coins -- must equal that witness's proof on a fresh system, and an
+// invalid witness must still be rejected. The vanishing reads its column at a
+// shift (a cancelled row, so a cancellation table) and through a Lagrange
+// selector.
+func TestQuotientPrograms_BindEachProofsData(t *testing.T) {
+	const size, pos = 8, 2
+	build := func() (*wiop.System, *wiop.Column, *wiop.Column) {
+		sys := wiop.NewSystemf("gl-program-rebind")
+		r0 := sys.NewRound()
+		mod := sys.NewSizedModule(sys.Context.Childf("mod"), size, wiop.PaddingDirectionNone)
+		x := mod.NewColumn(sys.Context.Childf("x"), r0)
+		y := mod.NewColumn(sys.Context.Childf("y"), r0)
+		// y[i] = x[i]·x[i-1] on every row but the first, and x[pos] = 0.
+		mod.NewVanishing(sys.Context.Childf("prod"),
+			wiop.Sub(y.View(), wiop.Mul(x.View(), x.View().Shift(-1))))
+		mod.NewVanishingManual(sys.Context.Childf("zero"),
+			wiop.Mul(x.View(), wiop.NewLagrangeSelector(mod, pos)))
+		global.Compile(sys)
+		pcs.Compile(sys)
+		return sys, x, y
+	}
+	witness := func(seed uint64, corrupt bool) func(*wiop.Column, *wiop.Column) func(*wiop.Runtime) {
+		return func(x, y *wiop.Column) func(*wiop.Runtime) {
+			xs, ys := make([]field.Element, size), make([]field.Element, size)
+			for i := range xs {
+				if i != pos {
+					xs[i].SetUint64(seed + uint64(i))
+				}
+			}
+			for i := 1; i < size; i++ {
+				ys[i].Mul(&xs[i], &xs[i-1])
+			}
+			if corrupt {
+				ys[5].SetUint64(1)
+			}
+			return func(rt *wiop.Runtime) {
+				rt.AssignColumn(x, &wiop.ConcreteVector{Plain: field.VecFromBase(xs)})
+				rt.AssignColumn(y, &wiop.ConcreteVector{Plain: field.VecFromBase(ys)})
+			}
+		}
+	}
+
+	sys, x, y := build()
+	proofA, pubA := sys.Prove(witness(3, false)(x, y))
+	require.NoError(t, sys.Verify(proofA, pubA))
+	built := global.BuiltPrograms(sys)
+
+	proofB, pubB := sys.Prove(witness(11, false)(x, y))
+	requireSamePrograms(t, built, global.BuiltPrograms(sys))
+	require.NoError(t, sys.Verify(proofB, pubB), "a second witness on reused programs must verify")
+	require.NotEqual(t, proofA, proofB)
+
+	fresh, fx, fy := build()
+	want, wantPub := fresh.Prove(witness(11, false)(fx, fy))
+	require.Equal(t, want, proofB, "a proof on reused programs must equal a fresh system's")
+	require.Equal(t, wantPub, pubB)
+
+	bad, badPub := sys.Prove(witness(11, true)(x, y))
+	require.Error(t, sys.Verify(bad, badPub), "an invalid witness on reused programs must be rejected")
 }

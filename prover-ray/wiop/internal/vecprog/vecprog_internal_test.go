@@ -346,8 +346,9 @@ func TestInternSeparatesNodesThatDiffer(t *testing.T) {
 // A program built once over parameters and slotted tables must give, on every
 // run, exactly what a program built with those values as constants and those
 // tables as leaves gives: accumulate sinks with a parameter-dependent
-// coefficient, Horner forms with parameter coefficients, and subtrees over
-// parameters only included.
+// coefficient and a slotted cancellation, Horner forms with parameter
+// coefficients, subtrees over parameters only, and parameters equal to zero
+// included.
 func TestParamsAndSlotsMatchConstants(t *testing.T) {
 	const n, ratio = 3*BlockSize + 5, 2
 	rng := rand.New(rand.NewPCG(11, 13))
@@ -424,16 +425,26 @@ func TestParamsAndSlotsMatchConstants(t *testing.T) {
 		return agg
 	}
 
+	// Every other sink is cancelled by the table Base[cancelSlot].
+	cancelSlot := len(baseSlot)
+	cancelOf := func(i int) int {
+		if i%2 == 1 {
+			return cancelSlot
+		}
+		return -1
+	}
+
 	b := NewBuilder()
 	coinPow := b.Scalar(field.Lift(field.One()), true)
 	coin := b.Param(coinSlot, false)
-	for _, tr := range trees {
-		b.AccumulateBy(build(b, tr, true), -1, coinPow)
+	for i, tr := range trees {
+		b.AccumulateBy(build(b, tr, true), cancelOf(i), coinPow)
 		coinPow = b.Op(Mul, coinPow, coin)
 	}
 	cached := b.Compile(n, ratio, 1)
 
-	for runIdx := range 2 {
+	// Run 1 sets the first scalar parameters to zero, run 2 the coin.
+	for runIdx := range 3 {
 		// Fresh values for every parameter and table.
 		bind := &Bindings{Params: make([]field.Ext, coinSlot+1)}
 		for i, tr := range scalarLeaves {
@@ -442,11 +453,19 @@ func TestParamsAndSlotsMatchConstants(t *testing.T) {
 			} else {
 				*tr.s = field.VecPseudoRandExt(rng, 1)[0]
 			}
+			if runIdx == 1 && i < 2 {
+				*tr.s = field.Ext{}
+			}
 			bind.Params[i] = *tr.s
 		}
 		coinVal := field.VecPseudoRandExt(rng, 1)[0]
+		if runIdx == 2 {
+			coinVal = field.Ext{}
+		}
 		bind.Params[coinSlot] = coinVal
-		bind.Base = make([][]field.Element, len(baseSlot))
+		cancellation := field.VecPseudoRandBase(rng, n*ratio)
+		bind.Base = make([][]field.Element, len(baseSlot)+1)
+		bind.Base[cancelSlot] = cancellation
 		bind.Ext = make([][]field.Ext, len(extSlot))
 		for _, tbl := range g.base {
 			copy(tbl, field.VecPseudoRandBase(rng, len(tbl)))
@@ -464,11 +483,28 @@ func TestParamsAndSlotsMatchConstants(t *testing.T) {
 		fresh := NewBuilder()
 		var pow field.Ext
 		pow.SetOne()
-		for _, tr := range trees {
-			fresh.Accumulate(build(fresh, tr, false), nil, pow)
+		for i, tr := range trees {
+			var cancel []field.Element
+			if cancelOf(i) >= 0 {
+				cancel = cancellation
+			}
+			fresh.Accumulate(build(fresh, tr, false), cancel, pow)
 			pow.Mul(&pow, &coinVal)
 		}
 		want := run(fresh.Compile(n, ratio, 1), nil)
 		require.Equal(t, want, run(cached, bind), "run %d", runIdx)
 	}
+}
+
+// A program reading a parameter or a slotted table cannot run without
+// bindings, nor any program accumulating into a short aggregate.
+func TestRunRejectsMissingBindings(t *testing.T) {
+	const n = 8
+	b := NewBuilder()
+	b.AccumulateBy(b.Op(Mul, b.Param(0, false), b.BaseSlot(0, 0)), -1, b.Scalar(field.Lift(field.One()), true))
+	p := b.Compile(n, 1, 1)
+	require.Panics(t, func() { p.Run(make([]field.Ext, n), nil, 1) }, "no bindings")
+	bind := &Bindings{Base: [][]field.Element{make([]field.Element, n)}, Params: make([]field.Ext, 1)}
+	require.Panics(t, func() { p.RunWith(bind, make([]field.Ext, n-1), nil, 1) }, "short aggregate")
+	require.NotPanics(t, func() { p.RunWith(bind, make([]field.Ext, n), nil, 1) })
 }

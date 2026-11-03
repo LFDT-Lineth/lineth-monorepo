@@ -175,24 +175,22 @@ func (bp *bucketProgram) bind(
 		case tableCancellation:
 			bind.Base[i] = cancellation(t.vanishing)
 		}
+		if bind.Base[i] == nil {
+			panic(fmt.Sprintf("wiop/compilers: quotient program: no table for base slot %d (%+v)", i, t))
+		}
 	}
 	for i, id := range bp.extCols {
 		bind.Ext[i] = cosetEvalsExt[id]
+		if bind.Ext[i] == nil {
+			panic(fmt.Sprintf("wiop/compilers: quotient program: no coset evaluations for extension column %v", id))
+		}
 	}
 	for i, e := range bp.params {
 		switch e := e.(type) {
 		case *wiop.CoinField:
 			bind.Params[i] = rt.GetCoinValue(e).AsExt()
 		case *wiop.Cell:
-			v := rt.GetCellValue(e)
-			switch {
-			case e.IsExtension():
-				bind.Params[i] = v.AsExt()
-			case v.IsBase():
-				bind.Params[i] = field.Lift(v.AsBase())
-			default:
-				panic(fmt.Sprintf("wiop: cell %q declared as base but holds an extension-field value", e.Context.Path()))
-			}
+			bind.Params[i] = wiop.LiftedCellValue(rt, e)
 		}
 	}
 	return bind
@@ -203,9 +201,8 @@ type BucketStats struct {
 	Module     string
 	Ratio      int
 	Vanishings int
-	// TreeNodes counts the nodes of the vanishings walked as trees, leaves
-	// included, saturating at the uint64 maximum: what a lowering that
-	// re-descends into shared subexpressions visits.
+	// TreeNodes counts the nodes of the vanishings as trees, a shared node
+	// once per occurrence, leaves included, saturating at the uint64 maximum.
 	TreeNodes uint64
 	// DistinctNodes counts the distinct nodes of the vanishings, by pointer.
 	DistinctNodes int

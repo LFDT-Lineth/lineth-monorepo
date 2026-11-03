@@ -96,9 +96,10 @@ func (l *RowLowering) sizedTo(expr Expression) bool {
 // their values from rt; every other leaf (column views, selectors, ...) is
 // lowered by leaf. With a nil rt, cells and coins are lowered by leaf too,
 // typically as a [vecprog.Builder.Param], so that the program can be built
-// without a runtime and run on every proof. Each distinct arithmetic node is lowered once across all
-// Lower calls, so a subexpression shared by pointer -- within an expression or
-// between the expressions of a program -- costs one visit: lowering is linear
+// without a runtime and run on every proof. Each distinct arithmetic node is
+// lowered once across all Lower calls, so a subexpression shared by pointer
+// -- within an expression or between the expressions of a program -- costs
+// one visit: lowering is linear
 // in the distinct nodes.
 type ExpressionLowering struct {
 	rt   *Runtime
@@ -122,14 +123,7 @@ func (l *ExpressionLowering) Lower(expr Expression) int {
 		if rt == nil {
 			return l.leaf(expr)
 		}
-		v := rt.GetCellValue(e)
-		if e.IsExtension() {
-			return b.Scalar(v.AsExt(), false)
-		}
-		if !v.IsBase() {
-			panic(fmt.Sprintf("wiop: cell %q declared as base but holds an extension-field value", e.Context.Path()))
-		}
-		return b.Scalar(field.Lift(v.AsBase()), true)
+		return b.Scalar(LiftedCellValue(rt, e), !e.IsExtension())
 	case *CoinField:
 		if rt == nil {
 			return l.leaf(expr)
@@ -149,6 +143,20 @@ func (l *ExpressionLowering) Lower(expr Expression) int {
 		return id
 	}
 	return l.leaf(expr)
+}
+
+// LiftedCellValue returns the value of c in rt as an extension element, a
+// lifted base element for a base cell. It panics when a base cell holds an
+// extension-field value.
+func LiftedCellValue(rt *Runtime, c *Cell) field.Ext {
+	v := rt.GetCellValue(c)
+	if c.IsExtension() {
+		return v.AsExt()
+	}
+	if !v.IsBase() {
+		panic(fmt.Sprintf("wiop: cell %q declared as base but holds an extension-field value", c.Context.Path()))
+	}
+	return field.Lift(v.AsBase())
 }
 
 func (l *RowLowering) lower(expr Expression) int {

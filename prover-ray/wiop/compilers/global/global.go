@@ -1010,7 +1010,9 @@ type Verifier struct {
 	WitnessViews  []*wiop.ColumnView
 	WitnessClaims []*wiop.Cell
 	viewKeyToIdx  map[colViewKey]int
-	Buckets       []VerifierBucket
+	// Buckets must not change after the first Check, which builds the plan
+	// below from their vanishings.
+	Buckets []VerifierBucket
 
 	// planOnce guards plan, the evaluation order of the distinct expression
 	// nodes of every bucket, built on the first Check.

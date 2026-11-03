@@ -200,9 +200,8 @@ type ArithmeticOperation struct {
 	// nil until the first call to EvaluateVector.
 	prog *compiledProgram
 	// isExtensionCache and degreeFactorCache memoise IsExtension and
-	// DegreeFactor, which are otherwise recomputed by a walk that re-descends
-	// into every shared subexpression. Zero means "not computed yet";
-	// otherwise isExtensionCache is 1 (false) or 2 (true) and
+	// DegreeFactor, so that each is computed once per node. Zero means "not
+	// computed yet"; otherwise isExtensionCache is 1 (false) or 2 (true) and
 	// degreeFactorCache holds the factor plus one. They are written only
 	// after a successful computation, so a panicking call (DegreeFactor on a
 	// Div) caches nothing. Degree is deliberately not memoised: it depends on

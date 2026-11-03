@@ -583,9 +583,8 @@ func TestLiftedVanishingsShareStructure(t *testing.T) {
 }
 
 // TestQuotientProgramsEvaluateDistinctNodes reports, per quotient bucket of
-// the real RISC-V system, what #4036 removes: the nodes of the vanishings
-// walked as trees (what binding them without memoisation visited per proof),
-// the distinct nodes, and the nodes of the compiled program that every proof
+// the real RISC-V system, the nodes of the vanishings as trees, their
+// distinct nodes, and the nodes of the compiled program that every proof
 // evaluates. Dynamic modules are compiled at 2^20 rows; the counts barely
 // depend on the size.
 //
