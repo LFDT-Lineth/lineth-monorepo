@@ -337,7 +337,8 @@ func TestInternSeparatesNodesThatDiffer(t *testing.T) {
 	form := func(a, c field.Ext) int {
 		return b.Op(Add, b.Op(Mul, b.Scalar(a, false), x), b.Op(Mul, b.Scalar(c, false), y))
 	}
-	require.Equal(t, kLinear, b.nodes[form(s1, s2)].kind)
-	require.Equal(t, form(s1, s2), form(s1, s2), "an identical linear form is merged")
-	require.NotEqual(t, form(s1, s2), form(s2, s1), "linear forms with different coefficients are distinct")
+	first, again := form(s1, s2), form(s1, s2)
+	require.Equal(t, kLinear, b.nodes[first].kind)
+	require.Equal(t, first, again, "an identical linear form is merged")
+	require.NotEqual(t, first, form(s2, s1), "linear forms with different coefficients are distinct")
 }
