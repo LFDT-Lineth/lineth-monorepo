@@ -2,6 +2,7 @@ const std = @import("std");
 
 const lineth_da = @import("lineth_da");
 const zstd_compressor = @import("zstd_compressor");
+const zstd_frames = @import("zstd_frames");
 
 const zstd = lineth_da.zstd;
 const dictionary = lineth_da.dictionary_v2025_04_21;
@@ -9,16 +10,22 @@ const gpa = std.testing.allocator;
 
 const zstd_magic = [4]u8{ 0x28, 0xb5, 0x2f, 0xfd };
 
-fn compress(payload: []const u8, options: zstd_compressor.Options) ![]u8 {
-    var with_dictionary = options;
-    if (with_dictionary.dictionary == null) with_dictionary.dictionary = dictionary;
-    return zstd_compressor.compress(gpa, payload, with_dictionary);
+/// The frame the package's compressor produces.
+fn packageFrame(payload: []const u8) ![]u8 {
+    return zstd_compressor.compress(gpa, payload, dictionary);
 }
 
-fn compressWithoutDictionary(payload: []const u8, options: zstd_compressor.Options) ![]u8 {
+/// A frame in the form `options` select, against the package dictionary unless they name another.
+fn compress(payload: []const u8, options: zstd_frames.Options) ![]u8 {
+    var with_dictionary = options;
+    if (with_dictionary.dictionary == null) with_dictionary.dictionary = dictionary;
+    return zstd_frames.compress(gpa, payload, with_dictionary);
+}
+
+fn compressWithoutDictionary(payload: []const u8, options: zstd_frames.Options) ![]u8 {
     var plain = options;
     plain.dictionary = null;
-    return zstd_compressor.compress(gpa, payload, plain);
+    return zstd_frames.compress(gpa, payload, plain);
 }
 
 /// A copy of the dictionary announcing itself under another dictionary ID.
@@ -158,7 +165,7 @@ test "round trips incompressible payloads" {
 
     const payload = try randomBytes(500_000, 7);
     defer gpa.free(payload);
-    const frame = try compress(payload, .{});
+    const frame = try packageFrame(payload);
     defer gpa.free(frame);
     const out = try gpa.alloc(u8, payload.len);
     defer gpa.free(out);
@@ -189,7 +196,7 @@ test "the dictionary is applied to the frame" {
     defer decoder.deinit();
 
     const shared = dictionary[dictionary.len - 4096 ..][0..3000];
-    const with_dictionary = try compress(shared, .{});
+    const with_dictionary = try packageFrame(shared);
     defer gpa.free(with_dictionary);
     const without_dictionary = try compressWithoutDictionary(shared, .{});
     defer gpa.free(without_dictionary);
@@ -357,7 +364,7 @@ test "an empty payload decompresses to an empty slice" {
     const decoder = try zstd.Decoder.init(gpa, dictionary);
     defer decoder.deinit();
 
-    const frame = try compress("", .{});
+    const frame = try packageFrame("");
     defer gpa.free(frame);
     var out: [8]u8 = undefined;
     try std.testing.expectEqual(@as(usize, 0), (try decoder.decompress(frame, out[0..0])).len);
@@ -388,9 +395,9 @@ test "bytes after the frame are rejected" {
 
     const payload = try transactionLikePayload(5000, 9);
     defer gpa.free(payload);
-    const frame = try compress(payload, .{});
+    const frame = try packageFrame(payload);
     defer gpa.free(frame);
-    const second = try compress("another conflation", .{});
+    const second = try packageFrame("another conflation");
     defer gpa.free(second);
     const skippable = [_]u8{ 0x50, 0x2a, 0x4d, 0x18, 0, 0, 0, 0 };
     const out = try gpa.alloc(u8, payload.len + 64);
@@ -483,7 +490,7 @@ test "frames announcing another dictionary are rejected" {
     const other_decoder = try zstd.Decoder.init(gpa, other);
     defer other_decoder.deinit();
     try std.testing.expectEqualSlices(u8, payload, try other_decoder.decompress(frame, out));
-    const own_frame = try compress(payload, .{});
+    const own_frame = try packageFrame(payload);
     defer gpa.free(own_frame);
     try std.testing.expectError(error.DictionaryMismatch, other_decoder.decompress(own_frame, out));
 }
@@ -496,9 +503,9 @@ test "a decoder stays usable after rejecting a frame" {
     defer gpa.free(first);
     const second = try transactionLikePayload(120_000, 2);
     defer gpa.free(second);
-    const first_frame = try compress(first, .{});
+    const first_frame = try packageFrame(first);
     defer gpa.free(first_frame);
-    const second_frame = try compress(second, .{});
+    const second_frame = try packageFrame(second);
     defer gpa.free(second_frame);
     const out = try gpa.alloc(u8, second.len);
     defer gpa.free(out);
@@ -543,7 +550,7 @@ test "decompression allocates at most one block buffer" {
     defer gpa.free(out);
 
     // A frame with content size decodes in one pass.
-    const frame = try compress(payload, .{});
+    const frame = try packageFrame(payload);
     defer gpa.free(frame);
     try std.testing.expectEqualSlices(u8, payload, try decoder.decompress(frame, out));
     try std.testing.expectError(error.TruncatedFrame, decoder.decompress(frame[0 .. frame.len - 1], out));
@@ -576,7 +583,7 @@ test "an allocation refused while decompressing is reported as out of memory" {
     const streamed = try compress(payload, .{ .content_size = false });
     defer gpa.free(streamed);
     try std.testing.expectError(error.OutOfMemory, decoder.decompress(streamed, out));
-    const single_pass = try compress(payload, .{});
+    const single_pass = try packageFrame(payload);
     defer gpa.free(single_pass);
     try std.testing.expectEqualSlices(u8, payload, try decoder.decompress(single_pass, out));
 }

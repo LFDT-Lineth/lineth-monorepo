@@ -38,7 +38,7 @@ const golden_frames = [_]struct { import_name: []const u8, path: []const u8 }{
     .{ .import_name = "golden_error_zero_seq_extraneous", .path = "tests/golden-decompression-errors/zeroSeq_extraneous.zst" },
 };
 
-/// libzstd sources of the single-threaded compressor, linked into native tests and tools only.
+/// libzstd sources of the single-threaded compressor, linked into the native `zstd_compressor` module only.
 const compressor_sources = [_][]const u8{
     "compress/fse_compress.c",
     "compress/hist.c",
@@ -76,7 +76,7 @@ pub fn build(b: *std.Build) void {
     // Consumers of the package build the guest side only.
     const host_tools = b.option(bool, "host-tools", "Build the native tests and tools: fetches the reference vectors and builds the host crypto providers") orelse false;
     const zkevm_fixtures = b.option(std.Build.LazyPath, "zkevm-fixtures", "Directory holding the EF zkevm fixtures; enables the reference tests over its blocks");
-    if (host_tools) addHostBuild(b, zkevm_fixtures);
+    if (host_tools) addHostBuild(b, zstd, target, optimize, zkevm_fixtures);
 }
 
 /// libzstd for one target: the release's sources and its C declarations translated for Zig.
@@ -124,30 +124,49 @@ fn hostPackage(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.bu
 }
 
 /// The native tests and tools run on the host: a freestanding riscv64 target has no OS to run a
-/// `std.testing` binary against.
-fn addHostBuild(b: *std.Build, zkevm_fixtures: ?std.Build.LazyPath) void {
+/// `std.testing` binary against. The zstd compressor (`zstd_compressor`) and the test-side encoders
+/// and signers (`support`) are modules of the package for the tests of its consumers; they are
+/// compiled at the package's `optimize`, where ReleaseSmall becomes ReleaseSafe. When the package
+/// itself is built for a native target, the compressor shares its libzstd declarations, which one
+/// compilation can hold only once.
+fn addHostBuild(
+    b: *std.Build,
+    package_zstd: Zstd,
+    package_target: std.Build.ResolvedTarget,
+    package_optimize: std.builtin.OptimizeMode,
+    zkevm_fixtures: ?std.Build.LazyPath,
+) void {
     const target = b.resolveTargetQuery(.{});
-    const zstd = Zstd.init(b, target);
+    const optimize: std.builtin.OptimizeMode = if (package_optimize == .ReleaseSmall) .ReleaseSafe else package_optimize;
+    const zstd = if (package_target.result.os.tag == .freestanding) Zstd.init(b, target) else package_zstd;
     const package = hostPackage(b, target, .Debug, zstd);
 
-    const compressor = b.createModule(.{
-        .root_source_file = b.path("test/zstd_compressor.zig"),
+    const compressor = b.addModule("zstd_compressor", .{
+        .root_source_file = b.path("src/zstd_compressor.zig"),
         .target = target,
-        .optimize = .Debug,
+        .optimize = optimize,
         .imports = &.{.{ .name = "zstd_c", .module = zstd.declarations }},
     });
     compressor.addCSourceFiles(.{ .root = zstd.source.path("lib"), .files = &compressor_sources });
 
-    const support = b.createModule(.{
+    // Frames in every form the guest decodes or must reject, for the tests of the decoder.
+    const zstd_frames = b.createModule(.{
+        .root_source_file = b.path("test/support/zstd_frames.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{.{ .name = "zstd_c", .module = zstd.declarations }},
+    });
+
+    const support = b.addModule("support", .{
         .root_source_file = b.path("test/support/root.zig"),
         .target = target,
-        .optimize = .Debug,
+        .optimize = optimize,
     });
 
     const conflation_sample = b.createModule(.{
         .root_source_file = b.path("test/conflation_sample.zig"),
         .target = target,
-        .optimize = .Debug,
+        .optimize = optimize,
         .imports = &.{
             .{ .name = "lineth_da", .module = package },
             .{ .name = "support", .module = support },
@@ -159,6 +178,7 @@ fn addHostBuild(b: *std.Build, zkevm_fixtures: ?std.Build.LazyPath) void {
         .imports = &.{
             .{ .name = "lineth_da", .module = package },
             .{ .name = "zstd_compressor", .module = compressor },
+            .{ .name = "zstd_frames", .module = zstd_frames },
             .{ .name = "support", .module = support },
             .{ .name = "conflation_sample", .module = conflation_sample },
         },

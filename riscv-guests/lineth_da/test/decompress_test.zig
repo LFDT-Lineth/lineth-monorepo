@@ -4,6 +4,7 @@ const conflation_sample = @import("conflation_sample");
 const lineth_da = @import("lineth_da");
 const support = @import("support");
 const zstd_compressor = @import("zstd_compressor");
+const zstd_frames = @import("zstd_frames");
 
 const decompress = lineth_da.decompress;
 const blob_payload = lineth_da.encoding.blob_payload;
@@ -38,15 +39,21 @@ fn keccak(bytes: []const u8) Hash {
     return hash;
 }
 
-fn compressFrame(a: Allocator, payload: []const u8, options: zstd_compressor.Options) ![]u8 {
+/// The frame the package's compressor produces.
+fn packageFrame(a: Allocator, payload: []const u8) ![]u8 {
+    return zstd_compressor.compress(a, payload, dictionary);
+}
+
+/// A frame in the form `options` select, against the package dictionary unless they name another.
+fn compressFrame(a: Allocator, payload: []const u8, options: zstd_frames.Options) ![]u8 {
     var with_dictionary = options;
     if (with_dictionary.dictionary == null) with_dictionary.dictionary = dictionary;
-    return zstd_compressor.compress(a, payload, with_dictionary);
+    return zstd_frames.compress(a, payload, with_dictionary);
 }
 
 /// One stream segment: the length prefix and the frame of `payload`.
 fn segment(a: Allocator, payload: []const u8) ![]u8 {
-    return da_stream.lengthPrefixed(a, try compressFrame(a, payload, .{}));
+    return da_stream.lengthPrefixed(a, try packageFrame(a, payload));
 }
 
 fn concat(a: Allocator, parts: []const []const u8) ![]u8 {
@@ -290,7 +297,7 @@ test "frame headers may omit the content size and the dictionary ID, or carry a 
     defer arena.deinit();
     const a = arena.allocator();
 
-    const variants = [_]zstd_compressor.Options{
+    const variants = [_]zstd_frames.Options{
         .{ .content_size = false },
         .{ .dictionary_id = false },
         .{ .content_size = false, .dictionary_id = false, .checksum = true },
@@ -704,7 +711,7 @@ test "each segment starts with a nonzero length that stays inside the stream" {
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
     const a = arena.allocator();
-    const frame = try compressFrame(a, payload_1, .{});
+    const frame = try packageFrame(a, payload_1);
 
     try expectRejected(error.MissingSegmentLength, &.{calldataChunk(&.{ 0x00, 0x01 })}, &.{payload_1}, .{});
     try expectRejected(error.InvalidSegmentLength, &.{calldataChunk(try da_stream.lengthPrefixed(a, &.{}))}, &.{payload_1}, .{});
@@ -730,8 +737,8 @@ test "each segment is one complete frame" {
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
     const a = arena.allocator();
-    const frame = try compressFrame(a, payload_1, .{});
-    const other_frame = try compressFrame(a, payload_2, .{});
+    const frame = try packageFrame(a, payload_1);
+    const other_frame = try packageFrame(a, payload_2);
 
     const rejected_frames = [_][]const u8{
         "not a zstd frame",

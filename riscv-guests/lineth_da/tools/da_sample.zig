@@ -53,7 +53,7 @@ pub fn main(init: std.process.Init) !void {
 }
 
 fn build(allocator: std.mem.Allocator, input: *std.ArrayList(u8), payload: []const u8, as_blob: bool) !void {
-    const frame = try zstd_compressor.compress(allocator, payload, .{ .dictionary = lineth_da.dictionary_v2025_04_21 });
+    const frame = try zstd_compressor.compress(allocator, payload, lineth_da.dictionary_v2025_04_21);
     defer allocator.free(frame);
     const segment = try da_stream.lengthPrefixed(allocator, frame);
     defer allocator.free(segment);

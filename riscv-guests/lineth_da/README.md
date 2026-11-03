@@ -20,12 +20,16 @@ const bytes = try decoder.decompress(frame, out_buffer); // out_buffer.len bound
 - **Categorized errors.** `zstd.Error` names the rejection: `OutOfMemory`, `InvalidDictionary`, `DictionaryMismatch`, `TruncatedFrame`, `TrailingBytes`, `MalformedFrame`, `OutputTooLarge`.
 - **Allocator.** libzstd allocates through `ZSTD_customMem` backed by the Zig allocator passed to `Decoder.init`: the decoder state and the dictionary when the decoder is created, and one input buffer of at most 128 KiB when the first frame without content size is decoded, which the decoder keeps. A decoder is reusable across frames, including after a rejected one.
 
+### Compression
+
+`zstd_compressor.compress(allocator, payload, dictionary)` compresses a payload into one frame for the guest, on the host: the module is built for native targets and its libzstd compressor sources are linked into native tests and tools only. The settings are fixed: level 3 in one pass, so the frame declares its content size, the dictionary ID in the header and no content checksum. libzstd's window for level 3 is at most 2^21 bytes, within the 2^27 + 1 the decoder accepts, and no block exceeds the smaller of the window and 128 KiB. `dictionary` has to be a well-formed zstd dictionary (`error.InvalidDictionary`); the caller owns the frame.
+
 ### Builds
 
 | Target | libzstd sources | C library |
 | --- | --- | --- |
 | freestanding rv64im (guest) | decoder only | none: `src/freestanding_c` supplies the two headers libzstd includes (`string.h`, `stdlib.h`); the `mem*` routines come from Zig's compiler runtime and libzstd's default allocation path reports exhaustion |
-| native (tests, tools) | decoder, and the single-threaded compressor behind `test/zstd_compressor.zig` | the host libc |
+| native (tests, tools) | decoder, and the single-threaded compressor behind `zstd_compressor` (`src/zstd_compressor.zig`) | the host libc |
 
 The C declarations the package and the compressor use (types, constants, signatures) are translated from libzstd's own headers, `zstd.h` with `ZSTD_STATIC_LINKING_ONLY` and `zstd_errors.h`, once per target by `build.zig` and imported as `zstd_c`.
 
@@ -88,7 +92,7 @@ make -C lineth_da exec SMOKE=decompress # verify a one-blob DA stream of the sam
 
 The smoke guests (`test/smoke/`) run one part of the package on the guest target; linking one proves its freestanding object needs no symbol the guest does not define. `zig build -Dsmoke=<name>` links one of them.
 
-- `zstd_smoke` reads a frame with `read_input`, decompresses it against the embedded dictionary and publishes the decompressed bytes through `write_output`; it exits with 0 on success and with 2 to 8 for the `zstd.Error` category. `compress_frame <frame-out> [<payload-in> [level]]` (`tools/`) produces its input.
+- `zstd_smoke` reads a frame with `read_input`, decompresses it against the embedded dictionary and publishes the decompressed bytes through `write_output`; it exits with 0 on success and with 2 to 8 for the `zstd.Error` category. `compress_frame <frame-out> [<payload-in>]` (`tools/`) produces its input.
 - `blob_smoke` reads the 48-byte commitment, the 48-byte proof and the 131072-byte blob, verifies the proof and publishes the versioned hash; it exits with 0 on success, 2 for an input of the wrong size and 3 for a proof that does not verify. `blob_sample <input-out>` (`tools/`) produces its input: a case of the official EIP-4844 reference vectors (c-kzg-4844 v2.1.5) whose proof verifies.
 - `decompress_smoke` reads the parent dataRollingHash, one conflation's canonical payload and one chunk (a blob or calldata), verifies the stream and publishes the end dataRollingHash and the unconsumed tail count; it exits with 0 on success, 2 for malformed input and with 3 to 10 for the `decompress.Error` category. `da_sample <input-out> [blob|calldata [<payload-in>]]` (`tools/`) produces its input: the payload compressed against the dictionary, published in one chunk. A blob chunk carries the commitment and the blob proof that c-kzg-4844 computes, so the run verifies the blob's proof.
 - `truncation_smoke` reads a chain ID as 8 big-endian bytes and a full block's RLP, truncates the block, round-trips the encoded payload through the blob packing and publishes the block hash, the parent hash and the payload; it exits with 0 on success and with 2 to 6 for its failure categories.
