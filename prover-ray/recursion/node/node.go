@@ -8,7 +8,7 @@
 // The program verifies nothing about the children: their values are plain
 // inputs. It is the layer of the verifier program that survives once the
 // children's proofs are verified in the machine, and it serves meanwhile to
-// settle and exercise the interface with conglomeration. Dev and test only.
+// settle and exercise the interface with conglomeration. Not sound until then.
 //
 // A bus product is an E6 value exposed as six base public inputs (lane l of
 // handle h is BusTag_(6h+l)), because wiop has no extension public input bound

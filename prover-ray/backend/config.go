@@ -20,10 +20,12 @@ type Config struct {
 	// (see zkcdriver.Settings.ShardSize). Zero disables sharding: the whole
 	// execution is a single shard.
 	//
-	// Sharding is not production-ready. With a non-zero ShardSize the in-shard
-	// message-bus check is off and the bus balances only across shards, which
-	// an [Aggregator] must check; in full mode, until the recursion machine
-	// lands, every sharded job fails with [ErrNotImplemented]. Leave it zero in
-	// production.
+	// With a non-zero ShardSize the in-shard message-bus check is off and the
+	// bus balances only across shards: the shard proofs are conglomerated by
+	// the recursion machine's node programs, and the final proof of a sharded
+	// job is a root-node proof, with the node programs' public-input layout and
+	// verification key rather than the shard system's. The node programs do
+	// not verify the children's proofs yet, so a sharded job's proof is not
+	// sound on its own.
 	ShardSize uint64
 }
