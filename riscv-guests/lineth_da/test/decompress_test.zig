@@ -43,13 +43,6 @@ const foreign_suffix = "segments owned by the next proof";
 const inside_length_prefix = 2;
 const inside_body = 7;
 
-/// A frame in the form `options` select, against the package dictionary unless they name another.
-fn compressFrame(a: Allocator, payload: []const u8, options: zstd_frames.Options) ![]u8 {
-    var with_dictionary = options;
-    if (with_dictionary.dictionary == null) with_dictionary.dictionary = dictionary;
-    return zstd_frames.compress(a, payload, with_dictionary);
-}
-
 // ---- accepted layouts ------------------------------------------------------------------------
 
 test "a blob holding one segment" {
@@ -218,53 +211,6 @@ test "a positive tail count is accepted up to one byte below a full payload" {
     const take = capacity - 1;
 
     try expectAccepted(&.{blob}, &.{payload_1}, insideFirstChunk(&.{blob}, take), foldOnto(before_first_chunk, &.{blob}), take - own.len);
-}
-
-test "frame headers may omit the content size and the dictionary ID, or carry a checksum" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    const a = arena.allocator();
-
-    const variants = [_]zstd_frames.Options{
-        .{ .content_size = false },
-        .{ .dictionary_id = false },
-        .{ .content_size = false, .dictionary_id = false, .checksum = true },
-        .{ .checksum = true },
-    };
-    for (variants) |options| {
-        const calldata = calldataChunk(try da_stream.lengthPrefixed(a, try compressFrame(a, payload_1, options)));
-
-        try expectAccepted(&.{calldata}, &.{payload_1}, .{}, foldOnto(parent, &.{calldata}), 0);
-    }
-}
-
-test "a frame without a dictionary ID decodes against the dictionary" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    const a = arena.allocator();
-
-    // Bytes of the dictionary's own content: the frame is a short reference into the dictionary
-    // and decodes only against it.
-    const payload = dictionary[dictionary.len - 300 ..][0..200];
-    const frame = try compressFrame(a, payload, .{ .dictionary_id = false });
-    try std.testing.expect(frame.len < payload.len / 2);
-    const calldata = calldataChunk(try da_stream.lengthPrefixed(a, frame));
-
-    try expectAccepted(&.{calldata}, &.{payload}, .{}, foldOnto(parent, &.{calldata}), 0);
-}
-
-// One last raw block holding "x" under a frame header without content size, and the window
-// descriptor 0x88 (2^27 bytes) or 0x90 (2^28).
-const window_2_27_frame = [_]u8{ 0x28, 0xb5, 0x2f, 0xfd, 0x00, 0x88, 0x09, 0x00, 0x00, 0x78 };
-const window_2_28_frame = [_]u8{ 0x28, 0xb5, 0x2f, 0xfd, 0x00, 0x90, 0x09, 0x00, 0x00, 0x78 };
-
-test "a frame may declare a window of up to 2^27 bytes" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-
-    const calldata = calldataChunk(try da_stream.lengthPrefixed(arena.allocator(), &window_2_27_frame));
-
-    try expectAccepted(&.{calldata}, &.{"x"}, .{}, foldOnto(parent, &.{calldata}), 0);
 }
 
 // ---- layouts built at random -----------------------------------------------------------------
@@ -624,37 +570,44 @@ test "a conflation without a segment in the stream is rejected" {
     try expectRejected(error.MissingSegmentLength, &.{calldata}, &.{ payload_1, payload_2 }, .{});
 }
 
-test "each segment is one complete frame" {
+test "each segment is one complete frame of the DA form" {
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
     const a = arena.allocator();
     const frame = try packageFrame(a, payload_1);
     const other_frame = try packageFrame(a, payload_2);
+    const other_dictionary = try zstd_frames.dictionaryWithId(a, dictionary, 0x1234_5678);
 
     const rejected_frames = [_][]const u8{
         "not a zstd frame",
         try concat(a, &.{ frame, "trailing" }),
         try concat(a, &.{ frame, other_frame }),
         frame[0 .. frame.len - 1],
-        try concat(a, &.{ try compressFrame(a, payload_1, .{ .content_size = false }), "trailing" }),
-        &window_2_28_frame,
+        try zstd_frames.compress(a, payload_1, .{ .dictionary = dictionary, .content_size = false }),
+        try packageFrame(a, payload_1 ++ "!"),
+        try packageFrame(a, payload_1[0 .. payload_1.len - 1]),
+        try zstd_frames.compress(a, payload_1, .{ .dictionary = dictionary, .dictionary_id = false }),
+        try zstd_frames.compress(a, payload_1, .{ .dictionary = other_dictionary }),
+        try zstd_frames.compress(a, payload_1, .{ .dictionary = dictionary, .checksum = true }),
     };
     for (rejected_frames) |rejected| {
         try expectRejected(error.InvalidFrame, &.{calldataChunk(try da_stream.lengthPrefixed(a, rejected))}, &.{payload_1}, .{});
     }
 }
 
-test "a frame compressed against another dictionary is rejected" {
+test "a frame declaring a window beyond 2^27 bytes is rejected" {
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
     const a = arena.allocator();
 
-    // The same dictionary under another ID.
-    const other = try a.dupe(u8, dictionary);
-    std.mem.writeInt(u32, other[4..8], std.mem.readInt(u32, dictionary[4..8], .little) ^ 1, .little);
-    const frame = try compressFrame(a, payload_1, .{ .dictionary = other });
+    // A payload beyond the 2 MiB window of level 3, so that the header carries a window descriptor.
+    const payload = try a.alloc(u8, 3 << 20);
+    var prng = std.Random.DefaultPrng.init(5);
+    prng.random().bytes(payload);
+    const frame = try packageFrame(a, payload);
+    zstd_frames.patchWindowDescriptor(frame, 0x90);
 
-    try expectRejected(error.InvalidFrame, &.{calldataChunk(try da_stream.lengthPrefixed(a, frame))}, &.{payload_1}, .{});
+    try expectRejected(error.InvalidFrame, &.{calldataChunk(try da_stream.lengthPrefixed(a, frame))}, &.{payload}, .{});
 }
 
 test "a frame has to decompress to its conflation's canonical payload" {
@@ -662,12 +615,9 @@ test "a frame has to decompress to its conflation's canonical payload" {
     defer arena.deinit();
     const a = arena.allocator();
 
-    // Other bytes, a prefix of the payload, and more bytes than the payload.
-    for ([_][]const u8{ "conflation X", payload_1[0 .. payload_1.len - 1], payload_1 ++ "!" }) |published| {
-        const calldata = calldataChunk(try segment(a, published));
+    const calldata = calldataChunk(try segment(a, "conflation X"));
 
-        try expectRejected(error.PayloadMismatch, &.{calldata}, &.{payload_1}, .{});
-    }
+    try expectRejected(error.PayloadMismatch, &.{calldata}, &.{payload_1}, .{});
 }
 
 test "the segments of a stream are matched to the conflations in order" {

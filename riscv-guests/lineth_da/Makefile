@@ -34,7 +34,7 @@ BIN    := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 # Default exec/debug input of the zstd, blob and decompress smokes, generated into a `.ssz` file (so
 # the ELF->JSON conversion frames it with the 8-byte length prefix `read_input` expects):
 #   zstd        the canonical payload of the first three valid blocks of the EF zkevm fixtures,
-#               compressed by compress_frame;
+#               compressed by compress_frame behind its length;
 #   blob        a case of the official EIP-4844 reference vectors, written by blob_sample;
 #   decompress  the same payload published as a one-blob DA stream by da_sample.
 # SMOKE_PAYLOAD=path/to/file uses the bytes of a file as the payload instead. Pass

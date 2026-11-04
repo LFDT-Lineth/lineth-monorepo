@@ -4,8 +4,9 @@
 //! conflation, in order. Its chunks are blobs (bound by the versioned hash of their KZG commitment
 //! and the EIP-4844 proof of the blob against it) and calldata submissions (bound by keccak256). A
 //! blob contributes its unpacked payload, a calldata chunk its bytes; the concatenation is the
-//! stream, and each segment's frame decompresses, with the decoder's dictionary, to the canonical
-//! payload of its conflation.
+//! stream, and each segment is one frame in the form the decoder accepts (declaring the canonical
+//! payload's length as its content size), which decompresses, with the decoder's dictionary, to the
+//! canonical payload of its conflation.
 
 const std = @import("std");
 
@@ -13,7 +14,7 @@ const accelerators = @import("zesu_accelerators");
 const blob_kzg = @import("encoding/blob_kzg.zig");
 const blob_payload = @import("encoding/blob_payload.zig");
 const rolling_hash = @import("encoding/rolling_hash.zig");
-const zstd = @import("zstd.zig");
+const zstd_decoder = @import("zstd_decoder.zig");
 
 const Allocator = std.mem.Allocator;
 
@@ -59,8 +60,9 @@ pub const Error = error{
 
     // Decompression of the segments.
 
-    /// A segment's bytes are other than one complete zstd frame that decodes with the decoder's
-    /// dictionary.
+    /// A segment's bytes are other than one frame the decoder accepts for the conflation's canonical
+    /// payload: a complete frame whose header declares the payload's length as its content size and
+    /// the dictionary's ID, with no content checksum and a window within the bound.
     InvalidFrame,
     /// A frame decompresses to bytes other than its conflation's canonical payload.
     PayloadMismatch,
@@ -98,7 +100,8 @@ pub const Verified = struct {
 ///   `parent_data_tail_take_bytes` requires a first blob with a longer payload, and the stream
 ///   starts at the last `parent_data_tail_take_bytes` bytes of it; every chunk owns at least one
 ///   byte inside the parsed segments; every calldata chunk ends at a segment boundary.
-/// - Every segment's frame decompresses exactly to its conflation's canonical payload.
+/// - Every segment is one frame in the form the decoder accepts, declaring the length of its
+///   conflation's canonical payload as its content size, and decompresses exactly to that payload.
 /// - The dataRollingHash folds the chunks onto `parent_data_rolling_hash`; a positive tail count
 ///   starts the range inside the first chunk, which the parent hash includes, so
 ///   `boundary_prev_data_rolling_hash` has to open it.
@@ -106,7 +109,7 @@ pub const Verified = struct {
 /// `allocator` serves the working buffers, released before returning.
 pub fn verifyDaChunks(
     allocator: Allocator,
-    decoder: zstd.Decoder,
+    decoder: zstd_decoder.Decoder,
     chunks: []const Chunk,
     canonical_payloads: []const []const u8,
     parent_data_rolling_hash: Hash,
@@ -204,7 +207,7 @@ fn bindChunk(chunk: Chunk, unpacked: *[blob_payload.stream_len]u8) Error![]const
 /// offset to `segment_ends`, and returns the offset where the last one ends.
 fn parseSegments(
     allocator: Allocator,
-    decoder: zstd.Decoder,
+    decoder: zstd_decoder.Decoder,
     stream: []const u8,
     canonical_payloads: []const []const u8,
     segment_ends: []usize,
@@ -220,12 +223,8 @@ fn parseSegments(
         const length = std.mem.readInt(u32, stream[cursor..][0..4], .big);
         if (length == 0 or length > stream.len - cursor - 4) return error.InvalidSegmentLength;
         const frame = stream[cursor + 4 ..][0..length];
-        const bytes = decoder.decompress(frame, decompressed[0..canonical.len]) catch |err| return switch (err) {
-            error.OutOfMemory => error.OutOfMemory,
-            error.OutputTooLarge => error.PayloadMismatch,
-            else => error.InvalidFrame,
-        };
-        if (!std.mem.eql(u8, bytes, canonical)) return error.PayloadMismatch;
+        decoder.decompress(frame, decompressed[0..canonical.len]) catch return error.InvalidFrame;
+        if (!std.mem.eql(u8, decompressed[0..canonical.len], canonical)) return error.PayloadMismatch;
         cursor += 4 + length;
         segment_end.* = cursor;
     }

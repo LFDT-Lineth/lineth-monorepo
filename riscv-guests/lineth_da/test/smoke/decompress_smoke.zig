@@ -19,7 +19,7 @@ const zkvm_provide = @import("zkvm_provide");
 
 const blob_kzg = lineth_da.encoding.blob_kzg;
 const decompress = lineth_da.decompress;
-const zstd = lineth_da.zstd;
+const zstd_decoder = lineth_da.zstd_decoder;
 
 extern var _heap_start: u8;
 extern var _heap_end: u8;
@@ -52,7 +52,7 @@ fn smokeMain() callconv(.c) noreturn {
         else => malformed(),
     };
 
-    const decoder = zstd.Decoder.init(allocator, lineth_da.dictionary_v2025_04_21) catch accelerators.zkvm_exit(3);
+    const decoder = zstd_decoder.Decoder.init(allocator, lineth_da.dictionary_v2025_04_21) catch accelerators.zkvm_exit(3);
     const verified = decompress.verifyDaChunks(allocator, decoder, &.{chunk}, &.{canonical}, parent, 0, null) catch |err| {
         accelerators.zkvm_exit(exitCode(err));
     };

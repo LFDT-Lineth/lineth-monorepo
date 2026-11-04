@@ -1,6 +1,6 @@
 //! Namespace of every source file in the lineth_da package.
 
-pub const zstd = @import("zstd.zig");
+pub const zstd_decoder = @import("zstd_decoder.zig");
 pub const encoding = @import("encoding.zig");
 pub const decompress = @import("decompress.zig");
 
