@@ -33,7 +33,7 @@ ARITHMETIZATION_DIR := $(abspath $(MAKEFILE_DIR)../..)
 include $(ARITHMETIZATION_DIR)/../riscv-guests/build_common/Makefile
 
 # Path to the zkc main used to execute/debug the JSON.
-ZKC_MAIN        := $(MAKEFILE_DIR)../main/riscv/main.zkc
+ZKC_MAIN        ?= $(MAKEFILE_DIR)../main/riscv/main.zkc
 # zkc command (override for CI comparison benchmarks, e.g. ZKC=/tmp/zkc-base).
 ZKC             ?= go -C $(ARITHMETIZATION_DIR) tool zkc
 # Assembly, Zig, or Rust test file to execute with exec target (TEST=src_optional_subfolder/your_test(.s|.zig|.rs)
