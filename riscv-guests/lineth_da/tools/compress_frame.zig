@@ -3,8 +3,9 @@
 //!
 //! usage: compress_frame <input-out> <fixtures-dir> [<payload-in>]
 //!
-//! The payload is the file `payload-in`, or the canonical payload of the first three valid blocks of
-//! the EF zkevm fixtures in `fixtures-dir`, the directory that holds `blockchain_tests/`. The output is raw bytes; a `.ssz`-suffixed output is framed with the 8-byte
+//! The payload is the file `payload-in`, or the canonical payload of the conflation `sample` of the
+//! block selection of the EF zkevm fixtures in `fixtures-dir`, the directory that holds
+//! `blockchain_tests/`. The output is raw bytes; a `.ssz`-suffixed output is framed with the 8-byte
 //! length prefix `read_input` expects when it is passed to `make exec INPUT=...`.
 
 const std = @import("std");
@@ -30,9 +31,9 @@ pub fn main(init: std.process.Init) !void {
         }
     else blk: {
         const corpus_dir = try std.fs.path.join(arena, &.{ args[2], "blockchain_tests", "for_amsterdam" });
-        var blocks = try ef_conflations.Blocks.open(init.gpa, init.io, corpus_dir);
-        defer blocks.deinit();
-        break :blk try blocks.conflationPayload(arena, 3);
+        var selection = try ef_conflations.Selection.load(init.gpa, init.io, corpus_dir);
+        defer selection.deinit();
+        break :blk try selection.conflationPayload(arena, &ef_conflations.sample);
     };
 
     const encoder = try zstd_encoder.Encoder.init(init.gpa, lineth_da.dictionary_v2025_04_21);

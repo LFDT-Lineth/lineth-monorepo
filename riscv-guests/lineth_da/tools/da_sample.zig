@@ -3,11 +3,11 @@
 //!
 //! usage: da_sample <input-out> <fixtures-dir> [blob|calldata [<payload-in>]]
 //!
-//! The payload is the file `payload-in`, or the canonical payload of the first three valid blocks of
-//! the EF zkevm fixtures in `fixtures-dir`, the directory that holds `blockchain_tests/`. The
-//! segment is the payload compressed against the package dictionary behind a 4-byte length prefix.
-//! A blob chunk packs it into a blob, anchored by the versioned hash of the blob's commitment and
-//! carrying the commitment and the blob proof computed by c-kzg-4844.
+//! The payload is the file `payload-in`, or the canonical payload of the conflation `sample` of the
+//! block selection of the EF zkevm fixtures in `fixtures-dir`, the directory that holds
+//! `blockchain_tests/`. The segment is the payload compressed against the package dictionary behind
+//! a 4-byte length prefix. A blob chunk packs it into a blob, anchored by the versioned hash of the
+//! blob's commitment and carrying the commitment and the blob proof computed by c-kzg-4844.
 
 const std = @import("std");
 
@@ -42,9 +42,9 @@ pub fn main(init: std.process.Init) !void {
         }
     else blk: {
         const corpus_dir = try std.fs.path.join(arena, &.{ args[2], "blockchain_tests", "for_amsterdam" });
-        var blocks = try ef_conflations.Blocks.open(init.gpa, init.io, corpus_dir);
-        defer blocks.deinit();
-        break :blk try blocks.conflationPayload(arena, 3);
+        var selection = try ef_conflations.Selection.load(init.gpa, init.io, corpus_dir);
+        defer selection.deinit();
+        break :blk try selection.conflationPayload(arena, &ef_conflations.sample);
     };
 
     var input: std.ArrayList(u8) = .empty;

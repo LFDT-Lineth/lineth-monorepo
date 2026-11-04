@@ -1,5 +1,6 @@
 //! The blocks of the Ethereum Foundation's zkevm fixtures: the cases of a corpus directory, and
-//! for every block a case accepts the facts the fixture lists for it, hex-decoded.
+//! for every block a case accepts the facts the fixture lists for it, hex-decoded; or one block at
+//! a known position.
 
 const std = @import("std");
 
@@ -7,6 +8,19 @@ const Allocator = std.mem.Allocator;
 
 pub const Hash = [32]u8;
 pub const Address = [20]u8;
+
+/// What the fixture lists about the transactions of a block.
+pub const Profile = struct {
+    transactions: usize,
+    /// Bit `n` is set when the block holds a transaction of type `n`.
+    types: u8,
+    /// The longest calldata of a transaction, in bytes.
+    max_data_len: usize,
+    /// Whether a transaction has an access list with an entry.
+    access_list: bool,
+    /// Whether a transaction has an authorization list with an entry.
+    authorization_list: bool,
+};
 
 /// A block a fixture accepts, as the fixture lists it.
 pub const Fact = struct {
@@ -21,6 +35,7 @@ pub const Fact = struct {
     senders: []const Address,
     /// Whether a transaction of the block is an EIP-4844 blob transaction (type 3).
     blob_transaction: bool,
+    profile: Profile,
 };
 
 /// One case of a fixture file.
@@ -45,6 +60,9 @@ const Header = struct {
 const Transaction = struct {
     type: []const u8 = "0x00",
     sender: []const u8,
+    data: []const u8 = "0x",
+    accessList: []const std.json.Value = &.{},
+    authorizationList: []const std.json.Value = &.{},
 };
 
 const Block = struct {
@@ -127,9 +145,15 @@ fn factOf(arena: Allocator, block: Block) !?Fact {
     const transactions = block.transactions orelse &.{};
     const senders = try arena.alloc(Address, transactions.len);
     var blob_transaction = false;
+    var profile: Profile = .{ .transactions = transactions.len, .types = 0, .max_data_len = 0, .access_list = false, .authorization_list = false };
     for (transactions, senders) |transaction, *sender| {
         sender.* = try decodeHex(20, transaction.sender);
-        if (try std.fmt.parseInt(u8, transaction.type, 0) == 3) blob_transaction = true;
+        const tx_type = try std.fmt.parseInt(u8, transaction.type, 0);
+        if (tx_type == 3) blob_transaction = true;
+        if (tx_type < 8) profile.types |= @as(u8, 1) << @intCast(tx_type);
+        profile.max_data_len = @max(profile.max_data_len, digits(transaction.data).len / 2);
+        profile.access_list = profile.access_list or transaction.accessList.len > 0;
+        profile.authorization_list = profile.authorization_list or transaction.authorizationList.len > 0;
     }
     return .{
         .rlp = try decodeHexAlloc(arena, rlp_text),
@@ -140,6 +164,28 @@ fn factOf(arena: Allocator, block: Block) !?Fact {
         .timestamp = try std.fmt.parseInt(u64, header.timestamp, 0),
         .senders = senders,
         .blob_transaction = blob_transaction,
+        .profile = profile,
+    };
+}
+
+/// A block at a known position, with the ID of the chain its case runs on.
+pub const Located = struct {
+    chain_id: u64,
+    fact: Fact,
+};
+
+/// Block `index` of the case `case_name` in the fixture file `path`, which is relative to the corpus
+/// directory `corpus_dir`. The block is one the fixture accepts, or `error.BlockNotAccepted`; it and
+/// the file's other allocations belong to `arena`.
+pub fn locate(arena: Allocator, io: std.Io, corpus_dir: []const u8, path: []const u8, case_name: []const u8, index: usize) !Located {
+    const full_path = try std.fs.path.join(arena, &.{ corpus_dir, path });
+    const text = try std.Io.Dir.cwd().readFileAlloc(io, full_path, arena, .limited(1 << 30));
+    const cases = try std.json.parseFromSliceLeaky(std.json.ArrayHashMap(RawCase), arena, text, .{ .ignore_unknown_fields = true });
+    const raw = cases.map.get(case_name) orelse return error.CaseNotFound;
+    if (index >= raw.blocks.len) return error.BlockNotFound;
+    return .{
+        .chain_id = try std.fmt.parseInt(u64, raw.config.chainid, 0),
+        .fact = try factOf(arena, raw.blocks[index]) orelse return error.BlockNotAccepted,
     };
 }
 
