@@ -22,6 +22,10 @@
 // prefix while building the ZkC input blobs. [SerializeProof] (wiop.Proof →
 // wire bytes) is still stubbed and returns [ErrNotImplemented].
 //
+// With sharding ([Config.ShardSize]), [Core.Prove] traces and proves one shard
+// at a time; conglomerating the shard proofs into one is not implemented, so a
+// sharded job returns [ErrNotImplemented].
+//
 // Circuit compiler passes and [wiop.Materialize] are also not yet wired
 // in [New]; see the inline comments in [core.go].
 package backend
