@@ -1310,11 +1310,12 @@ func (pcs *PCS) inputOpeningCommitments() ([]CommitterState, error) {
 		for _, entry := range bundle.Entries {
 			committed := pcs.openings[entry.BatchIdx].committed
 			root := committed.Tree.Root()
+			// Skip a batch already added at a larger size, or (with dedup) one sharing an added root.
 			if seenBatch[entry.BatchIdx] || (!pcs.rootDedupDisabled && seenRoot[root]) {
 				continue
 			}
-			seenBatch[entry.BatchIdx] = true
-			seenRoot[root] = true
+			seenBatch[entry.BatchIdx] = true // one input tree per batch, whatever its sizes
+			seenRoot[root] = true            // only consulted when dedup is on
 			inputs = append(inputs, committed)
 		}
 	}
