@@ -40,6 +40,7 @@ import java.net.ConnectException
 import java.net.URI
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -628,6 +629,32 @@ class JsonRpcV2ClientImplTest {
         ),
       )
     }
+  }
+
+  @Test
+  fun `factory applies per-request headers and per-method timeout`() {
+    val scriptedServer = ScriptedJsonRpcServer(vertx)
+    val endpoint = scriptedServer.start()
+    scriptedServer.reply("slowMethod", ScriptedJsonRpcServer.Reply(delay = 2.seconds))
+    val client = factory.createJsonRpcV2Client(
+      endpoints = listOf(endpoint.toURI()),
+      retryConfig = defaultRetryConfig,
+      shallRetryRequestsClientBasePredicate = Predicate { false },
+      requestHeadersProvider = { mapOf("Authorization" to "Bearer abc") },
+      requestTimeoutProvider = { method -> if (method == "slowMethod") 200.milliseconds else null },
+    )
+
+    assertThat(client.makeRequest(method = "fastMethod", params = emptyList<Any>(), resultMapper = { it }).get())
+      .isEqualTo("OK")
+    assertThat(scriptedServer.receivedRequests.single().headers["Authorization"]).isEqualTo("Bearer abc")
+
+    assertThatThrownBy {
+      client.makeRequest(method = "slowMethod", params = emptyList<Any>(), resultMapper = { it }).get()
+    }
+      .isInstanceOf(ExecutionException::class.java)
+      .cause()
+      .isInstanceOf(TimeoutException::class.java)
+      .hasMessageContaining("method=slowMethod")
   }
 
   private fun replyRequestWith(statusCode: Int, body: String?) {
