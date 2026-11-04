@@ -2011,12 +2011,16 @@ func inputOpeningRoots(layout layout, orders [][]int, roots []field.Octuplet, de
 	}
 	indexByRoot := make(map[field.Octuplet]int)
 	inputRoots := make(QueryLayerRoots, 0)
+	// Go over the layout's sizes, largest first.
 	for levelIdx := range layout {
+		// Go over the batches with columns at this size, in batch order.
 		for _, batchIdx := range orders[levelIdx] {
+			// A batch spanning several sizes keeps the tree it got at a larger size.
 			if indexByBatch[batchIdx] >= 0 {
 				continue
 			}
 			root := roots[batchIdx]
+			// Share an earlier batch's tree only with dedup; otherwise every batch gets its own.
 			if idx, ok := indexByRoot[root]; ok && dedup {
 				indexByBatch[batchIdx] = idx
 				continue
