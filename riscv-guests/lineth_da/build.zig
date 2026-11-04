@@ -173,7 +173,7 @@ fn addHostBuild(
     });
 
     const ef_blocks = b.addModule("ef_blocks", .{
-        .root_source_file = b.path("test/ef_blocks.zig"),
+        .root_source_file = b.path("test/support/ef_blocks.zig"),
         .target = target,
         .optimize = optimize,
     });
