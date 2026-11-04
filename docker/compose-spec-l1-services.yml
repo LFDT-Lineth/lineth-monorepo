@@ -2,7 +2,7 @@ services:
   l1-el-node:
     container_name: l1-el-node
     hostname: l1-el-node
-    image: ${BESU_PACKAGE_IMAGE_NAME:-consensys/linea-besu-package}:${LINEA_BESU_PACKAGE_TAG:-2.3.1-20261009-7d9e0fb}
+    image: ${BESU_PACKAGE_IMAGE_NAME:-consensys/linea-besu-package}:${LINEA_BESU_PACKAGE_TAG:-2.3.2-20261026-c6609be}
     profiles: [ "l1", "debug", "external-to-monorepo" ]
     depends_on:
       l1-node-genesis-generator:
@@ -46,7 +46,7 @@ services:
   l1-cl-node:
     container_name: l1-cl-node
     hostname: l1-cl-node
-    image: consensys/teku:26.9.1
+    image: consensys/teku:26.10.2
     profiles: [ "l1", "debug", "external-to-monorepo" ]
     depends_on:
       l1-el-node:

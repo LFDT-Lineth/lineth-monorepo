@@ -8,7 +8,7 @@ import { ShnarfDataAcceptorBase } from "./ShnarfDataAcceptorBase.sol";
 
 /**
  * @title Contract to manage compressed data blobs submitted as calldata.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract CalldataBlobAcceptor is LocalShnarfProvider, ShnarfDataAcceptorBase, IAcceptCalldataBlobs {

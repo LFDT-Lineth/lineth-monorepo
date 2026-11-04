@@ -51,8 +51,8 @@ class FileBasedRollupAggregationProverClientTest {
     client = RollupAggregationProverClient(
       transport = transport,
       rollupProofProvider = rollupProofTransport::findResponse,
-      programId = ROLLUP_AGGREGATION_PROGRAM_ID,
-      provingSystemVersion = PROVING_SYSTEM_VERSION,
+      guestProgramId = ROLLUP_AGGREGATION_PROGRAM_ID,
+      provingSystem = PROVING_SYSTEM_VERSION,
     )
   }
 

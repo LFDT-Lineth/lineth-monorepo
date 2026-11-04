@@ -54,8 +54,8 @@ class FileBasedRollupProverClientTest {
     client = RollupProverClient(
       transport = transport,
       l2ExecutionProofProvider = l2ExecutionProofTransport::findResponse,
-      programId = ROLLUP_PROGRAM_ID,
-      provingSystemVersion = PROVING_SYSTEM_VERSION,
+      guestProgramId = ROLLUP_PROGRAM_ID,
+      provingSystem = PROVING_SYSTEM_VERSION,
       chainId = CHAIN_ID,
     )
   }

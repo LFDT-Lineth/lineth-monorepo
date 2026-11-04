@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"path"
 	"path/filepath"
 
 	arith_src "github.com/LFDT-Lineth/lineth-monorepo/arithmetization/src"
@@ -13,52 +14,74 @@ import (
 	"github.com/LFDT-Lineth/zkc/pkg/util/source"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/compiler"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/compiler/ast"
+	"github.com/LFDT-Lineth/zkc/pkg/zkc/compiler/ast/decl"
+	"github.com/LFDT-Lineth/zkc/pkg/zkc/compiler/ast/symbol"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/compiler/codegen"
+	"github.com/LFDT-Lineth/zkc/pkg/zkc/compiler/parser"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/constraints"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 )
 
 const mainDir = "main"
-const zkcExt = ".zkc"
-const predecodingDir = "predecoding"
+
+// entryPoint is the R5 interpreter entry point, relative to [mainDir]. Only
+// the files it reaches through include declarations are compiled.
+const entryPoint = "riscv/main.zkc"
 
 // BinaryFile provides an instantiation of constraints.BinaryFile suitable for
 // running Koalabear.
 type BinaryFile = constraints.BinaryFile[koalabear.Element, vm.Uint32]
 
 // arithmetizationSourceFiles returns the embedded R5 interpreter source files
-// as a slice of source.File.
+// as a slice of source.File: the entry point [entryPoint] and the transitive
+// closure of its include declarations, resolved inside rootFs.
+//
+// Following the includes, rather than walking the whole directory, matches
+// what `zkc compile riscv/main.zkc` sees. A library that nothing includes (for
+// instance an unplugged accelerator under lib/) is not compiled, so it adds no
+// modules, and no all-zero columns, to the system. The files have to be listed
+// up front because the compiler resolves any include it does not already know
+// against the real filesystem, where the embedded paths do not exist.
 func arithmetizationSourceFiles(rootFs fs.FS) []source.File {
 	subFs, err := fs.Sub(rootFs, mainDir)
 	if err != nil {
 		panic("failed to get sub FS for embedded R5 interpreter: " + err.Error())
 	}
-	srcFiles := []source.File{}
-	if err := fs.WalkDir(subFs, ".", func(path string, d fs.DirEntry, err error) error {
+	var (
+		srcFiles []source.File
+		seen     = map[string]bool{entryPoint: true}
+		queue    = []string{entryPoint}
+	)
+	for len(queue) > 0 {
+		filename := queue[0]
+		queue = queue[1:]
+		bytes, err := fs.ReadFile(subFs, filename)
 		if err != nil {
-			return err
+			panic("failed to read embedded R5 interpreter source file: " + err.Error())
 		}
-		// skip predecoding directory, as it contains files that are not part of
-		// the main R5 interpreter source code.
-		if d.IsDir() && path == predecodingDir {
-			return fs.SkipDir
-		}
-		if d.IsDir() {
-			return nil
-		}
-		if filepath.Ext(path) != zkcExt {
-			return nil
-		}
-		bytes, err := fs.ReadFile(subFs, path)
-		if err != nil {
-			return err
-		}
-		absPath := filepath.Join("/", path)
-		srcFile := source.NewSourceFile(absPath, bytes)
+		srcFile := source.NewSourceFile(filepath.Join("/", filename), bytes)
 		srcFiles = append(srcFiles, *srcFile)
-		return nil
-	}); err != nil {
-		panic("failed to walk embedded R5 interpreter source files: " + err.Error())
+		// Syntax errors are left for compiler.Compile to report; only the
+		// include declarations matter here.
+		parsed, _ := parser.Parse(srcFile)
+		for _, d := range parsed.Declarations {
+			include, ok := d.(*decl.Include[symbol.Unresolved])
+			if !ok {
+				continue
+			}
+			// Include patterns are relative to the including file and may be
+			// globs, as in the compiler.
+			matches, err := fs.Glob(subFs, path.Join(path.Dir(filename), include.Pattern()))
+			if err != nil {
+				panic("invalid include pattern in embedded R5 interpreter: " + err.Error())
+			}
+			for _, match := range matches {
+				if !seen[match] {
+					seen[match] = true
+					queue = append(queue, match)
+				}
+			}
+		}
 	}
 	return srcFiles
 }

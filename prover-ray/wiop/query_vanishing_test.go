@@ -5,6 +5,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -58,7 +59,7 @@ func TestVanishing_Check_Vector_AllZero(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
 	col := mod.NewColumn(sys.Context.Childf("allZCol"), r0)
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, baseVec(4, 0))
+	rt.AssignColumn(col, wioptest.ConstVec(4, 0))
 
 	v := mod.NewVanishing(sys.Context.Childf("allZVan"), col.View())
 	require.NoError(t, v.Check(rt))
@@ -68,7 +69,7 @@ func TestVanishing_Check_Vector_NonZero(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
 	col := mod.NewColumn(sys.Context.Childf("nzVCol"), r0)
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, baseVec(4, 1))
+	rt.AssignColumn(col, wioptest.ConstVec(4, 1))
 
 	v := mod.NewVanishing(sys.Context.Childf("nzVVan"), col.View())
 	err := v.Check(rt)
@@ -80,7 +81,7 @@ func TestVanishing_Check_Vector_CancelledPositions(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
 	col := mod.NewColumn(sys.Context.Childf("cancelCol"), r0)
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, baseVec(4, 1))
+	rt.AssignColumn(col, wioptest.ConstVec(4, 1))
 
 	// negative indices: -4 = row 0, -3 = row 1, -2 = row 2, -1 = row 3
 	v := mod.NewVanishingManual(sys.Context.Childf("cancelVan"), col.View(), -4, -3, -2, -1)

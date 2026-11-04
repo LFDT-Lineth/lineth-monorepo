@@ -15,13 +15,13 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 /**
  * Maps a [RollupAggregationProofRequestV1] domain request to the RISC-V rollup-aggregation proof request DTO
- * described by `rollup_spec/prover_io/schemas/getZkRollupAggregationProofV1.request.schema.json`.
+ * described by `rollup_spec/src/rollup_spec/prover_io/schemas/getZkRollupAggregationProofV1.request.schema.json`.
  *
  * When rollupProofProvider is null, it will provide only rollup indexes and prover gateway will fill in the proof
  */
 class RollupAggregationProofRequestDtoMapper(
-  private val programId: String,
-  private val provingSystemVersion: String,
+  private val guestProgramId: String,
+  private val provingSystem: String,
   private val rollupProofProvider: ProofProvider<RollupProofResponseDto>?,
 ) : (RollupAggregationProofRequestV1) -> SafeFuture<FileBasedRollupAggregationProofRequestDto> {
 
@@ -30,9 +30,10 @@ class RollupAggregationProofRequestDtoMapper(
       request.rollupProofs.map { proofIndex ->
         rollupProofProvider.findProof(proofIndex)
           .thenApply { response ->
+            // proverVersion is response-only; the embedded rollupProof schema does not allow it.
             requireNotNull(response) {
               "Rollup proof response was not found for proofIndex=$proofIndex"
-            }
+            }.copy(proverVersion = null)
           }
       }
     } ?: emptyList()
@@ -46,8 +47,8 @@ class RollupAggregationProofRequestDtoMapper(
       .collectAll(rollupProofFutures.stream())
       .thenApply { rollupResponseDtos ->
         FileBasedRollupAggregationProofRequestDto(
-          programId = programId,
-          provingSystemVersion = provingSystemVersion,
+          guestProgramId = guestProgramId,
+          provingSystem = provingSystem,
           proofRequest = FileBasedRollupAggregationProofRequestParamsDto(
             rollupProofs = rollupResponseDtos.ifEmpty { null },
             rollupProofsIndexes = rollupProofsIndexes,
@@ -64,7 +65,7 @@ class RollupAggregationProofRequestDtoMapper(
 
 /**
  * Maps the deserialized rollup-aggregation proof response DTO onto the domain [RollupAggregationProofResponseV1]
- * described by `rollup_spec/prover_io/schemas/getZkRollupAggregationProofV1.response.schema.json`.
+ * described by `rollup_spec/src/rollup_spec/prover_io/schemas/getZkRollupAggregationProofV1.response.schema.json`.
  * The transport is responsible for parsing the JSON (read from a file or returned by a REST call) into
  * [RollupAggregationProofResponseDto] before this mapper runs.
  */
@@ -78,9 +79,6 @@ object RollupAggregationProofResponseDtoMapper :
       endBlockNumber = responseDto.publicInputs.endBlockNumber.toULong(),
       proof = responseDto.proof.decodeHex(),
       publicInputs = responseDto.publicInputs.toDomainObject(),
-      l2L1Roots = responseDto.l2L1Roots.map { it.decodeHex() },
-      filteredAddresses = responseDto.filteredAddresses.map { it.decodeHex() },
-      l2MessagingBlocksOffsets = responseDto.l2MessagingBlocksOffsets.map { it.toULong() },
     )
   }
 }
@@ -102,12 +100,12 @@ typealias RollupAggregationProofTransport =
 class RollupAggregationProverClient(
   transport: RollupAggregationProofTransport,
   rollupProofProvider: ProofProvider<RollupProofResponseDto>?,
-  programId: String,
-  provingSystemVersion: String,
+  guestProgramId: String,
+  provingSystem: String,
   proofRequestDtoMapper: (RollupAggregationProofRequestV1)
   -> SafeFuture<FileBasedRollupAggregationProofRequestDto> = RollupAggregationProofRequestDtoMapper(
-    programId,
-    provingSystemVersion,
+    guestProgramId,
+    provingSystem,
     rollupProofProvider,
   ),
   proofResponseDtoMapper: (RollupAggregationProofResponseDto)

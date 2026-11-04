@@ -39,7 +39,7 @@
     "ts-jest": "catalog:",
     "tsup": "catalog:",
     "unzipper": "0.12.5",
-    "viem": "2.56.9"
+    "viem": "2.57.11"
   },
   "dependencies": {
     "koffi": "2.16.3"

@@ -162,7 +162,11 @@ func (p *paddedColumn) hash() uint64 {
 
 // columnSizeIndex returns log2 of the column's padded size in rt.
 func columnSizeIndex(col *wiop.Column, rt *wiop.Runtime) int {
-	size := utils.NextPowerOfTwo(col.Module.RuntimeSize(rt))
+	return columnSizeIndexWith(col, runtimeSizeOf(rt))
+}
+
+func columnSizeIndexWith(col *wiop.Column, sizeOf moduleSizeFunc) int {
+	size := utils.NextPowerOfTwo(sizeOf(col.Module))
 	sizeIndex := utils.Log2Ceil(size)
 	if size != 1<<sizeIndex {
 		panic("wiop: only powers of 2 are supported")
@@ -219,7 +223,7 @@ func (c *compiled) shiftSubset(alias, target *wiop.Column, sizeIndex int) bool {
 func (c *compiled) buildManifest(round *wiop.Round, vectors []paddedColumn) ColumnManifest {
 	n := len(vectors)
 	manifest := allPresentManifest(n)
-	if c.elisionDisabled || n == 0 {
+	if !c.elisionEnabled || n == 0 {
 		return manifest
 	}
 

@@ -3,7 +3,7 @@ pragma solidity ^0.8.30;
 
 /**
  * @title Simplified interface declaring pre-existing cross-chain messaging functions, events and errors.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 interface IMessageService {

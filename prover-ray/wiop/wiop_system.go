@@ -2,6 +2,7 @@ package wiop
 
 import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/arena"
 )
 
@@ -60,7 +61,18 @@ type System struct {
 	// PrecomputedCommitment commitment bears the commitment to the precomputed
 	// values.
 	PrecomputedCommitment field.Octuplet
+	// pcsMode is the PCS selection state reported by [System.PCSMode].
+	pcsMode pcsMode
 }
+
+// pcsMode is the PCS selection state of a [System]; see [System.PCSMode].
+type pcsMode int8
+
+const (
+	pcsModeProvisional pcsMode = iota
+	pcsModeSelected
+	pcsModeNone
+)
 
 // NewSystemf constructs an empty System. It creates a root [ContextFrame]
 // using the formatted name as its label, then initialises the PrecomputedRound.
@@ -88,6 +100,46 @@ func (sys *System) Free() {
 	if sys.scratchArena != nil {
 		sys.scratchArena.Free()
 		sys.scratchArena = nil
+	}
+}
+
+// SelectPCS records that this System is compiled with a PCS. The PCS pass
+// calls it when its options are configured and when it commits columns.
+// Idempotent.
+//
+// Panics if no-PCS mode was declared via [System.DeclareNoPCS].
+func (sys *System) SelectPCS() {
+	if sys.pcsMode == pcsModeNone {
+		utils.Panic("wiop: system %q: PCS selection conflicts with the declared no-PCS mode", sys.Context.Path())
+	}
+	sys.pcsMode = pcsModeSelected
+}
+
+// DeclareNoPCS declares that this System is compiled without a PCS: its
+// compiled columns stay uncommitted, and the PCS pass rejects it. It is the
+// standalone counterpart of compilers.WithoutPCS. Idempotent.
+//
+// Panics if a PCS was selected via [System.SelectPCS].
+func (sys *System) DeclareNoPCS() {
+	if sys.pcsMode == pcsModeSelected {
+		utils.Panic("wiop: system %q: no-PCS mode conflicts with the selected PCS", sys.Context.Path())
+	}
+	sys.pcsMode = pcsModeNone
+}
+
+// PCSMode reports the PCS selection state of this System:
+//
+//	 1 — PCS selected via [System.SelectPCS];
+//	 0 — explicit no-PCS, declared via [System.DeclareNoPCS];
+//	-1 — provisional: neither happened yet.
+func (sys *System) PCSMode() int {
+	switch sys.pcsMode {
+	case pcsModeSelected:
+		return 1
+	case pcsModeNone:
+		return 0
+	default:
+		return -1
 	}
 }
 

@@ -3,8 +3,8 @@ package wiop_test
 import (
 	"testing"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -17,17 +17,6 @@ func newDynamicTestSystem(t *testing.T) (*wiop.System, *wiop.Round, *wiop.Round,
 	r1 := sys.NewRound()
 	mod := sys.NewDynamicModule(sys.Context.Childf("dynmod"), wiop.PaddingDirectionRight)
 	return sys, r0, r1, mod
-}
-
-// makeVec builds a ConcreteVector of length n with all elements set to val.
-func makeVec(n int, val uint64) *wiop.ConcreteVector {
-	elems := make([]field.Element, n)
-	var e field.Element
-	e.SetUint64(val)
-	for i := range elems {
-		elems[i] = e
-	}
-	return &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
 }
 
 // TestDynamicModule_IsDynamic verifies the flag is set correctly on each factory.
@@ -69,7 +58,7 @@ func TestDynamicModule_AutoSizeOnFirstAssign(t *testing.T) {
 	col := dyn.NewColumn(sys.Context.Childf("col"), r0)
 
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, makeVec(8, 1))
+	rt.AssignColumn(col, wioptest.ConstVec(8, 1))
 
 	// After assignment, RuntimeSize should return 8.
 	assert.Equal(t, 8, dyn.RuntimeSize(rt))
@@ -83,8 +72,8 @@ func TestDynamicModule_GrowOnLargerColumn(t *testing.T) {
 	colB := dyn.NewColumn(sys.Context.Childf("B"), r0)
 
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(colA, makeVec(4, 1)) // sets domain size = 4
-	rt.AssignColumn(colB, makeVec(8, 2)) // 8 > 4 → auto-grows to 8
+	rt.AssignColumn(colA, wioptest.ConstVec(4, 1)) // sets domain size = 4
+	rt.AssignColumn(colB, wioptest.ConstVec(8, 2)) // 8 > 4 → auto-grows to 8
 	assert.Equal(t, 8, dyn.RuntimeSize(rt))
 }
 
@@ -99,7 +88,7 @@ func TestDynamicModule_StaticOverflowPanic(t *testing.T) {
 
 	rt := wiop.NewRuntime(sys)
 	assert.Panics(t, func() {
-		rt.AssignColumn(col, makeVec(8, 1)) // 8 > 4 → overflow
+		rt.AssignColumn(col, wioptest.ConstVec(8, 1)) // 8 > 4 → overflow
 	})
 }
 
@@ -126,7 +115,7 @@ func TestDynamicModule_SizePanics(t *testing.T) {
 
 	// RuntimeSize stays the supported route for dynamic modules.
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, makeVec(8, 1))
+	rt.AssignColumn(col, wioptest.ConstVec(8, 1))
 	assert.Equal(t, 8, dyn.RuntimeSize(rt))
 }
 
@@ -145,8 +134,8 @@ func TestDynamicModule_VanishingCheck(t *testing.T) {
 	// Same System, two Runtimes with different sizes.
 	for _, n := range []int{4, 8} {
 		rt := wiop.NewRuntime(sys)
-		rt.AssignColumn(colA, makeVec(n, 3)) // sets domain size = n
-		rt.AssignColumn(colB, makeVec(n, 3))
+		rt.AssignColumn(colA, wioptest.ConstVec(n, 3)) // sets domain size = n
+		rt.AssignColumn(colB, wioptest.ConstVec(n, 3))
 
 		for _, v := range dyn.Vanishings {
 			require.NoError(t, v.Check(rt), "n=%d", n)
@@ -164,8 +153,8 @@ func TestDynamicModule_VanishingCheckFailure(t *testing.T) {
 	dyn.NewVanishing(sys.Context.Childf("eq"), wiop.Sub(colA.View(), colB.View()))
 
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(colA, makeVec(4, 1))
-	rt.AssignColumn(colB, makeVec(4, 2)) // mismatch → constraint fails
+	rt.AssignColumn(colA, wioptest.ConstVec(4, 1))
+	rt.AssignColumn(colB, wioptest.ConstVec(4, 2)) // mismatch → constraint fails
 
 	for _, v := range dyn.Vanishings {
 		require.Error(t, v.Check(rt))

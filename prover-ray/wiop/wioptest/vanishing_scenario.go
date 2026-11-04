@@ -68,21 +68,31 @@ func VanishingScenarios() []func() *VanishingScenario {
 //
 // The caller must assign all r0 oracle columns before calling RunProver; any
 // prover action registered on r0 (e.g. the multiplicity-column assignment that
-// lookuptologderivsum installs) is then run here.
+// lookuptologderivsum installs) is then run here. Like [wiop.System.Prove], it
+// panics if a dynamic module is below its minimum size once the sizes are
+// final (see [wiop.Runtime.CheckMinRuntimeSizes]).
 func RunProver(rt *wiop.Runtime) {
 	sys := rt.System
 	// Run any prover actions on the current (first) round before any
 	// AdvanceRound. The lookup-to-log-derivative compiler installs its
 	// multiplicity-assignment task on the group's witness round, which is
 	// the runtime's starting round.
-	for _, a := range rt.CurrentRound().ProverActions {
-		a.Run(rt)
-	}
-	for rt.CurrentRound().ID < len(sys.Rounds)-1 {
-		rt.AdvanceRound()
+	runRound := func() {
 		for _, a := range rt.CurrentRound().ProverActions {
 			a.Run(rt)
 		}
+		// As in wiop.System.Prove: the dynamic sizes are final once this
+		// round's actions have run.
+		if rt.CurrentRound().ID == sys.DynamicSizeRound {
+			if err := rt.CheckMinRuntimeSizes(); err != nil {
+				panic(err)
+			}
+		}
+	}
+	runRound()
+	for rt.CurrentRound().ID < len(sys.Rounds)-1 {
+		rt.AdvanceRound()
+		runRound()
 	}
 }
 

@@ -5,7 +5,7 @@ type ProofType string
 
 const (
 	// ProofTypeL2Execution proves a range of L2 blocks using the
-	// l2-execution guest ELF (riscv-guests/l2-execution/).
+	// l2-execution guest ELF (riscv-guests/l2_execution/).
 	ProofTypeL2Execution ProofType = "l2-execution"
 
 	// ProofTypeRollup proves the compression / data-availability stage
@@ -44,6 +44,14 @@ type Job struct {
 	// Multi-block conflation encoding is not yet decided; [Core.Prove] rejects
 	// jobs spanning more than one block.
 	Payload []byte
+
+	// ShardIndexes lists the trace shards this prover proves, in any order;
+	// empty proves them all. Without sharding ([Config.ShardSize] zero) only
+	// shard 0 exists. The shard count depends on the guest input and is only
+	// known after the job's fast-mode pass, so an index past the end fails the
+	// job. Conglomerating the shard proofs into one proof is not implemented
+	// yet: in full mode, a sharded job fails with [ErrNotImplemented].
+	ShardIndexes []uint
 }
 
 // ResultStatus indicates whether a prove attempt succeeded.
@@ -63,24 +71,22 @@ const (
 //
 // Count and field names follow the getZkL2ExecutionProofV1 response schema.
 type PublicInputs struct {
-	ParentBlockHash                          [32]byte
-	EndBlockHash                             [32]byte
-	EndBlockNumber                           uint64
-	EndBlockTimestamp                        uint64
-	ParentL1L2BridgeRollingHash              [32]byte
-	ParentL1L2BridgeRollingHashMessageNumber uint64
-	EndL1L2BridgeRollingHash                 [32]byte
-	EndL1L2BridgeRollingHashMessageNumber    uint64
-	DynamicChainConfigHash                   [32]byte
-	ParentFtxRollingHash                     [32]byte
-	ParentFtxNumber                          uint64
-	EndFtxRollingHash                        [32]byte
-	EndProcessedFtxNumber                    uint64
-	FilteredAddressesHash                    [32]byte
-	TxFromsHash                              [32]byte
-	BlockCount                               uint64
-	L2MessagingBlocksOffsets                 []uint16
-	L2L1Messages                             [][32]byte
+	ParentBlockHash                       [32]byte
+	EndBlockHash                          [32]byte
+	EndBlockNumber                        uint64
+	EndBlockTimestamp                     uint64
+	EndL1L2BridgeRollingHash              [32]byte
+	EndL1L2BridgeRollingHashMessageNumber uint64
+	DynamicChainConfigHash                [32]byte
+	ParentFtxRollingHash                  [32]byte
+	ParentFtxNumber                       uint64
+	EndFtxRollingHash                     [32]byte
+	EndProcessedFtxNumber                 uint64
+	FilteredAddresses                     [][20]byte
+	TxFromsHash                           [32]byte
+	BlockCount                            uint64
+	L2MessagingBlocksOffsets              []uint16
+	L2L1Messages                          [][32]byte
 }
 
 // Result is the backend's response for a completed [Job].

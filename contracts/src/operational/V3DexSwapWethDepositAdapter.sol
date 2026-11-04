@@ -9,7 +9,7 @@ import { IWETH9 } from "./interfaces/IWETH9.sol";
 /**
  * @title V3DexSwapWethDepositAdapter.
  * @dev A contract for swapping tokens on a decentralized exchange.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 contract V3DexSwapWethDepositAdapter is IV3DexSwapAdapter {

@@ -1,7 +1,6 @@
 package zkcdriver_test
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/files"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
 	"github.com/LFDT-Lineth/zkc/pkg/util/file"
 	"github.com/sirupsen/logrus"
 )
@@ -43,7 +43,7 @@ func TestZkcIntegrationTestSynced(t *testing.T) {
 	sysPipeline := proverCompilePipeline
 	if testing.Short() {
 		t.Log("short mode, skipping full prover pipeline")
-		sysPipeline = func(_ *wiop.System) {}
+		sysPipeline = func(_ *wiop.System, _ ...compilers.Option) {}
 	}
 
 	// glob the testdata files, and run each one as a sub-test. Each test-case is
@@ -108,7 +108,7 @@ func TestZkcIntegrationTestSynced(t *testing.T) {
 						logrus.Panicf("failed to parse test case: %v", err)
 					}
 					for outputName, expectedOutput := range zkcOutputs {
-						if !bytes.Equal(expectedOutput, zkcInput.Inputs[outputName]) {
+						if !expectedOutput.Equals(zkcInput.Inputs[outputName]) {
 							fatalIfNotKnown(
 								t, failures, baseName, l, failReasonOutputMismatch,
 								"output mismatch for %s: expected %x, got %x",

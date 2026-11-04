@@ -2,10 +2,12 @@
 
 from typing import Iterable
 
+import ckzg
 import zstandard as zstd
 from ethereum.crypto.hash import Hash32, keccak256
+from ethereum.crypto.kzg import KZGCommitment, kzg_commitment_to_versioned_hash
 
-from rollup_spec.rollup import ChunkWitness, blob_versioned_hash, pack_blob_payload
+from rollup_spec.rollup import ChunkWitness, pack_blob_payload, trusted_setup
 
 
 def segment(payload: bytes) -> bytes:
@@ -15,8 +17,17 @@ def segment(payload: bytes) -> bytes:
 
 
 def blob_chunk(payload: bytes) -> ChunkWitness:
+    """A blob chunk anchored by the versioned hash of its commitment, carrying the EIP-4844 blob proof."""
     blob = pack_blob_payload(payload)
-    return ChunkWitness(blob_versioned_hash(blob), is_calldata=False, blob_bytes=blob)
+    commitment = ckzg.blob_to_kzg_commitment(blob, trusted_setup())
+    proof = ckzg.compute_blob_kzg_proof(blob, commitment, trusted_setup())
+    return ChunkWitness(
+        kzg_commitment_to_versioned_hash(KZGCommitment(commitment)),
+        is_calldata=False,
+        blob_bytes=blob,
+        kzg_commitment=commitment,
+        kzg_proof=proof,
+    )
 
 
 def calldata_chunk(data: bytes) -> ChunkWitness:

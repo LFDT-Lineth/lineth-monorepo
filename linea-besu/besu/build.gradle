@@ -1,5 +1,5 @@
 /*
- * Copyright Consensys Software Inc.
+ * Copyright Consensys Incorporated
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -305,10 +305,24 @@ static String resolveBesuVersionCached(providers, String besuCommit, File rootDi
   if (cached) return cached
 
   // set last parameter as true to skip checkout the besu commit
-  // to save time as we only needs to retrieve the git tag
+  // to save time as we only needs to read CHANGELOG.md at that commit
   def besuVer = runCheckoutAndResolveScript(providers, besuCommit, rootDir, true).trim().readLines().last()
   writeCachedBesuVersion(cachedResolvedFile, besuCommit, besuVer)
+  updateBesuVersionComment(new File(rootDir, 'gradle/libs.versions.toml'), besuCommit, besuVer)
   return besuVer
+}
+
+/**
+ * Keeps the informational "# Besu version: X.Y.Z" comment in gradle/libs.versions.toml in
+ * sync with the base version resolved from Besu's CHANGELOG.md on besuCommit updates. Leaves
+ * the file untouched when the version could not be resolved (0.0.0 fallback) or is unchanged.
+ */
+static void updateBesuVersionComment(File versionsToml, String besuCommit, String besuVersion) {
+  def baseVersion = besuVersion - ~/-${besuCommit.take(7)}$/
+  if (!versionsToml.exists() || !(baseVersion ==~ /\d+\.\d+\.\d+/) || baseVersion == '0.0.0') return
+    def text = versionsToml.text
+  def updated = text.replaceFirst(/(?m)^# Besu version: .*$/, "# Besu version: ${baseVersion}")
+  if (updated != text) versionsToml.text = updated
 }
 
 static void buildAndPublishBesuAction(

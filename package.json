@@ -1,7 +1,7 @@
 {
   "name": "lineth-monorepo",
   "license": "(MIT OR Apache-2.0)",
-  "author": "Consensys Software Inc.",
+  "author": "Consensys Incorporated",
   "scripts": {
     "build": "pnpm run -r --if-present build",
     "clean": "pnpm run -r --if-present clean && rm -rf node_modules",
@@ -12,7 +12,7 @@
     "test": "pnpm run -r --if-present test"
   },
   "devDependencies": {
-    "@types/node": "24.19.0",
+    "@types/node": "24.19.2",
     "eslint": "catalog:",
     "husky": "9.1.7",
     "prettier": "catalog:",
@@ -22,7 +22,7 @@
   },
   "packageManager": "pnpm@12.6.0",
   "engines": {
-    "node": ">=24.18.0",
+    "node": ">=24.22.1",
     "pnpm": ">=12.6.0"
   }
 }

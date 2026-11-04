@@ -30,8 +30,8 @@
 //
 // EncodeInputs returns raw bytes for these public inputs:
 //
-//   - entry_point_and_blobs_count: two big-endian u64 values;
-//   - blobs_offset_and_size: one big-endian address and size pair per blob;
+//   - entry_point_and_blobs_count: a big-endian u32 entry point and u32 blob count;
+//   - blobs_offset_and_size: one big-endian u32 address and u32 size pair per blob;
 //   - blobs_data: all blob bytes concatenated in address order;
 //   - blobs_executable: an optional, MSB-first bit per blob.
 //

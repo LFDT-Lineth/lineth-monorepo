@@ -109,7 +109,7 @@ func cheatE6(p *Program, r *Run, addr int) error {
 // TestE6Chip: every E6 operation agrees with Go, and proves.
 func TestE6Chip(t *testing.T) {
 	m, in, _ := e6Program()
-	p, err := m.Compile()
+	p, err := m.Compile(testPCSOpts...)
 	require.NoError(t, err)
 	r, err := p.Execute(in)
 	require.NoError(t, err)
@@ -131,7 +131,7 @@ func TestE6ChipRejects(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			m, in, ops := e6Program()
-			p, err := m.Compile()
+			p, err := m.Compile(testPCSOpts...)
 			require.NoError(t, err)
 			r, err := p.Execute(in)
 			require.NoError(t, err)
@@ -143,7 +143,7 @@ func TestE6ChipRejects(t *testing.T) {
 	t.Run("wrong claim", func(t *testing.T) {
 		m := &Machine{}
 		m.AssertEqE6(m.InputE6(), m.InputE6())
-		p, err := m.Compile()
+		p, err := m.Compile(testPCSOpts...)
 		require.NoError(t, err)
 		rnd := rand.New(rand.NewPCG(3, 4))
 		r, err := p.Execute([]Cell{E6Cell(randE6(rnd)), E6Cell(randE6(rnd))})
@@ -156,7 +156,7 @@ func TestE6ChipRejects(t *testing.T) {
 		m := &Machine{}
 		a := m.InputDigest()
 		m.AssertEqE6(a, a)
-		p, err := m.Compile()
+		p, err := m.Compile(testPCSOpts...)
 		require.NoError(t, err)
 		var c Cell
 		c[6].SetOne()
@@ -167,7 +167,7 @@ func TestE6ChipRejects(t *testing.T) {
 	t.Run("zero divisor", func(t *testing.T) {
 		m := &Machine{}
 		m.Div(m.InputE6(), m.InputE6())
-		p, err := m.Compile()
+		p, err := m.Compile(testPCSOpts...)
 		require.NoError(t, err)
 		_, err = p.Execute([]Cell{{}, {}})
 		require.Error(t, err)
@@ -200,7 +200,7 @@ func TestScalarLanesBound(t *testing.T) {
 	m.AssertEqE6(m.Lanes(block, CellWidth-1, KindScalar), m.Const(ScalarCell(v)))
 	mul := m.Mul(s, ein)
 	m.AssertEqE6(mul, m.Const(E6Cell(w)))
-	p, err := m.Compile()
+	p, err := m.Compile(testPCSOpts...)
 	require.NoError(t, err)
 
 	in := []Cell{ScalarCell(v), E6Cell(e)}
@@ -256,7 +256,7 @@ func chainProgram() (*Machine, []Cell, []int) {
 func TestMulAddChain(t *testing.T) {
 	m, in, sums := chainProgram()
 	require.Len(t, m.e6Rows(), 1+(len(sums)+1)+1+1, "Mul, the chain (k + 1 rows), Mul, AssertEqE6")
-	p, err := m.Compile()
+	p, err := m.Compile(testPCSOpts...)
 	require.NoError(t, err)
 	r, err := p.Execute(in)
 	require.NoError(t, err)
@@ -284,7 +284,7 @@ func TestMulAddChainRejects(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			m, in, sums := chainProgram()
-			p, err := m.Compile()
+			p, err := m.Compile(testPCSOpts...)
 			require.NoError(t, err)
 			r, err := p.Execute(in)
 			require.NoError(t, err)
@@ -302,7 +302,7 @@ func TestE6Limits(t *testing.T) {
 		m := &Machine{}
 		n, d := m.InputE6(), m.InputE6()
 		q := m.Div(n, d)
-		p, err := m.Compile()
+		p, err := m.Compile(testPCSOpts...)
 		require.NoError(t, err)
 		_, err = p.Execute([]Cell{{}, {}})
 		require.Error(t, err, "a zero divisor executed")
@@ -320,7 +320,7 @@ func TestE6Limits(t *testing.T) {
 	t.Run("AssertEqE6 of digests", func(t *testing.T) {
 		m := &Machine{}
 		m.AssertEqE6(m.InputDigest(), m.InputDigest())
-		p, err := m.Compile()
+		p, err := m.Compile(testPCSOpts...)
 		require.NoError(t, err)
 		r, err := p.Execute([]Cell{cell(1), cell(1)})
 		require.NoError(t, err)

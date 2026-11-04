@@ -5,6 +5,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -78,7 +79,7 @@ func TestLocalConstraint_Position0_FailsWhenFirstRowNonZero(t *testing.T) {
 
 	rt := wiop.NewRuntime(sys)
 	// col[0] = 7 (non-zero) ⇒ Check at position 0 must fail.
-	rt.AssignColumn(col, baseVec(4, 7))
+	rt.AssignColumn(col, wioptest.ConstVec(4, 7))
 
 	v := mod.NewLocalConstraint(sys.Context.Childf("p0Fail"), col.View(), 0)
 	assert.Error(t, v.Check(rt))
@@ -146,8 +147,8 @@ func TestLocalConstraint_ArithmeticOverTwoColumns(t *testing.T) {
 
 	rt := wiop.NewRuntime(sys)
 	// a[0] = b[0] = 5 ⇒ a - b vanishes at row 0.
-	rt.AssignColumn(a, baseVec(4, 5))
-	rt.AssignColumn(b, baseVec(4, 5))
+	rt.AssignColumn(a, wioptest.ConstVec(4, 5))
+	rt.AssignColumn(b, wioptest.ConstVec(4, 5))
 
 	expr := wiop.Sub(a.View(), b.View())
 	v := mod.NewLocalConstraint(sys.Context.Childf("lcArith"), expr, 0)

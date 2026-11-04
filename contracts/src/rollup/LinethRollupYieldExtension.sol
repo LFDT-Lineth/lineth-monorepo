@@ -9,7 +9,7 @@ import { ErrorUtils } from "../libraries/ErrorUtils.sol";
 
 /**
  * @title Native yield extension module for the Linea L1MessageService.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract LinethRollupYieldExtension is LinethRollupBase, ILinethRollupYieldExtension {

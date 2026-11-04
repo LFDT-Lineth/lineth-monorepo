@@ -3,7 +3,7 @@ pragma solidity ^0.8.33;
 
 /**
  * @title Interface for shared shnarf related data accepting functions, errors and events.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 interface IShnarfDataAcceptorBase {

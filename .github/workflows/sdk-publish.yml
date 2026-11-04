@@ -123,8 +123,8 @@ jobs:
           cp -R \
             ts-libs/sdk/sdk-core/CHANGELOG.md \
             ts-libs/sdk/sdk-core/dist \
-            ts-libs/sdk/sdk-core/LICENSE-APACHE \
-            ts-libs/sdk/sdk-core/LICENSE-MIT \
+            LICENSE-APACHE \
+            LICENSE-MIT \
             ts-libs/sdk/sdk-core/package.json \
             ts-libs/sdk/sdk-core/README.md \
             "$LEGACY_DIR"
@@ -134,6 +134,8 @@ jobs:
             const pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
             pkg.name = "@consensys/linea-sdk-core";
             pkg.files = [...new Set([...(pkg.files ?? []), "CHANGELOG.md"])];
+            delete pkg.scripts?.prepack;
+            delete pkg.scripts?.postpack;
             fs.writeFileSync(packageJsonPath, JSON.stringify(pkg, null, 2) + "\n");
           ' "$LEGACY_DIR/package.json"
           npm publish "$LEGACY_DIR" --access public
@@ -177,12 +179,13 @@ jobs:
         if: ${{ !inputs.dry_run }}
         run: |
           VERSION=${{ steps.release_notes.outputs.version }}
-          tar -czf "linea-sdk-core-${VERSION}.tar.gz" -C ts-libs/sdk/sdk-core .
+          tar -czf "linea-sdk-core-${VERSION}.tar.gz" -C ts-libs/sdk/sdk-core . -C "$GITHUB_WORKSPACE" LICENSE-APACHE LICENSE-MIT
+          zip -q "linea-sdk-core-${VERSION}.zip" LICENSE-APACHE LICENSE-MIT
           cd ts-libs/sdk/sdk-core && zip -rq "../../../linea-sdk-core-${VERSION}.zip" .
 
       - name: Create GitHub Release
         if: ${{ !inputs.dry_run }}
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: "@lfdt-lineth/sdk-core@${{ steps.release_notes.outputs.version }}"
           name: "@lfdt-lineth/sdk-core@${{ steps.release_notes.outputs.version }}"
@@ -271,8 +274,8 @@ jobs:
           cp -R \
             ts-libs/sdk/sdk-viem/CHANGELOG.md \
             ts-libs/sdk/sdk-viem/dist \
-            ts-libs/sdk/sdk-viem/LICENSE-APACHE \
-            ts-libs/sdk/sdk-viem/LICENSE-MIT \
+            LICENSE-APACHE \
+            LICENSE-MIT \
             ts-libs/sdk/sdk-viem/package.json \
             ts-libs/sdk/sdk-viem/README.md \
             "$LEGACY_DIR"
@@ -287,6 +290,8 @@ jobs:
             };
             delete pkg.dependencies["@lfdt-lineth/sdk-core"];
             pkg.files = [...new Set([...(pkg.files ?? []), "CHANGELOG.md"])];
+            delete pkg.scripts?.prepack;
+            delete pkg.scripts?.postpack;
             fs.writeFileSync(packageJsonPath, JSON.stringify(pkg, null, 2) + "\n");
           ' "$LEGACY_DIR/package.json"
           npm publish "$LEGACY_DIR" --access public
@@ -330,12 +335,13 @@ jobs:
         if: ${{ !inputs.dry_run }}
         run: |
           VERSION=${{ steps.release_notes.outputs.version }}
-          tar -czf "linea-sdk-viem-${VERSION}.tar.gz" -C ts-libs/sdk/sdk-viem .
+          tar -czf "linea-sdk-viem-${VERSION}.tar.gz" -C ts-libs/sdk/sdk-viem . -C "$GITHUB_WORKSPACE" LICENSE-APACHE LICENSE-MIT
+          zip -q "linea-sdk-viem-${VERSION}.zip" LICENSE-APACHE LICENSE-MIT
           cd ts-libs/sdk/sdk-viem && zip -rq "../../../linea-sdk-viem-${VERSION}.zip" .
 
       - name: Create GitHub Release
         if: ${{ !inputs.dry_run }}
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: "@lfdt-lineth/sdk-viem@${{ steps.release_notes.outputs.version }}"
           name: "@lfdt-lineth/sdk-viem@${{ steps.release_notes.outputs.version }}"

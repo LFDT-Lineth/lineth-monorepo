@@ -33,6 +33,9 @@ WORKDIR /opt/consensys/linea/coordinator
 RUN mkdir -p logs /tmp/prover/request /tmp/prover/response
 
 COPY --from=builder /libs/** libs/
+# The glob lets downstream builds whose context has no license files skip them
+# (scripts/docker/build-image.sh --no-license-check).
+COPY LICENSE-* /licenses/
 
 ARG LINETH_APP_JAR=/opt/consensys/linea/coordinator/libs/coordinator.jar
 ENV LINETH_APP_JAR=$LINETH_APP_JAR
@@ -41,6 +44,7 @@ ENV LINETH_APP_JAR=$LINETH_APP_JAR
 ARG BUILD_DATE
 ARG VCS_REF
 ARG VERSION
+ARG IMAGE_LICENSES="MIT OR Apache-2.0"
 LABEL org.label-schema.build-date=$BUILD_DATE \
 	org.label-schema.name="coordinator" \
 	org.label-schema.description="Coordinator for Lineth" \
@@ -49,4 +53,5 @@ LABEL org.label-schema.build-date=$BUILD_DATE \
 	org.label-schema.vcs-url="https://github.com/LFDT-Lineth/lineth-monorepo" \
 	org.label-schema.vendor="ConsenSys" \
 	org.label-schema.version=$VERSION \
-	org.label-schema.schema-version="1.0"
+	org.label-schema.schema-version="1.0" \
+	org.opencontainers.image.licenses="$IMAGE_LICENSES"

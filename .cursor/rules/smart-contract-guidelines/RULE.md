@@ -108,7 +108,7 @@ import { ImportType } from "../ImportType.sol";
 
 /**
  * @title Brief description.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 interface ISampleContract {
@@ -130,7 +130,7 @@ import { ISampleContract } from "./interfaces/ISampleContract.sol";
 
 /**
  * @title Brief description.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 contract SampleContract is ISampleContract {

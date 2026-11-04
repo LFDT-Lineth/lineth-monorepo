@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 # Docker smoke test for the prover-ray image (reusable by CI).
 #
-# Checks four things:
+# Checks five things:
 #   1. dev-mock turns a dropped request file into a valid response file (the
 #      supervisor runs each request in a child over stdin/stdout).
 #   2. the native runner and its shared libraries run inside the image.
-#   3. dev-zkvm proves a real request: the guest output follows the spec, and the
+#   3. the bundled guest ELF can be staged into a guests folder under its
+#      Program ID.
+#   4. dev-zkvm proves a real request: the guest output follows the spec, and the
 #      bundled guest ELF and native runner emit the same output.
-#   4. the same dev-zkvm request over stdin/stdout leaves only the response on
+#   5. the same dev-zkvm request over stdin/stdout leaves only the response on
 #      stdout.
 #
 # Usage: scripts/docker-smoke.sh [image]
@@ -74,9 +76,9 @@ echo "==> native runner: runs in the image"
 # Run the bundled native runner on an extended (0x0002) input. This confirms the
 # runner and its shared libraries (glibc) run in the image. Step 3 checks the
 # output format.
-FIXTURE_DIR="$SCRIPT_DIR/../../riscv-guests/l2-execution/test/testdata"
+FIXTURE_DIR="$SCRIPT_DIR/../../riscv-guests/l2_execution/test/testdata"
 if ! $DOCKER run --rm \
-        --entrypoint /opt/linea/prover-ray/l2-execution-runner \
+        --entrypoint /opt/linea/prover-ray/l2_execution_runner \
         -v "$FIXTURE_DIR:/in:ro" \
         "$IMAGE" /in/stateless_input.ssz --ssz > "$WORK/commitment.bin" 2>/dev/null; then
     echo "FAIL: native runner failed to run (missing library or exec error)"
@@ -87,6 +89,18 @@ if [ ! -s "$WORK/commitment.bin" ]; then
     exit 1
 fi
 echo "    ok: native runner ran and wrote its output"
+
+echo "==> guests folder: bundled guest ELF staged under its Program ID"
+if ! program_id="$(DOCKER="$DOCKER" "$SCRIPT_DIR/stage-guest.sh" "$IMAGE" "$WORK/guests")"; then
+    echo "FAIL: could not stage the bundled guest ELF"
+    exit 1
+fi
+staged=("$WORK/guests/"*)
+if [ "${#staged[@]}" -ne 1 ] || [[ "${staged[0]##*/}" != l2-execution-v*-"${program_id#0x}".elf ]]; then
+    echo "FAIL: want one l2-execution ELF named by $program_id, got: ${staged[*]##*/}"
+    exit 1
+fi
+echo "    ok: l2-execution staged as ${staged[0]##*/}"
 
 echo "==> dev-zkvm: bundled guest and native runner agree on a real request"
 # Runs one dev-zkvm prove: the bundled guest ELF under ZkC Execute, cross-checked
@@ -101,7 +115,7 @@ log_level = 4
 [execution]
 prover_mode = "dev-zkvm"
 requests_root_dir = "/data"
-native_runner_bin = "/opt/linea/prover-ray/l2-execution-runner"
+native_runner_bin = "/opt/linea/prover-ray/l2_execution_runner"
 guest_elf = "/opt/linea/prover-ray/evm_execution_guest"
 TOML
 if ! $DOCKER run --rm \

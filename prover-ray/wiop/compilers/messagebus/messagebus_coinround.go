@@ -19,7 +19,7 @@ func latestRound(rounds ...*wiop.Round) *wiop.Round {
 // misplacedParticipantColumn returns the first column of an unreduced
 // [wiop.MessageBus] entry that does not live on round wantID, along with the
 // entry holding it; both are nil when every participating column is on that
-// round.
+// round. Constant entries are skipped.
 //
 // It looks at each column individually rather than at [wiop.MessageBus.Round],
 // which reports the maximum over the entry's table: a table straddling two
@@ -29,7 +29,12 @@ func misplacedParticipantColumn(sys *wiop.System, wantID int) (*wiop.MessageBus,
 		if mb.IsReduced() {
 			continue
 		}
-		for _, cv := range mb.Tab.Columns {
+		for _, e := range mb.Tab.Columns {
+			// Constant entries are never committed and have no round.
+			cv, ok := wiop.EntryView(e)
+			if !ok {
+				continue
+			}
 			if r := cv.Round(); r == nil || r.ID != wantID {
 				return mb, cv
 			}

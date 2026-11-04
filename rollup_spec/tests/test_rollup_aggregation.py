@@ -30,8 +30,6 @@ def _base_public_input(**overrides) -> RollupPublicInput:
     base = RollupPublicInput(
         end_block_number=U64(1000510),
         end_block_timestamp=U64(1763000200),
-        parent_l1_l2_bridge_rolling_hash=Hash32(bytes([0x22]) * 32),
-        parent_l1_l2_bridge_rolling_hash_message_number=U64(0),
         end_l1_l2_bridge_rolling_hash=Hash32(bytes([0x33]) * 32),
         end_l1_l2_bridge_rolling_hash_message_number=U64(4),
         dynamic_chain_config_hash=Hash32(bytes([0xC0]) * 32),
@@ -59,8 +57,6 @@ def _left_pi(**overrides) -> RollupPublicInput:
         end_data_rolling_hash=Hash32(bytes([0x8D]) * 32),
         final_data_tail_discard_bytes=500,
         end_block_hash=Hash32(bytes([0x0B]) * 32),
-        end_l1_l2_bridge_rolling_hash=Hash32(bytes([0x33]) * 32),
-        end_l1_l2_bridge_rolling_hash_message_number=U64(4),
         end_ftx_rolling_hash=Hash32(bytes([0x55]) * 32),
         end_processed_ftx_number=U64(12),
         block_count=10,
@@ -74,8 +70,6 @@ def _right_pi(**overrides) -> RollupPublicInput:
         parent_data_rolling_hash=Hash32(bytes([0x8D]) * 32),
         parent_data_tail_take_bytes=500,
         parent_block_hash=Hash32(bytes([0x0B]) * 32),
-        parent_l1_l2_bridge_rolling_hash=Hash32(bytes([0x33]) * 32),
-        parent_l1_l2_bridge_rolling_hash_message_number=U64(4),
         parent_ftx_rolling_hash=Hash32(bytes([0x55]) * 32),
         parent_ftx_number=U64(12),
         block_count=10,
@@ -161,21 +155,21 @@ def test_noncanonical_full_blob_tail_count_handoff_is_rejected() -> None:
         assert_rollup_proof_continuity(left, right)
 
 
+def test_adjacent_proofs_need_not_agree_on_the_l1_l2_rolling_hash_pair() -> None:
+    left = _proof(_left_pi(
+        end_l1_l2_bridge_rolling_hash=Hash32(bytes([0x33]) * 32),
+        end_l1_l2_bridge_rolling_hash_message_number=U64(4),
+    ))
+    right = _proof(_right_pi(
+        end_l1_l2_bridge_rolling_hash=Hash32(bytes(32)),
+        end_l1_l2_bridge_rolling_hash_message_number=U64(0),
+    ))
+    assert_rollup_proof_continuity(left, right)
+
+
 def test_block_hash_mismatch_is_rejected() -> None:
     right = _proof(_right_pi(parent_block_hash=Hash32(bytes([0x99]) * 32)))
     with pytest.raises(Exception, match="block-hash continuity"):
-        assert_rollup_proof_continuity(_proof(_left_pi()), right)
-
-
-def test_l1_l2_rolling_hash_mismatch_is_rejected() -> None:
-    right = _proof(_right_pi(parent_l1_l2_bridge_rolling_hash=Hash32(bytes([0x99]) * 32)))
-    with pytest.raises(Exception, match="L1-to-L2 rolling-hash continuity"):
-        assert_rollup_proof_continuity(_proof(_left_pi()), right)
-
-
-def test_l1_l2_rolling_hash_message_number_mismatch_is_rejected() -> None:
-    right = _proof(_right_pi(parent_l1_l2_bridge_rolling_hash_message_number=U64(999)))
-    with pytest.raises(Exception, match="rolling-hash-number continuity"):
         assert_rollup_proof_continuity(_proof(_left_pi()), right)
 
 

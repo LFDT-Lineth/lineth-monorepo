@@ -5,6 +5,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -12,7 +13,7 @@ import (
 // ---- ConcreteVector.ElementAt ----
 
 func TestElementAt_PaddingNone(t *testing.T) {
-	cv := baseVec(4, 7) // all-7 vector, PaddingNone via ConcreteVector
+	cv := wioptest.ConstVec(4, 7) // all-7 vector, PaddingNone via ConcreteVector
 	mod := wiop.NewSystemf("s").NewSizedModule(wiop.NewRootFramef("m"), 4, wiop.PaddingDirectionNone)
 	for i := range 4 {
 		elem := cv.ElementAt(mod, i)
@@ -64,7 +65,7 @@ func TestElementAt_PaddingRight(t *testing.T) {
 }
 
 func TestElementAt_OutOfBoundsPanic(t *testing.T) {
-	cv := baseVec(4, 1)
+	cv := wioptest.ConstVec(4, 1)
 	sys := wiop.NewSystemf("s")
 	sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("m"), 4, wiop.PaddingDirectionNone)
@@ -118,7 +119,7 @@ func TestColumnView_EvaluateSinglePanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
 	col := mod.NewColumn(sys.Context.Childf("cvEvalCol"), r0)
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, baseVec(4, 1))
+	rt.AssignColumn(col, wioptest.ConstVec(4, 1))
 	assert.Panics(t, func() { col.View().EvaluateSingle(rt) })
 }
 
@@ -126,7 +127,7 @@ func TestColumnView_EvaluateVector_Identity(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
 	col := mod.NewColumn(sys.Context.Childf("cvEvCol"), r0)
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, baseVec(4, 3))
+	rt.AssignColumn(col, wioptest.ConstVec(4, 3))
 
 	result := col.View().EvaluateVector(rt)
 	var want field.Element
@@ -228,7 +229,7 @@ func TestCoinField_EvaluateSingle(t *testing.T) {
 	col := mod.NewColumn(sys.Context.Childf("coinEvCol"), r0)
 	coin := r1.NewCoinField(sys.Context.Childf("coinEv"))
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, baseVec(4, 1))
+	rt.AssignColumn(col, wioptest.ConstVec(4, 1))
 	rt.AdvanceRound()
 
 	result := coin.EvaluateSingle(rt)
@@ -242,7 +243,7 @@ func TestCoinField_EvaluateVector_Panics(t *testing.T) {
 	col := mod.NewColumn(sys.Context.Childf("coinPanicCol"), r0)
 	coin := r1.NewCoinField(sys.Context.Childf("coinPanic"))
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, baseVec(4, 1))
+	rt.AssignColumn(col, wioptest.ConstVec(4, 1))
 	rt.AdvanceRound()
 	assert.Panics(t, func() { coin.EvaluateVector(rt) })
 }
@@ -254,7 +255,7 @@ func TestModule_NewPrecomputedColumn(t *testing.T) {
 	sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
 
-	assignment := baseVec(4, 5)
+	assignment := wioptest.ConstVec(4, 5)
 	col := mod.NewPrecomputedColumn(sys.Context.Childf("pre"), assignment)
 	require.NotNil(t, col)
 	assert.False(t, col.IsExtension)
@@ -264,7 +265,7 @@ func TestModule_NewPrecomputedColumn_NilCtxPanic(t *testing.T) {
 	sys := wiop.NewSystemf("sys")
 	sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	assert.Panics(t, func() { mod.NewPrecomputedColumn(nil, baseVec(4, 1)) })
+	assert.Panics(t, func() { mod.NewPrecomputedColumn(nil, wioptest.ConstVec(4, 1)) })
 }
 
 func TestColumnView_Degree_UnsizedPanic(t *testing.T) {

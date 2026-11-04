@@ -613,24 +613,58 @@ classDiagram
     LocalOpening <|-- AssignableQuery
     LocalOpening <|-- baseQuery
 
-    %% Table is an ordered group of same-module column views with an optional
-    %% row selector. A nil Selector means all rows are selected. Table is a
-    %% value type and carries no identity. All columns (and Selector, if
-    %% non-nil) must share the same module — enforced by NewTable and
-    %% NewFilteredTable.
+    %% TableEntry is one position of a Table row: either a *ColumnView or a
+    %% vector *Constant (NewConstantVector) bound to the table's module.
+    %% Sealed: no other type implements it.
+    %%
+    %% A constant entry is never committed: it evaluates to its value c on
+    %% every row of the module, padding rows included, and the reductions fold
+    %% it into the row's random linear combination as the scalar term αⁱ·c.
+    %% Package-level helpers:
+    %%   EntryView(e TableEntry) (*ColumnView, bool)
+    %%   EntryConst(e TableEntry) (field.Element, bool)
+    %%   EntryExprs(entries []TableEntry) []Expression
+    class TableEntry {
+        <<interface>>
+        %% Inherits the full Expression contract.
+        ~ isTableEntry()
+    }
+
+    Expression <|-- TableEntry
+    TableEntry <|-- ColumnView
+    TableEntry <|-- Constant
+
+    %% Table is an ordered group of same-module entries (column views or
+    %% vector constants, see TableEntry) with an optional row selector. A nil
+    %% Selector means all rows are selected. Table is a value type and carries
+    %% no identity. All entries (and Selector, if non-nil) must share the same
+    %% module, and at least one of them must be a column view so that the
+    %% table has a round — enforced by NewTable, NewFilteredTable and
+    %% NewTableEntries. A Table must not be built as a struct literal.
     %% Package-level constructors:
     %%   NewTable(columns ...*ColumnView) Table
     %%   NewFilteredTable(selector *ColumnView, columns ...*ColumnView) Table
+    %%   NewTableEntries(m *Module, selector TableEntry, entries ...TableEntry) Table
+    %%     selector may be nil, a *ColumnView, or a vector *Constant: constant 1
+    %%     is normalised to nil; constant 0 or non-binary constants panic.
     class Table {
-        + Columns []*ColumnView
+        + Columns []TableEntry
         + Selector *ColumnView
+        - module *Module
+        %% Module returns the stored module shared by all entries.
         + Module() *Module
+        %% Round returns the latest round among column views and Selector;
+        %% constant entries have no round.
         + Round() *Round
         + Width() int
+        %% firstView returns the first column-view entry, or Selector if every
+        %% entry is a constant (used to determine the padding length).
+        - firstView() *ColumnView
     }
 
-    Table --> "1..*" ColumnView : Columns
+    Table --> "1..*" TableEntry : Columns
     Table --> "0..1" ColumnView : Selector
+    Table --> "1" Module : module
 
     %% TableRelationQuery is a Query asserting that every selected row of A appears
     %% in the union of selected rows across all B fragments.

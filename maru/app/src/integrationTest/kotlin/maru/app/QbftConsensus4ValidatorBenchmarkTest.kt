@@ -1,6 +1,4 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
@@ -13,21 +11,20 @@ import io.micrometer.core.instrument.DistributionSummary
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.distribution.HistogramSnapshot
 import io.vertx.micrometer.backends.BackendRegistries
-import linea.testing.besu.BesuFactory
-import maru.crypto.SecpCrypto
+import maru.test.cluster.MaruCluster
+import maru.test.cluster.NodeRole
+import maru.test.cluster.configureLoggers
+import maru.test.extensions.TestSyncingConfigs
+import maru.test.extensions.withFastPeering
+import maru.test.extensions.withFastQbft
+import maru.test.extensions.withSyncingConfig
+import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
-import org.hyperledger.besu.tests.acceptance.dsl.condition.net.NetConditions
-import org.hyperledger.besu.tests.acceptance.dsl.node.ThreadBesuNodeRunner
-import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.Cluster
-import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.ClusterConfigurationBuilder
-import org.hyperledger.besu.tests.acceptance.dsl.transaction.net.NetTransactions
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
-import testutils.PeeringNodeNetworkStack
-import testutils.maru.MaruFactory
 import testutils.maru.awaitTillMaruHasPeers
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -53,113 +50,58 @@ class QbftConsensus4ValidatorBenchmarkTest {
   private val key2 = "080212202fec0750fe3edc7e8272d4814a36b632921fc5e835d20a2de874471e8ad9ad0b".fromHex()
   private val key3 = "080212207a19c01ce2246b94b48ed778d9bfb3b76eaabe8193c468d6751f4e4d1adf98a8".fromHex()
 
-  private lateinit var cluster: Cluster
-  private lateinit var stack0: PeeringNodeNetworkStack
-  private lateinit var stack1: PeeringNodeNetworkStack
-  private lateinit var stack2: PeeringNodeNetworkStack
-  private lateinit var stack3: PeeringNodeNetworkStack
+  private lateinit var cluster: MaruCluster
 
   private val log = LogManager.getLogger(this.javaClass)
 
-  private val maruFactory0 = MaruFactory(validatorPrivateKey = key0)
-  private val maruFactory1 = MaruFactory(validatorPrivateKey = key1)
-  private val maruFactory2 = MaruFactory(validatorPrivateKey = key2)
-  private val maruFactory3 = MaruFactory(validatorPrivateKey = key3)
-
   @BeforeEach
   fun setUp() {
-    cluster = Cluster(
-      ClusterConfigurationBuilder().build(),
-      NetConditions(NetTransactions()),
-      ThreadBesuNodeRunner(),
+    configureLoggers(
+      rootLevel = Level.WARN,
+      logLevels = listOf("maru" to Level.INFO),
     )
-    val besuBuilder = { BesuFactory.buildTestBesu(validator = false) }
-    stack0 = PeeringNodeNetworkStack(besuBuilder)
-    stack1 = PeeringNodeNetworkStack(besuBuilder)
-    stack2 = PeeringNodeNetworkStack(besuBuilder)
-    stack3 = PeeringNodeNetworkStack(besuBuilder)
-    PeeringNodeNetworkStack.startBesuNodes(cluster, stack0, stack1, stack2, stack3)
   }
 
   @AfterEach
   fun tearDown() {
-    runCatching { stack3.maruApp.stop().get() }
-    runCatching { stack2.maruApp.stop().get() }
-    runCatching { stack1.maruApp.stop().get() }
-    runCatching { stack0.maruApp.stop().get() }
-    runCatching { stack3.maruApp.close() }
-    runCatching { stack2.maruApp.close() }
-    runCatching { stack1.maruApp.close() }
-    runCatching { stack0.maruApp.close() }
-    cluster.close()
+    if (::cluster.isInitialized) {
+      cluster.stop()
+    }
   }
 
   @Test
   fun `measure QBFT consensus latency on local JVM with 4 validators`() {
-    val validator0 = SecpCrypto.privateKeyToValidator(SecpCrypto.privateKeyBytesWithoutPrefix(key0))
-    val validator1 = SecpCrypto.privateKeyToValidator(SecpCrypto.privateKeyBytesWithoutPrefix(key1))
-    val validator2 = SecpCrypto.privateKeyToValidator(SecpCrypto.privateKeyBytesWithoutPrefix(key2))
-    val validator3 = SecpCrypto.privateKeyToValidator(SecpCrypto.privateKeyBytesWithoutPrefix(key3))
-    val initialValidators = setOf(validator0, validator1, validator2, validator3)
-
-    // Start all 4 validators. Phase latencies are recorded automatically by ConsensusMetrics
+    // Start all 4 validators. The cluster builds the QBFT validator set from their node keys.
+    // Phase latencies are recorded automatically by ConsensusMetrics
     // inside each MaruApp into Micrometer histograms labeled by role and nodeid.
-    val app0 =
-      maruFactory0.buildTestMaruValidatorWithP2pPeering(
-        ethereumJsonRpcUrl = stack0.besuNode.jsonRpcBaseUrl().get(),
-        engineApiRpc = stack0.besuNode.engineRpcUrl().get(),
-        dataDir = stack0.tmpDir,
-        syncingConfig = MaruFactory.defaultSyncingConfig,
-        allowEmptyBlocks = true,
-        initialValidators = initialValidators,
-      )
-    stack0.setMaruApp(app0)
-    app0.start().get()
-
-    val app1 =
-      maruFactory1.buildTestMaruValidatorWithP2pPeering(
-        ethereumJsonRpcUrl = stack1.besuNode.jsonRpcBaseUrl().get(),
-        engineApiRpc = stack1.besuNode.engineRpcUrl().get(),
-        dataDir = stack1.tmpDir,
-        syncingConfig = MaruFactory.defaultSyncingConfig,
-        allowEmptyBlocks = true,
-        initialValidators = initialValidators,
-      )
-    stack1.setMaruApp(app1)
-    app1.start().get()
-
-    val app2 =
-      maruFactory2.buildTestMaruValidatorWithP2pPeering(
-        ethereumJsonRpcUrl = stack2.besuNode.jsonRpcBaseUrl().get(),
-        engineApiRpc = stack2.besuNode.engineRpcUrl().get(),
-        dataDir = stack2.tmpDir,
-        syncingConfig = MaruFactory.defaultSyncingConfig,
-        allowEmptyBlocks = true,
-        initialValidators = initialValidators,
-      )
-    stack2.setMaruApp(app2)
-    app2.start().get()
-
-    val app3 =
-      maruFactory3.buildTestMaruValidatorWithP2pPeering(
-        ethereumJsonRpcUrl = stack3.besuNode.jsonRpcBaseUrl().get(),
-        engineApiRpc = stack3.besuNode.engineRpcUrl().get(),
-        dataDir = stack3.tmpDir,
-        syncingConfig = MaruFactory.defaultSyncingConfig,
-        allowEmptyBlocks = true,
-        initialValidators = initialValidators,
-      )
-    stack3.setMaruApp(app3)
-    app3.start().get()
-
-    // Wire full mesh: 6 bidirectional connections for 4 nodes (n*(n-1)/2 = 6).
-    fun peerAddr(app: MaruApp) = "/ip4/127.0.0.1/tcp/${app.p2pPort()}/p2p/${app.p2pNetwork.nodeId}"
-    app1.p2pNetwork.addPeer(peerAddr(app0))
-    app2.p2pNetwork.addPeer(peerAddr(app0))
-    app2.p2pNetwork.addPeer(peerAddr(app1))
-    app3.p2pNetwork.addPeer(peerAddr(app0))
-    app3.p2pNetwork.addPeer(peerAddr(app1))
-    app3.p2pNetwork.addPeer(peerAddr(app2))
+    val chainId = 1337u
+    val validatorKeys = listOf(key0, key1, key2, key3)
+    cluster = MaruCluster(chainId = chainId)
+    validatorKeys.forEachIndexed { index, key ->
+      cluster.addNode("validator-$index", addBesu = true) { nodeBuilder ->
+        nodeBuilder
+          .withRole(NodeRole.Sequencer)
+          // otherwise the 4 Besu nodes would share the default signer key, hence the same enode
+          .besuValidator(false)
+          .withNodeKey(key)
+          .withFastQbft()
+          .withFastPeering()
+          .withSyncingConfig(TestSyncingConfigs.default)
+          // Wire full mesh: 6 bidirectional connections for 4 nodes (n*(n-1)/2 = 6).
+          .staticPeers((0 until index).map { "validator-$it" })
+          .maruConfig {
+            it.copy(
+              allowEmptyBlocks = true,
+              observability = it.observability.copy(prometheusMetricsEnabled = true, jvmMetricsEnabled = true),
+            )
+          }
+      }
+    }
+    cluster.start()
+    val app0 = cluster.maruNode("validator-0")
+    val app1 = cluster.maruNode("validator-1")
+    val app2 = cluster.maruNode("validator-2")
+    val app3 = cluster.maruNode("validator-3")
 
     app0.awaitTillMaruHasPeers(3u, pollingInterval = 500.milliseconds)
     app1.awaitTillMaruHasPeers(3u, pollingInterval = 500.milliseconds)

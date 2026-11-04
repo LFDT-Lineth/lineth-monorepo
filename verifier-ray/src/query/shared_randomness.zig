@@ -52,8 +52,8 @@ pub const System = struct {
 /// `verifier.verify`'s call to `bindRoundMessages` before any sub-verifier runs.
 ///
 /// A `System{}` zero value (no contribution_refs) verifies trivially: a
-/// protocol compiled without messagebus.CompileOptions.SharedRandomness
-/// registers no checker and has nothing for this sub-verifier to enforce.
+/// protocol compiled with messagebus.WithoutSharedRandomness registers no
+/// checker and has nothing for this sub-verifier to enforce.
 pub fn verify(system: System, ctx: protocol.Context) Error!void {
     if (system.contribution_refs.len == 0) return;
     // Codegen rejects any other length before emitting the System (see

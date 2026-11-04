@@ -5,7 +5,7 @@ import { EfficientLeftRightKeccak } from "../../libraries/EfficientLeftRightKecc
 
 /**
  * @title Library to verify sparse merkle proofs and to get the leaf hash value
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 library SparseMerkleTreeVerifier {

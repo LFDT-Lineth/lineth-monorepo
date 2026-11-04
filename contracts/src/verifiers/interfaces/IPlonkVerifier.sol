@@ -3,7 +3,7 @@ pragma solidity ^0.8.33;
 
 /**
  * @title Interface declaring verifier functions.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 interface IPlonkVerifier {

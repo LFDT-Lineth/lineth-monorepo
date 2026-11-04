@@ -7,7 +7,7 @@ import { IRecoverFunds } from "./interfaces/IRecoverFunds.sol";
 
 /**
  * @title Contract to recover funds sent to the message service address on the alternate chain.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 contract RecoverFunds is AccessControlUpgradeable, IRecoverFunds {

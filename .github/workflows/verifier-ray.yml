@@ -36,8 +36,8 @@ permissions:
   actions: read
 
 env:
-  GO_VERSION: '1.25.7'
-  ZKC_VERSION: 'v1.2.32'
+  GO_VERSION: '1.27.1'
+  ZKC_VERSION: 'v1.2.33'
   ZIG_VERSION: '0.16.0'
 
 concurrency:
@@ -55,7 +55,7 @@ jobs:
           submodules: false
 
       # Keep this aligned with .github/actions/setup-arithmetization-riscv, but use
-      # newer Go because verifier-ray/prover-ray modules declare go 1.25.7.
+      # newer Go because verifier-ray/prover-ray modules declare go 1.27.1.
       - name: Install Go
         uses: ./.github/actions/setup-go
         with:
