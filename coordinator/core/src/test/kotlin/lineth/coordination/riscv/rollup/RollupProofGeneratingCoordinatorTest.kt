@@ -62,11 +62,12 @@ class RollupProofGeneratingCoordinatorTest {
 
   private val l2Blocks = mutableMapOf<ULong, Block>()
 
-  // blob1 = [A, start of B], blob2 = [end of B, C, start of D], blob3 = [end of D, E].
+  // blob1 = [A, start of B], blob2 = [end of B, C, start of D], blob3 = [middle of D], blob4 = [end of D, E].
+  // blob3 starts and ends inside D, so it has no cut.
   private val a = conflation(1UL, 50_000)
   private val b = conflation(2UL, 100_000)
   private val c = conflation(3UL, 40_000)
-  private val d = conflation(4UL, 80_000)
+  private val d = conflation(4UL, 70_094 + DaConstants.BLOB_PAYLOAD_CAPACITY + 9_906)
   private val e = conflation(5UL, 30_000)
 
   private val batchesRepository = FakeBatchesRepository()
@@ -194,6 +195,7 @@ class RollupProofGeneratingCoordinatorTest {
     assertThat(request1.boundaryPrevDataRollingHash).isNull()
     assertThat(request1.l2Executions.map { it.hash }).containsExactly(proofHash(a), proofHash(b), proofHash(c))
     assertThat(request2.startBlockNumber).isEqualTo(4UL)
+    assertThat(request2.chunks).hasSize(3)
     assertThat(request2.chunks.first()).isEqualTo(request1.chunks.last())
     assertThat(request2.parentDataTailTakeBytes).isEqualTo(70_094)
 
@@ -204,6 +206,7 @@ class RollupProofGeneratingCoordinatorTest {
     assertThat(request2.parentDataRollingHash).isEqualTo(context1.dataRollingHash)
     assertThat(request2.boundaryPrevDataRollingHash).isEqualTo(context1.blobsData.last().prevDataRollingHash)
     assertThat(context2.parentDataTailTakeBytes).isEqualTo(70_094)
+    assertThat(context2.blobsData.map { it.batchesCount }).containsExactly(2U, 0U, 2U)
     assertThat(context2.finalDataTailDiscardBytes).isZero()
   }
 
