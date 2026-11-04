@@ -232,14 +232,19 @@ func VecMulBaseExt(res []Ext, a []Element, b []Ext) {
 	VecMulExtBase(res, b, a)
 }
 
-// VecMulExtExt sets res[i] = a[i] * b[i] over the extension field.
-// Cost: ~24 base multiplications per element (Karatsuba over E2 for E6).
-// All slices must have equal length.
+// VecMulExtExt sets res[i] = a[i] * b[i] over the extension field, using
+// gnark-crypto's vectorised E6 product. res may alias a or b. All slices must
+// have equal length.
 func VecMulExtExt(res, a, b []Ext) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		res[i].Mul(&a[i], &b[i])
-	}
+	extensions.VectorE6(res).Mul(a, b)
+}
+
+// VecInnerProdExtExt returns Σᵢ a[i]·b[i] over the extension field, using
+// gnark-crypto's vectorised E6 inner product. a and b must have equal length.
+func VecInnerProdExtExt(a, b []Ext) Ext {
+	mustEqualLen2(len(a), len(b))
+	return extensions.VectorE6(a).InnerProduct(b)
 }
 
 // VecMulInto sets res[i] = a[i] * b[i] for all i, dispatching to the typed
@@ -394,7 +399,7 @@ func VecScaleAddExtExt(acc []Ext, s Ext, b []Ext) {
 
 // VecBatchInvBase sets res[i] = 1/a[i] for all i over the base field, using
 // the Montgomery batch-inversion trick (one inversion + n multiplications).
-// Panics if any a[i] is zero. res and a must have equal length.
+// Zeroes map to zero. res and a must have equal length.
 func VecBatchInvBase(res, a []Element) {
 	mustEqualLen2(len(res), len(a))
 	tmp := BatchInvert(a)
@@ -402,15 +407,15 @@ func VecBatchInvBase(res, a []Element) {
 }
 
 // VecBatchInvExt sets res[i] = 1/a[i] for all i over the extension field,
-// using the batch-inversion trick. Panics if any a[i] is zero.
-// res and a must have equal length.
+// using the batch-inversion trick. Zeroes map to zero. res and a must have
+// equal length; res may alias a.
 func VecBatchInvExt(res, a []Ext) {
 	BatchInvertExtInto(a, res)
 }
 
 // VecBatchInvInto sets res[i] = 1/a[i] for all i, dispatching on the field
 // type of res. res and a must have the same field type and equal length.
-// Panics if any element is zero or if lengths/types are inconsistent.
+// Zeroes map to zero. Panics if lengths/types are inconsistent.
 func VecBatchInvInto(res, a Vec) {
 	if res.IsBase() {
 		VecBatchInvBase(res.base, a.base)
