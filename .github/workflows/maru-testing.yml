@@ -10,7 +10,7 @@ on:
       # N > 1 = up to N methods of a test class run concurrently inside
       # its fork JVM (-PmaruItMethodParallel=N, see maru/app/build.gradle).
       # 1 = test methods run sequentially.
-      # Default as 0 (uses the default maru/app/build.gradle which is 2).
+      # Default as 0 (uses the default, i.e. 2, from maru/app/build.gradle).
       maru_it_method_parallel:
         required: false
         type: string
