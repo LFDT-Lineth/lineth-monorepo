@@ -2,6 +2,7 @@
 //
 //	prover --config <toml>                                 watch the queues, prove each request
 //	prover prove --config <toml> --in <req> --out <resp>   prove one request, exit with a code
+//	prover program-id --elf <guest ELF>                    print the guest Program ID
 //
 // Config is a TOML file (--config or CONFIG_FILE). The queue adapter runs each
 // request in a "prover prove" child. --in and --out also accept "-" for stdin
@@ -26,6 +27,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/jobadapter/subprocess"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/config"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/sha3"
 )
 
 func main() {
@@ -37,6 +39,9 @@ func main() {
 func run(args []string) error {
 	if len(args) > 0 && args[0] == "prove" {
 		return runProve(args[1:])
+	}
+	if len(args) > 0 && args[0] == "program-id" {
+		return runProgramID(args[1:], os.Stdout)
 	}
 	return runAdapter(args)
 }
@@ -339,4 +344,25 @@ func writeResponse(outPath string, stdout io.Writer, data []byte) error {
 		return fmt.Errorf("writing response file: %w", err)
 	}
 	return nil
+}
+
+// runProgramID prints the guest Program ID of an ELF: the 0x-prefixed keccak256
+// of its bytes.
+func runProgramID(args []string, out io.Writer) error {
+	fs := flag.NewFlagSet("prover program-id", flag.ContinueOnError)
+	elfPath := fs.String("elf", "", "guest ELF to compute the Program ID of (required)")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *elfPath == "" {
+		return fmt.Errorf("--elf is required")
+	}
+	elf, err := os.ReadFile(*elfPath)
+	if err != nil {
+		return fmt.Errorf("reading guest ELF: %w", err)
+	}
+	h := sha3.NewLegacyKeccak256()
+	h.Write(elf)
+	_, err = fmt.Fprintf(out, "0x%x\n", h.Sum(nil))
+	return err
 }
