@@ -253,3 +253,43 @@ func TestRequestIdentity(t *testing.T) {
 		})
 	}
 }
+
+// The golden vector of riscv-guests/build_common/program_id.zig.
+const (
+	goldenELF = "\x7fELFguest data"
+	goldenID  = "0x8e7dae55483e7b63d384e441238245d76cf07ab4dd89eaac76e00ce9e811a665"
+)
+
+func TestRunProgramID(t *testing.T) {
+	elf := filepath.Join(t.TempDir(), "guest.elf")
+	require.NoError(t, os.WriteFile(elf, []byte(goldenELF), 0o600))
+
+	var out bytes.Buffer
+	require.NoError(t, runProgramID([]string{"--elf", elf}, &out))
+	assert.Equal(t, goldenID+"\n", out.String(), "the Program ID is the 0x-prefixed keccak256 of the ELF bytes")
+}
+
+func TestRunProgramID_Errors(t *testing.T) {
+	tests := map[string]struct {
+		args    []string
+		wantErr string
+	}{
+		"no elf":       {args: nil, wantErr: "--elf is required"},
+		"missing file": {args: []string{"--elf", filepath.Join(t.TempDir(), "missing.elf")}, wantErr: "reading guest ELF"},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			var out bytes.Buffer
+			err := runProgramID(tc.args, &out)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tc.wantErr)
+			assert.Empty(t, out.String(), "nothing is printed on error")
+		})
+	}
+}
+
+func TestRun_DispatchesProgramID(t *testing.T) {
+	err := run([]string{"program-id"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "--elf is required", "run must route program-id to its own command, not the adapter")
+}
