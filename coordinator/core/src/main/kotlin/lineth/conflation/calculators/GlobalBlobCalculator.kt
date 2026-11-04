@@ -11,8 +11,8 @@ import kotlin.time.Duration
 import kotlin.time.Instant
 
 /**
- * Level 2 of the RISC-V DA design: feeds conflations to the [DaStream] in order, flushes the open blob on blob
- * triggers, and emits one [BlobEvent] per sealed blob, carrying every conflation whose frame ends in it.
+ * Decides RISC-V blob cut-offs: feeds conflations to the [DaStream] in order, flushes the open blob on blob triggers,
+ * and emits one [BlobEvent] per sealed blob, carrying every conflation whose frame ends in it.
  *
  * Frames end in the order conflations were appended, so a sealed blob's cut points belong to the oldest queued
  * conflations, one to one.
@@ -63,7 +63,7 @@ class GlobalBlobCalculator(
   }
 
   /**
-   * Ends the open blob early: on blob triggers, the blob deadline, and when Level 3 needs a rollup cut.
+   * Ends the open blob early: on blob triggers, the blob deadline, and when the rollup calculator needs a rollup cut.
    *
    * @return true if a blob was flushed. False when no blob is open, or while a resumed shared blob is still being
    *   reproduced.
