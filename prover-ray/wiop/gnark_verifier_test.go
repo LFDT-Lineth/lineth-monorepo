@@ -425,6 +425,19 @@ func TestAllocateVerifierCircuit_RejectsUnsupportedAction(t *testing.T) {
 		"a verifier action without CheckGnark must be rejected instead of dropped")
 }
 
+func TestAllocateVerifierCircuit_RejectsUnreducedQuery(t *testing.T) {
+	sys, col, _ := newPCSOnlySystem()
+	// Declared after compilation, so no pass reduces it and no verifier action
+	// checks it.
+	col.Module.NewVanishing(sys.Context.Childf("unreduced"), col.View())
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, wioptest.ConstVec(8, 3)) })
+
+	require.PanicsWithValue(t,
+		`wiop: VerifierCircuit: query "gnark-pcs/unreduced" (and 0 more) was not reduced by any compiler pass; `+
+			"the predicate it states would be silently dropped",
+		func() { wiop.AllocateVerifierCircuit(sys, proof, pub) })
+}
+
 func TestAssignVerifierCircuit_RejectsShapeMismatch(t *testing.T) {
 	sys, col, le := newPCSOnlySystem()
 	proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, wioptest.ConstVec(8, 3)) })
