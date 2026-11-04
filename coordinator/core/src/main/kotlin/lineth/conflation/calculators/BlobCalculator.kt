@@ -58,6 +58,10 @@ data class BlobEvent(
   val flushed: Boolean,
 )
 
+/**
+ * Receives each sealed blob. Called synchronously while [GlobalBlobCalculator] is mid-update: must not call back into
+ * the calculators (`newConflation`, `flush`, `checkDeadline`), which would emit events out of order.
+ */
 fun interface BlobHandler {
   fun onBlob(event: BlobEvent)
 }
