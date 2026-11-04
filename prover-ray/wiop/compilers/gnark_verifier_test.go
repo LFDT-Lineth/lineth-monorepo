@@ -1,6 +1,8 @@
 package compilers_test
 
 import (
+	"maps"
+	"slices"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -245,4 +247,120 @@ func vecOf(vals ...uint64) *wiop.ConcreteVector {
 		elems[i].SetUint64(v)
 	}
 	return &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
+}
+
+// isDynamic reports whether sys has a dynamic module, which the verifier
+// circuit does not support.
+func isDynamic(sys *wiop.System) bool {
+	for _, m := range sys.Modules {
+		if m.IsDynamic() {
+			return true
+		}
+	}
+	return false
+}
+
+// requireTamperingRejected corrupts the honest proof one value at a time,
+// every cell then every round commitment, and checks the circuit rejects each
+// corrupted proof.
+func requireTamperingRejected(t *testing.T, gv *gnarkVerifier, proof wiop.Proof, pub wiop.PublicInput) {
+	t.Helper()
+	ids := slices.Sorted(maps.Keys(proof.Cells))
+	require.NotEmpty(t, ids, "proof must carry at least one cell")
+	for _, id := range ids {
+		require.Errorf(t, gv.solve(t, withCell(proof, id), pub), "tampered cell %d must not satisfy the circuit", id)
+	}
+	one := field.One()
+	for _, round := range slices.Sorted(maps.Keys(proof.Commitments)) {
+		bad := proof
+		bad.Commitments = maps.Clone(proof.Commitments)
+		root := bad.Commitments[round]
+		root[0].Add(&root[0], &one)
+		bad.Commitments[round] = root
+		require.Errorf(t, gv.solve(t, bad, pub), "tampered commitment of round %d must not satisfy the circuit", round)
+	}
+}
+
+// TestGnarkVerifier_LocalVanishingScenarios checks the circuit on every
+// static local-vanishing fixture: honest proofs pass, an invalid witness is
+// rejected, and so is every single-value corruption of the first fixture's
+// proof.
+func TestGnarkVerifier_LocalVanishingScenarios(t *testing.T) {
+	tampered := false
+	for _, build := range wioptest.LocalVanishingScenarios() {
+		sc := build()
+		if isDynamic(sc.Sys) {
+			continue
+		}
+		withTampering := !tampered
+		tampered = true
+		t.Run(sc.Name, func(t *testing.T) {
+			compileGnarkPipeline(t, sc.Sys)
+			proof, pub := sc.Sys.Prove(sc.AssignHonest)
+			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
+
+			gv := compileGnarkVerifier(t, sc.Sys, proof, pub)
+			require.NoError(t, gv.solve(t, proof, pub), "honest proof must satisfy the circuit")
+
+			invalid := build()
+			compileGnarkPipeline(t, invalid.Sys)
+			badProof, badPub := invalid.Sys.Prove(invalid.AssignInvalid)
+			require.Error(t, invalid.Sys.Verify(badProof, badPub), "invalid witness must fail natively")
+			require.Error(t, gv.solve(t, badProof, badPub), "invalid witness must not satisfy the circuit")
+
+			if withTampering {
+				requireTamperingRejected(t, gv, proof, pub)
+			}
+		})
+	}
+}
+
+// TestGnarkVerifier_NonNativeScenarios is the non-native counterpart of
+// [TestGnarkVerifier_LocalVanishingScenarios].
+func TestGnarkVerifier_NonNativeScenarios(t *testing.T) {
+	for i, build := range wioptest.NonNativeScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			compileGnarkPipeline(t, sc.Sys)
+			proof, pub := sc.Sys.Prove(sc.AssignHonest)
+			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
+
+			gv := compileGnarkVerifier(t, sc.Sys, proof, pub)
+			require.NoError(t, gv.solve(t, proof, pub), "honest proof must satisfy the circuit")
+			t.Logf("constraints: %d", gv.ccs.GetNbConstraints())
+
+			invalid := build()
+			compileGnarkPipeline(t, invalid.Sys)
+			badProof, badPub := invalid.Sys.Prove(invalid.AssignInvalid)
+			require.Error(t, invalid.Sys.Verify(badProof, badPub), "invalid witness must fail natively")
+			require.Error(t, gv.solve(t, badProof, badPub), "invalid witness must not satisfy the circuit")
+
+			if i == 0 {
+				requireTamperingRejected(t, gv, proof, pub)
+			}
+		})
+	}
+}
+
+// TestGnarkVerifier_RangeCheckScenarios checks the circuit on every
+// range-check fixture. An out-of-range witness cannot be proven at all (the
+// multiplicity assignment panics), so soundness is exercised by corrupting the
+// first fixture's honest proof one value at a time.
+func TestGnarkVerifier_RangeCheckScenarios(t *testing.T) {
+	for i, build := range wioptest.RangeCheckCompilerScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			compileGnarkPipeline(t, sc.Sys)
+			proof, pub := sc.Sys.Prove(sc.AssignWitness)
+			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
+
+			gv := compileGnarkVerifier(t, sc.Sys, proof, pub)
+			require.NoError(t, gv.solve(t, proof, pub), "honest proof must satisfy the circuit")
+			t.Logf("constraints: %d", gv.ccs.GetNbConstraints())
+
+			if i == 0 {
+				requireTamperingRejected(t, gv, proof, pub)
+			}
+		})
+	}
 }

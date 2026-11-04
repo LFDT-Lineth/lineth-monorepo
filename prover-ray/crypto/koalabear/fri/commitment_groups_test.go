@@ -55,11 +55,6 @@ func newGroupedPCSFixture(t *testing.T, numBatches int) pcsOpenVerifyFixture {
 	params.MerkleCapHeight = 2
 	pcs, err := NewPCS(params, makeEncoders(4, 2))
 	require.NoError(t, err)
-	// A single batch never shares its tree, so disabling dedup changes nothing
-	// but lets the circuit verifier, which requires it, run on the fixture.
-	if numBatches == 1 {
-		pcs.DisableRootDedup()
-	}
 	witness := groupedWitness(rand.New(utils.NewRandSource(20261021)))
 	committed := pcs.Commit(witness)
 
@@ -199,6 +194,9 @@ func TestPCSVerifyGroupedCommitment(t *testing.T) {
 // every batch its own input tree, so the fixture has a single batch.
 func TestPCSVerifyGnarkGroupedCommitment(t *testing.T) {
 	fx := newGroupedPCSFixture(t, 1)
+	// The circuit verifier requires dedup disabled. With a single batch nothing
+	// is shared, so the proof built with dedup on is unchanged.
+	fx.pcs.DisableRootDedup()
 	template, assignment := circuitFor(fx, fx.proof)
 	require.NoError(t, solvePCSCircuit(t, template, assignment), "grouped proof must satisfy the verifier circuit")
 
