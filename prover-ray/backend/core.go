@@ -349,7 +349,6 @@ func (c *Core) proveFull(ctx context.Context, job Job) Result {
 // guest input data differs.
 func (c *Core) buildInputs(job Job) (map[string]bit.Array, error) {
 	if err := sanityCheckJobs(job, c.cfg.ShardSize); err != nil {
-	if err := sanityCheckJobs(job, c.cfg.ShardSize); err != nil {
 		return nil, err
 	}
 	return c.encodeGuestInputs(job)
@@ -376,11 +375,6 @@ func (c *Core) encodeGuestInputs(job Job) (map[string]bit.Array, error) {
 	maps.Copy(inputs, c.decoded.EncodeInputs())
 	return inputs, nil
 }
-
-func sanityCheckJobs(job Job, shardSize uint64) error {
-	if _, err := checkShardIndexes(job.ShardIndexes, shardSize); err != nil {
-		return fmt.Errorf("shard indexes: %w", err)
-	}
 
 func sanityCheckJobs(job Job, shardSize uint64) error {
 	if _, err := checkShardIndexes(job.ShardIndexes, shardSize); err != nil {
@@ -451,30 +445,10 @@ func (c *Core) runProve(
 		logrus.Infof("Proving %d of %d shards: the result is a conglomeration node, not a final proof", len(indexes), numShards)
 	}
 
-	// Buffered so that sending never blocks, even if conglomeration fails early.
-	shardProofs := make(chan conglomeration.Node, len(indexes))
-	defer close(shardProofs)
-	var (
-		root     conglomeration.Node
-		rootErr  error
-		rootDone = make(chan struct{})
-	)
-	go func() {
-		defer close(rootDone)
-		root, rootErr = conglomeration.Conglomerate(shardProofs, len(indexes), c.merger,
-			conglomeration.DefaultMaxInFlightMerges)
-	}()
-
+	reducer := conglomeration.NewReducer(c.merger, conglomeration.DefaultMaxInFlightMerges)
 	for k, i := range indexes {
 		if err := ctx.Err(); err != nil {
 			return conglomeration.Node{}, 0, fmt.Errorf("before shard %d: %w", i, err)
-		}
-		// Conglomeration only returns before the last shard proof on a failed
-		// merge: stop rather than proving shards whose result is already lost.
-		select {
-		case <-rootDone:
-			return conglomeration.Node{}, 0, fmt.Errorf("before shard %d: %w", i, rootErr)
-		default:
 		}
 		shard, err := traceShard(lazyTrace, i)
 		if err != nil {
@@ -489,11 +463,15 @@ func (c *Core) runProve(
 		if err != nil {
 			return conglomeration.Node{}, 0, fmt.Errorf("shard %d: %w", i, err)
 		}
-		shardProofs <- conglomeration.Node{Coverage: []uint{i}, Proof: proof, Pub: pub}
+		// Add reports a merge that failed meanwhile: stop rather than prove
+		// shards whose result is already lost.
+		if err := reducer.Add(conglomeration.Node{Coverage: []uint{i}, Proof: proof, Pub: pub}); err != nil {
+			return conglomeration.Node{}, 0, fmt.Errorf("merging after shard %d: %w", i, err)
+		}
 	}
-	<-rootDone
-	if rootErr != nil {
-		return conglomeration.Node{}, 0, rootErr
+	root, err := reducer.Close()
+	if err != nil {
+		return conglomeration.Node{}, 0, fmt.Errorf("merging: %w", err)
 	}
 	if isRoot && c.cfg.ShardSize > 0 {
 		if root, err = c.merger.Finalize(root, numShards); err != nil {
@@ -508,7 +486,6 @@ func traceShard(lazyTrace zkcdriver.LazyTrace, i uint) (zkcdriver.Shard, error) 
 	shard, errs := lazyTrace.Get(i)
 	if len(errs) > 0 {
 		return zkcdriver.Shard{}, fmt.Errorf("tracing shard %d: %w", i, errors.Join(errs...))
-		return zkcdriver.Shard{}, fmt.Errorf("tracing shard %d: %w", i, errors.Join(errs...))
 	}
 	if shard.IsEmpty() {
 		return zkcdriver.Shard{}, fmt.Errorf("tracing shard %d: no shard produced", i)
@@ -519,7 +496,6 @@ func traceShard(lazyTrace zkcdriver.LazyTrace, i uint) (zkcdriver.Shard, error) 
 // proveShard proves the given shard, then verifies the proof.
 func (c *Core) proveShard(shard zkcdriver.Shard) (wiop.Proof, wiop.PublicInput, error) {
 	proof, pub := c.sys.Prove(func(rt *wiop.Runtime) {
-		c.driver.AssignTraceShard(rt, shard, field.Octuplet{})
 		c.driver.AssignTraceShard(rt, shard, field.Octuplet{})
 	})
 	// Verify proof

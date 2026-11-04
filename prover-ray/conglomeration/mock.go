@@ -17,13 +17,15 @@ import (
 // its Pub is the first child's with the message-bus products multiplied and the
 // shared randomness contributions added. A shard proof that reaches Finalize
 // unmerged keeps its proof.
+//
+// It verifies no proof either: the shard proofs it merges must have been
+// verified by whoever produced them, and a merged node has none to verify.
 type MockMerger struct {
 	sys *wiop.System
 }
 
-// NewMockMerger returns the mock merger of the shard proofs over sys,
-// a compiled RISCV-ZKC system (see risc5.CheckPublicInputs).
-// [Node.Proof] is empty.
+// NewMockMerger returns the mock merger of the shard proofs over sys, a
+// compiled RISCV-ZKC system (see risc5.CheckPublicInputs).
 func NewMockMerger(sys *wiop.System) MockMerger {
 	return MockMerger{sys: sys}
 }
@@ -33,19 +35,24 @@ func (m MockMerger) Merge(children []Node) (Node, error) {
 	if len(children) < 2 || len(children) > RecursionTreeArity {
 		return Node{}, fmt.Errorf("merging %d nodes, want 2 to %d", len(children), RecursionTreeArity)
 	}
-	first := children[0]
-	coverage := first.Coverage
 	for _, child := range children {
 		if len(child.Pub) != len(m.sys.PublicInputs) {
 			return Node{}, fmt.Errorf("node %v has %d public inputs, want %d",
 				child.Coverage, len(child.Pub), len(m.sys.PublicInputs))
 		}
 	}
-	seeded := messagebus.HasSharedRandomness(m.sys)
-	pub := slices.Clone(first.Pub)
-	products := messagebus.GetProducts(m.sys, first.Pub)
-	var contribution multisethashing.MSetHash
+	var (
+		first        = children[0]
+		coverage     = first.Coverage
+		vk           = risc5.GetProgramVK(m.sys, first.Pub)
+		output       = risc5.GetGuestPublicOutputs(m.sys, first.Pub)
+		products     = messagebus.GetProducts(m.sys, first.Pub)
+		seeded       = messagebus.HasSharedRandomness(m.sys)
+		seed         field.Octuplet
+		contribution multisethashing.MSetHash
+	)
 	if seeded {
+		seed = messagebus.GetSharedRandomnessSeed(m.sys, first.Pub)
 		contribution = messagebus.GetSharedRandomnessContribution(m.sys, first.Pub)
 	}
 	for _, child := range children[1:] {
@@ -53,17 +60,17 @@ func (m MockMerger) Merge(children []Node) (Node, error) {
 		if coverage, err = mergeCoverage(coverage, child.Coverage); err != nil {
 			return Node{}, err
 		}
-		if risc5.GetProgramVK(m.sys, first.Pub) != risc5.GetProgramVK(m.sys, child.Pub) {
+		if vk != risc5.GetProgramVK(m.sys, child.Pub) {
 			return Node{}, fmt.Errorf("nodes %v and %v have different program VK", first.Coverage, child.Coverage)
 		}
-		if !slices.Equal(risc5.GetGuestPublicOutputs(m.sys, first.Pub), risc5.GetGuestPublicOutputs(m.sys, child.Pub)) {
+		if !slices.Equal(output, risc5.GetGuestPublicOutputs(m.sys, child.Pub)) {
 			return Node{}, fmt.Errorf("nodes %v and %v have different guest output", first.Coverage, child.Coverage)
 		}
 		for h, p := range messagebus.GetProducts(m.sys, child.Pub) {
 			products[h] = products[h].Mul(p)
 		}
 		if seeded {
-			if messagebus.GetSharedRandomnessSeed(m.sys, first.Pub) != messagebus.GetSharedRandomnessSeed(m.sys, child.Pub) {
+			if seed != messagebus.GetSharedRandomnessSeed(m.sys, child.Pub) {
 				return Node{}, fmt.Errorf("nodes %v and %v have different shared randomness seed", first.Coverage, child.Coverage)
 			}
 			// The contributions live in the multiset-hash group, whose
@@ -73,15 +80,10 @@ func (m MockMerger) Merge(children []Node) (Node, error) {
 		}
 	}
 
-	for h, p := range products {
-		_, pos := m.sys.LookupPublicInputByTag(messagebus.PublicInputTag, h)
-		pub[pos] = p
-	}
+	pub := slices.Clone(first.Pub)
+	messagebus.SetProducts(m.sys, pub, products)
 	if seeded {
-		for i := range contribution {
-			_, pos := m.sys.LookupPublicInputByTag(messagebus.SharedRandomnessSeedContributionPI, i)
-			pub[pos] = field.ElemFromBase(contribution[i])
-		}
+		messagebus.SetSharedRandomnessContribution(m.sys, pub, contribution)
 	}
 	return Node{Coverage: coverage, Pub: pub}, nil
 }

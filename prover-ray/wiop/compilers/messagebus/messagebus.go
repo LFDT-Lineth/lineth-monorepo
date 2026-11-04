@@ -75,13 +75,35 @@ const PublicInputTag wiop.PublicInputTag = "MessageBus"
 func GetProducts(sys *wiop.System, pub wiop.PublicInput) []field.Gen {
 	products := make([]field.Gen, len(sys.MessageBusHandles()))
 	for h := range products {
-		_, pos := sys.LookupPublicInputByTag(PublicInputTag, h)
-		if pos < 0 {
-			panic(fmt.Sprintf("wiop/compilers/messagebus: GetProducts: no public input registered for handle %d", h))
-		}
-		products[h] = pub[pos]
+		products[h] = pub[productPos(sys, h)]
 	}
 	return products
+}
+
+// SetProducts writes products, in the order of [wiop.System.MessageBusHandles],
+// into the public inputs pub of a proof over sys: the inverse of
+// [GetProducts], for a cross-shard layer building the public inputs of a node
+// from its children's.
+//
+// Panics if a public input is missing or products has not one entry per
+// handle.
+func SetProducts(sys *wiop.System, pub wiop.PublicInput, products []field.Gen) {
+	if n := len(sys.MessageBusHandles()); len(products) != n {
+		panic(fmt.Sprintf("wiop/compilers/messagebus: SetProducts: %d products for %d handles", len(products), n))
+	}
+	for h, p := range products {
+		pub[productPos(sys, h)] = p
+	}
+}
+
+// productPos returns the position in the public inputs of the product on the
+// handle of index h. Panics if it is missing.
+func productPos(sys *wiop.System, h int) int {
+	_, pos := sys.LookupPublicInputByTag(PublicInputTag, h)
+	if pos < 0 {
+		panic(fmt.Sprintf("wiop/compilers/messagebus: no public input registered for handle %d", h))
+	}
+	return pos
 }
 
 type compileOptions struct {

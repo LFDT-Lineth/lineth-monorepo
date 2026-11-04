@@ -14,8 +14,10 @@
 package conglomeration
 
 import (
+	"errors"
 	"fmt"
 	"slices"
+	"sync"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
@@ -33,7 +35,7 @@ type Node struct {
 
 // RecursionTreeArity is the maximum number of children of a node of the
 // conglomeration tree: the most proofs one recursion step verifies. A merge
-// takes 2 to RecursionTreeArity children; [Conglomerate] fills every merge as
+// takes 2 to RecursionTreeArity children; a [Reducer] fills every merge as
 // much as possible, so only the last merge of the tree has fewer than
 // RecursionTreeArity.
 const RecursionTreeArity = 6
@@ -91,69 +93,107 @@ func checkCoverageComplete(coverage []uint, numShards uint) error {
 	return nil
 }
 
-// DefaultMaxInFlightMerges bounds the concurrent [Merger.Merge] calls of
-// [Conglomerate]: a real merged node is a full proof and competes for memory
-// with shard proving.
+// DefaultMaxInFlightMerges bounds the concurrent [Merger.Merge] calls of a
+// [Reducer]: a real merged node is a full proof and competes for memory with
+// shard proving.
 const DefaultMaxInFlightMerges = 1
 
-// Conglomerate drains the n shard proofs received on in and reduces them to a
-// single node with merger, at most maxInFlight merges at a time, filling
-// every merge as much as possible: it merges [RecursionTreeArity] ready nodes,
-// in arrival order, as soon as they are available, and waits for more shard
-// proofs or running merges rather than merge fewer. Only once every shard
-// proof has arrived and no merge is running does it merge the fewer nodes
-// left, so only the last merge of the tree has fewer children. n and maxInFlight must be at least 1; merger is only called
-// when n > 1. It does not run the root checks: the caller calls
-// [Merger.Finalize] if the node covers all the shards. It fails if in closes
-// before n proofs arrived.
-func Conglomerate(in <-chan Node, n int, merger Merger, maxInFlight int) (Node, error) {
-	type result struct {
-		node Node
-		err  error
+// Reducer reduces the shard proofs pushed to it by [Reducer.Add] to a single
+// node. It merges [RecursionTreeArity] ready nodes, in arrival order, in the
+// background as soon as they are available, at most maxInFlight merges at a
+// time, and waits for more shard proofs or running merges rather than merge
+// fewer. Only [Reducer.Close], once nothing more can arrive, merges the fewer
+// nodes left, so only the last merge of the tree has fewer children. It does
+// not run the root checks: the caller calls [Merger.Finalize] if the node
+// covers all the shards.
+type Reducer struct {
+	merger      Merger
+	maxInFlight int
+
+	mu       sync.Mutex
+	cond     sync.Cond // signalled when a merge completes
+	ready    []Node
+	inFlight int
+	err      error // the first merge failure
+}
+
+// NewReducer returns a reducer merging with merger, at most maxInFlight
+// merges at a time. maxInFlight must be at least 1; merger is only called
+// when more than one node is added.
+func NewReducer(merger Merger, maxInFlight int) *Reducer {
+	r := &Reducer{merger: merger, maxInFlight: maxInFlight}
+	r.cond.L = &r.mu
+	return r
+}
+
+// Add pushes a shard proof, starting a merge if enough nodes are ready. It
+// returns the error of a merge that failed since the previous call, if any:
+// the reduction is then lost and the caller need not prove the remaining
+// shards. Add must not be called after [Reducer.Close].
+func (r *Reducer) Add(node Node) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.err != nil {
+		return r.err
 	}
-	var (
-		ready    []Node
-		done     = make(chan result, n)
-		received int
-		inFlight int
-	)
-	start := func(k int) {
-		children := slices.Clone(ready[:k])
-		ready = slices.Delete(ready, 0, k)
-		inFlight++
-		go func() {
-			node, err := merger.Merge(children)
-			done <- result{node: node, err: err}
-		}()
-	}
+	r.ready = append(r.ready, node)
+	r.startFullMerges()
+	return nil
+}
+
+// Close waits for the running merges, performs the last merge of the tree
+// and returns the resulting node, or the error of the first failed merge.
+func (r *Reducer) Close() (Node, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	for {
-		for inFlight < maxInFlight && len(ready) >= RecursionTreeArity {
-			start(RecursionTreeArity)
+		r.startFullMerges()
+		for r.inFlight > 0 && r.err == nil {
+			r.cond.Wait()
 		}
-		if received == n && inFlight == 0 {
-			if len(ready) == 1 {
-				return ready[0], nil
-			}
-			// Fewer than RecursionTreeArity nodes are left and nothing more
-			// will arrive: the last merge of the tree.
-			start(len(ready))
+		if r.err != nil {
+			return Node{}, r.err
 		}
-		if received == n {
-			in = nil // all the shard proofs arrived, wait for the merges only
+		switch len(r.ready) {
+		case 0:
+			return Node{}, errors.New("no shard proof was added")
+		case 1:
+			return r.ready[0], nil
 		}
-		select {
-		case p, ok := <-in:
-			if !ok {
-				return Node{}, fmt.Errorf("only %d of %d shard proofs arrived", received, n)
-			}
-			received++
-			ready = append(ready, p)
-		case r := <-done:
-			inFlight--
-			if r.err != nil {
-				return Node{}, r.err
-			}
-			ready = append(ready, r.node)
-		}
+		// Fewer than RecursionTreeArity nodes are left and nothing more will
+		// arrive: the last merge of the tree.
+		r.start(len(r.ready))
 	}
+}
+
+// startFullMerges starts merges of RecursionTreeArity ready nodes as long as
+// there are enough and the in-flight bound allows. Called with mu held.
+func (r *Reducer) startFullMerges() {
+	for r.inFlight < r.maxInFlight && len(r.ready) >= RecursionTreeArity {
+		r.start(RecursionTreeArity)
+	}
+}
+
+// start merges the first k ready nodes in the background. Called with mu
+// held.
+func (r *Reducer) start(k int) {
+	children := slices.Clone(r.ready[:k])
+	r.ready = slices.Delete(r.ready, 0, k)
+	r.inFlight++
+	go func() {
+		node, err := r.merger.Merge(children)
+		r.mu.Lock()
+		defer r.mu.Unlock()
+		r.inFlight--
+		switch {
+		case err != nil:
+			if r.err == nil {
+				r.err = err
+			}
+		default:
+			r.ready = append(r.ready, node)
+			r.startFullMerges()
+		}
+		r.cond.Broadcast()
+	}()
 }

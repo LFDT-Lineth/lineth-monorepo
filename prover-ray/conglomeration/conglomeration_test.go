@@ -1,6 +1,8 @@
 package conglomeration
 
 import (
+	"fmt"
+	"math/rand"
 	"sync"
 	"testing"
 
@@ -68,15 +70,15 @@ func shardNode(sys *wiop.System, i uint, bus field.Gen) Node {
 	return Node{Coverage: []uint{i}, Pub: pub}
 }
 
-// reduce runs Conglomerate over the given nodes, sent in order on a closed
-// channel, expecting n of them.
-func reduce(n int, merger Merger, maxInFlight int, nodes ...Node) (Node, error) {
-	ch := make(chan Node, len(nodes))
+// reduce adds the nodes, in order, to a reducer over merger and closes it.
+func reduce(merger Merger, maxInFlight int, nodes ...Node) (Node, error) {
+	r := NewReducer(merger, maxInFlight)
 	for _, nd := range nodes {
-		ch <- nd
+		if err := r.Add(nd); err != nil {
+			return Node{}, err
+		}
 	}
-	close(ch)
-	return Conglomerate(ch, n, merger, maxInFlight)
+	return r.Close()
 }
 
 func requireElemEqual(t *testing.T, want, got field.Gen, msg string) {
@@ -99,29 +101,30 @@ func (a *arityMerger) Merge(children []Node) (Node, error) {
 	return a.MockMerger.Merge(children)
 }
 
-// arrivalOrder returns the shard indexes 0..n-1 in a scrambled order.
-func arrivalOrder(n uint) []uint {
+// arrivalOrder returns the shard indexes 0..n-1 in a scrambled, deterministic
+// order.
+func arrivalOrder(n int) []uint {
 	order := make([]uint, n)
-	for i := range order {
-		order[i] = (uint(i)*7 + 3) % n
+	for k, i := range rand.New(rand.NewSource(int64(n))).Perm(n) {
+		order[k] = uint(i)
 	}
 	return order
 }
 
-// TestConglomerate checks that Conglomerate reduces any number of shard
-// proofs, arriving in any order, to one node covering all of them and carrying
-// the product of their bus products, merging [RecursionTreeArity] nodes at a
-// time and fewer only in the last merge.
-func TestConglomerate(t *testing.T) {
+// TestReducer checks that a Reducer reduces any number of shard proofs,
+// arriving in any order, to one node covering all of them and carrying the
+// product of their bus products, merging [RecursionTreeArity] nodes at a time
+// and fewer only in the last merge.
+func TestReducer(t *testing.T) {
 	sys := testSystem(false)
 	for _, arrivals := range [][]uint{{0}, {2, 0, 1}, {5, 6, 0, 2, 1, 3, 4}, arrivalOrder(13), arrivalOrder(36), arrivalOrder(37)} {
-		t.Run("", func(t *testing.T) {
+		t.Run(fmt.Sprintf("%d shards", len(arrivals)), func(t *testing.T) {
 			merger := &arityMerger{MockMerger: NewMockMerger(sys)}
 			nodes := make([]Node, len(arrivals))
 			for k, i := range arrivals {
 				nodes[k] = shardNode(sys, i, elem(i+1))
 			}
-			root, err := reduce(len(arrivals), merger, 2, nodes...)
+			root, err := reduce(merger, 2, nodes...)
 			require.NoError(t, err, "arrivals %v", arrivals)
 
 			want := make([]uint, len(arrivals))
@@ -144,17 +147,9 @@ func TestConglomerate(t *testing.T) {
 	}
 }
 
-// TestConglomerate_MissingProofs checks that Conglomerate fails when the
-// channel closes before every shard proof arrived.
-func TestConglomerate_MissingProofs(t *testing.T) {
-	sys := testSystem(false)
-	_, err := reduce(3, NewMockMerger(sys), 1, shardNode(sys, 1, elem(1)), shardNode(sys, 0, elem(1)))
-	require.ErrorContains(t, err, "only 2 of 3 shard proofs arrived")
-}
-
-// countingMerger records the peak number of concurrent Merge calls,
-// holding the first one until release is closed so that the reducer has the
-// chance to start more.
+// countingMerger records the peak number of concurrent Merge calls, holding
+// the first one until release is closed so that the reducer has the chance to
+// start more.
 type countingMerger struct {
 	MockMerger
 	release chan struct{}
@@ -182,36 +177,26 @@ func (a *countingMerger) Merge(children []Node) (Node, error) {
 	return a.MockMerger.Merge(children)
 }
 
-// TestConglomerate_MaxInFlight checks that Conglomerate never runs more than
+// TestReducer_MaxInFlight checks that a Reducer never runs more than
 // maxInFlight merges at once.
-func TestConglomerate_MaxInFlight(t *testing.T) {
+func TestReducer_MaxInFlight(t *testing.T) {
 	sys := testSystem(false)
 	merger := &countingMerger{
 		MockMerger: NewMockMerger(sys),
 		release:    make(chan struct{}),
 		started:    make(chan struct{}, 1),
 	}
-	// Enough shards for two full merges that could run at once.
-	nodes := make([]Node, 2*RecursionTreeArity)
-	for i := range nodes {
-		nodes[i] = shardNode(sys, uint(i), elem(1))
+	// Enough shards for two full merges that could run at once: the first
+	// merge is held until release while every other shard is added, so a
+	// second one could start if the bound were not enforced.
+	r := NewReducer(merger, 1)
+	for i := range 2 * RecursionTreeArity {
+		require.NoError(t, r.Add(shardNode(sys, uint(i), elem(1))))
 	}
-	ch := make(chan Node, len(nodes))
-	for _, nd := range nodes {
-		ch <- nd
-	}
-	close(ch)
-
-	done := make(chan error, 1)
-	go func() {
-		_, err := Conglomerate(ch, len(nodes), merger, 1)
-		done <- err
-	}()
-	// The first merge is held until release, while the reducer receives the
-	// other shards and could start a second full merge.
 	<-merger.started
 	close(merger.release)
-	require.NoError(t, <-done)
+	_, err := r.Close()
+	require.NoError(t, err)
 	require.Equal(t, 1, merger.peak, "at most one merge should run at once")
 }
 
@@ -290,14 +275,12 @@ func TestMockMerger_Finalize(t *testing.T) {
 	}
 }
 
-// TestConglomerate_MergeError checks that a merge failure is
-// returned.
-func TestConglomerate_MergeError(t *testing.T) {
+// TestReducer_MergeError checks that a merge failure is returned.
+func TestReducer_MergeError(t *testing.T) {
 	sys := testSystem(false)
 	bad := shardNode(sys, 1, elem(1))
 	bad.Pub[programVKPos] = elem(8)
-	_, err := reduce(2, NewMockMerger(sys), 1, shardNode(sys, 0, elem(1)), bad)
-	require.Error(t, err)
+	_, err := reduce(NewMockMerger(sys), 1, shardNode(sys, 0, elem(1)), bad)
 	require.ErrorContains(t, err, "different program VK")
 }
 
@@ -336,7 +319,7 @@ func TestMockMerger_SharedRandomness(t *testing.T) {
 	}
 
 	t.Run("root seed derives from the contributions", func(t *testing.T) {
-		root, err := reduce(len(nodes), merger, 1, nodes...)
+		root, err := reduce(merger, 1, nodes...)
 		require.NoError(t, err)
 		require.Equal(t, sum, messagebus.GetSharedRandomnessContribution(sys, root.Pub), "the contributions should add up")
 		_, err = merger.Finalize(root, uint(len(nodes)))
