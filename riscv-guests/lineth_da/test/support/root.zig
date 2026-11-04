@@ -1,7 +1,7 @@
 //! Test-side encoders and signers, written without the package under test: a recursive RLP
 //! encoder, a transactions trie, a secp256k1 signer, builders of signed transactions and blocks, the
 //! byte-level pieces of a DA stream, the arithmetic of the BLS12-381 scalar field and the blob
-//! commitments and proofs of c-kzg-4844.
+//! commitments and proofs of Constantine.
 
 pub const rlp = @import("rlp.zig");
 pub const trie = @import("trie.zig");

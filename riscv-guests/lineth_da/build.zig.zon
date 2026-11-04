@@ -25,19 +25,12 @@
             .url = "https://github.com/facebook/zstd/releases/download/v1.5.6/zstd-1.5.6.tar.gz",
             .hash = "N-V-__8AAKbffQDMlwdeMxqHyyAcA6AYoVIjJdaqhEYZpGFG",
         },
-        // ethereum/c-kzg-4844 v2.1.5: the official EIP-4844 reference vectors (tests/ directory)
-        // the blob verification tests and the blob_sample tool read, and the C library that
-        // computes the commitments and proofs of the native tests and tools. Host builds only.
+        // ethereum/c-kzg-4844 v2.1.5, for the official EIP-4844 reference vectors (its tests/
+        // directory) that the blob verification tests and the blob_sample tool read. Host builds
+        // only.
         .c_kzg_4844 = .{
             .url = "https://github.com/ethereum/c-kzg-4844/archive/refs/tags/v2.1.5.tar.gz",
             .hash = "N-V-__8AALYXygU1iU8DU-qtzr7I31mr2vWOmfRVDNFAlTWj",
-            .lazy = true,
-        },
-        // supranational/blst at the commit c-kzg-4844 v2.1.5 pins as its submodule: the BLS12-381
-        // library under c-kzg-4844. Host builds only.
-        .blst = .{
-            .url = "https://github.com/supranational/blst/archive/6d960cd05d6fe2b5bc9ba161edf0c1a131b87c4c.tar.gz",
-            .hash = "N-V-__8AAKDMOgDp0ule4-ieF6xoW2euEGpOwOyBPo-KRj_a",
             .lazy = true,
         },
     },

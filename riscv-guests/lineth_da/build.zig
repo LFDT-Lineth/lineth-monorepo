@@ -196,7 +196,7 @@ fn addHostBuild(
     const test_step = b.step("test", "Run native Zig unit tests for the lineth_da package");
     const tests = common.addTests(b, test_step, native, .{});
     const tools = common.addTools(b, native, .{});
-    addKzgReferences(b, target, tests, tools, support);
+    addKzgReferences(b, target, tests, tools);
     const reference_tests = addReferenceTests(b, test_step, target, zstd, shared, zkevm_fixtures);
     linkHostCrypto(b, target, &.{ tests, tools, reference_tests });
 
@@ -242,33 +242,25 @@ const SharedModules = struct {
     }
 };
 
-/// The official EIP-4844 reference vectors for the blob tests and the blob_sample tool, and, with
-/// the c-kzg-4844 library over blst, the commitments and proofs of the test support. Each is wired
-/// in once its lazy dependency is fetched.
+/// The official EIP-4844 reference vectors for the blob tests and the blob_sample tool, wired in
+/// once their lazy dependency is fetched.
 fn addKzgReferences(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     tests: std.StringHashMap(*std.Build.Step.Compile),
     tools: std.StringHashMap(*std.Build.Step.Compile),
-    support: *std.Build.Module,
 ) void {
     const c_kzg = b.lazyDependency("c_kzg_4844", .{}) orelse return;
     const paths = b.addOptions();
     paths.addOptionPath("tests_dir", c_kzg.path("tests"));
-    paths.addOptionPath("trusted_setup", c_kzg.path("src/trusted_setup.txt"));
-    const paths_module = paths.createModule();
     const reference_vectors = b.createModule(.{
         .root_source_file = b.path("test/support/reference_vectors.zig"),
         .target = target,
         .optimize = .Debug,
-        .imports = &.{.{ .name = "c_kzg_paths", .module = paths_module }},
+        .imports = &.{.{ .name = "c_kzg_paths", .module = paths.createModule() }},
     });
     tests.get("test/blob_kzg_test.zig").?.root_module.addImport("reference_vectors", reference_vectors);
     tools.get("blob_sample").?.root_module.addImport("reference_vectors", reference_vectors);
-
-    const blst = b.lazyDependency("blst", .{}) orelse return;
-    support.addImport("c_kzg", cKzgModule(b, target, c_kzg, blst));
-    support.addImport("c_kzg_paths", paths_module);
 }
 
 /// Every native test and tool links the host build of the zkvm_* providers.
@@ -317,39 +309,6 @@ fn addReferenceTests(
             .{ .name = "da_chunks", .module = readers.da_chunks },
         },
     }, .{ .dir = "test/reference" });
-}
-
-/// c-kzg-4844 over blst, translated for Zig: the library that commits to blobs and proves them for
-/// the native tests and tools. blst's portable build runs on every CPU of the target architecture.
-fn cKzgModule(
-    b: *std.Build,
-    target: std.Build.ResolvedTarget,
-    c_kzg: *std.Build.Dependency,
-    blst: *std.Build.Dependency,
-) *std.Build.Module {
-    const translated = b.addTranslateC(.{
-        .root_source_file = c_kzg.path("src/ckzg.h"),
-        .target = target,
-        .optimize = .Debug,
-    });
-    translated.addIncludePath(c_kzg.path("src"));
-    translated.addIncludePath(blst.path("bindings"));
-    const module = translated.createModule();
-    module.addIncludePath(c_kzg.path("src"));
-    module.addIncludePath(blst.path("bindings"));
-    module.addCSourceFile(.{ .file = c_kzg.path("src/ckzg.c"), .flags = &.{ "-O2", "-fno-sanitize=undefined" } });
-    const has_assembly = switch (target.result.cpu.arch) {
-        .aarch64, .x86_64 => true,
-        else => false,
-    };
-    // The C sources and the assembly select the same field-arithmetic variants by the portable macro.
-    const blst_flags: []const []const u8 = if (has_assembly)
-        &.{ "-O2", "-fno-sanitize=undefined", "-D__BLST_PORTABLE__" }
-    else
-        &.{ "-O2", "-fno-sanitize=undefined", "-D__BLST_PORTABLE__", "-D__BLST_NO_ASM__" };
-    module.addCSourceFile(.{ .file = blst.path("src/server.c"), .flags = blst_flags });
-    if (has_assembly) module.addCSourceFile(.{ .file = blst.path("build/assembly.S"), .flags = blst_flags });
-    return module;
 }
 
 /// The smoke guests: freestanding rv64im programs that run one part of the package on the guest

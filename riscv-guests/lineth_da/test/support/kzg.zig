@@ -1,16 +1,9 @@
-//! Blob commitments and proofs computed by c-kzg-4844 under its trusted setup: the real KZG data of
-//! the DA tests and samples, from a library independent of the package under test.
+//! Blob commitments and proofs computed by Constantine's KZG prover under the trusted setup that
+//! the host archive embeds: the real KZG data of the DA tests and samples.
 
 const std = @import("std");
 
-const c = @import("c_kzg");
-const c_kzg_paths = @import("c_kzg_paths");
-
 pub const blob_len = 4096 * 32;
-
-comptime {
-    std.debug.assert(@sizeOf(c.Blob) == blob_len);
-}
 
 /// The EIP-4844 commitment of a blob and the blob proof of that commitment.
 pub const Opening = struct {
@@ -18,26 +11,24 @@ pub const Opening = struct {
     proof: [48]u8,
 };
 
-/// Loaded on first use. The tests and tools that use it are single-threaded.
-var settings: ?c.KZGSettings = null;
+const Context = opaque {};
+
+extern fn ctt_eth_kzg_context_new_embedded(ctx: *?*Context) u8;
+extern fn ctt_eth_kzg_blob_to_kzg_commitment(ctx: *const Context, dst: *[48]u8, blob: *const [blob_len]u8) u8;
+extern fn ctt_eth_kzg_compute_blob_kzg_proof(ctx: *const Context, proof: *[48]u8, blob: *const [blob_len]u8, commitment: *const [48]u8) u8;
+
+/// Created on first use. The tests and tools that use it are single-threaded.
+var context: ?*Context = null;
 /// Openings by the sha256 of their blob, kept for the life of the process.
 var openings: std.AutoHashMapUnmanaged([32]u8, Opening) = .empty;
 
-fn loadedSettings() *const c.KZGSettings {
-    if (settings == null) {
-        var path: [std.fs.max_path_bytes]u8 = undefined;
-        const trusted_setup = std.fmt.bufPrintZ(&path, "{s}", .{c_kzg_paths.trusted_setup}) catch @panic("trusted setup path too long");
-        const file = c.fopen(trusted_setup, "rb") orelse @panic("cannot open the trusted setup");
-        defer _ = c.fclose(file);
-        var loaded: c.KZGSettings = undefined;
-        check(c.load_trusted_setup_file(&loaded, file, 8));
-        settings = loaded;
-    }
-    return &settings.?;
+fn embeddedContext() *const Context {
+    if (context == null) check(ctt_eth_kzg_context_new_embedded(&context));
+    return context.?;
 }
 
-fn check(result: c.C_KZG_RET) void {
-    if (result != c.C_KZG_OK) std.debug.panic("c-kzg-4844 failed with code {d}", .{result});
+fn check(status: u8) void {
+    if (status != 0) std.debug.panic("Constantine failed with status {d}", .{status});
 }
 
 /// The commitment of `blob` and its blob proof.
@@ -46,13 +37,10 @@ pub fn open(blob: *const [blob_len]u8) Opening {
     std.crypto.hash.sha2.Sha256.hash(blob, &digest, .{});
     if (openings.get(digest)) |known| return known;
 
-    const s = loadedSettings();
-    const as_blob: *const c.Blob = @ptrCast(blob);
-    var commitment: c.KZGCommitment = undefined;
-    check(c.blob_to_kzg_commitment(&commitment, as_blob, s));
-    var proof: c.KZGProof = undefined;
-    check(c.compute_blob_kzg_proof(&proof, as_blob, &commitment, s));
-    const opening: Opening = .{ .commitment = commitment.bytes, .proof = proof.bytes };
+    const ctx = embeddedContext();
+    var opening: Opening = undefined;
+    check(ctt_eth_kzg_blob_to_kzg_commitment(ctx, &opening.commitment, blob));
+    check(ctt_eth_kzg_compute_blob_kzg_proof(ctx, &opening.proof, blob, &opening.commitment));
     openings.put(std.heap.page_allocator, digest, opening) catch @panic("out of memory");
     return opening;
 }

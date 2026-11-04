@@ -46,7 +46,7 @@ pub fn concat(a: Allocator, parts: []const []const u8) ![]u8 {
     return std.mem.concat(a, u8, parts);
 }
 
-/// The blob chunk packing `payload`, with the commitment and the blob proof of c-kzg-4844.
+/// The blob chunk packing `payload`, with the commitment and the blob proof of Constantine.
 pub fn blobChunk(a: Allocator, payload: []const u8) !Chunk {
     const blob = try a.create([blob_payload.blob_len]u8);
     try blob_payload.pack(payload, blob);

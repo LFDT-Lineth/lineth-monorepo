@@ -117,8 +117,9 @@ fn nimCmd(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath, name: []const 
 
 fn buildHost(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath) std.Build.LazyPath {
     const nim = nimCmd(b, tc, tree, "nim compile constantine (host)");
-    // The host archive backs the FFI unit test and its embedded KZG context.
-    nim.addArgs(&.{ "--cc:clang", "-d:CTT_EMBEDDED_KZG", "-d:CTT_KZG_VERIFICATION_ONLY" });
+    // The host archive embeds the full trusted setup and exposes the whole KZG API: verification,
+    // commitments and proofs.
+    nim.addArgs(&.{ "--cc:clang", "-d:CTT_EMBEDDED_KZG" });
     _ = nim.addPrefixedOutputDirectoryArg("--outdir:", "host");
     const nimcache = nim.addPrefixedOutputDirectoryArg("--nimcache:", "host-nimcache");
     _ = nimcache; // declared as a cache output

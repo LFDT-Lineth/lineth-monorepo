@@ -65,7 +65,7 @@ fn randomBlob(seed: u64) *[blob_len]u8 {
     return blob;
 }
 
-test "proofs computed by c-kzg-4844 verify for their blob only" {
+test "a commitment and proof computed from a blob verify for that blob only" {
     const blob = randomBlob(1);
     defer gpa.destroy(blob);
     const other = randomBlob(2);

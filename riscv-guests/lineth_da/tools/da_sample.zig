@@ -7,7 +7,7 @@
 //! block selection of the EF zkevm fixtures in `fixtures-dir`, the directory that holds
 //! `blockchain_tests/`. The segment is the payload compressed against the package dictionary behind
 //! a 4-byte length prefix. A blob chunk packs it into a blob, anchored by the versioned hash of the
-//! blob's commitment and carrying the commitment and the blob proof computed by c-kzg-4844.
+//! blob's commitment and carrying the commitment and the blob proof computed by Constantine.
 
 const std = @import("std");
 
