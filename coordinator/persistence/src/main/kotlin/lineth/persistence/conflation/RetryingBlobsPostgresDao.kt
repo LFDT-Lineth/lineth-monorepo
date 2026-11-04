@@ -51,4 +51,12 @@ class RetryingBlobsPostgresDao(
 class RetryingBlobsPostgresDaoV2(
   private val delegate: BlobsDaoV2,
   private val persistenceRetryer: PersistenceRetryer,
-) : RetryingBlobsPostgresDaoG<BlobRecordV2>(delegate, persistenceRetryer), BlobsDaoV2
+) : RetryingBlobsPostgresDaoG<BlobRecordV2>(delegate, persistenceRetryer), BlobsDaoV2 {
+  override fun findHighestConsecutiveEndBlockNumberFromBlockNumber(
+    startingBlockNumberInclusive: ULong,
+  ): SafeFuture<ULong?> {
+    return persistenceRetryer.retryQuery({
+      delegate.findHighestConsecutiveEndBlockNumberFromBlockNumber(startingBlockNumberInclusive)
+    })
+  }
+}

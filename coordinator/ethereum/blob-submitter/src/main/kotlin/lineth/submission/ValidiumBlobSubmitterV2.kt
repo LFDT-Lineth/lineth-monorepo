@@ -23,12 +23,20 @@ class ValidiumBlobSubmitterV2(
       .fold(SafeFuture.completedFuture(emptyList())) { chainOfFutures, blobRecord ->
         val newChainOfFutures = chainOfFutures
           .thenCompose { listOfTxHashes ->
-            submitBlobsInSingleTx(blobRecord)
-              .thenApply { txHash -> listOfTxHashes + txHash }
+            if (hasNoNewData(blobRecord)) {
+              SafeFuture.completedFuture(listOfTxHashes)
+            } else {
+              submitBlobsInSingleTx(blobRecord)
+                .thenApply { txHash -> listOfTxHashes + txHash }
+            }
           }
         newChainOfFutures
       }
   }
+
+  /** The rollup lies inside the previous rollup's last blob, whose rolling hash is already accepted. */
+  private fun hasNoNewData(blobRecord: BlobRecordV2): Boolean =
+    blobRecord.parentDataRollingHash.contentEquals(blobRecord.dataRollingHash)
 
   private fun submitBlobsInSingleTx(blobRecord: BlobRecordV2): SafeFuture<String> {
     return (
@@ -75,6 +83,7 @@ class ValidiumBlobSubmitterV2(
   }
 
   override fun submitBlobCall(blobRecord: BlobRecordV2): SafeFuture<*> {
+    if (hasNoNewData(blobRecord)) return SafeFuture.completedFuture(null)
     return (
       gasPriceCapProvider?.getGasPriceCapsWithCoefficient(blobRecord.startBlockTimestamp)
         ?: SafeFuture.completedFuture(null)
