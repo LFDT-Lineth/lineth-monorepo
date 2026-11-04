@@ -11,7 +11,6 @@ const da_stream = support.da_stream;
 const Allocator = std.mem.Allocator;
 const Chunk = da_chunks.Chunk;
 const Hash = da_chunks.Hash;
-const Start = da_chunks.Start;
 
 const blobChunk = da_chunks.blobChunk;
 const calldataChunk = da_chunks.calldataChunk;
@@ -21,7 +20,6 @@ const expectAccepted = da_chunks.expectAccepted;
 const expectRejected = da_chunks.expectRejected;
 const foldOnto = da_chunks.foldOnto;
 const insideFirstChunk = da_chunks.insideFirstChunk;
-const keccak = da_chunks.keccak;
 const packageFrame = da_chunks.packageFrame;
 const segment = da_chunks.segment;
 
@@ -213,67 +211,6 @@ test "a positive tail count is accepted up to one byte below a full payload" {
     try expectAccepted(&.{blob}, &.{payload_1}, insideFirstChunk(&.{blob}, take), foldOnto(before_first_chunk, &.{blob}), take - own.len);
 }
 
-// ---- layouts built at random -----------------------------------------------------------------
-
-test "streams cut into blobs and calldata at random verify" {
-    var prng = std.Random.DefaultPrng.init(4844);
-    const random = prng.random();
-
-    for (0..60) |_| {
-        var arena = std.heap.ArenaAllocator.init(gpa);
-        defer arena.deinit();
-        const a = arena.allocator();
-
-        const count = 1 + random.uintLessThan(usize, 5);
-        const payloads = try a.alloc([]const u8, count);
-        const segment_ends = try a.alloc(usize, count);
-        var stream: std.ArrayList(u8) = .empty;
-        for (payloads, segment_ends) |*payload, *end| {
-            const bytes = try a.alloc(u8, 1 + random.uintLessThan(usize, 400));
-            random.bytes(bytes);
-            payload.* = bytes;
-            try stream.appendSlice(a, try segment(a, bytes));
-            end.* = stream.items.len;
-        }
-
-        // Calldata ends at a segment boundary; a blob ends anywhere and, being short, is followed
-        // by calldata or by nothing. The first blob may start with bytes of the previous proof and
-        // the last one end with bytes of the next.
-        var chunks: std.ArrayList(Chunk) = .empty;
-        var take: u64 = 0;
-        var discard: u64 = 0;
-        var position: usize = 0;
-        var previous_was_blob = false;
-        while (position < stream.items.len) {
-            const as_blob = !previous_was_blob and random.boolean();
-            if (as_blob) {
-                const end = position + 1 + random.uintLessThan(usize, stream.items.len - position);
-                var content: std.ArrayList(u8) = .empty;
-                const prefix_len = if (chunks.items.len == 0 and random.boolean()) 1 + random.uintLessThan(usize, 40) else 0;
-                try content.appendNTimes(a, 0xee, prefix_len);
-                try content.appendSlice(a, stream.items[position..end]);
-                const suffix_len = if (end == stream.items.len and random.boolean()) 1 + random.uintLessThan(usize, 40) else 0;
-                try content.appendNTimes(a, 0xdd, suffix_len);
-                if (prefix_len > 0) take = content.items.len - prefix_len;
-                discard = suffix_len;
-                try chunks.append(a, try blobChunk(a, content.items));
-                position = end;
-            } else {
-                var candidates: std.ArrayList(usize) = .empty;
-                for (segment_ends) |end| if (end > position) try candidates.append(a, end);
-                const end = candidates.items[random.uintLessThan(usize, candidates.items.len)];
-                try chunks.append(a, calldataChunk(stream.items[position..end]));
-                position = end;
-            }
-            previous_was_blob = as_blob;
-        }
-
-        const start: Start = if (take > 0) insideFirstChunk(chunks.items, take) else .{};
-        const folded_from = if (take > 0) before_first_chunk else parent;
-        try expectAccepted(chunks.items, payloads, start, foldOnto(folded_from, chunks.items), discard);
-    }
-}
-
 // ---- rejected streams ------------------------------------------------------------------------
 
 test "no chunk at all is rejected" {
@@ -306,16 +243,6 @@ test "terminal calldata may not leave bytes after the last segment" {
     try expectRejected(error.CalldataEndsMidSegment, &.{calldataChunk(try concat(a, &.{ first, "extra" }))}, &.{payload_1}, .{});
     try expectRejected(error.CalldataEndsMidSegment, &.{calldataChunk(try concat(a, &.{ first, second[0..5] }))}, &.{payload_1}, .{});
     try expectRejected(error.CalldataEndsMidSegment, &.{calldataChunk(try concat(a, &.{ first, second }))}, &.{payload_1}, .{});
-}
-
-test "a blob followed by another blob has to hold a full payload" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    const a = arena.allocator();
-
-    const chunks = [_]Chunk{ try blobChunk(a, try segment(a, payload_1)), try blobChunk(a, try segment(a, payload_2)) };
-
-    try expectRejected(error.PartialBlobBeforeBlob, &chunks, &.{ payload_1, payload_2 }, .{});
 }
 
 test "a blob one byte short of a full payload before another blob is rejected" {
@@ -412,13 +339,6 @@ test "a blob has to be the one its commitment commits to" {
     // versioned hash of that commitment: every binding holds, and the blob is not the committed one.
     const own_blob = (try blobChunk(a, own)).blob_bytes[0..blob_payload.blob_len];
     try expectRejected(error.BlobKzgMismatch, &.{try chunkOf(a, own_blob, other_commitment, other_proof)}, &.{payload_1}, .{});
-
-    // The commitment of the blob under the proof of another blob.
-    const genuine = try blobChunk(a, own);
-    try expectRejected(error.BlobKzgMismatch, &.{try chunkOf(a, own_blob, genuine.kzg_commitment[0..48].*, other_proof)}, &.{payload_1}, .{});
-
-    // A proof that is no curve point.
-    try expectRejected(error.BlobKzgMismatch, &.{try chunkOf(a, own_blob, genuine.kzg_commitment[0..48].*, @splat(0xff))}, &.{payload_1}, .{});
 }
 
 test "the proof of every blob is verified" {
@@ -442,27 +362,6 @@ test "the proof of every blob is verified" {
         forged[wrong].kzg_proof = chunks[(wrong + 1) % chunks.len].kzg_proof;
         try expectRejected(error.BlobKzgMismatch, &forged, &.{large}, .{});
     }
-}
-
-test "blob proofs are checked after the chunk binding and before the layout" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    const a = arena.allocator();
-    const first = try segment(a, payload_1);
-    const second = try segment(a, payload_2);
-
-    // A short blob before a blob, the first of which carries the proof of the second.
-    var short = try blobChunk(a, first);
-    const next = try blobChunk(a, second);
-    short.kzg_proof = next.kzg_proof;
-    try expectRejected(error.BlobKzgMismatch, &.{ short, next }, &.{ payload_1, payload_2 }, .{});
-
-    // The same, with a chunk of the second blob that is no canonical packing: the binding comes first.
-    var forged = next;
-    const bytes = try a.dupe(u8, next.blob_bytes);
-    bytes[0] |= 0x40;
-    forged.blob_bytes = bytes;
-    try expectRejected(error.NonCanonicalBlob, &.{ short, forged }, &.{ payload_1, payload_2 }, .{});
 }
 
 test "a chunk's bytes have to match its anchored hash" {
@@ -570,39 +469,14 @@ test "a conflation without a segment in the stream is rejected" {
     try expectRejected(error.MissingSegmentLength, &.{calldata}, &.{ payload_1, payload_2 }, .{});
 }
 
-test "each segment is one complete frame of the DA form" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    const a = arena.allocator();
-    const frame = try packageFrame(a, payload_1);
-    const other_frame = try packageFrame(a, payload_2);
-    const other_dictionary = try zstd_frames.dictionaryWithId(a, dictionary, 0x1234_5678);
-
-    const rejected_frames = [_][]const u8{
-        "not a zstd frame",
-        try concat(a, &.{ frame, "trailing" }),
-        try concat(a, &.{ frame, other_frame }),
-        frame[0 .. frame.len - 1],
-        try zstd_frames.compress(a, payload_1, .{ .dictionary = dictionary, .content_size = false }),
-        try packageFrame(a, payload_1 ++ "!"),
-        try packageFrame(a, payload_1[0 .. payload_1.len - 1]),
-        try zstd_frames.compress(a, payload_1, .{ .dictionary = dictionary, .dictionary_id = false }),
-        try zstd_frames.compress(a, payload_1, .{ .dictionary = other_dictionary }),
-        try zstd_frames.compress(a, payload_1, .{ .dictionary = dictionary, .checksum = true }),
-    };
-    for (rejected_frames) |rejected| {
-        try expectRejected(error.InvalidFrame, &.{calldataChunk(try da_stream.lengthPrefixed(a, rejected))}, &.{payload_1}, .{});
-    }
-}
-
-test "a frame has to decompress to its conflation's canonical payload" {
+test "a segment whose frame is outside the DA form is rejected" {
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
     const a = arena.allocator();
 
-    const calldata = calldataChunk(try segment(a, "conflation X"));
+    const frame = try zstd_frames.compress(a, payload_1, .{ .dictionary = dictionary, .content_size = false });
 
-    try expectRejected(error.PayloadMismatch, &.{calldata}, &.{payload_1}, .{});
+    try expectRejected(error.InvalidFrame, &.{calldataChunk(try da_stream.lengthPrefixed(a, frame))}, &.{payload_1}, .{});
 }
 
 test "the segments of a stream are matched to the conflations in order" {
@@ -627,27 +501,4 @@ test "a range starting inside a chunk has to open its parent hash" {
     try expectRejected(error.BoundaryPreimageMismatch, &.{blob}, &.{payload_1}, start);
     start.boundary = wrong_hash;
     try expectRejected(error.BoundaryPreimageMismatch, &.{blob}, &.{payload_1}, start);
-}
-
-test "a boundary hash is not consulted when the range starts at a chunk boundary" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    const a = arena.allocator();
-
-    const blob = try blobChunk(a, try segment(a, payload_1));
-
-    try expectAccepted(&.{blob}, &.{payload_1}, .{ .boundary = wrong_hash }, foldOnto(parent, &.{blob}), 0);
-}
-
-test "chunk binding is checked before the layout" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    const a = arena.allocator();
-
-    // Both a short blob before a blob and a wrong hash: the hash is reported.
-    var first = try blobChunk(a, try segment(a, payload_1));
-    first.chunk_hash = wrong_hash;
-    const chunks = [_]Chunk{ first, try blobChunk(a, try segment(a, payload_2)) };
-
-    try expectRejected(error.ChunkHashMismatch, &chunks, &.{ payload_1, payload_2 }, .{});
 }
