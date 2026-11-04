@@ -254,9 +254,9 @@ func TestCompile_MixedRatiosShareColumns(t *testing.T) {
 // TestCompile_SharedSubexpressionsAreLinear runs the quotient argument on a
 // vanishing whose expression is a depth-64 DAG of shared subexpressions:
 // x_{i+1} = x_i + x_i over x_0 = col · L_pos, a tree of 2^64 leaves but only
-// 65 distinct nodes. Compilation, proving and verification must all walk it
-// in time linear in the distinct nodes, and the argument must still accept
-// exactly the witnesses with col[pos] == 0.
+// 65 distinct nodes. Declaration, compilation, proving and verification must
+// all walk it in time linear in the distinct nodes, and the argument must
+// still accept exactly the witnesses with col[pos] == 0.
 func TestCompile_SharedSubexpressionsAreLinear(t *testing.T) {
 	const size = 8
 	const pos = 3
@@ -270,7 +270,7 @@ func TestCompile_SharedSubexpressionsAreLinear(t *testing.T) {
 		for range 64 {
 			x = wiop.Add(x, x)
 		}
-		mod.NewVanishingManual(sys.Context.Childf("v"), x)
+		mod.NewVanishing(sys.Context.Childf("v"), x)
 		global.Compile(sys)
 		return sys, col
 	}
