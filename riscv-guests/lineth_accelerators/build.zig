@@ -13,7 +13,7 @@
 //! `zkvm_provide` (defines every `zkvm_*` symbol, linking the Constantine archive for the target),
 //! `guest_crypto` (the Zig bindings to that archive) and `secp256k1_std`. `-Dkeccak-accel=true`
 //! makes `zkvm_provide` export the prover-accelerated keccak instead of the standard Zig one, and
-//! `-Dsecp256k1-backend` selects its secp256k1 provider: `std` (default) or `constantine`. zesu and
+//! `-Dsecp256k1-backend` selects its secp256k1 provider: `constantine` (default) or `std`. zesu and
 //! Constantine are lazy dependencies behind `-Dzkvm-provide`, fetched and built only for consumers
 //! that pass it. A consumer that opts in takes every module from the same dependency instance:
 //!   const dep = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize, .@"zkvm-provide" = true });
@@ -36,7 +36,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseSmall)") orelse .ReleaseSmall;
     const zkvm_provide = b.option(bool, "zkvm-provide", "Expose the zkvm_provide, guest_crypto and secp256k1_std modules (fetches zesu, builds Constantine)") orelse false;
     const keccak_accel = b.option(bool, "keccak-accel", "zkvm_provide exports the arithmetization keccak wrapper instead of standard zig keccak (default: unaccelerated)") orelse false;
-    const secp256k1_backend = b.option(Secp256k1Backend, "secp256k1-backend", "zkvm_provide's secp256k1 ecrecover/verify provider: std (default) or constantine") orelse .std;
+    const secp256k1_backend = b.option(Secp256k1Backend, "secp256k1-backend", "zkvm_provide's secp256k1 ecrecover/verify provider: constantine (default) or std") orelse .constantine;
 
     const accelerators = b.addModule("lineth_accelerators", .{
         .root_source_file = b.path("src/root.zig"),

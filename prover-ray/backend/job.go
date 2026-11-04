@@ -44,6 +44,14 @@ type Job struct {
 	// Multi-block conflation encoding is not yet decided; [Core.Prove] rejects
 	// jobs spanning more than one block.
 	Payload []byte
+
+	// ShardIndexes lists the trace shards this prover proves, in any order;
+	// empty proves them all. Without sharding ([Config.ShardSize] zero) only
+	// shard 0 exists. The shard count depends on the guest input and is only
+	// known after the job's fast-mode pass, so an index past the end fails the
+	// job. Conglomerating the shard proofs into one proof is not implemented
+	// yet: in full mode, a sharded job fails with [ErrNotImplemented].
+	ShardIndexes []uint
 }
 
 // ResultStatus indicates whether a prove attempt succeeded.

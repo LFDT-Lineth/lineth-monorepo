@@ -9,8 +9,8 @@
         // Consensys fork of Constantine with the guest shims and an rv64 freestanding build whose archive
         // exports the BLS12-381 scalar field. Lazy: only a build that needs an archive fetches it.
         .constantine = .{
-            .url = "git+https://github.com/Consensys-Incorporated/constantine#f8d12f4b214bdfdfe02521b1a06aad72ac959cfe",
-            .hash = "N-V-__8AAAg86Qaz8pVaZzSehzdqBhRUzX-diKc0octruf4p",
+            .url = "git+https://github.com/Consensys-Incorporated/constantine#34741a92fb217fc1bba81c23557c04e9781cad4b",
+            .hash = "N-V-__8AACT26QadxkWGt922NHHWOVuh5gq6fCCbCw4ClCoV",
             .lazy = true,
         },
     },
