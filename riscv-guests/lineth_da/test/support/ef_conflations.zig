@@ -150,9 +150,6 @@ pub const Selection = struct {
     }
 };
 
-/// The conflation the sample inputs of the smoke guests carry.
-pub const sample = [_]Kind{ .legacy, .fee_market, .set_code };
-
 /// The selection of `corpus_dir`, read once per process and kept.
 pub fn shared(io: std.Io, corpus_dir: []const u8) !*const Selection {
     if (cached == null) cached = try Selection.load(std.heap.page_allocator, io, corpus_dir);

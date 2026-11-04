@@ -1,6 +1,4 @@
 //! Builds the `lineth_da` package module (data-availability building blocks for the guests).
-//! `zig build` links a freestanding rv64im smoke guest (`-Dsmoke` selects it), which proves the
-//! package module and the libraries behind it build and link on the guest target;
 //! `zig build test -Dhost-tools=true` runs the native unit tests, and `-Dzkevm-fixtures=<dir>` adds
 //! the reference tests over the EF zkevm corpus (what `make test` runs).
 
@@ -51,7 +49,7 @@ pub fn build(b: *std.Build) void {
     // Keep `-Doptimize` exposed to dependency consumers and default to ReleaseSmall.
     const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseSmall)") orelse .ReleaseSmall;
 
-    // ── Package module for consumers and the smoke guest ─────────────────────────────────────
+    // ── Package module for consumers ─────────────────────────────────────
     const zstd = Zstd.init(b, target, optimize);
     const package = b.addModule("lineth_da", .{
         .root_source_file = b.path("src/root.zig"),
@@ -60,10 +58,9 @@ pub fn build(b: *std.Build) void {
         .imports = packageImports(b, target, optimize, zstd),
     });
     addPackageSources(b, package, zstd);
-    if (target.result.os.tag == .freestanding) addSmokeGuest(b, package, target, optimize);
 
     // Consumers of the package build the guest side only.
-    const host_tools = b.option(bool, "host-tools", "Build the native tests and tools: fetches the reference vectors and builds the host crypto providers") orelse false;
+    const host_tools = b.option(bool, "host-tools", "Build the native tests: fetches the reference vectors and builds the host crypto providers") orelse false;
     const zkevm_fixtures = b.option(std.Build.LazyPath, "zkevm-fixtures", "Directory holding the EF zkevm fixtures; enables the reference tests over its blocks");
     if (host_tools) addHostBuild(b, zstd, target, optimize, zkevm_fixtures);
 }
@@ -128,7 +125,7 @@ fn hostPackage(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.bu
     return package;
 }
 
-/// The native tests and tools run on the host: a freestanding riscv64 target has no OS to run a
+/// The native tests run on the host: a freestanding riscv64 target has no OS to run a
 /// `std.testing` binary against. The test-side pieces (`support`), the zstd encoder
 /// (`zstd_encoder`) and the reader of the EF fixtures' blocks (`ef_blocks`) are modules of the
 /// package for the tests of its consumers; they are compiled at the package's `optimize`, where
@@ -200,13 +197,9 @@ fn addHostBuild(
     };
     const test_step = b.step("test", "Run native Zig unit tests for the lineth_da package");
     const tests = common.addTests(b, test_step, native, .{});
-    const tools = common.addTools(b, native, .{});
-    addKzgReferences(b, target, tests, tools);
+    addKzgReferences(b, target, tests);
     const reference_tests = addReferenceTests(b, test_step, target, zstd, shared, zkevm_fixtures);
-    linkHostCrypto(b, target, &.{ tests, tools, reference_tests });
-
-    var tool_iter = tools.valueIterator();
-    while (tool_iter.next()) |tool| b.installArtifact(tool.*);
+    linkHostCrypto(b, target, &.{ tests, reference_tests });
 }
 
 /// The test-side modules that are independent of the package, shared by every instance of it.
@@ -247,13 +240,12 @@ const SharedModules = struct {
     }
 };
 
-/// The official EIP-4844 reference vectors for the blob tests and the blob_sample tool, wired in
-/// once their lazy dependency is fetched.
+/// The official EIP-4844 reference vectors for the blob tests, wired in once their lazy dependency
+/// is fetched.
 fn addKzgReferences(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     tests: std.StringHashMap(*std.Build.Step.Compile),
-    tools: std.StringHashMap(*std.Build.Step.Compile),
 ) void {
     const c_kzg = b.lazyDependency("c_kzg_4844", .{}) orelse return;
     const paths = b.addOptions();
@@ -265,10 +257,9 @@ fn addKzgReferences(
         .imports = &.{.{ .name = "c_kzg_paths", .module = paths.createModule() }},
     });
     tests.get("test/blob_kzg_test.zig").?.root_module.addImport("reference_vectors", reference_vectors);
-    tools.get("blob_sample").?.root_module.addImport("reference_vectors", reference_vectors);
 }
 
-/// Every native test and tool links the host build of the zkvm_* providers.
+/// Every native test links the host build of the zkvm_* providers.
 /// Optimized: the compiler's own linker crashes on a debug-built provider object.
 fn linkHostCrypto(b: *std.Build, target: std.Build.ResolvedTarget, artifacts: []const std.StringHashMap(*std.Build.Step.Compile)) void {
     const accelerators = b.dependency("lineth_accelerators", .{
@@ -317,50 +308,6 @@ fn addReferenceTests(
             .{ .name = "da_chunks", .module = readers.da_chunks },
         },
     }, .{ .dir = "test/reference" });
-}
-
-/// The smoke guests: freestanding rv64im programs that run one part of the package on the guest
-/// target. Each is its own ELF, named `<smoke>_smoke`; `-Dsmoke` selects the one `zig build` links.
-const Smoke = enum {
-    /// Dictionary-based zstd decompression.
-    zstd,
-    /// Blob KZG verification and the blob's versioned hash.
-    blob,
-    /// Block truncation and the 254-bit packing of its payload.
-    truncation,
-    /// Verification of a DA stream of one conflation in one chunk.
-    decompress,
-};
-
-fn addSmokeGuest(
-    b: *std.Build,
-    package: *std.Build.Module,
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
-) void {
-    const smoke = b.option(Smoke, "smoke", "Smoke guest to link: zstd (default), blob, truncation or decompress") orelse .zstd;
-    const accelerators = b.dependency("lineth_accelerators", .{
-        .target = target,
-        .optimize = optimize,
-        .@"zkvm-provide" = true,
-    });
-    var imports: std.ArrayList(Import) = .empty;
-    imports.appendSlice(b.allocator, &.{
-        .{ .name = "lineth_da", .module = package },
-        .{ .name = "lineth_accelerators", .module = accelerators.module("lineth_accelerators") },
-    }) catch @panic("OOM");
-    // The guests that reach sha256, keccak256, the KZG point evaluation or sender recovery define
-    // the zkvm_* symbols the package declares.
-    if (smoke != .zstd) imports.append(b.allocator, .{ .name = "zkvm_provide", .module = accelerators.module("zkvm_provide") }) catch @panic("OOM");
-
-    common.addGuest(b, .{
-        .name = b.fmt("{s}_smoke", .{@tagName(smoke)}),
-        .root_source_file = b.fmt("test/smoke/{s}_smoke.zig", .{@tagName(smoke)}),
-        .target = target,
-        .optimize = optimize,
-        .imports = imports.items,
-        .code_model = .medium,
-    });
 }
 
 /// Wires the package module's embedded dictionary and the libzstd decoder behind its `zstd_decoder`
