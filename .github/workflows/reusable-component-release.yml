@@ -151,8 +151,6 @@ jobs:
       needs.compute-release-metadata.outputs.tag_changed == 'true' &&
       inputs.component-name == 'maru' &&
       github.ref_name != 'main'
-    with:
-      commit_tag: ${{ needs.compute-commit-tag.outputs.commit_tag }}
     secrets: inherit
 
   run-test-transaction-exclusion-api:

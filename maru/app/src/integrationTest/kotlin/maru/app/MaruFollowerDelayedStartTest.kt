@@ -12,11 +12,15 @@ import maru.test.cluster.NodeRole
 import maru.test.cluster.configureLoggers
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
+import org.awaitility.kotlin.await
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Amount
+import org.hyperledger.besu.tests.acceptance.dsl.node.BesuNode
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import testutils.Checks.assertMinedBlocks
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 
 class MaruFollowerDelayedStartTest {
   private lateinit var cluster: MaruCluster
@@ -48,13 +52,7 @@ class MaruFollowerDelayedStartTest {
 
     val blocksToProduce = 10
     repeat(blocksToProduce) {
-      transactionsHelper.run {
-        validatorBesuNode.sendTransactionAndAssertExecution(
-          logger = log,
-          recipient = createAccount("another account"),
-          amount = Amount.ether(100),
-        )
-      }
+      sendTransactionWhenElReady(validatorBesuNode)
     }
 
     validatorBesuNode.assertMinedBlocks(blocksToProduce)
@@ -68,16 +66,32 @@ class MaruFollowerDelayedStartTest {
     followerBesuNode.assertMinedBlocks(blocksToProduce)
 
     repeat(blocksToProduce) {
-      transactionsHelper.run {
-        followerBesuNode.sendTransactionAndAssertExecution(
-          logger = log,
-          recipient = createAccount("another account"),
-          amount = Amount.ether(100),
-        )
-      }
+      sendTransactionWhenElReady(followerBesuNode)
     }
 
     validatorBesuNode.assertMinedBlocks(2 * blocksToProduce)
     followerBesuNode.assertMinedBlocks(2 * blocksToProduce)
+  }
+
+  /**
+   * Besu's txpool stays disabled while the node reports "not in sync", and under CPU contention from
+   * parallel test forks the sync flag can flap even after blocks are imported — so every send is
+   * retried until the EL accepts it. Sends rejected with "Transaction pool not enabled" never enter
+   * the pool, so retrying them cannot duplicate a transaction.
+   */
+  private fun sendTransactionWhenElReady(node: BesuNode) {
+    await
+      .atMost(60.seconds.toJavaDuration())
+      .pollInterval(1.seconds.toJavaDuration())
+      .ignoreExceptions()
+      .untilAsserted {
+        transactionsHelper.run {
+          node.sendTransactionAndAssertExecution(
+            logger = log,
+            recipient = createAccount("another account"),
+            amount = Amount.ether(100),
+          )
+        }
+      }
   }
 }
