@@ -13,6 +13,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/guests"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
@@ -50,20 +51,52 @@ const (
 // safe for concurrent use after that; each [Prove] call gets its own
 // wiop.Runtime.
 type Core struct {
-	cfg     Config
-	mode    ProverMode
-	sys     *wiop.System
-	driver  *zkcdriver.ZkCDriver
-	program elfmapping.Program
-	decoded predecoding.DecodedProgram
+	cfg    Config
+	mode   ProverMode
+	sys    *wiop.System
+	driver *zkcdriver.ZkCDriver
+	guests guests.Store
 
 	// binaryFile is the compiled R5 arithmetization, used by dev-zkvm to run the
 	// guest under ZkC Execute (the no-trace path). nil outside dev-zkvm.
 	binaryFile *zkcdriver.BinaryFile
 }
 
-// New loads the circuit binary and the guest ELF, calls [zkcdriver.NewZkCDriver]
-// to define all columns and constraints, and returns a [Core] ready to prove.
+// guestProgram is a guest ELF mapped and predecoded for ZkC.
+type guestProgram struct {
+	program elfmapping.Program
+	decoded predecoding.DecodedProgram
+}
+
+// parseGuest maps and predecodes a guest ELF.
+func parseGuest(elf []byte) (guestProgram, error) {
+	program, err := elfmapping.Load(bytes.NewReader(elf))
+	if err != nil {
+		return guestProgram{}, fmt.Errorf("extracting ELF blobs: %w", err)
+	}
+	decoded, err := predecoding.Predecode(program)
+	if err != nil {
+		return guestProgram{}, fmt.Errorf("predecoding guest ELF: %w", err)
+	}
+	return guestProgram{program: program, decoded: decoded}, nil
+}
+
+// loadGuest loads the guest ELF whose Program ID is id from the guests folder.
+func (c *Core) loadGuest(id [32]byte) (guestProgram, error) {
+	elf, err := c.guests.Load(id)
+	if err != nil {
+		return guestProgram{}, err
+	}
+	g, err := parseGuest(elf)
+	if err != nil {
+		return guestProgram{}, fmt.Errorf("guest 0x%x: %w", id[:], err)
+	}
+	return g, nil
+}
+
+// New loads the circuit binary, calls [zkcdriver.NewZkCDriver] to define all
+// columns and constraints, and returns a [Core] ready to prove. The guest ELF is
+// loaded per job, from [Job.GuestProgramID].
 func New(cfg Config) (*Core, error) {
 	mode := cfg.Mode
 	if mode == "" {
@@ -75,6 +108,9 @@ func New(cfg Config) (*Core, error) {
 	// dev-mock runs no guest, so it loads no circuit bin or guest ELF.
 	if !mode.needsArtifacts() {
 		return &Core{cfg: cfg, mode: mode}, nil
+	}
+	if cfg.GuestsDir == "" {
+		return nil, fmt.Errorf("guests folder must be set for prover mode %q", mode)
 	}
 
 	// dev-zkvm runs the guest under ZkC Execute (no trace, no AIR), so it needs
@@ -89,21 +125,6 @@ func New(cfg Config) (*Core, error) {
 		return nil, fmt.Errorf("opening circuit bin %q: %w", cfg.CircuitBinPath, err)
 	}
 	defer binFile.Close()
-
-	elfFile, err := os.Open(cfg.GuestELFPath)
-	if err != nil {
-		return nil, fmt.Errorf("opening guest ELF %q: %w", cfg.GuestELFPath, err)
-	}
-	defer elfFile.Close()
-
-	program, err := elfmapping.Load(elfFile)
-	if err != nil {
-		return nil, fmt.Errorf("extracting ELF blobs from %q: %w", cfg.GuestELFPath, err)
-	}
-	decoded, err := predecoding.Predecode(program)
-	if err != nil {
-		return nil, fmt.Errorf("predecoding guest ELF %q: %w", cfg.GuestELFPath, err)
-	}
 
 	sys := wiop.NewSystemf(wiopSystemName)
 	sys.NewRound()
@@ -128,12 +149,11 @@ func New(cfg Config) (*Core, error) {
 	risc5.CheckPublicInputs(sys)
 
 	return &Core{
-		cfg:     cfg,
-		mode:    mode,
-		sys:     sys,
-		driver:  driver,
-		program: program,
-		decoded: decoded,
+		cfg:    cfg,
+		mode:   mode,
+		sys:    sys,
+		driver: driver,
+		guests: guests.Store{Dir: cfg.GuestsDir},
 	}, nil
 }
 
@@ -152,36 +172,20 @@ func checkShardIndexes(indexes []uint, shardSize uint64) ([]uint, error) {
 	return indexes, nil
 }
 
-// newDevZkVM builds an Execute-only Core: the compiled R5 arithmetization plus
-// the predecoded guest ELF, without the wiop system, driver, or AIR the proving
-// modes construct. dev-zkvm uses [zkcdriver.BinaryFile.Execute], the no-trace
-// path, so those are unnecessary.
+// newDevZkVM builds an Execute-only Core: the compiled R5 arithmetization,
+// without the wiop system, driver, or AIR the proving modes construct.
+// dev-zkvm uses [zkcdriver.BinaryFile.Execute], the no-trace path, so those are
+// unnecessary.
 func newDevZkVM(cfg Config, mode ProverMode) (*Core, error) {
 	binf, err := embedded.CompiledBinaryFile()
 	if err != nil {
 		return nil, fmt.Errorf("compiling R5 arithmetization: %w", err)
 	}
 
-	elfFile, err := os.Open(cfg.GuestELFPath)
-	if err != nil {
-		return nil, fmt.Errorf("opening guest ELF %q: %w", cfg.GuestELFPath, err)
-	}
-	defer elfFile.Close()
-
-	program, err := elfmapping.Load(elfFile)
-	if err != nil {
-		return nil, fmt.Errorf("extracting ELF blobs from %q: %w", cfg.GuestELFPath, err)
-	}
-	decoded, err := predecoding.Predecode(program)
-	if err != nil {
-		return nil, fmt.Errorf("predecoding guest ELF %q: %w", cfg.GuestELFPath, err)
-	}
-
 	return &Core{
 		cfg:        cfg,
 		mode:       mode,
-		program:    program,
-		decoded:    decoded,
+		guests:     guests.Store{Dir: cfg.GuestsDir},
 		binaryFile: binf,
 	}, nil
 }
@@ -220,7 +224,11 @@ func (c *Core) proveDevMock(job Job) Result {
 // runner. It runs no real proof; Payload is the whole extended (0x0002)
 // input, the same bytes the native runner consumes.
 func (c *Core) proveDevZkVM(job Job) Result {
-	inputs, err := c.encodeGuestInputs(job)
+	g, err := c.loadGuest(job.GuestProgramID)
+	if err != nil {
+		return failResult(job.ID, err)
+	}
+	inputs, err := c.encodeGuestInputs(job, g)
 	if err != nil {
 		return failResult(job.ID, fmt.Errorf("building inputs: %w", err))
 	}
@@ -310,7 +318,11 @@ func keccak256(b []byte) []byte {
 
 // proveFull is the real proving path; it is blocked at SerializeProof today.
 func (c *Core) proveFull(ctx context.Context, job Job) Result {
-	inputs, err := c.buildInputs(job)
+	g, err := c.loadGuest(job.GuestProgramID)
+	if err != nil {
+		return failResult(job.ID, err)
+	}
+	inputs, err := c.buildInputs(job, g)
 	if err != nil {
 		return failResult(job.ID, fmt.Errorf("building inputs: %w", err))
 	}
@@ -342,13 +354,12 @@ func (c *Core) proveFull(ctx context.Context, job Job) Result {
 }
 
 // buildInputs converts a Job's Payload into the guest and memory inputs ZkC
-// expects. ELF mapping and predecoding are cached by [New]; only the per-job
-// guest input data differs.
-func (c *Core) buildInputs(job Job) (map[string]bit.Array, error) {
+// expects for guest g.
+func (c *Core) buildInputs(job Job, g guestProgram) (map[string]bit.Array, error) {
 	if err := sanityCheckJobs(job, c.cfg.ShardSize); err != nil {
 		return nil, err
 	}
-	return c.encodeGuestInputs(job)
+	return c.encodeGuestInputs(job, g)
 }
 
 // encodeGuestInputs converts a Job's Payload into the guest and memory inputs
@@ -356,7 +367,7 @@ func (c *Core) buildInputs(job Job) (map[string]bit.Array, error) {
 // whole extended (0x0002) input and lets the guest conflate the range; a
 // conflation disagreement surfaces as a cross-check failure, not silent
 // corruption.
-func (c *Core) encodeGuestInputs(job Job) (map[string]bit.Array, error) {
+func (c *Core) encodeGuestInputs(job Job, g guestProgram) (map[string]bit.Array, error) {
 	dataBlobs, err := elfmapping.NewData(
 		elfmapping.DefaultInputOrigin,
 		decodePayload(job),
@@ -365,11 +376,11 @@ func (c *Core) encodeGuestInputs(job Job) (map[string]bit.Array, error) {
 	if err != nil {
 		return nil, fmt.Errorf("building data section: %w", err)
 	}
-	inputs, err := elfmapping.EncodeInputs(c.program, dataBlobs)
+	inputs, err := elfmapping.EncodeInputs(g.program, dataBlobs)
 	if err != nil {
 		return nil, err
 	}
-	maps.Copy(inputs, c.decoded.EncodeInputs())
+	maps.Copy(inputs, g.decoded.EncodeInputs())
 	return inputs, nil
 }
 
