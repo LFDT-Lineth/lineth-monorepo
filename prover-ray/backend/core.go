@@ -324,7 +324,8 @@ func (c *Core) proveFull(ctx context.Context, job Job) Result {
 	// supported: with sharding the in-shard message-bus check is off, so even a
 	// one-shard trace is not proved until conglomerated.
 	if c.cfg.ShardSize > 0 {
-		return failResult(job.ID, fmt.Errorf("conglomerating %d of %d shard proofs: %w", len(nodes), numShards, ErrNotImplemented))
+		return failResult(job.ID,
+			fmt.Errorf("conglomerating %d of %d shard proofs: %w", len(nodes), numShards, ErrNotImplemented))
 	}
 	//nolint (until SerializeProof implemented)
 	proofBytes, err := SerializeProof(nodes[0].Proof, nodes[0].Pub)
