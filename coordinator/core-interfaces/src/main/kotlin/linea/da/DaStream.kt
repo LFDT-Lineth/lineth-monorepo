@@ -6,8 +6,8 @@ import java.nio.ByteBuffer
 import java.nio.file.Path
 
 /**
- * The RISC-V DA stream (Level 1 of the blob compressor design): compresses conflations into frames, appends them to
- * the DA stream, packs and seals blobs, and computes each blob's KZG versioned hash and data rolling hash.
+ * The RISC-V DA stream: compresses conflations into frames, appends them to the DA stream, packs and seals blobs, and
+ * computes each blob's KZG versioned hash and data rolling hash.
  *
  * The DA stream is `[u32 BE len][compressed truncated-block RLP]` per conflation, concatenated. Blobs are windows over
  * it: each holds up to [DaConstants.BLOB_PAYLOAD_CAPACITY] payload bytes plus a `0xff` terminal. Conflations may span
