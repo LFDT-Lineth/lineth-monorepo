@@ -57,8 +57,9 @@ type Core struct {
 	program elfmapping.Program
 	decoded predecoding.DecodedProgram
 
-	// aggregator runs the conglomeration steps over the shard proofs. nil in
-	// production until the recursion machine lands; tests set [mockAggregator].
+	// aggregator runs the conglomeration steps over the shard proofs: a
+	// [recursionAggregator] when sharding is on ([Config.ShardSize] non-zero),
+	// nil otherwise, as the single shard's proof is final as is.
 	aggregator Aggregator
 
 	// binaryFile is the compiled R5 arithmetization, used by dev-zkvm to run the
@@ -131,14 +132,24 @@ func New(cfg Config) (*Core, error) {
 
 	risc5.CheckPublicInputs(sys)
 
-	return &Core{
+	c := &Core{
 		cfg:     cfg,
 		mode:    mode,
 		sys:     sys,
 		driver:  driver,
 		program: program,
 		decoded: decoded,
-	}, nil
+	}
+
+	// With sharding the shard proofs must be conglomerated, and the root checks
+	// replace the in-shard message-bus check; the aggregator's node programs are
+	// compiled for this system's public-input layout.
+	if cfg.ShardSize > 0 {
+		if c.aggregator, err = newRecursionAggregator(c.piLayout()); err != nil {
+			return nil, fmt.Errorf("compiling the recursion aggregator: %w", err)
+		}
+	}
+	return c, nil
 }
 
 // checkShardIndexes returns a sorted copy of the shard indexes, rejecting
@@ -433,8 +444,7 @@ func (c *Core) runProve(
 	isRoot := len(indexes) == int(numShards)
 	needsAggregator := len(indexes) > 1 || (isRoot && c.cfg.ShardSize > 0)
 	if needsAggregator && c.aggregator == nil {
-		return Node{}, 0, fmt.Errorf("conglomerating %d of %d shards needs the recursion machine: %w",
-			len(indexes), numShards, ErrNotImplemented)
+		return Node{}, 0, fmt.Errorf("conglomerating %d of %d shards without an aggregator", len(indexes), numShards)
 	}
 	if needsAggregator {
 		logrus.Warnf("Conglomerating %d of %d shards with %T", len(indexes), numShards, c.aggregator)

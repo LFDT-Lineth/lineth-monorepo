@@ -23,9 +23,11 @@
 // wire bytes) is still stubbed and returns [ErrNotImplemented].
 //
 // With sharding ([Config.ShardSize]), the shard proofs of a job are reduced to
-// one node by an [Aggregator]. The only implementations, for dev and test, do
-// not verify the children, so a sharded job in production returns
-// [ErrNotImplemented] until the recursion machine verifies proofs.
+// one node by an [Aggregator], the recursion machine's node programs. They do
+// not verify the children's proofs yet, so the root-node proof of a sharded
+// job is not sound on its own, and the shard proofs are not part of the
+// result. Pinning the node programs' verification keys and serializing or
+// transporting nodes between provers are not wired either.
 //
 // Circuit compiler passes and [wiop.Materialize] are also not yet wired
 // in [New]; see the inline comments in [core.go].

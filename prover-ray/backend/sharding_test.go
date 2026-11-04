@@ -32,6 +32,8 @@ func shardedTestCore(t *testing.T, shardSize uint64) *Core {
 
 	c, err := New(Config{CircuitBinPath: binPath, GuestELFPath: elfPath, ShardSize: shardSize})
 	require.NoError(t, err)
+	require.Equal(t, shardSize > 0, c.aggregator != nil, "New wires the aggregator iff sharding is on")
+	// Recompiled with the testing PCS options so that the proofs stay fast.
 	c.aggregator, err = newRecursionAggregator(c.piLayout(), wioptest.TestingCompileOptions()...)
 	require.NoError(t, err)
 	return c
@@ -81,14 +83,14 @@ func TestRunProve_ShardIndexes(t *testing.T) {
 	})
 }
 
-// TestRunProve_Sharded_NoAggregator_NotImplemented checks that a sharded trace
-// is not proved without an aggregator: the in-shard bus check is off, so the
-// shard proofs cannot be checked without the root.
-func TestRunProve_Sharded_NoAggregator_NotImplemented(t *testing.T) {
+// TestRunProve_Sharded_NoAggregator checks that a sharded trace is not proved
+// without an aggregator: the in-shard bus check is off, so the shard proofs
+// cannot be checked without the root.
+func TestRunProve_Sharded_NoAggregator(t *testing.T) {
 	c := shardedTestCore(t, 100)
 	c.aggregator = nil
 	_, _, err := runProveShards(t, context.Background(), c)
-	require.ErrorIs(t, err, ErrNotImplemented)
+	require.ErrorContains(t, err, "without an aggregator")
 }
 
 // TestRunProve_Unsharded_ReturnsShardProof checks that without sharding the

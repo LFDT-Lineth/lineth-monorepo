@@ -14,8 +14,8 @@ import (
 // program, which checks that they agree on the program VK and the guest
 // output, multiplies their bus products and exposes the result; the root
 // program also checks that every product is one. A disagreement is caught by
-// verifying the node's own proof. Dev and test only, until the node program
-// verifies the children's proofs.
+// verifying the node's own proof. Not sound until the node program verifies
+// the children's proofs: a node proof says nothing about the shards.
 //
 // A child is a shard proof or a node proof, told apart by the length of its
 // public inputs: a shard exposes one extension cell per bus handle, a node six
