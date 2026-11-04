@@ -38,7 +38,7 @@ Equivalently, running `zig build` directly from this directory (requires the gen
     zig build                        # arithmetization keccak wrapper
     zig build -Dkeccak-accel=false   # standard Zig keccak
 
-The secp256k1 ecrecover/verify backend is selectable the same way, with `SECP256K1_BACKEND=<backend>` on `make` or `-Dsecp256k1-backend=<backend>` on `zig build`; `zig build --help` lists the accepted values and the default.
+The secp256k1 ecrecover/verify backend defaults to Constantine. Select Zig's implementation with `SECP256K1_BACKEND=std` on `make` or `-Dsecp256k1-backend=std` on `zig build`; `zig build --help` lists the accepted values.
 
 ## Shell alias
 
