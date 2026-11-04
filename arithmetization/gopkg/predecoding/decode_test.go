@@ -5,6 +5,9 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"math"
+	"os"
+	"regexp"
+	"strconv"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
@@ -230,6 +233,10 @@ func TestShouldUseNoOp(t *testing.T) {
 		{name: "xori x0 x0 0xff", instr: encodeIType(opcodeOPIMM, 0b100, 0, 0, 0xff), want: true},
 		{name: "slli x0 x0 4", instr: encodeIType(opcodeOPIMM, 0b001, 0, 0, 4), want: true},
 		{name: "keccak x0", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b000, 0), want: false},
+		{name: "secp256k1 fp mul x0", instr: encodeRType(opcodeCUSTOM1, 0b0000000, 0, 0, 0b011, 0), want: false},
+		{name: "secp256k1 fp sq x0", instr: encodeRType(opcodeCUSTOM1, 0b0000001, 0, 0, 0b011, 0), want: false},
+		{name: "secp256k1 fp inv x0", instr: encodeRType(opcodeCUSTOM1, 0b0000010, 0, 0, 0b011, 0), want: false},
+		{name: "secp256k1 fp sqrt x0", instr: encodeRType(opcodeCUSTOM1, 0b0000011, 0, 0, 0b011, 0), want: false},
 		{name: "jal x0", instr: encodeJType(0, 8), want: false},
 	}
 
@@ -396,7 +403,12 @@ func TestDecodeRTypeSemantic(t *testing.T) {
 		{name: "poseidon2", opcode: opcodeCUSTOM1, funct3: 0b001, funct7: 0b0000000, wantOp: rtypeOpPoseidon2},
 		{name: "write_output", opcode: opcodeCUSTOM1, funct3: 0b010, funct7: 0b0000000, wantOp: rtypeOpWriteOutput},
 		{name: "invalid op funct3", opcode: opcodeOP, funct3: 0b010, funct7: 0b0100000, wantOp: rtypeInvalid},
-		{name: "invalid custom-1 funct3", opcode: opcodeCUSTOM1, funct3: 0b011, funct7: 0b0000000, wantOp: rtypeInvalid},
+		{name: "secp256k1 fp mul", opcode: opcodeCUSTOM1, funct3: 0b011, funct7: 0b0000000, wantOp: rtypeOpSecp256k1FpMul},
+		{name: "secp256k1 fp sq", opcode: opcodeCUSTOM1, funct3: 0b011, funct7: 0b0000001, wantOp: rtypeOpSecp256k1FpSq},
+		{name: "secp256k1 fp inv", opcode: opcodeCUSTOM1, funct3: 0b011, funct7: 0b0000010, wantOp: rtypeOpSecp256k1FpInv},
+		{name: "secp256k1 fp sqrt", opcode: opcodeCUSTOM1, funct3: 0b011, funct7: 0b0000011, wantOp: rtypeOpSecp256k1FpSqrt},
+		{name: "invalid secp256k1 fp funct7", opcode: opcodeCUSTOM1, funct3: 0b011, funct7: 0b0000100, wantOp: rtypeInvalid},
+		{name: "invalid custom-1 funct3", opcode: opcodeCUSTOM1, funct3: 0b100, funct7: 0b0000000, wantOp: rtypeInvalid},
 		{name: "invalid custom-1 funct7", opcode: opcodeCUSTOM1, funct3: 0b001, funct7: 0b0000001, wantOp: rtypeInvalid},
 	}
 
@@ -687,6 +699,10 @@ func TestClassifyInstructionExamples(t *testing.T) {
 		{name: "keccak", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b000, 1), want: computeRTypeBase + rtypeOpKeccak},
 		{name: "poseidon2", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b001, 1), want: computeRTypeBase + rtypeOpPoseidon2},
 		{name: "write_output", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b010, 1), want: computeRTypeBase + rtypeOpWriteOutput},
+		{name: "secp256k1 fp mul", instr: encodeRType(opcodeCUSTOM1, 0b0000000, 0, 0, 0b011, 0), want: computeRTypeBase + rtypeOpSecp256k1FpMul},
+		{name: "secp256k1 fp sq", instr: encodeRType(opcodeCUSTOM1, 0b0000001, 0, 0, 0b011, 0), want: computeRTypeBase + rtypeOpSecp256k1FpSq},
+		{name: "secp256k1 fp inv", instr: encodeRType(opcodeCUSTOM1, 0b0000010, 0, 0, 0b011, 0), want: computeRTypeBase + rtypeOpSecp256k1FpInv},
+		{name: "secp256k1 fp sqrt", instr: encodeRType(opcodeCUSTOM1, 0b0000011, 0, 0, 0b011, 0), want: computeRTypeBase + rtypeOpSecp256k1FpSqrt},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -728,4 +744,48 @@ func TestClassifyRoundTripSyntheticImage(t *testing.T) {
 		decodedBits.writeBits(uint64(rd), 5)
 	}
 	assertClassifyRoundTrip(t, image, hex.EncodeToString(decodedBits.buf))
+}
+
+// TestComputeOpBasesMatchConstantsZkc guards against the Go decoder and
+// constants.zkc disagreeing on ComputeOp values, which would silently
+// reinterpret every store, branch and jump.
+func TestComputeOpBasesMatchConstantsZkc(t *testing.T) {
+	src, err := os.ReadFile("../../src/main/common/constants.zkc")
+	if err != nil {
+		t.Fatal(err)
+	}
+	zkc := func(name string) uint32 {
+		m := regexp.MustCompile(`(?m)^const ` + name + `:ComputeOp = (\d+)$`).FindSubmatch(src)
+		if m == nil {
+			t.Fatalf("constant %s not found in constants.zkc", name)
+		}
+		v, _ := strconv.ParseUint(string(m[1]), 10, 32)
+		return uint32(v)
+	}
+	checks := []struct {
+		name string
+		want uint32
+	}{
+		{"OP_ADDI_WB", computeITypeBase + itypeOpAddiWB},
+		{"RTYPE_ADD_WB", computeRTypeBase + rtypeOpAddWB},
+		{"RTYPE_KECCAK", computeRTypeBase + rtypeOpKeccak},
+		{"RTYPE_POSEIDON2", computeRTypeBase + rtypeOpPoseidon2},
+		{"RTYPE_WRITE_OUTPUT", computeRTypeBase + rtypeOpWriteOutput},
+		{"RTYPE_SECP256K1_FP_MUL", computeRTypeBase + rtypeOpSecp256k1FpMul},
+		{"RTYPE_SECP256K1_FP_SQ", computeRTypeBase + rtypeOpSecp256k1FpSq},
+		{"RTYPE_SECP256K1_FP_INV", computeRTypeBase + rtypeOpSecp256k1FpInv},
+		{"RTYPE_SECP256K1_FP_SQRT", computeRTypeBase + rtypeOpSecp256k1FpSqrt},
+		{"STYPE_STORE8", computeSTypeBase},
+		{"STYPE_STORE64", computeSTypeBase + stypeStore64},
+		{"BRANCH_BEQ", computeBTypeBase},
+		{"BRANCH_BGEU", computeBTypeBase + 5},
+		{"JTYPE_JAL", computeJTypeBase},
+		{"JTYPE_JAL_WB", computeJTypeBase + jtypeJalWB},
+		{"UTYPE_LUI_WB", computeUTypeBase},
+	}
+	for _, c := range checks {
+		if got := zkc(c.name); got != c.want {
+			t.Errorf("%s: constants.zkc = %d, decode.go = %d", c.name, got, c.want)
+		}
+	}
 }
