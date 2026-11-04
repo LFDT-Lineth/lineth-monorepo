@@ -101,7 +101,7 @@ class GlobalBlobCalculator(
       }
       SealedConflation(oldest, end)
     }
-    check(!flushed || sealedConflations.isNotEmpty()) { "a flushed blob must end at least one conflation" }
+    if (flushed && sealedConflations.isEmpty()) error("a flushed blob must end at least one conflation")
     awaitingSharedBlobReseal = false
     triggers.forEach { it.reset() } // a new blob opens
     log.debug(
