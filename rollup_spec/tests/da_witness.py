@@ -10,20 +10,29 @@ from ethereum.crypto.kzg import KZGCommitment, kzg_commitment_to_versioned_hash
 from rollup_spec.rollup import ChunkWitness, pack_blob_payload, trusted_setup, zstd_dictionary
 
 
-def compress_frame(payload: bytes, dictionary: zstd.ZstdCompressionDict | None = None, **parameters) -> bytes:
-    """One zstd frame of `payload`, compressed against the program's dictionary unless another is given."""
+def compress_frame(
+    payload: bytes,
+    dictionary: zstd.ZstdCompressionDict | None = None,
+    *,
+    window_log: int = 0,
+    write_content_size: bool = True,
+    write_dict_id: bool = True,
+    write_checksum: bool = False,
+) -> bytes:
+    """
+    One zstd frame of `payload` in the form a DA frame takes: compressed against the program's dictionary unless
+    another is given, with the content size and the dictionary ID in its header and no content checksum. The flags
+    select the other forms, which a segment may not carry; `window_log` of 0 leaves the window to the level.
+    """
     dictionary = zstd_dictionary() if dictionary is None else dictionary
-    return zstd.ZstdCompressor(dict_data=dictionary, **parameters).compress(payload)
-
-
-def compress_frame_in_blocks(payload: bytes, window_log: int, block_len: int) -> bytes:
-    """One zstd frame of `payload` without content size, under a window of 2**window_log bytes, one block per `block_len` bytes."""
-    parameters = zstd.ZstdCompressionParameters.from_level(3, window_log=window_log, write_content_size=False)
-    compressor = zstd.ZstdCompressor(dict_data=zstd_dictionary(), compression_params=parameters).compressobj()
-    frame = b""
-    for start in range(0, len(payload), block_len):
-        frame += compressor.compress(payload[start:start + block_len]) + compressor.flush(zstd.COMPRESSOBJ_FLUSH_BLOCK)
-    return frame + compressor.flush()
+    parameters = zstd.ZstdCompressionParameters.from_level(
+        3,
+        window_log=window_log,
+        write_content_size=write_content_size,
+        write_dict_id=write_dict_id,
+        write_checksum=write_checksum,
+    )
+    return zstd.ZstdCompressor(dict_data=dictionary, compression_params=parameters).compress(payload)
 
 
 def segment(payload: bytes) -> bytes:

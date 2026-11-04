@@ -19,7 +19,6 @@ from tests.da_witness import (
     blob_chunk,
     calldata_chunk,
     compress_frame,
-    compress_frame_in_blocks,
     data_rolling_hash_after,
     segment,
 )
@@ -29,15 +28,7 @@ PAYLOAD_2 = b"conflation 2"
 SEGMENT_1 = segment(PAYLOAD_1)
 SEGMENT_2 = segment(PAYLOAD_2)
 ZSTD_FRAME_1 = compress_frame(PAYLOAD_1)
-# One last raw block holding b"x", under a frame header with no content size and window descriptor 0x88 (2^27 bytes) or 0x90 (2^28).
-WINDOW_2_27_FRAME = bytes.fromhex("28b52ffd0088090000" + "78")
-WINDOW_2_28_FRAME = bytes.fromhex("28b52ffd0090090000" + "78")
-# The same last raw block under a header that declares the content size 1 and the window 2^28.
-WINDOW_2_28_CONTENT_SIZE_FRAME = bytes.fromhex("28b52ffd80900100000009000078")
 ZSTD_MAX_BLOCK_SIZE = 128 * 1024
-# More than a block may hold under a window of 2^18 bytes.
-OVERSIZED_BLOCK_SIZE = 150_000
-OVERSIZED_RAW_PAYLOAD = random.Random(OVERSIZED_BLOCK_SIZE).randbytes(OVERSIZED_BLOCK_SIZE)
 # The program's dictionary under another dictionary ID.
 OTHER_DICTIONARY = zstd.ZstdCompressionDict(
     zstd_dictionary().as_bytes()[:4]
@@ -70,15 +61,12 @@ def length_prefixed(zstd_frame: bytes) -> bytes:
 REPEATING_HEAD = bytes(range(256)) * 4
 FAR_MATCH_PAYLOAD = REPEATING_HEAD + random.Random(2025).randbytes(6144) + REPEATING_HEAD
 
-
-def with_window_descriptor(zstd_frame: bytes, window_log: int) -> bytes:
-    """`zstd_frame` under a header that declares a window of 2**window_log bytes (byte 5 of a frame without single-segment flag)."""
-    return zstd_frame[:5] + bytes([(window_log - 10) << 3]) + zstd_frame[6:]
+DICTIONARY_ID = zstd_dictionary().dict_id().to_bytes(4, "little")
 
 
-def last_block_frame(block_type: int, size: int, body: bytes) -> bytes:
-    """One last block of `size` decoded bytes under a header with no content size and window 2^18 (block type 0 raw, 1 run-length)."""
-    return bytes.fromhex("28b52ffd0040") + ((size << 3) | (block_type << 1) | 1).to_bytes(3, "little") + body
+def windowed_frame(window_descriptor: int) -> bytes:
+    """One last raw block holding b"x" under a header that declares the content size 1, the program's dictionary ID and the window descriptor."""
+    return bytes.fromhex("28b52ffd83") + bytes([window_descriptor]) + DICTIONARY_ID + (1).to_bytes(4, "little") + bytes.fromhex("090000") + b"x"
 
 
 def single_segment_rle_frame(content_size: int) -> bytes:
@@ -89,7 +77,7 @@ def single_segment_rle_frame(content_size: int) -> bytes:
         size = min(remaining, ZSTD_MAX_BLOCK_SIZE)
         remaining -= size
         blocks += ((size << 3) | (1 << 1) | int(remaining == 0)).to_bytes(3, "little") + b"x"
-    return bytes.fromhex("28b52ffde0") + content_size.to_bytes(8, "little") + blocks
+    return bytes.fromhex("28b52ffde3") + DICTIONARY_ID + content_size.to_bytes(8, "little") + blocks
 
 
 def large_segment_over_three_blobs() -> list[ChunkWitness]:
@@ -195,68 +183,18 @@ def test_calldata_only_stream_needs_no_kzg_fields():
     assert verify_da_chunks([calldata], [PAYLOAD_1], PARENT) == (data_rolling_hash_after(PARENT, [calldata]), 0)
 
 
-@pytest.mark.parametrize("write_content_size", [True, False], ids=["content size written", "content size omitted"])
-def test_zstd_frame_content_size_header_is_optional(write_content_size):
-    zstd_frame = compress_frame(PAYLOAD_1, write_content_size=write_content_size)
-    calldata = calldata_chunk(length_prefixed(zstd_frame))
-
-    assert verify_da_chunks([calldata], [PAYLOAD_1], PARENT) == (data_rolling_hash_after(PARENT, [calldata]), 0)
-
-
-def test_zstd_frame_without_a_dictionary_id_decodes_with_the_dictionary():
-    # Bytes of the dictionary's own content: the frame is a short reference into the dictionary and decodes only against it.
-    payload = zstd_dictionary().as_bytes()[-300:-100]
-    zstd_frame = compress_frame(payload, write_dict_id=False)
-    assert zstd.get_frame_parameters(zstd_frame).dict_id == 0
-    assert len(zstd_frame) < len(payload) // 2
-    with pytest.raises(zstd.ZstdError):
-        zstd.ZstdDecompressor().decompress(zstd_frame)
-    calldata = calldata_chunk(length_prefixed(zstd_frame))
-
-    assert verify_da_chunks([calldata], [payload], PARENT) == (data_rolling_hash_after(PARENT, [calldata]), 0)
-
-
-def test_zstd_frame_compressed_without_a_dictionary_is_accepted():
-    calldata = calldata_chunk(length_prefixed(zstd.ZstdCompressor().compress(PAYLOAD_1)))
-
-    assert verify_da_chunks([calldata], [PAYLOAD_1], PARENT) == (data_rolling_hash_after(PARENT, [calldata]), 0)
-
-
 def test_zstd_frame_window_up_to_2_27_bytes_is_accepted():
-    calldata = calldata_chunk(length_prefixed(WINDOW_2_27_FRAME))
+    calldata = calldata_chunk(length_prefixed(windowed_frame(0x88)))
 
     assert verify_da_chunks([calldata], [b"x"], PARENT) == (data_rolling_hash_after(PARENT, [calldata]), 0)
 
 
-def test_zstd_frame_with_content_size_may_declare_a_window_below_its_content():
-    parameters = zstd.ZstdCompressionParameters.from_level(3, window_log=10)
-    zstd_frame = zstd.ZstdCompressor(dict_data=zstd_dictionary(), compression_params=parameters).compress(FAR_MATCH_PAYLOAD)
+def test_zstd_frame_may_declare_a_window_below_its_content():
+    zstd_frame = compress_frame(FAR_MATCH_PAYLOAD, window_log=10)
     assert zstd.get_frame_parameters(zstd_frame).window_size < len(FAR_MATCH_PAYLOAD)
     calldata = calldata_chunk(length_prefixed(zstd_frame))
 
     assert verify_da_chunks([calldata], [FAR_MATCH_PAYLOAD], PARENT) == (data_rolling_hash_after(PARENT, [calldata]), 0)
-
-
-def test_zstd_frame_without_content_size_declares_a_window_covering_its_content():
-    zstd_frame = compress_frame_in_blocks(FAR_MATCH_PAYLOAD, window_log=17, block_len=1024)
-    assert zstd.get_frame_parameters(zstd_frame).content_size == zstd.CONTENTSIZE_UNKNOWN
-    calldata = calldata_chunk(length_prefixed(zstd_frame))
-
-    assert verify_da_chunks([calldata], [FAR_MATCH_PAYLOAD], PARENT) == (data_rolling_hash_after(PARENT, [calldata]), 0)
-
-
-@pytest.mark.parametrize(
-    "zstd_frame, payload",
-    [
-        (last_block_frame(0, ZSTD_MAX_BLOCK_SIZE, OVERSIZED_RAW_PAYLOAD[:ZSTD_MAX_BLOCK_SIZE]), OVERSIZED_RAW_PAYLOAD[:ZSTD_MAX_BLOCK_SIZE]),
-        (last_block_frame(1, ZSTD_MAX_BLOCK_SIZE, b"x"), b"x" * ZSTD_MAX_BLOCK_SIZE),
-    ],
-    ids=["raw block", "run-length block"],
-)
-def test_zstd_frame_block_of_128_kib_is_accepted(zstd_frame, payload):
-    calldata = calldata_chunk(length_prefixed(zstd_frame))
-
-    assert verify_da_chunks([calldata], [payload], PARENT) == (data_rolling_hash_after(PARENT, [calldata]), 0)
 
 
 def test_zstd_frame_window_of_exactly_2_27_plus_1_bytes_is_accepted():
@@ -267,8 +205,13 @@ def test_zstd_frame_window_of_exactly_2_27_plus_1_bytes_is_accepted():
     assert verify_da_chunks([calldata], [b"x" * ZSTD_MAX_WINDOW_SIZE], PARENT) == (data_rolling_hash_after(PARENT, [calldata]), 0)
 
 
-def test_zstd_frame_one_byte_beyond_the_largest_window_declares_that_window():
-    assert zstd.get_frame_parameters(single_segment_rle_frame(ZSTD_MAX_WINDOW_SIZE + 1)).window_size == ZSTD_MAX_WINDOW_SIZE + 1
+def test_zstd_frame_window_one_byte_beyond_2_27_plus_1_is_rejected():
+    zstd_frame = single_segment_rle_frame(ZSTD_MAX_WINDOW_SIZE + 1)
+    assert zstd.get_frame_parameters(zstd_frame).window_size == ZSTD_MAX_WINDOW_SIZE + 1
+    calldata = calldata_chunk(length_prefixed(zstd_frame))
+
+    with pytest.raises(Exception, match="invalid zstd"):
+        verify_da_chunks([calldata], [b"x" * (ZSTD_MAX_WINDOW_SIZE + 1)], PARENT)
 
 
 # ---- rejected streams ------------------------------------------------------------------------
@@ -443,41 +386,33 @@ REJECTED_STREAMS = [
         lambda: [calldata_chunk(length_prefixed(compress_frame(b"conflation X")))],
     ),
     rejected(
-        "trailing data after a zstd frame without content size", "invalid zstd",
-        lambda: [calldata_chunk(length_prefixed(compress_frame(PAYLOAD_1, write_content_size=False) + b"trailing"))],
+        "skippable frame", "invalid zstd",
+        lambda: [calldata_chunk(length_prefixed(bytes.fromhex("502a4d1800000000")))],
+    ),
+    # a frame has exactly one form: content size, dictionary ID, no checksum, window within the bound
+    rejected(
+        "frame without content size", "invalid zstd",
+        lambda: [calldata_chunk(length_prefixed(compress_frame(PAYLOAD_1, write_content_size=False)))],
     ),
     rejected(
-        "frame window beyond 2^27 bytes", "invalid zstd",
-        lambda: [calldata_chunk(length_prefixed(WINDOW_2_28_FRAME))], payloads=(b"x",),
+        "frame whose content size differs from the payload length", "invalid zstd",
+        lambda: [calldata_chunk(length_prefixed(compress_frame(PAYLOAD_1 + b"!")))],
     ),
     rejected(
-        "frame window beyond 2^27 bytes with content size", "invalid zstd",
-        lambda: [calldata_chunk(length_prefixed(WINDOW_2_28_CONTENT_SIZE_FRAME))], payloads=(b"x",),
-    ),
-    rejected(
-        "frame window of 2^27 + 2 bytes", "invalid zstd",
-        lambda: [calldata_chunk(length_prefixed(single_segment_rle_frame(ZSTD_MAX_WINDOW_SIZE + 1)))], payloads=(b"x",),
-    ),
-    rejected(
-        "raw block beyond 128 KiB in a frame without content size", "invalid zstd",
-        lambda: [calldata_chunk(length_prefixed(last_block_frame(0, OVERSIZED_BLOCK_SIZE, OVERSIZED_RAW_PAYLOAD)))],
-        payloads=(OVERSIZED_RAW_PAYLOAD,),
-    ),
-    rejected(
-        "run-length block beyond 128 KiB in a frame without content size", "invalid zstd",
-        lambda: [calldata_chunk(length_prefixed(last_block_frame(1, OVERSIZED_BLOCK_SIZE, b"x")))],
-        payloads=(b"x" * OVERSIZED_BLOCK_SIZE,),
-    ),
-    rejected(
-        "frame without content size whose window is below its content", "invalid zstd",
-        lambda: [calldata_chunk(length_prefixed(
-            with_window_descriptor(compress_frame_in_blocks(FAR_MATCH_PAYLOAD, window_log=17, block_len=1024), window_log=10),
-        ))],
-        payloads=(FAR_MATCH_PAYLOAD,),
+        "frame without a dictionary ID", "invalid zstd",
+        lambda: [calldata_chunk(length_prefixed(compress_frame(PAYLOAD_1, write_dict_id=False)))],
     ),
     rejected(
         "frame compressed against another dictionary", "invalid zstd",
         lambda: [calldata_chunk(length_prefixed(compress_frame(PAYLOAD_1, dictionary=OTHER_DICTIONARY)))],
+    ),
+    rejected(
+        "frame with a content checksum", "invalid zstd",
+        lambda: [calldata_chunk(length_prefixed(compress_frame(PAYLOAD_1, write_checksum=True)))],
+    ),
+    rejected(
+        "frame window beyond 2^27 bytes", "invalid zstd",
+        lambda: [calldata_chunk(length_prefixed(windowed_frame(0x90)))], payloads=(b"x",),
     ),
 ]
 
