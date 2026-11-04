@@ -826,6 +826,44 @@ fn interpreter_c<registers, ram>(index:u32, pc:Address) -> (new_pc:Address) {
             result = imm
         }
 
+        // =========================================
+        // Custom-1 — secp256k1 field accelerator
+        // (rd is a destination pointer: no register writeback)
+        // =========================================
+        case RTYPE_SECP256K1_FP_MUL: {
+            printf "RTYPE_SECP256K1_FP_MUL(c) "
+            secp256k1_fp_mul(v1 as Address, v2 as Address, registers[rd] as Address)
+            // Increment PC
+            new_pc = (pc + 4) as Address
+            // Early return
+            return
+        }
+        case RTYPE_SECP256K1_FP_SQ: {
+            printf "RTYPE_SECP256K1_FP_SQ(c) "
+            secp256k1_fp_sq(v1 as Address, registers[rd] as Address)
+            // Increment PC
+            new_pc = (pc + 4) as Address
+            // Early return
+            return
+        }
+
+        case RTYPE_SECP256K1_FP_INV: {
+            printf "RTYPE_SECP256K1_FP_INV(c) "
+            secp256k1_fp_inv(v1 as Address, registers[rd] as Address)
+            // Increment PC
+            new_pc = (pc + 4) as Address
+            // Early return
+            return
+        }
+        case RTYPE_SECP256K1_FP_SQRT: {
+            printf "RTYPE_SECP256K1_FP_SQRT(c) "
+            secp256k1_fp_sqrt(v1 as Address, registers[rd] as Address)
+            // Increment PC
+            new_pc = (pc + 4) as Address
+            // Early return
+            return
+        }
+
         default: {
             // NO_OP, COMPUTE_INVALID, and unhandled ops advance PC only.
             new_pc = (pc + 4) as Address

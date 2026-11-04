@@ -43,5 +43,5 @@ Note. We use '.' to represent '0'.
 
 secp256k1 field accelerator (🟡 = opt-in): `rd` = destination pointer, `rs1` = a, `rs2` = b (ignored except by `mul`). `inv` returns 0 for 0. `sqrt` writes 40 bytes: r = a^((p+1)/4) and a u64 flag at +32 (1 = a is a square; 0 = non-square, then r² = -a). inv and sqrt are hinted (`expmod_unconstrained_256`) and checked with one `mulmod_256`.
 Each operand is 32 bytes, 8-byte aligned, little-endian (four u64). Inputs may be any 256-bit value; the
-result is canonical (< p). Each op lives in `lib/secp256k1_fp/{mul,inv,sqrt}.zkc` with a `*_stub.zkc` twin. `riscv/main_fieldaccel.zkc` compiles in all; `main_fieldaccel_{mul,inv,sqrt}.zkc` compile in one, to measure each separately. Copy one to combine others (it uses the native `mulmod_256`, so `zkc exec --gogen` cannot run it).
+result is canonical (< p). Each op lives in `lib/secp256k1_fp/{mul,inv,sqrt}.zkc` with a `*_stub.zkc` twin. `riscv/main_fieldaccel.zkc` compiles in all; `main_fieldaccel_{mul,inv,sqrt}.zkc` compile in one, to measure each separately.
 `riscv/main.zkc` links the stubs, which fails if the instruction is issued.
