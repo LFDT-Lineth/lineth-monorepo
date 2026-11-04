@@ -8,16 +8,16 @@ on:
     outputs:
       has-changes-requiring-e2e-testing:
         description: Changes affect the zkEVM e2e suite
-        value: ${{ jobs.get-has-changes-requiring-e2e-testing.outputs.has_changes_requiring_e2e_testing }}
+        value: ${{ jobs.detect.outputs.has_changes_requiring_e2e_testing }}
       has-changes-requiring-riscv-e2e-testing:
         description: Changes affect the RISC-V e2e suite
-        value: ${{ jobs.get-has-changes-requiring-e2e-testing.outputs.has_changes_requiring_riscv_e2e_testing }}
+        value: ${{ jobs.detect.outputs.has_changes_requiring_riscv_e2e_testing }}
       riscv-prover-mode:
         description: dev-zkvm when the RISC-V prover or guests changed, dev-mock otherwise
-        value: ${{ jobs.get-has-changes-requiring-e2e-testing.outputs.riscv_prover_mode }}
+        value: ${{ jobs.detect.outputs.riscv_prover_mode }}
 
 jobs:
-  get-has-changes-requiring-e2e-testing:
+  detect:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     outputs:
       has_changes_requiring_e2e_testing: ${{ steps.evaluate.outputs.zkevm }}

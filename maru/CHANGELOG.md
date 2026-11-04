@@ -1,4 +1,8 @@
-## [unreleased]
+## [1.5.0] - 2026-11-03
+
+### 🚀 Features
+
+- *(maru)* Add support of self-calculating terminal total difficulty (#4295)
 
 ### ⚙️ Miscellaneous Tasks
 

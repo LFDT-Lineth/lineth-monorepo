@@ -116,9 +116,9 @@ func BenchmarkR5Fibonacci(b *testing.B) {
 	//
 	b.ReportMetric(float64(numShards), "shards")
 	// Deterministic extrapolation to the cross-zkVM workload: the guest executes
-	// exactly 14+5*N instructions (see FibonacciELF doc), so shard count scales
+	// exactly 18+5*N instructions (see FibonacciELF doc), so shard count scales
 	// linearly from the measured interpreter rows per shard.
-	b.ReportMetric(float64((14+5*uint64(4_000_000)+instrPerShard-1)/instrPerShard), "shards-at-N4M")
+	b.ReportMetric(float64((18+5*uint64(4_000_000)+instrPerShard-1)/instrPerShard), "shards-at-N4M")
 
 	if proveShards < 1 {
 		return
