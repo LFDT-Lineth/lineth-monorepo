@@ -548,7 +548,7 @@ func TestParamCoefficientsFoldZero(t *testing.T) {
 	sum := b.Op(Add, ax, alpha) // α·x + α
 	require.Equal(t, kLinear, b.nodes[sum].kind)
 	require.Equal(t, coef{id: alpha}, b.nodes[sum].c, "0 + α must be α itself")
-	require.Equal(t, before+1, len(b.nodes), "only the new linear form may be built")
+	require.Len(t, b.nodes, before+1, "only the new linear form may be built")
 }
 
 // Compile evaluates per run only the scalars the program reads: a scalar
