@@ -1,5 +1,7 @@
 package backend
 
+import "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/conglomeration"
+
 // ProofType identifies which guest program to use for a proof request.
 type ProofType string
 
@@ -61,7 +63,7 @@ const (
 	ResultStatusOK     ResultStatus = "ok"
 	ResultStatusFailed ResultStatus = "failed"
 	// ResultStatusNode is a proof of a strict subset of the trace's shards: a
-	// conglomeration node to be aggregated elsewhere, not a final proof.
+	// conglomeration node to be merged elsewhere, not a final proof.
 	// ProofBytes and PublicInputs are empty; Node and NumShards are set.
 	ResultStatusNode ResultStatus = "node"
 )
@@ -108,8 +110,8 @@ type Result struct {
 
 	// Node is the non-root conglomeration node when Status is
 	// ResultStatusNode, and NumShards the trace's shard count, so that the
-	// party aggregating the nodes can tell when their coverage is complete.
-	Node      *Node
+	// party merging the nodes can tell when their coverage is complete.
+	Node      *conglomeration.Node
 	NumShards uint
 
 	// Err is non-nil when Status is ResultStatusFailed.

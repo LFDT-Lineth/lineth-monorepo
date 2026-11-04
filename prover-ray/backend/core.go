@@ -13,6 +13,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/conglomeration"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
@@ -57,9 +58,10 @@ type Core struct {
 	program elfmapping.Program
 	decoded predecoding.DecodedProgram
 
-	// aggregator runs the conglomeration steps over the shard proofs. nil in
-	// production until the recursion machine lands; tests set [mockAggregator].
-	aggregator Aggregator
+	// merger runs the conglomeration steps over the shard proofs. nil in
+	// production until the recursion machine lands; tests set
+	// [conglomeration.MockMerger].
+	merger conglomeration.Merger
 
 	// binaryFile is the compiled R5 arithmetization, used by dev-zkvm to run the
 	// guest under ZkC Execute (the no-trace path). nil outside dev-zkvm.
@@ -324,7 +326,7 @@ func (c *Core) proveFull(ctx context.Context, job Job) Result {
 		return failResult(job.ID, err)
 	}
 	// A strict subset of the shards is a conglomeration node for the
-	// orchestrator to aggregate further, never a final proof.
+	// orchestrator to merge further, never a final proof.
 	if uint(len(node.Coverage)) != numShards {
 		return Result{JobID: job.ID, Status: ResultStatusNode, Node: &node, NumShards: numShards}
 	}
@@ -405,13 +407,13 @@ func (c *Core) runProve(
 	ctx context.Context,
 	preRead *zkcdriver.PreReadInputs,
 	shardIndexes []uint,
-) (Node, uint, error) {
+) (conglomeration.Node, uint, error) {
 
 	// With sharding, this only runs the fast-mode pass recording one checkpoint
 	// per shard.
 	lazyTrace, err := c.driver.TryTraceZkcInputs(preRead)
 	if err != nil {
-		return Node{}, 0, fmt.Errorf("tracing: %w", guestError(err))
+		return conglomeration.Node{}, 0, fmt.Errorf("tracing: %w", guestError(err))
 	}
 	numShards := lazyTrace.Len()
 	indexes := slices.Sorted(slices.Values(shardIndexes))
@@ -422,47 +424,55 @@ func (c *Core) runProve(
 		}
 	}
 	if len(indexes) == 0 {
-		return Node{}, 0, errors.New("the trace has no shards")
+		return conglomeration.Node{}, 0, errors.New("the trace has no shards")
 	}
 	if last := indexes[len(indexes)-1]; last >= numShards {
-		return Node{}, 0, fmt.Errorf("shard index %d out of range, the trace has %d shards", last, numShards)
+		return conglomeration.Node{}, 0, fmt.Errorf("shard index %d out of range, the trace has %d shards", last, numShards)
 	}
 
 	// With sharding the in-shard message-bus check is off, so even a single
-	// shard needs the root checks of the aggregator.
+	// shard needs the root checks of the merger.
 	isRoot := len(indexes) == int(numShards)
-	needsAggregator := len(indexes) > 1 || (isRoot && c.cfg.ShardSize > 0)
-	if needsAggregator && c.aggregator == nil {
-		return Node{}, 0, fmt.Errorf("conglomerating %d of %d shards needs the recursion machine: %w",
+	needsMerger := len(indexes) > 1 || (isRoot && c.cfg.ShardSize > 0)
+	if needsMerger && c.merger == nil {
+		return conglomeration.Node{}, 0, fmt.Errorf("conglomerating %d of %d shards needs the recursion machine: %w",
 			len(indexes), numShards, ErrNotImplemented)
 	}
-	if needsAggregator {
-		logrus.Warnf("Conglomerating %d of %d shards with %T", len(indexes), numShards, c.aggregator)
+	if needsMerger {
+		logrus.Warnf("Conglomerating %d of %d shards with %T", len(indexes), numShards, c.merger)
 	}
 	if !isRoot {
 		logrus.Infof("Proving %d of %d shards: the result is a conglomeration node, not a final proof", len(indexes), numShards)
 	}
 
 	// Buffered so that sending never blocks, even if conglomeration fails early.
-	shardProofs := make(chan Node, len(indexes))
+	shardProofs := make(chan conglomeration.Node, len(indexes))
 	defer close(shardProofs)
 	var (
-		root     Node
+		root     conglomeration.Node
 		rootErr  error
 		rootDone = make(chan struct{})
 	)
 	go func() {
 		defer close(rootDone)
-		root, rootErr = conglomerate(shardProofs, len(indexes), c.aggregator, pairAnyTwo, defaultMaxInFlightAggregations)
+		root, rootErr = conglomeration.Conglomerate(shardProofs, len(indexes), c.merger,
+			conglomeration.DefaultMaxInFlightMerges)
 	}()
 
 	for k, i := range indexes {
 		if err := ctx.Err(); err != nil {
-			return Node{}, 0, fmt.Errorf("before shard %d: %w", i, err)
+			return conglomeration.Node{}, 0, fmt.Errorf("before shard %d: %w", i, err)
+		}
+		// Conglomeration only returns before the last shard proof on a failed
+		// merge: stop rather than proving shards whose result is already lost.
+		select {
+		case <-rootDone:
+			return conglomeration.Node{}, 0, fmt.Errorf("before shard %d: %w", i, rootErr)
+		default:
 		}
 		shard, err := traceShard(lazyTrace, i)
 		if err != nil {
-			return Node{}, 0, err
+			return conglomeration.Node{}, 0, err
 		}
 		// Once the last shard is traced, drop the lazy trace so that its
 		// checkpoints can be garbage collected before that shard is proved.
@@ -471,45 +481,20 @@ func (c *Core) runProve(
 		}
 		proof, pub, err := c.proveShard(shard)
 		if err != nil {
-			return Node{}, 0, fmt.Errorf("shard %d: %w", i, err)
+			return conglomeration.Node{}, 0, fmt.Errorf("shard %d: %w", i, err)
 		}
-		shardProofs <- Node{Coverage: []uint{i}, Proof: proof, Pub: pub}
+		shardProofs <- conglomeration.Node{Coverage: []uint{i}, Proof: proof, Pub: pub}
 	}
 	<-rootDone
 	if rootErr != nil {
-		return Node{}, 0, rootErr
+		return conglomeration.Node{}, 0, rootErr
 	}
 	if isRoot && c.cfg.ShardSize > 0 {
-		if root, err = c.aggregator.Finalize(root, numShards); err != nil {
-			return Node{}, 0, fmt.Errorf("root: %w", err)
+		if root, err = c.merger.Finalize(root, numShards); err != nil {
+			return conglomeration.Node{}, 0, fmt.Errorf("root: %w", err)
 		}
 	}
 	return root, numShards, nil
-}
-
-// piLayout holds the positions, in the public inputs, of the values aggregation
-// combines: the product on each message-bus handle, and the program VK and
-// guest output, which all the shards share.
-type piLayout struct {
-	bus, programVK, guestOutput []int
-}
-
-// piLayout returns the public-input layout of the shard proofs.
-func (c *Core) piLayout() piLayout {
-	return piLayout{
-		bus:         c.piPositions(messagebus.PublicInputTag, len(c.sys.MessageBusHandles())),
-		programVK:   c.piPositions(risc5.ProgramVKPI, risc5.NumProgramVK),
-		guestOutput: c.piPositions(risc5.GuestPublicOutputsPI, risc5.NumGuestPublicOutputs),
-	}
-}
-
-// piPositions returns the positions of the n public inputs tagged tag.
-func (c *Core) piPositions(tag wiop.PublicInputTag, n int) []int {
-	positions := make([]int, n)
-	for k := range positions {
-		_, positions[k] = c.sys.LookupPublicInputByTag(tag, k)
-	}
-	return positions
 }
 
 // traceShard traces and expands the ith shard of the lazy trace.

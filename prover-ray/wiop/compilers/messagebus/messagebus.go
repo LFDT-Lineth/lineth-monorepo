@@ -66,6 +66,24 @@ import (
 // [Compile] is single-invocation per system.
 const PublicInputTag wiop.PublicInputTag = "MessageBus"
 
+// GetProducts returns the products on every handle of sys, in the order of
+// [wiop.System.MessageBusHandles], read from the public inputs pub of a proof
+// over sys. Without the in-shard check (see [wiop.MessageBus.SkipInShardCheck])
+// they are this shard's partial products, which a cross-shard layer multiplies.
+//
+// Panics if a public input is missing.
+func GetProducts(sys *wiop.System, pub wiop.PublicInput) []field.Gen {
+	products := make([]field.Gen, len(sys.MessageBusHandles()))
+	for h := range products {
+		_, pos := sys.LookupPublicInputByTag(PublicInputTag, h)
+		if pos < 0 {
+			panic(fmt.Sprintf("wiop/compilers/messagebus: GetProducts: no public input registered for handle %d", h))
+		}
+		products[h] = pub[pos]
+	}
+	return products
+}
+
 type compileOptions struct {
 	sharedRandomness bool
 }

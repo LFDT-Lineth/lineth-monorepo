@@ -23,7 +23,7 @@
 // wire bytes) is still stubbed and returns [ErrNotImplemented].
 //
 // With sharding ([Config.ShardSize]), the shard proofs of a job are reduced to
-// one node by an [Aggregator]; only a mock exists, for dev and test, so a
+// one node by a [conglomeration.Merger]; only a mock exists, for dev and test, so a
 // sharded job in production returns [ErrNotImplemented] until the recursion
 // machine lands.
 //

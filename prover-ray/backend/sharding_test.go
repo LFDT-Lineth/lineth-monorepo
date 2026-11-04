@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/conglomeration"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	minimal_elf "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/minimal-elf"
@@ -15,7 +16,7 @@ import (
 )
 
 // shardedTestCore builds a Core over the all-in-one minimal ELF with the given
-// shard size, proving through the mock aggregator. The guest runs ~300
+// shard size, proving through the mock merger. The guest runs ~300
 // instructions, so a shard size of 100 yields 3 shards.
 func shardedTestCore(t *testing.T, shardSize uint64) *Core {
 	t.Helper()
@@ -32,12 +33,12 @@ func shardedTestCore(t *testing.T, shardSize uint64) *Core {
 
 	c, err := New(Config{CircuitBinPath: binPath, GuestELFPath: elfPath, ShardSize: shardSize})
 	require.NoError(t, err)
-	c.aggregator = mockAggregator{layout: c.piLayout()}
+	c.merger = conglomeration.NewMockMerger(c.sys)
 	return c
 }
 
 // runProveShards runs runProve on c for the given shards of the empty job.
-func runProveShards(t *testing.T, ctx context.Context, c *Core, indexes ...uint) (Node, uint, error) {
+func runProveShards(t *testing.T, ctx context.Context, c *Core, indexes ...uint) (conglomeration.Node, uint, error) {
 	t.Helper()
 	inputs, err := c.buildInputs(Job{ShardIndexes: indexes})
 	require.NoError(t, err)
@@ -57,7 +58,7 @@ func TestRunProve_ShardIndexes(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, uint(3), numShards, "the trace should have 3 shards")
 		require.Equal(t, []uint{0, 1, 2}, node.Coverage, "the root should cover every shard")
-		require.Equal(t, wiop.Proof{}, node.Proof, "a mock aggregation carries no proof")
+		require.Equal(t, wiop.Proof{}, node.Proof, "a mock merge carries no proof")
 	})
 
 	t.Run("strict subset", func(t *testing.T) {
@@ -65,7 +66,7 @@ func TestRunProve_ShardIndexes(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, uint(3), numShards)
 		require.Equal(t, []uint{1}, node.Coverage, "the node should cover the requested shard only")
-		require.NoError(t, c.sys.Verify(node.Proof, node.Pub), "an unaggregated shard proof should verify")
+		require.NoError(t, c.sys.Verify(node.Proof, node.Pub), "an unmerged shard proof should verify")
 	})
 
 	t.Run("out of range", func(t *testing.T) {
@@ -74,21 +75,21 @@ func TestRunProve_ShardIndexes(t *testing.T) {
 	})
 }
 
-// TestRunProve_Sharded_NoAggregator_NotImplemented checks that a sharded trace
-// is not proved without an aggregator: the in-shard bus check is off, so the
+// TestRunProve_Sharded_NoMerger_NotImplemented checks that a sharded trace
+// is not proved without a merger: the in-shard bus check is off, so the
 // shard proofs cannot be checked without the root.
-func TestRunProve_Sharded_NoAggregator_NotImplemented(t *testing.T) {
+func TestRunProve_Sharded_NoMerger_NotImplemented(t *testing.T) {
 	c := shardedTestCore(t, 100)
-	c.aggregator = nil
+	c.merger = nil
 	_, _, err := runProveShards(t, context.Background(), c)
 	require.ErrorIs(t, err, ErrNotImplemented)
 }
 
 // TestRunProve_Unsharded_ReturnsShardProof checks that without sharding the
-// single shard's proof is returned as is, with no aggregator involved.
+// single shard's proof is returned as is, with no merger involved.
 func TestRunProve_Unsharded_ReturnsShardProof(t *testing.T) {
 	c := shardedTestCore(t, 0)
-	c.aggregator = nil
+	c.merger = nil
 	node, numShards, err := runProveShards(t, context.Background(), c)
 	require.NoError(t, err)
 	require.Equal(t, uint(1), numShards, "an unsharded trace is a single shard")
