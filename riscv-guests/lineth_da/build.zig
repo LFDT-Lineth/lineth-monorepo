@@ -97,14 +97,19 @@ const Zstd = struct {
     }
 };
 
-/// What `src/` imports by name, for one target: the zesu modules under the `zesu_*` names the
-/// sources use, the declarations of libzstd and the memory hooks of the decoder.
-fn packageImports(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, zstd: Zstd) []const Import {
-    const zesu = b.dependency("zesu", .{
+/// The zesu dependency for one target, with the extern crypto backend.
+fn zesuFor(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) *std.Build.Dependency {
+    return b.dependency("zesu", .{
         .target = target,
         .optimize = optimize,
         .@"crypto-backend" = .@"extern",
     });
+}
+
+/// What `src/` imports by name, for one target: the zesu modules under the `zesu_*` names the
+/// sources use, the declarations of libzstd and the memory hooks of the decoder.
+fn packageImports(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, zstd: Zstd) []const Import {
+    const zesu = zesuFor(b, target, optimize);
     return b.allocator.dupe(Import, &.{
         .{ .name = "zesu_accelerators", .module = zesu.module("accelerators") },
         .{ .name = "zesu_executor", .module = zesu.module("executor") },
@@ -124,12 +129,12 @@ fn hostPackage(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.bu
 }
 
 /// The native tests and tools run on the host: a freestanding riscv64 target has no OS to run a
-/// `std.testing` binary against. The test-side encoders and signers (`support`), the zstd
-/// encoder (`zstd_encoder`) and the reader of the EF fixtures' blocks (`ef_blocks`) are
-/// modules of the package for the tests of its consumers; they are compiled at the package's
-/// `optimize`, where ReleaseSmall becomes ReleaseSafe. When the package itself is built for a
-/// native target, the encoder shares its libzstd declarations and memory hooks, which one
-/// compilation can hold only once.
+/// `std.testing` binary against. The test-side pieces (`support`), the zstd encoder
+/// (`zstd_encoder`) and the reader of the EF fixtures' blocks (`ef_blocks`) are modules of the
+/// package for the tests of its consumers; they are compiled at the package's `optimize`, where
+/// ReleaseSmall becomes ReleaseSafe. When the package itself is built for a native target, the
+/// encoder shares its libzstd declarations and memory hooks, which one compilation can hold only
+/// once.
 fn addHostBuild(
     b: *std.Build,
     package_zstd: Zstd,
@@ -295,6 +300,7 @@ fn addReferenceTests(
     paths.addOptionPath("amsterdam_blocks", fixtures.path(b, "blockchain_tests/for_amsterdam"));
     const package = hostPackage(b, target, .ReleaseSafe, zstd);
     const readers = shared.readersOf(b, target, package);
+    const zesu = zesuFor(b, target, .ReleaseSafe);
     return common.addTests(b, test_step, .{
         .target = target,
         .optimize = .ReleaseSafe,
@@ -302,6 +308,8 @@ fn addReferenceTests(
             .{ .name = "lineth_da", .module = package },
             .{ .name = "ef_fixtures", .module = paths.createModule() },
             .{ .name = "ef_blocks", .module = shared.ef_blocks },
+            .{ .name = "zesu_executor", .module = zesu.module("executor") },
+            .{ .name = "zesu_mpt", .module = zesu.module("mpt") },
             .{ .name = "zstd_encoder", .module = shared.encoder },
             .{ .name = "zstd_frames", .module = shared.zstd_frames },
             .{ .name = "support", .module = shared.support },

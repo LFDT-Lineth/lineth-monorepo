@@ -1,9 +1,9 @@
 //! Conflations of real blocks: a fixed selection of valid blocks of the EF zkevm fixtures, each
 //! truncated by `encoding.truncation`, and the truncated blocks of a conflation encoded by
-//! `encodeBlocks` into the canonical payload its zstd frame decompresses to. The selection names
-//! its blocks by fixture file, case and position, so every machine reads the same blocks whatever
-//! the order its file system lists the corpus in; the reference suite checks that the blocks
-//! cover what they are picked for.
+//! `encodeBlocks` into the canonical payload its zstd frame decompresses to; and one block with a
+//! blob transaction, which truncation rejects. The selection names its blocks by fixture file,
+//! case and position, so every machine reads the same blocks whatever the order its file system
+//! lists the corpus in; the reference suite checks that the blocks cover what they are picked for.
 
 const std = @import("std");
 
@@ -84,11 +84,18 @@ const picks: std.EnumArray(Kind, Pick) = .init(.{
     },
 });
 
-/// A selected block: what the fixture lists about its transactions, the length of its RLP and its
-/// truncation.
+/// The block with a blob transaction, which truncation rejects.
+const blob_transaction_pick: Pick = .{
+    .path = "amsterdam/eip7928_block_level_access_lists/block_access_lists/bal_blob_fee_leaves_sender_only.json",
+    .case = "tests/amsterdam/eip7928_block_level_access_lists/test_block_access_lists.py::test_bal_blob_fee_leaves_sender_only[fork_Amsterdam-blockchain_test_from_state_test]",
+};
+
+/// A selected block: what the fixture lists about its transactions, its RLP, the ID of its chain
+/// and its truncation.
 pub const Entry = struct {
     profile: ef_blocks.Profile,
-    rlp_len: usize,
+    rlp: []const u8,
+    chain_id: u64,
     truncated: truncation.TruncatedBlock,
 };
 
@@ -96,6 +103,8 @@ pub const Entry = struct {
 pub const Selection = struct {
     arena: std.heap.ArenaAllocator,
     entries: std.EnumArray(Kind, Entry),
+    /// A block with one blob transaction.
+    blob_transaction: ef_blocks.Located,
 
     /// Reads the selected blocks from `corpus_dir`, a directory of fixture files, absolute or
     /// relative to the working directory.
@@ -116,12 +125,14 @@ pub const Selection = struct {
             if (fact.blob_transaction) return error.BlobTransactionSelected;
             entries.set(kind, .{
                 .profile = fact.profile,
-                .rlp_len = fact.rlp.len,
+                .rlp = try arena.allocator().dupe(u8, fact.rlp),
+                .chain_id = located.chain_id,
                 .truncated = try truncation.truncateBlockRlp(arena.allocator(), scratch.allocator(), fact.rlp, located.chain_id),
             });
             _ = scratch.reset(.retain_capacity);
         }
-        return .{ .arena = arena, .entries = entries };
+        const blob_transaction = try ef_blocks.locate(arena.allocator(), io, corpus_dir, blob_transaction_pick.path, blob_transaction_pick.case, blob_transaction_pick.block);
+        return .{ .arena = arena, .entries = entries, .blob_transaction = blob_transaction };
     }
 
     pub fn deinit(self: *Selection) void {

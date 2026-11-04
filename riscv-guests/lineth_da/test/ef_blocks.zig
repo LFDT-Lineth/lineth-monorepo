@@ -22,6 +22,39 @@ pub const Profile = struct {
     authorization_list: bool,
 };
 
+/// An access-list entry of a transaction.
+pub const AccessListEntry = struct {
+    address: Address,
+    storage_keys: []const Hash,
+};
+
+/// An authorization of a set-code transaction.
+pub const Authorization = struct {
+    chain_id: u256,
+    address: Address,
+    nonce: u64,
+    y_parity: u256,
+    r: u256,
+    s: u256,
+};
+
+/// The fields of a transaction as the fixture lists them.
+pub const Transaction = struct {
+    type: u8,
+    nonce: u64,
+    /// `gasPrice`, or `maxFeePerGas` of a fee-market or set-code transaction.
+    gas_price: u256,
+    /// `maxPriorityFeePerGas` of a fee-market or set-code transaction.
+    max_priority_fee_per_gas: ?u256,
+    gas_limit: u64,
+    /// Null for a contract creation.
+    to: ?Address,
+    value: u256,
+    data: []const u8,
+    access_list: []const AccessListEntry,
+    authorization_list: []const Authorization,
+};
+
 /// A block a fixture accepts, as the fixture lists it.
 pub const Fact = struct {
     /// The block's RLP.
@@ -31,6 +64,8 @@ pub const Fact = struct {
     prev_randao: Hash,
     number: u64,
     timestamp: u64,
+    /// The transactions, in order.
+    transactions: []const Transaction,
     /// The sender of every transaction, in order.
     senders: []const Address,
     /// Whether a transaction of the block is an EIP-4844 blob transaction (type 3).
@@ -57,18 +92,39 @@ const Header = struct {
     number: []const u8,
 };
 
-const Transaction = struct {
+const RawAccessListEntry = struct {
+    address: []const u8 = "0x",
+    storageKeys: []const []const u8 = &.{},
+};
+
+const RawAuthorization = struct {
+    chainId: []const u8 = "0x0",
+    address: []const u8 = "0x",
+    nonce: []const u8 = "0x0",
+    yParity: []const u8 = "0x0",
+    r: []const u8 = "0x0",
+    s: []const u8 = "0x0",
+};
+
+const RawTransaction = struct {
     type: []const u8 = "0x00",
     sender: []const u8,
+    nonce: []const u8 = "0x0",
+    gasPrice: ?[]const u8 = null,
+    maxFeePerGas: ?[]const u8 = null,
+    maxPriorityFeePerGas: ?[]const u8 = null,
+    gasLimit: []const u8 = "0x0",
+    to: []const u8 = "",
+    value: []const u8 = "0x0",
     data: []const u8 = "0x",
-    accessList: []const std.json.Value = &.{},
-    authorizationList: []const std.json.Value = &.{},
+    accessList: []const RawAccessListEntry = &.{},
+    authorizationList: []const RawAuthorization = &.{},
 };
 
 const Block = struct {
     rlp: ?[]const u8 = null,
     blockHeader: ?Header = null,
-    transactions: ?[]const Transaction = null,
+    transactions: ?[]const RawTransaction = null,
     expectException: ?[]const u8 = null,
 };
 
@@ -142,18 +198,19 @@ fn factOf(arena: Allocator, block: Block) !?Fact {
     if (block.expectException != null) return null;
     const rlp_text = block.rlp orelse return null;
     const header = block.blockHeader orelse return error.FixtureWithoutHeader;
-    const transactions = block.transactions orelse &.{};
-    const senders = try arena.alloc(Address, transactions.len);
+    const raw_transactions = block.transactions orelse &.{};
+    const transactions = try arena.alloc(Transaction, raw_transactions.len);
+    const senders = try arena.alloc(Address, raw_transactions.len);
     var blob_transaction = false;
     var profile: Profile = .{ .transactions = transactions.len, .types = 0, .max_data_len = 0, .access_list = false, .authorization_list = false };
-    for (transactions, senders) |transaction, *sender| {
-        sender.* = try decodeHex(20, transaction.sender);
-        const tx_type = try std.fmt.parseInt(u8, transaction.type, 0);
-        if (tx_type == 3) blob_transaction = true;
-        if (tx_type < 8) profile.types |= @as(u8, 1) << @intCast(tx_type);
-        profile.max_data_len = @max(profile.max_data_len, digits(transaction.data).len / 2);
-        profile.access_list = profile.access_list or transaction.accessList.len > 0;
-        profile.authorization_list = profile.authorization_list or transaction.authorizationList.len > 0;
+    for (raw_transactions, transactions, senders) |raw, *transaction, *sender| {
+        sender.* = try decodeHex(20, raw.sender);
+        transaction.* = try transactionOf(arena, raw);
+        if (transaction.type == 3) blob_transaction = true;
+        if (transaction.type < 8) profile.types |= @as(u8, 1) << @intCast(transaction.type);
+        profile.max_data_len = @max(profile.max_data_len, transaction.data.len);
+        profile.access_list = profile.access_list or transaction.access_list.len > 0;
+        profile.authorization_list = profile.authorization_list or transaction.authorization_list.len > 0;
     }
     return .{
         .rlp = try decodeHexAlloc(arena, rlp_text),
@@ -162,9 +219,43 @@ fn factOf(arena: Allocator, block: Block) !?Fact {
         .prev_randao = try decodeHex(32, header.mixHash),
         .number = try std.fmt.parseInt(u64, header.number, 0),
         .timestamp = try std.fmt.parseInt(u64, header.timestamp, 0),
+        .transactions = transactions,
         .senders = senders,
         .blob_transaction = blob_transaction,
         .profile = profile,
+    };
+}
+
+fn transactionOf(arena: Allocator, raw: RawTransaction) !Transaction {
+    const access_list = try arena.alloc(AccessListEntry, raw.accessList.len);
+    for (raw.accessList, access_list) |raw_entry, *entry| {
+        const keys = try arena.alloc(Hash, raw_entry.storageKeys.len);
+        for (raw_entry.storageKeys, keys) |key, *decoded| decoded.* = try decodeHex(32, key);
+        entry.* = .{ .address = try decodeHex(20, raw_entry.address), .storage_keys = keys };
+    }
+    const authorization_list = try arena.alloc(Authorization, raw.authorizationList.len);
+    for (raw.authorizationList, authorization_list) |raw_authorization, *authorization| {
+        authorization.* = .{
+            .chain_id = try std.fmt.parseInt(u256, raw_authorization.chainId, 0),
+            .address = try decodeHex(20, raw_authorization.address),
+            .nonce = try std.fmt.parseInt(u64, raw_authorization.nonce, 0),
+            .y_parity = try std.fmt.parseInt(u256, raw_authorization.yParity, 0),
+            .r = try std.fmt.parseInt(u256, raw_authorization.r, 0),
+            .s = try std.fmt.parseInt(u256, raw_authorization.s, 0),
+        };
+    }
+    const fee_cap = raw.gasPrice orelse raw.maxFeePerGas orelse return error.TransactionWithoutGasPrice;
+    return .{
+        .type = try std.fmt.parseInt(u8, raw.type, 0),
+        .nonce = try std.fmt.parseInt(u64, raw.nonce, 0),
+        .gas_price = try std.fmt.parseInt(u256, fee_cap, 0),
+        .max_priority_fee_per_gas = if (raw.maxPriorityFeePerGas) |fee| try std.fmt.parseInt(u256, fee, 0) else null,
+        .gas_limit = try std.fmt.parseInt(u64, raw.gasLimit, 0),
+        .to = if (digits(raw.to).len == 0) null else try decodeHex(20, raw.to),
+        .value = try std.fmt.parseInt(u256, raw.value, 0),
+        .data = try decodeHexAlloc(arena, raw.data),
+        .access_list = access_list,
+        .authorization_list = authorization_list,
     };
 }
 
