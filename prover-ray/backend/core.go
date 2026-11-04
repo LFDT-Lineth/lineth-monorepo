@@ -349,6 +349,7 @@ func (c *Core) proveFull(ctx context.Context, job Job) Result {
 // guest input data differs.
 func (c *Core) buildInputs(job Job) (map[string]bit.Array, error) {
 	if err := sanityCheckJobs(job, c.cfg.ShardSize); err != nil {
+	if err := sanityCheckJobs(job, c.cfg.ShardSize); err != nil {
 		return nil, err
 	}
 	return c.encodeGuestInputs(job)
@@ -375,6 +376,11 @@ func (c *Core) encodeGuestInputs(job Job) (map[string]bit.Array, error) {
 	maps.Copy(inputs, c.decoded.EncodeInputs())
 	return inputs, nil
 }
+
+func sanityCheckJobs(job Job, shardSize uint64) error {
+	if _, err := checkShardIndexes(job.ShardIndexes, shardSize); err != nil {
+		return fmt.Errorf("shard indexes: %w", err)
+	}
 
 func sanityCheckJobs(job Job, shardSize uint64) error {
 	if _, err := checkShardIndexes(job.ShardIndexes, shardSize); err != nil {
@@ -502,6 +508,7 @@ func traceShard(lazyTrace zkcdriver.LazyTrace, i uint) (zkcdriver.Shard, error) 
 	shard, errs := lazyTrace.Get(i)
 	if len(errs) > 0 {
 		return zkcdriver.Shard{}, fmt.Errorf("tracing shard %d: %w", i, errors.Join(errs...))
+		return zkcdriver.Shard{}, fmt.Errorf("tracing shard %d: %w", i, errors.Join(errs...))
 	}
 	if shard.IsEmpty() {
 		return zkcdriver.Shard{}, fmt.Errorf("tracing shard %d: no shard produced", i)
@@ -512,6 +519,7 @@ func traceShard(lazyTrace zkcdriver.LazyTrace, i uint) (zkcdriver.Shard, error) 
 // proveShard proves the given shard, then verifies the proof.
 func (c *Core) proveShard(shard zkcdriver.Shard) (wiop.Proof, wiop.PublicInput, error) {
 	proof, pub := c.sys.Prove(func(rt *wiop.Runtime) {
+		c.driver.AssignTraceShard(rt, shard, field.Octuplet{})
 		c.driver.AssignTraceShard(rt, shard, field.Octuplet{})
 	})
 	// Verify proof

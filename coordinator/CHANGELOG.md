@@ -7,6 +7,7 @@
 ### 🐛 Bug Fixes
 
 - *(coordinator)* Enforce end-block invariant in RollupAggregationProofResponseV1 (#4315)
+- *(coordinator, docker)* Let downstream images opt out of the license files (#4382)
 
 ### ⚙️ Miscellaneous Tasks
 

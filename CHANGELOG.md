@@ -109,6 +109,7 @@
 - *(misc, riscv-guest, prover, coordinator)* Changing the spec to allow zero rolling hash and message number for the L2 Message Service (#4314)
 - *(tracer)* Adapt reference tests to Besu block processor API (#4328)
 - *(coordinator)* Enforce end-block invariant in RollupAggregationProofResponseV1 (#4315)
+- *(coordinator, docker)* Let downstream images opt out of the license files (#4382)
 
 ### 🚜 Refactor
 
