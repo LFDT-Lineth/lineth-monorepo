@@ -73,7 +73,7 @@ const (
 	instrSelect        // Select: the selected cell
 	instrLookup        // Lookup: the entry read
 	instrMD            // MDHash: the digest (and the compressions, for the P2 core)
-	instrPath          // MerklePath: the compressions, and MerklePathX's [x⁻¹, b0]
+	instrPath          // MerklePath: [x⁻¹, b0] if asked (and the compressions, for the P2 core)
 )
 
 func (m *Machine) alloc() int {
@@ -290,8 +290,7 @@ func (m *Machine) exec(in instr, r *Run) error {
 		m.execMD(m.mds[in.idx], r)
 		return nil
 	case instrPath:
-		m.execPath(m.paths[in.idx], r)
-		return nil
+		return m.execPath(m.paths[in.idx], r)
 	}
 	return fmt.Errorf("unknown instruction kind %d", in.kind)
 }

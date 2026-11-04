@@ -87,9 +87,13 @@ type mdChip struct{ m *Machine }
 
 func (c mdChip) name() string { return mdMod }
 
-func (c mdChip) rows() int {
+func (c mdChip) rows() int { return c.m.numMDBlocks() }
+
+// numMDBlocks is the number of blocks the MD hashes compress: the md chip's
+// rows.
+func (m *Machine) numMDBlocks() int {
 	n := 0
-	for _, d := range c.m.mds {
+	for _, d := range m.mds {
 		n += len(d.blocks)
 	}
 	return n
