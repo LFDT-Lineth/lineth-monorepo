@@ -215,7 +215,11 @@ class RollupProofGeneratingCoordinatorTest {
     assertThat(context.parentDataRollingHash).isEqualTo(genesisDataRollingHash)
     // fold(genesisDataRollingHash, fakeChunkHash) = fakeChunkHash.copyOf(32) per our calculator
     assertThat(context.dataRollingHash).isEqualTo(fakeChunkHash.copyOf(32))
-    assertThat(context.endOffset).isEqualTo(segmentSize * conflationsPerRollupProof)
+    assertThat(context.finalDataTailDiscardBytes).isZero()
+    assertThat(context.parentDataTailTakeBytes).isZero()
+    assertThat(context.boundaryPrevDataRollingHash).isNull()
+    assertThat(context.blobsData.single().prevDataRollingHash).isEqualTo(genesisDataRollingHash)
+    assertThat(context.blobsData.single().dataRollingHash).isEqualTo(context.dataRollingHash)
     assertThat(context.startBlockTimestamp).isEqualTo(Instant.fromEpochSeconds(12))
     assertThat(context.endBlockTimestamp).isEqualTo(Instant.fromEpochSeconds(6L * 12))
     assertThat(context.totalBatchesCount).isEqualTo(conflationsPerRollupProof)
@@ -260,10 +264,10 @@ class RollupProofGeneratingCoordinatorTest {
 
     assertThat(rollupProverClient.requests).hasSize(1)
     val request = rollupProverClient.requests.first()
-    // One full chunk sealed, no partial — endOffset on the full chunk is BLOB_SIZE
+    // One full chunk sealed, no partial
     assertThat(request.chunks).hasSize(1)
     assertThat(handledProofs).hasSize(1)
-    assertThat(handledProofs.first().second.endOffset).isEqualTo(Constants.Eip4844BlobSize)
+    assertThat(handledProofs.first().second.finalDataTailDiscardBytes).isZero()
   }
 
   @Test

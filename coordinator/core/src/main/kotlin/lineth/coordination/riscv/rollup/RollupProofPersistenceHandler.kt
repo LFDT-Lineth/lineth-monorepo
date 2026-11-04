@@ -22,7 +22,9 @@ class RollupProofPersistenceHandler(
       totalBatchesCount = context.totalBatchesCount.toUInt(),
       blobsData = context.blobsData,
       proofHash = context.proofIndex.hash,
-      endOffset = context.endOffset,
+      parentDataTailTakeBytes = context.parentDataTailTakeBytes,
+      boundaryPrevDataRollingHash = context.boundaryPrevDataRollingHash,
+      finalDataTailDiscardBytes = context.finalDataTailDiscardBytes,
     )
     return blobsRepository.saveNewBlob(record)
   }
