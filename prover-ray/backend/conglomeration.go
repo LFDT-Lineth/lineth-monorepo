@@ -20,8 +20,10 @@ type Node struct {
 }
 
 // Aggregator performs the 2-to-1 aggregation steps of the conglomeration tree
-// and the root finalisation. [mockAggregator] implements it for dev and test;
-// the recursion machine will implement it for production.
+// and the root finalisation. [recursionAggregator] implements it with the
+// recursion machine's node program, without verifying the children yet, and
+// [mockAggregator] without proofs at all, for the reducer's unit tests; the
+// production implementation verifies the children's proofs in the machine.
 type Aggregator interface {
 	// Aggregate verifies two children and returns their parent, covering the
 	// union of their coverage. It rejects overlapping coverage, a child of
@@ -34,7 +36,7 @@ type Aggregator interface {
 	Finalize(root Node, numShards uint) (Node, error)
 }
 
-// mockAggregator is the dev and test [Aggregator]. It produces no proof: an
+// mockAggregator is the [Aggregator] of the reducer's unit tests. It produces no proof: an
 // aggregated node's Proof is the zero wiop.Proof, so a mock node can never
 // pass for a verifiable proof, and its Pub is the left child's with the
 // message-bus products multiplied. A shard proof that reaches Finalize

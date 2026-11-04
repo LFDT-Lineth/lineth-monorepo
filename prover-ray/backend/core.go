@@ -492,14 +492,16 @@ func (c *Core) runProve(
 // guest output, which all the shards share.
 type piLayout struct {
 	bus, programVK, guestOutput []int
+	numPublicInputs             int // the total, to tell a shard proof from a node proof
 }
 
 // piLayout returns the public-input layout of the shard proofs.
 func (c *Core) piLayout() piLayout {
 	return piLayout{
-		bus:         c.piPositions(messagebus.PublicInputTag, len(c.sys.MessageBusHandles())),
-		programVK:   c.piPositions(risc5.ProgramVKPI, risc5.NumProgramVK),
-		guestOutput: c.piPositions(risc5.GuestPublicOutputsPI, risc5.NumGuestPublicOutputs),
+		bus:             c.piPositions(messagebus.PublicInputTag, len(c.sys.MessageBusHandles())),
+		programVK:       c.piPositions(risc5.ProgramVKPI, risc5.NumProgramVK),
+		guestOutput:     c.piPositions(risc5.GuestPublicOutputsPI, risc5.NumGuestPublicOutputs),
+		numPublicInputs: len(c.sys.PublicInputs),
 	}
 }
 

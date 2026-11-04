@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	minimal_elf "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/minimal-elf"
 	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
@@ -15,7 +15,7 @@ import (
 )
 
 // shardedTestCore builds a Core over the all-in-one minimal ELF with the given
-// shard size, proving through the mock aggregator. The guest runs ~300
+// shard size, proving through the recursion aggregator. The guest runs ~300
 // instructions, so a shard size of 100 yields 3 shards.
 func shardedTestCore(t *testing.T, shardSize uint64) *Core {
 	t.Helper()
@@ -32,7 +32,8 @@ func shardedTestCore(t *testing.T, shardSize uint64) *Core {
 
 	c, err := New(Config{CircuitBinPath: binPath, GuestELFPath: elfPath, ShardSize: shardSize})
 	require.NoError(t, err)
-	c.aggregator = mockAggregator{layout: c.piLayout()}
+	c.aggregator, err = newRecursionAggregator(c.piLayout(), wioptest.TestingCompileOptions()...)
+	require.NoError(t, err)
 	return c
 }
 
@@ -57,7 +58,13 @@ func TestRunProve_ShardIndexes(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, uint(3), numShards, "the trace should have 3 shards")
 		require.Equal(t, []uint{0, 1, 2}, node.Coverage, "the root should cover every shard")
-		require.Equal(t, wiop.Proof{}, node.Proof, "a mock aggregation carries no proof")
+		agg := c.aggregator.(*recursionAggregator)
+		require.NoError(t, agg.root.Verify(node.Proof, node.Pub), "the root proof should verify")
+		root, err := agg.root.Decode(node.Pub)
+		require.NoError(t, err)
+		for h, p := range root.Bus {
+			require.True(t, p.IsOne(), "bus handle %d should balance at the root", h)
+		}
 	})
 
 	t.Run("strict subset", func(t *testing.T) {
