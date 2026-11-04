@@ -13,7 +13,7 @@ pub const StatelessBlockFixture = struct {
 };
 
 pub const embedded = struct {
-    /// Embedded straight from the execution_spec_tests_zkevm dependency (see build.zig).
+    /// Embedded straight from the directory given by `-Dzkevm-fixtures`.
     pub const zkevm_stateless_block = @embedFile("zkevm_stateless_block.json");
 };
 
