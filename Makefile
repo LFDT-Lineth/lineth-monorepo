@@ -38,11 +38,20 @@ RISCV_COMPOSE_FILE = docker/compose-tracing-v2.yml -f docker/compose-riscv.yml$(
 start-env-with-riscv:
 	@test -f docker/config/prover/riscv/prover-ray-config.$(RISCV_PROVER_MODE).toml || \
 		{ echo "Unsupported RISCV_PROVER_MODE=$(RISCV_PROVER_MODE) (expected dev-mock or dev-zkvm)"; exit 1; }
+	@if [ "$(RISCV_PROVER_MODE)" = dev-zkvm ] && [ -z "$(LINEA_PROVER_RAY_TAG)" ]; then \
+		echo "dev-zkvm needs a prover-ray image with guest lookup: build one (make -C prover-ray docker-build) and set LINEA_PROVER_RAY_TAG"; exit 1; \
+	fi
 	$(MAKE) start-env COMPOSE_FILE="$(RISCV_COMPOSE_FILE)" \
 		L1_CONTRACT_VERSION=9 LINETH_PROTOCOL_CONTRACTS_ONLY=true \
 		LINETH_L1_CONTRACT_DEPLOYMENT_TARGET=deploy-lineth-rollup-v9-stub \
 		DEPLOY_FORCED_TRANSACTION_GATEWAY=false
-	# The coordinator needs the deployed L1 contract, so it starts last.
+	# The coordinator needs the deployed L1 contract, so it starts last. dev-zkvm
+	# stages the guest ELF bundled in the prover-ray image into the guests folder
+	# and gives the coordinator its Program ID.
+	if [ "$(RISCV_PROVER_MODE)" = dev-zkvm ]; then \
+		R5_L2_EXECUTION_PROGRAM_ID=$$(prover-ray/scripts/stage-guest.sh consensys/lineth-prover-ray:$(LINEA_PROVER_RAY_TAG) tmp/local/prover-ray/guests) || exit 1; \
+		export R5_L2_EXECUTION_PROGRAM_ID; \
+	fi; \
 	COMPOSE_PROFILES=l1,l2,riscv docker compose -f $(RISCV_COMPOSE_FILE) up -d --no-deps --wait --wait-timeout 600 prover-ray coordinator
 	$(MAKE) deploy-l2-evm-opcode-tester
 

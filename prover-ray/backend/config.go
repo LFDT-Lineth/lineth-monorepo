@@ -7,11 +7,9 @@ type Config struct {
 	// circuit. Loaded once at startup and reused across all proof requests.
 	CircuitBinPath string
 
-	// GuestELFPath is the path to the guest ELF binary. For l2-execution
-	// proofs this is riscv-guests/l2_execution/zig-out/bin/evm_execution_guest.
-	// Different proof types will eventually point to different ELFs; that
-	// dispatch is not yet implemented.
-	GuestELFPath string
+	// GuestsDir holds the guest ELFs, each found by [Job.GuestProgramID]
+	// (see [guests.Store]). Required by every mode that runs a guest.
+	GuestsDir string
 
 	// Mode selects how a Job is proved; empty defaults to [ProverModeFull].
 	Mode ProverMode

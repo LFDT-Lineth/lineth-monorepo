@@ -31,11 +31,11 @@ func TestRunProve_SplitTraceRound(t *testing.T) {
 	binPath := filepath.Join(t.TempDir(), "circuit.bin")
 	require.NoError(t, os.WriteFile(binPath, binBytes, 0o600))
 
+	dir := t.TempDir()
 	elf, _ := minimal_elf.AllInOneElfProgram()
-	elfPath := filepath.Join(t.TempDir(), "guest.elf")
-	require.NoError(t, os.WriteFile(elfPath, elf, 0o600))
+	id := writeGuest(t, dir, elf)
 
-	cfg := Config{CircuitBinPath: binPath, GuestELFPath: elfPath}
+	cfg := Config{CircuitBinPath: binPath, GuestsDir: dir}
 	c, err := New(cfg)
 	require.NoError(t, err)
 
@@ -64,7 +64,7 @@ func TestRunProve_SplitTraceRound(t *testing.T) {
 
 	// The larger payload makes the trace of job B taller than the one of job A,
 	// so the two proofs carry different dynamic module sizes.
-	jobs := []Job{{}, {Payload: make([]byte, 1<<12)}}
+	jobs := []Job{{GuestProgramID: id}, {GuestProgramID: id, Payload: make([]byte, 1<<12)}}
 
 	// References: the jobs proved one at a time, on a Core of their own.
 	fresh, err := New(cfg)
@@ -88,8 +88,10 @@ func TestRunProve_SplitTraceRound(t *testing.T) {
 		pubs     = make([]wiop.PublicInput, len(jobs))
 	)
 	assigned.Add(len(jobs))
+	g, err := c.loadGuest(id)
+	require.NoError(t, err)
 	for i, job := range jobs {
-		inputs, err := c.buildInputs(job)
+		inputs, err := c.buildInputs(job, g)
 		require.NoError(t, err)
 		shard, errs := c.driver.TraceZkcInputs(&zkcdriver.PreReadInputs{Inputs: inputs}).Get(0)
 		require.Empty(t, errs)
@@ -115,7 +117,11 @@ func TestRunProve_SplitTraceRound(t *testing.T) {
 
 // proveJob proves and verifies job on c.
 func proveJob(c *Core, job Job) (wiop.Proof, wiop.PublicInput, error) {
-	inputs, err := c.buildInputs(job)
+	g, err := c.loadGuest(job.GuestProgramID)
+	if err != nil {
+		return wiop.Proof{}, nil, err
+	}
+	inputs, err := c.buildInputs(job, g)
 	if err != nil {
 		return wiop.Proof{}, nil, err
 	}

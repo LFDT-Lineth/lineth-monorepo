@@ -42,6 +42,8 @@ services:
     volumes:
       - ./config/prover/riscv/prover-ray-config.${RISCV_PROVER_MODE:-dev-mock}.toml:/opt/linea/prover-ray/config/config.toml:ro
       - ../tmp/local/prover/riscv:/data/prover/riscv
+      # Guest ELFs by Program ID; dev-zkvm stages them (see start-env-with-riscv).
+      - ../tmp/local/prover-ray/guests:/opt/linea/prover-ray/guests:ro
     networks:
       - linea
 

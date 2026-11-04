@@ -105,23 +105,27 @@ echo "    ok: l2-execution staged as ${staged[0]##*/}"
 echo "==> dev-zkvm: bundled guest and native runner agree on a real request"
 # Runs one dev-zkvm prove: the bundled guest ELF under ZkC Execute, cross-checked
 # byte for byte against the bundled native runner. A runner/guest mismatch in the
-# image fails here. The request fixture encodes the guest's own stateless_input.ssz.
+# image fails here. The request fixture encodes the guest's own stateless_input.ssz;
+# its guestProgramId is set to the staged guest, as the coordinator would.
 ZKVM_FIXTURE="$SCRIPT_DIR/../backend/jobadapter/testdata/request_guest_fixture.json"
+ZKVM_REQUEST="$WORK/zkvm/1-1-getZkL2ExecutionProofV1.json"
 mkdir -p "$WORK/zkvm"
-cp "$ZKVM_FIXTURE" "$WORK/zkvm/1-1-getZkL2ExecutionProofV1.json"
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); d["guestProgramId"]=sys.argv[2]; json.dump(d, open(sys.argv[3], "w"))' \
+    "$ZKVM_FIXTURE" "$program_id" "$ZKVM_REQUEST"
 cat > "$WORK/zkvm/config.toml" <<'TOML'
 version = "smoke"
 log_level = 4
+guests_dir = "/opt/linea/prover-ray/guests"
 [execution]
 prover_mode = "dev-zkvm"
 requests_root_dir = "/data"
 native_runner_bin = "/opt/linea/prover-ray/l2_execution_runner"
-guest_elf = "/opt/linea/prover-ray/evm_execution_guest"
 TOML
 if ! $DOCKER run --rm \
         "${run_opts[@]}" \
         --entrypoint /opt/linea/prover-ray/prover \
         -v "$WORK/zkvm:/data" \
+        -v "$WORK/guests:/opt/linea/prover-ray/guests:ro" \
         "$IMAGE" prove --config /data/config.toml \
         --in /data/1-1-getZkL2ExecutionProofV1.json --out /data/response.json; then
     echo "FAIL: dev-zkvm prove failed (guest/native-runner mismatch or runtime error)"
@@ -142,8 +146,9 @@ if ! $DOCKER run --rm -i \
         "${run_opts[@]}" \
         --entrypoint /opt/linea/prover-ray/prover \
         -v "$WORK/zkvm:/data" \
+        -v "$WORK/guests:/opt/linea/prover-ray/guests:ro" \
         "$IMAGE" prove --config /data/config.toml --type l2-execution --id smoke \
-        --in - --out - < "$ZKVM_FIXTURE" > "$WORK/zkvm/stdout.json"; then
+        --in - --out - < "$ZKVM_REQUEST" > "$WORK/zkvm/stdout.json"; then
     echo "FAIL: dev-zkvm prove over stdin/stdout failed"
     cat "$WORK/zkvm/stdout.json" 2>/dev/null || true
     exit 1
