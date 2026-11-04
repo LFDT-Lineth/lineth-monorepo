@@ -13,11 +13,12 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 class GlobalRollupCalculatorV2Test {
-  // blob1 = [A, start of B], blob2 = [end of B, C, start of D], blob3 = [end of D, E].
+  // blob1 = [A, start of B], blob2 = [end of B, C, start of D], blob3 = [middle of D], blob4 = [end of D, E].
+  // blob3 starts and ends inside D, so it has no cut.
   private val a = conflation(1UL, 50_000)
   private val b = conflation(2UL, 100_000)
   private val c = conflation(3UL, 40_000)
-  private val d = conflation(4UL, 80_000)
+  private val d = conflation(4UL, 70_094 + BLOB_PAYLOAD_CAPACITY + 9_906)
   private val e = conflation(5UL, 30_000)
 
   private fun Rollup.ends(): List<ULong> = conflations.map { it.endBlockNumber }
@@ -41,7 +42,9 @@ class GlobalRollupCalculatorV2Test {
     assertThat(rollup1.da.expectedFinalDataTailDiscardBytes).isEqualTo(70_094)
 
     assertThat(rollup2.ends()).containsExactly(4UL, 5UL)
+    assertThat(rollup2.da.blobs).hasSize(3)
     assertThat(rollup2.da.blobs.first()).isSameAs(rollup1.da.blobs.last())
+    assertThat(rollup2.da.blobs[1].segmentEnds).isEmpty()
     assertThat(rollup2.da.parentDataTailTakeBytes).isEqualTo(70_094)
     assertThat(rollup2.da.parentDataRollingHash).isEqualTo(rollup1.da.expectedEndDataRollingHash)
     assertThat(rollup2.da.boundaryPrevDataRollingHash).isEqualTo(rollup1.da.blobs[0].dataRollingHash)
@@ -100,6 +103,29 @@ class GlobalRollupCalculatorV2Test {
   }
 
   @Test
+  fun `a blob that starts and ends inside one conflation has no cut and stays in that conflation's rollup`() {
+    // blob1 = [A, start of B], blob2 = [middle of B], blob3 = [end of B, C].
+    val pipeline = Pipeline(rollupTriggers = listOf(RollupTriggerCalculatorByDataLimit(50_000UL)))
+    val small = conflation(1UL, 10_000)
+    val spanning = conflation(2UL, 2 * BLOB_PAYLOAD_CAPACITY)
+    val next = conflation(3UL, 5_000)
+
+    pipeline.feed(small, spanning, next)
+    pipeline.blobCalculator.flush()
+
+    val (first, middle, last) = pipeline.rollups
+    assertThat(pipeline.rollups.map { it.ends() }).containsExactly(listOf(1UL), listOf(2UL), listOf(3UL))
+    val (sharedStart, inside, sharedEnd) = middle.da.blobs
+    assertThat(sharedStart).isSameAs(first.da.blobs.single())
+    assertThat(inside.segmentEnds).isEmpty()
+    assertThat(inside.payloadBytes).isEqualTo(BLOB_PAYLOAD_CAPACITY)
+    assertThat(sharedEnd).isSameAs(last.da.blobs.single())
+    assertThat(middle.da.parentDataTailTakeBytes).isEqualTo(BLOB_PAYLOAD_CAPACITY - 10_000)
+    assertThat(middle.da.expectedFinalDataTailDiscardBytes).isEqualTo(5_000)
+    assertThat(last.da.parentDataTailTakeBytes).isEqualTo(5_000)
+  }
+
+  @Test
   fun `several rollups can end in the same blob`() {
     val pipeline = Pipeline(rollupTriggers = listOf(RollupTriggerCalculatorByConflationCount(1)))
 
@@ -153,6 +179,7 @@ class GlobalRollupCalculatorV2Test {
     resumed.blobCalculator.flush()
 
     val resumedRollup2 = resumed.rollups.single()
+    assertThat(resumedRollup2.da.blobs).hasSize(3) // the re-sealed shared blob, the blob inside D, and the last
     assertThat(resumedRollup2.conflations).isEqualTo(rollup2.conflations)
     assertThat(
       resumedRollup2.da.blobs.map {
