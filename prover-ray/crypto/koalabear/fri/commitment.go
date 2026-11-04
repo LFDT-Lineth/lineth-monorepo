@@ -130,7 +130,12 @@ func pooledColumns[T any](pool *bufpool.Pool[T], count, n int) [][]T {
 
 // Release returns the codewords and the Merkle tree nodes of st to the field
 // pools. st must not be used afterwards, and none of its slices may still be
-// referenced: an opening proof only holds copies.
+// referenced. An opening proof only holds copies of them: the functions that
+// read a committed state into a proof, [openEncodedRow] (rows, also for the
+// revealed input tables), [Tree.OpenBranchToDepth] (siblings), [Tree.OpenCap]
+// and [PCS.openInputCaps] (cap nodes), copy what they return. A change that
+// makes one of them return a sub-slice of the codewords or of Tree.Nodes
+// breaks pooling: the next proof would overwrite the earlier proof's data.
 func (st *CommitterState) Release() {
 	for _, sized := range st.EncodedTable {
 		for _, col := range sized.Base {

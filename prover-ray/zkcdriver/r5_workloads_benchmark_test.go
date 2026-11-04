@@ -20,9 +20,9 @@ import (
 
 // r5WorkloadInstrPerShard is the shard size of the workload benchmarks, in
 // interpreter() invocations (= executed RISC-V instructions), matching
-// BenchmarkR5Fibonacci. At 500K a full Fibonacci shard already puts
-// $bit_xoa_u16 at the 2^22-row cap.
-const r5WorkloadInstrPerShard = 250_000
+// BenchmarkR5Fibonacci. At 500K a full shard pads $bit_xoa_u16 (~4.8 rows per
+// instruction) to 2^22 rows, the PCS limit at RS blowup 2 and 4.
+const r5WorkloadInstrPerShard = 500_000
 
 // r5Workload is a guest exercising one corner of the R5 arithmetization. Each
 // is sized to run in a single, nearly full shard: until cross-shard binding
@@ -36,11 +36,11 @@ type r5Workload struct {
 var r5Workloads = []r5Workload{
 	// Mixed: every instruction class once; a tiny shard (~3M cells).
 	{"allinone", minimalelf.AllInOneElfProgram},
-	// ALU- and branch-bound, no memory traffic: 14+5N = 245K instructions.
-	{"fibonacci", func() ([]byte, []byte) { return minimalelf.FibonacciELF(49_000) }},
-	// RAM-bound: N stores then N loads at distinct addresses, ~9N = 243K
-	// instructions.
-	{"memory", func() ([]byte, []byte) { return minimalelf.MemoryELF(27_000) }},
+	// ALU and branches, no memory traffic: 18+5N = 490K instructions.
+	{"fibonacci", func() ([]byte, []byte) { return minimalelf.FibonacciELF(97_996) }},
+	// More RAM traffic than fibonacci: N stores then N loads at distinct
+	// addresses, 9N+21 = 485K instructions.
+	{"memory", func() ([]byte, []byte) { return minimalelf.MemoryELF(53_886) }},
 }
 
 type r5WorkloadFixture struct {

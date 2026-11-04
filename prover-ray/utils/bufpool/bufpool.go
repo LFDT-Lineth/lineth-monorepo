@@ -19,9 +19,9 @@ import (
 //
 // Slices from [Pool.Get] hold stale values: a caller must write every element
 // before reading it. Released slices are only handed out again within their
-// capacity class, so the pool keeps, per class, the largest set of slices of
-// that class released at once. [Pool.Trim] drops the classes that went
-// unrequested, and [Pool.Drain] gives all the memory back.
+// capacity class. The pool keeps every released slice until [Pool.Trim] drops
+// the classes that went unrequested, or [Pool.Drain] gives all the memory
+// back.
 type Pool[T any] struct {
 	mu   sync.Mutex
 	free [bits.UintSize][][]T

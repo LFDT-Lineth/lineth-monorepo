@@ -145,7 +145,7 @@ func NewTree(leaves [][]field.Octuplet) *Tree {
 		}
 	}
 
-	t := allocPooledTree(len(leaves[bottom]))
+	t := allocTree(len(leaves[bottom]))
 	copy(t.Nodes[len(leaves[bottom])-1:], leaves[bottom])
 	t.buildLevels(injections)
 	return t
@@ -165,8 +165,8 @@ func allocTree(numLeaves int) *Tree {
 }
 
 // allocPooledTree is [allocTree] with its nodes taken from the octuplet pool.
-// The commitment trees go back to it through [CommitterState.Release]; other
-// trees are left to the garbage collector. Every node is written by the leaf
+// Only the commitment trees use it ([MultiSizeTable.Merkleize]); they go back
+// to the pool through [CommitterState.Release]. Every node is written by the leaf
 // hashing and buildLevels, so the stale nodes of a pooled slice are fine; its
 // capacity, 2·numLeaves, is the pool's power-of-two class.
 func allocPooledTree(numLeaves int) *Tree {

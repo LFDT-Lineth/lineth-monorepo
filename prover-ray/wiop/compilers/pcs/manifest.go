@@ -5,7 +5,6 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
@@ -94,6 +93,23 @@ type paddedColumn struct {
 	ext       []field.Ext
 }
 
+func (p *paddedColumn) isZero() bool {
+	if p.isExt {
+		for i := range p.ext {
+			if !p.ext[i].IsZero() {
+				return false
+			}
+		}
+		return true
+	}
+	for i := range p.base {
+		if !p.base[i].IsZero() {
+			return false
+		}
+	}
+	return true
+}
+
 func (p *paddedColumn) equal(q *paddedColumn) bool {
 	if p.isExt != q.isExt || p.sizeIndex != q.sizeIndex {
 		return false
@@ -114,24 +130,20 @@ func (p *paddedColumn) equal(q *paddedColumn) bool {
 	return true
 }
 
-// fnvOffset and fnvPrime are the FNV-1 64-bit parameters of the column
-// fingerprints.
-const (
-	fnvOffset = 14695981039346656037
-	fnvPrime  = 1099511628211
-)
-
-// scanChunk scans elements [lo, hi) of p: whether they are all zero, and
-// their FNV fingerprint.
-func (p *paddedColumn) scanChunk(lo, hi int) (zero bool, h uint64) {
-	h, zero = fnvOffset, true
+// hash is a cheap 64-bit fingerprint used only to bucket alias candidates;
+// [paddedColumn.equal] confirms every match.
+func (p *paddedColumn) hash() uint64 {
+	const (
+		offset = 14695981039346656037
+		prime  = 1099511628211
+	)
+	h := uint64(offset)
 	mix := func(e *field.Element) {
-		zero = zero && e.IsZero()
 		h ^= uint64(e[0])
-		h *= fnvPrime
+		h *= prime
 	}
 	if p.isExt {
-		for i := lo; i < hi; i++ {
+		for i := range p.ext {
 			e := &p.ext[i]
 			mix(&e.B0.A0)
 			mix(&e.B0.A1)
@@ -140,19 +152,12 @@ func (p *paddedColumn) scanChunk(lo, hi int) (zero bool, h uint64) {
 			mix(&e.B2.A0)
 			mix(&e.B2.A1)
 		}
-		return zero, h
+		return h
 	}
-	for i := lo; i < hi; i++ {
+	for i := range p.base {
 		mix(&p.base[i])
 	}
-	return zero, h
-}
-
-func (p *paddedColumn) len() int {
-	if p.isExt {
-		return len(p.ext)
-	}
-	return len(p.base)
+	return h
 }
 
 // columnSizeIndex returns log2 of the column's padded size in rt.
@@ -227,34 +232,24 @@ func (c *compiled) buildManifest(round *wiop.Round, vectors []paddedColumn) Colu
 		isExt     bool
 		hash      uint64
 	}
+	present := make(map[bucket][]int)
 
-	// The zero test and the fingerprint read every committed cell; they run in
-	// parallel chunks.
-	zero, hashes := scanColumns(vectors)
-
-	// A column can only alias an equal column, and equal columns share a
-	// bucket, so each bucket decides its columns independently, in column
-	// order: the buckets are processed concurrently.
-	var buckets [][]int
-	bucketOf := make(map[bucket]int)
+next:
 	for i := range vectors {
 		v := &vectors[i]
-		if zero[i] {
+		if v.isZero() {
 			manifest[i] = ManifestZero
 			continue
 		}
-		b := bucket{v.sizeIndex, v.isExt, hashes[i]}
-		idx, ok := bucketOf[b]
-		if !ok {
-			idx = len(buckets)
-			bucketOf[b] = idx
-			buckets = append(buckets, nil)
+		b := bucket{v.sizeIndex, v.isExt, v.hash()}
+		for _, k := range present[b] {
+			if vectors[k].equal(v) && c.shiftSubset(round.Columns[i], round.Columns[k], v.sizeIndex) {
+				manifest[i] = ManifestAlias(k)
+				continue next
+			}
 		}
-		buckets[idx] = append(buckets[idx], i)
+		present[b] = append(present[b], i)
 	}
-	parallel.ExecuteDynamic(len(buckets), func(bi int) {
-		c.decideBucket(round, vectors, buckets[bi], manifest)
-	})
 
 	// A batch is never emptied: CommittedBatches is a static function of the
 	// System and the FRI layer needs at least one committed row per batch. If
@@ -268,91 +263,6 @@ func (c *compiled) buildManifest(round *wiop.Round, vectors []paddedColumn) Colu
 		manifest[c.firstOpenedColumn(round)] = ManifestPresent
 	}
 	return manifest
-}
-
-// scanChunkSize is the number of elements of a column scanned per work item.
-const scanChunkSize = 1 << 14
-
-// scanColumns reports, for every vector, whether it is identically zero and,
-// when it is not, a 64-bit fingerprint: the FNV hash of the FNV hashes of its
-// chunks. The fingerprint only buckets alias candidates, every match being
-// confirmed by [paddedColumn.equal]. The chunks of every column are scanned
-// concurrently, so a single tall column is not scanned on one core.
-func scanColumns(vectors []paddedColumn) (zero []bool, hashes []uint64) {
-	type chunk struct{ col, lo, hi int }
-	var chunks []chunk
-	first := make([]int, len(vectors)+1) // chunks of column i: [first[i], first[i+1])
-	for i := range vectors {
-		first[i] = len(chunks)
-		n := vectors[i].len()
-		for lo := 0; lo < n; lo += scanChunkSize {
-			chunks = append(chunks, chunk{i, lo, min(lo+scanChunkSize, n)})
-		}
-	}
-	first[len(vectors)] = len(chunks)
-	chunkZero := make([]bool, len(chunks))
-	chunkHash := make([]uint64, len(chunks))
-	parallel.Execute(len(chunks), func(start, end int) {
-		for c := start; c < end; c++ {
-			chunkZero[c], chunkHash[c] = vectors[chunks[c].col].scanChunk(chunks[c].lo, chunks[c].hi)
-		}
-	})
-
-	zero = make([]bool, len(vectors))
-	hashes = make([]uint64, len(vectors))
-	for i := range vectors {
-		zero[i] = true
-		h := uint64(fnvOffset)
-		for c := first[i]; c < first[i+1]; c++ {
-			zero[i] = zero[i] && chunkZero[c]
-			h ^= chunkHash[c]
-			h *= fnvPrime
-		}
-		if !zero[i] {
-			hashes[i] = h
-		}
-	}
-	return zero, hashes
-}
-
-// decideBucket sets the manifest of the non-zero columns of one fingerprint
-// bucket, in column order: a column aliases the first earlier Present column
-// it equals whose shift schedule covers its own, and is Present otherwise.
-//
-// Equality is checked once per column, against the bucket's first column and
-// in parallel: the columns equal to it form one class, within which only the
-// shift schedules decide. The others, fingerprint collisions, are decided by
-// comparing them pairwise. A column never aliases a column it does not
-// equal, so the classes are decided independently with the same result.
-func (c *compiled) decideBucket(round *wiop.Round, vectors []paddedColumn, members []int, manifest ColumnManifest) {
-	equalFirst := make([]bool, len(members))
-	equalFirst[0] = true
-	parallel.ExecuteDynamic(len(members)-1, func(j int) {
-		equalFirst[j+1] = vectors[members[j+1]].equal(&vectors[members[0]])
-	})
-	var class, rest []int
-	for j, i := range members {
-		if equalFirst[j] {
-			class = append(class, i)
-		} else {
-			rest = append(rest, i)
-		}
-	}
-	decide := func(cols []int, equal func(k, i int) bool) {
-		var present []int
-	next:
-		for _, i := range cols {
-			for _, k := range present {
-				if equal(k, i) && c.shiftSubset(round.Columns[i], round.Columns[k], vectors[i].sizeIndex) {
-					manifest[i] = ManifestAlias(k)
-					continue next
-				}
-			}
-			present = append(present, i)
-		}
-	}
-	decide(class, func(_, _ int) bool { return true })
-	decide(rest, func(k, i int) bool { return vectors[k].equal(&vectors[i]) })
 }
 
 // firstOpenedColumn returns the index of the first column of round that is

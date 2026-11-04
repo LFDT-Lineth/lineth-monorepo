@@ -555,7 +555,7 @@ func denomBaseInverses(generator field.Element, n int, zeta field.Ext) ([]field.
 			lo, hi := c*chunk, min((c+1)*chunk, n)
 			bad[c] = -1
 			var pow field.Element
-			field.ExpToInt(&pow, generator, lo)
+			pow.ExpInt64(generator, int64(lo))
 			for e := lo; e < hi; e++ {
 				x := field.Lift(pow)
 				denoms[e-lo].Sub(&x, &zeta)

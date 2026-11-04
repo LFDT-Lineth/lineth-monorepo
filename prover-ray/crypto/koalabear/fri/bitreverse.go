@@ -2,7 +2,6 @@ package fri
 
 import (
 	"math/bits"
-	"runtime"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	gutils "github.com/consensys/gnark-crypto/utils"
@@ -18,10 +17,8 @@ func bitReverse[T any](v []T) {
 // disjoint destinations), so they are spread over the CPUs.
 func bitReverseCopy[T any](dst, src []T) {
 	n := uint64(len(src))
-	if n < 1<<16 || runtime.GOARCH == "arm64" {
-		// The serial gnark copy (COBRA tiling on amd64) below 2^16 elements,
-		// where the parallel dispatch would dominate, and at every size on
-		// arm64.
+	if n < 1<<16 {
+		// Below 2^16 elements the parallel dispatch would dominate.
 		gutils.BitReverseCopy(dst, src)
 		return
 	}

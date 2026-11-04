@@ -17,20 +17,26 @@ func (a *assembler) loadConst(rd reg, n int) {
 	a.addi(rd, rd, lo)
 }
 
+// memoryMaxN is the largest N for which the 8·N-byte array of [MemoryELF],
+// starting 4096 bytes past the entry point, ends within the 32-bit guest
+// address space.
+const memoryMaxN = (1<<32 - DefaultEntryPoint - 4096) / 8
+
 // MemoryELF returns a minimal valid ELF64 RISC-V binary that stores the
 // 64-bit words 0, 1, …, N-1 to N consecutive doublewords, loads them all back
 // and sums them, writing the 8-byte little-endian sum mod 2^64 to
-// guest_output, together with that expected output. It is a RAM-bound
-// workload: every iteration of both loops touches a distinct address, so the
-// memory modules grow with N while the ALU work stays trivial. The dynamic
-// instruction count is about 9·N (4 per store iteration, 5 per load
-// iteration). N must be in [1, 0x7FFFF7FF].
+// guest_output, together with that expected output. Every iteration of both
+// loops touches a distinct address, so it makes more RAM traffic than
+// [FibonacciELF]; the trace is still dominated by the per-instruction modules
+// (registers, bitwise lookups), not by the RAM module. The dynamic
+// instruction count is 9·N + 21 (4 per store iteration, 5 per load
+// iteration). N must be in [1, memoryMaxN].
 //
 // The array starts 4096 bytes past the auipc base, clear of the .text and of
 // the 8-byte result slot 768 bytes past the base.
 func MemoryELF(n int) (elf, output []byte) {
-	if n < 1 {
-		panic(fmt.Sprintf("minimalelf: MemoryELF N=%d must be at least 1", n))
+	if n < 1 || n > memoryMaxN {
+		panic(fmt.Sprintf("minimalelf: MemoryELF N=%d outside [1, %d]", n, memoryMaxN))
 	}
 	a := newAssembler()
 	a.auipc(s0, 0) // s0 = fixed base (entry address)

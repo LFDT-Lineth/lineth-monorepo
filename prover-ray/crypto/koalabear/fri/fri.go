@@ -7,7 +7,6 @@ import (
 	"math/big"
 	"math/bits"
 	"slices"
-	"sync"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
@@ -677,23 +676,16 @@ func foldLayerInternally(layer []field.Ext, alpha field.Ext, domain *fft.Domain)
 	return next
 }
 
-// foldTwiddleCache memoises [foldTwiddles] per domain: the twiddles only
-// depend on the domain, which the FRI parameters share across proofs.
-var foldTwiddleCache sync.Map // *fft.Domain -> []field.Element
-
 // foldTwiddles returns, for each pair j of a layer on domain, (1/2)·x⁻¹ where
 // x = g^i is the pair's natural-order domain point: the powers g⁻ⁱ/2 in
 // natural order, bit-reversed so that index j lines up with the bit-reversed
 // layout of the layer. Built in parallel chunks, each from its own power.
 func foldTwiddles(domain *fft.Domain) []field.Element {
-	if t, ok := foldTwiddleCache.Load(domain); ok {
-		return t.([]field.Element)
-	}
 	half := int(domain.Cardinality) / 2
 	natural := make([]field.Element, half)
 	parallel.Execute(half, func(start, end int) {
 		var pow field.Element
-		field.ExpToInt(&pow, domain.GeneratorInv, start)
+		pow.ExpInt64(domain.GeneratorInv, int64(start))
 		pow.Halve()
 		for i := start; i < end; i++ {
 			natural[i] = pow
@@ -707,8 +699,7 @@ func foldTwiddles(domain *fft.Domain) []field.Element {
 			twiddles[j] = natural[bits.Reverse64(uint64(j))>>(64-logHalf)&uint64(half-1)]
 		}
 	})
-	t, _ := foldTwiddleCache.LoadOrStore(domain, twiddles)
-	return t.([]field.Element)
+	return twiddles
 }
 
 // octupletToExt converts an octuplet into a field extension. It expects its
