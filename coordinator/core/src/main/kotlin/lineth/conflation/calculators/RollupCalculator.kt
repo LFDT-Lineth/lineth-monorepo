@@ -11,16 +11,6 @@ enum class RollupTrigger {
   TIME_LIMIT,
 }
 
-fun interface RollupHandler {
-  fun onRollup(window: List<BlocksConflation>)
-}
-
-interface RollupCalculator {
-  fun newConflation(conflation: BlocksConflation)
-
-  fun onRollup(handler: RollupHandler)
-}
-
 interface RollupTriggerCalculator {
   fun appendConflation(conflation: BlocksConflation)
 
