@@ -135,8 +135,7 @@ func checkBusBalanced(bus []field.Gen) error {
 
 // pairingPolicy picks the positions i < j in ready of the two nodes to
 // aggregate next; ok is false when none can be paired yet. [pairAnyTwo]
-// aggregates any two proofs in any order and tree shape; a fixed index-ordered
-// tree is a policy that pairs adjacent coverages only.
+// aggregates any two proofs in any order and tree shape
 type pairingPolicy func(ready []Node) (i, j int, ok bool)
 
 // pairAnyTwo pairs the first two ready nodes.
