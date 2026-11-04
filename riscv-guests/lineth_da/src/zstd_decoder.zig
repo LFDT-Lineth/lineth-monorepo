@@ -50,11 +50,6 @@ pub const max_window_size: u64 = (1 << 27) + 1;
 /// value, which the header spells as the wrap-around `0ULL - 1`.
 const content_size_unknown = std.math.maxInt(c_ulonglong);
 
-/// The linked libzstd release as `major * 10000 + minor * 100 + patch`.
-pub fn version() u32 {
-    return c.ZSTD_versionNumber();
-}
-
 /// Decompresses frames against one dictionary. A decoder is reusable across frames.
 pub const Decoder = struct {
     state: *State,

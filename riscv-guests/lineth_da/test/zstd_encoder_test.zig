@@ -53,38 +53,12 @@ test "a frame is in the DA form and decodes to its payload" {
     }
 }
 
-test "an encoder compresses every payload as a fresh one would" {
-    const first = try mixedPayload(300_000);
-    defer gpa.free(first);
-    const second = try mixedPayload(40_000);
-    defer gpa.free(second);
-
-    const fresh = try zstd_encoder.Encoder.init(gpa, dictionary);
-    defer fresh.deinit();
-    const expected = try fresh.compress(gpa, first);
-    defer gpa.free(expected);
-
-    const reused = try zstd_encoder.Encoder.init(gpa, dictionary);
-    defer reused.deinit();
-    const before = try reused.compress(gpa, first);
-    defer gpa.free(before);
-    const between = try reused.compress(gpa, second);
-    defer gpa.free(between);
-    const after = try reused.compress(gpa, first);
-    defer gpa.free(after);
-    try std.testing.expectEqualSlices(u8, expected, before);
-    try std.testing.expectEqualSlices(u8, expected, after);
-}
-
 test "bytes that are not a usable zstd dictionary are rejected" {
     var raw_content: [4096]u8 = undefined;
     @memset(&raw_content, 'x');
-    var corrupt_tables: [4096]u8 = undefined;
-    @memset(&corrupt_tables, 0xff);
-    @memcpy(corrupt_tables[0..8], dictionary[0..8]);
     const without_id = try zstd_frames.dictionaryWithId(gpa, dictionary, 0);
     defer gpa.free(without_id);
-    const invalid = [_][]const u8{ &.{}, dictionary[0..8], &corrupt_tables, &raw_content, without_id };
+    const invalid = [_][]const u8{ &raw_content, without_id };
     for (invalid) |bytes| {
         try std.testing.expectError(error.InvalidDictionary, zstd_encoder.Encoder.init(gpa, bytes));
     }

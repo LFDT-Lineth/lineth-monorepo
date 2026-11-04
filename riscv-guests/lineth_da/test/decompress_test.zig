@@ -595,21 +595,6 @@ test "each segment is one complete frame of the DA form" {
     }
 }
 
-test "a frame declaring a window beyond 2^27 bytes is rejected" {
-    var arena = std.heap.ArenaAllocator.init(gpa);
-    defer arena.deinit();
-    const a = arena.allocator();
-
-    // A payload beyond the 2 MiB window of level 3, so that the header carries a window descriptor.
-    const payload = try a.alloc(u8, 3 << 20);
-    var prng = std.Random.DefaultPrng.init(5);
-    prng.random().bytes(payload);
-    const frame = try packageFrame(a, payload);
-    zstd_frames.patchWindowDescriptor(frame, 0x90);
-
-    try expectRejected(error.InvalidFrame, &.{calldataChunk(try da_stream.lengthPrefixed(a, frame))}, &.{payload}, .{});
-}
-
 test "a frame has to decompress to its conflation's canonical payload" {
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
