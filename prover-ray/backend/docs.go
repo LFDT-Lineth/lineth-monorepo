@@ -3,12 +3,12 @@
 //
 // It has two responsibilities:
 //
-//  1. Setup (once): load RISCV-ZKC.bin and the guest ELF, run circuit
-//     compiler passes, hold a reusable [Core] ready to prove.
+//  1. Setup (once): load RISCV-ZKC.bin, run circuit compiler passes, hold a
+//     reusable [Core] ready to prove.
 //
-//  2. Per-proof: for each [Job], decode the guest input, build the three
-//     ZkC input blobs, invoke the shared prove core, and return a
-//     serialized [Result].
+//  2. Per-proof: for each [Job], load the guest ELF named by
+//     [Job.GuestProgramID], decode the guest input, build the three ZkC input
+//     blobs, invoke the shared prove core, and return a serialized [Result].
 //
 // This package does not own request polling or coordinator JSON parsing;
 // callers construct Jobs and pass them to [Core.Prove].

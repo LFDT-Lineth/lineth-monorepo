@@ -6,14 +6,18 @@
 # against the guest under ZkC Execute). rollup and aggregation run dev-mock until
 # their real paths land. For a quick plumbing check, set execution prover_mode to
 # dev-mock (then it needs no native runner or guest ELF).
+#
+# guests_dir is a read-only mount holding the guest ELF the coordinator's
+# guestProgramId names. Stage the one bundled in the image with
+# prover-ray/scripts/stage-guest.sh.
 version = "0.0.0-riscv"
 log_level = 4
+guests_dir = "/opt/linea/prover-ray/guests"
 
 [execution]
 prover_mode = "dev-zkvm"
 requests_root_dir = "/data/prover-ray/execution"
 native_runner_bin = "/opt/linea/prover-ray/l2_execution_runner"
-guest_elf = "/opt/linea/prover-ray/evm_execution_guest"
 
 [rollup]
 prover_mode = "dev-mock"

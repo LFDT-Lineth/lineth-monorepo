@@ -89,7 +89,9 @@ WORKDIR /opt/linea/prover-ray
 # run a wrong config): mount one and point CONFIG_FILE at it. The CMD runs the
 # queue adapter, expanding CONFIG_FILE and WORKER_ID like the legacy prover.
 # Samples: prover-ray/config/config-dev-mock.toml, config-dev-zkvm.toml.
+# dev-zkvm also needs the guests folder, staged with scripts/stage-guest.sh:
 #   docker run -e CONFIG_FILE=/data/config.toml -e WORKER_ID=prover-ray-0 \
-#              -v ./config-dev-zkvm.toml:/data/config.toml -v ./data:/data <image>
+#              -v ./config-dev-zkvm.toml:/data/config.toml -v ./data:/data \
+#              -v ./guests:/opt/linea/prover-ray/guests:ro <image>
 ENV CONFIG_FILE="/opt/linea/prover-ray/config/config.toml"
 CMD ["sh", "-c", "exec prover --config \"$CONFIG_FILE\" --local-id \"$WORKER_ID\""]

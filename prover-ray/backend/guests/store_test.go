@@ -95,3 +95,7 @@ func TestLoad_MissingDir(t *testing.T) {
 	_, err := guests.Store{Dir: filepath.Join(t.TempDir(), "missing")}.Load(elfID(t))
 	assert.ErrorIs(t, err, fs.ErrNotExist, "a missing guests folder is a config error, not an unknown guest")
 }
+
+func TestProgramID(t *testing.T) {
+	assert.Equal(t, elfID(t), guests.ProgramID([]byte(elf)), "the Program ID is the keccak256 of the ELF bytes")
+}

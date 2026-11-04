@@ -24,10 +24,10 @@ func TestNew_InvalidMode(t *testing.T) {
 }
 
 func TestNew_EmptyModeDefaultsToFull(t *testing.T) {
-	// Empty mode resolves to full, which fails opening the empty circuit bin path.
+	// Empty mode resolves to full, which needs a guests folder.
 	_, err := New(Config{})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "circuit bin")
+	assert.Contains(t, err.Error(), `prover mode "full"`)
 }
 
 func TestProve_DevMock_ReturnsPlaceholder(t *testing.T) {

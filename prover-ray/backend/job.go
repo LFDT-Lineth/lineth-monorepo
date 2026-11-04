@@ -25,8 +25,12 @@ type Job struct {
 	// ID is an opaque identifier used to correlate the Result.
 	ID string
 
-	// Type selects the guest ELF and any proof-type-specific processing.
+	// Type selects any proof-type-specific processing.
 	Type ProofType
+
+	// GuestProgramID is the Program ID (keccak256 of the guest ELF) of the guest
+	// to run, from the request's guestProgramId.
+	GuestProgramID [32]byte
 
 	// StartBlock and EndBlock identify the block range covered by Payload.
 	// Single-block jobs set both to the same block number.
