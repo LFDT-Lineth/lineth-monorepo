@@ -1,6 +1,7 @@
 package global_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -186,8 +187,10 @@ func TestCompile_AllVanishingsReduced(t *testing.T) {
 // TestCompile_MixedRatiosShareColumns runs one module whose vanishings fall in
 // buckets of ratio 1, 2 and 4, all reading the same column at shifts -1, 0
 // and +1: every bucket reads its own subset of the module's cosets of that
-// column, at offsets that wrap within a coset. The argument must accept the
-// constant witness and reject one wrong row.
+// column, at offsets that wrap within a coset. The witness col[i] = i is not
+// constant, so every bucket's quotient is nonzero and depends on reading the
+// right coset at the right shift; the test checks that before checking that
+// the argument accepts the witness and rejects one wrong row.
 func TestCompile_MixedRatiosShareColumns(t *testing.T) {
 	const size = 16
 	build := func() (*wiop.System, *wiop.Column) {
@@ -195,34 +198,52 @@ func TestCompile_MixedRatiosShareColumns(t *testing.T) {
 		r0 := sys.NewRound()
 		mod := sys.NewSizedModule(sys.Context.Childf("mod"), size, wiop.PaddingDirectionNone)
 		col := mod.NewColumn(sys.Context.Childf("col"), r0)
-		d := func(shift int) wiop.Expression {
-			return wiop.Sub(col.View().Shift(shift), wiop.NewConstantField(field.NewElement(7)))
-		}
+		c := func(shift int) wiop.Expression { return col.View().Shift(shift) }
+		one := wiop.NewConstantField(field.One())
+		// step(s) = col[i+s+1] - col[i+s] - 1, zero on every row where the
+		// shift does not wrap.
+		step := func(s int) wiop.Expression { return wiop.Sub(wiop.Sub(c(s+1), c(s)), one) }
+		sq := wiop.Mul(c(0), c(0))
 		// Degree 1 with one cancelled row: ratio 1.
-		mod.NewVanishing(sys.Context.Childf("r1"), wiop.Add(d(0), wiop.Sub(d(-1), d(-1))))
+		mod.NewVanishing(sys.Context.Childf("r1"), step(-1))
 		// Degree 3 with one cancelled row: ratio 2.
-		mod.NewVanishing(sys.Context.Childf("r2"), wiop.Mul(wiop.Add(d(0), d(-1)), wiop.Mul(d(0), d(0))))
+		mod.NewVanishing(sys.Context.Childf("r2"), wiop.Mul(step(-1), sq))
 		// Degree 5 with one cancelled row: ratio 4.
-		d2 := wiop.Mul(d(0), d(0))
-		mod.NewVanishing(sys.Context.Childf("r4"), wiop.Mul(wiop.Add(d(0), d(1)), wiop.Mul(d2, d2)))
+		mod.NewVanishing(sys.Context.Childf("r4"), wiop.Mul(step(0), wiop.Mul(sq, sq)))
 		global.Compile(sys)
 		pcs.Compile(sys)
 		return sys, col
 	}
 	witness := func(bad bool) *wiop.ConcreteVector {
-		v := colVec(size, 5, 7)
+		v := colVec(size, 0, 0)
 		elems := v.Plain.AsBase()
 		for i := range elems {
-			elems[i].SetUint64(7)
+			elems[i].SetUint64(uint64(i))
 		}
 		if bad {
-			elems[5].SetUint64(8)
+			elems[5].SetUint64(99)
 		}
 		return v
 	}
 
 	sys, col := build()
 	proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, witness(false)) })
+
+	// The claimed evaluations of the quotient shares, by bucket ratio: a
+	// bucket whose shares all evaluate to zero has a zero quotient.
+	nonZero := map[int]bool{}
+	for _, r := range sys.Rounds {
+		for _, cell := range r.Cells {
+			var ratio, share int
+			if _, err := fmt.Sscanf(cell.Context.Label, "q-claim-r%d-s%d", &ratio, &share); err != nil {
+				continue
+			}
+			v := proof.Cells[cell.Context.ID].AsExt()
+			nonZero[ratio] = nonZero[ratio] || !v.IsZero()
+		}
+	}
+	require.Equal(t, map[int]bool{1: true, 2: true, 4: true}, nonZero,
+		"each ratio bucket must exist and have a nonzero quotient")
 	require.NoError(t, sys.Verify(proof, pub), "honest witness must verify")
 
 	sys, col = build()
