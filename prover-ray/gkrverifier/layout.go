@@ -49,6 +49,9 @@ type levelLayout struct {
 	// skip levels. roundChallenges holds the ids of the challenges of the rounds.
 	foldChallenge   int
 	roundChallenges []int
+	// results holds, at a level that is not a skip level, the id of the value of each wire's gate on
+	// the level's final evaluations, in the order of the level's wires.
+	results []int
 }
 
 // layout describes the verifier of a circuit and a schedule for n variables.
@@ -74,6 +77,10 @@ type layout struct {
 	// initialChallenges holds the ids of the n challenges of the initial point.
 	initialChallenges []int
 	rows              []transcriptRow
+	// The gate rows have the ids from firstGate on, which follow the challenges: row i has the id
+	// firstGate + i.
+	firstGate int
+	gateRows  []gateRow
 }
 
 // coordinateID is the id under which coordinate k of the value id is exposed.
@@ -89,7 +96,6 @@ func newLayout(circuit gkr.SerializableCircuit, schedule constraint.GkrProvingSc
 	}
 	l := &layout{n: n, circuit: circuit, schedule: schedule, levels: make([]levelLayout, len(schedule))}
 
-	identity := gkr.SerializableGate{Evaluate: gkr.IdentityBytecode(), NbIn: 1, Degree: 1}
 	consolidated := make([]bool, len(circuit))
 	for _, group := range schedule[0].ClaimGroups() {
 		for _, wireI := range group.Wires {
@@ -100,7 +106,7 @@ func newLayout(circuit gkr.SerializableCircuit, schedule constraint.GkrProvingSc
 	// the positions in the proof
 	next := 0
 	for levelI, level := range schedule {
-		levelCircuit := circuit.LevelCircuit(schedule, levelI, identity)
+		levelCircuit := circuit.LevelCircuit(schedule, levelI, identityGate())
 		unique, _ := levelCircuit.InputMapping(level)
 		_, skip := level.(*constraint.GkrSkipLevel)
 		lv := levelLayout{
@@ -159,6 +165,8 @@ func newLayout(circuit gkr.SerializableCircuit, schedule constraint.GkrProvingSc
 	}
 	l.rows = b.rows
 	l.nbChallenges = b.nbChallenges
+	l.firstGate = l.firstChallenge + l.nbChallenges
+	l.lowerGates()
 	return l, nil
 }
 

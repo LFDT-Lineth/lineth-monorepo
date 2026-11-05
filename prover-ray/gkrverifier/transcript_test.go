@@ -90,6 +90,7 @@ func TestTranscriptLayout(t *testing.T) {
 // the values that its prover assigns, which a test changes.
 type transcriptSystem struct {
 	sys       *wiop.System
+	verifier  *Verifier
 	seed      [6]*wiop.Cell
 	table     CompressionTable
 	tableSize int
@@ -120,6 +121,7 @@ func newTranscriptSystem(t *testing.T, p *gnarkProof) *transcriptSystem {
 
 	v, err := Define(s.sys, round, p.compressor.Circuit, p.compressor.Schedule, p.n, Inputs{Seed: s.seed}, s.table)
 	require.NoError(t, err)
+	s.verifier = v
 	s.rows, err = v.Compressions(p.seed, p.flat)
 	require.NoError(t, err)
 	require.Len(t, s.rows, nbRows)
