@@ -130,7 +130,7 @@ tasks.register('integrationTest',  Test) {
   testClassesDirs = sourceSets.integrationTest.output.classesDirs
 
   jvmArgs '-XX:+UseZGC'
-  // Opt-in method-level concurrency: -PmaruItMethodParallel=N runs up to N test methods of a class
+  // Method-level concurrency: -PmaruItMethodParallel=N runs up to N test methods of a class
   // concurrently inside its fork JVM (classes stay isolated one-per-JVM via forkEvery = 1). Default
   // as 2. To keep methods sequential, set as 1. Heap is raised for concurrent runs since a fork then
   // hosts several clusters at once.
@@ -157,7 +157,7 @@ tasks.register('integrationTest',  Test) {
   }
 
   logger.lifecycle(
-      "integrationTest: availableProcessors=${Runtime.runtime.availableProcessors()}, " +
+      "integrationTest: availableProcessors=${Runtime.runtime.availableProcessors()} " +
       "maxParallelForks=$maxParallelForks" +
       "methodParallel=$methodParallel"
       )

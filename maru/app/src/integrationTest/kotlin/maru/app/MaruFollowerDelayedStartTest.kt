@@ -75,23 +75,41 @@ class MaruFollowerDelayedStartTest {
 
   /**
    * Besu's txpool stays disabled while the node reports "not in sync", and under CPU contention from
-   * parallel test forks the sync flag can flap even after blocks are imported — so every send is
-   * retried until the EL accepts it. Sends rejected with "Transaction pool not enabled" never enter
-   * the pool, so retrying them cannot duplicate a transaction.
+   * parallel test forks the sync flag can flap even after blocks are imported — so the send is
+   * retried until the EL accepts it. Two subtleties: (1) only the send is retried, and only while it
+   * fails with "Transaction pool not enabled" — such rejections never enter the pool, so they cannot
+   * duplicate a transaction; (2) the nonce must be read fresh from the chain per attempt
+   * (sendTransactionWithChainNonce), because the DSL's default local nonce counter increments on
+   * every attempt, including rejected ones, which would nonce-gap every retry. The mined-receipt
+   * assertion runs once, after a send was accepted.
    */
   private fun sendTransactionWhenElReady(node: BesuNode) {
-    await
-      .atMost(60.seconds.toJavaDuration())
-      .pollInterval(1.seconds.toJavaDuration())
-      .ignoreExceptions()
-      .untilAsserted {
-        transactionsHelper.run {
-          node.sendTransactionAndAssertExecution(
-            logger = log,
-            recipient = createAccount("another account"),
-            amount = Amount.ether(100),
-          )
-        }
-      }
+    val txHash =
+      await
+        .atMost(60.seconds.toJavaDuration())
+        .pollInterval(1.seconds.toJavaDuration())
+        .until(
+          {
+            try {
+              transactionsHelper.run {
+                node.sendTransactionWithChainNonce(
+                  logger = log,
+                  recipient = createAccount("another account"),
+                  amount = Amount.ether(100),
+                )
+              }
+            } catch (e: RuntimeException) {
+              if (e.message?.contains("Transaction pool not enabled") == true) {
+                null // txpool still disabled — retry
+              } else {
+                throw e
+              }
+            }
+          },
+          { it != null },
+        )
+    transactionsHelper.ethConditions
+      .expectSuccessfulTransactionReceipt(txHash!!.bytes.toHexString())
+      .verify(node)
   }
 }

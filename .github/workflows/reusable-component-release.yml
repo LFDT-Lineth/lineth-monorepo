@@ -146,7 +146,7 @@ jobs:
 
   run-test-maru:
     uses: ./.github/workflows/maru-testing.yml
-    needs: [compute-commit-tag, compute-release-metadata]
+    needs: [compute-release-metadata]
     if: >
       needs.compute-release-metadata.outputs.tag_changed == 'true' &&
       inputs.component-name == 'maru' &&

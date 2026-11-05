@@ -74,7 +74,6 @@ object PrivateKeyGenerator {
     )
   }
 
-  @Synchronized
   fun getKeyData(privateKey: ByteArray): KeyData {
     // Sometimes keyPair has 1 byte more so we just take the last 32 bytes ¯\_(ツ)_/¯
     val normalizedPrivateKey = ensureKeyIsExactly32BytesLong(privateKey)
@@ -86,7 +85,10 @@ object PrivateKeyGenerator {
     val nodeKey = createNodeKey(normalizedPrivateKey)
     val keyData =
       KeyData(
-        privateKey = privateKeyTyped.raw(),
+        // The canonical 32-byte form, not privateKeyTyped.raw(): raw() is BigInteger.toByteArray,
+        // whose length varies (31/32/33 bytes for short or high-bit keys), so any reader doing
+        // length-sensitive slicing on this field would hit the same class of bug as above.
+        privateKey = normalizedPrivateKey,
         // marshalPrivateKey(privateKeyTyped) round-trips through BigInteger, which drops leading
         // zero bytes (~0.4% of random keys): the protobuf payload then has 31 bytes and length byte
         // 0x1F, and readers stripping a fixed 4-byte prefix via takeLast(32) — see SecpCrypto.
@@ -124,13 +126,11 @@ object PrivateKeyGenerator {
     return NodeKey(keyPairSecurityModule)
   }
 
-  @Synchronized
   fun getKeyDataByPrefixedKey(prefixedPrivateKey: ByteArray): KeyData {
     val privateKeyTyped = unmarshalPrivateKey(prefixedPrivateKey)
     return getKeyData(privateKeyTyped.raw())
   }
 
-  @Synchronized
   fun generatePrivateKey(): KeyData {
     val (privKey, pubKey) = generateKeyPair(KeyType.SECP256K1)
     return getKeyData(privKey.raw())
