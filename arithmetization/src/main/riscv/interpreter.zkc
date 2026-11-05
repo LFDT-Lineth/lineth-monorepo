@@ -249,6 +249,12 @@ fn interpreter_a<registers, ram>(index:u64, pc:Address) -> (new_pc:Address) {
 
     rs1_plus_imm = signed_sum_of_double_word(v1, imm)
 
+    // Treat EBREAK first
+    if compute_op == ITYPE_EBREAK {
+        printf "[ERROR] ITYPE_EBREAK instruction triggered(c)\n"
+        fail
+    }
+
     switch compute_op {
         // ==============
         // I-type — LOAD
@@ -527,10 +533,6 @@ fn interpreter_b<registers, ram>(index:u64, pc:Address) -> (new_pc:Address) {
             new_pc = process_syscall(pc)
             // Early return
             return
-        }
-        case ITYPE_EBREAK: {
-            printf "[ERROR] ITYPE_EBREAK instruction triggered(c)\n"
-            fail
         }
         case RTYPE_KECCAK: {
             // printf "RTYPE_KECCAK(c) "
