@@ -101,11 +101,22 @@ func (m MockMerger) Finalize(root Node, numShards uint) (Node, error) {
 			return Node{}, fmt.Errorf("message-bus handle %d does not balance across the shards: product is %v", h, p)
 		}
 	}
-	if messagebus.HasSharedRandomness(m.sys) {
-		seed := multisethashing.ToSeed(messagebus.GetSharedRandomnessContribution(m.sys, root.Pub))
-		if messagebus.GetSharedRandomnessSeed(m.sys, root.Pub) != seed {
-			return Node{}, fmt.Errorf("the shared randomness seed is not derived from the shards' contributions")
-		}
+	if err := checkSeedDerived(m.sys, root.Pub); err != nil {
+		return Node{}, err
 	}
 	return root, nil
+}
+
+// checkSeedDerived checks, when sys has shared randomness, that the seed γ in
+// the public inputs pub of a root is the one the shards' contributions, added
+// up in pub, derive.
+func checkSeedDerived(sys *wiop.System, pub wiop.PublicInput) error {
+	if !messagebus.HasSharedRandomness(sys) {
+		return nil
+	}
+	seed := multisethashing.ToSeed(messagebus.GetSharedRandomnessContribution(sys, pub))
+	if messagebus.GetSharedRandomnessSeed(sys, pub) != seed {
+		return fmt.Errorf("the shared randomness seed is not derived from the shards' contributions")
+	}
+	return nil
 }

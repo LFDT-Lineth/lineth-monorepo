@@ -1,8 +1,9 @@
 // Package conglomeration reduces the shard proofs of a sharded execution to a
 // single root proof through a tree of merges of up to [RecursionTreeArity]
 // nodes each, performed by a [Merger]. The recursion machine (package
-// recursion) will implement the merger for production; [MockMerger]
-// implements it for dev and test, without producing proofs.
+// recursion) will implement the merger for production; for dev and test,
+// [RecursionMerger] proves the merges with the machine's node program without
+// verifying the children, and [MockMerger] produces no proof at all.
 //
 // Every node of the tree exposes the public-input layout of a shard proof
 // (see zkcdriver/risc5). Across shards, the message-bus products multiply and

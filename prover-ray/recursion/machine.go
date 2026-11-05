@@ -20,6 +20,7 @@ const (
 	lookupMod  = "lookup"
 	p2Mod      = "p2"
 	mdMod      = "md"
+	publicMod  = "public"
 )
 
 // Machine builds a program for the chips: it allocates addresses, counts the
@@ -47,6 +48,7 @@ type Machine struct {
 	tables  []tableInst
 	lookups []lookupInst
 	mds     []mdInst
+	publics []publicInst // the cells exposed as public inputs, in order
 
 	instrs []instr // every instruction, in execution order
 
@@ -133,7 +135,7 @@ func (m *Machine) chips() []chip {
 	return append([]chip{
 		witnessChip{m}, constChip{m}, windowChip{m}, bitsChip{m},
 		e6Chip{m}, selectChip{m}, tableChip{m}, lookupChip{m},
-		p2Chip{m}, mdChip{m},
+		p2Chip{m}, mdChip{m}, publicChip{m},
 	}, m.extra...)
 }
 
