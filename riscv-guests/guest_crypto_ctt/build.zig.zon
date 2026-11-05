@@ -6,11 +6,11 @@
     .dependencies = .{
         // Shared build helpers: the guest target the allocator shim is built for.
         .build_common = .{ .path = "../build_common" },
-        // Consensys fork of Constantine with the guest shims and an rv64 freestanding build whose archive
-        // exports the BLS12-381 scalar field. Lazy: only a build that needs an archive fetches it.
+        // Consensys fork of Constantine with the guest shims and rv64 freestanding build. Lazy: only a
+        // build that needs an archive fetches it.
         .constantine = .{
-            .url = "git+https://github.com/Consensys-Incorporated/constantine#34741a92fb217fc1bba81c23557c04e9781cad4b",
-            .hash = "N-V-__8AACT26QadxkWGt922NHHWOVuh5gq6fCCbCw4ClCoV",
+            .url = "git+https://github.com/Consensys-Incorporated/constantine#e59d1afbd5d0d9aa2f804a408e80b7028ea18dfc",
+            .hash = "N-V-__8AAMT-6QbaA003ZmRaY6_USv67j_gQcYOHabA5o7TI",
             .lazy = true,
         },
     },

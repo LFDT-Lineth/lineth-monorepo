@@ -2,7 +2,7 @@
 
 Data-availability building blocks for the RISC-V guests, packaged as the `lineth_da` Zig module. `src/root.zig` is the package module, one namespace per source file; guests consume the package as a path dependency.
 
-The `zstd_decoder` namespace decompresses frames, the `encoding` namespace holds the byte formats of the DA stream, the `decompress` namespace verifies a stream against the chunks that carry it. A guest that uses `encoding` or `decompress` links the `zkvm_*` crypto providers of `lineth_accelerators` (`-Dzkvm-provide=true`), which supply sha256, keccak256, secp256k1 recovery and the KZG point evaluation.
+The `zstd_decoder` namespace decompresses frames, the `encoding` namespace holds the byte formats of the DA stream, the `decompress` namespace verifies a stream against the chunks that carry it. A guest that uses `encoding` or `decompress` links the `zkvm_*` crypto providers of `lineth_accelerators` (`-Dzkvm-provide=true`), which supply sha256, keccak256, secp256k1 recovery and the verification of KZG blob proofs.
 
 ## `zstd_decoder`
 
@@ -62,7 +62,7 @@ const payload = try encoding.truncation.encodeBlocks(output, scratch, &.{block})
 
 **`rolling_hash`** is the dataRollingHash fold, `keccak256(parent ‖ chunkHash)`, with the opening of the boundary preimage for a range that starts inside a chunk.
 
-**`blob_kzg`** verifies an EIP-4844 blob proof without recomputing the commitment: the versioned hash of the commitment (`versionedHash`), the Fiat-Shamir challenge `z` (`computeChallenge`), the blob polynomial's value `y` at `z` by the barycentric formula over the bit-reversed 4096th roots of unity and the point-evaluation check of (commitment, `z`, `y`, proof) (`verify`). The field arithmetic is Constantine's BLS12-381 scalar field: `ctt_bls12_381_fr_*`, called through `src/encoding/scalar_field.zig` and defined by the archive of the `zkvm_provide` providers, which every consumer links for sha256 and the point evaluation.
+**`blob_kzg`** verifies EIP-4844 blob proofs without recomputing the commitment: the versioned hash of a commitment (`versionedHash`) and the proof of a blob against its commitment (`verify`), by Constantine's `verify_blob_kzg_proof` behind the `lineth_zkvm_kzg_verify_blob` accelerator. The `zkvm_provide` providers define that accelerator and own the guest's one KZG context, which holds the embedded verification-only trusted setup. A blob element of at least the scalar field's order, an invalid commitment and an invalid proof do not verify.
 
 ## `decompress`
 

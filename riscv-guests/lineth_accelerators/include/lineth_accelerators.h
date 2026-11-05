@@ -41,6 +41,26 @@ extern "C" {
 zkvm_status lineth_zkvm_poseidon2_permutation(const zkvm_bytes_64* input,
                                               zkvm_bytes_64* output);
 
+/* ============================================================================
+ * KZG blob verification
+ * ============================================================================ */
+
+/**
+ * Verify an EIP-4844 blob proof.
+ *
+ * @param blob Pointer to the blob of 131072 bytes
+ * @param commitment Pointer to the KZG commitment
+ * @param proof Pointer to the KZG blob proof
+ * @param[out] verified Pointer to bool indicating if the proof opens the commitment
+ *        to the blob; false for a blob element of at least the scalar field's order
+ *        and for an invalid commitment or proof
+ * @return ZKVM_EOK on success, ZKVM_EFAIL on failure
+ */
+zkvm_status lineth_zkvm_kzg_verify_blob(const uint8_t* blob,
+                                        const zkvm_kzg_commitment* commitment,
+                                        const zkvm_kzg_proof* proof,
+                                        bool* verified);
+
 #ifdef __cplusplus
 }
 #endif

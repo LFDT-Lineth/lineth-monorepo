@@ -23,13 +23,6 @@ fn expectCase(case: Case, ok: bool) !void {
     try std.testing.expect(ok);
 }
 
-fn hexOf(bytes: []const u8) ![]u8 {
-    const hex = try gpa.alloc(u8, 2 + bytes.len * 2);
-    hex[0..2].* = "0x".*;
-    _ = std.fmt.bufPrint(hex[2..], "{x}", .{bytes}) catch unreachable;
-    return hex;
-}
-
 test "blob proofs verify exactly as the reference vectors say" {
     var cases = try loadSuite("verify_blob_kzg_proof");
     defer freeCases(&cases);
@@ -51,19 +44,6 @@ test "blob proofs verify exactly as the reference vectors say" {
     }
     try std.testing.expectEqual(9, accepted);
     try std.testing.expectEqual(20, rejected);
-}
-
-test "challenges match the reference vectors" {
-    var cases = try loadSuite("compute_challenge");
-    defer freeCases(&cases);
-
-    try std.testing.expect(cases.items.len >= 9);
-    for (cases.items) |case| {
-        const challenge = blob_kzg.computeChallenge(case.blobArray().?, case.commitmentArray().?);
-        const hex = try hexOf(&challenge.toBytes());
-        defer gpa.free(hex);
-        try expectCase(case, std.mem.eql(u8, hex, case.output));
-    }
 }
 
 test "the versioned hash of a commitment is 0x01 followed by its sha256 without the first byte" {

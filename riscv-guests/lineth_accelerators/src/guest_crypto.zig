@@ -5,7 +5,8 @@
 //!
 //! secp256k1 ecrecover and verify use Constantine's raw-primitive exports.
 //!
-//! KZG point evaluation uses the trusted setup baked into the ELF.
+//! KZG point evaluation and the verification of blob proofs use the trusted setup baked into the
+//! ELF, through one context.
 
 const std = @import("std");
 
@@ -209,9 +210,23 @@ pub fn kzgPointEvalVerify(
     return ctt_eth_evm_kzg_point_evaluation(ctx, &out, 64, &in, 192) == OK;
 }
 
+/// Whether `proof` opens `commitment` to `blob`, as the consensus spec's `verify_blob_kzg_proof`
+/// defines it. A blob element of at least the scalar field's order, an invalid commitment or an
+/// invalid proof does not verify.
+pub fn kzgVerifyBlob(blob: *const [131072]u8, commitment: *const [48]u8, proof: *const [48]u8) bool {
+    const ctx = kzgContext() orelse return false;
+    return ctt_eth_kzg_verify_blob_kzg_proof(ctx, blob, commitment, proof) == 0; // cttEthKzg_Success
+}
+
 const CttKzgContext = opaque {};
 
 extern fn ctt_eth_kzg_context_new_embedded(ctx: *?*CttKzgContext) c_int;
+extern fn ctt_eth_kzg_verify_blob_kzg_proof(
+    ctx: ?*const CttKzgContext,
+    blob: *const [131072]u8,
+    commitment: *const [48]u8,
+    proof: *const [48]u8,
+) u8;
 extern fn ctt_eth_evm_kzg_point_evaluation(
     ctx: ?*const CttKzgContext,
     r: [*]u8,
