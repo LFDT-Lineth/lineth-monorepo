@@ -6,19 +6,16 @@
  */
 package maru.executionlayer.manager
 
+import linea.kotlin.encodeHex
 import maru.core.ExecutionPayload
-import maru.executionlayer.client.ExecutionLayerEngineApiClient
-import maru.executionlayer.mappers.Mappers.toDomain
+import maru.executionlayer.client.EngineApiClient
 import org.apache.logging.log4j.LogManager
-import org.apache.tuweni.bytes.Bytes
-import org.apache.tuweni.bytes.Bytes32
-import tech.pegasys.teku.ethereum.executionclient.schema.ForkChoiceStateV1
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import tech.pegasys.teku.infrastructure.bytes.Bytes8
+import java.util.concurrent.CompletionException
 import java.util.concurrent.atomic.AtomicReference
 
 class JsonRpcExecutionLayerManager(
-  private val executionLayerEngineApiClient: ExecutionLayerEngineApiClient,
+  private val engineApiClient: EngineApiClient,
 ) : ExecutionLayerManager {
   private val log = LogManager.getLogger(this.javaClass)
 
@@ -34,11 +31,6 @@ class JsonRpcExecutionLayerManager(
     nextBlockSlotNumber: ULong?,
     targetGasLimit: ULong?,
   ): SafeFuture<ForkChoiceUpdatedResult> {
-    log.debug(
-      "Trying to create a new block with timestamp={}, fork={}",
-      nextBlockTimestamp,
-      executionLayerEngineApiClient.getFork(),
-    )
     val payloadAttributes =
       PayloadAttributes(
         timestamp = nextBlockTimestamp,
@@ -50,20 +42,17 @@ class JsonRpcExecutionLayerManager(
     log.debug(
       "Starting block building with payloadAttributes={}, fork={}",
       payloadAttributes,
-      executionLayerEngineApiClient.getFork(),
+      engineApiClient.fork,
     )
     val fcuFuture =
       forkChoiceUpdate(headHash, safeHash, finalizedHash, payloadAttributes).thenPeek {
-        if (it.payloadId == null) {
-          throw IllegalStateException("Unexpected FCU result. Payload ID is null! $it")
-        } else {
-          log.debug(
-            "payloadId={}, nextBlockTimestamp={}, fork={}",
-            Bytes.wrap(it.payloadId!!).toHexString(),
-            nextBlockTimestamp,
-            executionLayerEngineApiClient.getFork(),
-          )
-        }
+        checkNotNull(it.payloadId) { "Unexpected FCU result. Payload ID is null! $it" }
+        log.debug(
+          "payloadId={}, nextBlockTimestamp={}, fork={}",
+          it.payloadId!!.encodeHex(),
+          nextBlockTimestamp,
+          engineApiClient.fork,
+        )
       }
     blockBuildingFuture.set(fcuFuture.thenApply { it.payloadId })
     return fcuFuture
@@ -74,37 +63,20 @@ class JsonRpcExecutionLayerManager(
     if (future == null) {
       log.warn("finishBlockBuilding called but no block building was started")
       return SafeFuture.failedFuture(
-        IllegalStateException(
-          "finishBlockBuilding called with no block building in progress",
-        ),
+        IllegalStateException("finishBlockBuilding called with no block building in progress"),
       )
     }
 
-    return future
-      .thenCompose { pid ->
-        if (pid == null) {
-          SafeFuture.failedFuture(
-            IllegalStateException(
-              "finishBlockBuilding: FCU did not return a payloadId",
-            ),
-          )
-        } else {
-          log.debug("finishBlockBuilding using payloadId={}", Bytes.wrap(pid).toHexString())
-          executionLayerEngineApiClient
-            .getPayload(Bytes8(Bytes.wrap(pid)))
-            .thenApply { payloadResponse ->
-              if (payloadResponse.isSuccess) {
-                payloadResponse.payload
-              } else {
-                throw IllegalStateException(
-                  "engine_getPayload request failed: " +
-                    "fork=${executionLayerEngineApiClient.getFork()} " +
-                    "Cause: " + payloadResponse.errorMessage,
-                )
-              }
-            }
-        }
+    return future.thenCompose { payloadId ->
+      if (payloadId == null) {
+        SafeFuture.failedFuture(IllegalStateException("finishBlockBuilding: FCU did not return a payloadId"))
+      } else {
+        log.debug("finishBlockBuilding using payloadId={}", payloadId.encodeHex())
+        engineApiClient
+          .getPayload(payloadId)
+          .failWithContext { "engine_getPayload request failed: fork=${engineApiClient.fork}" }
       }
+    }
   }
 
   override fun setHead(
@@ -127,58 +99,31 @@ class JsonRpcExecutionLayerManager(
     finalizedHash: ByteArray,
     payloadAttributes: PayloadAttributes?,
   ): SafeFuture<ForkChoiceUpdatedResult> =
-    executionLayerEngineApiClient
-      .forkChoiceUpdate(
-        ForkChoiceStateV1(
-          Bytes32.wrap(headHash),
-          Bytes32.wrap(safeHash),
-          Bytes32.wrap(finalizedHash),
-        ),
-        payloadAttributes,
-      ).thenApply { response ->
-        log.debug(
-          "engine_forkchoiceUpdated response={} fork={}",
-          response,
-          executionLayerEngineApiClient.getFork(),
-        )
-        if (response.isFailure) {
-          throw IllegalStateException(
-            "engine_forkchoiceUpdated request failed! nextBlockTimestamp=${payloadAttributes?.timestamp} " +
-              "fork=${executionLayerEngineApiClient.getFork()} " +
-              "Cause: " + response.errorMessage,
-          )
-        } else {
-          response.payload.toDomain()
-        }
+    engineApiClient
+      .forkChoiceUpdate(headHash, safeHash, finalizedHash, payloadAttributes)
+      .thenPeek { log.debug("engine_forkchoiceUpdated result={} fork={}", it, engineApiClient.fork) }
+      .failWithContext {
+        "engine_forkchoiceUpdated request failed! nextBlockTimestamp=${payloadAttributes?.timestamp} " +
+          "fork=${engineApiClient.fork}"
       }
 
   override fun newPayload(executionPayload: ExecutionPayload): SafeFuture<PayloadStatus> =
-    executionLayerEngineApiClient
+    engineApiClient
       .newPayload(executionPayload)
-      .thenApply { payloadStatusResponse ->
-        if (payloadStatusResponse.isSuccess) {
-          if (payloadStatusResponse.payload == null) {
-            throw IllegalStateException(
-              "engine_newPayload request failed! elBlockNumber=${executionPayload.blockNumber} " +
-                "fork=${executionLayerEngineApiClient.getFork()} " +
-                "response=" + payloadStatusResponse,
-            )
-          }
-          payloadStatusResponse.payload.asInternalExecutionPayload().toDomain()
-        } else {
-          throw IllegalStateException(
-            "engine_newPayload request failed: elBlockNumber=${executionPayload.blockNumber} " +
-              "fork=${executionLayerEngineApiClient.getFork()} " +
-              "Cause: " + payloadStatusResponse.errorMessage,
-          )
-        }
+      .failWithContext {
+        "engine_newPayload request failed: elBlockNumber=${executionPayload.blockNumber} fork=${engineApiClient.fork}"
       }.thenPeek {
         // A block was successfully imported; any in-progress build is now stale.
         blockBuildingFuture.set(null)
       }
 
-  override fun getLatestBlockMetadata(): SafeFuture<LatestBlockMetadata> =
-    executionLayerEngineApiClient.getLatestBlockMetadata()
+  override fun getLatestBlockMetadata(): SafeFuture<LatestBlockMetadata> = engineApiClient.getLatestBlockMetadata()
 
-  override fun isOnline(): SafeFuture<Boolean> = executionLayerEngineApiClient.isOnline()
+  override fun isOnline(): SafeFuture<Boolean> = engineApiClient.isOnline()
+
+  private fun <T> SafeFuture<T>.failWithContext(context: () -> String): SafeFuture<T> =
+    exceptionally { error ->
+      val cause = if (error is CompletionException && error.cause != null) error.cause!! else error
+      throw IllegalStateException("${context()} Cause: ${cause.message}", cause)
+    }
 }
