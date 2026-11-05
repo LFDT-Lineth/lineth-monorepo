@@ -75,6 +75,13 @@ func (m *Machine) Table(cells []int) Table {
 	return Table{tag: len(m.tables) - 1, n: len(cells)}
 }
 
+// checkTable panics if t is not a table of the machine.
+func (m *Machine) checkTable(t Table) {
+	if t.tag < 0 || t.tag >= len(m.tables) || len(m.tables[t.tag].src) != t.n {
+		panic("unknown table")
+	}
+}
+
 // Lookup returns a cell holding the entry idx of the table t, for a scalar
 // cell idx. Executing it fails if idx is not below the table's length (and a
 // proof of such a read does not verify).
@@ -163,6 +170,11 @@ func (c tableChip) trace(cs *cols, r *Run) error {
 			return err
 		}
 		counts[l.tag][i]++
+	}
+	for tag, reads := range r.tableReads {
+		for i, n := range reads {
+			counts[tag][i] += n
+		}
 	}
 	row := 0
 	for k, t := range c.m.tables {

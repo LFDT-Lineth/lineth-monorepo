@@ -21,6 +21,7 @@ const (
 	p2Mod      = "p2"
 	mdMod      = "md"
 	merkleMod  = "merkle"
+	dpathMod   = "dpath"
 )
 
 // Machine builds a program for the chips: it allocates addresses, counts the
@@ -49,6 +50,7 @@ type Machine struct {
 	lookups []lookupInst
 	mds     []mdInst
 	paths   []pathInst
+	dpaths  []dpathInst
 
 	instrs []instr // every instruction, in execution order
 
@@ -74,6 +76,7 @@ const (
 	instrLookup        // Lookup: the entry read
 	instrMD            // MDHash: the digest (and the compressions, for the P2 core)
 	instrPath          // MerklePath: [x⁻¹, b0] if asked (and the compressions, for the P2 core)
+	instrDPath         // MerklePathDynamic: its rows, table reads and compressions
 )
 
 func (m *Machine) alloc() int {
@@ -136,7 +139,7 @@ func (m *Machine) chips() []chip {
 	return append([]chip{
 		witnessChip{m}, constChip{m}, windowChip{m}, bitsChip{m},
 		e6Chip{m}, selectChip{m}, tableChip{m}, lookupChip{m},
-		p2Chip{m}, mdChip{m}, merkleChip{m},
+		p2Chip{m}, mdChip{m}, merkleChip{m}, dpathChip{m},
 	}, m.extra...)
 }
 
@@ -207,6 +210,12 @@ type Run struct {
 	values  []Cell
 	witness []*cols                  // the witness columns of Program.modules[i]
 	p2      [][P2Width]field.Element // the permutations' inputs, in P2 core row order
+
+	// tableReads[t][i] counts the reads of entry i of table t by the dynamic
+	// paths (the lookups' are counted from the lookups), and dpathRows[i] are
+	// the rows of dynamic path i: both depend on the execution.
+	tableReads map[int][]uint64
+	dpathRows  map[int][]dpathRow
 }
 
 // Value returns the value of the cell at addr.
@@ -291,6 +300,8 @@ func (m *Machine) exec(in instr, r *Run) error {
 		return nil
 	case instrPath:
 		return m.execPath(m.paths[in.idx], r)
+	case instrDPath:
+		return m.execDPath(in.idx, r)
 	}
 	return fmt.Errorf("unknown instruction kind %d", in.kind)
 }
