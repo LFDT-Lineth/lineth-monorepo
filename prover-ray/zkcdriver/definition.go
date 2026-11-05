@@ -51,12 +51,12 @@ type PublicOutput struct {
 	// Name is the corset name of the memory. It is empty when the
 	// arithmetization exposes no public output of the described shape.
 	Name string
-	// Address holds the limbs of the memory's address, most significant first:
-	// an address wider than the field's register width is split by the schema.
+	// Address is the memory's address column. The address is a u16, so it fits
+	// in a single register.
 	// The memory's own constraints make it vanish on padding rows, be zero on the
 	// first row carrying an element and increment from there, so the elements
 	// are laid out in address order on the last rows of the module.
-	Address []wiop.ObjectID
+	Address wiop.ObjectID
 	// Data is the memory's data column, holding one byte per address.
 	Data wiop.ObjectID
 }
@@ -198,19 +198,19 @@ func (s *schemaScanner) collectPublicOutputs() PublicOutput {
 			}
 		}
 
-		// A memory holding anything other than a single byte column, or lacking
-		// an address, is not describable by [PublicOutput], so it is reported and
+		// A memory holding anything other than a single address and a single
+		// byte column is not describable by [PublicOutput], so it is reported and
 		// skipped rather than half-described.
-		if len(address) == 0 || len(data) != 1 {
+		if len(address) != 1 || len(data) != 1 {
 			logrus.Warnf(
 				"zkcdriver: collectPublicOutputs: skipping public output %q: "+
-					"has %d address and %d data columns, expected at least one address and one datum",
+					"has %d address and %d data columns, expected one of each",
 				moduleName, len(address), len(data),
 			)
 			continue
 		}
 
-		output = PublicOutput{Name: moduleName, Address: address, Data: data[0]}
+		output = PublicOutput{Name: moduleName, Address: address[0], Data: data[0]}
 	}
 
 	return output
