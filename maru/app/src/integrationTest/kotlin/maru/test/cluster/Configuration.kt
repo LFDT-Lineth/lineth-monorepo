@@ -10,6 +10,15 @@ import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.core.config.Configurator
 import org.apache.logging.log4j.core.config.builder.api.ConfigurationBuilderFactory
 import org.apache.logging.log4j.core.config.builder.impl.BuiltConfiguration
+import java.util.concurrent.ConcurrentHashMap
+
+/**
+ * Fingerprints of log4j2 configurations already applied in this JVM. `Configurator.initialize` replaces
+ * the JVM-global log4j2 context, so when test methods run concurrently (-PmaruItMethodParallel=N) racing
+ * `@BeforeEach` calls would re-initialize logging mid-test. Args are constant per test class (and each
+ * class runs in its own fork), so applying each distinct configuration once per JVM is sufficient.
+ */
+private val appliedLoggerConfigs: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
 fun configureLoggers(
   pattern: String = "%d{yyyy-MM-dd HH:mm:ss} [%level] - %msg | %logger{36}%n",
@@ -26,6 +35,10 @@ fun configureLoggers(
   rootLevel: Level = Level.INFO,
   logLevels: List<Pair<String, Level>> = emptyList(),
 ) {
+  val fingerprint = "$pattern|$rootLevel|$logLevels"
+  if (!appliedLoggerConfigs.add(fingerprint)) {
+    return
+  }
   val builder = ConfigurationBuilderFactory.newConfigurationBuilder()
 
   // Create console appender with custom pattern

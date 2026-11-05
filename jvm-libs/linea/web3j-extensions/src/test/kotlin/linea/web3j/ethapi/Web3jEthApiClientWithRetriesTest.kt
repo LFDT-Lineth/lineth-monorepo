@@ -8,10 +8,14 @@ import linea.domain.toBlockParameter
 import linea.ethapi.EthApiClient
 import linea.jsonrpc.TestingJsonRpcServer
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponseException
+import okhttp3.OkHttpClient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.web3j.protocol.Web3j
+import org.web3j.protocol.http.HttpService
+import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.milliseconds
 
 @ExtendWith(VertxExtension::class)
@@ -19,17 +23,36 @@ class Web3jEthApiClientWithRetriesTest {
   private lateinit var jsonRpcServer: TestingJsonRpcServer
   private lateinit var client: EthApiClient
 
+  // These tests assert exact request counts, so a spurious transport failure (OkHttp's default 10s
+  // timeouts under CI CPU contention) would bypass the stop-retry predicates and retry — flaking
+  // the counts. A generous timeout keeps the only failure mode the intended RPC error response.
+  private fun createTestClient(
+    vertx: Vertx,
+    stopRetriesOnErrorPredicate: java.util.function.Predicate<Throwable> =
+      java.util.function.Predicate { false },
+  ): EthApiClient {
+    val httpClient =
+      OkHttpClient.Builder()
+        .connectTimeout(60, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
+        .build()
+    val web3j = Web3j.build(HttpService(jsonRpcServer.httpEndpoint.toString(), httpClient))
+    return createEthApiClient(
+      web3jClient = web3j,
+      requestRetryConfig = RetryConfig(maxRetries = 2u, backoffDelay = 10.milliseconds),
+      vertx = vertx,
+      stopRetriesOnErrorPredicate = stopRetriesOnErrorPredicate,
+    )
+  }
+
   @BeforeEach
   fun setup(vertx: Vertx) {
     jsonRpcServer = TestingJsonRpcServer(
       vertx = vertx,
       recordRequestsResponses = true,
     )
-    client = createEthApiClient(
-      rpcUrl = jsonRpcServer.httpEndpoint.toString(),
-      requestRetryConfig = RetryConfig(maxRetries = 2u, backoffDelay = 10.milliseconds),
-      vertx = vertx,
-    )
+    client = createTestClient(vertx)
   }
 
   @Test
@@ -46,9 +69,7 @@ class Web3jEthApiClientWithRetriesTest {
     jsonRpcServer.handle("eth_getBlockByNumber") { request ->
       throw JsonRpcErrorResponseException(rpcErrorCode = -39001, rpcErrorMessage = "Unknown block")
     }
-    val client = createEthApiClient(
-      rpcUrl = jsonRpcServer.httpEndpoint.toString(),
-      requestRetryConfig = RetryConfig(maxRetries = 2u, backoffDelay = 10.milliseconds),
+    val client = createTestClient(
       vertx = vertx,
       stopRetriesOnErrorPredicate = { th ->
         if (th.cause is linea.error.JsonRpcErrorResponseException) {

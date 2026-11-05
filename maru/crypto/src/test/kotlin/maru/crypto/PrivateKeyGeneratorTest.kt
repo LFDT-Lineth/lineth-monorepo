@@ -12,6 +12,7 @@ import maru.crypto.PrivateKeyGenerator.getKeyData
 import maru.crypto.PrivateKeyGenerator.getKeyDataByPrefixedKey
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.RepeatedTest
+import org.junit.jupiter.api.Test
 
 class PrivateKeyGeneratorTest {
   @RepeatedTest(100)
@@ -33,5 +34,21 @@ class PrivateKeyGeneratorTest {
     assertThat(keyInfo.prefixedPrivateKey).isEqualTo(prefixedPrivKey)
     assertThat(keyInfo.privateKey).isEqualTo(privKey)
     assertThat(keyInfo.address).isEqualTo(address)
+  }
+
+  @Test
+  fun `short keys with leading zero bytes keep a canonical 32-byte prefixed payload`() {
+    // Regression for the torn-KeyData flake: BigInteger round-trips drop leading zero bytes, so a
+    // 31-byte key used to produce a protobuf payload with length byte 0x1F, and takeLast(32) readers
+    // recovered a corrupted key (length byte + 31 key bytes).
+    val shortKey = byteArrayOf(0x00) + ByteArray(31) { (it + 1).toByte() }
+    val keyData = getKeyData(shortKey)
+
+    assertThat(keyData.prefixedPrivateKey).hasSize(36)
+    assertThat(keyData.prefixedPrivateKey.take(4))
+      .containsExactly(0x08.toByte(), 0x02.toByte(), 0x12.toByte(), 0x20.toByte())
+    assertThat(keyData.prefixedPrivateKey.takeLast(32).toByteArray())
+      .isEqualTo(byteArrayOf(0x00) + ByteArray(31) { (it + 1).toByte() })
+    assertThat(getKeyDataByPrefixedKey(keyData.prefixedPrivateKey)).isEqualTo(keyData)
   }
 }
