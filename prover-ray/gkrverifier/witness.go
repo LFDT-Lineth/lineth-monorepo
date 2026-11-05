@@ -59,37 +59,49 @@ func (l *layout) evaluate(seed [6]field.Element, proof []field.Ext) (*transcript
 	return w, nil
 }
 
+// coordinates returns the six base coordinates of an element of E₆.
+func coordinates(e field.Ext) (c [6]field.Element) {
+	copy(c[:], e.AppendBase(nil))
+	return c
+}
+
+// values returns the value of every id that is not a coordinate, by id: the proof's elements, the
+// seed, and the challenges. The ids of the rows of the gates, the folds and the eqs follow; the
+// evaluations of those rows fill them.
+func (l *layout) values(seed [6]field.Element, proof []field.Ext, w *transcriptWitness) []field.Ext {
+	values := make([]field.Ext, l.nbIDs)
+	copy(values, proof)
+	values[l.seed].SetBase(seed[:])
+	copy(values[l.firstChallenge:], w.challenges)
+	return values
+}
+
 // gateWitness holds, for each row of the gates, the values of its operands a and b, and of its result o.
 type gateWitness struct {
 	a, b, o []field.Ext
 }
 
-// evaluateGates runs the gate rows of the layout on the proof.
-func (l *layout) evaluateGates(proof []field.Ext) *gateWitness {
+// evaluateGates runs the gate rows of the layout, writing their results to values.
+func (l *layout) evaluateGates(values []field.Ext) *gateWitness {
 	w := &gateWitness{
 		a: make([]field.Ext, len(l.gateRows)),
 		b: make([]field.Ext, len(l.gateRows)),
 		o: make([]field.Ext, len(l.gateRows)),
 	}
-	value := func(id int) field.Ext {
-		if id < l.nbProof {
-			return proof[id]
-		}
-		return w.o[id-l.firstGate]
-	}
 	for i := range l.gateRows {
 		row := &l.gateRows[i]
 		if row.a >= 0 {
-			w.a[i] = value(row.a)
+			w.a[i] = values[row.a]
 		}
 		if row.b >= 0 {
-			w.b[i] = value(row.b)
+			w.b[i] = values[row.b]
 		}
 		var previous field.Ext
 		if i > 0 {
 			previous = w.o[i-1]
 		}
 		w.o[i] = row.evaluate(w.a[i], w.b[i], previous)
+		values[l.firstGate+i] = w.o[i]
 	}
 	return w
 }

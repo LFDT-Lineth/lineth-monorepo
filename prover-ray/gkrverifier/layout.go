@@ -52,6 +52,16 @@ type levelLayout struct {
 	// results holds, at a level that is not a skip level, the id of the value of each wire's gate on
 	// the level's final evaluations, in the order of the level's wires.
 	results []int
+	// single says that the level has one source, so that its rounds are those of a single-source
+	// zerocheck.
+	single bool
+	// sum and final are the ids of the sum that the level's sumcheck starts from, the claims folded by
+	// the folding challenge, and of the value it ends on, the gates' results folded the same way and
+	// weighted by the eq of the claims' points.
+	sum, final int
+	// eqs holds the ids of eq(p, r) for the point p of each claim source of each claim group, if the
+	// level is not single.
+	eqs [][]int
 }
 
 // layout describes the verifier of a circuit and a schedule for n variables.
@@ -81,6 +91,21 @@ type layout struct {
 	// firstGate + i.
 	firstGate int
 	gateRows  []gateRow
+	// consolidated marks the wires of level 0, and claimValueIndices is gnark's.
+	consolidated      []bool
+	claimValueIndices [][]int
+	// points[levelI][k] holds the ids of the challenges of the k-th outgoing evaluation point of the
+	// level, the output level being the schedule's length.
+	points [][][]int
+	// maxDegree is the largest degree of the levels' round polynomials.
+	maxDegree int
+	// the rows of the folds, the eqs and the rounds, and the claims that Verify returns
+	foldRows  []foldRow
+	eqRows    []eqRow
+	roundRows []roundRow
+	claims    []claimLayout
+	// nbIDs is the number of ids that are not coordinates: the values are indexed by them.
+	nbIDs int
 }
 
 // coordinateID is the id under which coordinate k of the value id is exposed.
@@ -111,6 +136,7 @@ func newLayout(circuit gkr.SerializableCircuit, schedule constraint.GkrProvingSc
 		_, skip := level.(*constraint.GkrSkipLevel)
 		lv := levelLayout{
 			skip:          skip,
+			single:        isSingle(level),
 			degree:        levelCircuit.ZeroCheckDegree(level),
 			start:         next,
 			nbFinals:      len(unique) * level.NbOutgoingEvalPoints(),
@@ -131,6 +157,8 @@ func newLayout(circuit gkr.SerializableCircuit, schedule constraint.GkrProvingSc
 		}
 		l.levels[levelI] = lv
 	}
+	l.consolidated = consolidated
+	l.claimValueIndices = circuit.ClaimValueIndices(schedule)
 	l.outputs = next
 	for i, wireI := range circuit.Outputs() {
 		if consolidated[wireI] {
@@ -166,8 +194,26 @@ func newLayout(circuit gkr.SerializableCircuit, schedule constraint.GkrProvingSc
 	l.rows = b.rows
 	l.nbChallenges = b.nbChallenges
 	l.firstGate = l.firstChallenge + l.nbChallenges
+	l.lowerPoints()
 	l.lowerGates()
+	l.lowerSumchecks()
+	l.lowerClaims()
 	return l, nil
+}
+
+// isSingle says that the level is a single-source zerocheck.
+func isSingle(level constraint.GkrProvingLevel) bool {
+	_, single := level.(*constraint.GkrSingleSourceZeroCheckLevel)
+	return single
+}
+
+// claimPosition is the position in the proof of the value with the given index among the final
+// evaluations of the level of a claim source, the output level being the schedule's length.
+func (l *layout) claimPosition(source constraint.GkrClaimSource, index int) int {
+	if source.Level == len(l.schedule) {
+		return l.outputs + index
+	}
+	return l.levels[source.Level].finals + index
 }
 
 // rangeOf returns first, first + 1, …, first + count - 1.

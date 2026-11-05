@@ -10,15 +10,19 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
 	"github.com/consensys/gnark-crypto/field/koalabear/poseidon2"
+	"github.com/consensys/gnark/constraint"
+	"github.com/consensys/gnark/gkr"
 	gkrkoalabear "github.com/consensys/gnark/gkr/koalabear"
 	gkrposeidon2 "github.com/consensys/gnark/gkr/permutation/gkr-poseidon2/koalabear"
 	"github.com/stretchr/testify/require"
 )
 
-// gnarkProof is a proof of gnark's GKR prover for the Poseidon2 compression circuit on 2ⁿ random
-// instances, with its seed.
+// gnarkProof is a proof of gnark's GKR prover for a circuit on 2ⁿ random instances, with its seed. The
+// circuit is the Poseidon2 compression's, unless built by [newCircuitProof].
 type gnarkProof struct {
 	compressor *gkrposeidon2.Compressor
+	circuit    gkr.SerializableCircuit
+	schedule   constraint.GkrProvingSchedule
 	n          int
 	seed       [6]field.Element
 	// flat is the flattened proof, and claims the claims that the prover returns.
@@ -51,15 +55,24 @@ func newGnarkProof(t *testing.T, n int) *gnarkProof {
 		}
 		return res
 	}
+	p.circuit, p.schedule = compressor.Circuit, compressor.Schedule
+	p.prove(t, compressor.Assignment(columns(), columns()))
+	return p
+}
+
+// prove proves the assignment with gnark's prover, seeded with the proof's seed, and sets the
+// flattened proof and the claims.
+func (p *gnarkProof) prove(t *testing.T, assignment gkrkoalabear.WireAssignment) {
+	t.Helper()
 	hasher := poseidon2.NewHasher()
 	hasher.WriteElements(p.seed[:]...)
-	proof, claims, err := gkrkoalabear.Prove(compressor.Circuit, compressor.Schedule, compressor.Assignment(columns(), columns()), hasher)
+	proof, claims, err := gkrkoalabear.Prove(p.circuit, p.schedule, assignment, hasher)
 	require.NoError(t, err)
+	require.NoError(t, claims.Check(assignment))
 	for _, e := range proof.Flatten() {
 		p.flat = append(p.flat, *e)
 	}
 	p.claims = claims
-	return p
 }
 
 // TestTranscriptLayout checks the layout against gnark's prover: the challenges that the layout
@@ -70,7 +83,7 @@ func TestTranscriptLayout(t *testing.T) {
 	for _, n := range []int{1, 2, 3} {
 		t.Run(fmt.Sprintf("n=%d", n), func(t *testing.T) {
 			p := newGnarkProof(t, n)
-			l, err := newLayout(p.compressor.Circuit, p.compressor.Schedule, n)
+			l, err := newLayout(p.circuit, p.schedule, n)
 			require.NoError(t, err)
 			require.Equal(t, len(p.flat), l.nbProof)
 
@@ -96,8 +109,13 @@ type transcriptSystem struct {
 	tableSize int
 	// the values to assign
 	seedValue [6]field.Element
-	flat      []field.Ext
-	rows      [][3 * blockLen]field.Element
+	// claimValues holds the values of the cells of the returned claims.
+	claimValues map[*wiop.Cell]field.Element
+	claims      map[int][]Claim
+	// anyPanic says that the prover may panic for any reason, which then counts as a rejection.
+	anyPanic bool
+	flat     []field.Ext
+	rows     [][3 * blockLen]field.Element
 }
 
 // newTranscriptSystem defines the verifier of the proof's circuit with a table of exactly the
@@ -108,7 +126,7 @@ func newTranscriptSystem(t *testing.T, p *gnarkProof) *transcriptSystem {
 	s := &transcriptSystem{sys: wiop.NewSystemf("gkrverifier-transcript"), seedValue: p.seed, flat: p.flat}
 	round := s.sys.NewRound()
 
-	nbRows, err := NbCompressions(p.compressor.Circuit, p.compressor.Schedule, p.n)
+	nbRows, err := NbCompressions(p.circuit, p.schedule, p.n)
 	require.NoError(t, err)
 	s.tableSize = utils.NextPowerOfTwo(nbRows)
 	tableModule := s.sys.NewSizedModule(s.sys.Context.Childf("compressions"), s.tableSize, wiop.PaddingDirectionNone)
@@ -119,7 +137,8 @@ func newTranscriptSystem(t *testing.T, p *gnarkProof) *transcriptSystem {
 		s.seed[k] = round.NewCell(s.sys.Context.Childf("seed%d", k), false)
 	}
 
-	v, err := Define(s.sys, round, p.compressor.Circuit, p.compressor.Schedule, p.n, Inputs{Seed: s.seed}, s.table)
+	s.claims, s.claimValues = newClaimCells(s.sys, round, p.claims)
+	v, err := Define(s.sys, round, p.circuit, p.schedule, p.n, Inputs{Seed: s.seed, Claims: s.claims}, s.table)
 	require.NoError(t, err)
 	s.verifier = v
 	s.rows, err = v.Compressions(p.seed, p.flat)
@@ -145,13 +164,18 @@ func (s *transcriptSystem) prove(t *testing.T) (err error) {
 	require.NoError(t, compilers.CompileFull(s.sys))
 	defer func() {
 		if r := recover(); r != nil {
-			require.Contains(t, fmt.Sprint(r), "has no match in the lookup table")
+			if !s.anyPanic {
+				require.Contains(t, fmt.Sprint(r), "has no match in the lookup table")
+			}
 			err = fmt.Errorf("the prover has a row that is not in the table: %v", r)
 		}
 	}()
 	proof, pub := s.sys.Prove(func(rt *wiop.Runtime) {
 		for k, cell := range s.seed {
 			rt.AssignCell(cell, field.ElemFromBase(s.seedValue[k]))
+		}
+		for cell, value := range s.claimValues {
+			rt.AssignCell(cell, field.ElemFromBase(value))
 		}
 		for i, col := range s.table {
 			values := make([]field.Element, s.tableSize)

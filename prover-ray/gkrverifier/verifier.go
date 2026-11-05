@@ -22,6 +22,8 @@ type Inputs struct {
 	// Seed holds the coordinates of the seed σ, an element of E₆, which the transcript writes before
 	// anything else.
 	Seed [6]*wiop.Cell
+	// Claims holds the claims that gnark's Verify returns, by wire, in the order it returns them.
+	Claims map[int][]Claim
 }
 
 // Verifier is the generated verifier of a circuit and a schedule for n variables. See [Define].
@@ -33,6 +35,12 @@ type Verifier struct {
 	seed       seedModule
 	transcript transcriptModule
 	gate       gateModule
+	fold       foldModule
+	eq         eqModule
+	rounds     roundModule
+	claims     claimsModule
+	// corrupt, if set, changes the values of a column before Assign assigns them: a test seam.
+	corrupt func(col *wiop.Column, values []field.Element)
 }
 
 // proofModule has one row per element of the flattened proof.
@@ -101,7 +109,8 @@ func NbCompressions(circuit gkr.SerializableCircuit, schedule constraint.GkrProv
 
 // Define adds to sys the tables and constraints of the verifier of circuit and schedule for n
 // variables, with the witness columns in round. The verifier checks that gnark's Verify accepts a
-// flattened proof, given to [Verifier.Assign], with the seed in inputs.
+// flattened proof, given to [Verifier.Assign], with the seed in inputs, and that it returns the claims
+// in inputs.
 //
 // Each of the verifier's compressions is a lookup into table, whose rows the caller must prove
 // to be compressions: [Verifier.Compressions] returns the rows it needs.
@@ -134,6 +143,12 @@ func Define(
 	v.defineSeed(sys, ctx.Childf("seed"), round)
 	v.defineTranscript(sys, ctx.Childf("transcript"), round, table)
 	v.defineGates(sys, ctx.Childf("gates"), round)
+	v.defineFolds(sys, ctx.Childf("folds"), round)
+	v.defineEqs(sys, ctx.Childf("eqs"), round)
+	v.defineRounds(sys, ctx.Childf("rounds"), round)
+	if err := v.defineClaims(sys, ctx.Childf("claims"), round); err != nil {
+		return nil, err
+	}
 	v.defineBus(sys, ctx.Childf("bus"))
 	return v, nil
 }
@@ -153,6 +168,52 @@ func precomputedElements(ctx *wiop.ContextFrame, m *wiop.Module, size int, value
 	vec := make([]field.Element, size)
 	copy(vec, values)
 	return m.NewPrecomputedColumn(ctx, &wiop.ConcreteVector{Plain: field.VecFromBase(vec)})
+}
+
+// elementColumn declares a precomputed column of the module whose first nb rows hold f(i).
+func elementColumn(ctx *wiop.ContextFrame, m *wiop.Module, size, nb int, f func(i int) field.Element) *wiop.Column {
+	values := make([]field.Element, nb)
+	for i := range values {
+		values[i] = f(i)
+	}
+	return precomputedElements(ctx, m, size, values)
+}
+
+// flagColumn declares a precomputed column of the module that is 1 on the first nb rows where f holds,
+// and 0 elsewhere.
+func flagColumn(ctx *wiop.ContextFrame, m *wiop.Module, size, nb int, f func(i int) bool) *wiop.Column {
+	values := make([]int, nb)
+	for i := range values {
+		if f(i) {
+			values[i] = 1
+		}
+	}
+	return precomputed(ctx, m, size, values)
+}
+
+// idColumn declares a precomputed column of the module whose first nb rows hold the ids f(i), with
+// -1 as 0.
+func idColumn(ctx *wiop.ContextFrame, m *wiop.Module, size, nb int, f func(i int) int) *wiop.Column {
+	ids := make([]int, nb)
+	for i := range ids {
+		ids[i] = max(f(i), 0)
+	}
+	return precomputed(ctx, m, size, ids)
+}
+
+// idColumns declares the precomputed columns of a selector and of ids for the value that some of the
+// first nb rows of the module read: id gives the id that row i reads, or -1 if it reads none, in which
+// case the selector is 0 and the id is 0.
+func idColumns(
+	ctx *wiop.ContextFrame, m *wiop.Module, size, nb int, id func(i int) int,
+) (selector, ids *wiop.Column) {
+	selected, values := make([]int, nb), make([]int, nb)
+	for i := range values {
+		if x := id(i); x >= 0 {
+			selected[i], values[i] = 1, x
+		}
+	}
+	return precomputed(ctx.Childf("read"), m, size, selected), precomputed(ctx.Childf("id"), m, size, values)
 }
 
 // ones returns count ones.
@@ -281,34 +342,21 @@ func (v *Verifier) defineGates(sys *wiop.System, ctx *wiop.ContextFrame, round *
 	}
 
 	nb := len(l.gateRows)
-	g.active = precomputed(ctx.Childf("active"), g.module, g.size, ones(nb))
+	g.active = flagColumn(ctx.Childf("active"), g.module, g.size, nb, func(int) bool { return true })
 	g.id = precomputed(ctx.Childf("id"), g.module, g.size, rangeOf(l.firstGate, nb))
 	constant := func(name string, k func(r *gateRow) field.Element) *wiop.Column {
-		values := make([]field.Element, nb)
-		for i := range l.gateRows {
-			values[i] = k(&l.gateRows[i])
-		}
-		return precomputedElements(ctx.Childf("%s", name), g.module, g.size, values)
+		return elementColumn(ctx.Childf("%s", name), g.module, g.size, nb,
+			func(i int) field.Element { return k(&l.gateRows[i]) })
 	}
 	g.kMul = constant("k-mul", func(r *gateRow) field.Element { return r.kMul })
 	g.kA = constant("k-a", func(r *gateRow) field.Element { return r.kA })
 	g.kB = constant("k-b", func(r *gateRow) field.Element { return r.kB })
 	g.kOut = constant("k-out", func(r *gateRow) field.Element { return r.kOut })
 	g.kConst = constant("k-const", func(r *gateRow) field.Element { return r.kConst })
-	// reads declares the selector and the ids of a value that some rows read: id gives -1 for the others.
-	reads := func(name string, id func(r *gateRow) int) (selector, ids *wiop.Column) {
-		sel, values := make([]int, nb), make([]int, nb)
-		for i := range l.gateRows {
-			if x := id(&l.gateRows[i]); x >= 0 {
-				sel[i], values[i] = 1, x
-			}
-		}
-		return precomputed(ctx.Childf("%s", name), g.module, g.size, sel),
-			precomputed(ctx.Childf("%s-id", name), g.module, g.size, values)
-	}
-	g.readA, g.idA = reads("read-a", func(r *gateRow) int { return r.a })
-	g.readB, g.idB = reads("read-b", func(r *gateRow) int { return r.b })
-	g.check, g.checkID = reads("check", func(r *gateRow) int { return r.check })
+	g.readA, g.idA = idColumns(ctx.Childf("a"), g.module, g.size, nb, func(i int) int { return l.gateRows[i].a })
+	g.readB, g.idB = idColumns(ctx.Childf("b"), g.module, g.size, nb, func(i int) int { return l.gateRows[i].b })
+	g.check, g.checkID = idColumns(ctx.Childf("check"), g.module, g.size, nb,
+		func(i int) int { return l.gateRows[i].check })
 
 	// every row, which holds on all of them, is the relation of its constants
 	a, b, o := columnViews(g.a), columnViews(g.b), columnViews(g.o)
@@ -335,6 +383,16 @@ func columnViews(cols [6]*wiop.Column) E6 {
 	return x
 }
 
+// busElement is the tuple (id, x₀, …, x₅) of the rows of the module where the selector is 1.
+func busElement(m *wiop.Module, selector, id *wiop.Column, x [6]*wiop.Column) wiop.Table {
+	entries := make([]wiop.TableEntry, 0, 1+len(x))
+	entries = append(entries, id.View())
+	for _, c := range x {
+		entries = append(entries, c.View())
+	}
+	return wiop.NewTableEntries(m, selector.View(), entries...)
+}
+
 // defineBus declares the value bus: every read of a value is a tuple (id, x₀, …, x₅) that some
 // producer exposes. A coordinate is read and exposed as (id, x, 0, 0, 0, 0, 0).
 func (v *Verifier) defineBus(sys *wiop.System, ctx *wiop.ContextFrame) {
@@ -343,18 +401,12 @@ func (v *Verifier) defineBus(sys *wiop.System, ctx *wiop.ContextFrame) {
 	coordinate := func(m *wiop.Module, selector, id, x *wiop.Column) wiop.Table {
 		return wiop.NewTableEntries(m, selector.View(), id.View(), x.View(), zero(m), zero(m), zero(m), zero(m), zero(m))
 	}
-	element := func(m *wiop.Module, selector, id *wiop.Column, x [6]*wiop.Column) wiop.Table {
-		entries := make([]wiop.TableEntry, 0, 1+len(x))
-		entries = append(entries, id.View())
-		for _, c := range x {
-			entries = append(entries, c.View())
-		}
-		return wiop.NewTableEntries(m, selector.View(), entries...)
-	}
 
 	producers := make([]wiop.Table, 0, 2+2*6+2)
-	producers = append(producers, element(p.module, p.active, p.id, p.elem), element(s.module, s.active, s.id, s.elem),
-		element(g.module, g.active, g.id, g.o))
+	producers = append(producers,
+		busElement(p.module, p.active, p.id, p.elem),
+		busElement(s.module, s.active, s.id, s.elem),
+		busElement(g.module, g.active, g.id, g.o))
 	for k := range 6 {
 		producers = append(producers,
 			coordinate(p.module, p.active, p.coordID[k], p.elem[k]),
@@ -372,9 +424,15 @@ func (v *Verifier) defineBus(sys *wiop.System, ctx *wiop.ContextFrame) {
 		consumers = append(consumers, coordinate(t.module, t.read[i], t.slotID[i], t.block[i]))
 	}
 	consumers = append(consumers,
-		element(g.module, g.readA, g.idA, g.a),
-		element(g.module, g.readB, g.idB, g.b),
-		element(g.module, g.check, g.checkID, g.o))
+		busElement(g.module, g.readA, g.idA, g.a),
+		busElement(g.module, g.readB, g.idB, g.b),
+		busElement(g.module, g.check, g.checkID, g.o))
+	producers = append(producers, v.fold.producers()...)
+	producers = append(producers, v.eq.producers()...)
+	consumers = append(consumers, v.fold.consumers()...)
+	consumers = append(consumers, v.eq.consumers()...)
+	consumers = append(consumers, v.rounds.consumers()...)
+	consumers = append(consumers, v.claims.consumers()...)
 	sys.NewInclusion(ctx, consumers, producers)
 }
 
@@ -411,12 +469,18 @@ func (v *Verifier) Assign(run *wiop.Runtime, proof []field.Ext) error {
 		return err
 	}
 
+	put := func(col *wiop.Column, vec []field.Element) {
+		if v.corrupt != nil {
+			v.corrupt(col, vec)
+		}
+		run.AssignColumn(col, &wiop.ConcreteVector{Plain: field.VecFromBase(vec)})
+	}
 	assign := func(col *wiop.Column, size int, value func(row int) field.Element, rows int) {
 		vec := make([]field.Element, size)
 		for i := range rows {
 			vec[i] = value(i)
 		}
-		run.AssignColumn(col, &wiop.ConcreteVector{Plain: field.VecFromBase(vec)})
+		put(col, vec)
 	}
 
 	for k, col := range v.proof.elem {
@@ -432,15 +496,53 @@ func (v *Verifier) Assign(run *wiop.Runtime, proof []field.Ext) error {
 		assign(t.next[i], t.size, func(r int) field.Element { return w.rows[r].next[i] }, len(w.rows))
 	}
 
-	gw := v.layout.evaluateGates(proof)
-	g := &v.gate
-	for k := range 6 {
-		for _, part := range []struct {
-			col    *wiop.Column
-			values []field.Ext
-		}{{g.a[k], gw.a}, {g.b[k], gw.b}, {g.o[k], gw.o}} {
-			assign(part.col, g.size, func(r int) field.Element { return part.values[r].AppendBase(nil)[k] }, len(part.values))
+	values := v.layout.values(seed, proof, w)
+	gates := v.layout.evaluateGates(values)
+	eqs := v.layout.evaluateEqs(values)
+	folds := v.layout.evaluateFolds(values)
+	rounds := v.layout.evaluateRounds(values)
+
+	assignExt := func(cols [6]*wiop.Column, size int, x []field.Ext) {
+		for k, col := range cols {
+			assign(col, size, func(i int) field.Element { return coordinates(x[i])[k] }, len(x))
 		}
 	}
-	return nil
+	g := &v.gate
+	assignExt(g.a, g.size, gates.a)
+	assignExt(g.b, g.size, gates.b)
+	assignExt(g.o, g.size, gates.o)
+	f := &v.fold
+	assignExt(f.v, f.size, folds.v)
+	assignExt(f.phi, f.size, folds.phi)
+	assignExt(f.e, f.size, folds.e)
+	assignExt(f.c, f.size, folds.c)
+	assignExt(f.sum, f.size, folds.sum)
+	assignExt(f.final, f.size, folds.final)
+	q := &v.eq
+	assignExt(q.p, q.size, eqs.p)
+	assignExt(q.r, q.size, eqs.r)
+	assignExt(q.factor, q.size, eqs.factor)
+	assignExt(q.product, q.size, eqs.product)
+	m := &v.rounds
+	assignExt(m.a, m.size, rounds.a)
+	assignExt(m.out, m.size, rounds.out)
+	assignExt(m.r, m.size, rounds.r)
+	assignExt(m.mu, m.size, rounds.mu)
+	assignExt(m.c0, m.size, rounds.c0)
+	for k := range m.c {
+		assignExt(m.c[k], m.size, columnOf(rounds.c, k))
+	}
+	for k := range m.h {
+		assignExt(m.h[k], m.size, columnOf(rounds.h, k))
+	}
+	return v.claims.assign(run, put)
+}
+
+// columnOf returns the k-th entry of every row.
+func columnOf(rows [][]field.Ext, k int) []field.Ext {
+	r := make([]field.Ext, len(rows))
+	for i := range rows {
+		r[i] = rows[i][k]
+	}
+	return r
 }
