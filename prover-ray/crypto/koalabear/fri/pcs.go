@@ -1307,7 +1307,7 @@ func (pcs *PCS) inputOpeningCommitments() ([]CommitterState, error) {
 		for _, entry := range bundle.Entries {
 			committed := pcs.openings[entry.BatchIdx].committed
 			root := committed.Tree.Root()
-			// Skip a batch already added at a larger size, or (with dedup) one sharing an added root.
+			// Skip a batch already added (by an earlier column), or (with dedup) one sharing an added root.
 			if seenBatch[entry.BatchIdx] || (!pcs.rootDedupDisabled && seenRoot[root]) {
 				continue
 			}
@@ -2022,6 +2022,7 @@ func inputOpeningRoots(layout layout, orders [][]int, roots []field.Octuplet, de
 				indexByBatch[batchIdx] = idx
 				continue
 			}
+			// The batch has no tree yet and shares none (no dedup, or a new root): append a new one.
 			indexByBatch[batchIdx] = len(inputRoots)
 			indexByRoot[root] = len(inputRoots)
 			inputRoots = append(inputRoots, root)
