@@ -26,7 +26,7 @@ func identicalBatchesFixture(t *testing.T, disableDedup bool) (*PCS, VerifyInput
 	}
 
 	prng := rand.New(utils.NewRandSource(20261016))
-	twin := make(Batch, 3)
+	twin := make(Batch, 3) // indexed by size log2: nothing at 2^0, one column of size 2 and one of size 4
 	twin[1] = SizedTable{Base: [][]field.Element{field.VecPseudoRandBase(prng, 2)}}
 	twin[2] = SizedTable{Ext: [][]field.Ext{field.VecPseudoRandExt(prng, 4)}}
 	other := make(Batch, 3)
