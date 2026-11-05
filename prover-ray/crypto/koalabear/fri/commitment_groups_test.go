@@ -46,8 +46,9 @@ func ungrouped(shape Shape) Shape {
 }
 
 // newGroupedPCSFixture commits the grouped witness, opens it as numBatches
-// batches sharing one input tree at four queries, and checks the native
-// verifier accepts.
+// batches at four queries, and checks the native verifier accepts. Root dedup
+// is on, so with several batches, which all share one root, they share one
+// input tree.
 func newGroupedPCSFixture(t *testing.T, numBatches int) pcsOpenVerifyFixture {
 	t.Helper()
 	params, err := NewParams(4, 3, 4)
