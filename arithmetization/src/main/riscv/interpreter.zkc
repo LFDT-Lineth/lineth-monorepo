@@ -846,11 +846,10 @@ fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
             printf "ECALL for exit\n"
             var a0:DoubleWord = registers[10]
             //
-            if a0 == 0 {
-                printf "EXIT CODE = 0\n"
-            } else {
+            if a0 != 0 {
                 fail "EXIT CODE = %d\n", a0
             }
+            printf "EXIT CODE = 0\n"
             new_pc = MAX_UINT_64
         }
         case WRITE_SYSCALL: {
