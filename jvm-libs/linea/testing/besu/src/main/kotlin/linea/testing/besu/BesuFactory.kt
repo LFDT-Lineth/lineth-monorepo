@@ -40,7 +40,8 @@ object BesuFactory {
 
   /**
    * Vertx defaults (2 * #CPUs event loops, 20 worker and 20 internal blocking threads) are created
-   * per Besu node, which starves CI CPUs when running multiple nodes/tests in parallel.
+   * per Besu node, which starves CI CPUs when running multiple nodes/tests in parallel, so we use
+   * [vertxTestOptions] instead (2 event loops, 2 worker and 2 internal blocking threads).
    */
   fun buildTestNodeRunner(): BesuNodeRunner =
     ThreadBesuNodeRunner(
