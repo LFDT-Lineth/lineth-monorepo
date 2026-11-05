@@ -7,10 +7,10 @@ import (
 	"github.com/consensys/gnark/gkr"
 )
 
-// The layout is everything about the verifier that depends only on the circuit, the schedule and the
-// number of variables n, not on the values: which element of the flattened proof is absorbed where,
-// which squeeze gives which challenge, and so how the transcript's compressions are filled. The tables
-// are defined from it and assigned from it, so they cannot disagree.
+// The layout holds everything about the verifier that depends only on the circuit, the schedule and the
+// number of variables n, not on the values: the ids of the values, which element of the flattened proof
+// the transcript absorbs where and which squeeze gives which challenge, the rows of the gates, the
+// folds, the eqs and the rounds, and the claims that gnark's Verify returns.
 
 // slot is one of the eight base elements of a block that a compression takes.
 type slot struct {

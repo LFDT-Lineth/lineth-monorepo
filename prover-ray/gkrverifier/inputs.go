@@ -19,24 +19,31 @@ type Claim struct {
 	Value [6]*wiop.Cell
 }
 
-// claimsModule has one row per cell handle of the claims: each coordinate of each distinct point, and
-// each value. A row is equated with its handle's cells, and reads the value that the layout gives it.
-type claimsModule struct {
+// inputsModule has one row per cell handle of the inputs: the seed, each coordinate of each distinct
+// point of the claims, and each claim's value. A row is equated with its handle's cells by a one-hot
+// selector. The seed's row exposes its six coordinates to the bus; the others read the value that the
+// layout gives them.
+type inputsModule struct {
 	module  *wiop.Module
 	size    int
 	x       [6]*wiop.Column // witness
-	active  *wiop.Column    // precomputed
-	id      *wiop.Column
+	seed    *wiop.Column    // precomputed: 1 on the seed's row, the first
+	coordID [6]*wiop.Column // the ids of the seed's coordinates
+	read    *wiop.Column    // 1 on the rows of the claims
+	id      *wiop.Column    // the id of the value that the row reads
 	handles [][6]*wiop.Cell
 }
 
-// defineClaims binds the claims of the inputs to the values that the layout gives them.
-func (v *Verifier) defineClaims(sys *wiop.System, ctx *wiop.ContextFrame, round *wiop.Round) error {
-	l, c := v.layout, &v.claims
-	var ids []int
+// defineInputs binds the seed and the claims of the inputs to the values that the layout gives them.
+func (v *Verifier) defineInputs(
+	sys *wiop.System, ctx *wiop.ContextFrame, round *wiop.Round, inputs Inputs,
+) error {
+	l, c := v.layout, &v.inputs
+	c.handles = [][6]*wiop.Cell{inputs.Seed}
+	ids := []int{-1}
 	points := make(map[*Point][]int)
 	for _, claim := range l.claims {
-		given, err := v.inputs.claim(claim)
+		given, err := inputs.claim(claim)
 		if err != nil {
 			return err
 		}
@@ -63,7 +70,7 @@ func (v *Verifier) defineClaims(sys *wiop.System, ctx *wiop.ContextFrame, round 
 		}
 		c.handles, ids = append(c.handles, given.Value), append(ids, claim.value)
 	}
-	for wireI, claims := range v.inputs.Claims {
+	for wireI, claims := range inputs.Claims {
 		if want := l.nbClaims(wireI); len(claims) != want {
 			return fmt.Errorf("gkrverifier: wire %d has %d claims, the verifier returns %d", wireI, len(claims), want)
 		}
@@ -75,15 +82,23 @@ func (v *Verifier) defineClaims(sys *wiop.System, ctx *wiop.ContextFrame, round 
 	for k := range c.x {
 		c.x[k] = c.module.NewColumn(ctx.Childf("x%d", k), round)
 	}
-	c.active = flagColumn(ctx.Childf("active"), c.module, c.size, nb, func(int) bool { return true })
-	c.id = precomputed(ctx.Childf("id"), c.module, c.size, ids)
+	c.seed = precomputed(ctx.Childf("seed"), c.module, c.size, ones(1))
+	for k := range c.coordID {
+		c.coordID[k] = precomputed(ctx.Childf("coordinate-id%d", k), c.module, c.size, []int{l.coordinateID(l.seed, k)})
+	}
+	c.read, c.id = idColumns(ctx, c.module, c.size, nb, func(i int) int { return ids[i] })
 
 	// every row is the cells of its handle, which a one-hot selector picks out
+	selectors := make([]*wiop.Column, nb)
+	for i := range selectors {
+		oneHot := make([]int, i+1)
+		oneHot[i] = 1
+		selectors[i] = precomputed(ctx.Childf("handle%d", i), c.module, c.size, oneHot)
+	}
 	for k := range c.x {
 		var sum wiop.Expression = wiop.NewConstantField(field.Zero())
 		for i, cells := range c.handles {
-			selector := flagColumn(ctx.Childf("handle%d-%d", k, i), c.module, c.size, nb, func(row int) bool { return row == i })
-			sum = wiop.Add(sum, wiop.Mul(selector.View(), wiop.Sub(c.x[k].View(), cells[k])))
+			sum = wiop.Add(sum, wiop.Mul(selectors[i].View(), wiop.Sub(c.x[k].View(), cells[k])))
 		}
 		c.module.NewVanishingManual(ctx.Childf("is-input%d", k), sum)
 	}
@@ -113,28 +128,37 @@ func (l *layout) nbClaims(wireI int) int {
 	return count
 }
 
-func (c *claimsModule) consumers() []wiop.Table {
-	return []wiop.Table{busElement(c.module, c.active, c.id, c.x)}
+func (c *inputsModule) producers() []wiop.Table {
+	producers := make([]wiop.Table, 0, len(c.coordID))
+	for k := range c.coordID {
+		producers = append(producers, busCoordinate(c.module, c.seed, c.coordID[k], c.x[k]))
+	}
+	return producers
 }
 
-// assign assigns the rows of the claims module from the cells that the runtime holds.
-func (c *claimsModule) assign(run *wiop.Runtime, put func(*wiop.Column, []field.Element)) error {
+func (c *inputsModule) consumers() []wiop.Table {
+	return []wiop.Table{busElement(c.module, c.read, c.id, c.x)}
+}
+
+// assign assigns the rows of the inputs module from the cells that the runtime holds, and returns the
+// seed.
+func (c *inputsModule) assign(run *wiop.Runtime) (seed [6]field.Element, err error) {
 	values := make([][6]field.Element, len(c.handles))
 	for i, cells := range c.handles {
 		for k, cell := range cells {
 			value := run.GetCellValue(cell)
 			if !value.IsBase() {
-				return errors.New("gkrverifier: a cell of a claim is not a base field element")
+				return seed, errors.New("gkrverifier: a cell of an input is not a base field element")
 			}
 			values[i][k] = value.AsBase()
 		}
 	}
 	for k, col := range c.x {
-		column := make([]field.Element, c.size)
+		column := make([]field.Element, len(values))
 		for i := range values {
 			column[i] = values[i][k]
 		}
-		put(col, column)
+		assignColumn(run, col, c.size, column)
 	}
-	return nil
+	return values[0], nil
 }

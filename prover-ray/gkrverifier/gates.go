@@ -19,12 +19,17 @@ func identityGate() gkr.SerializableGate {
 // of E₆ elements, with o⁻ the result of the previous row, a and b read from the value bus, and the
 // k base field constants. Every row exposes its result under its own id.
 
-// operand is an operand of an instruction: a base field constant, or a value of the bus.
+// operand is an operand of an instruction: a base field constant c, or the value of the bus with the
+// given id times the base field coefficient coef.
 type operand struct {
 	isConst bool
 	c       field.Element
 	id      int
+	coef    field.Element
 }
+
+// value returns the operand of the value with the given id.
+func value(id int) operand { return operand{id: id, coef: field.One()} }
 
 // gateRow is a row of the gate module.
 type gateRow struct {
@@ -43,7 +48,7 @@ type gateBuilder struct {
 
 func (g *gateBuilder) emit(r gateRow) operand {
 	g.rows = append(g.rows, r)
-	return operand{id: g.firstID + len(g.rows) - 1}
+	return value(g.firstID + len(g.rows) - 1)
 }
 
 func newRow() gateRow { return gateRow{a: -1, b: -1, check: -1} }
@@ -71,7 +76,7 @@ func (g *gateBuilder) lowerGate(gate gkr.GateBytecode, inputs []int) operand {
 		space = append(space, operand{isConst: true, c: base(c)})
 	}
 	for _, id := range inputs {
-		space = append(space, operand{id: id})
+		space = append(space, value(id))
 	}
 	for _, inst := range gate.Instructions {
 		ops := make([]operand, len(inst.Inputs))
@@ -112,11 +117,13 @@ func (g *gateBuilder) lowerInstruction(op gkr.GateOp, ops []operand) operand {
 
 // sum returns Σ ±ops[i], with the sign of ops[i] negative if negative[i], or all positive if negative
 // is nil. The constants are summed into one k_c, and the values are chained: the first row takes two
-// of them, each other row takes one and the previous row's result.
+// of them, each other row takes one and the previous row's result. The coefficient of a value is a
+// factor of the k_a or k_b that reads it.
 func (g *gateBuilder) sum(ops []operand, negative []bool) operand {
 	var (
 		constant field.Element
 		values   []operand
+		coefs    []field.Element
 		negs     []bool
 	)
 	for i, o := range ops {
@@ -126,10 +133,10 @@ func (g *gateBuilder) sum(ops []operand, negative []bool) operand {
 			constant.Add(&constant, &term)
 		} else {
 			values = append(values, o)
+			coefs = append(coefs, signed(o.coef, neg))
 			negs = append(negs, neg)
 		}
 	}
-	one := field.One()
 	switch {
 	case len(values) == 0:
 		return operand{isConst: true, c: constant}
@@ -138,22 +145,24 @@ func (g *gateBuilder) sum(ops []operand, negative []bool) operand {
 	}
 
 	first := newRow()
-	first.kA, first.a = signed(one, negs[0]), values[0].id
+	first.kA, first.a = coefs[0], values[0].id
 	if len(values) >= 2 {
-		first.kB, first.b = signed(one, negs[1]), values[1].id
+		first.kB, first.b = coefs[1], values[1].id
 	}
 	first.kConst = constant
 	result := g.emit(first)
 	for i := 2; i < len(values); i++ {
 		row := newRow()
-		row.kOut, row.kA, row.a = one, signed(one, negs[i]), values[i].id
+		row.kOut, row.kA, row.a = field.One(), coefs[i], values[i].id
 		result = g.emit(row)
 	}
 	return result
 }
 
-// product returns Πops[i]. The constants are multiplied into one factor, and the values are chained: the
-// first row takes two of them, each other row takes one and the previous row's result.
+// product returns Πops[i]. The constants and the coefficients of the values are multiplied into one
+// factor. A single value is returned with that factor as its coefficient, without a row; several are
+// chained: the first row takes two of them, with the factor as its k_m, and each other row takes one
+// and the previous row's result.
 func (g *gateBuilder) product(ops []operand) operand {
 	factor := field.One()
 	var values []operand
@@ -161,21 +170,18 @@ func (g *gateBuilder) product(ops []operand) operand {
 		if o.isConst {
 			factor.Mul(&factor, &o.c)
 		} else {
+			factor.Mul(&factor, &o.coef)
 			values = append(values, o)
 		}
 	}
-	switch {
-	case len(values) == 0:
+	switch len(values) {
+	case 0:
 		return operand{isConst: true, c: factor}
-	case len(values) == 1 && factor.IsOne():
-		return values[0]
+	case 1:
+		return operand{id: values[0].id, coef: factor}
 	}
 
 	first := newRow()
-	if len(values) == 1 {
-		first.kA, first.a = factor, values[0].id
-		return g.emit(first)
-	}
 	first.kMul, first.a, first.b = factor, values[0].id, values[1].id
 	result := g.emit(first)
 	for _, v := range values[2:] {
@@ -188,14 +194,24 @@ func (g *gateBuilder) product(ops []operand) operand {
 
 // evaluate lowers the evaluation of the gate on the values with the given ids, and returns the id of
 // the value of its result: the id of an input if the gate is the identity, and that of a row otherwise.
+// A result that is a constant or a scaled value gets a row of its own.
 func (g *gateBuilder) evaluate(gate gkr.GateBytecode, inputs []int) int {
 	result := g.lowerGate(gate, inputs)
-	if result.isConst {
-		row := newRow()
-		row.kConst = result.c
-		return g.emit(row).id
+	if result.isConst || !result.coef.IsOne() {
+		return g.emit(copyRow(result)).id
 	}
 	return result.id
+}
+
+// copyRow is the row whose result is the operand.
+func copyRow(o operand) gateRow {
+	row := newRow()
+	if o.isConst {
+		row.kConst = o.c
+	} else {
+		row.kA, row.a = o.coef, o.id
+	}
+	return row
 }
 
 // evaluateChecked lowers the evaluation of the gate on the values with the given ids, ending on a row
@@ -203,14 +219,8 @@ func (g *gateBuilder) evaluate(gate gkr.GateBytecode, inputs []int) int {
 func (g *gateBuilder) evaluateChecked(gate gkr.GateBytecode, inputs []int, claimed int) {
 	start := len(g.rows)
 	result := g.lowerGate(gate, inputs)
-	if result.isConst || len(g.rows) == start || result.id != g.firstID+len(g.rows)-1 {
-		row := newRow()
-		if result.isConst {
-			row.kConst = result.c
-		} else {
-			row.kA, row.a = field.One(), result.id
-		}
-		g.emit(row)
+	if result.isConst || !result.coef.IsOne() || len(g.rows) == start || result.id != g.firstID+len(g.rows)-1 {
+		g.emit(copyRow(result))
 	}
 	g.rows[len(g.rows)-1].check = claimed
 }

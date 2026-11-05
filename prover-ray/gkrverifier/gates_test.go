@@ -62,12 +62,13 @@ func evaluateBytecode(gate gkr.GateBytecode, inputs []field.Ext) field.Ext {
 }
 
 // TestLowerGate checks that the rows that a gate is lowered to compute its evaluation, for gates that
-// use every operation, with constants as any operand and operands that repeat.
+// use every operation, with constants as any operand, operands that repeat, and values scaled by a
+// constant before they are summed, multiplied, or returned.
 func TestLowerGate(t *testing.T) {
 	const (
 		c0, c1  = 0, 1    // the constants
 		x, y, z = 2, 3, 4 // the inputs
-		r0      = 5       // the first instruction's result
+		r0, r1  = 5, 6    // the results of the first instructions
 	)
 	constants := []*big.Int{big.NewInt(7), big.NewInt(-3)}
 	gates := map[string][]gkr.GateInstruction{
@@ -88,6 +89,45 @@ func TestLowerGate(t *testing.T) {
 			{Op: gkr.OpMul, Inputs: []uint16{z, z}},
 			{Op: gkr.OpAdd, Inputs: []uint16{r0}},
 		},
+		"scaled sum": {
+			{Op: gkr.OpMul, Inputs: []uint16{c0, x}},
+			{Op: gkr.OpMul, Inputs: []uint16{c1, y}},
+			{Op: gkr.OpAdd, Inputs: []uint16{r0, r1, z, c0}},
+		},
+		"scaled sub": {
+			{Op: gkr.OpMul, Inputs: []uint16{c0, x}},
+			{Op: gkr.OpSub, Inputs: []uint16{r0, y, r0}},
+		},
+		"scaled neg": {
+			{Op: gkr.OpMul, Inputs: []uint16{c0, x}},
+			{Op: gkr.OpNeg, Inputs: []uint16{r0}},
+		},
+		"scaled product": {
+			{Op: gkr.OpMul, Inputs: []uint16{c0, x}},
+			{Op: gkr.OpMul, Inputs: []uint16{c1, y}},
+			{Op: gkr.OpMul, Inputs: []uint16{r0, r1}},
+		},
+		"scaled chain": {
+			{Op: gkr.OpMul, Inputs: []uint16{c0, x}},
+			{Op: gkr.OpMul, Inputs: []uint16{y, r0, z}},
+		},
+		"scaled square": {
+			{Op: gkr.OpMul, Inputs: []uint16{c0, x}},
+			{Op: gkr.OpMul, Inputs: []uint16{r0, r0}},
+		},
+		"scaled mulacc": {
+			{Op: gkr.OpMul, Inputs: []uint16{c0, x}},
+			{Op: gkr.OpMulAcc, Inputs: []uint16{r0, y, z}},
+		},
+		"scaled sumexp17": {
+			{Op: gkr.OpMul, Inputs: []uint16{c0, x}},
+			{Op: gkr.OpSumExp17, Inputs: []uint16{r0, y, z}},
+		},
+		"scaled result": {{Op: gkr.OpMul, Inputs: []uint16{c0, x}}},
+		"scaled result of a sum": {
+			{Op: gkr.OpAdd, Inputs: []uint16{x, y}},
+			{Op: gkr.OpMul, Inputs: []uint16{c1, r0}},
+		},
 	}
 
 	inputs := make([]field.Ext, 3)
@@ -98,30 +138,42 @@ func TestLowerGate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			gate := gkr.GateBytecode{Instructions: instructions, Constants: constants}
 			const firstID = 100
+			// run returns the value of an id, with the rows' results computed
+			run := func(g *gateBuilder) func(id int) field.Ext {
+				o := make([]field.Ext, len(g.rows))
+				at := func(id int) field.Ext {
+					if id < len(inputs) {
+						return inputs[id]
+					}
+					return o[id-firstID]
+				}
+				for i, row := range g.rows {
+					var a, b, previous field.Ext
+					if row.a >= 0 {
+						a = at(row.a)
+					}
+					if row.b >= 0 {
+						b = at(row.b)
+					}
+					if i > 0 {
+						previous = o[i-1]
+					}
+					o[i] = row.evaluate(a, b, previous)
+				}
+				return at
+			}
+			want := evaluateBytecode(gate, inputs)
+
 			g := &gateBuilder{firstID: firstID}
 			id := g.evaluate(gate, []int{0, 1, 2})
-			// the rows' results, by id
-			o := make([]field.Ext, len(g.rows))
-			value := func(i int) field.Ext {
-				if i < len(inputs) {
-					return inputs[i]
-				}
-				return o[i-firstID]
-			}
-			for i := range g.rows {
-				var a, b, previous field.Ext
-				if g.rows[i].a >= 0 {
-					a = value(g.rows[i].a)
-				}
-				if g.rows[i].b >= 0 {
-					b = value(g.rows[i].b)
-				}
-				if i > 0 {
-					previous = o[i-1]
-				}
-				o[i] = g.rows[i].evaluate(a, b, previous)
-			}
-			require.Equal(t, evaluateBytecode(gate, inputs), value(id))
+			require.Equal(t, want, run(g)(id))
+
+			const claimed = 7
+			g = &gateBuilder{firstID: firstID}
+			g.evaluateChecked(gate, []int{0, 1, 2}, claimed)
+			last := g.rows[len(g.rows)-1]
+			require.Equal(t, claimed, last.check)
+			require.Equal(t, want, run(g)(firstID+len(g.rows)-1))
 		})
 	}
 }
