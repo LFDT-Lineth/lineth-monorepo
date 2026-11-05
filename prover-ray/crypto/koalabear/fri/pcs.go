@@ -1304,9 +1304,6 @@ func (pcs *PCS) inputOpeningCommitments() ([]CommitterState, error) {
 	seenBatch := make(map[int]bool)
 	var inputs []CommitterState
 	for _, bundle := range openingsLayout {
-		if int(bundle.SizeLog2) > int(pcs.Params.LogPlainTextSize) {
-			continue
-		}
 		for _, entry := range bundle.Entries {
 			committed := pcs.openings[entry.BatchIdx].committed
 			root := committed.Tree.Root()
