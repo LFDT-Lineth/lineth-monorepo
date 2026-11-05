@@ -640,6 +640,7 @@ pub const system_5_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 1,
+    .dynamic_module_min_sizes = &[_]usize{8},
 };
 pub const system_5_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 4 },
@@ -2520,6 +2521,7 @@ pub const system_20_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 1,
+    .dynamic_module_min_sizes = &[_]usize{4},
 };
 pub const system_20_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 3 },
@@ -3435,6 +3437,7 @@ pub const system_27_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 1,
+    .dynamic_module_min_sizes = &[_]usize{1},
 };
 pub const system_27_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 2 },
@@ -3688,6 +3691,7 @@ pub const system_29_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 1,
+    .dynamic_module_min_sizes = &[_]usize{8},
 };
 pub const system_29_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 4 },
@@ -3784,6 +3788,7 @@ pub const system_30_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 3 },
     .total_round_coins = 3,
     .dynamic_module_count = 2,
+    .dynamic_module_min_sizes = &[_]usize{ 8, 8 },
 };
 pub const system_30_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 2, 2, 8 },
@@ -10164,6 +10169,7 @@ pub const system_69_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 1,
+    .dynamic_module_min_sizes = &[_]usize{1},
 };
 pub const system_69_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 2, 1, 2 },
@@ -10408,6 +10414,7 @@ pub const system_71_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 1,
+    .dynamic_module_min_sizes = &[_]usize{1},
 };
 pub const system_71_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 2 },
@@ -12212,6 +12219,7 @@ pub const system_75_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 1,
+    .dynamic_module_min_sizes = &[_]usize{8},
 };
 pub const system_75_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 4 },
@@ -12308,6 +12316,7 @@ pub const system_76_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 1,
+    .dynamic_module_min_sizes = &[_]usize{8},
 };
 pub const system_76_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 4 },
@@ -12404,6 +12413,7 @@ pub const system_77_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 1,
+    .dynamic_module_min_sizes = &[_]usize{8},
 };
 pub const system_77_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 4 },

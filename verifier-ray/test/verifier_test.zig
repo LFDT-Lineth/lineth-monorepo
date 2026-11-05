@@ -152,6 +152,28 @@ test "rs blowup: a dynamic size above the rate's committable bound is rejected" 
     }
 }
 
+// End to end: the multi-size Fibonacci System opens its dynamic module at
+// shifts 0, -1 and -2, so its minimum size is 8 (N > 2·2). An honest size-8
+// proof re-declared at size 4 must be rejected for the size itself, before
+// the transcript or the PCS could disagree, as prover-ray's System.Verify does.
+test "dynamic module: a size below the module minimum is rejected" {
+    const i = comptime caseIndex("DynamicFibonacciMultiSize");
+    const case = comptime vf.get(i);
+    comptime std.debug.assert(case.spec.dynamic_module_min_sizes.len == 1);
+    comptime std.debug.assert(case.spec.dynamic_module_min_sizes[0] == 8);
+
+    var input = vf.getInput(i);
+    try std.testing.expectEqualSlices(usize, &[_]usize{8}, input.proof.module_sizes);
+    try verifier.verify(case.spec, case.systems, input.proof, input.public_inputs);
+
+    const below = [_]usize{4};
+    input.proof.module_sizes = &below;
+    try std.testing.expectError(
+        error.DynamicModuleSizeBelowMinimum,
+        verifier.verify(case.spec, case.systems, input.proof, input.public_inputs),
+    );
+}
+
 test "multi-size: one baked System verifies proofs of two dynamic sizes" {
     // The runtime-size-reconstructed PCS layout: a committed-dynamic-column
     // protocol is proven at two DIFFERENT dynamic-module sizes, and BOTH proofs
