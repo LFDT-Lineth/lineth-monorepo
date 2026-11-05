@@ -75,13 +75,13 @@ func identicalBatchesFixture(t *testing.T, disableDedup bool) (*PCS, VerifyInput
 // they share one input tree, with DisableRootDedup each batch gets its own,
 // and a verifier configured for the other mode rejects the proof on shape.
 func TestPCSRootDedup(t *testing.T) {
-	t.Run("enabled", func(t *testing.T) {
+	t.Run("DedupEnabled", func(t *testing.T) {
 		pcs, in, proof := identicalBatchesFixture(t, false)
 		require.Len(t, proof.InputCaps, 2, "equal roots must share one input tree")
 		require.Len(t, proof.InputQueries[0], 2)
 		require.NoError(t, pcs.Verify(in, proof))
 	})
-	t.Run("disabled", func(t *testing.T) {
+	t.Run("DedupDisabled", func(t *testing.T) {
 		pcs, in, proof := identicalBatchesFixture(t, true)
 		require.Len(t, proof.InputCaps, 3, "every batch must get its own input tree")
 		require.Len(t, proof.InputQueries[0], 3)
