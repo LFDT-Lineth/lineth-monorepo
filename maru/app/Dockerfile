@@ -11,8 +11,6 @@ COPY --from=licenses LICENSE-* /licenses/
 ARG LINETH_APP_JAR=/opt/consensys/maru/maru.jar
 ENV LINETH_APP_JAR=$LINETH_APP_JAR
 
-CMD ["sh", "-c", "exec java -jar \"$LINETH_APP_JAR\""]
-
 # Build-time metadata as defined at http://label-schema.org
 ARG BUILD_DATE
 ARG VCS_REF
