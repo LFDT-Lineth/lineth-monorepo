@@ -58,3 +58,38 @@ func (l *layout) evaluate(seed [6]field.Element, proof []field.Ext) (*transcript
 	}
 	return w, nil
 }
+
+// gateWitness holds, for each row of the gates, the values of its operands a and b, and of its result o.
+type gateWitness struct {
+	a, b, o []field.Ext
+}
+
+// evaluateGates runs the gate rows of the layout on the proof.
+func (l *layout) evaluateGates(proof []field.Ext) *gateWitness {
+	w := &gateWitness{
+		a: make([]field.Ext, len(l.gateRows)),
+		b: make([]field.Ext, len(l.gateRows)),
+		o: make([]field.Ext, len(l.gateRows)),
+	}
+	value := func(id int) field.Ext {
+		if id < l.nbProof {
+			return proof[id]
+		}
+		return w.o[id-l.firstGate]
+	}
+	for i := range l.gateRows {
+		row := &l.gateRows[i]
+		if row.a >= 0 {
+			w.a[i] = value(row.a)
+		}
+		if row.b >= 0 {
+			w.b[i] = value(row.b)
+		}
+		var previous field.Ext
+		if i > 0 {
+			previous = w.o[i-1]
+		}
+		w.o[i] = row.evaluate(w.a[i], w.b[i], previous)
+	}
+	return w
+}
