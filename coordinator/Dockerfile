@@ -45,12 +45,15 @@ ARG BUILD_DATE
 ARG VCS_REF
 ARG VERSION
 ARG IMAGE_LICENSES="MIT OR Apache-2.0"
+ARG IMAGE_NAME="coordinator"
+ARG IMAGE_DESCRIPTION="Coordinator for Lineth"
+ARG IMAGE_VCS_URL="https://github.com/LFDT-Lineth/lineth-monorepo"
 LABEL org.label-schema.build-date=$BUILD_DATE \
-	org.label-schema.name="coordinator" \
-	org.label-schema.description="Coordinator for Lineth" \
+	org.label-schema.name="$IMAGE_NAME" \
+	org.label-schema.description="$IMAGE_DESCRIPTION" \
 	org.label-schema.url="https://consensys.io/" \
 	org.label-schema.vcs-ref=$VCS_REF \
-	org.label-schema.vcs-url="https://github.com/LFDT-Lineth/lineth-monorepo" \
+	org.label-schema.vcs-url="$IMAGE_VCS_URL" \
 	org.label-schema.vendor="ConsenSys" \
 	org.label-schema.version=$VERSION \
 	org.label-schema.schema-version="1.0" \
