@@ -6,8 +6,8 @@
  */
 package linea.testing.besu
 
-import io.vertx.core.VertxOptions
 import linea.kotlin.encodeHex
+import lineth.vertx.vertxTestOptions
 import org.hyperledger.besu.consensus.qbft.QbftExtraDataCodec
 import org.hyperledger.besu.crypto.KeyPairUtil
 import org.hyperledger.besu.ethereum.api.jsonrpc.JsonRpcConfiguration
@@ -44,10 +44,7 @@ object BesuFactory {
    */
   fun buildTestNodeRunner(): BesuNodeRunner =
     ThreadBesuNodeRunner(
-      VertxOptions()
-        .setEventLoopPoolSize(2)
-        .setWorkerPoolSize(4)
-        .setInternalBlockingPoolSize(4),
+      vertxTestOptions,
     )
 
   fun buildTestBesu(
