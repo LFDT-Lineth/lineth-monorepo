@@ -147,6 +147,10 @@ func Compile(sys *wiop.System) {
 	// validates both the query's included (A) and including (B) sides.
 	registerRowLimitChecks(groups)
 
+	// Because α and γ are shared, the soundness error grows with the total row
+	// count N across every group (see [MaxTotalLookupRows]); bound it.
+	registerTotalRowLimitCheck(groups, latestWitness)
+
 	var (
 		fractions  []wiop.Fraction
 		consumedQs []*wiop.TableRelationQuery
@@ -601,6 +605,86 @@ func (a *RowLimitVerifierAction) overLimitError(side string, rows uint64) error 
 			"lookups bin-packed into one multiplicity column); the accumulators in the reduced "+
 			"constraints would overflow over a small field",
 		strings.Join(paths, ", "), side, rows, wiop.MaxLookupRows,
+	)
+}
+
+// MaxTotalLookupRows bounds N, the total number of rows over every lookup
+// group compiled together: all A-side rows plus all B-side rows, a table being
+// counted once per group that uses it. With α and γ shared by every group, the
+// soundness error of the aggregated check is at most
+//
+//	(C(N,2)·(L−1) + 2N) / |F|,   |F| = p⁶ ≈ 2^185.93,
+//
+// where L is the longest tagged tuple (lookup ID, optional head, columns). For
+// L = 16 and N < 2^41 this is below 2^−100.
+const MaxTotalLookupRows uint64 = 1 << 41
+
+// registerTotalRowLimitCheck enforces [MaxTotalLookupRows] across all groups.
+// At compile time it panics if the static row total (dynamic modules counted as
+// their maximum height) reaches the limit. At runtime one [TotalRowLimitAction]
+// re-checks the exact per-run total on latestWitness, by which point every
+// lookup column has been committed.
+func registerTotalRowLimitCheck(groups []*lookupGroup, latestWitness *wiop.Round) {
+	var modules []*wiop.Module
+	for _, g := range groups {
+		for _, inc := range g.included {
+			modules = append(modules, inc.module)
+		}
+		for _, it := range g.includings {
+			modules = append(modules, it.module)
+		}
+	}
+
+	var static uint64
+	for _, m := range modules {
+		if m.IsSized() {
+			static += uint64(m.Size())
+		} else {
+			static += uint64(wiop.ColumnSizeMaxSupported)
+		}
+	}
+	if static >= MaxTotalLookupRows {
+		panic(totalOverLimitError(static, " (dynamic/unsized modules counted as their maximum height)"))
+	}
+
+	action := &TotalRowLimitAction{Modules: modules}
+	latestWitness.RegisterAction(action)
+	latestWitness.RegisterVerifierAction(action)
+}
+
+// TotalRowLimitAction checks that the per-run row total over every lookup
+// group stays below [MaxTotalLookupRows]. Modules lists one module per
+// fragment of every group, A sides then B sides, so a module appears once per
+// fragment that uses it. One instance serves both roles: it panics as a prover
+// action and returns an error as a verifier action.
+type TotalRowLimitAction struct {
+	Modules []*wiop.Module
+}
+
+// Run implements [wiop.ProverAction]: it panics when the limit is reached.
+func (a *TotalRowLimitAction) Run(rt *wiop.Runtime) {
+	if err := a.Check(rt); err != nil {
+		panic(err)
+	}
+}
+
+// Check implements [wiop.VerifierAction].
+func (a *TotalRowLimitAction) Check(rt *wiop.Runtime) error {
+	var total uint64
+	for _, m := range a.Modules {
+		total += uint64(m.RuntimeSize(rt))
+	}
+	if total >= MaxTotalLookupRows {
+		return totalOverLimitError(total, "")
+	}
+	return nil
+}
+
+func totalOverLimitError(total uint64, note string) error {
+	return fmt.Errorf(
+		"wiop/compilers/lookuptologderivsum: lookups have %d rows in total%s, which is >= the "+
+			"total row limit %d; the shared-coin soundness bound would exceed its target",
+		total, note, MaxTotalLookupRows,
 	)
 }
 
