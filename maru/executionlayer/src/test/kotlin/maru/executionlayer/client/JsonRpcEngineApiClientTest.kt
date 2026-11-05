@@ -73,7 +73,7 @@ class JsonRpcEngineApiClientTest {
     fork: ElFork,
     endpoint: java.net.URL = server.endpoint,
     jwtSecretPath: java.nio.file.Path? = null,
-    timeoutOverride: Duration? = null,
+    timeoutOverride: Duration? = 30.seconds,
     clock: Clock = Clock.systemUTC(),
   ): JsonRpcEngineApiClient {
     val metricsFacade = MicrometerMetricsFacade(meterRegistry)
@@ -268,7 +268,7 @@ class JsonRpcEngineApiClientTest {
       delay = 1500.milliseconds,
     )
 
-    assertThatThrownBy { client(ElFork.Prague).getPayload(payloadId).get() }
+    assertThatThrownBy { client(ElFork.Prague, timeoutOverride = null).getPayload(payloadId).get() }
       .isInstanceOf(ExecutionException::class.java)
       .cause()
       .isInstanceOf(TimeoutException::class.java)
