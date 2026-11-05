@@ -9,26 +9,32 @@ package maru.executionlayer.client
 import maru.consensus.ElFork
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 class EngineApiTimeoutsTest {
   @Test
-  fun `spec defaults apply to every fork's method versions`() {
+  fun `defaults match the Teku client for every fork's method versions`() {
     ElFork.entries.map(EngineApiForkMethods::of).forEach { methods ->
-      assertThat(EngineApiTimeouts.specDefault(methods.getPayload)).isEqualTo(1.seconds)
-      assertThat(EngineApiTimeouts.specDefault(methods.newPayload)).isEqualTo(8.seconds)
-      assertThat(EngineApiTimeouts.specDefault(methods.forkChoiceUpdated)).isEqualTo(8.seconds)
+      assertThat(EngineApiTimeouts.defaultFor(methods.getPayload)).isEqualTo(2.seconds)
+      assertThat(EngineApiTimeouts.defaultFor(methods.newPayload)).isEqualTo(8.seconds)
+      assertThat(EngineApiTimeouts.defaultFor(methods.forkChoiceUpdated)).isEqualTo(8.seconds)
     }
-    assertThat(EngineApiTimeouts.specDefault("eth_getBlockByNumber")).isEqualTo(8.seconds)
-    assertThat(EngineApiTimeouts.specDefault("engine_getPayloadBodiesByHashV1")).isEqualTo(8.seconds)
+    assertThat(EngineApiTimeouts.defaultFor("eth_getBlockByNumber")).isEqualTo(1.seconds)
   }
 
   @Test
-  fun `configured timeout overrides every method`() {
-    val provider = EngineApiTimeouts.provider(override = 30.seconds)
+  fun `configured timeout caps but never extends the defaults`() {
+    val longCap = EngineApiTimeouts.provider(maxTimeout = 1.minutes)
+    assertThat(longCap("engine_getPayloadV4")).isEqualTo(2.seconds)
+    assertThat(longCap("engine_newPayloadV4")).isEqualTo(8.seconds)
+    assertThat(longCap("eth_getBlockByNumber")).isEqualTo(1.seconds)
 
-    assertThat(provider("engine_getPayloadV4")).isEqualTo(30.seconds)
-    assertThat(provider("eth_getBlockByNumber")).isEqualTo(30.seconds)
-    assertThat(EngineApiTimeouts.provider(override = null)("engine_getPayloadV4")).isEqualTo(1.seconds)
+    val shortCap = EngineApiTimeouts.provider(maxTimeout = 500.milliseconds)
+    assertThat(shortCap("engine_getPayloadV4")).isEqualTo(500.milliseconds)
+    assertThat(shortCap("engine_forkchoiceUpdatedV3")).isEqualTo(500.milliseconds)
+
+    assertThat(EngineApiTimeouts.provider(maxTimeout = null)("engine_getPayloadV4")).isEqualTo(2.seconds)
   }
 }

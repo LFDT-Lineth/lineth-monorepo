@@ -34,7 +34,7 @@ class EngineApiEndpoint(
       metricsFacade: MetricsFacade,
       endpoint: URL,
       jwtSecretPath: Path?,
-      timeoutOverride: Duration?,
+      requestTimeouts: (method: String) -> Duration,
       log: Logger,
     ): EngineApiEndpoint =
       EngineApiEndpoint(
@@ -44,7 +44,7 @@ class EngineApiEndpoint(
           metricsFacade,
           endpoint,
           jwtSecretPath,
-          timeoutOverride,
+          requestTimeouts,
           log,
         ),
         metricsFacade = metricsFacade,
