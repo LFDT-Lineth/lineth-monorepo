@@ -42,8 +42,13 @@ dependencies {
   implementation project(':jvm-libs:generic:extensions:kotlin')
   implementation project(':jvm-libs:generic:extensions:futures')
   implementation project(':jvm-libs:linea:core:metrics')
+  implementation project(':jvm-libs:generic:json-rpc')
+  implementation project(':jvm-libs:generic:serialization:jackson')
 
   testImplementation (group: 'tech.pegasys.teku.internal', name: 'spec', version: libs.versions.teku.get(), classifier: 'test-fixtures')
   testImplementation(testFixtures(project(':maru:core')))
   testImplementation(testFixtures(project(':jvm-libs:generic:extensions:kotlin')))
+  testImplementation(testFixtures(project(':maru:observability')))
+  testImplementation(project(':jvm-libs:linea:metrics:micrometer'))
+  testImplementation(testFixtures(project(':jvm-libs:generic:vertx-helper')))
 }
