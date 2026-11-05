@@ -9,6 +9,7 @@
         .constantine = .{
             .url = "git+https://github.com/Consensys-Incorporated/constantine#65e10e591dfbe0fd94f2c8a2e24d53655c5c62be",
             .hash = "N-V-__8AAOUJ6gaLYIGvo1Fr_f1c5glBsgzyFpKq_goOzxQr",
+            .lazy = true,
         },
     },
     .paths = .{

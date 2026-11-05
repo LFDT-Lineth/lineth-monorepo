@@ -24,8 +24,6 @@ extern fn zkvm_secp256k1_ecrecover(msg: *const [32]u8, sig: *const [64]u8, recid
 extern var _in_start: u64;
 extern var _heap_start: u8;
 
-// The Constantine archive's C allocator shim allocates from this, as in evm_execution_guest.zig.
-export var guest_allocator: extern struct { ptr: *anyopaque, vtable: *const anyopaque } = undefined;
 const GUEST_HEAP_SIZE: usize = 256 * 1024 * 1024;
 
 const OK: i32 = 0;
@@ -79,7 +77,8 @@ export fn main() noreturn {
     const heap = @as([*]u8, @ptrCast(&_heap_start))[0..GUEST_HEAP_SIZE];
     var fba = std.heap.FixedBufferAllocator.init(heap);
     const allocator = fba.allocator();
-    guest_allocator = .{ .ptr = allocator.ptr, .vtable = @ptrCast(allocator.vtable) };
+    // The Constantine archive's C allocator shim allocates from this heap.
+    provide.setAllocator(allocator);
 
     const k: u64 = _in_start;
 

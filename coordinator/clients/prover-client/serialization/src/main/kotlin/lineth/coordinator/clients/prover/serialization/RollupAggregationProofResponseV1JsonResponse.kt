@@ -15,7 +15,7 @@ import kotlin.time.Instant
  *
  * Flat: [startBlockNumber] and [proof], then the [FinalizationPublicInputs] fields under their domain names.
  * [endBlockNumber] is stored once and restores both `RollupAggregationProofResponseV1.endBlockNumber` and
- * `publicInputs.endBlockNumber`, which are always equal.
+ * `publicInputs.endBlockNumber`, which [RollupAggregationProofResponseV1] requires to be equal.
  */
 data class RollupAggregationProofResponseV1JsonResponse(
   val startBlockNumber: Long,
@@ -168,9 +168,6 @@ data class RollupAggregationProofResponseV1JsonResponse(
 
     fun fromDomainObject(response: RollupAggregationProofResponseV1): RollupAggregationProofResponseV1JsonResponse {
       val pi = response.publicInputs
-      require(response.endBlockNumber == pi.endBlockNumber) {
-        "endBlockNumber=${response.endBlockNumber} must equal publicInputs.endBlockNumber=${pi.endBlockNumber}"
-      }
       return RollupAggregationProofResponseV1JsonResponse(
         startBlockNumber = response.startBlockNumber.toLong(),
         endBlockNumber = response.endBlockNumber.toLong(),

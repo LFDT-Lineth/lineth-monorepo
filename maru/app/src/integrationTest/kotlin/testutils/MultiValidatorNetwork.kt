@@ -6,7 +6,6 @@
  */
 package testutils
 
-import io.libp2p.etc.types.fromHex
 import linea.kotlin.encodeHex
 import maru.app.MaruApp
 import maru.consensus.ChainFork
@@ -14,6 +13,7 @@ import maru.consensus.ClFork
 import maru.consensus.ElFork
 import maru.consensus.qbft.ProposerSelectorImpl
 import maru.core.SealedBeaconBlock
+import maru.crypto.PrivateKeyGenerator
 import maru.database.BeaconChain
 import maru.test.cluster.MaruCluster
 import maru.test.cluster.NodeBuilder
@@ -28,6 +28,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.kotlin.await
 import org.hyperledger.besu.consensus.common.bft.ConsensusRoundIdentifier
 import testutils.maru.awaitTillMaruHasPeers
+import kotlin.random.Random
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -38,20 +39,17 @@ import kotlin.time.toJavaDuration
  * Four Maru QBFT validators, each backed by its own Besu node, wired in a full P2P mesh.
  *
  * Shared by the MaruMultiValidator*Test classes, which are split by scenario so that Gradle runs them in parallel
- * forks.
+ * forks. Every instance gets a random [chainId] and freshly generated [validatorKeys], so each network has a
+ * unique P2P identity (gossip topics, peer IDs). That uniqueness is what allows test methods to also run
+ * concurrently within a fork without two networks interfering.
  */
-class MultiValidatorNetwork {
+class MultiValidatorNetwork(
+  private val chainId: UInt = Random.nextInt(1, Int.MAX_VALUE).toUInt(),
+  private val validatorKeys: List<ByteArray> =
+    List(4) { PrivateKeyGenerator.generatePrivateKey().prefixedPrivateKey },
+) {
   companion object {
-    private const val CHAIN_ID = 1337u
     private const val BLOCK_TIME_SECONDS = 1u
-
-    private val validatorKeys =
-      listOf(
-        "080212201dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae".fromHex(),
-        "0802122100abb81ba53518eb0a206dfe80f2a973182e5d66c98cd31d00bf7471fcd5514157".fromHex(),
-        "080212202fec0750fe3edc7e8272d4814a36b632921fc5e835d20a2de874471e8ad9ad0b".fromHex(),
-        "080212207a19c01ce2246b94b48ed778d9bfb3b76eaabe8193c468d6751f4e4d1adf98a8".fromHex(),
-      )
 
     private fun label(validatorIndex: Int) = "validator-$validatorIndex"
   }
@@ -74,7 +72,7 @@ class MultiValidatorNetwork {
    */
   fun startAllValidators(clFork: ClFork = ClFork.QBFT_PHASE0) {
     val chainForks = mapOf(Instant.fromEpochSeconds(0) to ChainFork(clFork, ElFork.Prague))
-    cluster = MaruCluster(chainId = CHAIN_ID, blockTimeSeconds = BLOCK_TIME_SECONDS, chainForks = chainForks)
+    cluster = MaruCluster(chainId = chainId, blockTimeSeconds = BLOCK_TIME_SECONDS, chainForks = chainForks)
     validatorKeys.indices.forEach { index ->
       cluster.addNode(label(index), addBesu = true) { nodeBuilder ->
         configureValidator(nodeBuilder, index)

@@ -8,12 +8,17 @@ import (
 	"fmt"
 	"maps"
 	"os"
+	"slices"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/guests"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/conglomeration"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/risc5"
 	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
@@ -28,9 +33,13 @@ var ErrNotImplemented = errors.New("not yet implemented")
 // wiopSystemName names the wiop constraint system built in [New].
 const wiopSystemName = "lineth-riscv"
 
-// guestOutputMemory is the ZkC Execute output-map key carrying the guest's
-// wire output.
-const guestOutputMemory = "guest_output"
+// guestOutputMemory and guestLogMemory are the ZkC Execute output-map keys
+// carrying the guest's wire output: the hash in the former, the schema id and
+// public inputs in the latter.
+const (
+	guestOutputMemory = "guest_output"
+	guestLogMemory    = "guest_log"
+)
 
 // Spec frame of the l2-execution guest output.
 const (
@@ -43,24 +52,57 @@ const (
 // safe for concurrent use after that; each [Prove] call gets its own
 // wiop.Runtime.
 type Core struct {
-	cfg     Config
-	mode    ProverMode
-	sys     *wiop.System
-	driver  *zkcdriver.ZkCDriver
-	program elfmapping.Program
-	decoded predecoding.DecodedProgram
+	cfg    Config
+	mode   ProverMode
+	sys    *wiop.System
+	driver *zkcdriver.ZkCDriver
+	guests guests.Store
+
+	// merger runs the conglomeration steps over the shard proofs. nil in
+	// production until the recursion machine lands; tests set
+	// [conglomeration.MockMerger].
+	merger conglomeration.Merger
 
 	// binaryFile is the compiled R5 arithmetization, used by dev-zkvm to run the
 	// guest under ZkC Execute (the no-trace path). nil outside dev-zkvm.
 	binaryFile *zkcdriver.BinaryFile
 }
 
-// New loads the circuit binary and the guest ELF, calls [zkcdriver.NewZkCDriver]
-// to define all columns and constraints, and returns a [Core] ready to prove.
-//
-// Compiler passes (rangecheck → lookup → logderiv → localvanishing → global)
-// and wiop.Materialize are not yet wired. They must be added before the
-// system can produce sound proofs.
+// guestProgram is a guest ELF mapped and predecoded for ZkC.
+type guestProgram struct {
+	program elfmapping.Program
+	decoded predecoding.DecodedProgram
+}
+
+// parseGuest maps and predecodes a guest ELF.
+func parseGuest(elf []byte) (guestProgram, error) {
+	program, err := elfmapping.Load(bytes.NewReader(elf))
+	if err != nil {
+		return guestProgram{}, fmt.Errorf("extracting ELF blobs: %w", err)
+	}
+	decoded, err := predecoding.Predecode(program)
+	if err != nil {
+		return guestProgram{}, fmt.Errorf("predecoding guest ELF: %w", err)
+	}
+	return guestProgram{program: program, decoded: decoded}, nil
+}
+
+// loadGuest loads the guest ELF whose Program ID is id from the guests folder.
+func (c *Core) loadGuest(id [32]byte) (guestProgram, error) {
+	elf, err := c.guests.Load(id)
+	if err != nil {
+		return guestProgram{}, err
+	}
+	g, err := parseGuest(elf)
+	if err != nil {
+		return guestProgram{}, fmt.Errorf("guest 0x%x: %w", id[:], err)
+	}
+	return g, nil
+}
+
+// New loads the circuit binary, calls [zkcdriver.NewZkCDriver] to define all
+// columns and constraints, and returns a [Core] ready to prove. The guest ELF is
+// loaded per job, from [Job.GuestProgramID].
 func New(cfg Config) (*Core, error) {
 	mode := cfg.Mode
 	if mode == "" {
@@ -69,10 +111,12 @@ func New(cfg Config) (*Core, error) {
 	if !mode.Valid() {
 		return nil, fmt.Errorf("invalid prover mode %q", cfg.Mode)
 	}
-
 	// dev-mock runs no guest, so it loads no circuit bin or guest ELF.
 	if !mode.needsArtifacts() {
 		return &Core{cfg: cfg, mode: mode}, nil
+	}
+	if cfg.GuestsDir == "" {
+		return nil, fmt.Errorf("guests folder must be set for prover mode %q", mode)
 	}
 
 	// dev-zkvm runs the guest under ZkC Execute (no trace, no AIR), so it needs
@@ -88,80 +132,66 @@ func New(cfg Config) (*Core, error) {
 	}
 	defer binFile.Close()
 
-	elfFile, err := os.Open(cfg.GuestELFPath)
-	if err != nil {
-		return nil, fmt.Errorf("opening guest ELF %q: %w", cfg.GuestELFPath, err)
-	}
-	defer elfFile.Close()
-
-	program, err := elfmapping.Load(elfFile)
-	if err != nil {
-		return nil, fmt.Errorf("extracting ELF blobs from %q: %w", cfg.GuestELFPath, err)
-	}
-	decoded, err := predecoding.Predecode(program)
-	if err != nil {
-		return nil, fmt.Errorf("predecoding guest ELF %q: %w", cfg.GuestELFPath, err)
-	}
-
 	sys := wiop.NewSystemf(wiopSystemName)
 	sys.NewRound()
 
 	// round 0 is reserved for the idential data, variable data per shard goes to round 1
-	driver := zkcdriver.NewZkCDriver(sys, zkcdriver.Settings{TraceRound: 1}, binFile)
+	driver := zkcdriver.NewZkCDriver(sys, zkcdriver.Settings{TraceRound: 1, ShardSize: cfg.ShardSize}, binFile)
 
 	// Must run after the arithmetization is defined, so the guest_output columns
-	// exist, and before the compiler passes, which discharge the openings it
-	// registers.
-	risc5.RegisterGuestPublicOutputs(sys)
+	// and the program round exist, and before the compiler passes, which
+	// discharge the guest-output openings and commit the program round that the
+	// program VK cells read.
+	risc5.RegisterPublicInputs(sys)
 
-	// Compiler passes go here once the real RISC-V .bin is fully supported:
-	//   compilers.RangeCheck(sys)
-	//   compilers.LookupToLogDerivSum(sys)
-	//   compilers.LogDerivativeSum(sys)
-	//   compilers.LocalVanishing(sys)
-	//   compilers.Global(sys)
-	//   wiop.Materialize(sys)
+	// Shared randomness is off: no preflight computes γ yet. Unsound: the bus
+	// coins then depend on round 0 only, not on the trace.
+	if err := compilers.CompileFull(sys,
+		compilers.ConfigureMessageBus(messagebus.WithoutSharedRandomness()),
+	); err != nil {
+		return nil, fmt.Errorf("compiling the wiop system: %w", err)
+	}
+
+	risc5.CheckPublicInputs(sys)
 
 	return &Core{
-		cfg:     cfg,
-		mode:    mode,
-		sys:     sys,
-		driver:  driver,
-		program: program,
-		decoded: decoded,
+		cfg:    cfg,
+		mode:   mode,
+		sys:    sys,
+		driver: driver,
+		guests: guests.Store{Dir: cfg.GuestsDir},
 	}, nil
 }
 
-// newDevZkVM builds an Execute-only Core: the compiled R5 arithmetization plus
-// the predecoded guest ELF, without the wiop system, driver, or AIR the proving
-// modes construct. dev-zkvm uses [zkcdriver.BinaryFile.Execute], the no-trace
-// path, so those are unnecessary.
+// checkShardIndexes returns a sorted copy of the shard indexes, rejecting
+// duplicates and, without sharding (shardSize zero), any shard other than 0.
+func checkShardIndexes(indexes []uint, shardSize uint64) ([]uint, error) {
+	indexes = slices.Sorted(slices.Values(indexes))
+	for k, i := range indexes {
+		if k > 0 && indexes[k-1] == i {
+			return nil, fmt.Errorf("duplicate shard index %d", i)
+		}
+		if shardSize == 0 && i != 0 {
+			return nil, fmt.Errorf("shard index %d requires a non-zero shard size", i)
+		}
+	}
+	return indexes, nil
+}
+
+// newDevZkVM builds an Execute-only Core: the compiled R5 arithmetization,
+// without the wiop system, driver, or AIR the proving modes construct.
+// dev-zkvm uses [zkcdriver.BinaryFile.Execute], the no-trace path, so those are
+// unnecessary.
 func newDevZkVM(cfg Config, mode ProverMode) (*Core, error) {
 	binf, err := embedded.CompiledBinaryFile()
 	if err != nil {
 		return nil, fmt.Errorf("compiling R5 arithmetization: %w", err)
 	}
 
-	elfFile, err := os.Open(cfg.GuestELFPath)
-	if err != nil {
-		return nil, fmt.Errorf("opening guest ELF %q: %w", cfg.GuestELFPath, err)
-	}
-	defer elfFile.Close()
-
-	program, err := elfmapping.Load(elfFile)
-	if err != nil {
-		return nil, fmt.Errorf("extracting ELF blobs from %q: %w", cfg.GuestELFPath, err)
-	}
-	decoded, err := predecoding.Predecode(program)
-	if err != nil {
-		return nil, fmt.Errorf("predecoding guest ELF %q: %w", cfg.GuestELFPath, err)
-	}
-
 	return &Core{
 		cfg:        cfg,
 		mode:       mode,
-		program:    program,
-		decoded:    decoded,
+		guests:     guests.Store{Dir: cfg.GuestsDir},
 		binaryFile: binf,
 	}, nil
 }
@@ -200,7 +230,11 @@ func (c *Core) proveDevMock(job Job) Result {
 // runner. It runs no real proof; Payload is the whole extended (0x0002)
 // input, the same bytes the native runner consumes.
 func (c *Core) proveDevZkVM(job Job) Result {
-	inputs, err := c.encodeGuestInputs(job)
+	g, err := c.loadGuest(job.GuestProgramID)
+	if err != nil {
+		return failResult(job.ID, err)
+	}
+	inputs, err := c.encodeGuestInputs(job, g)
 	if err != nil {
 		return failResult(job.ID, fmt.Errorf("building inputs: %w", err))
 	}
@@ -228,62 +262,58 @@ func executeGuest(binf *zkcdriver.BinaryFile, inputs map[string]bit.Array) (bit.
 // validated 0x0003 output or an error that distinguishes a guest block rejection
 // (a recognized [vm.Failure], the guest's own exit on an invalid block) from an
 // internal VM failure (a prover-side bug). A guest that rejects the block writes
-// no output, so a missing guest_output is also a rejection.
+// no output, so a missing guest_output is also a rejection. The guest_output
+// must be exactly the hash, the only bytes the proof binds, and the guest_log
+// the schema id and public inputs it commits to.
 func classifyGuestOutput(output map[string]bit.Array, errs []error) (res bit.Array, err error) {
 	if len(errs) > 0 {
-		var failure *vm.Failure
-		if errors.As(errors.Join(errs...), &failure) {
-			return res, fmt.Errorf("guest rejected the block (invalid): %s", failure.Message)
-		}
-		return res, fmt.Errorf("guest VM execution failed: %w", errors.Join(errs...))
+		return res, guestError(errors.Join(errs...))
 	}
 
 	out, ok := output[guestOutputMemory]
 	if !ok {
 		return res, fmt.Errorf("guest wrote no %s output (block likely invalid)", guestOutputMemory)
 	}
-	if err = checkGuestOutputFrame(out); err != nil {
+	if n := len(out.Bytes()); n != guestOutputHashSize {
+		return res, fmt.Errorf("guest wrote %d bytes to %s, want the %d-byte hash", n, guestOutputMemory, guestOutputHashSize)
+	}
+	log, ok := output[guestLogMemory]
+	if !ok {
+		return res, fmt.Errorf("guest wrote the hash but no %s (schema id and public inputs)", guestLogMemory)
+	}
+	if err = checkGuestOutputFrame(out.Bytes(), log.Bytes()); err != nil {
 		return res, fmt.Errorf("%s does not follow the spec: %w", guestOutputMemory, err)
 	}
-	return out, nil
+	frame := slices.Concat(out.Bytes(), log.Bytes())
+	return bit.NewArray(frame, uint(len(frame)*8), bit.BigEndian), nil
 }
 
-// checkGuestOutputFrame checks the spec frame of the guest output,
-// keccak256(0x0003 || public inputs) || 0x0003 || public inputs. The public
-// inputs themselves are checked by the byte-for-byte comparison with the
+// guestError distinguishes a guest block rejection (a recognized [vm.Failure],
+// the guest's own exit on an invalid block) from an internal VM failure (a
+// prover-side bug) in the errors of a ZkC execution or tracing.
+func guestError(err error) error {
+	var failure *vm.Failure
+	if errors.As(err, &failure) {
+		return fmt.Errorf("guest rejected the block (invalid): %s", failure.Message)
+	}
+	return fmt.Errorf("guest VM execution failed: %w", err)
+}
+
+// checkGuestOutputFrame checks the spec frame of the guest output: hash is
+// keccak256(0x0003 || public inputs) and framed is 0x0003 || public inputs. The
+// public inputs themselves are checked by the byte-for-byte comparison with the
 // native runner.
-func checkGuestOutputFrame(out bit.Array) error {
-	var (
-		outBytes = out.Bytes()
-	)
-	if len(outBytes) >= guestOutputHashSize+guestOutputSchemaIDSize {
-		framed := outBytes[guestOutputHashSize:]
-		if bytes.Equal(outBytes[:guestOutputHashSize], keccak256(framed)) {
-			if got := binary.BigEndian.Uint16(framed); got != guestOutputSchemaID {
-				return fmt.Errorf("schema id is 0x%04x, want 0x%04x", got, guestOutputSchemaID)
-			}
-			return nil
-		}
+func checkGuestOutputFrame(hash, framed []byte) error {
+	if len(framed) < guestOutputSchemaIDSize {
+		return fmt.Errorf("%d bytes after the hash, shorter than the schema id", len(framed))
 	}
-	if hasPreSpecGuestOutputLayout(outBytes) {
-		return errors.New("got 0x0003 || public inputs || keccak256(public inputs), " +
-			"the spec expects keccak256(0x0003 || public inputs) || 0x0003 || public inputs")
+	if !bytes.Equal(hash, keccak256(framed)) {
+		return errors.New("hash does not match keccak256(0x0003 || public inputs)")
 	}
-	if len(outBytes) < guestOutputHashSize+guestOutputSchemaIDSize {
-		return fmt.Errorf("%d bytes, shorter than the hash and schema id", len(outBytes))
+	if got := binary.BigEndian.Uint16(framed); got != guestOutputSchemaID {
+		return fmt.Errorf("schema id is 0x%04x, want 0x%04x", got, guestOutputSchemaID)
 	}
-	return errors.New("hash does not match keccak256(0x0003 || public inputs)")
-}
-
-// hasPreSpecGuestOutputLayout reports whether out is 0x0003 || x || keccak256(x),
-// the layout the guest wrote before the spec put the hash first.
-func hasPreSpecGuestOutputLayout(out []byte) bool {
-	if len(out) < guestOutputSchemaIDSize+guestOutputHashSize ||
-		binary.BigEndian.Uint16(out) != guestOutputSchemaID {
-		return false
-	}
-	body := out[guestOutputSchemaIDSize : len(out)-guestOutputHashSize]
-	return bytes.Equal(out[len(out)-guestOutputHashSize:], keccak256(body))
+	return nil
 }
 
 func keccak256(b []byte) []byte {
@@ -294,17 +324,26 @@ func keccak256(b []byte) []byte {
 
 // proveFull is the real proving path; it is blocked at SerializeProof today.
 func (c *Core) proveFull(ctx context.Context, job Job) Result {
-	inputs, err := c.buildInputs(job)
+	g, err := c.loadGuest(job.GuestProgramID)
+	if err != nil {
+		return failResult(job.ID, err)
+	}
+	inputs, err := c.buildInputs(job, g)
 	if err != nil {
 		return failResult(job.ID, fmt.Errorf("building inputs: %w", err))
 	}
 
-	proof, pub, err := c.runProve(ctx, &zkcdriver.PreReadInputs{Inputs: inputs})
+	node, numShards, err := c.runProve(ctx, &zkcdriver.PreReadInputs{Inputs: inputs}, job.ShardIndexes)
 	if err != nil {
 		return failResult(job.ID, err)
 	}
+	// A strict subset of the shards is a conglomeration node for the
+	// orchestrator to merge further, never a final proof.
+	if uint(len(node.Coverage)) != numShards {
+		return Result{JobID: job.ID, Status: ResultStatusNode, Node: &node, NumShards: numShards}
+	}
 	//nolint (until SerializeProof implemented)
-	proofBytes, err := SerializeProof(proof, pub)
+	proofBytes, err := SerializeProof(node.Proof, node.Pub)
 	//nolint (whilst SerializeProof unimplemented)
 	if err != nil {
 		return failResult(job.ID, fmt.Errorf("serializing proof: %w", err))
@@ -318,13 +357,12 @@ func (c *Core) proveFull(ctx context.Context, job Job) Result {
 }
 
 // buildInputs converts a Job's Payload into the guest and memory inputs ZkC
-// expects. ELF mapping and predecoding are cached by [New]; only the per-job
-// guest input data differs.
-func (c *Core) buildInputs(job Job) (map[string]bit.Array, error) {
-	if err := sanityCheckJobs(job); err != nil {
+// expects for guest g.
+func (c *Core) buildInputs(job Job, g guestProgram) (map[string]bit.Array, error) {
+	if err := sanityCheckJobs(job, c.cfg.ShardSize); err != nil {
 		return nil, err
 	}
-	return c.encodeGuestInputs(job)
+	return c.encodeGuestInputs(job, g)
 }
 
 // encodeGuestInputs converts a Job's Payload into the guest and memory inputs
@@ -332,7 +370,7 @@ func (c *Core) buildInputs(job Job) (map[string]bit.Array, error) {
 // whole extended (0x0002) input and lets the guest conflate the range; a
 // conflation disagreement surfaces as a cross-check failure, not silent
 // corruption.
-func (c *Core) encodeGuestInputs(job Job) (map[string]bit.Array, error) {
+func (c *Core) encodeGuestInputs(job Job, g guestProgram) (map[string]bit.Array, error) {
 	dataBlobs, err := elfmapping.NewData(
 		elfmapping.DefaultInputOrigin,
 		decodePayload(job),
@@ -341,15 +379,19 @@ func (c *Core) encodeGuestInputs(job Job) (map[string]bit.Array, error) {
 	if err != nil {
 		return nil, fmt.Errorf("building data section: %w", err)
 	}
-	inputs, err := elfmapping.EncodeInputs(c.program, dataBlobs)
+	inputs, err := elfmapping.EncodeInputs(g.program, dataBlobs)
 	if err != nil {
 		return nil, err
 	}
-	maps.Copy(inputs, c.decoded.EncodeInputs())
+	maps.Copy(inputs, g.decoded.EncodeInputs())
 	return inputs, nil
 }
 
-func sanityCheckJobs(job Job) error {
+func sanityCheckJobs(job Job, shardSize uint64) error {
+	if _, err := checkShardIndexes(job.ShardIndexes, shardSize); err != nil {
+		return fmt.Errorf("shard indexes: %w", err)
+	}
+
 	// Inverted ranges are malformed input.
 	if job.EndBlock < job.StartBlock {
 		return fmt.Errorf("invalid block range [%d, %d]: EndBlock < StartBlock",
@@ -365,33 +407,112 @@ func sanityCheckJobs(job Job) error {
 	return nil
 }
 
-// runProve traces the inputs, assigns the shard, then runs sys.Prove and sys.Verify.
+// runProve lazily traces the inputs, proves and verifies the shards of
+// shardIndexes (all of them if empty) one at a time, so that a single shard is
+// materialised at any moment rather than the whole trace, and conglomerates
+// the shard proofs as they arrive. It returns the resulting node and the
+// trace's shard count; the node is the root, and has passed the root checks,
+// iff it covers every shard. Without sharding, the single shard's proof is
+// returned as is: the in-shard message-bus check already applies.
 func (c *Core) runProve(
 	ctx context.Context,
 	preRead *zkcdriver.PreReadInputs,
-) (wiop.Proof, wiop.PublicInput, error) {
-	_ = ctx // cancellation not yet propagated into the prover internals
+	shardIndexes []uint,
+) (conglomeration.Node, uint, error) {
 
-	lazyTrace := c.driver.TraceZkcInputs(preRead)
-	// Assert exactly one shard (for now)
-	if lazyTrace.Len() != 1 {
-		logrus.Fatalf("expected a single public input")
+	// With sharding, this only runs the fast-mode pass recording one checkpoint
+	// per shard.
+	lazyTrace, err := c.driver.TryTraceZkcInputs(preRead)
+	if err != nil {
+		return conglomeration.Node{}, 0, fmt.Errorf("tracing: %w", guestError(err))
 	}
-	// Materalise first shard
-	shard, errs := lazyTrace.Get(0)
-	// Sanity check for tracing errors
+	numShards := lazyTrace.Len()
+	indexes := slices.Sorted(slices.Values(shardIndexes))
+	if len(indexes) == 0 {
+		indexes = make([]uint, numShards)
+		for i := range indexes {
+			indexes[i] = uint(i)
+		}
+	}
+	if len(indexes) == 0 {
+		return conglomeration.Node{}, 0, errors.New("the trace has no shards")
+	}
+	if last := indexes[len(indexes)-1]; last >= numShards {
+		return conglomeration.Node{}, 0, fmt.Errorf("shard index %d out of range, the trace has %d shards", last, numShards)
+	}
+
+	// With sharding the in-shard message-bus check is off, so even a single
+	// shard needs the root checks of the merger.
+	isRoot := len(indexes) == int(numShards)
+	needsMerger := len(indexes) > 1 || (isRoot && c.cfg.ShardSize > 0)
+	if needsMerger && c.merger == nil {
+		return conglomeration.Node{}, 0, fmt.Errorf("conglomerating %d of %d shards needs the recursion machine: %w",
+			len(indexes), numShards, ErrNotImplemented)
+	}
+	if needsMerger {
+		logrus.Warnf("Conglomerating %d of %d shards with %T", len(indexes), numShards, c.merger)
+	}
+	if !isRoot {
+		logrus.Infof("Proving %d of %d shards: the result is a conglomeration node, not a final proof", len(indexes), numShards)
+	}
+
+	reducer := conglomeration.NewReducer(c.merger, conglomeration.DefaultMaxInFlightMerges)
+	for k, i := range indexes {
+		if err := ctx.Err(); err != nil {
+			return conglomeration.Node{}, 0, fmt.Errorf("before shard %d: %w", i, err)
+		}
+		shard, err := traceShard(lazyTrace, i)
+		if err != nil {
+			return conglomeration.Node{}, 0, err
+		}
+		// Once the last shard is traced, drop the lazy trace so that its
+		// checkpoints can be garbage collected before that shard is proved.
+		if k == len(indexes)-1 {
+			lazyTrace = zkcdriver.LazyTrace{}
+		}
+		proof, pub, err := c.proveShard(shard)
+		if err != nil {
+			return conglomeration.Node{}, 0, fmt.Errorf("shard %d: %w", i, err)
+		}
+		// Add reports a merge that failed meanwhile: stop rather than prove
+		// shards whose result is already lost.
+		if err := reducer.Add(conglomeration.Node{Coverage: []uint{i}, Proof: proof, Pub: pub}); err != nil {
+			return conglomeration.Node{}, 0, fmt.Errorf("merging after shard %d: %w", i, err)
+		}
+	}
+	root, err := reducer.Close()
+	if err != nil {
+		return conglomeration.Node{}, 0, fmt.Errorf("merging: %w", err)
+	}
+	if isRoot && c.cfg.ShardSize > 0 {
+		if root, err = c.merger.Finalize(root, numShards); err != nil {
+			return conglomeration.Node{}, 0, fmt.Errorf("root: %w", err)
+		}
+	}
+	return root, numShards, nil
+}
+
+// traceShard traces and expands the ith shard of the lazy trace.
+func traceShard(lazyTrace zkcdriver.LazyTrace, i uint) (zkcdriver.Shard, error) {
+	shard, errs := lazyTrace.Get(i)
 	if len(errs) > 0 {
-		logrus.Fatalf("tracing failure: %v", errors.Join(errs...))
+		return zkcdriver.Shard{}, fmt.Errorf("tracing shard %d: %w", i, errors.Join(errs...))
 	}
-	// Generate proof
+	if shard.IsEmpty() {
+		return zkcdriver.Shard{}, fmt.Errorf("tracing shard %d: no shard produced", i)
+	}
+	return shard.Unwrap(), nil
+}
+
+// proveShard proves the given shard, then verifies the proof.
+func (c *Core) proveShard(shard zkcdriver.Shard) (wiop.Proof, wiop.PublicInput, error) {
 	proof, pub := c.sys.Prove(func(rt *wiop.Runtime) {
-		c.driver.AssignTraceShard(rt, shard.Unwrap(), field.Octuplet{})
+		c.driver.AssignTraceShard(rt, shard, field.Octuplet{})
 	})
 	// Verify proof
 	if err := c.sys.Verify(proof, pub); err != nil {
 		return wiop.Proof{}, nil, fmt.Errorf("proof verification: %w", err)
 	}
-	// Done
 	return proof, pub, nil
 }
 

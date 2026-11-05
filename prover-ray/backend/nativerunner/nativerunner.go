@@ -1,4 +1,4 @@
-// Package nativerunner runs the native l2-execution-runner on an extended
+// Package nativerunner runs the native l2_execution_runner on an extended
 // (0x0002) input and parses its --json output into the guest's public inputs.
 package nativerunner
 
@@ -23,7 +23,7 @@ type Output struct {
 }
 
 // Run writes the extended input to a temp file, runs `<binPath> <file> --json`,
-// and parses stdout. binPath is the native l2-execution-runner binary.
+// and parses stdout. binPath is the native l2_execution_runner binary.
 func Run(ctx context.Context, binPath string, extendedInput []byte) (Output, error) {
 	out, err := run(ctx, binPath, extendedInput, "--json")
 	if err != nil {

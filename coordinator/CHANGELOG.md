@@ -1,3 +1,18 @@
+## [unreleased]
+
+### 🚀 Features
+
+- *(misc)* Adding blob commitment and a proof to Rollup input (#4329)
+- *(coordinator, maru, docker)* Let downstream images override the image labels and maru jar (#4393)
+
+### 🐛 Bug Fixes
+
+- *(coordinator)* Enforce end-block invariant in RollupAggregationProofResponseV1 (#4315)
+- *(coordinator, docker)* Let downstream images opt out of the license files (#4382)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Ship license files and metadata in all published artifacts (#4336)
 ## [2.3.0] - 2026-10-28
 
 ### 🚀 Features

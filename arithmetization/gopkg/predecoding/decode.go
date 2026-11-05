@@ -99,7 +99,7 @@ func shouldUseNoOp(instrType, rd, localOp, opcode uint32) bool {
 			return false
 		}
 		switch localOp {
-		case rtypeOpKeccak, rtypeOpPoseidon2, rtypeOpWriteOutput, rtypeOpSecp256k1FpMul, rtypeOpSecp256k1FpSq, rtypeOpSecp256k1FpInv, rtypeOpSecp256k1FpSqrt:
+		case rtypeOpKeccak, rtypeOpPoseidon2, rtypeOpSecp256k1FpMul, rtypeOpSecp256k1FpSq, rtypeOpSecp256k1FpInv, rtypeOpSecp256k1FpSqrt:
 			return false
 		default:
 			return true
@@ -196,11 +196,10 @@ const (
 	rtypeOpRemuwWB         = 27
 	rtypeOpKeccak          = 28
 	rtypeOpPoseidon2       = 29
-	rtypeOpWriteOutput     = 30
-	rtypeOpSecp256k1FpMul  = 31
-	rtypeOpSecp256k1FpSq   = 32
-	rtypeOpSecp256k1FpInv  = 33
-	rtypeOpSecp256k1FpSqrt = 34
+	rtypeOpSecp256k1FpMul  = 30
+	rtypeOpSecp256k1FpSq   = 31
+	rtypeOpSecp256k1FpInv  = 32
+	rtypeOpSecp256k1FpSqrt = 33
 	rtypeInvalid           = 63
 )
 
@@ -262,10 +261,10 @@ const (
 	computeNoOp      = 0
 	computeITypeBase = 1
 	computeRTypeBase = 25
-	computeSTypeBase = 60
-	computeBTypeBase = 64
-	computeJTypeBase = 70
-	computeUTypeBase = 72
+	computeSTypeBase = 59
+	computeBTypeBase = 63
+	computeJTypeBase = 69
+	computeUTypeBase = 71
 	computeInvalid   = 255
 )
 
@@ -532,8 +531,6 @@ func decodeRTypeSemantic(opcode, funct3, funct7 uint32) (computeOp uint32) {
 			return rtypeOpKeccak
 		case 0b001:
 			return rtypeOpPoseidon2
-		case 0b010:
-			return rtypeOpWriteOutput
 		default:
 			return rtypeInvalid
 		}
@@ -773,7 +770,7 @@ type DecodedProgram struct {
 
 // EncodeInputs returns fresh raw input bytes suitable for ZkC input loading.
 func (program DecodedProgram) EncodeInputs() map[string]bit.Array {
-	base := binary.BigEndian.AppendUint64(nil, program.InstructionBase)
+	base := binary.BigEndian.AppendUint32(nil, uint32(program.InstructionBase))
 	decoded := append([]byte(nil), program.Decoded...)
 	return map[string]bit.Array{
 		InstructionBaseInput: elfmapping.BitArrayFromBytes(base...),
@@ -854,8 +851,8 @@ func executableImage(
 			maxEnd = end
 		}
 	}
-	if maxEnd > math.MaxUint64-3 {
-		return 0, nil, 0, fmt.Errorf("aligning executable span end %#x overflows address space", maxEnd)
+	if maxEnd > math.MaxUint32-3 {
+		return 0, nil, 0, fmt.Errorf("executable span end %#x is outside the 32-bit address space", maxEnd)
 	}
 	alignedEnd := (maxEnd + 3) &^ uint64(3)
 	records := (alignedEnd - base) / 4

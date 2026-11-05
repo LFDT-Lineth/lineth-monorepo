@@ -26,7 +26,8 @@ const primitives = @import("zesu_primitives");
 const ssz_decode = @import("zesu_ssz_decode");
 const zesu_allocator = @import("zesu_allocator");
 const rlp_decode = @import("zesu_rlp_decode");
-const l2_execution_ssz = @import("l2_execution_ssz");
+const l2_execution_ssz = @import("l2_execution_ssz.zig");
+const l2_execution_proof = @import("core_serde").l2_execution_proof;
 
 const execution = @import("execution.zig");
 
@@ -482,7 +483,7 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
         current_parent_hash = payload.block_hash;
     }
 
-    const public_inputs = l2_execution_ssz.L2ExecutionProofPublicInput{
+    const public_inputs = l2_execution_proof.L2ExecutionProofPublicInput{
         .parent_block_hash = parent_block_hash,
         .end_block_hash = last_payload.block_hash,
         .end_block_number = last_payload.block_number,
@@ -522,8 +523,7 @@ pub const test_api = if (@import("builtin").is_test) struct {
     pub const recoverSenderFn = tx_signing.recoverSender;
     pub const Acceptance = ForcedTransactionAcceptance;
     /// The real per-block execution seam, exposed so test code can run it directly against the
-    /// same inputs a stub engine receives — this module's own import of it is the only reachable
-    /// path without a build-graph module double-claim.
+    /// same inputs a stub engine receives.
     pub const executeStatelessInputWithLogsFn = execution.executeStatelessInputWithLogs;
     /// Same seam, without the final check against the payload's own declared commitments — for
     /// test code that needs to discover a block's real outcome after altering its conditions,

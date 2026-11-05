@@ -13,14 +13,8 @@ const (
 )
 
 // numPerms is the number of compressions the program computes: the rows of
-// the P2 core.
-func (m *Machine) numPerms() int {
-	n := 0
-	for _, d := range m.mds {
-		n += len(d.blocks)
-	}
-	return n
-}
+// the P2 core, the MD hashes' blocks and the Merkle paths' steps.
+func (m *Machine) numPerms() int { return m.numMDBlocks() + m.numPathSteps() }
 
 // p2Chip: the P2 core, one Poseidon2 permutation per row (see p2_air.go).
 //

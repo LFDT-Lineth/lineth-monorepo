@@ -85,11 +85,11 @@ func TestPredecodeRejectsInvalidExecutableRanges(t *testing.T) {
 			wantErr: "overflows address space",
 		},
 		{
-			name: "alignment overflow",
+			name: "above 4 GiB",
 			blobs: []elfmapping.Blob{{
-				Address: math.MaxUint64 - 4, Data: []byte{1, 2}, Executable: true,
+				Address: math.MaxUint32 - 4, Data: []byte{1, 2}, Executable: true,
 			}},
-			wantErr: "aligning executable span",
+			wantErr: "outside the 32-bit address space",
 		},
 	}
 	for _, test := range tests {
@@ -111,7 +111,7 @@ func TestDecodedProgramEncodeInputsReturnsFreshBytes(t *testing.T) {
 		secondDecoded = second[DecodedInput]
 	)
 	//
-	if got := first[InstructionBaseInput]; binary.BigEndian.Uint64(got.Bytes()) != program.InstructionBase {
+	if got := first[InstructionBaseInput]; uint64(binary.BigEndian.Uint32(got.Bytes())) != program.InstructionBase {
 		t.Errorf("instruction base = %#x, want %#x", got, program.InstructionBase)
 	}
 	//
@@ -401,7 +401,7 @@ func TestDecodeRTypeSemantic(t *testing.T) {
 		{name: "divw", opcode: opcodeOP32, funct3: 0b100, funct7: 0b0000001, wantOp: rtypeOpDivwWB},
 		{name: "keccak", opcode: opcodeCUSTOM1, funct3: 0b000, funct7: 0b0000000, wantOp: rtypeOpKeccak},
 		{name: "poseidon2", opcode: opcodeCUSTOM1, funct3: 0b001, funct7: 0b0000000, wantOp: rtypeOpPoseidon2},
-		{name: "write_output", opcode: opcodeCUSTOM1, funct3: 0b010, funct7: 0b0000000, wantOp: rtypeOpWriteOutput},
+		{name: "removed write_output", opcode: opcodeCUSTOM1, funct3: 0b010, funct7: 0b0000000, wantOp: rtypeInvalid},
 		{name: "invalid op funct3", opcode: opcodeOP, funct3: 0b010, funct7: 0b0100000, wantOp: rtypeInvalid},
 		{name: "secp256k1 fp mul", opcode: opcodeCUSTOM1, funct3: 0b011, funct7: 0b0000000, wantOp: rtypeOpSecp256k1FpMul},
 		{name: "secp256k1 fp sq", opcode: opcodeCUSTOM1, funct3: 0b011, funct7: 0b0000001, wantOp: rtypeOpSecp256k1FpSq},
@@ -435,9 +435,6 @@ func TestRtypeOpForRd(t *testing.T) {
 	}
 	if got := rtypeOpForRd(rtypeOpPoseidon2, 5); got != rtypeOpPoseidon2 {
 		t.Fatalf("rtypeOpForRd(poseidon2, x5) = %d, want %d", got, rtypeOpPoseidon2)
-	}
-	if got := rtypeOpForRd(rtypeOpWriteOutput, 5); got != rtypeOpWriteOutput {
-		t.Fatalf("rtypeOpForRd(write_output, x5) = %d, want %d", got, rtypeOpWriteOutput)
 	}
 }
 
@@ -698,11 +695,12 @@ func TestClassifyInstructionExamples(t *testing.T) {
 		{name: "invalid jalr funct3", instr: encodeIType(opcodeJALR, 0b001, 5, 5, 0), want: computeInvalid},
 		{name: "keccak", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b000, 1), want: computeRTypeBase + rtypeOpKeccak},
 		{name: "poseidon2", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b001, 1), want: computeRTypeBase + rtypeOpPoseidon2},
-		{name: "write_output", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b010, 1), want: computeRTypeBase + rtypeOpWriteOutput},
 		{name: "secp256k1 fp mul", instr: encodeRType(opcodeCUSTOM1, 0b0000000, 0, 0, 0b011, 0), want: computeRTypeBase + rtypeOpSecp256k1FpMul},
 		{name: "secp256k1 fp sq", instr: encodeRType(opcodeCUSTOM1, 0b0000001, 0, 0, 0b011, 0), want: computeRTypeBase + rtypeOpSecp256k1FpSq},
 		{name: "secp256k1 fp inv", instr: encodeRType(opcodeCUSTOM1, 0b0000010, 0, 0, 0b011, 0), want: computeRTypeBase + rtypeOpSecp256k1FpInv},
 		{name: "secp256k1 fp sqrt", instr: encodeRType(opcodeCUSTOM1, 0b0000011, 0, 0, 0b011, 0), want: computeRTypeBase + rtypeOpSecp256k1FpSqrt},
+
+		{name: "removed write_output", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b010, 1), want: computeInvalid},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -770,7 +768,6 @@ func TestComputeOpBasesMatchConstantsZkc(t *testing.T) {
 		{"RTYPE_ADD_WB", computeRTypeBase + rtypeOpAddWB},
 		{"RTYPE_KECCAK", computeRTypeBase + rtypeOpKeccak},
 		{"RTYPE_POSEIDON2", computeRTypeBase + rtypeOpPoseidon2},
-		{"RTYPE_WRITE_OUTPUT", computeRTypeBase + rtypeOpWriteOutput},
 		{"RTYPE_SECP256K1_FP_MUL", computeRTypeBase + rtypeOpSecp256k1FpMul},
 		{"RTYPE_SECP256K1_FP_SQ", computeRTypeBase + rtypeOpSecp256k1FpSq},
 		{"RTYPE_SECP256K1_FP_INV", computeRTypeBase + rtypeOpSecp256k1FpInv},

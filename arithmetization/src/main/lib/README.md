@@ -31,7 +31,6 @@ Note. We use '.' to represent '0'.
 |---------------------|:------:|----------|--------|-----------|
 | keccak              |   🟢   | custom-1 | 0b000  | 0b0000000 |
 | poseidon2           |   🟢   | custom-1 | 0b001  | 0b0000000 |
-| write_output        |   🟡   | custom-1 | 0b010  | 0b0000000 |
 | ecrecover           |   🔴   | custom-1 |        |           |
 | secp256k1_fp_mul    |   🟡   | custom-1 | 0b011  | 0b0000000 |
 | secp256k1_fp_sq     |   🟡   | custom-1 | 0b011  | 0b0000001 |
@@ -45,3 +44,7 @@ secp256k1 field accelerator (🟡 = opt-in): `rd` = destination pointer, `rs1` =
 Each operand is 32 bytes, 8-byte aligned, little-endian (four u64). Inputs may be any 256-bit value; the
 result is canonical (< p). Each op lives in `lib/secp256k1_fp/{mul,inv,sqrt}.zkc` with a `*_stub.zkc` twin. `riscv/main_fieldaccel.zkc` compiles in all; `main_fieldaccel_{mul,inv,sqrt}.zkc` compile in one, to measure each separately.
 `riscv/main.zkc` links the stubs, which fails if the instruction is issued.
+
+Guest output is not a precompile: `write_output` issues the Linux `write` syscall (`a7=64`) with
+fd 4 (`GUEST_OUT`, public output) or fd 3 (`GUEST_LOG`, private log). See `process_syscall` in
+`../riscv/interpreter.zkc`.
