@@ -18,12 +18,14 @@ pub const Error = error{
     InvalidFrontier,
 };
 
-/// Selects the shared prefix for a binary Merkle tree. At least one path step
-/// remains below the frontier so a query still carries the leaf and its
-/// conjugate value.
-pub fn capDepth(num_queries: usize, height: usize) usize {
-    if (num_queries <= 1 or height <= 1) return 0;
-    return @min(@bitSizeOf(usize) - @clz(num_queries - 1), height - 1);
+/// Depth of the frontier shared by every query branch of a tree of the given
+/// height: the System's configured Merkle cap height, clamped to height-1 so
+/// at least one path step remains below the frontier and a query still
+/// carries the leaf and its conjugate value. Mirrors prover-ray's
+/// `Params.merkleCapDepth`.
+pub fn capDepth(cap_height: usize, height: usize) usize {
+    if (height <= 1) return 0;
+    return @min(cap_height, height - 1);
 }
 
 /// A Merkle opening for one running-layer leaf. Unlike a conventional Merkle

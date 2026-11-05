@@ -185,7 +185,7 @@ test "cell ref past the proof's cells slice is rejected, not read OOB" {
 // touching PCS, so an empty system suffices. num_batches == 0 makes resolveRoots
 // fill a zero-length roots array.
 const empty_pcs_system = pcs.System{
-    .envelope_params = .{ .log_codeword_size = 1, .log_plaintext_size = 0, .num_queries = 1 },
+    .envelope_params = .{ .log_codeword_size = 1, .log_plaintext_size = 0, .num_queries = 1, .merkle_cap_height = 0 },
     .columns = &.{},
     .num_batches = 0,
     .max_entries = 0,
