@@ -970,6 +970,13 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		}
 	}
 
+	// Every committed column has size 1: the PCS keeps one FRI fold anyway.
+	{
+		sys, honest, invalid := buildAllSizeOneSystem()
+		if err := add("AllSizeOne", "AllSizeOneColumns", sys, honest, invalid); err != nil {
+			return nil, nil, err
+		}
+	}
 	return cases, systems, nil
 }
 
@@ -1238,6 +1245,30 @@ func buildDynamicLagrangeSelectorBoundarySystem() (*wiop.System, *wiop.Column) {
 //  1. the opened cell is omitted from the proof rounds and carried separately in
 //     the flat public-input vector;
 //  2. tampering only that public-input vector is rejected.
+//
+// buildAllSizeOneSystem has only size-1 committed columns: two equal columns
+// and a third constrained to be their sum. prover-ray raises the FRI top size
+// to 2^MinFoldedSizeLog2 so the proof still folds once (#4322); the verifier
+// must derive the same fold challenge count and query domain from the
+// transcript. The invalid witness breaks the sum.
+func buildAllSizeOneSystem() (*wiop.System, assignFn, assignFn) {
+	sys := wiop.NewSystemf("all-size-one")
+	r0 := sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 1, wiop.PaddingDirectionNone)
+	a := mod.NewColumn(sys.Context.Childf("a"), r0)
+	b := mod.NewColumn(sys.Context.Childf("b"), r0)
+	c := mod.NewColumn(sys.Context.Childf("c"), r0)
+	mod.NewVanishing(sys.Context.Childf("sum"), wiop.Sub(c.View(), wiop.Add(a.View(), b.View())))
+	assign := func(av, bv, cv uint64) assignFn {
+		return func(rt *wiop.Runtime) {
+			rt.AssignColumn(a, concreteBase(elems(av)))
+			rt.AssignColumn(b, concreteBase(elems(bv)))
+			rt.AssignColumn(c, concreteBase(elems(cv)))
+		}
+	}
+	return sys, assign(3, 4, 7), assign(3, 4, 8)
+}
+
 func buildPublicInputSystem() (*wiop.System, *wiop.Column) {
 	sys := wiop.NewSystemf("public-input")
 	r0 := sys.NewRound()

@@ -99,9 +99,12 @@ pub const Pair = struct {
 };
 
 /// One query's fully authenticated and reconstructed fold inputs: prover-ray's
-/// `resolvedQuery`. `rounds[0]` is never read: round 0 always introduces the
-/// top level (see `NewProverState`'s "there being no round -1 to fold a real
-/// codeword from"), so `aux[0]` is always present and supersedes it.
+/// `resolvedQuery`. Round 0 has no running codeword to fold from (see
+/// `NewProverState`'s "there being no round -1 to fold a real codeword
+/// from"): `rounds[0]` is the zero pair, superseded by `aux[0]` when a level
+/// sits at the top size. It does not when the top was raised to the smallest
+/// folded size (see `pcs.minFoldedTopSize`); round 0 then folds the zero
+/// codeword.
 pub const ResolvedQuery = struct {
     /// rounds[j] = the running codeword's (self, sibling) pair authenticated
     /// at round j; filled by `resolveRunningLayers` for j in [1, num_rounds).
@@ -172,8 +175,8 @@ pub fn checkOpeningProofShape(
 
 /// Authenticates one query's running-layer branches against `round_roots` and
 /// decodes each round's leaf/deepest-sibling pair into `rounds[1..num_rounds)`.
-/// `rounds[0]` is left untouched: round 0 always introduces the top level (see
-/// `ResolvedQuery`), so its running pair is never read. Mirrors the
+/// `rounds[0]` is left untouched: round 0 has no running layer, the caller
+/// seeds it with the zero pair (see `ResolvedQuery`). Mirrors the
 /// running-layer loop inside prover-ray's `pcs.Verify`.
 ///
 /// Validates every input length itself, since `rounds` is a caller-allocated
