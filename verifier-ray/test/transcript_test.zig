@@ -92,3 +92,27 @@ test "message-bus coin is sensitive to gamma" {
     // what makes their folds comparable, and what the override used to force.
     try std.testing.expect(!coins_1[0].eql(coins_2[0]));
 }
+
+// prover-ray's System.Verify rejects a dynamic module below its
+// Module.MinRuntimeSize (the smallest power of two N > 2·max|shift|, #4288);
+// the replay does too, before absorbing anything. The bound is per module, in
+// module_sizes order.
+test "replay rejects a dynamic module size below its minimum" {
+    const spec = protocol.Spec{
+        .round_coin_counts = &[_]usize{ 0, 1 },
+        .round_coin_offsets = &[_]usize{ 0, 0 },
+        .total_round_coins = 1,
+        .dynamic_module_count = 2,
+        .dynamic_module_min_sizes = &[_]usize{ 8, 2 },
+    };
+    const cells = [_]protocol.Scalar{.{ .base = field.Element.init(1) }};
+    const rounds = [_]protocol.RoundMessage{.{ .cells = &cells }};
+
+    var transcript = fiat_shamir.Transcript.init();
+    _ = try protocol.replayWithTranscript(&transcript, spec, &rounds, &[_]usize{ 8, 2 });
+
+    transcript = fiat_shamir.Transcript.init();
+    try std.testing.expectError(error.DynamicModuleSizeBelowMinimum, protocol.replayWithTranscript(&transcript, spec, &rounds, &[_]usize{ 4, 2 }));
+    transcript = fiat_shamir.Transcript.init();
+    try std.testing.expectError(error.DynamicModuleSizeBelowMinimum, protocol.replayWithTranscript(&transcript, spec, &rounds, &[_]usize{ 16, 1 }));
+}
