@@ -22,12 +22,12 @@ import (
 	"syscall"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/guests"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/jobadapter"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/jobadapter/filesystem"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/jobadapter/subprocess"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/config"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/sha3"
 )
 
 func main() {
@@ -72,7 +72,7 @@ type pipeline struct {
 	mode            backend.ProverMode
 	requestsRootDir string
 	nativeRunnerBin string
-	guestELF        string
+	guestsDir       string
 	priority        int
 }
 
@@ -92,7 +92,7 @@ func pipelineFor(cfg *config.Config, t backend.ProofType) (p pipeline, ok bool) 
 			mode:            backend.ProverMode(cfg.Execution.ProverMode),
 			requestsRootDir: cfg.Execution.RequestsRootDir,
 			nativeRunnerBin: cfg.Execution.NativeRunnerBin,
-			guestELF:        cfg.Execution.GuestELF,
+			guestsDir:       cfg.GuestsDir,
 			priority:        0,
 		}, true
 	case backend.ProofTypeRollup:
@@ -102,6 +102,7 @@ func pipelineFor(cfg *config.Config, t backend.ProofType) (p pipeline, ok bool) 
 		return pipeline{
 			mode:            backend.ProverMode(cfg.Rollup.ProverMode),
 			requestsRootDir: cfg.Rollup.RequestsRootDir,
+			guestsDir:       cfg.GuestsDir,
 			priority:        1,
 		}, true
 	case backend.ProofTypeRollupAggregation:
@@ -111,6 +112,7 @@ func pipelineFor(cfg *config.Config, t backend.ProofType) (p pipeline, ok bool) 
 		return pipeline{
 			mode:            backend.ProverMode(cfg.Aggregation.ProverMode),
 			requestsRootDir: cfg.Aggregation.RequestsRootDir,
+			guestsDir:       cfg.GuestsDir,
 			priority:        2,
 		}, true
 	}
@@ -120,7 +122,7 @@ func pipelineFor(cfg *config.Config, t backend.ProofType) (p pipeline, ok bool) 
 // buildRunner builds the request-to-response runner for one pipeline, backed by an
 // in-process Core.
 func buildRunner(version string, p pipeline) (*jobadapter.Runner, error) {
-	core, err := backend.New(backend.Config{Mode: p.mode, GuestELFPath: p.guestELF})
+	core, err := backend.New(backend.Config{Mode: p.mode, GuestsDir: p.guestsDir})
 	if err != nil {
 		return nil, fmt.Errorf("building prover core: %w", err)
 	}
@@ -361,8 +363,7 @@ func runProgramID(args []string, out io.Writer) error {
 	if err != nil {
 		return fmt.Errorf("reading guest ELF: %w", err)
 	}
-	h := sha3.NewLegacyKeccak256()
-	h.Write(elf)
-	_, err = fmt.Fprintf(out, "0x%x\n", h.Sum(nil))
+	id := guests.ProgramID(elf)
+	_, err = fmt.Fprintf(out, "0x%x\n", id[:])
 	return err
 }

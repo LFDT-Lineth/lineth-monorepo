@@ -3,7 +3,6 @@
 package guests
 
 import (
-	"bytes"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -47,12 +46,17 @@ func (s Store) Load(id [32]byte) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("reading guest ELF %q: %w", path, err)
 		}
-		h := sha3.NewLegacyKeccak256()
-		h.Write(elf)
-		if !bytes.Equal(h.Sum(nil), id[:]) {
+		if ProgramID(elf) != id {
 			return nil, fmt.Errorf("%w: %q", ErrHashMismatch, path)
 		}
 		return elf, nil
 	}
 	return nil, fmt.Errorf("%w 0x%s in %q", ErrUnknownGuest, idHex, s.Dir)
+}
+
+// ProgramID returns the Program ID of a guest ELF: the keccak256 of its bytes.
+func ProgramID(elf []byte) [32]byte {
+	h := sha3.NewLegacyKeccak256()
+	h.Write(elf)
+	return [32]byte(h.Sum(nil))
 }

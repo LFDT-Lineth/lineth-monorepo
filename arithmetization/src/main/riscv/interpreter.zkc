@@ -854,7 +854,7 @@ fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
                     write_guest_log(a1 as Address, a2 as Word)
                 }
                 case GUEST_OUT: {
-                    write_guest_output(a1 as Address, a2 as Word)
+                    write_guest_output(a1 as Address, a2 as u16)
                 }
                 default: {
                     print_string(a1 as Address, a2 as Word)
@@ -872,9 +872,9 @@ fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
 
 // Copy `size` bytes of guest RAM starting at byte address `offset` into the public
 // `guest_output` buffer at `output_write_address`.
-fn write_guest_output<ram>(offset:Address, size:Word) {
-    for i:u32 = 0; i<size; i = i + 1 {
-        var byte_read:u8 = read_8((offset + i) as Address)
+fn write_guest_output<ram>(offset:Address, size:u16) {
+    for i:u16 = 0; i<size; i = i + 1 {
+        var byte_read:u8 = read_8(offset + (i as Address))
         guest_output[i] = byte_read
     }
 }
