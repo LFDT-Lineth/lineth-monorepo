@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
@@ -59,7 +60,7 @@ func BenchmarkR5Fibonacci(b *testing.B) {
 	outputs, maybeTrace, errs := binf.Trace(inputsMap, tracingConfig)
 	if len(errs) > 0 {
 		b.Fatalf("tracing failed: %v", errs)
-	} else if got := outputs["guest_output"]; !bytes.Equal(got, wantOutput) {
+	} else if got := outputs["guest_output"]; !bytes.Equal(got.Bytes(), wantOutput) {
 		b.Fatalf("unexpected guest_output: got %x, want %x", got, wantOutput)
 	}
 	//
@@ -116,9 +117,9 @@ func BenchmarkR5Fibonacci(b *testing.B) {
 	//
 	b.ReportMetric(float64(numShards), "shards")
 	// Deterministic extrapolation to the cross-zkVM workload: the guest executes
-	// exactly 14+5*N instructions (see FibonacciELF doc), so shard count scales
+	// exactly 18+5*N instructions (see FibonacciELF doc), so shard count scales
 	// linearly from the measured interpreter rows per shard.
-	b.ReportMetric(float64((14+5*uint64(4_000_000)+instrPerShard-1)/instrPerShard), "shards-at-N4M")
+	b.ReportMetric(float64((18+5*uint64(4_000_000)+instrPerShard-1)/instrPerShard), "shards-at-N4M")
 
 	if proveShards < 1 {
 		return
@@ -130,6 +131,15 @@ func BenchmarkR5Fibonacci(b *testing.B) {
 		b.Fatalf("serializing R5 constraints: %v", err)
 	}
 	system, driver := compileR5BenchmarkSystem(b, serialized)
+
+	// Prove from a trace whose modules are padded to the compiled system's
+	// minimum dynamic size (wiop.Module.MinRuntimeSize), which proving
+	// enforces; the trace above, for the metrics, is not.
+	_, maybeTrace, errs = binf.Trace(inputsMap, zkcdriver.PadToMinSizes(tracingConfig, system))
+	if len(errs) > 0 {
+		b.Fatalf("tracing failed: %v", errors.Join(errs...))
+	}
+	lazyTrace = maybeTrace.Unwrap()
 
 	if limit := int(pcs.FRIMaxCommittableSizeLog2(system)); rowLimit > limit {
 		b.Fatalf("tallest shard module is 2^%d rows, above the 2^%d PCS limit; trace is not provable",
@@ -148,9 +158,13 @@ func BenchmarkR5Fibonacci(b *testing.B) {
 		if len(errs) > 0 {
 			b.Fatalf("shard %d failed to trace: %v", i, errors.Join(errs...))
 		}
+		proveStart := time.Now()
 		proof, pub := system.Prove(func(rt *wiop.Runtime) {
 			driver.AssignTraceShard(rt, shard.Unwrap(), placeholderSharedRandomness)
 		})
+		proveTime := time.Since(proveStart)
+		b.Logf("shard %d: proved in %v", i, proveTime)
+		b.ReportMetric(proveTime.Seconds(), fmt.Sprintf("shard_%d/prove-s", i))
 		sizeBytes := proofserialization.Measure(system, proof, pub).Total
 		if err := system.Verify(proof, pub); err != nil {
 			// Cross-shard consistency is not yet wired (messagebus shared

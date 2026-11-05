@@ -2,7 +2,7 @@ module github.com/LFDT-Lineth/lineth-monorepo/arithmetization
 
 go 1.27.1
 
-require github.com/LFDT-Lineth/zkc v1.2.33
+require github.com/LFDT-Lineth/zkc v1.2.35
 
 require (
 	github.com/bits-and-blooms/bitset v1.25.0 // indirect
@@ -25,4 +25,5 @@ require (
 )
 
 tool github.com/LFDT-Lineth/zkc/cmd/zkc
+
 tool github.com/LFDT-Lineth/lineth-monorepo/arithmetization/cmd/elf_to_json

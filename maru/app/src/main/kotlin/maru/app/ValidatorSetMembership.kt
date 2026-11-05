@@ -1,6 +1,4 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
@@ -45,7 +43,8 @@ internal object ValidatorSetMembership {
         }
       throw IllegalArgumentException(
         "$signerDescription address ${validator.address.encodeHex()} " +
-          "is not present in any configured validator set",
+          "is not present in any configured validator set " +
+          "(validators=${validatorsFromAllForks.map { it.address.encodeHex() }})",
       )
     }
   }

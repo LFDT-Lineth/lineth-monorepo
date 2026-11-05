@@ -14,17 +14,34 @@ var extendedInputSchemaID = []byte{0x00, 0x02}
 
 const (
 	// SSZ fixed-part sizes (little-endian uints, 4-byte offsets).
-	chainConfigSize   = 20 + 20 + 8                  // l2MessageServiceAddress, coinbase, chainId
-	privateInputFixed = 32 + 8 + chainConfigSize + 4 // hash, u64, chain config, payloads offset
-	payloadFixed      = 4 + 4                        // statelessInput offset, forcedTransactions offset
-	forcedTxFixed     = 8 + 4 + 1 + 8                // number, rlp offset, acceptance, deadline
+	systemContractsSize = 7 * 20
+	// l2MessageServiceAddress, coinbase, chainId, systemContracts
+	chainConfigSize = 20 + 20 + 8 + systemContractsSize
+	// hash, u64, chain config, payloads offset
+	privateInputFixed = 32 + 8 + chainConfigSize + 4
+	payloadFixed      = 4 + 4         // statelessInput offset, forcedTransactions offset
+	forcedTxFixed     = 8 + 4 + 1 + 8 // number, rlp offset, acceptance, deadline
 )
+
+// SystemContracts holds the system-contract addresses the guest hands to the
+// execution engine. Field order is the wire order and matches
+// rollup_spec block.py::SystemContracts.
+type SystemContracts struct {
+	BeaconRoots           [20]byte
+	HistoryStorage        [20]byte
+	Deposit               [20]byte
+	WithdrawalRequest     [20]byte
+	ConsolidationRequest  [20]byte
+	BuilderDepositRequest [20]byte
+	BuilderExitRequest    [20]byte
+}
 
 // ChainConfig is the range-level chain identity in the extended input.
 type ChainConfig struct {
 	L2MessageServiceAddress [20]byte
 	Coinbase                [20]byte
 	ChainID                 uint64
+	SystemContracts         SystemContracts
 }
 
 // ForcedTransaction is one forced-transaction witness. Acceptance is the
@@ -71,8 +88,23 @@ func encodePrivateInput(in ExtendedInput) []byte {
 	copy(out[40:60], in.ChainConfig.L2MessageServiceAddress[:])
 	copy(out[60:80], in.ChainConfig.Coinbase[:])
 	binary.LittleEndian.PutUint64(out[80:88], in.ChainConfig.ChainID)
-	binary.LittleEndian.PutUint32(out[88:92], privateInputFixed)
+	encodeSystemContracts(out[88:88+systemContractsSize], in.ChainConfig.SystemContracts)
+	binary.LittleEndian.PutUint32(out[88+systemContractsSize:privateInputFixed], privateInputFixed)
 	return append(out, payloadList...)
+}
+
+func encodeSystemContracts(out []byte, sc SystemContracts) {
+	for i, addr := range [...][20]byte{
+		sc.BeaconRoots,
+		sc.HistoryStorage,
+		sc.Deposit,
+		sc.WithdrawalRequest,
+		sc.ConsolidationRequest,
+		sc.BuilderDepositRequest,
+		sc.BuilderExitRequest,
+	} {
+		copy(out[i*20:(i+1)*20], addr[:])
+	}
 }
 
 func encodePayloadInput(p PayloadInput) []byte {

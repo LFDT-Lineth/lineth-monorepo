@@ -1,137 +1,105 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
-@file:Suppress("DEPRECATION") // TODO: migrate to maru.test.cluster.MaruCluster
-
 package testutils
 
-import io.libp2p.etc.types.fromHex
 import linea.kotlin.encodeHex
-import linea.testing.besu.BesuFactory
 import maru.app.MaruApp
+import maru.consensus.ChainFork
 import maru.consensus.ClFork
+import maru.consensus.ElFork
 import maru.consensus.qbft.ProposerSelectorImpl
 import maru.core.SealedBeaconBlock
-import maru.core.Validator
-import maru.crypto.SecpCrypto
+import maru.crypto.PrivateKeyGenerator
 import maru.database.BeaconChain
+import maru.test.cluster.MaruCluster
+import maru.test.cluster.NodeBuilder
+import maru.test.cluster.NodeRole
+import maru.test.extensions.TestSyncingConfigs
+import maru.test.extensions.withFastPeering
+import maru.test.extensions.withFastQbft
+import maru.test.extensions.withStaticPeeringOnly
+import maru.test.extensions.withSyncingConfig
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.kotlin.await
 import org.hyperledger.besu.consensus.common.bft.ConsensusRoundIdentifier
-import org.hyperledger.besu.tests.acceptance.dsl.condition.net.NetConditions
-import org.hyperledger.besu.tests.acceptance.dsl.node.ThreadBesuNodeRunner
-import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.Cluster
-import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.ClusterConfigurationBuilder
-import org.hyperledger.besu.tests.acceptance.dsl.transaction.net.NetTransactions
-import testutils.maru.MaruFactory
 import testutils.maru.awaitTillMaruHasPeers
+import kotlin.random.Random
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 import kotlin.time.toJavaDuration
 
 /**
  * Four Maru QBFT validators, each backed by its own Besu node, wired in a full P2P mesh.
  *
  * Shared by the MaruMultiValidator*Test classes, which are split by scenario so that Gradle runs them in parallel
- * forks.
+ * forks. Every instance gets a random [chainId] and freshly generated [validatorKeys], so each network has a
+ * unique P2P identity (gossip topics, peer IDs). That uniqueness is what allows test methods to also run
+ * concurrently within a fork without two networks interfering.
  */
-class MultiValidatorNetwork {
+class MultiValidatorNetwork(
+  private val chainId: UInt = Random.nextInt(1, Int.MAX_VALUE).toUInt(),
+  private val validatorKeys: List<ByteArray> =
+    List(4) { PrivateKeyGenerator.generatePrivateKey().prefixedPrivateKey },
+) {
   companion object {
-    private val multiValidatorSyncingConfig = MaruFactory.defaultValidatorSyncingConfig
+    private const val BLOCK_TIME_SECONDS = 1u
 
-    private val validatorKeys =
-      listOf(
-        "080212201dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae".fromHex(),
-        "0802122100abb81ba53518eb0a206dfe80f2a973182e5d66c98cd31d00bf7471fcd5514157".fromHex(),
-        "080212202fec0750fe3edc7e8272d4814a36b632921fc5e835d20a2de874471e8ad9ad0b".fromHex(),
-        "080212207a19c01ce2246b94b48ed778d9bfb3b76eaabe8193c468d6751f4e4d1adf98a8".fromHex(),
-      )
-
-    private fun peerAddr(app: MaruApp) = "/ip4/127.0.0.1/tcp/${app.p2pPort()}/p2p/${app.p2pNetwork.nodeId}"
+    private fun label(validatorIndex: Int) = "validator-$validatorIndex"
   }
 
   private val log = LogManager.getLogger(this.javaClass)
 
-  private val cluster =
-    Cluster(
-      ClusterConfigurationBuilder().build(),
-      NetConditions(NetTransactions()),
-      ThreadBesuNodeRunner(),
-    )
+  private lateinit var cluster: MaruCluster
 
-  val stacks: List<PeeringNodeNetworkStack> =
-    List(validatorKeys.size) { PeeringNodeNetworkStack { BesuFactory.buildTestBesu(validator = false) } }
-
-  private val defaultFactories = factoriesWithClFork(ClFork.QBFT_PHASE0)
-
-  private val initialValidators: Set<Validator> by lazy {
-    validatorKeys
-      .map { SecpCrypto.privateKeyToValidator(SecpCrypto.privateKeyBytesWithoutPrefix(it)) }
-      .toSet()
-  }
-
-  fun factoriesWithClFork(clFork: ClFork): List<MaruFactory> =
-    validatorKeys.map { MaruFactory(validatorPrivateKey = it, clFork = clFork) }
-
-  fun beaconChain(validatorIndex: Int): BeaconChain = stacks[validatorIndex].maruApp.beaconChain
-
-  fun startBesuNodes() {
-    PeeringNodeNetworkStack.startBesuNodes(cluster, *stacks.toTypedArray())
-  }
+  fun beaconChain(validatorIndex: Int): BeaconChain = maruApp(validatorIndex).beaconChain
 
   fun close() {
-    stacks.reversed().forEach { runCatching { it.maruApp.stop().get() } }
-    stacks.reversed().forEach { runCatching { it.maruApp.close() } }
-    cluster.close()
+    if (::cluster.isInitialized) {
+      cluster.stop()
+    }
   }
 
-  fun startAllValidators(factories: List<MaruFactory> = defaultFactories) {
-    val apps =
-      stacks.zip(factories).map { (stack, factory) ->
-        val app = buildValidator(stack, factory)
-        stack.setMaruApp(app)
-        app.start().get()
-        app
+  /**
+   * Starts all validators with a genesis fork schedule on [clFork]. Every validator statically peers with all
+   * validators started before it, which wires a full mesh.
+   */
+  fun startAllValidators(clFork: ClFork = ClFork.QBFT_PHASE0) {
+    val chainForks = mapOf(Instant.fromEpochSeconds(0) to ChainFork(clFork, ElFork.Prague))
+    cluster = MaruCluster(chainId = chainId, blockTimeSeconds = BLOCK_TIME_SECONDS, chainForks = chainForks)
+    validatorKeys.indices.forEach { index ->
+      cluster.addNode(label(index), addBesu = true) { nodeBuilder ->
+        configureValidator(nodeBuilder, index)
       }
-
-    // Wire full mesh: every validator dials all validators started before it
-    apps.forEachIndexed { index, app ->
-      apps.take(index).forEach { peer -> app.p2pNetwork.addPeer(peerAddr(peer)) }
     }
+    cluster.start()
+    awaitFullMesh()
+  }
 
-    // Wait for full mesh -- each validator should see all the others
-    val expectedPeers = (apps.size - 1).toUInt()
-    apps.forEachIndexed { index, app ->
-      app.awaitTillMaruHasPeers(expectedPeers, pollingInterval = 500.milliseconds)
-      log.info("Validator $index has $expectedPeers peers (height=${currentBlockHeight(index)})")
-    }
-    log.info("All ${apps.size} validators peered in full mesh")
+  /** Restarts all validators stopped with [stopValidator], reusing their data directories and Besu nodes */
+  fun restartAllValidators() {
+    validatorKeys.indices.forEach { cluster.startMaruNode(label(it)) }
+    awaitFullMesh()
   }
 
   fun stopValidator(validatorIndex: Int) {
-    val stack = stacks[validatorIndex]
-    stack.maruApp.stop().get()
-    stack.maruApp.close()
+    cluster.stopMaruNode(label(validatorIndex))
   }
 
   fun restartValidator(
     validatorIndex: Int,
     peerIndexes: List<Int>,
   ) {
-    val stack = stacks[validatorIndex]
-    val app = buildValidator(stack, defaultFactories[validatorIndex])
-    stack.setMaruApp(app)
-    app.start().get()
+    val app = cluster.startMaruNode(label(validatorIndex))
 
     peerIndexes.forEach { peerIndex ->
-      app.p2pNetwork.addPeer(peerAddr(stacks[peerIndex].maruApp))
+      app.p2pNetwork.addPeer(cluster.nodeAddr(label(peerIndex)))
     }
     app.awaitTillMaruHasPeers(peerIndexes.size.toUInt(), pollingInterval = 500.milliseconds)
   }
@@ -243,18 +211,34 @@ class MultiValidatorNetwork {
     }
   }
 
-  private fun buildValidator(
-    stack: PeeringNodeNetworkStack,
-    factory: MaruFactory,
-  ): MaruApp =
-    factory.buildTestMaruValidatorWithP2pPeering(
-      ethereumJsonRpcUrl = stack.besuNode.jsonRpcBaseUrl().get(),
-      engineApiRpc = stack.besuNode.engineRpcUrl().get(),
-      dataDir = stack.tmpDir,
-      syncingConfig = multiValidatorSyncingConfig,
-      allowEmptyBlocks = true,
-      initialValidators = initialValidators,
-    )
+  private fun maruApp(validatorIndex: Int): MaruApp = cluster.maruNode(label(validatorIndex))
+
+  private fun configureValidator(
+    nodeBuilder: NodeBuilder,
+    validatorIndex: Int,
+  ) {
+    nodeBuilder
+      .withRole(NodeRole.Sequencer)
+      .withNodeKey(validatorKeys[validatorIndex])
+      // otherwise the 4 Besu nodes would share the default signer key, hence the same enode
+      .besuValidator(false)
+      .staticPeers((0 until validatorIndex).map(::label))
+      .withSyncingConfig(TestSyncingConfigs.validator)
+      .withFastPeering()
+      .withFastQbft()
+      // discovery is not needed for a full mesh
+      .withStaticPeeringOnly()
+  }
+
+  private fun awaitFullMesh() {
+    // Wait for full mesh -- each validator should see all the others
+    val expectedPeers = (validatorKeys.size - 1).toUInt()
+    validatorKeys.indices.forEach { index ->
+      maruApp(index).awaitTillMaruHasPeers(expectedPeers, pollingInterval = 500.milliseconds)
+      log.info("Validator $index has $expectedPeers peers (height=${currentBlockHeight(index)})")
+    }
+    log.info("All ${validatorKeys.size} validators peered in full mesh")
+  }
 
   private fun clBlocksToMetadata(blocks: List<SealedBeaconBlock>): List<Pair<ULong, String>> =
     blocks.map {

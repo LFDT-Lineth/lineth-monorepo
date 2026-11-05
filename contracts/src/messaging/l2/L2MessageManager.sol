@@ -8,7 +8,7 @@ import { EfficientLeftRightKeccak } from "../../libraries/EfficientLeftRightKecc
 
 /**
  * @title Contract to manage cross-chain message hashes storage and statuses on L2.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract L2MessageManager is AccessControlUpgradeable, IL2MessageManager, L2MessageManagerV1 {

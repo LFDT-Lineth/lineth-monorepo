@@ -320,6 +320,7 @@ type pcsCaseData struct {
 // if shiftedPointExported ever drifted from prover-ray's internal
 // convention, this catches it here rather than shipping a wrong vector.
 func buildPCSScenarioData(s pcsScenario) pcsCaseData {
+	s.Params.MerkleCapHeight = fri.OptimalMerkleCapHeight(s.Params.NumQueries)
 	pcsInst, err := fri.NewPCS(s.Params, s.Encoders)
 	if err != nil {
 		panic(fmt.Sprintf("%s: NewPCS: %v", s.Name, err))

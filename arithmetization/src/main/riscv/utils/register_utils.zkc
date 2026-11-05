@@ -200,7 +200,7 @@ fn print_b_operands(rs1:Register, rs2:Register, imm:DoubleWord) {
 }
 
 #[debug]
-fn print_u_operands(rd:Register, imm:Imm20) {
+fn print_u_operands(rd:Register, imm:DoubleWord) {
     print_register_name(rd)
     printf ", 0x%x\n", imm
 }

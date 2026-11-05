@@ -8,10 +8,12 @@ package jobadapter
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/guests"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/nativerunner"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/ssz"
 )
@@ -53,7 +55,7 @@ func WithMode(m backend.ProverMode) RunnerOption {
 	return func(r *Runner) { r.mode = m }
 }
 
-// WithNativeRunnerBin sets the path to the native l2-execution-runner binary,
+// WithNativeRunnerBin sets the path to the native l2_execution_runner binary,
 // required by dev-zkvm mode.
 func WithNativeRunnerBin(path string) RunnerOption {
 	return func(r *Runner) { r.nativeRunnerBin = path }
@@ -165,14 +167,15 @@ func (r *Runner) runL2Execution(ctx context.Context, runReq RunRequest) RunResul
 	startBlock := req.Payloads[0].BlockNumber
 	endBlock := req.Payloads[len(req.Payloads)-1].BlockNumber
 	result := r.prover.Prove(ctx, backend.Job{
-		ID:         runReq.ID,
-		Type:       runReq.Type,
-		StartBlock: startBlock,
-		EndBlock:   endBlock,
-		Payload:    req.Payloads[0].FramedSSZ,
+		ID:             runReq.ID,
+		Type:           runReq.Type,
+		GuestProgramID: [32]byte(req.GuestProgramID),
+		StartBlock:     startBlock,
+		EndBlock:       endBlock,
+		Payload:        req.Payloads[0].FramedSSZ,
 	})
 	if result.Status != backend.ResultStatusOK {
-		return failedRunResult(runReq.ID, FailureCodeInternalError, proverErr(result))
+		return proverFailure(runReq.ID, result)
 	}
 	return RunResult{
 		ResponseBody: newExecutionResponse(result, startBlock, r.responseVersion(), req.GuestProgramID),
@@ -193,14 +196,15 @@ func (r *Runner) runRollup(ctx context.Context, runReq RunRequest) RunResult {
 	endBlock := req.L2ExecutionProofs[len(req.L2ExecutionProofs)-1].PublicInputs.EndBlockNumber
 
 	result := r.prover.Prove(ctx, backend.Job{
-		ID:         runReq.ID,
-		Type:       runReq.Type,
-		StartBlock: startBlock,
-		EndBlock:   endBlock,
-		Payload:    nil, // recursion guest input format undecided; mock passes no payload
+		ID:             runReq.ID,
+		Type:           runReq.Type,
+		GuestProgramID: [32]byte(req.ProgramVk),
+		StartBlock:     startBlock,
+		EndBlock:       endBlock,
+		Payload:        nil, // recursion guest input format undecided; mock passes no payload
 	})
 	if result.Status != backend.ResultStatusOK {
-		return failedRunResult(runReq.ID, FailureCodeInternalError, proverErr(result))
+		return proverFailure(runReq.ID, result)
 	}
 	return RunResult{
 		ResponseBody: newRollupResponse(result, startBlock, r.responseVersion(), req.ProgramVk),
@@ -220,14 +224,15 @@ func (r *Runner) runAggregation(ctx context.Context, runReq RunRequest) RunResul
 	endBlock := req.RollupProofs[len(req.RollupProofs)-1].PublicInputs.EndBlockNumber
 
 	result := r.prover.Prove(ctx, backend.Job{
-		ID:         runReq.ID,
-		Type:       runReq.Type,
-		StartBlock: startBlock,
-		EndBlock:   endBlock,
-		Payload:    nil, // recursion guest input format undecided; mock passes no payload
+		ID:             runReq.ID,
+		Type:           runReq.Type,
+		GuestProgramID: [32]byte(req.ProgramVk),
+		StartBlock:     startBlock,
+		EndBlock:       endBlock,
+		Payload:        nil, // recursion guest input format undecided; mock passes no payload
 	})
 	if result.Status != backend.ResultStatusOK {
-		return failedRunResult(runReq.ID, FailureCodeInternalError, proverErr(result))
+		return proverFailure(runReq.ID, result)
 	}
 	return RunResult{
 		ResponseBody: newAggregationResponse(result, startBlock, r.responseVersion()),
@@ -262,14 +267,15 @@ func (r *Runner) runL2ExecutionZkVM(ctx context.Context, runReq RunRequest, req 
 	startBlock := req.Payloads[0].BlockNumber
 	endBlock := req.Payloads[len(req.Payloads)-1].BlockNumber
 	result := r.prover.Prove(ctx, backend.Job{
-		ID:         runReq.ID,
-		Type:       runReq.Type,
-		StartBlock: startBlock,
-		EndBlock:   endBlock,
-		Payload:    extended,
+		ID:             runReq.ID,
+		Type:           runReq.Type,
+		GuestProgramID: [32]byte(req.GuestProgramID),
+		StartBlock:     startBlock,
+		EndBlock:       endBlock,
+		Payload:        extended,
 	})
 	if result.Status != backend.ResultStatusOK {
-		return failedRunResult(runReq.ID, FailureCodeInternalError, proverErr(result))
+		return proverFailure(runReq.ID, result)
 	}
 
 	// The guest's ZkC commitment (Result.ProofBytes) must equal the native runner's.
@@ -301,9 +307,20 @@ func buildExtendedInput(req *L2ExecutionRequest) ssz.ExtendedInput {
 			L2MessageServiceAddress: req.L2MessageServiceAddress,
 			Coinbase:                req.Coinbase,
 			ChainID:                 req.ChainID,
+			SystemContracts:         req.SystemContracts,
 		},
 		Payloads: payloads,
 	}
+}
+
+// proverFailure maps a non-OK prover result to a failed run. A guestProgramId
+// with no guest ELF is a bad request; any other failure is internal.
+func proverFailure(id string, result backend.Result) RunResult {
+	err := proverErr(result)
+	if errors.Is(err, guests.ErrUnknownGuest) {
+		return failedRunResult(id, FailureCodeInvalidInput, err)
+	}
+	return failedRunResult(id, FailureCodeInternalError, err)
 }
 
 // proverErr normalizes a non-OK prover result into an error.

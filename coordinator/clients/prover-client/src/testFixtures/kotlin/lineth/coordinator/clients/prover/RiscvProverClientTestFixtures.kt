@@ -10,6 +10,7 @@ import linea.clients.RollupProofRequestV1
 import linea.domain.BlockIntervalProofIndex
 import linea.domain.ExecutionPayload
 import linea.ethapi.ExecutionWitness
+import linea.ethapi.SystemContracts
 import linea.forcedtx.ForcedTransactionInclusionResult
 import lineth.coordinator.clients.prover.serialization.JsonSerialization
 import lineth.coordinator.config.v2.FileBasedProverConfig
@@ -33,6 +34,15 @@ object RiscvProverClientTestFixtures {
   const val ROLLUP_AGGREGATION_PROGRAM_ID = "0x8a5fdb137ddae03b9bad034500c0fcee76e1c61d70faca5f32bb7418d73392e1"
   const val L2_MESSAGE_SERVICE_ADDRESS = "0x508ca82df566dcd1b0019d2dedf7e3d6f7ad6dde"
   const val COINBASE = "0x0000000000000000000000000000000000000000"
+  val SYSTEM_CONTRACTS = SystemContracts(
+    beaconRoots = "0x000f3df6d732807ef1319fb7b8bb8522d0beac02",
+    historyStorage = "0x0000f90827f1c53a10cb7a02335b175320002935",
+    deposit = "0x94d4a7449b968b839dcbc64a61f195ca300986ae",
+    withdrawalRequest = "0x66355689a9f067eeb9dc9d899e4192676988279c",
+    consolidationRequest = "0xf0e003f0de2d583ae28fa8cbf66aa096cdace3ff",
+    builderDepositRequest = "0x0000bff46984e3725691fa540a8c7589300d8282",
+    builderExitRequest = "0x000064d678505ad48f8ccb093bc65613800e8282",
+  )
 
   val jsonMapper = JsonSerialization.proofResponseMapperV1
 
@@ -118,6 +128,7 @@ object RiscvProverClientTestFixtures {
     executions = executions,
     chainId = CHAIN_ID.toULong(),
     coinbase = coinbase,
+    systemContracts = SYSTEM_CONTRACTS,
     parentFtxRollingHash = parentFtxRollingHash,
     parentFtxNumber = parentFtxNumber,
   )
@@ -133,6 +144,17 @@ object RiscvProverClientTestFixtures {
     isCalldata = false,
     blobBytes = ByteArray(ChunkWitness.BLOB_BYTES_LENGTH) { fill },
     calldataBytes = ByteArray(0),
+    kzgCommitment = ByteArray(ChunkWitness.KZG_POINT_BYTES_LENGTH) { (fill + 1).toByte() },
+    kzgProof = ByteArray(ChunkWitness.KZG_POINT_BYTES_LENGTH) { (fill + 2).toByte() },
+  )
+
+  fun calldataChunkWitness(fill: Byte = 0x30): ChunkWitness = ChunkWitness(
+    chunkHash = ByteArray(32) { fill },
+    isCalldata = true,
+    blobBytes = ByteArray(0),
+    calldataBytes = ByteArray(64) { fill },
+    kzgCommitment = ByteArray(0),
+    kzgProof = ByteArray(0),
   )
 
   fun rollupProofRequestV1(
@@ -162,8 +184,6 @@ object RiscvProverClientTestFixtures {
       endBlockNumber = endBlockNumber,
       endBlockTimestamp = 1763000123,
       l2L1Messages = listOf("0xaa"),
-      parentL1L2BridgeRollingHash = "0x02",
-      parentL1L2BridgeRollingHashMessageNumber = 3,
       endL1L2BridgeRollingHash = "0x04",
       endL1L2BridgeRollingHashMessageNumber = 5,
       dynamicChainConfigHash = "0xc0ffee",
@@ -171,7 +191,7 @@ object RiscvProverClientTestFixtures {
       parentFtxNumber = 7,
       endFtxRollingHash = "0x07",
       endProcessedFtxNumber = 8,
-      filteredAddressesHash = "0x09",
+      filteredAddresses = emptyList(),
       txFromsHash = "0x0c",
       blockCount = 1,
       l2MessagingBlocksOffsets = emptyList(),
@@ -185,7 +205,6 @@ object RiscvProverClientTestFixtures {
     startBlockNumber = startBlockNumber,
     proof = "0xabcd",
     publicInputs = l2ExecutionProofPublicInputsDto(endBlockNumber),
-    filteredAddresses = emptyList(),
     programVk = L2_EXECUTION_PROGRAM_ID,
   )
 
@@ -194,8 +213,6 @@ object RiscvProverClientTestFixtures {
   ): RollupProofPublicInputsDto = RollupProofPublicInputsDto(
     endBlockNumber = endBlockNumber,
     endBlockTimestamp = 1763000457,
-    parentL1L2BridgeRollingHash = "0x11",
-    parentL1L2BridgeRollingHashMessageNumber = 12,
     endL1L2BridgeRollingHash = "0x13",
     endL1L2BridgeRollingHashMessageNumber = 14,
     dynamicChainConfigHash = "0xc0ffee",
@@ -227,18 +244,38 @@ object RiscvProverClientTestFixtures {
     publicInputs = rollupProofPublicInputsDto(endBlockNumber),
   )
 
+  fun finalizationPublicInputsDto(
+    endBlockNumber: Long,
+  ): FinalizationPublicInputsDto = FinalizationPublicInputsDto(
+    endBlockNumber = endBlockNumber,
+    endBlockTimestamp = 1763002301,
+    endL1L2BridgeRollingHash = "0x13",
+    endL1L2BridgeRollingHashMessageNumber = 14,
+    dynamicChainConfigHash = "0xc0ffee",
+    parentFtxRollingHash = "0x15",
+    parentFtxNumber = 16,
+    endFtxRollingHash = "0x16",
+    endProcessedFtxNumber = 17,
+    parentDataRollingHash = "0x19",
+    endDataRollingHash = "0x1a",
+    parentBlockHash = "0x1b",
+    endBlockHash = "0x1c",
+    parentDataTailTakeBytes = 0,
+    finalDataTailDiscardBytes = 1000,
+    l2L1Roots = listOf("0xaa"),
+    l2L1TreeDepth = 5,
+    filteredAddresses = listOf("0xbb"),
+    programIds = listOf(L2_EXECUTION_PROGRAM_ID, ROLLUP_PROGRAM_ID),
+    l2MessagingBlocksOffsets = listOf(1, 20, 100),
+  )
+
   fun rollupAggregationProofResponseDto(
     startBlockNumber: Long,
     endBlockNumber: Long,
   ): RollupAggregationProofResponseDto = RollupAggregationProofResponseDto(
     proverVersion = PROVER_VERSION,
-    startBlockNumber = startBlockNumber,
     proof = "0xabcd",
-    publicInputs = rollupProofPublicInputsDto(
-      endBlockNumber,
-    ).copy(endBlockNumber = 1000567, endBlockTimestamp = 1763002301),
-    l2L1Roots = listOf("0xaa"),
-    filteredAddresses = listOf("0xbb"),
-    l2MessagingBlocksOffsets = listOf(1, 20, 100),
+    startBlockNumber = startBlockNumber,
+    publicInputs = finalizationPublicInputsDto(endBlockNumber),
   )
 }

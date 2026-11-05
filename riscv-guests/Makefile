@@ -10,18 +10,17 @@
 # targets (e.g. l2-execution's EF spec-test, ZKC exec/debug) live in that guest's own Makefile and
 # run directly: `make -C <name> spec-test`.
 #
-# guest-common isn't a guest program itself (no ELF to link, just a shared Zig package other
-# guests consume as a path dependency — the same role lineth-accelerators plays) but is listed
-# here anyway so its own unit tests run as part of `make test`, and its build.zig/src/test get the
-# same `zig fmt --check` gate every guest's own sources get.
+# guest_common isn't a guest program itself (no ELF to link, just a shared Zig package other
+# guests consume as a path dependency — the same role lineth_accelerators plays) but is listed
+# here anyway so its own unit tests run as part of `make test`.
 
-GUESTS ?= guest-common l2-execution rollup
+GUESTS ?= guest_common l2_execution rollup
 ZIG    ?= zig
 
-# Sources to format: the shared build helper plus each guest's build.zig and hand-written src/ +
-# test/ — NOT the whole guest dir, which would walk generated .zig under .zig-cache/ and zig-out/.
-# Mirrors the CI `zig fmt --check` invocation (riscv-guests-host-tests.yml) and scales with GUESTS.
-FMT_PATHS := build_common/build.zig $(foreach g,$(GUESTS),$(g)/build.zig $(g)/src $(g)/test)
+# Every directory holding a build.zig is a Zig package, so a new package is formatted without
+# touching this file.
+PACKAGES := $(patsubst %/build.zig,%,$(wildcard */build.zig))
+FMT_EXCLUDES := $(foreach p,$(PACKAGES),--exclude $(p)/zig-pkg --exclude $(p)/zig-out --exclude $(p)/.zig-cache)
 
 .PHONY: compile test fetch clean fmt fmt-check help install-constantine-deps release-check release-asset
 
@@ -32,14 +31,16 @@ compile test fetch clean:
 		$(MAKE) -C $$g $@ ZIG="$(ZIG)" || exit $$?; \
 	done
 
-# Each guest stages its own ELF using the shared Zig build step.
+# Each guest stages its own ELF using the shared Zig build step. GUEST is the release name
+# (e.g. l2-execution); the guest's directory spells the same name in snake_case.
 RELEASE_DIR ?= $(CURDIR)/release-assets
+GUEST_DIR = $(subst -,_,$(GUEST))
 release-check:
-	$(MAKE) -C $(GUEST) test ZIG="$(ZIG)"
-	$(MAKE) -C $(GUEST) compile ZIG="$(ZIG)"
+	$(MAKE) -C $(GUEST_DIR) test ZIG="$(ZIG)"
+	$(MAKE) -C $(GUEST_DIR) compile ZIG="$(ZIG)"
 
 release-asset:
-	$(MAKE) -C $(GUEST) release-asset RELEASE_DIR="$(abspath $(RELEASE_DIR))" ZIG="$(ZIG)" RELEASE_VERSION="$(RELEASE_VERSION)"
+	$(MAKE) -C $(GUEST_DIR) release-asset RELEASE_DIR="$(abspath $(RELEASE_DIR))" ZIG="$(ZIG)" RELEASE_VERSION="$(RELEASE_VERSION)"
 
 NIM_VERSION := 2.2.10
 CHOOSENIM_VERSION := 0.8.16
@@ -81,13 +82,14 @@ install-constantine-deps:
 		echo "Nim $(NIM_VERSION) required, found $$nim_version" >&2; exit 1; \
 	fi
 
-# Formatting spans build_common + all guests, so it lives here (not fanned out). `fmt` rewrites in
-# place; `fmt-check` only verifies — the same gate CI runs.
+# Formatting reads sources only: `zig fmt` covers every package (guests and the non-guest
+# build_common, lineth_accelerators, guest_crypto_ctt) without configuring any build. `fmt` rewrites
+# in place; `fmt-check` only verifies — the same gate CI runs.
 fmt:
-	$(ZIG) fmt $(FMT_PATHS)
+	$(ZIG) fmt $(FMT_EXCLUDES) $(PACKAGES)
 
 fmt-check:
-	$(ZIG) fmt --check $(FMT_PATHS)
+	$(ZIG) fmt --check $(FMT_EXCLUDES) $(PACKAGES)
 
 help:
 	@echo "riscv-guests — builds every guest in GUESTS=\"$(GUESTS)\""
@@ -96,7 +98,7 @@ help:
 	@echo "  make test        # run each guest's native host tests"
 	@echo "  make fetch       # pre-fetch each guest's Zig dependencies"
 	@echo "  make clean       # remove each guest's zig-out/ and .zig-cache/"
-	@echo "  make fmt         # format build_common + all guest sources in place (zig fmt)"
+	@echo "  make fmt         # format every package's Zig sources in place (zig fmt)"
 	@echo "  make fmt-check   # verify formatting without writing (the CI gate)"
-	@echo "  make install-constantine-deps    # install nim/nimble/clang for the guest-crypto-ctt build"
+	@echo "  make install-constantine-deps    # install nim/nimble/clang for the guest_crypto_ctt build"
 	@echo ""

@@ -13,7 +13,7 @@ import { LibRLP } from "solady/src/utils/LibRLP.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 /**
  * @title Contract to manage forced transactions on L1.
- * @author Consensys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 contract ForcedTransactionGateway is AccessControl, IForcedTransactionGateway {

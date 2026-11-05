@@ -8,7 +8,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
 	minimal_elf "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/minimal-elf"
@@ -17,15 +16,15 @@ import (
 )
 
 func TestCore_BuildInputs_UsesPrecomputedELFBlobs(t *testing.T) {
-	program, decoded := prepareTestProgram(t)
-	c := &Core{program: program, decoded: decoded}
+	g := prepareTestProgram(t)
+	c := &Core{}
 
 	payload1 := []byte{0x01, 0x02}
 	payload2 := []byte{0xFF, 0xFE}
 
-	inputs1, err := c.buildInputs(Job{Payload: payload1})
+	inputs1, err := c.buildInputs(Job{Payload: payload1}, g)
 	require.NoError(t, err)
-	inputs2, err := c.buildInputs(Job{Payload: payload2})
+	inputs2, err := c.buildInputs(Job{Payload: payload2}, g)
 	require.NoError(t, err)
 
 	assert.NotEqual(t, inputs1["blobs_data"], inputs2["blobs_data"], "different payloads must produce different blobs_data")
@@ -33,14 +32,14 @@ func TestCore_BuildInputs_UsesPrecomputedELFBlobs(t *testing.T) {
 }
 
 func TestCore_BuildInputs_MatchesBuildZkcInputs(t *testing.T) {
-	program, decoded := prepareTestProgram(t)
-	c := &Core{program: program, decoded: decoded}
+	g := prepareTestProgram(t)
+	c := &Core{}
 
 	ssz := []byte{0xAA, 0xBB}
 
 	// Core.buildInputs (precomputed path) must produce identical output to
 	// buildZkcInputs (parse-every-call helper).
-	fromCore, err := c.buildInputs(Job{Payload: ssz})
+	fromCore, err := c.buildInputs(Job{Payload: ssz}, g)
 	require.NoError(t, err)
 
 	fromFull, err := predecoding.PrepareInputs(minimal_elf.MinimalElfProgram, ssz)
@@ -50,10 +49,10 @@ func TestCore_BuildInputs_MatchesBuildZkcInputs(t *testing.T) {
 }
 
 func TestCore_BuildInputs_DoesNotMutateCachedProgram(t *testing.T) {
-	program, decoded := prepareTestProgram(t)
-	c := &Core{program: program, decoded: decoded}
-	wantProgramData := append([]byte(nil), c.program.Blobs[0].Data...)
-	wantDecoded := append([]byte(nil), c.decoded.Decoded...)
+	g := prepareTestProgram(t)
+	c := &Core{}
+	wantProgramData := append([]byte(nil), g.program.Blobs[0].Data...)
+	wantDecoded := append([]byte(nil), g.decoded.Decoded...)
 
 	const workers = 16
 	errors := make(chan error, workers)
@@ -62,12 +61,12 @@ func TestCore_BuildInputs_DoesNotMutateCachedProgram(t *testing.T) {
 		wait.Add(1)
 		go func() {
 			defer wait.Done()
-			inputs, err := c.buildInputs(Job{Payload: []byte{byte(i)}})
+			inputs, err := c.buildInputs(Job{Payload: []byte{byte(i)}}, g)
 			if err != nil {
 				errors <- err
 				return
 			}
-			if !bytes.Equal(inputs[predecoding.DecodedInput], wantDecoded) {
+			if got := inputs[predecoding.DecodedInput]; !bytes.Equal(got.Bytes(), wantDecoded) {
 				errors <- fmt.Errorf("worker %d received mutated decoded input", i)
 			}
 		}()
@@ -77,8 +76,8 @@ func TestCore_BuildInputs_DoesNotMutateCachedProgram(t *testing.T) {
 	for err := range errors {
 		require.NoError(t, err)
 	}
-	assert.Equal(t, wantProgramData, c.program.Blobs[0].Data)
-	assert.Equal(t, wantDecoded, c.decoded.Decoded)
+	assert.Equal(t, wantProgramData, g.program.Blobs[0].Data)
+	assert.Equal(t, wantDecoded, g.decoded.Decoded)
 }
 
 // embeddedZKCBin serializes the embedded R5 arithmetization, writes it to a
@@ -99,65 +98,35 @@ func embeddedZKCBin(t *testing.T) string {
 	return binPath
 }
 
-// TestNew verifies that New precomputes the ELF blobs and entry point at
-// construction and that the resulting Core builds the same inputs as the
-// parse-every-call path.
+// TestNew checks that New needs no guest ELF: the guest is loaded per job.
 func TestNew(t *testing.T) {
-	elfBytes := minimal_elf.Make(minimal_elf.DefaultEntryPoint, minimal_elf.DefaultSectionAddr, minimal_elf.ValidSectionData)
-	elfPath := filepath.Join(t.TempDir(), "guest.elf")
-	require.NoError(t, os.WriteFile(elfPath, elfBytes, 0o600))
-
-	c, err := New(Config{CircuitBinPath: embeddedZKCBin(t), GuestELFPath: elfPath})
-	require.NoError(t, err)
-
-	assert.Len(t, c.program.Blobs, 1, "one loadable section must be precomputed")
-	assert.Equal(t, uint64(minimal_elf.DefaultEntryPoint), c.program.EntryPoint, "entry point must be precomputed")
-	assert.NotEmpty(t, c.decoded.Decoded, "decoded program must be precomputed")
-
-	ssz := []byte{0xAA, 0xBB}
-	fromCore, err := c.buildInputs(Job{Payload: ssz})
-	require.NoError(t, err)
-	fromFull, err := predecoding.PrepareInputs(minimal_elf.MinimalElfProgram, ssz)
-	require.NoError(t, err)
-	assert.Equal(t, fromFull, fromCore)
+	_, err := New(Config{CircuitBinPath: embeddedZKCBin(t), GuestsDir: t.TempDir()})
+	require.NoError(t, err, "an empty guests folder is enough to start")
 }
 
-func prepareTestProgram(t *testing.T) (elfmapping.Program, predecoding.DecodedProgram) {
+func prepareTestProgram(t *testing.T) guestProgram {
 	t.Helper()
-	program, err := elfmapping.Load(bytes.NewReader(minimal_elf.MinimalElfProgram))
+	g, err := parseGuest(minimal_elf.MinimalElfProgram)
 	require.NoError(t, err)
-	decoded, err := predecoding.Predecode(program)
-	require.NoError(t, err)
-	return program, decoded
+	return g
 }
 
-// TestNew_Errors verifies that New reports missing or invalid startup inputs
-// with errors naming the offending path.
+// TestNew_Errors verifies that New reports missing startup inputs.
 func TestNew_Errors(t *testing.T) {
-	elfBytes := minimal_elf.Make(minimal_elf.DefaultEntryPoint, minimal_elf.DefaultSectionAddr, minimal_elf.ValidSectionData)
-	elfPath := filepath.Join(t.TempDir(), "guest.elf")
-	require.NoError(t, os.WriteFile(elfPath, elfBytes, 0o600))
-
-	badELFPath := filepath.Join(t.TempDir(), "bad.elf")
-	require.NoError(t, os.WriteFile(badELFPath, []byte("not an elf"), 0o600))
-
-	// A valid circuit bin so the guest-ELF cases fail on the ELF, not the bin.
-	binPath := embeddedZKCBin(t)
-
 	cases := []struct {
 		name    string
 		cfg     Config
 		wantErr string
 	}{
 		{"MissingCircuitBin",
-			Config{CircuitBinPath: "does/not/exist.bin", GuestELFPath: elfPath},
+			Config{CircuitBinPath: "does/not/exist.bin", GuestsDir: t.TempDir()},
 			"circuit bin"},
-		{"MissingGuestELF",
-			Config{CircuitBinPath: binPath, GuestELFPath: "does/not/exist.elf"},
-			"guest ELF"},
-		{"InvalidGuestELF",
-			Config{CircuitBinPath: binPath, GuestELFPath: badELFPath},
-			"ELF"},
+		{"MissingGuestsDir",
+			Config{CircuitBinPath: embeddedZKCBin(t)},
+			"guests folder"},
+		{"DevZkVMMissingGuestsDir",
+			Config{Mode: ProverModeDevZkVM},
+			"guests folder"},
 	}
 
 	for _, tc := range cases {

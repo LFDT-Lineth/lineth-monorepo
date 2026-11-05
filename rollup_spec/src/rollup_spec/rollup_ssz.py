@@ -33,6 +33,7 @@ limits. Each constant below carries a one-line rationale.
 from typing import Any, Optional
 
 from ethereum.crypto.hash import Hash32, keccak256
+from ethereum.crypto.kzg import BYTES_PER_COMMITMENT, BYTES_PER_PROOF
 from ethereum.state import Address
 from ethereum_types.numeric import U64
 from remerkleable.basic import boolean, uint16, uint64
@@ -87,6 +88,8 @@ class SszChunkWitness(Container):
     is_calldata: boolean
     blob_bytes: ByteList[BLOB_BYTES_LENGTH]
     calldata_bytes: ByteList[MAX_CALLDATA_BYTES_PER_CHUNK]
+    kzg_commitment: ByteList[BYTES_PER_COMMITMENT]
+    kzg_proof: ByteList[BYTES_PER_PROOF]
 
 
 class SszRollupPublicInput(Container):
@@ -94,8 +97,6 @@ class SszRollupPublicInput(Container):
     # `rollup.py::RollupPublicInput`.
     end_block_number: uint64
     end_block_timestamp: uint64
-    parent_l1_l2_bridge_rolling_hash: SszBytes32
-    parent_l1_l2_bridge_rolling_hash_message_number: uint64
     end_l1_l2_bridge_rolling_hash: SszBytes32
     end_l1_l2_bridge_rolling_hash_message_number: uint64
     dynamic_chain_config_hash: SszBytes32
@@ -142,10 +143,6 @@ def _ssz_rollup_public_input(pi: RollupPublicInput) -> SszRollupPublicInput:
     return SszRollupPublicInput(
         end_block_number=int(pi.end_block_number),
         end_block_timestamp=int(pi.end_block_timestamp),
-        parent_l1_l2_bridge_rolling_hash=bytes(pi.parent_l1_l2_bridge_rolling_hash),
-        parent_l1_l2_bridge_rolling_hash_message_number=int(
-            pi.parent_l1_l2_bridge_rolling_hash_message_number
-        ),
         end_l1_l2_bridge_rolling_hash=bytes(pi.end_l1_l2_bridge_rolling_hash),
         end_l1_l2_bridge_rolling_hash_message_number=int(
             pi.end_l1_l2_bridge_rolling_hash_message_number
@@ -182,6 +179,8 @@ def _ssz_rollup_input(private_input: RollupProofPrivateInput) -> SszRollupProofP
                 is_calldata=c.is_calldata,
                 blob_bytes=c.blob_bytes,
                 calldata_bytes=c.calldata_bytes,
+                kzg_commitment=c.kzg_commitment,
+                kzg_proof=c.kzg_proof,
             )
             for c in private_input.chunks
         ],
@@ -205,10 +204,6 @@ def _rollup_public_input_from_view(view: Any) -> RollupPublicInput:
     return RollupPublicInput(
         end_block_number=U64(int(view.end_block_number)),
         end_block_timestamp=U64(int(view.end_block_timestamp)),
-        parent_l1_l2_bridge_rolling_hash=Hash32(bytes(view.parent_l1_l2_bridge_rolling_hash)),
-        parent_l1_l2_bridge_rolling_hash_message_number=U64(
-            int(view.parent_l1_l2_bridge_rolling_hash_message_number)
-        ),
         end_l1_l2_bridge_rolling_hash=Hash32(bytes(view.end_l1_l2_bridge_rolling_hash)),
         end_l1_l2_bridge_rolling_hash_message_number=U64(
             int(view.end_l1_l2_bridge_rolling_hash_message_number)
@@ -248,6 +243,8 @@ def _rollup_input_from_view(view: Any) -> RollupProofPrivateInput:
                 is_calldata=bool(c.is_calldata),
                 blob_bytes=bytes(c.blob_bytes),
                 calldata_bytes=bytes(c.calldata_bytes),
+                kzg_commitment=bytes(c.kzg_commitment),
+                kzg_proof=bytes(c.kzg_proof),
             )
             for c in view.chunks
         ],

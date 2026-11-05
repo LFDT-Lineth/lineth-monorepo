@@ -1,10 +1,12 @@
 # dev-zkvm: real public inputs from the native runner, cross-checked against the
-# guest run under ZkC Execute. Paths point at the artifacts bundled in the image.
+# guest run under ZkC Execute. The native runner is bundled in the image. The
+# guests folder is mounted read-only, like the legacy prover-assets;
+# scripts/stage-guest.sh stages the bundled guest ELF for it.
 version = "0.0.0-riscv"
 log_level = 4
+guests_dir = "/opt/linea/prover-ray/guests"
 
 [execution]
 prover_mode = "dev-zkvm"
 requests_root_dir = "/opt/linea/prover-ray/requests"
-native_runner_bin = "/opt/linea/prover-ray/l2-execution-runner"
-guest_elf = "/opt/linea/prover-ray/evm_execution_guest"
+native_runner_bin = "/opt/linea/prover-ray/l2_execution_runner"

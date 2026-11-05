@@ -1,6 +1,4 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
@@ -9,9 +7,7 @@
 package maru.app
 
 import linea.kotlin.encodeHex
-import maru.config.ApiEndpointConfig
 import maru.config.QbftConfig
-import maru.config.ValidatorElNode
 import maru.consensus.ChainFork
 import maru.consensus.ClFork
 import maru.consensus.ElFork
@@ -28,7 +24,6 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.web3j.protocol.core.DefaultBlockParameter
-import java.net.URI
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
@@ -119,16 +114,10 @@ class MaruSupportsAmsterdamTest {
     assertExecutionLayersAgree()
   }
 
-  /** The cluster replaces the template endpoint and fee recipient after starting Besu. */
+  /** The cluster sets the fee recipient from the node key. */
   private fun configureSequencer(node: NodeBuilder) {
     node.maruConfig { config ->
-      config.copy(
-        qbft = QbftConfig(feeRecipient = ByteArray(20), targetGasLimit = 30_000_000UL),
-        validatorElNode = ValidatorElNode(
-          engineApiEndpoint = ApiEndpointConfig(URI.create("http://localhost:8551").toURL()),
-          payloadValidationEnabled = true,
-        ),
-      )
+      config.copy(qbft = QbftConfig(feeRecipient = ByteArray(20), targetGasLimit = 30_000_000UL))
     }
   }
 

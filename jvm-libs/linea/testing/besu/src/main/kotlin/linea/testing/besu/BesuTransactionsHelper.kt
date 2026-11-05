@@ -1,6 +1,4 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
@@ -11,6 +9,7 @@ package linea.testing.besu
 import org.apache.logging.log4j.Logger
 import org.assertj.core.api.Assertions.assertThat
 import org.hyperledger.besu.datatypes.Hash
+import org.hyperledger.besu.datatypes.TransactionType
 import org.hyperledger.besu.tests.acceptance.dsl.account.Account
 import org.hyperledger.besu.tests.acceptance.dsl.account.Accounts
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Amount
@@ -18,6 +17,7 @@ import org.hyperledger.besu.tests.acceptance.dsl.condition.eth.EthConditions
 import org.hyperledger.besu.tests.acceptance.dsl.node.BesuNode
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.account.AccountTransactions
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.account.TransferTransaction
+import org.hyperledger.besu.tests.acceptance.dsl.transaction.account.TransferTransactionBuilder
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.eth.EthTransactions
 
 class BesuTransactionsHelper {
@@ -54,6 +54,32 @@ class BesuTransactionsHelper {
     val txHash = this.execute(transfer)
     assertThat(txHash).isNotNull()
     logger.info("Sending transaction {}", txHash)
+    return txHash
+  }
+
+  /**
+   * [sendTransaction] with the whale's nonce read fresh from the chain on every call. Needed for
+   * retried sends: the DSL's default nonce source (Account.getNextNonce) is a local counter that
+   * increments on every attempt — including ones Besu rejects — so a retried send with the default
+   * would be nonce-gapped and never recover.
+   */
+  fun BesuNode.sendTransactionWithChainNonce(
+    logger: Logger,
+    recipient: Account,
+    amount: Amount,
+  ): Hash {
+    val nonce = this.execute(ethTransactions.getTransactionCount(whaleAccount.address))
+    val transfer =
+      TransferTransactionBuilder()
+        .sender(whaleAccount)
+        .recipient(recipient)
+        .amount(amount)
+        .nonce(nonce)
+        .transactionType(TransactionType.FRONTIER)
+        .build()
+    val txHash = this.execute(transfer)
+    assertThat(txHash).isNotNull()
+    logger.info("Sending transaction {} with chain nonce {}", txHash, nonce)
     return txHash
   }
 

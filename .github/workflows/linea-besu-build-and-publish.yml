@@ -34,7 +34,7 @@ jobs:
 
       - name: Build besu from source and publish to maven including Cloudsmith
         if: ${{ steps.check_besu_commit.outputs.version_changed == 'true' }}
-        run: ./gradlew :linea-besu:besu:build -PpublishToMaven=true
+        run: ./gradlew :linea-besu:besu:buildAndPublishBesu -PpublishToMaven=true
         env:
           JAVA_OPTS: -Xmx2g -Dorg.gradle.daemon=false
           ORG_GRADLE_PROJECT_cloudsmithUser: ${{ secrets.CLOUDSMITH_USER }}

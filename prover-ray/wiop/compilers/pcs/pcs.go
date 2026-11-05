@@ -83,6 +83,7 @@ type compileOptions struct {
 	merkleCap      merkleCapChoice
 	elisionEnabled bool
 	moduleGroups   bool
+	fixedFRIDomain bool
 }
 
 // merkleCapMode tells how a System chose its Merkle cap height. The zero value
@@ -263,6 +264,42 @@ func WithModuleGroups() Option {
 	return func(o *compileOptions) { o.moduleGroups = true }
 }
 
+// WithFixedFRIDomain runs FRI over the full domain of the largest committable
+// column, 2^[FRIMaxCommittableSizeLog2] rows at the RS blowup, whatever the
+// sizes of the proof's columns (see [fri.PCS.FixedDomain]). The number of fold
+// rounds, of FRI layer roots and of transcript steps is then fixed by the
+// compiled System, and the query positions are drawn from the full codeword
+// domain, which a size-oblivious recursive verifier needs (#4246). When the
+// largest committed column is smaller, the top rounds fold the zero codeword:
+// the prover commits those layers at a constant cost, but every query opens
+// them.
+//
+// Every committed dynamic module must then be at least twice the final
+// polynomial's size (2 rows with the default final polynomial): a smaller one
+// would join FRI at the boundary round, after the last fold, where its level is
+// checked and weighted differently, so the verifier would depend on its size
+// again. Proving panics below that size, and verification rejects it. Sized
+// modules are not concerned: their rule is the same in every proof.
+//
+// Off by default: proofs differ from the default ones, which fold only as
+// many rounds as their largest committed column needs.
+func WithFixedFRIDomain() Option {
+	return func(o *compileOptions) { o.fixedFRIDomain = true }
+}
+
+// WithSizeOblivious makes the proof's structure independent of the dynamic
+// module sizes, as a size-oblivious recursive verifier needs (#4246): it is
+// [WithModuleGroups] and [WithFixedFRIDomain] together. Only the heights at
+// which the modules enter the trees and FRI then depend on the sizes. It
+// excludes the options [WithModuleGroups] excludes, and needs every committed
+// dynamic module to be folded by FRI (see [WithFixedFRIDomain]).
+func WithSizeOblivious() Option {
+	return func(o *compileOptions) {
+		o.moduleGroups = true
+		o.fixedFRIDomain = true
+	}
+}
+
 // merge resolves opts against sys's recorded PCS configuration without
 // mutating anything. A local value that conflicts with an explicit
 // preconfigured (or consumed) value is an error, while a matching value is
@@ -294,6 +331,9 @@ func merge(sys *wiop.System, opts []Option) (compileOptions, error) {
 	if cfg.moduleGroups && state.consumed && !pre.moduleGroups {
 		return cfg, fmt.Errorf("pcs: WithModuleGroups conflicts with the consumed compile without module groups")
 	}
+	if cfg.fixedFRIDomain && state.consumed && !pre.fixedFRIDomain {
+		return cfg, fmt.Errorf("pcs: WithFixedFRIDomain conflicts with the consumed compile without a fixed FRI domain")
+	}
 	if cfg.friNumQueries == 0 {
 		cfg.friNumQueries = pre.friNumQueries
 	}
@@ -305,6 +345,7 @@ func merge(sys *wiop.System, opts []Option) (compileOptions, error) {
 	}
 	cfg.elisionEnabled = cfg.elisionEnabled || pre.elisionEnabled
 	cfg.moduleGroups = cfg.moduleGroups || pre.moduleGroups
+	cfg.fixedFRIDomain = cfg.fixedFRIDomain || pre.fixedFRIDomain
 	if cfg.moduleGroups && cfg.elisionEnabled {
 		return cfg, fmt.Errorf("pcs: WithModuleGroups conflicts with WithColumnElision")
 	}
@@ -449,6 +490,13 @@ func FRIMaxCommittableSizeLog2(sys *wiop.System) uint8 {
 	return maxCommittableSizeLog2(compiledLogRSBlowup(sys))
 }
 
+// FRIFixedDomain reports whether sys was compiled [WithFixedFRIDomain]. It is
+// false when sys has no PCS opening.
+func FRIFixedDomain(sys *wiop.System) bool {
+	state := configOf(sys)
+	return state.consumed && state.fixedFRIDomain
+}
+
 // FRIStaticParams returns the FRI envelope parameters of sys (sized to
 // [FRIMaxCommittableSizeLog2] at sys's blowup, at the production query count).
 // sys may open fewer queries; see [FRINumQueries]. It panics when sys has no
@@ -473,6 +521,7 @@ func (c *compiled) newPCS() *fri.PCS {
 	if err != nil {
 		utils.Panic("pcs: newPCS: %v", err)
 	}
+	pcs.FixedDomain = c.fixedFRIDomain
 	return pcs
 }
 
@@ -487,15 +536,23 @@ func maxSizeIndex(sizeOf moduleSizeFunc, batches []BatchRef, manifests []ColumnM
 }
 
 // effectiveN is the FRI top-domain size for this proof's witness: the codeword
-// size of the largest committed (Present) column. Query positions are drawn
-// from [0, N), so this must match the size the PCS restricts its schedule to
-// (both derive it from the same committed columns).
+// size of the largest committed (Present) column, at least the smallest one
+// FRI folds, or of the largest committable one with a fixed FRI domain. Query positions are drawn from
+// [0, N), so this must match the size the PCS restricts its schedule to (both
+// derive it from the same committed columns).
 func (c *compiled) effectiveN(rt *wiop.Runtime, batches []BatchRef, manifests []ColumnManifest) int {
 	return c.effectiveNWith(runtimeSizeOf(rt), batches, manifests)
 }
 
 func (c *compiled) effectiveNWith(sizeOf moduleSizeFunc, batches []BatchRef, manifests []ColumnManifest) int {
-	return 1 << (maxSizeIndex(sizeOf, batches, manifests) + int(c.logRSBlowup))
+	if c.fixedFRIDomain {
+		return 1 << (int(c.maxSizeLog2) + int(c.logRSBlowup))
+	}
+	// the PCS keeps at least one fold (see fri.PCS), so the top size is at
+	// least the smallest folded one
+	params, _ := staticFRI(c.logRSBlowup)
+	top := max(maxSizeIndex(sizeOf, batches, manifests), int(params.MinFoldedSizeLog2()))
+	return 1 << (top + int(c.logRSBlowup))
 }
 
 // moduleSizeFunc resolves a module's domain size. The prover and verifier use
@@ -541,8 +598,14 @@ type compiled struct {
 	elisionEnabled bool
 	// moduleGroups commits every module as its own group (see
 	// [WithModuleGroups]).
-	moduleGroups  bool
-	friNumQueries int
+	moduleGroups bool
+	// fixedFRIDomain runs FRI over the full static domain (see
+	// [WithFixedFRIDomain]).
+	fixedFRIDomain bool
+	// minDynamicSizeLog2 is, with fixedFRIDomain, log2 of the smallest size a
+	// committed dynamic module may take (see [compiled.checkDynamicMinSizes]).
+	minDynamicSizeLog2 int
+	friNumQueries      int
 	// merkleCapHeight is the resolved [fri.Params.MerkleCapHeight].
 	merkleCapHeight uint8
 	logRSBlowup     uint8
@@ -593,10 +656,15 @@ func Compile(sys *wiop.System, opts ...Option) {
 		colShifts:       collectColumnShifts(sys),
 		elisionEnabled:  cfg.elisionEnabled,
 		moduleGroups:    cfg.moduleGroups,
+		fixedFRIDomain:  cfg.fixedFRIDomain,
 		friNumQueries:   cfg.friNumQueries,
 		merkleCapHeight: cfg.merkleCap.resolve(cfg.friNumQueries),
 		logRSBlowup:     logBlowup,
 		maxSizeLog2:     maxCommittableSizeLog2(logBlowup),
+	}
+	if c.fixedFRIDomain {
+		params, _ := staticFRI(logBlowup)
+		c.minDynamicSizeLog2 = int(params.MinFoldedSizeLog2())
 	}
 	c.checkStaticSizes(batches)
 	// Freeze the effective configuration before mutating sys; merge
@@ -665,6 +733,31 @@ func (c *compiled) checkStaticSizes(batches []BatchRef) {
 	}
 }
 
+// checkDynamicMinSizes returns an error when, with a fixed FRI domain, a
+// committed (Present) column of a dynamic module is smaller than
+// 2^minDynamicSizeLog2: its level would join FRI at the boundary round, after
+// the last fold, where it is checked and weighted differently from the levels
+// that are folded (see [fri.Params.MinFoldedSizeLog2]). A module that may move
+// between the two would make the verifier depend on its size again. Sized
+// modules keep their size, hence their rule, in every proof.
+func (c *compiled) checkDynamicMinSizes(sizeOf moduleSizeFunc, batches []BatchRef, manifests []ColumnManifest) error {
+	if !c.fixedFRIDomain {
+		return nil
+	}
+	for i, b := range batches {
+		for k, col := range b.Round.Columns {
+			if manifests[i][k] != ManifestPresent || !col.Module.IsDynamic() {
+				continue
+			}
+			if idx := columnSizeIndexWith(col, sizeOf); idx < c.minDynamicSizeLog2 {
+				return fmt.Errorf("pcs: dynamic column %q has size 2^%d, below the 2^%d a fixed FRI domain folds",
+					col.Context.Path(), idx, c.minDynamicSizeLog2)
+			}
+		}
+	}
+	return nil
+}
+
 // CommittedBatches returns the canonical batch ordering: every interactive round
 // that owns columns (in round order), then the precomputed round if it owns
 // columns. Deterministic from the System alone, so prover and verifier agree.
@@ -727,6 +820,25 @@ type openingProverAction struct{ c *compiled }
 func (a *openingProverAction) Run(rt *wiop.Runtime) {
 	proof := a.c.open(rt)
 	rt.PCSOpeningProof = &proof
+	a.c.releaseCommittedStates(rt)
+}
+
+// releaseCommittedStates returns the codewords and Merkle trees of every
+// interactive round to the field pools for the next proof, and drops them
+// from the runtime. The opening proof only holds copies of the rows and nodes
+// it reveals, so nothing references them once it is built. The precomputed
+// batch's state is shared by every proof and kept.
+func (c *compiled) releaseCommittedStates(rt *wiop.Runtime) {
+	for _, b := range CommittedBatches(rt.System) {
+		if b.IsPrecomp {
+			continue
+		}
+		key := committedStateKey(b.Round.ID)
+		if v, ok := rt.GetState(key); ok && v != nil {
+			v.(*fri.CommitterState).Release()
+			rt.SetState(key, nil)
+		}
+	}
 }
 
 // OpeningVerifierAction replays the opening transcript and checks the proof.
@@ -750,6 +862,9 @@ func (c *compiled) open(rt *wiop.Runtime) fri.OpeningProof {
 	}
 	batchShifts, batchClaims, _, evalPoint, err := RecoverBatchClaims(rt, batches, manifests)
 	if err != nil {
+		panic(fmt.Errorf("pcs: open: %w", err))
+	}
+	if err := c.checkDynamicMinSizes(runtimeSizeOf(rt), batches, manifests); err != nil {
 		panic(fmt.Errorf("pcs: open: %w", err))
 	}
 
@@ -803,6 +918,9 @@ func (c *compiled) verify(rt *wiop.Runtime, proof fri.OpeningProof) error {
 		return fmt.Errorf("pcs: committed column size 2^%d exceeds the 2^%d committable at RS blowup %d",
 			idx, c.maxSizeLog2, 1<<c.logRSBlowup)
 	}
+	if err := c.checkDynamicMinSizes(runtimeSizeOf(rt), batches, manifests); err != nil {
+		return err
+	}
 	batchShifts, batchClaims, shapes, evalPoint, err := RecoverBatchClaims(rt, batches, manifests)
 	if err != nil {
 		return err
@@ -850,7 +968,7 @@ func (c *compiled) collectCommittedStates(rt *wiop.Runtime, batches []BatchRef) 
 			continue
 		}
 		v, ok := rt.GetState(committedStateKey(b.Round.ID))
-		if !ok {
+		if !ok || v == nil {
 			utils.Panic("pcs: missing committed state for round %d", b.Round.ID)
 		}
 		states[i] = v.(*fri.CommitterState)
@@ -896,6 +1014,16 @@ func buildEncoders(logBlowup, maxSizeIndex uint8) []*fri.RSEncoder {
 	return encoders
 }
 
+// roundEncoders returns the encoder schedule for sizes 2^0 .. 2^maxSizeIndex
+// at blowup 2^logBlowup: a prefix of the process-wide schedule of
+// [staticFRI], so a commit does not rebuild FFT domains (twiddles and coset
+// tables) for every round of every proof. maxSizeIndex must not exceed
+// [maxCommittableSizeLog2] at that blowup.
+func roundEncoders(logBlowup, maxSizeIndex uint8) []*fri.RSEncoder {
+	_, encoders := staticFRI(logBlowup)
+	return encoders[:int(maxSizeIndex)+1]
+}
+
 // roundMaxSizeIndexWith returns the largest log2 padded size among a round's
 // Present columns, or 0 when the round owns no committed columns.
 func roundMaxSizeIndexWith(round *wiop.Round, sizeOf moduleSizeFunc, manifest ColumnManifest) int {
@@ -919,12 +1047,12 @@ func (c *compiled) commitToRound(round *wiop.Round, rt *wiop.Runtime, manifest C
 
 // commitVectors sorts a round's Present columns into a [fri.MultiSizeTable] by
 // padded size, appending them in the commit order of [committedLayout] (base
-// and extension rows kept apart within each size), and FRI-commits it with a
-// freshly-built per-round encoder schedule (a prefix of the global schedule).
-// The table takes the shape's groups, so with module groups it is a grouped
-// commitment (see [fri.MultiSizeTable.Merkleize]). Elided columns are absent
-// from the committed rows. It panics when a Present column exceeds the
-// committable size at c's blowup.
+// and extension rows kept apart within each size), and FRI-commits it with the
+// per-round encoder schedule, a prefix of the global one (see
+// [roundEncoders]). The table takes the shape's groups, so with module groups
+// it is a grouped commitment (see [fri.MultiSizeTable.Merkleize]). Elided
+// columns are absent from the committed rows. It panics when a Present column
+// exceeds the committable size at c's blowup.
 func (c *compiled) commitVectors(
 	round *wiop.Round, sizeOf moduleSizeFunc, vectors []paddedColumn, manifest ColumnManifest,
 ) *fri.CommitterState {
@@ -948,7 +1076,7 @@ func (c *compiled) commitVectors(
 		utils.Panic("pcs: round %d commits a column of size 2^%d, above the 2^%d committable at RS blowup %d",
 			round.ID, maxSizeIndex, c.maxSizeLog2, 1<<c.logRSBlowup)
 	}
-	committerState := fri.Commit(buildEncoders(c.logRSBlowup, uint8(maxSizeIndex)), sortedColumns[:maxSizeIndex+1])
+	committerState := fri.Commit(roundEncoders(c.logRSBlowup, uint8(maxSizeIndex)), sortedColumns[:maxSizeIndex+1])
 	return &committerState
 }
 
@@ -993,7 +1121,9 @@ func committedLayout(
 		if moduleGroups {
 			module := moduleIndex(col)
 			if last, ok := lastModule[sizeIndex]; !ok || last != module {
-				sized.Groups = append(sized.Groups, fri.GroupShape{})
+				// The module index orders the groups for the alpha_DEEP
+				// powers, so a module's powers do not depend on its size.
+				sized.Groups = append(sized.Groups, fri.GroupShape{Ordinal: module})
 				lastModule[sizeIndex] = module
 			}
 			group := &sized.Groups[len(sized.Groups)-1]
@@ -1255,7 +1385,11 @@ func initializeBatchClaims(shape fri.Shape) fri.BatchClaimedValues {
 
 // writeDownVectorBase materializes a base-field column assignment padded up to
 // size, respecting the module's padding direction so the committed polynomial
-// matches the one evalLagrangePadded evaluates.
+// matches the one LagrangeEval evaluates.
+//
+// A column that is already size long is returned as is, without a copy: the
+// committed table is only read by the encoder, and the committer state keeps
+// the encoded table, not its input.
 func writeDownVectorBase(concrete *wiop.ConcreteVector, size int, padding wiop.PaddingDirection) []field.Element {
 
 	if !concrete.Plain.IsBase() {
@@ -1263,6 +1397,9 @@ func writeDownVectorBase(concrete *wiop.ConcreteVector, size int, padding wiop.P
 	}
 
 	plainBase := concrete.Plain.AsBase()
+	if len(plainBase) == size {
+		return plainBase
+	}
 	plain := make([]field.Element, size)
 
 	if padding == wiop.PaddingDirectionLeft {
@@ -1283,10 +1420,16 @@ func writeDownVectorBase(concrete *wiop.ConcreteVector, size int, padding wiop.P
 
 // writeDownVectorExt materializes an extension-field column assignment padded up
 // to size, respecting the module's padding direction so the committed polynomial
-// matches the one evalLagrangePadded evaluates.
+// matches the one LagrangeEval evaluates.
+//
+// As for [writeDownVectorBase], a column that is already size long is returned
+// without a copy.
 func writeDownVectorExt(concrete *wiop.ConcreteVector, size int, padding wiop.PaddingDirection) []field.Ext {
 
 	plainExt := concrete.Plain.AsExt()
+	if len(plainExt) == size {
+		return plainExt
+	}
 	plain := make([]field.Ext, size)
 	padExt := field.Lift(concrete.Padding)
 

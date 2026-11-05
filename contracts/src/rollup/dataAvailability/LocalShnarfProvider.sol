@@ -6,7 +6,7 @@ import { IProvideShnarf } from "./interfaces/IProvideShnarf.sol";
 
 /**
  * @title Contract to manage shared functions for querying shnarf existence.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract LocalShnarfProvider is IProvideShnarf, LinethRollupBase {

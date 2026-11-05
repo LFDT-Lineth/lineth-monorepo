@@ -14,7 +14,16 @@
       "l2MessageServiceAddress": "0x1111111111111111111111111111111111111111",
       "coinbase": "0x0000000000000000000000000000000000000000",
       "chainId": 59144,
-      "forkName": "Amsterdam"
+      "forkName": "Amsterdam",
+      "systemContracts": {
+        "beaconRoots": "0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02",
+        "historyStorage": "0x0000F90827F1C53a10cb7A02335B175320002935",
+        "deposit": "0x94d4a7449B968b839dcbc64A61F195CA300986ae",
+        "withdrawalRequest": "0x66355689a9f067eeb9dc9d899E4192676988279C",
+        "consolidationRequest": "0xF0e003F0dE2d583Ae28FA8cBF66aa096CdAce3ff",
+        "builderDepositRequest": "0x0000BFF46984E3725691FA540A8C7589300D8282",
+        "builderExitRequest": "0x000064D678505AD48F8CCB093BC65613800E8282"
+      }
     },
     "parentFtxRollingHash": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
     "parentFtxNumber": 15,

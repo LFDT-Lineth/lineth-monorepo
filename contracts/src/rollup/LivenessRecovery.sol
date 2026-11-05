@@ -6,7 +6,7 @@ import { ILivenessRecovery } from "./interfaces/ILivenessRecovery.sol";
 import { FinalizedStateHashing } from "../libraries/FinalizedStateHashing.sol";
 /**
  * @title Contract to manage liveness recovery.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract LivenessRecovery is LinethRollupBase, ILivenessRecovery {

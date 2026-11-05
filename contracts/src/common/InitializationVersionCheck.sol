@@ -6,7 +6,7 @@ import { IGenericErrors } from "../interfaces/IGenericErrors.sol";
 
 /**
  * @title Modifier to guard initialize functions against re-initialization.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 abstract contract InitializationVersionCheck is Initializable, IGenericErrors {

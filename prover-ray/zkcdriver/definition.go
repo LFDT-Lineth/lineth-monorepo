@@ -13,7 +13,6 @@ import (
 	"github.com/LFDT-Lineth/zkc/pkg/schema"
 	"github.com/LFDT-Lineth/zkc/pkg/schema/register"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
-	ctrace "github.com/LFDT-Lineth/zkc/pkg/zkc/constraints/trace"
 )
 
 const (
@@ -52,17 +51,14 @@ type PublicOutput struct {
 	// Name is the corset name of the memory. It is empty when the
 	// arithmetization exposes no public output of the described shape.
 	Name string
-	// Address holds the limbs of the memory's address, most significant first:
-	// an address wider than the field's register width is split by the schema.
+	// Address is the memory's address column. The address is a u16, so it fits
+	// in a single register.
 	// The memory's own constraints make it vanish on padding rows, be zero on the
 	// first row carrying an element and increment from there, so the elements
 	// are laid out in address order on the last rows of the module.
-	Address []wiop.ObjectID
+	Address wiop.ObjectID
 	// Data is the memory's data column, holding one byte per address.
 	Data wiop.ObjectID
-	// AccessBit is the memory's access bit: zero on padding rows and one on the
-	// rows carrying an element.
-	AccessBit wiop.ObjectID
 }
 
 // PublicOutputs returns the public output memory [Define] found in the
@@ -86,6 +82,27 @@ type schemaScanner struct {
 	ColumnIDs map[string]wiop.ObjectID
 	// TraceRound is the round of every column outside of [programModule].
 	TraceRound int
+	// ExprCache interns the expression nodes built by [castExpression], per
+	// module, so that structurally identical subexpressions share one pointer
+	// instead of being re-allocated at every occurrence. See [intern].
+	//
+	// This is a fallback for zkc not deduplicating its own [air.Term] DAG; it
+	// is the designated removal point once zkc interns natively (see
+	// LFDT-Lineth/lineth-monorepo#4038). The map is used for lookup only and
+	// is never iterated, so it does not affect output ordering.
+	//
+	// Removing this structural fallback alone does not complete the native-zkc
+	// migration. ExprCache dedupes the *output*, but every traversal of the
+	// *input* still descends into each occurrence of a term, so a shared
+	// [air.Term] DAG would be expanded as a tree, which is exponential in DAG
+	// depth (a chain of 19 nested Add(t, t) costs ~786K allocations per
+	// conversion). Before relying on native sharing:
+	//   - [castExpression] must keep a per-module map[air.Term]wiop.Expression,
+	//     keyed on the original n-ary term and checked before descending;
+	//   - [collectFromTerm] must memoise visited terms in the same way;
+	//   - the Lisp rendering used to order constraints in [scanConstraints]
+	//     must not expand shared subterms (or must use another ordering key).
+	ExprCache map[schema.ModuleId]map[exprKey]wiop.Expression
 }
 
 // Define registers the arithmetization from a corset air.Schema and trace limits
@@ -112,6 +129,7 @@ func Define(sys *wiop.System, schema *air.Schema[koalabear.Element], traceRound 
 		ModulesIDsWiop: map[string]int{},
 		ColumnIDs:      map[string]wiop.ObjectID{},
 		TraceRound:     traceRound,
+		ExprCache:      newExprCache(),
 	}
 
 	scanner.scanColumns()
@@ -156,11 +174,7 @@ func (s *schemaScanner) collectPublicOutputs() PublicOutput {
 			)
 		}
 
-		var (
-			address, data []wiop.ObjectID
-			accessBit     wiop.ObjectID
-			hasAccessBit  bool
-		)
+		var address, data []wiop.ObjectID
 
 		for _, reg := range modDecl.Registers() {
 
@@ -171,37 +185,32 @@ func (s *schemaScanner) collectPublicOutputs() PublicOutput {
 
 			// A memory's address lines are exactly its input registers and its data
 			// lines exactly its output registers, so the two are told apart by
-			// register kind rather than by name. Of the computed registers, only the
-			// access bit is of use here; the address selectors are not.
+			// register kind rather than by name.
 			//
 			// Only [guestOutputModule] is collected. Any other public output leaves
-			// the lists empty and is skipped just below, so no memory becomes a
-			// public input merely by being declared `pub output`.
+			// the lists empty and is skipped.
 			switch {
 			case moduleName != guestOutputModule:
 			case reg.IsInput():
 				address = append(address, id)
 			case reg.IsOutput():
 				data = append(data, id)
-			case reg.Name() == ctrace.ACCESS_BIT_NAME:
-				accessBit, hasAccessBit = id, true
 			}
 		}
 
-		// A memory holding anything other than a single byte column, or lacking
-		// an address or an access bit, is not describable by [PublicOutput], so it
-		// is reported and skipped rather than half-described.
-		if len(address) == 0 || len(data) != 1 || !hasAccessBit {
+		// A memory holding anything other than a single address and a single
+		// byte column is not describable by [PublicOutput], so it is reported and
+		// skipped rather than half-described.
+		if len(address) != 1 || len(data) != 1 {
 			logrus.Warnf(
 				"zkcdriver: collectPublicOutputs: skipping public output %q: "+
-					"has %d address and %d data columns (access bit found: %v), "+
-					"expected at least one address, one datum and an access bit",
-				moduleName, len(address), len(data), hasAccessBit,
+					"has %d address and %d data columns, expected one of each",
+				moduleName, len(address), len(data),
 			)
 			continue
 		}
 
-		output = PublicOutput{Name: moduleName, Address: address, Data: data[0], AccessBit: accessBit}
+		output = PublicOutput{Name: moduleName, Address: address[0], Data: data[0]}
 	}
 
 	return output
@@ -349,6 +358,10 @@ func (s *schemaScanner) collectReferencedColumns() map[string]struct{} {
 
 // collectFromTerm recursively walks a constraint term and adds every column
 // access it finds to out. It mirrors the structure of castExpression.
+//
+// It does not memoise visited terms, so a shared [air.Term] is re-walked at
+// every occurrence. That is fine for the tree-shaped terms zkc emits today;
+// see [schemaScanner.ExprCache] for what native zkc interning requires.
 func (s *schemaScanner) collectFromTerm(
 	modID schema.ModuleId,
 	term air.Term[koalabear.Element],
@@ -416,6 +429,8 @@ func (s *schemaScanner) scanConstraints() {
 	}
 
 	// Pre-compute Lisp names to avoid O(n²) serialisation inside the comparator.
+	// The rendering expands shared subterms, so it would blow up on a native
+	// zkc DAG; see [schemaScanner.ExprCache].
 	names := make([]string, len(corsetCSS))
 	for i, cs := range corsetCSS {
 		names[i] = cs.Lisp(s.Schema).String(false)
@@ -439,17 +454,14 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 	case *air.BusConstraint[koalabear.Element]:
 		// Iterate receive ports, each of which identifies a set of columns in a
 		// given module (including a selector) which determine the message being
-		// reveived.
+		// received.
 		for _, recvPort := range cs.Receives {
 
-			table := wiop.Table{
-				Columns:  make([]*wiop.ColumnView, len(recvPort.Registers)),
-				Selector: s.compColumnByCorsetID(recvPort.Module, recvPort.Selector).View(),
+			cols := make([]*wiop.ColumnView, len(recvPort.Registers))
+			for i := range cols {
+				cols[i] = s.compColumnByCorsetID(recvPort.Module, recvPort.Registers[i]).View()
 			}
-
-			for i := range table.Columns {
-				table.Columns[i] = s.compColumnByCorsetID(recvPort.Module, recvPort.Registers[i]).View()
-			}
+			table := wiop.NewFilteredTable(s.compColumnByCorsetID(recvPort.Module, recvPort.Selector).View(), cols...)
 
 			s.Sys.NewMessageBusReceive(s.Sys.Context.Childf("bus-%v", name), "0", name, table)
 		}
@@ -458,14 +470,11 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 		// given module (including a selector) which determine the message being
 		// sent.
 		for _, sendPort := range cs.Sends {
-			table := wiop.Table{
-				Columns:  make([]*wiop.ColumnView, len(sendPort.Registers)),
-				Selector: s.compColumnByCorsetID(sendPort.Module, sendPort.Selector).View(),
+			cols := make([]*wiop.ColumnView, len(sendPort.Registers))
+			for i := range cols {
+				cols[i] = s.compColumnByCorsetID(sendPort.Module, sendPort.Registers[i]).View()
 			}
-
-			for i := range table.Columns {
-				table.Columns[i] = s.compColumnByCorsetID(sendPort.Module, sendPort.Registers[i]).View()
-			}
+			table := wiop.NewFilteredTable(s.compColumnByCorsetID(sendPort.Module, sendPort.Selector).View(), cols...)
 
 			s.Sys.NewMessageBusSend(s.Sys.Context.Childf("bus-%v", name), "0", name, table)
 		}
@@ -547,13 +556,18 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 		// and the domain is the position of the vanishing vector.
 		position := cs.Domain.Unwrap()
 
+		// The rewrite allocates fresh nodes throughout — [wiop.Column.At] for
+		// every leaf, [wiop.DefaultConstruct] for every compound — so the
+		// result is re-interned to let local constraints pinned at the same
+		// position share their lifted subexpressions. [wiop.EditExpression]
+		// visits bottom-up, which is the order [schemaScanner.intern] requires.
 		wExpr = wiop.EditExpression(wExpr,
 			func(e wiop.Expression, children []wiop.Expression) wiop.Expression {
 				switch e := e.(type) {
 				case *wiop.ColumnView:
-					return e.Column.At(position + e.ShiftingOffset)
+					return s.intern(cs.Context, e.Column.At(position+e.ShiftingOffset))
 				default:
-					return wiop.DefaultConstruct(e, children)
+					return s.intern(cs.Context, wiop.DefaultConstruct(e, children))
 				}
 			})
 
@@ -566,6 +580,20 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 
 // castExpression turns a corset expression into a [symbolic.Expression] whose
 // variables are [wiop.System] components.
+//
+// Every node it returns is interned per module (see [schemaScanner.intern]):
+// zkc hands out a tree in which structurally identical subexpressions are
+// distinct [air.Term] values, and allocating a fresh [wiop.Expression] for
+// each occurrence would starve every pointer-keyed cache downstream. Leaves
+// are interned too, and necessarily so: [wiop.Column.View] and
+// [wiop.ColumnView.Shift] allocate a new pointer on every call, so without
+// leaf interning no compound key could ever match.
+//
+// Interning dedupes the output only: the recursion still descends into every
+// occurrence of an input term before the lookup. This is linear for today's
+// tree-shaped input but exponential in depth for a shared [air.Term] DAG, so
+// native zkc interning needs an input-term memo here (see
+// [schemaScanner.ExprCache]).
 func (s *schemaScanner) castExpression(context schema.ModuleId, expr air.Term[koalabear.Element]) wiop.Expression {
 
 	switch e := expr.(type) {
@@ -576,13 +604,13 @@ func (s *schemaScanner) castExpression(context schema.ModuleId, expr air.Term[ko
 		for i := range args {
 			args[i] = s.castExpression(context, e.Args[i])
 		}
-		return wiop.Sum(args...)
+		return s.internedSum(context, args...)
 
 	case *air.Sub[koalabear.Element]:
 
 		res := s.castExpression(context, e.Args[0])
 		for i := 1; i < len(e.Args); i++ {
-			res = wiop.Sub(res, s.castExpression(context, e.Args[i]))
+			res = s.intern(context, wiop.Sub(res, s.castExpression(context, e.Args[i])))
 		}
 		return res
 
@@ -592,7 +620,7 @@ func (s *schemaScanner) castExpression(context schema.ModuleId, expr air.Term[ko
 		for i := range args {
 			args[i] = s.castExpression(context, e.Args[i])
 		}
-		return wiop.Product(args...)
+		return s.internedProduct(context, args...)
 
 	case *air.Constant[koalabear.Element]:
 		// @alex: this bit is a bit hacky, because corset's koalabear.Element
@@ -600,11 +628,11 @@ func (s *schemaScanner) castExpression(context schema.ModuleId, expr air.Term[ko
 		// layout. Ideally, both dependencies should converge toward using the
 		// exact same implementation. This would remove this kind of hacky
 		// conversions.
-		return wiop.NewConstantField(field.Element(e.Value))
+		return s.intern(context, wiop.NewConstantField(field.Element(e.Value)))
 
 	case *air.ColumnAccess[koalabear.Element]:
 
-		return s.compColumnByCorsetColumnAccess(context, e)
+		return s.intern(context, s.compColumnByCorsetColumnAccess(context, e))
 
 	default:
 		eStr := fmt.Sprintf("%v", e)

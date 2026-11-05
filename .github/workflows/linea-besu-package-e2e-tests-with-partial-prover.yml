@@ -61,7 +61,7 @@ jobs:
 
       - name: Upload linea-besu-package docker image artifact
         if: ${{ inputs.linea_besu_package_image_tag == '' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: linea-besu-package
           path: linea-besu-package-image.tar.gz
@@ -90,7 +90,7 @@ jobs:
 
       - name: Upload prover docker image artifact
         if: ${{ inputs.prover_image_tag == '' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: linea-prover
           path: linea-prover-image.tar.gz

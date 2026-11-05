@@ -1,6 +1,4 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
@@ -483,8 +481,10 @@ class CLSyncServiceImplTest {
   }
 
   private fun awaitUntilAsserted(
-    timeout: Long = 6000L,
-    timeUnit: TimeUnit = TimeUnit.MILLISECONDS,
+    // These tests sync real libp2p networks; under CI CPU contention (parallel module tests)
+    // 6s is not enough headroom. Matches the explicit 30s timeouts already used in this class.
+    timeout: Long = 30L,
+    timeUnit: TimeUnit = TimeUnit.SECONDS,
     condition: () -> Unit,
   ) {
     await()

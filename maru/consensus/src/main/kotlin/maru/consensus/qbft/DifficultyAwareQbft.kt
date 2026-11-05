@@ -1,6 +1,4 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
@@ -8,6 +6,9 @@
  */
 package maru.consensus.qbft
 
+import linea.domain.BlockParameter
+import linea.domain.BlockWithTxHashes
+import linea.ethapi.EthApiBlockClient
 import linea.timer.Timer
 import linea.timer.TimerFactory
 import linea.timer.VertxTimerFactory
@@ -17,24 +18,22 @@ import maru.consensus.ProtocolFactory
 import maru.core.Protocol
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
-import org.web3j.protocol.Web3j
-import org.web3j.protocol.core.DefaultBlockParameter
-import org.web3j.protocol.core.methods.response.EthBlock
+import java.math.BigInteger
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 class DifficultyAwareQbftFactory(
-  private val ethereumJsonRpcClient: Web3j?,
+  private val ethApiClient: EthApiBlockClient?,
   private val postTtdProtocolFactory: ProtocolFactory,
   private val timerFactory: TimerFactory,
 ) : ProtocolFactory {
   override fun create(forkSpec: ForkSpec): DifficultyAwareQbft {
-    require(ethereumJsonRpcClient != null) {
+    require(ethApiClient != null) {
       "L2 Ethereum API endpoint has to be set if the DifficultyAwareQbftFactory needs to be created"
     }
     return DifficultyAwareQbft(
-      ethereumJsonRpcClient = ethereumJsonRpcClient,
+      ethApiClient = ethApiClient,
       postTtdProtocolFactory = postTtdProtocolFactory,
       forkSpec = forkSpec,
       timerFactory = timerFactory,
@@ -43,16 +42,23 @@ class DifficultyAwareQbftFactory(
 }
 
 class DifficultyAwareQbft(
-  private val ethereumJsonRpcClient: Web3j,
+  private val ethApiClient: EthApiBlockClient,
   private val postTtdProtocolFactory: ProtocolFactory,
   private val forkSpec: ForkSpec,
   private val timerFactory: TimerFactory,
+  // EL clients no longer return totalDifficulty in eth_getBlockBy* responses, so the terminal block is derived from TTD
+  private val terminalBlockCalculator: TerminalBlockCalculator =
+    ConstantDifficultyTerminalBlockCalculator(
+      ethApiClient = ethApiClient,
+      terminalTotalDifficulty =
+      BigInteger((forkSpec.configuration as DifficultyAwareQbftConfig).terminalTotalDifficulty.toString()),
+    ),
 ) : Protocol {
   private val log: Logger = LogManager.getLogger(this.javaClass)
 
   private var poller: Timer? = null
   private var postTtdProtocol: Protocol? = null
-  private var missingTotalDifficultyReported = false
+  private var unexpectedDifficultyReported = false
 
   private fun pollTask() {
     val difficultyAwareQbftConfig = forkSpec.configuration as DifficultyAwareQbftConfig
@@ -63,22 +69,40 @@ class DifficultyAwareQbft(
         return
       }
 
-      val latestBlock =
-        ethereumJsonRpcClient
-          .ethGetBlockByNumber(DefaultBlockParameter.valueOf("latest"), false)
-          .send()
-          .block
-
+      val latestBlock = ethApiClient.ethFindBlockByNumberTxHashes(BlockParameter.Tag.LATEST).get()
       if (latestBlock == null) {
         log.warn("Failed to retrieve latest block from EL")
         return
       }
 
-      if (!isTerminalConditionReached(latestBlock, difficultyAwareQbftConfig)) {
+      val terminalBlock = terminalBlockCalculator.terminalBlock()
+      if (terminalBlock == null) {
+        log.debug(
+          "Waiting for the terminal block to be determined: elBlockNumber={}",
+          latestBlock.number,
+        )
+        return
+      }
+      checkConstantBlockDifficulty(latestBlock, terminalBlock)
+
+      log.debug(
+        "Current elBlockNumber={}, terminalBlockNumber={}, terminalTotalDifficulty={}",
+        latestBlock.number,
+        terminalBlock.number,
+        difficultyAwareQbftConfig.terminalTotalDifficulty,
+      )
+      if (latestBlock.number < terminalBlock.number) {
         return
       }
 
-      log.info("TTD reached at elBlockNumber={}. Transitioning to post-TTD protocol.", latestBlock.number)
+      log.info(
+        "TTD reached at elBlockNumber={} (terminalBlockNumber={}, genesisDifficulty={}, blockDifficulty={}). " +
+          "Transitioning to post-TTD protocol.",
+        latestBlock.number,
+        terminalBlock.number,
+        terminalBlock.genesisDifficulty,
+        terminalBlock.blockDifficulty,
+      )
       val postTtdForkSpec =
         ForkSpec(
           timestampSeconds = forkSpec.timestampSeconds,
@@ -92,33 +116,34 @@ class DifficultyAwareQbft(
     }
   }
 
-  private fun isTerminalConditionReached(
-    latestBlock: EthBlock.Block,
-    config: DifficultyAwareQbftConfig,
-  ): Boolean {
-    if (latestBlock.totalDifficultyRaw == null) {
-      // Some EL clients (e.g. Besu >= 26.9.0) no longer return totalDifficulty in eth_getBlockBy* responses,
-      // in which case TTD can never be detected and the transition to post-TTD protocol will not happen.
-      if (!missingTotalDifficultyReported) {
-        log.error(
-          "EL returned no totalDifficulty for elBlockNumber={}; cannot detect TTD={} and transition to " +
-            "post-TTD protocol. The EL client may not support totalDifficulty in eth_getBlockByNumber responses.",
-          latestBlock.number,
-          config.terminalTotalDifficulty,
-        )
-        missingTotalDifficultyReported = true
-      }
-      return false
+  /**
+   * The terminal block is computed assuming every block after genesis has the same difficulty as block 1. Report
+   * blocks that break that assumption (e.g. an out-of-turn Clique block when there is more than one signer), as the
+   * computed terminal block may then not match the EL's. Post-merge blocks have difficulty 0 and are expected.
+   */
+  private fun checkConstantBlockDifficulty(
+    latestBlock: BlockWithTxHashes,
+    terminalBlock: TerminalBlock,
+  ) {
+    val expectedDifficulty = terminalBlock.blockDifficulty ?: return
+    val latestDifficulty = BigInteger(latestBlock.difficulty.toString())
+    if (latestBlock.number == 0UL ||
+      latestDifficulty.signum() == 0 ||
+      latestDifficulty == expectedDifficulty ||
+      unexpectedDifficultyReported
+    ) {
+      return
     }
-
-    val totalDifficulty = latestBlock.totalDifficulty.toLong()
-    log.debug(
-      "Current elBlockNumber={}, totalDifficulty={}, terminalTotalDifficulty={}",
+    log.error(
+      "EL block {} has difficulty {} while every block after genesis is expected to have difficulty {} (as block 1). " +
+        "The terminal block {} may not match the EL's: only QBFT/IBFT 2.0 and single-signer Clique pre-merge " +
+        "chains are supported.",
       latestBlock.number,
-      totalDifficulty,
-      config.terminalTotalDifficulty,
+      latestDifficulty,
+      expectedDifficulty,
+      terminalBlock.number,
     )
-    return totalDifficulty >= config.terminalTotalDifficulty.toLong()
+    unexpectedDifficultyReported = true
   }
 
   @Synchronized

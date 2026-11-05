@@ -91,7 +91,9 @@ func TestFullPipeline_LookupRowLimit_TamperedDynamicSize(t *testing.T) {
 	// Honest witness: every A row (7) is in the lookup table {7, 7}.
 	assign := func(rt *wiop.Runtime) {
 		rt.AssignColumn(colT, rowLimitVec(7, 7))
-		rt.AssignColumn(colS, rowLimitVec(7, 7)) // dynamic module → honest size 2.
+		// dynamic module → honest size 4, its minimum: its logup column is
+		// read at shift −1 (wiop.Module.MinRuntimeSize).
+		rt.AssignColumn(colS, rowLimitVec(7, 7, 7, 7))
 	}
 
 	proof, pub := sys.Prove(assign)

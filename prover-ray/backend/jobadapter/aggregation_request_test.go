@@ -10,7 +10,7 @@ import (
 const referenceAggregationRequest = "../../../rollup_spec/src/rollup_spec/prover_io/testdata/10-18-getZkRollupAggregationProofV1.request.json"
 
 // TestDecodeAggregationRequest_Golden decodes the reference fixture and checks
-// the envelope and the embedded rollup proofs with their 22-field PI.
+// the envelope and the embedded rollup proofs with their PI.
 func TestDecodeAggregationRequest_Golden(t *testing.T) {
 	req, err := DecodeAggregationRequest(readSpecFixture(t, referenceAggregationRequest))
 	require.NoError(t, err)

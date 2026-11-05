@@ -200,7 +200,7 @@ func template() string {
 		"`arithmetization/src/test/scripts/weekly_metrics`. **Newest run first.** Rows are appended\n" +
 		"under each table's `<!-- table:… -->` marker; the prose around them is free to edit.\n\n" +
 		"The measured workload is the l2-execution guest built with `KECCAK_ACCEL=false`, run against\n" +
-		"`riscv-guests/l2-execution/test/testdata/stateless_input.ssz` — the small committed reference\n" +
+		"`riscv-guests/l2_execution/test/testdata/stateless_input.ssz` — the small committed reference\n" +
 		"block. Each cell in the cost table reads `outcome wall / peak RSS`.\n")
 	for _, name := range tableOrder {
 		hdr := tableHeaders[name]

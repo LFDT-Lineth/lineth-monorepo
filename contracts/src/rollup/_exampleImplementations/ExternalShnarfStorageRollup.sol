@@ -5,7 +5,7 @@ import { LinethRollupBase } from "../LinethRollupBase.sol";
 
 /**
  * @title Contract to manage cross-chain messaging on L1, L2 data submission, and rollup proof verification.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  */
 contract ExternalShnarfStorageRollup is LinethRollupBase {

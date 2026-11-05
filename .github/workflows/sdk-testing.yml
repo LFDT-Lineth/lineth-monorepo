@@ -66,6 +66,14 @@ jobs:
       - name: Lint sdk-ethers
         run: pnpm -F @lfdt-lineth/sdk run lint
 
+      - name: Check published packages ship the license files
+        run: |
+          for pkg in sdk-core sdk-viem; do
+            (cd "ts-libs/sdk/${pkg}" && npm pack --dry-run --json) \
+              | jq -e '[.[0].files[].path] | (index("LICENSE-APACHE") != null) and (index("LICENSE-MIT") != null)' >/dev/null \
+              || { echo "::error::${pkg} does not pack LICENSE-APACHE and LICENSE-MIT"; exit 1; }
+          done
+
       - name: Compute coverage artifact tag
         id: cov-tag
         shell: bash
@@ -86,7 +94,7 @@ jobs:
           cp ts-libs/sdk/sdk-ethers/coverage/lcov.info ci-sdk-coverage/sdk-ethers-lcov.info
 
       - name: Upload TS coverage report
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sdk-ts-coverage-${{ steps.cov-tag.outputs.TAG }}
           if-no-files-found: error

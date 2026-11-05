@@ -1,6 +1,4 @@
 /*
- * Copyright Consensys Software Inc.
- *
  * This file is dual-licensed under either the MIT license or Apache License 2.0.
  * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
  *
@@ -11,7 +9,6 @@ package maru.crypto
 import io.libp2p.core.PeerId
 import io.libp2p.core.crypto.KeyType
 import io.libp2p.core.crypto.generateKeyPair
-import io.libp2p.core.crypto.marshalPrivateKey
 import io.libp2p.core.crypto.unmarshalPrivateKey
 import io.libp2p.crypto.keys.unmarshalSecp256k1PrivateKey
 import linea.kotlin.encodeHex
@@ -82,17 +79,37 @@ object PrivateKeyGenerator {
     val normalizedPrivateKey = ensureKeyIsExactly32BytesLong(privateKey)
     // The curve parameters for the block signing are different from what LibP2P is using
     val signingAddress = SecpCrypto.privateKeyToAddress(normalizedPrivateKey)
-    val privateKeyTyped = unmarshalSecp256k1PrivateKey(privateKey)
+    val privateKeyTyped = unmarshalSecp256k1PrivateKey(normalizedPrivateKey)
     val peerId = PeerId.fromPubKey(privateKeyTyped.publicKey())
     val libP2PNodeId = LibP2PNodeId(peerId)
     val nodeKey = createNodeKey(normalizedPrivateKey)
-    return KeyData(
-      privateKey = privateKeyTyped.raw(),
-      prefixedPrivateKey = marshalPrivateKey(privateKeyTyped),
-      address = signingAddress,
-      peerId = libP2PNodeId,
-      nodeKey = nodeKey,
-    )
+    val keyData =
+      KeyData(
+        // The canonical 32-byte form, not privateKeyTyped.raw(): raw() is BigInteger.toByteArray,
+        // whose length varies (31/32/33 bytes for short or high-bit keys), so any reader doing
+        // length-sensitive slicing on this field would hit the same class of bug as above.
+        privateKey = normalizedPrivateKey,
+        // marshalPrivateKey(privateKeyTyped) round-trips through BigInteger, which drops leading
+        // zero bytes (~0.4% of random keys): the protobuf payload then has 31 bytes and length byte
+        // 0x1F, and readers stripping a fixed 4-byte prefix via takeLast(32) — see SecpCrypto.
+        // privateKeyBytesWithoutPrefix — end up with a corrupted key (the length byte leaks into
+        // the payload).
+        // Build the libp2p protobuf wrapper manually so the payload is always exactly 32 bytes:
+        // field 1 (type) = varint SECP256K1 (2), field 2 (data) = length-delimited 32-byte key.
+        prefixedPrivateKey = byteArrayOf(0x08, 0x02, 0x12, 0x20) + normalizedPrivateKey,
+        address = signingAddress,
+        peerId = libP2PNodeId,
+        nodeKey = nodeKey,
+      )
+    // Self-consistency invariant: the takeLast(32) readers above must recover the same key.
+    // Guards against any future change reintroducing a length-sensitive prefix/payload mismatch.
+    val addressFromPrefixedKey =
+      SecpCrypto.privateKeyToAddress(SecpCrypto.privateKeyBytesWithoutPrefix(keyData.prefixedPrivateKey))
+    require(keyData.address.contentEquals(addressFromPrefixedKey)) {
+      "Torn KeyData detected: address=${keyData.address.encodeHex(false)} but " +
+        "prefixedPrivateKey maps to address=${addressFromPrefixedKey.encodeHex(false)}"
+    }
+    return keyData
   }
 
   private fun ensureKeyIsExactly32BytesLong(privateKey: ByteArray): ByteArray =

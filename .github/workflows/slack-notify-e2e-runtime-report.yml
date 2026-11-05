@@ -43,14 +43,14 @@ jobs:
 
       - name: Upload HTML report
         if: ${{ fromJSON(steps.summary.outputs.json).totalRuns > 0 }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: e2e-runtime-report
           path: e2e/e2e-runtime-report.html
 
       - name: Post to Slack
         if: ${{ fromJSON(steps.summary.outputs.json).totalRuns > 0 }}
-        uses: slackapi/slack-github-action@0d95c9a7becc1e6e297d76df9bc735c44f4cbcbc # v3.0.5
+        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_GITHUB_ACTIONS_ALERTS_BOT_TOKEN }}

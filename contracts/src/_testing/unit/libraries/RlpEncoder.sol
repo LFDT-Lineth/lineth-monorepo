@@ -4,7 +4,7 @@ pragma solidity ^0.8.33;
 
 /**
  * @title Library for RLP Encoding data.
- * @author ConsenSys Software Inc.
+ * @author Consensys Incorporated
  * @custom:security-contact security-report@linea.build
  * @custom:attribution https://github.com/bakaoh/solidity-rlp-encode
  * @dev The internals have been significantly modified from the original for readability and gas.
