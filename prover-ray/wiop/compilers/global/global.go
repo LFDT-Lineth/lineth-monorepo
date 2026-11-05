@@ -314,7 +314,7 @@ func buildModuleQuotient(rawBuckets []rawBucket, m *wiop.Module, mergeCoin *wiop
 	)
 	if !m.IsDynamic() && len(rawBuckets) > 0 {
 		n = m.Size()
-		q.smallDomain = fft.NewDomain(uint64(n))
+		q.smallDomain = cachedDomain(n, nil)
 		q.cosetDomains = newCosetDomains(n, q.maxRatio)
 		cancels = newCancellationCosets(n, n*q.maxRatio)
 	}

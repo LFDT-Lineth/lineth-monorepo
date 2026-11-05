@@ -928,10 +928,6 @@ func (w *worker) extOp(nd *node, dst []field.Ext) {
 			case vecExt(&a) && b.scalar:
 				out.ScalarMul(a.ext, &b.s)
 				return
-			case vecBase(&a) && b.scalar:
-				clear(dst)
-				out.ScalarMulAccByElement(a.base, &b.s)
-				return
 			}
 			a, b = b, a
 		}

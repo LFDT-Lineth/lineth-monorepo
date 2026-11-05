@@ -111,7 +111,7 @@ func productOverRows(rt *Runtime, factors []Expression) (field.Ext, bool) {
 	var sizes []int
 	for _, e := range factors {
 		allBase = allBase && !e.IsExtension()
-		n := factorRows(rt, e)
+		n := e.Module().RuntimeSize(rt)
 		if _, ok := byRows[n]; !ok {
 			sizes = append(sizes, n)
 		}
@@ -135,15 +135,6 @@ func productOverRows(rt *Runtime, factors []Expression) (field.Ext, bool) {
 		prod.Mul(&prod, &p)
 	}
 	return prod, allBase
-}
-
-// factorRows returns the number of rows of a vector-valued factor: its
-// module's size, or the length of its evaluation when it has no module.
-func factorRows(rt *Runtime, e Expression) int {
-	if m := e.Module(); m != nil {
-		return m.RuntimeSize(rt)
-	}
-	return e.EvaluateVector(rt).Plain.Len()
 }
 
 // parallelProduct returns the product of v, computed in parallel chunks.
