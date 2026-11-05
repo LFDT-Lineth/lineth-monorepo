@@ -12,6 +12,7 @@ import (
 // result is the concatenation of the chunkSize Poseidon2 digests that
 // [MSetHash.Insert] would add, with no further arithmetic.
 func HashGnark(api frontend.API, root circuit.Octuplet) [MSetHashSizeNumFieldElement]circuit.Element {
+	// KoalaBear arithmetic, emulated over the circuit's native field (BN254 in our circuits).
 	koalaAPI := circuit.NewAPI(api)
 	var zeros [blockSize]circuit.Element
 	for i := range zeros {
