@@ -95,6 +95,38 @@ test "self-consistent false-statement fixtures fail in the targeted sub-verifier
     try std.testing.expect(checked > 0);
 }
 
+fn caseIndex(comptime name: []const u8) usize {
+    inline for (0..vf.case_count) |i| {
+        if (comptime std.mem.eql(u8, vf.get(i).name, name)) return i;
+    }
+    @compileError("no verify fixture case named " ++ name);
+}
+
+// RS blowup is a per-System PCS option (#4069). The DynamicFibonacciMultiSize
+// cases share one circuit at blowup 2, 4, 8 and 16 (the honest and alt-size
+// proofs of each are verified by the sweeps above). Here every non-default
+// proof must also be REJECTED by the blowup-2 System of the same circuit, so a
+// verifier that ignored the baked rate (and sized domains as if blowup were
+// fixed) could not pass the sweeps.
+test "rs blowup: a proof only verifies against the System of its own rate" {
+    const base = comptime vf.get(caseIndex("DynamicFibonacciMultiSize"));
+    const names = [_][]const u8{
+        "DynamicFibonacciMultiSizeBlowup4",
+        "DynamicFibonacciMultiSizeBlowup8",
+        "DynamicFibonacciMultiSizeBlowup16",
+    };
+    inline for (names) |name| {
+        const i = comptime caseIndex(name);
+        const case = comptime vf.get(i);
+        const input = vf.getInput(i);
+        try verifier.verify(case.spec, case.systems, input.proof, input.public_inputs);
+        if (verifier.verify(base.spec, base.systems, input.proof, input.public_inputs)) |_| {
+            std.debug.print("{s}: proof accepted by the blowup-2 System\n", .{name});
+            return error.WrongRateAccepted;
+        } else |_| {}
+    }
+}
+
 test "multi-size: one baked System verifies proofs of two dynamic sizes" {
     // The runtime-size-reconstructed PCS layout: a committed-dynamic-column
     // protocol is proven at two DIFFERENT dynamic-module sizes, and BOTH proofs
