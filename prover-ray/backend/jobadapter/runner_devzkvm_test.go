@@ -72,6 +72,8 @@ func TestRunner_DevZkVM_CrossCheckPasses(t *testing.T) {
 	require.Equal(t, RunStatusSuccess, result.Status)
 	require.NoError(t, result.Err)
 	require.Len(t, mock.jobs, 1, "dev-zkvm must run the guest under ZkC Execute")
+	assert.Equal(t, requestGuestProgramID(t, readFixture(t, "request_single_block.json")), mock.jobs[0].GuestProgramID,
+		"dev-zkvm must run the guest named by the request")
 
 	resp, ok := result.ResponseBody.(executionResponse)
 	require.True(t, ok)

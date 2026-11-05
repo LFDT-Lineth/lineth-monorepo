@@ -3,6 +3,7 @@
 ### 🚀 Features
 
 - *(misc)* Adding blob commitment and a proof to Rollup input (#4329)
+- *(coordinator, maru, docker)* Let downstream images override the image labels and maru jar (#4393)
 
 ### 🐛 Bug Fixes
 
