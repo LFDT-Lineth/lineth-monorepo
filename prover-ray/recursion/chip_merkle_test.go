@@ -345,11 +345,23 @@ func TestMerklePathRejectsFreeBits(t *testing.T) {
 
 // TestMerklePathRejectsOutputs: [x⁻¹, b0] changed consistently along the path,
 // so that only the first row's constraints see it: x⁻¹ scaled on every row,
-// and b0 flipped on every row after the first level row.
+// x⁻¹ and the first row's factor f scaled together, and b0 flipped on every
+// row after the first level row.
 func TestMerklePathRejectsOutputs(t *testing.T) {
 	c := randomMerkleCase(t, 8, 3, 0)
 	gInv := field.NewElement(5)
 	for name, cheat := range map[string]func(p *Program, r *Run, xb int){
+		"x on every row, f on the first": func(p *Program, r *Run, xb int) {
+			two := field.NewElement(2)
+			r.values[xb][0].Mul(&r.values[xb][0], &two)
+			require.NoError(t, p.trace(r))
+			f := r.Witness(p, merkleMod, merkleF)
+			f[0].Mul(&f[0], &two)
+			x := r.Witness(p, merkleMod, merkleX)
+			for row := range c.lastRow() + 1 {
+				x[row].Mul(&x[row], &two)
+			}
+		},
 		"x on every row": func(p *Program, r *Run, xb int) {
 			two := field.NewElement(2)
 			r.values[xb][0].Mul(&r.values[xb][0], &two)
@@ -538,4 +550,92 @@ func TestMerklePathChaining(t *testing.T) {
 		}
 	}
 	require.Error(t, proveAndVerify(p, r), "a forged leaf accepted")
+}
+
+// merkleWitness copies the merkle chip's witness columns.
+func merkleWitness(p *Program, r *Run) map[string][]field.Element {
+	w := map[string][]field.Element{}
+	save := func(name string) {
+		w[name] = append([]field.Element(nil), r.Witness(p, merkleMod, name)...)
+	}
+	for _, name := range []string{merkleB, merkleIdx, merkleF, merkleX, merkleB0} {
+		save(name)
+	}
+	for _, x := range []string{merkleCur, merkleS, merkleOut} {
+		for i := range CellWidth {
+			save(laneName(x, i))
+		}
+	}
+	return w
+}
+
+// TestMerklePathRejectsUnbound: what only one read or lookup of the chip sees.
+//   - a leaf, index or sibling cell that differs from the path the chip proves:
+//     the cell changes in the run and the other chips follow, but the merkle
+//     chip keeps the honest path, so only its read of the cell rejects it;
+//   - a forged node: row 0's output and row 1's input are replaced by the same
+//     digest, so the chain holds and only the P2 lookup rejects it.
+func TestMerklePathRejectsUnbound(t *testing.T) {
+	c := randomMerkleCase(t, 6, 3, 1)
+	changeCell := func(p *Program, r *Run, addr int, change func(v *Cell)) {
+		honest := merkleWitness(p, r)
+		change(&r.values[addr])
+		require.NoError(t, p.trace(r))
+		for name, w := range honest {
+			copy(r.Witness(p, merkleMod, name), w)
+		}
+	}
+	for name, cheat := range map[string]func(p *Program, r *Run, index int){
+		"leaf cell": func(p *Program, r *Run, _ int) { // the leaf is input 0
+			changeCell(p, r, 0, func(v *Cell) { v[0].SetUint64(77) })
+		},
+		"index cell": func(p *Program, r *Run, index int) {
+			changeCell(p, r, index, func(v *Cell) { v[0].SetUint64(uint64(c.index ^ 1)) })
+		},
+		"sibling cell": func(p *Program, r *Run, _ int) { // the first sibling is input 1
+			changeCell(p, r, 1, func(v *Cell) { v[3].SetUint64(9) })
+		},
+		"forged node": func(p *Program, r *Run, _ int) {
+			for i := range CellWidth {
+				out := r.Witness(p, merkleMod, laneName(merkleOut, i))
+				out[0].SetUint64(1000 + uint64(i))
+				r.Witness(p, merkleMod, laneName(merkleCur, i))[1] = out[0]
+			}
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			m, in, index, _, _ := merkleProgram(c, false, field.Element{})
+			p, err := m.Compile(testPCSOpts...)
+			require.NoError(t, err)
+			r, err := p.Execute(in)
+			require.NoError(t, err)
+			require.NoError(t, proveAndVerify(p, r), "honest")
+			cheat(p, r, index)
+			require.Error(t, proveAndVerify(p, r), "cheat accepted")
+		})
+	}
+}
+
+// TestMerklePathDepthBounds: a path has 1 to field.Bits−1 levels, since
+// idx = Σ bᵢ·2ⁱ is injective only below the field's modulus.
+func TestMerklePathDepthBounds(t *testing.T) {
+	for _, tc := range []struct {
+		depth int
+		ok    bool
+	}{{0, false}, {1, true}, {field.Bits - 1, true}, {field.Bits, false}} {
+		t.Run(fmt.Sprint(tc.depth), func(t *testing.T) {
+			m := &Machine{}
+			leaf, index, root := m.InputDigest(), m.InputScalar(), m.InputDigest()
+			siblings := make([]int, tc.depth)
+			for i := range siblings {
+				siblings[i] = m.InputDigest()
+			}
+			build := func() { m.MerklePath(leaf, siblings, index, root) }
+			if tc.ok {
+				require.NotPanics(t, build)
+			} else {
+				require.Panics(t, build)
+			}
+		})
+	}
 }

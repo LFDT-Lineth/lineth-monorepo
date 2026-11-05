@@ -103,8 +103,10 @@ func (m *Machine) merklePath(leaf int, siblings []int, index int, root int, inje
 	if err != nil {
 		panic(fmt.Sprintf("MerklePath: %v", err))
 	}
-	if len(siblings) == 0 {
-		panic("MerklePath: a path of depth 0")
+	// idx = Σ b_i·2^i is injective only below the field's modulus: at most
+	// field.Bits − 1 levels
+	if d := len(siblings); d == 0 || d >= field.Bits {
+		panic(fmt.Sprintf("MerklePath: a path of depth %d, want 1 to %d", d, field.Bits-1))
 	}
 	m.read(leaf)
 	m.read(index)
