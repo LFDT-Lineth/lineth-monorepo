@@ -10,8 +10,10 @@ import (
 )
 
 // identicalBatchesFixture commits the same table twice, so both batches have
-// the same Merkle root, plus a third, distinct batch. It returns the proof
-// opened with root deduplication on or off, and the matching verifier inputs.
+// the same Merkle root, plus a third, distinct batch. The twins span two sizes,
+// so each is visited at two levels but must still get a single input tree. It
+// returns the proof opened with root deduplication on or off, and the matching
+// verifier inputs.
 func identicalBatchesFixture(t *testing.T, disableDedup bool) (*PCS, VerifyInputs, OpeningProof) {
 	t.Helper()
 
@@ -25,6 +27,7 @@ func identicalBatchesFixture(t *testing.T, disableDedup bool) (*PCS, VerifyInput
 
 	prng := rand.New(utils.NewRandSource(20261016))
 	twin := make(Batch, 3)
+	twin[1] = SizedTable{Base: [][]field.Element{field.VecPseudoRandBase(prng, 2)}}
 	twin[2] = SizedTable{Ext: [][]field.Ext{field.VecPseudoRandExt(prng, 4)}}
 	other := make(Batch, 3)
 	other[2] = SizedTable{Ext: [][]field.Ext{field.VecPseudoRandExt(prng, 4)}}
@@ -38,6 +41,9 @@ func identicalBatchesFixture(t *testing.T, disableDedup bool) (*PCS, VerifyInput
 		roots[i] = committed[i].Tree.Root()
 		shifts[i] = make(BatchShifts, 3)
 		shifts[i][2] = SizedShifts{Ext: [][]int{{0}}}
+		if w[1].Base != nil {
+			shifts[i][1] = SizedShifts{Base: [][]int{{0}}}
+		}
 	}
 	require.Equal(t, roots[0], roots[1], "identical tables must share a root")
 	require.NotEqual(t, roots[0], roots[2])
