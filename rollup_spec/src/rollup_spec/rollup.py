@@ -324,7 +324,11 @@ def _verified_chunk_payload(chunk: ChunkWitness, index: int) -> bytes:
 
 
 def _verify_blob_kzg_proofs(blob_chunks: Sequence[ChunkWitness]) -> None:
-    """EIP-4844 `verify_blob_kzg_proof_batch` over the touched blob chunks, in chunk order."""
+    """EIP-4844 `verify_blob_kzg_proof_batch` over the touched blob chunks, in chunk order.
+
+    `verify_blob_kzg_proof` on each chunk accepts the same chunks, up to the batch's negligible
+    soundness error.
+    """
     if not blob_chunks:
         return
     try:
