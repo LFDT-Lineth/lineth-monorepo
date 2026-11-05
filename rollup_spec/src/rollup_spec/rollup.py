@@ -847,8 +847,11 @@ def truncate_block_rlp(block_rlp: bytes, chain_id: U64) -> TruncatedEthereumBloc
     Per-transaction fields:
       - `transactions[i]` is the signature- and chainID-stripped canonical
         bytes (see `_signature_stripped_tx_bytes`).
-      - `froms[i]` is the sender recovered via `recover_sender(chain_id, tx)`.
+      - `froms[i]` is the sender recovered via `recover_sender(chain_id, tx)`,
+        for a positive `chain_id`.
     """
+    if chain_id == 0:
+        raise Exception("sender recovery requires a positive chain ID")
     block = decode_block_rlp(block_rlp)
     if _transactions_root(block.transactions) != block.header.transactions_root:
         raise Exception("block transactions do not match the header's transactions root")
