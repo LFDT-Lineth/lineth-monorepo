@@ -145,7 +145,7 @@ func TestGates(t *testing.T) {
 	for _, n := range []int{1, 2} {
 		t.Run(fmt.Sprintf("n=%d", n), func(t *testing.T) {
 			p := newGnarkProof(t, n)
-			l, err := newLayout(p.compressor.Circuit, p.compressor.Schedule, n)
+			l, err := newLayout(p.circuit, p.schedule, n)
 			require.NoError(t, err)
 
 			nbSkipClaims := 0

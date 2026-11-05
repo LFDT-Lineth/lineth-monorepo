@@ -235,7 +235,6 @@ func (r *gateRow) evaluate(a, b, previous field.Ext) field.Ext {
 // records in the level; at a skip level, each wire's gate on the final evaluations at the point of
 // each claim, checked against the claimed value.
 func (l *layout) lowerGates() {
-	claimValueIndices := l.circuit.ClaimValueIndices(l.schedule)
 	g := &gateBuilder{firstID: l.firstGate}
 	for levelI, level := range l.schedule {
 		lv := &l.levels[levelI]
@@ -257,11 +256,8 @@ func (l *layout) lowerGates() {
 					lv.results = append(lv.results, g.evaluate(gate, finals(levelWireI, 0)))
 				} else {
 					for claimI, source := range group.ClaimSources {
-						claimed := l.outputs
-						if source.Level != len(l.schedule) {
-							claimed = l.levels[source.Level].finals
-						}
-						g.evaluateChecked(gate, finals(levelWireI, claimI), claimed+claimValueIndices[wireI][claimI])
+						claimed := l.claimPosition(source, l.claimValueIndices[wireI][claimI])
+						g.evaluateChecked(gate, finals(levelWireI, claimI), claimed)
 					}
 				}
 				levelWireI++
