@@ -9,6 +9,7 @@ const zkvm_types = @import("zkvm_types.zig");
 const keccak = @import("keccak.zig");
 const poseidon2 = @import("poseidon2.zig");
 const io = @import("io.zig");
+const secp256k1_fp = @import("secp256k1_fp.zig");
 
 // ── zkVM standard runtime (include/zkvm_std.h) ──────────────────────────────
 pub const zkvm_exit = lineth_std.zkvm_exit;
@@ -34,3 +35,11 @@ pub const write_output = io.write_output;
 
 // ── Poseidon2 accelerator (include/lineth_accelerators.h) ───────────────────
 pub const lineth_zkvm_poseidon2_permutation = poseidon2.lineth_zkvm_poseidon2_permutation;
+
+// ── secp256k1 field accelerator (arithmetization riscv/main_fieldaccel.zkc) ──
+pub const secp256k1_fp_t = secp256k1_fp.Fp;
+pub const secp256k1_fp_mul = secp256k1_fp.fpMul;
+pub const secp256k1_fp_sq = secp256k1_fp.fpSq;
+pub const secp256k1_fp_inv = secp256k1_fp.fpInv;
+pub const secp256k1_fp_sqrt_t = secp256k1_fp.FpSqrt;
+pub const secp256k1_fp_sqrt = secp256k1_fp.fpSqrt;

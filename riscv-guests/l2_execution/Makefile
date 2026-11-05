@@ -43,6 +43,12 @@ ZKC_EXEC_FLAGS ?=
 # Flags forwarded to `zkc trace` by trace / zkc-smoke-trace.
 ZKC_TRACE_FLAGS ?= --stats
 
+# Constantine secp256k1 field accelerator ops (needs SECP256K1_BACKEND=constantine): off, all, or a
+# comma-separated subset of mul, inv, sqrt. Such a guest only runs under an entry point that compiles
+# those ops in, so exec/trace/debug default ZKC_MAIN to riscv/main_fieldaccel.zkc (no --gogen).
+CTT_FIELD_ACCEL ?=
+ZKC_MAIN ?= $(if $(filter-out off,$(CTT_FIELD_ACCEL)),$(abspath $(MAKEFILE_DIR)../../arithmetization/src/main/riscv/main_fieldaccel.zkc))
+
 # Parameters for execution-spec zkevm fixtures.
 EXECUTION_SPECS_JSON_FIXTURES_DIR   := /tmp/execution-specs-json-fixtures
 EXECUTION_SPECS_FIXTURES_DIR        := $(EXECUTION_SPECS_JSON_FIXTURES_DIR)/fixtures
@@ -110,7 +116,7 @@ clean:
 	rm -rf $(BUILD_CACHE_DIR)
 
 compile:
-	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(KECCAK_ACCEL),-Dkeccak-accel=$(KECCAK_ACCEL)) $(if $(SECP256K1_BACKEND),-Dsecp256k1-backend=$(SECP256K1_BACKEND))
+	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(KECCAK_ACCEL),-Dkeccak-accel=$(KECCAK_ACCEL)) $(if $(SECP256K1_BACKEND),-Dsecp256k1-backend=$(SECP256K1_BACKEND)) $(if $(CTT_FIELD_ACCEL),-Dctt-field-accel=$(CTT_FIELD_ACCEL))
 	@if command -v riscv64-unknown-elf-objdump >/dev/null 2>&1; then \
 		if [ "$(OBJDUMP)" = "true" ]; then \
 			echo "\nDisassembling $(BIN)"; \
@@ -128,10 +134,10 @@ require-elf:
 	@[ -n "$(ELF)" ] && [ -f "$(ELF)" ] || { echo "ELF not found: '$(ELF)' (set ELF=path/to/evm_execution_guest)"; exit 1; }
 
 exec: require-input compile
-	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-exec BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)" ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"
+	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-exec BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)" $(if $(ZKC_MAIN),ZKC_MAIN="$(ZKC_MAIN)") ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"
 
 trace: require-input compile
-	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-trace BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)" ZKC_TRACE_FLAGS="$(ZKC_TRACE_FLAGS)"
+	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-trace BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)" $(if $(ZKC_MAIN),ZKC_MAIN="$(ZKC_MAIN)") ZKC_TRACE_FLAGS="$(ZKC_TRACE_FLAGS)"
 
 debug: require-input compile
-	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-debug BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)" ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"
+	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-debug BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)" $(if $(ZKC_MAIN),ZKC_MAIN="$(ZKC_MAIN)") ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"

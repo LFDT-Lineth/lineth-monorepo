@@ -4,10 +4,11 @@
     .fingerprint = 0x2b75fa46e7118444,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
-        // Consensys fork of Constantine with the guest shims and rv64 freestanding build.
+        // Consensys fork of Constantine with the guest shims and rv64 freestanding build, the vartime
+        // ecrecover (PR #5) and the opt-in secp256k1 field accelerator (CTT_FIELD_ACCEL).
         .constantine = .{
-            .url = "git+https://github.com/Consensys-Incorporated/constantine#1ad824d5f5eb9f26e2e46f086b56586b8cdacbee",
-            .hash = "N-V-__8AANg56QYpt2yF5fKW084TpZeHPpLbhCqTHC5-gIgN",
+            .url = "git+https://github.com/Consensys-Incorporated/constantine#65e10e591dfbe0fd94f2c8a2e24d53655c5c62be",
+            .hash = "N-V-__8AAOUJ6gaLYIGvo1Fr_f1c5glBsgzyFpKq_goOzxQr",
         },
     },
     .paths = .{

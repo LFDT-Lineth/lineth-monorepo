@@ -22,7 +22,7 @@ export WORK=/tmp/l2-bench                      # scratch space for inputs, JSON,
 |---|---|---|
 | Zig `0.16.0` | building the guest ELF and host tools | pinned in `riscv-guests/.zigversion` |
 | Go | `go tool zkc`, `go tool elf_to_json` | run **inside `arithmetization/`** — `arithmetization/go.mod` pins the `zkc` version (currently `v1.2.35`; the reference results below were measured on `v1.2.34`), so you get the `zkc` that matches the arithmetization sources |
-| Nim, `clang`, `llvm-ar` | building the Constantine staticlib (any build, both backends) | `make -C riscv-guests install-constantine-deps` |
+| Nim, `clang`, `llvm-ar` | building the Constantine staticlib (any build, both backends) | `make -C riscv-guests install-constantine-deps`. With a versioned Homebrew LLVM (e.g. `llvm@21`) instead of `llvm`, export `CLANG`, `LLVM_AR` and `LLVM_NM` with its `bin/` paths |
 | `jq`, `xxd` | unpacking `statelessInputBytes` from fixture JSON | |
 | `gh` or `curl` | downloading benchmark fixtures | `gh` needs no auth for public releases |
 | `taskset` (optional) | pinning tracing to 16 CPUs like CI does | |
@@ -281,9 +281,10 @@ Build each variant into its own prefix so ELFs coexist. Two independent options 
 |---|---|---|
 | `-Dsecp256k1-backend` | `std`, `constantine` | `std` |
 | `-Dkeccak-accel` | `true` (custom opcode), `false` (Zig keccak) | `false` |
+| `-Dctt-field-accel` | `off`, `all`, or a comma-separated subset of `mul`, `inv`, `sqrt` (needs `constantine`) | `off` |
 
-State both explicitly; the benchmarks below use `-Dkeccak-accel=false`, as CI does for the sample-block
-traces.
+State the first two explicitly; the benchmarks below use `-Dkeccak-accel=false`, as CI does for the
+sample-block traces.
 
 ```bash
 cd $REPO/riscv-guests/l2_execution
@@ -291,6 +292,37 @@ for v in std constantine; do
   zig build --prefix $WORK/guest-$v -Dsecp256k1-backend=$v -Dkeccak-accel=false
 done
 # -> $WORK/guest-{std,constantine}/bin/evm_execution_guest
+```
+
+**secp256k1 field accelerator variants** ([GRANULAR.md](GRANULAR.md)). `-Dctt-field-accel` makes
+Constantine issue the custom-1 field instructions for secp256k1 Fp multiplication/squaring (`mul`),
+inversion (`inv`) and square root (`sqrt`). Such an ELF runs only under an entry point that compiles
+those ops in: `src/main/riscv/main_fieldaccel.zkc` has all of them, `main_fieldaccel_{mul,inv,sqrt}.zkc`
+one each, and plain `main.zkc` fails on the first instruction. These entry points use `u256`, so time
+them with bytecode `zkc exec` (no `--gogen`) and compare against the bytecode times of `std` and
+`constantine`, not their `--gogen` times.
+
+```bash
+for a in mul mul,inv all; do
+  zig build --prefix $WORK/guest-ctt-${a//,/-} -Dsecp256k1-backend=constantine -Dkeccak-accel=false \
+    -Dctt-field-accel=$a
+done
+# -> $WORK/guest-ctt-{mul,mul-inv,all}/bin/evm_execution_guest, run with src/main/riscv/main_fieldaccel.zkc
+```
+
+`make exec`/`trace` take the same knob as `CTT_FIELD_ACCEL=…` and then default `ZKC_MAIN` to
+`main_fieldaccel.zkc`.
+
+**Per-call ecrecover cost** (B1). `arithmetization/src/test/zig/src/ecrecover/ecrecover_bench.zig`
+checks the ecrecover vectors through the guest's provider, then runs K more recoveries, with K read from
+the input. Per-call cost = (X(K) − X(0)) / K:
+
+```bash
+cd $REPO/arithmetization/src/test
+make exec TEST=ecrecover/ecrecover_bench.zig RELEASE=true IN_BYTES=0x0000000000000010 \
+  SECP256K1_BACKEND=constantine CTT_FIELD_ACCEL=all ZKC_MAIN=$REPO/arithmetization/src/main/riscv/main_fieldaccel.zkc
+# exact RISC-V steps: the `interpreter` row of
+#   go tool zkc trace --padding single-row --stats -r <json> <entry>.zkc
 ```
 
 Convert an ELF plus an input into the JSON that zkc loads (`0x08800000` is `IN_ORIGIN` from
@@ -322,26 +354,33 @@ Sequential harness (std vs constantine, alternating, results appended to `$WORK/
 cat > $WORK/bench_exec.sh <<'EOF'
 #!/usr/bin/env bash
 # usage: bench_exec.sh REPS input.ssz [input.ssz ...]   (extended-schema inputs)
+# VARIANTS names the $WORK/guest-<v> builds; ctt-* ones (-Dctt-field-accel) run under main_fieldaccel.zkc,
+# which has no --gogen, so mixing them in needs GOGEN=0 (bytecode exec for every variant).
 set -eu
 WORK=${WORK:-/tmp/l2-bench}
 ARITH=${ARITH:-${REPO:?set REPO to the repository root}/arithmetization}
+VARIANTS=${VARIANTS:-std constantine}
+GOGEN=${GOGEN:-1}
+case " $VARIANTS " in *" ctt-"*) [ "$GOGEN" = 0 ] || { echo "ctt-* variants need GOGEN=0" >&2; exit 1; } ;; esac
+gogen=$([ "$GOGEN" = 1 ] && echo --gogen || true)
 REPS=$1; shift
 inputs=$(realpath -- "$@")            # resolve before chdir
 mkdir -p "$WORK/json" "$WORK/logs"
 cd "$ARITH"
 for f in $inputs; do
   base=$(basename "$f" .ssz)
-  for v in std constantine; do
+  for v in $VARIANTS; do
     j=$WORK/json/$base.$v.json
     [ -s "$j" ] || go tool elf_to_json "$WORK/guest-$v/bin/evm_execution_guest" "@$f" 0x08800000 > "$j" \
       || { rm -f "$j"; echo "elf_to_json failed: $f" >&2; exit 1; }
   done
   for r in $(seq 1 "$REPS"); do
-    for v in std constantine; do
+    for v in $VARIANTS; do
+      case $v in ctt-*) entry=main_fieldaccel ;; *) entry=main ;; esac
       log=$WORK/logs/$base.$v.$r.log
       rc=0
       /usr/bin/time -f "%e %M" -o "$log.time" \
-        go tool zkc exec --gogen "$WORK/json/$base.$v.json" src/main/riscv/main.zkc > "$log" 2>&1 || rc=$?
+        go tool zkc exec $gogen "$WORK/json/$base.$v.json" src/main/riscv/$entry.zkc > "$log" 2>&1 || rc=$?
       schema=$(grep -m1 -o 'guest_output = 0x[0-9a-f]\{4\}' "$log" | tail -c 5)
       read -r wall rss < "$log.time"
       printf '%s\t%s\t%s\t%s\t%s\trc=%s schema=%s\n' "$base" "$v" "$r" "$wall" "$rss" "$rc" "${schema:-NONE}" \
@@ -353,6 +392,8 @@ EOF
 chmod +x $WORK/bench_exec.sh
 
 $WORK/bench_exec.sh 3 $WORK/blocks/*.ssz $WORK/wrapped/*.ssz      # 3 reps; use 1 for ether_transfers
+# field accelerator comparison, bytecode exec throughout:
+GOGEN=0 VARIANTS="std constantine ctt-mul ctt-all" $WORK/bench_exec.sh 3 $WORK/blocks/*.ssz
 ```
 
 Methodology that kept run-to-run spread within ~3.5% (after the first run):
@@ -436,7 +477,10 @@ Absolute times depend on the machine; compare ratios and shard counts, not secon
 - **Stale JSON.** `bench_exec.sh` reuses `$WORK/json/*.json` when non-empty. Delete them after
   rebuilding a guest or changing `IN_ORIGIN`.
 - **`make exec`/`trace` overwrite `zig-out/`.** They always rebuild the default variant (or the one
-  given by `SECP256K1_BACKEND` / `KECCAK_ACCEL`) over the same ELF path.
+  given by `SECP256K1_BACKEND` / `KECCAK_ACCEL` / `CTT_FIELD_ACCEL`) over the same ELF path.
+- **Accelerated ELF under `main.zkc`.** A `-Dctt-field-accel` guest fails under plain `main.zkc` with
+  `secp256k1 field accelerator (…) not compiled in` as soon as it recovers a signature; a block without
+  signatures passes there, so that is no proof the accelerator ran.
 - **Keccak default.** `build.zig` defaults to `-Dkeccak-accel=false` (standard Zig keccak); the prose
   in `README.md` still describes the accelerated wrapper as default. Pass the flag explicitly when
   comparing numbers.

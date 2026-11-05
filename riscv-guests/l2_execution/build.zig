@@ -18,6 +18,15 @@ pub fn build(b: *std.Build) void {
     // secp256k1 provider (ecrecover and verify): standard zig by default; -Dsecp256k1-backend=constantine
     // selects the Constantine staticlib. Read by zkvm_provide.zig at comptime.
     const secp256k1_backend = b.option(Secp256k1Backend, "secp256k1-backend", "secp256k1 ecrecover/verify provider: std (default) or constantine") orelse .std;
+    // Constantine secp256k1 field accelerator: off (default), all, or a comma-separated subset of mul (with
+    // squaring), inv and sqrt, validated and forwarded to the fork's nimble task by guest_crypto. Any op
+    // other than off makes the guest provable only under an entry point that compiles those ops in
+    // (arithmetization riscv/main_fieldaccel*.zkc, no gogen). Host tools keep the software path.
+    const ctt_field_accel = b.option([]const u8, "ctt-field-accel", "Constantine secp256k1 field accelerator ops: off (default), all, or a comma-separated subset of mul, inv, sqrt") orelse "off";
+    if (!std.mem.eql(u8, ctt_field_accel, "off") and secp256k1_backend != .constantine) {
+        std.debug.print("error: -Dctt-field-accel={s} needs -Dsecp256k1-backend=constantine\n", .{ctt_field_accel});
+        std.process.exit(1);
+    }
     const execution_specs_fixtures_link = b.option([]const u8, "execution-specs-fixtures-link", "Path where execution-specs zkevm fixtures are exposed") orelse "/tmp/execution-specs-json-fixtures/fixtures";
     const zkc_smoke_input = b.option([]const u8, "zkc-smoke-input", "Extended SSZ input for the ZkC smoke test") orelse "test/testdata/stateless_input.ssz";
     const host_tools = b.option(bool, "host-tools", "Build native test and helper targets") orelse false;
@@ -38,7 +47,7 @@ pub fn build(b: *std.Build) void {
     const lineth_accel_mod = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("lineth_accelerators");
 
     // Build guest and host Constantine archives, plus the Zig bindings module.
-    const guest_crypto_dep = b.dependency("guest_crypto", .{});
+    const guest_crypto_dep = b.dependency("guest_crypto", .{ .@"ctt-field-accel" = ctt_field_accel });
     const guest_crypto_riscv_a = guest_crypto_dep.namedLazyPath("riscv_staticlib");
     const guest_crypto_mod = b.createModule(.{
         .root_source_file = b.path("src/guest_crypto.zig"),

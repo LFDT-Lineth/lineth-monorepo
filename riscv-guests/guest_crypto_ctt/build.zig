@@ -57,23 +57,41 @@ fn findToolCandidates(
 
 pub fn build(b: *std.Build) void {
     const tc = resolveToolchain(b);
+    // Forwarded to the fork's nimble task as CTT_FIELD_ACCEL. The host archive never uses it.
+    const field_accel = b.option([]const u8, "ctt-field-accel", "secp256k1 field accelerator ops in the rv64 archive: off (default), all, or a comma-separated subset of mul, inv, sqrt") orelse "off";
+    if (!isFieldAccelOps(field_accel)) {
+        std.debug.print("error: -Dctt-field-accel={s}: expected off, all, or a comma-separated subset of mul, inv, sqrt\n", .{field_accel});
+        std.process.exit(1);
+    }
     const ctt = b.dependency("constantine", .{});
     // Build the rv64 archive in place and the host archive into Zig output dirs.
     const tree = ctt.path(".");
 
-    b.addNamedLazyPath("riscv_staticlib", buildRiscv(b, tc, tree));
+    b.addNamedLazyPath("riscv_staticlib", buildRiscv(b, tc, tree, field_accel));
     b.addNamedLazyPath("host_staticlib", buildHost(b, tc, tree));
+}
+
+/// Accepts the CTT_FIELD_ACCEL values the fork's nimble task understands.
+fn isFieldAccelOps(ops: []const u8) bool {
+    if (std.mem.eql(u8, ops, "off") or std.mem.eql(u8, ops, "all")) return true;
+    var it = std.mem.splitScalar(u8, ops, ',');
+    while (it.next()) |op| {
+        for ([_][]const u8{ "mul", "inv", "sqrt" }) |known| {
+            if (std.mem.eql(u8, op, known)) break;
+        } else return false;
+    }
+    return true;
 }
 
 const NIM_BINDINGS = "bindings/lib_constantine.nim";
 
-fn buildRiscv(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath) std.Build.LazyPath {
+fn buildRiscv(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath, field_accel: []const u8) std.Build.LazyPath {
     // Run the fork's rv64im-freestanding build in Zig's writable temporary output directory.
     const out = b.tmpPath();
     const task = b.addSystemCommand(&.{
         "sh",
         "-c",
-        \\export CTT_OUTDIR="$1" CTT_NIMCACHE="$1/nimcache" NIM="$3" LLVM_AR="$4" LLVM_NM="$5"
+        \\export CTT_OUTDIR="$1" CTT_NIMCACHE="$1/nimcache" NIM="$3" LLVM_AR="$4" LLVM_NM="$5" CTT_FIELD_ACCEL="$6"
         \\exec "$2" -y make_lib_riscv64_freestanding
         ,
         "nimble make_lib_riscv64_freestanding (rv64im)",
@@ -81,7 +99,7 @@ fn buildRiscv(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath) std.Build.
     task.setName("nimble make_lib_riscv64_freestanding (rv64im)");
     task.setCwd(tree);
     task.addDirectoryArg(out);
-    task.addArgs(&.{ tc.nimble, tc.nim, tc.llvm_ar, tc.llvm_nm });
+    task.addArgs(&.{ tc.nimble, tc.nim, tc.llvm_ar, tc.llvm_nm, field_accel });
     const archive = out.join(b.allocator, "libconstantine.riscv64.a") catch @panic("oom");
 
     // Match the guest's rv64im soft-float ABI.

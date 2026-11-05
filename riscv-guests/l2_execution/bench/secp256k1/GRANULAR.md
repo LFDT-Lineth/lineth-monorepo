@@ -438,17 +438,17 @@ export WORK=/tmp/l2-bench
 | Variant | Guest build | zkc entry point | gogen |
 |---|---|---|---|
 | `std` | `-Dsecp256k1-backend=std` | `riscv/main.zkc` | yes |
-| `constantine` | `-Dsecp256k1-backend=constantine`, pinned fork | `riscv/main.zkc` | yes |
-| `ctt-fixed` | constantine, fork branch with the fixes | `riscv/main.zkc` | yes |
-| `ctt-g1n`, `ctt-g2n` | fork branch with the hook, accel level g1 or g2 | `riscv/main_fieldaccel.zkc` (opt-in) | no |
+| `constantine` | `-Dsecp256k1-backend=constantine` (the pinned fork includes the fixes, PR #5) | `riscv/main.zkc` | yes |
+| `ctt-mul` (G1-N) | constantine, `-Dctt-field-accel=mul` | `riscv/main_fieldaccel.zkc` or `_mul` | no |
+| `ctt-mul-inv`, `ctt-all` | constantine, `-Dctt-field-accel=mul,inv` or `all` (mul, inv, sqrt) | `riscv/main_fieldaccel.zkc` | no |
+| `ctt-g2n` (not implemented) | add/sub/neg instructions as well | — | no |
 | `ctt-g2l` (optional) | as `ctt-g2n`, with the L-form product | `riscv/main.zkc` (or its own entry) | yes |
 | `zkc` (optional) | monolithic, per PLAN.md | `riscv/main_secp256k1.zkc` | no |
 
-- **Building the fork variants.** Build them one after another:
-  1. Pin the fork commit in `riscv-guests/guest_crypto_ctt/build.zig.zon`:
-     `zig fetch --save=constantine 'git+https://github.com/Consensys-Incorporated/constantine#<commit>'`.
-  2. Pass the accel level through a new build option. Proposed: `-Dctt-field-accel=off|g1|g2`,
-     forwarded to the nimble task as a `-d:` define.
+- **Building the fork variants.** `-Dctt-field-accel` is `off`, `all`, or a comma-separated subset of
+  `mul`, `inv`, `sqrt`; `guest_crypto` forwards it to the fork's nimble task as `CTT_FIELD_ACCEL`. Any
+  subset runs under `main_fieldaccel.zkc`, so step counts can be taken there; widths (B0) need the
+  entry point that compiles in exactly that subset.
 - **Prefixes.** Build every variant into its own prefix, always with `-Dkeccak-accel=false`:
   `zig build --prefix $WORK/guest-<variant> …`.
 - **Stale JSON.** Delete `$WORK/json/*.<variant>.json` after any rebuild (the guide's stale-JSON
@@ -533,3 +533,90 @@ Time budget (estimate):
   - `prover-ray/zkcdriver/r5_benchmark_test.go` reports a `proof-bytes` metric.
   - The production backend asserts a single shard (`prover-ray/backend/core.go:376-378`).
   - Proving hardware is not sized here.
+
+## 9. Implementation status (G1-N, plus inv and sqrt)
+
+Implemented on `precompile/zkc-ecrecover` (2026-11-05):
+- **zkc**: `lib/secp256k1_fp/{mul,inv,sqrt}.zkc`, each with a `*_stub.zkc`, over a shared `common.zkc`
+  (RAM read/write, canonicalisation), the native `mulmod_256` (`u256.zkc`) and the hint
+  `expmod_unconstrained_256` (`hint.zkc`). Entry points: `riscv/main_fieldaccel.zkc` (all) and
+  `main_fieldaccel_{mul,inv,sqrt}.zkc` (one each). The old `riscv/main.zkc` body moved to
+  `riscv/boot.zkc`; `main.zkc` links all stubs and stays gogen-compatible.
+- **ISA**: custom-1, funct3 `0b011`, funct7 `0` mul (ComputeOp 56), `1` sq (57), `2` inv (58), `3` sqrt (59).
+  S/B/J/U bases are now 60/64/70/72; `TestComputeOpBasesMatchConstantsZkc` guards Go against `constants.zkc`.
+- **inv / sqrt**: hinted with `a^(p-2)` / `a^((p+1)/4)` and checked with one `mulmod_256`. For sqrt, since
+  p = 3 mod 4, r² = a if a is a square and r² = -a otherwise, so one product proves either answer and a
+  dishonest hint cannot misreport. sqrt writes 40 bytes (root + u64 flag).
+  - The product pins the hint only modulo p: the NonNative identity is `left·right = q·p + result`, and
+    nothing bounds `left`, which must accept lazily reduced operands. The hint is therefore canonicalised
+    before it is written, or `inv + p` / `r + p` could reach memory whenever it fits in 256 bits.
+  - sqrt may still return either root (r or p − r). ecrecover fixes the y parity right after.
+- **Constantine hook**: fork commit `bca036a`, branch `feat/lineth-secp256k1-fp-accel`, on top of fork
+  master `1a62b06` (PR #5). **Not pushed yet**; `guest_crypto_ctt/build.zig.zon` pins it.
+  - `constantine/platforms/isa_riscv/lineth_secp256k1_fp.nim` emits the four instructions.
+  - Under `-d:CTT_LINETH_SECP256K1_FP_{MUL,INV,SQRT}`, `Fp[Secp256k1]` `prod`/`square`,
+    `inv`/`inv_vartime` and `sqrt`/`sqrt_vartime`/`sqrt_if_square[_vartime]` use them. Fr, other fields
+    and the host archive are unchanged; the Fr inversion stays in software.
+  - Inversion is the instruction, not Fermat on the accelerated product.
+  - PR #5 already carries ivokub's fixes (vartime GLV double-base with a precomputed G table, one affine
+    inversion, no re-verification, no `r + i·n` loop), so `constantine` is the "fixed" variant of §7.1.
+- **Guest**: `-Dctt-field-accel=off|all|<comma-separated subset of mul,inv,sqrt>` on `l2_execution` and on
+  the arithmetization Zig tests; `guest_crypto` validates it and forwards it to the nimble task as
+  `CTT_FIELD_ACCEL`. It is rejected unless `-Dsecp256k1-backend=constantine`. `make exec/trace
+  CTT_FIELD_ACCEL=…` defaults `ZKC_MAIN` to `main_fieldaccel.zkc`. `lineth_accelerators` also exports
+  `secp256k1_fp_{mul,sq,inv,sqrt}` for Zig callers.
+- **Tests**:
+  - `arithmetization/src/test/zig/src/secp256k1_fp/fp_accel.zig`: mul, sq, inv, sqrt, aliasing, lazy
+    inputs; run with `ZKC_MAIN=<abs>/main_fieldaccel.zkc`.
+  - `arithmetization/src/test/zig/src/ecrecover/ecrecover_bench.zig` (PLAN.md T2, B1): the 9 rows of
+    `ecrecover.csv` plus recid 2 through the guest's provider, then K more recoveries.
+
+zkc `compile --stats` "Total Prover¹" columns of the function modules (not committed columns). The
+default `main.zkc` with all stubs is 2,656 (original `main.zkc`: 2,562, so the stubs and four interpreter
+arms cost ~94 in every build). Deltas over the stub `main.zkc`, plus prover-ray's native modules
+(`mulmod_256` 111, `expmod_unconstrained_256` 64):
+
+| Entry point | function cols | + natives | ~ total added |
+|---|---|---|---|
+| `main_fieldaccel_mul` | +433 | 111 | ~544 |
+| `main_fieldaccel_inv` | +396 | 111 + 64 | ~571 |
+| `main_fieldaccel_sqrt` | +527 | 111 + 64 | ~702 |
+| `main_fieldaccel` (all) | +856 | 111 + 64 | ~1,031 |
+
+Most of the cost is the shared RAM wrapper rows, not the product, so inv and sqrt are not nearly free: adding
+both to mul costs ~490 more columns. B0 through prover-ray is still needed for committed columns and felts.
+
+**B1, measured** (2026-11-05, 16 GB laptop, zkc v1.2.35). `ecrecover_bench.zig` built with
+`RELEASE=true`; all variants pass the vectors. Steps are exact RISC-V steps: the `interpreter` rows of
+`zkc trace --padding single-row --stats -r`. K = 4 for the software variants (trace memory) and 16 for
+the accelerated ones. Cells are zkc cells with `mulmod_256` and `expmod_unconstrained_256` at
+prover-ray's widths (111 and 64), as in PLAN.md.
+
+| Variant | Steps per ecrecover | vs std | Cells per ecrecover | mul / sq / inv / sqrt per ecrecover |
+|---|---|---|---|---|
+| `std` | 3,252,568 | 1.000 | 1,801M | — |
+| `constantine` (PR #5) | 2,232,248 | 0.686 | 1,111M | — |
+| `ctt-mul` (G1-N) | 174,431 | 0.054 | 96M | 1,032 / 990 / 0 / 0 |
+| `ctt-mul-inv` | 137,158 | 0.042 | 77M | 1,032 / 990 / 2 / 0 |
+| `ctt-all` | 136,866 | 0.042 | 76M | 1,017 / 736 / 2 / 1 |
+
+- G1-N lands inside the §2.3 estimate (160–270K steps), so r ≈ 0.054 in §4. PR #5 Constantine is
+  0.69× std.
+- `inv` saves ~37K steps per ecrecover, ~18.6K per Fp inversion. With `mul` alone, Constantine still
+  inverts by divsteps in software. §2.3's "G3 saves ~1–3K" assumed Fermat on the accelerated product;
+  the instruction replaces that switch, and needs no Constantine change beyond the hook.
+- `sqrt` saves ~300 steps and ~0.6M cells per ecrecover. The addition chain already runs on the
+  accelerated product (254 sq + 15 mul become one instruction). Against +527 + 64 columns, it fails the
+  §2.3 rule, as predicted.
+- ~2.0K products per ecrecover with `mul` alone (including ~270 for the square root), against §2.3's
+  ~3.1K, which counted two Fermat inversions.
+- The remaining ~137K steps are Fp add/sub/neg (G2), the GLV split and recoding, Fr arithmetic and its
+  inversion, and call glue.
+- Bytecode `zkc exec` of the whole K = 0 check (5 recoveries and 5 rejections, one of them after a full
+  double-base multiplication): std 14.3 s, constantine 9.5 s, accelerated 1.5–1.7 s.
+
+Not done:
+- the fork commit is local only; push it before anyone else builds this branch;
+- the NonNative range checks in prover-ray (§2.2), which also cover `mulmod_256`'s `result < p`;
+- B0 through prover-ray, and B2 on the reference machine;
+- G2 (add/sub/neg).
