@@ -8,7 +8,6 @@ package maru.app
 
 import linea.crypto.Secp256k1Signature
 import linea.crypto.Signer
-import linea.teku.Web3JClient
 import maru.config.QbftConfig
 import maru.consensus.ForkSpec
 import maru.consensus.ForksSchedule
@@ -24,26 +23,25 @@ import maru.core.Protocol
 import maru.core.SealedBeaconBlock
 import maru.database.BeaconChain
 import maru.executionlayer.ExecutionLayerFactory.buildExecutionLayerManager
+import maru.executionlayer.client.EngineApiEndpoint
 import maru.p2p.P2PNetwork
 import maru.p2p.SealedBeaconBlockBroadcaster
 import maru.serialization.rlp.ForkAwareBlockHashing
 import maru.syncing.SyncStatusProvider
-import net.consensys.linea.metrics.MetricsFacade
 import org.hyperledger.besu.plugin.services.MetricsSystem
 import java.time.Clock
 
 class QbftProtocolValidatorFactory(
   private val qbftOptions: QbftConfig,
   private val signer: Signer<Secp256k1Signature>,
-  private val validatorELNodeEngineApiWeb3JClient: Web3JClient,
-  private val followerELNodeEngineApiWeb3JClients: Map<String, Web3JClient>,
+  private val validatorEngineApiEndpoint: EngineApiEndpoint,
+  private val followerEngineApiEndpoints: Map<String, EngineApiEndpoint>,
   private val metricsSystem: MetricsSystem,
   private val finalizationStateProvider: FinalizationProvider,
   private val beaconChain: BeaconChain,
   private val nextTargetBlockTimestampProvider: NextBlockTimestampProvider,
   private val clock: Clock,
   private val p2pNetwork: P2PNetwork,
-  private val metricsFacade: MetricsFacade,
   private val allowEmptyBlocks: Boolean,
   private val forksSchedule: ForksSchedule,
   private val payloadValidationEnabled: Boolean,
@@ -67,17 +65,12 @@ class QbftProtocolValidatorFactory(
     val qbftConsensusConfig = forkSpec.configuration as QbftConsensusConfig
 
     val payloadValidatorExecutionLayerManager =
-      buildExecutionLayerManager(
-        web3JEngineApiClient = validatorELNodeEngineApiWeb3JClient,
-        elFork = qbftConsensusConfig.elFork,
-        metricsFacade = metricsFacade,
-      )
+      buildExecutionLayerManager(engineApiEndpoint = validatorEngineApiEndpoint, elFork = qbftConsensusConfig.elFork)
     val blockImportHandlers =
       Helpers.createBlockImportHandlers(
         elFork = qbftConsensusConfig.elFork,
-        metricsFacade = metricsFacade,
         finalizationStateProvider = finalizationStateProvider,
-        followerELNodeEngineApiWeb3JClients = followerELNodeEngineApiWeb3JClients,
+        followerEngineApiEndpoints = followerEngineApiEndpoints,
       )
     val sealedBlockHandlers =
       mutableMapOf(

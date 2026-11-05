@@ -20,32 +20,13 @@ plugins {
 
 dependencies {
   implementation(project(':maru:core'))
-  implementation(project(':maru:config'))
 
-  implementation(project(':jvm-libs:linea:teku-web3j'))
-
-  api "org.web3j:core:${libs.versions.web3j.get()}"
-
-  api "tech.pegasys.teku.internal:executionclient:${libs.versions.teku.get()}"
-
-  api("tech.pegasys.teku.internal:time:${libs.versions.teku.get()}")
-  api("tech.pegasys.teku.internal:ethereum-events:${libs.versions.teku.get()}")
-  implementation "tech.pegasys.teku.internal:unsigned:${libs.versions.teku.get()}"
-  implementation "tech.pegasys.teku.internal:bytes:${libs.versions.teku.get()}"
-  implementation "tech.pegasys.teku.internal:spec:${libs.versions.teku.get()}"
-  implementation "org.hyperledger.besu.internal:besu-metrics-core"
-  implementation "org.hyperledger.besu.internal:besu-crypto-algorithms"
-  implementation "org.hyperledger.besu.internal:besu-ethereum-core"
-  implementation "org.hyperledger.besu:besu-datatypes"
-  implementation "org.hyperledger.besu:besu-plugin-api"
-  implementation "io.consensys.tuweni:tuweni-bytes:${libs.versions.tuweni.get()}"
   implementation project(':jvm-libs:generic:extensions:kotlin')
   implementation project(':jvm-libs:generic:extensions:futures')
   implementation project(':jvm-libs:linea:core:metrics')
   implementation project(':jvm-libs:generic:json-rpc')
   implementation project(':jvm-libs:generic:serialization:jackson')
 
-  testImplementation (group: 'tech.pegasys.teku.internal', name: 'spec', version: libs.versions.teku.get(), classifier: 'test-fixtures')
   testImplementation(testFixtures(project(':maru:core')))
   testImplementation(testFixtures(project(':jvm-libs:generic:extensions:kotlin')))
   testImplementation(testFixtures(project(':maru:observability')))
