@@ -32,6 +32,7 @@ func identicalBatchesFixture(t *testing.T, disableDedup bool) (*PCS, VerifyInput
 	// other has one column of size 4, matching nothing in twin, so its root differs.
 	other := make(Batch, 3)
 	other[2] = SizedTable{Ext: [][]field.Ext{field.VecPseudoRandExt(prng, 4)}} // prng has moved on: different values from twin[2]
+	// The same table as batches 0 and 1, so they get equal roots; batch 2 differs.
 	witnesses := []Batch{twin, twin, other}
 
 	committed := make([]CommitterState, len(witnesses))
