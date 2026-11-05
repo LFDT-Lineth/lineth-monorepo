@@ -456,7 +456,12 @@ func (c *Core) runProve(
 		logrus.Infof("Proving %d of %d shards: the result is a conglomeration node, not a final proof", len(indexes), numShards)
 	}
 
-	reducer := conglomeration.NewReducer(c.merger, conglomeration.DefaultMaxInFlightMerges)
+	// Without a merger there is a single shard, whose proof is the result as
+	// is: no reducer, which would lift it through the merger.
+	var reducer *conglomeration.Reducer
+	if needsMerger {
+		reducer = conglomeration.NewReducer(c.merger, conglomeration.DefaultMaxInFlightMerges)
+	}
 	for k, i := range indexes {
 		if err := ctx.Err(); err != nil {
 			return conglomeration.Node{}, 0, fmt.Errorf("before shard %d: %w", i, err)
@@ -474,9 +479,13 @@ func (c *Core) runProve(
 		if err != nil {
 			return conglomeration.Node{}, 0, fmt.Errorf("shard %d: %w", i, err)
 		}
+		node := conglomeration.Node{Coverage: []uint{i}, Proof: proof, Pub: pub}
+		if reducer == nil {
+			return node, numShards, nil
+		}
 		// Add reports a merge that failed meanwhile: stop rather than prove
 		// shards whose result is already lost.
-		if err := reducer.Add(conglomeration.Node{Coverage: []uint{i}, Proof: proof, Pub: pub}); err != nil {
+		if err := reducer.Add(node); err != nil {
 			return conglomeration.Node{}, 0, fmt.Errorf("merging after shard %d: %w", i, err)
 		}
 	}
