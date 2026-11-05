@@ -218,6 +218,89 @@ test "pcs uses the baked Merkle cap height" {
     )));
 }
 
+// prover-ray keeps at least one FRI fold (#4322): with every column at size 1
+// under an envelope that can fold, the top size is raised to 2^1, round 0
+// folds the zero codeword and all columns join at the boundary round weighted
+// by the last fold challenge. Without the floor, alpha_DEEP would be zero and
+// only the first column would be checked, so a wrong claim on any later
+// column must still be rejected here.
+test "pcs keeps one fold when every column has size one" {
+    const case = comptime pcsCaseNamed("all_size_one");
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const recon = try pcs.reconstruct(case.system, &.{});
+    try std.testing.expectEqual(@as(u8, 1), recon.top_size);
+    try std.testing.expectEqual(@as(u8, 1), recon.params.numRoundsRuntime());
+    try std.testing.expectEqual(@as(usize, 3), recon.num_entries);
+
+    try pcs.verify(case.system, try toPCSVerifyInput(allocator, case));
+
+    for (0..recon.num_entries) |e| {
+        var input = try toPCSVerifyInput(allocator, case);
+        const claims = try allocator.dupe([]const ext.Ext, input.entry_claims);
+        const values = try allocator.dupe(ext.Ext, claims[e]);
+        values[0] = values[0].add(ext.Ext.one());
+        claims[e] = values;
+        input.entry_claims = claims;
+        if (pcs.verify(case.system, input)) |_| {
+            std.debug.print("all_size_one: tampered claim of entry {d} accepted\n", .{e});
+            return error.TamperedClaimAccepted;
+        } else |_| {}
+    }
+}
+
+test "minFoldedTopSize raises the top only when the envelope can fold" {
+    const foldable = fri.Params{ .log_codeword_size = 3, .log_plaintext_size = 2, .log_final_poly_size = 0, .num_queries = 1, .merkle_cap_height = 0 };
+    try std.testing.expectEqual(@as(u8, 1), pcs.minFoldedTopSize(foldable, 0));
+    try std.testing.expectEqual(@as(u8, 1), pcs.minFoldedTopSize(foldable, 1));
+    try std.testing.expectEqual(@as(u8, 2), pcs.minFoldedTopSize(foldable, 2));
+
+    const final_one = fri.Params{ .log_codeword_size = 4, .log_plaintext_size = 3, .log_final_poly_size = 1, .num_queries = 1, .merkle_cap_height = 0 };
+    try std.testing.expectEqual(@as(u8, 2), pcs.minFoldedTopSize(final_one, 0));
+    try std.testing.expectEqual(@as(u8, 2), pcs.minFoldedTopSize(final_one, 1));
+
+    // An envelope with no fold at all cannot be raised (see the backstop).
+    const no_fold = fri.Params{ .log_codeword_size = 2, .log_plaintext_size = 0, .log_final_poly_size = 0, .num_queries = 1, .merkle_cap_height = 0 };
+    try std.testing.expectEqual(@as(u8, 0), pcs.minFoldedTopSize(no_fold, 0));
+}
+
+// Backstop for an envelope that cannot fold (log_plaintext_size ==
+// log_final_poly_size): there is no fold challenge, so only one column can be
+// checked and a schedule over more than one is rejected up front, as
+// prover-ray's checkFoldedSchedule does.
+test "pcs rejects several columns opened with no fold" {
+    const system = pcs.System{
+        .envelope_params = .{ .log_codeword_size = 2, .log_plaintext_size = 0, .num_queries = 1, .merkle_cap_height = 0 },
+        .columns = &.{
+            .{ .batch_idx = 0, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+            .{ .batch_idx = 0, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        },
+        .all_shifts = &[_]i32{ 0, 0 },
+        .num_batches = 1,
+        .max_entries = 2,
+        .max_size_log2 = 0,
+    };
+    const claim = [_]ext.Ext{ext.Ext.one()};
+    const claims = [_][]const ext.Ext{ &claim, &claim };
+    const roots = [_]poseidon2.Digest{challengeDigest(3)};
+    const final_poly = [_]ext.Ext{ext.Ext.zero()};
+    const input = pcs.VerifyInput{
+        .roots = &roots,
+        .entry_claims = &claims,
+        .zeta = ext.Ext.one(),
+        .fold_alphas = &.{},
+        .query_positions = &[_]usize{0},
+        .proof = .{
+            .input_queries = &.{},
+            .input_caps = &.{},
+            .fri_proof = .{ .round_roots = &.{}, .final_poly = &final_poly, .running_queries = &.{} },
+        },
+    };
+    try std.testing.expectError(error.NoFoldMultipleColumns, pcs.verify(system, input));
+}
+
 test "pcs rejects reordered input cap tables" {
     const case = fixtures.pcs_cases[0];
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);

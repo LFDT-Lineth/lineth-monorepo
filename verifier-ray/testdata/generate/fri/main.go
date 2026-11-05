@@ -488,6 +488,40 @@ func largeBenchRand(x uint64) uint64 {
 // buildD1PCSScenario exercises the num_rounds==0 special case: a single
 // size-1 batch, no folding rounds at all, verified directly against the
 // (Horner-evaluated) FinalPoly.
+// buildAllSizeOnePCSScenario opens only size-1 columns under an envelope that
+// can fold (plaintext 2^2, final polynomial 2^0). prover-ray keeps at least one
+// fold (#4322): the top size is raised from 2^0 to 2^MinFoldedSizeLog2 = 2^1,
+// so round 0 folds the zero codeword and both columns join at the boundary
+// round, weighted by the (nonzero) last fold challenge. Without the floor the
+// schedule would have no fold, alpha_DEEP would be zero and only the first
+// column would be checked.
+func buildAllSizeOnePCSScenario() pcsCaseData {
+	params, err := fri.NewParams(3, 2, 4)
+	if err != nil {
+		panic(err)
+	}
+
+	witness := make(fri.Batch, 1)
+	witness[0] = fri.SizedTable{
+		Base: [][]field.Element{{elem(5)}},
+		Ext:  [][]field.Ext{{extLift(61)}, {extLift(62)}},
+	}
+
+	shifts := make(fri.BatchShifts, 1)
+	shifts[0] = fri.SizedShifts{Base: [][]int{{0}}, Ext: [][]int{{0}, {0}}}
+
+	return buildPCSScenarioData(pcsScenario{
+		Name:       "all_size_one",
+		Params:     params,
+		Encoders:   pcsMakeEncoders(3, 2),
+		Witnesses:  []fri.Batch{witness},
+		Shifts:     []fri.BatchShifts{shifts},
+		Zeta:       field.UintsToExt(37, 2, 3, 5, 7, 11),
+		FoldAlphas: []field.Ext{field.UintsToExt(41, 1, 0, 0, 0, 0)},
+		Positions:  []int{3, 2, 1, 0},
+	})
+}
+
 func buildD1PCSScenario() pcsCaseData {
 	params, err := fri.NewParams(2, 0, 1)
 	if err != nil {
@@ -794,6 +828,7 @@ func writePCSFixtures() error {
 		buildNormalPCSScenario(),
 		buildNormalNoCapPCSScenario(),
 		buildD1PCSScenario(),
+		buildAllSizeOnePCSScenario(),
 		boundary,
 		corruptBoundaryClaimData(boundary),
 	}

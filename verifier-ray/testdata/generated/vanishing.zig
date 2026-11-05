@@ -12495,6 +12495,134 @@ const scenario_77 = Scenario{
     },
 };
 
+pub const system_78_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
+    .total_round_coins = 2,
+    .dynamic_module_count = 0,
+};
+pub const system_78_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 3, 1, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
+};
+
+// scenario: "all-size-one"
+
+// expression: "sum"
+const system_78_module_0_expressions = [_]vanishing.ExprNode{
+    .{ .column_claim = 0 }, // col: "c"
+    .{ .column_claim = 1 }, // col: "a"
+    .{ .column_claim = 2 }, // col: "b"
+    .{ .op = .{ .operator = .add, .lhs = 1, .rhs = 2 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 3 } },
+};
+
+const system_78_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
+    // expression: "sum"
+    .{ .expression = 4, .cancelled_positions = &.{} },
+};
+
+const system_78_module_0_buckets = [_]vanishing.Bucket{
+    .{ .ratio = 1, .vanishings = &system_78_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
+};
+
+const system_78_modules = [_]vanishing.Module{
+    // module: "mod"
+    .{ .size = .{ .static = 1 }, .expressions = &system_78_module_0_expressions, .buckets = &system_78_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
+};
+
+// system: "all-size-one"
+const system_78 = vanishing.System{
+    .modules = &system_78_modules,
+    .dynamic_module_count = 0,
+    .total_witness_claims = 3,
+    .total_quotient_claims = 1,
+};
+
+// logderiv system: "all-size-one"
+const system_78_logderiv_queries = [_]logderivativesum.Query{};
+
+const system_78_logderiv = logderivativesum.System{ .queries = &system_78_logderiv_queries };
+// grandproduct system: "all-size-one"
+const system_78_grandproduct_queries = [_]grandproduct.Query{};
+
+const system_78_grandproduct = grandproduct.System{ .queries = &system_78_grandproduct_queries };
+// rowlimit system: "all-size-one"
+const system_78_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_78_rowlimit = rowlimit.System{ .checks = &system_78_rowlimit_checks };
+// shared-randomness system: "all-size-one"
+const system_78_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_78_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_78_shared_randomness_contribution_refs };
+const scenario_78 = Scenario{
+    .name = "AllSizeOneColumns",
+    .spec = system_78_spec,
+    .public_input = system_78_public_input,
+    .system = system_78,
+    .logderiv = system_78_logderiv,
+    .honest = .{
+        .rounds = &.{
+            .{
+                .commitment = .{ 1221284762, 267636840, 2112144749, 389664648, 596392684, 893151919, 2046381192, 1470793313 },
+                .cells = &.{
+                    .{ .base = 0 },
+                    .{ .base = 0 },
+                    .{ .base = 0 },
+                },
+            },
+            .{
+                .commitment = .{ 2066816440, 1251002353, 1739592788, 365120622, 445688483, 1162635539, 2126865213, 1891784736 },
+                .cells = &.{
+                    .{ .base = 0 },
+                },
+            },
+            .{
+                .cells = &.{
+                    .{ .ext = .{ 7, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 3, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 4, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 0, 0, 0, 0, 0, 0 } },
+                },
+            },
+        },
+        .public_inputs = &.{},
+        .witness_claims = &.{ .{ 7, 0, 0, 0, 0, 0 }, .{ 3, 0, 0, 0, 0, 0 }, .{ 4, 0, 0, 0, 0, 0 } },
+        .quotient_claims = &.{.{ 0, 0, 0, 0, 0, 0 }},
+        .module_sizes = &.{},
+    },
+    .invalid = .{
+        .rounds = &.{
+            .{
+                .commitment = .{ 1637490376, 1163027839, 729941915, 315820874, 472640577, 2073666797, 828187232, 1744401879 },
+                .cells = &.{
+                    .{ .base = 0 },
+                    .{ .base = 0 },
+                    .{ .base = 0 },
+                },
+            },
+            .{
+                .commitment = .{ 931651904, 1353798335, 440902954, 590466343, 101396112, 444665449, 1647389806, 1906372950 },
+                .cells = &.{
+                    .{ .base = 0 },
+                },
+            },
+            .{
+                .cells = &.{
+                    .{ .ext = .{ 8, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 3, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 4, 0, 0, 0, 0, 0 } },
+                    .{ .ext = .{ 1065353217, 0, 0, 0, 0, 0 } },
+                },
+            },
+        },
+        .public_inputs = &.{},
+        .witness_claims = &.{ .{ 8, 0, 0, 0, 0, 0 }, .{ 3, 0, 0, 0, 0, 0 }, .{ 4, 0, 0, 0, 0, 0 } },
+        .quotient_claims = &.{.{ 1065353217, 0, 0, 0, 0, 0 }},
+        .module_sizes = &.{},
+    },
+};
+
 pub const scenarios = [_]Scenario{
     scenario_0,
     scenario_1,
@@ -12574,4 +12702,5 @@ pub const scenarios = [_]Scenario{
     scenario_75,
     scenario_76,
     scenario_77,
+    scenario_78,
 };
