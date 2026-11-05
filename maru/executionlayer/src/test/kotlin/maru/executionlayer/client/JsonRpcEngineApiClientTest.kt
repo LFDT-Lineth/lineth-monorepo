@@ -48,7 +48,7 @@ import java.util.concurrent.TimeoutException
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 class JsonRpcEngineApiClientTest {
@@ -73,7 +73,7 @@ class JsonRpcEngineApiClientTest {
     fork: ElFork,
     endpoint: java.net.URL = server.endpoint,
     jwtSecretPath: java.nio.file.Path? = null,
-    timeoutOverride: Duration? = 30.seconds,
+    requestTimeouts: (method: String) -> Duration = { 30.seconds },
     clock: Clock = Clock.systemUTC(),
   ): JsonRpcEngineApiClient {
     val metricsFacade = MicrometerMetricsFacade(meterRegistry)
@@ -83,7 +83,7 @@ class JsonRpcEngineApiClientTest {
         metricsFacade = metricsFacade,
         endpoint = endpoint,
         jwtSecretPath = jwtSecretPath,
-        timeoutOverride = timeoutOverride,
+        requestTimeouts = requestTimeouts,
         log = LogManager.getLogger(JsonRpcEngineApiClientTest::class.java),
         clock = clock,
       )
@@ -261,20 +261,25 @@ class JsonRpcEngineApiClientTest {
   }
 
   @Test
-  fun `getPayload uses the 1s spec timeout unless a timeout is configured`() {
+  fun `getPayload fails once its 2s default timeout elapses`() {
     server.replyResult(
       EngineApiForkMethods.of(ElFork.Prague).getPayload,
       getPayloadResultJson(ElFork.Prague),
-      delay = 1500.milliseconds,
+      delay = 3.seconds,
     )
 
-    assertThatThrownBy { client(ElFork.Prague, timeoutOverride = null).getPayload(payloadId).get() }
+    assertThatThrownBy {
+      client(
+        ElFork.Prague,
+        requestTimeouts = EngineApiTimeouts.provider(maxTimeout = 1.minutes),
+      ).getPayload(payloadId).get()
+    }
       .isInstanceOf(ExecutionException::class.java)
       .cause()
       .isInstanceOf(TimeoutException::class.java)
       .hasMessageContaining("engine_getPayloadV4")
 
-    assertThat(client(ElFork.Prague, timeoutOverride = 5.seconds).getPayload(payloadId).get(10, TimeUnit.SECONDS))
+    assertThat(client(ElFork.Prague, requestTimeouts = { 5.seconds }).getPayload(payloadId).get(10, TimeUnit.SECONDS))
       .isEqualTo(executionPayload(ElFork.Prague))
   }
 

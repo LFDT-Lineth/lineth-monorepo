@@ -411,7 +411,7 @@ class EagerQbftBlockCreatorTest {
         metricsFacade = TestMetrics.TestMetricsFacade,
         endpoint = URI(besuInstance.engineRpcUrl().get()).toURL(),
         jwtSecretPath = null,
-        timeoutOverride = 1.minutes,
+        requestTimeouts = { 1.minutes },
         log = LogManager.getLogger(EagerQbftBlockCreatorTest::class.java),
       )
     return JsonRpcExecutionLayerManager(engineApiEndpoint.clientFor(ElFork.Prague))

@@ -16,6 +16,7 @@ import maru.consensus.blockimport.FollowerBeaconBlockImporter
 import maru.consensus.state.FinalizationProvider
 import maru.executionlayer.ExecutionLayerFactory.buildExecutionLayerManager
 import maru.executionlayer.client.EngineApiEndpoint
+import maru.executionlayer.client.EngineApiTimeouts
 import net.consensys.linea.metrics.MetricsFacade
 import org.apache.logging.log4j.Logger
 import java.nio.file.Path
@@ -49,7 +50,7 @@ object Helpers {
       metricsFacade = metricsFacade,
       endpoint = apiEndpointConfig.endpoint,
       jwtSecretPath = apiEndpointConfig.jwtSecretPath?.let(Path::of),
-      timeoutOverride = apiEndpointConfig.timeout,
+      requestTimeouts = EngineApiTimeouts.provider(maxTimeout = apiEndpointConfig.timeout),
       log = log,
     )
 
