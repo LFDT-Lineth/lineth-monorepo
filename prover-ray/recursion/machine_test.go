@@ -89,7 +89,7 @@ func busProgram() (*Machine, []int) {
 	k := m.Const(cell(9))
 	outs := []int{cp.Copy(a), cp.Copy(cp.Copy(b)), cp.Copy(k), cp.Copy(a)}
 	_ = u
-	m.Public(outs[1], KindDigest, "Out", 0)
+	m.Public(outs[1], KindE6, "Out", 0)
 	return m, outs
 }
 

@@ -7,11 +7,32 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion/node"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/require"
 )
 
 var testOpts = wioptest.TestingCompileOptions()
+
+// testLayout is the layout of a shard proof with numBus bus handles: 4 output
+// bytes, 2 VK limbs, the extension bus products, then, when seeded, a 2-limb
+// seed and a 3-limb contribution.
+func testLayout(numBus int, seeded bool) node.Layout {
+	var l node.Layout
+	add := func(tag wiop.PublicInputTag, n int, ext bool, op node.Op) {
+		for i := range n {
+			l = append(l, node.Role{Tag: tag, Index: i, Ext: ext, Op: op})
+		}
+	}
+	add("Out", 4, false, node.OpEqual)
+	add("VK", 2, false, node.OpEqual)
+	add("Bus", numBus, true, node.OpMul)
+	if seeded {
+		add("Seed", 2, false, node.OpEqual)
+		add("Contribution", 3, false, node.OpAdd)
+	}
+	return l
+}
 
 // randExt returns a random E6 value.
 func randExt(r *rand.Rand) field.Ext {
@@ -22,70 +43,82 @@ func randExt(r *rand.Rand) field.Ext {
 	return recursion.CellE6(c)
 }
 
-// children returns n children of the layout sharing a VK and an output, with
-// random bus products.
-func children(r *rand.Rand, l node.Layout, n int) []node.Child {
-	vk := make([]field.Element, l.NumVK)
-	for i := range vk {
-		vk[i].SetUint64(uint64(100 + i))
-	}
-	out := make([]field.Element, l.NumOut)
-	for k := range out {
-		out[k].SetUint64(uint64(200 + k))
-	}
-	cs := make([]node.Child, n)
-	for c := range cs {
-		cs[c] = node.Child{Bus: make([]field.Ext, l.NumBus), VK: vk, Out: out}
-		for h := range cs[c].Bus {
-			cs[c].Bus[h] = randExt(r)
+// childPub returns the public inputs of a child of the layout: random bus
+// products and contributions, and the values 100+pos of the equal roles,
+// shared by every child.
+func childPub(r *rand.Rand, l node.Layout) wiop.PublicInput {
+	pub := make(wiop.PublicInput, len(l))
+	for pos, role := range l {
+		switch {
+		case role.Ext:
+			pub[pos] = field.ElemFromExt(randExt(r))
+		case role.Op == node.OpAdd:
+			pub[pos] = field.ElemFromBase(field.NewElement(r.Uint64() % 1000))
+		default:
+			pub[pos] = field.ElemFromBase(field.NewElement(uint64(100 + pos)))
 		}
 	}
-	return cs
+	return pub
 }
 
-// requireExtEqual checks two E6 values are equal.
-func requireExtEqual(t *testing.T, want, got field.Ext, msg string, args ...any) {
-	t.Helper()
-	require.True(t, want.Equal(&got), append([]any{msg}, args...)...)
-}
-
-// TestNew_Aggregates checks that the node program multiplies the children's
-// bus products and propagates their VK and output, for several bus widths.
-func TestNew_Aggregates(t *testing.T) {
-	r := rand.New(rand.NewPCG(1, 2))
-	for _, numBus := range []int{1, 2, 5} {
-		t.Run("", func(t *testing.T) {
-			l := node.Layout{NumBus: numBus, NumVK: 8, NumOut: 32}
-			p, err := node.New(l, 2, false, testOpts...)
-			require.NoError(t, err)
-			require.Equal(t, 6*numBus+40, p.NumPublicInputs(), "six lanes per bus product, 8 VK limbs, 32 output bytes")
-
-			for range 2 {
-				cs := children(r, l, 2)
-				_, pub, err := p.ProveChildren(cs...)
-				require.NoError(t, err)
-				got, err := p.Decode(pub)
-				require.NoError(t, err)
-				for h := range numBus {
-					var want field.Ext
-					want.Mul(&cs[0].Bus[h], &cs[1].Bus[h])
-					requireExtEqual(t, want, got.Bus[h], "bus product %d", h)
-				}
-				require.Equal(t, cs[0].VK, got.VK, "the VK should be propagated")
-				require.Equal(t, cs[0].Out, got.Out, "the output should be propagated")
+// want returns the public inputs a node of the children should expose.
+func want(l node.Layout, children []wiop.PublicInput) wiop.PublicInput {
+	pub := append(wiop.PublicInput{}, children[0]...)
+	for pos, role := range l {
+		for _, child := range children[1:] {
+			switch role.Op {
+			case node.OpMul:
+				pub[pos] = pub[pos].Mul(child[pos])
+			case node.OpAdd:
+				pub[pos] = pub[pos].Add(child[pos])
 			}
-		})
+		}
+	}
+	return pub
+}
+
+func requirePubEqual(t *testing.T, want, got wiop.PublicInput, msg string) {
+	t.Helper()
+	require.Len(t, got, len(want), msg)
+	for pos := range want {
+		diff := got[pos].Sub(want[pos])
+		require.True(t, diff.IsZero(), "%s: public input %d", msg, pos)
+		require.Equal(t, want[pos].IsBase(), got[pos].IsBase(), "%s: public input %d width", msg, pos)
 	}
 }
 
-// TestNew_Rejects checks that children disagreeing on the VK or the output,
-// or an unbalanced root, fail at verification.
+// TestNew_Aggregates checks that a node proof exposes the layout, with the
+// products multiplied, the contributions added and the shared values
+// propagated, for 1 to Arity children.
+func TestNew_Aggregates(t *testing.T) {
+	r := rand.New(rand.NewPCG(1, 2))
+	l := testLayout(2, true)
+	p, err := node.New(l, false, testOpts...)
+	require.NoError(t, err)
+	for pos, role := range l {
+		_, got := p.Sys.LookupPublicInputByTag(role.Tag, role.Index)
+		require.Equal(t, pos, got, "%s_%d should be at its position in the layout", role.Tag, role.Index)
+	}
+
+	for _, n := range []int{1, 2, node.Arity} {
+		children := make([]wiop.PublicInput, n)
+		for c := range children {
+			children[c] = childPub(r, l)
+		}
+		_, pub, err := p.ProveChildren(children...)
+		require.NoError(t, err, "%d children", n)
+		requirePubEqual(t, want(l, children), pub, "the node should combine its children")
+	}
+}
+
+// TestNew_Rejects checks that children disagreeing on a propagated value, or
+// an unbalanced root, fail at verification.
 func TestNew_Rejects(t *testing.T) {
 	r := rand.New(rand.NewPCG(3, 4))
-	l := node.Layout{NumBus: 2, NumVK: 8, NumOut: 32}
-	nodeP, err := node.New(l, 2, false, testOpts...)
+	l := testLayout(1, false)
+	nodeP, err := node.New(l, false, testOpts...)
 	require.NoError(t, err)
-	rootP, err := node.New(l, 1, true, testOpts...)
+	rootP, err := node.New(l, true, testOpts...)
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -93,22 +126,19 @@ func TestNew_Rejects(t *testing.T) {
 		run  func() error
 	}{
 		{name: "different VK limb", run: func() error {
-			cs := children(r, l, 2)
-			cs[1].VK = append([]field.Element{}, cs[1].VK...)
-			cs[1].VK[3].SetUint64(9)
-			_, _, err := nodeP.ProveChildren(cs...)
+			a, b := childPub(r, l), childPub(r, l)
+			b[5] = b[5].Add(field.ElemOne())
+			_, _, err := nodeP.ProveChildren(a, b)
 			return err
 		}},
 		{name: "different output byte", run: func() error {
-			cs := children(r, l, 2)
-			cs[1].Out = append([]field.Element{}, cs[1].Out...)
-			cs[1].Out[31].SetUint64(9)
-			_, _, err := nodeP.ProveChildren(cs...)
+			a, b := childPub(r, l), childPub(r, l)
+			b[0] = b[0].Add(field.ElemOne())
+			_, _, err := nodeP.ProveChildren(a, b)
 			return err
 		}},
 		{name: "unbalanced root", run: func() error {
-			cs := children(r, l, 1)
-			_, _, err := rootP.ProveChildren(cs...)
+			_, _, err := rootP.ProveChildren(childPub(r, l))
 			return err
 		}},
 	}
@@ -117,70 +147,74 @@ func TestNew_Rejects(t *testing.T) {
 			require.ErrorContains(t, tc.run(), "verifying the node proof")
 		})
 	}
+
+	t.Run("balanced root", func(t *testing.T) {
+		a, b := childPub(r, l), childPub(r, l)
+		bus := a[6].AsExt()
+		var inv field.Ext
+		inv.Inverse(&bus)
+		b[6] = field.ElemFromExt(inv)
+		_, pub, err := rootP.ProveChildren(a, b)
+		require.NoError(t, err)
+		product := pub[6].AsExt()
+		require.True(t, product.IsOne(), "the root should expose a balanced bus")
+	})
 }
 
-// TestNew_Root checks that a balanced child proves at the root and that its
-// values round-trip through the public inputs.
-func TestNew_Root(t *testing.T) {
-	r := rand.New(rand.NewPCG(5, 6))
-	l := node.Layout{NumBus: 3, NumVK: 8, NumOut: 32}
-	p, err := node.New(l, 1, true, testOpts...)
-	require.NoError(t, err)
-
-	cs := children(r, l, 1)
-	for h := range cs[0].Bus {
-		cs[0].Bus[h].SetOne()
-	}
-	_, pub, err := p.ProveChildren(cs...)
-	require.NoError(t, err)
-	got, err := p.Decode(pub)
-	require.NoError(t, err)
-	require.Equal(t, cs[0], got, "the root should expose its child's values")
-}
-
-// TestNew_InvalidArguments checks the argument validation of New, Inputs and
-// Decode.
+// TestNew_InvalidArguments checks the rejections of malformed layouts and
+// children.
 func TestNew_InvalidArguments(t *testing.T) {
-	l := node.Layout{NumBus: 1, NumVK: 2, NumOut: 2}
-	p, err := node.New(l, 2, false, testOpts...)
+	r := rand.New(rand.NewPCG(5, 6))
+	l := testLayout(1, false)
+	p, err := node.New(l, false, testOpts...)
 	require.NoError(t, err)
 
+	_, err = node.New(nil, false, testOpts...)
+	require.ErrorContains(t, err, "empty layout")
+
+	tooMany := make([]wiop.PublicInput, node.Arity+1)
+	for c := range tooMany {
+		tooMany[c] = childPub(r, l)
+	}
+	short := childPub(r, l)[:3]
+	extVK := childPub(r, l)
+	extVK[5] = field.ElemFromExt(extVK[5].AsExt())
 	cases := []struct {
-		name    string
-		run     func() error
-		wantErr string
+		name     string
+		children []wiop.PublicInput
+		wantErr  string
 	}{
-		{name: "three children", run: func() error {
-			_, err := node.New(l, 3, false, testOpts...)
-			return err
-		}, wantErr: "3 children"},
-		{name: "no bus handle", run: func() error {
-			_, err := node.New(node.Layout{NumBus: 0}, 2, false, testOpts...)
-			return err
-		}, wantErr: "invalid layout"},
-		{name: "wrong child count", run: func() error {
-			_, err := p.Inputs(node.Child{})
-			return err
-		}, wantErr: "1 children, the program takes 2"},
-		{name: "wrong child width", run: func() error {
-			c := node.Child{Bus: make([]field.Ext, 1), VK: make([]field.Element, 1), Out: make([]field.Element, 2)}
-			_, err := p.Inputs(c, c)
-			return err
-		}, wantErr: "1 VK limbs"},
-		{name: "wrong public input count", run: func() error {
-			_, err := p.Decode(make([]field.Gen, 3))
-			return err
-		}, wantErr: "3 public inputs"},
-		{name: "extension lane in a VK position", run: func() error {
-			pub := make([]field.Gen, p.NumPublicInputs())
-			pub[p.Positions().VK[0]] = field.ElemFromExt(field.Ext{})
-			_, err := p.Decode(pub)
-			return err
-		}, wantErr: "not a base field element"},
+		{name: "no child", children: nil, wantErr: "0 children, want 1 to 6"},
+		{name: "too many children", children: tooMany, wantErr: "7 children, want 1 to 6"},
+		{name: "wrong length", children: []wiop.PublicInput{short}, wantErr: "3 public inputs, want 7"},
+		{name: "extension VK limb", children: []wiop.PublicInput{extVK}, wantErr: "VK_1 is not a base field element"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			require.ErrorContains(t, tc.run(), tc.wantErr)
+			_, err := p.Inputs(tc.children...)
+			require.ErrorContains(t, err, tc.wantErr)
 		})
 	}
+}
+
+// TestLayoutOf checks that a system's public inputs are laid out by tag and
+// position, and that a public input without a role is rejected.
+func TestLayoutOf(t *testing.T) {
+	sys := wiop.NewSystemf("layout-test")
+	r0 := sys.NewRound()
+	ctx := sys.Context.Childf("test")
+	sys.RegisterPublicInputs("B", r0.NewCell(ctx.Childf("b0"), false), 0)
+	sys.RegisterPublicInputs("A", r0.NewCell(ctx.Childf("a"), true), 0)
+	sys.RegisterPublicInputs("B", r0.NewCell(ctx.Childf("b1"), false), 1)
+
+	l, err := node.LayoutOf(sys, map[wiop.PublicInputTag]node.Op{"A": node.OpMul, "B": node.OpEqual})
+	require.NoError(t, err)
+	require.Equal(t, node.Layout{
+		{Tag: "B", Index: 0, Op: node.OpEqual},
+		{Tag: "A", Index: 0, Ext: true, Op: node.OpMul},
+		{Tag: "B", Index: 1, Op: node.OpEqual},
+	}, l, "roles should be at the positions of their public inputs")
+
+	_, err = node.LayoutOf(sys, map[wiop.PublicInputTag]node.Op{"A": node.OpMul})
+	require.ErrorContains(t, err, "public input 0 (B_0) has no role")
 }

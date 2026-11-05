@@ -1,21 +1,26 @@
-// Package node builds, on the recursion machine, the program of a node of the
-// conglomeration tree: it takes the propagated public inputs of one or two
-// children, checks that the children agree on the program VK and the guest
-// output, multiplies their message-bus products, and exposes the result as
-// its own public inputs, in the same roles. The root variant additionally
-// checks that every bus product is one.
+// Package node builds, on the recursion machine, the layer of a node of the
+// conglomeration tree that combines its children's propagated public inputs:
+// it takes the public inputs of up to [Arity] children, checks that the
+// children agree on the values every shard shares (the program VK, the guest
+// output, the shared randomness seed), multiplies their message-bus products,
+// adds their shared randomness contributions, and exposes the result as its
+// own public inputs under the children's tags, in the children's order, so a
+// node proof has the public-input layout of a shard proof. The root variant
+// additionally checks that every bus product is one.
 //
 // The program verifies nothing about the children: their values are plain
 // inputs. It is the layer of the verifier program that survives once the
-// children's proofs are verified in the machine, and it serves meanwhile to
-// settle and exercise the interface with conglomeration. Dev and test only.
+// children's proofs are verified in the machine, where the inputs become the
+// values read from the verified proofs; meanwhile it settles and exercises the
+// interface with conglomeration. Dev and test only.
 //
-// A bus product is an E6 value exposed as six base public inputs (lane l of
-// handle h is BusTag_(6h+l)), because wiop has no extension public input bound
-// to base lanes; a shard proof exposes one extension cell per handle instead.
+// A node has a fixed number of children, [Arity], each with an active flag: a
+// merge of fewer children leaves the other slots inactive, so one program (one
+// verification key) serves every merge.
 package node
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -24,212 +29,201 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
 )
 
-// The public-input tags of a node proof. They are the node system's own; a
-// child's values are located by the caller, by whatever layout its proof has.
+// Arity is the number of children of a node program: the most proofs one
+// node of the conglomeration tree merges.
+const Arity = 6
+
+// Op is how a node combines the children's values of a public-input role.
+type Op int
+
 const (
-	BusTag wiop.PublicInputTag = "NodeMessageBus"
-	VKTag  wiop.PublicInputTag = "NodeProgramVK"
-	OutTag wiop.PublicInputTag = "NodeGuestOutput"
+	OpMul   Op = iota // the product of the children's values: a message-bus product
+	OpEqual           // the same on every child, propagated: the program VK, the guest output, the seed
+	OpAdd             // the sum of the children's values: a shared randomness contribution
 )
 
-// Layout is the shape of the propagated public inputs: the number of
-// message-bus handles, of program VK limbs and of guest output bytes.
-type Layout struct {
-	NumBus, NumVK, NumOut int
+// Role is one public input of a child proof: its tag and index, whether it
+// is an extension value, and how the node combines it.
+type Role struct {
+	Tag   wiop.PublicInputTag
+	Index int
+	Ext   bool
+	Op    Op
 }
 
-// Child is one child's propagated values, as decoded from its proof's public
-// inputs: one bus product per handle, the program VK limbs and the guest
-// output bytes.
-type Child struct {
-	Bus []field.Ext
-	VK  []field.Element
-	Out []field.Element
+// Layout is the public-input layout of a child proof, one role per position,
+// which a node proof reproduces: same tags, same order, same widths.
+type Layout []Role
+
+// LayoutOf returns the layout of the proofs of sys, giving the public inputs
+// of each tag the op of ops. It fails on a public input whose tag is not in
+// ops: every public input of a child must be combined somehow.
+func LayoutOf(sys *wiop.System, ops map[wiop.PublicInputTag]Op) (Layout, error) {
+	l := make(Layout, len(sys.PublicInputs))
+	seen := make([]bool, len(l))
+	for tag, op := range ops {
+		for i := 0; ; i++ {
+			cell, pos := sys.LookupPublicInputByTag(tag, i)
+			if pos < 0 {
+				break
+			}
+			l[pos] = Role{Tag: tag, Index: i, Ext: cell.IsExtension(), Op: op}
+			seen[pos] = true
+		}
+	}
+	for pos, ok := range seen {
+		if !ok {
+			tag, _ := wiop.PublicInputTagOf(sys.PublicInputs[pos])
+			return nil, fmt.Errorf("node: public input %d (%s) has no role", pos, tag)
+		}
+	}
+	if len(l) == 0 {
+		return nil, errors.New("node: the system has no public input")
+	}
+	return l, nil
 }
 
-// Positions are the positions, in a node proof's public inputs, of each role:
-// the six lanes of each bus product, the VK limbs and the output bytes.
-type Positions struct {
-	Bus     [][]int
-	VK, Out []int
+// Cells lays the public inputs of a child proof out as input cells, one per
+// role, checking their number and that a base role holds a base value.
+func (l Layout) Cells(pub wiop.PublicInput) ([]recursion.Cell, error) {
+	if len(pub) != len(l) {
+		return nil, fmt.Errorf("%d public inputs, want %d", len(pub), len(l))
+	}
+	cells := make([]recursion.Cell, len(l))
+	for pos, role := range l {
+		if role.Ext {
+			cells[pos] = recursion.E6Cell(pub[pos].AsExt())
+			continue
+		}
+		if !pub[pos].IsBase() {
+			return nil, fmt.Errorf("public input %s_%d is not a base field element", role.Tag, role.Index)
+		}
+		cells[pos] = recursion.ScalarCell(pub[pos].AsBase())
+	}
+	return cells, nil
 }
 
-// Program is a compiled node program (two children) or root program (one
-// child, whose bus products must all be one).
+// Program is a compiled node program, or root program when Root.
 type Program struct {
 	*recursion.Program
-	Layout   Layout
-	Children int
-	Root     bool
-	pos      Positions
+	Layout Layout
+	Root   bool
 }
 
-// New builds and compiles the program for children (1 or 2) of the given
-// layout. Every child's values are inputs, in child order: the bus products,
-// the VK limbs, then the output bytes.
-func New(l Layout, children int, root bool, opts ...compilers.Option) (*Program, error) {
-	if children < 1 || children > 2 {
-		return nil, fmt.Errorf("node: %d children, want 1 or 2", children)
+// New builds and compiles the node program of the layout. Its inputs are, for
+// each of the [Arity] children, an active flag (0 or 1) then the child's
+// public inputs in layout order; the first child is always active. An
+// inactive child contributes the neutral value of every role. The root
+// program also asserts that every [OpMul] result is one.
+func New(l Layout, root bool, opts ...compilers.Option) (*Program, error) {
+	if len(l) == 0 {
+		return nil, errors.New("node: empty layout")
 	}
-	if l.NumBus < 1 || l.NumVK < 0 || l.NumOut < 0 {
-		return nil, fmt.Errorf("node: invalid layout %+v", l)
-	}
-
 	m := &recursion.Machine{}
-	bus := make([][]int, children)
-	vk := make([][]int, children)
-	out := make([][]int, children)
-	for c := range children {
-		bus[c] = inputs(m.InputE6, l.NumBus)
-		vk[c] = inputs(m.InputScalar, l.NumVK)
-		out[c] = inputs(m.InputScalar, l.NumOut)
+	one := m.Const(recursion.ScalarCell(field.One()))
+	zero := m.Const(recursion.Cell{})
+	active := make([]int, Arity)
+	values := make([][]int, Arity)
+	for c := range Arity {
+		active[c] = m.InputScalar()
+		values[c] = make([]int, len(l))
+		for pos, role := range l {
+			if role.Ext {
+				values[c][pos] = m.InputE6()
+			} else {
+				values[c][pos] = m.InputScalar()
+			}
+		}
 	}
+	m.AssertEqE6(active[0], one)
 
-	prod := bus[0]
-	for c := 1; c < children; c++ {
-		for i := range l.NumVK {
-			m.AssertEqE6(vk[0][i], vk[c][i])
+	// Fold every role over the children: an inactive child's value is
+	// replaced by the role's neutral value, or compared with itself.
+	results := make([]int, len(l))
+	for pos, role := range l {
+		acc := values[0][pos]
+		for c := 1; c < Arity; c++ {
+			v := values[c][pos]
+			switch role.Op {
+			case OpEqual:
+				m.AssertEqE6(m.Select(active[c], v, acc), acc)
+			case OpMul:
+				acc = m.Mul(acc, m.Select(active[c], v, one))
+			case OpAdd:
+				acc = m.Add(acc, m.Select(active[c], v, zero))
+			default:
+				return nil, fmt.Errorf("node: unknown op %d of %s_%d", role.Op, role.Tag, role.Index)
+			}
 		}
-		for k := range l.NumOut {
-			m.AssertEqE6(out[0][k], out[c][k])
+		if root && role.Op == OpMul {
+			m.AssertEqE6(acc, one)
 		}
-		next := make([]int, l.NumBus)
-		for h := range l.NumBus {
-			next[h] = m.Mul(prod[h], bus[c][h])
+		results[pos] = acc
+	}
+	for pos, role := range l {
+		kind := recursion.KindScalar
+		if role.Ext {
+			kind = recursion.KindE6
 		}
-		prod = next
-	}
-	if root {
-		one := m.Const(recursion.ScalarCell(field.One()))
-		for h := range l.NumBus {
-			m.AssertEqE6(prod[h], one)
-		}
-	}
-
-	// The public inputs, in role order: bus products, VK, output.
-	for h := range l.NumBus {
-		m.Public(prod[h], recursion.KindE6, BusTag, recursion.KindE6*h)
-	}
-	for i := range l.NumVK {
-		m.Public(vk[0][i], recursion.KindScalar, VKTag, i)
-	}
-	for k := range l.NumOut {
-		m.Public(out[0][k], recursion.KindScalar, OutTag, k)
+		m.Public(results[pos], kind, role.Tag, role.Index)
 	}
 
 	rp, err := m.Compile(opts...)
 	if err != nil {
 		return nil, fmt.Errorf("node: %w", err)
 	}
-	p := &Program{Program: rp, Layout: l, Children: children, Root: root}
-	p.pos = Positions{
-		Bus: make([][]int, l.NumBus),
-		VK:  positions(rp.Sys, VKTag, 0, l.NumVK),
-		Out: positions(rp.Sys, OutTag, 0, l.NumOut),
-	}
-	for h := range l.NumBus {
-		p.pos.Bus[h] = positions(rp.Sys, BusTag, recursion.KindE6*h, recursion.KindE6)
-	}
-	return p, nil
+	p := &Program{Program: rp, Layout: l, Root: root}
+	return p, p.checkLayout()
 }
 
-// inputs allocates n input cells with alloc.
-func inputs(alloc func() int, n int) []int {
-	addrs := make([]int, n)
-	for i := range addrs {
-		addrs[i] = alloc()
+// checkLayout checks that the compiled program exposes the layout: every
+// role at its position, with its width.
+func (p *Program) checkLayout() error {
+	if n := len(p.Sys.PublicInputs); n != len(p.Layout) {
+		return fmt.Errorf("node: %d public inputs, want %d", n, len(p.Layout))
 	}
-	return addrs
+	for pos, role := range p.Layout {
+		cell, got := p.Sys.LookupPublicInputByTag(role.Tag, role.Index)
+		if got != pos {
+			return fmt.Errorf("node: %s_%d is public input %d, want %d", role.Tag, role.Index, got, pos)
+		}
+		if cell.IsExtension() != role.Ext {
+			return fmt.Errorf("node: %s_%d has the wrong width", role.Tag, role.Index)
+		}
+	}
+	return nil
 }
 
-// positions returns the positions of the public inputs tag_first..tag_first+n-1.
-func positions(sys *wiop.System, tag wiop.PublicInputTag, first, n int) []int {
-	pos := make([]int, n)
-	for i := range pos {
-		_, pos[i] = sys.LookupPublicInputByTag(tag, first+i)
+// Inputs lays the public inputs of 1 to [Arity] children out as the
+// program's input cells: the given children active with their values, the
+// other slots inactive and zero.
+func (p *Program) Inputs(pubs ...wiop.PublicInput) ([]recursion.Cell, error) {
+	if len(pubs) < 1 || len(pubs) > Arity {
+		return nil, fmt.Errorf("node: %d children, want 1 to %d", len(pubs), Arity)
 	}
-	return pos
-}
-
-// NumPublicInputs returns the number of public inputs of a proof of p.
-func (p *Program) NumPublicInputs() int { return len(p.Sys.PublicInputs) }
-
-// Positions returns the positions of each role in a proof's public inputs.
-func (p *Program) Positions() Positions { return p.pos }
-
-// Inputs lays the children's values out as the program's input cells.
-func (p *Program) Inputs(children ...Child) ([]recursion.Cell, error) {
-	if len(children) != p.Children {
-		return nil, fmt.Errorf("node: %d children, the program takes %d", len(children), p.Children)
-	}
-	l := p.Layout
-	cells := make([]recursion.Cell, 0, p.Children*(l.NumBus+l.NumVK+l.NumOut))
-	for c, child := range children {
-		if len(child.Bus) != l.NumBus || len(child.VK) != l.NumVK || len(child.Out) != l.NumOut {
-			return nil, fmt.Errorf("node: child %d has %d bus products, %d VK limbs and %d output bytes, want %d, %d and %d",
-				c, len(child.Bus), len(child.VK), len(child.Out), l.NumBus, l.NumVK, l.NumOut)
+	cells := make([]recursion.Cell, 0, Arity*(1+len(p.Layout)))
+	for c := range Arity {
+		if c >= len(pubs) {
+			cells = append(cells, make([]recursion.Cell, 1+len(p.Layout))...)
+			continue
 		}
-		for _, b := range child.Bus {
-			cells = append(cells, recursion.E6Cell(b))
+		values, err := p.Layout.Cells(pubs[c])
+		if err != nil {
+			return nil, fmt.Errorf("node: child %d: %w", c, err)
 		}
-		for _, v := range child.VK {
-			cells = append(cells, recursion.ScalarCell(v))
-		}
-		for _, o := range child.Out {
-			cells = append(cells, recursion.ScalarCell(o))
-		}
+		cells = append(cells, recursion.ScalarCell(field.One()))
+		cells = append(cells, values...)
 	}
 	return cells, nil
 }
 
-// Decode reads the propagated values from the public inputs of a proof of p.
-func (p *Program) Decode(pub wiop.PublicInput) (Child, error) {
-	if len(pub) != p.NumPublicInputs() {
-		return Child{}, fmt.Errorf("node: %d public inputs, want %d", len(pub), p.NumPublicInputs())
-	}
-	base := func(pos int) (field.Element, error) {
-		if !pub[pos].IsBase() {
-			return field.Element{}, fmt.Errorf("node: public input %d is not a base field element", pos)
-		}
-		return pub[pos].AsBase(), nil
-	}
-	var (
-		child = Child{
-			Bus: make([]field.Ext, p.Layout.NumBus),
-			VK:  make([]field.Element, p.Layout.NumVK),
-			Out: make([]field.Element, p.Layout.NumOut),
-		}
-		err error
-	)
-	for h, lanes := range p.pos.Bus {
-		var cell recursion.Cell
-		for l, pos := range lanes {
-			if cell[l], err = base(pos); err != nil {
-				return Child{}, err
-			}
-		}
-		child.Bus[h] = recursion.CellE6(cell)
-	}
-	for i, pos := range p.pos.VK {
-		if child.VK[i], err = base(pos); err != nil {
-			return Child{}, err
-		}
-	}
-	for k, pos := range p.pos.Out {
-		if child.Out[k], err = base(pos); err != nil {
-			return Child{}, err
-		}
-	}
-	return child, nil
-}
-
-// ProveChildren executes the program on the children's values, proves the
-// execution and verifies the proof. Children that disagree on the program VK
-// or the guest output, or an unbalanced bus at the root, fail at verification:
+// ProveChildren executes the program on the children's public inputs, proves
+// the execution and verifies the proof. Children that disagree on a
+// propagated value, or an unbalanced bus at the root, fail at verification:
 // the machine's equality assertions are checked by the proof, not by the
 // execution.
-func (p *Program) ProveChildren(children ...Child) (wiop.Proof, wiop.PublicInput, error) {
-	cells, err := p.Inputs(children...)
+func (p *Program) ProveChildren(pubs ...wiop.PublicInput) (wiop.Proof, wiop.PublicInput, error) {
+	cells, err := p.Inputs(pubs...)
 	if err != nil {
 		return wiop.Proof{}, nil, err
 	}

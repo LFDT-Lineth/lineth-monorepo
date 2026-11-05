@@ -9,7 +9,7 @@ import (
 )
 
 // publicProgram: a scalar input, an E6 input and their product, each exposed
-// as public inputs.
+// as a public input.
 func publicProgram() (*Machine, [3]int) {
 	m := &Machine{}
 	s, x := m.InputScalar(), m.InputE6()
@@ -29,8 +29,9 @@ func publicInputs(seed uint64) []Cell {
 	return []Cell{ScalarCell(field.NewElement(seed + 3)), x}
 }
 
-// TestPublic checks that the exposed lanes are the proof's public inputs, at
-// the positions of their tags, and that the proof verifies.
+// TestPublic checks that a scalar is exposed as a base public input and an E6
+// value as one extension public input, at the positions of their tags, and
+// that the proof verifies.
 func TestPublic(t *testing.T) {
 	m, addrs := publicProgram()
 	p, err := m.Compile(testPCSOpts...)
@@ -40,17 +41,20 @@ func TestPublic(t *testing.T) {
 		r, err := p.Execute(publicInputs(seed))
 		require.NoError(t, err)
 		proof, pub := p.Prove(r)
-		require.Len(t, pub, 1+6+6, "one scalar and two E6 values")
+		require.Len(t, pub, 3, "one scalar and two E6 values, one public input each")
 
-		want := map[wiop.PublicInputTag][]int{"S": {0}, "X": {0, 1, 2, 3, 4, 5}, "Y": {0, 1, 2, 3, 4, 5}}
 		for k, tag := range []wiop.PublicInputTag{"S", "X", "Y"} {
+			_, pos := p.Sys.LookupPublicInputByTag(tag, 0)
+			require.GreaterOrEqual(t, pos, 0, "%s_0 should be registered", tag)
 			cell := r.Value(addrs[k])
-			for _, l := range want[tag] {
-				_, pos := p.Sys.LookupPublicInputByTag(tag, l)
-				require.GreaterOrEqual(t, pos, 0, "%s_%d should be registered", tag, l)
-				diff := pub[pos].Sub(field.ElemFromBase(cell[l]))
-				require.True(t, diff.IsZero(), "%s_%d should be lane %d of the cell", tag, l, l)
+			if tag == "S" {
+				require.True(t, pub[pos].IsBase(), "a scalar should be a base public input")
+				require.Equal(t, cell[0], pub[pos].AsBase(), "S should be lane 0 of the cell")
+				continue
 			}
+			require.False(t, pub[pos].IsBase(), "%s should be an extension public input", tag)
+			want, got := CellE6(cell), pub[pos].AsExt()
+			require.True(t, want.Equal(&got), "%s should be the E6 value of the cell", tag)
 		}
 		require.NoError(t, p.Verify(proof, pub))
 	}
@@ -72,8 +76,8 @@ func TestPublic_Rejects(t *testing.T) {
 			_, pos := p.Sys.LookupPublicInputByTag("S", 0)
 			pub[pos] = pub[pos].Add(field.ElemOne())
 		}},
-		{name: "tampered E6 lane public input", pub: func(pub wiop.PublicInput) {
-			_, pos := p.Sys.LookupPublicInputByTag("Y", 3)
+		{name: "tampered E6 public input", pub: func(pub wiop.PublicInput) {
+			_, pos := p.Sys.LookupPublicInputByTag("Y", 0)
 			pub[pos] = pub[pos].Add(field.ElemOne())
 		}},
 		{name: "tampered public chip lane", witness: func(r *Run) {
@@ -104,10 +108,12 @@ func TestPublic_Rejects(t *testing.T) {
 	})
 }
 
-// TestPublic_KindPanics checks that Public rejects a lane count that is not a
-// cell kind.
+// TestPublic_KindPanics checks that Public rejects a kind without a
+// public-input shape: a digest or a lane count that is not a cell kind.
 func TestPublic_KindPanics(t *testing.T) {
 	m := &Machine{}
-	a := m.InputScalar()
-	require.Panics(t, func() { m.Public(a, 3, "A", 0) })
+	a := m.InputDigest()
+	for _, kind := range []int{3, KindDigest} {
+		require.Panics(t, func() { m.Public(a, kind, "A", 0) }, "kind %d", kind)
+	}
 }
