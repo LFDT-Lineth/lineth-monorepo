@@ -59,7 +59,7 @@ RUN make -C /riscv-guests/l2_execution fetch-host \
     && make -C /riscv-guests/l2_execution compile \
     && cd /riscv-guests/l2_execution \
     && zig build install-runner -Dhost-tools=true --summary all \
-    && strip /riscv-guests/l2_execution/zig-out/bin/l2-execution-runner
+    && strip /riscv-guests/l2_execution/zig-out/bin/l2_execution_runner
 
 ########################################
 # Final runtime image: debian:bookworm-slim (glibc 2.36, same release as the
@@ -78,7 +78,7 @@ LABEL org.label-schema.version=$VERSION \
 
 # Prover binary (static), native runner, and guest ELF.
 COPY --from=go-builder  /out/prover                                             /opt/linea/prover-ray/prover
-COPY --from=zig-builder /riscv-guests/l2_execution/zig-out/bin/l2-execution-runner /opt/linea/prover-ray/l2-execution-runner
+COPY --from=zig-builder /riscv-guests/l2_execution/zig-out/bin/l2_execution_runner /opt/linea/prover-ray/l2_execution_runner
 COPY --from=zig-builder /riscv-guests/l2_execution/zig-out/bin/evm_execution_guest /opt/linea/prover-ray/evm_execution_guest
 COPY --from=licenses LICENSE-APACHE LICENSE-MIT /licenses/
 
@@ -89,7 +89,9 @@ WORKDIR /opt/linea/prover-ray
 # run a wrong config): mount one and point CONFIG_FILE at it. The CMD runs the
 # queue adapter, expanding CONFIG_FILE and WORKER_ID like the legacy prover.
 # Samples: prover-ray/config/config-dev-mock.toml, config-dev-zkvm.toml.
+# dev-zkvm also needs the guests folder, staged with scripts/stage-guest.sh:
 #   docker run -e CONFIG_FILE=/data/config.toml -e WORKER_ID=prover-ray-0 \
-#              -v ./config-dev-zkvm.toml:/data/config.toml -v ./data:/data <image>
+#              -v ./config-dev-zkvm.toml:/data/config.toml -v ./data:/data \
+#              -v ./guests:/opt/linea/prover-ray/guests:ro <image>
 ENV CONFIG_FILE="/opt/linea/prover-ray/config/config.toml"
 CMD ["sh", "-c", "exec prover --config \"$CONFIG_FILE\" --local-id \"$WORKER_ID\""]

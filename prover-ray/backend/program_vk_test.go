@@ -3,7 +3,6 @@ package backend
 import (
 	"bytes"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -20,40 +19,31 @@ import (
 // TestProgramVK checks that the program VK is the commitment to the program
 // round, is bound to the program only, and cannot be forged.
 func TestProgramVK(t *testing.T) {
-	binPath := embeddedZKCBin(t)
-
-	// newCore returns a [Core] proving elf over the embedded arithmetization.
-	newCore := func(t *testing.T, elf []byte) *Core {
-		t.Helper()
-		elfPath := filepath.Join(t.TempDir(), "guest.elf")
-		require.NoError(t, os.WriteFile(elfPath, elf, 0o600))
-		c, err := New(Config{CircuitBinPath: binPath, GuestELFPath: elfPath})
-		require.NoError(t, err)
-		return c
-	}
-
+	dir := t.TempDir()
 	elf, _ := minimal_elf.AllInOneElfProgram()
-	c := newCore(t, elf)
+	id := writeGuest(t, dir, elf)
+	c, err := New(Config{CircuitBinPath: embeddedZKCBin(t), GuestsDir: dir})
+	require.NoError(t, err)
 
-	proof, pub, err := proveJob(c, Job{})
+	proof, pub, err := proveJob(c, Job{GuestProgramID: id})
 	require.NoError(t, err)
 	vk := risc5.GetProgramVK(c.sys, pub)
 	assert.Equal(t, proof.Commitments[zkcdriver.ProgramRound], vk)
 	assert.NotEqual(t, field.Octuplet{}, vk, "the program round must be committed")
 
 	t.Run("same program", func(t *testing.T) {
-		other, otherPub, err := proveJob(c, Job{Payload: make([]byte, 1<<12)})
+		other, otherPub, err := proveJob(c, Job{GuestProgramID: id, Payload: make([]byte, 1<<12)})
 		require.NoError(t, err)
 		require.NotEqual(t, proof.Commitments[1], other.Commitments[1], "the two executions must differ")
 		assert.Equal(t, vk, risc5.GetProgramVK(c.sys, otherPub))
 	})
 
-	t.Run("other program", func(t *testing.T) {
+	t.Run("other program on the same Core", func(t *testing.T) {
 		otherElf, _ := minimal_elf.OutputELF(risc5.NumGuestPublicOutputs)
-		other := newCore(t, otherElf)
-		_, otherPub, err := proveJob(other, Job{})
+		otherID := writeGuest(t, dir, otherElf)
+		_, otherPub, err := proveJob(c, Job{GuestProgramID: otherID})
 		require.NoError(t, err)
-		assert.NotEqual(t, vk, risc5.GetProgramVK(other.sys, otherPub))
+		assert.NotEqual(t, vk, risc5.GetProgramVK(c.sys, otherPub), "each job must prove the guest named by its own ID")
 	})
 
 	t.Run("forged", func(t *testing.T) {

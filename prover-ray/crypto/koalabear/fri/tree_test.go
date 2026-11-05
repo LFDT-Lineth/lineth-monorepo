@@ -251,18 +251,28 @@ func multiInjectionTree(prng *rand.Rand, height int, counts []int) (*Tree, [][][
 // alike, with zero, one and several injections per level.
 func TestTreeChainsSeveralInjections(t *testing.T) {
 	prng := rand.New(utils.NewRandSource(11))
-	const height = 7 // levels of 1..64 nodes: below and above batchLanes
-	tree, injections := multiInjectionTree(prng, height, []int{2, 0, 3, 1, 0, 2, 3})
-
-	for level := range height {
-		for j := range 1 << level {
-			k := 1<<level - 1 + j
-			want := poseidon2.Compress(tree.Nodes[2*k+1], tree.Nodes[2*k+2])
-			for _, injected := range injections[level] {
-				want = poseidon2.Compress(want, injected[j])
-			}
-			if tree.Nodes[k] != want {
-				t.Fatalf("level %d node %d does not match the injection chain", level, j)
+	for _, tc := range []struct {
+		height     int
+		injections []int
+	}{
+		// Levels of 1..64 nodes: below and above batchLanes.
+		{7, []int{2, 0, 3, 1, 0, 2, 3}},
+		// Levels of up to 2048 nodes: the deep ones are hashed subtree by
+		// subtree in parallel (minParallelTreeLevel).
+		{12, []int{1, 0, 2, 0, 3, 1, 0, 2, 3, 1, 2, 3}},
+	} {
+		height := tc.height
+		tree, injections := multiInjectionTree(prng, height, tc.injections)
+		for level := range height {
+			for j := range 1 << level {
+				k := 1<<level - 1 + j
+				want := poseidon2.Compress(tree.Nodes[2*k+1], tree.Nodes[2*k+2])
+				for _, injected := range injections[level] {
+					want = poseidon2.Compress(want, injected[j])
+				}
+				if tree.Nodes[k] != want {
+					t.Fatalf("height %d level %d node %d does not match the injection chain", height, level, j)
+				}
 			}
 		}
 	}

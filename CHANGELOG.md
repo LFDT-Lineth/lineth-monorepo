@@ -46,6 +46,8 @@
 - *(coordinator)* Added BlobSubmitterV2 interface and implementation (#3673)
 - *(coordinator)* Generic AggregationsDaoG and AggregationV2 for RISC-V aggregation proofs (#4174)
 - *(misc)* Adding blob commitment and a proof to Rollup input (#4329)
+- *(maru)* Add support of self-calculating terminal total difficulty (#4295)
+- *(coordinator, maru, docker)* Let downstream images override the image labels and maru jar (#4393)
 
 ### 🐛 Bug Fixes
 
@@ -107,6 +109,8 @@
 - *(prover)* Handle zero modulus in MODEXP (#4307)
 - *(misc, riscv-guest, prover, coordinator)* Changing the spec to allow zero rolling hash and message number for the L2 Message Service (#4314)
 - *(tracer)* Adapt reference tests to Besu block processor API (#4328)
+- *(coordinator)* Enforce end-block invariant in RollupAggregationProofResponseV1 (#4315)
+- *(coordinator, docker)* Let downstream images opt out of the license files (#4382)
 
 ### 🚜 Refactor
 

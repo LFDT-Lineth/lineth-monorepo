@@ -57,7 +57,8 @@ fn findToolCandidates(
 
 pub fn build(b: *std.Build) void {
     const tc = resolveToolchain(b);
-    const ctt = b.dependency("constantine", .{});
+    // Fetched on demand, by builds that use one of the archives.
+    const ctt = b.lazyDependency("constantine", .{}) orelse return;
     // Build the rv64 archive in place and the host archive into Zig output dirs.
     const tree = ctt.path(".");
 
@@ -84,7 +85,8 @@ fn buildRiscv(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath) std.Build.
     task.addArgs(&.{ tc.nimble, tc.nim, tc.llvm_ar, tc.llvm_nm });
     const archive = out.join(b.allocator, "libconstantine.riscv64.a") catch @panic("oom");
 
-    // Match the guest's rv64im soft-float ABI.
+    // Match the guest's rv64im target (build_common standardGuestTarget). The ZkC interpreter
+    // decodes only 32-bit RV64IM, so compressed (C), atomic (A) or CSR code would run as no-ops.
     const allocator_obj = b.addObject(.{
         .name = "ctt_allocator_rv64",
         .root_module = b.createModule(.{
@@ -93,7 +95,8 @@ fn buildRiscv(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath) std.Build.
                 .cpu_arch = .riscv64,
                 .os_tag = .freestanding,
                 .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv64 },
-                .cpu_features_add = std.Target.riscv.featureSet(&.{ .a, .c, .m, .zaamo, .zalrsc, .zicsr }),
+                .cpu_features_add = std.Target.riscv.featureSet(&.{.m}),
+                .cpu_features_sub = std.Target.riscv.featureSet(&.{ .a, .c, .d, .f, .zicsr, .zaamo, .zalrsc }),
             }),
             .optimize = .ReleaseSmall,
         }),

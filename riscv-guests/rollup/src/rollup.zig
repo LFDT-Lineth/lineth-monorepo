@@ -5,7 +5,7 @@
 //! own decode/encode bounds, not the rollup's real recursive-proof logic.
 
 const std = @import("std");
-const rollup_ssz = @import("rollup_ssz");
+const rollup_ssz = @import("rollup_ssz.zig");
 
 // ── Sentinels ─────────────────────────────────────────────────────────────────────────────────
 // Each value is keccak256 of its own tag string, computed at comptime — `std.crypto.hash.sha3.

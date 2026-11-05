@@ -1,5 +1,5 @@
-github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20261027092207-e9e81bae1626 h1:nNpHhYzBmX805QTDcdTvEJSr+/eAOfTRL07BaZ0trMI=
-github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20261027092207-e9e81bae1626/go.mod h1:swReMN5aNCwq4vR7hGdFKgVwqBUWOUsGDvF2B0WXZt8=
+github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20261103085344-82791aabd1c7 h1:iQazgoo5KGa5htQAcjQlWIi9bgiHRDxfI5W41vpxzZ8=
+github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20261103085344-82791aabd1c7/go.mod h1:swReMN5aNCwq4vR7hGdFKgVwqBUWOUsGDvF2B0WXZt8=
 github.com/LFDT-Lineth/zkc v1.2.35 h1:ExY9lk/AZmcs0w7CJ3ZfpoFjoSkv2lRIZDt2BeACxOI=
 github.com/LFDT-Lineth/zkc v1.2.35/go.mod h1:VbcIr1KkeSaKe/ax+ZYIOly0Pcs6azyek5xaYkJzP0A=
 github.com/benbjohnson/clock v1.1.0 h1:Q92kusRqC1XV2MjkWETPvjJVqKetz1OzxZB7mHJLju8=
@@ -19,8 +19,8 @@ github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMn
 github.com/chzyer/test v1.0.0/go.mod h1:2JlltgoNkt4TW/z9V/IzDdFaMTM2JPIi26O1pF38GC8=
 github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565 h1:NlOAmbLYsVb/hcuOBxza6CAA+233tB0eFiunGVEMyv4=
 github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565/go.mod h1:EoWWbEboQRydCqJDSA7zrFxucIeoy/5R+MDx04oFpF4=
-github.com/consensys/gnark-crypto v0.22.0 h1:RYH7FX1/zkmNrSiABo70HAqew41SRUsoluKundObo3o=
-github.com/consensys/gnark-crypto v0.22.0/go.mod h1:HL8XflRG4cvau1PEG3CWBTD2kkzUzdlqZF6BBgy57F8=
+github.com/consensys/gnark-crypto v0.22.1-0.20261014224656-bf76cc82bdd1 h1:ZVblfiooUoGIMGnjzIUkhNC+n0c64B6EoYvwBjejxDw=
+github.com/consensys/gnark-crypto v0.22.1-0.20261014224656-bf76cc82bdd1/go.mod h1:HL8XflRG4cvau1PEG3CWBTD2kkzUzdlqZF6BBgy57F8=
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

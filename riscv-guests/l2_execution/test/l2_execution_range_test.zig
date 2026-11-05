@@ -18,11 +18,11 @@ const testing = std.testing;
 
 const executor = @import("zesu_executor");
 const mpt = @import("zesu_mpt");
-const l2_execution = @import("l2_execution");
-const l2_execution_ssz = @import("l2_execution_ssz");
-const conflation_plan = @import("conflation_plan.zig");
-const tx_fixtures = @import("tx_fixtures");
-const log_fixtures = @import("log_fixtures.zig");
+const l2_execution = @import("l2_execution").l2_execution;
+const l2_execution_ssz = @import("l2_execution").l2_execution_ssz;
+const conflation_plan = @import("support").conflation_plan;
+const tx_fixtures = @import("support").tx_fixtures;
+const log_fixtures = @import("support").log_fixtures;
 
 const types = executor.executor_types;
 const api = l2_execution.test_api;

@@ -10,7 +10,7 @@
 //! own convention), so this file must take the `.ssz` path.
 
 const std = @import("std");
-const rollup_ssz = @import("rollup_ssz");
+const rollup_ssz = @import("rollup").rollup_ssz;
 const support = @import("support");
 
 pub fn main(init: std.process.Init) !void {

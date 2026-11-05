@@ -43,15 +43,13 @@ const (
 	t6
 )
 
-// RV64IM major opcodes, plus the custom-1 opcode carrying the Lineth
-// precompiles (R_KECCAK, R_POSEIDON2, R_WRITE_OUTPUT).
+// RV64IM major opcodes.
 const (
 	opLoad     = 0b0000011
 	opOpImm    = 0b0010011
 	opAuipc    = 0b0010111
 	opOpImm32  = 0b0011011
 	opStore    = 0b0100011
-	opCustom1  = 0b0101011
 	opOp       = 0b0110011
 	opLui      = 0b0110111
 	opOp32     = 0b0111011
@@ -182,11 +180,16 @@ func (a *assembler) jal(rd reg, label string) {
 func (a *assembler) jalr(rd, rs1 reg, off int32) { a.emit(encIType(opJalr, 0b000, rd, rs1, off)) }
 func (a *assembler) ecall()                      { a.emit(opSystem) }
 
-// Lineth precompiles on the custom-1 opcode.
-
-// writeOutput appends size bytes at addr to the guest_output channel.
+// writeOutput writes size bytes at addr to guest_output, from its address 0,
+// through the write syscall on the GUEST_OUT file descriptor (4). It clobbers
+// a0, which receives size back, a1, a2 and a7, so addr must not be a0 and size
+// neither a0 nor a1.
 func (a *assembler) writeOutput(addr, size reg) {
-	a.emit(encRType(opCustom1, 0b010, 0, zero, addr, size))
+	a.addi(a0, zero, 4)
+	a.addi(a1, addr, 0)
+	a.addi(a2, size, 0)
+	a.addi(a7, zero, 64)
+	a.ecall()
 }
 
 // Instruction-format encoders. They panic on out-of-range immediates so that

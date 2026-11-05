@@ -29,16 +29,20 @@ func TestDevZkVM_Integration(t *testing.T) {
 
 	const (
 		guestELF  = "../../riscv-guests/l2_execution/zig-out/bin/evm_execution_guest"
-		nativeBin = "../../riscv-guests/l2_execution/zig-out/bin/l2-execution-runner"
+		nativeBin = "../../riscv-guests/l2_execution/zig-out/bin/l2_execution_runner"
 		sszInput  = "../../riscv-guests/l2_execution/test/testdata/stateless_input.ssz"
 	)
 
-	core, err := New(Config{Mode: ProverModeDevZkVM, GuestELFPath: guestELF})
+	elf, err := os.ReadFile(guestELF)
+	require.NoError(t, err, "reading guest ELF")
+	dir := t.TempDir()
+	id := writeGuest(t, dir, elf)
+	core, err := New(Config{Mode: ProverModeDevZkVM, GuestsDir: dir})
 	require.NoError(t, err, "building dev-zkvm core")
 
 	extended, err := os.ReadFile(sszInput)
 	require.NoError(t, err, "reading extended input fixture")
-	result := core.Prove(context.Background(), Job{ID: "it-1", Type: ProofTypeL2Execution, Payload: extended})
+	result := core.Prove(context.Background(), Job{ID: "it-1", Type: ProofTypeL2Execution, GuestProgramID: id, Payload: extended})
 	require.Equal(t, ResultStatusOK, result.Status, "prove err: %v", result.Err)
 
 	t.Logf("guest_output = %s", hex.EncodeToString(result.ProofBytes))
