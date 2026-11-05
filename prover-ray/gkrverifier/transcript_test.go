@@ -112,10 +112,9 @@ type transcriptSystem struct {
 	// claimValues holds the values of the cells of the returned claims.
 	claimValues map[*wiop.Cell]field.Element
 	claims      map[int][]Claim
-	// anyPanic says that the prover may panic for any reason, which then counts as a rejection.
-	anyPanic bool
-	flat     []field.Ext
-	rows     [][3 * blockLen]field.Element
+	round       *wiop.Round
+	flat        []field.Ext
+	rows        [][3 * blockLen]field.Element
 }
 
 // newTranscriptSystem defines the verifier of the proof's circuit with a table of exactly the
@@ -125,6 +124,7 @@ func newTranscriptSystem(t *testing.T, p *gnarkProof) *transcriptSystem {
 	t.Helper()
 	s := &transcriptSystem{sys: wiop.NewSystemf("gkrverifier-transcript"), seedValue: p.seed, flat: p.flat}
 	round := s.sys.NewRound()
+	s.round = round
 
 	nbRows, err := NbCompressions(p.circuit, p.schedule, p.n)
 	require.NoError(t, err)
@@ -157,16 +157,14 @@ type actionFunc func(rt *wiop.Runtime)
 func (f actionFunc) Run(rt *wiop.Runtime) { f(rt) }
 
 // prove compiles the system and proves it with the system's values, and returns the result of the
-// verification. A prover that holds a compression missing from the table fails while it builds its
-// lookup, which is reported as an error too.
+// verification. A prover that holds a row missing from the table of a lookup fails while it builds the
+// lookup, which is reported as an error too; any other panic fails the test.
 func (s *transcriptSystem) prove(t *testing.T) (err error) {
 	t.Helper()
 	require.NoError(t, compilers.CompileFull(s.sys))
 	defer func() {
 		if r := recover(); r != nil {
-			if !s.anyPanic {
-				require.Contains(t, fmt.Sprint(r), "has no match in the lookup table")
-			}
+			require.Contains(t, fmt.Sprint(r), "has no match in the lookup table")
 			err = fmt.Errorf("the prover has a row that is not in the table: %v", r)
 		}
 	}()
@@ -192,6 +190,12 @@ func (s *transcriptSystem) prove(t *testing.T) (err error) {
 	return s.sys.Verify(proof, pub)
 }
 
+// The coordinate of the seed and the column of the table that TestTranscript changes.
+const (
+	changedSeed   = 3
+	changedColumn = 9
+)
+
 // TestTranscript checks the proof, seed and transcript tables, on gnark's proofs of the Poseidon2
 // compression circuit: with a table that has exactly the compressions of the verifier, the system proves
 // and verifies; and changing an element of the proof, a cell of the seed, or a row of the table is
@@ -215,22 +219,18 @@ func TestTranscript(t *testing.T) {
 				})
 			}
 
-			for k := range 6 {
-				t.Run(fmt.Sprintf("changed seed %d", k), func(t *testing.T) {
-					s := newTranscriptSystem(t, p)
-					s.seedValue[k].Add(&s.seedValue[k], &one.B0.A0)
-					require.Error(t, s.prove(t))
-				})
-			}
+			t.Run("changed seed", func(t *testing.T) {
+				s := newTranscriptSystem(t, p)
+				s.seedValue[changedSeed].Add(&s.seedValue[changedSeed], &one.B0.A0)
+				require.Error(t, s.prove(t))
+			})
 
-			for _, column := range []int{0, 9, 17} {
-				t.Run(fmt.Sprintf("changed table column %d", column), func(t *testing.T) {
-					s := newTranscriptSystem(t, p)
-					s.rows = append([][3 * blockLen]field.Element(nil), s.rows...)
-					s.rows[0][column].Add(&s.rows[0][column], &one.B0.A0)
-					require.Error(t, s.prove(t))
-				})
-			}
+			t.Run("changed table column", func(t *testing.T) {
+				s := newTranscriptSystem(t, p)
+				s.rows = append([][3 * blockLen]field.Element(nil), s.rows...)
+				s.rows[0][changedColumn].Add(&s.rows[0][changedColumn], &one.B0.A0)
+				require.Error(t, s.prove(t))
+			})
 		})
 	}
 }

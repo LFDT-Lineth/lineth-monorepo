@@ -2,6 +2,7 @@ package gkrverifier
 
 import (
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -133,8 +134,7 @@ func TestSumchecks(t *testing.T) {
 }
 
 // TestCorruptedWitness checks that the constraints of the modules, not only the lookups, reject: with
-// an honest proof, one value of a witness column that is not read from the bus is changed after the
-// assignment.
+// an honest proof, one value of a witness column is changed after the assignment.
 func TestCorruptedWitness(t *testing.T) {
 	p := newGnarkProof(t, 2)
 	for _, target := range []struct {
@@ -152,19 +152,19 @@ func TestCorruptedWitness(t *testing.T) {
 		{"round out", func(v *Verifier) *wiop.Column { return v.rounds.out[0] }, 0},
 		{"round a", func(v *Verifier) *wiop.Column { return v.rounds.a[4] }, 1},
 		{"round mu", func(v *Verifier) *wiop.Column { return v.rounds.mu[0] }, 0},
-		{"claim", func(v *Verifier) *wiop.Column { return v.claims.x[0] }, 0},
+		{"seed", func(v *Verifier) *wiop.Column { return v.inputs.x[0] }, 0},
+		{"claim", func(v *Verifier) *wiop.Column { return v.inputs.x[0] }, 1},
 		{"transcript block", func(v *Verifier) *wiop.Column { return v.transcript.block[0] }, 3},
 	} {
 		t.Run(target.name, func(t *testing.T) {
 			s := newTranscriptSystem(t, p)
 			col := target.column(s.verifier)
-			s.verifier.corrupt = func(c *wiop.Column, values []field.Element) {
-				if c == col {
-					one := field.One()
-					values[target.row].Add(&values[target.row], &one)
-				}
-			}
-			s.anyPanic = true
+			s.round.RegisterAction(actionFunc(func(rt *wiop.Runtime) {
+				values := slices.Clone(rt.GetColumnAssignment(col).Plain.AsBase())
+				one := field.One()
+				values[target.row].Add(&values[target.row], &one)
+				rt.OverrideColumn(col, &wiop.ConcreteVector{Plain: field.VecFromBase(values)})
+			}))
 			require.Error(t, s.prove(t))
 		})
 	}
