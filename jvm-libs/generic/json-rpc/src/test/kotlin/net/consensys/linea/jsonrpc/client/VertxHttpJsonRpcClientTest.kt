@@ -443,10 +443,14 @@ class VertxHttpJsonRpcClientTest {
       .also { response -> assertThat(response).isEqualTo(Ok(JsonRpcSuccessResponse(2, "OK"))) }
   }
 
+  /**
+   * Vert.x cancels the idle timeout once the response headers arrive, so it never bounds the streaming of the body. The
+   * idle timeout is generous because a cold request on a loaded CI runner can take over a second to receive headers.
+   */
   @Test
   fun makesRequest_overallTimeoutTripsOnSlowlyStreamedResponseThatIdleTimeoutTolerates() {
     scriptedServer.reply("eth_blockNumber", ScriptedJsonRpcServer.Reply(dribbleInterval = 40.milliseconds))
-    val idleTimeoutMillis = 1_000L
+    val idleTimeoutMillis = 10_000L
     val idleOnlyClient = clientWithHooks(endpoint = scriptedServerEndpoint, requestTimeout = idleTimeoutMillis)
     val overallDeadlineClient = clientWithHooks(
       endpoint = scriptedServerEndpoint,
