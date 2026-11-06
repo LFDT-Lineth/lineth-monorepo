@@ -23,7 +23,9 @@ import (
 const (
 	// chunkSize is the number of independent Poseidon2 output blocks used to
 	// represent one message. Chosen so that MSetHashSize = chunkSize * blockSize
-	// satisfies the SIS security bound (≥128 bits, ≤2^16 insertions/removals).
+	// satisfies the SIS security bound (≥128 bits, ≤2^16 insertions/removals):
+	// a collision is a nonzero combination Σ c_i·h(M_i) = 0 mod q with small
+	// integers |c_i| ≤ 2^16, an SIS instance of dimension MSetHashSize.
 	chunkSize = 41
 	// blockSize matches poseidon2.BlockSize (8 field elements per compression
 	// output). Defined locally to avoid importing poseidon2 just for the
@@ -36,6 +38,11 @@ const (
 
 // MSetHash is a multiset hash accumulator over the Koalabear field. The zero
 // value represents the empty set and is ready to use without initialisation.
+// It holds the hash of a multiset S,
+//
+//	H(S) = Σ_{M ∈ S} h(M)   (componentwise, mod q),
+//
+// with h the per-message expansion computed by [MSetHash.update].
 type MSetHash [MSetHashSizeNumFieldElement]field.Element
 
 // Insert adds msg to the accumulator. Panics on an empty msg.
@@ -65,7 +72,12 @@ func (m *MSetHash) IsEmpty() bool {
 	return true
 }
 
-// update adds (rem=false) or removes (rem=true) msg from the accumulator.
+// update adds (rem=false) or removes (rem=true) h(msg) to the accumulator,
+// where h(msg) = c_0 ‖ … ‖ c_{chunkSize-1} is built from Poseidon2 digests
+// chained by zero blocks:
+//
+//	c_0     = MD(msg)
+//	c_{i+1} = Compress(c_i, 0^8)
 func (m *MSetHash) update(rem bool, msg ...field.Element) {
 	if len(msg) == 0 {
 		panic("multiset_hashing: Insert/Remove requires a non-empty message")
