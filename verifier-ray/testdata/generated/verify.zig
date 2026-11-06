@@ -33,7 +33,7 @@ pub const VerifyCaseMetadata = struct {
     total_quotient_claims: usize,
 };
 
-pub const case_count: usize = 78;
+pub const case_count: usize = 79;
 
 pub const system_0_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -18227,6 +18227,198 @@ const verify_case_77_alt_input = verifier.VerifyInput{
 
 const verify_case_77_systems = verifier.Systems{ .public_input = system_77_public_input, .vanishing = system_77, .logderivativesum = system_77_logderiv, .grandproduct = system_77_grandproduct, .rowlimit = system_77_rowlimit, .shared_randomness = system_77_shared_randomness, .pcs = verify_case_77_pcs_system };
 
+pub const system_78_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
+    .total_round_coins = 2,
+    .dynamic_module_count = 0,
+};
+pub const system_78_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 3, 1, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
+};
+
+// scenario: "all-size-one"
+
+// expression: "sum"
+const system_78_module_0_expressions = [_]vanishing.ExprNode{
+    .{ .column_claim = 0 }, // col: "c"
+    .{ .column_claim = 1 }, // col: "a"
+    .{ .column_claim = 2 }, // col: "b"
+    .{ .op = .{ .operator = .add, .lhs = 1, .rhs = 2 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 3 } },
+};
+
+const system_78_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
+    // expression: "sum"
+    .{ .expression = 4, .cancelled_positions = &.{} },
+};
+
+const system_78_module_0_buckets = [_]vanishing.Bucket{
+    .{ .ratio = 1, .vanishings = &system_78_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
+};
+
+const system_78_modules = [_]vanishing.Module{
+    // module: "mod"
+    .{ .size = .{ .static = 1 }, .expressions = &system_78_module_0_expressions, .buckets = &system_78_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
+};
+
+// system: "all-size-one"
+const system_78 = vanishing.System{
+    .modules = &system_78_modules,
+    .dynamic_module_count = 0,
+    .total_witness_claims = 3,
+    .total_quotient_claims = 1,
+};
+
+// logderiv system: "all-size-one"
+const system_78_logderiv_queries = [_]logderivativesum.Query{};
+
+const system_78_logderiv = logderivativesum.System{ .queries = &system_78_logderiv_queries };
+// grandproduct system: "all-size-one"
+const system_78_grandproduct_queries = [_]grandproduct.Query{};
+
+const system_78_grandproduct = grandproduct.System{ .queries = &system_78_grandproduct_queries };
+// rowlimit system: "all-size-one"
+const system_78_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_78_rowlimit = rowlimit.System{ .checks = &system_78_rowlimit_checks };
+// shared-randomness system: "all-size-one"
+const system_78_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_78_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_78_shared_randomness_contribution_refs };
+const verify_case_78_pcs_witness_map = [_]pcs.ClaimRef{
+    .{ .col_decl_idx = 2, .shift = 0 },
+    .{ .col_decl_idx = 0, .shift = 0 },
+    .{ .col_decl_idx = 1, .shift = 0 },
+};
+const verify_case_78_pcs_quotient_map = [_]pcs.ClaimRef{
+    .{ .col_decl_idx = 3, .shift = 0 },
+};
+const verify_case_78_pcs_batch_roots = [_]pcs.BatchRoot{
+    .{ .round = 0 },
+    .{ .round = 1 },
+};
+const verify_case_78_pcs_batch_manifests = [_]?pcs.BatchManifest{
+    .{ .round = 0, .cell_start = 0, .col_start = 0 },
+    .{ .round = 1, .cell_start = 0, .col_start = 3 },
+};
+
+const verify_case_78_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_78_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 3 },
+};
+
+pub const verify_case_78_pcs_system = pcs.System{
+    .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4, .merkle_cap_height = 2 },
+    .columns = &.{
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+    },
+    .all_shifts = &verify_case_78_pcs_all_shifts,
+    .all_claim_cells = &verify_case_78_pcs_all_claim_cells,
+    .num_batches = 2,
+    .max_entries = 4,
+    .max_size_log2 = 22,
+    .witness_map = &verify_case_78_pcs_witness_map,
+    .quotient_map = &verify_case_78_pcs_quotient_map,
+    .batch_roots = &verify_case_78_pcs_batch_roots,
+    .batch_manifests = &verify_case_78_pcs_batch_manifests,
+    .zeta_coin_index = 1,
+};
+const verify_case_78_module_sizes = [_]usize{};
+
+const verify_case_78_round_0_cells = [_]protocol.Scalar{
+    .{ .base = .{ .value = 0 } },
+    .{ .base = .{ .value = 0 } },
+    .{ .base = .{ .value = 0 } },
+};
+
+const verify_case_78_round_1_cells = [_]protocol.Scalar{
+    .{ .base = .{ .value = 0 } },
+};
+
+const verify_case_78_round_2_cells = [_]protocol.Scalar{
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 7 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 3 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 4 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } } },
+};
+
+const verify_case_78_rounds = [_]protocol.RoundMessage{
+    .{ .commitment = commitment.Commitment{ .{ .value = 1221284762 }, .{ .value = 267636840 }, .{ .value = 2112144749 }, .{ .value = 389664648 }, .{ .value = 596392684 }, .{ .value = 893151919 }, .{ .value = 2046381192 }, .{ .value = 1470793313 } }, .cells = &verify_case_78_round_0_cells },
+    .{ .commitment = commitment.Commitment{ .{ .value = 2066816440 }, .{ .value = 1251002353 }, .{ .value = 1739592788 }, .{ .value = 365120622 }, .{ .value = 445688483 }, .{ .value = 1162635539 }, .{ .value = 2126865213 }, .{ .value = 1891784736 } }, .cells = &verify_case_78_round_1_cells },
+    .{ .cells = &verify_case_78_round_2_cells },
+};
+
+const verify_case_78_pcs_opening = verifier.PcsOpening{ .proof = pcs.OpeningProof{ .input_queries = &.{ &.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 3 }, .{ .value = 4 }, .{ .value = 7 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 3 }, .{ .value = 4 }, .{ .value = 7 } }, .ext = &[_]ext.Ext{} } }} }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} } }} } }, &.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 3 }, .{ .value = 4 }, .{ .value = 7 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 3 }, .{ .value = 4 }, .{ .value = 7 } }, .ext = &[_]ext.Ext{} } }} }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} } }} } }, &.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 3 }, .{ .value = 4 }, .{ .value = 7 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 3 }, .{ .value = 4 }, .{ .value = 7 } }, .ext = &[_]ext.Ext{} } }} }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} } }} } }, &.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 3 }, .{ .value = 4 }, .{ .value = 7 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 3 }, .{ .value = 4 }, .{ .value = 7 } }, .ext = &[_]ext.Ext{} } }} }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} } }} } } }, .input_caps = &.{ pcs.InputCap{ .nodes = &[_]commitment.Commitment{}, .tables = &.{} }, pcs.InputCap{ .nodes = &[_]commitment.Commitment{}, .tables = &.{} } }, .fri_proof = fri.Proof{ .round_roots = &[_]commitment.Commitment{}, .round_caps = &.{}, .final_poly = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }}, .running_queries = &.{ &.{}, &.{}, &.{}, &.{} } } } };
+
+const verify_case_78_proof = verifier.Proof{
+    .rounds = &verify_case_78_rounds,
+    .module_sizes = &verify_case_78_module_sizes,
+    .pcs_opening = verify_case_78_pcs_opening,
+};
+
+const verify_case_78_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_78_input = verifier.VerifyInput{
+    .proof = verify_case_78_proof,
+    .public_inputs = &verify_case_78_public_inputs,
+};
+
+const verify_case_78_failing_module_sizes = [_]usize{};
+
+const verify_case_78_failing_round_0_cells = [_]protocol.Scalar{
+    .{ .base = .{ .value = 0 } },
+    .{ .base = .{ .value = 0 } },
+    .{ .base = .{ .value = 0 } },
+};
+
+const verify_case_78_failing_round_1_cells = [_]protocol.Scalar{
+    .{ .base = .{ .value = 0 } },
+};
+
+const verify_case_78_failing_round_2_cells = [_]protocol.Scalar{
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 8 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 3 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 4 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1065353217 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } } },
+};
+
+const verify_case_78_failing_rounds = [_]protocol.RoundMessage{
+    .{ .commitment = commitment.Commitment{ .{ .value = 1637490376 }, .{ .value = 1163027839 }, .{ .value = 729941915 }, .{ .value = 315820874 }, .{ .value = 472640577 }, .{ .value = 2073666797 }, .{ .value = 828187232 }, .{ .value = 1744401879 } }, .cells = &verify_case_78_failing_round_0_cells },
+    .{ .commitment = commitment.Commitment{ .{ .value = 931651904 }, .{ .value = 1353798335 }, .{ .value = 440902954 }, .{ .value = 590466343 }, .{ .value = 101396112 }, .{ .value = 444665449 }, .{ .value = 1647389806 }, .{ .value = 1906372950 } }, .cells = &verify_case_78_failing_round_1_cells },
+    .{ .cells = &verify_case_78_failing_round_2_cells },
+};
+
+const verify_case_78_failing_pcs_opening = verifier.PcsOpening{ .proof = pcs.OpeningProof{ .input_queries = &.{ &.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 3 }, .{ .value = 4 }, .{ .value = 8 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 3 }, .{ .value = 4 }, .{ .value = 8 } }, .ext = &[_]ext.Ext{} } }} }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1065353217 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1065353217 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} } }} } }, &.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 3 }, .{ .value = 4 }, .{ .value = 8 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 3 }, .{ .value = 4 }, .{ .value = 8 } }, .ext = &[_]ext.Ext{} } }} }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1065353217 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1065353217 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} } }} } }, &.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 3 }, .{ .value = 4 }, .{ .value = 8 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 3 }, .{ .value = 4 }, .{ .value = 8 } }, .ext = &[_]ext.Ext{} } }} }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1065353217 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1065353217 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} } }} } }, &.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 3 }, .{ .value = 4 }, .{ .value = 8 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 3 }, .{ .value = 4 }, .{ .value = 8 } }, .ext = &[_]ext.Ext{} } }} }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1065353217 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1065353217 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} } }} } } }, .input_caps = &.{ pcs.InputCap{ .nodes = &[_]commitment.Commitment{}, .tables = &.{} }, pcs.InputCap{ .nodes = &[_]commitment.Commitment{}, .tables = &.{} } }, .fri_proof = fri.Proof{ .round_roots = &[_]commitment.Commitment{}, .round_caps = &.{}, .final_poly = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }}, .running_queries = &.{ &.{}, &.{}, &.{}, &.{} } } } };
+
+const verify_case_78_failing_proof = verifier.Proof{
+    .rounds = &verify_case_78_failing_rounds,
+    .module_sizes = &verify_case_78_failing_module_sizes,
+    .pcs_opening = verify_case_78_failing_pcs_opening,
+};
+
+const verify_case_78_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_78_failing_input = verifier.VerifyInput{
+    .proof = verify_case_78_failing_proof,
+    .public_inputs = &verify_case_78_failing_public_inputs,
+};
+
+const verify_case_78_systems = verifier.Systems{ .public_input = system_78_public_input, .vanishing = system_78, .logderivativesum = system_78_logderiv, .grandproduct = system_78_grandproduct, .rowlimit = system_78_rowlimit, .shared_randomness = system_78_shared_randomness, .pcs = verify_case_78_pcs_system };
+
 pub const metadata = [_]VerifyCaseMetadata{
     .{ .name = "BooleanColumn", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 3, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 1, .total_quotient_claims = 1 },
     .{ .name = "Fibonacci", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 3, .total_quotient_claims = 1 },
@@ -18306,6 +18498,7 @@ pub const metadata = [_]VerifyCaseMetadata{
     .{ .name = "DynamicFibonacciMultiSizeBlowup4", .module_count = 1, .dynamic_module_count = 1, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 3, .total_quotient_claims = 1 },
     .{ .name = "DynamicFibonacciMultiSizeBlowup8", .module_count = 1, .dynamic_module_count = 1, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 3, .total_quotient_claims = 1 },
     .{ .name = "DynamicFibonacciMultiSizeBlowup16", .module_count = 1, .dynamic_module_count = 1, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 3, .total_quotient_claims = 1 },
+    .{ .name = "AllSizeOneColumns", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 3, .total_quotient_claims = 1 },
 };
 
 pub fn get(comptime index: usize) VerifyCase {
@@ -18388,6 +18581,7 @@ pub fn get(comptime index: usize) VerifyCase {
         75 => .{ .name = "DynamicFibonacciMultiSizeBlowup4", .spec = system_75_spec, .systems = verify_case_75_systems },
         76 => .{ .name = "DynamicFibonacciMultiSizeBlowup8", .spec = system_76_spec, .systems = verify_case_76_systems },
         77 => .{ .name = "DynamicFibonacciMultiSizeBlowup16", .spec = system_77_spec, .systems = verify_case_77_systems },
+        78 => .{ .name = "AllSizeOneColumns", .spec = system_78_spec, .systems = verify_case_78_systems },
         else => @compileError("unknown verifier fixture case index"),
     };
 }
@@ -18471,6 +18665,7 @@ pub fn getInput(comptime index: usize) verifier.VerifyInput {
         75 => verify_case_75_input,
         76 => verify_case_76_input,
         77 => verify_case_77_input,
+        78 => verify_case_78_input,
         else => @compileError("unknown verifier fixture case index"),
     };
 }
@@ -18554,6 +18749,7 @@ pub fn getInputFailing(comptime index: usize) verifier.VerifyInput {
         75 => @compileError("verifier fixture case 75 (DynamicFibonacciMultiSizeBlowup4) has no failing input"),
         76 => @compileError("verifier fixture case 76 (DynamicFibonacciMultiSizeBlowup8) has no failing input"),
         77 => @compileError("verifier fixture case 77 (DynamicFibonacciMultiSizeBlowup16) has no failing input"),
+        78 => verify_case_78_failing_input,
         else => @compileError("unknown verifier fixture case index"),
     };
 }
@@ -18638,6 +18834,7 @@ pub fn hasFailing(comptime index: usize) bool {
         75 => false,
         76 => false,
         77 => false,
+        78 => true,
         else => false,
     };
 }
@@ -18722,6 +18919,7 @@ pub fn getInputFailingVerify(comptime index: usize) verifier.VerifyInput {
         75 => @compileError("verifier fixture case 75 (DynamicFibonacciMultiSizeBlowup4) has no self-consistent failing input"),
         76 => @compileError("verifier fixture case 76 (DynamicFibonacciMultiSizeBlowup8) has no self-consistent failing input"),
         77 => @compileError("verifier fixture case 77 (DynamicFibonacciMultiSizeBlowup16) has no self-consistent failing input"),
+        78 => @compileError("verifier fixture case 78 (AllSizeOneColumns) has no self-consistent failing input"),
         else => @compileError("unknown verifier fixture case index"),
     };
 }
@@ -18806,6 +19004,7 @@ pub fn hasFailingVerify(comptime index: usize) bool {
         75 => false,
         76 => false,
         77 => false,
+        78 => false,
         else => false,
     };
 }
@@ -18890,6 +19089,7 @@ pub fn failingVerifyError(comptime index: usize) []const u8 {
         75 => @compileError("verifier fixture case 75 (DynamicFibonacciMultiSizeBlowup4) has no self-consistent failing input"),
         76 => @compileError("verifier fixture case 76 (DynamicFibonacciMultiSizeBlowup8) has no self-consistent failing input"),
         77 => @compileError("verifier fixture case 77 (DynamicFibonacciMultiSizeBlowup16) has no self-consistent failing input"),
+        78 => @compileError("verifier fixture case 78 (AllSizeOneColumns) has no self-consistent failing input"),
         else => @compileError("unknown verifier fixture case index"),
     };
 }
@@ -18974,6 +19174,7 @@ pub fn getInputAlt(comptime index: usize) verifier.VerifyInput {
         75 => verify_case_75_alt_input,
         76 => verify_case_76_alt_input,
         77 => verify_case_77_alt_input,
+        78 => @compileError("verifier fixture case 78 (AllSizeOneColumns) has no alt input"),
         else => @compileError("unknown verifier fixture case index"),
     };
 }
@@ -19058,6 +19259,7 @@ pub fn hasAlt(comptime index: usize) bool {
         75 => true,
         76 => true,
         77 => true,
+        78 => false,
         else => false,
     };
 }
@@ -19142,6 +19344,7 @@ pub fn getInputAltDifferentStatement(comptime index: usize) verifier.VerifyInput
         75 => @compileError("verifier fixture case 75 (DynamicFibonacciMultiSizeBlowup4) has no altDifferentStatement input"),
         76 => @compileError("verifier fixture case 76 (DynamicFibonacciMultiSizeBlowup8) has no altDifferentStatement input"),
         77 => @compileError("verifier fixture case 77 (DynamicFibonacciMultiSizeBlowup16) has no altDifferentStatement input"),
+        78 => @compileError("verifier fixture case 78 (AllSizeOneColumns) has no altDifferentStatement input"),
         else => @compileError("unknown verifier fixture case index"),
     };
 }
@@ -19226,6 +19429,7 @@ pub fn hasAltDifferentStatement(comptime index: usize) bool {
         75 => false,
         76 => false,
         77 => false,
+        78 => false,
         else => false,
     };
 }
@@ -19310,6 +19514,7 @@ pub fn getInputAltSameStatement(comptime index: usize) verifier.VerifyInput {
         75 => @compileError("verifier fixture case 75 (DynamicFibonacciMultiSizeBlowup4) has no altSameStatement input"),
         76 => @compileError("verifier fixture case 76 (DynamicFibonacciMultiSizeBlowup8) has no altSameStatement input"),
         77 => @compileError("verifier fixture case 77 (DynamicFibonacciMultiSizeBlowup16) has no altSameStatement input"),
+        78 => @compileError("verifier fixture case 78 (AllSizeOneColumns) has no altSameStatement input"),
         else => @compileError("unknown verifier fixture case index"),
     };
 }
@@ -19394,6 +19599,7 @@ pub fn hasAltSameStatement(comptime index: usize) bool {
         75 => false,
         76 => false,
         77 => false,
+        78 => false,
         else => false,
     };
 }
