@@ -8,7 +8,6 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/bufpool"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
-	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 )
 
 // leafDomainTag domain-separates Merkle leaves so a table with the same row
@@ -105,11 +104,10 @@ func (table MultiSizeTable) Encode(encoders []*RSEncoder) MultiSizeTable {
 	}
 	parallel.ExecuteLargestFirst(costs, func(w, workers int) {
 		it := work[w]
-		encodeOpts := []fft.Option{fft.WithNbTasks(workers)}
 		if it.ext {
-			encoders[it.i].EncodeExtInto(table[it.i].Ext[it.k], encoded[it.i].Ext[it.k], encodeOpts...)
+			encoders[it.i].EncodeExtInto(table[it.i].Ext[it.k], encoded[it.i].Ext[it.k], workers)
 		} else {
-			encoders[it.i].EncodeInto(table[it.i].Base[it.k], encoded[it.i].Base[it.k], encodeOpts...)
+			encoders[it.i].EncodeInto(table[it.i].Base[it.k], encoded[it.i].Base[it.k], workers)
 		}
 	})
 

@@ -60,12 +60,10 @@ func newEncoderFromDomains(domain *fft.Domain, plainTextSize int) RSEncoder {
 // which is exactly the layout [foldLayerInternally] and the Merkle commitment
 // expect. To recover natural order, bit-reverse the result.
 //
-// Optional fftOpts are forwarded to both internal FFTs (e.g. to cap inner
-// parallelism with fft.WithNbTasks when Encode is itself called inside a
-// parallel.Execute loop).
-func (enc *RSEncoder) Encode(p []field.Element, fftOpt ...fft.Option) []field.Element {
+// Encode runs on all the CPUs; see [RSEncoder.EncodeInto] to bound that.
+func (enc *RSEncoder) Encode(p []field.Element) []field.Element {
 	_p := make([]field.Element, enc.Domain.Cardinality)
-	enc.EncodeInto(p, _p, fftOpt...)
+	enc.EncodeInto(p, _p, 0)
 	return _p
 }
 
@@ -73,7 +71,12 @@ func (enc *RSEncoder) Encode(p []field.Element, fftOpt ...fft.Option) []field.El
 // buffer out, whose length must be the codeword size. out must not alias p,
 // and may hold stale values: every element is overwritten. Callers pass
 // pooled buffers, so that commits reuse their codeword memory.
-func (enc *RSEncoder) EncodeInto(p []field.Element, out []field.Element, fftOpt ...fft.Option) {
+//
+// workers caps the encode's inner parallelism (the FFTs and the bit-reversed
+// copy), for when EncodeInto is itself called inside a parallel loop; workers
+// ≤ 0 means GOMAXPROCS.
+func (enc *RSEncoder) EncodeInto(p []field.Element, out []field.Element, workers int) {
+	fftOpt := fftWorkers(workers)
 
 	// get the size of p
 	n := len(p)
@@ -94,7 +97,7 @@ func (enc *RSEncoder) EncodeInto(p []field.Element, out []field.Element, fftOpt 
 	// half-size coset FFT. This replaces the full-size FFT and the standalone
 	// coefficient bit-reversal of the generic path.
 	if enc.cosetSmallDomain != nil && n == enc.PlainTextSize {
-		bitReverseCopy(_p[:n], p)
+		bitReverseCopy(_p[:n], p, workers)
 		copy(_p[n:], _p[:n])
 		enc.smallDomain.FFTInverse(_p[n:], fft.DIT, fftOpt...)
 		enc.cosetSmallDomain.FFT(_p[n:], fft.DIF, append(fftOpt[:len(fftOpt):len(fftOpt)], fft.OnCoset())...)
@@ -120,16 +123,17 @@ func (enc *RSEncoder) EncodeInto(p []field.Element, out []field.Element, fftOpt 
 // As with [RSEncoder.Encode], the returned codeword is in N-bit-reversed order
 // (the evaluation of natural-order index i lives at position bitReverse(i)), so
 // that FRI conjugate pairs land at adjacent positions 2j and 2j+1.
-func (enc *RSEncoder) EncodeExt(p []field.Ext, fftOpt ...fft.Option) []field.Ext {
+func (enc *RSEncoder) EncodeExt(p []field.Ext) []field.Ext {
 	_p := make([]field.Ext, enc.Domain.Cardinality)
-	enc.EncodeExtInto(p, _p, fftOpt...)
+	enc.EncodeExtInto(p, _p, 0)
 	return _p
 }
 
 // EncodeExtInto is [RSEncoder.EncodeExt] writing the codeword into the
 // caller-provided buffer out, whose length must be the codeword size. out must
-// not alias p.
-func (enc *RSEncoder) EncodeExtInto(p []field.Ext, out []field.Ext, fftOpt ...fft.Option) {
+// not alias p. workers is as in [RSEncoder.EncodeInto].
+func (enc *RSEncoder) EncodeExtInto(p []field.Ext, out []field.Ext, workers int) {
+	fftOpt := fftWorkers(workers)
 	n := len(p)
 
 	N := enc.Domain.Cardinality
@@ -140,7 +144,7 @@ func (enc *RSEncoder) EncodeExtInto(p []field.Ext, out []field.Ext, fftOpt ...ff
 
 	// Rate-two fast path; see EncodeInto for the layout argument.
 	if enc.cosetSmallDomain != nil && n == enc.PlainTextSize {
-		bitReverseCopy(_p[:n], p)
+		bitReverseCopy(_p[:n], p, workers)
 		copy(_p[n:], _p[:n])
 		enc.smallDomain.FFTInverseExt6(_p[n:], fft.DIT, fftOpt...)
 		enc.cosetSmallDomain.FFTExt6(_p[n:], fft.DIF, append(fftOpt[:len(fftOpt):len(fftOpt)], fft.OnCoset())...)
@@ -158,4 +162,13 @@ func (enc *RSEncoder) EncodeExtInto(p []field.Ext, out []field.Ext, fftOpt ...ff
 // InverseRate returns the inverse-rate of the code
 func (enc *RSEncoder) InverseRate() int {
 	return int(enc.Domain.Cardinality) / enc.PlainTextSize
+}
+
+// fftWorkers returns the FFT options capping an FFT at workers tasks, or none
+// (all the CPUs) when workers ≤ 0.
+func fftWorkers(workers int) []fft.Option {
+	if workers <= 0 {
+		return nil
+	}
+	return []fft.Option{fft.WithNbTasks(workers)}
 }
