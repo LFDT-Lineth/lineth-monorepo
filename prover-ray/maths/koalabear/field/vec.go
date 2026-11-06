@@ -257,6 +257,39 @@ func VecInnerProdExtExt(a, b []Ext) Ext {
 	return extensions.VectorE6(a).InnerProduct(b)
 }
 
+// innerProdBlock is the width of VecInnerProdExtBase's lane accumulators.
+const innerProdBlock = 1024
+
+// VecInnerProdExtBase returns Σ a[i]·b[i] where a is an extension vector and
+// b a base vector. It accumulates lane-wise into innerProdBlock stack
+// accumulators with VectorE6.MulAccByElement (AVX-512, scalar fallback
+// elsewhere), then folds the accumulators with limb-view adds. Field
+// addition is exact, so the result does not depend on the summation order.
+// Cost: 6 base multiplications + 6 base additions per element.
+// a and b must have equal length.
+func VecInnerProdExtBase(a []Ext, b []Element) Ext {
+	mustEqualLen2(len(a), len(b))
+	var accArr [innerProdBlock]Ext
+	width := min(len(a), innerProdBlock)
+	acc := extensions.VectorE6(accArr[:width])
+	for lo := 0; lo < len(a); lo += innerProdBlock {
+		hi := min(lo+innerProdBlock, len(a))
+		acc[:hi-lo].MulAccByElement(a[lo:hi], b[lo:hi])
+	}
+	// Halve the accumulators down to one kernel width, then sum the rest.
+	for width > 16 && width%2 == 0 {
+		half := width / 2
+		limbs := ExtLimbs(acc[:half])
+		limbs.Add(limbs, ExtLimbs(acc[half:width]))
+		width = half
+	}
+	var res Ext
+	for i := range width {
+		res.Add(&res, &acc[i])
+	}
+	return res
+}
+
 // VecMulInto sets res[i] = a[i] * b[i] for all i, dispatching to the typed
 // variant that matches the field types of the operands.
 //

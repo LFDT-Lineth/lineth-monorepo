@@ -302,6 +302,48 @@ func TestExtLimbs(t *testing.T) {
 	}
 }
 
+// innerProdExtBaseScalar is the element-loop ext·base inner product.
+func innerProdExtBaseScalar(a []Ext, b []Element) Ext {
+	var acc, term Ext
+	for i := range a {
+		term.MulByElement(&a[i], &b[i])
+		acc.Add(&acc, &term)
+	}
+	return acc
+}
+
+// TestVecInnerProdExtBase checks VecInnerProdExtBase against the element
+// loop on lengths that are tiny, not multiples of the 16 kernel lanes, and
+// around and past the accumulator width.
+func TestVecInnerProdExtBase(t *testing.T) {
+	for _, n := range []int{0, 1, 2, 7, 15, 16, 17, 31, 32, 100, 200, 255, 256, 257, 1000, 1023, 1024, 1025, 2050, 4096, 4099} {
+		a, b := randomExts(n), randomElems(n)
+		want := innerProdExtBaseScalar(a, b)
+		got := VecInnerProdExtBase(a, b)
+		if !extEq(want, got) {
+			t.Fatalf("n=%d: got %v, want %v", n, got, want)
+		}
+	}
+}
+
+// BenchmarkVecInnerProdExtBase compares the kernel and the element loop on a
+// 4096-element chunk.
+func BenchmarkVecInnerProdExtBase(b *testing.B) {
+	a, d := randomExts(4096), randomElems(4096)
+	var sink Ext
+	b.Run("scalar", func(b *testing.B) {
+		for b.Loop() {
+			sink = innerProdExtBaseScalar(a, d)
+		}
+	})
+	b.Run("vector", func(b *testing.B) {
+		for b.Loop() {
+			sink = VecInnerProdExtBase(a, d)
+		}
+	})
+	_ = sink
+}
+
 // TestVecSubIntoDispatch verifies that VecSubInto dispatches correctly.
 func TestVecSubIntoDispatch(t *testing.T) {
 	elems := [2][]Element{randomElems(testN), randomElems(testN)}

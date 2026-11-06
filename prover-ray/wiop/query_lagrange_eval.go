@@ -256,12 +256,12 @@ func (le *LagrangeEval) evalPolynomialsShared(rt *Runtime, z field.Ext) []field.
 	sums := make([]field.Ext, len(parts))
 	parallel.ExecuteDynamic(len(parts), func(p int) {
 		var (
-			it        = parts[p]
-			t         = &terms[it.owner]
-			w         = weights[t.domain]
-			lo, hi    = t.dataStart, t.dataStart + t.data.Len()
-			ds, de    = max(it.start, lo), min(it.end, hi)
-			acc, term field.Ext
+			it     = parts[p]
+			t      = &terms[it.owner]
+			w      = weights[t.domain]
+			lo, hi = t.dataStart, t.dataStart + t.data.Len()
+			ds, de = max(it.start, lo), min(it.end, hi)
+			acc    field.Ext
 		)
 		if !t.pad.IsZero() {
 			var padAcc field.Ext
@@ -279,10 +279,8 @@ func (le *LagrangeEval) evalPolynomialsShared(rt *Runtime, z field.Ext) []field.
 		}
 		if t.data.IsBase() {
 			data := t.data.AsBase()
-			for j := ds; j < de; j++ {
-				term.MulByElement(&w[j], &data[j-lo])
-				acc.Add(&acc, &term)
-			}
+			inner := field.VecInnerProdExtBase(w[ds:de], data[ds-lo:de-lo])
+			acc.Add(&acc, &inner)
 		} else {
 			data := t.data.AsExt()
 			inner := field.VecInnerProdExtExt(w[ds:de], data[ds-lo:de-lo])
