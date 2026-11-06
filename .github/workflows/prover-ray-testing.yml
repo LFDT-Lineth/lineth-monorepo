@@ -97,6 +97,13 @@ jobs:
       working-directory: prover-ray
       run: |
         go test -short -timeout=600s -tags bufpooldebug ./utils/bufpool/... ./crypto/koalabear/fri/... ./wiop/compilers/pcs/... ./wiop/compilers/global/...
+    # Concurrent proofs on one System share its lazy state and the buffer
+    # pools: check under the race detector, with poisoned pools, that each
+    # equals its serial proof.
+    - name: Test concurrent proving under the race detector
+      working-directory: prover-ray
+      run: |
+        go test -short -timeout=600s -race -tags bufpooldebug -run TestConcurrentProveMatchesSerial ./wiop/compilers/
 
   ssz-golden:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
