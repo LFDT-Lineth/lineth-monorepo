@@ -13,6 +13,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/jobadapter"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/jobadapter/subprocess"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -292,4 +293,33 @@ func TestRun_DispatchesProgramID(t *testing.T) {
 	err := run([]string{"program-id"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "--elf is required", "run must route program-id to its own command, not the adapter")
+}
+
+func TestPipelineFor_GuestsDir(t *testing.T) {
+	cfg := &config.Config{
+		GuestsDir:   "/data/guests",
+		Execution:   config.Execution{ProverMode: "dev-zkvm"},
+		Rollup:      config.Pipeline{ProverMode: "dev-mock"},
+		Aggregation: config.Pipeline{ProverMode: "dev-mock"},
+	}
+	for _, typ := range proofTypes {
+		p, ok := pipelineFor(cfg, typ)
+		require.True(t, ok, "%s is configured", typ)
+		assert.Equal(t, "/data/guests", p.guestsDir, "%s must find its guest in the shared guests folder", typ)
+	}
+}
+
+func TestRunProve_DevZkVMRequiresGuestsDir(t *testing.T) {
+	dir := t.TempDir()
+	cfg := filepath.Join(dir, "config.toml")
+	require.NoError(t, os.WriteFile(cfg, []byte(
+		"version = \"t\"\n[execution]\nprover_mode = \"dev-zkvm\"\n"), 0o600))
+	in := filepath.Join(dir, "1-1-getZkL2ExecutionProofV1.json")
+	reqData, err := os.ReadFile(filepath.Join(fixtureDir, "request_single_block.json"))
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(in, reqData, 0o600)) //nolint:gosec // G703: test-controlled path
+
+	err = run([]string{cmdProve, flagConfig, cfg, flagIn, in, flagOut, filepath.Join(dir, "out.json")})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "guests folder", "dev-zkvm without guests_dir must fail with a clear error")
 }

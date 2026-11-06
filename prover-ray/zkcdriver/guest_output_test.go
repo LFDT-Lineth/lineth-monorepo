@@ -67,10 +67,8 @@ func TestGuestPublicOutputs(t *testing.T) {
 
 	output := zkcdriver.PublicOutputs(sys)
 	assert.Equal(t, "guest_output", output.Name)
-	require.Len(t, output.Address, 2, "a u32 address is split across two 16-bit limbs")
-	for i, id := range append(output.Address, output.Data) {
-		assert.NotNil(t, sys.LookupColumn(id), "column %d must resolve", i)
-	}
+	assert.NotNil(t, sys.LookupColumn(output.Address), "the address column must resolve")
+	assert.NotNil(t, sys.LookupColumn(output.Data), "the data column must resolve")
 
 	shard := traceSingleShard(t, driver, inputs)
 	proof, pub := sys.Prove(func(rt *wiop.Runtime) {

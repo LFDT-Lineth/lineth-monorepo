@@ -15,7 +15,7 @@ import (
 // The guest output memory holds one byte per row, in address order, on the last
 // rows of its module. The guest writes exactly [NumGuestPublicOutputs] bytes to
 // it, so byte k is on row k-NumGuestPublicOutputs, counted from the end (-1
-// being the last row), and is opened there. A local constraint on each address limb pins the length: the last row
+// being the last row), and is opened there. A local constraint on the address pins the length: the last row
 // holds the address NumGuestPublicOutputs-1, which no padding row does, and the
 // addresses start at zero and increment by one, so that row is the last of
 // exactly NumGuestPublicOutputs element rows.
@@ -30,14 +30,9 @@ func RegisterGuestPublicOutputs(sys *wiop.System) {
 		ctx    = sys.Context.Childf("guest-public-outputs")
 	)
 
-	// The limbs are most significant first, so only the last one is non-zero.
-	for i, id := range output.Address {
-		var last wiop.Expression = sys.LookupColumn(id).At(-1)
-		if i == len(output.Address)-1 {
-			last = wiop.Sub(last, wiop.NewConstantField(field.NewElement(NumGuestPublicOutputs-1)))
-		}
-		module.NewVanishing(ctx.Childf("last-address-%d", i), last)
-	}
+	lastAddress := sys.LookupColumn(output.Address).At(-1)
+	module.NewVanishing(ctx.Childf("last-address"),
+		wiop.Sub(lastAddress, wiop.NewConstantField(field.NewElement(NumGuestPublicOutputs-1))))
 
 	for k := range NumGuestPublicOutputs {
 		cell := data.At(k - NumGuestPublicOutputs).Open(ctx.Childf("output-%d", k))

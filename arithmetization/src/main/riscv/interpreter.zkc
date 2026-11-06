@@ -248,6 +248,12 @@ fn interpreter_a<registers, ram>(index:u32, pc:Address) -> (new_pc:Address) {
 
     rs1_plus_imm = signed_sum_of_double_word(v1, imm)
 
+    // Treat EBREAK first
+    if compute_op == ITYPE_EBREAK {
+        printf "[ERROR] ITYPE_EBREAK instruction triggered(c)\n"
+        fail
+    }
+
     switch compute_op {
         // ==============
         // I-type — LOAD
@@ -526,10 +532,6 @@ fn interpreter_b<registers, ram>(index:u32, pc:Address) -> (new_pc:Address) {
             new_pc = process_syscall(pc)
             // Early return
             return
-        }
-        case ITYPE_EBREAK: {
-            printf "[ERROR] ITYPE_EBREAK instruction triggered(c)\n"
-            fail
         }
         case RTYPE_KECCAK: {
             // printf "RTYPE_KECCAK(c) "
@@ -839,11 +841,10 @@ fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
         case EXIT_SYSCALL: {
             printf "ECALL for exit\n"
             //
-            if a0 == 0 {
-                printf "EXIT CODE = 0\n"
-            } else {
+            if a0 != 0 {
                 fail "EXIT CODE = %d\n", a0
             }
+            printf "EXIT CODE = 0\n"
             new_pc = MAX_UINT_32
         }
         case WRITE_SYSCALL: {
@@ -854,7 +855,7 @@ fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
                     write_guest_log(a1 as Address, a2 as Word)
                 }
                 case GUEST_OUT: {
-                    write_guest_output(a1 as Address, a2 as Word)
+                    write_guest_output(a1 as Address, a2 as u16)
                 }
                 default: {
                     print_string(a1 as Address, a2 as Word)
@@ -872,9 +873,9 @@ fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
 
 // Copy `size` bytes of guest RAM starting at byte address `offset` into the public
 // `guest_output` buffer at `output_write_address`.
-fn write_guest_output<ram>(offset:Address, size:Word) {
-    for i:u32 = 0; i<size; i = i + 1 {
-        var byte_read:u8 = read_8((offset + i) as Address)
+fn write_guest_output<ram>(offset:Address, size:u16) {
+    for i:u16 = 0; i<size; i = i + 1 {
+        var byte_read:u8 = read_8(offset + (i as Address))
         guest_output[i] = byte_read
     }
 }

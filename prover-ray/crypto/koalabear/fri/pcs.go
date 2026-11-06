@@ -543,17 +543,38 @@ func denominatorInverses(domainPoints, claimPoints []field.Ext) ([]field.Ext, er
 // means ζ (hence every ζ·ω_n^s claim point) lands on the domain, which is a
 // soundness violation.
 func denomBaseInverses(generator field.Element, n int, zeta field.Ext) ([]field.Ext, error) {
-	denoms := make([]field.Ext, n)
-	pow := field.One()
-	for e := range n {
-		x := field.Lift(pow)
-		denoms[e].Sub(&x, &zeta)
-		if denoms[e].IsZero() {
+	// Positions are independent: each chunk starts from its own power of the
+	// generator and batch-inverts its own denominators, with one field
+	// inversion per chunk.
+	const chunk = 1 << 12
+	inv := make([]field.Ext, n)
+	bad := make([]int, (n+chunk-1)/chunk)
+	parallel.Execute(len(bad), func(first, last int) {
+		denoms := make([]field.Ext, chunk)
+		for c := first; c < last; c++ {
+			lo, hi := c*chunk, min((c+1)*chunk, n)
+			bad[c] = -1
+			var pow field.Element
+			pow.ExpInt64(generator, int64(lo))
+			for e := lo; e < hi; e++ {
+				x := field.Lift(pow)
+				denoms[e-lo].Sub(&x, &zeta)
+				if denoms[e-lo].IsZero() && bad[c] < 0 {
+					bad[c] = e
+				}
+				pow.Mul(&pow, &generator)
+			}
+			if bad[c] < 0 {
+				field.BatchInvertExtInto(denoms[:hi-lo], inv[lo:hi])
+			}
+		}
+	})
+	for _, e := range bad {
+		if e >= 0 {
 			return nil, fmt.Errorf("fri: reconstructLevels: claim point lands on domain position %d", e)
 		}
-		pow.Mul(&pow, &generator)
 	}
-	return field.BatchInvertExt(denoms), nil
+	return inv, nil
 }
 
 // =============================================================================
@@ -1046,10 +1067,14 @@ func (pcs *PCS) reconstructLevels() ([]Level, error) {
 		// blowup of the size-2^sizeLog2 plaintext domain, so ω_n = ω_N^r.
 		r := size >> sizeLog2
 
-		var columns []quotientColumn
 		var powers []int
 		var trees []*Tree
 		var runningPower int
+		type levelEntry struct {
+			opening pcsOpening
+			entry   deepEntry
+		}
+		var entries []levelEntry
 		for _, bundle := range openingsLayout {
 			if bundle.SizeLog2 != uint8(sizeLog2) {
 				continue
@@ -1062,13 +1087,26 @@ func (pcs *PCS) reconstructLevels() ([]Level, error) {
 					trees = append(trees, opening.committed.Tree)
 					lastBatch = entry.BatchIdx
 				}
+				entries = append(entries, levelEntry{opening, entry})
+				powers = append(powers, entry.AlphaPower)
+			}
+		}
+		// The columns of a level are independent: they are set up
+		// concurrently, in their level order.
+		columns := make([]quotientColumn, len(entries))
+		errs := make([]error, len(entries))
+		parallel.Execute(len(entries), func(start, end int) {
+			for c := start; c < end; c++ {
+				opening, entry := entries[c].opening, entries[c].entry
 				column, err := encodedColumnEvals(opening.committed, entry)
 				if err != nil {
-					return nil, err
+					errs[c] = err
+					continue
 				}
 				column.Claims, err = pcs.openingClaimsForEntry(opening, entry)
 				if err != nil {
-					return nil, err
+					errs[c] = err
+					continue
 				}
 				// Precompute the E2 rotation offset and base-field prefactor
 				// of each claim point for Level.EvalsAt, parallel to claims
@@ -1082,8 +1120,12 @@ func (pcs *PCS) reconstructLevels() ([]Level, error) {
 					rotations[i].Scale.Exp(domain.generator, big.NewInt(int64(expo)))
 				}
 				column.Rotations = rotations
-				columns = append(columns, column)
-				powers = append(powers, entry.AlphaPower)
+				columns[c] = column
+			}
+		})
+		for _, err := range errs {
+			if err != nil {
+				return nil, err
 			}
 		}
 		if len(columns) == 0 {
@@ -1126,9 +1168,10 @@ func (pcs *PCS) roundForSize(sizeLog2 uint8) (uint8, error) {
 
 // encodedColumnEvals aliases the entry's codeword from the committed table into
 // a quotientColumn (populating exactly one of EvalsExt / EvalsBase). The
-// committed table is never mutated after Commit, and both consumers of these
-// slices — Level.EvalsAt during folding and the query phase — read them
-// read-only, so aliasing rather than copying is safe. This avoids allocating a
+// committed table is not mutated until [CommitterState.Release] returns it to
+// the pools, after the opening, and both consumers of these slices --
+// Level.EvalsAt during folding and the query phase -- only read them during
+// the opening, so aliasing rather than copying is safe. This avoids allocating a
 // fresh 4N-length []E6 per column (and, for base columns, widening every
 // element to E6) — the dominant cost of reconstructLevels. EvalsAt lifts base
 // elements to E6 on the stack as it reads them.
@@ -1226,21 +1269,26 @@ func (pcs *PCS) Open(state *ProverState, queryPositions []int) OpeningProof {
 }
 
 func (pcs *PCS) openInputQueries(inputs []CommitterState, queryPositions []int) []InputQuery {
+	// Queries only read the committed trees and tables, so they are opened
+	// concurrently.
 	res := make([]InputQuery, len(queryPositions))
-	for queryIdx, queryPosition := range queryPositions {
-		res[queryIdx] = make(InputQuery, len(inputs))
-		for inputIdx, committed := range inputs {
-			height := committed.Tree.NumLevel() - 1
-			depth := pcs.Params.merkleCapDepth(height)
-			res[queryIdx][inputIdx] = openInputTreeOpeningToDepth(pcs.Params, committed, queryPosition, depth)
+	parallel.Execute(len(queryPositions), func(start, end int) {
+		for queryIdx := start; queryIdx < end; queryIdx++ {
+			res[queryIdx] = make(InputQuery, len(inputs))
+			for inputIdx, committed := range inputs {
+				height := committed.Tree.NumLevel() - 1
+				depth := pcs.Params.merkleCapDepth(height)
+				res[queryIdx][inputIdx] = openInputTreeOpeningToDepth(pcs.Params, committed, queryPositions[queryIdx], depth)
+			}
 		}
-	}
+	})
 	return res
 }
 
 func (pcs *PCS) openInputCaps(inputs []CommitterState) []InputCap {
 	caps := make([]InputCap, len(inputs))
-	for i, committed := range inputs {
+	parallel.ExecuteDynamic(len(inputs), func(i int) {
+		committed := inputs[i]
 		info, err := inputCapShapeInfo(pcs.Params, committed.EncodedTable.Shape())
 		if err != nil {
 			panic(err)
@@ -1249,13 +1297,13 @@ func (pcs *PCS) openInputCaps(inputs []CommitterState) []InputCap {
 			panic("fri: openInputCaps: table shape and tree height differ")
 		}
 		if info.depth == 0 {
-			continue
+			return
 		}
 		frontierStart := (1 << info.depth) - 1
 		frontierEnd := 2*frontierStart + 1
 		caps[i].Nodes = append([]field.Octuplet(nil), committed.Tree.Nodes[frontierStart:frontierEnd]...)
 		caps[i].Tables = revealedInputTables(committed.EncodedTable, info)
-	}
+	})
 	return caps
 }
 

@@ -71,8 +71,7 @@ type L2ExecutionPayload struct {
 // block. The block range is implied by the payloads (their
 // executionPayload.blockNumber), as in the reference decoder.
 type L2ExecutionRequest struct {
-	// GuestProgramID is routing metadata; this decoder validates its shape but
-	// does not verify it against the configured guest ELF.
+	// GuestProgramID selects the guest ELF; this decoder validates its shape only.
 	GuestProgramID          []byte
 	ChainID                 uint64
 	ForkName                string

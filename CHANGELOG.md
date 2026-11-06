@@ -47,6 +47,7 @@
 - *(coordinator)* Generic AggregationsDaoG and AggregationV2 for RISC-V aggregation proofs (#4174)
 - *(misc)* Adding blob commitment and a proof to Rollup input (#4329)
 - *(maru)* Add support of self-calculating terminal total difficulty (#4295)
+- *(coordinator, maru, docker)* Let downstream images override the image labels and maru jar (#4393)
 
 ### 🐛 Bug Fixes
 
