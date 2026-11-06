@@ -684,13 +684,13 @@ func prefixScanExt(z []Ext, workers int, mul bool) {
 	}
 	shift := func(v []Ext, offset *Ext) {
 		if mul {
-			for i := range v {
-				v[i].Mul(&v[i], offset)
-			}
-		} else {
-			for i := range v {
-				v[i].Add(&v[i], offset)
-			}
+			// The vectorised E6 product; it may write over its input.
+			vec := extensions.VectorE6(v)
+			vec.ScalarMul(v, offset)
+			return
+		}
+		for i := range v {
+			v[i].Add(&v[i], offset)
 		}
 	}
 	var identity Ext
