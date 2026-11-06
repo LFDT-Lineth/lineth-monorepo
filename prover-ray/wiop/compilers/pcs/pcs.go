@@ -1393,31 +1393,13 @@ func initializeBatchClaims(shape fri.Shape) fri.BatchClaimedValues {
 // committed table is only read by the encoder, and the committer state keeps
 // the encoded table, not its input.
 func writeDownVectorBase(concrete *wiop.ConcreteVector, size int, padding wiop.PaddingDirection) []field.Element {
-
 	if !concrete.Plain.IsBase() {
 		utils.Panic("is not base")
 	}
-
-	plainBase := concrete.Plain.AsBase()
-	if len(plainBase) == size {
-		return plainBase
+	if plain := concrete.Plain.AsBase(); len(plain) == size {
+		return plain
 	}
-	plain := make([]field.Element, size)
-
-	if padding == wiop.PaddingDirectionLeft {
-		gap := size - len(plainBase)
-		for i := range gap {
-			plain[i] = concrete.Padding
-		}
-		copy(plain[gap:], plainBase)
-	} else {
-		copy(plain, plainBase)
-		for i := len(plainBase); i < size; i++ {
-			plain[i] = concrete.Padding
-		}
-	}
-
-	return plain
+	return wiop.NewRowReader(concrete, padding, size, 0).ReadBase(0, size, make([]field.Element, size))
 }
 
 // writeDownVectorExt materializes an extension-field column assignment padded up
@@ -1427,26 +1409,8 @@ func writeDownVectorBase(concrete *wiop.ConcreteVector, size int, padding wiop.P
 // As for [writeDownVectorBase], a column that is already size long is returned
 // without a copy.
 func writeDownVectorExt(concrete *wiop.ConcreteVector, size int, padding wiop.PaddingDirection) []field.Ext {
-
-	plainExt := concrete.Plain.AsExt()
-	if len(plainExt) == size {
-		return plainExt
+	if plain := concrete.Plain.AsExt(); len(plain) == size {
+		return plain
 	}
-	plain := make([]field.Ext, size)
-	padExt := field.Lift(concrete.Padding)
-
-	if padding == wiop.PaddingDirectionLeft {
-		gap := size - len(plainExt)
-		for i := range gap {
-			plain[i] = padExt
-		}
-		copy(plain[gap:], plainExt)
-	} else {
-		copy(plain, plainExt)
-		for i := len(plainExt); i < size; i++ {
-			plain[i] = padExt
-		}
-	}
-
-	return plain
+	return wiop.NewRowReader(concrete, padding, size, 0).ReadExt(0, size, make([]field.Ext, size))
 }
