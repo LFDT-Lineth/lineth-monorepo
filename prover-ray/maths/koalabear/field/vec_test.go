@@ -257,6 +257,51 @@ func TestVecSubExtExt(t *testing.T) {
 	checkExtSlice(t, want, res)
 }
 
+// TestVecAddSubExtExtLengths checks the limb-view VecAddExtExt and
+// VecSubExtExt against element-wise Ext.Add/Ext.Sub on lengths around the
+// 16-lane kernel width (including the empty and single-element cases), both
+// out of place and in place.
+func TestVecAddSubExtExtLengths(t *testing.T) {
+	for _, n := range []int{0, 1, 2, 3, 5, 15, 16, 17, 31, 33, 100, 257} {
+		a, b := randomExts(n), randomExts(n)
+		wantAdd, wantSub := make([]Ext, n), make([]Ext, n)
+		for i := range n {
+			wantAdd[i].Add(&a[i], &b[i])
+			wantSub[i].Sub(&a[i], &b[i])
+		}
+		got := make([]Ext, n)
+		VecAddExtExt(got, a, b)
+		checkExtSlice(t, wantAdd, got)
+		VecSubExtExt(got, a, b)
+		checkExtSlice(t, wantSub, got)
+
+		inPlace := slices.Clone(a)
+		VecAddExtExt(inPlace, inPlace, b)
+		checkExtSlice(t, wantAdd, inPlace)
+		inPlace = slices.Clone(a)
+		VecSubExtExt(inPlace, inPlace, b)
+		checkExtSlice(t, wantSub, inPlace)
+	}
+}
+
+// TestExtLimbs checks the limb view's length and coordinate order.
+func TestExtLimbs(t *testing.T) {
+	if ExtLimbs(nil) != nil {
+		t.Fatal("ExtLimbs(nil) must be nil")
+	}
+	v := randomExts(3)
+	limbs := ExtLimbs(v)
+	if len(limbs) != 18 {
+		t.Fatalf("len = %d, want 18", len(limbs))
+	}
+	for i := range v {
+		want := [6]Element{v[i].B0.A0, v[i].B0.A1, v[i].B1.A0, v[i].B1.A1, v[i].B2.A0, v[i].B2.A1}
+		if [6]Element(limbs[6*i:6*i+6]) != want {
+			t.Fatalf("element %d: limbs %v, want %v", i, limbs[6*i:6*i+6], want)
+		}
+	}
+}
+
 // TestVecSubIntoDispatch verifies that VecSubInto dispatches correctly.
 func TestVecSubIntoDispatch(t *testing.T) {
 	elems := [2][]Element{randomElems(testN), randomElems(testN)}
