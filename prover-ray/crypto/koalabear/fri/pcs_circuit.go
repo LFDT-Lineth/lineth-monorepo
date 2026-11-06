@@ -21,10 +21,10 @@ import (
 // are circuit variables: every position-dependent selection is expressed on
 // their bit decomposition, so the circuit shape does not depend on them.
 //
-// One deliberate divergence: the native verifier deduplicates input trees by
-// root value. Roots are variables here, so batches are assumed to have
-// pairwise distinct roots; a proof with a collision has fewer input openings
-// per query than the circuit expects and is rejected as malformed.
+// Input trees are never deduplicated here: roots are variables, so merging
+// batches with equal roots would make the circuit shape depend on the witness.
+// [PCS.VerifyGnark] therefore requires a PCS on which [PCS.DisableRootDedup]
+// was called, so that the native prover emits one input tree per batch too.
 
 // GnarkOpeningProof mirrors [OpeningProof].
 type GnarkOpeningProof struct {
@@ -246,6 +246,9 @@ func convertExt(e field.Ext, withValues bool) circuit.Ext {
 // mismatches panic at circuit-definition time; every value check is a
 // constraint.
 func (pcs *PCS) VerifyGnark(api frontend.API, in GnarkVerifyInputs, proof GnarkOpeningProof) {
+	if !pcs.rootDedupDisabled {
+		panic("fri: pcs.VerifyGnark: requires DisableRootDedup, or the proof shape depends on the committed values")
+	}
 	if len(in.Roots) != len(in.Shapes) {
 		panic(fmt.Sprintf("fri: pcs.VerifyGnark: got %d roots, %d shapes", len(in.Roots), len(in.Shapes)))
 	}

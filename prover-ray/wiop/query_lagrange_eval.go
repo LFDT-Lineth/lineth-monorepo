@@ -23,8 +23,9 @@ import (
 // where ω is the canonical n-th root of unity of the ambient field.
 //
 // LagrangeEval is both [GnarkCheckableQuery] and [AssignableQuery]:
-//   - Check and CheckGnark assert that all polynomials and the evaluation point
-//     are publicly visible, then verify that the claims match the evaluations.
+//   - Check verifies that the claims match the evaluations recomputed from the
+//     assigned columns. CheckGnark cannot do so (the verifier circuit carries no
+//     column values) and panics: the PCS compiler must reduce the query first.
 //   - SelfAssign computes the evaluations from the runtime assignment and
 //     stores them in the EvaluationClaims cells.
 //
@@ -353,13 +354,15 @@ func (le *LagrangeEval) evalPolynomialsEach(rt *Runtime, z0 field.Gen) []field.G
 	return results
 }
 
-// CheckGnark implements [GnarkCheckableQuery]. Asserts inside a gnark circuit
-// that each polynomial evaluates to the claimed value at the EvaluationPoint.
-//
-// Precondition: all polynomials and the EvaluationPoint must be publicly
-// visible; panics otherwise.
+// CheckGnark implements [GnarkCheckableQuery]. The verifier circuit carries no
+// column values, so the evaluations cannot be recomputed in-circuit: the claims
+// are instead bound to the committed columns by the PCS compiler, whose
+// [pcs.OpeningVerifierAction] verifies the FRI opening proof in-circuit.
+// Always panics, pointing at that reduction.
 func (le *LagrangeEval) CheckGnark(_ frontend.API, _ *GnarkRuntime) {
-	panic("wiop: LagrangeEval.CheckGnark not yet implemented")
+	panic(fmt.Sprintf(
+		"wiop: LagrangeEval(%s).CheckGnark: column evaluations are not checkable in-circuit; "+
+			"compile the query away with the PCS compiler first", le.context.Path()))
 }
 
 // NewLagrangeEval constructs and registers a [LagrangeEval] query on sys.

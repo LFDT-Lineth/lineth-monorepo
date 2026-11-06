@@ -160,7 +160,22 @@ type PCS struct {
 	FixedDomain bool
 	openings    []pcsOpening
 	zeta        field.Ext
+	// rootDedupDisabled gives every batch its own input tree, even when two
+	// batches have the same root. See [PCS.DisableRootDedup].
+	rootDedupDisabled bool
 }
+
+// DisableRootDedup stops the prover and verifier from merging batches whose
+// Merkle roots are equal into one input tree. By default such batches share a
+// single cap and a single opening per query, so the opening proof's shape
+// depends on the committed values: two batches committing identical tables
+// (e.g. two all-zero columns of the same size) produce one input tree fewer.
+// With deduplication disabled, every batch gets its own input tree and the
+// shape depends on the batch layout alone, which the gnark verifier requires.
+//
+// Prover and verifier must agree on this setting: it changes the number of
+// input caps and openings in the proof.
+func (pcs *PCS) DisableRootDedup() { pcs.rootDedupDisabled = true }
 
 type pcsOpening struct {
 	committed CommitterState
@@ -998,10 +1013,11 @@ func (pcs *PCS) restrictTo(topSizeLog2 uint8) (*PCS, error) {
 		return nil, err
 	}
 	return &PCS{
-		Params:   restrictedParams,
-		Encoders: pcs.Encoders,
-		openings: pcs.openings,
-		zeta:     pcs.zeta,
+		Params:            restrictedParams,
+		Encoders:          pcs.Encoders,
+		openings:          pcs.openings,
+		zeta:              pcs.zeta,
+		rootDedupDisabled: pcs.rootDedupDisabled,
 	}, nil
 }
 
@@ -1329,20 +1345,23 @@ func (pcs *PCS) inputOpeningCommitments() ([]CommitterState, error) {
 		return nil, err
 	}
 	// Sizes in decreasing order (canonicalLayout's order), batches in order
-	// within a size: the commitments in order of first appearance.
-	seen := make(map[field.Octuplet]bool)
+	// within a size: the commitments in order of first appearance. A batch
+	// spanning several sizes appears once; with root dedup, so does every
+	// batch sharing its root.
+	seenRoot := make(map[field.Octuplet]bool)
+	seenBatch := make(map[int]bool)
 	var inputs []CommitterState
 	for _, bundle := range openingsLayout {
-		if int(bundle.SizeLog2) > int(pcs.Params.LogPlainTextSize) {
-			continue
-		}
 		for _, entry := range bundle.Entries {
 			committed := pcs.openings[entry.BatchIdx].committed
 			root := committed.Tree.Root()
-			if !seen[root] {
-				seen[root] = true
-				inputs = append(inputs, committed)
+			// Skip a batch already added (by an earlier column), or (with dedup) one sharing an added root.
+			if seenBatch[entry.BatchIdx] || (!pcs.rootDedupDisabled && seenRoot[root]) {
+				continue
 			}
+			seenBatch[entry.BatchIdx] = true // one input tree per batch, whatever its sizes
+			seenRoot[root] = true            // only consulted when dedup is on
+			inputs = append(inputs, committed)
 		}
 	}
 	return inputs, nil
@@ -1746,7 +1765,7 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	}
 	orders := batchOrders(layout)
 	positions := in.Challenges.QueryPositions[:pcs.Params.NumQueries]
-	inputRoots, inputIndexByBatch := inputOpeningRoots(layout, orders, in.Roots)
+	inputRoots, inputIndexByBatch := inputOpeningRoots(layout, orders, in.Roots, !pcs.rootDedupDisabled)
 	if len(proof.InputCaps) != len(inputRoots) {
 		return fmt.Errorf("fri: pcs.Verify: got %d input caps, want %d", len(proof.InputCaps), len(inputRoots))
 	}
@@ -2026,20 +2045,32 @@ func (vq verifyQueryCtx) resolve(queryIdx, queryPosition int) (resolvedQuery, er
 	return rq, nil
 }
 
-func inputOpeningRoots(layout layout, orders [][]int, roots []field.Octuplet) (QueryLayerRoots, []int) {
+// inputOpeningRoots assigns each batch its input tree, in order of first
+// appearance in the canonical layout. With dedup set, batches with equal roots
+// share one tree; otherwise every batch gets its own (see
+// [PCS.DisableRootDedup]).
+func inputOpeningRoots(layout layout, orders [][]int, roots []field.Octuplet, dedup bool) (QueryLayerRoots, []int) {
 	indexByBatch := make([]int, len(roots))
 	for i := range indexByBatch {
 		indexByBatch[i] = -1
 	}
 	indexByRoot := make(map[field.Octuplet]int)
 	inputRoots := make(QueryLayerRoots, 0)
+	// Go over the layout's sizes, largest first.
 	for levelIdx := range layout {
+		// Go over the batches with columns at this size, in batch order.
 		for _, batchIdx := range orders[levelIdx] {
+			// A batch spanning several sizes keeps the tree it got at a larger size.
+			if indexByBatch[batchIdx] >= 0 {
+				continue
+			}
 			root := roots[batchIdx]
-			if idx, ok := indexByRoot[root]; ok {
+			// Share an earlier batch's tree only with dedup; otherwise every batch gets its own.
+			if idx, ok := indexByRoot[root]; ok && dedup {
 				indexByBatch[batchIdx] = idx
 				continue
 			}
+			// The batch has no tree yet and shares none (no dedup, or a new root): append a new one.
 			indexByBatch[batchIdx] = len(inputRoots)
 			indexByRoot[root] = len(inputRoots)
 			inputRoots = append(inputRoots, root)

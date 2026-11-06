@@ -86,6 +86,7 @@ func newPCSCircuitFixtureAt(t *testing.T, capHeight uint8, extraRounds uint8) pc
 	params.MerkleCapHeight = capHeight
 	pcs, err := NewPCS(params, makeEncoders(int(params.numRounds()+1), 2))
 	require.NoError(t, err)
+	pcs.DisableRootDedup()
 	pcs.FixedDomain = extraRounds > 0
 
 	// build the witness

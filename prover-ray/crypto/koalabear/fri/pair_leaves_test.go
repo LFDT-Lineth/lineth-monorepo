@@ -26,14 +26,17 @@ func pairLeavesWitness(prng *rand.Rand) Batch {
 }
 
 // newPairLeavesPCSFixture commits pairLeavesWitness, a grouped table and so
-// one with pair leaves, opens it as numBatches batches sharing one input tree
-// at four queries, and checks the native verifier accepts.
+// one with pair leaves, opens it as numBatches batches at four queries, and
+// checks the native verifier accepts. Root dedup is off, so each batch gets
+// its own input tree even though they all share one root.
 func newPairLeavesPCSFixture(t *testing.T, numBatches int) pcsOpenVerifyFixture {
 	t.Helper()
 	params, err := NewParams(4, 3, 4)
 	require.NoError(t, err)
 	pcs, err := NewPCS(params, makeEncoders(4, 2))
 	require.NoError(t, err)
+	// The circuit verifier requires it; the native one accepts either setting.
+	pcs.DisableRootDedup()
 	witness := pairLeavesWitness(rand.New(utils.NewRandSource(20261022)))
 	committed := pcs.Commit(witness)
 	require.True(t, committed.EncodedTable.grouped())

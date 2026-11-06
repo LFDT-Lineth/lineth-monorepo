@@ -109,6 +109,13 @@ func evalExprAtPointGnark(
 				return leaf.EvaluateOutOfDomainGnark(run, r), true
 			}
 			return leaf.EvaluateOutOfDomainGnarkAt(run.API(), r, rPowN), true
+		case *wiop.Constant:
+			// A vector constant repeats one value on every row, so its
+			// interpolant is that constant polynomial; scalar constants are
+			// left to the runtime evaluator.
+			if leaf.IsMultiValued() {
+				return run.API().ConstExt(field.Lift(leaf.Value)), true
+			}
 		}
 		return circuit.Ext{}, false
 	})
