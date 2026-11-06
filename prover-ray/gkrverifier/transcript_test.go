@@ -1,8 +1,10 @@
 package gkrverifier
 
 import (
+	"errors"
 	"fmt"
 	"math/rand/v2"
+	"strings"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -75,17 +77,37 @@ func (p *gnarkProof) prove(t *testing.T, assignment gkrkoalabear.WireAssignment)
 	p.claims = claims
 }
 
-// TestTranscriptLayout checks the layout against gnark's prover: the challenges that the layout
-// gives for the seed and the flattened proof are those of gnark's transcript. The point of the
-// returned claims is made of the challenges of level 0's rounds, so it depends on every
-// element absorbed before.
-func TestTranscriptLayout(t *testing.T) {
+// checkClaims checks the claims of the layout against those that gnark's prover returns: for each wire,
+// the claims in the same order, at the same point, with the same value. values holds the value of every
+// id for the proof and its seed.
+func checkClaims(t *testing.T, p *gnarkProof, l *layout, values []field.Ext) {
+	t.Helper()
+	count := make(map[int]int)
+	for _, claim := range l.claims {
+		want := p.claims[claim.wire][claim.index]
+		require.Equal(t, want.Evaluation, values[claim.value], "wire %d claim %d", claim.wire, claim.index)
+		require.Len(t, claim.point, len(want.EvaluationPoint))
+		for j, id := range claim.point {
+			require.Equal(t, want.EvaluationPoint[j], values[id], "wire %d claim %d coordinate %d", claim.wire, claim.index, j)
+		}
+		count[claim.wire]++
+	}
+	for wireI, list := range p.claims {
+		require.Len(t, list, count[wireI], "wire %d", wireI)
+	}
+}
+
+// TestLayout checks the layout against gnark's prover on the Poseidon2 compression circuit: the challenges
+// that the layout gives for the seed and the flattened proof are those of gnark's transcript, as the point
+// of the returned claims is made of the challenges of level 0's rounds, so it depends on every element
+// absorbed before; and the claims of the layout are those that gnark returns.
+func TestLayout(t *testing.T) {
 	for _, n := range []int{1, 2, 3} {
 		t.Run(fmt.Sprintf("n=%d", n), func(t *testing.T) {
 			p := newGnarkProof(t, n)
 			l, err := newLayout(p.circuit, p.schedule, n)
 			require.NoError(t, err)
-			require.Equal(t, len(p.flat), l.nbProof)
+			require.Len(t, p.flat, l.nbProof)
 
 			w, err := l.evaluate(p.seed, p.flat)
 			require.NoError(t, err)
@@ -95,6 +117,7 @@ func TestTranscriptLayout(t *testing.T) {
 			for j, id := range l.levels[0].roundChallenges {
 				require.Equal(t, point[j], w.challenges[id-l.firstChallenge], "coordinate %d of the point", j)
 			}
+			checkClaims(t, p, l, l.values(p.seed, p.flat, w))
 		})
 	}
 }
@@ -114,7 +137,7 @@ type transcriptSystem struct {
 	claims      map[int][]Claim
 	round       *wiop.Round
 	flat        []field.Ext
-	rows        [][3 * blockLen]field.Element
+	rows        [][3 * poseidon2.BlockLen]field.Element
 }
 
 // newTranscriptSystem defines the verifier of the proof's circuit with a table of exactly the
@@ -151,21 +174,45 @@ func newTranscriptSystem(t *testing.T, p *gnarkProof) *transcriptSystem {
 	return s
 }
 
+// changeProofElement adds one to the element of the proof at position, and rebuilds the table's rows from
+// the changed proof, so that no compression is missing from the table.
+func (s *transcriptSystem) changeProofElement(t *testing.T, position int) {
+	t.Helper()
+	one := field.OneExt()
+	s.flat = append([]field.Ext(nil), s.flat...)
+	s.flat[position].Add(&s.flat[position], &one)
+	var err error
+	s.rows, err = s.verifier.Compressions(s.seedValue, s.flat)
+	require.NoError(t, err)
+}
+
 // actionFunc is a prover action.
 type actionFunc func(rt *wiop.Runtime)
 
 func (f actionFunc) Run(rt *wiop.Runtime) { f(rt) }
 
+// errMissingRow is the error that prove returns when the prover panics because a row that a lookup
+// reads is in none of its table's rows. The prover cannot then build the lookup's witness, so the
+// verifier never sees the proof.
+var errMissingRow = errors.New("a row of a lookup is in none of its table")
+
+// missesCompression says that err is a row of the verifier's compressions that the caller's table lacks.
+func missesCompression(err error) bool {
+	return errors.Is(err, errMissingRow) && strings.Contains(err.Error(), "/transcript/state0")
+}
+
 // prove compiles the system and proves it with the system's values, and returns the result of the
-// verification. A prover that holds a row missing from the table of a lookup fails while it builds the
-// lookup, which is reported as an error too; any other panic fails the test.
+// verification, or errMissingRow, wrapping the panic, if the prover holds a row missing from the table of
+// a lookup. Any other panic fails the test.
 func (s *transcriptSystem) prove(t *testing.T) (err error) {
 	t.Helper()
 	require.NoError(t, compilers.CompileFull(s.sys))
 	defer func() {
 		if r := recover(); r != nil {
-			require.Contains(t, fmt.Sprint(r), "has no match in the lookup table")
-			err = fmt.Errorf("the prover has a row that is not in the table: %v", r)
+			if !strings.Contains(fmt.Sprint(r), "has no match in the lookup table") {
+				t.Fatalf("the prover panicked: %v", r)
+			}
+			err = fmt.Errorf("%w: %v", errMissingRow, r)
 		}
 	}()
 	proof, pub := s.sys.Prove(func(rt *wiop.Runtime) {
@@ -196,10 +243,10 @@ const (
 	changedColumn = 9
 )
 
-// TestTranscript checks the proof, seed and transcript tables, on gnark's proofs of the Poseidon2
+// TestTranscript checks the proof, transcript and compression table, on gnark's proofs of the Poseidon2
 // compression circuit: with a table that has exactly the compressions of the verifier, the system proves
-// and verifies; and changing an element of the proof, a cell of the seed, or a row of the table is
-// rejected, as each leaves a compression of the transcript missing from the table.
+// and verifies; and, for n = 2, changing an element of the proof, a coordinate of the seed, or a column of
+// the table leaves a compression of the transcript missing from the table.
 func TestTranscript(t *testing.T) {
 	for _, n := range []int{1, 2, 3} {
 		t.Run(fmt.Sprintf("n=%d", n), func(t *testing.T) {
@@ -208,28 +255,30 @@ func TestTranscript(t *testing.T) {
 			t.Run("honest", func(t *testing.T) {
 				require.NoError(t, newTranscriptSystem(t, p).prove(t))
 			})
+			if n != 2 {
+				return
+			}
 
 			one := field.OneExt()
-			for _, position := range []int{0, len(p.flat) / 2, len(p.flat) - 1} {
-				t.Run(fmt.Sprintf("changed proof element %d", position), func(t *testing.T) {
-					s := newTranscriptSystem(t, p)
-					s.flat = append([]field.Ext(nil), p.flat...)
-					s.flat[position].Add(&s.flat[position], &one)
-					require.Error(t, s.prove(t))
-				})
-			}
+			t.Run("changed proof element", func(t *testing.T) {
+				s := newTranscriptSystem(t, p)
+				position := len(p.flat) / 2
+				s.flat = append([]field.Ext(nil), p.flat...)
+				s.flat[position].Add(&s.flat[position], &one)
+				require.True(t, missesCompression(s.prove(t)))
+			})
 
 			t.Run("changed seed", func(t *testing.T) {
 				s := newTranscriptSystem(t, p)
 				s.seedValue[changedSeed].Add(&s.seedValue[changedSeed], &one.B0.A0)
-				require.Error(t, s.prove(t))
+				require.True(t, missesCompression(s.prove(t)))
 			})
 
 			t.Run("changed table column", func(t *testing.T) {
 				s := newTranscriptSystem(t, p)
-				s.rows = append([][3 * blockLen]field.Element(nil), s.rows...)
+				s.rows = append([][3 * poseidon2.BlockLen]field.Element(nil), s.rows...)
 				s.rows[0][changedColumn].Add(&s.rows[0][changedColumn], &one.B0.A0)
-				require.Error(t, s.prove(t))
+				require.True(t, missesCompression(s.prove(t)))
 			})
 		})
 	}

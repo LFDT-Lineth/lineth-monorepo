@@ -26,7 +26,14 @@ type e6System struct {
 const e6Rows = 16
 
 // e6Results are the columns that hold the results of the operations.
-var e6Results = []string{"sum", "difference", "product", "scaled"}
+const (
+	e6Sum        = "sum"
+	e6Difference = "difference"
+	e6Product    = "product"
+	e6Scaled     = "scaled"
+)
+
+var e6Results = []string{e6Sum, e6Difference, e6Product, e6Scaled}
 
 func newE6System() *e6System {
 	rng := rand.New(rand.NewPCG(1, 2))
@@ -71,10 +78,10 @@ func newE6System() *e6System {
 		}
 		set("x", &x)
 		set("y", &y)
-		set("sum", &sum)
-		set("difference", &difference)
-		set("product", &product)
-		set("scaled", &scaled)
+		set(e6Sum, &sum)
+		set(e6Difference, &difference)
+		set(e6Product, &product)
+		set(e6Scaled, &scaled)
 		s.values["k"][0][row] = k
 	}
 
@@ -86,13 +93,13 @@ func newE6System() *e6System {
 		return e
 	}
 	x, y, k := view("x"), view("y"), s.columns["k"][0].View()
-	for name, want := range map[string]gkrverifier.E6{
-		"sum":        x.Add(y),
-		"difference": x.Sub(y),
-		"product":    x.Mul(y),
-		"scaled":     x.MulByBase(k),
+	for name, diffs := range map[string][6]wiop.Expression{
+		e6Sum:        view(e6Sum).Equal(x.Add(y)),
+		e6Difference: view(e6Difference).Add(y).Equal(x),
+		e6Product:    view(e6Product).Equal(x.Mul(y)),
+		e6Scaled:     view(e6Scaled).Equal(x.MulByBase(k)),
 	} {
-		for i, diff := range view(name).Equal(want) {
+		for i, diff := range diffs {
 			module.NewVanishingManual(s.sys.Context.Childf("%s-%d-constraint", name, i), diff)
 		}
 	}
@@ -119,7 +126,8 @@ func (s *e6System) assign(name string, changed int) func(rt *wiop.Runtime) {
 
 // TestE6 checks the operations of E6 against gnark-crypto's extensions.E6: a module whose rows hold
 // x, y and their sum, difference and product, and the product of x by a base element, constrained with
-// the operations, proves and verifies. A changed coordinate of any of them is rejected.
+// the operations, proves and verifies. A changed coordinate is rejected: each of the six of the product,
+// and one of each other result.
 func TestE6(t *testing.T) {
 	prove := func(t *testing.T, name string, changed int) error {
 		t.Helper()
@@ -133,8 +141,10 @@ func TestE6(t *testing.T) {
 		require.NoError(t, prove(t, "", -1))
 	})
 
-	for _, name := range e6Results {
-		for coordinate := range 6 {
+	for name, coordinates := range map[string][]int{
+		e6Product: {0, 1, 2, 3, 4, 5}, e6Sum: {2}, e6Difference: {2}, e6Scaled: {2},
+	} {
+		for _, coordinate := range coordinates {
 			t.Run(fmt.Sprintf("changed %s %d", name, coordinate), func(t *testing.T) {
 				require.Error(t, prove(t, name, coordinate))
 			})

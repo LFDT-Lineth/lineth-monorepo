@@ -12,13 +12,6 @@ func identityGate() gkr.SerializableGate {
 	return gkr.SerializableGate{Evaluate: gkr.IdentityBytecode(), NbIn: 1, Degree: 1}
 }
 
-// A gate's bytecode is lowered to rows of the gate module, each of which is the relation
-//
-//	o = k_m·a·b + k_a·a + k_b·b + k_o·o⁻ + k_c
-//
-// of E₆ elements, with o⁻ the result of the previous row, a and b read from the value bus, and the
-// k base field constants. Every row exposes its result under its own id.
-
 // operand is an operand of an instruction: a base field constant c, or the value of the bus with the
 // given id times the base field coefficient coef.
 type operand struct {
@@ -31,7 +24,8 @@ type operand struct {
 // value returns the operand of the value with the given id.
 func value(id int) operand { return operand{id: id, coef: field.One()} }
 
-// gateRow is a row of the gate module.
+// gateRow is a row of the gate module: o = k_m·a·b + k_a·a + k_b·b + k_o·o⁻ + k_c, with o⁻ the result of the
+// previous row.
 type gateRow struct {
 	kMul, kA, kB, kOut, kConst field.Element
 	// a and b are the ids of the values read as the operands a and b, or -1 if the row reads none.
@@ -116,9 +110,9 @@ func (g *gateBuilder) lowerInstruction(op gkr.GateOp, ops []operand) operand {
 }
 
 // sum returns Σ ±ops[i], with the sign of ops[i] negative if negative[i], or all positive if negative
-// is nil. The constants are summed into one k_c, and the values are chained: the first row takes two
-// of them, each other row takes one and the previous row's result. The coefficient of a value is a
-// factor of the k_a or k_b that reads it.
+// is nil. The constants are summed into one k_c, and the values are chained: each row takes two of
+// them, and the previous row's result but for the first. The coefficient of a value is a factor of the
+// k_a or k_b that reads it.
 func (g *gateBuilder) sum(ops []operand, negative []bool) operand {
 	var (
 		constant field.Element
@@ -151,9 +145,12 @@ func (g *gateBuilder) sum(ops []operand, negative []bool) operand {
 	}
 	first.kConst = constant
 	result := g.emit(first)
-	for i := 2; i < len(values); i++ {
+	for i := 2; i < len(values); i += 2 {
 		row := newRow()
 		row.kOut, row.kA, row.a = field.One(), coefs[i], values[i].id
+		if i+1 < len(values) {
+			row.kB, row.b = coefs[i+1], values[i+1].id
+		}
 		result = g.emit(row)
 	}
 	return result
@@ -248,11 +245,9 @@ func (l *layout) lowerGates() {
 	g := &gateBuilder{firstID: l.firstGate}
 	for levelI, level := range l.schedule {
 		lv := &l.levels[levelI]
-		levelCircuit := l.circuit.LevelCircuit(l.schedule, levelI, identityGate())
-		_, inputIndices := levelCircuit.InputMapping(level)
 		finals := func(levelWireI, claimI int) []int {
-			ids := make([]int, len(inputIndices[levelWireI]))
-			for i, uniqueI := range inputIndices[levelWireI] {
+			ids := make([]int, len(lv.inputIndices[levelWireI]))
+			for i, uniqueI := range lv.inputIndices[levelWireI] {
 				ids[i] = lv.finals + level.FinalEvalProofIndex(uniqueI, claimI)
 			}
 			return ids
@@ -261,7 +256,7 @@ func (l *layout) lowerGates() {
 		levelWireI := 0
 		for _, group := range level.ClaimGroups() {
 			for _, wireI := range group.Wires {
-				gate := levelCircuit[wireI].Gate.Evaluate
+				gate := lv.circuit[wireI].Gate.Evaluate
 				if !lv.skip {
 					lv.results = append(lv.results, g.evaluate(gate, finals(levelWireI, 0)))
 				} else {

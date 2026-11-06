@@ -59,15 +59,6 @@ func (x E6) Add(y E6) E6 {
 	return z
 }
 
-// Sub returns x − y.
-func (x E6) Sub(y E6) E6 {
-	var z E6
-	for i := range z {
-		z[i] = wiop.Sub(x[i], y[i])
-	}
-	return z
-}
-
 // MulByBase returns kx for an expression k of the base field, which may be a constant.
 func (x E6) MulByBase(k wiop.Expression) E6 {
 	var z E6

@@ -2,47 +2,61 @@ package gkrverifier
 
 import (
 	"fmt"
+	"slices"
 
+	"github.com/consensys/gnark-crypto/field/koalabear/poseidon2"
 	"github.com/consensys/gnark/constraint"
 	"github.com/consensys/gnark/gkr"
 )
 
-// The layout holds everything about the verifier that depends only on the circuit, the schedule and the
-// number of variables n, not on the values: the ids of the values, which element of the flattened proof
-// the transcript absorbs where and which squeeze gives which challenge, the rows of the gates, the
-// folds, the eqs and the rounds, and the claims that gnark's Verify returns.
+// slot is a coordinate that the block being filled holds: coordinate coord of the element elem, which
+// is -1 for a zero element.
+type slot struct{ elem, coord int }
 
-// slot is one of the eight base elements of a block that a compression takes.
-type slot struct {
-	// read says that the element is the coordinate coord of an absorbed value, and not zero.
-	read  bool
-	coord int
+// A block holds the coordinates of at most two elements, A and B, consecutive in the transcript: a block
+// of eight coordinates starts at coordinate 0, 2 or 4 of A, and a block that a squeeze pads takes the last
+// 6, 4 or 2 coordinates of the stream, those of one element. blockShapes lists the shapes, each as the
+// number of zeros that pad the block on the left and the coordinate of A that follows them; the block
+// then continues through A and into B.
+var blockShapes = [...][2]int{{0, 0}, {0, 2}, {0, 4}, {2, 0}, {4, 2}, {6, 4}}
+
+// blockSlot returns which element, 0 for A and 1 for B, and which coordinate of it slot i of a block of
+// the given shape holds; the element is -1 for a zero of the padding.
+func blockSlot(shape, i int) (elem, coord int) {
+	pad, first := blockShapes[shape][0], blockShapes[shape][1]
+	if i < pad {
+		return -1, 0
+	}
+	t := first + i - pad
+	return t / 6, t % 6
 }
 
 // transcriptRow is a compression of the transcript: its state is the previous row's new state, and
-// its block is slots.
+// its block has the given shape over the elements A and B.
 type transcriptRow struct {
-	slots [blockLen]slot
+	// elems holds the ids of A and B, each -1 if the block holds nothing of it or only zeros.
+	elems [2]int
+	shape int
 	// challenge is the id of the challenge that the row ends: the challenge is the first six elements of
 	// the new state. It is -1 for a row that ends no challenge.
 	challenge int
 }
 
-// blockLen is the number of base elements in a block and in the state of the transcript.
-const blockLen = 8
-
 // levelLayout is a level of the schedule, with the positions of its elements in the flattened proof.
 type levelLayout struct {
 	skip bool
+	// circuit is the circuit as the level sees it: level 0's identity view, and the circuit itself at
+	// the others. unique holds the wires that the level's gates read, and inputIndices the position of
+	// each input of each wire of the level in unique.
+	circuit      gkr.SerializableCircuit
+	unique       []int
+	inputIndices [][]int
 	// degree is the number of coefficients of each round polynomial that the proof holds: it is 0 at a
 	// skip level.
 	degree int
 	// start is the position of the level's first element in the proof: its round polynomials, n of
 	// them of degree coefficients each, then its final evaluations, which start at finals.
 	start, finals int
-	nbFinals      int
-	// nbClaims is the number of claims of the level.
-	nbClaims int
 	// absorbed holds the positions of the final evaluations that the transcript absorbs, in order.
 	absorbed []int
 	// foldChallenge is the id of the challenge c that batches the claims, or -1 below two claims and at
@@ -64,7 +78,10 @@ type levelLayout struct {
 	eqs [][]int
 }
 
-// layout describes the verifier of a circuit and a schedule for n variables.
+// layout describes the verifier of a circuit and a schedule for n variables: everything about it that
+// does not depend on the values. That is the ids of the values, which element of the flattened proof the
+// transcript absorbs where and which squeeze gives which challenge, the rows of the gates, the folds,
+// the eqs and the rounds, and the claims that gnark's Verify returns.
 type layout struct {
 	n        int
 	circuit  gkr.SerializableCircuit
@@ -76,12 +93,9 @@ type layout struct {
 	outputsAbsorbed []int
 	// nbProof is the number of elements of the flattened proof.
 	nbProof int
-	// The ids of the values: the proof's elements have their positions, and the seed follows. The
-	// transcript reads these by coordinate, so the next 6·(nbProof + 1) ids, from coordinateBase, are
-	// those of their coordinates: coordinate k of the value id has the id coordinateBase + 6·id + k. The
-	// challenges follow.
+	// The ids of the values: the proof's elements have their positions, the seed follows, and the
+	// challenges follow the seed.
 	seed           int
-	coordinateBase int
 	firstChallenge int
 	nbChallenges   int
 	// initialChallenges holds the ids of the n challenges of the initial point.
@@ -104,12 +118,11 @@ type layout struct {
 	eqRows    []eqRow
 	roundRows []roundRow
 	claims    []claimLayout
-	// nbIDs is the number of ids that are not coordinates: the values are indexed by them.
+	// claimCounts is the number of claims of each wire.
+	claimCounts map[int]int
+	// nbIDs is the number of ids: the values are indexed by them.
 	nbIDs int
 }
-
-// coordinateID is the id under which coordinate k of the value id is exposed.
-func (l *layout) coordinateID(id, k int) int { return l.coordinateBase + 6*id + k }
 
 // newLayout builds the layout, walking the schedule as gnark's Verify does.
 func newLayout(circuit gkr.SerializableCircuit, schedule constraint.GkrProvingSchedule, n int) (*layout, error) {
@@ -132,19 +145,21 @@ func newLayout(circuit gkr.SerializableCircuit, schedule constraint.GkrProvingSc
 	next := 0
 	for levelI, level := range schedule {
 		levelCircuit := circuit.LevelCircuit(schedule, levelI, identityGate())
-		unique, _ := levelCircuit.InputMapping(level)
+		unique, inputIndices := levelCircuit.InputMapping(level)
 		_, skip := level.(*constraint.GkrSkipLevel)
+		_, single := level.(*constraint.GkrSingleSourceZeroCheckLevel)
 		lv := levelLayout{
 			skip:          skip,
-			single:        isSingle(level),
+			single:        single,
+			circuit:       levelCircuit,
+			unique:        unique,
+			inputIndices:  inputIndices,
 			degree:        levelCircuit.ZeroCheckDegree(level),
 			start:         next,
-			nbFinals:      len(unique) * level.NbOutgoingEvalPoints(),
-			nbClaims:      level.NbClaims(),
 			foldChallenge: -1,
 		}
 		lv.finals = lv.start + n*lv.degree
-		next = lv.finals + lv.nbFinals
+		next = lv.finals + len(unique)*level.NbOutgoingEvalPoints()
 		if levelI != 0 {
 			for uniqueI, wireI := range unique {
 				if circuit.IsInput(wireI) && !consolidated[wireI] {
@@ -167,8 +182,7 @@ func newLayout(circuit gkr.SerializableCircuit, schedule constraint.GkrProvingSc
 	}
 	l.nbProof = l.outputs + len(circuit.Outputs())
 	l.seed = l.nbProof
-	l.coordinateBase = l.seed + 1
-	l.firstChallenge = l.coordinateBase + 6*(l.seed+1)
+	l.firstChallenge = l.seed + 1
 
 	// the transcript, in the order of Verify
 	b := &transcriptBuilder{layout: l}
@@ -180,7 +194,7 @@ func newLayout(circuit gkr.SerializableCircuit, schedule constraint.GkrProvingSc
 	for levelI := len(schedule) - 1; levelI >= 0; levelI-- {
 		lv := &l.levels[levelI]
 		if !lv.skip {
-			if lv.nbClaims >= 2 {
+			if schedule[levelI].NbClaims() >= 2 {
 				lv.foldChallenge = b.squeeze()
 			}
 			for j := range n {
@@ -199,12 +213,6 @@ func newLayout(circuit gkr.SerializableCircuit, schedule constraint.GkrProvingSc
 	l.lowerSumchecks()
 	l.lowerClaims()
 	return l, nil
-}
-
-// isSingle says that the level is a single-source zerocheck.
-func isSingle(level constraint.GkrProvingLevel) bool {
-	_, single := level.(*constraint.GkrSingleSourceZeroCheckLevel)
-	return single
 }
 
 // claimPosition is the position in the proof of the value with the given index among the final
@@ -239,16 +247,12 @@ type transcriptBuilder struct {
 	nbChallenges int
 }
 
-// write appends the six coordinates of the value id, or of the zero element if id is -1, to the block
+// write appends the six coordinates of the element id, or of the zero element if id is -1, to the block
 // being filled. It does not set the absorbed flag: the seed is written this way.
 func (b *transcriptBuilder) write(id int) {
 	for k := range 6 {
-		s := slot{}
-		if id >= 0 {
-			s = slot{read: true, coord: b.layout.coordinateID(id, k)}
-		}
-		b.pending = append(b.pending, s)
-		if len(b.pending) == blockLen {
+		b.pending = append(b.pending, slot{elem: id, coord: k})
+		if len(b.pending) == poseidon2.BlockLen {
 			b.compress()
 		}
 	}
@@ -256,8 +260,16 @@ func (b *transcriptBuilder) write(id int) {
 
 // compress ends the block being filled, padded on the left with zeros if it is not full.
 func (b *transcriptBuilder) compress() {
-	row := transcriptRow{challenge: -1}
-	copy(row.slots[blockLen-len(b.pending):], b.pending)
+	pad := poseidon2.BlockLen - len(b.pending)
+	shape := slices.Index(blockShapes[:], [2]int{pad, b.pending[0].coord})
+	if shape < 0 {
+		panic("gkrverifier: a block of the transcript has no known shape")
+	}
+	row := transcriptRow{elems: [2]int{-1, -1}, shape: shape, challenge: -1}
+	for i, s := range b.pending {
+		which, _ := blockSlot(shape, pad+i)
+		row.elems[which] = s.elem
+	}
 	b.rows = append(b.rows, row)
 	b.pending = b.pending[:0]
 }

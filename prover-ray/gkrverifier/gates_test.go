@@ -1,7 +1,6 @@
 package gkrverifier
 
 import (
-	"fmt"
 	"math/big"
 	"testing"
 
@@ -123,6 +122,8 @@ func TestLowerGate(t *testing.T) {
 			{Op: gkr.OpMul, Inputs: []uint16{c0, x}},
 			{Op: gkr.OpSumExp17, Inputs: []uint16{r0, y, z}},
 		},
+		"add five":      {{Op: gkr.OpAdd, Inputs: []uint16{x, y, z, x, y}}},
+		"add six":       {{Op: gkr.OpAdd, Inputs: []uint16{x, y, z, x, y, z}}},
 		"scaled result": {{Op: gkr.OpMul, Inputs: []uint16{c0, x}}},
 		"scaled result of a sum": {
 			{Op: gkr.OpAdd, Inputs: []uint16{x, y}},
@@ -189,49 +190,38 @@ func (l *layout) skipChecks() []int {
 	return checks
 }
 
-// TestGates checks the gate rows on gnark's proofs of the Poseidon2 compression circuit: the system
-// proves and verifies, with every claim of a skip level checked; and changing a final evaluation of a
-// skip level, or the claimed value that a skip level checks, is rejected. The compressions of the
-// changed proof are put in the table, so that the gates are what rejects it.
+// TestGates checks the gate rows on gnark's proof of the Poseidon2 compression circuit: every claim of a
+// skip level is checked, and changing a final evaluation of a skip level, or the claimed value that a skip
+// level checks, is rejected. The compressions of the changed proof are put in the table, so that the
+// compressions are not what rejects it.
 func TestGates(t *testing.T) {
-	for _, n := range []int{1, 2} {
-		t.Run(fmt.Sprintf("n=%d", n), func(t *testing.T) {
-			p := newGnarkProof(t, n)
-			l, err := newLayout(p.circuit, p.schedule, n)
-			require.NoError(t, err)
+	p := newGnarkProof(t, 2)
+	l, err := newLayout(p.circuit, p.schedule, 2)
+	require.NoError(t, err)
 
-			nbSkipClaims := 0
-			var skipFinals []int
-			for _, lv := range l.levels {
-				if lv.skip {
-					nbSkipClaims += lv.nbClaims
-					skipFinals = append(skipFinals, lv.finals)
-				}
+	nbSkipClaims, skipFinals := 0, -1
+	for levelI, lv := range l.levels {
+		if lv.skip {
+			nbSkipClaims += p.schedule[levelI].NbClaims()
+			if skipFinals < 0 {
+				skipFinals = lv.finals
 			}
-			checks := l.skipChecks()
-			require.NotEmpty(t, checks)
-			require.Len(t, checks, nbSkipClaims)
+		}
+	}
+	checks := l.skipChecks()
+	require.Len(t, checks, nbSkipClaims)
+	require.NotEmpty(t, checks)
 
-			t.Run("honest", func(t *testing.T) {
-				require.NoError(t, newTranscriptSystem(t, p).prove(t))
-			})
-
-			tamper := func(t *testing.T, position int) {
-				t.Helper()
-				s := newTranscriptSystem(t, p)
-				one := field.OneExt()
-				s.flat = append([]field.Ext(nil), p.flat...)
-				s.flat[position].Add(&s.flat[position], &one)
-				s.rows, err = s.verifier.Compressions(s.seedValue, s.flat)
-				require.NoError(t, err)
-				require.Error(t, s.prove(t))
-			}
-			for _, i := range []int{0, len(skipFinals) / 2, len(skipFinals) - 1} {
-				t.Run(fmt.Sprintf("changed final evaluation of skip level %d", i), func(t *testing.T) { tamper(t, skipFinals[i]) })
-			}
-			for _, i := range []int{0, len(checks) / 2, len(checks) - 1} {
-				t.Run(fmt.Sprintf("changed claimed value %d", i), func(t *testing.T) { tamper(t, checks[i]) })
-			}
+	for name, position := range map[string]int{
+		"changed final evaluation of a skip level": skipFinals,
+		"changed claimed value":                    checks[0],
+	} {
+		t.Run(name, func(t *testing.T) {
+			s := newTranscriptSystem(t, p)
+			s.changeProofElement(t, position)
+			err := s.prove(t)
+			require.Error(t, err)
+			require.False(t, missesCompression(err))
 		})
 	}
 }

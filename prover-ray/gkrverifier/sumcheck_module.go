@@ -2,6 +2,7 @@ package gkrverifier
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
@@ -10,7 +11,6 @@ import (
 // foldModule has one row per fold row.
 type foldModule struct {
 	module                   *wiop.Module
-	size                     int
 	v, phi, e, c, sum, final [6]*wiop.Column // witness
 	// precomputed
 	active, chain, last  *wiop.Column
@@ -21,18 +21,22 @@ type foldModule struct {
 
 // eqModule has one row per eq row.
 type eqModule struct {
-	module                *wiop.Module
-	size                  int
-	p, r, factor, product [6]*wiop.Column // witness
-	active, chain, last   *wiop.Column    // precomputed
-	idP, idR, idResult    *wiop.Column
+	module *wiop.Module
+	// witness: p and r of each slot, the product h of the factors of the first two slots, the product g
+	// of the three, and the running product
+	p, r          [eqSlots][6]*wiop.Column
+	h, g, product [6]*wiop.Column
+	// precomputed
+	active, chain, last *wiop.Column
+	read                [eqSlots]*wiop.Column // 1 where the slot's coordinate is read
+	idP, idR            [eqSlots]*wiop.Column
+	idResult            *wiop.Column
 }
 
-// roundModule has one row per round row, with room for the largest degree of the levels.
+// roundModule has one row per round row, with room for the largest degree of the levels. It is nil if no
+// level has rounds.
 type roundModule struct {
 	module *wiop.Module
-	size   int
-	degree int
 	a, out [6]*wiop.Column
 	r, mu  [6]*wiop.Column
 	c0     [6]*wiop.Column
@@ -46,28 +50,18 @@ type roundModule struct {
 	last, idFinal        *wiop.Column
 }
 
-// shifted returns the E₆ element of the previous row of the columns.
-func shifted(cols [6]*wiop.Column) E6 {
-	var x E6
-	for k, c := range cols {
-		x[k] = c.View().Shift(-1)
-	}
-	return x
-}
-
-// unit returns the coordinates of 1 in E₆, as expressions.
+// unit returns coordinate k of 1 in E₆, as a constant expression.
 func unit(k int) wiop.Expression {
 	if k == 0 {
-		return wiop.NewConstantField(field.One())
+		return baseConstant(1)
 	}
-	return wiop.NewConstantField(field.Zero())
+	return baseConstant(0)
 }
 
 func (v *Verifier) defineFolds(sys *wiop.System, ctx *wiop.ContextFrame, round *wiop.Round) {
 	l, f := v.layout, &v.fold
 	nb := len(l.foldRows)
-	f.size = moduleSize(nb)
-	f.module = sys.NewSizedModule(ctx, f.size, wiop.PaddingDirectionNone)
+	f.module = sys.NewSizedModule(ctx, moduleSize(nb), wiop.PaddingDirectionNone)
 	for k := range 6 {
 		f.v[k] = f.module.NewColumn(ctx.Childf("v%d", k), round)
 		f.phi[k] = f.module.NewColumn(ctx.Childf("phi%d", k), round)
@@ -77,23 +71,25 @@ func (v *Verifier) defineFolds(sys *wiop.System, ctx *wiop.ContextFrame, round *
 		f.final[k] = f.module.NewColumn(ctx.Childf("final%d", k), round)
 	}
 	chained, idV, idPhi, idFinal := make([]int, nb), make([]int, nb), make([]int, nb), make([]int, nb)
+	idSum, idE, idC := make([]int, nb), make([]int, nb), make([]int, nb)
 	for i, row := range l.foldRows {
 		if !row.first {
 			chained[i] = 1
 		}
 		idV[i], idPhi[i], idFinal[i] = row.value, row.phi, max(row.final, 0)
+		idSum[i], idE[i], idC[i] = row.sum, row.eq, row.fold
 	}
-	f.active = precomputed(ctx.Childf("active"), f.module, f.size, ones(nb))
-	f.chain = precomputed(ctx.Childf("chain"), f.module, f.size, chained)
-	f.last, f.idSum = idColumns(ctx.Childf("sum"), f.module, f.size, nb, func(i int) int { return l.foldRows[i].sum })
-	f.readE, f.idE = idColumns(ctx.Childf("e"), f.module, f.size, nb, func(i int) int { return l.foldRows[i].eq })
-	f.readC, f.idC = idColumns(ctx.Childf("c"), f.module, f.size, nb, func(i int) int { return l.foldRows[i].fold })
-	f.idV = precomputed(ctx.Childf("id-v"), f.module, f.size, idV)
-	f.idPhi = precomputed(ctx.Childf("id-phi"), f.module, f.size, idPhi)
-	f.idFinal = precomputed(ctx.Childf("id-final"), f.module, f.size, idFinal)
+	f.active = precomputed(ctx.Childf("active"), f.module, slices.Repeat([]int{1}, nb))
+	f.chain = precomputed(ctx.Childf("chain"), f.module, chained)
+	f.last, f.idSum = idColumns(ctx.Childf("sum"), f.module, idSum)
+	f.readE, f.idE = idColumns(ctx.Childf("e"), f.module, idE)
+	f.readC, f.idC = idColumns(ctx.Childf("c"), f.module, idC)
+	f.idV = precomputed(ctx.Childf("id-v"), f.module, idV)
+	f.idPhi = precomputed(ctx.Childf("id-phi"), f.module, idPhi)
+	f.idFinal = precomputed(ctx.Childf("id-final"), f.module, idFinal)
 
-	// every row holds, on every row: the sums extend those of the row before, except on the first row
-	// of a level, e is one where it is not read, and c is zero where it is not read.
+	// On every row, the sums extend those of the previous row, except on the first row of a level; e is
+	// 1 where it is not read; c is 0 where it is not read.
 	value, phi, e, c := columnViews(f.v), columnViews(f.phi), columnViews(f.e), columnViews(f.c)
 	chain := f.chain.View()
 	for k, diff := range columnViews(f.sum).Equal(value.Add(c.Mul(shifted(f.sum)).MulByBase(chain))) {
@@ -106,7 +102,7 @@ func (v *Verifier) defineFolds(sys *wiop.System, ctx *wiop.ContextFrame, round *
 		f.module.NewVanishingManual(ctx.Childf("e-is-one%d", k),
 			wiop.Mul(wiop.Sub(f.active.View(), f.readE.View()), wiop.Sub(f.e[k].View(), unit(k))))
 		f.module.NewVanishingManual(ctx.Childf("c-is-zero%d", k),
-			wiop.Mul(wiop.Sub(wiop.NewConstantField(field.One()), f.readC.View()), f.c[k].View()))
+			wiop.Mul(wiop.Sub(baseConstant(1), f.readC.View()), f.c[k].View()))
 	}
 }
 
@@ -126,44 +122,77 @@ func (f *foldModule) consumers() []wiop.Table {
 	}
 }
 
+func (f *foldModule) assign(run *wiop.Runtime, w *foldWitness) {
+	assignExt(run, f.v, w.v)
+	assignExt(run, f.phi, w.phi)
+	assignExt(run, f.e, w.e)
+	assignExt(run, f.c, w.c)
+	assignExt(run, f.sum, w.sum)
+	assignExt(run, f.final, w.final)
+}
+
 func (v *Verifier) defineEqs(sys *wiop.System, ctx *wiop.ContextFrame, round *wiop.Round) {
 	l, q := v.layout, &v.eq
 	nb := len(l.eqRows)
-	q.size = moduleSize(nb)
-	q.module = sys.NewSizedModule(ctx, q.size, wiop.PaddingDirectionNone)
+	q.module = sys.NewSizedModule(ctx, moduleSize(nb), wiop.PaddingDirectionNone)
+	for s := range eqSlots {
+		for k := range 6 {
+			q.p[s][k] = q.module.NewColumn(ctx.Childf("p%d-%d", s, k), round)
+			q.r[s][k] = q.module.NewColumn(ctx.Childf("r%d-%d", s, k), round)
+		}
+	}
 	for k := range 6 {
-		q.p[k] = q.module.NewColumn(ctx.Childf("p%d", k), round)
-		q.r[k] = q.module.NewColumn(ctx.Childf("r%d", k), round)
-		q.factor[k] = q.module.NewColumn(ctx.Childf("factor%d", k), round)
+		q.h[k] = q.module.NewColumn(ctx.Childf("h%d", k), round)
+		q.g[k] = q.module.NewColumn(ctx.Childf("g%d", k), round)
 		q.product[k] = q.module.NewColumn(ctx.Childf("product%d", k), round)
 	}
-	chain, idP, idR := make([]int, nb), make([]int, nb), make([]int, nb)
+
+	chained, results := make([]int, nb), make([]int, nb)
 	for i, row := range l.eqRows {
 		if !row.first {
-			chain[i] = 1
+			chained[i] = 1
 		}
-		idP[i], idR[i] = row.p, row.r
+		results[i] = row.result
 	}
-	q.active = precomputed(ctx.Childf("active"), q.module, q.size, ones(nb))
-	q.chain = precomputed(ctx.Childf("chain"), q.module, q.size, chain)
-	q.last, q.idResult = idColumns(ctx.Childf("result"), q.module, q.size, nb,
-		func(i int) int { return l.eqRows[i].result })
-	q.idP = precomputed(ctx.Childf("id-p"), q.module, q.size, idP)
-	q.idR = precomputed(ctx.Childf("id-r"), q.module, q.size, idR)
+	q.active = precomputed(ctx.Childf("active"), q.module, slices.Repeat([]int{1}, nb))
+	q.chain = precomputed(ctx.Childf("chain"), q.module, chained)
+	q.last, q.idResult = idColumns(ctx.Childf("result"), q.module, results)
+	for s := range eqSlots {
+		idP, idR := make([]int, nb), make([]int, nb)
+		for i, row := range l.eqRows {
+			idP[i], idR[i] = row.p[s], max(row.r[s], 0)
+		}
+		q.read[s], q.idP[s] = idColumns(ctx.Childf("p%d", s), q.module, idP)
+		q.idR[s] = precomputed(ctx.Childf("id-r%d", s), q.module, idR)
+	}
 
-	// factor = 1 − p − r + 2pr, and product = factor on the first row of an eq, factor times the
-	// previous product on the others
-	p, r, factor := columnViews(q.p), columnViews(q.r), columnViews(q.factor)
-	pr := p.Mul(r)
-	for k := range factor {
-		rhs := wiop.Sub(wiop.Add(unit(k), wiop.Mul(baseConstant(2), pr[k])), wiop.Add(p[k], r[k]))
-		q.module.NewVanishingManual(ctx.Childf("factor%d", k), wiop.Mul(q.active.View(), wiop.Sub(factor[k], rhs)))
+	// On every row: a slot that is not read is zero, so that its factor is 1; the factor of a slot is
+	// 1 − p − r + 2pr; h is the product of the first two factors, g that of the three; and the running
+	// product is g on the first row of an eq, g times the previous running product on the others.
+	var factors [eqSlots]E6
+	for s := range eqSlots {
+		p, r := columnViews(q.p[s]), columnViews(q.r[s])
+		pr := p.Mul(r)
+		for k := range factors[s] {
+			factors[s][k] = wiop.Sub(wiop.Add(unit(k), wiop.Mul(baseConstant(2), pr[k])), wiop.Add(p[k], r[k]))
+			q.module.NewVanishingManual(ctx.Childf("zero-p%d-%d", s, k),
+				wiop.Mul(wiop.Sub(baseConstant(1), q.read[s].View()), p[k]))
+			q.module.NewVanishingManual(ctx.Childf("zero-r%d-%d", s, k),
+				wiop.Mul(wiop.Sub(baseConstant(1), q.read[s].View()), r[k]))
+		}
+	}
+	h, g := columnViews(q.h), columnViews(q.g)
+	for k, diff := range h.Equal(factors[0].Mul(factors[1])) {
+		q.module.NewVanishingManual(ctx.Childf("h%d", k), diff)
+	}
+	for k, diff := range g.Equal(h.Mul(factors[2])) {
+		q.module.NewVanishingManual(ctx.Childf("g%d", k), diff)
 	}
 	previous := shifted(q.product).MulByBase(q.chain.View())
 	for k := range previous {
 		previous[k] = wiop.Add(previous[k], wiop.Mul(wiop.Sub(q.active.View(), q.chain.View()), unit(k)))
 	}
-	for k, diff := range columnViews(q.product).Equal(previous.Mul(factor)) {
+	for k, diff := range columnViews(q.product).Equal(previous.Mul(g)) {
 		q.module.NewVanishingManual(ctx.Childf("product%d", k), diff)
 	}
 }
@@ -173,18 +202,37 @@ func (q *eqModule) producers() []wiop.Table {
 }
 
 func (q *eqModule) consumers() []wiop.Table {
-	return []wiop.Table{
-		busElement(q.module, q.active, q.idP, q.p),
-		busElement(q.module, q.active, q.idR, q.r),
+	tables := make([]wiop.Table, 0, 2*eqSlots)
+	for s := range eqSlots {
+		tables = append(tables,
+			busElement(q.module, q.read[s], q.idP[s], q.p[s]),
+			busElement(q.module, q.read[s], q.idR[s], q.r[s]))
 	}
+	return tables
+}
+
+// assign assigns the witness. The rows past the eq rows are padding: nothing is read, so every factor is
+// 1, and so are h and g.
+func (q *eqModule) assign(run *wiop.Runtime, w *eqWitness) {
+	for s := range eqSlots {
+		assignExt(run, q.p[s], w.p[s])
+		assignExt(run, q.r[s], w.r[s])
+	}
+	pad := func(x []field.Ext) []field.Ext {
+		return slices.Concat(x, slices.Repeat([]field.Ext{field.OneExt()}, q.module.Size()-len(x)))
+	}
+	assignExt(run, q.h, pad(w.h))
+	assignExt(run, q.g, pad(w.g))
+	assignExt(run, q.product, w.product)
 }
 
 func (v *Verifier) defineRounds(sys *wiop.System, ctx *wiop.ContextFrame, round *wiop.Round) {
 	l, m := v.layout, &v.rounds
 	nb, d := len(l.roundRows), l.maxDegree
-	m.degree = d
-	m.size = moduleSize(nb)
-	m.module = sys.NewSizedModule(ctx, m.size, wiop.PaddingDirectionNone)
+	if d == 0 {
+		return
+	}
+	m.module = sys.NewSizedModule(ctx, moduleSize(nb), wiop.PaddingDirectionNone)
 	column := func(name string) (cols [6]*wiop.Column) {
 		for k := range cols {
 			cols[k] = m.module.NewColumn(ctx.Childf("%s%d", name, k), round)
@@ -199,45 +247,43 @@ func (v *Verifier) defineRounds(sys *wiop.System, ctx *wiop.ContextFrame, round 
 		m.h = append(m.h, column(fmt.Sprintf("h%d-", k)))
 	}
 
-	chain, kappa, idR := make([]int, nb), make([]int, nb), make([]int, nb)
+	chained, kappa, idR := make([]int, nb), make([]int, nb), make([]int, nb)
+	idSum, idFinal, idMu := make([]int, nb), make([]int, nb), make([]int, nb)
 	for i, row := range l.roundRows {
 		if !row.first {
-			chain[i] = 1
+			chained[i] = 1
 		}
 		kappa[i], idR[i] = row.kappa, row.r
+		idSum[i], idFinal[i], idMu[i] = row.sum, row.final, row.mu
 	}
-	m.active = precomputed(ctx.Childf("active"), m.module, m.size, ones(nb))
-	m.chain = precomputed(ctx.Childf("chain"), m.module, m.size, chain)
-	m.kappa = precomputed(ctx.Childf("kappa"), m.module, m.size, kappa)
-	m.idR = precomputed(ctx.Childf("id-r"), m.module, m.size, idR)
-	m.readMu, m.idMu = idColumns(ctx.Childf("mu"), m.module, m.size, nb, func(i int) int { return l.roundRows[i].mu })
+	m.active = precomputed(ctx.Childf("active"), m.module, slices.Repeat([]int{1}, nb))
+	m.chain = precomputed(ctx.Childf("chain"), m.module, chained)
+	m.kappa = precomputed(ctx.Childf("kappa"), m.module, kappa)
+	m.idR = precomputed(ctx.Childf("id-r"), m.module, idR)
+	m.readMu, m.idMu = idColumns(ctx.Childf("mu"), m.module, idMu)
 	for k := range d {
-		readC, idC := idColumns(ctx.Childf("c%d", k+1), m.module, m.size, nb, func(i int) int {
-			if coeffs := l.roundRows[i].coeffs; k < len(coeffs) {
-				return coeffs[k]
+		idC := make([]int, nb)
+		for i, row := range l.roundRows {
+			idC[i] = -1
+			if k < len(row.coeffs) {
+				idC[i] = row.coeffs[k]
 			}
-			return -1
-		})
-		m.readC, m.idC = append(m.readC, readC), append(m.idC, idC)
+		}
+		readC, idCol := idColumns(ctx.Childf("c%d", k+1), m.module, idC)
+		m.readC, m.idC = append(m.readC, readC), append(m.idC, idCol)
 	}
-	m.first, m.idSum = idColumns(ctx.Childf("sum"), m.module, m.size, nb, func(i int) int { return l.roundRows[i].sum })
-	m.last, m.idFinal = idColumns(ctx.Childf("final"), m.module, m.size, nb,
-		func(i int) int { return l.roundRows[i].final })
+	m.first, m.idSum = idColumns(ctx.Childf("sum"), m.module, idSum)
+	m.last, m.idFinal = idColumns(ctx.Childf("final"), m.module, idFinal)
 
 	// the constraints, which hold on every row
 	a, out, r, mu, c0 := columnViews(m.a), columnViews(m.out), columnViews(m.r), columnViews(m.mu), columnViews(m.c0)
 	coefficients := make([]E6, d)
-	var total E6
 	for k := range d {
 		coefficients[k] = columnViews(m.c[k])
-		if k == 0 {
-			total = coefficients[0]
-		} else {
-			total = total.Add(coefficients[k])
-		}
 	}
-	if d == 0 {
-		return
+	total := coefficients[0]
+	for _, c := range coefficients[1:] {
+		total = total.Add(c)
 	}
 
 	// κc₀ + μΣcₖ = a
@@ -257,8 +303,7 @@ func (v *Verifier) defineRounds(sys *wiop.System, ctx *wiop.ContextFrame, round 
 		m.module.NewVanishingManual(ctx.Childf("out%d", k), diff)
 	}
 	// a is the previous row's out, except on the first row of a level, and μ is 1 where it is not read
-	previous := shifted(m.out)
-	for k, diff := range a.Equal(previous) {
+	for k, diff := range a.Equal(shifted(m.out)) {
 		m.module.NewVanishingManual(ctx.Childf("chain%d", k), wiop.Mul(m.chain.View(), diff))
 	}
 	for k := range 6 {
@@ -269,12 +314,17 @@ func (v *Verifier) defineRounds(sys *wiop.System, ctx *wiop.ContextFrame, round 
 	for k := range d {
 		for i := range 6 {
 			m.module.NewVanishingManual(ctx.Childf("c%d-is-zero%d", k+1, i),
-				wiop.Mul(wiop.Sub(wiop.NewConstantField(field.One()), m.readC[k].View()), m.c[k][i].View()))
+				wiop.Mul(wiop.Sub(baseConstant(1), m.readC[k].View()), m.c[k][i].View()))
 		}
 	}
 }
 
+func (m *roundModule) producers() []wiop.Table { return nil }
+
 func (m *roundModule) consumers() []wiop.Table {
+	if m.module == nil {
+		return nil
+	}
 	tables := make([]wiop.Table, 0, 4+len(m.c))
 	tables = append(tables,
 		busElement(m.module, m.first, m.idSum, m.a),
@@ -287,33 +337,20 @@ func (m *roundModule) consumers() []wiop.Table {
 	return tables
 }
 
-func (f *foldModule) assign(run *wiop.Runtime, w *foldWitness) {
-	assignExt(run, f.v, f.size, w.v)
-	assignExt(run, f.phi, f.size, w.phi)
-	assignExt(run, f.e, f.size, w.e)
-	assignExt(run, f.c, f.size, w.c)
-	assignExt(run, f.sum, f.size, w.sum)
-	assignExt(run, f.final, f.size, w.final)
-}
-
-func (q *eqModule) assign(run *wiop.Runtime, w *eqWitness) {
-	assignExt(run, q.p, q.size, w.p)
-	assignExt(run, q.r, q.size, w.r)
-	assignExt(run, q.factor, q.size, w.factor)
-	assignExt(run, q.product, q.size, w.product)
-}
-
 func (m *roundModule) assign(run *wiop.Runtime, w *roundWitness) {
-	assignExt(run, m.a, m.size, w.a)
-	assignExt(run, m.out, m.size, w.out)
-	assignExt(run, m.r, m.size, w.r)
-	assignExt(run, m.mu, m.size, w.mu)
-	assignExt(run, m.c0, m.size, w.c0)
+	if m.module == nil {
+		return
+	}
+	assignExt(run, m.a, w.a)
+	assignExt(run, m.out, w.out)
+	assignExt(run, m.r, w.r)
+	assignExt(run, m.mu, w.mu)
+	assignExt(run, m.c0, w.c0)
 	for k := range m.c {
-		assignExt(run, m.c[k], m.size, columnOf(w.c, k))
+		assignExt(run, m.c[k], columnOf(w.c, k))
 	}
 	for k := range m.h {
-		assignExt(run, m.h[k], m.size, columnOf(w.h, k))
+		assignExt(run, m.h[k], columnOf(w.h, k))
 	}
 }
 
