@@ -6,7 +6,7 @@ import (
 
 // foldRow is a step of the Horner evaluations, at a level that is not a skip level, of the claimed
 // values Σᵢ cⁱvᵢ and of the weighted gate results Σᵢ cⁱeᵢφᵢ, over the level's claims i in gnark's order.
-// The rows of a level run from the last claim to the first: with the sums s and t of the rows before,
+// The rows of a level run from the last claim to the first, each extending the sums of the row before:
 //
 //	sum' = v + c·sum,    final' = e·φ + c·final.
 type foldRow struct {
@@ -18,9 +18,14 @@ type foldRow struct {
 	sum, final int
 }
 
-// eqRow is a step of eq(p, r) = Πⱼ (1 − pⱼ − rⱼ + 2pⱼrⱼ): the row of the variable j reads pⱼ and rⱼ.
+// eqSlots is the number of coordinates of eq that a row covers.
+const eqSlots = 3
+
+// eqRow is a step of eq(p, r) = Πⱼ (1 − pⱼ − rⱼ + 2pⱼrⱼ) over the coordinates j, j + 1 and j + 2: the
+// row reads pⱼ and rⱼ of each, and extends the running product by the product of their three factors.
 type eqRow struct {
-	p, r  int
+	// p and r hold the ids of the three coordinates, -1 for a coordinate past the last, whose factor is 1.
+	p, r  [eqSlots]int
 	first bool
 	// result is the id that the last row of a product exposes it under, and -1 on the others.
 	result int
@@ -92,9 +97,15 @@ func (l *layout) lowerSumchecks() {
 				for k, source := range group.ClaimSources {
 					ids[k] = alloc()
 					point := l.points[source.Level][source.OutgoingClaimIndex]
-					for j := range l.n {
-						row := eqRow{p: point[j], r: lv.roundChallenges[j], first: j == 0, result: -1}
-						if j == l.n-1 {
+					for j := 0; j < l.n; j += eqSlots {
+						row := eqRow{first: j == 0, result: -1}
+						for s := range eqSlots {
+							row.p[s], row.r[s] = -1, -1
+							if j+s < l.n {
+								row.p[s], row.r[s] = point[j+s], lv.roundChallenges[j+s]
+							}
+						}
+						if j+eqSlots >= l.n {
 							row.result = ids[k]
 						}
 						l.eqRows = append(l.eqRows, row)
@@ -159,10 +170,10 @@ func (l *layout) lowerSumchecks() {
 // that are not consolidated, then the levels from the top down to level 0, whose every wire gets a
 // claim, the other levels giving one to each unconsolidated input.
 func (l *layout) lowerClaims() {
-	counts := make(map[int]int)
+	l.claimCounts = make(map[int]int)
 	add := func(wireI int, point []int, value int) {
-		l.claims = append(l.claims, claimLayout{wire: wireI, index: counts[wireI], point: point, value: value})
-		counts[wireI]++
+		l.claims = append(l.claims, claimLayout{wire: wireI, index: l.claimCounts[wireI], point: point, value: value})
+		l.claimCounts[wireI]++
 	}
 	for i, wireI := range l.circuit.Outputs() {
 		if !l.consolidated[wireI] {
@@ -171,8 +182,7 @@ func (l *layout) lowerClaims() {
 	}
 	for levelI := len(l.schedule) - 1; levelI >= 0; levelI-- {
 		level, lv := l.schedule[levelI], &l.levels[levelI]
-		unique, _ := l.circuit.LevelCircuit(l.schedule, levelI, identityGate()).InputMapping(level)
-		for uniqueI, wireI := range unique {
+		for uniqueI, wireI := range lv.unique {
 			if levelI != 0 && (!l.circuit.IsInput(wireI) || l.consolidated[wireI]) {
 				continue
 			}
@@ -188,13 +198,16 @@ type foldWitness struct {
 	v, phi, e, c, sum, final []field.Ext
 }
 
-// eqWitness holds the values of the columns of the eq rows: the factor 1 − p − r + 2pr and the product.
+// eqWitness holds the values of the columns of the eq rows: p and r of each slot, the product h of the
+// factors of the first two slots, the product g of the three, and the running product.
 type eqWitness struct {
-	p, r, factor, product []field.Ext
+	p, r          [eqSlots][]field.Ext
+	h, g, product []field.Ext
 }
 
-// roundWitness holds the values of the columns of the round rows: the coefficients c₀, …, c_D, and the
-// intermediates h₁, …, h_{D−1} of Horner's rule, hₖ = cₖ + r·hₖ₊₁ with h_D = c_D.
+// roundWitness holds the values of the columns of the round rows: the claim a, the result out, r, μ, the
+// coefficient c₀, the coefficients c₁, …, c_D of each row, and its intermediates h₁, …, h_{D−1} of
+// Horner's rule, hₖ = cₖ + r·hₖ₊₁ with h_D = c_D.
 type roundWitness struct {
 	a, out, r, mu, c0 []field.Ext
 	c, h              [][]field.Ext
@@ -203,19 +216,27 @@ type roundWitness struct {
 // evaluateEqs runs the eq rows, writing the results to values.
 func (l *layout) evaluateEqs(values []field.Ext) *eqWitness {
 	n := len(l.eqRows)
-	w := &eqWitness{
-		p: make([]field.Ext, n), r: make([]field.Ext, n), factor: make([]field.Ext, n), product: make([]field.Ext, n),
+	w := &eqWitness{h: make([]field.Ext, n), g: make([]field.Ext, n), product: make([]field.Ext, n)}
+	for s := range eqSlots {
+		w.p[s], w.r[s] = make([]field.Ext, n), make([]field.Ext, n)
 	}
 	for i, row := range l.eqRows {
-		w.p[i], w.r[i] = values[row.p], values[row.r]
-		var pr field.Ext
-		pr.Mul(&w.p[i], &w.r[i])
-		w.factor[i] = field.OneExt()
-		w.factor[i].Sub(&w.factor[i], &w.p[i])
-		w.factor[i].Sub(&w.factor[i], &w.r[i])
-		w.factor[i].Add(&w.factor[i], &pr)
-		w.factor[i].Add(&w.factor[i], &pr)
-		w.product[i] = w.factor[i]
+		var factors [eqSlots]field.Ext
+		for s := range eqSlots {
+			if row.p[s] >= 0 {
+				w.p[s][i], w.r[s][i] = values[row.p[s]], values[row.r[s]]
+			}
+			var pr field.Ext
+			pr.Mul(&w.p[s][i], &w.r[s][i])
+			factors[s] = field.OneExt()
+			factors[s].Sub(&factors[s], &w.p[s][i])
+			factors[s].Sub(&factors[s], &w.r[s][i])
+			factors[s].Add(&factors[s], &pr)
+			factors[s].Add(&factors[s], &pr)
+		}
+		w.h[i].Mul(&factors[0], &factors[1])
+		w.g[i].Mul(&w.h[i], &factors[2])
+		w.product[i] = w.g[i]
 		if !row.first {
 			w.product[i].Mul(&w.product[i], &w.product[i-1])
 		}
