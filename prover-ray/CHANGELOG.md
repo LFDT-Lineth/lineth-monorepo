@@ -7,6 +7,8 @@
 - *(prover-ray)* FRI over a fixed maximum domain (#4322)
 - *(prover-ray)* Register program vk to the public inputs (#4309)
 - *(riscv-guest)* Refactoring to enable further Rollup GP development (#4342)
+- *(prover-ray)* Prepare centralized prover (#4242)
+- *(prover-ray)* Conglomerate the shard proofs behind a Merger interface (#4372)
 
 ### 🐛 Bug Fixes
 
@@ -15,6 +17,7 @@
 - *(prover-ray)* Fix lookup soundness bug due to improper reuse of th… (#4363)
 - *(prover-ray)* Adopt the guest log syscall in the prover-ray (#4371)
 - *(riscv-guest, misc, prover-ray)* Riscv guest/shared zkevm fixtures (#4368)
+- *(prover-ray)* Bump arithmetization commit to support u16 addresses (#4396)
 
 ### 🚜 Refactor
 
@@ -23,6 +26,8 @@
 ### ⚡ Performance
 
 - *(prover-ray)* Preserve expression sharing through the localvanishing lift (#4155)
+- *(prover-ray)* Parallelise and pool the R5 commits, opening, Lagrange evaluation and lookup (#4202)
+- *(prover-ray)* Evaluate the quotient, log-derivative and grand-product rows with vector programs (#4203)
 
 ### ⚙️ Miscellaneous Tasks
 
