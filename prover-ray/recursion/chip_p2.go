@@ -14,7 +14,7 @@ const (
 
 // numPerms is the number of compressions the program computes: the rows of
 // the P2 core, the MD hashes' blocks and the Merkle paths' steps.
-func (m *Machine) numPerms() int { return m.numMDBlocks() + m.numPathSteps() + m.numDPathRows() }
+func (m *Machine) numPerms() int { return m.numMDBlocks() + m.numPathSteps() + m.numDPathHashes() }
 
 // p2Chip: the P2 core, one Poseidon2 permutation per row (see p2_air.go).
 //
@@ -48,10 +48,10 @@ func (c p2Chip) define(m *module, bus *Bus) error {
 // compressions, then the permutation of zero.
 func (c p2Chip) trace(cs *cols, r *Run) error {
 	// the dynamic paths compress on some of their rows only (not before
-	// their first leaf), so rows() bounds the compressions; the others are
-	// padding
-	if len(r.p2) > c.rows() {
-		return fmt.Errorf("%d compressions recorded, for %d rows", len(r.p2), c.rows())
+	// their first leaf): rows() bounds an execution's compressions, and the
+	// module's padded height any trace's; the rows left are padding
+	if len(r.p2) > cs.n {
+		return fmt.Errorf("%d compressions recorded, for %d rows", len(r.p2), cs.n)
 	}
 	columns := make([][]field.Element, len(p2Cols))
 	for k, name := range p2Cols {

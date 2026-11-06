@@ -86,9 +86,7 @@ func (m *Machine) checkTable(t Table) {
 // cell idx. Executing it fails if idx is not below the table's length (and a
 // proof of such a read does not verify).
 func (m *Machine) Lookup(t Table, idx int) int {
-	if t.tag < 0 || t.tag >= len(m.tables) || len(m.tables[t.tag].src) != t.n {
-		panic("Lookup: unknown table")
-	}
+	m.checkTable(t)
 	in := lookupInst{tag: t.tag, idx: m.rd(idx).addr, out: m.wr()}
 	m.lookups = append(m.lookups, in)
 	m.record(instrLookup, len(m.lookups)-1)

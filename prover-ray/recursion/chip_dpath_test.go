@@ -1,6 +1,7 @@
 package recursion
 
 import (
+	"fmt"
 	"math/rand/v2"
 	"sort"
 	"testing"
@@ -10,23 +11,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The dynamic path circuit of these tests: G groups, heights up to H,
-// positions of L bits.
+// The dynamic path circuit of these tests: G groups, heights up to H.
 const (
 	dpG = 4
 	dpH = 8
-	dpL = 10
 )
 
 // dpathValues are the input values of a dynamic path: the groups' leaves and
-// heights, the order, the siblings by height, the position's bits and the
-// root.
+// heights, the order, the siblings by height, the index and the root.
 type dpathValues struct {
 	leaves  []Cell
 	heights []int
 	order   []int
 	sibs    []Cell
-	bits    []uint64
+	index   uint64
 	root    Cell
 }
 
@@ -53,11 +51,12 @@ func (r dpRand) cell() Cell {
 }
 
 // dpathTree builds one of ray's mixed-height trees with the groups at the
-// given heights, as fri.Tree hashes it: a leaf chains the digests of the
-// groups of the top height, in order, and a node at height h chains, after
-// compressing its children, the digests of the groups of height h. It opens
-// it at a random leaf, checks the opening with fri.Branch.AuthenticateToCap,
-// and returns the dynamic path's values for it.
+// given heights (in [0, H]), as fri.Tree hashes it: a leaf chains the digests
+// of the groups of the top height, in order, and a node at height h chains,
+// after compressing its children, the digests of the groups of height h (the
+// root, h = 0, included). It opens it at a random leaf, checks the opening
+// with fri.Branch.AuthenticateToCap, and returns the dynamic path's values for
+// it.
 func dpathTree(t *testing.T, heights []int, seed uint64) dpathValues {
 	t.Helper()
 	rnd := dpRand{rand.New(rand.NewPCG(seed, 31))}
@@ -110,8 +109,10 @@ func dpathTree(t *testing.T, heights []int, seed uint64) dpathValues {
 			}
 		}
 	}
-	require.NoError(t, branch.AuthenticateToCap(i, []field.Octuplet{field.Octuplet(level[0][0])}),
-		"the test's tree must be ray's")
+	if top > 0 {
+		require.NoError(t, branch.AuthenticateToCap(i, []field.Octuplet{field.Octuplet(level[0][0])}),
+			"the test's tree must be ray's")
+	}
 
 	v := dpathValues{leaves: make([]Cell, len(heights)), heights: heights, order: order, sibs: make([]Cell, dpH), root: level[0][0]}
 	for g, h := range heights {
@@ -120,16 +121,9 @@ func dpathTree(t *testing.T, heights []int, seed uint64) dpathValues {
 	for h := 1; h <= top; h++ {
 		v.sibs[h-1] = level[h][(i>>(top-h))^1]
 	}
-	v.setPosition(uint64(i)<<(dpL-top) | rnd.Uint64N(1<<(dpL-top)))
+	// the index at height H: the leaf's index, then bits below the tree
+	v.index = uint64(i)<<(dpH-top) | rnd.Uint64N(1<<(dpH-top))
 	return v
-}
-
-// setPosition sets the bits of the queried position.
-func (v *dpathValues) setPosition(s uint64) {
-	v.bits = v.bits[:0]
-	for j := range dpL {
-		v.bits = append(v.bits, s>>j&1)
-	}
 }
 
 // cells returns the input cells of v, in the circuit's input order.
@@ -143,15 +137,29 @@ func (v dpathValues) cells() []Cell {
 		res = append(res, ScalarCell(field.NewElement(uint64(g))))
 	}
 	res = append(res, v.sibs...)
-	for _, b := range v.bits {
-		res = append(res, ScalarCell(field.NewElement(b)))
-	}
-	return append(res, v.root)
+	return append(res, ScalarCell(field.NewElement(v.index)), v.root)
 }
 
+// Input cells of dpathCircuit (inputs are the machine's first cells), and its
+// tables, in creation order.
+const (
+	dpLeafCell   = 0
+	dpHeightCell = dpLeafCell + dpG
+	dpOrderCell  = dpHeightCell + dpG
+	dpSibCell    = dpOrderCell + dpG
+	dpIndexCell  = dpSibCell + dpH
+	dpRootCell   = dpIndexCell + 1
+)
+
+const (
+	dpLeafTable = iota
+	dpHeightTable
+	dpOrderTable
+	dpSibTable
+)
+
 // dpathCircuit is one dynamic path over tables of input cells, in the order
-// of dpathValues.cells; the root is copied, so that it is read on the bus
-// besides the path's own read.
+// of dpathValues.cells.
 func dpathCircuit() *Machine {
 	m := &Machine{}
 	dpathCircuitOn(m)
@@ -169,18 +177,20 @@ func dpathCircuitOn(m *Machine) {
 	}
 	leaves := m.Table(inputs(dpG, KindDigest))
 	heights, order := m.Table(inputs(dpG, KindScalar)), m.Table(inputs(dpG, KindScalar))
-	sibs, bits := m.Table(inputs(dpH, KindDigest)), m.Table(inputs(dpL, KindScalar))
-	root := m.input(KindDigest)
-	m.MerklePathDynamic(DynamicPath{Leaves: leaves, Heights: heights, Order: order, Siblings: sibs, Bits: bits, L: dpL, Root: root})
+	sibs := m.Table(inputs(dpH, KindDigest))
+	index, root := m.input(KindScalar), m.input(KindDigest)
+	m.MerklePathDynamic(DynamicPath{Leaves: leaves, Heights: heights, Order: order, Siblings: sibs, Index: index, Root: root})
 }
 
 // TestDynamicPath: one compiled circuit checks the openings of trees of every
 // shape: distinct heights, all groups at the top, a top below H, the top group
-// changing, all at height 1, a group at H.
+// changing, all at height 1, a group at H, groups injected at the root
+// (height 0), and a tree of one pair.
 func TestDynamicPath(t *testing.T) {
 	p, err := dpathCircuit().Compile(testPCSOpts...)
 	require.NoError(t, err)
-	for i, hs := range [][]int{{5, 3, 3, 2}, {8, 8, 8, 8}, {4, 4, 4, 4}, {2, 6, 6, 1}, {1, 1, 1, 1}, {8, 1, 4, 4}, {3, 7, 3, 7}} {
+	for i, hs := range [][]int{{5, 3, 3, 2}, {8, 8, 8, 8}, {4, 4, 4, 4}, {2, 6, 6, 1}, {1, 1, 1, 1}, {8, 1, 4, 4},
+		{3, 7, 3, 7}, {3, 0, 2, 0}, {0, 0, 0, 0}} {
 		v := dpathTree(t, hs, uint64(i))
 		r, err := p.Execute(v.cells())
 		require.NoError(t, err, "heights %v", hs)
@@ -214,15 +224,15 @@ func groupedTable(logSizes []int, seed uint64) fri.MultiSizeTable {
 }
 
 // groupedValues returns the dynamic path's values for the opening of a grouped
-// commitment's tree at position s (of dpL bits): module g is the group of
-// height log size + 1 − 1 (its row pairs), its leaf its digest at its pair on
+// commitment's tree at index s (of dpH bits): module g is the group of height
+// its log size (its row pairs, at blowup 2), its leaf its digest at its pair on
 // the path, which a commitment of that group alone gives.
 func groupedValues(t *testing.T, table fri.MultiSizeTable, logSizes []int, s uint64) dpathValues {
 	t.Helper()
 	tree := table.Merkleize()
 	top := len(table) - 2 // the bottom's pairs
-	i := int(s >> (dpL - top))
-	v := dpathValues{heights: make([]int, len(logSizes)), sibs: make([]Cell, dpH), root: Cell(tree.Root())}
+	i := int(s >> (dpH - top))
+	v := dpathValues{heights: make([]int, len(logSizes)), sibs: make([]Cell, dpH), index: s, root: Cell(tree.Root())}
 	for g, l := range logSizes {
 		v.heights[g] = l
 		size := l + 1
@@ -242,48 +252,64 @@ func groupedValues(t *testing.T, table fri.MultiSizeTable, logSizes []int, s uin
 	for h := 1; h <= top; h++ {
 		v.sibs[h-1] = Cell(branch.Siblings[h-1])
 	}
-	v.setPosition(s)
 	return v
 }
 
 // TestDynamicPathGroupedTrees: one compiled circuit verifies openings of real
 // grouped commitments (fri.MultiSizeTable.Merkleize) of the same modules at
-// different sizes, the trees' heights, the groups' order and which groups
-// share a height all changing, at several positions.
+// different sizes (modules of size 1, injected at the root, included), the
+// trees' heights, the groups' order and which groups share a height all
+// changing, at several positions.
 func TestDynamicPathGroupedTrees(t *testing.T) {
 	p, err := dpathCircuit().Compile(testPCSOpts...)
 	require.NoError(t, err)
-	for k, logSizes := range [][]int{{4, 3, 3, 1}, {2, 5, 1, 5}, {1, 1, 1, 1}, {6, 2, 7, 2}} {
+	for k, logSizes := range [][]int{{4, 3, 3, 1}, {2, 5, 1, 5}, {1, 1, 1, 1}, {6, 2, 7, 2}, {3, 0, 2, 0}} {
 		table := groupedTable(logSizes, uint64(k))
-		for _, s := range []uint64{0, 1<<dpL - 1, 0x2a5} {
+		for _, s := range []uint64{0, 1<<dpH - 1, 0xa5} {
 			v := groupedValues(t, table, logSizes, s)
 			r, err := p.Execute(v.cells())
-			require.NoError(t, err, "log sizes %v, position %#x", logSizes, s)
-			require.NoError(t, proveAndVerify(p, r), "log sizes %v, position %#x", logSizes, s)
+			require.NoError(t, err, "log sizes %v, index %#x", logSizes, s)
+			require.NoError(t, proveAndVerify(p, r), "log sizes %v, index %#x", logSizes, s)
 		}
 	}
 }
 
-// TestDynamicPathRejects: openings the circuit must reject, on the tree of
-// heights 5, 3, 3, 2: statements that execute (the circuit, not the
-// executor, rejects them).
+// TestDynamicPathOrderIsTheCallers: the chip does not check the order, which
+// is the caller's check. A path folding group 1 twice and group 2 never, with
+// the root that path reaches, verifies: group 2's leaf is not authenticated.
+func TestDynamicPathOrderIsTheCallers(t *testing.T) {
+	p, err := dpathCircuit().Compile(testPCSOpts...)
+	require.NoError(t, err)
+	v := dpathTree(t, []int{5, 3, 3, 2}, 7)
+	v.order = []int{0, 1, 1, 3}
+	r, err := p.Execute(v.cells())
+	require.NoError(t, err)
+	rows := r.dpathRows[0]
+	v.root = rows[len(rows)-1].out
+	r, err = p.Execute(v.cells())
+	require.NoError(t, err)
+	require.NoError(t, proveAndVerify(p, r), "the chip accepts any order; the caller checks it")
+}
+
+// TestDynamicPathRejects: statements of the tree of heights 5, 3, 3, 2 with
+// one value wrong, which execute: the circuit rejects them (the root read,
+// for all of these, since the path then reaches another root; the forgeries
+// below isolate each check). Execution rejects orders whose heights
+// increase, heights above H and an index of more than H bits: no rows follow
+// from them.
 func TestDynamicPathRejects(t *testing.T) {
 	hs := []int{5, 3, 3, 2}
 	p, err := dpathCircuit().Compile(testPCSOpts...)
 	require.NoError(t, err)
 	for name, edit := range map[string]func(v *dpathValues){
-		// groups 1 and 2 share height 3: folded in the other order
-		"order of equal heights": func(v *dpathValues) { v.order = []int{0, 2, 1, 3} },
-		// group 1 folded twice, group 2 never
-		"group twice": func(v *dpathValues) { v.order = []int{0, 1, 1, 3} },
 		// group 2 claimed at height 2: folded at the wrong level
 		"wrong height": func(v *dpathValues) {
 			v.heights = []int{5, 3, 2, 2}
 			v.order = []int{0, 1, 2, 3}
 		},
 		"sibling": func(v *dpathValues) { v.sibs[2][0].SetUint64(9) },
-		// the direction bit of height 3: bit L − 3 of the position
-		"direction bit": func(v *dpathValues) { v.bits[dpL-3] ^= 1 },
+		// the direction bit of height 3: bit H − 3 of the index
+		"direction bit": func(v *dpathValues) { v.index ^= 1 << (dpH - 3) },
 		"root":          func(v *dpathValues) { v.root[1].SetUint64(9) },
 		"leaf":          func(v *dpathValues) { v.leaves[3][2].SetUint64(9) },
 	} {
@@ -292,7 +318,6 @@ func TestDynamicPathRejects(t *testing.T) {
 			v.heights = append([]int(nil), v.heights...)
 			v.sibs = append([]Cell(nil), v.sibs...)
 			v.leaves = append([]Cell(nil), v.leaves...)
-			v.bits = append([]uint64(nil), v.bits...)
 			edit(&v)
 			r, err := p.Execute(v.cells())
 			require.NoError(t, err, "not executed")
@@ -300,12 +325,10 @@ func TestDynamicPathRejects(t *testing.T) {
 		})
 	}
 
-	// execution rejects orders whose heights increase, and heights out of
-	// [1, H]: no rows follow from them
 	for name, edit := range map[string]func(v *dpathValues){
 		"increasing order": func(v *dpathValues) { v.order = []int{3, 0, 1, 2} },
-		"height 0":         func(v *dpathValues) { v.heights = []int{5, 3, 3, 0} },
 		"height above H":   func(v *dpathValues) { v.heights = []int{dpH + 1, 3, 3, 2} },
+		"index above 2^H":  func(v *dpathValues) { v.index += 1 << dpH },
 	} {
 		v := dpathTree(t, hs, 7)
 		v.heights = append([]int(nil), v.heights...)
@@ -315,66 +338,33 @@ func TestDynamicPathRejects(t *testing.T) {
 	}
 }
 
-// TestDynamicPathRejectsTrace: traces tampered past the executor, on the tree
-// of heights 5, 3, 3, 2, whose rows are H − 5 = 3 copies, then group 0 (the
-// leaf) at row 3.
-func TestDynamicPathRejectsTrace(t *testing.T) {
-	for name, tamper := range map[string]func(p *Program, r *Run){
-		// a fold with its leaf on the left
-		"fold direction": func(p *Program, r *Run) { r.Witness(p, dpathMod, dpathB)[3].SetOne() },
-		// a copy row (before the leaf) that changes the running value
-		"copy": func(p *Program, r *Run) {
-			out := r.Witness(p, dpathMod, laneName(dpathOut, 0))
-			one := field.One()
-			out[1].Add(&out[1], &one)
-		},
-		// a level skipped: a level row turned into a fold
-		"kind": func(p *Program, r *Run) { r.Witness(p, dpathMod, dpathKind)[2].SetOne() },
-	} {
-		t.Run(name, func(t *testing.T) {
-			p, err := dpathCircuit().Compile(testPCSOpts...)
-			require.NoError(t, err)
-			r, err := p.Execute(dpathTree(t, []int{5, 3, 3, 2}, 7).cells())
-			require.NoError(t, err)
-			require.NoError(t, proveAndVerify(p, r), "honest")
-			tamper(p, r)
-			require.Error(t, proveAndVerify(p, r), "tampered trace accepted")
+// TestDynamicPathHeightBound: a tree has at most field.Bits − 1 levels, since
+// idx = Σ bᵢ·2ⁱ is injective only below the field's modulus.
+func TestDynamicPathHeightBound(t *testing.T) {
+	for _, tc := range []struct {
+		height int
+		ok     bool
+	}{{1, true}, {field.Bits - 1, true}, {field.Bits, false}} {
+		t.Run(fmt.Sprint(tc.height), func(t *testing.T) {
+			m := &Machine{}
+			table := func(n int) Table {
+				cells := make([]int, n)
+				for i := range cells {
+					cells[i] = m.InputScalar()
+				}
+				return m.Table(cells)
+			}
+			p := DynamicPath{Leaves: table(1), Heights: table(1), Order: table(1), Siblings: table(tc.height),
+				Index: m.InputScalar(), Root: m.InputDigest()}
+			build := func() { m.MerklePathDynamic(p) }
+			if tc.ok {
+				require.NotPanics(t, build)
+			} else {
+				require.Panics(t, build)
+			}
 		})
 	}
 }
-
-// TestDynamicPathFoldsAtItsHeight: a group must fold at the height its
-// Heights entry gives. The tree of heights 5, 3, 3, 2 holds group 2 at height
-// 3. Claiming height 2 for it, a forged trace still folds it at height 3 (row
-// 7: 3 copies, group 0, two levels, group 1, group 2), where the tree needs
-// it, and reads the claimed 2 consistently (the input cell, the table's
-// entry, the row's hg): only the fold-height constraint rejects it.
-func TestDynamicPathFoldsAtItsHeight(t *testing.T) {
-	p, err := dpathCircuit().Compile(testPCSOpts...)
-	require.NoError(t, err)
-	v := dpathTree(t, []int{5, 3, 3, 2}, 7)
-	r, err := p.Execute(v.cells())
-	require.NoError(t, err)
-	require.NoError(t, proveAndVerify(p, r), "honest")
-	heightCell := dpG + 2 // the input cell of heights[2]
-	r.values[heightCell] = ScalarCell(field.NewElement(2))
-	rows := r.dpathRows[0]
-	require.True(t, rows[7].fold && rows[7].pi == 2, "row 7 folds group 2")
-	require.NoError(t, p.trace(r)) // the witness and table chips follow the cell
-	r.Witness(p, dpathMod, dpathHg)[7] = field.NewElement(2)
-	require.Error(t, proveAndVerify(p, r), "group folded at another height than its claimed one")
-}
-
-// Input cells of dpathCircuit (inputs are the machine's first cells): the
-// leaves, heights, order, siblings and bits tables, then the root.
-const (
-	dpLeafCell   = 0
-	dpHeightCell = dpLeafCell + dpG
-	dpOrderCell  = dpHeightCell + dpG
-	dpSibCell    = dpOrderCell + dpG
-	dpBitCell    = dpSibCell + dpH
-	dpRootCell   = dpBitCell + dpL
-)
 
 // dpCompress returns a row's compression and its P2 input: its running hash
 // and operand, ordered by its direction bit.
@@ -386,22 +376,68 @@ func dpCompress(row dpathRow) (Cell, [P2Width]field.Element) {
 	return compressCell(left, right), p2Input(left, right)
 }
 
+// replay recomputes a forged path from its rows' kinds, bits, operands and
+// started flags, as the chip's constraints but the forged one require: the
+// running hash (a copy before the first leaf, the first leaf, then
+// compressions, recorded for the P2 core), the root it reaches, and the index
+// bits it consumes (the index cell, from the last row's bit, plus extra on
+// the last row, up).
+func replay(r *Run, rows []dpathRow, extra uint64) {
+	r.p2 = r.p2[:0]
+	cur := rows[0].cur
+	for k := range rows {
+		rows[k].cur = cur
+		switch {
+		case rows[k].started:
+			var in [P2Width]field.Element
+			rows[k].out, in = dpCompress(rows[k])
+			r.p2 = append(r.p2, in)
+		case rows[k].fold:
+			rows[k].out = rows[k].op
+		default:
+			rows[k].out = cur
+		}
+		cur = rows[k].out
+	}
+	r.values[dpRootCell] = cur
+	idx := rows[len(rows)-1].b + extra
+	rows[len(rows)-1].idx = idx
+	for k := len(rows) - 2; k >= 0; k-- {
+		if rows[k].fold {
+			idx += rows[k].b
+		} else {
+			idx = rows[k].b + 2*idx
+		}
+		rows[k].idx = idx
+	}
+	r.values[dpIndexCell] = ScalarCell(field.NewElement(idx))
+}
+
 // TestDynamicPathRejectsForged: on the tree of heights 5, 3, 3, 2, whose rows
 // are three copies (heights 8, 7, 6), group 0's fold (row 3, the path's first
 // leaf), levels 5 and 4, the folds of groups 1 and 2 at height 3, level 3,
 // group 3's fold, levels 2 and 1, the run is forged so that only one check of
 // the chip sees it: its rows, the tables' read counts, the P2 core's
 // compressions and the cells change consistently, and the trace follows.
-// Every check that a forgery can isolate rejects one here.
+// Every check of the chip but kind's booleanity (which keeps the fold and
+// level weights 0 or 1) rejects one here or in TestDynamicPathRejectsPadding.
 func TestDynamicPathRejectsForged(t *testing.T) {
 	// the compressions start at row 4, the first after the first leaf
 	const firstHash = 4
 	for name, forge := range map[string]func(r *Run, rows []dpathRow){
 		// b boolean: a bit of 2 on a copy row, where nothing hashes
 		"non-boolean bit on a copy row": func(r *Run, rows []dpathRow) {
-			r.values[dpBitCell+dpL-dpH] = ScalarCell(field.NewElement(2))
 			rows[0].b = 2
+			replay(r, rows, 0)
 		},
+		// kind·b = 0: group 1 folded with its leaf on the left
+		"fold direction": func(r *Run, rows []dpathRow) {
+			rows[6].b = 1
+			replay(r, rows, 0)
+		},
+		// the index's bound: an index of H + 1 bits, the extra one left on
+		// the last row
+		"index above 2^H": func(r *Run, rows []dpathRow) { replay(r, rows, 2) },
 		// copy before the leaf: the first fold's output is not its leaf
 		"first fold's output": func(r *Run, rows []dpathRow) {
 			r.values[dpLeafCell][0].SetUint64(77)
@@ -416,47 +452,44 @@ func TestDynamicPathRejectsForged(t *testing.T) {
 			r.p2[9-firstHash] = in
 		},
 		// hc transition: a copy row at another height, reading that height's
-		// sibling (zero, like its own) and bit
+		// sibling (zero, like its own)
 		"height of a copy row": func(r *Run, rows []dpathRow) {
-			moveRead(r, dpSibTable, 6, 5)
-			moveRead(r, dpBitTable, dpL-7, dpL-6)
+			if c := r.tableReads[dpSibTable]; c != nil {
+				c[6]--
+				c[5]++
+			}
 			rows[1].hc = 6
-			rows[1].b = r.values[dpBitCell+dpL-6][0].Uint64()
 		},
 		// fc transition: a level row's fold count, which it reads nothing with
 		"fold count of a level row": func(_ *Run, rows []dpathRow) { rows[4].fc = 3 },
-		// started transition: a copy row hashes, the next one copies again
+		// started transition: a copy row hashes, the next one copies again,
+		// and the first fold takes its leaf whatever the running hash
 		"started on a copy row": func(r *Run, rows []dpathRow) {
 			var in [P2Width]field.Element
 			rows[1].started = true
 			rows[1].out, in = dpCompress(rows[1])
 			r.p2 = append(r.p2, in)
 			rows[2].cur, rows[2].out = rows[1].out, rows[1].out
-			rows[3].cur = rows[1].out // the first fold takes its leaf whatever cur
+			rows[3].cur = rows[1].out
 		},
 		// started = 0 on the first row: every row hashes, the copies above
 		// the tree included, and the statement's root is that path's
 		"started from the first row": func(r *Run, rows []dpathRow) {
-			r.p2 = r.p2[:0]
-			var cur Cell
 			for k := range rows {
-				rows[k].started, rows[k].cur = true, cur
-				var in [P2Width]field.Element
-				rows[k].out, in = dpCompress(rows[k])
-				r.p2 = append(r.p2, in)
-				cur = rows[k].out
+				rows[k].started = true
 			}
-			r.values[dpRootCell] = cur
+			replay(r, rows, 0)
 		},
-		// the reads: a table cell differs from what the rows use
+		// the reads: a cell differs from what the rows use
 		"leaf cell":    func(r *Run, _ []dpathRow) { r.values[dpLeafCell+1][2].SetUint64(77) },
 		"sibling cell": func(r *Run, _ []dpathRow) { r.values[dpSibCell+2][2].SetUint64(77) },
 		"order cell": func(r *Run, _ []dpathRow) {
 			r.values[dpOrderCell+1], r.values[dpOrderCell+2] = r.values[dpOrderCell+2], r.values[dpOrderCell+1]
 		},
+		// group 3 claimed at height 5 while it folds at height 2
 		"height cell": func(r *Run, _ []dpathRow) { r.values[dpHeightCell+3] = ScalarCell(field.NewElement(5)) },
-		"bit cell": func(r *Run, _ []dpathRow) {
-			r.values[dpBitCell+dpL-3][0].SetUint64(r.values[dpBitCell+dpL-3][0].Uint64() ^ 1)
+		"index cell": func(r *Run, _ []dpathRow) {
+			r.values[dpIndexCell][0].SetUint64(r.values[dpIndexCell][0].Uint64() ^ 1<<(dpH-3))
 		},
 		// the P2 lookup: a node replaced, the chain kept
 		"forged node": func(_ *Run, rows []dpathRow) {
@@ -477,24 +510,6 @@ func TestDynamicPathRejectsForged(t *testing.T) {
 	}
 }
 
-// The tables of dpathCircuit, in creation order.
-const (
-	dpLeafTable = iota
-	dpHeightTable
-	dpOrderTable
-	dpSibTable
-	dpBitTable
-)
-
-// moveRead moves one counted read of a table from entry i to entry j, if the
-// run counts that table's reads.
-func moveRead(r *Run, table, i, j int) {
-	if reads := r.tableReads[table]; reads != nil {
-		reads[i]--
-		reads[j]++
-	}
-}
-
 // setRow sets the dpath chip's witness on a row, past the trace: the module's
 // padding rows, which the trace leaves zero.
 func setRow(p *Program, r *Run, row int, cols map[string]field.Element, cells map[string]Cell) {
@@ -508,110 +523,85 @@ func setRow(p *Program, r *Run, row int, cols map[string]field.Element, cells ma
 	}
 }
 
-// TestDynamicPathRejectsPadding: the module's padding rows (12 path rows,
-// 16 rows) have no setup selector, and kind and started are witness
-// selectors there: only their booleanity keeps a padding row from turning a
-// read into a write.
-//   - started = −1: a padding row supplies a compression that is not one, to
-//     a path that copies at level 4 instead of hashing it (the statement's
-//     root being that path's);
-//   - kind = −1: a padding row writes the table entries that a mirror row,
-//     kind = 1, reads (a net zero).
+// TestDynamicPathRejectsPadding: the module's padding rows (16 rows for 12
+// path rows) have no setup selector, and kind and started are witness
+// selectors there too: only (1 − active)·started = 0 and (1 − active)·kind = 0
+// keep a padding row from accessing the buses.
+//   - started = −1: a padding row's P2 read of weight −1 writes a compression
+//     that is not one, for a path that copies at level 4 instead of hashing
+//     it (the statement's root being that path's);
+//   - kind = 1: a padding row's sibling read, of weight active − kind = −1,
+//     writes a table entry. Table 0 here is a table of scalars [1, 3, 9, 4],
+//     read by a Lookup at index 2. With the zero tags of padding, the row
+//     reads its group 1 at entry 0 (fc = 0), its leaf and its height 3 at
+//     entry 1, and writes the entry (2, 3): the Lookup would read 3 instead
+//     of 9.
 func TestDynamicPathRejectsPadding(t *testing.T) {
 	const firstHash, padding = 4, 12
-	minusOne := field.NewElement(0)
-	one := field.One()
-	minusOne.Sub(&minusOne, &one)
-	for name, forge := range map[string]func(p *Program, r *Run){
-		"started": func(p *Program, r *Run) {
-			rows := r.dpathRows[0]
-			skipped := rows[5] // level 4: copied instead of hashed
-			rows[5].out = rows[5].cur
-			p2 := append([][P2Width]field.Element(nil), r.p2[:5-firstHash]...)
-			for k := 6; k < len(rows); k++ {
-				rows[k].cur = rows[k-1].out
-				var in [P2Width]field.Element
-				rows[k].out, in = dpCompress(rows[k])
-				p2 = append(p2, in)
-			}
-			r.p2 = p2
-			r.values[dpRootCell] = rows[len(rows)-1].out
-			require.NoError(t, p.trace(r))
-			// the padding row writes the copied level's tuple: inputs ordered
-			// by its bit, output its running hash
-			setRow(p, r, padding, map[string]field.Element{dpathStarted: minusOne, dpathB: field.NewElement(skipped.b)},
-				map[string]Cell{dpathCur: skipped.cur, dpathOp: skipped.op, dpathOut: skipped.cur})
-		},
-		"kind": func(p *Program, r *Run) {
-			require.NoError(t, p.trace(r))
-			x := cell(5)
-			var neg Cell
-			for i := range CellWidth {
-				neg[i].Sub(&neg[i], &x[i])
-			}
-			// both: pi = 0, fc = 0, hg = hc = 1, b = 0, started = 0, op = x;
-			// out follows the copy relation, out = cur + kind·(op − cur)
-			setRow(p, r, padding, map[string]field.Element{dpathKind: minusOne, dpathHg: one, dpathHc: one},
-				map[string]Cell{dpathOp: x, dpathOut: neg})
-			setRow(p, r, padding+1, map[string]field.Element{dpathKind: one, dpathHg: one, dpathHc: one},
-				map[string]Cell{dpathOp: x, dpathOut: x})
-		},
-	} {
-		t.Run(name, func(t *testing.T) {
-			p, err := dpathCircuit().Compile(testPCSOpts...)
-			require.NoError(t, err)
-			r, err := p.Execute(dpathTree(t, []int{5, 3, 3, 2}, 7).cells())
-			require.NoError(t, err)
-			require.NoError(t, proveAndVerify(p, r), "honest")
-			forge(p, r)
-			require.Error(t, proveAndVerify(p, r), "forged padding accepted")
-		})
-	}
-}
+	t.Run("started", func(t *testing.T) {
+		p, err := dpathCircuit().Compile(testPCSOpts...)
+		require.NoError(t, err)
+		r, err := p.Execute(dpathTree(t, []int{5, 3, 3, 2}, 7).cells())
+		require.NoError(t, err)
+		require.NoError(t, proveAndVerify(p, r), "honest")
+		rows := r.dpathRows[0]
+		skipped := rows[5] // level 4: copied instead of hashed
+		rows[5].out = rows[5].cur
+		p2 := append([][P2Width]field.Element(nil), r.p2[:5-firstHash]...)
+		for k := 6; k < len(rows); k++ {
+			rows[k].cur = rows[k-1].out
+			var in [P2Width]field.Element
+			rows[k].out, in = dpCompress(rows[k])
+			p2 = append(p2, in)
+		}
+		r.p2 = p2
+		r.values[dpRootCell] = rows[len(rows)-1].out
+		require.NoError(t, p.trace(r))
+		minusOne := field.NewElement(0)
+		one := field.One()
+		minusOne.Sub(&minusOne, &one)
+		// the padding row writes the copied level's tuple: inputs ordered by
+		// its bit, output its running hash
+		setRow(p, r, padding, map[string]field.Element{dpathStarted: minusOne, dpathB: field.NewElement(skipped.b)},
+			map[string]Cell{dpathCur: skipped.cur, dpathOp: skipped.op, dpathOut: skipped.cur})
+		require.Error(t, proveAndVerify(p, r), "a padding row wrote a compression")
+	})
 
-// TestDynamicPathPaddingTags: the dpath chip's padding rows must not reach a
-// table. Here table 0 is a table of scalars [3, 7, 9, 4], read by a Lookup at
-// index 2. A padding row with kind = 1 reads entry 0 twice (its leaf and
-// height reads, both 3) and writes, with its level reads (weight active −
-// kind = −1), the entry (2, 3) and an entry its order read consumes: with
-// zero tags it would inject T0[2] = 3, and the Lookup would read 3 instead of
-// 9 in a proof that verifies. The padding rows' tags match no table, so it
-// cannot.
-func TestDynamicPathPaddingTags(t *testing.T) {
-	m := &Machine{}
-	cp := withCopy(m)
-	scalars := []uint64{3, 7, 9, 4}
-	t0cells := make([]int, 0, len(scalars))
-	for range scalars {
-		t0cells = append(t0cells, m.input(KindScalar))
-	}
-	t0 := m.Table(t0cells) // tag 0
-	dpathCircuitOn(m)
-	idx := m.input(KindScalar)
-	v := m.Lookup(t0, idx)
-	cp.Copy(v)
-	p, err := m.Compile(testPCSOpts...)
-	require.NoError(t, err)
-	in := make([]Cell, 0, len(scalars))
-	for _, x := range scalars {
-		in = append(in, ScalarCell(field.NewElement(x)))
-	}
-	in = append(in, dpathTree(t, []int{5, 3, 3, 2}, 7).cells()...)
-	in = append(in, ScalarCell(field.NewElement(2)))
-	r, err := p.Execute(in)
-	require.NoError(t, err)
-	require.Equal(t, field.NewElement(9), r.Value(v)[0])
-	require.NoError(t, proveAndVerify(p, r), "honest")
+	t.Run("kind", func(t *testing.T) {
+		m := &Machine{}
+		cp := withCopy(m)
+		scalars := []uint64{1, 3, 9, 4}
+		t0cells := make([]int, 0, len(scalars))
+		for range scalars {
+			t0cells = append(t0cells, m.input(KindScalar))
+		}
+		t0 := m.Table(t0cells) // tag 0
+		dpathCircuitOn(m)
+		idx := m.input(KindScalar)
+		v := m.Lookup(t0, idx)
+		cp.Copy(v)
+		p, err := m.Compile(testPCSOpts...)
+		require.NoError(t, err)
+		in := make([]Cell, 0, len(scalars))
+		for _, x := range scalars {
+			in = append(in, ScalarCell(field.NewElement(x)))
+		}
+		in = append(in, dpathTree(t, []int{5, 3, 3, 2}, 7).cells()...)
+		in = append(in, ScalarCell(field.NewElement(2)))
+		r, err := p.Execute(in)
+		require.NoError(t, err)
+		require.Equal(t, field.NewElement(9), r.Value(v)[0])
+		require.NoError(t, proveAndVerify(p, r), "honest")
 
-	r.values[v] = ScalarCell(field.NewElement(3)) // T0[2] read as 3, not 9
-	require.NoError(t, p.trace(r))
-	cnt := r.Witness(p, tableMod, tableCnt)
-	cnt[0].SetUint64(2) // entry 0 read by the padding row twice
-	cnt[2].SetZero()    // entry 2 read by none
-	minus3 := field.NewElement(0)
-	three := field.NewElement(3)
-	minus3.Sub(&minus3, &three)
-	setRow(p, r, 12, map[string]field.Element{dpathKind: field.One(), dpathHc: three, dpathHg: three, dpathFc: minus3},
-		map[string]Cell{dpathOp: ScalarCell(three), dpathOut: ScalarCell(three)})
-	require.Error(t, proveAndVerify(p, r), "a padding row injected a table entry")
+		r.values[v] = ScalarCell(field.NewElement(3)) // T0[2] read as 3, not 9
+		require.NoError(t, p.trace(r))
+		cnt := r.Witness(p, tableMod, tableCnt)
+		cnt[0].SetUint64(1) // entry 0 read by the padding row's order read
+		cnt[1].SetUint64(2) // entry 1 by its leaf and height reads
+		cnt[2].SetZero()    // entry 2 by none
+		three := field.NewElement(3)
+		setRow(p, r, padding, map[string]field.Element{dpathKind: field.One(), dpathPi: field.One(), dpathHc: three},
+			map[string]Cell{dpathOp: ScalarCell(three), dpathOut: ScalarCell(three)})
+		require.Error(t, proveAndVerify(p, r), "a padding row injected a table entry")
+	})
 }

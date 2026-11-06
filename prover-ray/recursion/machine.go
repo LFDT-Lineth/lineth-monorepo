@@ -50,7 +50,7 @@ type Machine struct {
 	lookups []lookupInst
 	mds     []mdInst
 	paths   []pathInst
-	dpaths  []dpathInst
+	dpaths  []DynamicPath
 
 	instrs []instr // every instruction, in execution order
 
@@ -214,8 +214,8 @@ type Run struct {
 	// tableReads[t][i] counts the reads of entry i of table t by the dynamic
 	// paths (the lookups' are counted from the lookups), and dpathRows[i] are
 	// the rows of dynamic path i: both depend on the execution.
-	tableReads map[int][]uint64
-	dpathRows  map[int][]dpathRow
+	tableReads [][]uint64 // by table tag, nil for a table no dynamic path reads
+	dpathRows  [][]dpathRow
 }
 
 // Value returns the value of the cell at addr.
