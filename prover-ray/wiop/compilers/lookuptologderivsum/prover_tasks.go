@@ -93,7 +93,7 @@ func (t *mAssignmentTask) run(rt *wiop.Runtime, workers int) {
 				head = headSelector
 			}
 		}
-		h := newRowHasher(rt, alpha, it.cols, it.selector, head, n)
+		h := newRowHasher(rt, alpha, it.cols, it.selector, head)
 		dst := tEntries[tOffsets[frag] : tOffsets[frag]+n]
 		chunks := splitRows(n, workers)
 		parallel.ExecuteWithNbTasks(len(chunks), workers, func(start, stop int) {
@@ -117,7 +117,7 @@ func (t *mAssignmentTask) run(rt *wiop.Runtime, workers int) {
 	// and flushes its counters once, however many fragments the group has.
 	type aSide struct {
 		h   *rowHasher
-		sel *columnReader
+		sel *wiop.RowReader
 	}
 	type aChunk struct{ frag, lo, hi int }
 	sides := make([]aSide, len(t.included))
@@ -128,9 +128,10 @@ func (t *mAssignmentTask) run(rt *wiop.Runtime, workers int) {
 		if t.prependOneOnAOk {
 			head = headOne
 		}
-		sides[aFrag].h = newRowHasher(rt, alpha, inc.cols, nil, head, an)
+		sides[aFrag].h = newRowHasher(rt, alpha, inc.cols, nil, head)
 		if inc.selector != nil {
-			sides[aFrag].sel = newColumnReader(rt, inc.selector, an)
+			sel := inc.selector.Rows(rt)
+			sides[aFrag].sel = &sel
 		}
 		for _, c := range splitRows(an, workers) {
 			items = append(items, aChunk{aFrag, c[0], c[1]})
@@ -153,7 +154,7 @@ func (t *mAssignmentTask) run(rt *wiop.Runtime, workers int) {
 				vals := side.h.hash(lo, hi, bufs[it.frag])
 				var selVals []field.Ext
 				if side.sel != nil {
-					selVals = side.sel.readExt(lo, hi, selBuf)
+					selVals = side.sel.ReadExt(lo, hi, selBuf)
 				}
 				for i := range vals {
 					if selVals != nil && !t.activeRow(inc, &selVals[i], lo+i) {
@@ -220,10 +221,10 @@ const (
 // powers of α are precomputed, so each column costs one extension-by-base
 // multiply-accumulate per row.
 type rowHasher struct {
-	cols     []*columnReader
+	cols     []wiop.RowReader
 	coefs    []field.Ext // coefs[k] multiplies cols[k]
 	head     headKind
-	selector *columnReader // headSelector only
+	selector wiop.RowReader // headSelector only
 	// constant is the contribution of the constant entries, the same on
 	// every row; hasConstant is false when there are none.
 	constant    field.Ext
@@ -231,7 +232,7 @@ type rowHasher struct {
 }
 
 func newRowHasher(rt *wiop.Runtime, alpha field.Ext, cols []wiop.TableEntry, selector *wiop.ColumnView,
-	head headKind, n int) *rowHasher {
+	head headKind) *rowHasher {
 	h := &rowHasher{head: head}
 	var pow field.Ext
 	pow.SetOne()
@@ -246,13 +247,13 @@ func newRowHasher(rt *wiop.Runtime, alpha field.Ext, cols []wiop.TableEntry, sel
 			h.hasConstant = true
 		} else {
 			cv, _ := wiop.EntryView(e)
-			h.cols = append(h.cols, newColumnReader(rt, cv, n))
+			h.cols = append(h.cols, cv.Rows(rt))
 			h.coefs = append(h.coefs, pow)
 		}
 		pow.Mul(&pow, &alpha)
 	}
 	if head == headSelector {
-		h.selector = newColumnReader(rt, selector, n)
+		h.selector = selector.Rows(rt)
 	}
 	return h
 }
@@ -281,7 +282,7 @@ func (h *rowHasher) hash(lo, hi int, buf *hashBuffers) []field.Ext {
 			out[i].SetOne()
 		}
 	case headSelector:
-		copy(out, h.selector.readExt(lo, hi, buf.ext))
+		h.selector.ReadExt(lo, hi, out)
 	default:
 		clear(out)
 	}
@@ -292,95 +293,13 @@ func (h *rowHasher) hash(lo, hi int, buf *hashBuffers) []field.Ext {
 	}
 	acc := extensions.VectorE6(out)
 	for k, col := range h.cols {
-		if col.isBase() {
-			acc.ScalarMulAccByElement(col.readBase(lo, hi, buf.base), &h.coefs[k])
+		if col.IsBase() {
+			acc.ScalarMulAccByElement(col.ReadBase(lo, hi, buf.base), &h.coefs[k])
 		} else {
-			acc.ScalarMulAcc(col.readExt(lo, hi, buf.ext), &h.coefs[k])
+			acc.ScalarMulAcc(col.ReadExt(lo, hi, buf.ext), &h.coefs[k])
 		}
 	}
 	return out
-}
-
-// columnReader reads rows of a column view straight from the column's
-// assignment, as [wiop.ColumnView.EvaluateVector] would return them: row i is
-// the module's padded row (i + shift) mod n.
-type columnReader struct {
-	plain     field.Vec
-	pad       field.Element
-	n         int
-	shift     int
-	dataStart int // padded row of plain[0]
-}
-
-func newColumnReader(rt *wiop.Runtime, cv *wiop.ColumnView, n int) *columnReader {
-	assignment := rt.GetColumnAssignment(cv.Column)
-	r := &columnReader{
-		plain: assignment.Plain,
-		pad:   assignment.Padding,
-		n:     n,
-		shift: ((cv.ShiftingOffset % n) + n) % n,
-	}
-	if cv.Column.Module.Padding == wiop.PaddingDirectionLeft {
-		r.dataStart = n - r.plain.Len()
-	}
-	return r
-}
-
-func (r *columnReader) isBase() bool { return r.plain.IsBase() }
-
-// segments calls f for the contiguous padded-row runs [p, p+len) making up
-// rows [lo, hi), with the offset of the run in the output.
-func (r *columnReader) segments(lo, hi int, f func(out, p, length int)) {
-	out, p := 0, (lo+r.shift)%r.n
-	for out < hi-lo {
-		length := min(hi-lo-out, r.n-p)
-		f(out, p, length)
-		out += length
-		p = 0
-	}
-}
-
-// readBase returns rows [lo, hi) of a base-field column, in buf.
-func (r *columnReader) readBase(lo, hi int, buf []field.Element) []field.Element {
-	plain := r.plain.AsBase()
-	dst := buf[:hi-lo]
-	r.segments(lo, hi, func(out, p, length int) {
-		// Padded rows [p, p+length): data where they overlap plain, the
-		// padding value elsewhere.
-		dLo, dHi := max(p, r.dataStart), min(p+length, r.dataStart+len(plain))
-		if dLo >= dHi {
-			field.VecFillBase(dst[out:out+length], r.pad)
-			return
-		}
-		field.VecFillBase(dst[out:out+dLo-p], r.pad)
-		copy(dst[out+dLo-p:out+dHi-p], plain[dLo-r.dataStart:dHi-r.dataStart])
-		field.VecFillBase(dst[out+dHi-p:out+length], r.pad)
-	})
-	return dst
-}
-
-// readExt returns rows [lo, hi) of the column in the extension field, in buf.
-func (r *columnReader) readExt(lo, hi int, buf []field.Ext) []field.Ext {
-	dst := buf[:hi-lo]
-	pad := field.Lift(r.pad)
-	r.segments(lo, hi, func(out, p, length int) {
-		dLo, dHi := max(p, r.dataStart), min(p+length, r.dataStart+r.plain.Len())
-		if dLo >= dHi {
-			field.VecFillExt(dst[out:out+length], pad)
-			return
-		}
-		field.VecFillExt(dst[out:out+dLo-p], pad)
-		field.VecFillExt(dst[out+dHi-p:out+length], pad)
-		seg := dst[out+dLo-p : out+dHi-p]
-		if r.plain.IsBase() {
-			for i, v := range r.plain.AsBase()[dLo-r.dataStart : dHi-r.dataStart] {
-				seg[i] = field.Lift(v)
-			}
-			return
-		}
-		copy(seg, r.plain.AsExt()[dLo-r.dataStart:dHi-r.dataStart])
-	})
-	return dst
 }
 
 // lookupTable maps the hash of every B row to its union index. It is split
