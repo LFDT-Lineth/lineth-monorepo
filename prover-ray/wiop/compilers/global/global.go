@@ -817,23 +817,23 @@ func evalColumnsOnCosets(
 	tasks := max(1, cpus/max(1, len(cols)))
 	parallel.ExecuteDynamic(len(cols), func(c int) {
 		col := cols[c]
-		cv := rt.GetColumnAssignment(col)
+		rows := wiop.NewRowReader(rt.GetColumnAssignment(col), m.Padding, n, 0)
 		if col.IsExtension {
 			// Pooled: every coset slot read later is written below.
 			vals := field.ExtPool.Get(n * ratio)
-			writeColumnExt(cv, m.Padding, vals[:n])
+			rows.ReadExt(0, n, vals)
 			smallDomain.FFTInverseExt6(vals[:n], fft.DIF, fft.WithNbTasks(tasks))
 			extEvals[c] = vals
 			return
 		}
-		if !cv.Plain.IsBase() {
+		if !rows.IsBase() {
 			panic(fmt.Sprintf(
 				"wiop/compilers: global quotient does not support extension-field data in base column %q",
 				col.Context.Path(),
 			))
 		}
 		vals := field.BasePool.Get(n * ratio)
-		writeColumnBase(cv, m.Padding, vals[:n])
+		rows.ReadBase(0, n, vals)
 		smallDomain.FFTInverse(vals[:n], fft.DIF, fft.WithNbTasks(tasks))
 		baseEvals[c] = vals
 	})
@@ -880,53 +880,6 @@ func evalColumnsOnCosets(
 		}
 	}
 	return cosetEvals, cosetEvalsExt
-}
-
-// writeColumnBase writes cv down as its len(out) rows on H_n, padded as the
-// module pads (see [wiop.ConcreteVector.ElementAtN]). The data must be
-// base-field.
-func writeColumnBase(cv *wiop.ConcreteVector, padding wiop.PaddingDirection, out []field.Element) {
-	plain := cv.Plain.AsBase()
-	switch padding {
-	case wiop.PaddingDirectionLeft:
-		gap := len(out) - len(plain)
-		if gap < 0 {
-			copy(out, plain[-gap:])
-			return
-		}
-		field.VecFillBase(out[:gap], cv.Padding)
-		copy(out[gap:], plain)
-	case wiop.PaddingDirectionRight:
-		k := copy(out, plain)
-		field.VecFillBase(out[k:], cv.Padding)
-	default:
-		copy(out, plain[:len(out)])
-	}
-}
-
-// writeColumnExt is [writeColumnBase] into the extension field, lifting
-// base-field data and padding.
-func writeColumnExt(cv *wiop.ConcreteVector, padding wiop.PaddingDirection, out []field.Ext) {
-	n := len(out)
-	start, plainLen := 0, cv.Plain.Len() // rows [start, start+plainLen) hold data
-	switch padding {
-	case wiop.PaddingDirectionLeft:
-		start = n - plainLen
-		field.VecFillExt(out[:max(start, 0)], field.Lift(cv.Padding))
-	case wiop.PaddingDirectionRight:
-		field.VecFillExt(out[min(plainLen, n):], field.Lift(cv.Padding))
-	default:
-		plainLen = n
-	}
-	skip := max(-start, 0) // a Left plain longer than n keeps its last n rows
-	data := out[max(start, 0):min(start+plainLen, n)]
-	if cv.Plain.IsBase() {
-		for i, v := range cv.Plain.AsBase()[skip : skip+len(data)] {
-			data[i] = field.Lift(v)
-		}
-		return
-	}
-	copy(data, cv.Plain.AsExt()[skip:skip+len(data)])
 }
 
 // cosetsToShares interpolates the quotient Q, given by its evaluations on the
