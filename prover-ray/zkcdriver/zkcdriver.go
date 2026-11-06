@@ -47,7 +47,15 @@ type Settings struct {
 	// program ones which are in [ProgramRound]. Zero puts the whole trace in
 	// round 0.
 	TraceRound int
+	// ShardSize is the number of [ShardFunction] invocations (i.e. executed
+	// RISC-V instructions) per trace shard. Zero disables sharding: the whole
+	// execution is traced eagerly as a single shard.
+	ShardSize uint64
 }
+
+// ShardFunction is the ZkC function around which the trace is sharded. It is
+// invoked once per executed RISC-V instruction.
+const ShardFunction = "interpreter"
 
 // ZkCDriver exposes all the methods relevant for the user to interact with the
 // constraints being used for proving.  This includes all constraints arising
@@ -84,10 +92,23 @@ func NewZkCDriver(sys *wiop.System, settings Settings, bin io.Reader) *ZkCDriver
 	schema := binf.AirConstraints()
 	// Translate air.Schema into prover's internal representation
 	Define(sys, &schema, settings.TraceRound)
+	// With sharding, a bus message and its answer can land in different shards,
+	// so the bus balances only across shards: conglomeration checks it.
+	if settings.ShardSize > 0 {
+		for _, mb := range sys.MessageBuses {
+			mb.SkipInShardCheck = true
+		}
+	}
+	// With sharding, tracing only runs a fast-mode pass recording a checkpoint
+	// per shard; each shard is then traced on demand from its checkpoint.
+	tracingConfig := vm.DEFAULT_TRACE_CONFIG
+	if settings.ShardSize > 0 {
+		tracingConfig = tracingConfig.WithSharding(vm.NewShardingStrategy(ShardFunction, settings.ShardSize))
+	}
 	// Construct the driver
 	return &ZkCDriver{
 		BinaryFile:    binf,
-		TracingConfig: vm.DEFAULT_TRACE_CONFIG,
+		TracingConfig: tracingConfig,
 		Settings:      &settings,
 		Metadata:      metadata,
 		system:        sys,
@@ -145,11 +166,23 @@ func PreReadZkcInputs(inputsFile string) *PreReadInputs {
 	return &PreReadInputs{Inputs: inputs, Err: err, InputsFile: inputsFile}
 }
 
-// TraceZkcInputs reads and expands a trace file, returning the pre-read trace
-// data laid out on multiple shards. The function panics on errors. The
-// driver's System must be compiled before tracing: the trace is padded to its
-// dynamic modules' minimum sizes (see [PadToMinSizes]).
+// TraceZkcInputs is [ZkCDriver.TryTraceZkcInputs] panicking on error.
 func (a *ZkCDriver) TraceZkcInputs(preRead *PreReadInputs) trace.LazyTrace[koalabear.Element] {
+	lazyTrace, err := a.TryTraceZkcInputs(preRead)
+	if err != nil {
+		logrus.Panicf("tracing failed: %v", err)
+	}
+	return lazyTrace
+}
+
+// TryTraceZkcInputs returns the lazy trace of the pre-read inputs, or the
+// tracing errors joined; a guest rejection is a [vm.Failure] in that chain.
+// Shards are only traced and expanded when requested (see [LazyTrace.Get]);
+// with sharding enabled, this call only runs the fast-mode pass recording one
+// checkpoint per shard. The driver's System must be compiled before tracing:
+// the trace is padded to its dynamic modules' minimum sizes (see
+// [PadToMinSizes]).
+func (a *ZkCDriver) TryTraceZkcInputs(preRead *PreReadInputs) (trace.LazyTrace[koalabear.Element], error) {
 
 	assignStart := time.Now()
 	var (
@@ -179,11 +212,11 @@ func (a *ZkCDriver) TraceZkcInputs(preRead *PreReadInputs) trace.LazyTrace[koala
 	_, expandedTrace, errs := a.BinaryFile.Trace(inputs, PadToMinSizes(a.TracingConfig, a.system))
 
 	if len(errs) > 0 {
-		logrus.Panicf("tracing failed: %v", errors.Join(errs...).Error())
+		return trace.LazyTrace[koalabear.Element]{}, errors.Join(errs...)
 	}
 	logrus.Infof("[bootstrapper] tracing: %v", time.Since(tracingStart))
 
-	return expandedTrace.Unwrap()
+	return expandedTrace.Unwrap(), nil
 }
 
 // AssignTraceShard assigns arithmetization columns using a pre-read trace.

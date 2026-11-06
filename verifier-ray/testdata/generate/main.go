@@ -593,7 +593,7 @@ func buildProofFixture(sys *wiop.System, assign assignFn, source, name, label st
 // ballooning the fixture sizes.
 func compileFullPipeline(sys *wiop.System) error {
 	return compilers.CompileFull(sys,
-		compilers.ConfigurePCS(pcscompiler.WithFRINumQueries(4)),
+		compilers.ConfigurePCS(pcscompiler.WithFRINumQueries(4), pcscompiler.WithOptimalMerkleCap()),
 	)
 }
 

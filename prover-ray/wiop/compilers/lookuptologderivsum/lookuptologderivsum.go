@@ -156,14 +156,31 @@ func Compile(sys *wiop.System) {
 		consumedQs []*wiop.TableRelationQuery
 		idColumns  = make([][]*wiop.Constant, len(groups))
 	)
+	// The M-assignment tasks of the groups sharing a witness round run as
+	// one batch, after the row-limit checks registered above.
+	var (
+		batchRounds []*wiop.Round
+		batches     = map[*wiop.Round]*mAssignmentBatch{}
+	)
 	for i, g := range groups {
 		// IDs start at 1 so that no group's ID is zero.
 		var id field.Element
 		id.SetUint64(uint64(i + 1))
-		gFractions, gIDColumns := compileGroup(g, i, id, alpha, gamma, compCtx)
+		gFractions, gIDColumns, task := compileGroup(g, i, id, alpha, gamma, compCtx)
 		fractions = append(fractions, gFractions...)
 		consumedQs = append(consumedQs, g.queries...)
 		idColumns[i] = gIDColumns
+
+		b, ok := batches[g.witnessRound]
+		if !ok {
+			b = &mAssignmentBatch{}
+			batches[g.witnessRound] = b
+			batchRounds = append(batchRounds, g.witnessRound)
+		}
+		b.tasks = append(b.tasks, task)
+	}
+	for _, r := range batchRounds {
+		r.RegisterAction(batches[r])
 	}
 
 	ld := sys.NewLogDerivativeSum(compCtx.Childf("aggregated"), fractions)
@@ -396,18 +413,20 @@ func collectGroups(sys *wiop.System) []*lookupGroup {
 
 // compileGroup builds the fraction list for a single B-grouped collection of
 // inclusion queries. It also allocates the group's multiplicity column M on
-// the group's witness round and registers the prover task that fills it
-// there, so M is committed before α and γ are sampled in the coin round.
+// the group's witness round and returns the prover task that fills it, which
+// the caller registers there, so M is committed before α and γ are sampled in
+// the coin round.
 //
 // Every row on both sides is prefixed with a constant column holding id, the
-// group's lookup ID. It returns the fractions and the ID columns it created.
+// group's lookup ID. It returns the fractions, the ID columns it created and
+// the M-assignment task.
 func compileGroup(
 	g *lookupGroup,
 	groupIdx int,
 	id field.Element,
 	alpha, gamma *wiop.CoinField,
 	compCtx *wiop.ContextFrame,
-) ([]wiop.Fraction, []*wiop.Constant) {
+) ([]wiop.Fraction, []*wiop.Constant, *mAssignmentTask) {
 	// groupIdx is the group's position in collectGroups' deterministic output
 	// order, so the derived names are reproducible across runs (unlike a
 	// pointer-based name, which would break serializing or diffing the
@@ -510,16 +529,17 @@ func compileGroup(
 	}
 
 	// The prover task that fills every M with multiplicities once the witness
-	// is in place. Registered on the group's witness round so it runs before
-	// AdvanceRound samples coinRound's α and γ.
-	g.witnessRound.RegisterAction(&mAssignmentTask{
+	// is in place. The caller registers it, batched with the other groups of
+	// the same witness round, on that round so it runs before AdvanceRound
+	// samples coinRound's α and γ.
+	task := &mAssignmentTask{
 		ms:              mCols,
 		includings:      append([]includingTable{}, g.includings...),
 		included:        append([]includedSpec{}, g.included...),
 		prependOneOnAOk: prependOnesToA,
-	})
+	}
 
-	return fractions, idColumns
+	return fractions, idColumns, task
 }
 
 // RowLimitVerifierAction enforces, at runtime, that a single subgroup's summed row

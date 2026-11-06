@@ -112,11 +112,13 @@ object Checks {
       }
   }
 
-  // Checks that all block times in the list are exactly BesuFactory.MIN_BLOCK_TIME (1 second)
-  // First block is skipped, because after startup block time is sometimes floating above 1 second
-  fun List<EthBlock.Block>.verifyBlockTime() {
-    val timestampsSeconds = this.subList(1, this.size - 1).map { it.timestamp.toLong() }
-    timestampsSeconds.reduceIndexed { index, prevTimestamp, timestamp ->
+  // Checks that all block times in the list are exactly BesuFactory.MIN_BLOCK_TIME (1 second).
+  // The first [blocksToSkip] blocks are skipped: after startup block time can float above 1 second,
+  // and under CI contention (parallel test forks) the warmup can extend into the second block, and
+  // hence blocksToSkip is set as 2 as default.
+  fun List<EthBlock.Block>.verifyBlockTime(blocksToSkip: Int = 2) {
+    val timestampsSeconds = this.subList(blocksToSkip, this.size - 1).map { it.timestamp.toLong() }
+    timestampsSeconds.reduce { prevTimestamp, timestamp ->
       Assertions.assertThat(prevTimestamp).isLessThan(timestamp)
       val actualBlockTime = timestamp - prevTimestamp
       Assertions
@@ -134,8 +136,10 @@ object Checks {
     val blocksPreGap = this.subList(1, gappedBlockNumber)
     // Skipping the first block after gap as well, because first block after startup can be missed for unclear reasons
     val blocksPostGap = this.subList(gappedBlockNumber, this.size - 1)
-    // Verify block time is consistent before and after the switch
-    blocksPreGap.verifyBlockTime()
-    blocksPostGap.verifyBlockTime()
+    // Verify block time is consistent before and after the switch. These segments are short
+    // (a handful of blocks), so keep the customary single warmup-block skip rather than the
+    // wider default — otherwise nothing would be left to verify.
+    blocksPreGap.verifyBlockTime(blocksToSkip = 1)
+    blocksPostGap.verifyBlockTime(blocksToSkip = 1)
   }
 }

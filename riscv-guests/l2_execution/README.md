@@ -5,7 +5,7 @@ This package contains the RISC-V guest program for the Rollup's extended l2-exec
 ## Scope
 
 - Decodes the extended `L2ExecutionProofPrivateInput` SSZ envelope (a contiguous run of payloads, each carrying an opaque vanilla `SszStatelessInput` plus forced-transaction witnesses), runs `l2_execution.runL2Execution`, and emits `keccak256(frame) ‖ frame` with `frame = schema_id (0x0003) ‖ SSZ(public inputs)`. The public inputs include the `l2L1Messages`, `filteredAddresses` and `l2MessagingBlocksOffsets` lists.
-- The native Zig tests replay a real execution-spec-tests `tests-zkevm` fixture and hand-built fixtures against Python-oracle-computed expected values (see `Readme.md` §6.3/§6.5/§2.1); `zig build extended-vanilla` reference-tests the EF zkevm corpus against fixture validity, while `zig build zkc-smoke` compares one extended SSZ input under ZkC with the host machine, including the exact accepted output.
+- The native Zig tests replay a real execution-spec-tests `tests-zkevm` fixture and hand-built fixtures against Python-oracle-computed expected values (see `Readme.md` §6.3/§6.5/§2.1); `zig build extended-vanilla -Dzkevm-fixtures=<dir>` reference-tests the EF zkevm corpus against fixture validity, while `zig build zkc-smoke` compares one extended SSZ input under ZkC with the host machine, including the exact accepted output.
 - Does not include blob compression or recursive proof aggregation — those are the rollup/rollup-aggregation guests' concern.
 - Keeps cryptographic precompile/signature acceleration behind Zesu's `accel_impl` boundary. Both the freestanding guest and native tests use Zesu's `extern` backend and define every `zkvm_*` accelerator symbol through `lineth_accelerators`' opt-in `zkvm_provide` module: keccak from the Lineth wrapper (`-Dkeccak-accel`) or Zig `std.crypto`; SHA-256 and P-256 from Zig `std.crypto`; secp256k1 ecrecover/verify from a switchable backend (`-Dsecp256k1-backend`); EIP-2537 BLS12-381, BN254 (EIP-196/197), and EIP-4844 KZG point evaluation from the `guest_crypto_ctt` Constantine staticlib; and modexp/RIPEMD-160/BLAKE2f from Zesu's C-free backends.
 
@@ -38,7 +38,7 @@ Equivalently, running `zig build` directly from this directory (requires the gen
     zig build                        # arithmetization keccak wrapper
     zig build -Dkeccak-accel=false   # standard Zig keccak
 
-The secp256k1 ecrecover/verify backend is selectable the same way, with `SECP256K1_BACKEND=<backend>` on `make` or `-Dsecp256k1-backend=<backend>` on `zig build`; `zig build --help` lists the accepted values and the default.
+The secp256k1 ecrecover/verify backend defaults to Constantine. Select Zig's implementation with `SECP256K1_BACKEND=std` on `make` or `-Dsecp256k1-backend=std` on `zig build`; `zig build --help` lists the accepted values.
 
 ## Shell alias
 

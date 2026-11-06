@@ -1,5 +1,7 @@
 package backend
 
+import "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/conglomeration"
+
 // ProofType identifies which guest program to use for a proof request.
 type ProofType string
 
@@ -23,8 +25,12 @@ type Job struct {
 	// ID is an opaque identifier used to correlate the Result.
 	ID string
 
-	// Type selects the guest ELF and any proof-type-specific processing.
+	// Type selects any proof-type-specific processing.
 	Type ProofType
+
+	// GuestProgramID is the Program ID (keccak256 of the guest ELF) of the guest
+	// to run, from the request's guestProgramId.
+	GuestProgramID [32]byte
 
 	// StartBlock and EndBlock identify the block range covered by Payload.
 	// Single-block jobs set both to the same block number.
@@ -44,6 +50,14 @@ type Job struct {
 	// Multi-block conflation encoding is not yet decided; [Core.Prove] rejects
 	// jobs spanning more than one block.
 	Payload []byte
+
+	// ShardIndexes lists the trace shards this prover proves, in any order;
+	// empty proves them all. Without sharding ([Config.ShardSize] zero) only
+	// shard 0 exists. The shard count depends on the guest input and is only
+	// known after the job's fast-mode pass, so an index past the end fails the
+	// job. A strict subset of the shards yields [ResultStatusNode], not a final
+	// proof.
+	ShardIndexes []uint
 }
 
 // ResultStatus indicates whether a prove attempt succeeded.
@@ -52,6 +66,10 @@ type ResultStatus string
 const (
 	ResultStatusOK     ResultStatus = "ok"
 	ResultStatusFailed ResultStatus = "failed"
+	// ResultStatusNode is a proof of a strict subset of the trace's shards: a
+	// conglomeration node to be merged elsewhere, not a final proof.
+	// ProofBytes and PublicInputs are empty; Node and NumShards are set.
+	ResultStatusNode ResultStatus = "node"
 )
 
 // PublicInputs carries the 16 public output fields of the coordinator
@@ -89,10 +107,16 @@ type Result struct {
 	// ProofBytes is the proof output for the mode. For full it is the serialized
 	// wiop.Proof (wire format not yet decided); for dev-zkvm it is the guest's
 	// 0x0003 output from the ZkC Execute run, which the runner cross-checks
-	// against the native runner. nil when Status is ResultStatusFailed.
+	// against the native runner. nil when Status is not ResultStatusOK.
 	ProofBytes []byte
 
 	PublicInputs PublicInputs
+
+	// Node is the non-root conglomeration node when Status is
+	// ResultStatusNode, and NumShards the trace's shard count, so that the
+	// party merging the nodes can tell when their coverage is complete.
+	Node      *conglomeration.Node
+	NumShards uint
 
 	// Err is non-nil when Status is ResultStatusFailed.
 	Err error
