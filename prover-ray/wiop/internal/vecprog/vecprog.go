@@ -564,35 +564,27 @@ const (
 )
 
 type sink struct {
-	kind         sinkKind
-	root         int
-	guard        int // sinkCheck
-	cancellation []field.Element
-	// cancelSlotted: the cancellation is Bindings.Base[cancelSlot].
-	cancelSlotted bool
-	cancelSlot    int
-	coef          coef
-	dst           []field.Ext
-	onZero        func(t int)
+	kind  sinkKind
+	root  int
+	guard int // sinkCheck
+	// cancelSlot (sinkAccumulate): the cancellation is Bindings.Base[cancelSlot]; none when < 0.
+	cancelSlot int
+	coef       coef
+	dst        []field.Ext
+	onZero     func(t int)
 }
 
-// Accumulate adds coef · root · cancellation into the aggregate passed to
-// [Program.Run]; a nil cancellation stands for 1. The cancellation is laid
-// out like the tables.
-func (b *Builder) Accumulate(root int, cancellation []field.Element, coef field.Ext) {
-	b.sinks = append(b.sinks, sink{kind: sinkAccumulate, root: root, cancellation: cancellation, coef: constCoef(coef)})
-}
-
-// AccumulateBy is [Builder.Accumulate] with the coefficient a scalar node,
-// such as a power of a [Builder.Param], and the cancellation the table
-// Bindings.Base[cancelSlot] of each run (none when cancelSlot < 0).
+// AccumulateBy adds coef · root · cancellation into the aggregate passed to
+// [Program.RunWith]. The coefficient is a scalar node, such as a power of a
+// [Builder.Param], and the cancellation the table Bindings.Base[cancelSlot] of
+// each run, laid out like the tables (none when cancelSlot < 0).
 func (b *Builder) AccumulateBy(root, cancelSlot, coef int) {
 	if !b.isScalar(coef) {
 		panic("vecprog: AccumulateBy: the coefficient must be a scalar node")
 	}
 	b.sinks = append(b.sinks, sink{
 		kind: sinkAccumulate, root: root, coef: b.coefOf(coef),
-		cancelSlotted: cancelSlot >= 0, cancelSlot: cancelSlot,
+		cancelSlot: max(cancelSlot, -1),
 	})
 }
 
@@ -758,7 +750,7 @@ func (b *Builder) Compile(n, ratio, cosetStep int) *Program {
 	}
 	for i := range p.sinks {
 		p.accumulates = p.accumulates || p.sinks[i].kind == sinkAccumulate
-		p.bound = p.bound || p.sinks[i].cancelSlotted
+		p.bound = p.bound || (p.sinks[i].kind == sinkAccumulate && p.sinks[i].cancelSlot >= 0)
 		emit(p.sinks[i].root)
 		if p.sinks[i].kind == sinkCheck {
 			emit(p.sinks[i].guard)
@@ -1391,11 +1383,8 @@ func (w *worker) sink(sk *sink, agg []field.Ext, tablePos, point, L int) {
 		}
 	}
 	var cancel []field.Element
-	switch {
-	case sk.cancelSlotted:
+	if sk.cancelSlot >= 0 {
 		cancel = w.bind.Base[sk.cancelSlot][tablePos : tablePos+L]
-	case sk.cancellation != nil:
-		cancel = sk.cancellation[tablePos : tablePos+L]
 	}
 	if root.isBase {
 		vals := root.base

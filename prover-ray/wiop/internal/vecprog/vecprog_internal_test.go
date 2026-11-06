@@ -153,7 +153,7 @@ func TestSinksMatchTreeEvaluation(t *testing.T) {
 	}
 }
 
-// The Accumulate sinks must add coef·root·cancellation over ratio cosets of n
+// The accumulate sinks must add coef·root·cancellation over ratio cosets of n
 // points, coset k reading coset k·step of the tables, then scale coset k by
 // scale[k], as a point-by-point evaluation does: on sizes below, at and across
 // a block, with subtrees shared across sinks and zeros hitting every division
@@ -167,6 +167,9 @@ func TestAccumulateMatchesTreeEvaluation(t *testing.T) {
 				size, N := tc.n*tc.ratio*tc.step, tc.n*tc.ratio
 				g := newTreeGen(rand.New(rand.NewPCG(seed, uint64(tc.n))), tc.n, size)
 				b := NewBuilder()
+				// The sinks that are cancelled all read the table Base[0].
+				cancellation := g.base[g.rng.IntN(len(g.base))]
+				bind := &Bindings{Base: [][]field.Element{cancellation}}
 				want := make([]field.Ext, N)
 				var prev *tree
 				for range 12 {
@@ -175,15 +178,16 @@ func TestAccumulateMatchesTreeEvaluation(t *testing.T) {
 						tr = &tree{op: Mul, args: []*tree{prev, tr}}
 					}
 					prev = tr
-					var cancellation []field.Element
-					if g.rng.IntN(2) == 0 {
-						cancellation = g.base[g.rng.IntN(len(g.base))]
+					cancelled := g.rng.IntN(2) == 0
+					cancelSlot := -1
+					if cancelled {
+						cancelSlot = 0
 					}
 					coef := field.VecPseudoRandExt(g.rng, 1)[0]
-					b.Accumulate(tr.build(b), cancellation, coef)
+					b.AccumulateBy(tr.build(b), cancelSlot, b.Scalar(coef, false))
 					for j := range N {
 						v := tr.at(j, tc.n, tc.step)
-						if cancellation != nil {
+						if cancelled {
 							v.MulByElement(&v, &cancellation[j/tc.n*tc.step*tc.n+j%tc.n])
 						}
 						v.Mul(&v, &coef)
@@ -196,7 +200,7 @@ func TestAccumulateMatchesTreeEvaluation(t *testing.T) {
 				}
 
 				got := make([]field.Ext, N)
-				b.Compile(tc.n, tc.ratio, tc.step).Run(got, scale, 0)
+				b.Compile(tc.n, tc.ratio, tc.step).RunWith(bind, got, scale, 0)
 				require.Equal(t, want, got)
 			})
 		}
@@ -480,18 +484,19 @@ func TestParamsAndSlotsMatchConstants(t *testing.T) {
 			}
 		}
 
+		// The reference program reads only the cancellation as a slot, Base[0].
 		fresh := NewBuilder()
 		var pow field.Ext
 		pow.SetOne()
 		for i, tr := range trees {
-			var cancel []field.Element
+			cancel := -1
 			if cancelOf(i) >= 0 {
-				cancel = cancellation
+				cancel = 0
 			}
-			fresh.Accumulate(build(fresh, tr, false), cancel, pow)
+			fresh.AccumulateBy(build(fresh, tr, false), cancel, fresh.Scalar(pow, false))
 			pow.Mul(&pow, &coinVal)
 		}
-		want := run(fresh.Compile(n, ratio, 1), nil)
+		want := run(fresh.Compile(n, ratio, 1), &Bindings{Base: [][]field.Element{cancellation}})
 		require.Equal(t, want, run(cached, bind), "run %d", runIdx)
 	}
 }
