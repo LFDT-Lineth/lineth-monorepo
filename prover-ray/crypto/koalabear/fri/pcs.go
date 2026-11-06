@@ -544,28 +544,30 @@ func denominatorInverses(domainPoints, claimPoints []field.Ext) ([]field.Ext, er
 // soundness violation.
 func denomBaseInverses(generator field.Element, n int, zeta field.Ext) ([]field.Ext, error) {
 	// Positions are independent: each chunk starts from its own power of the
-	// generator and batch-inverts its own denominators, with one field
-	// inversion per chunk.
+	// generator and batch-inverts its own denominators in place, with one
+	// field inversion per chunk.
 	const chunk = 1 << 12
 	inv := make([]field.Ext, n)
 	bad := make([]int, (n+chunk-1)/chunk)
 	parallel.Execute(len(bad), func(first, last int) {
-		denoms := make([]field.Ext, chunk)
+		scratch := field.ExtPool.Get(min(chunk, n))
+		defer field.ExtPool.Put(scratch)
 		for c := first; c < last; c++ {
 			lo, hi := c*chunk, min((c+1)*chunk, n)
+			denoms := inv[lo:hi]
 			bad[c] = -1
 			var pow field.Element
 			pow.ExpInt64(generator, int64(lo))
-			for e := lo; e < hi; e++ {
+			for e := range denoms {
 				x := field.Lift(pow)
-				denoms[e-lo].Sub(&x, &zeta)
-				if denoms[e-lo].IsZero() && bad[c] < 0 {
-					bad[c] = e
+				denoms[e].Sub(&x, &zeta)
+				if denoms[e].IsZero() && bad[c] < 0 {
+					bad[c] = lo + e
 				}
 				pow.Mul(&pow, &generator)
 			}
 			if bad[c] < 0 {
-				field.BatchInvertExtInto(denoms[:hi-lo], inv[lo:hi])
+				field.BatchInvertExtScratch(denoms, denoms, scratch)
 			}
 		}
 	})

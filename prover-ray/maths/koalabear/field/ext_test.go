@@ -97,7 +97,7 @@ func TestBatchInvertExtInto(t *testing.T) {
 		a := randomExts(testN)
 		a[0] = ZeroExt()
 		res := make([]Ext, testN)
-		BatchInvertExtInto(a, res) // must not panic
+		BatchInvertExtInto(res, a) // must not panic
 
 		oneExt := OneExt()
 		for i := 1; i < testN; i++ {
