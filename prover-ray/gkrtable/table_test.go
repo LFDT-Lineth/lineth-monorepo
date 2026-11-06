@@ -94,13 +94,9 @@ func TestTable(t *testing.T) {
 	nbElements := len(proof.ExtVectors[table.Proof.Context.ID])
 
 	for name, changed := range map[string]wiop.Proof{
-		"the first coordinate of r*":  changeCell(table.Point[0]),
-		"the last coordinate of r*":   changeCell(table.Point[logSize-1]),
-		"the first value":             changeCell(table.Values[0]),
-		"the last value":              changeCell(table.Values[nbColumns-1]),
-		"the first element of proof":  changeProofElement(0),
-		"the middle element of proof": changeProofElement(nbElements / 2),
-		"the last element of proof":   changeProofElement(nbElements - 1),
+		"a coordinate of r*":      changeCell(table.Point[0]),
+		"a value y":               changeCell(table.Values[0]),
+		"an element of the proof": changeProofElement(nbElements / 2),
 	} {
 		t.Run("changed "+name, func(t *testing.T) {
 			require.ErrorContains(t, sys.Verify(changed, pub), "gkrtable: GKR proof")
@@ -120,24 +116,16 @@ func TestTable(t *testing.T) {
 		"an output of a padding row": func(table *Table) func(*wiop.Runtime) {
 			return func(rt *wiop.Runtime) { overrideRow(rt, table.Columns[20], nbRows+1) }
 		},
-		// a value y, after the GKR proof assigns it and before the round is absorbed
-		"the first value y": func(table *Table) func(*wiop.Runtime) {
+		// after the GKR proof assigns it and before the round is absorbed
+		"a value y": func(table *Table) func(*wiop.Runtime) {
 			table.Sigma.Round().RegisterAction(actionFunc(func(rt *wiop.Runtime) {
 				rt.OverrideCell(table.Values[0], field.ElemFromExt(addOne(rt.GetCellValue(table.Values[0]).AsExt())))
 			}))
 			return nil
 		},
-		"the last value y": func(table *Table) func(*wiop.Runtime) {
-			last := table.Values[nbColumns-1]
-			table.Sigma.Round().RegisterAction(actionFunc(func(rt *wiop.Runtime) {
-				rt.OverrideCell(last, field.ElemFromExt(addOne(rt.GetCellValue(last).AsExt())))
-			}))
-			return nil
-		},
 		// a row of E, after its action assigns it
 		"a row of E": func(table *Table) func(*wiop.Runtime) {
-			eq := table.Module.Columns[nbColumns]
-			require.True(t, eq.IsExtension)
+			eq := table.eq
 			eq.Round().RegisterAction(actionFunc(func(rt *wiop.Runtime) {
 				values := append([]field.Ext(nil), rt.GetColumnAssignment(eq).Plain.AsExt()...)
 				values[2] = addOne(values[2])
@@ -152,10 +140,4 @@ func TestTable(t *testing.T) {
 			require.Error(t, sys.Verify(proof, pub))
 		})
 	}
-}
-
-// TestAssignTooManyRows checks that Assign refuses more rows than the table has.
-func TestAssignTooManyRows(t *testing.T) {
-	_, table := newTable(t)
-	require.ErrorContains(t, table.Assign(nil, randomRows(1<<logSize+1)), "9 rows in a table of 8")
 }

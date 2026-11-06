@@ -17,10 +17,10 @@ func (t *Table) defineBinding(sys *wiop.System, ctx *wiop.ContextFrame) {
 		round      = t.Sigma.Round().EnsureNext()
 		one        = field.One()
 		oneConst   = wiop.NewConstantField(one)
-		eq         = t.Module.NewExtensionColumn(ctx.Childf("eq"), round)
-		eqView     = eq.View()
 		batchedRow = make([]wiop.Expression, nbColumns)
 	)
+	t.eq = t.Module.NewExtensionColumn(ctx.Childf("eq"), round)
+	eqView := t.eq.View()
 	t.Lambda = round.NewCoinField(ctx.Childf("lambda"))
 	round.EnsureNext() // the round of the result of the log-derivative sum
 
@@ -63,15 +63,12 @@ func (t *Table) defineBinding(sys *wiop.System, ctx *wiop.ContextFrame) {
 	}})
 	t.Result = sum.Result
 
-	round.RegisterAction(&eqAction{Table: t, eq: eq})
+	round.RegisterAction(&eqAction{t})
 	sum.Result.Round().RegisterVerifierAction(&sumVerifierAction{Table: t})
 }
 
 // eqAction is the prover action that assigns E[i] = eq(r*, i).
-type eqAction struct {
-	*Table
-	eq *wiop.Column
-}
+type eqAction struct{ *Table }
 
 // Run implements [wiop.ProverAction].
 func (a *eqAction) Run(rt *wiop.Runtime) {

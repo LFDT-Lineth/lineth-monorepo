@@ -51,6 +51,8 @@ type Table struct {
 
 	circuit *gkrposeidon2.Compressor
 	logSize int
+	// eq is the column E.
+	eq *wiop.Column
 }
 
 // Define declares in sys a table of 2ᵐ rows, whose columns are in round, and the GKR proof of its rows
