@@ -123,7 +123,7 @@ func cancellationRoots(cancelled []int, n int) []field.Element {
 		if k < 0 {
 			k = n + pos
 		}
-		field.ExpToInt(&roots[i], omega, k)
+		roots[i].ExpInt64(omega, int64(k))
 	}
 	return roots
 }

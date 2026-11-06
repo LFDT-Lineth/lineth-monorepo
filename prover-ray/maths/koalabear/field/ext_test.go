@@ -2,6 +2,7 @@ package field
 
 import (
 	"math/big"
+	"slices"
 	"testing"
 )
 
@@ -77,8 +78,21 @@ func TestBatchInvertExtRoundTrip(t *testing.T) {
 func TestBatchInvertExtInto(t *testing.T) {
 	t.Run("LengthMismatch", func(t *testing.T) {
 		checkPanics(t, func() {
-			BatchInvertExtInto(randomExts(testN), make([]Ext, testN+1))
+			BatchInvertExtInto(make([]Ext, testN+1), randomExts(testN))
 		})
+	})
+
+	t.Run("InPlace", func(t *testing.T) {
+		a := randomExts(testN)
+		w := slices.Clone(a)
+		BatchInvertExtInto(w, w)
+		for i := range a {
+			var prod Ext
+			prod.Mul(&a[i], &w[i])
+			if !prod.IsOne() {
+				t.Fatalf("w[%d] is not the inverse of a[%d]", i, i)
+			}
+		}
 	})
 
 	t.Run("EmptySlice", func(_ *testing.T) {
@@ -97,7 +111,7 @@ func TestBatchInvertExtInto(t *testing.T) {
 		a := randomExts(testN)
 		a[0] = ZeroExt()
 		res := make([]Ext, testN)
-		BatchInvertExtInto(a, res) // must not panic
+		BatchInvertExtInto(res, a) // must not panic
 
 		oneExt := OneExt()
 		for i := 1; i < testN; i++ {

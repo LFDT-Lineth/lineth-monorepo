@@ -318,8 +318,10 @@ func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
 
 	// The outer loop over position chunks is embarrassingly parallel:
 	// read-only inputs, disjoint writes to evals[start:end]. gbuf is the
-	// chunk-sized G_g scratch, reused across groups.
-	parallel.Execute(len(evals), func(start, end int) {
+	// chunk-sized G_g scratch, reused across groups. The chunks are aligned
+	// to the 16 lanes of the AVX-512 kernels, so only the last one has a
+	// scalar tail.
+	parallel.ExecuteAligned(len(evals), 16, func(start, end int) {
 		if running != nil {
 			field.VecScaleExtExt(evals[start:end], alphaTop, running[start:end])
 		}

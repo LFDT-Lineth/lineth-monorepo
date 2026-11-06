@@ -31,69 +31,6 @@ func TestNewFromStringPanic(t *testing.T) {
 	checkPanics(t, func() { NewFromString("not_a_valid_number") })
 }
 
-// TestExpToInt verifies ExpToInt for k=0, k=1, a positive exponent, and
-// negative exponents using round-trip identity checks.
-func TestExpToInt(t *testing.T) {
-	rng := newRng()
-
-	t.Run("k=0", func(t *testing.T) {
-		for range testN {
-			x := PseudoRand(rng)
-			var z Element
-			ExpToInt(&z, x, 0)
-			checkElem(t, One(), z)
-		}
-	})
-
-	t.Run("k=1", func(t *testing.T) {
-		for range testN {
-			x := PseudoRand(rng)
-			var z Element
-			ExpToInt(&z, x, 1)
-			checkElem(t, x, z)
-		}
-	})
-
-	// Verify x^5 against x*x*x*x*x computed by repeated multiplication.
-	t.Run("k=5", func(t *testing.T) {
-		for range testN {
-			x := PseudoRand(rng)
-			var want Element
-			want.Mul(&x, &x)
-			want.Mul(&want, &want)
-			want.Mul(&want, &x)
-			var z Element
-			ExpToInt(&z, x, 5)
-			checkElem(t, want, z)
-		}
-	})
-
-	// x^(-1) must satisfy x * x^(-1) == 1.
-	t.Run("k=-1", func(t *testing.T) {
-		for range testN {
-			x := PseudoRand(rng)
-			var z Element
-			ExpToInt(&z, x, -1)
-			var product Element
-			product.Mul(&x, &z)
-			checkElem(t, One(), product)
-		}
-	})
-
-	// x^(-2) must satisfy x^2 * x^(-2) == 1.
-	t.Run("k=-2", func(t *testing.T) {
-		for range testN {
-			x := PseudoRand(rng)
-			var z Element
-			ExpToInt(&z, x, -2)
-			var sq, product Element
-			sq.Square(&x)
-			product.Mul(&sq, &z)
-			checkElem(t, One(), product)
-		}
-	})
-}
-
 // TestPseudoRandTruncated verifies that values generated with sizeByte in
 // {1,2,3} fit within the expected range and that sizeByte=5 panics.
 func TestPseudoRandTruncated(t *testing.T) {

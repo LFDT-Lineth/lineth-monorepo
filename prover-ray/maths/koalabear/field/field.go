@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"math/bits"
 	"math/rand/v2"
 	"runtime"
 	"unsafe"
@@ -80,29 +79,6 @@ func NewFromString(s string) (res Element) {
 		panic(err)
 	}
 	return res
-}
-
-// ExpToInt sets z to x**k
-func ExpToInt(z *Element, x Element, k int) *Element {
-	if k == 0 {
-		return z.SetOne()
-	}
-
-	if k < 0 {
-		x.Inverse(&x)
-		k = -k
-	}
-
-	z.Set(&x)
-
-	for i := bits.Len(uint(k)) - 2; i >= 0; i-- {
-		z.Square(z)
-		if (k>>i)&1 == 1 {
-			z.Mul(z, &x)
-		}
-	}
-
-	return z
 }
 
 // RandomElement returns a random element
@@ -218,15 +194,15 @@ func WriteOctupletTo(w io.Writer, octuplet Octuplet) error {
 func ParBatchInvert(a []Element, numCPU int) []Element {
 
 	if numCPU == 0 {
-		numCPU = runtime.NumCPU()
+		numCPU = runtime.GOMAXPROCS(0)
 	}
 
 	res := make([]Element, len(a))
 
-	parallel.Execute(len(a), func(start, stop int) {
+	parallel.ExecuteWithNbTasks(len(a), numCPU, func(start, stop int) {
 		subRes := BatchInvert(a[start:stop])
 		copy(res[start:stop], subRes)
-	}, numCPU)
+	})
 
 	return res
 }

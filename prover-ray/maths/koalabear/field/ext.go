@@ -35,7 +35,7 @@ func BatchInvertExt(a []Ext) []Ext {
 
 // BatchInvertExtInto computes the inverses of all elements in a and writes
 // the result into res; zeroes map to zero. res may alias a.
-func BatchInvertExtInto(a, res []Ext) {
+func BatchInvertExtInto(res, a []Ext) {
 	if len(a) != len(res) {
 		panic("input and output slices must have the same length")
 	}
@@ -210,9 +210,9 @@ func ParBatchInvertExt(a []Ext, numCPU int) []Ext {
 	}
 
 	res := make([]Ext, len(a))
-	parallel.Execute(len(a), func(start, stop int) {
-		BatchInvertExtInto(a[start:stop], res[start:stop])
-	}, numCPU)
+	parallel.ExecuteWithNbTasks(len(a), numCPU, func(start, stop int) {
+		BatchInvertExtInto(res[start:stop], a[start:stop])
+	})
 
 	return res
 }

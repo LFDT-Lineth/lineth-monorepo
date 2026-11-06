@@ -625,7 +625,7 @@ func (p *Program) Run(aggregate []field.Ext, scale []field.Element, workers int)
 		}
 	}
 	if workers > 0 {
-		parallel.Execute(p.ratio*perCoset, work, workers)
+		parallel.ExecuteWithNbTasks(p.ratio*perCoset, workers, work)
 	} else {
 		parallel.Execute(p.ratio*perCoset, work)
 	}

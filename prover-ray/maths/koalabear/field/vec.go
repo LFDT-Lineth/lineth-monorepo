@@ -411,7 +411,7 @@ func VecBatchInvBase(res, a []Element) {
 // using the batch-inversion trick. Zeroes map to zero. res and a must have
 // equal length; res may alias a.
 func VecBatchInvExt(res, a []Ext) {
-	BatchInvertExtInto(a, res)
+	BatchInvertExtInto(res, a)
 }
 
 // VecBatchInvInto sets res[i] = 1/a[i] for all i, dispatching on the field
@@ -665,20 +665,20 @@ func prefixScanExt(z []Ext, workers int, mul bool) {
 	nbChunks := (n + size - 1) / size
 	chunk := func(c int) []Ext { return z[c*size : min((c+1)*size, n)] }
 	offsets := make([]Ext, nbChunks)
-	parallel.Execute(nbChunks, func(start, end int) {
+	parallel.ExecuteWithNbTasks(nbChunks, workers, func(start, end int) {
 		for c := start; c < end; c++ {
 			offsets[c] = scan(chunk(c), identity)
 		}
-	}, workers)
+	})
 	if nbChunks < 2 {
 		return
 	}
 	// offsets[c] becomes the combination of the totals of chunks 0..c-1.
 	scan(offsets[:nbChunks-1], identity)
 	copy(offsets[1:], offsets[:nbChunks-1])
-	parallel.Execute(nbChunks-1, func(start, end int) {
+	parallel.ExecuteWithNbTasks(nbChunks-1, workers, func(start, end int) {
 		for c := start + 1; c < end+1; c++ {
 			shift(chunk(c), &offsets[c])
 		}
-	}, workers)
+	})
 }

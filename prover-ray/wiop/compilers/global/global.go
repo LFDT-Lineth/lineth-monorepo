@@ -362,7 +362,7 @@ func computeCancellationCoset(cancelled []int, n, N int) []field.Element {
 		if k < 0 {
 			k = n + pos
 		}
-		field.ExpToInt(&roots[i], omega, k)
+		roots[i].ExpInt64(omega, int64(k))
 	}
 
 	// Evaluate the product at every coset point. Points are independent, so
@@ -399,7 +399,7 @@ type cosetWalk struct {
 func newCosetWalk(shifts []field.Element, n, t int) *cosetWalk {
 	w := &cosetWalk{shifts: shifts, omega: field.RootOfUnityBy(n), n: n, k: t / n, i: t % n}
 	if w.k < len(shifts) {
-		field.ExpToInt(&w.x, w.omega, w.i)
+		w.x.ExpInt64(w.omega, int64(w.i))
 		w.x.Mul(&w.x, &shifts[w.k])
 	}
 	return w
@@ -470,7 +470,7 @@ func computeLagrangeSelectorCoset(position, n, N int) []field.Element {
 
 	omega := field.RootOfUnityBy(n)
 	var omegaP field.Element
-	field.ExpToInt(&omegaP, omega, p)
+	omegaP.ExpInt64(omega, int64(p))
 
 	// Constant numerator coefficient ω^p / n.
 	var nInv field.Element
@@ -485,7 +485,7 @@ func computeLagrangeSelectorCoset(position, n, N int) []field.Element {
 	var one field.Element
 	one.SetOne()
 	for k := range shifts {
-		field.ExpToInt(&num[k], shifts[k], n)
+		num[k].ExpInt64(shifts[k], int64(n))
 		num[k].Sub(&num[k], &one)
 		num[k].Mul(&num[k], &numCoef)
 	}
@@ -945,18 +945,18 @@ func cosetsToShares(agg []field.Ext, smallDomain *fft.Domain, cosetDomains []*ff
 		ratio = len(cosetDomains)
 		tasks = max(1, runtime.GOMAXPROCS(0)/ratio)
 	)
-	parallel.Execute(ratio, func(start, end int) {
+	parallel.ExecuteWithNbTasks(ratio, ratio, func(start, end int) {
 		for k := start; k < end; k++ {
 			cosetDomains[k].FFTInverseExt6(agg[k*n:(k+1)*n], fft.DIF, fft.OnCoset(), fft.WithNbTasks(tasks))
 		}
-	}, ratio)
+	})
 
 	// coefs[m][k] = g^{-nm}·ω_ratio^{-km}/ratio, with ω_ratio = ω_N^n.
 	var g, gInvN, omegaInv, ratioInv field.Element
 	g.SetUint64(field.MultiplicativeGen)
-	field.ExpToInt(&gInvN, g, n)
+	gInvN.ExpInt64(g, int64(n))
 	gInvN.Inverse(&gInvN)
-	field.ExpToInt(&omegaInv, field.RootOfUnityBy(n*ratio), n)
+	omegaInv.ExpInt64(field.RootOfUnityBy(n*ratio), int64(n))
 	omegaInv.Inverse(&omegaInv)
 	ratioInv.SetUint64(uint64(ratio))
 	ratioInv.Inverse(&ratioInv)
@@ -966,7 +966,7 @@ func cosetsToShares(agg []field.Ext, smallDomain *fft.Domain, cosetDomains []*ff
 	for m := range coefs {
 		coefs[m] = make([]field.Element, ratio)
 		var step field.Element // ω_ratio^{-m}
-		field.ExpToInt(&step, omegaInv, m)
+		step.ExpInt64(omegaInv, int64(m))
 		coefs[m][0] = rowScale
 		for k := 1; k < ratio; k++ {
 			coefs[m][k].Mul(&coefs[m][k-1], &step)
@@ -975,12 +975,12 @@ func cosetsToShares(agg []field.Ext, smallDomain *fft.Domain, cosetDomains []*ff
 	}
 
 	shares := make([][]field.Ext, ratio)
-	parallel.Execute(ratio, func(start, end int) {
+	parallel.ExecuteWithNbTasks(ratio, ratio, func(start, end int) {
 		for m := start; m < end; m++ {
 			shares[m] = make([]field.Ext, n)
 			hugepage.Advise(shares[m])
 		}
-	}, ratio)
+	})
 	parallel.Execute(n, func(start, end int) {
 		for m, share := range shares {
 			for p := start; p < end; p++ {
@@ -994,11 +994,11 @@ func cosetsToShares(agg []field.Ext, smallDomain *fft.Domain, cosetDomains []*ff
 		}
 	})
 
-	parallel.Execute(ratio, func(start, end int) {
+	parallel.ExecuteWithNbTasks(ratio, ratio, func(start, end int) {
 		for m := start; m < end; m++ {
 			smallDomain.FFTExt6(shares[m], fft.DIT, fft.WithNbTasks(tasks))
 		}
-	}, ratio)
+	})
 	return shares
 }
 
@@ -1150,7 +1150,7 @@ func evalCancellationAtPoint(cancelled []int, n int, r field.Gen) field.Gen {
 			k = n + pos
 		}
 		var omegaK field.Element
-		field.ExpToInt(&omegaK, omega, k)
+		omegaK.ExpInt64(omega, int64(k))
 		factor := r.Sub(field.ElemFromBase(omegaK))
 		result = result.Mul(factor)
 	}

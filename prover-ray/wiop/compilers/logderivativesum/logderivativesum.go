@@ -304,7 +304,7 @@ func (a *proverAction) Run(rt *wiop.Runtime) {
 		nInv.Inverse(&nInv)
 		var c field.Ext
 		c.MulByElement(&colTotal, &nInv)
-		parallel.Execute(n, func(start, stop int) {
+		parallel.ExecuteWithNbTasks(n, workers, func(start, stop int) {
 			var ic field.Ext
 			var s field.Element
 			s.SetUint64(uint64(start))
@@ -313,7 +313,7 @@ func (a *proverAction) Run(rt *wiop.Runtime) {
 				ic.Add(&ic, &c)
 				z[k].Sub(&z[k], &ic)
 			}
-		}, workers)
+		})
 
 		rt.AssignColumn(e.zCol, &wiop.ConcreteVector{Plain: field.VecFromExt(z)})
 		rt.AssignCell(e.Average, field.ElemFromExt(c))

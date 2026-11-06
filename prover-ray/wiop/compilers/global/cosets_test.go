@@ -22,7 +22,7 @@ func serialCancellationCoset(cancelled []int, n, N int) []field.Element {
 		if k < 0 {
 			k = n + pos
 		}
-		field.ExpToInt(&roots[i], omega, k)
+		roots[i].ExpInt64(omega, int64(k))
 	}
 	omegaN := field.RootOfUnityBy(N)
 	var x field.Element
@@ -45,7 +45,7 @@ func serialCancellationCoset(cancelled []int, n, N int) []field.Element {
 func serialLagrangeSelectorCoset(position, n, N int) []field.Element {
 	p := ((position % n) + n) % n
 	var omegaP, nInv, numCoef, x, one field.Element
-	field.ExpToInt(&omegaP, field.RootOfUnityBy(n), p)
+	omegaP.ExpInt64(field.RootOfUnityBy(n), int64(p))
 	nInv.SetUint64(uint64(n))
 	nInv.Inverse(&nInv)
 	numCoef.Mul(&omegaP, &nInv)
@@ -55,7 +55,7 @@ func serialLagrangeSelectorCoset(position, n, N int) []field.Element {
 	out := make([]field.Element, N)
 	for j := range N {
 		var xn, num, den field.Element
-		field.ExpToInt(&xn, x, n)
+		xn.ExpInt64(x, int64(n))
 		num.Sub(&xn, &one)
 		den.Sub(&x, &omegaP)
 		den.Inverse(&den)

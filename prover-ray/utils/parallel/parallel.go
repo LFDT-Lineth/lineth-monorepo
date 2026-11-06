@@ -8,23 +8,16 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 )
 
-// Execute process in parallel the work function
-func Execute(nbIterations int, work func(int, int), maxCpus ...int) {
-	nbTasks := runtime.GOMAXPROCS(0)
+// Execute calls work on contiguous ranges [start, end) that cover
+// [0, nbIterations), on GOMAXPROCS goroutines. A panic in work is re-raised in
+// the calling goroutine once every goroutine has stopped.
+func Execute(nbIterations int, work func(start, end int)) {
+	ExecuteWithNbTasks(nbIterations, runtime.GOMAXPROCS(0), work)
+}
 
-	if len(maxCpus) == 1 {
-		nbTasks = maxCpus[0]
-		if nbTasks < 1 {
-			nbTasks = 1
-		}
-	}
-
-	// heuristic to avoid creating too many goroutines (experimental, may change)
-	// nbGoRoutines := runtime.NumGoroutine()
-	// nbCpus := runtime.GOMAXPROCS(0) * 4
-	// for nbTasks+nbGoRoutines > nbCpus && nbTasks > 1 {
-	// 	nbTasks--
-	// }
+// ExecuteWithNbTasks is [Execute] on nbTasks goroutines (at least one, and at
+// most one per iteration).
+func ExecuteWithNbTasks(nbIterations, nbTasks int, work func(start, end int)) {
 	nbTasks = max(1, nbTasks)
 
 	if nbTasks == 1 {
@@ -62,8 +55,6 @@ func Execute(nbIterations int, work func(int, int), maxCpus ...int) {
 		}
 
 		go func() {
-			// runtime.LockOSThread()
-			// defer runtime.UnlockOSThread()
 			// In case the subtask panics, we recover so that we can repanic in
 			// the main goroutine. Simplifying the process of tracing back the
 			// error and allowing to test the panics.
@@ -87,4 +78,16 @@ func Execute(nbIterations int, work func(int, int), maxCpus ...int) {
 	if len(panicTrace) > 0 {
 		utils.Panic("Had a panic: %v\nStack: %v\n", panicMsg, string(panicTrace))
 	}
+}
+
+// ExecuteAligned is [Execute] with every range starting at a multiple of
+// align, and every range but the last a whole number of align units: the
+// tail of nbIterations goes to the last range. Vector kernels then run their
+// unrolled loop on every range, with at most one scalar remainder.
+func ExecuteAligned(nbIterations, align int, work func(start, end int)) {
+	align = max(1, align)
+	units := (nbIterations + align - 1) / align
+	Execute(units, func(start, end int) {
+		work(start*align, min(end*align, nbIterations))
+	})
 }

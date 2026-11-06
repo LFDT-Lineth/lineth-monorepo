@@ -565,7 +565,7 @@ func denomBaseInverses(generator field.Element, n int, zeta field.Ext) ([]field.
 				pow.Mul(&pow, &generator)
 			}
 			if bad[c] < 0 {
-				field.BatchInvertExtInto(denoms[:hi-lo], inv[lo:hi])
+				field.BatchInvertExtInto(inv[lo:hi], denoms[:hi-lo])
 			}
 		}
 	})
