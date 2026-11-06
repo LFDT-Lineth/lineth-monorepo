@@ -6,8 +6,7 @@
  */
 package maru.app
 
-import linea.teku.TekuWeb3JClientFactory
-import linea.teku.Web3JClient
+import io.vertx.core.Vertx
 import maru.config.ApiEndpointConfig
 import maru.consensus.ElFork
 import maru.consensus.ForksSchedule
@@ -16,8 +15,11 @@ import maru.consensus.blockimport.ElForkAwareBlockImporter
 import maru.consensus.blockimport.FollowerBeaconBlockImporter
 import maru.consensus.state.FinalizationProvider
 import maru.executionlayer.ExecutionLayerFactory.buildExecutionLayerManager
+import maru.executionlayer.client.EngineApiEndpoint
+import maru.executionlayer.client.EngineApiTimeouts
 import net.consensys.linea.metrics.MetricsFacade
 import org.apache.logging.log4j.Logger
+import java.nio.file.Path
 
 object Helpers {
   fun closeAll(vararg closeActions: () -> Unit) {
@@ -37,32 +39,30 @@ object Helpers {
     firstFailure?.let { throw it }
   }
 
-  fun createWeb3jClient(
+  fun createEngineApiEndpoint(
+    vertx: Vertx,
+    metricsFacade: MetricsFacade,
     apiEndpointConfig: ApiEndpointConfig,
     log: Logger,
-  ): Web3JClient =
-    TekuWeb3JClientFactory
-      .create(
-        endpoint = apiEndpointConfig.endpoint,
-        jwtPath = apiEndpointConfig.jwtSecretPath,
-        timeout = apiEndpointConfig.timeout,
-        log = log,
-      )
+  ): EngineApiEndpoint =
+    EngineApiEndpoint.create(
+      vertx = vertx,
+      metricsFacade = metricsFacade,
+      endpoint = apiEndpointConfig.endpoint,
+      jwtSecretPath = apiEndpointConfig.jwtSecretPath?.let(Path::of),
+      requestTimeouts = EngineApiTimeouts.provider(maxTimeout = apiEndpointConfig.timeout),
+      log = log,
+    )
 
   fun createBlockImportHandlers(
     elFork: ElFork,
-    metricsFacade: MetricsFacade,
     finalizationStateProvider: FinalizationProvider,
-    followerELNodeEngineApiWeb3JClients: Map<String, Web3JClient>,
+    followerEngineApiEndpoints: Map<String, EngineApiEndpoint>,
   ): NewBlockHandlerMultiplexer {
     val elFollowersNewBlockHandlerMap =
-      followerELNodeEngineApiWeb3JClients.mapValues { (followerName, web3JClient) ->
+      followerEngineApiEndpoints.mapValues { (followerName, engineApiEndpoint) ->
         val elFollowerExecutionLayerManager =
-          buildExecutionLayerManager(
-            web3JEngineApiClient = web3JClient,
-            elFork = elFork,
-            metricsFacade = metricsFacade,
-          )
+          buildExecutionLayerManager(engineApiEndpoint = engineApiEndpoint, elFork = elFork)
         FollowerBeaconBlockImporter.create(
           executionLayerManager = elFollowerExecutionLayerManager,
           finalizationStateProvider = finalizationStateProvider,
@@ -74,19 +74,14 @@ object Helpers {
 
   fun createForkAwareBlockImportHandlers(
     forksSchedule: ForksSchedule,
-    metricsFacade: MetricsFacade,
-    followerELNodeEngineApiWeb3JClients: Map<String, Web3JClient>,
+    followerEngineApiEndpoints: Map<String, EngineApiEndpoint>,
     finalizationProvider: FinalizationProvider,
   ): NewBlockHandlerMultiplexer {
     val elFollowersNewBlockHandlerMap =
-      followerELNodeEngineApiWeb3JClients.mapValues { (followerName, web3JClient) ->
+      followerEngineApiEndpoints.mapValues { (followerName, engineApiEndpoint) ->
         val elManagerMap =
           ElFork.entries.associateWith { elFork ->
-            buildExecutionLayerManager(
-              web3JEngineApiClient = web3JClient,
-              elFork = elFork,
-              metricsFacade = metricsFacade,
-            )
+            buildExecutionLayerManager(engineApiEndpoint = engineApiEndpoint, elFork = elFork)
           }
         ElForkAwareBlockImporter(
           forksSchedule = forksSchedule,

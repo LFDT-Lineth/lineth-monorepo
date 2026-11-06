@@ -6,73 +6,14 @@
  */
 package maru.executionlayer
 
-import linea.teku.Web3JClient
 import maru.consensus.ElFork
-import maru.executionlayer.client.AmsterdamWeb3JJsonRpcExecutionLayerEngineApiClient
-import maru.executionlayer.client.CancunWeb3JJsonRpcExecutionLayerEngineApiClient
-import maru.executionlayer.client.ExecutionLayerEngineApiClient
-import maru.executionlayer.client.OsakaWeb3JJsonRpcExecutionLayerEngineApiClient
-import maru.executionlayer.client.ParisWeb3JJsonRpcExecutionLayerEngineApiClient
-import maru.executionlayer.client.PragueWeb3JJsonRpcExecutionLayerEngineApiClient
-import maru.executionlayer.client.ShanghaiWeb3JJsonRpcExecutionLayerEngineApiClient
+import maru.executionlayer.client.EngineApiEndpoint
 import maru.executionlayer.manager.ExecutionLayerManager
 import maru.executionlayer.manager.JsonRpcExecutionLayerManager
-import net.consensys.linea.metrics.MetricsFacade
 
 object ExecutionLayerFactory {
   fun buildExecutionLayerManager(
-    web3JEngineApiClient: Web3JClient,
+    engineApiEndpoint: EngineApiEndpoint,
     elFork: ElFork,
-    metricsFacade: MetricsFacade,
-  ): ExecutionLayerManager =
-    JsonRpcExecutionLayerManager(
-      executionLayerEngineApiClient = buildExecutionEngineClient(
-        web3JEngineApiClient = web3JEngineApiClient,
-        elFork = elFork,
-        metricsFacade = metricsFacade,
-      ),
-    )
-
-  fun buildExecutionEngineClient(
-    web3JEngineApiClient: Web3JClient,
-    elFork: ElFork,
-    metricsFacade: MetricsFacade,
-  ): ExecutionLayerEngineApiClient =
-    when (elFork) {
-      ElFork.Paris ->
-        ParisWeb3JJsonRpcExecutionLayerEngineApiClient(
-          web3jClient = web3JEngineApiClient,
-          metricsFacade = metricsFacade,
-        )
-
-      ElFork.Shanghai ->
-        ShanghaiWeb3JJsonRpcExecutionLayerEngineApiClient(
-          web3jClient = web3JEngineApiClient,
-          metricsFacade = metricsFacade,
-        )
-
-      ElFork.Cancun ->
-        CancunWeb3JJsonRpcExecutionLayerEngineApiClient(
-          web3jClient = web3JEngineApiClient,
-          metricsFacade = metricsFacade,
-        )
-
-      ElFork.Prague ->
-        PragueWeb3JJsonRpcExecutionLayerEngineApiClient(
-          web3jClient = web3JEngineApiClient,
-          metricsFacade = metricsFacade,
-        )
-
-      ElFork.Osaka ->
-        OsakaWeb3JJsonRpcExecutionLayerEngineApiClient(
-          web3jClient = web3JEngineApiClient,
-          metricsFacade = metricsFacade,
-        )
-
-      ElFork.Amsterdam ->
-        AmsterdamWeb3JJsonRpcExecutionLayerEngineApiClient(
-          web3jClient = web3JEngineApiClient,
-          metricsFacade = metricsFacade,
-        )
-    }
+  ): ExecutionLayerManager = JsonRpcExecutionLayerManager(engineApiEndpoint.clientFor(elFork))
 }

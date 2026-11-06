@@ -11,7 +11,6 @@ import linea.crypto.CloseableSigner
 import linea.crypto.Secp256k1Signature
 import linea.crypto.Signer
 import linea.kotlin.encodeHex
-import linea.teku.Web3JClient
 import linea.timer.TimerFactory
 import linea.web3j.ethapi.createEthApiClient
 import maru.api.ApiServer
@@ -27,6 +26,7 @@ import maru.core.Protocol
 import maru.core.SealedBeaconBlock
 import maru.crypto.toValidator
 import maru.database.BeaconChain
+import maru.executionlayer.client.EngineApiEndpoint
 import maru.finalization.LineaFinalizationProvider
 import maru.metrics.MaruMetricsCategory
 import maru.p2p.P2PNetwork
@@ -61,7 +61,8 @@ class MaruApp internal constructor(
   private val metricsFacade: MetricsFacade,
   private val metricsSystem: MetricsSystem,
   private val l2EthWeb3j: Web3j?,
-  private val validatorELNodeEngineApiWeb3JClient: Web3JClient?,
+  private val validatorEngineApiEndpoint: EngineApiEndpoint?,
+  private val followerEngineApiEndpoints: Map<String, EngineApiEndpoint>,
   private val apiServer: ApiServer,
   private val syncControllerManager: SyncController,
   private val timerFactory: TimerFactory,
@@ -125,14 +126,6 @@ class MaruApp internal constructor(
       )
     }
   }
-
-  private val followerELNodeEngineApiWeb3JClients: Map<String, Web3JClient> =
-    config.followers.followers.mapValues { (followerLabel, apiEndpointConfig) ->
-      Helpers.createWeb3jClient(
-        apiEndpointConfig = apiEndpointConfig,
-        log = LogManager.getLogger("maru.clients.follower.$followerLabel"),
-      )
-    }
 
   fun p2pPort(): UInt = p2pNetwork.port
 
@@ -205,13 +198,7 @@ class MaruApp internal constructor(
 
   override fun close() {
     Helpers.closeAll(
-      { validatorELNodeEngineApiWeb3JClient?.close() },
       { l2EthWeb3j?.shutdown() },
-      {
-        followerELNodeEngineApiWeb3JClients.forEach { (_, web3jClient) ->
-          web3jClient.close()
-        }
-      },
       p2pNetwork::close,
       { vertx.close() },
       protocolStarter::close,
@@ -254,15 +241,14 @@ class MaruApp internal constructor(
         QbftProtocolValidatorFactory(
           qbftOptions = config.qbft!!,
           signer = checkNotNull(validatorSigner),
-          validatorELNodeEngineApiWeb3JClient = validatorELNodeEngineApiWeb3JClient!!,
-          followerELNodeEngineApiWeb3JClients = followerELNodeEngineApiWeb3JClients,
+          validatorEngineApiEndpoint = validatorEngineApiEndpoint!!,
+          followerEngineApiEndpoints = followerEngineApiEndpoints,
           metricsSystem = metricsSystem,
           finalizationStateProvider = finalizationProvider,
           nextTargetBlockTimestampProvider = nextTargetBlockTimestampProvider,
           beaconChain = beaconChain,
           clock = clock,
           p2pNetwork = p2pNetwork,
-          metricsFacade = metricsFacade,
           allowEmptyBlocks = config.allowEmptyBlocks,
           forksSchedule = beaconGenesisConfig,
           payloadValidationEnabled = config.validatorElNode!!.payloadValidationEnabled,
@@ -279,9 +265,8 @@ class MaruApp internal constructor(
         QbftFollowerFactory(
           p2pNetwork = p2pNetwork,
           beaconChain = beaconChain,
-          validatorELNodeEngineApiWeb3JClient = validatorELNodeEngineApiWeb3JClient,
-          followerELNodeEngineApiWeb3JClients = followerELNodeEngineApiWeb3JClients,
-          metricsFacade = metricsFacade,
+          validatorEngineApiEndpoint = validatorEngineApiEndpoint,
+          followerEngineApiEndpoints = followerEngineApiEndpoints,
           allowEmptyBlocks = config.allowEmptyBlocks,
           finalizationStateProvider = finalizationProvider,
           payloadValidationEnabled = config.validatorElNode?.payloadValidationEnabled ?: false,

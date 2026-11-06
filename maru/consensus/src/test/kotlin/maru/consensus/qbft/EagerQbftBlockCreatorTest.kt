@@ -6,11 +6,12 @@
  */
 package maru.consensus.qbft
 
-import linea.teku.TekuWeb3JClientFactory
-import linea.teku.Web3JClient
+import io.vertx.core.Vertx
 import linea.testing.besu.BesuFactory
 import linea.testing.besu.BesuTransactionsHelper
+import maru.consensus.ElFork
 import maru.consensus.ValidatorProvider
+import maru.consensus.qbft.EthBlockMappers.toDomain
 import maru.consensus.qbft.adapters.QbftBlockHeaderAdapter
 import maru.consensus.qbft.adapters.toBeaconBlock
 import maru.consensus.qbft.adapters.toBeaconBlockHeader
@@ -24,12 +25,13 @@ import maru.core.Validator
 import maru.core.ext.DataGenerators
 import maru.core.ext.metrics.TestMetrics
 import maru.database.BeaconChain
-import maru.executionlayer.client.PragueWeb3JJsonRpcExecutionLayerEngineApiClient
+import maru.executionlayer.client.EngineApiEndpoint
 import maru.executionlayer.manager.ExecutionLayerManager
 import maru.executionlayer.manager.JsonRpcExecutionLayerManager
 import maru.executionlayer.manager.LatestBlockMetadata
-import maru.executionlayer.mappers.Mappers.toDomain
 import maru.serialization.rlp.HashUtil
+import net.consensys.linea.async.get
+import org.apache.logging.log4j.LogManager
 import org.apache.tuweni.bytes.Bytes
 import org.apache.tuweni.bytes.Bytes32
 import org.assertj.core.api.Assertions.assertThat
@@ -68,7 +70,7 @@ class EagerQbftBlockCreatorTest {
   private lateinit var cluster: Cluster
   private lateinit var besuInstance: BesuNode
   private lateinit var ethApiClient: Web3j
-  private val engineApiClients = mutableListOf<Web3JClient>()
+  private val vertx = Vertx.vertx()
   private val proposerSelector = Mockito.mock(ProposerSelector::class.java)
   private val validatorProvider = Mockito.mock(ValidatorProvider::class.java)
   private val beaconChain = Mockito.mock(BeaconChain::class.java)
@@ -106,7 +108,7 @@ class EagerQbftBlockCreatorTest {
   @AfterEach
   fun tearDown() {
     ethApiClient.shutdown()
-    engineApiClients.forEach { it.close() }
+    vertx.close().get()
     cluster.stop()
   }
 
@@ -403,17 +405,16 @@ class EagerQbftBlockCreatorTest {
   }
 
   private fun createExecutionLayerManager(): ExecutionLayerManager {
-    val engineApiClient =
-      TekuWeb3JClientFactory.create(
-        endpoint = URI(besuInstance.engineRpcUrl().get()).toURL(),
-        timeout = 1.minutes,
-      ).also { engineApiClients.add(it) }
-    return JsonRpcExecutionLayerManager(
-      PragueWeb3JJsonRpcExecutionLayerEngineApiClient(
-        web3jClient = engineApiClient,
+    val engineApiEndpoint =
+      EngineApiEndpoint.create(
+        vertx = vertx,
         metricsFacade = TestMetrics.TestMetricsFacade,
-      ),
-    )
+        endpoint = URI(besuInstance.engineRpcUrl().get()).toURL(),
+        jwtSecretPath = null,
+        requestTimeouts = { 1.minutes },
+        log = LogManager.getLogger(EagerQbftBlockCreatorTest::class.java),
+      )
+    return JsonRpcExecutionLayerManager(engineApiEndpoint.clientFor(ElFork.Prague))
   }
 
   private fun createDelayedBlockCreator(

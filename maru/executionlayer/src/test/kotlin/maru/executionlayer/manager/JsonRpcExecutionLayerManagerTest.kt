@@ -9,297 +9,233 @@ package maru.executionlayer.manager
 import maru.core.EMPTY_HASH
 import maru.core.ExecutionPayload
 import maru.core.ext.DataGenerators
-import maru.executionlayer.client.ExecutionLayerEngineApiClient
-import maru.executionlayer.mappers.Mappers.toDomain
-import org.apache.tuweni.bytes.Bytes
-import org.apache.tuweni.bytes.Bytes32
+import net.consensys.linea.jsonrpc.JsonRpcErrorResponseException
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.Mockito.atLeastOnce
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.reset
-import org.mockito.Mockito.verify
-import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
-import org.mockito.kotlin.argThat
-import org.mockito.kotlin.eq
-import org.mockito.kotlin.isNull
-import org.mockito.kotlin.times
-import org.mockito.kotlin.whenever
-import tech.pegasys.teku.ethereum.executionclient.schema.ForkChoiceStateV1
-import tech.pegasys.teku.ethereum.executionclient.schema.PayloadStatusV1
-import tech.pegasys.teku.ethereum.executionclient.schema.Response
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import tech.pegasys.teku.infrastructure.bytes.Bytes8
 import java.util.concurrent.ExecutionException
 import kotlin.random.Random
 import kotlin.random.nextULong
-import tech.pegasys.teku.ethereum.executionclient.schema.ForkChoiceUpdatedResult as TekuForkChoiceUpdatedResult
-import tech.pegasys.teku.spec.executionlayer.ExecutionPayloadStatus as TekuExecutionPayloadStatus
 
 class JsonRpcExecutionLayerManagerTest {
-  private lateinit var executionLayerEngineApiClient: ExecutionLayerEngineApiClient
+  private lateinit var engineApiClient: FakeEngineApiClient
   private lateinit var executionLayerManager: ExecutionLayerManager
 
   private val feeRecipient: ByteArray = Random.nextBytes(20)
+  private val headHash = Random.nextBytes(32)
+  private val safeHash = Random.nextBytes(32)
+  private val finalizedHash = Random.nextBytes(32)
 
   @BeforeEach
   fun setUp() {
-    executionLayerEngineApiClient = mock()
-    executionLayerManager = createExecutionLayerManager()
+    engineApiClient = FakeEngineApiClient()
+    executionLayerManager = JsonRpcExecutionLayerManager(engineApiClient)
   }
 
-  @AfterEach
-  fun tearDown() {
-    reset(executionLayerEngineApiClient)
+  private fun validStatus() = PayloadStatus(ExecutionPayloadStatus.VALID, Random.nextBytes(32), validationError = null)
+
+  private fun respondToForkChoiceUpdate(payloadId: ByteArray?): ForkChoiceUpdatedResult {
+    val result = ForkChoiceUpdatedResult(validStatus(), payloadId)
+    engineApiClient.forkChoiceUpdateResponse = { SafeFuture.completedFuture(result) }
+    return result
   }
 
-  private fun createExecutionLayerManager(): ExecutionLayerManager =
-    JsonRpcExecutionLayerManager(
-      executionLayerEngineApiClient = executionLayerEngineApiClient,
+  private fun respondToGetPayload(executionPayload: ExecutionPayload) {
+    engineApiClient.getPayloadResponse = { SafeFuture.completedFuture(executionPayload) }
+  }
+
+  private fun respondToNewPayload(status: PayloadStatus) {
+    engineApiClient.newPayloadResponse = { SafeFuture.completedFuture(status) }
+  }
+
+  private fun assertForkChoiceUpdatedWith(payloadAttributes: PayloadAttributes?) {
+    assertThat(engineApiClient.forkChoiceUpdateCalls).hasSize(1)
+    val call = engineApiClient.forkChoiceUpdateCalls.single()
+    assertThat(call.headBlockHash).isEqualTo(headHash)
+    assertThat(call.safeBlockHash).isEqualTo(safeHash)
+    assertThat(call.finalizedBlockHash).isEqualTo(finalizedHash)
+    assertThat(call.payloadAttributes).isEqualTo(payloadAttributes)
+  }
+
+  private fun startBlockBuilding(
+    nextBlockTimestamp: ULong = 0UL,
+    nextBlockSlotNumber: ULong? = null,
+    targetGasLimit: ULong? = null,
+  ): SafeFuture<ForkChoiceUpdatedResult> =
+    executionLayerManager.setHeadAndStartBlockBuilding(
+      headHash = headHash,
+      safeHash = safeHash,
+      finalizedHash = finalizedHash,
+      nextBlockTimestamp = nextBlockTimestamp,
+      feeRecipient = feeRecipient,
+      nextBlockSlotNumber = nextBlockSlotNumber,
+      targetGasLimit = targetGasLimit,
     )
-
-  private fun mockForkChoiceUpdateWithValidStatus(payloadId: Bytes8?): PayloadStatusV1 {
-    val latestValidHash = Bytes32.random()
-    val executionStatus = TekuExecutionPayloadStatus.VALID
-    val payloadStatus = PayloadStatusV1(executionStatus, latestValidHash, null)
-    whenever(executionLayerEngineApiClient.forkChoiceUpdate(any(), anyOrNull()))
-      .thenReturn(
-        SafeFuture.completedFuture(
-          Response.fromPayloadReceivedAsJson(TekuForkChoiceUpdatedResult(payloadStatus, payloadId)),
-        ),
-      )
-    return payloadStatus
-  }
-
-  private fun mockGetPayloadWithRandomData(
-    payloadId: Bytes8,
-    executionPayload: ExecutionPayload,
-  ) {
-    val getPayloadResponse =
-      Response.fromPayloadReceivedAsJson(
-        executionPayload,
-      )
-    whenever(executionLayerEngineApiClient.getPayload(eq(payloadId)))
-      .thenReturn(SafeFuture.completedFuture(getPayloadResponse))
-  }
-
-  private fun mockNewPayloadWithStatus(payloadStatus: PayloadStatusV1) {
-    whenever(executionLayerEngineApiClient.newPayload(any())).thenReturn(
-      SafeFuture.completedFuture(Response.fromPayloadReceivedAsJson(payloadStatus)),
-    )
-  }
-
-  private fun mockFailedNewPayloadWithStatus(errorMessage: String) {
-    whenever(executionLayerEngineApiClient.newPayload(any())).thenReturn(
-      SafeFuture.completedFuture(Response.fromErrorMessage(errorMessage)),
-    )
-  }
 
   @Test
   fun `setHeadAndStartBlockBuilding stores payloadId for finishBlockBuilding`() {
-    val newHeadHash = Bytes32.random()
-    val newSafeHash = Bytes32.random()
-    val newFinalizedHash = Bytes32.random()
-    val nextTimestamp = 0UL
+    val payloadId = Random.nextBytes(8)
+    val expectedResult = respondToForkChoiceUpdate(payloadId)
 
-    val payloadId = Bytes8(Bytes.random(8))
-    val payloadStatus = mockForkChoiceUpdateWithValidStatus(payloadId)
-
-    val result =
-      executionLayerManager
-        .setHeadAndStartBlockBuilding(
-          headHash = newHeadHash.toArray(),
-          safeHash = newSafeHash.toArray(),
-          finalizedHash = newFinalizedHash.toArray(),
-          nextBlockTimestamp = nextTimestamp,
-          feeRecipient = feeRecipient,
-        ).get()
-
-    val expectedPayloadStatus =
-      PayloadStatus(
-        ExecutionPayloadStatus.VALID,
-        latestValidHash = payloadStatus
-          .asInternalExecutionPayload()
-          .latestValidHash
-          .get()
-          .toArray(),
-        validationError = null,
-      )
-    val expectedResult = ForkChoiceUpdatedResult(expectedPayloadStatus, payloadId.wrappedBytes.toArray())
-    assertThat(result).isEqualTo(expectedResult)
+    assertThat(startBlockBuilding().get()).isEqualTo(expectedResult)
 
     val executionPayload = DataGenerators.randomExecutionPayload()
-    mockGetPayloadWithRandomData(payloadId, executionPayload)
-    mockNewPayloadWithStatus(payloadStatus)
+    respondToGetPayload(executionPayload)
 
-    executionLayerManager.finishBlockBuilding().get()
-    verify(executionLayerEngineApiClient, atLeastOnce()).getPayload(eq(payloadId))
+    assertThat(executionLayerManager.finishBlockBuilding().get()).isEqualTo(executionPayload)
+    assertThat(engineApiClient.getPayloadCalls).hasSize(1)
+    assertThat(engineApiClient.getPayloadCalls.single()).isEqualTo(payloadId)
   }
 
   @ParameterizedTest(name = "FCU argument propagation with Amsterdam attributes = {0}")
   @ValueSource(booleans = [false, true])
   fun `setHeadAndStartBlockBuilding passes arguments to FCU correctly`(amsterdam: Boolean) {
-    val newHeadHash = Bytes32.random()
-    val newSafeHash = Bytes32.random()
-    val newFinalizedHash = Bytes32.random()
     val nextTimestamp = Random.nextULong(0U, ULong.MAX_VALUE)
     val nextSlot = if (amsterdam) Random.nextULong(0U, ULong.MAX_VALUE) else null
     val targetGasLimit = if (amsterdam) 60_000_000UL else null
+    val expectedResult = respondToForkChoiceUpdate(Random.nextBytes(8))
 
-    val payloadId = Bytes8(Bytes.random(8))
-    val payloadStatus = mockForkChoiceUpdateWithValidStatus(payloadId)
+    val result = startBlockBuilding(nextTimestamp, nextSlot, targetGasLimit).get()
 
-    val result =
-      executionLayerManager
-        .setHeadAndStartBlockBuilding(
-          headHash = newHeadHash.toArray(),
-          safeHash = newSafeHash.toArray(),
-          finalizedHash = newFinalizedHash.toArray(),
-          nextBlockTimestamp = nextTimestamp,
-          feeRecipient = feeRecipient,
-          nextBlockSlotNumber = nextSlot,
-          targetGasLimit = targetGasLimit,
-        ).get()
-
-    val expectedPayloadStatus =
-      PayloadStatus(
-        ExecutionPayloadStatus.VALID,
-        latestValidHash = payloadStatus
-          .asInternalExecutionPayload()
-          .latestValidHash
-          .get()
-          .toArray(),
-        validationError = null,
-      )
-    val expectedResult = ForkChoiceUpdatedResult(expectedPayloadStatus, payloadId.wrappedBytes.toArray())
     assertThat(result).isEqualTo(expectedResult)
-    verify(executionLayerEngineApiClient, atLeastOnce()).forkChoiceUpdate(
-      argThat { forkChoiceState ->
-        forkChoiceState == ForkChoiceStateV1(newHeadHash, newSafeHash, newFinalizedHash)
-      },
-      argThat { payloadAttributes ->
-        payloadAttributes ==
-          PayloadAttributes(
-            timestamp = nextTimestamp,
-            prevRandao = EMPTY_HASH,
-            suggestedFeeRecipient = feeRecipient,
-            slotNumber = nextSlot,
-            targetGasLimit = targetGasLimit,
-          )
-      },
+    assertForkChoiceUpdatedWith(
+      PayloadAttributes(
+        timestamp = nextTimestamp,
+        prevRandao = EMPTY_HASH,
+        suggestedFeeRecipient = feeRecipient,
+        slotNumber = nextSlot,
+        targetGasLimit = targetGasLimit,
+      ),
     )
+  }
+
+  @Test
+  fun `setHeadAndStartBlockBuilding fails when FCU returns no payloadId`() {
+    respondToForkChoiceUpdate(payloadId = null)
+
+    val exception = assertThrows<ExecutionException> { startBlockBuilding().get() }
+
+    assertThat(exception).cause().hasMessageStartingWith("Unexpected FCU result. Payload ID is null!")
+    assertThat(executionLayerManager.finishBlockBuilding()).isCompletedExceptionally()
   }
 
   @Test
   fun `finishBlockBuilding waits for FCU to complete before calling getPayload`() {
-    val newHeadHash = Bytes32.random()
-    val newSafeHash = Bytes32.random()
-    val newFinalizedHash = Bytes32.random()
+    val pendingFcu = SafeFuture<ForkChoiceUpdatedResult>()
+    engineApiClient.forkChoiceUpdateResponse = { pendingFcu }
 
-    val pendingFcu = SafeFuture<Response<TekuForkChoiceUpdatedResult>>()
-    whenever(executionLayerEngineApiClient.forkChoiceUpdate(any(), anyOrNull()))
-      .thenReturn(pendingFcu)
-
-    executionLayerManager.setHeadAndStartBlockBuilding(
-      headHash = newHeadHash.toArray(),
-      safeHash = newSafeHash.toArray(),
-      finalizedHash = newFinalizedHash.toArray(),
-      nextBlockTimestamp = 0UL,
-      feeRecipient = feeRecipient,
-    )
-
+    startBlockBuilding()
     val finishFuture = executionLayerManager.finishBlockBuilding()
 
-    // FCU hasn't completed yet — getPayload must NOT have been called
-    verify(executionLayerEngineApiClient, times(0)).getPayload(any())
+    assertThat(engineApiClient.getPayloadCalls).isEmpty()
     assertThat(finishFuture.isDone).isFalse()
 
-    // Now complete the FCU
-    val payloadId = Bytes8(Bytes.random(8))
-    val payloadStatus = PayloadStatusV1(TekuExecutionPayloadStatus.VALID, Bytes32.random(), null)
+    val payloadId = Random.nextBytes(8)
     val executionPayload = DataGenerators.randomExecutionPayload()
-    mockGetPayloadWithRandomData(payloadId, executionPayload)
-    pendingFcu.complete(Response.fromPayloadReceivedAsJson(TekuForkChoiceUpdatedResult(payloadStatus, payloadId)))
+    respondToGetPayload(executionPayload)
+    pendingFcu.complete(ForkChoiceUpdatedResult(validStatus(), payloadId))
 
-    val result = finishFuture.get()
-    assertThat(result).isEqualTo(executionPayload)
-    verify(executionLayerEngineApiClient, times(1)).getPayload(eq(payloadId))
+    assertThat(finishFuture.get()).isEqualTo(executionPayload)
+    assertThat(engineApiClient.getPayloadCalls).hasSize(1)
+    assertThat(engineApiClient.getPayloadCalls.single()).isEqualTo(payloadId)
   }
 
   @Test
   fun `finishBlockBuilding can't be called before setHeadAndStartBlockBuilding`() {
-    val result = executionLayerManager.finishBlockBuilding()
-    assertThat(result.isCompletedExceptionally).isTrue()
+    assertThat(executionLayerManager.finishBlockBuilding().isCompletedExceptionally).isTrue()
+    assertThat(engineApiClient.getPayloadCalls).isEmpty()
   }
 
   @Test
-  fun `importPayload forwards the call`() {
-    val executionPayload = DataGenerators.randomExecutionPayload()
-    val payloadStatus = PayloadStatusV1(TekuExecutionPayloadStatus.VALID, Bytes32.random(), null)
-    mockNewPayloadWithStatus(payloadStatus)
-    mockForkChoiceUpdateWithValidStatus(null)
-    executionLayerManager.newPayload(executionPayload).get()
+  fun `finishBlockBuilding reports getPayload failures with context`() {
+    respondToForkChoiceUpdate(Random.nextBytes(8))
+    engineApiClient.getPayloadResponse = {
+      SafeFuture.failedFuture(JsonRpcErrorResponseException(-38001, "Unknown payload", null))
+    }
+    startBlockBuilding().get()
 
-    verify(executionLayerEngineApiClient, times(1)).newPayload(eq(executionPayload))
+    val exception = assertThrows<ExecutionException> { executionLayerManager.finishBlockBuilding().get() }
+
+    assertThat(exception.cause)
+      .isInstanceOf(IllegalStateException::class.java)
+      .hasMessage(
+        "engine_getPayload request failed: fork=Prague " +
+          "Cause: code=-38001 message=Unknown payload errorData=null",
+      ).hasCauseInstanceOf(JsonRpcErrorResponseException::class.java)
   }
 
   @Test
-  fun `importPayload throws exception on validation failure`() {
+  fun `newPayload forwards the call and returns the status`() {
     val executionPayload = DataGenerators.randomExecutionPayload()
-    val payloadStatus = PayloadStatusV1(TekuExecutionPayloadStatus.INVALID, Bytes32.random(), "Invalid payload")
-    mockNewPayloadWithStatus(payloadStatus)
+    val status = validStatus()
+    respondToNewPayload(status)
 
-    assertThat(executionLayerManager.newPayload(executionPayload).get().validationError).isEqualTo("Invalid payload")
+    assertThat(executionLayerManager.newPayload(executionPayload).get()).isEqualTo(status)
+    assertThat(engineApiClient.newPayloadCalls).containsExactly(executionPayload)
   }
 
   @Test
-  fun `importPayload throws exception on general failure`() {
-    val executionPayload = DataGenerators.randomExecutionPayload()
-    mockFailedNewPayloadWithStatus("Unexpected error!")
+  fun `newPayload returns invalid status with validation error`() {
+    respondToNewPayload(PayloadStatus(ExecutionPayloadStatus.INVALID, Random.nextBytes(32), "Invalid payload"))
 
-    val exception =
-      assertThrows<ExecutionException> {
-        executionLayerManager.newPayload(executionPayload).get()
-      }
+    val result = executionLayerManager.newPayload(DataGenerators.randomExecutionPayload()).get()
+
+    assertThat(result.validationError).isEqualTo("Invalid payload")
+  }
+
+  @Test
+  fun `newPayload reports request failures with context`() {
+    val executionPayload = DataGenerators.randomExecutionPayload()
+    engineApiClient.newPayloadResponse = {
+      SafeFuture.failedFuture(JsonRpcErrorResponseException(-32000, "Unexpected error!", null))
+    }
+
+    val exception = assertThrows<ExecutionException> { executionLayerManager.newPayload(executionPayload).get() }
 
     assertThat(exception).cause().hasMessage(
-      "engine_newPayload request failed: " +
-        "elBlockNumber=${executionPayload.blockNumber} fork=null Cause: Unexpected error!",
+      "engine_newPayload request failed: elBlockNumber=${executionPayload.blockNumber} fork=Prague " +
+        "Cause: code=-32000 message=Unexpected error! errorData=null",
     )
   }
 
   @Test
-  fun `setHead updates fork choice state and returns result`() {
-    val newHeadHash = Bytes32.random()
-    val newSafeHash = Bytes32.random()
-    val newFinalizedHash = Bytes32.random()
+  fun `newPayload discards in-progress block building`() {
+    respondToForkChoiceUpdate(Random.nextBytes(8))
+    startBlockBuilding().get()
+    respondToNewPayload(validStatus())
 
-    val payloadId = Bytes8(Bytes.random(8))
-    val payloadStatus = mockForkChoiceUpdateWithValidStatus(payloadId)
+    executionLayerManager.newPayload(DataGenerators.randomExecutionPayload()).get()
 
-    val result =
-      executionLayerManager
-        .setHead(
-          headHash = newHeadHash.toArray(),
-          safeHash = newSafeHash.toArray(),
-          finalizedHash = newFinalizedHash.toArray(),
-        ).get()
+    assertThat(executionLayerManager.finishBlockBuilding()).isCompletedExceptionally()
+    assertThat(engineApiClient.getPayloadCalls).isEmpty()
+  }
 
-    val expectedResult =
-      ForkChoiceUpdatedResult(payloadStatus.asInternalExecutionPayload().toDomain(), payloadId.wrappedBytes.toArray())
+  @Test
+  fun `setHead updates fork choice state without payload attributes`() {
+    val expectedResult = respondToForkChoiceUpdate(payloadId = null)
+
+    val result = executionLayerManager.setHead(headHash, safeHash, finalizedHash).get()
+
     assertThat(result).isEqualTo(expectedResult)
+    assertForkChoiceUpdatedWith(payloadAttributes = null)
+  }
 
-    verify(executionLayerEngineApiClient).forkChoiceUpdate(
-      argThat { forkChoiceState ->
-        forkChoiceState == ForkChoiceStateV1(newHeadHash, newSafeHash, newFinalizedHash)
-      },
-      isNull(),
+  @Test
+  fun `setHead reports request failures with context`() {
+    engineApiClient.forkChoiceUpdateResponse = {
+      SafeFuture.failedFuture(RuntimeException("connection refused"))
+    }
+
+    val exception = assertThrows<ExecutionException> {
+      executionLayerManager.setHead(headHash, safeHash, finalizedHash).get()
+    }
+
+    assertThat(exception).cause().hasMessage(
+      "engine_forkchoiceUpdated request failed! nextBlockTimestamp=null fork=Prague Cause: connection refused",
     )
   }
 }
