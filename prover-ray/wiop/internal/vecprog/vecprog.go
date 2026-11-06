@@ -38,6 +38,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/internal/padded"
 	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
 )
 
@@ -741,19 +742,7 @@ func paddedView[T any](data []T, pad T, start, n, idx, L int, buf *[]T) []T {
 		*buf = make([]T, BlockSize)
 	}
 	out := (*buf)[:L]
-	for o := 0; o < L; {
-		p := (idx + o) % n
-		length := min(L-o, n-p) // a run of rows that does not wrap
-		dLo, dHi := max(p, start), min(p+length, start+len(data))
-		if dLo >= dHi {
-			fill(out[o:o+length], pad)
-		} else {
-			fill(out[o:o+dLo-p], pad)
-			copy(out[o+dLo-p:o+dHi-p], data[dLo-start:dHi-start])
-			fill(out[o+dHi-p:o+length], pad)
-		}
-		o += length
-	}
+	padded.Read(out, data, pad, start, n, idx)
 	return out
 }
 
