@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"strings"
+	"unsafe"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark-crypto/field/koalabear"
@@ -59,6 +60,19 @@ func (v Vec) AsExt() []Ext {
 	return v.ext
 }
 
+// ExtLimbs views extension elements as their 6·len(v) contiguous base-field
+// coordinates (an Ext is six Elements laid out back to back). Coordinate-wise
+// operations — Add, Sub, scaling by a base scalar — on the view act on the
+// extension elements, so they can run through the koalabear.Vector kernels.
+// The view aliases v.
+func ExtLimbs(v []Ext) Vector {
+	if len(v) == 0 {
+		return nil
+	}
+	// #nosec G103 -- an Ext is six contiguous Elements
+	return unsafe.Slice((*Element)(unsafe.Pointer(unsafe.SliceData(v))), ExtensionDegree*len(v))
+}
+
 // mustEqualLen panics if the three lengths are not all equal. Used to guard
 // all typed vector operations against mismatched slice lengths.
 func mustEqualLen(res, a, b int) {
@@ -105,12 +119,13 @@ func VecAddBaseExt(res []Ext, a []Element, b []Ext) {
 }
 
 // VecAddExtExt sets res[i] = a[i] + b[i] over the extension field.
-// Cost: 6 base additions per element. All slices must have equal length.
+// Cost: 6 base additions per element, run as one koalabear.Vector.Add over
+// the limb views (see [ExtLimbs]). All slices must have equal length; res
+// may alias a or b.
 func VecAddExtExt(res, a, b []Ext) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		res[i].Add(&a[i], &b[i])
-	}
+	limbs := ExtLimbs(res)
+	limbs.Add(ExtLimbs(a), ExtLimbs(b))
 }
 
 // VecAddInto sets res[i] = a[i] + b[i] for all i, dispatching to the typed
@@ -169,12 +184,13 @@ func VecSubBaseExt(res []Ext, a []Element, b []Ext) {
 }
 
 // VecSubExtExt sets res[i] = a[i] - b[i] over the extension field.
-// Cost: 6 base subtractions per element. All slices must have equal length.
+// Cost: 6 base subtractions per element, run as one koalabear.Vector.Sub over
+// the limb views (see [ExtLimbs]). All slices must have equal length; res
+// may alias a or b.
 func VecSubExtExt(res, a, b []Ext) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		res[i].Sub(&a[i], &b[i])
-	}
+	limbs := ExtLimbs(res)
+	limbs.Sub(ExtLimbs(a), ExtLimbs(b))
 }
 
 // VecSubInto sets res[i] = a[i] - b[i] for all i, dispatching to the typed
