@@ -129,6 +129,7 @@ func newPcsTemplateData(index int, system PcsSystem, opts PcsZigOptions) pcsTemp
 			checkPcsIndex(b.RoundIndex, u8Max, fmt.Sprintf("batch_roots[%d].round", i))
 		}
 	}
+	checkPcsIndex(system.MerkleCapHeight, u8Max, "merkle_cap_height")
 	if len(system.BatchManifests) > 0 && len(system.BatchManifests) != system.NumBatches {
 		panic(fmt.Sprintf("pcs codegen: %d batch_manifests for %d batches", len(system.BatchManifests), system.NumBatches))
 	}
@@ -201,7 +202,7 @@ const {{.ShiftsName}} = [_]i32{ {{range .FlatShifts}}{{.}}, {{end}}};
 const {{.ClaimCellsName}} = [_]pcs.CellRef{ {{range .FlatClaimCells}}.{ .round = {{.Round}}, .index = {{.Index}} }, {{end}}};
 
 pub const {{.ConstName}} = pcs.System{
-    .envelope_params = fri.Params{ .log_codeword_size = {{.System.LogCodewordSize}}, .log_plaintext_size = {{.System.LogPlaintextSize}}, .log_final_poly_size = {{.System.LogFinalPolySize}}, .num_queries = {{.System.NumQueries}} },
+    .envelope_params = fri.Params{ .log_codeword_size = {{.System.LogCodewordSize}}, .log_plaintext_size = {{.System.LogPlaintextSize}}, .log_final_poly_size = {{.System.LogFinalPolySize}}, .num_queries = {{.System.NumQueries}}, .merkle_cap_height = {{.System.MerkleCapHeight}} },
     .columns = &.{
 {{range $i, $c := .System.Columns}}        .{ .batch_idx = {{$c.BatchIdx}}, .is_ext = {{$c.IsExt}}, .size = {{if $c.IsDynamic}}.{ .dynamic = .{ .index = {{$c.DynamicIndex}}, .min_size_log2 = {{$c.DynamicMinSizeLog2}} } }{{else}}.{ .static = {{$c.SizeLog2}} }{{end}}, .shifts_start = {{(index $.ColOffsets $i).ShiftsStart}}, .shifts_len = {{(index $.ColOffsets $i).ShiftsLen}}, .claim_start = {{(index $.ColOffsets $i).ClaimStart}} },
 {{end}}    },

@@ -868,7 +868,7 @@ fn buildInputCapInfo(comptime system: System, recon: *const Reconstructed(system
     if (!found) return Error.InputTreeShapeMismatch;
     info.height = @as(usize, info.rate_log) + bottom;
     if (info.height == 0 or info.height > recon.params.log_codeword_size) return Error.InputTreeShapeMismatch;
-    info.depth = merkle.capDepth(recon.params.num_queries, info.height);
+    info.depth = merkle.capDepth(recon.params.merkle_cap_height, info.height);
     info.query_rows[info.height - 1] = true;
 
     for (0..recon.num_entries) |e| {
@@ -1081,7 +1081,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     var running_root_frontiers: [cap_rounds]poseidon2.Digest = undefined;
     if (num_rounds > 0) {
         for (1..@as(usize, num_rounds)) |j| {
-            const depth = merkle.capDepth(params.num_queries, params.log_codeword_size - @as(u8, @intCast(j)));
+            const depth = merkle.capDepth(params.merkle_cap_height, params.log_codeword_size - @as(u8, @intCast(j)));
             const cap = input.proof.fri_proof.round_caps[j - 1];
             if (depth == 0) {
                 running_root_frontiers[j] = input.proof.fri_proof.round_roots[j - 1];

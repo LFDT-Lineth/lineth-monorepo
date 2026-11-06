@@ -17,6 +17,7 @@ func TestWritePcsSystemZig(t *testing.T) {
 		LogPlaintextSize: 22,
 		LogFinalPolySize: 0,
 		NumQueries:       2,
+		MerkleCapHeight:  1,
 		NumBatches:       2,
 		Columns: []PcsColumnDesc{
 			{BatchIdx: 0, IsExt: false, SizeLog2: 3, Shifts: []int{0, 7}, ClaimCells: []PcsCellRef{{Round: 1, Index: 0}, {Round: 1, Index: 1}}},
@@ -59,6 +60,7 @@ func TestWritePcsSystemZig(t *testing.T) {
 		`.{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 2, .claim_start = 0 },`,
 		`.{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 1, .min_size_log2 = 3 } }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },`,
 		`.zeta_coin_index = 5,`,
+		`.num_queries = 2, .merkle_cap_height = 1 },`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("generated pcs missing %q\n--- got ---\n%s", want, out)
@@ -193,6 +195,45 @@ func TestBuildPcsSystemRecordsMinimumSafeDynamicSize(t *testing.T) {
 	}
 	if pcs.Columns[0].DynamicMinSizeLog2 != 3 {
 		t.Fatalf("pcs.Columns[0].DynamicMinSizeLog2 = %d, want 3", pcs.Columns[0].DynamicMinSizeLog2)
+	}
+}
+
+// The baked cap height must be the one the System was compiled with, not one
+// derived from the query count: prover-ray's default is no cap at every query
+// count, so a verifier inferring the cap would reject every default proof.
+func TestBuildPcsSystemCarriesMerkleCapHeight(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		opts []pcscompiler.Option
+		want int
+	}{
+		{name: "default-no-cap", opts: []pcscompiler.Option{pcscompiler.WithFRINumQueries(16)}, want: 0},
+		{name: "optimal", opts: []pcscompiler.Option{pcscompiler.WithFRINumQueries(16), pcscompiler.WithOptimalMerkleCap()}, want: 4},
+		{name: "explicit", opts: []pcscompiler.Option{pcscompiler.WithFRINumQueries(16), pcscompiler.WithMerkleCapHeight(2)}, want: 2},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			sys := wiop.NewSystemf("merkle-cap-%s", tc.name)
+			r0 := sys.NewRound()
+			mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionRight)
+			a := mod.NewColumn(sys.Context.Childf("a"), r0)
+			b := mod.NewColumn(sys.Context.Childf("b"), r0)
+			mod.NewVanishing(sys.Context.Childf("eq"), wiop.Sub(a.View(), b.View()))
+
+			global.Compile(sys)
+			pcscompiler.Compile(sys, tc.opts...)
+
+			routing, err := BuildCoinRouting(sys)
+			if err != nil {
+				t.Fatalf("BuildCoinRouting() error = %v", err)
+			}
+			pcs, err := BuildPcsSystem(sys, routing)
+			if err != nil {
+				t.Fatalf("BuildPcsSystem() error = %v", err)
+			}
+			if pcs.MerkleCapHeight != tc.want {
+				t.Fatalf("MerkleCapHeight = %d, want %d", pcs.MerkleCapHeight, tc.want)
+			}
+		})
 	}
 }
 

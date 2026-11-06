@@ -42,6 +42,12 @@ pub const Params = struct {
     log_final_poly_size: u8 = 0,
     /// Number of independent FRI queries.
     num_queries: usize,
+    /// Merkle cap height every committed tree is capped at before its own
+    /// height-1 clamp (`fri.Params.MerkleCapHeight`, emitted from prover-ray's
+    /// `pcs.MerkleCapHeight(sys)`). 0 means no cap. Required: the prover's
+    /// default is no cap, so deriving it from `num_queries` would silently
+    /// disagree with any System compiled without `WithOptimalMerkleCap`.
+    merkle_cap_height: u8,
 
     /// Number of folding rounds: `fri.Params.numRounds()`.
     pub fn numRounds(comptime self: Params) u8 {
@@ -81,6 +87,7 @@ pub const Params = struct {
             .log_plaintext_size = top_log2,
             .log_final_poly_size = self.log_final_poly_size,
             .num_queries = self.num_queries,
+            .merkle_cap_height = self.merkle_cap_height,
         };
     }
 };
@@ -155,7 +162,7 @@ pub fn checkOpeningProofShape(
     const codeword_size = @as(usize, 1) << @intCast(params.log_codeword_size);
     for (proof.round_caps, 0..) |cap, i| {
         const height = params.log_codeword_size - @as(u8, @intCast(i + 1));
-        try cap.validate(merkle.capDepth(params.num_queries, height));
+        try cap.validate(merkle.capDepth(params.merkle_cap_height, height));
     }
     for (proof.running_queries, positions[0..params.num_queries]) |query_branches, position| {
         if (query_branches.len != want_round_roots) return Error.InvalidRunningQueryCount;
@@ -187,7 +194,7 @@ pub fn resolveRunningLayers(
     for (1..@as(usize, num_rounds)) |j| {
         const branch = query_branches[j - 1];
         const height = params.log_codeword_size - j;
-        const depth = merkle.capDepth(params.num_queries, height);
+        const depth = merkle.capDepth(params.merkle_cap_height, height);
         const want_siblings = height - @as(u8, @intCast(depth));
         if (branch.siblings.len != want_siblings) return Error.InvalidRunningLayerShape;
 

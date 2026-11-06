@@ -44,7 +44,12 @@ type PcsSystem struct {
 	LogPlaintextSize int
 	LogFinalPolySize int
 	NumQueries       int
-	NumBatches       int
+	// MerkleCapHeight is prover-ray's pcs.MerkleCapHeight(sys): the cap height
+	// every committed tree uses before its own height-1 clamp (0 = no cap). It
+	// is a per-System compile option, so the verifier must be told it rather
+	// than derive it from NumQueries.
+	MerkleCapHeight int
+	NumBatches      int
 
 	// Columns is the symbolic committed-column descriptor list in prover
 	// DECLARATION order (batch-major, then round.Columns order). The Zig verifier
@@ -403,6 +408,7 @@ func BuildPcsSystem(sys *wiop.System, routing CoinRouting) (PcsSystem, error) {
 		LogPlaintextSize: int(envelope.LogPlainTextSize),
 		LogFinalPolySize: 0,
 		NumQueries:       pcscompiler.FRINumQueries(sys),
+		MerkleCapHeight:  pcscompiler.MerkleCapHeight(sys),
 		NumBatches:       len(batches),
 		Columns:          columns,
 		MaxEntries:       len(columns),
