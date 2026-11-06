@@ -31,6 +31,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import tech.pegasys.teku.ethereum.executionclient.schema.ForkChoiceStateV1
 import tech.pegasys.teku.infrastructure.bytes.Bytes8
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Checks that the native client decodes execution-layer responses exactly like the Teku/Web3J client it replaces.
@@ -80,7 +81,7 @@ class TekuEngineApiClientParityTest {
             metricsFacade = TestMetricsFacade,
             endpoint = server.endpoint,
             jwtSecretPath = null,
-            timeoutOverride = null,
+            timeoutOverride = 30.seconds,
             log = LogManager.getLogger(TekuEngineApiClientParityTest::class.java),
           ),
           fork = fork,
