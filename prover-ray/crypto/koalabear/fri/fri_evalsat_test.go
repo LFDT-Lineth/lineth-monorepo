@@ -119,3 +119,85 @@ func TestEvalsAtMatchesReference(t *testing.T) {
 		})
 	}
 }
+
+// divideAccScalar is the per-position scalar divide pass divideAcc replaced.
+func divideAccScalar(evals, gbuf []field.Ext, start int, points []groupPoint, denomBaseInv []field.Ext, logSize int) {
+	mask := len(denomBaseInv) - 1
+	for i := range evals {
+		e := bitReverseExponent(start+i, logSize)
+		for k := range points {
+			p := &points[k]
+			var term field.Ext
+			term.Sub(&gbuf[i], &p.combinedClaim)
+			term.Mul(&term, &denomBaseInv[(e-p.rot)&mask])
+			term.MulByElement(&term, &p.scale)
+			evals[i].Add(&evals[i], &term)
+		}
+	}
+}
+
+// divideAccFixture returns random divideAcc inputs: a denominator table of
+// 2^logSize entries, gbuf and evals of length n, and numPoints claim points.
+func divideAccFixture(logSize, n, numPoints int, seed uint64) (evals, gbuf, den []field.Ext, points []groupPoint) {
+	rng := seed
+	randExts := func(m int) []field.Ext {
+		out := make([]field.Ext, m)
+		for i := range out {
+			out[i], rng = benchExt(rng)
+		}
+		return out
+	}
+	den, gbuf, evals = randExts(1<<logSize), randExts(n), randExts(n)
+	points = make([]groupPoint, numPoints)
+	for k := range points {
+		rng = benchRand(rng)
+		points[k].rot = int(rng % uint64(1<<logSize))
+		rng = benchRand(rng)
+		points[k].scale.SetUint64(rng)
+		points[k].combinedClaim, rng = benchExt(rng)
+	}
+	return evals, gbuf, den, points
+}
+
+// TestDivideAccMatchesScalar checks the blocked VectorE6 divide pass against
+// the scalar one on random data, for tiny lengths, lengths that are not a
+// multiple of the 16 kernel lanes or of the block size, and offsets that
+// are not chunk-aligned.
+func TestDivideAccMatchesScalar(t *testing.T) {
+	const logSize = 12
+	for _, n := range []int{0, 1, 3, 7, 15, 16, 17, 33, 255, 256, 257, 600, 1 << logSize} {
+		for _, numPoints := range []int{1, 2, 3} {
+			for _, start := range []int{0, 5, 1024} {
+				if start+n > 1<<logSize {
+					continue
+				}
+				evals, gbuf, den, points := divideAccFixture(logSize, n, numPoints, uint64(n*131+numPoints*7+start))
+				want := append([]field.Ext(nil), evals...)
+				divideAccScalar(want, gbuf, start, points, den, logSize)
+				divideAcc(evals, gbuf, start, points, den, logSize)
+				for i := range want {
+					if !want[i].Equal(&evals[i]) {
+						t.Fatalf("n=%d points=%d start=%d: mismatch at %d", n, numPoints, start, i)
+					}
+				}
+			}
+		}
+	}
+}
+
+// BenchmarkDivideAcc compares the divide pass on one 4096-position chunk with
+// two claim points.
+func BenchmarkDivideAcc(b *testing.B) {
+	const logSize, n, start = 20, 4096, 12345 * 16
+	evals, gbuf, den, points := divideAccFixture(logSize, n, 2, 1)
+	b.Run("scalar", func(b *testing.B) {
+		for b.Loop() {
+			divideAccScalar(evals, gbuf, start, points, den, logSize)
+		}
+	})
+	b.Run("vector", func(b *testing.B) {
+		for b.Loop() {
+			divideAcc(evals, gbuf, start, points, den, logSize)
+		}
+	})
+}

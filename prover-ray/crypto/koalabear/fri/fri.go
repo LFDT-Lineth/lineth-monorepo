@@ -287,10 +287,11 @@ func groupColumnsByClaimPoints(columns []quotientColumn, alphaPow []field.Ext) [
 // proofs — are bit-identical to the quotient-per-claim form (see
 // evalsAtReference in fri_evalsat_test.go).
 //
-// The combine pass runs through the field.VecScaleAcc* helpers — currently
-// scalar placeholders, to be swapped for gnark-crypto's AVX-512 VectorE6
-// kernels once available. The divide pass reconstructs denominator inverses
-// on the fly from DenomBaseInv via the rotation identity
+// Both passes run on gnark-crypto's VectorE6 kernels (AVX-512, with a scalar
+// fallback elsewhere): the combine pass through ScalarMulAcc and
+// ScalarMulAccByElement, the divide pass through divideAcc. The divide pass
+// reconstructs denominator inverses on the fly from DenomBaseInv via the
+// rotation identity
 // 1/(ω^e − ζ·ω_n^s) = ω^{−rs}·(1/(ω^{e−rs} − ζ)): point z contributes
 // scale_z · DenomBaseInv[(e − rot_z) mod N], where e = bitReverse(pos),
 // rot_z = rs mod N, scale_z = ω^{−rs}.
@@ -303,7 +304,6 @@ func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
 		panic(fmt.Sprintf("fri: Level.EvalsAt: running codeword has %d values, want %d", len(running), len(evals)))
 	}
 
-	mask := len(l.DenomBaseInv) - 1
 	logSize := bits.TrailingZeros(uint(len(l.DenomBaseInv)))
 
 	powers, runningPower := l.powers()
@@ -344,24 +344,69 @@ func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
 				}
 			}
 
-			for pos := start; pos < end; pos++ {
-				// e is the natural-order exponent of this position's domain
-				// point (codewords are stored at bit-reversed indices);
-				// (e - rot) & mask is the correct mod-N index even when the
-				// difference is negative (two's-complement, N a power of 2).
-				e := bitReverseExponent(pos, logSize)
-				for k := range g.points {
-					p := &g.points[k]
-					var term field.Ext
-					term.Sub(&gbuf[pos-start], &p.combinedClaim)
-					term.Mul(&term, &l.DenomBaseInv[(e-p.rot)&mask])
-					term.MulByElement(&term, &p.scale)
-					evals[pos].Add(&evals[pos], &term)
-				}
-			}
+			divideAcc(evals[start:end], gbuf, start, g.points, l.DenomBaseInv, logSize)
 		}
 	})
 	return evals
+}
+
+// divideBlock is the number of positions divideAcc processes at a time: its
+// scratch vectors stay on the stack and in L1 while the kernels run over
+// them. A multiple of the 16 AVX-512 lanes.
+const divideBlock = 256
+
+// divideAcc adds the DEEP quotients of one quotientGroup at positions start,
+// …, start+len(evals)−1 to evals:
+//
+//	evals[i] += Σ_k (gbuf[i] − Y_k) · scale_k · DenomBaseInv[(e_i − rot_k) mod N]
+//
+// with e_i = bitReverse(start+i) and N = len(denomBaseInv), a power of two.
+// It runs over blocks of divideBlock positions with the VectorE6 kernels:
+// gather the denominators, scale them by scale_k, multiply by gbuf − Y_k (a
+// limb-view subtraction against a broadcast Y_k), and add to evals through
+// the limb view. The products are reassociated —
+// (G − Y)·(D·s) instead of ((G − Y)·D)·s — which is exact field arithmetic,
+// so the result is identical to the per-position scalar form.
+func divideAcc(evals, gbuf []field.Ext, start int, points []groupPoint, denomBaseInv []field.Ext, logSize int) {
+	var (
+		mask              = len(denomBaseInv) - 1
+		denArr, diffArr   [divideBlock]field.Ext
+		claimArr          [divideBlock]field.Ext
+		filledFor, filled = -1, 0
+	)
+	for lo := 0; lo < len(evals); lo += divideBlock {
+		var (
+			hi    = min(lo+divideBlock, len(evals))
+			n     = hi - lo
+			den   = extensions.VectorE6(denArr[:n])
+			diff  = diffArr[:n]
+			claim = claimArr[:n]
+		)
+		for k := range points {
+			p := &points[k]
+			// e is the natural-order exponent of this position's domain
+			// point (codewords are stored at bit-reversed indices);
+			// (e - rot) & mask is the correct mod-N index even when the
+			// difference is negative (two's-complement, N a power of 2).
+			for i := range den {
+				e := bitReverseExponent(start+lo+i, logSize)
+				den[i] = denomBaseInv[(e-p.rot)&mask]
+			}
+			den.ScalarMulByElement(den, &p.scale)
+
+			// The broadcast Y_k only needs refilling when the point changes
+			// or the block grows past what was filled.
+			if filledFor != k || filled < n {
+				for i := range claim {
+					claim[i] = p.combinedClaim
+				}
+				filledFor, filled = k, n
+			}
+			field.VecSubExtExt(diff, gbuf[lo:hi], claim)
+			den.Mul(den, diff)
+			field.VecAddExtExt(evals[lo:hi], evals[lo:hi], den)
+		}
+	}
 }
 
 // powers returns the level's column powers and running power (see Level).
