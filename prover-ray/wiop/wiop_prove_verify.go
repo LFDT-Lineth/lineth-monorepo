@@ -13,7 +13,9 @@ import (
 //
 //   - cells;
 //   - the per-Runtime size of each dynamic module, so the verifier can
-//     reconstruct module domains.
+//     reconstruct module domains;
+//   - vectors of extension elements that prover actions hand to verifier
+//     actions outside the Fiat-Shamir transcript.
 //
 // It deliberately does NOT carry the verifier coins: [System.Verify] re-derives
 // every Fiat-Shamir challenge itself by replaying the transcript, so a prover
@@ -44,6 +46,12 @@ type Proof struct {
 	// core wiop package does not depend on the FRI package. Nil when the protocol
 	// was not PCS-compiled.
 	PCSOpeningProof *fri.OpeningProof
+	// ExtVectors maps the ID of each declared [ExtVector] to its value, set with
+	// [Runtime.SetExtVector]. The transcript never absorbs them, and neither does
+	// [System.Verify] check their content: a verifier action that reads one with
+	// [Runtime.GetExtVector] must bind it to what the transcript absorbs. It is
+	// nil when the system declares none.
+	ExtVectors map[ObjectID][]field.Ext
 }
 
 // ProveOptions are options for [System.Prove].
@@ -119,6 +127,25 @@ func (sys *System) Prove(assign func(rt *Runtime), proveOpts ...ProveOptions) (P
 		proof.Commitments[id] = commitment
 	}
 	proof.PCSOpeningProof = rt.PCSOpeningProof
+
+	// Every declared vector must have been set, for the same reason as the
+	// columns below: to fail here, naming the vector, rather than in whichever
+	// verifier action reads it.
+	for _, r := range sys.Rounds {
+		for _, v := range r.ExtVectors {
+			if _, ok := rt.extVectors[v.Context.ID]; !ok {
+				utils.Panic("wiop: missing extension vector in runtime: %v", v.Context.Path())
+			}
+		}
+	}
+
+	// Carry the vectors that actions handed over outside the transcript.
+	if len(rt.extVectors) > 0 {
+		proof.ExtVectors = make(map[ObjectID][]field.Ext, len(rt.extVectors))
+		for id, v := range rt.extVectors {
+			proof.ExtVectors[id] = v
+		}
+	}
 
 	// Membership index for the per-cell loop below. Their values are captured
 	// into the returned PublicInput, not into the proof, so the two structures
@@ -203,6 +230,22 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 		rt.Commitments[id] = commitment
 	}
 	rt.PCSOpeningProof = proof.PCSOpeningProof
+
+	// Restore the vectors outside the transcript, which the verifier actions read.
+	// The proof must carry exactly the declared ones.
+	for id, v := range proof.ExtVectors {
+		if !sys.hasExtVector(id) {
+			return fmt.Errorf("wiop: extension vector %#x not found in system", uint64(id))
+		}
+		rt.extVectors[id] = v
+	}
+	for _, r := range sys.Rounds {
+		for _, v := range r.ExtVectors {
+			if _, ok := proof.ExtVectors[v.Context.ID]; !ok {
+				return fmt.Errorf("extension vector %q not found in proof", v.Context.Path())
+			}
+		}
+	}
 
 	// Dynamic-module sizes must be known before the transcript replay, because
 	// AdvanceRound feeds them into Fiat-Shamir. The verifier holds no column

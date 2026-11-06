@@ -2,6 +2,8 @@ package proofserialization
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
@@ -30,6 +32,13 @@ func Project(
 	if len(pub) != len(sys.PublicInputs) {
 		return VerifyInput{}, fmt.Errorf("proofserialization: Project: %d public inputs, system declares %d",
 			len(pub), len(sys.PublicInputs))
+	}
+
+	// The image does not hold ExtVectors; a proof carrying any is refused.
+	if len(proof.ExtVectors) > 0 {
+		ids := slices.Sorted(maps.Keys(proof.ExtVectors))
+		return VerifyInput{}, fmt.Errorf("proofserialization: Project: the proof carries vectors outside "+
+			"the transcript (wiop.Proof.ExtVectors), for the objects %#x, which the image cannot hold", ids)
 	}
 
 	out := VerifyInput{Proof: Proof{}}

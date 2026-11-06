@@ -59,6 +59,10 @@ type Runtime struct {
 	// [Proof] and [System.Verify] restores it here before running verifier
 	// actions. Mirrors the transport role of [Runtime.Commitments].
 	PCSOpeningProof *fri.OpeningProof
+	// extVectors maps each [ExtVector]'s [ObjectID] to its value, which
+	// [System.Prove] carries in the [Proof] without absorbing it into the
+	// Fiat-Shamir transcript. See [Runtime.SetExtVector].
+	extVectors map[ObjectID][]field.Ext
 }
 
 // NewRuntime creates a fresh Runtime for sys. currentRound is initialised to
@@ -73,6 +77,7 @@ func NewRuntime(sys *System) *Runtime {
 		fs:           fiatshamir.NewFiatShamir(),
 		columns:      make(map[ObjectID]*ConcreteVector),
 		cells:        make(map[ObjectID]field.Gen),
+		extVectors:   make(map[ObjectID][]field.Ext),
 		coins:        make(map[ObjectID]field.Gen),
 		state:        make(map[string]any),
 		dynamicSizes: make(map[int]int),
@@ -409,4 +414,38 @@ func (run *Runtime) SetState(key string, value any) {
 	run.lock.Lock()
 	defer run.lock.Unlock()
 	run.state[key] = value
+}
+
+// SetExtVector sets the declared vector v, for a verifier action to read.
+// [System.Prove] carries it in [Proof.ExtVectors] and [System.Verify] restores
+// it before the verifier actions run, where [Runtime.GetExtVector] returns it.
+//
+// The vector is never absorbed into the Fiat-Shamir transcript, so nothing binds
+// it: whoever sets it must have the verifier action that reads it check it
+// against what the transcript does absorb.
+//
+// Panics if the runtime is not in the vector's round, or if v already has a
+// value.
+func (run *Runtime) SetExtVector(v *ExtVector, vec []field.Ext) {
+	run.lock.Lock()
+	defer run.lock.Unlock()
+	if v.round != run.currentRound {
+		panic(fmt.Sprintf(
+			"wiop: SetExtVector: vector %q belongs to round %d but current round is %v",
+			v.Context.Path(), v.round.ID, run.currentRound,
+		))
+	}
+	if _, exists := run.extVectors[v.Context.ID]; exists {
+		panic(fmt.Sprintf("wiop: SetExtVector: vector %q already has a value", v.Context.Path()))
+	}
+	run.extVectors[v.Context.ID] = vec
+}
+
+// GetExtVector returns the value of the declared vector v, and whether it has
+// one. See [Runtime.SetExtVector].
+func (run *Runtime) GetExtVector(v *ExtVector) ([]field.Ext, bool) {
+	run.lock.Lock()
+	defer run.lock.Unlock()
+	vec, ok := run.extVectors[v.Context.ID]
+	return vec, ok
 }

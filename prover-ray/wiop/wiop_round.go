@@ -15,8 +15,8 @@ import (
 // [System.Rounds]. It carries no [ContextFrame]: identity is purely positional.
 //
 // Columns are registered in a Round indirectly through [Module.NewColumn] and
-// [Module.NewExtensionColumn]; coins and cells are registered directly via
-// [Round.NewCoinField] and [Round.NewCell].
+// [Module.NewExtensionColumn]; coins, cells and extension vectors are registered
+// directly via [Round.NewCoinField], [Round.NewCell] and [Round.NewExtVector].
 type Round struct {
 	// ID is the zero-based index of this round in [System.Rounds]. Set once
 	// at registration time by [System.NewRound], never mutated.
@@ -31,6 +31,10 @@ type Round struct {
 	// Cells holds the scalar values committed by the prover during this round,
 	// in declaration order.
 	Cells []*Cell
+	// ExtVectors holds the vectors of extension elements that the prover hands
+	// to the verifier during this round outside the transcript, in declaration
+	// order. See [ExtVector].
+	ExtVectors []*ExtVector
 	// ProverActions holds the prover-side computations registered for this round, in
 	// declaration order. Each action is run by the prover when the runtime
 	// enters this round, after coins have been derived.
@@ -136,6 +140,28 @@ func (r *Round) NewCell(ctx *ContextFrame, isExtension bool) *Cell {
 	}
 	r.Cells = append(r.Cells, c)
 	return c
+}
+
+// NewExtVector declares a vector of extension elements that a prover action
+// sets in this round with [Runtime.SetExtVector] and that verifier actions read
+// with [Runtime.GetExtVector]. See [ExtVector].
+//
+// Panics if ctx is nil.
+func (r *Round) NewExtVector(ctx *ContextFrame) *ExtVector {
+	if ctx == nil {
+		panic("wiop: Round.NewExtVector requires a non-nil ContextFrame")
+	}
+	if ctx.ID != 0 {
+		panic(fmt.Sprintf("wiop: ContextFrame %q is already registered (id=%d)", ctx.Path(), ctx.ID))
+	}
+	ctx.ID = newExtVectorID(r.ID, len(r.ExtVectors))
+	v := &ExtVector{
+		Context:     ctx,
+		Annotations: make(Annotations),
+		round:       r,
+	}
+	r.ExtVectors = append(r.ExtVectors, v)
+	return v
 }
 
 // NewLazyCell declares a scalar cell whose value is computed on demand by

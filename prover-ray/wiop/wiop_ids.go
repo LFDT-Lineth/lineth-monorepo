@@ -13,6 +13,8 @@ const (
 	KindCell ObjectKind = 0x02
 	// KindCoinField identifies a [CoinField].
 	KindCoinField ObjectKind = 0x03
+	// KindExtVector identifies an [ExtVector].
+	KindExtVector ObjectKind = 0x04
 )
 
 // String implements [fmt.Stringer].
@@ -24,13 +26,15 @@ func (k ObjectKind) String() string {
 		return "Cell"
 	case KindCoinField:
 		return "CoinField"
+	case KindExtVector:
+		return "ExtVector"
 	default:
 		return fmt.Sprintf("ObjectKind(0x%02x)", uint8(k))
 	}
 }
 
 // ObjectID is a structured uint64 serialisable identifier for registered
-// protocol objects ([Column], [Cell], [CoinField]). Its 64 bits are laid out
+// protocol objects ([Column], [Cell], [CoinField], [ExtVector]). Its 64 bits are laid out
 // as follows:
 //
 //	[63:56]  ObjectKind  (8 bits)   — type tag
@@ -79,6 +83,12 @@ func newCoinID(roundIdx, pos int) ObjectID {
 	return ObjectID(KindCoinField)<<idKindShift | ObjectID(roundIdx)<<idSlotShift | ObjectID(pos)
 }
 
+// newExtVectorID constructs an [ObjectID] for an extension vector in round
+// roundIdx at position pos within [Round.ExtVectors].
+func newExtVectorID(roundIdx, pos int) ObjectID {
+	return ObjectID(KindExtVector)<<idKindShift | ObjectID(roundIdx)<<idSlotShift | ObjectID(pos)
+}
+
 // LookupColumn recovers the [Column] identified by id. Panics if id does not
 // carry [KindColumn] or if the slot/position is out of range.
 func (sys *System) LookupColumn(id ObjectID) *Column {
@@ -113,4 +123,19 @@ func (sys *System) LookupCoinField(id ObjectID) *CoinField {
 		panic(fmt.Sprintf("wiop: LookupCoinField: id has out-of-range slot/position: %d %d", id.Slot(), id.Position()))
 	}
 	return sys.Rounds[id.Slot()].Coins[id.Position()]
+}
+
+// LookupExtVector recovers the [ExtVector] identified by id. Panics if id does
+// not carry [KindExtVector] or if the slot/position is out of range.
+func (sys *System) LookupExtVector(id ObjectID) *ExtVector {
+	if !sys.hasExtVector(id) {
+		panic(fmt.Sprintf("wiop: LookupExtVector: id %#x is not an extension vector of the system", uint64(id)))
+	}
+	return sys.Rounds[id.Slot()].ExtVectors[id.Position()]
+}
+
+// hasExtVector reports whether id identifies an [ExtVector] of the system.
+func (sys *System) hasExtVector(id ObjectID) bool {
+	return id.Kind() == KindExtVector &&
+		id.Slot() < len(sys.Rounds) && id.Position() < len(sys.Rounds[id.Slot()].ExtVectors)
 }
