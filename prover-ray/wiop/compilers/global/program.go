@@ -145,7 +145,11 @@ func newBucketProgram(vanishings []*wiop.Vanishing, mergeCoin *wiop.CoinField, n
 			})
 		}
 		b.AccumulateBy(lowering.Lower(v.Expression), cancel, coinPow)
-		coinPow = b.Op(vecprog.Mul, coinPow, coin)
+		if j == 0 {
+			coinPow = coin // not Op(Mul, 1, coin), which would build a scalar node
+		} else {
+			coinPow = b.Op(vecprog.Mul, coinPow, coin)
+		}
 	}
 	bp.prog = b.Compile(n, ratio, maxRatio/ratio)
 	return bp

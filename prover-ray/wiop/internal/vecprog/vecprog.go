@@ -34,8 +34,10 @@
 // Subtrees and linear-form coefficients over parameters are kept as scalar
 // nodes, simplified only by exact identities (adding zero, multiplying by zero
 // or one, ordering the operands of a commutative operation), and evaluated
-// once per run, before the points; the program itself is never written after
-// [Builder.Compile], so it may be run concurrently with different bindings.
+// once per run, before the points. The program itself is never written after
+// [Builder.Compile], so a program whose sinks all accumulate may be run
+// concurrently with different bindings; Store and AddTo write to the tables
+// given when they are built.
 package vecprog
 
 import (
