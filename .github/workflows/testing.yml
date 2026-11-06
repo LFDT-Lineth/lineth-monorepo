@@ -136,8 +136,6 @@ jobs:
   maru:
     uses: ./.github/workflows/maru-testing.yml
     if: ${{ inputs.maru_changed == 'true' }}
-    with:
-      commit_tag: ${{ inputs.commit_tag }}
     secrets: inherit
 
   # Run Jacoco report after all JVM tests complete

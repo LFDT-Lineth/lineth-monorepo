@@ -844,6 +844,25 @@ type openingProverAction struct{ c *compiled }
 func (a *openingProverAction) Run(rt *wiop.Runtime) {
 	proof := a.c.open(rt)
 	rt.PCSOpeningProof = &proof
+	a.c.releaseCommittedStates(rt)
+}
+
+// releaseCommittedStates returns the codewords and Merkle trees of every
+// interactive round to the field pools for the next proof, and drops them
+// from the runtime. The opening proof only holds copies of the rows and nodes
+// it reveals, so nothing references them once it is built. The precomputed
+// batch's state is shared by every proof and kept.
+func (c *compiled) releaseCommittedStates(rt *wiop.Runtime) {
+	for _, b := range CommittedBatches(rt.System) {
+		if b.IsPrecomp {
+			continue
+		}
+		key := committedStateKey(b.Round.ID)
+		if v, ok := rt.GetState(key); ok && v != nil {
+			v.(*fri.CommitterState).Release()
+			rt.SetState(key, nil)
+		}
+	}
 }
 
 // OpeningVerifierAction replays the opening transcript and checks the proof.
@@ -973,7 +992,7 @@ func (c *compiled) collectCommittedStates(rt *wiop.Runtime, batches []BatchRef) 
 			continue
 		}
 		v, ok := rt.GetState(committedStateKey(b.Round.ID))
-		if !ok {
+		if !ok || v == nil {
 			utils.Panic("pcs: missing committed state for round %d", b.Round.ID)
 		}
 		states[i] = v.(*fri.CommitterState)
@@ -1019,6 +1038,16 @@ func buildEncoders(logBlowup, maxSizeIndex uint8) []*fri.RSEncoder {
 	return encoders
 }
 
+// roundEncoders returns the encoder schedule for sizes 2^0 .. 2^maxSizeIndex
+// at blowup 2^logBlowup: a prefix of the process-wide schedule of
+// [staticFRI], so a commit does not rebuild FFT domains (twiddles and coset
+// tables) for every round of every proof. maxSizeIndex must not exceed
+// [maxCommittableSizeLog2] at that blowup.
+func roundEncoders(logBlowup, maxSizeIndex uint8) []*fri.RSEncoder {
+	_, encoders := staticFRI(logBlowup)
+	return encoders[:int(maxSizeIndex)+1]
+}
+
 // roundMaxSizeIndexWith returns the largest log2 padded size among a round's
 // Present columns, or 0 when the round owns no committed columns.
 func roundMaxSizeIndexWith(round *wiop.Round, sizeOf moduleSizeFunc, manifest ColumnManifest) int {
@@ -1042,12 +1071,12 @@ func (c *compiled) commitToRound(round *wiop.Round, rt *wiop.Runtime, manifest C
 
 // commitVectors sorts a round's Present columns into a [fri.MultiSizeTable] by
 // padded size, appending them in the commit order of [committedLayout] (base
-// and extension rows kept apart within each size), and FRI-commits it with a
-// freshly-built per-round encoder schedule (a prefix of the global schedule).
-// The table takes the shape's groups, so with module groups it is a grouped
-// commitment (see [fri.MultiSizeTable.Merkleize]). Elided columns are absent
-// from the committed rows. It panics when a Present column exceeds the
-// committable size at c's blowup.
+// and extension rows kept apart within each size), and FRI-commits it with the
+// per-round encoder schedule, a prefix of the global one (see
+// [roundEncoders]). The table takes the shape's groups, so with module groups
+// it is a grouped commitment (see [fri.MultiSizeTable.Merkleize]). Elided
+// columns are absent from the committed rows. It panics when a Present column
+// exceeds the committable size at c's blowup.
 func (c *compiled) commitVectors(
 	round *wiop.Round, sizeOf moduleSizeFunc, vectors []paddedColumn, manifest ColumnManifest,
 ) *fri.CommitterState {
@@ -1071,7 +1100,7 @@ func (c *compiled) commitVectors(
 		utils.Panic("pcs: round %d commits a column of size 2^%d, above the 2^%d committable at RS blowup %d",
 			round.ID, maxSizeIndex, c.maxSizeLog2, 1<<c.logRSBlowup)
 	}
-	committerState := fri.Commit(buildEncoders(c.logRSBlowup, uint8(maxSizeIndex)), sortedColumns[:maxSizeIndex+1])
+	committerState := fri.Commit(roundEncoders(c.logRSBlowup, uint8(maxSizeIndex)), sortedColumns[:maxSizeIndex+1])
 	return &committerState
 }
 
@@ -1380,7 +1409,11 @@ func initializeBatchClaims(shape fri.Shape) fri.BatchClaimedValues {
 
 // writeDownVectorBase materializes a base-field column assignment padded up to
 // size, respecting the module's padding direction so the committed polynomial
-// matches the one evalLagrangePadded evaluates.
+// matches the one LagrangeEval evaluates.
+//
+// A column that is already size long is returned as is, without a copy: the
+// committed table is only read by the encoder, and the committer state keeps
+// the encoded table, not its input.
 func writeDownVectorBase(concrete *wiop.ConcreteVector, size int, padding wiop.PaddingDirection) []field.Element {
 
 	if !concrete.Plain.IsBase() {
@@ -1388,6 +1421,9 @@ func writeDownVectorBase(concrete *wiop.ConcreteVector, size int, padding wiop.P
 	}
 
 	plainBase := concrete.Plain.AsBase()
+	if len(plainBase) == size {
+		return plainBase
+	}
 	plain := make([]field.Element, size)
 
 	if padding == wiop.PaddingDirectionLeft {
@@ -1408,10 +1444,16 @@ func writeDownVectorBase(concrete *wiop.ConcreteVector, size int, padding wiop.P
 
 // writeDownVectorExt materializes an extension-field column assignment padded up
 // to size, respecting the module's padding direction so the committed polynomial
-// matches the one evalLagrangePadded evaluates.
+// matches the one LagrangeEval evaluates.
+//
+// As for [writeDownVectorBase], a column that is already size long is returned
+// without a copy.
 func writeDownVectorExt(concrete *wiop.ConcreteVector, size int, padding wiop.PaddingDirection) []field.Ext {
 
 	plainExt := concrete.Plain.AsExt()
+	if len(plainExt) == size {
+		return plainExt
+	}
 	plain := make([]field.Ext, size)
 	padExt := field.Lift(concrete.Padding)
 

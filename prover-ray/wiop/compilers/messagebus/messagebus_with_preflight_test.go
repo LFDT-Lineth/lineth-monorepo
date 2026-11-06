@@ -202,7 +202,7 @@ func (s *seededShard) getBusAccFromSys(rt *wiop.Runtime, i int) field.Gen {
 // Run deliberately does not build this — a caller supplies it, because only the
 // orchestrator knows how each shard laid its columns out. Here that layout has to
 // reproduce the one the PCS commits at prove time (same column order, same padded
-// sizes, same encoder schedule; see commitToRound and buildEncoders), because the
+// sizes, same encoder schedule; see commitToRound and roundEncoders), because the
 // whole point is that the root obtained before any proof exists is the same one
 // the shard will go on to publish as its contribution.
 func (s *seededShard) busInputSet(t *testing.T) preflight.BusInputSet {

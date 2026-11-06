@@ -30,7 +30,7 @@ func (*SharedRandomnessContributionChecker) CheckGnark(api frontend.API, run *wi
 
 	digest := multisethashing.HashGnark(api, run.GetCommitment(round.ID))
 	for i := range digest {
-		cell := contributionCell(run.System, i)
+		cell, _ := limbCell(run.System, SharedRandomnessSeedContributionPI, i)
 		v, ok := run.GetCellBase(cell)
 		if !ok {
 			panic(fmt.Sprintf(
