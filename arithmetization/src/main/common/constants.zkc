@@ -36,8 +36,8 @@ const WRITE_SYSCALL:u8 = 64
 // Predecoding operations
 // =======================
 //
-// ComputeOp values are dense: 0 = NO_OP, 1..69 = semantic ops,
-// 255 = COMPUTE_INVALID. Ranges: I 1-24, R 25-55, S 56-59, B 60-65, J 66-67, U 68-69.
+// ComputeOp values are dense: 0 = NO_OP, 1..73 = semantic ops,
+// 255 = COMPUTE_INVALID. Ranges: I 1-24, R 25-59, S 60-63, B 64-69, J 70-71, U 72-73.
 
 // I-type ops (writeback variants only; rd=x0 inert paths use NO_OP)
 const READ8_SGN_WB:ComputeOp = 1
@@ -96,28 +96,32 @@ const RTYPE_REMW_WB:ComputeOp = 51
 const RTYPE_REMUW_WB:ComputeOp = 52
 const RTYPE_KECCAK:ComputeOp = 53
 const RTYPE_POSEIDON2:ComputeOp = 54
+const RTYPE_SECP256K1_FP_MUL:ComputeOp = 55
+const RTYPE_SECP256K1_FP_SQ:ComputeOp = 56
+const RTYPE_SECP256K1_FP_INV:ComputeOp = 57
+const RTYPE_SECP256K1_FP_SQRT:ComputeOp = 58
 
 // S-type ops
-const STYPE_STORE8:ComputeOp = 56
-const STYPE_STORE16:ComputeOp = 57
-const STYPE_STORE32:ComputeOp = 58
-const STYPE_STORE64:ComputeOp = 59
+const STYPE_STORE8:ComputeOp = 59
+const STYPE_STORE16:ComputeOp = 60
+const STYPE_STORE32:ComputeOp = 61
+const STYPE_STORE64:ComputeOp = 62
 
 // B-type ops
-const BRANCH_BEQ:ComputeOp = 60
-const BRANCH_BNE:ComputeOp = 61
-const BRANCH_BLT:ComputeOp = 62
-const BRANCH_BGE:ComputeOp = 63
-const BRANCH_BLTU:ComputeOp = 64
-const BRANCH_BGEU:ComputeOp = 65
+const BRANCH_BEQ:ComputeOp = 63
+const BRANCH_BNE:ComputeOp = 64
+const BRANCH_BLT:ComputeOp = 65
+const BRANCH_BGE:ComputeOp = 66
+const BRANCH_BLTU:ComputeOp = 67
+const BRANCH_BGEU:ComputeOp = 68
 
 // J-type ops
-const JTYPE_JAL:ComputeOp = 66
-const JTYPE_JAL_WB:ComputeOp = 67
+const JTYPE_JAL:ComputeOp = 69
+const JTYPE_JAL_WB:ComputeOp = 70
 
 // U-type ops (writeback variants only; rd=x0 inert paths use NO_OP)
-const UTYPE_LUI_WB:ComputeOp = 68
-const UTYPE_AUIPC_WB:ComputeOp = 69
+const UTYPE_LUI_WB:ComputeOp = 71
+const UTYPE_AUIPC_WB:ComputeOp = 72
 
 // Unified semantic compute ops stored in decoded.
 
@@ -326,6 +330,11 @@ const FUNCT3_KECCAK:Funct3 = 0b000
 const FUNCT7_KECCAK:Funct7 = 0b0000000
 const FUNCT3_POSEIDON2:Funct3 = 0b001
 const FUNCT7_POSEIDON2:Funct7 = 0b0000000
+const FUNCT3_SECP256K1_FP:Funct3 = 0b011
+const FUNCT7_SECP256K1_FP_MUL:Funct7 = 0b0000000
+const FUNCT7_SECP256K1_FP_SQ:Funct7 = 0b0000001
+const FUNCT7_SECP256K1_FP_INV:Funct7 = 0b0000010
+const FUNCT7_SECP256K1_FP_SQRT:Funct7 = 0b0000011
 
 // Flatten opcode::funct3::funct7 for R-type encoding tags (see check_r_type.zkc).
 // u18 dispatch keys append rd_is_zero: *_FOLD when rd=x0, base name when rd≠0.
@@ -359,6 +368,11 @@ const R_REMW_INST:u17 = (((OPCODE_OP32 as u17) << 10) | ((FUNCT3_REMW as u17) <<
 const R_REMUW_INST:u17 = (((OPCODE_OP32 as u17) << 10) | ((FUNCT3_REMUW as u17) << 7) | (FUNCT7_REMUW as u17))
 const R_KECCAK_INST:u17 = (((OPCODE_CUSTOM1 as u17) << 10) | ((FUNCT3_KECCAK as u17) << 7) | (FUNCT7_KECCAK as u17))
 const R_POSEIDON2_INST:u17 = (((OPCODE_CUSTOM1 as u17) << 10) | ((FUNCT3_POSEIDON2 as u17) << 7) | (FUNCT7_POSEIDON2 as u17))
+const R_SECP256K1_FP_MUL_INST:u17 = (((OPCODE_CUSTOM1 as u17) << 10) | ((FUNCT3_SECP256K1_FP as u17) << 7) | (FUNCT7_SECP256K1_FP_MUL as u17))
+const R_SECP256K1_FP_SQ_INST:u17 = (((OPCODE_CUSTOM1 as u17) << 10) | ((FUNCT3_SECP256K1_FP as u17) << 7) | (FUNCT7_SECP256K1_FP_SQ as u17))
+const R_SECP256K1_FP_INV_INST:u17 = (((OPCODE_CUSTOM1 as u17) << 10) | ((FUNCT3_SECP256K1_FP as u17) << 7) | (FUNCT7_SECP256K1_FP_INV as u17))
+const R_SECP256K1_FP_SQRT_INST:u17 = (((OPCODE_CUSTOM1 as u17) << 10) | ((FUNCT3_SECP256K1_FP as u17) << 7) | (FUNCT7_SECP256K1_FP_SQRT as u17))
+
 
 // Flatten R_INST::rd_is_zero for single-switch check_r_type dispatch.
 const R_ADD_FOLD:u18 = ((R_ADD_INST as u18) << 1) | (1 as u18)

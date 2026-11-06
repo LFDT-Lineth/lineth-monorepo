@@ -1,0 +1,44 @@
+include "u256.zkc"
+include "../../riscv/memory.zkc"
+include "../../riscv/ram/read.zkc"
+include "../../riscv/ram/write.zkc"
+include "../../common/type.zkc"
+
+// Shared by the secp256k1 base-field accelerators (mul/sq, inv, sqrt).
+//
+// Operands are 32-byte, 8-byte-aligned, little-endian arrays of four u64 (the limb layout of
+// Constantine). Inputs may be any 256-bit value; outputs are canonical (< p). The destination may
+// alias a source: all reads happen before any write.
+
+// p = 2^256 - 2^32 - 977
+const SECP256K1_P:u256 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f
+
+fn secp256k1_fp_read<ram>(addr:Address) -> (v:u256) {
+    var l0:u64 = read_64(addr)
+    var l1:u64 = read_64((addr + 8) as Address)
+    var l2:u64 = read_64((addr + 16) as Address)
+    var l3:u64 = read_64((addr + 24) as Address)
+    v = l3::l2::l1::l0
+}
+
+fn secp256k1_fp_write<ram>(addr:Address, v:u256) {
+    var l0:u64
+    var l1:u64
+    var l2:u64
+    var l3:u64
+    l3::l2::l1::l0 = v
+    write_64(addr, l0)
+    write_64((addr + 8) as Address, l1)
+    write_64((addr + 16) as Address, l2)
+    write_64((addr + 24) as Address, l3)
+}
+
+// One conditional subtraction canonicalises any 256-bit input, because
+// 2^256 - 1 - p < p. mulmod_256 fails when the quotient exceeds 256 bits,
+// which lazily reduced operands (>= p) could otherwise cause.
+fn secp256k1_fp_canonical(v:u256) -> (r:u256) {
+    r = v
+    if v >= SECP256K1_P {
+        r = v - SECP256K1_P
+    }
+}

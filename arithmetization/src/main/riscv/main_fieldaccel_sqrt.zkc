@@ -1,0 +1,7 @@
+// Opt-in entry point with secp256k1 field accelerators (GRANULAR.md). They work on u256, which
+// gogen rejects in zkc v1.2.35 (registers are limited to 128 bits), so `zkc exec --gogen` cannot run them yet. Compiled in: sqrt. Mix and match by copying this
+// file and swapping `<op>.zkc` / `<op>_stub.zkc`.
+include "boot.zkc"
+include "../lib/secp256k1_fp/mul_stub.zkc"
+include "../lib/secp256k1_fp/inv_stub.zkc"
+include "../lib/secp256k1_fp/sqrt.zkc"

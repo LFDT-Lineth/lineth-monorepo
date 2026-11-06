@@ -3,6 +3,8 @@ const common = @import("build_common");
 
 pub fn build(b: *std.Build) void {
     const keccak_accel = b.option(bool, "keccak-accel", "Enable zkc accelerated keccak precompile (argument passthrough to lineth_accelerators)") orelse false;
+    const secp256k1_backend = b.option([]const u8, "secp256k1-backend", "secp256k1 ecrecover/verify provider: constantine (default) or std (argument passthrough to lineth_accelerators; needs -Dzkvm-provide)") orelse "constantine";
+    const ctt_field_accel = b.option([]const u8, "ctt-field-accel", "Constantine secp256k1 field accelerator ops: off (default), all, or a comma-separated subset of mul, inv, sqrt (argument passthrough to lineth_accelerators; needs -Dzkvm-provide)") orelse "off";
     const zkvm_provide = b.option(bool, "zkvm-provide", "Link the zkvm_* precompile providers (argument passthrough to lineth_accelerators; fetches zesu, builds Constantine)") orelse false;
     // The shared freestanding rv64im ZkC profile every guest builds for (build_common).
     const target = common.standardGuestTarget(b);
@@ -34,6 +36,8 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .@"zkvm-provide" = zkvm_provide,
         .@"keccak-accel" = keccak_accel,
+        .@"secp256k1-backend" = secp256k1_backend,
+        .@"ctt-field-accel" = ctt_field_accel,
     });
     root_mod.addImport("lineth_zkvm_accel", lineth_accel_dep.module("lineth_accelerators"));
     if (zkvm_provide) root_mod.addImport("zkvm_provide", lineth_accel_dep.module("zkvm_provide"));

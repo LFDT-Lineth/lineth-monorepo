@@ -37,6 +37,7 @@ pub fn build(b: *std.Build) void {
     const zkvm_provide = b.option(bool, "zkvm-provide", "Expose the zkvm_provide, guest_crypto and secp256k1_std modules (fetches zesu, builds Constantine)") orelse false;
     const keccak_accel = b.option(bool, "keccak-accel", "zkvm_provide exports the arithmetization keccak wrapper instead of standard zig keccak (default: unaccelerated)") orelse false;
     const secp256k1_backend = b.option(Secp256k1Backend, "secp256k1-backend", "zkvm_provide's secp256k1 ecrecover/verify provider: constantine (default) or std") orelse .constantine;
+    const ctt_field_accel = b.option([]const u8, "ctt-field-accel", "Constantine secp256k1 field accelerator ops in the rv64 archive: off (default), all, or a comma-separated subset of mul, inv, sqrt (needs the arithmetization riscv/main_fieldaccel*.zkc entry point)") orelse "off";
 
     const accelerators = b.addModule("lineth_accelerators", .{
         .root_source_file = b.path("src/root.zig"),
@@ -44,7 +45,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    if (zkvm_provide) addCryptoProviders(b, accelerators, target, optimize, keccak_accel, secp256k1_backend);
+    if (zkvm_provide) addCryptoProviders(b, accelerators, target, optimize, keccak_accel, secp256k1_backend, ctt_field_accel);
 }
 
 /// The `zkvm_provide`, `guest_crypto` and `secp256k1_std` modules for `target`. The freestanding
@@ -58,6 +59,7 @@ fn addCryptoProviders(
     optimize: std.builtin.OptimizeMode,
     keccak_accel: bool,
     secp256k1_backend: Secp256k1Backend,
+    ctt_field_accel: []const u8,
 ) void {
     const is_guest = target.result.os.tag == .freestanding;
 
@@ -107,7 +109,7 @@ fn addCryptoProviders(
     zesu_crypto_backend.addImport("zesu_ripemd160_impl", zesuBackendImpl(b, zesu, "ripemd160_impl", target, optimize));
     zesu_crypto_backend.addImport("zesu_blake2f_impl", zesuBackendImpl(b, zesu, "blake2f_impl", target, optimize));
 
-    const constantine = b.lazyDependency("guest_crypto_ctt", .{}) orelse return;
+    const constantine = b.lazyDependency("guest_crypto_ctt", .{ .@"ctt-field-accel" = ctt_field_accel }) orelse return;
     const archive_name = if (is_guest) "riscv_staticlib" else "host_staticlib";
     // The archives exist once Constantine is fetched.
     provide.addObjectFile(constantine.builder.named_lazy_paths.get(archive_name) orelse return);

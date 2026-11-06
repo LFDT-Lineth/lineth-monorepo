@@ -21,6 +21,30 @@ fn check_r_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
                 fail
             }
         }
+        case R_SECP256K1_FP_MUL_INST: {
+            if compute_op != RTYPE_SECP256K1_FP_MUL {
+                printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case R_SECP256K1_FP_SQ_INST: {
+            if compute_op != RTYPE_SECP256K1_FP_SQ {
+                printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case R_SECP256K1_FP_INV_INST: {
+            if compute_op != RTYPE_SECP256K1_FP_INV {
+                printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case R_SECP256K1_FP_SQRT_INST: {
+            if compute_op != RTYPE_SECP256K1_FP_SQRT {
+                printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
         default: {
             check_r_type_with_fold(compute_op, opcode, instruction_parameters, funct3, funct7, rd, R_inst)
         }

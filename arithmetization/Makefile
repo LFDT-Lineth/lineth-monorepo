@@ -23,7 +23,7 @@ ZKC_BINDIR ?= $(MAKEFILE_DIR)bin
 ZKC_BINARY ?= riscv.bin
 ZKC_INPUT ?= input.json
 
-.PHONY: prepare-zkc install-sail zkc-compile zkc-check zkc-compile-and-check check
+.PHONY: riscv-check-compilation-fieldaccel prepare-zkc install-sail zkc-compile zkc-check zkc-compile-and-check check
 
 # Use go.mod's pinned tool unless ZKC_REF requests a module override, then pre-download dependencies.
 prepare-zkc:
@@ -57,6 +57,11 @@ zkc-lint-apply: prepare-zkc
 riscv-check-compilation: zkc-compile
 
 riscv-check-lint: zkc-lint
+
+# Compile the opt-in entry point with the secp256k1 field accelerator (u256 is beyond gogen's 128-bit register limit in zkc v1.2.35: no gogen)
+riscv-check-compilation-fieldaccel: prepare-zkc $(ZKC_FILES)
+	mkdir -p $(ZKC_BINDIR)
+	$(ZKC) compile -o $(ZKC_BINDIR)/riscv_fieldaccel.bin $(MAKEFILE_DIR)src/main/riscv/main_fieldaccel.zkc
 
 # Install Sail for ACT4 host builds. Other host tools are prerequisites.
 install-sail:

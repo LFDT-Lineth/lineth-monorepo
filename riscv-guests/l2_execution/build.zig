@@ -30,6 +30,10 @@ const Options = struct {
     keccak_accel: bool,
     /// secp256k1 ecrecover/verify provider: standard zig or the Constantine staticlib.
     secp256k1_backend: Secp256k1Backend,
+    /// Constantine secp256k1 field accelerator ops: off, all, or a comma-separated subset of mul, inv, sqrt.
+    /// Any op other than off makes the guest provable only under an entry point that compiles those ops in
+    /// (arithmetization riscv/main_fieldaccel*.zkc, no gogen). Host tools keep the software path.
+    ctt_field_accel: []const u8,
     /// Directory holding the EF zkevm fixtures; its `blockchain_tests/` is the corpus.
     zkevm_fixtures: ?std.Build.LazyPath,
     zkc_smoke_input: []const u8,
@@ -42,6 +46,11 @@ const Options = struct {
         const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseSmall)") orelse .ReleaseSmall;
         const keccak_accel = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: unaccelerated)") orelse false;
         const secp256k1_backend = b.option(Secp256k1Backend, "secp256k1-backend", "secp256k1 ecrecover/verify provider: constantine (default) or std") orelse .constantine;
+        const ctt_field_accel = b.option([]const u8, "ctt-field-accel", "Constantine secp256k1 field accelerator ops: off (default), all, or a comma-separated subset of mul, inv, sqrt") orelse "off";
+        if (!std.mem.eql(u8, ctt_field_accel, "off") and secp256k1_backend != .constantine) {
+            std.debug.print("error: -Dctt-field-accel={s} needs -Dsecp256k1-backend=constantine\n", .{ctt_field_accel});
+            std.process.exit(1);
+        }
         const zkevm_fixtures = b.option(std.Build.LazyPath, "zkevm-fixtures", "Directory holding the EF zkevm fixtures; enables the corpus suites and reference steps");
         const zkc_smoke_input = b.option([]const u8, "zkc-smoke-input", "Extended SSZ input for the ZkC smoke test") orelse "test/testdata/stateless_input.ssz";
         const host_tools = b.option(bool, "host-tools", "Build native test and helper targets") orelse false;
@@ -50,6 +59,7 @@ const Options = struct {
             .optimize = optimize,
             .keccak_accel = keccak_accel,
             .secp256k1_backend = secp256k1_backend,
+            .ctt_field_accel = ctt_field_accel,
             .zkevm_fixtures = zkevm_fixtures,
             .zkc_smoke_input = zkc_smoke_input,
             .host_tools = host_tools,
@@ -65,6 +75,7 @@ fn acceleratorsDependency(
     optimize: std.builtin.OptimizeMode,
     keccak_accel: bool,
     secp256k1_backend: Secp256k1Backend,
+    ctt_field_accel: []const u8,
 ) *std.Build.Dependency {
     return b.dependency("lineth_accelerators", .{
         .target = target,
@@ -72,6 +83,7 @@ fn acceleratorsDependency(
         .@"zkvm-provide" = true,
         .@"keccak-accel" = keccak_accel,
         .@"secp256k1-backend" = secp256k1_backend,
+        .@"ctt-field-accel" = ctt_field_accel,
     });
 }
 
@@ -82,7 +94,7 @@ fn addGuestProgram(b: *std.Build, options: Options) void {
         .optimize = options.optimize,
         .@"crypto-backend" = .@"extern",
     });
-    const accelerators = acceleratorsDependency(b, options.target, options.optimize, options.keccak_accel, options.secp256k1_backend);
+    const accelerators = acceleratorsDependency(b, options.target, options.optimize, options.keccak_accel, options.secp256k1_backend, options.ctt_field_accel);
     const deps = Deps.init(b, options.target, options.optimize, zesu, accelerators);
 
     const package = common.createPackageModule(b, options.target, options.optimize, deps.package);
@@ -129,7 +141,7 @@ const Host = struct {
             .optimize = optimize,
             .@"crypto-backend" = .@"extern",
         });
-        const accelerators = acceleratorsDependency(b, target, optimize, false, options.secp256k1_backend);
+        const accelerators = acceleratorsDependency(b, target, optimize, false, options.secp256k1_backend, "off");
         const deps = Deps.init(b, target, optimize, zesu, accelerators);
         const package = common.createPackageModule(b, target, optimize, deps.package);
         const support = supportModule(b, target, optimize, deps, package, zlob);

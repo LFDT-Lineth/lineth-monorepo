@@ -1,0 +1,16 @@
+include "common.zkc"
+
+// custom-1, funct3 0b011, funct7 0 (mul) / 1 (sq).
+fn secp256k1_fp_mul<ram>(a_addr:Address, b_addr:Address, out_addr:Address) {
+    var a:u256 = secp256k1_fp_read(a_addr)
+    var b:u256 = secp256k1_fp_read(b_addr)
+    var r:u256 = mulmod_256(secp256k1_fp_canonical(a), secp256k1_fp_canonical(b), SECP256K1_P)
+    secp256k1_fp_write(out_addr, r)
+}
+
+fn secp256k1_fp_sq<ram>(a_addr:Address, out_addr:Address) {
+    var a:u256 = secp256k1_fp_read(a_addr)
+    var c:u256 = secp256k1_fp_canonical(a)
+    var r:u256 = mulmod_256(c, c, SECP256K1_P)
+    secp256k1_fp_write(out_addr, r)
+}

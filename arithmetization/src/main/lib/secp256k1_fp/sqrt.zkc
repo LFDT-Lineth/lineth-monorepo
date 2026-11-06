@@ -1,0 +1,34 @@
+include "common.zkc"
+include "hint.zkc"
+
+// (p + 1) / 4. p = 3 (mod 4), so r = a^((p+1)/4) satisfies r^2 = a if a is a square and r^2 = -a
+// otherwise (since -1 is a non-residue).
+const SECP256K1_P_PLUS_1_OVER_4:u256 = 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffbfffff0c
+
+// custom-1, funct3 0b011, funct7 3. Output is 40 bytes: r (32 bytes, as above) then a u64 flag at
+// +32: 1 if a is a square (a = 0 included, r = 0), 0 otherwise.
+// One constrained product settles both cases: r^2 = a proves a is a square, r^2 = -a proves it is
+// not, so a dishonest hint cannot misreport either way. It can still return either root (r or p - r),
+// so callers must fix the sign themselves, as ecrecover does with the y parity. The hint is
+// canonicalised, since the product pins it only modulo p.
+fn secp256k1_fp_sqrt<ram>(a_addr:Address, out_addr:Address) {
+    var a:u256 = secp256k1_fp_canonical(secp256k1_fp_read(a_addr))
+    if a == 0 {
+        secp256k1_fp_write(out_addr, 0)
+        write_64((out_addr + 32) as Address, 1)
+    } else {
+        var r:u256 = secp256k1_fp_canonical(expmod_unconstrained_256(a, SECP256K1_P_PLUS_1_OVER_4, SECP256K1_P))
+        var s:u256 = mulmod_256(r, r, SECP256K1_P)
+        var flag:u64 = 1
+        if s != a {
+            // a != 0 here, so -a = p - a
+            var neg_a:u256 = SECP256K1_P - a
+            if s != neg_a {
+                fail "secp256k1 fp sqrt: bad hint"
+            }
+            flag = 0
+        }
+        secp256k1_fp_write(out_addr, r)
+        write_64((out_addr + 32) as Address, flag)
+    }
+}

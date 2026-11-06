@@ -99,7 +99,7 @@ func shouldUseNoOp(instrType, rd, localOp, opcode uint32) bool {
 			return false
 		}
 		switch localOp {
-		case rtypeOpKeccak, rtypeOpPoseidon2:
+		case rtypeOpKeccak, rtypeOpPoseidon2, rtypeOpSecp256k1FpMul, rtypeOpSecp256k1FpSq, rtypeOpSecp256k1FpInv, rtypeOpSecp256k1FpSqrt:
 			return false
 		default:
 			return true
@@ -166,37 +166,41 @@ func itypeOpForRd(localOp, rd uint32) uint32 {
 
 // R-type semantic micro-op local indices. Unified value = computeRTypeBase + index.
 const (
-	rtypeOpAddWB     = 0
-	rtypeOpSubWB     = 1
-	rtypeOpSllWB     = 2
-	rtypeOpSltWB     = 3
-	rtypeOpSltuWB    = 4
-	rtypeOpXorWB     = 5
-	rtypeOpSrlWB     = 6
-	rtypeOpSraWB     = 7
-	rtypeOpOrWB      = 8
-	rtypeOpAndWB     = 9
-	rtypeOpMulWB     = 10
-	rtypeOpMulhWB    = 11
-	rtypeOpMulhsuWB  = 12
-	rtypeOpMulhuWB   = 13
-	rtypeOpDivWB     = 14
-	rtypeOpDivuWB    = 15
-	rtypeOpRemWB     = 16
-	rtypeOpRemuWB    = 17
-	rtypeOpAddwWB    = 18
-	rtypeOpSubwWB    = 19
-	rtypeOpSllwWB    = 20
-	rtypeOpSrlwWB    = 21
-	rtypeOpSrawWB    = 22
-	rtypeOpMulwWB    = 23
-	rtypeOpDivwWB    = 24
-	rtypeOpDivuwWB   = 25
-	rtypeOpRemwWB    = 26
-	rtypeOpRemuwWB   = 27
-	rtypeOpKeccak    = 28
-	rtypeOpPoseidon2 = 29
-	rtypeInvalid     = 63
+	rtypeOpAddWB           = 0
+	rtypeOpSubWB           = 1
+	rtypeOpSllWB           = 2
+	rtypeOpSltWB           = 3
+	rtypeOpSltuWB          = 4
+	rtypeOpXorWB           = 5
+	rtypeOpSrlWB           = 6
+	rtypeOpSraWB           = 7
+	rtypeOpOrWB            = 8
+	rtypeOpAndWB           = 9
+	rtypeOpMulWB           = 10
+	rtypeOpMulhWB          = 11
+	rtypeOpMulhsuWB        = 12
+	rtypeOpMulhuWB         = 13
+	rtypeOpDivWB           = 14
+	rtypeOpDivuWB          = 15
+	rtypeOpRemWB           = 16
+	rtypeOpRemuWB          = 17
+	rtypeOpAddwWB          = 18
+	rtypeOpSubwWB          = 19
+	rtypeOpSllwWB          = 20
+	rtypeOpSrlwWB          = 21
+	rtypeOpSrawWB          = 22
+	rtypeOpMulwWB          = 23
+	rtypeOpDivwWB          = 24
+	rtypeOpDivuwWB         = 25
+	rtypeOpRemwWB          = 26
+	rtypeOpRemuwWB         = 27
+	rtypeOpKeccak          = 28
+	rtypeOpPoseidon2       = 29
+	rtypeOpSecp256k1FpMul  = 30
+	rtypeOpSecp256k1FpSq   = 31
+	rtypeOpSecp256k1FpInv  = 32
+	rtypeOpSecp256k1FpSqrt = 33
+	rtypeInvalid           = 63
 )
 
 func rtypeOpForRd(localOp, rd uint32) uint32 {
@@ -257,10 +261,10 @@ const (
 	computeNoOp      = 0
 	computeITypeBase = 1
 	computeRTypeBase = 25
-	computeSTypeBase = 56
-	computeBTypeBase = 60
-	computeJTypeBase = 66
-	computeUTypeBase = 68
+	computeSTypeBase = 59
+	computeBTypeBase = 63
+	computeJTypeBase = 69
+	computeUTypeBase = 71
 	computeInvalid   = 255
 )
 
@@ -504,6 +508,21 @@ func decodeRTypeSemantic(opcode, funct3, funct7 uint32) (computeOp uint32) {
 		}
 		return rtypeInvalid
 	case opcodeCUSTOM1:
+		if funct3 == 0b011 {
+			// secp256k1 field accelerator: funct7 selects the operation.
+			switch funct7 {
+			case 0b0000000:
+				return rtypeOpSecp256k1FpMul
+			case 0b0000001:
+				return rtypeOpSecp256k1FpSq
+			case 0b0000010:
+				return rtypeOpSecp256k1FpInv
+			case 0b0000011:
+				return rtypeOpSecp256k1FpSqrt
+			default:
+				return rtypeInvalid
+			}
+		}
 		if funct7 != 0b0000000 {
 			return rtypeInvalid
 		}

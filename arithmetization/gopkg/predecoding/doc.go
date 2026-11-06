@@ -116,6 +116,14 @@
 //	0b000   rtypeOpKeccak (28)       RTYPE_KECCAK (53)      keccak(...)
 //	0b001   rtypeOpPoseidon2 (29)    RTYPE_POSEIDON2 (54)   poseidon2(...)
 //
+// funct3 `0b011` is the secp256k1 field accelerator; funct7 selects the operation:
+//
+//	funct7     Local operation                  Unified compute_op            Runtime handler
+//	0b0000000  rtypeOpSecp256k1FpMul (31)       RTYPE_SECP256K1_FP_MUL (56)   secp256k1_fp_mul(...)
+//	0b0000001  rtypeOpSecp256k1FpSq (32)        RTYPE_SECP256K1_FP_SQ (57)    secp256k1_fp_sq(...)
+//	0b0000010  rtypeOpSecp256k1FpInv (33)       RTYPE_SECP256K1_FP_INV (58)   secp256k1_fp_inv(...)
+//	0b0000011  rtypeOpSecp256k1FpSqrt (34)      RTYPE_SECP256K1_FP_SQRT (59)  secp256k1_fp_sqrt(...)
+//
 // Any other `(funct3, funct7)` pair on Custom-1 maps to `rtypeInvalid` → `COMPUTE_INVALID`
 // (255) in the `decoded` table.
 //
@@ -150,7 +158,7 @@
 //   - `jal` / `jalr x0, …` — control flow
 //   - branches and stores — side effects
 //   - `ecall` / `ebreak` — syscalls
-//   - any Custom-1 precompile (`KECCAK`, `POSEIDON2`) — memory side effects
+//   - any Custom-1 precompile (`KECCAK`, `POSEIDON2`, `SECP256K1_FP_*`) — memory side effects
 //
 // The predicate lives in `shouldUseNoOp` / `finalizeComputeOp` in `decode.go`
 // (see `decode_test.go`).
