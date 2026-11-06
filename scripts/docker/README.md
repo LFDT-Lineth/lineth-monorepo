@@ -89,7 +89,8 @@ on Linux run `docker run --privileged --rm tonistiigi/binfmt --install arm64`).
   caller-supplied `--build-arg` of the same name still wins.
 * **Licenses** — a locally loaded image must carry the
   `org.opencontainers.image.licenses` label and `/licenses/LICENSE-APACHE` and
-  `/licenses/LICENSE-MIT`, otherwise the build fails.
+  `/licenses/LICENSE-MIT`, otherwise the build fails. Downstream images that do
+  not ship them pass `--no-license-check` (`LICENSE_CHECK=false`).
 * **Artifacts** — `--save-to FILE` runs `docker save … | gzip` on the primary
   image, which CI uploads as a workflow artifact.
 

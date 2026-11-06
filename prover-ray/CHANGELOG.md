@@ -12,6 +12,13 @@
 
 - *(riscv-guest)* Added a build option to choose between crypto backe… (#4293)
 - *(riscv-guest)* Build script refactoring. Introducing a convention … (#4347)
+- *(prover-ray)* Fix lookup soundness bug due to improper reuse of th… (#4363)
+- *(prover-ray)* Adopt the guest log syscall in the prover-ray (#4371)
+- *(riscv-guest, misc, prover-ray)* Riscv guest/shared zkevm fixtures (#4368)
+
+### 🚜 Refactor
+
+- *(prover-ray)* Refactor the guest output fetching (#4370)
 
 ### ⚡ Performance
 

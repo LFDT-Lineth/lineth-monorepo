@@ -13,7 +13,7 @@
 //! `zkvm_provide` (defines every `zkvm_*` symbol, linking the Constantine archive for the target),
 //! `guest_crypto` (the Zig bindings to that archive) and `secp256k1_std`. `-Dkeccak-accel=true`
 //! makes `zkvm_provide` export the prover-accelerated keccak instead of the standard Zig one, and
-//! `-Dsecp256k1-backend` selects its secp256k1 provider: `std` (default) or `constantine`. zesu and
+//! `-Dsecp256k1-backend` selects its secp256k1 provider: `constantine` (default) or `std`. zesu and
 //! Constantine are lazy dependencies behind `-Dzkvm-provide`, fetched and built only for consumers
 //! that pass it. A consumer that opts in takes every module from the same dependency instance:
 //!   const dep = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize, .@"zkvm-provide" = true });

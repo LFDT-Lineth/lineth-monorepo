@@ -5,11 +5,11 @@ const std = @import("std");
 
 const lineth_da = @import("lineth_da");
 const support = @import("support");
-const zstd_compressor = @import("zstd_compressor");
+const zstd_encoder = @import("zstd_encoder");
 
 const decompress = lineth_da.decompress;
 const blob_payload = lineth_da.encoding.blob_payload;
-const zstd = lineth_da.zstd;
+const zstd_decoder = lineth_da.zstd_decoder;
 const da_stream = support.da_stream;
 
 const Allocator = std.mem.Allocator;
@@ -28,9 +28,13 @@ pub fn keccak(bytes: []const u8) Hash {
     return hash;
 }
 
-/// The frame the package's compressor produces.
+/// The encoder of the package, which digests the dictionary once for every test of the process.
+var encoder: ?zstd_encoder.Encoder = null;
+
+/// The frame the package's encoder produces.
 pub fn packageFrame(a: Allocator, payload: []const u8) ![]u8 {
-    return zstd_compressor.compress(a, payload, dictionary);
+    if (encoder == null) encoder = try zstd_encoder.Encoder.init(std.heap.page_allocator, dictionary);
+    return encoder.?.compress(a, payload);
 }
 
 /// One stream segment: the length prefix and the frame of `payload`.
@@ -42,7 +46,7 @@ pub fn concat(a: Allocator, parts: []const []const u8) ![]u8 {
     return std.mem.concat(a, u8, parts);
 }
 
-/// The blob chunk packing `payload`, with the commitment and the blob proof of c-kzg-4844.
+/// The blob chunk packing `payload`, with the commitment and the blob proof of Constantine.
 pub fn blobChunk(a: Allocator, payload: []const u8) !Chunk {
     const blob = try a.create([blob_payload.blob_len]u8);
     try blob_payload.pack(payload, blob);
@@ -89,7 +93,7 @@ pub fn insideFirstChunk(chunks: []const Chunk, take: u64) Start {
 
 /// Verifies the stream under the package dictionary.
 pub fn verify(chunks: []const Chunk, payloads: []const []const u8, start: Start) !decompress.Verified {
-    const decoder = try zstd.Decoder.init(gpa, dictionary);
+    const decoder = try zstd_decoder.Decoder.init(gpa, dictionary);
     defer decoder.deinit();
     return decompress.verifyDaChunks(gpa, decoder, chunks, payloads, start.parent, start.take, start.boundary);
 }

@@ -19,8 +19,9 @@ const (
 	SharedRandomnessContributionPI                     = messagebus.SharedRandomnessSeedContributionPI
 	GuestPublicOutputsPI           wiop.PublicInputTag = "GuestPublicOutputs"
 
-	// NumGuestPublicOutputs = 32 because only the first 32 bytes of the guest
-	// output are bound as public inputs, one byte per row.
+	// NumGuestPublicOutputs = 32 because the guest output is exactly 32 bytes:
+	// the commitment the guest writes to its public output, one byte per row.
+	// Anything else the guest emits goes to its private log, not to its output.
 	NumGuestPublicOutputs = 32
 
 	// NumSharedRandomness is the number of shared randomness cells. 8 because

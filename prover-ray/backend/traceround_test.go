@@ -119,5 +119,9 @@ func proveJob(c *Core, job Job) (wiop.Proof, wiop.PublicInput, error) {
 	if err != nil {
 		return wiop.Proof{}, nil, err
 	}
-	return c.runProve(context.Background(), &zkcdriver.PreReadInputs{Inputs: inputs})
+	nodes, _, err := c.runProve(context.Background(), &zkcdriver.PreReadInputs{Inputs: inputs}, job.ShardIndexes)
+	if err != nil {
+		return wiop.Proof{}, nil, err
+	}
+	return nodes[0].Proof, nodes[0].Pub, nil
 }

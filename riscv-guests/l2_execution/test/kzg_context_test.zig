@@ -4,7 +4,7 @@
 const std = @import("std");
 const gc = @import("guest_crypto");
 
-test "the embedded trusted setup builds on request, ahead of the first point evaluation" {
+test "the embedded trusted setup builds on request, ahead of its first use" {
     try std.testing.expect(!gc.kzgContextBuilt());
     try std.testing.expect(gc.initKzgContext());
     try std.testing.expect(gc.kzgContextBuilt());

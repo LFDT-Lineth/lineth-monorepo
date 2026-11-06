@@ -5,7 +5,8 @@
 //!
 //! secp256k1 ecrecover and verify use Constantine's raw-primitive exports.
 //!
-//! KZG point evaluation uses the trusted setup baked into the ELF.
+//! KZG point evaluation and the verification of blob proofs use the trusted setup baked into the
+//! ELF, through one context.
 
 const std = @import("std");
 
@@ -209,9 +210,28 @@ pub fn kzgPointEvalVerify(
     return ctt_eth_evm_kzg_point_evaluation(ctx, &out, 64, &in, 192) == OK;
 }
 
+/// Whether every proof opens its commitment to its blob, as the consensus specs'
+/// `verify_blob_kzg_proof_batch` defines it. All-zero random bytes make Constantine derive the batch
+/// weights by the specs' Fiat-Shamir transcript. A blob element of at least the scalar field's
+/// order, an invalid commitment or an invalid proof does not verify.
+pub fn kzgVerifyBlobBatch(blobs: []const [131072]u8, commitments: []const [48]u8, proofs: []const [48]u8) bool {
+    if (blobs.len != commitments.len or blobs.len != proofs.len) return false;
+    const ctx = kzgContext() orelse return false;
+    const zero_bytes: [32]u8 = @splat(0);
+    return ctt_eth_kzg_verify_blob_kzg_proof_batch(ctx, blobs.ptr, commitments.ptr, proofs.ptr, blobs.len, &zero_bytes) == 0; // cttEthKzg_Success
+}
+
 const CttKzgContext = opaque {};
 
 extern fn ctt_eth_kzg_context_new_embedded(ctx: *?*CttKzgContext) c_int;
+extern fn ctt_eth_kzg_verify_blob_kzg_proof_batch(
+    ctx: ?*const CttKzgContext,
+    blobs: [*]const [131072]u8,
+    commitments: [*]const [48]u8,
+    proofs: [*]const [48]u8,
+    n: usize,
+    secure_random_bytes: *const [32]u8,
+) u8;
 extern fn ctt_eth_evm_kzg_point_evaluation(
     ctx: ?*const CttKzgContext,
     r: [*]u8,
@@ -223,8 +243,8 @@ extern fn ctt_eth_evm_kzg_point_evaluation(
 var kzg_ctx: ?*CttKzgContext = null;
 var kzg_ctx_failed = false;
 
-/// Builds the KZG trusted-setup context ahead of the first point evaluation. False when the heap the
-/// C allocator draws on refuses it.
+/// Builds the KZG trusted-setup context ahead of its first use. False when the heap the C allocator
+/// draws on refuses it.
 pub fn initKzgContext() bool {
     return kzgContext() != null;
 }

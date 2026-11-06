@@ -375,7 +375,7 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     # parentDataRollingHash (top-level) -> parent_data_rolling_hash; the outbound endDataRollingHash/finalDataTailDiscardBytes are
     # recomputed by the guest and not echoed in the request.
     assert bytes(req.parent_data_rolling_hash) == bytes([0x47]) * 32
-    assert req.parent_data_tail_take_bytes == 60
+    assert req.parent_data_tail_take_bytes == 68
     assert bytes(req.boundary_prev_data_rolling_hash) == bytes([0x39]) * 32
 
     assert len(req.conflations) == 2

@@ -277,16 +277,21 @@ def derive_canonical_payload(
 
 def _validate_zstd_frame(zstd_frame: bytes, canonical_payload: bytes) -> None:
     """
-    Check that a segment's zstd frame decompresses, with the program's dictionary, exactly to its canonical payload.
+    Check that a segment's zstd frame is the one form a DA frame takes and decompresses, with the program's dictionary,
+    exactly to its canonical payload.
 
-    The declared window is at most `ZSTD_MAX_WINDOW_SIZE`. A frame without content size has a window
-    covering its whole content, so that every decoder keeps all the output a match can reach.
+    The header declares the content size, equal to the payload's length, and the ID of the program's dictionary; the
+    frame carries no content checksum and declares a window of at most `ZSTD_MAX_WINDOW_SIZE`.
     """
     try:
         parameters = zstd.get_frame_parameters(zstd_frame)
-        covers_content = parameters.content_size != zstd.CONTENTSIZE_UNKNOWN or parameters.window_size >= len(canonical_payload)
-        if parameters.window_size > ZSTD_MAX_WINDOW_SIZE or not covers_content:
-            raise zstd.ZstdError("frame window")
+        if (
+            parameters.content_size != len(canonical_payload)
+            or parameters.dict_id != zstd_dictionary().dict_id()
+            or parameters.has_checksum
+            or parameters.window_size > ZSTD_MAX_WINDOW_SIZE
+        ):
+            raise zstd.ZstdError("frame header")
         decompressed = zstd.ZstdDecompressor(dict_data=zstd_dictionary()).decompress(
             zstd_frame, max_output_size=len(canonical_payload), allow_extra_data=False,
         )
@@ -838,8 +843,11 @@ def truncate_block_rlp(block_rlp: bytes, chain_id: U64) -> TruncatedEthereumBloc
     Per-transaction fields:
       - `transactions[i]` is the signature- and chainID-stripped canonical
         bytes (see `_signature_stripped_tx_bytes`).
-      - `froms[i]` is the sender recovered via `recover_sender(chain_id, tx)`.
+      - `froms[i]` is the sender recovered via `recover_sender(chain_id, tx)`,
+        for a positive `chain_id`.
     """
+    if chain_id == 0:
+        raise Exception("sender recovery requires a positive chain ID")
     block = decode_block_rlp(block_rlp)
     if _transactions_root(block.transactions) != block.header.transactions_root:
         raise Exception("block transactions do not match the header's transactions root")

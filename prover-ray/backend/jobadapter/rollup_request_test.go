@@ -38,7 +38,7 @@ func TestDecodeRollupRequest_Golden(t *testing.T) {
 	assert.Equal(t, vk[:], req.ProgramVk)
 	assert.Equal(t, uint64(59144), req.ChainID)
 	assert.Equal(t, filledHash(0x47), req.ParentDataRollingHash)
-	assert.Equal(t, uint64(60), req.ParentDataTailTakeBytes)
+	assert.Equal(t, uint64(68), req.ParentDataTailTakeBytes)
 
 	require.NotNil(t, req.BoundaryPrevDataRollingHash)
 	assert.Equal(t, filledHash(0x39), *req.BoundaryPrevDataRollingHash)
@@ -48,15 +48,15 @@ func TestDecodeRollupRequest_Golden(t *testing.T) {
 	assert.Equal(t, mustHex(t, "0xf90215a0"), req.Conflations[0].BlockRlps[0])
 
 	require.Len(t, req.Chunks, 1)
-	assert.Equal(t, mustHex(t, "0x01787e92ee92078d97d6eb761e9224d362199ed44889a0543ac63ec6eec40062"),
+	assert.Equal(t, mustHex(t, "0x01b166d6411021bf24e7eb5911dd6f815ea30509afc19fc5b5bc781156c2dc78"),
 		req.Chunks[0].ChunkHash[:])
 	assert.False(t, req.Chunks[0].IsCalldata)
 	assert.NotEmpty(t, req.Chunks[0].BlobBytes)
 	assert.Empty(t, req.Chunks[0].CalldataBytes)
-	assert.Equal(t, mustHex(t, "0xb7a1e1fb958a4b99a2caf2a9b820288febfecf07e4f2a8ce7e1e6cd440f5e7b7"+
-		"67e7643954195a1264dcd090945cbeeb"), req.Chunks[0].KZGCommitment)
-	assert.Equal(t, mustHex(t, "0x8ce30126356d26665f7b0b2f04244c59c1dff059e3c3ceeac0260a615fa92784"+
-		"80261456261a383301bee674cf491b59"), req.Chunks[0].KZGProof)
+	assert.Equal(t, mustHex(t, "0x83f5402ceefaf0fec6856c8ba565834228193978ab06deadd71b07a18dd0461a"+
+		"4047fe19be9033c1a91ba74498b74f03"), req.Chunks[0].KZGCommitment)
+	assert.Equal(t, mustHex(t, "0x8fe9644760a26dbe51d26924fd57c29efb8752260116856d04f7643f3b5b6449"+
+		"ee68adf7ba380d39e54bf8f726e8c34a"), req.Chunks[0].KZGProof)
 
 	require.Len(t, req.L2ExecutionProofs, 2)
 	p0 := req.L2ExecutionProofs[0]

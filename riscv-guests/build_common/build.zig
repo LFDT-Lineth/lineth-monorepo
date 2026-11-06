@@ -67,21 +67,19 @@ pub fn createPackageModule(
 pub const GuestOptions = struct {
     /// Name of the installed ELF.
     name: []const u8,
-    /// The guest's entry point, relative to the package.
-    root_source_file: []const u8 = "src/main.zig",
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
-    /// Modules the entry point (`root_source_file`) names: the package module and any dependency it uses directly.
+    /// Modules `src/main.zig` names: the package module and any dependency it uses directly.
     imports: []const std.Build.Module.Import,
     code_model: std.builtin.CodeModel = .default,
 };
 
-/// Builds the guest ELF from the entry point `options.root_source_file` and installs it via
-/// `installGuestElf`. Call after the package module and its dependency imports are fully wired: the
-/// freestanding linkage pass walks the module graph as it stands.
+/// Builds the guest ELF from the entry point `src/main.zig` and installs it via `installGuestElf`.
+/// Call after the package module and its dependency imports are fully wired: the freestanding
+/// linkage pass walks the module graph as it stands.
 pub fn addGuest(b: *std.Build, options: GuestOptions) void {
     const entry = b.createModule(.{
-        .root_source_file = b.path(options.root_source_file),
+        .root_source_file = b.path("src/main.zig"),
         .target = options.target,
         .optimize = options.optimize,
         .imports = options.imports,
@@ -185,11 +183,11 @@ pub const Secp256k1Backend = enum { std, constantine };
 pub const CryptoOptions = struct {
     /// Keccak provider: the arithmetization wrapper (prover-accelerated custom op) or standard zig keccak.
     keccak_accel: bool = false,
-    secp256k1_backend: Secp256k1Backend = .std,
+    secp256k1_backend: Secp256k1Backend = .constantine,
 
     pub fn parse(b: *std.Build) CryptoOptions {
         const keccak_accel = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: unaccelerated)") orelse false;
-        const secp256k1_backend = b.option(Secp256k1Backend, "secp256k1-backend", "secp256k1 ecrecover/verify provider: std (default) or constantine") orelse .std;
+        const secp256k1_backend = b.option(Secp256k1Backend, "secp256k1-backend", "secp256k1 ecrecover/verify provider: constantine (default) or std") orelse .constantine;
         return .{ .keccak_accel = keccak_accel, .secp256k1_backend = secp256k1_backend };
     }
 

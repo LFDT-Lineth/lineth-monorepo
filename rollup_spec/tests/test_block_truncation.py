@@ -67,6 +67,11 @@ def test_block_without_transactions_is_accepted():
     assert (truncated.transactions, truncated.froms) == ([], [])
 
 
+def test_chain_id_zero_is_rejected_even_for_a_block_without_transactions():
+    with pytest.raises(Exception, match="positive chain ID"):
+        truncate_block_rlp(block_rlp([]), U64(0))
+
+
 def envelope(tx) -> Bytes:
     return Bytes(wire(tx))
 
