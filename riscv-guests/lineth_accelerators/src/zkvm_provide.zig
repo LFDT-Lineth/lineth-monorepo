@@ -11,7 +11,8 @@ const build_options = @import("build_options");
 // the Lineth wrapper (prover-accelerated) or the standard zig keccak, selected at build time by
 // -Dkeccak-accel; modexp/ripemd160/blake2f come from zesu_crypto_backend; secp256k1 is either
 // secp256k1_std or guest_crypto, selected at build time by -Dsecp256k1-backend; the
-// BLS12-381/KZG and bn254 come from guest_crypto.
+// BLS12-381/KZG and bn254 come from guest_crypto. `lineth_zkvm_kzg_verify_blob_batch` is
+// the Lineth-specific symbol of the batch verification of blob proofs.
 comptime {
     if (build_options.keccak_accel) {
         @export(&lineth_accel.zkvm_keccak256, .{ .name = "zkvm_keccak256" });
@@ -28,6 +29,7 @@ comptime {
     @export(&bn254_pairing, .{ .name = "zkvm_bn254_pairing" });
     @export(&blake2f, .{ .name = "zkvm_blake2f" });
     @export(&kzg_point_eval, .{ .name = "zkvm_kzg_point_eval" });
+    @export(&kzg_verify_blob_batch, .{ .name = "lineth_zkvm_kzg_verify_blob_batch" });
     @export(&bls12_g1_add, .{ .name = "zkvm_bls12_g1_add" });
     @export(&bls12_g1_msm, .{ .name = "zkvm_bls12_g1_msm" });
     @export(&bls12_g2_add, .{ .name = "zkvm_bls12_g2_add" });
@@ -141,6 +143,10 @@ fn blake2f(rounds: u32, h: *[64]u8, m: *const [128]u8, t: *const [16]u8, f: u8) 
 fn kzg_point_eval(commitment: *const [48]u8, z: *const [32]u8, y: *const [32]u8, proof: *const [48]u8, verified: *bool) callconv(.c) i32 {
     // Verification uses the embedded KZG setup.
     verified.* = guest_crypto.kzgPointEvalVerify(commitment, z, y, proof);
+    return OK;
+}
+fn kzg_verify_blob_batch(blobs: [*]const [131072]u8, commitments: [*]const [48]u8, proofs: [*]const [48]u8, n: usize, verified: *bool) callconv(.c) i32 {
+    verified.* = guest_crypto.kzgVerifyBlobBatch(blobs[0..n], commitments[0..n], proofs[0..n]);
     return OK;
 }
 fn bls12_g1_add(p1: *const [96]u8, p2: *const [96]u8, result: *[96]u8) callconv(.c) i32 {

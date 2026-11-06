@@ -11,6 +11,7 @@ riscv-guests/
   build_common/        Shared build helpers (+ the shared standalone-ELF link: start.s, linker_script.ld)
   lineth_accelerators/ Shared library package: Lineth accelerator wrappers + C headers, and the opt-in zkvm_* crypto providers
   guest_common/        Shared library package: generic SSZ primitives (`guest_common` module) and the cross-guest wire contracts with their SSZ codecs (`core_serde` module), with its own unit tests
+  lineth_da/           Shared library package: data-availability building blocks (`lineth_da` module) — zstd dictionary decompression over upstream libzstd, the truncation of blocks, the 254-bit blob packing, the dataRollingHash, EIP-4844 blob verification and the verification of a DA stream against its chunks — with its own unit and reference tests
   l2_execution/        Vanilla EVM execution guest: build.zig + build.zig.zon + Makefile + src/ + test/ + tools/
   rollup/              Rollup guest stub (echo/sentinel, no proof verification/folding): build.zig + build.zig.zon + Makefile + src/ + test/ + tools/
 ```
@@ -31,7 +32,7 @@ Set `ZIG=/path/to/zig` when the required Zig binary is not first on `PATH`.
 
 ## Dependencies
 
-Each guest pins its **own** external dependencies in its `build.zig.zon`. For `l2-execution`: **Zesu** (EVM/stateless execution) and the **`guest_crypto_ctt`** package (the Constantine staticlib backing secp256k1, BLS12-381, BN254, and KZG point evaluation; Constantine itself is a `lazy` dependency fetched by builds that use an archive). `lineth_accelerators` lists Zesu and `guest_crypto_ctt` as `lazy` dependencies behind its `-Dzkvm-provide` option, so consumers that do not opt in never fetch or build them. Every guest also takes `../build_common` as a path dependency for the shared build helpers. `make fetch` pre-fetches a guest's Zig dependency tree; the EF zkevm fixtures below are fetched by `make fetch-zkevm-fixtures`.
+Each guest pins its **own** external dependencies in its `build.zig.zon`. For `l2-execution`: **Zesu** (EVM/stateless execution). `lineth_accelerators` lists Zesu and the **`guest_crypto_ctt`** package (the Constantine staticlib backing secp256k1, BLS12-381, BN254, and KZG point evaluation; Constantine itself is a `lazy` dependency fetched by builds that use an archive) as `lazy` dependencies behind its `-Dzkvm-provide` option, so consumers that do not opt in never fetch or build them; it publishes the archive of its target as the named lazy path `zkvm_provide_archive`, which `build_common.HostCrypto` links into native tests and tools. `l2_execution`, `lineth_da` and `lineth_accelerators` pin the same Zesu commit, so the pin moves in all three at once. Every guest also takes `../build_common` as a path dependency for the shared build helpers. `make fetch` pre-fetches a guest's Zig dependency tree; the EF zkevm fixtures below are fetched by `make fetch-zkevm-fixtures`.
 
 The **execution-spec-tests `tests-zkevm` fixtures** live in one directory per machine that every checkout of any guest that includes [`build_common/zkevm_fixtures.mk`](build_common/zkevm_fixtures.mk) reads. [`build_common/zkevm_fixtures_pin.mk`](build_common/zkevm_fixtures_pin.mk) pins the release (URL and sha256), and the `fetch-zkevm-fixtures` target unpacks the release's `blockchain_tests/` into `ZKEVM_FIXTURES_DIR` (`$XDG_CACHE_HOME/lineth/zkevm-fixtures`, else `~/.cache/lineth/zkevm-fixtures`) once; while the directory's stamp matches the pinned sha256 the target is a no-op. A Zig dependency would be unpacked into the `zig-pkg/` of every package that declares it, repeating the whole release per package and per checkout. A guest's fixture-reading make targets depend on `fetch-zkevm-fixtures` and pass the directory as `-Dzkevm-fixtures=<dir>`; the corpus suites and reference steps exist only with that option, and `zig build test -Dhost-tools=true` alone runs every other suite.
 
@@ -130,6 +131,7 @@ These need `zkc` and `go` on `PATH`. The interpreter loads a finished ELF — `e
 
 Each guest folder is a complete package: its own dependencies (`build.zig.zon`), compile/test logic (`build.zig`), lifecycle (`Makefile`), production source (`src/`), host-only test code (`test/`) and host programs (`tools/`). Shared build helpers are factored into `build_common/`; the toolchain pin (`.zigversion`) is shared at this level.
 
+- `lineth_da/`: the data-availability library package: zstd dictionary decompression, the truncation of blocks, the 254-bit blob packing, the dataRollingHash, EIP-4844 blob verification and the verification of a DA stream against its chunks. See `lineth_da/README.md`.
 - `l2_execution/`: the Rollup's extended l2-execution guest. See `l2_execution/README.md`.
 - `rollup/`: the rollup guest stub (echo/sentinel mapping, no proof verification or chunk/conflation folding). See `rollup/README.md`.
 ```

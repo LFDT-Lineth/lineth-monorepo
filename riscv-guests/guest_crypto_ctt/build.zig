@@ -2,6 +2,7 @@
 //! Tool locations are overridable with `NIM`, `NIMBLE`, and `LLVM_AR`.
 
 const std = @import("std");
+const common = @import("build_common");
 
 const Toolchain = struct {
     nim: []const u8,
@@ -85,19 +86,11 @@ fn buildRiscv(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath) std.Build.
     task.addArgs(&.{ tc.nimble, tc.nim, tc.llvm_ar, tc.llvm_nm });
     const archive = out.join(b.allocator, "libconstantine.riscv64.a") catch @panic("oom");
 
-    // Match the guest's rv64im target (build_common standardGuestTarget). The ZkC interpreter
-    // decodes only 32-bit RV64IM, so compressed (C), atomic (A) or CSR code would run as no-ops.
     const allocator_obj = b.addObject(.{
         .name = "ctt_allocator_rv64",
         .root_module = b.createModule(.{
             .root_source_file = b.path("c_allocator.zig"),
-            .target = b.resolveTargetQuery(.{
-                .cpu_arch = .riscv64,
-                .os_tag = .freestanding,
-                .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv64 },
-                .cpu_features_add = std.Target.riscv.featureSet(&.{.m}),
-                .cpu_features_sub = std.Target.riscv.featureSet(&.{ .a, .c, .d, .f, .zicsr, .zaamo, .zalrsc }),
-            }),
+            .target = b.resolveTargetQuery(common.guest_target_query),
             .optimize = .ReleaseSmall,
         }),
     });
@@ -124,8 +117,9 @@ fn nimCmd(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath, name: []const 
 
 fn buildHost(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath) std.Build.LazyPath {
     const nim = nimCmd(b, tc, tree, "nim compile constantine (host)");
-    // The host archive backs the FFI unit test and its embedded KZG context.
-    nim.addArgs(&.{ "--cc:clang", "-d:CTT_EMBEDDED_KZG", "-d:CTT_KZG_VERIFICATION_ONLY" });
+    // The host archive embeds the full trusted setup and exposes the whole KZG API: verification,
+    // commitments and proofs.
+    nim.addArgs(&.{ "--cc:clang", "-d:CTT_EMBEDDED_KZG" });
     _ = nim.addPrefixedOutputDirectoryArg("--outdir:", "host");
     const nimcache = nim.addPrefixedOutputDirectoryArg("--nimcache:", "host-nimcache");
     _ = nimcache; // declared as a cache output
