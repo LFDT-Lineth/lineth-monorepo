@@ -490,18 +490,13 @@ pub fn reconstructWithManifest(
                 const n = module_sizes[dyn.index];
                 if (!field.isPowerOfTwo(n)) return Error.NonPowerOfTwoModuleSize;
                 const sz: u8 = @intCast(field.log2PowerOfTwo(n));
-                // dyn.min_size_log2 used to reject runtime sizes where two
-                // distinct RAW shifts of this column alias to the same domain
-                // point (e.g. offsets 0 and -1 both normalize to row 0 at
-                // runtime size 1). That rejection was overly conservative: an
-                // honest prover CAN legitimately run a module at an aliasing
-                // size (prover-ray's own RecoverBatchClaims dedupes such
-                // openings into a single FRI claim before batching, and
-                // reconstructQueryValueAt below dedupes the same way when
-                // summing the DEEP quotient), so aliasing sizes are safe to
-                // accept, not just aliasing-completeness gaps to reject. Kept
-                // as a documented field (still emitted by codegen) but no
-                // longer enforced here.
+                // dyn.min_size_log2 (two raw shifts of this column alias
+                // below it) is not enforced here: the stronger per-module
+                // minimum, prover-ray's Module.MinRuntimeSize (N > 2·max|shift|,
+                // which implies no two shifts alias), is checked up front by
+                // protocol.replayWithTranscript against
+                // Spec.dynamic_module_min_sizes. Kept as a documented field
+                // (still emitted by codegen).
                 _ = dyn.min_size_log2;
                 break :blk sz;
             },
