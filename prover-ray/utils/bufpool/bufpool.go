@@ -10,6 +10,7 @@ package bufpool
 import (
 	"math/bits"
 	"sync"
+	"unsafe"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/hugepage"
 )
@@ -19,13 +20,51 @@ import (
 //
 // Slices from [Pool.Get] hold stale values: a caller must write every element
 // before reading it. Released slices are only handed out again within their
-// capacity class. The pool keeps every released slice until [Pool.Trim] drops
+// capacity class. The pool keeps released slices until [Pool.Trim] drops
 // the classes that went unrequested, or [Pool.Drain] gives all the memory
-// back.
+// back, up to a cap on the bytes it retains (see [Pool.SetMaxRetainedBytes]):
+// a slice released past the cap is dropped for the garbage collector.
 type Pool[T any] struct {
 	mu   sync.Mutex
 	free [bits.UintSize][][]T
 	idle [bits.UintSize]uint8 // per class, Trims since its last Get, up to trimAfter
+
+	retained    int64 // bytes of the slices in free
+	maxRetained int64 // cap on retained; 0 means DefaultMaxRetainedBytes
+}
+
+// DefaultMaxRetainedBytes is the cap on the bytes a [Pool] retains unless
+// [Pool.SetMaxRetainedBytes] sets another one. It is far above what a proof
+// releases into any one pool (the field pools together keep a few GiB on a
+// full proof), so it does not change proving; it only bounds a pool that
+// would otherwise grow without limit, e.g. under many concurrent proofs.
+const DefaultMaxRetainedBytes int64 = 32 << 30
+
+// SetMaxRetainedBytes caps the bytes of the released slices p keeps; a slice
+// released while it would bring p past the cap is dropped instead. A cap of
+// zero or less restores [DefaultMaxRetainedBytes]. Lowering the cap does not
+// drop slices already kept; [Pool.Drain] or [Pool.Trim] do.
+func (p *Pool[T]) SetMaxRetainedBytes(n int64) {
+	if n < 0 {
+		n = 0
+	}
+	p.mu.Lock()
+	p.maxRetained = n
+	p.mu.Unlock()
+}
+
+// RetainedBytes returns the bytes of the released slices p currently keeps.
+func (p *Pool[T]) RetainedBytes() int64 {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.retained
+}
+
+// classBytes returns the size in bytes of a slice of the given capacity
+// class.
+func classBytes[T any](class int) int64 {
+	var zero T
+	return int64(unsafe.Sizeof(zero)) << class
 }
 
 // trimAfter is the number of Trims in a row a capacity class must go
@@ -47,6 +86,7 @@ func (p *Pool[T]) Get(n int) []T {
 		v := p.free[class][k-1]
 		p.free[class][k-1] = nil
 		p.free[class] = p.free[class][:k-1]
+		p.retained -= classBytes[T](class)
 		p.mu.Unlock()
 		return v[:n]
 	}
@@ -57,15 +97,26 @@ func (p *Pool[T]) Get(n int) []T {
 }
 
 // Put releases v for reuse. v must have been returned by [Pool.Get] and no
-// longer be used. A slice whose capacity is not a power of two is ignored;
-// any other one is kept and handed out again.
+// longer be used. A slice whose capacity is not a power of two, or that would
+// bring the pool past its retained-bytes cap, is ignored; any other one is
+// kept and handed out again.
 func (p *Pool[T]) Put(v []T) {
 	c := cap(v)
 	if c == 0 || c&(c-1) != 0 {
 		return
 	}
 	class := bits.Len(uint(c - 1))
+	size := classBytes[T](class)
 	p.mu.Lock()
+	limit := p.maxRetained
+	if limit == 0 {
+		limit = DefaultMaxRetainedBytes
+	}
+	if p.retained+size > limit {
+		p.mu.Unlock()
+		return
+	}
+	p.retained += size
 	p.free[class] = append(p.free[class], v[:c])
 	p.mu.Unlock()
 }
@@ -81,6 +132,7 @@ func (p *Pool[T]) Trim() {
 			p.idle[i]++
 		}
 		if p.idle[i] >= trimAfter {
+			p.retained -= int64(len(p.free[i])) * classBytes[T](i)
 			p.free[i] = nil
 		}
 	}
@@ -94,4 +146,5 @@ func (p *Pool[T]) Drain() {
 	for i := range p.free {
 		p.free[i] = nil
 	}
+	p.retained = 0
 }

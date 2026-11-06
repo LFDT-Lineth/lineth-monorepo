@@ -61,3 +61,53 @@ func TestPoolTrimDropsUnrequestedClasses(t *testing.T) {
 		t.Fatal("Trim must drop a class unrequested for trimAfter Trims")
 	}
 }
+
+// The pool must count the bytes it retains, drop a released slice that would
+// bring it past its cap, and count down on Get, Trim and Drain.
+func TestPoolCapsRetainedBytes(t *testing.T) {
+	const slice = 64 * 4 // bytes of a 64-element uint32 slice
+	var p Pool[uint32]
+	p.SetMaxRetainedBytes(3 * slice)
+	a, b, c, d := p.Get(64), p.Get(64), p.Get(64), p.Get(64)
+	for _, v := range [][]uint32{a, b, c, d} {
+		p.Put(v)
+	}
+	if got := p.RetainedBytes(); got != 3*slice {
+		t.Fatalf("retained %d bytes, want %d", got, 3*slice)
+	}
+	// d went past the cap: it was dropped, so the pool hands out c, b, a.
+	for _, want := range [][]uint32{c, b, a} {
+		if v := p.Get(64); &v[0] != &want[0] {
+			t.Fatal("Get must hand out the retained slices")
+		}
+	}
+	if got := p.RetainedBytes(); got != 0 {
+		t.Fatalf("retained %d bytes after emptying the pool", got)
+	}
+	if v := p.Get(64); &v[0] == &d[0] {
+		t.Fatal("a slice released past the cap must not be kept")
+	}
+
+	p.Put(a)
+	p.Put(p.Get(1024)) // over the cap on its own: dropped
+	if got := p.RetainedBytes(); got != slice {
+		t.Fatalf("retained %d bytes, want %d", got, slice)
+	}
+	for range trimAfter {
+		p.Trim()
+	}
+	if got := p.RetainedBytes(); got != 0 {
+		t.Fatalf("retained %d bytes after Trim dropped every class", got)
+	}
+
+	p.SetMaxRetainedBytes(0) // back to the default
+	p.Put(a)
+	p.Put(make([]uint32, 1024))
+	if got := p.RetainedBytes(); got != slice+1024*4 {
+		t.Fatalf("retained %d bytes, want %d", got, slice+1024*4)
+	}
+	p.Drain()
+	if got := p.RetainedBytes(); got != 0 {
+		t.Fatalf("retained %d bytes after Drain", got)
+	}
+}
