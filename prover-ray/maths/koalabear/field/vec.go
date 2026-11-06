@@ -416,7 +416,7 @@ func VecBatchInvBase(res, a []Element) {
 // using the batch-inversion trick. Zeroes map to zero. res and a must have
 // equal length; res may alias a.
 func VecBatchInvExt(res, a []Ext) {
-	BatchInvertExtInto(a, res)
+	BatchInvertExtInto(res, a)
 }
 
 // VecBatchInvInto sets res[i] = 1/a[i] for all i, dispatching on the field
