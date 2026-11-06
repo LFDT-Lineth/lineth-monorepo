@@ -2,11 +2,13 @@
 // single root proof through a tree of merges of up to [RecursionTreeArity]
 // nodes each, performed by a [Merger]. The recursion machine (package
 // recursion) will implement the merger for production; for dev and test,
-// [RecursionMerger] proves the merges with the machine's node program without
+// [RecursionMerger] proves the merges with the machine's node programs without
 // verifying the children, and [MockMerger] produces no proof at all.
 //
 // Every node of the tree exposes the public-input layout of a shard proof
-// (see zkcdriver/risc5). Across shards, the message-bus products multiply and
+// (see zkcdriver/risc5), a merged node possibly followed by public inputs of
+// its own (the recursion machine's key box, see package recursion/node).
+// Across shards, the message-bus products multiply and
 // the shared randomness contributions add; the program VK, the guest output
 // and the shared randomness seed γ are the same on every shard. At the root,
 // every message-bus handle balances and γ is the seed the contributions add
@@ -14,11 +16,12 @@
 // the conglomeration (see the soundness precondition in package messagebus).
 //
 // A merge takes children of one [Kind] only: shard proofs are verified by the
-// leaf verifier of the recursion machine and merged nodes by its internal
-// verifier, two different programs, and a merged node will carry a public
-// input (the verification key of the node program) that a shard proof lacks.
-// A lone shard proof is lifted into a merged node by a single-child merge, so
-// the root checks only ever run on a merged node.
+// leaf program of the recursion machine and merged nodes by its internal
+// program, two different programs, and a merged node carries a public input
+// (the key box) that a shard proof lacks. Merged nodes of any depth merge
+// together: the internal program serves every level, so the tree has any
+// shape. A lone shard proof is lifted into a merged node by a single-child
+// merge, so the root checks only ever run on a merged node.
 package conglomeration
 
 import (

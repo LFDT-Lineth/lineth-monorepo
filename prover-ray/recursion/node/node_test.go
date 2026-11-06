@@ -34,6 +34,22 @@ func testLayout(numBus int, seeded bool) node.Layout {
 	return l
 }
 
+// tree compiles the three programs of a shard layout.
+type tree struct {
+	leaf, internal, root *node.Program
+}
+
+func newTree(t *testing.T, l node.Layout) tree {
+	t.Helper()
+	leaf, err := node.NewLeaf(l, testOpts...)
+	require.NoError(t, err)
+	internal, err := node.NewInternal(l, testOpts...)
+	require.NoError(t, err)
+	root, err := node.NewRoot(l, internal.Key(), testOpts...)
+	require.NoError(t, err)
+	return tree{leaf, internal, root}
+}
+
 // randExt returns a random E6 value.
 func randExt(r *rand.Rand) field.Ext {
 	var c recursion.Cell
@@ -43,7 +59,7 @@ func randExt(r *rand.Rand) field.Ext {
 	return recursion.CellE6(c)
 }
 
-// childPub returns the public inputs of a child of the layout: random bus
+// childPub returns the public inputs of a shard of the layout: random bus
 // products and contributions, and the values 100+pos of the equal roles,
 // shared by every child.
 func childPub(r *rand.Rand, l node.Layout) wiop.PublicInput {
@@ -61,9 +77,10 @@ func childPub(r *rand.Rand, l node.Layout) wiop.PublicInput {
 	return pub
 }
 
-// want returns the public inputs a node of the children should expose.
-func want(l node.Layout, children []wiop.PublicInput) wiop.PublicInput {
-	pub := append(wiop.PublicInput{}, children[0]...)
+// want returns the public inputs a node of the children should expose over
+// the shard layout l: the children combined, then the key box.
+func want(l node.Layout, key field.Octuplet, children ...wiop.PublicInput) wiop.PublicInput {
+	pub := append(wiop.PublicInput{}, children[0][:len(l)]...)
 	for pos, role := range l {
 		for _, child := range children[1:] {
 			switch role.Op {
@@ -73,6 +90,9 @@ func want(l node.Layout, children []wiop.PublicInput) wiop.PublicInput {
 				pub[pos] = pub[pos].Add(child[pos])
 			}
 		}
+	}
+	for _, limb := range key {
+		pub = append(pub, field.ElemFromBase(limb))
 	}
 	return pub
 }
@@ -87,58 +107,125 @@ func requirePubEqual(t *testing.T, want, got wiop.PublicInput, msg string) {
 	}
 }
 
-// TestNew_Aggregates checks that a node proof exposes the layout, with the
-// products multiplied, the contributions added and the shared values
-// propagated, for 1 to Arity children.
+// shards returns n shards of the layout.
+func shards(r *rand.Rand, l node.Layout, n int) []node.Child {
+	children := make([]node.Child, n)
+	for c := range children {
+		children[c] = node.Child{Pub: childPub(r, l)}
+	}
+	return children
+}
+
+// pubs returns the public inputs of children.
+func pubs(children []node.Child) []wiop.PublicInput {
+	res := make([]wiop.PublicInput, len(children))
+	for c, child := range children {
+		res[c] = child.Pub
+	}
+	return res
+}
+
+// TestNew_Aggregates checks that a node proof exposes the node layout, with
+// the products multiplied, the contributions added, the shared values
+// propagated and the key box set, for 1 to Arity children of a leaf, then of
+// an internal node over leaf and internal nodes.
 func TestNew_Aggregates(t *testing.T) {
 	r := rand.New(rand.NewPCG(1, 2))
 	l := testLayout(2, true)
-	p, err := node.New(l, false, testOpts...)
-	require.NoError(t, err)
-	for pos, role := range l {
-		_, got := p.Sys.LookupPublicInputByTag(role.Tag, role.Index)
-		require.Equal(t, pos, got, "%s_%d should be at its position in the layout", role.Tag, role.Index)
+	tr := newTree(t, l)
+	require.NotEqual(t, field.Octuplet{}, tr.leaf.Key(), "a program should have a key")
+	require.NotEqual(t, tr.leaf.Key(), tr.internal.Key(), "the programs should have different keys")
+	require.NotEqual(t, tr.internal.Key(), tr.root.Key(), "the programs should have different keys")
+	for _, p := range []*node.Program{tr.leaf, tr.internal, tr.root} {
+		for pos, role := range p.Layout {
+			_, got := p.Sys.LookupPublicInputByTag(role.Tag, role.Index)
+			require.Equal(t, pos, got, "%s_%d should be at its position in the layout", role.Tag, role.Index)
+		}
 	}
 
+	var leaves []node.Child
 	for _, n := range []int{1, 2, node.Arity} {
-		children := make([]wiop.PublicInput, n)
-		for c := range children {
-			children[c] = childPub(r, l)
-		}
-		_, pub, err := p.ProveChildren(children...)
-		require.NoError(t, err, "%d children", n)
-		requirePubEqual(t, want(l, children), pub, "the node should combine its children")
+		children := shards(r, l, n)
+		_, pub, err := tr.leaf.ProveChildren(field.Octuplet{}, children...)
+		require.NoError(t, err, "%d shards", n)
+		requirePubEqual(t, want(l, field.Octuplet{}, pubs(children)...), pub, "the leaf should combine its shards")
+		leaves = append(leaves, node.Child{Pub: pub, Leaf: true})
 	}
+
+	key := tr.internal.Key()
+	_, pub, err := tr.internal.ProveChildren(key, leaves...)
+	require.NoError(t, err, "an internal node over leaves")
+	requirePubEqual(t, want(l, key, pubs(leaves)...), pub, "the internal node should combine the leaves")
+	internal := node.Child{Pub: pub}
+
+	children := append([]node.Child{internal}, leaves...)
+	_, pub, err = tr.internal.ProveChildren(key, children...)
+	require.NoError(t, err, "an internal node over an internal node and leaves")
+	requirePubEqual(t, want(l, key, pubs(children)...), pub, "the internal node should combine both kinds")
+	got, err := node.KeyOf(pub)
+	require.NoError(t, err)
+	require.Equal(t, key, got, "the key box should be the internal key")
 }
 
-// TestNew_Rejects checks that children disagreeing on a propagated value, or
-// an unbalanced root, fail at verification.
+// TestNew_Rejects checks that children disagreeing on a propagated value, a
+// key box breaking the key rule, a root with a foreign key box or an
+// unbalanced root fail at verification.
 func TestNew_Rejects(t *testing.T) {
 	r := rand.New(rand.NewPCG(3, 4))
 	l := testLayout(1, false)
-	nodeP, err := node.New(l, false, testOpts...)
-	require.NoError(t, err)
-	rootP, err := node.New(l, true, testOpts...)
-	require.NoError(t, err)
+	tr := newTree(t, l)
+	key := tr.internal.Key()
+	leaf := func() node.Child {
+		_, pub, err := tr.leaf.ProveChildren(field.Octuplet{}, shards(r, l, 1)...)
+		require.NoError(t, err)
+		return node.Child{Pub: pub, Leaf: true}
+	}
+	internal := func() node.Child {
+		_, pub, err := tr.internal.ProveChildren(key, leaf())
+		require.NoError(t, err)
+		return node.Child{Pub: pub}
+	}
+	foreign := key
+	foreign[0].Add(&foreign[0], new(field.Element).SetOne())
 
 	cases := []struct {
 		name string
 		run  func() error
 	}{
 		{name: "different VK limb", run: func() error {
-			a, b := childPub(r, l), childPub(r, l)
-			b[5] = b[5].Add(field.ElemOne())
-			_, _, err := nodeP.ProveChildren(a, b)
+			a, b := shards(r, l, 2)[0], shards(r, l, 1)[0]
+			b.Pub[5] = b.Pub[5].Add(field.ElemOne())
+			_, _, err := tr.leaf.ProveChildren(field.Octuplet{}, a, b)
 			return err
 		}},
 		{name: "different output byte", run: func() error {
-			a, b := childPub(r, l), childPub(r, l)
-			b[0] = b[0].Add(field.ElemOne())
-			_, _, err := nodeP.ProveChildren(a, b)
+			a, b := shards(r, l, 2)[0], shards(r, l, 1)[0]
+			b.Pub[0] = b.Pub[0].Add(field.ElemOne())
+			_, _, err := tr.leaf.ProveChildren(field.Octuplet{}, a, b)
+			return err
+		}},
+		{name: "node child with a different key box", run: func() error {
+			_, _, err := tr.internal.ProveChildren(foreign, internal())
+			return err
+		}},
+		{name: "node child flagged as a leaf", run: func() error {
+			child := internal()
+			child.Leaf = true
+			_, _, err := tr.internal.ProveChildren(key, child)
+			return err
+		}},
+		{name: "leaf child flagged as a node", run: func() error {
+			child := leaf()
+			child.Leaf = false
+			_, _, err := tr.internal.ProveChildren(key, child)
+			return err
+		}},
+		{name: "root with a foreign key box", run: func() error {
+			_, _, err := tr.root.ProveChildren(foreign, leaf())
 			return err
 		}},
 		{name: "unbalanced root", run: func() error {
-			_, _, err := rootP.ProveChildren(childPub(r, l))
+			_, _, err := tr.root.ProveChildren(key, leaf())
 			return err
 		}},
 	}
@@ -149,15 +236,20 @@ func TestNew_Rejects(t *testing.T) {
 	}
 
 	t.Run("balanced root", func(t *testing.T) {
-		a, b := childPub(r, l), childPub(r, l)
-		bus := a[6].AsExt()
+		a, b := shards(r, l, 2)[0], shards(r, l, 1)[0]
+		bus := a.Pub[6].AsExt()
 		var inv field.Ext
 		inv.Inverse(&bus)
-		b[6] = field.ElemFromExt(inv)
-		_, pub, err := rootP.ProveChildren(a, b)
+		b.Pub[6] = field.ElemFromExt(inv)
+		_, pub, err := tr.leaf.ProveChildren(field.Octuplet{}, a, b)
+		require.NoError(t, err)
+		_, pub, err = tr.root.ProveChildren(key, node.Child{Pub: pub, Leaf: true})
 		require.NoError(t, err)
 		product := pub[6].AsExt()
 		require.True(t, product.IsOne(), "the root should expose a balanced bus")
+		got, err := node.KeyOf(pub)
+		require.NoError(t, err)
+		require.Equal(t, key, got, "the root should expose the internal key")
 	})
 }
 
@@ -166,32 +258,33 @@ func TestNew_Rejects(t *testing.T) {
 func TestNew_InvalidArguments(t *testing.T) {
 	r := rand.New(rand.NewPCG(5, 6))
 	l := testLayout(1, false)
-	p, err := node.New(l, false, testOpts...)
-	require.NoError(t, err)
+	tr := newTree(t, l)
 
-	_, err = node.New(nil, false, testOpts...)
+	_, err := node.NewLeaf(nil, testOpts...)
 	require.ErrorContains(t, err, "empty layout")
+	_, err = node.NewLeaf(l.WithKey(), testOpts...)
+	require.ErrorContains(t, err, "has a key box")
+	_, err = node.KeyOf(childPub(r, l)[:3])
+	require.ErrorContains(t, err, "no key box")
 
-	tooMany := make([]wiop.PublicInput, node.Arity+1)
-	for c := range tooMany {
-		tooMany[c] = childPub(r, l)
-	}
 	short := childPub(r, l)[:3]
 	extVK := childPub(r, l)
 	extVK[5] = field.ElemFromExt(extVK[5].AsExt())
 	cases := []struct {
 		name     string
-		children []wiop.PublicInput
+		program  *node.Program
+		children []node.Child
 		wantErr  string
 	}{
-		{name: "no child", children: nil, wantErr: "0 children, want 1 to 6"},
-		{name: "too many children", children: tooMany, wantErr: "7 children, want 1 to 6"},
-		{name: "wrong length", children: []wiop.PublicInput{short}, wantErr: "3 public inputs, want 7"},
-		{name: "extension VK limb", children: []wiop.PublicInput{extVK}, wantErr: "VK_1 is not a base field element"},
+		{name: "no child", program: tr.leaf, children: nil, wantErr: "0 children, want 1 to 6"},
+		{name: "too many children", program: tr.leaf, children: shards(r, l, node.Arity+1), wantErr: "7 children, want 1 to 6"},
+		{name: "wrong length", program: tr.leaf, children: []node.Child{{Pub: short}}, wantErr: "3 public inputs, want 7"},
+		{name: "shard as a node child", program: tr.internal, children: shards(r, l, 1), wantErr: "7 public inputs, want 15"},
+		{name: "extension VK limb", program: tr.leaf, children: []node.Child{{Pub: extVK}}, wantErr: "VK_1 is not a base field element"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := p.Inputs(tc.children...)
+			_, err := tc.program.Inputs(field.Octuplet{}, tc.children...)
 			require.ErrorContains(t, err, tc.wantErr)
 		})
 	}
@@ -214,6 +307,7 @@ func TestLayoutOf(t *testing.T) {
 		{Tag: "A", Index: 0, Ext: true, Op: node.OpMul},
 		{Tag: "B", Index: 1, Op: node.OpEqual},
 	}, l, "roles should be at the positions of their public inputs")
+	require.Len(t, l.WithKey(), 3+node.NumKey, "the node layout should append the key box")
 
 	_, err = node.LayoutOf(sys, map[wiop.PublicInputTag]node.Op{"A": node.OpMul})
 	require.ErrorContains(t, err, "public input 0 (B_0) has no role")
