@@ -30,24 +30,19 @@ func newPooledTestSystem(n int) (*wiop.System, *wiop.Column) {
 // holds no reference into them.
 func TestCompileReusesPooledBuffers(t *testing.T) {
 	const n = 1 << 12
-	drainPools := func() {
-		field.BasePool.Drain()
-		field.ExtPool.Drain()
-		field.OctupletPool.Drain()
-	}
 	sys, col := newPooledTestSystem(n)
 	proofA, pubA := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, baseVec(n, 3)) })
 	require.NoError(t, sys.Verify(proofA, pubA))
 	proofB, pubB := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, baseVec(n, 5)) })
 	require.NoError(t, sys.Verify(proofB, pubB), "a proof on pooled buffers must verify")
 
-	drainPools()
+	field.DrainPools()
 	fresh, freshCol := newPooledTestSystem(n)
 	want, wantPub := fresh.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(freshCol, baseVec(n, 5)) })
 	require.Equal(t, want, proofB, "a proof on pooled buffers must equal a fresh one")
 	require.Equal(t, wantPub, pubB)
 
-	drainPools()
+	field.DrainPools()
 	freshA, freshACol := newPooledTestSystem(n)
 	wantA, _ := freshA.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(freshACol, baseVec(n, 3)) })
 	require.Equal(t, wantA, proofA, "a proof must not change when a later proof reuses its buffers")
