@@ -12207,6 +12207,294 @@ const scenario_74 = Scenario{
     },
 };
 
+pub const system_75_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
+    .total_round_coins = 2,
+    .dynamic_module_count = 1,
+};
+pub const system_75_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 1, 1, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
+};
+
+// scenario: "dyn-fib-multisize"
+
+// expression: "fib"
+const system_75_module_0_expressions = [_]vanishing.ExprNode{
+    .{ .column_claim = 0 }, // col: "col"
+    .{ .column_claim = 1 }, // col: "col"
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
+    .{ .column_claim = 2 }, // col: "col"
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
+};
+
+const system_75_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
+    // expression: "fib"
+    .{ .expression = 4, .cancelled_positions = &.{ 0, 1 } },
+};
+
+const system_75_module_0_buckets = [_]vanishing.Bucket{
+    .{ .ratio = 1, .vanishings = &system_75_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
+};
+
+const system_75_modules = [_]vanishing.Module{
+    // module: "mod"
+    .{ .size = .{ .dynamic = 0 }, .expressions = &system_75_module_0_expressions, .buckets = &system_75_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
+};
+
+// system: "dyn-fib-multisize"
+const system_75 = vanishing.System{
+    .modules = &system_75_modules,
+    .dynamic_module_count = 1,
+    .total_witness_claims = 3,
+    .total_quotient_claims = 1,
+};
+
+// logderiv system: "dyn-fib-multisize"
+const system_75_logderiv_queries = [_]logderivativesum.Query{};
+
+const system_75_logderiv = logderivativesum.System{ .queries = &system_75_logderiv_queries };
+// grandproduct system: "dyn-fib-multisize"
+const system_75_grandproduct_queries = [_]grandproduct.Query{};
+
+const system_75_grandproduct = grandproduct.System{ .queries = &system_75_grandproduct_queries };
+// rowlimit system: "dyn-fib-multisize"
+const system_75_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_75_rowlimit = rowlimit.System{ .checks = &system_75_rowlimit_checks };
+// shared-randomness system: "dyn-fib-multisize"
+const system_75_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_75_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_75_shared_randomness_contribution_refs };
+const scenario_75 = Scenario{
+    .name = "DynamicFibonacciMultiSizeBlowup4",
+    .spec = system_75_spec,
+    .public_input = system_75_public_input,
+    .system = system_75,
+    .logderiv = system_75_logderiv,
+    .honest = .{
+        .rounds = &.{
+            .{
+                .commitment = .{ 42316228, 1709454099, 73713984, 205432107, 1989184636, 2012075707, 634585249, 1101983018 },
+                .cells = &.{
+                    .{ .base = 0 },
+                },
+            },
+            .{
+                .commitment = .{ 537961123, 1051228512, 160743038, 372428606, 565670854, 1560861531, 1256971375, 1475222048 },
+                .cells = &.{
+                    .{ .base = 0 },
+                },
+            },
+            .{
+                .cells = &.{
+                    .{ .ext = .{ 2083210108, 1827556219, 75985666, 429700184, 1519573890, 1412585456 } },
+                    .{ .ext = .{ 1371428826, 308287616, 1342230916, 654800972, 1181486037, 496388711 } },
+                    .{ .ext = .{ 1834855872, 2075920677, 1896879557, 1791320024, 109583893, 266630438 } },
+                    .{ .ext = .{ 853504361, 1734435381, 1910005107, 1076410132, 853450484, 1300252284 } },
+                },
+            },
+        },
+        .public_inputs = &.{},
+        .witness_claims = &.{ .{ 2083210108, 1827556219, 75985666, 429700184, 1519573890, 1412585456 }, .{ 1371428826, 308287616, 1342230916, 654800972, 1181486037, 496388711 }, .{ 1834855872, 2075920677, 1896879557, 1791320024, 109583893, 266630438 } },
+        .quotient_claims = &.{.{ 853504361, 1734435381, 1910005107, 1076410132, 853450484, 1300252284 }},
+        .module_sizes = &.{8},
+    },
+};
+
+pub const system_76_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
+    .total_round_coins = 2,
+    .dynamic_module_count = 1,
+};
+pub const system_76_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 1, 1, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
+};
+
+// scenario: "dyn-fib-multisize"
+
+// expression: "fib"
+const system_76_module_0_expressions = [_]vanishing.ExprNode{
+    .{ .column_claim = 0 }, // col: "col"
+    .{ .column_claim = 1 }, // col: "col"
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
+    .{ .column_claim = 2 }, // col: "col"
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
+};
+
+const system_76_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
+    // expression: "fib"
+    .{ .expression = 4, .cancelled_positions = &.{ 0, 1 } },
+};
+
+const system_76_module_0_buckets = [_]vanishing.Bucket{
+    .{ .ratio = 1, .vanishings = &system_76_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
+};
+
+const system_76_modules = [_]vanishing.Module{
+    // module: "mod"
+    .{ .size = .{ .dynamic = 0 }, .expressions = &system_76_module_0_expressions, .buckets = &system_76_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
+};
+
+// system: "dyn-fib-multisize"
+const system_76 = vanishing.System{
+    .modules = &system_76_modules,
+    .dynamic_module_count = 1,
+    .total_witness_claims = 3,
+    .total_quotient_claims = 1,
+};
+
+// logderiv system: "dyn-fib-multisize"
+const system_76_logderiv_queries = [_]logderivativesum.Query{};
+
+const system_76_logderiv = logderivativesum.System{ .queries = &system_76_logderiv_queries };
+// grandproduct system: "dyn-fib-multisize"
+const system_76_grandproduct_queries = [_]grandproduct.Query{};
+
+const system_76_grandproduct = grandproduct.System{ .queries = &system_76_grandproduct_queries };
+// rowlimit system: "dyn-fib-multisize"
+const system_76_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_76_rowlimit = rowlimit.System{ .checks = &system_76_rowlimit_checks };
+// shared-randomness system: "dyn-fib-multisize"
+const system_76_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_76_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_76_shared_randomness_contribution_refs };
+const scenario_76 = Scenario{
+    .name = "DynamicFibonacciMultiSizeBlowup8",
+    .spec = system_76_spec,
+    .public_input = system_76_public_input,
+    .system = system_76,
+    .logderiv = system_76_logderiv,
+    .honest = .{
+        .rounds = &.{
+            .{
+                .commitment = .{ 1509572064, 1094539135, 816592934, 851945094, 841195883, 36060891, 389924301, 1872555448 },
+                .cells = &.{
+                    .{ .base = 0 },
+                },
+            },
+            .{
+                .commitment = .{ 1114476371, 1038865894, 473667093, 74022063, 117027593, 1309745187, 1574920004, 754499022 },
+                .cells = &.{
+                    .{ .base = 0 },
+                },
+            },
+            .{
+                .cells = &.{
+                    .{ .ext = .{ 559693889, 540274588, 619807977, 534525063, 2076573684, 762581248 } },
+                    .{ .ext = .{ 1799486044, 1111472487, 1084584966, 795220705, 1318477305, 932460851 } },
+                    .{ .ext = .{ 58590223, 1800637544, 832110099, 1123931924, 2083745153, 1072065524 } },
+                    .{ .ext = .{ 1515670261, 1454668805, 1623786386, 2042308177, 479167485, 645548761 } },
+                },
+            },
+        },
+        .public_inputs = &.{},
+        .witness_claims = &.{ .{ 559693889, 540274588, 619807977, 534525063, 2076573684, 762581248 }, .{ 1799486044, 1111472487, 1084584966, 795220705, 1318477305, 932460851 }, .{ 58590223, 1800637544, 832110099, 1123931924, 2083745153, 1072065524 } },
+        .quotient_claims = &.{.{ 1515670261, 1454668805, 1623786386, 2042308177, 479167485, 645548761 }},
+        .module_sizes = &.{8},
+    },
+};
+
+pub const system_77_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
+    .total_round_coins = 2,
+    .dynamic_module_count = 1,
+};
+pub const system_77_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 1, 1, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
+};
+
+// scenario: "dyn-fib-multisize"
+
+// expression: "fib"
+const system_77_module_0_expressions = [_]vanishing.ExprNode{
+    .{ .column_claim = 0 }, // col: "col"
+    .{ .column_claim = 1 }, // col: "col"
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
+    .{ .column_claim = 2 }, // col: "col"
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
+};
+
+const system_77_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
+    // expression: "fib"
+    .{ .expression = 4, .cancelled_positions = &.{ 0, 1 } },
+};
+
+const system_77_module_0_buckets = [_]vanishing.Bucket{
+    .{ .ratio = 1, .vanishings = &system_77_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
+};
+
+const system_77_modules = [_]vanishing.Module{
+    // module: "mod"
+    .{ .size = .{ .dynamic = 0 }, .expressions = &system_77_module_0_expressions, .buckets = &system_77_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
+};
+
+// system: "dyn-fib-multisize"
+const system_77 = vanishing.System{
+    .modules = &system_77_modules,
+    .dynamic_module_count = 1,
+    .total_witness_claims = 3,
+    .total_quotient_claims = 1,
+};
+
+// logderiv system: "dyn-fib-multisize"
+const system_77_logderiv_queries = [_]logderivativesum.Query{};
+
+const system_77_logderiv = logderivativesum.System{ .queries = &system_77_logderiv_queries };
+// grandproduct system: "dyn-fib-multisize"
+const system_77_grandproduct_queries = [_]grandproduct.Query{};
+
+const system_77_grandproduct = grandproduct.System{ .queries = &system_77_grandproduct_queries };
+// rowlimit system: "dyn-fib-multisize"
+const system_77_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_77_rowlimit = rowlimit.System{ .checks = &system_77_rowlimit_checks };
+// shared-randomness system: "dyn-fib-multisize"
+const system_77_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_77_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_77_shared_randomness_contribution_refs };
+const scenario_77 = Scenario{
+    .name = "DynamicFibonacciMultiSizeBlowup16",
+    .spec = system_77_spec,
+    .public_input = system_77_public_input,
+    .system = system_77,
+    .logderiv = system_77_logderiv,
+    .honest = .{
+        .rounds = &.{
+            .{
+                .commitment = .{ 651125957, 1236605274, 853388830, 702312388, 225545628, 298278002, 253206948, 1687553257 },
+                .cells = &.{
+                    .{ .base = 0 },
+                },
+            },
+            .{
+                .commitment = .{ 582734498, 1895387610, 1222741571, 430961964, 1034511995, 2016391927, 825299415, 61272177 },
+                .cells = &.{
+                    .{ .base = 0 },
+                },
+            },
+            .{
+                .cells = &.{
+                    .{ .ext = .{ 1439729798, 2049136785, 1305469037, 1330730487, 413829221, 1157767784 } },
+                    .{ .ext = .{ 638160991, 1757760650, 1714901546, 1897890673, 205012071, 908521227 } },
+                    .{ .ext = .{ 231154732, 285294513, 843590845, 1211447911, 85113371, 748951362 } },
+                    .{ .ext = .{ 651087716, 1182373433, 2006747728, 1526325521, 1949227487, 901061573 } },
+                },
+            },
+        },
+        .public_inputs = &.{},
+        .witness_claims = &.{ .{ 1439729798, 2049136785, 1305469037, 1330730487, 413829221, 1157767784 }, .{ 638160991, 1757760650, 1714901546, 1897890673, 205012071, 908521227 }, .{ 231154732, 285294513, 843590845, 1211447911, 85113371, 748951362 } },
+        .quotient_claims = &.{.{ 651087716, 1182373433, 2006747728, 1526325521, 1949227487, 901061573 }},
+        .module_sizes = &.{8},
+    },
+};
+
 pub const scenarios = [_]Scenario{
     scenario_0,
     scenario_1,
@@ -12283,4 +12571,7 @@ pub const scenarios = [_]Scenario{
     scenario_72,
     scenario_73,
     scenario_74,
+    scenario_75,
+    scenario_76,
+    scenario_77,
 };
