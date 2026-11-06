@@ -13,7 +13,7 @@ interface IAcceptShnarfData is IShnarfDataAcceptorBase {
    * @dev OPERATOR_ROLE is required to execute.
    * @param _parentShnarf The parent shnarf.
    * @param _shnarf The shnarf to indicate exists.
-   * @param _finalStateRootHash The final state root hash in the data.
+   * @param _finalBlockHash The final L2 block hash in the data.
    */
-  function acceptShnarfData(bytes32 _parentShnarf, bytes32 _shnarf, bytes32 _finalStateRootHash) external;
+  function acceptShnarfData(bytes32 _parentShnarf, bytes32 _shnarf, bytes32 _finalBlockHash) external;
 }
