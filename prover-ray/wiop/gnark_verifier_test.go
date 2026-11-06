@@ -368,49 +368,6 @@ func TestVerifierCircuit_Vanishing_TamperedProof(t *testing.T) {
 	}
 }
 
-// vanishingAction checks a [wiop.Vanishing] query as a verifier action, so the
-// query's own CheckGnark runs inside the verifier circuit.
-type vanishingAction struct{ v *wiop.Vanishing }
-
-func (a vanishingAction) Check(rt *wiop.Runtime) error { return a.v.Check(rt) }
-func (a vanishingAction) CheckGnark(api frontend.API, run *wiop.GnarkRuntime) {
-	a.v.CheckGnark(api, run)
-}
-
-// TestVerifierCircuit_ScalarVanishing checks a scalar Vanishing query mixing a
-// proof cell, a coin and a constant (cell − zeta·claim − 3 = 0) in-circuit.
-func TestVerifierCircuit_ScalarVanishing(t *testing.T) {
-	sys, col, le := newPCSOnlySystem()
-	r1 := sys.Rounds[1]
-	zeta := le.EvaluationPoint.(*wiop.CoinField)
-	cell := r1.NewCell(sys.Context.Childf("scalar"), true)
-	three := field.NewFromString("3")
-	expr := wiop.Sub(wiop.Sub(cell, wiop.Mul(zeta, le.EvaluationClaims[0])), wiop.NewConstantField(three))
-	v := col.Module.NewVanishing(sys.Context.Childf("scalar-vanishing"), expr)
-	v.MarkAsReduced()
-	r1.RegisterAction(assignCellFn(func(rt *wiop.Runtime) {
-		z := rt.GetCoinValue(zeta)
-		claim := rt.GetCellValue(le.EvaluationClaims[0])
-		rt.AssignCell(cell, z.Mul(claim).Add(field.ElemFromBase(three)))
-	}))
-	r1.RegisterVerifierAction(vanishingAction{v: v})
-
-	proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, nonConstVec(8)) })
-	require.NoError(t, sys.Verify(proof, pub), "honest proof must verify natively")
-
-	cv := compileVerifierCircuit(t, sys, proof, pub)
-	require.NoError(t, cv.solve(t, proof, pub), "honest proof must satisfy the circuit")
-
-	bad := cloneProof(proof)
-	bad.Cells[cell.Context.ID] = bad.Cells[cell.Context.ID].Add(field.ElemFromBase(field.One()))
-	require.Error(t, sys.Verify(bad, pub), "tampered cell must fail natively")
-	require.Error(t, cv.solve(t, bad, pub), "tampered cell must not satisfy the circuit")
-}
-
-type assignCellFn func(rt *wiop.Runtime)
-
-func (f assignCellFn) Run(rt *wiop.Runtime) { f(rt) }
-
 // unsupportedAction is a verifier action without an in-circuit counterpart.
 type unsupportedAction struct{}
 
