@@ -122,10 +122,18 @@ func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 		}
 	}
 
-	// The zero codeword (nil) folds into the zero codeword.
+	// The zero codeword (nil) folds into the zero codeword. The layer folded
+	// from, and the running codeword it was combined from, are dead once
+	// folded: the tree committing to the running codeword holds its own copy
+	// of the values, which is what the queries open.
+	previous := st.running
 	st.running = nil
 	if primary != nil {
 		st.running = foldLayerInternally(primary, alpha, st.p.domains[j])
+		field.ExtPool.Put(primary)
+	}
+	if previous != nil && (primary == nil || &previous[0] != &primary[0]) {
+		field.ExtPool.Put(previous)
 	}
 	st.round = j + 1
 
@@ -148,6 +156,8 @@ func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 			}
 		}
 		st.FinalPoly = coeffs[:f]
+		field.ExtPool.Put(st.running)
+		st.running = nil
 		return field.Octuplet{}
 	}
 
@@ -190,4 +200,17 @@ func (st *ProverState) Open(openedPositions []int) Proof {
 	})
 
 	return st.Proof
+}
+
+// Release returns the Merkle trees of the committed folding layers to the
+// octuplet pool. It must be called only once the proof is opened, and the
+// state must not be used afterwards; the Proof returned by Open holds copies
+// of everything it took from the trees.
+func (st *ProverState) Release() {
+	for j, tree := range st.trees {
+		if t, ok := tree.(*Tree); ok {
+			field.OctupletPool.Put(t.Nodes)
+		}
+		st.trees[j] = nil
+	}
 }
