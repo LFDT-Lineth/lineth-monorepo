@@ -7,6 +7,15 @@
 // computing. Where transparent huge pages are enabled on request (the
 // "madvise" mode), advising a buffer before its first touch makes each fault
 // map 2 MiB instead of 4 KiB.
+//
+// The gain depends on the host's THP mode
+// (/sys/kernel/mm/transparent_hugepage/enabled): under "madvise" it comes
+// from this advice; under "always" the kernel uses huge pages anyway and the
+// advice changes nothing; under "never" the advice is ignored. Each advice
+// also splits the VMA holding the range (adjacent advised ranges merge back),
+// so the number of VMAs it creates is bounded by the heap size over 2 MiB:
+// about 11k for a 22 GiB heap, under the kernel's default vm.max_map_count
+// of 65530, but a heap above 128 GiB could approach that limit.
 package hugepage
 
 import "unsafe"
@@ -24,12 +33,13 @@ func Advise[T any](v []T) {
 	if len(v) == 0 {
 		return
 	}
-	start := uintptr(unsafe.Pointer(unsafe.SliceData(v)))
+	base := unsafe.Pointer(unsafe.SliceData(v))
+	start := uintptr(base)
 	end := start + uintptr(len(v))*unsafe.Sizeof(v[0])
 	lo := (start + hugePageSize - 1) &^ (hugePageSize - 1)
 	hi := end &^ (hugePageSize - 1)
 	if hi <= lo {
 		return
 	}
-	advise(lo, hi-lo)
+	advise(unsafe.Slice((*byte)(unsafe.Add(base, lo-start)), hi-lo))
 }

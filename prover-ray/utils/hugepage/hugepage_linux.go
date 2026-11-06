@@ -2,8 +2,11 @@
 
 package hugepage
 
-import "syscall"
+import "golang.org/x/sys/unix"
 
-func advise(addr, length uintptr) {
-	_, _, _ = syscall.Syscall(syscall.SYS_MADVISE, addr, length, syscall.MADV_HUGEPAGE)
+// advise asks for transparent huge pages over b, whose bounds are huge-page
+// aligned. The advice is a hint: its error (e.g. EINVAL on a kernel built
+// without THP) is ignored.
+func advise(b []byte) {
+	_ = unix.Madvise(b, unix.MADV_HUGEPAGE)
 }

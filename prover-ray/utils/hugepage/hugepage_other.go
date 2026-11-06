@@ -2,4 +2,4 @@
 
 package hugepage
 
-func advise(_, _ uintptr) {}
+func advise(_ []byte) {}
