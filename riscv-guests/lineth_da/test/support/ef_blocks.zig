@@ -265,18 +265,32 @@ pub const Located = struct {
     fact: Fact,
 };
 
-/// Block `index` of the case `case_name` in the fixture file `path`, which is relative to the corpus
-/// directory `corpus_dir`. The block is one the fixture accepts, or `error.BlockNotAccepted`; it and
-/// the file's other allocations belong to `arena`.
-pub fn locate(arena: Allocator, io: std.Io, corpus_dir: []const u8, path: []const u8, case_name: []const u8, index: usize) !Located {
+/// The case `case_name` of the fixture file `path`, which is relative to the corpus directory
+/// `corpus_dir`. It and the file's other allocations belong to `arena`.
+pub fn locateCase(arena: Allocator, io: std.Io, corpus_dir: []const u8, path: []const u8, case_name: []const u8) !Case {
     const full_path = try std.fs.path.join(arena, &.{ corpus_dir, path });
     const text = try std.Io.Dir.cwd().readFileAlloc(io, full_path, arena, .limited(1 << 30));
     const cases = try std.json.parseFromSliceLeaky(std.json.ArrayHashMap(RawCase), arena, text, .{ .ignore_unknown_fields = true });
     const raw = cases.map.get(case_name) orelse return error.CaseNotFound;
-    if (index >= raw.blocks.len) return error.BlockNotFound;
+    const blocks = try arena.alloc(?Fact, raw.blocks.len);
+    for (raw.blocks, blocks) |block, *fact| fact.* = try factOf(arena, block);
     return .{
+        .path = path,
+        .name = case_name,
         .chain_id = try std.fmt.parseInt(u64, raw.config.chainid, 0),
-        .fact = try factOf(arena, raw.blocks[index]) orelse return error.BlockNotAccepted,
+        .blocks = blocks,
+    };
+}
+
+/// Block `index` of the case `case_name` in the fixture file `path`, which is relative to the corpus
+/// directory `corpus_dir`. The block is one the fixture accepts, or `error.BlockNotAccepted`; it and
+/// the file's other allocations belong to `arena`.
+pub fn locate(arena: Allocator, io: std.Io, corpus_dir: []const u8, path: []const u8, case_name: []const u8, index: usize) !Located {
+    const case = try locateCase(arena, io, corpus_dir, path, case_name);
+    if (index >= case.blocks.len) return error.BlockNotFound;
+    return .{
+        .chain_id = case.chain_id,
+        .fact = case.blocks[index] orelse return error.BlockNotAccepted,
     };
 }
 

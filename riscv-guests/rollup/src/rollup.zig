@@ -133,7 +133,7 @@ pub fn run(allocator: Allocator, input: rollup_ssz.RollupProofPrivateInput) Erro
 /// The chunks bound to their hashes and the stream they carry parsed and decompressed against the
 /// canonical `payloads`.
 fn verifyDataAvailability(allocator: Allocator, input: rollup_ssz.RollupProofPrivateInput, payloads: []const []const u8) Error!decompress.Verified {
-    const decoder = lineth_da.zstd.Decoder.init(allocator, lineth_da.dictionary_v2025_04_21) catch |err| switch (err) {
+    const decoder = lineth_da.zstd_decoder.Decoder.init(allocator, lineth_da.dictionary_v2025_04_21) catch |err| switch (err) {
         error.OutOfMemory => return error.OutOfMemory,
         // The embedded dictionary is a well-formed zstd dictionary.
         error.InvalidDictionary => unreachable,

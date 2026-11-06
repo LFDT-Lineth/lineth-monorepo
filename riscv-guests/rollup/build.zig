@@ -13,12 +13,11 @@ pub fn build(b: *std.Build) void {
     if (!options.host_tools) return;
 
     const crypto = common.HostCrypto.forTarget(b, options.host_target, options.crypto) orelse return;
-    const unit = Host.init(b, options.host_target, .Debug);
+    const unit = Host.init(b, options.host_target, .Debug, null);
     const tools = addHostTools(b, unit, crypto);
-    addHostTests(b, unit, crypto);
+    addHostTests(b, options, unit, crypto);
     addFixtureStep(b, tools);
     addZkcSmokeStep(b, tools);
-    addReferenceStep(b, options, crypto);
 }
 
 /// Every `-D` option of this package, read once.
@@ -37,7 +36,7 @@ const Options = struct {
         // Keep `-Doptimize` exposed to dependency consumers and default to ReleaseSmall.
         const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseSmall)") orelse .ReleaseSmall;
         const host_tools = b.option(bool, "host-tools", "Build native test and helper targets") orelse false;
-        const zkevm_fixtures = b.option(std.Build.LazyPath, "zkevm-fixtures", "Directory holding the EF zkevm fixtures; enables the reference-test step");
+        const zkevm_fixtures = b.option(std.Build.LazyPath, "zkevm-fixtures", "Directory holding the EF zkevm fixtures; enables the test/reference suites");
         return .{
             .target = target,
             .optimize = optimize,
@@ -99,13 +98,21 @@ fn addGuestProgram(b: *std.Build, options: Options) void {
 /// What the native tests and tools of one optimize mode share: the modules they import.
 const Host = struct {
     native: common.NativeOptions,
-    lineth_da: *std.Build.Dependency,
 
-    fn init(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) Host {
+    /// `fixtures` is the directory of the EF zkevm fixtures the `ef_fixtures` module names.
+    fn init(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, fixtures: ?std.Build.LazyPath) Host {
         const deps = Deps.init(b, target, optimize, true);
         const package = common.createPackageModule(b, target, optimize, deps.package);
         const da_support = deps.lineth_da.module("support");
-        const zstd_compressor = deps.lineth_da.module("zstd_compressor");
+        const zstd_encoder = deps.lineth_da.module("zstd_encoder");
+        const ef_blocks = deps.lineth_da.module("ef_blocks");
+        const paths = b.addOptions();
+        if (fixtures) |dir| {
+            paths.addOptionPath("amsterdam_blocks", dir.path(b, "blockchain_tests/for_amsterdam"));
+        } else {
+            paths.addOption([]const u8, "amsterdam_blocks", "");
+        }
+        const ef_fixtures = paths.createModule();
         const support = b.createModule(.{
             .root_source_file = b.path("test/support.zig"),
             .target = target,
@@ -124,11 +131,12 @@ const Host = struct {
                 .{ .name = "core_serde", .module = deps.core_serde },
                 .{ .name = "lineth_da", .module = deps.lineth_da.module("lineth_da") },
                 .{ .name = "da_support", .module = da_support },
-                .{ .name = "zstd_compressor", .module = zstd_compressor },
+                .{ .name = "zstd_encoder", .module = zstd_encoder },
+                .{ .name = "ef_blocks", .module = ef_blocks },
+                .{ .name = "ef_fixtures", .module = ef_fixtures },
             },
         });
         return .{
-            .lineth_da = deps.lineth_da,
             // Tests run on the native host: a freestanding riscv64 target has no OS to run a
             // `std.testing` binary against.
             .native = .{
@@ -141,6 +149,8 @@ const Host = struct {
                     .{ .name = "lineth_da", .module = deps.lineth_da.module("lineth_da") },
                     .{ .name = "support", .module = support },
                     .{ .name = "scenario", .module = scenario },
+                    .{ .name = "ef_blocks", .module = ef_blocks },
+                    .{ .name = "ef_fixtures", .module = ef_fixtures },
                 }) catch @panic("OOM"),
             },
         };
@@ -155,10 +165,19 @@ fn addHostTools(b: *std.Build, host: Host, crypto: common.HostCrypto) Tools {
     return tools;
 }
 
-/// The `test/*_test.zig` suites.
-fn addHostTests(b: *std.Build, host: Host, crypto: common.HostCrypto) void {
-    const test_step = b.step("test", "Run native Zig unit tests for the rollup guest");
-    crypto.linkAll(common.addTests(b, test_step, host.native, .{}));
+/// The `test/*_test.zig` suites, and with `-Dzkevm-fixtures` the `test/reference/*_test.zig` suites
+/// over the Amsterdam blocks of the EF zkevm fixtures. The reference suites are compiled optimized:
+/// the corpus is gigabytes of JSON.
+fn addHostTests(b: *std.Build, options: Options, unit: Host, crypto: common.HostCrypto) void {
+    const test_step = b.step("test", "Run native Zig tests for the rollup guest");
+    crypto.linkAll(common.addTests(b, test_step, unit.native, .{}));
+
+    const fixtures = options.zkevm_fixtures orelse {
+        if (b.pkg_hash.len == 0) std.log.warn("test/reference skipped: pass -Dzkevm-fixtures=<dir> (`make test` does)", .{});
+        return;
+    };
+    const reference = Host.init(b, options.host_target, .ReleaseSafe, fixtures);
+    crypto.linkAll(common.addTests(b, test_step, reference.native, .{ .dir = "test/reference" }));
 }
 
 /// Runs `gen_fixture` with the arguments after `--`.
@@ -174,31 +193,4 @@ fn addZkcSmokeStep(b: *std.Build, tools: Tools) void {
     const zkc_smoke = b.addRunArtifact(tools.get("zkc_smoke").?);
     if (b.args) |args| zkc_smoke.addArgs(args);
     b.step("zkc-smoke", "Run a guest ELF under zkc and compare its output with the native statement's").dependOn(&zkc_smoke.step);
-}
-
-/// The `test/reference/*_test.zig` suites over the Amsterdam blocks of the EF zkevm fixtures, run
-/// by the `reference-test` step; without `-Dzkevm-fixtures` the step fails with the flag to pass.
-/// They are compiled optimized: the corpus is gigabytes of JSON.
-fn addReferenceStep(b: *std.Build, options: Options, crypto: common.HostCrypto) void {
-    const step = b.step("reference-test", "Run the rollup guest over consecutive blocks of the EF zkevm fixtures");
-    const fixtures = options.zkevm_fixtures orelse {
-        step.dependOn(&b.addFail("needs -Dzkevm-fixtures=<dir>; use `make -C riscv-guests/rollup reference-test`").step);
-        return;
-    };
-    const paths = b.addOptions();
-    paths.addOptionPath("amsterdam_blocks", fixtures.path(b, "blockchain_tests/for_amsterdam"));
-
-    const host = Host.init(b, options.host_target, .ReleaseSafe);
-    const imports = std.mem.concat(b.allocator, Import, &.{
-        host.native.imports,
-        &.{
-            .{ .name = "ef_fixtures", .module = paths.createModule() },
-            .{ .name = "ef_blocks", .module = host.lineth_da.module("ef_blocks") },
-        },
-    }) catch @panic("OOM");
-    crypto.linkAll(common.addTests(b, step, .{
-        .target = host.native.target,
-        .optimize = host.native.optimize,
-        .imports = imports,
-    }, .{ .dir = "test/reference" }));
 }

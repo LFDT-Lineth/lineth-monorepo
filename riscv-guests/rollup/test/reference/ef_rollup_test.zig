@@ -9,17 +9,13 @@ const std = @import("std");
 
 const ef_blocks = @import("ef_blocks");
 const ef_fixtures = @import("ef_fixtures");
-const lineth_da = @import("lineth_da");
 const rollup = @import("rollup");
 const scenario = @import("scenario");
 
-const truncation = lineth_da.encoding.truncation;
 const rollup_ssz = rollup.rollup_ssz;
 
 const Allocator = std.mem.Allocator;
-const Address = scenario.Address;
 const Fact = ef_blocks.Fact;
-const Hash = scenario.Hash;
 
 const gpa = std.testing.allocator;
 const io = std.testing.io;
@@ -27,31 +23,6 @@ const io = std.testing.io;
 /// One request in this many publishes its stream in a blob, whose commitment and proof cost far more
 /// than the rest of the request.
 const blob_period = 16;
-
-/// The conflation of `blocks`: what the fixture lists, and the canonical payload the truncation of
-/// the package derives from the blocks' RLPs.
-fn conflationOf(a: Allocator, scratch: Allocator, chain_id: u64, blocks: []const Fact) !scenario.Conflation {
-    const rlps = try a.alloc([]const u8, blocks.len);
-    const hashes = try a.alloc(Hash, blocks.len);
-    const truncated = try a.alloc(truncation.TruncatedBlock, blocks.len);
-    var senders: std.ArrayList(Address) = .empty;
-    for (blocks, rlps, hashes, truncated) |block, *rlp, *hash, *slot| {
-        rlp.* = block.rlp;
-        hash.* = block.hash;
-        slot.* = try truncation.truncateBlockRlp(a, scratch, block.rlp, chain_id);
-        try senders.appendSlice(a, block.senders);
-    }
-    return .{
-        .block_rlps = rlps,
-        .payload = try truncation.encodeBlocks(a, scratch, truncated),
-        .first_number = blocks[0].number,
-        .parent_hash = blocks[0].parent_hash,
-        .end_hash = blocks[blocks.len - 1].hash,
-        .end_timestamp = blocks[blocks.len - 1].timestamp,
-        .block_hashes = hashes,
-        .senders = try senders.toOwnedSlice(a),
-    };
-}
 
 /// How the stream of the `index`-th request is cut into chunks.
 fn chunksOf(index: usize, conflations: usize) []const scenario.ChunkSpec {
@@ -89,7 +60,7 @@ fn checkRun(a: Allocator, scratch: Allocator, index: usize, chain_id: u64, run: 
     var step = index % 3;
     while (start < run.len) : (step += 1) {
         const end = @min(start + 1 + step % 3, run.len);
-        try conflations.append(a, try conflationOf(a, scratch, chain_id, run[start..end]));
+        try conflations.append(a, try scenario.conflationOf(a, scratch, chain_id, run[start..end]));
         start = end;
     }
 

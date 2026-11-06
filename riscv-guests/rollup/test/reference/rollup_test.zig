@@ -1,5 +1,6 @@
 //! The public inputs of accepted rollup requests: what each field is derived from, over the DA
-//! layouts a stream can take across blob and calldata chunks.
+//! layouts a stream can take across blob and calldata chunks. The requests are built from real
+//! blocks of the EF zkevm fixtures.
 
 const std = @import("std");
 
@@ -33,17 +34,17 @@ test "one conflation in one blob: the public inputs follow its proof and its str
     defer arena.deinit();
     const a = arena.allocator();
 
-    const conflations = try scenario.conflations(a, .{}, &.{.{ .blocks = 2 }});
+    const chain = (try scenario.selection()).chain;
+    const conflations = try scenario.chainConflations(a, &.{2});
     const request = try scenario.build(a, conflations, .{});
     const chunk_hash = request.chunks[0].chunk_hash;
     const pi = try run(a, request);
 
-    // Blocks 100 and 101, timestamps 12 seconds apart from 1_700_000_000.
-    try std.testing.expectEqual(@as(u64, 101), pi.end_block_number);
-    try std.testing.expectEqual(@as(u64, 1_700_001_212), pi.end_block_timestamp);
+    try std.testing.expectEqual(chain[1].number, pi.end_block_number);
+    try std.testing.expectEqual(chain[1].timestamp, pi.end_block_timestamp);
     try std.testing.expectEqual(@as(u64, 2), pi.block_count);
-    try std.testing.expectEqualSlices(u8, &hashOf(0x01), &pi.parent_block_hash);
-    try std.testing.expectEqualSlices(u8, &conflations[0].block_hashes[1], &pi.end_block_hash);
+    try std.testing.expectEqualSlices(u8, &chain[0].parent_hash, &pi.parent_block_hash);
+    try std.testing.expectEqualSlices(u8, &chain[1].hash, &pi.end_block_hash);
 
     // The proof's forced-transaction state and configuration.
     try std.testing.expectEqualSlices(u8, &hashOf(0xc0), &pi.dynamic_chain_config_hash);
@@ -71,7 +72,7 @@ test "the framed request yields a framed output that decodes to the public input
     defer arena.deinit();
     const a = arena.allocator();
 
-    const conflations = try scenario.conflations(a, .{}, &.{ .{ .blocks = 2 }, .{} });
+    const conflations = try scenario.chainConflations(a, &.{ 2, 1 });
     const request = try scenario.build(a, conflations, .{});
 
     const frame = try rollup_ssz.encodeInput(a, request.input());
@@ -85,7 +86,7 @@ test "the framed request yields a framed output that decodes to the public input
 
 // ── The public inputs of several conflations ─────────────────────────────────────────────────────
 
-const three_conflations = [_]scenario.ConflationSpec{ .{ .blocks = 2 }, .{ .blocks = 1 }, .{ .blocks = 3 } };
+const three_conflations = [_]usize{ 2, 1, 3 };
 
 const messages_0 = [_]Hash{ hashOf(0x08), hashOf(0x18) };
 const messages_1 = [_]Hash{hashOf(0x28)};
@@ -122,7 +123,7 @@ fn threeRequest(a: Allocator, conflations: []const scenario.Conflation, proofs: 
 }
 
 fn threeConflations(a: Allocator, proofs: []const scenario.ProofSpec) !scenario.Request {
-    return threeRequest(a, try scenario.conflations(a, .{}, &three_conflations), proofs);
+    return threeRequest(a, try scenario.chainConflations(a, &three_conflations), proofs);
 }
 
 test "the public inputs of three conflations combine their proofs" {
@@ -130,17 +131,17 @@ test "the public inputs of three conflations combine their proofs" {
     defer arena.deinit();
     const a = arena.allocator();
 
+    const chain = (try scenario.selection()).chain;
     const proofs = threeProofs();
-    const conflations = try scenario.conflations(a, .{}, &three_conflations);
+    const conflations = try scenario.chainConflations(a, &three_conflations);
     const pi = try run(a, try threeRequest(a, conflations, &proofs));
 
-    // Blocks 100 to 105.
-    try std.testing.expectEqual(@as(u64, 105), pi.end_block_number);
+    try std.testing.expectEqual(chain[5].number, pi.end_block_number);
     try std.testing.expectEqual(@as(u64, 6), pi.block_count);
     // The chain ends with the last conflation's last block and descends from the first conflation's parent.
-    try std.testing.expectEqual(conflations[2].end_timestamp, pi.end_block_timestamp);
-    try std.testing.expectEqualSlices(u8, &conflations[2].end_hash, &pi.end_block_hash);
-    try std.testing.expectEqualSlices(u8, &conflations[0].parent_hash, &pi.parent_block_hash);
+    try std.testing.expectEqual(chain[5].timestamp, pi.end_block_timestamp);
+    try std.testing.expectEqualSlices(u8, &chain[5].hash, &pi.end_block_hash);
+    try std.testing.expectEqualSlices(u8, &chain[0].parent_hash, &pi.parent_block_hash);
     try std.testing.expectEqualSlices(u8, &scenario.ftxHash(0), &pi.parent_ftx_rolling_hash);
     try std.testing.expectEqual(@as(u64, 10), pi.parent_ftx_number);
     try std.testing.expectEqualSlices(u8, &scenario.ftxHash(3), &pi.end_ftx_rolling_hash);
@@ -155,7 +156,8 @@ test "the public inputs of three conflations combine their proofs" {
     // The bridge pair is the last non-zero one.
     try std.testing.expectEqualSlices(u8, &hashOf(0x13), &pi.end_l1_l2_bridge_rolling_hash);
     try std.testing.expectEqual(@as(u64, 6), pi.end_l1_l2_bridge_rolling_hash_message_number);
-    // The offsets count blocks from block 100: the second proof starts at block 102, the third at 103.
+    // The offsets count blocks from the first block: the second proof starts at the third block, the
+    // third at the fourth.
     try std.testing.expectEqualSlices(u16, &.{ 1, 2, 3, 5, 6 }, pi.l2_messaging_blocks_offsets);
 }
 
@@ -222,9 +224,8 @@ test "the program VKs of many proofs are distinct and ascending whatever their o
     defer arena.deinit();
     const a = arena.allocator();
 
-    const specs = [_]scenario.ConflationSpec{ .{}, .{}, .{}, .{} };
     const vks = [_]scenario.ProofSpec{ .{ .program_vk = hashOf(0xcc) }, .{ .program_vk = hashOf(0xaa) }, .{ .program_vk = hashOf(0xcc) }, .{ .program_vk = hashOf(0xbb) } };
-    const request = try scenario.build(a, try scenario.conflations(a, .{}, &specs), .{ .proofs = &vks });
+    const request = try scenario.build(a, try scenario.chainConflations(a, &.{ 1, 1, 1, 1 }), .{ .proofs = &vks });
     const pi = try run(a, request);
 
     try std.testing.expectEqualSlices([32]u8, &.{ hashOf(0xaa), hashOf(0xbb), hashOf(0xcc) }, pi.program_vks);
@@ -238,13 +239,9 @@ const Expected = struct {
     discard: u64 = 0,
 };
 
-/// Builds the request of `specs` cut into `chunks` and checks the stream part of its public inputs.
-fn expectStream(specs: []const scenario.ConflationSpec, chunks: []const scenario.ChunkSpec, expected: Expected) !void {
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-    const a = arena.allocator();
-
-    const request = try scenario.build(a, try scenario.conflations(a, .{}, specs), .{ .chunks = chunks });
+/// Builds the request of `conflations` cut into `chunks` and checks the stream part of its public inputs.
+fn expectStreamOf(a: Allocator, conflations: []const scenario.Conflation, chunks: []const scenario.ChunkSpec, expected: Expected) !void {
+    const request = try scenario.build(a, conflations, .{ .chunks = chunks });
     const pi = try run(a, request);
 
     if (expected.take) |take| {
@@ -258,29 +255,39 @@ fn expectStream(specs: []const scenario.ConflationSpec, chunks: []const scenario
     try std.testing.expectEqualSlices(u8, &request.end_data_rolling_hash, &pi.end_data_rolling_hash);
 }
 
+/// The same for consecutive conflations of the chain, `counts[i]` blocks in the `i`-th.
+fn expectStream(counts: []const usize, chunks: []const scenario.ChunkSpec, expected: Expected) !void {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+
+    try expectStreamOf(a, try scenario.chainConflations(a, counts), chunks, expected);
+}
+
 test "the stream of two conflations in one calldata chunk" {
-    try expectStream(&.{ .{ .blocks = 2 }, .{} }, &.{.{ .kind = .calldata }}, .{});
+    try expectStream(&.{ 2, 1 }, &.{.{ .kind = .calldata }}, .{});
 }
 
 test "the stream of two conflations in two calldata chunks split at a segment boundary" {
-    try expectStream(&.{ .{ .blocks = 2 }, .{} }, &.{ .{ .kind = .calldata, .own = .{ .through_segment = 1 } }, .{ .kind = .calldata } }, .{});
+    try expectStream(&.{ 2, 1 }, &.{ .{ .kind = .calldata, .own = .{ .through_segment = 1 } }, .{ .kind = .calldata } }, .{});
 }
 
 test "a segment that continues from a blob into calldata" {
-    try expectStream(&.{ .{ .blocks = 2 }, .{} }, &.{ .{ .own = .{ .bytes = 20 } }, .{ .kind = .calldata } }, .{});
-}
-
-test "a stream across two full blobs" {
-    // The frame of 140000 random bytes does not fit one blob, whose payload is 130047 bytes.
-    try expectStream(&.{.{ .bulk_bytes = 140_000 }}, &.{ .{ .own = .{ .bytes = scenario.blob_capacity } }, .{} }, .{});
+    try expectStream(&.{ 2, 1 }, &.{ .{ .own = .{ .bytes = 20 } }, .{ .kind = .calldata } }, .{});
 }
 
 test "a range inside one shared blob takes the bytes behind its neighbour and discards those before the next" {
     // The blob holds 1000 bytes of the previous proof's stream, the segments, then 500 bytes of the next proof's.
-    try expectStream(&.{.{}}, &.{.{ .prefix = .{ .bytes = 1000 }, .suffix = 500 }}, .{ .take = null, .discard = 500 });
+    try expectStream(&.{1}, &.{.{ .prefix = .{ .bytes = 1000 }, .suffix = 500 }}, .{ .take = null, .discard = 500 });
 }
 
 test "a range starting inside the first of two blobs" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+
+    const large_block = (try scenario.selection()).large_block;
+    const conflation = try scenario.conflationFrom(a, &.{large_block});
     // Only the last 20000 bytes of the first full blob belong to the range.
-    try expectStream(&.{.{ .bulk_bytes = 140_000 }}, &.{ .{ .own = .{ .bytes = 20_000 }, .prefix = .full }, .{ .suffix = 70 } }, .{ .take = 20_000, .discard = 70 });
+    try expectStreamOf(a, &.{conflation}, &.{ .{ .own = .{ .bytes = 20_000 }, .prefix = .full }, .{ .suffix = 70 } }, .{ .take = 20_000, .discard = 70 });
 }

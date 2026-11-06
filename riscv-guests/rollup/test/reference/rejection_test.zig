@@ -1,6 +1,7 @@
 //! The requests the rollup guest rejects: every rule of the statement broken in an otherwise valid
 //! request, with the error it is rejected by and the exit-code category of that error; and the
-//! requests at the edge of an output bound, which it accepts.
+//! requests at the edge of an output bound, which it accepts. The requests are built from real
+//! blocks of the EF zkevm fixtures.
 
 const std = @import("std");
 
@@ -23,11 +24,10 @@ fn expectRejected(expected: anyerror, code: guest_errors.ExitCode, a: Allocator,
     try std.testing.expectEqual(code, guest_errors.exitCode(expected));
 }
 
-/// A request of conflations of `blocks` blocks each, in one blob.
+/// A request of consecutive conflations of the chain's blocks, `blocks[i]` in the `i`-th, in one
+/// blob.
 fn requestOf(a: Allocator, blocks: []const usize, options: scenario.Options) !Request {
-    const specs = try a.alloc(scenario.ConflationSpec, blocks.len);
-    for (specs, blocks) |*spec, count| spec.* = .{ .blocks = count };
-    return scenario.build(a, try scenario.conflations(a, .{}, specs), options);
+    return scenario.build(a, try scenario.chainConflations(a, blocks), options);
 }
 
 fn flip(bytes: []const u8, index: usize) void {
@@ -116,7 +116,8 @@ test "a block RLP that is not canonical is rejected" {
     const a = arena.allocator();
 
     var request = try requestOf(a, &.{2}, .{});
-    // The last byte of a block is its empty withdrawals list; 0xc1 announces a byte that is missing.
+    // The last byte of a block is the amount of its last withdrawal; 0xc1 announces a byte that is
+    // missing.
     const block_rlp = try a.dupe(u8, request.conflations[0].block_rlps[1]);
     block_rlp[block_rlp.len - 1] = 0xc1;
     const block_rlps = try a.dupe([]const u8, request.conflations[0].block_rlps);
@@ -141,7 +142,7 @@ test "a chain ID other than the one the legacy transactions were signed under is
     const a = arena.allocator();
 
     // An EIP-155 signature commits to the chain ID.
-    var request = try scenario.build(a, try scenario.conflations(a, .{ .kinds = &.{.legacy} }, &.{.{ .blocks = 2 }}), .{});
+    var request = try requestOf(a, &.{2}, .{});
     request.chain_id += 1;
     try expectRejected(error.SenderRecoveryFailed, guest_errors.CODE_BLOCK_BINDING, a, request);
 }
@@ -151,7 +152,11 @@ test "a block that carries a blob transaction is rejected" {
     defer arena.deinit();
     const a = arena.allocator();
 
-    const request = try scenario.build(a, try scenario.conflations(a, .{ .kinds = &.{.blob} }, &.{.{ .blocks = 2 }}), .{});
+    // The proof and the segment are those of a chain block, which the blob block replaces.
+    const selected = try scenario.selection();
+    var conflation = try scenario.conflationFrom(a, selected.chain[0..1]);
+    conflation.block_rlps = &.{selected.blob_transaction.rlp};
+    const request = try scenario.build(a, &.{conflation}, .{});
     try expectRejected(error.MalformedBlock, guest_errors.CODE_BLOCK_BINDING, a, request);
 }
 
@@ -356,9 +361,12 @@ test "a block that does not descend from the block before it is rejected" {
     defer arena.deinit();
     const a = arena.allocator();
 
-    // Every proof, hash and segment agrees with the blocks, whose second one has another parent.
-    const specs = [_]scenario.ConflationSpec{ .{ .blocks = 3, .detached_block = 1 }, .{} };
-    const request = try scenario.build(a, try scenario.conflations(a, .{}, &specs), .{});
+    // Every proof, hash and segment agrees with the blocks, whose second one descends from a block
+    // the conflation leaves out.
+    const chain = (try scenario.selection()).chain;
+    const first = try scenario.conflationFrom(a, &.{ chain[0], chain[2], chain[3] });
+    const second = scenario.follow(first, try scenario.conflationFrom(a, &.{chain[4]}));
+    const request = try scenario.build(a, &.{ first, second }, .{});
     try expectRejected(error.ParentHashMismatch, guest_errors.CODE_BLOCK_HASH_CHAIN, a, request);
 }
 
@@ -368,8 +376,10 @@ test "a conflation whose first block does not descend from the last block of the
     const a = arena.allocator();
 
     // The proofs continue each other, so only the parent hashes of the blocks reject the request.
-    const specs = [_]scenario.ConflationSpec{ .{ .blocks = 2 }, .{ .blocks = 2, .detached_block = 0 } };
-    const request = try scenario.build(a, try scenario.conflations(a, .{}, &specs), .{});
+    const chain = (try scenario.selection()).chain;
+    const first = try scenario.conflationFrom(a, chain[0..2]);
+    const second = scenario.follow(first, try scenario.conflationFrom(a, chain[3..5]));
+    const request = try scenario.build(a, &.{ first, second }, .{});
     try expectRejected(error.ParentHashMismatch, guest_errors.CODE_BLOCK_HASH_CHAIN, a, request);
 }
 

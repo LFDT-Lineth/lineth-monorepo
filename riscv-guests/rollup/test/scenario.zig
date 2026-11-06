@@ -1,33 +1,36 @@
-//! Builders of valid rollup requests for the tests and the fixture generator. Conflations of signed
-//! blocks, their canonical payloads compressed against the dictionary into the DA stream, the stream
-//! cut into blob and calldata chunks with the commitments and proofs of c-kzg-4844, and the
-//! l2-execution proofs that tie them together are all computed with the test-side encoders of
-//! `lineth_da` and put into the wire types of `rollup_ssz`.
+//! Builders of valid rollup requests for the tests and the fixture generator. Conflations of real
+//! blocks of the Ethereum Foundation's zkevm fixtures, their canonical payloads compressed against
+//! the dictionary into the DA stream, the stream cut into blob and calldata chunks with the
+//! commitments and proofs of Constantine, and the l2-execution proofs that tie them together are
+//! computed with the test-side encoders of `lineth_da` and put into the wire types of `rollup_ssz`.
 
 const std = @import("std");
 
 const core_serde = @import("core_serde");
+const da_support = @import("da_support");
+const ef_blocks = @import("ef_blocks");
+const ef_fixtures = @import("ef_fixtures");
 const lineth_da = @import("lineth_da");
 const rollup = @import("rollup");
-const da_support = @import("da_support");
-const zstd_compressor = @import("zstd_compressor");
+const zstd_encoder = @import("zstd_encoder");
 
-const blocks = da_support.blocks;
-const da_stream = da_support.da_stream;
-const rlp = da_support.rlp;
-const secp256k1 = da_support.secp256k1;
 const blob_payload = lineth_da.encoding.blob_payload;
+const da_stream = da_support.da_stream;
 const l2_execution_proof = core_serde.l2_execution_proof;
 const rollup_ssz = rollup.rollup_ssz;
+const truncation = lineth_da.encoding.truncation;
 
 const Allocator = std.mem.Allocator;
 
 pub const Hash = [32]u8;
 pub const Address = [20]u8;
+pub const Fact = ef_blocks.Fact;
 
 pub const dictionary = lineth_da.dictionary_v2025_04_21;
 /// The longest payload of a blob.
 pub const blob_capacity = blob_payload.payload_capacity;
+/// The chain the selected blocks run on.
+pub const selected_chain_id: u64 = 1;
 
 pub fn keccak(bytes: []const u8) Hash {
     var hash: Hash = undefined;
@@ -39,7 +42,96 @@ fn keccakPair(left: Hash, right: Hash) Hash {
     return keccak(&(left ++ right));
 }
 
-// ── Conflations of signed blocks ─────────────────────────────────────────────────────────────────
+// ── The selected blocks ──────────────────────────────────────────────────────────────────────────
+
+const Pick = struct {
+    /// The fixture file, relative to the corpus directory.
+    path: []const u8,
+    case: []const u8,
+};
+
+const chain_pick: Pick = .{
+    .path = "cancun/eip4788_beacon_root/beacon_root_contract/multi_block_beacon_root_timestamp_calls.json",
+    .case = "tests/cancun/eip4788_beacon_root/test_beacon_root_contract.py::test_multi_block_beacon_root_timestamp_calls[fork_Amsterdam-blockchain_test-block_count_10-buffer_wraparound]",
+};
+
+const blob_transaction_pick: Pick = .{
+    .path = "amsterdam/eip7928_block_level_access_lists/block_access_lists/bal_blob_fee_leaves_sender_only.json",
+    .case = "tests/amsterdam/eip7928_block_level_access_lists/test_block_access_lists.py::test_bal_blob_fee_leaves_sender_only[fork_Amsterdam-blockchain_test_from_state_test]",
+};
+
+const large_block_pick: Pick = .{
+    .path = "osaka/eip7825_transaction_gas_limit_cap/tx_gas_limit/tx_gas_limit_cap_authorized_tx.json",
+    .case = "tests/osaka/eip7825_transaction_gas_limit_cap/test_tx_gas_limit.py::test_tx_gas_limit_cap_authorized_tx[fork_Amsterdam-blockchain_test_from_state_test-exceed_tx_gas_limit_False-correct_intrinsic_cost_in_transaction_gas_limit_True]",
+};
+
+/// The blocks every request is built from.
+pub const Selection = struct {
+    arena: std.heap.ArenaAllocator,
+    /// Ten consecutive blocks with one EIP-155 legacy transaction each.
+    chain: []const Fact,
+    /// A block with a blob transaction.
+    blob_transaction: Fact,
+    /// A block of a set-code transaction of 161 KB whose access list has 1397 entries; its frame is
+    /// longer than 20 KB and shorter than a blob.
+    large_block: Fact,
+
+    /// Reads the selected blocks from `corpus_dir`, a directory of fixture files.
+    pub fn load(gpa: Allocator, io: std.Io, corpus_dir: []const u8) !Selection {
+        var arena = std.heap.ArenaAllocator.init(gpa);
+        errdefer arena.deinit();
+        const a = arena.allocator();
+
+        const chain_case = try readCase(a, io, corpus_dir, chain_pick);
+        const chain = try a.alloc(Fact, chain_case.blocks.len);
+        for (chain_case.blocks, chain, 0..) |block, *slot, index| {
+            slot.* = block orelse return fail(error.ChainBlockNotAccepted, "block {d} of the chain case is not accepted by its fixture", .{index});
+            if (slot.transactions.len == 0) return fail(error.ChainBlockWithoutTransaction, "block {d} of the chain case has no transaction", .{index});
+            if (index > 0 and !std.mem.eql(u8, &slot.parent_hash, &chain[index - 1].hash)) {
+                return fail(error.ChainBroken, "block {d} of the chain case does not descend from block {d}", .{ index, index - 1 });
+            }
+        }
+        if (chain.len != 10) return fail(error.ChainLength, "the chain case has {d} blocks, not 10", .{chain.len});
+
+        const blob_transaction = try readBlock(a, io, corpus_dir, blob_transaction_pick);
+        if (!blob_transaction.blob_transaction) return fail(error.NoBlobTransaction, "the selected blob block has no blob transaction", .{});
+        const large_block = try readBlock(a, io, corpus_dir, large_block_pick);
+        return .{ .arena = arena, .chain = chain, .blob_transaction = blob_transaction, .large_block = large_block };
+    }
+
+    pub fn deinit(self: *Selection) void {
+        self.arena.deinit();
+    }
+};
+
+fn fail(err: anyerror, comptime fmt: []const u8, args: anytype) anyerror {
+    std.debug.print("selected blocks: " ++ fmt ++ "\n", args);
+    return err;
+}
+
+fn readCase(a: Allocator, io: std.Io, corpus_dir: []const u8, pick: Pick) !ef_blocks.Case {
+    const case = ef_blocks.locateCase(a, io, corpus_dir, pick.path, pick.case) catch |err| {
+        return fail(err, "{s} of {s} is not in the corpus: {s}", .{ pick.case, pick.path, @errorName(err) });
+    };
+    if (case.chain_id != selected_chain_id) return fail(error.UnexpectedChainId, "{s} runs on chain {d}, not {d}", .{ pick.case, case.chain_id, selected_chain_id });
+    return case;
+}
+
+fn readBlock(a: Allocator, io: std.Io, corpus_dir: []const u8, pick: Pick) !Fact {
+    const case = try readCase(a, io, corpus_dir, pick);
+    if (case.blocks.len == 0) return fail(error.BlockNotFound, "{s} has no block", .{pick.case});
+    return case.blocks[0] orelse return fail(error.BlockNotAccepted, "block 0 of {s} is not accepted by its fixture", .{pick.case});
+}
+
+var cached: ?Selection = null;
+
+/// The selection of the fixtures the tests run against, read on first use and kept.
+pub fn selection() !*const Selection {
+    if (cached == null) cached = try Selection.load(std.heap.page_allocator, std.testing.io, ef_fixtures.amsterdam_blocks);
+    return &cached.?;
+}
+
+// ── Conflations of real blocks ───────────────────────────────────────────────────────────────────
 
 /// One conflation: its full block RLPs and what the proofs and the DA stream derive from them.
 pub const Conflation = struct {
@@ -55,103 +147,56 @@ pub const Conflation = struct {
     senders: []const Address,
 };
 
-pub const ChainOptions = struct {
-    chain_id: u64 = 59144,
-    first_number: u64 = 100,
-    /// The parent hash of the first block.
-    parent_hash: Hash = @splat(0x01),
-    seed: u64 = 2026,
-    /// The kinds the transactions are drawn from.
-    kinds: []const blocks.Kind = &blocks.accepted_kinds,
-};
-
-pub const ConflationSpec = struct {
-    blocks: usize = 1,
-    /// Random bytes in the data of the first transaction of the conflation. They do not compress, so
-    /// they make the payload and its frame at least that long.
-    bulk_bytes: usize = 0,
-    /// The block whose parent hash is not the hash of the block before it.
-    detached_block: ?usize = null,
-};
-
-fn secretKey(index: usize) [32]u8 {
-    var secret: [32]u8 = undefined;
-    std.crypto.hash.sha2.Sha256.hash(&.{ 'k', 'e', 'y', @intCast(index) }, &secret, .{});
-    return secret;
+/// The conflation of `blocks`: what the fixture lists, and the canonical payload the truncation of
+/// the package derives from the blocks' RLPs.
+pub fn conflationOf(a: Allocator, scratch: Allocator, chain_id: u64, blocks: []const Fact) !Conflation {
+    const rlps = try a.alloc([]const u8, blocks.len);
+    const hashes = try a.alloc(Hash, blocks.len);
+    const truncated = try a.alloc(truncation.TruncatedBlock, blocks.len);
+    var senders: std.ArrayList(Address) = .empty;
+    for (blocks, rlps, hashes, truncated) |block, *rlp, *hash, *slot| {
+        rlp.* = block.rlp;
+        hash.* = block.hash;
+        slot.* = try truncation.truncateBlockRlp(a, scratch, block.rlp, chain_id);
+        try senders.appendSlice(a, block.senders);
+    }
+    return .{
+        .block_rlps = rlps,
+        .payload = try truncation.encodeBlocks(a, scratch, truncated),
+        .first_number = blocks[0].number,
+        .parent_hash = blocks[0].parent_hash,
+        .end_hash = blocks[blocks.len - 1].hash,
+        .end_timestamp = blocks[blocks.len - 1].timestamp,
+        .block_hashes = hashes,
+        .senders = try senders.toOwnedSlice(a),
+    };
 }
 
-/// Consecutive conflations of random signed transactions, one per spec, each block's parent hash the
-/// hash of the block before it.
-pub fn conflations(a: Allocator, chain: ChainOptions, specs: []const ConflationSpec) ![]Conflation {
-    var prng = std.Random.DefaultPrng.init(chain.seed);
-    const random = prng.random();
-    const kinds = chain.kinds;
+/// The conflation of `blocks` on the selection's chain.
+pub fn conflationFrom(a: Allocator, blocks: []const Fact) !Conflation {
+    var scratch = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer scratch.deinit();
+    return conflationOf(a, scratch.allocator(), selected_chain_id, blocks);
+}
 
-    const out = try a.alloc(Conflation, specs.len);
-    var number = chain.first_number;
-    var parent_hash = chain.parent_hash;
-    for (specs, out) |spec, *conflation| {
-        const rlps = try a.alloc([]const u8, spec.blocks);
-        const hashes = try a.alloc(Hash, spec.blocks);
-        const entries = try a.alloc(rlp.Item, spec.blocks);
-        var senders: std.ArrayList(Address) = .empty;
-        const first_parent_hash = parent_hash;
-        var timestamp: u64 = 0;
-
-        for (rlps, hashes, entries, 0..) |*block_rlp, *block_hash, *entry, index| {
-            const tx_count = 1 + random.uintLessThan(usize, 3);
-            const txs = try a.alloc(blocks.Tx, tx_count);
-            const items = try a.alloc(rlp.Item, tx_count);
-            const stripped_items = try a.alloc(rlp.Item, tx_count);
-            const sender_items = try a.alloc(rlp.Item, tx_count);
-            for (txs, items, stripped_items, sender_items, 0..) |*tx, *item, *stripped_item, *sender_item, tx_index| {
-                tx.* = try blocks.randomTx(a, random, kinds[random.uintLessThan(usize, kinds.len)]);
-                if (index == 0 and tx_index == 0 and spec.bulk_bytes > 0) {
-                    const data = try a.alloc(u8, spec.bulk_bytes);
-                    random.bytes(data);
-                    tx.data = data;
-                }
-                const secret = secretKey(random.uintLessThan(usize, 4));
-                item.* = try blocks.signed(a, tx.*, chain.chain_id, secret);
-                stripped_item.* = rlp.string(try blocks.stripped(a, tx.*));
-                const sender = try a.create(Address);
-                sender.* = secp256k1.addressOf(secret);
-                sender_item.* = rlp.string(sender);
-                try senders.append(a, sender.*);
-            }
-
-            timestamp = 1_700_000_000 + 12 * number;
-            const detached = spec.detached_block == index;
-            const header = try blocks.withTransactions(a, .{
-                .parent_hash = if (detached) blocks.randomBytes(Hash, random) else parent_hash,
-                .prev_randao = blocks.randomBytes(Hash, random),
-                .number = number,
-                .timestamp = timestamp,
-            }, items);
-            block_rlp.* = try blocks.block(a, header, items, &.{});
-            block_hash.* = try blocks.blockHash(a, header);
-            entry.* = rlp.list(try a.dupe(rlp.Item, &.{
-                try rlp.int(a, header.timestamp),
-                rlp.string(block_hash),
-                rlp.string(try a.dupe(u8, &header.prev_randao)),
-                rlp.list(stripped_items),
-                rlp.list(sender_items),
-            }));
-            parent_hash = block_hash.*;
-            number += 1;
-        }
-
-        conflation.* = .{
-            .block_rlps = rlps,
-            .payload = try rlp.encode(a, rlp.list(entries)),
-            .first_number = number - spec.blocks,
-            .parent_hash = first_parent_hash,
-            .end_hash = parent_hash,
-            .end_timestamp = timestamp,
-            .block_hashes = hashes,
-            .senders = try senders.toOwnedSlice(a),
-        };
+/// Consecutive conflations of the chain's blocks, `counts[i]` blocks in the `i`-th, from block 0.
+pub fn chainConflations(a: Allocator, counts: []const usize) ![]Conflation {
+    const chain = (try selection()).chain;
+    const out = try a.alloc(Conflation, counts.len);
+    var start: usize = 0;
+    for (counts, out) |count, *conflation| {
+        conflation.* = try conflationFrom(a, chain[start..][0..count]);
+        start += count;
     }
+    return out;
+}
+
+/// `next` as the proof range right behind `previous`: its first block number continues the numbers
+/// of `previous` and its parent hash is the hash `previous` ends with.
+pub fn follow(previous: Conflation, next: Conflation) Conflation {
+    var out = next;
+    out.first_number = previous.first_number + previous.block_rlps.len;
+    out.parent_hash = previous.end_hash;
     return out;
 }
 
@@ -205,7 +250,7 @@ pub const SegmentFault = enum {
 };
 
 pub const Options = struct {
-    chain_id: u64 = 59144,
+    chain_id: u64 = selected_chain_id,
     parent_data_rolling_hash: Hash = @splat(0x47),
     /// The dataRollingHash before the first chunk, which a range starting inside that chunk opens.
     boundary_prev_data_rolling_hash: Hash = @splat(0x39),
@@ -250,17 +295,20 @@ pub const Request = struct {
 /// The request proving `conflations`: their canonical payloads compressed into one segment each,
 /// the segments cut into chunks as `options.chunks` says, and one l2-execution proof per conflation.
 pub fn build(a: Allocator, conflations_in: []const Conflation, options: Options) !Request {
+    const encoder = try zstd_encoder.Encoder.init(a, dictionary);
+    defer encoder.deinit();
+
     const segments = try a.alloc([]const u8, conflations_in.len);
     const segment_ends = try a.alloc(usize, conflations_in.len);
     var stream_len: usize = 0;
     for (conflations_in, segments, segment_ends, 0..) |conflation, *segment, *segment_end, index| {
         const fault: SegmentFault = if (index < options.segment_faults.len) options.segment_faults[index] else .none;
         const frame = switch (fault) {
-            .none => try zstd_compressor.compress(a, conflation.payload, dictionary),
+            .none => try encoder.compress(a, conflation.payload),
             .other_payload => blk: {
                 const other = try a.dupe(u8, conflation.payload);
                 other[other.len - 1] ^= 0x01;
-                break :blk try zstd_compressor.compress(a, other, dictionary);
+                break :blk try encoder.compress(a, other);
             },
             .not_a_frame => try a.dupe(u8, "these bytes are not a zstd frame"),
         };

@@ -133,6 +133,8 @@ jobs:
 
       - name: Setup RISC-V guests environment (Zig + caches)
         uses: ./.github/actions/setup-riscv-guests
+        with:
+          needs-zkevm-fixtures: 'true'
 
       # The production build constructs only the freestanding guest graph.
       - name: Build l2-execution guest
@@ -187,7 +189,7 @@ jobs:
         working-directory: riscv-guests
 
   reference-tests:
-    name: "EF reference-test guards (host): l2-execution and rollup"
+    name: l2-execution extended-guest reference-test guards (host)
     needs: [changes, host-tests]
     if: needs.changes.outputs.guest == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
@@ -202,13 +204,9 @@ jobs:
         with:
           needs-zkevm-fixtures: 'true'
 
-      - name: Run l2-execution extended-guest reference-test guards
+      - name: Run extended-guest reference-test guards
         run: make reference-test
         working-directory: riscv-guests/l2_execution
-
-      - name: Run rollup guest reference-test over consecutive EF blocks
-        run: make reference-test
-        working-directory: riscv-guests/rollup
 
   zkc-interpreter-run:
     name: l2-execution guest in ZKC interpreter (accel)
