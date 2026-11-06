@@ -757,10 +757,12 @@ func paddedView[T any](data []T, pad T, start, n, idx, L int, buf *[]T) []T {
 	return out
 }
 
-func fill[T any](v []T, x T) {
+// fill sets every entry of v to x and returns v.
+func fill[T any](v []T, x T) []T {
 	for i := range v {
 		v[i] = x
 	}
+	return v
 }
 
 // operand is a node's value over the current block: a scalar or a vector of
@@ -947,23 +949,34 @@ func (w *worker) extOp(nd *node, dst []field.Ext) {
 	if len(nd.args) > 1 {
 		b = w.operand(nd.args[1], L)
 	}
-	out := extensions.VectorE6(dst)
-	vecExt := func(o *operand) bool { return !o.scalar && !o.isBase }
-	vecBase := func(o *operand) bool { return !o.scalar && o.isBase }
+	w.extApply(nd.op, len(nd.args), &a, &b, dst)
+}
 
-	switch nd.op {
+// extApply writes o applied to the operands a and b (b unused when arity is
+// 1), lifted to the extension field, into dst. Some operand is not a scalar:
+// an operation over scalars only is a scalar node.
+func (w *worker) extApply(o Op, arity int, a, b *operand, dst []field.Ext) {
+	L := len(dst)
+	out := extensions.VectorE6(dst)
+	vecExt := func(x *operand) bool { return !x.scalar && !x.isBase }
+	vecBase := func(x *operand) bool { return !x.scalar && x.isBase }
+
+	switch o {
 	case Add, Sub:
-		sub := nd.op == Sub
+		sub := o == Sub
+		if !sub && !vecExt(a) {
+			a, b = b, a // the field addition commutes: a is the extension vector, if any
+		}
+		limbs := asLimbs(dst)
 		switch {
-		case vecExt(&a) && vecExt(&b):
-			limbs := asLimbs(dst)
+		case vecExt(a) && vecExt(b):
 			if sub {
 				limbs.Sub(asLimbs(a.ext), asLimbs(b.ext))
 			} else {
 				limbs.Add(asLimbs(a.ext), asLimbs(b.ext))
 			}
 			return
-		case vecExt(&a) && vecBase(&b):
+		case vecExt(a) && vecBase(b):
 			copy(dst, a.ext)
 			for i := range dst {
 				if sub {
@@ -973,40 +986,66 @@ func (w *worker) extOp(nd *node, dst []field.Ext) {
 				}
 			}
 			return
+		case vecExt(a) && b.scalar && b.isBase && sub:
+			subBaseScalarExt(dst, a.ext, b.s.B0.A0)
+			return
+		case vecExt(a) && b.scalar && b.isBase:
+			addBaseScalarExt(dst, a.ext, b.s.B0.A0)
+			return
+		case vecExt(a) && b.scalar:
+			// The six limbs of an extension scalar: one broadcast, then the
+			// limb kernel, beats a loop over the limbs.
+			s := asLimbs(fill(w.tmpExt[:L], b.s))
+			if sub {
+				limbs.Sub(asLimbs(a.ext), s)
+			} else {
+				limbs.Add(asLimbs(a.ext), s)
+			}
+			return
+		// Only a subtraction gets here with a in the base field or a scalar.
+		case vecExt(b) && vecBase(a):
+			limbs.Sub(asLimbs(zeroExt[:L]), asLimbs(b.ext))
+			for i := range dst {
+				dst[i].B0.A0.Sub(&a.base[i], &b.ext[i].B0.A0)
+			}
+			return
+		case vecExt(b) && a.scalar:
+			limbs.Sub(asLimbs(fill(w.tmpExt[:L], a.s)), asLimbs(b.ext))
+			return
 		}
 	case Mul:
 		for range 2 {
 			switch {
-			case vecExt(&a) && vecExt(&b):
+			case vecExt(a) && vecExt(b):
 				field.VecMulExtExt(dst, a.ext, b.ext)
 				return
-			case vecExt(&a) && vecBase(&b):
+			case vecExt(a) && vecBase(b):
 				out.MulByElement(a.ext, b.base)
 				return
-			case vecExt(&a) && b.scalar && b.isBase:
+			case vecExt(a) && b.scalar && b.isBase:
 				out.ScalarMulByElement(a.ext, &b.s.B0.A0)
 				return
-			case vecExt(&a) && b.scalar:
+			case vecExt(a) && b.scalar:
 				out.ScalarMul(a.ext, &b.s)
 				return
 			}
 			a, b = b, a
 		}
 	case Square:
-		if vecExt(&a) {
+		if vecExt(a) {
 			field.VecMulExtExt(dst, a.ext, a.ext)
 			return
 		}
 	case Inverse:
-		field.BatchInvertExtScratch(dst, extVector(&a, L, w.tmpExt), w.invExt[:L])
+		field.BatchInvertExtScratch(dst, extVector(a, L, w.tmpExt), w.invExt[:L])
 		return
 	case Div:
 		inv := w.tmpExt2[:L]
-		field.BatchInvertExtScratch(inv, extVector(&b, L, w.tmpExt), w.invExt[:L])
+		field.BatchInvertExtScratch(inv, extVector(b, L, w.tmpExt), w.invExt[:L])
 		switch {
-		case vecExt(&a):
+		case vecExt(a):
 			field.VecMulExtExt(dst, a.ext, inv)
-		case vecBase(&a):
+		case vecBase(a):
 			out.MulByElement(inv, a.base)
 		case a.isBase:
 			out.ScalarMulByElement(inv, &a.s.B0.A0)
@@ -1015,13 +1054,42 @@ func (w *worker) extOp(nd *node, dst []field.Ext) {
 		}
 		return
 	}
+	applyExtGeneric(o, arity, a, b, dst)
+}
+
+// applyExtGeneric is the element-by-element form of [worker.extApply], for
+// the operand kinds without a vector path.
+func applyExtGeneric(o Op, arity int, a, b *operand, dst []field.Ext) {
 	var args [2]field.Ext
 	for i := range dst {
 		args[0] = a.extAt(i)
-		if len(nd.args) > 1 {
+		if arity > 1 {
 			args[1] = b.extAt(i)
 		}
-		dst[i] = applyExt(nd.op, args[:len(nd.args)])
+		dst[i] = applyExt(o, args[:arity])
+	}
+}
+
+// zeroExt is a block of zeros, read only: a - b for a base vector a is the
+// limb subtraction 0 - b, then a added into the first limb.
+var zeroExt [BlockSize]field.Ext
+
+// addBaseScalarExt sets dst[i] = a[i] + s, for a base-field s: only the
+// first limb changes.
+func addBaseScalarExt(dst, a []field.Ext, s field.Element) {
+	a = a[:len(dst)]
+	for i := range dst {
+		dst[i] = a[i]
+		dst[i].B0.A0.Add(&a[i].B0.A0, &s)
+	}
+}
+
+// subBaseScalarExt sets dst[i] = a[i] - s, for a base-field s.
+func subBaseScalarExt(dst, a []field.Ext, s field.Element) {
+	a = a[:len(dst)]
+	for i := range dst {
+		dst[i] = a[i]
+		dst[i].B0.A0.Sub(&a[i].B0.A0, &s)
 	}
 }
 
