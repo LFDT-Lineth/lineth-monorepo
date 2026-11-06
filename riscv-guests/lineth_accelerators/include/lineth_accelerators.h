@@ -12,6 +12,7 @@
 #ifndef LINETH_ACCELERATORS_H
 #define LINETH_ACCELERATORS_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include "zkvm_accelerators.h" /* zkvm_status, zkvm_bytes_64 */
@@ -46,20 +47,23 @@ zkvm_status lineth_zkvm_poseidon2_permutation(const zkvm_bytes_64* input,
  * ============================================================================ */
 
 /**
- * Verify an EIP-4844 blob proof.
+ * Verify EIP-4844 blob proofs as one batch.
  *
- * @param blob Pointer to the blob of 131072 bytes
- * @param commitment Pointer to the KZG commitment
- * @param proof Pointer to the KZG blob proof
- * @param[out] verified Pointer to bool indicating if the proof opens the commitment
- *        to the blob; false for a blob element of at least the scalar field's order
- *        and for an invalid commitment or proof
+ * @param blobs Pointer to n contiguous blobs of 131072 bytes each
+ * @param commitments Pointer to n KZG commitments
+ * @param proofs Pointer to n KZG blob proofs
+ * @param n Number of blobs, commitments and proofs
+ * @param[out] verified Pointer to bool indicating if every proof opens its commitment
+ *        to its blob (the consensus specs' verify_blob_kzg_proof_batch; true for
+ *        n = 0); false for a blob element of at least the scalar field's order and
+ *        for an invalid commitment or proof
  * @return ZKVM_EOK on success, ZKVM_EFAIL on failure
  */
-zkvm_status lineth_zkvm_kzg_verify_blob(const uint8_t* blob,
-                                        const zkvm_kzg_commitment* commitment,
-                                        const zkvm_kzg_proof* proof,
-                                        bool* verified);
+zkvm_status lineth_zkvm_kzg_verify_blob_batch(const uint8_t* blobs,
+                                              const zkvm_kzg_commitment* commitments,
+                                              const zkvm_kzg_proof* proofs,
+                                              size_t n,
+                                              bool* verified);
 
 #ifdef __cplusplus
 }

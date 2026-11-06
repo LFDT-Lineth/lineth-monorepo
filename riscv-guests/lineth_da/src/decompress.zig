@@ -37,7 +37,8 @@ pub const Error = error{
     /// The versioned hash of a blob's commitment, or the keccak256 of a calldata chunk's bytes,
     /// differs from the chunk's hash.
     ChunkHashMismatch,
-    /// A blob's EIP-4844 proof does not open its commitment to the blob.
+    /// The batch verification of the blobs' EIP-4844 proofs fails: some blob's proof does not open
+    /// its commitment to the blob.
     BlobKzgMismatch,
     /// `boundary_prev_data_rolling_hash` is missing or opens a hash other than the parent hash.
     BoundaryPreimageMismatch,
@@ -94,8 +95,8 @@ pub const Verified = struct {
 /// - Each chunk is bound to its `chunk_hash`: a blob has no calldata, a 48-byte commitment and
 ///   proof and the canonical packing of its payload, and the versioned hash of its commitment is
 ///   the `chunk_hash`; a calldata chunk has no blob, commitment or proof, and its keccak256 is the
-///   `chunk_hash`. Once every chunk is bound, each blob's EIP-4844 proof opens its commitment to
-///   the blob.
+///   `chunk_hash`. Once every chunk is bound, the blobs' EIP-4844 proofs verify as one batch, each
+///   opening its commitment to its blob.
 /// - Layout: a blob followed by another blob holds a full payload; a positive
 ///   `parent_data_tail_take_bytes` requires a first blob with a longer payload, and the stream
 ///   starts at the last `parent_data_tail_take_bytes` bytes of it; every chunk owns at least one
@@ -137,12 +138,26 @@ pub fn verifyDaChunks(
         payload_len.* = payload.len;
     }
 
+    var blob_count: usize = 0;
     for (chunks) |chunk| {
-        if (chunk.is_calldata) continue;
-        const blob = chunk.blob_bytes[0..blob_kzg.blob_len];
-        if (!blob_kzg.verify(blob, chunk.kzg_commitment[0..blob_kzg.commitment_len], chunk.kzg_proof[0..blob_kzg.proof_len])) {
-            return error.BlobKzgMismatch;
+        if (!chunk.is_calldata) blob_count += 1;
+    }
+    if (blob_count > 0) {
+        const blobs = try allocator.alloc([blob_kzg.blob_len]u8, blob_count);
+        defer allocator.free(blobs);
+        const commitments = try allocator.alloc([blob_kzg.commitment_len]u8, blob_count);
+        defer allocator.free(commitments);
+        const proofs = try allocator.alloc([blob_kzg.proof_len]u8, blob_count);
+        defer allocator.free(proofs);
+        var next: usize = 0;
+        for (chunks) |chunk| {
+            if (chunk.is_calldata) continue;
+            blobs[next] = chunk.blob_bytes[0..blob_kzg.blob_len].*;
+            commitments[next] = chunk.kzg_commitment[0..blob_kzg.commitment_len].*;
+            proofs[next] = chunk.kzg_proof[0..blob_kzg.proof_len].*;
+            next += 1;
         }
+        if (!blob_kzg.verifyBatch(blobs, commitments, proofs)) return error.BlobKzgMismatch;
     }
 
     for (chunks[0 .. chunks.len - 1], chunks[1..], payload_lens[0 .. chunks.len - 1]) |chunk, following, payload_len| {

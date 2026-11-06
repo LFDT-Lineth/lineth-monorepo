@@ -210,22 +210,27 @@ pub fn kzgPointEvalVerify(
     return ctt_eth_evm_kzg_point_evaluation(ctx, &out, 64, &in, 192) == OK;
 }
 
-/// Whether `proof` opens `commitment` to `blob`, as the consensus spec's `verify_blob_kzg_proof`
-/// defines it. A blob element of at least the scalar field's order, an invalid commitment or an
-/// invalid proof does not verify.
-pub fn kzgVerifyBlob(blob: *const [131072]u8, commitment: *const [48]u8, proof: *const [48]u8) bool {
+/// Whether every proof opens its commitment to its blob, as the consensus specs'
+/// `verify_blob_kzg_proof_batch` defines it. All-zero random bytes make Constantine derive the batch
+/// weights by the specs' Fiat-Shamir transcript. A blob element of at least the scalar field's
+/// order, an invalid commitment or an invalid proof does not verify.
+pub fn kzgVerifyBlobBatch(blobs: []const [131072]u8, commitments: []const [48]u8, proofs: []const [48]u8) bool {
+    if (blobs.len != commitments.len or blobs.len != proofs.len) return false;
     const ctx = kzgContext() orelse return false;
-    return ctt_eth_kzg_verify_blob_kzg_proof(ctx, blob, commitment, proof) == 0; // cttEthKzg_Success
+    const zero_bytes: [32]u8 = @splat(0);
+    return ctt_eth_kzg_verify_blob_kzg_proof_batch(ctx, blobs.ptr, commitments.ptr, proofs.ptr, blobs.len, &zero_bytes) == 0; // cttEthKzg_Success
 }
 
 const CttKzgContext = opaque {};
 
 extern fn ctt_eth_kzg_context_new_embedded(ctx: *?*CttKzgContext) c_int;
-extern fn ctt_eth_kzg_verify_blob_kzg_proof(
+extern fn ctt_eth_kzg_verify_blob_kzg_proof_batch(
     ctx: ?*const CttKzgContext,
-    blob: *const [131072]u8,
-    commitment: *const [48]u8,
-    proof: *const [48]u8,
+    blobs: [*]const [131072]u8,
+    commitments: [*]const [48]u8,
+    proofs: [*]const [48]u8,
+    n: usize,
+    secure_random_bytes: *const [32]u8,
 ) u8;
 extern fn ctt_eth_evm_kzg_point_evaluation(
     ctx: ?*const CttKzgContext,

@@ -9,6 +9,7 @@ const gpa = std.testing.allocator;
 const io = std.testing.io;
 
 const Case = reference_vectors.Case;
+const BatchCase = reference_vectors.BatchCase;
 
 fn loadSuite(suite: []const u8) !std.ArrayList(Case) {
     return reference_vectors.loadSuite(gpa, io, suite);
@@ -18,12 +19,53 @@ fn freeCases(cases: *std.ArrayList(Case)) void {
     reference_vectors.freeCases(gpa, cases);
 }
 
-fn expectCase(case: Case, ok: bool) !void {
-    if (!ok) std.debug.print("reference vector {s} fails\n", .{case.name});
+fn expectCase(name: []const u8, ok: bool) !void {
+    if (!ok) std.debug.print("reference vector {s} fails\n", .{name});
     try std.testing.expect(ok);
 }
 
-test "blob proofs verify exactly as the reference vectors say" {
+/// The entries as one contiguous array; null when an entry has the wrong size.
+fn contiguous(comptime len: usize, entries: []const []u8) !?[][len]u8 {
+    const out = try gpa.alloc([len]u8, entries.len);
+    errdefer gpa.free(out);
+    for (entries, out) |entry, *slot| {
+        if (entry.len != len) {
+            gpa.free(out);
+            return null;
+        }
+        slot.* = entry[0..len].*;
+    }
+    return out;
+}
+
+fn verifyBatchCase(case: BatchCase) !bool {
+    const blobs = try contiguous(blob_kzg.blob_len, case.blobs) orelse return false;
+    defer gpa.free(blobs);
+    const commitments = try contiguous(blob_kzg.commitment_len, case.commitments) orelse return false;
+    defer gpa.free(commitments);
+    const proofs = try contiguous(blob_kzg.proof_len, case.proofs) orelse return false;
+    defer gpa.free(proofs);
+    return blob_kzg.verifyBatch(blobs, commitments, proofs);
+}
+
+test "blob proof batches verify exactly as the reference vectors say" {
+    var cases = try reference_vectors.loadBatchSuite(gpa, io);
+    defer reference_vectors.freeBatchCases(gpa, &cases);
+
+    var accepted: usize = 0;
+    var rejected: usize = 0;
+    for (cases.items) |case| {
+        const verified = try verifyBatchCase(case);
+        // The reference answers `true` for a verifying batch, `false` for one that does not verify
+        // and null for malformed input; only a verifying batch is accepted.
+        try expectCase(case.name, verified == std.mem.eql(u8, case.output, "true"));
+        if (verified) accepted += 1 else rejected += 1;
+    }
+    try std.testing.expectEqual(7, accepted);
+    try std.testing.expectEqual(17, rejected);
+}
+
+test "blob proofs verify exactly as the reference vectors say, each as a batch of one" {
     var cases = try loadSuite("verify_blob_kzg_proof");
     defer freeCases(&cases);
 
@@ -32,14 +74,12 @@ test "blob proofs verify exactly as the reference vectors say" {
     for (cases.items) |case| {
         const verified = if (case.blobArray()) |blob|
             if (case.commitmentArray()) |commitment|
-                if (case.proofArray()) |proof| blob_kzg.verify(blob, commitment, proof) else false
+                if (case.proofArray()) |proof| blob_kzg.verifyBatch(&.{blob.*}, &.{commitment.*}, &.{proof.*}) else false
             else
                 false
         else
             false;
-        // The reference answers `true` for a verifying proof, `false` for one that does not verify
-        // and null for malformed input; only a verifying proof is accepted.
-        try expectCase(case, verified == std.mem.eql(u8, case.output, "true"));
+        try expectCase(case.name, verified == std.mem.eql(u8, case.output, "true"));
         if (verified) accepted += 1 else rejected += 1;
     }
     try std.testing.expectEqual(9, accepted);

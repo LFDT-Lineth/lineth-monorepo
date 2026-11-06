@@ -9,8 +9,8 @@
         // Consensys fork of Constantine with the guest shims and rv64 freestanding build. Lazy: only a
         // build that needs an archive fetches it.
         .constantine = .{
-            .url = "git+https://github.com/Consensys-Incorporated/constantine#e59d1afbd5d0d9aa2f804a408e80b7028ea18dfc",
-            .hash = "N-V-__8AAMT-6QbaA003ZmRaY6_USv67j_gQcYOHabA5o7TI",
+            .url = "git+https://github.com/Consensys-Incorporated/constantine#90d65fc4f72d994403d50984ac1f979759f917c4",
+            .hash = "N-V-__8AACA96gZN8n0WId6IWzHR1ktU_c0WZrLS9dtwGlJY",
             .lazy = true,
         },
     },
