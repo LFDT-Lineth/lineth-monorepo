@@ -9,6 +9,8 @@ package maru.app
 import linea.kotlin.decodeHex
 import linea.testing.besu.BesuTransactionsHelper
 import linea.testing.besu.ethGetBlockByNumber
+import linea.timer.JvmTimer
+import linea.timer.TimerSchedule
 import maru.consensus.ChainFork
 import maru.consensus.ClFork
 import maru.consensus.ElFork
@@ -22,6 +24,7 @@ import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.awaitility.kotlin.await
+import org.hyperledger.besu.datatypes.Hash
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Amount
 import org.hyperledger.besu.tests.acceptance.dsl.node.BesuNode
 import org.junit.jupiter.api.AfterEach
@@ -30,7 +33,9 @@ import org.junit.jupiter.api.Test
 import org.web3j.protocol.core.methods.response.EthBlock
 import testutils.Checks.getMinedBlocks
 import testutils.Checks.verifyBlockTime
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Clock
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
@@ -39,6 +44,7 @@ import kotlin.time.toJavaDuration
 class MaruConsensusSwitchTest {
   companion object {
     private const val VANILLA_EXTRA_DATA_LENGTH = 32
+    private val TRANSACTION_SEND_INTERVAL = 200.milliseconds
   }
 
   private lateinit var cluster: MaruCluster
@@ -139,16 +145,7 @@ class MaruConsensusSwitchTest {
         assertThat(validatorMaruNode.p2pNetwork.peerCount).isGreaterThanOrEqualTo(1)
         assertThat(followerMaruNode.p2pNetwork.peerCount).isGreaterThanOrEqualTo(1)
       }
-    log.info("Sending transactions")
-    do {
-      transactionsHelper.run {
-        validatorBesuNode.sendTransactionAndAssertExecution(
-          logger = log,
-          recipient = createAccount("pre-switch account"),
-          amount = Amount.ether(1),
-        )
-      }
-    } while (Clock.System.now() < pragueTimestamp + 2.seconds)
+    sendTransactionsContinuously(validatorBesuNode, until = pragueTimestamp + 2.seconds)
 
     await()
       .atMost(3.seconds.toJavaDuration())
@@ -175,6 +172,44 @@ class MaruConsensusSwitchTest {
       totalBlocksToProduce = sequencerHead,
       shanghaiTimestamp = shanghaiTimestamp,
     )
+  }
+
+  /**
+   * Sends transactions from a background thread without waiting for receipts, so the validator, which does not allow
+   * empty blocks, always has pending transactions and never skips a slot. Returns once the last transaction is mined.
+   */
+  private fun sendTransactionsContinuously(
+    besuNode: BesuNode,
+    until: Instant,
+  ) {
+    log.info("Sending transactions until {}", until)
+    val recipient = transactionsHelper.createAccount("pre-switch account")
+    val lastTxHash = AtomicReference<Hash>()
+    val sender =
+      JvmTimer(
+        name = "transaction-sender",
+        initialDelay = Duration.ZERO,
+        period = TRANSACTION_SEND_INTERVAL,
+        timerSchedule = TimerSchedule.FIXED_DELAY,
+        errorHandler = { log.warn("Failed to send transaction: {}", it.message, it) },
+        task = {
+          transactionsHelper.run { lastTxHash.set(besuNode.sendTransaction(log, recipient, Amount.ether(1))) }
+        },
+      )
+    sender.start()
+    try {
+      await
+        .timeout((until - Clock.System.now() + 10.seconds).toJavaDuration())
+        .pollInterval(100.milliseconds.toJavaDuration())
+        .until { Clock.System.now() >= until }
+    } finally {
+      sender.stop().get()
+    }
+    val txHash = checkNotNull(lastTxHash.get()) { "No transaction was sent" }
+    transactionsHelper.ethConditions
+      .expectSuccessfulTransactionReceipt(txHash.bytes.toHexString())
+      .verify(besuNode)
+    log.info("Last transaction {} was mined", txHash)
   }
 
   private fun List<EthBlock.Block>.findSwitchBlock(): Int? =
