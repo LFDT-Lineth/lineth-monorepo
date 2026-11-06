@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
+	"github.com/consensys/gnark-crypto/field/koalabear"
 	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
 )
 
@@ -81,9 +82,7 @@ func mustEqualLen2(res, a int) {
 // base field. All slices must have equal length.
 func VecAddBaseBase(res, a, b []Element) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		res[i].Add(&a[i], &b[i])
-	}
+	(*koalabear.Vector)(&res).Add(a, b)
 }
 
 // VecAddExtBase sets res[i] = a[i] + b[i] where a is an extension vector and
@@ -140,9 +139,7 @@ func VecAddInto(res, a, b Vec) {
 // All slices must have equal length.
 func VecSubBaseBase(res, a, b []Element) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		res[i].Sub(&a[i], &b[i])
-	}
+	(*koalabear.Vector)(&res).Sub(a, b)
 }
 
 // VecSubExtBase sets res[i] = a[i] - b[i] where a is an extension vector and
@@ -207,9 +204,7 @@ func VecSubInto(res, a, b Vec) {
 // All slices must have equal length.
 func VecMulBaseBase(res, a, b []Element) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		res[i].Mul(&a[i], &b[i])
-	}
+	(*koalabear.Vector)(&res).Mul(a, b)
 }
 
 // VecMulExtBase sets res[i] = a[i] * b[i] where a is an extension vector and
@@ -219,9 +214,7 @@ func VecMulBaseBase(res, a, b []Element) {
 // All slices must have equal length.
 func VecMulExtBase(res []Ext, a []Ext, b []Element) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		res[i].MulByElement(&a[i], &b[i])
-	}
+	extensions.VectorE6(res).MulByElement(a, b)
 }
 
 // VecMulBaseExt sets res[i] = a[i] * b[i] where a is a base vector and b is
@@ -310,9 +303,7 @@ func VecNegInto(res, a Vec) {
 // res and a must have equal length.
 func VecScaleBaseBase(res []Element, s Element, a []Element) {
 	mustEqualLen2(len(res), len(a))
-	for i := range res {
-		res[i].Mul(&s, &a[i])
-	}
+	(*koalabear.Vector)(&res).ScalarMul(a, &s)
 }
 
 // VecScaleBaseExt sets res[i] = s * a[i] where s is a base scalar and a is an
@@ -321,9 +312,7 @@ func VecScaleBaseBase(res []Element, s Element, a []Element) {
 // res and a must have equal length.
 func VecScaleBaseExt(res []Ext, s Element, a []Ext) {
 	mustEqualLen2(len(res), len(a))
-	for i := range res {
-		res[i].MulByElement(&a[i], &s)
-	}
+	extensions.VectorE6(res).ScalarMulByElement(a, &s)
 }
 
 // VecScaleExtBase sets res[i] = s * a[i] where s is an extension scalar and a

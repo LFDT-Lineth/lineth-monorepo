@@ -1,6 +1,7 @@
 package field
 
 import (
+	"slices"
 	"testing"
 )
 
@@ -720,4 +721,40 @@ func TestVecLengthMismatchPanics(t *testing.T) {
 			VecBatchInvBase(make([]Element, n), make([]Element, short))
 		})
 	})
+}
+
+// TestVecKernelsInPlace checks the helpers backed by gnark-crypto kernels when
+// res aliases an input, as callers that update a vector in place do.
+func TestVecKernelsInPlace(t *testing.T) {
+	a, b := randomElems(testN), randomElems(testN)
+	s := a[0]
+	x := randomExts(testN)
+	baseCases := map[string]func(res, a, b []Element){
+		"Add":   VecAddBaseBase,
+		"Sub":   VecSubBaseBase,
+		"Mul":   VecMulBaseBase,
+		"Scale": func(res, a, _ []Element) { VecScaleBaseBase(res, s, a) },
+	}
+	for name, f := range baseCases {
+		want := make([]Element, testN)
+		f(want, a, b)
+		got := slices.Clone(a)
+		f(got, got, b)
+		if !slices.Equal(got, want) {
+			t.Errorf("%s: in-place result differs", name)
+		}
+	}
+	extCases := map[string]func(res, x []Ext){
+		"MulExtBase":   func(res, x []Ext) { VecMulExtBase(res, x, b) },
+		"ScaleBaseExt": func(res, x []Ext) { VecScaleBaseExt(res, s, x) },
+	}
+	for name, f := range extCases {
+		want := make([]Ext, testN)
+		f(want, x)
+		got := slices.Clone(x)
+		f(got, got)
+		if !slices.Equal(got, want) {
+			t.Errorf("%s: in-place result differs", name)
+		}
+	}
 }
