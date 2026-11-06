@@ -6,6 +6,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/internal/padded"
 	"github.com/sirupsen/logrus"
 )
 
@@ -340,152 +341,136 @@ func (cv *ColumnView) Degree() int {
 // 1 * (n - 1) where n is the module size.
 func (cv *ColumnView) DegreeFactor() int { return 1 }
 
+// RowReader reads blocks of rows of a column view straight from its column's
+// assignment, without materialising the padded, shifted column: row i is the
+// module's padded row (i + ShiftingOffset) mod n, as [ColumnView.EvaluateVector]
+// returns it. Rows outside the assignment's data read as its padding value,
+// following the module's [PaddingDirection] (see [ConcreteVector.ElementAtN]);
+// for a [PaddingDirectionLeft] assignment longer than n, its last n values are
+// the data.
+//
+// A RowReader is a read-only value: it is safe for concurrent use as long as
+// the assignment it reads is not mutated. Obtain one with [ColumnView.Rows] or
+// [NewRowReader], once, out of any hot loop: [ColumnView.Rows] looks the
+// assignment up under the runtime's lock.
+type RowReader struct {
+	plain field.Vec
+	pad   field.Element
+	n     int
+	shift int // in [0, n)
+	start int // padded row of plain[0]; negative for an over-full Left assignment
+}
+
+// NewRowReader returns a [RowReader] over the assignment a laid out as a
+// column of n rows padded towards padding, cyclically shifted by shift (any
+// integer, as [ColumnView.ShiftingOffset]).
+func NewRowReader(a *ConcreteVector, padding PaddingDirection, n, shift int) RowReader {
+	r := RowReader{plain: a.Plain, pad: a.Padding, n: n}
+	if n > 0 {
+		r.shift = ((shift % n) + n) % n
+	}
+	if padding == PaddingDirectionLeft {
+		r.start = n - a.Plain.Len()
+	}
+	return r
+}
+
+// Rows returns a [RowReader] over the view, sized to its module's runtime
+// size.
+func (cv *ColumnView) Rows(rt *Runtime) RowReader {
+	return NewRowReader(
+		rt.GetColumnAssignment(cv.Column),
+		cv.Column.Module.Padding,
+		cv.Column.Module.RuntimeSize(rt),
+		cv.ShiftingOffset,
+	)
+}
+
+// Len returns the number of rows n.
+func (r RowReader) Len() int { return r.n }
+
+// IsBase reports whether the assignment holds base-field data, which
+// [RowReader.ReadBase] requires. Extension data must be read with
+// [RowReader.ReadExt].
+func (r RowReader) IsBase() bool { return r.plain.IsBase() }
+
+// ReadBase copies rows [lo, hi) into dst and returns dst[:hi-lo]. Panics if
+// the assignment holds extension data, if the range is not within [0, n), or
+// if dst is shorter than hi-lo.
+func (r RowReader) ReadBase(lo, hi int, dst []field.Element) []field.Element {
+	r.checkRange(lo, hi)
+	dst = dst[:hi-lo]
+	padded.Read(dst, r.plain.AsBase(), r.pad, r.start, r.n, r.first(lo))
+	return dst
+}
+
+// ReadExt copies rows [lo, hi) into dst, in the extension field, and returns
+// dst[:hi-lo]. Base-field data and the padding value are lifted. Panics if the
+// range is not within [0, n), or if dst is shorter than hi-lo.
+func (r RowReader) ReadExt(lo, hi int, dst []field.Ext) []field.Ext {
+	r.checkRange(lo, hi)
+	dst = dst[:hi-lo]
+	if r.plain.IsBase() {
+		padded.ReadLift(dst, r.plain.AsBase(), r.pad, r.start, r.n, r.first(lo))
+	} else {
+		padded.Read(dst, r.plain.AsExt(), field.Lift(r.pad), r.start, r.n, r.first(lo))
+	}
+	return dst
+}
+
+// first returns the padded row read as row lo.
+func (r RowReader) first(lo int) int {
+	if lo == r.n { // empty read at the end: any row in [0, n) will do
+		return 0
+	}
+	idx := lo + r.shift
+	if idx >= r.n {
+		idx -= r.n
+	}
+	return idx
+}
+
+func (r RowReader) checkRange(lo, hi int) {
+	if lo < 0 || hi < lo || hi > r.n {
+		panic(fmt.Sprintf("wiop: RowReader: rows [%d, %d) out of bounds [0, %d)", lo, hi, r.n))
+	}
+}
+
 // EvaluateVector implements [Expression]. Returns a full-sized concrete vector
 // (length == module size) where logical row i holds the column value at
 // physical row (i + ShiftingOffset) mod n, accounting for the module's padding.
 //
-// The padded column is materialized with bulk copies and fills rather than
-// per-row [ConcreteVector.ElementAtN] indexing, and a non-zero shift is
-// applied as a two-piece rotation.
+// The vector is a fresh copy, written in one pass by a [RowReader]: bulk
+// copies and fills, the shift applied by reading from the right row rather
+// than by rotating afterwards.
 func (cv *ColumnView) EvaluateVector(rt *Runtime) ConcreteVector {
-	concrete := rt.GetColumnAssignment(cv.Column)
-	m := cv.Column.Module
-	n := m.RuntimeSize(rt)
+	r := cv.Rows(rt)
+	n := r.Len()
 
 	var result field.Vec
 	if cv.Column.IsExtension {
-		dst := make([]field.Ext, n)
-		materializeExt(dst, concrete, m.Padding, n)
-		rotateLeft(dst, cv.ShiftingOffset, n)
-		result = field.VecFromExt(dst)
+		result = field.VecFromExt(r.ReadExt(0, n, make([]field.Ext, n)))
 	} else {
-		dst := make([]field.Element, n)
-		materializeBase(dst, concrete, m.Padding, n)
-		rotateLeft(dst, cv.ShiftingOffset, n)
-		result = field.VecFromBase(dst)
+		result = field.VecFromBase(r.ReadBase(0, n, make([]field.Element, n)))
 	}
 
 	return ConcreteVector{
 		Plain:   result,
-		Padding: concrete.Padding,
+		Padding: r.pad,
 		promise: cv,
 	}
 }
 
-// materializeBase writes the padding-expanded base-field column into dst
-// (length n): the plain assignment placed per the padding direction, with the
-// gap filled by the padding constant. Follows the same index mapping as
-// [ConcreteVector.ElementAtN].
-func materializeBase(dst []field.Element, cv *ConcreteVector, padding PaddingDirection, n int) {
-	plain := cv.Plain.AsBase()
-	switch {
-	case padding == PaddingDirectionLeft && len(plain) < n:
-		gap := n - len(plain)
-		field.VecFillBase(dst[:gap], cv.Padding)
-		copy(dst[gap:], plain)
-	case padding == PaddingDirectionLeft: // plain over-full: keep the tail
-		copy(dst, plain[len(plain)-n:])
-	default: // None or Right: plain-first, fill any tail gap
-		copied := copy(dst, plain)
-		field.VecFillBase(dst[copied:], cv.Padding)
-	}
-}
-
-// materializeExt is the extension-field variant of [materializeBase]. The
-// plain assignment may still be base-typed (a base-assigned column declared as
-// extension); its values and the padding constant are lifted on copy.
-func materializeExt(dst []field.Ext, cv *ConcreteVector, padding PaddingDirection, n int) {
-	if cv.Plain.IsBase() {
-		plain := cv.Plain.AsBase()
-		pad := field.Lift(cv.Padding)
-		switch {
-		case padding == PaddingDirectionLeft && len(plain) < n:
-			gap := n - len(plain)
-			field.VecFillExt(dst[:gap], pad)
-			for i, x := range plain {
-				dst[gap+i] = field.Lift(x)
-			}
-		case padding == PaddingDirectionLeft:
-			for i, x := range plain[len(plain)-n:] {
-				dst[i] = field.Lift(x)
-			}
-		default:
-			copied := len(plain)
-			if copied > n {
-				copied = n
-			}
-			for i, x := range plain[:copied] {
-				dst[i] = field.Lift(x)
-			}
-			field.VecFillExt(dst[copied:], pad)
-		}
-		return
-	}
-	plain := cv.Plain.AsExt()
-	switch {
-	case padding == PaddingDirectionLeft && len(plain) < n:
-		gap := n - len(plain)
-		field.VecFillExt(dst[:gap], field.Lift(cv.Padding))
-		copy(dst[gap:], plain)
-	case padding == PaddingDirectionLeft:
-		copy(dst, plain[len(plain)-n:])
-	default:
-		copied := copy(dst, plain)
-		field.VecFillExt(dst[copied:], field.Lift(cv.Padding))
-	}
-}
-
-// rotateLeft rotates v in place so that v[i] takes the value previously at
-// (i + offset) mod n. offset may be negative or exceed n. No-op when the
-// normalized offset is zero.
-func rotateLeft[E any](v []E, offset, n int) {
-	s := ((offset % n) + n) % n
-	if s == 0 {
-		return
-	}
-	tmp := make([]E, s)
-	copy(tmp, v[:s])
-	copy(v, v[s:])
-	copy(v[n-s:], tmp)
-}
-
 // EvaluateVectorAsExt is like EvaluateVector but always returns a length-n
 // []field.Ext. Base-field columns are lifted; extension columns are copied
-// as-is. If the evaluated vector is shorter than n, the remainder is filled
-// with the lifted padding value.
+// as-is. If n exceeds the module size, the remainder is filled with the
+// lifted padding value.
 func (cv *ColumnView) EvaluateVectorAsExt(rt *Runtime, n int) []field.Ext {
-	cvData := cv.EvaluateVector(rt)
+	r := cv.Rows(rt)
 	out := make([]field.Ext, n)
-	plain := cvData.Plain
-	if plain.IsBase() {
-		base := plain.AsBase()
-		copyLen := len(base)
-		if copyLen > n {
-			copyLen = n
-		}
-		for i := 0; i < copyLen; i++ {
-			out[i] = field.Lift(base[i])
-		}
-		if copyLen < n {
-			pad := field.Lift(cvData.Padding)
-			for i := copyLen; i < n; i++ {
-				out[i] = pad
-			}
-		}
-		return out
-	}
-	ext := plain.AsExt()
-	copyLen := len(ext)
-	if copyLen > n {
-		copyLen = n
-	}
-	copy(out[:copyLen], ext[:copyLen])
-	if copyLen < n {
-		pad := field.Lift(cvData.Padding)
-		for i := copyLen; i < n; i++ {
-			out[i] = pad
-		}
-	}
+	k := min(n, r.Len())
+	r.ReadExt(0, k, out)
+	field.VecFillExt(out[k:], field.Lift(r.pad))
 	return out
 }
 
