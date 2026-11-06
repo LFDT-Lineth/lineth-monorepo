@@ -837,29 +837,37 @@ func (w *worker) baseOp(nd *node, dst []field.Element) {
 	if len(nd.args) > 1 {
 		b = w.operand(nd.args[1], L)
 	}
+	w.baseApply(nd.op, len(nd.args), &a, &b, dst)
+}
+
+// baseApply writes o applied to the base-field operands a and b (b unused
+// when arity is 1) into dst. At most one operand is a scalar: an operation
+// over scalars only is a scalar node.
+func (w *worker) baseApply(o Op, arity int, a, b *operand, dst []field.Element) {
+	L := len(dst)
 	out := field.Vector(dst)
 	switch {
-	case nd.op == Add && !a.scalar && !b.scalar:
+	case o == Add && !a.scalar && !b.scalar:
 		out.Add(a.base, b.base)
 		return
-	case nd.op == Sub && !a.scalar && !b.scalar:
+	case o == Sub && !a.scalar && !b.scalar:
 		out.Sub(a.base, b.base)
 		return
-	case nd.op == Mul && !a.scalar && !b.scalar:
+	case o == Mul && !a.scalar && !b.scalar:
 		out.Mul(a.base, b.base)
 		return
-	case nd.op == Mul && b.scalar:
+	case o == Mul && b.scalar:
 		s := b.s.B0.A0
 		out.ScalarMul(a.base, &s)
 		return
-	case nd.op == Mul && a.scalar:
+	case o == Mul && a.scalar:
 		s := a.s.B0.A0
 		out.ScalarMul(b.base, &s)
 		return
-	case nd.op == Inverse && !a.scalar:
+	case o == Inverse && !a.scalar:
 		batchInvertBase(a.base, dst, w.invBase[:L])
 		return
-	case nd.op == Div && !b.scalar:
+	case o == Div && !b.scalar:
 		batchInvertBase(b.base, w.tmpBase[:L], w.invBase[:L])
 		if a.scalar {
 			s := a.s.B0.A0
@@ -868,14 +876,67 @@ func (w *worker) baseOp(nd *node, dst []field.Element) {
 			out.Mul(a.base, w.tmpBase[:L])
 		}
 		return
+	case o == Add && b.scalar:
+		addScalarBase(dst, a.base, b.s.B0.A0)
+		return
+	case o == Add && a.scalar:
+		addScalarBase(dst, b.base, a.s.B0.A0)
+		return
+	case o == Sub && b.scalar:
+		subScalarBase(dst, a.base, b.s.B0.A0)
+		return
+	case o == Sub && a.scalar:
+		scalarSubBase(dst, a.s.B0.A0, b.base)
+		return
+	case o == Negate && !a.scalar:
+		scalarSubBase(dst, field.Element{}, a.base)
+		return
+	case o == Double && !a.scalar:
+		out.Add(a.base, a.base)
+		return
+	case o == Square && !a.scalar:
+		out.Mul(a.base, a.base)
+		return
 	}
+	applyBaseGeneric(o, arity, a, b, dst)
+}
+
+// applyBaseGeneric is the element-by-element form of [worker.baseApply], for
+// the operand kinds without a vector path.
+func applyBaseGeneric(o Op, arity int, a, b *operand, dst []field.Element) {
 	var args [2]field.Element
 	for i := range dst {
 		args[0] = a.baseAt(i)
-		if len(nd.args) > 1 {
+		if arity > 1 {
 			args[1] = b.baseAt(i)
 		}
-		dst[i] = applyBase(nd.op, args[:len(nd.args)])
+		dst[i] = applyBase(o, args[:arity])
+	}
+}
+
+// addScalarBase sets dst[i] = a[i] + s. Like the other scalar loops below,
+// it is a plain loop rather than a broadcast and a vector kernel: over a
+// block, the broadcast costs more than the kernel saves.
+func addScalarBase(dst, a []field.Element, s field.Element) {
+	a = a[:len(dst)]
+	for i := range dst {
+		dst[i].Add(&a[i], &s)
+	}
+}
+
+// subScalarBase sets dst[i] = a[i] - s.
+func subScalarBase(dst, a []field.Element, s field.Element) {
+	a = a[:len(dst)]
+	for i := range dst {
+		dst[i].Sub(&a[i], &s)
+	}
+}
+
+// scalarSubBase sets dst[i] = s - b[i]; with s = 0, it is the negation.
+func scalarSubBase(dst []field.Element, s field.Element, b []field.Element) {
+	b = b[:len(dst)]
+	for i := range dst {
+		dst[i].Sub(&s, &b[i])
 	}
 }
 
