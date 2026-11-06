@@ -19,7 +19,11 @@ import (
 // zero value is ready to use and safe for concurrent use.
 //
 // Slices from [Pool.Get] hold stale values: a caller must write every element
-// before reading it. Released slices are only handed out again within their
+// before reading it. Built with the bufpooldebug tag, the pool fills every
+// slice it hands out or takes back with a non-zero pattern, so that reading
+// an element before writing it, or using a slice after releasing it, gives
+// wrong values deterministically instead of only when the stale values
+// happen to differ. Released slices are only handed out again within their
 // capacity class. The pool keeps released slices until [Pool.Trim] drops
 // the classes that went unrequested, or [Pool.Drain] gives all the memory
 // back, up to a cap on the bytes it retains (see [Pool.SetMaxRetainedBytes]):
@@ -88,11 +92,17 @@ func (p *Pool[T]) Get(n int) []T {
 		p.free[class] = p.free[class][:k-1]
 		p.retained -= classBytes[T](class)
 		p.mu.Unlock()
+		if poisonEnabled {
+			poison(v)
+		}
 		return v[:n]
 	}
 	p.mu.Unlock()
 	v := make([]T, 1<<class)
 	hugepage.Advise(v)
+	if poisonEnabled {
+		poison(v)
+	}
 	return v[:n]
 }
 
@@ -107,6 +117,9 @@ func (p *Pool[T]) Put(v []T) {
 	}
 	class := bits.Len(uint(c - 1))
 	size := classBytes[T](class)
+	if poisonEnabled {
+		poison(v[:c])
+	}
 	p.mu.Lock()
 	limit := p.maxRetained
 	if limit == 0 {

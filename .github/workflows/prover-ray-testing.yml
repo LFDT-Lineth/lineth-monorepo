@@ -90,6 +90,13 @@ jobs:
       working-directory: prover-ray
       run: |
         go test -short -timeout=600s ./...
+    # The bufpooldebug tag poisons every pooled buffer handed out or released,
+    # so a buffer read before it is written, or used after it is released,
+    # fails these tests deterministically.
+    - name: Test with poisoned buffer pools
+      working-directory: prover-ray
+      run: |
+        go test -short -timeout=600s -tags bufpooldebug ./utils/bufpool/... ./crypto/koalabear/fri/... ./wiop/compilers/pcs/... ./wiop/compilers/global/...
 
   ssz-golden:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
