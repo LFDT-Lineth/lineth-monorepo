@@ -12,11 +12,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// hashGnarkCircuit checks that HashGnark(Root) equals the Expected digest.
 type hashGnarkCircuit struct {
 	Root     circuit.Octuplet
 	Expected [MSetHashSizeNumFieldElement]circuit.Element
 }
 
+// Define hashes Root in-circuit and asserts each element equals Expected.
 func (c *hashGnarkCircuit) Define(api frontend.API) error {
 	koalaAPI := circuit.NewAPI(api)
 	got := HashGnark(api, c.Root)
@@ -26,6 +28,7 @@ func (c *hashGnarkCircuit) Define(api frontend.API) error {
 	return nil
 }
 
+// hashGnarkWitness builds an assignment from a random root and its native [Hash].
 func hashGnarkWitness(t *testing.T) *hashGnarkCircuit {
 	t.Helper()
 	var root field.Octuplet
@@ -45,8 +48,8 @@ func hashGnarkWitness(t *testing.T) *hashGnarkCircuit {
 	return &w
 }
 
-// TestHashGnark checks that [HashGnark] matches the native [Hash] limb for
-// limb, and that a single tampered limb is rejected.
+// TestHashGnark checks that [HashGnark] matches the native [Hash] element for
+// element, and that a single tampered element is rejected.
 func TestHashGnark(t *testing.T) {
 	ccs, err := frontend.Compile(ecc.BN254.ScalarField(), scs.NewBuilder, &hashGnarkCircuit{})
 	require.NoError(t, err)
