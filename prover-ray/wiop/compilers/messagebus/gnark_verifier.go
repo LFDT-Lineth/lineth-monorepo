@@ -36,6 +36,6 @@ func (*SharedRandomnessContributionChecker) CheckGnark(api frontend.API, run *wi
 			panic(fmt.Sprintf(
 				"wiop/compilers/messagebus: contribution-%d is carried as an extension element", i))
 		}
-		run.API().AssertIsEqual(v, digest[i])
+		run.API().AssertIsEqual(v, digest[i]) // a forged contribution limb fails here
 	}
 }

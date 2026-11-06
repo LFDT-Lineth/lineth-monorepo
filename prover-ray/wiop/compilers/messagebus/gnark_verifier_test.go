@@ -55,11 +55,13 @@ func TestGnarkVerifier_SharedRandomness(t *testing.T) {
 	require.GreaterOrEqual(t, pos, 0)
 	honest := cell.Assigner
 	cell.Assigner = func(rt *wiop.Runtime) field.Gen {
-		return honest(rt).Add(field.ElemFromBase(field.One()))
+		return honest(rt).Add(field.ElemFromBase(field.One())) // contribution limb 0 is off by one
 	}
 	defer func() { cell.Assigner = honest }()
 
-	_, badProof, badPub := shard1.runProve(t, g)
+	_, badProof, badPub := shard1.runProve(t, g) // the malformed proof
+	// Natively, SharedRandomnessContributionChecker.Check finds the mismatch.
 	require.Error(t, sys.Verify(badProof, badPub), "forged contribution must fail natively")
+	// In-circuit, CheckGnark's assertion against HashGnark(commitment) fails.
 	require.Error(t, solve(badProof, badPub), "forged contribution must not satisfy the circuit")
 }
