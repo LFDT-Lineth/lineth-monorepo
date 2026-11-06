@@ -24,7 +24,6 @@ import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.awaitility.kotlin.await
-import org.hyperledger.besu.datatypes.Hash
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Amount
 import org.hyperledger.besu.tests.acceptance.dsl.node.BesuNode
 import org.junit.jupiter.api.AfterEach
@@ -35,7 +34,6 @@ import testutils.Checks.getMinedBlocks
 import testutils.Checks.verifyBlockTime
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Clock
-import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
@@ -184,28 +182,27 @@ class MaruConsensusSwitchTest {
   ) {
     log.info("Sending transactions until {}", until)
     val recipient = transactionsHelper.createAccount("pre-switch account")
-    val lastTxHash = AtomicReference<Hash>()
+    val sendTransaction = { transactionsHelper.run { besuNode.sendTransaction(log, recipient, Amount.ether(1)) } }
+    val lastTxHash = AtomicReference(sendTransaction())
     val sender =
       JvmTimer(
         name = "transaction-sender",
-        initialDelay = Duration.ZERO,
+        initialDelay = TRANSACTION_SEND_INTERVAL,
         period = TRANSACTION_SEND_INTERVAL,
         timerSchedule = TimerSchedule.FIXED_DELAY,
         errorHandler = { log.warn("Failed to send transaction: {}", it.message, it) },
-        task = {
-          transactionsHelper.run { lastTxHash.set(besuNode.sendTransaction(log, recipient, Amount.ether(1))) }
-        },
+        task = { lastTxHash.set(sendTransaction()) },
       )
     sender.start()
     try {
-      await
-        .timeout((until - Clock.System.now() + 10.seconds).toJavaDuration())
-        .pollInterval(100.milliseconds.toJavaDuration())
-        .until { Clock.System.now() >= until }
+      val remaining = until - Clock.System.now()
+      if (remaining.isPositive()) {
+        Thread.sleep(remaining.inWholeMilliseconds)
+      }
     } finally {
       sender.stop().get()
     }
-    val txHash = checkNotNull(lastTxHash.get()) { "No transaction was sent" }
+    val txHash = lastTxHash.get()
     transactionsHelper.ethConditions
       .expectSuccessfulTransactionReceipt(txHash.bytes.toHexString())
       .verify(besuNode)
