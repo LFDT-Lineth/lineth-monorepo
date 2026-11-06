@@ -187,6 +187,85 @@ func TestCosetsToShares(t *testing.T) {
 	}
 }
 
+// mixCosetsScalar is the per-position scalar loop mixCosets replaced.
+func mixCosetsScalar(shares [][]field.Ext, agg []field.Ext, coefs [][]field.Element, start, end int) {
+	for m, share := range shares {
+		n := len(share)
+		for p := start; p < end; p++ {
+			var acc, term field.Ext
+			for k := range coefs[m] {
+				term.MulByElement(&agg[k*n+p], &coefs[m][k])
+				acc.Add(&acc, &term)
+			}
+			share[p] = acc
+		}
+	}
+}
+
+// mixCosets must match the scalar loop on random data, for tiny share
+// lengths, lengths that are not multiples of the 16 kernel lanes or of the
+// block, and sub-ranges that do not start at 0.
+func TestMixCosetsMatchesScalar(t *testing.T) {
+	rng := rand.New(rand.NewPCG(7, 8))
+	for _, ratio := range []int{1, 2, 3, 4} {
+		for _, n := range []int{1, 2, 5, 15, 16, 17, 255, 257, 1024, 1025, 2100} {
+			agg := field.VecPseudoRandExt(rng, ratio*n)
+			coefs := make([][]field.Element, ratio)
+			for m := range coefs {
+				coefs[m] = make([]field.Element, ratio)
+				for k := range coefs[m] {
+					coefs[m][k] = field.PseudoRand(rng)
+				}
+			}
+			newShares := func() [][]field.Ext {
+				s := make([][]field.Ext, ratio)
+				for m := range s {
+					s[m] = field.VecPseudoRandExt(rng, n)
+				}
+				return s
+			}
+			for _, r := range [][2]int{{0, n}, {n / 3, n}, {0, n / 2}} {
+				want, got := newShares(), newShares()
+				for m := range want {
+					copy(got[m], want[m])
+				}
+				mixCosetsScalar(want, agg, coefs, r[0], r[1])
+				mixCosets(got, agg, coefs, r[0], r[1])
+				require.Equal(t, want, got, "ratio=%d n=%d range=%v", ratio, n, r)
+			}
+		}
+	}
+}
+
+// BenchmarkMixCosets compares the mixing on n = 2^14 rows at ratios 2 and 4
+// (single-threaded).
+func BenchmarkMixCosets(b *testing.B) {
+	const n = 1 << 14
+	rng := rand.New(rand.NewPCG(9, 10))
+	for _, ratio := range []int{2, 4} {
+		agg := field.VecPseudoRandExt(rng, ratio*n)
+		coefs := make([][]field.Element, ratio)
+		shares := make([][]field.Ext, ratio)
+		for m := range coefs {
+			coefs[m] = make([]field.Element, ratio)
+			for k := range coefs[m] {
+				coefs[m][k] = field.PseudoRand(rng)
+			}
+			shares[m] = make([]field.Ext, n)
+		}
+		b.Run(fmt.Sprintf("ratio=%d/scalar", ratio), func(b *testing.B) {
+			for b.Loop() {
+				mixCosetsScalar(shares, agg, coefs, 0, n)
+			}
+		})
+		b.Run(fmt.Sprintf("ratio=%d/vector", ratio), func(b *testing.B) {
+			for b.Loop() {
+				mixCosets(shares, agg, coefs, 0, n)
+			}
+		})
+	}
+}
+
 // hornerExt evaluates Σ c_i·x^i.
 func hornerExt(c []field.Ext, x field.Element) field.Ext {
 	var acc field.Ext

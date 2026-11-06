@@ -981,17 +981,8 @@ func cosetsToShares(agg []field.Ext, smallDomain *fft.Domain, cosetDomains []*ff
 			hugepage.Advise(shares[m])
 		}
 	})
-	parallel.Execute(n, func(start, end int) {
-		for m, share := range shares {
-			for p := start; p < end; p++ {
-				var acc, term field.Ext
-				for k := range ratio {
-					term.MulByElement(&agg[k*n+p], &coefs[m][k])
-					acc.Add(&acc, &term)
-				}
-				share[p] = acc
-			}
-		}
+	parallel.ExecuteAligned(n, 16, func(start, end int) {
+		mixCosets(shares, agg, coefs, start, end)
 	})
 
 	parallel.ExecuteWithNbTasks(ratio, ratio, func(start, end int) {
@@ -1000,6 +991,37 @@ func cosetsToShares(agg []field.Ext, smallDomain *fft.Domain, cosetDomains []*ff
 		}
 	})
 	return shares
+}
+
+// mixBlock is the number of positions mixCosets processes at a time: its
+// 24 KiB scratch stays on the stack and the coset rows it reads stay in
+// cache. 1024 measured faster than 256 or 512 (fewer kernel calls).
+const mixBlock = 1024
+
+// mixCosets sets, for p in [start, end) and every share m,
+//
+//	shares[m][p] = Σ_k coefs[m][k] · agg[k·n + p]
+//
+// with n = len(shares[m]) and k ranging over the ratio cosets. Each term is
+// a base scalar times an extension vector, which is a scaling of the limb
+// view (see field.ExtLimbs), so it runs through koalabear.Vector.ScalarMul
+// and Add over blocks of mixBlock positions. Exact arithmetic: the result
+// matches the per-position scalar loop.
+func mixCosets(shares [][]field.Ext, agg []field.Ext, coefs [][]field.Element, start, end int) {
+	var tmpArr [mixBlock]field.Ext
+	for lo := start; lo < end; lo += mixBlock {
+		hi := min(lo+mixBlock, end)
+		tmp := field.ExtLimbs(tmpArr[:hi-lo])
+		for m, share := range shares {
+			n := len(share)
+			dst := field.ExtLimbs(share[lo:hi])
+			dst.ScalarMul(field.ExtLimbs(agg[lo:hi]), &coefs[m][0])
+			for k := 1; k < len(coefs[m]); k++ {
+				tmp.ScalarMul(field.ExtLimbs(agg[k*n+lo:k*n+hi]), &coefs[m][k])
+				dst.Add(dst, tmp)
+			}
+		}
+	}
 }
 
 // EvalProverAction self-assigns the LagrangeEval queries of every module. It
