@@ -5,18 +5,6 @@ import (
 	"fmt"
 )
 
-// loadConst emits LUI+ADDI materializing n in rd. n must be in
-// [0, 0x7FFFF7FF], so that LUI's upper immediate never sets bit 31.
-func (a *assembler) loadConst(rd reg, n int) {
-	if n < 0 || n > fibonacciMaxN {
-		panic(fmt.Sprintf("minimalelf: constant %d outside [0, %d]", n, fibonacciMaxN))
-	}
-	hi := uint32((n + 0x800) >> 12) // imm20 for LUI, with carry fixup
-	lo := int32(n - int(hi)<<12)    // signed imm12 for ADDI
-	a.lui(rd, hi)
-	a.addi(rd, rd, lo)
-}
-
 // memoryMaxN is the largest N for which the 8·N-byte array of [MemoryELF],
 // starting 4096 bytes past the entry point, ends within the 32-bit guest
 // address space.

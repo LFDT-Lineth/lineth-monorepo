@@ -5,11 +5,6 @@ import (
 	"fmt"
 )
 
-// fibonacciMaxN is the largest N that LUI+ADDI materializes as a positive
-// 32-bit constant: beyond it LUI's upper immediate would set bit 31 and the
-// result would be sign-extended.
-const fibonacciMaxN = 0x7FFFF7FF
-
 // FibonacciELF returns a minimal valid ELF64 RISC-V binary computing fib(N)
 // mod 2^64 (wrapping u64 addition), writing the 8-byte little-endian result
 // to guest_output and exiting 0, together with that expected output. N must
@@ -22,17 +17,12 @@ const fibonacciMaxN = 0x7FFFF7FF
 // The result is stored in scratch memory 768 bytes past the auipc base,
 // clear of the 92-byte .text, as in [allInOneSectionData].
 func FibonacciELF(n int) (elf, output []byte) {
-	if n < 0 || n > fibonacciMaxN {
-		panic(fmt.Sprintf("minimalelf: FibonacciELF N=%d outside [0, %d]", n, fibonacciMaxN))
+	if n < 0 || n > maxLuiAddiConst {
+		panic(fmt.Sprintf("minimalelf: FibonacciELF N=%d outside [0, %d]", n, maxLuiAddiConst))
 	}
-	var (
-		hi = uint32((n + 0x800) >> 12) // imm20 for LUI, with carry fixup
-		lo = int32(n - int(hi)<<12)    // signed imm12 for ADDI
-		a  = newAssembler()
-	)
-	a.auipc(s0, 0) // s0 = fixed base (entry address)
-	a.lui(t3, hi)
-	a.addi(t3, t3, lo)  // t3 = N
+	a := newAssembler()
+	a.auipc(s0, 0)      // s0 = fixed base (entry address)
+	a.loadConst(t3, n)  // t3 = N
 	a.addi(t0, zero, 0) // a = 0
 	a.addi(t1, zero, 1) // b = 1
 	a.addi(t2, zero, 0) // i = 0

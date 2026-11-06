@@ -252,3 +252,20 @@ func checkEven(imm int32) {
 		panic(fmt.Sprintf("minimalelf: pc-relative offset %d is not even", imm))
 	}
 }
+
+// maxLuiAddiConst is the largest constant that LUI+ADDI materializes as a
+// positive 32-bit value: beyond it LUI's upper immediate would set bit 31 and
+// the result would be sign-extended.
+const maxLuiAddiConst = 0x7FFFF7FF
+
+// loadConst emits LUI+ADDI materializing n in rd. n must be in
+// [0, 0x7FFFF7FF], so that LUI's upper immediate never sets bit 31.
+func (a *assembler) loadConst(rd reg, n int) {
+	if n < 0 || n > maxLuiAddiConst {
+		panic(fmt.Sprintf("minimalelf: constant %d outside [0, %d]", n, maxLuiAddiConst))
+	}
+	hi := uint32((n + 0x800) >> 12) // imm20 for LUI, with carry fixup
+	lo := int32(n - int(hi)<<12)    // signed imm12 for ADDI
+	a.lui(rd, hi)
+	a.addi(rd, rd, lo)
+}
