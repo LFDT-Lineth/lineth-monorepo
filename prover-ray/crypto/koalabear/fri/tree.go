@@ -165,8 +165,9 @@ func allocTree(numLeaves int) *Tree {
 }
 
 // allocPooledTree is [allocTree] with its nodes taken from the octuplet pool.
-// Only the commitment trees use it ([MultiSizeTable.Merkleize]); they go back
-// to the pool through [CommitterState.Release]. Every node is written by the leaf
+// The commitment trees ([MultiSizeTable.Merkleize]) go back to the pool
+// through [CommitterState.Release], the FRI layer trees ([buildTreeExt])
+// through [ProverState.Release]. Every node is written by the leaf
 // hashing and buildLevels, so the stale nodes of a pooled slice are fine; its
 // capacity, 2·numLeaves, is the pool's power-of-two class.
 func allocPooledTree(numLeaves int) *Tree {
