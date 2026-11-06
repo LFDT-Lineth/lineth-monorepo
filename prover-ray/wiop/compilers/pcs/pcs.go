@@ -901,7 +901,9 @@ func (c *compiled) open(rt *wiop.Runtime) fri.OpeningProof {
 
 	fs.UpdateExt(state.FinalPoly...)
 	positions := fs.RandomManyIntegers(int(pcs.Params.NumQueries), c.effectiveN(rt, batches, manifests))
-	return pcs.Open(state, positions)
+	proof := pcs.Open(state, positions)
+	state.Release()
+	return proof
 }
 
 // verify replays the opening transcript exactly as the prover produced it and
