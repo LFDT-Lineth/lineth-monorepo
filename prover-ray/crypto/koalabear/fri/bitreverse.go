@@ -9,10 +9,6 @@ import (
 	gutils "github.com/consensys/gnark-crypto/utils"
 )
 
-func bitReverse[T any](v []T) {
-	gutils.BitReverse(v)
-}
-
 const (
 	// bitReverseTileBytes bounds one row of a bit-reverse tile: the tile side
 	// B is the largest power of two (at most 2^bitReverseMaxLogTile) with

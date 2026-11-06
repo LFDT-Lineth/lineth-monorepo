@@ -3,7 +3,6 @@ package fri
 import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
-	gutils "github.com/consensys/gnark-crypto/utils"
 )
 
 // RSEncoder is a Reed-Solomon error correcting-code encoder and decoder.
@@ -104,15 +103,13 @@ func (enc *RSEncoder) EncodeInto(p []field.Element, out []field.Element, workers
 		return
 	}
 
-	copy(_p, p)
+	// The zero-padding to size N needs natural-order coefficients, after
+	// which FFT(DIF) emits the N-bit-reversed codeword directly. The input is
+	// bit-reversed on the way in, so that the IFFT(DIT) yields them without
+	// an in-place bit-reversal of the coefficients.
+	bitReverseCopy(_p[:n], p, workers)
 	clear(_p[n:]) // out may hold stale values
-
-	// IFFT(DIF) consumes natural-order Lagrange input and returns n-bit-reversed
-	// coefficients. The n-to-N size change needs one normalization to natural
-	// coefficient order, after which FFT(DIF) emits the N-bit-reversed codeword
-	// directly.
-	enc.smallDomain.FFTInverse(_p[:n], fft.DIF, fftOpt...)
-	bitReverse(_p[:n])
+	enc.smallDomain.FFTInverse(_p[:n], fft.DIT, fftOpt...)
 	enc.Domain.FFT(_p, fft.DIF, fftOpt...)
 }
 
@@ -151,11 +148,10 @@ func (enc *RSEncoder) EncodeExtInto(p []field.Ext, out []field.Ext, workers int)
 		return
 	}
 
-	copy(_p, p)
+	// See EncodeInto for the generic path.
+	bitReverseCopy(_p[:n], p, workers)
 	clear(_p[n:]) // out may hold stale values
-
-	enc.smallDomain.FFTInverseExt6(_p[:n], fft.DIF, fftOpt...)
-	gutils.BitReverse(_p[:n])
+	enc.smallDomain.FFTInverseExt6(_p[:n], fft.DIT, fftOpt...)
 	enc.Domain.FFTExt6(_p, fft.DIF, fftOpt...)
 }
 
