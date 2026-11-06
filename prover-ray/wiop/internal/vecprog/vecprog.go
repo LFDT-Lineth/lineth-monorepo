@@ -654,7 +654,9 @@ func (p *Program) collectPerRun() {
 			if sk.kind == sinkCheck {
 				mark(sk.guard)
 			}
-			markCoef(sk.coef)
+			if sk.kind == sinkAccumulate { // other sinks leave coef unset
+				markCoef(sk.coef)
+			}
 			continue
 		}
 		nd := &p.nodes[st.node]

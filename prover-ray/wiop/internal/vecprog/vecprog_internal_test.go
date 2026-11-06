@@ -568,3 +568,12 @@ func TestCompileEvaluatesOnlyReadScalars(t *testing.T) {
 	p := b.Compile(8, 1, 1)
 	require.Equal(t, 1, p.Stats().Scalars, "only α is read")
 }
+
+// Only an Accumulate sink reads its coefficient: an unused parameter at node 0
+// must not make a Store-only program require bindings.
+func TestStoreSinkReadsNoCoefficient(t *testing.T) {
+	b := NewBuilder()
+	b.Param(0, false)
+	b.Store(b.Base(make([]field.Element, 8), 0), make([]field.Ext, 8))
+	require.NotPanics(t, func() { b.Compile(8, 1, 1).Run(nil, nil, 1) })
+}
