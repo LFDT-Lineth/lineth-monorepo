@@ -83,9 +83,10 @@ func evalCancellationAtPointGnark(api *circuit.KoalaBearAPI, r circuit.Ext, canc
 	return result
 }
 
-// evalExprAtPointGnark mirrors [evalExprAtPoint]: column views resolve to
-// their claimed evaluations, Lagrange selectors to their closed form at r,
-// everything else through the runtime's scalar evaluator.
+// evalExprAtPointGnark evaluates expr at r in the circuit, with the leaves
+// of [evalExprAtPoint]: column views resolve to their claimed evaluations,
+// Lagrange selectors to their closed form at r, everything else through the
+// runtime's scalar evaluator.
 //
 // rPowN is r^n for the module under verification; it is shared with every
 // Lagrange selector of that module so the power chain is paid for once per

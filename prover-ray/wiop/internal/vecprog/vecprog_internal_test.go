@@ -153,7 +153,7 @@ func TestSinksMatchTreeEvaluation(t *testing.T) {
 	}
 }
 
-// The Accumulate sinks must add coef·root·cancellation over ratio cosets of n
+// The accumulate sinks must add coef·root·cancellation over ratio cosets of n
 // points, coset k reading coset k·step of the tables, then scale coset k by
 // scale[k], as a point-by-point evaluation does: on sizes below, at and across
 // a block, with subtrees shared across sinks and zeros hitting every division
@@ -167,6 +167,9 @@ func TestAccumulateMatchesTreeEvaluation(t *testing.T) {
 				size, N := tc.n*tc.ratio*tc.step, tc.n*tc.ratio
 				g := newTreeGen(rand.New(rand.NewPCG(seed, uint64(tc.n))), tc.n, size)
 				b := NewBuilder()
+				// The sinks that are cancelled all read the table Base[0].
+				cancellation := g.base[g.rng.IntN(len(g.base))]
+				bind := &Bindings{Base: [][]field.Element{cancellation}}
 				want := make([]field.Ext, N)
 				var prev *tree
 				for range 12 {
@@ -175,15 +178,16 @@ func TestAccumulateMatchesTreeEvaluation(t *testing.T) {
 						tr = &tree{op: Mul, args: []*tree{prev, tr}}
 					}
 					prev = tr
-					var cancellation []field.Element
-					if g.rng.IntN(2) == 0 {
-						cancellation = g.base[g.rng.IntN(len(g.base))]
+					cancelled := g.rng.IntN(2) == 0
+					cancelSlot := -1
+					if cancelled {
+						cancelSlot = 0
 					}
 					coef := field.VecPseudoRandExt(g.rng, 1)[0]
-					b.Accumulate(tr.build(b), cancellation, coef)
+					b.AccumulateBy(tr.build(b), cancelSlot, b.Scalar(coef, false))
 					for j := range N {
 						v := tr.at(j, tc.n, tc.step)
-						if cancellation != nil {
+						if cancelled {
 							v.MulByElement(&v, &cancellation[j/tc.n*tc.step*tc.n+j%tc.n])
 						}
 						v.Mul(&v, &coef)
@@ -196,7 +200,7 @@ func TestAccumulateMatchesTreeEvaluation(t *testing.T) {
 				}
 
 				got := make([]field.Ext, N)
-				b.Compile(tc.n, tc.ratio, tc.step).Run(got, scale, 0)
+				b.Compile(tc.n, tc.ratio, tc.step).RunWith(bind, got, scale, 0)
 				require.Equal(t, want, got)
 			})
 		}
@@ -341,4 +345,235 @@ func TestInternSeparatesNodesThatDiffer(t *testing.T) {
 	require.Equal(t, kLinear, b.nodes[first].kind)
 	require.Equal(t, first, again, "an identical linear form is merged")
 	require.NotEqual(t, first, form(s2, s1), "linear forms with different coefficients are distinct")
+}
+
+// A program built once over parameters and slotted tables must give, on every
+// run, exactly what a program built with those values as constants and those
+// tables as leaves gives: accumulate sinks with a parameter-dependent
+// coefficient and a slotted cancellation, Horner forms with parameter
+// coefficients, subtrees over parameters only, and parameters equal to zero
+// included.
+func TestParamsAndSlotsMatchConstants(t *testing.T) {
+	const n, ratio = 3*BlockSize + 5, 2
+	rng := rand.New(rand.NewPCG(11, 13))
+	g := newTreeGen(rng, n, n*ratio)
+
+	// build lowers the same trees with every scalar leaf either a constant
+	// (params == nil) or Params[i], and every table either a direct leaf
+	// (slotted == false) or a slot.
+	type leafRef struct {
+		base []field.Element
+		ext  []field.Ext
+	}
+	var scalarLeaves []*tree
+	var tableLeaves []leafRef
+	var collect func(tr *tree)
+	collect = func(tr *tree) {
+		switch {
+		case tr.s != nil:
+			scalarLeaves = append(scalarLeaves, tr)
+		case tr.base != nil || tr.ext != nil:
+			tableLeaves = append(tableLeaves, leafRef{tr.base, tr.ext})
+		}
+		for _, a := range tr.args {
+			collect(a)
+		}
+	}
+	trees := make([]*tree, 6)
+	for i := range trees {
+		trees[i] = g.tree(5)
+		collect(trees[i])
+	}
+	scalarIdx := map[*tree]int{}
+	for i, tr := range scalarLeaves {
+		scalarIdx[tr] = i
+	}
+	baseSlot, extSlot := map[*field.Element]int{}, map[*field.Ext]int{}
+	for _, l := range tableLeaves {
+		if l.base != nil {
+			if _, ok := baseSlot[&l.base[0]]; !ok {
+				baseSlot[&l.base[0]] = len(baseSlot)
+			}
+		} else if _, ok := extSlot[&l.ext[0]]; !ok {
+			extSlot[&l.ext[0]] = len(extSlot)
+		}
+	}
+
+	var build func(b *Builder, tr *tree, params bool) int
+	build = func(b *Builder, tr *tree, params bool) int {
+		switch {
+		case tr.s != nil && params:
+			return b.Param(scalarIdx[tr], tr.isBase)
+		case tr.s != nil:
+			return b.Scalar(*tr.s, tr.isBase)
+		case tr.base != nil && params:
+			return b.BaseSlot(baseSlot[&tr.base[0]], tr.offset)
+		case tr.base != nil:
+			return b.Base(tr.base, tr.offset)
+		case tr.ext != nil && params:
+			return b.ExtSlot(extSlot[&tr.ext[0]], tr.offset)
+		case tr.ext != nil:
+			return b.Ext(tr.ext, tr.offset)
+		}
+		args := make([]int, len(tr.args))
+		for k, a := range tr.args {
+			args[k] = build(b, a, params)
+		}
+		return b.Op(tr.op, args...)
+	}
+	// coin is the accumulation coefficient: Params[len(scalarLeaves)].
+	coinSlot := len(scalarLeaves)
+	run := func(p *Program, bind *Bindings) []field.Ext {
+		agg := make([]field.Ext, n*ratio)
+		p.RunWith(bind, agg, nil, 0)
+		return agg
+	}
+
+	// Every other sink is cancelled by the table Base[cancelSlot].
+	cancelSlot := len(baseSlot)
+	cancelOf := func(i int) int {
+		if i%2 == 1 {
+			return cancelSlot
+		}
+		return -1
+	}
+
+	b := NewBuilder()
+	coinPow := b.Scalar(field.Lift(field.One()), true)
+	coin := b.Param(coinSlot, false)
+	for i, tr := range trees {
+		b.AccumulateBy(build(b, tr, true), cancelOf(i), coinPow)
+		coinPow = b.Op(Mul, coinPow, coin)
+	}
+	cached := b.Compile(n, ratio, 1)
+
+	// Run 1 sets the first scalar parameters to zero, run 2 the coin.
+	for runIdx := range 3 {
+		// Fresh values for every parameter and table.
+		bind := &Bindings{Params: make([]field.Ext, coinSlot+1)}
+		for i, tr := range scalarLeaves {
+			if tr.isBase {
+				*tr.s = field.Lift(field.VecPseudoRandBase(rng, 1)[0])
+			} else {
+				*tr.s = field.VecPseudoRandExt(rng, 1)[0]
+			}
+			if runIdx == 1 && i < 2 {
+				*tr.s = field.Ext{}
+			}
+			bind.Params[i] = *tr.s
+		}
+		coinVal := field.VecPseudoRandExt(rng, 1)[0]
+		if runIdx == 2 {
+			coinVal = field.Ext{}
+		}
+		bind.Params[coinSlot] = coinVal
+		cancellation := field.VecPseudoRandBase(rng, n*ratio)
+		bind.Base = make([][]field.Element, len(baseSlot)+1)
+		bind.Base[cancelSlot] = cancellation
+		bind.Ext = make([][]field.Ext, len(extSlot))
+		for _, tbl := range g.base {
+			copy(tbl, field.VecPseudoRandBase(rng, len(tbl)))
+			if s, ok := baseSlot[&tbl[0]]; ok {
+				bind.Base[s] = tbl
+			}
+		}
+		for _, tbl := range g.ext {
+			copy(tbl, field.VecPseudoRandExt(rng, len(tbl)))
+			if s, ok := extSlot[&tbl[0]]; ok {
+				bind.Ext[s] = tbl
+			}
+		}
+
+		// The reference program reads only the cancellation as a slot, Base[0].
+		fresh := NewBuilder()
+		var pow field.Ext
+		pow.SetOne()
+		for i, tr := range trees {
+			cancel := -1
+			if cancelOf(i) >= 0 {
+				cancel = 0
+			}
+			fresh.AccumulateBy(build(fresh, tr, false), cancel, fresh.Scalar(pow, false))
+			pow.Mul(&pow, &coinVal)
+		}
+		want := run(fresh.Compile(n, ratio, 1), &Bindings{Base: [][]field.Element{cancellation}})
+		require.Equal(t, want, run(cached, bind), "run %d", runIdx)
+	}
+}
+
+// A program reading a parameter or a slotted table cannot run without
+// bindings, nor any program accumulating into a short aggregate.
+func TestRunRejectsMissingBindings(t *testing.T) {
+	const n = 8
+	b := NewBuilder()
+	b.AccumulateBy(b.Op(Mul, b.Param(0, false), b.BaseSlot(0, 0)), -1, b.Scalar(field.Lift(field.One()), true))
+	p := b.Compile(n, 1, 1)
+	require.Panics(t, func() { p.Run(make([]field.Ext, n), nil, 1) }, "no bindings")
+	bind := &Bindings{Base: [][]field.Element{make([]field.Element, n)}, Params: make([]field.Ext, 1)}
+	require.Panics(t, func() { p.RunWith(bind, make([]field.Ext, n-1), nil, 1) }, "short aggregate")
+	require.NotPanics(t, func() { p.RunWith(bind, make([]field.Ext, n), nil, 1) })
+}
+
+// Linear forms whose coefficients are parameters must merge as they do over
+// constants: the same coefficient built in either order, or multiplied by
+// one, gives the same node.
+func TestParamCoefficientsMergeLikeConstants(t *testing.T) {
+	b := NewBuilder()
+	x := b.Base(make([]field.Element, 4), 0)
+	alpha := b.Param(0, false)
+	var two, one field.Ext
+	two.B0.A0.SetUint64(2)
+	two.B1.A0.SetUint64(1) // an extension constant, so its products are linear forms
+	one.SetOne()
+	c2, c1 := b.Scalar(two, false), b.Scalar(one, false)
+
+	left := b.Op(Mul, c2, b.Op(Mul, alpha, x))  // coefficient α·2
+	right := b.Op(Mul, alpha, b.Op(Mul, c2, x)) // coefficient 2·α
+	require.Equal(t, kLinear, b.nodes[left].kind)
+	require.Equal(t, left, right, "α·2 and 2·α must give the same linear form")
+
+	ax := b.Op(Mul, alpha, x)
+	require.Equal(t, ax, b.Op(Mul, c1, ax), "multiplying by one must keep the node")
+}
+
+// Multiplying a linear form by zero yields the constant zero, and adding a
+// parameter to a linear form with a zero constant term keeps the parameter
+// itself as the new constant term, with no scalar node built for 0 + α.
+func TestParamCoefficientsFoldZero(t *testing.T) {
+	b := NewBuilder()
+	x := b.Base(make([]field.Element, 4), 0)
+	alpha := b.Param(0, false)
+	ax := b.Op(Mul, alpha, x) // α·x, constant term 0
+
+	zero := b.Op(Mul, b.Scalar(field.Ext{}, false), ax)
+	require.Equal(t, kScalar, b.nodes[zero].kind)
+	require.True(t, b.nodes[zero].s.IsZero(), "0·(α·x) must fold to zero")
+
+	before := len(b.nodes)
+	sum := b.Op(Add, ax, alpha) // α·x + α
+	require.Equal(t, kLinear, b.nodes[sum].kind)
+	require.Equal(t, coef{id: alpha}, b.nodes[sum].c, "0 + α must be α itself")
+	require.Len(t, b.nodes, before+1, "only the new linear form may be built")
+}
+
+// Compile evaluates per run only the scalars the program reads: a scalar
+// built for an intermediate linear form and then discarded is not.
+func TestCompileEvaluatesOnlyReadScalars(t *testing.T) {
+	b := NewBuilder()
+	x := b.Base(make([]field.Element, 8), 0)
+	alpha, beta := b.Param(0, false), b.Param(1, false)
+	b.Op(Mul, alpha, b.Op(Mul, beta, x)) // builds the linear forms β·x and (α·β)·x and the coefficient α·β; none is sunk
+	root := b.Op(Mul, alpha, x)
+	b.AccumulateBy(root, -1, b.Scalar(field.Lift(field.One()), true))
+	p := b.Compile(8, 1, 1)
+	require.Equal(t, 1, p.Stats().Scalars, "only α is read")
+}
+
+// Only an Accumulate sink reads its coefficient: an unused parameter at node 0
+// must not make a Store-only program require bindings.
+func TestStoreSinkReadsNoCoefficient(t *testing.T) {
+	b := NewBuilder()
+	b.Param(0, false)
+	b.Store(b.Base(make([]field.Element, 8), 0), make([]field.Ext, 8))
+	require.NotPanics(t, func() { b.Compile(8, 1, 1).Run(nil, nil, 1) })
 }
