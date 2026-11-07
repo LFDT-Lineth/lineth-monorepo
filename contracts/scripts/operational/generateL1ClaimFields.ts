@@ -29,6 +29,13 @@
  * Optional search bounds:
  *   --l1-from-block <number> --l1-to-block <number>
  *   --l2-from-block <number> --l2-to-block <number>
+ *   --l2-block <number>     (recommended: known L2 block where message was sent)
+ *
+ * Optional rate limiting:
+ *   --max-block-range <number>     (default: 10000, must be <= 10000)
+ *   --rpc-timeout-ms <number>      (default: 30000)
+ *   --max-retries <number>         (default: 5)
+ *   --initial-backoff-ms <number>  (default: 100)
  */
 
 import { ethers, Contract, Interface, JsonRpcProvider, EventLog, Log, ZeroAddress } from "ethers";
@@ -37,6 +44,11 @@ import { writeFileSync } from "node:fs";
 import { encodeSendMessage } from "../../common/helpers/encoding";
 import { getRequiredEnvVar } from "../../common/helpers/environment";
 import { getCliOrEnvValue } from "../../common/helpers/environmentHelper";
+
+const DEFAULT_MAX_BLOCK_RANGE = 10000;
+const DEFAULT_RPC_TIMEOUT_MS = 30000;
+const DEFAULT_MAX_RETRIES = 5;
+const DEFAULT_INITIAL_BACKOFF_MS = 100;
 
 const MESSAGE_SENT_ABI = [
   "event MessageSent(address indexed _from, address indexed _to, uint256 _fee, uint256 _value, uint256 _nonce, bytes _calldata, bytes32 indexed _messageHash)",
@@ -62,6 +74,18 @@ interface ScriptConfig {
   l1ToBlock: BlockBound;
   l2FromBlock: BlockBound;
   l2ToBlock: BlockBound;
+  l2Block: number | undefined;
+  maxBlockRange: number;
+  rpcTimeoutMs: number;
+  maxRetries: number;
+  initialBackoffMs: number;
+}
+
+interface RateLimitConfig {
+  maxBlockRange: number;
+  rpcTimeoutMs: number;
+  maxRetries: number;
+  initialBackoffMs: number;
 }
 
 interface MessageSentData {
@@ -153,11 +177,109 @@ function info(step: number, message: string): void {
   console.log(`${stepLabel(step)} ${message}`);
 }
 
+async function sleepMs(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRateLimitError(error: unknown): boolean {
+  if (error instanceof Error) {
+    // Check for HTTP 429 or common rate limit messages
+    const message = error.message.toLowerCase();
+    return message.includes("429") || message.includes("rate limit") || message.includes("too many requests");
+  }
+  return false;
+}
+
+async function withRateLimitRetry<T>(fn: () => Promise<T>, config: RateLimitConfig, operationName: string): Promise<T> {
+  let lastError: unknown;
+  let backoffMs = config.initialBackoffMs;
+
+  for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (!isRateLimitError(error) || attempt === config.maxRetries) {
+        throw error;
+      }
+
+      const jitterMs = Math.random() * backoffMs * 0.1;
+      const waitMs = backoffMs + jitterMs;
+      console.warn(
+        `Rate limit encountered on "${operationName}" (attempt ${attempt + 1}/${config.maxRetries + 1}). ` +
+          `Waiting ${waitMs.toFixed(0)}ms before retry...`,
+      );
+      await sleepMs(waitMs);
+      backoffMs *= 2;
+    }
+  }
+
+  throw lastError;
+}
+
+interface BlockRangeResolved {
+  fromBlock: number | string;
+  toBlock: number | string;
+}
+
+async function resolveBlockRange(
+  from: BlockBound,
+  to: BlockBound,
+  provider: JsonRpcProvider,
+): Promise<BlockRangeResolved> {
+  const resolveOne = async (bound: BlockBound): Promise<number | string> => {
+    if (typeof bound === "string") {
+      if (bound === "latest") {
+        return await provider.getBlockNumber();
+      }
+      return "earliest";
+    }
+    return bound;
+  };
+
+  return {
+    fromBlock: await resolveOne(from),
+    toBlock: await resolveOne(to),
+  };
+}
+
 function loadConfig(): ScriptConfig {
   const l1FromRaw = getOptionalCliOrEnvValue("l1-from-block", "L1_FROM_BLOCK");
   const l1ToRaw = getOptionalCliOrEnvValue("l1-to-block", "L1_TO_BLOCK");
   const l2FromRaw = getOptionalCliOrEnvValue("l2-from-block", "L2_FROM_BLOCK");
   const l2ToRaw = getOptionalCliOrEnvValue("l2-to-block", "L2_TO_BLOCK");
+  const l2BlockRaw = getOptionalCliOrEnvValue("l2-block", "L2_BLOCK");
+  const maxBlockRangeRaw =
+    getOptionalCliOrEnvValue("max-block-range", "MAX_BLOCK_RANGE") ?? String(DEFAULT_MAX_BLOCK_RANGE);
+  const rpcTimeoutRaw = getOptionalCliOrEnvValue("rpc-timeout-ms", "RPC_TIMEOUT_MS") ?? String(DEFAULT_RPC_TIMEOUT_MS);
+  const maxRetriesRaw = getOptionalCliOrEnvValue("max-retries", "MAX_RETRIES") ?? String(DEFAULT_MAX_RETRIES);
+  const initialBackoffRaw =
+    getOptionalCliOrEnvValue("initial-backoff-ms", "INITIAL_BACKOFF_MS") ?? String(DEFAULT_INITIAL_BACKOFF_MS);
+
+  const maxBlockRange = Number(maxBlockRangeRaw);
+  if (isNaN(maxBlockRange) || maxBlockRange <= 0 || maxBlockRange > 10000) {
+    throw new Error(`Invalid max-block-range: must be a positive number <= 10000, got ${maxBlockRangeRaw}`);
+  }
+
+  const rpcTimeoutMs = Number(rpcTimeoutRaw);
+  if (isNaN(rpcTimeoutMs) || rpcTimeoutMs <= 0) {
+    throw new Error(`Invalid rpc-timeout-ms: must be a positive number, got ${rpcTimeoutRaw}`);
+  }
+
+  const maxRetries = Number(maxRetriesRaw);
+  if (isNaN(maxRetries) || maxRetries < 0) {
+    throw new Error(`Invalid max-retries: must be a non-negative number, got ${maxRetriesRaw}`);
+  }
+
+  const initialBackoffMs = Number(initialBackoffRaw);
+  if (isNaN(initialBackoffMs) || initialBackoffMs < 0) {
+    throw new Error(`Invalid initial-backoff-ms: must be a non-negative number, got ${initialBackoffRaw}`);
+  }
+
+  const l2Block = l2BlockRaw ? Number(l2BlockRaw) : undefined;
+  if (l2BlockRaw && (isNaN(l2Block!) || l2Block! < 0)) {
+    throw new Error(`Invalid l2-block: must be a non-negative number, got ${l2BlockRaw}`);
+  }
 
   return {
     messageHash: getRequiredCliOrEnvValue("message-hash", "MESSAGE_HASH"),
@@ -172,6 +294,11 @@ function loadConfig(): ScriptConfig {
     l1ToBlock: parseBlockBound(l1ToRaw, "l1-to"),
     l2FromBlock: parseBlockBound(l2FromRaw, "l2-from"),
     l2ToBlock: parseBlockBound(l2ToRaw, "l2-to"),
+    l2Block,
+    maxBlockRange,
+    rpcTimeoutMs,
+    maxRetries,
+    initialBackoffMs,
   };
 }
 
@@ -320,40 +447,84 @@ function parseFinalizationReceipt(receipt: ethers.TransactionReceipt, linethRoll
 
 async function findMessageSentEvent(
   l2MessageService: Contract,
+  l2Provider: JsonRpcProvider,
   targetMessageHash: string,
   fromBlock: BlockBound,
   toBlock: BlockBound,
+  config: RateLimitConfig,
 ): Promise<MessageSentData> {
-  const messageSentEvents = await l2MessageService.queryFilter(
-    l2MessageService.filters.MessageSent(null, null, null, null, null, null, targetMessageHash),
-    fromBlock,
-    toBlock,
+  // If l2Block is provided, search in a narrow range around it
+  // Otherwise, use the provided from/to blocks with chunking
+  const resolved = await resolveBlockRange(fromBlock, toBlock, l2Provider);
+  const fromNum = typeof resolved.fromBlock === "string" ? 0 : resolved.fromBlock;
+  const toNum = typeof resolved.toBlock === "string" ? await l2Provider.getBlockNumber() : resolved.toBlock;
+
+  if (fromNum > toNum) {
+    throw new Error(`Invalid block range: fromBlock (${fromNum}) > toBlock (${toNum})`);
+  }
+
+  return await withRateLimitRetry(
+    async () => {
+      const events = await queryFilterInChunks(
+        l2MessageService,
+        l2MessageService.filters.MessageSent(null, null, null, null, null, null, targetMessageHash),
+        fromNum,
+        toNum,
+        config.maxBlockRange,
+      );
+
+      if (events.length === 0) {
+        throw new Error(
+          `No MessageSent event found for message hash ${targetMessageHash} in range [${fromNum}, ${toNum}]`,
+        );
+      }
+
+      const firstEvent = events[0];
+      const parsed = l2MessageService.interface.parseLog({
+        topics: firstEvent.topics as string[],
+        data: firstEvent.data,
+      });
+      if (!parsed) {
+        throw new Error("Failed to parse MessageSent event");
+      }
+
+      return {
+        from: parsed.args._from as string,
+        to: parsed.args._to as string,
+        fee: parsed.args._fee as bigint,
+        value: parsed.args._value as bigint,
+        nonce: parsed.args._nonce as bigint,
+        calldata: parsed.args._calldata as string,
+        l2BlockNumber: firstEvent.blockNumber,
+      };
+    },
+    config,
+    `findMessageSentEvent for hash ${targetMessageHash.slice(0, 10)}...`,
   );
+}
 
-  if (messageSentEvents.length === 0) {
-    throw new Error(
-      `No MessageSent event found for message hash ${targetMessageHash} in range [${fromBlock}, ${toBlock}]`,
-    );
+async function queryFilterInChunks(
+  contract: Contract,
+  filter: object | string | null | undefined,
+  fromBlock: number,
+  toBlock: number,
+  maxBlockRange: number,
+): Promise<(EventLog | Log)[]> {
+  const allEvents: (EventLog | Log)[] = [];
+  let currentFrom = fromBlock;
+
+  while (currentFrom <= toBlock) {
+    const currentTo = Math.min(currentFrom + maxBlockRange - 1, toBlock);
+    console.log(`  Querying block range [${currentFrom}, ${currentTo}]...`);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const events = await contract.queryFilter(filter as any, currentFrom, currentTo);
+    allEvents.push(...events);
+
+    currentFrom = currentTo + 1;
   }
 
-  const firstEvent = messageSentEvents[0];
-  const parsed = l2MessageService.interface.parseLog({
-    topics: firstEvent.topics as string[],
-    data: firstEvent.data,
-  });
-  if (!parsed) {
-    throw new Error("Failed to parse MessageSent event");
-  }
-
-  return {
-    from: parsed.args._from as string,
-    to: parsed.args._to as string,
-    fee: parsed.args._fee as bigint,
-    value: parsed.args._value as bigint,
-    nonce: parsed.args._nonce as bigint,
-    calldata: parsed.args._calldata as string,
-    l2BlockNumber: firstEvent.blockNumber,
-  };
+  return allEvents;
 }
 
 function verifyMessageHash(message: MessageSentData, targetMessageHash: string): void {
@@ -373,44 +544,76 @@ function verifyMessageHash(message: MessageSentData, targetMessageHash: string):
 
 async function findFinalizationTxHash(
   linethRollup: Contract,
+  l1Provider: JsonRpcProvider,
   l2BlockNumber: number,
   fromBlock: BlockBound,
   toBlock: BlockBound,
+  config: RateLimitConfig,
 ): Promise<string> {
-  const anchoredEvents = await linethRollup.queryFilter(
-    linethRollup.filters.L2MessagingBlockAnchored(l2BlockNumber),
-    fromBlock,
-    toBlock,
-  );
+  const resolved = await resolveBlockRange(fromBlock, toBlock, l1Provider);
+  const fromNum = typeof resolved.fromBlock === "string" ? 0 : resolved.fromBlock;
+  const toNum = typeof resolved.toBlock === "string" ? await l1Provider.getBlockNumber() : resolved.toBlock;
 
-  if (anchoredEvents.length === 0) {
-    throw new Error(
-      `No L2MessagingBlockAnchored event found for L2 block ${l2BlockNumber}. ` +
-        `Searched range [${fromBlock}, ${toBlock}]. The block may not be finalized yet.`,
-    );
+  if (fromNum > toNum) {
+    throw new Error(`Invalid block range: fromBlock (${fromNum}) > toBlock (${toNum})`);
   }
-  return anchoredEvents[0].transactionHash;
+
+  return await withRateLimitRetry(
+    async () => {
+      const events = await queryFilterInChunks(
+        linethRollup,
+        linethRollup.filters.L2MessagingBlockAnchored(l2BlockNumber),
+        fromNum,
+        toNum,
+        config.maxBlockRange,
+      );
+
+      if (events.length === 0) {
+        throw new Error(
+          `No L2MessagingBlockAnchored event found for L2 block ${l2BlockNumber}. ` +
+            `Searched range [${fromNum}, ${toNum}]. The block may not be finalized yet.`,
+        );
+      }
+      return events[0].transactionHash;
+    },
+    config,
+    `findFinalizationTxHash for L2 block ${l2BlockNumber}`,
+  );
 }
 
 async function collectMessageHashesInRange(
   l2MessageService: Contract,
   startBlock: number,
   endBlock: number,
+  config: RateLimitConfig,
 ): Promise<string[]> {
-  const allEvents = await l2MessageService.queryFilter(l2MessageService.filters.MessageSent(), startBlock, endBlock);
-  const hashes = allEvents.map((event: EventLog | Log) => {
-    const parsed = l2MessageService.interface.parseLog({
-      topics: event.topics as string[],
-      data: event.data,
-    });
-    return parsed!.args._messageHash as string;
-  });
+  return await withRateLimitRetry(
+    async () => {
+      const allEvents = await queryFilterInChunks(
+        l2MessageService,
+        l2MessageService.filters.MessageSent(),
+        startBlock,
+        endBlock,
+        config.maxBlockRange,
+      );
 
-  if (hashes.length === 0) {
-    throw new Error(`No MessageSent events found in L2 block range [${startBlock}, ${endBlock}]`);
-  }
+      const hashes = allEvents.map((event: EventLog | Log) => {
+        const parsed = l2MessageService.interface.parseLog({
+          topics: event.topics as string[],
+          data: event.data,
+        });
+        return parsed!.args._messageHash as string;
+      });
 
-  return hashes;
+      if (hashes.length === 0) {
+        throw new Error(`No MessageSent events found in L2 block range [${startBlock}, ${endBlock}]`);
+      }
+
+      return hashes;
+    },
+    config,
+    `collectMessageHashesInRange [${startBlock}, ${endBlock}]`,
+  );
 }
 
 function buildClaimParams(
@@ -444,18 +647,45 @@ function writeOutput(claimParams: ClaimMessageWithProofParams, outputPath?: stri
 
 async function main() {
   const config = loadConfig();
+  const rateLimitConfig: RateLimitConfig = {
+    maxBlockRange: config.maxBlockRange,
+    rpcTimeoutMs: config.rpcTimeoutMs,
+    maxRetries: config.maxRetries,
+    initialBackoffMs: config.initialBackoffMs,
+  };
+
   const l1Provider = new JsonRpcProvider(config.l1RpcUrl);
   const l2Provider = new JsonRpcProvider(config.l2RpcUrl);
   const l2MessageService = new Contract(config.l2MessageServiceAddress, MESSAGE_SENT_ABI, l2Provider);
   const linethRollup = new Contract(config.linethRollupAddress, L2_BLOCK_ANCHORED_ABI, l1Provider);
 
-  info(1, `Searching L2 MessageSent event for hash ${config.messageHash}...`);
-  const message = await findMessageSentEvent(
-    l2MessageService,
-    config.messageHash,
-    config.l2FromBlock,
-    config.l2ToBlock,
-  );
+  // Step 1: Find the MessageSent event
+  let message: MessageSentData;
+  if (config.l2Block !== undefined) {
+    // If L2 block is provided, search in a narrow range around it
+    const searchRangeBlocks = config.maxBlockRange;
+    const startBlock = Math.max(0, config.l2Block - searchRangeBlocks);
+    const endBlock = config.l2Block + searchRangeBlocks;
+    info(1, `Searching L2 MessageSent event for hash ${config.messageHash} near L2 block ${config.l2Block}...`);
+    message = await findMessageSentEvent(
+      l2MessageService,
+      l2Provider,
+      config.messageHash,
+      startBlock,
+      endBlock,
+      rateLimitConfig,
+    );
+  } else {
+    info(1, `Searching L2 MessageSent event for hash ${config.messageHash}...`);
+    message = await findMessageSentEvent(
+      l2MessageService,
+      l2Provider,
+      config.messageHash,
+      config.l2FromBlock,
+      config.l2ToBlock,
+      rateLimitConfig,
+    );
+  }
   verifyMessageHash(message, config.messageHash);
   info(1, `Found message in L2 block ${message.l2BlockNumber}`);
   if (config.pretty) {
@@ -464,15 +694,19 @@ async function main() {
     );
   }
 
+  // Step 2: Find the finalization transaction
   info(2, `Searching L1 finalization for L2 block ${message.l2BlockNumber}...`);
   const finalizationTxHash = await findFinalizationTxHash(
     linethRollup,
+    l1Provider,
     message.l2BlockNumber,
     config.l1FromBlock,
     config.l1ToBlock,
+    rateLimitConfig,
   );
   info(2, `Found finalization tx ${finalizationTxHash}`);
 
+  // Step 3: Parse the finalization receipt
   info(3, "Parsing finalization receipt...");
   const finalizationReceipt = await l1Provider.getTransactionReceipt(finalizationTxHash);
   if (!finalizationReceipt) {
@@ -484,14 +718,17 @@ async function main() {
     `Finalization range ${finalization.l2BlockRange.start}-${finalization.l2BlockRange.end}, tree depth ${finalization.treeDepth}, roots ${finalization.l2MerkleRoots.length}`,
   );
 
+  // Step 4: Collect all message hashes in the finalization range
   info(4, "Collecting MessageSent hashes in the finalization L2 range...");
   const allMessageHashes = await collectMessageHashesInRange(
     l2MessageService,
     finalization.l2BlockRange.start,
     finalization.l2BlockRange.end,
+    rateLimitConfig,
   );
   info(4, `Collected ${allMessageHashes.length} message hash(es)`);
 
+  // Step 5: Build proof
   info(5, "Building sparse Merkle tree and generating proof...");
   const siblings = getMessageSiblings(config.messageHash, allMessageHashes, finalization.treeDepth);
   const tree = new SparseMerkleTree(finalization.treeDepth);
@@ -514,6 +751,7 @@ async function main() {
   const proofData = tree.getProof(localIndex);
   info(5, `Generated proof with leafIndex=${proofData.leafIndex}`);
 
+  // Step 6: Build output params
   info(6, "Building ClaimMessageWithProofParams...");
   const claimParams = buildClaimParams(message, proofData, config.feeRecipient);
   if (config.pretty) {
