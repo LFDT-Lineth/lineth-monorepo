@@ -753,9 +753,11 @@ type DecodedProgram struct {
 func (program DecodedProgram) EncodeInputs() map[string]bit.Array {
 	base := binary.BigEndian.AppendUint32(nil, uint32(program.InstructionBase))
 	decoded := append([]byte(nil), program.Decoded...)
+	// Each row is 87 bits; discard the final byte's padding bits.
+	nbits := uint(len(decoded)*8/87) * 87
 	return map[string]bit.Array{
 		InstructionBaseInput: elfmapping.BitArrayFromBytes(base...),
-		DecodedInput:         elfmapping.BitArrayFromBytes(decoded...),
+		DecodedInput:         bit.NewArray(decoded, nbits, bit.BigEndian),
 	}
 }
 

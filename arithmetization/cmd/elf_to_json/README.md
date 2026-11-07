@@ -18,6 +18,18 @@ When `inputOffset` is omitted, it defaults to `0x08800000`.
 The output contains `entry_point_and_blobs_count`, `blobs_offset_and_size`,
 `blobs_data`, `instruction_base`, and `decoded`.
 
+The packed `decoded` table preserves its exact bit length, excluding padding in
+the final byte. Its hexadecimal value may include a partial-byte suffix. Consume
+generated inputs with the module-pinned compiler (`go tool zkc` from
+`arithmetization`) so the producer and consumer use the same suffix format:
+
+```sh
+go tool zkc exec ../input.json src/main/riscv/main.zkc
+```
+
+Standalone ZkC installations may use a different partial-byte suffix (`~N`
+instead of the pinned version's `:N`).
+
 Environment variables:
 
 - `ELF2JSON_PREDECODING_PROOF=true` also emits `blobs_executable`.
