@@ -28,9 +28,9 @@ const (
 	// this is the state of a poseidon2 hasher.
 	NumSharedRandomness = messagebus.NumSharedRandomness
 
-	// NumSharedRandomnessContributions is not decided yet and is to be taken from
-	// another place. The negative value is an unset sentinel: it is deliberately
-	// unusable as a count or loop bound until it is given its real value.
+	// NumSharedRandomnessContributions is the number of cells of a shard's
+	// contribution to the shared randomness: the multiset-hash accumulator the
+	// contributions of all the shards add up in.
 	NumSharedRandomnessContributions = messagebus.NumSharedRandomnessContribution
 )
 

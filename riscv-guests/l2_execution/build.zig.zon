@@ -10,8 +10,6 @@
         },
         // Shared build helpers.
         .build_common = .{ .path = "../build_common" },
-        // Constantine precompile backend.
-        .guest_crypto = .{ .path = "../guest_crypto_ctt" },
         // Lineth zkVM accelerator wrappers.
         .lineth_accelerators = .{ .path = "../lineth_accelerators" },
         .zlob = .{

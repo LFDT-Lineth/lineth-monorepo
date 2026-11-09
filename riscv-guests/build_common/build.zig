@@ -2,12 +2,13 @@
 //! bits: the pinned toolchain, the common freestanding rv64im target (every guest targets the same
 //! ZkC profile), freestanding-linkage hygiene, the package layout (`src/root.zig` is the package
 //! module, `src/main.zig` the guest entry point), the standalone-ELF link (entry stub + memory
-//! layout, shared because every guest links the same way), and small utilities.
+//! layout, shared because every guest links the same way), the host build of the `zkvm_*` crypto
+//! providers that native tests and tools link, and small utilities.
 //!
 //! Anything tied to a specific workload stays in the guest that uses it. In particular the zesu /
-//! EVM-execution wiring (executor + SSZ module imports, native crypto linking) lives in
-//! l2-execution's build.zig — the rollup and rollup-aggregation guests do NOT run the EVM (they do
-//! KZG/compression and recursive proof verification), so that wiring is not common.
+//! EVM-execution wiring (executor + SSZ module imports) lives in l2-execution's build.zig: the
+//! rollup and rollup-aggregation guests run no EVM (they do KZG/compression and recursive proof
+//! verification), so that wiring is not common.
 //!
 //! Each guest pulls this in via a `build_common` path dependency in its build.zig.zon plus
 //! `const common = @import("build_common");`. Never built on its own — `build()` is a no-op.
@@ -30,18 +31,19 @@ pub fn requireZigVersion() void {
 }
 
 /// The freestanding rv64im target every guest builds for (the Lineth ZkC interpreter profile:
-/// base RV64I + M, soft-float, no A/C/D/F/Zicsr). Overridable on the CLI like any standard target.
+/// base RV64I + M, soft-float, no A/C/D/F/Zicsr).
+pub const guest_target_query: std.Target.Query = .{
+    .cpu_arch = .riscv64,
+    .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv64 },
+    .cpu_features_add = std.Target.riscv.featureSet(&.{.m}),
+    .cpu_features_sub = std.Target.riscv.featureSet(&.{ .a, .c, .d, .f, .zicsr, .zaamo, .zalrsc }),
+    .os_tag = .freestanding,
+    .abi = .none,
+};
+
+/// The guest target, overridable on the CLI like any standard target.
 pub fn standardGuestTarget(b: *std.Build) std.Build.ResolvedTarget {
-    return b.standardTargetOptions(.{
-        .default_target = .{
-            .cpu_arch = .riscv64,
-            .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv64 },
-            .cpu_features_add = std.Target.riscv.featureSet(&.{.m}),
-            .cpu_features_sub = std.Target.riscv.featureSet(&.{ .a, .c, .d, .f, .zicsr, .zaamo, .zalrsc }),
-            .os_tag = .freestanding,
-            .abi = .none,
-        },
-    });
+    return b.standardTargetOptions(.{ .default_target = guest_target_query });
 }
 
 /// The package module: `src/root.zig` for one target, plus the package's declared dependency
@@ -172,6 +174,36 @@ fn nativeRoot(b: *std.Build, root_file: []const u8, native: NativeOptions) *std.
 pub fn parseAddress(comptime name: []const u8, value: []const u8) u64 {
     return std.fmt.parseInt(u64, value, 0) catch @panic("invalid -D" ++ name ++ " value");
 }
+
+/// The host build of the `zkvm_*` crypto providers, which native tests and tools link: the
+/// Constantine-backed provider module as an object, and the Constantine archive it needs.
+pub const HostCrypto = struct {
+    provider: *std.Build.Step.Compile,
+    constantine: std.Build.LazyPath,
+
+    /// `accelerators` is the `lineth_accelerators` dependency built with `-Dzkvm-provide` for the
+    /// native target, which publishes the Constantine archive of its provider as
+    /// `zkvm_provide_archive`. Null until that archive exists: it is fetched on demand and the build
+    /// reruns once it is.
+    pub fn init(b: *std.Build, accelerators: *std.Build.Dependency) ?HostCrypto {
+        const constantine = accelerators.builder.named_lazy_paths.get("zkvm_provide_archive") orelse return null;
+        return .{
+            .provider = b.addObject(.{ .name = "zkvm_provide", .root_module = accelerators.module("zkvm_provide") }),
+            .constantine = constantine,
+        };
+    }
+
+    pub fn link(crypto: HostCrypto, artifact: *std.Build.Step.Compile) void {
+        artifact.root_module.addObject(crypto.provider);
+        artifact.root_module.addObjectFile(crypto.constantine);
+        artifact.root_module.link_libc = true;
+    }
+
+    pub fn linkAll(crypto: HostCrypto, artifacts: std.StringHashMap(*std.Build.Step.Compile)) void {
+        var it = artifacts.valueIterator();
+        while (it.next()) |artifact| crypto.link(artifact.*);
+    }
+};
 
 /// Clear native libc/libcpp linkage across a module graph — freestanding rv64im guests must not
 /// link a host libc, but imported modules may default to it.

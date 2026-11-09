@@ -14,6 +14,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/guests"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/conglomeration"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
@@ -56,6 +57,11 @@ type Core struct {
 	sys    *wiop.System
 	driver *zkcdriver.ZkCDriver
 	guests guests.Store
+
+	// merger runs the conglomeration steps over the shard proofs. nil in
+	// production until the recursion machine lands; tests set
+	// [conglomeration.MockMerger].
+	merger conglomeration.Merger
 
 	// binaryFile is the compiled R5 arithmetization, used by dev-zkvm to run the
 	// guest under ZkC Execute (the no-trace path). nil outside dev-zkvm.
@@ -327,20 +333,17 @@ func (c *Core) proveFull(ctx context.Context, job Job) Result {
 		return failResult(job.ID, fmt.Errorf("building inputs: %w", err))
 	}
 
-	nodes, numShards, err := c.runProve(ctx, &zkcdriver.PreReadInputs{Inputs: inputs}, job.ShardIndexes)
+	node, numShards, err := c.runProve(ctx, &zkcdriver.PreReadInputs{Inputs: inputs}, job.ShardIndexes)
 	if err != nil {
 		return failResult(job.ID, err)
 	}
-	// Conglomerating shard proofs into one proof is not implemented yet. Only
-	// an unsharded trace, whose single shard proof is the final proof, is
-	// supported: with sharding the in-shard message-bus check is off, so even a
-	// one-shard trace is not proved until conglomerated.
-	if c.cfg.ShardSize > 0 {
-		return failResult(job.ID,
-			fmt.Errorf("conglomerating %d of %d shard proofs: %w", len(nodes), numShards, ErrNotImplemented))
+	// A strict subset of the shards is a conglomeration node for the
+	// orchestrator to merge further, never a final proof.
+	if uint(len(node.Coverage)) != numShards {
+		return Result{JobID: job.ID, Status: ResultStatusNode, Node: &node, NumShards: numShards}
 	}
 	//nolint (until SerializeProof implemented)
-	proofBytes, err := SerializeProof(nodes[0].Proof, nodes[0].Pub)
+	proofBytes, err := SerializeProof(node.Proof, node.Pub)
 	//nolint (whilst SerializeProof unimplemented)
 	if err != nil {
 		return failResult(job.ID, fmt.Errorf("serializing proof: %w", err))
@@ -404,33 +407,24 @@ func sanityCheckJobs(job Job, shardSize uint64) error {
 	return nil
 }
 
-// Node is a proof over a set of trace shards: a shard proof, whose Coverage is
-// its single shard index. Conglomeration will aggregate nodes into nodes
-// covering the union of their children's, with the same public-input layout.
-type Node struct {
-	Coverage []uint
-	Proof    wiop.Proof
-	Pub      wiop.PublicInput
-}
-
-// runProve lazily traces the inputs, then proves and verifies the shards of
+// runProve lazily traces the inputs, proves and verifies the shards of
 // shardIndexes (all of them if empty) one at a time, so that a single shard is
-// materialised at any moment rather than the whole trace. It returns the
-// shard proofs, in shard order, and the trace's shard count. With sharding,
-// the in-shard message-bus check is off and the bus balances only across
-// shards: the shard proofs are then not a proof of the execution until
-// conglomerated.
+// materialised at any moment rather than the whole trace, and conglomerates
+// the shard proofs as they arrive. It returns the resulting node and the
+// trace's shard count; the node is the root, and has passed the root checks,
+// iff it covers every shard. Without sharding, the single shard's proof is
+// returned as is: the in-shard message-bus check already applies.
 func (c *Core) runProve(
 	ctx context.Context,
 	preRead *zkcdriver.PreReadInputs,
 	shardIndexes []uint,
-) ([]Node, uint, error) {
+) (conglomeration.Node, uint, error) {
 
 	// With sharding, this only runs the fast-mode pass recording one checkpoint
 	// per shard.
 	lazyTrace, err := c.driver.TryTraceZkcInputs(preRead)
 	if err != nil {
-		return nil, 0, fmt.Errorf("tracing: %w", guestError(err))
+		return conglomeration.Node{}, 0, fmt.Errorf("tracing: %w", guestError(err))
 	}
 	numShards := lazyTrace.Len()
 	indexes := slices.Sorted(slices.Values(shardIndexes))
@@ -441,23 +435,35 @@ func (c *Core) runProve(
 		}
 	}
 	if len(indexes) == 0 {
-		return nil, 0, errors.New("the trace has no shards")
+		return conglomeration.Node{}, 0, errors.New("the trace has no shards")
 	}
 	if last := indexes[len(indexes)-1]; last >= numShards {
-		return nil, 0, fmt.Errorf("shard index %d out of range, the trace has %d shards", last, numShards)
-	}
-	if len(indexes) != int(numShards) {
-		logrus.Infof("Proving %d of %d shards", len(indexes), numShards)
+		return conglomeration.Node{}, 0, fmt.Errorf("shard index %d out of range, the trace has %d shards", last, numShards)
 	}
 
-	nodes := make([]Node, 0, len(indexes))
+	// With sharding the in-shard message-bus check is off, so even a single
+	// shard needs the root checks of the merger.
+	isRoot := len(indexes) == int(numShards)
+	needsMerger := len(indexes) > 1 || (isRoot && c.cfg.ShardSize > 0)
+	if needsMerger && c.merger == nil {
+		return conglomeration.Node{}, 0, fmt.Errorf("conglomerating %d of %d shards needs the recursion machine: %w",
+			len(indexes), numShards, ErrNotImplemented)
+	}
+	if needsMerger {
+		logrus.Warnf("Conglomerating %d of %d shards with %T", len(indexes), numShards, c.merger)
+	}
+	if !isRoot {
+		logrus.Infof("Proving %d of %d shards: the result is a conglomeration node, not a final proof", len(indexes), numShards)
+	}
+
+	reducer := conglomeration.NewReducer(c.merger, conglomeration.DefaultMaxInFlightMerges)
 	for k, i := range indexes {
 		if err := ctx.Err(); err != nil {
-			return nil, 0, fmt.Errorf("before shard %d: %w", i, err)
+			return conglomeration.Node{}, 0, fmt.Errorf("before shard %d: %w", i, err)
 		}
 		shard, err := traceShard(lazyTrace, i)
 		if err != nil {
-			return nil, 0, err
+			return conglomeration.Node{}, 0, err
 		}
 		// Once the last shard is traced, drop the lazy trace so that its
 		// checkpoints can be garbage collected before that shard is proved.
@@ -466,11 +472,24 @@ func (c *Core) runProve(
 		}
 		proof, pub, err := c.proveShard(shard)
 		if err != nil {
-			return nil, 0, fmt.Errorf("shard %d: %w", i, err)
+			return conglomeration.Node{}, 0, fmt.Errorf("shard %d: %w", i, err)
 		}
-		nodes = append(nodes, Node{Coverage: []uint{i}, Proof: proof, Pub: pub})
+		// Add reports a merge that failed meanwhile: stop rather than prove
+		// shards whose result is already lost.
+		if err := reducer.Add(conglomeration.Node{Coverage: []uint{i}, Proof: proof, Pub: pub}); err != nil {
+			return conglomeration.Node{}, 0, fmt.Errorf("merging after shard %d: %w", i, err)
+		}
 	}
-	return nodes, numShards, nil
+	root, err := reducer.Close()
+	if err != nil {
+		return conglomeration.Node{}, 0, fmt.Errorf("merging: %w", err)
+	}
+	if isRoot && c.cfg.ShardSize > 0 {
+		if root, err = c.merger.Finalize(root, numShards); err != nil {
+			return conglomeration.Node{}, 0, fmt.Errorf("root: %w", err)
+		}
+	}
+	return root, numShards, nil
 }
 
 // traceShard traces and expands the ith shard of the lazy trace.

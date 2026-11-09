@@ -16,7 +16,6 @@ from ethereum.crypto.kzg import (
 )
 from .fork import (
     AccessListTransaction,
-    BlobTransaction,
     FeeMarketTransaction,
     LegacyTransaction,
     SetCodeTransaction,
@@ -24,6 +23,7 @@ from .fork import (
     decode_transaction,
     recover_sender,
 )
+from ethereum.merkle_patricia_trie import Trie, root, trie_set
 from ethereum.state import Address
 from ethereum_rlp import rlp
 from ethereum_types.bytes import Bytes, Bytes32
@@ -113,6 +113,26 @@ def trusted_setup():
             f"-o {_TRUSTED_SETUP_PATH}` if missing."
         )
     return ckzg.load_trusted_setup(str(_TRUSTED_SETUP_PATH), 0)
+
+
+# The zstd dictionary fixed by the rollup guest program: DA frames are compressed against it and
+# decompressed with it. parents[3] is the repo root, as for the trusted setup above.
+_ZSTD_DICTIONARY_PATH = (
+    Path(__file__).resolve().parents[3]
+    / "riscv-guests" / "lineth_da" / "dictionaries" / "v2025-04-21.bin"
+)
+
+
+# The largest window a DA frame may declare: the limit of libzstd's streaming decoder.
+ZSTD_MAX_WINDOW_SIZE = 2**27 + 1
+
+
+@lru_cache(maxsize=1)
+def zstd_dictionary() -> zstd.ZstdCompressionDict:
+    """Load the zstd dictionary once on first use; cached for the process lifetime via `lru_cache`."""
+    if not _ZSTD_DICTIONARY_PATH.is_file():
+        raise FileNotFoundError(f"zstd dictionary not found at {_ZSTD_DICTIONARY_PATH}")
+    return zstd.ZstdCompressionDict(_ZSTD_DICTIONARY_PATH.read_bytes(), dict_type=zstd.DICT_TYPE_FULLDICT)
 
 
 @dataclass
@@ -256,9 +276,23 @@ def derive_canonical_payload(
 
 
 def _validate_zstd_frame(zstd_frame: bytes, canonical_payload: bytes) -> None:
-    """Check that a segment's zstd frame decompresses exactly to its canonical payload."""
+    """
+    Check that a segment's zstd frame is the one form a DA frame takes and decompresses, with the program's dictionary,
+    exactly to its canonical payload.
+
+    The header declares the content size, equal to the payload's length, and the ID of the program's dictionary; the
+    frame carries no content checksum and declares a window of at most `ZSTD_MAX_WINDOW_SIZE`.
+    """
     try:
-        decompressed = zstd.ZstdDecompressor().decompress(
+        parameters = zstd.get_frame_parameters(zstd_frame)
+        if (
+            parameters.content_size != len(canonical_payload)
+            or parameters.dict_id != zstd_dictionary().dict_id()
+            or parameters.has_checksum
+            or parameters.window_size > ZSTD_MAX_WINDOW_SIZE
+        ):
+            raise zstd.ZstdError("frame header")
+        decompressed = zstd.ZstdDecompressor(dict_data=zstd_dictionary()).decompress(
             zstd_frame, max_output_size=len(canonical_payload), allow_extra_data=False,
         )
     except zstd.ZstdError as exc:
@@ -765,12 +799,6 @@ def _signature_stripped_tx_bytes(tx: Transaction) -> bytes:
             tx.nonce, tx.max_priority_fee_per_gas, tx.max_fee_per_gas, tx.gas,
             tx.to, tx.value, tx.data, tx.access_list,
         ])
-    if isinstance(tx, BlobTransaction):
-        return b"\x03" + rlp.encode([
-            tx.nonce, tx.max_priority_fee_per_gas, tx.max_fee_per_gas, tx.gas,
-            tx.to, tx.value, tx.data, tx.access_list,
-            tx.max_fee_per_blob_gas, tx.blob_versioned_hashes,
-        ])
     if isinstance(tx, SetCodeTransaction):
         return b"\x04" + rlp.encode([
             tx.nonce, tx.max_priority_fee_per_gas, tx.max_fee_per_gas, tx.gas,
@@ -779,10 +807,33 @@ def _signature_stripped_tx_bytes(tx: Transaction) -> bytes:
     raise Exception(f"unknown transaction type {type(tx).__name__}")
 
 
+def _transactions_root(transactions: Sequence[Transaction | Bytes]) -> Hash32:
+    """The root of the transactions trie of a block body: key RLP(index), value the transaction's wire form."""
+    trie = Trie(secured=False, default=None)
+    for index, tx_item in enumerate(transactions):
+        trie_set(trie, rlp.encode(Uint(index)), tx_item)
+    return root(trie)
+
+
+def _decode_block_transaction(tx_item: Transaction | Bytes) -> Transaction:
+    """
+    Decode one entry of a block's transaction list: a legacy list, or an envelope of type 1, 2 or 4,
+    the types the truncation strips.
+    """
+    if isinstance(tx_item, (bytes, bytearray)):
+        if len(tx_item) < 2 or tx_item[0] not in (1, 2, 4):
+            raise Exception("transaction is neither a legacy list nor an envelope of type 1, 2 or 4")
+        return decode_transaction(Bytes(tx_item))
+    return tx_item
+
+
 def truncate_block_rlp(block_rlp: bytes, chain_id: U64) -> TruncatedEthereumBlock:
     """
     Decode the canonical full block RLP and apply the §3.2 DA truncation
     rule, returning a `TruncatedEthereumBlock`.
+
+    The block's transactions are the ones its header commits to: they hash
+    to the header's `transactions_root`.
 
     Header-derived fields:
       - `timestamp` and `prev_randao` are taken from the decoded header.
@@ -792,9 +843,14 @@ def truncate_block_rlp(block_rlp: bytes, chain_id: U64) -> TruncatedEthereumBloc
     Per-transaction fields:
       - `transactions[i]` is the signature- and chainID-stripped canonical
         bytes (see `_signature_stripped_tx_bytes`).
-      - `froms[i]` is the sender recovered via `recover_sender(chain_id, tx)`.
+      - `froms[i]` is the sender recovered via `recover_sender(chain_id, tx)`,
+        for a positive `chain_id`.
     """
+    if chain_id == 0:
+        raise Exception("sender recovery requires a positive chain ID")
     block = decode_block_rlp(block_rlp)
+    if _transactions_root(block.transactions) != block.header.transactions_root:
+        raise Exception("block transactions do not match the header's transactions root")
     bh = block_hash(block.header)
 
     transactions: List[bytes] = []
@@ -802,10 +858,7 @@ def truncate_block_rlp(block_rlp: bytes, chain_id: U64) -> TruncatedEthereumBloc
     for tx_item in block.transactions:
         # `Block.transactions` holds typed (EIP-2718) txs as bytes and
         # legacy txs as decoded `LegacyTransaction` objects.
-        if isinstance(tx_item, (bytes, bytearray)):
-            decoded_tx: Transaction = decode_transaction(Bytes(tx_item))
-        else:
-            decoded_tx = tx_item
+        decoded_tx = _decode_block_transaction(tx_item)
         transactions.append(_signature_stripped_tx_bytes(decoded_tx))
         froms.append(recover_sender(chain_id, decoded_tx))
 
