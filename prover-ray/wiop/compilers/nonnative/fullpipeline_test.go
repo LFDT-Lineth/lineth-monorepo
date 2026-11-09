@@ -11,9 +11,9 @@ import (
 
 // TestFullPipeline_NonNativeScenarios runs the full pipeline on every
 // [wioptest.NonNativeScenarios] fixture. The nonnative pass reduces each
-// [wiop.NonNative] query to a multi-valued [wiop.Vanishing] identity checked at
-// a shared random point; this is then checked by global compiler using quotient
-// argument.
+// [wiop.NonNative] query to [wiop.Vanishing] coefficient identities, range
+// checks and a Result < Modulus check; the global compiler then discharges the
+// identities using the quotient argument.
 func TestFullPipeline_NonNativeScenarios(t *testing.T) {
 	for _, build := range wioptest.NonNativeScenarios() {
 		sc := build()
