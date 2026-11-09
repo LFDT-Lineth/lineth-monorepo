@@ -1,2 +1,6 @@
 packages:
   - "."
+
+ignoreWorkspaceRootCheck: true
+
+minimumReleaseAge: 10080

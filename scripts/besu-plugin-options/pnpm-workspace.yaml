@@ -1,3 +1,7 @@
 # Own workspace root so `pnpm install` here does not adopt the monorepo workspace.
 packages:
   - "."
+
+ignoreWorkspaceRootCheck: true
+
+minimumReleaseAge: 10080
