@@ -6,6 +6,7 @@
 const std = @import("std");
 const rollup_ssz = @import("rollup").rollup_ssz;
 const l2_execution_proof = @import("core_serde").l2_execution_proof;
+const ssz = @import("guest_common").ssz;
 
 pub fn repeat32(byte: u8) [32]u8 {
     return @splat(byte);
@@ -94,7 +95,7 @@ pub fn sampleProof0(alloc: std.mem.Allocator) !l2_execution_proof.VerifiableL2Ex
                 .end_block_hash = PROOF0_END_BLOCK_HASH,
                 .end_block_number = PROOF0_END_BLOCK_NUMBER,
                 .end_block_timestamp = PROOF0_END_BLOCK_TIMESTAMP,
-                .l2_l1_messages = try alloc.dupe([32]u8, &[_][32]u8{ PROOF0_L2_L1_MESSAGE_0, PROOF0_L2_L1_MESSAGE_1 }),
+                .l2_l1_messages = .{ .items = try alloc.dupe([32]u8, &[_][32]u8{ PROOF0_L2_L1_MESSAGE_0, PROOF0_L2_L1_MESSAGE_1 }) },
                 .end_l1_l2_bridge_rolling_hash = PROOF0_END_L1L2_BRIDGE_ROLLING_HASH,
                 .end_l1_l2_bridge_rolling_hash_message_number = PROOF0_END_L1L2_BRIDGE_ROLLING_HASH_MSG_NUMBER,
                 .dynamic_chain_config_hash = PROOF0_DYNAMIC_CHAIN_CONFIG_HASH,
@@ -102,13 +103,13 @@ pub fn sampleProof0(alloc: std.mem.Allocator) !l2_execution_proof.VerifiableL2Ex
                 .parent_ftx_number = PROOF0_PARENT_FTX_NUMBER,
                 .end_ftx_rolling_hash = PROOF0_END_FTX_ROLLING_HASH,
                 .end_processed_ftx_number = PROOF0_END_PROCESSED_FTX_NUMBER,
-                .filtered_addresses = try alloc.dupe([20]u8, &[_][20]u8{ PROOF0_FILTERED_ADDRESS_0, PROOF0_FILTERED_ADDRESS_1 }),
+                .filtered_addresses = .{ .items = try alloc.dupe([20]u8, &[_][20]u8{ PROOF0_FILTERED_ADDRESS_0, PROOF0_FILTERED_ADDRESS_1 }) },
                 .tx_froms_hash = PROOF0_TX_FROMS_HASH,
                 .block_count = PROOF0_BLOCK_COUNT,
-                .l2_messaging_blocks_offsets = &PROOF0_MESSAGING_BLOCKS_OFFSETS,
+                .l2_messaging_blocks_offsets = .{ .items = &PROOF0_MESSAGING_BLOCKS_OFFSETS },
             },
             .start_block_number = PROOF0_START_BLOCK_NUMBER,
-            .proof = &PROOF0_PROOF_BYTES,
+            .proof = .{ .bytes = &PROOF0_PROOF_BYTES },
         },
     };
 }
@@ -123,7 +124,7 @@ fn sampleProof1(alloc: std.mem.Allocator) !l2_execution_proof.VerifiableL2Execut
                 .end_block_hash = PROOF1_END_BLOCK_HASH,
                 .end_block_number = PROOF1_END_BLOCK_NUMBER,
                 .end_block_timestamp = PROOF1_END_BLOCK_TIMESTAMP,
-                .l2_l1_messages = try alloc.dupe([32]u8, &[_][32]u8{PROOF1_L2_L1_MESSAGE_0}),
+                .l2_l1_messages = .{ .items = try alloc.dupe([32]u8, &[_][32]u8{PROOF1_L2_L1_MESSAGE_0}) },
                 .end_l1_l2_bridge_rolling_hash = PROOF1_END_L1L2_BRIDGE_ROLLING_HASH,
                 .end_l1_l2_bridge_rolling_hash_message_number = PROOF1_END_L1L2_BRIDGE_ROLLING_HASH_MSG_NUMBER,
                 .dynamic_chain_config_hash = PROOF1_DYNAMIC_CHAIN_CONFIG_HASH,
@@ -131,13 +132,13 @@ fn sampleProof1(alloc: std.mem.Allocator) !l2_execution_proof.VerifiableL2Execut
                 .parent_ftx_number = PROOF1_PARENT_FTX_NUMBER,
                 .end_ftx_rolling_hash = PROOF1_END_FTX_ROLLING_HASH,
                 .end_processed_ftx_number = PROOF1_END_PROCESSED_FTX_NUMBER,
-                .filtered_addresses = try alloc.dupe([20]u8, &[_][20]u8{ PROOF1_FILTERED_ADDRESS_0, PROOF1_FILTERED_ADDRESS_1 }),
+                .filtered_addresses = .{ .items = try alloc.dupe([20]u8, &[_][20]u8{ PROOF1_FILTERED_ADDRESS_0, PROOF1_FILTERED_ADDRESS_1 }) },
                 .tx_froms_hash = PROOF1_TX_FROMS_HASH,
                 .block_count = PROOF1_BLOCK_COUNT,
-                .l2_messaging_blocks_offsets = &PROOF1_MESSAGING_BLOCKS_OFFSETS,
+                .l2_messaging_blocks_offsets = .{ .items = &PROOF1_MESSAGING_BLOCKS_OFFSETS },
             },
             .start_block_number = PROOF1_START_BLOCK_NUMBER,
-            .proof = &PROOF1_PROOF_BYTES,
+            .proof = .{ .bytes = &PROOF1_PROOF_BYTES },
         },
     };
 }
@@ -149,38 +150,41 @@ pub fn sampleBlob(alloc: std.mem.Allocator) ![]u8 {
     return blob;
 }
 
+/// The conflation witness whose blocks are `block_rlps`.
+pub fn conflationOf(alloc: std.mem.Allocator, block_rlps: []const []const u8) !rollup_ssz.ConflationWitness {
+    const lists = try alloc.alloc(ssz.ByteList(rollup_ssz.MAX_BYTES_PER_BLOCK_RLP), block_rlps.len);
+    for (lists, block_rlps) |*list, block_rlp| list.* = .{ .bytes = block_rlp };
+    return .{ .block_rlps = .{ .items = lists } };
+}
+
+const sample_boundary = [_][32]u8{BOUNDARY_PREV_DATA_ROLLING_HASH};
+
 /// A readable `RollupProofPrivateInput` built entirely from the named constants above.
 pub fn sampleInput(alloc: std.mem.Allocator) !rollup_ssz.RollupProofPrivateInput {
     const conflations = try alloc.dupe(rollup_ssz.ConflationWitness, &[_]rollup_ssz.ConflationWitness{
-        .{ .block_rlps = try alloc.dupe([]const u8, &[_][]const u8{
-            &CONFLATION_0_BLOCK_RLP_0,
-            &CONFLATION_0_BLOCK_RLP_1,
-        }) },
-        .{ .block_rlps = try alloc.dupe([]const u8, &[_][]const u8{
-            &CONFLATION_1_BLOCK_RLP_0,
-            &CONFLATION_1_BLOCK_RLP_1,
-        }) },
+        try conflationOf(alloc, &.{ &CONFLATION_0_BLOCK_RLP_0, &CONFLATION_0_BLOCK_RLP_1 }),
+        try conflationOf(alloc, &.{ &CONFLATION_1_BLOCK_RLP_0, &CONFLATION_1_BLOCK_RLP_1 }),
     });
 
     return .{
         .parent_data_rolling_hash = PARENT_DATA_ROLLING_HASH,
         .parent_data_tail_take_bytes = PARENT_DATA_TAIL_TAKE_BYTES,
         .chain_id = CHAIN_ID,
-        .conflations = conflations,
-        .chunks = try alloc.dupe(rollup_ssz.ChunkWitness, &[_]rollup_ssz.ChunkWitness{
+        .conflations = .{ .items = conflations },
+        .chunks = .{ .items = try alloc.dupe(rollup_ssz.ChunkWitness, &[_]rollup_ssz.ChunkWitness{
             .{
                 .chunk_hash = BLOB_CHUNK_HASH,
-                .is_calldata = false,
-                .blob_bytes = try sampleBlob(alloc),
-                .kzg_commitment = &BLOB_KZG_COMMITMENT,
-                .kzg_proof = &BLOB_KZG_PROOF,
+                .is_calldata = .{ .value = false },
+                .blob_bytes = .{ .bytes = try sampleBlob(alloc) },
+                .kzg_commitment = .{ .bytes = &BLOB_KZG_COMMITMENT },
+                .kzg_proof = .{ .bytes = &BLOB_KZG_PROOF },
             },
-            .{ .chunk_hash = CALLDATA_CHUNK_HASH, .is_calldata = true, .calldata_bytes = &CALLDATA_BYTES },
-        }),
-        .l2_execution_proofs = try alloc.dupe(l2_execution_proof.VerifiableL2ExecutionProof, &[_]l2_execution_proof.VerifiableL2ExecutionProof{
+            .{ .chunk_hash = CALLDATA_CHUNK_HASH, .is_calldata = .{ .value = true }, .calldata_bytes = .{ .bytes = &CALLDATA_BYTES } },
+        }) },
+        .l2_execution_proofs = .{ .items = try alloc.dupe(l2_execution_proof.VerifiableL2ExecutionProof, &[_]l2_execution_proof.VerifiableL2ExecutionProof{
             try sampleProof0(alloc),
             try sampleProof1(alloc),
-        }),
-        .boundary_prev_data_rolling_hash = BOUNDARY_PREV_DATA_ROLLING_HASH,
+        }) },
+        .boundary_prev_data_rolling_hash = .{ .items = &sample_boundary },
     };
 }

@@ -28,5 +28,5 @@ pub fn verifyL2ExecutionProof(allocator: std.mem.Allocator, verifiable: l2_execu
         error.OutOfMemory => return error.OutOfMemory,
         error.BoundsViolation => return error.RecursiveProofRejected,
     };
-    try verifyRecursiveProof(verifiable.program_vk, verifiable.proof.proof, public_input_hash);
+    try verifyRecursiveProof(verifiable.program_vk, verifiable.proof.proof.bytes, public_input_hash);
 }

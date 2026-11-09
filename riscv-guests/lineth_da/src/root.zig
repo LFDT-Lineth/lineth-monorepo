@@ -1,9 +1,6 @@
 //! Namespace of every source file in the lineth_da package.
 
 pub const zstd_decoder = @import("zstd_decoder.zig");
-/// The zkVM accelerator interface the package hashes and recovers signatures through; the `zkvm_*`
-/// providers of `lineth_accelerators` define its symbols.
-pub const accelerators = @import("zesu_accelerators");
 pub const encoding = @import("encoding.zig");
 pub const decompress = @import("decompress.zig");
 

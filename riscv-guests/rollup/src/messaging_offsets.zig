@@ -19,13 +19,13 @@ pub const Error = error{
 /// `out`, which holds one element per offset.
 pub fn rebase(proof: l2_execution_proof.L2ExecutionProof, range_start: u64, out: []u16) Error!void {
     const pi = proof.public_inputs;
-    std.debug.assert(out.len == pi.l2_messaging_blocks_offsets.len);
+    std.debug.assert(out.len == pi.l2_messaging_blocks_offsets.items.len);
     const count = chain.blockCount(proof) orelse return error.InvalidMessagingOffsets;
     if (pi.block_count != count) return error.InvalidMessagingOffsets;
     const shift = std.math.sub(u64, proof.start_block_number, range_start) catch return error.InvalidMessagingOffsets;
 
     var previous: u16 = 0;
-    for (pi.l2_messaging_blocks_offsets, out) |offset, *rebased| {
+    for (pi.l2_messaging_blocks_offsets.items, out) |offset, *rebased| {
         if (offset <= previous or offset > count) return error.InvalidMessagingOffsets;
         rebased.* = std.math.cast(u16, shift + offset) orelse return error.InvalidMessagingOffsets;
         previous = offset;

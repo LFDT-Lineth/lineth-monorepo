@@ -26,6 +26,7 @@ const primitives = @import("zesu_primitives");
 const ssz_decode = @import("zesu_ssz_decode");
 const zesu_allocator = @import("zesu_allocator");
 const rlp_decode = @import("zesu_rlp_decode");
+const zkvm_accelerators = @import("zkvm_accelerators");
 const l2_execution_ssz = @import("l2_execution_ssz.zig");
 const guest_common = @import("guest_common");
 const l2_execution_proof = @import("core_serde").l2_execution_proof;
@@ -87,7 +88,7 @@ fn chainConfigHash(chain_config: l2_execution_ssz.ChainConfig, base_fee: u64) [3
     @memcpy(buf[32..52], &chain_config.coinbase);
     @memcpy(buf[52..72], &chain_config.l2_message_service_address);
     @memcpy(buf[72..104], &u64ToSlot32(base_fee));
-    return mpt.keccak256(&buf);
+    return zkvm_accelerators.keccak256Digest(&buf);
 }
 
 /// The range-level system contracts in zesu's own type (same fields, same order).
@@ -106,7 +107,7 @@ fn addToForcedTxRollingHash(prev: [32]u8, tx_hash: [32]u8, deadline: u64, from_a
     @memcpy(buf[32..64], &tx_hash);
     @memcpy(buf[64..96], &u64ToSlot32(deadline));
     @memcpy(buf[96..116], &from_address);
-    return mpt.keccak256(&buf);
+    return zkvm_accelerators.keccak256Digest(&buf);
 }
 
 /// Hash of a list of 32-byte digests (e.g. `l2_l1_messages_hash`'s message-hash preimages). Named
@@ -117,14 +118,14 @@ fn hashDigestList(alloc: std.mem.Allocator, values: []const [32]u8) ![32]u8 {
     const buf = try alloc.alloc(u8, values.len * 32);
     defer alloc.free(buf);
     for (values, 0..) |v, i| @memcpy(buf[i * 32 ..][0..32], &v);
-    return mpt.keccak256(buf);
+    return zkvm_accelerators.keccak256Digest(buf);
 }
 
 fn hashAddressList(alloc: std.mem.Allocator, values: []const [20]u8) ![32]u8 {
     const buf = try alloc.alloc(u8, values.len * 20);
     defer alloc.free(buf);
     for (values, 0..) |v, i| @memcpy(buf[i * 20 ..][0..20], &v);
-    return mpt.keccak256(buf);
+    return zkvm_accelerators.keccak256Digest(buf);
 }
 
 // ─── Witness-backed MPT state reads (mirrors state_transition.py's L2State) ───────────────────────
@@ -246,16 +247,16 @@ fn validateForcedTransactions(
 
     const payload_tx_hashes = try alloc.alloc([32]u8, payload.raw_transactions.len);
     defer alloc.free(payload_tx_hashes);
-    for (payload.raw_transactions, 0..) |raw, i| payload_tx_hashes[i] = mpt.keccak256(raw);
+    for (payload.raw_transactions, 0..) |raw, i| payload_tx_hashes[i] = zkvm_accelerators.keccak256Digest(raw);
 
     for (forced_transactions) |ftx| {
         if (ftx.number != last_processed_ftx_number.* + 1) return error.ForcedTxOutOfOrder;
         if (ftx.deadline < payload.block_number) return error.ForcedTxDeadlineExceeded;
 
-        const decoded = try tx_decode.decodeTxs(alloc, &.{ftx.signed_tx_rlp});
+        const decoded = try tx_decode.decodeTxs(alloc, &.{ftx.signed_tx_rlp.bytes});
         const tx = &decoded[0];
         const from_address = try tx_signing.recoverSender(alloc, tx, chain_id, GUEST_SPEC) orelse return error.ForcedTxSenderRecoveryFailed;
-        const tx_hash = mpt.keccak256(ftx.signed_tx_rlp);
+        const tx_hash = zkvm_accelerators.keccak256Digest(ftx.signed_tx_rlp.bytes);
 
         // Rolling hash update for EVERY FTX in the range, regardless of outcome.
         curr_rolling_hash.* = addToForcedTxRollingHash(curr_rolling_hash.*, tx_hash, ftx.deadline, from_address);
@@ -324,13 +325,13 @@ pub fn runL2Execution(alloc: std.mem.Allocator, in: l2_execution_ssz.L2Execution
 pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator, in: l2_execution_ssz.L2ExecutionProofPrivateInput) !l2_execution_ssz.L2ExecutionProofOutput {
     zesu_allocator.set(alloc);
 
-    if (in.payloads.len == 0) return error.EmptyPayloads;
+    if (in.payloads.items.len == 0) return error.EmptyPayloads;
 
     // Decode each payload's vanilla stateless input ONCE; parsed objects are shared between
     // execution and the Linea logic below.
-    const stateless_inputs = try alloc.alloc(input.StatelessInput, in.payloads.len);
-    for (in.payloads, 0..) |payload, i| {
-        stateless_inputs[i] = ssz_decode.decode(alloc, payload.stateless_input_ssz) catch return error.InvalidStatelessInput;
+    const stateless_inputs = try alloc.alloc(input.StatelessInput, in.payloads.items.len);
+    for (in.payloads.items, 0..) |payload, i| {
+        stateless_inputs[i] = ssz_decode.decode(alloc, payload.stateless_input_ssz.bytes) catch return error.InvalidStatelessInput;
     }
 
     // Combined NodeIndex over ALL payloads' witness state nodes (mirrors `_build_node_index` over
@@ -369,7 +370,7 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
     var end_bridge = BridgeState{};
     var last_payload: input.ExecutionPayload = undefined;
 
-    for (in.payloads, stateless_inputs, 0..) |linea_payload, si, idx| {
+    for (in.payloads.items, stateless_inputs, 0..) |linea_payload, si, idx| {
         const payload = si.new_payload_request.execution_payload;
 
         // ── Conflation-level invariants the engine cannot know (it validates each block in
@@ -455,7 +456,7 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
             payload,
             result.pre_state_root,
             &node_index,
-            linea_payload.forced_transactions,
+            linea_payload.forced_transactions.items,
         );
         try filtered_addresses.appendSlice(alloc, block_filtered);
 
@@ -478,7 +479,7 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
         .end_block_hash = last_payload.block_hash,
         .end_block_number = last_payload.block_number,
         .end_block_timestamp = last_payload.timestamp,
-        .l2_l1_messages = try l2_l1_messages.toOwnedSlice(alloc),
+        .l2_l1_messages = .{ .items = try l2_l1_messages.toOwnedSlice(alloc) },
         .end_l1_l2_bridge_rolling_hash = end_bridge.hash,
         .end_l1_l2_bridge_rolling_hash_message_number = end_bridge.number,
         .dynamic_chain_config_hash = chainConfigHash(in.chain_config, base_fee),
@@ -486,10 +487,10 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
         .parent_ftx_number = in.parent_last_processed_ftx_number,
         .end_ftx_rolling_hash = current_ftx_rolling_hash,
         .end_processed_ftx_number = current_last_processed_ftx_number,
-        .filtered_addresses = try mergeFilteredAddresses(alloc, &filtered_addresses),
+        .filtered_addresses = .{ .items = try mergeFilteredAddresses(alloc, &filtered_addresses) },
         .tx_froms_hash = try hashAddressList(alloc, tx_froms.items),
-        .block_count = in.payloads.len,
-        .l2_messaging_blocks_offsets = try messaging_offsets.toOwnedSlice(alloc),
+        .block_count = in.payloads.items.len,
+        .l2_messaging_blocks_offsets = .{ .items = try messaging_offsets.toOwnedSlice(alloc) },
     };
 
     return .{

@@ -10,9 +10,8 @@
         // (read_input/write_output) and, through -Dzkvm-provide, the zkvm_* crypto providers that
         // data-availability verification and sender recovery resolve to.
         .lineth_accelerators = .{ .path = "../lineth_accelerators" },
-        // Generic riscv-guests utilities (sibling path dependency): the SSZ decode/encode
-        // primitives `rollup_ssz.zig`'s container codec builds on, and the l2-execution proof and
-        // rollup proof wire contracts.
+        // Generic riscv-guests utilities (sibling path dependency): the SSZ codec the guest input
+        // is decoded with, and the l2-execution proof and rollup proof wire contracts.
         .guest_common = .{ .path = "../guest_common" },
         // Data-availability building blocks (sibling path dependency): block truncation, the blob
         // packing and verification, the dictionary-based zstd decompression and the verification

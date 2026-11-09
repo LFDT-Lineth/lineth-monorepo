@@ -13,6 +13,7 @@ const rollup = @import("rollup");
 const scenario = @import("scenario");
 
 const rollup_ssz = rollup.rollup_ssz;
+const ByteList = @import("guest_common").ssz.ByteList(rollup_ssz.MAX_BYTES_PER_BLOCK_RLP);
 
 const Allocator = std.mem.Allocator;
 const Fact = ef_blocks.Fact;
@@ -88,7 +89,7 @@ fn checkRun(a: Allocator, scratch: Allocator, index: usize, chain_id: u64, run: 
     tally.blocks += run.len;
     if (conflations.items.len > 1) tally.multi_conflation += 1;
     for (request.chunks) |chunk| {
-        if (chunk.is_calldata) tally.calldata_chunks += 1 else tally.blobs += 1;
+        if (chunk.is_calldata.value) tally.calldata_chunks += 1 else tally.blobs += 1;
     }
     if (request.parent_data_tail_take_bytes > 0) tally.shared_blobs += 1;
 
@@ -118,20 +119,20 @@ fn tamper(a: Allocator, index: usize, request: *scenario.Request) !void {
         },
         4 => blk: {
             // The first byte of a block RLP is the prefix of its list.
-            const block_rlp = try a.dupe(u8, request.conflations[0].block_rlps[0]);
+            const block_rlps = try a.dupe(ByteList, request.conflations[0].block_rlps.items);
+            const block_rlp = try a.dupe(u8, block_rlps[0].bytes);
             block_rlp[0] ^= 0x01;
-            const block_rlps = try a.dupe([]const u8, request.conflations[0].block_rlps);
-            block_rlps[0] = block_rlp;
-            request.conflations[0].block_rlps = block_rlps;
+            block_rlps[0] = .{ .bytes = block_rlp };
+            request.conflations[0].block_rlps = .{ .items = block_rlps };
             break :blk error.MalformedBlock;
         },
         else => blk: {
             const first = request.chunks[0];
-            if (first.is_calldata) {
-                @constCast(first.calldata_bytes)[0] ^= 0x01;
+            if (first.is_calldata.value) {
+                @constCast(first.calldata_bytes.bytes)[0] ^= 0x01;
                 break :blk error.ChunkHashMismatch;
             }
-            @constCast(first.kzg_proof)[0] ^= 0x01;
+            @constCast(first.kzg_proof.bytes)[0] ^= 0x01;
             break :blk error.BlobKzgMismatch;
         },
     };

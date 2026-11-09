@@ -13,6 +13,7 @@ const guest_errors = rollup.guest_errors;
 const l2_execution_proof = core_serde.l2_execution_proof;
 const messaging_offsets = rollup.messaging_offsets;
 const rollup_ssz = rollup.rollup_ssz;
+const ByteList = @import("guest_common").ssz.ByteList(rollup_ssz.MAX_BYTES_PER_BLOCK_RLP);
 
 const Address = scenario.Address;
 const Allocator = std.mem.Allocator;
@@ -85,7 +86,7 @@ test "a conflation without blocks is rejected" {
     const a = arena.allocator();
 
     var request = try requestOf(a, &.{1}, .{});
-    request.conflations[0].block_rlps = &.{};
+    request.conflations[0].block_rlps = .{ .items = &.{} };
     try expectRejected(error.BlockCountMismatch, guest_errors.CODE_BLOCK_BINDING, a, request);
 }
 
@@ -95,7 +96,7 @@ test "a conflation without blocks is rejected even when its proof's range is emp
     const a = arena.allocator();
 
     var request = try requestOf(a, &.{1}, .{});
-    request.conflations[0].block_rlps = &.{};
+    request.conflations[0].block_rlps = .{ .items = &.{} };
     request.proofs[0].proof.public_inputs.end_block_number = request.proofs[0].proof.start_block_number - 1;
     try expectRejected(error.BlockCountMismatch, guest_errors.CODE_BLOCK_BINDING, a, request);
 }
@@ -118,11 +119,11 @@ test "a block RLP that is not canonical is rejected" {
     var request = try requestOf(a, &.{2}, .{});
     // The last byte of a block is the amount of its last withdrawal; 0xc1 announces a byte that is
     // missing.
-    const block_rlp = try a.dupe(u8, request.conflations[0].block_rlps[1]);
+    const block_rlps = try a.dupe(ByteList, request.conflations[0].block_rlps.items);
+    const block_rlp = try a.dupe(u8, block_rlps[1].bytes);
     block_rlp[block_rlp.len - 1] = 0xc1;
-    const block_rlps = try a.dupe([]const u8, request.conflations[0].block_rlps);
-    block_rlps[1] = block_rlp;
-    request.conflations[0].block_rlps = block_rlps;
+    block_rlps[1] = .{ .bytes = block_rlp };
+    request.conflations[0].block_rlps = .{ .items = block_rlps };
     try expectRejected(error.MalformedBlock, guest_errors.CODE_BLOCK_BINDING, a, request);
 }
 
@@ -188,7 +189,7 @@ test "calldata that does not hash to its chunk hash is rejected" {
     const a = arena.allocator();
 
     const request = try requestOf(a, &.{1}, .{ .chunks = &.{.{ .kind = .calldata }} });
-    flip(request.chunks[0].calldata_bytes, 0);
+    flip(request.chunks[0].calldata_bytes.bytes, 0);
     try expectRejected(error.ChunkHashMismatch, guest_errors.CODE_CHUNK_BINDING, a, request);
 }
 
@@ -198,7 +199,7 @@ test "a calldata chunk that carries a commitment is rejected" {
     const a = arena.allocator();
 
     var request = try requestOf(a, &.{1}, .{ .chunks = &.{.{ .kind = .calldata }} });
-    request.chunks[0].kzg_commitment = &(@as([48]u8, @splat(0)));
+    request.chunks[0].kzg_commitment = .{ .bytes = &(@as([48]u8, @splat(0))) };
     try expectRejected(error.MalformedChunk, guest_errors.CODE_CHUNK_BINDING, a, request);
 }
 
@@ -208,7 +209,7 @@ test "a blob with an element of 2^254 or more is rejected" {
     const a = arena.allocator();
 
     const request = try requestOf(a, &.{1}, .{});
-    @constCast(request.chunks[0].blob_bytes)[0] |= 0x40;
+    @constCast(request.chunks[0].blob_bytes.bytes)[0] |= 0x40;
     try expectRejected(error.NonCanonicalBlob, guest_errors.CODE_CHUNK_BINDING, a, request);
 }
 
@@ -238,7 +239,7 @@ test "a blob proof that does not open the commitment is rejected" {
     const a = arena.allocator();
 
     const request = try requestOf(a, &.{1}, .{});
-    flip(request.chunks[0].kzg_proof, 47);
+    flip(request.chunks[0].kzg_proof.bytes, 47);
     try expectRejected(error.BlobKzgMismatch, guest_errors.CODE_BLOB_KZG, a, request);
 }
 
@@ -249,7 +250,7 @@ test "a blob that is not the one its commitment commits to is rejected" {
 
     const request = try requestOf(a, &.{1}, .{});
     // The low bit of the first element changes the blob and keeps it a canonical packing.
-    flip(request.chunks[0].blob_bytes, 31);
+    flip(request.chunks[0].blob_bytes.bytes, 31);
     try expectRejected(error.BlobKzgMismatch, guest_errors.CODE_BLOB_KZG, a, request);
 }
 
@@ -391,7 +392,7 @@ test "a proof whose public input is beyond a bound of its wire schema is rejecte
     const offsets = try a.alloc(u16, l2_execution_proof.MAX_MESSAGING_BLOCKS + 1);
     @memset(offsets, 1);
     var request = try requestOf(a, &.{ 1, 1 }, .{});
-    request.proofs[0].proof.public_inputs.l2_messaging_blocks_offsets = offsets;
+    request.proofs[0].proof.public_inputs.l2_messaging_blocks_offsets = .{ .items = offsets };
     try expectRejected(error.RecursiveProofRejected, guest_errors.CODE_RECURSION, a, request);
 }
 
@@ -478,15 +479,15 @@ test "an offset rebases to 65535 but not to 65536" {
     var pi = std.mem.zeroes(l2_execution_proof.L2ExecutionProofPublicInput);
     pi.end_block_number = 65_536;
     pi.block_count = 2;
-    pi.l2_messaging_blocks_offsets = &.{1};
+    pi.l2_messaging_blocks_offsets = .{ .items = &.{1} };
     // The proof starts at block 65535, which is 65534 blocks after the first block of the rollup proof.
-    var proof: l2_execution_proof.L2ExecutionProof = .{ .public_inputs = pi, .start_block_number = 65_535, .proof = &.{} };
+    var proof: l2_execution_proof.L2ExecutionProof = .{ .public_inputs = pi, .start_block_number = 65_535, .proof = .{ .bytes = &.{} } };
 
     var out: [2]u16 = undefined;
     try messaging_offsets.rebase(proof, 1, out[0..1]);
     try std.testing.expectEqual(@as(u16, 65_535), out[0]);
 
-    proof.public_inputs.l2_messaging_blocks_offsets = &.{ 1, 2 };
+    proof.public_inputs.l2_messaging_blocks_offsets = .{ .items = &.{ 1, 2 } };
     try std.testing.expectError(error.InvalidMessagingOffsets, messaging_offsets.rebase(proof, 1, &out));
 }
 
@@ -512,8 +513,8 @@ test "more distinct filtered addresses than the output holds are rejected by the
     const max = max_filtered_addresses;
     const addresses = try ascendingAddresses(a, max + 1);
     var request = try requestOf(a, &.{ 1, 1 }, .{});
-    request.proofs[0].proof.public_inputs.filtered_addresses = addresses[0..max];
-    request.proofs[1].proof.public_inputs.filtered_addresses = addresses[max..];
+    request.proofs[0].proof.public_inputs.filtered_addresses = .{ .items = addresses[0..max] };
+    request.proofs[1].proof.public_inputs.filtered_addresses = .{ .items = addresses[max..] };
 
     const frame = try rollup_ssz.encodeInput(a, request.input());
     try std.testing.expectError(error.OutputEncodeFailed, rollup.rollup.runFramed(a, frame));
@@ -530,11 +531,11 @@ test "the same maximal list of filtered addresses in two proofs is accepted as o
     const descending = try a.alloc(Address, max);
     for (descending, 0..) |*address, i| address.* = addresses[max - 1 - i];
     var request = try requestOf(a, &.{ 1, 1 }, .{});
-    request.proofs[0].proof.public_inputs.filtered_addresses = descending;
-    request.proofs[1].proof.public_inputs.filtered_addresses = addresses;
+    request.proofs[0].proof.public_inputs.filtered_addresses = .{ .items = descending };
+    request.proofs[1].proof.public_inputs.filtered_addresses = .{ .items = addresses };
 
     const pi = try rollup.rollup.run(a, request.input());
-    try std.testing.expectEqualSlices(Address, addresses, pi.filtered_addresses);
+    try std.testing.expectEqualSlices(Address, addresses, pi.filtered_addresses.items);
 }
 
 test "a maximal list of distinct filtered addresses split between two proofs is accepted" {
@@ -545,11 +546,11 @@ test "a maximal list of distinct filtered addresses split between two proofs is 
     const max = max_filtered_addresses;
     const addresses = try ascendingAddresses(a, max);
     var request = try requestOf(a, &.{ 1, 1 }, .{});
-    request.proofs[0].proof.public_inputs.filtered_addresses = addresses[max / 2 ..];
-    request.proofs[1].proof.public_inputs.filtered_addresses = addresses[0 .. max / 2];
+    request.proofs[0].proof.public_inputs.filtered_addresses = .{ .items = addresses[max / 2 ..] };
+    request.proofs[1].proof.public_inputs.filtered_addresses = .{ .items = addresses[0 .. max / 2] };
 
     const pi = try rollup.rollup.run(a, request.input());
-    try std.testing.expectEqualSlices(Address, addresses, pi.filtered_addresses);
+    try std.testing.expectEqualSlices(Address, addresses, pi.filtered_addresses.items);
 }
 
 test "an allocator that refuses any one request ends the run in the out-of-memory category" {

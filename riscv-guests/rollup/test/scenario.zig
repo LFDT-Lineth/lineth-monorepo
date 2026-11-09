@@ -12,6 +12,7 @@ const ef_blocks = @import("ef_blocks");
 const ef_fixtures = @import("ef_fixtures");
 const lineth_da = @import("lineth_da");
 const rollup = @import("rollup");
+const support = @import("support");
 const zstd_encoder = @import("zstd_encoder");
 
 const blob_payload = lineth_da.encoding.blob_payload;
@@ -279,15 +280,16 @@ pub const Request = struct {
     /// The bytes of the last blob behind the last segment.
     final_data_tail_discard_bytes: u64,
 
-    pub fn input(self: Request) rollup_ssz.RollupProofPrivateInput {
+    /// The input over this request's slices, which it must outlive.
+    pub fn input(self: *const Request) rollup_ssz.RollupProofPrivateInput {
         return .{
             .parent_data_rolling_hash = self.parent_data_rolling_hash,
             .parent_data_tail_take_bytes = self.parent_data_tail_take_bytes,
             .chain_id = self.chain_id,
-            .conflations = self.conflations,
-            .chunks = self.chunks,
-            .l2_execution_proofs = self.proofs,
-            .boundary_prev_data_rolling_hash = self.boundary_prev_data_rolling_hash,
+            .conflations = .{ .items = self.conflations },
+            .chunks = .{ .items = self.chunks },
+            .l2_execution_proofs = .{ .items = self.proofs },
+            .boundary_prev_data_rolling_hash = .{ .items = if (self.boundary_prev_data_rolling_hash) |*hash| @as(*const [1]Hash, @ptrCast(hash)) else &.{} },
         };
     }
 };
@@ -332,7 +334,7 @@ pub fn build(a: Allocator, conflations_in: []const Conflation, options: Options)
         const owned_bytes = stream[position..][0..owned];
         position += owned;
         switch (spec.kind) {
-            .calldata => chunk.* = .{ .chunk_hash = keccak(owned_bytes), .is_calldata = true, .calldata_bytes = owned_bytes },
+            .calldata => chunk.* = .{ .chunk_hash = keccak(owned_bytes), .is_calldata = .{ .value = true }, .calldata_bytes = .{ .bytes = owned_bytes } },
             .blob => {
                 const prefix_len = switch (spec.prefix) {
                     .bytes => |len| len,
@@ -364,7 +366,7 @@ pub fn build(a: Allocator, conflations_in: []const Conflation, options: Options)
     const witnesses = try a.alloc(rollup_ssz.ConflationWitness, conflations_in.len);
     const proofs = try a.alloc(l2_execution_proof.VerifiableL2ExecutionProof, conflations_in.len);
     for (conflations_in, witnesses, proofs, 0..) |conflation, *witness, *proof, index| {
-        witness.* = .{ .block_rlps = conflation.block_rlps };
+        witness.* = try support.conflationOf(a, conflation.block_rlps);
         proof.* = try proofOf(a, conflation, index, if (index < options.proofs.len) options.proofs[index] else .{}, options.dynamic_chain_config_hash);
     }
 
@@ -391,10 +393,10 @@ pub fn blobChunk(a: Allocator, payload: []const u8) !rollup_ssz.ChunkWitness {
     const commitment = try a.dupe(u8, &opening.commitment);
     return .{
         .chunk_hash = da_stream.versionedHash(&opening.commitment),
-        .is_calldata = false,
-        .blob_bytes = blob,
-        .kzg_commitment = commitment,
-        .kzg_proof = try a.dupe(u8, &opening.proof),
+        .is_calldata = .{ .value = false },
+        .blob_bytes = .{ .bytes = blob },
+        .kzg_commitment = .{ .bytes = commitment },
+        .kzg_proof = .{ .bytes = try a.dupe(u8, &opening.proof) },
     };
 }
 
@@ -416,7 +418,7 @@ fn proofOf(a: Allocator, conflation: Conflation, index: usize, spec: ProofSpec, 
                 .end_block_hash = conflation.end_hash,
                 .end_block_number = conflation.first_number + conflation.block_rlps.len - 1,
                 .end_block_timestamp = conflation.end_timestamp,
-                .l2_l1_messages = spec.l2_l1_messages,
+                .l2_l1_messages = .{ .items = spec.l2_l1_messages },
                 .end_l1_l2_bridge_rolling_hash = spec.bridge_rolling_hash,
                 .end_l1_l2_bridge_rolling_hash_message_number = spec.bridge_message_number,
                 .dynamic_chain_config_hash = chain_config_hash,
@@ -424,13 +426,13 @@ fn proofOf(a: Allocator, conflation: Conflation, index: usize, spec: ProofSpec, 
                 .parent_ftx_number = 10 + 2 * index,
                 .end_ftx_rolling_hash = ftxHash(index + 1),
                 .end_processed_ftx_number = 12 + 2 * index,
-                .filtered_addresses = spec.filtered_addresses,
+                .filtered_addresses = .{ .items = spec.filtered_addresses },
                 .tx_froms_hash = keccak(senders),
                 .block_count = conflation.block_rlps.len,
-                .l2_messaging_blocks_offsets = spec.messaging_offsets,
+                .l2_messaging_blocks_offsets = .{ .items = spec.messaging_offsets },
             },
             .start_block_number = conflation.first_number,
-            .proof = try a.dupe(u8, &.{ 0xab, 0xcd, @as(u8, @truncate(index)) }),
+            .proof = .{ .bytes = try a.dupe(u8, &.{ 0xab, 0xcd, @as(u8, @truncate(index)) }) },
         },
     };
 }

@@ -9,6 +9,9 @@
 //!   const dep = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize });
 //!   some_module.addImport("lineth_zkvm_accel", dep.module("lineth_accelerators"));
 //!
+//! The `zkvm_accelerators` module declares the `zkvm_*` and `lineth_zkvm_*` symbols that the guests'
+//! own code calls (hashing, blob verification); the providers below define them.
+//!
 //! `-Dzkvm-provide=true` additionally exposes the crypto surface zesu's extern backend needs:
 //! `zkvm_provide` (defines every `zkvm_*` symbol, linking the Constantine archive for the target),
 //! `guest_crypto` (the Zig bindings to that archive) and `secp256k1_std`. `-Dkeccak-accel=true`
@@ -37,6 +40,12 @@ pub fn build(b: *std.Build) void {
 
     const accelerators = b.addModule("lineth_accelerators", .{
         .root_source_file = b.path("src/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    _ = b.addModule("zkvm_accelerators", .{
+        .root_source_file = b.path("src/zkvm_accelerators.zig"),
         .target = target,
         .optimize = optimize,
     });

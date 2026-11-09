@@ -103,11 +103,15 @@ fn zesuFor(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builti
 }
 
 /// What `src/` imports by name, for one target: the zesu modules under the `zesu_*` names the
-/// sources use, the declarations of libzstd and the memory hooks of the decoder.
+/// sources use, the accelerator calls, the SSZ views of the witnesses, the declarations of libzstd and the memory hooks of the
+/// decoder.
 fn packageImports(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, zstd: Zstd) []const Import {
     const zesu = zesuFor(b, target, optimize);
+    const accelerators = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize });
+    const guest_common = b.dependency("guest_common", .{ .target = target, .optimize = optimize });
     return b.allocator.dupe(Import, &.{
-        .{ .name = "zesu_accelerators", .module = zesu.module("accelerators") },
+        .{ .name = "guest_common", .module = guest_common.module("guest_common") },
+        .{ .name = "zkvm_accelerators", .module = accelerators.module("zkvm_accelerators") },
         .{ .name = "zesu_executor", .module = zesu.module("executor") },
         .{ .name = "zesu_input", .module = zesu.module("input") },
         .{ .name = "zesu_mpt", .module = zesu.module("mpt") },

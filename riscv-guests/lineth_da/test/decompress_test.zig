@@ -308,21 +308,21 @@ test "a blob has to be the canonical packing of its payload" {
     // An element of 2^254 or more.
     for ([_]usize{ 0, 1000, blob_payload.field_elements - 1 }) |element| {
         const chunk = try blobChunk(a, own);
-        const forged: []u8 = try a.dupe(u8, chunk.blob_bytes);
+        const forged: []u8 = try a.dupe(u8, chunk.blob_bytes.bytes);
         forged[element * 32] |= 0x40;
         var with_forged = chunk;
-        with_forged.blob_bytes = forged;
+        with_forged.blob_bytes = .{ .bytes = forged };
         try expectRejected(error.NonCanonicalBlob, &.{with_forged}, &.{payload_1}, .{});
     }
     // A missing terminal: an all-zero blob, or a last nonzero byte other than 0xff.
     var chunk = try blobChunk(a, own);
     var forged: []u8 = try a.alloc(u8, blob_payload.blob_len);
     @memset(forged, 0);
-    chunk.blob_bytes = forged;
+    chunk.blob_bytes = .{ .bytes = forged };
     try expectRejected(error.NonCanonicalBlob, &.{chunk}, &.{payload_1}, .{});
-    forged = try a.dupe(u8, (try blobChunk(a, own)).blob_bytes);
+    forged = try a.dupe(u8, (try blobChunk(a, own)).blob_bytes.bytes);
     forged[blob_payload.blob_len - 1] = 1;
-    chunk.blob_bytes = forged;
+    chunk.blob_bytes = .{ .bytes = forged };
     try expectRejected(error.NonCanonicalBlob, &.{chunk}, &.{payload_1}, .{});
 }
 
@@ -332,12 +332,12 @@ test "a blob has to be the one its commitment commits to" {
     const a = arena.allocator();
     const own = try segment(a, payload_1);
     const other = try blobChunk(a, try segment(a, payload_2));
-    const other_commitment = other.kzg_commitment[0..48].*;
-    const other_proof = other.kzg_proof[0..48].*;
+    const other_commitment = other.kzg_commitment.bytes[0..48].*;
+    const other_proof = other.kzg_proof.bytes[0..48].*;
 
     // The blob of the stream under a commitment and a proof of another blob, anchored by the
     // versioned hash of that commitment: every binding holds, and the blob is not the committed one.
-    const own_blob = (try blobChunk(a, own)).blob_bytes[0..blob_payload.blob_len];
+    const own_blob = (try blobChunk(a, own)).blob_bytes.bytes[0..blob_payload.blob_len];
     try expectRejected(error.BlobKzgMismatch, &.{try chunkOf(a, own_blob, other_commitment, other_proof)}, &.{payload_1}, .{});
 }
 
@@ -384,7 +384,7 @@ test "a chunk's bytes have to match its anchored hash" {
     try expectRejected(error.ChunkHashMismatch, &.{calldata}, &.{payload_1}, .{});
 
     calldata = calldataChunk(first);
-    calldata.calldata_bytes = second;
+    calldata.calldata_bytes = .{ .bytes = second };
     try expectRejected(error.ChunkHashMismatch, &.{calldata}, &.{payload_1}, .{});
 }
 
@@ -396,7 +396,7 @@ test "a chunk carries the fields of its own kind only" {
     const blob = try blobChunk(a, own);
 
     var carrying_calldata = blob;
-    carrying_calldata.calldata_bytes = own;
+    carrying_calldata.calldata_bytes = .{ .bytes = own };
     try expectRejected(error.MalformedChunk, &.{carrying_calldata}, &.{payload_1}, .{});
 
     var carrying_blob = calldataChunk(own);
@@ -419,27 +419,27 @@ test "a blob has a 131072-byte body, a 48-byte commitment and a 48-byte proof" {
     const blob = try blobChunk(a, try segment(a, payload_1));
 
     var short_body = blob;
-    short_body.blob_bytes = blob.blob_bytes[0 .. blob.blob_bytes.len - 1];
+    short_body.blob_bytes = .{ .bytes = blob.blob_bytes.bytes[0 .. blob.blob_bytes.bytes.len - 1] };
     try expectRejected(error.MalformedChunk, &.{short_body}, &.{payload_1}, .{});
 
     var long_body = blob;
-    long_body.blob_bytes = try concat(a, &.{ blob.blob_bytes, &.{0} });
+    long_body.blob_bytes = .{ .bytes = try concat(a, &.{ blob.blob_bytes.bytes, &.{0} }) };
     try expectRejected(error.MalformedChunk, &.{long_body}, &.{payload_1}, .{});
 
     var no_commitment = blob;
-    no_commitment.kzg_commitment = &.{};
+    no_commitment.kzg_commitment = .{ .bytes = &.{} };
     try expectRejected(error.MalformedChunk, &.{no_commitment}, &.{payload_1}, .{});
 
     var no_proof = blob;
-    no_proof.kzg_proof = &.{};
+    no_proof.kzg_proof = .{ .bytes = &.{} };
     try expectRejected(error.MalformedChunk, &.{no_proof}, &.{payload_1}, .{});
 
     var short_commitment = blob;
-    short_commitment.kzg_commitment = blob.kzg_commitment[0..47];
+    short_commitment.kzg_commitment = .{ .bytes = blob.kzg_commitment.bytes[0..47] };
     try expectRejected(error.MalformedChunk, &.{short_commitment}, &.{payload_1}, .{});
 
     var long_proof = blob;
-    long_proof.kzg_proof = try concat(a, &.{ blob.kzg_proof, &.{0} });
+    long_proof.kzg_proof = .{ .bytes = try concat(a, &.{ blob.kzg_proof.bytes, &.{0} }) };
     try expectRejected(error.MalformedChunk, &.{long_proof}, &.{payload_1}, .{});
 }
 

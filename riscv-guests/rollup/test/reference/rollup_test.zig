@@ -59,10 +59,10 @@ test "one conflation in one blob: the public inputs follow its proof and its str
     try std.testing.expectEqualSlices(u8, &scenario.keccak(&(hashOf(0x47) ++ chunk_hash)), &pi.end_data_rolling_hash);
     try std.testing.expectEqual(@as(u64, 0), pi.final_data_tail_discard_bytes);
 
-    try std.testing.expectEqual(@as(usize, 0), pi.l2_l1_messages.len);
-    try std.testing.expectEqual(@as(usize, 0), pi.filtered_addresses.len);
-    try std.testing.expectEqual(@as(usize, 0), pi.l2_messaging_blocks_offsets.len);
-    try std.testing.expectEqualSlices([32]u8, &.{hashOf(0xaa)}, pi.program_vks);
+    try std.testing.expectEqual(@as(usize, 0), pi.l2_l1_messages.items.len);
+    try std.testing.expectEqual(@as(usize, 0), pi.filtered_addresses.items.len);
+    try std.testing.expectEqual(@as(usize, 0), pi.l2_messaging_blocks_offsets.items.len);
+    try std.testing.expectEqualSlices([32]u8, &.{hashOf(0xaa)}, pi.program_vks.items);
     try std.testing.expectEqualSlices(u8, &hashOf(0), &pi.end_l1_l2_bridge_rolling_hash);
     try std.testing.expectEqual(@as(u64, 0), pi.end_l1_l2_bridge_rolling_hash_message_number);
 }
@@ -148,17 +148,18 @@ test "the public inputs of three conflations combine their proofs" {
     try std.testing.expectEqual(@as(u64, 16), pi.end_processed_ftx_number);
 
     // The L2 to L1 messages are the proofs' lists end to end.
-    try std.testing.expectEqualSlices([32]u8, &.{ hashOf(0x08), hashOf(0x18), hashOf(0x28) }, pi.l2_l1_messages);
+    try std.testing.expectEqualSlices([32]u8, &.{ hashOf(0x08), hashOf(0x18), hashOf(0x28) }, pi.l2_l1_messages.items);
     // The addresses are the distinct ones, ascending.
-    try std.testing.expectEqualSlices([20]u8, &.{ addressOf(0x03), addressOf(0x04), addressOf(0x05) }, pi.filtered_addresses);
+    try std.testing.expectEqualSlices([20]u8, &.{ addressOf(0x03), addressOf(0x04), addressOf(0x05) }, pi.filtered_addresses.items);
     // The program VKs are the distinct ones, ascending.
-    try std.testing.expectEqualSlices([32]u8, &.{ hashOf(0xaa), hashOf(0xcc) }, pi.program_vks);
+    try std.testing.expectEqualSlices([32]u8, &.{ hashOf(0xaa), hashOf(0xcc) }, pi.program_vks.items);
     // The bridge pair is the last non-zero one.
     try std.testing.expectEqualSlices(u8, &hashOf(0x13), &pi.end_l1_l2_bridge_rolling_hash);
     try std.testing.expectEqual(@as(u64, 6), pi.end_l1_l2_bridge_rolling_hash_message_number);
     // The offsets count blocks from the first block: the second proof starts at the third block, the
     // third at the fourth.
-    try std.testing.expectEqualSlices(u16, &.{ 1, 2, 3, 5, 6 }, pi.l2_messaging_blocks_offsets);
+    const expected_offsets = [_]u16{ 1, 2, 3, 5, 6 };
+    try std.testing.expectEqualSlices(u8, std.mem.sliceAsBytes(&expected_offsets), std.mem.sliceAsBytes(pi.l2_messaging_blocks_offsets.items));
 }
 
 test "trailing proofs without a bridge anchor keep the earlier proof's pair" {
@@ -228,7 +229,7 @@ test "the program VKs of many proofs are distinct and ascending whatever their o
     const request = try scenario.build(a, try scenario.chainConflations(a, &.{ 1, 1, 1, 1 }), .{ .proofs = &vks });
     const pi = try run(a, request);
 
-    try std.testing.expectEqualSlices([32]u8, &.{ hashOf(0xaa), hashOf(0xbb), hashOf(0xcc) }, pi.program_vks);
+    try std.testing.expectEqualSlices([32]u8, &.{ hashOf(0xaa), hashOf(0xbb), hashOf(0xcc) }, pi.program_vks.items);
 }
 
 // ── The streams chunks can carry ─────────────────────────────────────────────────────────────────

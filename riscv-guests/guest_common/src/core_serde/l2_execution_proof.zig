@@ -1,14 +1,9 @@
 //! Wire contract of an l2-execution proof: the public-input tuple, the proof that carries it with
 //! its range start and proof bytes, and the verifiable proof that adds the program VK. The layouts
-//! are SSZ and decoders accept only the canonical encoding; byte-list fields alias the decoded buffer.
+//! are SSZ and decoders accept only the canonical encoding; the lists alias the decoded buffer.
 //!
 //! The l2-execution guest's own output frames the public inputs with the 0x0003 schema id and leads
 //! with their keccak256 commitment: `keccak256(frame) || frame`, `frame = schema_id || SSZ(public inputs)`.
-//!
-//! Fixed-head sizes (variable-size fields sit behind 4-byte offsets):
-//!   L2ExecutionProofPublicInput:  284 bytes
-//!   L2ExecutionProof:              16 bytes
-//!   VerifiableL2ExecutionProof:    36 bytes
 
 const std = @import("std");
 const ssz = @import("guest_common").ssz;
@@ -31,7 +26,7 @@ pub const L2ExecutionProofPublicInput = struct {
     end_block_hash: [32]u8,
     end_block_number: u64,
     end_block_timestamp: u64,
-    l2_l1_messages: []const [32]u8,
+    l2_l1_messages: ssz.FixedList([32]u8, MAX_MESSAGES),
     end_l1_l2_bridge_rolling_hash: [32]u8,
     end_l1_l2_bridge_rolling_hash_message_number: u64,
     dynamic_chain_config_hash: [32]u8,
@@ -39,16 +34,16 @@ pub const L2ExecutionProofPublicInput = struct {
     parent_ftx_number: u64,
     end_ftx_rolling_hash: [32]u8,
     end_processed_ftx_number: u64,
-    filtered_addresses: []const [20]u8,
+    filtered_addresses: ssz.FixedList([20]u8, MAX_FILTERED),
     tx_froms_hash: [32]u8,
     block_count: u64,
-    l2_messaging_blocks_offsets: []const u16,
+    l2_messaging_blocks_offsets: ssz.FixedList(u16, MAX_MESSAGING_BLOCKS),
 };
 
 pub const L2ExecutionProof = struct {
     public_inputs: L2ExecutionProofPublicInput,
     start_block_number: u64,
-    proof: []const u8,
+    proof: ssz.ByteList(MAX_PROOF_BYTES),
 };
 
 pub const VerifiableL2ExecutionProof = struct {
@@ -56,185 +51,38 @@ pub const VerifiableL2ExecutionProof = struct {
     program_vk: [32]u8,
 };
 
-const readU32 = ssz.readU32;
-const readU64 = ssz.readU64;
-const writeU32 = ssz.writeU32;
-const writeU64 = ssz.writeU64;
-
-const putHash = ssz.putHash;
-const putU64 = ssz.putU64;
-const putOffset = ssz.putOffset;
-const getHash = ssz.getHash;
-const getU64 = ssz.getU64;
-const getOffset = ssz.getOffset;
-const decodeFixedList = ssz.decodeFixedList;
-
-// ── L2ExecutionProofPublicInput ───────────────────────────────────────────────
-// Fixed head: the fixed-size fields inline plus a 4-byte offset per list = 284.
-const PI_FIXED_SIZE: usize = 284;
-
-/// SSZ-encode the public-input tuple: the 284-byte fixed head followed by the three list tails.
-pub fn encodePublicInputs(alloc: std.mem.Allocator, pi: L2ExecutionProofPublicInput) ![]u8 {
-    if (pi.l2_l1_messages.len > MAX_MESSAGES or
-        pi.filtered_addresses.len > MAX_FILTERED or
-        pi.l2_messaging_blocks_offsets.len > MAX_MESSAGING_BLOCKS) return error.BoundsViolation;
-
-    const messages_len = pi.l2_l1_messages.len * 32;
-    const filtered_len = pi.filtered_addresses.len * 20;
-    const out = try alloc.alloc(u8, PI_FIXED_SIZE + messages_len + filtered_len + pi.l2_messaging_blocks_offsets.len * 2);
-
-    const messages_start = PI_FIXED_SIZE;
-    const filtered_start = messages_start + messages_len;
-    const blocks_start = filtered_start + filtered_len;
-
-    var pos: usize = 0;
-    putHash(out, &pos, pi.parent_block_hash);
-    putHash(out, &pos, pi.end_block_hash);
-    putU64(out, &pos, pi.end_block_number);
-    putU64(out, &pos, pi.end_block_timestamp);
-    putOffset(out, &pos, messages_start);
-    putHash(out, &pos, pi.end_l1_l2_bridge_rolling_hash);
-    putU64(out, &pos, pi.end_l1_l2_bridge_rolling_hash_message_number);
-    putHash(out, &pos, pi.dynamic_chain_config_hash);
-    putHash(out, &pos, pi.parent_ftx_rolling_hash);
-    putU64(out, &pos, pi.parent_ftx_number);
-    putHash(out, &pos, pi.end_ftx_rolling_hash);
-    putU64(out, &pos, pi.end_processed_ftx_number);
-    putOffset(out, &pos, filtered_start);
-    putHash(out, &pos, pi.tx_froms_hash);
-    putU64(out, &pos, pi.block_count);
-    putOffset(out, &pos, blocks_start);
-    std.debug.assert(pos == PI_FIXED_SIZE);
-
-    for (pi.l2_l1_messages, 0..) |m, i| @memcpy(out[messages_start + i * 32 ..][0..32], &m);
-    for (pi.filtered_addresses, 0..) |a, i| @memcpy(out[filtered_start + i * 20 ..][0..20], &a);
-    ssz.writeU16List(out[blocks_start..], pi.l2_messaging_blocks_offsets);
-    return out;
+pub fn encodePublicInputs(alloc: std.mem.Allocator, pi: L2ExecutionProofPublicInput) ssz.EncodeError![]u8 {
+    return ssz.encode(L2ExecutionProofPublicInput, alloc, pi);
 }
 
-/// Decode the SSZ public-input tuple. Inverse of `encodePublicInputs`; the message and address lists alias `bytes`.
-pub fn decodePublicInputs(alloc: std.mem.Allocator, bytes: []const u8) !L2ExecutionProofPublicInput {
-    if (bytes.len < PI_FIXED_SIZE) return error.InvalidSsz;
-
-    var pos: usize = 0;
-    const parent_block_hash = getHash(bytes, &pos);
-    const end_block_hash = getHash(bytes, &pos);
-    const end_block_number = getU64(bytes, &pos);
-    const end_block_timestamp = getU64(bytes, &pos);
-    const messages_start = getOffset(bytes, &pos);
-    const end_l1_l2_bridge_rolling_hash = getHash(bytes, &pos);
-    const end_l1_l2_bridge_rolling_hash_message_number = getU64(bytes, &pos);
-    const dynamic_chain_config_hash = getHash(bytes, &pos);
-    const parent_ftx_rolling_hash = getHash(bytes, &pos);
-    const parent_ftx_number = getU64(bytes, &pos);
-    const end_ftx_rolling_hash = getHash(bytes, &pos);
-    const end_processed_ftx_number = getU64(bytes, &pos);
-    const filtered_start = getOffset(bytes, &pos);
-    const tx_froms_hash = getHash(bytes, &pos);
-    const block_count = getU64(bytes, &pos);
-    const blocks_start = getOffset(bytes, &pos);
-    std.debug.assert(pos == PI_FIXED_SIZE);
-
-    // The first tail starts right behind the fixed head and every tail ends where the next begins.
-    if (messages_start != PI_FIXED_SIZE or filtered_start < messages_start or
-        blocks_start < filtered_start or blocks_start > bytes.len) return error.InvalidSsz;
-
-    const l2_l1_messages = try decodeFixedList([32]u8, bytes[messages_start..filtered_start], MAX_MESSAGES);
-    const filtered_addresses = try decodeFixedList([20]u8, bytes[filtered_start..blocks_start], MAX_FILTERED);
-    const l2_messaging_blocks_offsets = try ssz.decodeU16List(alloc, bytes[blocks_start..], MAX_MESSAGING_BLOCKS);
-
-    return .{
-        .parent_block_hash = parent_block_hash,
-        .end_block_hash = end_block_hash,
-        .end_block_number = end_block_number,
-        .end_block_timestamp = end_block_timestamp,
-        .l2_l1_messages = l2_l1_messages,
-        .end_l1_l2_bridge_rolling_hash = end_l1_l2_bridge_rolling_hash,
-        .end_l1_l2_bridge_rolling_hash_message_number = end_l1_l2_bridge_rolling_hash_message_number,
-        .dynamic_chain_config_hash = dynamic_chain_config_hash,
-        .parent_ftx_rolling_hash = parent_ftx_rolling_hash,
-        .parent_ftx_number = parent_ftx_number,
-        .end_ftx_rolling_hash = end_ftx_rolling_hash,
-        .end_processed_ftx_number = end_processed_ftx_number,
-        .filtered_addresses = filtered_addresses,
-        .tx_froms_hash = tx_froms_hash,
-        .block_count = block_count,
-        .l2_messaging_blocks_offsets = l2_messaging_blocks_offsets,
-    };
+pub fn decodePublicInputs(alloc: std.mem.Allocator, bytes: []const u8) ssz.DecodeError!L2ExecutionProofPublicInput {
+    return ssz.decode(L2ExecutionProofPublicInput, alloc, bytes);
 }
 
-// ── L2ExecutionProof ──────────────────────────────────────────────────────────
-// Fixed head: public_inputs offset(4) + start_block_number(8) + proof offset(4) = 16.
-const PROOF_FIXED_SIZE: usize = 16;
-
-pub fn encodeProof(alloc: std.mem.Allocator, v: L2ExecutionProof) ![]u8 {
-    if (v.proof.len > MAX_PROOF_BYTES) return error.BoundsViolation;
-    const public_inputs = try encodePublicInputs(alloc, v.public_inputs);
-    defer alloc.free(public_inputs);
-
-    const out = try alloc.alloc(u8, PROOF_FIXED_SIZE + public_inputs.len + v.proof.len);
-    writeU32(out, 0, @intCast(PROOF_FIXED_SIZE));
-    writeU64(out, 4, v.start_block_number);
-    writeU32(out, 12, @intCast(PROOF_FIXED_SIZE + public_inputs.len));
-    @memcpy(out[PROOF_FIXED_SIZE..][0..public_inputs.len], public_inputs);
-    @memcpy(out[PROOF_FIXED_SIZE + public_inputs.len ..], v.proof);
-    return out;
+pub fn encodeProof(alloc: std.mem.Allocator, v: L2ExecutionProof) ssz.EncodeError![]u8 {
+    return ssz.encode(L2ExecutionProof, alloc, v);
 }
 
-/// Decode an `L2ExecutionProof`. Inverse of `encodeProof`; `proof` aliases `bytes`.
-pub fn decodeProof(alloc: std.mem.Allocator, bytes: []const u8) !L2ExecutionProof {
-    if (bytes.len < PROOF_FIXED_SIZE) return error.InvalidSsz;
-    const off_public_inputs = readU32(bytes, 0);
-    const start_block_number = readU64(bytes, 4);
-    const off_proof = readU32(bytes, 12);
-    if (off_public_inputs != PROOF_FIXED_SIZE or off_proof < off_public_inputs or off_proof > bytes.len) return error.InvalidSsz;
-
-    const proof = bytes[off_proof..];
-    if (proof.len > MAX_PROOF_BYTES) return error.BoundsViolation;
-    return .{
-        .public_inputs = try decodePublicInputs(alloc, bytes[off_public_inputs..off_proof]),
-        .start_block_number = start_block_number,
-        .proof = proof,
-    };
+pub fn decodeProof(alloc: std.mem.Allocator, bytes: []const u8) ssz.DecodeError!L2ExecutionProof {
+    return ssz.decode(L2ExecutionProof, alloc, bytes);
 }
 
-// ── VerifiableL2ExecutionProof ────────────────────────────────────────────────
-// Fixed head: proof offset(4) + program_vk(32) = 36.
-const VERIFIABLE_FIXED_SIZE: usize = 36;
-
-pub fn encodeVerifiableProof(alloc: std.mem.Allocator, v: VerifiableL2ExecutionProof) ![]u8 {
-    const proof = try encodeProof(alloc, v.proof);
-    defer alloc.free(proof);
-
-    const out = try alloc.alloc(u8, VERIFIABLE_FIXED_SIZE + proof.len);
-    writeU32(out, 0, @intCast(VERIFIABLE_FIXED_SIZE));
-    @memcpy(out[4..VERIFIABLE_FIXED_SIZE], &v.program_vk);
-    @memcpy(out[VERIFIABLE_FIXED_SIZE..], proof);
-    return out;
+pub fn encodeVerifiableProof(alloc: std.mem.Allocator, v: VerifiableL2ExecutionProof) ssz.EncodeError![]u8 {
+    return ssz.encode(VerifiableL2ExecutionProof, alloc, v);
 }
 
-/// Decode a `VerifiableL2ExecutionProof`. Inverse of `encodeVerifiableProof`; `proof.proof` aliases `bytes`.
-pub fn decodeVerifiableProof(alloc: std.mem.Allocator, bytes: []const u8) !VerifiableL2ExecutionProof {
-    if (bytes.len < VERIFIABLE_FIXED_SIZE) return error.InvalidSsz;
-    if (readU32(bytes, 0) != VERIFIABLE_FIXED_SIZE) return error.InvalidSsz;
-    return .{
-        .proof = try decodeProof(alloc, bytes[VERIFIABLE_FIXED_SIZE..]),
-        .program_vk = bytes[4..VERIFIABLE_FIXED_SIZE][0..32].*,
-    };
+pub fn decodeVerifiableProof(alloc: std.mem.Allocator, bytes: []const u8) ssz.DecodeError!VerifiableL2ExecutionProof {
+    return ssz.decode(VerifiableL2ExecutionProof, alloc, bytes);
 }
 
 // ── Guest output ──────────────────────────────────────────────────────────────
 
 /// Encode the 0x0003 output: `keccak256(schema_id || ssz) || schema_id || ssz`.
-pub fn encodeOutput(alloc: std.mem.Allocator, pi: L2ExecutionProofPublicInput) ![]u8 {
-    const body = try encodePublicInputs(alloc, pi);
-    defer alloc.free(body);
-    return output_frame.encode(alloc, OUTPUT_SCHEMA_ID, body);
+pub fn encodeOutput(alloc: std.mem.Allocator, pi: L2ExecutionProofPublicInput) ssz.EncodeError![]u8 {
+    return output_frame.encode(L2ExecutionProofPublicInput, alloc, OUTPUT_SCHEMA_ID, pi);
 }
 
 /// keccak256 of the schema-framed SSZ public-input tuple: the commitment at the head of the output.
-pub fn hashPublicInputs(alloc: std.mem.Allocator, pi: L2ExecutionProofPublicInput) ![32]u8 {
-    const body = try encodePublicInputs(alloc, pi);
-    defer alloc.free(body);
-    return output_frame.commitment(alloc, OUTPUT_SCHEMA_ID, body);
+pub fn hashPublicInputs(alloc: std.mem.Allocator, pi: L2ExecutionProofPublicInput) ssz.EncodeError![32]u8 {
+    return output_frame.commitment(L2ExecutionProofPublicInput, alloc, OUTPUT_SCHEMA_ID, pi);
 }

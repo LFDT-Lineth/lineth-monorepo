@@ -46,20 +46,19 @@ A rejected request exits with the category of the step that rejects it (`src/gue
 | --- | --- |
 | 1 | unknown |
 | 2 | the schema id of the frame is missing or wrong |
-| 3 | the SSZ body is not the canonical encoding |
-| 4 | a list or byte field exceeds its bound |
-| 5 | the request has no conflation, chunk or proof, or the conflations and proofs do not pair one to one |
-| 6 | the output encoder rejected the public inputs: a list exceeds the bound of the output's wire schema |
-| 7 | blocks and senders: a block is not accepted, a sender is not recoverable, a conflation's block count differs from its proof's range, the senders do not hash to `txFromsHash` |
-| 8 | chunk binding: a chunk contradicts its kind, is not the canonical packing, does not hash to its `chunkHash`, or the boundary preimage does not open the parent dataRollingHash |
-| 9 | a blob's EIP-4844 proof does not open its commitment |
-| 10 | stream layout: a layout rule is broken, or a segment's length is missing, zero or beyond the stream |
-| 11 | decompression: a segment is not one complete frame of the dictionary, or decompresses to another payload |
-| 12 | recursion: a proof is rejected by the recursive verifier, or its public input is beyond a bound of its wire schema |
-| 13 | block-hash chain: an end block hash or a parent hash does not match the conflations' blocks |
-| 14 | tiling and continuity between consecutive proofs |
-| 15 | messaging offsets: a proof's `block_count` differs from its block range, or an offset is out of order, out of range or exceeds 16 bits once rebased |
-| 16 | an allocation exceeds the guest heap, whether it builds the KZG context, decodes the input, runs the statement or encodes the output |
+| 3 | the SSZ body is not the canonical encoding within the bounds of the wire schema |
+| 4 | the request has no conflation, chunk or proof, or the conflations and proofs do not pair one to one |
+| 5 | the output encoder rejected the public inputs: a list exceeds the bound of the output's wire schema |
+| 6 | blocks and senders: a block is not accepted, a sender is not recoverable, a conflation's block count differs from its proof's range, the senders do not hash to `txFromsHash` |
+| 7 | chunk binding: a chunk contradicts its kind, is not the canonical packing, does not hash to its `chunkHash`, or the boundary preimage does not open the parent dataRollingHash |
+| 8 | a blob's EIP-4844 proof does not open its commitment |
+| 9 | stream layout: a layout rule is broken, or a segment's length is missing, zero or beyond the stream |
+| 10 | decompression: a segment is not one complete frame of the dictionary, or decompresses to another payload |
+| 11 | recursion: a proof is rejected by the recursive verifier, or its public input is beyond a bound of its wire schema |
+| 12 | block-hash chain: an end block hash or a parent hash does not match the conflations' blocks |
+| 13 | tiling and continuity between consecutive proofs |
+| 14 | messaging offsets: a proof's `block_count` differs from its block range, or an offset is out of order, out of range or exceeds 16 bits once rebased |
+| 15 | an allocation exceeds the guest heap, whether it builds the KZG context, decodes the input, runs the statement or encodes the output |
 
 ## Allocation
 
@@ -80,6 +79,6 @@ make -C rollup zkc-smoke-exec   # the same run, whose output has to equal the na
 
 The native tests build their requests with `test/scenario.zig` from a fixed selection of blocks of the Ethereum Foundation's zkevm fixtures (`tests-zkevm@v21.0.5`, the shared fixtures directory that `make test` passes as `-Dzkevm-fixtures`): the ten consecutive blocks of one case, each with an EIP-155 legacy transaction; a block with a blob transaction; and a block with a 161 KB set-code transaction, whose frame is longer than 20 KB and shorter than a blob. A conflation takes its block hashes, parent hash, numbers, timestamp and senders from the fixture; its canonical payload is compressed with libzstd against the dictionary into the DA stream, which is cut into blob and calldata chunks as a plan says (shared blob boundaries included) with the commitments and proofs of Constantine, and one l2-execution proof is made per conflation. Everything is computed with the test-side encoders of `lineth_da` and put into the wire types of `rollup_ssz`.
 
-`make test` runs `test/*_test.zig`, which need no fixtures (the wire format and the exit codes), and `test/reference/*_test.zig`: `rollup_test.zig` asserts the public inputs of accepted requests; `rejection_test.zig` breaks every rule of the statement in an otherwise valid request and asserts the error and its exit-code category; `ef_rollup_test.zig` builds requests from the Amsterdam blocks of the whole corpus: each run of consecutive valid blocks of a fixture, which a block with a blob transaction ends, is grouped into conflations and published as calldata and blob chunks, alone and sharing a blob with neighbouring proofs. Every such request is accepted with the public inputs the fixture determines, and a tampered copy of each is rejected with the error of the tampered rule. Without `-Dzkevm-fixtures` the `test/reference` suites are skipped with a warning.
+`make test` runs `test/*_test.zig`, which need no fixtures (the input frame and the exit codes), and `test/reference/*_test.zig`: `rollup_test.zig` asserts the public inputs of accepted requests; `rejection_test.zig` breaks every rule of the statement in an otherwise valid request and asserts the error and its exit-code category; `ef_rollup_test.zig` builds requests from the Amsterdam blocks of the whole corpus: each run of consecutive valid blocks of a fixture, which a block with a blob transaction ends, is grouped into conflations and published as calldata and blob chunks, alone and sharing a blob with neighbouring proofs. Every such request is accepted with the public inputs the fixture determines, and a tampered copy of each is rejected with the error of the tampered rule. Without `-Dzkevm-fixtures` the `test/reference` suites are skipped with a warning.
 
 `tools/gen_fixture.zig` writes the sample request (`zig-out/sample.request.ssz`) and the output `rollup.runFramed` computes for it natively (`zig-out/sample.output.bin`): one conflation of the chain's first three blocks published in one blob; the generator reads them from the fixtures directory it is given. `make exec` runs the guest on the request under the ZkC interpreter. `make zkc-smoke-exec` does so and requires the `guest_output` zkc prints to equal the native output byte for byte; CI runs `make zkc-smoke-external ELF=...` on the prebuilt ELF.

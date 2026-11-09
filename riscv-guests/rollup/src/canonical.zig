@@ -3,6 +3,7 @@
 
 const std = @import("std");
 const lineth_da = @import("lineth_da");
+const zkvm_accelerators = @import("zkvm_accelerators");
 const core_serde = @import("core_serde");
 const chain = @import("chain.zig");
 const rollup_ssz = @import("rollup_ssz.zig");
@@ -41,15 +42,16 @@ pub fn derive(
     proof: l2_execution_proof.L2ExecutionProof,
     chain_id: u64,
 ) Error!Conflation {
-    const count = conflation.block_rlps.len;
+    const block_rlps = conflation.block_rlps.items;
+    const count = block_rlps.len;
     if (count == 0 or chain.blockCount(proof) != count) return error.BlockCountMismatch;
 
     const truncated = try allocator.alloc(truncation.TruncatedBlock, count);
     const block_hashes = try allocator.alloc(Hash, count);
     const parent_hashes = try allocator.alloc(Hash, count);
     var sender_count: usize = 0;
-    for (conflation.block_rlps, truncated, block_hashes, parent_hashes) |block_rlp, *block, *block_hash, *parent_hash| {
-        block.* = try truncation.truncateBlockRlp(allocator, allocator, block_rlp, chain_id);
+    for (block_rlps, truncated, block_hashes, parent_hashes) |block_rlp, *block, *block_hash, *parent_hash| {
+        block.* = try truncation.truncateBlockRlp(allocator, allocator, block_rlp.bytes, chain_id);
         block_hash.* = block.block_hash;
         parent_hash.* = block.parent_hash;
         sender_count += block.froms.len;
@@ -62,7 +64,7 @@ pub fn derive(
         next += block.froms.len;
     }
     var senders_hash: Hash = undefined;
-    lineth_da.accelerators.keccak256(std.mem.sliceAsBytes(senders), &senders_hash);
+    zkvm_accelerators.keccak256(std.mem.sliceAsBytes(senders), &senders_hash);
     if (!std.mem.eql(u8, &senders_hash, &proof.public_inputs.tx_froms_hash)) return error.SendersHashMismatch;
 
     const payload = try truncation.encodeBlocks(allocator, allocator, truncated);

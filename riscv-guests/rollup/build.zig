@@ -52,6 +52,7 @@ const Options = struct {
 const Deps = struct {
     guest_common: *std.Build.Module,
     core_serde: *std.Build.Module,
+    ssz_contract: *std.Build.Module,
     lineth_da: *std.Build.Dependency,
     /// Imports of the package module (`src/root.zig`).
     package: []const Import,
@@ -63,14 +64,18 @@ const Deps = struct {
             b.dependency("lineth_da", .{ .target = target, .optimize = optimize, .@"host-tools" = true })
         else
             b.dependency("lineth_da", .{ .target = target, .optimize = optimize });
+        // The same instance `lineth_da` and `guest_common` import, so one compilation holds the module once.
+        const zkvm_accelerators = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("zkvm_accelerators");
         return .{
             .guest_common = guest_common.module("guest_common"),
             .core_serde = guest_common.module("core_serde"),
+            .ssz_contract = guest_common.module("ssz_contract"),
             .lineth_da = lineth_da,
             .package = b.allocator.dupe(Import, &.{
                 .{ .name = "guest_common", .module = guest_common.module("guest_common") },
                 .{ .name = "core_serde", .module = guest_common.module("core_serde") },
                 .{ .name = "lineth_da", .module = lineth_da.module("lineth_da") },
+                .{ .name = "zkvm_accelerators", .module = zkvm_accelerators },
             }) catch @panic("OOM"),
         };
     }
@@ -120,6 +125,7 @@ const Host = struct {
             .imports = &.{
                 .{ .name = "rollup", .module = package },
                 .{ .name = "core_serde", .module = deps.core_serde },
+                .{ .name = "guest_common", .module = deps.guest_common },
             },
         });
         const scenario = b.createModule(.{
@@ -129,6 +135,7 @@ const Host = struct {
             .imports = &.{
                 .{ .name = "rollup", .module = package },
                 .{ .name = "core_serde", .module = deps.core_serde },
+                .{ .name = "support", .module = support },
                 .{ .name = "lineth_da", .module = deps.lineth_da.module("lineth_da") },
                 .{ .name = "da_support", .module = da_support },
                 .{ .name = "zstd_encoder", .module = zstd_encoder },
@@ -151,6 +158,8 @@ const Host = struct {
                     .{ .name = "scenario", .module = scenario },
                     .{ .name = "ef_blocks", .module = ef_blocks },
                     .{ .name = "ef_fixtures", .module = ef_fixtures },
+                    .{ .name = "ssz_contract", .module = deps.ssz_contract },
+                    .{ .name = "spec_testdata", .module = common.specTestdataModule(b) },
                 }) catch @panic("OOM"),
             },
         };

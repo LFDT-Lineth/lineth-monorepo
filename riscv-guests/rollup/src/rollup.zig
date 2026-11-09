@@ -44,12 +44,13 @@ pub fn runFramed(allocator: Allocator, raw_input: []const u8) ![]const u8 {
 /// Everything is allocated from `allocator`, a bump allocator whose memory is reclaimed as a whole;
 /// the public inputs alias it. The output encoder rejects a list beyond its wire schema's bound.
 pub fn run(allocator: Allocator, input: rollup_ssz.RollupProofPrivateInput) Error!rollup_proof.RollupPublicInput {
-    const proofs = input.l2_execution_proofs;
-    if (input.conflations.len == 0 or proofs.len == 0 or input.conflations.len != proofs.len) return error.InvalidRequest;
+    const proofs = input.l2_execution_proofs.items;
+    const witnesses = input.conflations.items;
+    if (witnesses.len == 0 or proofs.len == 0 or witnesses.len != proofs.len) return error.InvalidRequest;
 
     const conflations = try allocator.alloc(canonical.Conflation, proofs.len);
     const payloads = try allocator.alloc([]const u8, proofs.len);
-    for (input.conflations, proofs, conflations, payloads) |witness, verifiable, *conflation, *payload| {
+    for (witnesses, proofs, conflations, payloads) |witness, verifiable, *conflation, *payload| {
         conflation.* = try canonical.derive(allocator, witness, verifiable.proof, input.chain_id);
         payload.* = conflation.payload;
     }
@@ -77,9 +78,9 @@ pub fn run(allocator: Allocator, input: rollup_ssz.RollupProofPrivateInput) Erro
     var offset_count: usize = 0;
     for (proofs) |verifiable| {
         const pi = verifiable.proof.public_inputs;
-        message_count += pi.l2_l1_messages.len;
-        address_count += pi.filtered_addresses.len;
-        offset_count += pi.l2_messaging_blocks_offsets.len;
+        message_count += pi.l2_l1_messages.items.len;
+        address_count += pi.filtered_addresses.items.len;
+        offset_count += pi.l2_messaging_blocks_offsets.items.len;
     }
     const l2_l1_messages = try allocator.alloc([32]u8, message_count);
     const all_addresses = try allocator.alloc([20]u8, address_count);
@@ -92,11 +93,11 @@ pub fn run(allocator: Allocator, input: rollup_ssz.RollupProofPrivateInput) Erro
     var end_bridge_message_number: u64 = 0;
     for (proofs, program_vks) |verifiable, *program_vk| {
         const pi = verifiable.proof.public_inputs;
-        @memcpy(l2_l1_messages[message_pos..][0..pi.l2_l1_messages.len], pi.l2_l1_messages);
-        message_pos += pi.l2_l1_messages.len;
-        @memcpy(all_addresses[address_pos..][0..pi.filtered_addresses.len], pi.filtered_addresses);
-        address_pos += pi.filtered_addresses.len;
-        const proof_offsets = offsets[offset_pos..][0..pi.l2_messaging_blocks_offsets.len];
+        @memcpy(l2_l1_messages[message_pos..][0..pi.l2_l1_messages.items.len], pi.l2_l1_messages.items);
+        message_pos += pi.l2_l1_messages.items.len;
+        @memcpy(all_addresses[address_pos..][0..pi.filtered_addresses.items.len], pi.filtered_addresses.items);
+        address_pos += pi.filtered_addresses.items.len;
+        const proof_offsets = offsets[offset_pos..][0..pi.l2_messaging_blocks_offsets.items.len];
         try messaging_offsets.rebase(verifiable.proof, range_start, proof_offsets);
         offset_pos += proof_offsets.len;
         program_vk.* = verifiable.program_vk;
@@ -122,11 +123,11 @@ pub fn run(allocator: Allocator, input: rollup_ssz.RollupProofPrivateInput) Erro
         .end_block_hash = last.public_inputs.end_block_hash,
         .parent_data_tail_take_bytes = input.parent_data_tail_take_bytes,
         .final_data_tail_discard_bytes = verified.final_data_tail_discard_bytes,
-        .l2_l1_messages = l2_l1_messages,
-        .filtered_addresses = guest_common.lists.sortedDistinct(20, all_addresses),
-        .program_vks = guest_common.lists.sortedDistinct(32, program_vks),
+        .l2_l1_messages = .{ .items = l2_l1_messages },
+        .filtered_addresses = .{ .items = guest_common.lists.sortedDistinct(20, all_addresses) },
+        .program_vks = .{ .items = guest_common.lists.sortedDistinct(32, program_vks) },
         .block_count = range_end - range_start + 1,
-        .l2_messaging_blocks_offsets = offsets,
+        .l2_messaging_blocks_offsets = .{ .items = offsets },
     };
 }
 
@@ -139,14 +140,15 @@ fn verifyDataAvailability(allocator: Allocator, input: rollup_ssz.RollupProofPri
         error.InvalidDictionary => unreachable,
     };
     defer decoder.deinit();
+    const boundary = input.boundary_prev_data_rolling_hash.items;
     return decompress.verifyDaChunks(
         allocator,
         decoder,
-        input.chunks,
+        input.chunks.items,
         payloads,
         input.parent_data_rolling_hash,
         input.parent_data_tail_take_bytes,
-        input.boundary_prev_data_rolling_hash,
+        if (boundary.len == 1) boundary[0] else null,
     );
 }
 

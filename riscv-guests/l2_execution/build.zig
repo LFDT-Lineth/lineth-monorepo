@@ -123,6 +123,8 @@ const Host = struct {
                     .{ .name = "secp256k1_std", .module = accelerators.module("secp256k1_std") },
                     .{ .name = "support", .module = support },
                     .{ .name = "zlob", .module = zlob.module("zlob") },
+                    .{ .name = "ssz_contract", .module = deps.ssz_contract },
+                    .{ .name = "spec_testdata", .module = common.specTestdataModule(b) },
                 } }),
             },
             .crypto = crypto,
@@ -303,8 +305,9 @@ fn addReferenceSteps(b: *std.Build, tools: Tools, options: Options) void {
 /// What l2_execution's source files import by name, for one target.
 const Deps = struct {
     /// zesu's exposed modules under the `zesu_*` names the sources use.
-    zesu: [13]Import,
+    zesu: [12]Import,
     core_serde: *std.Build.Module,
+    ssz_contract: *std.Build.Module,
     accelerators: *std.Build.Dependency,
     /// Imports of the package module (`src/root.zig`).
     package: []const Import,
@@ -319,13 +322,17 @@ const Deps = struct {
         const zesu = zesuImports(zesu_dep);
         const guest_common = b.dependency("guest_common", .{ .target = target, .optimize = optimize });
         const core_serde = guest_common.module("core_serde");
+        // The instance `guest_common` imports, so one compilation holds the module once.
+        const zkvm_accelerators = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("zkvm_accelerators");
         return .{
             .zesu = zesu,
             .core_serde = core_serde,
+            .ssz_contract = guest_common.module("ssz_contract"),
             .accelerators = accelerators,
             .package = concatImports(b, &.{ &zesu, &.{
                 .{ .name = "guest_common", .module = guest_common.module("guest_common") },
                 .{ .name = "core_serde", .module = core_serde },
+                .{ .name = "zkvm_accelerators", .module = zkvm_accelerators },
             } }),
         };
     }
@@ -333,7 +340,7 @@ const Deps = struct {
 
 /// Pull zesu's exposed modules by name. Which crypto backend zesu uses is selected inside zesu by
 /// target (freestanding leaves zkvm_* extern; native links real crypto) — that's zesu's concern.
-fn zesuImports(zesu: *std.Build.Dependency) [13]Import {
+fn zesuImports(zesu: *std.Build.Dependency) [12]Import {
     return .{
         .{ .name = "zesu_allocator", .module = zesu.module("zesu_allocator") },
         .{ .name = "zesu_executor", .module = zesu.module("executor") },
@@ -346,9 +353,6 @@ fn zesuImports(zesu: *std.Build.Dependency) [13]Import {
         .{ .name = "zesu_input", .module = zesu.module("input") },
         .{ .name = "zesu_hardfork", .module = zesu.module("hardfork") },
         .{ .name = "zesu_rlp_decode", .module = zesu.module("rlp_decode") },
-        // The crypto-accelerator interface tx_signing.zig uses for ecrecover/keccak256; the
-        // `executor` module does not re-export it.
-        .{ .name = "zesu_accelerators", .module = zesu.module("accelerators") },
         .{ .name = "zesu_block_rlp_size", .module = zesu.module("block_rlp_size") },
     };
 }
