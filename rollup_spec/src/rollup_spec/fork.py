@@ -46,6 +46,7 @@ from ethereum.forks.amsterdam.transactions import (
     SetCodeTransaction,
     Transaction,
     decode_transaction,
+    encode_transaction,
     recover_sender,
 )
 from ethereum.forks.amsterdam.fork import (
@@ -132,6 +133,7 @@ __all__ = [
     "SetCodeTransaction",
     "Transaction",
     "decode_transaction",
+    "encode_transaction",
     "recover_sender",
     "BlockChain",
     "apply_body",

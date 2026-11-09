@@ -78,7 +78,7 @@ func TestDecodeL2ExecutionRequest_SingleBlock(t *testing.T) {
 func TestDecodeL2ExecutionRequest_Regression_GuestFixture(t *testing.T) {
 	req, err := DecodeL2ExecutionRequest(readFixture(t, "request_guest_fixture.json"))
 	require.NoError(t, err, "decode the guest fixture's JSON request")
-	want, err := os.ReadFile("../../../riscv-guests/l2-execution/test/testdata/stateless_input.ssz")
+	want, err := os.ReadFile("../../../riscv-guests/l2_execution/test/testdata/stateless_input.ssz")
 	require.NoError(t, err, "read the guest's executable SSZ fixture")
 	assert.Equal(t, want, ssz.EncodeExtendedInput(buildExtendedInput(req)),
 		"JSON requests must encode exactly the input accepted by the pinned guest")

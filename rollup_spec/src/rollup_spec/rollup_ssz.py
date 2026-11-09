@@ -33,6 +33,7 @@ limits. Each constant below carries a one-line rationale.
 from typing import Any, Optional
 
 from ethereum.crypto.hash import Hash32, keccak256
+from ethereum.crypto.kzg import BYTES_PER_COMMITMENT, BYTES_PER_PROOF
 from ethereum.state import Address
 from ethereum_types.numeric import U64
 from remerkleable.basic import boolean, uint16, uint64
@@ -87,6 +88,8 @@ class SszChunkWitness(Container):
     is_calldata: boolean
     blob_bytes: ByteList[BLOB_BYTES_LENGTH]
     calldata_bytes: ByteList[MAX_CALLDATA_BYTES_PER_CHUNK]
+    kzg_commitment: ByteList[BYTES_PER_COMMITMENT]
+    kzg_proof: ByteList[BYTES_PER_PROOF]
 
 
 class SszRollupPublicInput(Container):
@@ -176,6 +179,8 @@ def _ssz_rollup_input(private_input: RollupProofPrivateInput) -> SszRollupProofP
                 is_calldata=c.is_calldata,
                 blob_bytes=c.blob_bytes,
                 calldata_bytes=c.calldata_bytes,
+                kzg_commitment=c.kzg_commitment,
+                kzg_proof=c.kzg_proof,
             )
             for c in private_input.chunks
         ],
@@ -238,6 +243,8 @@ def _rollup_input_from_view(view: Any) -> RollupProofPrivateInput:
                 is_calldata=bool(c.is_calldata),
                 blob_bytes=bytes(c.blob_bytes),
                 calldata_bytes=bytes(c.calldata_bytes),
+                kzg_commitment=bytes(c.kzg_commitment),
+                kzg_proof=bytes(c.kzg_proof),
             )
             for c in view.chunks
         ],

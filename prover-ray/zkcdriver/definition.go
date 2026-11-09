@@ -13,7 +13,6 @@ import (
 	"github.com/LFDT-Lineth/zkc/pkg/schema"
 	"github.com/LFDT-Lineth/zkc/pkg/schema/register"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
-	ctrace "github.com/LFDT-Lineth/zkc/pkg/zkc/constraints/trace"
 )
 
 const (
@@ -52,17 +51,14 @@ type PublicOutput struct {
 	// Name is the corset name of the memory. It is empty when the
 	// arithmetization exposes no public output of the described shape.
 	Name string
-	// Address holds the limbs of the memory's address, most significant first:
-	// an address wider than the field's register width is split by the schema.
+	// Address is the memory's address column. The address is a u16, so it fits
+	// in a single register.
 	// The memory's own constraints make it vanish on padding rows, be zero on the
 	// first row carrying an element and increment from there, so the elements
 	// are laid out in address order on the last rows of the module.
-	Address []wiop.ObjectID
+	Address wiop.ObjectID
 	// Data is the memory's data column, holding one byte per address.
 	Data wiop.ObjectID
-	// AccessBit is the memory's access bit: zero on padding rows and one on the
-	// rows carrying an element.
-	AccessBit wiop.ObjectID
 }
 
 // PublicOutputs returns the public output memory [Define] found in the
@@ -178,11 +174,7 @@ func (s *schemaScanner) collectPublicOutputs() PublicOutput {
 			)
 		}
 
-		var (
-			address, data []wiop.ObjectID
-			accessBit     wiop.ObjectID
-			hasAccessBit  bool
-		)
+		var address, data []wiop.ObjectID
 
 		for _, reg := range modDecl.Registers() {
 
@@ -193,37 +185,32 @@ func (s *schemaScanner) collectPublicOutputs() PublicOutput {
 
 			// A memory's address lines are exactly its input registers and its data
 			// lines exactly its output registers, so the two are told apart by
-			// register kind rather than by name. Of the computed registers, only the
-			// access bit is of use here; the address selectors are not.
+			// register kind rather than by name.
 			//
 			// Only [guestOutputModule] is collected. Any other public output leaves
-			// the lists empty and is skipped just below, so no memory becomes a
-			// public input merely by being declared `pub output`.
+			// the lists empty and is skipped.
 			switch {
 			case moduleName != guestOutputModule:
 			case reg.IsInput():
 				address = append(address, id)
 			case reg.IsOutput():
 				data = append(data, id)
-			case reg.Name() == ctrace.ACCESS_BIT_NAME:
-				accessBit, hasAccessBit = id, true
 			}
 		}
 
-		// A memory holding anything other than a single byte column, or lacking
-		// an address or an access bit, is not describable by [PublicOutput], so it
-		// is reported and skipped rather than half-described.
-		if len(address) == 0 || len(data) != 1 || !hasAccessBit {
+		// A memory holding anything other than a single address and a single
+		// byte column is not describable by [PublicOutput], so it is reported and
+		// skipped rather than half-described.
+		if len(address) != 1 || len(data) != 1 {
 			logrus.Warnf(
 				"zkcdriver: collectPublicOutputs: skipping public output %q: "+
-					"has %d address and %d data columns (access bit found: %v), "+
-					"expected at least one address, one datum and an access bit",
-				moduleName, len(address), len(data), hasAccessBit,
+					"has %d address and %d data columns, expected one of each",
+				moduleName, len(address), len(data),
 			)
 			continue
 		}
 
-		output = PublicOutput{Name: moduleName, Address: address, Data: data[0], AccessBit: accessBit}
+		output = PublicOutput{Name: moduleName, Address: address[0], Data: data[0]}
 	}
 
 	return output
@@ -467,17 +454,14 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 	case *air.BusConstraint[koalabear.Element]:
 		// Iterate receive ports, each of which identifies a set of columns in a
 		// given module (including a selector) which determine the message being
-		// reveived.
+		// received.
 		for _, recvPort := range cs.Receives {
 
-			table := wiop.Table{
-				Columns:  make([]*wiop.ColumnView, len(recvPort.Registers)),
-				Selector: s.compColumnByCorsetID(recvPort.Module, recvPort.Selector).View(),
+			cols := make([]*wiop.ColumnView, len(recvPort.Registers))
+			for i := range cols {
+				cols[i] = s.compColumnByCorsetID(recvPort.Module, recvPort.Registers[i]).View()
 			}
-
-			for i := range table.Columns {
-				table.Columns[i] = s.compColumnByCorsetID(recvPort.Module, recvPort.Registers[i]).View()
-			}
+			table := wiop.NewFilteredTable(s.compColumnByCorsetID(recvPort.Module, recvPort.Selector).View(), cols...)
 
 			s.Sys.NewMessageBusReceive(s.Sys.Context.Childf("bus-%v", name), "0", name, table)
 		}
@@ -486,14 +470,11 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 		// given module (including a selector) which determine the message being
 		// sent.
 		for _, sendPort := range cs.Sends {
-			table := wiop.Table{
-				Columns:  make([]*wiop.ColumnView, len(sendPort.Registers)),
-				Selector: s.compColumnByCorsetID(sendPort.Module, sendPort.Selector).View(),
+			cols := make([]*wiop.ColumnView, len(sendPort.Registers))
+			for i := range cols {
+				cols[i] = s.compColumnByCorsetID(sendPort.Module, sendPort.Registers[i]).View()
 			}
-
-			for i := range table.Columns {
-				table.Columns[i] = s.compColumnByCorsetID(sendPort.Module, sendPort.Registers[i]).View()
-			}
+			table := wiop.NewFilteredTable(s.compColumnByCorsetID(sendPort.Module, sendPort.Selector).View(), cols...)
 
 			s.Sys.NewMessageBusSend(s.Sys.Context.Childf("bus-%v", name), "0", name, table)
 		}

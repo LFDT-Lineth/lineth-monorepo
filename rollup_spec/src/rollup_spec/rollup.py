@@ -9,12 +9,13 @@ import zstandard as zstd
 
 from ethereum.crypto.hash import Hash32, keccak256
 from ethereum.crypto.kzg import (
+    BYTES_PER_COMMITMENT,
+    BYTES_PER_PROOF,
     KZGCommitment,
     kzg_commitment_to_versioned_hash,
 )
 from .fork import (
     AccessListTransaction,
-    BlobTransaction,
     FeeMarketTransaction,
     LegacyTransaction,
     SetCodeTransaction,
@@ -22,6 +23,7 @@ from .fork import (
     decode_transaction,
     recover_sender,
 )
+from ethereum.merkle_patricia_trie import Trie, root, trie_set
 from ethereum.state import Address
 from ethereum_rlp import rlp
 from ethereum_types.bytes import Bytes, Bytes32
@@ -43,9 +45,6 @@ L2_L1_TREE_DEPTH = 5
 ZERO_HASH32 = Hash32(b"\x00" * 32)
 
 # EIP-4844 blob size: FIELD_ELEMENTS_PER_BLOB (4096) × BYTES_PER_FIELD_ELEMENT (32).
-# The KZG commitment is computed over a polynomial defined by exactly this many
-# evaluations, so the byte payload handed to `ckzg.blob_to_kzg_commitment` must
-# be exactly `BLOB_BYTES_LENGTH` bytes.
 BLOB_BYTES_LENGTH = 4096 * 32
 PACKING_BITS_PER_ELEMENT = 254
 BLOB_PAYLOAD_CAPACITY = (4096 * PACKING_BITS_PER_ELEMENT) // 8 - 1
@@ -99,13 +98,12 @@ _TRUSTED_SETUP_PATH = (
 
 
 @lru_cache(maxsize=1)
-def _trusted_setup():
+def trusted_setup():
     """
     Load the EIP-4844 trusted setup once on first use; cached for the
     process lifetime via `lru_cache`. `precompute=0` skips the optional
     FK20 multi-scalar-multiplication precomputation that only matters for
-    `compute_cells_and_kzg_proofs`; we don't need it for the single
-    polynomial evaluation we perform per blob.
+    cell proofs.
     """
     if not _TRUSTED_SETUP_PATH.is_file():
         raise FileNotFoundError(
@@ -117,10 +115,24 @@ def _trusted_setup():
     return ckzg.load_trusted_setup(str(_TRUSTED_SETUP_PATH), 0)
 
 
-def blob_versioned_hash(blob_bytes: bytes) -> Hash32:
-    """EIP-4844 versioned hash of a physical blob: the `chunkHash` L1 anchors a blob chunk to."""
-    commitment = KZGCommitment(ckzg.blob_to_kzg_commitment(blob_bytes, _trusted_setup()))
-    return kzg_commitment_to_versioned_hash(commitment)
+# The zstd dictionary fixed by the rollup guest program: DA frames are compressed against it and
+# decompressed with it. parents[3] is the repo root, as for the trusted setup above.
+_ZSTD_DICTIONARY_PATH = (
+    Path(__file__).resolve().parents[3]
+    / "riscv-guests" / "lineth_da" / "dictionaries" / "v2025-04-21.bin"
+)
+
+
+# The largest window a DA frame may declare: the limit of libzstd's streaming decoder.
+ZSTD_MAX_WINDOW_SIZE = 2**27 + 1
+
+
+@lru_cache(maxsize=1)
+def zstd_dictionary() -> zstd.ZstdCompressionDict:
+    """Load the zstd dictionary once on first use; cached for the process lifetime via `lru_cache`."""
+    if not _ZSTD_DICTIONARY_PATH.is_file():
+        raise FileNotFoundError(f"zstd dictionary not found at {_ZSTD_DICTIONARY_PATH}")
+    return zstd.ZstdCompressionDict(_ZSTD_DICTIONARY_PATH.read_bytes(), dict_type=zstd.DICT_TYPE_FULLDICT)
 
 
 @dataclass
@@ -147,20 +159,22 @@ class ChunkWitness:
     - **Blob chunk** (`is_calldata=False`): `blob_bytes` is exactly 128 KiB of
       physical field elements. Unpacking yields at most
       `BLOB_PAYLOAD_CAPACITY` unpacked bytes, committed as a 128 KiB physical blob, bound by
-      its KZG commitment / versioned hash. A blob chunk may be *shared* with a
-      neighbouring proof across a range boundary (§3.1); its unpacked bytes
-      are divided into a foreign prefix, owned slice and foreign suffix.
+      its KZG commitment / versioned hash. `kzg_commitment` is the 48-byte compressed
+      G1 commitment and `kzg_proof` the 48-byte EIP-4844 blob proof for it. A blob chunk
+      may be *shared* with a neighbouring proof across a range boundary (§3.1); its
+      unpacked bytes are divided into a foreign prefix, owned slice and foreign suffix.
     - **Calldata chunk** (`is_calldata=True`): one calldata submission, bound
       by `keccak256(_compressedData)`. It may complete a segment begun in the
       preceding blob, but must end at a segment boundary. It is *range-aligned*:
       it shares no bytes with a neighbouring proof and carries no foreign bytes.
       `calldata_bytes` contains its exact positive-length
-      submission; blob chunks set this field empty. Calldata sets `blob_bytes` empty.
+      submission; blob chunks set this field empty. Calldata sets `blob_bytes`,
+      `kzg_commitment` and `kzg_proof` empty.
 
     `is_calldata` is witness data: the anchored `chunk_hash` does not by itself
     record which binding applies. It needs no independent L1 verification
-    because the guest confirms it — each arm recomputes the binding hash from
-    the reconstructed bytes and rejects unless it equals `chunk_hash`, so a
+    because the guest confirms it — each arm derives the binding hash from
+    the witnessed bytes and rejects unless it equals `chunk_hash`, so a
     mismatched flag fails the check. The flag selects the check; the hash
     carries the soundness.
     """
@@ -168,6 +182,8 @@ class ChunkWitness:
     is_calldata: bool
     blob_bytes: bytes = b""
     calldata_bytes: bytes = b""
+    kzg_commitment: bytes = b""
+    kzg_proof: bytes = b""
 
     @property
     def is_blob(self) -> bool:
@@ -260,9 +276,23 @@ def derive_canonical_payload(
 
 
 def _validate_zstd_frame(zstd_frame: bytes, canonical_payload: bytes) -> None:
-    """Check that a segment's zstd frame decompresses exactly to its canonical payload."""
+    """
+    Check that a segment's zstd frame is the one form a DA frame takes and decompresses, with the program's dictionary,
+    exactly to its canonical payload.
+
+    The header declares the content size, equal to the payload's length, and the ID of the program's dictionary; the
+    frame carries no content checksum and declares a window of at most `ZSTD_MAX_WINDOW_SIZE`.
+    """
     try:
-        decompressed = zstd.ZstdDecompressor().decompress(
+        parameters = zstd.get_frame_parameters(zstd_frame)
+        if (
+            parameters.content_size != len(canonical_payload)
+            or parameters.dict_id != zstd_dictionary().dict_id()
+            or parameters.has_checksum
+            or parameters.window_size > ZSTD_MAX_WINDOW_SIZE
+        ):
+            raise zstd.ZstdError("frame header")
+        decompressed = zstd.ZstdDecompressor(dict_data=zstd_dictionary()).decompress(
             zstd_frame, max_output_size=len(canonical_payload), allow_extra_data=False,
         )
     except zstd.ZstdError as exc:
@@ -272,19 +302,42 @@ def _validate_zstd_frame(zstd_frame: bytes, canonical_payload: bytes) -> None:
 
 
 def _verified_chunk_payload(chunk: ChunkWitness, index: int) -> bytes:
-    """Check a chunk's physical bytes against its anchored hash; return its unpacked payload."""
+    """Check a chunk's witnessed bytes against its anchored hash; return its unpacked payload."""
     if chunk.is_calldata:
         if chunk.blob_bytes:
             raise Exception(f"calldata chunk {index} must have empty blobBytes")
+        if chunk.kzg_commitment or chunk.kzg_proof:
+            raise Exception(f"calldata chunk {index} must have empty kzgCommitment and kzgProof")
         if keccak256(chunk.calldata_bytes) != chunk.chunk_hash:
             raise Exception(f"calldata chunk {index} computed hash does not match chunkHash")
         return chunk.calldata_bytes
     if chunk.calldata_bytes:
         raise Exception(f"blob chunk {index} must have empty calldataBytes")
+    if len(chunk.kzg_commitment) != BYTES_PER_COMMITMENT or len(chunk.kzg_proof) != BYTES_PER_PROOF:
+        raise Exception(
+            f"blob chunk {index} kzgCommitment and kzgProof must be {BYTES_PER_COMMITMENT} bytes"
+        )
     payload = unpack_blob_payload(chunk.blob_bytes)
-    if blob_versioned_hash(chunk.blob_bytes) != chunk.chunk_hash:
-        raise Exception(f"blob chunk {index} computed KZG commitment does not match chunkHash")
+    if kzg_commitment_to_versioned_hash(KZGCommitment(chunk.kzg_commitment)) != chunk.chunk_hash:
+        raise Exception(f"blob chunk {index} kzgCommitment versioned hash does not match chunkHash")
     return payload
+
+
+def _verify_blob_kzg_proofs(blob_chunks: Sequence[ChunkWitness]) -> None:
+    """EIP-4844 `verify_blob_kzg_proof_batch` over the touched blob chunks, in chunk order."""
+    if not blob_chunks:
+        return
+    try:
+        valid = ckzg.verify_blob_kzg_proof_batch(
+            b"".join(chunk.blob_bytes for chunk in blob_chunks),
+            b"".join(chunk.kzg_commitment for chunk in blob_chunks),
+            b"".join(chunk.kzg_proof for chunk in blob_chunks),
+            trusted_setup(),
+        )
+    except (RuntimeError, ValueError) as exc:
+        raise Exception("blob KZG proof batch is malformed") from exc
+    if not valid:
+        raise Exception("blob KZG proof batch verification failed")
 
 
 def _parse_segment_ends(stream: bytes, canonical_payloads: Sequence[bytes]) -> List[int]:
@@ -337,12 +390,14 @@ def verify_da_chunks(
     boundary_prev_data_rolling_hash: Optional[Hash32] = None,
 ) -> Tuple[Hash32, int]:
     """
-    Bind each chunk to its anchored hash and parse one segment per conflation from their stream.
+    Bind each chunk to its anchored hash, batch-verify the blob KZG proofs, and parse one
+    segment per conflation from their stream.
     Returns `(endDataRollingHash, finalDataTailDiscardBytes)`.
     """
     if not chunks:
         raise Exception("rollup proof must touch at least one chunk")
     payloads = [_verified_chunk_payload(chunk, i) for i, chunk in enumerate(chunks)]
+    _verify_blob_kzg_proofs([chunk for chunk in chunks if chunk.is_blob])
 
     for i in range(len(chunks) - 1):
         if chunks[i].is_blob and chunks[i + 1].is_blob and len(payloads[i]) != BLOB_PAYLOAD_CAPACITY:
@@ -488,14 +543,15 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     """
     rollup: for each conflation, derives the canonical truncated-block RLP from
     `block_rlps` (§3.1) and matches the parsed segments from physical blobs and
-    calldata. Unpacks each touched physical blob and recomputes its binding hash
-    (dispatched per chunk on the witnessed `is_calldata` flag, §3.1: KZG
-    commitment for a blob chunk, keccak256 for a calldata chunk), and checks it
-    against the L1-anchored `chunkHash` — folding the dataRollingHash chain
-    across the touched chunks as it goes (§3.4). Recursively verifies the N
-    l2-execution proofs, checks continuity, commits the ordered L2->L1 messages,
-    collects FTX outputs, and emits the rollup PI tuple
-    (§2.4).
+    calldata. Unpacks each touched physical blob and derives its binding hash
+    (dispatched per chunk on the witnessed `is_calldata` flag, §3.1: the
+    versioned hash of the witnessed KZG commitment for a blob chunk, keccak256
+    for a calldata chunk), and checks it against the L1-anchored `chunkHash` —
+    folding the dataRollingHash chain across the touched chunks as it goes
+    (§3.4). Verifies the touched blobs' EIP-4844 KZG proofs as one batch.
+    Recursively verifies the N l2-execution proofs, checks continuity, commits
+    the ordered L2->L1 messages, collects FTX outputs, and emits the rollup PI
+    tuple (§2.4).
     """
     if len(rollup_input.conflations) == 0:
         raise Exception("rollup proof must cover at least one conflation")
@@ -743,12 +799,6 @@ def _signature_stripped_tx_bytes(tx: Transaction) -> bytes:
             tx.nonce, tx.max_priority_fee_per_gas, tx.max_fee_per_gas, tx.gas,
             tx.to, tx.value, tx.data, tx.access_list,
         ])
-    if isinstance(tx, BlobTransaction):
-        return b"\x03" + rlp.encode([
-            tx.nonce, tx.max_priority_fee_per_gas, tx.max_fee_per_gas, tx.gas,
-            tx.to, tx.value, tx.data, tx.access_list,
-            tx.max_fee_per_blob_gas, tx.blob_versioned_hashes,
-        ])
     if isinstance(tx, SetCodeTransaction):
         return b"\x04" + rlp.encode([
             tx.nonce, tx.max_priority_fee_per_gas, tx.max_fee_per_gas, tx.gas,
@@ -757,10 +807,33 @@ def _signature_stripped_tx_bytes(tx: Transaction) -> bytes:
     raise Exception(f"unknown transaction type {type(tx).__name__}")
 
 
+def _transactions_root(transactions: Sequence[Transaction | Bytes]) -> Hash32:
+    """The root of the transactions trie of a block body: key RLP(index), value the transaction's wire form."""
+    trie = Trie(secured=False, default=None)
+    for index, tx_item in enumerate(transactions):
+        trie_set(trie, rlp.encode(Uint(index)), tx_item)
+    return root(trie)
+
+
+def _decode_block_transaction(tx_item: Transaction | Bytes) -> Transaction:
+    """
+    Decode one entry of a block's transaction list: a legacy list, or an envelope of type 1, 2 or 4,
+    the types the truncation strips.
+    """
+    if isinstance(tx_item, (bytes, bytearray)):
+        if len(tx_item) < 2 or tx_item[0] not in (1, 2, 4):
+            raise Exception("transaction is neither a legacy list nor an envelope of type 1, 2 or 4")
+        return decode_transaction(Bytes(tx_item))
+    return tx_item
+
+
 def truncate_block_rlp(block_rlp: bytes, chain_id: U64) -> TruncatedEthereumBlock:
     """
     Decode the canonical full block RLP and apply the §3.2 DA truncation
     rule, returning a `TruncatedEthereumBlock`.
+
+    The block's transactions are the ones its header commits to: they hash
+    to the header's `transactions_root`.
 
     Header-derived fields:
       - `timestamp` and `prev_randao` are taken from the decoded header.
@@ -770,9 +843,14 @@ def truncate_block_rlp(block_rlp: bytes, chain_id: U64) -> TruncatedEthereumBloc
     Per-transaction fields:
       - `transactions[i]` is the signature- and chainID-stripped canonical
         bytes (see `_signature_stripped_tx_bytes`).
-      - `froms[i]` is the sender recovered via `recover_sender(chain_id, tx)`.
+      - `froms[i]` is the sender recovered via `recover_sender(chain_id, tx)`,
+        for a positive `chain_id`.
     """
+    if chain_id == 0:
+        raise Exception("sender recovery requires a positive chain ID")
     block = decode_block_rlp(block_rlp)
+    if _transactions_root(block.transactions) != block.header.transactions_root:
+        raise Exception("block transactions do not match the header's transactions root")
     bh = block_hash(block.header)
 
     transactions: List[bytes] = []
@@ -780,10 +858,7 @@ def truncate_block_rlp(block_rlp: bytes, chain_id: U64) -> TruncatedEthereumBloc
     for tx_item in block.transactions:
         # `Block.transactions` holds typed (EIP-2718) txs as bytes and
         # legacy txs as decoded `LegacyTransaction` objects.
-        if isinstance(tx_item, (bytes, bytearray)):
-            decoded_tx: Transaction = decode_transaction(Bytes(tx_item))
-        else:
-            decoded_tx = tx_item
+        decoded_tx = _decode_block_transaction(tx_item)
         transactions.append(_signature_stripped_tx_bytes(decoded_tx))
         froms.append(recover_sender(chain_id, decoded_tx))
 

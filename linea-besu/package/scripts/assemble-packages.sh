@@ -5,6 +5,8 @@ set -e
 
 source ./versions.env
 
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+
 mkdir -p ./tmp
 pushd ./tmp
 
@@ -76,3 +78,7 @@ popd
 echo "placing the packages, config, profiles together for preparing docker image build"
 cd ./linea-besu
 cp -r config profiles ../tmp/besu/
+
+echo "copying the Lineth license files"
+mkdir -p ../tmp/besu/licenses/lineth
+cp "$REPO_ROOT/LICENSE-APACHE" "$REPO_ROOT/LICENSE-MIT" ../tmp/besu/licenses/lineth/

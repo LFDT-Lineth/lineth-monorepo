@@ -1,0 +1,8 @@
+version = "riscv-local"
+log_level = 4
+guests_dir = "/opt/linea/prover-ray/guests"
+
+[execution]
+prover_mode = "dev-zkvm"
+requests_root_dir = "/data/prover/riscv/execution"
+native_runner_bin = "/opt/linea/prover-ray/l2_execution_runner"

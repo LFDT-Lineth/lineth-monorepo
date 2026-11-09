@@ -7,14 +7,20 @@ permissions:
 on:
   workflow_call:
     inputs:
-      commit_tag:
-        required: true
+      # N > 1 = up to N methods of a test class run concurrently inside
+      # its fork JVM (-PmaruItMethodParallel=N, see maru/app/build.gradle).
+      # 1 = test methods run sequentially.
+      # Default as 0 (uses the default, i.e. 2, from maru/app/build.gradle).
+      maru_it_method_parallel:
+        required: false
         type: string
-    secrets:
-      DOCKERHUB_USERNAME:
+        default: '0'
+      # 0 = default maxParallelForks min(nCpu, 9). N > 0 = override fork count
+      # (-PmaruItMaxForks=N, see maru/app/build.gradle).
+      maru_it_max_forks:
         required: false
-      DOCKERHUB_TOKEN:
-        required: false
+        type: string
+        default: '0'
 
 concurrency:
   group: maru-testing-${{ github.workflow }}-${{ github.ref }}
@@ -23,16 +29,9 @@ concurrency:
 jobs:
   run-tests:
     env:
-      COMMIT_TAG: ${{ inputs.commit_tag }}
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
     name: maru tests
-    # useful for debugging flaky tests. Comment out Jacoco and Codecov steps because they override the test results.
-    #    strategy:
-    #      matrix:
-    #        iterations: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -48,11 +47,21 @@ jobs:
         run: |
           ./gradlew -V maru:app:buildNeeded
       - name: Run integration tests
+        env:
+          MARU_IT_METHOD_PARALLEL: ${{ inputs.maru_it_method_parallel }}
+          MARU_IT_MAX_FORKS: ${{ inputs.maru_it_max_forks }}
         run: |
-          ./gradlew maru:app:integrationTest
+          EXTRA_ARGS=""
+          if [ "$MARU_IT_METHOD_PARALLEL" != "0" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS -PmaruItMethodParallel=$MARU_IT_METHOD_PARALLEL"
+          fi
+          if [ "$MARU_IT_MAX_FORKS" != "0" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS -PmaruItMaxForks=$MARU_IT_MAX_FORKS"
+          fi
+          ./gradlew maru:app:integrationTest $EXTRA_ARGS
       - name: Store reports
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: test reports
           path: |
@@ -61,7 +70,7 @@ jobs:
           if-no-files-found: ignore
       - name: Upload Jacoco execution data
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: jacoco-maru-exec
           path: |

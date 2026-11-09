@@ -105,9 +105,8 @@
 // `funct7` / opcode bits. Instead, `decodeRTypeSemantic` maps each R-type encoding
 // to a local op index; `finalizeComputeOp` selects `RTYPE_*_WB` when `rd != x0` or
 // `NO_OP` when `rd == x0` (except Custom-1 precompiles, which always
-// keep their semantic op). Custom-1 precompiles (`RTYPE_KECCAK`, `RTYPE_POSEIDON2`,
-// `RTYPE_WRITE_OUTPUT`) have no `_WB` variant and return early after the
-// precompile side effects.
+// keep their semantic op). Custom-1 precompiles (`RTYPE_KECCAK`, `RTYPE_POSEIDON2`)
+// have no `_WB` variant and return early after the precompile side effects.
 //
 // # Custom-1 precompiles (`opcode` = `0b0101011`)
 //
@@ -151,7 +150,7 @@
 //   - `jal` / `jalr x0, …` — control flow
 //   - branches and stores — side effects
 //   - `ecall` / `ebreak` — syscalls
-//   - any Custom-1 precompile (`KECCAK`, `POSEIDON2`, `WRITE_OUTPUT`) — memory side effects
+//   - any Custom-1 precompile (`KECCAK`, `POSEIDON2`) — memory side effects
 //
 // The predicate lives in `shouldUseNoOp` / `finalizeComputeOp` in `decode.go`
 // (see `decode_test.go`).

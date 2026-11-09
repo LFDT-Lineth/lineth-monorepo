@@ -39,7 +39,7 @@ func buildRuntimeLimitGroup(t *testing.T, aSize, bSize int) (*lookupGroup, *wiop
 func rowLimitActionFor(g *lookupGroup) *RowLimitVerifierAction {
 	includedModules := make([]*wiop.Module, len(g.included))
 	for i, inc := range g.included {
-		includedModules[i] = inc.cols[0].Module()
+		includedModules[i] = inc.module
 	}
 	includingsModules := make([]*wiop.Module, len(g.includings))
 	for i, it := range g.includings {

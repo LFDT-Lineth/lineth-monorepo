@@ -14,7 +14,6 @@ import (
 	"github.com/consensys/gnark-crypto/field/koalabear"
 	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
-	gutils "github.com/consensys/gnark-crypto/utils"
 )
 
 // Params holds the FRI configuration and precomputed per-level data.
@@ -37,6 +36,13 @@ type Params struct {
 }
 
 func (p Params) numRounds() uint8 { return p.LogPlainTextSize - p.logFinalPolySize }
+
+// MinFoldedSizeLog2 is log2 of the smallest plaintext size whose level is
+// folded: a level of size 2^logFinalPolySize joins at the boundary round
+// numRounds, after the last fold, where it is checked to be constant instead
+// (see checkFolds) and weighted by the last fold challenge rather than a
+// squared one (see levelAlphaDeep).
+func (p Params) MinFoldedSizeLog2() uint8 { return p.logFinalPolySize + 1 }
 
 type Option func(c *Params) error
 
@@ -264,7 +270,8 @@ func groupColumnsByClaimPoints(columns []quotientColumn, alphaPow []field.Ext) [
 // EvalsAt returns this level's evaluations, combined with the running codeword.
 // Column c is weighted by alphaDeep^Powers[c] and running by
 // alphaDeep^RunningPower (see deepPowers; by default, alphaDeep^c and
-// alphaDeep^len(Columns)).
+// alphaDeep^len(Columns)). A nil running is the zero codeword (see
+// ProverState).
 //
 // The batched DEEP quotient is computed combine-then-divide: the columns of
 // each quotientGroup are first combined into G_g(X) = Σ_{c∈g} alphaDeep^{p(c)}·f_c(X)
@@ -288,10 +295,12 @@ func groupColumnsByClaimPoints(columns []quotientColumn, alphaPow []field.Ext) [
 // scale_z · DenomBaseInv[(e − rot_z) mod N], where e = bitReverse(pos),
 // rot_z = rs mod N, scale_z = ω^{−rs}.
 func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
-	evals := make([]field.Ext, len(running))
 	if len(l.Columns) == 0 {
-		copy(evals, running)
-		return evals
+		return append([]field.Ext(nil), running...)
+	}
+	evals := make([]field.Ext, l.Columns[0].codewordLen())
+	if running != nil && len(running) != len(evals) {
+		panic(fmt.Sprintf("fri: Level.EvalsAt: running codeword has %d values, want %d", len(running), len(evals)))
 	}
 
 	mask := len(l.DenomBaseInv) - 1
@@ -311,7 +320,9 @@ func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
 	// read-only inputs, disjoint writes to evals[start:end]. gbuf is the
 	// chunk-sized G_g scratch, reused across groups.
 	parallel.Execute(len(evals), func(start, end int) {
-		field.VecScaleExtExt(evals[start:end], alphaTop, running[start:end])
+		if running != nil {
+			field.VecScaleExtExt(evals[start:end], alphaTop, running[start:end])
+		}
 
 		gbuf := make([]field.Ext, end-start)
 		for gi := range groups {
@@ -403,8 +414,9 @@ type provePlan struct {
 }
 
 // buildProvePlan validates levels and computes the provePlan schedule. It
-// enforces no two levels are introduced at the same folding round, and that
-// exactly one level is introduced at round 0 (i.e. with codeword length 2^p.LogCodewordSize).
+// enforces no two levels are introduced at the same folding round. Round 0
+// may have no level (a FixedDomain PCS whose largest size opened is below its
+// domain): the running codeword is then zero until the first level joins.
 func buildProvePlan(p Params, levels []Level) (provePlan, error) {
 	var plan provePlan
 	if len(levels) == 0 || len(levels) > 255 {
@@ -438,10 +450,6 @@ func buildProvePlan(p Params, levels []Level) (provePlan, error) {
 			return plan, fmt.Errorf("fri: Prove: %w", err)
 		}
 	}
-	if _, ok := plan.levelAtRound[0]; !ok {
-		return plan, fmt.Errorf("fri: Prove: no level introduced at round 0 (there must be a top level)")
-	}
-
 	return plan, nil
 }
 
@@ -643,38 +651,55 @@ func foldLayerInternally(layer []field.Ext, alpha field.Ext, domain *fft.Domain)
 	}
 
 	var (
-		half = len(layer) / 2
-		next = make([]field.Ext, half)
+		half        = len(layer) / 2
+		next        = make([]field.Ext, half)
+		invTwiddles = foldTwiddles(domain)
 	)
 
-	// invTwiddles[j] holds (1/2)·x⁻¹ for pair j, where x = g^i is its
-	// natural-order domain point. We build the powers g⁻ⁱ/2 in natural order
-	// then bit-reverse the slice so that index j lines up with the bit-reversed
-	// layout of layer.
-	invTwiddles := make([]field.Element, half)
-	genPowI := field.One()
-	genPowI.Halve()
-	for i := range half {
-		invTwiddles[i] = genPowI
-		genPowI.Mul(&genPowI, &domain.GeneratorInv)
-	}
-	gutils.BitReverse(invTwiddles)
+	// Pairs are independent: the fold is chunked across CPUs.
+	parallel.Execute(half, func(start, end int) {
+		for j := start; j < end; j++ {
+			p, q := layer[2*j], layer[2*j+1]
 
-	for j := range half {
-		p, q := layer[2*j], layer[2*j+1]
+			var sum, diff field.Ext
+			sum.Add(&p, &q)
+			sum.Halve()
 
-		var sum, diff field.Ext
-		sum.Add(&p, &q)
-		sum.Halve()
+			diff.Sub(&p, &q)
+			diff.MulByElement(&diff, &invTwiddles[j])
+			diff.Mul(&diff, &alpha)
 
-		diff.Sub(&p, &q)
-		diff.MulByElement(&diff, &invTwiddles[j])
-		diff.Mul(&diff, &alpha)
-
-		next[j].Add(&sum, &diff)
-	}
+			next[j].Add(&sum, &diff)
+		}
+	})
 
 	return next
+}
+
+// foldTwiddles returns, for each pair j of a layer on domain, (1/2)·x⁻¹ where
+// x = g^i is the pair's natural-order domain point: the powers g⁻ⁱ/2 in
+// natural order, bit-reversed so that index j lines up with the bit-reversed
+// layout of the layer. Built in parallel chunks, each from its own power.
+func foldTwiddles(domain *fft.Domain) []field.Element {
+	half := int(domain.Cardinality) / 2
+	natural := make([]field.Element, half)
+	parallel.Execute(half, func(start, end int) {
+		var pow field.Element
+		pow.ExpInt64(domain.GeneratorInv, int64(start))
+		pow.Halve()
+		for i := start; i < end; i++ {
+			natural[i] = pow
+			pow.Mul(&pow, &domain.GeneratorInv)
+		}
+	})
+	twiddles := make([]field.Element, half)
+	logHalf := bits.TrailingZeros(uint(half))
+	parallel.Execute(half, func(start, end int) {
+		for j := start; j < end; j++ {
+			twiddles[j] = natural[bits.Reverse64(uint64(j))>>(64-logHalf)&uint64(half-1)]
+		}
+	})
+	return twiddles
 }
 
 // octupletToExt converts an octuplet into a field extension. It expects its
@@ -724,27 +749,16 @@ func mapExtToOctuplet(exts []field.Ext) []field.Octuplet {
 
 // openRunningQueryExt builds the Merkle opening data for query index s across
 // running extension folding levels. Input-tree openings are carried separately.
+// Each fold halves the layer: s>>j is the bit-reversed position of the query in
+// layer j.
 func (st *ProverState) openRunningQueryExt(s int, capDepths []int) RunningQuery {
 	if st.p.numRounds() <= 1 {
 		return nil
 	}
 	q := make(RunningQuery, st.p.numRounds()-1)
 	for j := uint8(1); j < st.p.numRounds(); j++ {
-
-		var (
-			base = s >> j
-			path = st.trees[j].OpenBranchToDepth(base, capDepths[j])
-		)
-
-		// Each fold halves the layer, so layer j has half the entries of layer
-		// j-1. base = s>>j is the bit-reversed position of the query in layer j.
-		if len(st.layers[j])*2 != len(st.layers[j-1]) {
-			panic("fri: openRunningQueryExt: layers must halve at each round")
-		}
-
-		q[j-1] = path
+		q[j-1] = st.trees[j].OpenBranchToDepth(s>>j, capDepths[j])
 	}
-
 	return q
 }
 

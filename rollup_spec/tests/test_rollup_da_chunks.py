@@ -1,19 +1,44 @@
 """DA stream verification: segment ownership across blob and calldata chunks, chunk binding, segment validity."""
 
+import random
 from dataclasses import replace
 
 import pytest
 import zstandard as zstd
 from ethereum.crypto.hash import keccak256
+from ethereum.crypto.kzg import KZGCommitment, kzg_commitment_to_versioned_hash
 
-from rollup_spec.rollup import BLOB_PAYLOAD_CAPACITY, ChunkWitness, verify_da_chunks
-from tests.da_witness import blob_chunk, calldata_chunk, data_rolling_hash_after, segment
+from rollup_spec.rollup import (
+    BLOB_PAYLOAD_CAPACITY,
+    ZSTD_MAX_WINDOW_SIZE,
+    ChunkWitness,
+    verify_da_chunks,
+    zstd_dictionary,
+)
+from tests.da_witness import (
+    blob_chunk,
+    calldata_chunk,
+    compress_frame,
+    data_rolling_hash_after,
+    segment,
+)
 
 PAYLOAD_1 = b"conflation 1"
 PAYLOAD_2 = b"conflation 2"
 SEGMENT_1 = segment(PAYLOAD_1)
 SEGMENT_2 = segment(PAYLOAD_2)
-ZSTD_FRAME_1 = zstd.ZstdCompressor().compress(PAYLOAD_1)
+ZSTD_FRAME_1 = compress_frame(PAYLOAD_1)
+ZSTD_MAX_BLOCK_SIZE = 128 * 1024
+# The program's dictionary under another dictionary ID.
+OTHER_DICTIONARY = zstd.ZstdCompressionDict(
+    zstd_dictionary().as_bytes()[:4]
+    + (zstd_dictionary().dict_id() ^ 1).to_bytes(4, "little")
+    + zstd_dictionary().as_bytes()[8:],
+    dict_type=zstd.DICT_TYPE_FULLDICT,
+)
+# Incompressible, so its segment fills two blobs and spills into a third.
+LARGE_PAYLOAD = random.Random(4844).randbytes(2 * BLOB_PAYLOAD_CAPACITY)
+LARGE_SEGMENT = segment(LARGE_PAYLOAD)
 
 PARENT = keccak256(b"parent dataRollingHash")
 BEFORE_FIRST_CHUNK = keccak256(b"dataRollingHash before the first touched chunk")
@@ -30,6 +55,38 @@ SPLITS = pytest.mark.parametrize(
 
 def length_prefixed(zstd_frame: bytes) -> bytes:
     return len(zstd_frame).to_bytes(4, "big") + zstd_frame
+
+
+# A payload whose last bytes repeat its first 1 KiB after 6 KiB of other bytes: a match reaching back 7 KiB.
+REPEATING_HEAD = bytes(range(256)) * 4
+FAR_MATCH_PAYLOAD = REPEATING_HEAD + random.Random(2025).randbytes(6144) + REPEATING_HEAD
+
+DICTIONARY_ID = zstd_dictionary().dict_id().to_bytes(4, "little")
+
+
+def windowed_frame(window_descriptor: int) -> bytes:
+    """One last raw block holding b"x" under a header that declares the content size 1, the program's dictionary ID and the window descriptor."""
+    return bytes.fromhex("28b52ffd83") + bytes([window_descriptor]) + DICTIONARY_ID + (1).to_bytes(4, "little") + bytes.fromhex("090000") + b"x"
+
+
+def single_segment_rle_frame(content_size: int) -> bytes:
+    """A single-segment frame, whose window is its content size, holding `content_size` copies of b"x" in run-length blocks."""
+    blocks = b""
+    remaining = content_size
+    while remaining:
+        size = min(remaining, ZSTD_MAX_BLOCK_SIZE)
+        remaining -= size
+        blocks += ((size << 3) | (1 << 1) | int(remaining == 0)).to_bytes(3, "little") + b"x"
+    return bytes.fromhex("28b52ffde3") + DICTIONARY_ID + content_size.to_bytes(8, "little") + blocks
+
+
+def large_segment_over_three_blobs() -> list[ChunkWitness]:
+    full = BLOB_PAYLOAD_CAPACITY
+    return [
+        blob_chunk(LARGE_SEGMENT[:full]),
+        blob_chunk(LARGE_SEGMENT[full:2 * full]),
+        blob_chunk(LARGE_SEGMENT[2 * full:]),
+    ]
 
 
 def verify_from_mid_blob(chunks, payloads, take):
@@ -113,12 +170,48 @@ def test_calldata_followed_by_blob():
     assert result == (data_rolling_hash_after(PARENT, [calldata, blob]), 0)
 
 
-@pytest.mark.parametrize("write_content_size", [True, False], ids=["content size written", "content size omitted"])
-def test_zstd_frame_content_size_header_is_optional(write_content_size):
-    zstd_frame = zstd.ZstdCompressor(write_content_size=write_content_size).compress(PAYLOAD_1)
+def test_segment_spanning_three_blobs():
+    blobs = large_segment_over_three_blobs()
+
+    assert verify_da_chunks(blobs, [LARGE_PAYLOAD], PARENT) == (data_rolling_hash_after(PARENT, blobs), 0)
+
+
+def test_calldata_only_stream_needs_no_kzg_fields():
+    calldata = calldata_chunk(SEGMENT_1)
+
+    assert (calldata.kzg_commitment, calldata.kzg_proof) == (b"", b"")
+    assert verify_da_chunks([calldata], [PAYLOAD_1], PARENT) == (data_rolling_hash_after(PARENT, [calldata]), 0)
+
+
+def test_zstd_frame_window_up_to_2_27_bytes_is_accepted():
+    calldata = calldata_chunk(length_prefixed(windowed_frame(0x88)))
+
+    assert verify_da_chunks([calldata], [b"x"], PARENT) == (data_rolling_hash_after(PARENT, [calldata]), 0)
+
+
+def test_zstd_frame_may_declare_a_window_below_its_content():
+    zstd_frame = compress_frame(FAR_MATCH_PAYLOAD, window_log=10)
+    assert zstd.get_frame_parameters(zstd_frame).window_size < len(FAR_MATCH_PAYLOAD)
     calldata = calldata_chunk(length_prefixed(zstd_frame))
 
-    assert verify_da_chunks([calldata], [PAYLOAD_1], PARENT) == (data_rolling_hash_after(PARENT, [calldata]), 0)
+    assert verify_da_chunks([calldata], [FAR_MATCH_PAYLOAD], PARENT) == (data_rolling_hash_after(PARENT, [calldata]), 0)
+
+
+def test_zstd_frame_window_of_exactly_2_27_plus_1_bytes_is_accepted():
+    zstd_frame = single_segment_rle_frame(ZSTD_MAX_WINDOW_SIZE)
+    assert zstd.get_frame_parameters(zstd_frame).window_size == ZSTD_MAX_WINDOW_SIZE
+    calldata = calldata_chunk(length_prefixed(zstd_frame))
+
+    assert verify_da_chunks([calldata], [b"x" * ZSTD_MAX_WINDOW_SIZE], PARENT) == (data_rolling_hash_after(PARENT, [calldata]), 0)
+
+
+def test_zstd_frame_window_one_byte_beyond_2_27_plus_1_is_rejected():
+    zstd_frame = single_segment_rle_frame(ZSTD_MAX_WINDOW_SIZE + 1)
+    assert zstd.get_frame_parameters(zstd_frame).window_size == ZSTD_MAX_WINDOW_SIZE + 1
+    calldata = calldata_chunk(length_prefixed(zstd_frame))
+
+    with pytest.raises(Exception, match="invalid zstd"):
+        verify_da_chunks([calldata], [b"x" * (ZSTD_MAX_WINDOW_SIZE + 1)], PARENT)
 
 
 # ---- rejected streams ------------------------------------------------------------------------
@@ -132,6 +225,15 @@ def rejected(case_id, error, build_chunks, payloads=(PAYLOAD_1,), take=0):
 def blob_missing_last_byte() -> ChunkWitness:
     blob = blob_chunk(SEGMENT_1)
     return replace(blob, blob_bytes=blob.blob_bytes[:-1])
+
+
+def blob_anchored_by(commitment: bytes) -> ChunkWitness:
+    """A blob chunk whose chunkHash is the versioned hash of `commitment`, whatever the blob."""
+    return replace(
+        blob_chunk(SEGMENT_1),
+        kzg_commitment=commitment,
+        chunk_hash=kzg_commitment_to_versioned_hash(KZGCommitment(commitment)),
+    )
 
 
 REJECTED_STREAMS = [
@@ -187,8 +289,31 @@ REJECTED_STREAMS = [
     # chunk bytes bind to the anchored hash
     rejected("invalid physical blob", "physical blob", lambda: [blob_missing_last_byte()]),
     rejected(
-        "blob with wrong chunk hash", "KZG commitment does not match chunkHash",
+        "blob with wrong chunk hash", "versioned hash does not match chunkHash",
         lambda: [replace(blob_chunk(SEGMENT_1), chunk_hash=WRONG_HASH)],
+    ),
+    rejected(
+        "blob carrying another blob's commitment", "versioned hash does not match chunkHash",
+        lambda: [replace(blob_chunk(SEGMENT_1), kzg_commitment=blob_chunk(SEGMENT_2).kzg_commitment)],
+    ),
+    rejected(
+        "blob carrying another blob's proof", "KZG proof batch verification failed",
+        lambda: [replace(blob_chunk(SEGMENT_1), kzg_proof=blob_chunk(SEGMENT_2).kzg_proof)],
+    ),
+    rejected(
+        "blob anchored by another blob's commitment and proof", "KZG proof batch verification failed",
+        lambda: [replace(
+            blob_anchored_by(blob_chunk(SEGMENT_2).kzg_commitment),
+            kzg_proof=blob_chunk(SEGMENT_2).kzg_proof,
+        )],
+    ),
+    rejected(
+        "blob commitment that is not a curve point", "KZG proof batch is malformed",
+        lambda: [blob_anchored_by(b"\xff" * 48)],
+    ),
+    rejected(
+        "blob proof that is not a curve point", "KZG proof batch is malformed",
+        lambda: [replace(blob_chunk(SEGMENT_1), kzg_proof=b"\xff" * 48)],
     ),
     rejected(
         "calldata with wrong chunk hash", "computed hash does not match chunkHash",
@@ -201,6 +326,31 @@ REJECTED_STREAMS = [
     rejected(
         "calldata carrying blob bytes", "empty blobBytes",
         lambda: [replace(calldata_chunk(SEGMENT_1), blob_bytes=blob_chunk(SEGMENT_1).blob_bytes)],
+    ),
+    rejected(
+        "calldata carrying a commitment", "empty kzgCommitment and kzgProof",
+        lambda: [replace(calldata_chunk(SEGMENT_1), kzg_commitment=blob_chunk(SEGMENT_1).kzg_commitment)],
+    ),
+    rejected(
+        "calldata carrying a proof", "empty kzgCommitment and kzgProof",
+        lambda: [replace(calldata_chunk(SEGMENT_1), kzg_proof=blob_chunk(SEGMENT_1).kzg_proof)],
+    ),
+    # a blob carries a 48-byte commitment and a 48-byte proof
+    rejected(
+        "blob without a commitment", "must be 48 bytes",
+        lambda: [replace(blob_chunk(SEGMENT_1), kzg_commitment=b"")],
+    ),
+    rejected(
+        "blob without a proof", "must be 48 bytes",
+        lambda: [replace(blob_chunk(SEGMENT_1), kzg_proof=b"")],
+    ),
+    rejected(
+        "blob with a short commitment", "must be 48 bytes",
+        lambda: [replace(blob_chunk(SEGMENT_1), kzg_commitment=blob_chunk(SEGMENT_1).kzg_commitment[:-1])],
+    ),
+    rejected(
+        "blob with a long proof", "must be 48 bytes",
+        lambda: [replace(blob_chunk(SEGMENT_1), kzg_proof=blob_chunk(SEGMENT_1).kzg_proof + b"\x00")],
     ),
     # each segment is a length prefix and one zstd frame that decompresses to its canonical payload
     rejected(
@@ -225,7 +375,7 @@ REJECTED_STREAMS = [
     ),
     rejected(
         "two zstd frames under one length", "invalid zstd",
-        lambda: [calldata_chunk(length_prefixed(ZSTD_FRAME_1 + zstd.ZstdCompressor().compress(PAYLOAD_2)))],
+        lambda: [calldata_chunk(length_prefixed(ZSTD_FRAME_1 + compress_frame(PAYLOAD_2)))],
     ),
     rejected(
         "truncated zstd frame", "invalid zstd",
@@ -233,7 +383,36 @@ REJECTED_STREAMS = [
     ),
     rejected(
         "decompressed bytes differ from the canonical payload", "does not match canonical",
-        lambda: [calldata_chunk(length_prefixed(zstd.ZstdCompressor().compress(b"conflation X")))],
+        lambda: [calldata_chunk(length_prefixed(compress_frame(b"conflation X")))],
+    ),
+    rejected(
+        "skippable frame", "invalid zstd",
+        lambda: [calldata_chunk(length_prefixed(bytes.fromhex("502a4d1800000000")))],
+    ),
+    # a frame has exactly one form: content size, dictionary ID, no checksum, window within the bound
+    rejected(
+        "frame without content size", "invalid zstd",
+        lambda: [calldata_chunk(length_prefixed(compress_frame(PAYLOAD_1, write_content_size=False)))],
+    ),
+    rejected(
+        "frame whose content size differs from the payload length", "invalid zstd",
+        lambda: [calldata_chunk(length_prefixed(compress_frame(PAYLOAD_1 + b"!")))],
+    ),
+    rejected(
+        "frame without a dictionary ID", "invalid zstd",
+        lambda: [calldata_chunk(length_prefixed(compress_frame(PAYLOAD_1, write_dict_id=False)))],
+    ),
+    rejected(
+        "frame compressed against another dictionary", "invalid zstd",
+        lambda: [calldata_chunk(length_prefixed(compress_frame(PAYLOAD_1, dictionary=OTHER_DICTIONARY)))],
+    ),
+    rejected(
+        "frame with a content checksum", "invalid zstd",
+        lambda: [calldata_chunk(length_prefixed(compress_frame(PAYLOAD_1, write_checksum=True)))],
+    ),
+    rejected(
+        "frame window beyond 2^27 bytes", "invalid zstd",
+        lambda: [calldata_chunk(length_prefixed(windowed_frame(0x90)))], payloads=(b"x",),
     ),
 ]
 
@@ -242,6 +421,15 @@ REJECTED_STREAMS = [
 def test_invalid_da_stream_is_rejected(build_chunks, payloads, take, error):
     with pytest.raises(Exception, match=error):
         verify_da_chunks(build_chunks(), payloads, PARENT, take)
+
+
+@pytest.mark.parametrize("index", [0, 1, 2], ids=["first", "middle", "last"])
+def test_one_wrong_proof_among_valid_blob_proofs_is_rejected(index):
+    blobs = large_segment_over_three_blobs()
+    blobs[index] = replace(blobs[index], kzg_proof=blobs[(index + 1) % 3].kzg_proof)
+
+    with pytest.raises(Exception, match="KZG proof batch verification failed"):
+        verify_da_chunks(blobs, [LARGE_PAYLOAD], PARENT)
 
 
 @pytest.mark.parametrize("boundary", [None, WRONG_HASH], ids=["missing", "wrong"])

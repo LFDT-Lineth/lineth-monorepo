@@ -66,6 +66,46 @@ import (
 // [Compile] is single-invocation per system.
 const PublicInputTag wiop.PublicInputTag = "MessageBus"
 
+// GetProducts returns the products on every handle of sys, in the order of
+// [wiop.System.MessageBusHandles], read from the public inputs pub of a proof
+// over sys. Without the in-shard check (see [wiop.MessageBus.SkipInShardCheck])
+// they are this shard's partial products, which a cross-shard layer multiplies.
+//
+// Panics if a public input is missing.
+func GetProducts(sys *wiop.System, pub wiop.PublicInput) []field.Gen {
+	products := make([]field.Gen, len(sys.MessageBusHandles()))
+	for h := range products {
+		products[h] = pub[productPos(sys, h)]
+	}
+	return products
+}
+
+// SetProducts writes products, in the order of [wiop.System.MessageBusHandles],
+// into the public inputs pub of a proof over sys: the inverse of
+// [GetProducts], for a cross-shard layer building the public inputs of a node
+// from its children's.
+//
+// Panics if a public input is missing or products has not one entry per
+// handle.
+func SetProducts(sys *wiop.System, pub wiop.PublicInput, products []field.Gen) {
+	if n := len(sys.MessageBusHandles()); len(products) != n {
+		panic(fmt.Sprintf("wiop/compilers/messagebus: SetProducts: %d products for %d handles", len(products), n))
+	}
+	for h, p := range products {
+		pub[productPos(sys, h)] = p
+	}
+}
+
+// productPos returns the position in the public inputs of the product on the
+// handle of index h. Panics if it is missing.
+func productPos(sys *wiop.System, h int) int {
+	_, pos := sys.LookupPublicInputByTag(PublicInputTag, h)
+	if pos < 0 {
+		panic(fmt.Sprintf("wiop/compilers/messagebus: no public input registered for handle %d", h))
+	}
+	return pos
+}
+
 type compileOptions struct {
 	sharedRandomness bool
 }
@@ -403,7 +443,7 @@ func permutationFold(alpha, beta *wiop.CoinField, tab wiop.Table) wiop.Expressio
 // longer one with leading zeros. Same-width participants get the same
 // sentinel, so a balanced bus stays balanced. α is always consulted, including
 // the width-1 case (β + α + c_0).
-func foldDenominator(alpha, beta *wiop.CoinField, cols []*wiop.ColumnView) wiop.Expression {
+func foldDenominator(alpha, beta *wiop.CoinField, cols []wiop.TableEntry) wiop.Expression {
 	return wiop.Add(beta, grandproduct.RLCWithSentinel(alpha, cols))
 }
 

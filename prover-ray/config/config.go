@@ -22,6 +22,9 @@ type Config struct {
 	Rollup Pipeline `mapstructure:"rollup"`
 	// Aggregation configures the aggregation pipeline.
 	Aggregation Pipeline `mapstructure:"aggregation"`
+	// GuestsDir holds the guest ELFs, found by the guestProgramId of each
+	// request. Required by every mode that runs a guest.
+	GuestsDir string `mapstructure:"guests_dir"`
 }
 
 // Execution holds the L2-execution pipeline settings.
@@ -30,10 +33,8 @@ type Execution struct {
 	ProverMode string `mapstructure:"prover_mode"`
 	// RequestsRootDir contains the requests/, responses/, requests-done/ queue.
 	RequestsRootDir string `mapstructure:"requests_root_dir"`
-	// NativeRunnerBin is the native l2-execution-runner binary, required by dev-zkvm.
+	// NativeRunnerBin is the native l2_execution_runner binary, required by dev-zkvm.
 	NativeRunnerBin string `mapstructure:"native_runner_bin"`
-	// GuestELF is the l2-execution guest ELF, required by dev-zkvm.
-	GuestELF string `mapstructure:"guest_elf"`
 }
 
 // Pipeline holds the rollup and aggregation pipeline settings (no guest, so no

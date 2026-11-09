@@ -248,7 +248,14 @@ func TestVerifierCircuit_PCSModuleGroups(t *testing.T) {
 	}
 }
 
-func verifyModuleGroupsCircuit(t *testing.T, sizeAB, sizeBig int) {
+// TestVerifierCircuit_PCSFixedFRIDomain checks the circuit verifier on a
+// system compiled with module groups and a fixed FRI domain, whose top rounds
+// fold the zero codeword.
+func TestVerifierCircuit_PCSFixedFRIDomain(t *testing.T) {
+	verifyModuleGroupsCircuit(t, 8, 32, pcs.WithFixedFRIDomain())
+}
+
+func verifyModuleGroupsCircuit(t *testing.T, sizeAB, sizeBig int, opts ...pcs.Option) {
 	t.Helper()
 	sys := wiop.NewSystemf("gnark-pcs-groups")
 	r0 := sys.NewRound()
@@ -269,7 +276,7 @@ func verifyModuleGroupsCircuit(t *testing.T, sizeAB, sizeBig int) {
 	zeta := r1.NewCoinField(sys.Context.Childf("zeta"))
 	le := sys.NewLagrangeEval(sys.Context.Childf("le"), views, zeta)
 	r1.RegisterAction(&selfAssignLagrange{le: le})
-	pcs.Compile(sys, append(testPCSOptions(), pcs.WithModuleGroups())...)
+	pcs.Compile(sys, append(append(testPCSOptions(), pcs.WithModuleGroups()), opts...)...)
 
 	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
 		for _, col := range cols[:3] {
