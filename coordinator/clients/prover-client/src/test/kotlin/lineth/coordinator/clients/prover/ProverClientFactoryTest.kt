@@ -516,16 +516,30 @@ class ProverClientFactoryTest {
     val proverClientI1 = preRiscvProverClientFactory.preRiscvProofAggregationProverClient()
     val proverClientI2 = preRiscvProverClientFactory.preRiscvProofAggregationProverClient()
 
-    runCatching { proverClientI1.requestProof(request1).get() }
-    runCatching { proverClientI2.requestProof(request2).get() }
-    runCatching { proverClientI1.requestProof(request3).get() }
+    val requests = listOf(
+      proverClientI1.requestProof(request1),
+      proverClientI2.requestProof(request2),
+      proverClientI1.requestProof(request3),
+    )
 
     assertThat(meterRegistry.find("linea.batch.prover.waiting").gauge()).isNotNull
     assertThat(meterRegistry.find("linea.blob.prover.waiting").gauge()).isNotNull
     assertThat(meterRegistry.find("linea.aggregation.prover.waiting").gauge()).isNotNull
 
+    await()
+      .pollDelay(0.milliseconds.toJavaDuration())
+      .pollInterval(10.milliseconds.toJavaDuration())
+      .atMost(5.seconds.toJavaDuration())
+      .untilAsserted {
+        assertThat(meterRegistry.find("linea.aggregation.prover.waiting").gauge()!!.value()).isEqualTo(3.0)
+      }
     assertThat(meterRegistry.find("linea.batch.prover.waiting").gauge()!!.value()).isEqualTo(0.0)
     assertThat(meterRegistry.find("linea.blob.prover.waiting").gauge()!!.value()).isEqualTo(0.0)
-    assertThat(meterRegistry.find("linea.aggregation.prover.waiting").gauge()!!.value()).isEqualTo(3.0)
+
+    // swallow timeout exception because responses are not available
+    requests.forEach { runCatching { it.get() } }
+
+    // waiting counter must be released even when the request fails (e.g. response timeout)
+    assertThat(meterRegistry.find("linea.aggregation.prover.waiting").gauge()!!.value()).isEqualTo(0.0)
   }
 }

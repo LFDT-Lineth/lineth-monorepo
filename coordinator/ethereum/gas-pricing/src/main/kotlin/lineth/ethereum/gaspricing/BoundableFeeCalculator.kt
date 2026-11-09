@@ -32,7 +32,7 @@ class BoundableFeeCalculator(
     val blockRange = feeHistory.blocksRange()
     val fee = feesCalculator.calculateFees(feeHistory) + config.feeMargin
     val gasPriceToUpdate =
-      if (fee.compareTo(config.feeUpperBound) == 1) {
+      if (fee.compareTo(config.feeUpperBound) > 0) {
         log.debug(
           "Gas fee update: fee={}GWei, l1Blocks={}. fee is higher than feeUpperBound={}GWei." +
             " Will default to the upper bound value",
@@ -41,7 +41,7 @@ class BoundableFeeCalculator(
           config.feeUpperBound.toGWei(),
         )
         config.feeUpperBound
-      } else if (fee.compareTo(config.feeLowerBound) == -1) {
+      } else if (fee.compareTo(config.feeLowerBound) < 0) {
         log.debug(
           "Gas fee update: fee={}GWei, l1Blocks={}. fee is lower than feeLowerBound={}GWei." +
             " Will default to the lower bound value",

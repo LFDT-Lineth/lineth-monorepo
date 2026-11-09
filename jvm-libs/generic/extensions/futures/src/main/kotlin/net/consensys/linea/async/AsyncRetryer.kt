@@ -1,6 +1,8 @@
 package net.consensys.linea.async
 
 import io.vertx.core.Vertx
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.function.Consumer
 import kotlin.time.Clock
@@ -108,6 +110,7 @@ internal class SequentialAsyncActionRetryer<T>(
   }
 
   private val resultFuture = SafeFuture<T>()
+  private val log: Logger = LogManager.getLogger(SequentialAsyncActionRetryer::class.java)
   private var remainingRetries: Int? = maxRetries
   private var startTime: Instant = clock.now()
   private var remainingTime: Long? = timeout?.inWholeMilliseconds
@@ -153,7 +156,18 @@ internal class SequentialAsyncActionRetryer<T>(
       if (errorThrowable != null && timeElapsedSinceStarted >
         (ignoreFirstExceptionsUntilTimeElapsed?.inWholeMilliseconds ?: -1L)
       ) {
-        exceptionConsumer?.runCatching { exceptionConsumer.accept(errorThrowable) }
+        exceptionConsumer?.also { consumer ->
+          // must not escape: resultFuture would never complete
+          try {
+            consumer.accept(errorThrowable)
+          } catch (consumerError: Throwable) {
+            log.warn(
+              "AsyncRetryer exceptionConsumer failed: errorMessage={}",
+              consumerError.message,
+              consumerError,
+            )
+          }
+        }
       }
 
       if (stopRetrying) {
