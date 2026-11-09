@@ -140,7 +140,7 @@ func TestVanishing_AutoCancelledPositions_SharedDAG(t *testing.T) {
 		x = wiop.Add(x, x)
 	}
 	v := mod.NewVanishing(sys.Context.Childf("dagV"), x)
-	assert.Equal(t, []int{0}, v.CancelledPositions)
+	assert.Equal(t, []int{0}, v.CancelledPositions, "the shift -1 at the bottom of the shared DAG must cancel position 0")
 }
 
 func TestVanishing_CheckGnark_Panics(t *testing.T) {

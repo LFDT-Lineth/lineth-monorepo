@@ -33,11 +33,11 @@ func TestEvaluateSingle_IsLinearOnDAGs(t *testing.T) {
 		want.Mul(&want, &two)
 	}
 	got := x.EvaluateSingle(nil).Value
-	require.True(t, got.IsBase())
-	assert.Equal(t, want, got.AsBase())
+	require.True(t, got.IsBase(), "a sum of base constants must stay in the base field")
+	assert.Equal(t, want, got.AsBase(), "x_64 must equal 3·2^64")
 
 	// The compiled program is reused across calls.
-	assert.Equal(t, got, x.EvaluateSingle(nil).Value)
+	assert.Equal(t, got, x.EvaluateSingle(nil).Value, "a second EvaluateSingle on the compiled program must give the same value")
 }
 
 func TestMetadata_IsLinearOnDAGs(t *testing.T) {
@@ -47,11 +47,11 @@ func TestMetadata_IsLinearOnDAGs(t *testing.T) {
 	col := mod.NewExtensionColumn(sys.Context.Childf("col"), r0)
 
 	x := doublingDAG(col.View(), 64)
-	assert.True(t, x.IsExtension())
-	assert.Equal(t, 1, x.DegreeFactor())
+	assert.True(t, x.IsExtension(), "a DAG over an extension column must be an extension")
+	assert.Equal(t, 1, x.DegreeFactor(), "sums of a degree-1 column keep degree factor 1")
 
 	sq := doublingDAG(wiop.Square(col.View()), 64)
-	assert.Equal(t, 2, sq.DegreeFactor())
+	assert.Equal(t, 2, sq.DegreeFactor(), "sums of a squared column keep degree factor 2")
 }
 
 // A DegreeFactor call that panics must not leave a cached value behind: a
@@ -63,6 +63,6 @@ func TestDegreeFactor_PanicIsNotCached(t *testing.T) {
 	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 
 	div := wiop.Div(col.View(), col.View())
-	assert.Panics(t, func() { div.DegreeFactor() })
-	assert.Panics(t, func() { div.DegreeFactor() })
+	assert.Panics(t, func() { div.DegreeFactor() }, "DegreeFactor of a Div must panic")
+	assert.Panics(t, func() { div.DegreeFactor() }, "a second DegreeFactor of a Div must panic again, not return a cached zero")
 }

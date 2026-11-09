@@ -185,6 +185,10 @@ func (op ArithmeticOperator) String() string {
 //
 // Size, IsSized, and EvaluateVector may only be called when IsMultiValued()
 // is true. EvaluateSingle may only be called when IsMultiValued() is false.
+//
+// The structural fields (Operator, Operands) are never changed after
+// construction; the cached results below are filled in lazily and are safe
+// for concurrent use.
 type ArithmeticOperation struct {
 	Operator ArithmeticOperator
 	Operands []Expression
