@@ -1047,8 +1047,9 @@ func (gv *Verifier) Check(rt *wiop.Runtime) error {
 		viewEvals[key] = rt.GetCellValue(gv.WitnessClaims[i])
 	}
 
-	// Compute annihilator r^n − 1.
-	annihilator := computeAnnihilator(r, n)
+	// r^n, and the annihilator r^n − 1.
+	rPowN := expFieldElem(r, n)
+	annihilator := rPowN.Sub(field.ElemOne())
 
 	// Every bucket is evaluated at the same point r, so each distinct node of
 	// the module -- shared between vanishings or between buckets -- is
@@ -1060,13 +1061,10 @@ func (gv *Verifier) Check(rt *wiop.Runtime) error {
 		// --- Recombine quotient shares: Q(r) = Σ_k r^{kn} · Q_k(r) ---
 		qr := field.ElemZero()
 		rPowKN := field.ElemOne() // r^{kn}, starts at r^0 = 1
-		for k, claim := range bkt.QuotientClaims {
-			_ = k
+		for _, claim := range bkt.QuotientClaims {
 			qk := rt.GetCellValue(claim) // Q_k(r)
 			qr = qr.Add(rPowKN.Mul(qk))
 			// Advance: r^{(k+1)n} = r^{kn} · r^n
-			rPowN := computeAnnihilator(r, n) // r^n − 1 + 1 = r^n ... just compute r^n
-			rPowN = rPowN.Add(field.ElemOne())
 			rPowKN = rPowKN.Mul(rPowN)
 		}
 
@@ -1103,11 +1101,6 @@ func (gv *Verifier) Check(rt *wiop.Runtime) error {
 		}
 	}
 	return nil
-}
-
-// computeAnnihilator computes r^n − 1.
-func computeAnnihilator(r field.Gen, n int) field.Gen {
-	return expFieldElem(r, n).Sub(field.ElemOne())
 }
 
 // expFieldElem computes base^exp using binary exponentiation.
