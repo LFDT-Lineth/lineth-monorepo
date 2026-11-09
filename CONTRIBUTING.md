@@ -11,6 +11,8 @@
 | Docker Compose | 2.19+ |
 | Make | 3.81+ |
 
+pnpm does not switch to the pinned version by itself (`pmOnFail: ignore` in `pnpm-workspace.yaml` keeps the lockfile readable by GitHub's dependency graph). Install it with `corepack enable` or `npm install -g pnpm@12.17.0`.
+
 ## Setup
 
 ```bash
