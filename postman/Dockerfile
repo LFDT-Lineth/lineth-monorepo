@@ -49,20 +49,13 @@ COPY ./ts-libs/eslint-config ./ts-libs/eslint-config
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm run build \
     && pnpm --config.allow-unused-patches=true --config.block-exotic-subdeps=false deploy --legacy --filter=./postman --prod ./prod/postman
 
-FROM node:${NODE_VERSION}-trixie-slim AS production
+FROM dhi.io/node:${NODE_VERSION} AS production
 
 ENV NODE_ENV=production
-
-# The runtime only needs the node binary: drop the bundled package managers and their dependencies.
-RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
-    /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
-    /opt/yarn-* /usr/local/bin/yarn /usr/local/bin/yarnpkg
 
 WORKDIR /usr/src/app
 
 # Copy only production dependencies and built files
-# Note: Using slim (Debian/glibc) instead of alpine (musl) for compatibility
-# with the prebuilt native blob_compressor Go library that's dynamically linked against glibc
 COPY --from=builder --chown=node:node /usr/src/app/prod/postman ./postman
 COPY LICENSE-APACHE LICENSE-MIT /licenses/
 
