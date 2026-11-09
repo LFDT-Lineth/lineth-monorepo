@@ -1,6 +1,9 @@
 ARG NODE_VERSION=24.22.1
+# Docker Hardened Image (node only, no shell or package manager). Pulling it requires `docker login dhi.io`;
+# builds without Docker Hub credentials can pass RUNTIME_IMAGE=node:<version>-trixie-slim instead.
+ARG RUNTIME_IMAGE=dhi.io/node:${NODE_VERSION}
 
-FROM node:${NODE_VERSION}-slim AS base
+FROM node:${NODE_VERSION}-trixie-slim AS base
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
@@ -45,19 +48,17 @@ COPY ./ts-libs/linea-native-libs ./ts-libs/linea-native-libs
 COPY ./ts-libs/linea-shared-utils ./ts-libs/linea-shared-utils
 COPY ./ts-libs/eslint-config ./ts-libs/eslint-config
 
-# Build and create production deployment
+# Build and create production deployment.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm run build \
     && pnpm --config.allow-unused-patches=true --config.block-exotic-subdeps=false deploy --legacy --filter=./postman --prod ./prod/postman
 
-FROM node:${NODE_VERSION}-slim AS production
+FROM ${RUNTIME_IMAGE} AS production
 
 ENV NODE_ENV=production
 
 WORKDIR /usr/src/app
 
 # Copy only production dependencies and built files
-# Note: Using slim (Debian/glibc) instead of alpine (musl) for compatibility
-# with the prebuilt native blob_compressor Go library that's dynamically linked against glibc
 COPY --from=builder --chown=node:node /usr/src/app/prod/postman ./postman
 COPY LICENSE-APACHE LICENSE-MIT /licenses/
 
