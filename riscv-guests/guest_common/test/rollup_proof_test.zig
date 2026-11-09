@@ -90,7 +90,7 @@ test "public inputs decode to what was encoded, including empty lists" {
     }
 }
 
-test "output is the commitment to the 0x1801 frame followed by the frame carrying the public inputs" {
+test "output is the commitment to its frame followed by the frame: the rollup output schema id and the public inputs" {
     const alloc = std.testing.allocator;
     const pi = samplePublicInputs();
     const out = try rollup_proof.encodeOutput(alloc, pi);
@@ -99,7 +99,7 @@ test "output is the commitment to the 0x1801 frame followed by the frame carryin
     defer alloc.free(body);
 
     try std.testing.expectEqual(32 + 2 + body.len, out.len);
-    try std.testing.expectEqualSlices(u8, &[_]u8{ 0x18, 0x01 }, out[32..34]);
+    try std.testing.expectEqualSlices(u8, &[_]u8{ 0x00, 0x05 }, out[32..34]);
     try std.testing.expectEqualSlices(u8, body, out[34..]);
     try std.testing.expectEqualSlices(u8, &keccak256(out[32..]), out[0..32]);
 }

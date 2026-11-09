@@ -1,7 +1,7 @@
 //! Wire contract of a rollup proof's public inputs: the tuple the rollup guest commits to. The
 //! layout is SSZ and the decoders accept only the canonical encoding; the lists alias the decoded buffer.
 //!
-//! The rollup guest's own output frames the public inputs with the 0x1801 schema id and leads with
+//! The rollup guest's own output frames the public inputs with the 0x0005 schema id and leads with
 //! their keccak256 commitment: `keccak256(frame) || frame`, `frame = schema_id || SSZ(public inputs)`.
 
 const std = @import("std");
@@ -9,7 +9,7 @@ const ssz = @import("guest_common").ssz;
 const l2_execution_proof = @import("l2_execution_proof.zig");
 const output_frame = @import("output_frame.zig");
 
-pub const OUTPUT_SCHEMA_ID: u16 = 0x1801;
+pub const OUTPUT_SCHEMA_ID: u16 = 0x0005;
 
 // List bounds of the wire schema: encoders and decoders reject longer lists.
 /// L2-execution proofs, one per conflation, in one rollup proof.
@@ -54,12 +54,12 @@ pub fn decodePublicInputs(alloc: std.mem.Allocator, bytes: []const u8) ssz.Decod
 
 // ── Guest output ──────────────────────────────────────────────────────────────
 
-/// Encode the 0x1801 output: `keccak256(schema_id || ssz) || schema_id || ssz`.
+/// Encode the 0x0005 output: `keccak256(schema_id || ssz) || schema_id || ssz`.
 pub fn encodeOutput(alloc: std.mem.Allocator, pi: RollupPublicInput) ssz.EncodeError![]u8 {
     return output_frame.encode(RollupPublicInput, alloc, OUTPUT_SCHEMA_ID, pi);
 }
 
-/// Decode a 0x1801 output into its public inputs. The leading commitment is the keccak256 of the
+/// Decode a 0x0005 output into its public inputs. The leading commitment is the keccak256 of the
 /// frame and the frame leads with the schema id; a failing check is `error.MalformedFrame`.
 pub fn decodeOutput(alloc: std.mem.Allocator, bytes: []const u8) (error{MalformedFrame} || ssz.DecodeError)!RollupPublicInput {
     return decodePublicInputs(alloc, try output_frame.decode(bytes, OUTPUT_SCHEMA_ID));

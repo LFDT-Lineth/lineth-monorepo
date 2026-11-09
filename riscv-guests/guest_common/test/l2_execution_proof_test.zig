@@ -87,7 +87,7 @@ fn expectProofEqual(want: l2_execution_proof.L2ExecutionProof, got: l2_execution
 
 // ── Guest output ──────────────────────────────────────────────────────────────
 
-test "output is the commitment to the 0x0003 frame followed by the frame carrying the public inputs" {
+test "output is the commitment to its frame followed by the frame: the l2-execution output schema id and the public inputs" {
     const alloc = std.testing.allocator;
     const pi = samplePublicInputs();
     const out = try l2_execution_proof.encodeOutput(alloc, pi);

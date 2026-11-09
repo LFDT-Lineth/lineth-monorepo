@@ -1,5 +1,5 @@
 //! Wire contract of the rollup guest's input: the `RollupProofPrivateInput` container behind the
-//! 0x1001 schema id. The decoder accepts only the canonical encoding, and the byte lists alias the
+//! 0x0004 schema id. The decoder accepts only the canonical encoding, and the byte lists alias the
 //! decoded buffer.
 //!
 //! The already-proven l2-execution proofs the input embeds are core_serde's contract, and so is the
@@ -13,7 +13,7 @@ const Allocator = @import("std").mem.Allocator;
 const l2_execution_proof = core_serde.l2_execution_proof;
 const rollup_proof = core_serde.rollup_proof;
 
-pub const INPUT_SCHEMA_ID: u16 = 0x1001;
+pub const INPUT_SCHEMA_ID: u16 = 0x0004;
 
 // List bounds of the wire schema: encoders and decoders reject longer lists.
 /// Conflations one rollup proof covers.
@@ -53,7 +53,7 @@ pub const RollupProofPrivateInput = struct {
     boundary_prev_data_rolling_hash: ssz.FixedList([32]u8, 1),
 };
 
-/// The input in `data`, the 0x1001 schema id followed by the SSZ container.
+/// The input in `data`, the 0x0004 schema id followed by the SSZ container.
 pub fn decodeInput(alloc: Allocator, data: []const u8) ssz.FramedDecodeError!RollupProofPrivateInput {
     return ssz.decodeFramed(RollupProofPrivateInput, alloc, data, INPUT_SCHEMA_ID);
 }

@@ -1,6 +1,6 @@
 # Rollup Guest
 
-The RISC-V guest program of the rollup proof (`rollup_spec/Readme.md` §2.2). It decodes the canonical `RollupProofPrivateInput` SSZ envelope (schema id `0x1001`), runs the rollup statement over it and emits the rollup public inputs (schema id `0x1801`: `keccak256(frame) || frame`, where `frame` is the schema id followed by the SSZ public inputs). The input codec is `src/rollup_ssz.zig`; the output codec and the l2-execution proofs the input embeds are the `core_serde` wire contracts of `guest_common`.
+The RISC-V guest program of the rollup proof (`rollup_spec/Readme.md` §2.2). It decodes the canonical `RollupProofPrivateInput` SSZ envelope (schema id `0x0004`), runs the rollup statement over it and emits the rollup public inputs (schema id `0x0005`: `keccak256(frame) || frame`, where `frame` is the schema id followed by the SSZ public inputs). The input codec is `src/rollup_ssz.zig`; the output codec and the l2-execution proofs the input embeds are the `core_serde` wire contracts of `guest_common`.
 
 ## Statement
 

@@ -19,10 +19,9 @@ test "decodeInput: rejects a frame under another schema id or without one" {
     const alloc = arena.allocator();
 
     var frame = try rollup_ssz.encodeInput(alloc, try support.sampleInput(alloc));
-    frame[0] = 0x18; // the output schema id
+    frame[1] = 0x05; // the rollup output's schema id
     try expectDecodeError(error.MalformedFrame, frame);
-    frame[0] = 0x10;
-    frame[1] = 0x02;
+    frame[1] = 0x06; // the aggregation input's schema id
     try expectDecodeError(error.MalformedFrame, frame);
     try expectDecodeError(error.MalformedFrame, &.{});
     try expectDecodeError(error.MalformedFrame, frame[0..1]);
@@ -35,7 +34,7 @@ test "encodeInput/decodeInput: round-trips every field of a readable sample inpu
 
     const original = try support.sampleInput(alloc);
     const encoded = try rollup_ssz.encodeInput(alloc, original);
-    try std.testing.expectEqualSlices(u8, &[_]u8{ 0x10, 0x01 }, encoded[0..2]);
+    try std.testing.expectEqualSlices(u8, &[_]u8{ 0x00, 0x04 }, encoded[0..2]);
     try std.testing.expectEqualDeep(original, try rollup_ssz.decodeInput(alloc, encoded));
 }
 
@@ -98,7 +97,7 @@ test "decoding failures exit with the code of their category" {
 
     const frame = try rollup_ssz.encodeInput(alloc, try support.sampleInput(alloc));
     const wrong_schema = try alloc.dupe(u8, frame);
-    wrong_schema[0] = 0x18;
+    wrong_schema[1] = 0x05;
     try std.testing.expectEqual(guest_errors.CODE_MALFORMED_FRAME, try exitCodeOfDecoding(wrong_schema));
     try std.testing.expectEqual(guest_errors.CODE_MALFORMED_SSZ, try exitCodeOfDecoding(frame[0 .. frame.len - 1]));
     try std.testing.expectEqual(guest_errors.CODE_MALFORMED_SSZ, try exitCodeOfDecoding(try std.mem.concat(alloc, u8, &.{ frame, &.{0} })));
