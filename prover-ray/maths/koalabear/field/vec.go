@@ -343,38 +343,6 @@ func VecNegInto(res, a Vec) {
 // ---------------------------------------------------------------------------
 // Scale (scalar × vector)
 // ---------------------------------------------------------------------------
-//
-// For each variant, the naming convention is VecScale{ScalarType}{VecType}
-// where ScalarType and VecType are "Base" or "Ext".
-
-// VecScaleBaseBase sets res[i] = s * a[i] where s and a are both base-field.
-// Cost: 1 base multiplication per element.
-// res and a must have equal length.
-func VecScaleBaseBase(res []Element, s Element, a []Element) {
-	mustEqualLen2(len(res), len(a))
-	(*koalabear.Vector)(&res).ScalarMul(a, &s)
-}
-
-// VecScaleBaseExt sets res[i] = s * a[i] where s is a base scalar and a is an
-// extension vector. Uses [Ext.MulByElement] to exploit the base structure of s.
-// Cost: 6 base multiplications per element.
-// res and a must have equal length.
-func VecScaleBaseExt(res []Ext, s Element, a []Ext) {
-	mustEqualLen2(len(res), len(a))
-	extensions.VectorE6(res).ScalarMulByElement(a, &s)
-}
-
-// VecScaleExtBase sets res[i] = s * a[i] where s is an extension scalar and a
-// is a base vector. Uses [Ext.MulByElement] to exploit the base structure of
-// each a[i].
-// Cost: 6 base multiplications per element.
-// res and a must have equal length.
-func VecScaleExtBase(res []Ext, s Ext, a []Element) {
-	mustEqualLen2(len(res), len(a))
-	for i := range res {
-		res[i].MulByElement(&s, &a[i])
-	}
-}
 
 // VecScaleExtExt sets res[i] = s * a[i] where s and a are both extension-field.
 // Cost: ~24 base multiplications per element; AVX-512 vectorized (gnark-crypto
@@ -383,24 +351,6 @@ func VecScaleExtBase(res []Ext, s Ext, a []Element) {
 func VecScaleExtExt(res []Ext, s Ext, a []Ext) {
 	mustEqualLen2(len(res), len(a))
 	extensions.VectorE6(res).ScalarMul(extensions.VectorE6(a), &s)
-}
-
-// VecScaleInto sets res[i] = s * v[i] for all i, dispatching to the typed
-// variant that matches the field types of s and v.
-//
-// res must be pre-allocated; its field type (IsBase) must be true iff both s
-// and v are base. res and v must have equal length. Panics otherwise.
-func VecScaleInto(res Vec, s Gen, v Vec) {
-	switch {
-	case res.IsBase():
-		VecScaleBaseBase(res.base, s.B0.A0, v.base)
-	case s.isBase && !v.IsBase():
-		VecScaleBaseExt(res.ext, s.B0.A0, v.ext)
-	case !s.isBase && v.IsBase():
-		VecScaleExtBase(res.ext, s.Ext, v.base)
-	default:
-		VecScaleExtExt(res.ext, s.Ext, v.ext)
-	}
 }
 
 // ---------------------------------------------------------------------------

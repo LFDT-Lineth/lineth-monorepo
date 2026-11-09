@@ -537,61 +537,6 @@ func TestVecNegIntoDispatch(t *testing.T) {
 // Scale
 // ---------------------------------------------------------------------------
 
-// TestVecScaleBaseBase verifies VecScaleBaseBase against element-wise
-// Element.Mul with the scalar.
-func TestVecScaleBaseBase(t *testing.T) {
-	rng := newRng()
-	s := PseudoRand(rng)
-	a := randomElems(testN)
-	res := make([]Element, testN)
-	VecScaleBaseBase(res, s, a)
-
-	want := make([]Element, testN)
-	for i := range want {
-		want[i].Mul(&s, &a[i])
-	}
-	checkElemSlice(t, want, res)
-}
-
-// TestVecScaleBaseExt verifies VecScaleBaseExt (base scalar × ext vector)
-// against element-wise Ext.MulByElement, and against full Ext.Mul to confirm
-// equivalence.
-func TestVecScaleBaseExt(t *testing.T) {
-	rng := newRng()
-	s := PseudoRand(rng)
-	a := randomExts(testN)
-	res := make([]Ext, testN)
-	VecScaleBaseExt(res, s, a)
-
-	wantMBE := make([]Ext, testN)
-	wantFull := make([]Ext, testN)
-	for i := range wantMBE {
-		wantMBE[i].MulByElement(&a[i], &s)
-		sLift := Lift(s)
-		wantFull[i].Mul(&sLift, &a[i])
-	}
-	checkExtSlice(t, wantMBE, res)
-	checkExtSlice(t, wantFull, res)
-}
-
-// TestVecScaleExtBase verifies VecScaleExtBase (ext scalar × base vector)
-// against element-wise Ext.MulByElement with swapped roles, and also confirms
-// commutativity with VecScaleBaseExt when the scalar value happens to be the
-// same in both base and ext position.
-func TestVecScaleExtBase(t *testing.T) {
-	rng := newRng()
-	s := PseudoRandExt(rng)
-	a := randomElems(testN)
-	res := make([]Ext, testN)
-	VecScaleExtBase(res, s, a)
-
-	want := make([]Ext, testN)
-	for i := range want {
-		want[i].MulByElement(&s, &a[i])
-	}
-	checkExtSlice(t, want, res)
-}
-
 // TestVecScaleExtExt verifies VecScaleExtExt (ext scalar × ext vector) against
 // element-wise Ext.Mul.
 func TestVecScaleExtExt(t *testing.T) {
@@ -606,48 +551,6 @@ func TestVecScaleExtExt(t *testing.T) {
 		want[i].Mul(&s, &a[i])
 	}
 	checkExtSlice(t, want, res)
-}
-
-// TestVecScaleIntoDispatch verifies that VecScaleInto dispatches to the
-// correct typed variant for all four scalar/vector type combinations.
-func TestVecScaleIntoDispatch(t *testing.T) {
-	rng := newRng()
-	sBase := PseudoRand(rng)
-	sExt := PseudoRandExt(rng)
-	elems := randomElems(testN)
-	exts := randomExts(testN)
-
-	t.Run("BaseBase", func(t *testing.T) {
-		res := make([]Element, testN)
-		VecScaleInto(VecFromBase(res), ElemFromBase(sBase), VecFromBase(elems))
-		want := make([]Element, testN)
-		VecScaleBaseBase(want, sBase, elems)
-		checkElemSlice(t, want, res)
-	})
-
-	t.Run("BaseExt", func(t *testing.T) {
-		res := make([]Ext, testN)
-		VecScaleInto(VecFromExt(res), ElemFromBase(sBase), VecFromExt(exts))
-		want := make([]Ext, testN)
-		VecScaleBaseExt(want, sBase, exts)
-		checkExtSlice(t, want, res)
-	})
-
-	t.Run("ExtBase", func(t *testing.T) {
-		res := make([]Ext, testN)
-		VecScaleInto(VecFromExt(res), ElemFromExt(sExt), VecFromBase(elems))
-		want := make([]Ext, testN)
-		VecScaleExtBase(want, sExt, elems)
-		checkExtSlice(t, want, res)
-	})
-
-	t.Run("ExtExt", func(t *testing.T) {
-		res := make([]Ext, testN)
-		VecScaleInto(VecFromExt(res), ElemFromExt(sExt), VecFromExt(exts))
-		want := make([]Ext, testN)
-		VecScaleExtExt(want, sExt, exts)
-		checkExtSlice(t, want, res)
-	})
 }
 
 // ---------------------------------------------------------------------------
@@ -797,12 +700,6 @@ func TestVecLengthMismatchPanics(t *testing.T) {
 		})
 	})
 
-	t.Run("VecScaleBaseBase", func(t *testing.T) {
-		checkPanics(t, func() {
-			VecScaleBaseBase(make([]Element, n), Element{}, make([]Element, short))
-		})
-	})
-
 	t.Run("VecBatchInvBase", func(t *testing.T) {
 		checkPanics(t, func() {
 			VecBatchInvBase(make([]Element, n), make([]Element, short))
@@ -814,13 +711,12 @@ func TestVecLengthMismatchPanics(t *testing.T) {
 // res aliases an input, as callers that update a vector in place do.
 func TestVecKernelsInPlace(t *testing.T) {
 	a, b := randomElems(testN), randomElems(testN)
-	s := a[0]
 	x := randomExts(testN)
+	sExt := x[0]
 	baseCases := map[string]func(res, a, b []Element){
-		"Add":   VecAddBaseBase,
-		"Sub":   VecSubBaseBase,
-		"Mul":   VecMulBaseBase,
-		"Scale": func(res, a, _ []Element) { VecScaleBaseBase(res, s, a) },
+		"Add": VecAddBaseBase,
+		"Sub": VecSubBaseBase,
+		"Mul": VecMulBaseBase,
 	}
 	for name, f := range baseCases {
 		want := make([]Element, testN)
@@ -832,8 +728,8 @@ func TestVecKernelsInPlace(t *testing.T) {
 		}
 	}
 	extCases := map[string]func(res, x []Ext){
-		"MulExtBase":   func(res, x []Ext) { VecMulExtBase(res, x, b) },
-		"ScaleBaseExt": func(res, x []Ext) { VecScaleBaseExt(res, s, x) },
+		"MulExtBase":  func(res, x []Ext) { VecMulExtBase(res, x, b) },
+		"ScaleExtExt": func(res, x []Ext) { VecScaleExtExt(res, sExt, x) },
 	}
 	for name, f := range extCases {
 		want := make([]Ext, testN)

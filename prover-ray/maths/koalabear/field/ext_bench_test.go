@@ -121,15 +121,3 @@ func BenchmarkVecMulExtExt(b *testing.B) {
 		VecMulExtExt(out, a, c)
 	}
 }
-
-// BenchmarkVecScaleBaseExt measures the cost of scaling an extension vector
-// by a single base scalar (uses MulByElement under the hood).
-func BenchmarkVecScaleBaseExt(b *testing.B) {
-	a := benchExts(benchN)
-	s := benchElems(1)[0]
-	out := make([]Ext, benchN)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		VecScaleBaseExt(out, s, a)
-	}
-}
