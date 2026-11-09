@@ -57,9 +57,9 @@ type DynamicPath struct {
 	// Order[k] is the k-th group folded: the groups by decreasing height,
 	// equal heights by increasing index, which is the order fri.Tree chains
 	// them in (the groups of a size in module order). The chip does not check
-	// it: the caller checks that it is that permutation. An index past G reads
-	// no entry of Leaves and Heights, but a repeated group could, leaving
-	// another group's leaf unauthenticated.
+	// it: the caller checks it once per tree, with AssertCanonicalOrder. An
+	// index past G reads no entry of Leaves and Heights, but a repeated group
+	// could, leaving another group's leaf unauthenticated.
 	Order Table
 	// Siblings[h−1] is the sibling at height h (h = 1..H), anything above the
 	// tree's actual height; H = Siblings.Len(), at most field.Bits − 1.
