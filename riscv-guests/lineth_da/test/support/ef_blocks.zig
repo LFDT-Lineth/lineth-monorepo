@@ -270,6 +270,12 @@ pub const Located = struct {
 pub fn locateCase(arena: Allocator, io: std.Io, corpus_dir: []const u8, path: []const u8, case_name: []const u8) !Case {
     const full_path = try std.fs.path.join(arena, &.{ corpus_dir, path });
     const text = try std.Io.Dir.cwd().readFileAlloc(io, full_path, arena, .limited(1 << 30));
+    return caseOf(arena, text, path, case_name);
+}
+
+/// The case `case_name` of the fixture JSON `text`, which came from the file `path`. The case and
+/// the allocations of parsing belong to `arena`.
+pub fn caseOf(arena: Allocator, text: []const u8, path: []const u8, case_name: []const u8) !Case {
     const cases = try std.json.parseFromSliceLeaky(std.json.ArrayHashMap(RawCase), arena, text, .{ .ignore_unknown_fields = true });
     const raw = cases.map.get(case_name) orelse return error.CaseNotFound;
     const blocks = try arena.alloc(?Fact, raw.blocks.len);
