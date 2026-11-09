@@ -4,6 +4,7 @@ permissions:
   contents: write
   actions: read
   packages: write
+  id-token: write
 
 on:
   workflow_call:
@@ -48,11 +49,6 @@ on:
       docker_tag_with_suffix:
         description: "Docker image tag with suffix (same value as docker_tag if no suffix is given)"
         value: ${{ jobs.build-and-push-dockerhub.outputs.docker_tag_with_suffix }}
-    secrets:
-      DOCKERHUB_USERNAME:
-        required: false
-      DOCKERHUB_TOKEN:
-        required: false
 
 jobs:
   build-and-upload-artifact:
@@ -88,10 +84,7 @@ jobs:
     needs: [ run-test, run-e2e-tests ]
     if: ${{ always() && !cancelled() && (!inputs.run_e2e_test || needs.run-e2e-tests.outputs.tests_outcome == 'success') && (!inputs.run-test || needs.run-test.result == 'success') }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
-    environment: dockerhub
-    env:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    environment: publish
     outputs:
       docker_tag: ${{ steps.build-plugins-and-assemble.outputs.dockertag }}
       docker_tag_with_suffix: ${{ steps.build-plugins-and-assemble.outputs.dockertag_with_suffix }}
@@ -113,11 +106,13 @@ jobs:
 
       # QEMU and buildx are set up by the shared docker-build-publish action.
       - name: Login to Docker Hub
-        if: ${{ !inputs.skip_docker_image_build_and_push && env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
+        if: ${{ !inputs.skip_docker_image_build_and_push && github.event.pull_request.head.repo.fork != true }}
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        env:
+          DOCKERHUB_OIDC_CONNECTIONID: ${{ vars.DOCKERHUB_OIDC_CONNECTIONID }}
+          DOCKERHUB_OIDC_EXPIREIN: 1800
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: consensys
 
       - name: set docker build args
         if: ${{ !inputs.skip_docker_image_build_and_push }}

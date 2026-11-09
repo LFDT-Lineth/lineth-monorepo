@@ -18,6 +18,7 @@ permissions:
   actions: read
   security-events: write
   packages: write
+  id-token: write
 
 jobs:
   # Manual-dispatch gate: only internal contributors (collaborators with

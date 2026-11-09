@@ -4,6 +4,7 @@ permissions:
   contents: read
   actions: read
   packages: write
+  id-token: write
 
 on:
   push:
@@ -65,6 +66,7 @@ jobs:
 
   all-tools-tag-only:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    environment: publish
     name: All tools tag only
     needs: [changes, store_image_name_and_tags, check_image_tags_exist]
     if: ${{ github.event_name != 'pull_request' && needs.changes.outputs['all-tools'] == 'false' }}
@@ -82,31 +84,31 @@ jobs:
           develop_tag: ${{ needs.store_image_name_and_tags.outputs.develop_tag }}
           image_name: consensys/linea-alltools
           last_commit_tag_exists: ${{ needs.check_image_tags_exist.outputs.last_commit_tag_exists }}
-          docker_username: ${{ secrets.DOCKERHUB_USERNAME }}
-          docker_password: ${{ secrets.DOCKERHUB_TOKEN }}
+          dockerhub_oidc_connection_id: ${{ vars.DOCKERHUB_OIDC_CONNECTIONID }}
 
   build-and-publish:
     needs: [changes, store_image_name_and_tags, all-tools-tag-only]
     if: ${{ always() && needs.store_image_name_and_tags.outputs.commit_tag != '' && (needs.changes.outputs['all-tools'] == 'true' || needs.all-tools-tag-only.result != 'success' || needs.all-tools-tag-only.outputs.image_tagged != 'true') }}
     # ~0.5 mins saved vs small
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    environment: publish
     env:
       COMMIT_TAG: ${{ needs.store_image_name_and_tags.outputs.commit_tag }}
       DEVELOP_TAG: ${{ needs.store_image_name_and_tags.outputs.develop_tag }}
       IMAGE_NAME: consensys/linea-alltools
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     name: All tools build and push
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Login to Docker Hub
-        if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
+        if: ${{ github.event.pull_request.head.repo.fork != true }}
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        env:
+          DOCKERHUB_OIDC_CONNECTIONID: ${{ vars.DOCKERHUB_OIDC_CONNECTIONID }}
+          DOCKERHUB_OIDC_EXPIREIN: 1800
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: consensys
       # Note: Building arm* images on QEMU emulator can get extremely slow
       # when downloading large packages with npm / yarn. Arm* based docker
       # images are not necessarily needed as we run amd64 machines for most

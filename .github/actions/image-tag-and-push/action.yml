@@ -17,12 +17,9 @@ inputs:
   last_commit_tag_exists:
     description: 'Whether the last commit image tag exists'
     required: true
-  docker_username:
-    description: 'The username to login to Docker Hub'
-    required: false
-  docker_password:
-    description: 'The password to login to Docker Hub'
-    required: false
+  dockerhub_oidc_connection_id:
+    description: 'Docker Hub OIDC connection ID. The calling job needs id-token: write.'
+    required: true
 
 outputs:
   image_tagged:
@@ -35,9 +32,11 @@ runs:
     - name: Login to Docker Hub
       if: ${{ github.ref == 'refs/heads/main' && inputs.last_commit_tag_exists == '0' }}
       uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+      env:
+        DOCKERHUB_OIDC_CONNECTIONID: ${{ inputs.dockerhub_oidc_connection_id }}
+        DOCKERHUB_OIDC_EXPIREIN: 1800
       with:
-        username: ${{ inputs.docker_username }}
-        password: ${{ inputs.docker_password }}
+        username: consensys
     - name: Initialize IMAGE_TAGGED value
       shell: bash
       run: |

@@ -4,6 +4,7 @@ permissions:
   contents: read
   actions: read
   packages: write
+  id-token: write
 
 on:
   workflow_call:
@@ -41,11 +42,6 @@ on:
     outputs:
       linea_besu_package_tag:
         value: ${{ jobs.linea_besu_package_build_and_upload.outputs.linea_besu_package_tag }}
-    secrets:
-      DOCKERHUB_USERNAME:
-        required: false
-      DOCKERHUB_TOKEN:
-        required: false
 
 jobs:
   coordinator:

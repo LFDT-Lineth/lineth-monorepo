@@ -3,6 +3,7 @@ name: "Reusable: Linea-besu-package Run E2E Tests"
 permissions:
   contents: read
   actions: read
+  id-token: write
 
 on:
   workflow_call:
@@ -29,11 +30,6 @@ on:
     outputs:
       tests_outcome:
         value: ${{ jobs.run-e2e-tests.outputs.tests_outcome }}
-    secrets:
-      DOCKERHUB_USERNAME:
-        required: false
-      DOCKERHUB_TOKEN:
-        required: false
 
 jobs:
   # Required job
@@ -45,11 +41,10 @@ jobs:
       LINEA_PROVER_TAG: develop
       LINEA_TRANSACTION_EXCLUSION_API_TAG: develop
       MARU_TAG: develop
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     outputs:
       tests_outcome: ${{ steps.run_e2e_tests.outcome }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
+    environment: publish
     steps:
       - name: Setup upterm session
         if: ${{ inputs.e2e-tests-with-ssh }}
@@ -63,11 +58,13 @@ jobs:
           commands: |
             pnpm run -F "e2e^..." build
       - name: Login to Docker Hub
-        if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
+        if: ${{ github.event.pull_request.head.repo.fork != true }}
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        env:
+          DOCKERHUB_OIDC_CONNECTIONID: ${{ vars.DOCKERHUB_OIDC_CONNECTIONID }}
+          DOCKERHUB_OIDC_EXPIREIN: 1800
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: consensys
       - name: Create directory for conflated traces
         run: |
           mkdir -p tmp/local/traces/v2/conflated
