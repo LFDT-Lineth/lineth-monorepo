@@ -1,6 +1,6 @@
 ARG NODE_VERSION=24.22.1
 
-FROM node:${NODE_VERSION}-slim AS base
+FROM node:${NODE_VERSION}-trixie-slim AS base
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
@@ -45,13 +45,18 @@ COPY ./ts-libs/linea-native-libs ./ts-libs/linea-native-libs
 COPY ./ts-libs/linea-shared-utils ./ts-libs/linea-shared-utils
 COPY ./ts-libs/eslint-config ./ts-libs/eslint-config
 
-# Build and create production deployment
+# Build and create production deployment.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm run build \
     && pnpm --config.allow-unused-patches=true --config.block-exotic-subdeps=false deploy --legacy --filter=./postman --prod ./prod/postman
 
-FROM node:${NODE_VERSION}-slim AS production
+FROM node:${NODE_VERSION}-trixie-slim AS production
 
 ENV NODE_ENV=production
+
+# The runtime only needs the node binary: drop the bundled package managers and their dependencies.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+    /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+    /opt/yarn-* /usr/local/bin/yarn /usr/local/bin/yarnpkg
 
 WORKDIR /usr/src/app
 
