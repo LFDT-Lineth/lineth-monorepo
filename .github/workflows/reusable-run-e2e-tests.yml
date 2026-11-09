@@ -128,4 +128,4 @@ jobs:
           e2e-tests-with-ssh: ${{ inputs.e2e-tests-with-ssh }}
           e2e-tests-logs-dump: ${{ inputs.e2e-tests-logs-dump }}
           e2e-tests-containers-list: ${{ inputs.e2e-tests-containers-list }}
-          dockerhub_oidc_connection_id: ${{ github.event.pull_request.head.repo.fork != true && vars.DOCKERHUB_OIDC_CONNECTIONID || '' }}
+          dockerhub_oidc_connection_id: ${{ github.event.pull_request.head.repo.fork != true && vars.DOCKERHUB_OIDC_CONNECTIONID_PULL || '' }}

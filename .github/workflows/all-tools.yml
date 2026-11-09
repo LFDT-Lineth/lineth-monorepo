@@ -84,7 +84,7 @@ jobs:
           develop_tag: ${{ needs.store_image_name_and_tags.outputs.develop_tag }}
           image_name: consensys/linea-alltools
           last_commit_tag_exists: ${{ needs.check_image_tags_exist.outputs.last_commit_tag_exists }}
-          dockerhub_oidc_connection_id: ${{ vars.DOCKERHUB_OIDC_CONNECTIONID }}
+          dockerhub_oidc_connection_id: ${{ vars.DOCKERHUB_OIDC_CONNECTIONID_LINEA_ALLTOOLS }}
 
   build-and-publish:
     needs: [changes, store_image_name_and_tags, all-tools-tag-only]
@@ -105,7 +105,7 @@ jobs:
         if: ${{ github.event.pull_request.head.repo.fork != true }}
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         env:
-          DOCKERHUB_OIDC_CONNECTIONID: ${{ vars.DOCKERHUB_OIDC_CONNECTIONID }}
+          DOCKERHUB_OIDC_CONNECTIONID: ${{ vars.DOCKERHUB_OIDC_CONNECTIONID_LINEA_ALLTOOLS }}
           DOCKERHUB_OIDC_EXPIREIN: 1800
         with:
           username: consensys

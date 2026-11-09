@@ -109,7 +109,7 @@ jobs:
         if: ${{ !inputs.skip_docker_image_build_and_push && github.event.pull_request.head.repo.fork != true }}
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         env:
-          DOCKERHUB_OIDC_CONNECTIONID: ${{ vars.DOCKERHUB_OIDC_CONNECTIONID }}
+          DOCKERHUB_OIDC_CONNECTIONID: ${{ vars.DOCKERHUB_OIDC_CONNECTIONID_LINEA_BESU_PACKAGE }}
           DOCKERHUB_OIDC_EXPIREIN: 1800
         with:
           username: consensys
