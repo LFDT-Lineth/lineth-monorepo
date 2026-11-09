@@ -2,6 +2,7 @@ package wiop
 
 import (
 	"fmt"
+	"math"
 	"sync"
 	"sync/atomic"
 
@@ -123,9 +124,9 @@ func (op ArithmeticOperator) combineDegree(operandDegrees []int) int {
 	case ArithmeticOperatorDouble, ArithmeticOperatorNegate:
 		return operandDegrees[0]
 	case ArithmeticOperatorMul:
-		return operandDegrees[0] + operandDegrees[1]
+		return addDegrees("Degree", operandDegrees[0], operandDegrees[1])
 	case ArithmeticOperatorSquare:
-		return 2 * operandDegrees[0]
+		return addDegrees("Degree", operandDegrees[0], operandDegrees[0])
 	case ArithmeticOperatorDiv, ArithmeticOperatorInverse:
 		panic(fmt.Sprintf("wiop: Degree() called on non-polynomial expression (%v)", op))
 	default:
@@ -146,14 +147,25 @@ func (op ArithmeticOperator) combineDegreeFactor(operandFactors []int) int {
 	case ArithmeticOperatorDouble, ArithmeticOperatorNegate:
 		return operandFactors[0]
 	case ArithmeticOperatorMul:
-		return operandFactors[0] + operandFactors[1]
+		return addDegrees("DegreeFactor", operandFactors[0], operandFactors[1])
 	case ArithmeticOperatorSquare:
-		return 2 * operandFactors[0]
+		return addDegrees("DegreeFactor", operandFactors[0], operandFactors[0])
 	case ArithmeticOperatorDiv, ArithmeticOperatorInverse:
 		panic(fmt.Sprintf("wiop: DegreeFactor() called on non-polynomial expression (%v)", op))
 	default:
 		panic(fmt.Sprintf("wiop: unknown ArithmeticOperator %d", int(op)))
 	}
+}
+
+// addDegrees returns a + b for the degrees (or degree factors) of the operands
+// of a product, and panics rather than wrap around: a DAG of repeated
+// squarings can reach a degree above [math.MaxInt] in a few dozen distinct
+// nodes.
+func addDegrees(what string, a, b int) int {
+	if (b > 0 && a > math.MaxInt-b) || (b < 0 && a < math.MinInt-b) {
+		panic(fmt.Sprintf("wiop: %s() overflows int (%d + %d)", what, a, b))
+	}
+	return a + b
 }
 
 // String implements [fmt.Stringer].
@@ -273,12 +285,28 @@ func (a *ArithmeticOperation) IsMultiValued() bool {
 // Degree implements [Expression]. Combines the degrees of the operands using
 // the operator's own degree-combination rule. Panics for non-polynomial
 // operators (Div, Inverse).
+//
+// Each distinct node is visited once per call. The result is not cached on the
+// node: it depends on the module size, which may not be known yet.
 func (a *ArithmeticOperation) Degree() int {
+	return a.degree(make(map[*ArithmeticOperation]int))
+}
+
+func (a *ArithmeticOperation) degree(memo map[*ArithmeticOperation]int) int {
+	if d, ok := memo[a]; ok {
+		return d
+	}
 	degrees := make([]int, len(a.Operands))
 	for i, o := range a.Operands {
-		degrees[i] = o.Degree()
+		if op, ok := o.(*ArithmeticOperation); ok {
+			degrees[i] = op.degree(memo)
+		} else {
+			degrees[i] = o.Degree()
+		}
 	}
-	return a.Operator.combineDegree(degrees)
+	d := a.Operator.combineDegree(degrees)
+	memo[a] = d
+	return d
 }
 
 // DegreeFactor implements [Expression]. Combines the degree factors of the
@@ -312,16 +340,38 @@ func (a *ArithmeticOperation) Size() int {
 
 // IsSized implements [Expression]. Returns true if all vector-valued operands
 // are sized. Panics if IsMultiValued() is false.
+//
+// Each distinct node is visited once per call. The result is not cached on the
+// node: a dynamic module's size is set later.
 func (a *ArithmeticOperation) IsSized() bool {
 	if !a.IsMultiValued() {
 		panic("wiop: IsSized() called on a scalar ArithmeticOperation; check IsMultiValued() first")
 	}
+	return a.isSized(make(map[*ArithmeticOperation]bool))
+}
+
+func (a *ArithmeticOperation) isSized(memo map[*ArithmeticOperation]bool) bool {
+	if s, ok := memo[a]; ok {
+		return s
+	}
+	res := true
 	for _, o := range a.Operands {
-		if o.IsMultiValued() && !o.IsSized() {
-			return false
+		if !o.IsMultiValued() {
+			continue
+		}
+		var sized bool
+		if op, ok := o.(*ArithmeticOperation); ok {
+			sized = op.isSized(memo)
+		} else {
+			sized = o.IsSized()
+		}
+		if !sized {
+			res = false
+			break
 		}
 	}
-	return true
+	memo[a] = res
+	return res
 }
 
 // EvaluateVector implements [Expression].

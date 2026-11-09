@@ -170,6 +170,22 @@ func TestMaxRoundInExpr_MultipleRounds(t *testing.T) {
 	assert.Equal(t, r1, v.Round())
 }
 
+// Vanishing.Round walks each distinct node of a shared DAG once.
+func TestMaxRoundInExpr_SharedDAG(t *testing.T) {
+	sys := wiop.NewSystemf("s")
+	r0 := sys.NewRound()
+	r1 := sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("m"), 4, wiop.PaddingDirectionNone)
+	c0 := mod.NewColumn(sys.Context.Childf("c0"), r0)
+	c1 := mod.NewColumn(sys.Context.Childf("c1"), r1)
+	x := wiop.Mul(c0.View(), c1.View())
+	for range 64 {
+		x = wiop.Add(x, x)
+	}
+	v := mod.NewVanishingManual(sys.Context.Childf("v"), x)
+	assert.Equal(t, r1, v.Round(), "the latest round at the bottom of the shared DAG must be found")
+}
+
 func TestVanishing_Check_Vector_ExtZero(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
 	extCol := mod.NewExtensionColumn(sys.Context.Childf("extZeroCol"), r0)

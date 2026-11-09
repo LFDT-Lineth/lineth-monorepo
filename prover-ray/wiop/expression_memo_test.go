@@ -66,3 +66,36 @@ func TestDegreeFactor_PanicIsNotCached(t *testing.T) {
 	assert.Panics(t, func() { div.DegreeFactor() }, "DegreeFactor of a Div must panic")
 	assert.Panics(t, func() { div.DegreeFactor() }, "a second DegreeFactor of a Div must panic again, not return a cached zero")
 }
+
+// Degree and IsSized are not cached on the node, but each call visits a
+// distinct node once.
+func TestDegreeAndIsSized_AreLinearOnDAGs(t *testing.T) {
+	sys := wiop.NewSystemf("degree-sized-dag")
+	r0 := sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
+
+	x := doublingDAG(col.View(), 64)
+	assert.Equal(t, col.View().Degree(), x.Degree(), "sums of a column keep the column's degree")
+	assert.True(t, x.IsSized(), "a DAG over a sized column must be sized")
+
+	sq := doublingDAG(wiop.Mul(col.View(), col.View()), 64)
+	assert.Equal(t, 2*col.View().Degree(), sq.Degree(), "sums of a squared column keep the squared degree")
+}
+
+// A chain of 64 squarings has degree factor 2^64, above math.MaxInt: it must
+// panic instead of wrapping around, and keep panicking (nothing is cached).
+func TestDegreeFactor_OverflowPanics(t *testing.T) {
+	sys := wiop.NewSystemf("degree-factor-overflow")
+	r0 := sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
+
+	var x wiop.Expression = col.View()
+	for range 64 {
+		x = wiop.Mul(x, x)
+	}
+	assert.Panics(t, func() { x.DegreeFactor() }, "a degree factor of 2^64 must panic, not wrap")
+	assert.Panics(t, func() { x.DegreeFactor() }, "an overflowing DegreeFactor must not be cached")
+	assert.Panics(t, func() { x.Degree() }, "a degree above math.MaxInt must panic, not wrap")
+}

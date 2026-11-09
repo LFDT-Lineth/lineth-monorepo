@@ -105,6 +105,13 @@ func roundOf(fp FieldPromise) *Round {
 // the highest ID reachable from any leaf node, or nil if the expression
 // contains no round-carrying leaf.
 func maxRoundInExpr(expr Expression) *Round {
+	return maxRoundIn(expr, make(map[*ArithmeticOperation]*Round))
+}
+
+// maxRoundIn is [maxRoundInExpr] with memo holding the result of each
+// operation node already visited, so a node shared in the expression DAG is
+// walked once rather than once per path to it.
+func maxRoundIn(expr Expression, memo map[*ArithmeticOperation]*Round) *Round {
 	switch e := expr.(type) {
 	case *ColumnView:
 		return e.Column.round
@@ -115,13 +122,17 @@ func maxRoundInExpr(expr Expression) *Round {
 	case *CoinField:
 		return e.round
 	case *ArithmeticOperation:
+		if r, ok := memo[e]; ok {
+			return r
+		}
 		var best *Round
 		for _, op := range e.Operands {
-			r := maxRoundInExpr(op)
+			r := maxRoundIn(op, memo)
 			if r != nil && (best == nil || r.ID > best.ID) {
 				best = r
 			}
 		}
+		memo[e] = best
 		return best
 	default:
 		return nil
