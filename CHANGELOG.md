@@ -111,6 +111,7 @@
 - *(tracer)* Adapt reference tests to Besu block processor API (#4328)
 - *(coordinator)* Enforce end-block invariant in RollupAggregationProofResponseV1 (#4315)
 - *(coordinator, docker)* Let downstream images opt out of the license files (#4382)
+- *(postman)* Optimize docker image (#4424)
 
 ### 🚜 Refactor
 

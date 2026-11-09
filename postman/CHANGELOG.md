@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🐛 Bug Fixes
+
+- *(postman)* Optimize docker image (#4424)
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(misc)* Update copyright holder to Consensys Incorporated (#4244)
