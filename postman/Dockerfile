@@ -1,4 +1,7 @@
 ARG NODE_VERSION=24.22.1
+# Docker Hardened Image (node only, no shell or package manager). Pulling it requires `docker login dhi.io`;
+# builds without Docker Hub credentials can pass RUNTIME_IMAGE=node:<version>-trixie-slim instead.
+ARG RUNTIME_IMAGE=dhi.io/node:${NODE_VERSION}
 
 FROM node:${NODE_VERSION}-trixie-slim AS base
 
@@ -49,7 +52,7 @@ COPY ./ts-libs/eslint-config ./ts-libs/eslint-config
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm run build \
     && pnpm --config.allow-unused-patches=true --config.block-exotic-subdeps=false deploy --legacy --filter=./postman --prod ./prod/postman
 
-FROM dhi.io/node:${NODE_VERSION} AS production
+FROM ${RUNTIME_IMAGE} AS production
 
 ENV NODE_ENV=production
 

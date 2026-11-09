@@ -60,6 +60,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # The runtime base image comes from Docker Hardened Images, which requires an authenticated pull.
+      # Without credentials (fork PRs, dependabot) the build falls back to the public slim image below.
       - name: Login to Docker Hardened Images
         if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
@@ -83,6 +84,7 @@ jobs:
           build_args: |
             NATIVE_LIBS_RELEASE_TAG=blob-libs-v3.0.1
             NODE_VERSION=${{ steps.get-node-version.outputs.node-version }}
+            ${{ (env.DOCKERHUB_USERNAME == '' || env.DOCKERHUB_TOKEN == '') && format('RUNTIME_IMAGE=node:{0}-trixie-slim', steps.get-node-version.outputs.node-version) || '' }}
           save_artifact: ${{ env.PUSH_IMAGE == 'false' }}
           artifact_name: linea-postman
           requires_qemu: ${{ env.PUSH_IMAGE }}
