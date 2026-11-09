@@ -202,11 +202,15 @@ func compileModule(
 	// every module is opened at the same random evaluation point.
 
 	// --- Step 5: collect all unique column views across all vanishings ---
+	// One visited set across every vanishing: a node shared between them is
+	// walked once, and the views it holds were recorded on that first walk,
+	// so the order of first occurrences is unchanged.
 	viewKeyToIdx := make(map[colViewKey]int)
 	var views []*wiop.ColumnView
+	visitedViews := make(map[*wiop.ArithmeticOperation]struct{})
 	for _, bkt := range rawBuckets {
 		for _, v := range bkt.vanishings {
-			for _, cv := range collectColumnViews(v.Expression) {
+			for _, cv := range collectColumnViews(v.Expression, visitedViews) {
 				key := colViewKey{id: cv.Column.Context.ID, shift: cv.ShiftingOffset}
 				if _, exists := viewKeyToIdx[key]; !exists {
 					viewKeyToIdx[key] = len(views)
@@ -294,8 +298,12 @@ func buildModuleQuotient(rawBuckets []rawBucket, m *wiop.Module, mergeCoin *wiop
 	colIdx := make(map[wiop.ObjectID]int)
 	for _, bkt := range rawBuckets {
 		q.maxRatio = max(q.maxRatio, bkt.ratio)
+		// One visited set per bucket, not per module: every column a bucket
+		// reads must see that bucket's ratio, including the columns of a node
+		// another bucket shares.
+		visited := make(map[*wiop.ArithmeticOperation]struct{})
 		for _, v := range bkt.vanishings {
-			for _, col := range collectRootColumns(v.Expression) {
+			for _, col := range collectRootColumns(v.Expression, visited) {
 				i, ok := colIdx[col.Context.ID]
 				if !ok {
 					i = len(q.rootCols)
@@ -513,9 +521,12 @@ func computeLagrangeSelectorCoset(position, n, N int) []field.Element {
 }
 
 // collectLagrangeSelectorPositions records the Position of every
-// [wiop.LagrangeSelector] leaf reachable from expr into out.
-func collectLagrangeSelectorPositions(expr wiop.Expression, out map[int]struct{}) {
-	walkLeaves(expr, func(leaf wiop.Expression) {
+// [wiop.LagrangeSelector] leaf reachable from expr into out, skipping the
+// nodes in visited.
+func collectLagrangeSelectorPositions(
+	expr wiop.Expression, visited map[*wiop.ArithmeticOperation]struct{}, out map[int]struct{},
+) {
+	wiop.WalkLeaves(expr, visited, func(leaf wiop.Expression) {
 		if ls, ok := leaf.(*wiop.LagrangeSelector); ok {
 			out[ls.Position] = struct{}{}
 		}
@@ -611,9 +622,10 @@ func (q *moduleQuotient) run(rt *wiop.Runtime) {
 	// Selectors are not committed columns: they are computed in closed form.
 	// selectorCosets[position][t] = L_position(x_t).
 	selectorPositions := make(map[int]struct{})
+	visitedSelectors := make(map[*wiop.ArithmeticOperation]struct{})
 	for i := range q.buckets {
 		for _, v := range bktVanishings(&q.buckets[i]) {
-			collectLagrangeSelectorPositions(v.Expression, selectorPositions)
+			collectLagrangeSelectorPositions(v.Expression, visitedSelectors, selectorPositions)
 		}
 	}
 	selectorCosets := make(map[int][]field.Element, len(selectorPositions))
@@ -1249,36 +1261,12 @@ func evalExprAtPoint(
 // Expression tree traversal helpers
 // ---------------------------------------------------------------------------
 
-// walkLeaves calls visit on the leaves of expr in depth-first, left-to-right
-// order, descending into each distinct compound node once. A leaf reachable
-// only through an already-visited node was reported on the first visit, so
-// the order of first occurrences is that of the full tree walk, while the cost
-// is linear in the distinct nodes rather than in the tree size.
-func walkLeaves(expr wiop.Expression, visit func(wiop.Expression)) {
-	seen := make(map[*wiop.ArithmeticOperation]struct{})
-	var walk func(wiop.Expression)
-	walk = func(e wiop.Expression) {
-		op, ok := e.(*wiop.ArithmeticOperation)
-		if !ok {
-			visit(e)
-			return
-		}
-		if _, done := seen[op]; done {
-			return
-		}
-		seen[op] = struct{}{}
-		for _, o := range op.Operands {
-			walk(o)
-		}
-	}
-	walk(expr)
-}
-
 // collectColumnViews collects the *ColumnView leaves of expr in order of first
-// occurrence. A view may appear more than once.
-func collectColumnViews(expr wiop.Expression) []*wiop.ColumnView {
+// occurrence, skipping the nodes in visited (see [wiop.WalkLeaves]; nil walks
+// expr alone). A view may appear more than once.
+func collectColumnViews(expr wiop.Expression, visited map[*wiop.ArithmeticOperation]struct{}) []*wiop.ColumnView {
 	var result []*wiop.ColumnView
-	walkLeaves(expr, func(leaf wiop.Expression) {
+	wiop.WalkLeaves(expr, visited, func(leaf wiop.Expression) {
 		if cv, ok := leaf.(*wiop.ColumnView); ok {
 			result = append(result, cv)
 		}
@@ -1286,20 +1274,19 @@ func collectColumnViews(expr wiop.Expression) []*wiop.ColumnView {
 	return result
 }
 
-// collectRootColumns recursively collects all unique root *Column objects
-// referenced by expr (deduplication by ObjectID).
-func collectRootColumns(expr wiop.Expression) []*wiop.Column {
-	views := collectColumnViews(expr)
-	seen := make(map[wiop.ObjectID]*wiop.Column, len(views))
+// collectRootColumns collects all unique root *Column objects referenced by
+// expr (deduplication by ObjectID), in order of first occurrence, skipping the
+// nodes in visited.
+func collectRootColumns(expr wiop.Expression, visited map[*wiop.ArithmeticOperation]struct{}) []*wiop.Column {
+	views := collectColumnViews(expr, visited)
+	seen := make(map[wiop.ObjectID]struct{}, len(views))
+	result := make([]*wiop.Column, 0, len(views))
 	for _, cv := range views {
 		id := cv.Column.Context.ID
 		if _, ok := seen[id]; !ok {
-			seen[id] = cv.Column
+			seen[id] = struct{}{}
+			result = append(result, cv.Column)
 		}
-	}
-	result := make([]*wiop.Column, 0, len(seen))
-	for _, col := range seen {
-		result = append(result, col)
 	}
 	return result
 }

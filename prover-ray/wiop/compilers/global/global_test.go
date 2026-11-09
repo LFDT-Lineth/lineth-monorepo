@@ -283,3 +283,57 @@ func TestCompile_SharedSubexpressionsAreLinear(t *testing.T) {
 	proof, pub = sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, colVec(size, pos, 5)) })
 	assert.Error(t, sys.Verify(proof, pub), "invalid: col[pos]=5 must be rejected")
 }
+
+// TestCompile_NodeSharedAcrossRatios shares one node between a ratio-2 and a
+// ratio-4 bucket, and reads a column only through it. Each bucket must still
+// evaluate that column on its own cosets, so the honest witness verifies and a
+// wrong row is rejected.
+func TestCompile_NodeSharedAcrossRatios(t *testing.T) {
+	const size = 16
+	build := func() (*wiop.System, *wiop.Column, *wiop.Column) {
+		sys := wiop.NewSystemf("gl-shared-across-ratios")
+		r0 := sys.NewRound()
+		mod := sys.NewSizedModule(sys.Context.Childf("mod"), size, wiop.PaddingDirectionNone)
+		col := mod.NewColumn(sys.Context.Childf("col"), r0)
+		other := mod.NewColumn(sys.Context.Childf("other"), r0)
+		c := func(shift int) wiop.Expression { return col.View().Shift(shift) }
+		one := wiop.NewConstantField(field.One())
+		step := func(s int) wiop.Expression { return wiop.Sub(wiop.Sub(c(s+1), c(s)), one) }
+		// other is read only through shared, which both buckets use.
+		shared := wiop.Mul(other.View(), other.View())
+		// Degree 3 with one cancelled row: ratio 2.
+		mod.NewVanishing(sys.Context.Childf("r2"), wiop.Mul(step(-1), shared))
+		// Degree 5 with one cancelled row: ratio 4.
+		mod.NewVanishing(sys.Context.Childf("r4"), wiop.Mul(step(0), wiop.Mul(shared, shared)))
+		global.Compile(sys)
+		pcs.Compile(sys)
+		return sys, col, other
+	}
+	sys, col, other := build()
+	witness := func(bad bool) (*wiop.ConcreteVector, *wiop.ConcreteVector) {
+		v, o := colVec(size, 0, 0), colVec(size, 0, 0)
+		ve, oe := v.Plain.AsBase(), o.Plain.AsBase()
+		for i := range ve {
+			ve[i].SetUint64(uint64(i))
+			oe[i].SetUint64(uint64(3*i + 7))
+		}
+		if bad {
+			ve[5].SetUint64(99)
+		}
+		return v, o
+	}
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+		v, o := witness(false)
+		rt.AssignColumn(col, v)
+		rt.AssignColumn(other, o)
+	})
+	require.NoError(t, sys.Verify(proof, pub), "the honest witness must verify")
+
+	sys, col, other = build()
+	proof, pub = sys.Prove(func(rt *wiop.Runtime) {
+		v, o := witness(true)
+		rt.AssignColumn(col, v)
+		rt.AssignColumn(other, o)
+	})
+	assert.Error(t, sys.Verify(proof, pub), "a wrong row must be rejected")
+}

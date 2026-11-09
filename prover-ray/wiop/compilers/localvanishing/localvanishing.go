@@ -188,28 +188,14 @@ func reduce(
 // constants across the coset. Shared nodes are visited once.
 func minColumnPosition(expr wiop.Expression) (int, bool) {
 	var (
-		anchor  int
-		found   bool
-		visited = make(map[wiop.Expression]struct{})
+		anchor int
+		found  bool
 	)
-	var walk func(e wiop.Expression)
-	walk = func(e wiop.Expression) {
-		if _, ok := visited[e]; ok {
-			return
+	// *Cell, *CoinField, *Constant leaves carry no positional info.
+	wiop.WalkLeaves(expr, nil, func(leaf wiop.Expression) {
+		if t, ok := leaf.(*wiop.ColumnPosition); ok && (!found || t.Position < anchor) {
+			anchor, found = t.Position, true
 		}
-		visited[e] = struct{}{}
-		switch t := e.(type) {
-		case *wiop.ColumnPosition:
-			if !found || t.Position < anchor {
-				anchor, found = t.Position, true
-			}
-		case *wiop.ArithmeticOperation:
-			for _, op := range t.Operands {
-				walk(op)
-			}
-			// *Cell, *CoinField, *Constant leaves carry no positional info.
-		}
-	}
-	walk(expr)
+	})
 	return anchor, found
 }
