@@ -1,11 +1,12 @@
 //! The requests the rollup guest rejects: every rule of the statement broken in an otherwise valid
 //! request, with the error it is rejected by and the exit-code category of that error; and the
 //! requests at the edge of an output bound, which it accepts. The requests are built from real
-//! blocks of the EF zkevm fixtures.
+//! blocks of the EF zkevm fixtures and of Linea mainnet.
 
 const std = @import("std");
 
 const core_serde = @import("core_serde");
+const devmode_prover = @import("devmode_prover");
 const rollup = @import("rollup");
 const scenario = @import("scenario");
 
@@ -19,10 +20,17 @@ const Address = scenario.Address;
 const Allocator = std.mem.Allocator;
 const Request = scenario.Request;
 
-/// Runs `request` and expects it rejected by `expected`, which belongs to the category `code`.
-fn expectRejected(expected: anyerror, code: guest_errors.ExitCode, a: Allocator, request: Request) !void {
+/// Runs `request` as it is and expects it rejected by `expected`, which belongs to the category
+/// `code`.
+fn expectRejectedAsIs(expected: anyerror, code: guest_errors.ExitCode, a: Allocator, request: Request) !void {
     try std.testing.expectError(expected, rollup.rollup.run(a, request.input()));
     try std.testing.expectEqual(code, guest_errors.exitCode(expected));
+}
+
+/// As `expectRejectedAsIs`, with the proofs valid for the public inputs the test left them with.
+fn expectRejected(expected: anyerror, code: guest_errors.ExitCode, a: Allocator, request: Request) !void {
+    try scenario.prove(a, request.proofs);
+    try expectRejectedAsIs(expected, code, a, request);
 }
 
 /// A request of consecutive conflations of the chain's blocks, `blocks[i]` in the `i`-th, in one
@@ -148,6 +156,17 @@ test "a chain ID other than the one the legacy transactions were signed under is
     try expectRejected(error.SenderRecoveryFailed, guest_errors.CODE_BLOCK_BINDING, a, request);
 }
 
+test "a Linea block window under another chain ID is rejected" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+
+    // The signatures of the window's transactions commit to the chain ID 59144.
+    var request = try scenario.build(a, try scenario.lineaConflations(a, &.{5}), .{});
+    request.chain_id = scenario.ef_chain_id;
+    try expectRejected(error.SenderRecoveryFailed, guest_errors.CODE_BLOCK_BINDING, a, request);
+}
+
 test "a block that carries a blob transaction is rejected" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
@@ -155,7 +174,7 @@ test "a block that carries a blob transaction is rejected" {
 
     // The proof and the segment are those of a chain block, which the blob block replaces.
     const selected = try scenario.selection();
-    var conflation = try scenario.conflationFrom(a, selected.chain[0..1]);
+    var conflation = try scenario.conflationFrom(a, scenario.ef_chain_id, selected.chain[0..1]);
     conflation.block_rlps = &.{selected.blob_transaction.rlp};
     const request = try scenario.build(a, &.{conflation}, .{});
     try expectRejected(error.MalformedBlock, guest_errors.CODE_BLOCK_BINDING, a, request);
@@ -365,8 +384,8 @@ test "a block that does not descend from the block before it is rejected" {
     // Every proof, hash and segment agrees with the blocks, whose second one descends from a block
     // the conflation leaves out.
     const chain = (try scenario.selection()).chain;
-    const first = try scenario.conflationFrom(a, &.{ chain[0], chain[2], chain[3] });
-    const second = scenario.follow(first, try scenario.conflationFrom(a, &.{chain[4]}));
+    const first = try scenario.conflationFrom(a, scenario.ef_chain_id, &.{ chain[0], chain[2], chain[3] });
+    const second = scenario.follow(first, try scenario.conflationFrom(a, scenario.ef_chain_id, &.{chain[4]}));
     const request = try scenario.build(a, &.{ first, second }, .{});
     try expectRejected(error.ParentHashMismatch, guest_errors.CODE_BLOCK_HASH_CHAIN, a, request);
 }
@@ -378,10 +397,42 @@ test "a conflation whose first block does not descend from the last block of the
 
     // The proofs continue each other, so only the parent hashes of the blocks reject the request.
     const chain = (try scenario.selection()).chain;
-    const first = try scenario.conflationFrom(a, chain[0..2]);
-    const second = scenario.follow(first, try scenario.conflationFrom(a, chain[3..5]));
+    const first = try scenario.conflationFrom(a, scenario.ef_chain_id, chain[0..2]);
+    const second = scenario.follow(first, try scenario.conflationFrom(a, scenario.ef_chain_id, chain[3..5]));
     const request = try scenario.build(a, &.{ first, second }, .{});
     try expectRejected(error.ParentHashMismatch, guest_errors.CODE_BLOCK_HASH_CHAIN, a, request);
+}
+
+test "a proof image with a changed round commitment is rejected by the recursive verifier" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+
+    const request = try requestOf(a, &.{ 1, 1 }, .{});
+    const image = try a.dupe(u8, request.proofs[1].proof.proof.bytes);
+    image[try devmode_prover.commitmentOffset(a, image)] ^= 0x01;
+    request.proofs[1].proof.proof = .{ .bytes = image };
+    try expectRejectedAsIs(error.RecursiveProofRejected, guest_errors.CODE_RECURSION, a, request);
+}
+
+test "a proof of another conflation's public input is rejected by the recursive verifier" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+
+    const request = try requestOf(a, &.{ 1, 1 }, .{});
+    request.proofs[0].proof.proof = request.proofs[1].proof.proof;
+    try expectRejectedAsIs(error.RecursiveProofRejected, guest_errors.CODE_RECURSION, a, request);
+}
+
+test "a program VK with a limb that is not a canonical field element is rejected by the recursive verifier" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+
+    const request = try requestOf(a, &.{ 1, 1 }, .{});
+    request.proofs[1].program_vk[4..8].* = .{ 0xff, 0xff, 0xff, 0xff };
+    try expectRejectedAsIs(error.RecursiveProofRejected, guest_errors.CODE_RECURSION, a, request);
 }
 
 test "a proof whose public input is beyond a bound of its wire schema is rejected by the recursive verifier" {
@@ -516,6 +567,7 @@ test "more distinct filtered addresses than the output holds are rejected by the
     request.proofs[0].proof.public_inputs.filtered_addresses = .{ .items = addresses[0..max] };
     request.proofs[1].proof.public_inputs.filtered_addresses = .{ .items = addresses[max..] };
 
+    try scenario.prove(a, request.proofs);
     const frame = try rollup_ssz.encodeInput(a, request.input());
     try std.testing.expectError(error.OutputEncodeFailed, rollup.rollup.runFramed(a, frame));
     try std.testing.expectEqual(guest_errors.CODE_OUTPUT_ENCODE_FAILED, guest_errors.exitCode(error.OutputEncodeFailed));
@@ -534,6 +586,7 @@ test "the same maximal list of filtered addresses in two proofs is accepted as o
     request.proofs[0].proof.public_inputs.filtered_addresses = .{ .items = descending };
     request.proofs[1].proof.public_inputs.filtered_addresses = .{ .items = addresses };
 
+    try scenario.prove(a, request.proofs);
     const pi = try rollup.rollup.run(a, request.input());
     try std.testing.expectEqualSlices(Address, addresses, pi.filtered_addresses.items);
 }
@@ -549,6 +602,7 @@ test "a maximal list of distinct filtered addresses split between two proofs is 
     request.proofs[0].proof.public_inputs.filtered_addresses = .{ .items = addresses[max / 2 ..] };
     request.proofs[1].proof.public_inputs.filtered_addresses = .{ .items = addresses[0 .. max / 2] };
 
+    try scenario.prove(a, request.proofs);
     const pi = try rollup.rollup.run(a, request.input());
     try std.testing.expectEqualSlices(Address, addresses, pi.filtered_addresses.items);
 }

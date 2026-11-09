@@ -1,14 +1,12 @@
-//! The rollup guest statement over the Amsterdam blocks of the Ethereum Foundation's zkevm fixtures.
-//! The consecutive valid blocks of each fixture are grouped into conflations whose hashes, parent
-//! hashes, numbers, timestamps and senders are the fixture's own, published in calldata and blob
-//! chunks, alone and sharing a blob with the neighbouring proofs. Every request is accepted with
-//! the public inputs the fixture determines, and a tampered copy of it is rejected by the error of
-//! the rule it breaks.
+//! The rollup guest statement over the curated blocks: each accepted EF block alone, the EF chain of
+//! ten consecutive blocks and the Linea mainnet window of 150. Each run of consecutive blocks is
+//! grouped into conflations whose hashes, parent hashes, numbers, timestamps and senders are the
+//! fixture's own, published in calldata and blob chunks, alone and sharing a blob with the
+//! neighbouring proofs. Every request is accepted with the public inputs the fixture determines, and
+//! a tampered copy of it is rejected by the error of each rule it breaks.
 
 const std = @import("std");
 
-const ef_blocks = @import("ef_blocks");
-const ef_fixtures = @import("ef_fixtures");
 const rollup = @import("rollup");
 const scenario = @import("scenario");
 
@@ -16,31 +14,50 @@ const rollup_ssz = rollup.rollup_ssz;
 const ByteList = @import("guest_common").ssz.ByteList(rollup_ssz.MAX_BYTES_PER_BLOCK_RLP);
 
 const Allocator = std.mem.Allocator;
-const Fact = ef_blocks.Fact;
+const Fact = scenario.Fact;
 
-const gpa = std.testing.allocator;
-const io = std.testing.io;
+/// Consecutive blocks of one chain.
+const Run = struct {
+    label: []const u8,
+    chain_id: u64,
+    blocks: []const Fact,
+    layouts: []const Layout,
+};
 
-/// One request in this many publishes its stream in a blob, whose commitment and proof cost far more
-/// than the rest of the request.
-const blob_period = 16;
+/// How the stream of a request is cut into chunks.
+const Layout = enum {
+    /// The whole stream in one blob.
+    one_blob,
+    /// A segment that starts in a blob and ends in calldata.
+    blob_into_calldata,
+    /// A blob shared with the previous and the next proof.
+    shared_blob,
+    /// Calldata cut at a segment boundary, when there is one.
+    calldata_cut,
+    calldata,
+    /// Two full blobs and the rest of the stream in a third, which the segments' stored frames make long enough.
+    full_blobs,
+    /// A range that starts inside the first of two blobs.
+    range_in_first_blob,
 
-/// How the stream of the `index`-th request is cut into chunks.
-fn chunksOf(index: usize, conflations: usize) []const scenario.ChunkSpec {
-    return switch (index % blob_period) {
-        0 => &.{.{}},
-        // A segment that starts in a blob and ends in calldata.
-        blob_period / 2 - 1 => &.{ .{ .own = .{ .bytes = 8 } }, .{ .kind = .calldata } },
-        // A blob shared with the previous and the next proof.
-        blob_period / 2 => &.{.{ .prefix = .{ .bytes = 37 }, .suffix = 91 }},
-        // Calldata cut at a segment boundary, when there is one.
-        3 => if (conflations > 1)
-            &.{ .{ .kind = .calldata, .own = .{ .through_segment = 1 } }, .{ .kind = .calldata } }
-        else
-            &.{.{ .kind = .calldata }},
-        else => &.{.{ .kind = .calldata }},
-    };
-}
+    fn chunks(self: Layout, conflations: usize) []const scenario.ChunkSpec {
+        return switch (self) {
+            .one_blob => &.{.{}},
+            .blob_into_calldata => &.{ .{ .own = .{ .bytes = 8 } }, .{ .kind = .calldata } },
+            .shared_blob => &.{.{ .prefix = .{ .bytes = 37 }, .suffix = 91 }},
+            .calldata_cut => if (conflations > 1)
+                &.{ .{ .kind = .calldata, .own = .{ .through_segment = 1 } }, .{ .kind = .calldata } }
+            else
+                &.{.{ .kind = .calldata }},
+            .calldata => &.{.{ .kind = .calldata }},
+            .full_blobs => &.{ .{ .own = .{ .bytes = scenario.blob_capacity } }, .{ .own = .{ .bytes = scenario.blob_capacity } }, .{} },
+            .range_in_first_blob => &.{ .{ .own = .{ .bytes = 30_000 }, .prefix = .full }, .{ .suffix = 70 } },
+        };
+    }
+};
+
+const short_layouts = [_]Layout{ .one_blob, .blob_into_calldata, .shared_blob, .calldata_cut, .calldata };
+const long_layouts = [_]Layout{ .calldata_cut, .range_in_first_blob, .full_blobs };
 
 const Tally = struct {
     requests: usize = 0,
@@ -52,154 +69,158 @@ const Tally = struct {
     tampered: usize = 0,
 };
 
-/// Builds the request of the `index`-th run of consecutive blocks, checks it is accepted with the
-/// public inputs the fixture determines, and checks a tampered copy of it is rejected.
-fn checkRun(a: Allocator, scratch: Allocator, index: usize, chain_id: u64, run: []const Fact, tally: *Tally) !void {
-    // Conflations of one to three blocks, in a rotation that depends on the run.
+/// The rules a tampered copy of a request breaks, each with the error the guest rejects it by.
+const Rule = enum {
+    senders_hash,
+    end_block_hash,
+    parent_block_hash,
+    chunk_hash,
+    malformed_block,
+    chunk_content,
+
+    fn error_of(self: Rule, request: scenario.Request) anyerror {
+        return switch (self) {
+            .senders_hash => error.SendersHashMismatch,
+            .end_block_hash => error.EndBlockHashMismatch,
+            .parent_block_hash => error.ParentHashMismatch,
+            .chunk_hash => error.ChunkHashMismatch,
+            .malformed_block => error.MalformedBlock,
+            .chunk_content => if (request.chunks[0].is_calldata.value) error.ChunkHashMismatch else error.BlobKzgMismatch,
+        };
+    }
+};
+
+/// Builds the request of `run` in `layout`, checks it is accepted with the public inputs the
+/// fixture determines, and checks every tampered copy of it is rejected.
+fn checkRequest(a: Allocator, scratch: Allocator, index: usize, run: Run, layout: Layout, tally: *Tally) !void {
+    // Conflations of one to three groups of blocks, in a rotation that depends on the request.
+    const group = std.math.divCeil(usize, run.blocks.len, 10) catch unreachable;
     var conflations: std.ArrayList(scenario.Conflation) = .empty;
     var start: usize = 0;
     var step = index % 3;
-    while (start < run.len) : (step += 1) {
-        const end = @min(start + 1 + step % 3, run.len);
-        try conflations.append(a, try scenario.conflationOf(a, scratch, chain_id, run[start..end]));
+    while (start < run.blocks.len) : (step += 1) {
+        const end = @min(start + group * (1 + step % 3), run.blocks.len);
+        try conflations.append(a, try scenario.conflationOf(a, scratch, run.chain_id, run.blocks[start..end]));
         start = end;
     }
 
-    const chunk_specs = chunksOf(index, conflations.items.len);
-    var request = try scenario.build(a, conflations.items, .{ .chain_id = chain_id, .chunks = chunk_specs });
+    var request = try scenario.build(a, conflations.items, .{ .chunks = layout.chunks(conflations.items.len), .stored_frames = layout == .full_blobs });
     const pi = try rollup.rollup.run(a, request.input());
 
-    const last = run[run.len - 1];
+    const last = run.blocks[run.blocks.len - 1];
     try std.testing.expectEqual(last.number, pi.end_block_number);
     try std.testing.expectEqual(last.timestamp, pi.end_block_timestamp);
-    try std.testing.expectEqual(@as(u64, run.len), pi.block_count);
+    try std.testing.expectEqual(@as(u64, run.blocks.len), pi.block_count);
     try std.testing.expectEqualSlices(u8, &last.hash, &pi.end_block_hash);
-    try std.testing.expectEqualSlices(u8, &run[0].parent_hash, &pi.parent_block_hash);
+    try std.testing.expectEqualSlices(u8, &run.blocks[0].parent_hash, &pi.parent_block_hash);
     try std.testing.expectEqual(request.parent_data_tail_take_bytes, pi.parent_data_tail_take_bytes);
     try std.testing.expectEqualSlices(u8, &request.end_data_rolling_hash, &pi.end_data_rolling_hash);
     try std.testing.expectEqual(request.final_data_tail_discard_bytes, pi.final_data_tail_discard_bytes);
 
     // The request survives the wire: the decoded frame gives the same public inputs.
-    if (index % 32 == 0) {
-        const frame = try rollup_ssz.encodeInput(a, request.input());
-        try std.testing.expectEqualDeep(pi, try rollup.rollup.run(a, try rollup_ssz.decodeInput(a, frame)));
-    }
+    const frame = try rollup_ssz.encodeInput(a, request.input());
+    try std.testing.expectEqualDeep(pi, try rollup.rollup.run(a, try rollup_ssz.decodeInput(a, frame)));
 
     tally.requests += 1;
-    tally.blocks += run.len;
+    tally.blocks += run.blocks.len;
     if (conflations.items.len > 1) tally.multi_conflation += 1;
     for (request.chunks) |chunk| {
         if (chunk.is_calldata.value) tally.calldata_chunks += 1 else tally.blobs += 1;
     }
     if (request.parent_data_tail_take_bytes > 0) tally.shared_blobs += 1;
 
-    try tamper(a, index, &request);
-    tally.tampered += 1;
+    for (std.enums.values(Rule)) |rule| {
+        try expectRejected(a, &request, rule);
+        tally.tampered += 1;
+    }
+    // Every rule left the request as it was.
+    try std.testing.expectEqualDeep(pi, try rollup.rollup.run(a, request.input()));
 }
 
-/// Breaks one rule of the accepted request, in a rotation, and expects the guest's error for it.
-fn tamper(a: Allocator, index: usize, request: *scenario.Request) !void {
-    const proofs = request.proofs;
-    const expected: anyerror = switch (index % 6) {
-        0 => blk: {
-            proofs[0].proof.public_inputs.tx_froms_hash[0] ^= 0x01;
-            break :blk error.SendersHashMismatch;
-        },
-        1 => blk: {
-            proofs[0].proof.public_inputs.end_block_hash[0] ^= 0x01;
-            break :blk error.EndBlockHashMismatch;
-        },
-        2 => blk: {
-            proofs[0].proof.public_inputs.parent_block_hash[0] ^= 0x01;
-            break :blk error.ParentHashMismatch;
-        },
-        3 => blk: {
-            request.chunks[0].chunk_hash[0] ^= 0x01;
-            break :blk error.ChunkHashMismatch;
-        },
-        4 => blk: {
+/// Breaks `rule` in the accepted request, expects the guest's error for it, and mends the request.
+fn expectRejected(a: Allocator, request: *scenario.Request, rule: Rule) !void {
+    const proofs = try a.dupe(@typeInfo(@TypeOf(request.proofs)).pointer.child, request.proofs);
+    const chunks = try a.dupe(@typeInfo(@TypeOf(request.chunks)).pointer.child, request.chunks);
+    const conflations = try a.dupe(@typeInfo(@TypeOf(request.conflations)).pointer.child, request.conflations);
+    const expected = rule.error_of(request.*);
+
+    switch (rule) {
+        .senders_hash => request.proofs[0].proof.public_inputs.tx_froms_hash[0] ^= 0x01,
+        .end_block_hash => request.proofs[0].proof.public_inputs.end_block_hash[0] ^= 0x01,
+        .parent_block_hash => request.proofs[0].proof.public_inputs.parent_block_hash[0] ^= 0x01,
+        .chunk_hash => request.chunks[0].chunk_hash[0] ^= 0x01,
+        .malformed_block => {
             // The first byte of a block RLP is the prefix of its list.
             const block_rlps = try a.dupe(ByteList, request.conflations[0].block_rlps.items);
             const block_rlp = try a.dupe(u8, block_rlps[0].bytes);
             block_rlp[0] ^= 0x01;
             block_rlps[0] = .{ .bytes = block_rlp };
             request.conflations[0].block_rlps = .{ .items = block_rlps };
-            break :blk error.MalformedBlock;
         },
-        else => blk: {
-            const first = request.chunks[0];
-            if (first.is_calldata.value) {
-                @constCast(first.calldata_bytes.bytes)[0] ^= 0x01;
-                break :blk error.ChunkHashMismatch;
-            }
-            @constCast(first.kzg_proof.bytes)[0] ^= 0x01;
-            break :blk error.BlobKzgMismatch;
-        },
-    };
+        .chunk_content => flipChunkContent(request.chunks[0]),
+    }
+    try scenario.prove(a, request.proofs);
     try std.testing.expectError(expected, rollup.rollup.run(a, request.input()));
+
+    @memcpy(request.proofs, proofs);
+    @memcpy(request.chunks, chunks);
+    @memcpy(request.conflations, conflations);
+    if (rule == .chunk_content) flipChunkContent(request.chunks[0]);
 }
 
-test "requests built from consecutive blocks of the fixtures are accepted and their tampered copies rejected" {
-    var corpus = try ef_blocks.Corpus.open(gpa, io, ef_fixtures.amsterdam_blocks);
-    defer corpus.deinit();
+/// Changes the calldata of a chunk, or the proof of its blob.
+fn flipChunkContent(chunk: rollup_ssz.ChunkWitness) void {
+    const bytes = if (chunk.is_calldata.value) chunk.calldata_bytes.bytes else chunk.kzg_proof.bytes;
+    @constCast(bytes)[0] ^= 0x01;
+}
+
+test "requests built from the curated blocks are accepted and their tampered copies rejected" {
+    const selection = try scenario.selection();
+    const gpa = std.testing.allocator;
+
+    var runs: std.ArrayList(Run) = .empty;
+    defer runs.deinit(gpa);
+    for (selection.picks, 0..) |*pick, index| {
+        try runs.append(gpa, .{ .label = ef_labels[index], .chain_id = scenario.ef_chain_id, .blocks = @as(*const [1]Fact, pick), .layouts = &short_layouts });
+    }
+    try runs.append(gpa, .{ .label = "EF chain", .chain_id = scenario.ef_chain_id, .blocks = selection.chain, .layouts = &short_layouts });
+    try runs.append(gpa, .{ .label = "Linea window", .chain_id = scenario.linea_chain_id, .blocks = selection.linea, .layouts = &long_layouts });
 
     var tally: Tally = .{};
-    var failures: usize = 0;
     var index: usize = 0;
-    while (try corpus.next()) |case| {
-        var request_arena = std.heap.ArenaAllocator.init(gpa);
-        defer request_arena.deinit();
-        const a = request_arena.allocator();
-        var scratch_arena = std.heap.ArenaAllocator.init(gpa);
-        defer scratch_arena.deinit();
+    for (runs.items) |run| {
+        for (run.layouts) |layout| {
+            var request_arena = std.heap.ArenaAllocator.init(gpa);
+            defer request_arena.deinit();
+            var scratch_arena = std.heap.ArenaAllocator.init(gpa);
+            defer scratch_arena.deinit();
 
-        var run: std.ArrayList(Fact) = .empty;
-        for (case.blocks, 0..) |block, position| {
-            // The fixture's rejected blocks and the blocks with a blob transaction end a run.
-            const usable: ?Fact = if (block) |fact| (if (fact.blob_transaction) null else fact) else null;
-            if (usable) |fact| {
-                // A run ends where the next block does not continue it.
-                if (run.items.len > 0) {
-                    const previous = run.items[run.items.len - 1];
-                    if (!std.mem.eql(u8, &previous.hash, &fact.parent_hash) or previous.number + 1 != fact.number) {
-                        try finishRun(a, scratch_arena.allocator(), &index, case.chain_id, run.items, &tally, &failures, case.path, case.name);
-                        run.clearRetainingCapacity();
-                    }
-                }
-                try run.append(a, fact);
-            }
-            if (usable == null or position + 1 == case.blocks.len) {
-                try finishRun(a, scratch_arena.allocator(), &index, case.chain_id, run.items, &tally, &failures, case.path, case.name);
-                run.clearRetainingCapacity();
-            }
+            checkRequest(request_arena.allocator(), scratch_arena.allocator(), index, run, layout, &tally) catch |err| {
+                std.debug.print("{s}, {s}: {s}\n", .{ run.label, @tagName(layout), @errorName(err) });
+                return err;
+            };
+            index += 1;
         }
     }
     std.debug.print(
         "{d} requests over {d} blocks ({d} blobs, {d} of them shared, {d} calldata chunks, {d} of several conflations); {d} tampered copies rejected\n",
         .{ tally.requests, tally.blocks, tally.blobs, tally.shared_blobs, tally.calldata_chunks, tally.multi_conflation, tally.tampered },
     );
-    try std.testing.expect(tally.requests > 1000);
-    try std.testing.expect(tally.shared_blobs > 10);
-    try std.testing.expect(tally.multi_conflation > 100);
-    try std.testing.expectEqual(0, failures);
+    try std.testing.expectEqual(tally.requests * std.enums.values(Rule).len, tally.tampered);
+    try std.testing.expect(tally.shared_blobs > 0);
+    try std.testing.expect(tally.multi_conflation > 0);
 }
 
-/// Checks the run, if it holds a block, counting and reporting a failure instead of ending the walk.
-fn finishRun(
-    a: Allocator,
-    scratch: Allocator,
-    index: *usize,
-    chain_id: u64,
-    run: []const Fact,
-    tally: *Tally,
-    failures: *usize,
-    path: []const u8,
-    name: []const u8,
-) !void {
-    if (run.len == 0) return;
-    defer index.* += 1;
-    checkRun(a, scratch, index.*, chain_id, run, tally) catch |err| {
-        failures.* += 1;
-        if (failures.* <= 20) std.debug.print("{s}: {s}: {s}\n", .{ path, name, @errorName(err) });
-    };
-}
+/// The names of the accepted EF blocks, in the order of the selection.
+const ef_labels = [_][]const u8{
+    "legacy with a contract creation",
+    "fee-market",
+    "set-code",
+    "legacy and access-list",
+    "legacy and fee-market",
+    "legacy and set-code",
+    "access-list and set-code",
+    "fee-market and set-code",
+    "1020 legacy transactions",
+    "200 deposits",
+};

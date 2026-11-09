@@ -25,6 +25,7 @@ on:
     paths:
       - "rollup_spec/src/**"
       - "riscv-guests/**"
+      - "verifier-ray/**" # the rollup guest's recursive verifier and devmode prover
       - "arithmetization/src/main/riscv/**" # main.zkc — the interpreter (ZKC_MAIN)
       - "arithmetization/src/main/common/**" # shared constants used by the RISC-V program
       - "arithmetization/src/main/lib/**" # zkc stdlib used by the interpreter
@@ -44,6 +45,7 @@ on:
     paths:
       - "rollup_spec/src/**"
       - "riscv-guests/**"
+      - "verifier-ray/**" # the rollup guest's recursive verifier and devmode prover
       - "arithmetization/src/main/riscv/**"
       - "arithmetization/src/main/common/**"
       - "arithmetization/src/main/lib/**"
@@ -106,6 +108,7 @@ jobs:
           filters: |
             guest:
               - "riscv-guests/**"
+              - "verifier-ray/**"
               - "arithmetization/src/main/riscv/**"
               - "arithmetization/src/main/common/**"
               - "arithmetization/src/main/lib/**"
@@ -135,6 +138,14 @@ jobs:
         uses: ./.github/actions/setup-riscv-guests
         with:
           needs-zkevm-fixtures: 'true'
+
+      # The rollup guest's tests and sample request are proved by verifier-ray's Go devmode prover.
+      - name: Install Go
+        uses: ./.github/actions/setup-go
+        with:
+          go-version: "1.27.1"
+          cache-dependency-path: "**/*.sum"
+          cache: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
 
       # The production build constructs only the freestanding guest graph.
       - name: Build l2-execution guest
@@ -179,6 +190,14 @@ jobs:
         uses: ./.github/actions/setup-riscv-guests
         with:
           needs-zkevm-fixtures: 'true'
+
+      # The rollup guest's tests and sample request are proved by verifier-ray's Go devmode prover.
+      - name: Install Go
+        uses: ./.github/actions/setup-go
+        with:
+          go-version: "1.27.1"
+          cache-dependency-path: "**/*.sum"
+          cache: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
 
       - name: Check Zig formatting
         run: make fmt-check

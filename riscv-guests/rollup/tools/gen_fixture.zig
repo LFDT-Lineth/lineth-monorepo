@@ -25,7 +25,7 @@ pub fn main(init: std.process.Init) !void {
     }
 
     const selection = try scenario.Selection.load(alloc, init.io, args[1]);
-    const conflation = try scenario.conflationFrom(alloc, selection.chain[0..3]);
+    const conflation = try scenario.conflationFrom(alloc, scenario.ef_chain_id, selection.chain[0..3]);
     const request = try scenario.build(alloc, &.{conflation}, .{});
     const encoded = try rollup.rollup_ssz.encodeInput(alloc, request.input());
     const output = try rollup.rollup.runFramed(alloc, encoded);
