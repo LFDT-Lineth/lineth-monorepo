@@ -14,6 +14,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 )
 
 // newCircuitProof proves a circuit of gates of every operation, of several depths and with outputs at
@@ -108,10 +109,7 @@ func TestDefineInputs(t *testing.T) {
 		for i := range table {
 			table[i] = module.NewColumn(sys.Context.Childf("compression%d", i), round)
 		}
-		var seed [6]*wiop.Cell
-		for k := range seed {
-			seed[k] = round.NewCell(sys.Context.Childf("seed%d", k), false)
-		}
+		seed := wioptest.NewE6Cells(sys.Context, round, "seed")
 		claims, _ := newClaimCells(sys, round, p.claims)
 		mutate(claims)
 		_, err := Define(sys, round, p.circuit, p.schedule, p.n, Inputs{Seed: seed, Claims: claims}, table)

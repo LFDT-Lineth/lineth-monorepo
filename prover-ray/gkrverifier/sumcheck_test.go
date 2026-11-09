@@ -8,6 +8,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/consensys/gnark-crypto/field/koalabear/poseidon2"
 	gkrkoalabear "github.com/consensys/gnark/gkr/koalabear"
 	"github.com/stretchr/testify/require"
@@ -20,11 +21,10 @@ func newClaimCells(
 ) (map[int][]Claim, map[*wiop.Cell]field.Element) {
 	inputs := make(map[int][]Claim)
 	values := make(map[*wiop.Cell]field.Element)
-	cells := func(name string, e field.Ext) (c [6]*wiop.Cell) {
-		coordinates := coordinates(e)
-		for k := range c {
-			c[k] = round.NewCell(sys.Context.Childf("%s-%d", name, k), false)
-			values[c[k]] = coordinates[k]
+	cells := func(name string, e field.Ext) [6]*wiop.Cell {
+		c := wioptest.NewE6Cells(sys.Context, round, name)
+		for k, coordinate := range coordinates(e) {
+			values[c[k]] = coordinate
 		}
 		return c
 	}
@@ -99,14 +99,14 @@ func TestSumchecks(t *testing.T) {
 			value, one := s.claimValues[c], field.One()
 			value.Add(&value, &one)
 			s.claimValues[c] = value
-			require.ErrorIs(t, s.prove(t), errMissingRow)
+			require.ErrorIs(t, s.prove(t), wioptest.ErrMissingRow)
 		})
 	}
 }
 
 // override adds one to the value of the column at row, after the verifier's assignment.
 func (s *transcriptSystem) override(col *wiop.Column, row int) {
-	s.round.RegisterAction(actionFunc(func(rt *wiop.Runtime) {
+	s.round.RegisterAction(wioptest.ActionFunc(func(rt *wiop.Runtime) {
 		values := slices.Clone(rt.GetColumnAssignment(col).Plain.AsBase())
 		one := field.One()
 		values[row].Add(&values[row], &one)
@@ -117,7 +117,7 @@ func (s *transcriptSystem) override(col *wiop.Column, row int) {
 // overrideCell adds one to the value of the cell, which has the given value, after the verifier's
 // assignment.
 func (s *transcriptSystem) overrideCell(cell *wiop.Cell, value field.Element) {
-	s.round.RegisterAction(actionFunc(func(rt *wiop.Runtime) {
+	s.round.RegisterAction(wioptest.ActionFunc(func(rt *wiop.Runtime) {
 		one := field.One()
 		value.Add(&value, &one)
 		rt.OverrideCell(cell, field.ElemFromBase(value))
@@ -254,7 +254,7 @@ func TestCorruptedWitness(t *testing.T) {
 			c.corrupt(t, s, s.verifier.layout)
 			err := s.prove(t)
 			require.Error(t, err)
-			require.NotErrorIs(t, err, errMissingRow)
+			require.NotErrorIs(t, err, wioptest.ErrMissingRow)
 		})
 	}
 }

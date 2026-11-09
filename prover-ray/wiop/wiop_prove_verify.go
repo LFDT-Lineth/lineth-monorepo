@@ -47,10 +47,7 @@ type Proof struct {
 	// was not PCS-compiled.
 	PCSOpeningProof *fri.OpeningProof
 	// ExtVectors maps the ID of each declared [ExtVector] to its value, set with
-	// [Runtime.SetExtVector]. The transcript never absorbs them, and neither does
-	// [System.Verify] check their content: a verifier action that reads one with
-	// [Runtime.GetExtVector] must bind it to what the transcript absorbs. It is
-	// nil when the system declares none.
+	// [Runtime.SetExtVector]. It is nil when the system declares none.
 	ExtVectors map[ObjectID][]field.Ext
 }
 
@@ -128,9 +125,7 @@ func (sys *System) Prove(assign func(rt *Runtime), proveOpts ...ProveOptions) (P
 	}
 	proof.PCSOpeningProof = rt.PCSOpeningProof
 
-	// Every declared vector must have been set, for the same reason as the
-	// columns below: to fail here, naming the vector, rather than in whichever
-	// verifier action reads it.
+	// Every declared vector must have been set.
 	for _, r := range sys.Rounds {
 		for _, v := range r.ExtVectors {
 			if _, ok := rt.extVectors[v.Context.ID]; !ok {
@@ -139,7 +134,7 @@ func (sys *System) Prove(assign func(rt *Runtime), proveOpts ...ProveOptions) (P
 		}
 	}
 
-	// Carry the vectors that actions handed over outside the transcript.
+	// Carry the vectors in the proof.
 	if len(rt.extVectors) > 0 {
 		proof.ExtVectors = make(map[ObjectID][]field.Ext, len(rt.extVectors))
 		for id, v := range rt.extVectors {

@@ -6,16 +6,12 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
-// ConstrainSum adds to the sized module the constraints of R = Σ_c λᶜ y_c, where λ, R and the y_c are
-// elements of E₆, each given as the six base cells of its coordinates.
-//
-// By Horner's rule, with a_{23} = y_{23} and a_c = λ a_{c+1} + y_c, R = a₀. An expression of the whole
-// sum has a size exponential in its depth, so the intermediate values a₁, …, a₂₂ are cells, in the round
-// after the latest of the inputs', which a prover action of that round assigns. Each step is six local
-// constraints, on the first row of the module and multiplied by a precomputed column that is 1 there,
-// which the compilation of a local constraint needs as it lifts the column references. The expressions
-// are otherwise over cells, so they add no quotient degree.
-func ConstrainSum(module *wiop.Module, lambda, result [6]*wiop.Cell, y [nbColumns][6]*wiop.Cell) {
+// ConstrainSum declares in the sized module the constraints of R = Σ_c λᶜ y_c, where λ, R and the y_c are
+// elements of E₆, each given as the six base cells of its coordinates: the cells a₁, …, a₂₂ of Horner's
+// rule, with a₂₃ = y₂₃, a_c = λ a_{c+1} + y_c and a₀ = R, in the round after the latest of the inputs',
+// which a prover action of that round assigns; and, for each step, six constraints on the first row of
+// the module.
+func ConstrainSum(module *wiop.Module, lambda, result [6]*wiop.Cell, y [NbColumns][6]*wiop.Cell) {
 	round := lambda[0].Round()
 	for _, cells := range append([][6]*wiop.Cell{lambda, result}, y[:]...) {
 		for _, cell := range cells {
@@ -27,9 +23,9 @@ func ConstrainSum(module *wiop.Module, lambda, result [6]*wiop.Cell, y [nbColumn
 	round = round.EnsureNext()
 
 	// acc[c] holds a_c
-	var acc [nbColumns][6]*wiop.Cell
-	acc[0], acc[nbColumns-1] = result, y[nbColumns-1]
-	for c := 1; c < nbColumns-1; c++ {
+	var acc [NbColumns][6]*wiop.Cell
+	acc[0], acc[NbColumns-1] = result, y[NbColumns-1]
+	for c := 1; c < NbColumns-1; c++ {
 		for k := range acc[c] {
 			acc[c][k] = round.NewCell(module.Context.Childf("sum-a%d-%d", c, k), false)
 		}
@@ -51,20 +47,19 @@ func ConstrainSum(module *wiop.Module, lambda, result [6]*wiop.Cell, y [nbColumn
 		return e
 	}
 	l := expr(lambda)
-	for c := range nbColumns - 1 {
+	for c := range NbColumns - 1 {
 		step := expr(acc[c+1]).Mul(l).Add(expr(y[c]))
 		for k, diff := range expr(acc[c]).Equal(step) {
-			module.NewLocalConstraint(module.Context.Childf("sum-step%d-%d", c, k), wiop.Mul(selector, diff), 0)
+			module.NewVanishingManual(module.Context.Childf("sum-step%d-%d", c, k), wiop.Mul(selector, diff))
 		}
 	}
 }
 
-// sumAction is the prover action that assigns the intermediate values of the Horner evaluation of
-// [ConstrainSum].
+// sumAction is the prover action that assigns the cells a₁, …, a₂₂ of [ConstrainSum].
 type sumAction struct {
 	lambda [6]*wiop.Cell
-	y      [nbColumns][6]*wiop.Cell
-	acc    [nbColumns][6]*wiop.Cell
+	y      [NbColumns][6]*wiop.Cell
+	acc    [NbColumns][6]*wiop.Cell
 }
 
 // Run implements [wiop.ProverAction].
@@ -78,14 +73,27 @@ func (a *sumAction) Run(rt *wiop.Runtime) {
 		return e
 	}
 
-	lambda := value(a.lambda)
-	sum := value(a.y[nbColumns-1])
-	for c := nbColumns - 2; c >= 1; c-- {
-		y := value(a.y[c])
-		sum.Mul(&sum, &lambda)
-		sum.Add(&sum, &y)
-		for k, coordinate := range sum.AppendBase(nil) {
+	y := make([]field.Ext, NbColumns)
+	for c := range y {
+		y[c] = value(a.y[c])
+	}
+	sums := horner(value(a.lambda), y)
+	for c := 1; c < NbColumns-1; c++ {
+		for k, coordinate := range sums[c].AppendBase(nil) {
 			rt.AssignCell(a.acc[c][k], field.ElemFromBase(coordinate))
 		}
 	}
+}
+
+// horner returns the values a_c of Horner's rule, a_{len(y)-1} = y_{len(y)-1} and a_c = λ a_{c+1} + y_c, so
+// that a₀ = Σ_c λᶜ y_c.
+func horner(lambda field.Ext, y []field.Ext) []field.Ext {
+	a := make([]field.Ext, len(y))
+	var next field.Ext
+	for c := len(y) - 1; c >= 0; c-- {
+		a[c].Mul(&next, &lambda)
+		a[c].Add(&a[c], &y[c])
+		next = a[c]
+	}
+	return a
 }

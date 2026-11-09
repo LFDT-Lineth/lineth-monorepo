@@ -34,7 +34,6 @@ func Project(
 			len(pub), len(sys.PublicInputs))
 	}
 
-	// The image does not hold ExtVectors; a proof carrying any is refused.
 	if len(proof.ExtVectors) > 0 {
 		ids := slices.Sorted(maps.Keys(proof.ExtVectors))
 		return VerifyInput{}, fmt.Errorf("proofserialization: Project: the proof carries vectors outside "+

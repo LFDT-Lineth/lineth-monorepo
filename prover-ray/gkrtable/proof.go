@@ -1,8 +1,8 @@
 package gkrtable
 
 import (
-	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
@@ -22,36 +22,35 @@ type proofVerifierAction struct{ *Table }
 func (t *Table) wire(c int) int {
 	switch {
 	case c < blockLen:
-		return int(t.circuit.Left[c])
+		return int(t.compressor.Left[c])
 	case c < 2*blockLen:
-		return int(t.circuit.Right[c-blockLen])
+		return int(t.compressor.Right[c-blockLen])
 	default:
-		return int(t.circuit.Out[c-2*blockLen])
+		return int(t.compressor.Out[c-2*blockLen])
 	}
 }
 
-// newHasher returns the hasher of the GKR transcript, which has σ's six coordinates written to it.
-func newHasher(sigma field.Ext) *poseidon2.Hasher {
+// newHasher returns the hasher of the GKR transcript, which has the six coordinates of the seed written
+// to it.
+func newHasher(seed field.Ext) *poseidon2.Hasher {
 	hasher := poseidon2.NewHasher()
-	hasher.WriteElements(sigma.AppendBase(nil)...)
+	hasher.WriteElements(seed.AppendBase(nil)...)
 	return hasher
 }
 
 // Run implements [wiop.ProverAction].
 func (a *proofAction) Run(rt *wiop.Runtime) {
-	// gkrkoalabear.Prove may use the assignment's columns for its working tables, and T's columns are
-	// the prover's witness, so it gets copies.
 	column := func(c int) []koalabear.Element {
-		return append([]koalabear.Element(nil), rt.GetColumnAssignment(a.Columns[c]).Plain.AsBase()...)
+		return slices.Clone(rt.GetColumnAssignment(a.Columns[c]).Plain.AsBase())
 	}
 	left, right := make([][]koalabear.Element, blockLen), make([][]koalabear.Element, blockLen)
 	for i := range blockLen {
 		left[i], right[i] = column(i), column(blockLen+i)
 	}
 
-	hasher := newHasher(rt.GetCoinValue(a.Sigma).AsExt())
-	assignment := a.circuit.Assignment(left, right)
-	proof, claims, err := gkrkoalabear.Prove(a.circuit.Circuit, a.circuit.Schedule, assignment, hasher)
+	hasher := newHasher(rt.GetCoinValue(a.Seed).AsExt())
+	assignment := a.compressor.Assignment(left, right)
+	proof, claims, err := gkrkoalabear.Prove(a.Circuit, a.Schedule, assignment, hasher)
 	if err != nil {
 		utils.Panic("gkrtable: GKR proof: %v", err)
 	}
@@ -68,34 +67,29 @@ func (a *proofAction) Run(rt *wiop.Runtime) {
 			utils.Panic("gkrtable: GKR proof: %d claims on column %d of T, expected 1", len(wireClaims), c)
 		}
 		rt.AssignCell(cell, field.ElemFromExt(wireClaims[0].Evaluation))
-		if c == 0 {
-			for j, coordinate := range a.Point {
-				rt.AssignCell(coordinate, field.ElemFromExt(wireClaims[0].EvaluationPoint[j]))
-			}
-		}
+	}
+	for j, cell := range a.Point {
+		rt.AssignCell(cell, field.ElemFromExt(claims[a.wire(0)][0].EvaluationPoint[j]))
 	}
 }
 
-// Check implements [wiop.VerifierAction]. It verifies the GKR proof with a transcript seeded with σ,
+// Check implements [wiop.VerifierAction]. It verifies the GKR proof with a transcript seeded with the seed,
 // and checks that its claims are the values y at the point r* of the cells, one per column of T.
 func (a *proofVerifierAction) Check(rt *wiop.Runtime) error {
-	flat, ok := rt.GetExtVector(a.Proof)
-	if !ok {
-		return errors.New("gkrtable: GKR proof: the proof is missing")
-	}
-	proof, err := gkrkoalabear.DeserializeProof(a.circuit.Circuit, a.circuit.Schedule, flat)
+	flat, _ := rt.GetExtVector(a.Proof)
+	proof, err := gkrkoalabear.DeserializeProof(a.Circuit, a.Schedule, flat)
 	if err != nil {
 		return fmt.Errorf("gkrtable: GKR proof: %w", err)
 	}
 
-	hasher := newHasher(rt.GetCoinValue(a.Sigma).AsExt())
-	claims, err := gkrkoalabear.Verify(a.circuit.Circuit, a.circuit.Schedule, a.logSize, proof, hasher)
+	hasher := newHasher(rt.GetCoinValue(a.Seed).AsExt())
+	claims, err := gkrkoalabear.Verify(a.Circuit, a.Schedule, len(a.Point), proof, hasher)
 	if err != nil {
 		return fmt.Errorf("gkrtable: GKR proof: %w", err)
 	}
 
-	if len(claims) != nbColumns {
-		return fmt.Errorf("gkrtable: GKR proof: claims on %d wires, expected %d", len(claims), nbColumns)
+	if len(claims) != NbColumns {
+		return fmt.Errorf("gkrtable: GKR proof: claims on %d wires, expected %d", len(claims), NbColumns)
 	}
 	for c, cell := range a.Values {
 		wireClaims := claims[a.wire(c)]

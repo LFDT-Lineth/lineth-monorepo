@@ -127,6 +127,17 @@ func TestProject_RejectsIncompleteInput(t *testing.T) {
 		require.ErrorContains(t, err, "nil system")
 	})
 
+	t.Run("extension vectors", func(t *testing.T) {
+		var vector field.Ext
+		vector.B0.A0.SetUint64(7)
+		const id = wiop.ObjectID(1)
+		withVector := proof
+		withVector.ExtVectors = map[wiop.ObjectID][]field.Ext{id: {vector}}
+		_, err := ps.Project(sc.Sys, withVector, pub)
+		require.ErrorContains(t, err, "wiop.Proof.ExtVectors")
+		require.ErrorContains(t, err, fmt.Sprintf("%#x", uint64(id)))
+	})
+
 	t.Run("public input count mismatch", func(t *testing.T) {
 		// Appending unconditionally: this scenario may declare none, and an
 		// append of an empty slice would leave the length unchanged and quietly
@@ -258,30 +269,4 @@ func TestImageShapeIsCircuitDependent(t *testing.T) {
 		"leaf slots per query (input trees x tree depth) must vary with the circuit; if this "+
 			"ever stops being true the spec's size model can be simplified")
 	t.Logf("leaf slots per query range: %d..%d across %d circuits", minPer, maxPer, len(shapes))
-}
-
-// TestProject_RefusesVectorsOutsideTheTranscript checks that a proof carrying
-// extension vectors outside the transcript is not projected, naming the objects
-// they are for, and that the same proof without them is.
-func TestProject_RefusesVectorsOutsideTheTranscript(t *testing.T) {
-	sc := wioptest.VanishingScenarios()[0]()
-	require.NoError(t, compilers.CompileFull(sc.Sys))
-
-	vec := sc.Sys.Rounds[0].NewExtVector(sc.Sys.Context.Childf("vector"))
-	key := vec.Context.ID
-	var e field.Ext
-	e.B0.A0.SetUint64(7)
-	proof, pub := sc.Sys.Prove(func(rt *wiop.Runtime) {
-		sc.AssignHonest(rt)
-		rt.SetExtVector(vec, []field.Ext{e})
-	})
-	require.NoError(t, sc.Sys.Verify(proof, pub), "the vector does not affect verification")
-
-	_, err := ps.Project(sc.Sys, proof, pub)
-	require.ErrorContains(t, err, "ExtVectors")
-	require.ErrorContains(t, err, fmt.Sprintf("%#x", uint64(key)))
-
-	proof.ExtVectors = nil
-	_, err = ps.Project(sc.Sys, proof, pub)
-	require.NoError(t, err)
 }

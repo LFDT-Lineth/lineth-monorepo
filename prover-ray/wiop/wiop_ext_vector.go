@@ -5,9 +5,10 @@ package wiop
 // it with [Runtime.SetExtVector], [System.Prove] carries it in
 // [Proof.ExtVectors], and verifier actions read it with [Runtime.GetExtVector].
 //
-// Nothing absorbs it into the transcript and nothing in [System.Verify] checks
-// its content: a verifier action that reads one must bind it to what the
-// transcript does absorb. Its length is not declared.
+// Nothing binds an ExtVector: the transcript does not absorb it and
+// [System.Verify] does not check its content, so a verifier action that reads
+// one must check it against what the transcript absorbs. Its length is not
+// declared.
 //
 // Like cells, a declared ExtVector must be in the proof, and no other may be.
 //

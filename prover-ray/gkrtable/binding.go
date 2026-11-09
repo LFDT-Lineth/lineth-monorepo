@@ -11,25 +11,19 @@ import (
 // bit columns b_j, the column E in the round after the GKR proof's with its constraints, the coin λ,
 // and the log-derivative sum with the verifier action that checks it.
 func (t *Table) defineBinding(sys *wiop.System, ctx *wiop.ContextFrame) {
-	var (
-		logSize    = t.logSize
-		size       = 1 << logSize
-		round      = t.Sigma.Round().EnsureNext()
-		one        = field.One()
-		oneConst   = wiop.NewConstantField(one)
-		batchedRow = make([]wiop.Expression, nbColumns)
-	)
+	n := len(t.Point)
+	round := t.Seed.Round().EnsureNext()
 	t.eq = t.Module.NewExtensionColumn(ctx.Childf("eq"), round)
 	eqView := t.eq.View()
 	t.Lambda = round.NewCoinField(ctx.Childf("lambda"))
 	round.EnsureNext() // the round of the result of the log-derivative sum
 
 	// b_j(i) is bit n-j of i: b_1 is the most significant bit, as in gnark's points.
-	bitColumns := make([]*wiop.Column, logSize)
+	bitColumns := make([]*wiop.Column, n)
 	for j := range bitColumns {
-		bit := make([]field.Element, size)
+		bit := make([]field.Element, t.Module.Size())
 		for i := range bit {
-			bit[i].SetUint64(uint64(i >> (logSize - 1 - j) & 1))
+			bit[i].SetUint64(uint64(i >> (n - 1 - j) & 1))
 		}
 		bitColumns[j] = t.Module.NewPrecomputedColumn(
 			ctx.Childf("bit-%d", j+1),
@@ -38,6 +32,7 @@ func (t *Table) defineBinding(sys *wiop.System, ctx *wiop.ContextFrame) {
 	}
 
 	// E[0] = ∏ⱼ (1 - r*ⱼ)
+	oneConst := wiop.NewConstantField(field.One())
 	product := wiop.Expression(oneConst)
 	for _, r := range t.Point {
 		product = wiop.Mul(product, wiop.Sub(oneConst, r))
@@ -46,7 +41,7 @@ func (t *Table) defineBinding(sys *wiop.System, ctx *wiop.ContextFrame) {
 
 	// b_j · ((1 - r*ⱼ) E[i] - r*ⱼ E[i - 2^(n-j)]) = 0 on every row
 	for j, r := range t.Point {
-		shifted := eqView.Shift(-(1 << (logSize - 1 - j)))
+		shifted := eqView.Shift(-(1 << (n - 1 - j)))
 		t.Module.NewVanishingManual(
 			ctx.Childf("eq-step-%d", j+1),
 			wiop.Mul(bitColumns[j].View(), wiop.Sub(wiop.Mul(wiop.Sub(oneConst, r), eqView), wiop.Mul(r, shifted))),
@@ -54,16 +49,17 @@ func (t *Table) defineBinding(sys *wiop.System, ctx *wiop.ContextFrame) {
 	}
 
 	// Σᵢ (Σ_c λᶜ C_c[i]) E[i]
+	batched := make([]wiop.Expression, NbColumns)
 	for c, column := range t.Columns {
-		batchedRow[c] = column.View()
+		batched[c] = column.View()
 	}
 	sum := sys.NewLogDerivativeSum(ctx.Childf("claims"), []wiop.Fraction{{
-		Numerator:   wiop.Mul(wiop.RLCExpression(t.Lambda, batchedRow), eqView),
+		Numerator:   wiop.Mul(wiop.RLCExpression(t.Lambda, batched), eqView),
 		Denominator: oneConst,
 	}})
 	t.Result = sum.Result
 
-	round.RegisterAction(&eqAction{t})
+	round.RegisterAction(&eqAction{Table: t})
 	sum.Result.Round().RegisterVerifierAction(&sumVerifierAction{Table: t})
 }
 
@@ -96,14 +92,11 @@ type sumVerifierAction struct{ *Table }
 
 // Check implements [wiop.VerifierAction].
 func (a *sumVerifierAction) Check(rt *wiop.Runtime) error {
-	lambda := rt.GetCoinValue(a.Lambda).AsExt()
-	// Horner, from the last value
-	var expected field.Ext
-	for c := len(a.Values) - 1; c >= 0; c-- {
-		y := rt.GetCellValue(a.Values[c]).AsExt()
-		expected.Mul(&expected, &lambda)
-		expected.Add(&expected, &y)
+	y := make([]field.Ext, NbColumns)
+	for c, cell := range a.Values {
+		y[c] = rt.GetCellValue(cell).AsExt()
 	}
+	expected := horner(rt.GetCoinValue(a.Lambda).AsExt(), y)[0]
 	if got := rt.GetCellValue(a.Result).AsExt(); got != expected {
 		return errors.New("gkrtable: the columns of T do not have the evaluations y at r*")
 	}

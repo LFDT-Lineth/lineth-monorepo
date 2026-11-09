@@ -2,6 +2,7 @@ package wiop_test
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -92,15 +93,28 @@ func TestExtVector_Declared(t *testing.T) {
 
 	missing := proof
 	missing.ExtVectors = nil
-	require.ErrorContains(t, sys.Verify(missing, pub), "not found in proof")
+	err := sys.Verify(missing, pub)
+	require.ErrorContains(t, err, "extension vector")
+	require.ErrorContains(t, err, "not found in proof")
 
 	// An ID that is no vector of the system: a vector beyond the declared ones, and an object of
 	// another kind.
 	for _, extra := range []wiop.ObjectID{vec.Context.ID + 1, sys.Rounds[1].Coins[0].Context.ID} {
 		extended := proof
 		extended.ExtVectors = map[wiop.ObjectID][]field.Ext{vec.Context.ID: proof.ExtVectors[vec.Context.ID], extra: nil}
-		require.ErrorContains(t, sys.Verify(extended, pub), "not found in system")
+		err := sys.Verify(extended, pub)
+		require.ErrorContains(t, err, "extension vector")
+		require.ErrorContains(t, err, "not found in system")
 	}
+}
+
+// panicMessage returns the message of the panic of f, and fails the test if f does not panic.
+func panicMessage(t *testing.T, f func()) (message string) {
+	t.Helper()
+	defer func() { message = fmt.Sprint(recover()) }()
+	f()
+	t.Fatal("no panic")
+	return
 }
 
 // TestExtVector_SetAndGet checks the prover's side: a declared vector must be set, once, in its
@@ -111,18 +125,20 @@ func TestExtVector_SetAndGet(t *testing.T) {
 	r1 := sys.NewRound()
 	vec := r1.NewExtVector(sys.Context.Childf("vector"))
 
-	require.Panics(t, func() { sys.Prove(func(*wiop.Runtime) {}) }, "a declared vector that no action set")
+	require.Contains(t, panicMessage(t, func() { sys.Prove(func(*wiop.Runtime) {}) }),
+		"missing extension vector in runtime", "a declared vector that no action set")
 
 	rt := wiop.NewRuntime(sys)
 	_, ok := rt.GetExtVector(vec)
 	require.False(t, ok)
-	require.Panics(t, func() { rt.SetExtVector(vec, nil) }, "set in another round")
+	require.Contains(t, panicMessage(t, func() { rt.SetExtVector(vec, nil) }),
+		"belongs to round 1 but current round", "set in another round")
 	rt.AdvanceRound()
 	rt.SetExtVector(vec, []field.Ext{{}})
 	got, ok := rt.GetExtVector(vec)
 	require.True(t, ok)
 	require.Len(t, got, 1)
-	require.Panics(t, func() { rt.SetExtVector(vec, nil) }, "set twice")
+	require.Contains(t, panicMessage(t, func() { rt.SetExtVector(vec, nil) }), "already has a value", "set twice")
 
 	none := wiop.NewSystemf("no-ext-vector")
 	none.NewRound()

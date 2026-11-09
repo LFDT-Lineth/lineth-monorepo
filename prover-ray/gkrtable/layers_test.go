@@ -1,4 +1,4 @@
-package gkrtable
+package gkrtable_test
 
 import (
 	"fmt"
@@ -6,35 +6,49 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/gkrtable"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/gkrverifier"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/require"
 )
 
-// layer is what a system that verifies the GKR proof of a [Table] is given of it.
+const (
+	// n is the log size of the table that a layer proves, and nbRows the number of compressions that it
+	// assigns: the table has padding rows.
+	n      = 3
+	nbRows = 5
+)
+
+// layer is what a system that verifies the GKR proof of a [gkrtable.Table] is given of it.
 type layer struct {
-	table *Table
+	table *gkrtable.Table
 	// the seed σ and the coin λ, the point r*, the values y and the result R of the sum, and the GKR
 	// proof
-	sigma, lambda, result field.Ext
-	point                 []field.Ext
-	values                [nbColumns]field.Ext
-	proof                 []field.Ext
+	seed, lambda, result field.Ext
+	point                []field.Ext
+	values               [gkrtable.NbColumns]field.Ext
+	proof                []field.Ext
 }
 
 // proveLayer proves and verifies a table of random compressions.
 func proveLayer(t *testing.T) *layer {
 	t.Helper()
-	sys, table := newTable(t)
+	sys := wiop.NewSystemf("gkrtable")
+	table, err := gkrtable.Define(sys, sys.NewRound(), n)
+	require.NoError(t, err)
 	l := &layer{table: table}
-	table.Lambda.Round().RegisterAction(actionFunc(func(rt *wiop.Runtime) {
-		l.sigma = rt.GetCoinValue(table.Sigma).AsExt()
+	table.Lambda.Round().RegisterAction(wioptest.ActionFunc(func(rt *wiop.Runtime) {
+		l.seed = rt.GetCoinValue(table.Seed).AsExt()
 		l.lambda = rt.GetCoinValue(table.Lambda).AsExt()
 	}))
-	proof, pub := prove(t, sys, table, nil)
+	require.NoError(t, compilers.CompileFull(sys))
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+		require.NoError(t, table.Assign(rt, gkrtable.RandomRows(nbRows)))
+	})
 	require.NoError(t, sys.Verify(proof, pub))
 
 	cell := func(c *wiop.Cell) field.Ext { return proof.Cells[c.Context.ID].AsExt() }
@@ -51,60 +65,49 @@ func proveLayer(t *testing.T) *layer {
 
 // proveNext proves and verifies a system, which holds the layer's σ, r*, y, λ and R in cells, verifies
 // the layer's GKR proof with [gkrverifier], constrains R = Σ_c λᶜ y_c, and has a table of the
-// compressions that the verifier needs. It returns the result of the verification. A prover that holds
-// a value that the bus of the verifier does not have fails while it builds the lookup, which is reported
-// as an error too; any other panic fails the test.
+// compressions that the verifier needs. It returns the result of the verification, or
+// [wioptest.ErrMissingRow].
 func proveNext(t *testing.T, l *layer) (err error) {
 	t.Helper()
 	sys := wiop.NewSystemf("gkrtable-next")
 	round := sys.NewRound()
 
-	values := make(map[*wiop.Cell]field.Element)
-	cells := func(name string, e field.Ext) (c [6]*wiop.Cell) {
-		for k, coordinate := range e.AppendBase(nil) {
-			c[k] = round.NewCell(sys.Context.Childf("%s-%d", name, k), false)
-			values[c[k]] = coordinate
-		}
+	var assignments []func(rt *wiop.Runtime)
+	cells := func(name string, e field.Ext) [6]*wiop.Cell {
+		c := wioptest.NewE6Cells(sys.Context, round, name)
+		assignments = append(assignments, func(rt *wiop.Runtime) { wioptest.AssignE6(rt, c, e) })
 		return c
 	}
-	seed, lambda, result := cells("sigma", l.sigma), cells("lambda", l.lambda), cells("result", l.result)
+	seed, lambda, result := cells("seed", l.seed), cells("lambda", l.lambda), cells("result", l.result)
 	point := new(gkrverifier.Point)
 	for j, r := range l.point {
 		*point = append(*point, cells(fmt.Sprintf("point-%d", j), r))
 	}
-	var y [nbColumns][6]*wiop.Cell
-	claims := make(map[int][]gkrverifier.Claim)
+	var y [gkrtable.NbColumns][6]*wiop.Cell
 	for c := range y {
 		y[c] = cells(fmt.Sprintf("y-%d", c), l.values[c])
-		claims[l.table.wire(c)] = []gkrverifier.Claim{{Point: point, Value: y[c]}}
 	}
 
-	circuit, schedule, n := l.table.circuit.Circuit, l.table.circuit.Schedule, l.table.logSize
-	nbCompressions, err := gkrverifier.NbCompressions(circuit, schedule, n)
+	nbCompressions, err := gkrverifier.NbCompressions(l.table.Circuit, l.table.Schedule, len(l.table.Point))
 	require.NoError(t, err)
-	next, err := Define(sys, round, bits.TrailingZeros(uint(utils.NextPowerOfTwo(nbCompressions))))
+	next, err := gkrtable.Define(sys, round, bits.TrailingZeros(uint(utils.NextPowerOfTwo(nbCompressions))))
 	require.NoError(t, err)
-	verifier, err := gkrverifier.Define(sys, round, circuit, schedule, n,
-		gkrverifier.Inputs{Seed: seed, Claims: claims}, next.Columns)
+	verifier, err := gkrverifier.Define(sys, round, l.table.Circuit, l.table.Schedule, len(l.table.Point),
+		gkrverifier.Inputs{Seed: seed, Claims: l.table.Claims(point, y)}, next.Columns)
 	require.NoError(t, err)
-	ConstrainSum(next.Module, lambda, result, y)
+	gkrtable.ConstrainSum(next.Module, lambda, result, y)
 
-	rows, err := verifier.Compressions([6]field.Element(l.sigma.AppendBase(nil)), l.proof)
+	rows, err := verifier.Compressions([6]field.Element(l.seed.AppendBase(nil)), l.proof)
 	require.NoError(t, err)
-	round.RegisterAction(actionFunc(func(rt *wiop.Runtime) {
+	round.RegisterAction(wioptest.ActionFunc(func(rt *wiop.Runtime) {
 		require.NoError(t, verifier.Assign(rt, l.proof))
 	}))
 
 	require.NoError(t, compilers.CompileFull(sys))
-	defer func() {
-		if r := recover(); r != nil {
-			require.Contains(t, fmt.Sprint(r), "has no match in the lookup table")
-			err = fmt.Errorf("the prover has a row that is not in the table: %v", r)
-		}
-	}()
+	defer wioptest.RecoverMissingRow(t, &err)
 	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
-		for cell, value := range values {
-			rt.AssignCell(cell, field.ElemFromBase(value))
+		for _, assign := range assignments {
+			assign(rt)
 		}
 		require.NoError(t, next.Assign(rt, rows))
 	})

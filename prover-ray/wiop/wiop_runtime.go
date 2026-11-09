@@ -59,9 +59,8 @@ type Runtime struct {
 	// [Proof] and [System.Verify] restores it here before running verifier
 	// actions. Mirrors the transport role of [Runtime.Commitments].
 	PCSOpeningProof *fri.OpeningProof
-	// extVectors maps each [ExtVector]'s [ObjectID] to its value, which
-	// [System.Prove] carries in the [Proof] without absorbing it into the
-	// Fiat-Shamir transcript. See [Runtime.SetExtVector].
+	// extVectors maps each [ExtVector]'s [ObjectID] to its value, set with
+	// [Runtime.SetExtVector].
 	extVectors map[ObjectID][]field.Ext
 }
 
@@ -416,13 +415,8 @@ func (run *Runtime) SetState(key string, value any) {
 	run.state[key] = value
 }
 
-// SetExtVector sets the declared vector v, for a verifier action to read.
-// [System.Prove] carries it in [Proof.ExtVectors] and [System.Verify] restores
-// it before the verifier actions run, where [Runtime.GetExtVector] returns it.
-//
-// The vector is never absorbed into the Fiat-Shamir transcript, so nothing binds
-// it: whoever sets it must have the verifier action that reads it check it
-// against what the transcript does absorb.
+// SetExtVector sets the declared vector v. [System.Prove] carries it in
+// [Proof.ExtVectors], and verifier actions read it with [Runtime.GetExtVector].
 //
 // Panics if the runtime is not in the vector's round, or if v already has a
 // value.
