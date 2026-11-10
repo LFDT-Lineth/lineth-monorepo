@@ -14,8 +14,8 @@ const (
 	publicV    = "v" // lanes
 )
 
-// publicInst is one cell exposed as a public input: the cell at s.addr, of
-// the given kind, under tag_index.
+// publicInst is one cell exposed as public inputs: the cell at s.addr, of the
+// given kind, from tag_index on.
 type publicInst struct {
 	s     slot
 	kind  int
@@ -23,23 +23,21 @@ type publicInst struct {
 	index int
 }
 
-// Public exposes the cell at addr as the public input tag_index of the
-// compiled system: a scalar (KindScalar) as a base public input, an E6 value
-// (KindE6) as one extension public input, bound to its lanes by an [E6Check].
+// Public exposes the cell at addr as public inputs of the compiled system. A
+// cell of base lanes (KindScalar, KindDigest) gives kind base public inputs,
+// tag_index … tag_(index+kind−1), one per lane. An E6 value (KindE6) gives one
+// extension public input, tag_index, bound to its six lanes by an [E6Check].
 // Public inputs are laid out in the order of the Public calls. kind is the
 // caller's declaration, not checked against the cell: a scalar declared on an
-// E6 cell exposes lane 0 only. A digest has no public-input shape: Public
-// panics on KindDigest.
+// E6 cell exposes lane 0 only. Public panics on a kind that is not a cell
+// kind.
 func (m *Machine) Public(addr, kind int, tag wiop.PublicInputTag, index int) {
-	if kind != KindScalar && kind != KindE6 {
-		panic(fmt.Sprintf("Public: kind %d, want a scalar or an E6 value", kind))
-	}
+	checkCellKind(kind)
 	m.publics = append(m.publics, publicInst{s: m.rd(addr), kind: kind, tag: tag, index: index})
 }
 
-// publicChip: one row per Public call. Setup: addr, sel. Witness: v0..v5, the
-// cell read on the bus at addr, whose first kind lanes are opened. Lanes 6 and
-// 7 are constant zero on the bus, as no digest is exposed.
+// publicChip: one row per Public call. Setup: addr, sel. Witness: v0..v7, the
+// cell read on the bus at addr, whose first kind lanes are opened.
 type publicChip struct{ m *Machine }
 
 func (c publicChip) name() string { return publicMod }
@@ -55,16 +53,18 @@ func (c publicChip) setup(cs *cols) {
 }
 
 func (c publicChip) define(m *module, bus *Bus) error {
-	v := m.lanes(publicV, KindE6)
-	bus.Read(m, m.s(publicAddr), cellOf(v...), m.s(publicSel))
+	v := m.lanes(publicV, CellWidth)
+	bus.Read(m, m.s(publicAddr), cellLanes(v), m.s(publicSel))
 	for row, p := range c.m.publics {
 		ctx := m.sys.Context.Childf("%s.public-%d", m.name, row)
 		lanes := make([]*wiop.Cell, p.kind)
 		for l := range lanes {
 			lanes[l] = m.witness[laneName(publicV, l)].At(row).Open(ctx.Childf("lane-%d", l))
 		}
-		if p.kind == KindScalar {
-			m.sys.RegisterPublicInputs(p.tag, lanes[0], p.index)
+		if p.kind != KindE6 {
+			for l, lane := range lanes {
+				m.sys.RegisterPublicInputs(p.tag, lane, p.index+l)
+			}
 			continue
 		}
 		ext := m.round.NewLazyCell(ctx.Childf("e6"), true, func(rt *wiop.Runtime) field.Gen {
@@ -81,9 +81,9 @@ func (c publicChip) define(m *module, bus *Bus) error {
 }
 
 func (c publicChip) trace(cs *cols, r *Run) error {
-	cs.declareLanes(publicV, KindE6)
+	cs.declareLanes(publicV, CellWidth)
 	for row, p := range c.m.publics {
-		cs.setE6(publicV, row, CellE6(r.values[p.s.addr]))
+		cs.setCell(publicV, row, r.values[p.s.addr])
 	}
 	return nil
 }
