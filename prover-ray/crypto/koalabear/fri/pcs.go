@@ -113,7 +113,8 @@
 //   - (iii) empty shift list is an error (every committed row is
 //     opened at least once).
 //   - (iv)  duplicate shifts inside a row's shift list is an error.
-//   - (v)   no cross-batch dedup; caller is responsible.
+//   - (v)   every batch gets its own input tree, even when roots coincide;
+//     batches are never merged.
 //   - (vi)  caller picks batch order. Convention: setup batches at
 //     the front, AIR-quotient batch at the back, witness rounds
 //     in between -- though the PCS itself doesn't care, only
