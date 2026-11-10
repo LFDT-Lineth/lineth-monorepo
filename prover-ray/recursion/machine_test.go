@@ -81,7 +81,7 @@ func cell(seed uint64) Cell {
 
 // busProgram: two inputs and a constant, read through copies — a chain (a
 // copy of a copy), a cell read twice (a), a constant read, an input never
-// read (u).
+// read (u) — and a scalar constant copied and exposed as a public input.
 func busProgram() (*Machine, []int) {
 	m := &Machine{}
 	cp := withCopy(m)
@@ -89,7 +89,7 @@ func busProgram() (*Machine, []int) {
 	k := m.Const(cell(9))
 	outs := []int{cp.Copy(a), cp.Copy(cp.Copy(b)), cp.Copy(k), cp.Copy(a)}
 	_ = u
-	m.Public(outs[1], KindE6, "Out", 0)
+	m.Public(cp.Copy(m.Const(ScalarCell(field.NewElement(7)))), KindScalar, "Out", 0)
 	return m, outs
 }
 
