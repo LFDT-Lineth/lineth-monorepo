@@ -1,5 +1,4 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
-import { zeroAddress } from "viem";
 
 import { deployUpgradeImplementation } from "../lib/proxy.js";
 
@@ -9,7 +8,6 @@ export default buildModule("YieldManagerUpgrade", (m) => {
     contractName: "YieldManager",
     unsafeAllow: ["constructor", "incorrect-initializer-order", "state-variable-immutable", "delegatecall"],
     constructorArgs: [m.getParameter<string>("linethRollup")],
-    validationConstructorArgs: [zeroAddress],
   });
   return { implementation };
 });

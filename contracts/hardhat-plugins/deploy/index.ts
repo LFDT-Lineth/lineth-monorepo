@@ -12,7 +12,7 @@ export default definePlugin({
     import("../signer-ui/index.js"),
     import("@nomicfoundation/hardhat-viem"),
     import("@nomicfoundation/hardhat-ignition"),
-    import("@openzeppelin/hardhat-upgrades"),
+    import("@openzeppelin/hardhat-upgrades/viem"),
   ],
   tasks: [
     overrideTask(["ignition", "deploy"])

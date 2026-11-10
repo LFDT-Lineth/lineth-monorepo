@@ -10,7 +10,7 @@
     "build": "hardhat build",
     "test": "pnpm run autoupdate && hardhat test",
     "test:reportgas": "hardhat test --gas-stats",
-    "coverage": "pnpm run autoupdate && SOLIDITY_COVERAGE=true hardhat test --coverage",
+    "coverage": "pnpm run autoupdate && hardhat test --coverage",
     "autoupdate": "cd ../prover && cmd/dev-tools/testcase-gen/compression-aggregation/autoupdate.sh && cd ../contracts",
     "prettier:sol": "prettier -c '**/*.sol'",
     "prettier:sol:fix": "prettier -w '**/*.sol'",
@@ -22,8 +22,8 @@
     "lint:fix": "pnpm run lint:sol:fix && pnpm run lint:ts:fix && pnpm run prettier:sol:fix",
     "validate:address-registry": "tsx scripts/deployment/validateAddressRegistry.ts",
     "validate:deploy-scripts": "tsx scripts/deployment/validateDeployScripts.ts",
-    "clean": "rimraf .openzeppelin build cache node_modules coverage",
-    "clean:validations": "rimraf cache/validations.json && hardhat build --force",
+    "clean": "rimraf build cache node_modules coverage",
+    "clean:validations": "rimraf cache/validations.json && hardhat build",
     "solidity:docgen": "hardhat build && tsx scripts/docgen.ts"
   },
   "devDependencies": {

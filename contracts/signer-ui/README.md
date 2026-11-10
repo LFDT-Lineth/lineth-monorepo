@@ -107,7 +107,7 @@ A full signing round-trip still requires the bridge from a running `hardhat igni
 
 ## Further reading
 
-- [Lineth deployment scripts overview](../docs/deployment/README.md) — env vars, modules, verification, upgradeable / `.openzeppelin` reuse.
+- [Lineth deployment scripts overview](../docs/deployment/README.md) — env vars, modules, verification, upgrade checks.
 - [Chained deployments](../docs/deployment/chained-deployments.md) — one UI session for the whole tag batch.
 - [Removing the signer UI](../docs/deployment/signer-ui-removal.md) — maintainers only.
 
@@ -115,4 +115,4 @@ A full signing round-trip still requires the bridge from a running `hardhat igni
 
 - Scripts that broadcast **fixed pre-signed** transactions (some predeploy paths) do not use the browser signer.
 - **One in-flight transaction** from Hardhat’s perspective at a time per session.
-- OpenZeppelin **may reuse** implementation / ProxyAdmin from `.openzeppelin/` — fewer wallet prompts than three does not imply a bug.
+- Ignition **skips futures already deployed** in the deployment id (e.g. the shared `ProxyAdmin`) — fewer wallet prompts than three does not imply a bug.

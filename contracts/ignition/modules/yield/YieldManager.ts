@@ -1,5 +1,4 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
-import { zeroAddress } from "viem";
 
 import { deployPinnedTransparentProxy } from "../lib/proxy.js";
 
@@ -18,7 +17,6 @@ export default buildModule("YieldManager", (m) => {
   const { proxy, proxyAdmin } = deployPinnedTransparentProxy(m, {
     name: "YieldManager",
     unsafeAllow: ["constructor", "incorrect-initializer-order", "state-variable-immutable", "delegatecall"],
-    validationConstructorArgs: [zeroAddress],
     implementation,
     initializer: "initialize",
     initializerArgs: [m.getParameter("yieldManagerInitializationData")],

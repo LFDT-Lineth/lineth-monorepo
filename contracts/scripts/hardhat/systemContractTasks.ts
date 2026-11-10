@@ -68,7 +68,7 @@ export function serializePresignedDeployment(systemContract: PresignedSystemCont
   );
 }
 
-/** Broadcasts the presigned deployment unless code already exists at the expected address. Errors are logged, as before. */
+/** Broadcasts the presigned deployment unless code already exists at the expected address. Failures fail the task. */
 export async function deployPresignedSystemContract(
   connection: NetworkConnection,
   systemContract: PresignedSystemContract,
@@ -113,8 +113,9 @@ export async function deployPresignedSystemContract(
       throw new Error(`Contract deployed to ${receipt.contractAddress}, expected ${expectedAddress}`);
     }
   } catch (error) {
-    console.error(
+    throw new Error(
       `Error during contract=${contractName} deployment: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
     );
   }
 }

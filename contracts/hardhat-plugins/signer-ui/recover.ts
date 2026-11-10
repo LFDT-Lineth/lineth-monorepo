@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { type Address, getAddress, isAddress } from "viem";
 
@@ -25,7 +25,7 @@ function parseJournalLine(line: string, index: number, journalPath: string): Jou
   return parsed as JournalRecord;
 }
 
-type Journal = { content: string; lines: string[]; records: JournalRecord[] };
+type Journal = { records: JournalRecord[] };
 
 /** Reads and parses a journal once (no separate existence check: CodeQL js/file-system-race); missing → `undefined`. */
 function readJournal(journalPath: string): Journal | undefined {
@@ -40,7 +40,7 @@ function readJournal(journalPath: string): Journal | undefined {
   }
   // Ignition writes each record as "\n" + JSON, so the file starts with a blank line.
   const lines = content.split("\n").filter((line) => line.trim() !== "");
-  return { content, lines, records: lines.map((line, index) => parseJournalLine(line, index, journalPath)) };
+  return { records: lines.map((line, index) => parseJournalLine(line, index, journalPath)) };
 }
 
 /** Deployments of `chainId` (`chain-<id>`, or `<Module>-<id>-<hash>` for upgrade modules) ending on an unsent tx. */
@@ -89,8 +89,8 @@ function findFutureSender(records: readonly JournalRecord[], futureId: string): 
  *
  * - the signer-UI broadcast log has that `(sender, nonce)`: the transaction was broadcast, so it is handed to
  *   `ignition track-tx` with the logged hash;
- * - the sender's pending nonce still equals the prepared nonce: nothing was broadcast, so the record is dropped
- *   (a backup of the journal is kept under `<cache>/signer-ui/journal-backups/`);
+ * - the sender's pending nonce still equals the prepared nonce: nothing was broadcast, so the future is reset with
+ *   `ignition wipe` (Ignition appends a `WIPE_APPLY` record; the journal is never rewritten);
  * - otherwise the nonce was used by a transaction the bridge did not record: stop and explain.
  *
  * Re-run the same `ignition deploy` afterwards.
@@ -132,7 +132,7 @@ export default async function deployRecover(
     [{ deploymentId, journalPath, journal }] = stuck;
   }
 
-  const { lines, records } = journal;
+  const { records } = journal;
   const last = records.at(-1);
   if (last === undefined || last.type !== "TRANSACTION_PREPARE_SEND") {
     console.log(`Nothing to recover in ${deploymentId}: the last journal record is ${last?.type ?? "missing"}.`);
@@ -161,23 +161,10 @@ export default async function deployRecover(
 
   const pendingNonce = await publicClient.getTransactionCount({ address: sender, blockTag: "pending" });
   if (pendingNonce === nonce) {
-    const backupDir = path.join(hre.config.paths.cache, "signer-ui", "journal-backups");
-    mkdirSync(backupDir, { recursive: true });
-    const backupPath = path.join(backupDir, `${deploymentId}-${new Date().toISOString().replace(/[:.]/g, "-")}.jsonl`);
-    writeFileSync(backupPath, journal.content);
-    // Write the truncated journal next to it and rename over the original, so the journal is never half-written.
-    const truncatedPath = `${journalPath}.recover`;
-    writeFileSync(
-      truncatedPath,
-      lines
-        .slice(0, -1)
-        .map((line) => `\n${line}`)
-        .join(""),
-    );
-    renameSync(truncatedPath, journalPath);
+    await hre.tasks.getTask(["ignition", "wipe"]).run({ deploymentId, futureId });
     console.log(
-      `Recovered ${deploymentId}: dropped the unsent ${futureId} transaction (nonce ${nonce} of ${sender}). ` +
-        `Journal backup: ${backupPath}. Re-run the same ignition deploy to continue.`,
+      `Recovered ${deploymentId}: reset ${futureId}, whose transaction (nonce ${nonce} of ${sender}) was never sent. ` +
+        "Re-run the same ignition deploy to continue.",
     );
     return;
   }

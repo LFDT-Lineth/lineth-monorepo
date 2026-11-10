@@ -189,7 +189,8 @@ describe("Ignition deploy plugin", () => {
     it("validates the upgradeable implementations of every module with their unsafeAllow", async () => {
       const connection = await getConnection();
       // Upgrade modules point at a proxy with no code here: implementations are validated on their own.
-      const parameters: DeploymentParameters = { $global: { proxy: role(99) } };
+      // Constructor arguments are taken from the modules' parameters (YieldManager: `linethRollup`).
+      const parameters: DeploymentParameters = { $global: { proxy: role(99), linethRollup: role(98) } };
       await withEnv({ VERIFIER_CONTRACT_NAME: "PlonkVerifierForDataAggregation" }, async () => {
         for (const modulePath of findModuleFiles(path.join(IGNITION_DIR, "modules"))) {
           const targets = collectUpgradeTargets(await loadIgnitionModule(modulePath));
@@ -208,7 +209,6 @@ describe("Ignition deploy plugin", () => {
           implementation,
           initializer: "initialize",
           initializerArgs: [m.getParameter("yieldManagerInitializationData")],
-          validationConstructorArgs: [zeroAddress],
         });
         return { proxy };
       });
@@ -252,7 +252,7 @@ describe("Ignition deploy plugin", () => {
           TokenBridgeUpgrade: { proxy },
         }),
       );
-      expect(message).to.not.equal("");
+      expect(message).to.contain("New storage layout is incompatible");
     });
 
     it("skips pinned-bytecode implementations", async () => {
@@ -287,6 +287,8 @@ describe("Ignition deploy plugin", () => {
       );
       const implementation = requireContract(result.contracts, "YieldManagerUpgrade#YieldManagerImplementation");
       expect(lines.join("\n")).to.contain(encodeProxyAdminUpgrade(role(6), implementation));
+      // forceImport needs the implementation's constructor arguments (`linethRollup`).
+      expect(lines).to.include(`OZ Upgrades manifest: imported YieldManager (upgrade) at ${implementation}`);
     });
 
     it("LinethRollupReinitializeV9: ProxyAdmin.upgradeAndCall(reinitializeLineaRollupV9)", async () => {
@@ -501,5 +503,16 @@ describe("Ignition deploy plugin", () => {
         }
       });
     }
+
+    it("fails the task when the presigned deployment cannot be broadcast", async () => {
+      // Unfunded predetermined sender: gas estimation fails, which must not exit 0.
+      const connection = await network.create({ override: { hardfork: "shanghai" } });
+      try {
+        const message = await captureError(() => deployPresignedSystemContract(connection, EIP2935_SYSTEM_CONTRACT));
+        expect(message).to.contain(`Error during contract=${EIP2935_SYSTEM_CONTRACT.contractName} deployment`);
+      } finally {
+        await connection.close();
+      }
+    });
   });
 });

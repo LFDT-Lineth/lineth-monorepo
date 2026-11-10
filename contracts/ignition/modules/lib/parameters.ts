@@ -1,7 +1,6 @@
 import { toHex } from "viem";
 
 import { formatEnvVarValueForMessage } from "../../../common/helpers/envVarLogging.js";
-import { jsonBigint } from "../../../hardhat-plugins/deploy/companion.js";
 
 import type { ModuleParameters, SolidityParameterType } from "@nomicfoundation/ignition-core";
 import type { Hex } from "viem";
@@ -71,17 +70,4 @@ export function withoutKey(parameters: ModuleParameters, key: string): ModulePar
     }
   }
   return result;
-}
-/** Merges per-module parameter sets, refusing a key that two sub-builders would set to different values. */
-export function mergeModuleParameters(moduleId: string, ...sets: ModuleParameters[]): ModuleParameters {
-  const merged: ModuleParameters = {};
-  for (const set of sets) {
-    for (const [key, value] of Object.entries(set)) {
-      if (key in merged && JSON.stringify(merged[key], jsonBigint) !== JSON.stringify(value, jsonBigint)) {
-        throw new Error(`Parameter "${moduleId}.${key}" is produced twice with different values.`);
-      }
-      merged[key] = value;
-    }
-  }
-  return merged;
 }

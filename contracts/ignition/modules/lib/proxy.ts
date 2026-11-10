@@ -8,8 +8,6 @@ import type { ArgumentType, CallableContractFuture, IgnitionModuleBuilder } from
 type UpgradeSafety = {
   /** OpenZeppelin validation exceptions (the Hardhat 2 script's `unsafeAllow`). */
   unsafeAllow?: UnsafeAllow;
-  /** Placeholder constructor arguments for validating an implementation with a constructor (count and types matter). */
-  validationConstructorArgs?: readonly unknown[];
 };
 
 export type PinnedTransparentProxyOptions = UpgradeSafety & {
@@ -44,9 +42,6 @@ export function deployPinnedTransparentProxy(m: IgnitionModuleBuilder, options: 
     contractName: options.implementation.contractName,
     implementation: options.implementation,
     unsafeAllow: options.unsafeAllow ?? [],
-    ...(options.validationConstructorArgs === undefined
-      ? {}
-      : { validationConstructorArgs: options.validationConstructorArgs }),
   });
   return { proxy, proxyAdmin };
 }
@@ -65,9 +60,6 @@ export function deployPinnedBeacon(
     contractName: options.implementation.contractName,
     implementation: options.implementation,
     unsafeAllow: options.unsafeAllow ?? [],
-    ...(options.validationConstructorArgs === undefined
-      ? {}
-      : { validationConstructorArgs: options.validationConstructorArgs }),
   });
   return beacon;
 }
@@ -85,20 +77,15 @@ export function deployUpgradeImplementation<ContractNameT extends string>(
     reinitializer?: { functionName: string; args?: ArgumentType[] };
   },
 ) {
-  const constructorArgs = options.constructorArgs ?? [];
-  const implementation = m.contract(options.contractName, constructorArgs, {
+  const implementation = m.contract(options.contractName, options.constructorArgs ?? [], {
     id: `${options.contractName}Implementation`,
   });
   recordUpgradeTarget(implementation, {
     kind: "upgrade",
     proxy: m.getParameter<string>("proxy"),
-    constructorArgs,
     contractName: options.contractName,
     implementation,
     unsafeAllow: options.unsafeAllow ?? [],
-    ...(options.validationConstructorArgs === undefined
-      ? {}
-      : { validationConstructorArgs: options.validationConstructorArgs }),
     ...(options.reinitializer === undefined
       ? {}
       : { reinitializer: { functionName: options.reinitializer.functionName, args: options.reinitializer.args ?? [] } }),

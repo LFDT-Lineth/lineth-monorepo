@@ -2,7 +2,7 @@
 import "dotenv/config";
 
 import hardhatToolboxViem from "@nomicfoundation/hardhat-toolbox-viem";
-import hardhatUpgrades from "@openzeppelin/hardhat-upgrades";
+import hardhatUpgrades from "@openzeppelin/hardhat-upgrades/viem";
 import { configVariable, defineConfig } from "hardhat/config";
 import hardhatIgnoreWarnings from "hardhat-ignore-warnings";
 
@@ -140,6 +140,16 @@ export default defineConfig({
     sourcify: {
       enabled: false,
     },
+  },
+  // Mocks, the pinned proxies and code exercised only by gas-heavy tests are not instrumented (Hardhat 2 .solcover.js).
+  coverage: {
+    skipFiles: [
+      "src/_testing/**",
+      "src/proxies/**",
+      "src/bridging/token/CustomBridgedToken.sol",
+      "src/rollup/_exampleImplementations/**",
+      "src/libraries/SparseMerkleProof.sol",
+    ],
   },
   test: {
     solidity: {

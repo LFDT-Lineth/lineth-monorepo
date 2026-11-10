@@ -85,10 +85,6 @@ describe("SparseMerkleProof", () => {
       });
 
       it("Should revert when a value is not mod 32", async () => {
-        if (process.env.SOLIDITY_COVERAGE === "true") {
-          // Skipping this test in coverage mode due to high gas consumption.
-          return;
-        }
         const {
           accountProof: {
             proof: { proofRelatedNodes },
@@ -148,10 +144,6 @@ describe("SparseMerkleProof", () => {
       });
 
       it("Should revert when the computedHash != subSmtRoot", async () => {
-        if (process.env.SOLIDITY_COVERAGE === "true") {
-          // Skipping this test in coverage mode due to high gas consumption.
-          return;
-        }
         const {
           accountProof: {
             proof: { proofRelatedNodes },
@@ -168,10 +160,6 @@ describe("SparseMerkleProof", () => {
       });
 
       it("Should return false when the account proof is not correct", async () => {
-        if (process.env.SOLIDITY_COVERAGE === "true") {
-          // Skipping this test in coverage mode due to high gas consumption.
-          return;
-        }
         const {
           accountProof: {
             proof: { proofRelatedNodes },
@@ -189,10 +177,6 @@ describe("SparseMerkleProof", () => {
       });
 
       it("Should revert when leaf index is higher than max leaf index", async () => {
-        if (process.env.SOLIDITY_COVERAGE === "true") {
-          // Skipping this test in coverage mode due to high gas consumption.
-          return;
-        }
         const {
           accountProof: {
             proof: { proofRelatedNodes },
@@ -210,10 +194,6 @@ describe("SparseMerkleProof", () => {
       });
 
       it("Should return true when the account proof is correct", async () => {
-        if (process.env.SOLIDITY_COVERAGE === "true") {
-          // Skipping this test in coverage mode due to high gas consumption.
-          return;
-        }
         const {
           accountProof: {
             proof: { proofRelatedNodes },
@@ -229,10 +209,6 @@ describe("SparseMerkleProof", () => {
 
     describe("storage proof", () => {
       it("Should revert when the computedHash != subSmtRoot", async () => {
-        if (process.env.SOLIDITY_COVERAGE === "true") {
-          // Skipping this test in coverage mode due to high gas consumption.
-          return;
-        }
         const {
           storageProofs: [
             {
@@ -251,10 +227,6 @@ describe("SparseMerkleProof", () => {
       });
 
       it("Should return false when the storage proof is not correct", async () => {
-        if (process.env.SOLIDITY_COVERAGE === "true") {
-          // Skipping this test in coverage mode due to high gas consumption.
-          return;
-        }
         const {
           storageProofs: [
             {
@@ -274,10 +246,6 @@ describe("SparseMerkleProof", () => {
       });
 
       it("Should return true when the storage proof is correct", { timeout: 30_000 }, async () => {
-        if (process.env.SOLIDITY_COVERAGE === "true") {
-          // Skipping this test in coverage mode due to high gas consumption.
-          return;
-        }
         const { storageProofs } = merkleProofTestData;
 
         for (const {

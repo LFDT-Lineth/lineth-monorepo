@@ -1,3 +1,4 @@
+import { readDeploymentParameters } from "@nomicfoundation/hardhat-ignition/helpers";
 import { DeploymentResultType } from "@nomicfoundation/ignition-core";
 import path from "node:path";
 import { getAddress, keccak256, toHex } from "viem";
@@ -7,12 +8,12 @@ import {
   jsonBigint,
   loadCompanion,
   loadIgnitionModule,
-  readParametersFile,
   resolveModulePath,
   writeParametersFile,
 } from "./companion.js";
 import {
   collectUpgradeTargets,
+  constructorArgsOf,
   registerAndReportUpgradeTargets,
   resolveArgument,
   validateUpgradeTargets,
@@ -103,7 +104,8 @@ export default async function deployWithUpgradeChecks(
     writeParametersFile(parametersPath, parameters);
     console.log(`Ignition parameters for ${ignitionModule.id} written to ${parametersPath}`);
   } else if (parametersPath !== undefined) {
-    parameters = readParametersFile(parametersPath);
+    // Ignition's own reader: JSON5, `"123n"` bigints, unsafe integers rejected.
+    parameters = await readDeploymentParameters(parametersPath);
   }
 
   const targets = collectUpgradeTargets(ignitionModule);
@@ -118,14 +120,17 @@ export default async function deployWithUpgradeChecks(
     const parts = await Promise.all(
       upgradeTargets.map(async (target) => {
         const { bytecode } = await hre.artifacts.readArtifact(target.contractName);
-        if (target.constructorArgs.length === 0) {
+        const constructorArgs = constructorArgsOf(target.implementation);
+        if (constructorArgs.length === 0) {
           return bytecode.slice(2);
         }
-        const resolved = target.constructorArgs.map((arg) => resolveArgument(arg, { parameters }));
+        const resolved = constructorArgs.map((arg) => resolveArgument(arg, { parameters }));
         return `${bytecode.slice(2)}${toHex(JSON.stringify(resolved, jsonBigint)).slice(2)}`;
       }),
     );
     deploymentId = `${ignitionModule.id}-${chainId}-${keccak256(`0x${parts.join("")}`).slice(2, 10)}`;
+    // Ignition does not print it; `ignition status | verify | wipe | track-tx` need it.
+    console.log(`Deployment id: ${deploymentId}`);
   }
 
   const verify = !isSimulated && (args.verify || process.env.VERIFY_CONTRACT === "true");
@@ -135,11 +140,12 @@ export default async function deployWithUpgradeChecks(
     `ignition deploy ${ignitionModule.id}`,
     async () => {
       // Ignition deploys on its own connection; capture it to reach the same chain afterwards (also in-process).
-      let deployConnection: NetworkConnection = connection;
+      // Only the first one: with --verify, Ignition's verify task opens another connection inside runSuper.
+      let deployConnection: NetworkConnection | undefined;
       const captureConnection: Partial<NetworkHooks> = {
         async newConnection(hookContext, next) {
           const created = await next(hookContext);
-          if (isViemConnection(created)) {
+          if (deployConnection === undefined && isViemConnection(created)) {
             deployConnection = created;
           }
           return created;
@@ -156,6 +162,7 @@ export default async function deployWithUpgradeChecks(
         return result;
       }
 
+      deployConnection ??= connection;
       const contracts: Record<string, Address> = Object.fromEntries(
         Object.entries(result.contracts).map(([futureId, contract]) => [futureId, getAddress(contract.address)]),
       );

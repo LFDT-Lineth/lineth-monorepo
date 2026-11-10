@@ -2,7 +2,7 @@ import { globalFlag, task } from "hardhat/config";
 import { definePlugin } from "hardhat/plugins";
 import { ArgumentType } from "hardhat/types/arguments";
 
-import "./type-extensions.js";
+export type * from "./type-extensions.js";
 
 /**
  * Browser-wallet signing for Hardhat tasks and scripts. `--signer-ui` (or `HARDHAT_SIGNER_UI=true`) enables it; tasks

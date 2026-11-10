@@ -6,13 +6,21 @@ import {
   isModuleParameterRuntimeValue,
 } from "@nomicfoundation/ignition-core";
 import { upgrades } from "@openzeppelin/hardhat-upgrades/viem";
-import { concat, encodeAbiParameters, encodeFunctionData, getAddress, isAddress, parseAbiParameters } from "viem";
+import {
+  concat,
+  encodeAbiParameters,
+  encodeFunctionData,
+  getAddress,
+  isAddress,
+  parseAbiParameters,
+  zeroAddress,
+} from "viem";
 
 import { getUpgradeTarget } from "./targets.js";
 
 import type { UpgradeTarget } from "./targets.js";
 import type { ArgumentType, DeploymentParameters, Future, IgnitionModule } from "@nomicfoundation/ignition-core";
-import type { ValidateImplementationOptions } from "@openzeppelin/hardhat-upgrades/viem";
+import type { ForceImportOptions, ValidateImplementationOptions } from "@openzeppelin/hardhat-upgrades/viem";
 import type { HardhatRuntimeEnvironment } from "hardhat/types/hre";
 import type { NetworkConnection } from "hardhat/types/network";
 import type { Address, Hex } from "viem";
@@ -56,11 +64,23 @@ function isPinnedImplementation(target: UpgradeTarget): boolean {
   return target.implementation.type === FutureType.CONTRACT_DEPLOYMENT;
 }
 
+/** Constructor arguments of an implementation future (none for other future types). */
+export function constructorArgsOf(future: Future): ArgumentType[] {
+  return future.type === FutureType.CONTRACT_DEPLOYMENT || future.type === FutureType.NAMED_ARTIFACT_CONTRACT_DEPLOYMENT
+    ? future.constructorArgs
+    : [];
+}
+
+type ResolveContext = {
+  parameters: DeploymentParameters;
+  contracts?: Record<string, Address>;
+  accounts?: readonly Address[];
+  /** Before deploying: futures and accounts resolve to the zero address (OpenZeppelin only encodes the arguments). */
+  placeholders?: boolean;
+};
+
 /** Resolves an Ignition argument (module parameter, account, deployed future, nested values) to a plain value. */
-export function resolveArgument(
-  argument: ArgumentType,
-  context: { parameters: DeploymentParameters; contracts?: Record<string, Address>; accounts?: readonly Address[] },
-): unknown {
+export function resolveArgument(argument: ArgumentType, context: ResolveContext): unknown {
   if (isModuleParameterRuntimeValue(argument)) {
     const value =
       context.parameters[argument.moduleId]?.[argument.name] ??
@@ -72,7 +92,10 @@ export function resolveArgument(
     return value;
   }
   if (isAccountRuntimeValue(argument)) {
-    return context.accounts?.[argument.accountIndex];
+    return context.placeholders === true ? zeroAddress : context.accounts?.[argument.accountIndex];
+  }
+  if (isFuture(argument) && context.placeholders === true) {
+    return zeroAddress;
   }
   if (isFuture(argument)) {
     const address = isContractFuture(argument) ? context.contracts?.[argument.id] : undefined;
@@ -98,13 +121,21 @@ function resolveAddress(argument: ArgumentType, parameters: DeploymentParameters
   return getAddress(value);
 }
 
-function validationOptions(target: UpgradeTarget) {
-  const options: ValidateImplementationOptions & { constructorArgs?: readonly unknown[] } = {
-    kind: target.kind === "beacon" ? "beacon" : "transparent",
+/** OpenZeppelin reads `constructorArgs` (engine/deploy-impl.ts) although its viem option types omit it. */
+type ConstructorArgsOption = { constructorArgs?: unknown[] };
+
+function proxyKind(target: UpgradeTarget): "transparent" | "beacon" {
+  return target.kind === "beacon" ? "beacon" : "transparent";
+}
+
+function validationOptions(target: UpgradeTarget, parameters: DeploymentParameters) {
+  const options: ValidateImplementationOptions & ConstructorArgsOption = {
+    kind: proxyKind(target),
     unsafeAllow: target.unsafeAllow,
   };
-  if (target.validationConstructorArgs !== undefined) {
-    options.constructorArgs = target.validationConstructorArgs;
+  const constructorArgs = constructorArgsOf(target.implementation);
+  if (constructorArgs.length > 0) {
+    options.constructorArgs = constructorArgs.map((arg) => resolveArgument(arg, { parameters, placeholders: true }));
   }
   return options;
 }
@@ -131,7 +162,7 @@ export async function validateUpgradeTargets(
       console.log(`${target.contractName}: pinned audited bytecode (not built from src/); OZ validation skipped.`);
       continue;
     }
-    const options = validationOptions(target);
+    const options = validationOptions(target, parameters);
     const proxy = target.kind === "upgrade" ? resolveAddress(target.proxy, parameters) : undefined;
     const proxyCode = proxy === undefined ? undefined : await publicClient.getCode({ address: proxy });
     if (proxy !== undefined && (proxyCode === undefined || proxyCode === "0x")) {
@@ -219,9 +250,15 @@ export async function registerAndReportUpgradeTargets(
     if (imported === undefined || isPinnedImplementation(target)) {
       continue;
     }
-    const kind = target.kind === "beacon" ? "beacon" : "transparent";
+    // The manifest keys implementations by bytecode and constructor arguments, so pass the deployed ones.
+    const options: ForceImportOptions & ConstructorArgsOption = {
+      kind: proxyKind(target),
+      constructorArgs: constructorArgsOf(target.implementation).map((arg) =>
+        resolveArgument(arg, { parameters, contracts }),
+      ),
+    };
     try {
-      await oz.forceImport(imported, target.contractName, { kind });
+      await oz.forceImport(imported, target.contractName, options);
       console.log(`OZ Upgrades manifest: imported ${target.contractName} (${target.kind}) at ${imported}`);
     } catch (error: unknown) {
       console.warn(

@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -66,16 +66,6 @@ export async function loadCompanion(modulePath: string): Promise<DeployCompanion
 /** JSON replacer writing bigints the way Ignition's parameter reader revives them (`"123n"`). */
 export function jsonBigint(_key: string, value: unknown): unknown {
   return typeof value === "bigint" ? `${value.toString()}n` : value;
-}
-
-function reviveBigint(_key: string, value: unknown): unknown {
-  return typeof value === "string" && /^\d+n$/.test(value) ? BigInt(value.slice(0, -1)) : value;
-}
-
-/** Reads an Ignition parameters file (JSON, bigints as `"123n"`). */
-export function readParametersFile(filePath: string): DeploymentParameters {
-  const parsed: DeploymentParameters = JSON.parse(readFileSync(filePath, "utf8"), reviveBigint);
-  return parsed;
 }
 
 /**
