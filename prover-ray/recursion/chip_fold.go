@@ -70,12 +70,12 @@ func (m *Machine) FoldChain(xInv int, rounds []FoldRound) {
 // first, last (a chain's first and last rows), addr_p, addr_q, addr_al,
 // addr_t, addr_xi (first row).
 //
-//	active·((p + q) + al·(p − q)·xi − 2·t) = 0
+//	(p + q) + al·(p − q)·xi − 2·t = 0
 //	(active − last)·(xi[+1] − xi²) = 0          the point squares
 //
 // Bus: reads p, q, al, t on every active row, and xi on a chain's first row.
-// Every access has a setup multiplicity, so padding rows are inert. The
-// constraints have degree 3.
+// Every access has a setup multiplicity, so padding rows are inert, and their
+// zero witness satisfies the fold. The constraints have degree 3.
 type foldChip struct{ m *Machine }
 
 func (c foldChip) name() string { return foldMod }
@@ -122,7 +122,7 @@ func (c foldChip) define(m *module, bus *Bus) error {
 	odd := e6MulExprs(al, diff)
 	for i := range KindE6 {
 		fold := sum(p[i], q[i], odd[i])
-		m.assertZero(wiop.Mul(active, wiop.Sub(fold, wiop.Mul(constant(2), t[i]))))
+		m.assertZero(wiop.Sub(fold, wiop.Mul(constant(2), t[i])))
 	}
 	m.assertZero(wiop.Mul(wiop.Sub(active, last), wiop.Sub(m.wShift(foldXi, 1), wiop.Mul(xi, xi))))
 

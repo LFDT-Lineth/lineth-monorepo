@@ -233,10 +233,7 @@ func (c deepChip) setup(cs *cols) {
 	cs.declareLanes(deepAddrX, c.cells())
 	cs.declareLanes(deepAct, c.lanes)
 	cs.declareLanes(deepSel, c.lanes)
-	per := 1
-	if c.ext {
-		per = c.lanes
-	}
+	per := c.cells()
 	row := 0
 	for _, in := range c.m.deeps {
 		for _, sg := range in.segs {
