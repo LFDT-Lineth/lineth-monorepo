@@ -1,6 +1,7 @@
 package proofserialization_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -124,6 +125,17 @@ func TestProject_RejectsIncompleteInput(t *testing.T) {
 	t.Run("nil system", func(t *testing.T) {
 		_, err := ps.Project(nil, proof, pub)
 		require.ErrorContains(t, err, "nil system")
+	})
+
+	t.Run("extension vectors", func(t *testing.T) {
+		var vector field.Ext
+		vector.B0.A0.SetUint64(7)
+		const id = wiop.ObjectID(1)
+		withVector := proof
+		withVector.ExtVectors = map[wiop.ObjectID][]field.Ext{id: {vector}}
+		_, err := ps.Project(sc.Sys, withVector, pub)
+		require.ErrorContains(t, err, "wiop.Proof.ExtVectors")
+		require.ErrorContains(t, err, fmt.Sprintf("%#x", uint64(id)))
 	})
 
 	t.Run("public input count mismatch", func(t *testing.T) {

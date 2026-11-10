@@ -11,6 +11,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/consensys/gnark-crypto/field/koalabear/poseidon2"
 	"github.com/consensys/gnark/constraint"
 	"github.com/consensys/gnark/gkr"
@@ -156,9 +157,7 @@ func newTranscriptSystem(t *testing.T, p *gnarkProof) *transcriptSystem {
 	for i := range s.table {
 		s.table[i] = tableModule.NewColumn(s.sys.Context.Childf("compression%d", i), round)
 	}
-	for k := range s.seed {
-		s.seed[k] = round.NewCell(s.sys.Context.Childf("seed%d", k), false)
-	}
+	s.seed = wioptest.NewE6Cells(s.sys.Context, round, "seed")
 
 	s.claims, s.claimValues = newClaimCells(s.sys, round, p.claims)
 	v, err := Define(s.sys, round, p.circuit, p.schedule, p.n, Inputs{Seed: s.seed, Claims: s.claims}, s.table)
@@ -168,7 +167,7 @@ func newTranscriptSystem(t *testing.T, p *gnarkProof) *transcriptSystem {
 	require.NoError(t, err)
 	require.Len(t, s.rows, nbRows)
 
-	round.RegisterAction(actionFunc(func(rt *wiop.Runtime) {
+	round.RegisterAction(wioptest.ActionFunc(func(rt *wiop.Runtime) {
 		require.NoError(t, v.Assign(rt, s.flat))
 	}))
 	return s
@@ -186,35 +185,17 @@ func (s *transcriptSystem) changeProofElement(t *testing.T, position int) {
 	require.NoError(t, err)
 }
 
-// actionFunc is a prover action.
-type actionFunc func(rt *wiop.Runtime)
-
-func (f actionFunc) Run(rt *wiop.Runtime) { f(rt) }
-
-// errMissingRow is the error that prove returns when the prover panics because a row that a lookup
-// reads is in none of its table's rows. The prover cannot then build the lookup's witness, so the
-// verifier never sees the proof.
-var errMissingRow = errors.New("a row of a lookup is in none of its table")
-
 // missesCompression says that err is a row of the verifier's compressions that the caller's table lacks.
 func missesCompression(err error) bool {
-	return errors.Is(err, errMissingRow) && strings.Contains(err.Error(), "/transcript/state0")
+	return errors.Is(err, wioptest.ErrMissingRow) && strings.Contains(err.Error(), "/transcript/state0")
 }
 
 // prove compiles the system and proves it with the system's values, and returns the result of the
-// verification, or errMissingRow, wrapping the panic, if the prover holds a row missing from the table of
-// a lookup. Any other panic fails the test.
+// verification, or [wioptest.ErrMissingRow] if the prover holds a row missing from the table of a lookup.
 func (s *transcriptSystem) prove(t *testing.T) (err error) {
 	t.Helper()
 	require.NoError(t, compilers.CompileFull(s.sys))
-	defer func() {
-		if r := recover(); r != nil {
-			if !strings.Contains(fmt.Sprint(r), "has no match in the lookup table") {
-				t.Fatalf("the prover panicked: %v", r)
-			}
-			err = fmt.Errorf("%w: %v", errMissingRow, r)
-		}
-	}()
+	defer wioptest.RecoverMissingRow(t, &err)
 	proof, pub := s.sys.Prove(func(rt *wiop.Runtime) {
 		for k, cell := range s.seed {
 			rt.AssignCell(cell, field.ElemFromBase(s.seedValue[k]))
