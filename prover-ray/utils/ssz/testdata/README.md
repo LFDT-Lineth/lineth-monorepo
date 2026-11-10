@@ -21,17 +21,23 @@ installed (Python 3.11 or 3.12):
 
 ```bash
 python prover-ray/utils/ssz/testdata/generate.py
-cd prover-ray && go test ./utils/ssz ./backend/jobadapter
+cd prover-ray && go test ./utils/ssz ./backend ./backend/jobadapter
 ```
 
 The generator also updates
-`backend/jobadapter/testdata/single_block_expected.ssz`, which duplicates payload0.
+`backend/jobadapter/testdata/single_block_expected.ssz`, which duplicates payload0,
+and writes `l2_execution_output.ssz`: the l2-execution guest output
+(`keccak256(frame) || frame`, `frame = 0x0003 || SSZ(public inputs)`) for the
+public inputs of the spec's reference response
+`rollup_spec/src/rollup_spec/prover_io/testdata/10-11-getZkL2ExecutionProofV1.response.json`.
+`backend` decodes it and checks it against that response.
 
 | Fixture | Bytes | SHA-256 |
 | --- | ---: | --- |
 | payload0 | 772 | `1c5f4c6d7824e006abfbc13bb5b766b78a7fc61efe2d1bb3e65912b274d2fe3e` |
 | payload1 | 772 | `88d3c88127dd4460668fc9c83a3098b97649aa6888326d55666e8ca392600642` |
 | full | 1099 | `ad56803912126e7d60ed5eee3f89b742ec6908c5fc3f0daef93e50db51cceaaa` |
+| l2_execution_output | 370 | `d16135f2d4662a0cd7cf30a492aff3718602a549948684cb47e3e2eeb361b293` |
 
 `payload0` and `payload1` cover single-block coordinator fixture inputs.
 `full` additionally covers withdrawals, versioned hashes, extra data, block access
