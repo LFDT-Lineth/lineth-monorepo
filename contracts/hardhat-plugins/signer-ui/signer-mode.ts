@@ -13,7 +13,8 @@ export function hasConfiguredDeployerPrivateKey(
   return hasTrimmedValue(deployerPrivateKey);
 }
 
-export function isSignerUiEnabled(hardhatSignerUiEnabled: string | undefined = process.env.HARDHAT_SIGNER_UI): boolean {
+/** `HARDHAT_SIGNER_UI=true` (config-time view; the bridge's `isSignerUiEnabled` is the runtime scope). */
+export function isSignerUiEnvSet(hardhatSignerUiEnabled: string | undefined = process.env.HARDHAT_SIGNER_UI): boolean {
   return hardhatSignerUiEnabled === "true";
 }
 
@@ -26,7 +27,7 @@ export function getSignerModeConflictMessage(): string {
 }
 
 export function assertExclusiveSignerMode(details: SignerModeConflictDetails = {}): void {
-  const signerUiEnabled = details.hardhatSignerUiEnabled ?? isSignerUiEnabled();
+  const signerUiEnabled = details.hardhatSignerUiEnabled ?? isSignerUiEnvSet();
   const privateKeyConfigured = details.deployerPrivateKeyConfigured ?? hasConfiguredDeployerPrivateKey();
 
   if (signerUiEnabled && privateKeyConfigured) {
@@ -47,7 +48,7 @@ type ResolveDeployerAccountsInputs = {
 export function resolveDeployerAccounts(inputs: ResolveDeployerAccountsInputs = {}): string[] {
   const hardhatSignerUiEnabled = inputs.hardhatSignerUiEnabled ?? process.env.HARDHAT_SIGNER_UI;
   const deployerPrivateKey = inputs.deployerPrivateKey ?? process.env.DEPLOYER_PRIVATE_KEY;
-  const signerUiEnabled = isSignerUiEnabled(hardhatSignerUiEnabled);
+  const signerUiEnabled = isSignerUiEnvSet(hardhatSignerUiEnabled);
 
   const signerModeConflictDetails = {
     hardhatSignerUiEnabled: signerUiEnabled,

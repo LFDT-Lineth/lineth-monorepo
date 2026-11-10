@@ -24,7 +24,7 @@ This app is local operator tooling for the contracts package. It is not intended
 
 For a composite module, e.g. `hardhat ignition deploy L1Protocol --signer-ui` (PlonkVerifier, LinethRollup, Timelock), Hardhat keeps **one** browser session for the **entire** run. Ignition sends the module's transactions in order; you sign each one, but the UI and bridge are **not** restarted in between. Operational tasks get one session per task run.
 
-If you reject a wallet prompt or stop the run before signing, the Ignition journal is left on an unsent transaction. Run `pnpm exec hardhat deploy:recover --network <network>` (add `--deployment-id <id>` if you used one), then re-run the same deploy command to resume.
+If you reject a wallet prompt or stop the run before signing, the Ignition journal is left on an unsent transaction. Run `pnpm exec hardhat deploy:recover --network <network>` (it finds the stuck deployment of that chain, including upgrade modules' `<Module>-<chainId>-<hash>` ids; add `--deployment-id <id>` if several are stuck or you used a custom one), then re-run the same deploy command to resume.
 
 ## UI features (operator-facing)
 

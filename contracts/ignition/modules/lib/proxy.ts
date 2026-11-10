@@ -65,6 +65,9 @@ export function deployPinnedBeacon(
     contractName: options.implementation.contractName,
     implementation: options.implementation,
     unsafeAllow: options.unsafeAllow ?? [],
+    ...(options.validationConstructorArgs === undefined
+      ? {}
+      : { validationConstructorArgs: options.validationConstructorArgs }),
   });
   return beacon;
 }
@@ -82,12 +85,14 @@ export function deployUpgradeImplementation<ContractNameT extends string>(
     reinitializer?: { functionName: string; args?: ArgumentType[] };
   },
 ) {
-  const implementation = m.contract(options.contractName, options.constructorArgs ?? [], {
+  const constructorArgs = options.constructorArgs ?? [];
+  const implementation = m.contract(options.contractName, constructorArgs, {
     id: `${options.contractName}Implementation`,
   });
   recordUpgradeTarget(implementation, {
     kind: "upgrade",
     proxy: m.getParameter<string>("proxy"),
+    constructorArgs,
     contractName: options.contractName,
     implementation,
     unsafeAllow: options.unsafeAllow ?? [],

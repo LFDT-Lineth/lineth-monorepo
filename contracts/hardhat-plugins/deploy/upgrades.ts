@@ -33,7 +33,12 @@ export function collectUpgradeTargets(ignitionModule: IgnitionModule): UpgradeTa
       const target = getUpgradeTarget(future);
       if (target !== undefined) {
         targets.push(target);
-      } else if (future.type === FutureType.CONTRACT_DEPLOYMENT && PROXY_CONTRACT_NAMES.has(future.contractName)) {
+      } else if (
+        // Both the artifact form and `m.contract("TransparentUpgradeableProxy", …)`: src/_testing compiles one too.
+        (future.type === FutureType.CONTRACT_DEPLOYMENT ||
+          future.type === FutureType.NAMED_ARTIFACT_CONTRACT_DEPLOYMENT) &&
+        PROXY_CONTRACT_NAMES.has(future.contractName)
+      ) {
         throw new Error(
           `${future.id} deploys a ${future.contractName} without the proxy helpers of ignition/modules/lib/proxy.ts, ` +
             "so it would skip the OpenZeppelin Upgrades checks.",

@@ -6,7 +6,7 @@ import {
   assertExclusiveSignerMode,
   getSignerModeConflictMessage,
   hasConfiguredDeployerPrivateKey,
-  isSignerUiEnabled,
+  isSignerUiEnvSet,
 } from "../../../hardhat-plugins/signer-ui/signer-mode.js";
 
 describe("signer mode and hardhat task-args helpers", () => {
@@ -15,9 +15,9 @@ describe("signer mode and hardhat task-args helpers", () => {
     expect(hasConfiguredDeployerPrivateKey("   ")).to.equal(false);
     expect(hasConfiguredDeployerPrivateKey("0x1234")).to.equal(true);
 
-    expect(isSignerUiEnabled(undefined)).to.equal(false);
-    expect(isSignerUiEnabled("false")).to.equal(false);
-    expect(isSignerUiEnabled("true")).to.equal(true);
+    expect(isSignerUiEnvSet(undefined)).to.equal(false);
+    expect(isSignerUiEnvSet("false")).to.equal(false);
+    expect(isSignerUiEnvSet("true")).to.equal(true);
   });
 
   it("throws on exclusive signer-mode conflict", () => {

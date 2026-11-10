@@ -19,6 +19,8 @@ export type UpgradeTarget =
       kind: "upgrade";
       /** Address of the existing transparent proxy (usually a module parameter). */
       proxy: ArgumentType;
+      /** Constructor arguments of the implementation (part of the default deployment id). */
+      constructorArgs: ArgumentType[];
       /** Reinitializer called through `ProxyAdmin.upgradeAndCall`; omitted → `ProxyAdmin.upgrade`. */
       reinitializer?: { functionName: string; args: ArgumentType[] };
     });

@@ -1,16 +1,22 @@
 import { DeploymentResultType } from "@nomicfoundation/ignition-core";
 import path from "node:path";
-import { getAddress, keccak256 } from "viem";
+import { getAddress, keccak256, toHex } from "viem";
 
 import {
   createParameterContext,
+  jsonBigint,
   loadCompanion,
   loadIgnitionModule,
   readParametersFile,
   resolveModulePath,
   writeParametersFile,
 } from "./companion.js";
-import { collectUpgradeTargets, registerAndReportUpgradeTargets, validateUpgradeTargets } from "./upgrades.js";
+import {
+  collectUpgradeTargets,
+  registerAndReportUpgradeTargets,
+  resolveArgument,
+  validateUpgradeTargets,
+} from "./upgrades.js";
 import { withSignerUi } from "../signer-ui/session.js";
 
 import type { DeploymentParameters } from "./types.js";
@@ -74,9 +80,14 @@ export default async function deployWithUpgradeChecks(
 ): Promise<unknown> {
   const args = readArguments(taskArguments);
   const modulePath = resolveModulePath(hre.config.paths.ignition, args.modulePath);
-  // Fresh artifacts and OpenZeppelin validations for the checks below. A full default-profile build also removes the
-  // isolated build infos a previous production build (Ignition's) left, which the in-process network cannot load.
-  await hre.tasks.getTask("build").run({ quiet: true });
+  // Fresh artifacts and OpenZeppelin validations for the checks below. On live networks, build exactly as Ignition
+  // does (production profile) so its own build is a cache hit. On the in-process network, a default-profile build
+  // instead: it removes the isolated build infos of a production build, which the in-process network cannot load.
+  const networkName = hre.globalOptions.network ?? "default"; // Hardhat's DEFAULT_NETWORK_NAME
+  const isSimulated = hre.config.networks[networkName]?.type === "edr-simulated";
+  await hre.tasks
+    .getTask("build")
+    .run(isSimulated ? { quiet: true } : { quiet: true, noTests: true, defaultBuildProfile: "production" });
   const ignitionModule = await loadIgnitionModule(modulePath);
   const companion = await loadCompanion(modulePath);
 
@@ -98,18 +109,25 @@ export default async function deployWithUpgradeChecks(
   const targets = collectUpgradeTargets(ignitionModule);
   await validateUpgradeTargets(hre, connection, targets, parameters);
 
-  // Upgrade modules deploy one implementation per bytecode: identical bytecode resumes the same deployment (like
-  // OpenZeppelin's deployImplementation reuse), new bytecode gets a new deployment id instead of a reconciliation error.
+  // Upgrade modules deploy one implementation per bytecode and constructor arguments: identical ones resume the same
+  // deployment (like OpenZeppelin's deployImplementation reuse), changed ones get a new deployment id instead of a
+  // reconciliation error.
   let deploymentId = args.deploymentId;
-  const upgradeTargets = targets.filter((target) => target.kind === "upgrade");
+  const upgradeTargets = targets.flatMap((target) => (target.kind === "upgrade" ? [target] : []));
   if (deploymentId === undefined && upgradeTargets.length > 0) {
-    const bytecodes = await Promise.all(
-      upgradeTargets.map(async (target) => (await hre.artifacts.readArtifact(target.contractName)).bytecode),
+    const parts = await Promise.all(
+      upgradeTargets.map(async (target) => {
+        const { bytecode } = await hre.artifacts.readArtifact(target.contractName);
+        if (target.constructorArgs.length === 0) {
+          return bytecode.slice(2);
+        }
+        const resolved = target.constructorArgs.map((arg) => resolveArgument(arg, { parameters }));
+        return `${bytecode.slice(2)}${toHex(JSON.stringify(resolved, jsonBigint)).slice(2)}`;
+      }),
     );
-    deploymentId = `${ignitionModule.id}-${chainId}-${keccak256(`0x${bytecodes.map((b) => b.slice(2)).join("")}`).slice(2, 10)}`;
+    deploymentId = `${ignitionModule.id}-${chainId}-${keccak256(`0x${parts.join("")}`).slice(2, 10)}`;
   }
 
-  const isSimulated = connection.networkConfig.type === "edr-simulated";
   const verify = !isSimulated && (args.verify || process.env.VERIFY_CONTRACT === "true");
 
   return withSignerUi(

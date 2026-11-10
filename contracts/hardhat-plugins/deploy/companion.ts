@@ -78,22 +78,13 @@ export function readParametersFile(filePath: string): DeploymentParameters {
   return parsed;
 }
 
-function readParametersFileIfPresent(filePath: string): DeploymentParameters {
-  try {
-    return readParametersFile(filePath);
-  } catch (error: unknown) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-      return {};
-    }
-    throw error;
-  }
-}
-
-/** Writes `parameters` into `filePath`, replacing only their top-level module entries (other modules are kept). */
+/**
+ * Writes `parameters` to `filePath`, replacing the file: Ignition must deploy with exactly the values the upgrade
+ * checks and the Security Council calldata were computed from, not with entries left by an earlier run.
+ */
 export function writeParametersFile(filePath: string, parameters: DeploymentParameters): void {
-  const existing = readParametersFileIfPresent(filePath);
   mkdirSync(path.dirname(filePath), { recursive: true });
-  writeFileSync(filePath, `${JSON.stringify({ ...existing, ...parameters }, jsonBigint, 2)}\n`);
+  writeFileSync(filePath, `${JSON.stringify(parameters, jsonBigint, 2)}\n`);
 }
 
 /** What `<Module>.deploy.ts` parameter builders read about the target network. */

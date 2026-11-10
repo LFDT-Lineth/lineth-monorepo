@@ -841,7 +841,8 @@ async function ensureSession<ChainTypeT extends ChainType | string>(
     try {
       await session.start();
     } catch (error) {
-      await session.close().catch(() => undefined);
+      // Also stop `next dev`: a start that timed out waiting for it leaves it running otherwise.
+      await session.close({ shutdownNextDev: true }).catch(() => undefined);
       throw error;
     }
     activeSession = session;

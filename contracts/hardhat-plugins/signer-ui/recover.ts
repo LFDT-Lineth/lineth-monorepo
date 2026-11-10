@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { type Address, getAddress, isAddress } from "viem";
 
@@ -7,7 +7,7 @@ import { findSignerUiBroadcast, getSignerUiBroadcastLogPath, readSignerUiBroadca
 import type { HardhatRuntimeEnvironment } from "hardhat/types/hre";
 
 type DeployRecoverTaskArguments = {
-  /** Ignition deployment id; defaults to Ignition's `chain-<chainId>`. */
+  /** Ignition deployment id; by default the one deployment of this chain that ends on an unsent transaction. */
   deploymentId: string | undefined;
 };
 
@@ -23,6 +23,47 @@ function parseJournalLine(line: string, index: number, journalPath: string): Jou
     throw new Error(`${journalPath}: record ${index + 1} is not an Ignition journal message.`);
   }
   return parsed as JournalRecord;
+}
+
+type Journal = { content: string; lines: string[]; records: JournalRecord[] };
+
+/** Reads and parses a journal once (no separate existence check: CodeQL js/file-system-race); missing → `undefined`. */
+function readJournal(journalPath: string): Journal | undefined {
+  let content: string;
+  try {
+    content = readFileSync(journalPath, "utf8");
+  } catch (error: unknown) {
+    if (isFileNotFound(error)) {
+      return undefined;
+    }
+    throw error;
+  }
+  // Ignition writes each record as "\n" + JSON, so the file starts with a blank line.
+  const lines = content.split("\n").filter((line) => line.trim() !== "");
+  return { content, lines, records: lines.map((line, index) => parseJournalLine(line, index, journalPath)) };
+}
+
+/** Deployments of `chainId` (`chain-<id>`, or `<Module>-<id>-<hash>` for upgrade modules) ending on an unsent tx. */
+function findStuckDeployments(deploymentsDir: string, chainId: number) {
+  let entries: string[];
+  try {
+    entries = readdirSync(deploymentsDir);
+  } catch (error: unknown) {
+    if (isFileNotFound(error)) {
+      return [];
+    }
+    throw error;
+  }
+  const upgradeId = new RegExp(`-${chainId}-[0-9a-f]{8}$`);
+  return entries
+    .filter((deploymentId) => deploymentId === `chain-${chainId}` || upgradeId.test(deploymentId))
+    .flatMap((deploymentId) => {
+      const journalPath = path.join(deploymentsDir, deploymentId, "journal.jsonl");
+      const journal = readJournal(journalPath);
+      return journal?.records.at(-1)?.type === "TRANSACTION_PREPARE_SEND"
+        ? [{ deploymentId, journalPath, journal }]
+        : [];
+    });
 }
 
 /** Sender of the future that prepared the transaction (its `*_EXECUTION_STATE_INITIALIZE` record carries `from`). */
@@ -52,25 +93,38 @@ export default async function deployRecover(
   const connection = await hre.network.getOrCreate();
   const publicClient = await connection.viem.getPublicClient();
   const chainId = await publicClient.getChainId();
-  const deploymentId = taskArgs.deploymentId ?? `chain-${chainId}`;
-  const journalPath = path.join(hre.config.paths.ignition, "deployments", deploymentId, "journal.jsonl");
+  const deploymentsDir = path.join(hre.config.paths.ignition, "deployments");
 
-  // Read once and work on this content: no separate existence check (CodeQL js/file-system-race).
-  let journal: string;
-  try {
-    journal = readFileSync(journalPath, "utf8");
-  } catch (error: unknown) {
-    if (isFileNotFound(error)) {
+  let deploymentId: string;
+  let journalPath: string;
+  let journal: Journal;
+  if (taskArgs.deploymentId !== undefined) {
+    deploymentId = taskArgs.deploymentId;
+    journalPath = path.join(deploymentsDir, deploymentId, "journal.jsonl");
+    const read = readJournal(journalPath);
+    if (read === undefined) {
       throw new Error(`No Ignition journal at ${journalPath}. Check --deployment-id and --network.`);
     }
-    throw error;
+    journal = read;
+  } else {
+    // Ignition's `chain-<chainId>`, or an upgrade module's `<Module>-<chainId>-<hash>` (deploy plugin).
+    const stuck = findStuckDeployments(deploymentsDir, chainId);
+    if (stuck.length === 0) {
+      console.log(
+        `Nothing to recover on chain ${chainId}: no deployment in ${deploymentsDir} ends on an unsent transaction.`,
+      );
+      return;
+    }
+    if (stuck.length > 1) {
+      throw new Error(
+        `Several deployments on chain ${chainId} end on an unsent transaction (${stuck.map((s) => s.deploymentId).join(", ")}). Pass --deployment-id.`,
+      );
+    }
+    [{ deploymentId, journalPath, journal }] = stuck;
   }
 
-  // Ignition writes each record as "\n" + JSON, so the file starts with a blank line.
-  const lines = journal.split("\n").filter((line) => line.trim() !== "");
-  const records = lines.map((line, index) => parseJournalLine(line, index, journalPath));
+  const { lines, records } = journal;
   const last = records.at(-1);
-
   if (last === undefined || last.type !== "TRANSACTION_PREPARE_SEND") {
     console.log(`Nothing to recover in ${deploymentId}: the last journal record is ${last?.type ?? "missing"}.`);
     return;
@@ -101,7 +155,7 @@ export default async function deployRecover(
     const backupDir = path.join(hre.config.paths.cache, "signer-ui", "journal-backups");
     mkdirSync(backupDir, { recursive: true });
     const backupPath = path.join(backupDir, `${deploymentId}-${new Date().toISOString().replace(/[:.]/g, "-")}.jsonl`);
-    writeFileSync(backupPath, journal);
+    writeFileSync(backupPath, journal.content);
     // Write the truncated journal next to it and rename over the original, so the journal is never half-written.
     const truncatedPath = `${journalPath}.recover`;
     writeFileSync(

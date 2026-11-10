@@ -20,32 +20,27 @@ function lsof(args: string[]): string {
   return execFileSync("lsof", args, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], maxBuffer: 512 * 1024 });
 }
 
-/** SIGKILL any process listening on `port` (Next dev often survives pnpm SIGKILL). Best-effort; no-op on Windows. */
+/**
+ * SIGKILL other processes listening on `port` (Next dev often survives pnpm SIGKILL). Only listeners: a plain `:port`
+ * match would also hit clients connected to it (the browser) and this process. Best-effort; no-op on Windows.
+ */
 export function killTcpListenersOnPort(port: number): void {
   if (process.platform === "win32") {
     return;
   }
-  for (const args of [
-    ["-ti", `tcp:${port}`, "-sTCP:LISTEN"],
-    ["-ti", `:${port}`],
-  ]) {
-    try {
-      const out = lsof(args).trim();
-      if (!out) {
-        continue;
+  let out: string;
+  try {
+    out = lsof(["-ti", `tcp:${port}`, "-sTCP:LISTEN"]).trim();
+  } catch {
+    return; // lsof exits non-zero when nothing listens
+  }
+  for (const pid of out.split("\n").map((line) => Number.parseInt(line.trim(), 10))) {
+    if (Number.isFinite(pid) && pid > 0 && pid !== process.pid) {
+      try {
+        process.kill(pid, "SIGKILL");
+      } catch {
+        /* process may have exited */
       }
-      for (const pid of out.split("\n").map((line) => Number.parseInt(line.trim(), 10))) {
-        if (Number.isFinite(pid) && pid > 0) {
-          try {
-            process.kill(pid, "SIGKILL");
-          } catch {
-            /* process may have exited */
-          }
-        }
-      }
-      return;
-    } catch {
-      /* try the next lsof variant, or no listeners */
     }
   }
 }

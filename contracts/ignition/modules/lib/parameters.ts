@@ -1,6 +1,7 @@
 import { toHex } from "viem";
 
 import { formatEnvVarValueForMessage } from "../../../common/helpers/envVarLogging.js";
+import { jsonBigint } from "../../../hardhat-plugins/deploy/companion.js";
 
 import type { ModuleParameters, SolidityParameterType } from "@nomicfoundation/ignition-core";
 import type { Hex } from "viem";
@@ -83,8 +84,4 @@ export function mergeModuleParameters(moduleId: string, ...sets: ModuleParameter
     }
   }
   return merged;
-}
-/** JSON replacer writing bigints the way Ignition's parameter reader revives them (`"123n"`). */
-export function jsonBigint(_key: string, value: unknown): unknown {
-  return typeof value === "bigint" ? `${value.toString()}n` : value;
 }

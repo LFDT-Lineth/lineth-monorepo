@@ -146,14 +146,14 @@ describe("Ignition deploy plugin", () => {
   useFreshChain();
 
   describe("module parameters", () => {
-    it("writes Ignition-readable parameters, merging other modules already in the file", async () => {
+    it("writes Ignition-readable parameters, replacing entries left by an earlier run", async () => {
       const connection = await getConnection();
-      const output = temporaryFile("default.json", JSON.stringify({ Other: { kept: "yes" } }));
+      const output = temporaryFile("default.json", JSON.stringify({ Other: { stale: "yes" } }));
 
       writeParametersFile(output, await buildParametersFromEnv(connection, "L2MessageService", l2MessageServiceEnv));
 
       const written: unknown = JSON.parse(fs.readFileSync(output, "utf-8"));
-      expect(written).to.deep.include({ Other: { kept: "yes" } });
+      expect(written).to.not.have.property("Other");
       expect(written).to.have.nested.property("L2MessageService.rateLimitPeriod", "86400n");
       expect(written).to.have.nested.property("L2MessageService.securityCouncil", role(1));
 

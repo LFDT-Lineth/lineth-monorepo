@@ -101,7 +101,7 @@ Every deployment is one Ignition module, run by name:
 
 `<ModuleName>` is the module file name under `ignition/modules/` (table below); a path to the module file also works. The in-repo deploy plugin (`hardhat-plugins/deploy/`) wraps Ignition's `ignition deploy`:
 
-1. **Parameters.** The module's `<ModuleName>.deploy.ts` builds its parameters from env vars and the address registry and writes them to `ignition/parameters/<network>.json` (only that module's entries are replaced). With `--parameters <file.json>`, the file is used as is.
+1. **Parameters.** The module's `<ModuleName>.deploy.ts` builds its parameters from env vars and the address registry and writes them to `ignition/parameters/<network>.json` (the file is rewritten on every run, so Ignition deploys exactly what was checked). With `--parameters <file.json>`, the file is used as is.
 2. **Upgrade safety.** Every upgradeable implementation in the module is validated with OpenZeppelin Upgrades before anything is sent (`validateImplementation` with the module's `unsafeAllow`; `validateUpgrade` against the existing proxy for upgrade modules).
 3. **Deployment.** Ignition deploys (journaled, resumable), signing with `DEPLOYER_PRIVATE_KEY` or, with `--signer-ui`, the browser wallet.
 4. **After deploying.** New proxies, beacons and implementations are registered in `.openzeppelin/<network>.json` (`forceImport`), upgrade modules print the Security Council calldata, and the module's `afterDeploy` runs (for example the AddressFilter configuration or the `setVerifierAddress` calldata).
