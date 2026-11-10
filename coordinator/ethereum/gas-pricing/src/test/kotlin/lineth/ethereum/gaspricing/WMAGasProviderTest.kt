@@ -2,6 +2,8 @@ package lineth.ethereum.gaspricing
 
 import linea.domain.FeeHistory
 import linea.kotlin.toULong
+import linea.web3j.gas.EIP1559GasFees
+import linea.web3j.gas.EIP4844GasFees
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
@@ -214,5 +216,61 @@ class WMAGasProviderTest {
     assertThat(calculatedFees.eip1559GasFees.maxPriorityFeePerGas).isEqualTo(maxFeePerGasCap)
     assertThat(calculatedFees.eip1559GasFees.maxFeePerGas).isEqualTo(maxFeePerGasCap)
     assertThat(calculatedFees.maxFeePerBlobGas).isEqualTo(maxFeePerBlobGasCap)
+  }
+
+  @Test
+  fun `async fee getters return the same capped values as the sync getters`() {
+    val wmaGasProvider =
+      WMAGasProvider(
+        chainId.toLong(),
+        mockFeesFetcher,
+        l1PriorityFeeCalculator,
+        WMAGasProvider.Config(
+          gasLimit = gasLimit,
+          maxFeePerGasCap = 1500uL,
+          maxPriorityFeePerGasCap = 100000000uL,
+          maxFeePerBlobGasCap = 100uL,
+        ),
+      )
+
+    assertThat(wmaGasProvider.getEIP1559GasFeesAsync().get()).isEqualTo(wmaGasProvider.getEIP1559GasFees())
+    assertThat(wmaGasProvider.getEIP4844GasFeesAsync().get()).isEqualTo(wmaGasProvider.getEIP4844GasFees())
+    assertThat(wmaGasProvider.getEIP4844GasFeesAsync().get()).isEqualTo(
+      EIP4844GasFees(
+        EIP1559GasFees(maxPriorityFeePerGas = 1229uL, maxFeePerGas = 1500uL),
+        maxFeePerBlobGas = 100uL,
+      ),
+    )
+  }
+
+  @Test
+  fun `async fee getters do not block while fee history is pending`() {
+    val pendingFeeHistory = SafeFuture<FeeHistory>()
+    val pendingFeesFetcher =
+      mock<FeesFetcher> {
+        on { getL1EthGasPriceData() } doReturn pendingFeeHistory
+      }
+    val wmaGasProvider =
+      WMAGasProvider(
+        chainId.toLong(),
+        pendingFeesFetcher,
+        l1PriorityFeeCalculator,
+        WMAGasProvider.Config(
+          gasLimit = gasLimit,
+          maxFeePerGasCap = 1000000000uL,
+          maxPriorityFeePerGasCap = 100000000uL,
+          maxFeePerBlobGasCap = 1000000000uL,
+        ),
+      )
+
+    val eip1559Fees = wmaGasProvider.getEIP1559GasFeesAsync()
+    val eip4844Fees = wmaGasProvider.getEIP4844GasFeesAsync()
+    assertThat(eip1559Fees).isNotDone()
+    assertThat(eip4844Fees).isNotDone()
+
+    pendingFeeHistory.complete(feeHistory)
+
+    assertThat(eip1559Fees.get()).isEqualTo(EIP1559GasFees(maxPriorityFeePerGas = 1229uL, maxFeePerGas = 1509uL))
+    assertThat(eip4844Fees.get().eip1559GasFees).isEqualTo(eip1559Fees.get())
   }
 }
