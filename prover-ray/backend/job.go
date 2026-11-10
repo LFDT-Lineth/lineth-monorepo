@@ -113,8 +113,9 @@ type Result struct {
 	PublicInputs PublicInputs
 
 	// Node is the non-root conglomeration node when Status is
-	// ResultStatusNode, and NumShards the trace's shard count, so that the
-	// party merging the nodes can tell when their coverage is complete.
+	// ResultStatusNode: the shard proof itself for a single requested shard,
+	// a merged node otherwise. NumShards is the trace's shard count, so that
+	// the party merging the nodes can tell when their coverage is complete.
 	Node      *conglomeration.Node
 	NumShards uint
 
