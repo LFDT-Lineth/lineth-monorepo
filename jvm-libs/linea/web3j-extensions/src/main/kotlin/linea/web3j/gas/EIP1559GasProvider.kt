@@ -37,7 +37,10 @@ class EIP1559GasProvider(private val ethApiClient: EthApiClient, private val con
   private var feesCache: EIP1559GasFees = getRecentFees()
 
   private fun getRecentFees(): EIP1559GasFees {
-    return getRecentFeesAsync().get()
+    // Return the field, not the future's value: when called from the initializer with the chain still at
+    // block 0, no fetch happens and the cache is not yet set (preserves the previous behaviour).
+    getRecentFeesAsync().get()
+    return feesCache
   }
 
   private fun getRecentFeesAsync(): SafeFuture<EIP1559GasFees> {
