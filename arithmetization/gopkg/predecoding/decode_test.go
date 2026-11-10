@@ -3,6 +3,10 @@ package predecoding
 import (
 	"math"
 	"testing"
+
+	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
+	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
+	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 )
 
 // TestInstructionTypeFromOpcode
