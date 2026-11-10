@@ -23,9 +23,10 @@
 // wire bytes) is still stubbed and returns [ErrNotImplemented].
 //
 // With sharding ([Config.ShardSize]), the shard proofs of a job are reduced to
-// one node by a [conglomeration.Merger]; only a mock exists, for dev and test, so a
-// sharded job in production returns [ErrNotImplemented] until the recursion
-// machine lands.
+// one node by a [conglomeration.Merger]. The implementations,
+// [conglomeration.MockMerger] and [conglomeration.RecursionMerger], are for dev
+// and test: neither verifies the children's proofs, so a sharded job in
+// production returns [ErrNotImplemented] until the recursion machine does.
 //
 // Circuit compiler passes and [wiop.Materialize] are also not yet wired
 // in [New]; see the inline comments in [core.go].

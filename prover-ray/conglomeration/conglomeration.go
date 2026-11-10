@@ -1,26 +1,30 @@
 // Package conglomeration reduces the shard proofs of a sharded execution to a
 // single root proof through a tree of merges of up to [RecursionTreeArity]
 // nodes each, performed by a [Merger]. The recursion machine (package
-// recursion) will implement the merger for production; [MockMerger]
-// implements it for dev and test, without producing proofs.
+// recursion) will implement the merger for production; for dev and test,
+// [RecursionMerger] proves the merges with the machine's node programs over a
+// mock in-machine verifier, verifying the children in Go, and [MockMerger]
+// produces no proof at all.
 //
 // Every node of the tree exposes the public-input layout of a shard proof
-// (see zkcdriver/risc5), which a merged node extends with the verification
-// key of the node program. Across shards, the message-bus products multiply
-// and the shared randomness contributions add; the program VK, the guest
-// output and the shared randomness seed γ are the same on every shard. At the
-// root, every message-bus handle balances and γ is the seed the contributions
-// add up to: that is the external check of γ the message-bus compiler leaves
-// to the conglomeration (see the soundness precondition in package
-// messagebus).
+// (see zkcdriver/risc5), which a merged node extends with the recursion
+// machine's key box (see package recursionguests/node). Across shards, the
+// message-bus products multiply and the shared randomness contributions add;
+// the program VK, the guest output and the shared randomness seed γ are the
+// same on every shard. At the root, every message-bus handle balances and γ
+// is the seed the contributions add up to: that is the external check of γ
+// the message-bus compiler leaves to the conglomeration (see the soundness
+// precondition in package messagebus).
 //
 // A merge takes children of one [Kind] only: shard proofs are verified by the
-// leaf verifier of the recursion machine and merged nodes by its internal
-// verifier, two different programs. A lone shard proof is lifted into a
-// merged node by a single-child merge, so the root checks only ever run on
-// merged nodes. A node's Kind and Coverage are host-side labels: a [Merger]
-// verifies a child under the key its Kind implies, so a wrong label fails the
-// merge rather than weakens it.
+// leaf program of the recursion machine and merged nodes by its internal
+// program, which serves every level, so the tree has any shape. A lone shard
+// proof is lifted into a merged node by a single-child merge, so the root
+// checks only ever run on merged nodes. A node's Kind and Coverage are
+// host-side labels. A wrong Kind fails the merge, which verifies a child
+// under the key its Kind implies. No proof sees Coverage: the host checks it
+// for duplicates and completeness, and the shard set is bound in-proof by γ
+// alone, the digest of the contributions of the shards under the root.
 package conglomeration
 
 import (

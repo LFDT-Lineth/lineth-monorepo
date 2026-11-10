@@ -26,8 +26,9 @@ const (
 )
 
 // testSystem declares a system with one message-bus handle and the public
-// inputs of a RISCV-ZKC shard proof registered under their tags, without
-// compiling it: the mock merger only reads the public inputs by tag.
+// inputs of a RISCV-ZKC shard proof registered under their tags, the bus
+// product as an extension cell, without compiling it: the mergers only read
+// the public inputs by tag.
 func testSystem(seeded bool) *wiop.System {
 	sys := wiop.NewSystemf("conglomeration-test")
 	r0 := sys.NewRound()
@@ -36,17 +37,17 @@ func testSystem(seeded bool) *wiop.System {
 	col := mod.NewColumn(ctx.Childf("col"), r0)
 	sys.NewMessageBusSend(ctx.Childf("send"), "shard", "route", wiop.NewTable(col.View()))
 	sys.NewMessageBusReceive(ctx.Childf("recv"), "shard", "route", wiop.NewTable(col.View()))
-	register := func(tag wiop.PublicInputTag, n int) {
+	register := func(tag wiop.PublicInputTag, n int, ext bool) {
 		for i := range n {
-			sys.RegisterPublicInputs(tag, r0.NewCell(ctx.Childf("%s-%d", tag, i), false), i)
+			sys.RegisterPublicInputs(tag, r0.NewCell(ctx.Childf("%s-%d", tag, i), ext), i)
 		}
 	}
-	register(messagebus.PublicInputTag, 1)
-	register(risc5.ProgramVKPI, risc5.NumProgramVK)
-	register(risc5.GuestPublicOutputsPI, risc5.NumGuestPublicOutputs)
+	register(messagebus.PublicInputTag, 1, true)
+	register(risc5.ProgramVKPI, risc5.NumProgramVK, false)
+	register(risc5.GuestPublicOutputsPI, risc5.NumGuestPublicOutputs, false)
 	if seeded {
-		register(risc5.SharedRandomnessPI, risc5.NumSharedRandomness)
-		register(risc5.SharedRandomnessContributionPI, risc5.NumSharedRandomnessContributions)
+		register(risc5.SharedRandomnessPI, risc5.NumSharedRandomness, false)
+		register(risc5.SharedRandomnessContributionPI, risc5.NumSharedRandomnessContributions, false)
 	}
 	return sys
 }
