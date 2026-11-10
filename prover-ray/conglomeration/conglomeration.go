@@ -5,20 +5,22 @@
 // implements it for dev and test, without producing proofs.
 //
 // Every node of the tree exposes the public-input layout of a shard proof
-// (see zkcdriver/risc5). Across shards, the message-bus products multiply and
-// the shared randomness contributions add; the program VK, the guest output
-// and the shared randomness seed γ are the same on every shard. At the root,
-// every message-bus handle balances and γ is the seed the contributions add
-// up to: that is the external check of γ the message-bus compiler leaves to
-// the conglomeration (see the soundness precondition in package messagebus).
+// (see zkcdriver/risc5), which a merged node extends with the verification
+// key of the node program. Across shards, the message-bus products multiply
+// and the shared randomness contributions add; the program VK, the guest
+// output and the shared randomness seed γ are the same on every shard. At the
+// root, every message-bus handle balances and γ is the seed the contributions
+// add up to: that is the external check of γ the message-bus compiler leaves
+// to the conglomeration (see the soundness precondition in package
+// messagebus).
 //
 // A merge takes children of one [Kind] only: shard proofs are verified by the
 // leaf verifier of the recursion machine and merged nodes by its internal
-// verifier, two different programs, and a merged node will carry a public
-// input (the verification key of the node program) that a shard proof lacks.
-// A lone shard proof is lifted into a merged node by a single-child merge, so
-// the root checks only ever run on merged nodes: the root is the last merge
-// of the tree, [Merger.Finalize], over the merged nodes left.
+// verifier, two different programs. A lone shard proof is lifted into a
+// merged node by a single-child merge, so the root checks only ever run on
+// merged nodes. A node's Kind and Coverage are host-side labels: a [Merger]
+// verifies a child under the key its Kind implies, so a wrong label fails the
+// merge rather than weakens it.
 package conglomeration
 
 import (
@@ -43,9 +45,8 @@ const (
 )
 
 // Node is a proof in the conglomeration tree: a shard proof or a merged node,
-// told apart by Kind. Shard proofs and merged nodes expose the same
-// public-input layout, so the merged nodes can be the children of another
-// node at any depth.
+// told apart by Kind. Every merged node exposes the same public-input layout,
+// so merged nodes can be the children of another node at any depth.
 type Node struct {
 	Kind     Kind
 	Coverage []uint
@@ -54,10 +55,7 @@ type Node struct {
 }
 
 // RecursionTreeArity is the maximum number of children of a node of the
-// conglomeration tree: the most proofs one recursion step verifies. A merge
-// takes 1 to RecursionTreeArity children; a [Reducer] fills every merge as
-// much as possible, so only the last merge of each kind has fewer than
-// RecursionTreeArity.
+// conglomeration tree: the most proofs one recursion step verifies.
 const RecursionTreeArity = 6
 
 // Merger performs the merge steps of the conglomeration tree and the root
@@ -81,9 +79,7 @@ type Merger interface {
 	Finalize(children []Node, numShards uint) (Node, error)
 }
 
-// checkChildren checks the child count and kinds of a merge: 1 to
-// [RecursionTreeArity] children of one kind, a single one only for a shard
-// proof.
+// checkChildren checks the child count and kinds of [Merger.Merge].
 func checkChildren(children []Node) error {
 	if len(children) < 1 || len(children) > RecursionTreeArity {
 		return fmt.Errorf("merging %d nodes, want 1 to %d", len(children), RecursionTreeArity)
@@ -103,9 +99,7 @@ func checkChildren(children []Node) error {
 	return nil
 }
 
-// checkRoot checks the children of the root merge: 1 to [RecursionTreeArity]
-// merged nodes. The root checks never run on a bare shard proof, which is
-// lifted first.
+// checkRoot checks the child count and kinds of [Merger.Finalize].
 func checkRoot(children []Node) error {
 	if len(children) < 1 || len(children) > RecursionTreeArity {
 		return fmt.Errorf("finalizing %d nodes, want 1 to %d", len(children), RecursionTreeArity)
@@ -165,10 +159,10 @@ const DefaultMaxInFlightMerges = 1
 // maxInFlight merges at a time, and waits for more nodes or running merges
 // rather than merge fewer. Only [Reducer.Close], once nothing more can
 // arrive, merges the fewer nodes left: the shard proofs first (a lone one is
-// lifted), then the merged nodes by the last merge, so only the last merge of
-// each kind has fewer children. The last merge is the root merge,
-// [Merger.Finalize], when the node covers all the shards: the root is the
-// last node of the tree, not a node over it.
+// lifted), then the merged nodes, so only the last merge of each kind has
+// fewer children. The last merge is the root merge, [Merger.Finalize], when
+// the node covers all the shards: the root is the last node of the tree, not
+// a node over it.
 type Reducer struct {
 	merger      Merger
 	maxInFlight int
@@ -178,10 +172,8 @@ type Reducer struct {
 	shards   []Node    // ready shard proofs
 	merged   []Node    // ready merged nodes
 	inFlight int
-	err      error // the first merge failure
-	// last is the last merge given to Close, if any; once set, it is left
-	// RecursionTreeArity merged nodes rather than a full merge of them.
-	last func(children []Node) (Node, error)
+	err      error                               // the first merge failure
+	last     func(children []Node) (Node, error) // the last merge given to Close
 }
 
 // NewReducer returns a reducer merging with merger, at most maxInFlight
@@ -218,10 +210,10 @@ func (r *Reducer) Add(node Node) error {
 
 // Close waits for the running merges, performs the last merges of the tree
 // and returns the resulting merged node, or the error of the first failed
-// merge. The last merge, of the 1 to [RecursionTreeArity] merged nodes left
-// once the shard proofs are merged, is last when given, the root merge of a
-// reducer over every shard; otherwise it is [Merger.Merge], and a single
-// node left is returned as is.
+// merge. last, if given, is the last merge, called once with the 1 to
+// [RecursionTreeArity] merged nodes left, nothing else running: the root
+// merge of a reducer over every shard. Otherwise the nodes left are merged
+// by the merger, and a single one is returned as is.
 func (r *Reducer) Close(last func(children []Node) (Node, error)) (Node, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -255,9 +247,9 @@ func (r *Reducer) Close(last func(children []Node) (Node, error)) (Node, error) 
 }
 
 // startFullMerges starts merges of RecursionTreeArity ready nodes of a kind
-// as long as there are enough and the in-flight bound allows: the shard
-// proofs first, which frees the larger proofs sooner. Once Close has a last
-// merge, RecursionTreeArity merged nodes are left to it. Called with mu held.
+// as long as there are enough and the in-flight bound allows, the shard
+// proofs first to free the larger proofs sooner. Once Close has a last merge,
+// RecursionTreeArity merged nodes are left to it. Called with mu held.
 func (r *Reducer) startFullMerges() {
 	for r.inFlight < r.maxInFlight && len(r.shards) >= RecursionTreeArity {
 		r.start(&r.shards, RecursionTreeArity)
