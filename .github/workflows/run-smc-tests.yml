@@ -57,10 +57,6 @@ jobs:
       - name: Check JS formatting
         run: pnpm -F contracts run lint:ts
 
-      # Required for hardhat commands due to @nomicfoundation/hardhat-foundry package
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
-
       - name: Compile kzg.node
         run: pnpm -F contracts exec node-gyp --directory=node_modules/c-kzg rebuild # explicitly running rebuild to get the .node file
 
@@ -70,20 +66,24 @@ jobs:
       - name: Run smart contracts tests and generate coverage report
         run: pnpm -F contracts run coverage
 
+      # Hardhat 3 writes lcov paths relative to contracts/ (SF:src/...); make them repo-relative for codecov.yml paths.
+      - name: Make coverage paths repository-relative
+        run: sed -i 's|^SF:|SF:contracts/|' contracts/coverage/lcov.info
+
       - name: Upload coverage report
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: smart-contract-coverage-${{ env.COMMIT_TAG }}.json
+          name: smart-contract-coverage-${{ env.COMMIT_TAG }}.lcov
           if-no-files-found: error
           path: |
-            ./contracts/coverage/coverage-final.json
+            ./contracts/coverage/lcov.info
 
       - name: Upload coverage to Codecov
         if: ${{ env.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           fail_ci_if_error: true
-          files: ./contracts/coverage/coverage-final.json
+          files: ./contracts/coverage/lcov.info
           flags: hardhat
           os: linux
           name: codecov-contracts

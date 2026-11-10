@@ -24,6 +24,14 @@ coverage:
     patch: true
     project: true
 
+# Contracts excluded from coverage (formerly contracts/.solcover.js skipFiles; Hardhat 3 coverage has no exclude option).
+ignore:
+  - "contracts/src/_testing/**"
+  - "contracts/src/proxies/**"
+  - "contracts/src/bridging/token/CustomBridgedToken.sol"
+  - "contracts/src/rollup/_exampleImplementations/**"
+  - "contracts/src/libraries/SparseMerkleProof.sol"
+
 flags:
   hardhat:
     paths:
