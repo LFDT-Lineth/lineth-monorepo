@@ -46,8 +46,8 @@ func ungrouped(shape Shape) Shape {
 }
 
 // newGroupedPCSFixture commits the grouped witness, opens it as numBatches
-// batches sharing one input tree at four queries, and checks the native
-// verifier accepts.
+// batches of that one commitment (each its own input tree) at four queries,
+// and checks the native verifier accepts.
 func newGroupedPCSFixture(t *testing.T, numBatches int) pcsOpenVerifyFixture {
 	t.Helper()
 	params, err := NewParams(4, 3, 4)
