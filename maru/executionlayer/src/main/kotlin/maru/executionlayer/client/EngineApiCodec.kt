@@ -35,11 +35,11 @@ internal class EngineApiCodec(
     buildList {
       add(executionPayload.toJson())
       if (methods.newPayloadVersion >= 3) {
-        add(emptyList<ByteArray>())
-        add(ZERO_HASH)
+        add(emptyList<ByteArray>()) // expectedBlobVersionedHashes
+        add(ZERO_HASH) // parentBeaconBlockRoot
       }
       if (methods.newPayloadVersion >= 4) {
-        add(emptyList<ByteArray>())
+        add(emptyList<ByteArray>()) // executionRequests
       }
     }
 
