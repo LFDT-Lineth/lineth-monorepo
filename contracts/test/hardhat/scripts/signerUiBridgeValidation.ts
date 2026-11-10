@@ -1,6 +1,7 @@
 import { expect } from "chai";
+import { describe, it } from "node:test";
 
-import { calldataMatchesPromptForSignerUiValidation } from "../../../scripts/hardhat/signer-ui-bridge";
+import { calldataMatchesPromptForSignerUiValidation } from "../../../hardhat-plugins/signer-ui/bridge.js";
 
 describe("signer-ui bridge calldata validation", () => {
   it("accepts exact raw calldata even when bytes look like ASCII hex characters", () => {

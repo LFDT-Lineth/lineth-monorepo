@@ -1,4 +1,4 @@
-export * from "./deploy";
-export * from "./setup";
-export * from "./types";
-export * from "./mocks";
+export * from "./deploy.js";
+export * from "./setup.js";
+export type * from "./types.js";
+export * from "./mocks.js";

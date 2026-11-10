@@ -1,6 +1,8 @@
-import { ethers, upgrades } from "hardhat";
+import { upgrades } from "@openzeppelin/hardhat-upgrades/viem";
+import hre from "hardhat";
+import { describe, it } from "node:test";
 
-// pnpm exec hardhat test --network linea_mainnet
+// pnpm exec hardhat test nodejs --network linea_mainnet <this file>
 // THIS IS A MANUAL TEST TO VERIFY LINEA MAINNET DOES NOT BREAK
 // ALSO SEE PR FOR LAYOUT TABLE
 describe.skip("L2MessageService Upgrade from L2MessageService Linea Mainnet", () => {
@@ -8,15 +10,15 @@ describe.skip("L2MessageService Upgrade from L2MessageService Linea Mainnet", ()
 
   describe("Collision", () => {
     it("Does not collide", async () => {
-      const contract = await ethers.getContractFactory("L2MessageServiceLineaMainnet");
+      const connection = await hre.network.getOrCreate();
+      const oz = await upgrades(hre, connection);
 
       console.log("Importing contract");
-      await upgrades.forceImport(mainnetProxyAddress, contract, {
+      await oz.forceImport(mainnetProxyAddress, "L2MessageServiceLineaMainnet", {
         kind: "transparent",
       });
 
-      const l2MessageServiceFactory = await ethers.getContractFactory("L2MessageService");
-      await upgrades.validateUpgrade(mainnetProxyAddress, l2MessageServiceFactory);
+      await oz.validateUpgrade(mainnetProxyAddress, "L2MessageService");
     });
   });
 });

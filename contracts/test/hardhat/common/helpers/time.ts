@@ -1,12 +1,14 @@
-import { time } from "@nomicfoundation/hardhat-network-helpers";
+import { getConnection } from "./connection.js";
 
 export const getLastBlockTimestamp = async (): Promise<bigint> => {
-  return BigInt(await time.latest());
+  const { networkHelpers } = await getConnection();
+  return BigInt(await networkHelpers.time.latest());
 };
 
 export const setFutureTimestampForNextBlock = async (secondsInTheFuture: number | bigint = 1): Promise<bigint> => {
-  const lastBlockTimestamp: number = await time.latest();
+  const { networkHelpers } = await getConnection();
+  const lastBlockTimestamp: number = await networkHelpers.time.latest();
   const futureTimestamp: bigint = BigInt(lastBlockTimestamp) + BigInt(secondsInTheFuture);
-  await time.setNextBlockTimestamp(futureTimestamp);
+  await networkHelpers.time.setNextBlockTimestamp(futureTimestamp);
   return futureTimestamp;
 };

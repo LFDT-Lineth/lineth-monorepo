@@ -1,195 +1,215 @@
-import { toChecksumAddress } from "@ethereumjs/util";
-import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
-import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
-import { setNextBlockTimestamp } from "@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time";
 import { expect } from "chai";
-import { ethers, network } from "hardhat";
+import { network } from "hardhat";
+import { describe, it, before, beforeEach } from "node:test";
+import { type Address, decodeEventLog, getAddress, parseEther, parseUnits } from "viem";
 
-import { deployWETH9Fixture } from "./helpers/deploy";
-import { TestDexSwapAdapter, TestDexRouter, TestERC20 } from "../../../typechain-types";
-import { ADDRESS_ZERO, ONE_MINUTE_IN_SECONDS } from "../common/constants";
-import { deployFromFactory } from "../common/deployment";
-import { expectRevertWithCustomError, generateRandomBytes } from "../common/helpers";
+import { deployWETH9Fixture } from "./helpers/deploy.js";
+import { ADDRESS_ZERO, ONE_MINUTE_IN_SECONDS } from "../common/constants/index.js";
+import { deployFromFactory } from "../common/deployment.js";
+import {
+  type TestAccount,
+  generateRandomBytes,
+  getTestAccounts,
+  expectRevertWithCustomError,
+} from "../common/helpers/index.js";
+
+import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
 
 describe("V3DexSwapAdapter", () => {
-  let dexSwapAdapter: TestDexSwapAdapter;
-  let rollupRevenueVault: SignerWithAddress;
-  let lineaToken: TestERC20;
-  let testWETH9Address: string;
-  let router: TestDexRouter;
+  let dexSwapAdapter: ContractReturnType<"TestDexSwapAdapter">;
+  let rollupRevenueVault: TestAccount;
+  let lineaToken: ContractReturnType<"TestERC20">;
+  let testWETH9Address: Address;
+  let router: ContractReturnType<"TestDexRouter">;
 
   async function deployDexAdapterContractFixture() {
-    const lineaToken = (await deployFromFactory(
-      "TestERC20",
-      "TestERC20",
-      "TEST",
-      ethers.parseUnits("1000000000", 18),
-    )) as TestERC20;
+    const lineaToken = await deployFromFactory("TestERC20", ["TestERC20", "TEST", parseUnits("1000000000", 18)]);
 
     const testWETH9 = await deployWETH9Fixture();
 
-    const router = (await deployFromFactory("TestDexRouter")) as TestDexRouter;
+    const router = await deployFromFactory("TestDexRouter");
 
-    const dexSwapAdapter = (await deployFromFactory(
-      "TestDexSwapAdapter",
-      await router.getAddress(),
+    const dexSwapAdapter = await deployFromFactory("TestDexSwapAdapter", [
+      router.address,
       testWETH9,
-      await lineaToken.getAddress(),
+      lineaToken.address,
       50,
-    )) as TestDexSwapAdapter;
+    ]);
 
     return { dexSwapAdapter, lineaToken, testWETH9, router };
   }
 
   before(async () => {
-    await network.provider.send("hardhat_reset");
-    [, rollupRevenueVault] = await ethers.getSigners();
+    // Hardhat 2 also reset the chain here (`hardhat_reset`), which Hardhat 3's EDR does not support; the fixture
+    // below does not depend on a fresh chain.
+    [, rollupRevenueVault] = await getTestAccounts();
   });
 
   beforeEach(async () => {
+    const { networkHelpers } = await network.getOrCreate();
     ({
       dexSwapAdapter,
       lineaToken,
       testWETH9: testWETH9Address,
       router,
-    } = await loadFixture(deployDexAdapterContractFixture));
+    } = await networkHelpers.loadFixture(deployDexAdapterContractFixture));
   });
 
   describe("construtor", () => {
     it("Should revert when router address is zero", async () => {
-      const randomnAddress = toChecksumAddress(generateRandomBytes(20));
+      const randomnAddress = getAddress(generateRandomBytes(20));
       await expectRevertWithCustomError(
         dexSwapAdapter,
-        deployFromFactory("V3DexSwapAdapter", ADDRESS_ZERO, randomnAddress, randomnAddress, 50),
+        deployFromFactory("V3DexSwapAdapter", [ADDRESS_ZERO, randomnAddress, randomnAddress, 50]),
         "ZeroAddressNotAllowed",
       );
     });
 
     it("Should revert when WETH token address is zero", async () => {
-      const randomnAddress = toChecksumAddress(generateRandomBytes(20));
+      const randomnAddress = getAddress(generateRandomBytes(20));
       await expectRevertWithCustomError(
         dexSwapAdapter,
-        deployFromFactory("V3DexSwapAdapter", randomnAddress, ADDRESS_ZERO, randomnAddress, 50),
+        deployFromFactory("V3DexSwapAdapter", [randomnAddress, ADDRESS_ZERO, randomnAddress, 50]),
         "ZeroAddressNotAllowed",
       );
     });
 
     it("Should revert when LINEA token address is zero", async () => {
-      const randomnAddress = toChecksumAddress(generateRandomBytes(20));
+      const randomnAddress = getAddress(generateRandomBytes(20));
       await expectRevertWithCustomError(
         dexSwapAdapter,
-        deployFromFactory("V3DexSwapAdapter", randomnAddress, randomnAddress, ADDRESS_ZERO, 50),
+        deployFromFactory("V3DexSwapAdapter", [randomnAddress, randomnAddress, ADDRESS_ZERO, 50]),
         "ZeroAddressNotAllowed",
       );
     });
 
     it("Should revert when tick spacing is zero", async () => {
-      const randomnAddress = toChecksumAddress(generateRandomBytes(20));
+      const randomnAddress = getAddress(generateRandomBytes(20));
       await expectRevertWithCustomError(
         dexSwapAdapter,
-        deployFromFactory("V3DexSwapAdapter", randomnAddress, randomnAddress, randomnAddress, 0),
+        deployFromFactory("V3DexSwapAdapter", [randomnAddress, randomnAddress, randomnAddress, 0]),
         "ZeroTickSpacingNotAllowed",
       );
     });
 
     it("Should emit an event when initialized", async () => {
-      const randomnAddress = toChecksumAddress(generateRandomBytes(20));
-      const contract = await deployFromFactory("V3DexSwapAdapter", randomnAddress, randomnAddress, randomnAddress, 50);
+      const { viem } = await network.getOrCreate();
+      const randomnAddress = getAddress(generateRandomBytes(20));
+      const publicClient = await viem.getPublicClient();
+      const { contract, deploymentTransaction } = await viem.sendDeploymentTransaction("V3DexSwapAdapter", [
+        randomnAddress,
+        randomnAddress,
+        randomnAddress,
+        50,
+      ]);
 
-      const receipt = await contract.deploymentTransaction()?.wait();
-      const logs = receipt?.logs;
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: deploymentTransaction.hash });
+      const logs = receipt.logs;
 
       expect(logs).to.have.lengthOf(1);
 
-      const event = contract.interface.parseLog(logs![0]);
-      expect(event).is.not.null;
-      expect(event!.name).to.equal("V3DexSwapAdapterInitialized");
-      expect(event!.args.router).to.equal(randomnAddress);
-      expect(event!.args.wethToken).to.equal(randomnAddress);
-      expect(event!.args.lineaToken).to.equal(randomnAddress);
-      expect(event!.args.poolTickSpacing).to.equal(50);
+      const event = decodeEventLog({ abi: contract.abi, data: logs[0].data, topics: logs[0].topics });
+      expect(event.eventName).to.equal("V3DexSwapAdapterInitialized");
+      expect(event.args.router).to.equal(randomnAddress);
+      expect(event.args.wethToken).to.equal(randomnAddress);
+      expect(event.args.lineaToken).to.equal(randomnAddress);
+      expect(event.args.poolTickSpacing).to.equal(50);
     });
 
     it("Should set the correct addresses and values", async () => {
-      const lineaTokenAddress = await dexSwapAdapter.LINEA_TOKEN();
-      const wethTokenAddress = await dexSwapAdapter.WETH_TOKEN();
-      const routerAddress = await dexSwapAdapter.ROUTER();
-      const poolTickSpacing = await dexSwapAdapter.POOL_TICK_SPACING();
+      const lineaTokenAddress = await dexSwapAdapter.read.LINEA_TOKEN();
+      const wethTokenAddress = await dexSwapAdapter.read.WETH_TOKEN();
+      const routerAddress = await dexSwapAdapter.read.ROUTER();
+      const poolTickSpacing = await dexSwapAdapter.read.POOL_TICK_SPACING();
 
-      expect(lineaTokenAddress).to.equal(await lineaToken.getAddress());
+      expect(lineaTokenAddress).to.equal(getAddress(lineaToken.address));
       expect(wethTokenAddress).to.equal(testWETH9Address);
-      expect(routerAddress).to.equal(await router.getAddress());
+      expect(routerAddress).to.equal(getAddress(router.address));
       expect(poolTickSpacing).to.equal(50);
     });
   });
 
   describe("swap", () => {
     it("Should revert when msg.value == 0", async () => {
+      const { networkHelpers } = await network.getOrCreate();
       const minLineaOut = 200n;
-      const deadline = (await time.latest()) + ONE_MINUTE_IN_SECONDS;
+      const deadline = (await networkHelpers.time.latest()) + ONE_MINUTE_IN_SECONDS;
       await expectRevertWithCustomError(
         dexSwapAdapter,
-        dexSwapAdapter.swap(minLineaOut, deadline, { value: 0n }),
+        dexSwapAdapter.write.swap([minLineaOut, BigInt(deadline)], { value: 0n }),
         "NoEthSent",
       );
     });
 
     it("Should revert when deadline is in the past", async () => {
+      const { networkHelpers } = await network.getOrCreate();
       const minLineaOut = 200n;
-      const deadline = (await time.latest()) - ONE_MINUTE_IN_SECONDS;
-      const ethValueToSwap = ethers.parseEther("1");
+      const deadline = (await networkHelpers.time.latest()) - ONE_MINUTE_IN_SECONDS;
+      const ethValueToSwap = parseEther("1");
       await expectRevertWithCustomError(
         dexSwapAdapter,
-        dexSwapAdapter.swap(minLineaOut, deadline, { value: ethValueToSwap }),
+        dexSwapAdapter.write.swap([minLineaOut, BigInt(deadline)], { value: ethValueToSwap }),
         "DeadlineInThePast",
       );
     });
 
     it("Should revert when minLineaOut == 0", async () => {
-      const deadline = (await time.latest()) + ONE_MINUTE_IN_SECONDS;
-      const ethValueToSwap = ethers.parseEther("1");
+      const { networkHelpers } = await network.getOrCreate();
+      const deadline = (await networkHelpers.time.latest()) + ONE_MINUTE_IN_SECONDS;
+      const ethValueToSwap = parseEther("1");
       await expectRevertWithCustomError(
         dexSwapAdapter,
-        dexSwapAdapter.swap(0n, deadline, { value: ethValueToSwap }),
+        dexSwapAdapter.write.swap([0n, BigInt(deadline)], { value: ethValueToSwap }),
         "ZeroMinLineaOutNotAllowed",
       );
     });
 
     it("Should revert when amountOut < minLineaOut", async () => {
-      const deadline = (await time.latest()) + ONE_MINUTE_IN_SECONDS;
-      const ethValueToSwap = ethers.parseEther("1");
+      const { networkHelpers } = await network.getOrCreate();
+      const deadline = (await networkHelpers.time.latest()) + ONE_MINUTE_IN_SECONDS;
+      const ethValueToSwap = parseEther("1");
       await expectRevertWithCustomError(
         dexSwapAdapter,
-        dexSwapAdapter.testSwapInsufficientLineaTokensReceived(10n, deadline, { value: ethValueToSwap }),
+        dexSwapAdapter.write.testSwapInsufficientLineaTokensReceived([10n, BigInt(deadline)], {
+          value: ethValueToSwap,
+        }),
         "InsufficientLineaTokensReceived",
         [10n, 0n],
       );
     });
 
     it("Should swap ETH to LINEA tokens", async () => {
-      const minLineaOut = ethers.parseUnits("2", 18);
-      const deadline = (await time.latest()) + ONE_MINUTE_IN_SECONDS;
+      const { networkHelpers } = await network.getOrCreate();
+      const minLineaOut = parseUnits("2", 18);
+      const deadline = (await networkHelpers.time.latest()) + ONE_MINUTE_IN_SECONDS;
 
-      const ethValueToSwap = ethers.parseEther("1");
-      const rollupRevenueVaultLineaTokensBalanceBefore = await lineaToken.balanceOf(rollupRevenueVault.address);
-      await dexSwapAdapter.connect(rollupRevenueVault).swap(minLineaOut, deadline, { value: ethValueToSwap });
+      const ethValueToSwap = parseEther("1");
+      const rollupRevenueVaultLineaTokensBalanceBefore = await lineaToken.read.balanceOf([rollupRevenueVault.address]);
+      await dexSwapAdapter.write.swap([minLineaOut, BigInt(deadline)], {
+        account: rollupRevenueVault.account,
+        value: ethValueToSwap,
+      });
 
-      const rollupRevenueVaultLineaTokensBalanceAfter = await lineaToken.balanceOf(rollupRevenueVault.address);
+      const rollupRevenueVaultLineaTokensBalanceAfter = await lineaToken.read.balanceOf([rollupRevenueVault.address]);
       expect(rollupRevenueVaultLineaTokensBalanceAfter).to.equal(
         rollupRevenueVaultLineaTokensBalanceBefore + ethValueToSwap * 2n, // 1 ETH = 2 LINEA in the TestDexRouter
       );
     });
 
     it("Should swap ETH to LINEA tokens if deadline in same block", async () => {
-      const minLineaOut = ethers.parseUnits("2", 18);
-      const deadline = (await time.latest()) + ONE_MINUTE_IN_SECONDS;
-      await setNextBlockTimestamp(deadline);
+      const { networkHelpers } = await network.getOrCreate();
+      const minLineaOut = parseUnits("2", 18);
+      const deadline = (await networkHelpers.time.latest()) + ONE_MINUTE_IN_SECONDS;
+      await networkHelpers.time.setNextBlockTimestamp(deadline);
 
-      const ethValueToSwap = ethers.parseEther("1");
-      const rollupRevenueVaultLineaTokensBalanceBefore = await lineaToken.balanceOf(rollupRevenueVault.address);
-      await dexSwapAdapter.connect(rollupRevenueVault).swap(minLineaOut, deadline, { value: ethValueToSwap });
+      const ethValueToSwap = parseEther("1");
+      const rollupRevenueVaultLineaTokensBalanceBefore = await lineaToken.read.balanceOf([rollupRevenueVault.address]);
+      await dexSwapAdapter.write.swap([minLineaOut, BigInt(deadline)], {
+        account: rollupRevenueVault.account,
+        value: ethValueToSwap,
+      });
 
-      const rollupRevenueVaultLineaTokensBalanceAfter = await lineaToken.balanceOf(rollupRevenueVault.address);
+      const rollupRevenueVaultLineaTokensBalanceAfter = await lineaToken.read.balanceOf([rollupRevenueVault.address]);
       expect(rollupRevenueVaultLineaTokensBalanceAfter).to.equal(
         rollupRevenueVaultLineaTokensBalanceBefore + ethValueToSwap * 2n, // 1 ETH = 2 LINEA in the TestDexRouter
       );

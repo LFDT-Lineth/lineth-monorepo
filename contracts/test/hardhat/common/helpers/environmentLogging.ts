@@ -1,11 +1,12 @@
 import { expect } from "chai";
+import { describe, it } from "node:test";
 
 import {
   formatEnvVarForLog,
   formatEnvVarValueForMessage,
   isEnvVarContext,
   isSensitiveEnvVar,
-} from "../../../../common/helpers/envVarLogging";
+} from "../../../../common/helpers/envVarLogging.js";
 
 /** Synthetic names — each triggers a denylist pattern; not real project env vars. */
 const SENSITIVE_ENV_VAR_EXAMPLES = [

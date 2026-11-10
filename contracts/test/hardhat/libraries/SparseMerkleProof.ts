@@ -1,16 +1,30 @@
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { dataSlice } from "ethers";
-import { ethers } from "hardhat";
+import { network } from "hardhat";
+import { describe, it, beforeEach } from "node:test";
+import { size, slice } from "viem";
 
-import { Poseidon2, SparseMerkleProof } from "../../../typechain-types";
-import accountKeyTestVectors from "../_testData/account-key-test-vectors.json";
-import merkleProofTestData from "../_testData/merkle-proof-data-poseidon2.json";
-import { deployFromFactory } from "../common/deployment";
-import { expectRevertWithCustomError } from "../common/helpers";
+import accountKeyTestVectors from "../_testData/account-key-test-vectors.json" with { type: "json" };
+import merkleProofTestDataJson from "../_testData/merkle-proof-data-poseidon2.json" with { type: "json" };
+import { deployFromFactory } from "../common/deployment.js";
+import { address, hex, expectRevertWithCustomError } from "../common/helpers/index.js";
+
+import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
+
+type MerkleProofJson = { key: string; leafIndex: number; proof: { value: string; proofRelatedNodes: string[] } };
+
+const toMerkleProof = ({ key, leafIndex, proof }: MerkleProofJson) => ({
+  key: hex(key),
+  leafIndex: BigInt(leafIndex),
+  proof: { value: hex(proof.value), proofRelatedNodes: proof.proofRelatedNodes.map(hex) },
+});
+
+const merkleProofTestData = {
+  accountProof: toMerkleProof(merkleProofTestDataJson.accountProof),
+  storageProofs: merkleProofTestDataJson.storageProofs.map(toMerkleProof),
+};
 
 describe("SparseMerkleProof", () => {
-  let sparseMerkleProof: SparseMerkleProof;
+  let sparseMerkleProof: ContractReturnType<"SparseMerkleProof">;
 
   const STATE_ROOT = "0x1aae3e0a143c0ac31b469af05096c1000a64836f05c250ad0857d0a1496f0c71";
   const STORAGE_ROOT = "0x07bd72a3216f334e18eb7cb3388a4ab4758d0b10486f08ae22e9834c7a0210d3";
@@ -20,17 +34,13 @@ describe("SparseMerkleProof", () => {
   const STORAGE_VALUE_HASH = "0x454eebb36976d82c78601ad67bd131797dd516b36b6b62b2457fcdd443662bc6";
 
   async function deploySparseMerkleProofFixture() {
-    const poseidon2 = (await deployFromFactory("Poseidon2")) as Poseidon2;
-    const factory = await ethers.getContractFactory("SparseMerkleProof", {
-      libraries: { Poseidon2: await poseidon2.getAddress() },
-    });
-    const sparseMerkleProof = await factory.deploy();
-    await sparseMerkleProof.waitForDeployment();
-    return sparseMerkleProof;
+    const poseidon2 = await deployFromFactory("Poseidon2");
+    return deployFromFactory("SparseMerkleProof", [], { libraries: { Poseidon2: poseidon2.address } });
   }
 
   beforeEach(async () => {
-    sparseMerkleProof = await loadFixture(deploySparseMerkleProofFixture);
+    const { networkHelpers } = await network.getOrCreate();
+    sparseMerkleProof = await networkHelpers.loadFixture(deploySparseMerkleProofFixture);
   });
 
   describe("verifyProof", () => {
@@ -42,15 +52,15 @@ describe("SparseMerkleProof", () => {
           },
         } = merkleProofTestData;
 
-        const leafIndex = 2;
+        const leafIndex = 2n;
 
         const proofRelatedNodesPopped = proofRelatedNodes.slice(0, proofRelatedNodes.length - 1);
 
         await expectRevertWithCustomError(
           sparseMerkleProof,
-          sparseMerkleProof.verifyProof(proofRelatedNodesPopped, leafIndex, STATE_ROOT),
+          sparseMerkleProof.read.verifyProof([proofRelatedNodesPopped, leafIndex, STATE_ROOT]),
           "WrongProofLength",
-          [42, 41],
+          [42n, 41n],
         );
       });
 
@@ -61,16 +71,16 @@ describe("SparseMerkleProof", () => {
           },
         } = merkleProofTestData;
 
-        const leafIndex = 200;
+        const leafIndex = 200n;
 
         const clonedProof = proofRelatedNodes.slice(0, proofRelatedNodes.length);
         clonedProof.push(STATE_ROOT);
 
         await expectRevertWithCustomError(
           sparseMerkleProof,
-          sparseMerkleProof.verifyProof(clonedProof, leafIndex, STATE_ROOT),
+          sparseMerkleProof.read.verifyProof([clonedProof, leafIndex, STATE_ROOT]),
           "WrongProofLength",
-          [42, 43],
+          [42n, 43n],
         );
       });
 
@@ -85,14 +95,14 @@ describe("SparseMerkleProof", () => {
           },
         } = merkleProofTestData;
 
-        const leafIndex = 200;
+        const leafIndex = 200n;
 
         const clonedProof = proofRelatedNodes.slice(0, proofRelatedNodes.length);
         clonedProof[40] = "0x1234"; // set the second last item in the array
 
         await expectRevertWithCustomError(
           sparseMerkleProof,
-          sparseMerkleProof.verifyProof(clonedProof, leafIndex, STATE_ROOT),
+          sparseMerkleProof.read.verifyProof([clonedProof, leafIndex, STATE_ROOT]),
           "LengthNotMod32",
         );
       });
@@ -104,16 +114,16 @@ describe("SparseMerkleProof", () => {
           },
         } = merkleProofTestData;
 
-        const leafIndex = 200;
+        const leafIndex = 200n;
 
         const clonedProof = proofRelatedNodes.slice(0, proofRelatedNodes.length);
         clonedProof[0] = "0x1234";
 
         await expectRevertWithCustomError(
           sparseMerkleProof,
-          sparseMerkleProof.verifyProof(clonedProof, leafIndex, STATE_ROOT),
+          sparseMerkleProof.read.verifyProof([clonedProof, leafIndex, STATE_ROOT]),
           "WrongBytesLength",
-          [96, 2],
+          [96n, 2n],
         );
       });
 
@@ -124,16 +134,16 @@ describe("SparseMerkleProof", () => {
           },
         } = merkleProofTestData;
 
-        const leafIndex = 200;
+        const leafIndex = 200n;
 
         const clonedProof = proofRelatedNodes.slice(0, proofRelatedNodes.length);
         clonedProof[clonedProof.length - 1] = "0x1234";
 
         await expectRevertWithCustomError(
           sparseMerkleProof,
-          sparseMerkleProof.verifyProof(clonedProof, leafIndex, STATE_ROOT),
+          sparseMerkleProof.read.verifyProof([clonedProof, leafIndex, STATE_ROOT]),
           "WrongBytesLength",
-          [192, 2],
+          [192n, 2n],
         );
       });
 
@@ -148,12 +158,12 @@ describe("SparseMerkleProof", () => {
           },
         } = merkleProofTestData;
 
-        const leafIndex = 200;
+        const leafIndex = 200n;
         await expectRevertWithCustomError(
           sparseMerkleProof,
-          sparseMerkleProof.verifyProof(proofRelatedNodes, leafIndex, STATE_ROOT),
+          sparseMerkleProof.read.verifyProof([proofRelatedNodes, leafIndex, STATE_ROOT]),
           "SubSmtRootMismatch",
-          [dataSlice(proofRelatedNodes[0], 64), "0x64e2a3801735b62727c6dd645f2167bd2f2876aa77f90cf71c45321019ab1440"],
+          [slice(proofRelatedNodes[0], 64), "0x64e2a3801735b62727c6dd645f2167bd2f2876aa77f90cf71c45321019ab1440"],
         );
       });
 
@@ -169,7 +179,11 @@ describe("SparseMerkleProof", () => {
           },
         } = merkleProofTestData;
 
-        const result = await sparseMerkleProof.verifyProof(proofRelatedNodes, leafIndex, `0x00${STATE_ROOT.slice(4)}`);
+        const result = await sparseMerkleProof.read.verifyProof([
+          proofRelatedNodes,
+          leafIndex,
+          hex(`0x00${STATE_ROOT.slice(4)}`),
+        ]);
 
         expect(result).to.be.false;
       });
@@ -186,11 +200,11 @@ describe("SparseMerkleProof", () => {
           },
         } = merkleProofTestData;
 
-        const higherLeafIndex = leafIndex + Math.pow(2, 40);
+        const higherLeafIndex = leafIndex + 2n ** 40n;
 
         await expectRevertWithCustomError(
           sparseMerkleProof,
-          sparseMerkleProof.verifyProof(proofRelatedNodes, higherLeafIndex, STATE_ROOT),
+          sparseMerkleProof.read.verifyProof([proofRelatedNodes, higherLeafIndex, STATE_ROOT]),
           "MaxTreeLeafIndexExceed",
         );
       });
@@ -207,7 +221,7 @@ describe("SparseMerkleProof", () => {
           },
         } = merkleProofTestData;
 
-        const result = await sparseMerkleProof.verifyProof(proofRelatedNodes, leafIndex, STATE_ROOT);
+        const result = await sparseMerkleProof.read.verifyProof([proofRelatedNodes, leafIndex, STATE_ROOT]);
 
         expect(result).to.be.true;
       });
@@ -227,12 +241,12 @@ describe("SparseMerkleProof", () => {
           ],
         } = merkleProofTestData;
 
-        const leafIndex = 200;
+        const leafIndex = 200n;
         await expectRevertWithCustomError(
           sparseMerkleProof,
-          sparseMerkleProof.verifyProof(proofRelatedNodes, leafIndex, STORAGE_ROOT),
+          sparseMerkleProof.read.verifyProof([proofRelatedNodes, leafIndex, STORAGE_ROOT]),
           "SubSmtRootMismatch",
-          [dataSlice(proofRelatedNodes[0], 64), "0x2fd8ac0b6f2a69964661ea2c27f2b1ad320d5aea49a3451735e55037672b1dd7"],
+          [slice(proofRelatedNodes[0], 64), "0x2fd8ac0b6f2a69964661ea2c27f2b1ad320d5aea49a3451735e55037672b1dd7"],
         );
       });
 
@@ -250,16 +264,16 @@ describe("SparseMerkleProof", () => {
           ],
         } = merkleProofTestData;
 
-        const result = await sparseMerkleProof.verifyProof(
+        const result = await sparseMerkleProof.read.verifyProof([
           proofRelatedNodes,
           leafIndex,
-          `0x00${STORAGE_ROOT.slice(4)}`,
-        );
+          hex(`0x00${STORAGE_ROOT.slice(4)}`),
+        ]);
 
         expect(result).to.be.false;
       });
 
-      it("Should return true when the storage proof is correct", async () => {
+      it("Should return true when the storage proof is correct", { timeout: 30_000 }, async () => {
         if (process.env.SOLIDITY_COVERAGE === "true") {
           // Skipping this test in coverage mode due to high gas consumption.
           return;
@@ -270,10 +284,10 @@ describe("SparseMerkleProof", () => {
           proof: { proofRelatedNodes },
           leafIndex,
         } of storageProofs) {
-          const result = await sparseMerkleProof.verifyProof(proofRelatedNodes, leafIndex, STORAGE_ROOT);
+          const result = await sparseMerkleProof.read.verifyProof([proofRelatedNodes, leafIndex, STORAGE_ROOT]);
           expect(result).to.be.true;
         }
-      }).timeout(30_000);
+      });
     });
   });
 
@@ -285,7 +299,7 @@ describe("SparseMerkleProof", () => {
         },
       } = merkleProofTestData;
 
-      const hVal = await sparseMerkleProof.hashAccountValue(value);
+      const hVal = await sparseMerkleProof.read.hashAccountValue([value]);
       expect(hVal).to.be.equal(ACCOUNT_VALUE_HASH);
     });
 
@@ -294,9 +308,9 @@ describe("SparseMerkleProof", () => {
 
       await expectRevertWithCustomError(
         sparseMerkleProof,
-        sparseMerkleProof.hashAccountValue(shortValue),
+        sparseMerkleProof.read.hashAccountValue([shortValue]),
         "WrongBytesLength",
-        [192, 2],
+        [192n, 2n],
       );
     });
 
@@ -306,9 +320,9 @@ describe("SparseMerkleProof", () => {
 
       await expectRevertWithCustomError(
         sparseMerkleProof,
-        sparseMerkleProof.hashAccountValue(longValue),
+        sparseMerkleProof.read.hashAccountValue([longValue]),
         "WrongBytesLength",
-        [192, 195],
+        [192n, 195n],
       );
     });
   });
@@ -322,7 +336,7 @@ describe("SparseMerkleProof", () => {
           },
         ],
       } = merkleProofTestData;
-      const hVal = await sparseMerkleProof.hashStorageValue(value);
+      const hVal = await sparseMerkleProof.read.hashStorageValue([value]);
       expect(hVal).to.be.equal(STORAGE_VALUE_HASH);
     });
   });
@@ -333,13 +347,13 @@ describe("SparseMerkleProof", () => {
         accountProof: { key },
       } = merkleProofTestData;
 
-      const hKey = await sparseMerkleProof.hashAccountKey(key);
+      const hKey = await sparseMerkleProof.read.hashAccountKey([key]);
       expect(hKey).to.be.equal(ACCOUNT_KEY_HASH);
     });
 
     it("Should return account key hash from test vectors", async () => {
       for (const { input, output } of accountKeyTestVectors) {
-        const hKey = await sparseMerkleProof.hashAccountKey(input);
+        const hKey = await sparseMerkleProof.read.hashAccountKey([address(input)]);
         expect(hKey).to.be.equal(output);
       }
     });
@@ -354,13 +368,13 @@ describe("SparseMerkleProof", () => {
           },
         } = merkleProofTestData;
 
-        const wrongLeaftValue = `0x${proofRelatedNodes[proofRelatedNodes.length - 1].slice(4)}`;
+        const wrongLeaftValue = hex(`0x${proofRelatedNodes[proofRelatedNodes.length - 1].slice(4)}`);
 
         await expectRevertWithCustomError(
           sparseMerkleProof,
-          sparseMerkleProof.getLeaf(wrongLeaftValue),
+          sparseMerkleProof.read.getLeaf([wrongLeaftValue]),
           "WrongBytesLength",
-          [192, ethers.dataLength(wrongLeaftValue)],
+          [192n, BigInt(size(wrongLeaftValue))],
         );
       });
 
@@ -371,13 +385,13 @@ describe("SparseMerkleProof", () => {
           },
         } = merkleProofTestData;
 
-        const wrongLeaftValue = `${proofRelatedNodes[proofRelatedNodes.length - 1]}1234`;
+        const wrongLeaftValue = hex(`${proofRelatedNodes[proofRelatedNodes.length - 1]}1234`);
 
         await expectRevertWithCustomError(
           sparseMerkleProof,
-          sparseMerkleProof.getLeaf(wrongLeaftValue),
+          sparseMerkleProof.read.getLeaf([wrongLeaftValue]),
           "WrongBytesLength",
-          [192, ethers.dataLength(wrongLeaftValue)],
+          [192n, BigInt(size(wrongLeaftValue))],
         );
       });
 
@@ -389,9 +403,9 @@ describe("SparseMerkleProof", () => {
           },
         } = merkleProofTestData;
 
-        const leaf = await sparseMerkleProof.getLeaf(proofRelatedNodes[proofRelatedNodes.length - 1]);
-        const expectedHKey = await sparseMerkleProof.hashAccountKey(key);
-        const expectedHValue = await sparseMerkleProof.hashAccountValue(value);
+        const leaf = await sparseMerkleProof.read.getLeaf([proofRelatedNodes[proofRelatedNodes.length - 1]]);
+        const expectedHKey = await sparseMerkleProof.read.hashAccountKey([key]);
+        const expectedHValue = await sparseMerkleProof.read.hashAccountValue([value]);
 
         expect(leaf.prev[0]).to.be.equal(0n);
         expect(leaf.prev[1]).to.be.equal(0n);
@@ -414,13 +428,13 @@ describe("SparseMerkleProof", () => {
           ],
         } = merkleProofTestData;
 
-        const wrongLeaftValue = `0x${proofRelatedNodes[proofRelatedNodes.length - 1].slice(4)}`;
+        const wrongLeaftValue = hex(`0x${proofRelatedNodes[proofRelatedNodes.length - 1].slice(4)}`);
 
         await expectRevertWithCustomError(
           sparseMerkleProof,
-          sparseMerkleProof.getLeaf(wrongLeaftValue),
+          sparseMerkleProof.read.getLeaf([wrongLeaftValue]),
           "WrongBytesLength",
-          [192, ethers.dataLength(wrongLeaftValue)],
+          [192n, BigInt(size(wrongLeaftValue))],
         );
       });
 
@@ -434,9 +448,9 @@ describe("SparseMerkleProof", () => {
           ],
         } = merkleProofTestData;
 
-        const leaf = await sparseMerkleProof.getLeaf(proofRelatedNodes[proofRelatedNodes.length - 1]);
-        const expectedHKey = await sparseMerkleProof.hashStorageValue(key);
-        const expectedHValue = await sparseMerkleProof.hashStorageValue(value);
+        const leaf = await sparseMerkleProof.read.getLeaf([proofRelatedNodes[proofRelatedNodes.length - 1]]);
+        const expectedHKey = await sparseMerkleProof.read.hashStorageValue([key]);
+        const expectedHValue = await sparseMerkleProof.read.hashStorageValue([value]);
 
         expect(leaf.prev[0]).to.be.equal(0n);
         expect(leaf.prev[1]).to.be.equal(0n);
@@ -458,13 +472,13 @@ describe("SparseMerkleProof", () => {
         },
       } = merkleProofTestData;
 
-      const wrongAccountValue = `0x${value.slice(4)}`;
+      const wrongAccountValue = hex(`0x${value.slice(4)}`);
 
       await expectRevertWithCustomError(
         sparseMerkleProof,
-        sparseMerkleProof.getAccount(wrongAccountValue),
+        sparseMerkleProof.read.getAccount([wrongAccountValue]),
         "WrongBytesLength",
-        [192, ethers.dataLength(wrongAccountValue)],
+        [192n, BigInt(size(wrongAccountValue))],
       );
     });
 
@@ -475,13 +489,13 @@ describe("SparseMerkleProof", () => {
         },
       } = merkleProofTestData;
 
-      const wrongAccountValue = `${value}123456`;
+      const wrongAccountValue = hex(`${value}123456`);
 
       await expectRevertWithCustomError(
         sparseMerkleProof,
-        sparseMerkleProof.getAccount(wrongAccountValue),
+        sparseMerkleProof.read.getAccount([wrongAccountValue]),
         "WrongBytesLength",
-        [192, ethers.dataLength(wrongAccountValue)],
+        [192n, BigInt(size(wrongAccountValue))],
       );
     });
 
@@ -492,7 +506,7 @@ describe("SparseMerkleProof", () => {
         },
       } = merkleProofTestData;
 
-      const account = await sparseMerkleProof.getAccount(value);
+      const account = await sparseMerkleProof.read.getAccount([value]);
 
       expect(account.nonce).to.be.equal(41n);
       expect(account.balance).to.be.equal(15353n);
@@ -511,7 +525,7 @@ describe("SparseMerkleProof", () => {
         },
       } = merkleProofTestData;
 
-      const hashedValue = await sparseMerkleProof.poseidon2Hash(value);
+      const hashedValue = await sparseMerkleProof.read.poseidon2Hash([value]);
 
       expect(hashedValue).to.be.equal("0x12275b306674a6b26e40a01c7c337a825058bd87160698ef3f0270bf2abbda20");
     });

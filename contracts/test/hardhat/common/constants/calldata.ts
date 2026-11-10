@@ -1,4 +1,4 @@
-import { generateKeccak256 } from "../helpers";
+import { generateKeccak256 } from "../helpers/index.js";
 
 export const SAMPLE_FUNCTION_CALLDATA = generateKeccak256(["string"], ["callThisFunction()"], true).substring(0, 10); // 0x + 4 bytes
 export const EMPTY_CALLDATA = "0x";

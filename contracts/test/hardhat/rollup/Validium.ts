@@ -1,16 +1,15 @@
-import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
+import { network } from "hardhat";
+import { describe, it, before, beforeEach } from "node:test";
+
+import { deployValidiumFixture, getAccountsFixture, getValidiumRoleAddressesFixture } from "./helpers/index.js";
 import {
   VALIDIUM_PAUSE_TYPES_ROLES,
   VALIDIUM_UNPAUSE_TYPES_ROLES,
   STATE_DATA_SUBMISSION_PAUSE_TYPE,
-} from "contracts/common/constants";
-import { AddressFilter, TestValidium } from "contracts/typechain-types";
-
-import { deployValidiumFixture, getAccountsFixture, getValidiumRoleAddressesFixture } from "./helpers";
-import firstCompressedDataContent from "../_testData/compressedData/blocks-1-46.json";
-import secondCompressedDataContent from "../_testData/compressedData/blocks-47-81.json";
+} from "../../../common/constants/index.js";
+import firstCompressedDataContent from "../_testData/compressedData/blocks-1-46.json" with { type: "json" };
+import secondCompressedDataContent from "../_testData/compressedData/blocks-47-81.json" with { type: "json" };
 import {
   ADDRESS_ZERO,
   GENERAL_PAUSE_TYPE,
@@ -26,58 +25,70 @@ import {
   INITIALIZED_ALREADY_MESSAGE,
   VALIDIUM_INITIALIZE_SIGNATURE,
   MAX_GAS_LIMIT,
-} from "../common/constants";
-import { deployUpgradableFromFactory } from "../common/deployment";
+} from "../common/constants/index.js";
+import { deployUpgradableFromFactory } from "../common/deployment.js";
 import {
+  type TestAccount,
+  hex,
   calculateRollingHash,
   generateRandomBytes,
   generateCallDataSubmission,
-  expectEvent,
   buildAccessErrorMessage,
-  expectRevertWithCustomError,
-  expectRevertWithReason,
   expectRevertWhenPaused,
   generateKeccak256,
-} from "../common/helpers";
+  expectRevertWithCustomError,
+  expectRevertWithReason,
+  expectEvent,
+} from "../common/helpers/index.js";
+
+import type { RoleAddress } from "../common/types.js";
+import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
+import type { Address, Hex } from "viem";
 
 describe("Validium contract", () => {
-  let validium: TestValidium;
-  let addressFilter: AddressFilter;
-  let verifier: string;
+  let validium: ContractReturnType<"TestValidium">;
+  let addressFilter: ContractReturnType<"AddressFilter">;
+  let verifier: Address;
 
-  let admin: SignerWithAddress;
-  let securityCouncil: SignerWithAddress;
-  let operator: SignerWithAddress;
-  let nonAuthorizedAccount: SignerWithAddress;
-  let alternateShnarfProviderAddress: SignerWithAddress;
-  let roleAddresses: { addressWithRole: string; role: string }[];
-  let addressFilterAddress: string;
+  let admin: TestAccount;
+  let securityCouncil: TestAccount;
+  let operator: TestAccount;
+  let nonAuthorizedAccount: TestAccount;
+  let alternateShnarfProviderAddress: TestAccount;
+  let roleAddresses: RoleAddress[];
+  let addressFilterAddress: Address;
 
-  const { prevShnarf, expectedShnarf, parentStateRootHash } = firstCompressedDataContent;
-  const { expectedShnarf: secondExpectedShnarf } = secondCompressedDataContent;
+  const prevShnarf = hex(firstCompressedDataContent.prevShnarf);
+  const expectedShnarf = hex(firstCompressedDataContent.expectedShnarf);
+  const parentStateRootHash = hex(firstCompressedDataContent.parentStateRootHash);
+  const secondExpectedShnarf = hex(secondCompressedDataContent.expectedShnarf);
 
   before(async () => {
+    const { networkHelpers } = await network.getOrCreate();
     ({ admin, securityCouncil, operator, nonAuthorizedAccount, alternateShnarfProviderAddress } =
-      await loadFixture(getAccountsFixture));
-    roleAddresses = await loadFixture(getValidiumRoleAddressesFixture);
+      await networkHelpers.loadFixture(getAccountsFixture));
+    roleAddresses = await networkHelpers.loadFixture(getValidiumRoleAddressesFixture);
   });
 
   beforeEach(async () => {
-    ({ verifier, validium, addressFilter } = await loadFixture(deployValidiumFixture));
-    addressFilterAddress = await addressFilter.getAddress();
+    const { networkHelpers } = await network.getOrCreate();
+    ({ verifier, validium, addressFilter } = await networkHelpers.loadFixture(deployValidiumFixture));
+    addressFilterAddress = addressFilter.address;
   });
 
   describe("Fallback/Receive tests", () => {
-    const sendEthToContract = async (data: string) => {
-      return admin.sendTransaction({ to: await validium.getAddress(), value: INITIAL_WITHDRAW_LIMIT, data });
+    const sendEthToContract = async (data: Hex) => {
+      return admin.sendTransaction({ to: validium.address, value: INITIAL_WITHDRAW_LIMIT, data });
     };
 
     it("Should fail to send eth to the validium contract through the fallback", async () => {
-      await expect(sendEthToContract(EMPTY_CALLDATA)).to.be.reverted;
+      const { viem } = await network.getOrCreate();
+      await viem.assertions.revert(sendEthToContract(EMPTY_CALLDATA));
     });
 
     it("Should fail to send eth to the validium contract through the receive function", async () => {
-      await expect(sendEthToContract("0x1234")).to.be.reverted;
+      const { viem } = await network.getOrCreate();
+      await viem.assertions.revert(sendEthToContract("0x1234"));
     });
   });
 
@@ -136,23 +147,27 @@ describe("Validium contract", () => {
     });
 
     it("Should store verifier address in storage", async () => {
-      ({ verifier, validium } = await loadFixture(deployValidiumFixture));
-      expect(await validium.verifiers(0)).to.be.equal(verifier);
+      const { networkHelpers } = await network.getOrCreate();
+      ({ verifier, validium } = await networkHelpers.loadFixture(deployValidiumFixture));
+      expect(await validium.read.verifiers([0n])).to.be.equal(verifier);
     });
 
     it("Should assign the OPERATOR_ROLE to operator addresses", async () => {
-      ({ verifier, validium } = await loadFixture(deployValidiumFixture));
-      expect(await validium.hasRole(OPERATOR_ROLE, operator.address)).to.be.true;
+      const { networkHelpers } = await network.getOrCreate();
+      ({ verifier, validium } = await networkHelpers.loadFixture(deployValidiumFixture));
+      expect(await validium.read.hasRole([OPERATOR_ROLE, operator.address])).to.be.true;
     });
 
     it("Should assign the VERIFIER_SETTER_ROLE to securityCouncil addresses", async () => {
-      ({ verifier, validium } = await loadFixture(deployValidiumFixture));
-      expect(await validium.hasRole(VERIFIER_SETTER_ROLE, securityCouncil.address)).to.be.true;
+      const { networkHelpers } = await network.getOrCreate();
+      ({ verifier, validium } = await networkHelpers.loadFixture(deployValidiumFixture));
+      expect(await validium.read.hasRole([VERIFIER_SETTER_ROLE, securityCouncil.address])).to.be.true;
     });
 
     it("Should assign the VERIFIER_UNSETTER_ROLE to securityCouncil addresses", async () => {
-      ({ verifier, validium } = await loadFixture(deployValidiumFixture));
-      expect(await validium.hasRole(VERIFIER_UNSETTER_ROLE, securityCouncil.address)).to.be.true;
+      const { networkHelpers } = await network.getOrCreate();
+      ({ verifier, validium } = await networkHelpers.loadFixture(deployValidiumFixture));
+      expect(await validium.read.hasRole([VERIFIER_UNSETTER_ROLE, securityCouncil.address])).to.be.true;
     });
 
     it("Should store the startingRootHash in storage for the first block number", async () => {
@@ -176,7 +191,7 @@ describe("Validium contract", () => {
         unsafeAllow: ["constructor", "incorrect-initializer-order"],
       });
 
-      expect(await validium.stateRootHashes(INITIAL_MIGRATION_BLOCK)).to.be.equal(parentStateRootHash);
+      expect(await validium.read.stateRootHashes([BigInt(INITIAL_MIGRATION_BLOCK)])).to.be.equal(parentStateRootHash);
     });
 
     it("Should assign the VERIFIER_SETTER_ROLE to both SecurityCouncil and Operator", async () => {
@@ -200,8 +215,8 @@ describe("Validium contract", () => {
         unsafeAllow: ["constructor", "incorrect-initializer-order"],
       });
 
-      expect(await validium.hasRole(VERIFIER_SETTER_ROLE, securityCouncil.address)).to.be.true;
-      expect(await validium.hasRole(VERIFIER_SETTER_ROLE, operator.address)).to.be.true;
+      expect(await validium.read.hasRole([VERIFIER_SETTER_ROLE, securityCouncil.address])).to.be.true;
+      expect(await validium.read.hasRole([VERIFIER_SETTER_ROLE, operator.address])).to.be.true;
     });
 
     it("Should assign the passed in shnarfProvider address", async () => {
@@ -225,7 +240,7 @@ describe("Validium contract", () => {
         unsafeAllow: ["constructor", "incorrect-initializer-order"],
       });
 
-      expect(await validium.shnarfProvider()).to.equal(alternateShnarfProviderAddress.address);
+      expect(await validium.read.shnarfProvider()).to.equal(alternateShnarfProviderAddress.address);
     });
 
     it("Should assign the passed in addressFilter address", async () => {
@@ -249,37 +264,42 @@ describe("Validium contract", () => {
         unsafeAllow: ["constructor", "incorrect-initializer-order"],
       });
 
-      expect(await validium.addressFilter()).to.equal(addressFilterAddress);
+      expect(await validium.read.addressFilter()).to.equal(addressFilterAddress);
     });
 
     it("Should have the validium address as the shnarfProvider", async () => {
-      ({ verifier, validium } = await loadFixture(deployValidiumFixture));
-      const validiumAddress = await validium.getAddress();
+      const { networkHelpers } = await network.getOrCreate();
+      ({ verifier, validium } = await networkHelpers.loadFixture(deployValidiumFixture));
+      const validiumAddress = validium.address;
 
-      expect(await validium.shnarfProvider()).to.equal(validiumAddress);
+      expect(await validium.read.shnarfProvider()).to.equal(validiumAddress);
     });
 
     it("Should have the correct contract version", async () => {
-      ({ verifier, validium } = await loadFixture(deployValidiumFixture));
-      expect(await validium.CONTRACT_VERSION()).to.equal("2.0");
+      const { networkHelpers } = await network.getOrCreate();
+      ({ verifier, validium } = await networkHelpers.loadFixture(deployValidiumFixture));
+      expect(await validium.read.CONTRACT_VERSION()).to.equal("2.0");
     });
 
     it("Should revert if the initialize function is called a second time", async () => {
-      ({ verifier, validium } = await loadFixture(deployValidiumFixture));
-      const initializeCall = validium.initialize({
-        initialStateRootHash: parentStateRootHash,
-        initialL2BlockNumber: INITIAL_MIGRATION_BLOCK,
-        genesisTimestamp: GENESIS_L2_TIMESTAMP,
-        defaultVerifier: verifier,
-        rateLimitPeriodInSeconds: ONE_DAY_IN_SECONDS,
-        rateLimitAmountInWei: INITIAL_WITHDRAW_LIMIT,
-        roleAddresses,
-        pauseTypeRoles: VALIDIUM_PAUSE_TYPES_ROLES,
-        unpauseTypeRoles: VALIDIUM_UNPAUSE_TYPES_ROLES,
-        defaultAdmin: securityCouncil.address,
-        shnarfProvider: ADDRESS_ZERO,
-        addressFilter: addressFilterAddress,
-      });
+      const { networkHelpers } = await network.getOrCreate();
+      ({ verifier, validium } = await networkHelpers.loadFixture(deployValidiumFixture));
+      const initializeCall = validium.write.initialize([
+        {
+          initialStateRootHash: parentStateRootHash,
+          initialL2BlockNumber: BigInt(INITIAL_MIGRATION_BLOCK),
+          genesisTimestamp: BigInt(GENESIS_L2_TIMESTAMP),
+          defaultVerifier: verifier,
+          rateLimitPeriodInSeconds: BigInt(ONE_DAY_IN_SECONDS),
+          rateLimitAmountInWei: INITIAL_WITHDRAW_LIMIT,
+          roleAddresses,
+          pauseTypeRoles: VALIDIUM_PAUSE_TYPES_ROLES,
+          unpauseTypeRoles: VALIDIUM_UNPAUSE_TYPES_ROLES,
+          defaultAdmin: securityCouncil.address,
+          shnarfProvider: ADDRESS_ZERO,
+          addressFilter: addressFilterAddress,
+        },
+      ]);
 
       await expectRevertWithReason(initializeCall, INITIALIZED_ALREADY_MESSAGE);
     });
@@ -287,7 +307,9 @@ describe("Validium contract", () => {
 
   describe("Change verifier address", () => {
     it("Should revert if the caller has not the VERIFIER_SETTER_ROLE", async () => {
-      const setVerifierCall = validium.connect(nonAuthorizedAccount).setVerifierAddress(verifier, 2);
+      const setVerifierCall = validium.write.setVerifierAddress([verifier, 2n], {
+        account: nonAuthorizedAccount.account,
+      });
 
       await expectRevertWithReason(
         setVerifierCall,
@@ -296,49 +318,64 @@ describe("Validium contract", () => {
     });
 
     it("Should revert if the address being set is the zero address", async () => {
-      await validium.connect(securityCouncil).grantRole(VERIFIER_SETTER_ROLE, securityCouncil.address);
+      await validium.write.grantRole([VERIFIER_SETTER_ROLE, securityCouncil.address], {
+        account: securityCouncil.account,
+      });
 
-      const setVerifierCall = validium.connect(securityCouncil).setVerifierAddress(ADDRESS_ZERO, 2);
+      const setVerifierCall = validium.write.setVerifierAddress([ADDRESS_ZERO, 2n], {
+        account: securityCouncil.account,
+      });
       await expectRevertWithCustomError(validium, setVerifierCall, "ZeroAddressNotAllowed");
     });
 
     it("Should set the new verifier address", async () => {
-      await validium.connect(securityCouncil).grantRole(VERIFIER_SETTER_ROLE, securityCouncil.address);
+      await validium.write.grantRole([VERIFIER_SETTER_ROLE, securityCouncil.address], {
+        account: securityCouncil.account,
+      });
 
-      await validium.connect(securityCouncil).setVerifierAddress(verifier, 2);
-      expect(await validium.verifiers(2)).to.be.equal(verifier);
+      await validium.write.setVerifierAddress([verifier, 2n], { account: securityCouncil.account });
+      expect(await validium.read.verifiers([2n])).to.be.equal(verifier);
     });
 
     it("Should remove verifier address in storage ", async () => {
-      ({ verifier, validium } = await loadFixture(deployValidiumFixture));
-      await validium.connect(securityCouncil).unsetVerifierAddress(0);
+      const { networkHelpers } = await network.getOrCreate();
+      ({ verifier, validium } = await networkHelpers.loadFixture(deployValidiumFixture));
+      await validium.write.unsetVerifierAddress([0n], { account: securityCouncil.account });
 
-      expect(await validium.verifiers(0)).to.be.equal(ADDRESS_ZERO);
+      expect(await validium.read.verifiers([0n])).to.be.equal(ADDRESS_ZERO);
     });
 
     it("Should revert when removing verifier address if the caller has not the VERIFIER_UNSETTER_ROLE ", async () => {
-      ({ verifier, validium } = await loadFixture(deployValidiumFixture));
+      const { networkHelpers } = await network.getOrCreate();
+      ({ verifier, validium } = await networkHelpers.loadFixture(deployValidiumFixture));
 
       await expectRevertWithReason(
-        validium.connect(nonAuthorizedAccount).unsetVerifierAddress(0),
+        validium.write.unsetVerifierAddress([0n], { account: nonAuthorizedAccount.account }),
         buildAccessErrorMessage(nonAuthorizedAccount, VERIFIER_UNSETTER_ROLE),
       );
     });
 
     it("Should emit the correct event", async () => {
-      await validium.connect(securityCouncil).grantRole(VERIFIER_SETTER_ROLE, securityCouncil.address);
+      await validium.write.grantRole([VERIFIER_SETTER_ROLE, securityCouncil.address], {
+        account: securityCouncil.account,
+      });
 
-      const oldVerifierAddress = await validium.verifiers(2);
+      const oldVerifierAddress = await validium.read.verifiers([2n]);
 
-      const setVerifierCall = validium.connect(securityCouncil).setVerifierAddress(verifier, 2);
-      let expectedArgs = [verifier, 2, securityCouncil.address, oldVerifierAddress];
+      const setVerifierCall = validium.write.setVerifierAddress([verifier, 2n], { account: securityCouncil.account });
+      let expectedArgs: [Address, bigint, Address, Address] = [
+        verifier,
+        2n,
+        securityCouncil.address,
+        oldVerifierAddress,
+      ];
 
       await expectEvent(validium, setVerifierCall, "VerifierAddressChanged", expectedArgs);
 
-      await validium.connect(securityCouncil).unsetVerifierAddress(2);
+      await validium.write.unsetVerifierAddress([2n], { account: securityCouncil.account });
 
-      const unsetVerifierCall = validium.connect(securityCouncil).unsetVerifierAddress(2);
-      expectedArgs = [ADDRESS_ZERO, 2, securityCouncil.address, oldVerifierAddress];
+      const unsetVerifierCall = validium.write.unsetVerifierAddress([2n], { account: securityCouncil.account });
+      expectedArgs = [ADDRESS_ZERO, 2n, securityCouncil.address, oldVerifierAddress];
 
       await expectEvent(validium, unsetVerifierCall, "VerifierAddressChanged", expectedArgs);
     });
@@ -346,7 +383,7 @@ describe("Validium contract", () => {
 
   describe("Data submission tests", () => {
     beforeEach(async () => {
-      await validium.setLastFinalizedBlock(0);
+      await validium.write.setLastFinalizedBlock([0n]);
     });
 
     const [DATA_ONE] = generateCallDataSubmission(0, 1);
@@ -360,11 +397,10 @@ describe("Validium contract", () => {
         [HASH_ZERO, HASH_ZERO, submissionData.finalStateRootHash, HASH_ZERO, HASH_ZERO],
       );
 
-      const asyncCall = validium
-        .connect(operator)
-        .acceptShnarfData(nonExistingParentShnarf, wrongExpectedShnarf, submissionData.finalStateRootHash, {
-          gasLimit: MAX_GAS_LIMIT,
-        });
+      const asyncCall = validium.write.acceptShnarfData(
+        [nonExistingParentShnarf, wrongExpectedShnarf, submissionData.finalStateRootHash],
+        { account: operator.account, gas: BigInt(MAX_GAS_LIMIT) },
+      );
 
       await expectRevertWithCustomError(validium, asyncCall, "ParentShnarfNotSubmitted", [nonExistingParentShnarf]);
     });
@@ -372,87 +408,80 @@ describe("Validium contract", () => {
     it("Should succesfully submit 1 compressed data chunk setting values", async () => {
       const [submissionData] = generateCallDataSubmission(0, 1);
 
-      await expect(
-        validium
-          .connect(operator)
-          .acceptShnarfData(prevShnarf, expectedShnarf, submissionData.finalStateRootHash, { gasLimit: MAX_GAS_LIMIT }),
-      ).to.not.be.reverted;
+      await validium.write.acceptShnarfData([prevShnarf, expectedShnarf, submissionData.finalStateRootHash], {
+        account: operator.account,
+        gas: BigInt(MAX_GAS_LIMIT),
+      });
 
-      const blobShnarfExists = await validium.blobShnarfExists(expectedShnarf);
+      const blobShnarfExists = await validium.read.blobShnarfExists([expectedShnarf]);
       expect(blobShnarfExists).to.equal(1n);
     });
 
     it("Should successfully submit 2 compressed data chunks in two transactions", async () => {
       const [firstSubmissionData, secondSubmissionData] = generateCallDataSubmission(0, 2);
 
-      await expect(
-        validium
-          .connect(operator)
-          .acceptShnarfData(prevShnarf, expectedShnarf, firstSubmissionData.finalStateRootHash, {
-            gasLimit: MAX_GAS_LIMIT,
-          }),
-      ).to.not.be.reverted;
+      await validium.write.acceptShnarfData([prevShnarf, expectedShnarf, firstSubmissionData.finalStateRootHash], {
+        account: operator.account,
+        gas: BigInt(MAX_GAS_LIMIT),
+      });
 
-      await expect(
-        validium
-          .connect(operator)
-          .acceptShnarfData(expectedShnarf, secondExpectedShnarf, secondSubmissionData.finalStateRootHash, {
-            gasLimit: MAX_GAS_LIMIT,
-          }),
-      ).to.not.be.reverted;
+      await validium.write.acceptShnarfData(
+        [expectedShnarf, secondExpectedShnarf, secondSubmissionData.finalStateRootHash],
+        { account: operator.account, gas: BigInt(MAX_GAS_LIMIT) },
+      );
 
-      let blobShnarfExists = await validium.blobShnarfExists(expectedShnarf);
+      let blobShnarfExists = await validium.read.blobShnarfExists([expectedShnarf]);
       expect(blobShnarfExists).to.equal(1n);
-      blobShnarfExists = await validium.blobShnarfExists(secondExpectedShnarf);
+      blobShnarfExists = await validium.read.blobShnarfExists([secondExpectedShnarf]);
       expect(blobShnarfExists).to.equal(1n);
     });
 
     it("Should emit an event while submitting 1 compressed data chunk", async () => {
       const [submissionData] = generateCallDataSubmission(0, 1);
 
-      const submitDataCall = validium
-        .connect(operator)
-        .acceptShnarfData(prevShnarf, secondExpectedShnarf, submissionData.finalStateRootHash, {
-          gasLimit: MAX_GAS_LIMIT,
-        });
-      const eventArgs = [prevShnarf, secondExpectedShnarf, submissionData.finalStateRootHash];
+      const submitDataCall = validium.write.acceptShnarfData(
+        [prevShnarf, secondExpectedShnarf, submissionData.finalStateRootHash],
+        { account: operator.account, gas: BigInt(MAX_GAS_LIMIT) },
+      );
 
-      await expectEvent(validium, submitDataCall, "DataSubmittedV3", eventArgs);
+      await expectEvent(validium, submitDataCall, "DataSubmittedV3", [
+        prevShnarf,
+        secondExpectedShnarf,
+        submissionData.finalStateRootHash,
+      ]);
     });
 
     it("Should fail if the final state root hash is HASH_ZERO", async () => {
-      const submitDataCall = validium
-        .connect(operator)
-        .acceptShnarfData(prevShnarf, expectedShnarf, HASH_ZERO, { gasLimit: MAX_GAS_LIMIT });
+      const submitDataCall = validium.write.acceptShnarfData([prevShnarf, expectedShnarf, HASH_ZERO], {
+        account: operator.account,
+        gas: BigInt(MAX_GAS_LIMIT),
+      });
 
       // TODO: Make the failure shnarf dynamic and computed
-      await expectRevertWithCustomError(validium, submitDataCall, "FinalStateRootHashIsZeroHash", []);
+      await expectRevertWithCustomError(validium, submitDataCall, "FinalStateRootHashIsZeroHash");
     });
 
     it("Should fail to submit where submitted shnarf is HASH_ZERO", async () => {
       const [firstSubmissionData, secondSubmissionData] = generateCallDataSubmission(0, 2);
 
-      await expect(
-        validium
-          .connect(operator)
-          .acceptShnarfData(prevShnarf, expectedShnarf, firstSubmissionData.finalStateRootHash, {
-            gasLimit: MAX_GAS_LIMIT,
-          }),
-      ).to.not.be.reverted;
+      await validium.write.acceptShnarfData([prevShnarf, expectedShnarf, firstSubmissionData.finalStateRootHash], {
+        account: operator.account,
+        gas: BigInt(MAX_GAS_LIMIT),
+      });
 
-      const submitDataCall = validium
-        .connect(operator)
-        .acceptShnarfData(expectedShnarf, HASH_ZERO, secondSubmissionData.finalStateRootHash, {
-          gasLimit: MAX_GAS_LIMIT,
-        });
+      const submitDataCall = validium.write.acceptShnarfData(
+        [expectedShnarf, HASH_ZERO, secondSubmissionData.finalStateRootHash],
+        { account: operator.account, gas: BigInt(MAX_GAS_LIMIT) },
+      );
 
-      await expectRevertWithCustomError(validium, submitDataCall, "ShnarfSubmissionIsZeroHash", []);
+      await expectRevertWithCustomError(validium, submitDataCall, "ShnarfSubmissionIsZeroHash");
     });
 
     it("Should revert if the caller does not have the OPERATOR_ROLE", async () => {
-      const submitDataCall = validium
-        .connect(nonAuthorizedAccount)
-        .acceptShnarfData(prevShnarf, expectedShnarf, DATA_ONE.finalStateRootHash, { gasLimit: MAX_GAS_LIMIT });
+      const submitDataCall = validium.write.acceptShnarfData(
+        [prevShnarf, expectedShnarf, DATA_ONE.finalStateRootHash],
+        { account: nonAuthorizedAccount.account, gas: BigInt(MAX_GAS_LIMIT) },
+      );
 
       await expectRevertWithReason(submitDataCall, buildAccessErrorMessage(nonAuthorizedAccount, OPERATOR_ROLE));
     });
@@ -465,38 +494,43 @@ describe("Validium contract", () => {
 
     validiumSubmissionPauseTypes.forEach(({ pauseType, name }) => {
       it(`Should revert if ${name} is enabled`, async () => {
-        await validium.connect(securityCouncil).pauseByType(pauseType);
+        await validium.write.pauseByType([pauseType], { account: securityCouncil.account });
 
-        const submitDataCall = validium
-          .connect(operator)
-          .acceptShnarfData(prevShnarf, expectedShnarf, DATA_ONE.finalStateRootHash, { gasLimit: MAX_GAS_LIMIT });
+        const submitDataCall = validium.write.acceptShnarfData(
+          [prevShnarf, expectedShnarf, DATA_ONE.finalStateRootHash],
+          { account: operator.account, gas: BigInt(MAX_GAS_LIMIT) },
+        );
 
         await expectRevertWhenPaused(validium, submitDataCall, pauseType);
       });
     });
 
     it("Should revert with ShnarfAlreadySubmitted when submitting same compressed data twice in 2 separate transactions", async () => {
-      await validium
-        .connect(operator)
-        .acceptShnarfData(prevShnarf, expectedShnarf, DATA_ONE.finalStateRootHash, { gasLimit: MAX_GAS_LIMIT });
+      await validium.write.acceptShnarfData([prevShnarf, expectedShnarf, DATA_ONE.finalStateRootHash], {
+        account: operator.account,
+        gas: BigInt(MAX_GAS_LIMIT),
+      });
 
-      const submitDataCall = validium
-        .connect(operator)
-        .acceptShnarfData(prevShnarf, expectedShnarf, DATA_ONE.finalStateRootHash, { gasLimit: MAX_GAS_LIMIT });
+      const submitDataCall = validium.write.acceptShnarfData(
+        [prevShnarf, expectedShnarf, DATA_ONE.finalStateRootHash],
+        { account: operator.account, gas: BigInt(MAX_GAS_LIMIT) },
+      );
 
       await expectRevertWithCustomError(validium, submitDataCall, "ShnarfAlreadySubmitted", [expectedShnarf]);
     });
 
     it("Should revert with ShnarfAlreadySubmitted when submitting same data, differing block numbers", async () => {
-      await validium
-        .connect(operator)
-        .acceptShnarfData(prevShnarf, expectedShnarf, DATA_ONE.finalStateRootHash, { gasLimit: MAX_GAS_LIMIT });
+      await validium.write.acceptShnarfData([prevShnarf, expectedShnarf, DATA_ONE.finalStateRootHash], {
+        account: operator.account,
+        gas: BigInt(MAX_GAS_LIMIT),
+      });
 
       const [dataOneCopy] = generateCallDataSubmission(0, 1);
 
-      const submitDataCall = validium
-        .connect(operator)
-        .acceptShnarfData(prevShnarf, expectedShnarf, dataOneCopy.finalStateRootHash, { gasLimit: MAX_GAS_LIMIT });
+      const submitDataCall = validium.write.acceptShnarfData(
+        [prevShnarf, expectedShnarf, dataOneCopy.finalStateRootHash],
+        { account: operator.account, gas: BigInt(MAX_GAS_LIMIT) },
+      );
 
       await expectRevertWithCustomError(validium, submitDataCall, "ShnarfAlreadySubmitted", [expectedShnarf]);
     });
@@ -504,12 +538,12 @@ describe("Validium contract", () => {
 
   describe("Validate L2 computed rolling hash", () => {
     it("Should revert if l1 message number == 0 and l1 rolling hash is not empty", async () => {
-      const l1MessageNumber = 0;
+      const l1MessageNumber = 0n;
       const l1RollingHash = generateRandomBytes(32);
 
       await expectRevertWithCustomError(
         validium,
-        validium.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash),
+        validium.read.validateL2ComputedRollingHash([l1MessageNumber, l1RollingHash]),
         "MissingMessageNumberForRollingHash",
         [l1RollingHash],
       );
@@ -521,7 +555,7 @@ describe("Validium contract", () => {
 
       await expectRevertWithCustomError(
         validium,
-        validium.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash),
+        validium.read.validateL2ComputedRollingHash([l1MessageNumber, l1RollingHash]),
         "MissingRollingHashForMessageNumber",
         [l1MessageNumber],
       );
@@ -533,27 +567,27 @@ describe("Validium contract", () => {
 
       await expectRevertWithCustomError(
         validium,
-        validium.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash),
+        validium.read.validateL2ComputedRollingHash([l1MessageNumber, l1RollingHash]),
         "L1RollingHashDoesNotExistOnL1",
         [l1MessageNumber, l1RollingHash],
       );
     });
 
     it("Should succeed if l1 message number == 0 and l1 rolling hash is empty", async () => {
-      const l1MessageNumber = 0;
+      const l1MessageNumber = 0n;
       const l1RollingHash = HASH_ZERO;
-      await expect(validium.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash)).to.not.be.reverted;
+      await validium.read.validateL2ComputedRollingHash([l1MessageNumber, l1RollingHash]);
     });
 
     it("Should succeed if l1 message number != 0, l1 rolling hash is not empty and exists on L1", async () => {
       const l1MessageNumber = 1n;
       const messageHash = generateRandomBytes(32);
 
-      await validium.addRollingHash(l1MessageNumber, messageHash);
+      await validium.write.addRollingHash([l1MessageNumber, messageHash]);
 
       const l1RollingHash = calculateRollingHash(HASH_ZERO, messageHash);
 
-      await expect(validium.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash)).to.not.be.reverted;
+      await validium.read.validateL2ComputedRollingHash([l1MessageNumber, l1RollingHash]);
     });
   });
 });

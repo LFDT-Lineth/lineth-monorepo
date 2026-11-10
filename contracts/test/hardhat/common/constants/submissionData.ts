@@ -1,20 +1,20 @@
-import { HASH_ZERO } from "./general";
-import firstCompressedDataContent from "../../_testData/compressedData/blocks-1-46.json";
-import fourthCompressedDataContent from "../../_testData/compressedData/blocks-115-155.json";
-import secondCompressedDataContent from "../../_testData/compressedData/blocks-47-81.json";
-import thirdCompressedDataContent from "../../_testData/compressedData/blocks-82-114.json";
-import firstCompressedDataContent_multiple from "../../_testData/compressedData/multipleProofs/blocks-1-46.json";
-import fourthCompressedDataContent_multiple from "../../_testData/compressedData/multipleProofs/blocks-120-153.json";
-import secondCompressedDataContent_multiple from "../../_testData/compressedData/multipleProofs/blocks-47-81.json";
-import thirdCompressedDataContent_multiple from "../../_testData/compressedData/multipleProofs/blocks-82-119.json";
-import firstBlobDataContent from "../../_testData/compressedDataEip4844/blocks-1-46.json";
-import fourthBlobDataContent from "../../_testData/compressedDataEip4844/blocks-115-155.json";
-import secondBlobDataContent from "../../_testData/compressedDataEip4844/blocks-47-81.json";
-import thirdBlobDataContent from "../../_testData/compressedDataEip4844/blocks-82-114.json";
-import firstBlobContent_multiple from "../../_testData/compressedDataEip4844/multipleProofs/blocks-1-46.json";
-import fourthBlobContent_multiple from "../../_testData/compressedDataEip4844/multipleProofs/blocks-111-139.json";
-import secondBlobContent_multiple from "../../_testData/compressedDataEip4844/multipleProofs/blocks-47-81.json";
-import thirdBlobContent_multiple from "../../_testData/compressedDataEip4844/multipleProofs/blocks-82-110.json";
+import { HASH_ZERO } from "./general.js";
+import firstCompressedDataContent from "../../_testData/compressedData/blocks-1-46.json" with { type: "json" };
+import fourthCompressedDataContent from "../../_testData/compressedData/blocks-115-155.json" with { type: "json" };
+import secondCompressedDataContent from "../../_testData/compressedData/blocks-47-81.json" with { type: "json" };
+import thirdCompressedDataContent from "../../_testData/compressedData/blocks-82-114.json" with { type: "json" };
+import firstCompressedDataContent_multiple from "../../_testData/compressedData/multipleProofs/blocks-1-46.json" with { type: "json" };
+import fourthCompressedDataContent_multiple from "../../_testData/compressedData/multipleProofs/blocks-120-153.json" with { type: "json" };
+import secondCompressedDataContent_multiple from "../../_testData/compressedData/multipleProofs/blocks-47-81.json" with { type: "json" };
+import thirdCompressedDataContent_multiple from "../../_testData/compressedData/multipleProofs/blocks-82-119.json" with { type: "json" };
+import firstBlobDataContent from "../../_testData/compressedDataEip4844/blocks-1-46.json" with { type: "json" };
+import fourthBlobDataContent from "../../_testData/compressedDataEip4844/blocks-115-155.json" with { type: "json" };
+import secondBlobDataContent from "../../_testData/compressedDataEip4844/blocks-47-81.json" with { type: "json" };
+import thirdBlobDataContent from "../../_testData/compressedDataEip4844/blocks-82-114.json" with { type: "json" };
+import firstBlobContent_multiple from "../../_testData/compressedDataEip4844/multipleProofs/blocks-1-46.json" with { type: "json" };
+import fourthBlobContent_multiple from "../../_testData/compressedDataEip4844/multipleProofs/blocks-111-139.json" with { type: "json" };
+import secondBlobContent_multiple from "../../_testData/compressedDataEip4844/multipleProofs/blocks-47-81.json" with { type: "json" };
+import thirdBlobContent_multiple from "../../_testData/compressedDataEip4844/multipleProofs/blocks-82-110.json" with { type: "json" };
 
 export const DEFAULT_SUBMISSION_DATA = {
   dataParentHash: HASH_ZERO,

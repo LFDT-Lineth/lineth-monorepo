@@ -1,16 +1,21 @@
-import { TokenBridgeInitializationData } from "contracts/scripts/tokenBridge/test/deployTokenBridges";
-import { ethers, AbiCoder } from "ethers";
+import { type Hex, encodeAbiParameters, encodePacked, parseAbiParameters } from "viem";
 
-export const encodeData = (types: string[], values: unknown[], packed?: boolean) => {
+import type { TokenBridgeInitializationData } from "../../../../scripts/tokenBridge/test/deployTokenBridges.js";
+
+/**
+ * ABI-encodes `values` for the given Solidity `types` (e.g. `["uint256", "bytes32"]`), or tightly packs them when
+ * `packed` is set. Replaces ethers' `AbiCoder.encode` / `solidityPacked`. Integers must be `bigint` or `number`.
+ */
+export const encodeData = (types: string[], values: unknown[], packed?: boolean): Hex => {
   if (packed) {
-    return ethers.solidityPacked(types, values);
+    return encodePacked(types, values);
   }
-  return AbiCoder.defaultAbiCoder().encode(types, values);
+  return encodeAbiParameters(parseAbiParameters(types.join(", ")), values);
 };
 
 /**
- * Serializes TokenBridgeInitializationData to the positional array format
- * that ethers v6 `toArray()` produces from parsed event structs.
+ * Serializes TokenBridgeInitializationData to the positional array format used by the event assertions
+ * (structs compare positionally, in ABI order).
  *
  * Struct field order in Solidity:
  * 1. defaultAdmin, 2. messageService, 3. tokenBeacon, 4. sourceChainId,

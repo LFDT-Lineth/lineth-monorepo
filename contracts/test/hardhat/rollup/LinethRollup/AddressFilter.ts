@@ -1,32 +1,36 @@
-import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { DEFAULT_ADMIN_ROLE } from "contracts/common/constants";
-import { AddressFilter } from "contracts/typechain-types";
+import { network } from "hardhat";
+import { describe, it, before, beforeEach } from "node:test";
 
-import { ADDRESS_ZERO } from "../../common/constants";
+import { DEFAULT_ADMIN_ROLE } from "../../../../common/constants/index.js";
+import { ADDRESS_ZERO } from "../../common/constants/index.js";
 import {
+  type TestAccount,
   buildAccessErrorMessage,
-  expectEvent,
   expectRevertWithCustomError,
+  expectEvent,
   expectRevertWithReason,
-} from "../../common/helpers";
-import { getAccountsFixture, deployAddressFilterFixture, deployAddressFilter } from "../helpers";
+} from "../../common/helpers/index.js";
+import { getAccountsFixture, deployAddressFilterFixture, deployAddressFilter } from "../helpers/index.js";
+
+import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
 
 describe("AddressFilter: Forced Transactions", () => {
-  let addressFilter: AddressFilter;
-  let securityCouncil: SignerWithAddress;
-  let operator: SignerWithAddress;
-  let nonAuthorizedAccount: SignerWithAddress;
+  let addressFilter: ContractReturnType<"AddressFilter">;
+  let securityCouncil: TestAccount;
+  let operator: TestAccount;
+  let nonAuthorizedAccount: TestAccount;
 
-  // let securityCouncil: SignerWithAddress;
+  // let securityCouncil: TestAccount;
 
   before(async () => {
-    ({ nonAuthorizedAccount, securityCouncil, operator } = await loadFixture(getAccountsFixture));
+    const { networkHelpers } = await network.getOrCreate();
+    ({ nonAuthorizedAccount, securityCouncil, operator } = await networkHelpers.loadFixture(getAccountsFixture));
   });
 
   beforeEach(async () => {
-    ({ addressFilter } = await loadFixture(deployAddressFilterFixture));
+    const { networkHelpers } = await network.getOrCreate();
+    ({ addressFilter } = await networkHelpers.loadFixture(deployAddressFilterFixture));
   });
 
   describe("Contract Construction", () => {
@@ -41,7 +45,7 @@ describe("AddressFilter: Forced Transactions", () => {
     it("Should set the _defaultAdmin role", async () => {
       await deployAddressFilter(securityCouncil.address, [nonAuthorizedAccount.address]);
 
-      const hasRole = await addressFilter.hasRole(DEFAULT_ADMIN_ROLE, securityCouncil.address);
+      const hasRole = await addressFilter.read.hasRole([DEFAULT_ADMIN_ROLE, securityCouncil.address]);
       expect(hasRole).to.be.true;
     });
 
@@ -51,51 +55,53 @@ describe("AddressFilter: Forced Transactions", () => {
         operator.address,
       ]));
 
-      let isFiltered = await addressFilter.addressIsFiltered(nonAuthorizedAccount.address);
+      let isFiltered = await addressFilter.read.addressIsFiltered([nonAuthorizedAccount.address]);
       expect(isFiltered).to.be.true;
 
-      isFiltered = await addressFilter.addressIsFiltered(operator.address);
+      isFiltered = await addressFilter.read.addressIsFiltered([operator.address]);
       expect(isFiltered).to.be.true;
 
       // double check it isn't just returning true
-      isFiltered = await addressFilter.addressIsFiltered(securityCouncil.address);
+      isFiltered = await addressFilter.read.addressIsFiltered([securityCouncil.address]);
       expect(isFiltered).to.be.false;
     });
   });
 
   describe("Setting address filter addresses statuses", () => {
     it("Should fail if the address list is empty", async () => {
-      const asyncCall = addressFilter.connect(securityCouncil).setFilteredStatus([], true);
+      const asyncCall = addressFilter.write.setFilteredStatus([[], true], { account: securityCouncil.account });
 
       await expectRevertWithCustomError(addressFilter, asyncCall, "FilteredAddressesEmpty");
     });
 
     it("Should set the address filter addresses to true", async () => {
-      let isFiltered = await addressFilter.addressIsFiltered(operator.address);
+      let isFiltered = await addressFilter.read.addressIsFiltered([operator.address]);
       expect(isFiltered).to.be.false;
 
-      await addressFilter.connect(securityCouncil).setFilteredStatus([operator.address], true);
+      await addressFilter.write.setFilteredStatus([[operator.address], true], { account: securityCouncil.account });
 
       // double check it isn't just returning true
-      isFiltered = await addressFilter.addressIsFiltered(operator.address);
+      isFiltered = await addressFilter.read.addressIsFiltered([operator.address]);
       expect(isFiltered).to.be.true;
     });
 
     it("Should set the address filter addresses to false", async () => {
-      let isFiltered = await addressFilter.addressIsFiltered(nonAuthorizedAccount.address);
+      let isFiltered = await addressFilter.read.addressIsFiltered([nonAuthorizedAccount.address]);
       expect(isFiltered).to.be.true;
 
-      await addressFilter.connect(securityCouncil).setFilteredStatus([nonAuthorizedAccount.address], false);
+      await addressFilter.write.setFilteredStatus([[nonAuthorizedAccount.address], false], {
+        account: securityCouncil.account,
+      });
 
       // double check it isn't just returning false
-      isFiltered = await addressFilter.addressIsFiltered(nonAuthorizedAccount.address);
+      isFiltered = await addressFilter.read.addressIsFiltered([nonAuthorizedAccount.address]);
       expect(isFiltered).to.be.false;
     });
 
     it("Should emit FilteredStatusesSet when setting status to true", async () => {
       await expectEvent(
         addressFilter,
-        addressFilter.connect(securityCouncil).setFilteredStatus([operator.address], true),
+        addressFilter.write.setFilteredStatus([[operator.address], true], { account: securityCouncil.account }),
         "FilteredStatusesSet",
         [[operator.address], true],
       );
@@ -104,7 +110,9 @@ describe("AddressFilter: Forced Transactions", () => {
     it("Should emit FilteredStatusesSet when setting status to false", async () => {
       await expectEvent(
         addressFilter,
-        addressFilter.connect(securityCouncil).setFilteredStatus([nonAuthorizedAccount.address], false),
+        addressFilter.write.setFilteredStatus([[nonAuthorizedAccount.address], false], {
+          account: securityCouncil.account,
+        }),
         "FilteredStatusesSet",
         [[nonAuthorizedAccount.address], false],
       );
@@ -114,7 +122,7 @@ describe("AddressFilter: Forced Transactions", () => {
   describe("Access Control", () => {
     it("Should fail to set statuses if not authorized", async () => {
       await expectRevertWithReason(
-        addressFilter.connect(nonAuthorizedAccount).setFilteredStatus([operator.address], true),
+        addressFilter.write.setFilteredStatus([[operator.address], true], { account: nonAuthorizedAccount.account }),
         buildAccessErrorMessage(nonAuthorizedAccount, DEFAULT_ADMIN_ROLE),
       );
     });

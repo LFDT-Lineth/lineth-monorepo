@@ -75,19 +75,19 @@ Within the test file itself, organize tests by contract name, external calls, be
 
 ## Additional Guidelines
 
-### Ethers Wrapping/Abstractions
-- Ensure proper wrapping and abstraction using Ethers.js. Ideally Ethers should be in the common helpers/constants files and
+### viem Wrapping/Abstractions
+- Tests use viem through Hardhat 3 (`hardhat-viem`). Keep shared setup in the common helpers/constants files; see [hardhat-v3-viem-conventions.md](../docs/hardhat-v3-viem-conventions.md).
 
 ### Solidity Test Contracts
 - Use Solidity test contracts where necessary to set required state to simplify testing.
 
 ### Event Testing
 - Test events, including expected arguments.
-- Use the wrapped helper functions e.g. `expectEvent`
+- Use the wrapped helper functions e.g. `expectEvent`, `expectEvents`, `expectNoEvent` (implemented with Hardhat's `viem.assertions`).
 
 ### Error Testing
 - Test errors, including expected arguments.
-- Use the wrapped helper functions e.g. `expectRevertWithCustomError`
+- Use the wrapped helper functions e.g. `expectRevertWithCustomError`, `expectRevertWithReason` (implemented with Hardhat's `viem.assertions`).
 
 ### Scenario Building Pre-Testing
 - Ideally build the scenarios in the test files without actual tests to ensure comprehensive coverage and ease of reading.
