@@ -56,7 +56,6 @@ class Web3JContractAsyncHelperTest {
     helper = Web3JContractAsyncHelper(
       contractAddress = contractAddress,
       web3j = web3j,
-      // same setup as the coordinator; chainId is carried by each tx, hence -1
       transactionManager = AsyncFriendlyTransactionManager(
         web3j,
         // obviously fake key, test only
@@ -65,8 +64,6 @@ class Web3JContractAsyncHelperTest {
       ),
       contractGasProvider = gasProvider,
       smartContractErrors = emptyMap(),
-      // with eth_estimateGas disabled, the gas limit future is already completed
-      // and fee lookup runs on the calling thread: the event loop
       useEthEstimateGas = false,
     )
   }
@@ -76,10 +73,6 @@ class Web3JContractAsyncHelperTest {
     vertx.close()
   }
 
-  /**
-   * Runs [action] on a Vert.x event loop. Gas fees are completed by a Vert.x timer bound to that same
-   * event loop, so any blocking wait on fees from the event loop would never complete.
-   */
   private fun <T> runOnEventLoop(action: () -> SafeFuture<T>): T {
     val result = SafeFuture<T>()
     vertx.runOnContext {
@@ -119,10 +112,7 @@ class Web3JContractAsyncHelperTest {
     assertThat(web3jService.sentRawTransactions).hasSize(1)
   }
 
-  /**
-   * Async fees are completed by a Vert.x timer, as with `Web3jEthApiClientWithRetries` retry backoff.
-   * Synchronous getters fail the test: they must not be used from async continuations.
-   */
+  // fees complete on a Vert.x timer, like the L1 client's retry backoff
   private class TimerCompletedGasProvider(
     private val vertx: Vertx,
     private val chainId: Long,

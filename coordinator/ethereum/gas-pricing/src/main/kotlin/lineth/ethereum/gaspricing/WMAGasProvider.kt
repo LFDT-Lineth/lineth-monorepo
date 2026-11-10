@@ -59,8 +59,6 @@ class WMAGasProvider(
     return chainId
   }
 
-  // Synchronous getters block until fees are fetched. They are kept only for the web3j
-  // ContractGasProvider contract and blocking callers; async code must use the *Async variants.
   override fun getMaxFeePerGas(): BigInteger {
     return getEIP1559GasFees().maxFeePerGas.toBigInteger()
   }

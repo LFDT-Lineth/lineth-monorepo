@@ -9,16 +9,8 @@ data class EIP1559GasFees(
 )
 
 interface AtomicContractEIP1559GasProvider : ContractEIP1559GasProvider {
-  /**
-   * Synchronous variant, kept for blocking callers only.
-   * Implementations may block the calling thread while fees are fetched,
-   * so it must not be called from a Vert.x event-loop thread or async continuations.
-   * Prefer [getEIP1559GasFeesAsync].
-   */
+  /** May block; use [getEIP1559GasFeesAsync] from async code. */
   fun getEIP1559GasFees(): EIP1559GasFees
 
-  /**
-   * Non-blocking variant. Implementations must not block the calling thread.
-   */
   fun getEIP1559GasFeesAsync(): SafeFuture<EIP1559GasFees>
 }

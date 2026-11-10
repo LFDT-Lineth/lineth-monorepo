@@ -173,9 +173,6 @@ class Web3JContractAsyncHelper(
     return contractGasProvider is ContractEIP1559GasProvider
   }
 
-  /**
-   * Blocking EIP-1559 fee lookup, only for the synchronous [sendTransaction] API.
-   */
   private fun getEip1559GasFees(): EIP1559GasFees {
     return when (contractGasProvider) {
       is AtomicContractEIP1559GasProvider -> contractGasProvider.getEIP1559GasFees()
@@ -188,14 +185,9 @@ class Web3JContractAsyncHelper(
     }
   }
 
-  /**
-   * Non-blocking EIP-1559 fee lookup. Must be used in async continuations instead of [getEip1559GasFees],
-   * which may block the calling thread (possibly a Vert.x event loop).
-   */
   private fun getEip1559GasFeesAsync(): SafeFuture<EIP1559GasFees> {
     return when (contractGasProvider) {
       is AtomicContractEIP1559GasProvider -> contractGasProvider.getEIP1559GasFeesAsync()
-      // plain web3j providers only expose sync getters
       is ContractEIP1559GasProvider -> SafeFuture.completedFuture(
         EIP1559GasFees(
           maxPriorityFeePerGas = contractGasProvider.maxPriorityFeePerGas.toULong(),
@@ -207,9 +199,6 @@ class Web3JContractAsyncHelper(
     }
   }
 
-  /**
-   * Non-blocking EIP-4844 fee lookup.
-   */
   private fun getEip4844GasFeesAsync(): SafeFuture<EIP4844GasFees> {
     if (contractGasProvider !is EIP4844GasProvider) {
       return SafeFuture.failedFuture(UnsupportedOperationException("GasProvider does not support EIP4844!"))
