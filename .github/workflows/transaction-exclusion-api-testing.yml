@@ -3,7 +3,6 @@ name: transaction-exclusion-api-testing
 permissions:
   contents: read
   actions: read
-  id-token: write
 
 on:
   workflow_call:
@@ -21,9 +20,13 @@ concurrency:
 
 jobs:
   run-tests:
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
     # ~1.5 mins saved vs small
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
-    environment: publish
+    environment: dockerhub-pull
     name: Transaction exclusion api tests
     steps:
       - name: Checkout

@@ -5,7 +5,6 @@ permissions:
   contents: write
   packages: write
   pull-requests: write
-  id-token: write
 
 on:
   workflow_call:
@@ -93,6 +92,12 @@ jobs:
       image-tag-suffix: ${{ inputs.image_tag_suffix }}
 
   build-and-publish-image-coordinator:
+    permissions:
+      actions: read
+      contents: write
+      packages: write
+      pull-requests: write
+      id-token: write
     needs: [compute-docker-tag]
     if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'coordinator'
     uses: ./.github/workflows/coordinator-build-and-publish.yml
@@ -104,6 +109,12 @@ jobs:
     secrets: inherit
 
   build-and-publish-image-postman:
+    permissions:
+      actions: read
+      contents: write
+      packages: write
+      pull-requests: write
+      id-token: write
     needs: [compute-docker-tag]
     if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'postman'
     uses: ./.github/workflows/postman-build-and-publish.yml
@@ -115,6 +126,12 @@ jobs:
     secrets: inherit
 
   build-and-publish-image-prover:
+    permissions:
+      actions: read
+      contents: write
+      packages: write
+      pull-requests: write
+      id-token: write
     needs: [compute-docker-tag]
     if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'prover'
     uses: ./.github/workflows/prover-build-and-publish.yml
@@ -126,6 +143,12 @@ jobs:
     secrets: inherit
 
   build-and-publish-image-prover-ray:
+    permissions:
+      actions: read
+      contents: write
+      packages: write
+      pull-requests: write
+      id-token: write
     needs: [compute-docker-tag]
     if: >
       !cancelled() && !inputs.dry_run_release &&
@@ -140,6 +163,12 @@ jobs:
     secrets: inherit
 
   build-and-publish-image-maru:
+    permissions:
+      actions: read
+      contents: write
+      packages: write
+      pull-requests: write
+      id-token: write
     needs: [compute-docker-tag]
     if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'maru'
     uses: ./.github/workflows/maru-build-and-publish.yml
@@ -151,6 +180,12 @@ jobs:
     secrets: inherit
 
   build-and-publish-image-tx-exclusion-api:
+    permissions:
+      actions: read
+      contents: write
+      packages: write
+      pull-requests: write
+      id-token: write
     needs: [compute-docker-tag]
     if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'tx-exclusion-api'
     uses: ./.github/workflows/transaction-exclusion-api-build-and-publish.yml

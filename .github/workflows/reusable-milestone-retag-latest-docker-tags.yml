@@ -50,8 +50,10 @@ on:
 
 jobs:
   retag-latest-docker-tags:
+    permissions:
+      id-token: write
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
-    environment: publish
+    environment: dockerhub-${{ matrix.image-name }}
     strategy:
       fail-fast: true
       matrix:
@@ -61,38 +63,38 @@ jobs:
             image-name: linea-coordinator
             metadata: ${{ inputs.coordinator_metadata }}
             latest-docker-tag: ${{ inputs.coordinator_latest_docker_tag }}
-            oidc-connection-id: ${{ vars.DOCKERHUB_OIDC_CONNECTIONID_LINEA_COORDINATOR }}
+            oidc-var: DOCKERHUB_OIDC_CONNECTIONID_LINEA_COORDINATOR
           - component: maru
             # maru is published as consensys/maru rather than consensys/linea-maru.
             image-name: maru
             metadata: ${{ inputs.maru_metadata }}
             latest-docker-tag: ${{ inputs.maru_latest_docker_tag }}
-            oidc-connection-id: ${{ vars.DOCKERHUB_OIDC_CONNECTIONID_MARU }}
+            oidc-var: DOCKERHUB_OIDC_CONNECTIONID_MARU
           - component: prover
             image-name: linea-prover
             metadata: ${{ inputs.prover_metadata }}
             latest-docker-tag: ${{ inputs.prover_latest_docker_tag }}
-            oidc-connection-id: ${{ vars.DOCKERHUB_OIDC_CONNECTIONID_LINEA_PROVER }}
+            oidc-var: DOCKERHUB_OIDC_CONNECTIONID_LINEA_PROVER
           - component: postman
             image-name: linea-postman
             metadata: ${{ inputs.postman_metadata }}
             latest-docker-tag: ${{ inputs.postman_latest_docker_tag }}
-            oidc-connection-id: ${{ vars.DOCKERHUB_OIDC_CONNECTIONID_LINEA_POSTMAN }}
+            oidc-var: DOCKERHUB_OIDC_CONNECTIONID_LINEA_POSTMAN
           - component: tx-exclusion-api
             image-name: linea-transaction-exclusion-api
             metadata: ${{ inputs.tx_exclusion_api_metadata }}
             latest-docker-tag: ${{ inputs.tx_exclusion_api_latest_docker_tag }}
-            oidc-connection-id: ${{ vars.DOCKERHUB_OIDC_CONNECTIONID_LINEA_TRANSACTION_EXCLUSION_API }}
+            oidc-var: DOCKERHUB_OIDC_CONNECTIONID_LINEA_TRANSACTION_EXCLUSION_API
           - component: linea-besu-package
             image-name: linea-besu-package
             metadata: ${{ inputs.linea_besu_package_metadata }}
             latest-docker-tag: ${{ inputs.linea_besu_package_latest_docker_tag }}
-            oidc-connection-id: ${{ vars.DOCKERHUB_OIDC_CONNECTIONID_LINEA_BESU_PACKAGE }}
+            oidc-var: DOCKERHUB_OIDC_CONNECTIONID_LINEA_BESU_PACKAGE
     steps:
       - name: Login to Docker Hub
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         env:
-          DOCKERHUB_OIDC_CONNECTIONID: ${{ matrix.oidc-connection-id }}
+          DOCKERHUB_OIDC_CONNECTIONID: ${{ vars[matrix.oidc-var] }}
           DOCKERHUB_OIDC_EXPIREIN: 300
         with:
           username: consensys

@@ -3,7 +3,6 @@ name: "Reusable: Linea-besu-package Run E2E Tests"
 permissions:
   contents: read
   actions: read
-  id-token: write
 
 on:
   workflow_call:
@@ -34,6 +33,10 @@ on:
 jobs:
   # Required job
   run-e2e-tests:
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
     env:
       LINEA_BESU_PACKAGE_TAG: ${{ inputs.linea_besu_package_tag }}
       LINEA_COORDINATOR_TAG: develop
@@ -44,7 +47,7 @@ jobs:
     outputs:
       tests_outcome: ${{ steps.run_e2e_tests.outcome }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
-    environment: publish
+    environment: dockerhub-pull
     steps:
       - name: Setup upterm session
         if: ${{ inputs.e2e-tests-with-ssh }}

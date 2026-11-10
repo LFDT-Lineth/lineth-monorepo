@@ -47,7 +47,7 @@ jobs:
     env:
       COMMIT_TAG: ${{ inputs.commit_tag }}
     runs-on: [ gha-lfdt-lineth-ss-ubuntu-24-amd64-large ]
-    environment: publish
+    environment: dockerhub-pull
     name: chaos tests
     # useful for debugging flaky tests.
     #    strategy:

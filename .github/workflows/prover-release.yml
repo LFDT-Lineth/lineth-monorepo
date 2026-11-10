@@ -5,7 +5,6 @@ permissions:
   contents: write
   packages: write
   pull-requests: write
-  id-token: write
 
 on:
 
@@ -38,6 +37,12 @@ concurrency:
 
 jobs:
   component-release:
+    permissions:
+      actions: read
+      contents: write
+      packages: write
+      pull-requests: write
+      id-token: write
     uses: ./.github/workflows/reusable-component-release.yml
     with:
       component-name: prover

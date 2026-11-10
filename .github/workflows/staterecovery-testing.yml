@@ -3,7 +3,6 @@ name: staterecovery-testing
 permissions:
   contents: read
   actions: read
-  id-token: write
 
 on:
   workflow_call:
@@ -18,12 +17,16 @@ concurrency:
 
 jobs:
   run-tests:
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
     env:
       COMMIT_TAG: ${{ inputs.commit_tag }}
       # CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     # ~2.5 mins saved vs large
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
-    environment: publish
+    environment: dockerhub-pull
     name: Staterecovery tests
     steps:
       - name: Checkout

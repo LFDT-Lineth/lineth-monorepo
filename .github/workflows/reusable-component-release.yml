@@ -5,7 +5,6 @@ permissions:
   contents: write
   packages: write
   pull-requests: write
-  id-token: write
 
 on:
   workflow_call:
@@ -106,6 +105,12 @@ jobs:
       release_tag_suffix: ${{ inputs.release_tag_suffix }}
 
   run-test-coordinator:
+    permissions:
+      actions: read
+      contents: write
+      packages: write
+      pull-requests: write
+      id-token: write
     uses: ./.github/workflows/coordinator-testing.yml
     needs: [compute-commit-tag, compute-release-metadata]
     if: >
@@ -155,6 +160,12 @@ jobs:
     secrets: inherit
 
   run-test-transaction-exclusion-api:
+    permissions:
+      actions: read
+      contents: write
+      packages: write
+      pull-requests: write
+      id-token: write
     uses: ./.github/workflows/transaction-exclusion-api-testing.yml
     needs: [compute-release-metadata]
     if: >
@@ -164,6 +175,12 @@ jobs:
     secrets: inherit
 
   build-local-coordinator:
+    permissions:
+      actions: read
+      contents: write
+      packages: write
+      pull-requests: write
+      id-token: write
     needs: [compute-release-metadata, run-test-coordinator]
     if: >
       always() && !cancelled() &&
@@ -179,6 +196,12 @@ jobs:
     secrets: inherit
 
   build-local-postman:
+    permissions:
+      actions: read
+      contents: write
+      packages: write
+      pull-requests: write
+      id-token: write
     needs: [compute-release-metadata, run-test-postman]
     if: >
       always() && !cancelled() &&
@@ -194,6 +217,12 @@ jobs:
     secrets: inherit
 
   build-local-prover:
+    permissions:
+      actions: read
+      contents: write
+      packages: write
+      pull-requests: write
+      id-token: write
     needs: [compute-release-metadata, run-test-prover]
     if: >
       always() && !cancelled() &&
@@ -209,6 +238,12 @@ jobs:
     secrets: inherit
 
   build-local-prover-ray:
+    permissions:
+      actions: read
+      contents: write
+      packages: write
+      pull-requests: write
+      id-token: write
     needs: [compute-release-metadata, run-test-prover-ray]
     if: >
       always() && !cancelled() &&
@@ -223,6 +258,12 @@ jobs:
     secrets: inherit
 
   build-local-maru:
+    permissions:
+      actions: read
+      contents: write
+      packages: write
+      pull-requests: write
+      id-token: write
     needs: [compute-release-metadata, run-test-maru]
     if: >
       always() && !cancelled() &&
@@ -238,6 +279,12 @@ jobs:
     secrets: inherit
 
   build-local-tx-exclusion-api:
+    permissions:
+      actions: read
+      contents: write
+      packages: write
+      pull-requests: write
+      id-token: write
     needs: [compute-release-metadata, run-test-transaction-exclusion-api]
     if: >
       always() && !cancelled() &&
@@ -253,6 +300,12 @@ jobs:
     secrets: inherit
 
   run-e2e-tests:
+    permissions:
+      actions: read
+      contents: write
+      packages: write
+      pull-requests: write
+      id-token: write
     needs: [compute-release-metadata, build-local-coordinator, build-local-postman, build-local-prover, build-local-tx-exclusion-api, build-local-maru]
     if: >
       always() && !cancelled() &&
@@ -272,6 +325,12 @@ jobs:
     secrets: inherit
 
   push-tag-update-changelog-and-gh-release:
+    permissions:
+      actions: read
+      contents: write
+      packages: write
+      pull-requests: write
+      id-token: write
     needs: [compute-release-metadata, run-e2e-tests, build-local-prover-ray]
     # Prover-ray is not in the e2e stack yet, so its release gate is the local
     # image build plus smoke test (build-local-prover-ray) instead of run-e2e-tests.
