@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
+	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
+	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 )
 
 func TestPredecodeRejectsMissingExecutableBlob(t *testing.T) {
@@ -99,9 +101,26 @@ func TestPredecodeRejectsInvalidExecutableRanges(t *testing.T) {
 	}
 }
 
+func TestDecodedInputsPreserveExactRowLength(t *testing.T) {
+	// Exercise every final-byte alignment, including empty and byte-aligned tables.
+	for records := 0; records <= 8; records++ {
+		decoded, err := Predecode(elfmapping.Program{Blobs: []elfmapping.Blob{{
+			Address: 0x1000, Data: make([]byte, records*4), Executable: true,
+		}}})
+		if err != nil {
+			t.Fatalf("Predecode(%d records): %v", records, err)
+		}
+		input := decoded.EncodeInputs()[DecodedInput]
+		want := bit.NewArray(append([]byte(nil), decoded.Decoded...), uint(records*87), bit.BigEndian)
+		if !input.Equals(want) {
+			t.Errorf("%d records: input = %s, want %s", records, input.String(), want.String())
+		}
+	}
+}
+
 func TestDecodedProgramEncodeInputsReturnsFreshBytes(t *testing.T) {
 	var (
-		program       = DecodedProgram{InstructionBase: 0x11223344, Decoded: []byte{1, 2, 3}}
+		program       = DecodedProgram{InstructionBase: 0x11223344, Decoded: []byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}
 		first         = program.EncodeInputs()
 		second        = program.EncodeInputs()
 		firstDecoded  = first[DecodedInput]
@@ -116,6 +135,35 @@ func TestDecodedProgramEncodeInputsReturnsFreshBytes(t *testing.T) {
 	if secondDecoded.Bytes()[0] != 1 || program.Decoded[0] != 1 {
 		t.Fatal("EncodeInputs() returned bytes alias cached decoded program")
 	}
+}
+
+func TestBitsPerRowOfModuleDecoded(t *testing.T) {
+	compiled, err := embedded.CompiledBinaryFile()
+	if err != nil {
+		t.Fatalf("get compiled R5 arithmetizaton: %v", err)
+	}
+	//
+	pg := compiled.ExecutionProgram()
+	//
+	if m, ok := pg.HasModule(DecodedInput); ok {
+		var (
+			sumLength uint = 0
+			decoded        = pg.Module(m)
+		)
+		// Iterate output columns of decoded module
+		for _, o := range decoded.Outputs() {
+			sumLength += o.Bitwidth().Unwrap()
+		}
+		// Check that sum matches constant
+		if sumLength != BitsPerRowOfModuleDecoded {
+			t.Fatalf("bits-per-row mismatch for module \"decoded\", expected %d got %d",
+				BitsPerRowOfModuleDecoded, sumLength)
+		}
+		//
+		return
+	}
+	// Catch situation where decoded module does not exist
+	t.Fatalf("compiled R5 arithmetization has no %q input", DecodedInput)
 }
 
 type memoryBlob struct {

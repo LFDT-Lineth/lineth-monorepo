@@ -111,6 +111,7 @@
 - *(tracer)* Adapt reference tests to Besu block processor API (#4328)
 - *(coordinator)* Enforce end-block invariant in RollupAggregationProofResponseV1 (#4315)
 - *(coordinator, docker)* Let downstream images opt out of the license files (#4382)
+- *(postman)* Optimize docker image (#4424)
 
 ### 🚜 Refactor
 
@@ -216,3 +217,4 @@
 - *(deps)* Bump the go_modules group across 1 directory with 2 updates (#4258)
 - *(deps)* Refresh dependencies (#4323)
 - *(misc)* Ship license files and metadata in all published artifacts (#4336)
+- *(coordinator)* Review fixes — null safety, typos, concurrency and error handling (#2965) (#4421)

@@ -11,9 +11,8 @@ Use these notes for the GitHub Actions referenced by `.github/workflows/*.yml` a
   movable: the upstream repo can repoint it at new code that then runs in CI without review.
 - Keep the human-readable version as an end-of-line comment (`uses: actions/checkout@<sha> # v6.0.3`) and update it in
   the same edit as the SHA, so the pin stays auditable and the two never drift.
-- Release-age gate (mandatory): only adopt a SHA whose release (tag) is older than 7 days. Actions use a longer window
-  than the 3-day JS/npm/pnpm gate because an action runs with repository scope in CI, so a fresh release is higher-risk
-  supply-chain surface. This is a hard gate — hold the bump until the release matures.
+- Release-age gate (mandatory): only adopt a SHA whose release (tag) is older than 7 days, the same window as the JS/npm/pnpm
+  gate. An action runs with repository scope in CI, so a fresh release is higher-risk supply-chain surface. This is a hard gate — hold the bump until the release matures.
 - Default scope is same-major (patch/minor) bumps. Track semver-major action bumps as issues; they can change runner or
   Node baselines and need deliberate migration.
 - Local actions (`uses: ./.github/actions/...`) are first-party and are not pinned.

@@ -13,9 +13,11 @@ import (
 	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 )
 
-const DefaultMaxDecodedRecords uint64 = 2_000_000
-
 const (
+	DefaultMaxDecodedRecords uint64 = 2_000_000
+	// BitsPerRowOfModuleDecoded determines the number of bits for a single row of the
+	// module "decoded" in the RISC-V interpreter.
+	BitsPerRowOfModuleDecoded uint = 87
 	// InstructionBaseInput contains the lowest aligned executable address.
 	InstructionBaseInput = "instruction_base"
 	// DecodedInput contains the densely packed predecoded instruction rows.
@@ -753,9 +755,11 @@ type DecodedProgram struct {
 func (program DecodedProgram) EncodeInputs() map[string]bit.Array {
 	base := binary.BigEndian.AppendUint32(nil, uint32(program.InstructionBase))
 	decoded := append([]byte(nil), program.Decoded...)
+	// Each row is a fixed number of bits; discard the final byte's padding bits.
+	nbits := ((uint(len(decoded)) * 8) / BitsPerRowOfModuleDecoded) * BitsPerRowOfModuleDecoded
 	return map[string]bit.Array{
 		InstructionBaseInput: elfmapping.BitArrayFromBytes(base...),
-		DecodedInput:         elfmapping.BitArrayFromBytes(decoded...),
+		DecodedInput:         bit.NewArray(decoded, nbits, bit.BigEndian),
 	}
 }
 

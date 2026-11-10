@@ -153,6 +153,32 @@ class FinalizationMonitorImplTest {
   }
 
   @Test
+  fun failedHandlerFutureDoesNotSkipSubsequentHandlers(testContext: VertxTestContext) {
+    val failures = AtomicInteger(0)
+    val updatesReceived = CopyOnWriteArrayList<FinalizationMonitor.FinalizationUpdate>()
+    finalizationMonitorImpl.addFinalizationHandler("handler1") {
+      failures.incrementAndGet()
+      SafeFuture.failedFuture<Unit>(Exception("Finalization handler future failure for the testing!"))
+    }
+    finalizationMonitorImpl.addFinalizationHandler("handler2") {
+      SafeFuture.completedFuture(updatesReceived.add(it))
+    }
+
+    finalizationMonitorImpl.start()
+    await()
+      .atMost(5.seconds.toJavaDuration())
+      .pollInterval(10.milliseconds.toJavaDuration())
+      .untilAsserted {
+        assertThat(failures.get()).isGreaterThan(1)
+        assertThat(updatesReceived).hasSizeGreaterThanOrEqualTo(failures.get() - 1)
+      }
+
+    finalizationMonitorImpl.stop()
+      .thenApply { testContext.completeNow() }
+      .whenException(testContext::failNow)
+  }
+
+  @Test
   fun monitorDoesntCrashInCaseOfWeb3Exceptions(testContext: VertxTestContext) {
     val updatesReceived = CopyOnWriteArrayList<FinalizationMonitor.FinalizationUpdate>()
 
