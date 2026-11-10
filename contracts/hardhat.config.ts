@@ -9,7 +9,7 @@ import hardhatIgnoreWarnings from "hardhat-ignore-warnings";
 import { SupportedChainIds } from "./common/supportedNetworks.js";
 import { getBlockchainNode } from "./common.js";
 import linethDeployPlugin from "./hardhat-plugins/deploy/index.js";
-import { resolveDeployerAccounts } from "./hardhat-plugins/signer-ui/signer-mode.js";
+import { normalizeSignerUiEnv, resolveDeployerAccounts } from "./hardhat-plugins/signer-ui/signer-mode.js";
 import { overrides } from "./hardhat_overrides.js";
 import { deployTasks, operationalTasks } from "./scripts/hardhat/tasks.js";
 
@@ -22,6 +22,7 @@ const useViaIR = process.env.ENABLE_VIA_IR === "true";
  * If `DEPLOYER_PRIVATE_KEY` is unset → `[]` so `hardhat build`, `clean`, etc. work without secrets.
  * If a key *is* set, it must be valid non-zero hex.
  */
+normalizeSignerUiEnv();
 const deployerAccounts = resolveDeployerAccounts();
 
 // Infura endpoints keep the existing INFURA_API_KEY contract; resolved lazily, only when the network is used.

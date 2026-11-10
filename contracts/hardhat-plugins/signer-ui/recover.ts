@@ -59,7 +59,16 @@ function findStuckDeployments(deploymentsDir: string, chainId: number) {
     .filter((deploymentId) => deploymentId === `chain-${chainId}` || upgradeId.test(deploymentId))
     .flatMap((deploymentId) => {
       const journalPath = path.join(deploymentsDir, deploymentId, "journal.jsonl");
-      const journal = readJournal(journalPath);
+      let journal: Journal | undefined;
+      try {
+        journal = readJournal(journalPath);
+      } catch (error: unknown) {
+        // One unreadable journal (e.g. a record cut short by a crash) must not hide the stuck deployment.
+        console.warn(
+          `Skipping ${deploymentId}: ${journalPath} cannot be read (${error instanceof Error ? error.message : String(error)}). Pass --deployment-id to inspect it.`,
+        );
+        return [];
+      }
       return journal?.records.at(-1)?.type === "TRANSACTION_PREPARE_SEND"
         ? [{ deploymentId, journalPath, journal }]
         : [];

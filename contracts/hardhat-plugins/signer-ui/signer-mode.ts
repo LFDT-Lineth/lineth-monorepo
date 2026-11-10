@@ -18,6 +18,33 @@ export function isSignerUiEnvSet(hardhatSignerUiEnabled: string | undefined = pr
   return hardhatSignerUiEnabled === "true";
 }
 
+const SIGNER_UI_ENV = "HARDHAT_SIGNER_UI";
+const TRUTHY = new Set(["true", "1", "yes"]);
+const FALSY = new Set(["false", "0", "no"]);
+
+/**
+ * Hardhat parses `HARDHAT_SIGNER_UI` itself for the `--signer-ui` global flag and accepts only `true` / `false`, so an
+ * empty value (e.g. from a copied `.env`) would fail every command. Called from `hardhat.config.ts`, which Hardhat
+ * loads before it resolves global options: empty → unset (off), common boolean spellings → `true` / `false`, anything
+ * else → a clear error.
+ */
+export function normalizeSignerUiEnv(env: NodeJS.ProcessEnv = process.env): void {
+  const raw = env[SIGNER_UI_ENV];
+  if (raw === undefined) {
+    return;
+  }
+  const value = raw.trim().toLowerCase();
+  if (value === "") {
+    delete env[SIGNER_UI_ENV];
+  } else if (TRUTHY.has(value)) {
+    env[SIGNER_UI_ENV] = "true";
+  } else if (FALSY.has(value)) {
+    env[SIGNER_UI_ENV] = "false";
+  } else {
+    throw new Error(`${SIGNER_UI_ENV} must be true or false (or empty), got "${raw}".`);
+  }
+}
+
 export function getSignerModeConflictMessage(): string {
   return (
     "Invalid signer configuration: HARDHAT_SIGNER_UI=true and DEPLOYER_PRIVATE_KEY are both set. " +

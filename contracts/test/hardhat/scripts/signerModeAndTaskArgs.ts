@@ -7,6 +7,7 @@ import {
   getSignerModeConflictMessage,
   hasConfiguredDeployerPrivateKey,
   isSignerUiEnvSet,
+  normalizeSignerUiEnv,
 } from "../../../hardhat-plugins/signer-ui/signer-mode.js";
 
 describe("signer mode and hardhat task-args helpers", () => {
@@ -18,6 +19,21 @@ describe("signer mode and hardhat task-args helpers", () => {
     expect(isSignerUiEnvSet(undefined)).to.equal(false);
     expect(isSignerUiEnvSet("false")).to.equal(false);
     expect(isSignerUiEnvSet("true")).to.equal(true);
+  });
+
+  it("normalizes HARDHAT_SIGNER_UI to a value Hardhat's --signer-ui flag accepts", () => {
+    const normalized = (value: string) => {
+      const env: NodeJS.ProcessEnv = { HARDHAT_SIGNER_UI: value };
+      normalizeSignerUiEnv(env);
+      return env.HARDHAT_SIGNER_UI;
+    };
+    expect(normalized("")).to.equal(undefined);
+    expect(normalized("  ")).to.equal(undefined);
+    expect(normalized("TRUE")).to.equal("true");
+    expect(normalized("1")).to.equal("true");
+    expect(normalized("0")).to.equal("false");
+    expect(normalized("no")).to.equal("false");
+    expect(() => normalized("maybe")).to.throw('HARDHAT_SIGNER_UI must be true or false (or empty), got "maybe".');
   });
 
   it("throws on exclusive signer-mode conflict", () => {

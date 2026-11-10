@@ -122,6 +122,7 @@ Every deployment is one Ignition module, run by name:
 - **Verification.** Contracts compiled from `src/` verify through `--verify` / `hardhat ignition verify`. The pinned proxy, `ProxyAdmin` and audited artifacts are not built from this repository, so verification reports an error for them; they are verified on Etherscan as matches of the already-verified mainnet bytecode (audited artifacts: verify from their audit tag).
 - **Signer.** Ignition signs with account 0 of the network (`DEPLOYER_PRIVATE_KEY`) or, with `--signer-ui` / `HARDHAT_SIGNER_UI=true`, through the browser wallet. If a browser-signed deployment is interrupted (wallet rejection, Ctrl-C), run `hardhat deploy:recover` before resuming.
 - **Parameters file.** `ignition/parameters/<network>.json` is generated (git-ignored); review it before deploying to a live network. Big integers are written as `"<value>n"`, as Ignition expects.
+- **Validations cache.** OpenZeppelin Upgrades stores the upgrade-safety analysis of every compilation in `cache/validations.json` and never prunes it. Deploys build with the isolated `production` profile and tests with the `default` one, so switching between them recompiles and the file keeps growing. If tests or deploys slow down, run `pnpm -F contracts run clean:validations` (deletes the file and rebuilds with `--force`; deleting it without a forced build makes the upgrade checks fail).
 
 ### Hardhat 2 command mapping
 

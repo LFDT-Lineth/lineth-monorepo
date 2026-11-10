@@ -23,6 +23,7 @@
     "validate:address-registry": "tsx scripts/deployment/validateAddressRegistry.ts",
     "validate:deploy-scripts": "tsx scripts/deployment/validateDeployScripts.ts",
     "clean": "rimraf .openzeppelin build cache node_modules coverage",
+    "clean:validations": "rimraf cache/validations.json && hardhat build --force",
     "solidity:docgen": "hardhat build && tsx scripts/docgen.ts"
   },
   "devDependencies": {
