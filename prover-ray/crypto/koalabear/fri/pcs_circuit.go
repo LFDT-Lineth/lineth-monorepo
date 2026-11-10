@@ -280,10 +280,11 @@ func (pcs *PCS) VerifyGnark(api frontend.API, in GnarkVerifyInputs, proof GnarkO
 	// [PCS.Verify].
 	inputShapes := make([]Shape, len(inputRoots))
 	for batchIdx, treeIdx := range inputIndexByBatch {
-		if treeIdx < 0 {
-			continue
-		}
-		if inputShapes[treeIdx] == nil {
+		// The PCS allows empty batches, e.g. a batch whose columns were all
+		// elided upstream. Such a batch has no layout entries, hence no input
+		// tree, and treeIdx is -1: skip it. Otherwise each tree belongs to
+		// exactly one batch.
+		if treeIdx >= 0 {
 			inputShapes[treeIdx] = in.Shapes[batchIdx]
 		}
 	}
