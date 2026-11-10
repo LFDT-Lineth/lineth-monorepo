@@ -2,36 +2,34 @@ import * as dotenv from "dotenv";
 import { ethers } from "ethers";
 import path from "path";
 
-import { abi as LinethRollupV6Abi, bytecode as LinethRollupV6Bytecode } from "./dynamic-artifacts/LinethRollupV6.json";
-import {
-  contractName as ProxyAdminContractName,
-  abi as ProxyAdminAbi,
-  bytecode as ProxyAdminBytecode,
-} from "./static-artifacts/ProxyAdmin.json";
-import {
-  abi as TransparentUpgradeableProxyAbi,
-  bytecode as TransparentUpgradeableProxyBytecode,
-} from "./static-artifacts/TransparentUpgradeableProxy.json";
+import linethRollupV6Json from "./dynamic-artifacts/LinethRollupV6.json" with { type: "json" };
+import proxyAdminJson from "./static-artifacts/ProxyAdmin.json" with { type: "json" };
+import transparentUpgradeableProxyJson from "./static-artifacts/TransparentUpgradeableProxy.json" with { type: "json" };
 import {
   LINETH_ROLLUP_V6_PAUSE_TYPES_ROLES,
   LINETH_ROLLUP_V6_UNPAUSE_TYPES_ROLES,
   LINETH_ROLLUP_V6_ROLES,
   OPERATOR_ROLE,
-} from "../common/constants";
+} from "../common/constants/index.js";
 import {
   deployContractFromArtifacts,
   getDeployNonceFromEnv,
   getInitializerData,
   loadArtifactFromDirectory,
-} from "../common/helpers/deployments";
-import { getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment";
+} from "../common/helpers/deployments.js";
+import { getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment.js";
 import {
   getDeploymentNetworkName,
   requireAddressesFromRegistryOrEnv,
   requireAddressFromRegistryOrEnv,
-} from "../common/helpers/readAddress";
-import { generateRoleAssignments } from "../common/helpers/roles";
-import { get1559Fees } from "../scripts/utils";
+} from "../common/helpers/readAddress.js";
+import { generateRoleAssignments } from "../common/helpers/roles.js";
+import { get1559Fees } from "../scripts/utils.js";
+
+const { abi: LinethRollupV6Abi, bytecode: LinethRollupV6Bytecode } = linethRollupV6Json;
+const { contractName: ProxyAdminContractName, abi: ProxyAdminAbi, bytecode: ProxyAdminBytecode } = proxyAdminJson;
+const { abi: TransparentUpgradeableProxyAbi, bytecode: TransparentUpgradeableProxyBytecode } =
+  transparentUpgradeableProxyJson;
 
 dotenv.config();
 
@@ -67,7 +65,10 @@ async function main() {
   ]);
   const roleAddresses = getEnvVarOrDefault("LINETH_ROLLUP_ROLE_ADDRESSES", defaultRoleAddresses);
 
-  const verifierArtifacts = loadArtifactFromDirectory(path.join(__dirname, "./dynamic-artifacts"), verifierName);
+  const verifierArtifacts = loadArtifactFromDirectory(
+    path.join(import.meta.dirname, "./dynamic-artifacts"),
+    verifierName,
+  );
 
   const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
 

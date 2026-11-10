@@ -14,10 +14,10 @@
  *   L2_RPC_URL=https://... \
  *   LINETH_ROLLUP_ADDRESS=0x... \
  *   L2_MESSAGE_SERVICE_ADDRESS=0x... \
- *   pnpm exec ts-node scripts/operational/generateL1ClaimFields.ts
+ *   pnpm exec tsx scripts/operational/generateL1ClaimFields.ts
  *
  * Usage (flags + env fallback):
- *   pnpm exec ts-node scripts/operational/generateL1ClaimFields.ts \
+ *   pnpm exec tsx scripts/operational/generateL1ClaimFields.ts \
  *     --message-hash 0x... \
  *     --l1-rpc-url https://... \
  *     --l2-rpc-url https://... \
@@ -31,31 +31,49 @@
  *   --l2-from-block <number> --l2-to-block <number>
  */
 
-import { ethers, Contract, Interface, JsonRpcProvider, EventLog, Log, ZeroAddress } from "ethers";
 import { writeFileSync } from "node:fs";
+import {
+  type Address,
+  type BlockNumber,
+  type BlockTag,
+  type Hex,
+  type PublicClient,
+  type TransactionReceipt,
+  createPublicClient,
+  encodePacked,
+  getAddress,
+  http,
+  isHex,
+  keccak256,
+  parseAbi,
+  parseEventLogs,
+  zeroAddress,
+} from "viem";
 
-import { encodeSendMessage } from "../../common/helpers/encoding";
-import { getRequiredEnvVar } from "../../common/helpers/environment";
-import { getCliOrEnvValue } from "../../common/helpers/environmentHelper";
+import { encodeSendMessage } from "../../common/helpers/encoding.js";
+import { getRequiredEnvVar } from "../../common/helpers/environment.js";
+import { getCliOrEnvValue } from "../../common/helpers/environmentHelper.js";
 
-const MESSAGE_SENT_ABI = [
+const MESSAGE_SENT_ABI = parseAbi([
   "event MessageSent(address indexed _from, address indexed _to, uint256 _fee, uint256 _value, uint256 _nonce, bytes _calldata, bytes32 indexed _messageHash)",
-];
-const L2_BLOCK_ANCHORED_ABI = ["event L2MessagingBlockAnchored(uint256 indexed l2Block)"];
-const L2_MERKLE_ROOT_ADDED_ABI = ["event L2MerkleRootAdded(bytes32 indexed l2MerkleRoot, uint256 indexed treeDepth)"];
+]);
+const L2_BLOCK_ANCHORED_ABI = parseAbi(["event L2MessagingBlockAnchored(uint256 indexed l2Block)"]);
+const L2_MERKLE_ROOT_ADDED_ABI = parseAbi([
+  "event L2MerkleRootAdded(bytes32 indexed l2MerkleRoot, uint256 indexed treeDepth)",
+]);
 const FINALIZATION_ABI = [...L2_MERKLE_ROOT_ADDED_ABI, ...L2_BLOCK_ANCHORED_ABI];
-const ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000";
+const ZERO_HASH: Hex = "0x0000000000000000000000000000000000000000000000000000000000000000";
 const TOTAL_STEPS = 6;
 
 type BlockBound = number | "earliest" | "latest";
 
 interface ScriptConfig {
-  messageHash: string;
+  messageHash: Hex;
   l1RpcUrl: string;
   l2RpcUrl: string;
-  linethRollupAddress: string;
-  l2MessageServiceAddress: string;
-  feeRecipient: string;
+  linethRollupAddress: Address;
+  l2MessageServiceAddress: Address;
+  feeRecipient: Address;
   outputPath: string | undefined;
   pretty: boolean;
   l1FromBlock: BlockBound;
@@ -65,32 +83,32 @@ interface ScriptConfig {
 }
 
 interface MessageSentData {
-  from: string;
-  to: string;
+  from: Address;
+  to: Address;
   fee: bigint;
   value: bigint;
   nonce: bigint;
-  calldata: string;
+  calldata: Hex;
   l2BlockNumber: number;
 }
 
 interface FinalizationInfo {
-  l2MerkleRoots: string[];
+  l2MerkleRoots: Hex[];
   treeDepth: number;
   l2BlockRange: { start: number; end: number };
 }
 
 interface ClaimMessageWithProofParams {
-  proof: string[];
+  proof: Hex[];
   messageNumber: string;
   leafIndex: number;
-  from: string;
-  to: string;
+  from: Address;
+  to: Address;
   fee: string;
   value: string;
-  feeRecipient: string;
-  merkleRoot: string;
-  data: string;
+  feeRecipient: Address;
+  merkleRoot: Hex;
+  data: Hex;
 }
 
 function getCliValueFromEqualsSyntax(argName: string): string | undefined {
@@ -136,6 +154,10 @@ function parseBlockBound(rawValue: string | undefined, label: string): BlockBoun
   return Number(rawValue);
 }
 
+function toBlockParameter(bound: BlockBound): BlockNumber | BlockTag {
+  return typeof bound === "number" ? BigInt(bound) : bound;
+}
+
 function normalizeHex(value: string): string {
   return value.toLowerCase();
 }
@@ -159,13 +181,20 @@ function loadConfig(): ScriptConfig {
   const l2FromRaw = getOptionalCliOrEnvValue("l2-from-block", "L2_FROM_BLOCK");
   const l2ToRaw = getOptionalCliOrEnvValue("l2-to-block", "L2_TO_BLOCK");
 
+  const messageHash = getRequiredCliOrEnvValue("message-hash", "MESSAGE_HASH");
+  if (!isHex(messageHash)) {
+    throw new Error(`Invalid message hash "${messageHash}"`);
+  }
+
   return {
-    messageHash: getRequiredCliOrEnvValue("message-hash", "MESSAGE_HASH"),
+    messageHash,
     l1RpcUrl: getRequiredCliOrEnvValue("l1-rpc-url", "L1_RPC_URL"),
     l2RpcUrl: getRequiredCliOrEnvValue("l2-rpc-url", "L2_RPC_URL"),
-    linethRollupAddress: getRequiredCliOrEnvValue("lineth-rollup-address", "LINETH_ROLLUP_ADDRESS"),
-    l2MessageServiceAddress: getRequiredCliOrEnvValue("l2-message-service-address", "L2_MESSAGE_SERVICE_ADDRESS"),
-    feeRecipient: getOptionalCliOrEnvValue("fee-recipient", "FEE_RECIPIENT") ?? ZeroAddress,
+    linethRollupAddress: getAddress(getRequiredCliOrEnvValue("lineth-rollup-address", "LINETH_ROLLUP_ADDRESS")),
+    l2MessageServiceAddress: getAddress(
+      getRequiredCliOrEnvValue("l2-message-service-address", "L2_MESSAGE_SERVICE_ADDRESS"),
+    ),
+    feeRecipient: getAddress(getOptionalCliOrEnvValue("fee-recipient", "FEE_RECIPIENT") ?? zeroAddress),
     outputPath: getCliValueFromEqualsSyntax("out") ?? getCliOrEnvValue("--out", "CLAIM_PARAMS_OUT"),
     pretty: hasCliFlag("pretty"),
     l1FromBlock: parseBlockBound(l1FromRaw, "l1-from"),
@@ -175,14 +204,14 @@ function loadConfig(): ScriptConfig {
   };
 }
 
-function smtHash(left: string, right: string): string {
-  return ethers.solidityPackedKeccak256(["bytes32", "bytes32"], [left, right]);
+function smtHash(left: Hex, right: Hex): Hex {
+  return keccak256(encodePacked(["bytes32", "bytes32"], [left, right]));
 }
 
 class SparseMerkleTree {
   private depth: number;
-  private nodeMap = new Map<bigint, string>();
-  private zeroHashes: string[];
+  private nodeMap = new Map<bigint, Hex>();
+  private zeroHashes: Hex[];
 
   constructor(depth: number) {
     if (depth <= 1) {
@@ -196,24 +225,28 @@ class SparseMerkleTree {
     this.nodeMap.set(1n, this.zeroHashes[depth]);
   }
 
-  public getRoot(): string {
-    return this.nodeMap.get(1n)!;
+  public getRoot(): Hex {
+    const root = this.nodeMap.get(1n);
+    if (root === undefined) {
+      throw new Error("Merkle tree root is not set");
+    }
+    return root;
   }
 
-  public addLeaf(idx: number, leafHash: string): void {
+  public addLeaf(idx: number, leafHash: Hex): void {
     const nodeIdx = this.leafNodeIndex(idx);
     this.nodeMap.set(nodeIdx, leafHash);
     this.rehashPath(nodeIdx);
   }
 
-  public getProof(idx: number): { proof: string[]; root: string; leafIndex: number } {
+  public getProof(idx: number): { proof: Hex[]; root: Hex; leafIndex: number } {
     const leafIdx = this.leafNodeIndex(idx);
     const leafHash = this.nodeMap.get(leafIdx) ?? this.zeroHashes[0];
     if (leafHash === this.zeroHashes[0]) {
       throw new Error("Leaf does not exist");
     }
 
-    const proof: string[] = [];
+    const proof: Hex[] = [];
     let nodeIdx = leafIdx;
     for (let level = this.depth; level > 0; level--) {
       const height = this.depth - level;
@@ -256,7 +289,7 @@ class SparseMerkleTree {
   }
 }
 
-function getMessageSiblings(targetMessageHash: string, messageHashes: string[], treeDepth: number): string[] {
+function getMessageSiblings(targetMessageHash: Hex, messageHashes: Hex[], treeDepth: number): Hex[] {
   const treeCapacity = 2 ** treeDepth;
   const messageHashIndex = findHashIndex(messageHashes, targetMessageHash);
   if (messageHashIndex === -1) {
@@ -269,35 +302,28 @@ function getMessageSiblings(targetMessageHash: string, messageHashes: string[], 
 
   const remainder = siblings.length % treeCapacity;
   if (remainder !== 0) {
-    siblings.push(...Array(treeCapacity - remainder).fill(ZERO_HASH));
+    siblings.push(...Array<Hex>(treeCapacity - remainder).fill(ZERO_HASH));
   }
 
   return siblings;
 }
 
-function parseFinalizationReceipt(receipt: ethers.TransactionReceipt, linethRollupAddress: string): FinalizationInfo {
-  const iface = new Interface(FINALIZATION_ABI);
-  const l2MerkleRoots: string[] = [];
+function parseFinalizationReceipt(receipt: TransactionReceipt, linethRollupAddress: Address): FinalizationInfo {
+  const l2MerkleRoots: Hex[] = [];
   const anchoredBlocks: number[] = [];
   let treeDepth = 0;
 
-  for (const log of receipt.logs) {
-    if (normalizeHex(log.address) !== normalizeHex(linethRollupAddress)) {
-      continue;
-    }
-    try {
-      const parsed = iface.parseLog({ topics: log.topics as string[], data: log.data });
-      if (!parsed) {
-        continue;
-      }
-      if (parsed.name === "L2MerkleRootAdded") {
-        l2MerkleRoots.push(parsed.args.l2MerkleRoot as string);
-        treeDepth = Number(parsed.args.treeDepth);
-      } else if (parsed.name === "L2MessagingBlockAnchored") {
-        anchoredBlocks.push(Number(parsed.args.l2Block));
-      }
-    } catch {
-      // Ignore unrelated events from same contract address.
+  // Unrelated events from the same contract address are skipped by parseEventLogs.
+  const parsedLogs = parseEventLogs({
+    abi: FINALIZATION_ABI,
+    logs: receipt.logs.filter((log) => normalizeHex(log.address) === normalizeHex(linethRollupAddress)),
+  });
+  for (const parsed of parsedLogs) {
+    if (parsed.eventName === "L2MerkleRootAdded") {
+      l2MerkleRoots.push(parsed.args.l2MerkleRoot);
+      treeDepth = Number(parsed.args.treeDepth);
+    } else if (parsed.eventName === "L2MessagingBlockAnchored") {
+      anchoredBlocks.push(Number(parsed.args.l2Block));
     }
   }
 
@@ -319,16 +345,20 @@ function parseFinalizationReceipt(receipt: ethers.TransactionReceipt, linethRoll
 }
 
 async function findMessageSentEvent(
-  l2MessageService: Contract,
-  targetMessageHash: string,
+  l2Client: PublicClient,
+  l2MessageServiceAddress: Address,
+  targetMessageHash: Hex,
   fromBlock: BlockBound,
   toBlock: BlockBound,
 ): Promise<MessageSentData> {
-  const messageSentEvents = await l2MessageService.queryFilter(
-    l2MessageService.filters.MessageSent(null, null, null, null, null, null, targetMessageHash),
-    fromBlock,
-    toBlock,
-  );
+  const messageSentEvents = await l2Client.getContractEvents({
+    address: l2MessageServiceAddress,
+    abi: MESSAGE_SENT_ABI,
+    eventName: "MessageSent",
+    args: { _messageHash: targetMessageHash },
+    fromBlock: toBlockParameter(fromBlock),
+    toBlock: toBlockParameter(toBlock),
+  });
 
   if (messageSentEvents.length === 0) {
     throw new Error(
@@ -337,26 +367,30 @@ async function findMessageSentEvent(
   }
 
   const firstEvent = messageSentEvents[0];
-  const parsed = l2MessageService.interface.parseLog({
-    topics: firstEvent.topics as string[],
-    data: firstEvent.data,
-  });
-  if (!parsed) {
+  const { _from, _to, _fee, _value, _nonce, _calldata } = firstEvent.args;
+  if (
+    _from === undefined ||
+    _to === undefined ||
+    _fee === undefined ||
+    _value === undefined ||
+    _nonce === undefined ||
+    _calldata === undefined
+  ) {
     throw new Error("Failed to parse MessageSent event");
   }
 
   return {
-    from: parsed.args._from as string,
-    to: parsed.args._to as string,
-    fee: parsed.args._fee as bigint,
-    value: parsed.args._value as bigint,
-    nonce: parsed.args._nonce as bigint,
-    calldata: parsed.args._calldata as string,
-    l2BlockNumber: firstEvent.blockNumber,
+    from: _from,
+    to: _to,
+    fee: _fee,
+    value: _value,
+    nonce: _nonce,
+    calldata: _calldata,
+    l2BlockNumber: Number(firstEvent.blockNumber),
   };
 }
 
-function verifyMessageHash(message: MessageSentData, targetMessageHash: string): void {
+function verifyMessageHash(message: MessageSentData, targetMessageHash: Hex): void {
   const encodedMessage = encodeSendMessage(
     message.from,
     message.to,
@@ -365,23 +399,27 @@ function verifyMessageHash(message: MessageSentData, targetMessageHash: string):
     message.nonce,
     message.calldata,
   );
-  const computedHash = ethers.keccak256(encodedMessage);
+  const computedHash = keccak256(encodedMessage);
   if (normalizeHex(computedHash) !== normalizeHex(targetMessageHash)) {
     throw new Error(`Computed hash ${computedHash} does not match requested hash ${targetMessageHash}`);
   }
 }
 
 async function findFinalizationTxHash(
-  linethRollup: Contract,
+  l1Client: PublicClient,
+  linethRollupAddress: Address,
   l2BlockNumber: number,
   fromBlock: BlockBound,
   toBlock: BlockBound,
-): Promise<string> {
-  const anchoredEvents = await linethRollup.queryFilter(
-    linethRollup.filters.L2MessagingBlockAnchored(l2BlockNumber),
-    fromBlock,
-    toBlock,
-  );
+): Promise<Hex> {
+  const anchoredEvents = await l1Client.getContractEvents({
+    address: linethRollupAddress,
+    abi: L2_BLOCK_ANCHORED_ABI,
+    eventName: "L2MessagingBlockAnchored",
+    args: { l2Block: BigInt(l2BlockNumber) },
+    fromBlock: toBlockParameter(fromBlock),
+    toBlock: toBlockParameter(toBlock),
+  });
 
   if (anchoredEvents.length === 0) {
     throw new Error(
@@ -389,21 +427,32 @@ async function findFinalizationTxHash(
         `Searched range [${fromBlock}, ${toBlock}]. The block may not be finalized yet.`,
     );
   }
-  return anchoredEvents[0].transactionHash;
+  const finalizationTxHash = anchoredEvents[0].transactionHash;
+  if (finalizationTxHash === null) {
+    throw new Error(`L2MessagingBlockAnchored event for L2 block ${l2BlockNumber} is still pending.`);
+  }
+  return finalizationTxHash;
 }
 
 async function collectMessageHashesInRange(
-  l2MessageService: Contract,
+  l2Client: PublicClient,
+  l2MessageServiceAddress: Address,
   startBlock: number,
   endBlock: number,
-): Promise<string[]> {
-  const allEvents = await l2MessageService.queryFilter(l2MessageService.filters.MessageSent(), startBlock, endBlock);
-  const hashes = allEvents.map((event: EventLog | Log) => {
-    const parsed = l2MessageService.interface.parseLog({
-      topics: event.topics as string[],
-      data: event.data,
-    });
-    return parsed!.args._messageHash as string;
+): Promise<Hex[]> {
+  const allEvents = await l2Client.getContractEvents({
+    address: l2MessageServiceAddress,
+    abi: MESSAGE_SENT_ABI,
+    eventName: "MessageSent",
+    fromBlock: BigInt(startBlock),
+    toBlock: BigInt(endBlock),
+  });
+  const hashes = allEvents.map((event) => {
+    const messageHash = event.args._messageHash;
+    if (messageHash === undefined) {
+      throw new Error("Failed to parse MessageSent event");
+    }
+    return messageHash;
   });
 
   if (hashes.length === 0) {
@@ -415,8 +464,8 @@ async function collectMessageHashesInRange(
 
 function buildClaimParams(
   message: MessageSentData,
-  proof: { proof: string[]; root: string; leafIndex: number },
-  feeRecipient: string,
+  proof: { proof: Hex[]; root: Hex; leafIndex: number },
+  feeRecipient: Address,
 ): ClaimMessageWithProofParams {
   return {
     proof: proof.proof,
@@ -444,14 +493,13 @@ function writeOutput(claimParams: ClaimMessageWithProofParams, outputPath?: stri
 
 async function main() {
   const config = loadConfig();
-  const l1Provider = new JsonRpcProvider(config.l1RpcUrl);
-  const l2Provider = new JsonRpcProvider(config.l2RpcUrl);
-  const l2MessageService = new Contract(config.l2MessageServiceAddress, MESSAGE_SENT_ABI, l2Provider);
-  const linethRollup = new Contract(config.linethRollupAddress, L2_BLOCK_ANCHORED_ABI, l1Provider);
+  const l1Client = createPublicClient({ transport: http(config.l1RpcUrl) });
+  const l2Client = createPublicClient({ transport: http(config.l2RpcUrl) });
 
   info(1, `Searching L2 MessageSent event for hash ${config.messageHash}...`);
   const message = await findMessageSentEvent(
-    l2MessageService,
+    l2Client,
+    config.l2MessageServiceAddress,
     config.messageHash,
     config.l2FromBlock,
     config.l2ToBlock,
@@ -466,7 +514,8 @@ async function main() {
 
   info(2, `Searching L1 finalization for L2 block ${message.l2BlockNumber}...`);
   const finalizationTxHash = await findFinalizationTxHash(
-    linethRollup,
+    l1Client,
+    config.linethRollupAddress,
     message.l2BlockNumber,
     config.l1FromBlock,
     config.l1ToBlock,
@@ -474,7 +523,7 @@ async function main() {
   info(2, `Found finalization tx ${finalizationTxHash}`);
 
   info(3, "Parsing finalization receipt...");
-  const finalizationReceipt = await l1Provider.getTransactionReceipt(finalizationTxHash);
+  const finalizationReceipt = await l1Client.getTransactionReceipt({ hash: finalizationTxHash });
   if (!finalizationReceipt) {
     throw new Error(`Could not fetch receipt for finalization tx ${finalizationTxHash}`);
   }
@@ -486,7 +535,8 @@ async function main() {
 
   info(4, "Collecting MessageSent hashes in the finalization L2 range...");
   const allMessageHashes = await collectMessageHashesInRange(
-    l2MessageService,
+    l2Client,
+    config.l2MessageServiceAddress,
     finalization.l2BlockRange.start,
     finalization.l2BlockRange.end,
   );

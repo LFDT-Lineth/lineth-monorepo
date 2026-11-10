@@ -1,5 +1,5 @@
-#!/usr/bin/env ts-node
-import { validateAllAddressRegistries } from "../../common/helpers/addressRegistry";
+#!/usr/bin/env tsx
+import { validateAllAddressRegistries } from "../../common/helpers/addressRegistry.js";
 
 function main(): void {
   const issues = validateAllAddressRegistries();

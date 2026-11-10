@@ -1,9 +1,9 @@
 // Get smart contract Errors (with code) from smart contract ABI
-// Usage - `pnpm exec ts-node scripts/operational/getSmartContractErrorsFromABI.ts <ABI_JSON_FILE_PATH>`
+// Usage - `pnpm exec tsx scripts/operational/getSmartContractErrorsFromABI.ts <ABI_JSON_FILE_PATH>`
 
 import { readFileSync } from "fs";
 
-import { generateFunctionSelector } from "../../common/helpers/hashing";
+import { generateFunctionSelector } from "../../common/helpers/hashing.js";
 
 // Input types
 type ABIElementInput = {
@@ -67,7 +67,7 @@ function importABIFromCLIArg(): ABI {
   const filePath = process.argv[2];
   if (filePath.length === 0)
     throw new Error(
-      "No file path provided. Usage: pnpm exec ts-node scripts/operational/getSmartContractErrorsFromABI.ts <ABI_JSON_FILE_PATH>",
+      "No file path provided. Usage: pnpm exec tsx scripts/operational/getSmartContractErrorsFromABI.ts <ABI_JSON_FILE_PATH>",
     );
 
   try {

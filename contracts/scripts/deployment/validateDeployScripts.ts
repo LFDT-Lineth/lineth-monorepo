@@ -1,13 +1,17 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env tsx
 /**
- * Validates deploy script initializer signatures against compiled contract ABIs and
- * checks that registry-backed lookups used by deploy scripts resolve on known networks.
+ * Validates the Ignition deployment setup:
+ * - initializer signatures used by the modules exist in the compiled ABIs;
+ * - every module under `ignition/modules/` is named after its `buildModule` id (unique, so `hardhat ignition deploy
+ *   <Name>` resolves it), every `<Module>.deploy.ts` companion has its module, and no module uses `deployProxy`;
+ * - registry-backed lookups in the companions resolve on known networks, and registry keys are never read straight
+ *   from `process.env`.
  *
  * Run after `pnpm -F contracts run build`.
  */
-import { Interface, InterfaceAbi } from "ethers";
 import fs from "fs";
 import path from "path";
+import { toFunctionSignature } from "viem";
 
 import {
   EMPTY_INITIALIZE_SIGNATURE,
@@ -16,21 +20,26 @@ import {
   ROLLUP_REVENUE_VAULT_INITIALIZE_SIGNATURE,
   VALIDIUM_INITIALIZE_SIGNATURE,
   YIELD_MANAGER_INITIALIZE_SIGNATURE,
-} from "../../common/constants/general";
+} from "../../common/constants/general.js";
 import {
   getPopulatedAddresses,
   isMultiRegistryEntry,
   loadRegistry,
   lookupRegistryEntry,
   REGISTRY_NETWORKS,
-} from "../../common/helpers/addressRegistry";
+} from "../../common/helpers/addressRegistry.js";
+import { findModuleFiles } from "../../hardhat-plugins/deploy/companion.js";
 
-const BUILD_DIR = path.join(__dirname, "..", "..", "build");
-const DEPLOY_DIR = path.join(__dirname, "..", "..", "deploy");
-const LOCAL_DEPLOYMENT_ARTIFACTS_DIR = path.join(__dirname, "..", "..", "local-deployments-artifacts");
+import type { Abi } from "viem";
+
+const CONTRACTS_DIR = path.join(import.meta.dirname, "..", "..");
+const BUILD_DIR = path.join(CONTRACTS_DIR, "build");
+const IGNITION_MODULES_DIR = path.join(CONTRACTS_DIR, "ignition", "modules");
+const COMPANION_SUFFIX = ".deploy.ts";
+const LOCAL_DEPLOYMENT_ARTIFACTS_DIR = path.join(import.meta.dirname, "..", "..", "local-deployments-artifacts");
 
 type ValidationIssue = {
-  category: "signature" | "registry" | "artifact";
+  category: "signature" | "registry" | "artifact" | "module";
   target: string;
   message: string;
 };
@@ -104,12 +113,21 @@ const INITIALIZER_CHECKS: InitializerCheck[] = [
   },
 ];
 
-function loadArtifact(relativePath: string): { abi: InterfaceAbi } {
+function loadArtifactAbi(relativePath: string): Abi {
   const filePath = path.join(BUILD_DIR, relativePath);
   if (!fs.existsSync(filePath)) {
     throw new Error(`Missing artifact ${relativePath}. Run pnpm -F contracts run build first.`);
   }
-  return JSON.parse(fs.readFileSync(filePath, "utf-8")) as { abi: InterfaceAbi };
+  const artifact: unknown = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+  if (artifact === null || typeof artifact !== "object" || !("abi" in artifact) || !Array.isArray(artifact.abi)) {
+    throw new Error(`Artifact ${relativePath} has no ABI.`);
+  }
+  const abi: Abi = artifact.abi;
+  return abi;
+}
+
+function normalizeSignature(signature: string): string {
+  return signature.replace(/\s+/g, "");
 }
 
 function validateInitializerSignatures(): ValidationIssue[] {
@@ -117,10 +135,12 @@ function validateInitializerSignatures(): ValidationIssue[] {
 
   for (const check of INITIALIZER_CHECKS) {
     try {
-      const artifact = loadArtifact(check.artifactRelativePath);
-      const iface = new Interface(artifact.abi);
-      const fn = iface.getFunction(check.signature);
-      if (!fn) {
+      const abi = loadArtifactAbi(check.artifactRelativePath);
+      const expected = normalizeSignature(check.signature);
+      const found = abi.some(
+        (item) => item.type === "function" && normalizeSignature(toFunctionSignature(item)) === expected,
+      );
+      if (!found) {
         issues.push({
           category: "signature",
           target: check.label,
@@ -139,14 +159,66 @@ function validateInitializerSignatures(): ValidationIssue[] {
   return issues;
 }
 
-function loadDeployScriptSources(): Array<{ fileName: string; source: string }> {
-  return fs
-    .readdirSync(DEPLOY_DIR)
-    .filter((fileName) => fileName.endsWith(".ts"))
-    .map((fileName) => ({
-      fileName,
-      source: fs.readFileSync(path.join(DEPLOY_DIR, fileName), "utf-8"),
-    }));
+/** The env/registry inputs of deployments: the `<Module>.deploy.ts` companions. */
+function loadDeployInputSources(): Array<{ fileName: string; source: string }> {
+  const companions: string[] = [];
+  const walk = (directory: string) => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const fullPath = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        walk(fullPath);
+      } else if (entry.name.endsWith(COMPANION_SUFFIX)) {
+        companions.push(fullPath);
+      }
+    }
+  };
+  walk(IGNITION_MODULES_DIR);
+  return companions.map((fullPath) => ({
+    fileName: path.relative(CONTRACTS_DIR, fullPath),
+    source: fs.readFileSync(fullPath, "utf-8"),
+  }));
+}
+
+function validateModuleLayout(companions: Array<{ fileName: string }>): { issues: ValidationIssue[]; count: number } {
+  const issues: ValidationIssue[] = [];
+  const moduleFiles = findModuleFiles(IGNITION_MODULES_DIR);
+  const pathsByName = new Map<string, string[]>();
+
+  for (const modulePath of moduleFiles) {
+    const name = path.basename(modulePath, ".ts");
+    const relative = path.relative(CONTRACTS_DIR, modulePath);
+    pathsByName.set(name, [...(pathsByName.get(name) ?? []), relative]);
+    const source = fs.readFileSync(modulePath, "utf-8");
+    if (!source.includes(`buildModule("${name}"`) && !/^export default build\w+Module\(/m.test(source)) {
+      issues.push({
+        category: "module",
+        target: relative,
+        message: `The file name must be the module id: expected buildModule("${name}", ...).`,
+      });
+    }
+    if (/deployProxy\s*\(/.test(source)) {
+      issues.push({
+        category: "module",
+        target: relative,
+        message: "Modules must deploy the pinned OZ 4.x proxies (ignition/modules/lib/proxy.ts), not deployProxy.",
+      });
+    }
+  }
+
+  for (const [name, paths] of pathsByName) {
+    if (paths.length > 1) {
+      issues.push({ category: "module", target: name, message: `Module name used twice: ${paths.join(", ")}` });
+    }
+  }
+
+  for (const { fileName } of companions) {
+    const modulePath = path.join(CONTRACTS_DIR, fileName.replace(COMPANION_SUFFIX, ".ts"));
+    if (!fs.existsSync(modulePath)) {
+      issues.push({ category: "module", target: fileName, message: "Companion without a module next to it." });
+    }
+  }
+
+  return { issues, count: moduleFiles.length };
 }
 
 function loadLocalDeploymentArtifactSources(): Array<{ fileName: string; source: string }> {
@@ -161,10 +233,10 @@ function loadLocalDeploymentArtifactSources(): Array<{ fileName: string; source:
 
 function extractRegistryLookupChecks(sources: Array<{ fileName: string; source: string }>): RegistryLookupCheck[] {
   const checks: RegistryLookupCheck[] = [];
-  // Matches both Hardhat scripts (network.name / hre.network.name) and standalone scripts
-  // that resolve the network via getDeploymentNetworkName() stored in a local variable.
+  // Matches the parameter builders / deploy tasks (networkName, context.networkName, connection.networkName) and
+  // standalone scripts that resolve the network via getDeploymentNetworkName() stored in a local variable.
   const callPattern =
-    /(requireAddressFromRegistryOrEnv|requireAddressesFromRegistryOrEnv|getAddressesFromRegistryOrEnv)\(\s*(?:networkName|network\.name|hre\.network\.name)\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"/gs;
+    /(requireAddressFromRegistryOrEnv|requireAddressesFromRegistryOrEnv|getAddressesFromRegistryOrEnv)\(\s*(?:[\w.]*networkName|network\.name|hre\.network\.name)\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"/gs;
 
   for (const { fileName, source } of sources) {
     for (const match of source.matchAll(callPattern)) {
@@ -327,23 +399,26 @@ function validateLocalDeploymentArtifacts(sources: Array<{ fileName: string; sou
 }
 
 function main(): void {
-  const deployScriptSources = loadDeployScriptSources();
+  const deployInputSources = loadDeployInputSources();
   const localDeploymentArtifactSources = loadLocalDeploymentArtifactSources();
   const registryLookupChecks = [
-    ...extractRegistryLookupChecks(deployScriptSources),
+    ...extractRegistryLookupChecks(deployInputSources),
     ...extractRegistryLookupChecks(localDeploymentArtifactSources),
   ];
   const signatureIssues = validateInitializerSignatures();
   const registryIssues = [
     ...validateRegistryLookups(registryLookupChecks),
-    ...validateRegistryEnvUsage(deployScriptSources),
+    ...validateRegistryEnvUsage(deployInputSources),
     ...validateRegistryEnvUsage(localDeploymentArtifactSources),
   ];
   const artifactIssues = validateLocalDeploymentArtifacts(localDeploymentArtifactSources);
-  const issues = [...signatureIssues, ...registryIssues, ...artifactIssues];
+  const { issues: moduleIssues, count: moduleCount } = validateModuleLayout(deployInputSources);
+  const issues = [...signatureIssues, ...moduleIssues, ...registryIssues, ...artifactIssues];
 
   if (issues.length === 0) {
-    console.log("Deploy script validation passed (signatures + registry usage + local artifact scripts).");
+    console.log(
+      `Deploy validation passed (signatures + ${moduleCount} Ignition modules + registry usage in ${registryLookupChecks.length} lookups + local artifact scripts).`,
+    );
     return;
   }
 

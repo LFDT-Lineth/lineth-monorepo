@@ -1,22 +1,23 @@
-import { ethers, AbiCoder, hexlify, randomBytes } from "ethers";
+import { randomBytes } from "node:crypto";
+import { type Hex, bytesToHex, encodeAbiParameters, encodePacked, pad, parseAbiParameters, stringToBytes } from "viem";
 
-export const encodeData = (types: string[], values: unknown[], packed?: boolean) => {
+/**
+ * ABI-encodes `values` for the given Solidity `types`, or tightly packs them when `packed` is set.
+ * Accepts ethers-style type strings, including `tuple(...)` (viem's parser expects a bare `(...)`).
+ */
+export const encodeData = (types: string[], values: unknown[], packed?: boolean): Hex => {
   if (packed) {
-    return ethers.solidityPacked(types, values);
+    return encodePacked(types, values);
   }
-  return AbiCoder.defaultAbiCoder().encode(types, values);
+  return encodeAbiParameters(parseAbiParameters(types.map((type) => type.replace(/tuple\(/g, "(")).join(", ")), values);
 };
 
-export function convertStringToPaddedHexBytes(strVal: string, paddedSize: number): string {
+/** UTF-8 encodes `strVal` and right-pads it with zero bytes to `paddedSize` bytes (ethers' `zeroPadBytes`). */
+export function convertStringToPaddedHexBytes(strVal: string, paddedSize: number): Hex {
   if (strVal.length > paddedSize) {
     throw "Length is longer than padded size!";
   }
-
-  const strBytes = ethers.toUtf8Bytes(strVal);
-  const bytes = ethers.zeroPadBytes(strBytes, paddedSize);
-  const bytes8Hex = ethers.hexlify(bytes);
-
-  return bytes8Hex;
+  return bytesToHex(pad(stringToBytes(strVal), { dir: "right", size: paddedSize }));
 }
 
 export function encodeSendMessage(
@@ -26,11 +27,11 @@ export function encodeSendMessage(
   amount: bigint,
   salt: bigint,
   calldata: string,
-): string {
-  return AbiCoder.defaultAbiCoder().encode(
+): Hex {
+  return encodeData(
     ["address", "address", "uint256", "uint256", "uint256", "bytes"],
     [sender, receiver, fee, amount, salt, calldata],
   );
 }
 
-export const randomBytes32 = (): string => hexlify(randomBytes(32));
+export const randomBytes32 = (): Hex => bytesToHex(randomBytes(32));

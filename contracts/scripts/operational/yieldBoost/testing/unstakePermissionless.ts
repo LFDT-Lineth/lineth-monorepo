@@ -4,16 +4,40 @@ import {
   fetchBeaconHeaderByParentRoot,
 } from "@lidofinance/lsv-cli/dist/utils/fetch-cl.js";
 import { createBeaconHeaderProof, createStateProof } from "@lidofinance/lsv-cli/dist/utils/proof/proofs.js";
-import { hexlify, AbiCoder } from "ethers";
 import * as fs from "fs";
-import { task } from "hardhat/config";
 import * as path from "path";
 import { pathToFileURL } from "url";
+import { bytesToHex, getAddress } from "viem";
 
-import { getTaskCliOrEnvValue } from "../../../../common/helpers/environmentHelper";
-import { getUiSigner, runWithSignerUiSession } from "../../../../scripts/hardhat/signer-ui-bridge";
+import { encodeData } from "../../../../common/helpers/encoding.js";
+import { getTaskCliOrEnvValue } from "../../../../common/helpers/environmentHelper.js";
+import { getUiWalletClient, withSignerUi } from "../../../../hardhat-plugins/signer-ui/session.js";
+
+import type { HardhatRuntimeEnvironment } from "hardhat/types/hre";
+import type { TaskArguments } from "hardhat/types/tasks";
 
 const gIndexPendingPartialWithdrawals = 99n;
+
+/** Validator fields read from the SSZ state view (the lsv-cli typing of this view resolves to `never`). */
+type ValidatorFields = {
+  pubkey: Uint8Array;
+  effectiveBalance: number;
+  activationEpoch: number;
+  activationEligibilityEpoch: number;
+};
+
+function isValidatorFields(value: unknown): value is ValidatorFields {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  return (
+    "pubkey" in value &&
+    value.pubkey instanceof Uint8Array &&
+    "effectiveBalance" in value &&
+    "activationEpoch" in value &&
+    "activationEligibilityEpoch" in value
+  );
+}
 
 /*
   *******************************************************************************************
@@ -46,219 +70,213 @@ const gIndexPendingPartialWithdrawals = 99n;
   The pendingPartialWithdrawalsWitness proof needs to be provided manually in the code.
   *******************************************************************************************
 */
-task("unstakePermissionless", "Performs YieldManager::unstakePermissionless (current contract version)")
-  .addOptionalParam("yieldManager")
-  .addOptionalParam("yieldProvider")
-  .addOptionalParam("validatorIndex")
-  .addOptionalParam("slot")
-  .addOptionalParam("beaconRpcUrl")
-  .setAction(async (taskArgs, hre) => {
-    return runWithSignerUiSession(hre, "task:unstakePermissionless", async () => {
-      const { ethers } = hre;
-      const signer = await getUiSigner(hre);
-      const signerAddress = await signer.getAddress();
+export default async function unstakePermissionless(taskArgs: TaskArguments, hre: HardhatRuntimeEnvironment) {
+  const connection = await hre.network.getOrCreate();
+  return withSignerUi(hre, "task:unstakePermissionless", async () => {
+    const { viem } = connection;
+    const wallet = await getUiWalletClient(connection);
+    const publicClient = await viem.getPublicClient();
+    const signerAddress = wallet.account.address;
 
-      // --- Resolve inputs from CLI or ENV ---
-      const yieldManagerAddress = getTaskCliOrEnvValue(taskArgs, "yieldManager", "YIELD_MANAGER_ADDRESS");
-      const yieldProvider = getTaskCliOrEnvValue(taskArgs, "yieldProvider", "YIELD_PROVIDER_ADDRESS");
-      const validatorIndexRaw = getTaskCliOrEnvValue(taskArgs, "validatorIndex", "VALIDATOR_INDEX");
-      const slotRaw = getTaskCliOrEnvValue(taskArgs, "slot", "SLOT");
-      const beaconRpcUrl = getTaskCliOrEnvValue(taskArgs, "beaconRpcUrl", "BEACON_RPC_URL");
+    // --- Resolve inputs from CLI or ENV ---
+    const yieldManagerAddress = getTaskCliOrEnvValue(taskArgs, "yieldManager", "YIELD_MANAGER_ADDRESS");
+    const yieldProvider = getTaskCliOrEnvValue(taskArgs, "yieldProvider", "YIELD_PROVIDER_ADDRESS");
+    const validatorIndexRaw = getTaskCliOrEnvValue(taskArgs, "validatorIndex", "VALIDATOR_INDEX");
+    const slotRaw = getTaskCliOrEnvValue(taskArgs, "slot", "SLOT");
+    const beaconRpcUrl = getTaskCliOrEnvValue(taskArgs, "beaconRpcUrl", "BEACON_RPC_URL");
 
-      // --- Basic required fields check (adjust as needed) ---
-      const missing: string[] = [];
-      if (!yieldManagerAddress) missing.push("yieldManager / YIELD_MANAGER_ADDRESS");
-      if (!yieldProvider) missing.push("yieldProvider / YIELD_PROVIDER_ADDRESS");
-      if (!validatorIndexRaw) missing.push("validatorIndex / VALIDATOR_INDEX");
-      if (!slotRaw) missing.push("slot / SLOT");
-      if (!beaconRpcUrl) missing.push("beaconRpcUrl / BEACON_RPC_URL");
-      if (missing.length) {
-        throw new Error(`Missing required params/envs: ${missing.join(", ")}`);
-      }
+    // --- Basic required fields check (adjust as needed) ---
+    const missing: string[] = [];
+    if (!yieldManagerAddress) missing.push("yieldManager / YIELD_MANAGER_ADDRESS");
+    if (!yieldProvider) missing.push("yieldProvider / YIELD_PROVIDER_ADDRESS");
+    if (!validatorIndexRaw) missing.push("validatorIndex / VALIDATOR_INDEX");
+    if (!slotRaw) missing.push("slot / SLOT");
+    if (!beaconRpcUrl) missing.push("beaconRpcUrl / BEACON_RPC_URL");
+    if (missing.length || !yieldManagerAddress || !yieldProvider || !validatorIndexRaw || !slotRaw || !beaconRpcUrl) {
+      throw new Error(`Missing required params/envs: ${missing.join(", ")}`);
+    }
 
-      // --- Parse numeric params ---
-      const validatorIndex = parseInt(validatorIndexRaw!, 10);
-      const slot = parseInt(slotRaw!, 10);
+    // --- Parse numeric params ---
+    const validatorIndex = parseInt(validatorIndexRaw, 10);
+    const slot = parseInt(slotRaw, 10);
 
-      // --- Log params ---
-      console.log("Params:");
-      console.log("  yieldManager:", yieldManagerAddress);
-      console.log("  yieldProvider:", yieldProvider);
-      console.log("  validatorIndex:", validatorIndex.toString());
-      console.log("  slot:", slot.toString());
-      console.log("  beaconRpcUrl:", beaconRpcUrl);
+    // --- Log params ---
+    console.log("Params:");
+    console.log("  yieldManager:", yieldManagerAddress);
+    console.log("  yieldProvider:", yieldProvider);
+    console.log("  validatorIndex:", validatorIndex.toString());
+    console.log("  slot:", slot.toString());
+    console.log("  beaconRpcUrl:", beaconRpcUrl);
 
-      // Resolve path relative to contracts directory (where script is run from)
-      const persistentMerkleTreePath = path.resolve(
-        process.cwd(),
-        "node_modules/@chainsafe/persistent-merkle-tree/lib/proof/index.js",
+    // Resolve path relative to contracts directory (where script is run from)
+    const persistentMerkleTreePath = path.resolve(
+      process.cwd(),
+      "node_modules/@chainsafe/persistent-merkle-tree/lib/proof/index.js",
+    );
+    // Verify file exists before attempting import
+    if (!fs.existsSync(persistentMerkleTreePath)) {
+      throw new Error(`Module not found at: ${persistentMerkleTreePath}. Current working directory: ${process.cwd()}`);
+    }
+    // Convert path to file:// URL using Node's pathToFileURL for proper formatting
+    // Use Function constructor to prevent ts-node from statically analyzing the import
+    const fileUrl = pathToFileURL(persistentMerkleTreePath).href;
+    const importModule = new Function("url", "return import(url)");
+    const proofModule = await importModule(fileUrl);
+    const { createProof, ProofType } = proofModule;
+
+    // Import @lodestar/types using the same dynamic import pattern
+    const lodestarTypes = await importModule("@lodestar/types");
+
+    // Get beacon state
+    const beaconHeaderJson = await fetchBeaconHeader(slot, beaconRpcUrl);
+    const beaconHeader = beaconHeaderJson.data.header.message;
+    console.log("beaconHeader:", beaconHeader);
+    const { stateBodyBytes, forkName } = await fetchBeaconState(slot, beaconRpcUrl);
+    console.log("forkName:", forkName);
+
+    // Validator Container Proof
+    const { proof: beaconHeaderProof, root: beaconHeaderRoot } = await createBeaconHeaderProof(beaconHeader);
+    const {
+      proof: validatorStateProof,
+      validator: validatorView,
+      view: stateView,
+    } = await createStateProof(validatorIndex, stateBodyBytes, forkName);
+    const validator: unknown = validatorView;
+    if (!isValidatorFields(validator)) {
+      throw new Error(`Unexpected validator view shape for validator index ${validatorIndex}`);
+    }
+    const validatorContainerProofConcat = [...validatorStateProof.witnesses, ...beaconHeaderProof.witnesses];
+    const validatorContainerProofHex = validatorContainerProofConcat.map((w) => bytesToHex(w));
+
+    // Pending Partial Withdrawals Proof
+    console.log("Using forkName for SSZ schema access:", forkName);
+    console.log("Available SSZ forks:", Object.keys(lodestarTypes.ssz));
+    // const stateViewDU = lodestarTypes.ssz.fulu.BeaconState.getViewDU(stateView.node);
+    const stateViewDU = lodestarTypes.ssz[forkName].BeaconState.getViewDU(stateView.node);
+    const { pendingPartialWithdrawals } = stateViewDU;
+    const pendingPartialWithdrawalsProof = createProof(stateView.node, {
+      type: ProofType.single,
+      gindex: gIndexPendingPartialWithdrawals,
+    }) as { witnesses: Uint8Array[] };
+    const pendingPartialWithdrawalsProofConcat = [
+      ...pendingPartialWithdrawalsProof.witnesses,
+      ...beaconHeaderProof.witnesses,
+    ];
+    const pendingPartialWithdrawalsProofHex = pendingPartialWithdrawalsProofConcat.map((w) => bytesToHex(w));
+
+    // Fill out Validator Witness fields
+    const headerByParentJson = await fetchBeaconHeaderByParentRoot(beaconHeaderRoot, beaconRpcUrl);
+    if (!headerByParentJson.data || !Array.isArray(headerByParentJson.data) || headerByParentJson.data.length === 0) {
+      throw new Error(
+        `No beacon headers found for parent root ${beaconHeaderRoot} at ${beaconRpcUrl}. ` +
+          `This may occur during chain reorganization, timing issues, or if the parent root doesn't exist. ` +
+          `Please verify the parent root and try again.`,
       );
-      // Verify file exists before attempting import
-      if (!fs.existsSync(persistentMerkleTreePath)) {
-        throw new Error(
-          `Module not found at: ${persistentMerkleTreePath}. Current working directory: ${process.cwd()}`,
-        );
-      }
-      // Convert path to file:// URL using Node's pathToFileURL for proper formatting
-      // Use Function constructor to prevent ts-node from statically analyzing the import
-      const fileUrl = pathToFileURL(persistentMerkleTreePath).href;
-      const importModule = new Function("url", "return import(url)");
-      const proofModule = await importModule(fileUrl);
-      const { createProof, ProofType } = proofModule;
+    }
+    const headerByParentSlot = headerByParentJson.data[0].header.message.slot;
+    const headerByParentTimestamp = stateView.genesisTime + headerByParentSlot * 12;
 
-      // Import @lodestar/types using the same dynamic import pattern
-      const lodestarTypes = await importModule("@lodestar/types");
+    // Encode withdrawal params - only pubkeys and refundRecipient (no amounts array)
+    const withdrawalParams = encodeData(["bytes", "address"], [bytesToHex(validator.pubkey), signerAddress]);
 
-      // Get beacon state
-      const beaconHeaderJson = await fetchBeaconHeader(slot, beaconRpcUrl);
-      const beaconHeader = beaconHeaderJson.data.header.message;
-      console.log("beaconHeader:", beaconHeader);
-      const { stateBodyBytes, forkName } = await fetchBeaconState(slot, beaconRpcUrl);
-      console.log("forkName:", forkName);
+    // Build BeaconProofWitness structure
+    // struct ValidatorContainerWitness {
+    //   bytes32[] proof;
+    //   uint64 effectiveBalance;
+    //   uint64 activationEpoch;
+    //   uint64 activationEligibilityEpoch;
+    // }
+    const validatorContainerWitness = {
+      proof: validatorContainerProofHex,
+      effectiveBalance: BigInt(validator.effectiveBalance),
+      activationEpoch: BigInt(validator.activationEpoch),
+      activationEligibilityEpoch: BigInt(validator.activationEligibilityEpoch),
+    };
 
-      // Validator Container Proof
-      const { proof: beaconHeaderProof, root: beaconHeaderRoot } = await createBeaconHeaderProof(beaconHeader);
-      const {
-        proof: validatorStateProof,
-        validator,
-        view: stateView,
-      } = await createStateProof(validatorIndex, stateBodyBytes, forkName);
-      const validatorContainerProofConcat = [...validatorStateProof.witnesses, ...beaconHeaderProof.witnesses];
-      const validatorContainerProofHex = validatorContainerProofConcat.map((w) => hexlify(w));
+    // struct PendingPartialWithdrawalsWitness {
+    //   bytes32[] proof;
+    //   PendingPartialWithdrawal[] pendingPartialWithdrawals;
+    // }
+    const pendingPartialWithdrawalsWitness = {
+      proof: pendingPartialWithdrawalsProofHex,
+      pendingPartialWithdrawals: pendingPartialWithdrawals.toValue(),
+    };
 
-      // Pending Partial Withdrawals Proof
-      console.log("Using forkName for SSZ schema access:", forkName);
-      console.log("Available SSZ forks:", Object.keys(lodestarTypes.ssz));
-      // const stateViewDU = lodestarTypes.ssz.fulu.BeaconState.getViewDU(stateView.node);
-      const stateViewDU = lodestarTypes.ssz[forkName].BeaconState.getViewDU(stateView.node);
-      const { pendingPartialWithdrawals } = stateViewDU;
-      const pendingPartialWithdrawalsProof = createProof(stateView.node, {
-        type: ProofType.single,
-        gindex: gIndexPendingPartialWithdrawals,
-      }) as { witnesses: Uint8Array[] };
-      const pendingPartialWithdrawalsProofConcat = [
-        ...pendingPartialWithdrawalsProof.witnesses,
-        ...beaconHeaderProof.witnesses,
-      ];
-      const pendingPartialWithdrawalsProofHex = pendingPartialWithdrawalsProofConcat.map((w) => hexlify(w));
+    // struct BeaconProofWitness {
+    //   uint64 childBlockTimestamp;
+    //   uint64 proposerIndex;
+    //   ValidatorContainerWitness validatorContainerWitness;
+    //   PendingPartialWithdrawalsWitness pendingPartialWithdrawalsWitness;
+    // }
+    const beaconProofWitness = {
+      childBlockTimestamp: BigInt(headerByParentTimestamp),
+      proposerIndex: BigInt(beaconHeader.proposer_index),
+      validatorContainerWitness: validatorContainerWitness,
+      pendingPartialWithdrawalsWitness: pendingPartialWithdrawalsWitness,
+    };
 
-      // Fill out Validator Witness fields
-      const headerByParentJson = await fetchBeaconHeaderByParentRoot(beaconHeaderRoot, beaconRpcUrl);
-      if (!headerByParentJson.data || !Array.isArray(headerByParentJson.data) || headerByParentJson.data.length === 0) {
-        throw new Error(
-          `No beacon headers found for parent root ${beaconHeaderRoot} at ${beaconRpcUrl}. ` +
-            `This may occur during chain reorganization, timing issues, or if the parent root doesn't exist. ` +
-            `Please verify the parent root and try again.`,
-        );
-      }
-      const headerByParentSlot = headerByParentJson.data[0].header.message.slot;
-      const headerByParentTimestamp = stateView.genesisTime + headerByParentSlot * 12;
+    console.log("beaconProofWitness:", beaconProofWitness);
 
-      // Encode withdrawal params - only pubkeys and refundRecipient (no amounts array)
-      const withdrawalParams = AbiCoder.defaultAbiCoder().encode(
-        ["bytes", "address"],
-        [hexlify(validator.pubkey), signerAddress],
-      );
+    const VALIDATOR_CONTAINER_WITNESS_TYPE =
+      "tuple(bytes32[] proof, uint64 effectiveBalance, uint64 activationEpoch, uint64 activationEligibilityEpoch)";
+    // PendingPartialWithdrawal struct: (uint64 validatorIndex, uint64 amount, uint64 withdrawableEpoch)
+    const PENDING_PARTIAL_WITHDRAWALS_WITNESS_TYPE =
+      "tuple(bytes32[] proof, tuple(uint64 validatorIndex, uint64 amount, uint64 withdrawableEpoch)[] pendingPartialWithdrawals)";
+    const BEACON_PROOF_WITNESS_TYPE = `tuple(uint64 childBlockTimestamp, uint64 proposerIndex, ${VALIDATOR_CONTAINER_WITNESS_TYPE} validatorContainerWitness, ${PENDING_PARTIAL_WITHDRAWALS_WITNESS_TYPE} pendingPartialWithdrawalsWitness)`;
 
-      // Build BeaconProofWitness structure
-      // struct ValidatorContainerWitness {
-      //   bytes32[] proof;
-      //   uint64 effectiveBalance;
-      //   uint64 activationEpoch;
-      //   uint64 activationEligibilityEpoch;
-      // }
-      const validatorContainerWitness = {
-        proof: validatorContainerProofHex,
-        effectiveBalance: BigInt(validator.effectiveBalance),
-        activationEpoch: BigInt(validator.activationEpoch),
-        activationEligibilityEpoch: BigInt(validator.activationEligibilityEpoch),
-      };
+    const withdrawalParamsProof = encodeData([BEACON_PROOF_WITNESS_TYPE], [beaconProofWitness]);
 
-      // struct PendingPartialWithdrawalsWitness {
-      //   bytes32[] proof;
-      //   PendingPartialWithdrawal[] pendingPartialWithdrawals;
-      // }
-      const pendingPartialWithdrawalsWitness = {
-        proof: pendingPartialWithdrawalsProofHex,
-        pendingPartialWithdrawals: pendingPartialWithdrawals.toValue(),
-      };
+    // Define minimal ABI for YieldManager
+    const YIELD_MANAGER_ABI = [
+      {
+        inputs: [
+          { internalType: "address", name: "_yieldProvider", type: "address" },
+          { internalType: "uint64", name: "_validatorIndex", type: "uint64" },
+          { internalType: "uint64", name: "_slot", type: "uint64" },
+          { internalType: "bytes", name: "_withdrawalParams", type: "bytes" },
+          { internalType: "bytes", name: "_withdrawalParamsProof", type: "bytes" },
+        ],
+        name: "unstakePermissionless",
+        outputs: [],
+        stateMutability: "payable",
+        type: "function",
+      },
+    ] as const;
 
-      // struct BeaconProofWitness {
-      //   uint64 childBlockTimestamp;
-      //   uint64 proposerIndex;
-      //   ValidatorContainerWitness validatorContainerWitness;
-      //   PendingPartialWithdrawalsWitness pendingPartialWithdrawalsWitness;
-      // }
-      const beaconProofWitness = {
-        childBlockTimestamp: BigInt(headerByParentTimestamp),
-        proposerIndex: BigInt(beaconHeader.proposer_index),
-        validatorContainerWitness: validatorContainerWitness,
-        pendingPartialWithdrawalsWitness: pendingPartialWithdrawalsWitness,
-      };
-
-      console.log("beaconProofWitness:", beaconProofWitness);
-
-      const VALIDATOR_CONTAINER_WITNESS_TYPE =
-        "tuple(bytes32[] proof, uint64 effectiveBalance, uint64 activationEpoch, uint64 activationEligibilityEpoch)";
-      // PendingPartialWithdrawal struct: (uint64 validatorIndex, uint64 amount, uint64 withdrawableEpoch)
-      const PENDING_PARTIAL_WITHDRAWALS_WITNESS_TYPE =
-        "tuple(bytes32[] proof, tuple(uint64 validatorIndex, uint64 amount, uint64 withdrawableEpoch)[] pendingPartialWithdrawals)";
-      const BEACON_PROOF_WITNESS_TYPE = `tuple(uint64 childBlockTimestamp, uint64 proposerIndex, ${VALIDATOR_CONTAINER_WITNESS_TYPE} validatorContainerWitness, ${PENDING_PARTIAL_WITHDRAWALS_WITNESS_TYPE} pendingPartialWithdrawalsWitness)`;
-
-      const withdrawalParamsProof = AbiCoder.defaultAbiCoder().encode(
-        [BEACON_PROOF_WITNESS_TYPE],
-        [beaconProofWitness],
-      );
-
-      // Define minimal ABI for YieldManager
-      const YIELD_MANAGER_ABI = [
-        {
-          inputs: [
-            { internalType: "address", name: "_yieldProvider", type: "address" },
-            { internalType: "uint64", name: "_validatorIndex", type: "uint64" },
-            { internalType: "uint64", name: "_slot", type: "uint64" },
-            { internalType: "bytes", name: "_withdrawalParams", type: "bytes" },
-            { internalType: "bytes", name: "_withdrawalParamsProof", type: "bytes" },
-          ],
-          name: "unstakePermissionless",
-          outputs: [],
-          stateMutability: "payable",
-          type: "function",
-        },
-      ];
-
-      // Create contract instance
-      const yieldManagerContract = await ethers.getContractAt(YIELD_MANAGER_ABI, yieldManagerAddress!, signer);
-
-      // Call function
-      console.log("Calling unstakePermissionless...");
-      try {
-        const tx = await yieldManagerContract.unstakePermissionless(
-          yieldProvider!,
-          validatorIndex,
-          slot,
+    // Call function
+    console.log("Calling unstakePermissionless...");
+    try {
+      const hash = await wallet.writeContract({
+        address: getAddress(yieldManagerAddress),
+        abi: YIELD_MANAGER_ABI,
+        functionName: "unstakePermissionless",
+        args: [
+          getAddress(yieldProvider),
+          BigInt(validatorIndex),
+          BigInt(slot),
           withdrawalParams,
           withdrawalParamsProof,
-          { value: 1n },
-        );
-        console.log("Transaction sent, hash:", tx.hash);
-        const receipt = await tx.wait();
-        console.log("Transaction receipt:", receipt);
-        console.log("Transaction successful!");
-      } catch (error: unknown) {
-        // Extract error data
-        if (error && typeof error === "object") {
-          const errorObj = error as Record<string, unknown>;
-          if (errorObj.data) {
-            console.error("Error data:", errorObj.data);
-          } else if (errorObj.error && typeof errorObj.error === "object") {
-            const nestedError = errorObj.error as Record<string, unknown>;
-            if (nestedError.data) {
-              console.error("Error data:", nestedError.data);
-            }
+        ],
+        value: 1n,
+      });
+      console.log("Transaction sent, hash:", hash);
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      console.log("Transaction receipt:", receipt);
+      console.log("Transaction successful!");
+    } catch (error: unknown) {
+      // Extract error data
+      if (error && typeof error === "object") {
+        const errorObj = error as Record<string, unknown>;
+        if (errorObj.data) {
+          console.error("Error data:", errorObj.data);
+        } else if (errorObj.error && typeof errorObj.error === "object") {
+          const nestedError = errorObj.error as Record<string, unknown>;
+          if (nestedError.data) {
+            console.error("Error data:", nestedError.data);
           }
         }
-        throw error;
       }
-    });
+      throw error;
+    }
   });
+}

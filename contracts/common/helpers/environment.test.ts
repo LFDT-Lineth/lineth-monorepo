@@ -1,6 +1,6 @@
 import * as assert from "node:assert/strict";
 
-import { getBooleanEnvVar, getBooleanEnvVarOrDefault } from "./environment";
+import { getBooleanEnvVar, getBooleanEnvVarOrDefault } from "./environment.js";
 
 type TestCase = {
   name: string;

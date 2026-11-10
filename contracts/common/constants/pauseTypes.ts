@@ -23,7 +23,7 @@ import {
   UNPAUSE_NATIVE_YIELD_REPORTING_ROLE,
   UNPAUSE_NATIVE_YIELD_STAKING_ROLE,
   UNPAUSE_NATIVE_YIELD_UNSTAKING_ROLE,
-} from "./roles";
+} from "./roles.js";
 
 export const GENERAL_PAUSE_TYPE = 1;
 export const L1_L2_PAUSE_TYPE = 2;

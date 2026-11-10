@@ -1,7 +1,17 @@
 import * as dotenv from "dotenv";
-import { ethers } from "ethers";
+import {
+  createPublicClient,
+  createWalletClient,
+  encodeFunctionData,
+  getAddress,
+  http,
+  isHex,
+  parseAbi,
+  zeroAddress,
+} from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 
-import { requireEnv, checkDelegation, getAccountInfo, createAuthorization, estimateGasFees } from "../utils";
+import { requireEnv, checkDelegation, getAccountInfo, createAuthorization, estimateGasFees } from "./utils.js";
 
 // Self-sponsored EIP-7702 transaction: the same wallet signs the authorization AND sends the transaction.
 // Prerequisite - Deploy a contract with NON-VIEW initialize() function, e.g. TestEIP7702Delegation
@@ -21,10 +31,15 @@ async function main() {
   const privateKey = requireEnv("DEPLOYER_PRIVATE_KEY");
   const targetAddressEnv = process.env.TARGET_ADDRESS?.trim();
   const targetAddress =
-    targetAddressEnv == null || targetAddressEnv === SHORT_ZERO_ADDRESS ? ethers.ZeroAddress : targetAddressEnv;
+    targetAddressEnv == null || targetAddressEnv === SHORT_ZERO_ADDRESS ? zeroAddress : getAddress(targetAddressEnv);
 
-  const provider = new ethers.JsonRpcProvider(rpcUrl);
-  const signer = new ethers.Wallet(privateKey, provider);
+  const normalizedPrivateKey = privateKey.startsWith("0x") ? privateKey : `0x${privateKey}`;
+  if (!isHex(normalizedPrivateKey)) {
+    throw new Error("DEPLOYER_PRIVATE_KEY must be a hex string");
+  }
+  const signer = privateKeyToAccount(normalizedPrivateKey);
+  const provider = createPublicClient({ transport: http(rpcUrl) });
+  const walletClient = createWalletClient({ account: signer, transport: http(rpcUrl) });
 
   const signerInfo = await getAccountInfo(provider, signer.address);
   console.log("Signer info:", signerInfo);
@@ -32,7 +47,7 @@ async function main() {
   const delegationStatus = await checkDelegation(provider, signer.address);
   console.log("EOA delegation status:", delegationStatus);
 
-  const isRevocation = targetAddress === ethers.ZeroAddress;
+  const isRevocation = targetAddress === zeroAddress;
 
   console.log("\n=== SELF-SPONSORED EIP-7702 TRANSACTION ===");
   console.log("Same wallet signs authorization and sends the transaction.");
@@ -43,43 +58,44 @@ async function main() {
   // +1 nonce offset: sender nonce is incremented before authorization processing
   const authorization = await createAuthorization(signer, provider, targetAddress, 1);
 
-  let tx;
+  let hash;
   if (isRevocation) {
     // No calldata to execute when revoking - the authorization list alone carries the intent.
-    // Use provider.getFeeData() directly; linea_estimateGas rejects empty-calldata self-sends.
-    const feeData = await provider.getFeeData();
-    tx = await signer.sendTransaction({
-      type: 4,
+    // Use the node's EIP-1559 fee estimate directly; linea_estimateGas rejects empty-calldata self-sends.
+    const feeData = await provider.estimateFeesPerGas();
+    hash = await walletClient.sendTransaction({
+      chain: null,
+      type: "eip7702",
       authorizationList: [authorization],
       to: signer.address,
       data: "0x",
-      gasLimit: 500000n,
+      gas: 500000n,
       value: 0n,
-      ...(feeData.maxFeePerGas != null && { maxFeePerGas: feeData.maxFeePerGas }),
-      ...(feeData.maxPriorityFeePerGas != null && { maxPriorityFeePerGas: feeData.maxPriorityFeePerGas }),
+      maxFeePerGas: feeData.maxFeePerGas,
+      maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
     });
   } else {
-    const ABI = ["function initialize() external"];
-    const delegatedContract = new ethers.Contract(signer.address, ABI, signer);
+    const ABI = parseAbi(["function initialize() external"]);
 
-    const calldata = delegatedContract.interface.encodeFunctionData("initialize");
-    const delegationFees = await estimateGasFees(provider, rpcUrl, signer.address, signer.address, calldata);
+    const calldata = encodeFunctionData({ abi: ABI, functionName: "initialize" });
+    const delegationFees = await estimateGasFees(provider, signer.address, signer.address, calldata);
 
-    const txParams = {
-      type: 4,
+    hash = await walletClient.sendTransaction({
+      chain: null,
+      type: "eip7702",
       authorizationList: [authorization],
-      gasLimit: 500000n,
+      to: signer.address,
+      data: calldata,
+      gas: 500000n,
       value: 0n,
       ...(delegationFees.maxFeePerGas != null && { maxFeePerGas: delegationFees.maxFeePerGas }),
       ...(delegationFees.maxPriorityFeePerGas != null && { maxPriorityFeePerGas: delegationFees.maxPriorityFeePerGas }),
-    };
-
-    tx = await delegatedContract["initialize()"](txParams);
+    });
   }
 
-  console.log("Self-sponsored transaction sent:", tx.hash);
+  console.log("Self-sponsored transaction sent:", hash);
 
-  const receipt = await tx.wait();
+  const receipt = await provider.waitForTransactionReceipt({ hash });
   console.log("Receipt:", receipt);
 }
 

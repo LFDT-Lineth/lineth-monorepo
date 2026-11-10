@@ -1,19 +1,18 @@
-import { ethers, AbstractSigner, Interface, InterfaceAbi, BaseContract } from "ethers";
+import { ethers, type AbstractSigner, Interface, type InterfaceAbi, type BaseContract } from "ethers";
 import fs from "fs";
 import path from "path";
 
-import { normalizeAddressArgs } from "./normalize-address-args";
-import { clearSignerUiWorkflowStatus, setSignerUiWorkflowStatus } from "./signerUiWorkflowStatus";
-import {
-  contractName as ProxyAdminContractName,
-  abi as ProxyAdminAbi,
-  bytecode as ProxyAdminBytecode,
-} from "../../deployments/bytecode/mainnet-proxy/ProxyAdmin.json";
-import {
-  contractName as TransparentUpgradeableProxyContractName,
-  abi as TransparentUpgradeableProxyAbi,
-  bytecode as TransparentUpgradeableProxyBytecode,
-} from "../../deployments/bytecode/mainnet-proxy/TransparentUpgradeableProxy.json";
+import { normalizeAddressArgs } from "./normalize-address-args.js";
+import { clearSignerUiWorkflowStatus, setSignerUiWorkflowStatus } from "./signerUiWorkflowStatus.js";
+import proxyAdminJson from "../../deployments/bytecode/mainnet-proxy/ProxyAdmin.json" with { type: "json" };
+import transparentUpgradeableProxyJson from "../../deployments/bytecode/mainnet-proxy/TransparentUpgradeableProxy.json" with { type: "json" };
+
+const { contractName: ProxyAdminContractName, abi: ProxyAdminAbi, bytecode: ProxyAdminBytecode } = proxyAdminJson;
+const {
+  contractName: TransparentUpgradeableProxyContractName,
+  abi: TransparentUpgradeableProxyAbi,
+  bytecode: TransparentUpgradeableProxyBytecode,
+} = transparentUpgradeableProxyJson;
 
 /**
  * Loads a compiled contract artifact ("<contractName>.json") from a directory.

@@ -1,7 +1,7 @@
 import * as dotenv from "dotenv";
 import { ethers } from "ethers";
 
-import { getDeployNonceFromEnv } from "../common/helpers/deployments";
+import { getDeployNonceFromEnv } from "../common/helpers/deployments.js";
 
 dotenv.config();
 

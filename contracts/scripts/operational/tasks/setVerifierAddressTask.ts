@@ -1,7 +1,11 @@
-import { task } from "hardhat/config";
+import { getAddress } from "viem";
 
-import { getTaskCliOrEnvValue } from "../../../common/helpers/environmentHelper";
-import { getUiSigner, runWithSignerUiSession } from "../../../scripts/hardhat/signer-ui-bridge";
+import { getTaskCliOrEnvValue } from "../../../common/helpers/environmentHelper.js";
+import { getUiWalletClient, withSignerUi } from "../../../hardhat-plugins/signer-ui/session.js";
+import { requireRegistryAddress } from "../registryAddress.js";
+
+import type { HardhatRuntimeEnvironment } from "hardhat/types/hre";
+import type { TaskArguments } from "hardhat/types/tasks";
 
 /*
     *******************************************************************************************
@@ -21,48 +25,44 @@ import { getUiSigner, runWithSignerUiSession } from "../../../scripts/hardhat/si
     *******************************************************************************************
 */
 
-task("setVerifierAddress", "Sets the verifier address on a Message Service contract")
-  .addOptionalParam("verifierProofType")
-  .addOptionalParam("proxyAddress")
-  .addOptionalParam("verifierAddress")
-  .addOptionalParam("verifierName")
-  .setAction(async (taskArgs, hre) => {
-    return runWithSignerUiSession(hre, "task:setVerifierAddress", async () => {
-      const ethers = hre.ethers;
+export default async function setVerifierAddress(taskArgs: TaskArguments, hre: HardhatRuntimeEnvironment) {
+  const connection = await hre.network.getOrCreate();
+  return withSignerUi(hre, "task:setVerifierAddress", async () => {
+    const { viem, networkName } = connection;
 
-      const { deployments } = hre;
-      const { get } = deployments;
+    const proofType = getTaskCliOrEnvValue(taskArgs, "verifierProofType", "VERIFIER_PROOF_TYPE");
+    let LinethRollupAddress = getTaskCliOrEnvValue(taskArgs, "proxyAddress", "LINETH_ROLLUP_ADDRESS");
+    const verifierName = getTaskCliOrEnvValue(taskArgs, "verifierName", "VERIFIER_CONTRACT_NAME");
 
-      const proofType = getTaskCliOrEnvValue(taskArgs, "verifierProofType", "VERIFIER_PROOF_TYPE");
-      let LinethRollupAddress = getTaskCliOrEnvValue(taskArgs, "proxyAddress", "LINETH_ROLLUP_ADDRESS");
-      const verifierName = getTaskCliOrEnvValue(taskArgs, "verifierContractName", "VERIFIER_CONTRACT_NAME");
+    if (LinethRollupAddress === undefined) {
+      LinethRollupAddress = requireRegistryAddress(networkName, "LinethRollup");
+    }
 
-      if (LinethRollupAddress === undefined) {
-        LinethRollupAddress = (await get("LinethRollup")).address;
+    let verifierAddress = getTaskCliOrEnvValue(taskArgs, "verifierAddress", "VERIFIER_ADDRESS");
+    if (verifierAddress === undefined) {
+      if (verifierName === undefined) {
+        throw "Please specify a verifier name e.g. --verifier-name PlonkVerifierDev";
       }
+      verifierAddress = requireRegistryAddress(networkName, verifierName);
+    }
 
-      let verifierAddress = getTaskCliOrEnvValue(taskArgs, "verifierAddress", "VERIFIER_ADDRESS");
-      if (verifierAddress === undefined) {
-        if (verifierName === undefined) {
-          throw "Please specify a verifier name e.g. --verifier-contract-name PlonkVerifierDev";
-        }
-        verifierAddress = (await get(verifierName)).address;
-      }
+    if (!proofType) {
+      throw "Please specify a verifierProofType";
+    }
 
-      if (!proofType) {
-        throw "Please specify a verifierProofType";
-      }
-
-      const signer = await getUiSigner(hre);
-      const LinethRollup = await ethers.getContractAt("LinethRollup", LinethRollupAddress, signer);
-
-      console.log(`Setting verifier address ${verifierAddress} of type ${proofType}`);
-      const tx = await LinethRollup.setVerifierAddress(verifierAddress, proofType);
-
-      console.log("Waiting for transaction to process");
-      await tx.wait();
-
-      const checkVerifierIsSet = await LinethRollup.verifiers(proofType);
-      console.log(`Lineth Rollup implementation added ${checkVerifierIsSet} as new verifier`);
+    const wallet = await getUiWalletClient(connection);
+    const publicClient = await viem.getPublicClient();
+    const LinethRollup = await viem.getContractAt("LinethRollup", getAddress(LinethRollupAddress), {
+      client: { public: publicClient, wallet },
     });
+
+    console.log(`Setting verifier address ${verifierAddress} of type ${proofType}`);
+    const hash = await LinethRollup.write.setVerifierAddress([getAddress(verifierAddress), BigInt(proofType)]);
+
+    console.log("Waiting for transaction to process");
+    await publicClient.waitForTransactionReceipt({ hash });
+
+    const checkVerifierIsSet = await LinethRollup.read.verifiers([BigInt(proofType)]);
+    console.log(`Lineth Rollup implementation added ${checkVerifierIsSet} as new verifier`);
   });
+}

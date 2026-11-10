@@ -1,31 +1,35 @@
 import * as dotenv from "dotenv";
 import { ethers } from "ethers";
 
+import upgradeableBeaconChainDepositPredeployV1Json from "./dynamic-artifacts/UpgradeableBeaconChainDepositPredeployV1.json" with { type: "json" };
+import upgradeableConsolidationQueuePredeployV1Json from "./dynamic-artifacts/UpgradeableConsolidationQueuePredeployV1.json" with { type: "json" };
+import upgradeableWithdrawalQueuePredeployV1Json from "./dynamic-artifacts/UpgradeableWithdrawalQueuePredeployV1.json" with { type: "json" };
+import proxyAdminJson from "./static-artifacts/ProxyAdmin.json" with { type: "json" };
+import transparentUpgradeableProxyJson from "./static-artifacts/TransparentUpgradeableProxy.json" with { type: "json" };
 import {
-  contractName as BeaconChainDepositContractName,
-  abi as BeaconChainDepositAbi,
-  bytecode as BeaconChainDepositBytecode,
-} from "./dynamic-artifacts/UpgradeableBeaconChainDepositPredeployV1.json";
-import {
-  contractName as ConsolidationQueueContractName,
-  abi as ConsolidationQueueAbi,
-  bytecode as ConsolidationQueueBytecode,
-} from "./dynamic-artifacts/UpgradeableConsolidationQueuePredeployV1.json";
-import {
-  contractName as WithdrawalQueueContractName,
-  abi as WithdrawalQueueAbi,
-  bytecode as WithdrawalQueueBytecode,
-} from "./dynamic-artifacts/UpgradeableWithdrawalQueuePredeployV1.json";
-import {
-  contractName as ProxyAdminContractName,
-  abi as ProxyAdminAbi,
-  bytecode as ProxyAdminBytecode,
-} from "./static-artifacts/ProxyAdmin.json";
-import {
-  abi as TransparentUpgradeableProxyAbi,
-  bytecode as TransparentUpgradeableProxyBytecode,
-} from "./static-artifacts/TransparentUpgradeableProxy.json";
-import { deployContractFromArtifacts, getDeployNonceFromEnv, getInitializerData } from "../common/helpers/deployments";
+  deployContractFromArtifacts,
+  getDeployNonceFromEnv,
+  getInitializerData,
+} from "../common/helpers/deployments.js";
+
+const {
+  contractName: BeaconChainDepositContractName,
+  abi: BeaconChainDepositAbi,
+  bytecode: BeaconChainDepositBytecode,
+} = upgradeableBeaconChainDepositPredeployV1Json;
+const {
+  contractName: ConsolidationQueueContractName,
+  abi: ConsolidationQueueAbi,
+  bytecode: ConsolidationQueueBytecode,
+} = upgradeableConsolidationQueuePredeployV1Json;
+const {
+  contractName: WithdrawalQueueContractName,
+  abi: WithdrawalQueueAbi,
+  bytecode: WithdrawalQueueBytecode,
+} = upgradeableWithdrawalQueuePredeployV1Json;
+const { contractName: ProxyAdminContractName, abi: ProxyAdminAbi, bytecode: ProxyAdminBytecode } = proxyAdminJson;
+const { abi: TransparentUpgradeableProxyAbi, bytecode: TransparentUpgradeableProxyBytecode } =
+  transparentUpgradeableProxyJson;
 
 dotenv.config();
 

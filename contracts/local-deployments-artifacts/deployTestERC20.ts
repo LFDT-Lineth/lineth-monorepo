@@ -1,14 +1,12 @@
 import { ethers } from "ethers";
 
-import {
-  contractName as TestERC20ContractName,
-  abi as TestERC20Abi,
-  bytecode as TestERC20Bytecode,
-} from "./static-artifacts/TestERC20.json";
-import { deployContractFromArtifacts, getDeployNonceFromEnv } from "../common/helpers/deployments";
-import { getBooleanEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment";
-import { LOCAL_L2_DEPLOY_FEE_OVERRIDES } from "../common/helpers/feeOverrides";
-import { get1559Fees } from "../scripts/utils";
+import testERC20Json from "./static-artifacts/TestERC20.json" with { type: "json" };
+import { deployContractFromArtifacts, getDeployNonceFromEnv } from "../common/helpers/deployments.js";
+import { getBooleanEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment.js";
+import { LOCAL_L2_DEPLOY_FEE_OVERRIDES } from "../common/helpers/feeOverrides.js";
+import { get1559Fees } from "../scripts/utils.js";
+
+const { contractName: TestERC20ContractName, abi: TestERC20Abi, bytecode: TestERC20Bytecode } = testERC20Json;
 
 async function main() {
   const ORDERED_NONCE_POST_LINETHROLLUP = 7;

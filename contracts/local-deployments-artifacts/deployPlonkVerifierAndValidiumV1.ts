@@ -2,33 +2,31 @@ import * as dotenv from "dotenv";
 import { ethers } from "ethers";
 import path from "path";
 
-import { abi as ValidiumV1Abi, bytecode as ValidiumV1Bytecode } from "./dynamic-artifacts/ValidiumV1.json";
-import {
-  contractName as ProxyAdminContractName,
-  abi as ProxyAdminAbi,
-  bytecode as ProxyAdminBytecode,
-} from "./static-artifacts/ProxyAdmin.json";
-import {
-  abi as TransparentUpgradeableProxyAbi,
-  bytecode as TransparentUpgradeableProxyBytecode,
-} from "./static-artifacts/TransparentUpgradeableProxy.json";
+import validiumV1Json from "./dynamic-artifacts/ValidiumV1.json" with { type: "json" };
+import proxyAdminJson from "./static-artifacts/ProxyAdmin.json" with { type: "json" };
+import transparentUpgradeableProxyJson from "./static-artifacts/TransparentUpgradeableProxy.json" with { type: "json" };
+import { ADDRESS_ZERO } from "../common/constants/general.js";
 import {
   VALIDIUM_PAUSE_TYPES_ROLES,
   VALIDIUM_ROLES,
   VALIDIUM_UNPAUSE_TYPES_ROLES,
   OPERATOR_ROLE,
-} from "../common/constants";
-import { ADDRESS_ZERO } from "../common/constants/general";
+} from "../common/constants/index.js";
 import {
   deployContractFromArtifacts,
   getDeployNonceFromEnv,
   getInitializerData,
   loadArtifactFromDirectory,
-} from "../common/helpers/deployments";
-import { getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment";
-import { getDeploymentNetworkName, requireAddressFromRegistryOrEnv } from "../common/helpers/readAddress";
-import { generateRoleAssignments } from "../common/helpers/roles";
-import { get1559Fees } from "../scripts/utils";
+} from "../common/helpers/deployments.js";
+import { getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment.js";
+import { getDeploymentNetworkName, requireAddressFromRegistryOrEnv } from "../common/helpers/readAddress.js";
+import { generateRoleAssignments } from "../common/helpers/roles.js";
+import { get1559Fees } from "../scripts/utils.js";
+
+const { abi: ValidiumV1Abi, bytecode: ValidiumV1Bytecode } = validiumV1Json;
+const { contractName: ProxyAdminContractName, abi: ProxyAdminAbi, bytecode: ProxyAdminBytecode } = proxyAdminJson;
+const { abi: TransparentUpgradeableProxyAbi, bytecode: TransparentUpgradeableProxyBytecode } =
+  transparentUpgradeableProxyJson;
 
 dotenv.config();
 
@@ -56,7 +54,10 @@ async function main() {
   ]);
   const roleAddresses = getEnvVarOrDefault("VALIDIUM_ROLE_ADDRESSES", defaultRoleAddresses);
 
-  const verifierArtifacts = loadArtifactFromDirectory(path.join(__dirname, "./dynamic-artifacts"), verifierName);
+  const verifierArtifacts = loadArtifactFromDirectory(
+    path.join(import.meta.dirname, "./dynamic-artifacts"),
+    verifierName,
+  );
 
   const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
 

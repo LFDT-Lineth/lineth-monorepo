@@ -1,20 +1,37 @@
-import { commitmentsToVersionedHashes } from "@ethereumjs/util";
-import * as kzg from "c-kzg";
-import { AbiCoder, BytesLike, Transaction, Wallet, ethers } from "ethers";
-import { DataHexString } from "ethers/lib.commonjs/utils/data";
+import cKzg from "c-kzg";
+import {
+  type Hex,
+  type PrivateKeyAccount,
+  type PublicClient,
+  bytesToHex,
+  commitmentsToVersionedHashes,
+  concat,
+  createPublicClient,
+  defineKzg,
+  getAddress,
+  http,
+  isHex,
+  keccak256,
+  zeroHash,
+} from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 
-import aggregateProof1to305 from "./aggregatedProof-1-305.json";
-import submissionDataJson1 from "./blocks-1-46.json";
-import submissionDataJson4 from "./blocks-115-155.json";
-import submissionDataJson5 from "./blocks-156-175.json";
-import submissionDataJson6 from "./blocks-176-206.json";
-import submissionDataJson7 from "./blocks-207-228.json";
-import submissionDataJson8 from "./blocks-229-265.json";
-import submissionDataJson9 from "./blocks-266-305.json";
-import submissionDataJson2 from "./blocks-47-81.json";
-import submissionDataJson3 from "./blocks-82-114.json";
+import aggregateProof1to305 from "./aggregatedProof-1-305.json" with { type: "json" };
+import submissionDataJson1 from "./blocks-1-46.json" with { type: "json" };
+import submissionDataJson4 from "./blocks-115-155.json" with { type: "json" };
+import submissionDataJson5 from "./blocks-156-175.json" with { type: "json" };
+import submissionDataJson6 from "./blocks-176-206.json" with { type: "json" };
+import submissionDataJson7 from "./blocks-207-228.json" with { type: "json" };
+import submissionDataJson8 from "./blocks-229-265.json" with { type: "json" };
+import submissionDataJson9 from "./blocks-266-305.json" with { type: "json" };
+import submissionDataJson2 from "./blocks-47-81.json" with { type: "json" };
+import submissionDataJson3 from "./blocks-82-114.json" with { type: "json" };
+import { encodeData as encodeAbiData } from "../../../common/helpers/encoding.js";
 
 const chainId = 31648428;
+
+type SubmissionJson = typeof submissionDataJson1;
+type AggregatedProofJson = typeof aggregateProof1to305;
 
 const dataItems = [
   submissionDataJson1,
@@ -29,15 +46,22 @@ const dataItems = [
 ];
 
 export function generateKeccak256(types: string[], values: unknown[], packed?: boolean) {
-  return ethers.keccak256(encodeData(types, values, packed));
+  return keccak256(encodeData(types, values, packed));
 }
 
-export const encodeData = (types: string[], values: unknown[], packed?: boolean) => {
-  if (packed) {
-    return ethers.solidityPacked(types, values);
+export const encodeData = (types: string[], values: unknown[], packed?: boolean): Hex =>
+  encodeAbiData(types, values, packed);
+
+function toHex(value: string, label: string): Hex {
+  if (!isHex(value)) {
+    throw new Error(`Invalid ${label}: expected a 0x-prefixed hex string`);
   }
-  return AbiCoder.defaultAbiCoder().encode(types, values);
-};
+  return value;
+}
+
+function decodeBase64(value: string): Uint8Array {
+  return new Uint8Array(Buffer.from(value, "base64"));
+}
 
 export type SubmissionData = {
   parentStateRootHash: string;
@@ -52,8 +76,8 @@ export type BlobSubmissionData = {
   submissionData: SubmissionData;
   parentSubmissionData: ParentSubmissionData;
   dataEvaluationClaim: bigint;
-  kzgCommitment: BytesLike;
-  kzgProof: BytesLike;
+  kzgCommitment: Hex;
+  kzgProof: Hex;
 };
 
 export type ParentSubmissionData = {
@@ -67,8 +91,7 @@ export type ParentSubmissionData = {
 export function generateSubmissionDataFromJSON(
   startingBlockNumber: number,
   endingBlockNumber: number,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  parsedJSONData: any,
+  parsedJSONData: SubmissionJson,
 ): { submissionData: SubmissionData; blob: Uint8Array } {
   const returnData = {
     parentStateRootHash: parsedJSONData.parentStateRootHash,
@@ -81,7 +104,7 @@ export function generateSubmissionDataFromJSON(
 
   return {
     submissionData: returnData,
-    blob: ethers.decodeBase64(parsedJSONData.compressedData),
+    blob: decodeBase64(parsedJSONData.compressedData),
   };
 }
 
@@ -95,8 +118,7 @@ export function generateParentSubmissionData(finalStateRootHash: string, parentD
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function generateParentSubmissionDataFromJson(parsedJSONData: any): ParentSubmissionData {
+export function generateParentSubmissionDataFromJson(parsedJSONData: SubmissionJson): ParentSubmissionData {
   return {
     finalStateRootHash: parsedJSONData.finalStateRootHash,
     firstBlockInData: BigInt(parsedJSONData.conflationOrder.startingBlockNumber),
@@ -109,8 +131,7 @@ export function generateParentSubmissionDataFromJson(parsedJSONData: any): Paren
 export function generateSubmissionCallDataFromJSON(
   startingBlockNumber: number,
   endingBlockNumber: number,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  parsedJSONData: any,
+  parsedJSONData: SubmissionJson,
 ): { submissionData: SubmissionData } {
   const returnData = {
     parentStateRootHash: parsedJSONData.parentStateRootHash,
@@ -119,7 +140,7 @@ export function generateSubmissionCallDataFromJSON(
     firstBlockInData: BigInt(startingBlockNumber),
     finalBlockInData: BigInt(endingBlockNumber),
     snarkHash: parsedJSONData.snarkHash,
-    compressedData: ethers.hexlify(ethers.decodeBase64(parsedJSONData.compressedData)),
+    compressedData: bytesToHex(decodeBase64(parsedJSONData.compressedData)),
   };
 
   return {
@@ -142,39 +163,44 @@ function requireEnv(name: string): string {
   return envVariable;
 }
 
-function kzgCommitmentsToVersionedHashes(commitments: Uint8Array[]): string[] {
-  const versionedHashes = commitmentsToVersionedHashes(commitments);
-  return versionedHashes.map((versionedHash) => ethers.hexlify(versionedHash));
+function kzgCommitmentsToVersionedHashes(commitments: Uint8Array[]): Hex[] {
+  return [...commitmentsToVersionedHashes({ commitments: commitments.map((commitment) => bytesToHex(commitment)) })];
 }
 
-async function main() {
+function getClients(): { provider: PublicClient; wallet: PrivateKeyAccount; destinationAddress: Hex } {
   const rpcUrl = requireEnv("RPC_URL");
-  const privateKey = requireEnv("DEPLOYER_PRIVATE_KEY");
-  const destinationAddress = requireEnv("DESTINATION_ADDRESS");
+  const privateKey = toHex(requireEnv("DEPLOYER_PRIVATE_KEY"), "DEPLOYER_PRIVATE_KEY");
+  const destinationAddress = getAddress(requireEnv("DESTINATION_ADDRESS"));
 
-  const provider = new ethers.JsonRpcProvider(rpcUrl);
-  const wallet = new Wallet(privateKey, provider);
+  const provider = createPublicClient({ transport: http(rpcUrl) });
+  const wallet = privateKeyToAccount(privateKey);
+  return { provider, wallet, destinationAddress };
+}
 
-  kzg.loadTrustedSetup(`${__dirname}/trusted_setup.txt`);
+const trustedSetupPath = `${import.meta.dirname}/trusted_setup.txt`;
+
+async function main() {
+  const { provider, wallet, destinationAddress } = getClients();
+
+  cKzg.loadTrustedSetup(0, trustedSetupPath);
 
   const parentSubmissionData1 = generateParentSubmissionData(
     "0x072ead6777750dc20232d1cee8dc9a395c2d350df4bbaa5096c6f59b214dcecd",
-    ethers.ZeroHash,
+    zeroHash,
   );
 
   const kzgProofsArray: Uint8Array[] = [];
   const commitmentsArray: Uint8Array[] = [];
-  const versionedHashesArray: string[] = [];
+  const versionedHashesArray: Hex[] = [];
   const blobsArray: Uint8Array[] = [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const kzgProofsContractArray: any[] = [];
+  const kzgProofsContractArray: string[] = [];
   // const parentSubmissionData: ParentSubmissionData[] = [];
 
   const blobSubmissionData: BlobSubmissionData[] = [];
 
   let previousSubmissionData = generateParentSubmissionData(
     "0x072ead6777750dc20232d1cee8dc9a395c2d350df4bbaa5096c6f59b214dcecd",
-    ethers.ZeroHash,
+    zeroHash,
   );
 
   const finalSubmissionData = generateParentSubmissionDataFromJson(submissionDataJson6);
@@ -186,8 +212,8 @@ async function main() {
       dataItems[i],
     );
     const fullblob = getPadded(blob);
-    const commitment = kzg.blobToKzgCommitment(fullblob);
-    const kzgProof = kzg.computeBlobKzgProof(fullblob, commitment);
+    const commitment = cKzg.blobToKzgCommitment(fullblob);
+    const kzgProof = cKzg.computeBlobKzgProof(fullblob, commitment);
 
     blobsArray.push(fullblob);
     versionedHashesArray.push(kzgCommitmentsToVersionedHashes([commitment])[0]);
@@ -199,8 +225,8 @@ async function main() {
       submissionData: submissionData,
       parentSubmissionData: previousSubmissionData,
       dataEvaluationClaim: BigInt(dataItems[i].expectedY),
-      kzgCommitment: commitment,
-      kzgProof: dataItems[i].kzgProofContract,
+      kzgCommitment: bytesToHex(commitment),
+      kzgProof: toHex(dataItems[i].kzgProofContract, "kzgProofContract"),
     });
 
     previousSubmissionData = generateParentSubmissionDataFromJson(dataItems[i]);
@@ -215,8 +241,7 @@ async function main() {
   await sendProof(aggregateProof1to305, parentSubmissionData1, finalSubmissionData);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapToTuple(blobSubmissionDataItems: BlobSubmissionData[]): any {
+function mapToTuple(blobSubmissionDataItems: BlobSubmissionData[]): unknown[] {
   return blobSubmissionDataItems.map((blobSubmissionData) => [
     blobSubmissionData.dataEvaluationClaim,
     blobSubmissionData.kzgCommitment,
@@ -226,12 +251,12 @@ function mapToTuple(blobSubmissionDataItems: BlobSubmissionData[]): any {
   ]);
 }
 
-function encodeCall(submissionData: BlobSubmissionData[]): DataHexString {
+function encodeCall(submissionData: BlobSubmissionData[]): Hex {
   //submitBlobs((uint256,bytes,bytes,bytes32,bytes32)[],bytes32,bytes32)": "99467a35"
 
-  const encodedCall = ethers.concat([
+  const encodedCall = concat([
     "0x99467a35",
-    ethers.AbiCoder.defaultAbiCoder().encode(
+    encodeData(
       ["tuple(uint256,bytes,bytes,bytes32,bytes32)[]", "bytes32", "bytes32"],
       [
         mapToTuple(submissionData),
@@ -247,91 +272,86 @@ function encodeCall(submissionData: BlobSubmissionData[]): DataHexString {
 async function sendMessage() {
   console.log("sending the message");
 
-  const rpcUrl = requireEnv("RPC_URL");
-  const privateKey = requireEnv("DEPLOYER_PRIVATE_KEY");
-  const destinationAddress = requireEnv("DESTINATION_ADDRESS");
+  const { provider, wallet, destinationAddress } = getClients();
 
-  const provider = new ethers.JsonRpcProvider(rpcUrl);
-  const wallet = new Wallet(privateKey, provider);
-
-  const encodedCall = ethers.concat([
+  const encodedCall = concat([
     "0x9f3ce55a",
-    ethers.AbiCoder.defaultAbiCoder().encode(
+    encodeData(
       ["address", "uint256", "bytes"],
-      ["0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC", "50000000000000000", "0x"],
+      ["0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC", 50000000000000000n, "0x"],
     ),
   ]);
 
-  const { maxFeePerGas, maxPriorityFeePerGas } = await provider.getFeeData();
-  const nonce = await provider.getTransactionCount(wallet.address);
+  const { maxFeePerGas, maxPriorityFeePerGas } = await provider.estimateFeesPerGas();
+  const nonce = await provider.getTransactionCount({ address: wallet.address });
 
-  const transaction = Transaction.from({
+  const transaction = {
+    type: "eip1559",
     data: encodedCall,
-    maxPriorityFeePerGas: maxPriorityFeePerGas!,
-    maxFeePerGas: maxFeePerGas!,
+    maxPriorityFeePerGas,
+    maxFeePerGas,
     to: destinationAddress,
     chainId,
     nonce,
     value: 1050000000000000000n,
-    gasLimit: 5_000_000,
-  });
+    gas: 5_000_000n,
+  } as const;
 
-  const tx = await wallet.sendTransaction(transaction);
-  const receipt = await tx.wait();
-  console.log({ transaction: tx, receipt });
+  const hash = await provider.sendRawTransaction({ serializedTransaction: await wallet.signTransaction(transaction) });
+  const receipt = await provider.waitForTransactionReceipt({ hash });
+  console.log({ transaction: { ...transaction, hash }, receipt });
 }
 
 async function submitBlob(
-  provider: ethers.JsonRpcProvider,
-  wallet: Wallet,
-  encodedCall: string,
-  destinationAddress: string,
-  versionedHashes: string[],
+  provider: PublicClient,
+  wallet: PrivateKeyAccount,
+  encodedCall: Hex,
+  destinationAddress: Hex,
+  versionedHashes: Hex[],
   fullblobs: Uint8Array[],
 ) {
-  const { maxFeePerGas, maxPriorityFeePerGas } = await provider.getFeeData();
-  const nonce = await provider.getTransactionCount(wallet.address);
+  const { maxFeePerGas, maxPriorityFeePerGas } = await provider.estimateFeesPerGas();
+  const nonce = await provider.getTransactionCount({ address: wallet.address });
 
   console.log(encodedCall);
 
-  const transaction = Transaction.from({
+  const serializedTransaction = await wallet.signTransaction({
     data: encodedCall,
-    maxPriorityFeePerGas: maxPriorityFeePerGas!,
-    maxFeePerGas: maxFeePerGas!,
+    maxPriorityFeePerGas,
+    maxFeePerGas,
     to: destinationAddress,
     chainId,
-    type: 3,
+    type: "eip4844",
     nonce,
-    value: 0,
-    kzg,
+    value: 0n,
+    kzg: defineKzg({
+      blobToKzgCommitment: cKzg.blobToKzgCommitment,
+      computeBlobKzgProof: cKzg.computeBlobKzgProof,
+    }),
     blobs: fullblobs,
-    gasLimit: 5_000_000,
+    gas: 5_000_000n,
     blobVersionedHashes: versionedHashes,
-    maxFeePerBlobGas: maxFeePerGas!,
+    maxFeePerBlobGas: maxFeePerGas,
   });
 
-  const tx = await wallet.sendTransaction(transaction);
-  const receipt = await tx.wait();
+  const hash = await provider.sendRawTransaction({ serializedTransaction });
+  const receipt = await provider.waitForTransactionReceipt({ hash });
 
   console.log(versionedHashes);
-  console.log("BlobTX Hash: ", tx.hash);
-  console.log(`BlobTX receipt: ${JSON.stringify(receipt, null, 2)}`);
+  console.log("BlobTX Hash: ", hash);
+  console.log(
+    `BlobTX receipt: ${JSON.stringify(receipt, (_key, value) => (typeof value === "bigint" ? value.toString() : value), 2)}`,
+  );
 }
 
 async function sendProof(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  proofFile: any,
+  proofFile: AggregatedProofJson,
   submissionData: ParentSubmissionData,
   finalSubmissionData: ParentSubmissionData,
 ) {
   console.log("proof");
 
-  const rpcUrl = requireEnv("RPC_URL");
-  const privateKey = requireEnv("DEPLOYER_PRIVATE_KEY");
-  const destinationAddress = requireEnv("DESTINATION_ADDRESS");
-
-  const provider = new ethers.JsonRpcProvider(rpcUrl);
-  const wallet = new Wallet(privateKey, provider);
+  const { provider, wallet, destinationAddress } = getClients();
 
   const finalSubmission = dataItems[dataItems.length - 1];
 
@@ -363,9 +383,9 @@ async function sendProof(
   console.log(proofData);
   //finalizeBlocks(bytes,uint256,(bytes32,uint256,(bytes32,bytes32,bytes32,bytes32,bytes32),uint256,uint256,bytes32,bytes32,uint256,uint256,uint256,bytes32[],bytes))": "5603c65f"
   //finalizeBlocks(bytes,uint256,(bytes32,uint256,(bytes32,bytes32,bytes32,bytes32,bytes32),uint256,uint256,bytes32,bytes32,uint256,uint256,uint256,bytes32[],bytes))": "5603c65f"
-  const encodedCall = ethers.concat([
+  const encodedCall = concat([
     "0x5603c65f",
-    ethers.AbiCoder.defaultAbiCoder().encode(
+    encodeData(
       [
         "bytes",
         "uint256",
@@ -379,23 +399,24 @@ async function sendProof(
   console.log(finalSubmission.expectedShnarf);
   console.log(BigInt(finalSubmission.conflationOrder.upperBoundaries.slice(-1)[0]));
 
-  const { maxFeePerGas, maxPriorityFeePerGas } = await provider.getFeeData();
-  const nonce = await provider.getTransactionCount(wallet.address);
+  const { maxFeePerGas, maxPriorityFeePerGas } = await provider.estimateFeesPerGas();
+  const nonce = await provider.getTransactionCount({ address: wallet.address });
 
-  const transaction = Transaction.from({
+  const transaction = {
+    type: "eip1559",
     data: encodedCall,
-    maxPriorityFeePerGas: maxPriorityFeePerGas!,
-    maxFeePerGas: maxFeePerGas!,
+    maxPriorityFeePerGas,
+    maxFeePerGas,
     to: destinationAddress,
     chainId,
     nonce,
-    value: 0,
-    gasLimit: 5_000_000,
-  });
+    value: 0n,
+    gas: 5_000_000n,
+  } as const;
 
-  const tx = await wallet.sendTransaction(transaction);
-  const receipt = await tx.wait();
-  console.log({ transaction: tx, receipt });
+  const hash = await provider.sendRawTransaction({ serializedTransaction: await wallet.signTransaction(transaction) });
+  const receipt = await provider.waitForTransactionReceipt({ hash });
+  console.log({ transaction: { ...transaction, hash }, receipt });
 }
 
 main()

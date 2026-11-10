@@ -1,6 +1,6 @@
-import { ethers } from "ethers";
 import fs from "fs";
 import path from "path";
+import { getAddress, isAddress } from "viem";
 
 import {
   getPopulatedAddresses,
@@ -11,9 +11,10 @@ import {
   parseEnvAddressList,
   REGISTRY_NETWORKS,
   sameAddressSet,
-} from "./addressRegistry";
-import { getHandoffAddress } from "./deploymentHandoff";
-import { formatEnvVarForLog, formatEnvVarValueForMessage } from "./envVarLogging";
+} from "./addressRegistry.js";
+import { formatEnvVarForLog, formatEnvVarValueForMessage } from "./envVarLogging.js";
+
+import type { Address } from "viem";
 
 /**
  * Resolves the deployment network for standalone scripts without Hardhat runtime.
@@ -95,12 +96,6 @@ export function getAddressesFromRegistry(
  * Lookup tries `contractKey` first, then `envVarName` when they differ.
  */
 export function requireAddressFromRegistryOrEnv(networkName: string, contractKey: string, envVarName?: string): string {
-  const handoffAddress = envVarName ? getHandoffAddress(envVarName) : undefined;
-  if (handoffAddress !== undefined) {
-    console.log(`Using in-process handoff address for ${contractKey}: ${handoffAddress}`);
-    return handoffAddress;
-  }
-
   const registryAddress = getAddressFromRegistry(networkName, contractKey, envVarName);
   const envAddress = envVarName ? parseEnvAddress(envVarName) : undefined;
 
@@ -211,22 +206,30 @@ export function getAddressesFromRegistryOrEnv(networkName: string, contractKey: 
   return [];
 }
 
+/** Hardhat Ignition journals: `contracts/ignition/deployments/<deploymentId>/`. */
+export const IGNITION_DEPLOYMENTS_DIR = path.join(import.meta.dirname, "..", "..", "ignition", "deployments");
+
 /**
- * @deprecated Use getAddressFromRegistry instead.
- *
- * Reads a deployed contract address from the legacy hardhat-deploy artefact format at
- * `deployments/<networkName>/<contractName>.json`. This path is no longer written by
- * deploy scripts; prefer the address registry under `deployments/addresses/`.
+ * Reads `ignition/deployments/<deploymentId>/deployed_addresses.json` (future id → checksummed address).
+ * Returns `undefined` when the deployment does not exist.
  */
-export const getDeployedContractOnNetwork = async (
-  networkName: string,
-  contractName: string,
-): Promise<string | undefined> => {
-  const filePath = path.join(__dirname, "..", "..", "deployments", `${networkName}`, `${contractName}.json`);
+export function getIgnitionDeployedAddresses(
+  deploymentId: string,
+  deploymentsDir: string = IGNITION_DEPLOYMENTS_DIR,
+): Record<string, Address> | undefined {
+  const filePath = path.join(deploymentsDir, deploymentId, "deployed_addresses.json");
   if (!fs.existsSync(filePath)) {
     return undefined;
   }
-  const data = fs.readFileSync(filePath, "utf-8");
-  const address: string = JSON.parse(data).address;
-  return ethers.isAddress(address) ? ethers.getAddress(address) : undefined;
-};
+  const parsed: unknown = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error(`${filePath} is not a JSON object.`);
+  }
+  const addresses: Record<string, Address> = {};
+  for (const [futureId, value] of Object.entries(parsed)) {
+    if (typeof value === "string" && isAddress(value, { strict: false })) {
+      addresses[futureId] = getAddress(value);
+    }
+  }
+  return addresses;
+}

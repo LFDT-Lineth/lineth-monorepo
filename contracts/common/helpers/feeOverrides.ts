@@ -1,6 +1,6 @@
-import { ethers } from "ethers";
+import { get1559Fees } from "../../scripts/utils.js";
 
-import { get1559Fees } from "../../scripts/utils";
+import type { ethers } from "ethers";
 
 // A transaction fee override that must describe exactly one fee model: either a
 // legacy `gasPrice`, or a complete EIP-1559 pair, never a mix of both.
