@@ -1,6 +1,6 @@
 /** Lifecycle of the local Next.js signer app (`contracts/signer-ui/`) the bridge launches. */
 import { type ChildProcess, execFileSync, spawn } from "node:child_process";
-import { existsSync, readFileSync, unlinkSync } from "node:fs";
+import { readFileSync, unlinkSync } from "node:fs";
 import { createServer } from "node:http";
 import { Socket } from "node:net";
 import { join, resolve } from "node:path";
@@ -69,9 +69,7 @@ function isPidListeningOnPort(pid: number, port: number): boolean {
  * can be reused by unrelated processes).
  */
 export function removeNextDevLock({ stopOwner }: { stopOwner: boolean }): void {
-  if (!existsSync(NEXT_DEV_LOCK)) {
-    return;
-  }
+  // No existence check: both the read and the unlink tolerate a missing lock.
   if (stopOwner) {
     try {
       const { pid, port } = JSON.parse(readFileSync(NEXT_DEV_LOCK, "utf8")) as { pid?: number; port?: number };

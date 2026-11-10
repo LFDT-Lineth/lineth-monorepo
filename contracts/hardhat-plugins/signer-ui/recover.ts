@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { type Address, getAddress, isAddress } from "viem";
 
@@ -10,6 +10,10 @@ type DeployRecoverTaskArguments = {
   /** Ignition deployment id; defaults to Ignition's `chain-<chainId>`. */
   deploymentId: string | undefined;
 };
+
+function isFileNotFound(error: unknown): boolean {
+  return error instanceof Error && "code" in error && error.code === "ENOENT";
+}
 
 type JournalRecord = Record<string, unknown> & { type: string };
 
@@ -51,14 +55,19 @@ export default async function deployRecover(
   const deploymentId = taskArgs.deploymentId ?? `chain-${chainId}`;
   const journalPath = path.join(hre.config.paths.ignition, "deployments", deploymentId, "journal.jsonl");
 
-  if (!existsSync(journalPath)) {
-    throw new Error(`No Ignition journal at ${journalPath}. Check --deployment-id and --network.`);
+  // Read once and work on this content: no separate existence check (CodeQL js/file-system-race).
+  let journal: string;
+  try {
+    journal = readFileSync(journalPath, "utf8");
+  } catch (error: unknown) {
+    if (isFileNotFound(error)) {
+      throw new Error(`No Ignition journal at ${journalPath}. Check --deployment-id and --network.`);
+    }
+    throw error;
   }
 
   // Ignition writes each record as "\n" + JSON, so the file starts with a blank line.
-  const lines = readFileSync(journalPath, "utf8")
-    .split("\n")
-    .filter((line) => line.trim() !== "");
+  const lines = journal.split("\n").filter((line) => line.trim() !== "");
   const records = lines.map((line, index) => parseJournalLine(line, index, journalPath));
   const last = records.at(-1);
 
@@ -92,14 +101,17 @@ export default async function deployRecover(
     const backupDir = path.join(hre.config.paths.cache, "signer-ui", "journal-backups");
     mkdirSync(backupDir, { recursive: true });
     const backupPath = path.join(backupDir, `${deploymentId}-${new Date().toISOString().replace(/[:.]/g, "-")}.jsonl`);
-    copyFileSync(journalPath, backupPath);
+    writeFileSync(backupPath, journal);
+    // Write the truncated journal next to it and rename over the original, so the journal is never half-written.
+    const truncatedPath = `${journalPath}.recover`;
     writeFileSync(
-      journalPath,
+      truncatedPath,
       lines
         .slice(0, -1)
         .map((line) => `\n${line}`)
         .join(""),
     );
+    renameSync(truncatedPath, journalPath);
     console.log(
       `Recovered ${deploymentId}: dropped the unsent ${futureId} transaction (nonce ${nonce} of ${sender}). ` +
         `Journal backup: ${backupPath}. Re-run the same ignition deploy to continue.`,

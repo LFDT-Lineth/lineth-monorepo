@@ -1,4 +1,4 @@
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { type Address, type Hash, getAddress, isAddress, isHash } from "viem";
 
@@ -50,10 +50,16 @@ function parseBroadcastRecord(line: string): SignerUiBroadcastRecord | undefined
 
 /** Reads the log, skipping malformed lines (e.g. a line truncated by a crash mid-write). */
 export function readSignerUiBroadcasts(logPath: string): SignerUiBroadcastRecord[] {
-  if (!existsSync(logPath)) {
-    return [];
+  let content: string;
+  try {
+    content = readFileSync(logPath, "utf8");
+  } catch (error: unknown) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      return [];
+    }
+    throw error;
   }
-  return readFileSync(logPath, "utf8")
+  return content
     .split("\n")
     .filter((line) => line.trim() !== "")
     .map(parseBroadcastRecord)
