@@ -14,7 +14,7 @@ See **[addresses/README.md](addresses/README.md)** for:
 
 ## bytecode/
 
-Pinned, audit-signed contract bytecode snapshots used by `*Artifacts` deploy scripts (e.g. `21_deploy_YieldManagerArtifacts.ts`). Each subdirectory is named by audit date and contains the exact bytecode committed at that snapshot.
+Pinned, audit-signed contract bytecode snapshots used by the Ignition modules through `ignition/modules/lib/pinned.ts` (e.g. `YieldManagerArtifacts`). Each subdirectory is named by audit date and contains the exact bytecode committed at that snapshot.
 
 | Directory | Contents |
 |-----------|----------|
@@ -22,4 +22,4 @@ Pinned, audit-signed contract bytecode snapshots used by `*Artifacts` deploy scr
 | `bytecode/2026-01-14/` | YieldManager, ValidatorContainerProofVerifier, LidoStVaultYieldProviderFactory (Jan 2026 audit) |
 | `bytecode/2026-02-17/` | LineaRollup, L2MessageService, TokenBridge (Feb 2026 audit) |
 | `bytecode/2025-10-27/` | RollupRevenueVault, V3DexSwapAdapter, L1LineaTokenBurner (Oct 2025 audit) |
-| `bytecode/mainnet-proxy/` | TransparentUpgradeableProxy and ProxyAdmin bytecode (mainnet-verified) |
+| `bytecode/mainnet-proxy/` | TransparentUpgradeableProxy and ProxyAdmin bytecode (OZ v4.8.3, mainnet-verified); UpgradeableBeacon (OZ v4.4.1, solc 0.8.9, copied from `@openzeppelin/upgrades-core`, the beacon the Hardhat 2 OZ plugin deployed) |
