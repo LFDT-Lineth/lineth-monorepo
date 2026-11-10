@@ -448,10 +448,13 @@ class VertxHttpJsonRpcClientTest {
    * idle timeout is generous because a cold request on a loaded CI runner can take over a second to receive headers.
    */
   @Test
-  fun makesRequest_overallTimeoutTripsOnSlowlyStreamedResponseThatIdleTimeoutTolerates() {
+  fun makesRequest_timeoutCoversSlowResponseBody() {
     scriptedServer.reply("eth_blockNumber", ScriptedJsonRpcServer.Reply(dribbleInterval = 40.milliseconds))
     val idleTimeoutMillis = 10_000L
-    val idleOnlyClient = clientWithHooks(endpoint = scriptedServerEndpoint, requestTimeout = idleTimeoutMillis)
+    val idleOnlyClient = clientWithHooks(
+      endpoint = scriptedServerEndpoint,
+      requestTimeout = idleTimeoutMillis,
+    )
     val overallDeadlineClient = clientWithHooks(
       endpoint = scriptedServerEndpoint,
       requestTimeout = idleTimeoutMillis,
@@ -471,7 +474,7 @@ class VertxHttpJsonRpcClientTest {
   }
 
   @Test
-  fun makesRequest_overallTimeoutCoversWaitingForPooledConnectionAndRequestIsNeverSent() {
+  fun makesRequest_timeoutCoversWaitForPooledConnection() {
     scriptedServer.reply("engine_newPayloadV1", ScriptedJsonRpcServer.Reply(delay = 1.seconds))
     httpClient.close().get()
     httpClient = vertx.createHttpClient(clientOptions, PoolOptions().setHttp1MaxSize(1))
