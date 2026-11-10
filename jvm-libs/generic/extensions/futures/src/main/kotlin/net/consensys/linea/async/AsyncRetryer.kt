@@ -10,6 +10,8 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
+private val log: Logger = LogManager.getLogger(AsyncRetryer::class.java)
+
 class RetriedExecutionException(override val message: String) : RuntimeException(message)
 
 fun <T> alwaysTruePredicate(@Suppress("UNUSED_PARAMETER") value: T) = true
@@ -110,7 +112,6 @@ internal class SequentialAsyncActionRetryer<T>(
   }
 
   private val resultFuture = SafeFuture<T>()
-  private val log: Logger = LogManager.getLogger(SequentialAsyncActionRetryer::class.java)
   private var remainingRetries: Int? = maxRetries
   private var startTime: Instant = clock.now()
   private var remainingTime: Long? = timeout?.inWholeMilliseconds
@@ -156,18 +157,8 @@ internal class SequentialAsyncActionRetryer<T>(
       if (errorThrowable != null && timeElapsedSinceStarted >
         (ignoreFirstExceptionsUntilTimeElapsed?.inWholeMilliseconds ?: -1L)
       ) {
-        exceptionConsumer?.also { consumer ->
-          // must not escape: resultFuture would never complete
-          try {
-            consumer.accept(errorThrowable)
-          } catch (consumerError: Throwable) {
-            log.warn(
-              "AsyncRetryer exceptionConsumer failed: errorMessage={}",
-              consumerError.message,
-              consumerError,
-            )
-          }
-        }
+        exceptionConsumer?.runCatching { exceptionConsumer.accept(errorThrowable) }
+          ?.onFailure { log.warn("AsyncRetryer exceptionConsumer failed: errorMessage={}", it.message, it) }
       }
 
       if (stopRetrying) {
