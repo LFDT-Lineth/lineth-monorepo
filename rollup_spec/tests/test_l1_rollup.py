@@ -32,6 +32,7 @@ from rollup_spec.l1_rollup import (
     reinitialize_linea_rollup_v10,
     seed_genesis_position,
 )
+from rollup_spec.l2_execution import ZERO_HASH
 
 
 # Distinct guest program IDs; L1 checks them in one combined list.
@@ -44,7 +45,6 @@ _END_DATA_ROLLING_HASH = Hash32(bytes([0x8D]) * 32)
 _FINAL_DATA_TAIL_DISCARD = 500
 _PARENT_BLOCK_HASH = Hash32(bytes([0x46]) * 32)
 _END_BLOCK_HASH = Hash32(bytes([0x9A]) * 32)
-_L1L2_ROLLING_HASH = Hash32(bytes([0x22]) * 32)
 _FTX_ROLLING_HASH = Hash32(bytes([0x44]) * 32)
 _CHAIN_CONFIG_HASH = Hash32(bytes([0xC0]) * 32)
 _LEGACY_SHNARF = Hash32(bytes([0x71]) * 32)
@@ -63,7 +63,7 @@ def _base_state(approved_vks, current_data_tail_bytes: int = 0) -> LinethRollupS
         current_l2_block_number=U64(1000500),
         block_hashes={U64(1000500): _PARENT_BLOCK_HASH},
         current_l2_block_timestamp=U64(1763000000),
-        current_finalized_l1_l2_bridge_rolling_hash=_L1L2_ROLLING_HASH,
+        current_finalized_l1_l2_bridge_rolling_hash=ZERO_HASH,
         current_finalized_l1_l2_bridge_rolling_hash_message_number=U64(0),
         current_finalized_ftx_rolling_hash=_FTX_ROLLING_HASH,
         current_finalized_processed_ftx_number=U64(7),
@@ -84,9 +84,7 @@ def _base_submission(program_ids, parent_data_tail_take_bytes: int = 0) -> Final
     pi = FinalizationPublicInput(
         end_block_number=U64(1000520),
         end_block_timestamp=U64(1763000457),
-        parent_l1_l2_bridge_rolling_hash=_L1L2_ROLLING_HASH,
-        parent_l1_l2_bridge_rolling_hash_message_number=U64(0),
-        end_l1_l2_bridge_rolling_hash=_L1L2_ROLLING_HASH,
+        end_l1_l2_bridge_rolling_hash=ZERO_HASH,
         end_l1_l2_bridge_rolling_hash_message_number=U64(0),
         dynamic_chain_config_hash=_CHAIN_CONFIG_HASH,
         parent_ftx_rolling_hash=_FTX_ROLLING_HASH,
@@ -283,20 +281,93 @@ def test_compute_public_input_binds_l2_messaging_blocks_offsets() -> None:
     # preimages: tampering with the offsets changes the computed `public_input`, so a proof
     # attesting to the original would no longer verify.
     state = _base_state(approved_vks={_EXEC_ID_A, _ROLLUP_ID})
-    config = state.verifier.get_chain_configuration()
     original = _base_submission(program_ids=[_EXEC_ID_A, _ROLLUP_ID])
     tampered = _base_submission(program_ids=[_EXEC_ID_A, _ROLLUP_ID])
     tampered.public_inputs.l2_messaging_blocks_offsets = [7, 9]
-    assert compute_public_input(original, config) != compute_public_input(tampered, config)
+    assert compute_public_input(original, state) != compute_public_input(tampered, state)
     # Determinism / bound range: the public input is a BN254 scalar-field element.
-    assert compute_public_input(original, config) == compute_public_input(original, config)
-    assert 0 <= compute_public_input(original, config) < (1 << 254)
+    assert compute_public_input(original, state) == compute_public_input(original, state)
+    assert 0 <= compute_public_input(original, state) < (1 << 254)
 
 
 def test_compute_public_input_binds_data_tail_bytes() -> None:
     # The tail byte counts are part of the packed public input (replacing the old offsets).
     state = _base_state(approved_vks=set())
-    config = state.verifier.get_chain_configuration()
     original = _base_submission(program_ids=[])
     tampered = _base_submission(program_ids=[], parent_data_tail_take_bytes=9)
-    assert compute_public_input(original, config) != compute_public_input(tampered, config)
+    assert compute_public_input(original, state) != compute_public_input(tampered, state)
+
+
+_FINALIZED_ROLLING_HASH = Hash32(bytes([0x22]) * 32)
+_ANCHORED_ROLLING_HASH = Hash32(bytes([0x55]) * 32)
+
+
+def _state_with_l1_l2_rolling_hashes() -> LinethRollupState:
+    """A state that finalized L1->L2 message 3 and holds L1's authoritative rolling hashes for messages 3 and 5."""
+    state = _base_state(approved_vks=set())
+    state.current_finalized_l1_l2_bridge_rolling_hash = _FINALIZED_ROLLING_HASH
+    state.current_finalized_l1_l2_bridge_rolling_hash_message_number = U64(3)
+    state.l1_l2_rolling_hashes = {U64(3): _FINALIZED_ROLLING_HASH, U64(5): _ANCHORED_ROLLING_HASH}
+    return state
+
+
+def _submission_ending_at(rolling_hash: Hash32, message_number: int) -> FinalizationSubmission:
+    submission = _base_submission(program_ids=[])
+    submission.public_inputs.end_l1_l2_bridge_rolling_hash = rolling_hash
+    submission.public_inputs.end_l1_l2_bridge_rolling_hash_message_number = U64(message_number)
+    return submission
+
+
+def test_finalization_that_anchored_no_messages_keeps_the_stored_rolling_hash_pair() -> None:
+    state = _state_with_l1_l2_rolling_hashes()
+
+    _finalize(state, _submission_ending_at(ZERO_HASH, 0))
+
+    assert state.current_finalized_l1_l2_bridge_rolling_hash == _FINALIZED_ROLLING_HASH
+    assert int(state.current_finalized_l1_l2_bridge_rolling_hash_message_number) == 3
+
+
+def test_finalization_with_an_authentic_advancing_rolling_hash_updates_the_stored_pair() -> None:
+    state = _state_with_l1_l2_rolling_hashes()
+
+    _finalize(state, _submission_ending_at(_ANCHORED_ROLLING_HASH, 5))
+
+    assert state.current_finalized_l1_l2_bridge_rolling_hash == _ANCHORED_ROLLING_HASH
+    assert int(state.current_finalized_l1_l2_bridge_rolling_hash_message_number) == 5
+
+
+def test_finalization_rejects_a_rolling_hash_without_a_message_number() -> None:
+    state = _state_with_l1_l2_rolling_hashes()
+
+    with pytest.raises(Exception, match="must be zero"):
+        _finalize(state, _submission_ending_at(_ANCHORED_ROLLING_HASH, 0))
+
+    assert state.current_finalized_l1_l2_bridge_rolling_hash == _FINALIZED_ROLLING_HASH
+
+
+def test_finalization_rejects_a_rolling_hash_that_differs_from_l1_storage() -> None:
+    state = _state_with_l1_l2_rolling_hashes()
+
+    with pytest.raises(Exception, match="does not match L1 storage"):
+        _finalize(state, _submission_ending_at(Hash32(bytes([0x66]) * 32), 5))
+
+    assert int(state.current_finalized_l1_l2_bridge_rolling_hash_message_number) == 3
+
+
+def test_finalization_rejects_a_message_number_l1_never_anchored() -> None:
+    state = _state_with_l1_l2_rolling_hashes()
+
+    with pytest.raises(Exception, match="does not match L1 storage"):
+        _finalize(state, _submission_ending_at(_ANCHORED_ROLLING_HASH, 6))
+
+
+@pytest.mark.parametrize("message_number", [2, 3])
+def test_finalization_rejects_a_message_number_not_above_the_stored_one(message_number: int) -> None:
+    state = _state_with_l1_l2_rolling_hashes()
+    state.l1_l2_rolling_hashes[U64(2)] = Hash32(bytes([0x11]) * 32)
+    submission = _submission_ending_at(state.l1_l2_rolling_hashes[U64(message_number)], message_number)
+
+    with pytest.raises(Exception, match="must increase"):
+        _finalize(state, submission)
+
+    assert int(state.current_finalized_l1_l2_bridge_rolling_hash_message_number) == 3

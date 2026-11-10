@@ -67,7 +67,7 @@ func TestCore_BuildInputs_DoesNotMutateCachedProgram(t *testing.T) {
 				errors <- err
 				return
 			}
-			if !bytes.Equal(inputs[predecoding.DecodedInput], wantDecoded) {
+			if got := inputs[predecoding.DecodedInput]; !bytes.Equal(got.Bytes(), wantDecoded) {
 				errors <- fmt.Errorf("worker %d received mutated decoded input", i)
 			}
 		}()

@@ -9,6 +9,7 @@ import linea.domain.ExecutionPayload
 import linea.ethapi.ExecutionPayloadClient
 import linea.ethapi.ExecutionWitness
 import linea.ethapi.ExecutionWitnessClient
+import linea.ethapi.SystemContracts
 import linea.kotlin.encodeHex
 import linea.kotlin.minusCoercingUnderflow
 import lineth.coordination.FtxRollingInfoProvider
@@ -23,6 +24,7 @@ class L2ExecutionRequestBuilderImpl(
   private val forcedTransactionsDao: ForcedTransactionsDao,
   private val ftxRollingInfoProvider: FtxRollingInfoProvider = FtxRollingInfoProviderImpl(forcedTransactionsDao),
   private val chainId: ULong,
+  private val systemContracts: SystemContracts,
 ) : L2ExecutionRequestBuilder {
 
   override fun build(conflation: BlocksConflation): SafeFuture<L2ExecutionProofRequestV1> {
@@ -58,6 +60,7 @@ class L2ExecutionRequestBuilderImpl(
           },
           chainId = chainId,
           coinbase = conflation.blocks.first().miner.encodeHex(),
+          systemContracts = systemContracts,
           parentFtxRollingHash = ftxState.ftxRollingHash,
           parentFtxNumber = ftxState.ftxNumber,
         )

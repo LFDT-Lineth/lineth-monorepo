@@ -122,8 +122,6 @@ class FinalizationPublicInput:
     """
     end_block_number: U64
     end_block_timestamp: U64
-    parent_l1_l2_bridge_rolling_hash: Hash32
-    parent_l1_l2_bridge_rolling_hash_message_number: U64
     end_l1_l2_bridge_rolling_hash: Hash32
     end_l1_l2_bridge_rolling_hash_message_number: U64
     dynamic_chain_config_hash: Hash32
@@ -233,7 +231,7 @@ def reinitialize_linea_rollup_v10(state: LinethRollupState) -> Hash32:
 
 def compute_public_input(
     submission: FinalizationSubmission,
-    verifier_chain_configuration: Hash32,
+    state: "LinethRollupState",
 ) -> int:
     """
     Model the contract's `_computePublicInput` (LinethRollupBase.sol) bit-for-bit: a single
@@ -244,20 +242,25 @@ def compute_public_input(
     function maps the relevant fields onto the on-chain layout. The four dynamic arrays are
     bound as keccak hashes of their packed preimages: `l2MerkleRoots` (`l2_l1_roots`),
     `filteredAddresses`, `verifierKeys` (`program_ids`), and `l2MessagingBlocksOffsets`.
-    `lastFinalizedTimestamp` is not part of `RollupPublicInput`; the L1 contract reads it
-    from its own storage, so it is passed via `submission`'s parent-state context — modelled
-    here as 0 (the value is irrelevant to the binding relationship under test).
+    The `lastFinalizedL1RollingHash` / `lastFinalizedL1RollingHashMessageNumber` pair is not
+    part of the guest PI tuple (the guest only exposes the end-of-range pair, zero when the
+    range anchored nothing); on-chain it arrives in calldata and is validated against
+    `currentFinalizedState`, so here it is read straight from `state`. `lastFinalizedTimestamp`
+    is likewise not part of `RollupPublicInput`; the L1 contract reads it from its own
+    storage, so it is modelled here as 0 (the value is irrelevant to the binding
+    relationship under test).
     """
     pi = submission.public_inputs
+    verifier_chain_configuration = state.verifier.get_chain_configuration()
     packed = b"".join(
         [
             pi.parent_block_hash,  # parentBlockHash
             pi.end_block_hash,  # finalBlockHash
             _u256(pi.end_block_timestamp),  # finalTimestamp
             _u256(pi.end_block_number),  # endBlockNumber
-            pi.parent_l1_l2_bridge_rolling_hash,  # lastFinalizedL1RollingHash
+            state.current_finalized_l1_l2_bridge_rolling_hash,  # lastFinalizedL1RollingHash
             pi.end_l1_l2_bridge_rolling_hash,  # l1RollingHash
-            _u256(pi.parent_l1_l2_bridge_rolling_hash_message_number),  # lastFinalizedL1RollingHashMessageNumber
+            _u256(state.current_finalized_l1_l2_bridge_rolling_hash_message_number),  # lastFinalizedL1RollingHashMessageNumber
             _u256(pi.end_l1_l2_bridge_rolling_hash_message_number),  # l1RollingHashMessageNumber
             pi.parent_ftx_rolling_hash,  # lastFinalizedForcedTransactionRollingHash
             pi.end_ftx_rolling_hash,  # finalForcedTransactionRollingHash
@@ -294,7 +297,7 @@ def finalize_rollup(
     # calldata (the PI tuple plus the revealed preimages). Computing it here binds
     # `l2_messaging_blocks_offsets` (and the other preimages) into the verified statement —
     # a preimage mismatch yields a public input the proof does not attest to.
-    public_input = compute_public_input(submission, state.verifier.get_chain_configuration())
+    public_input = compute_public_input(submission, state)
     if not verify_rollup_aggregation_snark(submission.proof, pi, public_input):
         raise Exception("invalid rollup-aggregation proof")
     # The boundary is checked as a pair: the same dataRollingHash can recur at different
@@ -335,17 +338,22 @@ def finalize_rollup(
 
     if pi.end_block_hash == ZERO_HASH32:
         raise Exception("finalBlockHash cannot be the zero hash")
-    if pi.parent_l1_l2_bridge_rolling_hash != state.current_finalized_l1_l2_bridge_rolling_hash:
-        raise Exception("L1-to-L2 rolling hash continuity mismatch")
-    if (
-        pi.parent_l1_l2_bridge_rolling_hash_message_number !=
-        state.current_finalized_l1_l2_bridge_rolling_hash_message_number
-    ):
-        raise Exception("L1-to-L2 rolling hash message number continuity mismatch")
-    if _l1_l2_rolling_hash_at(state, pi.end_l1_l2_bridge_rolling_hash_message_number) != (
-        pi.end_l1_l2_bridge_rolling_hash
-    ):
-        raise Exception("L1-to-L2 rolling hash does not match L1 storage")
+    # L1→L2 rolling hash pair, mirroring `_validateL2ComputedRollingHash`. A zero pair signals
+    # "no transition" (the range anchored nothing) and leaves the stored pair untouched below.
+    # A non-zero pair must strictly advance past the stored message number and match L1's
+    # authoritative `rollingHashes` chain. The guest only emits a non-zero pair when anchoring
+    # advanced, so a valid proof never carries a stale pair; the explicit monotonicity check is
+    # an additional on-chain safeguard for finalization paths that do not rely on a zk proof
+    # (e.g. signed attestations).
+    rolling_hash_number = pi.end_l1_l2_bridge_rolling_hash_message_number
+    if rolling_hash_number == 0:
+        if pi.end_l1_l2_bridge_rolling_hash != ZERO_HASH32:
+            raise Exception("L1-to-L2 rolling hash must be zero when no message number is anchored")
+    else:
+        if rolling_hash_number <= state.current_finalized_l1_l2_bridge_rolling_hash_message_number:
+            raise Exception("L1-to-L2 rolling hash message number must increase")
+        if state.l1_l2_rolling_hashes.get(rolling_hash_number) != pi.end_l1_l2_bridge_rolling_hash:
+            raise Exception("L1-to-L2 rolling hash does not match L1 storage")
     if pi.dynamic_chain_config_hash != state.verifier.get_chain_configuration():
         # The verifier holds the chain-configuration hash as an immutable
         # bytes32 set at its deploy time; the full preimage (chainId,
@@ -383,10 +391,9 @@ def finalize_rollup(
     state.block_hashes[pi.end_block_number] = pi.end_block_hash
     state.current_l2_block_number = pi.end_block_number
     state.current_l2_block_timestamp = pi.end_block_timestamp
-    state.current_finalized_l1_l2_bridge_rolling_hash = pi.end_l1_l2_bridge_rolling_hash
-    state.current_finalized_l1_l2_bridge_rolling_hash_message_number = (
-        pi.end_l1_l2_bridge_rolling_hash_message_number
-    )
+    if rolling_hash_number != 0:
+        state.current_finalized_l1_l2_bridge_rolling_hash = pi.end_l1_l2_bridge_rolling_hash
+        state.current_finalized_l1_l2_bridge_rolling_hash_message_number = rolling_hash_number
     state.current_finalized_ftx_rolling_hash = pi.end_ftx_rolling_hash
     state.current_finalized_processed_ftx_number = pi.end_processed_ftx_number
 
@@ -408,14 +415,6 @@ def verify_rollup_aggregation_snark(
 
 
 verify_aggregation_snark = verify_rollup_aggregation_snark
-
-
-def _l1_l2_rolling_hash_at(state: LinethRollupState, message_number: U64) -> Hash32:
-    if message_number == state.current_finalized_l1_l2_bridge_rolling_hash_message_number:
-        return state.current_finalized_l1_l2_bridge_rolling_hash
-    if message_number not in state.l1_l2_rolling_hashes:
-        raise Exception("missing L1-to-L2 rolling hash for message number")
-    return state.l1_l2_rolling_hashes[message_number]
 
 
 def _ftx_rolling_hash_at(state: LinethRollupState, ftx_number: U64) -> Hash32:

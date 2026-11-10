@@ -59,6 +59,10 @@ recovery). Derivable duplication is deliberately kept off the wire: no top-level
 request (only `parentShnarf` is sent; the guest recomputes `endShnarf` and
 returns it in the response PI), and no `chainId` on the aggregation request.
 
+The rollup request's blob chunk carries the real EIP-4844 `kzgCommitment` and
+`kzgProof` of its `blobBytes`, and its `chunkHash` is that commitment's versioned
+hash; calldata chunks leave both fields empty.
+
 ## Running the tests locally
 
 `tests/test_proof_io_v1.py` imports the guest dataclasses, which pull in the

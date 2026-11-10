@@ -14,7 +14,6 @@ import linea.ethapi.StateOverride
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 import linea.kotlin.toULong
-import linea.web3j.EthBlockExtended
 import linea.web3j.EthFeeHistoryBlobExtended
 import linea.web3j.domain.toDomain
 import linea.web3j.domain.toWeb3j
@@ -27,6 +26,7 @@ import org.web3j.protocol.Web3j
 import org.web3j.protocol.Web3jService
 import org.web3j.protocol.core.Request
 import org.web3j.protocol.core.methods.request.EthFilter
+import org.web3j.protocol.core.methods.response.EthBlock
 import org.web3j.protocol.core.methods.response.Log
 import org.web3j.utils.Numeric
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -41,7 +41,7 @@ class Web3jEthApiClient(
   val web3jClient: Web3j,
   val web3jService: Web3jService = web3jClient.getWeb3jService(),
   val executionWitnessClient: ExecutionWitnessClient = Web3jExecutionWitnessClient(web3jService),
-  private val blockValidator: (EthBlockExtended.Block) -> Unit = {},
+  private val blockValidator: (EthBlock.Block) -> Unit = {},
 ) : EthApiClient, ExecutionWitnessClient by executionWitnessClient {
   override fun getLogs(
     fromBlock: BlockParameter,
@@ -120,21 +120,15 @@ class Web3jEthApiClient(
       .requestAsync { it.transactionCount.toULong() }
 
   override fun ethFindBlockByNumberFullTxs(blockParameter: BlockParameter): SafeFuture<Block?> {
-    return Request(
-      "eth_getBlockByNumber",
-      listOf(blockParameter.toWeb3j().value, true),
-      web3jService,
-      EthBlockExtended::class.java,
-    ).requestAsync { resp -> resp.result?.also(blockValidator)?.toDomain() }
+    return web3jClient
+      .ethGetBlockByNumber(blockParameter.toWeb3j(), true)
+      .requestAsync { resp -> resp.block?.also(blockValidator)?.toDomain() }
   }
 
   override fun ethFindBlockByNumberTxHashes(blockParameter: BlockParameter): SafeFuture<BlockWithTxHashes?> {
-    return Request(
-      "eth_getBlockByNumber",
-      listOf(blockParameter.toWeb3j().value, false),
-      web3jService,
-      EthBlockExtended::class.java,
-    ).requestAsync { resp -> resp.result?.also(blockValidator)?.let(::mapToDomainWithTxHashes) }
+    return web3jClient
+      .ethGetBlockByNumber(blockParameter.toWeb3j(), false)
+      .requestAsync { resp -> resp.block?.also(blockValidator)?.let(::mapToDomainWithTxHashes) }
   }
 
   override fun ethGetTransactionByHash(transactionHash: ByteArray): SafeFuture<Transaction?> {

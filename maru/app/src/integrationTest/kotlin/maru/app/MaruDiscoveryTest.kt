@@ -6,11 +6,10 @@
  */
 package maru.app
 
-import maru.config.P2PConfig
 import maru.test.cluster.MaruCluster
-import maru.test.cluster.NodeBuilder
 import maru.test.cluster.NodeRole
 import maru.test.cluster.configureLoggers
+import maru.test.extensions.withFastPeering
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
@@ -51,22 +50,6 @@ class MaruDiscoveryTest {
     testMultiNodeDiscovery(numberOfNodes = 10, expectedPeers = 9)
   }
 
-  // Faster peering/discovery timings than the defaults, as everything runs on localhost
-  private fun NodeBuilder.withFastDiscovery(): NodeBuilder =
-    apply {
-      maruConfig { config ->
-        val p2p = config.p2p!!
-        config.copy(
-          p2p = p2p.copy(
-            reconnectDelay = 500.milliseconds,
-            statusUpdate = P2PConfig.StatusUpdate(refreshInterval = 1.seconds),
-            reputation = P2PConfig.Reputation(banPeriod = 10.seconds, cooldownPeriod = 10.seconds),
-            discovery = p2p.discovery!!.copy(refreshInterval = 1.seconds, retryTimeout = 500.milliseconds),
-          ),
-        )
-      }
-    }
-
   /**
    * Tests peer discovery with multiple Maru nodes.
    *
@@ -90,7 +73,7 @@ class MaruDiscoveryTest {
     cluster = MaruCluster()
       .addNode(NodeRole.Sequencer, withBesuEl = true) { nodeBuilder ->
         nodeBuilder.maruConfig { it.copy(allowEmptyBlocks = true) }
-        nodeBuilder.withFastDiscovery()
+        nodeBuilder.withFastPeering(banPeriod = 10.seconds, cooldownPeriod = 10.seconds)
       }.start()
     val bootnodeBesu = cluster.besuNode("sequencer")
     log.info("Bootnode ENR: ${cluster.maruNode("sequencer").p2pNetwork.enr}")
@@ -109,7 +92,7 @@ class MaruDiscoveryTest {
       cluster.addNode("follower-$i", addBesu = true) { nodeBuilder ->
         nodeBuilder.bootnodes(listOf("sequencer"))
         nodeBuilder.maruConfig { it.copy(allowEmptyBlocks = true) }
-        nodeBuilder.withFastDiscovery()
+        nodeBuilder.withFastPeering(banPeriod = 10.seconds, cooldownPeriod = 10.seconds)
       }
     }
     log.info("All $numberOfNodes Maru nodes started")

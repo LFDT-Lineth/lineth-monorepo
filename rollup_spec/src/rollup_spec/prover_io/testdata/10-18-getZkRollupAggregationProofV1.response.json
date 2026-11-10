@@ -5,8 +5,6 @@
   "publicInputs": {
     "endBlockNumber": 1000520,
     "endBlockTimestamp": 1763000457,
-    "parentL1L2BridgeRollingHash": "0x2222222222222222222222222222222222222222222222222222222222222222",
-    "parentL1L2BridgeRollingHashMessageNumber": 0,
     "endL1L2BridgeRollingHash": "0x3333333333333333333333333333333333333333333333333333333333333333",
     "endL1L2BridgeRollingHashMessageNumber": 7,
     "dynamicChainConfigHash": "0xc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0",

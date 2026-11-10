@@ -136,13 +136,7 @@ func TestProveVerify(t *testing.T) {
 		// "intro round numRounds, must be < numRounds" in buildProvePlan and
 		// pcs.Verify.
 		{"extra-D1-at-final-round", 4, 3, 4, []int{2, 1}},
-		// The top-level polynomial itself has D=1 (a constant), so numRounds
-		// == 0: HasNext() is false from the start, no fold ever runs, and
-		// layer 0 IS the final layer. Regression test for two bugs this
-		// exposed: (1) NewProverState never populated FinalPoly when no Fold
-		// call happens; (2) pcs.Verify indexed Rounds[0] into a zero-length
-		// slice (allocated with size numRounds==0), panicking.
-		{"top-level-D1-zero-rounds", 1, 0, 2, nil},
+		// A top level of D=1 (numRounds == 0) is TestUnfoldedSchedule's.
 	}
 
 	prng := rand.New(utils.NewRandSource(99))
@@ -178,6 +172,54 @@ func TestProveVerify(t *testing.T) {
 				t.Fatalf("Verify accepted a proof with a tampered leaf")
 			}
 		})
+	}
+}
+
+// TestUnfoldedSchedule: when Params itself has D=1 (a constant top-level
+// polynomial), numRounds == 0: HasNext() is false from the start, no fold ever
+// runs, and layer 0 IS the final layer. With a single column, it proves and
+// verifies (regression test for NewProverState not populating FinalPoly
+// without a Fold, and pcs.Verify indexing Rounds[0] into a zero-length slice).
+// With two columns, alphaDeep is zero and only the first would be checked:
+// proving and verifying reject it. When Params has a fold, a size-1 opening
+// keeps one (see PCS.restrictTo), and both claims of two columns are checked.
+func TestUnfoldedSchedule(t *testing.T) {
+	prng := rand.New(utils.NewRandSource(99))
+	positions := []int{0, 1}
+
+	single := newLDTFixture(t, 1, 0, 2)
+	single.addLevelWith(t, 0, field.VecPseudoRandExt(prng, 1), false)
+	proof := single.open(t, nil, positions)
+	require.NoError(t, single.verify(nil, positions, proof))
+	branch := proof.InputQueries[0][0]
+	branch.Leaves[len(branch.Leaves)-1][0].Ext[0] = field.PseudoRandExt(prng)
+	require.Error(t, single.verify(nil, positions, proof), "a tampered leaf must be rejected")
+
+	two := newLDTFixture(t, 1, 0, 2)
+	two.addLevel(t, 0, field.VecPseudoRandExt(prng, 1))
+	_, err := two.pcs.NewProverState()
+	require.ErrorContains(t, err, "2 columns opened with no FRI fold")
+	require.ErrorContains(t, two.verify(nil, positions, OpeningProof{}), "2 columns opened with no FRI fold")
+
+	folded := newLDTFixture(t, 3, 2, 2)
+	folded.addLevel(t, 0, field.VecPseudoRandExt(prng, 1))
+	foldAlphas := []field.Ext{field.PseudoRandExt(prng), field.PseudoRandExt(prng)}
+	positions = []int{0, 3}
+	proof = folded.open(t, foldAlphas, positions)
+	require.Empty(t, proof.FRIProof.RoundRoots, "a size-1 opening folds once, with no intermediate layer")
+	require.NoError(t, folded.verify(foldAlphas, positions, proof))
+	for _, tamper := range []func(*SizedClaimedValues){
+		func(c *SizedClaimedValues) { c.Base[0][0] = field.PseudoRandExt(prng) },
+		func(c *SizedClaimedValues) { c.Ext[0][0] = field.PseudoRandExt(prng) },
+	} {
+		original := folded.claims[0][0]
+		folded.claims[0][0] = SizedClaimedValues{
+			Base: [][]field.Ext{{original.Base[0][0]}},
+			Ext:  [][]field.Ext{{original.Ext[0][0]}},
+		}
+		tamper(&folded.claims[0][0])
+		require.Error(t, folded.verify(foldAlphas, positions, proof), "both columns' claims must be checked")
+		folded.claims[0][0] = original
 	}
 }
 

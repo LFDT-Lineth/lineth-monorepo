@@ -6,9 +6,11 @@ import linea.domain.Batch
 import linea.domain.Block
 import linea.domain.BlockCounters
 import linea.ethapi.EthApiClient
+import linea.ethapi.systemContracts
 import linea.ftx.ForcedTransactionsApp
 import linea.kotlin.encodeHex
 import linea.web3j.createWeb3jHttpService
+import linea.web3j.ethapi.Web3jEthConfigClient
 import linea.web3j.ethapi.Web3jExecutionPayloadClient
 import linea.web3j.ethapi.Web3jExecutionWitnessClient
 import linea.web3j.ethapi.createEthApiClient
@@ -122,6 +124,7 @@ class ConflationAppV2(
       executionPayloadClient = executionPayloadClient,
       forcedTransactionsDao = forcedTransactionsDao,
       chainId = chainId,
+      systemContracts = Web3jEthConfigClient(web3jService).ethConfig().get().systemContracts(expectedChainId = chainId),
     )
 
     val batchProofHandler = BatchProofHandlerImpl(batchesRepository)

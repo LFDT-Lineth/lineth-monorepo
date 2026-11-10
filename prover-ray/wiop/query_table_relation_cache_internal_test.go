@@ -101,3 +101,53 @@ func TestInclusionSetCache_ReusesSetForSharedTarget(t *testing.T) {
 
 	require.Len(t, cache.sets, 1, "one target must be built once, however many queries read it")
 }
+
+// TestInclusionSetCache_ConstantsInKey checks that the cache key covers
+// constant entries: two targets over the same column that differ only in a
+// constant (or in constant-versus-column at one position) must not share a
+// cached set, or one query would be checked against the other's rows.
+func TestInclusionSetCache_ConstantsInKey(t *testing.T) {
+	sys := NewSystemf("incl-cache-const")
+	r0 := sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, PaddingDirectionNone)
+
+	target := mod.NewColumn(sys.Context.Childf("target"), r0)
+	tag := mod.NewColumn(sys.Context.Childf("tag"), r0)
+	in := mod.NewColumn(sys.Context.Childf("in"), r0)
+
+	one, two := field.One(), field.NewElement(2)
+	newInc := func(name string, a, b Table) *TableRelationQuery {
+		return sys.NewInclusion(sys.Context.Childf("%s", name), []Table{a}, []Table{b})
+	}
+	incOne := newInc("incOne",
+		NewTableEntries(mod, nil, in.View(), NewConstantVector(mod, one)),
+		NewTableEntries(mod, nil, target.View(), NewConstantVector(mod, one)))
+	incTwo := newInc("incTwo",
+		NewTableEntries(mod, nil, in.View(), NewConstantVector(mod, one)),
+		NewTableEntries(mod, nil, target.View(), NewConstantVector(mod, two)))
+	incCol := newInc("incCol",
+		NewTableEntries(mod, nil, in.View(), NewConstantVector(mod, one)),
+		NewTable(target.View(), tag.View()))
+
+	for _, tables := range [][]Table{incOne.B, incTwo.B, incCol.B} {
+		_, ok := inclusionSetKey(tables)
+		require.True(t, ok)
+	}
+	k1, _ := inclusionSetKey(incOne.B)
+	k2, _ := inclusionSetKey(incTwo.B)
+	k3, _ := inclusionSetKey(incCol.B)
+	require.NotEqual(t, k1, k2)
+	require.NotEqual(t, k1, k3)
+
+	rt := NewRuntime(sys)
+	rt.AssignColumn(target, constVec(4, 3))
+	rt.AssignColumn(tag, constVec(4, 1))
+	rt.AssignColumn(in, constVec(4, 3))
+
+	cache := newInclusionSetCache()
+	require.NoError(t, incOne.checkWith(rt, cache), "(3, 1) is in the target with constant 1")
+	require.Error(t, incTwo.checkWith(rt, cache),
+		"the constant-2 target must not be served the constant-1 target's set")
+	require.NoError(t, incCol.checkWith(rt, cache), "(3, 1) is in (target, tag)")
+	require.Len(t, cache.sets, 3)
+}

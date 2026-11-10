@@ -85,7 +85,7 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
     sqlClient.preparedQuery("select * from ${BlobsPostgresDaoG.TableName}")
 
   private fun aggregationsContentQuery(): PreparedQuery<RowSet<Row>> =
-    sqlClient.preparedQuery("select * from ${PostgresAggregationsDao.aggregationsTable}")
+    sqlClient.preparedQuery("select * from ${PostgresAggregationsDaoG.aggregationsTable}")
 
   val batch1 = createBatch(startBlockNumber = 1L, endBlockNumber = 10L)
   val batch2 = createBatch(startBlockNumber = 11L, endBlockNumber = 15L)

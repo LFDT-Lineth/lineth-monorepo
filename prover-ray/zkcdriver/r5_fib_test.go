@@ -59,7 +59,7 @@ func BenchmarkR5Fibonacci(b *testing.B) {
 	outputs, maybeTrace, errs := binf.Trace(inputsMap, tracingConfig)
 	if len(errs) > 0 {
 		b.Fatalf("tracing failed: %v", errs)
-	} else if got := outputs["guest_output"]; !bytes.Equal(got, wantOutput) {
+	} else if got := outputs["guest_output"]; !bytes.Equal(got.Bytes(), wantOutput) {
 		b.Fatalf("unexpected guest_output: got %x, want %x", got, wantOutput)
 	}
 	//

@@ -4,26 +4,25 @@
  *
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
-@file:Suppress("DEPRECATION") // TODO: migrate to maru.test.cluster.MaruCluster
-
 package maru.app
 
 import maru.config.SyncingConfig
+import maru.test.extensions.TestSyncingConfigs
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
+import testutils.Checks.checkAllNodesHaveSameBlocks
 import testutils.Checks.getBlockNumber
 import testutils.ValidatorFollowerNetwork
-import testutils.maru.MaruFactory
 import testutils.maru.awaitTillMaruHasPeers
 import kotlin.time.Duration.Companion.seconds
 
 class MaruFollowerSyncAfterRestartTest {
   companion object {
     @JvmStatic
-    fun enumeratingSyncingConfigs(): List<SyncingConfig> = MaruFactory.enumeratingSyncingConfigs()
+    fun enumeratingSyncingConfigs(): List<SyncingConfig> = TestSyncingConfigs.enumerating()
   }
 
   private lateinit var network: ValidatorFollowerNetwork
@@ -31,7 +30,6 @@ class MaruFollowerSyncAfterRestartTest {
   @BeforeEach
   fun setUp() {
     network = ValidatorFollowerNetwork()
-    network.startBesuNodes()
   }
 
   @AfterEach
@@ -42,7 +40,7 @@ class MaruFollowerSyncAfterRestartTest {
   @ParameterizedTest
   @MethodSource("enumeratingSyncingConfigs")
   fun `Maru follower is able to complete syncing after restarted`(syncingConfig: SyncingConfig) {
-    network.startMaruNodes(syncingConfig)
+    network.start(syncingConfig)
 
     val residueBlocks = 3 // residue of modulo peerChainHeightGranularity i.e. 10
     val blocksToProduceWithoutResidue = 10 // a block number dividable by 10
@@ -55,10 +53,10 @@ class MaruFollowerSyncAfterRestartTest {
     network.stopFollowerMaru()
 
     network.produceBlocks(blocksToProduceWithoutResidue + residueBlocks)
-    network.checkNetworkStacksBlocksProduced(2 * blocksToProduceWithoutResidue + residueBlocks, network.validatorStack)
+    checkAllNodesHaveSameBlocks(2 * blocksToProduceWithoutResidue + residueBlocks, network.validatorBesu)
 
-    network.startFollowerMaru(syncingConfig)
-    network.followerStack.maruApp.awaitTillMaruHasPeers(1u, pollingInterval = 1.seconds)
+    network.startFollowerMaru()
+    network.followerMaru.awaitTillMaruHasPeers(1u, pollingInterval = 1.seconds)
 
     when (syncingConfig.syncTargetSelection) {
       is SyncingConfig.SyncTargetSelection.Highest ->
@@ -69,7 +67,7 @@ class MaruFollowerSyncAfterRestartTest {
       is SyncingConfig.SyncTargetSelection.MostFrequent -> {
         network.checkValidatorAndFollowerBlocks(2 * blocksToProduceWithoutResidue)
         // ensure that the head of follower is 2 * blocksToProduceWithoutResidue
-        assertThat(network.followerStack.besuNode.getBlockNumber()).isEqualTo(2 * blocksToProduceWithoutResidue)
+        assertThat(network.followerBesu.getBlockNumber()).isEqualTo(2 * blocksToProduceWithoutResidue)
       }
     }
   }

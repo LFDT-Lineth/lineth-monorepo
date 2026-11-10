@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🚀 Features
+
+- *(maru)* Add support of self-calculating terminal total difficulty (#4295)
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(misc)* Maru use root gradle configs (#4031)
@@ -9,6 +13,7 @@
 - *(misc)* Maru break down integration tests into smaller chunks (#4049)
 - *(maru)* Refactor MaruClForkUpgradeTest to use new MaruCluster test (#4214)
 - *(misc)* Update copyright holder to Consensys Incorporated (#4244)
+- *(misc)* Ship license files and metadata in all published artifacts (#4336)
 ## [1.4.0] - 2026-09-23
 
 ### 🚀 Features

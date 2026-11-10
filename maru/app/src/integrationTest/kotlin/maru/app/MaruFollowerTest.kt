@@ -17,7 +17,6 @@ class MaruFollowerTest {
   @BeforeEach
   fun setUp() {
     network = ValidatorFollowerNetwork()
-    network.startBesuNodes()
   }
 
   @AfterEach
@@ -27,7 +26,7 @@ class MaruFollowerTest {
 
   @Test
   fun `Maru follower is able to import blocks`() {
-    network.startMaruNodes()
+    network.start()
 
     val blocksToProduce = 5
     network.produceBlocks(blocksToProduce)
@@ -37,7 +36,7 @@ class MaruFollowerTest {
 
   @Test
   fun `Maru follower is able to import blocks with payload validation disabled`() {
-    network.startMaruNodes(payloadValidationEnabled = false)
+    network.start(payloadValidationEnabled = false)
 
     val blocksToProduce = 5
     network.produceBlocks(blocksToProduce)

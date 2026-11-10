@@ -44,6 +44,9 @@
 - *(coordinator)* Inline pluggable signer types and per-proof-type prover transport (#4164)
 - *(coordinator)* RISC-V rollup proof coordinator — chunk assembly + proof submission (#3967)
 - *(coordinator)* Added BlobSubmitterV2 interface and implementation (#3673)
+- *(coordinator)* Generic AggregationsDaoG and AggregationV2 for RISC-V aggregation proofs (#4174)
+- *(misc)* Adding blob commitment and a proof to Rollup input (#4329)
+- *(maru)* Add support of self-calculating terminal total difficulty (#4295)
 
 ### 🐛 Bug Fixes
 
@@ -103,6 +106,9 @@
 - *(misc)* Moved filtered addresses into the list of the PI (#4166)
 - *(coordinator)* Align RISC-V rollup-aggregation DTOs with rollup_spec (#4263)
 - *(prover)* Handle zero modulus in MODEXP (#4307)
+- *(misc, riscv-guest, prover, coordinator)* Changing the spec to allow zero rolling hash and message number for the L2 Message Service (#4314)
+- *(tracer)* Adapt reference tests to Besu block processor API (#4328)
+- *(coordinator)* Enforce end-block invariant in RollupAggregationProofResponseV1 (#4315)
 
 ### 🚜 Refactor
 
@@ -205,3 +211,6 @@
 - *(maru)* Refactor MaruClForkUpgradeTest to use new MaruCluster test (#4214)
 - *(deps)* Bump Node.js to 24.22.1 (#4284)
 - *(misc)* Update copyright holder to Consensys Incorporated (#4244)
+- *(deps)* Bump the go_modules group across 1 directory with 2 updates (#4258)
+- *(deps)* Refresh dependencies (#4323)
+- *(misc)* Ship license files and metadata in all published artifacts (#4336)

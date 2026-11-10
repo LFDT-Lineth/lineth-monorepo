@@ -26,6 +26,9 @@ src
             └── keccak
                 ├── keccak_batched_input_native.zig       # test using provider with batched inputs
                 ├── keccak_native.zig                     # test using provider with trivial inputs
+                ├── keccak_with_provider_single_input.zig # test using provider with a single input
                 ├── keccak_zkc.zig                        # test using zkc wrapper with trivial inputs
                 └── README.md                             # You are here
 ```
+
+The programs that import `zkvm_provide` (`keccak_native.zig`, `keccak_batched_input_native.zig` and `keccak_with_provider_single_input.zig`) are built with `ZKVM_PROVIDE=true` (`-Dzkvm-provide=true` for `zig build`); `keccak-zig-build` sets it. `KECCAK_ACCEL` then selects the zkc keccak wrapper or the standard Zig keccak inside the provider.

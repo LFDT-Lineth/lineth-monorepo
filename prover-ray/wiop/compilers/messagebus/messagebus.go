@@ -403,7 +403,7 @@ func permutationFold(alpha, beta *wiop.CoinField, tab wiop.Table) wiop.Expressio
 // longer one with leading zeros. Same-width participants get the same
 // sentinel, so a balanced bus stays balanced. α is always consulted, including
 // the width-1 case (β + α + c_0).
-func foldDenominator(alpha, beta *wiop.CoinField, cols []*wiop.ColumnView) wiop.Expression {
+func foldDenominator(alpha, beta *wiop.CoinField, cols []wiop.TableEntry) wiop.Expression {
 	return wiop.Add(beta, grandproduct.RLCWithSentinel(alpha, cols))
 }
 

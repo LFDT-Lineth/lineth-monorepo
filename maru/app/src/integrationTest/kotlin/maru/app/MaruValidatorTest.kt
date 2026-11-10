@@ -4,113 +4,108 @@
  *
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
-@file:Suppress("DEPRECATION") // TODO: migrate to maru.test.cluster.MaruCluster
-
 package maru.app
 
 import linea.testing.besu.BesuFactory
 import linea.testing.besu.BesuTransactionsHelper
-import linea.testing.besu.ethGetBlockByNumber
 import maru.config.SyncingConfig
+import maru.test.cluster.MaruCluster
+import maru.test.cluster.NodeRole
+import maru.test.cluster.assertSameCanonicalElChain
+import maru.test.cluster.configureLoggers
+import maru.test.extensions.TestSyncingConfigs
+import maru.test.extensions.withFastPeering
+import maru.test.extensions.withFastQbft
+import maru.test.extensions.withSyncingConfig
+import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.kotlin.await
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Amount
-import org.hyperledger.besu.tests.acceptance.dsl.condition.net.NetConditions
-import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.Cluster
-import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.ClusterConfigurationBuilder
-import org.hyperledger.besu.tests.acceptance.dsl.transaction.net.NetTransactions
+import org.hyperledger.besu.tests.acceptance.dsl.node.BesuNode
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import testutils.Checks.assertMinedBlocks
 import testutils.Checks.getMinedBlocks
-import testutils.PeeringNodeNetworkStack
-import testutils.maru.MaruFactory
 import testutils.maru.awaitTillMaruHasPeers
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
 class MaruValidatorTest {
-  private lateinit var cluster: Cluster
-  private lateinit var validatorStack: PeeringNodeNetworkStack
-  private lateinit var followerStack: PeeringNodeNetworkStack
+  private lateinit var cluster: MaruCluster
   private lateinit var transactionsHelper: BesuTransactionsHelper
   private val log = LogManager.getLogger(this.javaClass)
-  private val maruFactory = MaruFactory()
 
-  private fun setupMaruHelper(syncingConfig: SyncingConfig = MaruFactory.defaultSyncingConfig) {
-    // Create and start validator Maru app first
-    val validatorMaruApp =
-      maruFactory.buildTestMaruValidatorWithP2pPeering(
-        ethereumJsonRpcUrl = validatorStack.besuNode.jsonRpcBaseUrl().get(),
-        engineApiRpc = validatorStack.besuNode.engineRpcUrl().get(),
-        dataDir = validatorStack.tmpDir,
-        syncingConfig = syncingConfig,
-      )
-    validatorStack.setMaruApp(validatorMaruApp)
-    validatorStack.maruApp.start().get()
+  private val validatorBesuNode: BesuNode get() = cluster.besuNode("sequencer")
+  private val followerBesuNode: BesuNode get() = cluster.besuNode("follower")
 
-    // Get the validator's p2p port after it's started
-    val validatorP2pPort = validatorStack.p2pPort
-
-    // Create follower Maru app with the validator's p2p port for static peering
-    val followerMaruApp =
-      maruFactory.buildTestMaruFollowerWithP2pPeering(
-        ethereumJsonRpcUrl = followerStack.besuNode.jsonRpcBaseUrl().get(),
-        engineApiRpc = followerStack.besuNode.engineRpcUrl().get(),
-        dataDir = followerStack.tmpDir,
-        validatorPortForStaticPeering = validatorP2pPort,
-        syncingConfig = syncingConfig,
-      )
-    followerStack.setMaruApp(followerMaruApp)
-    followerStack.maruApp.start().get()
+  private fun setupCluster(syncingConfig: SyncingConfig = TestSyncingConfigs.default) {
+    // The follower is added first so that its Besu node is the Besu cluster's bootnode.
+    // This way in the tests where the sequencer's Besu node is restarted, it can still peer within the cluster.
+    // As the follower is started before the sequencer, it is the sequencer that statically peers with the follower.
+    cluster = MaruCluster()
+      .addNode(NodeRole.Follower, withBesuEl = true) { nodeBuilder ->
+        nodeBuilder
+          .payloadValidation(true)
+          .maruConfig { it.copy(allowEmptyBlocks = false) }
+          .withFastPeering()
+          .withSyncingConfig(syncingConfig)
+      }.addNode(NodeRole.Sequencer, withBesuEl = true) { nodeBuilder ->
+        nodeBuilder.maruConfig { it.copy(allowEmptyBlocks = false) }
+        nodeBuilder.withFastPeering().withFastQbft().withSyncingConfig(syncingConfig)
+        nodeBuilder.staticPeers(listOf("follower"))
+      }.start()
 
     log.info("Nodes are peered")
-    followerStack.maruApp.awaitTillMaruHasPeers(1u)
-    validatorStack.maruApp.awaitTillMaruHasPeers(1u)
-    val validatorGenesis = validatorStack.besuNode.ethGetBlockByNumber("earliest", false)
-    val followerGenesis = followerStack.besuNode.ethGetBlockByNumber("earliest", false)
-
-    assertThat(validatorGenesis).isEqualTo(followerGenesis)
+    cluster.maruNode("follower").awaitTillMaruHasPeers(1u)
+    cluster.maruNode("sequencer").awaitTillMaruHasPeers(1u)
+    cluster.assertSameCanonicalElChain(chainHeight = 0UL)
   }
 
   @BeforeEach
   fun setUp() {
+    configureLoggers(
+      rootLevel = Level.WARN,
+      logLevels = listOf("maru" to Level.INFO),
+    )
     transactionsHelper = BesuTransactionsHelper()
-    cluster = Cluster(
-      ClusterConfigurationBuilder().awaitPeerDiscovery(false).build(),
-      NetConditions(NetTransactions()),
-      BesuFactory.buildTestNodeRunner(),
-    )
-
-    validatorStack = PeeringNodeNetworkStack()
-
-    followerStack = PeeringNodeNetworkStack(
-      besuBuilder = { BesuFactory.buildTestBesu(validator = false) },
-    )
-
-    // FollowerStack's besu node should be the first to start to ensure that it becomes the cluster's Bootnode
-    // This way in the test where ValidatorStack's besu node is restarted, it can still peer within the cluster.
-    PeeringNodeNetworkStack.startBesuNodes(cluster, followerStack, validatorStack)
   }
 
   @AfterEach
   fun tearDown() {
-    followerStack.maruApp.stop().get()
-    validatorStack.maruApp.stop().get()
-    followerStack.maruApp.close()
-    validatorStack.maruApp.close()
-    cluster.close()
+    if (::cluster.isInitialized) {
+      cluster.stop()
+    }
+  }
+
+  /**
+   * Stops the sequencer's Besu node and builds a new one from scratch, on the same RPC ports so that the sequencer's
+   * Maru node keeps using it. The new Besu node isn't started.
+   */
+  private fun stopSequencerBesuAndBuildNewOne(): BesuNode {
+    val oldBesuSequencer = validatorBesuNode
+    val genesis = oldBesuSequencer.genesisConfig.get()
+    val engineRpcPort = oldBesuSequencer.engineJsonRpcPort
+    val jsonRpcPort = oldBesuSequencer.jsonRpcPort
+    log.info("Old sequencer jsonRpcPort=$jsonRpcPort, engineRpcPort=$engineRpcPort")
+    cluster.besuCluster.stopNode(oldBesuSequencer.name)
+    oldBesuSequencer.close()
+
+    return BesuFactory.buildTestBesu(
+      genesisFile = genesis,
+      jsonRpcPort = jsonRpcPort,
+      engineRpcPort = engineRpcPort,
+    )
   }
 
   @Test
   fun `Besu sequencer restarted from scratch is able to sync state`() {
-    setupMaruHelper()
+    setupCluster()
     val blocksToProduce = 5
     repeat(blocksToProduce) {
       transactionsHelper.run {
-        validatorStack.besuNode.sendTransactionAndAssertExecution(
+        validatorBesuNode.sendTransactionAndAssertExecution(
           logger = log,
           recipient = createAccount("another account"),
           amount = Amount.ether(100),
@@ -118,24 +113,12 @@ class MaruValidatorTest {
       }
     }
 
-    validatorStack.besuNode.assertMinedBlocks(blocksToProduce)
-    followerStack.besuNode.assertMinedBlocks(blocksToProduce)
+    validatorBesuNode.assertMinedBlocks(blocksToProduce)
+    followerBesuNode.assertMinedBlocks(blocksToProduce)
 
-    val oldBesuSequencer = validatorStack.besuNode
-    val engineRpcPort = oldBesuSequencer.engineJsonRpcPort
-    val jsonRpcPort = oldBesuSequencer.jsonRpcPort
-    println("Old sequencer jsonRpcPort=$jsonRpcPort, engineRpcPort=$engineRpcPort")
-    cluster.stopNode(oldBesuSequencer)
-    oldBesuSequencer.stop()
-    oldBesuSequencer.close()
+    val newBesuSequencer = stopSequencerBesuAndBuildNewOne()
 
-    val newBesuSequencer =
-      BesuFactory.buildTestBesu(
-        jsonRpcPort = jsonRpcPort,
-        engineRpcPort = engineRpcPort,
-      )
-
-    cluster.addNode(newBesuSequencer)
+    cluster.besuCluster.addNodeAndStart(newBesuSequencer)
 
     await
       .pollDelay(1.seconds.toJavaDuration())
@@ -156,16 +139,16 @@ class MaruValidatorTest {
     }
 
     newBesuSequencer.assertMinedBlocks(blocksToProduce * 2)
-    followerStack.besuNode.assertMinedBlocks(blocksToProduce * 2)
+    followerBesuNode.assertMinedBlocks(blocksToProduce * 2)
   }
 
   @Test
   fun `Besu sequencer restarted from scratch is able to sync state while follower accepts transactions`() {
-    setupMaruHelper()
+    setupCluster()
     val blocksToProduce = 5
     repeat(blocksToProduce) {
       transactionsHelper.run {
-        followerStack.besuNode.sendTransactionAndAssertExecution(
+        followerBesuNode.sendTransactionAndAssertExecution(
           logger = log,
           recipient = createAccount("another account"),
           amount = Amount.ether(100),
@@ -173,20 +156,14 @@ class MaruValidatorTest {
       }
     }
 
-    validatorStack.besuNode.assertMinedBlocks(blocksToProduce)
-    followerStack.besuNode.assertMinedBlocks(blocksToProduce)
+    validatorBesuNode.assertMinedBlocks(blocksToProduce)
+    followerBesuNode.assertMinedBlocks(blocksToProduce)
 
-    val oldBesuSequencer = validatorStack.besuNode
-    val engineRpcPort = oldBesuSequencer.engineJsonRpcPort
-    val jsonRpcPort = oldBesuSequencer.jsonRpcPort
-    println("Old sequencer jsonRpcPort=$jsonRpcPort, engineRpcPort=$engineRpcPort")
-    cluster.stopNode(oldBesuSequencer)
-    oldBesuSequencer.stop()
-    oldBesuSequencer.close()
+    val newBesuSequencer = stopSequencerBesuAndBuildNewOne()
 
     repeat(3) {
       transactionsHelper.run {
-        followerStack.besuNode.sendTransaction(
+        followerBesuNode.sendTransaction(
           logger = log,
           recipient = createAccount("another account"),
           amount = Amount.ether(100),
@@ -194,13 +171,7 @@ class MaruValidatorTest {
       }
     }
 
-    val newBesuSequencer =
-      BesuFactory.buildTestBesu(
-        jsonRpcPort = jsonRpcPort,
-        engineRpcPort = engineRpcPort,
-      )
-
-    cluster.addNode(newBesuSequencer)
+    cluster.besuCluster.addNodeAndStart(newBesuSequencer)
 
     await
       .pollDelay(1.seconds.toJavaDuration())
@@ -212,7 +183,7 @@ class MaruValidatorTest {
 
     repeat(blocksToProduce) {
       transactionsHelper.run {
-        followerStack.besuNode.sendTransactionAndAssertExecution(
+        followerBesuNode.sendTransactionAndAssertExecution(
           logger = log,
           recipient = createAccount("another account"),
           amount = Amount.ether(100),
@@ -221,6 +192,6 @@ class MaruValidatorTest {
     }
 
     newBesuSequencer.assertMinedBlocks(blocksToProduce * 2 + 1)
-    followerStack.besuNode.assertMinedBlocks(blocksToProduce * 2 + 1)
+    followerBesuNode.assertMinedBlocks(blocksToProduce * 2 + 1)
   }
 }

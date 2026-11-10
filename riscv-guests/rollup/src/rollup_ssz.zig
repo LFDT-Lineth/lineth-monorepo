@@ -53,15 +53,13 @@ pub const ChunkWitness = struct {
     calldata_length: u64,
 };
 
-/// The 16-field l2-execution public-input tuple, in wire order.
+/// The l2-execution public-input tuple, in wire order.
 pub const L2ExecutionProofPublicInput = struct {
     parent_block_hash: [32]u8,
     end_block_hash: [32]u8,
     end_block_number: u64,
     end_block_timestamp: u64,
     l2_l1_messages_hash: [32]u8,
-    parent_l1_l2_bridge_rolling_hash: [32]u8,
-    parent_l1_l2_bridge_rolling_hash_message_number: u64,
     end_l1_l2_bridge_rolling_hash: [32]u8,
     end_l1_l2_bridge_rolling_hash_message_number: u64,
     dynamic_chain_config_hash: [32]u8,
@@ -106,14 +104,12 @@ pub const RollupProofPrivateInput = struct {
     boundary_prev_data_rolling_hash: ?[32]u8,
 };
 
-/// The 20-field rollup/rollup-aggregation public-input tuple, in wire order. Every field but
+/// The rollup/rollup-aggregation public-input tuple, in wire order. Every field but
 /// `program_vks` is fixed-size.
 pub const RollupPublicInput = struct {
     end_block_number: u64,
     end_block_timestamp: u64,
     l2_l1_bridge_transaction_tree: [32]u8,
-    parent_l1_l2_bridge_rolling_hash: [32]u8,
-    parent_l1_l2_bridge_rolling_hash_message_number: u64,
     end_l1_l2_bridge_rolling_hash: [32]u8,
     end_l1_l2_bridge_rolling_hash_message_number: u64,
     dynamic_chain_config_hash: [32]u8,
@@ -267,8 +263,8 @@ fn decodeConflationWitness(alloc: std.mem.Allocator, bytes: []const u8) !Conflat
     return .{ .block_rlps = block_rlps };
 }
 
-// ── L2ExecutionProofPublicInput (16 fixed fields, 368 bytes, no offsets) ─────────────────────────
-const EXEC_PI_FIXED_SIZE: usize = 368;
+// ── L2ExecutionProofPublicInput (14 fixed fields, 328 bytes, no offsets) ─────────────────────────
+const EXEC_PI_FIXED_SIZE: usize = 328;
 
 fn decodeExecPublicInput(bytes: []const u8) !L2ExecutionProofPublicInput {
     if (bytes.len < EXEC_PI_FIXED_SIZE) return error.InvalidSsz;
@@ -279,8 +275,6 @@ fn decodeExecPublicInput(bytes: []const u8) !L2ExecutionProofPublicInput {
     v.end_block_number = getU64(bytes, &pos);
     v.end_block_timestamp = getU64(bytes, &pos);
     v.l2_l1_messages_hash = getHash(bytes, &pos);
-    v.parent_l1_l2_bridge_rolling_hash = getHash(bytes, &pos);
-    v.parent_l1_l2_bridge_rolling_hash_message_number = getU64(bytes, &pos);
     v.end_l1_l2_bridge_rolling_hash = getHash(bytes, &pos);
     v.end_l1_l2_bridge_rolling_hash_message_number = getU64(bytes, &pos);
     v.dynamic_chain_config_hash = getHash(bytes, &pos);
@@ -295,7 +289,7 @@ fn decodeExecPublicInput(bytes: []const u8) !L2ExecutionProofPublicInput {
 }
 
 // ── L2ExecutionProof ──────────────────────────────────────────────────────────────────────────
-// Fixed head: public_inputs(368, inline — itself fully fixed) + start_block_number(8) +
+// Fixed head: public_inputs(328, inline — itself fully fixed) + start_block_number(8) +
 // proof offset(4) + l2_l1_messages offset(4) + tx_froms offset(4) + filtered_addresses offset(4).
 const EXEC_PROOF_FIXED_SIZE: usize = EXEC_PI_FIXED_SIZE + 8 + 4 + 4 + 4 + 4;
 
@@ -416,8 +410,6 @@ fn encodeExecPublicInput(alloc: std.mem.Allocator, v: L2ExecutionProofPublicInpu
     putU64(out, &pos, v.end_block_number);
     putU64(out, &pos, v.end_block_timestamp);
     putHash(out, &pos, v.l2_l1_messages_hash);
-    putHash(out, &pos, v.parent_l1_l2_bridge_rolling_hash);
-    putU64(out, &pos, v.parent_l1_l2_bridge_rolling_hash_message_number);
     putHash(out, &pos, v.end_l1_l2_bridge_rolling_hash);
     putU64(out, &pos, v.end_l1_l2_bridge_rolling_hash_message_number);
     putHash(out, &pos, v.dynamic_chain_config_hash);
@@ -570,9 +562,9 @@ pub fn encodeInput(alloc: std.mem.Allocator, v: RollupProofPrivateInput) ![]u8 {
     return out;
 }
 
-// ── RollupPublicInput (20 fields; only `program_vks` is variable) ────────────────────────────────
-// Fixed head: 19 fixed fields (11 hashes * 32 + 8 u64s * 8 = 416) + program_vks offset(4) = 420.
-const ROLLUP_PI_FIXED_SIZE: usize = 420;
+// ── RollupPublicInput (only `program_vks` is variable) ────────────────────────────────
+// Fixed head: 17 fixed fields (10 hashes * 32 + 7 u64s * 8 = 376) + program_vks offset(4) = 380.
+const ROLLUP_PI_FIXED_SIZE: usize = 380;
 
 fn encodeRollupPublicInput(alloc: std.mem.Allocator, v: RollupPublicInput) ![]u8 {
     if (v.program_vks.len > MAX_PROGRAM_VKS) return error.BoundsViolation;
@@ -585,8 +577,6 @@ fn encodeRollupPublicInput(alloc: std.mem.Allocator, v: RollupPublicInput) ![]u8
     putU64(out, &pos, v.end_block_number);
     putU64(out, &pos, v.end_block_timestamp);
     putHash(out, &pos, v.l2_l1_bridge_transaction_tree);
-    putHash(out, &pos, v.parent_l1_l2_bridge_rolling_hash);
-    putU64(out, &pos, v.parent_l1_l2_bridge_rolling_hash_message_number);
     putHash(out, &pos, v.end_l1_l2_bridge_rolling_hash);
     putU64(out, &pos, v.end_l1_l2_bridge_rolling_hash_message_number);
     putHash(out, &pos, v.dynamic_chain_config_hash);

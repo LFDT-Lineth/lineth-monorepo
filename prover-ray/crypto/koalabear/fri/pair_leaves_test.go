@@ -20,7 +20,7 @@ func pairLeavesWitness(prng *rand.Rand) Batch {
 	witness[3] = SizedTable{
 		Base:   [][]field.Element{field.VecPseudoRandBase(prng, 8)},
 		Ext:    [][]field.Ext{field.VecPseudoRandExt(prng, 8)},
-		Groups: []GroupShape{{ExtWidth: 1}, {BaseWidth: 1}},
+		Groups: []GroupShape{{ExtWidth: 1, Ordinal: 6}, {BaseWidth: 1, Ordinal: 7}},
 	}
 	return witness
 }

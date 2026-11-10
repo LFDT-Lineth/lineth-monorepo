@@ -13,7 +13,7 @@ jobs:
       - name: CSV export
         uses: advanced-security/ghas-to-csv@ab2f3f6b7cf5f464602edc46cc6ef9d424097a49 # v3.0.6
       - name: Upload CSV
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ghas-data
           path: ${{ github.workspace }}/*.csv

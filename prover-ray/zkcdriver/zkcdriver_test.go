@@ -11,6 +11,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
+	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
 	"github.com/LFDT-Lineth/zkc/pkg/util/source"
@@ -73,7 +74,7 @@ func parseTestCase(
 	withTraceCheck bool,
 ) (
 	inputs *zkcdriver.PreReadInputs,
-	outputs map[string][]byte,
+	outputs map[string]bit.Array,
 	err error,
 ) {
 
@@ -100,9 +101,9 @@ func parseTestCase(
 func traceZkc(
 	binFile *zkcdriver.BinaryFile,
 	tracingCfg vm.TraceConfig,
-	input map[string][]byte,
+	input map[string]bit.Array,
 	withCheck bool,
-) (outputs map[string][]byte, err error) {
+) (outputs map[string]bit.Array, err error) {
 	// recover panics. ZKC tends to panic when it fails tracing, so we want to catch those and return them as errors.
 	defer func() {
 		if r := recover(); r != nil {

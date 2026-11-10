@@ -14,10 +14,12 @@ Run from the rollup_spec/ directory:  python -m pytest
 import json
 from pathlib import Path
 
+import ckzg
 import pytest
 
 import rollup_spec
 from ethereum.crypto.hash import Hash32
+from ethereum.crypto.kzg import KZGCommitment, kzg_commitment_to_versioned_hash
 from ethereum.state import Address
 from ethereum_types.numeric import U64
 
@@ -27,7 +29,7 @@ from rollup_spec.l2_execution import (
     L2ExecutionProof,
     L2ExecutionProofPublicInput,
 )
-from rollup_spec.rollup import RollupProof, RollupPublicInput
+from rollup_spec.rollup import RollupProof, RollupPublicInput, trusted_setup
 from rollup_spec.proof_io_v1 import (
     ProofIoError,
     decode_aggregation_request,
@@ -110,8 +112,6 @@ def _sample_proof() -> L2ExecutionProof:
         end_block_number=U64(1000503),
         end_block_timestamp=U64(1763000123),
         l2_l1_messages=[Hash32(bytes([0x08]) * 32)],
-        parent_l1_l2_bridge_rolling_hash=Hash32(bytes([0x02]) * 32),
-        parent_l1_l2_bridge_rolling_hash_message_number=U64(0),
         end_l1_l2_bridge_rolling_hash=Hash32(bytes([0x03]) * 32),
         end_l1_l2_bridge_rolling_hash_message_number=U64(5),
         dynamic_chain_config_hash=Hash32(bytes([0xC0]) * 32),
@@ -191,6 +191,38 @@ def test_missing_required_field_is_rejected() -> None:
         decode_request(req)
 
 
+def test_system_contracts_are_decoded() -> None:
+    sc = decode_request(_valid_request()).chain_config.system_contracts
+    assert bytes(sc.deposit) == bytes.fromhex("94d4a7449B968b839dcbc64A61F195CA300986ae")
+    assert bytes(sc.withdrawal_request) == bytes.fromhex("66355689a9f067eeb9dc9d899E4192676988279C")
+    assert bytes(sc.consolidation_request) == bytes.fromhex("F0e003F0dE2d583Ae28FA8cBF66aa096CdAce3ff")
+    assert bytes(sc.beacon_roots) == bytes.fromhex("000F3df6D732807Ef1319fB7B8bB8522d0Beac02")
+    assert bytes(sc.history_storage) == bytes.fromhex("0000F90827F1C53a10cb7A02335B175320002935")
+    assert bytes(sc.builder_deposit_request) == bytes.fromhex("0000BFF46984E3725691FA540A8C7589300D8282")
+    assert bytes(sc.builder_exit_request) == bytes.fromhex("000064D678505AD48F8CCB093BC65613800E8282")
+
+
+def test_missing_system_contracts_is_rejected() -> None:
+    req = _valid_request()
+    del req["proofRequest"]["chainConfig"]["systemContracts"]
+    with pytest.raises(ProofIoError, match="systemContracts"):
+        decode_request(req)
+
+
+def test_missing_system_contract_address_is_rejected() -> None:
+    req = _valid_request()
+    del req["proofRequest"]["chainConfig"]["systemContracts"]["builderExitRequest"]
+    with pytest.raises(ProofIoError, match="builderExitRequest"):
+        decode_request(req)
+
+
+def test_short_system_contract_address_is_rejected() -> None:
+    req = _valid_request()
+    req["proofRequest"]["chainConfig"]["systemContracts"]["deposit"] = "0x1234"
+    with pytest.raises(ProofIoError, match="deposit.*20-byte"):
+        decode_request(req)
+
+
 def test_unknown_acceptance_is_rejected() -> None:
     req = _valid_request()
     req["proofRequest"]["payloads"][1]["rollupExtension"]["forcedTransactions"][0]["acceptance"] = "MAYBE"
@@ -265,8 +297,7 @@ def test_encode_response_shape_and_values() -> None:
     assert pi["endProcessedFtxNumber"] == 18
     assert set(pi.keys()) == {
         "parentBlockHash", "endBlockHash", "endBlockNumber", "endBlockTimestamp",
-        "l2L1Messages", "parentL1L2BridgeRollingHash",
-        "parentL1L2BridgeRollingHashMessageNumber", "endL1L2BridgeRollingHash",
+        "l2L1Messages", "endL1L2BridgeRollingHash",
         "endL1L2BridgeRollingHashMessageNumber", "dynamicChainConfigHash",
         "parentFtxRollingHash", "parentFtxNumber", "endFtxRollingHash",
             "endProcessedFtxNumber", "filteredAddresses", "txFromsHash",
@@ -306,8 +337,6 @@ def _sample_rollup_public_input() -> RollupPublicInput:
     return RollupPublicInput(
         end_block_number=U64(1000520),
         end_block_timestamp=U64(1763000457),
-        parent_l1_l2_bridge_rolling_hash=Hash32(bytes([0x22]) * 32),
-        parent_l1_l2_bridge_rolling_hash_message_number=U64(0),
         end_l1_l2_bridge_rolling_hash=Hash32(bytes([0x33]) * 32),
         end_l1_l2_bridge_rolling_hash_message_number=U64(7),
         dynamic_chain_config_hash=Hash32(bytes([0xC0]) * 32),
@@ -354,10 +383,11 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     assert req.conflations[1].block_rlps == [bytes.fromhex("f90215aa"), bytes.fromhex("f90216bb")]
 
     assert len(req.chunks) == 1
-    assert bytes(req.chunks[0].chunk_hash) == bytes([0x1A]) * 32
     assert req.chunks[0].is_calldata is False
     assert req.chunks[0].calldata_bytes == b""
     assert len(req.chunks[0].blob_bytes) == 131072
+    assert len(req.chunks[0].kzg_commitment) == 48
+    assert len(req.chunks[0].kzg_proof) == 48
 
     assert len(req.l2_execution_proofs) == 2
     verifiable = req.l2_execution_proofs[0]
@@ -425,15 +455,24 @@ def test_decode_rollup_request_malformed_chunk_hash_is_rejected() -> None:
         decode_rollup_request(req)
 
 
+def test_rollup_request_fixture_blob_chunk_carries_a_valid_blob_kzg_proof() -> None:
+    chunk = decode_rollup_request(_valid_rollup_request()).chunks[0]
+
+    assert kzg_commitment_to_versioned_hash(KZGCommitment(chunk.kzg_commitment)) == chunk.chunk_hash
+    assert ckzg.verify_blob_kzg_proof(chunk.blob_bytes, chunk.kzg_commitment, chunk.kzg_proof, trusted_setup())
+
+
 def test_decode_rollup_request_is_calldata_true_decodes() -> None:
     req = _valid_rollup_request()
-    req["proofRequest"]["chunks"][0]["isCalldata"] = True
-    req["proofRequest"]["chunks"][0]["calldataBytes"] = "0x" + "01" * 131073
-    req["proofRequest"]["chunks"][0]["blobBytes"] = "0x"
+    req["proofRequest"]["chunks"][0].update(
+        isCalldata=True, calldataBytes="0x" + "01" * 131073, blobBytes="0x", kzgCommitment="0x", kzgProof="0x",
+    )
     out = decode_rollup_request(req)
     assert out.chunks[0].is_calldata is True
     assert out.chunks[0].calldata_bytes == bytes([1]) * 131073
     assert out.chunks[0].blob_bytes == b""
+    assert out.chunks[0].kzg_commitment == b""
+    assert out.chunks[0].kzg_proof == b""
 
 
 @pytest.mark.parametrize("blob_hex", [None, "0x", "0x00"])
@@ -454,7 +493,27 @@ def test_calldata_chunk_requires_empty_physical_blob() -> None:
         decode_rollup_request(req)
 
 
-@pytest.mark.parametrize("field", ["isCalldata", "calldataBytes"])
+@pytest.mark.parametrize("field", ["kzgCommitment", "kzgProof"])
+@pytest.mark.parametrize("hex_value", ["0x", "0x00", "0x" + "00" * 47, "0x" + "00" * 49])
+def test_blob_chunk_requires_48_byte_kzg_fields(field, hex_value) -> None:
+    req = _valid_rollup_request()
+    req["proofRequest"]["chunks"][0][field] = hex_value
+    with pytest.raises(ProofIoError, match=f"{field}.*48 bytes"):
+        decode_rollup_request(req)
+
+
+@pytest.mark.parametrize("field", ["kzgCommitment", "kzgProof"])
+def test_calldata_chunk_requires_empty_kzg_fields(field) -> None:
+    req = _valid_rollup_request()
+    req["proofRequest"]["chunks"][0].update(
+        isCalldata=True, calldataBytes="0x01", blobBytes="0x", kzgCommitment="0x", kzgProof="0x",
+    )
+    req["proofRequest"]["chunks"][0][field] = "0x" + "00" * 48
+    with pytest.raises(ProofIoError, match=f"{field}.*empty for calldata"):
+        decode_rollup_request(req)
+
+
+@pytest.mark.parametrize("field", ["isCalldata", "calldataBytes", "kzgCommitment", "kzgProof"])
 def test_decode_rollup_request_missing_chunk_field_is_rejected(field) -> None:
     req = _valid_rollup_request()
     del req["proofRequest"]["chunks"][0][field]
@@ -531,7 +590,6 @@ def test_encode_rollup_response_shape_and_values() -> None:
     assert pi["programVks"] == ["0x" + ("aa" * 32)]
     assert set(pi.keys()) == {
         "endBlockNumber", "endBlockTimestamp",
-        "parentL1L2BridgeRollingHash", "parentL1L2BridgeRollingHashMessageNumber",
         "endL1L2BridgeRollingHash", "endL1L2BridgeRollingHashMessageNumber",
         "dynamicChainConfigHash", "parentFtxRollingHash", "parentFtxNumber",
         "endFtxRollingHash", "endProcessedFtxNumber",
@@ -698,7 +756,6 @@ def test_encode_aggregation_response_is_l1_sufficient() -> None:
     assert pi["programIds"] == ["0x" + ("11" * 32), "0x" + ("22" * 32)]
     assert set(pi.keys()) == {
         "endBlockNumber", "endBlockTimestamp",
-        "parentL1L2BridgeRollingHash", "parentL1L2BridgeRollingHashMessageNumber",
         "endL1L2BridgeRollingHash", "endL1L2BridgeRollingHashMessageNumber",
         "dynamicChainConfigHash", "parentFtxRollingHash", "parentFtxNumber",
         "endFtxRollingHash", "endProcessedFtxNumber",
