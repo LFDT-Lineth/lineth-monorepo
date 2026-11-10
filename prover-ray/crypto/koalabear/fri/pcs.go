@@ -566,8 +566,9 @@ func denomBaseInverses(generator field.Element, n int, zeta field.Ext) ([]field.
 type OpeningProof struct {
 	// InputQueries[k] contains one row-carrying opening per input tree for query k.
 	InputQueries []InputQuery
-	// InputCaps contains one authenticated cap per distinct input tree, in the
-	// same canonical order as the tree openings inside InputQueries.
+	// InputCaps contains one authenticated cap per input tree (one per opened
+	// batch), in the same canonical order as the tree openings inside
+	// InputQueries.
 	InputCaps []InputCap
 
 	// FRIProof is checked through PCS verification, which reconstructs virtual
@@ -1314,9 +1315,6 @@ func (pcs *PCS) inputOpeningCommitments() ([]CommitterState, error) {
 	seen := make(map[int]bool)
 	var inputs []CommitterState
 	for _, bundle := range openingsLayout {
-		if int(bundle.SizeLog2) > int(pcs.Params.LogPlainTextSize) {
-			continue
-		}
 		for _, entry := range bundle.Entries {
 			committed := pcs.openings[entry.BatchIdx].committed
 			if !seen[entry.BatchIdx] {
