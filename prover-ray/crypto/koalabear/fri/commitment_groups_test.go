@@ -161,7 +161,7 @@ func TestMerkleizeInjectsEachGroup(t *testing.T) {
 // TestPCSVerifyGroupedCommitment opens a grouped commitment through both the
 // revealed-table and the query-path authentication, and checks that the
 // verifier rejects any other grouping, including no grouping, and batches that
-// share the tree but disagree on its grouping.
+// commit the same table but disagree on its grouping.
 func TestPCSVerifyGroupedCommitment(t *testing.T) {
 	fx := newGroupedPCSFixture(t, 2)
 
@@ -183,15 +183,14 @@ func TestPCSVerifyGroupedCommitment(t *testing.T) {
 	swapped[2].Groups = []GroupShape{{BaseWidth: 1, Ordinal: 4}, {BaseWidth: 1, ExtWidth: 1, Ordinal: 5}}
 	require.Error(t, fx.pcs.Verify(withShapes(swapped, swapped), fx.proof), "another grouping must not verify")
 
-	require.ErrorContains(t, fx.pcs.Verify(withShapes(fx.input.Shapes[0], swapped), fx.proof),
-		"groups its rows differently")
+	require.Error(t, fx.pcs.Verify(withShapes(fx.input.Shapes[0], swapped), fx.proof),
+		"a batch whose grouping disagrees with its commitment must not verify")
 	require.ErrorContains(t, fx.pcs.Verify(withShapes(fx.input.Shapes[0], flat), fx.proof),
 		"declares no groups", "a grouped and an ungrouped batch cannot be numbered together")
 }
 
 // TestPCSVerifyGnarkGroupedCommitment is the circuit counterpart: the circuit
-// accepts the grouped proof and rejects it under no grouping. The circuit gives
-// every batch its own input tree, so the fixture has a single batch.
+// accepts the grouped proof and rejects it under no grouping.
 func TestPCSVerifyGnarkGroupedCommitment(t *testing.T) {
 	fx := newGroupedPCSFixture(t, 1)
 	template, assignment := circuitFor(fx, fx.proof)

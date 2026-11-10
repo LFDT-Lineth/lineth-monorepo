@@ -20,11 +20,6 @@ import (
 // Value facts (roots, fold values, claims) become constraints. Query positions
 // are circuit variables: every position-dependent selection is expressed on
 // their bit decomposition, so the circuit shape does not depend on them.
-//
-// One deliberate divergence: the native verifier deduplicates input trees by
-// root value. Roots are variables here, so batches are assumed to have
-// pairwise distinct roots; a proof with a collision has fewer input openings
-// per query than the circuit expects and is rejected as malformed.
 
 // GnarkOpeningProof mirrors [OpeningProof].
 type GnarkOpeningProof struct {
@@ -280,7 +275,7 @@ func (pcs *PCS) VerifyGnark(api frontend.API, in GnarkVerifyInputs, proof GnarkO
 		panic(fmt.Sprintf("fri: pcs.VerifyGnark: got %d input caps, want %d", len(proof.InputCaps), len(inputRoots)))
 	}
 
-	// Shape per deduplicated input tree, then one cap authentication each,
+	// Shape per input tree (one per batch), then one cap authentication each,
 	// outside the query loop. Mirrors the inputShapes/inputFrontiers block of
 	// [PCS.Verify].
 	inputShapes := make([]Shape, len(inputRoots))
@@ -416,8 +411,8 @@ func (pcs *PCS) assertClaimPointsOutOfDomainGnark(api *circuit.KoalaBearAPI, lay
 	}
 }
 
-// inputOpeningRootsGnark mirrors [inputOpeningRoots] without deduplication:
-// every batch gets its own input tree, in order of first appearance.
+// inputOpeningRootsGnark mirrors [inputOpeningRoots]: every batch gets its own
+// input tree, in order of first appearance.
 func inputOpeningRootsGnark(
 	layout layout, orders [][]int, roots []circuit.Octuplet,
 ) ([]circuit.Octuplet, []int) {
@@ -428,11 +423,10 @@ func inputOpeningRootsGnark(
 	inputRoots := make([]circuit.Octuplet, 0, len(roots))
 	for levelIdx := range layout {
 		for _, batchIdx := range orders[levelIdx] {
-			if indexByBatch[batchIdx] >= 0 {
-				continue
+			if indexByBatch[batchIdx] < 0 {
+				indexByBatch[batchIdx] = len(inputRoots)
+				inputRoots = append(inputRoots, roots[batchIdx])
 			}
-			indexByBatch[batchIdx] = len(inputRoots)
-			inputRoots = append(inputRoots, roots[batchIdx])
 		}
 	}
 	return inputRoots, indexByBatch
