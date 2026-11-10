@@ -27,9 +27,6 @@ generated inputs with the module-pinned compiler (`go tool zkc` from
 go tool zkc exec ../input.json src/main/riscv/main.zkc
 ```
 
-Standalone ZkC installations may use a different partial-byte suffix (`~N`
-instead of the pinned version's `:N`).
-
 Environment variables:
 
 - `ELF2JSON_PREDECODING_PROOF=true` also emits `blobs_executable`.

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
+	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
 	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 )
 
@@ -134,6 +135,35 @@ func TestDecodedProgramEncodeInputsReturnsFreshBytes(t *testing.T) {
 	if secondDecoded.Bytes()[0] != 1 || program.Decoded[0] != 1 {
 		t.Fatal("EncodeInputs() returned bytes alias cached decoded program")
 	}
+}
+
+func TestBitsPerRowOfModuleDecoded(t *testing.T) {
+	compiled, err := embedded.CompiledBinaryFile()
+	if err != nil {
+		t.Fatalf("get compiled R5 arithmetizaton: %v", err)
+	}
+	//
+	pg := compiled.ExecutionProgram()
+	//
+	if m, ok := pg.HasModule(DecodedInput); ok {
+		var (
+			sumLength uint = 0
+			decoded        = pg.Module(m)
+		)
+		// Iterate output columns of decoded module
+		for _, o := range decoded.Outputs() {
+			sumLength += o.Bitwidth().Unwrap()
+		}
+		// Check that sum matches constant
+		if sumLength != BitsPerRowOfModuleDecoded {
+			t.Fatalf("bits-per-row mismatch for module \"decoded\", expected %d got %d",
+				BitsPerRowOfModuleDecoded, sumLength)
+		}
+		//
+		return
+	}
+	// Catch situation where decoded module does not exist
+	t.Fatalf("compiled R5 arithmetization has no %q input", DecodedInput)
 }
 
 type memoryBlob struct {
