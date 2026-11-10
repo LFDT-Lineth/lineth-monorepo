@@ -1,3 +1,23 @@
 {
-  "extends": "../tsconfig.json"
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": ["es2023"],
+    "verbatimModuleSyntax": true,
+    "types": ["node"]
+  },
+  "exclude": [
+    "**/node_modules",
+    "**/dist",
+    "*.d.ts",
+    "**/.*/",
+    "signer-ui",
+    "integrity-verifier",
+    "cache",
+    "cache_forge",
+    "out",
+    "lib",
+    "docs",
+    "coverage"
+  ]
 }
