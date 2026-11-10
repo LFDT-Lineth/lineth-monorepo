@@ -52,6 +52,9 @@ abstract contract LinethRollupBase is
   /// @notice The empty hash value.
   bytes32 internal constant EMPTY_HASH = 0x0;
 
+  /// @notice Value indicating a dataRollingHash is anchored in `_dataRollingHashExists`.
+  uint256 internal constant DATA_ROLLING_HASH_EXISTS_DEFAULT_VALUE = 1;
+
   /// @notice Maximum valid `parentDataTailTakeBytes`/`finalDataTailDiscardBytes` value: a blob's
   ///   254-bit-packed usable payload length, minus one. Calldata submissions always use 0.
   uint256 internal constant MAX_DATA_TAIL_BYTES = 130046;
@@ -192,7 +195,7 @@ abstract contract LinethRollupBase is
       _initializationData.initialBlockHash
     );
     currentDataRollingHash = genesisDataRollingHash;
-    _dataRollingHashExists[genesisDataRollingHash] = 1;
+    _dataRollingHashExists[genesisDataRollingHash] = DATA_ROLLING_HASH_EXISTS_DEFAULT_VALUE;
 
     currentFinalizedState = FinalizedStateHashing._computeLastFinalizedState(
       0,
@@ -224,6 +227,29 @@ abstract contract LinethRollupBase is
     }
 
     emit LineaRollupBaseInitialized(bytes8(bytes(CONTRACT_VERSION())), _initializationData, EMPTY_HASH);
+  }
+
+  /**
+   * @notice Migrates the legacy finalized shnarf into the blob-spanning dataRollingHash model.
+   * @dev Sets `currentDataRollingHash` to the still-live legacy finalized shnarf and anchors it so the first
+   *   post-upgrade submission and finalization chain directly from it. `currentDataTailBytes` stays 0 (legacy
+   *   finalizations always ended on a chunk boundary). The deprecated slot is then wiped.
+   * @dev Trusts the on-chain `currentFinalizedShnarf_DEPRECATED` value directly: it was itself the proven output of
+   *   the prior contract version's `finalizeBlocks` (or its genesis seed).
+   * @dev On any real in-place upgrade the legacy shnarf is never EMPTY_HASH (prior versions seed a genesis shnarf at
+   *   initialization). The zero check guards against running the migration on a proxy that never held a legacy
+   *   shnarf, which would otherwise anchor EMPTY_HASH as a valid parent.
+   * @dev Must only be called from a version-gated reinitializer so it runs exactly once per proxy.
+   */
+  function _migrateLegacyShnarf() internal {
+    bytes32 migratedDataRollingHash = currentFinalizedShnarf_DEPRECATED;
+    require(migratedDataRollingHash != EMPTY_HASH, IGenericErrors.ZeroHashNotAllowed());
+
+    currentDataRollingHash = migratedDataRollingHash;
+    _dataRollingHashExists[migratedDataRollingHash] = DATA_ROLLING_HASH_EXISTS_DEFAULT_VALUE;
+    currentFinalizedShnarf_DEPRECATED = EMPTY_HASH;
+
+    emit LegacyShnarfMigrated(migratedDataRollingHash);
   }
 
   /**
@@ -557,20 +583,7 @@ abstract contract LinethRollupBase is
     currentL2BlockNumber = _finalizationData.endBlockNumber;
     currentDataRollingHash = _finalizationData.endDataRollingHash;
     currentDataTailBytes = _finalizationData.finalDataTailDiscardBytes;
-    currentFinalizedState = FinalizedStateHashing._computeLastFinalizedState(
-      _finalizationData.l1RollingHashMessageNumber,
-      _finalizationData.l1RollingHash,
-      _finalizationData.finalForcedTransactionNumber,
-      _finalForcedTransactionRollingHash,
-      _finalizationData.finalTimestamp
-    );
-
-    emit FinalizedStateUpdated(
-      _finalizationData.endBlockNumber,
-      _finalizationData.finalTimestamp,
-      _finalizationData.l1RollingHashMessageNumber,
-      _finalizationData.finalForcedTransactionNumber
-    );
+    _updateFinalizedState(_finalizationData, _finalForcedTransactionRollingHash);
 
     unchecked {
       emit DataFinalizedV4(
@@ -582,6 +595,47 @@ abstract contract LinethRollupBase is
         _finalizationData.finalBlockHash
       );
     }
+  }
+
+  /**
+   * @notice Stores the new finalized state and emits FinalizedStateUpdated, keeping the previous L1 rolling hash
+   *   values when they are passed as defaults.
+   * @dev A default L1 rolling hash pair (`l1RollingHashMessageNumber == 0` with `l1RollingHash == EMPTY_HASH`,
+   *   enforced by `_validateL2ComputedRollingHash`) signals "no transition" (the guest program(s) infer the same), so
+   *   `lastFinalizedL1RollingHashMessageNumber`/`lastFinalizedL1RollingHash` are kept. Only the public input uses the
+   *   values exactly as passed in.
+   * @dev Forced transaction values are always stored as passed in.
+   * @dev The emitted message number always matches `currentFinalizedState`, as off-chain consumers (e.g. forced
+   *   transaction submitters) rebuild the last finalized state from the latest event.
+   * @dev The `lastFinalized*` values were validated against `currentFinalizedState` earlier in `_finalizeBlocks`.
+   * @param _finalizationData The full finalization data.
+   * @param _finalForcedTransactionRollingHash The rolling hash for the final forced transaction.
+   */
+  function _updateFinalizedState(
+    FinalizationDataV5 calldata _finalizationData,
+    bytes32 _finalForcedTransactionRollingHash
+  ) internal {
+    uint256 l1RollingHashMessageNumber = _finalizationData.l1RollingHashMessageNumber;
+    bytes32 l1RollingHash = _finalizationData.l1RollingHash;
+    if (l1RollingHashMessageNumber == 0) {
+      l1RollingHashMessageNumber = _finalizationData.lastFinalizedL1RollingHashMessageNumber;
+      l1RollingHash = _finalizationData.lastFinalizedL1RollingHash;
+    }
+
+    currentFinalizedState = FinalizedStateHashing._computeLastFinalizedState(
+      l1RollingHashMessageNumber,
+      l1RollingHash,
+      _finalizationData.finalForcedTransactionNumber,
+      _finalForcedTransactionRollingHash,
+      _finalizationData.finalTimestamp
+    );
+
+    emit FinalizedStateUpdated(
+      _finalizationData.endBlockNumber,
+      _finalizationData.finalTimestamp,
+      l1RollingHashMessageNumber,
+      _finalizationData.finalForcedTransactionNumber
+    );
   }
 
   /**

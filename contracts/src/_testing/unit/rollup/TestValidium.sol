@@ -25,7 +25,7 @@ contract TestValidium is Validium {
   }
 
   function setupParentDataRollingHash(bytes32 _dataRollingHash) external {
-    _dataRollingHashExists[_dataRollingHash] = 1;
+    _dataRollingHashExists[_dataRollingHash] = DATA_ROLLING_HASH_EXISTS_DEFAULT_VALUE;
   }
 
   function setLastFinalizedBlock(uint256 _blockNumber) external {
@@ -35,6 +35,16 @@ contract TestValidium is Validium {
   function setCurrentDataPosition(bytes32 _dataRollingHash, uint256 _dataTailBytes) external {
     currentDataRollingHash = _dataRollingHash;
     currentDataTailBytes = _dataTailBytes;
+  }
+
+  function setSlotValue(uint256 _slot, uint256 _value) external {
+    assembly {
+      sstore(_slot, _value)
+    }
+  }
+
+  function setLegacyFinalizedShnarf(bytes32 _legacyShnarf) external {
+    currentFinalizedShnarf_DEPRECATED = _legacyShnarf;
   }
 
   function setDataRollingHashExistenceValue(bytes32 _dataRollingHash, uint256 _value) external {

@@ -10,9 +10,6 @@ import { LinethRollupBase } from "../LinethRollupBase.sol";
  * @custom:security-contact security-report@linea.build
  */
 abstract contract DataRollingHashAcceptorBase is LinethRollupBase, IDataRollingHashAcceptorBase {
-  /// @dev Value indicating a dataRollingHash is anchored.
-  uint256 internal constant DATA_ROLLING_HASH_EXISTS_DEFAULT_VALUE = 1;
-
   /**
    * @notice Accepts and anchors that a dataRollingHash exists.
    * @dev Anchoring only stores the final dataRollingHash of a submission; intermediate chunk

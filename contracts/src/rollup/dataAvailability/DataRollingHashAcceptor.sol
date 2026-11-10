@@ -20,7 +20,7 @@ abstract contract DataRollingHashAcceptor is IAcceptDataRollingHash, DataRolling
     bytes32 _parentDataRollingHash,
     bytes32 _storedDataRollingHash
   ) public virtual whenTypeAndGeneralNotPaused(PauseType.STATE_DATA_SUBMISSION) onlyRole(OPERATOR_ROLE) {
-    require(_storedDataRollingHash != 0x0, DataRollingHashSubmissionIsZeroHash());
+    require(_storedDataRollingHash != EMPTY_HASH, DataRollingHashSubmissionIsZeroHash());
     _acceptDataRollingHash(_parentDataRollingHash, _storedDataRollingHash);
   }
 }

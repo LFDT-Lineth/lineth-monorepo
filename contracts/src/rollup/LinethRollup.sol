@@ -63,22 +63,13 @@ contract LinethRollup is
    * @notice Reinitializer for v10: migrates the legacy shnarf into the blob-spanning
    *   dataRollingHash model and advances CONTRACT_VERSION().
    * @dev Should be called using an upgradeAndCall transaction to the ProxyAdmin for live-chain
-   *   (in-place) upgrades. Unconditional: on any real in-place upgrade
-   *   `currentFinalizedShnarf_DEPRECATED` can never be EMPTY_HASH (it is the prior contract
-   *   version's live finalized shnarf), so no emptiness guard is needed. `reinitializer(10)`
-   *   itself guarantees this runs exactly once per proxy.
-   * @dev Trusts the on-chain `currentFinalizedShnarf_DEPRECATED` value directly (it was itself the
-   *   proven output of the prior contract version's `finalizeBlocks`) rather than requiring the
-   *   caller to re-supply and reconstruct it.
+   *   (in-place) upgrades. `reinitializer(10)` guarantees this runs exactly once per proxy, and a
+   *   proxy created with `initialize` (which also consumes version 10) can never call it.
+   * @dev See `_migrateLegacyShnarf` for the migration details.
    */
   function reinitializeLineaRollupV10() external reinitializer(10) {
-    bytes32 migratedDataRollingHash = currentFinalizedShnarf_DEPRECATED;
+    _migrateLegacyShnarf();
 
-    currentDataRollingHash = migratedDataRollingHash;
-    _dataRollingHashExists[migratedDataRollingHash] = 1;
-    currentFinalizedShnarf_DEPRECATED = EMPTY_HASH;
-
-    emit LegacyShnarfMigrated(migratedDataRollingHash);
     emit LineaRollupVersionChanged(bytes8("9.0"), bytes8("10.0"));
   }
 }

@@ -6,7 +6,8 @@ import {
   VALIDIUM_UNPAUSE_TYPES_ROLES,
   STATE_DATA_SUBMISSION_PAUSE_TYPE,
 } from "contracts/common/constants";
-import { AddressFilter, TestValidium } from "contracts/typechain-types";
+import { AddressFilter, TestValidium, Validium__factory } from "contracts/typechain-types";
+import { ethers } from "hardhat";
 
 import { deployValidiumFixture, getAccountsFixture, getValidiumRoleAddressesFixture } from "./helpers";
 import firstCompressedDataContent from "../_testData/compressedData/blocks-1-46.json";
@@ -26,7 +27,7 @@ import {
   VALIDIUM_INITIALIZE_SIGNATURE,
   MAX_GAS_LIMIT,
 } from "../common/constants";
-import { deployUpgradableFromFactory } from "../common/deployment";
+import { deployUpgradableFromFactory, reinitializeUpgradeableProxy } from "../common/deployment";
 import {
   calculateRollingHash,
   generateRandomBytes,
@@ -288,7 +289,98 @@ describe("Validium contract", () => {
         addressFilter: addressFilterAddress,
       });
 
-      await expectRevertWithReason(initializeCall, INITIALIZED_ALREADY_MESSAGE);
+      await expectRevertWithCustomError(validium, initializeCall, "InitializedVersionWrong", [0, 3]);
+    });
+
+    it("Should revert if initialize is called on an already deployed (version 1) proxy", async () => {
+      ({ verifier, validium } = await loadFixture(deployValidiumFixture));
+      // Simulate a Validium 2.0 proxy, which was initialized with `initializer` (version 1).
+      await validium.setSlotValue(0, 1);
+
+      const initializeCall = validium.initialize({
+        initialBlockHash: parentStateRootHash,
+        initialL2BlockNumber: INITIAL_MIGRATION_BLOCK,
+        genesisTimestamp: GENESIS_L2_TIMESTAMP,
+        defaultVerifier: verifier,
+        rateLimitPeriodInSeconds: ONE_DAY_IN_SECONDS,
+        rateLimitAmountInWei: INITIAL_WITHDRAW_LIMIT,
+        roleAddresses,
+        pauseTypeRoles: VALIDIUM_PAUSE_TYPES_ROLES,
+        unpauseTypeRoles: VALIDIUM_UNPAUSE_TYPES_ROLES,
+        verifierKeys: [],
+        defaultAdmin: securityCouncil.address,
+        dataRollingHashProvider: ADDRESS_ZERO,
+        addressFilter: addressFilterAddress,
+      });
+
+      await expectRevertWithCustomError(validium, initializeCall, "InitializedVersionWrong", [0, 1]);
+    });
+  });
+
+  describe("Upgrading / reinitialisation V3", () => {
+    const legacyFinalizedShnarf = generateRandomBytes(32);
+
+    beforeEach(async () => {
+      // Simulate a deployed Validium 2.0 proxy: initialized with `initializer` (version 1), holding a live
+      // legacy finalized shnarf.
+      await validium.setSlotValue(0, 1);
+      await validium.setLegacyFinalizedShnarf(legacyFinalizedShnarf);
+    });
+
+    it("Should revert reinitializeValidiumV3 on a freshly initialized proxy", async () => {
+      ({ validium } = await loadFixture(deployValidiumFixture));
+      await expectRevertWithReason(validium.reinitializeValidiumV3(), INITIALIZED_ALREADY_MESSAGE);
+    });
+
+    it("Should emit LineaRollupVersionChanged 2.0 to 3.0", async () => {
+      const upgradeCall = reinitializeUpgradeableProxy(validium, Validium__factory.abi, "reinitializeValidiumV3", []);
+
+      const previousVersion = ethers.zeroPadBytes(ethers.toUtf8Bytes("2.0"), 8);
+      const newVersion = ethers.zeroPadBytes(ethers.toUtf8Bytes("3.0"), 8);
+
+      await expectEvent(validium, upgradeCall, "LineaRollupVersionChanged", [previousVersion, newVersion]);
+      expect(await validium.CONTRACT_VERSION()).to.equal("3.0");
+    });
+
+    it("Migrates currentFinalizedShnarf_DEPRECATED into currentDataRollingHash and anchors it", async () => {
+      const upgradeCall = reinitializeUpgradeableProxy(validium, Validium__factory.abi, "reinitializeValidiumV3", []);
+
+      await expectEvent(validium, upgradeCall, "LegacyShnarfMigrated", [legacyFinalizedShnarf]);
+
+      expect(await validium.currentFinalizedShnarf_DEPRECATED()).to.equal(HASH_ZERO);
+      expect(await validium.currentDataRollingHash()).to.equal(legacyFinalizedShnarf);
+      expect(await validium.currentDataTailBytes()).to.equal(0n);
+      expect(await validium.dataRollingHashExists(legacyFinalizedShnarf)).to.equal(1n);
+    });
+
+    it("Allows submissions to chain from the migrated legacy shnarf", async () => {
+      await reinitializeUpgradeableProxy(validium, Validium__factory.abi, "reinitializeValidiumV3", []);
+
+      const nextDataRollingHash = generateRandomBytes(32);
+      await expect(validium.connect(operator).acceptDataRollingHash(legacyFinalizedShnarf, nextDataRollingHash)).to.not
+        .be.reverted;
+      expect(await validium.dataRollingHashExists(nextDataRollingHash)).to.equal(1n);
+    });
+
+    it("Should revert if there is no legacy shnarf to migrate", async () => {
+      await validium.setLegacyFinalizedShnarf(HASH_ZERO);
+
+      const upgradeCall = reinitializeUpgradeableProxy(validium, Validium__factory.abi, "reinitializeValidiumV3", []);
+
+      await expectRevertWithCustomError(validium, upgradeCall, "ZeroHashNotAllowed");
+    });
+
+    it("Fails to reinitialize twice", async () => {
+      await reinitializeUpgradeableProxy(validium, Validium__factory.abi, "reinitializeValidiumV3", []);
+
+      const secondUpgradeCall = reinitializeUpgradeableProxy(
+        validium,
+        Validium__factory.abi,
+        "reinitializeValidiumV3",
+        [],
+      );
+
+      await expectRevertWithReason(secondUpgradeCall, INITIALIZED_ALREADY_MESSAGE);
     });
   });
 

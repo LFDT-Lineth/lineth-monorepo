@@ -50,7 +50,7 @@ Live proxies moving to ABI `"9.0"` perform a single cutover:
 
 - **Blob-spanning cutover** — `LinethRollupV10WithReinitialization` → `reinitializeLineaRollupV10()` (`reinitializer(10)`, ABI `"9.0"`→`"10.0"`).
 
-`reinitializeLineaRollupV10` is a no-op version bump; see the [LinethRollupV10WithReinitialization](#linethrollupv10withreinitialization) section below for how the legacy-shnarf migration is actually performed.
+`reinitializeLineaRollupV10` performs the one-time legacy-shnarf migration; see the [LinethRollupV10WithReinitialization](#linethrollupv10withreinitialization) section below.
 
 ### LinethRollupWithReinitialization
 
@@ -72,7 +72,7 @@ pnpm exec hardhat deploy --network sepolia --tags LinethRollupWithReinitializati
 
 Deploys a new LinethRollup implementation and generates encoded `upgradeAndCall` calldata for `reinitializeLineaRollupV10()` (blob-spanning dataRollingHash cutover). Submit the printed calldata through the Security Council Safe targeting the ProxyAdmin.
 
-`reinitializeLineaRollupV10` is a no-op version bump: it performs no data migration and just emits `LineaRollupVersionChanged("9.0", "10.0")`. The legacy shnarf -> dataRollingHash bridge is instead validated and applied on-chain, once, inside `finalizeBlocks` itself (via the `shnarfData` field of `FinalizationDataV5`). Verifier keys and `SET_VERIFIER_KEY_ROLE` / `UNSET_VERIFIER_KEY_ROLE` are configured separately after upgrade via `grantRole` and `setVerifierKeys`.
+`reinitializeLineaRollupV10` performs the one-time legacy shnarf -> dataRollingHash migration: it sets `currentDataRollingHash` to the live legacy finalized shnarf, anchors it so post-upgrade submissions can chain from it, wipes the deprecated shnarf slot, and emits `LegacyShnarfMigrated` and `LineaRollupVersionChanged("9.0", "10.0")`. Verifier keys and `SET_VERIFIER_KEY_ROLE` / `UNSET_VERIFIER_KEY_ROLE` are configured separately after upgrade via `grantRole` and `setVerifierKeys`.
 
 > Note: the currently-deployed contract on `main` is `CONTRACT_VERSION() == "8.0"`. OpenZeppelin's `reinitializer(10)` only requires `_initialized < 10`, so an in-place upgrade calls `reinitializeLineaRollupV10` directly, jumping from 8 to 10; `"9.0"` is this repo's internal pre-cutover label only.
 

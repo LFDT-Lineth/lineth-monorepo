@@ -25,7 +25,7 @@ contract TestLinethRollup is LinethRollup, CalldataBlobAcceptor {
   }
 
   function setupParentDataRollingHash(bytes32 _dataRollingHash) external {
-    _dataRollingHashExists[_dataRollingHash] = 1;
+    _dataRollingHashExists[_dataRollingHash] = DATA_ROLLING_HASH_EXISTS_DEFAULT_VALUE;
   }
 
   function setLastFinalizedBlock(uint256 _blockNumber) external {

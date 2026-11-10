@@ -138,7 +138,7 @@ Only add these when the code calls library functions as methods on the type (e.g
 
 ```solidity
 contract PlonkVerifierForDataAggregation is IPlonkVerifier {
-  using Mimc for *;
+  using EfficientLeftRightKeccak for *;
 
   // Constants come after using statements
   uint256 public constant VERSION = 1;

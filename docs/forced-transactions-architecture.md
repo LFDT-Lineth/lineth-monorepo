@@ -139,8 +139,8 @@ The **Sequencer** is responsible for block production:
   │   - forcedTxFeeInWei        │      └─────────────────────────────┘
   │   ───────────────────────── │
   │   + storeForcedTransaction  │      ┌─────────────────────────────┐
-  │   + finalizeBlocks          │      │    Libraries (Mimc,         │
-  │   + getRequiredFields       │◄────►│    FinalizedStateHashing)   │
+  │   + finalizeBlocks          │      │    Library:                 │
+  │   + getRequiredFields       │◄────►│    FinalizedStateHashing    │
   └──────────────┬──────────────┘      └─────────────────────────────┘
                  │
                  │ emits ForcedTransactionAdded
@@ -201,7 +201,7 @@ The main rollup contract that stores forced transactions and enforces processing
 | `currentFinalizedState` | Hash of the last finalized state components |
 | `nextForcedTransactionNumber` | Counter for forced transactions (starts at 1) |
 | `forcedTransactionL2BlockNumbers` | Maps tx number → L2 block deadline (must be processed BY this block) |
-| `forcedTransactionRollingHashes` | Maps tx number → MiMC rolling hash |
+| `forcedTransactionRollingHashes` | Maps tx number → keccak256 rolling hash |
 | `forcedTransactionFeeInWei` | Required fee to submit a forced tx |
 | `addressFilter` | Address filter contract instance |
 

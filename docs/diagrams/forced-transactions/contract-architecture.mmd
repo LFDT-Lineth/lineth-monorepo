@@ -47,11 +47,6 @@ classDiagram
         +_computeLastFinalizedState()
     }
     
-    class Mimc {
-        <<library>>
-        +hash()
-    }
-    
     class Coordinator {
         <<off-chain service>>
         +listenForForcedTransactionAdded()
@@ -74,7 +69,6 @@ classDiagram
     LinethRollup ..|> IAcceptForcedTransactions
     ForcedTransactionGateway --> IAcceptForcedTransactions : calls
     ForcedTransactionGateway --> AddressFilter : validates
-    ForcedTransactionGateway --> Mimc : uses
     ForcedTransactionGateway --> FinalizedStateHashing : uses
     LinethRollup --> FinalizedStateHashing : uses
     LinethRollup --> AddressFilter : references

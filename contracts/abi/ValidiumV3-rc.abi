@@ -2624,6 +2624,13 @@
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "reinitializeValidiumV3",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "bytes32",

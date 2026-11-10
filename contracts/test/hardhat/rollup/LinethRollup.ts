@@ -336,8 +336,22 @@ describe("Lineth Rollup contract", () => {
   describe("Upgrading / reinitialisation V10", () => {
     beforeEach(async () => {
       // Simulate a pre-upgrade state: lower the initialized version so reinitializer(10) can run.
-      // Migration now happens inside reinitializeLineaRollupV10 itself (unconditionally, once).
+      // Migration happens inside reinitializeLineaRollupV10 itself (once), from a non-empty legacy shnarf.
       await linethRollup.setSlotValue(0, 9);
+      await linethRollup.setLegacyFinalizedShnarf(generateRandomBytes(32));
+    });
+
+    it("Should revert if there is no legacy shnarf to migrate", async () => {
+      await linethRollup.setLegacyFinalizedShnarf(HASH_ZERO);
+
+      const upgradeCall = reinitializeUpgradeableProxy(
+        linethRollup,
+        LinethRollup__factory.abi,
+        "reinitializeLineaRollupV10",
+        [],
+      );
+
+      await expectRevertWithCustomError(linethRollup, upgradeCall, "ZeroHashNotAllowed");
     });
 
     it("Should emit LineaRollupVersionChanged 9.0 to 10.0", async () => {

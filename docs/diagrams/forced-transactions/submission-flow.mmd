@@ -38,7 +38,7 @@ sequenceDiagram
     
     Note over Gateway,Rollup: Step 4: Calculate & Store
     Gateway->>Gateway: Calculate blockNumberDeadline (latest block BY which tx must be processed)
-    Gateway->>Gateway: Compute MiMC rolling hash
+    Gateway->>Gateway: Compute keccak256 rolling hash
     Gateway->>Gateway: RLP encode signed transaction
     Gateway->>Rollup: storeForcedTransaction(rollingHash, signer, deadline, rlpTx)
     Rollup->>Rollup: Store in mappings

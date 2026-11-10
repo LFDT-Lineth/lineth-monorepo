@@ -38,3 +38,26 @@ VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_A
 ```
 
 (make sure to replace `<value>` `<key>` `<bytes>` `<address>` with actual values).
+
+<br />
+
+## Upgrade Deployments
+
+Fresh deployments use `initialize`, which is restricted to a fresh proxy (initialized version `0`) and consumes reinitializer version `3`, so `reinitializeValidiumV3` can never run on them. Already deployed Validium `"2.0"` proxies (initialized with `initializer`, version `1`) perform a single cutover:
+
+- **Blob-spanning cutover** — `ValidiumV3WithReinitialization` → `reinitializeValidiumV3()` (`reinitializer(3)`, ABI `"2.0"`→`"3.0"`).
+
+### ValidiumV3WithReinitialization
+
+Deploys a new Validium implementation and generates encoded `upgradeAndCall` calldata for `reinitializeValidiumV3()` (blob-spanning dataRollingHash cutover). Submit the printed calldata through the Security Council Safe targeting the ProxyAdmin.
+
+`reinitializeValidiumV3` performs the one-time legacy shnarf -> dataRollingHash migration: it sets `currentDataRollingHash` to the live legacy finalized shnarf, anchors it so post-upgrade submissions can chain from it, wipes the deprecated shnarf slot, and emits `LegacyShnarfMigrated` and `LineaRollupVersionChanged("2.0", "3.0")`. It reverts with `ZeroHashNotAllowed` if there is no legacy shnarf to migrate. Data submitted but not yet finalized before the upgrade is not carried over and must be resubmitted from the migrated value. Verifier keys and `SET_VERIFIER_KEY_ROLE` / `UNSET_VERIFIER_KEY_ROLE` are configured separately after upgrade via `grantRole` and `setVerifierKeys`.
+
+| Parameter name | Required | Input value | Description |
+|---|---|---|---|
+| \**DEPLOYER_PRIVATE_KEY* | true | key | Network-specific private key |
+| VALIDIUM_ADDRESS | registry\|env | address | Existing Validium proxy address. Read from registry on stable networks; env var used as fallback. |
+
+```shell
+pnpm exec hardhat deploy --network sepolia --tags ValidiumV3WithReinitialization
+```

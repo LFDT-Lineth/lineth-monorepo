@@ -168,7 +168,7 @@ Verifier deployments require chain-configuration inputs in addition to the contr
 |----------|-----|------|
 | PlonkVerifier | [verifier.md](l1/verifier.md) | `PlonkVerifier` |
 | LinethRollup | [lineth-rollup.md](l1/lineth-rollup.md) | `LinethRollup`, `LinethRollupWithReinitialization`, `LinethRollupV10WithReinitialization` |
-| Validium | [validium.md](l1/validium.md) | `Validium` |
+| Validium | [validium.md](l1/validium.md) | `Validium`, `ValidiumV3WithReinitialization` |
 | Timelock | [timelock.md](l1/timelock.md) | `Timelock` |
 | YieldManager | [yield-manager.md](l1/yield-manager.md) | `YieldManager`, `YieldManagerArtifacts`, `YieldManagerImplementation` |
 | RecoverFunds | [recover-funds.md](l1/recover-funds.md) | `RecoverFunds` |

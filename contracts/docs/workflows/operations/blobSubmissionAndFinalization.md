@@ -6,7 +6,7 @@ This document outlines the core data-availability and finalization flows involve
 
 ## Data Submission
 
-This flow is used by the **Data Submission Operator** to submit DA chunks (EIP-4844 blobs or calldata) to the LinethRollup system. Unlike the legacy shnarf model, a chunk carries no L2 block hash or conflation boundary — it is pure DA, folded into a running `dataRollingHash` accumulator. A single logical stream can span any number of submissions, and a single finalization can span a partial chunk (see `startOffset`/`endOffset` below), hence "blob-spanning".
+This flow is used by the **Data Submission Operator** to submit DA chunks (EIP-4844 blobs or calldata) to the LinethRollup system. Unlike the legacy shnarf model, a chunk carries no L2 block hash or conflation boundary — it is pure DA, folded into a running `dataRollingHash` accumulator. A single logical stream can span any number of submissions, and a single finalization can start or end part-way through a shared blob chunk (see `parentDataTailTakeBytes`/`finalDataTailDiscardBytes` below), hence "blob-spanning".
 
 ### Steps — EIP-4844 blobs
 
@@ -15,7 +15,7 @@ This flow is used by the **Data Submission Operator** to submit DA chunks (EIP-4
    - The contract reads `blobhash(i)` as the chunk hash (reverts with `BlobSubmissionDataIsMissing` if `blobhash(0)` is zero).
    - Folds `dataRollingHash = keccak256(dataRollingHash || blobhash(i))`, starting from `parentDataRollingHash`.
 3. The final folded value must equal `storedDataRollingHash` (`DataRollingHashMismatch` otherwise) and is anchored.
-4. `parentDataRollingHash` must already be anchored, or be `EMPTY_HASH` (`ParentDataRollingHashNotAnchored` otherwise); `storedDataRollingHash` must not already be anchored (`DataRollingHashAlreadyAnchored` otherwise).
+4. `parentDataRollingHash` must already be anchored (`ParentDataRollingHashNotAnchored` otherwise); `storedDataRollingHash` must not already be anchored (`DataRollingHashAlreadyAnchored` otherwise).
 5. `DataSubmittedV4(parentDataRollingHash, dataRollingHash)` is emitted.
 
 ### Steps — calldata
@@ -24,7 +24,7 @@ Calldata DA (`CalldataOnlyDaRollup`, Validium, test harnesses) uses `submitDataA
 
 **Note:** L1 no longer runs the EIP-4844 point-evaluation precompile for DA acceptance; blob DA still requires a real blob-carrying transaction so `blobhash(i)` is non-zero.
 
-**Note:** only the final `dataRollingHash` of each submission is anchored on-chain (`_dataRollingHashExists`); intermediate per-chunk folds within a multi-blob submission are not separately persisted. `EMPTY_HASH` is permanently treated as an anchored parent, covering both a genuine genesis fresh-start and a network still awaiting its one-time legacy-shnarf migration (see below).
+**Note:** only the final `dataRollingHash` of each submission is anchored on-chain (`_dataRollingHashExists`); intermediate per-chunk folds within a multi-blob submission are not separately persisted. There is no `EMPTY_HASH` special case: the first valid parent is anchored explicitly — the deterministic genesis `keccak256(EMPTY_HASH || initialBlockHash)` seeded at initialization on fresh networks, or the legacy finalized shnarf migrated by `reinitializeLineaRollupV10` on in-place upgrades (see below).
 
 ---
 
@@ -42,16 +42,20 @@ This flow finalizes 1 or more DA submissions by verifying correct L2 execution p
      - If `blockHashes[lastFinalized]` is empty → **one-time migration path**: requires `parentBlockHash == EMPTY_HASH` (no parent block hash exists yet to soft-check against).
      - Else → **block-hash path**: requires the caller-declared `parentBlockHash` to match the on-chain `blockHashes[lastFinalized]`. All rounds after migration rely on the block hash.
    - Requires `finalBlockHash != EMPTY_HASH`.
-   - **One-time legacy-shnarf migration** (only if `finalizationData.shnarfData` has any non-zero field): reconstructs the legacy 5-input shnarf (`keccak256(parentShnarf || snarkHash || finalStateRootHash || keccak256(snarkHash || blobHash) || dataEvaluationClaim)`) and requires it to equal the still-live `currentFinalizedShnarf`, requires the live DA position to still be at its zero default (`LegacyShnarfAlreadyMigrated` otherwise), then wipes `currentFinalizedShnarf` to `EMPTY_HASH` and emits `LegacyShnarfMigrated`. This is a one-way integrity check on the last legacy blob; it does **not** chain the new `dataRollingHash` stream from the legacy shnarf — the new stream still starts fresh from `EMPTY_HASH`.
-   - DA continuity: requires `parentDataRollingHash == currentDataRollingHash` and `startOffset == currentDataAvailabilityOffset` (`DataRollingHashNotContinuous` / `StartOffsetNotContinuous` otherwise).
+   - DA continuity: requires `parentDataRollingHash == currentDataRollingHash` and `parentDataTailTakeBytes == currentDataTailBytes`, checked as a pair because the same `dataRollingHash` can recur at different tail counts (`DataRollingHashNotContinuous` / `ParentDataTailTakeBytesNotContinuous` otherwise).
+   - Tail bounds: requires `parentDataTailTakeBytes` and `finalDataTailDiscardBytes` to be `<= MAX_DATA_TAIL_BYTES` (130046, a blob's usable payload length minus one; `DataTailBytesOutOfRange` otherwise). Calldata submissions always use `0`.
+   - Same-chunk progression: if `parentDataRollingHash == endDataRollingHash` (no new chunk), requires `parentDataTailTakeBytes > finalDataTailDiscardBytes` (`InvalidDataTailProgression` otherwise).
    - DA anchoring: requires `endDataRollingHash` to have been anchored by a prior submission (`FinalDataRollingHashNotAnchored` otherwise).
    - Stores **Merkle roots** of L2 → L1 messages for proof-based claiming, and emits events for L2 blocks containing `MessageSent` events.
-3. Computes the **public input** as a single `keccak256(...) % MODULO_R` over one contiguous, assembly-packed memory region (in order): `parentBlockHash`, `finalBlockHash`, `finalTimestamp`, `endBlockNumber`, `lastFinalizedL1RollingHash`, `l1RollingHash`, `lastFinalizedL1RollingHashMessageNumber`, `l1RollingHashMessageNumber`, `lastFinalizedForcedTransactionRollingHash`, `finalForcedTransactionRollingHash`, `lastFinalizedForcedTransactionNumber`, `finalForcedTransactionNumber`, `l2MerkleTreesDepth`, `parentDataRollingHash`, `endDataRollingHash`, `startOffset`, `endOffset`, then the hashed dynamic arrays: `keccak256(l2MerkleRoots)`, the verifier chain configuration, `keccak256(filteredAddresses)`, `keccak256(verifierKeys)`, `keccak256(l2MessagingBlocksOffsets)`.
+3. Computes the **public input** as a single `keccak256(...) % MODULO_R` over one contiguous, assembly-packed memory region (in order): `parentBlockHash`, `finalBlockHash`, `finalTimestamp`, `endBlockNumber`, `lastFinalizedL1RollingHash`, `l1RollingHash`, `lastFinalizedL1RollingHashMessageNumber`, `l1RollingHashMessageNumber`, `lastFinalizedForcedTransactionRollingHash`, `finalForcedTransactionRollingHash`, `lastFinalizedForcedTransactionNumber`, `finalForcedTransactionNumber`, `l2MerkleTreesDepth`, `parentDataRollingHash`, `endDataRollingHash`, `parentDataTailTakeBytes`, `finalDataTailDiscardBytes`, then the hashed dynamic arrays: `keccak256(l2MerkleRoots)`, the verifier chain configuration, `keccak256(filteredAddresses)`, `keccak256(verifierKeys)`, `keccak256(l2MessagingBlocksOffsets)`.
+   - Defaults signal no transition: if `l1RollingHashMessageNumber` and `l1RollingHash` are both default (`0` / `0x00..00`), the guest program(s) infer the L1 rolling hash state is unchanged. The defaults are used as-is in the public input only; `currentFinalizedState` and `FinalizedStateUpdated` keep the `lastFinalizedL1RollingHash*` values (so the event always matches stored state). A lone L1 default (message number without rolling hash, or vice versa) reverts. Forced transaction values are always the actual values and are stored as passed in.
 4. Calls the Plonk-based **Verifier** to validate the provided zk-proof against that public input.
 5. Upon success, updates finalized state:
    - Anchors `blockHashes[endBlockNumber] = finalBlockHash`.
-   - Updates `currentL2BlockNumber`, `currentDataRollingHash`, `currentDataAvailabilityOffset`, and `currentFinalizedState`.
+   - Updates `currentL2BlockNumber`, `currentDataRollingHash`, `currentDataTailBytes` (= `finalDataTailDiscardBytes`), and `currentFinalizedState`.
    - Emits `FinalizedStateUpdated` and `DataFinalizedV4`.
+
+**Note:** the one-time legacy-shnarf migration is not part of finalization: `reinitializeLineaRollupV10` sets `currentDataRollingHash` to the still-live legacy finalized shnarf, anchors it, wipes the deprecated shnarf slot and emits `LegacyShnarfMigrated`, so the first post-upgrade submission and finalization chain directly from it.
 
 **Note:** the public-input byte layout above (a flat, assembly-packed `keccak256` over the fields in the order listed, with the legacy shnarf pair replaced by `parentBlockHash`/`finalBlockHash`, the DA stream-position fields appended just before the hashed dynamic arrays, and the hashed `l2MessagingBlocksOffsets` appended last) differs from the layout used prior to blob spanning. Any change to this layout must be mirrored bit-for-bit by the off-chain prover/circuit before deployment.
 

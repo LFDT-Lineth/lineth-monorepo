@@ -1,4 +1,5 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { DeployProxyOptions } from "@openzeppelin/hardhat-upgrades/src/utils";
 import { PRECOMPILES_ADDRESSES } from "contracts/common/constants";
 import {
   LINETH_ROLLUP_V8_PAUSE_TYPES_ROLES,
@@ -11,8 +12,10 @@ import {
   AddressFilter,
   CallForwardingProxy,
   ForcedTransactionGateway,
+  LinethRollupV9Stub,
   TestLinethRollup,
   TestValidium,
+  ValidiumV3Stub,
 } from "contracts/typechain-types";
 import { toBeHex } from "ethers";
 import { ethers } from "hardhat";
@@ -46,6 +49,8 @@ import {
 import { deployUpgradableFromFactory } from "../../common/deployment";
 import { LinethRollupInitializationData, PauseTypeRole } from "../../common/types";
 
+type UnsafeAllow = NonNullable<DeployProxyOptions["unsafeAllow"]>[number];
+
 export async function deployRevertingVerifier(scenario: bigint): Promise<string> {
   const revertingVerifierFactory = await ethers.getContractFactory("RevertingVerifier");
   const verifier = await revertingVerifierFactory.deploy(scenario);
@@ -60,6 +65,15 @@ export async function deployCallForwardingProxy(target: string): Promise<CallFor
   return callForwardingProxy;
 }
 export async function deployValidiumFixture() {
+  return deployValidiumContract<TestValidium>("TestValidium");
+}
+
+export async function deployValidiumV3StubFixture() {
+  // The stub inherits `initialize` from Validium rather than declaring its own.
+  return deployValidiumContract<ValidiumV3Stub>("ValidiumV3Stub", ["missing-initializer"]);
+}
+
+async function deployValidiumContract<T>(contractName: string, extraUnsafeAllow: UnsafeAllow[] = []) {
   const { securityCouncil, nonAuthorizedAccount } = await loadFixture(getAccountsFixture);
   const roleAddresses = await loadFixture(getValidiumRoleAddressesFixture);
 
@@ -84,10 +98,10 @@ export async function deployValidiumFixture() {
     addressFilter: await addressFilter.getAddress(),
   };
 
-  const validium = (await deployUpgradableFromFactory("TestValidium", [initializationData], {
+  const validium = (await deployUpgradableFromFactory(contractName, [initializationData], {
     initializer: VALIDIUM_INITIALIZE_SIGNATURE,
-    unsafeAllow: ["constructor", "incorrect-initializer-order"],
-  })) as unknown as TestValidium;
+    unsafeAllow: ["constructor", "incorrect-initializer-order", ...extraUnsafeAllow],
+  })) as unknown as T;
 
   return { verifier, validium, addressFilter };
 }
@@ -100,6 +114,15 @@ export async function deployMockYieldManager(): Promise<string> {
 }
 
 export async function deployLinethRollupFixture() {
+  return deployLinethRollupContract<TestLinethRollup>("TestLinethRollup");
+}
+
+export async function deployLinethRollupV9StubFixture() {
+  // The stub inherits `initialize` from LinethRollup rather than declaring its own.
+  return deployLinethRollupContract<LinethRollupV9Stub>("LinethRollupV9Stub", ["missing-initializer"]);
+}
+
+async function deployLinethRollupContract<T>(contractName: string, extraUnsafeAllow: UnsafeAllow[] = []) {
   const { securityCouncil, nonAuthorizedAccount } = await loadFixture(getAccountsFixture);
   const roleAddresses = await loadFixture(getRoleAddressesFixture);
 
@@ -127,13 +150,13 @@ export async function deployLinethRollupFixture() {
   };
 
   const linethRollup = (await deployUpgradableFromFactory(
-    "TestLinethRollup",
+    contractName,
     [initializationData, FALLBACK_OPERATOR_ADDRESS, yieldManager],
     {
       initializer: LINETH_ROLLUP_INITIALIZE_SIGNATURE,
-      unsafeAllow: ["constructor", "incorrect-initializer-order"],
+      unsafeAllow: ["constructor", "incorrect-initializer-order", ...extraUnsafeAllow],
     },
-  )) as unknown as TestLinethRollup;
+  )) as unknown as T;
 
   return { verifier, linethRollup, addressFilter, yieldManager, linethRollupInitializationData: initializationData };
 }

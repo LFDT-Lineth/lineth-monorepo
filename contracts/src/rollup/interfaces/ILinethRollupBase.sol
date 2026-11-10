@@ -51,6 +51,9 @@ interface ILinethRollupBase {
    * @param finalTimestamp is the timestamp of the last block being finalized.
    * @param lastFinalizedL1RollingHash is the last stored L2 computed rolling hash used in finalization.
    * @param l1RollingHash is the calculated rolling hash on L2 that is expected to match L1 at l1RollingHashMessageNumber.
+   *   Together with l1RollingHashMessageNumber it MAY be the default (EMPTY_HASH / 0) to signal no L1 rolling hash
+   *   transition: the defaults are used as-is in the public input, while the last finalized rolling hash and message
+   *   number are kept in the stored finalized state. Supplying only one of the two as a default is invalid.
    * @param lastFinalizedL1RollingHashMessageNumber is the last stored L2 computed message number used in finalization.
    * @param l1RollingHashMessageNumber is the calculated message number on L2 that is expected to match the existing L1 rolling hash.
    * @param l2MerkleTreesDepth is the depth of all l2MerkleRoots.
@@ -154,7 +157,7 @@ interface ILinethRollupBase {
   );
 
   /**
-   * @notice Emitted once, on `reinitializeLineaRollupV10`, indicating the legacy shnarf was set
+   * @notice Emitted once, on `reinitializeLineaRollupV10` / `reinitializeValidiumV3`, indicating the legacy shnarf was set
    *   as the live currentDataRollingHash and anchored into the dataRollingHash membership set.
    * @param migratedDataRollingHash The legacy shnarf value that was migrated.
    */
@@ -167,7 +170,8 @@ interface ILinethRollupBase {
    * @dev The `lastFinalizedState` fields are needed for liveness recovery as well as forced transactions.
    * @param blockNumber The indexed L2 block number indicating which block the finalization the data ends on.
    * @param timestamp The timestamp of the last block being finalized.
-   * @param messageNumber The calculated message number on L2 that is expected to match the existing L1 rolling hash.
+   * @param messageNumber The finalized L1 rolling hash message number, as stored in `currentFinalizedState`. Equal to
+   *   the last finalized message number when the finalization passed the default (no transition).
    * @param forcedTransactionNumber The final forced transaction finalized.
    */
   event FinalizedStateUpdated(
