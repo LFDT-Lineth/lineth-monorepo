@@ -5,11 +5,13 @@
 | Tool | Version |
 |------|---------|
 | Node.js | >= 24.22.1 (see `.nvmrc`) |
-| pnpm | >= 12.6.0 |
+| pnpm | >= 12.17.0 |
 | JDK | 21 (for coordinator, Besu plugins) |
 | Docker | 24+ with 16 GB memory, 4+ CPUs |
 | Docker Compose | 2.19+ |
 | Make | 3.81+ |
+
+pnpm does not switch to the pinned version by itself (`pmOnFail: ignore` in `pnpm-workspace.yaml` keeps the lockfile readable by GitHub's dependency graph). Install it with `corepack enable` or `npm install -g pnpm@12.17.0`.
 
 ## Setup
 

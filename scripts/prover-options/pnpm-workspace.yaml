@@ -1,2 +1,11 @@
 packages:
   - "."
+
+ignoreWorkspaceRootCheck: true
+
+# pnpm 12 records the pinned pnpm in a first lockfile document, which hides all dependencies
+# from GitHub's dependency graph and Dependabot. `ignore` keeps a single-document lockfile,
+# but pnpm no longer switches to the pinned version locally (CI, Docker and Vercel still pin it).
+pmOnFail: ignore
+
+minimumReleaseAge: 10080

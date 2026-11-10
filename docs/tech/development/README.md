@@ -7,7 +7,7 @@
 | Tool | Version | Purpose |
 |------|---------|---------|
 | Node.js | >= 24.22.1 (see `.nvmrc`) | TypeScript projects |
-| pnpm | v12.6.0+ | Package management |
+| pnpm | v12.17.0+ | Package management |
 | Docker | v24+ | Container runtime |
 | Docker Compose | v2.19+ | Multi-container orchestration |
 | Make | v3.81+ | Build automation |
