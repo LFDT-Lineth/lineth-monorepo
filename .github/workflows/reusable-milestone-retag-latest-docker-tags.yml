@@ -48,10 +48,11 @@ on:
         required: true
         type: string
 
+permissions:
+  id-token: write
+
 jobs:
   retag-latest-docker-tags:
-    permissions:
-      id-token: write
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     environment: dockerhub-${{ matrix.image-name }}
     strategy:

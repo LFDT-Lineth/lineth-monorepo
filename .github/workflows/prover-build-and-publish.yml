@@ -4,6 +4,7 @@ permissions:
   contents: read
   actions: read
   packages: write
+  id-token: write
 
 on:
   workflow_call:
@@ -36,11 +37,6 @@ env:
 
 jobs:
   build-and-publish:
-    permissions:
-      contents: read
-      actions: read
-      packages: write
-      id-token: write
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     environment: ${{ inputs.push_image && 'dockerhub-linea-prover' || 'dockerhub-pull' }}
     name: Prover build

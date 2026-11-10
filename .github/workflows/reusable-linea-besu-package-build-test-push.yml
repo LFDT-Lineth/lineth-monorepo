@@ -69,9 +69,8 @@ jobs:
 
   run-e2e-tests:
     permissions:
-      contents: write
+      contents: read
       actions: read
-      packages: write
       id-token: write
     needs: [ build-and-upload-artifact ]
     if: ${{ inputs.run_e2e_test }}

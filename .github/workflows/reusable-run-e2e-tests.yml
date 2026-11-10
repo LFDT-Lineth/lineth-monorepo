@@ -3,6 +3,7 @@ name: "Reusable: Run E2E Tests"
 permissions:
   contents: read
   actions: read
+  id-token: write
 
 on:
   workflow_dispatch:
@@ -99,10 +100,6 @@ on:
 jobs:
   # Required job
   run-e2e-tests:
-    permissions:
-      contents: read
-      actions: read
-      id-token: write
     # We can only use conditionals, and not path filters to 'successfully' skip a required job - https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks#handling-skipped-but-required-checks
     # Unset (workflow_dispatch) runs the tests.
     if: ${{ inputs.has-changes-requiring-e2e-testing != 'false' }}

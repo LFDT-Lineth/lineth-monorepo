@@ -297,8 +297,6 @@ jobs:
     permissions:
       contents: read
       actions: read
-      security-events: write
-      packages: write
       id-token: write
     needs: [filter-commit-changes, compute-commit-tags, prepare-linea-besu-maven]
     # !cancelled() (not always()): run on need failure/skip, but not after a
@@ -350,7 +348,6 @@ jobs:
     permissions:
       contents: read
       actions: read
-      security-events: write
       packages: write
       id-token: write
     needs:
@@ -385,8 +382,6 @@ jobs:
     permissions:
       contents: read
       actions: read
-      security-events: write
-      packages: write
       id-token: write
     needs:
       [
@@ -414,8 +409,6 @@ jobs:
     permissions:
       contents: read
       actions: read
-      security-events: write
-      packages: write
       id-token: write
     needs:
       [

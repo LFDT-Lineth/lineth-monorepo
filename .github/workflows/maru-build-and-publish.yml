@@ -4,6 +4,7 @@ permissions:
   contents: read
   actions: read
   packages: write
+  id-token: write
 
 on:
   workflow_call:
@@ -34,11 +35,6 @@ concurrency:
 
 jobs:
   build-and-publish:
-    permissions:
-      contents: read
-      actions: read
-      packages: write
-      id-token: write
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     environment: ${{ inputs.push_image && 'dockerhub-maru' || 'dockerhub-pull' }}
     name: Maru build and publish

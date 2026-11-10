@@ -106,10 +106,8 @@ jobs:
 
   run-test-coordinator:
     permissions:
+      contents: read
       actions: read
-      contents: write
-      packages: write
-      pull-requests: write
       id-token: write
     uses: ./.github/workflows/coordinator-testing.yml
     needs: [compute-commit-tag, compute-release-metadata]
@@ -161,10 +159,8 @@ jobs:
 
   run-test-transaction-exclusion-api:
     permissions:
+      contents: read
       actions: read
-      contents: write
-      packages: write
-      pull-requests: write
       id-token: write
     uses: ./.github/workflows/transaction-exclusion-api-testing.yml
     needs: [compute-release-metadata]
@@ -176,10 +172,9 @@ jobs:
 
   build-local-coordinator:
     permissions:
+      contents: read
       actions: read
-      contents: write
       packages: write
-      pull-requests: write
       id-token: write
     needs: [compute-release-metadata, run-test-coordinator]
     if: >
@@ -197,10 +192,9 @@ jobs:
 
   build-local-postman:
     permissions:
+      contents: read
       actions: read
-      contents: write
       packages: write
-      pull-requests: write
       id-token: write
     needs: [compute-release-metadata, run-test-postman]
     if: >
@@ -218,10 +212,9 @@ jobs:
 
   build-local-prover:
     permissions:
+      contents: read
       actions: read
-      contents: write
       packages: write
-      pull-requests: write
       id-token: write
     needs: [compute-release-metadata, run-test-prover]
     if: >
@@ -239,10 +232,9 @@ jobs:
 
   build-local-prover-ray:
     permissions:
+      contents: read
       actions: read
-      contents: write
       packages: write
-      pull-requests: write
       id-token: write
     needs: [compute-release-metadata, run-test-prover-ray]
     if: >
@@ -259,10 +251,9 @@ jobs:
 
   build-local-maru:
     permissions:
+      contents: read
       actions: read
-      contents: write
       packages: write
-      pull-requests: write
       id-token: write
     needs: [compute-release-metadata, run-test-maru]
     if: >
@@ -280,10 +271,9 @@ jobs:
 
   build-local-tx-exclusion-api:
     permissions:
+      contents: read
       actions: read
-      contents: write
       packages: write
-      pull-requests: write
       id-token: write
     needs: [compute-release-metadata, run-test-transaction-exclusion-api]
     if: >
@@ -301,10 +291,8 @@ jobs:
 
   run-e2e-tests:
     permissions:
+      contents: read
       actions: read
-      contents: write
-      packages: write
-      pull-requests: write
       id-token: write
     needs: [compute-release-metadata, build-local-coordinator, build-local-postman, build-local-prover, build-local-tx-exclusion-api, build-local-maru]
     if: >

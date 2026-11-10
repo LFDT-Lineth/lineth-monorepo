@@ -93,10 +93,9 @@ jobs:
 
   build-and-publish-image-coordinator:
     permissions:
+      contents: read
       actions: read
-      contents: write
       packages: write
-      pull-requests: write
       id-token: write
     needs: [compute-docker-tag]
     if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'coordinator'
@@ -110,10 +109,9 @@ jobs:
 
   build-and-publish-image-postman:
     permissions:
+      contents: read
       actions: read
-      contents: write
       packages: write
-      pull-requests: write
       id-token: write
     needs: [compute-docker-tag]
     if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'postman'
@@ -127,10 +125,9 @@ jobs:
 
   build-and-publish-image-prover:
     permissions:
+      contents: read
       actions: read
-      contents: write
       packages: write
-      pull-requests: write
       id-token: write
     needs: [compute-docker-tag]
     if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'prover'
@@ -144,10 +141,9 @@ jobs:
 
   build-and-publish-image-prover-ray:
     permissions:
+      contents: read
       actions: read
-      contents: write
       packages: write
-      pull-requests: write
       id-token: write
     needs: [compute-docker-tag]
     if: >
@@ -164,10 +160,9 @@ jobs:
 
   build-and-publish-image-maru:
     permissions:
+      contents: read
       actions: read
-      contents: write
       packages: write
-      pull-requests: write
       id-token: write
     needs: [compute-docker-tag]
     if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'maru'
@@ -181,10 +176,9 @@ jobs:
 
   build-and-publish-image-tx-exclusion-api:
     permissions:
+      contents: read
       actions: read
-      contents: write
       packages: write
-      pull-requests: write
       id-token: write
     needs: [compute-docker-tag]
     if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'tx-exclusion-api'
