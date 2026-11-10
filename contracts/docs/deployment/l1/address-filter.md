@@ -21,12 +21,12 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-npx hardhat deploy --network sepolia --tags AddressFilter
+pnpm exec hardhat ignition deploy AddressFilter --network sepolia
 ```
 
 Base command with cli arguments:
 ```shell
-DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> L1_SECURITY_COUNCIL=<address> npx hardhat deploy --network sepolia --tags AddressFilter
+DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> L1_SECURITY_COUNCIL=<address> pnpm exec hardhat ignition deploy AddressFilter --network sepolia
 ```
 
 (make sure to replace `<key>` `<address>` with actual values)

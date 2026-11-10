@@ -34,7 +34,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-pnpm exec hardhat deploy --network sepolia --tags YieldManager
+pnpm exec hardhat ignition deploy YieldManager --network sepolia
 ```
 
 <br />
@@ -67,7 +67,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-pnpm exec hardhat deploy --network sepolia --tags YieldManagerArtifacts
+pnpm exec hardhat ignition deploy YieldManagerArtifacts --network sepolia
 ```
 
 <br />
@@ -89,5 +89,5 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-pnpm exec hardhat deploy --network sepolia --tags YieldManagerImplementation
+pnpm exec hardhat ignition deploy YieldManagerUpgrade --network sepolia
 ```

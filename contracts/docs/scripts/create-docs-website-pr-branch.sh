@@ -46,7 +46,7 @@ if [ -z "$(pnpm -F contracts list hardhat)" ]; then
 fi
 
 # Docgen
-pnpm exec hardhat docgen
+pnpm run solidity:docgen
 
 # Git clone docs website repo and create a new branch
 cd $MONOREPO_ROOT_PATH

@@ -96,7 +96,7 @@ pnpm -F contracts run coverage
 or
 
 ```shell
-pnpm hardhat coverage --solcoverjs ./.solcover.js
+pnpm hardhat test --coverage
 ```
 
 The report will be generated in the `coverage` folder at the root of the repository. To visualize it in your web browser, you can use the `coverage/index.html` file.

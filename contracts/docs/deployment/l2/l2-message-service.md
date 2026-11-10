@@ -23,12 +23,12 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-pnpm exec hardhat deploy --network linea_sepolia --tags L2MessageService
+pnpm exec hardhat ignition deploy L2MessageService --network linea_sepolia
 ```
 
 Base command with cli arguments:
 ```shell
-VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> L2_SECURITY_COUNCIL=<address> L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER=<address> L2_MESSAGE_SERVICE_RATE_LIMIT_PERIOD=<value> L2_MESSAGE_SERVICE_RATE_LIMIT_AMOUNT=<value> pnpm exec hardhat deploy --network linea_sepolia --tags L2MessageService
+VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> L2_SECURITY_COUNCIL=<address> L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER=<address> L2_MESSAGE_SERVICE_RATE_LIMIT_PERIOD=<value> L2_MESSAGE_SERVICE_RATE_LIMIT_AMOUNT=<value> pnpm exec hardhat ignition deploy L2MessageService --network linea_sepolia
 ```
 
 (make sure to replace `<value>` `<key>` `<address>` with actual values)
@@ -55,7 +55,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-pnpm exec hardhat deploy --network linea_mainnet --tags L2MessageServiceLineaMainnet
+pnpm exec hardhat ignition deploy L2MessageServiceV1 --network linea_mainnet
 ```
 
 <br />
@@ -72,5 +72,5 @@ Deploys a new L2MessageService implementation and generates encoded upgrade call
 | L2_MESSAGE_SERVICE_ADDRESS | registry\|env | address | Existing L2MessageService proxy address. Read from registry on stable networks; env var used as fallback. |
 
 ```shell
-pnpm exec hardhat deploy --network linea_sepolia --tags L2MessageServiceWithReinitialization
+pnpm exec hardhat ignition deploy L2MessageServiceReinitializeV3 --network linea_sepolia
 ```

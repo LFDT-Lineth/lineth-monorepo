@@ -33,12 +33,12 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-npx hardhat deploy --network sepolia --tags ForcedTransactionGateway
+pnpm exec hardhat ignition deploy ForcedTransactionGateway --network sepolia
 ```
 
 Base command with cli arguments:
 ```shell
-DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> LINETH_ROLLUP_ADDRESS=<address> L1_SECURITY_COUNCIL=<address> FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID=<value> FORCED_TRANSACTION_GATEWAY_L2_BLOCK_BUFFER=<value> FORCED_TRANSACTION_GATEWAY_MAX_GAS_LIMIT=<value> FORCED_TRANSACTION_GATEWAY_MAX_INPUT_LENGTH_BUFFER=<value> FORCED_TRANSACTION_ADDRESS_FILTER=<address> FORCED_TRANSACTION_L2_BLOCK_DURATION_SECONDS=<value> FORCED_TRANSACTION_BLOCK_NUMBER_DEADLINE_BUFFER=<value> MIMC_LIBRARY_ADDRESS=<address> npx hardhat deploy --network sepolia --tags ForcedTransactionGateway
+DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> LINETH_ROLLUP_ADDRESS=<address> L1_SECURITY_COUNCIL=<address> FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID=<value> FORCED_TRANSACTION_GATEWAY_L2_BLOCK_BUFFER=<value> FORCED_TRANSACTION_GATEWAY_MAX_GAS_LIMIT=<value> FORCED_TRANSACTION_GATEWAY_MAX_INPUT_LENGTH_BUFFER=<value> FORCED_TRANSACTION_ADDRESS_FILTER=<address> FORCED_TRANSACTION_L2_BLOCK_DURATION_SECONDS=<value> FORCED_TRANSACTION_BLOCK_NUMBER_DEADLINE_BUFFER=<value> MIMC_LIBRARY_ADDRESS=<address> pnpm exec hardhat ignition deploy ForcedTransactionGateway --network sepolia
 ```
 
 (make sure to replace `<value>` `<key>` `<address>` with actual values)

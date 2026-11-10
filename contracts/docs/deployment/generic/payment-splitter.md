@@ -20,5 +20,5 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-pnpm exec hardhat deploy --network sepolia --tags PaymentSplitterWrapper
+pnpm exec hardhat ignition deploy PaymentSplitterWrapper --network sepolia
 ```

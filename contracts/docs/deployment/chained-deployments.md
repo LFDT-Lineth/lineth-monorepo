@@ -4,27 +4,36 @@
 
 <br />
 
-This section describes the scripts that can be run to deploy multiple contracts in a sequence.
+This section describes the composite Ignition modules (`contracts/ignition/modules/stacks/`) that deploy multiple contracts in one deployment. They replace the chained `hardhat deploy --tags A,B,C` runs: the contracts a later step needs (the new verifier for LinethRollup, the new BridgedToken beacon for TokenBridge) are wired inside the module, so no address is handed over between scripts and a stale registry/env value for them is never used.
+
+| Hardhat 2 | Now | Module file |
+|---|---|---|
+| `--tags PlonkVerifier,LinethRollup,Timelock` | `hardhat ignition deploy L1Protocol` | `ignition/modules/stacks/L1Protocol.ts` |
+| `--tags L2MessageService,Timelock` | `hardhat ignition deploy L2Protocol` | `ignition/modules/stacks/L2Protocol.ts` |
+| `--tags BridgedToken,TokenBridge` | `hardhat ignition deploy TokenBridgeWithBeacon` | `ignition/modules/stacks/TokenBridgeWithBeacon.ts` |
+
+`hardhat ignition deploy <Name>` builds the parameters (env vars + address registry → `ignition/parameters/<network>.json`), runs the OpenZeppelin Upgrades checks, deploys with Ignition and runs the post-deploy steps. See [README.md](README.md#generalized-command-format) for the details, deployment ids and resume.
 
 <br />
 
 ## UI-backed chained deployments
 
-Chained `--tags` deployments support the browser-wallet flow with **one session for the entire run**:
+Composite deployments support the browser-wallet flow with **one session for the entire run**:
 
 ```shell
-HARDHAT_SIGNER_UI=true pnpm exec hardhat deploy --network sepolia --tags PlonkVerifier,LinethRollup,Timelock
+pnpm exec hardhat ignition deploy L1Protocol --network sepolia --signer-ui
 ```
 
-When `HARDHAT_SIGNER_UI=true` is set:
+With `--signer-ui` (or `HARDHAT_SIGNER_UI=true`):
 
-- **Single session per `hardhat deploy` invocation** — Hardhat overrides the `deploy:runDeploy` subtask so the local HTTP bridge and Next.js UI stay up until **all** scripts for the requested tags have finished (no restart between deploy files).
-- **Multiple transactions in one deploy file** still share that same session (sequential wallet approvals).
-- The UI can show **batch context** (tags, current script) and keep a **submitted-transaction history** in the browser (session storage) after the bridge closes.
+- **Single session per `hardhat ignition deploy` run** — with `--signer-ui`, the whole Ignition deployment and the post-deploy steps run in one signer session, so the local HTTP bridge and Next.js UI stay up until the whole module is deployed.
+- **Multiple transactions** share that same session (sequential wallet approvals). Ignition skips what is already deployed in the deployment id, so a resumed run only asks for the missing transactions.
+- The UI can show **batch context** (module, step) and keep a **submitted-transaction history** in the browser (session storage) after the bridge closes.
 - By default the **Next.js process is stopped** when the deploy run ends (success or failure), alongside the HTTP bridge; the tab stays open with history in session storage. Set `HARDHAT_SIGNER_UI_LEAVE_NEXT_DEV_AFTER_DEPLOY=true` to keep Next running. The bridge reports a terminal outcome so the UI stops polling cleanly.
-- `HARDHAT_SIGNER_UI=true` and `DEPLOYER_PRIVATE_KEY` cannot be set together. Hardhat now errors immediately if both are present.
+- If a wallet prompt is rejected or the run is interrupted, run `pnpm exec hardhat deploy:recover --network <n>` before re-running the same command.
+- `--signer-ui` and `DEPLOYER_PRIVATE_KEY` cannot be used together. Hardhat errors if both are present.
 
-If `HARDHAT_SIGNER_UI` is not set (or not `true`), the existing **`DEPLOYER_PRIVATE_KEY`** / named-account flow is unchanged.
+If `HARDHAT_SIGNER_UI` is not set (or not `true`), deployments sign with **`DEPLOYER_PRIVATE_KEY`** (the network's account 0).
 
 See the **Browser wallet signing (`HARDHAT_SIGNER_UI`)** section in [README.md](README.md) and [signer-ui/README.md](../../signer-ui/README.md) for env vars and local stack notes.
 
@@ -32,13 +41,13 @@ See the **Browser wallet signing (`HARDHAT_SIGNER_UI`)** section in [README.md](
 
 ## L1MessageService Chained Deployments
 
-This will run the script that deploys PlonkVerifier, LinethRollup, Timelock contracts.
+Module `L1Protocol`: deploys PlonkVerifier (+ `Mimc`, unless `VERIFIER_MIMC_ADDRESS` is set), LinethRollup (behind the pinned OpenZeppelin 4.x proxy, `defaultVerifier` = the new verifier) and Timelock. The `setVerifierAddress` calldata for `VERIFIER_PROOF_TYPE` is printed after deploying.
 
 Parameters that should be filled either in .env or passed as CLI arguments:
 
 | Parameter name        | Required | Input Value | Description |
 | ------------------ | -------- | ---------- | ----------- |
-| VERIFY_CONTRACT    | false    |true\|false| Verifies the deployed contract |
+| VERIFY_CONTRACT    | false    |true\|false| Verifies the deployed contracts (same as `--verify`) |
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network. |
@@ -68,12 +77,17 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-pnpm exec hardhat deploy --network sepolia --tags PlonkVerifier,LinethRollup,Timelock
+pnpm exec hardhat ignition deploy L1Protocol --network sepolia
 ```
 
 Base command with cli arguments:
 ```shell
-VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> INITIAL_L2_STATE_ROOT_HASH=<bytes> INITIAL_L2_BLOCK_NUMBER=<value> L2_GENESIS_TIMESTAMP=<value> L1_SECURITY_COUNCIL=<address> LINETH_ROLLUP_OPERATORS=<address> LINETH_ROLLUP_RATE_LIMIT_PERIOD=<value> LINETH_ROLLUP_RATE_LIMIT_AMOUNT=<value> YIELD_MANAGER_ADDRESS=<address> TIMELOCK_PROPOSERS=<address> TIMELOCK_EXECUTORS=<address> TIMELOCK_ADMIN_ADDRESS=<address> MIN_DELAY=<value> VERIFIER_CONTRACT_NAME=PlonkVerifierForMultiTypeDataAggregation VERIFIER_IS_ALLOWED_CIRCUIT_ID=<value> pnpm exec hardhat deploy --network sepolia --tags PlonkVerifier,LinethRollup,Timelock
+VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> INITIAL_L2_STATE_ROOT_HASH=<bytes> INITIAL_L2_BLOCK_NUMBER=<value> L2_GENESIS_TIMESTAMP=<value> L1_SECURITY_COUNCIL=<address> LINETH_ROLLUP_OPERATORS=<address> LINETH_ROLLUP_RATE_LIMIT_PERIOD=<value> LINETH_ROLLUP_RATE_LIMIT_AMOUNT=<value> YIELD_MANAGER_ADDRESS=<address> TIMELOCK_PROPOSERS=<address> TIMELOCK_EXECUTORS=<address> TIMELOCK_ADMIN_ADDRESS=<address> MIN_DELAY=<value> VERIFIER_CONTRACT_NAME=PlonkVerifierForMultiTypeDataAggregation VERIFIER_IS_ALLOWED_CIRCUIT_ID=<value> pnpm exec hardhat ignition deploy L1Protocol --network sepolia
+```
+
+With a reviewed or edited parameters file (no rebuild from env vars):
+```shell
+pnpm exec hardhat ignition deploy L1Protocol --network sepolia --parameters ignition/parameters/sepolia.json --verify
 ```
 
 (make sure to replace `<value>` `<bytes>` `<key>` `<address>` with actual values)
@@ -82,11 +96,11 @@ VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_A
 
 ## L2MessageService Chained Deployments
 
-This will run the script that deploys Timelock, L2MessageService contracts.
+Module `L2Protocol`: deploys L2MessageService (behind the pinned OpenZeppelin 4.x proxy) and Timelock.
 
 | Parameter name        | Required | Input Value | Description |
 | ------------------ | -------- | ---------- | ----------- |
-| VERIFY_CONTRACT    | false    |true\|false| Verifies the deployed contract |
+| VERIFY_CONTRACT    | false    |true\|false| Verifies the deployed contracts (same as `--verify`) |
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network. |
@@ -103,12 +117,12 @@ This will run the script that deploys Timelock, L2MessageService contracts.
 
 Base command:
 ```shell
-pnpm exec hardhat deploy --network linea_sepolia --tags L2MessageService,Timelock
+pnpm exec hardhat ignition deploy L2Protocol --network linea_sepolia
 ```
 
 Base command with cli arguments:
 ```shell
-VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> L2_SECURITY_COUNCIL=<address> L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER=<address> L2_MESSAGE_SERVICE_RATE_LIMIT_PERIOD=<value> L2_MESSAGE_SERVICE_RATE_LIMIT_AMOUNT=<value> TIMELOCK_PROPOSERS=<address> TIMELOCK_EXECUTORS=<address> TIMELOCK_ADMIN_ADDRESS=<address> MIN_DELAY=<value> pnpm exec hardhat deploy --network linea_sepolia --tags L2MessageService,Timelock
+VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> L2_SECURITY_COUNCIL=<address> L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER=<address> L2_MESSAGE_SERVICE_RATE_LIMIT_PERIOD=<value> L2_MESSAGE_SERVICE_RATE_LIMIT_AMOUNT=<value> TIMELOCK_PROPOSERS=<address> TIMELOCK_EXECUTORS=<address> TIMELOCK_ADMIN_ADDRESS=<address> MIN_DELAY=<value> pnpm exec hardhat ignition deploy L2Protocol --network linea_sepolia
 ```
 
 (make sure to replace `<value>` `<key>` `<address>` with actual values)
@@ -117,11 +131,11 @@ VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_A
 
 ## TokenBridge & BridgedToken Chained Deployments
 
-This will run the script that deploys the TokenBridge and BridgedToken contracts.
+Module `TokenBridgeWithBeacon`: deploys the BridgedToken implementation behind the pinned OpenZeppelin 4.x (v4.4.1) `UpgradeableBeacon`, then the TokenBridge (behind the pinned OpenZeppelin 4.x proxy) initialized with that beacon. `BRIDGED_TOKEN_ADDRESS` is not read (it is only used by the standalone `TokenBridge` module).
 
 | Parameter name        | Required | Input Value | Description |
 | --------------------- | -------- | ---------- | ----------- |
-| VERIFY_CONTRACT       | false    |true\|false| Verifies the deployed contract. |
+| VERIFY_CONTRACT       | false    |true\|false| Verifies the deployed contracts (same as `--verify`). |
 | \**DEPLOYER_PRIVATE_KEY*       | true     | key | Network-specific private key used when deploying the contract. |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY         | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network. |
@@ -138,11 +152,11 @@ This will run the script that deploys the TokenBridge and BridgedToken contracts
 
 Base command:
 ```shell
-pnpm exec hardhat deploy --network linea_sepolia --tags BridgedToken,TokenBridge
+pnpm exec hardhat ignition deploy TokenBridgeWithBeacon --network linea_sepolia
 ```
 
 Base command with cli arguments:
 ```shell
-VERIFY_CONTRACT=true ETHERSCAN_API_KEY=<key> DEPLOYER_PRIVATE_KEY=<key> INFURA_API_KEY=<key> REMOTE_CHAIN_ID=<uint256> DEPLOY_TOKEN_BRIDGE_ON_L1=true L1_SECURITY_COUNCIL=<address> L1_RESERVED_TOKEN_ADDRESSES=<address> L2_MESSAGE_SERVICE_ADDRESS=<address> LINETH_ROLLUP_ADDRESS=<address> REMOTE_SENDER_ADDRESS=<address> pnpm exec hardhat deploy --network linea_sepolia --tags BridgedToken,TokenBridge
+VERIFY_CONTRACT=true ETHERSCAN_API_KEY=<key> DEPLOYER_PRIVATE_KEY=<key> INFURA_API_KEY=<key> REMOTE_CHAIN_ID=<uint256> DEPLOY_TOKEN_BRIDGE_ON_L1=true L1_SECURITY_COUNCIL=<address> L1_RESERVED_TOKEN_ADDRESSES=<address> L2_MESSAGE_SERVICE_ADDRESS=<address> LINETH_ROLLUP_ADDRESS=<address> REMOTE_SENDER_ADDRESS=<address> pnpm exec hardhat ignition deploy TokenBridgeWithBeacon --network linea_sepolia
 ```
 (make sure to replace `<value>` `<key>` `<address>` with actual values)
