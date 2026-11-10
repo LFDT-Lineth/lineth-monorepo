@@ -16,7 +16,8 @@ import (
 // zero wiop.Proof, so a mock node can never pass for a verifiable proof, and
 // its Pub is the first child's with the message-bus products multiplied and the
 // shared randomness contributions added; a lifted shard proof keeps its public
-// inputs and loses its proof.
+// inputs and loses its proof. The root is the merge of the root's children
+// with the root checks applied.
 //
 // It verifies no proof either: the shard proofs it merges must have been
 // verified by whoever produced them, and a merged node has none to verify.
@@ -35,6 +36,12 @@ func (m MockMerger) Merge(children []Node) (Node, error) {
 	if err := checkChildren(children); err != nil {
 		return Node{}, err
 	}
+	return m.combine(children)
+}
+
+// combine checks the shape and agreement of the children of a merge and
+// returns their parent, covering the union of their coverage.
+func (m MockMerger) combine(children []Node) (Node, error) {
 	for _, child := range children {
 		if len(child.Pub) != len(m.sys.PublicInputs) {
 			return Node{}, fmt.Errorf("node %v has %d public inputs, want %d",
@@ -89,8 +96,12 @@ func (m MockMerger) Merge(children []Node) (Node, error) {
 }
 
 // Finalize implements [Merger].
-func (m MockMerger) Finalize(root Node, numShards uint) (Node, error) {
-	if err := checkRoot(root); err != nil {
+func (m MockMerger) Finalize(children []Node, numShards uint) (Node, error) {
+	if err := checkRoot(children); err != nil {
+		return Node{}, err
+	}
+	root, err := m.combine(children)
+	if err != nil {
 		return Node{}, err
 	}
 	if err := checkCoverageComplete(root.Coverage, numShards); err != nil {

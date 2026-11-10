@@ -70,15 +70,22 @@ func shardNode(sys *wiop.System, i uint, bus field.Gen) Node {
 	return Node{Coverage: []uint{i}, Pub: pub}
 }
 
-// reduce adds the nodes, in order, to a reducer over merger and closes it.
+// reduce adds the nodes, in order, to a reducer over merger and closes it
+// without a last merge.
 func reduce(merger Merger, maxInFlight int, nodes ...Node) (Node, error) {
+	return reduceWith(merger, maxInFlight, nil, nodes...)
+}
+
+// reduceWith adds the nodes, in order, to a reducer over merger and closes
+// it with the last merge last.
+func reduceWith(merger Merger, maxInFlight int, last func([]Node) (Node, error), nodes ...Node) (Node, error) {
 	r := NewReducer(merger, maxInFlight)
 	for _, nd := range nodes {
 		if err := r.Add(nd); err != nil {
 			return Node{}, err
 		}
 	}
-	return r.Close()
+	return r.Close(last)
 }
 
 func requireElemEqual(t *testing.T, want, got field.Gen, msg string) {
@@ -151,6 +158,46 @@ func TestReducer(t *testing.T) {
 	}
 }
 
+// TestReducer_Last checks that a Reducer closed with a last merge leaves it
+// 1 to [RecursionTreeArity] merged nodes, so that the root merge is the last
+// node of the tree: every other merge of merged nodes is full, and the last
+// merge, the mock's root merge here, yields the root.
+func TestReducer_Last(t *testing.T) {
+	sys := testSystem(false)
+	for _, n := range []int{1, 3, 7, 13, 36, 37} {
+		t.Run(fmt.Sprintf("%d shards", n), func(t *testing.T) {
+			merger := &arityMerger{MockMerger: NewMockMerger(sys), arities: map[Kind][]int{}}
+			nodes := make([]Node, n)
+			for k, i := range arrivalOrder(n) {
+				nodes[k] = shardNode(sys, i, elem(1))
+			}
+			var lastArities []int
+			last := func(children []Node) (Node, error) {
+				lastArities = append(lastArities, len(children))
+				return merger.Finalize(children, uint(n))
+			}
+			root, err := reduceWith(merger, 2, last, nodes...)
+			require.NoError(t, err)
+
+			want := make([]uint, n)
+			for i := range want {
+				want[i] = uint(i)
+			}
+			require.Equal(t, want, root.Coverage, "the root should cover every shard")
+			require.Equal(t, Merged, root.Kind, "the root should be a merged node")
+			require.Len(t, lastArities, 1, "the last merge should run once")
+			require.GreaterOrEqual(t, lastArities[0], 1)
+			require.LessOrEqual(t, lastArities[0], RecursionTreeArity)
+			for _, arity := range merger.arities[Merged] {
+				require.Equal(t, RecursionTreeArity, arity, "every merge of merged nodes but the last should be full")
+			}
+			if n <= RecursionTreeArity {
+				require.Equal(t, []int{1}, lastArities, "up to %d shards make one merged node for the root merge", RecursionTreeArity)
+			}
+		})
+	}
+}
+
 // countingMerger records the peak number of concurrent Merge calls, holding
 // the first one until release is closed so that the reducer has the chance to
 // start more.
@@ -199,7 +246,7 @@ func TestReducer_MaxInFlight(t *testing.T) {
 	}
 	<-merger.started
 	close(merger.release)
-	_, err := r.Close()
+	_, err := r.Close(nil)
 	require.NoError(t, err)
 	require.Equal(t, 1, merger.peak, "at most one merge should run at once")
 }
@@ -260,37 +307,43 @@ func TestMockMerger_Merge_Lift(t *testing.T) {
 	require.Equal(t, Node{Kind: Merged, Coverage: []uint{3}, Pub: shard.Pub}, node, "a lift should keep the coverage and public inputs")
 }
 
-// TestMockMerger_Finalize checks the root checks: complete coverage and a
-// balanced bus.
+// TestMockMerger_Finalize checks the root merge and its checks: merged
+// children only, complete coverage and a balanced bus.
 func TestMockMerger_Finalize(t *testing.T) {
 	sys := testSystem(false)
 	merger := NewMockMerger(sys)
-	root := func(bus field.Gen, coverage ...uint) Node {
+	merged := func(bus field.Gen, coverage ...uint) Node {
 		node := shardNode(sys, 0, bus)
 		node.Kind, node.Coverage = Merged, coverage
 		return node
 	}
 	cases := []struct {
 		name      string
-		root      Node
+		children  []Node
 		numShards uint
 		wantErr   string
 	}{
-		{name: "complete and balanced", root: root(elem(1), 0, 1, 2), numShards: 3},
-		{name: "single shard", root: root(elem(1), 0), numShards: 1},
-		{name: "missing shard", root: root(elem(1), 0, 2), numShards: 3, wantErr: "missing shard 1"},
-		{name: "extra shard", root: root(elem(1), 0, 1, 2, 3), numShards: 3, wantErr: "unexpected shard 3"},
-		{name: "unbalanced bus", root: root(elem(2), 0, 1, 2), numShards: 3, wantErr: "does not balance across the shards"},
-		{name: "shard proof", root: shardNode(sys, 0, elem(1)), numShards: 1, wantErr: "finalizing the shard proof [0], want a merged node"},
+		{name: "complete and balanced", children: []Node{merged(elem(1), 0, 1, 2)}, numShards: 3},
+		{name: "merges the children", children: []Node{merged(elem(1), 1), merged(elem(1), 0, 2)}, numShards: 3},
+		{name: "single shard", children: []Node{merged(elem(1), 0)}, numShards: 1},
+		{name: "no child", children: nil, numShards: 1, wantErr: "finalizing 0 nodes, want 1 to 6"},
+		{name: "missing shard", children: []Node{merged(elem(1), 0, 2)}, numShards: 3, wantErr: "missing shard 1"},
+		{name: "extra shard", children: []Node{merged(elem(1), 0, 1, 2, 3)}, numShards: 3, wantErr: "unexpected shard 3"},
+		{name: "unbalanced bus", children: []Node{merged(elem(2), 0, 1), merged(elem(1), 2)}, numShards: 3, wantErr: "does not balance across the shards"},
+		{name: "overlapping children", children: []Node{merged(elem(1), 0, 1), merged(elem(1), 1, 2)}, numShards: 3, wantErr: "shard 1 is covered twice"},
+		{name: "shard proof", children: []Node{merged(elem(1), 1, 2), shardNode(sys, 0, elem(1))}, numShards: 3, wantErr: "finalizing the shard proof [0], want a merged node"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := merger.Finalize(tc.root, tc.numShards)
+			root, err := merger.Finalize(tc.children, tc.numShards)
 			if tc.wantErr != "" {
 				require.ErrorContains(t, err, tc.wantErr)
 				return
 			}
 			require.NoError(t, err)
+			require.Equal(t, Merged, root.Kind, "the root should be a merged node")
+			require.Len(t, root.Coverage, int(tc.numShards), "the root should cover every shard")
+			requireElemEqual(t, elem(1), root.Pub[busPos], "the root bus product should balance")
 		})
 	}
 }
@@ -339,11 +392,10 @@ func TestMockMerger_SharedRandomness(t *testing.T) {
 	}
 
 	t.Run("root seed derives from the contributions", func(t *testing.T) {
-		root, err := reduce(merger, 1, nodes...)
+		last := func(children []Node) (Node, error) { return merger.Finalize(children, uint(len(nodes))) }
+		root, err := reduceWith(merger, 1, last, nodes...)
 		require.NoError(t, err)
 		require.Equal(t, sum, messagebus.GetSharedRandomnessContribution(sys, root.Pub), "the contributions should add up")
-		_, err = merger.Finalize(root, uint(len(nodes)))
-		require.NoError(t, err)
 	})
 
 	t.Run("different seeds", func(t *testing.T) {
@@ -356,7 +408,7 @@ func TestMockMerger_SharedRandomness(t *testing.T) {
 		// A single shard's seed must be derived from its own contribution.
 		lifted, err := merger.Merge([]Node{nodes[0]})
 		require.NoError(t, err)
-		_, err = merger.Finalize(lifted, 1)
+		_, err = merger.Finalize([]Node{lifted}, 1)
 		require.ErrorContains(t, err, "not derived from the shards' contributions")
 	})
 }

@@ -489,14 +489,16 @@ func (c *Core) runProve(
 			return conglomeration.Node{}, 0, fmt.Errorf("merging after shard %d: %w", i, err)
 		}
 	}
-	root, err := reducer.Close()
+	// The last merge is the root merge when every shard is covered.
+	var last func([]conglomeration.Node) (conglomeration.Node, error)
+	if isRoot && c.cfg.ShardSize > 0 {
+		last = func(children []conglomeration.Node) (conglomeration.Node, error) {
+			return c.merger.Finalize(children, numShards)
+		}
+	}
+	root, err := reducer.Close(last)
 	if err != nil {
 		return conglomeration.Node{}, 0, fmt.Errorf("merging: %w", err)
-	}
-	if isRoot && c.cfg.ShardSize > 0 {
-		if root, err = c.merger.Finalize(root, numShards); err != nil {
-			return conglomeration.Node{}, 0, fmt.Errorf("root: %w", err)
-		}
 	}
 	return root, numShards, nil
 }
