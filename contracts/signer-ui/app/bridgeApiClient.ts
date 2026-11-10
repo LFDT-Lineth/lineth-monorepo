@@ -1,6 +1,6 @@
 /**
- * Must match `HARDHAT_SIGNER_UI_SESSION_TOKEN_HEADER` in
- * `contracts/scripts/hardhat/signer-ui-bridge.ts`
+ * Must match `SESSION_TOKEN_HEADER` in
+ * `contracts/hardhat-plugins/signer-ui/http.ts`
  * (HTTP headers are case-insensitive; Node normalizes to lowercase).
  */
 export const HARDHAT_SIGNER_UI_SESSION_TOKEN_HEADER = "x-hardhat-signer-ui-session-token";
