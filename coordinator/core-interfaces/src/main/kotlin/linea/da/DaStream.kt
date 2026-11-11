@@ -1,6 +1,5 @@
 package linea.da
 
-import linea.clients.ChunkWitness
 import linea.domain.BlockInterval
 import java.nio.ByteBuffer
 import java.nio.file.Path
@@ -54,8 +53,14 @@ interface SealedBlob {
   /** Read-only view of the [DaConstants.BLOB_BYTES]-byte packed blob. */
   val blob: ByteBuffer
 
-  /** KZG versioned hash of [blob]. */
+  /** KZG versioned hash of [blob], derived from [kzgCommitment]. */
   val chunkHash: ByteArray
+
+  /** [DaConstants.KZG_POINT_BYTES]-byte KZG commitment of [blob]. */
+  val kzgCommitment: ByteArray
+
+  /** [DaConstants.KZG_POINT_BYTES]-byte KZG proof for [blob] against [kzgCommitment]. */
+  val kzgProof: ByteArray
 
   /** Data rolling hash before this blob. */
   val prevDataRollingHash: ByteArray
@@ -77,13 +82,20 @@ fun SealedBlob.blobBytes(): ByteArray {
 }
 
 /**
- * A cut point: the frame of the conflation ending at [conflationEndBlock] ends at [offset] within the blob's payload.
- * The tail at this cut (discarded by the rollup ending here, taken by the next one) is `payloadBytes - offset`.
+ * A cut point: the frame of the conflation ending at [conflationEndBlock] ends inside this blob, followed by
+ * [tailBytes] payload bytes. A rollup ending here discards them (`finalDataTailDiscardBytes`), and the next rollup
+ * takes them (`parentDataTailTakeBytes`).
  */
 data class SegmentEnd(
   val conflationEndBlock: ULong,
-  val offset: Int,
-)
+  val tailBytes: Int,
+) {
+  init {
+    require(tailBytes in 0..DaConstants.MAX_TAIL_BYTES) {
+      "tailBytes=$tailBytes must be in 0..${DaConstants.MAX_TAIL_BYTES}"
+    }
+  }
+}
 
 /** Opens [DaStream]s. */
 fun interface DaStreamFactory {
@@ -98,10 +110,19 @@ enum class DaCodecVersion(val version: String) {
 
 object DaConstants {
   /** Size of a packed EIP-4844 blob: 4096 field elements of 32 bytes. */
-  const val BLOB_BYTES = ChunkWitness.BLOB_BYTES_LENGTH
+  const val BLOB_BYTES = 4096 * 32
+
+  /** Compressed BLS12-381 G1 point: the size of a KZG commitment and of a KZG proof. */
+  const val KZG_POINT_BYTES = 48
 
   /** Payload bytes per blob: 4096 field elements of 254 bits, minus the `0xff` terminal byte. */
   const val BLOB_PAYLOAD_CAPACITY = 4096 * 254 / 8 - 1
+
+  /**
+   * Upper bound of a blob tail byte count (`tailCount` in the V1 schemas): a tail shared with the next rollup is strictly
+   * shorter than a blob's payload, otherwise the whole blob would belong to the next rollup.
+   */
+  const val MAX_TAIL_BYTES = BLOB_PAYLOAD_CAPACITY - 1
 
   /** Terminal byte that ends a blob's payload. */
   const val BLOB_PAYLOAD_TERMINAL: Byte = 0xff.toByte()
