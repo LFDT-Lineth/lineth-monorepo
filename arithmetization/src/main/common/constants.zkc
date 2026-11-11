@@ -31,6 +31,8 @@ const GUEST_OUT:FileDescriptor = 4
 //
 const EXIT_SYSCALL:u8 = 93
 const WRITE_SYSCALL:u8 = 64
+// Lineth field accelerator (lib/field/field.zkc). Not a Linux syscall number.
+const FIELD_OP_SYSCALL:u8 = 0xF0
 
 // =======================
 // Predecoding operations
