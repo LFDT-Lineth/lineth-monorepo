@@ -1,8 +1,13 @@
 package linea.s11n.jackson
 
 import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
+import linea.kotlin.toBigIntegerFromHex
+import linea.kotlin.toULongFromHex
 import java.math.BigInteger
 
 internal fun Number.toHex(): String = "0x" + BigInteger(toString()).toString(16)
@@ -44,4 +49,14 @@ object BigIntegerToHexSerializer : JsonSerializer<BigInteger>() {
   override fun serialize(value: BigInteger, gen: JsonGenerator, serializers: SerializerProvider) {
     gen.writeString(value.toHex())
   }
+}
+
+object ULongFromHexDeserializer : JsonDeserializer<ULong>() {
+  override fun deserialize(parser: JsonParser, context: DeserializationContext): ULong =
+    parser.text.toULongFromHex()
+}
+
+object BigIntegerFromHexDeserializer : JsonDeserializer<BigInteger>() {
+  override fun deserialize(parser: JsonParser, context: DeserializationContext): BigInteger =
+    parser.text.toBigIntegerFromHex()
 }

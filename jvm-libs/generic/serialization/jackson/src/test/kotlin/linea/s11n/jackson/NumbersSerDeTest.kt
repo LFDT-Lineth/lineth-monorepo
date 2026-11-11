@@ -2,7 +2,9 @@ package linea.s11n.jackson
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.math.BigInteger
@@ -76,5 +78,28 @@ class NumbersSerDeTest {
       }
       """.trimIndent(),
     )
+  }
+
+  @Test
+  fun numbersDeserializationFromHex() {
+    class SomeObject(
+      val uLongZero: ULong,
+      val uLongMaxValue: ULong,
+      val uLongNull: ULong?,
+      val bigInteger: BigInteger,
+    )
+    val mapper = jacksonObjectMapper().registerModules(ethNumberAsHexDeserialisersModule)
+
+    val result = mapper.readValue(
+      """
+        {"uLongZero":"0x0","uLongMaxValue":"0xffffffffffffffff","uLongNull":null,"bigInteger":"0x1ffffffffffffffff"}
+      """,
+      SomeObject::class.java,
+    )
+
+    assertThat(result.uLongZero).isEqualTo(0UL)
+    assertThat(result.uLongMaxValue).isEqualTo(ULong.MAX_VALUE)
+    assertThat(result.uLongNull).isNull()
+    assertThat(result.bigInteger).isEqualTo(BigInteger("1ffffffffffffffff", 16))
   }
 }
