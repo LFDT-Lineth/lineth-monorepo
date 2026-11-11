@@ -51,7 +51,8 @@ by `zkc exec --gogen` yet.
   DIV with a = 1.
 - Fields: the `FIELD_*` ids in `field/field.zkc`, which are 256-bit fields only. SQRT
   needs p = 3 (mod 4).
-- Operands are four little-endian u64 limbs below 2p; any 256-bit value qualifies when p > 2^255.
+- Operands are four little-endian u64 limbs below 2p (not checked: a larger one gives an
+  unspecified result); any 256-bit value qualifies when p > 2^255.
   b is read for every op. The output is reduced and may alias an input. The status comes back in a0.
 - Each call makes one constrained `mulmod_256` (prover-ray's NonNative gadget). DIV and SQRT
   take their answer from the unconstrained `hint_field_op_256`, whose exponentiation adds

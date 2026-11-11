@@ -88,9 +88,10 @@ zkvm_status lineth_zkvm_kzg_verify_blob_batch(const uint8_t* blobs,
  *
  * Elements are four little-endian 64-bit limbs of the plain value (not in
  * Montgomery form). Inputs must be below 2p (any 256-bit value for the
- * secp256k1 and secp256r1 fields); out is reduced and may alias an input. b is
- * read for every operation (pass a for SQRT). SQRT is only supported where
- * p = 3 (mod 4) (secp256k1 and secp256r1 Fp, bn254 Fp) and returns either root.
+ * secp256k1 and secp256r1 fields), or the result is unspecified; out is reduced
+ * and may alias an input. b is read for every operation (pass a for SQRT). SQRT
+ * is only supported where p = 3 (mod 4) (secp256k1 and secp256r1 Fp, bn254 Fp)
+ * and returns either root.
  * An inverse is DIV with a = 1.
  *
  * An unknown op or field is unprovable.

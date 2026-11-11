@@ -868,7 +868,7 @@ fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
         }
         case FIELD_OP_SYSCALL: {
             // a0 = op, a1 = field, a2 = out, a3 = a, a4 = b; status back in a0
-            var status:u1 = field_op(a0, registers[11] as u8, a2 as Address, registers[13] as Address, registers[14] as Address)
+            var status:u1 = field_op(a0 as u2, registers[11] as u3, a2 as Address, registers[13] as Address, registers[14] as Address)
             registers[10] = status as DoubleWord
             new_pc = (pc + 4) as Address
         }
