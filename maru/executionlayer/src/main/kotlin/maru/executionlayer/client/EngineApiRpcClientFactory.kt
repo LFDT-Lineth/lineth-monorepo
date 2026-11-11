@@ -8,7 +8,6 @@ package maru.executionlayer.client
 
 import com.github.michaelbull.result.Result
 import io.vertx.core.Vertx
-import linea.s11n.jackson.ethApiObjectMapper
 import net.consensys.linea.jsonrpc.client.JsonRpcV2Client
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
@@ -40,7 +39,7 @@ object EngineApiRpcClientFactory {
     return VertxHttpJsonRpcClientFactory(vertx, metricsFacade).createJsonRpcV2Client(
       endpoints = listOf(endpoint.toURI()),
       retryConfig = RequestRetryConfig(backoffDelay = 1.seconds),
-      requestObjectMapper = ethApiObjectMapper,
+      requestObjectMapper = engineApiObjectMapper,
       shallRetryRequestsClientBasePredicate = Predicate<Result<Any?, Throwable>> { false },
       log = log,
       requestHeadersProvider = { jwtTokenProvider?.authorizationHeader() ?: emptyMap() },

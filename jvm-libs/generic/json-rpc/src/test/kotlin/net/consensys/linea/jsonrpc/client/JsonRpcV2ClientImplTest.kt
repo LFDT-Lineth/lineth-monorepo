@@ -19,6 +19,7 @@ import com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
+import linea.jsonrpc.TestingJsonRpcServer
 import linea.kotlin.decodeHex
 import linea.s11n.jackson.ByteArrayToHexSerializer
 import linea.s11n.jackson.ULongToHexSerializer
@@ -633,11 +634,12 @@ class JsonRpcV2ClientImplTest {
 
   @Test
   fun `factory applies per-request headers and per-method timeout`() {
-    val scriptedServer = ScriptedJsonRpcServer(vertx)
-    val endpoint = scriptedServer.start()
-    scriptedServer.reply("slowMethod", ScriptedJsonRpcServer.Reply(delay = 2.seconds))
+    val server = TestingJsonRpcServer(vertx = vertx, recordRequestsResponses = true)
+    server.handle("fastMethod") { "OK" }
+    server.handle("slowMethod") { "OK" }
+    server.delayResponses("slowMethod", 2.seconds)
     val client = factory.createJsonRpcV2Client(
-      endpoints = listOf(endpoint.toURI()),
+      endpoints = listOf(server.httpEndpoint.toURI()),
       retryConfig = defaultRetryConfig,
       shallRetryRequestsClientBasePredicate = Predicate { false },
       requestHeadersProvider = { mapOf("Authorization" to "Bearer abc") },
@@ -646,7 +648,7 @@ class JsonRpcV2ClientImplTest {
 
     assertThat(client.makeRequest(method = "fastMethod", params = emptyList<Any>(), resultMapper = { it }).get())
       .isEqualTo("OK")
-    assertThat(scriptedServer.receivedRequests.single().headers["Authorization"]).isEqualTo("Bearer abc")
+    assertThat(server.recordedRequestsHeaders().single()["Authorization"]).isEqualTo("Bearer abc")
 
     assertThatThrownBy {
       client.makeRequest(method = "slowMethod", params = emptyList<Any>(), resultMapper = { it }).get()
