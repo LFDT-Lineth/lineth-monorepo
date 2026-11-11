@@ -38,11 +38,14 @@ import lineth.persistence.FeeHistoriesPostgresDao
 import lineth.persistence.conflation.AggregationsRepositoryImpl
 import lineth.persistence.conflation.BatchesPostgresDao
 import lineth.persistence.conflation.BlobsPostgresDao
+import lineth.persistence.conflation.BlobsPostgresDaoV2
 import lineth.persistence.conflation.BlobsRepositoryImpl
+import lineth.persistence.conflation.BlobsRepositoryImplV2
 import lineth.persistence.conflation.PostgresAggregationsDao
 import lineth.persistence.conflation.PostgresBatchesRepository
 import lineth.persistence.conflation.RetryingBatchesPostgresDao
 import lineth.persistence.conflation.RetryingBlobsPostgresDao
+import lineth.persistence.conflation.RetryingBlobsPostgresDaoV2
 import lineth.persistence.conflation.RetryingPostgresAggregationsDao
 import lineth.persistence.ftx.PostgresForcedTransactionsDao
 import lineth.persistence.ftx.RetryingPostgresForcedTransactionsDao
@@ -140,6 +143,23 @@ class CoordinatorApp(
           config =
           BlobsPostgresDao.Config(
             maxBlobsToReturn = configs.l1Submission.blob.dbMaxBlobsToReturn,
+          ),
+          connection = sqlClient,
+        ),
+        persistenceRetryer = persistenceRetryer,
+      ),
+    )
+
+  // RISC-V rollup rows, in the same blobs table.
+  private val blobsRepositoryV2 =
+    BlobsRepositoryImplV2(
+      blobsDao =
+      RetryingBlobsPostgresDaoV2(
+        delegate =
+        BlobsPostgresDaoV2(
+          config =
+          BlobsPostgresDaoV2.Config(
+            maxRollupProofsToReturn = configs.l1Submission.blob.dbMaxBlobsToReturn,
           ),
           connection = sqlClient,
         ),
@@ -258,6 +278,7 @@ class CoordinatorApp(
     clock = clock,
     batchesRepository = batchesRepository,
     blobsRepository = blobsRepository,
+    blobsRepositoryV2 = blobsRepositoryV2,
     aggregationsRepository = aggregationsRepository,
     forcedTransactionsDao = forcedTransactionsDao,
     lastFinalizedBlock = lastFinalizedBlock,
