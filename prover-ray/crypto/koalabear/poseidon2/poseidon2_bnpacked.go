@@ -298,6 +298,16 @@ func koalaCanonicalSplitHint(_ *big.Int, in, out []*big.Int) error {
 	return nil
 }
 
+// reducedLimb returns the single limb of e after the weak reduction, as a
+// native variable. A constant zero has no limb at all, and gives 0.
+func reducedLimb(koalaAPI *circuit.KoalaBearAPI, e circuit.Element) frontend.Variable {
+	reduced := koalaAPI.EmulatedField().Reduce(&e.EV)
+	if len(reduced.Limbs) == 0 {
+		return 0
+	}
+	return reduced.Limbs[0]
+}
+
 // canonicalKoala returns the canonical value x in [0, p) of a KoalaBear
 // element as a native variable. This is "Option A" of the hashing report,
 // following SP1's reduceWithMaxBits.
@@ -314,8 +324,7 @@ func koalaCanonicalSplitHint(_ *big.Int, in, out []*big.Int) error {
 // If q were 1 while v < p, x = v - p would wrap mod r and could not be
 // written as h*2^24 + l with those bounds, so the checks reject it.
 func canonicalKoala(api frontend.API, koalaAPI *circuit.KoalaBearAPI, rc frontend.Rangechecker, e circuit.Element) frontend.Variable {
-	reduced := koalaAPI.EmulatedField().Reduce(&e.EV)
-	v := reduced.Limbs[0]
+	v := reducedLimb(koalaAPI, e)
 
 	out, err := api.Compiler().NewHint(koalaCanonicalSplitHint, 3, v)
 	if err != nil {

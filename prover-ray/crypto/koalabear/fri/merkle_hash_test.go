@@ -10,6 +10,9 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/gnark/frontend/cs/scs"
 	"github.com/stretchr/testify/require"
 )
 
@@ -165,4 +168,50 @@ func TestMerkleHashBNPackedTree(t *testing.T) {
 		require.NoError(t, branch.authenticateToCap(MerkleHashBNPacked, idx, frontier))
 		require.Error(t, branch.authenticateToCap(MerkleHashKoalaBear, idx, frontier))
 	}
+}
+
+// TestPCSVerifyGnarkBNPacked runs the in-circuit verifier in BN-packed mode
+// against the native one, over cap heights and a FixedDomain PCS (whose top
+// rounds commit zero-layer trees), and checks tampering is rejected.
+func TestPCSVerifyGnarkBNPacked(t *testing.T) {
+	bn := WithMerkleHash(MerkleHashBNPacked)
+	cases := []struct {
+		capHeight, extraRounds uint8
+	}{{0, 0}, {1, 0}, {pcsCircuitCapHeight, 0}, {pcsCircuitCapHeight, 1}}
+	for _, tc := range cases {
+		t.Run(fmt.Sprintf("cap=%d/extra=%d", tc.capHeight, tc.extraRounds), func(t *testing.T) {
+			fx := newPCSCircuitFixtureAt(t, tc.capHeight, tc.extraRounds, bn)
+			template, assignment := circuitFor(fx, fx.proof)
+			require.NoError(t, solvePCSCircuit(t, template, assignment))
+
+			// a running-layer sibling and an input-tree sibling, each flipped
+			tampered := fx.proof
+			tampered.FRIProof.RunningQueries = append([]RunningQuery(nil), fx.proof.FRIProof.RunningQueries...)
+			tampered.FRIProof.RunningQueries[0] = append(RunningQuery(nil), fx.proof.FRIProof.RunningQueries[0]...)
+			br := tampered.FRIProof.RunningQueries[0][0]
+			br.Siblings = append([]field.Octuplet(nil), br.Siblings...)
+			br.Siblings[0][3].SetUint64(br.Siblings[0][3].Uint64() ^ 1)
+			tampered.FRIProof.RunningQueries[0][0] = br
+			require.Error(t, fx.pcs.Verify(fx.input, tampered))
+			_, bad := circuitFor(fx, tampered)
+			require.Error(t, solvePCSCircuit(t, template, bad))
+		})
+	}
+}
+
+// TestPCSVerifyGnarkConstraintsByHash prints the PLONK constraint count of the
+// whole in-circuit PCS verifier in both modes on the same fixture.
+func TestPCSVerifyGnarkConstraintsByHash(t *testing.T) {
+	if testing.Short() {
+		t.Skip("compiles circuits")
+	}
+	count := func(opts ...Option) int {
+		fx := newPCSCircuitFixtureAt(t, pcsCircuitCapHeight, 0, opts...)
+		template, _ := circuitFor(fx, fx.proof)
+		ccs, err := frontend.Compile(ecc.BN254.ScalarField(), scs.NewBuilder, template)
+		require.NoError(t, err)
+		return ccs.GetNbConstraints()
+	}
+	koala, bn := count(), count(WithMerkleHash(MerkleHashBNPacked))
+	t.Logf("PCS verifier: koalabear=%d  bn-packed=%d  (%.2fx)", koala, bn, float64(koala)/float64(bn))
 }

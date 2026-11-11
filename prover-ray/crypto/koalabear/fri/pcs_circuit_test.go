@@ -77,11 +77,11 @@ func newPCSCircuitFixture(t *testing.T, capHeight uint8) pcsOpenVerifyFixture {
 // newPCSCircuitFixtureAt is newPCSCircuitFixture over a FixedDomain PCS whose
 // domain is extraRounds rounds above the witness's largest size, or the
 // restricted PCS of newPCSCircuitFixture for extraRounds = 0.
-func newPCSCircuitFixtureAt(t *testing.T, capHeight uint8, extraRounds uint8) pcsOpenVerifyFixture {
+func newPCSCircuitFixtureAt(t *testing.T, capHeight uint8, extraRounds uint8, opts ...Option) pcsOpenVerifyFixture {
 	t.Helper()
 
 	// prepare the PCS setup
-	params, err := NewParams(4+extraRounds, 3+extraRounds, pcsCircuitNumQueries)
+	params, err := NewParams(4+extraRounds, 3+extraRounds, pcsCircuitNumQueries, opts...)
 	require.NoError(t, err)
 	params.MerkleCapHeight = capHeight
 	pcs, err := NewPCS(params, makeEncoders(int(params.numRounds()+1), 2))
