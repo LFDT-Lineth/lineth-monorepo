@@ -19,6 +19,8 @@ from .block import (
     ForcedTransactionAcceptance,
     ForcedTransactionWitness,
     LinethPayloadInput,
+    MAINNET_BEACON_ROOTS_ADDRESS,
+    MAINNET_HISTORY_STORAGE_ADDRESS,
     ResolvedForcedTransaction,
     StatelessInput,
     decode_signed_transaction_rlp,
@@ -328,6 +330,13 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
     """
     if len(execution_input.payloads) == 0:
         raise Exception("l2-execution proof must cover at least one payload")
+    # Beacon roots and history storage are the same as on Ethereum mainnet and are not
+    # part of `dynamicChainConfigHash`, so the prover-supplied values are not trusted.
+    system_contracts = execution_input.chain_config.system_contracts
+    if system_contracts.beacon_roots != MAINNET_BEACON_ROOTS_ADDRESS:
+        raise Exception("beacon roots contract must be the mainnet address")
+    if system_contracts.history_storage != MAINNET_HISTORY_STORAGE_ADDRESS:
+        raise Exception("history storage contract must be the mainnet address")
 
     # Parse each vanilla stateless input ONCE via the underlying engine's parser
     # (e.g. Zesu); the parsed objects are shared between execution and the Lineth

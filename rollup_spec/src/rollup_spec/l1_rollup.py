@@ -22,10 +22,14 @@ class PlonkVerifier:
     `contracts/src/verifiers/interfaces/IPlonkVerifier.sol`).
 
     The chain-configuration preimage (`chainId`, `baseFee`, `coinbase`,
-    `l2MessageServiceAddress`) is passed to the verifier at deploy time as
-    a `ChainConfigurationParameter[]` array of named bytes32 values (see
-    `contracts/deploy/01_deploy_PlonkVerifier.ts`); the constructor hashes
-    those values and stores ONLY the digest in `bytes32 immutable
+    `l2MessageServiceAddress`, `depositContractAddress`,
+    `withdrawalRequestContractAddress`, `consolidationRequestContractAddress`,
+    `builderDepositRequestContractAddress`, `builderExitRequestContractAddress`,
+    in that order) is passed to the verifier at deploy time as a
+    `ChainConfigurationParameter[]` array of named bytes32 values (see
+    `contracts/deploy/01_deploy_PlonkVerifier.ts`); the constructor
+    keccak256-hashes those values (equal to `ChainConfig.hash`, §2.1) and
+    stores ONLY the digest in `bytes32 immutable
     CHAIN_CONFIGURATION`, then emits the full preimage in the
     `ChainConfigurationSet` event. The L1 `LinethRollupBase` reads the
     digest at finalization time via `getChainConfiguration()`; changing
@@ -191,7 +195,8 @@ def finalize_rollup(
     if pi.dynamic_chain_config_hash != state.verifier.get_chain_configuration():
         # The verifier holds the chain-configuration hash as an immutable
         # bytes32 set at its deploy time; the full preimage (chainId,
-        # baseFee, coinbase, l2MessageServiceAddress) is auditable via the
+        # baseFee, coinbase, l2MessageServiceAddress and the five
+        # Lineth-configurable system contracts) is auditable via the
         # `ChainConfigurationSet` event the verifier emitted at deploy.
         raise Exception("dynamic chain config hash mismatch")
     if pi.parent_ftx_rolling_hash != state.current_finalized_ftx_rolling_hash:

@@ -77,16 +77,48 @@ fn u64ToSlot32(n: u64) [32]u8 {
     return out;
 }
 
-/// `ChainConfig.hash(base_fee)`: keccak256(chainID_be32 || coinbase || l2MessageServiceAddress ||
-/// baseFee_be32). `system_contracts` is deliberately NOT part of the preimage: the hash is anchored
-/// in the L1 verifier's chain configuration.
+fn addressToSlot32(address: [20]u8) [32]u8 {
+    var out: [32]u8 = @splat(0);
+    @memcpy(out[12..32], &address);
+    return out;
+}
+
+/// Number of 32-byte words in the `dynamicChainConfigHash` preimage.
+const CHAIN_CONFIG_HASH_WORDS: usize = 9;
+
+/// `ChainConfig.hash(base_fee)` (Readme.md §2.1): keccak256 over nine 32-byte words, integers
+/// big-endian and addresses left-padded, in the order of the L1 verifier's chain-configuration
+/// parameters: chainId, baseFee, coinbase, l2MessageServiceAddress, deposit, withdrawalRequest,
+/// consolidationRequest, builderDepositRequest, builderExitRequest. This equals the L1 verifier's
+/// keccak chain-configuration hash over the same named parameters. `beacon_roots` and
+/// `history_storage` are NOT part of the preimage: they are fixed to the mainnet addresses
+/// (`checkFixedSystemContracts`).
 fn chainConfigHash(chain_config: l2_execution_ssz.ChainConfig, base_fee: u64) [32]u8 {
-    var buf: [104]u8 = undefined;
-    @memcpy(buf[0..32], &u64ToSlot32(chain_config.chain_id));
-    @memcpy(buf[32..52], &chain_config.coinbase);
-    @memcpy(buf[52..72], &chain_config.l2_message_service_address);
-    @memcpy(buf[72..104], &u64ToSlot32(base_fee));
-    return mpt.keccak256(&buf);
+    const sc = chain_config.system_contracts;
+    const words = [CHAIN_CONFIG_HASH_WORDS][32]u8{
+        u64ToSlot32(chain_config.chain_id),
+        u64ToSlot32(base_fee),
+        addressToSlot32(chain_config.coinbase),
+        addressToSlot32(chain_config.l2_message_service_address),
+        addressToSlot32(sc.deposit),
+        addressToSlot32(sc.withdrawal_request),
+        addressToSlot32(sc.consolidation_request),
+        addressToSlot32(sc.builder_deposit_request),
+        addressToSlot32(sc.builder_exit_request),
+    };
+    return mpt.keccak256(std.mem.asBytes(&words));
+}
+
+/// The EIP-4788 beacon roots and EIP-2935 history storage contracts are the same on Lineth as on
+/// Ethereum mainnet, so they are not part of `dynamicChainConfigHash` and the guest rejects any
+/// other value rather than trusting the prover-supplied one.
+fn checkFixedSystemContracts(sc: l2_execution_ssz.SystemContracts) !void {
+    if (!std.mem.eql(u8, &sc.beacon_roots, &input.SystemContracts.MAINNET_BEACON_ROOTS)) {
+        return error.BeaconRootsAddressNotMainnet;
+    }
+    if (!std.mem.eql(u8, &sc.history_storage, &input.SystemContracts.MAINNET_HISTORY_STORAGE)) {
+        return error.HistoryStorageAddressNotMainnet;
+    }
 }
 
 /// The range-level system contracts in zesu's own type (same fields, same order).
@@ -335,6 +367,7 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
     zesu_allocator.set(alloc);
 
     if (in.payloads.len == 0) return error.EmptyPayloads;
+    try checkFixedSystemContracts(in.chain_config.system_contracts);
 
     // Decode each payload's vanilla stateless input ONCE; parsed objects are shared between
     // execution and the Linea logic below.
@@ -513,6 +546,7 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
 
 pub const test_api = if (@import("builtin").is_test) struct {
     pub const chainConfigHashFn = chainConfigHash;
+    pub const checkFixedSystemContractsFn = checkFixedSystemContracts;
     pub const zesuSystemContractsFn = zesuSystemContracts;
     pub const addToForcedTxRollingHashFn = addToForcedTxRollingHash;
     pub const hashDigestListFn = hashDigestList;
