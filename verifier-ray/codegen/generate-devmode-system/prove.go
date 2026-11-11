@@ -1,13 +1,3 @@
-// Command devmode-prove is a long-lived devmode prover for callers that need many proof images.
-//
-// It reads one request per line from stdin: the 32-byte public-input hash and the 32-byte program
-// VK, each as 64 hex digits, separated by one space. The devmode public input of a request is the
-// 32 bytes of the hash, one cell each, followed by the 8 big-endian 32-bit limbs of the VK. For each
-// request it writes the proof image encoded for devmode.GuestBase to stdout, behind its length as
-// 4 big-endian bytes. The system is built once, before the first request.
-//
-// A malformed request, or a VK limb that is not a canonical KoalaBear element, ends the process
-// with a message on stderr and a nonzero status.
 package main
 
 import (
@@ -16,7 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/devmode"
@@ -30,14 +19,8 @@ const (
 	limbSize = 4
 )
 
-func main() {
-	if err := run(os.Stdin, os.Stdout); err != nil {
-		fmt.Fprintln(os.Stderr, "devmode-prove:", err)
-		os.Exit(1)
-	}
-}
-
-func run(in io.Reader, out io.Writer) error {
+// serve proves the requests read line by line from in and writes each proof image to out.
+func serve(in io.Reader, out io.Writer) error {
 	sys, err := devmode.NewSystem()
 	if err != nil {
 		return fmt.Errorf("devmode.NewSystem: %w", err)
