@@ -36,6 +36,18 @@ native_runner_bin = "/opt/linea/prover-ray/l2_execution_runner"
 	assert.Equal(t, "/data/guests", cfg.GuestsDir)
 }
 
+func TestNewConfigFromFile_ShardSize(t *testing.T) {
+	cfg, err := NewConfigFromFile(writeConfig(t, `
+version = "0.0.0-riscv"
+
+[execution]
+prover_mode = "partial"
+shard_size = 500000
+`))
+	require.NoError(t, err)
+	assert.Equal(t, uint64(500000), cfg.Execution.ShardSize)
+}
+
 func TestNewConfigFromFile_GuestELFRejected(t *testing.T) {
 	_, err := NewConfigFromFile(writeConfig(t, `
 version = "t"

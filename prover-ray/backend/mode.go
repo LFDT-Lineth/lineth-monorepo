@@ -12,8 +12,9 @@ const (
 	// inputs (via the native runner) and cross-checks the guest's commitment
 	// against that runner.
 	ProverModeDevZkVM ProverMode = "dev-zkvm"
-	// ProverModePartial traces and checks the trace against the constraints, no
-	// proof; memory-gated.
+	// ProverModePartial runs the guest, checks its trace against every
+	// constraint and returns the public inputs from the guest output, with a
+	// devmode proof in place of a real one.
 	ProverModePartial ProverMode = "partial"
 	// ProverModeFull is the real STARK-proving path; blocked.
 	ProverModeFull ProverMode = "full"
@@ -32,7 +33,7 @@ func (m ProverMode) Valid() bool {
 // IsDev reports whether m is a non-production mode.
 func (m ProverMode) IsDev() bool {
 	switch m {
-	case ProverModeDevMock, ProverModeDevZkVM:
+	case ProverModeDevMock, ProverModeDevZkVM, ProverModePartial:
 		return true
 	default:
 		return false

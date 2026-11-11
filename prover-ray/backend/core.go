@@ -13,11 +13,13 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/devmode"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/guests"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/conglomeration"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/risc5"
@@ -59,13 +61,17 @@ type Core struct {
 	guests guests.Store
 
 	// merger runs the conglomeration steps over the shard proofs. nil in
-	// production until the recursion machine lands; tests set
+	// full until the recursion machine lands; tests set it, and partial uses
 	// [conglomeration.MockMerger].
 	merger conglomeration.Merger
 
 	// binaryFile is the compiled R5 arithmetization, used by dev-zkvm to run the
 	// guest under ZkC Execute (the no-trace path). nil outside dev-zkvm.
 	binaryFile *zkcdriver.BinaryFile
+
+	// devSys is the devmode system whose proof partial returns. nil outside
+	// partial.
+	devSys *wiop.System
 }
 
 // guestProgram is a guest ELF mapped and predecoded for ZkC.
@@ -124,6 +130,9 @@ func New(cfg Config) (*Core, error) {
 	// driver, or public-output columns the proving modes build.
 	if mode == ProverModeDevZkVM {
 		return newDevZkVM(cfg, mode)
+	}
+	if mode == ProverModePartial {
+		return newPartial(cfg, mode)
 	}
 
 	binFile, err := os.Open(cfg.CircuitBinPath)
@@ -196,6 +205,53 @@ func newDevZkVM(cfg Config, mode ProverMode) (*Core, error) {
 	}, nil
 }
 
+// newPartial builds a check-only Core: the R5 arithmetization and its public
+// inputs, without a PCS, so that proving a trace commits to nothing and checks
+// it against every constraint. Its proofs are devmode proofs.
+func newPartial(cfg Config, mode ProverMode) (*Core, error) {
+	binf, err := embedded.CompiledBinaryFile()
+	if err != nil {
+		return nil, fmt.Errorf("compiling R5 arithmetization: %w", err)
+	}
+	bin, err := binf.MarshalBinary()
+	if err != nil {
+		return nil, fmt.Errorf("encoding R5 arithmetization: %w", err)
+	}
+
+	sys := wiop.NewSystemf(wiopSystemName)
+	sys.NewRound()
+	settings := zkcdriver.Settings{TraceRound: 1, ShardSize: cfg.ShardSize}
+	driver := zkcdriver.NewZkCDriver(sys, settings, bytes.NewReader(bin))
+	risc5.RegisterPublicInputs(sys)
+	if err := compilers.Configure(sys,
+		compilers.ConfigureMessageBus(messagebus.WithoutSharedRandomness()),
+		compilers.WithoutPCS(),
+	); err != nil {
+		return nil, fmt.Errorf("configuring the wiop system: %w", err)
+	}
+	// A message bus has no check of its own: reduce it to a grand product,
+	// which has one. Every other query is checked as is.
+	messagebus.Compile(sys)
+	grandproduct.Compile(sys)
+	risc5.CheckPublicInputs(sys)
+
+	devSys, err := devmode.NewSystem()
+	if err != nil {
+		return nil, err
+	}
+	return &Core{
+		cfg:    cfg,
+		mode:   mode,
+		sys:    sys,
+		driver: driver,
+		guests: guests.Store{Dir: cfg.GuestsDir},
+		// Without sharding the single shard checks its own message bus; with
+		// it, the mock merger checks the bus across the shards.
+		merger: conglomeration.NewMockMerger(sys),
+		devSys: devSys,
+	}, nil
+}
+
 // Prove runs a single [Job] and returns its [Result]. Each mode is dispatched
 // here; modes that cannot run yet return their blocker error.
 func (c *Core) Prove(ctx context.Context, job Job) Result {
@@ -205,7 +261,7 @@ func (c *Core) Prove(ctx context.Context, job Job) Result {
 	case ProverModeDevZkVM:
 		return c.proveDevZkVM(job)
 	case ProverModePartial:
-		return failResult(job.ID, fmt.Errorf("partial mode not runnable yet, memory-gated: %w", ErrNotImplemented))
+		return c.provePartial(ctx, job)
 	case ProverModeFull:
 		return c.proveFull(ctx, job)
 	default:
@@ -249,6 +305,97 @@ func (c *Core) proveDevZkVM(job Job) Result {
 		Status:     ResultStatusOK,
 		ProofBytes: guestOutput.Bytes(),
 	}
+}
+
+// provePartial runs the guest, checks its trace against the constraints, and
+// returns the public inputs decoded from its output, with a devmode proof of
+// the output hash in place of a real proof. Payload is the whole extended
+// (0x0002) input, as in dev-zkvm.
+func (c *Core) provePartial(ctx context.Context, job Job) Result {
+	g, err := c.loadGuest(job.GuestProgramID)
+	if err != nil {
+		return failResult(job.ID, err)
+	}
+	inputs, err := c.encodeGuestInputs(job, g)
+	if err != nil {
+		return failResult(job.ID, fmt.Errorf("building inputs: %w", err))
+	}
+
+	// The lazy trace keeps no output, so Execute gives it. It also fails fast
+	// on a rejected block, before the trace.
+	guestOutput, err := executeGuest(c.driver.BinaryFile, inputs)
+	if err != nil {
+		return failResult(job.ID, err)
+	}
+	out := guestOutput.Bytes()
+	pi, err := decodeGuestPublicInputs(out[guestOutputHashSize:])
+	if err != nil {
+		return failResult(job.ID, fmt.Errorf("decoding the guest public inputs: %w", err))
+	}
+
+	// Every shard, so that the result is the root.
+	root, _, err := c.runProve(ctx, &zkcdriver.PreReadInputs{Inputs: inputs}, nil)
+	if err != nil {
+		return failResult(job.ID, err)
+	}
+	pub, err := c.devmodePublicInputs(root.Pub, out[:guestOutputHashSize])
+	if err != nil {
+		return failResult(job.ID, err)
+	}
+	proof, pub, err := devmode.Prove(c.devSys, pub)
+	if err != nil {
+		return failResult(job.ID, err)
+	}
+	proofBytes, err := devmode.Encode(c.devSys, proof, pub, devmode.GuestBase)
+	if err != nil {
+		return failResult(job.ID, fmt.Errorf("encoding the devmode proof: %w", err))
+	}
+
+	return Result{
+		JobID:        job.ID,
+		Status:       ResultStatusOK,
+		ProofBytes:   proofBytes,
+		PublicInputs: pi,
+		GuestOutput:  out,
+	}
+}
+
+// checkAssignment proves the assignment, which commits to nothing but checks
+// every query, then verifies the proof, which runs the verifier actions, such
+// as the message-bus balance. It returns the proof and its public inputs.
+func (c *Core) checkAssignment(assign func(*wiop.Runtime)) (proof wiop.Proof, pub wiop.PublicInput, err error) {
+	// A failed query check panics.
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("checking the trace: %v", r)
+		}
+	}()
+	proof, pub = c.sys.Prove(assign, wiop.ProveOptions{CheckUnreducedQueries: true})
+	if err := c.sys.Verify(proof, pub); err != nil {
+		return wiop.Proof{}, nil, fmt.Errorf("checking the trace: %w", err)
+	}
+	return proof, pub, nil
+}
+
+// devmodePublicInputs returns the public inputs of the devmode proof from those
+// of the trace: the guest output hash, which must be hash, then the program
+// VK, zero as nothing is committed.
+func (c *Core) devmodePublicInputs(pub wiop.PublicInput, hash []byte) (wiop.PublicInput, error) {
+	out := make(wiop.PublicInput, 0, devmode.NumPublicInputs)
+	for i, b := range hash {
+		var e field.Element
+		e.SetUint64(uint64(b))
+		_, pos := c.sys.LookupPublicInputByTag(risc5.GuestPublicOutputsPI, i)
+		if diff := pub[pos].Sub(field.ElemFromBase(e)); !diff.IsZero() {
+			return nil, fmt.Errorf("traced guest output byte %d is %v, the executed one %d", i, pub[pos], b)
+		}
+		out = append(out, pub[pos])
+	}
+	for i := range risc5.NumProgramVK {
+		_, pos := c.sys.LookupPublicInputByTag(risc5.ProgramVKPI, i)
+		out = append(out, pub[pos])
+	}
+	return out, nil
 }
 
 // executeGuest runs the guest under ZkC Execute (the no-trace path) and returns
@@ -515,11 +662,14 @@ func traceShard(lazyTrace zkcdriver.LazyTrace, i uint) (zkcdriver.Shard, error) 
 	return shard.Unwrap(), nil
 }
 
-// proveShard proves the given shard, then verifies the proof.
+// proveShard proves the given shard, then verifies the proof. In partial it
+// checks the shard instead.
 func (c *Core) proveShard(shard zkcdriver.Shard) (wiop.Proof, wiop.PublicInput, error) {
-	proof, pub := c.sys.Prove(func(rt *wiop.Runtime) {
-		c.driver.AssignTraceShard(rt, shard, field.Octuplet{})
-	})
+	assign := func(rt *wiop.Runtime) { c.driver.AssignTraceShard(rt, shard, field.Octuplet{}) }
+	if c.mode == ProverModePartial {
+		return c.checkAssignment(assign)
+	}
+	proof, pub := c.sys.Prove(assign)
 	// Verify proof
 	if err := c.sys.Verify(proof, pub); err != nil {
 		return wiop.Proof{}, nil, fmt.Errorf("proof verification: %w", err)

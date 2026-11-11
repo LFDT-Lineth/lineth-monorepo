@@ -33,8 +33,14 @@ type Execution struct {
 	ProverMode string `mapstructure:"prover_mode"`
 	// RequestsRootDir contains the requests/, responses/, requests-done/ queue.
 	RequestsRootDir string `mapstructure:"requests_root_dir"`
-	// NativeRunnerBin is the native l2_execution_runner binary, required by dev-zkvm.
+	// NativeRunnerBin is the native l2_execution_runner binary, required by
+	// dev-zkvm. Optional in partial, which then checks the guest output against
+	// it.
 	NativeRunnerBin string `mapstructure:"native_runner_bin"`
+	// ShardSize is the number of executed RISC-V instructions per trace shard;
+	// zero is one shard. partial needs it for a real block, whose single
+	// shard does not fit in a column. full does not support sharding yet.
+	ShardSize uint64 `mapstructure:"shard_size"`
 }
 
 // Pipeline holds the rollup and aggregation pipeline settings (no guest, so no
