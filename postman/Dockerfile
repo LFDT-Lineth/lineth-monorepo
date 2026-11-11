@@ -1,4 +1,4 @@
-ARG NODE_VERSION=24.22.1
+ARG NODE_VERSION=24.22.3
 # Docker Hardened Image (node only, no shell or package manager). Pulling it requires `docker login dhi.io`;
 # builds without Docker Hub credentials can pass RUNTIME_IMAGE=node:<version>-trixie-slim instead.
 ARG RUNTIME_IMAGE=dhi.io/node:${NODE_VERSION}
