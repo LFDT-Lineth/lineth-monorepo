@@ -155,7 +155,7 @@ func BNPackDigestGnark(api frontend.API, o circuit.Octuplet) frontend.Variable {
 	rc := rangecheck.New(api)
 	var acc frontend.Variable = 0
 	for i := range o {
-		v := koalaAPI.EmulatedField().Reduce(&o[i].EV).Limbs[0]
+		v := reducedLimb(koalaAPI, o[i])
 		rc.Check(v, bnDigestLimbBits)
 		acc = api.Add(api.Mul(acc, 1<<BNPackedBitsPerKoala), v)
 	}

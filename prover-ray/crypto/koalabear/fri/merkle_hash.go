@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/circuit"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
@@ -71,4 +72,40 @@ func (m MerkleHash) compress(left, right field.Octuplet) field.Octuplet {
 		return poseidon2.BNCompressOctuplet(left, right)
 	}
 	return poseidon2.Compress(left, right)
+}
+
+// gnarkLeafHasher is the in-circuit leaf hashing interface shared by both
+// modes.
+type gnarkLeafHasher interface {
+	Write(data ...circuit.Element)
+	Sum() circuit.Octuplet
+}
+
+func (m MerkleHash) newLeafHasherGnark(api *circuit.KoalaBearAPI) gnarkLeafHasher {
+	if m == MerkleHashBNPacked {
+		return poseidon2.NewBNOctupletGnarkMDHasher(api.Frontend())
+	}
+	return poseidon2.NewKoalagnarkMDHasher(api.Frontend())
+}
+
+// compressGnark mirrors [MerkleHash.compress] for two children that are
+// digests, which holds at every node above the leaves. In BN-packed mode it
+// rejects a child with a limb >= 2^30, which no digest encoding has.
+func (m MerkleHash) compressGnark(api *circuit.KoalaBearAPI, left, right circuit.Octuplet) circuit.Octuplet {
+	if m == MerkleHashBNPacked {
+		return poseidon2.BNCompressOctupletGnark(api.Frontend(), left, right)
+	}
+	return poseidon2.KoalagnarkCompress(api, left, right)
+}
+
+// compressLeavesGnark mirrors [MerkleHash.compress] for two children that are
+// raw octuplets rather than digests: the leaves of a FRI layer tree, which
+// hold extension values. In BN-packed mode their limbs can be any canonical
+// value, so they are packed with the full canonical check.
+func (m MerkleHash) compressLeavesGnark(api *circuit.KoalaBearAPI, left, right circuit.Octuplet) circuit.Octuplet {
+	if m == MerkleHashBNPacked {
+		f := api.Frontend()
+		return poseidon2.BNCompressPackedGnark(f, poseidon2.BNPackOctupletGnark(f, left), poseidon2.BNPackOctupletGnark(f, right))
+	}
+	return poseidon2.KoalagnarkCompress(api, left, right)
 }
