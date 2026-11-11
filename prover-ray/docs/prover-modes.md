@@ -12,6 +12,20 @@ The guest is the RISC-V program whose run is proven: the `l2_execution` guest fo
 | `dev-full-dummy-wrap` (aggregation only) | yes | yes | proved | real recursion | real | real proof, but a dummy BN254 proof for L1 |
 | `full` | yes | yes | proved | real recursion | real | real proof |
 
+## Status per layer
+
+| Mode | Execution | Rollup | Aggregation |
+|---|---|---|---|
+| `dev-mock` | ready | ready | ready |
+| `dev-zkvm` | ready | not yet | not yet |
+| `dev-partial` | ready | not yet | not yet |
+| `dev-full-dummy-wrap` | n/a | n/a | not yet |
+| `full` | not yet | not yet | not yet |
+
+For rollup and aggregation, the modes other than `dev-mock` need the layer's guest input format (not decided yet) and a guest that verifies the proof type of the layer below: a devmode proof below `dev-partial`, a real proof below `full`. In every mode except `full`, aggregation sends a dummy BN254 proof to L1.
+
+## Modes
+
 ### dev-mock
 
 - Runs nothing and returns a placeholder response at once.
@@ -52,17 +66,5 @@ The guest is the RISC-V program whose run is proven: the `l2_execution` guest fo
 
 - The native runner runs the same guest code outside the VM.
 - The check will be dropped once the VM passes the RISC-V compliance tests, or before a second guest version goes live.
-
-## Status per layer
-
-| Mode | Execution | Rollup | Aggregation |
-|---|---|---|---|
-| `dev-mock` | ready | ready | ready |
-| `dev-zkvm` | ready | not yet | not yet |
-| `dev-partial` | ready | not yet | not yet |
-| `dev-full-dummy-wrap` | n/a | n/a | not yet |
-| `full` | not yet | not yet | not yet |
-
-For rollup and aggregation, the modes other than `dev-mock` need the layer's guest input format (not decided yet) and a guest that verifies the proof type of the layer below: a devmode proof below `dev-partial`, a real proof below `full`. In every mode except `full`, aggregation sends a dummy BN254 proof to L1.
 
 Sample configs: `prover-ray/config/config-dev-mock.toml`, `config-dev-zkvm.toml`, `config-dev-partial.toml`.
