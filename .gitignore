@@ -36,6 +36,8 @@
 .loadpath
 .metadata
 .openzeppelin
+# contracts/ commits its public-network manifests (see contracts/.openzeppelin/.gitignore)
+!contracts/.openzeppelin/
 .pnp
 .pnp.js
 .pnpm-store

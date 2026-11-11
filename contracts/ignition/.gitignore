@@ -1,0 +1,6 @@
+# Written by `hardhat ignition deploy` from the module's <Module>.deploy.ts (env vars + address registry); do not edit.
+parameters/*.json
+# Journals of local/dev chains (in-process hardhat, docker L1, local L2). Stable-network journals are committed.
+deployments/chain-31337/
+deployments/chain-31648428/
+deployments/chain-1337/

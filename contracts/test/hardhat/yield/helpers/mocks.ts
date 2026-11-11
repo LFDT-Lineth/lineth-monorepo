@@ -1,17 +1,21 @@
-import { TestYieldManager } from "contracts/typechain-types";
-import { ethers } from "hardhat";
+import { type Address, type Hex, encodeAbiParameters, parseAbiParameters } from "viem";
+import { generatePrivateKey, privateKeyToAddress } from "viem/accounts";
 
-import { deployMockWithdrawTarget, deployMockYieldProvider } from "./deploy";
-import { YieldProviderRegistration } from "./types";
-import { EMPTY_CALLDATA } from "../../common/constants";
-import { YieldProviderVendor } from "../../common/constants";
-import { getAccountsFixture } from "../../common/helpers";
+import { deployMockWithdrawTarget, deployMockYieldProvider } from "./deploy.js";
+import { EMPTY_CALLDATA } from "../../common/constants/index.js";
+import { YieldProviderVendor } from "../../common/constants/index.js";
+import { getAccountsFixture } from "../../common/helpers/index.js";
+
+import type { YieldProviderRegistration } from "./types.js";
+import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
+
+const randomAddress = (): Address => privateKeyToAddress(generatePrivateKey());
 
 export const buildMockYieldProviderRegistration = (
   overrides: Partial<{
     yieldProviderVendor: number;
-    primaryEntrypoint: string;
-    ossifiedEntrypoint: string;
+    primaryEntrypoint: Address;
+    ossifiedEntrypoint: Address;
     usersFundsIncrement: bigint;
   }> = {},
 ): YieldProviderRegistration => ({
@@ -19,65 +23,67 @@ export const buildMockYieldProviderRegistration = (
     (overrides.yieldProviderVendor ?? Math.random() < 0.5)
       ? YieldProviderVendor.UNUSED_YIELD_PROVIDER_VENDOR
       : YieldProviderVendor.LIDO_ST_VAULT_YIELD_PROVIDER_VENDOR,
-  primaryEntrypoint: overrides.primaryEntrypoint ?? ethers.Wallet.createRandom().address,
-  ossifiedEntrypoint: overrides.ossifiedEntrypoint ?? ethers.Wallet.createRandom().address,
+  primaryEntrypoint: overrides.primaryEntrypoint ?? randomAddress(),
+  ossifiedEntrypoint: overrides.ossifiedEntrypoint ?? randomAddress(),
   usersFundsIncrement: overrides.usersFundsIncrement ?? 0n,
 });
 
 export const buildVendorExitData = (
   overrides: Partial<{
-    newVaultOwner: string;
+    newVaultOwner: Address;
   }> = {},
-) => {
+): Hex => {
   const params = {
-    newVaultOwner: overrides.newVaultOwner ?? ethers.Wallet.createRandom().address,
+    newVaultOwner: overrides.newVaultOwner ?? randomAddress(),
   };
 
-  return ethers.AbiCoder.defaultAbiCoder().encode(["address"], [params.newVaultOwner]);
+  return encodeAbiParameters(parseAbiParameters("address"), [params.newVaultOwner]);
 };
 
 export const buildVendorInitializationData = (
   overrides: Partial<{
-    defaultAdmin: string;
-    nodeOperator: string;
-    nodeOperatorManager: string;
+    defaultAdmin: Address;
+    nodeOperator: Address;
+    nodeOperatorManager: Address;
     nodeOperatorFeeBP: bigint;
     confirmExpiry: bigint;
-    roleAssignments: { addressWithRole: string; role: string }[];
+    roleAssignments: { addressWithRole: Address; role: Hex }[];
   }> = {},
-) => {
+): Hex => {
   const params = {
-    defaultAdmin: overrides.defaultAdmin ?? ethers.Wallet.createRandom().address,
-    nodeOperator: overrides.nodeOperator ?? ethers.Wallet.createRandom().address,
-    nodeOperatorManager: overrides.nodeOperatorManager ?? ethers.Wallet.createRandom().address,
+    defaultAdmin: overrides.defaultAdmin ?? randomAddress(),
+    nodeOperator: overrides.nodeOperator ?? randomAddress(),
+    nodeOperatorManager: overrides.nodeOperatorManager ?? randomAddress(),
     nodeOperatorFeeBP: overrides.nodeOperatorFeeBP ?? 0n,
     confirmExpiry: overrides.confirmExpiry ?? 0n,
     roleAssignments: overrides.roleAssignments ?? [],
   };
 
-  return ethers.AbiCoder.defaultAbiCoder().encode(
-    ["address", "address", "address", "uint256", "uint256", "tuple(address addressWithRole, bytes32 role)[]"],
+  return encodeAbiParameters(
+    parseAbiParameters("address, address, address, uint256, uint256, (address addressWithRole, bytes32 role)[]"),
     [
       params.defaultAdmin,
       params.nodeOperator,
       params.nodeOperatorManager,
       params.nodeOperatorFeeBP,
       params.confirmExpiry,
-      params.roleAssignments.map(({ addressWithRole, role }) => [addressWithRole, role]),
+      params.roleAssignments,
     ],
   );
 };
 
-export const addMockYieldProvider = async (yieldManager: TestYieldManager) => {
+export const addMockYieldProvider = async (yieldManager: ContractReturnType<"TestYieldManager">) => {
   const { securityCouncil } = await getAccountsFixture();
   const mockYieldProvider = await deployMockYieldProvider();
-  const mockYieldProviderAddress = await mockYieldProvider.getAddress();
+  const mockYieldProviderAddress = mockYieldProvider.address;
   const mockRegistration = buildMockYieldProviderRegistration();
-  await yieldManager.connect(securityCouncil).addYieldProvider(mockYieldProviderAddress, EMPTY_CALLDATA);
+  await yieldManager.write.addYieldProvider([mockYieldProviderAddress, EMPTY_CALLDATA], {
+    account: securityCouncil.account,
+  });
   const mockWithdrawTarget = await deployMockWithdrawTarget();
-  const mockWithdrawTargetAddress = await mockWithdrawTarget.getAddress();
-  await yieldManager
-    .connect(securityCouncil)
-    .setMockWithdrawTarget(mockYieldProviderAddress, mockWithdrawTargetAddress);
+  const mockWithdrawTargetAddress = mockWithdrawTarget.address;
+  await yieldManager.write.setMockWithdrawTarget([mockYieldProviderAddress, mockWithdrawTargetAddress], {
+    account: securityCouncil.account,
+  });
   return { mockWithdrawTarget, mockYieldProvider, mockYieldProviderAddress, mockRegistration };
 };

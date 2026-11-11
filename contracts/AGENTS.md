@@ -119,7 +119,7 @@ Named imports only. Explicit inheritance of key ancestors. Blank line after impo
 
 - Hardhat tests: `test/hardhat/` — TypeScript test files
 - Foundry tests: `test/foundry/` — Solidity test files
-- Coverage: `SOLIDITY_COVERAGE=true` flag with `.solcover.js` config
+- Coverage: `hardhat test --coverage` (`pnpm -F contracts run coverage`, which also sets `SOLIDITY_COVERAGE=true` so gas-heavy `SparseMerkleProof` cases skip themselves)
 - CI runs coverage and uploads to Codecov with `hardhat` flag
 
 ## Agent Rules (Overrides)
@@ -131,8 +131,8 @@ Named imports only. Explicit inheritance of key ancestors. Blank line after impo
 
 ## Hardhat scripts and optional browser signer UI (`HARDHAT_SIGNER_UI`)
 
-- **Default:** deployments use **`DEPLOYER_PRIVATE_KEY`** (and `namedAccounts`) like any standard Hardhat project.
-- **Opt-in UI:** set `HARDHAT_SIGNER_UI=true` to sign in a browser via the local Next.js app under `contracts/signer-ui/`, driven by `contracts/scripts/hardhat/signer-ui-bridge.ts`. Deploy scripts use `withSignerUiSession`, `getUiSigner`, and helpers in `scripts/hardhat/utils.ts` that call `setUiTransactionContext` for richer UI labels. Selected operational tasks use `runWithSignerUiSession` + `getUiSigner`. `HARDHAT_SIGNER_UI=true` and `DEPLOYER_PRIVATE_KEY` are mutually exclusive; Hardhat errors if both are set. After a full `hardhat deploy`, the bridge reports a terminal outcome and **stops Next.js by default** (see `HARDHAT_SIGNER_UI_LEAVE_NEXT_DEV_AFTER_DEPLOY` / `HARDHAT_SIGNER_UI_SHUTDOWN_NEXT_DEV` in deployment docs).
+- **Default:** deployments use **`DEPLOYER_PRIVATE_KEY`** (the network `accounts` resolved in `hardhat.config.ts`) like any standard Hardhat project.
+- **Opt-in UI:** pass `--signer-ui` (or set `HARDHAT_SIGNER_UI=true`) to sign in a browser via the local Next.js app under `contracts/signer-ui/`, driven by the in-repo plugin `contracts/hardhat-plugins/signer-ui/` (bridge in `bridge.ts`). Code that signs wraps its work in `withSignerUi(hre, label, fn)` (`hardhat-plugins/signer-ui/session.ts`): for that call it registers a `network.onRequest` handler that answers `eth_accounts` with the browser wallet and routes `eth_sendTransaction` to it, so Ignition, OZ Upgrades and viem wallet clients sign in the browser, and it closes the session when `fn` settles. `hardhat ignition deploy` and the operational tasks do this; get the signer with `getUiWalletClient` and label transactions with `setUiTransactionContext`. `--signer-ui` and `DEPLOYER_PRIVATE_KEY` are mutually exclusive; Hardhat errors if both are set. After `hardhat ignition deploy`, the bridge reports a terminal outcome and **stops Next.js by default** (see `HARDHAT_SIGNER_UI_LEAVE_NEXT_DEV_AFTER_DEPLOY` / `HARDHAT_SIGNER_UI_SHUTDOWN_NEXT_DEV` in deployment docs). A rejected or interrupted wallet prompt leaves the Ignition journal on an unsent transaction: run `hardhat deploy:recover` (it reads `cache/signer-ui/broadcasts-<chainId>.jsonl`) before resuming.
 - **Docs:** [contracts/docs/deployment/README.md](docs/deployment/README.md) (overview), [contracts/signer-ui/README.md](signer-ui/README.md) (operator walkthrough), [contracts/docs/deployment/signer-ui-removal.md](docs/deployment/signer-ui-removal.md) (how to delete the feature).
 - **Lint:** `contracts/eslint.config.mjs` ignores `signer-ui/**` so Next’s `.next` output is not parsed by the contracts ESLint project.
 

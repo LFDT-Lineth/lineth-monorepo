@@ -1,7 +1,12 @@
-import { task } from "hardhat/config";
+import { getAddress } from "viem";
 
-import { getTaskCliOrEnvValue } from "../../../common/helpers/environmentHelper";
-import { getUiSigner, runWithSignerUiSession } from "../../../scripts/hardhat/signer-ui-bridge";
+import { getTaskCliOrEnvValue } from "../../../common/helpers/environmentHelper.js";
+import { getUiWalletClient, withSignerUi } from "../../../hardhat-plugins/signer-ui/session.js";
+import { requireRegistryAddress } from "../registryAddress.js";
+import { parseRoles } from "./roles.js";
+
+import type { HardhatRuntimeEnvironment } from "hardhat/types/hre";
+import type { TaskArguments } from "hardhat/types/tasks";
 
 /*
     *******************************************************************************************
@@ -23,53 +28,47 @@ import { getUiSigner, runWithSignerUiSession } from "../../../scripts/hardhat/si
     *******************************************************************************************
 */
 
-task("grantContractRoles", "Grants roles to specific accounts")
-  .addOptionalParam("adminAddress")
-  .addOptionalParam("proxyAddress")
-  .addOptionalParam("contractType")
-  .addOptionalParam("contractRoles")
-  .setAction(async (taskArgs, hre) => {
-    return runWithSignerUiSession(hre, "task:grantContractRoles", async () => {
-      const ethers = hre.ethers;
+export default async function grantContractRoles(taskArgs: TaskArguments, hre: HardhatRuntimeEnvironment) {
+  const connection = await hre.network.getOrCreate();
+  return withSignerUi(hre, "task:grantContractRoles", async () => {
+    const { viem, networkName } = connection;
 
-      const { deployments } = hre;
-      const { get } = deployments;
+    const adminAddress = getTaskCliOrEnvValue(taskArgs, "adminAddress", "ADMIN_ADDRESS");
+    let proxyAddress = getTaskCliOrEnvValue(taskArgs, "proxyAddress", "PROXY_ADDRESS");
+    const contractType = getTaskCliOrEnvValue(taskArgs, "contractType", "CONTRACT_TYPE");
+    const contractRoles = getTaskCliOrEnvValue(taskArgs, "contractRoles", "CONTRACT_ROLES");
 
-      const adminAddress = getTaskCliOrEnvValue(taskArgs, "adminAddress", "ADMIN_ADDRESS");
-      let proxyAddress = getTaskCliOrEnvValue(taskArgs, "proxyAddress", "PROXY_ADDRESS");
-      const contractType = getTaskCliOrEnvValue(taskArgs, "contractType", "CONTRACT_TYPE");
-      const contractRoles = getTaskCliOrEnvValue(taskArgs, "contractRoles", "CONTRACT_ROLES");
+    if (contractType === undefined) {
+      throw "Please specify a Message Service name e.g: --proxy-address LinethRollup or PROXY_ADDRESS=LinethRollup";
+    }
 
-      if (contractType === undefined) {
-        throw "Please specify a Message Service name e.g: --proxy-address LinethRollup or PROXY_ADDRESS=LinethRollup";
-      }
+    if (proxyAddress === undefined) {
+      proxyAddress = requireRegistryAddress(networkName, contractType);
+    }
 
-      if (proxyAddress === undefined) {
-        proxyAddress = (await get(contractType)).address;
-        if (proxyAddress === undefined) {
-          throw "proxyAddress is undefined";
-        }
-      }
+    if (contractRoles === undefined) {
+      throw "Please specify a role e.g. --contract-roles 0x9a80e24e463f00a8763c4dcec6a92d07d33272fa5db895d8589be70dccb002df or CONTRACT_ROLES=0x9a80e24e463f00a8763c4dcec6a92d07d33272fa5db895d8589be70dccb002df";
+    }
 
-      if (contractRoles === undefined) {
-        throw "Please specify a role e.g. --contract-roles 0x9a80e24e463f00a8763c4dcec6a92d07d33272fa5db895d8589be70dccb002df or CONTRACT_ROLES=0x9a80e24e463f00a8763c4dcec6a92d07d33272fa5db895d8589be70dccb002df";
-      }
+    if (adminAddress === undefined) {
+      throw "Please specify an Admin address e.g. --admin-address 0x5B38Da6a701c568545dCfcB03FcB875f56beddC4 or ADMIN_ADDRESS=0x5B38Da6a701c568545dCfcB03FcB875f56beddC4";
+    }
 
-      if (adminAddress === undefined) {
-        throw "Please specify an Admin address e.g. --admin-address 0x5B38Da6a701c568545dCfcB03FcB875f56beddC4 or ADMIN_ADDRESS=0x5B38Da6a701c568545dCfcB03FcB875f56beddC4";
-      }
-
-      const signer = await getUiSigner(hre);
-      const contract = await ethers.getContractAt(contractType, proxyAddress, signer);
-
-      const rolesArray = contractRoles?.split(",");
-      for (let i = 0; i < rolesArray.length; i++) {
-        console.log(`Granting ${rolesArray[i]} to ${adminAddress}`);
-        const tx = await contract.grantRole(rolesArray[i], adminAddress);
-        console.log("Waiting for transaction to process");
-        await tx.wait();
-      }
-
-      console.log("Done");
+    const wallet = await getUiWalletClient(connection);
+    const publicClient = await viem.getPublicClient();
+    const contract = await viem.getContractAt(contractType, getAddress(proxyAddress), {
+      client: { public: publicClient, wallet },
     });
+
+    const rolesArray = parseRoles(contractRoles);
+    const admin = getAddress(adminAddress);
+    for (let i = 0; i < rolesArray.length; i++) {
+      console.log(`Granting ${rolesArray[i]} to ${adminAddress}`);
+      const hash = await contract.write.grantRole([rolesArray[i], admin]);
+      console.log("Waiting for transaction to process");
+      await publicClient.waitForTransactionReceipt({ hash });
+    }
+
+    console.log("Done");
   });
+}

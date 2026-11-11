@@ -1,8 +1,6 @@
-import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
-import { loadFixture, time as networkTime } from "@nomicfoundation/hardhat-network-helpers";
-import { expect } from "chai";
-import { AddressFilter, LinethRollup__factory, TestLinethRollup } from "contracts/typechain-types";
-import { ethers } from "hardhat";
+import { network } from "hardhat";
+import { describe, it, before, beforeEach } from "node:test";
+import { encodeFunctionData } from "viem";
 
 import {
   expectSuccessfulFinalize,
@@ -12,13 +10,13 @@ import {
   deployLinethRollupFixture,
   sendBlobTransaction,
   deployRevertingVerifier,
-} from "./../helpers";
-import calldataAggregatedProof1To155 from "../../_testData/compressedData/aggregatedProof-1-155.json";
-import aggregatedProof1To81 from "../../_testData/compressedData/multipleProofs/aggregatedProof-1-81.json";
-import aggregatedProof82To153 from "../../_testData/compressedData/multipleProofs/aggregatedProof-82-153.json";
-import blobAggregatedProof1To155 from "../../_testData/compressedDataEip4844/aggregatedProof-1-155.json";
-import blobMultipleAggregatedProof1To81 from "../../_testData/compressedDataEip4844/multipleProofs/aggregatedProof-1-81.json";
-import blobMultipleAggregatedProof82To153 from "../../_testData/compressedDataEip4844/multipleProofs/aggregatedProof-82-139.json";
+} from "./../helpers/index.js";
+import calldataAggregatedProof1To155 from "../../_testData/compressedData/aggregatedProof-1-155.json" with { type: "json" };
+import aggregatedProof1To81 from "../../_testData/compressedData/multipleProofs/aggregatedProof-1-81.json" with { type: "json" };
+import aggregatedProof82To153 from "../../_testData/compressedData/multipleProofs/aggregatedProof-82-153.json" with { type: "json" };
+import blobAggregatedProof1To155 from "../../_testData/compressedDataEip4844/aggregatedProof-1-155.json" with { type: "json" };
+import blobMultipleAggregatedProof1To81 from "../../_testData/compressedDataEip4844/multipleProofs/aggregatedProof-1-81.json" with { type: "json" };
+import blobMultipleAggregatedProof82To153 from "../../_testData/compressedDataEip4844/multipleProofs/aggregatedProof-82-139.json" with { type: "json" };
 ensureKzgSetup();
 import {
   GENERAL_PAUSE_TYPE,
@@ -28,18 +26,18 @@ import {
   EMPTY_CALLDATA,
   FINALIZATION_PAUSE_TYPE,
   DEFAULT_LAST_FINALIZED_TIMESTAMP,
-  HARDHAT_CHAIN_ID,
   MAX_GAS_LIMIT,
   FORCED_TRANSACTION_FEE,
-} from "../../common/constants";
+} from "../../common/constants/index.js";
 import {
+  type TestAccount,
+  address,
+  hex,
   calculateRollingHash,
   generateFinalizationData,
   generateRandomBytes,
   generateKeccak256,
   buildAccessErrorMessage,
-  expectRevertWithCustomError,
-  expectRevertWithReason,
   generateParentShnarfData,
   generateBlobParentShnarfData,
   calculateLastFinalizedState,
@@ -47,31 +45,38 @@ import {
   submitCalldataBeforeFinalization,
   proofDataToFinalizationParams,
   expectRevertWhenPaused,
-} from "../../common/helpers";
-import { AggregatedProofData } from "../../common/types";
+  expectRevertWithCustomError,
+  expectRevertWithReason,
+} from "../../common/helpers/index.js";
+
+import type { AggregatedProofData } from "../../common/types.js";
+import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
+import type { Address, Hex } from "viem";
 
 describe("Lineth Rollup contract: Finalization", () => {
-  let linethRollup: TestLinethRollup;
-  let addressFilter: AddressFilter;
+  let linethRollup: ContractReturnType<"TestLinethRollup">;
+  let addressFilter: ContractReturnType<"AddressFilter">;
 
-  let securityCouncil: SignerWithAddress;
-  let operator: SignerWithAddress;
-  let nonAuthorizedAccount: SignerWithAddress;
+  let securityCouncil: TestAccount;
+  let operator: TestAccount;
+  let nonAuthorizedAccount: TestAccount;
 
   before(async () => {
-    ({ securityCouncil, operator, nonAuthorizedAccount } = await loadFixture(getAccountsFixture));
+    const { networkHelpers } = await network.getOrCreate();
+    ({ securityCouncil, operator, nonAuthorizedAccount } = await networkHelpers.loadFixture(getAccountsFixture));
   });
 
   beforeEach(async () => {
-    ({ linethRollup, addressFilter } = await loadFixture(deployLinethRollupFixture));
+    const { networkHelpers } = await network.getOrCreate();
+    ({ linethRollup, addressFilter } = await networkHelpers.loadFixture(deployLinethRollupFixture));
   });
 
   describe("Blocks finalization with proof", () => {
     const messageHash = generateRandomBytes(32);
 
     beforeEach(async () => {
-      await linethRollup.addRollingHash(10, messageHash);
-      await linethRollup.setLastFinalizedBlock(0);
+      await linethRollup.write.addRollingHash([10n, messageHash]);
+      await linethRollup.write.setLastFinalizedBlock([0n]);
     });
 
     describe("With and without submission data", () => {
@@ -81,15 +86,16 @@ describe("Lineth Rollup contract: Finalization", () => {
           l1RollingHash: generateRandomBytes(32),
         });
 
-        const lastFinalizedBlockNumber = await linethRollup.currentL2BlockNumber();
-        const parentStateRootHash = await linethRollup.stateRootHashes(lastFinalizedBlockNumber);
+        const lastFinalizedBlockNumber = await linethRollup.read.currentL2BlockNumber();
+        const parentStateRootHash = await linethRollup.read.stateRootHashes([lastFinalizedBlockNumber]);
         finalizationData.parentStateRootHash = parentStateRootHash;
 
-        const proof = calldataAggregatedProof1To155.aggregatedProof;
+        const proof = hex(calldataAggregatedProof1To155.aggregatedProof);
 
-        const finalizeCall = linethRollup
-          .connect(operator)
-          .finalizeBlocks(proof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
+        const finalizeCall = linethRollup.write.finalizeBlocks(
+          [proof, BigInt(TEST_PUBLIC_VERIFIER_INDEX), finalizationData],
+          { account: operator.account },
+        );
 
         await expectRevertWithCustomError(linethRollup, finalizeCall, "MissingMessageNumberForRollingHash", [
           finalizationData.l1RollingHash,
@@ -102,15 +108,16 @@ describe("Lineth Rollup contract: Finalization", () => {
           l1RollingHash: HASH_ZERO,
         });
 
-        const lastFinalizedBlockNumber = await linethRollup.currentL2BlockNumber();
-        const parentStateRootHash = await linethRollup.stateRootHashes(lastFinalizedBlockNumber);
+        const lastFinalizedBlockNumber = await linethRollup.read.currentL2BlockNumber();
+        const parentStateRootHash = await linethRollup.read.stateRootHashes([lastFinalizedBlockNumber]);
         finalizationData.parentStateRootHash = parentStateRootHash;
 
-        const proof = calldataAggregatedProof1To155.aggregatedProof;
+        const proof = hex(calldataAggregatedProof1To155.aggregatedProof);
 
-        const finalizeCall = linethRollup
-          .connect(operator)
-          .finalizeBlocks(proof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
+        const finalizeCall = linethRollup.write.finalizeBlocks(
+          [proof, BigInt(TEST_PUBLIC_VERIFIER_INDEX), finalizationData],
+          { account: operator.account },
+        );
 
         await expectRevertWithCustomError(linethRollup, finalizeCall, "MissingRollingHashForMessageNumber", [
           finalizationData.l1RollingHashMessageNumber,
@@ -123,15 +130,16 @@ describe("Lineth Rollup contract: Finalization", () => {
           l1RollingHash: generateRandomBytes(32),
         });
 
-        const lastFinalizedBlockNumber = await linethRollup.currentL2BlockNumber();
-        const parentStateRootHash = await linethRollup.stateRootHashes(lastFinalizedBlockNumber);
+        const lastFinalizedBlockNumber = await linethRollup.read.currentL2BlockNumber();
+        const parentStateRootHash = await linethRollup.read.stateRootHashes([lastFinalizedBlockNumber]);
         finalizationData.parentStateRootHash = parentStateRootHash;
 
-        const proof = calldataAggregatedProof1To155.aggregatedProof;
+        const proof = hex(calldataAggregatedProof1To155.aggregatedProof);
 
-        const finalizeCall = linethRollup
-          .connect(operator)
-          .finalizeBlocks(proof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
+        const finalizeCall = linethRollup.write.finalizeBlocks(
+          [proof, BigInt(TEST_PUBLIC_VERIFIER_INDEX), finalizationData],
+          { account: operator.account },
+        );
 
         await expectRevertWithCustomError(linethRollup, finalizeCall, "L1RollingHashDoesNotExistOnL1", [
           finalizationData.l1RollingHashMessageNumber,
@@ -140,7 +148,7 @@ describe("Lineth Rollup contract: Finalization", () => {
       });
 
       it("Should revert if timestamps are not in sequence", async () => {
-        const { finalIndex } = await submitCalldataBeforeFinalization(linethRollup.connect(operator), {
+        const { finalIndex } = await submitCalldataBeforeFinalization(linethRollup, operator, {
           startIndex: 0,
           finalIndex: 4,
           maxGasLimit: MAX_GAS_LIMIT,
@@ -159,16 +167,16 @@ describe("Lineth Rollup contract: Finalization", () => {
           lastFinalizedTimestamp: DEFAULT_LAST_FINALIZED_TIMESTAMP,
         });
 
-        await linethRollup.setRollingHash(
-          calldataAggregatedProof1To155.l1RollingHashMessageNumber,
-          calldataAggregatedProof1To155.l1RollingHash,
-        );
+        await linethRollup.write.setRollingHash([
+          BigInt(calldataAggregatedProof1To155.l1RollingHashMessageNumber),
+          hex(calldataAggregatedProof1To155.l1RollingHash),
+        ]);
 
         const expectedHashValue = calculateLastFinalizedState(
           finalizationData.lastFinalizedL1RollingHashMessageNumber,
           finalizationData.lastFinalizedL1RollingHash,
           BigInt(calldataAggregatedProof1To155.parentAggregationFtxNumber),
-          calldataAggregatedProof1To155.parentAggregationFtxRollingHash,
+          hex(calldataAggregatedProof1To155.parentAggregationFtxRollingHash),
           finalizationData.lastFinalizedTimestamp,
         );
 
@@ -180,9 +188,10 @@ describe("Lineth Rollup contract: Finalization", () => {
           finalizationData.lastFinalizedTimestamp,
         );
 
-        const finalizeCompressedCall = linethRollup
-          .connect(operator)
-          .finalizeBlocks(calldataAggregatedProof1To155.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
+        const finalizeCompressedCall = linethRollup.write.finalizeBlocks(
+          [hex(calldataAggregatedProof1To155.aggregatedProof), BigInt(TEST_PUBLIC_VERIFIER_INDEX), finalizationData],
+          { account: operator.account },
+        );
 
         await expectRevertWithCustomError(linethRollup, finalizeCompressedCall, "FinalizationStateIncorrect", [
           expectedHashValue,
@@ -191,7 +200,7 @@ describe("Lineth Rollup contract: Finalization", () => {
       });
 
       it("Should revert if the final shnarf does not exist", async () => {
-        const { finalIndex } = await submitCalldataBeforeFinalization(linethRollup.connect(operator), {
+        const { finalIndex } = await submitCalldataBeforeFinalization(linethRollup, operator, {
           startIndex: 0,
           finalIndex: 4,
           maxGasLimit: MAX_GAS_LIMIT,
@@ -210,10 +219,10 @@ describe("Lineth Rollup contract: Finalization", () => {
           lastFinalizedTimestamp: DEFAULT_LAST_FINALIZED_TIMESTAMP,
         });
 
-        await linethRollup.setRollingHash(
-          calldataAggregatedProof1To155.l1RollingHashMessageNumber,
-          calldataAggregatedProof1To155.l1RollingHash,
-        );
+        await linethRollup.write.setRollingHash([
+          BigInt(calldataAggregatedProof1To155.l1RollingHashMessageNumber),
+          hex(calldataAggregatedProof1To155.l1RollingHash),
+        ]);
 
         finalizationData.shnarfData.snarkHash = generateRandomBytes(32);
 
@@ -224,9 +233,10 @@ describe("Lineth Rollup contract: Finalization", () => {
           [parentShnarf, snarkHash, finalStateRootHash, dataEvaluationPoint, dataEvaluationClaim],
         );
 
-        const finalizeCompressedCall = linethRollup
-          .connect(operator)
-          .finalizeBlocks(calldataAggregatedProof1To155.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
+        const finalizeCompressedCall = linethRollup.write.finalizeBlocks(
+          [hex(calldataAggregatedProof1To155.aggregatedProof), BigInt(TEST_PUBLIC_VERIFIER_INDEX), finalizationData],
+          { account: operator.account },
+        );
 
         await expectRevertWithCustomError(linethRollup, finalizeCompressedCall, "FinalShnarfNotSubmitted", [
           expectedMissingBlobShnarf,
@@ -234,7 +244,7 @@ describe("Lineth Rollup contract: Finalization", () => {
       });
 
       it("Should revert if finalizationData.finalTimestamp is greater than the block.timestamp", async () => {
-        const { finalIndex } = await submitCalldataBeforeFinalization(linethRollup.connect(operator), {
+        const { finalIndex } = await submitCalldataBeforeFinalization(linethRollup, operator, {
           startIndex: 0,
           finalIndex: 4,
           maxGasLimit: MAX_GAS_LIMIT,
@@ -254,25 +264,27 @@ describe("Lineth Rollup contract: Finalization", () => {
           finalTimestamp: BigInt(new Date(new Date().setHours(new Date().getHours() + 2)).getTime()), // Set to 2 hours in the future
         });
 
-        await linethRollup.setRollingHash(
-          calldataAggregatedProof1To155.l1RollingHashMessageNumber,
-          calldataAggregatedProof1To155.l1RollingHash,
+        await linethRollup.write.setRollingHash([
+          BigInt(calldataAggregatedProof1To155.l1RollingHashMessageNumber),
+          hex(calldataAggregatedProof1To155.l1RollingHash),
+        ]);
+
+        const finalizeCompressedCall = linethRollup.write.finalizeBlocks(
+          [hex(calldataAggregatedProof1To155.aggregatedProof), BigInt(TEST_PUBLIC_VERIFIER_INDEX), finalizationData],
+          { account: operator.account },
         );
 
-        const finalizeCompressedCall = linethRollup
-          .connect(operator)
-          .finalizeBlocks(calldataAggregatedProof1To155.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
-
+        const { networkHelpers } = await network.getOrCreate();
         await expectRevertWithCustomError(linethRollup, finalizeCompressedCall, "FinalizationInTheFuture", [
           finalizationData.finalTimestamp,
-          (await networkTime.latest()) + 1,
+          BigInt((await networkHelpers.time.latest()) + 1),
         ]);
       });
     });
 
     describe("Without submission data", () => {
       it("Should revert if the final block state equals the zero hash", async () => {
-        const { finalIndex } = await submitCalldataBeforeFinalization(linethRollup.connect(operator), {
+        const { finalIndex } = await submitCalldataBeforeFinalization(linethRollup, operator, {
           startIndex: 0,
           finalIndex: 4,
           maxGasLimit: MAX_GAS_LIMIT,
@@ -291,17 +303,18 @@ describe("Lineth Rollup contract: Finalization", () => {
           lastFinalizedTimestamp: DEFAULT_LAST_FINALIZED_TIMESTAMP,
         });
 
-        await linethRollup.setRollingHash(
-          calldataAggregatedProof1To155.l1RollingHashMessageNumber,
-          calldataAggregatedProof1To155.l1RollingHash,
-        );
+        await linethRollup.write.setRollingHash([
+          BigInt(calldataAggregatedProof1To155.l1RollingHashMessageNumber),
+          hex(calldataAggregatedProof1To155.l1RollingHash),
+        ]);
 
         // Set the final state root hash to zero
         finalizationData.shnarfData.finalStateRootHash = HASH_ZERO;
 
-        const finalizeCall = linethRollup
-          .connect(operator)
-          .finalizeBlocks(calldataAggregatedProof1To155.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
+        const finalizeCall = linethRollup.write.finalizeBlocks(
+          [hex(calldataAggregatedProof1To155.aggregatedProof), BigInt(TEST_PUBLIC_VERIFIER_INDEX), finalizationData],
+          { account: operator.account },
+        );
 
         await expectRevertWithCustomError(linethRollup, finalizeCall, "FinalBlockStateEqualsZeroHash");
       });
@@ -310,15 +323,16 @@ describe("Lineth Rollup contract: Finalization", () => {
 
   describe("Compressed data finalization with proof", () => {
     beforeEach(async () => {
-      await linethRollup.setLastFinalizedBlock(0);
+      await linethRollup.write.setLastFinalizedBlock([0n]);
     });
 
     it("Should revert if the caller does not have the OPERATOR_ROLE", async () => {
       const finalizationData = await generateFinalizationData();
 
-      const finalizeCall = linethRollup
-        .connect(nonAuthorizedAccount)
-        .finalizeBlocks(calldataAggregatedProof1To155.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
+      const finalizeCall = linethRollup.write.finalizeBlocks(
+        [hex(calldataAggregatedProof1To155.aggregatedProof), BigInt(TEST_PUBLIC_VERIFIER_INDEX), finalizationData],
+        { account: nonAuthorizedAccount.account },
+      );
       await expectRevertWithReason(finalizeCall, buildAccessErrorMessage(nonAuthorizedAccount, OPERATOR_ROLE));
     });
 
@@ -332,11 +346,12 @@ describe("Lineth Rollup contract: Finalization", () => {
       it(`Should revert if ${name} is enabled`, async () => {
         const finalizationData = await generateFinalizationData();
 
-        await linethRollup.connect(securityCouncil).pauseByType(pauseType);
+        await linethRollup.write.pauseByType([pauseType], { account: securityCouncil.account });
 
-        const finalizeCall = linethRollup
-          .connect(operator)
-          .finalizeBlocks(EMPTY_CALLDATA, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
+        const finalizeCall = linethRollup.write.finalizeBlocks(
+          [EMPTY_CALLDATA, BigInt(TEST_PUBLIC_VERIFIER_INDEX), finalizationData],
+          { account: operator.account },
+        );
         await expectRevertWhenPaused(linethRollup, finalizeCall, pauseType);
       });
     });
@@ -344,15 +359,16 @@ describe("Lineth Rollup contract: Finalization", () => {
     it("Should revert if the proof is empty", async () => {
       const finalizationData = await generateFinalizationData();
 
-      const finalizeCall = linethRollup
-        .connect(operator)
-        .finalizeBlocks(EMPTY_CALLDATA, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
+      const finalizeCall = linethRollup.write.finalizeBlocks(
+        [EMPTY_CALLDATA, BigInt(TEST_PUBLIC_VERIFIER_INDEX), finalizationData],
+        { account: operator.account },
+      );
       await expectRevertWithCustomError(linethRollup, finalizeCall, "ProofIsEmpty");
     });
 
     it("Should revert when finalization parentStateRootHash is different than last finalized state root hash", async () => {
       // Submit 4 sets of compressed data setting the correct shnarf in storage
-      await submitCalldataBeforeFinalization(linethRollup.connect(operator), {
+      await submitCalldataBeforeFinalization(linethRollup, operator, {
         startIndex: 0,
         finalIndex: 4,
         maxGasLimit: MAX_GAS_LIMIT,
@@ -361,20 +377,19 @@ describe("Lineth Rollup contract: Finalization", () => {
       const finalizationData = await generateFinalizationData({
         lastFinalizedTimestamp: DEFAULT_LAST_FINALIZED_TIMESTAMP,
         parentStateRootHash: generateRandomBytes(32),
-        aggregatedProof: calldataAggregatedProof1To155.aggregatedProof,
+        aggregatedProof: hex(calldataAggregatedProof1To155.aggregatedProof),
       });
 
-      const finalizeCall = linethRollup
-        .connect(operator)
-        .finalizeBlocks(calldataAggregatedProof1To155.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData, {
-          gasLimit: MAX_GAS_LIMIT,
-        });
+      const finalizeCall = linethRollup.write.finalizeBlocks(
+        [hex(calldataAggregatedProof1To155.aggregatedProof), BigInt(TEST_PUBLIC_VERIFIER_INDEX), finalizationData],
+        { account: operator.account, gas: BigInt(MAX_GAS_LIMIT) },
+      );
       await expectRevertWithCustomError(linethRollup, finalizeCall, "StartingRootHashDoesNotMatch");
     });
 
     it("Should successfully finalize with only previously submitted data", async () => {
       // Submit 4 sets of compressed data setting the correct shnarf in storage
-      const { finalIndex } = await submitCalldataBeforeFinalization(linethRollup.connect(operator), {
+      const { finalIndex } = await submitCalldataBeforeFinalization(linethRollup, operator, {
         startIndex: 0,
         finalIndex: 4,
         maxGasLimit: MAX_GAS_LIMIT,
@@ -395,7 +410,7 @@ describe("Lineth Rollup contract: Finalization", () => {
     });
 
     it("Should revert when proofType is invalid", async () => {
-      const { finalIndex } = await submitCalldataBeforeFinalization(linethRollup.connect(operator), {
+      const { finalIndex } = await submitCalldataBeforeFinalization(linethRollup, operator, {
         startIndex: 0,
         finalIndex: 4,
         maxGasLimit: MAX_GAS_LIMIT,
@@ -411,19 +426,20 @@ describe("Lineth Rollup contract: Finalization", () => {
         }),
       });
 
-      await linethRollup.setRollingHash(
-        calldataAggregatedProof1To155.l1RollingHashMessageNumber,
-        calldataAggregatedProof1To155.l1RollingHash,
-      );
+      await linethRollup.write.setRollingHash([
+        BigInt(calldataAggregatedProof1To155.l1RollingHashMessageNumber),
+        hex(calldataAggregatedProof1To155.l1RollingHash),
+      ]);
 
-      const finalizeCall = linethRollup
-        .connect(operator)
-        .finalizeBlocks(calldataAggregatedProof1To155.aggregatedProof, 99, finalizationData);
+      const finalizeCall = linethRollup.write.finalizeBlocks(
+        [hex(calldataAggregatedProof1To155.aggregatedProof), 99n, finalizationData],
+        { account: operator.account },
+      );
       await expectRevertWithCustomError(linethRollup, finalizeCall, "InvalidProofType");
     });
 
     it("Should revert when using a proofType index that was removed", async () => {
-      const { finalIndex } = await submitCalldataBeforeFinalization(linethRollup.connect(operator), {
+      const { finalIndex } = await submitCalldataBeforeFinalization(linethRollup, operator, {
         startIndex: 0,
         finalIndex: 4,
         maxGasLimit: MAX_GAS_LIMIT,
@@ -439,22 +455,25 @@ describe("Lineth Rollup contract: Finalization", () => {
         }),
       });
 
-      await linethRollup.setRollingHash(
-        calldataAggregatedProof1To155.l1RollingHashMessageNumber,
-        calldataAggregatedProof1To155.l1RollingHash,
-      );
+      await linethRollup.write.setRollingHash([
+        BigInt(calldataAggregatedProof1To155.l1RollingHashMessageNumber),
+        hex(calldataAggregatedProof1To155.l1RollingHash),
+      ]);
 
       // removing the verifier index
-      await linethRollup.connect(securityCouncil).unsetVerifierAddress(TEST_PUBLIC_VERIFIER_INDEX);
+      await linethRollup.write.unsetVerifierAddress([BigInt(TEST_PUBLIC_VERIFIER_INDEX)], {
+        account: securityCouncil.account,
+      });
 
-      const finalizeCall = linethRollup
-        .connect(operator)
-        .finalizeBlocks(calldataAggregatedProof1To155.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
+      const finalizeCall = linethRollup.write.finalizeBlocks(
+        [hex(calldataAggregatedProof1To155.aggregatedProof), BigInt(TEST_PUBLIC_VERIFIER_INDEX), finalizationData],
+        { account: operator.account },
+      );
       await expectRevertWithCustomError(linethRollup, finalizeCall, "InvalidProofType");
     });
 
     it("Should fail when proof does not match", async () => {
-      const { finalIndex } = await submitCalldataBeforeFinalization(linethRollup.connect(operator), {
+      const { finalIndex } = await submitCalldataBeforeFinalization(linethRollup, operator, {
         startIndex: 0,
         finalIndex: 4,
         maxGasLimit: MAX_GAS_LIMIT,
@@ -470,20 +489,21 @@ describe("Lineth Rollup contract: Finalization", () => {
         }),
       });
 
-      await linethRollup.setRollingHash(
-        calldataAggregatedProof1To155.l1RollingHashMessageNumber,
-        calldataAggregatedProof1To155.l1RollingHash,
-      );
+      await linethRollup.write.setRollingHash([
+        BigInt(calldataAggregatedProof1To155.l1RollingHashMessageNumber),
+        hex(calldataAggregatedProof1To155.l1RollingHash),
+      ]);
 
       // aggregatedProof1To81.aggregatedProof, wrong proof on purpose
-      const finalizeCall = linethRollup
-        .connect(operator)
-        .finalizeBlocks(aggregatedProof1To81.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
+      const finalizeCall = linethRollup.write.finalizeBlocks(
+        [hex(aggregatedProof1To81.aggregatedProof), BigInt(TEST_PUBLIC_VERIFIER_INDEX), finalizationData],
+        { account: operator.account },
+      );
       await expectRevertWithCustomError(linethRollup, finalizeCall, "InvalidProof");
     });
 
     it("Should fail if shnarf does not exist when finalizing", async () => {
-      await submitCalldataBeforeFinalization(linethRollup.connect(operator), {
+      await submitCalldataBeforeFinalization(linethRollup, operator, {
         startIndex: 0,
         finalIndex: 4,
         maxGasLimit: MAX_GAS_LIMIT,
@@ -499,19 +519,20 @@ describe("Lineth Rollup contract: Finalization", () => {
         }),
       });
 
-      await linethRollup.setRollingHash(
-        calldataAggregatedProof1To155.l1RollingHashMessageNumber,
-        calldataAggregatedProof1To155.l1RollingHash,
-      );
+      await linethRollup.write.setRollingHash([
+        BigInt(calldataAggregatedProof1To155.l1RollingHashMessageNumber),
+        hex(calldataAggregatedProof1To155.l1RollingHash),
+      ]);
 
-      const finalizeCall = linethRollup
-        .connect(operator)
-        .finalizeBlocks(calldataAggregatedProof1To155.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
+      const finalizeCall = linethRollup.write.finalizeBlocks(
+        [hex(calldataAggregatedProof1To155.aggregatedProof), BigInt(TEST_PUBLIC_VERIFIER_INDEX), finalizationData],
+        { account: operator.account },
+      );
       await expectRevertWithCustomError(linethRollup, finalizeCall, "InvalidProof");
     });
 
     it("Should successfully finalize 1-81 and then 82-153 in two separate finalizations", async () => {
-      await submitCalldataBeforeFinalization(linethRollup.connect(operator), {
+      await submitCalldataBeforeFinalization(linethRollup, operator, {
         startIndex: 0,
         finalIndex: 4,
         useMultipleProofs: true,
@@ -532,7 +553,9 @@ describe("Lineth Rollup contract: Finalization", () => {
       });
 
       for (const filteredAddress of aggregatedProof82To153.filteredAddresses) {
-        await addressFilter.connect(securityCouncil).setFilteredStatus([filteredAddress], true);
+        await addressFilter.write.setFilteredStatus([[address(filteredAddress)], true], {
+          account: securityCouncil.account,
+        });
       }
 
       await expectSuccessfulFinalize({
@@ -550,20 +573,22 @@ describe("Lineth Rollup contract: Finalization", () => {
     });
 
     it("Should succeed when sending with pure calldata", async () => {
-      await submitCalldataBeforeFinalization(linethRollup.connect(operator), {
+      const { viem } = await network.getOrCreate();
+      await submitCalldataBeforeFinalization(linethRollup, operator, {
         startIndex: 0,
         finalIndex: 4,
         useMultipleProofs: true,
         maxGasLimit: MAX_GAS_LIMIT,
       });
-      await linethRollup.setRollingHash(
-        aggregatedProof1To81.l1RollingHashMessageNumber,
-        aggregatedProof1To81.l1RollingHash,
-      );
+      await linethRollup.write.setRollingHash([
+        BigInt(aggregatedProof1To81.l1RollingHashMessageNumber),
+        hex(aggregatedProof1To81.l1RollingHash),
+      ]);
 
-      const linethRollupAddress = await linethRollup.getAddress();
+      const linethRollupAddress = linethRollup.address;
 
-      const { maxFeePerGas, maxPriorityFeePerGas } = await ethers.provider.getFeeData();
+      const publicClient = await viem.getPublicClient();
+      const { maxFeePerGas, maxPriorityFeePerGas } = await publicClient.estimateFeesPerGas();
 
       const proofData = aggregatedProof1To81 as AggregatedProofData;
       const finalizationData = await generateFinalizationData({
@@ -575,68 +600,70 @@ describe("Lineth Rollup contract: Finalization", () => {
         }),
       });
 
-      const encodedCall = LinethRollup__factory.createInterface().encodeFunctionData("finalizeBlocks", [
-        aggregatedProof1To81.aggregatedProof,
-        TEST_PUBLIC_VERIFIER_INDEX,
-        finalizationData,
-      ]);
+      const encodedCall = encodeFunctionData({
+        abi: linethRollup.abi,
+        functionName: "finalizeBlocks",
+        args: [hex(aggregatedProof1To81.aggregatedProof), BigInt(TEST_PUBLIC_VERIFIER_INDEX), finalizationData],
+      });
 
       const transaction = {
         data: encodedCall,
-        maxPriorityFeePerGas: maxPriorityFeePerGas!,
-        maxFeePerGas: maxFeePerGas!,
+        maxPriorityFeePerGas,
+        maxFeePerGas,
         to: linethRollupAddress,
-        chainId: 31337,
-        value: 0,
-        gasLimit: 5_000_000,
+        value: 0n,
+        gas: 5_000_000n,
       };
 
-      await expect(operator.sendTransaction(transaction)).to.not.be.reverted;
+      // The chain is the in-process Hardhat network (chain id 31337), as before.
+      // A reverted transaction makes the Hardhat provider throw, so a resolved send means it did not revert.
+      await operator.sendTransaction(transaction);
     });
 
     // TODO: decide on removing - not really applicable anymore
     it.skip("Should fail when sending with wrong merkle root location", async () => {
-      await submitCalldataBeforeFinalization(linethRollup.connect(operator), {
+      const { viem } = await network.getOrCreate();
+      await submitCalldataBeforeFinalization(linethRollup, operator, {
         startIndex: 0,
         finalIndex: 4,
         useMultipleProofs: true,
         maxGasLimit: MAX_GAS_LIMIT,
       });
 
-      await linethRollup.setRollingHash(
-        aggregatedProof1To81.l1RollingHashMessageNumber,
-        aggregatedProof1To81.l1RollingHash,
-      );
+      await linethRollup.write.setRollingHash([
+        BigInt(aggregatedProof1To81.l1RollingHashMessageNumber),
+        hex(aggregatedProof1To81.l1RollingHash),
+      ]);
 
-      const linethRollupAddress = await linethRollup.getAddress();
+      const linethRollupAddress = linethRollup.address;
 
-      const { maxFeePerGas, maxPriorityFeePerGas } = await ethers.provider.getFeeData();
+      const publicClient = await viem.getPublicClient();
+      const { maxFeePerGas, maxPriorityFeePerGas } = await publicClient.estimateFeesPerGas();
 
       // This contains the Merkle roots length for public input at a specific location and a contrived pointer to an alternate location.
-      const encodedCall =
+      const encodedCall: Hex =
         "0x4abc041c0000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003e00000000000000000000000000000000000000000000000000000000000000360008e483358dc0ac1d3f6a27b43f6332e88c4196151b2a1ce6c8575013cec2cbe2f666e5649165dfc5a88ede985203341f5910ec2f4e3d4e9fa2a0a2621e4b0a70a91e0f995a8d754a3ddec1698800be83da8815650488540d2ffb699eaf3518d14bff479974f1f5f8bef7687f89c6301247cd92a4ccfa76a868bd24090a670f20eb06513431e74411648ab8c02a270353146bc759451d00cf2a59477d6106b9d11df3e18bca0d3a36951e31699b21a73e22a77fb7fe43a33b717a23dd06a889a102e4143d1e024e053e4318f903c3dbd0ec0f6e49672dd0ccb10749ac00adaf311149a24bf2c2ee4cfe7ed1db713526c6f7c0893f2ec153e5f55a4b390ce135a0d3ebe372c1beea8142afebdc96fe2764b8b5a33efc0457b9ad65f678c8b9ede196eb1fe34a82e0f370fe1d53e5cfc34bc77f38a64eddbb74f6530a82feb0e0a148de4d309b179697ff8a3c97a5516a1bbffc36d8cf153e9f5ee8fdc98002fd1136a2a12603aa1c7a985b34c5dc6774a5efd6270eac180406b4f03c7ef08eee428bb45d04a3c6635a0225aae76c0522049df5080045629cd6a686c2d50d8b7fe10e6facded652c8d75d4a67d5f8f4c3c6b491f44cc23c307064ec94f7c3a44eb1d1dcd369464960e54a88ad3f9edbdd818f2ac711d6c8f49efe224fb2616f2ac0005ca0c753c801d9e2df1133cdd4de5e54554197ac3e2f42d0b140261a12796050d64ec14bb22355173d157a7a2a9a5c0a20d47430819b4c106fda54923f9bf273cbc4145962e07b853279e64e198d3da5919814935c4cf12ffc03128d0e4fc24e8f35180d257253c0ce33725cb665a81141f16418fb20cf2abb96fa65a03bc0fa8e1e842123e2a2590f423e34c1db2c51c9e872ea41942d44d94d735cf8b4b0ccc265c6bdc41dd6f1167da133450a5ea0c07ea4704c9ca377cd201d8a63f932f7d4c9edb88269008bfe08d91d576cbf1a46c2da88b13d2a38e68f66f330552114f37a226c38ed3a9acd35b75f5852e6879eb3c8746ed2676f9e3957d32bbee1493ac055f03a56e964c4ea278d323abde55b36439b5460897771bf5ef3be1992448a5479f3515d5605d403a51391c6c6db94a90b3353aa956a5ba6f7b951fee2b7657ab431f90220c84820c2db8e4b57eaa5c3ea13e8d1f4ed31b9434c5df5c083dbb24fdf9dc5a64ba7416e6d154e6b17727a3acaa9f59820e926196efd232072ead6777750dc20232d1cee8dc9a395c2d350df4bbaa5096c6f59b214dcecd00000000000000000000000000000000000000000000000000000000000000519562fa89830a0ba0063a636ca96e52ce2f032b855336c95dd788321f4e1934190eacb8ed649249b3ec6efd9fbd6ffebe1b325b53380a91f7d689bfc1aff3b6dcf0f26782f7afb93f926cacb145f55530714f20b1356725e3971dc99e0ef8b59101216d3e1700c3a0d5115686fa51caa982cb4e002a5bb9f9488c9c44e4d9a3042d2f290de42ce8ea03cf8ac09288166932f174cb069ff8147c95ed6374e4e6cb00000000000000000000000000000000000000000000000000000000645580d1000000000000000000000000000000000000000000000000000000006455a7e10000000000000000000000000000000000000000000000000000000000000000dc8e70637c1048e1e0406c4ed6fab51a7489ccb52f37ddd2c135cb1aa18ec69700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002e000000000000000000000000000000000000000000000000000000000000002a000000000000000000000000000000000000000000000000000000000000000016de197db892fd7d3fe0a389452dae0c5d0520e23d18ad20327546e2189a7e3f1000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000fffff000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000001cafecafe";
       const transaction = {
         data: encodedCall,
-        maxPriorityFeePerGas: maxPriorityFeePerGas!,
-        maxFeePerGas: maxFeePerGas!,
+        maxPriorityFeePerGas,
+        maxFeePerGas,
         to: linethRollupAddress,
-        chainId: HARDHAT_CHAIN_ID,
-        value: 0,
-        gasLimit: 5_000_000,
+        value: 0n,
+        gas: 5_000_000n,
       };
 
       await expectRevertWithCustomError(linethRollup, operator.sendTransaction(transaction), "InvalidProof");
     });
 
     it("Should fail to finalize with extra merkle roots", async () => {
-      await submitCalldataBeforeFinalization(linethRollup.connect(operator), {
+      await submitCalldataBeforeFinalization(linethRollup, operator, {
         startIndex: 0,
         finalIndex: 4,
         useMultipleProofs: true,
         maxGasLimit: MAX_GAS_LIMIT,
       });
 
-      const merkleRoots = [...aggregatedProof1To81.l2MerkleRoots, generateRandomBytes(32)];
+      const merkleRoots = [...aggregatedProof1To81.l2MerkleRoots.map(hex), generateRandomBytes(32)];
 
       const proofData = aggregatedProof1To81 as AggregatedProofData;
       const finalizationData = await generateFinalizationData({
@@ -651,33 +678,37 @@ describe("Lineth Rollup contract: Finalization", () => {
         lastFinalizedL1RollingHashMessageNumber: 0n,
       });
 
-      await linethRollup.setRollingHash(
-        aggregatedProof1To81.l1RollingHashMessageNumber,
-        aggregatedProof1To81.l1RollingHash,
-      );
+      await linethRollup.write.setRollingHash([
+        BigInt(aggregatedProof1To81.l1RollingHashMessageNumber),
+        hex(aggregatedProof1To81.l1RollingHash),
+      ]);
 
-      const finalizeCall = linethRollup
-        .connect(operator)
-        .finalizeBlocks(aggregatedProof1To81.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
+      const finalizeCall = linethRollup.write.finalizeBlocks(
+        [hex(aggregatedProof1To81.aggregatedProof), BigInt(TEST_PUBLIC_VERIFIER_INDEX), finalizationData],
+        { account: operator.account },
+      );
 
       await expectRevertWithCustomError(linethRollup, finalizeCall, "InvalidProof");
     });
   });
 
   describe("Blob-based finalization tests", () => {
-    let revertingVerifier: string;
+    let revertingVerifier: Address;
 
     beforeEach(async () => {
-      ({ linethRollup, addressFilter } = await loadFixture(deployLinethRollupFixture));
-      await linethRollup.setLastFinalizedBlock(0);
+      const { networkHelpers } = await network.getOrCreate();
+      ({ linethRollup, addressFilter } = await networkHelpers.loadFixture(deployLinethRollupFixture));
+      await linethRollup.write.setLastFinalizedBlock([0n]);
     });
 
     it("Should submit 2 blobs, then submit another 2 blobs and finalize", async () => {
       // Address filter is already set during initialize; only the forced transaction fee needs explicit setup
-      await linethRollup.connect(securityCouncil).setForcedTransactionFee(FORCED_TRANSACTION_FEE);
+      await linethRollup.write.setForcedTransactionFee([FORCED_TRANSACTION_FEE], { account: securityCouncil.account });
 
       // validating address filtering checking by marking the security council as filtered
-      await addressFilter.connect(securityCouncil).setFilteredStatus([securityCouncil.getAddress()], true);
+      await addressFilter.write.setFilteredStatus([[securityCouncil.address], true], {
+        account: securityCouncil.account,
+      });
 
       // Submit 2 blobs
       await sendBlobTransaction(linethRollup, 0, 2);
@@ -699,10 +730,10 @@ describe("Lineth Rollup contract: Finalization", () => {
     });
 
     it("Should revert if the address filter is set and the address is not marked as filtered", async () => {
-      const filteredAddress = await securityCouncil.getAddress();
+      const filteredAddress = securityCouncil.address;
 
       // Address filter is already set during initialize; only the forced transaction fee needs explicit setup
-      await linethRollup.connect(securityCouncil).setForcedTransactionFee(FORCED_TRANSACTION_FEE);
+      await linethRollup.write.setForcedTransactionFee([FORCED_TRANSACTION_FEE], { account: securityCouncil.account });
 
       // Submit 2 blobs
       await sendBlobTransaction(linethRollup, 0, 2);
@@ -732,6 +763,7 @@ describe("Lineth Rollup contract: Finalization", () => {
 
     it("Should fail to finalize with not enough gas for the rollup (pre-verifier)", async () => {
       // Submit 2 blobs
+      const { viem } = await network.getOrCreate();
       await sendBlobTransaction(linethRollup, 0, 2);
       // Submit another 2 blobs
       await sendBlobTransaction(linethRollup, 2, 4);
@@ -748,16 +780,18 @@ describe("Lineth Rollup contract: Finalization", () => {
         lastFinalizedL1RollingHashMessageNumber: 0n,
       });
 
-      await linethRollup.setRollingHash(proofData.l1RollingHashMessageNumber, proofData.l1RollingHash);
+      await linethRollup.write.setRollingHash([
+        BigInt(proofData.l1RollingHashMessageNumber),
+        hex(proofData.l1RollingHash),
+      ]);
 
-      const finalizeCompressedCall = linethRollup
-        .connect(operator)
-        .finalizeBlocks(proofData.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData, {
-          gasLimit: 80_000,
-        });
+      const finalizeCompressedCall = linethRollup.write.finalizeBlocks(
+        [hex(proofData.aggregatedProof), BigInt(TEST_PUBLIC_VERIFIER_INDEX), finalizationData],
+        { account: operator.account, gas: 80_000n },
+      );
 
       // there is no reason
-      await expect(finalizeCompressedCall).to.be.reverted;
+      await viem.assertions.revert(finalizeCompressedCall);
     });
 
     it("Should fail to finalize with not enough gas to verify", async () => {
@@ -778,13 +812,15 @@ describe("Lineth Rollup contract: Finalization", () => {
         lastFinalizedL1RollingHashMessageNumber: 0n,
       });
 
-      await linethRollup.setRollingHash(proofData.l1RollingHashMessageNumber, proofData.l1RollingHash);
+      await linethRollup.write.setRollingHash([
+        BigInt(proofData.l1RollingHashMessageNumber),
+        hex(proofData.l1RollingHash),
+      ]);
 
-      const finalizeCompressedCall = linethRollup
-        .connect(operator)
-        .finalizeBlocks(proofData.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData, {
-          gasLimit: 400000,
-        });
+      const finalizeCompressedCall = linethRollup.write.finalizeBlocks(
+        [hex(proofData.aggregatedProof), BigInt(TEST_PUBLIC_VERIFIER_INDEX), finalizationData],
+        { account: operator.account, gas: 400000n },
+      );
 
       await expectRevertWithCustomError(
         linethRollup,
@@ -795,14 +831,14 @@ describe("Lineth Rollup contract: Finalization", () => {
     });
 
     const testCases = [
-      { revertScenario: 0n, title: "Should fail to finalize via EMPTY_REVERT scenario with 'Unknown'" },
-      { revertScenario: 1n, title: "Should fail to finalize via GAS_GUZZLE scenario with 'Unknown'" },
+      { revertScenario: 0, title: "Should fail to finalize via EMPTY_REVERT scenario with 'Unknown'" },
+      { revertScenario: 1, title: "Should fail to finalize via GAS_GUZZLE scenario with 'Unknown'" },
     ];
 
     testCases.forEach(({ revertScenario, title }) => {
       it(title, async () => {
         revertingVerifier = await deployRevertingVerifier(revertScenario);
-        await linethRollup.connect(securityCouncil).setVerifierAddress(revertingVerifier, 0);
+        await linethRollup.write.setVerifierAddress([revertingVerifier, 0n], { account: securityCouncil.account });
 
         // Submit 2 blobs
         await sendBlobTransaction(linethRollup, 0, 2);
@@ -821,13 +857,15 @@ describe("Lineth Rollup contract: Finalization", () => {
           lastFinalizedL1RollingHashMessageNumber: 0n,
         });
 
-        await linethRollup.setRollingHash(proofData.l1RollingHashMessageNumber, proofData.l1RollingHash);
+        await linethRollup.write.setRollingHash([
+          BigInt(proofData.l1RollingHashMessageNumber),
+          hex(proofData.l1RollingHash),
+        ]);
 
-        const finalizeCompressedCall = linethRollup
-          .connect(operator)
-          .finalizeBlocks(proofData.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData, {
-            gasLimit: 400000,
-          });
+        const finalizeCompressedCall = linethRollup.write.finalizeBlocks(
+          [hex(proofData.aggregatedProof), BigInt(TEST_PUBLIC_VERIFIER_INDEX), finalizationData],
+          { account: operator.account, gas: 400000n },
+        );
 
         await expectRevertWithCustomError(
           linethRollup,
@@ -858,17 +896,21 @@ describe("Lineth Rollup contract: Finalization", () => {
         finalForcedTransactionNumber: 1n,
       });
 
-      await linethRollup.setRollingHash(proofData.l1RollingHashMessageNumber, proofData.l1RollingHash);
+      await linethRollup.write.setRollingHash([
+        BigInt(proofData.l1RollingHashMessageNumber),
+        hex(proofData.l1RollingHash),
+      ]);
 
-      await linethRollup.setLastFinalizedBlock(10_000_000);
+      await linethRollup.write.setLastFinalizedBlock([10_000_000n]);
 
       await expectRevertWithCustomError(
         linethRollup,
-        linethRollup
-          .connect(operator)
-          .finalizeBlocks(proofData.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData),
+        linethRollup.write.finalizeBlocks(
+          [hex(proofData.aggregatedProof), BigInt(TEST_PUBLIC_VERIFIER_INDEX), finalizationData],
+          { account: operator.account },
+        ),
         "MissingRollingHashForForcedTransactionNumber",
-        [1],
+        [1n],
       );
     });
 
@@ -879,7 +921,7 @@ describe("Lineth Rollup contract: Finalization", () => {
       await sendBlobTransaction(linethRollup, 2, 4, true);
 
       const proofData = blobAggregatedProof1To155 as AggregatedProofData;
-      await linethRollup.setForcedTransactionBlockNumber(BigInt(proofData.finalBlockNumber));
+      await linethRollup.write.setForcedTransactionBlockNumber([BigInt(proofData.finalBlockNumber)]);
 
       const expectedErrorTransactionNumber = 1; // first transaction
 
@@ -895,17 +937,21 @@ describe("Lineth Rollup contract: Finalization", () => {
         lastFinalizedL1RollingHashMessageNumber: 0n,
       });
 
-      await linethRollup.setRollingHash(proofData.l1RollingHashMessageNumber, proofData.l1RollingHash);
+      await linethRollup.write.setRollingHash([
+        BigInt(proofData.l1RollingHashMessageNumber),
+        hex(proofData.l1RollingHash),
+      ]);
 
-      await linethRollup.setLastFinalizedBlock(10_000_000);
+      await linethRollup.write.setLastFinalizedBlock([10_000_000n]);
 
       await expectRevertWithCustomError(
         linethRollup,
-        linethRollup
-          .connect(operator)
-          .finalizeBlocks(proofData.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData),
+        linethRollup.write.finalizeBlocks(
+          [hex(proofData.aggregatedProof), BigInt(TEST_PUBLIC_VERIFIER_INDEX), finalizationData],
+          { account: operator.account },
+        ),
         "FinalizationDataMissingForcedTransaction",
-        [expectedErrorTransactionNumber],
+        [BigInt(expectedErrorTransactionNumber)],
       );
     });
 
@@ -915,17 +961,19 @@ describe("Lineth Rollup contract: Finalization", () => {
       // Submit another 2 blobs
       await sendBlobTransaction(linethRollup, 2, 4, true);
 
-      await linethRollup.setForcedTransactionRollingHash(
-        blobMultipleAggregatedProof1To81.finalFtxNumber,
-        blobMultipleAggregatedProof1To81.finalFtxRollingHash,
-      );
-      await linethRollup.setForcedTransactionRollingHash(
-        blobMultipleAggregatedProof82To153.finalFtxNumber,
-        blobMultipleAggregatedProof82To153.finalFtxRollingHash,
-      );
+      await linethRollup.write.setForcedTransactionRollingHash([
+        BigInt(blobMultipleAggregatedProof1To81.finalFtxNumber),
+        hex(blobMultipleAggregatedProof1To81.finalFtxRollingHash),
+      ]);
+      await linethRollup.write.setForcedTransactionRollingHash([
+        BigInt(blobMultipleAggregatedProof82To153.finalFtxNumber),
+        hex(blobMultipleAggregatedProof82To153.finalFtxRollingHash),
+      ]);
 
       for (const filteredAddress of blobMultipleAggregatedProof1To81.filteredAddresses) {
-        await addressFilter.connect(securityCouncil).setFilteredStatus([filteredAddress], true);
+        await addressFilter.write.setFilteredStatus([[address(filteredAddress)], true], {
+          account: securityCouncil.account,
+        });
       }
 
       await expectSuccessfulFinalize({
@@ -942,7 +990,9 @@ describe("Lineth Rollup contract: Finalization", () => {
       });
 
       for (const filteredAddress of blobMultipleAggregatedProof82To153.filteredAddresses) {
-        await addressFilter.connect(securityCouncil).setFilteredStatus([filteredAddress], true);
+        await addressFilter.write.setFilteredStatus([[address(filteredAddress)], true], {
+          account: securityCouncil.account,
+        });
       }
 
       // Finalize second 2 blobs
@@ -962,20 +1012,22 @@ describe("Lineth Rollup contract: Finalization", () => {
 
     it("Should successfully submit 2 blobs twice then finalize in two separate finalizations using 3 and then 6 finalizationState fields", async () => {
       // Explicitly use the 3 fields to simulate an existing finalization
-      await linethRollup.setLastFinalizedStateV6(0, HASH_ZERO, DEFAULT_LAST_FINALIZED_TIMESTAMP);
+      await linethRollup.write.setLastFinalizedStateV6([0n, HASH_ZERO, DEFAULT_LAST_FINALIZED_TIMESTAMP]);
 
       // Submit 2 blobs
       await sendBlobTransaction(linethRollup, 0, 2, true);
       // Submit another 2 blobs
       await sendBlobTransaction(linethRollup, 2, 4, true);
 
-      await linethRollup.setForcedTransactionRollingHash(
-        blobMultipleAggregatedProof1To81.finalFtxNumber,
-        blobMultipleAggregatedProof1To81.finalFtxRollingHash,
-      );
+      await linethRollup.write.setForcedTransactionRollingHash([
+        BigInt(blobMultipleAggregatedProof1To81.finalFtxNumber),
+        hex(blobMultipleAggregatedProof1To81.finalFtxRollingHash),
+      ]);
 
       for (const filteredAddress of blobMultipleAggregatedProof1To81.filteredAddresses) {
-        await addressFilter.connect(securityCouncil).setFilteredStatus([filteredAddress], true);
+        await addressFilter.write.setFilteredStatus([[address(filteredAddress)], true], {
+          account: securityCouncil.account,
+        });
       }
 
       // Finalize first 2 blobs
@@ -992,13 +1044,15 @@ describe("Lineth Rollup contract: Finalization", () => {
         },
       });
 
-      await linethRollup.setForcedTransactionRollingHash(
-        blobMultipleAggregatedProof82To153.finalFtxNumber,
-        blobMultipleAggregatedProof82To153.finalFtxRollingHash,
-      );
+      await linethRollup.write.setForcedTransactionRollingHash([
+        BigInt(blobMultipleAggregatedProof82To153.finalFtxNumber),
+        hex(blobMultipleAggregatedProof82To153.finalFtxRollingHash),
+      ]);
 
       for (const filteredAddress of blobMultipleAggregatedProof82To153.filteredAddresses) {
-        await addressFilter.connect(securityCouncil).setFilteredStatus([filteredAddress], true);
+        await addressFilter.write.setFilteredStatus([[address(filteredAddress)], true], {
+          account: securityCouncil.account,
+        });
       }
 
       // Finalize second 2 blobs
@@ -1022,7 +1076,7 @@ describe("Lineth Rollup contract: Finalization", () => {
       // Submit another 2 blobs
       await sendBlobTransaction(linethRollup, 2, 4, false);
 
-      await linethRollup.setLastFinalizedBlock(10_000_000);
+      await linethRollup.write.setLastFinalizedBlock([10_000_000n]);
 
       await expectFailedCustomErrorFinalize({
         context: {

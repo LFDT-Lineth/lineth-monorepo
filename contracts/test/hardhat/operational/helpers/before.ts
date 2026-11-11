@@ -1,4 +1,4 @@
-import { ethers } from "hardhat";
+import { getTestAccounts } from "../../common/helpers/index.js";
 
 export async function getRollupRevenueVaultAccountsFixture() {
   const [
@@ -9,7 +9,7 @@ export async function getRollupRevenueVaultAccountsFixture() {
     l1l2MessageSetter,
     l1LineaTokenBurner,
     nonAuthorizedAccount,
-  ] = await ethers.getSigners();
+  ] = await getTestAccounts();
   return {
     admin,
     invoiceSubmitter,

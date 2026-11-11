@@ -1,25 +1,17 @@
 // Test scenarios with LinethRollup + YieldManager + LidoStVaultYieldProvider
-import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
-import { loadFixture, setBalance } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import {
-  TestYieldManager,
-  TestLinethRollup,
-  TestLidoStVaultYieldProvider,
-  MockDashboard,
-  MockStakingVault,
-  TestLidoStVaultYieldProviderFactory,
-  SSZMerkleTree,
-  TestValidatorContainerProofVerifier,
-  MockSTETH,
-  MockVaultHub,
-  MockVaultFactory,
-} from "contracts/typechain-types";
-import { ethers } from "hardhat";
+import { network } from "hardhat";
+import { describe, it, before, beforeEach } from "node:test";
+import { type Address, encodeFunctionData, keccak256 } from "viem";
 
-import { encodeSendMessage } from "../../../../common/helpers/encoding";
-import { EMPTY_CALLDATA, ONE_ETHER, ZERO_VALUE, CONNECT_DEPOSIT } from "../../common/constants";
-import { expectRevertWithCustomError, expectEvent, getAccountsFixture } from "../../common/helpers";
+import { encodeSendMessage } from "../../../../common/helpers/encoding.js";
+import { EMPTY_CALLDATA, ONE_ETHER, ZERO_VALUE, CONNECT_DEPOSIT } from "../../common/constants/index.js";
+import {
+  type TestAccount,
+  getAccountsFixture,
+  expectRevertWithCustomError,
+  expectEvent,
+} from "../../common/helpers/index.js";
 import {
   decrementBalance,
   deployAndAddAdditionalLidoStVaultYieldProvider,
@@ -31,6 +23,7 @@ import {
   incrementMockDashboardTotalValue,
   incurNegativeYield,
   incurPositiveYield,
+  setBalance,
   setupLinethRollupMessageMerkleTree,
   setWithdrawalReserveToMinimum,
   setWithdrawalReserveToTarget,
@@ -39,39 +32,43 @@ import {
   setupLSTPrincipalDecrementForPaxMaximumPossibleLSTLiability,
   buildVendorExitData,
   buildSetWithdrawalReserveParams,
-  YieldManagerInitializationData,
-} from "../helpers";
+  type YieldManagerInitializationData,
+} from "../helpers/index.js";
+
+import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
 
 describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYieldProvider", () => {
-  let nativeYieldOperator: SignerWithAddress;
-  let nonAuthorizedAccount: SignerWithAddress;
-  let l2YieldRecipient: SignerWithAddress;
-  let securityCouncil: SignerWithAddress;
+  let nativeYieldOperator: TestAccount;
+  let nonAuthorizedAccount: TestAccount;
+  let l2YieldRecipient: TestAccount;
+  let securityCouncil: TestAccount;
 
-  let linethRollup: TestLinethRollup;
-  let yieldManager: TestYieldManager;
-  let yieldProvider: TestLidoStVaultYieldProvider;
-  let mockDashboard: MockDashboard;
-  let mockStakingVault: MockStakingVault;
-  let mockSTETH: MockSTETH;
-  let mockVaultHub: MockVaultHub;
-  let mockVaultFactory: MockVaultFactory;
-  let lidoStVaultYieldProviderFactory: TestLidoStVaultYieldProviderFactory;
-  let sszMerkleTree: SSZMerkleTree;
-  let testVerifier: TestValidatorContainerProofVerifier;
+  let linethRollup: ContractReturnType<"TestLinethRollup">;
+  let yieldManager: ContractReturnType<"TestYieldManager">;
+  let yieldProvider: ContractReturnType<"TestLidoStVaultYieldProvider">;
+  let mockDashboard: ContractReturnType<"MockDashboard">;
+  let mockStakingVault: ContractReturnType<"MockStakingVault">;
+  let mockSTETH: ContractReturnType<"MockSTETH">;
+  let mockVaultHub: ContractReturnType<"MockVaultHub">;
+  let mockVaultFactory: ContractReturnType<"MockVaultFactory">;
+  let lidoStVaultYieldProviderFactory: ContractReturnType<"TestLidoStVaultYieldProviderFactory">;
+  let sszMerkleTree: ContractReturnType<"SSZMerkleTree">;
+  let testVerifier: ContractReturnType<"TestValidatorContainerProofVerifier">;
   let initializationData: YieldManagerInitializationData;
 
-  let l1MessageServiceAddress: string;
-  let yieldManagerAddress: string;
-  let yieldProviderAddress: string;
-  let mockStakingVaultAddress: string;
+  let l1MessageServiceAddress: Address;
+  let yieldManagerAddress: Address;
+  let yieldProviderAddress: Address;
+  let mockStakingVaultAddress: Address;
 
   before(async () => {
+    const { networkHelpers } = await network.getOrCreate();
     ({ nativeYieldOperator, nonAuthorizedAccount, l2YieldRecipient, securityCouncil } =
-      await loadFixture(getAccountsFixture));
+      await networkHelpers.loadFixture(getAccountsFixture));
   });
 
   beforeEach(async () => {
+    const { networkHelpers } = await network.getOrCreate();
     ({
       linethRollup,
       yieldProvider,
@@ -86,17 +83,17 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       sszMerkleTree,
       testVerifier,
       initializationData,
-    } = await loadFixture(deployYieldManagerIntegrationTestFixture));
-    l1MessageServiceAddress = await linethRollup.getAddress();
-    yieldManagerAddress = await yieldManager.getAddress();
-    mockStakingVaultAddress = await mockStakingVault.getAddress();
+    } = await networkHelpers.loadFixture(deployYieldManagerIntegrationTestFixture));
+    l1MessageServiceAddress = linethRollup.address;
+    yieldManagerAddress = yieldManager.address;
+    mockStakingVaultAddress = mockStakingVault.address;
   });
 
   describe("Initial state", () => {
     it("userFunds should be equivalent to CONNECT_DEPOSIT amount", async () => {
-      const connectDeposit = await yieldProvider.CONNECT_DEPOSIT();
-      expect(await yieldManager.userFunds(yieldProviderAddress)).eq(connectDeposit);
-      expect(await yieldManager.userFundsInYieldProvidersTotal()).eq(connectDeposit);
+      const connectDeposit = await yieldProvider.read.CONNECT_DEPOSIT();
+      expect(await yieldManager.read.userFunds([yieldProviderAddress])).eq(connectDeposit);
+      expect(await yieldManager.read.userFundsInYieldProvidersTotal()).eq(connectDeposit);
     });
   });
 
@@ -105,27 +102,30 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       const fundAmount = ONE_ETHER;
       await setWithdrawalReserveToMinimum(yieldManager);
       await incrementBalance(l1MessageServiceAddress, fundAmount);
-      const rollupBalanceBefore = await ethers.provider.getBalance(l1MessageServiceAddress);
-      const yieldManagerBalanceBefore = await ethers.provider.getBalance(yieldManagerAddress);
+      const rollupBalanceBefore = await getBalance({ address: l1MessageServiceAddress });
+      const yieldManagerBalanceBefore = await getBalance({ address: yieldManagerAddress });
       // Act
-      await linethRollup.connect(nativeYieldOperator).transferFundsForNativeYield(fundAmount);
+      await linethRollup.write.transferFundsForNativeYield([fundAmount], { account: nativeYieldOperator.account });
       // Assert
-      const rollupBalanceAfter = await ethers.provider.getBalance(l1MessageServiceAddress);
-      const yieldManagerBalanceAfter = await ethers.provider.getBalance(yieldManagerAddress);
+      const rollupBalanceAfter = await getBalance({ address: l1MessageServiceAddress });
+      const yieldManagerBalanceAfter = await getBalance({ address: yieldManagerAddress });
       expect(rollupBalanceAfter).eq(rollupBalanceBefore - fundAmount);
       expect(yieldManagerBalanceAfter).eq(yieldManagerBalanceBefore + fundAmount);
     });
     it("Should revert when withdrawal reserve at minimum (including msg.value in the reserve computation)", async () => {
       // Arrange - %-based minimum at 20%
-      await yieldManager
-        .connect(securityCouncil)
-        .setWithdrawalReserveParameters(buildSetWithdrawalReserveParams(initializationData, { minAmount: 0n }));
-      await setBalance(await linethRollup.getAddress(), 21n * ONE_ETHER);
-      await setBalance(await yieldManager.getAddress(), 79n * ONE_ETHER);
+      await yieldManager.write.setWithdrawalReserveParameters(
+        [buildSetWithdrawalReserveParams(initializationData, { minAmount: 0n })],
+        { account: securityCouncil.account },
+      );
+      await setBalance(linethRollup.address, 21n * ONE_ETHER);
+      await setBalance(yieldManager.address, 79n * ONE_ETHER);
 
       // Act
       const withdrawAmount = ONE_ETHER + 1n;
-      const call = linethRollup.connect(nativeYieldOperator).transferFundsForNativeYield(withdrawAmount);
+      const call = linethRollup.write.transferFundsForNativeYield([withdrawAmount], {
+        account: nativeYieldOperator.account,
+      });
 
       // Assert
       await expectRevertWithCustomError(yieldManager, call, "InsufficientWithdrawalReserve");
@@ -136,8 +136,8 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       await setWithdrawalReserveToMinimum(yieldManager);
       await incrementBalance(l1MessageServiceAddress, transferAmount);
       // Arrange - setup L1MessageService message
-      const recipientAddress = await nonAuthorizedAccount.getAddress();
-      const calldata = await yieldManager.interface.encodeFunctionData("receiveFundsFromReserve", []);
+      const recipientAddress = nonAuthorizedAccount.address;
+      const calldata = encodeFunctionData({ abi: yieldManager.abi, functionName: "receiveFundsFromReserve" });
       const reserveBalanceBefore = await getBalance(linethRollup);
       const yieldManagerBalanceBefore = await getBalance(yieldManager);
 
@@ -151,8 +151,10 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       );
 
       // Act
-      const claimCall = linethRollup.connect(nonAuthorizedAccount).claimMessageWithProof(claimParams);
-      await expect(claimCall).to.not.be.reverted;
+      const claimCall = linethRollup.write.claimMessageWithProof([claimParams], {
+        account: nonAuthorizedAccount.account,
+      });
+      await claimCall;
       expect(await getBalance(linethRollup)).eq(reserveBalanceBefore - transferAmount);
       expect(await getBalance(yieldManager)).eq(yieldManagerBalanceBefore + transferAmount);
     });
@@ -164,10 +166,10 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       const initialFundAmount = ONE_ETHER;
       await fundLidoStVaultYieldProvider(yieldManager, yieldProvider, nativeYieldOperator, initialFundAmount);
       // Arrange - setup withdrawal reserve deficit
-      await setBalance(l1MessageServiceAddress, ZERO_VALUE);
+      await setBalance(l1MessageServiceAddress, BigInt(ZERO_VALUE));
       // Arrange - setup L1MessageService message
       const withdrawAmount = initialFundAmount / 2n;
-      const recipientAddress = await nonAuthorizedAccount.getAddress();
+      const recipientAddress = nonAuthorizedAccount.address;
       const claimParams = await setupLinethRollupMessageMerkleTree(
         linethRollup,
         recipientAddress,
@@ -177,16 +179,16 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
         securityCouncil,
       );
       // Arrange - Get before figures
-      const lstPrincipalBefore = await yieldManager.getYieldProviderLstLiabilityPrincipal(yieldProviderAddress);
+      const lstPrincipalBefore = await yieldManager.read.getYieldProviderLstLiabilityPrincipal([yieldProviderAddress]);
 
       // Act
-      const claimCall = linethRollup
-        .connect(nonAuthorizedAccount)
-        .claimMessageWithProofAndWithdrawLST(claimParams, yieldProviderAddress);
+      const claimCall = linethRollup.write.claimMessageWithProofAndWithdrawLST([claimParams, yieldProviderAddress], {
+        account: nonAuthorizedAccount.account,
+      });
 
       // Assert
-      await expect(claimCall).to.not.be.reverted;
-      const lstPrincipalAfter = await yieldManager.getYieldProviderLstLiabilityPrincipal(yieldProviderAddress);
+      await claimCall;
+      const lstPrincipalAfter = await yieldManager.read.getYieldProviderLstLiabilityPrincipal([yieldProviderAddress]);
       expect(lstPrincipalAfter).eq(lstPrincipalBefore + withdrawAmount);
     });
     it("Should not be allowed from claimMessage", async () => {
@@ -194,15 +196,15 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       const initialFundAmount = ONE_ETHER;
       await fundLidoStVaultYieldProvider(yieldManager, yieldProvider, nativeYieldOperator, initialFundAmount);
       // Arrange - setup withdrawal reserve deficit
-      await setBalance(l1MessageServiceAddress, ZERO_VALUE);
+      await setBalance(l1MessageServiceAddress, BigInt(ZERO_VALUE));
       // Arrange - setup L1MessageService message
       const withdrawAmount = 0n;
-      const recipientAddress = await nonAuthorizedAccount.getAddress();
-      const calldata = await yieldProvider.interface.encodeFunctionData("withdrawLST", [
-        yieldProviderAddress,
-        withdrawAmount,
-        recipientAddress,
-      ]);
+      const recipientAddress = nonAuthorizedAccount.address;
+      const calldata = encodeFunctionData({
+        abi: yieldProvider.abi,
+        functionName: "withdrawLST",
+        args: [yieldProviderAddress, withdrawAmount, recipientAddress],
+      });
 
       const claimParams = await setupLinethRollupMessageMerkleTree(
         linethRollup,
@@ -214,7 +216,9 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       );
 
       // Act
-      const claimCall = linethRollup.connect(nonAuthorizedAccount).claimMessageWithProof(claimParams);
+      const claimCall = linethRollup.write.claimMessageWithProof([claimParams], {
+        account: nonAuthorizedAccount.account,
+      });
       await expectRevertWithCustomError(yieldManager, claimCall, "LSTWithdrawalNotAllowed");
     });
     it("Should not allow LST withdrawal amount > fund amount", async () => {
@@ -222,10 +226,10 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       const initialFundAmount = ONE_ETHER;
       await fundLidoStVaultYieldProvider(yieldManager, yieldProvider, nativeYieldOperator, initialFundAmount);
       // Arrange - setup withdrawal reserve deficit
-      await setBalance(l1MessageServiceAddress, ZERO_VALUE);
+      await setBalance(l1MessageServiceAddress, BigInt(ZERO_VALUE));
       // Arrange - setup L1MessageService message
       const withdrawAmount = initialFundAmount * 2n + CONNECT_DEPOSIT;
-      const recipientAddress = await nonAuthorizedAccount.getAddress();
+      const recipientAddress = nonAuthorizedAccount.address;
       const claimParams = await setupLinethRollupMessageMerkleTree(
         linethRollup,
         recipientAddress,
@@ -236,9 +240,9 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       );
 
       // Act
-      const claimCall = linethRollup
-        .connect(nonAuthorizedAccount)
-        .claimMessageWithProofAndWithdrawLST(claimParams, yieldProviderAddress);
+      const claimCall = linethRollup.write.claimMessageWithProofAndWithdrawLST([claimParams, yieldProviderAddress], {
+        account: nonAuthorizedAccount.account,
+      });
       await expectRevertWithCustomError(yieldManager, claimCall, "LSTWithdrawalExceedsYieldProviderFunds");
     });
     it("Should revert if LST withdrawal is for another recipient", async () => {
@@ -246,10 +250,10 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       const initialFundAmount = ONE_ETHER;
       await fundLidoStVaultYieldProvider(yieldManager, yieldProvider, nativeYieldOperator, initialFundAmount);
       // Arrange - setup withdrawal reserve deficit
-      await setBalance(l1MessageServiceAddress, ZERO_VALUE);
+      await setBalance(l1MessageServiceAddress, BigInt(ZERO_VALUE));
       // Arrange - setup L1MessageService message
       const withdrawAmount = initialFundAmount / 2n;
-      const recipientAddress = await nonAuthorizedAccount.getAddress();
+      const recipientAddress = nonAuthorizedAccount.address;
       const claimParams = await setupLinethRollupMessageMerkleTree(
         linethRollup,
         recipientAddress,
@@ -260,17 +264,17 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       );
 
       // Act - Execute with different sender than _to
-      const claimCall = linethRollup
-        .connect(l2YieldRecipient)
-        .claimMessageWithProofAndWithdrawLST(claimParams, yieldProviderAddress);
+      const claimCall = linethRollup.write.claimMessageWithProofAndWithdrawLST([claimParams, yieldProviderAddress], {
+        account: l2YieldRecipient.account,
+      });
 
       // Assert
       await expectRevertWithCustomError(linethRollup, claimCall, "CallerNotLSTWithdrawalRecipient");
     });
     it("Should revert if LST withdrawal > rate limit", async () => {
-      const rateLimit = await linethRollup.limitInWei();
+      const rateLimit = await linethRollup.read.limitInWei();
 
-      const recipientAddress = await nonAuthorizedAccount.getAddress();
+      const recipientAddress = nonAuthorizedAccount.address;
       const claimParams = await setupLinethRollupMessageMerkleTree(
         linethRollup,
         recipientAddress,
@@ -279,16 +283,16 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
         EMPTY_CALLDATA,
         securityCouncil,
       );
-      const call = linethRollup
-        .connect(nonAuthorizedAccount)
-        .claimMessageWithProofAndWithdrawLST(claimParams, yieldProviderAddress);
+      const call = linethRollup.write.claimMessageWithProofAndWithdrawLST([claimParams, yieldProviderAddress], {
+        account: nonAuthorizedAccount.account,
+      });
       await expectRevertWithCustomError(linethRollup, call, "RateLimitExceeded");
     });
     it("LST withdrawal should use previous rate limit", async () => {
       // Regular claim message for rate limit
-      const rateLimit = await linethRollup.limitInWei();
+      const rateLimit = await linethRollup.read.limitInWei();
       await incrementBalance(l1MessageServiceAddress, rateLimit);
-      const recipientAddress = await nonAuthorizedAccount.getAddress();
+      const recipientAddress = nonAuthorizedAccount.address;
       const claimParams = await setupLinethRollupMessageMerkleTree(
         linethRollup,
         recipientAddress,
@@ -297,7 +301,7 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
         EMPTY_CALLDATA,
         securityCouncil,
       );
-      await linethRollup.connect(nonAuthorizedAccount).claimMessageWithProof(claimParams);
+      await linethRollup.write.claimMessageWithProof([claimParams], { account: nonAuthorizedAccount.account });
       // Next claim message with LST withdrawal
       const claimParams2 = await setupLinethRollupMessageMerkleTree(
         linethRollup,
@@ -307,9 +311,9 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
         EMPTY_CALLDATA,
         securityCouncil,
       );
-      const call = linethRollup
-        .connect(nonAuthorizedAccount)
-        .claimMessageWithProofAndWithdrawLST(claimParams2, yieldProviderAddress);
+      const call = linethRollup.write.claimMessageWithProofAndWithdrawLST([claimParams2, yieldProviderAddress], {
+        account: nonAuthorizedAccount.account,
+      });
       await expectRevertWithCustomError(linethRollup, call, "RateLimitExceeded");
     });
   });
@@ -321,38 +325,42 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       await fundLidoStVaultYieldProvider(yieldManager, yieldProvider, nativeYieldOperator, initialFundAmount);
       // Arrange - Setup positive yield
       const yieldEarned = ONE_ETHER / 10n;
-      await mockDashboard.setTotalValueReturn(initialFundAmount + CONNECT_DEPOSIT + yieldEarned);
+      await mockDashboard.write.setTotalValueReturn([initialFundAmount + CONNECT_DEPOSIT + yieldEarned]);
       // Arrange - Get message params
-      const nextMessageNumberBefore = await linethRollup.nextMessageNumber();
+      const nextMessageNumberBefore = await linethRollup.read.nextMessageNumber();
 
       const expectedBytes = encodeSendMessage(
         yieldManagerAddress,
-        await l2YieldRecipient.getAddress(),
+        l2YieldRecipient.address,
         0n,
         yieldEarned,
         nextMessageNumberBefore,
         EMPTY_CALLDATA,
       );
-      const messageHash = ethers.keccak256(expectedBytes);
+      const messageHash = keccak256(expectedBytes);
 
       // Act
-      const [newReportedYield, outstandingNegativeYield] = await yieldManager
-        .connect(nativeYieldOperator)
-        .reportYield.staticCall(yieldProviderAddress, l2YieldRecipient);
-      const call = await yieldManager.connect(nativeYieldOperator).reportYield(yieldProviderAddress, l2YieldRecipient);
+      const [newReportedYield, outstandingNegativeYield] = (
+        await yieldManager.simulate.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+          account: nativeYieldOperator.address,
+        })
+      ).result;
+      const call = await yieldManager.write.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+        account: nativeYieldOperator.account,
+      });
 
       // Assert
-      await expectEvent(linethRollup, call, "MessageSent", [
+      await expectEvent(linethRollup, Promise.resolve(call), "MessageSent", [
         yieldManagerAddress,
-        l2YieldRecipient,
-        0,
+        l2YieldRecipient.address,
+        0n,
         yieldEarned,
         nextMessageNumberBefore,
         EMPTY_CALLDATA,
         messageHash,
       ]);
       expect(newReportedYield).eq(yieldEarned);
-      expect(outstandingNegativeYield).eq(0);
+      expect(outstandingNegativeYield).eq(0n);
     });
     it("Should report negative yield successfully", async () => {
       // Arrange - setup user funds
@@ -360,31 +368,35 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       await fundLidoStVaultYieldProvider(yieldManager, yieldProvider, nativeYieldOperator, initialFundAmount);
       // Arrange - Setup negative yield
       const yieldEarned = 0n;
-      await mockDashboard.setTotalValueReturn(yieldEarned + CONNECT_DEPOSIT);
+      await mockDashboard.write.setTotalValueReturn([yieldEarned + CONNECT_DEPOSIT]);
       // Arrange - Get message params
-      const nextMessageNumberBefore = await linethRollup.nextMessageNumber();
+      const nextMessageNumberBefore = await linethRollup.read.nextMessageNumber();
 
       const expectedBytes = encodeSendMessage(
         yieldManagerAddress,
-        await l2YieldRecipient.getAddress(),
+        l2YieldRecipient.address,
         0n,
         yieldEarned,
         nextMessageNumberBefore,
         EMPTY_CALLDATA,
       );
-      const messageHash = ethers.keccak256(expectedBytes);
+      const messageHash = keccak256(expectedBytes);
 
       // Act
-      const [newReportedYield, outstandingNegativeYield] = await yieldManager
-        .connect(nativeYieldOperator)
-        .reportYield.staticCall(yieldProviderAddress, l2YieldRecipient);
-      const call = await yieldManager.connect(nativeYieldOperator).reportYield(yieldProviderAddress, l2YieldRecipient);
+      const [newReportedYield, outstandingNegativeYield] = (
+        await yieldManager.simulate.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+          account: nativeYieldOperator.address,
+        })
+      ).result;
+      const call = await yieldManager.write.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+        account: nativeYieldOperator.account,
+      });
 
       // Assert
-      await expectEvent(linethRollup, call, "MessageSent", [
+      await expectEvent(linethRollup, Promise.resolve(call), "MessageSent", [
         yieldManagerAddress,
-        l2YieldRecipient,
-        0,
+        l2YieldRecipient.address,
+        0n,
         yieldEarned,
         nextMessageNumberBefore,
         EMPTY_CALLDATA,
@@ -399,43 +411,49 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       await fundLidoStVaultYieldProvider(yieldManager, yieldProvider, nativeYieldOperator, initialFundAmount);
       // Arrange - Setup positive yield
       const yieldEarned = ONE_ETHER / 10n;
-      await mockDashboard.setTotalValueReturn(initialFundAmount + CONNECT_DEPOSIT + yieldEarned);
+      await mockDashboard.write.setTotalValueReturn([initialFundAmount + CONNECT_DEPOSIT + yieldEarned]);
       // Arrange - Get message params
-      const nextMessageNumberBefore = await linethRollup.nextMessageNumber();
+      const nextMessageNumberBefore = await linethRollup.read.nextMessageNumber();
 
       const expectedBytes = encodeSendMessage(
         yieldManagerAddress,
-        await l2YieldRecipient.getAddress(),
+        l2YieldRecipient.address,
         0n,
         yieldEarned,
         nextMessageNumberBefore,
         EMPTY_CALLDATA,
       );
-      const messageHash = ethers.keccak256(expectedBytes);
+      const messageHash = keccak256(expectedBytes);
 
       // Act
-      const [newReportedYield, outstandingNegativeYield] = await yieldManager
-        .connect(nativeYieldOperator)
-        .reportYield.staticCall(yieldProviderAddress, l2YieldRecipient);
-      const call = await yieldManager.connect(nativeYieldOperator).reportYield(yieldProviderAddress, l2YieldRecipient);
-      const [newReportedYield2, outstandingNegativeYield2] = await yieldManager
-        .connect(nativeYieldOperator)
-        .reportYield.staticCall(yieldProviderAddress, l2YieldRecipient);
+      const [newReportedYield, outstandingNegativeYield] = (
+        await yieldManager.simulate.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+          account: nativeYieldOperator.address,
+        })
+      ).result;
+      const call = await yieldManager.write.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+        account: nativeYieldOperator.account,
+      });
+      const [newReportedYield2, outstandingNegativeYield2] = (
+        await yieldManager.simulate.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+          account: nativeYieldOperator.address,
+        })
+      ).result;
 
       // Assert
-      await expectEvent(linethRollup, call, "MessageSent", [
+      await expectEvent(linethRollup, Promise.resolve(call), "MessageSent", [
         yieldManagerAddress,
-        l2YieldRecipient,
-        0,
+        l2YieldRecipient.address,
+        0n,
         yieldEarned,
         nextMessageNumberBefore,
         EMPTY_CALLDATA,
         messageHash,
       ]);
       expect(newReportedYield).eq(yieldEarned);
-      expect(outstandingNegativeYield).eq(0);
-      expect(newReportedYield2).eq(0);
-      expect(outstandingNegativeYield2).eq(0);
+      expect(outstandingNegativeYield).eq(0n);
+      expect(newReportedYield2).eq(0n);
+      expect(outstandingNegativeYield2).eq(0n);
     });
     it("Immediate subsequent negative yield report with no fund movement should have same outstanding negative yield", async () => {
       // Arrange - setup user funds
@@ -443,34 +461,40 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       await fundLidoStVaultYieldProvider(yieldManager, yieldProvider, nativeYieldOperator, initialFundAmount);
       // Arrange - Setup negative yield
       const yieldEarned = 0n;
-      await mockDashboard.setTotalValueReturn(yieldEarned + CONNECT_DEPOSIT);
+      await mockDashboard.write.setTotalValueReturn([yieldEarned + CONNECT_DEPOSIT]);
       // Arrange - Get message params
-      const nextMessageNumberBefore = await linethRollup.nextMessageNumber();
+      const nextMessageNumberBefore = await linethRollup.read.nextMessageNumber();
 
       const expectedBytes = encodeSendMessage(
         yieldManagerAddress,
-        await l2YieldRecipient.getAddress(),
+        l2YieldRecipient.address,
         0n,
         yieldEarned,
         nextMessageNumberBefore,
         EMPTY_CALLDATA,
       );
-      const messageHash = ethers.keccak256(expectedBytes);
+      const messageHash = keccak256(expectedBytes);
 
       // Act
-      const [newReportedYield, outstandingNegativeYield] = await yieldManager
-        .connect(nativeYieldOperator)
-        .reportYield.staticCall(yieldProviderAddress, l2YieldRecipient);
-      const call = await yieldManager.connect(nativeYieldOperator).reportYield(yieldProviderAddress, l2YieldRecipient);
-      const [newReportedYield2, outstandingNegativeYield2] = await yieldManager
-        .connect(nativeYieldOperator)
-        .reportYield.staticCall(yieldProviderAddress, l2YieldRecipient);
+      const [newReportedYield, outstandingNegativeYield] = (
+        await yieldManager.simulate.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+          account: nativeYieldOperator.address,
+        })
+      ).result;
+      const call = await yieldManager.write.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+        account: nativeYieldOperator.account,
+      });
+      const [newReportedYield2, outstandingNegativeYield2] = (
+        await yieldManager.simulate.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+          account: nativeYieldOperator.address,
+        })
+      ).result;
 
       // Assert
-      await expectEvent(linethRollup, call, "MessageSent", [
+      await expectEvent(linethRollup, Promise.resolve(call), "MessageSent", [
         yieldManagerAddress,
-        l2YieldRecipient,
-        0,
+        l2YieldRecipient.address,
+        0n,
         yieldEarned,
         nextMessageNumberBefore,
         EMPTY_CALLDATA,
@@ -490,11 +514,15 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       await fundLidoStVaultYieldProvider(yieldManager, yieldProvider, nativeYieldOperator, initialFundAmount);
       // Arrange - single positive vault report
       const yieldEarned = ONE_ETHER;
-      await mockDashboard.setTotalValueReturn(initialFundAmount + yieldEarned);
-      await yieldManager.connect(nativeYieldOperator).reportYield(yieldProviderAddress, l2YieldRecipient);
+      await mockDashboard.write.setTotalValueReturn([initialFundAmount + yieldEarned]);
+      await yieldManager.write.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+        account: nativeYieldOperator.account,
+      });
 
       // Act
-      const call = yieldManager.connect(securityCouncil).removeYieldProvider(yieldProviderAddress, EMPTY_CALLDATA);
+      const call = yieldManager.write.removeYieldProvider([yieldProviderAddress, EMPTY_CALLDATA], {
+        account: securityCouncil.account,
+      });
 
       // Assert
       await expectRevertWithCustomError(yieldManager, call, "YieldProviderHasRemainingFunds", [
@@ -507,17 +535,21 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       await fundLidoStVaultYieldProvider(yieldManager, yieldProvider, nativeYieldOperator, initialFundAmount);
       // Arrange - single positive vault report
       const yieldEarned = ONE_ETHER;
-      await mockDashboard.setTotalValueReturn(initialFundAmount + yieldEarned);
-      await yieldManager.connect(nativeYieldOperator).reportYield(yieldProviderAddress, l2YieldRecipient);
+      await mockDashboard.write.setTotalValueReturn([initialFundAmount + yieldEarned]);
+      await yieldManager.write.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+        account: nativeYieldOperator.account,
+      });
       // Arrange - withdraw vault funds
-      await incrementBalance(await mockStakingVault.getAddress(), ONE_ETHER);
+      await incrementBalance(mockStakingVault.address, ONE_ETHER);
       await setWithdrawalReserveToTarget(yieldManager);
-      await mockDashboard.setWithdrawableValueReturn(ONE_ETHER * 2n);
-      await yieldManager
-        .connect(nativeYieldOperator)
-        .safeWithdrawFromYieldProvider(yieldProviderAddress, ONE_ETHER * 2n);
+      await mockDashboard.write.setWithdrawableValueReturn([ONE_ETHER * 2n]);
+      await yieldManager.write.safeWithdrawFromYieldProvider([yieldProviderAddress, ONE_ETHER * 2n], {
+        account: nativeYieldOperator.account,
+      });
       // Arrange - Remove yield provider
-      await yieldManager.connect(securityCouncil).removeYieldProvider(yieldProviderAddress, buildVendorExitData());
+      await yieldManager.write.removeYieldProvider([yieldProviderAddress, buildVendorExitData()], {
+        account: securityCouncil.account,
+      });
       // Arrange - Add new yield provider
       const { yieldProviderAddress: yieldProvider2Address } = await deployAndAddAdditionalLidoStVaultYieldProvider(
         lidoStVaultYieldProviderFactory,
@@ -527,7 +559,9 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       );
 
       // Act - Move funds to new YieldProvider
-      await yieldManager.connect(nativeYieldOperator).fundYieldProvider(yieldProvider2Address, ONE_ETHER);
+      await yieldManager.write.fundYieldProvider([yieldProvider2Address, ONE_ETHER], {
+        account: nativeYieldOperator.account,
+      });
     });
   });
 
@@ -537,9 +571,9 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       const initialFundAmount = ONE_ETHER * 10n;
       await fundLidoStVaultYieldProvider(yieldManager, yieldProvider, nativeYieldOperator, initialFundAmount);
       // Arrange - 5 ETH LST withdrawal
-      await setBalance(l1MessageServiceAddress, ZERO_VALUE);
+      await setBalance(l1MessageServiceAddress, BigInt(ZERO_VALUE));
       const withdrawLSTAmount = ONE_ETHER * 5n;
-      const recipientAddress = await nonAuthorizedAccount.getAddress();
+      const recipientAddress = nonAuthorizedAccount.address;
       const claimParams = await setupLinethRollupMessageMerkleTree(
         linethRollup,
         recipientAddress,
@@ -548,9 +582,9 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
         EMPTY_CALLDATA,
         securityCouncil,
       );
-      await linethRollup
-        .connect(nonAuthorizedAccount)
-        .claimMessageWithProofAndWithdrawLST(claimParams, yieldProviderAddress);
+      await linethRollup.write.claimMessageWithProofAndWithdrawLST([claimParams, yieldProviderAddress], {
+        account: nonAuthorizedAccount.account,
+      });
       // Arrange LST liability paydown
       await setupMaxLSTLiabilityPaymentForWithdrawal(
         yieldManager,
@@ -562,16 +596,19 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       );
       // Arrange withdrawal
       const withdrawAmount = ONE_ETHER * 5n;
-      await mockDashboard.setWithdrawableValueReturn(withdrawAmount);
+      await mockDashboard.write.setWithdrawableValueReturn([withdrawAmount]);
       // Arrange - Before figures
-      const lstLiabilityPrincipalBefore =
-        await yieldManager.getYieldProviderLstLiabilityPrincipal(yieldProviderAddress);
+      const lstLiabilityPrincipalBefore = await yieldManager.read.getYieldProviderLstLiabilityPrincipal([
+        yieldProviderAddress,
+      ]);
 
       // Act
-      await yieldManager.connect(nativeYieldOperator).safeAddToWithdrawalReserve(yieldProviderAddress, withdrawAmount);
+      await yieldManager.write.safeAddToWithdrawalReserve([yieldProviderAddress, withdrawAmount], {
+        account: nativeYieldOperator.account,
+      });
 
       // Assert
-      expect(await yieldManager.getYieldProviderLstLiabilityPrincipal(yieldProviderAddress)).eq(
+      expect(await yieldManager.read.getYieldProviderLstLiabilityPrincipal([yieldProviderAddress])).eq(
         lstLiabilityPrincipalBefore - withdrawAmount,
       );
     });
@@ -580,9 +617,9 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       const initialFundAmount = ONE_ETHER * 10n;
       await fundLidoStVaultYieldProvider(yieldManager, yieldProvider, nativeYieldOperator, initialFundAmount);
       // Arrange - 5 ETH LST withdrawal
-      await setBalance(l1MessageServiceAddress, ZERO_VALUE);
+      await setBalance(l1MessageServiceAddress, BigInt(ZERO_VALUE));
       const withdrawLSTAmount = ONE_ETHER * 5n;
-      const recipientAddress = await nonAuthorizedAccount.getAddress();
+      const recipientAddress = nonAuthorizedAccount.address;
       const claimParams = await setupLinethRollupMessageMerkleTree(
         linethRollup,
         recipientAddress,
@@ -591,9 +628,9 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
         EMPTY_CALLDATA,
         securityCouncil,
       );
-      await linethRollup
-        .connect(nonAuthorizedAccount)
-        .claimMessageWithProofAndWithdrawLST(claimParams, yieldProviderAddress);
+      await linethRollup.write.claimMessageWithProofAndWithdrawLST([claimParams, yieldProviderAddress], {
+        account: nonAuthorizedAccount.account,
+      });
       // Arrange LST liability paydown
       await setupMaxLSTLiabilityPaymentForWithdrawal(
         yieldManager,
@@ -605,18 +642,19 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       );
       // Arrange withdrawal
       const withdrawAmount = ONE_ETHER * 5n;
-      await mockDashboard.setWithdrawableValueReturn(withdrawAmount);
+      await mockDashboard.write.setWithdrawableValueReturn([withdrawAmount]);
       // Arrange - Before figures
-      const lstLiabilityPrincipalBefore =
-        await yieldManager.getYieldProviderLstLiabilityPrincipal(yieldProviderAddress);
+      const lstLiabilityPrincipalBefore = await yieldManager.read.getYieldProviderLstLiabilityPrincipal([
+        yieldProviderAddress,
+      ]);
 
       // Act
-      await yieldManager
-        .connect(nativeYieldOperator)
-        .safeWithdrawFromYieldProvider(yieldProviderAddress, withdrawAmount);
+      await yieldManager.write.safeWithdrawFromYieldProvider([yieldProviderAddress, withdrawAmount], {
+        account: nativeYieldOperator.account,
+      });
 
       // Assert
-      expect(await yieldManager.getYieldProviderLstLiabilityPrincipal(yieldProviderAddress)).eq(
+      expect(await yieldManager.read.getYieldProviderLstLiabilityPrincipal([yieldProviderAddress])).eq(
         lstLiabilityPrincipalBefore - withdrawAmount,
       );
     });
@@ -625,9 +663,9 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       const initialFundAmount = ONE_ETHER * 10n;
       await fundLidoStVaultYieldProvider(yieldManager, yieldProvider, nativeYieldOperator, initialFundAmount);
       // Arrange - 5 ETH LST withdrawal
-      await setBalance(l1MessageServiceAddress, ZERO_VALUE);
+      await setBalance(l1MessageServiceAddress, BigInt(ZERO_VALUE));
       const withdrawLSTAmount = ONE_ETHER * 5n;
-      const recipientAddress = await nonAuthorizedAccount.getAddress();
+      const recipientAddress = nonAuthorizedAccount.address;
       const claimParams = await setupLinethRollupMessageMerkleTree(
         linethRollup,
         recipientAddress,
@@ -636,9 +674,9 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
         EMPTY_CALLDATA,
         securityCouncil,
       );
-      await linethRollup
-        .connect(nonAuthorizedAccount)
-        .claimMessageWithProofAndWithdrawLST(claimParams, yieldProviderAddress);
+      await linethRollup.write.claimMessageWithProofAndWithdrawLST([claimParams, yieldProviderAddress], {
+        account: nonAuthorizedAccount.account,
+      });
       // Arrange LST liability paydown
       await setupMaxLSTLiabilityPaymentForWithdrawal(
         yieldManager,
@@ -650,16 +688,17 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       );
       // Arrange withdrawal
       const withdrawAmount = ONE_ETHER * 5n;
-      await mockDashboard.setWithdrawableValueReturn(withdrawAmount);
+      await mockDashboard.write.setWithdrawableValueReturn([withdrawAmount]);
       // Arrange - Before figures
-      const lstLiabilityPrincipalBefore =
-        await yieldManager.getYieldProviderLstLiabilityPrincipal(yieldProviderAddress);
+      const lstLiabilityPrincipalBefore = await yieldManager.read.getYieldProviderLstLiabilityPrincipal([
+        yieldProviderAddress,
+      ]);
 
       // Act
-      await yieldManager.replenishWithdrawalReserve(yieldProviderAddress);
+      await yieldManager.write.replenishWithdrawalReserve([yieldProviderAddress]);
 
       // Assert
-      expect(await yieldManager.getYieldProviderLstLiabilityPrincipal(yieldProviderAddress)).eq(
+      expect(await yieldManager.read.getYieldProviderLstLiabilityPrincipal([yieldProviderAddress])).eq(
         lstLiabilityPrincipalBefore,
       );
     });
@@ -670,25 +709,29 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       // Arrange - setup user funds
       const initialFundAmount = ONE_ETHER * 10n;
       await fundLidoStVaultYieldProvider(yieldManager, yieldProvider, nativeYieldOperator, initialFundAmount);
-      const userFundsInYieldProvidersTotalBefore = await yieldManager.userFundsInYieldProvidersTotal();
-      const userFundsBefore = await yieldManager.userFunds(yieldProviderAddress);
+      const userFundsInYieldProvidersTotalBefore = await yieldManager.read.userFundsInYieldProvidersTotal();
+      const userFundsBefore = await yieldManager.read.userFunds([yieldProviderAddress]);
       // Arrange - Setup first negative yield
       const firstNegativeYield = ONE_ETHER * 5n;
       const secondNegativeYield = ONE_ETHER * 5n;
-      await mockDashboard.setTotalValueReturn(
+      await mockDashboard.write.setTotalValueReturn([
         initialFundAmount + CONNECT_DEPOSIT - firstNegativeYield - secondNegativeYield,
-      );
+      ]);
 
       // Act
-      const [newReportedYield, outstandingNegativeYield] = await yieldManager
-        .connect(nativeYieldOperator)
-        .reportYield.staticCall(yieldProviderAddress, l2YieldRecipient);
-      await yieldManager.connect(nativeYieldOperator).reportYield(yieldProviderAddress, l2YieldRecipient);
+      const [newReportedYield, outstandingNegativeYield] = (
+        await yieldManager.simulate.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+          account: nativeYieldOperator.address,
+        })
+      ).result;
+      await yieldManager.write.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+        account: nativeYieldOperator.account,
+      });
 
       // Assert
-      expect(await yieldManager.userFundsInYieldProvidersTotal()).eq(userFundsInYieldProvidersTotalBefore);
-      expect(await yieldManager.userFunds(yieldProviderAddress)).eq(userFundsBefore);
-      expect(newReportedYield).eq(0);
+      expect(await yieldManager.read.userFundsInYieldProvidersTotal()).eq(userFundsInYieldProvidersTotalBefore);
+      expect(await yieldManager.read.userFunds([yieldProviderAddress])).eq(userFundsBefore);
+      expect(newReportedYield).eq(0n);
       expect(outstandingNegativeYield).eq(firstNegativeYield + secondNegativeYield);
     });
 
@@ -701,24 +744,28 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
 
       // Negative yield event for -5 ETH
       const firstNegativeYield = ONE_ETHER * 5n;
-      await mockDashboard.setTotalValueReturn(initialFundAmount - firstNegativeYield);
+      await mockDashboard.write.setTotalValueReturn([initialFundAmount - firstNegativeYield]);
       await decrementBalance(mockStakingVaultAddress, firstNegativeYield);
       {
-        const [newReportedYield, outstandingNegativeYield] = await yieldManager
-          .connect(nativeYieldOperator)
-          .reportYield.staticCall(yieldProviderAddress, l2YieldRecipient);
-        expect(newReportedYield).eq(0);
+        const [newReportedYield, outstandingNegativeYield] = (
+          await yieldManager.simulate.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+            account: nativeYieldOperator.address,
+          })
+        ).result;
+        expect(newReportedYield).eq(0n);
         expect(outstandingNegativeYield).eq(firstNegativeYield);
       }
-      await yieldManager.connect(nativeYieldOperator).reportYield(yieldProviderAddress, l2YieldRecipient);
+      await yieldManager.write.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+        account: nativeYieldOperator.account,
+      });
 
       // Drain all L1MessageService funds
-      await setBalance(l1MessageServiceAddress, ZERO_VALUE);
+      await setBalance(l1MessageServiceAddress, BigInt(ZERO_VALUE));
 
       // Max LST withdrawal for 5 ETH
-      await linethRollup.connect(securityCouncil).resetRateLimitAmount(ONE_ETHER * 100n);
+      await linethRollup.write.resetRateLimitAmount([ONE_ETHER * 100n], { account: securityCouncil.account });
       const withdrawLSTAmount = ONE_ETHER * 5n;
-      const recipientAddress = await nonAuthorizedAccount.getAddress();
+      const recipientAddress = nonAuthorizedAccount.address;
       const claimParams = await setupLinethRollupMessageMerkleTree(
         linethRollup,
         recipientAddress,
@@ -727,10 +774,10 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
         EMPTY_CALLDATA,
         securityCouncil,
       );
-      await linethRollup
-        .connect(nonAuthorizedAccount)
-        .claimMessageWithProofAndWithdrawLST(claimParams, yieldProviderAddress);
-      await mockSTETH.setPooledEthBySharesRoundUpReturn(withdrawLSTAmount);
+      await linethRollup.write.claimMessageWithProofAndWithdrawLST([claimParams, yieldProviderAddress], {
+        account: nonAuthorizedAccount.account,
+      });
+      await mockSTETH.write.setPooledEthBySharesRoundUpReturn([withdrawLSTAmount]);
 
       // Assert - Cannot do another LST withdrawal
       const claimParams2 = await setupLinethRollupMessageMerkleTree(
@@ -741,13 +788,14 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
         EMPTY_CALLDATA,
         securityCouncil,
       );
-      const secondWithdrawLSTCall = linethRollup
-        .connect(nonAuthorizedAccount)
-        .claimMessageWithProofAndWithdrawLST(claimParams2, yieldProviderAddress);
+      const secondWithdrawLSTCall = linethRollup.write.claimMessageWithProofAndWithdrawLST(
+        [claimParams2, yieldProviderAddress],
+        { account: nonAuthorizedAccount.account },
+      );
       await expectRevertWithCustomError(yieldManager, secondWithdrawLSTCall, "LSTWithdrawalExceedsYieldProviderFunds");
       await expectRevertWithCustomError(
         yieldManager,
-        yieldManager.replenishWithdrawalReserve(yieldProviderAddress),
+        yieldManager.write.replenishWithdrawalReserve([yieldProviderAddress]),
         "NoAvailableFundsToReplenishWithdrawalReserve",
       );
 
@@ -762,46 +810,57 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       // Earn 7 ETH positive yield
       const firstPositiveYield = ONE_ETHER * 7n;
       await incrementBalance(mockStakingVaultAddress, firstPositiveYield);
-      let stakingVaultBalance = await ethers.provider.getBalance(mockStakingVaultAddress);
-      await mockDashboard.setTotalValueReturn(stakingVaultBalance);
-      let userFunds = await yieldManager.userFunds(yieldProviderAddress);
+      let stakingVaultBalance = await getBalance({ address: mockStakingVaultAddress });
+      await mockDashboard.write.setTotalValueReturn([stakingVaultBalance]);
+      let userFunds = await yieldManager.read.userFunds([yieldProviderAddress]);
       {
-        const [newReportedYield, outstandingNegativeYield] = await yieldManager
-          .connect(nativeYieldOperator)
-          .reportYield.staticCall(yieldProviderAddress, l2YieldRecipient);
-        expect(newReportedYield).eq(0);
+        const [newReportedYield, outstandingNegativeYield] = (
+          await yieldManager.simulate.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+            account: nativeYieldOperator.address,
+          })
+        ).result;
+        expect(newReportedYield).eq(0n);
         expect(outstandingNegativeYield).eq(firstNegativeYield + withdrawLSTAmount - firstPositiveYield);
       }
-      await yieldManager.connect(nativeYieldOperator).reportYield(yieldProviderAddress, l2YieldRecipient);
-      expect(await yieldManager.userFunds(yieldProviderAddress)).eq(
+      await yieldManager.write.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+        account: nativeYieldOperator.account,
+      });
+      expect(await yieldManager.read.userFunds([yieldProviderAddress])).eq(
         userFunds + firstPositiveYield - firstNegativeYield,
       );
-      expect(await yieldManager.getYieldProviderYieldReportedCumulative(yieldProviderAddress)).eq(0);
-      expect(await yieldManager.userFundsInYieldProvidersTotal()).eq(
-        await yieldManager.userFunds(yieldProviderAddress),
+      expect(await yieldManager.read.getYieldProviderYieldReportedCumulative([yieldProviderAddress])).eq(0n);
+      expect(await yieldManager.read.userFundsInYieldProvidersTotal()).eq(
+        await yieldManager.read.userFunds([yieldProviderAddress]),
       );
-      console.log(await yieldManager.getYieldProviderLstLiabilityPrincipal(yieldProviderAddress));
+      console.log(await yieldManager.read.getYieldProviderLstLiabilityPrincipal([yieldProviderAddress]));
 
       // Add to withdrawal reserve (expect route all funds to L1MessageService)
-      stakingVaultBalance = await ethers.provider.getBalance(mockStakingVaultAddress);
-      userFunds = await yieldManager.userFunds(yieldProviderAddress);
-      await mockDashboard.setWithdrawableValueReturn(stakingVaultBalance);
-      const l1MessageBalance = await ethers.provider.getBalance(l1MessageServiceAddress);
-      await yieldManager
-        .connect(nativeYieldOperator)
-        .safeAddToWithdrawalReserve(yieldProviderAddress, stakingVaultBalance);
-      expect(await yieldManager.userFunds(yieldProviderAddress)).eq(0);
-      expect(await ethers.provider.getBalance(l1MessageServiceAddress)).eq(l1MessageBalance + userFunds);
+      stakingVaultBalance = await getBalance({ address: mockStakingVaultAddress });
+      userFunds = await yieldManager.read.userFunds([yieldProviderAddress]);
+      await mockDashboard.write.setWithdrawableValueReturn([stakingVaultBalance]);
+      const l1MessageBalance = await getBalance({ address: l1MessageServiceAddress });
+      await yieldManager.write.safeAddToWithdrawalReserve([yieldProviderAddress, stakingVaultBalance], {
+        account: nativeYieldOperator.account,
+      });
+      expect(await yieldManager.read.userFunds([yieldProviderAddress])).eq(0n);
+      expect(await getBalance({ address: l1MessageServiceAddress })).eq(l1MessageBalance + userFunds);
 
       // Donation to replenish reserve to target
-      await linethRollup.connect(securityCouncil).fund({ value: await yieldManager.getTargetReserveDeficit() });
+      await linethRollup.write.fund({
+        account: securityCouncil.account,
+        value: await yieldManager.read.getTargetReserveDeficit(),
+      });
 
       // Fresh deposit of 10 ETH -> should clear all existing LST principal
       const secondFundAmount = ONE_ETHER * 10n;
-      await linethRollup.connect(nativeYieldOperator).transferFundsForNativeYield(secondFundAmount);
-      await yieldManager.connect(nativeYieldOperator).fundYieldProvider(yieldProviderAddress, secondFundAmount);
+      await linethRollup.write.transferFundsForNativeYield([secondFundAmount], {
+        account: nativeYieldOperator.account,
+      });
+      await yieldManager.write.fundYieldProvider([yieldProviderAddress, secondFundAmount], {
+        account: nativeYieldOperator.account,
+      });
 
-      expect(await yieldManager.getYieldProviderLstLiabilityPrincipal(yieldProviderAddress)).eq(0);
+      expect(await yieldManager.read.getYieldProviderLstLiabilityPrincipal([yieldProviderAddress])).eq(0n);
     });
 
     it("Should be able to safely handle different yield report situations", async () => {
@@ -811,112 +870,138 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
 
       // First negative yield event for -5 ETH
       const firstNegativeYield = ONE_ETHER * 5n;
-      await mockDashboard.setTotalValueReturn(initialFundAmount + CONNECT_DEPOSIT - firstNegativeYield);
+      await mockDashboard.write.setTotalValueReturn([initialFundAmount + CONNECT_DEPOSIT - firstNegativeYield]);
       await decrementBalance(mockStakingVaultAddress, firstNegativeYield);
       {
-        const [newReportedYield, outstandingNegativeYield] = await yieldManager
-          .connect(nativeYieldOperator)
-          .reportYield.staticCall(yieldProviderAddress, l2YieldRecipient);
-        expect(newReportedYield).eq(0);
+        const [newReportedYield, outstandingNegativeYield] = (
+          await yieldManager.simulate.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+            account: nativeYieldOperator.address,
+          })
+        ).result;
+        expect(newReportedYield).eq(0n);
         expect(outstandingNegativeYield).eq(firstNegativeYield);
       }
-      await yieldManager.connect(nativeYieldOperator).reportYield(yieldProviderAddress, l2YieldRecipient);
+      await yieldManager.write.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+        account: nativeYieldOperator.account,
+      });
 
       // Second negative yield of -2 ETH due to obligation settlement
       const firstObligationsPaid = ONE_ETHER * 2n;
-      await mockDashboard.setObligationsFeesToSettleReturn(firstObligationsPaid);
+      await mockDashboard.write.setObligationsFeesToSettleReturn([firstObligationsPaid]);
       const mockStakingVaultBalance = await getBalance(mockStakingVault);
-      await mockVaultHub.setIsSettleLidoFeesWithdrawingFromVault(true);
-      await mockVaultHub.setSettleVaultObligationAmount(firstObligationsPaid);
+      await mockVaultHub.write.setIsSettleLidoFeesWithdrawingFromVault([true]);
+      await mockVaultHub.write.setSettleVaultObligationAmount([firstObligationsPaid]);
       {
-        const [newReportedYield, outstandingNegativeYield] = await yieldManager
-          .connect(nativeYieldOperator)
-          .reportYield.staticCall(yieldProviderAddress, l2YieldRecipient);
-        expect(newReportedYield).eq(0);
+        const [newReportedYield, outstandingNegativeYield] = (
+          await yieldManager.simulate.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+            account: nativeYieldOperator.address,
+          })
+        ).result;
+        expect(newReportedYield).eq(0n);
         expect(outstandingNegativeYield).eq(firstNegativeYield + firstObligationsPaid);
       }
-      await yieldManager.connect(nativeYieldOperator).reportYield(yieldProviderAddress, l2YieldRecipient);
-      expect(await yieldManager.userFunds(yieldProviderAddress)).eq(initialFundAmount + CONNECT_DEPOSIT);
+      await yieldManager.write.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+        account: nativeYieldOperator.account,
+      });
+      expect(await yieldManager.read.userFunds([yieldProviderAddress])).eq(initialFundAmount + CONNECT_DEPOSIT);
       expect(await getBalance(mockStakingVault)).eq(mockStakingVaultBalance - firstObligationsPaid);
-      await mockDashboard.setTotalValueReturn((await mockDashboard.totalValue()) - firstObligationsPaid);
-      await mockDashboard.setObligationsFeesToSettleReturn(0n);
-      await mockVaultHub.setSettleVaultObligationAmount(0n);
+      await mockDashboard.write.setTotalValueReturn([(await mockDashboard.read.totalValue()) - firstObligationsPaid]);
+      await mockDashboard.write.setObligationsFeesToSettleReturn([0n]);
+      await mockVaultHub.write.setSettleVaultObligationAmount([0n]);
 
       // First positive yield of 4 ETH, not enough to recover from all negative yield incurred so far
       const firstPositiveYield = ONE_ETHER * 4n;
-      await mockDashboard.setTotalValueReturn((await mockDashboard.totalValue()) + firstPositiveYield);
+      await mockDashboard.write.setTotalValueReturn([(await mockDashboard.read.totalValue()) + firstPositiveYield]);
       await incrementBalance(mockStakingVaultAddress, firstPositiveYield);
       {
-        const [newReportedYield, outstandingNegativeYield] = await yieldManager
-          .connect(nativeYieldOperator)
-          .reportYield.staticCall(yieldProviderAddress, l2YieldRecipient);
-        expect(newReportedYield).eq(0);
+        const [newReportedYield, outstandingNegativeYield] = (
+          await yieldManager.simulate.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+            account: nativeYieldOperator.address,
+          })
+        ).result;
+        expect(newReportedYield).eq(0n);
         expect(outstandingNegativeYield).eq(firstNegativeYield + firstObligationsPaid - firstPositiveYield);
       }
-      await yieldManager.connect(nativeYieldOperator).reportYield(yieldProviderAddress, l2YieldRecipient);
-      expect(await yieldManager.getYieldProviderYieldReportedCumulative(yieldProviderAddress)).eq(0n);
+      await yieldManager.write.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+        account: nativeYieldOperator.account,
+      });
+      expect(await yieldManager.read.getYieldProviderYieldReportedCumulative([yieldProviderAddress])).eq(0n);
 
       // Second positive yield of 4 ETH
       // +1 ETH in Vault relative to start
       const secondPositiveYield = ONE_ETHER * 4n;
-      await mockDashboard.setTotalValueReturn((await mockDashboard.totalValue()) + secondPositiveYield);
+      await mockDashboard.write.setTotalValueReturn([(await mockDashboard.read.totalValue()) + secondPositiveYield]);
       await incrementBalance(mockStakingVaultAddress, secondPositiveYield);
       {
-        const [newReportedYield, outstandingNegativeYield] = await yieldManager
-          .connect(nativeYieldOperator)
-          .reportYield.staticCall(yieldProviderAddress, l2YieldRecipient);
+        const [newReportedYield, outstandingNegativeYield] = (
+          await yieldManager.simulate.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+            account: nativeYieldOperator.address,
+          })
+        ).result;
         expect(newReportedYield).eq(ONE_ETHER);
         expect(outstandingNegativeYield).eq(0n);
       }
-      await yieldManager.connect(nativeYieldOperator).reportYield(yieldProviderAddress, l2YieldRecipient);
-      expect(await yieldManager.getYieldProviderYieldReportedCumulative(yieldProviderAddress)).eq(ONE_ETHER);
+      await yieldManager.write.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+        account: nativeYieldOperator.account,
+      });
+      expect(await yieldManager.read.getYieldProviderYieldReportedCumulative([yieldProviderAddress])).eq(ONE_ETHER);
 
       // Third positive yield of 3 ETH
       // -2 ETH of node operators fees
       // -3 ETH of protocol fees
       // Expect end with -2 ETH
       const thirdPositiveYield = ONE_ETHER * 3n;
-      await mockDashboard.setTotalValueReturn((await mockDashboard.totalValue()) + thirdPositiveYield);
+      await mockDashboard.write.setTotalValueReturn([(await mockDashboard.read.totalValue()) + thirdPositiveYield]);
       await incrementBalance(mockStakingVaultAddress, thirdPositiveYield);
-      await mockDashboard.setObligationsFeesToSettleReturn(ONE_ETHER * 3n);
-      await mockVaultHub.setIsSettleLidoFeesWithdrawingFromVault(true);
-      await mockVaultHub.setSettleVaultObligationAmount(ONE_ETHER * 3n);
-      await mockDashboard.setIsDisburseFeeWithdrawingFromVault(true);
-      await mockDashboard.setAccruedFeeReturn(ONE_ETHER * 2n);
+      await mockDashboard.write.setObligationsFeesToSettleReturn([ONE_ETHER * 3n]);
+      await mockVaultHub.write.setIsSettleLidoFeesWithdrawingFromVault([true]);
+      await mockVaultHub.write.setSettleVaultObligationAmount([ONE_ETHER * 3n]);
+      await mockDashboard.write.setIsDisburseFeeWithdrawingFromVault([true]);
+      await mockDashboard.write.setAccruedFeeReturn([ONE_ETHER * 2n]);
       {
-        const [newReportedYield, outstandingNegativeYield] = await yieldManager
-          .connect(nativeYieldOperator)
-          .reportYield.staticCall(yieldProviderAddress, l2YieldRecipient);
-        expect(newReportedYield).eq(0);
+        const [newReportedYield, outstandingNegativeYield] = (
+          await yieldManager.simulate.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+            account: nativeYieldOperator.address,
+          })
+        ).result;
+        expect(newReportedYield).eq(0n);
         // Obligations was paid, node operator fees was not
         expect(outstandingNegativeYield).eq(ONE_ETHER * 2n);
       }
-      await yieldManager.connect(nativeYieldOperator).reportYield(yieldProviderAddress, l2YieldRecipient);
-      await mockDashboard.setTotalValueReturn((await mockDashboard.totalValue()) - ONE_ETHER * 5n);
-      await mockVaultHub.setSettleVaultObligationAmount(0n);
-      await mockDashboard.setObligationsFeesToSettleReturn(0n);
-      await mockDashboard.setAccruedFeeReturn(0n);
-      expect(await yieldManager.getYieldProviderYieldReportedCumulative(yieldProviderAddress)).eq(ONE_ETHER);
+      await yieldManager.write.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+        account: nativeYieldOperator.account,
+      });
+      await mockDashboard.write.setTotalValueReturn([(await mockDashboard.read.totalValue()) - ONE_ETHER * 5n]);
+      await mockVaultHub.write.setSettleVaultObligationAmount([0n]);
+      await mockDashboard.write.setObligationsFeesToSettleReturn([0n]);
+      await mockDashboard.write.setAccruedFeeReturn([0n]);
+      expect(await yieldManager.read.getYieldProviderYieldReportedCumulative([yieldProviderAddress])).eq(ONE_ETHER);
 
       // Fourth positive yield of 7 ETH
       // LST liability of -2 ETH
-      await mockSTETH.setPooledEthBySharesRoundUpReturn(ONE_ETHER * 2n);
-      await mockDashboard.setRebalanceVaultWithSharesWithdrawingFromVault(true);
+      await mockSTETH.write.setPooledEthBySharesRoundUpReturn([ONE_ETHER * 2n]);
+      await mockDashboard.write.setRebalanceVaultWithSharesWithdrawingFromVault([true]);
       const fourthPositiveYield = ONE_ETHER * 7n;
-      await mockDashboard.setTotalValueReturn((await mockDashboard.totalValue()) + fourthPositiveYield);
+      await mockDashboard.write.setTotalValueReturn([(await mockDashboard.read.totalValue()) + fourthPositiveYield]);
       await incrementBalance(mockStakingVaultAddress, fourthPositiveYield);
       {
-        const [newReportedYield, outstandingNegativeYield] = await yieldManager
-          .connect(nativeYieldOperator)
-          .reportYield.staticCall(yieldProviderAddress, l2YieldRecipient);
+        const [newReportedYield, outstandingNegativeYield] = (
+          await yieldManager.simulate.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+            account: nativeYieldOperator.address,
+          })
+        ).result;
         expect(newReportedYield).eq(ONE_ETHER * 3n);
         // Obligations was paid, node operator fees was not
         expect(outstandingNegativeYield).eq(0n);
       }
-      await yieldManager.connect(nativeYieldOperator).reportYield(yieldProviderAddress, l2YieldRecipient);
-      await mockDashboard.setTotalValueReturn((await mockDashboard.totalValue()) - ONE_ETHER * 2n);
-      await mockSTETH.setPooledEthBySharesRoundUpReturn(0);
-      expect(await yieldManager.getYieldProviderYieldReportedCumulative(yieldProviderAddress)).eq(ONE_ETHER * 4n);
+      await yieldManager.write.reportYield([yieldProviderAddress, l2YieldRecipient.address], {
+        account: nativeYieldOperator.account,
+      });
+      await mockDashboard.write.setTotalValueReturn([(await mockDashboard.read.totalValue()) - ONE_ETHER * 2n]);
+      await mockSTETH.write.setPooledEthBySharesRoundUpReturn([0n]);
+      expect(await yieldManager.read.getYieldProviderYieldReportedCumulative([yieldProviderAddress])).eq(
+        ONE_ETHER * 4n,
+      );
     });
 
     it("Should be able to safely reach ossification state", async () => {
@@ -929,13 +1014,17 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       const secondFundAmount = ONE_ETHER * 10n;
       await setWithdrawalReserveToTarget(yieldManager);
       await incrementBalance(l1MessageServiceAddress, secondFundAmount);
-      await linethRollup.connect(nativeYieldOperator).transferFundsForNativeYield(secondFundAmount);
-      await yieldManager.connect(nativeYieldOperator).fundYieldProvider(yieldProviderAddress, secondFundAmount);
+      await linethRollup.write.transferFundsForNativeYield([secondFundAmount], {
+        account: nativeYieldOperator.account,
+      });
+      await yieldManager.write.fundYieldProvider([yieldProviderAddress, secondFundAmount], {
+        account: nativeYieldOperator.account,
+      });
       await incrementMockDashboardTotalValue(mockDashboard, secondFundAmount);
 
       // Earn 5 ETH positive yield
       const firstPositiveYield = ONE_ETHER * 5n;
-      await mockDashboard.setTotalValueReturn((await mockDashboard.totalValue()) + CONNECT_DEPOSIT);
+      await mockDashboard.write.setTotalValueReturn([(await mockDashboard.read.totalValue()) + CONNECT_DEPOSIT]);
       await incurPositiveYield(
         yieldManager,
         mockDashboard,
@@ -966,21 +1055,21 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       await decrementBalance(l1MessageServiceAddress, ONE_ETHER * 10n);
       await expectRevertWithCustomError(
         yieldManager,
-        linethRollup.connect(nativeYieldOperator).transferFundsForNativeYield(1n),
+        linethRollup.write.transferFundsForNativeYield([1n], { account: nativeYieldOperator.account }),
         "InsufficientWithdrawalReserve",
       );
 
       // Create LST withdrawal - 5 ETH. Should cause staking pause.
-      await setBalance(l1MessageServiceAddress, (await linethRollup.limitInWei()) - 1n);
-      const lstWithdrawalAmount = await linethRollup.limitInWei();
+      await setBalance(l1MessageServiceAddress, (await linethRollup.read.limitInWei()) - 1n);
+      const lstWithdrawalAmount = await linethRollup.read.limitInWei();
       await withdrawLST(linethRollup, nonAuthorizedAccount, yieldProviderAddress, lstWithdrawalAmount, securityCouncil);
-      expect(await yieldManager.isStakingPaused(yieldProviderAddress)).eq(true);
+      expect(await yieldManager.read.isStakingPaused([yieldProviderAddress])).eq(true);
 
       // Do permissionless rebalance (should not paydown LST liability)
       const stakingVaultBalance = await getBalance(mockStakingVault);
       const l1MessageServiceBalance = await getBalance(linethRollup);
       const withdrawableValue = stakingVaultBalance - lstWithdrawalAmount; // Simulate locked balance
-      await mockDashboard.setWithdrawableValueReturn(withdrawableValue); // Simulate locked balance
+      await mockDashboard.write.setWithdrawableValueReturn([withdrawableValue]); // Simulate locked balance
       await setupMaxLSTLiabilityPaymentForWithdrawal(
         yieldManager,
         mockDashboard,
@@ -989,10 +1078,14 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
         yieldProviderAddress,
         lstWithdrawalAmount,
       );
-      await yieldManager.connect(nonAuthorizedAccount).replenishWithdrawalReserve(yieldProviderAddress);
-      expect(await yieldManager.getYieldProviderLstLiabilityPrincipal(yieldProviderAddress)).eq(lstWithdrawalAmount);
+      await yieldManager.write.replenishWithdrawalReserve([yieldProviderAddress], {
+        account: nonAuthorizedAccount.account,
+      });
+      expect(await yieldManager.read.getYieldProviderLstLiabilityPrincipal([yieldProviderAddress])).eq(
+        lstWithdrawalAmount,
+      );
       expect(await getBalance(mockStakingVault)).eq(lstWithdrawalAmount);
-      await mockDashboard.setTotalValueReturn(0);
+      await mockDashboard.write.setTotalValueReturn([0n]);
       expect(await getBalance(linethRollup)).eq(l1MessageServiceBalance + withdrawableValue);
 
       // Call unstakePermissionless
@@ -1002,7 +1095,7 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
         yieldManager,
         yieldProviderAddress,
         mockStakingVaultAddress,
-        await nativeYieldOperator.getAddress(),
+        nativeYieldOperator.address,
       );
 
       // Some more positive yield
@@ -1020,11 +1113,13 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       );
 
       // Kick off ossification
-      await yieldManager.connect(securityCouncil).initiateOssification(yieldProviderAddress);
+      await yieldManager.write.initiateOssification([yieldProviderAddress], { account: securityCouncil.account });
 
       // Complete ossification
-      await mockVaultHub.setIsVaultConnectedReturn(false);
-      await yieldManager.connect(nativeYieldOperator).progressPendingOssification(yieldProviderAddress);
+      await mockVaultHub.write.setIsVaultConnectedReturn([false]);
+      await yieldManager.write.progressPendingOssification([yieldProviderAddress], {
+        account: nativeYieldOperator.account,
+      });
     });
   });
 });

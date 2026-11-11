@@ -1,15 +1,17 @@
-import { time as networkTime } from "@nomicfoundation/hardhat-network-helpers";
-import { ethers } from "ethers";
 import * as fs from "fs";
+import { type Account, type Hash, type Hex, bytesToHex, concat, encodePacked, keccak256 } from "viem";
 
+import { getConnection } from "./connection.js";
+import { address, generateRandomBytes, hex, range } from "./general.js";
 import {
   HASH_ZERO,
   COMPRESSED_SUBMISSION_DATA,
   COMPRESSED_SUBMISSION_DATA_MULTIPLE_PROOF,
   BLOB_SUBMISSION_DATA,
   BLOB_SUBMISSION_DATA_MULTIPLE_PROOF,
-} from "../constants";
-import {
+} from "../constants/index.js";
+
+import type {
   FinalizationData,
   CalldataSubmissionData,
   ShnarfData,
@@ -17,13 +19,12 @@ import {
   BlobSubmission,
   AggregatedProofData,
   ShnarfDataGenerator,
-} from "../types";
-import { generateRandomBytes, range } from "./general";
+} from "../types.js";
 
 export const generateL2MessagingBlocksOffsets = (start: number, end: number) =>
   `0x${range(start, end)
-    .map((num) => ethers.solidityPacked(["uint16"], [num]).slice(2))
-    .join("")}`;
+    .map((num) => encodePacked(["uint16"], [num]).slice(2))
+    .join("")}` as const;
 
 /**
  * Context for generating finalization parameters from proof data
@@ -43,34 +44,36 @@ export function proofDataToFinalizationParams(context: ProofFinalizationContext)
   const { proofData, shnarfDataGenerator, blobParentShnarfIndex, isMultiple } = context;
 
   return {
-    l1RollingHash: proofData.l1RollingHash,
+    l1RollingHash: hex(proofData.l1RollingHash),
     l1RollingHashMessageNumber: BigInt(proofData.l1RollingHashMessageNumber),
     lastFinalizedTimestamp: BigInt(proofData.parentAggregationLastBlockTimestamp),
     endBlockNumber: BigInt(proofData.finalBlockNumber),
-    parentStateRootHash: proofData.parentStateRootHash,
+    parentStateRootHash: hex(proofData.parentStateRootHash),
     finalTimestamp: BigInt(proofData.finalTimestamp),
-    l2MerkleRoots: proofData.l2MerkleRoots,
+    l2MerkleRoots: proofData.l2MerkleRoots.map(hex),
     l2MerkleTreesDepth: BigInt(proofData.l2MerkleTreesDepth),
-    l2MessagingBlocksOffsets: proofData.l2MessagingBlocksOffsets,
-    aggregatedProof: proofData.aggregatedProof,
+    l2MessagingBlocksOffsets: hex(proofData.l2MessagingBlocksOffsets),
+    aggregatedProof: hex(proofData.aggregatedProof),
     shnarfData: shnarfDataGenerator(blobParentShnarfIndex, isMultiple),
-    lastFinalizedL1RollingHash: proofData.lastFinalizedL1RollingHash,
+    lastFinalizedL1RollingHash: hex(proofData.lastFinalizedL1RollingHash),
     lastFinalizedL1RollingHashMessageNumber: BigInt(proofData.lastFinalizedL1RollingHashMessageNumber),
-    lastFinalizedForcedTransactionRollingHash: proofData.parentAggregationFtxRollingHash,
+    lastFinalizedForcedTransactionRollingHash: hex(proofData.parentAggregationFtxRollingHash),
     lastFinalizedForcedTransactionNumber: BigInt(proofData.parentAggregationFtxNumber),
     finalForcedTransactionNumber: BigInt(proofData.finalFtxNumber),
-    filteredAddresses: proofData.filteredAddresses,
+    filteredAddresses: proofData.filteredAddresses.map(address),
   };
 }
 
 export async function generateFinalizationData(overrides?: Partial<FinalizationData>): Promise<FinalizationData> {
+  const { networkHelpers } = await getConnection();
+  const latest = await networkHelpers.time.latest();
   return {
     aggregatedProof: generateRandomBytes(928),
     endBlockNumber: 99n,
     shnarfData: generateParentShnarfData(1),
     parentStateRootHash: generateRandomBytes(32),
-    lastFinalizedTimestamp: BigInt((await networkTime.latest()) - 2),
-    finalTimestamp: BigInt(await networkTime.latest()),
+    lastFinalizedTimestamp: BigInt(latest - 2),
+    finalTimestamp: BigInt(latest),
     l1RollingHash: generateRandomBytes(32),
     l1RollingHashMessageNumber: 10n,
     l2MerkleRoots: [generateRandomBytes(32)],
@@ -89,9 +92,9 @@ export async function generateFinalizationData(overrides?: Partial<FinalizationD
 export function generateCallDataSubmission(startDataIndex: number, finalDataIndex: number): CalldataSubmissionData[] {
   return COMPRESSED_SUBMISSION_DATA.slice(startDataIndex, finalDataIndex).map((data) => {
     const returnData = {
-      finalStateRootHash: data.finalStateRootHash,
-      snarkHash: data.snarkHash,
-      compressedData: ethers.hexlify(ethers.decodeBase64(data.compressedData)),
+      finalStateRootHash: hex(data.finalStateRootHash),
+      snarkHash: hex(data.snarkHash),
+      compressedData: base64ToHex(data.compressedData),
     };
     return returnData;
   });
@@ -103,23 +106,23 @@ export function generateBlobDataSubmission(
   isMultiple: boolean = false,
 ): {
   blobDataSubmission: BlobSubmission[];
-  compressedBlobs: string[];
-  parentShnarf: string;
-  finalShnarf: string;
+  compressedBlobs: Hex[];
+  parentShnarf: Hex;
+  finalShnarf: Hex;
 } {
   const dataSet = isMultiple ? BLOB_SUBMISSION_DATA_MULTIPLE_PROOF : BLOB_SUBMISSION_DATA;
-  const compressedBlobs: string[] = [];
-  const parentShnarf = dataSet[startDataIndex].prevShnarf;
-  const finalShnarf = dataSet[finalDataIndex - 1].expectedShnarf;
+  const compressedBlobs: Hex[] = [];
+  const parentShnarf = hex(dataSet[startDataIndex].prevShnarf);
+  const finalShnarf = hex(dataSet[finalDataIndex - 1].expectedShnarf);
 
   const blobDataSubmission = dataSet.slice(startDataIndex, finalDataIndex).map((data) => {
-    compressedBlobs.push(ethers.hexlify(ethers.decodeBase64(data.compressedData)));
+    compressedBlobs.push(base64ToHex(data.compressedData));
     const returnData: BlobSubmission = {
-      dataEvaluationClaim: data.expectedY,
-      kzgCommitment: data.commitment,
-      kzgProof: data.kzgProofContract,
-      finalStateRootHash: data.finalStateRootHash,
-      snarkHash: data.snarkHash,
+      dataEvaluationClaim: hex(data.expectedY),
+      kzgCommitment: hex(data.commitment),
+      kzgProof: hex(data.kzgProofContract),
+      finalStateRootHash: hex(data.finalStateRootHash),
+      snarkHash: hex(data.snarkHash),
     };
     return returnData;
   });
@@ -133,25 +136,25 @@ export function generateBlobDataSubmission(
 
 export function generateBlobDataSubmissionFromFile(filePath: string): {
   blobDataSubmission: BlobSubmission[];
-  compressedBlobs: string[];
-  parentShnarf: string;
-  finalShnarf: string;
+  compressedBlobs: Hex[];
+  parentShnarf: Hex;
+  finalShnarf: Hex;
 } {
   const fileContents = JSON.parse(fs.readFileSync(filePath, "utf-8"));
 
-  const compressedBlobs: string[] = [];
-  const parentShnarf = fileContents.prevShnarf;
-  const finalShnarf = fileContents.expectedShnarf;
+  const compressedBlobs: Hex[] = [];
+  const parentShnarf = hex(fileContents.prevShnarf);
+  const finalShnarf = hex(fileContents.expectedShnarf);
 
-  compressedBlobs.push(ethers.hexlify(ethers.decodeBase64(fileContents.compressedData)));
+  compressedBlobs.push(base64ToHex(fileContents.compressedData));
 
   const blobDataSubmission = [
     {
-      dataEvaluationClaim: fileContents.expectedY,
-      kzgCommitment: fileContents.commitment,
-      kzgProof: fileContents.kzgProofContract,
-      finalStateRootHash: fileContents.finalStateRootHash,
-      snarkHash: fileContents.snarkHash,
+      dataEvaluationClaim: hex(fileContents.expectedY),
+      kzgCommitment: hex(fileContents.commitment),
+      kzgProof: hex(fileContents.kzgProofContract),
+      finalStateRootHash: hex(fileContents.finalStateRootHash),
+      snarkHash: hex(fileContents.snarkHash),
     },
   ];
 
@@ -166,9 +169,9 @@ export function generateBlobDataSubmissionFromFile(filePath: string): {
 /**
  * Mirrors the Solidity _computeShnarf: keccak256(abi.encodePacked(parentShnarf, snarkHash, finalStateRootHash, dataEvaluationPoint, dataEvaluationClaim)).
  */
-export function computeShnarf(shnarfData: ShnarfData): string {
-  return ethers.keccak256(
-    ethers.concat([
+export function computeShnarf(shnarfData: ShnarfData): Hex {
+  return keccak256(
+    concat([
       shnarfData.parentShnarf,
       shnarfData.snarkHash,
       shnarfData.finalStateRootHash,
@@ -181,7 +184,7 @@ export function computeShnarf(shnarfData: ShnarfData): string {
 /**
  * Computes the genesis shnarf the same way the contract does during initialization.
  */
-export function computeGenesisShnarf(initialStateRootHash: string): string {
+export function computeGenesisShnarf(initialStateRootHash: Hex): Hex {
   return computeShnarf({
     parentShnarf: HASH_ZERO,
     snarkHash: HASH_ZERO,
@@ -197,8 +200,8 @@ export function generateParentShnarfData(index: number, multiple?: boolean): Shn
       parentShnarf: HASH_ZERO,
       snarkHash: HASH_ZERO,
       finalStateRootHash: multiple
-        ? COMPRESSED_SUBMISSION_DATA_MULTIPLE_PROOF[0].parentStateRootHash
-        : COMPRESSED_SUBMISSION_DATA[0].parentStateRootHash,
+        ? hex(COMPRESSED_SUBMISSION_DATA_MULTIPLE_PROOF[0].parentStateRootHash)
+        : hex(COMPRESSED_SUBMISSION_DATA[0].parentStateRootHash),
       dataEvaluationPoint: HASH_ZERO,
       dataEvaluationClaim: HASH_ZERO,
     };
@@ -208,11 +211,11 @@ export function generateParentShnarfData(index: number, multiple?: boolean): Shn
     : COMPRESSED_SUBMISSION_DATA[index - 1];
 
   return {
-    parentShnarf: parentSubmissionData.prevShnarf,
-    snarkHash: parentSubmissionData.snarkHash,
-    finalStateRootHash: parentSubmissionData.finalStateRootHash,
-    dataEvaluationPoint: parentSubmissionData.expectedX,
-    dataEvaluationClaim: parentSubmissionData.expectedY,
+    parentShnarf: hex(parentSubmissionData.prevShnarf),
+    snarkHash: hex(parentSubmissionData.snarkHash),
+    finalStateRootHash: hex(parentSubmissionData.finalStateRootHash),
+    dataEvaluationPoint: hex(parentSubmissionData.expectedX),
+    dataEvaluationClaim: hex(parentSubmissionData.expectedY),
   };
 }
 
@@ -222,8 +225,8 @@ export function generateBlobParentShnarfData(index: number, multiple?: boolean):
       parentShnarf: HASH_ZERO,
       snarkHash: HASH_ZERO,
       finalStateRootHash: multiple
-        ? BLOB_SUBMISSION_DATA_MULTIPLE_PROOF[0].parentStateRootHash
-        : BLOB_SUBMISSION_DATA[0].parentStateRootHash,
+        ? hex(BLOB_SUBMISSION_DATA_MULTIPLE_PROOF[0].parentStateRootHash)
+        : hex(BLOB_SUBMISSION_DATA[0].parentStateRootHash),
       dataEvaluationPoint: HASH_ZERO,
       dataEvaluationClaim: HASH_ZERO,
     };
@@ -233,25 +236,25 @@ export function generateBlobParentShnarfData(index: number, multiple?: boolean):
     : BLOB_SUBMISSION_DATA[index - 1];
 
   return {
-    parentShnarf: parentSubmissionData.prevShnarf,
-    snarkHash: parentSubmissionData.snarkHash,
-    finalStateRootHash: parentSubmissionData.finalStateRootHash,
-    dataEvaluationPoint: parentSubmissionData.expectedX,
-    dataEvaluationClaim: parentSubmissionData.expectedY,
+    parentShnarf: hex(parentSubmissionData.prevShnarf),
+    snarkHash: hex(parentSubmissionData.snarkHash),
+    finalStateRootHash: hex(parentSubmissionData.finalStateRootHash),
+    dataEvaluationPoint: hex(parentSubmissionData.expectedX),
+    dataEvaluationClaim: hex(parentSubmissionData.expectedY),
   };
 }
 
 export function generateParentAndExpectedShnarfForIndex(index: number): ParentAndExpectedShnarf {
   return {
-    parentShnarf: COMPRESSED_SUBMISSION_DATA[index].prevShnarf,
-    expectedShnarf: COMPRESSED_SUBMISSION_DATA[index].expectedShnarf,
+    parentShnarf: hex(COMPRESSED_SUBMISSION_DATA[index].prevShnarf),
+    expectedShnarf: hex(COMPRESSED_SUBMISSION_DATA[index].expectedShnarf),
   };
 }
 
 export function generateParentAndExpectedShnarfForMulitpleIndex(index: number): ParentAndExpectedShnarf {
   return {
-    parentShnarf: COMPRESSED_SUBMISSION_DATA_MULTIPLE_PROOF[index].prevShnarf,
-    expectedShnarf: COMPRESSED_SUBMISSION_DATA_MULTIPLE_PROOF[index].expectedShnarf,
+    parentShnarf: hex(COMPRESSED_SUBMISSION_DATA_MULTIPLE_PROOF[index].prevShnarf),
+    expectedShnarf: hex(COMPRESSED_SUBMISSION_DATA_MULTIPLE_PROOF[index].expectedShnarf),
   };
 }
 
@@ -261,14 +264,14 @@ export function generateCallDataSubmissionMultipleProofs(
 ): CalldataSubmissionData[] {
   return COMPRESSED_SUBMISSION_DATA_MULTIPLE_PROOF.slice(startDataIndex, finalDataIndex).map((data) => {
     const returnData = {
-      parentStateRootHash: data.parentStateRootHash,
-      dataParentHash: data.parentDataHash,
-      finalStateRootHash: data.finalStateRootHash,
+      parentStateRootHash: hex(data.parentStateRootHash),
+      dataParentHash: hex(data.parentDataHash),
+      finalStateRootHash: hex(data.finalStateRootHash),
       firstBlockNumber: BigInt(data.conflationOrder.startingBlockNumber),
       endBlockNumber: BigInt(data.conflationOrder.upperBoundaries.slice(-1)[0]),
-      snarkHash: data.snarkHash,
-      compressedData: ethers.hexlify(ethers.decodeBase64(data.compressedData)),
-      parentShnarf: data.prevShnarf,
+      snarkHash: hex(data.snarkHash),
+      compressedData: base64ToHex(data.compressedData),
+      parentShnarf: hex(data.prevShnarf),
     };
     return returnData;
   });
@@ -299,25 +302,39 @@ export interface SubmissionSetupResult {
 }
 
 /**
+ * A LinethRollup-like contract (viem instance) that accepts calldata submissions.
+ */
+export interface CalldataSubmitter {
+  write: {
+    submitDataAsCalldata(
+      args: readonly [CalldataSubmissionData, Hex, Hex],
+      options: { account: Account; gas: bigint },
+    ): Promise<Hash>;
+  };
+}
+
+/**
  * Helper to submit calldata before finalization tests.
  * Encapsulates the repeated pattern of generating and submitting calldata in a loop.
  *
- * @param linethRollup - The LinethRollup contract instance (connected to operator)
+ * @param linethRollup - The LinethRollup contract instance
+ * @param operator - The account submitting the data
  * @param config - Configuration for the submission
  * @returns Final index for use in subsequent operations
  *
  * @example
  * ```typescript
  * const { finalIndex } = await submitCalldataBeforeFinalization(
- *   linethRollup.connect(operator),
+ *   linethRollup,
+ *   operator,
  *   { startIndex: 0, finalIndex: 4, maxGasLimit: MAX_GAS_LIMIT }
  * );
  * // Use finalIndex for generateParentShnarfData(finalIndex)
  * ```
  */
 export async function submitCalldataBeforeFinalization(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  linethRollup: any,
+  linethRollup: CalldataSubmitter,
+  operator: { account: Account },
   config: SubmissionSetupConfig,
 ): Promise<SubmissionSetupResult> {
   const { startIndex, finalIndex, useMultipleProofs = false, maxGasLimit } = config;
@@ -333,11 +350,9 @@ export async function submitCalldataBeforeFinalization(
   let index = startIndex;
   for (const data of submissionData) {
     const parentAndExpectedShnarf = getShnarfFn(index);
-    await linethRollup.submitDataAsCalldata(
-      data,
-      parentAndExpectedShnarf.parentShnarf,
-      parentAndExpectedShnarf.expectedShnarf,
-      { gasLimit: maxGasLimit },
+    await linethRollup.write.submitDataAsCalldata(
+      [data, parentAndExpectedShnarf.parentShnarf, parentAndExpectedShnarf.expectedShnarf],
+      { account: operator.account, gas: BigInt(maxGasLimit) },
     );
     index++;
   }
@@ -346,4 +361,8 @@ export async function submitCalldataBeforeFinalization(
     finalIndex: index,
     submissionCount: submissionData.length,
   };
+}
+
+function base64ToHex(base64: string): Hex {
+  return bytesToHex(Buffer.from(base64, "base64"));
 }

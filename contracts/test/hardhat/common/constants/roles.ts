@@ -1,5 +1,5 @@
-import { generateKeccak256 } from "../helpers";
-import { HASH_ZERO } from "./general";
+import { HASH_ZERO } from "./general.js";
+import { generateKeccak256 } from "../helpers/index.js";
 
 // Linea XP Token roles
 export const MINTER_ROLE = generateKeccak256(["string"], ["MINTER_ROLE"], true);

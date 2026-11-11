@@ -1,11 +1,10 @@
 // TODO rename to LinethRollupYieldExtension
-import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { MockYieldManager__factory, TestLinethRollup } from "contracts/typechain-types";
-import { ethers } from "hardhat";
+import { network } from "hardhat";
+import { describe, it, before, beforeEach } from "node:test";
+import { type Address, type Hex, keccak256, parseEther, toHex, zeroHash } from "viem";
 
-import { encodeSendMessage } from "../../../../common/helpers/encoding";
+import { encodeData, encodeSendMessage } from "../../../../common/helpers/encoding.js";
 import {
   ADDRESS_ZERO,
   EMPTY_CALLDATA,
@@ -18,39 +17,50 @@ import {
   SET_YIELD_MANAGER_ROLE,
   VALID_MERKLE_PROOF,
   ZERO_VALUE,
-} from "../../common/constants";
+} from "../../common/constants/index.js";
 import {
-  expectEvent,
+  type TestAccount,
   buildAccessErrorMessage,
-  expectRevertWithCustomError,
-  expectRevertWithReason,
   expectRevertWhenPaused,
   calculateRollingHash,
+  generateRandomBytes,
   getAccountsFixture,
-} from "../../common/helpers";
-import { deployLinethRollupFixture } from "../../rollup/helpers/deploy";
+  hex,
+  expectRevertWithReason,
+  expectRevertWithCustomError,
+  expectEvent,
+} from "../../common/helpers/index.js";
+import { deployLinethRollupFixture } from "../../rollup/helpers/deploy.js";
+import { expectRevert, getBalance, getImpersonatedAccount, randomAddress, setBalance } from "../helpers/index.js";
+
+import type { ClaimMessageWithProofParams } from "../helpers/types.js";
+import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
 
 describe("Lineth Rollup Yield Extension", () => {
-  let linethRollup: TestLinethRollup;
-  let yieldManager: string;
-  let operator: SignerWithAddress;
+  let linethRollup: ContractReturnType<"TestLinethRollup">;
+  let yieldManager: Address;
+  let operator: TestAccount;
 
-  let admin: SignerWithAddress;
-  let securityCouncil: SignerWithAddress;
-  let nonAuthorizedAccount: SignerWithAddress;
+  let admin: TestAccount;
+  let securityCouncil: TestAccount;
+  let nonAuthorizedAccount: TestAccount;
 
   before(async () => {
-    ({ admin, securityCouncil, operator, nonAuthorizedAccount } = await loadFixture(getAccountsFixture));
+    const { networkHelpers } = await network.getOrCreate();
+    ({ admin, securityCouncil, operator, nonAuthorizedAccount } = await networkHelpers.loadFixture(getAccountsFixture));
   });
 
   beforeEach(async () => {
-    ({ yieldManager, linethRollup } = await loadFixture(deployLinethRollupFixture));
+    const { networkHelpers } = await network.getOrCreate();
+    ({ yieldManager, linethRollup } = await networkHelpers.loadFixture(deployLinethRollupFixture));
   });
 
   describe("Change yield manager address", () => {
     it("Should revert if the caller does not the SET_YIELD_MANAGER_ROLE", async () => {
-      const newYieldManager = ethers.Wallet.createRandom().address;
-      const setYieldManagerCall = linethRollup.connect(nonAuthorizedAccount).setYieldManager(newYieldManager);
+      const newYieldManager = randomAddress();
+      const setYieldManagerCall = linethRollup.write.setYieldManager([newYieldManager], {
+        account: nonAuthorizedAccount.account,
+      });
 
       await expectRevertWithReason(
         setYieldManagerCall,
@@ -59,20 +69,24 @@ describe("Lineth Rollup Yield Extension", () => {
     });
 
     it("Should revert if the address being set is the zero address", async () => {
-      const setYieldManagerCall = linethRollup.connect(securityCouncil).setYieldManager(ADDRESS_ZERO);
+      const setYieldManagerCall = linethRollup.write.setYieldManager([ADDRESS_ZERO], {
+        account: securityCouncil.account,
+      });
       await expectRevertWithCustomError(linethRollup, setYieldManagerCall, "ZeroAddressNotAllowed");
     });
 
     it("Should set the new yield manager address", async () => {
-      const newYieldManager = ethers.Wallet.createRandom().address;
-      await linethRollup.connect(securityCouncil).setYieldManager(newYieldManager);
-      expect(await linethRollup.yieldManager()).to.be.equal(newYieldManager);
+      const newYieldManager = randomAddress();
+      await linethRollup.write.setYieldManager([newYieldManager], { account: securityCouncil.account });
+      expect(await linethRollup.read.yieldManager()).to.be.equal(newYieldManager);
     });
 
     it("Should emit the correct event", async () => {
-      const oldYieldManagerAddress = await linethRollup.yieldManager();
-      const newYieldManagerAddress = ethers.Wallet.createRandom().address;
-      const setYieldManagerCall = linethRollup.connect(securityCouncil).setYieldManager(newYieldManagerAddress);
+      const oldYieldManagerAddress = await linethRollup.read.yieldManager();
+      const newYieldManagerAddress = randomAddress();
+      const setYieldManagerCall = linethRollup.write.setYieldManager([newYieldManagerAddress], {
+        account: securityCouncil.account,
+      });
 
       await expectEvent(linethRollup, setYieldManagerCall, "YieldManagerChanged", [
         oldYieldManagerAddress,
@@ -83,32 +97,32 @@ describe("Lineth Rollup Yield Extension", () => {
 
   describe("IS_WITHDRAW_LST_ALLOWED toggle", () => {
     it("isWithdrawLSTAllowed should return false", async () => {
-      expect(await linethRollup.isWithdrawLSTAllowed()).to.be.false;
+      expect(await linethRollup.read.isWithdrawLSTAllowed()).to.be.false;
     });
   });
 
   describe("fund() to receive funding", () => {
     it("Should revert if 0 value received", async () => {
-      const fundCall = linethRollup.connect(nonAuthorizedAccount).fund({ value: ZERO_VALUE });
+      const fundCall = linethRollup.write.fund({ account: nonAuthorizedAccount.account, value: BigInt(ZERO_VALUE) });
       await expectRevertWithCustomError(linethRollup, fundCall, "NoEthSent");
     });
 
     it("Should succeed with permissionless call and emit the correct event", async () => {
-      const amount = ethers.parseEther("1");
-      const fundCall = linethRollup.connect(nonAuthorizedAccount).fund({ value: amount });
+      const amount = parseEther("1");
+      const fundCall = linethRollup.write.fund({ account: nonAuthorizedAccount.account, value: amount });
 
       await expectEvent(linethRollup, fundCall, "FundingReceived", [amount]);
 
-      const linethRollupBalance = await ethers.provider.getBalance(await linethRollup.getAddress());
+      const linethRollupBalance = await getBalance({ address: linethRollup.address });
       expect(linethRollupBalance).to.equal(amount);
     });
   });
 
   describe("transferFundsForNativeYield() to transfer funds to YieldManager", () => {
     it("Should revert if the caller does not the YIELD_PROVIDER_STAKING_ROLE", async () => {
-      const transferCall = linethRollup
-        .connect(nonAuthorizedAccount)
-        .transferFundsForNativeYield(ethers.parseEther("1"));
+      const transferCall = linethRollup.write.transferFundsForNativeYield([parseEther("1")], {
+        account: nonAuthorizedAccount.account,
+      });
 
       await expectRevertWithReason(
         transferCall,
@@ -117,62 +131,68 @@ describe("Lineth Rollup Yield Extension", () => {
     });
 
     it("Should revert if GENERAL_PAUSE_TYPE is enabled", async () => {
-      await linethRollup.connect(securityCouncil).pauseByType(GENERAL_PAUSE_TYPE);
+      await linethRollup.write.pauseByType([GENERAL_PAUSE_TYPE], { account: securityCouncil.account });
 
-      const transferCall = linethRollup.connect(securityCouncil).transferFundsForNativeYield(0n);
+      const transferCall = linethRollup.write.transferFundsForNativeYield([0n], { account: securityCouncil.account });
 
       await expectRevertWhenPaused(linethRollup, transferCall, GENERAL_PAUSE_TYPE);
     });
 
     it("Should revert if NATIVE_YIELD_STAKING pause type is enabled", async () => {
-      await linethRollup.connect(securityCouncil).pauseByType(NATIVE_YIELD_STAKING_PAUSE_TYPE);
+      await linethRollup.write.pauseByType([NATIVE_YIELD_STAKING_PAUSE_TYPE], { account: securityCouncil.account });
 
-      const transferCall = linethRollup.connect(securityCouncil).transferFundsForNativeYield(0n);
+      const transferCall = linethRollup.write.transferFundsForNativeYield([0n], { account: securityCouncil.account });
 
       await expectRevertWhenPaused(linethRollup, transferCall, NATIVE_YIELD_STAKING_PAUSE_TYPE);
     });
 
     it("Security council should be able to unpause NATIVE_YIELD_STAKING pause type", async () => {
-      await linethRollup.connect(securityCouncil).pauseByType(NATIVE_YIELD_STAKING_PAUSE_TYPE);
-      await linethRollup.connect(securityCouncil).unPauseByType(NATIVE_YIELD_STAKING_PAUSE_TYPE);
+      await linethRollup.write.pauseByType([NATIVE_YIELD_STAKING_PAUSE_TYPE], { account: securityCouncil.account });
+      await linethRollup.write.unPauseByType([NATIVE_YIELD_STAKING_PAUSE_TYPE], { account: securityCouncil.account });
     });
 
     it("Should revert when non-authorized account enacts NATIVE_YIELD_STAKING pause type", async () => {
-      const call = linethRollup.connect(nonAuthorizedAccount).pauseByType(NATIVE_YIELD_STAKING_PAUSE_TYPE);
+      const call = linethRollup.write.pauseByType([NATIVE_YIELD_STAKING_PAUSE_TYPE], {
+        account: nonAuthorizedAccount.account,
+      });
       await expectRevertWithReason(
         call,
-        buildAccessErrorMessage(nonAuthorizedAccount, await linethRollup.PAUSE_NATIVE_YIELD_STAKING_ROLE()),
+        buildAccessErrorMessage(nonAuthorizedAccount, await linethRollup.read.PAUSE_NATIVE_YIELD_STAKING_ROLE()),
       );
     });
 
     it("Should revert when non-authorized account unpauses NATIVE_YIELD_STAKING pause type", async () => {
-      await linethRollup.connect(securityCouncil).pauseByType(NATIVE_YIELD_STAKING_PAUSE_TYPE);
-      const call = linethRollup.connect(nonAuthorizedAccount).unPauseByType(NATIVE_YIELD_STAKING_PAUSE_TYPE);
+      await linethRollup.write.pauseByType([NATIVE_YIELD_STAKING_PAUSE_TYPE], { account: securityCouncil.account });
+      const call = linethRollup.write.unPauseByType([NATIVE_YIELD_STAKING_PAUSE_TYPE], {
+        account: nonAuthorizedAccount.account,
+      });
       await expectRevertWithReason(
         call,
-        buildAccessErrorMessage(nonAuthorizedAccount, await linethRollup.UNPAUSE_NATIVE_YIELD_STAKING_ROLE()),
+        buildAccessErrorMessage(nonAuthorizedAccount, await linethRollup.read.UNPAUSE_NATIVE_YIELD_STAKING_ROLE()),
       );
     });
 
     it("Should revert if LinethRollup has balance < _amount", async () => {
-      const amount = ethers.parseEther("1");
-      const transferCall = linethRollup.connect(securityCouncil).transferFundsForNativeYield(amount);
+      const amount = parseEther("1");
+      const transferCall = linethRollup.write.transferFundsForNativeYield([amount], {
+        account: securityCouncil.account,
+      });
 
-      await expect(transferCall).to.be.reverted;
+      await expectRevert(transferCall);
     });
 
     it("Should successfully transfer ETH to the YieldManager", async () => {
-      const amount = ethers.parseEther("1");
-      await linethRollup.connect(securityCouncil).fund({ value: amount });
+      const amount = parseEther("1");
+      await linethRollup.write.fund({ account: securityCouncil.account, value: amount });
 
-      const linethRollupAddress = await linethRollup.getAddress();
-      const initialContractBalance = await ethers.provider.getBalance(linethRollupAddress);
-      const initialYieldManagerBalance = await ethers.provider.getBalance(yieldManager);
+      const linethRollupAddress = linethRollup.address;
+      const initialContractBalance = await getBalance({ address: linethRollupAddress });
+      const initialYieldManagerBalance = await getBalance({ address: yieldManager });
 
-      await linethRollup.connect(securityCouncil).transferFundsForNativeYield(amount);
+      await linethRollup.write.transferFundsForNativeYield([amount], { account: securityCouncil.account });
 
-      const finalContractBalance = await ethers.provider.getBalance(linethRollupAddress);
-      const finalYieldManagerBalance = await ethers.provider.getBalance(yieldManager);
+      const finalContractBalance = await getBalance({ address: linethRollupAddress });
+      const finalYieldManagerBalance = await getBalance({ address: yieldManager });
 
       expect(finalContractBalance).to.equal(initialContractBalance - amount);
       expect(finalYieldManagerBalance).to.equal(initialYieldManagerBalance + amount);
@@ -181,43 +201,47 @@ describe("Lineth Rollup Yield Extension", () => {
 
   describe("Yield reporting", () => {
     async function impersonateYieldManager() {
-      await ethers.provider.send("hardhat_impersonateAccount", [yieldManager]);
-      await ethers.provider.send("hardhat_setBalance", [yieldManager, ethers.toBeHex(ethers.parseEther("1"))]);
-      return await ethers.getSigner(yieldManager);
+      const yieldManagerSigner = await getImpersonatedAccount(yieldManager);
+      await setBalance(yieldManager, parseEther("1"));
+      return yieldManagerSigner;
     }
 
     async function stopYieldManagerImpersonation() {
-      await ethers.provider.send("hardhat_stopImpersonatingAccount", [yieldManager]);
+      const { viem } = await network.getOrCreate();
+      const testClient = await viem.getTestClient();
+      await testClient.stopImpersonatingAccount({ address: yieldManager });
     }
 
-    const abiCoder = ethers.AbiCoder.defaultAbiCoder();
-
     const computeMessageHash = (
-      from: string,
-      to: string,
+      from: Address,
+      to: Address,
       fee: bigint,
       value: bigint,
       messageNumber: bigint,
-      data: string,
+      data: Hex,
     ) =>
-      ethers.keccak256(
-        abiCoder.encode(
+      keccak256(
+        encodeData(
           ["address", "address", "uint256", "uint256", "uint256", "bytes"],
           [from, to, fee, value, messageNumber, data],
         ),
       );
 
     it("Should revert if caller is not the YieldManager", async () => {
-      const reportCall = linethRollup.connect(securityCouncil).reportNativeYield(1n, operator.address);
+      const reportCall = linethRollup.write.reportNativeYield([1n, operator.address], {
+        account: securityCouncil.account,
+      });
 
       await expectRevertWithCustomError(linethRollup, reportCall, "CallerIsNotYieldManager");
     });
 
     it("Should revert if GENERAL_PAUSE_TYPE is enabled", async () => {
       const yieldManagerSigner = await impersonateYieldManager();
-      await linethRollup.connect(securityCouncil).pauseByType(GENERAL_PAUSE_TYPE);
+      await linethRollup.write.pauseByType([GENERAL_PAUSE_TYPE], { account: securityCouncil.account });
 
-      const reportCall = linethRollup.connect(yieldManagerSigner).reportNativeYield(1n, operator.address);
+      const reportCall = linethRollup.write.reportNativeYield([1n, operator.address], {
+        account: yieldManagerSigner.account,
+      });
 
       await expectRevertWhenPaused(linethRollup, reportCall, GENERAL_PAUSE_TYPE);
 
@@ -226,9 +250,11 @@ describe("Lineth Rollup Yield Extension", () => {
 
     it("Should revert if L1_L2 pause type is enabled", async () => {
       const yieldManagerSigner = await impersonateYieldManager();
-      await linethRollup.connect(securityCouncil).pauseByType(L1_L2_PAUSE_TYPE);
+      await linethRollup.write.pauseByType([L1_L2_PAUSE_TYPE], { account: securityCouncil.account });
 
-      const reportCall = linethRollup.connect(yieldManagerSigner).reportNativeYield(1n, operator.address);
+      const reportCall = linethRollup.write.reportNativeYield([1n, operator.address], {
+        account: yieldManagerSigner.account,
+      });
 
       await expectRevertWhenPaused(linethRollup, reportCall, L1_L2_PAUSE_TYPE);
 
@@ -238,7 +264,9 @@ describe("Lineth Rollup Yield Extension", () => {
     it("Should revert if l2YieldRecipient is the 0 address", async () => {
       const yieldManagerSigner = await impersonateYieldManager();
 
-      const reportCall = linethRollup.connect(yieldManagerSigner).reportNativeYield(1n, ADDRESS_ZERO);
+      const reportCall = linethRollup.write.reportNativeYield([1n, ADDRESS_ZERO], {
+        account: yieldManagerSigner.account,
+      });
 
       await expectRevertWithCustomError(linethRollup, reportCall, "ZeroAddressNotAllowed");
 
@@ -249,9 +277,9 @@ describe("Lineth Rollup Yield Extension", () => {
 
     it("Should successfully emit a synthetic MessageSent event with valid parameters", async () => {
       const yieldManagerSigner = await impersonateYieldManager();
-      const amount = ethers.parseEther("1");
-      const nextMessageNumberBefore = await linethRollup.nextMessageNumber();
-      const l2YieldRecipient = ethers.Wallet.createRandom().address;
+      const amount = parseEther("1");
+      const nextMessageNumberBefore = await linethRollup.read.nextMessageNumber();
+      const l2YieldRecipient = randomAddress();
 
       const expectedMessageHash = computeMessageHash(
         yieldManager,
@@ -262,7 +290,9 @@ describe("Lineth Rollup Yield Extension", () => {
         EMPTY_CALLDATA,
       );
 
-      const reportCall = linethRollup.connect(yieldManagerSigner).reportNativeYield(amount, l2YieldRecipient);
+      const reportCall = linethRollup.write.reportNativeYield([amount, l2YieldRecipient], {
+        account: yieldManagerSigner.account,
+      });
 
       await expectEvent(linethRollup, reportCall, "MessageSent", [
         // _from = YieldManager
@@ -279,7 +309,7 @@ describe("Lineth Rollup Yield Extension", () => {
         expectedMessageHash,
       ]);
 
-      expect(await linethRollup.nextMessageNumber()).to.equal(nextMessageNumberBefore + 1n);
+      expect(await linethRollup.read.nextMessageNumber()).to.equal(nextMessageNumberBefore + 1n);
 
       await stopYieldManagerImpersonation();
     });
@@ -288,15 +318,17 @@ describe("Lineth Rollup Yield Extension", () => {
       // ARRANGE
       const yieldManagerSigner = await impersonateYieldManager();
 
-      const amount = ethers.parseEther("0.5");
-      const messageNumber = await linethRollup.nextMessageNumber();
-      const l2YieldRecipient = ethers.Wallet.createRandom().address;
+      const amount = parseEther("0.5");
+      const messageNumber = await linethRollup.read.nextMessageNumber();
+      const l2YieldRecipient = randomAddress();
 
       const messageHash = computeMessageHash(yieldManager, l2YieldRecipient, 0n, amount, messageNumber, EMPTY_CALLDATA);
-      const expectedRollingHash = calculateRollingHash(ethers.ZeroHash, messageHash);
+      const expectedRollingHash = calculateRollingHash(zeroHash, messageHash);
 
       // ACT
-      const reportCall = linethRollup.connect(yieldManagerSigner).reportNativeYield(amount, l2YieldRecipient);
+      const reportCall = linethRollup.write.reportNativeYield([amount, l2YieldRecipient], {
+        account: yieldManagerSigner.account,
+      });
 
       // ASSERT
       await expectEvent(linethRollup, reportCall, "RollingHashUpdated", [
@@ -305,19 +337,18 @@ describe("Lineth Rollup Yield Extension", () => {
         messageHash,
       ]);
 
-      const storedRollingHash = await linethRollup.rollingHashes(messageNumber);
+      const storedRollingHash = await linethRollup.read.rollingHashes([messageNumber]);
       expect(storedRollingHash).to.equal(expectedRollingHash);
-      expect(storedRollingHash).to.not.equal(ethers.ZeroHash);
+      expect(storedRollingHash).to.not.equal(zeroHash);
 
       await stopYieldManagerImpersonation();
     });
 
     it("Should correctly update the rolling hash after sendMessage", async () => {
       // ARRANGE STAGE 1 - Perform sendMessage
-      const calldataPayload = ethers.randomBytes(32);
-      const calldataHex = ethers.hexlify(calldataPayload);
+      const calldataHex = generateRandomBytes(32);
 
-      const initialMessageNumber = await linethRollup.nextMessageNumber();
+      const initialMessageNumber = await linethRollup.read.nextMessageNumber();
       const sendMessageHash = computeMessageHash(
         securityCouncil.address,
         nonAuthorizedAccount.address,
@@ -326,13 +357,12 @@ describe("Lineth Rollup Yield Extension", () => {
         initialMessageNumber,
         calldataHex,
       );
-      const expectedRollingAfterSend = calculateRollingHash(ethers.ZeroHash, sendMessageHash);
+      const expectedRollingAfterSend = calculateRollingHash(zeroHash, sendMessageHash);
 
-      const sendMessageCall = linethRollup
-        .connect(securityCouncil)
-        .sendMessage(nonAuthorizedAccount.address, MESSAGE_FEE, calldataHex, {
-          value: MESSAGE_FEE + MESSAGE_VALUE_1ETH,
-        });
+      const sendMessageCall = linethRollup.write.sendMessage([nonAuthorizedAccount.address, MESSAGE_FEE, calldataHex], {
+        account: securityCouncil.account,
+        value: MESSAGE_FEE + MESSAGE_VALUE_1ETH,
+      });
 
       await expectEvent(linethRollup, sendMessageCall, "RollingHashUpdated", [
         initialMessageNumber,
@@ -340,13 +370,13 @@ describe("Lineth Rollup Yield Extension", () => {
         sendMessageHash,
       ]);
 
-      const rollingHashAfterSend = await linethRollup.rollingHashes(initialMessageNumber);
+      const rollingHashAfterSend = await linethRollup.read.rollingHashes([initialMessageNumber]);
       expect(rollingHashAfterSend).to.equal(expectedRollingAfterSend);
 
       // ARRANGE STAGE 2 - Prepare reportNativeYield
       const yieldManagerSigner = await impersonateYieldManager();
-      const amount = ethers.parseEther("0.3");
-      const messageNumber = await linethRollup.nextMessageNumber();
+      const amount = parseEther("0.3");
+      const messageNumber = await linethRollup.read.nextMessageNumber();
       const l2YieldRecipient = operator.address;
 
       const yieldMessageHash = computeMessageHash(
@@ -360,7 +390,9 @@ describe("Lineth Rollup Yield Extension", () => {
       const expectedRollingAfterReportYield = calculateRollingHash(rollingHashAfterSend, yieldMessageHash);
 
       // ACT
-      const reportCall = linethRollup.connect(yieldManagerSigner).reportNativeYield(amount, l2YieldRecipient);
+      const reportCall = linethRollup.write.reportNativeYield([amount, l2YieldRecipient], {
+        account: yieldManagerSigner.account,
+      });
 
       // ASSERT
       await expectEvent(linethRollup, reportCall, "RollingHashUpdated", [
@@ -369,9 +401,9 @@ describe("Lineth Rollup Yield Extension", () => {
         yieldMessageHash,
       ]);
 
-      const storedRollingHash = await linethRollup.rollingHashes(messageNumber);
+      const storedRollingHash = await linethRollup.read.rollingHashes([messageNumber]);
       expect(storedRollingHash).to.equal(expectedRollingAfterReportYield);
-      expect(storedRollingHash).to.not.equal(ethers.ZeroHash);
+      expect(storedRollingHash).to.not.equal(zeroHash);
       expect(storedRollingHash).to.not.equal(rollingHashAfterSend);
 
       await stopYieldManagerImpersonation();
@@ -380,35 +412,37 @@ describe("Lineth Rollup Yield Extension", () => {
 
   describe("Claiming message with proof and withdrawing LST", () => {
     it("Should revert if L1MessageService has more than sufficient balance to fulfil withdrawal request amount", async () => {
-      const preFundAmount = ethers.parseEther("1");
-      await linethRollup.connect(securityCouncil).fund({ value: preFundAmount });
+      const preFundAmount = parseEther("1");
+      await linethRollup.write.fund({ account: securityCouncil.account, value: preFundAmount });
 
-      const params = {
-        proof: [] as string[],
+      const params: ClaimMessageWithProofParams = {
+        proof: [] as Hex[],
         messageNumber: 0n,
         leafIndex: 0,
         from: admin.address,
         to: admin.address,
         fee: 0n,
-        value: ethers.parseEther("0.5"),
+        value: parseEther("0.5"),
         feeRecipient: admin.address,
-        merkleRoot: ethers.ZeroHash,
+        merkleRoot: zeroHash,
         data: EMPTY_CALLDATA,
       };
 
-      const claimCall = linethRollup.connect(admin).claimMessageWithProofAndWithdrawLST(params, operator.address);
+      const claimCall = linethRollup.write.claimMessageWithProofAndWithdrawLST([params, operator.address], {
+        account: admin.account,
+      });
 
       await expectRevertWithCustomError(linethRollup, claimCall, "LSTWithdrawalRequiresDeficit");
 
-      expect(await ethers.provider.getBalance(await linethRollup.getAddress())).to.equal(preFundAmount);
+      expect(await getBalance({ address: linethRollup.address })).to.equal(preFundAmount);
     });
 
     it("Should revert if L1MessageService has the exact balance to fulfil withdrawal request amount", async () => {
-      const preFundAmount = ethers.parseEther("1");
-      await linethRollup.connect(securityCouncil).fund({ value: preFundAmount });
+      const preFundAmount = parseEther("1");
+      await linethRollup.write.fund({ account: securityCouncil.account, value: preFundAmount });
 
-      const params = {
-        proof: [] as string[],
+      const params: ClaimMessageWithProofParams = {
+        proof: [] as Hex[],
         messageNumber: 0n,
         leafIndex: 0,
         from: admin.address,
@@ -416,58 +450,60 @@ describe("Lineth Rollup Yield Extension", () => {
         fee: 0n,
         value: preFundAmount,
         feeRecipient: admin.address,
-        merkleRoot: ethers.ZeroHash,
+        merkleRoot: zeroHash,
         data: EMPTY_CALLDATA,
       };
 
-      const claimCall = linethRollup.connect(admin).claimMessageWithProofAndWithdrawLST(params, operator.address);
+      const claimCall = linethRollup.write.claimMessageWithProofAndWithdrawLST([params, operator.address], {
+        account: admin.account,
+      });
 
       await expectRevertWithCustomError(linethRollup, claimCall, "LSTWithdrawalRequiresDeficit");
 
-      expect(await ethers.provider.getBalance(await linethRollup.getAddress())).to.equal(preFundAmount);
+      expect(await getBalance({ address: linethRollup.address })).to.equal(preFundAmount);
     });
 
     it("Should revert if caller is not the LST withdrawal recipient", async () => {
-      const preFundAmount = ethers.parseEther("1");
-      await linethRollup.connect(securityCouncil).fund({ value: preFundAmount });
+      const preFundAmount = parseEther("1");
+      await linethRollup.write.fund({ account: securityCouncil.account, value: preFundAmount });
 
-      const params = {
-        proof: [] as string[],
+      const params: ClaimMessageWithProofParams = {
+        proof: [] as Hex[],
         messageNumber: 0n,
         leafIndex: 0,
         from: admin.address,
         to: nonAuthorizedAccount.address,
         fee: 0n,
-        value: ethers.parseEther("0.5"),
+        value: parseEther("0.5"),
         feeRecipient: admin.address,
-        merkleRoot: ethers.ZeroHash,
+        merkleRoot: zeroHash,
         data: EMPTY_CALLDATA,
       };
 
-      const claimCall = linethRollup.connect(admin).claimMessageWithProofAndWithdrawLST(params, operator.address);
+      const claimCall = linethRollup.write.claimMessageWithProofAndWithdrawLST([params, operator.address], {
+        account: admin.account,
+      });
 
       await expectRevertWithCustomError(linethRollup, claimCall, "LSTWithdrawalRequiresDeficit");
     });
 
     it("Should revert on reentry", async () => {
-      const linethRollupAddress = await linethRollup.getAddress();
+      const linethRollupAddress = linethRollup.address;
 
       const l2MerkleRootsDepthsSlot = 336n;
-      const storageSlot = ethers.keccak256(
-        ethers.AbiCoder.defaultAbiCoder().encode(
-          ["bytes32", "uint256"],
-          [VALID_MERKLE_PROOF.merkleRoot, l2MerkleRootsDepthsSlot],
-        ),
+      const storageSlot = keccak256(
+        encodeData(["bytes32", "uint256"], [VALID_MERKLE_PROOF.merkleRoot, l2MerkleRootsDepthsSlot]),
       );
 
-      await ethers.provider.send("hardhat_setStorageAt", [
+      const { viem, networkHelpers } = await network.getOrCreate();
+      await networkHelpers.setStorageAt(
         linethRollupAddress,
         storageSlot,
-        ethers.zeroPadValue(ethers.toBeHex(BigInt(VALID_MERKLE_PROOF.proof.length)), 32),
-      ]);
+        toHex(BigInt(VALID_MERKLE_PROOF.proof.length), { size: 32 }),
+      );
 
-      const claimParams = {
-        proof: VALID_MERKLE_PROOF.proof,
+      const claimParams: ClaimMessageWithProofParams = {
+        proof: VALID_MERKLE_PROOF.proof.map(hex),
         messageNumber: 1n,
         leafIndex: VALID_MERKLE_PROOF.index,
         from: admin.address,
@@ -475,22 +511,28 @@ describe("Lineth Rollup Yield Extension", () => {
         fee: MESSAGE_FEE,
         value: MESSAGE_FEE + MESSAGE_VALUE_1ETH,
         feeRecipient: ADDRESS_ZERO,
-        merkleRoot: VALID_MERKLE_PROOF.merkleRoot,
+        merkleRoot: hex(VALID_MERKLE_PROOF.merkleRoot),
         data: EMPTY_CALLDATA,
       };
 
-      const mockYieldManagerContract = MockYieldManager__factory.connect(yieldManager, securityCouncil);
-      await mockYieldManagerContract.connect(admin).setReentryData(claimParams, operator.address);
+      const mockYieldManagerContract = await viem.getContractAt("MockYieldManager", yieldManager, {
+        client: { wallet: securityCouncil },
+      });
+      await mockYieldManagerContract.write.setReentryData([claimParams, operator.address], { account: admin.account });
 
-      const claimCall = linethRollup.connect(admin).claimMessageWithProofAndWithdrawLST(claimParams, operator.address);
+      const claimCall = linethRollup.write.claimMessageWithProofAndWithdrawLST([claimParams, operator.address], {
+        account: admin.account,
+      });
 
       await expectRevertWithCustomError(linethRollup, claimCall, "ReentrantCall");
     });
 
     it("Should claim successfully with correct MessageClaimed event emitted", async () => {
-      await linethRollup
-        .connect(securityCouncil)
-        .addL2MerkleRoots([VALID_MERKLE_PROOF.merkleRoot], VALID_MERKLE_PROOF.proof.length);
+      const { viem } = await network.getOrCreate();
+      await linethRollup.write.addL2MerkleRoots(
+        [[hex(VALID_MERKLE_PROOF.merkleRoot)], BigInt(VALID_MERKLE_PROOF.proof.length)],
+        { account: securityCouncil.account },
+      );
 
       const expectedBytes = encodeSendMessage(
         admin.address,
@@ -501,10 +543,10 @@ describe("Lineth Rollup Yield Extension", () => {
         EMPTY_CALLDATA,
       );
 
-      const messageHash = ethers.keccak256(expectedBytes);
+      const messageHash = keccak256(expectedBytes);
 
-      const claimParams = {
-        proof: VALID_MERKLE_PROOF.proof,
+      const claimParams: ClaimMessageWithProofParams = {
+        proof: VALID_MERKLE_PROOF.proof.map(hex),
         messageNumber: 1n,
         leafIndex: VALID_MERKLE_PROOF.index,
         from: admin.address,
@@ -512,20 +554,24 @@ describe("Lineth Rollup Yield Extension", () => {
         fee: MESSAGE_FEE,
         value: MESSAGE_FEE + MESSAGE_VALUE_1ETH,
         feeRecipient: ADDRESS_ZERO,
-        merkleRoot: VALID_MERKLE_PROOF.merkleRoot,
+        merkleRoot: hex(VALID_MERKLE_PROOF.merkleRoot),
         data: EMPTY_CALLDATA,
       };
 
       // Act
-      const claimCall = linethRollup.connect(admin).claimMessageWithProofAndWithdrawLST(claimParams, operator.address);
+      const claimCall = linethRollup.write.claimMessageWithProofAndWithdrawLST([claimParams, operator.address], {
+        account: admin.account,
+      });
 
       // Assert MessageClaimed event emitted
       await expectEvent(linethRollup, claimCall, "MessageClaimed", [messageHash]);
-      const mockYieldManagerContract = MockYieldManager__factory.connect(yieldManager, securityCouncil);
+      const mockYieldManagerContract = await viem.getContractAt("MockYieldManager", yieldManager, {
+        client: { wallet: securityCouncil },
+      });
       // Assert that isWithdrawLSTAllowed() flag is toggled on during the tx - use event on MockYieldManager
       await expectEvent(mockYieldManagerContract, claimCall, "LSTWithdrawalFlag", [true]);
       // Assert that isWithdrawLSTAllowed() flag is toggled off after the tx
-      expect(await linethRollup.isWithdrawLSTAllowed()).to.be.false;
+      expect(await linethRollup.read.isWithdrawLSTAllowed()).to.be.false;
     });
   });
 });

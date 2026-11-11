@@ -1,13 +1,21 @@
-import { ethers, upgrades } from "hardhat";
+import { upgrades } from "@openzeppelin/hardhat-upgrades/viem";
+import hre, { network } from "hardhat";
+import { getAddress } from "viem";
 
-import { warnIfUsingPrivateKeySigning } from "../hardhat/signer-ui-bridge";
-import { requireEnv } from "../hardhat/utils";
+import { getRequiredEnvVar } from "../../common/helpers/environment.js";
+import {
+  getUiWalletClient,
+  withSignerUi,
+  warnIfUsingPrivateKeySigning,
+} from "../../hardhat-plugins/signer-ui/session.js";
 
 /*
     *******************************************************************************************
-    HARDHAT_SIGNER_UI: This script uses @openzeppelin/hardhat-upgrades admin helpers with the
-    default Hardhat signer. Browser-wallet signing is not wired here yet; use DEPLOYER_PRIVATE_KEY
-    or extend the script to pass an explicit signer from getUiSigner + runWithSignerUiSession.
+    HARDHAT_SIGNER_UI: the OpenZeppelin admin helper signs with getUiWalletClient, so the
+    transaction goes to the browser wallet when HARDHAT_SIGNER_UI=true.
+
+    The ownership of the ProxyAdmin that administers PROXY_ADDRESS is transferred
+    (OpenZeppelin Upgrades 4.x resolves the ProxyAdmin from the proxy's ERC-1967 admin slot).
 
     If upgrading a to a timelock controller 
     be sure to deploy the timelock controller and
@@ -24,26 +32,33 @@ import { requireEnv } from "../hardhat/utils";
 */
 
 async function main() {
+  const connection = await network.getOrCreate();
   warnIfUsingPrivateKeySigning({
+    networkName: connection.networkName,
     scriptContext: "scripts/operational/transferProxyAdminOwnership.ts",
-    uiSupported: false,
   });
 
-  const proxyAdminOwnerAddress = requireEnv("PROXY_ADMIN_OWNER_ADDRESS");
-  const proxyAddress = requireEnv("PROXY_ADDRESS");
-  const contractType = requireEnv("CONTRACT_TYPE");
+  const proxyAdminOwnerAddress = getAddress(getRequiredEnvVar("PROXY_ADMIN_OWNER_ADDRESS"));
+  const proxyAddress = getAddress(getRequiredEnvVar("PROXY_ADDRESS"));
+  const contractType = getRequiredEnvVar("CONTRACT_TYPE");
 
-  const proxyContract = await ethers.getContractFactory(contractType);
-  await upgrades.forceImport(proxyAddress, proxyContract, {
-    kind: "transparent",
+  await withSignerUi(hre, "scripts/operational/transferProxyAdminOwnership.ts", async () => {
+    const oz = await upgrades(hre, connection);
+    const wallet = await getUiWalletClient(connection);
+    const publicClient = await connection.viem.getPublicClient();
+
+    await oz.forceImport(proxyAddress, contractType, {
+      kind: "transparent",
+      client: { public: publicClient, wallet },
+    });
+
+    // CHANGE OWNERSHIP OF PROXY ADMIN
+    console.log(
+      `Changing ProxyAdmin owner of ${contractType} at ${proxyAddress} to new owner: ${proxyAdminOwnerAddress}`,
+    );
+    await oz.admin.transferProxyAdminOwnership(proxyAddress, proxyAdminOwnerAddress, wallet);
+    console.log("Done");
   });
-
-  // CHANGE OWNERSHIP OF PROXY ADMIN
-  console.log(
-    `Changing ProxyAdmin owner of ${contractType} at ${proxyAddress} to new owner: ${proxyAdminOwnerAddress}`,
-  );
-  await upgrades.admin.transferProxyAdminOwnership(proxyAdminOwnerAddress);
-  console.log("Done");
 }
 
 main()

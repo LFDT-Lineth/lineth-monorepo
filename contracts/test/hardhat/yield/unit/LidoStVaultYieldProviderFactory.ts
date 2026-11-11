@@ -1,44 +1,44 @@
-import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import {
-  LidoStVaultYieldProviderFactory,
-  MockLinethRollup,
-  MockSTETH,
-  MockVaultHub,
-  MockVaultFactory,
-  TestYieldManager,
-  ValidatorContainerProofVerifier,
-} from "contracts/typechain-types";
-import { ZeroAddress } from "ethers";
-import { ethers } from "hardhat";
+import hre, { network } from "hardhat";
+import { describe, it, before, beforeEach } from "node:test";
+import { type Address, zeroAddress } from "viem";
 
-import { getAccountsFixture, expectZeroAddressRevert, expectEvent } from "../../common/helpers";
-import { deployLidoStVaultYieldProviderFactory } from "../helpers";
+import { deployFromFactory } from "../../common/deployment.js";
+import {
+  type TestAccount,
+  getAccountsFixture,
+  expectZeroAddressRevert,
+  expectEvent,
+} from "../../common/helpers/index.js";
+import { deployLidoStVaultYieldProviderFactory } from "../helpers/index.js";
+
+import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
 
 describe("LidoStVaultYieldProviderFactory", () => {
-  let lidoStVaultYieldProviderFactory: LidoStVaultYieldProviderFactory;
-  let mockVaultHub: MockVaultHub;
-  let mockVaultFactory: MockVaultFactory;
-  let mockSTETH: MockSTETH;
-  let mockLinethRollup: MockLinethRollup;
-  let yieldManager: TestYieldManager;
-  let verifier: ValidatorContainerProofVerifier;
+  let lidoStVaultYieldProviderFactory: ContractReturnType<"LidoStVaultYieldProviderFactory">;
+  let mockVaultHub: ContractReturnType<"MockVaultHub">;
+  let mockVaultFactory: ContractReturnType<"MockVaultFactory">;
+  let mockSTETH: ContractReturnType<"MockSTETH">;
+  let mockLinethRollup: ContractReturnType<"MockLinethRollup">;
+  let yieldManager: ContractReturnType<"TestYieldManager">;
+  let verifier: ContractReturnType<"ValidatorContainerProofVerifier">;
 
-  let nativeYieldOperator: SignerWithAddress;
+  let nativeYieldOperator: TestAccount;
 
-  let l1MessageServiceAddress: string;
-  let yieldManagerAddress: string;
-  let vaultHubAddress: string;
-  let vaultFactoryAddress: string;
-  let stethAddress: string;
-  let verifierAddress: string;
+  let l1MessageServiceAddress: Address;
+  let yieldManagerAddress: Address;
+  let vaultHubAddress: Address;
+  let vaultFactoryAddress: Address;
+  let stethAddress: Address;
+  let verifierAddress: Address;
 
   before(async () => {
-    ({ nativeYieldOperator } = await loadFixture(getAccountsFixture));
+    const { networkHelpers } = await network.getOrCreate();
+    ({ nativeYieldOperator } = await networkHelpers.loadFixture(getAccountsFixture));
   });
 
   beforeEach(async () => {
+    const { networkHelpers } = await network.getOrCreate();
     ({
       lidoStVaultYieldProviderFactory,
       mockVaultHub,
@@ -48,28 +48,28 @@ describe("LidoStVaultYieldProviderFactory", () => {
       mockSTETH,
       verifier,
       verifierAddress,
-    } = await loadFixture(deployLidoStVaultYieldProviderFactory));
-    l1MessageServiceAddress = await mockLinethRollup.getAddress();
-    yieldManagerAddress = await yieldManager.getAddress();
-    vaultHubAddress = await mockVaultHub.getAddress();
-    vaultFactoryAddress = await mockVaultFactory.getAddress();
-    stethAddress = await mockSTETH.getAddress();
-    verifierAddress = await verifier.getAddress();
+    } = await networkHelpers.loadFixture(deployLidoStVaultYieldProviderFactory));
+    l1MessageServiceAddress = mockLinethRollup.address;
+    yieldManagerAddress = yieldManager.address;
+    vaultHubAddress = mockVaultHub.address;
+    vaultFactoryAddress = mockVaultFactory.address;
+    stethAddress = mockSTETH.address;
+    verifierAddress = verifier.address;
   });
 
   describe("Constructor", () => {
     // Configuration for constructor arguments
     interface ConstructorConfig {
-      l1MessageService: string;
-      yieldManager: string;
-      vaultHub: string;
-      vaultFactory: string;
-      steth: string;
-      validatorContainerProofVerifier: string;
+      l1MessageService: Address;
+      yieldManager: Address;
+      vaultHub: Address;
+      vaultFactory: Address;
+      steth: Address;
+      validatorContainerProofVerifier: Address;
     }
 
     // Convert config to args tuple
-    const toArgs = (config: ConstructorConfig): [string, string, string, string, string, string] => [
+    const toArgs = (config: ConstructorConfig): [Address, Address, Address, Address, Address, Address] => [
       config.l1MessageService,
       config.yieldManager,
       config.vaultHub,
@@ -93,7 +93,7 @@ describe("LidoStVaultYieldProviderFactory", () => {
 
     zeroAddressValidationCases.forEach(({ name, field }) => {
       it(`Should revert if 0 address provided for ${name}`, async () => {
-        const contractFactory = await ethers.getContractFactory("LidoStVaultYieldProviderFactory");
+        const { abi } = await hre.artifacts.readArtifact("LidoStVaultYieldProviderFactory");
 
         const defaultConfig: ConstructorConfig = {
           l1MessageService: l1MessageServiceAddress,
@@ -104,61 +104,72 @@ describe("LidoStVaultYieldProviderFactory", () => {
           validatorContainerProofVerifier: verifierAddress,
         };
 
-        const args = toArgs({ ...defaultConfig, [field]: ZeroAddress });
+        const args = toArgs({ ...defaultConfig, [field]: zeroAddress });
 
         await expectZeroAddressRevert({
-          contract: contractFactory,
-          deployOrInitCall: contractFactory.deploy(...args),
+          contract: { abi },
+          deployOrInitCall: deployFromFactory("LidoStVaultYieldProviderFactory", args),
         });
       });
     });
 
     it("Should succeed and emit the correct event", async () => {
-      const contractFactory = await ethers.getContractFactory("LidoStVaultYieldProviderFactory");
-      const call = await contractFactory.deploy(
-        l1MessageServiceAddress,
-        yieldManagerAddress,
-        vaultHubAddress,
-        vaultFactoryAddress,
-        stethAddress,
-        verifierAddress,
+      const { viem } = await network.getOrCreate();
+      const { contract, deploymentTransaction } = await viem.sendDeploymentTransaction(
+        "LidoStVaultYieldProviderFactory",
+        [
+          l1MessageServiceAddress,
+          yieldManagerAddress,
+          vaultHubAddress,
+          vaultFactoryAddress,
+          stethAddress,
+          verifierAddress,
+        ],
       );
-      await expectEvent(call, call.deploymentTransaction()!, "LidoStVaultYieldProviderFactoryDeployed", [
-        l1MessageServiceAddress,
-        yieldManagerAddress,
-        vaultHubAddress,
-        vaultFactoryAddress,
-        stethAddress,
-        verifierAddress,
-      ]);
+      await expectEvent(
+        contract,
+        Promise.resolve(deploymentTransaction.hash),
+        "LidoStVaultYieldProviderFactoryDeployed",
+        [
+          l1MessageServiceAddress,
+          yieldManagerAddress,
+          vaultHubAddress,
+          vaultFactoryAddress,
+          stethAddress,
+          verifierAddress,
+        ],
+      );
     });
   });
 
   describe("Immutables", () => {
     it("Should deploy with correct VaultHub address", async () => {
-      expect(await lidoStVaultYieldProviderFactory.VAULT_HUB()).eq(await mockVaultHub.getAddress());
+      expect(await lidoStVaultYieldProviderFactory.read.VAULT_HUB()).eq(mockVaultHub.address);
     });
     it("Should deploy with correct STETH address", async () => {
-      expect(await lidoStVaultYieldProviderFactory.STETH()).eq(await mockSTETH.getAddress());
+      expect(await lidoStVaultYieldProviderFactory.read.STETH()).eq(mockSTETH.address);
     });
     it("Should deploy with correct L1MessageService address", async () => {
-      expect(await lidoStVaultYieldProviderFactory.L1_MESSAGE_SERVICE()).eq(await mockLinethRollup.getAddress());
+      expect(await lidoStVaultYieldProviderFactory.read.L1_MESSAGE_SERVICE()).eq(mockLinethRollup.address);
     });
     it("Should deploy with correct YieldManager address", async () => {
-      expect(await lidoStVaultYieldProviderFactory.YIELD_MANAGER()).eq(await yieldManager.getAddress());
+      expect(await lidoStVaultYieldProviderFactory.read.YIELD_MANAGER()).eq(yieldManager.address);
     });
     it("Should deploy with correct VaultFactory address", async () => {
-      expect(await lidoStVaultYieldProviderFactory.VAULT_FACTORY()).eq(await mockVaultFactory.getAddress());
+      expect(await lidoStVaultYieldProviderFactory.read.VAULT_FACTORY()).eq(mockVaultFactory.address);
     });
     it("Should deploy with correct ValidatorContainerProofVerifier address", async () => {
-      expect(await lidoStVaultYieldProviderFactory.VALIDATOR_CONTAINER_PROOF_VERIFIER()).eq(verifierAddress);
+      expect(await lidoStVaultYieldProviderFactory.read.VALIDATOR_CONTAINER_PROOF_VERIFIER()).eq(verifierAddress);
     });
   });
 
   describe("createLidoStVaultYieldProvider", () => {
     it("Should successfully create new LidoStVaultYieldProvider and emit expected event", async () => {
-      const yieldProviderAddress = await lidoStVaultYieldProviderFactory.createLidoStVaultYieldProvider.staticCall();
-      const call = lidoStVaultYieldProviderFactory.connect(nativeYieldOperator).createLidoStVaultYieldProvider();
+      const { result: yieldProviderAddress } =
+        await lidoStVaultYieldProviderFactory.simulate.createLidoStVaultYieldProvider();
+      const call = lidoStVaultYieldProviderFactory.write.createLidoStVaultYieldProvider({
+        account: nativeYieldOperator.account,
+      });
       await expectEvent(lidoStVaultYieldProviderFactory, call, "LidoStVaultYieldProviderCreated", [
         yieldProviderAddress,
       ]);

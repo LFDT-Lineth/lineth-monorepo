@@ -1,24 +1,14 @@
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { PRECOMPILES_ADDRESSES } from "contracts/common/constants";
+import { type Address, pad, toHex } from "viem";
+
+import { getAccountsFixture, getRoleAddressesFixture, getValidiumRoleAddressesFixture } from "./before.js";
+import { PRECOMPILES_ADDRESSES } from "../../../../common/constants/index.js";
 import {
   LINETH_ROLLUP_V8_PAUSE_TYPES_ROLES,
   LINETH_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
   VALIDIUM_PAUSE_TYPES_ROLES,
   VALIDIUM_UNPAUSE_TYPES_ROLES,
-} from "contracts/common/constants/pauseTypes";
-import {
-  AddressFilter,
-  CallForwardingProxy,
-  ForcedTransactionGateway,
-  Mimc,
-  TestLinethRollup,
-  TestValidium,
-} from "contracts/typechain-types";
-import { toBeHex } from "ethers";
-import { ethers } from "hardhat";
-
-import { getAccountsFixture, getRoleAddressesFixture, getValidiumRoleAddressesFixture } from "./before";
-import firstCompressedDataContent from "../../_testData/compressedData/blocks-1-46.json";
+} from "../../../../common/constants/pauseTypes.js";
+import firstCompressedDataContent from "../../_testData/compressedData/blocks-1-46.json" with { type: "json" };
 import {
   ADDRESS_ZERO,
   BLOCK_NUMBER_DEADLINE_BUFFER,
@@ -33,26 +23,27 @@ import {
   ONE_DAY_IN_SECONDS,
   THREE_DAYS_IN_SECONDS,
   VALIDIUM_INITIALIZE_SIGNATURE,
-} from "../../common/constants";
-import { deployFromFactory, deployUpgradableFromFactory } from "../../common/deployment";
-import { LinethRollupInitializationData, PauseTypeRole } from "../../common/types";
+} from "../../common/constants/index.js";
+import { deployFromFactory, deployUpgradableFromFactory } from "../../common/deployment.js";
+import { address, hex } from "../../common/helpers/index.js";
 
-export async function deployRevertingVerifier(scenario: bigint): Promise<string> {
-  const revertingVerifierFactory = await ethers.getContractFactory("RevertingVerifier");
-  const verifier = await revertingVerifierFactory.deploy(scenario);
-  await verifier.waitForDeployment();
-  return await verifier.getAddress();
+import type { LinethRollupInitializationData } from "../../common/types.js";
+
+export async function deployRevertingVerifier(scenario: number): Promise<Address> {
+  const verifier = await deployFromFactory("RevertingVerifier", [scenario]);
+  return verifier.address;
 }
 
-export async function deployCallForwardingProxy(target: string): Promise<CallForwardingProxy> {
-  const callForwardingProxyFactory = await ethers.getContractFactory("CallForwardingProxy");
-  const callForwardingProxy = await callForwardingProxyFactory.deploy(target);
-  await callForwardingProxy.waitForDeployment();
-  return callForwardingProxy;
+export async function deployCallForwardingProxy(target: Address) {
+  return deployFromFactory("CallForwardingProxy", [target]);
 }
+
+// Fixtures call the fixtures they build on directly instead of through `loadFixture`: Hardhat 3's network helpers
+// lose snapshot invalidations made by a `loadFixture` nested inside another fixture (the outer call keeps the snapshot
+// list it read before running the fixture), which later fails with HHE60013 when a stale snapshot is restored.
 export async function deployValidiumFixture() {
-  const { securityCouncil, nonAuthorizedAccount } = await loadFixture(getAccountsFixture);
-  const roleAddresses = await loadFixture(getValidiumRoleAddressesFixture);
+  const { securityCouncil, nonAuthorizedAccount } = await getAccountsFixture();
+  const roleAddresses = await getValidiumRoleAddressesFixture();
 
   const { addressFilter } = await deployAddressFilter(securityCouncil.address, [nonAuthorizedAccount.address]);
 
@@ -60,7 +51,7 @@ export async function deployValidiumFixture() {
   const { parentStateRootHash } = firstCompressedDataContent;
 
   const initializationData = {
-    initialStateRootHash: parentStateRootHash,
+    initialStateRootHash: hex(parentStateRootHash),
     initialL2BlockNumber: 0,
     genesisTimestamp: DEFAULT_LAST_FINALIZED_TIMESTAMP,
     defaultVerifier: verifier,
@@ -71,27 +62,25 @@ export async function deployValidiumFixture() {
     unpauseTypeRoles: VALIDIUM_UNPAUSE_TYPES_ROLES,
     defaultAdmin: securityCouncil.address,
     shnarfProvider: ADDRESS_ZERO,
-    addressFilter: await addressFilter.getAddress(),
+    addressFilter: addressFilter.address,
   };
 
-  const validium = (await deployUpgradableFromFactory("TestValidium", [initializationData], {
+  const validium = await deployUpgradableFromFactory("TestValidium", [initializationData], {
     initializer: VALIDIUM_INITIALIZE_SIGNATURE,
     unsafeAllow: ["constructor", "incorrect-initializer-order"],
-  })) as unknown as TestValidium;
+  });
 
   return { verifier, validium, addressFilter };
 }
 
-export async function deployMockYieldManager(): Promise<string> {
-  const mockYieldManagerFactory = await ethers.getContractFactory("MockYieldManager");
-  const mockYieldManager = await mockYieldManagerFactory.deploy();
-  await mockYieldManager.waitForDeployment();
-  return await mockYieldManager.getAddress();
+export async function deployMockYieldManager(): Promise<Address> {
+  const mockYieldManager = await deployFromFactory("MockYieldManager");
+  return mockYieldManager.address;
 }
 
 export async function deployLinethRollupFixture() {
-  const { securityCouncil, nonAuthorizedAccount } = await loadFixture(getAccountsFixture);
-  const roleAddresses = await loadFixture(getRoleAddressesFixture);
+  const { securityCouncil, nonAuthorizedAccount } = await getAccountsFixture();
+  const roleAddresses = await getRoleAddressesFixture();
 
   const { addressFilter } = await deployAddressFilter(securityCouncil.address, [nonAuthorizedAccount.address]);
 
@@ -101,74 +90,67 @@ export async function deployLinethRollupFixture() {
   const yieldManager = await deployMockYieldManager();
 
   const initializationData: LinethRollupInitializationData = {
-    initialStateRootHash: parentStateRootHash,
+    initialStateRootHash: hex(parentStateRootHash),
     initialL2BlockNumber: 0n,
     genesisTimestamp: DEFAULT_LAST_FINALIZED_TIMESTAMP,
     defaultVerifier: verifier,
     rateLimitPeriodInSeconds: BigInt(ONE_DAY_IN_SECONDS),
     rateLimitAmountInWei: BigInt(INITIAL_WITHDRAW_LIMIT),
     roleAddresses,
-    pauseTypeRoles: LINETH_ROLLUP_V8_PAUSE_TYPES_ROLES as unknown as PauseTypeRole[],
-    unpauseTypeRoles: LINETH_ROLLUP_V8_UNPAUSE_TYPES_ROLES as unknown as PauseTypeRole[],
+    pauseTypeRoles: LINETH_ROLLUP_V8_PAUSE_TYPES_ROLES,
+    unpauseTypeRoles: LINETH_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
     defaultAdmin: securityCouncil.address,
     shnarfProvider: ADDRESS_ZERO,
-    addressFilter: await addressFilter.getAddress(),
+    addressFilter: addressFilter.address,
   };
 
-  const linethRollup = (await deployUpgradableFromFactory(
+  const linethRollup = await deployUpgradableFromFactory(
     "TestLinethRollup",
     [initializationData, FALLBACK_OPERATOR_ADDRESS, yieldManager],
     {
       initializer: LINETH_ROLLUP_INITIALIZE_SIGNATURE,
       unsafeAllow: ["constructor", "incorrect-initializer-order"],
     },
-  )) as unknown as TestLinethRollup;
+  );
 
   return { verifier, linethRollup, addressFilter, yieldManager, linethRollupInitializationData: initializationData };
 }
 
-export async function deployAddressFilter(securityCouncil: string, nonAuthorizedAccount: string[]) {
-  const AddressFilterFactory = await ethers.getContractFactory("AddressFilter");
-
-  const addressFilter = (await AddressFilterFactory.deploy(securityCouncil, [
-    ...PRECOMPILES_ADDRESSES,
-    ...nonAuthorizedAccount,
-  ])) as unknown as AddressFilter;
-
-  await addressFilter.waitForDeployment();
+export async function deployAddressFilter(securityCouncil: Address, nonAuthorizedAccount: Address[]) {
+  const addressFilter = await deployFromFactory("AddressFilter", [
+    securityCouncil,
+    [...PRECOMPILES_ADDRESSES.map(address), ...nonAuthorizedAccount],
+  ]);
 
   return { addressFilter };
 }
 
 export async function deployMimcFixture() {
-  const mimc = (await deployFromFactory("Mimc")) as unknown as Mimc;
-  await mimc.waitForDeployment();
+  const mimc = await deployFromFactory("Mimc");
   return { mimc };
 }
 
 export async function deployForcedTransactionGatewayFixture() {
-  const { securityCouncil } = await loadFixture(getAccountsFixture);
+  const { securityCouncil } = await getAccountsFixture();
   const { linethRollup, addressFilter, verifier, yieldManager, linethRollupInitializationData } =
-    await loadFixture(deployLinethRollupFixture);
-  const { mimc } = await loadFixture(deployMimcFixture);
+    await deployLinethRollupFixture();
+  const { mimc } = await deployMimcFixture();
 
-  const forcedTransactionGatewayFactory = await ethers.getContractFactory("ForcedTransactionGateway", {
-    libraries: { Mimc: await mimc.getAddress() },
-  });
-
-  const forcedTransactionGateway = (await forcedTransactionGatewayFactory.deploy(
-    await linethRollup.getAddress(),
-    LINEA_MAINNET_CHAIN_ID,
-    THREE_DAYS_IN_SECONDS,
-    MAX_FORCED_TRANSACTION_GAS_LIMIT,
-    MAX_INPUT_LENGTH_LIMIT,
-    securityCouncil.address,
-    await addressFilter.getAddress(),
-    L2_BLOCK_DURATION_SECONDS,
-    BLOCK_NUMBER_DEADLINE_BUFFER,
-  )) as unknown as ForcedTransactionGateway;
-
-  await forcedTransactionGateway.waitForDeployment();
+  const forcedTransactionGateway = await deployFromFactory(
+    "ForcedTransactionGateway",
+    [
+      linethRollup.address,
+      LINEA_MAINNET_CHAIN_ID,
+      BigInt(THREE_DAYS_IN_SECONDS),
+      MAX_FORCED_TRANSACTION_GAS_LIMIT,
+      MAX_INPUT_LENGTH_LIMIT,
+      securityCouncil.address,
+      addressFilter.address,
+      L2_BLOCK_DURATION_SECONDS,
+      BLOCK_NUMBER_DEADLINE_BUFFER,
+    ],
+    { libraries: { Mimc: mimc.address } },
+  );
 
   return {
     linethRollup,
@@ -182,38 +164,40 @@ export async function deployForcedTransactionGatewayFixture() {
 }
 
 export async function deployAddressFilterFixture() {
-  const { securityCouncil, nonAuthorizedAccount } = await loadFixture(getAccountsFixture);
+  const { securityCouncil, nonAuthorizedAccount } = await getAccountsFixture();
   const { addressFilter } = await deployAddressFilter(securityCouncil.address, [nonAuthorizedAccount.address]);
   return { addressFilter };
 }
 
-async function deployTestPlonkVerifierForDataAggregation(): Promise<string> {
-  const mimc = (await deployFromFactory("Mimc")) as Mimc;
-  const testPlonkVerifierFactory = await ethers.getContractFactory("TestPlonkVerifierForDataAggregation", {
-    libraries: { Mimc: await mimc.getAddress() },
-  });
-  const verifier = await testPlonkVerifierFactory.deploy([
-    {
-      value: toBeHex(59144, 32),
-      name: "chainId",
-    },
-    {
-      value: toBeHex(7n, 32),
-      name: "baseFee",
-    },
-    {
-      value: toBeHex("0x8f81e2e3f8b46467523463835f965ffe476e1c9e", 32),
-      name: "coinbase",
-    },
-    {
-      value: toBeHex("0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec", 32),
-      name: "l2MessageServiceAddress",
-    },
-    {
-      value: toBeHex(0n, 32),
-      name: "isAllowedCircuitID",
-    },
-  ]);
-  await verifier.waitForDeployment();
-  return await verifier.getAddress();
+async function deployTestPlonkVerifierForDataAggregation(): Promise<Address> {
+  const mimc = await deployFromFactory("Mimc");
+  const verifier = await deployFromFactory(
+    "TestPlonkVerifierForDataAggregation",
+    [
+      [
+        {
+          value: toHex(59144, { size: 32 }),
+          name: "chainId",
+        },
+        {
+          value: toHex(7n, { size: 32 }),
+          name: "baseFee",
+        },
+        {
+          value: pad("0x8f81e2e3f8b46467523463835f965ffe476e1c9e", { size: 32 }),
+          name: "coinbase",
+        },
+        {
+          value: pad("0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec", { size: 32 }),
+          name: "l2MessageServiceAddress",
+        },
+        {
+          value: toHex(0n, { size: 32 }),
+          name: "isAllowedCircuitID",
+        },
+      ],
+    ],
+    { libraries: { Mimc: mimc.address } },
+  );
+  return verifier.address;
 }

@@ -1,5 +1,5 @@
-import { ethers } from "ethers";
 import * as fs from "fs";
+import { generatePrivateKey, privateKeyToAddress } from "viem/accounts";
 
 async function main() {
   let data = "recipient,amount\n";
@@ -9,7 +9,7 @@ async function main() {
   data = "";
   for (let i = 0; i < 2; i++) {
     let value = 23;
-    const wallet = ethers.Wallet.createRandom();
+    const walletAddress = privateKeyToAddress(generatePrivateKey());
     if (i % 3 == 0) {
       value = values[0];
     }
@@ -25,7 +25,7 @@ async function main() {
     if (i % 17 == 0) {
       value = values[4];
     }
-    data += `${wallet.address},${value}\n`;
+    data += `${walletAddress},${value}\n`;
   }
   fs.appendFileSync("example2.csv", data);
 }

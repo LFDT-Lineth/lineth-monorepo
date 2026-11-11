@@ -1,6 +1,7 @@
 import { expect } from "chai";
+import { describe, it } from "node:test";
 
-import { __testOnlySignerUiBridge } from "../../../scripts/hardhat/signer-ui-bridge";
+import { __testOnlySignerUiBridge } from "../../../hardhat-plugins/signer-ui/bridge.js";
 
 describe("signer-ui bridge payload parsing and request shaping", () => {
   it("builds the signer UI URL without a bearer session token", () => {

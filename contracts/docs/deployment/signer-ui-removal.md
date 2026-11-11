@@ -10,36 +10,34 @@ Do **not** follow this guide for day-to-day use. Operators should leave `HARDHAT
 
 | Area | Path / symbol |
 |------|----------------|
-| Bridge + session logic | `contracts/scripts/hardhat/signer-ui-bridge.ts` |
-| Shared signer-mode helper | `contracts/scripts/hardhat/signer-mode.ts` |
+| Plugin (flag, task-scoped hook, bridge) | `contracts/hardhat-plugins/signer-ui/`: `index.ts` (`--signer-ui`, `deploy:recover`), `session.ts` (`withSignerUi`), `bridge.ts` (session + network hook), `http.ts`, `next-dev.ts`, `transactions.ts`, `broadcast-log.ts`, `recover.ts`, `signer-mode.ts` (incl. `resolveDeployerAccounts`), `type-extensions.ts` |
 | Next.js app | `contracts/signer-ui/` (local private Next.js app) |
-| Hardhat hook | `subtask(TASK_DEPLOY_RUN_DEPLOY)` in `contracts/hardhat.config.ts` |
-| Config branch | `deployerAccounts()` UI branch in `contracts/hardhat.config.ts` |
-| Deploy script wrappers | `withSignerUiSession`, `getUiSigner`, `setUiTransactionContext` across `contracts/deploy/*.ts` |
-| Operational tasks | `runWithSignerUiSession`, `getUiSigner` in `scripts/operational/**` |
-| Shared helpers | `resolveUiRunner` / UI context in `contracts/scripts/hardhat/utils.ts` |
+| Config | `resolveDeployerAccounts()` in `contracts/hardhat.config.ts`; the deploy plugin (`hardhat-plugins/deploy/index.ts`) lists the signer-UI plugin as a dependency |
+| Deploy plugin | `withSignerUi` around `ignition deploy` in `hardhat-plugins/deploy/deploy-action.ts`; `getUiWalletClient` in `ignition/modules/rollup/AddressFilter.deploy.ts` |
+| Operational scripts | `withSignerUi`, `getUiWalletClient`, `setUiTransactionContext` in `scripts/operational/**`, `scripts/upgrades/**`, `scripts/testEIP7702/**` |
+| Shared helpers | `common/helpers/signerUiWorkflowStatus.ts` |
 | ESLint ignore | `signer-ui/**` in `contracts/eslint.config.mjs` |
 | Documentation | Sections in `contracts/docs/deployment/README.md`, `chained-deployments.md`, `contracts/signer-ui/README.md`, this file; cross-links from `contracts/AGENTS.md`, `docs/tech/components/contracts.md` |
 
 ## 1. `hardhat.config.ts`
 
-1. Remove the `subtask(TASK_DEPLOY_RUN_DEPLOY).setAction(...)` block that `require()`s `./scripts/hardhat/signer-ui-bridge.ts`.
-2. Remove the shared signer-mode validation/helper import (`./scripts/hardhat/signer-mode.ts`) if you no longer need browser-signing exclusivity checks.
-3. Simplify **`deployerAccounts()`**: delete the `HARDHAT_SIGNER_UI` branch and the non-zero key validation; always return `[normalizedPrivateKey]` from env (or your preferred account wiring).
+1. Remove `import("../signer-ui/index.js")` from the deploy plugin's `dependencies`.
+2. Replace **`resolveDeployerAccounts()`** with the `DEPLOYER_PRIVATE_KEY` account (move the key validation next to `hardhat.config.ts`).
 
 ## 2. Delete UI and bridge implementation
 
-- Delete **`contracts/scripts/hardhat/signer-ui-bridge.ts`**.
+- Delete **`contracts/hardhat-plugins/signer-ui/`** (this also removes `--signer-ui` and the `deploy:recover` task).
 - Delete the directory **`contracts/signer-ui/`**.
 
-## 3. `contracts/scripts/hardhat/utils.ts`
+## 3. Deploy plugin
 
-1. Remove imports from `./signer-ui-bridge` (`resolveUiRunner`, `setUiTransactionContext`, `isSignerUiEnabled`).
-2. Remove **`pushUiDeployContext`** / **`setUiTransactionContext`** usage and reimplement **`resolveUiRunner`** as a local helper that only handles non-UI signers (see previous git history for the non-UI branches).
+Remove the `withSignerUi(...)` wrapper in `hardhat-plugins/deploy/deploy-action.ts` (call its body directly).
 
-## 4. Deploy scripts and operational tasks
+## 4. Deploy tasks and operational scripts
 
-- Remove `withSignerUiSession` wrappers and `getUiSigner` / `runWithSignerUiSession` from `contracts/deploy/*.ts` and `scripts/operational/**/*.ts`; restore explicit `hre.ethers.getSigner` / named accounts as needed.
+- Replace `withSignerUi(hre, label, fn)` with a direct `fn()` call.
+- Replace `getUiWalletClient(connection)` with `(await connection.viem.getWalletClients())[0]`.
+- Remove `setUiTransactionContext` / `setUiWorkflowStatus` calls.
 
 ## 5. Lockfile and verification
 
@@ -47,7 +45,7 @@ Do **not** follow this guide for day-to-day use. Operators should leave `HARDHAT
 2. Search the repo:
 
    ```bash
-   rg "HARDHAT_SIGNER_UI|signer-ui-bridge|linea-contract-signer-ui|signer-ui/" --glob '!**/node_modules/**' --glob '!**/pnpm-lock.yaml'
+   rg "HARDHAT_SIGNER_UI|signer-ui|signerUi|withSignerUi|contract-signer-ui" --glob '!**/node_modules/**' --glob '!**/pnpm-lock.yaml'
    ```
 
 ## 6. Documentation

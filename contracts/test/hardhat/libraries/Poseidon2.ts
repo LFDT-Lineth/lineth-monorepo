@@ -1,41 +1,44 @@
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
+import { network } from "hardhat";
+import { describe, it, beforeEach } from "node:test";
 
-import { Poseidon2 } from "../../../typechain-types";
-import poseidon2TestData from "../_testData/poseidon2-test-data.json";
-import { deployFromFactory } from "../common/deployment";
-import { expectRevertWithCustomError } from "../common/helpers";
+import poseidon2TestData from "../_testData/poseidon2-test-data.json" with { type: "json" };
+import { deployFromFactory } from "../common/deployment.js";
+import { hex, expectRevertWithCustomError } from "../common/helpers/index.js";
+
+import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
 
 describe("Poseidon2", () => {
-  let poseidon2: Poseidon2;
+  let poseidon2: ContractReturnType<"Poseidon2">;
 
   async function deployPoseidon2Fixture() {
-    return deployFromFactory("Poseidon2") as Promise<Poseidon2>;
+    return deployFromFactory("Poseidon2");
   }
 
   beforeEach(async () => {
-    poseidon2 = await loadFixture(deployPoseidon2Fixture);
+    const { networkHelpers } = await network.getOrCreate();
+    poseidon2 = await networkHelpers.loadFixture(deployPoseidon2Fixture);
   });
 
   describe("hash", () => {
     it("Should return poseidon2 hash for each test case", async () => {
       for (const element of poseidon2TestData) {
-        expect(await poseidon2.hash(element.in)).to.equal(element.out);
+        expect(await poseidon2.read.hash([hex(element.in)])).to.equal(element.out);
       }
     });
 
     it("Should revert if the data is zero length", async () => {
-      await expectRevertWithCustomError(poseidon2, poseidon2.hash("0x"), "DataIsEmpty");
+      await expectRevertWithCustomError(poseidon2, poseidon2.read.hash(["0x"]), "DataIsEmpty");
     });
 
     it("Should revert if the data is less than 32 and not mod32", async () => {
-      await expectRevertWithCustomError(poseidon2, poseidon2.hash("0x12"), "DataIsNotMod32");
+      await expectRevertWithCustomError(poseidon2, poseidon2.read.hash(["0x12"]), "DataIsNotMod32");
     });
 
     it("Should revert if the data is greater than 32 and not mod32", async () => {
       await expectRevertWithCustomError(
         poseidon2,
-        poseidon2.hash("0x103adbc490c2067eac112873462707eb2072813005a4ac3ab182135be336742423456789"),
+        poseidon2.read.hash(["0x103adbc490c2067eac112873462707eb2072813005a4ac3ab182135be336742423456789"]),
         "DataIsNotMod32",
       );
     });
@@ -57,7 +60,7 @@ describe("Poseidon2", () => {
       ];
 
       for (const { input, output } of data) {
-        expect(await poseidon2.padBytes32(input)).to.deep.equal(output);
+        expect(await poseidon2.read.padBytes32([hex(input)])).to.deep.equal(output);
       }
     });
   });

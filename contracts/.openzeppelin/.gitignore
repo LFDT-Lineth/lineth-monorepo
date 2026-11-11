@@ -1,0 +1,11 @@
+# OpenZeppelin Upgrades manifests: proxies and implementations with their storage layouts, read by the upgrade modules'
+# validateUpgrade. Public networks are committed (OpenZeppelin's recommendation); local and dev chains are not.
+*
+!.gitignore
+# Ethereum mainnet, Sepolia, Hoodi
+!mainnet.json
+!sepolia.json
+!unknown-560048.json
+# Linea mainnet, Linea Sepolia
+!unknown-59144.json
+!unknown-59141.json

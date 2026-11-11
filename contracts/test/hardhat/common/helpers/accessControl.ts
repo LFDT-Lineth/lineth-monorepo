@@ -1,27 +1,34 @@
-import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { expect } from "chai";
-import { BaseContract } from "ethers";
 
-import { expectRevertWithReason } from "./expectations";
-import { buildAccessErrorMessage } from "./general";
+import { type TestAccount } from "./accounts.js";
+import { expectRevertWithReason } from "./expectations.js";
+import { buildAccessErrorMessage } from "./general.js";
+
+import type { Abi, Address, Hash, Hex } from "viem";
 
 /**
  * Interface for contracts that implement AccessControl
  */
-export interface AccessControlContract extends BaseContract {
-  hasRole(role: string, account: string): Promise<boolean>;
-  grantRole(role: string, account: string): Promise<unknown>;
-  revokeRole(role: string, account: string): Promise<unknown>;
-  renounceRole(role: string, account: string): Promise<unknown>;
-  getRoleAdmin(role: string): Promise<string>;
+export interface AccessControlContract {
+  abi: Abi;
+  address: Address;
+  read: {
+    hasRole(args: readonly [Hex, Address]): Promise<boolean>;
+    getRoleAdmin(args: readonly [Hex]): Promise<Hex>;
+  };
+  write: {
+    grantRole(args: readonly [Hex, Address]): Promise<Hash>;
+    revokeRole(args: readonly [Hex, Address]): Promise<Hash>;
+    renounceRole(args: readonly [Hex, Address]): Promise<Hash>;
+  };
 }
 
 /**
  * Role assignment configuration for batch operations
  */
 export interface RoleAssignment {
-  role: string;
-  account: SignerWithAddress;
+  role: Hex;
+  account: TestAccount;
 }
 
 /**
@@ -32,11 +39,11 @@ export interface RoleAssignment {
  */
 export async function expectHasRole<T extends AccessControlContract>(
   contract: T,
-  role: string,
-  account: SignerWithAddress | string,
+  role: Hex,
+  account: { address: Address } | Address,
 ): Promise<void> {
   const address = typeof account === "string" ? account : account.address;
-  const hasRole = await contract.hasRole(role, address);
+  const hasRole = await contract.read.hasRole([role, address]);
   expect(hasRole).to.be.true;
 }
 
@@ -48,11 +55,11 @@ export async function expectHasRole<T extends AccessControlContract>(
  */
 export async function expectDoesNotHaveRole<T extends AccessControlContract>(
   contract: T,
-  role: string,
-  account: SignerWithAddress | string,
+  role: Hex,
+  account: { address: Address } | Address,
 ): Promise<void> {
   const address = typeof account === "string" ? account : account.address;
-  const hasRole = await contract.hasRole(role, address);
+  const hasRole = await contract.read.hasRole([role, address]);
   expect(hasRole).to.be.false;
 }
 
@@ -70,26 +77,26 @@ export async function expectHasRoles<T extends AccessControlContract>(
 
 /**
  * Grants multiple roles in parallel
- * @param contract - Contract with AccessControl (connected to admin)
+ * @param contract - Contract with AccessControl, whose default sender holds the admin role
  * @param assignments - Array of role-account pairs to grant
  */
 export async function grantRoles<T extends AccessControlContract>(
   contract: T,
   assignments: RoleAssignment[],
 ): Promise<void> {
-  await Promise.all(assignments.map(({ role, account }) => contract.grantRole(role, account.address)));
+  await Promise.all(assignments.map(({ role, account }) => contract.write.grantRole([role, account.address])));
 }
 
 /**
  * Revokes multiple roles in parallel
- * @param contract - Contract with AccessControl (connected to admin)
+ * @param contract - Contract with AccessControl, whose default sender holds the admin role
  * @param assignments - Array of role-account pairs to revoke
  */
 export async function revokeRoles<T extends AccessControlContract>(
   contract: T,
   assignments: RoleAssignment[],
 ): Promise<void> {
-  await Promise.all(assignments.map(({ role, account }) => contract.revokeRole(role, account.address)));
+  await Promise.all(assignments.map(({ role, account }) => contract.write.revokeRole([role, account.address])));
 }
 
 /**
@@ -100,8 +107,8 @@ export async function revokeRoles<T extends AccessControlContract>(
  */
 export async function expectAccessControlRevert(
   asyncCall: Promise<unknown>,
-  account: SignerWithAddress,
-  requiredRole: string,
+  account: TestAccount,
+  requiredRole: Hex,
 ): Promise<void> {
   await expectRevertWithReason(asyncCall, buildAccessErrorMessage(account, requiredRole));
 }
@@ -112,49 +119,46 @@ export async function expectAccessControlRevert(
  * @param authorizedAccount - Account with the required role
  * @param unauthorizedAccount - Account without the required role
  * @param requiredRole - Role required for the action
- * @param actionFn - Function that performs the action (receives connected contract)
+ * @param actionFn - Performs the action as the given account (e.g. `contract.write.fn([...], { account: account.account })`)
  */
 export async function testRoleBasedAccess<T extends AccessControlContract>(
   contract: T,
-  authorizedAccount: SignerWithAddress,
-  unauthorizedAccount: SignerWithAddress,
-  requiredRole: string,
-  actionFn: (connectedContract: T) => Promise<unknown>,
+  authorizedAccount: TestAccount,
+  unauthorizedAccount: TestAccount,
+  requiredRole: Hex,
+  actionFn: (account: TestAccount) => Promise<unknown>,
 ): Promise<void> {
   // Verify unauthorized account cannot perform action
-  const unauthorizedContract = contract.connect(unauthorizedAccount) as T;
-  await expectAccessControlRevert(actionFn(unauthorizedContract), unauthorizedAccount, requiredRole);
+  await expectAccessControlRevert(actionFn(unauthorizedAccount), unauthorizedAccount, requiredRole);
 
   // Verify authorized account can perform action
-  const authorizedContract = contract.connect(authorizedAccount) as T;
-  await actionFn(authorizedContract);
+  await actionFn(authorizedAccount);
 }
 
 /**
  * Tests that granting a role enables the action and revoking disables it
- * @param contract - Contract with AccessControl (connected to admin)
+ * @param contract - Contract with AccessControl, whose default sender holds the admin role
  * @param account - Account to test with
  * @param role - Role to grant/revoke
- * @param actionFn - Function that performs the role-protected action
+ * @param actionFn - Performs the role-protected action as the given account
  */
 export async function testRoleGrantAndRevoke<T extends AccessControlContract>(
   contract: T,
-  account: SignerWithAddress,
-  role: string,
-  actionFn: (connectedContract: T) => Promise<unknown>,
+  account: TestAccount,
+  role: Hex,
+  actionFn: (account: TestAccount) => Promise<unknown>,
 ): Promise<void> {
   // Verify action fails without role
-  const connectedContract = contract.connect(account) as T;
-  await expectAccessControlRevert(actionFn(connectedContract), account, role);
+  await expectAccessControlRevert(actionFn(account), account, role);
 
   // Grant role and verify action succeeds
-  await contract.grantRole(role, account.address);
+  await contract.write.grantRole([role, account.address]);
   await expectHasRole(contract, role, account);
 
   // Revoke role and verify action fails again
-  await contract.revokeRole(role, account.address);
+  await contract.write.revokeRole([role, account.address]);
   await expectDoesNotHaveRole(contract, role, account);
-  await expectAccessControlRevert(actionFn(connectedContract), account, role);
+  await expectAccessControlRevert(actionFn(account), account, role);
 }
 
 /**
@@ -165,9 +169,9 @@ export async function testRoleGrantAndRevoke<T extends AccessControlContract>(
  */
 export async function expectRoleAdmin<T extends AccessControlContract>(
   contract: T,
-  role: string,
-  expectedAdminRole: string,
+  role: Hex,
+  expectedAdminRole: Hex,
 ): Promise<void> {
-  const adminRole = await contract.getRoleAdmin(role);
+  const adminRole = await contract.read.getRoleAdmin([role]);
   expect(adminRole).to.equal(expectedAdminRole);
 }

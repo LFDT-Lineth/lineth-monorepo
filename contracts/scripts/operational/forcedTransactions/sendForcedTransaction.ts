@@ -53,7 +53,7 @@
  *   TX_MAX_FEE_PER_GAS=1000000000 \
  *   TX_MAX_PRIORITY_FEE_PER_GAS=100000000 \
  *   TX_NONCE=0 \
- *   npx ts-node scripts/operational/forcedTransactions/sendForcedTransaction.ts
+ *   pnpm exec tsx scripts/operational/forcedTransactions/sendForcedTransaction.ts
  *
  *   # Mode A — submit a pre-signed transaction from a JSON file
  *   L1_RPC_URL=http://localhost:8445 \
@@ -61,17 +61,53 @@
  *   FORCED_TRANSACTION_GATEWAY_ADDRESS=0x0165878A594ca255338adfa4d48449f69242Eb8F \
  *   LINETH_ROLLUP_ADDRESS=0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9 \
  *   TX_DATA_FILE=./my-signed-tx.json \
- *   npx ts-node scripts/operational/forcedTransactions/sendForcedTransaction.ts
+ *   pnpm exec tsx scripts/operational/forcedTransactions/sendForcedTransaction.ts
  */
 
 import * as dotenv from "dotenv";
-import { ethers } from "ethers";
 import fs from "fs";
 import path from "path";
+import {
+  type Address,
+  type Hex,
+  type PrivateKeyAccount,
+  type PublicClient,
+  createPublicClient,
+  createWalletClient,
+  encodeAbiParameters,
+  getAddress,
+  hexToBigInt,
+  http,
+  isHex,
+  keccak256,
+  parseAbi,
+  parseAbiParameters,
+  parseEventLogs,
+  parseTransaction,
+  zeroHash,
+} from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 
-import { getRequiredEnvVar } from "../../../common/helpers/environment";
-import { abi as LinethRollupV8Abi } from "../../../local-deployments-artifacts/dynamic-artifacts/LinethRollupV8.json";
-import { abi as ForcedTransactionGatewayAbi } from "../../../local-deployments-artifacts/static-artifacts/ForcedTransactionGateway.json";
+import { getRequiredEnvVar } from "../../../common/helpers/environment.js";
+
+// Fragments of the LinethRollupV8 / ForcedTransactionGateway ABIs
+// (local-deployments-artifacts/{dynamic-artifacts/LinethRollupV8,static-artifacts/ForcedTransactionGateway}.json).
+const LinethRollupV8Abi = parseAbi([
+  "function currentFinalizedState() view returns (bytes32)",
+  "function currentL2BlockNumber() view returns (uint256)",
+  "function rollingHashes(uint256 messageNumber) view returns (bytes32 rollingHash)",
+  "function forcedTransactionRollingHashes(uint256 forcedTransactionNumber) view returns (bytes32 rollingHash)",
+  "function getRequiredForcedTransactionFields() view returns (bytes32 finalizedState, bytes32 previousForcedTransactionRollingHash, uint256 previousForcedTransactionBlockDeadline, uint256 currentFinalizedL2BlockNumber, uint256 forcedTransactionFeeAmount)",
+  "event FinalizedStateUpdated(uint256 indexed blockNumber, uint256 timestamp, uint256 messageNumber, uint256 forcedTransactionNumber)",
+  "event ForcedTransactionAdded(uint256 indexed forcedTransactionNumber, address indexed from, uint256 blockNumberDeadline, bytes32 forcedTransactionRollingHash, bytes rlpEncodedSignedTransaction)",
+]);
+const ForcedTransactionGatewayAbi = parseAbi([
+  "struct AccessList { address contractAddress; bytes32[] storageKeys; }",
+  "struct Eip1559Transaction { uint256 nonce; uint256 maxPriorityFeePerGas; uint256 maxFeePerGas; uint256 gasLimit; address to; uint256 value; bytes input; AccessList[] accessList; uint8 yParity; uint256 r; uint256 s; }",
+  "struct LastFinalizedState { uint256 timestamp; uint256 messageNumber; bytes32 messageRollingHash; uint256 forcedTransactionNumber; bytes32 forcedTransactionRollingHash; }",
+  "function DESTINATION_CHAIN_ID() view returns (uint256)",
+  "function submitForcedTransaction(Eip1559Transaction _forcedTransaction, LastFinalizedState _lastFinalizedState) payable",
+]);
 
 dotenv.config();
 
@@ -83,17 +119,17 @@ const DEFAULT_LAST_FINALIZED_TIMESTAMP = 1770394477n;
 const DEFAULT_FINALIZED_STATE = {
   timestamp: DEFAULT_LAST_FINALIZED_TIMESTAMP,
   messageNumber: 0n,
-  messageRollingHash: ethers.ZeroHash,
+  messageRollingHash: zeroHash,
   forcedTransactionNumber: 0n,
-  forcedTransactionRollingHash: ethers.ZeroHash,
+  forcedTransactionRollingHash: zeroHash,
 };
 
 type LastFinalizedState = {
   timestamp: bigint;
   messageNumber: bigint;
-  messageRollingHash: string;
+  messageRollingHash: Hex;
   forcedTransactionNumber: bigint;
-  forcedTransactionRollingHash: string;
+  forcedTransactionRollingHash: Hex;
 };
 
 type Eip1559TransactionStruct = {
@@ -101,31 +137,35 @@ type Eip1559TransactionStruct = {
   maxPriorityFeePerGas: bigint;
   maxFeePerGas: bigint;
   gasLimit: bigint;
-  to: string;
+  to: Address;
   value: bigint;
-  input: string;
-  accessList: { contractAddress: string; storageKeys: string[] }[];
+  input: Hex;
+  accessList: { contractAddress: Address; storageKeys: Hex[] }[];
   yParity: number;
   r: bigint;
   s: bigint;
 };
 
+function toHexValue(value: unknown, label: string): Hex {
+  if (typeof value !== "string" || !isHex(value)) {
+    throw new Error(`Invalid ${label}: expected a 0x-prefixed hex string.`);
+  }
+  return value;
+}
+
 /**
  * Computes the finalized state hash identical to
  * FinalizedStateHashing._computeLastFinalizedState in Solidity.
  */
-function computeFinalizedStateHash(state: LastFinalizedState): string {
-  return ethers.keccak256(
-    ethers.AbiCoder.defaultAbiCoder().encode(
-      ["uint256", "bytes32", "uint256", "bytes32", "uint256"],
-      [
-        state.messageNumber,
-        state.messageRollingHash,
-        state.forcedTransactionNumber,
-        state.forcedTransactionRollingHash,
-        state.timestamp,
-      ],
-    ),
+function computeFinalizedStateHash(state: LastFinalizedState): Hex {
+  return keccak256(
+    encodeAbiParameters(parseAbiParameters("uint256, bytes32, uint256, bytes32, uint256"), [
+      state.messageNumber,
+      state.messageRollingHash,
+      state.forcedTransactionNumber,
+      state.forcedTransactionRollingHash,
+      state.timestamp,
+    ]),
   );
 }
 
@@ -136,11 +176,9 @@ function computeFinalizedStateHash(state: LastFinalizedState): string {
  * 2. If not, reconstructs the state from the FinalizedStateUpdated event
  *    and the rollingHashes / forcedTransactionRollingHashes mappings.
  */
-async function resolveLastFinalizedState(
-  rollup: ethers.Contract,
-  provider: ethers.JsonRpcProvider,
-): Promise<LastFinalizedState> {
-  const onChainStateHash: string = await rollup.currentFinalizedState();
+async function resolveLastFinalizedState(provider: PublicClient, rollupAddress: Address): Promise<LastFinalizedState> {
+  const rollup = { address: rollupAddress, abi: LinethRollupV8Abi } as const;
+  const onChainStateHash = await provider.readContract({ ...rollup, functionName: "currentFinalizedState" });
   console.log(`On-chain currentFinalizedState: ${onChainStateHash}`);
 
   const defaultHash = computeFinalizedStateHash(DEFAULT_FINALIZED_STATE);
@@ -151,17 +189,15 @@ async function resolveLastFinalizedState(
 
   console.log("Finalized state differs from default — reconstructing from on-chain events...");
 
-  const currentL2BlockNumber: bigint = await rollup.currentL2BlockNumber();
+  const currentL2BlockNumber = await provider.readContract({ ...rollup, functionName: "currentL2BlockNumber" });
   console.log(`currentL2BlockNumber: ${currentL2BlockNumber}`);
 
-  const eventSignature = "FinalizedStateUpdated(uint256,uint256,uint256,uint256)";
-  const eventTopic = ethers.id(eventSignature);
-  const blockNumberTopic = ethers.AbiCoder.defaultAbiCoder().encode(["uint256"], [currentL2BlockNumber]);
-
-  const logs = await provider.getLogs({
-    address: await rollup.getAddress(),
-    topics: [eventTopic, blockNumberTopic],
-    fromBlock: 0,
+  // FinalizedStateUpdated(uint256,uint256,uint256,uint256) filtered on the indexed blockNumber.
+  const logs = await provider.getContractEvents({
+    ...rollup,
+    eventName: "FinalizedStateUpdated",
+    args: { blockNumber: currentL2BlockNumber },
+    fromBlock: 0n,
     toBlock: "latest",
   });
 
@@ -173,24 +209,23 @@ async function resolveLastFinalizedState(
   }
 
   const latestLog = logs[logs.length - 1];
-  const iface = new ethers.Interface(LinethRollupV8Abi);
-  const parsed = iface.parseLog({ topics: latestLog.topics as string[], data: latestLog.data });
+  const { timestamp, messageNumber, forcedTransactionNumber } = latestLog.args;
 
-  if (!parsed) {
+  if (timestamp === undefined || messageNumber === undefined || forcedTransactionNumber === undefined) {
     throw new Error("Failed to parse FinalizedStateUpdated event.");
   }
-
-  const timestamp: bigint = parsed.args.timestamp;
-  const messageNumber: bigint = parsed.args.messageNumber;
-  const forcedTransactionNumber: bigint = parsed.args.forcedTransactionNumber;
 
   console.log(
     `Event data — timestamp=${timestamp}, messageNumber=${messageNumber}, forcedTransactionNumber=${forcedTransactionNumber}`,
   );
 
-  const [messageRollingHash, forcedTransactionRollingHash]: [string, string] = await Promise.all([
-    rollup.rollingHashes(messageNumber),
-    rollup.forcedTransactionRollingHashes(forcedTransactionNumber),
+  const [messageRollingHash, forcedTransactionRollingHash] = await Promise.all([
+    provider.readContract({ ...rollup, functionName: "rollingHashes", args: [messageNumber] }),
+    provider.readContract({
+      ...rollup,
+      functionName: "forcedTransactionRollingHashes",
+      args: [forcedTransactionNumber],
+    }),
   ]);
 
   console.log(`messageRollingHash=${messageRollingHash}, forcedTransactionRollingHash=${forcedTransactionRollingHash}`);
@@ -230,13 +265,13 @@ function buildTransactionFromFile(filePath: string): Eip1559TransactionStruct {
     maxPriorityFeePerGas: BigInt(raw.maxPriorityFeePerGas),
     maxFeePerGas: BigInt(raw.maxFeePerGas),
     gasLimit: BigInt(raw.gasLimit ?? raw.gas),
-    to: raw.to,
+    to: getAddress(raw.to),
     value: BigInt(raw.value ?? 0),
-    input: raw.input ?? raw.data ?? "0x",
+    input: toHexValue(raw.input ?? raw.data ?? "0x", "input"),
     accessList: (raw.accessList ?? []).map(
       (entry: { address?: string; contractAddress?: string; storageKeys: string[] }) => ({
-        contractAddress: entry.contractAddress ?? entry.address,
-        storageKeys: entry.storageKeys ?? [],
+        contractAddress: getAddress(entry.contractAddress ?? entry.address ?? ""),
+        storageKeys: (entry.storageKeys ?? []).map((key) => toHexValue(key, "accessList storage key")),
       }),
     ),
     yParity: Number(raw.yParity ?? raw.v),
@@ -246,79 +281,92 @@ function buildTransactionFromFile(filePath: string): Eip1559TransactionStruct {
 }
 
 /**
- * Builds an Eip1559TransactionStruct by signing a transaction with the provided wallet.
+ * Builds an Eip1559TransactionStruct by signing a transaction with the provided account.
  */
-async function buildTransactionFromParams(wallet: ethers.Wallet, chainId: bigint): Promise<Eip1559TransactionStruct> {
-  const to = getRequiredEnvVar("TX_TO");
+async function buildTransactionFromParams(
+  account: PrivateKeyAccount,
+  chainId: bigint,
+): Promise<Eip1559TransactionStruct> {
+  const to = getAddress(getRequiredEnvVar("TX_TO"));
   const gasLimit = BigInt(getRequiredEnvVar("TX_GAS_LIMIT"));
   const maxFeePerGas = BigInt(getRequiredEnvVar("TX_MAX_FEE_PER_GAS"));
   const maxPriorityFeePerGas = BigInt(getRequiredEnvVar("TX_MAX_PRIORITY_FEE_PER_GAS"));
   const nonce = BigInt(getRequiredEnvVar("TX_NONCE"));
-  const data = process.env.TX_DATA ?? "0x";
+  const data = toHexValue(process.env.TX_DATA ?? "0x", "TX_DATA");
   const value = BigInt(process.env.TX_VALUE ?? "0");
 
   console.log(
     `Signing L2 transaction — to=${to}, nonce=${nonce}, gasLimit=${gasLimit}, maxFeePerGas=${maxFeePerGas}, maxPriorityFeePerGas=${maxPriorityFeePerGas}, value=${value}, data=${data}, chainId=${chainId}`,
   );
 
-  const tx: ethers.TransactionLike = {
-    type: 2,
-    chainId,
+  const signedTxHex = await account.signTransaction({
+    type: "eip1559",
+    chainId: Number(chainId),
     nonce: Number(nonce),
     maxPriorityFeePerGas,
     maxFeePerGas,
-    gasLimit,
+    gas: gasLimit,
     to,
     value,
     data,
     accessList: [],
-  };
+  });
+  const parsed = parseTransaction(signedTxHex);
 
-  const signedTxHex = await wallet.signTransaction(tx);
-  const parsed = ethers.Transaction.from(signedTxHex);
-
-  if (!parsed.signature) {
+  if (parsed.r === undefined || parsed.s === undefined || parsed.yParity === undefined) {
     throw new Error("Failed to extract signature from signed transaction.");
+  }
+  if (
+    parsed.nonce === undefined ||
+    parsed.maxPriorityFeePerGas === undefined ||
+    parsed.maxFeePerGas === undefined ||
+    parsed.gas === undefined ||
+    !parsed.to
+  ) {
+    throw new Error("Failed to parse signed transaction.");
   }
 
   return {
     nonce: BigInt(parsed.nonce),
-    maxPriorityFeePerGas: parsed.maxPriorityFeePerGas!,
-    maxFeePerGas: parsed.maxFeePerGas!,
-    gasLimit: BigInt(parsed.gasLimit),
-    to: parsed.to!,
-    value: parsed.value,
-    input: parsed.data,
+    maxPriorityFeePerGas: parsed.maxPriorityFeePerGas,
+    maxFeePerGas: parsed.maxFeePerGas,
+    gasLimit: parsed.gas,
+    to: parsed.to,
+    value: parsed.value ?? 0n,
+    input: parsed.data ?? "0x",
     accessList: [],
-    yParity: parsed.signature.yParity,
-    r: BigInt(parsed.signature.r),
-    s: BigInt(parsed.signature.s),
+    yParity: parsed.yParity,
+    r: hexToBigInt(parsed.r),
+    s: hexToBigInt(parsed.s),
   };
 }
 
 async function main() {
   // --- Configuration ---
   const l1RpcUrl = getRequiredEnvVar("L1_RPC_URL");
-  const privateKey = getRequiredEnvVar("PRIVATE_KEY");
-  const gatewayAddress = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_ADDRESS");
-  const rollupAddress = getRequiredEnvVar("LINETH_ROLLUP_ADDRESS");
+  const privateKey = toHexValue(getRequiredEnvVar("PRIVATE_KEY"), "PRIVATE_KEY");
+  const gatewayAddress = getAddress(getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_ADDRESS"));
+  const rollupAddress = getAddress(getRequiredEnvVar("LINETH_ROLLUP_ADDRESS"));
 
-  const l2PrivateKey = process.env.L2_PRIVATE_KEY ?? privateKey;
+  const l2PrivateKey = process.env.L2_PRIVATE_KEY
+    ? toHexValue(process.env.L2_PRIVATE_KEY, "L2_PRIVATE_KEY")
+    : privateKey;
   const txDataFile = process.env.TX_DATA_FILE;
 
-  // --- Provider & Wallets ---
-  const provider = new ethers.JsonRpcProvider(l1RpcUrl);
-  const { chainId } = await provider.getNetwork();
-  const l1Wallet = new ethers.Wallet(privateKey, provider);
-  console.log(`Connected — l1RpcUrl=${l1RpcUrl}, chainId=${chainId}, l1Sender=${l1Wallet.address}`);
+  // --- Clients & Accounts ---
+  const provider = createPublicClient({ transport: http(l1RpcUrl) });
+  const chainId = await provider.getChainId();
+  const l1Account = privateKeyToAccount(privateKey);
+  const l1Wallet = createWalletClient({ account: l1Account, transport: http(l1RpcUrl) });
+  console.log(`Connected — l1RpcUrl=${l1RpcUrl}, chainId=${chainId}, l1Sender=${l1Account.address}`);
 
   // --- Contract Instances ---
-  const rollup = new ethers.Contract(rollupAddress, LinethRollupV8Abi, l1Wallet);
-  const gateway = new ethers.Contract(gatewayAddress, ForcedTransactionGatewayAbi, l1Wallet);
+  const rollup = { address: rollupAddress, abi: LinethRollupV8Abi } as const;
+  const gateway = { address: gatewayAddress, abi: ForcedTransactionGatewayAbi } as const;
 
   // --- Resolve Last Finalized State ---
   console.log("\n--- Resolving last finalized state ---");
-  const lastFinalizedState = await resolveLastFinalizedState(rollup, provider);
+  const lastFinalizedState = await resolveLastFinalizedState(provider, rollupAddress);
   console.log(
     `Last finalized state — timestamp=${lastFinalizedState.timestamp}, messageNumber=${lastFinalizedState.messageNumber}, messageRollingHash=${lastFinalizedState.messageRollingHash}, forcedTransactionNumber=${lastFinalizedState.forcedTransactionNumber}, forcedTransactionRollingHash=${lastFinalizedState.forcedTransactionRollingHash}`,
   );
@@ -330,11 +378,11 @@ async function main() {
   if (txDataFile) {
     forcedTransaction = buildTransactionFromFile(txDataFile);
   } else {
-    const destinationChainId: bigint = await gateway.DESTINATION_CHAIN_ID();
-    const l2Wallet = new ethers.Wallet(l2PrivateKey);
-    console.log(`Building from params — destinationChainId=${destinationChainId}, l2Signer=${l2Wallet.address}`);
+    const destinationChainId = await provider.readContract({ ...gateway, functionName: "DESTINATION_CHAIN_ID" });
+    const l2Account = privateKeyToAccount(l2PrivateKey);
+    console.log(`Building from params — destinationChainId=${destinationChainId}, l2Signer=${l2Account.address}`);
 
-    forcedTransaction = await buildTransactionFromParams(l2Wallet, destinationChainId);
+    forcedTransaction = await buildTransactionFromParams(l2Account, destinationChainId);
   }
 
   console.log(
@@ -343,50 +391,64 @@ async function main() {
 
   // --- Read Fee & Submit ---
   console.log("\n--- Submitting forced transaction ---");
-  const [, , , , feeAmount] = await rollup.getRequiredForcedTransactionFields();
+  const [, , , , feeAmount] = await provider.readContract({
+    ...rollup,
+    functionName: "getRequiredForcedTransactionFields",
+  });
 
-  // get1559Fees uses truthiness checks, so 0n values are omitted.
   // Query fee data directly to handle zero priority fees on local chains.
-  const {
-    maxFeePerGas: l1MaxFee,
-    maxPriorityFeePerGas: l1PriorityFee,
-    gasPrice: l1GasPrice,
-  } = await provider.getFeeData();
+  const block = await provider.getBlock();
+  const l1GasPrice = await provider.getGasPrice();
+  const l1FeesPerGas = block.baseFeePerGas == null ? undefined : await provider.estimateFeesPerGas();
+  const l1MaxFee = l1FeesPerGas?.maxFeePerGas;
+  const l1PriorityFee = l1FeesPerGas?.maxPriorityFeePerGas;
 
   // Prefer EIP-1559 fields; only fall back to gasPrice for legacy chains
   const l1GasOverrides =
     l1MaxFee != null && l1PriorityFee != null
-      ? { maxFeePerGas: l1MaxFee * 2n, maxPriorityFeePerGas: l1PriorityFee == 0n ? l1MaxFee * 2n : l1PriorityFee * 2n }
-      : { gasPrice: l1GasPrice };
+      ? {
+          maxFeePerGas: l1MaxFee * 2n,
+          maxPriorityFeePerGas: l1PriorityFee == 0n ? l1MaxFee * 2n : l1PriorityFee * 2n,
+          gasPrice: undefined,
+        }
+      : { gasPrice: l1GasPrice, maxFeePerGas: undefined, maxPriorityFeePerGas: undefined };
 
   console.log(
     `forcedTransactionFee=${feeAmount}, l1MaxFeePerGas=${l1GasOverrides.maxFeePerGas}, l1MaxPriorityFeePerGas=${l1GasOverrides.maxPriorityFeePerGas}, l1GasPrice=${l1GasPrice}, gasPrice=${l1GasOverrides.gasPrice}`,
   );
 
-  const tx = await gateway.submitForcedTransaction(forcedTransaction, lastFinalizedState, {
+  const submitArgs = {
+    ...gateway,
+    functionName: "submitForcedTransaction",
+    args: [forcedTransaction, lastFinalizedState],
     value: feeAmount,
-    ...l1GasOverrides,
-  });
+    chain: null,
+  } as const;
+  const hash =
+    l1GasOverrides.gasPrice !== undefined
+      ? await l1Wallet.writeContract({ ...submitArgs, gasPrice: l1GasOverrides.gasPrice })
+      : await l1Wallet.writeContract({
+          ...submitArgs,
+          maxFeePerGas: l1GasOverrides.maxFeePerGas,
+          maxPriorityFeePerGas: l1GasOverrides.maxPriorityFeePerGas,
+        });
 
-  console.log(`Transaction submitted — txHash=${tx.hash}`);
+  console.log(`Transaction submitted — txHash=${hash}`);
   console.log("Waiting for confirmation...");
 
-  const receipt = await tx.wait();
-  console.log(`Transaction confirmed — block=${receipt!.blockNumber}, gasUsed=${receipt!.gasUsed}`);
+  const receipt = await provider.waitForTransactionReceipt({ hash });
+  console.log(`Transaction confirmed — block=${receipt.blockNumber}, gasUsed=${receipt.gasUsed}`);
 
-  // Decode ForcedTransactionAdded events from the rollup
-  const rollupInterface = new ethers.Interface(LinethRollupV8Abi);
-  for (const log of receipt!.logs) {
-    try {
-      const parsed = rollupInterface.parseLog({ topics: log.topics as string[], data: log.data });
-      if (parsed && parsed.name === "ForcedTransactionAdded") {
-        console.log(
-          `ForcedTransactionAdded — forcedTransactionNumber=${parsed.args.forcedTransactionNumber}, from=${parsed.args.from}, blockNumberDeadline=${parsed.args.blockNumberDeadline}, forcedTransactionRollingHash=${parsed.args.forcedTransactionRollingHash}, rlpEncodedSignedTransaction=${parsed.args.rlpEncodedSignedTransaction}`,
-        );
-      }
-    } catch {
-      // Skip logs from other contracts
-    }
+  // Decode ForcedTransactionAdded events from the rollup (logs from other contracts are skipped)
+  const forcedTransactionAddedLogs = parseEventLogs({
+    abi: LinethRollupV8Abi,
+    eventName: "ForcedTransactionAdded",
+    logs: receipt.logs,
+  });
+  for (const parsed of forcedTransactionAddedLogs) {
+    console.log(
+      `ForcedTransactionAdded — forcedTransactionNumber=${parsed.args.forcedTransactionNumber}, from=${parsed.args.from}, blockNumberDeadline=${parsed.args.blockNumberDeadline}, forcedTransactionRollingHash=${parsed.args.forcedTransactionRollingHash}, rlpEncodedSignedTransaction=${parsed.args.rlpEncodedSignedTransaction}`,
+    );
   }
 
   console.log("\nDone.");

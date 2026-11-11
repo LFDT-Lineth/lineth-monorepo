@@ -1,9 +1,18 @@
 import { SecretKey } from "@chainsafe/blst";
-import { SSZMerkleTree, TestValidatorContainerProofVerifier } from "contracts/typechain-types";
-import { hexlify, parseUnits } from "ethers";
-import { ethers } from "hardhat";
+import { network } from "hardhat";
+import { type Address, type Hex, parseGwei } from "viem";
 
+import { randomBytes32 } from "../../../../common/helpers/encoding.js";
 import {
+  FAR_FUTURE_EXIT_EPOCH,
+  GI_PENDING_PARTIAL_WITHDRAWALS_ROOT,
+  SHARD_COMMITTEE_PERIOD,
+  SLOTS_PER_EPOCH,
+} from "../../common/constants/index.js";
+import { deployFromFactory } from "../../common/deployment.js";
+import { hex } from "../../common/helpers/index.js";
+
+import type {
   BeaconBlockHeader,
   BeaconProofWitness,
   EIP4788Witness,
@@ -11,35 +20,32 @@ import {
   PendingPartialWithdrawalsWitness,
   ValidatorContainer,
   ValidatorContainerWitness,
-} from "./types";
-import { randomBytes32 } from "../../../../common/helpers/encoding";
-import {
-  FAR_FUTURE_EXIT_EPOCH,
-  GI_PENDING_PARTIAL_WITHDRAWALS_ROOT,
-  SHARD_COMMITTEE_PERIOD,
-  SLOTS_PER_EPOCH,
-} from "../../common/constants";
+} from "./types.js";
+import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
+
+type SSZMerkleTree = ContractReturnType<"SSZMerkleTree">;
+type TestValidatorContainerProofVerifier = ContractReturnType<"TestValidatorContainerProofVerifier">;
 
 export interface LocalMerkleTree {
   sszMerkleTree: SSZMerkleTree;
-  gIFirstValidator: string;
+  gIFirstValidator: Hex;
   firstValidatorLeafIndex: bigint;
   readonly totalValidators: number;
   addValidator: (validator: ValidatorContainer) => Promise<{ validatorIndex: number }>;
   validatorAtIndex: (index: number) => ValidatorContainer;
   commitChangesToBeaconRoot: (
-    slot?: number,
+    slot?: number | bigint,
   ) => Promise<{ childBlockTimestamp: number; beaconBlockHeader: BeaconBlockHeader }>;
-  buildProof: (validatorIndex: number, beaconBlockHeader: BeaconBlockHeader) => Promise<string[]>;
+  buildProof: (validatorIndex: number, beaconBlockHeader: BeaconBlockHeader) => Promise<Hex[]>;
 }
 
 // min = 0 will cause flaky test with NoValidatorExitForUnstakePermissionless() error
 export const randomInt = (max: number, min = 1): number => Math.floor(Math.random() * (max - min)) + min;
 
-export const generateBeaconHeader = (stateRoot: string, slot?: number): BeaconBlockHeader => {
+export const generateBeaconHeader = (stateRoot: Hex, slot?: number | bigint): BeaconBlockHeader => {
   return {
-    slot: slot ?? randomInt(1743359),
-    proposerIndex: randomInt(1337),
+    slot: BigInt(slot ?? randomInt(1743359)),
+    proposerIndex: BigInt(randomInt(1337)),
     parentRoot: randomBytes32(),
     stateRoot,
     bodyRoot: randomBytes32(),
@@ -50,14 +56,14 @@ const ikm = Uint8Array.from(Buffer.from("test test test test test test test", "u
 const masterSecret = SecretKey.deriveMasterEip2333(ikm);
 let secretIndex = 0;
 
-export const generateValidatorContainer = (customWC?: string): ValidatorContainer => {
+export const generateValidatorContainer = (customWC?: Hex): ValidatorContainer => {
   const secretKey = masterSecret.deriveChildEip2333(secretIndex++);
   const activationEligibilityEpoch = BigInt(randomInt(343000));
 
   return {
-    pubkey: secretKey.toPublicKey().toHex(true),
-    withdrawalCredentials: customWC ?? hexlify(randomBytes32()),
-    effectiveBalance: parseUnits(randomInt(2048).toString(), "gwei"),
+    pubkey: hex(secretKey.toPublicKey().toHex(true)),
+    withdrawalCredentials: customWC ?? randomBytes32(),
+    effectiveBalance: parseGwei(randomInt(2048).toString()),
     slashed: false,
     activationEligibilityEpoch: activationEligibilityEpoch,
     activationEpoch: activationEligibilityEpoch + BigInt(randomInt(300)),
@@ -72,9 +78,9 @@ export const generatePendingPartialWithdrawal = (
   withdrawableEpoch?: number | bigint,
 ): PendingPartialWithdrawal => {
   return {
-    validatorIndex: validatorIndex ?? BigInt(randomInt(1000000)),
-    amount: amount ?? parseUnits(randomInt(2016).toString(), "gwei"), // Random amount up to 32 ETH in gwei
-    withdrawableEpoch: withdrawableEpoch ?? BigInt(randomInt(343000)),
+    validatorIndex: BigInt(validatorIndex ?? randomInt(1000000)),
+    amount: amount !== undefined ? BigInt(amount) : parseGwei(randomInt(2016).toString()), // Random amount up to 32 ETH in gwei
+    withdrawableEpoch: BigInt(withdrawableEpoch ?? randomInt(343000)),
   };
 };
 
@@ -89,43 +95,44 @@ export const generatePendingPartialWithdrawals = (
   return [...withdrawals, ...randomWithdrawals];
 };
 
-export const setBeaconBlockRoot = async (root: string): Promise<number> => {
-  const systemAddress = "0xfffffffffffffffffffffffffffffffffffffffe";
+export const setBeaconBlockRoot = async (root: Hex): Promise<number> => {
+  const { viem, networkHelpers } = await network.getOrCreate();
+  const publicClient = await viem.getPublicClient();
+  const systemAddress: Address = "0xfffffffffffffffffffffffffffffffffffffffe";
   const initialBalance = 999999999999999999999999999n;
-  await ethers.provider.send("hardhat_impersonateAccount", [systemAddress]);
-  await ethers.provider.send("hardhat_setBalance", [systemAddress, ethers.toBeHex(initialBalance)]);
-  const systemSigner = await ethers.getSigner(systemAddress);
-  const BEACON_ROOTS = "0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02";
-  const block = await systemSigner
-    .sendTransaction({
-      to: BEACON_ROOTS,
-      value: 0,
-      data: root,
-    })
-    .then((tx) => tx.getBlock());
-  if (!block) throw new Error("invariant");
-  return block.timestamp;
+  await networkHelpers.impersonateAccount(systemAddress);
+  await networkHelpers.setBalance(systemAddress, initialBalance);
+  const systemSigner = await viem.getWalletClient(systemAddress);
+  const BEACON_ROOTS: Address = "0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02";
+  const hash = await systemSigner.sendTransaction({
+    to: BEACON_ROOTS,
+    value: 0n,
+    data: root,
+  });
+  const receipt = await publicClient.waitForTransactionReceipt({ hash });
+  const block = await publicClient.getBlock({ blockHash: receipt.blockHash });
+  return Number(block.timestamp);
 };
 
 // Default mainnet values for validator state tree
 export const prepareLocalMerkleTree = async (
-  gIndex = "0x0000000000000000000000000000000000000000000000000096000000000028",
+  gIndex: Hex = "0x0000000000000000000000000000000000000000000000000096000000000028",
 ): Promise<LocalMerkleTree> => {
-  const sszMerkleTree: SSZMerkleTree = await ethers.deployContract("SSZMerkleTree", [gIndex], {});
+  const sszMerkleTree = await deployFromFactory("SSZMerkleTree", [gIndex]);
   const firstValidator = generateValidatorContainer();
 
-  await sszMerkleTree.addValidatorLeaf(firstValidator);
+  await sszMerkleTree.write.addValidatorLeaf([firstValidator]);
   const validators: ValidatorContainer[] = [firstValidator];
 
-  const firstValidatorLeafIndex = (await sszMerkleTree.leafCount()) - 1n;
-  const gIFirstValidator = await sszMerkleTree.getGeneralizedIndex(firstValidatorLeafIndex);
+  const firstValidatorLeafIndex = (await sszMerkleTree.read.leafCount()) - 1n;
+  const gIFirstValidator = await sszMerkleTree.read.getGeneralizedIndex([firstValidatorLeafIndex]);
 
   // compare GIndex.index()
   if (BigInt(gIFirstValidator) >> 8n !== BigInt(gIndex) >> 8n)
     throw new Error("Invariant: sszMerkleTree implementation is broken");
 
   const addValidator = async (validator: ValidatorContainer) => {
-    await sszMerkleTree.addValidatorLeaf(validator);
+    await sszMerkleTree.write.addValidatorLeaf([validator]);
     validators.push(validator);
 
     return {
@@ -137,20 +144,20 @@ export const prepareLocalMerkleTree = async (
     return validators[index];
   };
 
-  const commitChangesToBeaconRoot = async (slot?: number) => {
-    const beaconBlockHeader = generateBeaconHeader(await sszMerkleTree.getMerkleRoot(), slot);
-    const beaconBlockHeaderHash = await sszMerkleTree.beaconBlockHeaderHashTreeRoot(beaconBlockHeader);
+  const commitChangesToBeaconRoot = async (slot?: number | bigint) => {
+    const beaconBlockHeader = generateBeaconHeader(await sszMerkleTree.read.getMerkleRoot(), slot);
+    const beaconBlockHeaderHash = await sszMerkleTree.read.beaconBlockHeaderHashTreeRoot([beaconBlockHeader]);
     return {
       childBlockTimestamp: await setBeaconBlockRoot(beaconBlockHeaderHash),
       beaconBlockHeader,
     };
   };
 
-  const buildProof = async (validatorIndex: number, beaconBlockHeader: BeaconBlockHeader): Promise<string[]> => {
+  const buildProof = async (validatorIndex: number, beaconBlockHeader: BeaconBlockHeader): Promise<Hex[]> => {
     const [validatorProof, stateProof, beaconBlockProof] = await Promise.all([
-      sszMerkleTree.getValidatorPubkeyWCParentProof(validators[Number(validatorIndex)]).then((r) => r.proof),
-      sszMerkleTree.getMerkleProof(BigInt(validatorIndex) + firstValidatorLeafIndex),
-      sszMerkleTree.getBeaconBlockHeaderProof(beaconBlockHeader).then((r) => r.proof),
+      sszMerkleTree.read.getValidatorPubkeyWCParentProof([validators[Number(validatorIndex)]]).then(([proof]) => proof),
+      sszMerkleTree.read.getMerkleProof([BigInt(validatorIndex) + firstValidatorLeafIndex]),
+      sszMerkleTree.read.getBeaconBlockHeaderProof([beaconBlockHeader]).then(([proof]) => proof),
     ]);
 
     return [...validatorProof, ...stateProof, ...beaconBlockProof];
@@ -174,8 +181,8 @@ export const ACTIVE_0X01_VALIDATOR_PROOF = {
   blockRoot: "0xeb961eae87c614e11a7959a529a59db3c9d825d284dc30e0d12e43ba6daf4cca",
   gIFirstValidator: "0x0000000000000000000000000000000000000000000000000096000000000028",
   beaconBlockHeader: {
-    slot: 22140000,
-    proposerIndex: 1337,
+    slot: 22140000n,
+    proposerIndex: 1337n,
     parentRoot: "0x8576d3eb5ef5b3a460b85e5493d0d0510b7d1a2943a4e51add5227c9d3bffa0f",
     stateRoot: "0xa802c5f4f818564a2774a19937fdfafc0241f475d7f28312c3609c6e5995d980",
     bodyRoot: "0xca4f98890bc98a59f015d06375a5e00546b8f2ac1e88d31b1774ea28d4b3e7d1",
@@ -252,7 +259,7 @@ export const ACTIVE_0X01_VALIDATOR_PROOF = {
 export const generateEIP4478Witness = async (
   sszMerkleTree: SSZMerkleTree,
   verifier: TestValidatorContainerProofVerifier,
-  address: string,
+  address: Address,
   effectiveBalance?: bigint,
   pendingPartialWithdrawalsGwei: bigint[] = [],
   randomPendingPartialWithdrawalsCount: number = 0,
@@ -265,7 +272,7 @@ export const generateEIP4478Witness = async (
     throw new Error("Invalid address format");
   }
   // Create 0x02 withdrawal credentials
-  const withdrawalCredentials = `0x020000000000000000000000${lowercaseAddress}`;
+  const withdrawalCredentials: Hex = `0x020000000000000000000000${lowercaseAddress}`;
   const validatorContainer = generateValidatorContainer(withdrawalCredentials);
   if (effectiveBalance) {
     validatorContainer.effectiveBalance = effectiveBalance;
@@ -299,7 +306,7 @@ export const generateEIP4478Witness = async (
     ...randomPendingPartialWithdrawals,
   ];
 
-  const pendingPartialWithdrawalsRoot = await sszMerkleTree.hashTreeRoot(pendingPartialWithdrawals);
+  const pendingPartialWithdrawalsRoot = await sszMerkleTree.read.hashTreeRoot([pendingPartialWithdrawals]);
 
   // We have two fixed nodes in the BeaconState Merkle tree:
   // - validators subtree at generalized index 75
@@ -321,14 +328,23 @@ export const generateEIP4478Witness = async (
   // Generate GI=2 from Validator Container
   // ============================================================================
 
-  const validatorMerkleSubtree = await sszMerkleTree.getValidatorPubkeyWCParentProof(validatorContainer);
-  const validatorGIndexInLeftSubtree = await verifier.getValidatorGIInLeftSubtree(validatorIndex);
+  const [, validatorMerkleSubtreeRoot] = await sszMerkleTree.read.getValidatorPubkeyWCParentProof([validatorContainer]);
+  const validatorGIndexInLeftSubtree = await verifier.read.getValidatorGIInLeftSubtree([validatorIndex]);
   // Remove last element gI3
   const proofForGI2 = originalValidatorContainerProof.slice(0, -1);
-  const gi2Root = await sszMerkleTree.getRoot(proofForGI2, validatorMerkleSubtree.root, validatorGIndexInLeftSubtree);
+  const gi2Root = await sszMerkleTree.read.getRoot([
+    proofForGI2,
+    validatorMerkleSubtreeRoot,
+    validatorGIndexInLeftSubtree,
+  ]);
 
   // Verify (ValidatorContainer) leaf against (StateRoot) Merkle root
-  await sszMerkleTree.verifyProof(proofForGI2, gi2Root, validatorMerkleSubtree.root, validatorGIndexInLeftSubtree);
+  await sszMerkleTree.read.verifyProof([
+    proofForGI2,
+    gi2Root,
+    validatorMerkleSubtreeRoot,
+    validatorGIndexInLeftSubtree,
+  ]);
 
   // ============================================================================
   // Generate GI=3 from Pending Partial Withdrawals
@@ -341,77 +357,83 @@ export const generateEIP4478Witness = async (
   // 4. The leftmost node will become GI 32 in the right subtree
   // 5. So this node becomes GI 32 + 3 = 35
   // gI99 -> gI35 in the right subtree
-  const GI_PENDING_PARTIAL_WITHDRAWALS_ROOT_IN_RIGHT_SUBTREE =
+  const GI_PENDING_PARTIAL_WITHDRAWALS_ROOT_IN_RIGHT_SUBTREE: Hex =
     "0x000000000000000000000000000000000000000000000000000000000000231b";
 
   // each subtree has depth 5 -> create proof of 5 elements
   const proofForGI3 = Array.from({ length: 5 }, () => randomBytes32());
-  const gi3Root = await sszMerkleTree.getRoot(
+  const gi3Root = await sszMerkleTree.read.getRoot([
     proofForGI3,
     pendingPartialWithdrawalsRoot,
     GI_PENDING_PARTIAL_WITHDRAWALS_ROOT_IN_RIGHT_SUBTREE,
-  );
+  ]);
 
-  await sszMerkleTree.verifyProof(
+  await sszMerkleTree.read.verifyProof([
     proofForGI3,
     gi3Root,
     pendingPartialWithdrawalsRoot,
     GI_PENDING_PARTIAL_WITHDRAWALS_ROOT_IN_RIGHT_SUBTREE,
-  );
+  ]);
 
   // ============================================================================
   // Generate state root
   // ============================================================================
 
-  const stateRoot = await sszMerkleTree.getRoot(
+  const stateRoot = await sszMerkleTree.read.getRoot([
     [gi3Root],
     gi2Root,
     "0x0000000000000000000000000000000000000000000000000000000000000200",
-  );
+  ]);
 
-  await sszMerkleTree.verifyProof(
+  await sszMerkleTree.read.verifyProof([
     [...proofForGI3, gi2Root],
     stateRoot,
     pendingPartialWithdrawalsRoot,
     GI_PENDING_PARTIAL_WITHDRAWALS_ROOT,
-  );
+  ]);
 
-  const validatorGIndex = await verifier.getValidatorGI(validatorIndex);
-  await sszMerkleTree.verifyProof([...proofForGI2, gi3Root], stateRoot, validatorMerkleSubtree.root, validatorGIndex);
+  const validatorGIndex = await verifier.read.getValidatorGI([validatorIndex]);
+  await sszMerkleTree.read.verifyProof([
+    [...proofForGI2, gi3Root],
+    stateRoot,
+    validatorMerkleSubtreeRoot,
+    validatorGIndex,
+  ]);
 
   // ============================================================================
   // Generate beacon chain header and beacon root
   // ============================================================================
   const slot = SLOTS_PER_EPOCH * (validatorContainer.activationEpoch + SHARD_COMMITTEE_PERIOD) + 1n;
   const beaconHeader = generateBeaconHeader(stateRoot, Number(slot));
-  const beaconHeaderMerkleSubtree = await sszMerkleTree.getBeaconBlockHeaderProof(beaconHeader);
-  const beaconRoot = await sszMerkleTree.getRoot(
-    [...beaconHeaderMerkleSubtree.proof],
+  const [beaconHeaderMerkleSubtreeProof, , , beaconHeaderMerkleSubtreeIndex] =
+    await sszMerkleTree.read.getBeaconBlockHeaderProof([beaconHeader]);
+  const beaconRoot = await sszMerkleTree.read.getRoot([
+    [...beaconHeaderMerkleSubtreeProof],
     stateRoot,
-    beaconHeaderMerkleSubtree.index,
-  );
+    beaconHeaderMerkleSubtreeIndex,
+  ]);
 
   // Verify computed beacon root
-  await sszMerkleTree.verifyProof(
-    [...beaconHeaderMerkleSubtree.proof],
+  await sszMerkleTree.read.verifyProof([
+    [...beaconHeaderMerkleSubtreeProof],
     beaconRoot,
     stateRoot,
-    beaconHeaderMerkleSubtree.index,
-  );
+    beaconHeaderMerkleSubtreeIndex,
+  ]);
 
   // ============================================================================
   // Generate BeaconProofWitness
   // ============================================================================
 
   const validatorContainerWitness: ValidatorContainerWitness = {
-    proof: [...proofForGI2, gi3Root, ...beaconHeaderMerkleSubtree.proof],
+    proof: [...proofForGI2, gi3Root, ...beaconHeaderMerkleSubtreeProof],
     effectiveBalance: validatorContainer.effectiveBalance,
     activationEpoch: validatorContainer.activationEpoch,
     activationEligibilityEpoch: validatorContainer.activationEligibilityEpoch,
   };
 
   const pendingPartialWithdrawalsWitness: PendingPartialWithdrawalsWitness = {
-    proof: [...proofForGI3, gi2Root, ...beaconHeaderMerkleSubtree.proof],
+    proof: [...proofForGI3, gi2Root, ...beaconHeaderMerkleSubtreeProof],
     pendingPartialWithdrawals: pendingPartialWithdrawals,
   };
 
@@ -440,13 +462,13 @@ export const generateEIP4478Witness = async (
 export const generateLidoUnstakePermissionlessWitness = async (
   sszMerkleTree: SSZMerkleTree,
   verifier: TestValidatorContainerProofVerifier,
-  withdrawalAddress: string,
-  effectiveBalance: bigint = parseUnits("100", "gwei"),
+  withdrawalAddress: Address,
+  effectiveBalance: bigint = parseGwei("100"),
   pendingPartialWithdrawalsGwei: bigint[] = [],
   randomPendingPartialWithdrawalsCount: number = 0,
 ): Promise<{
   eip4788Witness: EIP4788Witness;
-  pubkey: string;
+  pubkey: Hex;
   validatorIndex: bigint;
   slot: bigint;
   pendingPartialWithdrawals: PendingPartialWithdrawal[];

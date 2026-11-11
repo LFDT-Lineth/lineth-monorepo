@@ -1,31 +1,33 @@
 import * as dotenv from "dotenv";
 import { ethers } from "ethers";
 
-import {
-  contractName as L2MessageServiceContractName,
-  abi as L2MessageServiceAbi,
-  bytecode as L2MessageServiceBytecode,
-} from "./dynamic-artifacts/L2MessageServiceV1.json";
-import {
-  contractName as ProxyAdminContractName,
-  abi as ProxyAdminAbi,
-  bytecode as ProxyAdminBytecode,
-} from "./static-artifacts/ProxyAdmin.json";
-import {
-  abi as TransparentUpgradeableProxyAbi,
-  bytecode as TransparentUpgradeableProxyBytecode,
-} from "./static-artifacts/TransparentUpgradeableProxy.json";
+import l2MessageServiceV1Json from "./dynamic-artifacts/L2MessageServiceV1.json" with { type: "json" };
+import proxyAdminJson from "./static-artifacts/ProxyAdmin.json" with { type: "json" };
+import transparentUpgradeableProxyJson from "./static-artifacts/TransparentUpgradeableProxy.json" with { type: "json" };
 import {
   L1_L2_MESSAGE_SETTER_ROLE,
   L2_MESSAGE_SERVICE_PAUSE_TYPES_ROLES,
   L2_MESSAGE_SERVICE_ROLES,
   L2_MESSAGE_SERVICE_UNPAUSE_TYPES_ROLES,
-} from "../common/constants";
-import { deployContractFromArtifacts, getDeployNonceFromEnv, getInitializerData } from "../common/helpers/deployments";
-import { getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment";
-import { LOCAL_L2_DEPLOY_FEE_OVERRIDES } from "../common/helpers/feeOverrides";
-import { getDeploymentNetworkName, requireAddressFromRegistryOrEnv } from "../common/helpers/readAddress";
-import { generateRoleAssignments } from "../common/helpers/roles";
+} from "../common/constants/index.js";
+import {
+  deployContractFromArtifacts,
+  getDeployNonceFromEnv,
+  getInitializerData,
+} from "../common/helpers/deployments.js";
+import { getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment.js";
+import { LOCAL_L2_DEPLOY_FEE_OVERRIDES } from "../common/helpers/feeOverrides.js";
+import { getDeploymentNetworkName, requireAddressFromRegistryOrEnv } from "../common/helpers/readAddress.js";
+import { generateRoleAssignments } from "../common/helpers/roles.js";
+
+const {
+  contractName: L2MessageServiceContractName,
+  abi: L2MessageServiceAbi,
+  bytecode: L2MessageServiceBytecode,
+} = l2MessageServiceV1Json;
+const { contractName: ProxyAdminContractName, abi: ProxyAdminAbi, bytecode: ProxyAdminBytecode } = proxyAdminJson;
+const { abi: TransparentUpgradeableProxyAbi, bytecode: TransparentUpgradeableProxyBytecode } =
+  transparentUpgradeableProxyJson;
 
 dotenv.config();
 

@@ -1,7 +1,7 @@
 import "colors";
-import Diff from "diff";
+import { diffJson } from "diff";
 import fs from "fs";
-import { artifacts } from "hardhat";
+import hre from "hardhat";
 import path from "path";
 
 const UNCHANGED_COLOR = "grey";
@@ -22,7 +22,10 @@ async function main() {
     const abiPath = path.resolve("abi", CONTRACT_OUPUT_ABIS[contract]);
 
     if (checkOnly) {
-      const currentAbi = JSON.parse(fs.readFileSync(abiPath, "utf8"));
+      const currentAbi: unknown = JSON.parse(fs.readFileSync(abiPath, "utf8"));
+      if (typeof currentAbi !== "object" || currentAbi === null) {
+        throw new Error(`${abiPath} does not contain a JSON ABI`);
+      }
       const stringifiedCurrentAbi = JSON.stringify(currentAbi, null, 2);
 
       const { stringifiedAbi, abi } = await readAbi(contract);
@@ -40,13 +43,11 @@ async function main() {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function showDiff(abi: any[], currentAbi: any[]) {
-  const diff = Diff.diffJson(abi, currentAbi);
+function showDiff(abi: object, currentAbi: object) {
+  const diff = diffJson(abi, currentAbi);
 
   diff.forEach((part) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let color: any;
+    let color: "green" | "red" | typeof UNCHANGED_COLOR;
 
     if (part.added) {
       color = "green";
@@ -66,7 +67,7 @@ function showDiff(abi: any[], currentAbi: any[]) {
 }
 
 async function readAbi(contract: string) {
-  const artifact = await artifacts.readArtifact(contract);
+  const artifact = await hre.artifacts.readArtifact(contract);
   const abi = artifact.abi;
 
   const stringifiedAbi = JSON.stringify(abi, null, 2);

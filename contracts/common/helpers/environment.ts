@@ -1,6 +1,6 @@
-import { ethers } from "ethers";
+import { getAddress, isAddress } from "viem";
 
-import { formatEnvVarForLog, formatEnvVarValueForMessage } from "./envVarLogging";
+import { formatEnvVarForLog, formatEnvVarValueForMessage } from "./envVarLogging.js";
 
 export {
   envVarNameFromContext,
@@ -8,7 +8,7 @@ export {
   formatEnvVarValueForMessage,
   isEnvVarContext,
   isSensitiveEnvVar,
-} from "./envVarLogging";
+} from "./envVarLogging.js";
 
 export function getRequiredEnvVar(name: string): string {
   const envValue = process.env[name];
@@ -86,11 +86,11 @@ export function getOptionalEnvVar(name: string): string | undefined {
  */
 export function validateAddressEnvVar(name: string): string {
   const raw = getRequiredEnvVar(name);
-  if (!ethers.isAddress(raw)) {
+  if (!isAddress(raw)) {
     throw new Error(
       `Environment variable "${name}" is not a valid EVM address. Got: "${formatEnvVarValueForMessage(name, raw)}". ` +
         `Expected a 0x-prefixed 40-hex-character address.`,
     );
   }
-  return ethers.getAddress(raw);
+  return getAddress(raw);
 }

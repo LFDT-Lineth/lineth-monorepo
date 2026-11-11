@@ -1,6 +1,9 @@
-import { BaseContract, ContractFactory } from "ethers";
+import { expectRevertWithCustomError, expectRevertWithReason } from "./expectations.js";
 
-import { expectRevertWithCustomError, expectRevertWithReason } from "./expectations";
+import type { Abi } from "viem";
+
+/** Any viem contract instance, or just an ABI holder, used to decode custom errors. */
+type AbiHolder = { abi: Abi };
 
 /**
  * Standard error messages for initialization failures
@@ -23,7 +26,7 @@ export const ZERO_VALUE_ERRORS = {
 /**
  * Configuration for testing initialization with zero values
  */
-export interface ZeroValueTestConfig<TContract extends BaseContract | ContractFactory> {
+export interface ZeroValueTestConfig<TContract extends AbiHolder> {
   /** The contract instance used for error matching */
   contract: TContract;
   /** The async call that should revert */
@@ -37,7 +40,7 @@ export interface ZeroValueTestConfig<TContract extends BaseContract | ContractFa
 /**
  * Configuration for testing double initialization
  */
-export interface DoubleInitTestConfig<TContract extends BaseContract> {
+export interface DoubleInitTestConfig<TContract extends AbiHolder> {
   /** The contract instance that has already been initialized */
   contract: TContract;
   /** The async call that attempts to initialize again */
@@ -51,7 +54,7 @@ export interface DoubleInitTestConfig<TContract extends BaseContract> {
 /**
  * Configuration for batch testing multiple zero value scenarios
  */
-export interface ZeroValueBatchConfig<TContract extends BaseContract | ContractFactory> {
+export interface ZeroValueBatchConfig<TContract extends AbiHolder> {
   /** The contract instance used for error matching */
   contract: TContract;
   /** Array of test scenarios */
@@ -81,11 +84,12 @@ export interface ZeroValueBatchConfig<TContract extends BaseContract | ContractF
  * });
  * ```
  */
-export async function expectZeroAddressRevert<TContract extends BaseContract | ContractFactory>(
+export async function expectZeroAddressRevert<TContract extends AbiHolder>(
   config: Omit<ZeroValueTestConfig<TContract>, "expectedError"> & { expectedError?: string },
 ): Promise<void> {
   const errorName = config.expectedError ?? ZERO_VALUE_ERRORS.ZERO_ADDRESS_NOT_ALLOWED;
-  await expectRevertWithCustomError(config.contract, config.deployOrInitCall, errorName, config.errorArgs ?? []);
+  const target: { abi: Abi } = config.contract;
+  await expectRevertWithCustomError(target, config.deployOrInitCall, errorName, config.errorArgs);
 }
 
 /**
@@ -97,16 +101,17 @@ export async function expectZeroAddressRevert<TContract extends BaseContract | C
  * ```typescript
  * await expectZeroValueRevert({
  *   contract: myContract,
- *   deployOrInitCall: myContract.initialize(0n),
+ *   deployOrInitCall: myContract.write.initialize([0n]),
  *   expectedError: "ZeroValueNotAllowed",
  * });
  * ```
  */
-export async function expectZeroValueRevert<TContract extends BaseContract | ContractFactory>(
+export async function expectZeroValueRevert<TContract extends AbiHolder>(
   config: Omit<ZeroValueTestConfig<TContract>, "expectedError"> & { expectedError?: string },
 ): Promise<void> {
   const errorName = config.expectedError ?? ZERO_VALUE_ERRORS.ZERO_VALUE_NOT_ALLOWED;
-  await expectRevertWithCustomError(config.contract, config.deployOrInitCall, errorName, config.errorArgs ?? []);
+  const target: { abi: Abi } = config.contract;
+  await expectRevertWithCustomError(target, config.deployOrInitCall, errorName, config.errorArgs);
 }
 
 /**
@@ -118,16 +123,17 @@ export async function expectZeroValueRevert<TContract extends BaseContract | Con
  * ```typescript
  * await expectZeroHashRevert({
  *   contract: myContract,
- *   deployOrInitCall: myContract.initialize(ZERO_HASH),
+ *   deployOrInitCall: myContract.write.initialize([ZERO_HASH]),
  *   expectedError: "ZeroHashNotAllowed",
  * });
  * ```
  */
-export async function expectZeroHashRevert<TContract extends BaseContract | ContractFactory>(
+export async function expectZeroHashRevert<TContract extends AbiHolder>(
   config: Omit<ZeroValueTestConfig<TContract>, "expectedError"> & { expectedError?: string },
 ): Promise<void> {
   const errorName = config.expectedError ?? ZERO_VALUE_ERRORS.ZERO_HASH_NOT_ALLOWED;
-  await expectRevertWithCustomError(config.contract, config.deployOrInitCall, errorName, config.errorArgs ?? []);
+  const target: { abi: Abi } = config.contract;
+  await expectRevertWithCustomError(target, config.deployOrInitCall, errorName, config.errorArgs);
 }
 
 /**
@@ -139,16 +145,17 @@ export async function expectZeroHashRevert<TContract extends BaseContract | Cont
  * ```typescript
  * await expectZeroLengthRevert({
  *   contract: myContract,
- *   deployOrInitCall: myContract.storeData("0x"),
+ *   deployOrInitCall: myContract.write.storeData(["0x"]),
  *   expectedError: "ZeroLengthNotAllowed",
  * });
  * ```
  */
-export async function expectZeroLengthRevert<TContract extends BaseContract | ContractFactory>(
+export async function expectZeroLengthRevert<TContract extends AbiHolder>(
   config: Omit<ZeroValueTestConfig<TContract>, "expectedError"> & { expectedError?: string },
 ): Promise<void> {
   const errorName = config.expectedError ?? ZERO_VALUE_ERRORS.ZERO_LENGTH_NOT_ALLOWED;
-  await expectRevertWithCustomError(config.contract, config.deployOrInitCall, errorName, config.errorArgs ?? []);
+  const target: { abi: Abi } = config.contract;
+  await expectRevertWithCustomError(target, config.deployOrInitCall, errorName, config.errorArgs);
 }
 
 /**
@@ -162,19 +169,19 @@ export async function expectZeroLengthRevert<TContract extends BaseContract | Co
  * // Using default reason string (OpenZeppelin Initializable)
  * await expectDoubleInitRevert({
  *   contract: myContract,
- *   initCall: myContract.initialize(params),
+ *   initCall: myContract.write.initialize([params]),
  * });
  *
  * // Using custom error
  * await expectDoubleInitRevert({
  *   contract: myContract,
- *   initCall: myContract.initialize(params),
+ *   initCall: myContract.write.initialize([params]),
  *   usesCustomError: true,
  *   customErrorName: "InvalidInitialization",
  * });
  * ```
  */
-export async function expectDoubleInitRevert<TContract extends BaseContract>(
+export async function expectDoubleInitRevert<TContract extends AbiHolder>(
   config: DoubleInitTestConfig<TContract>,
 ): Promise<void> {
   if (config.usesCustomError && config.customErrorName) {
@@ -209,15 +216,11 @@ export async function expectDoubleInitRevert<TContract extends BaseContract>(
  * });
  * ```
  */
-export async function expectZeroValueReverts<TContract extends BaseContract | ContractFactory>(
+export async function expectZeroValueReverts<TContract extends AbiHolder>(
   config: ZeroValueBatchConfig<TContract>,
 ): Promise<void> {
   for (const scenario of config.scenarios) {
-    await expectRevertWithCustomError(
-      config.contract,
-      scenario.deployOrInitCall,
-      scenario.expectedError,
-      scenario.errorArgs ?? [],
-    );
+    const target: { abi: Abi } = config.contract;
+    await expectRevertWithCustomError(target, scenario.deployOrInitCall, scenario.expectedError, scenario.errorArgs);
   }
 }

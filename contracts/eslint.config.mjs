@@ -4,11 +4,10 @@ import { node } from "@lfdt-lineth/eslint-config/node";
 export default [
   {
     ignores: [
-      ".solcover.js",
       "docs/**",
       "integrity-verifier/**",
-      "signer-ui/.next/**",
-      "signer-ui/node_modules/**",
+      // Own workspace package with its own tsconfig and ESLint config (`pnpm --filter @lfdt-lineth/contract-signer-ui lint`).
+      "signer-ui/**",
     ],
   },
   ...node,

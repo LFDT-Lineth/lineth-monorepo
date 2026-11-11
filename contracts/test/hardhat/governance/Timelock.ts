@@ -1,54 +1,51 @@
-import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { network } from "hardhat";
+import { describe, it, before, beforeEach } from "node:test";
+import { zeroAddress } from "viem";
 
-import { TimeLock } from "../../../typechain-types";
-import { CANCELLER_ROLE, EXECUTOR_ROLE, PROPOSER_ROLE, TIMELOCK_ADMIN_ROLE } from "../common/constants";
-import { deployFromFactory } from "../common/deployment";
+import { CANCELLER_ROLE, EXECUTOR_ROLE, PROPOSER_ROLE, TIMELOCK_ADMIN_ROLE } from "../common/constants/index.js";
+import { deployFromFactory } from "../common/deployment.js";
+import { type TestAccount, getTestAccounts } from "../common/helpers/index.js";
+
+import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
 
 describe("Timelock", () => {
-  let contract: TimeLock;
-  let proposer: SignerWithAddress;
-  let executor: SignerWithAddress;
+  let contract: ContractReturnType<"TimeLock">;
+  let proposer: TestAccount;
+  let executor: TestAccount;
 
   async function deployTimeLockFixture() {
-    return deployFromFactory(
-      "TimeLock",
-      10,
-      [proposer.address],
-      [executor.address],
-      ethers.ZeroAddress,
-    ) as Promise<TimeLock>;
+    return deployFromFactory("TimeLock", [10n, [proposer.address], [executor.address], zeroAddress]);
   }
 
   before(async () => {
-    [, proposer, executor] = await ethers.getSigners();
+    [, proposer, executor] = await getTestAccounts();
   });
 
   beforeEach(async () => {
-    contract = await loadFixture(deployTimeLockFixture);
+    const { networkHelpers } = await network.getOrCreate();
+    contract = await networkHelpers.loadFixture(deployTimeLockFixture);
   });
 
   describe("Initialization", () => {
     it("Timelock contract should have the 'TIMELOCK_ADMIN_ROLE' role", async () => {
-      expect(await contract.hasRole(TIMELOCK_ADMIN_ROLE, await contract.getAddress())).to.be.true;
+      expect(await contract.read.hasRole([TIMELOCK_ADMIN_ROLE, contract.address])).to.be.true;
     });
 
     it("Proposer address should have the 'PROPOSER_ROLE' role", async () => {
-      expect(await contract.hasRole(PROPOSER_ROLE, proposer.address)).to.be.true;
+      expect(await contract.read.hasRole([PROPOSER_ROLE, proposer.address])).to.be.true;
     });
 
     it("Proposer address should have the 'CANCELLER_ROLE' role", async () => {
-      expect(await contract.hasRole(CANCELLER_ROLE, proposer.address)).to.be.true;
+      expect(await contract.read.hasRole([CANCELLER_ROLE, proposer.address])).to.be.true;
     });
 
     it("Executor address should have the 'EXECUTOR_ROLE' role", async () => {
-      expect(await contract.hasRole(EXECUTOR_ROLE, executor.address)).to.be.true;
+      expect(await contract.read.hasRole([EXECUTOR_ROLE, executor.address])).to.be.true;
     });
 
     it("Should set the minDelay state variable with the value passed in the contructor params", async () => {
-      expect(await contract.getMinDelay()).to.equal(10);
+      expect(await contract.read.getMinDelay()).to.equal(10n);
     });
   });
 });

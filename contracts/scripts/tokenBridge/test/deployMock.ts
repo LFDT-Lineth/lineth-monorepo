@@ -1,4 +1,4 @@
-import { deployTokenBridgeWithMockMessaging } from "./deployTokenBridges";
+import { deployTokenBridgeWithMockMessaging } from "./deployTokenBridges.js";
 
 deployTokenBridgeWithMockMessaging(true)
   .then(() => {

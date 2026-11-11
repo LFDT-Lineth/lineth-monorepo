@@ -1,11 +1,13 @@
 import { ethers } from "ethers";
 
-import {
-  contractName as lineaScenarioDelegatingProxyName,
-  abi as lineaScenarioDelegatingProxyAbi,
-  bytecode as lineaScenarioDelegatingProxyBytecode,
-} from "./static-artifacts/LineaScenarioDelegatingProxy.json";
-import { deployContractFromArtifacts } from "../common/helpers/deployments";
+import lineaScenarioDelegatingProxyJson from "./static-artifacts/LineaScenarioDelegatingProxy.json" with { type: "json" };
+import { deployContractFromArtifacts } from "../common/helpers/deployments.js";
+
+const {
+  contractName: lineaScenarioDelegatingProxyName,
+  abi: lineaScenarioDelegatingProxyAbi,
+  bytecode: lineaScenarioDelegatingProxyBytecode,
+} = lineaScenarioDelegatingProxyJson;
 
 async function main() {
   const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);

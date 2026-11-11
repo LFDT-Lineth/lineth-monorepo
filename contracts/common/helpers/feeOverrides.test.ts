@@ -1,4 +1,3 @@
-import { ethers } from "ethers";
 import * as assert from "node:assert/strict";
 
 import {
@@ -6,7 +5,9 @@ import {
   feeBudgetPricePerGas,
   parseGasPriceWeiEnv,
   resolveOneModelFeeOverrides,
-} from "./feeOverrides";
+} from "./feeOverrides.js";
+
+import type { ethers } from "ethers";
 
 type FeeData = {
   gasPrice?: bigint | null;
@@ -22,12 +23,14 @@ function mockProvider(feeData: FeeData): ethers.Provider {
 
 type TestCase = {
   name: string;
-  run: () => Promise<void> | void;
+  run: () => unknown;
 };
 
 const ENV_NAME = "LINETH_FEE_OVERRIDES_TEST_GAS_PRICE_WEI";
 
-function withEnv(value: string | undefined, run: () => Promise<void> | void): Promise<void> | void {
+function withEnv<T>(value: string | undefined, run: () => Promise<T>): Promise<T>;
+function withEnv<T>(value: string | undefined, run: () => T): T;
+function withEnv(value: string | undefined, run: () => unknown): unknown {
   const previous = process.env[ENV_NAME];
   if (value === undefined) {
     delete process.env[ENV_NAME];

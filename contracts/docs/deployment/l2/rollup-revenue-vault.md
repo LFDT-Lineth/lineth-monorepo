@@ -31,7 +31,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-pnpm exec hardhat deploy --network linea_sepolia --tags RollupRevenueVault
+pnpm exec hardhat ignition deploy RollupRevenueVault --network linea_sepolia
 ```
 
 (make sure to replace `<key>` `<address>` `<value>` with actual values)
@@ -60,5 +60,5 @@ Deploys a new RollupRevenueVault implementation and generates encoded upgrade ca
 | ROLLUP_REVENUE_VAULT_DEX_SWAP_ADAPTER | registry\|env | address | DEX swap adapter address. Read from registry if present; env var used as fallback. |
 
 ```shell
-pnpm exec hardhat deploy --network linea_sepolia --tags RollupRevenueVaultWithReinitialization
+pnpm exec hardhat ignition deploy RollupRevenueVaultReinitialize --network linea_sepolia
 ```

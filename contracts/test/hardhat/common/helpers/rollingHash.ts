@@ -1,14 +1,13 @@
 import { expect } from "chai";
-import { BaseContract } from "ethers";
-import { ethers } from "hardhat";
+import { type Abi, type Address, type Hash, type Hex, zeroHash } from "viem";
 
-import { expectEvent, expectRevertWithCustomError } from "./expectations";
-import { calculateRollingHash, generateKeccak256 } from "./hashing";
+import { type AssertionTarget, expectEvent, expectRevertWithCustomError } from "./expectations.js";
+import { calculateRollingHash, generateKeccak256 } from "./hashing.js";
 
 /**
  * Initial rolling hash value (zero hash)
  */
-export const INITIAL_ROLLING_HASH = ethers.ZeroHash;
+export const INITIAL_ROLLING_HASH: Hex = zeroHash;
 
 /**
  * Common error names for rolling hash validation
@@ -27,43 +26,48 @@ export const ROLLING_HASH_EVENTS = {
   ROLLING_HASH_UPDATED: "RollingHashUpdated",
 } as const;
 
+/** Any deployed viem contract instance (address + ABI). */
+type DeployedContract = { abi: Abi; address: Address };
+
 /**
  * Configuration for validating rolling hash storage
  */
 export interface RollingHashStorageConfig {
   /** The contract instance to query */
-  contract: BaseContract & {
-    rollingHashes?: (messageNumber: bigint) => Promise<string>;
-    l1RollingHashes?: (messageNumber: bigint) => Promise<string>;
+  contract: {
+    read: {
+      rollingHashes?: (args: readonly [bigint]) => Promise<Hex>;
+      l1RollingHashes?: (args: readonly [bigint]) => Promise<Hex>;
+    };
   };
   /** The message number to check */
   messageNumber: bigint;
   /** The expected rolling hash value */
-  expectedHash: string;
+  expectedHash: Hex;
   /** Whether this is an L1 rolling hash (uses l1RollingHashes) or standard (uses rollingHashes) */
-  isL1RollingHash?: boolean;
+  isL1RollingHash?: boolean | undefined;
 }
 
 /**
  * Configuration for testing rolling hash update events
  */
-export interface RollingHashEventConfig<TContract extends BaseContract> {
+export interface RollingHashEventConfig<TContract extends DeployedContract> {
   /** The contract instance */
   contract: TContract;
   /** The async call that should emit the event */
-  updateCall: Promise<unknown>;
+  updateCall: Promise<Hash>;
   /** The message number for the event */
   messageNumber: bigint;
   /** The expected rolling hash in the event */
-  expectedRollingHash: string;
+  expectedRollingHash: Hex;
   /** The message hash that was added */
-  messageHash: string;
+  messageHash: Hex;
 }
 
 /**
  * Configuration for testing rolling hash mismatch errors
  */
-export interface RollingHashMismatchConfig<TContract extends BaseContract> {
+export interface RollingHashMismatchConfig<TContract extends DeployedContract> {
   /** The contract instance */
   contract: TContract;
   /** The async call that should revert */
@@ -79,11 +83,11 @@ export interface RollingHashMismatchConfig<TContract extends BaseContract> {
  */
 export interface RollingHashChainResult {
   /** The final rolling hash after processing all messages */
-  finalHash: string;
+  finalHash: Hex;
   /** Intermediate rolling hashes at each step */
-  intermediateHashes: string[];
+  intermediateHashes: Hex[];
   /** The message hashes that were processed */
-  messageHashes: string[];
+  messageHashes: Hex[];
 }
 
 /**
@@ -96,13 +100,13 @@ export interface RollingHashChainResult {
  *
  * @example
  * ```typescript
- * const result = computeRollingHashChain(ethers.ZeroHash, [hash1, hash2, hash3]);
+ * const result = computeRollingHashChain(zeroHash, [hash1, hash2, hash3]);
  * console.log(result.finalHash); // Final rolling hash
  * console.log(result.intermediateHashes); // [hash after 1, hash after 2, hash after 3]
  * ```
  */
-export function computeRollingHashChain(startingHash: string, messageHashes: string[]): RollingHashChainResult {
-  const intermediateHashes: string[] = [];
+export function computeRollingHashChain(startingHash: Hex, messageHashes: Hex[]): RollingHashChainResult {
+  const intermediateHashes: Hex[] = [];
   let currentHash = startingHash;
 
   for (const messageHash of messageHashes) {
@@ -134,21 +138,21 @@ export function computeRollingHashChain(startingHash: string, messageHashes: str
  * const messageHash = generateMessageHash(
  *   sender.address,
  *   receiver.address,
- *   ethers.parseEther("0.05"),
- *   ethers.parseEther("1"),
+ *   parseEther("0.05"),
+ *   parseEther("1"),
  *   1n,
  *   "0x"
  * );
  * ```
  */
 export function generateMessageHash(
-  sender: string,
-  receiver: string,
+  sender: Address,
+  receiver: Address,
   fee: bigint,
   value: bigint,
   nonce: bigint,
-  calldata: string,
-): string {
+  calldata: Hex,
+): Hex {
   return generateKeccak256(
     ["address", "address", "uint256", "uint256", "uint256", "bytes"],
     [sender, receiver, fee, value, nonce, calldata],
@@ -172,11 +176,11 @@ export function generateMessageHash(
 export async function validateRollingHashStorage(config: RollingHashStorageConfig): Promise<void> {
   const { contract, messageNumber, expectedHash, isL1RollingHash } = config;
 
-  let storedHash: string;
-  if (isL1RollingHash && contract.l1RollingHashes) {
-    storedHash = await contract.l1RollingHashes(messageNumber);
-  } else if (contract.rollingHashes) {
-    storedHash = await contract.rollingHashes(messageNumber);
+  let storedHash: Hex;
+  if (isL1RollingHash && contract.read.l1RollingHashes) {
+    storedHash = await contract.read.l1RollingHashes([messageNumber]);
+  } else if (contract.read.rollingHashes) {
+    storedHash = await contract.read.rollingHashes([messageNumber]);
   } else {
     throw new Error("Contract does not have rollingHashes or l1RollingHashes method");
   }
@@ -202,11 +206,11 @@ export async function validateRollingHashNotZero(
 ): Promise<void> {
   const { contract, messageNumber, isL1RollingHash } = config;
 
-  let storedHash: string;
-  if (isL1RollingHash && contract.l1RollingHashes) {
-    storedHash = await contract.l1RollingHashes(messageNumber);
-  } else if (contract.rollingHashes) {
-    storedHash = await contract.rollingHashes(messageNumber);
+  let storedHash: Hex;
+  if (isL1RollingHash && contract.read.l1RollingHashes) {
+    storedHash = await contract.read.l1RollingHashes([messageNumber]);
+  } else if (contract.read.rollingHashes) {
+    storedHash = await contract.read.rollingHashes([messageNumber]);
   } else {
     throw new Error("Contract does not have rollingHashes or l1RollingHashes method");
   }
@@ -233,11 +237,11 @@ export async function validateRollingHashNotZero(
 export async function validateRollingHashIsZero(config: Omit<RollingHashStorageConfig, "expectedHash">): Promise<void> {
   const { contract, messageNumber, isL1RollingHash } = config;
 
-  let storedHash: string;
-  if (isL1RollingHash && contract.l1RollingHashes) {
-    storedHash = await contract.l1RollingHashes(messageNumber);
-  } else if (contract.rollingHashes) {
-    storedHash = await contract.rollingHashes(messageNumber);
+  let storedHash: Hex;
+  if (isL1RollingHash && contract.read.l1RollingHashes) {
+    storedHash = await contract.read.l1RollingHashes([messageNumber]);
+  } else if (contract.read.rollingHashes) {
+    storedHash = await contract.read.rollingHashes([messageNumber]);
   } else {
     throw new Error("Contract does not have rollingHashes or l1RollingHashes method");
   }
@@ -261,12 +265,13 @@ export async function validateRollingHashIsZero(config: Omit<RollingHashStorageC
  * });
  * ```
  */
-export async function expectRollingHashUpdatedEvent<TContract extends BaseContract>(
+export async function expectRollingHashUpdatedEvent<TContract extends DeployedContract>(
   config: RollingHashEventConfig<TContract>,
 ): Promise<void> {
   const { contract, updateCall, messageNumber, expectedRollingHash, messageHash } = config;
 
-  await expectEvent(contract, updateCall, ROLLING_HASH_EVENTS.ROLLING_HASH_UPDATED, [
+  const target: AssertionTarget = contract;
+  await expectEvent(target, updateCall, ROLLING_HASH_EVENTS.ROLLING_HASH_UPDATED, [
     messageNumber,
     expectedRollingHash,
     messageHash,
@@ -287,11 +292,12 @@ export async function expectRollingHashUpdatedEvent<TContract extends BaseContra
  * });
  * ```
  */
-export async function expectRollingHashMismatchRevert<TContract extends BaseContract>(
+export async function expectRollingHashMismatchRevert<TContract extends DeployedContract>(
   config: RollingHashMismatchConfig<TContract>,
 ): Promise<void> {
   const errorName = config.errorName ?? ROLLING_HASH_ERRORS.ROLLING_HASH_MISMATCH;
-  await expectRevertWithCustomError(config.contract, config.call, errorName, config.errorArgs ?? []);
+  const target: AssertionTarget = config.contract;
+  await expectRevertWithCustomError(target, config.call, errorName, config.errorArgs);
 }
 
 /**
@@ -308,7 +314,7 @@ export async function expectRollingHashMismatchRevert<TContract extends BaseCont
  * ```typescript
  * const expectedHash = await computeAndValidateRollingHash(
  *   messageService,
- *   ethers.ZeroHash,
+ *   zeroHash,
  *   messageHash,
  *   1n,
  * );
@@ -316,11 +322,11 @@ export async function expectRollingHashMismatchRevert<TContract extends BaseCont
  */
 export async function computeAndValidateRollingHash(
   contract: RollingHashStorageConfig["contract"],
-  startingHash: string,
-  messageHash: string,
+  startingHash: Hex,
+  messageHash: Hex,
   messageNumber: bigint,
   isL1RollingHash?: boolean,
-): Promise<string> {
+): Promise<Hex> {
   const expectedHash = calculateRollingHash(startingHash, messageHash);
 
   await validateRollingHashStorage({
@@ -346,8 +352,8 @@ export async function computeAndValidateRollingHash(
  * const hashes = createMessageHashSequence("test-message", 10);
  * ```
  */
-export function createMessageHashSequence(baseString: string, count: number): string[] {
-  const hashes: string[] = [];
+export function createMessageHashSequence(baseString: string, count: number): Hex[] {
+  const hashes: Hex[] = [];
   for (let i = 1; i <= count; i++) {
     hashes.push(generateKeccak256(["string"], [`${baseString}${i}`], true));
   }
@@ -364,7 +370,7 @@ export function createMessageHashSequence(baseString: string, count: number): st
  *
  * @example
  * ```typescript
- * const chain = computeRollingHashChain(ethers.ZeroHash, messageHashes);
+ * const chain = computeRollingHashChain(zeroHash, messageHashes);
  * await validateRollingHashChain(messageService, chain, 1n);
  * ```
  */

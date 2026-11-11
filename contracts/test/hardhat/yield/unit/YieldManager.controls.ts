@@ -1,8 +1,6 @@
-import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { TestYieldManager } from "contracts/typechain-types";
-import { ethers } from "hardhat";
+import { network } from "hardhat";
+import { describe, it, before, beforeEach } from "node:test";
 
 import {
   GENERAL_PAUSE_TYPE,
@@ -11,35 +9,43 @@ import {
   NATIVE_YIELD_PERMISSIONLESS_ACTIONS_PAUSE_TYPE,
   NATIVE_YIELD_REPORTING_PAUSE_TYPE,
   ProgressOssificationResult,
-} from "../../common/constants";
+} from "../../common/constants/index.js";
 import {
   expectAccessControlRevert,
-  expectEvent,
-  expectRevertWithCustomError,
   expectPaused,
   expectNotPaused,
   getAccountsFixture,
-} from "../../common/helpers";
-import { deployYieldManagerForUnitTest } from "../helpers/deploy";
-import { addMockYieldProvider } from "../helpers/mocks";
-import { setWithdrawalReserveBalance, setWithdrawalReserveToMinimum } from "../helpers/setup";
+  type TestAccount,
+  expectEvent,
+  expectRevertWithCustomError,
+} from "../../common/helpers/index.js";
+import { deployYieldManagerForUnitTest } from "../helpers/deploy.js";
+import { addMockYieldProvider } from "../helpers/mocks.js";
+import { randomAddress, setWithdrawalReserveBalance, setWithdrawalReserveToMinimum } from "../helpers/setup.js";
+
+import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
 
 describe("YieldManager contract - control operations", () => {
-  let yieldManager: TestYieldManager;
+  let yieldManager: ContractReturnType<"TestYieldManager">;
 
-  let securityCouncil: SignerWithAddress;
-  let nonAuthorizedAccount: SignerWithAddress;
-  let nativeYieldOperator: SignerWithAddress;
+  let securityCouncil: TestAccount;
+  let nonAuthorizedAccount: TestAccount;
+  let nativeYieldOperator: TestAccount;
 
   before(async () => {
-    ({ securityCouncil, operator: nonAuthorizedAccount, nativeYieldOperator } = await loadFixture(getAccountsFixture));
+    const { networkHelpers } = await network.getOrCreate();
+    ({
+      securityCouncil,
+      operator: nonAuthorizedAccount,
+      nativeYieldOperator,
+    } = await networkHelpers.loadFixture(getAccountsFixture));
   });
 
   describe("pausing", () => {
     it("Security council should be able to activate GENERAL_PAUSE_TYPE", async () => {
       await expectEvent(
         yieldManager,
-        yieldManager.connect(securityCouncil).pauseByType(GENERAL_PAUSE_TYPE),
+        yieldManager.write.pauseByType([GENERAL_PAUSE_TYPE], { account: securityCouncil.account }),
         "PausedIndefinitely",
         [securityCouncil.address, GENERAL_PAUSE_TYPE],
       );
@@ -49,7 +55,7 @@ describe("YieldManager contract - control operations", () => {
     it("Security council should be able to activate NATIVE_YIELD_STAKING_PAUSE_TYPE", async () => {
       await expectEvent(
         yieldManager,
-        yieldManager.connect(securityCouncil).pauseByType(NATIVE_YIELD_STAKING_PAUSE_TYPE),
+        yieldManager.write.pauseByType([NATIVE_YIELD_STAKING_PAUSE_TYPE], { account: securityCouncil.account }),
         "PausedIndefinitely",
         [securityCouncil.address, NATIVE_YIELD_STAKING_PAUSE_TYPE],
       );
@@ -59,7 +65,7 @@ describe("YieldManager contract - control operations", () => {
     it("Security council should be able to activate NATIVE_YIELD_UNSTAKING_PAUSE_TYPE", async () => {
       await expectEvent(
         yieldManager,
-        yieldManager.connect(securityCouncil).pauseByType(NATIVE_YIELD_UNSTAKING_PAUSE_TYPE),
+        yieldManager.write.pauseByType([NATIVE_YIELD_UNSTAKING_PAUSE_TYPE], { account: securityCouncil.account }),
         "PausedIndefinitely",
         [securityCouncil.address, NATIVE_YIELD_UNSTAKING_PAUSE_TYPE],
       );
@@ -69,7 +75,9 @@ describe("YieldManager contract - control operations", () => {
     it("Security council should be able to activate NATIVE_YIELD_PERMISSIONLESS_ACTIONS_PAUSE_TYPE", async () => {
       await expectEvent(
         yieldManager,
-        yieldManager.connect(securityCouncil).pauseByType(NATIVE_YIELD_PERMISSIONLESS_ACTIONS_PAUSE_TYPE),
+        yieldManager.write.pauseByType([NATIVE_YIELD_PERMISSIONLESS_ACTIONS_PAUSE_TYPE], {
+          account: securityCouncil.account,
+        }),
         "PausedIndefinitely",
         [securityCouncil.address, NATIVE_YIELD_PERMISSIONLESS_ACTIONS_PAUSE_TYPE],
       );
@@ -79,7 +87,7 @@ describe("YieldManager contract - control operations", () => {
     it("Security council should be able to activate NATIVE_YIELD_REPORTING_PAUSE_TYPE", async () => {
       await expectEvent(
         yieldManager,
-        yieldManager.connect(securityCouncil).pauseByType(NATIVE_YIELD_REPORTING_PAUSE_TYPE),
+        yieldManager.write.pauseByType([NATIVE_YIELD_REPORTING_PAUSE_TYPE], { account: securityCouncil.account }),
         "PausedIndefinitely",
         [securityCouncil.address, NATIVE_YIELD_REPORTING_PAUSE_TYPE],
       );
@@ -89,26 +97,30 @@ describe("YieldManager contract - control operations", () => {
     // LST withdrawals are now governed by NATIVE_YIELD_PERMISSIONLESS_ACTIONS_PAUSE_TYPE.
 
     const pauseRoleExpectations = [
-      { label: "GENERAL_PAUSE_TYPE", pauseType: GENERAL_PAUSE_TYPE, roleGetter: () => yieldManager.PAUSE_ALL_ROLE() },
+      {
+        label: "GENERAL_PAUSE_TYPE",
+        pauseType: GENERAL_PAUSE_TYPE,
+        roleGetter: () => yieldManager.read.PAUSE_ALL_ROLE(),
+      },
       {
         label: "NATIVE_YIELD_STAKING_PAUSE_TYPE",
         pauseType: NATIVE_YIELD_STAKING_PAUSE_TYPE,
-        roleGetter: () => yieldManager.PAUSE_NATIVE_YIELD_STAKING_ROLE(),
+        roleGetter: () => yieldManager.read.PAUSE_NATIVE_YIELD_STAKING_ROLE(),
       },
       {
         label: "NATIVE_YIELD_UNSTAKING_PAUSE_TYPE",
         pauseType: NATIVE_YIELD_UNSTAKING_PAUSE_TYPE,
-        roleGetter: () => yieldManager.PAUSE_NATIVE_YIELD_UNSTAKING_ROLE(),
+        roleGetter: () => yieldManager.read.PAUSE_NATIVE_YIELD_UNSTAKING_ROLE(),
       },
       {
         label: "NATIVE_YIELD_PERMISSIONLESS_ACTIONS_PAUSE_TYPE",
         pauseType: NATIVE_YIELD_PERMISSIONLESS_ACTIONS_PAUSE_TYPE,
-        roleGetter: () => yieldManager.PAUSE_NATIVE_YIELD_PERMISSIONLESS_ACTIONS_ROLE(),
+        roleGetter: () => yieldManager.read.PAUSE_NATIVE_YIELD_PERMISSIONLESS_ACTIONS_ROLE(),
       },
       {
         label: "NATIVE_YIELD_REPORTING_PAUSE_TYPE",
         pauseType: NATIVE_YIELD_REPORTING_PAUSE_TYPE,
-        roleGetter: () => yieldManager.PAUSE_NATIVE_YIELD_REPORTING_ROLE(),
+        roleGetter: () => yieldManager.read.PAUSE_NATIVE_YIELD_REPORTING_ROLE(),
       },
     ] as const;
 
@@ -116,7 +128,7 @@ describe("YieldManager contract - control operations", () => {
       it(`Non authorized account should not be able to activate ${label}`, async () => {
         const requiredRole = await roleGetter();
         await expectAccessControlRevert(
-          yieldManager.connect(nonAuthorizedAccount).pauseByType(pauseType),
+          yieldManager.write.pauseByType([pauseType], { account: nonAuthorizedAccount.account }),
           nonAuthorizedAccount,
           requiredRole,
         );
@@ -126,10 +138,10 @@ describe("YieldManager contract - control operations", () => {
 
   describe("unpausing", () => {
     it("Security council should be able to unpause GENERAL_PAUSE_TYPE", async () => {
-      await yieldManager.connect(securityCouncil).pauseByType(GENERAL_PAUSE_TYPE);
+      await yieldManager.write.pauseByType([GENERAL_PAUSE_TYPE], { account: securityCouncil.account });
       await expectEvent(
         yieldManager,
-        yieldManager.connect(securityCouncil).unPauseByType(GENERAL_PAUSE_TYPE),
+        yieldManager.write.unPauseByType([GENERAL_PAUSE_TYPE], { account: securityCouncil.account }),
         "UnPaused",
         [securityCouncil.address, GENERAL_PAUSE_TYPE],
       );
@@ -137,11 +149,13 @@ describe("YieldManager contract - control operations", () => {
     });
 
     async function pauseThenUnpause(pauseType: number) {
-      await yieldManager.connect(securityCouncil).pauseByType(pauseType);
-      await expectEvent(yieldManager, yieldManager.connect(securityCouncil).unPauseByType(pauseType), "UnPaused", [
-        securityCouncil.address,
-        pauseType,
-      ]);
+      await yieldManager.write.pauseByType([pauseType], { account: securityCouncil.account });
+      await expectEvent(
+        yieldManager,
+        yieldManager.write.unPauseByType([pauseType], { account: securityCouncil.account }),
+        "UnPaused",
+        [securityCouncil.address, pauseType],
+      );
       await expectNotPaused(yieldManager, pauseType);
     }
 
@@ -167,27 +181,27 @@ describe("YieldManager contract - control operations", () => {
       {
         label: "GENERAL_PAUSE_TYPE",
         pauseType: GENERAL_PAUSE_TYPE,
-        roleGetter: () => yieldManager.UNPAUSE_ALL_ROLE(),
+        roleGetter: () => yieldManager.read.UNPAUSE_ALL_ROLE(),
       },
       {
         label: "NATIVE_YIELD_STAKING_PAUSE_TYPE",
         pauseType: NATIVE_YIELD_STAKING_PAUSE_TYPE,
-        roleGetter: () => yieldManager.UNPAUSE_NATIVE_YIELD_STAKING_ROLE(),
+        roleGetter: () => yieldManager.read.UNPAUSE_NATIVE_YIELD_STAKING_ROLE(),
       },
       {
         label: "NATIVE_YIELD_UNSTAKING_PAUSE_TYPE",
         pauseType: NATIVE_YIELD_UNSTAKING_PAUSE_TYPE,
-        roleGetter: () => yieldManager.UNPAUSE_NATIVE_YIELD_UNSTAKING_ROLE(),
+        roleGetter: () => yieldManager.read.UNPAUSE_NATIVE_YIELD_UNSTAKING_ROLE(),
       },
       {
         label: "NATIVE_YIELD_PERMISSIONLESS_ACTIONS_PAUSE_TYPE",
         pauseType: NATIVE_YIELD_PERMISSIONLESS_ACTIONS_PAUSE_TYPE,
-        roleGetter: () => yieldManager.UNPAUSE_NATIVE_YIELD_PERMISSIONLESS_ACTIONS_ROLE(),
+        roleGetter: () => yieldManager.read.UNPAUSE_NATIVE_YIELD_PERMISSIONLESS_ACTIONS_ROLE(),
       },
       {
         label: "NATIVE_YIELD_REPORTING_PAUSE_TYPE",
         pauseType: NATIVE_YIELD_REPORTING_PAUSE_TYPE,
-        roleGetter: () => yieldManager.UNPAUSE_NATIVE_YIELD_REPORTING_ROLE(),
+        roleGetter: () => yieldManager.read.UNPAUSE_NATIVE_YIELD_REPORTING_ROLE(),
       },
     ] as const;
 
@@ -195,7 +209,7 @@ describe("YieldManager contract - control operations", () => {
       it(`Non authorized account should not be able to unpause ${label}`, async () => {
         const requiredRole = await roleGetter();
         await expectAccessControlRevert(
-          yieldManager.connect(nonAuthorizedAccount).unPauseByType(pauseType),
+          yieldManager.write.unPauseByType([pauseType], { account: nonAuthorizedAccount.account }),
           nonAuthorizedAccount,
           requiredRole,
         );
@@ -204,7 +218,8 @@ describe("YieldManager contract - control operations", () => {
   });
 
   beforeEach(async () => {
-    ({ yieldManager } = await loadFixture(deployYieldManagerForUnitTest));
+    const { networkHelpers } = await network.getOrCreate();
+    ({ yieldManager } = await networkHelpers.loadFixture(deployYieldManagerForUnitTest));
   });
 
   // pauseStaking() unit tests
@@ -212,10 +227,10 @@ describe("YieldManager contract - control operations", () => {
     it("Should revert when adding if the caller does not have the STAKING_PAUSE_CONTROLLER_ROLE", async () => {
       const { mockYieldProviderAddress } = await addMockYieldProvider(yieldManager);
 
-      const requiredRole = await yieldManager.STAKING_PAUSE_CONTROLLER_ROLE();
+      const requiredRole = await yieldManager.read.STAKING_PAUSE_CONTROLLER_ROLE();
 
       await expectAccessControlRevert(
-        yieldManager.connect(nonAuthorizedAccount).pauseStaking(mockYieldProviderAddress),
+        yieldManager.write.pauseStaking([mockYieldProviderAddress], { account: nonAuthorizedAccount.account }),
         nonAuthorizedAccount,
         requiredRole,
       );
@@ -224,7 +239,7 @@ describe("YieldManager contract - control operations", () => {
     it("Should revert when pausing an unknown yield provider", async () => {
       await expectRevertWithCustomError(
         yieldManager,
-        yieldManager.connect(nativeYieldOperator).pauseStaking(ethers.Wallet.createRandom().address),
+        yieldManager.write.pauseStaking([randomAddress()], { account: nativeYieldOperator.account }),
         "UnknownYieldProvider",
       );
     });
@@ -232,11 +247,11 @@ describe("YieldManager contract - control operations", () => {
     it("Should revert if staking already paused", async () => {
       const { mockYieldProviderAddress } = await addMockYieldProvider(yieldManager);
 
-      await yieldManager.connect(nativeYieldOperator).pauseStaking(mockYieldProviderAddress);
+      await yieldManager.write.pauseStaking([mockYieldProviderAddress], { account: nativeYieldOperator.account });
 
       await expectRevertWithCustomError(
         yieldManager,
-        yieldManager.connect(nativeYieldOperator).pauseStaking(mockYieldProviderAddress),
+        yieldManager.write.pauseStaking([mockYieldProviderAddress], { account: nativeYieldOperator.account }),
         "StakingAlreadyPaused",
       );
     });
@@ -246,12 +261,12 @@ describe("YieldManager contract - control operations", () => {
 
       await expectEvent(
         yieldManager,
-        yieldManager.connect(nativeYieldOperator).pauseStaking(mockYieldProviderAddress),
+        yieldManager.write.pauseStaking([mockYieldProviderAddress], { account: nativeYieldOperator.account }),
         "YieldProviderStakingPaused",
         [mockYieldProviderAddress],
       );
 
-      expect(await yieldManager.isStakingPaused(mockYieldProviderAddress)).to.be.true;
+      expect(await yieldManager.read.isStakingPaused([mockYieldProviderAddress])).to.be.true;
     });
   });
 
@@ -259,21 +274,25 @@ describe("YieldManager contract - control operations", () => {
   describe("Pausing staking if not already", () => {
     it("If not currently paused, should pause", async () => {
       const { mockYieldProviderAddress } = await addMockYieldProvider(yieldManager);
-      expect(await yieldManager.isStakingPaused(mockYieldProviderAddress)).to.be.false;
+      expect(await yieldManager.read.isStakingPaused([mockYieldProviderAddress])).to.be.false;
 
-      await yieldManager.connect(nativeYieldOperator).pauseStakingIfNotAlready(mockYieldProviderAddress);
+      await yieldManager.write.pauseStakingIfNotAlready([mockYieldProviderAddress], {
+        account: nativeYieldOperator.account,
+      });
 
-      expect(await yieldManager.isStakingPaused(mockYieldProviderAddress)).to.be.true;
+      expect(await yieldManager.read.isStakingPaused([mockYieldProviderAddress])).to.be.true;
     });
 
     it("If already paused, no-op", async () => {
       const { mockYieldProviderAddress } = await addMockYieldProvider(yieldManager);
 
-      await yieldManager.setYieldProviderIsStakingPaused(mockYieldProviderAddress, true);
+      await yieldManager.write.setYieldProviderIsStakingPaused([mockYieldProviderAddress, true]);
 
-      await yieldManager.connect(nativeYieldOperator).pauseStakingIfNotAlready(mockYieldProviderAddress);
+      await yieldManager.write.pauseStakingIfNotAlready([mockYieldProviderAddress], {
+        account: nativeYieldOperator.account,
+      });
 
-      expect(await yieldManager.isStakingPaused(mockYieldProviderAddress)).to.be.true;
+      expect(await yieldManager.read.isStakingPaused([mockYieldProviderAddress])).to.be.true;
     });
   });
 
@@ -282,10 +301,10 @@ describe("YieldManager contract - control operations", () => {
     it("Should revert when adding if the caller does not have the STAKING_PAUSE_CONTROLLER_ROLE", async () => {
       const { mockYieldProviderAddress } = await addMockYieldProvider(yieldManager);
 
-      const requiredRole = await yieldManager.STAKING_PAUSE_CONTROLLER_ROLE();
+      const requiredRole = await yieldManager.read.STAKING_PAUSE_CONTROLLER_ROLE();
 
       await expectAccessControlRevert(
-        yieldManager.connect(nonAuthorizedAccount).unpauseStaking(mockYieldProviderAddress),
+        yieldManager.write.unpauseStaking([mockYieldProviderAddress], { account: nonAuthorizedAccount.account }),
         nonAuthorizedAccount,
         requiredRole,
       );
@@ -294,7 +313,7 @@ describe("YieldManager contract - control operations", () => {
     it("Should revert when pausing an unknown yield provider", async () => {
       await expectRevertWithCustomError(
         yieldManager,
-        yieldManager.connect(nativeYieldOperator).unpauseStaking(ethers.Wallet.createRandom().address),
+        yieldManager.write.unpauseStaking([randomAddress()], { account: nativeYieldOperator.account }),
         "UnknownYieldProvider",
       );
     });
@@ -305,7 +324,7 @@ describe("YieldManager contract - control operations", () => {
 
       await expectRevertWithCustomError(
         yieldManager,
-        yieldManager.connect(nativeYieldOperator).unpauseStaking(mockYieldProviderAddress),
+        yieldManager.write.unpauseStaking([mockYieldProviderAddress], { account: nativeYieldOperator.account }),
         "StakingAlreadyUnpaused",
       );
     });
@@ -313,12 +332,12 @@ describe("YieldManager contract - control operations", () => {
     it("Should revert if the withdrawal reserve is in deficit", async () => {
       const { mockYieldProviderAddress } = await addMockYieldProvider(yieldManager);
 
-      await yieldManager.connect(nativeYieldOperator).pauseStaking(mockYieldProviderAddress);
+      await yieldManager.write.pauseStaking([mockYieldProviderAddress], { account: nativeYieldOperator.account });
       await setWithdrawalReserveBalance(yieldManager, 0n);
 
       await expectRevertWithCustomError(
         yieldManager,
-        yieldManager.connect(nativeYieldOperator).unpauseStaking(mockYieldProviderAddress),
+        yieldManager.write.unpauseStaking([mockYieldProviderAddress], { account: nativeYieldOperator.account }),
         "InsufficientWithdrawalReserve",
       );
     });
@@ -326,13 +345,13 @@ describe("YieldManager contract - control operations", () => {
     it("Should revert if ossification has been initiated but not completed", async () => {
       const { mockYieldProviderAddress } = await addMockYieldProvider(yieldManager);
 
-      await yieldManager.connect(nativeYieldOperator).pauseStaking(mockYieldProviderAddress);
+      await yieldManager.write.pauseStaking([mockYieldProviderAddress], { account: nativeYieldOperator.account });
       await setWithdrawalReserveToMinimum(yieldManager);
-      await yieldManager.setYieldProviderIsOssificationInitiated(mockYieldProviderAddress, true);
+      await yieldManager.write.setYieldProviderIsOssificationInitiated([mockYieldProviderAddress, true]);
 
       await expectRevertWithCustomError(
         yieldManager,
-        yieldManager.connect(nativeYieldOperator).unpauseStaking(mockYieldProviderAddress),
+        yieldManager.write.unpauseStaking([mockYieldProviderAddress], { account: nativeYieldOperator.account }),
         "UnpauseStakingForbiddenDuringPendingOssification",
       );
     });
@@ -340,25 +359,27 @@ describe("YieldManager contract - control operations", () => {
     it("Should succeed if ossification has been completed", async () => {
       const { mockYieldProviderAddress } = await addMockYieldProvider(yieldManager);
 
-      await yieldManager.connect(nativeYieldOperator).pauseStaking(mockYieldProviderAddress);
+      await yieldManager.write.pauseStaking([mockYieldProviderAddress], { account: nativeYieldOperator.account });
       await setWithdrawalReserveToMinimum(yieldManager);
-      await yieldManager.setYieldProviderIsOssificationInitiated(mockYieldProviderAddress, true);
-      await yieldManager.setYieldProviderIsOssified(mockYieldProviderAddress, true);
+      await yieldManager.write.setYieldProviderIsOssificationInitiated([mockYieldProviderAddress, true]);
+      await yieldManager.write.setYieldProviderIsOssified([mockYieldProviderAddress, true]);
 
-      const tx = yieldManager.connect(nativeYieldOperator).unpauseStaking(mockYieldProviderAddress);
-      await expect(tx).to.not.be.reverted;
+      const tx = yieldManager.write.unpauseStaking([mockYieldProviderAddress], {
+        account: nativeYieldOperator.account,
+      });
+      await tx;
     });
 
     it("Should revert if there is a current lst liability", async () => {
       const { mockYieldProviderAddress } = await addMockYieldProvider(yieldManager);
 
-      await yieldManager.connect(nativeYieldOperator).pauseStaking(mockYieldProviderAddress);
+      await yieldManager.write.pauseStaking([mockYieldProviderAddress], { account: nativeYieldOperator.account });
       await setWithdrawalReserveToMinimum(yieldManager);
-      await yieldManager.setYieldProviderLstLiabilityPrincipal(mockYieldProviderAddress, 1n);
+      await yieldManager.write.setYieldProviderLstLiabilityPrincipal([mockYieldProviderAddress, 1n]);
 
       await expectRevertWithCustomError(
         yieldManager,
-        yieldManager.connect(nativeYieldOperator).unpauseStaking(mockYieldProviderAddress),
+        yieldManager.write.unpauseStaking([mockYieldProviderAddress], { account: nativeYieldOperator.account }),
         "UnpauseStakingForbiddenWithCurrentLSTLiability",
       );
     });
@@ -366,17 +387,17 @@ describe("YieldManager contract - control operations", () => {
     it("Should successfully unpause and emit the correct event", async () => {
       const { mockYieldProviderAddress } = await addMockYieldProvider(yieldManager);
 
-      await yieldManager.connect(nativeYieldOperator).pauseStaking(mockYieldProviderAddress);
+      await yieldManager.write.pauseStaking([mockYieldProviderAddress], { account: nativeYieldOperator.account });
       await setWithdrawalReserveToMinimum(yieldManager);
 
       await expectEvent(
         yieldManager,
-        yieldManager.connect(nativeYieldOperator).unpauseStaking(mockYieldProviderAddress),
+        yieldManager.write.unpauseStaking([mockYieldProviderAddress], { account: nativeYieldOperator.account }),
         "YieldProviderStakingUnpaused",
         [mockYieldProviderAddress],
       );
 
-      expect(await yieldManager.isStakingPaused(mockYieldProviderAddress)).to.be.false;
+      expect(await yieldManager.read.isStakingPaused([mockYieldProviderAddress])).to.be.false;
     });
   });
 
@@ -385,10 +406,10 @@ describe("YieldManager contract - control operations", () => {
     it("Should revert when adding if the caller does not have the OSSIFICATION_INITIATOR_ROLE", async () => {
       const { mockYieldProviderAddress } = await addMockYieldProvider(yieldManager);
 
-      const requiredRole = await yieldManager.OSSIFICATION_INITIATOR_ROLE();
+      const requiredRole = await yieldManager.read.OSSIFICATION_INITIATOR_ROLE();
 
       await expectAccessControlRevert(
-        yieldManager.connect(nativeYieldOperator).initiateOssification(mockYieldProviderAddress),
+        yieldManager.write.initiateOssification([mockYieldProviderAddress], { account: nativeYieldOperator.account }),
         nativeYieldOperator,
         requiredRole,
       );
@@ -397,7 +418,7 @@ describe("YieldManager contract - control operations", () => {
     it("Should revert when requesting for an unknown yield provider", async () => {
       await expectRevertWithCustomError(
         yieldManager,
-        yieldManager.connect(securityCouncil).initiateOssification(ethers.Wallet.createRandom().address),
+        yieldManager.write.initiateOssification([randomAddress()], { account: securityCouncil.account }),
         "UnknownYieldProvider",
       );
     });
@@ -405,11 +426,11 @@ describe("YieldManager contract - control operations", () => {
     it("Should revert if ossification has been initiated", async () => {
       const { mockYieldProviderAddress } = await addMockYieldProvider(yieldManager);
 
-      await yieldManager.connect(securityCouncil).initiateOssification(mockYieldProviderAddress);
+      await yieldManager.write.initiateOssification([mockYieldProviderAddress], { account: securityCouncil.account });
 
       await expectRevertWithCustomError(
         yieldManager,
-        yieldManager.connect(securityCouncil).initiateOssification(mockYieldProviderAddress),
+        yieldManager.write.initiateOssification([mockYieldProviderAddress], { account: securityCouncil.account }),
         "OssificationAlreadyInitiated",
       );
     });
@@ -417,11 +438,11 @@ describe("YieldManager contract - control operations", () => {
     it("Should revert if ossification has completed", async () => {
       const { mockYieldProviderAddress } = await addMockYieldProvider(yieldManager);
 
-      await yieldManager.setYieldProviderIsOssified(mockYieldProviderAddress, true);
+      await yieldManager.write.setYieldProviderIsOssified([mockYieldProviderAddress, true]);
 
       await expectRevertWithCustomError(
         yieldManager,
-        yieldManager.connect(securityCouncil).initiateOssification(mockYieldProviderAddress),
+        yieldManager.write.initiateOssification([mockYieldProviderAddress], { account: securityCouncil.account }),
         "AlreadyOssified",
       );
     });
@@ -429,12 +450,14 @@ describe("YieldManager contract - control operations", () => {
     it("Should successfully initiate ossification, pause staking and emit the correct event", async () => {
       const { mockYieldProviderAddress } = await addMockYieldProvider(yieldManager);
 
-      const initiateCall = yieldManager.connect(securityCouncil).initiateOssification(mockYieldProviderAddress);
+      const initiateCall = yieldManager.write.initiateOssification([mockYieldProviderAddress], {
+        account: securityCouncil.account,
+      });
       await expectEvent(yieldManager, initiateCall, "YieldProviderStakingPaused", [mockYieldProviderAddress]);
       await expectEvent(yieldManager, initiateCall, "YieldProviderOssificationInitiated", [mockYieldProviderAddress]);
 
-      expect(await yieldManager.isOssificationInitiated(mockYieldProviderAddress)).to.be.true;
-      expect(await yieldManager.isStakingPaused(mockYieldProviderAddress)).to.be.true;
+      expect(await yieldManager.read.isOssificationInitiated([mockYieldProviderAddress])).to.be.true;
+      expect(await yieldManager.read.isStakingPaused([mockYieldProviderAddress])).to.be.true;
     });
   });
 
@@ -443,10 +466,12 @@ describe("YieldManager contract - control operations", () => {
     it("Should revert when adding if the caller does not have the OSSIFICATION_PROCESSOR_ROLE", async () => {
       const { mockYieldProviderAddress } = await addMockYieldProvider(yieldManager);
 
-      const requiredRole = await yieldManager.OSSIFICATION_PROCESSOR_ROLE();
+      const requiredRole = await yieldManager.read.OSSIFICATION_PROCESSOR_ROLE();
 
       await expectAccessControlRevert(
-        yieldManager.connect(nonAuthorizedAccount).progressPendingOssification(mockYieldProviderAddress),
+        yieldManager.write.progressPendingOssification([mockYieldProviderAddress], {
+          account: nonAuthorizedAccount.account,
+        }),
         nonAuthorizedAccount,
         requiredRole,
       );
@@ -455,7 +480,7 @@ describe("YieldManager contract - control operations", () => {
     it("Should revert when requesting for an unknown yield provider", async () => {
       await expectRevertWithCustomError(
         yieldManager,
-        yieldManager.connect(securityCouncil).progressPendingOssification(ethers.Wallet.createRandom().address),
+        yieldManager.write.progressPendingOssification([randomAddress()], { account: securityCouncil.account }),
         "UnknownYieldProvider",
       );
     });
@@ -465,7 +490,9 @@ describe("YieldManager contract - control operations", () => {
 
       await expectRevertWithCustomError(
         yieldManager,
-        yieldManager.connect(securityCouncil).progressPendingOssification(mockYieldProviderAddress),
+        yieldManager.write.progressPendingOssification([mockYieldProviderAddress], {
+          account: securityCouncil.account,
+        }),
         "OssificationNotInitiated",
       );
     });
@@ -473,12 +500,14 @@ describe("YieldManager contract - control operations", () => {
     it("Should revert if ossification completed", async () => {
       const { mockYieldProviderAddress } = await addMockYieldProvider(yieldManager);
 
-      await yieldManager.setYieldProviderIsOssificationInitiated(mockYieldProviderAddress, true);
-      await yieldManager.setYieldProviderIsOssified(mockYieldProviderAddress, true);
+      await yieldManager.write.setYieldProviderIsOssificationInitiated([mockYieldProviderAddress, true]);
+      await yieldManager.write.setYieldProviderIsOssified([mockYieldProviderAddress, true]);
 
       await expectRevertWithCustomError(
         yieldManager,
-        yieldManager.connect(securityCouncil).progressPendingOssification(mockYieldProviderAddress),
+        yieldManager.write.progressPendingOssification([mockYieldProviderAddress], {
+          account: securityCouncil.account,
+        }),
         "AlreadyOssified",
       );
     });
@@ -486,72 +515,87 @@ describe("YieldManager contract - control operations", () => {
     it("If YieldProvider does no-op for progress pending, should not complete ossification and emit the correct event", async () => {
       const { mockYieldProviderAddress } = await addMockYieldProvider(yieldManager);
 
-      await yieldManager.connect(securityCouncil).initiateOssification(mockYieldProviderAddress);
-      await yieldManager
-        .connect(securityCouncil)
-        .setProgressPendingOssificationReturnVal(mockYieldProviderAddress, ProgressOssificationResult.NOOP);
+      await yieldManager.write.initiateOssification([mockYieldProviderAddress], { account: securityCouncil.account });
+      await yieldManager.write.setProgressPendingOssificationReturnVal(
+        [mockYieldProviderAddress, ProgressOssificationResult.NOOP],
+        { account: securityCouncil.account },
+      );
 
-      const progressOssificationResult = await yieldManager
-        .connect(securityCouncil)
-        .progressPendingOssification.staticCall(mockYieldProviderAddress);
+      const progressOssificationResult = (
+        await yieldManager.simulate.progressPendingOssification([mockYieldProviderAddress], {
+          account: securityCouncil.address,
+        })
+      ).result;
       expect(progressOssificationResult).to.eq(ProgressOssificationResult.NOOP);
 
       await expectEvent(
         yieldManager,
-        yieldManager.connect(securityCouncil).progressPendingOssification(mockYieldProviderAddress),
+        yieldManager.write.progressPendingOssification([mockYieldProviderAddress], {
+          account: securityCouncil.account,
+        }),
         "YieldProviderOssificationProcessed",
         [mockYieldProviderAddress, ProgressOssificationResult.NOOP],
       );
 
-      expect(await yieldManager.isOssificationInitiated(mockYieldProviderAddress)).to.be.true;
-      expect(await yieldManager.isOssified(mockYieldProviderAddress)).to.be.false;
+      expect(await yieldManager.read.isOssificationInitiated([mockYieldProviderAddress])).to.be.true;
+      expect(await yieldManager.read.isOssified([mockYieldProviderAddress])).to.be.false;
     });
 
     it("If YieldProvider does reinitiate ossification for progress, should not complete ossification and emit the correct event", async () => {
       const { mockYieldProviderAddress } = await addMockYieldProvider(yieldManager);
 
-      await yieldManager.connect(securityCouncil).initiateOssification(mockYieldProviderAddress);
-      await yieldManager
-        .connect(securityCouncil)
-        .setProgressPendingOssificationReturnVal(mockYieldProviderAddress, ProgressOssificationResult.REINITIATED);
+      await yieldManager.write.initiateOssification([mockYieldProviderAddress], { account: securityCouncil.account });
+      await yieldManager.write.setProgressPendingOssificationReturnVal(
+        [mockYieldProviderAddress, ProgressOssificationResult.REINITIATED],
+        { account: securityCouncil.account },
+      );
 
-      const progressOssificationResult = await yieldManager
-        .connect(securityCouncil)
-        .progressPendingOssification.staticCall(mockYieldProviderAddress);
+      const progressOssificationResult = (
+        await yieldManager.simulate.progressPendingOssification([mockYieldProviderAddress], {
+          account: securityCouncil.address,
+        })
+      ).result;
       expect(progressOssificationResult).to.eq(ProgressOssificationResult.REINITIATED);
 
       await expectEvent(
         yieldManager,
-        yieldManager.connect(securityCouncil).progressPendingOssification(mockYieldProviderAddress),
+        yieldManager.write.progressPendingOssification([mockYieldProviderAddress], {
+          account: securityCouncil.account,
+        }),
         "YieldProviderOssificationProcessed",
         [mockYieldProviderAddress, ProgressOssificationResult.REINITIATED],
       );
 
-      expect(await yieldManager.isOssificationInitiated(mockYieldProviderAddress)).to.be.true;
-      expect(await yieldManager.isOssified(mockYieldProviderAddress)).to.be.false;
+      expect(await yieldManager.read.isOssificationInitiated([mockYieldProviderAddress])).to.be.true;
+      expect(await yieldManager.read.isOssified([mockYieldProviderAddress])).to.be.false;
     });
 
     it("If YieldProvider returns completed ossification, should complete ossification and emit the correct event", async () => {
       const { mockYieldProviderAddress } = await addMockYieldProvider(yieldManager);
 
-      await yieldManager.connect(securityCouncil).initiateOssification(mockYieldProviderAddress);
-      await yieldManager
-        .connect(securityCouncil)
-        .setProgressPendingOssificationReturnVal(mockYieldProviderAddress, ProgressOssificationResult.COMPLETE);
+      await yieldManager.write.initiateOssification([mockYieldProviderAddress], { account: securityCouncil.account });
+      await yieldManager.write.setProgressPendingOssificationReturnVal(
+        [mockYieldProviderAddress, ProgressOssificationResult.COMPLETE],
+        { account: securityCouncil.account },
+      );
 
-      const progressOssificationResult = await yieldManager
-        .connect(securityCouncil)
-        .progressPendingOssification.staticCall(mockYieldProviderAddress);
+      const progressOssificationResult = (
+        await yieldManager.simulate.progressPendingOssification([mockYieldProviderAddress], {
+          account: securityCouncil.address,
+        })
+      ).result;
       expect(progressOssificationResult).to.eq(ProgressOssificationResult.COMPLETE);
 
       await expectEvent(
         yieldManager,
-        yieldManager.connect(securityCouncil).progressPendingOssification(mockYieldProviderAddress),
+        yieldManager.write.progressPendingOssification([mockYieldProviderAddress], {
+          account: securityCouncil.account,
+        }),
         "YieldProviderOssificationProcessed",
         [mockYieldProviderAddress, ProgressOssificationResult.COMPLETE],
       );
 
-      expect(await yieldManager.isOssified(mockYieldProviderAddress)).to.be.true;
+      expect(await yieldManager.read.isOssified([mockYieldProviderAddress])).to.be.true;
     });
   });
 });

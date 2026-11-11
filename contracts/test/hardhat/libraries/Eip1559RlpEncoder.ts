@@ -1,30 +1,40 @@
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
+import { network } from "hardhat";
+import { describe, it, beforeEach } from "node:test";
 
-import { TestEip1559RlpEncoder } from "../../../typechain-types";
-import transactionWithCalldata from "../_testData/eip1559RlpEncoderTransactions/withCalldata.json";
-import transactionWithCalldataAndAccessList from "../_testData/eip1559RlpEncoderTransactions/withCalldataAndAccessList.json";
-import transactionWithLargeCalldata from "../_testData/eip1559RlpEncoderTransactions/withLargeCalldata.json";
-import transactionWithoutCalldata from "../_testData/eip1559RlpEncoderTransactions/withoutCalldata.json";
-import { deployFromFactory } from "../common/deployment";
-import { generateKeccak256BytesDirectly } from "../common/helpers";
-import { buildEip1559Transaction } from "../common/helpers/typedTransactionBuilding";
+import transactionWithCalldata from "../_testData/eip1559RlpEncoderTransactions/withCalldata.json" with { type: "json" };
+import transactionWithCalldataAndAccessList from "../_testData/eip1559RlpEncoderTransactions/withCalldataAndAccessList.json" with { type: "json" };
+import transactionWithLargeCalldata from "../_testData/eip1559RlpEncoderTransactions/withLargeCalldata.json" with { type: "json" };
+import transactionWithoutCalldata from "../_testData/eip1559RlpEncoderTransactions/withoutCalldata.json" with { type: "json" };
+import { deployFromFactory } from "../common/deployment.js";
+import { generateKeccak256BytesDirectly } from "../common/helpers/index.js";
+import { buildEip1559Transaction } from "../common/helpers/typedTransactionBuilding.js";
+
+import type { Eip1559Transaction } from "../common/types.js";
+import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
+
+// The struct's `yParity` is a `uint8`, which viem encodes from a `number`.
+const toAbiTransaction = (transaction: Eip1559Transaction) => ({
+  ...transaction,
+  yParity: Number(transaction.yParity),
+});
 
 describe("Eip1559RlpEncoder Library", () => {
-  let contract: TestEip1559RlpEncoder;
+  let contract: ContractReturnType<"TestEip1559RlpEncoder">;
 
   async function deployTestEip1559RlpEncoderFixture() {
-    return deployFromFactory("TestEip1559RlpEncoder", 1);
+    return deployFromFactory("TestEip1559RlpEncoder", [1n]);
   }
   beforeEach(async () => {
-    contract = (await loadFixture(deployTestEip1559RlpEncoderFixture)) as TestEip1559RlpEncoder;
+    const { networkHelpers } = await network.getOrCreate();
+    contract = await networkHelpers.loadFixture(deployTestEip1559RlpEncoderFixture);
   });
 
   describe("RLP Encoding and hashing", () => {
     it("Succeeds for a transaction without calldata", async () => {
-      const { rlpEncodedTransaction, transactionHash } = await contract.encodeEip1559Transaction(
-        buildEip1559Transaction(transactionWithoutCalldata.result),
-      );
+      const [rlpEncodedTransaction, transactionHash] = await contract.read.encodeEip1559Transaction([
+        toAbiTransaction(buildEip1559Transaction(transactionWithoutCalldata.result)),
+      ]);
 
       expect(transactionWithoutCalldata.result.hash).equal(transactionHash);
       expect(transactionWithoutCalldata.rlpEncoded).equal(rlpEncodedTransaction);
@@ -32,9 +42,9 @@ describe("Eip1559RlpEncoder Library", () => {
     });
 
     it("Succeeds for a transaction with calldata", async () => {
-      const { rlpEncodedTransaction, transactionHash } = await contract.encodeEip1559Transaction(
-        buildEip1559Transaction(transactionWithCalldata.result),
-      );
+      const [rlpEncodedTransaction, transactionHash] = await contract.read.encodeEip1559Transaction([
+        toAbiTransaction(buildEip1559Transaction(transactionWithCalldata.result)),
+      ]);
 
       expect(transactionWithCalldata.result.hash).equal(transactionHash);
       expect(transactionWithCalldata.rlpEncoded).equal(rlpEncodedTransaction);
@@ -42,9 +52,9 @@ describe("Eip1559RlpEncoder Library", () => {
     });
 
     it("Succeeds for a transaction with large calldata", async () => {
-      const { rlpEncodedTransaction, transactionHash } = await contract.encodeEip1559Transaction(
-        buildEip1559Transaction(transactionWithLargeCalldata.result),
-      );
+      const [rlpEncodedTransaction, transactionHash] = await contract.read.encodeEip1559Transaction([
+        toAbiTransaction(buildEip1559Transaction(transactionWithLargeCalldata.result)),
+      ]);
 
       expect(transactionWithLargeCalldata.result.hash).equal(transactionHash);
       expect(transactionWithLargeCalldata.rlpEncoded).equal(rlpEncodedTransaction);
@@ -52,11 +62,11 @@ describe("Eip1559RlpEncoder Library", () => {
     });
 
     it("Succeeds for a transaction with calldata and an access list", async () => {
-      const sepoliaContract = (await deployFromFactory("TestEip1559RlpEncoder", 11155111)) as TestEip1559RlpEncoder;
+      const sepoliaContract = await deployFromFactory("TestEip1559RlpEncoder", [11155111n]);
 
-      const { rlpEncodedTransaction, transactionHash } = await sepoliaContract.encodeEip1559Transaction(
-        buildEip1559Transaction(transactionWithCalldataAndAccessList.result),
-      );
+      const [rlpEncodedTransaction, transactionHash] = await sepoliaContract.read.encodeEip1559Transaction([
+        toAbiTransaction(buildEip1559Transaction(transactionWithCalldataAndAccessList.result)),
+      ]);
 
       expect(transactionWithCalldataAndAccessList.result.hash).equal(transactionHash);
       expect(transactionWithCalldataAndAccessList.rlpEncoded).equal(rlpEncodedTransaction);

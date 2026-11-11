@@ -1,0 +1,25 @@
+diff --git a/dist/src/internal/network-helpers/network-helpers.js b/dist/src/internal/network-helpers/network-helpers.js
+index a0f6ece4537d56f60cf518a19e67acd504a0c1d8..099d668427d4778a1adc202b47ee04cc030aed18 100644
+--- a/dist/src/internal/network-helpers/network-helpers.js
++++ b/dist/src/internal/network-helpers/network-helpers.js
+@@ -50,8 +50,18 @@ export class NetworkHelpers {
+     }
+     async loadFixture(fixture) {
+         await this.throwIfNotDevelopmentNetwork();
+-        const { snapshots, snapshotData } = await loadFixture(this, fixture, this.#snapshots, this.#connection);
+-        this.#snapshots = snapshots;
++        // PATCH (linea-monorepo, Hardhat 2 parity): a loadFixture nested inside `fixture` can restore a snapshot and
++        // replace this.#snapshots while this call still holds the previous array. Writing that stale array back
++        // resurrects reverted snapshots ("There was an error reverting the snapshot of the fixture" later). Keep the
++        // nested result and append only this call's own new snapshot, as Hardhat 2 did.
++        const passed = this.#snapshots;
++        const { snapshots, snapshotData } = await loadFixture(this, fixture, passed, this.#connection);
++        if (snapshots === passed && this.#snapshots !== passed) {
++            this.#snapshots = [...this.#snapshots, ...passed.filter((s) => s.fixture === fixture)];
++        }
++        else {
++            this.#snapshots = snapshots;
++        }
+         return snapshotData;
+     }
+     async mine(blocks = 1, options = { interval: 1 }) {

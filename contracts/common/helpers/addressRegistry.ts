@@ -1,10 +1,10 @@
-import { ethers } from "ethers";
 import fs from "fs";
 import path from "path";
+import { getAddress, isAddress, zeroAddress } from "viem";
 
-import { envVarNameFromContext, formatEnvVarValueForMessage, isEnvVarContext } from "./envVarLogging";
+import { envVarNameFromContext, formatEnvVarValueForMessage, isEnvVarContext } from "./envVarLogging.js";
 
-export const REGISTRY_DIR = path.join(__dirname, "..", "..", "deployments", "addresses");
+export const REGISTRY_DIR = path.join(import.meta.dirname, "..", "..", "deployments", "addresses");
 
 export const REGISTRY_NETWORKS = new Set(["mainnet", "sepolia", "hoodi", "linea_mainnet", "linea_sepolia"]);
 
@@ -56,7 +56,7 @@ export function isMultiRegistryEntry(entry: RegistryContractEntry): entry is Mul
 }
 
 export function parseChecksummedAddress(raw: string, context: string): string {
-  if (!ethers.isAddress(raw)) {
+  if (!isAddress(raw)) {
     if (isEnvVarContext(context)) {
       const envVarName = envVarNameFromContext(context);
       throw new Error(
@@ -66,7 +66,7 @@ export function parseChecksummedAddress(raw: string, context: string): string {
     }
     throw new Error(`${context}: invalid EVM address "${raw}"`);
   }
-  return ethers.getAddress(raw);
+  return getAddress(raw);
 }
 
 export function assertChecksummedAddress(address: string, context: string): void {
@@ -89,7 +89,7 @@ export function resolveRegistryEntryAddresses(entry: RegistryContractEntry): str
  */
 export function getPopulatedAddresses(entry: RegistryContractEntry): string[] | undefined {
   const addresses = resolveRegistryEntryAddresses(entry);
-  const nonZero = addresses.filter((value) => value !== ethers.ZeroAddress);
+  const nonZero = addresses.filter((value) => value !== zeroAddress);
   if (nonZero.length === 0) {
     return undefined;
   }
@@ -357,10 +357,10 @@ function validateDuplicateAddressObjects(
       continue;
     }
     const address = (entry as Record<string, unknown>).address;
-    if (typeof address !== "string" || !ethers.isAddress(address)) {
+    if (typeof address !== "string" || !isAddress(address)) {
       continue;
     }
-    const normalized = ethers.getAddress(address).toLowerCase();
+    const normalized = getAddress(address).toLowerCase();
     if (seen.has(normalized)) {
       addIssue(issues, file, addressesPath, `Duplicate address "${address}" in \`addresses\` array.`);
       return;

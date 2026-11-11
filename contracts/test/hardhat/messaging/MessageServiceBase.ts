@@ -1,11 +1,11 @@
-import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { L2_MESSAGE_SERVICE_ROLES } from "contracts/common/constants";
-import { generateRoleAssignments } from "contracts/common/helpers";
-import { ethers } from "hardhat";
+import { network } from "hardhat";
+import { describe, it, beforeEach } from "node:test";
+import { getAddress, zeroAddress } from "viem";
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 
-import { TestL2MessageService, TestMessageServiceBase } from "../../../typechain-types";
+import { L2_MESSAGE_SERVICE_ROLES } from "../../../common/constants/index.js";
+import { generateRoleAssignments } from "../../../common/helpers/index.js";
 import {
   INITIALIZED_ERROR_MESSAGE,
   INITIAL_WITHDRAW_LIMIT,
@@ -13,42 +13,51 @@ import {
   ONE_DAY_IN_SECONDS,
   pauseTypeRoles,
   unpauseTypeRoles,
-} from "../common/constants";
-import { deployUpgradableFromFactory } from "../common/deployment";
-import { expectEvent, expectRevertWithCustomError, expectRevertWithReason } from "../common/helpers";
+} from "../common/constants/index.js";
+import { deployUpgradableFromFactory } from "../common/deployment.js";
+import {
+  type TestAccount,
+  getTestAccounts,
+  expectRevertWithCustomError,
+  expectRevertWithReason,
+  expectEvent,
+} from "../common/helpers/index.js";
+
+import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
 
 describe("MessageServiceBase", () => {
-  let messageServiceBase: TestMessageServiceBase;
-  let messageService: TestL2MessageService;
-  let admin: SignerWithAddress;
-  let remoteSender: SignerWithAddress;
-  let securityCouncil: SignerWithAddress;
-  let l1L2MessageSetter: SignerWithAddress;
+  let messageServiceBase: ContractReturnType<"TestMessageServiceBase">;
+  let messageService: ContractReturnType<"TestL2MessageService">;
+  let admin: TestAccount;
+  let remoteSender: TestAccount;
+  let securityCouncil: TestAccount;
+  let l1L2MessageSetter: TestAccount;
 
   async function deployMessageServiceBaseFixture() {
     const roleAddresses = generateRoleAssignments(L2_MESSAGE_SERVICE_ROLES, securityCouncil.address, [
       { role: L1_L2_MESSAGE_SETTER_ROLE, addresses: [l1L2MessageSetter.address] },
     ]);
 
-    const messageService = (await deployUpgradableFromFactory("TestL2MessageService", [
+    const messageService = await deployUpgradableFromFactory("TestL2MessageService", [
       ONE_DAY_IN_SECONDS,
       INITIAL_WITHDRAW_LIMIT,
       securityCouncil.address,
       roleAddresses,
       pauseTypeRoles,
       unpauseTypeRoles,
-    ])) as unknown as TestL2MessageService;
+    ]);
 
-    const messageServiceBase = (await deployUpgradableFromFactory("TestMessageServiceBase", [
-      await messageService.getAddress(),
+    const messageServiceBase = await deployUpgradableFromFactory("TestMessageServiceBase", [
+      messageService.address,
       remoteSender.address,
-    ])) as unknown as TestMessageServiceBase;
+    ]);
     return { messageService, messageServiceBase };
   }
 
   beforeEach(async () => {
-    [admin, remoteSender, securityCouncil, l1L2MessageSetter] = await ethers.getSigners();
-    const contracts = await loadFixture(deployMessageServiceBaseFixture);
+    const { networkHelpers } = await network.getOrCreate();
+    [admin, remoteSender, securityCouncil, l1L2MessageSetter] = await getTestAccounts();
+    const contracts = await networkHelpers.loadFixture(deployMessageServiceBaseFixture);
     messageService = contracts.messageService;
     messageServiceBase = contracts.messageServiceBase;
   });
@@ -57,14 +66,14 @@ describe("MessageServiceBase", () => {
     it("Should revert if message service address is address(0)", async () => {
       await expectRevertWithCustomError(
         messageService,
-        deployUpgradableFromFactory("TestMessageServiceBase", [ethers.ZeroAddress, remoteSender.address]),
+        deployUpgradableFromFactory("TestMessageServiceBase", [zeroAddress, remoteSender.address]),
         "ZeroAddressNotAllowed",
       );
     });
 
     it("It should fail when not initializing", async () => {
       await expectRevertWithReason(
-        messageServiceBase.tryInitialize(await messageService.getAddress(), remoteSender.address),
+        messageServiceBase.write.tryInitialize([messageService.address, remoteSender.address]),
         INITIALIZED_ERROR_MESSAGE,
       );
     });
@@ -72,26 +81,26 @@ describe("MessageServiceBase", () => {
     it("Should revert if remote sender address is address(0)", async () => {
       await expectRevertWithCustomError(
         messageServiceBase,
-        deployUpgradableFromFactory("TestMessageServiceBase", [await messageService.getAddress(), ethers.ZeroAddress]),
+        deployUpgradableFromFactory("TestMessageServiceBase", [messageService.address, zeroAddress]),
         "ZeroAddressNotAllowed",
       );
     });
 
     it("Should set the value of remoteSender variable in storage", async () => {
-      expect(await messageServiceBase.remoteSender()).to.equal(remoteSender.address);
+      expect(await messageServiceBase.read.remoteSender()).to.equal(getAddress(remoteSender.address));
     });
 
     it("Should set the value of messageService variable in storage", async () => {
-      expect(await messageServiceBase.messageService()).to.equal(await messageService.getAddress());
+      expect(await messageServiceBase.read.messageService()).to.equal(messageService.address);
     });
   });
 
   describe("RemoteSenderSet event", () => {
     it("Should emit RemoteSenderSet event when testSetRemoteSender is called", async () => {
-      const newRemoteSender = ethers.Wallet.createRandom().address;
+      const newRemoteSender = privateKeyToAccount(generatePrivateKey()).address;
       await expectEvent(
         messageServiceBase,
-        messageServiceBase.testSetRemoteSender(newRemoteSender),
+        messageServiceBase.write.testSetRemoteSender([newRemoteSender]),
         "RemoteSenderSet",
         [newRemoteSender, admin.address],
       );
@@ -102,13 +111,16 @@ describe("MessageServiceBase", () => {
     it("Should revert if msg.sender is not the message service address", async () => {
       await expectRevertWithCustomError(
         messageServiceBase,
-        messageServiceBase.withOnlyMessagingService(),
+        messageServiceBase.write.withOnlyMessagingService(),
         "CallerIsNotMessageService",
       );
     });
 
     it("Should succeed if msg.sender is the message service address", async () => {
-      expect(await messageService.callMessageServiceBase(await messageServiceBase.getAddress())).to.not.be.reverted;
+      const { viem } = await network.getOrCreate();
+      const publicClient = await viem.getPublicClient();
+      const hash = await messageService.write.callMessageServiceBase([messageServiceBase.address]);
+      expect((await publicClient.waitForTransactionReceipt({ hash })).status).to.equal("success");
     });
   });
 
@@ -116,7 +128,7 @@ describe("MessageServiceBase", () => {
     it("Should revert if sender is not allowed", async () => {
       await expectRevertWithCustomError(
         messageServiceBase,
-        messageServiceBase.withOnlyAuthorizedRemoteSender(),
+        messageServiceBase.write.withOnlyAuthorizedRemoteSender(),
         "SenderNotAuthorized",
       );
     });
@@ -124,13 +136,15 @@ describe("MessageServiceBase", () => {
     it("Should succeed if original sender is allowed", async () => {
       // Construct a call A from `remoteSender` to `messageService`
       // Call A will created a nested call from `messageService` to `messageServiceBase`, invoking onlyAuthorizedRemoteSender modifier
-      const call = messageService.claimMessageWithoutChecks(
-        remoteSender,
-        messageServiceBase,
-        0,
+      const { viem } = await network.getOrCreate();
+      const publicClient = await viem.getPublicClient();
+      const hash = await messageService.write.claimMessageWithoutChecks([
+        remoteSender.address,
+        messageServiceBase.address,
+        0n,
         "0xfcd38105", // keccak256("withOnlyAuthorizedRemoteSender()")
-      );
-      await expect(call).to.not.be.reverted;
+      ]);
+      expect((await publicClient.waitForTransactionReceipt({ hash })).status).to.equal("success");
     });
   });
 });

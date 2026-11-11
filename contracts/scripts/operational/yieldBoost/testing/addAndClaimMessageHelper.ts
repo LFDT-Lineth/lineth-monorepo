@@ -1,27 +1,30 @@
-import { Contract } from "ethers";
-import { HardhatRuntimeEnvironment } from "hardhat/types";
+import { type Address, type Hex, bytesToBigInt, getAddress, isHex, keccak256, zeroAddress } from "viem";
 
-import { encodeSendMessage, randomBytes32 } from "../../../../common/helpers/encoding";
-import { getTaskCliOrEnvValue } from "../../../../common/helpers/environmentHelper";
-import { getUiSigner } from "../../../../scripts/hardhat/signer-ui-bridge";
+import { encodeSendMessage, randomBytes32 } from "../../../../common/helpers/encoding.js";
+import { getTaskCliOrEnvValue } from "../../../../common/helpers/environmentHelper.js";
+import { getUiWalletClient } from "../../../../hardhat-plugins/signer-ui/session.js";
+
+import type { ContractReturnType, PublicClient } from "@nomicfoundation/hardhat-viem/types";
+import type { NetworkConnection } from "hardhat/types/network";
 
 export interface ClaimParams {
-  proof: string[];
+  proof: Hex[];
   messageNumber: bigint;
-  leafIndex: bigint;
-  from: string;
-  to: string;
-  fee: string;
+  leafIndex: number;
+  from: Address;
+  to: Address;
+  fee: bigint;
   value: bigint;
-  feeRecipient: string;
-  merkleRoot: string;
-  data: string;
-  yieldProvider?: string;
+  feeRecipient: Address;
+  merkleRoot: Hex;
+  data: Hex;
+  yieldProvider?: Address;
 }
 
 export interface PrepareMessageResult {
   claimParams: ClaimParams;
-  linethRollup: Contract;
+  linethRollup: ContractReturnType<"TestLinethRollup">;
+  publicClient: PublicClient;
 }
 
 /**
@@ -30,18 +33,19 @@ export interface PrepareMessageResult {
  * proof creation, merkle root calculation, and adding the root to the contract.
  *
  * @param taskArgs - Task arguments from Hardhat
- * @param hre - Hardhat runtime environment
+ * @param connection - Hardhat network connection
  * @param requireYieldProvider - Whether yieldProvider is required (default: false)
  * @returns Claim parameters and LinethRollup contract instance
  */
 export async function prepareAndAddMessageMerkleRoot(
   taskArgs: Record<string, unknown>,
-  hre: HardhatRuntimeEnvironment,
+  connection: NetworkConnection,
   requireYieldProvider: boolean = false,
 ): Promise<PrepareMessageResult> {
-  const { ethers } = hre;
-  const signer = await getUiSigner(hre);
-  const signerAddress = await signer.getAddress();
+  const { viem } = connection;
+  const wallet = await getUiWalletClient(connection);
+  const publicClient = await viem.getPublicClient();
+  const signerAddress = wallet.account.address;
 
   // --- Resolve inputs from CLI or ENV (with sensible fallbacks to deployments) ---
   const linethRollupAddress = getTaskCliOrEnvValue(taskArgs, "linethRollupAddress", "LINETH_ROLLUP_ADDRESS");
@@ -60,34 +64,41 @@ export async function prepareAndAddMessageMerkleRoot(
   if (requireYieldProvider && !yieldProvider) {
     missing.push("yieldProvider / YIELD_PROVIDER_ADDRESS");
   }
-  if (missing.length) {
+  if (missing.length || !linethRollupAddress || !toAddress) {
     throw new Error(`Missing required params/envs: ${missing.join(", ")}`);
   }
+  if (!isHex(data)) {
+    throw new Error(`Invalid data "${data}": expected a 0x-prefixed hex string`);
+  }
+  const from = getAddress(fromAddress);
+  const to = getAddress(toAddress);
 
   // --- Parse numeric params ---
   const value = valueRaw ? BigInt(valueRaw) : 0n;
 
   // Fixed values
   const fee = 0n;
-  const leafIndex = 0n;
+  const leafIndex = 0;
   // Generate random proof array first (depth determined by proof length)
   const proof = Array.from({ length: 32 }, () => randomBytes32());
   const proofDepth = proof.length;
 
-  const linethRollup = await ethers.getContractAt("TestLinethRollup", linethRollupAddress!, signer);
+  const linethRollup = await viem.getContractAt("TestLinethRollup", getAddress(linethRollupAddress), {
+    client: { public: publicClient, wallet },
+  });
   // Generate random messageNumber and check if it's already claimed
   let messageNumber: bigint;
   let attempts = 0;
   const maxAttempts = 100; // Prevent infinite loop
   do {
-    messageNumber = ethers.toBigInt(ethers.randomBytes(32));
+    messageNumber = bytesToBigInt(crypto.getRandomValues(new Uint8Array(32)));
     attempts++;
     if (attempts > maxAttempts) {
       throw new Error(
         `Failed to find unclaimed message number after ${maxAttempts} attempts. This is highly unlikely.`,
       );
     }
-    const isClaimed = await linethRollup.isMessageClaimed(messageNumber);
+    const isClaimed = await linethRollup.read.isMessageClaimed([messageNumber]);
     if (!isClaimed) {
       break;
     }
@@ -111,22 +122,22 @@ export async function prepareAndAddMessageMerkleRoot(
   console.log("  proofDepth:", proofDepth, "(from generated proof)");
 
   // Encode message bytes
-  const expectedBytes = encodeSendMessage(fromAddress, toAddress!, fee, value, messageNumber, data);
-  const messageHash = ethers.keccak256(expectedBytes);
+  const expectedBytes = encodeSendMessage(from, to, fee, value, messageNumber, data);
+  const messageHash = keccak256(expectedBytes);
   console.log("  messageHash:", messageHash);
 
   // Get generatedRoot
-  const generatedRoot = await linethRollup.generateMerkleRoot.staticCall(messageHash, proof, leafIndex);
+  const generatedRoot = await linethRollup.read.generateMerkleRoot([messageHash, proof, leafIndex]);
   console.log("generatedRoot=", generatedRoot);
 
   // Add merkle root to LinethRollup
   console.log("\nAdding merkle root to LinethRollup...");
   console.log("  NOTE: Signer must have DEFAULT_ADMIN_ROLE");
   {
-    const tx = await linethRollup.addL2MerkleRoots([generatedRoot], proofDepth);
-    console.log("  Transaction hash:", tx.hash);
-    const receipt = await tx.wait();
-    console.log("  Transaction confirmed in block:", receipt?.blockNumber);
+    const hash = await linethRollup.write.addL2MerkleRoots([[generatedRoot], BigInt(proofDepth)]);
+    console.log("  Transaction hash:", hash);
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    console.log("  Transaction confirmed in block:", receipt.blockNumber.toString());
   }
 
   // Build claim parameters object
@@ -134,17 +145,17 @@ export async function prepareAndAddMessageMerkleRoot(
     proof,
     messageNumber,
     leafIndex,
-    from: fromAddress,
-    to: toAddress!,
-    fee: fee.toString(),
+    from,
+    to,
+    fee,
     value,
-    feeRecipient: ethers.ZeroAddress,
+    feeRecipient: zeroAddress,
     merkleRoot: generatedRoot,
     data,
   };
 
   if (yieldProvider) {
-    claimParams.yieldProvider = yieldProvider;
+    claimParams.yieldProvider = getAddress(yieldProvider);
   }
 
   // Output claim parameters
@@ -158,7 +169,7 @@ export async function prepareAndAddMessageMerkleRoot(
     to: toAddress,
     fee: fee.toString(),
     value: value.toString(),
-    feeRecipient: ethers.ZeroAddress,
+    feeRecipient: zeroAddress,
     merkleRoot: generatedRoot,
     data: data,
   };
@@ -170,5 +181,6 @@ export async function prepareAndAddMessageMerkleRoot(
   return {
     claimParams,
     linethRollup,
+    publicClient,
   };
 }

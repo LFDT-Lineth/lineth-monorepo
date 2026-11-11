@@ -1,10 +1,11 @@
-import { AbstractSigner } from "ethers";
 import fs from "fs";
 import * as assert from "node:assert/strict";
 import os from "os";
 import path from "path";
 
-import { getDeployNonceFromEnv, loadArtifactFromDirectory } from "./deployments";
+import { getDeployNonceFromEnv, loadArtifactFromDirectory } from "./deployments.js";
+
+import type { AbstractSigner } from "ethers";
 
 type TestCase = {
   name: string;
