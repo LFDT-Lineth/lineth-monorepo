@@ -9,6 +9,7 @@ const zkvm_types = @import("zkvm_types.zig");
 const keccak = @import("keccak.zig");
 const poseidon2 = @import("poseidon2.zig");
 const io = @import("io.zig");
+const field = @import("field.zig");
 
 // ── zkVM standard runtime (include/zkvm_std.h) ──────────────────────────────
 pub const zkvm_exit = lineth_std.zkvm_exit;
@@ -34,3 +35,6 @@ pub const write_output = io.write_output;
 
 // ── Poseidon2 accelerator (include/lineth_accelerators.h) ───────────────────
 pub const lineth_zkvm_poseidon2_permutation = poseidon2.lineth_zkvm_poseidon2_permutation;
+
+// ── Field accelerator (include/lineth_accelerators.h) ───────────────────────
+pub const lineth_zkvm_field_op = field.lineth_zkvm_field_op;

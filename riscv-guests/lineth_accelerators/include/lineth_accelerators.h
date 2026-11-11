@@ -65,6 +65,46 @@ zkvm_status lineth_zkvm_kzg_verify_blob_batch(const uint8_t* blobs,
                                               size_t n,
                                               bool* verified);
 
+/* ============================================================================
+ * Field arithmetic
+ * ============================================================================ */
+
+/* Operations */
+#define LINETH_FIELD_OP_MUL 0  /* out = a * b */
+#define LINETH_FIELD_OP_DIV 1  /* out = a / b; out = 0 and status 1 if b = 0 */
+#define LINETH_FIELD_OP_SQRT 2 /* out^2 = a; if a is not a square, out^2 = -a and status 1 */
+
+/* Fields */
+#define LINETH_FIELD_SECP256K1_FP 1
+#define LINETH_FIELD_SECP256K1_FR 2
+#define LINETH_FIELD_SECP256R1_FP 3
+#define LINETH_FIELD_SECP256R1_FR 4
+#define LINETH_FIELD_BN254_FP 5
+#define LINETH_FIELD_BN254_FR 6
+#define LINETH_FIELD_BLS12_381_FR 7
+
+/**
+ * One operation in a known 256-bit prime field, proven by the arithmetization.
+ *
+ * Elements are four little-endian 64-bit limbs of the plain value (not in
+ * Montgomery form). Inputs must be below 2p (any 256-bit value for the
+ * secp256k1 and secp256r1 fields); out is reduced and may alias an input. b is
+ * read for every operation (pass a for SQRT). SQRT is only supported where
+ * p = 3 (mod 4) (secp256k1 and secp256r1 Fp, bn254 Fp) and returns either root.
+ * An inverse is DIV with a = 1.
+ *
+ * An unknown op or field is unprovable.
+ *
+ * @param op LINETH_FIELD_OP_*
+ * @param field LINETH_FIELD_*
+ * @param[out] out Pointer to the result
+ * @param a Pointer to the first operand
+ * @param b Pointer to the second operand
+ * @return 0, or 1 if there is no result (b = 0, or a is not a square)
+ */
+uint32_t lineth_zkvm_field_op(uint32_t op, uint32_t field, uint64_t out[4],
+                              const uint64_t a[4], const uint64_t b[4]);
+
 #ifdef __cplusplus
 }
 #endif
