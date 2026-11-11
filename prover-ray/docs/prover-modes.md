@@ -8,9 +8,9 @@ The guest is the RISC-V program whose run is proven: the `l2_execution` guest fo
 |---|---|---|---|---|---|---|
 | `dev-mock` | no | no | not checked | none | placeholder | marker bytes |
 | `dev-zkvm` | yes | no | not checked | none | real | marker bytes |
-| `dev-partial` | yes | yes, shard by shard | checked | mock (checks the shards fit together) | real | devmode proof |
-| `dev-full-dummy-wrap` (aggregation only) | yes | yes, shard by shard | proved | real recursion | real | real proof, but a dummy BN254 proof for L1 |
-| `full` | yes | yes, shard by shard | proved | real recursion | real | real proof |
+| `dev-partial` | yes | yes | checked | mock (checks the shards fit together) | real | devmode proof |
+| `dev-full-dummy-wrap` (aggregation only) | yes | yes | proved | real recursion | real | real proof, but a dummy BN254 proof for L1 |
+| `full` | yes | yes | proved | real recursion | real | real proof |
 
 ### dev-mock
 
@@ -27,7 +27,7 @@ The guest is the RISC-V program whose run is proven: the `l2_execution` guest fo
 
 ### dev-partial
 
-- Runs the guest and traces it, shard by shard.
+- Runs the guest and traces it, in pieces called shards.
 - Checks every shard against every constraint.
 - The mock conglomeration checks that:
   - the shards agree on the program VK and the guest output;
