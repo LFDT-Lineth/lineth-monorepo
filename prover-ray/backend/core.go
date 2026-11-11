@@ -61,7 +61,7 @@ type Core struct {
 	guests guests.Store
 
 	// merger runs the conglomeration steps over the shard proofs. nil in
-	// full until the recursion machine lands; tests set it, and partial uses
+	// full until the recursion machine lands; tests set it, and dev-partial uses
 	// [conglomeration.MockMerger].
 	merger conglomeration.Merger
 
@@ -69,8 +69,8 @@ type Core struct {
 	// guest under ZkC Execute (the no-trace path). nil outside dev-zkvm.
 	binaryFile *zkcdriver.BinaryFile
 
-	// devSys is the devmode system whose proof partial returns. nil outside
-	// partial.
+	// devSys is the devmode system whose proof dev-partial returns. nil outside
+	// dev-partial.
 	devSys *wiop.System
 }
 
@@ -131,8 +131,8 @@ func New(cfg Config) (*Core, error) {
 	if mode == ProverModeDevZkVM {
 		return newDevZkVM(cfg, mode)
 	}
-	if mode == ProverModePartial {
-		return newPartial(cfg, mode)
+	if mode == ProverModeDevPartial {
+		return newDevPartial(cfg, mode)
 	}
 
 	binFile, err := os.Open(cfg.CircuitBinPath)
@@ -205,10 +205,10 @@ func newDevZkVM(cfg Config, mode ProverMode) (*Core, error) {
 	}, nil
 }
 
-// newPartial builds a check-only Core: the R5 arithmetization and its public
+// newDevPartial builds a check-only Core: the R5 arithmetization and its public
 // inputs, without a PCS, so that proving a trace commits to nothing and checks
 // it against every constraint. Its proofs are devmode proofs.
-func newPartial(cfg Config, mode ProverMode) (*Core, error) {
+func newDevPartial(cfg Config, mode ProverMode) (*Core, error) {
 	binf, err := embedded.CompiledBinaryFile()
 	if err != nil {
 		return nil, fmt.Errorf("compiling R5 arithmetization: %w", err)
@@ -260,8 +260,8 @@ func (c *Core) Prove(ctx context.Context, job Job) Result {
 		return c.proveDevMock(job)
 	case ProverModeDevZkVM:
 		return c.proveDevZkVM(job)
-	case ProverModePartial:
-		return c.provePartial(ctx, job)
+	case ProverModeDevPartial:
+		return c.proveDevPartial(ctx, job)
 	case ProverModeFull:
 		return c.proveFull(ctx, job)
 	default:
@@ -307,11 +307,11 @@ func (c *Core) proveDevZkVM(job Job) Result {
 	}
 }
 
-// provePartial runs the guest, checks its trace against the constraints, and
+// proveDevPartial runs the guest, checks its trace against the constraints, and
 // returns the public inputs decoded from its output, with a devmode proof of
 // the output hash in place of a real proof. Payload is the whole extended
 // (0x0002) input, as in dev-zkvm.
-func (c *Core) provePartial(ctx context.Context, job Job) Result {
+func (c *Core) proveDevPartial(ctx context.Context, job Job) Result {
 	g, err := c.loadGuest(job.GuestProgramID)
 	if err != nil {
 		return failResult(job.ID, err)
@@ -662,11 +662,11 @@ func traceShard(lazyTrace zkcdriver.LazyTrace, i uint) (zkcdriver.Shard, error) 
 	return shard.Unwrap(), nil
 }
 
-// proveShard proves the given shard, then verifies the proof. In partial it
+// proveShard proves the given shard, then verifies the proof. In dev-partial it
 // checks the shard instead.
 func (c *Core) proveShard(shard zkcdriver.Shard) (wiop.Proof, wiop.PublicInput, error) {
 	assign := func(rt *wiop.Runtime) { c.driver.AssignTraceShard(rt, shard, field.Octuplet{}) }
-	if c.mode == ProverModePartial {
+	if c.mode == ProverModeDevPartial {
 		return c.checkAssignment(assign)
 	}
 	proof, pub := c.sys.Prove(assign)

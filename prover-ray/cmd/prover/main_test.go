@@ -310,7 +310,7 @@ func TestPipelineFor_GuestsDir(t *testing.T) {
 }
 
 func TestPipelineFor_ShardSize(t *testing.T) {
-	cfg := &config.Config{Execution: config.Execution{ProverMode: "partial", ShardSize: 500000}}
+	cfg := &config.Config{Execution: config.Execution{ProverMode: "dev-partial", ShardSize: 500000}}
 	p, ok := pipelineFor(cfg, backend.ProofTypeL2Execution)
 	require.True(t, ok)
 	assert.Equal(t, uint64(500000), p.shardSize, "the execution pipeline must shard its trace as configured")

@@ -14,7 +14,7 @@ import (
 // it; it only compares it byte for byte with the native runner's output.
 var partialGuestOutput = []byte("guest output")
 
-// partialProver returns what partial returns: a proof, the public inputs
+// partialProver returns what dev-partial returns: a proof, the public inputs
 // decoded from the guest output, and that output.
 func partialProver(guestOutput []byte) *mockProver {
 	return &mockProver{result: func(job backend.Job) backend.Result {
@@ -28,12 +28,12 @@ func partialProver(guestOutput []byte) *mockProver {
 	}}
 }
 
-// partial fills the response from the prover's result, and runs the guest on
+// dev-partial fills the response from the prover's result, and runs the guest on
 // the same extended input as the native runner.
-func TestRunner_Partial_ResponseFromResult(t *testing.T) {
+func TestRunner_DevPartial_ResponseFromResult(t *testing.T) {
 	body := readFixture(t, "request_single_block.json")
 	mock := partialProver(partialGuestOutput)
-	runner, err := NewRunner(mock, testProverVersion, WithMode(backend.ProverModePartial))
+	runner, err := NewRunner(mock, testProverVersion, WithMode(backend.ProverModeDevPartial))
 	require.NoError(t, err)
 
 	result := runner.Run(context.Background(), l2ExecutionRunRequest("p-1", body))
@@ -43,12 +43,12 @@ func TestRunner_Partial_ResponseFromResult(t *testing.T) {
 	req, err := DecodeL2ExecutionRequest(body)
 	require.NoError(t, err)
 	assert.Equal(t, ssz.EncodeExtendedInput(buildExtendedInput(req)), mock.jobs[0].Payload,
-		"partial must run the guest on the extended input")
+		"dev-partial must run the guest on the extended input")
 	assert.Equal(t, requestGuestProgramID(t, body), mock.jobs[0].GuestProgramID)
 
 	resp, ok := result.ResponseBody.(executionResponse)
 	require.True(t, ok)
-	assert.Equal(t, testProverVersion+"-partial", resp.ProverVersion)
+	assert.Equal(t, testProverVersion+"-dev-partial", resp.ProverVersion)
 	assert.Equal(t, hexBytes([]byte("devmode proof")), resp.ProofHex)
 	assert.Equal(t, req.Payloads[0].BlockNumber, resp.StartBlockNumber, "the start block should come from the request")
 	assert.Equal(t, publicInputs(backend.PublicInputs{EndBlockNumber: 1, BlockCount: 1, ParentBlockHash: [32]byte{0xee}}),
@@ -56,10 +56,10 @@ func TestRunner_Partial_ResponseFromResult(t *testing.T) {
 	assert.Equal(t, guestProgramID, resp.ProgramVk)
 }
 
-// With a native runner set, partial also checks the guest output against it.
-func TestRunner_Partial_NativeCheckPasses(t *testing.T) {
+// With a native runner set, dev-partial also checks the guest output against it.
+func TestRunner_DevPartial_NativeCheckPasses(t *testing.T) {
 	runner, err := NewRunner(partialProver(partialGuestOutput), testProverVersion,
-		WithMode(backend.ProverModePartial),
+		WithMode(backend.ProverModeDevPartial),
 		WithNativeRunnerBin(fakeRunnerJSONSSZ(t, devZkVMRunnerJSON, partialGuestOutput)))
 	require.NoError(t, err)
 
@@ -69,11 +69,11 @@ func TestRunner_Partial_NativeCheckPasses(t *testing.T) {
 	require.Equal(t, RunStatusSuccess, result.Status, "run err: %v", result.Err)
 }
 
-func TestRunner_Partial_NativeCheckFails(t *testing.T) {
+func TestRunner_DevPartial_NativeCheckFails(t *testing.T) {
 	wrong := append([]byte(nil), partialGuestOutput...)
 	wrong[2] ^= 0xff
 	runner, err := NewRunner(partialProver(wrong), testProverVersion,
-		WithMode(backend.ProverModePartial),
+		WithMode(backend.ProverModeDevPartial),
 		WithNativeRunnerBin(fakeRunnerJSONSSZ(t, devZkVMRunnerJSON, partialGuestOutput)))
 	require.NoError(t, err)
 

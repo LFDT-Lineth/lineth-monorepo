@@ -23,7 +23,7 @@
 // wire bytes) is still stubbed and returns [ErrNotImplemented].
 //
 // With sharding ([Config.ShardSize]), the shard proofs of a job are reduced to
-// one node by a [conglomeration.Merger]; only a mock exists, which partial
+// one node by a [conglomeration.Merger]; only a mock exists, which dev-partial
 // uses, so a sharded job in full returns [ErrNotImplemented] until the
 // recursion machine lands. The modes are described in docs/prover-modes.md.
 //

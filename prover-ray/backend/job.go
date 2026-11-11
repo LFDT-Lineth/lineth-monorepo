@@ -105,7 +105,7 @@ type Result struct {
 	Status ResultStatus
 
 	// ProofBytes is the proof output for the mode. For full it is the serialized
-	// wiop.Proof (wire format not yet decided); for partial it is the image of
+	// wiop.Proof (wire format not yet decided); for dev-partial it is the image of
 	// a devmode proof of the guest output hash; for dev-zkvm it is the guest's
 	// 0x0003 output from the ZkC Execute run, which the runner cross-checks
 	// against the native runner. nil when Status is not ResultStatusOK.
@@ -113,7 +113,7 @@ type Result struct {
 
 	PublicInputs PublicInputs
 
-	// GuestOutput is the guest's 0x0003 output (hash || frame) in partial, for
+	// GuestOutput is the guest's 0x0003 output (hash || frame) in dev-partial, for
 	// the runner's optional native runner check. nil in the other modes.
 	GuestOutput []byte
 

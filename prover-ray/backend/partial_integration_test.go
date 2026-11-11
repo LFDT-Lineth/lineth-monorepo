@@ -23,7 +23,7 @@ import (
 // inputs, named after the gas the block uses.
 const guestTestdata = "../../riscv-guests/l2_execution/test/testdata"
 
-// TestPartial_Integration runs partial on the real l2-execution guest and the
+// TestDevPartial_Integration runs dev-partial on the real l2-execution guest and the
 // guest's block files: it traces each block, checks every constraint and
 // decodes the public inputs.
 //
@@ -35,8 +35,8 @@ const guestTestdata = "../../riscv-guests/l2_execution/test/testdata"
 //
 //	make -C riscv-guests/l2_execution compile
 //	RISCV_SPIKE=1 PARTIAL_BLOCKS=stateless_input.ssz,block_amsterdam_175k.ssz \
-//		go test ./backend -run TestPartial_Integration -v -timeout 0
-func TestPartial_Integration(t *testing.T) {
+//		go test ./backend -run TestDevPartial_Integration -v -timeout 0
+func TestDevPartial_Integration(t *testing.T) {
 	core, id, blocks := realGuestCore(t)
 	for _, name := range blocks {
 		t.Run(name, func(t *testing.T) {
@@ -47,7 +47,7 @@ func TestPartial_Integration(t *testing.T) {
 			start := time.Now()
 			result := core.Prove(context.Background(), Job{ID: name, Type: ProofTypeL2Execution, GuestProgramID: id, Payload: extended})
 			require.Equal(t, ResultStatusOK, result.Status, "prove err: %v", result.Err)
-			t.Logf("partial took %s, public inputs %+v", time.Since(start), result.PublicInputs)
+			t.Logf("dev-partial took %s, public inputs %+v", time.Since(start), result.PublicInputs)
 
 			assert.Equal(t, uint64(1), result.PublicInputs.BlockCount, "a block file holds one block")
 			assert.Equal(t, devmodeImage(t, result.GuestOutput[:guestOutputHashSize]), result.ProofBytes,
@@ -63,8 +63,8 @@ func TestPartial_Integration(t *testing.T) {
 	}
 }
 
-// realGuestCore builds a partial Core for the real l2-execution guest, with
-// the settings of the environment variables of [TestPartial_Integration], and
+// realGuestCore builds a dev-partial Core for the real l2-execution guest, with
+// the settings of the environment variables of [TestDevPartial_Integration], and
 // returns the guest's Program ID and the block files to run.
 func realGuestCore(t *testing.T) (*Core, [32]byte, []string) {
 	t.Helper()
@@ -86,8 +86,8 @@ func realGuestCore(t *testing.T) (*Core, [32]byte, []string) {
 		shardSize, err = strconv.ParseUint(s, 10, 64)
 		require.NoError(t, err, "parsing PARTIAL_SHARD_SIZE")
 	}
-	core, err := New(Config{Mode: ProverModePartial, GuestsDir: dir, ShardSize: shardSize})
-	require.NoError(t, err, "building partial core")
+	core, err := New(Config{Mode: ProverModeDevPartial, GuestsDir: dir, ShardSize: shardSize})
+	require.NoError(t, err, "building dev-partial core")
 	blocks := "stateless_input.ssz"
 	if b := os.Getenv("PARTIAL_BLOCKS"); b != "" {
 		blocks = b
@@ -95,15 +95,15 @@ func realGuestCore(t *testing.T) (*Core, [32]byte, []string) {
 	return core, id, strings.Split(blocks, ",")
 }
 
-// TestPartial_ShardRows logs the row count of the largest modules of every
+// TestDevPartial_ShardRows logs the row count of the largest modules of every
 // shard of the block files, against the column limit
 // [wiop.ColumnSizeMaxSupported]. A shard with a module over the limit cannot
 // be assigned. It only traces, it checks nothing. Same settings as
-// [TestPartial_Integration]; SHARD_ROWS_FIRST=1 stops after shard 0:
+// [TestDevPartial_Integration]; SHARD_ROWS_FIRST=1 stops after shard 0:
 //
 //	RISCV_SPIKE=1 PARTIAL_BLOCKS=block_amsterdam_175k.ssz \
-//		go test ./backend -run TestPartial_ShardRows -v -timeout 0
-func TestPartial_ShardRows(t *testing.T) {
+//		go test ./backend -run TestDevPartial_ShardRows -v -timeout 0
+func TestDevPartial_ShardRows(t *testing.T) {
 	core, id, blocks := realGuestCore(t)
 	g, err := core.loadGuest(id)
 	require.NoError(t, err)

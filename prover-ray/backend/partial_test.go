@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// devmodeImage is the devmode proof image partial must return for the guest
+// devmodeImage is the devmode proof image dev-partial must return for the guest
 // output hash: the hash bytes and a zero program VK as the public inputs.
 func devmodeImage(t *testing.T, hash []byte) []byte {
 	t.Helper()
@@ -38,13 +38,13 @@ func devmodeImage(t *testing.T, hash []byte) []byte {
 
 // partialJob is an l2-execution job of guest id.
 func partialJob(id [32]byte) Job {
-	return Job{ID: "partial", Type: ProofTypeL2Execution, GuestProgramID: id}
+	return Job{ID: "dev-partial", Type: ProofTypeL2Execution, GuestProgramID: id}
 }
 
-// TestProvePartial runs partial on guests that write a given output: it checks
+// TestProveDevPartial runs dev-partial on guests that write a given output: it checks
 // the trace, decodes the public inputs from the output and returns a devmode
 // proof of the output hash.
-func TestProvePartial(t *testing.T) {
+func TestProveDevPartial(t *testing.T) {
 	hash, framed := referenceFrame(t)
 	badHash := slices.Clone(hash)
 	badHash[0] ^= 0xff
@@ -56,7 +56,7 @@ func TestProvePartial(t *testing.T) {
 	wrongHash := writeGuest(t, dir, minimal_elf.OutputAndLogELF(badHash, framed))
 	shortInputs := writeGuest(t, dir, minimal_elf.OutputAndLogELF(keccak256(shortFrame), shortFrame))
 
-	c, err := New(Config{Mode: ProverModePartial, GuestsDir: dir})
+	c, err := New(Config{Mode: ProverModeDevPartial, GuestsDir: dir})
 	require.NoError(t, err)
 	prove := func(id [32]byte) Result {
 		return c.Prove(context.Background(), partialJob(id))
@@ -83,43 +83,43 @@ func TestProvePartial(t *testing.T) {
 	})
 }
 
-func TestNew_PartialNeedsGuestsDir(t *testing.T) {
-	_, err := New(Config{Mode: ProverModePartial})
+func TestNew_DevPartialNeedsGuestsDir(t *testing.T) {
+	_, err := New(Config{Mode: ProverModeDevPartial})
 	assert.ErrorContains(t, err, "guests folder must be set")
 }
 
 // partialShardSize splits the trace of the OutputAndLogELF guest into 2 shards.
 const partialShardSize = 500
 
-// TestProvePartial_Sharded checks that partial checks a sharded trace shard by
+// TestProveDevPartial_Sharded checks that dev-partial checks a sharded trace shard by
 // shard, merges the shards with the mock merger and returns what it returns
 // without sharding.
-func TestProvePartial_Sharded(t *testing.T) {
+func TestProveDevPartial_Sharded(t *testing.T) {
 	hash, framed := referenceFrame(t)
 	dir := t.TempDir()
 	id := writeGuest(t, dir, minimal_elf.OutputAndLogELF(hash, framed))
 	job := partialJob(id)
 
-	unsharded, err := New(Config{Mode: ProverModePartial, GuestsDir: dir})
+	unsharded, err := New(Config{Mode: ProverModeDevPartial, GuestsDir: dir})
 	require.NoError(t, err)
 	want := unsharded.Prove(context.Background(), job)
 	require.Equal(t, ResultStatusOK, want.Status, "prove err: %v", want.Err)
 
-	c, err := New(Config{Mode: ProverModePartial, GuestsDir: dir, ShardSize: partialShardSize})
+	c, err := New(Config{Mode: ProverModeDevPartial, GuestsDir: dir, ShardSize: partialShardSize})
 	require.NoError(t, err)
 	got := c.Prove(context.Background(), job)
 	require.Equal(t, ResultStatusOK, got.Status, "prove err: %v", got.Err)
 	assert.Equal(t, want, got, "sharding should not change the result")
 }
 
-// TestProvePartial_Sharded_UnbalancedBus checks that with sharding, where no
-// shard checks its own message bus, partial still rejects a trace that
+// TestProveDevPartial_Sharded_UnbalancedBus checks that with sharding, where no
+// shard checks its own message bus, dev-partial still rejects a trace that
 // unbalances the bus: the mock merger checks it across the shards.
-func TestProvePartial_Sharded_UnbalancedBus(t *testing.T) {
+func TestProveDevPartial_Sharded_UnbalancedBus(t *testing.T) {
 	hash, framed := referenceFrame(t)
 	dir := t.TempDir()
 	id := writeGuest(t, dir, minimal_elf.OutputAndLogELF(hash, framed))
-	c, err := New(Config{Mode: ProverModePartial, GuestsDir: dir, ShardSize: partialShardSize})
+	c, err := New(Config{Mode: ProverModeDevPartial, GuestsDir: dir, ShardSize: partialShardSize})
 	require.NoError(t, err)
 	interpreter := interpreterColumns(t, c)
 	tamper := &tamperAction{f: func(rt *wiop.Runtime) {
@@ -176,14 +176,14 @@ func (a *tamperAction) Run(rt *wiop.Runtime) {
 	}
 }
 
-// TestCheckAssignment checks that partial rejects a trace that breaks a
+// TestCheckAssignment checks that dev-partial rejects a trace that breaks a
 // constraint, and one that keeps every constraint but unbalances the message
 // bus, which only the verifier actions check.
 func TestCheckAssignment(t *testing.T) {
 	hash, framed := referenceFrame(t)
 	dir := t.TempDir()
 	id := writeGuest(t, dir, minimal_elf.OutputAndLogELF(hash, framed))
-	c, err := New(Config{Mode: ProverModePartial, GuestsDir: dir})
+	c, err := New(Config{Mode: ProverModeDevPartial, GuestsDir: dir})
 	require.NoError(t, err)
 	tamper := &tamperAction{}
 	c.sys.Rounds[1].RegisterAction(tamper)

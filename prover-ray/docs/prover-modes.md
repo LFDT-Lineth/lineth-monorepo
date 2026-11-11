@@ -1,6 +1,6 @@
 # Prover modes
 
-Each proof layer has its own mode, set with `prover_mode` in its config section (`[execution]`, `[rollup]`, `[aggregation]`). Every mode except `full` is a dev mode: it makes no real proof, and the response's `proverVersion` gets the mode as a suffix (for example `0.0.0-riscv-partial`).
+Each proof layer has its own mode, set with `prover_mode` in its config section (`[execution]`, `[rollup]`, `[aggregation]`). Every mode except `full` is a dev mode: it makes no real proof, and the response's `proverVersion` gets the mode as a suffix (for example `0.0.0-riscv-dev-partial`).
 
 The guest is the RISC-V program whose run is proven: the `l2_execution` guest for execution, the rollup guest for rollup and the aggregation guest for aggregation.
 
@@ -8,8 +8,8 @@ The guest is the RISC-V program whose run is proven: the `l2_execution` guest fo
 |---|---|---|---|---|---|---|
 | `dev-mock` | no | no | not checked | none | placeholder | marker bytes |
 | `dev-zkvm` | yes (ZkC Execute) | no | not checked | none | real | marker bytes |
-| `partial` | yes | yes, shard by shard | checked | mock (checks the shards fit together) | real | devmode proof |
-| `full-dummy-wrap` (aggregation only) | yes | yes, shard by shard | proved | real recursion | real | real proof, but a dummy BN254 proof for L1 |
+| `dev-partial` | yes | yes, shard by shard | checked | mock (checks the shards fit together) | real | devmode proof |
+| `dev-full-dummy-wrap` (aggregation only) | yes | yes, shard by shard | proved | real recursion | real | real proof, but a dummy BN254 proof for L1 |
 | `full` | yes | yes, shard by shard | proved | real recursion | real | real proof |
 
 ### dev-mock
@@ -25,7 +25,7 @@ The guest is the RISC-V program whose run is proven: the `l2_execution` guest fo
 - Nothing is checked against the constraints.
 - The guest output must be equal to the native runner's output (temporary, see below).
 
-### partial
+### dev-partial
 
 - Runs the guest and traces it, shard by shard.
 - Checks every shard against every constraint.
@@ -38,7 +38,7 @@ The guest is the RISC-V program whose run is proven: the `l2_execution` guest fo
   - but anyone can make one, so it proves nothing.
 - If a native runner is set, the guest output must also be equal to its output (temporary, see below).
 
-### full-dummy-wrap (aggregation only)
+### dev-full-dummy-wrap (aggregation only)
 
 - The same as `full`.
 - But the final gnark BN254 proof sent to L1 is a dummy one.
@@ -59,10 +59,10 @@ The guest is the RISC-V program whose run is proven: the `l2_execution` guest fo
 |---|---|---|---|
 | `dev-mock` | ready | ready | ready |
 | `dev-zkvm` | ready | not yet | not yet |
-| `partial` | ready | not yet | not yet |
-| `full-dummy-wrap` | n/a | n/a | not yet |
+| `dev-partial` | ready | not yet | not yet |
+| `dev-full-dummy-wrap` | n/a | n/a | not yet |
 | `full` | not yet | not yet | not yet |
 
-For rollup and aggregation, the modes other than `dev-mock` need the layer's guest input format (not decided yet) and a guest that verifies the proof type of the layer below: a devmode proof below `partial`, a real proof below `full`. In every mode except `full`, aggregation sends a dummy BN254 proof to L1.
+For rollup and aggregation, the modes other than `dev-mock` need the layer's guest input format (not decided yet) and a guest that verifies the proof type of the layer below: a devmode proof below `dev-partial`, a real proof below `full`. In every mode except `full`, aggregation sends a dummy BN254 proof to L1.
 
-Sample configs: `prover-ray/config/config-dev-mock.toml`, `config-dev-zkvm.toml`, `config-partial.toml`.
+Sample configs: `prover-ray/config/config-dev-mock.toml`, `config-dev-zkvm.toml`, `config-dev-partial.toml`.

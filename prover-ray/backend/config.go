@@ -20,7 +20,7 @@ type Config struct {
 	//
 	// Sharding is not production-ready. With a non-zero ShardSize the in-shard
 	// message-bus check is off and the bus balances only across shards, which
-	// a [conglomeration.Merger] must check. partial checks it with
+	// a [conglomeration.Merger] must check. dev-partial checks it with
 	// [conglomeration.MockMerger]; in full mode, until the recursion machine
 	// lands, every sharded job fails with [ErrNotImplemented]. Leave it zero in
 	// production.

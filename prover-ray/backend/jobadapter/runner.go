@@ -56,7 +56,7 @@ func WithMode(m backend.ProverMode) RunnerOption {
 }
 
 // WithNativeRunnerBin sets the path to the native l2_execution_runner binary,
-// required by dev-zkvm mode and optional in partial.
+// required by dev-zkvm mode and optional in dev-partial.
 func WithNativeRunnerBin(path string) RunnerOption {
 	return func(r *Runner) { r.nativeRunnerBin = path }
 }
@@ -147,12 +147,12 @@ func (r *Runner) runL2Execution(ctx context.Context, runReq RunRequest) RunResul
 	if r.mode == backend.ProverModeDevZkVM {
 		return r.runL2ExecutionZkVM(ctx, runReq, req)
 	}
-	if r.mode == backend.ProverModePartial {
-		return r.runL2ExecutionPartial(ctx, runReq, req)
+	if r.mode == backend.ProverModeDevPartial {
+		return r.runL2ExecutionDevPartial(ctx, runReq, req)
 	}
 
 	// dev-mock accepts ranges and forced transactions (it runs no guest);
-	// dev-zkvm and partial are handled above. full supports a single block
+	// dev-zkvm and dev-partial are handled above. full supports a single block
 	// only, today.
 	if r.mode != backend.ProverModeDevMock {
 		if len(req.Payloads) != 1 {
@@ -294,11 +294,11 @@ func (r *Runner) runL2ExecutionZkVM(ctx context.Context, runReq RunRequest, req 
 	}
 }
 
-// runL2ExecutionPartial runs the guest on the extended input, as dev-zkvm
+// runL2ExecutionDevPartial runs the guest on the extended input, as dev-zkvm
 // does, and shapes the response from the result: the public inputs decoded
 // from the guest output and a devmode proof. With a native runner set, the
 // guest output must also equal the native runner's --ssz output byte for byte.
-func (r *Runner) runL2ExecutionPartial(ctx context.Context, runReq RunRequest, req *L2ExecutionRequest) RunResult {
+func (r *Runner) runL2ExecutionDevPartial(ctx context.Context, runReq RunRequest, req *L2ExecutionRequest) RunResult {
 	extended := ssz.EncodeExtendedInput(buildExtendedInput(req))
 	startBlock := req.Payloads[0].BlockNumber
 	endBlock := req.Payloads[len(req.Payloads)-1].BlockNumber

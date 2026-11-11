@@ -41,7 +41,7 @@ func TestNewConfigFromFile_ShardSize(t *testing.T) {
 version = "0.0.0-riscv"
 
 [execution]
-prover_mode = "partial"
+prover_mode = "dev-partial"
 shard_size = 500000
 `))
 	require.NoError(t, err)

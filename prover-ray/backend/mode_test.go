@@ -47,7 +47,9 @@ func TestProverMode_Helpers(t *testing.T) {
 	assert.True(t, ProverModeDevMock.IsDev())
 	assert.True(t, ProverModeDevZkVM.IsDev())
 	assert.False(t, ProverModeFull.IsDev())
-	assert.True(t, ProverModePartial.IsDev(), "partial returns a devmode proof, not a real one")
+	assert.True(t, ProverModeDevPartial.IsDev(), "dev-partial returns a devmode proof, not a real one")
+	assert.Equal(t, "dev-partial", string(ProverModeDevPartial))
+	assert.False(t, ProverMode("partial").Valid(), "partial is now dev-partial")
 
 	assert.False(t, ProverModeDevMock.needsArtifacts())
 	assert.True(t, ProverModeFull.needsArtifacts())
