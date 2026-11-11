@@ -46,6 +46,9 @@ ZKC_EXEC_FLAGS ?=
 # Flags forwarded to `zkc trace` by trace / zkc-smoke-trace.
 ZKC_TRACE_FLAGS ?= --stats
 
+# CTT_FIELD_ACCEL=false stops Constantine from using the field accelerator (default: true).
+CTT_FIELD_ACCEL ?=
+
 # Symlink to ZKEVM_FIXTURES_DIR at a fixed path, for external runners.
 ZKEVM_FIXTURES_LINK ?= /tmp/execution-specs-json-fixtures/fixtures
 
@@ -113,7 +116,7 @@ clean:
 	rm -rf $(BUILD_CACHE_DIR)
 
 compile:
-	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(KECCAK_ACCEL),-Dkeccak-accel=$(KECCAK_ACCEL)) $(if $(SECP256K1_BACKEND),-Dsecp256k1-backend=$(SECP256K1_BACKEND))
+	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(KECCAK_ACCEL),-Dkeccak-accel=$(KECCAK_ACCEL)) $(if $(SECP256K1_BACKEND),-Dsecp256k1-backend=$(SECP256K1_BACKEND)) $(if $(CTT_FIELD_ACCEL),-Dctt-field-accel=$(CTT_FIELD_ACCEL))
 	@if command -v riscv64-unknown-elf-objdump >/dev/null 2>&1; then \
 		if [ "$(OBJDUMP)" = "true" ]; then \
 			echo "\nDisassembling $(BIN)"; \
