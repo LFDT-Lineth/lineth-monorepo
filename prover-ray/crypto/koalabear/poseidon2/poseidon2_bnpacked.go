@@ -7,9 +7,11 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	bnposeidon2 "github.com/consensys/gnark-crypto/ecc/bn254/fr/poseidon2"
+	"github.com/consensys/gnark/constraint/solver"
+	"github.com/consensys/gnark/frontend"
 	gnarkhash "github.com/consensys/gnark/std/hash"
 	stdposeidon2 "github.com/consensys/gnark/std/hash/poseidon2"
-	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/gnark/std/rangecheck"
 )
 
 // BN-packed Poseidon2 hashing of KoalaBear elements.
@@ -159,11 +161,11 @@ func (h *BNPackedGnarkHasher) absorb(md gnarkhash.FieldHasher) {
 }
 
 // pack packs the buffered elements into native BN254 variables. Each element
-// is strictly reduced first so that its single limb is the canonical value in
-// [0, p): this keeps the encoding unique (x and x+p must not hash differently)
-// and guarantees each slot fits in 31 bits.
+// is first brought to its canonical value in [0, p) by [canonicalKoala]: this
+// keeps the encoding unique (x and x+p must not hash differently) and
+// guarantees each slot fits in 31 bits.
 func (h *BNPackedGnarkHasher) pack() []frontend.Variable {
-	ef := h.koalaAPI.EmulatedField()
+	rc := rangecheck.New(h.api)
 	shift := new(big.Int).Lsh(big.NewInt(1), BNPackedBitsPerKoala)
 
 	res := make([]frontend.Variable, 0, (len(h.buffer)+BNPackedNbKoalaPerLimb-1)/BNPackedNbKoalaPerLimb)
@@ -171,11 +173,66 @@ func (h *BNPackedGnarkHasher) pack() []frontend.Variable {
 		end := min(start+BNPackedNbKoalaPerLimb, len(h.buffer))
 		var acc frontend.Variable = 0
 		for i := start; i < end; i++ {
-			x := h.buffer[i]
-			canonical := ef.ReduceStrict(&x.EV)
-			acc = h.api.Add(h.api.Mul(acc, shift), canonical.Limbs[0])
+			x := canonicalKoala(h.api, h.koalaAPI, rc, h.buffer[i])
+			acc = h.api.Add(h.api.Mul(acc, shift), x)
 		}
 		res = append(res, acc)
 	}
 	return res
+}
+
+// KoalaBear modulus p = 2^31 - 2^24 + 1 = 127 * 2^24 + 1.
+var (
+	koalaModulus = big.NewInt(2130706433)
+	koalaLowMask = big.NewInt(1<<24 - 1)
+)
+
+func init() {
+	solver.RegisterHint(koalaCanonicalSplitHint)
+}
+
+// koalaCanonicalSplitHint takes v in [0, 2^31) and returns (q, h, l) such that
+// v = q*p + x with q in {0, 1}, x = v mod p, and x = h*2^24 + l with
+// h < 2^7 and l < 2^24.
+func koalaCanonicalSplitHint(_ *big.Int, in, out []*big.Int) error {
+	q, x := new(big.Int), new(big.Int)
+	q.DivMod(in[0], koalaModulus, x)
+	out[0].Set(q)
+	out[1].Rsh(x, 24)
+	out[2].And(x, koalaLowMask)
+	return nil
+}
+
+// canonicalKoala returns the canonical value x in [0, p) of a KoalaBear
+// element as a native variable. This is "Option A" of the hashing report,
+// following SP1's reduceWithMaxBits.
+//
+// After the weak Reduce, gnark constrains the single 31-bit limb, so
+// v < 2^31 < 2p and the quotient q = floor(v/p) is 0 or 1 (B = 31). We then
+// check:
+//
+//	q * (q - 1) = 0
+//	v = q*p + h*2^24 + l
+//	h < 2^7, l < 2^24            (so x < 2^31)
+//	IsZero(h - 127) * l = 0      (so x < p = 127*2^24 + 1)
+//
+// If q were 1 while v < p, x = v - p would wrap mod r and could not be
+// written as h*2^24 + l with those bounds, so the checks reject it.
+func canonicalKoala(api frontend.API, koalaAPI *circuit.KoalaBearAPI, rc frontend.Rangechecker, e circuit.Element) frontend.Variable {
+	reduced := koalaAPI.EmulatedField().Reduce(&e.EV)
+	v := reduced.Limbs[0]
+
+	out, err := api.Compiler().NewHint(koalaCanonicalSplitHint, 3, v)
+	if err != nil {
+		panic(err)
+	}
+	q, hi, lo := out[0], out[1], out[2]
+
+	api.AssertIsBoolean(q)
+	rc.Check(hi, 7)
+	rc.Check(lo, 24)
+	x := api.Add(api.Mul(hi, 1<<24), lo)
+	api.AssertIsEqual(v, api.Add(api.Mul(q, koalaModulus), x))
+	api.AssertIsEqual(api.Mul(api.IsZero(api.Sub(hi, 127)), lo), 0)
+	return x
 }
