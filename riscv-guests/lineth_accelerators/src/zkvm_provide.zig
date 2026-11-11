@@ -44,6 +44,8 @@ comptime {
         // `write_output` already matches the declared C ABI, so export it directly.
         @export(&lineth_accel.write_output, .{ .name = "write_output" });
         @export(&guest_allocator, .{ .name = "guest_allocator" });
+        // Referenced by a Constantine archive built with CTT_EXTERN_FIELD_ACCEL.
+        @export(&lineth_accel.lineth_zkvm_field_op, .{ .name = "lineth_zkvm_field_op" });
     }
 }
 
