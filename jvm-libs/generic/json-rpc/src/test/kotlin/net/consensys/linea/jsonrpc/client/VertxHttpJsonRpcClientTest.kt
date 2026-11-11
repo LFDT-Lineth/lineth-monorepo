@@ -430,7 +430,7 @@ class VertxHttpJsonRpcClientTest {
     testingServer.delayResponses("engine_newPayloadV1", 300.milliseconds)
     client = clientWithHooks(
       endpoint = testingServerEndpoint,
-      requestTimeoutProvider = { method -> if (method == "engine_getPayloadV1") 200.milliseconds else null },
+      requestOverallTimeoutProvider = { method -> if (method == "engine_getPayloadV1") 200.milliseconds else null },
     )
 
     assertThatThrownBy {
@@ -458,7 +458,7 @@ class VertxHttpJsonRpcClientTest {
     val overallDeadlineClient = clientWithHooks(
       endpoint = testingServerEndpoint,
       requestTimeout = idleTimeoutMillis,
-      requestTimeoutProvider = { 500.milliseconds },
+      requestOverallTimeoutProvider = { 500.milliseconds },
     )
 
     idleOnlyClient.makeRequest(JsonRpcRequestListParams("2.0", 1, "eth_blockNumber", emptyList())).get()
@@ -480,7 +480,8 @@ class VertxHttpJsonRpcClientTest {
     httpClient = vertx.createHttpClient(clientOptions, PoolOptions().setHttp1MaxSize(1))
     client = clientWithHooks(
       endpoint = testingServerEndpoint,
-      requestTimeoutProvider = { method -> if (method == "engine_forkchoiceUpdatedV1") 200.milliseconds else null },
+      requestOverallTimeoutProvider =
+      { method -> if (method == "engine_forkchoiceUpdatedV1") 200.milliseconds else null },
     )
 
     val occupyingRequest =
@@ -512,7 +513,7 @@ class VertxHttpJsonRpcClientTest {
     endpoint: URL = this.endpoint,
     requestTimeout: Long? = null,
     requestHeadersProvider: () -> Map<String, String> = { emptyMap() },
-    requestTimeoutProvider: (String) -> Duration? = { null },
+    requestOverallTimeoutProvider: (String) -> Duration? = { null },
   ): VertxHttpJsonRpcClient =
     VertxHttpJsonRpcClient(
       httpClient,
@@ -520,7 +521,7 @@ class VertxHttpJsonRpcClientTest {
       metricsFacade,
       requestTimeout = requestTimeout,
       requestHeadersProvider = requestHeadersProvider,
-      requestTimeoutProvider = requestTimeoutProvider,
+      requestOverallTimeoutProvider = requestOverallTimeoutProvider,
     )
 
   private fun replyRequestWith(jsonRpcResponse: JsonObject) {

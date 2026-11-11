@@ -37,7 +37,7 @@ import kotlin.time.Duration
  * deadline: a server that keeps streaming bytes slowly will not trip it.
  * @param requestHeadersProvider evaluated once per request; the returned headers are added to that request only.
  * Useful for credentials that must be regenerated per call, e.g. Engine API JWTs.
- * @param requestTimeoutProvider returns the overall deadline for a request of the given JSON-RPC method, covering
+ * @param requestOverallTimeoutProvider returns the overall deadline for a request of the given JSON-RPC method, covering
  * connection acquisition, sending and reading the full response. When it elapses the HTTP request is reset and the
  * returned future fails with [TimeoutException]. Returning null applies no overall deadline.
  */
@@ -55,7 +55,7 @@ class VertxHttpJsonRpcClient(
     override val name: String = "jsonrpc"
   },
   private val requestHeadersProvider: () -> Map<String, String> = { emptyMap() },
-  private val requestTimeoutProvider: (method: String) -> Duration? = { null },
+  private val requestOverallTimeoutProvider: (method: String) -> Duration? = { null },
 ) : JsonRpcClient {
   private val baseRequestOptions = RequestOptions().apply {
     setMethod(HttpMethod.POST)
@@ -88,7 +88,7 @@ class VertxHttpJsonRpcClient(
   ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
     val json = serializeRequest(request)
     val (requestOptions, overallTimeout) =
-      runCatching { buildRequestOptions() to requestTimeoutProvider(request.method) }
+      runCatching { buildRequestOptions() to requestOverallTimeoutProvider(request.method) }
         .getOrElse { error ->
           return Future.failedFuture<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>(error)
             .onFailure { th -> logRequestFailure(json, th) }

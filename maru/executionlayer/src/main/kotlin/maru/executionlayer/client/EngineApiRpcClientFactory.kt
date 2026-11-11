@@ -43,7 +43,7 @@ object EngineApiRpcClientFactory {
       shallRetryRequestsClientBasePredicate = Predicate<Result<Any?, Throwable>> { false },
       log = log,
       requestHeadersProvider = { jwtTokenProvider?.authorizationHeader() ?: emptyMap() },
-      requestTimeoutProvider = requestTimeouts,
+      requestOverallTimeoutProvider = requestTimeouts,
     )
   }
 }
