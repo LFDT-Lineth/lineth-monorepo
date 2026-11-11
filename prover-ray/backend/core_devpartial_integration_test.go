@@ -31,7 +31,8 @@ const guestTestdata = "../../riscv-guests/l2_execution/test/testdata"
 // guest ELF, NATIVE_RUNNER sets a native runner to check the guest output
 // against, DEV_PARTIAL_SHARD_SIZE sets the shard size (default 500000, as the guest
 // trace CI and the zkcdriver benchmarks) and DEV_PARTIAL_BLOCKS picks the block
-// files (comma separated, default stateless_input.ssz):
+// files (comma separated, absolute paths or names in the guest testdata,
+// default stateless_input.ssz):
 //
 //	make -C riscv-guests/l2_execution compile
 //	REAL_GUEST_TESTS=1 DEV_PARTIAL_BLOCKS=stateless_input.ssz,block_amsterdam_175k.ssz \
@@ -40,7 +41,7 @@ func TestDevPartial_Integration(t *testing.T) {
 	core, id, blocks := realGuestCore(t)
 	for _, name := range blocks {
 		t.Run(name, func(t *testing.T) {
-			input := filepath.Join(guestTestdata, name)
+			input := blockPath(name)
 			extended, err := os.ReadFile(input) //nolint:gosec // G703: test-controlled path
 			require.NoError(t, err, "reading block file")
 
@@ -61,6 +62,15 @@ func TestDevPartial_Integration(t *testing.T) {
 			}
 		})
 	}
+}
+
+// blockPath returns the path of a block file: as is when absolute, in
+// [guestTestdata] otherwise.
+func blockPath(name string) string {
+	if filepath.IsAbs(name) {
+		return name
+	}
+	return filepath.Join(guestTestdata, name)
 }
 
 // realGuestCore builds a dev-partial Core for the real l2-execution guest, with
@@ -109,7 +119,7 @@ func TestDevPartial_ShardRows(t *testing.T) {
 	require.NoError(t, err)
 	for _, name := range blocks {
 		t.Run(name, func(t *testing.T) {
-			extended, err := os.ReadFile(filepath.Join(guestTestdata, name)) //nolint:gosec // G703: test-controlled path
+			extended, err := os.ReadFile(blockPath(name)) //nolint:gosec // G703: test-controlled path
 			require.NoError(t, err, "reading block file")
 			inputs, err := core.encodeGuestInputs(Job{Payload: extended}, g)
 			require.NoError(t, err)
@@ -124,26 +134,27 @@ func TestDevPartial_ShardRows(t *testing.T) {
 			for i := range numShards {
 				shard, err := traceShard(lazyTrace, i)
 				require.NoError(t, err)
-				logLargestModules(t, i, shard)
+				logLargestModules(t, core, i, shard)
 			}
 		})
 	}
 }
 
 // logLargestModules logs the five largest modules of the shard that are
-// assigned per shard: static modules, such as the $bit tables, are not.
-func logLargestModules(t *testing.T, i uint, shard zkcdriver.Shard) {
+// assigned per shard. Static modules are not, so they are left out.
+func logLargestModules(t *testing.T, c *Core, i uint, shard zkcdriver.Shard) {
 	t.Helper()
 	type module struct {
 		name   string
 		height uint
 	}
+	schema := c.driver.BinaryFile.AirConstraints()
 	var modules []module
 	for k := range shard.Width() {
-		m := shard.Module(k)
-		if strings.HasPrefix(m.Name(), "$") {
+		if schema.Module(k).IsStatic() {
 			continue
 		}
+		m := shard.Module(k)
 		modules = append(modules, module{m.Name(), m.Height()})
 	}
 	slices.SortFunc(modules, func(a, b module) int { return cmp.Compare(b.height, a.height) })
