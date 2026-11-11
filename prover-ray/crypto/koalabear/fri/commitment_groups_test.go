@@ -146,7 +146,7 @@ func TestMerkleizeInjectsEachGroup(t *testing.T) {
 			injections[level] = append(injections[level], digests)
 		}
 	}
-	want := allocTree(len(leaves))
+	want := allocTree(MerkleHashKoalaBear, len(leaves))
 	copy(want.Nodes[len(leaves)-1:], leaves)
 	want.buildLevels(injections)
 	require.Equal(t, want.Root(), tree.Root(), "grouped root must inject one digest per group")

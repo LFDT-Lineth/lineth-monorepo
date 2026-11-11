@@ -14,7 +14,7 @@ import (
 // builds over the zero codeword: same root, caps and branches.
 func TestZeroLayerTree(t *testing.T) {
 	for height := 1; height <= 6; height++ {
-		want := buildTreeExt(make([]field.Ext, 1<<height))
+		want := buildTreeExt(MerkleHashKoalaBear, make([]field.Ext, 1<<height))
 		got := zeroLayerTree{height: height}
 		require.Equal(t, want.Root(), got.Root(), "height %d", height)
 		for depth := 0; depth <= height; depth++ {

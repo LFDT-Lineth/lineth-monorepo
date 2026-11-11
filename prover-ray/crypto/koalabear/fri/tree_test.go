@@ -59,7 +59,7 @@ func TestBuildTreeExtOpenAuthenticate(t *testing.T) {
 			leaves[i] = field.PseudoRandExt(prng)
 		}
 		octs := mapExtToOctuplet(leaves)
-		tree := buildTreeExt(leaves)
+		tree := buildTreeExt(MerkleHashKoalaBear, leaves)
 
 		if tree.NumLeaves() != n {
 			t.Fatalf("n=%d: NumLeaves=%d, want %d", n, tree.NumLeaves(), n)
@@ -96,7 +96,7 @@ func TestBuildTreeExtOpenAuthenticate(t *testing.T) {
 func TestMerkleCapAuthenticatesBranches(t *testing.T) {
 	prng := rand.New(utils.NewRandSource(19))
 	leaves := field.VecPseudoRandExt(prng, 16)
-	tree := buildTreeExt(leaves)
+	tree := buildTreeExt(MerkleHashKoalaBear, leaves)
 	height := tree.NumLevel() - 1
 
 	for depth := 1; depth < height; depth++ {
@@ -149,7 +149,7 @@ func pseudoRandOctuplets(prng *rand.Rand, n int) []field.Octuplet {
 
 func TestMerkleCapRejectsMalformedAndTamperedProofs(t *testing.T) {
 	prng := rand.New(utils.NewRandSource(29))
-	tree := buildTreeExt(field.VecPseudoRandExt(prng, 8))
+	tree := buildTreeExt(MerkleHashKoalaBear, field.VecPseudoRandExt(prng, 8))
 	treeCap := tree.OpenCap(2)
 
 	badLength := treeCap
@@ -240,7 +240,7 @@ func multiInjectionTree(prng *rand.Rand, height int, counts []int) (*Tree, [][][
 			injections[level] = append(injections[level], injected)
 		}
 	}
-	tree := allocTree(len(bottom))
+	tree := allocTree(MerkleHashKoalaBear, len(bottom))
 	copy(tree.Nodes[len(bottom)-1:], bottom)
 	tree.buildLevels(injections)
 	return tree, injections
@@ -344,7 +344,7 @@ func TestCapRootSeveralInjections(t *testing.T) {
 			injections[k] = tree.injectedInto(k)
 		}
 		nodes := tree.Nodes[frontierStart : 2*frontierStart+1]
-		if capRoot(nodes, injections) != tree.Root() {
+		if capRoot(MerkleHashKoalaBear, nodes, injections) != tree.Root() {
 			t.Fatalf("depth %d: capRoot does not rebuild the root", depth)
 		}
 	}
