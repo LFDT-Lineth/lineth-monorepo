@@ -15,6 +15,9 @@ import (
 const (
 	nativeMulmod = "mulmod_"
 	expmodHint   = "expmod_unconstrained_"
+	// nativeHint prefixes native functions the prover leaves unconstrained:
+	// their results must be checked by the caller.
+	nativeHint = "hint_"
 
 	nativeMulmodLeft      = "lhsL'"
 	nativeMulmodRight     = "rhsL'"
@@ -28,7 +31,7 @@ const (
 	expmodRes  = "res'"
 )
 
-func (s *schemaScanner) defineNativeModule(mod schema.Module[koalabear.Element]) error {
+func (s *schemaScanner) defineNativeModule(mod schema.Module[koalabear.Element], referenced map[string]struct{}) error {
 	modName := mod.Name()
 	if after, found := strings.CutPrefix(modName, nativeMulmod); found {
 		if err := s.defineNativeMulmod(mod, after); err != nil {
@@ -39,6 +42,10 @@ func (s *schemaScanner) defineNativeModule(mod schema.Module[koalabear.Element])
 	if strings.HasPrefix(modName, expmodHint) {
 		// expmod_unconstrained_* is unconstrained. Though, we still need to register the columns so that lookups would work.
 		s.defineNativeExpUnconstrained(mod)
+		return nil
+	}
+	if strings.HasPrefix(modName, nativeHint) {
+		s.defineNativeHint(mod, referenced)
 		return nil
 	}
 	return fmt.Errorf("unknown native module %s", modName)
@@ -69,6 +76,29 @@ func (s *schemaScanner) defineNativeExpUnconstrained(mod schema.Module[koalabear
 			continue
 		}
 		colQualifiedName := qualifiedCorsetName(modName, reg.Name())
+		col := moduleWIOP.NewColumn(
+			s.Sys.Context.Childf("col-native-%s", colQualifiedName),
+			s.Sys.Rounds[s.TraceRound],
+		)
+		s.ColumnIDs[colQualifiedName] = col.Context.ID
+	}
+}
+
+// defineNativeHint registers a wiop column for every referenced register of a
+// native hint module (the inputs and outputs its callers look up) without
+// adding any constraint. The module is genuinely unconstrained: callers must
+// check what it returns.
+func (s *schemaScanner) defineNativeHint(mod schema.Module[koalabear.Element], referenced map[string]struct{}) {
+	modName := mod.Name()
+	moduleWIOP := s.Sys.NewDynamicModule(
+		s.Sys.Context.Childf("module-native-%s", modName),
+		wiop.PaddingDirectionRight,
+	)
+	for _, reg := range mod.Registers() {
+		colQualifiedName := qualifiedCorsetName(modName, reg.Name())
+		if _, ok := referenced[colQualifiedName]; !ok {
+			continue
+		}
 		col := moduleWIOP.NewColumn(
 			s.Sys.Context.Childf("col-native-%s", colQualifiedName),
 			s.Sys.Rounds[s.TraceRound],
