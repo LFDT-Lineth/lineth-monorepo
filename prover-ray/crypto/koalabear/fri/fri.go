@@ -29,6 +29,10 @@ type Params struct {
 	// disables capping: branches climb to the root and caps are empty. See
 	// [OptimalMerkleCapHeight].
 	MerkleCapHeight uint8
+	// MerkleHash is the hash of every Merkle tree the PCS builds and opens
+	// (see [MerkleHash]); the zero value is KoalaBear Poseidon2. Prover and
+	// verifier must agree on it.
+	MerkleHash MerkleHash
 
 	logFinalPolySize uint8         // logFinalPolySize = log2(the final polynomial's degree + 1)
 	domains          []*fft.Domain // domains[j] has cardinality 2^(LogCodewordSize-j), generator ωⱼ
@@ -53,6 +57,17 @@ type Option func(c *Params) error
 func LogFinalPolySize(log2Size uint8) Option {
 	return func(c *Params) error {
 		c.logFinalPolySize = log2Size
+		return nil
+	}
+}
+
+// WithMerkleHash sets the hash of the Merkle trees (see [MerkleHash]).
+func WithMerkleHash(hash MerkleHash) Option {
+	return func(c *Params) error {
+		if err := hash.validate(); err != nil {
+			return err
+		}
+		c.MerkleHash = hash
 		return nil
 	}
 }
@@ -130,6 +145,7 @@ func (p Params) restrictTo(topSizeLog2 uint8) (Params, error) {
 		LogPlainTextSize: topSizeLog2,
 		NumQueries:       p.NumQueries,
 		MerkleCapHeight:  p.MerkleCapHeight,
+		MerkleHash:       p.MerkleHash,
 		logFinalPolySize: p.logFinalPolySize,
 		domains:          p.domains[offset:],
 	}
@@ -615,9 +631,9 @@ func checkBranchShape(b Branch, numLeaves, capDepth int) error {
 // binary tree whose leaves are the layer's extension elements (padded into
 // octuplets). Unlike NewTree, which is the 3-ary multi-size builder, this is a
 // plain power-of-two binary tree with no auxiliary leaves.
-func buildTreeExt(layer []field.Ext) *Tree {
+func buildTreeExt(hash MerkleHash, layer []field.Ext) *Tree {
 	n := len(layer)
-	t := allocTree(n)
+	t := allocTree(hash, n)
 	bottom := t.Nodes[n-1:]
 	parallel.Execute(n, func(start, end int) {
 		for i := start; i < end; i++ {

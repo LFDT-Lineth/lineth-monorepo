@@ -120,7 +120,7 @@ func TestPairLeavesTree(t *testing.T) {
 			injections[level] = append(injections[level], digests)
 		}
 	}
-	want := allocTree(len(leaves))
+	want := allocTree(MerkleHashKoalaBear, len(leaves))
 	copy(want.Nodes[len(leaves)-1:], leaves)
 	want.buildLevels(injections)
 	require.Equal(t, want.Root(), tree.Root(), "pair-leaf root must follow its definition")

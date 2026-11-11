@@ -132,7 +132,7 @@ func (l leafLayout) fillColumns(matrix []field.Element, t SizedTable, off, base,
 
 // hashLeafScalar reproduces the MDHasher path for a single leaf; used for the
 // <16-leaf tail and as the reference fallback.
-func (l leafLayout) hashLeafScalar(hasher *poseidon2.MDHasher, t SizedTable, j int) field.Octuplet {
+func (l leafLayout) hashLeafScalar(hasher leafHasher, t SizedTable, j int) field.Octuplet {
 	hasher.Reset()
 	absorbLeafHeader(hasher, l.baseWidth, l.extWidth)
 	if l.paired {
@@ -149,9 +149,20 @@ func (l leafLayout) hashLeafScalar(hasher *poseidon2.MDHasher, t SizedTable, j i
 // paired, out has size/2 entries and leaf j digests rows 2j and 2j+1
 // (non-bottom levels); otherwise out has size entries and leaf j digests row j
 // (bottom level). Digests are bit-identical to the scalar MDHasher path.
-func hashSizedLeaves(t SizedTable, paired bool, out []field.Octuplet) {
+func hashSizedLeaves(hash MerkleHash, t SizedTable, paired bool, out []field.Octuplet) {
 	l := newLeafLayout(t, paired)
 	nbLeaves := len(out)
+
+	// Without a batched path every leaf takes the scalar one, in parallel.
+	if !hash.batched() {
+		parallel.Execute(nbLeaves, func(start, end int) {
+			hasher := hash.newLeafHasher()
+			for j := start; j < end; j++ {
+				out[j] = l.hashLeafScalar(hasher, t, j)
+			}
+		})
+		return
+	}
 
 	// Parallelize over SIMD groups, not individual leaves: parallel.Execute
 	// splits its range across GOMAXPROCS workers, so parallelizing over leaves
