@@ -36,8 +36,8 @@ func devmodeImage(t *testing.T, hash []byte) []byte {
 	return img
 }
 
-// partialJob is an l2-execution job of guest id.
-func partialJob(id [32]byte) Job {
+// devPartialJob is an l2-execution job of guest id.
+func devPartialJob(id [32]byte) Job {
 	return Job{ID: "dev-partial", Type: ProofTypeL2Execution, GuestProgramID: id}
 }
 
@@ -59,7 +59,7 @@ func TestProveDevPartial(t *testing.T) {
 	c, err := New(Config{Mode: ProverModeDevPartial, GuestsDir: dir})
 	require.NoError(t, err)
 	prove := func(id [32]byte) Result {
-		return c.Prove(context.Background(), partialJob(id))
+		return c.Prove(context.Background(), devPartialJob(id))
 	}
 
 	t.Run("valid output", func(t *testing.T) {
@@ -88,11 +88,31 @@ func TestNew_DevPartialNeedsGuestsDir(t *testing.T) {
 	assert.ErrorContains(t, err, "guests folder must be set")
 }
 
+// TestDevmodePublicInputs checks that the traced guest output hash must equal
+// the executed one.
+func TestDevmodePublicInputs(t *testing.T) {
+	c, err := New(Config{Mode: ProverModeDevPartial, GuestsDir: t.TempDir()})
+	require.NoError(t, err)
+	pub := make(wiop.PublicInput, len(c.sys.PublicInputs))
+	for i := range pub {
+		pub[i] = field.ElemFromBase(field.Element{})
+	}
+
+	got, err := c.devmodePublicInputs(pub, make([]byte, guestOutputHashSize))
+	require.NoError(t, err)
+	assert.Len(t, got, devmode.NumPublicInputs)
+
+	hash := make([]byte, guestOutputHashSize)
+	hash[3] = 1
+	_, err = c.devmodePublicInputs(pub, hash)
+	assert.ErrorContains(t, err, "traced guest output byte 3")
+}
+
 // TestNewDevPartial_EveryQueryIsChecked checks that every query left in the
 // check-only system is of a type whose Check runs on the trace. A query whose
 // Check does nothing, such as a MessageBus, would silently not be checked.
 func TestNewDevPartial_EveryQueryIsChecked(t *testing.T) {
-	for _, shardSize := range []uint64{0, partialShardSize} {
+	for _, shardSize := range []uint64{0, devPartialShardSize} {
 		c, err := New(Config{Mode: ProverModeDevPartial, GuestsDir: t.TempDir(), ShardSize: shardSize})
 		require.NoError(t, err)
 		queries := c.sys.UnreducedQueries()
@@ -108,8 +128,8 @@ func TestNewDevPartial_EveryQueryIsChecked(t *testing.T) {
 	}
 }
 
-// partialShardSize splits the trace of the OutputAndLogELF guest into 2 shards.
-const partialShardSize = 500
+// devPartialShardSize splits the trace of the OutputAndLogELF guest into 2 shards.
+const devPartialShardSize = 500
 
 // TestProveDevPartial_Sharded checks that dev-partial checks a sharded trace shard by
 // shard, merges the shards with the mock merger and returns what it returns
@@ -118,14 +138,14 @@ func TestProveDevPartial_Sharded(t *testing.T) {
 	hash, framed := referenceFrame(t)
 	dir := t.TempDir()
 	id := writeGuest(t, dir, minimal_elf.OutputAndLogELF(hash, framed))
-	job := partialJob(id)
+	job := devPartialJob(id)
 
 	unsharded, err := New(Config{Mode: ProverModeDevPartial, GuestsDir: dir})
 	require.NoError(t, err)
 	want := unsharded.Prove(context.Background(), job)
 	require.Equal(t, ResultStatusOK, want.Status, "prove err: %v", want.Err)
 
-	c, err := New(Config{Mode: ProverModeDevPartial, GuestsDir: dir, ShardSize: partialShardSize})
+	c, err := New(Config{Mode: ProverModeDevPartial, GuestsDir: dir, ShardSize: devPartialShardSize})
 	require.NoError(t, err)
 	got := c.Prove(context.Background(), job)
 	require.Equal(t, ResultStatusOK, got.Status, "prove err: %v", got.Err)
@@ -139,7 +159,7 @@ func TestProveDevPartial_Sharded_UnbalancedBus(t *testing.T) {
 	hash, framed := referenceFrame(t)
 	dir := t.TempDir()
 	id := writeGuest(t, dir, minimal_elf.OutputAndLogELF(hash, framed))
-	c, err := New(Config{Mode: ProverModeDevPartial, GuestsDir: dir, ShardSize: partialShardSize})
+	c, err := New(Config{Mode: ProverModeDevPartial, GuestsDir: dir, ShardSize: devPartialShardSize})
 	require.NoError(t, err)
 	interpreter := interpreterColumns(t, c)
 	tamper := &tamperAction{f: func(rt *wiop.Runtime) {
@@ -147,7 +167,7 @@ func TestProveDevPartial_Sharded_UnbalancedBus(t *testing.T) {
 	}}
 	c.sys.Rounds[1].RegisterAction(tamper)
 
-	result := c.Prove(context.Background(), partialJob(id))
+	result := c.Prove(context.Background(), devPartialJob(id))
 	assert.Equal(t, ResultStatusFailed, result.Status)
 	assert.ErrorContains(t, result.Err, "does not balance across the shards")
 }

@@ -112,7 +112,9 @@ func TestOutputAndLogGuest(t *testing.T) {
 	traceAndCheck(t, elf, output)
 }
 
-// At the size cap, .text is longest, and the buffers must still not overlap it.
+// Both buffers at the size cap. ZkC runs the predecoded program, so this passes
+// even if a buffer overlaps .text; TestOutputAndLogText_BuffersPastText checks
+// the layout.
 func TestOutputAndLogGuest_MaxSize(t *testing.T) {
 	output := make([]byte, 2047)
 	log := make([]byte, 2047)

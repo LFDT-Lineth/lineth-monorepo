@@ -27,6 +27,5 @@
 // uses, so a sharded job in full returns [ErrNotImplemented] until the
 // recursion machine lands. The modes are described in docs/prover-modes.md.
 //
-// Circuit compiler passes and [wiop.Materialize] are also not yet wired
-// in [New]; see the inline comments in [core.go].
+// [wiop.Materialize] is not yet wired in [New].
 package backend

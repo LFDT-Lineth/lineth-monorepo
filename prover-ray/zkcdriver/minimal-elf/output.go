@@ -41,8 +41,8 @@ func OutputELF(n int) (elf, output []byte) {
 	return Make(DefaultEntryPoint, DefaultSectionAddr, a.bytes()), output
 }
 
-// outputAndLogMaxN bounds each buffer of [OutputAndLogELF]: its bytes are
-// stored with one SB each, whose signed 12-bit offset stops at 2047.
+// outputAndLogMaxN bounds each buffer of [OutputAndLogELF]: its length is set
+// with one ADDI, whose signed 12-bit immediate stops at 2047.
 const outputAndLogMaxN = 2047
 
 // Buffers of [OutputAndLogELF], from the start of .text, past its longest

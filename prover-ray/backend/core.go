@@ -220,6 +220,9 @@ func newDevPartial(cfg Config, mode ProverMode) (*Core, error) {
 
 	sys := wiop.NewSystemf(wiopSystemName)
 	sys.NewRound()
+	if cfg.ShardSize == 0 {
+		logrus.Warnf("dev-partial without shard_size: a real block does not fit in one shard")
+	}
 	settings := zkcdriver.Settings{TraceRound: 1, ShardSize: cfg.ShardSize}
 	driver := zkcdriver.NewZkCDriver(sys, settings, bytes.NewReader(bin))
 	risc5.RegisterPublicInputs(sys)
@@ -450,8 +453,8 @@ func guestError(err error) error {
 
 // checkGuestOutputFrame checks the spec frame of the guest output: hash is
 // keccak256(0x0003 || public inputs) and framed is 0x0003 || public inputs. The
-// public inputs themselves are checked by the byte-for-byte comparison with the
-// native runner.
+// public inputs are bound by the hash, which dev-partial checks against the
+// trace; the native runner check, when set, compares the whole output.
 func checkGuestOutputFrame(hash, framed []byte) error {
 	if len(framed) < guestOutputSchemaIDSize {
 		return fmt.Errorf("%d bytes after the hash, shorter than the schema id", len(framed))

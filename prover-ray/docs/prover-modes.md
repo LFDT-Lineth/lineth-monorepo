@@ -1,6 +1,6 @@
 # Prover modes
 
-Each proof layer has its own mode, set with `prover_mode` in its config section (`[execution]`, `[rollup]`, `[aggregation]`). Every mode except `full` is a dev mode: it makes no real proof, and the response's `proverVersion` gets the mode as a suffix (for example `0.0.0-riscv-dev-partial`).
+Each proof layer has its own mode, set with `prover_mode` in its config section (`[execution]`, `[rollup]`, `[aggregation]`). Every mode except `full` is a dev mode, not for production: the response's `proverVersion` gets the mode as a suffix (for example `0.0.0-riscv-dev-partial`).
 
 The guest is the RISC-V program whose run is proven: the `l2_execution` guest for execution, the rollup guest for rollup and the aggregation guest for aggregation.
 
@@ -22,7 +22,7 @@ The guest is the RISC-V program whose run is proven: the `l2_execution` guest fo
 | `dev-full-dummy-wrap` | n/a | n/a | not yet |
 | `full` | not yet | not yet | not yet |
 
-For rollup and aggregation, the modes other than `dev-mock` need the layer's guest input format (not decided yet) and a guest that verifies the proof type of the layer below: a devmode proof below `dev-partial`, a real proof below `full`. In every mode except `full`, aggregation sends a dummy BN254 proof to L1.
+For rollup and aggregation, the modes other than `dev-mock` need the layer's guest input format (not decided yet) and a guest that verifies the proof type of the layer below: a devmode proof below `dev-partial`, a real proof below `full`. In every dev mode, aggregation will send a dummy BN254 proof to L1; today `dev-mock` sends marker bytes.
 
 ## Modes
 
@@ -41,15 +41,17 @@ For rollup and aggregation, the modes other than `dev-mock` need the layer's gue
 
 ### dev-partial
 
-- Runs the guest and traces it, in pieces called shards.
+- Runs the guest and traces it, in pieces called shards when `shard_size` is set. A real block needs it.
 - Checks every shard against every constraint.
-- The mock conglomeration checks that:
-  - the shards agree on the program VK and the guest output;
+- With shards, the mock conglomeration checks that:
+  - the shards agree on the guest output;
   - every shard is there;
   - the message bus balances across the shards.
 - The proof is a devmode proof:
   - a real wiop proof that the next layer can verify;
-  - but anyone can make one, so it proves nothing.
+  - but anyone can make one, so it proves nothing;
+  - its program VK is zero, as nothing is committed.
+- Needs a lot of memory: about 40 GB for the small test block.
 - If a native runner is set, the guest output must also be equal to its output (temporary, see below).
 
 ### dev-full-dummy-wrap (aggregation only)

@@ -139,4 +139,4 @@ notable still-open design questions, grouped by section:
 
 These are not part of the specification.
 
-- [`prover-modes.md`](prover-modes.md): the prover modes (`dev-mock`, `dev-zkvm`, `dev-partial`, `full`), what each one runs, and which are ready for each proof layer.
+- [`prover-modes.md`](prover-modes.md): the prover modes, what each one runs, and which are ready for each proof layer.
