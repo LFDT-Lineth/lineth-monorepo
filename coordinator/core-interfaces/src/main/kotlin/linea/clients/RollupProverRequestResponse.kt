@@ -1,5 +1,8 @@
 package linea.clients
 
+import linea.da.DaConstants.BLOB_BYTES
+import linea.da.DaConstants.KZG_POINT_BYTES
+import linea.da.DaConstants.MAX_TAIL_BYTES
 import linea.domain.BlockInterval
 import linea.domain.BlockIntervalProofIndex
 import linea.domain.StartBlockTimestampProvider
@@ -79,11 +82,6 @@ data class RollupProofRequestV1(
       "parentDataTailTakeBytes=$parentDataTailTakeBytes, " +
       "boundaryPrevDataRollingHash=${boundaryPrevDataRollingHash?.encodeHex()})"
   }
-
-  companion object {
-    /** Upper bound of a blob tail byte count (`tailCount` in the V1 schemas, §3.1). */
-    const val MAX_TAIL_BYTES = 130046
-  }
 }
 
 data class ConflationWitness(
@@ -132,12 +130,12 @@ data class ChunkWitness(
         "calldata chunk must have non-empty calldataBytes and empty blobBytes, kzgCommitment and kzgProof"
       }
     } else {
-      require(blobBytes.size == BLOB_BYTES_LENGTH && calldataBytes.isEmpty()) {
-        "blob chunk must have exactly $BLOB_BYTES_LENGTH blobBytes and empty calldataBytes, got " +
+      require(blobBytes.size == BLOB_BYTES && calldataBytes.isEmpty()) {
+        "blob chunk must have exactly $BLOB_BYTES blobBytes and empty calldataBytes, got " +
           "blobBytes.size=${blobBytes.size} calldataBytes.size=${calldataBytes.size}"
       }
-      require(kzgCommitment.size == KZG_POINT_BYTES_LENGTH && kzgProof.size == KZG_POINT_BYTES_LENGTH) {
-        "blob chunk must have $KZG_POINT_BYTES_LENGTH-byte kzgCommitment and kzgProof, got " +
+      require(kzgCommitment.size == KZG_POINT_BYTES && kzgProof.size == KZG_POINT_BYTES) {
+        "blob chunk must have $KZG_POINT_BYTES-byte kzgCommitment and kzgProof, got " +
           "kzgCommitment.size=${kzgCommitment.size} kzgProof.size=${kzgProof.size}"
       }
     }
@@ -173,14 +171,6 @@ data class ChunkWitness(
     return "ChunkWitness(chunkHash=${chunkHash.encodeHex()}, isCalldata=$isCalldata, " +
       "blobBytes.size=${blobBytes.size}, calldataBytes.size=${calldataBytes.size}, " +
       "kzgCommitment=${kzgCommitment.encodeHex()}, kzgProof=${kzgProof.encodeHex()})"
-  }
-
-  companion object {
-    /** Physical EIP-4844 blob size: 4096 field elements of 32 bytes. */
-    const val BLOB_BYTES_LENGTH = 131072
-
-    /** Compressed BLS12-381 G1 point, the size of a KZG commitment and of a KZG proof. */
-    const val KZG_POINT_BYTES_LENGTH = 48
   }
 }
 

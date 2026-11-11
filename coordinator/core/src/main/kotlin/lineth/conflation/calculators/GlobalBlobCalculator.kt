@@ -21,8 +21,11 @@ import kotlin.time.Instant
  * rollup handler behind it) runs while this calculator is mid-update, so it must not call back into it.
  *
  * @param blobDeadline flushes the open blob once its oldest conflation's first block is this old; see [checkDeadline].
- * @param resumingInsideSharedBlob true when [daStream] was opened inside a shared blob (`tailBytes > 0`). Until that
- *   blob is re-sealed, flushing is skipped: a short seal would differ from the already stored and submitted blob.
+ *   It bounds the data's age from the block timestamp, and conflations arrive only once their execution proof is done,
+ *   so it must be well above the execution proving time: otherwise every blob is flushed with a single conflation.
+ * @param sharedBlobTailBytes the `tailBytes` [daStream] was opened with: > 0 when it resumes inside a shared blob. Until
+ *   appended frames have reproduced that many bytes, flushing is skipped: a shorter seal would differ from the already
+ *   stored and submitted blob.
  */
 class GlobalBlobCalculator(
   private val daStream: DaStream,
@@ -30,12 +33,18 @@ class GlobalBlobCalculator(
   private val blockEncoder: BlockEncoder,
   private val handler: BlobHandler,
   private val blobDeadline: Duration? = null,
-  resumingInsideSharedBlob: Boolean = false,
+  sharedBlobTailBytes: Int = 0,
   private val log: Logger = LogManager.getLogger(GlobalBlobCalculator::class.java),
 ) {
   /** Appended to the stream, but the blob holding the end of their frame is not sealed yet. */
   private val appended = ArrayDeque<CompressedBlocksConflation>()
-  private var awaitingSharedBlobReseal = resumingInsideSharedBlob
+
+  /** Shared blob bytes still to reproduce; flushing is skipped while > 0. */
+  private var bytesToReproduce = sharedBlobTailBytes
+
+  init {
+    require(sharedBlobTailBytes >= 0) { "sharedBlobTailBytes=$sharedBlobTailBytes must not be negative" }
+  }
 
   /** The oldest conflation appended to the stream whose frame end is not in a sealed blob yet, if any. */
   val oldestUnsealedConflation: BlocksConflation? get() = appended.firstOrNull()?.conflation
@@ -59,6 +68,7 @@ class GlobalBlobCalculator(
       appended.removeLast()
       throw e
     }
+    bytesToReproduce = maxOf(0, bytesToReproduce - compressed.compressedBytes)
     // append seals only full blobs; a short one can only be a resumed shared blob that was flushed originally.
     sealed.forEach { emit(it, flushed = it.payloadBytes < BLOB_PAYLOAD_CAPACITY) }
 
@@ -70,11 +80,15 @@ class GlobalBlobCalculator(
    * Ends the open blob early: on blob triggers, the blob deadline, and when the rollup calculator needs a rollup cut.
    *
    * @return true if a blob was flushed. False when no blob is open, or while a resumed shared blob is still being
-   *   reproduced.
+   *   reproduced. Once it has been reproduced in full, flushing re-seals it unchanged.
    */
   fun flush(trigger: BlobTrigger? = null): Boolean {
-    if (awaitingSharedBlobReseal) {
-      log.debug("skipping blob flush trigger={}: the resumed shared blob is not re-sealed yet", trigger)
+    if (bytesToReproduce > 0) {
+      log.debug(
+        "skipping blob flush trigger={}: {} bytes of the resumed shared blob are still to reproduce",
+        trigger,
+        bytesToReproduce,
+      )
       return false
     }
     val blob = daStream.flush() ?: return false
@@ -102,7 +116,7 @@ class GlobalBlobCalculator(
       SealedConflation(oldest, end)
     }
     if (flushed && sealedConflations.isEmpty()) error("a flushed blob must end at least one conflation")
-    awaitingSharedBlobReseal = false
+    bytesToReproduce = 0
     triggers.forEach { it.reset() } // a new blob opens
     log.debug(
       "blob sealed: payloadBytes={} flushed={} conflations={}",

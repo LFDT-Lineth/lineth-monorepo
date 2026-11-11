@@ -1,6 +1,5 @@
 package linea.da
 
-import linea.clients.RollupProofRequestV1
 import linea.kotlin.encodeHex
 
 /**
@@ -23,8 +22,8 @@ data class DaStreamPosition(
 ) {
   init {
     require(dataRollingHash.size == 32) { "dataRollingHash must be 32 bytes, got ${dataRollingHash.size}" }
-    require(tailBytes in 0..RollupProofRequestV1.MAX_TAIL_BYTES) {
-      "tailBytes=$tailBytes must be in 0..${RollupProofRequestV1.MAX_TAIL_BYTES}"
+    require(tailBytes in 0..DaConstants.MAX_TAIL_BYTES) {
+      "tailBytes=$tailBytes must be in 0..${DaConstants.MAX_TAIL_BYTES}"
     }
     if (tailBytes > 0) {
       require(sharedBlob?.size == DaConstants.BLOB_BYTES) {

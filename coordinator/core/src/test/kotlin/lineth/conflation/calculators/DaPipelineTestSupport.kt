@@ -72,7 +72,7 @@ object DaPipelineTestSupport {
       triggers = blobTriggers,
       blockEncoder = encoder,
       handler = rollupCalculator,
-      resumingInsideSharedBlob = position.tailBytes > 0,
+      sharedBlobTailBytes = position.tailBytes,
     )
 
     fun feed(vararg conflations: BlocksConflation) = conflations.forEach(blobCalculator::newConflation)

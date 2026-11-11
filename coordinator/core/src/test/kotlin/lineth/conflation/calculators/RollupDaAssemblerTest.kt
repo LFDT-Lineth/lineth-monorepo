@@ -1,5 +1,6 @@
 package lineth.conflation.calculators
 
+import linea.da.DaConstants.KZG_POINT_BYTES
 import linea.da.DaStreamPosition
 import linea.da.SealedBlob
 import linea.da.SegmentEnd
@@ -109,6 +110,8 @@ class RollupDaAssemblerTest {
     val blob = object : SealedBlob {
       override val blob: ByteBuffer = ByteBuffer.allocate(0)
       override val chunkHash = ByteArray(32)
+      override val kzgCommitment = ByteArray(KZG_POINT_BYTES)
+      override val kzgProof = ByteArray(KZG_POINT_BYTES)
       override val prevDataRollingHash = ByteArray(32)
       override val dataRollingHash = ByteArray(32)
       override val payloadBytes = 1
