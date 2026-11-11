@@ -18,6 +18,7 @@ pub fn build(b: *std.Build) void {
     const tools = addHostTools(b, unit, crypto);
     addHostTests(b, options, unit, crypto, prover);
     addFixtureStep(b, tools);
+    addFetchLineaBlocksStep(b, tools);
     addZkcSmokeStep(b, tools);
 }
 
@@ -54,6 +55,7 @@ const Deps = struct {
     guest_common: *std.Build.Module,
     core_serde: *std.Build.Module,
     ssz_contract: *std.Build.Module,
+    zkvm_accelerators: *std.Build.Module,
     verifier_ray: *std.Build.Module,
     lineth_da: *std.Build.Dependency,
     /// Imports of the package module (`src/root.zig`).
@@ -86,6 +88,7 @@ const Deps = struct {
             .guest_common = guest_common.module("guest_common"),
             .core_serde = guest_common.module("core_serde"),
             .ssz_contract = guest_common.module("ssz_contract"),
+            .zkvm_accelerators = zkvm_accelerators,
             .verifier_ray = verifier_ray.module("verifier_ray"),
             .lineth_da = lineth_da,
             .package = b.allocator.dupe(Import, &.{
@@ -207,6 +210,7 @@ const Host = struct {
                     .{ .name = "ef_blocks", .module = ef_blocks },
                     .{ .name = "ef_fixtures", .module = ef_fixtures },
                     .{ .name = "ssz_contract", .module = deps.ssz_contract },
+                    .{ .name = "zkvm_accelerators", .module = deps.zkvm_accelerators },
                     .{ .name = "spec_testdata", .module = common.specTestdataModule(b) },
                 }) catch @panic("OOM"),
             },
@@ -214,11 +218,12 @@ const Host = struct {
     }
 };
 
-/// Every `tools/*.zig` executable. `gen_fixture` runs the statement and links the host crypto
-/// provider.
+/// Every `tools/*.zig` executable. `gen_fixture` runs the statement and `fetch_linea_blocks`
+/// recovers senders; both link the host crypto provider.
 fn addHostTools(b: *std.Build, host: Host, crypto: common.HostCrypto) Tools {
     const tools = common.addTools(b, host.native, .{});
     crypto.link(tools.get("gen_fixture").?);
+    crypto.link(tools.get("fetch_linea_blocks").?);
     return tools;
 }
 
@@ -242,6 +247,13 @@ fn addFixtureStep(b: *std.Build, tools: Tools) void {
     const gen_fixture = b.addRunArtifact(tools.get("gen_fixture").?);
     if (b.args) |args| gen_fixture.addArgs(args);
     b.step("gen-fixture", "Write a sample RollupProofPrivateInput and its expected output to the paths after `--`").dependOn(&gen_fixture.step);
+}
+
+/// Runs `fetch_linea_blocks` with the arguments after `--`.
+fn addFetchLineaBlocksStep(b: *std.Build, tools: Tools) void {
+    const fetch_linea_blocks = b.addRunArtifact(tools.get("fetch_linea_blocks").?);
+    if (b.args) |args| fetch_linea_blocks.addArgs(args);
+    b.step("fetch-linea-blocks", "Rebuild the Linea mainnet window from the public RPC into the directory after `-- fetch`").dependOn(&fetch_linea_blocks.step);
 }
 
 /// Runs the guest ELF under zkc and compares its output with the native statement's; the options

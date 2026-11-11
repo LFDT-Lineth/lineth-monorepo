@@ -8,7 +8,7 @@
 # run itself (ELF->JSON via elf_to_json_gen, then zkc) is owned by
 # arithmetization/src/test/Makefile; `exec`/`debug` build that ELF and hand it over.
 
-.PHONY: fetch test clean compile exec debug require-input zkc-smoke-exec zkc-smoke-external select-ef-blocks fetch-linea-blocks
+.PHONY: fetch test clean compile exec debug require-input zkc-smoke-exec zkc-smoke-external fetch-linea-blocks
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -70,17 +70,9 @@ fetch: $(DEVMODE_SYSTEM)
 test: $(DEVMODE_SYSTEM) fetch-zkevm-fixtures
 	$(ZIG) build test $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FIXTURES_FLAGS) $(ZIG_FETCH_FLAGS)
 
-# Prints the EF blocks the reference tests pin (test/scenario.zig), chosen from the corpus by
-# tools/select_ef_blocks.py.
-select-ef-blocks: fetch-zkevm-fixtures
-	python3 -I $(MAKEFILE_DIR)tools/select_ef_blocks.py "$(ZKEVM_FIXTURES_DIR)/blockchain_tests/for_amsterdam"
-
-# Rebuilds the Linea mainnet window in test/testdata from the public RPC, with the Python of the
-# rollup_spec virtualenv, which carries the EL specs' RLP encoders.
-ROLLUP_SPEC_PYTHON ?= $(MAKEFILE_DIR)../../rollup_spec/.venv/bin/python
-
-fetch-linea-blocks:
-	$(ROLLUP_SPEC_PYTHON) $(MAKEFILE_DIR)tools/fetch_linea_blocks.py fetch
+# Rebuilds the Linea mainnet window in test/testdata from the public RPC.
+fetch-linea-blocks: $(DEVMODE_SYSTEM)
+	$(ZIG) build fetch-linea-blocks $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -- fetch "$(MAKEFILE_DIR)test/testdata"
 
 clean:
 	rm -rf $(MAKEFILE_DIR)zig-out/
