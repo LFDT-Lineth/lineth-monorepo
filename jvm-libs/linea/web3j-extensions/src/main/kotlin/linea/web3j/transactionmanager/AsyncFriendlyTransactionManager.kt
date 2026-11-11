@@ -2,6 +2,7 @@ package linea.web3j.transactionmanager
 
 import linea.domain.BlockParameter
 import linea.kotlin.toULong
+import linea.web3j.AsyncSignerTxSignService
 import linea.web3j.domain.toWeb3j
 import linea.web3j.requestAsync
 import org.apache.logging.log4j.LogManager
@@ -18,6 +19,7 @@ import org.web3j.service.TxSignService
 import org.web3j.tx.RawTransactionManager
 import org.web3j.tx.response.EmptyTransactionReceipt
 import org.web3j.tx.response.TransactionReceiptProcessor
+import org.web3j.utils.Numeric
 import org.web3j.utils.RevertReasonExtractor
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.math.BigInteger
@@ -28,6 +30,8 @@ class AsyncFriendlyTransactionManager : RawTransactionManager {
   private var web3j: Web3j
 
   private val nonce = AtomicReference<BigInteger>()
+  private var asyncTxSignService: AsyncSignerTxSignService? = null
+  private var chainId: Long = AsyncSignerTxSignService.NO_CHAIN_ID
 
   constructor(web3j: Web3j, credentials: Credentials, chainId: Long) : super(web3j, credentials, chainId) {
     this.web3j = web3j
@@ -40,6 +44,8 @@ class AsyncFriendlyTransactionManager : RawTransactionManager {
     chainId: Long,
   ) : super(web3j, txSignService, chainId) {
     this.web3j = web3j
+    this.asyncTxSignService = txSignService as? AsyncSignerTxSignService
+    this.chainId = chainId
     resetNonce().get()
   }
 
@@ -94,6 +100,13 @@ class AsyncFriendlyTransactionManager : RawTransactionManager {
 
   private fun setNonce(value: BigInteger) {
     nonce.set(value)
+  }
+
+  fun signAsync(rawTransaction: RawTransaction): SafeFuture<String> {
+    return asyncTxSignService
+      ?.signAsync(rawTransaction, chainId)
+      ?.thenApply(Numeric::toHexString)
+      ?: SafeFuture.of { SafeFuture.completedFuture(sign(rawTransaction)) }
   }
 
   fun waitForTransaction(

@@ -256,10 +256,11 @@ class Web3JContractAsyncHelper(
         data = FunctionEncoder.encode(function),
       )
     }
-    val signedMessage = transactionManager.sign(transaction)
-    return web3j
-      .ethSendRawTransaction(signedMessage)
-      .requestAsync { it }
+    return transactionManager.signAsync(transaction).thenCompose { signedMessage ->
+      web3j
+        .ethSendRawTransaction(signedMessage)
+        .requestAsync { it }
+    }
   }
 
   @Synchronized
@@ -349,9 +350,10 @@ class Web3JContractAsyncHelper(
           value = weiValue,
           maxFeePerBlobGas = gasPriceCaps?.maxFeePerBlobGasCap?.toBigInteger() ?: maxFeePerBlobGas.toBigInteger(),
         )
-        val signedMessage = transactionManager.sign(transaction)
-        web3j.ethSendRawTransaction(signedMessage)
-          .requestAsync { it }
+        transactionManager.signAsync(transaction).thenCompose { signedMessage ->
+          web3j.ethSendRawTransaction(signedMessage)
+            .requestAsync { it }
+        }
       }
   }
 

@@ -3,7 +3,7 @@ package lineth.coordinator.app
 import io.vertx.core.Vertx
 import linea.contract.l1.LineaSmartContractClient
 import linea.ethapi.EthLogsSearcherImpl
-import linea.web3j.ECKeypairSignerAdapter
+import linea.web3j.AsyncSignerTxSignService
 import linea.web3j.SmartContractErrors
 import linea.web3j.ethapi.createEthApiClient
 import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
@@ -15,9 +15,7 @@ import lineth.ethereum.gaspricing.BoundableFeeCalculator
 import lineth.ethereum.gaspricing.FeesCalculator
 import lineth.ethereum.gaspricing.FeesFetcher
 import lineth.ethereum.gaspricing.WMAGasProvider
-import org.web3j.crypto.Credentials
 import org.web3j.protocol.Web3j
-import org.web3j.service.TxSignServiceImpl
 import org.web3j.tx.gas.ContractGasProvider
 
 fun createTransactionManager(
@@ -27,8 +25,7 @@ fun createTransactionManager(
   signerFactory: SignerFactory = DefaultSignerFactory,
 ): AsyncFriendlyTransactionManager {
   val signer = signerFactory.create(vertx, signerConfig)
-  val credentials = Credentials.create(ECKeypairSignerAdapter(signer))
-  return AsyncFriendlyTransactionManager(client, TxSignServiceImpl(credentials), -1L)
+  return AsyncFriendlyTransactionManager(client, AsyncSignerTxSignService(signer), -1L)
 }
 
 /**
