@@ -15,8 +15,8 @@ import (
 // RISCV-ZKC system. It produces no proof: a merged node's Proof is the
 // zero wiop.Proof, so a mock node can never pass for a verifiable proof, and
 // its Pub is the first child's with the message-bus products multiplied and the
-// shared randomness contributions added. A shard proof that reaches Finalize
-// unmerged keeps its proof.
+// shared randomness contributions added; a lifted shard proof keeps its public
+// inputs and loses its proof.
 //
 // It verifies no proof either: the shard proofs it merges must have been
 // verified by whoever produced them, and a merged node has none to verify.
@@ -32,9 +32,15 @@ func NewMockMerger(sys *wiop.System) MockMerger {
 
 // Merge implements [Merger].
 func (m MockMerger) Merge(children []Node) (Node, error) {
-	if len(children) < 2 || len(children) > RecursionTreeArity {
-		return Node{}, fmt.Errorf("merging %d nodes, want 2 to %d", len(children), RecursionTreeArity)
+	if err := checkChildren(children); err != nil {
+		return Node{}, err
 	}
+	return m.combine(children)
+}
+
+// combine checks the shape and agreement of the children and returns their
+// parent.
+func (m MockMerger) combine(children []Node) (Node, error) {
 	for _, child := range children {
 		if len(child.Pub) != len(m.sys.PublicInputs) {
 			return Node{}, fmt.Errorf("node %v has %d public inputs, want %d",
@@ -85,11 +91,18 @@ func (m MockMerger) Merge(children []Node) (Node, error) {
 	if seeded {
 		messagebus.SetSharedRandomnessContribution(m.sys, pub, contribution)
 	}
-	return Node{Coverage: coverage, Pub: pub}, nil
+	return Node{Kind: Merged, Coverage: coverage, Pub: pub}, nil
 }
 
 // Finalize implements [Merger].
-func (m MockMerger) Finalize(root Node, numShards uint) (Node, error) {
+func (m MockMerger) Finalize(children []Node, numShards uint) (Node, error) {
+	if err := checkRoot(children); err != nil {
+		return Node{}, err
+	}
+	root, err := m.combine(children)
+	if err != nil {
+		return Node{}, err
+	}
 	if err := checkCoverageComplete(root.Coverage, numShards); err != nil {
 		return Node{}, err
 	}

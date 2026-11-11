@@ -36,7 +36,7 @@ class ECKeypairSignerAdapterTest {
   fun `exposes the delegate public key and refuses to expose a private key`() {
     assertThat(adapter.publicKey).isEqualTo(keyPair.publicKey)
     assertThatThrownBy { adapter.privateKey }
-      .isInstanceOf(RuntimeException::class.java)
+      .isInstanceOf(UnsupportedOperationException::class.java)
       .hasMessageContaining("Key is managed by delegated Signer")
   }
 

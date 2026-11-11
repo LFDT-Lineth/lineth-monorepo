@@ -38,12 +38,14 @@ class GlobalAggregationCalculator(
   init {
     require(syncAggregationTrigger.size + deferredAggregationTrigger.size > 0) { "Specify at least one trigger" }
     deferredAggregationTrigger.forEach { it.onAggregationTrigger(this::handleAggregationTrigger) }
+    // pendingBlobs is a non thread-safe PriorityQueue mutated under this object's monitor,
+    // so gauges must read it under the same lock
     metricsFacade.createGauge(
       category = LineaMetricsCategory.AGGREGATION,
       name = "proofs.ready",
       description = "Number of proofs pending for aggregation",
       measurementSupplier = {
-        pendingBlobs.size + pendingBlobs.sumOf { it.numberOfBatches }.toLong()
+        synchronized(this) { pendingBlobs.size + pendingBlobs.sumOf { it.numberOfBatches }.toLong() }
       },
     )
     metricsFacade.createGauge(
@@ -51,7 +53,7 @@ class GlobalAggregationCalculator(
       name = "batches.ready",
       description = "Number of batches pending for aggregation",
       measurementSupplier = {
-        pendingBlobs.sumOf { it.numberOfBatches }.toLong()
+        synchronized(this) { pendingBlobs.sumOf { it.numberOfBatches }.toLong() }
       },
     )
     metricsFacade.createGauge(
@@ -59,7 +61,7 @@ class GlobalAggregationCalculator(
       name = "blobs.ready",
       description = "Number of blobs pending for aggregation",
       measurementSupplier = {
-        pendingBlobs.size
+        synchronized(this) { pendingBlobs.size }
       },
     )
   }

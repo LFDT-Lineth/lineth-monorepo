@@ -61,6 +61,7 @@ func TestRunProve_ShardIndexes(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, uint(3), numShards, "the trace should have 3 shards")
 		require.Equal(t, []uint{0, 1, 2}, node.Coverage, "the root should cover every shard")
+		require.Equal(t, conglomeration.Merged, node.Kind, "the root should be a merged node")
 		require.Equal(t, wiop.Proof{}, node.Proof, "a mock merge carries no proof")
 	})
 
@@ -69,6 +70,7 @@ func TestRunProve_ShardIndexes(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, uint(3), numShards)
 		require.Equal(t, []uint{1}, node.Coverage, "the node should cover the requested shard only")
+		require.Equal(t, conglomeration.Shard, node.Kind, "a single requested shard is returned as a shard proof")
 		require.NoError(t, c.sys.Verify(node.Proof, node.Pub), "an unmerged shard proof should verify")
 	})
 
