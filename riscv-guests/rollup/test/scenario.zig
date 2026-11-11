@@ -555,15 +555,18 @@ pub fn build(a: Allocator, conflations_in: []const Conflation, options: Options)
     };
 }
 
+const zstd_magic_number: u32 = 0xFD2FB528;
+
 /// A zstd frame of one segment holding `payload` in raw blocks, which declares the dictionary of the
 /// stream and the payload's length as the frames of the encoder do.
 fn storedFrame(a: Allocator, payload: []const u8) ![]u8 {
     const max_block = 1 << 17;
+    const dictionary_id = dictionary[4..8];
     var frame: std.ArrayList(u8) = .empty;
-    try frame.appendSlice(a, &.{ 0x28, 0xb5, 0x2f, 0xfd });
+    try frame.appendSlice(a, &std.mem.toBytes(std.mem.nativeToLittle(u32, zstd_magic_number)));
     // A single segment with a 4-byte content size and a 4-byte dictionary ID.
     try frame.append(a, 0b10_1_0_0_0_11);
-    try frame.appendSlice(a, dictionary[4..8]);
+    try frame.appendSlice(a, dictionary_id);
     try frame.appendSlice(a, &std.mem.toBytes(std.mem.nativeToLittle(u32, @intCast(payload.len))));
     var rest = payload;
     while (true) {
