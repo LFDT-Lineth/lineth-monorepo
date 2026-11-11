@@ -12,19 +12,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Real-artifact integration test for dev-zkvm (grew out of the Stage 0 Execute
-// spike). It builds a dev-zkvm Core, runs the guest under ZkC Execute, and
+// Real-artifact integration test for dev-zkvm. It builds a dev-zkvm Core, runs
+// the guest under ZkC Execute, and
 // asserts its 0x0003 commitment is byte-identical to the native runner's --ssz
 // output — the cross-check invariant runL2ExecutionZkVM relies on.
 //
-// Gated on RISCV_SPIKE=1: it compiles the R5 arithmetization (~5s) and needs the
+// Gated on REAL_GUEST_TESTS=1: it compiles the R5 arithmetization (~5s) and needs the
 // built guest ELF and native runner:
 //
 //	make -C riscv-guests/l2_execution compile
-//	RISCV_SPIKE=1 go test ./backend -run TestDevZkVM_Integration -v
+//	REAL_GUEST_TESTS=1 go test ./backend -run TestDevZkVM_Integration -v
 func TestDevZkVM_Integration(t *testing.T) {
-	if os.Getenv("RISCV_SPIKE") == "" {
-		t.Skip("set RISCV_SPIKE=1 to run the dev-zkvm integration test (heavy: compiles R5 arithmetization)")
+	if os.Getenv("REAL_GUEST_TESTS") == "" {
+		t.Skip("set REAL_GUEST_TESTS=1 to run the dev-zkvm integration test (heavy: compiles R5 arithmetization)")
 	}
 
 	const (

@@ -23,18 +23,18 @@ import (
 // inputs, named after the gas the block uses.
 const guestTestdata = "../../riscv-guests/l2_execution/test/testdata"
 
-// TestDevPartial_Integration runs dev-partial on the real l2-execution guest and the
-// guest's block files: it traces each block, checks every constraint and
-// decodes the public inputs.
+// TestDevPartial_Integration runs dev-partial on the real l2-execution guest
+// and the guest's block files: it traces each block, checks every constraint
+// and decodes the public inputs.
 //
-// Gated on RISCV_SPIKE=1, like TestDevZkVM_Integration. GUEST_ELF overrides the
+// Gated on REAL_GUEST_TESTS=1, like TestDevZkVM_Integration. GUEST_ELF overrides the
 // guest ELF, NATIVE_RUNNER sets a native runner to check the guest output
-// against, PARTIAL_SHARD_SIZE sets the shard size (default 500000, as the guest
-// trace CI and the zkcdriver benchmarks) and PARTIAL_BLOCKS picks the block
+// against, DEV_PARTIAL_SHARD_SIZE sets the shard size (default 500000, as the guest
+// trace CI and the zkcdriver benchmarks) and DEV_PARTIAL_BLOCKS picks the block
 // files (comma separated, default stateless_input.ssz):
 //
 //	make -C riscv-guests/l2_execution compile
-//	RISCV_SPIKE=1 PARTIAL_BLOCKS=stateless_input.ssz,block_amsterdam_175k.ssz \
+//	REAL_GUEST_TESTS=1 DEV_PARTIAL_BLOCKS=stateless_input.ssz,block_amsterdam_175k.ssz \
 //		go test ./backend -run TestDevPartial_Integration -v -timeout 0
 func TestDevPartial_Integration(t *testing.T) {
 	core, id, blocks := realGuestCore(t)
@@ -68,8 +68,8 @@ func TestDevPartial_Integration(t *testing.T) {
 // returns the guest's Program ID and the block files to run.
 func realGuestCore(t *testing.T) (*Core, [32]byte, []string) {
 	t.Helper()
-	if os.Getenv("RISCV_SPIKE") == "" {
-		t.Skip("set RISCV_SPIKE=1 to run the real guest tests (heavy: traces real blocks)")
+	if os.Getenv("REAL_GUEST_TESTS") == "" {
+		t.Skip("set REAL_GUEST_TESTS=1 to run the real guest tests (heavy: traces real blocks)")
 	}
 	elfPath := os.Getenv("GUEST_ELF")
 	if elfPath == "" {
@@ -82,14 +82,14 @@ func realGuestCore(t *testing.T) (*Core, [32]byte, []string) {
 	// A real block does not fit in one shard: some module has more rows than
 	// a column can hold.
 	shardSize := uint64(500000)
-	if s := os.Getenv("PARTIAL_SHARD_SIZE"); s != "" {
+	if s := os.Getenv("DEV_PARTIAL_SHARD_SIZE"); s != "" {
 		shardSize, err = strconv.ParseUint(s, 10, 64)
-		require.NoError(t, err, "parsing PARTIAL_SHARD_SIZE")
+		require.NoError(t, err, "parsing DEV_PARTIAL_SHARD_SIZE")
 	}
 	core, err := New(Config{Mode: ProverModeDevPartial, GuestsDir: dir, ShardSize: shardSize})
 	require.NoError(t, err, "building dev-partial core")
 	blocks := "stateless_input.ssz"
-	if b := os.Getenv("PARTIAL_BLOCKS"); b != "" {
+	if b := os.Getenv("DEV_PARTIAL_BLOCKS"); b != "" {
 		blocks = b
 	}
 	return core, id, strings.Split(blocks, ",")
@@ -101,7 +101,7 @@ func realGuestCore(t *testing.T) (*Core, [32]byte, []string) {
 // be assigned. It only traces, it checks nothing. Same settings as
 // [TestDevPartial_Integration]; SHARD_ROWS_FIRST=1 stops after shard 0:
 //
-//	RISCV_SPIKE=1 PARTIAL_BLOCKS=block_amsterdam_175k.ssz \
+//	REAL_GUEST_TESTS=1 DEV_PARTIAL_BLOCKS=block_amsterdam_175k.ssz \
 //		go test ./backend -run TestDevPartial_ShardRows -v -timeout 0
 func TestDevPartial_ShardRows(t *testing.T) {
 	core, id, blocks := realGuestCore(t)
