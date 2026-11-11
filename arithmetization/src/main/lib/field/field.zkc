@@ -12,136 +12,99 @@ include "../../riscv/ram/write.zkc"
 //   DIV   out = a/b (0 if b = 0)        checked as  out * b   = a
 //   SQRT  out = sqrt(a) or sqrt(-a)     checked as  out * out = a  or  -a
 // An inverse is DIV with a = 1. The hint out is unconstrained: it is pinned by
-// the product and reduced, so every output is canonical.
+// the product and checked below p, so every output is canonical.
 // ===================================================================================
 
 // Operations (a0 of FIELD_OP_SYSCALL).
-const FIELD_OP_MUL:u8 = 0
-const FIELD_OP_DIV:u8 = 1
-const FIELD_OP_SQRT:u8 = 2
+const FIELD_OP_MUL:u2 = 0
+const FIELD_OP_DIV:u2 = 1
+const FIELD_OP_SQRT:u2 = 2
 
-// Fields (a1 of FIELD_OP_SYSCALL), see field_modulus.
-const FIELD_SECP256K1_FP:u8 = 1
-const FIELD_SECP256K1_FR:u8 = 2
-const FIELD_SECP256R1_FP:u8 = 3
-const FIELD_SECP256R1_FR:u8 = 4
-const FIELD_BN254_FP:u8 = 5
-const FIELD_BN254_FR:u8 = 6
-const FIELD_BLS12_381_FR:u8 = 7
+// Fields (a1 of FIELD_OP_SYSCALL): the index into FIELD_MODULUS, with whether
+// p = 3 mod 4 (the fields where SQRT can report non-squares). Id 0 has p = 0,
+// for which mulmod_256 has no remainder (it must be below p); ids above 7 do not
+// fit the u3.
+static FIELD_MODULUS(field:u3) -> (p:u256, p_is_3_mod_4:u1) {
+    (0, 0),
+    // 1: secp256k1 Fp
+    (0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f, 1),
+    // 2: secp256k1 Fr
+    (0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141, 0),
+    // 3: secp256r1 Fp
+    (0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff, 1),
+    // 4: secp256r1 Fr
+    (0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551, 0),
+    // 5: BN254 Fp
+    (0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47, 1),
+    // 6: BN254 Fr
+    (0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001, 0),
+    // 7: BLS12-381 Fr
+    (0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001, 0)
+}
 
 // field_op performs `op` in `field` on the 256-bit little-endian operands at
 // a_addr (and b_addr for MUL and DIV) and writes the result to out_addr. The
 // destination may alias a source. status is 1 when there is no result
 // (x/0, or a non-square for SQRT) and 0 otherwise.
-fn field_op<ram>(op:u8, field:u8, out_addr:Address, a_addr:Address, b_addr:Address) -> (status:u1) {
-    if op > FIELD_OP_SQRT {
-        fail "field_op: unknown operation %d", op
+//
+// Every register is assigned once on each path, so that the function stays a
+// single trace row.
+fn field_op<ram>(op:u2, field:u3, out_addr:Address, a_addr:Address, b_addr:Address) -> (status:u1) {
+    if op == 3 {
+        fail "field_op: unknown operation 3"
     }
     var p:u256
     var p_is_3_mod_4:u1
-    p, p_is_3_mod_4 = field_modulus(field)
-    var a:u256 = field_reduce(field_read(a_addr), p)
-    var b:u256 = field_reduce(field_read(b_addr), p)
+    p, p_is_3_mod_4 = FIELD_MODULUS[field]
+    var a:u256 = field_load(a_addr, p)
+    var b:u256 = field_load(b_addr, p)
     var hint:u256
     var non_square:u1
     hint, non_square = hint_field_op_256(op, a, b, p)
-    // The output (but for MUL). The product below pins it modulo p only.
-    var out:u256 = field_reduce(hint, p)
 
-    // One checked product, lhs*rhs = want (mod p):
-    //   MUL         a*b   = .     the product is the output
-    //   DIV         out*b = a
-    //   DIV, b = 0  out*1 = 0     (x/0 = 0)
-    //   SQRT        out^2 = a     status 0
-    //   SQRT        out^2 = -a    status 1: a is not a square. Only claimable
+    // One checked product, lhs*rhs = want (mod p), lhs and rhs inline below:
+    //   MUL         a*b    = .     the product is the output
+    //   DIV         hint*b = a
+    //   DIV, b = 0  hint*1 = 0     (x/0 = 0)
+    //   SQRT        hint^2 = a     status 0
+    //   SQRT        hint^2 = -a    status 1: a is not a square. Only claimable
     //               when p = 3 mod 4: -1 is then a non-residue, so a and -a are
     //               not both squares. For a = 0, -a = p is out of reach.
-    var lhs:u256 = out
-    var rhs:u256 = b
-    var want:u256 = a
-    status = 0
-    if op == FIELD_OP_MUL {
-        lhs = a
-    }
-    if op == FIELD_OP_DIV && b == 0 {
-        rhs = 1
-        want = 0
-        status = 1
-    }
-    if op == FIELD_OP_SQRT {
-        rhs = out
-        if non_square == 1 && p_is_3_mod_4 == 1 {
-            want = p - a
-            status = 1
-        }
-    }
-    // (the fail sits in an else: zkc v1.2.35 panics on it at top level here)
-    var prod:u256 = mulmod_256(lhs, rhs, p)
+    var div0:u1 = ((op == FIELD_OP_DIV) && (b == 0)) ? 1 : 0
+    var neg:u1 = ((op == FIELD_OP_SQRT) && (non_square == 1) && (p_is_3_mod_4 == 1)) ? 1 : 0
+    status = div0 + neg
+    var prod:u256 = mulmod_256(op == FIELD_OP_MUL ? a : hint, op == FIELD_OP_SQRT ? hint : (div0 == 1 ? 1 : b), p)
+    var want:u256 = div0 == 1 ? 0 : (neg == 1 ? p - a : a)
+    // The hint must be canonical: below p.
+    var hint_lt_p:u1
+    var hint_minus_p:u256
+    hint_lt_p::hint_minus_p = (hint - p) as u257
     if op == FIELD_OP_MUL {
         field_write(out_addr, prod)
     } else {
-        if prod == want {
-            field_write(out_addr, out)
+        if (prod == want) && (hint_lt_p == 1) {
+            field_write(out_addr, hint)
         } else {
             fail "field_op: bad hint"
         }
     }
 }
 
-// field_modulus returns the modulus of a known field, and whether it is 3 mod 4
-// (the fields where SQRT can report non-squares).
-fn field_modulus(field:u8) -> (p:u256, p_is_3_mod_4:u1) {
-    p_is_3_mod_4 = 0
-    switch field {
-        case FIELD_SECP256K1_FP: {
-            p = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f
-            p_is_3_mod_4 = 1
-        }
-        case FIELD_SECP256K1_FR: {
-            p = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141
-        }
-        case FIELD_SECP256R1_FP: {
-            p = 0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff
-            p_is_3_mod_4 = 1
-        }
-        case FIELD_SECP256R1_FR: {
-            p = 0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551
-        }
-        case FIELD_BN254_FP: {
-            p = 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47
-            p_is_3_mod_4 = 1
-        }
-        case FIELD_BN254_FR: {
-            p = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001
-        }
-        case FIELD_BLS12_381_FR: {
-            p = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
-        }
-        default: {
-            fail "field_op: unknown field %d", field
-        }
-    }
-}
-
-// field_reduce maps v < 2p to v mod p with one conditional subtraction. Every
-// 256-bit value is < 2p when p > 2^255 (the secp256k1 and secp256r1 fields).
-fn field_reduce(v:u256, p:u256) -> (r:u256) {
-    r = v
-    if v >= p {
-        r = v - p
-        if r >= p {
-            fail "field_op: operand not below 2p"
-        }
-    }
-}
-
-// Operands are 32 bytes, 8-byte aligned, four little-endian u64 limbs.
-fn field_read<ram>(addr:Address) -> (v:u256) {
+// field_load reads the operand at addr (32 bytes, 8-byte aligned, four
+// little-endian u64 limbs) and reduces it below p with one subtraction, whose
+// borrow tells whether it already is. The operand must be below 2p, as every
+// 256-bit value is when p > 2^255 (the secp256k1 and secp256r1 fields); a larger
+// one is not reduced below p, and the result of the call is then unspecified.
+fn field_load<ram>(addr:Address, p:u256) -> (r:u256) {
     var l0:u64 = read_64(addr)
     var l1:u64 = read_64((addr + 8) as Address)
     var l2:u64 = read_64((addr + 16) as Address)
     var l3:u64 = read_64((addr + 24) as Address)
-    v = l3::l2::l1::l0
+    var v:u256 = l3::l2::l1::l0
+    var v_lt_p:u1
+    var v_minus_p:u256
+    v_lt_p::v_minus_p = (v - p) as u257
+    r = v_lt_p == 1 ? v : v_minus_p
 }
 
 fn field_write<ram>(addr:Address, v:u256) {
@@ -194,10 +157,10 @@ fn mulmod_256(lhsL:u256, rhsL:u256, modL:u256) -> (remainder:u256) {
 //     That costs about 1.5 constrained mulmod_256 rows per exponent bit. A
 //     separate unconstrained product would be unreachable (native functions
 //     make no lookups, so zkc rejects it).
-const HINT_POW:u8 = 0xFF
+const HINT_POW:u2 = 3
 
 #[native]
-fn hint_field_op_256(op:u8, a:u256, b:u256, p:u256) -> (res:u256, non_square:u1) {
+fn hint_field_op_256(op:u2, a:u256, b:u256, p:u256) -> (res:u256, non_square:u1) {
     if op == HINT_POW {
         non_square = 0
         if b == 0 {
