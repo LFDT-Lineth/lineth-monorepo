@@ -7,7 +7,7 @@ The guest is the RISC-V program whose run is proven: the `l2_execution` guest fo
 | Mode | Runs the guest | Traces the guest | Constraints | Conglomeration | Public inputs | Proof |
 |---|---|---|---|---|---|---|
 | `dev-mock` | no | no | not checked | none | placeholder | marker bytes |
-| `dev-zkvm` | yes (ZkC Execute) | no | not checked | none | real | marker bytes |
+| `dev-zkvm` | yes | no | not checked | none | real | marker bytes |
 | `dev-partial` | yes | yes, shard by shard | checked | mock (checks the shards fit together) | real | devmode proof |
 | `dev-full-dummy-wrap` (aggregation only) | yes | yes, shard by shard | proved | real recursion | real | real proof, but a dummy BN254 proof for L1 |
 | `full` | yes | yes, shard by shard | proved | real recursion | real | real proof |
@@ -20,7 +20,7 @@ The guest is the RISC-V program whose run is proven: the `l2_execution` guest fo
 
 ### dev-zkvm
 
-- Runs the guest on the real input with ZkC Execute, without a trace.
+- Runs the guest on the real input, without a trace.
 - The public inputs are real.
 - Nothing is checked against the constraints.
 - The guest output must be equal to the native runner's output (temporary, see below).
