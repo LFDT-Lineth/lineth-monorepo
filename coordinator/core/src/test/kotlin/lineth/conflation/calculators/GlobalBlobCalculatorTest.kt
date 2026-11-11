@@ -3,6 +3,7 @@ package lineth.conflation.calculators
 import linea.da.CompressedConflation
 import linea.da.DaCodecVersion
 import linea.da.DaConstants.BLOB_PAYLOAD_CAPACITY
+import linea.da.DaConstants.KZG_POINT_BYTES
 import linea.da.DaStream
 import linea.da.DaStreamException
 import linea.da.DaStreamPosition
@@ -88,11 +89,14 @@ class GlobalBlobCalculatorTest {
 
     assertThat(events).hasSize(2)
     assertThat(events[0].conflationEnds()).containsExactly(1UL)
-    assertThat(events[0].conflations.single().cut).isEqualTo(SegmentEnd(1UL, 50_000))
+    assertThat(
+      events[0].conflations.single().cut,
+    ).isEqualTo(SegmentEnd(1UL, tailBytes = BLOB_PAYLOAD_CAPACITY - 50_000))
     assertThat(events[0].next!!.conflation).isEqualTo(b)
     assertThat(events[0].flushed).isFalse()
     assertThat(events[1].conflationEnds()).containsExactly(2UL, 3UL)
-    assertThat(events[1].conflations.map { it.cut.offset }).containsExactly(19_953, 59_953)
+    assertThat(events[1].conflations.map { it.cut.tailBytes })
+      .containsExactly(BLOB_PAYLOAD_CAPACITY - 19_953, BLOB_PAYLOAD_CAPACITY - 59_953)
     assertThat(events[1].next!!.conflation).isEqualTo(d)
     assertThat(events[1].conflations.first().conflation.compressed.compressedBytes).isEqualTo(100_000)
   }
@@ -173,7 +177,7 @@ class GlobalBlobCalculatorTest {
     val cutAfterC = events[1].conflations.last().cut
     val position = DaStreamPosition(
       dataRollingHash = blob2.dataRollingHash,
-      tailBytes = blob2.payloadBytes - cutAfterC.offset,
+      tailBytes = cutAfterC.tailBytes,
       sharedBlob = blob2.blobBytes(),
       prevDataRollingHash = blob2.prevDataRollingHash,
     )
@@ -198,7 +202,7 @@ class GlobalBlobCalculatorTest {
     val blob2 = events[1].blob
     val position = DaStreamPosition(
       dataRollingHash = blob2.dataRollingHash,
-      tailBytes = blob2.payloadBytes - events[1].conflations.last().cut.offset,
+      tailBytes = events[1].conflations.last().cut.tailBytes,
       sharedBlob = blob2.blobBytes(),
       prevDataRollingHash = blob2.prevDataRollingHash,
     )
@@ -238,6 +242,8 @@ class GlobalBlobCalculatorTest {
   private fun blobWithCuts(vararg cuts: SegmentEnd): SealedBlob = object : SealedBlob {
     override val blob: ByteBuffer = ByteBuffer.allocate(0)
     override val chunkHash = ByteArray(32)
+    override val kzgCommitment = ByteArray(KZG_POINT_BYTES)
+    override val kzgProof = ByteArray(KZG_POINT_BYTES)
     override val prevDataRollingHash = ByteArray(32)
     override val dataRollingHash = ByteArray(32)
     override val payloadBytes = BLOB_PAYLOAD_CAPACITY
