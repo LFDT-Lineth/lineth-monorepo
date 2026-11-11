@@ -88,6 +88,26 @@ func TestNew_DevPartialNeedsGuestsDir(t *testing.T) {
 	assert.ErrorContains(t, err, "guests folder must be set")
 }
 
+// TestNewDevPartial_EveryQueryIsChecked checks that every query left in the
+// check-only system is of a type whose Check runs on the trace. A query whose
+// Check does nothing, such as a MessageBus, would silently not be checked.
+func TestNewDevPartial_EveryQueryIsChecked(t *testing.T) {
+	for _, shardSize := range []uint64{0, partialShardSize} {
+		c, err := New(Config{Mode: ProverModeDevPartial, GuestsDir: t.TempDir(), ShardSize: shardSize})
+		require.NoError(t, err)
+		queries := c.sys.UnreducedQueries()
+		require.NotEmpty(t, queries)
+		for _, q := range queries {
+			switch q.(type) {
+			// Before adding a type, check that its Check runs on the trace.
+			case *wiop.Vanishing, *wiop.TableRelationQuery:
+			default:
+				t.Errorf("shard size %d: %T at %s is not a query type dev-partial checks", shardSize, q, q.Context().Path())
+			}
+		}
+	}
+}
+
 // partialShardSize splits the trace of the OutputAndLogELF guest into 2 shards.
 const partialShardSize = 500
 

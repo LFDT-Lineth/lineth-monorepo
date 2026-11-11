@@ -230,7 +230,9 @@ func newDevPartial(cfg Config, mode ProverMode) (*Core, error) {
 		return nil, fmt.Errorf("configuring the wiop system: %w", err)
 	}
 	// A message bus has no check of its own: reduce it to a grand product,
-	// which has one. Every other query is checked as is.
+	// which has one. Every other query is checked as is. Without a PCS no
+	// column data enters the transcript, so the bus coins are fixed and the
+	// same on every shard: fine to check our own trace, not a proof.
 	messagebus.Compile(sys)
 	grandproduct.Compile(sys)
 	risc5.CheckPublicInputs(sys)
