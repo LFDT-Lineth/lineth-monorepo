@@ -23,6 +23,7 @@ import io.vertx.core.http.HttpVersion
 import io.vertx.core.http.PoolOptions
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
+import linea.jsonrpc.TestingJsonRpcServer
 import linea.kotlin.decodeHex
 import lineth.vertx.vertxTestOptions
 import net.consensys.linea.async.get
@@ -68,8 +69,8 @@ class VertxHttpJsonRpcClientTest {
       .setKeepAlive(true)
       .setProtocolVersion(HttpVersion.HTTP_1_1)
   private lateinit var endpoint: URL
-  private lateinit var scriptedServer: ScriptedJsonRpcServer
-  private lateinit var scriptedServerEndpoint: URL
+  private lateinit var testingServer: TestingJsonRpcServer
+  private lateinit var testingServerEndpoint: URL
 
   @BeforeEach
   fun setUp() {
@@ -79,8 +80,10 @@ class VertxHttpJsonRpcClientTest {
     endpoint = URI(wiremock.baseUrl() + path).toURL()
     meterRegistry = SimpleMeterRegistry()
     metricsFacade = MicrometerMetricsFacade(registry = meterRegistry)
-    scriptedServer = ScriptedJsonRpcServer(vertx)
-    scriptedServerEndpoint = scriptedServer.start()
+    testingServer = TestingJsonRpcServer(vertx = vertx, recordRequestsResponses = true)
+    listOf("engine_getPayloadV1", "engine_newPayloadV1", "engine_forkchoiceUpdatedV1", "eth_blockNumber")
+      .forEach { method -> testingServer.handle(method) { "OK" } }
+    testingServerEndpoint = testingServer.httpEndpoint
     httpClient = vertx.createHttpClient(clientOptions, PoolOptions().setHttp1MaxSize(2))
     client = VertxHttpJsonRpcClient(
       httpClient,
@@ -92,7 +95,7 @@ class VertxHttpJsonRpcClientTest {
   @AfterEach
   fun tearDown() {
     httpClient.close().get()
-    scriptedServer.stop()
+    testingServer.stopHttpServer().get()
     wiremock.stop()
     vertx.close().get()
   }
@@ -423,10 +426,10 @@ class VertxHttpJsonRpcClientTest {
 
   @Test
   fun makesRequest_appliesPerMethodTimeoutAndKeepsClientUsable() {
-    scriptedServer.reply("engine_getPayloadV1", ScriptedJsonRpcServer.Reply(delay = 2.seconds))
-    scriptedServer.reply("engine_newPayloadV1", ScriptedJsonRpcServer.Reply(delay = 300.milliseconds))
+    testingServer.delayResponses("engine_getPayloadV1", 2.seconds)
+    testingServer.delayResponses("engine_newPayloadV1", 300.milliseconds)
     client = clientWithHooks(
-      endpoint = scriptedServerEndpoint,
+      endpoint = testingServerEndpoint,
       requestTimeoutProvider = { method -> if (method == "engine_getPayloadV1") 200.milliseconds else null },
     )
 
@@ -449,11 +452,11 @@ class VertxHttpJsonRpcClientTest {
    */
   @Test
   fun makesRequest_overallTimeoutTripsOnSlowlyStreamedResponseThatIdleTimeoutTolerates() {
-    scriptedServer.reply("eth_blockNumber", ScriptedJsonRpcServer.Reply(dribbleInterval = 40.milliseconds))
+    testingServer.streamResponses("eth_blockNumber", chunkInterval = 40.milliseconds)
     val idleTimeoutMillis = 10_000L
-    val idleOnlyClient = clientWithHooks(endpoint = scriptedServerEndpoint, requestTimeout = idleTimeoutMillis)
+    val idleOnlyClient = clientWithHooks(endpoint = testingServerEndpoint, requestTimeout = idleTimeoutMillis)
     val overallDeadlineClient = clientWithHooks(
-      endpoint = scriptedServerEndpoint,
+      endpoint = testingServerEndpoint,
       requestTimeout = idleTimeoutMillis,
       requestTimeoutProvider = { 500.milliseconds },
     )
@@ -472,11 +475,11 @@ class VertxHttpJsonRpcClientTest {
 
   @Test
   fun makesRequest_overallTimeoutCoversWaitingForPooledConnectionAndRequestIsNeverSent() {
-    scriptedServer.reply("engine_newPayloadV1", ScriptedJsonRpcServer.Reply(delay = 1.seconds))
+    testingServer.delayResponses("engine_newPayloadV1", 1.seconds)
     httpClient.close().get()
     httpClient = vertx.createHttpClient(clientOptions, PoolOptions().setHttp1MaxSize(1))
     client = clientWithHooks(
-      endpoint = scriptedServerEndpoint,
+      endpoint = testingServerEndpoint,
       requestTimeoutProvider = { method -> if (method == "engine_forkchoiceUpdatedV1") 200.milliseconds else null },
     )
 
@@ -492,14 +495,14 @@ class VertxHttpJsonRpcClientTest {
     occupyingRequest.get()
 
     client.makeRequest(JsonRpcRequestListParams("2.0", 3, "engine_newPayloadV1", emptyList())).get()
-    assertThat(scriptedServer.receivedRequests.map { it.method })
+    assertThat(testingServer.recordedRequests().map { it.first.method })
       .containsExactly("engine_newPayloadV1", "engine_newPayloadV1")
   }
 
   @Test
   fun makesRequest_withoutTimeoutProviderWaitsForSlowResponse() {
-    scriptedServer.reply("engine_newPayloadV1", ScriptedJsonRpcServer.Reply(delay = 500.milliseconds))
-    client = clientWithHooks(endpoint = scriptedServerEndpoint)
+    testingServer.delayResponses("engine_newPayloadV1", 500.milliseconds)
+    client = clientWithHooks(endpoint = testingServerEndpoint)
 
     client.makeRequest(JsonRpcRequestListParams("2.0", 1, "engine_newPayloadV1", emptyList())).get()
       .also { response -> assertThat(response).isEqualTo(Ok(JsonRpcSuccessResponse(1, "OK"))) }
