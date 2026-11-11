@@ -111,3 +111,33 @@ func TestOutputAndLogGuest(t *testing.T) {
 	}
 	traceAndCheck(t, elf, output)
 }
+
+// At the size cap, .text is longest, and the buffers must still not overlap it.
+func TestOutputAndLogGuest_MaxSize(t *testing.T) {
+	output := make([]byte, 2047)
+	log := make([]byte, 2047)
+	for i := range output {
+		output[i] = byte(i)
+		log[i] = byte(i * 7)
+	}
+	elf := minimalelf.OutputAndLogELF(output, log)
+
+	binf, err := embedded.CompiledBinaryFile()
+	if err != nil {
+		t.Fatalf("failed to compile embedded R5 arithmetization: %v", err)
+	}
+	inputs, err := predecoding.PrepareInputs(elf, nil)
+	if err != nil {
+		t.Fatalf("failed to prepare inputs: %v", err)
+	}
+	outputs, errs := binf.Execute(inputs)
+	if len(errs) > 0 {
+		t.Fatalf("execution failed: %v", errors.Join(errs...))
+	}
+	if got := outputs["guest_output"]; !bytes.Equal(got.Bytes(), output) {
+		t.Fatalf("guest_output is %d bytes, want the %d bytes written", len(got.Bytes()), len(output))
+	}
+	if got := outputs["guest_log"]; !bytes.Equal(got.Bytes(), log) {
+		t.Fatalf("guest_log is %d bytes, want the %d bytes written", len(got.Bytes()), len(log))
+	}
+}

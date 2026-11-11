@@ -45,10 +45,22 @@ func OutputELF(n int) (elf, output []byte) {
 // stored with one SB each, whose signed 12-bit offset stops at 2047.
 const outputAndLogMaxN = 2047
 
+// Buffers of [OutputAndLogELF], from the start of .text, past its longest
+// .text (about 32 KiB at the size cap). Each is a LUI immediate shifted by 12.
+const (
+	outputBufferOffset = 0x10000
+	logBufferOffset    = 0x11000
+)
+
 // OutputAndLogELF returns a minimal valid ELF64 RISC-V binary that writes
 // output to guest_output and log to guest_log, each in a single write call,
 // and exits 0. Each may be at most 2047 bytes.
 func OutputAndLogELF(output, log []byte) []byte {
+	return Make(DefaultEntryPoint, DefaultSectionAddr, outputAndLogText(output, log))
+}
+
+// outputAndLogText returns the .text of [OutputAndLogELF].
+func outputAndLogText(output, log []byte) []byte {
 	if len(output) > outputAndLogMaxN || len(log) > outputAndLogMaxN {
 		panic(fmt.Sprintf("minimalelf: OutputAndLogELF output %d or log %d bytes past %d",
 			len(output), len(log), outputAndLogMaxN))
@@ -56,10 +68,9 @@ func OutputAndLogELF(output, log []byte) []byte {
 
 	a := newAssembler()
 	a.auipc(s0, 0)
-	// Buffers clear of .text, which is 8 bytes per staged byte.
-	a.lui(t4, 0x8)
+	a.lui(t4, outputBufferOffset>>12)
 	a.add(t1, s0, t4) // output buffer
-	a.lui(t4, 0x9)
+	a.lui(t4, logBufferOffset>>12)
 	a.add(t5, s0, t4) // log buffer
 	stage := func(buf reg, data []byte) {
 		for i, b := range data {
@@ -76,6 +87,5 @@ func OutputAndLogELF(output, log []byte) []byte {
 	a.addi(a0, zero, 0)
 	a.addi(a7, zero, 93) // exit(0)
 	a.ecall()
-
-	return Make(DefaultEntryPoint, DefaultSectionAddr, a.bytes())
+	return a.bytes()
 }
