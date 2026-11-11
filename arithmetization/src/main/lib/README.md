@@ -36,6 +36,29 @@ Note. We use '.' to represent '0'.
 | ...                 |   🔴   | custom-1 |        |           |
 |---------------------|--------|----------|--------|-----------|
 
+The field accelerator is an ECALL, not a custom opcode, so the predecoder needs no change for it.
+`field/field.zkc` implements it. Its `#[native]` functions and u256 registers are not supported
+by `zkc exec --gogen` yet.
+
+|---------------------|--------|-------------------------------------------------------------|
+| ECALL               | status | registers                                                   |
+|---------------------|:------:|-------------------------------------------------------------|
+| field op            |   🟡   | a7 = 0xF0, a0 = op, a1 = field, a2 = out, a3 = a, a4 = b    |
+|---------------------|--------|-------------------------------------------------------------|
+
+- Ops (in `field/field.zkc`): `FIELD_OP_MUL` (out = a·b), `FIELD_OP_DIV` (out = a/b, or 0 and status 1 if b = 0), and
+  `FIELD_OP_SQRT` (out² = a, or out² = −a and status 1 if a is not a square). An inverse is
+  DIV with a = 1.
+- Fields: the `FIELD_*` ids in `field/field.zkc`, which are 256-bit fields only. SQRT
+  needs p = 3 (mod 4).
+- Operands are four little-endian u64 limbs below 2p; any 256-bit value qualifies when p > 2^255.
+  b is read for every op. The output is reduced and may alias an input. The status comes back in a0.
+- Each call makes one constrained `mulmod_256` (prover-ray's NonNative gadget). DIV and SQRT
+  take their answer from the unconstrained `hint_field_op_256`, whose exponentiation adds
+  about 1.5 more `mulmod_256` rows per exponent bit.
+- The guest-side C interface is `lineth_zkvm_field_op` in
+  `riscv-guests/lineth_accelerators/include/lineth_accelerators.h`.
+
 Guest output is not a precompile: `write_output` issues the Linux `write` syscall (`a7=64`) with
 fd 4 (`GUEST_OUT`, public output) or fd 3 (`GUEST_LOG`, private log). See `process_syscall` in
 `../riscv/interpreter.zkc`.
