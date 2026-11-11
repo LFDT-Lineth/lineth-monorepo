@@ -1,10 +1,12 @@
 package linea.s11n.jackson
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.math.BigInteger
@@ -101,5 +103,17 @@ class NumbersSerDeTest {
     assertThat(result.uLongMaxValue).isEqualTo(ULong.MAX_VALUE)
     assertThat(result.uLongNull).isNull()
     assertThat(result.bigInteger).isEqualTo(BigInteger("1ffffffffffffffff", 16))
+  }
+
+  @Test
+  fun numbersDeserializationRejectsNonHexQuantities() {
+    class SomeObject(val value: ULong)
+    val mapper = jacksonObjectMapper().registerModules(ethNumberAsHexDeserialisersModule)
+
+    listOf("""{"value":100}""", """{"value":"100"}""", """{"value":"0xzz"}""").forEach { json ->
+      assertThatThrownBy { mapper.readValue(json, SomeObject::class.java) }
+        .describedAs(json)
+        .isInstanceOf(JsonMappingException::class.java)
+    }
   }
 }

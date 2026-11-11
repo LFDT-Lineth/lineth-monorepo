@@ -51,4 +51,6 @@ dependencies {
   testImplementation(testFixtures(project(':maru:observability')))
   testImplementation(project(':jvm-libs:linea:metrics:micrometer'))
   testImplementation(testFixtures(project(':jvm-libs:generic:vertx-helper')))
+  testImplementation "com.networknt:json-schema-validator:${libs.versions.jsonSchemaValidator.get()}"
+  testImplementation "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml"
 }

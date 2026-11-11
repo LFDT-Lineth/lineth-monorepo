@@ -6,18 +6,27 @@
  */
 package maru.executionlayer.client
 
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.NullNode
+import com.fasterxml.jackson.databind.node.ObjectNode
+import com.fasterxml.jackson.databind.node.TextNode
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import lineth.vertx.vertxTestOptions
 import maru.consensus.ElFork
 import maru.executionlayer.client.EngineApiTestData.executionPayload
+import maru.executionlayer.client.EngineApiTestData.executionPayloadJson
 import maru.executionlayer.client.EngineApiTestData.finalizedBlockHash
+import maru.executionlayer.client.EngineApiTestData.forkChoiceUpdatedRequest
+import maru.executionlayer.client.EngineApiTestData.getPayloadRequest
 import maru.executionlayer.client.EngineApiTestData.getPayloadResultJson
 import maru.executionlayer.client.EngineApiTestData.headBlockHash
+import maru.executionlayer.client.EngineApiTestData.latestBlockRequest
+import maru.executionlayer.client.EngineApiTestData.newPayloadRequest
 import maru.executionlayer.client.EngineApiTestData.payloadAttributes
 import maru.executionlayer.client.EngineApiTestData.payloadId
 import maru.executionlayer.client.EngineApiTestData.safeBlockHash
-import maru.executionlayer.client.EngineApiTestData.tekuRequest
 import maru.executionlayer.client.EngineApiTestData.withoutId
 import maru.executionlayer.manager.ExecutionPayloadStatus
 import maru.executionlayer.manager.ForkChoiceUpdatedResult
@@ -35,6 +44,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
+import org.junit.jupiter.params.provider.MethodSource
 import java.net.ServerSocket
 import java.net.URI
 import java.nio.file.Files
@@ -94,7 +104,7 @@ class JsonRpcEngineApiClientTest {
 
   @ParameterizedTest
   @EnumSource(ElFork::class)
-  fun `requests match the Teku client byte for byte`(fork: ElFork) {
+  fun `requests conform to the Engine API spec and carry the expected values`(fork: ElFork) {
     val methods = EngineApiForkMethods.of(fork)
     server.replyResult(methods.newPayload, validStatus)
     server.replyResult(
@@ -113,19 +123,26 @@ class JsonRpcEngineApiClientTest {
 
     assertThat(server.requests.map { withoutId(it.body) })
       .containsExactly(
-        tekuRequest(fork, "newPayload"),
-        tekuRequest(fork, "fcu"),
-        tekuRequest(fork, "fcuWithAttributes"),
-        tekuRequest(fork, "getPayload"),
-        tekuRequest(fork, "latestBlock"),
+        newPayloadRequest(fork),
+        forkChoiceUpdatedRequest(fork, withAttributes = false),
+        forkChoiceUpdatedRequest(fork, withAttributes = true),
+        getPayloadRequest(fork),
+        latestBlockRequest(),
       )
+    server.requests.filter { it.method.startsWith("engine_") }.forEach { request ->
+      assertThat(EngineApiSpec.paramsViolations(request.method, request.body["params"]))
+        .describedAs(request.method)
+        .isEmpty()
+    }
     assertThat(server.requests).allSatisfy { assertThat(it.authorization).isNull() }
   }
 
   @ParameterizedTest
   @EnumSource(ElFork::class)
   fun `getPayload decodes the payload the execution layer built`(fork: ElFork) {
-    server.replyResult(EngineApiForkMethods.of(fork).getPayload, getPayloadResultJson(fork))
+    val method = EngineApiForkMethods.of(fork).getPayload
+    assertThat(EngineApiSpec.resultViolations(method, getPayloadResultJson(fork))).isEmpty()
+    server.replyResult(method, getPayloadResultJson(fork))
 
     assertThat(client(fork).getPayload(payloadId).get()).isEqualTo(executionPayload(fork))
   }
@@ -212,17 +229,25 @@ class JsonRpcEngineApiClientTest {
     awaitRequestLatencyCount(fork = ElFork.Prague, method = "newPayload", status = "success", expected = 1)
   }
 
-  @Test
-  fun `null or malformed results fail the future`() {
-    val methods = EngineApiForkMethods.of(ElFork.Prague)
-    server.replyResult(methods.newPayload, null)
-    server.replyResult(methods.forkChoiceUpdated, mapOf("payloadStatus" to mapOf("status" to "NOT_A_STATUS")))
-    val client = client(ElFork.Prague)
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("malformedResults")
+  fun `results violating the spec fail the future`(case: MalformedResult) {
+    if (case.method.startsWith("engine_")) {
+      assertThat(EngineApiSpec.resultViolations(case.method, case.result ?: NullNode.instance)).isNotEmpty()
+    }
+    server.replyResult(case.method, case.result)
+    val client = client(case.fork)
+    val methods = EngineApiForkMethods.of(case.fork)
 
-    assertThatThrownBy { client.newPayload(executionPayload(ElFork.Prague)).get() }
-      .hasRootCauseInstanceOf(IllegalArgumentException::class.java)
-    assertThatThrownBy { client.forkChoiceUpdate(headBlockHash, safeBlockHash, finalizedBlockHash, null).get() }
-      .hasRootCauseMessage("Unknown payload status 'NOT_A_STATUS'")
+    val response =
+      when (case.method) {
+        methods.getPayload -> client.getPayload(payloadId)
+        methods.newPayload -> client.newPayload(executionPayload(case.fork))
+        methods.forkChoiceUpdated -> client.forkChoiceUpdate(headBlockHash, safeBlockHash, finalizedBlockHash, null)
+        else -> client.getLatestBlockMetadata()
+      }
+
+    assertThatThrownBy { response.get() }.isInstanceOf(ExecutionException::class.java)
   }
 
   @Test
@@ -303,5 +328,103 @@ class JsonRpcEngineApiClientTest {
   private fun issuedAt(token: String): Long {
     val claims = String(Base64.getUrlDecoder().decode(token.split(".")[1]))
     return Regex("\"iat\":(\\d+)").find(claims)!!.groupValues[1].toLong()
+  }
+
+  class MalformedResult(
+    private val description: String,
+    val fork: ElFork,
+    val method: String,
+    val result: JsonNode?,
+  ) {
+    override fun toString(): String = description
+  }
+
+  companion object {
+    private val objectMapper = jacksonObjectMapper()
+
+    private fun json(value: Any): JsonNode = objectMapper.valueToTree(value)
+
+    private fun getPayloadResult(fork: ElFork, edit: ObjectNode.() -> Unit): ObjectNode =
+      getPayloadResultJson(fork).apply(edit)
+
+    private fun executionPayloadOf(fork: ElFork, edit: ObjectNode.() -> Unit): ObjectNode =
+      getPayloadResult(fork) { (get("executionPayload") as ObjectNode).edit() }
+
+    @JvmStatic
+    fun malformedResults(): List<MalformedResult> {
+      val prague = EngineApiForkMethods.of(ElFork.Prague)
+      val validHash = "0x" + "ab".repeat(32)
+      fun prague(description: String, method: String, result: JsonNode?) =
+        MalformedResult(description, ElFork.Prague, method, result)
+      return listOf(
+        prague("getPayload: null result", prague.getPayload, null),
+        prague("getPayload: result is not an object", prague.getPayload, TextNode("0x00")),
+        prague(
+          "getPayload: no executionPayload",
+          prague.getPayload,
+          getPayloadResult(ElFork.Prague) {
+            remove("executionPayload")
+          },
+        ),
+        prague(
+          "getPayload: payload without blockHash",
+          prague.getPayload,
+          executionPayloadOf(ElFork.Prague) {
+            remove("blockHash")
+          },
+        ),
+        prague(
+          "getPayload: non-hex blockHash",
+          prague.getPayload,
+          executionPayloadOf(ElFork.Prague) {
+            put("blockHash", "0xzz")
+          },
+        ),
+        prague(
+          "getPayload: blockNumber as a JSON number",
+          prague.getPayload,
+          executionPayloadOf(ElFork.Prague) {
+            put("blockNumber", 100)
+          },
+        ),
+        MalformedResult(
+          "getPayloadV1: payload without transactions",
+          ElFork.Paris,
+          EngineApiForkMethods.of(ElFork.Paris).getPayload,
+          executionPayloadJson(ElFork.Paris).apply { remove("transactions") },
+        ),
+        MalformedResult(
+          "getPayloadV6: payload without blockAccessList",
+          ElFork.Amsterdam,
+          EngineApiForkMethods.of(ElFork.Amsterdam).getPayload,
+          executionPayloadOf(ElFork.Amsterdam) { remove("blockAccessList") },
+        ),
+        prague("newPayload: null result", prague.newPayload, null),
+        prague("newPayload: no status", prague.newPayload, json(mapOf("latestValidHash" to validHash))),
+        prague("newPayload: unknown status", prague.newPayload, json(mapOf("status" to "NOT_A_STATUS"))),
+        prague(
+          "newPayload: non-hex latestValidHash",
+          prague.newPayload,
+          json(mapOf("status" to "VALID", "latestValidHash" to "0xzz")),
+        ),
+        prague(
+          "forkchoiceUpdated: no payloadStatus",
+          prague.forkChoiceUpdated,
+          json(mapOf("payloadId" to "0x0102030405060708")),
+        ),
+        prague(
+          "forkchoiceUpdated: unknown status",
+          prague.forkChoiceUpdated,
+          json(mapOf("payloadStatus" to mapOf("status" to "NOT_A_STATUS"))),
+        ),
+        prague(
+          "forkchoiceUpdated: non-hex payloadId",
+          prague.forkChoiceUpdated,
+          json(mapOf("payloadStatus" to mapOf("status" to "VALID"), "payloadId" to "0xzz")),
+        ),
+        prague("eth_getBlockByNumber: no block", "eth_getBlockByNumber", null),
+        prague("eth_getBlockByNumber: no timestamp", "eth_getBlockByNumber", json(mapOf("hash" to validHash))),
+      )
+    }
   }
 }

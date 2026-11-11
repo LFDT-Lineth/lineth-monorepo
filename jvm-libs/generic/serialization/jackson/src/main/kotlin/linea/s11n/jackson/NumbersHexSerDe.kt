@@ -2,6 +2,7 @@ package linea.s11n.jackson
 
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.JsonSerializer
@@ -53,10 +54,18 @@ object BigIntegerToHexSerializer : JsonSerializer<BigInteger>() {
 
 object ULongFromHexDeserializer : JsonDeserializer<ULong>() {
   override fun deserialize(parser: JsonParser, context: DeserializationContext): ULong =
-    parser.text.toULongFromHex()
+    hexQuantity(parser, context, ULong::class.java).toULongFromHex()
 }
 
 object BigIntegerFromHexDeserializer : JsonDeserializer<BigInteger>() {
   override fun deserialize(parser: JsonParser, context: DeserializationContext): BigInteger =
-    parser.text.toBigIntegerFromHex()
+    hexQuantity(parser, context, BigInteger::class.java).toBigIntegerFromHex()
+}
+
+private fun hexQuantity(parser: JsonParser, context: DeserializationContext, type: Class<*>): String {
+  val text = parser.text
+  if (parser.currentToken != JsonToken.VALUE_STRING || !text.startsWith("0x")) {
+    throw context.weirdStringException(text, type, "expected a 0x-prefixed hex string")
+  }
+  return text
 }
