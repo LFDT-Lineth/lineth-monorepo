@@ -8,6 +8,8 @@ import (
 	kbcircuit "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/circuit"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
+	bnposeidon2 "github.com/consensys/gnark-crypto/ecc/bn254/fr/poseidon2"
 	"github.com/consensys/gnark/constraint/solver"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/scs"
@@ -19,10 +21,11 @@ import (
 type bnPackedCircuit struct {
 	Inputs []kbcircuit.Element
 	Output frontend.Variable
+	Domain BNPackedDomain `gnark:"-"`
 }
 
 func (c *bnPackedCircuit) Define(api frontend.API) error {
-	h := NewBNPackedGnarkHasher(api)
+	h := NewBNPackedGnarkHasher(api, c.Domain)
 	h.Write(c.Inputs...)
 	api.AssertIsEqual(h.Sum(), c.Output)
 	return nil
@@ -39,26 +42,65 @@ func randKoala(n int) []field.Element {
 }
 
 func TestBNPackedHasherCircuit(t *testing.T) {
-	for _, n := range []int{0, 1, 7, 8, 9, 16, 23} {
-		t.Run(fmt.Sprintf("n=%d", n), func(t *testing.T) {
-			vals := randKoala(n)
-			nh := NewBNPackedHasher()
-			nh.Write(vals...)
-			digest := nh.Sum()
-
-			circuit := &bnPackedCircuit{Inputs: make([]kbcircuit.Element, n)}
-			witness := &bnPackedCircuit{Inputs: make([]kbcircuit.Element, n), Output: digest}
-			for i := range vals {
-				witness.Inputs[i] = kbcircuit.NewElementFromKoala(vals[i])
+	domains := map[string]BNPackedDomain{"lengthInIV": BNPackedLengthInIV, "lengthSuffix": BNPackedLengthSuffix}
+	for name, domain := range domains {
+		for _, n := range []int{0, 1, 7, 8, 9, 16, 23} {
+			if n == 0 && domain == BNPackedLengthInIV {
+				continue // rejected, see TestBNPackedLengthInIVRejectsEmpty
 			}
-			require.NoError(t, test.IsSolved(circuit, witness, ecc.BN254.ScalarField()))
+			t.Run(fmt.Sprintf("%s/n=%d", name, n), func(t *testing.T) {
+				vals := randKoala(n)
+				nh := NewBNPackedHasher(domain)
+				nh.Write(vals...)
+				digest := nh.Sum()
 
-			// wrong digest must fail
-			var bad = digest
-			bad.SetUint64(42)
-			witness.Output = bad
-			require.Error(t, test.IsSolved(circuit, witness, ecc.BN254.ScalarField()))
-		})
+				circuit := &bnPackedCircuit{Inputs: make([]kbcircuit.Element, n), Domain: domain}
+				witness := &bnPackedCircuit{Inputs: make([]kbcircuit.Element, n), Output: digest, Domain: domain}
+				for i := range vals {
+					witness.Inputs[i] = kbcircuit.NewElementFromKoala(vals[i])
+				}
+				require.NoError(t, test.IsSolved(circuit, witness, ecc.BN254.ScalarField()))
+
+				// wrong digest must fail
+				var bad = digest
+				bad.SetUint64(42)
+				witness.Output = bad
+				require.Error(t, test.IsSolved(circuit, witness, ecc.BN254.ScalarField()))
+			})
+		}
+	}
+}
+
+func TestBNPackedLengthInIVRejectsEmpty(t *testing.T) {
+	require.Panics(t, func() { NewBNPackedHasher(BNPackedLengthInIV).Sum() })
+}
+
+// TestBNPackedLengthInIVSeparation checks that inputs of different lengths
+// that zero padding would otherwise confuse get different digests, and that
+// the two domain modes give different digests.
+func TestBNPackedLengthInIVSeparation(t *testing.T) {
+	var x, zero field.Element
+	x.SetUint64(5)
+	chunk := randKoala(8)
+	cases := map[string][]field.Element{
+		"[x]":         {x},
+		"[0, x]":      {zero, x},
+		"[x, 0]":      {x, zero},
+		"chunk":       chunk,
+		"chunk + [0]": append(append([]field.Element{}, chunk...), zero),
+	}
+	seen := map[fr.Element]string{}
+	for name, in := range cases {
+		for _, domain := range []BNPackedDomain{BNPackedLengthInIV, BNPackedLengthSuffix} {
+			h := NewBNPackedHasher(domain)
+			h.Write(in...)
+			d := h.Sum()
+			key := fmt.Sprintf("%s (domain %d)", name, domain)
+			if other, ok := seen[d]; ok {
+				t.Fatalf("collision between %s and %s", key, other)
+			}
+			seen[d] = key
+		}
 	}
 }
 
@@ -67,9 +109,9 @@ func TestBNPackedHasherInjective(t *testing.T) {
 	x.SetUint64(5)
 	var zero field.Element
 
-	h1 := NewBNPackedHasher()
+	h1 := NewBNPackedHasher(BNPackedLengthSuffix)
 	h1.Write(x)
-	h2 := NewBNPackedHasher()
+	h2 := NewBNPackedHasher(BNPackedLengthSuffix)
 	h2.Write(zero, x)
 	a, b := h1.Sum(), h2.Sum()
 	require.False(t, a.Equal(&b))
@@ -170,4 +212,61 @@ func (c *bnPackedCanonicalCircuit) Define(api frontend.API) error {
 	x := canonicalKoala(api, kb, rangecheck.New(api), kbcircuit.WrapFrontendVariable(c.In))
 	api.AssertIsDifferent(x, -1)
 	return nil
+}
+
+// bnPackedSumBytesReference is the original byte-based implementation, kept
+// to pin that the element-based Sum produces the same digest.
+func bnPackedSumBytesReference(xs []field.Element) fr.Element {
+	md := bnposeidon2.NewMerkleDamgardHasher()
+	for start := 0; start < len(xs); start += BNPackedNbKoalaPerLimb {
+		end := min(start+BNPackedNbKoalaPerLimb, len(xs))
+		acc, tmp := new(big.Int), new(big.Int)
+		for _, x := range xs[start:end] {
+			acc.Lsh(acc, BNPackedBitsPerKoala)
+			acc.Add(acc, tmp.SetUint64(x.Uint64()))
+		}
+		var e fr.Element
+		e.SetBigInt(acc)
+		b := e.Bytes()
+		_, _ = md.Write(b[:])
+	}
+	var length fr.Element
+	length.SetUint64(uint64(len(xs)))
+	lb := length.Bytes()
+	_, _ = md.Write(lb[:])
+	var res fr.Element
+	res.SetBytes(md.Sum(nil))
+	return res
+}
+
+func TestBNPackedNativeMatchesByteReference(t *testing.T) {
+	for _, n := range []int{0, 1, 2, 7, 8, 9, 15, 16, 17, 64, 100} {
+		vals := randKoala(n)
+		// include the extreme value p-1 to exercise slot straddling
+		if n > 0 {
+			vals[0].SetUint64(2130706432)
+		}
+		h := NewBNPackedHasher(BNPackedLengthSuffix)
+		h.Write(vals...)
+		got, want := h.Sum(), bnPackedSumBytesReference(vals)
+		require.True(t, got.Equal(&want), "n=%d", n)
+	}
+}
+
+func BenchmarkBNPackedNative(b *testing.B) {
+	vals := randKoala(512)
+	b.Run("elements", func(b *testing.B) {
+		h := NewBNPackedHasher(BNPackedLengthSuffix)
+		h.Write(vals...)
+		b.ReportAllocs()
+		for b.Loop() {
+			_ = h.Sum()
+		}
+	})
+	b.Run("bytes-reference", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			_ = bnPackedSumBytesReference(vals)
+		}
+	})
 }
