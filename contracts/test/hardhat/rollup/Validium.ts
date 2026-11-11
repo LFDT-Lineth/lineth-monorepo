@@ -561,7 +561,7 @@ describe("Validium contract", () => {
 
       await expectRevertWithCustomError(
         validium,
-        validium.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash),
+        validium.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash, 0n),
         "MissingMessageNumberForRollingHash",
         [l1RollingHash],
       );
@@ -573,7 +573,7 @@ describe("Validium contract", () => {
 
       await expectRevertWithCustomError(
         validium,
-        validium.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash),
+        validium.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash, 0n),
         "MissingRollingHashForMessageNumber",
         [l1MessageNumber],
       );
@@ -585,7 +585,7 @@ describe("Validium contract", () => {
 
       await expectRevertWithCustomError(
         validium,
-        validium.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash),
+        validium.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash, 0n),
         "L1RollingHashDoesNotExistOnL1",
         [l1MessageNumber, l1RollingHash],
       );
@@ -594,7 +594,7 @@ describe("Validium contract", () => {
     it("Should succeed if l1 message number == 0 and l1 rolling hash is empty", async () => {
       const l1MessageNumber = 0;
       const l1RollingHash = HASH_ZERO;
-      await expect(validium.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash)).to.not.be.reverted;
+      await expect(validium.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash, 0n)).to.not.be.reverted;
     });
 
     it("Should succeed if l1 message number != 0, l1 rolling hash is not empty and exists on L1", async () => {
@@ -605,7 +605,37 @@ describe("Validium contract", () => {
 
       const l1RollingHash = calculateRollingHash(HASH_ZERO, messageHash);
 
-      await expect(validium.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash)).to.not.be.reverted;
+      await expect(validium.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash, 0n)).to.not.be.reverted;
+    });
+
+    it("Should revert if l1 message number is not greater than the last finalized message number", async () => {
+      const l1MessageNumber = 5n;
+      const messageHash = generateRandomBytes(32);
+
+      await validium.addRollingHash(l1MessageNumber, messageHash);
+
+      const l1RollingHash = calculateRollingHash(HASH_ZERO, messageHash);
+
+      for (const lastFinalizedMessageNumber of [l1MessageNumber, l1MessageNumber + 1n]) {
+        await expectRevertWithCustomError(
+          validium,
+          validium.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash, lastFinalizedMessageNumber),
+          "L1RollingHashMessageNumberNotIncreasing",
+          [l1MessageNumber, lastFinalizedMessageNumber],
+        );
+      }
+    });
+
+    it("Should succeed if l1 message number is greater than the last finalized message number", async () => {
+      const l1MessageNumber = 5n;
+      const messageHash = generateRandomBytes(32);
+
+      await validium.addRollingHash(l1MessageNumber, messageHash);
+
+      const l1RollingHash = calculateRollingHash(HASH_ZERO, messageHash);
+
+      await expect(validium.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash, l1MessageNumber - 1n)).to.not
+        .be.reverted;
     });
   });
 });

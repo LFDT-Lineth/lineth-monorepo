@@ -161,6 +161,7 @@ async function main() {
   if (deployForcedTransactionGateway) {
     const destinationChainId = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID");
     const l2BlockBuffer = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_L2_BLOCK_BUFFER");
+    const minGasLimit = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_MIN_GAS_LIMIT");
     const maxGasLimit = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_MAX_GAS_LIMIT");
     const maxInputLengthBuffer = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_MAX_INPUT_LENGTH_BUFFER");
     const l2BlockDurationSeconds = getRequiredEnvVar("FORCED_TRANSACTION_L2_BLOCK_DURATION_SECONDS");
@@ -171,6 +172,7 @@ async function main() {
       validiumAddress,
       destinationChainId,
       l2BlockBuffer,
+      minGasLimit,
       maxGasLimit,
       maxInputLengthBuffer,
       validiumSecurityCouncil,

@@ -12,6 +12,7 @@ import {
 import {
   generateRoleAssignments,
   getEnvVarOrDefault,
+  getOptionalEnvVarList,
   getRequiredEnvVar,
   requireAddressFromRegistryOrEnv,
   requireAddressesFromRegistryOrEnv,
@@ -27,7 +28,7 @@ const func: DeployFunction = withSignerUiSession("03_deploy_LinethRollup.ts", as
   // LinethRollup DEPLOYED AS UPGRADEABLE PROXY (OpenZeppelin transparent). Hardhat Upgrades may reuse an
   // implementation and/or ProxyAdmin from `.openzeppelin/` for this network, so you might sign fewer than three txs.
   const verifierAddress = requireAddressFromRegistryOrEnv(network.name, "PlonkVerifier", "VERIFIER_ADDRESS");
-  const linethRollupInitialStateRootHash = getRequiredEnvVar("INITIAL_L2_STATE_ROOT_HASH");
+  const linethRollupInitialBlockHash = getRequiredEnvVar("INITIAL_L2_BLOCK_HASH");
   const linethRollupInitialL2BlockNumber = getRequiredEnvVar("INITIAL_L2_BLOCK_NUMBER");
   const linethRollupSecurityCouncil = requireAddressFromRegistryOrEnv(
     network.name,
@@ -56,12 +57,13 @@ const func: DeployFunction = withSignerUiSession("03_deploy_LinethRollup.ts", as
   const yieldManagerAddress = requireAddressFromRegistryOrEnv(network.name, "YieldManager", "YIELD_MANAGER_ADDRESS");
 
   const addressFilter = requireAddressFromRegistryOrEnv(network.name, "AddressFilter", "LINETH_ROLLUP_ADDRESS_FILTER");
+  const verifierKeys = getOptionalEnvVarList("LINETH_ROLLUP_VERIFIER_KEYS");
 
   const contract = await deployUpgradableFromFactory(
     "LinethRollup",
     [
       {
-        initialStateRootHash: linethRollupInitialStateRootHash,
+        initialBlockHash: linethRollupInitialBlockHash,
         initialL2BlockNumber: linethRollupInitialL2BlockNumber,
         genesisTimestamp: linethRollupGenesisTimestamp,
         defaultVerifier: verifierAddress,
@@ -70,6 +72,7 @@ const func: DeployFunction = withSignerUiSession("03_deploy_LinethRollup.ts", as
         roleAddresses,
         pauseTypeRoles,
         unpauseTypeRoles,
+        verifierKeys,
         defaultAdmin: linethRollupSecurityCouncil,
         dataRollingHashProvider: ADDRESS_ZERO,
         addressFilter,

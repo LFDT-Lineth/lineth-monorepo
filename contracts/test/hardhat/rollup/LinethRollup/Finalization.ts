@@ -138,6 +138,29 @@ describe("Lineth Rollup contract: Finalization", () => {
         ]);
       });
 
+      it("Should revert if l1 message number does not advance past the last finalized message number", async () => {
+        const finalizationData = await generateFinalizationData({
+          l1RollingHashMessageNumber: 10n,
+          l1RollingHash: calculateRollingHash(HASH_ZERO, messageHash),
+          lastFinalizedL1RollingHashMessageNumber: 10n,
+        });
+
+        const lastFinalizedBlockNumber = await linethRollup.currentL2BlockNumber();
+        const parentBlockHash = await linethRollup.blockHashes(lastFinalizedBlockNumber);
+        finalizationData.parentBlockHash = parentBlockHash;
+
+        const proof = calldataAggregatedProof1To155.aggregatedProof;
+
+        const finalizeCall = linethRollup
+          .connect(operator)
+          .finalizeBlocks(proof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
+
+        await expectRevertWithCustomError(linethRollup, finalizeCall, "L1RollingHashMessageNumberNotIncreasing", [
+          finalizationData.l1RollingHashMessageNumber,
+          finalizationData.lastFinalizedL1RollingHashMessageNumber,
+        ]);
+      });
+
       it("Should revert if timestamps are not in sequence", async () => {
         const { finalIndex } = await submitCalldataBeforeFinalization(linethRollup.connect(operator), {
           startIndex: 0,

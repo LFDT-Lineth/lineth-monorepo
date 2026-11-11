@@ -1,6 +1,6 @@
 import * as assert from "node:assert/strict";
 
-import { getBooleanEnvVar, getBooleanEnvVarOrDefault } from "./environment";
+import { getBooleanEnvVar, getBooleanEnvVarOrDefault, getOptionalEnvVarList } from "./environment";
 
 type TestCase = {
   name: string;
@@ -71,6 +71,23 @@ const tests: TestCase[] = [
       withEnv("true", () => assert.equal(getBooleanEnvVar(ENV_NAME), true));
       withEnv("false", () => assert.equal(getBooleanEnvVar(ENV_NAME), false));
       withEnv("nope", () => assert.throws(() => getBooleanEnvVar(ENV_NAME), /must be either "true" or "false"/));
+    },
+  },
+  {
+    name: "getOptionalEnvVarList returns an empty list when unset, empty or whitespace-only",
+    run: () => {
+      withEnv(undefined, () => assert.deepEqual(getOptionalEnvVarList(ENV_NAME), []));
+      withEnv("", () => assert.deepEqual(getOptionalEnvVarList(ENV_NAME), []));
+      withEnv("  ", () => assert.deepEqual(getOptionalEnvVarList(ENV_NAME), []));
+    },
+  },
+  {
+    name: "getOptionalEnvVarList splits on commas, trims entries and drops empty ones",
+    run: () => {
+      withEnv("0xaa", () => assert.deepEqual(getOptionalEnvVarList(ENV_NAME), ["0xaa"]));
+      withEnv(" 0xaa , 0xbb,,0xcc, ", () =>
+        assert.deepEqual(getOptionalEnvVarList(ENV_NAME), ["0xaa", "0xbb", "0xcc"]),
+      );
     },
   },
 ];

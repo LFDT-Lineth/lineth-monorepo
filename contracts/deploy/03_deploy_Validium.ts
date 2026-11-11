@@ -12,6 +12,7 @@ import {
 import {
   generateRoleAssignments,
   getEnvVarOrDefault,
+  getOptionalEnvVarList,
   getRequiredEnvVar,
   requireAddressFromRegistryOrEnv,
   requireAddressesFromRegistryOrEnv,
@@ -45,10 +46,7 @@ const func: DeployFunction = withSignerUiSession("03_deploy_Validium.ts", async 
   ]);
   const roleAddresses = getEnvVarOrDefault("VALIDIUM_ROLE_ADDRESSES", defaultRoleAddresses);
   const addressFilter = requireAddressFromRegistryOrEnv(network.name, "AddressFilter", "LINETH_ROLLUP_ADDRESS_FILTER");
-  const verifierKeys = (getEnvVarOrDefault("VALIDIUM_VERIFIER_KEYS", "") as string)
-    .split(",")
-    .map((key) => key.trim())
-    .filter((key) => key.length > 0);
+  const verifierKeys = getOptionalEnvVarList("VALIDIUM_VERIFIER_KEYS");
 
   const contract = await deployUpgradableFromFactory(
     "Validium",

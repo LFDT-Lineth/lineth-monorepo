@@ -474,7 +474,11 @@ abstract contract LinethRollupBase is
     uint256 _lastFinalizedBlock,
     bytes32 _finalForcedTransactionRollingHash
   ) internal {
-    _validateL2ComputedRollingHash(_finalizationData.l1RollingHashMessageNumber, _finalizationData.l1RollingHash);
+    _validateL2ComputedRollingHash(
+      _finalizationData.l1RollingHashMessageNumber,
+      _finalizationData.l1RollingHash,
+      _finalizationData.lastFinalizedL1RollingHashMessageNumber
+    );
 
     _validateFilteredAddresses(_finalizationData.filteredAddresses);
 
@@ -657,10 +661,21 @@ abstract contract LinethRollupBase is
 
   /**
    * @notice Internal function to validate l1 rolling hash.
+   * @dev A zero pair signals "no transition" and is accepted as-is. A non-zero message number must strictly advance
+   *   past the last finalized one and its rolling hash must exist on L1. The guest program only emits a non-zero pair
+   *   when anchoring advanced, so a valid proof never carries a stale pair; the explicit monotonicity check is an
+   *   additional safeguard for finalization paths that do not rely on a zk proof (e.g. signed attestations).
+   * @dev `_lastFinalizedRollingHashMessageNumber` is caller-supplied and validated against `currentFinalizedState`
+   *   later in the same call, so any mismatch reverts the whole finalization.
    * @param _rollingHashMessageNumber Message number associated with the rolling hash as computed on L2.
    * @param _rollingHash L1 rolling hash as computed on L2.
+   * @param _lastFinalizedRollingHashMessageNumber The last finalized L1 rolling hash message number.
    */
-  function _validateL2ComputedRollingHash(uint256 _rollingHashMessageNumber, bytes32 _rollingHash) internal view {
+  function _validateL2ComputedRollingHash(
+    uint256 _rollingHashMessageNumber,
+    bytes32 _rollingHash,
+    uint256 _lastFinalizedRollingHashMessageNumber
+  ) internal view {
     if (_rollingHashMessageNumber == 0) {
       if (_rollingHash != EMPTY_HASH) {
         revert MissingMessageNumberForRollingHash(_rollingHash);
@@ -668,6 +683,12 @@ abstract contract LinethRollupBase is
     } else {
       if (_rollingHash == EMPTY_HASH) {
         revert MissingRollingHashForMessageNumber(_rollingHashMessageNumber);
+      }
+      if (_rollingHashMessageNumber <= _lastFinalizedRollingHashMessageNumber) {
+        revert L1RollingHashMessageNumberNotIncreasing(
+          _rollingHashMessageNumber,
+          _lastFinalizedRollingHashMessageNumber
+        );
       }
       if (rollingHashes[_rollingHashMessageNumber] != _rollingHash) {
         revert L1RollingHashDoesNotExistOnL1(_rollingHashMessageNumber, _rollingHash);

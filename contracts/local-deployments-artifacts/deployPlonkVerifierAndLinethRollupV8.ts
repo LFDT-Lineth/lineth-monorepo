@@ -11,7 +11,7 @@ import {
 import {
   abi as ForcedTransactionGatewayAbi,
   bytecode as ForcedTransactionGatewayBytecode,
-} from "./static-artifacts/ForcedTransactionGateway.json";
+} from "./static-artifacts/ForcedTransactionGatewayMimc.json";
 import {
   contractName as MimcAddressContractName,
   abi as MimcAddressAbi,

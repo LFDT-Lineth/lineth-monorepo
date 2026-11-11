@@ -20,8 +20,12 @@ contract TestValidium is Validium {
     rollingHashes[_messageNumber] = _rollingHash;
   }
 
-  function validateL2ComputedRollingHash(uint256 _rollingHashMessageNumber, bytes32 _rollingHash) external view {
-    _validateL2ComputedRollingHash(_rollingHashMessageNumber, _rollingHash);
+  function validateL2ComputedRollingHash(
+    uint256 _rollingHashMessageNumber,
+    bytes32 _rollingHash,
+    uint256 _lastFinalizedRollingHashMessageNumber
+  ) external view {
+    _validateL2ComputedRollingHash(_rollingHashMessageNumber, _rollingHash, _lastFinalizedRollingHashMessageNumber);
   }
 
   function setupParentDataRollingHash(bytes32 _dataRollingHash) external {

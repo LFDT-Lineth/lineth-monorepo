@@ -76,6 +76,23 @@ export function getOptionalEnvVar(name: string): string | undefined {
 }
 
 /**
+ * Reads an optional comma-delimited environment variable into a list of trimmed, non-empty entries.
+ * Returns an empty list when the variable is unset or empty.
+ */
+export function getOptionalEnvVarList(name: string): string[] {
+  const raw = getOptionalEnvVar(name)?.trim();
+  if (!raw) {
+    console.log(`Using default ${name}=[]`);
+    return [];
+  }
+  console.log(`Using provided ${formatEnvVarForLog(name, raw)}`);
+  return raw
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+}
+
+/**
  * Reads an environment variable that must be a valid EVM address.
  * Throws immediately with a clear message if the value is missing or not a valid address.
  * Returns the EIP-55 checksummed form of the address.
