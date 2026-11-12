@@ -155,6 +155,10 @@ func BNPackDigestGnark(api frontend.API, o circuit.Octuplet) frontend.Variable {
 	rc := rangecheck.New(api)
 	var acc frontend.Variable = 0
 	for i := range o {
+		// gnark's weak reduction bounds v to 31 bits, not below p, so a
+		// prover may supply limb + p instead of limb. The 30-bit check
+		// rejects it (limb + p >= p > 2^30), and any v that passes is
+		// below 2^30 < p, hence already canonical.
 		v := reducedLimb(koalaAPI, o[i])
 		rc.Check(v, bnDigestLimbBits)
 		acc = api.Add(api.Mul(acc, 1<<BNPackedBitsPerKoala), v)

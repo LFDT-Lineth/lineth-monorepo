@@ -238,13 +238,18 @@ func (h *BNPackedGnarkHasher) Sum() frontend.Variable {
 		panic(err)
 	}
 	var iv frontend.Variable = 0
+	// if the mode is [BNPackedLengthInIV], the initial chaining value is n, which is a compile-time constant, so it costs no constraints.
 	if h.domain == BNPackedLengthInIV {
+		// empty inputs are rejected, as the initial chaining value is n
 		checkBNPackedNonEmpty(n)
+		// length enters here: n is the initial chaining value
 		iv = n
 	}
 	md := gnarkhash.NewMerkleDamgardHasher(h.api, perm, iv)
 	md.Write(h.pack()...)
+	// if the mode is [BNPackedLengthSuffix], the length n is absorbed as a final block, which costs one extra permutation.
 	if h.domain == BNPackedLengthSuffix {
+		// length enters here: n is absorbed as a final block
 		md.Write(n)
 	}
 	return md.Sum()
@@ -261,14 +266,19 @@ func (h *BNPackedGnarkHasher) pack() []frontend.Variable {
 // each slot fits in 31 bits.
 func packKoalaCanonical(api frontend.API, koalaAPI *circuit.KoalaBearAPI, xs []circuit.Element) []frontend.Variable {
 	rc := rangecheck.New(api)
+	// shift = 2^31, the slot multiplier
 	shift := new(big.Int).Lsh(big.NewInt(1), BNPackedBitsPerKoala)
-
+	// pack the KoalaBear elements into native BN254 variables, 8 per variable
 	res := make([]frontend.Variable, 0, (len(xs)+BNPackedNbKoalaPerLimb-1)/BNPackedNbKoalaPerLimb)
 	for start := 0; start < len(xs); start += BNPackedNbKoalaPerLimb {
 		end := min(start+BNPackedNbKoalaPerLimb, len(xs))
 		var acc frontend.Variable = 0
 		for i := start; i < end; i++ {
+			// canonicalKoala returns a native variable in [0, p) for the KoalaBear element, which is guaranteed to fit in 31 bits.
+			// The packing is big-endian.
+			// uniqueness is guaranteed by the canonicalization, so x and x+p cannot hash differently.
 			x := canonicalKoala(api, koalaAPI, rc, xs[i])
+			// acc = acc * 2^31 + x
 			acc = api.Add(api.Mul(acc, shift), x)
 		}
 		res = append(res, acc)
@@ -304,7 +314,11 @@ func koalaCanonicalSplitHint(_ *big.Int, in, out []*big.Int) error {
 // reducedLimb returns the single limb of e after the weak reduction, as a
 // native variable. A constant zero has no limb at all, and gives 0.
 func reducedLimb(koalaAPI *circuit.KoalaBearAPI, e circuit.Element) frontend.Variable {
+	// Weak reduction: the result v (one 31-bit limb) satisfies v ≡ e (mod p)
+	// and v < 2^31, but NOT v < p, so v is x or x+p. Callers must make it
+	// canonical ([canonicalKoala]) or bound it below p ([BNPackDigestGnark]).
 	reduced := koalaAPI.EmulatedField().Reduce(&e.EV)
+	// A constant zero has no limbs.
 	if len(reduced.Limbs) == 0 {
 		return 0
 	}
@@ -329,6 +343,7 @@ func reducedLimb(koalaAPI *circuit.KoalaBearAPI, e circuit.Element) frontend.Var
 func canonicalKoala(
 	api frontend.API, koalaAPI *circuit.KoalaBearAPI, rc frontend.Rangechecker, e circuit.Element,
 ) frontend.Variable {
+	// v is the single limb of e after the weak reduction, in [0, 2^31)
 	v := reducedLimb(koalaAPI, e)
 
 	out, err := api.Compiler().NewHint(koalaCanonicalSplitHint, 3, v)
