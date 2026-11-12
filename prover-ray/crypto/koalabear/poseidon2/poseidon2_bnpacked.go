@@ -291,9 +291,12 @@ func init() {
 // h < 2^7 and l < 2^24.
 func koalaCanonicalSplitHint(_ *big.Int, in, out []*big.Int) error {
 	q, x := new(big.Int), new(big.Int)
+	// in[0] = q*p + x, 0 <= x < p
 	q.DivMod(in[0], koalaModulus, x)
 	out[0].Set(q)
+	// take the high 7 bits of x as h
 	out[1].Rsh(x, 24)
+	// take the low 24 bits of x as l
 	out[2].And(x, koalaLowMask)
 	return nil
 }
