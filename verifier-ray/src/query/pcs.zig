@@ -33,6 +33,8 @@ pub const Error = merkle.Error || fri.Error || error{
     ConjugateRowShapeMismatch,
     ClaimPointOnQueryPoint,
     InconsistentAliasedClaim,
+    NoFoldMultipleColumns,
+    LevelBeyondBoundaryRound,
     MissingTopLevelAux,
     BoundaryFinalSelfMismatch,
     BoundaryFinalSiblingMismatch,
@@ -303,10 +305,11 @@ pub const VerifyInput = struct {
     entry_claims: []const []const ext.Ext,
     zeta: ext.Ext,
     fold_alphas: []const ext.Ext,
-    /// The top-level DEEP batching challenge. When FRI has one or more fold
-    /// rounds this equals the last entry of `fold_alphas`; when the largest
-    /// opened size is 1 (num_rounds == 0), prover-ray still squeezes this final
-    /// alpha and uses it as alpha_DEEP even though there are no fold alphas.
+    /// The final fold challenge, squeezed unconditionally. With one or more
+    /// fold rounds it equals the last entry of `fold_alphas`. It is only used
+    /// when the schedule has no fold at all (an envelope with
+    /// `log_plaintext_size == log_final_poly_size`): at most one column is
+    /// then opened, so only its alpha^0 term matters (prover-ray uses zero).
     deep_alpha: ext.Ext = ext.Ext.zero(),
     query_positions: []const usize,
     proof: OpeningProof,
@@ -339,8 +342,9 @@ pub fn Reconstructed(comptime system: System) type {
         /// runtime number of opened columns (== the number of Present columns;
         /// == system.columns.len without elision).
         num_entries: usize,
-        /// runtime max size_log2 across Present columns (== restricted
-        /// log_plaintext_size).
+        /// restricted log_plaintext_size: the max size_log2 across Present
+        /// columns, raised to the smallest folded size when it is below it
+        /// (see `minFoldedTopSize`).
         top_size: u8,
 
         // Per-entry arrays, canonical order, filled [0, num_entries).
@@ -537,7 +541,7 @@ pub fn reconstructWithManifest(
         col_position[c] = count.*;
         count.* += 1;
     }
-    r.top_size = top_size;
+    r.top_size = minFoldedTopSize(system.envelope_params, top_size);
     r.num_entries = num_present;
     // A batch that owns columns must keep at least one (prover-ray never
     // empties a batch; an empty batch would have no committed rows to open).
@@ -588,8 +592,24 @@ pub fn reconstructWithManifest(
     }
     if (entry_idx != num_present) return Error.LayoutOverflow;
 
-    r.params = system.envelope_params.restrictTo(top_size) catch return Error.RestrictOutOfRange;
+    r.params = system.envelope_params.restrictTo(r.top_size) catch return Error.RestrictOutOfRange;
     return r;
+}
+
+/// Raises the largest opened size to the smallest one FRI folds,
+/// `2^(log_final_poly_size + 1)` (prover-ray `Params.MinFoldedSizeLog2`), when
+/// the envelope can fold at all. Mirrors prover-ray's `PCS.restrictTo` floor
+/// (#4322): with every column at or below the final polynomial's size the
+/// schedule would otherwise have no fold, hence no fold challenge, so
+/// alpha_DEEP would be zero and only the first column of the DEEP combination
+/// would be checked. With the floor, round 0 folds the zero codeword (no level
+/// sits at the raised top) and the levels join at the boundary round, weighted
+/// by the last fold challenge. The query positions and fold challenges follow
+/// from the restricted params, as on the prover side (`effectiveN`).
+pub fn minFoldedTopSize(envelope: fri.Params, top_size: u8) u8 {
+    const min_folded = envelope.log_final_poly_size + 1;
+    if (top_size < min_folded and min_folded <= envelope.log_plaintext_size) return min_folded;
+    return top_size;
 }
 
 /// Index of the slot in column `k`'s shift schedule that opens the same domain
@@ -1040,6 +1060,12 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
 
     if (input.entry_claims.len != num_entries) return Error.ClaimedValueCountMismatch;
 
+    // Backstop for an envelope that cannot fold at all (log_plaintext_size ==
+    // log_final_poly_size, so `minFoldedTopSize` cannot raise the top): with
+    // no fold challenge only one column can be checked. Mirrors prover-ray's
+    // `checkFoldedSchedule`.
+    if (num_rounds == 0 and num_entries > 1) return Error.NoFoldMultipleColumns;
+
     // Each opened column owns exactly `shifts.len` claimed values. Guarded by a
     // comptime len check so a column-free System (columns == &.{}) doesn't force
     // Zig to analyze indexing into an empty slice.
@@ -1055,6 +1081,16 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     // (the rotations collapse). This is a fixed property of `columns`.
     if (comptime systemHasMultiShiftEntry(system)) {
         if (input.zeta.isZero()) return Error.ZetaZeroWithMultipleShifts;
+    }
+
+    // Every level must join at or before the boundary round. With
+    // log_final_poly_size >= 1, `minFoldedTopSize` can raise the top above a
+    // column smaller than the final polynomial, putting its level past
+    // num_rounds (out of bounds in `seedPair`). Mirrors prover-ray's `resolve`
+    // check; codegen bakes log_final_poly_size = 0, so only hand-written
+    // Systems reach it.
+    for (0..num_entries) |e| {
+        if (recon.top_size - recon.entry_size_log2[e] > num_rounds) return Error.LevelBeyondBoundaryRound;
     }
 
     // zeta must not land in any bundle's domain.

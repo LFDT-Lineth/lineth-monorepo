@@ -970,6 +970,13 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		}
 	}
 
+	// Every committed column has size 1: the PCS keeps one FRI fold anyway.
+	{
+		sys, honest, invalid := buildAllSizeOneSystem()
+		if err := add("AllSizeOne", "AllSizeOneColumns", sys, honest, invalid); err != nil {
+			return nil, nil, err
+		}
+	}
 	return cases, systems, nil
 }
 
@@ -1229,6 +1236,35 @@ func buildDynamicLagrangeSelectorBoundarySystem() (*wiop.System, *wiop.Column) {
 	value := wiop.NewConstantField(elem(99))
 	mod.NewVanishing(sys.Context.Childf("boundary"), wiop.Mul(selector, wiop.Sub(col.View(), value)))
 	return sys, col
+}
+
+// buildAllSizeOneSystem has only size-1 committed columns: a and b are free
+// and c is constrained to be their sum. prover-ray raises the FRI top size
+// to 2^MinFoldedSizeLog2 so the proof still folds once (#4322); the verifier
+// must derive the same fold challenge count and query domain from the
+// transcript. The invalid witness breaks the sum.
+//
+// This case does not guard the boundary alpha_DEEP: size-1 columns equal their
+// claims, so honest DEEP quotients are identically zero and the honest proof
+// verifies even with alpha_DEEP forced to zero, while the invalid witness is
+// rejected by the quotient identity, not by the PCS. The FRI-level
+// all_size_one fixture (testdata/generate/fri) is the alpha_DEEP check.
+func buildAllSizeOneSystem() (*wiop.System, assignFn, assignFn) {
+	sys := wiop.NewSystemf("all-size-one")
+	r0 := sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 1, wiop.PaddingDirectionNone)
+	a := mod.NewColumn(sys.Context.Childf("a"), r0)
+	b := mod.NewColumn(sys.Context.Childf("b"), r0)
+	c := mod.NewColumn(sys.Context.Childf("c"), r0)
+	mod.NewVanishing(sys.Context.Childf("sum"), wiop.Sub(c.View(), wiop.Add(a.View(), b.View())))
+	assign := func(av, bv, cv uint64) assignFn {
+		return func(rt *wiop.Runtime) {
+			rt.AssignColumn(a, concreteBase(elems(av)))
+			rt.AssignColumn(b, concreteBase(elems(bv)))
+			rt.AssignColumn(c, concreteBase(elems(cv)))
+		}
+	}
+	return sys, assign(3, 4, 7), assign(3, 4, 8)
 }
 
 // buildPublicInputSystem mirrors prover-ray's basic public-input flow: open one
