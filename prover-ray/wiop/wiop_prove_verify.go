@@ -361,49 +361,43 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 // their result.
 func (sys *System) UnreducedQueries() []Query {
 	var out []Query
+	sys.forEachQuery(func(q Query) {
+		if !q.IsReduced() {
+			out = append(out, q)
+		}
+	})
+	return out
+}
+
+// forEachQuery calls fn on every query of the system, in the order documented
+// on [System.UnreducedQueries].
+func (sys *System) forEachQuery(fn func(Query)) {
 	for _, m := range sys.Modules {
 		for _, q := range m.Vanishings {
-			if !q.IsReduced() {
-				out = append(out, q)
-			}
+			fn(q)
 		}
 		for _, q := range m.RangeChecks {
-			if !q.IsReduced() {
-				out = append(out, q)
-			}
+			fn(q)
 		}
 		for _, q := range m.NonNatives {
-			if !q.IsReduced() {
-				out = append(out, q)
-			}
+			fn(q)
 		}
 	}
 	for _, q := range sys.LagrangeEvals {
-		if !q.IsReduced() {
-			out = append(out, q)
-		}
+		fn(q)
 	}
 	for _, q := range sys.TableRelations {
-		if !q.IsReduced() {
-			out = append(out, q)
-		}
+		fn(q)
 	}
 	for _, q := range sys.LogDerivativeSums {
-		if !q.IsReduced() {
-			out = append(out, q)
-		}
+		fn(q)
 	}
 	for _, q := range sys.GrandProducts {
-		if !q.IsReduced() {
-			out = append(out, q)
-		}
+		fn(q)
 	}
 	for _, q := range sys.MessageBuses {
-		if !q.IsReduced() {
-			out = append(out, q)
-		}
+		fn(q)
 	}
-	return out
 }
 
 // checkUnreducedQueries calls [Query.Check] on every query that has not yet
