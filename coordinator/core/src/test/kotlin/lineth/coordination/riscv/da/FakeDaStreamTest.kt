@@ -4,6 +4,7 @@ import linea.da.CompressedConflation
 import linea.da.DaConstants.BLOB_BYTES
 import linea.da.DaConstants.BLOB_PAYLOAD_CAPACITY
 import linea.da.DaConstants.BLOB_PAYLOAD_TERMINAL
+import linea.da.DaConstants.KZG_POINT_BYTES
 import linea.da.DaStream
 import linea.da.DaStreamException
 import linea.da.DaStreamPosition
@@ -48,6 +49,9 @@ class FakeDaStreamTest {
     assertThat(bytes[blob.payloadBytes]).isEqualTo(BLOB_PAYLOAD_TERMINAL)
     assertThat(bytes.copyOfRange(blob.payloadBytes + 1, BLOB_BYTES)).containsOnly(0)
     assertThat(blob.chunkHash).isEqualTo(FakeDaStream.fakeVersionedHash(bytes))
+    assertThat(blob.kzgCommitment).hasSize(KZG_POINT_BYTES).isEqualTo(FakeDaStream.fakeKzgCommitment(bytes))
+    assertThat(blob.kzgProof).hasSize(KZG_POINT_BYTES).isEqualTo(FakeDaStream.fakeKzgProof(bytes))
+    assertThat(blob.kzgCommitment).isNotEqualTo(blob.kzgProof)
     assertThat(blob.prevDataRollingHash).isEqualTo(prevDataRollingHash)
     assertThat(blob.dataRollingHash)
       .isEqualTo(Keccak256DataRollingHashCalculator.fold(prevDataRollingHash, blob.chunkHash))
@@ -92,7 +96,7 @@ class FakeDaStreamTest {
     val blob = stream.flush()!!
 
     assertThat(blob.payloadBytes).isEqualTo(compressed.compressedBytes)
-    assertThat(blob.segmentEnds).containsExactly(SegmentEnd(1UL, compressed.compressedBytes))
+    assertThat(blob.segmentEnds).containsExactly(SegmentEnd(1UL, tailBytes = 0))
     assertBlobLayout(blob, prevDataRollingHash = genesisDataRollingHash)
     assertThat(stream.flush()).isNull()
   }
@@ -106,7 +110,7 @@ class FakeDaStreamTest {
 
     assertThat(sealed).hasSize(1)
     assertThat(sealed.single().payloadBytes).isEqualTo(BLOB_PAYLOAD_CAPACITY)
-    assertThat(sealed.single().segmentEnds).containsExactly(SegmentEnd(1UL, BLOB_PAYLOAD_CAPACITY))
+    assertThat(sealed.single().segmentEnds).containsExactly(SegmentEnd(1UL, tailBytes = 0))
     assertBlobLayout(sealed.single(), prevDataRollingHash = genesisDataRollingHash)
   }
 
@@ -122,8 +126,11 @@ class FakeDaStreamTest {
     val sealed = stream.append(third)
 
     assertThat(sealed).hasSize(1)
-    assertThat(sealed.single().segmentEnds).containsExactly(SegmentEnd(1UL, 40_000), SegmentEnd(2UL, 90_000))
-    assertThat(stream.flush()!!.segmentEnds).containsExactly(SegmentEnd(3UL, 90_000 + 60_000 - BLOB_PAYLOAD_CAPACITY))
+    assertThat(sealed.single().segmentEnds).containsExactly(
+      SegmentEnd(1UL, tailBytes = BLOB_PAYLOAD_CAPACITY - 40_000),
+      SegmentEnd(2UL, tailBytes = BLOB_PAYLOAD_CAPACITY - 90_000),
+    )
+    assertThat(stream.flush()!!.segmentEnds).containsExactly(SegmentEnd(3UL, tailBytes = 0))
   }
 
   @Test
@@ -134,13 +141,13 @@ class FakeDaStreamTest {
     val sealed = stream.appendAll(blockRlpsWithFrameSize(2UL, 3 * BLOB_PAYLOAD_CAPACITY))
 
     assertThat(sealed).hasSize(3)
-    assertThat(sealed[0].segmentEnds).containsExactly(SegmentEnd(1UL, 10_000))
+    assertThat(sealed[0].segmentEnds).containsExactly(SegmentEnd(1UL, tailBytes = BLOB_PAYLOAD_CAPACITY - 10_000))
     assertThat(sealed[1].segmentEnds).isEmpty()
     assertThat(sealed[2].segmentEnds).isEmpty()
     assertThat(sealed).allSatisfy { assertThat(it.payloadBytes).isEqualTo(BLOB_PAYLOAD_CAPACITY) }
     assertThat(sealed[1].prevDataRollingHash).isEqualTo(sealed[0].dataRollingHash)
     assertThat(sealed[2].prevDataRollingHash).isEqualTo(sealed[1].dataRollingHash)
-    assertThat(stream.flush()!!.segmentEnds).containsExactly(SegmentEnd(2UL, 10_000))
+    assertThat(stream.flush()!!.segmentEnds).containsExactly(SegmentEnd(2UL, tailBytes = 0))
   }
 
   @Test
@@ -176,7 +183,7 @@ class FakeDaStreamTest {
     val cutAfterC = blob2.segmentEnds.single { it.conflationEndBlock == 3UL }
     return DaStreamPosition(
       dataRollingHash = blob2.dataRollingHash,
-      tailBytes = blob2.payloadBytes - cutAfterC.offset,
+      tailBytes = cutAfterC.tailBytes,
       sharedBlob = blob2.blobBytes(),
       prevDataRollingHash = blob2.prevDataRollingHash,
     )
@@ -194,6 +201,8 @@ class FakeDaStreamTest {
     assertThat(
       blobs.map { it.dataRollingHash },
     ).containsExactlyElementsOf(uninterrupted.drop(1).map { it.dataRollingHash })
+    assertThat(blobs.map { it.kzgCommitment }).containsExactlyElementsOf(uninterrupted.drop(1).map { it.kzgCommitment })
+    assertThat(blobs.map { it.kzgProof }).containsExactlyElementsOf(uninterrupted.drop(1).map { it.kzgProof })
     // The re-sealed shared blob only reports cuts of frames appended after the resume: none here, as D spans into blob3.
     assertThat(blobs[0].segmentEnds).isEmpty()
     assertThat(blobs[1].segmentEnds).isEqualTo(uninterrupted[2].segmentEnds)
@@ -233,7 +242,7 @@ class FakeDaStreamTest {
     val resumed = FakeDaStream(
       DaStreamPosition(
         dataRollingHash = flushed.dataRollingHash,
-        tailBytes = flushed.payloadBytes - cutAfterA.offset,
+        tailBytes = cutAfterA.tailBytes,
         sharedBlob = flushed.blobBytes(),
         prevDataRollingHash = flushed.prevDataRollingHash,
       ),
@@ -246,7 +255,7 @@ class FakeDaStreamTest {
     assertThat(sealed).hasSize(1)
     assertThat(sealed.single().blobBytes()).isEqualTo(flushed.blobBytes())
     assertThat(sealed.single().payloadBytes).isEqualTo(flushed.payloadBytes)
-    assertThat(sealed.single().segmentEnds).containsExactly(SegmentEnd(3UL, flushed.payloadBytes))
+    assertThat(sealed.single().segmentEnds).containsExactly(SegmentEnd(3UL, tailBytes = 0))
   }
 
   @Test

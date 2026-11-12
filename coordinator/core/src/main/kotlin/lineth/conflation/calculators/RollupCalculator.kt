@@ -26,14 +26,14 @@ interface RollupTriggerCalculator {
 }
 
 /**
- * Receives each rollup cut by a [RollupCalculatorV2]. Called synchronously from inside [GlobalBlobCalculator]: must only
+ * Receives each rollup cut by a [RollupCalculator]. Called synchronously from inside [GlobalBlobCalculator]: must only
  * enqueue the rollup and return, not call back into the calculators.
  */
-fun interface RollupHandlerV2 {
+fun interface RollupHandler {
   fun onRollup(rollup: Rollup)
 }
 
 /** Cuts RISC-V rollups out of the [BlobEvent]s emitted by [GlobalBlobCalculator]. */
-interface RollupCalculatorV2 : BlobHandler {
-  fun onRollup(handler: RollupHandlerV2)
+interface RollupCalculator : BlobHandler {
+  fun onRollup(handler: RollupHandler)
 }

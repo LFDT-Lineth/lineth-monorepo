@@ -20,11 +20,12 @@ import linea.domain.ConflationCalculationResult
 import linea.domain.ConflationTrigger
 import lineth.conflation.calculators.BlobTriggerCalculator
 import lineth.conflation.calculators.BlobTriggerCalculatorByTargetBlockNumbers
-import lineth.conflation.calculators.DaPipelineTestSupport
-import lineth.conflation.calculators.DaPipelineTestSupport.baseTime
-import lineth.conflation.calculators.DaPipelineTestSupport.genesisDataRollingHash
+import lineth.conflation.calculators.DaTestConflations
+import lineth.conflation.calculators.DaTestConflations.baseTime
+import lineth.conflation.calculators.DaTestConflations.genesisDataRollingHash
 import lineth.conflation.calculators.RollupTriggerCalculator
 import lineth.conflation.calculators.RollupTriggerCalculatorByConflationCount
+import lineth.coordination.riscv.da.FakeDaStream
 import lineth.coordination.riscv.da.FakeDaStreamFactory
 import lineth.persistence.FakeBatchesRepository
 import lineth.vertx.vertxTestOptions
@@ -101,7 +102,7 @@ class RollupProofGeneratingCoordinatorTest {
   }
 
   private fun conflation(number: ULong, frameSize: Int): BlocksConflation =
-    DaPipelineTestSupport.conflation(number, frameSize).also { conflation ->
+    DaTestConflations.conflation(number, frameSize).also { conflation ->
       conflation.blocks.forEach { l2Blocks[it.number] = it }
     }
 
@@ -142,7 +143,7 @@ class RollupProofGeneratingCoordinatorTest {
       daStreamFactory = FakeDaStreamFactory(),
       blobTriggers = blobTriggers,
       rollupTriggers = rollupTriggers,
-      blockEncoder = DaPipelineTestSupport.encoder,
+      blockEncoder = DaTestConflations.encoder,
       config = RollupProofGeneratingCoordinator.Config(
         pollingInterval = 1.seconds,
         daCodecVersion = DaCodecVersion.FAKE,
@@ -190,6 +191,11 @@ class RollupProofGeneratingCoordinatorTest {
 
     val (request1, request2) = requests
     assertThat(request1.chunks).hasSize(2).allSatisfy { assertThat(it.blobBytes).hasSize(DaConstants.BLOB_BYTES) }
+    // Each chunk carries the stream's KZG commitment and proof for its blob.
+    assertThat(request1.chunks).allSatisfy {
+      assertThat(it.kzgCommitment).isEqualTo(FakeDaStream.fakeKzgCommitment(it.blobBytes))
+      assertThat(it.kzgProof).isEqualTo(FakeDaStream.fakeKzgProof(it.blobBytes))
+    }
     assertThat(request1.parentDataRollingHash).isEqualTo(genesisDataRollingHash)
     assertThat(request1.parentDataTailTakeBytes).isZero()
     assertThat(request1.boundaryPrevDataRollingHash).isNull()
@@ -267,6 +273,38 @@ class RollupProofGeneratingCoordinatorTest {
     restarted.action().get()
 
     assertThat(fetchedRanges).containsExactly(4UL..4UL, 5UL..5UL)
+    assertThat(requests.single()).isEqualTo(expectedRequest2)
+  }
+
+  @Test
+  fun `a restart inside a short shared blob that the persisted batches fill exactly is ended by the rollup deadline`() {
+    // A blob flushed after 2 holds [1 (10k), 2 (30k)]; one rollup per conflation, so rollup 1 ends inside it.
+    val first = conflation(1UL, 10_000)
+    val second = conflation(2UL, 30_000)
+    val uninterrupted = createCoordinator(
+      rollupTriggers = listOf(RollupTriggerCalculatorByConflationCount(1)),
+      blobTriggers = listOf(BlobTriggerCalculatorByTargetBlockNumbers(setOf(2UL))),
+    )
+    prove(first, second)
+    uninterrupted.action().get()
+    val (_, expectedRequest2) = requests
+    val context1 = pollProofs().first()
+    proverClient.delegate.requests.clear()
+    proverClient.delegate.responseProvider = { null }
+
+    // After the restart, batch 2 reproduces the shared blob exactly, so appending it does not seal the blob, and no
+    // further batch is persisted to seal it.
+    val restarted = createCoordinator(
+      resumePoint = resumePointAfter(context1),
+      rollupTriggers = listOf(RollupTriggerCalculatorByConflationCount(1)),
+      rollupDeadline = 1.minutes,
+    )
+    clock.setTimeTo(baseTime)
+    restarted.action().get()
+    assertThat(requests).isEmpty()
+
+    clock.setTimeTo(baseTime + 2.minutes)
+    restarted.action().get()
     assertThat(requests.single()).isEqualTo(expectedRequest2)
   }
 

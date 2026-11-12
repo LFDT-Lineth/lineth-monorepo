@@ -60,7 +60,7 @@ class RollupDaWitness(
   }
 }
 
-/** A rollup cut by a [RollupCalculatorV2]: its conflations, in order, and its DA witness. */
+/** A rollup cut by a [RollupCalculator]: its conflations, in order, and its DA witness. */
 data class Rollup(
   val conflations: List<BlocksConflation>,
   val da: RollupDaWitness,
@@ -128,7 +128,7 @@ class RollupDaAssembler(start: DaStreamPosition) {
     check(conflations.lastOrNull()?.endBlockNumber == at.conflationEndBlock) {
       "cut=$at does not end the open rollup's last conflation=${conflations.lastOrNull()?.intervalString()}"
     }
-    val tail = last.payloadBytes - at.offset // payload bytes after the cut
+    val tail = at.tailBytes
     val witness = RollupDaWitness(
       blobs = blobs.toList(),
       parentDataRollingHash = parent,

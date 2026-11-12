@@ -22,10 +22,10 @@ import linea.timer.VertxPeriodicPollingService
 import lineth.conflation.ConflationHandler
 import lineth.conflation.calculators.BlobTriggerCalculator
 import lineth.conflation.calculators.GlobalBlobCalculator
-import lineth.conflation.calculators.GlobalRollupCalculatorV2
+import lineth.conflation.calculators.GlobalRollupCalculator
 import lineth.conflation.calculators.Rollup
 import lineth.conflation.calculators.RollupDaAssembler
-import lineth.conflation.calculators.RollupHandlerV2
+import lineth.conflation.calculators.RollupHandler
 import lineth.conflation.calculators.RollupTriggerCalculator
 import lineth.encoding.BlockEncoder
 import lineth.persistence.BatchesRepository
@@ -76,7 +76,7 @@ class RollupProofGeneratingCoordinator(
   private val clock: Clock = Clock.System,
   private val log: Logger = LogManager.getLogger(RollupProofGeneratingCoordinator::class.java),
 ) : ConflationHandler,
-  RollupHandlerV2,
+  RollupHandler,
   VertxPeriodicPollingService(
     vertx = vertx,
     name = "RollupProofGeneratingCoordinator",
@@ -97,7 +97,7 @@ class RollupProofGeneratingCoordinator(
   private class DaPipeline(
     val daStream: DaStream,
     val blobCalculator: GlobalBlobCalculator,
-    val rollupCalculator: GlobalRollupCalculatorV2,
+    val rollupCalculator: GlobalRollupCalculator,
   )
 
   private var pipeline: DaPipeline? = null
@@ -150,7 +150,7 @@ class RollupProofGeneratingCoordinator(
     val position = resumePoint.daPosition
     val daStream = daStreamFactory.open(config.daCodecVersion, config.dictionaryPath, position)
     lateinit var blobCalculator: GlobalBlobCalculator
-    val rollupCalculator = GlobalRollupCalculatorV2(
+    val rollupCalculator = GlobalRollupCalculator(
       triggers = rollupTriggers,
       openRollup = RollupDaAssembler(position),
       blobCalculator = { blobCalculator },
@@ -162,7 +162,7 @@ class RollupProofGeneratingCoordinator(
       blockEncoder = blockEncoder,
       handler = rollupCalculator,
       blobDeadline = config.blobDeadline,
-      resumingInsideSharedBlob = position.tailBytes > 0,
+      sharedBlobTailBytes = position.tailBytes,
     )
     pipeline = DaPipeline(daStream, blobCalculator, rollupCalculator)
     lastFedBlockNumber = resumePoint.lastConflationEndBlock
@@ -297,15 +297,14 @@ class RollupProofGeneratingCoordinator(
     return RollupProofRequestV1(
       conflations = rollup.conflations.map { ConflationWitness(it.blocks.map(blockEncoder::encode)) },
       l2Executions = l2Executions,
-      // The blob's KZG commitment and proof are still to do: the DA stream does not compute them yet.
       chunks = da.blobs.map {
         ChunkWitness(
           chunkHash = it.chunkHash,
           isCalldata = false,
           blobBytes = it.blobBytes(),
           calldataBytes = ByteArray(0),
-          kzgCommitment = ByteArray(ChunkWitness.KZG_POINT_BYTES_LENGTH),
-          kzgProof = ByteArray(ChunkWitness.KZG_POINT_BYTES_LENGTH),
+          kzgCommitment = it.kzgCommitment,
+          kzgProof = it.kzgProof,
         )
       },
       parentDataRollingHash = da.parentDataRollingHash,

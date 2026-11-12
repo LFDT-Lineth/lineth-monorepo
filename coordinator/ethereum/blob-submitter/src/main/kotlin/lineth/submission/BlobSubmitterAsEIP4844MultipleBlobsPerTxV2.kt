@@ -59,7 +59,7 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTxV2(
       )
       .thenCompose<List<String>> { gasPriceCaps ->
         val chunkedBlobs = blobsToSubmit(blobRecord).chunked(targetBlobsPerTransaction.toInt())
-        (if (isEthCall) chunkedBlobs.take(1) else chunkedBlobs)
+        (if (isEthCall) listOf(chunkedBlobs.first()) else chunkedBlobs)
           .fold(SafeFuture.completedFuture(emptyList())) { chainOfFutures, blobs ->
             val newChainOfFutures = chainOfFutures
               .thenCompose { listOfTxHashes ->

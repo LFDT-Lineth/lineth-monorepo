@@ -19,18 +19,20 @@ import kotlin.time.Instant
  * @param blobCalculator the blob calculator feeding this one, used to flush the open blob. Passed as a provider
  *   because the blob calculator in turn takes this calculator as its [BlobHandler].
  * @param rollupDeadline ends the open rollup (by flushing the open blob) once its oldest pending conflation's first
- *   block is this old; see [checkDeadline].
+ *   block is this old; see [checkDeadline]. Like the blob deadline, it is measured from the block timestamp and
+ *   conflations arrive only once their execution proof is done, so it must be well above the execution proving time:
+ *   otherwise every rollup ends after a single conflation.
  */
-class GlobalRollupCalculatorV2(
+class GlobalRollupCalculator(
   private val triggers: List<RollupTriggerCalculator>,
   private val openRollup: RollupDaAssembler,
   private val blobCalculator: () -> GlobalBlobCalculator,
   private val rollupDeadline: Duration? = null,
-  private val log: Logger = LogManager.getLogger(GlobalRollupCalculatorV2::class.java),
-) : RollupCalculatorV2 {
-  private var rollupHandler: RollupHandlerV2? = null
+  private val log: Logger = LogManager.getLogger(GlobalRollupCalculator::class.java),
+) : RollupCalculator {
+  private var rollupHandler: RollupHandler? = null
 
-  override fun onRollup(handler: RollupHandlerV2) {
+  override fun onRollup(handler: RollupHandler) {
     rollupHandler = handler
   }
 
