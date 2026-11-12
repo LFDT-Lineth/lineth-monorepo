@@ -3,6 +3,8 @@ package field
 import (
 	"slices"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 // randomElems returns a slice of n pseudo-random base field elements.
@@ -674,6 +676,7 @@ func TestVecKernelsInPlace(t *testing.T) {
 		"Add": VecAddBaseBase,
 		"Sub": VecSubBaseBase,
 		"Mul": VecMulBaseBase,
+		"Neg": func(res, a, _ []Element) { VecNegBase(res, a) },
 	}
 	for name, f := range baseCases {
 		want := make([]Element, testN)
@@ -685,7 +688,10 @@ func TestVecKernelsInPlace(t *testing.T) {
 		}
 	}
 	extCases := map[string]func(res, x []Ext){
-		"MulExtBase": func(res, x []Ext) { VecMulExtBase(res, x, b) },
+		"MulExtBase":  func(res, x []Ext) { VecMulExtBase(res, x, b) },
+		"NegExt":      func(res, x []Ext) { VecNegExt(res, x) },
+		"SubBaseExt":  func(res, x []Ext) { VecSubBaseExt(res, b, x) },
+		"ScaleExtExt": func(res, x []Ext) { VecScaleExtExt(res, x[1], x) },
 	}
 	for name, f := range extCases {
 		want := make([]Ext, testN)
@@ -695,5 +701,62 @@ func TestVecKernelsInPlace(t *testing.T) {
 		if !slices.Equal(got, want) {
 			t.Errorf("%s: in-place result differs", name)
 		}
+	}
+}
+
+// TestVecVectorisedMatchesElementwise checks the helpers built from
+// gnark-crypto kernels against their element-wise definitions at lengths
+// around and across the kernels' 16-lane blocks, out of place and in place.
+func TestVecVectorisedMatchesElementwise(t *testing.T) {
+	lengths := []int{1000}
+	for n := range 71 {
+		lengths = append(lengths, n)
+	}
+	for _, n := range lengths {
+		a, x, y := randomElems(n), randomExts(n), randomExts(n)
+		var s Ext
+		s.SetRandom()
+
+		wantNegBase := make([]Element, n)
+		wantNegExt, wantSub, wantSAB, wantSAE := make([]Ext, n), make([]Ext, n), make([]Ext, n), make([]Ext, n)
+		for i := range n {
+			wantNegBase[i].Neg(&a[i])
+			wantNegExt[i].Neg(&x[i])
+			wantSub[i].Sub(new(Ext), &x[i]) // -x[i] + a[i]
+			wantSub[i].B0.A0.Add(&wantSub[i].B0.A0, &a[i])
+			wantSAB[i].Mul(&y[i], &s)
+			wantSAB[i].B0.A0.Add(&wantSAB[i].B0.A0, &a[i])
+			wantSAE[i].Mul(&y[i], &s)
+			wantSAE[i].Add(&wantSAE[i], &x[i])
+		}
+
+		gotB := make([]Element, n)
+		VecNegBase(gotB, a)
+		require.Equal(t, wantNegBase, gotB, "VecNegBase n=%d", n)
+		gotB = slices.Clone(a)
+		VecNegBase(gotB, gotB)
+		require.Equal(t, wantNegBase, gotB, "VecNegBase in place n=%d", n)
+
+		got := make([]Ext, n)
+		VecNegExt(got, x)
+		require.Equal(t, wantNegExt, got, "VecNegExt n=%d", n)
+		got = slices.Clone(x)
+		VecNegExt(got, got)
+		require.Equal(t, wantNegExt, got, "VecNegExt in place n=%d", n)
+
+		got = make([]Ext, n)
+		VecSubBaseExt(got, a, x)
+		require.Equal(t, wantSub, got, "VecSubBaseExt n=%d", n)
+		got = slices.Clone(x)
+		VecSubBaseExt(got, a, got)
+		require.Equal(t, wantSub, got, "VecSubBaseExt in place n=%d", n)
+
+		got = slices.Clone(y)
+		VecScaleAddExtBase(got, s, a)
+		require.Equal(t, wantSAB, got, "VecScaleAddExtBase n=%d", n)
+
+		got = slices.Clone(y)
+		VecScaleAddExtExt(got, s, x)
+		require.Equal(t, wantSAE, got, "VecScaleAddExtExt n=%d", n)
 	}
 }
