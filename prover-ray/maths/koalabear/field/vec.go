@@ -353,12 +353,11 @@ func VecScaleAddExtExt(acc []Ext, s Ext, b []Ext) {
 // ---------------------------------------------------------------------------
 
 // VecBatchInvBase sets res[i] = 1/a[i] for all i over the base field, using
-// the Montgomery batch-inversion trick (one inversion + n multiplications).
-// Zeroes map to zero. res and a must have equal length.
+// the Montgomery batch-inversion trick (one inversion + n multiplications)
+// without allocating; see [BatchInvertInto]. Zeroes map to zero. res and a
+// must have equal length; res may alias a.
 func VecBatchInvBase(res, a []Element) {
-	mustEqualLen2(len(res), len(a))
-	tmp := BatchInvert(a)
-	copy(res, tmp)
+	BatchInvertInto(res, a)
 }
 
 // VecBatchInvExt sets res[i] = 1/a[i] for all i over the extension field,
