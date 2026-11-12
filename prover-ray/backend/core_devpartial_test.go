@@ -2,6 +2,7 @@ package backend
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -108,21 +109,18 @@ func TestDevmodePublicInputs(t *testing.T) {
 	assert.ErrorContains(t, err, "traced guest output byte 3")
 }
 
-// TestNewDevPartial_EveryQueryIsChecked checks that every query left in the
-// check-only system is of a type whose Check runs on the trace. A query whose
-// Check does nothing, such as a MessageBus, would silently not be checked.
-func TestNewDevPartial_EveryQueryIsChecked(t *testing.T) {
+// TestNewDevPartial_OnlyEvaluationsLeft checks that dev-partial runs every
+// compiler pass but the PCS, as full does: the only queries left are the
+// evaluations the PCS would open, which the check runs in the clear.
+func TestNewDevPartial_OnlyEvaluationsLeft(t *testing.T) {
 	for _, shardSize := range []uint64{0, devPartialShardSize} {
 		c, err := New(Config{Mode: ProverModeDevPartial, GuestsDir: t.TempDir(), ShardSize: shardSize})
 		require.NoError(t, err)
 		queries := c.sys.UnreducedQueries()
 		require.NotEmpty(t, queries)
 		for _, q := range queries {
-			switch q.(type) {
-			// Before adding a type, check that its Check runs on the trace.
-			case *wiop.Vanishing, *wiop.TableRelationQuery:
-			default:
-				t.Errorf("shard size %d: %T at %s is not a query type dev-partial checks", shardSize, q, q.Context().Path())
+			if _, ok := q.(*wiop.LagrangeEval); !ok {
+				t.Errorf("shard size %d: %T at %s is not compiled", shardSize, q, q.Context().Path())
 			}
 		}
 	}
@@ -162,10 +160,10 @@ func TestProveDevPartial_Sharded_UnbalancedBus(t *testing.T) {
 	c, err := New(Config{Mode: ProverModeDevPartial, GuestsDir: dir, ShardSize: devPartialShardSize})
 	require.NoError(t, err)
 	interpreter := interpreterColumns(t, c)
-	tamper := &tamperAction{f: func(rt *wiop.Runtime) {
+	tamper := tamperAfterTrace(t, c)
+	tamper.f = func(rt *wiop.Runtime) {
 		setInterpreterRows(t, rt, interpreter, func(rows []field.Element, row int) { rows[row] = rows[row-1] })
-	}}
-	c.sys.Rounds[1].RegisterAction(tamper)
+	}
 
 	result := c.Prove(context.Background(), devPartialJob(id))
 	assert.Equal(t, ResultStatusFailed, result.Status)
@@ -183,6 +181,19 @@ func interpreterColumns(t *testing.T, c *Core) []*wiop.Column {
 	}
 	require.NotEmpty(t, interpreter, "the interpreter module should have trace columns")
 	return interpreter
+}
+
+// interpreterColumn returns the first interpreter trace column whose name
+// starts with name.
+func interpreterColumn(t *testing.T, c *Core, name string) *wiop.Column {
+	t.Helper()
+	for _, col := range interpreterColumns(t, c) {
+		if strings.Contains(col.Context.Path(), "/column-"+name) {
+			return col
+		}
+	}
+	require.FailNow(t, "no interpreter column "+name)
+	return nil
 }
 
 // setInterpreterRows overrides the interpreter columns with edit applied to
@@ -216,17 +227,29 @@ func (a *tamperAction) Run(rt *wiop.Runtime) {
 	}
 }
 
+// tamperAfterTrace registers a tamperAction right after the action that
+// assigns the trace, so that the compiled checks see the tampered trace, as
+// they would a wrong one.
+func tamperAfterTrace(t *testing.T, c *Core) *tamperAction {
+	t.Helper()
+	round := c.sys.Rounds[1]
+	require.Contains(t, fmt.Sprintf("%T", round.ProverActions[0]), "assignTraceRoundAction",
+		"the first action of the trace round should assign the trace")
+	tamper := &tamperAction{}
+	round.ProverActions = slices.Insert(round.ProverActions, 1, wiop.ProverAction(tamper))
+	return tamper
+}
+
 // TestCheckAssignment checks that dev-partial rejects a trace that breaks a
-// constraint, and one that keeps every constraint but unbalances the message
-// bus, which only the verifier actions check.
+// constraint, and one that keeps every row constraint but unbalances the
+// message bus.
 func TestCheckAssignment(t *testing.T) {
 	hash, framed := referenceFrame(t)
 	dir := t.TempDir()
 	id := writeGuest(t, dir, minimal_elf.OutputAndLogELF(hash, framed))
 	c, err := New(Config{Mode: ProverModeDevPartial, GuestsDir: dir})
 	require.NoError(t, err)
-	tamper := &tamperAction{}
-	c.sys.Rounds[1].RegisterAction(tamper)
+	tamper := tamperAfterTrace(t, c)
 
 	g, err := c.loadGuest(id)
 	require.NoError(t, err)
@@ -250,14 +273,16 @@ func TestCheckAssignment(t *testing.T) {
 	})
 
 	t.Run("broken constraint", func(t *testing.T) {
+		// An inverse column is in a row constraint only, no lookup or bus.
+		inv := interpreterColumn(t, c, "(inv ")
 		tamper.f = func(rt *wiop.Runtime) {
-			set(rt, func(rows []field.Element, row int) {
+			setInterpreterRows(t, rt, []*wiop.Column{inv}, func(rows []field.Element, row int) {
 				one := field.One()
 				rows[row].Add(&rows[row], &one)
 			})
 		}
 		_, _, err := c.checkAssignment(assign)
-		assert.ErrorContains(t, err, "unreduced query check failed")
+		assert.ErrorContains(t, err, "global quotient check failed")
 	})
 
 	t.Run("unbalanced message bus", func(t *testing.T) {

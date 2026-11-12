@@ -19,7 +19,6 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/risc5"
@@ -201,9 +200,10 @@ func newDevZkVM(cfg Config, mode ProverMode) (*Core, error) {
 	}, nil
 }
 
-// newDevPartial builds a check-only Core: the R5 arithmetization and its public
-// inputs, without a PCS, so that proving a trace commits to nothing and checks
-// it against every constraint. Its proofs are devmode proofs.
+// newDevPartial builds a Core that checks the trace: the R5 arithmetization and
+// its public inputs, compiled as in full but without a PCS, so that proving a
+// trace commits to nothing and checks it against every constraint. Its proofs
+// are devmode proofs.
 func newDevPartial(cfg Config, mode ProverMode) (*Core, error) {
 	binf, err := embedded.CompiledBinaryFile()
 	if err != nil {
@@ -222,18 +222,15 @@ func newDevPartial(cfg Config, mode ProverMode) (*Core, error) {
 	settings := zkcdriver.Settings{TraceRound: 1, ShardSize: cfg.ShardSize}
 	driver := zkcdriver.NewZkCDriver(sys, settings, bytes.NewReader(bin))
 	risc5.RegisterPublicInputs(sys)
-	if err := compilers.Configure(sys,
+	// Every pass but the PCS, as in full. Without a PCS no column data enters
+	// the transcript, so every coin is fixed and the same on every shard: fine
+	// to check our own trace, not a proof.
+	if err := compilers.CompileFull(sys,
 		compilers.ConfigureMessageBus(messagebus.WithoutSharedRandomness()),
 		compilers.WithoutPCS(),
 	); err != nil {
-		return nil, fmt.Errorf("configuring the wiop system: %w", err)
+		return nil, fmt.Errorf("compiling the wiop system: %w", err)
 	}
-	// A message bus has no check of its own: reduce it to a grand product,
-	// which has one. Every other query is checked as is. Without a PCS no
-	// column data enters the transcript, so the bus coins are fixed and the
-	// same on every shard: fine to check our own trace, not a proof.
-	messagebus.Compile(sys)
-	grandproduct.Compile(sys)
 	risc5.CheckPublicInputs(sys)
 
 	return &Core{
@@ -360,9 +357,10 @@ func (c *Core) proveDevPartial(ctx context.Context, job Job) Result {
 	}
 }
 
-// checkAssignment proves the assignment, which commits to nothing but checks
-// every query, then verifies the proof, which runs the verifier actions, such
-// as the message-bus balance. It returns the proof and its public inputs.
+// checkAssignment proves the assignment, which commits to nothing and checks
+// the evaluations left, then verifies the proof, which runs the compiled
+// checks: the quotients, the lookups and the message bus. It returns the proof
+// and its public inputs.
 func (c *Core) checkAssignment(assign func(*wiop.Runtime)) (proof wiop.Proof, pub wiop.PublicInput, err error) {
 	// A failed query check panics.
 	defer func() {

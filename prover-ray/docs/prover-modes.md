@@ -42,7 +42,7 @@ For rollup and aggregation, the modes other than `dev-mock` need the layer's gue
 ### dev-partial
 
 - Runs the guest and traces it, in pieces called shards when `shard_size` is set. A real block needs it.
-- Checks every shard against every constraint.
+- Checks every shard against every constraint, compiled as in `full` but without the commitment (PCS).
 - With shards, the mock conglomeration checks that:
   - the shards agree on the guest output;
   - every shard is there;
@@ -51,7 +51,7 @@ For rollup and aggregation, the modes other than `dev-mock` need the layer's gue
   - a real wiop proof that the next layer can verify;
   - but anyone can make one, so it proves nothing;
   - its program VK is zero, as nothing is committed.
-- Needs a lot of memory: about 40 GB for the small test block.
+- Needs a lot of memory: more than 50 GB for the small test block.
 - If a native runner is set, the guest output must also be equal to its output (temporary, see below).
 
 ### dev-full-dummy-wrap (aggregation only)
