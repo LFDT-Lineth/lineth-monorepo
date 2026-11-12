@@ -110,7 +110,7 @@ lineth-monorepo/
 ## Quick Start
 
 ```bash
-# Prerequisites: Node.js >= 24.22.1 (see `.nvmrc`), Docker v24+, pnpm v12.17.0+, Make, JDK 25
+# Prerequisites: Node.js >= 24.22.3 (see `.nvmrc`), Docker v24+, pnpm v12.17.0+, Make, JDK 25
 
 # 1. Install dependencies
 make pnpm-install
