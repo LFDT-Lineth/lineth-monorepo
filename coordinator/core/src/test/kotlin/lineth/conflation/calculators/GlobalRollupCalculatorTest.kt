@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
-class GlobalRollupCalculatorV2Test {
+class GlobalRollupCalculatorTest {
   // blob1 = [A, start of B], blob2 = [end of B, C, start of D], blob3 = [middle of D], blob4 = [end of D, E].
   // blob3 starts and ends inside D, so it has no cut.
   private val a = conflation(1UL, 3UL, 50_000)

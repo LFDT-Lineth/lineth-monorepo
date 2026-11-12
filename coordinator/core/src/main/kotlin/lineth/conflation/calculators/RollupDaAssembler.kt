@@ -60,7 +60,7 @@ class RollupDaWitness(
   }
 }
 
-/** A rollup cut by a [RollupCalculatorV2]: its conflations, in order, and its DA witness. */
+/** A rollup cut by a [RollupCalculator]: its conflations, in order, and its DA witness. */
 data class Rollup(
   val conflations: List<BlocksConflation>,
   val da: RollupDaWitness,

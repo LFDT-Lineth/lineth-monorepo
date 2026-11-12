@@ -23,16 +23,16 @@ import kotlin.time.Instant
  *   conflations arrive only once their execution proof is done, so it must be well above the execution proving time:
  *   otherwise every rollup ends after a single conflation.
  */
-class GlobalRollupCalculatorV2(
+class GlobalRollupCalculator(
   private val triggers: List<RollupTriggerCalculator>,
   private val openRollup: RollupDaAssembler,
   private val blobCalculator: () -> GlobalBlobCalculator,
   private val rollupDeadline: Duration? = null,
-  private val log: Logger = LogManager.getLogger(GlobalRollupCalculatorV2::class.java),
-) : RollupCalculatorV2 {
-  private var rollupHandler: RollupHandlerV2? = null
+  private val log: Logger = LogManager.getLogger(GlobalRollupCalculator::class.java),
+) : RollupCalculator {
+  private var rollupHandler: RollupHandler? = null
 
-  override fun onRollup(handler: RollupHandlerV2) {
+  override fun onRollup(handler: RollupHandler) {
     rollupHandler = handler
   }
 

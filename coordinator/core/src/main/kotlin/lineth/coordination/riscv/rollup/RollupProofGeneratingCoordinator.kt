@@ -22,10 +22,10 @@ import linea.timer.VertxPeriodicPollingService
 import lineth.conflation.ConflationHandler
 import lineth.conflation.calculators.BlobTriggerCalculator
 import lineth.conflation.calculators.GlobalBlobCalculator
-import lineth.conflation.calculators.GlobalRollupCalculatorV2
+import lineth.conflation.calculators.GlobalRollupCalculator
 import lineth.conflation.calculators.Rollup
 import lineth.conflation.calculators.RollupDaAssembler
-import lineth.conflation.calculators.RollupHandlerV2
+import lineth.conflation.calculators.RollupHandler
 import lineth.conflation.calculators.RollupTriggerCalculator
 import lineth.encoding.BlockEncoder
 import lineth.persistence.BatchesRepository
@@ -76,7 +76,7 @@ class RollupProofGeneratingCoordinator(
   private val clock: Clock = Clock.System,
   private val log: Logger = LogManager.getLogger(RollupProofGeneratingCoordinator::class.java),
 ) : ConflationHandler,
-  RollupHandlerV2,
+  RollupHandler,
   VertxPeriodicPollingService(
     vertx = vertx,
     name = "RollupProofGeneratingCoordinator",
@@ -97,7 +97,7 @@ class RollupProofGeneratingCoordinator(
   private class DaPipeline(
     val daStream: DaStream,
     val blobCalculator: GlobalBlobCalculator,
-    val rollupCalculator: GlobalRollupCalculatorV2,
+    val rollupCalculator: GlobalRollupCalculator,
   )
 
   private var pipeline: DaPipeline? = null
@@ -150,7 +150,7 @@ class RollupProofGeneratingCoordinator(
     val position = resumePoint.daPosition
     val daStream = daStreamFactory.open(config.daCodecVersion, config.dictionaryPath, position)
     lateinit var blobCalculator: GlobalBlobCalculator
-    val rollupCalculator = GlobalRollupCalculatorV2(
+    val rollupCalculator = GlobalRollupCalculator(
       triggers = rollupTriggers,
       openRollup = RollupDaAssembler(position),
       blobCalculator = { blobCalculator },
