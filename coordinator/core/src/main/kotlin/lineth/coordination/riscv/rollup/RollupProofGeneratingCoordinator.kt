@@ -162,7 +162,7 @@ class RollupProofGeneratingCoordinator(
       blockEncoder = blockEncoder,
       handler = rollupCalculator,
       blobDeadline = config.blobDeadline,
-      resumingInsideSharedBlob = position.tailBytes > 0,
+      sharedBlobTailBytes = position.tailBytes,
     )
     pipeline = DaPipeline(daStream, blobCalculator, rollupCalculator)
     lastFedBlockNumber = resumePoint.lastConflationEndBlock
@@ -297,15 +297,14 @@ class RollupProofGeneratingCoordinator(
     return RollupProofRequestV1(
       conflations = rollup.conflations.map { ConflationWitness(it.blocks.map(blockEncoder::encode)) },
       l2Executions = l2Executions,
-      // The blob's KZG commitment and proof are still to do: the DA stream does not compute them yet.
       chunks = da.blobs.map {
         ChunkWitness(
           chunkHash = it.chunkHash,
           isCalldata = false,
           blobBytes = it.blobBytes(),
           calldataBytes = ByteArray(0),
-          kzgCommitment = ByteArray(ChunkWitness.KZG_POINT_BYTES_LENGTH),
-          kzgProof = ByteArray(ChunkWitness.KZG_POINT_BYTES_LENGTH),
+          kzgCommitment = it.kzgCommitment,
+          kzgProof = it.kzgProof,
         )
       },
       parentDataRollingHash = da.parentDataRollingHash,

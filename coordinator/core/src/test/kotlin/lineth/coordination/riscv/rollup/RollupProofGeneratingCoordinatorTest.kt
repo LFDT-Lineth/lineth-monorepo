@@ -20,11 +20,12 @@ import linea.domain.ConflationCalculationResult
 import linea.domain.ConflationTrigger
 import lineth.conflation.calculators.BlobTriggerCalculator
 import lineth.conflation.calculators.BlobTriggerCalculatorByTargetBlockNumbers
-import lineth.conflation.calculators.DaPipelineTestSupport
-import lineth.conflation.calculators.DaPipelineTestSupport.baseTime
-import lineth.conflation.calculators.DaPipelineTestSupport.genesisDataRollingHash
+import lineth.conflation.calculators.DaTestConflations
+import lineth.conflation.calculators.DaTestConflations.baseTime
+import lineth.conflation.calculators.DaTestConflations.genesisDataRollingHash
 import lineth.conflation.calculators.RollupTriggerCalculator
 import lineth.conflation.calculators.RollupTriggerCalculatorByConflationCount
+import lineth.coordination.riscv.da.FakeDaStream
 import lineth.coordination.riscv.da.FakeDaStreamFactory
 import lineth.persistence.FakeBatchesRepository
 import lineth.vertx.vertxTestOptions
@@ -101,7 +102,7 @@ class RollupProofGeneratingCoordinatorTest {
   }
 
   private fun conflation(number: ULong, frameSize: Int): BlocksConflation =
-    DaPipelineTestSupport.conflation(number, frameSize).also { conflation ->
+    DaTestConflations.conflation(number, frameSize).also { conflation ->
       conflation.blocks.forEach { l2Blocks[it.number] = it }
     }
 
@@ -142,7 +143,7 @@ class RollupProofGeneratingCoordinatorTest {
       daStreamFactory = FakeDaStreamFactory(),
       blobTriggers = blobTriggers,
       rollupTriggers = rollupTriggers,
-      blockEncoder = DaPipelineTestSupport.encoder,
+      blockEncoder = DaTestConflations.encoder,
       config = RollupProofGeneratingCoordinator.Config(
         pollingInterval = 1.seconds,
         daCodecVersion = DaCodecVersion.FAKE,
@@ -190,6 +191,11 @@ class RollupProofGeneratingCoordinatorTest {
 
     val (request1, request2) = requests
     assertThat(request1.chunks).hasSize(2).allSatisfy { assertThat(it.blobBytes).hasSize(DaConstants.BLOB_BYTES) }
+    // Each chunk carries the stream's KZG commitment and proof for its blob.
+    assertThat(request1.chunks).allSatisfy {
+      assertThat(it.kzgCommitment).isEqualTo(FakeDaStream.fakeKzgCommitment(it.blobBytes))
+      assertThat(it.kzgProof).isEqualTo(FakeDaStream.fakeKzgProof(it.blobBytes))
+    }
     assertThat(request1.parentDataRollingHash).isEqualTo(genesisDataRollingHash)
     assertThat(request1.parentDataTailTakeBytes).isZero()
     assertThat(request1.boundaryPrevDataRollingHash).isNull()

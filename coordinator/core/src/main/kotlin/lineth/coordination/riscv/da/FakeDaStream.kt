@@ -5,6 +5,7 @@ import linea.da.DaCodecVersion
 import linea.da.DaConstants.BLOB_BYTES
 import linea.da.DaConstants.BLOB_PAYLOAD_CAPACITY
 import linea.da.DaConstants.BLOB_PAYLOAD_TERMINAL
+import linea.da.DaConstants.KZG_POINT_BYTES
 import linea.da.DaStream
 import linea.da.DaStreamException
 import linea.da.DaStreamFactory
@@ -38,6 +39,7 @@ import java.nio.file.Path
  * - no zstd and no block truncation: the frame body is the concatenated block RLPs
  * - no 254-bit packing: the blob is the payload, the `0xff` terminal, then zero padding
  * - [chunkHasher] instead of a KZG versioned hash
+ * - [fakeKzgCommitment] and [fakeKzgProof] instead of a KZG commitment and proof
  *
  * Not thread-safe: [append] and [flush] must be confined to one thread. [compress] is pure.
  */
@@ -56,7 +58,9 @@ class FakeDaStream(
   ) {
     val payload = ByteArray(capacity)
     var used = 0
-    val segmentEnds = mutableListOf<SegmentEnd>()
+
+    /** Conflation end block and payload offset where its frame ends; turned into [SegmentEnd]s when sealed. */
+    val frameEnds = mutableListOf<Pair<ULong, Int>>()
 
     fun isReproducing(): Boolean = reproduce != null && used < capacity
   }
@@ -124,7 +128,7 @@ class FakeDaStream(
       blob.used += count
       written += count
     }
-    open!!.segmentEnds += SegmentEnd(frame.blockInterval.endBlockNumber, open!!.used)
+    open!!.frameEnds += frame.blockInterval.endBlockNumber to open!!.used
     frame.consumed = true
     return sealed
   }
@@ -153,22 +157,24 @@ class FakeDaStream(
     blobBytes[blob.used] = BLOB_PAYLOAD_TERMINAL
     val chunkHash = chunkHasher(blobBytes)
     val sealedDataRollingHash = dataRollingHashCalculator.fold(blob.prevDataRollingHash, chunkHash)
+    // Invariant: append checks every reproduced byte before writing it, so a re-sealed shared blob equals the original.
     blob.reproduce?.let { reproduction ->
-      if (!blobBytes.contentEquals(reproduction.sharedBlob) ||
-        !sealedDataRollingHash.contentEquals(reproduction.dataRollingHash)
-      ) {
-        throw DaStreamException(DaStreamStatus.SEEDED_BLOB_MISMATCH, "re-sealed shared blob differs from the original")
-      }
+      check(
+        blobBytes.contentEquals(reproduction.sharedBlob) &&
+          sealedDataRollingHash.contentEquals(reproduction.dataRollingHash),
+      ) { "re-sealed shared blob differs from the original" }
     }
     dataRollingHash = sealedDataRollingHash
     open = null
     return FakeSealedBlob(
       bytes = blobBytes,
       chunkHash = chunkHash,
+      kzgCommitment = fakeKzgCommitment(blobBytes),
+      kzgProof = fakeKzgProof(blobBytes),
       prevDataRollingHash = blob.prevDataRollingHash,
       dataRollingHash = sealedDataRollingHash,
       payloadBytes = blob.used,
-      segmentEnds = blob.segmentEnds.toList(),
+      segmentEnds = blob.frameEnds.map { (endBlock, frameEnd) -> SegmentEnd(endBlock, blob.used - frameEnd) },
     )
   }
 
@@ -232,6 +238,8 @@ class FakeDaStream(
   private class FakeSealedBlob(
     private val bytes: ByteArray,
     override val chunkHash: ByteArray,
+    override val kzgCommitment: ByteArray,
+    override val kzgProof: ByteArray,
     override val prevDataRollingHash: ByteArray,
     override val dataRollingHash: ByteArray,
     override val payloadBytes: Int,
@@ -247,6 +255,19 @@ class FakeDaStream(
     /** A versioned-hash-shaped stand-in for the KZG versioned hash: `0x01 ‖ keccak256(blob)[1:]`. */
     fun fakeVersionedHash(blob: ByteArray): ByteArray =
       Hash.hash(Bytes.wrap(blob)).bytes.toArray().also { it[0] = 0x01 }
+
+    /** A deterministic [KZG_POINT_BYTES]-byte stand-in for the KZG commitment of [blob]. */
+    fun fakeKzgCommitment(blob: ByteArray): ByteArray = fakeKzgPoint(blob, domain = 0x01)
+
+    /** A deterministic [KZG_POINT_BYTES]-byte stand-in for the KZG proof of [blob]. */
+    fun fakeKzgProof(blob: ByteArray): ByteArray = fakeKzgPoint(blob, domain = 0x02)
+
+    /** `keccak256(domain ‖ blob) ‖ keccak256(keccak256(domain ‖ blob))[0:16]`, so commitment and proof differ. */
+    private fun fakeKzgPoint(blob: ByteArray, domain: Byte): ByteArray {
+      val first = Hash.hash(Bytes.concatenate(Bytes.of(domain), Bytes.wrap(blob))).bytes
+      val second = Hash.hash(first).bytes
+      return Bytes.concatenate(first, second.slice(0, KZG_POINT_BYTES - first.size())).toArray()
+    }
 
     private fun decodeBlockNumber(blockRlp: ByteArray): ULong {
       return try {
