@@ -142,13 +142,8 @@ func (r *Runner) runL2Execution(ctx context.Context, runReq RunRequest) RunResul
 		return failedRunResult(runReq.ID, FailureCodeInvalidInput, err)
 	}
 
-	// dev-zkvm gets its real public inputs from the native runner and the guest's
-	// commitment from ZkC Execute, then cross-checks the two.
-	if r.mode == backend.ProverModeDevZkVM {
-		return r.runL2ExecutionZkVM(ctx, runReq, req)
-	}
-	if r.mode == backend.ProverModeDevPartial {
-		return r.runL2ExecutionDevPartial(ctx, runReq, req)
+	if r.mode == backend.ProverModeDevZkVM || r.mode == backend.ProverModeDevPartial {
+		return r.runL2ExecutionExtended(ctx, runReq, req)
 	}
 
 	// dev-mock accepts ranges and forced transactions (it runs no guest);
@@ -243,63 +238,17 @@ func (r *Runner) runAggregation(ctx context.Context, runReq RunRequest) RunResul
 	}
 }
 
-// runL2ExecutionZkVM shapes the response from the native runner (real public
-// inputs and revealed arrays) and additionally runs the guest under ZkC Execute,
-// asserting the two commit to the same public inputs: the guest's ZkC
-// guest_output must equal the native runner's --ssz output byte for byte. A
-// mismatch means the native runner and the real prover-to-guest path disagree,
-// so the response is refused.
-func (r *Runner) runL2ExecutionZkVM(ctx context.Context, runReq RunRequest, req *L2ExecutionRequest) RunResult {
-	if r.nativeRunnerBin == "" {
+// runL2ExecutionExtended runs the guest on the extended input (dev-zkvm and
+// dev-partial) and shapes the response from the result: the public inputs
+// decoded from the guest output and the mode's proof. The guest's end block and
+// block count must match the request. With a native runner set, which dev-zkvm
+// requires, the guest output must also equal the native runner's --ssz output
+// byte for byte.
+func (r *Runner) runL2ExecutionExtended(ctx context.Context, runReq RunRequest, req *L2ExecutionRequest) RunResult {
+	if r.mode == backend.ProverModeDevZkVM && r.nativeRunnerBin == "" {
 		return failedRunResult(runReq.ID, FailureCodeInternalError,
 			fmt.Errorf("dev-zkvm mode requires a native runner binary path"))
 	}
-	extended := ssz.EncodeExtendedInput(buildExtendedInput(req))
-
-	// Native runner: the response fields (--json) and its commitment (--ssz).
-	out, err := nativerunner.Run(ctx, r.nativeRunnerBin, extended)
-	if err != nil {
-		return failedRunResult(runReq.ID, FailureCodeInternalError, err)
-	}
-	nativeCommitment, err := nativerunner.RunSSZ(ctx, r.nativeRunnerBin, extended)
-	if err != nil {
-		return failedRunResult(runReq.ID, FailureCodeInternalError, err)
-	}
-
-	// Real prover-to-guest path: run the guest under ZkC Execute for its commitment.
-	startBlock := req.Payloads[0].BlockNumber
-	endBlock := req.Payloads[len(req.Payloads)-1].BlockNumber
-	result := r.prover.Prove(ctx, backend.Job{
-		ID:             runReq.ID,
-		Type:           runReq.Type,
-		GuestProgramID: [32]byte(req.GuestProgramID),
-		StartBlock:     startBlock,
-		EndBlock:       endBlock,
-		Payload:        extended,
-	})
-	if result.Status != backend.ResultStatusOK {
-		return proverFailure(runReq.ID, result)
-	}
-
-	// The guest's ZkC commitment (Result.ProofBytes) must equal the native runner's.
-	if !bytes.Equal(result.ProofBytes, nativeCommitment) {
-		return failedRunResult(runReq.ID, FailureCodeInternalError, fmt.Errorf(
-			"dev-zkvm cross-check failed: guest commitment %x != native commitment %x",
-			result.ProofBytes, nativeCommitment))
-	}
-
-	return RunResult{
-		ResponseBody: newExecutionResponseFromNative(out, r.responseVersion(), req.GuestProgramID),
-		Status:       RunStatusSuccess,
-	}
-}
-
-// runL2ExecutionDevPartial runs the guest on the extended input, as dev-zkvm
-// does, and shapes the response from the result: the public inputs decoded
-// from the guest output and a devmode proof. The guest's end block and block
-// count must match the request. With a native runner set, the guest output
-// must also equal the native runner's --ssz output byte for byte.
-func (r *Runner) runL2ExecutionDevPartial(ctx context.Context, runReq RunRequest, req *L2ExecutionRequest) RunResult {
 	extended := ssz.EncodeExtendedInput(buildExtendedInput(req))
 	startBlock := req.Payloads[0].BlockNumber
 	endBlock := req.Payloads[len(req.Payloads)-1].BlockNumber

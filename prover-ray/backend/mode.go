@@ -8,9 +8,9 @@ const (
 	// ProverModeDevMock runs no guest and returns a placeholder response. Needs
 	// no guest ELF or circuit bin.
 	ProverModeDevMock ProverMode = "dev-mock"
-	// ProverModeDevZkVM runs the guest under ZkC Execute for its real public
-	// inputs (via the native runner) and cross-checks the guest's commitment
-	// against that runner.
+	// ProverModeDevZkVM runs the guest under ZkC Execute, without a trace, and
+	// returns the public inputs from the guest output, with a marker in place of
+	// a proof. The guest output must equal the native runner's.
 	ProverModeDevZkVM ProverMode = "dev-zkvm"
 	// ProverModeDevPartial runs the guest, checks its trace against every
 	// constraint and returns the public inputs from the guest output, with a

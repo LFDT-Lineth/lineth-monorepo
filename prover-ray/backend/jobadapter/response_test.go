@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/nativerunner"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -59,25 +58,6 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 	assert.Equal(t, uint64(14), pi.EndProcessedFtxNumber)
 	assert.Equal(t, []string{"0x09" + strings.Repeat("00", 19)}, pi.FilteredAddresses)
 	assert.Equal(t, repeatHex(0x0a), pi.TxFromsHash)
-}
-
-// blockCount, l2L1Messages and offsets pass through from the native output.
-func TestNewExecutionResponseFromNative_PublicInputs(t *testing.T) {
-	out := nativerunner.Output{
-		StartBlockNumber: 1000501,
-		PublicInputs: backend.PublicInputs{
-			EndBlockNumber:           1000503,
-			L2L1Messages:             [][32]byte{filledHash(0x11), filledHash(0x22)},
-			BlockCount:               3,
-			L2MessagingBlocksOffsets: []uint16{1, 3},
-		},
-	}
-	vk := filledHash(0xbb)
-	resp := newExecutionResponseFromNative(out, "v-dev-zkvm", vk[:])
-
-	assert.Equal(t, uint64(3), resp.PublicInputs.BlockCount)
-	assert.Equal(t, []string{repeatHex(0x11), repeatHex(0x22)}, resp.PublicInputs.L2L1Messages)
-	assert.Equal(t, []uint16{1, 3}, resp.PublicInputs.L2MessagingBlocksOffsets)
 }
 
 func TestNewExecutionResponse_MatchesReferenceResponseShape(t *testing.T) {
