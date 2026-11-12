@@ -1,6 +1,6 @@
 package linea.domain
 
-import linea.clients.RollupProofRequestV1.Companion.MAX_TAIL_BYTES
+import linea.da.DaConstants.MAX_TAIL_BYTES
 import kotlin.time.Instant
 
 data class Blob(
