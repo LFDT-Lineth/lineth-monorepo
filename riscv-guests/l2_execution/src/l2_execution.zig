@@ -83,19 +83,12 @@ fn addressToSlot32(address: [20]u8) [32]u8 {
     return out;
 }
 
-/// Number of 32-byte words in the `dynamicChainConfigHash` preimage.
-const CHAIN_CONFIG_HASH_WORDS: usize = 9;
-
-/// `ChainConfig.hash(base_fee)` (Readme.md §2.1): keccak256 over nine 32-byte words, integers
-/// big-endian and addresses left-padded, in the order of the L1 verifier's chain-configuration
-/// parameters: chainId, baseFee, coinbase, l2MessageServiceAddress, deposit, withdrawalRequest,
-/// consolidationRequest, builderDepositRequest, builderExitRequest. This equals the L1 verifier's
-/// keccak chain-configuration hash over the same named parameters. `beacon_roots` and
-/// `history_storage` are NOT part of the preimage: they are fixed to the mainnet addresses
-/// (`checkFixedSystemContracts`).
+/// `ChainConfig.hash(base_fee)` (Readme.md §2.1): keccak256 over `abi.encode`-style 32-byte words,
+/// in the L1 verifier's chain-configuration parameter order. `beacon_roots` and `history_storage`
+/// are not hashed (see `checkFixedSystemContracts`).
 fn chainConfigHash(chain_config: l2_execution_ssz.ChainConfig, base_fee: u64) [32]u8 {
     const sc = chain_config.system_contracts;
-    const words = [CHAIN_CONFIG_HASH_WORDS][32]u8{
+    const words = [_][32]u8{
         u64ToSlot32(chain_config.chain_id),
         u64ToSlot32(base_fee),
         addressToSlot32(chain_config.coinbase),
@@ -109,9 +102,7 @@ fn chainConfigHash(chain_config: l2_execution_ssz.ChainConfig, base_fee: u64) [3
     return mpt.keccak256(std.mem.asBytes(&words));
 }
 
-/// The EIP-4788 beacon roots and EIP-2935 history storage contracts are the same on Lineth as on
-/// Ethereum mainnet, so they are not part of `dynamicChainConfigHash` and the guest rejects any
-/// other value rather than trusting the prover-supplied one.
+/// The EIP-4788 and EIP-2935 contracts are not in `dynamicChainConfigHash`, so pin them to mainnet.
 fn checkFixedSystemContracts(sc: l2_execution_ssz.SystemContracts) !void {
     if (!std.mem.eql(u8, &sc.beacon_roots, &input.SystemContracts.MAINNET_BEACON_ROOTS)) {
         return error.BeaconRootsAddressNotMainnet;
@@ -546,7 +537,6 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
 
 pub const test_api = if (@import("builtin").is_test) struct {
     pub const chainConfigHashFn = chainConfigHash;
-    pub const checkFixedSystemContractsFn = checkFixedSystemContracts;
     pub const zesuSystemContractsFn = zesuSystemContracts;
     pub const addToForcedTxRollingHashFn = addToForcedTxRollingHash;
     pub const hashDigestListFn = hashDigestList;

@@ -61,40 +61,15 @@ test "chainConfigHash matches Readme.md's §2.1 dynamicChainConfigHash formula" 
     try testing.expectEqualSlices(u8, &want, &got);
 }
 
-test "chainConfigHash commits to the Lineth-configurable system contracts" {
+test "chainConfigHash commits to every system contract except beacon roots and history storage" {
     const baseline = api.chainConfigHashFn(sampleChainConfig(), 7);
-    const committed = [_][]const u8{ "deposit", "withdrawal_request", "consolidation_request", "builder_deposit_request", "builder_exit_request" };
-    inline for (committed) |name| {
+    inline for (std.meta.fields(l2_execution_ssz.SystemContracts)) |field| {
         var tampered = sampleChainConfig();
-        @field(tampered.system_contracts, name) = repeat(20, 0x00);
+        @field(tampered.system_contracts, field.name) = repeat(20, 0x00);
         const got = api.chainConfigHashFn(tampered, 7);
-        try testing.expect(!std.mem.eql(u8, &baseline, &got));
+        const hashed = !std.mem.eql(u8, field.name, "beacon_roots") and !std.mem.eql(u8, field.name, "history_storage");
+        try testing.expectEqual(hashed, !std.mem.eql(u8, &baseline, &got));
     }
-}
-
-test "chainConfigHash excludes the mainnet-fixed beacon roots and history storage contracts" {
-    const baseline = api.chainConfigHashFn(sampleChainConfig(), 7);
-    inline for (.{ "beacon_roots", "history_storage" }) |name| {
-        var tampered = sampleChainConfig();
-        @field(tampered.system_contracts, name) = repeat(20, 0x00);
-        const got = api.chainConfigHashFn(tampered, 7);
-        try testing.expectEqualSlices(u8, &baseline, &got);
-    }
-}
-
-test "checkFixedSystemContracts accepts the mainnet beacon roots and history storage contracts" {
-    const sc = l2_execution_ssz.SystemContracts.from(zinput.SystemContracts{});
-    try api.checkFixedSystemContractsFn(sc);
-}
-
-test "checkFixedSystemContracts rejects a non-mainnet beacon roots or history storage contract" {
-    var beacon = l2_execution_ssz.SystemContracts.from(zinput.SystemContracts{});
-    beacon.beacon_roots = repeat(20, 0xa1);
-    try testing.expectError(error.BeaconRootsAddressNotMainnet, api.checkFixedSystemContractsFn(beacon));
-
-    var history = l2_execution_ssz.SystemContracts.from(zinput.SystemContracts{});
-    history.history_storage = repeat(20, 0xa2);
-    try testing.expectError(error.HistoryStorageAddressNotMainnet, api.checkFixedSystemContractsFn(history));
 }
 
 test "zesuSystemContracts copies every address into zesu's type" {

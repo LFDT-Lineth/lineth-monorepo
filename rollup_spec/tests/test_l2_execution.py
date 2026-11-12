@@ -10,6 +10,7 @@ guest unchanged — it is the reference-side counterpart of the guest's
 Run from the rollup_spec/ directory:  python -m pytest
 """
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -45,8 +46,8 @@ _TESTDATA_DIR = Path(l2_execution.__file__).resolve().parent / "prover_io" / "te
 _MESSAGE_SERVICE = Address(bytes([0x11]) * 20)
 _OTHER_CONTRACT = Address(bytes([0x22]) * 20)
 
-# Distinct per-field addresses so a field swap anywhere in the pipeline is caught. Beacon
-# roots and history storage must be the mainnet addresses for the guest to accept them.
+# Distinct per-field addresses so a field swap anywhere in the pipeline is caught; beacon
+# roots and history storage must be mainnet.
 _SYSTEM_CONTRACTS = SystemContracts(
     beacon_roots=MAINNET_BEACON_ROOTS_ADDRESS,
     history_storage=MAINNET_HISTORY_STORAGE_ADDRESS,
@@ -341,53 +342,23 @@ def _config_with_system_contracts() -> ChainConfig:
     )
 
 
-def _word(value: bytes) -> bytes:
-    return value.rjust(32, b"\x00")
-
-
 def test_chain_config_hash_preimage() -> None:
     expected = keccak256(
-        _word((59144).to_bytes(8, "big"))
-        + _word((1_000_000_000).to_bytes(8, "big"))
-        + _word(bytes(20))
-        + _word(bytes([0x11]) * 20)
-        + b"".join(_word(bytes([byte]) * 20) for byte in (0xA3, 0xA4, 0xA5, 0xA6, 0xA7))
+        (59144).to_bytes(32, "big")
+        + (1_000_000_000).to_bytes(32, "big")
+        + b"".join(bytes(12) + bytes([byte]) * 20 for byte in (0x00, 0x11, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7))
     )
+    # Golden vector shared with riscv-guests/l2_execution/test/l2_execution_test.zig.
+    assert expected == bytes.fromhex("22a4a19c730005a8ec6de4f29e818b679c822d1989b409dbc82bf1526a3eb235")
     assert _config_with_system_contracts().hash(1_000_000_000) == expected
 
 
-def test_chain_config_hash_golden_vector() -> None:
-    # Same vector as riscv-guests/l2_execution/test/l2_execution_test.zig, built from the same
-    # sample config but with beacon roots/history storage set to 0xA1/0xA2 there (they are not hashed).
-    expected = bytes.fromhex("22a4a19c730005a8ec6de4f29e818b679c822d1989b409dbc82bf1526a3eb235")
-    assert _config_with_system_contracts().hash(1_000_000_000) == expected
-
-
-@pytest.mark.parametrize(
-    "field",
-    ["deposit", "withdrawal_request", "consolidation_request", "builder_deposit_request", "builder_exit_request"],
-)
-def test_chain_config_hash_commits_to_configurable_system_contracts(field: str) -> None:
-    from dataclasses import replace
-
+@pytest.mark.parametrize("field", SystemContracts.__dataclass_fields__)
+def test_chain_config_hash_commits_to_configurable_system_contracts_only(field: str) -> None:
     config = _config_with_system_contracts()
     tampered = replace(config, system_contracts=replace(_SYSTEM_CONTRACTS, **{field: Address(bytes(20))}))
-    assert tampered.hash(7) != config.hash(7)
-
-
-@pytest.mark.parametrize("field", ["beacon_roots", "history_storage"])
-def test_chain_config_hash_excludes_fixed_system_contracts(field: str) -> None:
-    from dataclasses import replace
-
-    config = _config_with_system_contracts()
-    tampered = replace(config, system_contracts=replace(_SYSTEM_CONTRACTS, **{field: Address(bytes(20))}))
-    assert tampered.hash(7) == config.hash(7)
-
-
-def test_mainnet_fixed_system_contracts_match_the_golden_request() -> None:
-    sc = decode_request_json(_fixture("getZkL2ExecutionProofV1.request.json").read_text()).chain_config.system_contracts
-    assert sc.beacon_roots == MAINNET_BEACON_ROOTS_ADDRESS
-    assert sc.history_storage == MAINNET_HISTORY_STORAGE_ADDRESS
+    hashed = field not in ("beacon_roots", "history_storage")
+    assert (tampered.hash(7) != config.hash(7)) == hashed
 
 
 @pytest.mark.parametrize(
@@ -398,8 +369,6 @@ def test_mainnet_fixed_system_contracts_match_the_golden_request() -> None:
     ],
 )
 def test_run_l2_execution_guest_rejects_non_mainnet_fixed_system_contracts(field: str, message: str) -> None:
-    from dataclasses import replace
-
     ext = _zero_bridge_input(_golden_vanilla_stateless_input_ssz())
     system_contracts = replace(ext.chain_config.system_contracts, **{field: Address(bytes([0xEE]) * 20)})
     ext = replace(ext, chain_config=replace(ext.chain_config, system_contracts=system_contracts))

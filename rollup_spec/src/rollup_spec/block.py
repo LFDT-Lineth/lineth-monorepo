@@ -21,9 +21,7 @@ from typing import List, TypeAlias
 BlockTransaction: TypeAlias = bytes | LegacyTransaction
 
 
-# EIP-4788 beacon roots and EIP-2935 history storage contracts. They are the same
-# on Lineth as on Ethereum mainnet, so they are not part of `dynamicChainConfigHash`
-# and the l2-execution guest rejects any other value.
+# EIP-4788 / EIP-2935 contracts: not in `dynamicChainConfigHash`, so pinned to mainnet.
 MAINNET_BEACON_ROOTS_ADDRESS = Address(bytes.fromhex("000F3df6D732807Ef1319fB7B8bB8522d0Beac02"))
 MAINNET_HISTORY_STORAGE_ADDRESS = Address(bytes.fromhex("0000F90827F1C53a10cb7A02335B175320002935"))
 
@@ -36,11 +34,9 @@ class SystemContracts:
     EIP-8282). They come from the chain's genesis configuration and are
     supplied as a proof-range input.
 
-    `deposit` through `builder_exit_request` are Lineth-configurable and part
-    of the `dynamicChainConfigHash` preimage, which is anchored in the L1
-    verifier's chain configuration. `beacon_roots` and `history_storage` are
-    not hashed: they must equal `MAINNET_BEACON_ROOTS_ADDRESS` and
-    `MAINNET_HISTORY_STORAGE_ADDRESS`.
+    `deposit` through `builder_exit_request` are hashed into
+    `dynamicChainConfigHash`; `beacon_roots` and `history_storage` must be
+    the mainnet addresses.
 
     Field order is the wire order.
     """
@@ -86,12 +82,9 @@ class ChainConfig:
                       uint256(withdrawalRequest) || uint256(consolidationRequest) ||
                       uint256(builderDepositRequest) || uint256(builderExitRequest))
 
-        Every field is one 32-byte big-endian word (addresses left-padded),
-        i.e. Solidity `abi.encode`, in the order of the L1 verifier's named
-        chain-configuration parameters, so the digest equals the verifier's
-        keccak chain-configuration hash. `base_fee` is supplied at hash time
-        by the caller (it is sourced from the block header — see §2.1).
-        `beacon_roots` and `history_storage` are not hashed.
+        Every field is one 32-byte big-endian word (Solidity `abi.encode`), in
+        the L1 verifier's chain-configuration parameter order. `base_fee` is
+        supplied by the caller (sourced from the block header — see §2.1).
         """
         sc = self.system_contracts
         return keccak256(

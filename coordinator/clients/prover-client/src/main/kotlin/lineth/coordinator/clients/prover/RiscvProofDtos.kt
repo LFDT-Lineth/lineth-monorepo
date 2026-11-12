@@ -143,10 +143,7 @@ data class NewPayloadRequestDto(
   val executionRequests: List<String>,
 )
 
-/**
- * System-contract addresses handed to the execution engine. All but [beaconRoots] and [historyStorage] are part of the
- * `dynamicChainConfigHash` preimage; those two must be the mainnet addresses.
- */
+/** System-contract addresses handed to the execution engine; see the rollup spec for which are hashed. */
 data class SystemContractsDto(
   val beaconRoots: String,
   val historyStorage: String,
@@ -157,7 +154,7 @@ data class SystemContractsDto(
   val builderExitRequest: String,
 )
 
-/** Static chain configuration: `dynamicChainConfigHash` preimage inputs, except [forkName] and fixed system contracts. */
+/** Static chain configuration (see the rollup spec for the `dynamicChainConfigHash` preimage). */
 data class ChainConfigDto(
   val l2MessageServiceAddress: String,
   val coinbase: String,
