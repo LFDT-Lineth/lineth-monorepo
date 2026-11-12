@@ -590,11 +590,14 @@ func buildProofFixture(sys *wiop.System, assign assignFn, source, name, label st
 // fixtures: the production default (229) would emit ~229 Merkle branches per
 // opening, ballooning verify.zig to hundreds of MB and making Zig compilation
 // intractable. Four queries is sufficient to test the Merkle capping without
-// ballooning the fixture sizes.
-func compileFullPipeline(sys *wiop.System) error {
-	return compilers.CompileFull(sys,
-		compilers.ConfigurePCS(pcscompiler.WithFRINumQueries(4), pcscompiler.WithOptimalMerkleCap()),
-	)
+// ballooning the fixture sizes. pcsOpts, when given, replaces the query count
+// (and adds e.g. an RS blowup); the optimal Merkle cap is always kept.
+func compileFullPipeline(sys *wiop.System, pcsOpts ...pcscompiler.Option) error {
+	if len(pcsOpts) == 0 {
+		pcsOpts = []pcscompiler.Option{pcscompiler.WithFRINumQueries(4)}
+	}
+	pcsOpts = append(pcsOpts, pcscompiler.WithOptimalMerkleCap())
+	return compilers.CompileFull(sys, compilers.ConfigurePCS(pcsOpts...))
 }
 
 func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error) {
@@ -635,10 +638,10 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		return nil
 	}
 
-	// addMultiSize emits one baked PcsSystem plus two honest proofs at different
-	// runtime sizes.
-	addMultiSize := func(source, name string, sys *wiop.System, honest, alt assignFn) error {
-		if err := compileFullPipeline(sys); err != nil {
+	// addMultiSizeWith emits one baked PcsSystem plus two honest proofs at
+	// different runtime sizes, compiled with pcsOpts (see compileFullPipeline).
+	addMultiSizeWith := func(source, name string, sys *wiop.System, honest, alt assignFn, pcsOpts ...pcscompiler.Option) error {
+		if err := compileFullPipeline(sys, pcsOpts...); err != nil {
 			return fmt.Errorf("compile %s/%s: %w", source, name, err)
 		}
 		if err := codegen.AssertAllVerifierActionsHandled(sys); err != nil {
@@ -663,6 +666,9 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		cases = append(cases, tc)
 		systems = append(systems, compiled)
 		return nil
+	}
+	addMultiSize := func(source, name string, sys *wiop.System, honest, alt assignFn) error {
+		return addMultiSizeWith(source, name, sys, honest, alt)
 	}
 
 	// addPrecompiled is like add, but for a sys the caller has already
@@ -704,7 +710,7 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 	}
 
 	// Multi-size committed-dynamic coverage for one baked PcsSystem.
-	if err := addMultiSizeDynFib(addMultiSize); err != nil {
+	if err := addMultiSizeDynFib("DynamicFibonacciMultiSize", addMultiSize); err != nil {
 		return nil, nil, err
 	}
 	// Two independent committed dynamic modules against one baked PcsSystem.
@@ -944,6 +950,24 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		return nil
 	}); err != nil {
 		return nil, nil, err
+	}
+
+	// The same multi-size Fibonacci System at every non-default RS blowup, with
+	// the query count prover-ray pairs it with. Every other fixture uses the
+	// default blowup 2; these check that the verifier's domain sizing, its
+	// envelope (FRIMaxCommittableSizeLog2 shrinks at high blowup) and query
+	// sampling agree with the prover at the other rates, at two runtime sizes
+	// so restrictTo runs at each rate too.
+	for _, cfg := range wioptest.RSBlowupBenchConfigs() {
+		if cfg.Blowup == 2 {
+			continue
+		}
+		name := fmt.Sprintf("DynamicFibonacciMultiSizeBlowup%d", cfg.Blowup)
+		if err := addMultiSizeDynFib(name, func(source, caseName string, sys *wiop.System, honest, alt assignFn) error {
+			return addMultiSizeWith(source, caseName, sys, honest, alt, cfg.PCSOptions()...)
+		}); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	return cases, systems, nil
@@ -1294,8 +1318,8 @@ func extractVanishingProofView(sys *wiop.System, rt *wiop.Runtime) vanishingProo
 // it via `reg` (addMultiSize) with two honest witnesses of DIFFERENT lengths
 // (8 and 16). Rows 0 and 1 are auto-cancelled by the back-shifts, so any
 // Fibonacci prefix is valid. This exercises verifying two dynamic sizes against
-// one baked PcsSystem.
-func addMultiSizeDynFib(reg func(source, name string, sys *wiop.System, honest, alt assignFn) error) error {
+// one baked PcsSystem, registered under name.
+func addMultiSizeDynFib(name string, reg func(source, name string, sys *wiop.System, honest, alt assignFn) error) error {
 	sys := wiop.NewSystemf("dyn-fib-multisize")
 	r0 := sys.NewRound()
 	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
@@ -1310,7 +1334,7 @@ func addMultiSizeDynFib(reg func(source, name string, sys *wiop.System, honest, 
 
 	honest := func(rt *wiop.Runtime) { rt.AssignColumn(col, fibVector(8)) }
 	alt := func(rt *wiop.Runtime) { rt.AssignColumn(col, fibVector(16)) }
-	return reg("MultiSize", "DynamicFibonacciMultiSize", sys, honest, alt)
+	return reg("MultiSize", name, sys, honest, alt)
 }
 
 // fibVector builds a length-n Fibonacci column (rows 0 and 1 = 1), used as an

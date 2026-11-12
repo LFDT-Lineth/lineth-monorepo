@@ -95,6 +95,63 @@ test "self-consistent false-statement fixtures fail in the targeted sub-verifier
     try std.testing.expect(checked > 0);
 }
 
+fn caseIndex(comptime name: []const u8) usize {
+    inline for (0..vf.case_count) |i| {
+        if (comptime std.mem.eql(u8, vf.get(i).name, name)) return i;
+    }
+    @compileError("no verify fixture case named " ++ name);
+}
+
+const rs_blowup_cases = [_][]const u8{
+    "DynamicFibonacciMultiSizeBlowup4",
+    "DynamicFibonacciMultiSizeBlowup8",
+    "DynamicFibonacciMultiSizeBlowup16",
+};
+
+fn withLogPlaintextSize(comptime systems: verifier.Systems, comptime log_plaintext_size: u8) verifier.Systems {
+    var s = systems;
+    s.pcs.envelope_params.log_plaintext_size = log_plaintext_size;
+    return s;
+}
+
+// RS blowup is a per-System PCS option (#4069). The honest sweeps above verify
+// each DynamicFibonacciMultiSizeBlowup* proof under its own System; here the
+// SAME System with only the rate changed (log_plaintext_size +-1; query count
+// and cap height untouched) must reject it, so a verifier that ignored the
+// baked rate could not pass.
+test "rs blowup: a proof is rejected under the same System at another rate" {
+    inline for (rs_blowup_cases) |name| {
+        const i = comptime caseIndex(name);
+        const case = comptime vf.get(i);
+        const input = vf.getInput(i);
+        const log_plaintext = comptime case.systems.pcs.envelope_params.log_plaintext_size;
+        inline for ([_]i16{ -1, 1 }) |delta| {
+            const other = comptime withLogPlaintextSize(case.systems, @intCast(@as(i16, log_plaintext) + delta));
+            try std.testing.expectError(error.InvalidCap, verifier.verify(case.spec, other, input.proof, input.public_inputs));
+        }
+    }
+}
+
+// The largest committable size shrinks with the blowup (the field's 2-adicity
+// caps the codeword at 2^24), so blowup 8 and 16 must reject a dynamic size
+// that blowup 2 and 4 still accept. The honest fixtures stay far below the
+// bound, so claim one power of two above it. Blowup 4 shares blowup 2's
+// max_size_log2, so only 8 and 16 apply.
+test "rs blowup: a dynamic size above the rate's committable bound is rejected" {
+    const base = comptime vf.get(caseIndex("DynamicFibonacciMultiSize"));
+    inline for (rs_blowup_cases[1..]) |name| {
+        const i = comptime caseIndex(name);
+        const case = comptime vf.get(i);
+        const input = vf.getInput(i);
+        const max_size_log2 = comptime case.systems.pcs.max_size_log2;
+        comptime std.debug.assert(max_size_log2 < base.systems.pcs.max_size_log2);
+        const sizes = [_]usize{@as(usize, 1) << (max_size_log2 + 1)};
+        var proof = input.proof;
+        proof.module_sizes = &sizes;
+        try std.testing.expectError(error.LayoutOverflow, verifier.verify(case.spec, case.systems, proof, input.public_inputs));
+    }
+}
+
 test "multi-size: one baked System verifies proofs of two dynamic sizes" {
     // The runtime-size-reconstructed PCS layout: a committed-dynamic-column
     // protocol is proven at two DIFFERENT dynamic-module sizes, and BOTH proofs
