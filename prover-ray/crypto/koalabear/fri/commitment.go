@@ -21,6 +21,11 @@ const leafDomainTag uint64 = 0x4c66_7269_5f6c_6631 // "Lfri_lf1"
 // before any row values. Prover ([MultiSizeTable.Merkleize]) and verifier
 // ([hashRowOpening]) MUST call this identically or roots will not
 // reconstruct.
+//
+// The widths make a leaf's element stream decode in one way only: exactly
+// baseWidth base values, then extWidth blocks of 6 extension coordinates (see
+// [writeRowElements]). The header encodes the shape but not the order in which
+// the columns were declared; see writeRowElements for why that is not needed.
 func absorbLeafHeader(h leafHasher, baseWidth, extWidth int) {
 	var tag, b, e field.Element
 	tag.SetUint64(leafDomainTag)
@@ -266,6 +271,18 @@ func chainDigests(hash MerkleHash, digests []field.Octuplet) field.Octuplet {
 
 // writeRowElements absorbs one row into hasher without resetting or summing,
 // so a caller can digest several rows into one combined value.
+//
+// All base values come first, then the 6 coordinates of each extension value
+// (see [extLimbs]), whatever order the columns were declared in: the table
+// only has a Base and an Ext list (the wiop PCS compiler splits a round's
+// columns by kind, see its commitVectors). Rounds declared [a, E] and [E, a]
+// therefore hash identically. This is not an ambiguity a prover can use: the
+// verifier does not learn the column order from the digest, it derives every
+// column's slot from the compiled layout, which the proof cannot change. A
+// second reading of the same digest would need a second layout inside the same
+// verifier. The one place a verifier compares different tables against one
+// root, root dedup in inputOpeningRoots, is covered by the shape in the leaf
+// header (see [absorbLeafHeader]).
 func writeRowElements(hasher leafHasher, t SizedTable, row int) {
 	for k := range t.Base {
 		hasher.WriteElements(t.Base[k][row])

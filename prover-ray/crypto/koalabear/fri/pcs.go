@@ -1484,6 +1484,9 @@ func hashAuxPair(hash MerkleHash, pair RowPair, selfIsEven bool) field.Octuplet 
 	return hasher.SumDigest()
 }
 
+// writeRowOpeningElements mirrors [writeRowElements] on an opened row: base
+// values first, then extension coordinates. See writeRowElements for why the
+// declaration order of the columns needs no encoding.
 func writeRowOpeningElements(hasher leafHasher, row RowOpening) {
 	for _, base := range row.Base {
 		hasher.WriteElements(base)

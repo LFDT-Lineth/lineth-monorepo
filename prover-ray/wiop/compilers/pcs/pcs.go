@@ -1059,6 +1059,12 @@ func (c *compiled) commitVectors(
 
 	order, shape := committedLayout(round, sizeOf, manifest, c.moduleGroups)
 
+	// Each column goes to the Base or the Ext list of its size, so the
+	// interleaving of base and extension columns in round.Columns is not kept:
+	// the leaves hash all base values before all extension values. That is
+	// sound because the column order never comes from the proof: prover and
+	// verifier both derive every column's location from committedLayout (see
+	// GetLayout), so one root has one reading. See fri's writeRowElements.
 	sortedColumns := make(fri.MultiSizeTable, len(shape))
 	for _, i := range order {
 		v := &vectors[i]
