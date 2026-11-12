@@ -319,6 +319,7 @@ const Deps = struct {
         const zesu = zesuImports(zesu_dep);
         const guest_common = b.dependency("guest_common", .{ .target = target, .optimize = optimize });
         const core_serde = guest_common.module("core_serde");
+        // The instance `guest_common` imports, so one compilation holds the module once.
         const zkvm_accelerators = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("zkvm_accelerators");
         return .{
             .zesu = zesu,

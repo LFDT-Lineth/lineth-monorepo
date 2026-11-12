@@ -253,10 +253,10 @@ fn validateForcedTransactions(
         if (ftx.number != last_processed_ftx_number.* + 1) return error.ForcedTxOutOfOrder;
         if (ftx.deadline < payload.block_number) return error.ForcedTxDeadlineExceeded;
 
-        const decoded = try tx_decode.decodeTxs(alloc, &.{ftx.signed_tx_rlp});
+        const decoded = try tx_decode.decodeTxs(alloc, &.{ftx.signed_tx_rlp.bytes});
         const tx = &decoded[0];
         const from_address = try tx_signing.recoverSender(alloc, tx, chain_id, GUEST_SPEC) orelse return error.ForcedTxSenderRecoveryFailed;
-        const tx_hash = zkvm_accelerators.keccak256Digest(ftx.signed_tx_rlp);
+        const tx_hash = zkvm_accelerators.keccak256Digest(ftx.signed_tx_rlp.bytes);
 
         // Rolling hash update for EVERY FTX in the range, regardless of outcome.
         curr_rolling_hash.* = addToForcedTxRollingHash(curr_rolling_hash.*, tx_hash, ftx.deadline, from_address);
@@ -325,13 +325,13 @@ pub fn runL2Execution(alloc: std.mem.Allocator, in: l2_execution_ssz.L2Execution
 pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator, in: l2_execution_ssz.L2ExecutionProofPrivateInput) !l2_execution_ssz.L2ExecutionProofOutput {
     zesu_allocator.set(alloc);
 
-    if (in.payloads.len == 0) return error.EmptyPayloads;
+    if (in.payloads.items.len == 0) return error.EmptyPayloads;
 
     // Decode each payload's vanilla stateless input ONCE; parsed objects are shared between
     // execution and the Linea logic below.
-    const stateless_inputs = try alloc.alloc(input.StatelessInput, in.payloads.len);
-    for (in.payloads, 0..) |payload, i| {
-        stateless_inputs[i] = ssz_decode.decode(alloc, payload.stateless_input_ssz) catch return error.InvalidStatelessInput;
+    const stateless_inputs = try alloc.alloc(input.StatelessInput, in.payloads.items.len);
+    for (in.payloads.items, 0..) |payload, i| {
+        stateless_inputs[i] = ssz_decode.decode(alloc, payload.stateless_input_ssz.bytes) catch return error.InvalidStatelessInput;
     }
 
     // Combined NodeIndex over ALL payloads' witness state nodes (mirrors `_build_node_index` over
@@ -370,7 +370,7 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
     var end_bridge = BridgeState{};
     var last_payload: input.ExecutionPayload = undefined;
 
-    for (in.payloads, stateless_inputs, 0..) |linea_payload, si, idx| {
+    for (in.payloads.items, stateless_inputs, 0..) |linea_payload, si, idx| {
         const payload = si.new_payload_request.execution_payload;
 
         // ── Conflation-level invariants the engine cannot know (it validates each block in
@@ -456,7 +456,7 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
             payload,
             result.pre_state_root,
             &node_index,
-            linea_payload.forced_transactions,
+            linea_payload.forced_transactions.items,
         );
         try filtered_addresses.appendSlice(alloc, block_filtered);
 
@@ -479,7 +479,7 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
         .end_block_hash = last_payload.block_hash,
         .end_block_number = last_payload.block_number,
         .end_block_timestamp = last_payload.timestamp,
-        .l2_l1_messages = try l2_l1_messages.toOwnedSlice(alloc),
+        .l2_l1_messages = .{ .items = try l2_l1_messages.toOwnedSlice(alloc) },
         .end_l1_l2_bridge_rolling_hash = end_bridge.hash,
         .end_l1_l2_bridge_rolling_hash_message_number = end_bridge.number,
         .dynamic_chain_config_hash = chainConfigHash(in.chain_config, base_fee),
@@ -487,10 +487,10 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
         .parent_ftx_number = in.parent_last_processed_ftx_number,
         .end_ftx_rolling_hash = current_ftx_rolling_hash,
         .end_processed_ftx_number = current_last_processed_ftx_number,
-        .filtered_addresses = try mergeFilteredAddresses(alloc, &filtered_addresses),
+        .filtered_addresses = .{ .items = try mergeFilteredAddresses(alloc, &filtered_addresses) },
         .tx_froms_hash = try hashAddressList(alloc, tx_froms.items),
-        .block_count = in.payloads.len,
-        .l2_messaging_blocks_offsets = try messaging_offsets.toOwnedSlice(alloc),
+        .block_count = in.payloads.items.len,
+        .l2_messaging_blocks_offsets = .{ .items = try messaging_offsets.toOwnedSlice(alloc) },
     };
 
     return .{
