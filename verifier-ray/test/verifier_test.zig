@@ -102,28 +102,53 @@ fn caseIndex(comptime name: []const u8) usize {
     @compileError("no verify fixture case named " ++ name);
 }
 
-// RS blowup is a per-System PCS option (#4069). The DynamicFibonacciMultiSize
-// cases share one circuit at blowup 2, 4, 8 and 16 (the honest and alt-size
-// proofs of each are verified by the sweeps above). Here every non-default
-// proof must also be REJECTED by the blowup-2 System of the same circuit, so a
-// verifier that ignored the baked rate (and sized domains as if blowup were
-// fixed) could not pass the sweeps.
-test "rs blowup: a proof only verifies against the System of its own rate" {
-    const base = comptime vf.get(caseIndex("DynamicFibonacciMultiSize"));
-    const names = [_][]const u8{
-        "DynamicFibonacciMultiSizeBlowup4",
-        "DynamicFibonacciMultiSizeBlowup8",
-        "DynamicFibonacciMultiSizeBlowup16",
-    };
-    inline for (names) |name| {
+const rs_blowup_cases = [_][]const u8{
+    "DynamicFibonacciMultiSizeBlowup4",
+    "DynamicFibonacciMultiSizeBlowup8",
+    "DynamicFibonacciMultiSizeBlowup16",
+};
+
+fn withLogPlaintextSize(comptime systems: verifier.Systems, comptime log_plaintext_size: u8) verifier.Systems {
+    var s = systems;
+    s.pcs.envelope_params.log_plaintext_size = log_plaintext_size;
+    return s;
+}
+
+// RS blowup is a per-System PCS option (#4069). The honest sweeps above verify
+// each DynamicFibonacciMultiSizeBlowup* proof under its own System; here the
+// SAME System with only the rate changed (log_plaintext_size +-1; query count
+// and cap height untouched) must reject it, so a verifier that ignored the
+// baked rate could not pass.
+test "rs blowup: a proof is rejected under the same System at another rate" {
+    inline for (rs_blowup_cases) |name| {
         const i = comptime caseIndex(name);
         const case = comptime vf.get(i);
         const input = vf.getInput(i);
-        try verifier.verify(case.spec, case.systems, input.proof, input.public_inputs);
-        if (verifier.verify(base.spec, base.systems, input.proof, input.public_inputs)) |_| {
-            std.debug.print("{s}: proof accepted by the blowup-2 System\n", .{name});
-            return error.WrongRateAccepted;
-        } else |_| {}
+        const log_plaintext = comptime case.systems.pcs.envelope_params.log_plaintext_size;
+        inline for ([_]i16{ -1, 1 }) |delta| {
+            const other = comptime withLogPlaintextSize(case.systems, @intCast(@as(i16, log_plaintext) + delta));
+            try std.testing.expectError(error.InvalidCap, verifier.verify(case.spec, other, input.proof, input.public_inputs));
+        }
+    }
+}
+
+// The largest committable size shrinks with the blowup (the field's 2-adicity
+// caps the codeword at 2^24), so blowup 8 and 16 must reject a dynamic size
+// that blowup 2 and 4 still accept. The honest fixtures stay far below the
+// bound, so claim one power of two above it. Blowup 4 shares blowup 2's
+// max_size_log2, so only 8 and 16 apply.
+test "rs blowup: a dynamic size above the rate's committable bound is rejected" {
+    const base = comptime vf.get(caseIndex("DynamicFibonacciMultiSize"));
+    inline for (rs_blowup_cases[1..]) |name| {
+        const i = comptime caseIndex(name);
+        const case = comptime vf.get(i);
+        const input = vf.getInput(i);
+        const max_size_log2 = comptime case.systems.pcs.max_size_log2;
+        comptime std.debug.assert(max_size_log2 < base.systems.pcs.max_size_log2);
+        const sizes = [_]usize{@as(usize, 1) << (max_size_log2 + 1)};
+        var proof = input.proof;
+        proof.module_sizes = &sizes;
+        try std.testing.expectError(error.LayoutOverflow, verifier.verify(case.spec, case.systems, proof, input.public_inputs));
     }
 }
 

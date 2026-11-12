@@ -710,7 +710,7 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 	}
 
 	// Multi-size committed-dynamic coverage for one baked PcsSystem.
-	if err := addMultiSizeDynFib(addMultiSize); err != nil {
+	if err := addMultiSizeDynFib("DynamicFibonacciMultiSize", addMultiSize); err != nil {
 		return nil, nil, err
 	}
 	// Two independent committed dynamic modules against one baked PcsSystem.
@@ -963,8 +963,8 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 			continue
 		}
 		name := fmt.Sprintf("DynamicFibonacciMultiSizeBlowup%d", cfg.Blowup)
-		if err := addMultiSizeDynFibNamed(name, func(source, name string, sys *wiop.System, honest, alt assignFn) error {
-			return addMultiSizeWith(source, name, sys, honest, alt, cfg.PCSOptions()...)
+		if err := addMultiSizeDynFib(name, func(source, caseName string, sys *wiop.System, honest, alt assignFn) error {
+			return addMultiSizeWith(source, caseName, sys, honest, alt, cfg.PCSOptions()...)
 		}); err != nil {
 			return nil, nil, err
 		}
@@ -1318,14 +1318,8 @@ func extractVanishingProofView(sys *wiop.System, rt *wiop.Runtime) vanishingProo
 // it via `reg` (addMultiSize) with two honest witnesses of DIFFERENT lengths
 // (8 and 16). Rows 0 and 1 are auto-cancelled by the back-shifts, so any
 // Fibonacci prefix is valid. This exercises verifying two dynamic sizes against
-// one baked PcsSystem.
-func addMultiSizeDynFib(reg func(source, name string, sys *wiop.System, honest, alt assignFn) error) error {
-	return addMultiSizeDynFibNamed("DynamicFibonacciMultiSize", reg)
-}
-
-// addMultiSizeDynFibNamed builds a fresh multi-size Fibonacci System and
-// registers it under name.
-func addMultiSizeDynFibNamed(name string, reg func(source, name string, sys *wiop.System, honest, alt assignFn) error) error {
+// one baked PcsSystem, registered under name.
+func addMultiSizeDynFib(name string, reg func(source, name string, sys *wiop.System, honest, alt assignFn) error) error {
 	sys := wiop.NewSystemf("dyn-fib-multisize")
 	r0 := sys.NewRound()
 	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
