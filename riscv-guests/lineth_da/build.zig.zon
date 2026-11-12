@@ -10,6 +10,8 @@
         // The accelerator calls the package makes (sha256, keccak256, blob verification) and, through
         // -Dzkvm-provide, the zkvm_* crypto providers they resolve to in the native tests.
         .lineth_accelerators = .{ .path = "../lineth_accelerators" },
+        // The SSZ list views of the chunk witness.
+        .guest_common = .{ .path = "../guest_common" },
         // Block and transaction decoding, sender recovery and the trie of the truncation.
         .zesu = .{
             .url = "https://github.com/Consensys-Incorporated/zesu/archive/2835883c929407ff7252f7f70924436833d767c7.tar.gz",

@@ -29,6 +29,11 @@ const api = l2_execution.test_api;
 const makeLog = log_fixtures.makeLog;
 const rollingHashUpdatedLog = log_fixtures.rollingHashUpdatedLog;
 
+fn expectOffsets(want: []const u16, got: []align(1) const u16) !void {
+    try testing.expectEqual(want.len, got.len);
+    for (want, got) |w, g| try testing.expectEqual(w, g);
+}
+
 const ZERO_HASH: [32]u8 = @splat(0);
 const ZERO_ADDRESS: [20]u8 = @splat(0);
 
@@ -148,13 +153,13 @@ test "a realistic 2-block range produces every public-input field exactly" {
 
     const ftx1 = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = t1_rlp,
+        .signed_tx_rlp = .{ .bytes = t1_rlp },
         .acceptance = api.Acceptance.INCLUDED,
         .deadline = FTX_DEADLINE,
     };
     const ftx2 = l2_execution_ssz.ForcedTransactionWitness{
         .number = 2,
-        .signed_tx_rlp = t4_rlp,
+        .signed_tx_rlp = .{ .bytes = t4_rlp },
         .acceptance = api.Acceptance.FILTERED_ADDRESS_FROM,
         .deadline = FTX_DEADLINE,
     };
@@ -191,13 +196,13 @@ test "a realistic 2-block range produces every public-input field exactly" {
     try testing.expectEqual(EXPECTED_BLOCK1_TIMESTAMP, output.public_inputs.end_block_timestamp);
 
     // L2->L1 messages, in block order; T2's non-matching-topic0 log is collected by neither.
-    try testing.expectEqual(@as(usize, 2), output.public_inputs.l2_l1_messages.len);
-    try testing.expectEqualSlices(u8, &MESSAGE_HASH_1, &output.public_inputs.l2_l1_messages[0]);
-    try testing.expectEqualSlices(u8, &MESSAGE_HASH_2, &output.public_inputs.l2_l1_messages[1]);
+    try testing.expectEqual(@as(usize, 2), output.public_inputs.l2_l1_messages.items.len);
+    try testing.expectEqualSlices(u8, &MESSAGE_HASH_1, &output.public_inputs.l2_l1_messages.items[0]);
+    try testing.expectEqualSlices(u8, &MESSAGE_HASH_2, &output.public_inputs.l2_l1_messages.items[1]);
 
     // Both blocks emitted a message: their 1-based block offsets, and the range's block count.
     try testing.expectEqual(@as(u64, 2), output.public_inputs.block_count);
-    try testing.expectEqualSlices(u16, &.{ 1, 2 }, output.public_inputs.l2_messaging_blocks_offsets);
+    try expectOffsets(&.{ 1, 2 }, output.public_inputs.l2_messaging_blocks_offsets.items);
 
     // L1->L2 bridge: both blocks anchored, so the end pair is block 1's (the last) update.
     try testing.expectEqual(ROLLING_HASH_NUMBER_2, output.public_inputs.end_l1_l2_bridge_rolling_hash_message_number);
@@ -220,8 +225,8 @@ test "a realistic 2-block range produces every public-input field exactly" {
     try testing.expectEqual(@as(u64, 2), output.public_inputs.end_processed_ftx_number);
     try testing.expectEqualSlices(u8, &expected_end_ftx_rolling_hash, &output.public_inputs.end_ftx_rolling_hash);
 
-    try testing.expectEqual(@as(usize, 1), output.public_inputs.filtered_addresses.len);
-    try testing.expectEqualSlices(u8, &t4_sender, &output.public_inputs.filtered_addresses[0]);
+    try testing.expectEqual(@as(usize, 1), output.public_inputs.filtered_addresses.items.len);
+    try testing.expectEqualSlices(u8, &t4_sender, &output.public_inputs.filtered_addresses.items[0]);
 
     // tx_froms, in block-then-transaction order: T1's sender, T2's sender, then T3's sender.
     const expected_tx_froms = [_][20]u8{ t1_sender, t2_sender, t3_sender };
@@ -407,8 +412,8 @@ test "matching bridge logs are ignored while the address stays at its suppressed
 
     const output = try plan.run(alloc);
 
-    try testing.expectEqual(@as(usize, 0), output.public_inputs.l2_l1_messages.len);
-    try testing.expectEqual(@as(usize, 0), output.public_inputs.l2_messaging_blocks_offsets.len);
+    try testing.expectEqual(@as(usize, 0), output.public_inputs.l2_l1_messages.items.len);
+    try testing.expectEqual(@as(usize, 0), output.public_inputs.l2_messaging_blocks_offsets.items.len);
     try testing.expectEqual(@as(u64, 0), output.public_inputs.end_l1_l2_bridge_rolling_hash_message_number);
     try testing.expectEqualSlices(u8, &ZERO_HASH, &output.public_inputs.end_l1_l2_bridge_rolling_hash);
 }
@@ -442,7 +447,7 @@ test "an included forced transaction's bridge message reaches the public input" 
 
     const included_forced_transaction = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = forced_bridge_tx_rlp,
+        .signed_tx_rlp = .{ .bytes = forced_bridge_tx_rlp },
         .acceptance = api.Acceptance.INCLUDED,
         .deadline = FTX_DEADLINE,
     };
@@ -461,11 +466,11 @@ test "an included forced transaction's bridge message reaches the public input" 
 
     const output = try plan.run(alloc);
 
-    try testing.expectEqual(@as(usize, 2), output.public_inputs.l2_l1_messages.len);
-    try testing.expectEqualSlices(u8, &MESSAGE_HASH_1, &output.public_inputs.l2_l1_messages[0]);
-    try testing.expectEqualSlices(u8, &MESSAGE_HASH_2, &output.public_inputs.l2_l1_messages[1]);
+    try testing.expectEqual(@as(usize, 2), output.public_inputs.l2_l1_messages.items.len);
+    try testing.expectEqualSlices(u8, &MESSAGE_HASH_1, &output.public_inputs.l2_l1_messages.items[0]);
+    try testing.expectEqualSlices(u8, &MESSAGE_HASH_2, &output.public_inputs.l2_l1_messages.items[1]);
     // Both messages come from block 0, which is listed once.
-    try testing.expectEqualSlices(u16, &.{1}, output.public_inputs.l2_messaging_blocks_offsets);
+    try expectOffsets(&.{1}, output.public_inputs.l2_messaging_blocks_offsets.items);
 
     try testing.expectEqual(@as(u64, 1), output.public_inputs.end_processed_ftx_number);
     const expected_end_ftx_rolling_hash = api.addToForcedTxRollingHashFn(ZERO_HASH, mpt.keccak256(forced_bridge_tx_rlp), FTX_DEADLINE, forced_bridge_tx_sender);
@@ -478,7 +483,7 @@ test "an included forced transaction's bridge message reaches the public input" 
     try testing.expectEqualSlices(u8, &ordinary_bridge_tx_sender, &output.tx_froms[0]);
     try testing.expectEqualSlices(u8, &forced_bridge_tx_sender, &output.tx_froms[1]);
 
-    try testing.expectEqual(@as(usize, 0), output.public_inputs.filtered_addresses.len);
+    try testing.expectEqual(@as(usize, 0), output.public_inputs.filtered_addresses.items.len);
 }
 
 test "a forced transaction failing pre-validation produces no bridge message and no sender entry" {
@@ -506,7 +511,7 @@ test "a forced transaction failing pre-validation produces no bridge message and
 
     const invalid_forced_transaction = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = invalid_forced_bridge_tx_rlp,
+        .signed_tx_rlp = .{ .bytes = invalid_forced_bridge_tx_rlp },
         .acceptance = api.Acceptance.BAD_NONCE,
         .deadline = FTX_DEADLINE,
     };
@@ -528,8 +533,8 @@ test "a forced transaction failing pre-validation produces no bridge message and
 
     const output = try plan.run(alloc);
 
-    try testing.expectEqual(@as(usize, 0), output.public_inputs.l2_l1_messages.len);
-    try testing.expectEqual(@as(usize, 0), output.public_inputs.l2_messaging_blocks_offsets.len);
+    try testing.expectEqual(@as(usize, 0), output.public_inputs.l2_l1_messages.items.len);
+    try testing.expectEqual(@as(usize, 0), output.public_inputs.l2_messaging_blocks_offsets.items.len);
 
     // tx_froms feeds L1's own data-availability sender reconstruction — a forced transaction that
     // failed pre-validation and never executed must never contribute a sender there, or L1 would
@@ -567,13 +572,13 @@ test "a range refusing one forced transaction by sender and another by recipient
 
     const refused_by_sender = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = refused_sender_tx_rlp,
+        .signed_tx_rlp = .{ .bytes = refused_sender_tx_rlp },
         .acceptance = api.Acceptance.FILTERED_ADDRESS_FROM,
         .deadline = FTX_DEADLINE,
     };
     const refused_by_recipient = l2_execution_ssz.ForcedTransactionWitness{
         .number = 2,
-        .signed_tx_rlp = refused_recipient_tx_rlp,
+        .signed_tx_rlp = .{ .bytes = refused_recipient_tx_rlp },
         .acceptance = api.Acceptance.FILTERED_ADDRESS_TO,
         .deadline = FTX_DEADLINE,
     };
@@ -598,7 +603,7 @@ test "a range refusing one forced transaction by sender and another by recipient
             return std.mem.order(u8, &a, &b) == .lt;
         }
     }.lessThan);
-    const filtered = output.public_inputs.filtered_addresses;
+    const filtered = output.public_inputs.filtered_addresses.items;
     try testing.expectEqual(@as(usize, 2), filtered.len);
     try testing.expectEqualSlices(u8, &expected_filtered_addresses[0], &filtered[0]);
     try testing.expectEqualSlices(u8, &expected_filtered_addresses[1], &filtered[1]);
@@ -631,7 +636,7 @@ test "a forced transaction in the last block leaves that block's rolling-hash up
     const forced_bridge_tx_sender = try recoverFixtureSender(alloc, forced_bridge_tx_rlp, RANGE_CHAIN_ID);
     const forced_transaction = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = forced_bridge_tx_rlp,
+        .signed_tx_rlp = .{ .bytes = forced_bridge_tx_rlp },
         .acceptance = api.Acceptance.INCLUDED,
         .deadline = FTX_DEADLINE,
     };
@@ -694,13 +699,13 @@ test "a continuation range chains the FTX rolling hash from its parent value" {
     // stays contiguous with whatever `PARENT_FTX_NUMBER` declares.
     const first_forced_transaction = l2_execution_ssz.ForcedTransactionWitness{
         .number = PARENT_FTX_NUMBER + 1,
-        .signed_tx_rlp = first_forced_tx_rlp,
+        .signed_tx_rlp = .{ .bytes = first_forced_tx_rlp },
         .acceptance = api.Acceptance.FILTERED_ADDRESS_FROM,
         .deadline = FTX_DEADLINE,
     };
     const second_forced_transaction = l2_execution_ssz.ForcedTransactionWitness{
         .number = PARENT_FTX_NUMBER + 2,
-        .signed_tx_rlp = second_forced_tx_rlp,
+        .signed_tx_rlp = .{ .bytes = second_forced_tx_rlp },
         .acceptance = api.Acceptance.FILTERED_ADDRESS_FROM,
         .deadline = FTX_DEADLINE,
     };
@@ -733,7 +738,7 @@ test "a range replaying the parent's last FTX number is rejected" {
     const replayed_forced_tx_rlp = try buildSignedFixtureTx(alloc, "ReplayedForcedTx", 0, 1000);
     const replayed_forced_transaction = l2_execution_ssz.ForcedTransactionWitness{
         .number = PARENT_FTX_NUMBER,
-        .signed_tx_rlp = replayed_forced_tx_rlp,
+        .signed_tx_rlp = .{ .bytes = replayed_forced_tx_rlp },
         .acceptance = api.Acceptance.FILTERED_ADDRESS_FROM,
         .deadline = FTX_DEADLINE,
     };
@@ -760,7 +765,7 @@ test "a range skipping an FTX number at the parent boundary is rejected" {
     const gapped_forced_tx_rlp = try buildSignedFixtureTx(alloc, "GappedForcedTx", 0, 1000);
     const gapped_forced_transaction = l2_execution_ssz.ForcedTransactionWitness{
         .number = PARENT_FTX_NUMBER + 2,
-        .signed_tx_rlp = gapped_forced_tx_rlp,
+        .signed_tx_rlp = .{ .bytes = gapped_forced_tx_rlp },
         .acceptance = api.Acceptance.FILTERED_ADDRESS_FROM,
         .deadline = FTX_DEADLINE,
     };

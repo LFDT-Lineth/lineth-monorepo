@@ -123,6 +123,8 @@ const Host = struct {
                     .{ .name = "secp256k1_std", .module = accelerators.module("secp256k1_std") },
                     .{ .name = "support", .module = support },
                     .{ .name = "zlob", .module = zlob.module("zlob") },
+                    .{ .name = "ssz_contract", .module = deps.ssz_contract },
+                    .{ .name = "spec_testdata", .module = common.specTestdataModule(b) },
                 } }),
             },
             .crypto = crypto,
@@ -305,6 +307,7 @@ const Deps = struct {
     /// zesu's exposed modules under the `zesu_*` names the sources use.
     zesu: [12]Import,
     core_serde: *std.Build.Module,
+    ssz_contract: *std.Build.Module,
     accelerators: *std.Build.Dependency,
     /// Imports of the package module (`src/root.zig`).
     package: []const Import,
@@ -319,10 +322,12 @@ const Deps = struct {
         const zesu = zesuImports(zesu_dep);
         const guest_common = b.dependency("guest_common", .{ .target = target, .optimize = optimize });
         const core_serde = guest_common.module("core_serde");
+        // The instance `guest_common` imports, so one compilation holds the module once.
         const zkvm_accelerators = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("zkvm_accelerators");
         return .{
             .zesu = zesu,
             .core_serde = core_serde,
+            .ssz_contract = guest_common.module("ssz_contract"),
             .accelerators = accelerators,
             .package = concatImports(b, &.{ &zesu, &.{
                 .{ .name = "guest_common", .module = guest_common.module("guest_common") },
