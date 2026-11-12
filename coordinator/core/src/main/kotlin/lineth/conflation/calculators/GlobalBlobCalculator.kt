@@ -17,7 +17,8 @@ import kotlin.time.Instant
  * Frames end in the order conflations were appended, so a sealed blob's cut points belong to the oldest queued
  * conflations, one to one.
  *
- * Not thread-safe: all calls must be confined to the thread that owns [daStream].
+ * Not thread-safe: all calls must be confined to the thread that owns [daStream]. Not re-entrant: [handler] (and the
+ * rollup handler behind it) runs while this calculator is mid-update, so it must not call back into it.
  *
  * @param blobDeadline flushes the open blob once its oldest conflation's first block is this old; see [checkDeadline].
  *   It bounds the data's age from the block timestamp, and conflations arrive only once their execution proof is done,
@@ -44,6 +45,9 @@ class GlobalBlobCalculator(
   init {
     require(sharedBlobTailBytes >= 0) { "sharedBlobTailBytes=$sharedBlobTailBytes must not be negative" }
   }
+
+  /** The oldest conflation appended to the stream whose frame end is not in a sealed blob yet, if any. */
+  val oldestUnsealedConflation: BlocksConflation? get() = appended.firstOrNull()?.conflation
 
   fun newConflation(conflation: BlocksConflation) {
     triggers.firstNotNullOfOrNull { it.checkOverflow(conflation) }?.let { flush(it) }
