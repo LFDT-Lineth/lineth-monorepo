@@ -132,3 +132,35 @@ func TestPCSVerifyGnarkTwinBatches(t *testing.T) {
 		"got 2 input caps, want 3",
 		"the old deduplicated shape must be rejected by VerifyGnark")
 }
+
+// droppedTwinOpening returns the proof with all three input caps kept but the
+// second twin's per-query opening dropped: a partially deduplicated shape that
+// passes the cap-count check and must be caught by the per-query check.
+func droppedTwinOpening(p OpeningProof) OpeningProof {
+	const dropped = 1
+	res := p
+	res.InputQueries = make([]InputQuery, len(p.InputQueries))
+	for q, query := range p.InputQueries {
+		res.InputQueries[q] = append(append(InputQuery(nil), query[:dropped]...), query[dropped+1:]...)
+	}
+	return res
+}
+
+// TestPCSTwinBatchesRejectDroppedOpening checks that both verifiers reject a
+// proof that keeps one input cap per batch but omits a twin's query opening.
+func TestPCSTwinBatchesRejectDroppedOpening(t *testing.T) {
+	fx := newTwinBatchesFixture(t)
+	dropped := droppedTwinOpening(fx.proof)
+	require.Len(t, dropped.InputCaps, 3, "all input caps must be kept")
+
+	require.ErrorContains(t, fx.pcs.Verify(fx.input, dropped),
+		"input query has 2 tree openings, want 3",
+		"native verifier must reject a missing twin opening")
+
+	droppedFixture := fx
+	droppedFixture.proof = dropped
+	template, assignment := circuitFor(droppedFixture, dropped)
+	require.ErrorContains(t, compileAndSolvePCSCircuit(template, assignment),
+		"input query has 2 tree openings, want 3",
+		"circuit must reject a missing twin opening")
+}
