@@ -67,6 +67,10 @@ type Core struct {
 	// binaryFile is the compiled R5 arithmetization, used by dev-zkvm to run the
 	// guest under ZkC Execute (the no-trace path). nil outside dev-zkvm.
 	binaryFile *zkcdriver.BinaryFile
+
+	// maxColumnRows is the most rows a shard module may have; zero is
+	// [wiop.ColumnSizeMaxSupported]. Tests lower it.
+	maxColumnRows uint
 }
 
 // guestProgram is a guest ELF mapped and predecoded for ZkC.
@@ -615,6 +619,12 @@ func (c *Core) runProve(
 		if err != nil {
 			return conglomeration.Node{}, 0, err
 		}
+		// Assigning a module over the limit would panic in a worker goroutine,
+		// which no recover here can catch.
+		if err := c.driver.CheckShardFits(shard, c.columnLimit()); err != nil {
+			return conglomeration.Node{}, 0, fmt.Errorf("shard %d does not fit in a column (%s): %w",
+				i, c.shardHint(i), err)
+		}
 		// Once the last shard is traced, drop the lazy trace so that its
 		// checkpoints can be garbage collected before that shard is proved.
 		if k == len(indexes)-1 {
@@ -646,6 +656,27 @@ func (c *Core) runProve(
 		return conglomeration.Node{}, 0, fmt.Errorf("merging: %w", err)
 	}
 	return root, numShards, nil
+}
+
+// columnLimit returns the most rows a shard module may have.
+func (c *Core) columnLimit() uint {
+	if c.maxColumnRows == 0 {
+		return wiop.ColumnSizeMaxSupported
+	}
+	return c.maxColumnRows
+}
+
+// shardHint says what to change when shard i does not fit in a column.
+func (c *Core) shardHint(i uint) string {
+	switch {
+	case c.cfg.ShardSize == 0:
+		return "set shard_size to split the trace into shards"
+	case i == 0:
+		return "use a smaller shard_size; shard 0 also holds the input setup, " +
+			"which shard_size does not limit, so this may not be enough"
+	default:
+		return "use a smaller shard_size"
+	}
 }
 
 // traceShard traces and expands the ith shard of the lazy trace.
