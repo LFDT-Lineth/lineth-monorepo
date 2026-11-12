@@ -154,10 +154,10 @@ func TestDynamicModuleOrderFollowsSysModules(t *testing.T) {
 }
 
 // A dynamic column's runtime size must be >= its baked min_size_log2, or two
-// distinct raw shifts alias mod the runtime size. That bound is enforced by
-// `src/query/pcs.zig`'s `reconstruct`, which returns
-// `error.DynamicModuleSizeBelowMinimum` for an aliasing size — covered by
-// verifier-ray's own `test/pcs_test.zig`. See
+// distinct raw shifts alias mod the runtime size. The Zig verifier no longer
+// enforces that bound per column: the stronger per-module minimum
+// (N > 2·max|shift|, CoinRouting.DynamicModuleMinSizes) is checked by
+// protocol.replayWithTranscript. See
 // TestBuildPcsSystemRecordsMinimumSafeDynamicSize below for the
 // DynamicMinSizeLog2 computation itself.
 

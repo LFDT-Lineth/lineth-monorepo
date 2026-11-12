@@ -73,11 +73,7 @@ func BuildCoinRouting(sys *wiop.System) (CoinRouting, error) {
 		if !m.IsDynamic() {
 			continue
 		}
-		minSize, ok := minSizes[k]
-		if !ok {
-			return CoinRouting{}, fmt.Errorf("codegen: dynamic module %q has no minimum runtime size", m.Context.Path())
-		}
-		out.DynamicModuleMinSizes = append(out.DynamicModuleMinSizes, minSize)
+		out.DynamicModuleMinSizes = append(out.DynamicModuleMinSizes, minSizes[k])
 	}
 
 	return out, nil
