@@ -40,7 +40,6 @@ pub const Error = merkle.Error || fri.Error || error{
     BoundaryFinalSiblingMismatch,
     MissingDynamicModuleSize,
     NonPowerOfTwoModuleSize,
-    DynamicModuleSizeBelowMinimum,
     RestrictOutOfRange,
     LayoutOverflow,
     ManifestLengthMismatch,
@@ -156,9 +155,10 @@ fn batchFirstColumn(comptime system: System) [@max(system.num_batches, 1)]usize 
 /// `.dynamic` names an index into the runtime `module_sizes` slice plus the
 /// minimum runtime size_log2 this raw shift schedule is valid for. The
 /// dynamic-module column's size_log2 = log2(module_sizes[idx]) varies per
-/// proof, but proofs below `min_size_log2` are rejected because the baked raw
-/// shift schedule would alias there. Mirrors how prover-ray's `GetLayout`
-/// derives size_log2 from `col.Module.RuntimeSize(rt)`.
+/// proof. `min_size_log2` is the size below which the baked raw shift schedule
+/// would alias; `reconstruct` does not enforce it, the per-module minimum in
+/// `protocol.Spec.dynamic_module_min_sizes` does. Mirrors how prover-ray's
+/// `GetLayout` derives size_log2 from `col.Module.RuntimeSize(rt)`.
 pub const SizeSource = union(enum) {
     static: u8,
     dynamic: struct {
@@ -314,9 +314,9 @@ pub const VerifyInput = struct {
     query_positions: []const usize,
     proof: OpeningProof,
     /// Runtime dynamic-module sizes, in canonical dynamic-module order (the
-    /// same order `SizeSource.dynamic.index` indices into). Powers of two, and
-    /// each one must satisfy the emitted `min_size_log2` bound for every column
-    /// that references it.
+    /// same order `SizeSource.dynamic.index` indices into). Powers of two. The
+    /// per-module minimum (`protocol.Spec.dynamic_module_min_sizes`) is enforced by
+    /// `protocol.replayWithTranscript`, not here.
     module_sizes: []const usize = &.{},
     /// Per-column manifest codes in declaration order (see `readManifest`).
     /// Empty means every column is Present.
@@ -492,18 +492,13 @@ pub fn reconstructWithManifest(
                 const n = module_sizes[dyn.index];
                 if (!field.isPowerOfTwo(n)) return Error.NonPowerOfTwoModuleSize;
                 const sz: u8 = @intCast(field.log2PowerOfTwo(n));
-                // dyn.min_size_log2 used to reject runtime sizes where two
-                // distinct RAW shifts of this column alias to the same domain
-                // point (e.g. offsets 0 and -1 both normalize to row 0 at
-                // runtime size 1). That rejection was overly conservative: an
-                // honest prover CAN legitimately run a module at an aliasing
-                // size (prover-ray's own RecoverBatchClaims dedupes such
-                // openings into a single FRI claim before batching, and
-                // reconstructQueryValueAt below dedupes the same way when
-                // summing the DEEP quotient), so aliasing sizes are safe to
-                // accept, not just aliasing-completeness gaps to reject. Kept
-                // as a documented field (still emitted by codegen) but no
-                // longer enforced here.
+                // dyn.min_size_log2 (two raw shifts of this column alias
+                // below it) is not enforced here: the stronger per-module
+                // minimum, prover-ray's Module.MinRuntimeSize (N > 2·max|shift|,
+                // which implies no two shifts alias), is checked up front by
+                // protocol.replayWithTranscript against
+                // Spec.dynamic_module_min_sizes. Kept as a documented field
+                // (still emitted by codegen).
                 _ = dyn.min_size_log2;
                 break :blk sz;
             },

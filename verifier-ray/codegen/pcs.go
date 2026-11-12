@@ -250,9 +250,9 @@ func pcsShiftClaimCells(sys *wiop.System) (map[wiop.ObjectID][]int, map[wiop.Obj
 // observes this: it dedups by normalized shift before opening
 // (recoverBatchClaims), producing exactly one claim, so the two claims baked
 // here can never both be supplied correctly by an honest prover at an aliasing
-// size — there is no valid completion, only rejection (enforced against each
-// specific proof's actual runtime size by the Zig verifier's own
-// `pcs.reconstruct`, which returns `error.DynamicModuleSizeBelowMinimum`).
+// size — there is no valid completion, only rejection (enforced by the
+// stronger per-module minimum, CoinRouting.DynamicModuleMinSizes, which
+// protocol.replayWithTranscript checks).
 func pcsDynamicMinSizeLog2(colPath string, shifts []int, maxSizeLog2 int) (int, error) {
 	minSizeLog2 := 0
 	var (
@@ -371,6 +371,13 @@ func BuildPcsSystem(sys *wiop.System, routing CoinRouting) (PcsSystem, error) {
 				minSizeLog2, err := pcsDynamicMinSizeLog2(col.Context.Path(), desc.Shifts, maxSizeLog2)
 				if err != nil {
 					return PcsSystem{}, err
+				}
+				// The verifier only enforces the per-module minimum, which covers
+				// this column's bound as long as its shifts are among the module's
+				// Lagrange-evaluation shifts. Fail here if that ever stops holding.
+				if moduleMin := routing.DynamicModuleMinSizes[idx]; 1<<minSizeLog2 > moduleMin {
+					return PcsSystem{}, fmt.Errorf("codegen: BuildPcsSystem: column %q needs module size >= %d, above the module minimum %d",
+						col.Context.Path(), 1<<minSizeLog2, moduleMin)
 				}
 				desc.DynamicMinSizeLog2 = minSizeLog2
 			} else {
