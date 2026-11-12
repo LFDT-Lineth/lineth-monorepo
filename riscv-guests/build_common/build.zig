@@ -121,14 +121,6 @@ pub const NativeOptions = struct {
     imports: []const std.Build.Module.Import = &.{},
 };
 
-/// The module `spec_testdata`, holding the `dir` of the spec's JSON and SSZ contract fixtures, for a
-/// package that sits beside `rollup_spec`'s checkout.
-pub fn specTestdataModule(b: *std.Build) *std.Build.Module {
-    const paths = b.addOptions();
-    paths.addOptionPath("dir", b.path("../../rollup_spec/src/rollup_spec/prover_io/testdata"));
-    return paths.createModule();
-}
-
 pub const TestsOptions = struct {
     dir: []const u8 = "test",
     suffix: []const u8 = "_test.zig",

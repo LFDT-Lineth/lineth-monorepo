@@ -30,13 +30,6 @@ pub fn build(b: *std.Build) void {
         .imports = &.{ .{ .name = "guest_common", .module = guest_common }, shared.accelerators },
     });
 
-    // The host-only checks of the contract tests: consumers import it for their own wire structs.
-    const contract = b.addModule("ssz_contract", .{
-        .root_source_file = b.path("test/support/ssz_contract.zig"),
-        .target = b.resolveTargetQuery(.{}),
-        .optimize = .Debug,
-    });
-
     // ── Native unit tests ────────────────────────────────────────────────────
     // Like every other `b.addTest` artifact in this tree, these run on the native host: a
     // freestanding riscv64 target has no OS to run a `std.testing` binary against.
@@ -56,8 +49,6 @@ pub fn build(b: *std.Build) void {
         .imports = &.{
             .{ .name = "guest_common", .module = guest_common_native_mod },
             .{ .name = "core_serde", .module = core_serde_native_mod },
-            .{ .name = "ssz_contract", .module = contract },
-            .{ .name = "spec_testdata", .module = common.specTestdataModule(b) },
         },
     }, .{});
     const crypto = common.HostCrypto.forTarget(b, native_target, .{}) orelse return;
