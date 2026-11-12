@@ -2,6 +2,7 @@ package fri
 
 import (
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"math/rand/v2"
@@ -19,7 +20,7 @@ import (
 // goldenKoalaBearDigest pins the KoalaBear-mode Merkle outputs of
 // goldenFixtureProof to the values produced before MerkleHash existed, so that
 // the default mode stays bit-identical.
-const goldenKoalaBearDigest = "8a9e9c2d058f60a8871d04a5ce42de4773257ccd63ce3d7397e17e5a3b1614de"
+const goldenKoalaBearDigest = "963960fee3211c8e4b8da5bd1d362586acdf461a9d2d91869de2db6812abd9c6"
 
 func goldenFixtureProof(t *testing.T, opts ...Option) (*PCS, VerifyInputs, OpeningProof, CommitterState) {
 	t.Helper()
@@ -75,9 +76,16 @@ func goldenFixtureProof(t *testing.T, opts ...Option) (*PCS, VerifyInputs, Openi
 // goldenDigest summarises the Merkle outputs of a proof: the commitment root
 // and the FRI round roots.
 func goldenDigest(committed CommitterState, proof OpeningProof) string {
+	// Hash the canonical values explicitly: fmt's rendering of field elements
+	// depends on the gnark-crypto version.
 	h := sha256.New()
-	fmt.Fprint(h, committed.Tree.Root())
-	fmt.Fprint(h, proof.FRIProof.RoundRoots)
+	var buf [8]byte
+	for _, o := range append([]field.Octuplet{committed.Tree.Root()}, proof.FRIProof.RoundRoots...) {
+		for _, x := range o {
+			binary.BigEndian.PutUint64(buf[:], x.Uint64())
+			h.Write(buf[:])
+		}
+	}
 	return hex.EncodeToString(h.Sum(nil))
 }
 
