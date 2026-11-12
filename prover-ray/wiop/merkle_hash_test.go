@@ -43,13 +43,18 @@ func TestVerifierCircuit_MerkleHash(t *testing.T) {
 				require.NoError(t, cv.solve(t, proof, pub), "honest proof must satisfy the circuit")
 				t.Logf("constraints: %d", cv.ccs.GetNbConstraints())
 
+				// With a cap, the tampered root fails the cap check before any query.
+				wantNative := "query 0: input tree 0: invalid Merkle proof"
+				if capHeight > 0 {
+					wantNative = "input cap 0: invalid Merkle cap"
+				}
 				bad := cloneProof(proof)
 				root := bad.Commitments[0]
 				one := field.One()
 				root[0].Add(&root[0], &one)
 				bad.Commitments[0] = root
-				require.Error(t, sys.Verify(bad, pub), "tampered commitment must fail natively")
-				require.Error(t, cv.solve(t, bad, pub), "tampered commitment must not satisfy the circuit")
+				require.ErrorContains(t, sys.Verify(bad, pub), wantNative)
+				require.ErrorContains(t, cv.solve(t, bad, pub), "is not satisfied")
 			})
 		}
 	}
@@ -65,14 +70,15 @@ func TestCompile_MerkleHashBindsProof(t *testing.T) {
 	proofB, pubB := bn.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(colB, nonConstVec(16)) })
 	require.NotEqual(t, proofK.Commitments, proofB.Commitments, "modes must commit to different roots")
 
-	require.Error(t, bn.Verify(proofK, pubK), "KoalaBear proof must not verify in BN-packed mode")
-	require.Error(t, koala.Verify(proofB, pubB), "BN-packed proof must not verify in KoalaBear mode")
+	require.ErrorContains(t, bn.Verify(proofK, pubK), "input tree 0: invalid Merkle proof")
+	require.ErrorContains(t, koala.Verify(proofB, pubB), "query 0: input tree 0: invalid Merkle proof")
 }
 
 // TestConfigure_MerkleHashConflict checks that a Compile cannot downgrade the
 // hash a consumed compile already froze.
 func TestConfigure_MerkleHashConflict(t *testing.T) {
 	sys, _ := newMerkleHashSystem()
-	require.Error(t, pcs.Validate(sys, pcs.WithMerkleHash(fri.MerkleHashBNPacked)))
-	require.Panics(t, func() { pcs.WithMerkleHash(fri.MerkleHashBNPacked + 1) })
+	require.ErrorContains(t, pcs.Validate(sys, pcs.WithMerkleHash(fri.MerkleHashBNPacked)), "WithMerkleHash(bn-packed-poseidon2) conflicts with the consumed compile with koalabear-poseidon2")
+	require.PanicsWithValue(t, "unknown Merkle hash MerkleHash(2)",
+		func() { pcs.WithMerkleHash(fri.MerkleHashBNPacked + 1) })
 }

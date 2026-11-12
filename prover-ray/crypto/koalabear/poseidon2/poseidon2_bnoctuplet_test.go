@@ -33,7 +33,7 @@ func TestBNCompressOctupletRejectsNonDigest(t *testing.T) {
 	l[0].SetUint64(1 << 30)
 	out := BNCompressOctuplet(l, r)
 	w := &bnCompressOctCircuit{Left: octupletWitness(l), Right: octupletWitness(r), Output: octupletWitness(out)}
-	require.Error(t, test.IsSolved(&bnCompressOctCircuit{}, w, ecc.BN254.ScalarField()))
+	require.ErrorContains(t, test.IsSolved(&bnCompressOctCircuit{}, w, ecc.BN254.ScalarField()), "rangecheck")
 }
 
 // bnChainCircuit chains N node compressions, to measure the marginal cost of
@@ -103,7 +103,7 @@ func TestBNCompressOctupletCircuit(t *testing.T) {
 	require.NoError(t, test.IsSolved(&bnCompressOctCircuit{}, w, ecc.BN254.ScalarField()))
 
 	w.Left, w.Right = w.Right, w.Left
-	require.Error(t, test.IsSolved(&bnCompressOctCircuit{}, w, ecc.BN254.ScalarField()))
+	require.ErrorContains(t, test.IsSolved(&bnCompressOctCircuit{}, w, ecc.BN254.ScalarField()), "bnCompressOctCircuit).Define")
 }
 
 type bnOctLeafCircuit struct {

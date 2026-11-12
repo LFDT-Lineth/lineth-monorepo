@@ -65,14 +65,15 @@ func TestBNPackedHasherCircuit(t *testing.T) {
 				var bad = digest
 				bad.SetUint64(42)
 				witness.Output = bad
-				require.Error(t, test.IsSolved(circuit, witness, ecc.BN254.ScalarField()))
+				require.ErrorContains(t, test.IsSolved(circuit, witness, ecc.BN254.ScalarField()), "bnPackedCircuit).Define")
 			})
 		}
 	}
 }
 
 func TestBNPackedLengthInIVRejectsEmpty(t *testing.T) {
-	require.Panics(t, func() { NewBNPackedHasher(BNPackedLengthInIV).Sum() })
+	require.PanicsWithValue(t, "poseidon2: BN-packed hasher with length in IV cannot hash an empty input",
+		func() { NewBNPackedHasher(BNPackedLengthInIV).Sum() })
 }
 
 // TestBNPackedLengthInIVSeparation checks that inputs of different lengths
@@ -148,13 +149,15 @@ func TestBNPackedCanonicalSoundness(t *testing.T) {
 		out[2].And(x, big.NewInt(1<<24-1))
 	}
 	cases := []struct {
-		name string
-		v    uint64
-		hint solver.Hint
+		name    string
+		v       uint64
+		wantErr string
+		hint    solver.Hint
 	}{
 		{
 			// v < p, prover claims q = 1 and x = v - p (wraps mod r)
 			"q=1 on canonical input", 5,
+			"query element not in table",
 			func(_ *big.Int, in, out []*big.Int) error {
 				x := new(big.Int).Sub(in[0], p)
 				x.Mod(x, ecc.BN254.ScalarField())
@@ -165,6 +168,7 @@ func TestBNPackedCanonicalSoundness(t *testing.T) {
 		{
 			// v in [p, 2^31), prover keeps x = v (non-canonical) with q = 0
 			"non-canonical x = v", 2130706433 + 5,
+			"is not satisfied",
 			func(_ *big.Int, in, out []*big.Int) error {
 				split(new(big.Int).Set(in[0]), 0, out)
 				return nil
@@ -173,6 +177,7 @@ func TestBNPackedCanonicalSoundness(t *testing.T) {
 		{
 			// h = 127 with l != 0, i.e. x >= p
 			"x = p exactly", 2130706433,
+			"is not satisfied",
 			func(_ *big.Int, in, out []*big.Int) error {
 				split(new(big.Int).Set(in[0]), 0, out)
 				return nil
@@ -195,7 +200,7 @@ func TestBNPackedCanonicalSoundness(t *testing.T) {
 			require.NoError(t, ccs.IsSolved(w))
 			// malicious hint must fail
 			err = ccs.IsSolved(w, solver.OverrideHint(solver.GetHintID(koalaCanonicalSplitHint), tc.hint))
-			require.Error(t, err)
+			require.ErrorContains(t, err, tc.wantErr)
 		})
 	}
 }

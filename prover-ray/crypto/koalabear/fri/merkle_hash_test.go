@@ -109,7 +109,7 @@ func TestMerkleHashBNPackedRoundTrip(t *testing.T) {
 
 	// A KoalaBear verifier rejects a BN-packed proof, and the other way round.
 	koala, _, _, _ := goldenFixtureProof(t)
-	require.Error(t, koala.Verify(in, proof))
+	require.ErrorContains(t, koala.Verify(in, proof), "input cap 0: invalid Merkle cap")
 
 	// Tampering with a revealed row or a running sibling is rejected.
 	tampered := proof
@@ -121,7 +121,7 @@ func TestMerkleHashBNPackedRoundTrip(t *testing.T) {
 	bottom[0].Ext[0].B0.A0.SetUint64(bottom[0].Ext[0].B0.A0.Uint64() + 1)
 	leaves[len(leaves)-1] = &bottom
 	tampered.InputQueries[0][0].Leaves = leaves
-	require.Error(t, pcs.Verify(in, tampered))
+	require.ErrorContains(t, pcs.Verify(in, tampered), "query 0: input tree 0: invalid Merkle proof")
 }
 
 func TestMerkleHashAddOpeningRejectsMismatch(t *testing.T) {
@@ -145,7 +145,7 @@ func TestMerkleHashAddOpeningRejectsMismatch(t *testing.T) {
 
 func TestWithMerkleHashRejectsUnknown(t *testing.T) {
 	_, err := NewParams(3, 2, 1, WithMerkleHash(MerkleHash(7)))
-	require.Error(t, err)
+	require.ErrorContains(t, err, "fri: unknown Merkle hash MerkleHash(7)")
 }
 
 // TestMerkleHashBNPackedTree checks the BN-packed tree, built on its scalar
@@ -174,7 +174,7 @@ func TestMerkleHashBNPackedTree(t *testing.T) {
 		branch := tree.OpenBranch(idx)
 		frontier := []field.Octuplet{tree.Root()}
 		require.NoError(t, branch.authenticateToCap(MerkleHashBNPacked, idx, frontier))
-		require.Error(t, branch.authenticateToCap(MerkleHashKoalaBear, idx, frontier))
+		require.ErrorContains(t, branch.authenticateToCap(MerkleHashKoalaBear, idx, frontier), "invalid Merkle proof")
 	}
 }
 
@@ -200,9 +200,9 @@ func TestPCSVerifyGnarkBNPacked(t *testing.T) {
 			br.Siblings = append([]field.Octuplet(nil), br.Siblings...)
 			br.Siblings[0][3].SetUint64(br.Siblings[0][3].Uint64() ^ 1)
 			tampered.FRIProof.RunningQueries[0][0] = br
-			require.Error(t, fx.pcs.Verify(fx.input, tampered))
+			require.ErrorContains(t, fx.pcs.Verify(fx.input, tampered), "invalid Merkle proof")
 			_, bad := circuitFor(fx, tampered)
-			require.Error(t, solvePCSCircuit(t, template, bad))
+			require.ErrorContains(t, solvePCSCircuit(t, template, bad), "is not satisfied")
 		})
 	}
 }

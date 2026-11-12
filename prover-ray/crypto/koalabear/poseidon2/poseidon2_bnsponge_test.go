@@ -51,7 +51,7 @@ func TestBNSpongeCircuitMatchesNative(t *testing.T) {
 			bad := digest
 			bad.SetUint64(42)
 			witness.Output = bad
-			require.Error(t, test.IsSolved(circuit, witness, ecc.BN254.ScalarField()))
+			require.ErrorContains(t, test.IsSolved(circuit, witness, ecc.BN254.ScalarField()), "bnSpongeCircuit).Define")
 		})
 	}
 }
@@ -83,7 +83,8 @@ func TestBNSpongeLengthSeparation(t *testing.T) {
 }
 
 func TestBNSpongeRejectsEmpty(t *testing.T) {
-	require.Panics(t, func() { bnSpongeNative(nil) })
+	require.PanicsWithValue(t, "poseidon2: BN sponge with length in capacity cannot hash an empty input",
+		func() { bnSpongeNative(nil) })
 }
 
 type bnNodeCircuit struct {
@@ -102,8 +103,8 @@ func TestBNNodeCompressCircuitMatchesNative(t *testing.T) {
 	out := BNNodeCompress(l, r)
 	require.NoError(t, test.IsSolved(&bnNodeCircuit{},
 		&bnNodeCircuit{Left: l, Right: r, Output: out}, ecc.BN254.ScalarField()))
-	require.Error(t, test.IsSolved(&bnNodeCircuit{},
-		&bnNodeCircuit{Left: r, Right: l, Output: out}, ecc.BN254.ScalarField()))
+	require.ErrorContains(t, test.IsSolved(&bnNodeCircuit{},
+		&bnNodeCircuit{Left: r, Right: l, Output: out}, ecc.BN254.ScalarField()), "bnNodeCircuit).Define")
 }
 
 // TestBNSpongeConstraints prints PLONK constraint counts of the emulated
