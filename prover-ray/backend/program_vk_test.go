@@ -56,10 +56,12 @@ func TestProgramVK(t *testing.T) {
 	})
 
 	t.Run("extension", func(t *testing.T) {
+		// The VK limbs are declared base-field cells: an extension-tagged limb
+		// is refused by the transcript replay, before the VK check runs.
 		_, pos := c.sys.LookupPublicInputByTag(risc5.ProgramVKPI, 0)
 		forged := append(wiop.PublicInput(nil), pub...)
 		forged[pos] = field.ElemFromExt(forged[pos].AsExt())
-		assert.ErrorIs(t, c.sys.Verify(proof, forged), risc5.ErrProgramVKMismatch)
+		assert.ErrorContains(t, c.sys.Verify(proof, forged), "does not carry its declared field tag")
 	})
 }
 

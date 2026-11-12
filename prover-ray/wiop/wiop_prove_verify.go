@@ -235,6 +235,10 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 
 		for _, cell := range r.Cells {
 			if pos, isPI := piIdx[cell.Context.ID]; isPI {
+				if !cell.hasDeclaredTag(pub[pos]) {
+					return fmt.Errorf("public input %q does not carry its declared field tag (extension=%v)",
+						cell.Context.Path(), cell.IsExtension())
+				}
 				rt.AssignCell(cell, pub[pos])
 				continue
 			}
@@ -242,6 +246,14 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 			v, ok := proof.Cells[cell.Context.ID]
 			if !ok {
 				return fmt.Errorf("cell %q not found in proof", cell.Context.Path())
+			}
+			// The tag fixes how many field elements the cell absorbs into the
+			// transcript, so it must be the declared one: AssignCell would
+			// otherwise lift a base value silently and replay a transcript the
+			// proof was not made for.
+			if !cell.hasDeclaredTag(v) {
+				return fmt.Errorf("cell %q does not carry its declared field tag (extension=%v)",
+					cell.Context.Path(), cell.IsExtension())
 			}
 
 			rt.AssignCell(cell, v)

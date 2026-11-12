@@ -300,6 +300,10 @@ func (run *Runtime) AssignCell(cell *Cell, v field.Gen) {
 			cell.Context.Path(),
 		))
 	}
+	v, err := cell.canonical(v)
+	if err != nil {
+		panic(fmt.Sprintf("wiop: AssignCell: %v", err))
+	}
 	run.cells[id] = v
 }
 
@@ -354,7 +358,10 @@ func (run *Runtime) resolveLazyCell(cell *Cell) (field.Gen, bool) {
 		return field.Gen{}, false
 	}
 
-	v = cell.Assigner(run)
+	v, err := cell.canonical(cell.Assigner(run))
+	if err != nil {
+		panic(fmt.Sprintf("wiop: resolveLazyCell: %v", err))
+	}
 
 	run.lock.Lock()
 	if existing, exists := run.cells[cell.Context.ID]; exists {
