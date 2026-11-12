@@ -178,6 +178,46 @@ test "pcs verify cases from prover-ray vectors" {
     }
 }
 
+fn pcsCaseNamed(comptime name: []const u8) fixtures.PcsCase {
+    inline for (fixtures.pcs_cases) |case| {
+        if (comptime std.mem.eql(u8, case.name, name)) return case;
+    }
+    @compileError("no pcs case named " ++ name);
+}
+
+fn withMerkleCapHeight(comptime system: pcs.System, comptime height: u8) pcs.System {
+    var s = system;
+    s.envelope_params.merkle_cap_height = height;
+    return s;
+}
+
+// The cap height is a per-System compile option (prover-ray defaults to none),
+// so the verifier must use the baked height rather than derive it from the
+// query count. normal_flow and normal_flow_no_cap are the same proof at cap
+// height 2 and 0 (4 queries); each must be rejected under the other's height.
+test "pcs uses the baked Merkle cap height" {
+    const capped = comptime pcsCaseNamed("normal_flow");
+    const uncapped = comptime pcsCaseNamed("normal_flow_no_cap");
+    comptime std.debug.assert(capped.system.envelope_params.merkle_cap_height == 2);
+    comptime std.debug.assert(uncapped.system.envelope_params.merkle_cap_height == 0);
+
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    try pcs.verify(capped.system, try toPCSVerifyInput(allocator, capped));
+    try pcs.verify(uncapped.system, try toPCSVerifyInput(allocator, uncapped));
+
+    try std.testing.expectError(error.InvalidCap, pcs.verify(
+        comptime withMerkleCapHeight(capped.system, 0),
+        try toPCSVerifyInput(allocator, capped),
+    ));
+    try std.testing.expectError(error.InvalidCap, pcs.verify(
+        comptime withMerkleCapHeight(uncapped.system, 2),
+        try toPCSVerifyInput(allocator, uncapped),
+    ));
+}
+
 test "pcs rejects reordered input cap tables" {
     const case = fixtures.pcs_cases[0];
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
@@ -300,7 +340,7 @@ test "pcs rejects tampered running cap auxiliary digest" {
 
 test "routeInputRoots ignores an unused batch root" {
     const system = pcs.System{
-        .envelope_params = .{ .log_codeword_size = 2, .log_plaintext_size = 1, .num_queries = 1 },
+        .envelope_params = .{ .log_codeword_size = 2, .log_plaintext_size = 1, .num_queries = 1, .merkle_cap_height = 0 },
         .columns = &.{},
         .num_batches = 2,
         .max_entries = 1,
@@ -333,7 +373,7 @@ test "routeInputRoots ignores an unused batch root" {
 // log_plaintext_size = 2, num_queries = 3 } (numRounds = 2, one running-layer
 // root). The envelope is that same params (restrictTo is a no-op).
 const challenge_system = pcs.System{
-    .envelope_params = .{ .log_codeword_size = 4, .log_plaintext_size = 2, .num_queries = 3 },
+    .envelope_params = .{ .log_codeword_size = 4, .log_plaintext_size = 2, .num_queries = 3, .merkle_cap_height = 0 },
     .columns = &.{
         .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
     },
@@ -364,7 +404,7 @@ fn challengeFriProof(root_seed: u32) fri.Proof {
 // roots, but prover-ray still squeezes one final alpha and uses it as the
 // top-level alpha_DEEP.
 const d1_challenge_system = pcs.System{
-    .envelope_params = .{ .log_codeword_size = 2, .log_plaintext_size = 0, .num_queries = 1 },
+    .envelope_params = .{ .log_codeword_size = 2, .log_plaintext_size = 0, .num_queries = 1, .merkle_cap_height = 0 },
     .columns = &.{
         .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
     },
@@ -442,7 +482,7 @@ test "deriveChallenges retains deep alpha when there are no fold rounds" {
 // STATIC base column at size 2^2. Batch 1 owns one STATIC ext column at size 2^3.
 // Declaration order: [dyn(b0), static2(b0), static3ext(b1)].
 const recon_system = pcs.System{
-    .envelope_params = .{ .log_codeword_size = 6, .log_plaintext_size = 5, .num_queries = 1 },
+    .envelope_params = .{ .log_codeword_size = 6, .log_plaintext_size = 5, .num_queries = 1, .merkle_cap_height = 0 },
     .columns = &.{
         .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
         .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 2, .claim_start = 0 },
@@ -546,7 +586,7 @@ test "reconstruct: accepts a dynamic size below the column's declared min_size_l
 // base s2 (shift 1), static-2 base s3 (shift 0)]. Batch 1: one static-3 ext
 // column. Declaration order: d0, s1, s2, s3, e4.
 const manifest_system = pcs.System{
-    .envelope_params = .{ .log_codeword_size = 6, .log_plaintext_size = 5, .num_queries = 1 },
+    .envelope_params = .{ .log_codeword_size = 6, .log_plaintext_size = 5, .num_queries = 1, .merkle_cap_height = 0 },
     .columns = &.{
         .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
         .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 2, .claim_start = 1 },
@@ -649,7 +689,7 @@ test "buildEntryClaims pins elided claim cells; routedClaim serves them" {
     // An alias whose shift the target never opens cannot be pinned: column 1
     // (shift 1) aliases column 0, which is opened at shift 0 only.
     const narrow_system = pcs.System{
-        .envelope_params = .{ .log_codeword_size = 6, .log_plaintext_size = 5, .num_queries = 1 },
+        .envelope_params = .{ .log_codeword_size = 6, .log_plaintext_size = 5, .num_queries = 1, .merkle_cap_height = 0 },
         .columns = &.{
             .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
             .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },

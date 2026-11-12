@@ -290,7 +290,11 @@ func computeClaims(witness fri.Batch, shifts fri.BatchShifts, zeta field.Ext) fr
 }
 
 type pcsScenario struct {
-	Name             string
+	Name string
+	// MerkleCapHeight overrides the optimal cap height for the query count
+	// when non-nil, so the verifier is exercised with an explicitly chosen
+	// System height (0 = prover-ray's default, no cap).
+	MerkleCapHeight  *uint8
 	Params           fri.Params
 	LogFinalPolySize uint8
 	Encoders         []*fri.RSEncoder
@@ -320,7 +324,11 @@ type pcsCaseData struct {
 // if shiftedPointExported ever drifted from prover-ray's internal
 // convention, this catches it here rather than shipping a wrong vector.
 func buildPCSScenarioData(s pcsScenario) pcsCaseData {
-	s.Params.MerkleCapHeight = fri.OptimalMerkleCapHeight(s.Params.NumQueries)
+	if s.MerkleCapHeight != nil {
+		s.Params.MerkleCapHeight = *s.MerkleCapHeight
+	} else {
+		s.Params.MerkleCapHeight = fri.OptimalMerkleCapHeight(s.Params.NumQueries)
+	}
 	pcsInst, err := fri.NewPCS(s.Params, s.Encoders)
 	if err != nil {
 		panic(fmt.Sprintf("%s: NewPCS: %v", s.Name, err))
@@ -384,7 +392,38 @@ func extLift(v uint64) field.Ext { return field.Lift(elem(v)) }
 // buildNormalPCSScenario covers cap-authenticated input tables, including the
 // encoded-size-two table, plus two folding rounds.
 func buildNormalPCSScenario() pcsCaseData {
-	params, err := fri.NewParams(3, 2, 4)
+	return buildNormalPCSScenarioWith("normal_flow", 4, nil)
+}
+
+// buildNormalNoCapPCSScenario is normal_flow without a Merkle cap (prover-ray's
+// default): its 4 queries would give an optimal cap height of 2, so it checks
+// the verifier uses the System's baked height rather than one derived from the
+// query count.
+func buildNormalNoCapPCSScenario() pcsCaseData {
+	return buildNormalPCSScenarioWith("normal_flow_no_cap", 4, u8Ptr(0))
+}
+
+// buildNormalQ1Cap2PCSScenario is normal_flow with one query and an explicit
+// cap height of 2, above the optimal height for one query (0): the verifier's
+// input-cap scratch must be sized from the baked height, not the query count.
+func buildNormalQ1Cap2PCSScenario() pcsCaseData {
+	return buildNormalPCSScenarioWith("normal_flow_q1_cap2", 1, u8Ptr(2))
+}
+
+// buildNormalQ1Cap5PCSScenario is normal_flow with one query and a cap height
+// of 5, above every tree's height-1, so each tree clamps its cap depth to
+// height-1 (2 for the height-3 input tree).
+func buildNormalQ1Cap5PCSScenario() pcsCaseData {
+	return buildNormalPCSScenarioWith("normal_flow_q1_cap5", 1, u8Ptr(5))
+}
+
+func u8Ptr(v uint8) *uint8 { return &v }
+
+// buildNormalPCSScenarioWith builds normal_flow with the first numQueries of
+// its query positions and, when capHeight is non-nil, that Merkle cap height
+// instead of the optimal one.
+func buildNormalPCSScenarioWith(name string, numQueries uint, capHeight *uint8) pcsCaseData {
+	params, err := fri.NewParams(3, 2, numQueries)
 	if err != nil {
 		panic(err)
 	}
@@ -403,17 +442,18 @@ func buildNormalPCSScenario() pcsCaseData {
 	shifts[2] = fri.SizedShifts{Ext: [][]int{{0}, {1}}}
 
 	return buildPCSScenarioData(pcsScenario{
-		Name:      "normal_flow",
-		Params:    params,
-		Encoders:  pcsMakeEncoders(3, 2),
-		Witnesses: []fri.Batch{witness},
-		Shifts:    []fri.BatchShifts{shifts},
-		Zeta:      field.UintsToExt(19, 2, 3, 5, 7, 11),
+		Name:            name,
+		MerkleCapHeight: capHeight,
+		Params:          params,
+		Encoders:        pcsMakeEncoders(3, 2),
+		Witnesses:       []fri.Batch{witness},
+		Shifts:          []fri.BatchShifts{shifts},
+		Zeta:            field.UintsToExt(19, 2, 3, 5, 7, 11),
 		FoldAlphas: []field.Ext{
 			field.UintsToExt(29, 1, 0, 0, 0, 0),
 			field.UintsToExt(31, 0, 1, 0, 0, 0),
 		},
-		Positions: []int{3, 2, 1, 0},
+		Positions: []int{3, 2, 1, 0}[:numQueries],
 	})
 }
 
@@ -586,8 +626,8 @@ func pcsSystemLiteral(params fri.Params, logFinalPolySize uint8, layout []pcsSiz
 	}
 
 	var b strings.Builder
-	fmt.Fprintf(&b, "pcs.System{ .envelope_params = fri.Params{ .log_codeword_size = %d, .log_plaintext_size = %d, .log_final_poly_size = %d, .num_queries = %d }, .columns = &.{ ",
-		params.LogCodewordSize, params.LogPlainTextSize, logFinalPolySize, params.NumQueries)
+	fmt.Fprintf(&b, "pcs.System{ .envelope_params = fri.Params{ .log_codeword_size = %d, .log_plaintext_size = %d, .log_final_poly_size = %d, .num_queries = %d, .merkle_cap_height = %d }, .columns = &.{ ",
+		params.LogCodewordSize, params.LogPlainTextSize, logFinalPolySize, params.NumQueries, params.MerkleCapHeight)
 	flatShifts := []int{}
 	offsets := make([][2]int, 0, len(cols))
 	for _, c := range cols {
@@ -774,6 +814,9 @@ func writePCSFixtures() error {
 	boundary := buildBoundaryPCSScenario()
 	cases := []pcsCaseData{
 		buildNormalPCSScenario(),
+		buildNormalNoCapPCSScenario(),
+		buildNormalQ1Cap2PCSScenario(),
+		buildNormalQ1Cap5PCSScenario(),
 		buildD1PCSScenario(),
 		boundary,
 		corruptBoundaryClaimData(boundary),

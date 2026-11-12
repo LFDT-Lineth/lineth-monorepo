@@ -868,7 +868,7 @@ fn buildInputCapInfo(comptime system: System, recon: *const Reconstructed(system
     if (!found) return Error.InputTreeShapeMismatch;
     info.height = @as(usize, info.rate_log) + bottom;
     if (info.height == 0 or info.height > recon.params.log_codeword_size) return Error.InputTreeShapeMismatch;
-    info.depth = merkle.capDepth(recon.params.num_queries, info.height);
+    info.depth = merkle.capDepth(recon.params.merkle_cap_height, info.height);
     info.query_rows[info.height - 1] = true;
 
     for (0..recon.num_entries) |e| {
@@ -913,6 +913,24 @@ fn inputSizeWidths(recon: anytype, batch_idx: usize, size_log2: u8) InputWidths 
         if (recon.entry_is_ext[e]) widths.ext += 1 else widths.base += 1;
     }
     return widths;
+}
+
+/// Largest Merkle cap height a System may bake. `verify` keeps the input-cap
+/// interior nodes in a stack buffer of `2^height` digests, so this bounds the
+/// guest stack use (~37 KiB at 10); prover-ray's optimal height is 8 at the
+/// production 229 queries. codegen/pcs_zig.go enforces the same bound.
+pub const max_merkle_cap_height: u8 = 10;
+
+/// Scratch slots `authenticateInputCap` needs for the interior nodes above a
+/// cap of depth `capDepth(cap_height, height) <= min(cap_height,
+/// log_codeword_size - 1)`: `2^depth - 1`, rounded up to `2^depth`.
+fn inputAuxCapacity(comptime system: System) usize {
+    const params = system.envelope_params;
+    if (params.merkle_cap_height > max_merkle_cap_height) @compileError(std.fmt.comptimePrint(
+        "merkle_cap_height {d} exceeds max_merkle_cap_height {d}",
+        .{ params.merkle_cap_height, max_merkle_cap_height },
+    ));
+    return @as(usize, 1) << @intCast(@min(params.merkle_cap_height, params.log_codeword_size -| 1));
 }
 
 fn authenticateInputCap(
@@ -1056,7 +1074,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     var input_infos: [tree_cap]Info = undefined;
     var input_frontiers: [tree_cap][]const poseidon2.Digest = undefined;
     var input_root_frontiers: [tree_cap]poseidon2.Digest = undefined;
-    var input_aux_storage: [@max(system.envelope_params.num_queries * 2, 2)]?poseidon2.Digest = undefined;
+    var input_aux_storage: [inputAuxCapacity(system)]?poseidon2.Digest = undefined;
     for (0..routing.distinct_count) |tree_idx| {
         const info = try buildInputCapInfo(system, &recon, routing, tree_idx);
         input_infos[tree_idx] = info;
@@ -1081,7 +1099,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     var running_root_frontiers: [cap_rounds]poseidon2.Digest = undefined;
     if (num_rounds > 0) {
         for (1..@as(usize, num_rounds)) |j| {
-            const depth = merkle.capDepth(params.num_queries, params.log_codeword_size - @as(u8, @intCast(j)));
+            const depth = merkle.capDepth(params.merkle_cap_height, params.log_codeword_size - @as(u8, @intCast(j)));
             const cap = input.proof.fri_proof.round_caps[j - 1];
             if (depth == 0) {
                 running_root_frontiers[j] = input.proof.fri_proof.round_roots[j - 1];
