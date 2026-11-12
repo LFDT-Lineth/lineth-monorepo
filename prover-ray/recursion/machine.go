@@ -22,6 +22,9 @@ const (
 	mdMod      = "md"
 	merkleMod  = "merkle"
 	dpathMod   = "dpath"
+	deepMod    = "deep"  // the DEEP Horner's base rows
+	deepxMod   = "deepx" // and its Ext rows
+	foldMod    = "fold"
 	publicMod  = "public"
 )
 
@@ -52,6 +55,8 @@ type Machine struct {
 	mds     []mdInst
 	paths   []pathInst
 	dpaths  []DynamicPath
+	deeps   []deepInst
+	folds   []foldInst
 	publics []publicInst // the cells exposed as public inputs, in order
 
 	instrs []instr // every instruction, in execution order
@@ -79,6 +84,7 @@ const (
 	instrMD            // MDHash: the digest (and the compressions, for the P2 core)
 	instrPath          // MerklePath: [x⁻¹, b0] if asked (and the compressions, for the P2 core)
 	instrDPath         // MerklePathDynamic: its rows, table reads and compressions
+	instrDeep          // DeepHorner: the segments' h
 )
 
 func (m *Machine) alloc() int {
@@ -142,6 +148,8 @@ func (m *Machine) chips() []chip {
 		witnessChip{m}, constChip{m}, windowChip{m}, bitsChip{m},
 		e6Chip{m}, selectChip{m}, tableChip{m}, lookupChip{m},
 		p2Chip{m}, mdChip{m}, merkleChip{m}, dpathChip{m}, publicChip{m},
+		deepChip{m: m, mod: deepMod, lanes: CellWidth}, deepChip{m: m, mod: deepxMod, lanes: deepExtLanes, ext: true},
+		foldChip{m},
 	}, m.extra...)
 }
 
@@ -304,6 +312,9 @@ func (m *Machine) exec(in instr, r *Run) error {
 		return m.execPath(m.paths[in.idx], r)
 	case instrDPath:
 		return m.execDPath(in.idx, r)
+	case instrDeep:
+		m.execDeep(m.deeps[in.idx], r)
+		return nil
 	}
 	return fmt.Errorf("unknown instruction kind %d", in.kind)
 }
