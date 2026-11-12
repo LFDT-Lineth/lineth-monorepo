@@ -46,8 +46,9 @@ func ungrouped(shape Shape) Shape {
 }
 
 // newGroupedPCSFixture commits the grouped witness, opens it as numBatches
-// batches sharing one input tree at four queries, and checks the native
-// verifier accepts.
+// batches at four queries, and checks the native verifier accepts. Root dedup
+// is on, so with several batches, which all share one root, they share one
+// input tree.
 func newGroupedPCSFixture(t *testing.T, numBatches int) pcsOpenVerifyFixture {
 	t.Helper()
 	params, err := NewParams(4, 3, 4)
@@ -145,7 +146,7 @@ func TestMerkleizeInjectsEachGroup(t *testing.T) {
 			injections[level] = append(injections[level], digests)
 		}
 	}
-	want := allocTree(len(leaves))
+	want := allocTree(MerkleHashKoalaBear, len(leaves))
 	copy(want.Nodes[len(leaves)-1:], leaves)
 	want.buildLevels(injections)
 	require.Equal(t, want.Root(), tree.Root(), "grouped root must inject one digest per group")
@@ -194,6 +195,9 @@ func TestPCSVerifyGroupedCommitment(t *testing.T) {
 // every batch its own input tree, so the fixture has a single batch.
 func TestPCSVerifyGnarkGroupedCommitment(t *testing.T) {
 	fx := newGroupedPCSFixture(t, 1)
+	// The circuit verifier requires dedup disabled. With a single batch nothing
+	// is shared, so the proof built with dedup on is unchanged.
+	fx.pcs.DisableRootDedup()
 	template, assignment := circuitFor(fx, fx.proof)
 	require.NoError(t, solvePCSCircuit(t, template, assignment), "grouped proof must satisfy the verifier circuit")
 

@@ -88,6 +88,7 @@ func buildSeededBidirectionalShard(
 	t *testing.T,
 	name, originShard string,
 	traffic []busTraffic,
+	pcsOpts ...pcs.Option,
 ) *seededShard {
 	t.Helper()
 
@@ -124,7 +125,7 @@ func buildSeededBidirectionalShard(
 	grandproduct.Compile(sys)
 	localvanishing.Compile(sys)
 	global.Compile(sys)
-	pcs.Compile(sys)
+	pcs.Compile(sys, pcsOpts...)
 
 	require.Len(t, sys.Rounds[coinRoundID].Coins, 2,
 		"α and β must be declared on round %d", coinRoundID)

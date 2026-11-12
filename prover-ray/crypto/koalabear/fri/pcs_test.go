@@ -149,18 +149,18 @@ func TestOpenInputTreeOpeningAlignsMultiSizeRows(t *testing.T) {
 		t.Helper()
 
 		root := tree.Root()
-		require.NoError(t, branch.AuthenticateToCap(query, []field.Octuplet{root}, nil), name)
+		require.NoError(t, branch.AuthenticateToCap(MerkleHashKoalaBear, query, []field.Octuplet{root}, nil), name)
 
 		leaf, err := branch.rowAtLevel(len(levelEvals))
 		require.NoError(t, err, name)
-		assert.Equal(t, digestSizedRow(encoded[2], base), hashRowOpening(leaf), name)
+		assert.Equal(t, digestSizedRow(encoded[2], base), hashRowOpening(MerkleHashKoalaBear, leaf), name)
 
 		// The aux level's conjugate row (base^1) is carried alongside the
 		// on-path row, one tree depth shallower than the level's own size.
 		pair := branch.Leaves[2]
 		require.NotNil(t, pair, name)
-		assert.Equal(t, digestSizedRow(encoded[2], base), hashRowOpening(pair[0]), name)
-		assert.Equal(t, digestSizedRow(encoded[2], base^1), hashRowOpening(pair[1]), name)
+		assert.Equal(t, digestSizedRow(encoded[2], base), hashRowOpening(MerkleHashKoalaBear, pair[0]), name)
+		assert.Equal(t, digestSizedRow(encoded[2], base^1), hashRowOpening(MerkleHashKoalaBear, pair[1]), name)
 	}
 	checkInputTreeOpening("first tree", openInputTreeOpening(params, CommitterState{Tree: tree, EncodedTable: encoded}, query), tree, encoded)
 	checkInputTreeOpening("second tree", openInputTreeOpening(params, CommitterState{Tree: otherTree, EncodedTable: otherEncoded}, query), otherTree, otherEncoded)
@@ -187,7 +187,7 @@ func TestInputCapsAuthenticateRevealedTablesAndQueryBoundary(t *testing.T) {
 	capNodes := committed.Tree.OpenCap(info.depth).Nodes
 	treeCap := InputCap{Nodes: capNodes, Tables: revealedInputTables(committed.EncodedTable, info)}
 	require.Len(t, treeCap.Tables, 2)
-	frontier, err := authenticateInputCap(info, treeCap, shape, committed.Tree.Root())
+	frontier, err := authenticateInputCap(MerkleHashKoalaBear, info, treeCap, shape, committed.Tree.Root())
 	require.NoError(t, err)
 
 	queryPosition := 5
@@ -197,7 +197,7 @@ func TestInputCapsAuthenticateRevealedTablesAndQueryBoundary(t *testing.T) {
 	require.NotNil(t, branch.Leaves[2], "auxiliary pair below the cap must stay on the query path")
 	numLeaves := 1 << len(branch.Leaves)
 	leafIndex := queryPosition / ((1 << params.LogCodewordSize) / numLeaves)
-	require.NoError(t, branch.AuthenticateToCap(leafIndex, frontier, nil))
+	require.NoError(t, branch.AuthenticateToCap(MerkleHashKoalaBear, leafIndex, frontier, nil))
 	base := leafIndex / (numLeaves / len(treeCap.Tables[0].Rows))
 	require.Equal(t, openEncodedRow(committed.EncodedTable[0], base), treeCap.Tables[0].Rows[base])
 	require.Equal(t, openEncodedRow(committed.EncodedTable[0], base^1), treeCap.Tables[0].Rows[base^1])
@@ -567,5 +567,5 @@ func multiSizeTreeForCodewords(levelEvals, fullEvals []field.Ext) (*Tree, MultiS
 }
 
 func digestSizedRow(table SizedTable, row int) field.Octuplet {
-	return hashRowOpening(openEncodedRow(table, row))
+	return hashRowOpening(MerkleHashKoalaBear, openEncodedRow(table, row))
 }

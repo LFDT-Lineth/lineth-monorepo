@@ -78,12 +78,13 @@ const maxMerkleCapHeight = int(field.MaxOrderRoot)
 const configAnnotationKey = "compiler.pcs.config"
 
 type compileOptions struct {
-	friNumQueries  int
-	rsBlowup       int
-	merkleCap      merkleCapChoice
-	elisionEnabled bool
-	moduleGroups   bool
-	fixedFRIDomain bool
+	friNumQueries     int
+	rsBlowup          int
+	merkleCap         merkleCapChoice
+	elisionEnabled    bool
+	moduleGroups      bool
+	fixedFRIDomain    bool
+	rootDedupDisabled bool
 }
 
 // merkleCapMode tells how a System chose its Merkle cap height. The zero value
@@ -300,6 +301,18 @@ func WithSizeOblivious() Option {
 	}
 }
 
+// WithoutRootDedup gives every committed batch its own FRI input tree, even
+// when two batches have the same Merkle root (see [fri.PCS.DisableRootDedup]).
+// The opening proof's shape then depends on the batch layout alone, which the
+// gnark verifier requires. Costs one extra cap and one extra opening per query
+// for each collision.
+//
+// Off by default: proofs differ from the default ones, which share one input
+// tree between batches with the same root.
+func WithoutRootDedup() Option {
+	return func(o *compileOptions) { o.rootDedupDisabled = true }
+}
+
 // merge resolves opts against sys's recorded PCS configuration without
 // mutating anything. A local value that conflicts with an explicit
 // preconfigured (or consumed) value is an error, while a matching value is
@@ -334,6 +347,9 @@ func merge(sys *wiop.System, opts []Option) (compileOptions, error) {
 	if cfg.fixedFRIDomain && state.consumed && !pre.fixedFRIDomain {
 		return cfg, fmt.Errorf("pcs: WithFixedFRIDomain conflicts with the consumed compile without a fixed FRI domain")
 	}
+	if cfg.rootDedupDisabled && state.consumed && !pre.rootDedupDisabled {
+		return cfg, fmt.Errorf("pcs: WithoutRootDedup conflicts with the consumed compile with root dedup")
+	}
 	if cfg.friNumQueries == 0 {
 		cfg.friNumQueries = pre.friNumQueries
 	}
@@ -346,6 +362,7 @@ func merge(sys *wiop.System, opts []Option) (compileOptions, error) {
 	cfg.elisionEnabled = cfg.elisionEnabled || pre.elisionEnabled
 	cfg.moduleGroups = cfg.moduleGroups || pre.moduleGroups
 	cfg.fixedFRIDomain = cfg.fixedFRIDomain || pre.fixedFRIDomain
+	cfg.rootDedupDisabled = cfg.rootDedupDisabled || pre.rootDedupDisabled
 	if cfg.moduleGroups && cfg.elisionEnabled {
 		return cfg, fmt.Errorf("pcs: WithModuleGroups conflicts with WithColumnElision")
 	}
@@ -522,6 +539,9 @@ func (c *compiled) newPCS() *fri.PCS {
 		utils.Panic("pcs: newPCS: %v", err)
 	}
 	pcs.FixedDomain = c.fixedFRIDomain
+	if c.rootDedupDisabled {
+		pcs.DisableRootDedup()
+	}
 	return pcs
 }
 
@@ -612,6 +632,9 @@ type compiled struct {
 	// maxSizeLog2 is the largest committable padded column size (log2) at
 	// logRSBlowup; see [maxCommittableSizeLog2].
 	maxSizeLog2 uint8
+	// rootDedupDisabled gives every batch its own FRI input tree (see
+	// [WithoutRootDedup]).
+	rootDedupDisabled bool
 }
 
 // BatchRef identifies one FRI batch: an interactive round, or the precomputed
@@ -652,15 +675,16 @@ func Compile(sys *wiop.System, opts ...Option) {
 	}
 	logBlowup := uint8(utils.Log2Floor(cfg.rsBlowup))
 	c := &compiled{
-		manifestCells:   make(map[int][]*wiop.Cell),
-		colShifts:       collectColumnShifts(sys),
-		elisionEnabled:  cfg.elisionEnabled,
-		moduleGroups:    cfg.moduleGroups,
-		fixedFRIDomain:  cfg.fixedFRIDomain,
-		friNumQueries:   cfg.friNumQueries,
-		merkleCapHeight: cfg.merkleCap.resolve(cfg.friNumQueries),
-		logRSBlowup:     logBlowup,
-		maxSizeLog2:     maxCommittableSizeLog2(logBlowup),
+		manifestCells:     make(map[int][]*wiop.Cell),
+		colShifts:         collectColumnShifts(sys),
+		elisionEnabled:    cfg.elisionEnabled,
+		moduleGroups:      cfg.moduleGroups,
+		fixedFRIDomain:    cfg.fixedFRIDomain,
+		friNumQueries:     cfg.friNumQueries,
+		merkleCapHeight:   cfg.merkleCap.resolve(cfg.friNumQueries),
+		logRSBlowup:       logBlowup,
+		maxSizeLog2:       maxCommittableSizeLog2(logBlowup),
+		rootDedupDisabled: cfg.rootDedupDisabled,
 	}
 	if c.fixedFRIDomain {
 		params, _ := staticFRI(logBlowup)

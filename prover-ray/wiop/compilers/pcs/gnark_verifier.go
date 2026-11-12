@@ -26,6 +26,10 @@ func (a *OpeningVerifierAction) CheckGnark(api frontend.API, run *wiop.GnarkRunt
 	if a.c.elisionEnabled {
 		panic("pcs: CheckGnark: all-Present manifests only: compile without WithColumnElision")
 	}
+	// The circuit has one input tree per batch; the prover must too.
+	if !a.c.rootDedupDisabled {
+		panic("pcs: CheckGnark: requires Compile with WithoutRootDedup")
+	}
 	proof := run.PCSOpeningProof
 	batches := CommittedBatches(run.System)
 	a.c.assertAllPresentGnark(run, batches)
