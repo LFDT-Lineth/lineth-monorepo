@@ -7,6 +7,7 @@ import io.vertx.sqlclient.RowSet
 import linea.domain.createAggregation
 import linea.domain.createBatch
 import linea.domain.createBlobRecordFromBatches
+import linea.domain.createBlobRecordV2
 import linea.persistence.db.DbHelper
 import linea.persistence.db.test.CleanDbTestSuiteParallel
 import lineth.finalization.FinalizationMonitor
@@ -187,5 +188,51 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
     val forcedTransactionsAfterCleanup = forcedTransactionsDao.list().get()
     Assertions.assertThat(forcedTransactionsAfterCleanup.map { it.ftxNumber })
       .isEqualTo(listOf(3UL, 4UL))
+  }
+
+  @Test
+  fun `cleanup after the RISC-V cutover keeps the rollup row ending at the finalized block and the rows after it`() {
+    val blobsRepositoryV2 = BlobsRepositoryImplV2(
+      BlobsPostgresDaoV2(
+        config = BlobsPostgresDaoV2.Config(maxRollupProofsToReturn = 10u),
+        connection = sqlClient,
+        clock = fakeClock,
+      ),
+    )
+    val riscvBatches = (0L until 8L).map { createBatch(startBlockNumber = it * 5 + 1, endBlockNumber = it * 5 + 5) }
+    // Rollups ending inside a blob share it with the next one.
+    val rollups = listOf(
+      createBlobRecordV2(startBlockNumber = 1UL, endBlockNumber = 10UL, finalDataTailDiscardBytes = 100),
+      createBlobRecordV2(
+        startBlockNumber = 11UL,
+        endBlockNumber = 20UL,
+        parentDataTailTakeBytes = 100,
+        finalDataTailDiscardBytes = 200,
+      ),
+      createBlobRecordV2(startBlockNumber = 21UL, endBlockNumber = 30UL, parentDataTailTakeBytes = 200),
+      createBlobRecordV2(startBlockNumber = 31UL, endBlockNumber = 40UL),
+    )
+    riscvBatches.forEach { batchesRepository.saveNewBatch(it).get() }
+    rollups.forEach { blobsRepositoryV2.saveNewBlob(it).get() }
+
+    recordsCleanupFinalizationHandler.handleUpdate(
+      FinalizationMonitor.FinalizationUpdate(
+        blockNumber = 20u,
+        blockHash = Bytes32.random(),
+        forcedTransactionNumber = 0UL,
+      ),
+    ).get()
+
+    // The resume anchor and every row after it survive, and parse as RISC-V rollup rows.
+    Assertions.assertThat(blobsRepositoryV2.findBlobByEndBlockNumber(20L).get()).isEqualTo(rollups[1])
+    Assertions.assertThat(blobsRepositoryV2.findBlobByEndBlockNumber(10L).get()).isNull()
+    Assertions.assertThat(blobsRepositoryV2.findHighestConsecutiveEndBlockNumberFromBlockNumber(21UL).get())
+      .isEqualTo(40UL)
+    Assertions.assertThat(blobsContentQuery().execute().get().size()).isEqualTo(3)
+    // Batches after the finalized block survive for conflation and rollup resume.
+    Assertions.assertThat(batchesRepository.findHighestConsecutiveEndBlockNumberFromBlockNumber(21L).get())
+      .isEqualTo(40L)
+    Assertions.assertThat(batchesContentQuery().execute().get().map { it.getLong("start_block_number") })
+      .containsExactlyInAnyOrder(21L, 26L, 31L, 36L)
   }
 }
