@@ -58,7 +58,6 @@ import java.util.concurrent.TimeoutException
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 class JsonRpcEngineApiClientTest {
@@ -296,7 +295,7 @@ class JsonRpcEngineApiClientTest {
     assertThatThrownBy {
       client(
         ElFork.Prague,
-        requestTimeouts = EngineApiTimeouts.provider(maxTimeout = 1.minutes),
+        requestTimeouts = EngineApiTimeouts.provider(override = null),
       ).getPayload(payloadId).get()
     }
       .isInstanceOf(ExecutionException::class.java)

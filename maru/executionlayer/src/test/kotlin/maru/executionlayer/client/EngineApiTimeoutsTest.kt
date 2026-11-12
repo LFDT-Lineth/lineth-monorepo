@@ -25,16 +25,22 @@ class EngineApiTimeoutsTest {
   }
 
   @Test
-  fun `configured timeout caps but never extends the defaults`() {
-    val longCap = EngineApiTimeouts.provider(maxTimeout = 1.minutes)
-    assertThat(longCap("engine_getPayloadV4")).isEqualTo(2.seconds)
-    assertThat(longCap("engine_newPayloadV4")).isEqualTo(8.seconds)
-    assertThat(longCap("eth_getBlockByNumber")).isEqualTo(1.seconds)
+  fun `configured timeout replaces every default, whether longer or shorter`() {
+    val longer = EngineApiTimeouts.provider(override = 1.minutes)
+    assertThat(longer("engine_getPayloadV4")).isEqualTo(1.minutes)
+    assertThat(longer("engine_forkchoiceUpdatedV3")).isEqualTo(1.minutes)
+    assertThat(longer("eth_getBlockByNumber")).isEqualTo(1.minutes)
 
-    val shortCap = EngineApiTimeouts.provider(maxTimeout = 500.milliseconds)
-    assertThat(shortCap("engine_getPayloadV4")).isEqualTo(500.milliseconds)
-    assertThat(shortCap("engine_forkchoiceUpdatedV3")).isEqualTo(500.milliseconds)
+    val shorter = EngineApiTimeouts.provider(override = 500.milliseconds)
+    assertThat(shorter("engine_getPayloadV4")).isEqualTo(500.milliseconds)
+    assertThat(shorter("engine_newPayloadV4")).isEqualTo(500.milliseconds)
+  }
 
-    assertThat(EngineApiTimeouts.provider(maxTimeout = null)("engine_getPayloadV4")).isEqualTo(2.seconds)
+  @Test
+  fun `no configured timeout keeps the defaults`() {
+    val defaults = EngineApiTimeouts.provider(override = null)
+    assertThat(defaults("engine_getPayloadV4")).isEqualTo(2.seconds)
+    assertThat(defaults("engine_forkchoiceUpdatedV3")).isEqualTo(8.seconds)
+    assertThat(defaults("eth_getBlockByNumber")).isEqualTo(1.seconds)
   }
 }

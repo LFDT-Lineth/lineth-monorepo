@@ -38,7 +38,6 @@ object EngineApiTimeouts {
       else -> NON_BLOCK_EXECUTION
     }
 
-  /** @param maxTimeout when set, caps every method's default, so it can shorten but never extend a timeout. */
-  fun provider(maxTimeout: Duration?): (String) -> Duration =
-    { method -> maxTimeout?.let { minOf(defaultFor(method), it) } ?: defaultFor(method) }
+  /** @param override when set, replaces the default of every method, whether longer or shorter. */
+  fun provider(override: Duration?): (String) -> Duration = { method -> override ?: defaultFor(method) }
 }

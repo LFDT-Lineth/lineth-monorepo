@@ -50,7 +50,7 @@ object Helpers {
       metricsFacade = metricsFacade,
       endpoint = apiEndpointConfig.endpoint,
       jwtSecretPath = apiEndpointConfig.jwtSecretPath?.let(Path::of),
-      requestTimeouts = EngineApiTimeouts.provider(maxTimeout = apiEndpointConfig.timeout),
+      requestTimeouts = EngineApiTimeouts.provider(override = apiEndpointConfig.timeout),
       log = log,
     )
 
