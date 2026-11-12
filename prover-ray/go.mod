@@ -6,7 +6,7 @@ require (
 	github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20261110120652-88fe45db48d1
 	github.com/LFDT-Lineth/zkc v1.2.36
 	github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565
-	github.com/consensys/gnark-crypto v0.22.1-0.20261111213257-92e12f7b35ae
+	github.com/consensys/gnark-crypto v0.22.1-0.20261112125213-98b06120d35c
 	github.com/go-playground/assert/v2 v2.2.0
 	github.com/pkg/profile v1.7.0
 	github.com/sirupsen/logrus v1.9.4
