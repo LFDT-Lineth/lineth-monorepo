@@ -426,15 +426,6 @@ func TestText(t *testing.T) {
 	})
 }
 
-// TestParBatchInvertExt verifies that ParBatchInvertExt returns the same
-// result as the sequential BatchInvertExt.
-func TestParBatchInvertExt(t *testing.T) {
-	a := randomExts(testN)
-	want := BatchInvertExt(a)
-	got := ParBatchInvertExt(a, 4)
-	checkExtSlice(t, want, got)
-}
-
 // TestMulRInvExt verifies that MulRInvExt is the inverse of multiplication by
 // MontConstant: MulByElement(MulRInvExt(x), MontConstant) == x.
 func TestMulRInvExt(t *testing.T) {

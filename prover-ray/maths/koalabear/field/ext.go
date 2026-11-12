@@ -7,9 +7,7 @@ import (
 	"math/bits"
 	"math/rand/v2"
 	"reflect"
-	"runtime"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
 )
 
@@ -214,21 +212,6 @@ func ExtToText(z *Ext, base int) string {
 		z.B0.A0.Text(base), z.B0.A1.Text(base),
 		z.B1.A0.Text(base), z.B1.A1.Text(base),
 		z.B2.A0.Text(base), z.B2.A1.Text(base))
-}
-
-// ParBatchInvertExt computes inverses of all elements in a in parallel using numCPU goroutines.
-func ParBatchInvertExt(a []Ext, numCPU int) []Ext {
-
-	if numCPU == 0 {
-		numCPU = runtime.GOMAXPROCS(0)
-	}
-
-	res := make([]Ext, len(a))
-	parallel.Execute(len(a), func(start, stop int) {
-		BatchInvertExtInto(res[start:stop], a[start:stop])
-	}, numCPU)
-
-	return res
 }
 
 // MulRInvExt multiplies the extension field element by R^-1, where R is the Montgomery constant.
