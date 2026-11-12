@@ -50,7 +50,8 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm run build \
     && pnpm --config.allow-unused-patches=true --config.block-exotic-subdeps=false deploy --legacy --filter=./postman --prod ./prod/postman
 
 # Distroless Node.js runtime (no shell, no package manager), running as the nonroot user (uid 65532).
-# Pinned by digest because distroless publishes no per-version tags; this digest ships Node v24.22.3.
+# Pinned by digest because distroless publishes no per-version tags; this digest ships Node v24.22.3
+# (distroless commit 48b5c0455fb00d6ea7223f1fc6862c46da736556).
 # To update: docker buildx imagetools inspect gcr.io/distroless/nodejs24-debian13:nonroot
 FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:9fc11f6ee65993285c0fe3c4c9bbc4fd275fd4470572f58834ce490df91056e3 AS production
 
