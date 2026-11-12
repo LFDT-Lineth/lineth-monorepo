@@ -120,14 +120,14 @@ func (h *BNPackedHasher) Sum() fr.Element {
 	length.SetUint64(uint64(n))
 	if h.domain == BNPackedLengthInIV {
 		checkBNPackedNonEmpty(n)
-		state = length
+		state = length // length enters here: n is the initial chaining value
 	}
 	for start := 0; start < n; start += BNPackedNbKoalaPerLimb {
 		end := min(start+BNPackedNbKoalaPerLimb, n)
 		state = bnPackedCompress(state, bnPackChunk(h.buffer[start:end]))
 	}
 	if h.domain == BNPackedLengthSuffix {
-		state = bnPackedCompress(state, length)
+		state = bnPackedCompress(state, length) // length enters here: n is absorbed as a final block
 	}
 	return state
 }
