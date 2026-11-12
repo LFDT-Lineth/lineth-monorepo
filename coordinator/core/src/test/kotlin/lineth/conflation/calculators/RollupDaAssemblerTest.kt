@@ -1,11 +1,14 @@
 package lineth.conflation.calculators
 
+import linea.da.DaConstants.BLOB_PAYLOAD_CAPACITY
 import linea.da.DaConstants.KZG_POINT_BYTES
 import linea.da.DaStreamPosition
 import linea.da.SealedBlob
 import linea.da.SegmentEnd
-import lineth.conflation.calculators.DaPipelineTestSupport.conflation
-import lineth.conflation.calculators.DaPipelineTestSupport.genesisDataRollingHash
+import linea.domain.BlocksConflation
+import lineth.conflation.calculators.DaTestConflations.conflation
+import lineth.conflation.calculators.DaTestConflations.encoder
+import lineth.conflation.calculators.DaTestConflations.genesisDataRollingHash
 import lineth.coordination.riscv.da.FakeDaStream
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -18,9 +21,117 @@ class RollupDaAssemblerTest {
     val stream = FakeDaStream(DaStreamPosition(genesisDataRollingHash))
     val conflations = listOf(conflation(1UL, 40_000), conflation(2UL, 50_000), conflation(3UL, 60_000))
     val sealed = conflations.flatMap {
-      stream.append(stream.compress(it.blocks.map(DaPipelineTestSupport.encoder::encode)))
+      stream.append(stream.compress(it.blocks.map(encoder::encode)))
     }
     return sealed + stream.flush()!!
+  }
+
+  /**
+   * Feeds [conflations] through a [FakeDaStream] and the assembler in the order the rollup calculator does (each sealed
+   * blob, then the conflations whose frame ends in it), ending a rollup after each conflation whose end block is in
+   * [cutAfter]. The open blob is flushed at the end.
+   */
+  private fun assemble(conflations: List<BlocksConflation>, cutAfter: Set<ULong>): List<Rollup> {
+    val stream = FakeDaStream(DaStreamPosition(genesisDataRollingHash))
+    val assembler = RollupDaAssembler(DaStreamPosition(genesisDataRollingHash))
+    val unsealed = ArrayDeque<BlocksConflation>()
+    val rollups = mutableListOf<Rollup>()
+    fun onBlob(blob: SealedBlob) {
+      assembler.addBlob(blob)
+      blob.segmentEnds.forEach { end ->
+        assembler.addConflation(unsealed.removeFirst())
+        if (end.conflationEndBlock in cutAfter) rollups += assembler.endRollup(end)
+      }
+    }
+    conflations.forEach {
+      unsealed += it
+      stream.append(stream.compress(it.blocks.map(encoder::encode))).forEach(::onBlob)
+    }
+    stream.flush()?.let(::onBlob)
+    return rollups
+  }
+
+  /** Each rollup's blobs chain by rolling hash, and each rollup starts exactly where the previous one ends. */
+  private fun assertChained(rollups: List<Rollup>) {
+    rollups.forEach { rollup ->
+      rollup.da.blobs.zipWithNext().forEach { (previous, next) ->
+        assertThat(next.prevDataRollingHash).isEqualTo(previous.dataRollingHash)
+      }
+      assertThat(rollup.da.expectedEndDataRollingHash).isEqualTo(rollup.da.blobs.last().dataRollingHash)
+    }
+    assertThat(rollups.first().da.parentDataRollingHash).isEqualTo(genesisDataRollingHash)
+    rollups.zipWithNext().forEach { (previous, next) ->
+      assertThat(next.da.parentDataRollingHash).isEqualTo(previous.da.expectedEndDataRollingHash)
+      assertThat(next.da.parentDataTailTakeBytes).isEqualTo(previous.da.expectedFinalDataTailDiscardBytes)
+      if (next.da.parentDataTailTakeBytes > 0) {
+        assertThat(next.da.blobs.first()).isSameAs(previous.da.blobs.last())
+        assertThat(next.da.boundaryPrevDataRollingHash).isEqualTo(previous.da.blobs.last().prevDataRollingHash)
+      } else {
+        assertThat(next.da.boundaryPrevDataRollingHash).isNull()
+      }
+    }
+  }
+
+  private fun Rollup.ends(): List<ULong> = conflations.map { it.endBlockNumber }
+
+  @Test
+  fun `a huge conflation spanning many blobs takes them all into its rollup`() {
+    // blob1 = [1..2 (10k), start of 3..12], blob2..blob4 = [middle of 3..12], blob5 = [end of 3..12 (15k), 13..14].
+    val small = conflation(1UL, 2UL, 10_000)
+    val huge = conflation(3UL, 12UL, 4 * BLOB_PAYLOAD_CAPACITY + 5_000)
+    val next = conflation(13UL, 14UL, 10_000)
+
+    val rollups = assemble(listOf(small, huge, next), cutAfter = setOf(2UL, 12UL, 14UL))
+
+    assertChained(rollups)
+    val (first, spanning, last) = rollups
+    assertThat(rollups.map { it.ends() }).containsExactly(listOf(2UL), listOf(12UL), listOf(14UL))
+    assertThat(spanning.da.blobs).hasSize(5)
+    assertThat(spanning.da.blobs.first()).isSameAs(first.da.blobs.single())
+    assertThat(spanning.da.blobs.subList(1, 4)).allSatisfy { assertThat(it.segmentEnds).isEmpty() }
+    assertThat(spanning.da.parentDataTailTakeBytes).isEqualTo(BLOB_PAYLOAD_CAPACITY - 10_000)
+    assertThat(spanning.da.expectedFinalDataTailDiscardBytes).isEqualTo(10_000)
+    assertThat(last.da.blobs).containsExactly(spanning.da.blobs.last())
+    assertThat(last.da.expectedFinalDataTailDiscardBytes).isZero()
+  }
+
+  @Test
+  fun `many small conflations in one blob split into several rollups sharing it`() {
+    // Ten 2-block conflations of 10k each, all in one (flushed) blob; a rollup after every third.
+    val conflations = (0 until 10).map { conflation(2UL * it.toULong() + 1UL, 2UL * it.toULong() + 2UL, 10_000) }
+
+    val rollups = assemble(conflations, cutAfter = setOf(6UL, 12UL, 18UL, 20UL))
+
+    assertChained(rollups)
+    assertThat(rollups.map { it.ends() })
+      .containsExactly(listOf(2UL, 4UL, 6UL), listOf(8UL, 10UL, 12UL), listOf(14UL, 16UL, 18UL), listOf(20UL))
+    val blob = rollups.first().da.blobs.single()
+    assertThat(blob.segmentEnds).hasSize(10)
+    assertThat(rollups).allSatisfy { assertThat(it.da.blobs).containsExactly(blob) }
+    assertThat(rollups.map { it.da.expectedFinalDataTailDiscardBytes }).containsExactly(70_000, 40_000, 10_000, 0)
+  }
+
+  @Test
+  fun `one rollup can hold many small conflations and a huge one spanning blobs`() {
+    // blob1 = [4 smalls (40k), start of 9..15], blob2 = [middle of 9..15], blob3 = [end of 9..15 (40k), 3 smalls].
+    val smallsBefore = (0 until 4).map { conflation(2UL * it.toULong() + 1UL, 2UL * it.toULong() + 2UL, 10_000) }
+    val huge = conflation(9UL, 15UL, 2 * BLOB_PAYLOAD_CAPACITY)
+    val smallsAfter = (0 until 3).map { conflation(2UL * it.toULong() + 16UL, 2UL * it.toULong() + 17UL, 10_000) }
+    // A first rollup cut after the second small conflation, so the mixed rollup starts inside blob1.
+    val rollups = assemble(smallsBefore + huge + smallsAfter, cutAfter = setOf(4UL, 21UL))
+
+    assertChained(rollups)
+    val (first, mixed) = rollups
+    assertThat(first.ends()).containsExactly(2UL, 4UL)
+    assertThat(mixed.ends()).containsExactly(6UL, 8UL, 15UL, 17UL, 19UL, 21UL)
+    val (blob1, blob2, blob3) = mixed.da.blobs
+    assertThat(mixed.da.blobs).hasSize(3)
+    assertThat(blob1).isSameAs(first.da.blobs.single())
+    assertThat(blob1.segmentEnds.map { it.conflationEndBlock }).containsExactly(2UL, 4UL, 6UL, 8UL)
+    assertThat(blob2.segmentEnds).isEmpty()
+    assertThat(blob3.segmentEnds.map { it.conflationEndBlock }).containsExactly(15UL, 17UL, 19UL, 21UL)
+    assertThat(mixed.da.parentDataTailTakeBytes).isEqualTo(BLOB_PAYLOAD_CAPACITY - 20_000)
+    assertThat(mixed.da.expectedFinalDataTailDiscardBytes).isZero()
   }
 
   @Test
