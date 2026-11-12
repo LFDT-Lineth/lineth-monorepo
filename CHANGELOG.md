@@ -218,3 +218,4 @@
 - *(deps)* Refresh dependencies (#4323)
 - *(misc)* Ship license files and metadata in all published artifacts (#4336)
 - *(coordinator)* Review fixes — null safety, typos, concurrency and error handling (#2965) (#4421)
+- *(deps)* Bump Node.js to 24.22.3 (#4457)
