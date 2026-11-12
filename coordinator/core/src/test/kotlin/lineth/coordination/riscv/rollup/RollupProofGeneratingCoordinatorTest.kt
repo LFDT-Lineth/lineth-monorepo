@@ -277,6 +277,38 @@ class RollupProofGeneratingCoordinatorTest {
   }
 
   @Test
+  fun `a restart inside a short shared blob that the persisted batches fill exactly is ended by the rollup deadline`() {
+    // A blob flushed after 2 holds [1 (10k), 2 (30k)]; one rollup per conflation, so rollup 1 ends inside it.
+    val first = conflation(1UL, 10_000)
+    val second = conflation(2UL, 30_000)
+    val uninterrupted = createCoordinator(
+      rollupTriggers = listOf(RollupTriggerCalculatorByConflationCount(1)),
+      blobTriggers = listOf(BlobTriggerCalculatorByTargetBlockNumbers(setOf(2UL))),
+    )
+    prove(first, second)
+    uninterrupted.action().get()
+    val (_, expectedRequest2) = requests
+    val context1 = pollProofs().first()
+    proverClient.delegate.requests.clear()
+    proverClient.delegate.responseProvider = { null }
+
+    // After the restart, batch 2 reproduces the shared blob exactly, so appending it does not seal the blob, and no
+    // further batch is persisted to seal it.
+    val restarted = createCoordinator(
+      resumePoint = resumePointAfter(context1),
+      rollupTriggers = listOf(RollupTriggerCalculatorByConflationCount(1)),
+      rollupDeadline = 1.minutes,
+    )
+    clock.setTimeTo(baseTime)
+    restarted.action().get()
+    assertThat(requests).isEmpty()
+
+    clock.setTimeTo(baseTime + 2.minutes)
+    restarted.action().get()
+    assertThat(requests.single()).isEqualTo(expectedRequest2)
+  }
+
+  @Test
   fun `a rollup whose proof already exists is tracked without a new request`() {
     val coordinator = createCoordinator(blobTriggers = listOf(BlobTriggerCalculatorByTargetBlockNumbers(setOf(1UL))))
     prove(a)
