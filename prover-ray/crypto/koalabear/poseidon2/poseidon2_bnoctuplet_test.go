@@ -14,12 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func randOctuplet() field.Octuplet {
-	var o field.Octuplet
-	copy(o[:], randKoala(8))
-	return o
-}
-
 func randDigestOctuplet() field.Octuplet {
 	var d fr.Element
 	_, _ = d.SetRandom()
@@ -135,19 +129,6 @@ func TestBNOctupletLeafCircuit(t *testing.T) {
 		}
 		require.NoError(t, test.IsSolved(&bnOctLeafCircuit{Inputs: make([]kbcircuit.Element, n)}, w, ecc.BN254.ScalarField()))
 	}
-}
-
-type koalaCompressCircuit struct {
-	Left, Right, Output kbcircuit.Octuplet
-}
-
-func (c *koalaCompressCircuit) Define(api frontend.API) error {
-	kb := kbcircuit.NewAPI(api)
-	res := KoalagnarkCompress(kb, c.Left, c.Right)
-	for i := range res {
-		kb.AssertIsEqual(res[i], c.Output[i])
-	}
-	return nil
 }
 
 // TestBNCompressOctupletConstraints compares one Merkle node in the circuit:

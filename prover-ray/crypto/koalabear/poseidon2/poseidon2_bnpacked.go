@@ -323,7 +323,9 @@ func reducedLimb(koalaAPI *circuit.KoalaBearAPI, e circuit.Element) frontend.Var
 //
 // If q were 1 while v < p, x = v - p would wrap mod r and could not be
 // written as h*2^24 + l with those bounds, so the checks reject it.
-func canonicalKoala(api frontend.API, koalaAPI *circuit.KoalaBearAPI, rc frontend.Rangechecker, e circuit.Element) frontend.Variable {
+func canonicalKoala(
+	api frontend.API, koalaAPI *circuit.KoalaBearAPI, rc frontend.Rangechecker, e circuit.Element,
+) frontend.Variable {
 	v := reducedLimb(koalaAPI, e)
 
 	out, err := api.Compiler().NewHint(koalaCanonicalSplitHint, 3, v)

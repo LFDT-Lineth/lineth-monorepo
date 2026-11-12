@@ -696,7 +696,8 @@ func (source inputQuerySource) authenticate() error {
 			return fmt.Errorf("input tree %d: tree size %d incompatible with domain size %d", i, 1<<info.height, codewordSize)
 		}
 		leafIndex := source.queryPosition / (codewordSize / (1 << info.height))
-		if err := branch.AuthenticateToCap(source.params.MerkleHash, leafIndex, source.frontiers[i], info.levelGroups); err != nil {
+		err := branch.AuthenticateToCap(source.params.MerkleHash, leafIndex, source.frontiers[i], info.levelGroups)
+		if err != nil {
 			return fmt.Errorf("input tree %d: %w", i, err)
 		}
 	}
@@ -1542,7 +1543,8 @@ func (branch InputTreeOpening) AuthenticateToCap(
 		}
 		ancestor, currPos = chainDigests(hash, digests), idx>>1
 	} else {
-		ancestor, currPos, err = foldOneLevel(hash, hashRowOpening(hash, bottom[0]), hashRowOpening(hash, bottom[1]), nil, nil, idx)
+		left, right := hashRowOpening(hash, bottom[0]), hashRowOpening(hash, bottom[1])
+		ancestor, currPos, err = foldOneLevel(hash, left, right, nil, nil, idx)
 		if err != nil {
 			return err
 		}
@@ -1553,7 +1555,8 @@ func (branch InputTreeOpening) AuthenticateToCap(
 		if level < len(levelGroups) {
 			groups = levelGroups[level]
 		}
-		ancestor, currPos, err = foldOneLevel(hash, ancestor, branch.Siblings[siblingIdx], branch.Leaves[level], groups, currPos)
+		ancestor, currPos, err = foldOneLevel(
+			hash, ancestor, branch.Siblings[siblingIdx], branch.Leaves[level], groups, currPos)
 		if err != nil {
 			return fmt.Errorf("level %d: %w", level, err)
 		}
@@ -1776,7 +1779,8 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 			return fmt.Errorf("fri: pcs.Verify: input cap %d: %w", treeIdx, err)
 		}
 		inputCapInfos[treeIdx] = info
-		frontier, err := authenticateInputCap(pcs.Params.MerkleHash, info, proof.InputCaps[treeIdx], inputShapes[treeIdx], inputRoots[treeIdx])
+		frontier, err := authenticateInputCap(
+			pcs.Params.MerkleHash, info, proof.InputCaps[treeIdx], inputShapes[treeIdx], inputRoots[treeIdx])
 		if err != nil {
 			return fmt.Errorf("fri: pcs.Verify: input cap %d: %w", treeIdx, err)
 		}

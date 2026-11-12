@@ -105,7 +105,8 @@ func (m MerkleHash) compressGnark(api *circuit.KoalaBearAPI, left, right circuit
 func (m MerkleHash) compressLeavesGnark(api *circuit.KoalaBearAPI, left, right circuit.Octuplet) circuit.Octuplet {
 	if m == MerkleHashBNPacked {
 		f := api.Frontend()
-		return poseidon2.BNCompressPackedGnark(f, poseidon2.BNPackOctupletGnark(f, left), poseidon2.BNPackOctupletGnark(f, right))
+		l, r := poseidon2.BNPackOctupletGnark(f, left), poseidon2.BNPackOctupletGnark(f, right)
+		return poseidon2.BNCompressPackedGnark(f, l, r)
 	}
 	return poseidon2.KoalagnarkCompress(api, left, right)
 }

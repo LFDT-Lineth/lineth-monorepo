@@ -1011,7 +1011,8 @@ func authenticateInputToCapGnark(
 		if level < len(levelGroups) {
 			groups = levelGroups[level]
 		}
-		ancestor = foldOneLevelGnark(api, hash, ancestor, branch.Siblings[level-depth], aux, groups, idxBits[numLevels-1-level], false)
+		ancestor = foldOneLevelGnark(
+			api, hash, ancestor, branch.Siblings[level-depth], aux, groups, idxBits[numLevels-1-level], false)
 	}
 	assertOctupletEqual(api, ancestor, selectFrontierNodeGnark(api, frontier, idxBits[numLevels-depth:numLevels]))
 }

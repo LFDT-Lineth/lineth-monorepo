@@ -1127,7 +1127,8 @@ func (c *compiled) commitVectors(
 		utils.Panic("pcs: round %d commits a column of size 2^%d, above the 2^%d committable at RS blowup %d",
 			round.ID, maxSizeIndex, c.maxSizeLog2, 1<<c.logRSBlowup)
 	}
-	committerState := fri.CommitWithHash(c.merkleHash, roundEncoders(c.logRSBlowup, uint8(maxSizeIndex)), sortedColumns[:maxSizeIndex+1])
+	encoders := roundEncoders(c.logRSBlowup, uint8(maxSizeIndex))
+	committerState := fri.CommitWithHash(c.merkleHash, encoders, sortedColumns[:maxSizeIndex+1])
 	return &committerState
 }
 

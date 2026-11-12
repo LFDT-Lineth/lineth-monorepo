@@ -126,7 +126,7 @@ func BNDigestToOctupletGnark(api frontend.API, d frontend.Variable) circuit.Octu
 	}
 	rc := rangecheck.New(api)
 	var (
-		acc frontend.Variable = out[bnDigestNbLimbs]
+		acc = out[bnDigestNbLimbs]
 		o   circuit.Octuplet
 	)
 	rc.Check(out[bnDigestNbLimbs], bnDigestHighBits)
