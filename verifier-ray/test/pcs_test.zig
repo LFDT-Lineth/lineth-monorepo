@@ -208,14 +208,14 @@ test "pcs uses the baked Merkle cap height" {
     try pcs.verify(capped.system, try toPCSVerifyInput(allocator, capped));
     try pcs.verify(uncapped.system, try toPCSVerifyInput(allocator, uncapped));
 
-    try std.testing.expect(std.meta.isError(pcs.verify(
+    try std.testing.expectError(error.InvalidCap, pcs.verify(
         comptime withMerkleCapHeight(capped.system, 0),
         try toPCSVerifyInput(allocator, capped),
-    )));
-    try std.testing.expect(std.meta.isError(pcs.verify(
+    ));
+    try std.testing.expectError(error.InvalidCap, pcs.verify(
         comptime withMerkleCapHeight(uncapped.system, 2),
         try toPCSVerifyInput(allocator, uncapped),
-    )));
+    ));
 }
 
 test "pcs rejects reordered input cap tables" {

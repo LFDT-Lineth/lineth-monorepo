@@ -88,6 +88,11 @@ type pcsColOffset struct {
 const (
 	u8Max  = 1<<8 - 1
 	u16Max = 1<<16 - 1
+
+	// maxMerkleCapHeight mirrors pcs.zig's `max_merkle_cap_height`: verify
+	// keeps a cap's interior nodes in a stack buffer of 2^height digests, so
+	// the baked height is bounded by what the guest stack can hold.
+	maxMerkleCapHeight = 10
 )
 
 // checkPcsIndex panics with the offending value rather than emitting a literal
@@ -129,7 +134,7 @@ func newPcsTemplateData(index int, system PcsSystem, opts PcsZigOptions) pcsTemp
 			checkPcsIndex(b.RoundIndex, u8Max, fmt.Sprintf("batch_roots[%d].round", i))
 		}
 	}
-	checkPcsIndex(system.MerkleCapHeight, u8Max, "merkle_cap_height")
+	checkPcsIndex(system.MerkleCapHeight, maxMerkleCapHeight, "merkle_cap_height")
 	if len(system.BatchManifests) > 0 && len(system.BatchManifests) != system.NumBatches {
 		panic(fmt.Sprintf("pcs codegen: %d batch_manifests for %d batches", len(system.BatchManifests), system.NumBatches))
 	}

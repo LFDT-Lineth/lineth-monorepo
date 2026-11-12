@@ -349,6 +349,11 @@ func TestPcsZigRejectsOutOfRangeIndices(t *testing.T) {
 			sys:  PcsSystem{BatchRoots: []PcsBatchRoot{{Precomputed: false, RoundIndex: 1 << 8}}},
 			want: "round is 256",
 		},
+		{
+			name: "merkle_cap_height above the guest stack bound",
+			sys:  PcsSystem{MerkleCapHeight: maxMerkleCapHeight + 1},
+			want: "merkle_cap_height is 11",
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
