@@ -1,7 +1,4 @@
 ARG NODE_VERSION=24.22.3
-# Docker Hardened Image (node only, no shell or package manager). Pulling it requires `docker login dhi.io`;
-# builds without Docker Hub credentials can pass RUNTIME_IMAGE=node:<version>-trixie-slim instead.
-ARG RUNTIME_IMAGE=dhi.io/node:${NODE_VERSION}
 
 FROM node:${NODE_VERSION}-trixie-slim AS base
 
@@ -52,21 +49,21 @@ COPY ./ts-libs/eslint-config ./ts-libs/eslint-config
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm run build \
     && pnpm --config.allow-unused-patches=true --config.block-exotic-subdeps=false deploy --legacy --filter=./postman --prod ./prod/postman
 
-FROM ${RUNTIME_IMAGE} AS production
+# Distroless Node.js runtime (no shell, no package manager), running as the nonroot user (uid 65532).
+# Pinned by digest because distroless publishes no per-version tags; this digest ships Node v24.22.3.
+# To update: docker buildx imagetools inspect gcr.io/distroless/nodejs24-debian13:nonroot
+FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:9fc11f6ee65993285c0fe3c4c9bbc4fd275fd4470572f58834ce490df91056e3 AS production
 
 ENV NODE_ENV=production
 
 WORKDIR /usr/src/app
 
 # Copy only production dependencies and built files
-COPY --from=builder --chown=node:node /usr/src/app/prod/postman ./postman
+COPY --from=builder --chown=nonroot:nonroot /usr/src/app/prod/postman ./postman
 COPY LICENSE-APACHE LICENSE-MIT /licenses/
 
-# Run as non-root user
-USER node
-
-# Use exec form for proper signal handling
-CMD ["node", "./postman/dist/src/main.js"]
+# The image entrypoint is the node binary.
+CMD ["./postman/dist/src/main.js"]
 
 # Build-time metadata as defined at http://label-schema.org
 # Values are injected by scripts/docker/build-image.sh.
