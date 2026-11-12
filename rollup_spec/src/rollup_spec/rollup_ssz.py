@@ -10,8 +10,8 @@ sibling `l2_execution_ssz.py`, mirroring the proof pipeline itself.
 Inputs are framed as `schema_id (2 bytes, big-endian) || SSZ bytes`.
 Two schema ids are defined, one per guest-facing message:
 
-  - `ROLLUP_INPUT_SCHEMA_ID`  (0x1001) — rollup guest input
-  - `ROLLUP_OUTPUT_SCHEMA_ID` (0x1801) — rollup guest output
+  - `ROLLUP_INPUT_SCHEMA_ID`  (0x0004) — rollup guest input
+  - `ROLLUP_OUTPUT_SCHEMA_ID` (0x0005) — rollup guest output
 
 The guest output is `keccak256(schema_id || SSZ(public_inputs)) || schema_id
 || SSZ(public_inputs)`. The prover attaches the proof and range metadata;
@@ -61,8 +61,8 @@ from .rollup import (
 from .stateless_input import InvalidSsz
 
 # ── Framing ──────────────────────────────────────────────────────────────────
-ROLLUP_INPUT_SCHEMA_ID = 0x1001
-ROLLUP_OUTPUT_SCHEMA_ID = 0x1801
+ROLLUP_INPUT_SCHEMA_ID = 0x0004
+ROLLUP_OUTPUT_SCHEMA_ID = 0x0005
 
 # ── SSZ list/vector bounds ───────────────────────────────────────────────────
 MAX_CONFLATIONS_PER_ROLLUP = 2**10             # conflations one rollup proof recursively verifies
@@ -259,7 +259,7 @@ def _rollup_input_from_view(view: Any) -> RollupProofPrivateInput:
 
 
 def encode_rollup_input(private_input: RollupProofPrivateInput) -> bytes:
-    """Encode a `RollupProofPrivateInput` into framed SSZ bytes (0x1001 schema id)."""
+    """Encode a `RollupProofPrivateInput` into framed SSZ bytes (0x0004 schema id)."""
     return _frame(ROLLUP_INPUT_SCHEMA_ID, _ssz_rollup_input(private_input).encode_bytes())
 
 
@@ -281,7 +281,7 @@ def hash_rollup_public_inputs(pi: RollupPublicInput) -> Hash32:
 
 def encode_rollup_output(proof: RollupProof) -> bytes:
     """
-    Encode the rollup guest's own output into framed SSZ bytes (0x1801 schema
+    Encode the rollup guest's own output into framed SSZ bytes (0x0005 schema
     id). `proof.proof` is deliberately dropped — it is a prover-attached
     placeholder in `RollupProof`, never part of the guest-emitted bytes.
     """

@@ -1,5 +1,5 @@
 //! SSZ codec for the rollup guest wire format: private input and public inputs plus hash,
-//! schema ids 0x1001/0x1801.
+//! schema ids 0x0004/0x0005.
 //!
 //! Frame: 2-byte big-endian schema id || SSZ container bytes (SSZ itself little-endian). This
 //! guest's own tests round-trip the input container byte-for-byte using this
@@ -19,8 +19,8 @@
 const std = @import("std");
 const guest_common = @import("guest_common");
 
-pub const INPUT_SCHEMA_ID: u16 = 0x1001;
-pub const OUTPUT_SCHEMA_ID: u16 = 0x1801;
+pub const INPUT_SCHEMA_ID: u16 = 0x0004;
+pub const OUTPUT_SCHEMA_ID: u16 = 0x0005;
 const SCHEMA_ID_SIZE: usize = 2;
 
 // ── SSZ list/vector bounds (mirrors rollup_ssz.py's MAX_* constants) ─────────────────────────────
@@ -341,7 +341,7 @@ fn decodeVerifiableL2ExecutionProof(alloc: std.mem.Allocator, bytes: []const u8)
 // Fixed head: parent_data_rolling_hash(32) + start_offset(8) + chain_id(8) + 6 offsets(4 each).
 const INPUT_FIXED_SIZE: usize = 32 + 8 + 8 + 4 * 6;
 
-/// Decode the rollup guest input: the 0x1001 schema id followed by the SSZ
+/// Decode the rollup guest input: the 0x0004 schema id followed by the SSZ
 /// `SszRollupProofPrivateInput`. Strict: rejects a wrong schema id, a too-short frame, a
 /// misaligned/out-of-order/out-of-bounds offset, or a list exceeding its wire-format bound.
 pub fn decodeInput(alloc: std.mem.Allocator, data: []const u8) !RollupProofPrivateInput {
@@ -489,7 +489,7 @@ fn encodeConflationWitness(alloc: std.mem.Allocator, v: ConflationWitness) ![]u8
     return out;
 }
 
-/// Encode the rollup guest input: the 0x1001 schema id followed by the SSZ
+/// Encode the rollup guest input: the 0x0004 schema id followed by the SSZ
 /// `SszRollupProofPrivateInput`. Not used by the guest itself at runtime (it only ever decodes) —
 /// kept so the input codec's byte-exact round-trip can be asserted against `decodeInput` in this
 /// guest's own tests, from literal readable Zig values rather than an externally-produced fixture.
@@ -601,7 +601,7 @@ fn encodeRollupPublicInput(alloc: std.mem.Allocator, v: RollupPublicInput) ![]u8
 // Framed output: SSZ(public_inputs) followed by its 32-byte keccak256 hash.
 const OUTPUT_HASH_SIZE: usize = 32;
 
-/// Encode the 0x1801 frame containing plain SSZ public inputs followed by their keccak256 hash.
+/// Encode the 0x0005 frame containing plain SSZ public inputs followed by their keccak256 hash.
 /// Auxiliary business-logic fields stay off wire.
 pub fn encodeOutput(alloc: std.mem.Allocator, v: RollupOutput) ![]u8 {
     const pi_bytes = try encodeRollupPublicInput(alloc, v.public_inputs);

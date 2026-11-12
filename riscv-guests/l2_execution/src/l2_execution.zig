@@ -26,7 +26,9 @@ const primitives = @import("zesu_primitives");
 const ssz_decode = @import("zesu_ssz_decode");
 const zesu_allocator = @import("zesu_allocator");
 const rlp_decode = @import("zesu_rlp_decode");
+const zkvm_accelerators = @import("zkvm_accelerators");
 const l2_execution_ssz = @import("l2_execution_ssz.zig");
+const guest_common = @import("guest_common");
 const l2_execution_proof = @import("core_serde").l2_execution_proof;
 
 const execution = @import("execution.zig");
@@ -86,7 +88,7 @@ fn chainConfigHash(chain_config: l2_execution_ssz.ChainConfig, base_fee: u64) [3
     @memcpy(buf[32..52], &chain_config.coinbase);
     @memcpy(buf[52..72], &chain_config.l2_message_service_address);
     @memcpy(buf[72..104], &u64ToSlot32(base_fee));
-    return mpt.keccak256(&buf);
+    return zkvm_accelerators.keccak256Digest(&buf);
 }
 
 /// The range-level system contracts in zesu's own type (same fields, same order).
@@ -105,7 +107,7 @@ fn addToForcedTxRollingHash(prev: [32]u8, tx_hash: [32]u8, deadline: u64, from_a
     @memcpy(buf[32..64], &tx_hash);
     @memcpy(buf[64..96], &u64ToSlot32(deadline));
     @memcpy(buf[96..116], &from_address);
-    return mpt.keccak256(&buf);
+    return zkvm_accelerators.keccak256Digest(&buf);
 }
 
 /// Hash of a list of 32-byte digests (e.g. `l2_l1_messages_hash`'s message-hash preimages). Named
@@ -116,14 +118,14 @@ fn hashDigestList(alloc: std.mem.Allocator, values: []const [32]u8) ![32]u8 {
     const buf = try alloc.alloc(u8, values.len * 32);
     defer alloc.free(buf);
     for (values, 0..) |v, i| @memcpy(buf[i * 32 ..][0..32], &v);
-    return mpt.keccak256(buf);
+    return zkvm_accelerators.keccak256Digest(buf);
 }
 
 fn hashAddressList(alloc: std.mem.Allocator, values: []const [20]u8) ![32]u8 {
     const buf = try alloc.alloc(u8, values.len * 20);
     defer alloc.free(buf);
     for (values, 0..) |v, i| @memcpy(buf[i * 20 ..][0..20], &v);
-    return mpt.keccak256(buf);
+    return zkvm_accelerators.keccak256Digest(buf);
 }
 
 // ─── Witness-backed MPT state reads (mirrors state_transition.py's L2State) ───────────────────────
@@ -183,20 +185,9 @@ fn scanL2MessageServiceLogs(
     return scan;
 }
 
-fn lessThanAddress(_: void, a: [20]u8, b: [20]u8) bool {
-    return std.mem.order(u8, &a, &b) == .lt;
-}
-
 /// Distinct addresses, sorted ascending by byte value (mirrors `merge_filtered_addresses`).
 fn mergeFilteredAddresses(alloc: std.mem.Allocator, list: *std.ArrayListUnmanaged([20]u8)) ![][20]u8 {
-    std.mem.sort([20]u8, list.items, {}, lessThanAddress);
-    var n: usize = 0;
-    for (list.items) |a| {
-        if (n > 0 and std.mem.eql(u8, &list.items[n - 1], &a)) continue;
-        list.items[n] = a;
-        n += 1;
-    }
-    list.items.len = n;
+    list.items.len = guest_common.lists.sortedDistinct(20, list.items).len;
     return list.toOwnedSlice(alloc);
 }
 
@@ -256,7 +247,7 @@ fn validateForcedTransactions(
 
     const payload_tx_hashes = try alloc.alloc([32]u8, payload.raw_transactions.len);
     defer alloc.free(payload_tx_hashes);
-    for (payload.raw_transactions, 0..) |raw, i| payload_tx_hashes[i] = mpt.keccak256(raw);
+    for (payload.raw_transactions, 0..) |raw, i| payload_tx_hashes[i] = zkvm_accelerators.keccak256Digest(raw);
 
     for (forced_transactions) |ftx| {
         if (ftx.number != last_processed_ftx_number.* + 1) return error.ForcedTxOutOfOrder;
@@ -265,7 +256,7 @@ fn validateForcedTransactions(
         const decoded = try tx_decode.decodeTxs(alloc, &.{ftx.signed_tx_rlp});
         const tx = &decoded[0];
         const from_address = try tx_signing.recoverSender(alloc, tx, chain_id, GUEST_SPEC) orelse return error.ForcedTxSenderRecoveryFailed;
-        const tx_hash = mpt.keccak256(ftx.signed_tx_rlp);
+        const tx_hash = zkvm_accelerators.keccak256Digest(ftx.signed_tx_rlp);
 
         // Rolling hash update for EVERY FTX in the range, regardless of outcome.
         curr_rolling_hash.* = addToForcedTxRollingHash(curr_rolling_hash.*, tx_hash, ftx.deadline, from_address);

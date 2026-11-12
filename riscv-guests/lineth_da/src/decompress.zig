@@ -10,7 +10,7 @@
 
 const std = @import("std");
 
-const accelerators = @import("zesu_accelerators");
+const accelerators = @import("zkvm_accelerators");
 const blob_kzg = @import("encoding/blob_kzg.zig");
 const blob_payload = @import("encoding/blob_payload.zig");
 const rolling_hash = @import("encoding/rolling_hash.zig");

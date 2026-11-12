@@ -12,6 +12,7 @@ const executor = @import("zesu_executor");
 const primitives = @import("zesu_primitives");
 const input = @import("zesu_input");
 const mpt = @import("zesu_mpt");
+const zkvm_accelerators = @import("zkvm_accelerators");
 
 const rlp = executor.executor_rlp_encode;
 const mpt_builder = mpt.builder;
@@ -79,7 +80,7 @@ pub fn validate(
     block_access_list_hash: [32]u8,
 ) !void {
     const header = try encodeHeader(alloc, req, spec, requests_hash, block_access_list_hash);
-    if (!std.mem.eql(u8, &rlp.keccak256(header), &req.execution_payload.block_hash)) return error.InvalidBlockHash;
+    if (!std.mem.eql(u8, &zkvm_accelerators.keccak256Digest(header), &req.execution_payload.block_hash)) return error.InvalidBlockHash;
 }
 
 /// Withdrawals trie: key = RLP(index), value = RLP([index, validator_index, address, amount]).

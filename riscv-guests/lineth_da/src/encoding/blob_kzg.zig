@@ -3,20 +3,12 @@
 //! through the `lineth_zkvm_kzg_verify_blob_batch` accelerator of the zkvm providers, which owns the
 //! KZG context.
 
-const accelerators = @import("zesu_accelerators");
+const accelerators = @import("zkvm_accelerators");
 const blob_payload = @import("blob_payload.zig");
 
 pub const blob_len = blob_payload.blob_len;
 pub const commitment_len = 48;
 pub const proof_len = 48;
-
-extern fn lineth_zkvm_kzg_verify_blob_batch(
-    blobs: [*]const [blob_len]u8,
-    commitments: [*]const [commitment_len]u8,
-    proofs: [*]const [proof_len]u8,
-    n: usize,
-    verified: *bool,
-) i32;
 
 /// `0x01 ‖ sha256(commitment)[1..]`.
 pub fn versionedHash(commitment: *const [commitment_len]u8) [32]u8 {
@@ -35,7 +27,5 @@ pub fn verifyBatch(
     commitments: []const [commitment_len]u8,
     proofs: []const [proof_len]u8,
 ) bool {
-    if (blobs.len != commitments.len or blobs.len != proofs.len) return false;
-    var verified = false;
-    return lineth_zkvm_kzg_verify_blob_batch(blobs.ptr, commitments.ptr, proofs.ptr, blobs.len, &verified) == 0 and verified;
+    return accelerators.kzgVerifyBlobBatch(blobs, commitments, proofs);
 }
