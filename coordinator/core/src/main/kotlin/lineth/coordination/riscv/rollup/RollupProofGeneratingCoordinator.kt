@@ -90,7 +90,6 @@ class RollupProofGeneratingCoordinator(
     val dataRollingHash: ByteArray,
   ) {
     val parentDataRollingHash: ByteArray get() = chunks.first().parentDataRollingHash
-    val endOffset: Int get() = chunks.last().endOffset
 
     override fun equals(other: Any?): Boolean {
       if (this === other) return true
@@ -302,12 +301,21 @@ class RollupProofGeneratingCoordinator(
   ) {
     rollupProofPoller.addProofInProgress(
       proofIndex = proofIndex,
-      blobsData = chunkedData.chunks.map {
-        BlobData(chunkHash = it.chunkHash, blobBytes = it.blobBytes, batchesCount = 0u)
+      blobsData = chunkedData.chunks.mapIndexed { i, chunk ->
+        BlobData(
+          chunkHash = chunk.chunkHash,
+          blobBytes = chunk.blobBytes,
+          batchesCount = 0u,
+          prevDataRollingHash = chunk.parentDataRollingHash,
+          dataRollingHash = chunkedData.chunks.getOrNull(i + 1)?.parentDataRollingHash ?: chunkedData.dataRollingHash,
+        )
       },
       parentDataRollingHash = chunkedData.parentDataRollingHash,
       dataRollingHash = chunkedData.dataRollingHash,
-      endOffset = chunkedData.endOffset,
+      // Every proof window closes its own last chunk, so no bytes are shared with the next window.
+      parentDataTailTakeBytes = 0,
+      boundaryPrevDataRollingHash = null,
+      finalDataTailDiscardBytes = 0,
       startBlockTimestamp = windowPending.first().startBlockTimestamp,
       endBlockTimestamp = windowPending.last().endBlockTimestamp,
       totalBatchesCount = windowPending.size,
