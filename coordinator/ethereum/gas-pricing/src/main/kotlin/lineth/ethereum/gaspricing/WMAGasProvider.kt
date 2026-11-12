@@ -76,12 +76,7 @@ class WMAGasProvider(
   }
 
   override fun getEIP1559GasFeesAsync(): SafeFuture<EIP1559GasFees> {
-    return getRecentFeesAsync().thenApply {
-      EIP1559GasFees(
-        maxPriorityFeePerGas = min(it.eip1559GasFees.maxPriorityFeePerGas, config.maxFeePerGasCap),
-        maxFeePerGas = min(it.eip1559GasFees.maxFeePerGas, config.maxFeePerGasCap),
-      )
-    }
+    return getEIP4844GasFeesAsync().thenApply { it.eip1559GasFees }
   }
 
   override fun getEIP4844GasFeesAsync(): SafeFuture<EIP4844GasFees> {

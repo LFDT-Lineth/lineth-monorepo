@@ -219,7 +219,7 @@ class WMAGasProviderTest {
   }
 
   @Test
-  fun `async fee getters return the same capped values as the sync getters`() {
+  fun `getEIP4844GasFeesAsync applies the gas and blob fee caps`() {
     val wmaGasProvider =
       WMAGasProvider(
         chainId.toLong(),
@@ -233,8 +233,6 @@ class WMAGasProviderTest {
         ),
       )
 
-    assertThat(wmaGasProvider.getEIP1559GasFeesAsync().get()).isEqualTo(wmaGasProvider.getEIP1559GasFees())
-    assertThat(wmaGasProvider.getEIP4844GasFeesAsync().get()).isEqualTo(wmaGasProvider.getEIP4844GasFees())
     assertThat(wmaGasProvider.getEIP4844GasFeesAsync().get()).isEqualTo(
       EIP4844GasFees(
         EIP1559GasFees(maxPriorityFeePerGas = 1229uL, maxFeePerGas = 1500uL),

@@ -174,15 +174,7 @@ class Web3JContractAsyncHelper(
   }
 
   private fun getEip1559GasFees(): EIP1559GasFees {
-    return when (contractGasProvider) {
-      is AtomicContractEIP1559GasProvider -> contractGasProvider.getEIP1559GasFees()
-      is ContractEIP1559GasProvider -> EIP1559GasFees(
-        maxPriorityFeePerGas = contractGasProvider.maxPriorityFeePerGas.toULong(),
-        maxFeePerGas = contractGasProvider.maxFeePerGas.toULong(),
-      )
-
-      else -> throw UnsupportedOperationException("GasProvider does not support EIP1559!")
-    }
+    return getEip1559GasFeesAsync().get()
   }
 
   private fun getEip1559GasFeesAsync(): SafeFuture<EIP1559GasFees> {
@@ -344,9 +336,8 @@ class Web3JContractAsyncHelper(
       .map { BlobUtils.kzgToVersionedHash(BlobUtils.getCommitment(it)).toArray() }
     return getGasLimit(function, blobs, blobVersionedHashes)
       .thenCompose { gasLimit ->
+        val eip4844GasProvider = contractGasProvider as EIP4844GasProvider
         getEip4844GasFeesAsync().thenCompose { (eip1559fees, maxFeePerBlobGas) ->
-          val eip4844GasProvider = contractGasProvider as EIP4844GasProvider
-
           logGasPriceCapsInfo(
             logMessagePrefix = function.name,
             maxPriorityFeePerGas = eip1559fees.maxPriorityFeePerGas,
