@@ -45,7 +45,7 @@ jobs:
         uses: ./.github/actions/setup-tracer-environment
 
       - name: Set up GCC
-        uses: egor-tensin/setup-gcc@a2861a8b8538f49cf2850980acccf6b05a1b2ae4 # v2.0
+        uses: egor-tensin/setup-gcc@6bc5b3aec7d4527ede15a51e4e94abd2b2708594 # v2.0
 
       - name: Build without tests
         run: ./gradlew :tracer:build -x test -x spotlessCheck
