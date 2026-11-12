@@ -3,11 +3,17 @@ package wiop_test
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
+	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark/backend/plonk"
+	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/gnark/frontend/cs/scs"
+	"github.com/consensys/gnark/test/unsafekzg"
 	"github.com/stretchr/testify/require"
 )
 
@@ -81,4 +87,52 @@ func TestConfigure_MerkleHashConflict(t *testing.T) {
 	require.ErrorContains(t, pcs.Validate(sys, pcs.WithMerkleHash(fri.MerkleHashBNPacked)), "WithMerkleHash(bn-packed-poseidon2) conflicts with the consumed compile with koalabear-poseidon2")
 	require.PanicsWithValue(t, "unknown Merkle hash MerkleHash(2)",
 		func() { pcs.WithMerkleHash(fri.MerkleHashBNPacked + 1) })
+}
+
+// TestVerifierCircuit_PLONKProve runs the full gnark PLONK flow (setup,
+// prove, verify) on the wiop verifier circuit in both Merkle hash modes, and
+// checks that a tampered wiop proof cannot be proven. The SRS comes from
+// [unsafekzg], so this is a test of the circuit, not a production setup.
+func TestVerifierCircuit_PLONKProve(t *testing.T) {
+	if testing.Short() {
+		t.Skip("PLONK setup and proving")
+	}
+	modulus := ecc.BN254.ScalarField()
+	for _, hash := range []fri.MerkleHash{fri.MerkleHashKoalaBear, fri.MerkleHashBNPacked} {
+		t.Run(hash.String(), func(t *testing.T) {
+			sys, col := newMerkleHashSystem(pcs.WithMerkleHash(hash))
+			proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, nonConstVec(16)) })
+			require.NoError(t, sys.Verify(proof, pub), "honest proof must verify natively")
+
+			ccs, err := frontend.Compile(modulus, scs.NewBuilder, wiop.AllocateVerifierCircuit(sys, proof, pub))
+			require.NoError(t, err)
+			srs, srsLagrange, err := unsafekzg.NewSRS(ccs)
+			require.NoError(t, err)
+			pk, vk, err := plonk.Setup(ccs, srs, srsLagrange)
+			require.NoError(t, err)
+
+			assignment := wiop.AllocateVerifierCircuit(sys, proof, pub).AssignVerifierCircuit(proof, pub)
+			w, err := frontend.NewWitness(assignment, modulus)
+			require.NoError(t, err)
+			public, err := w.Public()
+			require.NoError(t, err)
+
+			start := time.Now()
+			plonkProof, err := plonk.Prove(ccs, pk, w)
+			require.NoError(t, err, "honest wiop proof must be provable")
+			t.Logf("constraints=%d prove=%v", ccs.GetNbConstraints(), time.Since(start).Round(time.Millisecond))
+			require.NoError(t, plonk.Verify(plonkProof, vk, public), "PLONK proof must verify")
+
+			bad := cloneProof(proof)
+			root := bad.Commitments[0]
+			one := field.One()
+			root[0].Add(&root[0], &one)
+			bad.Commitments[0] = root
+			badW, err := frontend.NewWitness(
+				wiop.AllocateVerifierCircuit(sys, proof, pub).AssignVerifierCircuit(bad, pub), modulus)
+			require.NoError(t, err)
+			_, err = plonk.Prove(ccs, pk, badW)
+			require.ErrorContains(t, err, "is not satisfied", "tampered wiop proof must not be provable")
+		})
+	}
 }
