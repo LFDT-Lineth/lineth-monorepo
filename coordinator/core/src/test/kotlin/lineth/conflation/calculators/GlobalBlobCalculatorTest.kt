@@ -12,71 +12,20 @@ import linea.da.SealedBlob
 import linea.da.SegmentEnd
 import linea.da.blobBytes
 import linea.domain.BlocksConflation
-import linea.domain.ConflationCalculationResult
-import linea.domain.ConflationTrigger
-import linea.domain.createBlock
-import linea.domain.toBesu
-import linea.rlp.RLP
+import lineth.conflation.calculators.DaTestConflations.baseTime
+import lineth.conflation.calculators.DaTestConflations.conflation
+import lineth.conflation.calculators.DaTestConflations.encoder
+import lineth.conflation.calculators.DaTestConflations.genesisDataRollingHash
 import lineth.coordination.riscv.da.FakeDaStream
-import lineth.encoding.BlockEncoder
-import net.consensys.linea.traces.TracesCountersV5
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.Instant
 
 class GlobalBlobCalculatorTest {
-  private val encoder = BlockEncoder { RLP.encodeBlock(it.toBesu()) }
-  private val baseTime = Instant.parse("2026-10-01T00:00:00Z")
-  private val genesisDataRollingHash = ByteArray(32) { 0x11 }
   private val events = mutableListOf<BlobEvent>()
-
-  /** One-block conflation whose DA frame is exactly [frameSize] bytes. */
-  private fun conflation(
-    number: ULong,
-    frameSize: Int,
-    timestamp: Instant = baseTime + (number.toLong() * 2).seconds,
-  ): BlocksConflation = conflation(number, number, frameSize, timestamp)
-
-  /**
-   * Conflation of blocks [startNumber]..[endNumber], 2 seconds apart from [firstTimestamp], whose DA frame is exactly
-   * [frameSize] bytes. The last block's extraData pads the frame.
-   */
-  private fun conflation(
-    startNumber: ULong,
-    endNumber: ULong,
-    frameSize: Int,
-    firstTimestamp: Instant = baseTime + (startNumber.toLong() * 2).seconds,
-  ): BlocksConflation {
-    fun timestamp(number: ULong) = firstTimestamp + ((number - startNumber).toLong() * 2).seconds
-    val leading = (startNumber until endNumber).map { createBlock(number = it, timestamp = timestamp(it)) }
-    val leadingBytes = Int.SIZE_BYTES + leading.sumOf { encoder.encode(it).size }
-    var extraDataSize = frameSize - leadingBytes
-    repeat(10) {
-      val last = createBlock(
-        number = endNumber,
-        timestamp = timestamp(endNumber),
-        extraData = ByteArray(extraDataSize) { 0x2a },
-      )
-      val size = leadingBytes + encoder.encode(last).size
-      if (size == frameSize) {
-        return BlocksConflation(
-          leading + last,
-          ConflationCalculationResult(
-            startNumber,
-            endNumber,
-            ConflationTrigger.BLOCKS_LIMIT,
-            TracesCountersV5.EMPTY_TRACES_COUNT,
-          ),
-        )
-      }
-      extraDataSize += frameSize - size
-    }
-    error("could not build a frame of $frameSize bytes")
-  }
 
   private fun calculator(
     stream: DaStream = FakeDaStream(DaStreamPosition(genesisDataRollingHash)),
