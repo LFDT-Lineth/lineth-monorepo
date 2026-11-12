@@ -158,8 +158,12 @@ func runAdapter(args []string) error {
 		if !ok {
 			continue
 		}
-		if !p.mode.Valid() {
-			return fmt.Errorf("invalid prover_mode %q for %s", p.mode, t)
+		warnings, err := checkPipeline(t, p)
+		if err != nil {
+			return fmt.Errorf("invalid config %q: %w", path, err)
+		}
+		for _, w := range warnings {
+			logrus.Warn(w)
 		}
 		queues = append(queues, filesystem.Queue{RequestsRootDir: p.requestsRootDir, Priority: p.priority})
 		if p.mode.IsDev() {
@@ -261,8 +265,9 @@ func runProve(args []string) error {
 	if !ok {
 		return fmt.Errorf("proof type %q is not configured", proofType)
 	}
-	if !p.mode.Valid() {
-		return fmt.Errorf("invalid prover_mode %q for %s", p.mode, proofType)
+	// The adapter logs the warnings at startup.
+	if _, err := checkPipeline(proofType, p); err != nil {
+		return err
 	}
 	runner, err := buildRunner(cfg.Version, p)
 	if err != nil {
