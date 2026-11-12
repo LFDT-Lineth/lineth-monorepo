@@ -50,9 +50,10 @@ func RegisterProgramVK(sys *wiop.System) {
 	round.RegisterVerifierAction(&ProgramVKChecker{})
 }
 
-// programCommitment returns the commitment to [zkcdriver.ProgramRound].
+// programCommitment returns the commitment to [zkcdriver.ProgramRound]: zero
+// in a system declared without a PCS.
 func programCommitment(rt *wiop.Runtime) field.Octuplet {
-	if !rt.System.Rounds[zkcdriver.ProgramRound].HasCommitment {
+	if !rt.System.Rounds[zkcdriver.ProgramRound].HasCommitment && rt.System.PCSMode() != 0 {
 		logrus.Warnf(
 			"No commitment found for round: %v. Did you reduce the current system using a PCS?",
 			zkcdriver.ProgramRound)
