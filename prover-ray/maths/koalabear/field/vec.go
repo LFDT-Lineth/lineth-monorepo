@@ -3,7 +3,6 @@ package field
 import (
 	"fmt"
 	"math/rand/v2"
-	"strings"
 	"unsafe"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
@@ -310,38 +309,6 @@ func VecNegInto(res, a Vec) {
 // ---------------------------------------------------------------------------
 // Scale (scalar × vector)
 // ---------------------------------------------------------------------------
-//
-// For each variant, the naming convention is VecScale{ScalarType}{VecType}
-// where ScalarType and VecType are "Base" or "Ext".
-
-// VecScaleBaseBase sets res[i] = s * a[i] where s and a are both base-field.
-// Cost: 1 base multiplication per element.
-// res and a must have equal length.
-func VecScaleBaseBase(res []Element, s Element, a []Element) {
-	mustEqualLen2(len(res), len(a))
-	(*koalabear.Vector)(&res).ScalarMul(a, &s)
-}
-
-// VecScaleBaseExt sets res[i] = s * a[i] where s is a base scalar and a is an
-// extension vector. Uses [Ext.MulByElement] to exploit the base structure of s.
-// Cost: 6 base multiplications per element.
-// res and a must have equal length.
-func VecScaleBaseExt(res []Ext, s Element, a []Ext) {
-	mustEqualLen2(len(res), len(a))
-	extensions.VectorE6(res).ScalarMulByElement(a, &s)
-}
-
-// VecScaleExtBase sets res[i] = s * a[i] where s is an extension scalar and a
-// is a base vector. Uses [Ext.MulByElement] to exploit the base structure of
-// each a[i].
-// Cost: 6 base multiplications per element.
-// res and a must have equal length.
-func VecScaleExtBase(res []Ext, s Ext, a []Element) {
-	mustEqualLen2(len(res), len(a))
-	for i := range res {
-		res[i].MulByElement(&s, &a[i])
-	}
-}
 
 // VecScaleExtExt sets res[i] = s * a[i] where s and a are both extension-field.
 // Cost: ~24 base multiplications per element; AVX-512 vectorized (gnark-crypto
@@ -350,24 +317,6 @@ func VecScaleExtBase(res []Ext, s Ext, a []Element) {
 func VecScaleExtExt(res []Ext, s Ext, a []Ext) {
 	mustEqualLen2(len(res), len(a))
 	extensions.VectorE6(res).ScalarMul(extensions.VectorE6(a), &s)
-}
-
-// VecScaleInto sets res[i] = s * v[i] for all i, dispatching to the typed
-// variant that matches the field types of s and v.
-//
-// res must be pre-allocated; its field type (IsBase) must be true iff both s
-// and v are base. res and v must have equal length. Panics otherwise.
-func VecScaleInto(res Vec, s Gen, v Vec) {
-	switch {
-	case res.IsBase():
-		VecScaleBaseBase(res.base, s.B0.A0, v.base)
-	case s.isBase && !v.IsBase():
-		VecScaleBaseExt(res.ext, s.B0.A0, v.ext)
-	case !s.isBase && v.IsBase():
-		VecScaleExtBase(res.ext, s.Ext, v.base)
-	default:
-		VecScaleExtExt(res.ext, s.Ext, v.ext)
-	}
 }
 
 // ---------------------------------------------------------------------------
@@ -431,87 +380,14 @@ func VecBatchInvInto(res, a Vec) {
 }
 
 // ---------------------------------------------------------------------------
-// Prettify
-// ---------------------------------------------------------------------------
-
-// VecPrettifyBase returns a human-readable string representation of a base-field
-// vector, e.g. "[1, 2, 3]".
-func VecPrettifyBase(a []Element) string {
-	var b strings.Builder
-	b.WriteByte('[')
-	for i := range a {
-		if i > 0 {
-			b.WriteString(", ")
-		}
-		b.WriteString(a[i].String())
-	}
-	b.WriteByte(']')
-	return b.String()
-}
-
-// VecPrettifyExt returns a human-readable string representation of an
-// extension-field vector.
-func VecPrettifyExt(a []Ext) string {
-	var b strings.Builder
-	b.WriteByte('[')
-	for i := range a {
-		if i > 0 {
-			b.WriteString(", ")
-		}
-		b.WriteString(a[i].String())
-	}
-	b.WriteByte(']')
-	return b.String()
-}
-
-// ---------------------------------------------------------------------------
 // Construction
 // ---------------------------------------------------------------------------
-
-// VecFromInts allocates a []Element from a list of integer literals.
-// Each integer is converted via SetInt64. Useful in tests.
-func VecFromInts(xs ...int) []Element {
-	res := make([]Element, len(xs))
-	for i, x := range xs {
-		res[i].SetInt64(int64(x))
-	}
-	return res
-}
 
 // VecRepeatBase allocates a []Element of length n where every entry equals x.
 func VecRepeatBase(x Element, n int) []Element {
 	res := make([]Element, n)
 	for i := range res {
 		res[i] = x
-	}
-	return res
-}
-
-// VecRepeatExt allocates a []Ext of length n where every entry equals x.
-func VecRepeatExt(x Ext, n int) []Ext {
-	res := make([]Ext, n)
-	for i := range res {
-		res[i] = x
-	}
-	return res
-}
-
-// VecRandomBase allocates a []Element of length size filled with
-// cryptographically random base-field elements.
-func VecRandomBase(size int) []Element {
-	res := make([]Element, size)
-	for i := range res {
-		res[i] = RandomElement()
-	}
-	return res
-}
-
-// VecRandomExt allocates a []Ext of length size filled with
-// cryptographically random extension-field elements.
-func VecRandomExt(size int) []Ext {
-	res := make([]Ext, size)
-	for i := range res {
-		res[i] = RandomElementExt()
 	}
 	return res
 }
@@ -536,24 +412,6 @@ func VecPseudoRandExt(rng *rand.Rand, size int) []Ext {
 	return res
 }
 
-// VecPowerBase allocates and returns [x^0, x^1, ..., x^{n-1}].
-// Panics if x is zero or n is negative.
-func VecPowerBase(x Element, n int) []Element {
-	var zero Element
-	if x == zero {
-		panic("field: VecPowerBase called with x=0")
-	}
-	if n == 0 {
-		return []Element{}
-	}
-	res := make([]Element, n)
-	res[0].SetOne()
-	for i := 1; i < n; i++ {
-		res[i].Mul(&res[i-1], &x)
-	}
-	return res
-}
-
 // ---------------------------------------------------------------------------
 // In-place mutation
 // ---------------------------------------------------------------------------
@@ -572,47 +430,9 @@ func VecFillExt(v []Ext, val Ext) {
 	}
 }
 
-// VecReverseBase reverses v in-place.
-func VecReverseBase(v []Element) {
-	for i, j := 0, len(v)-1; i < j; i, j = i+1, j-1 {
-		v[i], v[j] = v[j], v[i]
-	}
-}
-
-// VecReverseExt reverses v in-place.
-func VecReverseExt(v []Ext) {
-	for i, j := 0, len(v)-1; i < j; i, j = i+1, j-1 {
-		v[i], v[j] = v[j], v[i]
-	}
-}
-
 // ---------------------------------------------------------------------------
-// Comparison
+// Prefix scans
 // ---------------------------------------------------------------------------
-
-// VecEqualBase reports whether a and b contain the same values.
-// Panics if a and b have different lengths.
-func VecEqualBase(a, b []Element) bool {
-	mustEqualLen2(len(a), len(b))
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
-}
-
-// VecEqualExt reports whether a and b contain the same values.
-// Panics if a and b have different lengths.
-func VecEqualExt(a, b []Ext) bool {
-	mustEqualLen2(len(a), len(b))
-	for i := range a {
-		if !a[i].Equal(&b[i]) {
-			return false
-		}
-	}
-	return true
-}
 
 // prefixScanMinChunk is the smallest number of elements a worker of
 // [VecPrefixSumExt] or [VecPrefixProductExt] scans: below it, splitting costs
