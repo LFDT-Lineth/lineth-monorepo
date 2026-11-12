@@ -34,6 +34,7 @@ pub const Error = merkle.Error || fri.Error || error{
     ClaimPointOnQueryPoint,
     InconsistentAliasedClaim,
     NoFoldMultipleColumns,
+    LevelBeyondBoundaryRound,
     MissingTopLevelAux,
     BoundaryFinalSelfMismatch,
     BoundaryFinalSiblingMismatch,
@@ -304,10 +305,11 @@ pub const VerifyInput = struct {
     entry_claims: []const []const ext.Ext,
     zeta: ext.Ext,
     fold_alphas: []const ext.Ext,
-    /// The top-level DEEP batching challenge. When FRI has one or more fold
-    /// rounds this equals the last entry of `fold_alphas`; when the largest
-    /// opened size is 1 (num_rounds == 0), prover-ray still squeezes this final
-    /// alpha and uses it as alpha_DEEP even though there are no fold alphas.
+    /// The final fold challenge, squeezed unconditionally. With one or more
+    /// fold rounds it equals the last entry of `fold_alphas`. It is only used
+    /// when the schedule has no fold at all (an envelope with
+    /// `log_plaintext_size == log_final_poly_size`): at most one column is
+    /// then opened, so only its alpha^0 term matters (prover-ray uses zero).
     deep_alpha: ext.Ext = ext.Ext.zero(),
     query_positions: []const usize,
     proof: OpeningProof,
@@ -1079,6 +1081,16 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     // (the rotations collapse). This is a fixed property of `columns`.
     if (comptime systemHasMultiShiftEntry(system)) {
         if (input.zeta.isZero()) return Error.ZetaZeroWithMultipleShifts;
+    }
+
+    // Every level must join at or before the boundary round. With
+    // log_final_poly_size >= 1, `minFoldedTopSize` can raise the top above a
+    // column smaller than the final polynomial, putting its level past
+    // num_rounds (out of bounds in `seedPair`). Mirrors prover-ray's `resolve`
+    // check; codegen bakes log_final_poly_size = 0, so only hand-written
+    // Systems reach it.
+    for (0..num_entries) |e| {
+        if (recon.top_size - recon.entry_size_log2[e] > num_rounds) return Error.LevelBeyondBoundaryRound;
     }
 
     // zeta must not land in any bundle's domain.

@@ -507,9 +507,6 @@ func largeBenchRand(x uint64) uint64 {
 	return x * 2685821657736338717
 }
 
-// buildD1PCSScenario exercises the num_rounds==0 special case: a single
-// size-1 batch, no folding rounds at all, verified directly against the
-// (Horner-evaluated) FinalPoly.
 // buildAllSizeOnePCSScenario opens only size-1 columns under an envelope that
 // can fold (plaintext 2^2, final polynomial 2^0). prover-ray keeps at least one
 // fold (#4322): the top size is raised from 2^0 to 2^MinFoldedSizeLog2 = 2^1,
@@ -544,6 +541,9 @@ func buildAllSizeOnePCSScenario() pcsCaseData {
 	})
 }
 
+// buildD1PCSScenario exercises the num_rounds==0 special case: a single
+// size-1 batch, no folding rounds at all, verified directly against the
+// (Horner-evaluated) FinalPoly.
 func buildD1PCSScenario() pcsCaseData {
 	params, err := fri.NewParams(2, 0, 1)
 	if err != nil {

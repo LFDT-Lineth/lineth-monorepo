@@ -301,6 +301,41 @@ test "pcs rejects several columns opened with no fold" {
     try std.testing.expectError(error.NoFoldMultipleColumns, pcs.verify(system, input));
 }
 
+// With log_final_poly_size >= 1 the one-fold floor raises the top above a
+// column smaller than the final polynomial: a size-1 column under final_one
+// params (top 0 -> 2, num_rounds 1) would join at round 2, past the boundary.
+// prover-ray's resolve rejects that level; so must the verifier, rather than
+// read the per-round buffer out of bounds.
+test "pcs rejects a level beyond the boundary round" {
+    const system = pcs.System{
+        .envelope_params = .{ .log_codeword_size = 4, .log_plaintext_size = 3, .log_final_poly_size = 1, .num_queries = 1, .merkle_cap_height = 0 },
+        .columns = &.{
+            .{ .batch_idx = 0, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        },
+        .all_shifts = &[_]i32{0},
+        .num_batches = 1,
+        .max_entries = 1,
+        .max_size_log2 = 3,
+    };
+    const claim = [_]ext.Ext{ext.Ext.one()};
+    const claims = [_][]const ext.Ext{&claim};
+    const roots = [_]poseidon2.Digest{challengeDigest(3)};
+    const final_poly = [_]ext.Ext{ ext.Ext.zero(), ext.Ext.zero() };
+    const input = pcs.VerifyInput{
+        .roots = &roots,
+        .entry_claims = &claims,
+        .zeta = toExt(.{ 19, 2, 3, 5, 7, 11 }), // off every domain
+        .fold_alphas = &.{ext.Ext.one()},
+        .query_positions = &[_]usize{0},
+        .proof = .{
+            .input_queries = &.{},
+            .input_caps = &.{},
+            .fri_proof = .{ .round_roots = &.{}, .final_poly = &final_poly, .running_queries = &.{} },
+        },
+    };
+    try std.testing.expectError(error.LevelBeyondBoundaryRound, pcs.verify(system, input));
+}
+
 test "pcs rejects reordered input cap tables" {
     const case = fixtures.pcs_cases[0];
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);

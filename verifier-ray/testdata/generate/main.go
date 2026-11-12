@@ -1238,19 +1238,17 @@ func buildDynamicLagrangeSelectorBoundarySystem() (*wiop.System, *wiop.Column) {
 	return sys, col
 }
 
-// buildPublicInputSystem mirrors prover-ray's basic public-input flow: open one
-// oracle column position into a cell, register that cell as a public input, and
-// let the local-vanishing compiler turn the opening equality into a verifier
-// check. The verifier fixture then proves two properties end-to-end:
-//  1. the opened cell is omitted from the proof rounds and carried separately in
-//     the flat public-input vector;
-//  2. tampering only that public-input vector is rejected.
-//
-// buildAllSizeOneSystem has only size-1 committed columns: two equal columns
-// and a third constrained to be their sum. prover-ray raises the FRI top size
+// buildAllSizeOneSystem has only size-1 committed columns: a and b are free
+// and c is constrained to be their sum. prover-ray raises the FRI top size
 // to 2^MinFoldedSizeLog2 so the proof still folds once (#4322); the verifier
 // must derive the same fold challenge count and query domain from the
 // transcript. The invalid witness breaks the sum.
+//
+// This case does not guard the boundary alpha_DEEP: size-1 columns equal their
+// claims, so honest DEEP quotients are identically zero and the honest proof
+// verifies even with alpha_DEEP forced to zero, while the invalid witness is
+// rejected by the quotient identity, not by the PCS. The FRI-level
+// all_size_one fixture (testdata/generate/fri) is the alpha_DEEP check.
 func buildAllSizeOneSystem() (*wiop.System, assignFn, assignFn) {
 	sys := wiop.NewSystemf("all-size-one")
 	r0 := sys.NewRound()
@@ -1269,6 +1267,13 @@ func buildAllSizeOneSystem() (*wiop.System, assignFn, assignFn) {
 	return sys, assign(3, 4, 7), assign(3, 4, 8)
 }
 
+// buildPublicInputSystem mirrors prover-ray's basic public-input flow: open one
+// oracle column position into a cell, register that cell as a public input, and
+// let the local-vanishing compiler turn the opening equality into a verifier
+// check. The verifier fixture then proves two properties end-to-end:
+//  1. the opened cell is omitted from the proof rounds and carried separately in
+//     the flat public-input vector;
+//  2. tampering only that public-input vector is rejected.
 func buildPublicInputSystem() (*wiop.System, *wiop.Column) {
 	sys := wiop.NewSystemf("public-input")
 	r0 := sys.NewRound()
