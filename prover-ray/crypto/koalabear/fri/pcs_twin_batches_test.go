@@ -107,7 +107,8 @@ func TestPCSTwinBatchesGetSeparateInputTrees(t *testing.T) {
 	}
 	require.NoError(t, fx.pcs.Verify(fx.input, fx.proof), "native verifier must accept twin batches")
 
-	require.Error(t, fx.pcs.Verify(fx.input, dedupedShape(fx.proof)),
+	require.ErrorContains(t, fx.pcs.Verify(fx.input, dedupedShape(fx.proof)),
+		"got 2 input caps, want 3",
 		"native verifier must reject the old deduplicated shape")
 }
 
@@ -122,7 +123,12 @@ func TestPCSVerifyGnarkTwinBatches(t *testing.T) {
 		"twin-batch proof must satisfy the verifier circuit")
 
 	deduped := dedupedShape(fx.proof)
-	template, assignment = circuitFor(fx, deduped)
-	require.Error(t, compileAndSolvePCSCircuit(template, assignment),
-		"the old deduplicated shape must not satisfy the verifier circuit")
+	// Build template and assignment from the same (deduplicated) geometry so the
+	// witness is well-formed and the rejection comes from VerifyGnark itself.
+	dedupedFixture := fx
+	dedupedFixture.proof = deduped
+	template, assignment = circuitFor(dedupedFixture, deduped)
+	require.ErrorContains(t, compileAndSolvePCSCircuit(template, assignment),
+		"got 2 input caps, want 3",
+		"the old deduplicated shape must be rejected by VerifyGnark")
 }
