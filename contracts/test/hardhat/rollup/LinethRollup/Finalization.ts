@@ -138,11 +138,11 @@ describe("Lineth Rollup contract: Finalization", () => {
         ]);
       });
 
-      it("Should revert if l1 message number does not advance past the last finalized message number", async () => {
+      it("Should revert if l1 message number is lower than the last finalized message number", async () => {
         const finalizationData = await generateFinalizationData({
           l1RollingHashMessageNumber: 10n,
           l1RollingHash: calculateRollingHash(HASH_ZERO, messageHash),
-          lastFinalizedL1RollingHashMessageNumber: 10n,
+          lastFinalizedL1RollingHashMessageNumber: 11n,
         });
 
         const lastFinalizedBlockNumber = await linethRollup.currentL2BlockNumber();
@@ -155,7 +155,7 @@ describe("Lineth Rollup contract: Finalization", () => {
           .connect(operator)
           .finalizeBlocks(proof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
 
-        await expectRevertWithCustomError(linethRollup, finalizeCall, "L1RollingHashMessageNumberNotIncreasing", [
+        await expectRevertWithCustomError(linethRollup, finalizeCall, "L1RollingHashMessageNumberDecreasing", [
           finalizationData.l1RollingHashMessageNumber,
           finalizationData.lastFinalizedL1RollingHashMessageNumber,
         ]);

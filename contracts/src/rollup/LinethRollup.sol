@@ -60,16 +60,17 @@ contract LinethRollup is
   }
 
   /**
-   * @notice Reinitializer for v10: migrates the legacy shnarf into the blob-spanning
-   *   dataRollingHash model and advances CONTRACT_VERSION().
+   * @notice Reinitializer for contract version 9.0: migrates the legacy shnarf into the blob-spanning
+   *   dataRollingHash model.
    * @dev Should be called using an upgradeAndCall transaction to the ProxyAdmin for live-chain
-   *   (in-place) upgrades. `reinitializer(10)` guarantees this runs exactly once per proxy, and a
-   *   proxy created with `initialize` (which also consumes version 10) can never call it.
+   *   (in-place) upgrades. `reinitializer(10)` is the OpenZeppelin initializer version (not the
+   *   contract version) and guarantees this runs exactly once per proxy; a proxy created with
+   *   `initialize` (which also consumes initializer version 10) can never call it.
    * @dev See `_migrateLegacyShnarf` for the migration details.
    */
   function reinitializeLineaRollupV10() external reinitializer(10) {
     _migrateLegacyShnarf();
 
-    emit LineaRollupVersionChanged(bytes8("9.0"), bytes8("10.0"));
+    emit LineaRollupVersionChanged(bytes8("8.0"), bytes8(bytes(CONTRACT_VERSION())));
   }
 }

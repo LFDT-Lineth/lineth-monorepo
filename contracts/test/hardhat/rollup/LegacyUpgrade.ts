@@ -301,7 +301,7 @@ describe("Legacy in-place upgrades (real previous bytecode)", () => {
     });
   });
 
-  describe("LinethRollup 8.0 -> 10.0 (reinitializeLineaRollupV10)", () => {
+  describe("LinethRollup 8.0 -> 9.0 (reinitializeLineaRollupV10)", () => {
     async function deployLinethRollupV8Fixture() {
       const yieldManager = ethers.Wallet.createRandom().address;
       const legacy = await deployLegacyProxy(
@@ -325,14 +325,14 @@ describe("Legacy in-place upgrades (real previous bytecode)", () => {
       return fixture.proxyAdmin.upgradeAndCall(fixture.proxyAddress, fixture.newImplementation, reinitCalldata);
     }
 
-    it("Starts from the real legacy state: LinethRollup 8.0 below version 10 with a non-empty shnarf", async () => {
+    it("Starts from the real legacy state: LinethRollup 8.0 below initializer version 10 with a non-empty shnarf", async () => {
       const fixture = await loadFixture(deployLinethRollupV8Fixture);
       expect(await fixture.proxy.CONTRACT_VERSION()).to.equal("8.0");
       expect(await initializedVersion(fixture.proxyAddress)).to.be.lessThan(10n);
       expect(await fixture.proxy.currentFinalizedShnarf()).to.not.equal(HASH_ZERO);
     });
 
-    it("Migrates the legacy shnarf, preserves state and lands on version 10", async () => {
+    it("Migrates the legacy shnarf, preserves state and lands on contract version 9.0 (initializer version 10)", async () => {
       const fixture = await loadFixture(deployLinethRollupV8Fixture);
       const legacyShnarf = await fixture.proxy.currentFinalizedShnarf();
       const before = {
@@ -345,10 +345,11 @@ describe("Legacy in-place upgrades (real previous bytecode)", () => {
 
       await expectEvents(fixture.linethRollup, upgradeLinethRollup(fixture), [
         { name: "LegacyShnarfMigrated", args: [legacyShnarf] },
-        { name: "LineaRollupVersionChanged", args: [toBytes8("9.0"), toBytes8("10.0")] },
+        { name: "LineaRollupVersionChanged", args: [toBytes8("8.0"), toBytes8("9.0")] },
       ]);
 
       const r = fixture.linethRollup;
+      expect(await r.CONTRACT_VERSION()).to.equal("9.0");
       expect(await initializedVersion(fixture.proxyAddress)).to.equal(10n);
       expect(await r.currentDataRollingHash()).to.equal(legacyShnarf);
       expect(await r.dataRollingHashExists(legacyShnarf)).to.equal(1n);

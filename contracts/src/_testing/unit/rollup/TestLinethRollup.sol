@@ -61,10 +61,6 @@ contract TestLinethRollup is LinethRollup, CalldataBlobAcceptor {
     return EfficientLeftRightKeccak._efficientKeccak(_parentDataRollingHash, _chunkHash);
   }
 
-  function setLastFinalizedStateV6(uint256 _messageNumber, bytes32 _rollingHash, uint256 _timestamp) external {
-    currentFinalizedState = FinalizedStateHashing._computeLastFinalizedState(_messageNumber, _rollingHash, _timestamp);
-  }
-
   function setLastFinalizedState(
     uint256 _messageNumber,
     bytes32 _rollingHash,

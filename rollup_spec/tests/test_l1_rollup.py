@@ -276,6 +276,16 @@ def test_reinitialize_linea_rollup_v10_migrates_legacy_shnarf() -> None:
     assert state.current_finalized_shnarf_deprecated == _ZERO_HASH
 
 
+def test_reinitialize_linea_rollup_v10_rejects_zero_legacy_shnarf() -> None:
+    # Mirrors the contract's `ZeroHashNotAllowed` guard in `_migrateLegacyShnarf`: a proxy that
+    # never held a legacy shnarf must not anchor the zero hash as a valid parent dataRollingHash.
+    state = _base_state(approved_vks={_EXEC_ID_A, _ROLLUP_ID})
+    state.current_finalized_shnarf_deprecated = _ZERO_HASH
+    with pytest.raises(Exception, match="ZeroHashNotAllowed"):
+        reinitialize_linea_rollup_v10(state)
+    assert _ZERO_HASH not in state.anchored_data_rolling_hashes
+
+
 def test_compute_public_input_binds_l2_messaging_blocks_offsets() -> None:
     # `l2MessagingBlocksOffsets` is hashed into the on-chain public input like the other
     # preimages: tampering with the offsets changes the computed `public_input`, so a proof
@@ -361,13 +371,23 @@ def test_finalization_rejects_a_message_number_l1_never_anchored() -> None:
         _finalize(state, _submission_ending_at(_ANCHORED_ROLLING_HASH, 6))
 
 
-@pytest.mark.parametrize("message_number", [2, 3])
-def test_finalization_rejects_a_message_number_not_above_the_stored_one(message_number: int) -> None:
+def test_finalization_rejects_a_message_number_below_the_stored_one() -> None:
     state = _state_with_l1_l2_rolling_hashes()
     state.l1_l2_rolling_hashes[U64(2)] = Hash32(bytes([0x11]) * 32)
-    submission = _submission_ending_at(state.l1_l2_rolling_hashes[U64(message_number)], message_number)
+    submission = _submission_ending_at(state.l1_l2_rolling_hashes[U64(2)], 2)
 
-    with pytest.raises(Exception, match="must increase"):
+    with pytest.raises(Exception, match="must not decrease"):
         _finalize(state, submission)
 
+    assert int(state.current_finalized_l1_l2_bridge_rolling_hash_message_number) == 3
+
+
+def test_finalization_accepts_the_stored_pair_carried_forward_explicitly() -> None:
+    # Equal is fine: the prover re-emits the parent aggregation's pair when no new L1 message
+    # was anchored in the range, and the stored pair is left unchanged.
+    state = _state_with_l1_l2_rolling_hashes()
+
+    _finalize(state, _submission_ending_at(_FINALIZED_ROLLING_HASH, 3))
+
+    assert state.current_finalized_l1_l2_bridge_rolling_hash == _FINALIZED_ROLLING_HASH
     assert int(state.current_finalized_l1_l2_bridge_rolling_hash_message_number) == 3

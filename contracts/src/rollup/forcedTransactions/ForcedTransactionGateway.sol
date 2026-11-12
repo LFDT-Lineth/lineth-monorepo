@@ -198,30 +198,28 @@ contract ForcedTransactionGateway is AccessControl, IForcedTransactionGateway {
       blockNumberDeadline = previousForcedTransactionBlockDeadline + BLOCK_NUMBER_DEADLINE_BUFFER;
     }
 
-    bytes32 hashedPayloadMsb;
-    bytes32 hashedPayloadLsb;
-    assembly {
-      hashedPayloadMsb := shr(128, hashedPayload)
-      hashedPayloadLsb := and(hashedPayload, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
-    }
-
     transactionFieldList = LibRLP.p(transactionFieldList, _forcedTransaction.yParity);
     transactionFieldList = LibRLP.p(transactionFieldList, _forcedTransaction.r);
     transactionFieldList = LibRLP.p(transactionFieldList, _forcedTransaction.s);
 
+    bytes memory rlpEncodedSignedTransaction = abi.encodePacked(hex"02", LibRLP.encode(transactionFieldList));
+
+    /// @dev Rolling hash formula per the rollup spec (§6.3): keccak256(prev ‖ txHash ‖ deadline ‖ from),
+    /// where txHash is the standard EIP-2718 transaction hash keccak256(signedTxRlp).
+    bytes32 forcedTransactionRollingHash = keccak256(
+      abi.encodePacked(
+        previousForcedTransactionRollingHash,
+        keccak256(rlpEncodedSignedTransaction),
+        blockNumberDeadline,
+        signer
+      )
+    );
+
     LINEA_ROLLUP.storeForcedTransaction{ value: msg.value }(
-      keccak256(
-        abi.encode(
-          previousForcedTransactionRollingHash,
-          hashedPayloadMsb,
-          hashedPayloadLsb,
-          blockNumberDeadline,
-          signer
-        )
-      ),
+      forcedTransactionRollingHash,
       signer,
       blockNumberDeadline,
-      abi.encodePacked(hex"02", LibRLP.encode(transactionFieldList))
+      rlpEncodedSignedTransaction
     );
 
     lastSubmissionBlock = block.number;

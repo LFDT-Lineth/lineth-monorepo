@@ -219,10 +219,15 @@ def reinitialize_linea_rollup_v10(state: LinethRollupState) -> Hash32:
     it as the live end dataRollingHash: the value becomes `current_data_rolling_hash`, is
     anchored into the dataRollingHash membership set so post-upgrade submissions chain from it,
     and the legacy slot is wiped to `ZERO_HASH32` (never written again). The migration runs
-    exactly once per proxy (enforced on-chain by `reinitializer(10)`); on any real in-place
-    upgrade the slot can never be `ZERO_HASH32`, so no emptiness guard is needed.
+    exactly once per proxy (enforced on-chain by `reinitializer(10)`). On any real in-place
+    upgrade the slot is never `ZERO_HASH32` (prior versions seed a genesis shnarf at
+    initialization); the zero check mirrors the contract's `ZeroHashNotAllowed` guard against
+    running the migration on a proxy that never held a legacy shnarf, which would otherwise
+    anchor `ZERO_HASH32` as a valid parent.
     """
     migrated_data_rolling_hash = state.current_finalized_shnarf_deprecated
+    if migrated_data_rolling_hash == ZERO_HASH32:
+        raise Exception("ZeroHashNotAllowed: legacy finalized shnarf cannot be the zero hash")
     state.current_data_rolling_hash = migrated_data_rolling_hash
     state.anchored_data_rolling_hashes.add(migrated_data_rolling_hash)
     state.current_finalized_shnarf_deprecated = ZERO_HASH32
@@ -340,18 +345,19 @@ def finalize_rollup(
         raise Exception("finalBlockHash cannot be the zero hash")
     # L1→L2 rolling hash pair, mirroring `_validateL2ComputedRollingHash`. A zero pair signals
     # "no transition" (the range anchored nothing) and leaves the stored pair untouched below.
-    # A non-zero pair must strictly advance past the stored message number and match L1's
-    # authoritative `rollingHashes` chain. The guest only emits a non-zero pair when anchoring
-    # advanced, so a valid proof never carries a stale pair; the explicit monotonicity check is
-    # an additional on-chain safeguard for finalization paths that do not rely on a zk proof
+    # A non-zero pair must match L1's authoritative `rollingHashes` chain and, like the forced
+    # transaction number, may stay equal to the stored message number (the prover carries the
+    # parent aggregation's pair forward when no new L1 message was anchored) or advance, but
+    # never go backwards. The guest already enforces this; the explicit monotonicity check is an
+    # additional on-chain safeguard for finalization paths that do not rely on a zk proof
     # (e.g. signed attestations).
     rolling_hash_number = pi.end_l1_l2_bridge_rolling_hash_message_number
     if rolling_hash_number == 0:
         if pi.end_l1_l2_bridge_rolling_hash != ZERO_HASH32:
             raise Exception("L1-to-L2 rolling hash must be zero when no message number is anchored")
     else:
-        if rolling_hash_number <= state.current_finalized_l1_l2_bridge_rolling_hash_message_number:
-            raise Exception("L1-to-L2 rolling hash message number must increase")
+        if rolling_hash_number < state.current_finalized_l1_l2_bridge_rolling_hash_message_number:
+            raise Exception("L1-to-L2 rolling hash message number must not decrease")
         if state.l1_l2_rolling_hashes.get(rolling_hash_number) != pi.end_l1_l2_bridge_rolling_hash:
             raise Exception("L1-to-L2 rolling hash does not match L1 storage")
     if pi.dynamic_chain_config_hash != state.verifier.get_chain_configuration():

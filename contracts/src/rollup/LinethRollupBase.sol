@@ -133,7 +133,7 @@ abstract contract LinethRollupBase is
    * @dev Directly readable on-chain so the coordinator can determine where to build the next
    *   submission/finalization from. EMPTY_HASH with `currentDataTailBytes == 0` marks a
    *   fresh network or one awaiting the one-time legacy-shnarf bridge (see `currentFinalizedShnarf_DEPRECATED`).
-   * @dev Appended at the end of the layout (two slots from `__gap_LineaRollup`) to avoid shifting existing slots.
+   * @dev Appended at the end of the layout (taken from `__gap_LinethRollup`) to avoid shifting existing slots.
    */
   bytes32 public currentDataRollingHash;
 
@@ -144,8 +144,9 @@ abstract contract LinethRollupBase is
    */
   uint256 public currentDataTailBytes;
 
-  /// @dev Keep 46 free storage slots for inheriting contracts (reduced from 48 for the two new slots above).
-  uint256[46] private __gap_LineaRollup;
+  /// @dev Keep 46 free storage slots for inheriting contracts (reduced from 50 for the four new slots above:
+  ///   `verifierKeys`, `blockHashes`, `currentDataRollingHash`, `currentDataTailBytes`).
+  uint256[46] private __gap_LinethRollup;
 
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
@@ -463,8 +464,15 @@ abstract contract LinethRollupBase is
 
   /**
    * @notice Internal function to finalize compressed blocks.
-   * @dev If blockHashes[lastFinalizedBlock] is EMPTY_HASH, validates the legacy parent state root
-   *   (block-hash/state-root migration).
+   * @dev Block-hash anchoring replaced state-root anchoring. If blockHashes[_lastFinalizedBlock] is EMPTY_HASH
+   *   the parent was finalized under the legacy state-root model, so this is the one-time migration round:
+   *   `_finalizationData.parentBlockHash` must also be EMPTY_HASH and the guest program treats the round as a
+   *   migration, binding the legacy parent state root in the proof rather than a parent block hash.
+   * @dev Every round after the migration must supply the non-zero parent block hash anchored by the previous
+   *   finalization, and every finalization (including the migration round) must anchor a non-zero final block hash.
+   * @dev Validation order is deliberate: calldata-only checks (L1 rolling hash pairing and monotonicity, filtered
+   *   addresses) run first, then the caller-supplied last finalized tuple is authenticated against
+   *   `currentFinalizedState`, and only then are the remaining storage reads performed.
    * @param _finalizationData The full finalization data.
    * @param _lastFinalizedBlock The last finalized block number.
    * @param _finalForcedTransactionRollingHash The rolling hash for the final forced transaction.
@@ -660,13 +668,18 @@ abstract contract LinethRollupBase is
   }
 
   /**
-   * @notice Internal function to validate l1 rolling hash.
-   * @dev A zero pair signals "no transition" and is accepted as-is. A non-zero message number must strictly advance
-   *   past the last finalized one and its rolling hash must exist on L1. The guest program only emits a non-zero pair
-   *   when anchoring advanced, so a valid proof never carries a stale pair; the explicit monotonicity check is an
-   *   additional safeguard for finalization paths that do not rely on a zk proof (e.g. signed attestations).
-   * @dev `_lastFinalizedRollingHashMessageNumber` is caller-supplied and validated against `currentFinalizedState`
-   *   later in the same call, so any mismatch reverts the whole finalization.
+   * @notice Validates the L2 computed L1 rolling hash pair against L1 storage.
+   * @dev A zero message number must be paired with an empty rolling hash (no transition in this range).
+   * @dev A non-zero message number must be paired with a non-empty rolling hash that matches `rollingHashes`.
+   * @dev Like the forced transaction number, the message number may stay equal to the last finalized one
+   *   (the prover carries the parent aggregation's pair forward when no new L1 message was anchored) or
+   *   advance, but it may never go backwards. The guest program already enforces this; the explicit on-chain
+   *   check is an additional safeguard for finalization paths that do not rely on a zk proof (e.g. signed
+   *   attestations).
+   * @dev Ordering: the calldata-only checks (zero pairing and monotonicity) run before the `rollingHashes`
+   *   state read, and `_lastFinalizedRollingHashMessageNumber` is caller-supplied and only authenticated against
+   *   `currentFinalizedState` later in `_finalizeBlocks`, so a stale last-finalized tuple may surface here first.
+   *   Any mismatch reverts the whole finalization either way.
    * @param _rollingHashMessageNumber Message number associated with the rolling hash as computed on L2.
    * @param _rollingHash L1 rolling hash as computed on L2.
    * @param _lastFinalizedRollingHashMessageNumber The last finalized L1 rolling hash message number.
@@ -684,11 +697,8 @@ abstract contract LinethRollupBase is
       if (_rollingHash == EMPTY_HASH) {
         revert MissingRollingHashForMessageNumber(_rollingHashMessageNumber);
       }
-      if (_rollingHashMessageNumber <= _lastFinalizedRollingHashMessageNumber) {
-        revert L1RollingHashMessageNumberNotIncreasing(
-          _rollingHashMessageNumber,
-          _lastFinalizedRollingHashMessageNumber
-        );
+      if (_rollingHashMessageNumber < _lastFinalizedRollingHashMessageNumber) {
+        revert L1RollingHashMessageNumberDecreasing(_rollingHashMessageNumber, _lastFinalizedRollingHashMessageNumber);
       }
       if (rollingHashes[_rollingHashMessageNumber] != _rollingHash) {
         revert L1RollingHashDoesNotExistOnL1(_rollingHashMessageNumber, _rollingHash);

@@ -35,26 +35,4 @@ library FinalizedStateHashing {
       hashedFinalizationState := keccak256(mPtr, 0xa0)
     }
   }
-
-  /**
-   * @notice Internal function to compute and save the finalization state.
-   * @dev Using assembly this way is cheaper gas wise.
-   * @param _messageNumber Is the last L2 computed L1 message number in the finalization.
-   * @param _rollingHash Is the last L2 computed L1 rolling hash in the finalization.
-   * @param _timestamp The final timestamp in the finalization.
-   * @return hashedFinalizationState The hashed finalization state.
-   */
-  function _computeLastFinalizedState(
-    uint256 _messageNumber,
-    bytes32 _rollingHash,
-    uint256 _timestamp
-  ) internal pure returns (bytes32 hashedFinalizationState) {
-    assembly {
-      let mPtr := mload(0x40)
-      mstore(mPtr, _messageNumber)
-      mstore(add(mPtr, 0x20), _rollingHash)
-      mstore(add(mPtr, 0x40), _timestamp)
-      hashedFinalizationState := keccak256(mPtr, 0x60)
-    }
-  }
 }

@@ -55,7 +55,19 @@ contract TestValidium is Validium {
     _dataRollingHashExists[_dataRollingHash] = _value;
   }
 
-  function setLastFinalizedState(uint256 _messageNumber, bytes32 _rollingHash, uint256 _timestamp) external {
-    currentFinalizedState = FinalizedStateHashing._computeLastFinalizedState(_messageNumber, _rollingHash, _timestamp);
+  function setLastFinalizedState(
+    uint256 _messageNumber,
+    bytes32 _rollingHash,
+    uint256 _forcedTransactionNumber,
+    bytes32 _forcedTransactionRollingHash,
+    uint256 _timestamp
+  ) external {
+    currentFinalizedState = FinalizedStateHashing._computeLastFinalizedState(
+      _messageNumber,
+      _rollingHash,
+      _forcedTransactionNumber,
+      _forcedTransactionRollingHash,
+      _timestamp
+    );
   }
 }

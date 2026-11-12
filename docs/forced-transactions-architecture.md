@@ -295,8 +295,9 @@ PHASE 4: STORAGE & CHAINING
 
      This ensures deadlines are monotonically increasing across forced transactions.
 
-  2. Compute new rolling hash via MiMC:
-     newRollingHash = MiMC(prevRollingHash, txHashMSB, txHashLSB, deadline, signer)
+  2. Compute new rolling hash via keccak256 (rollup spec §6.3):
+     newRollingHash = keccak256(prevRollingHash ‖ txHash ‖ deadline ‖ signer)
+     where txHash = keccak256(signedTxRlp), the standard EIP-2718 transaction hash
 
   3. Store in LinethRollup:
      forcedTransactionRollingHashes[nextNumber] = newRollingHash
@@ -312,7 +313,7 @@ PHASE 4: STORAGE & CHAINING
 
 ## Rolling Hash: Proving Integrity
 
-The forced transaction system uses a **MiMC-based rolling hash** to create a cryptographic chain. This is critical for proving that the exact set of forced transactions was processed - **no exclusions and no unauthorized additions**.
+The forced transaction system uses a **keccak256-based rolling hash** to create a cryptographic chain. This is critical for proving that the exact set of forced transactions was processed - **no exclusions and no unauthorized additions**.
 
 ### Purpose of the Rolling Hash
 
@@ -342,36 +343,30 @@ The rolling hash provides **tamper-proof integrity**:
                           ▲                    ▲                    ▲
                           │                    │                    │
                     ┌─────┴─────┐        ┌─────┴─────┐        ┌─────┴─────┐
-                    │ MiMC of:  │        │ MiMC of:  │        │ MiMC of:  │
+                    │ keccak of:│        │ keccak of:│        │ keccak of:│
                     │ - prevHash│        │ - prevHash│        │ - prevHash│
-                    │ - txMSB   │        │ - txMSB   │        │ - txMSB   │
-                    │ - txLSB   │        │ - txLSB   │        │ - txLSB   │
+                    │ - txHash  │        │ - txHash  │        │ - txHash  │
                     │ - deadline│        │ - deadline│        │ - deadline│
                     │ - signer  │        │ - signer  │        │ - signer  │
                     └───────────┘        └───────────┘        └───────────┘
 ```
 
-### How MiMC Hashing Works
+### How the Rolling Hash Is Computed
 
 ```solidity
-// 1. Hash the unsigned EIP-1559 transaction fields
-bytes32 hashedPayload = keccak256(abi.encodePacked(hex"02", rlpEncode(txFields)));
+// 1. Build the signed EIP-1559 (type 02) transaction envelope
+bytes memory rlpEncodedSignedTransaction = abi.encodePacked(hex"02", rlpEncode(txFields ++ [yParity, r, s]));
 
-// 2. Split into MSB and LSB (MiMC operates on smaller field elements)
-bytes32 hashedPayloadMsb = hashedPayload >> 128;
-bytes32 hashedPayloadLsb = hashedPayload & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
-
-// 3. Compute rolling hash using SNARK-friendly MiMC
-bytes32 newRollingHash = Mimc.hash(abi.encode(
+// 2. Compute the rolling hash with keccak256 over the packed fields (32 + 32 + 32 + 20 bytes)
+bytes32 newRollingHash = keccak256(abi.encodePacked(
     previousForcedTransactionRollingHash,
-    hashedPayloadMsb,
-    hashedPayloadLsb,
+    keccak256(rlpEncodedSignedTransaction), // standard EIP-2718 transaction hash
     blockNumberDeadline,
     signer
 ));
 ```
 
-The MiMC hash function is specifically chosen because it is **SNARK-friendly**, meaning it can be efficiently verified inside the ZK proof.
+keccak256 replaces the earlier MiMC construction so the formula matches the guest program and the rollup spec exactly, with no field-size splitting of the transaction hash.
 
 ---
 

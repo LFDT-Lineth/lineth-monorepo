@@ -1,8 +1,7 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { time as networkTime } from "@nomicfoundation/hardhat-network-helpers";
-import { encodeData } from "contracts/common/helpers";
 import { LinethRollup } from "contracts/typechain-types";
-import { AccessListish, ethers, Transaction } from "ethers";
+import { AccessListish, ethers, Signature, Transaction } from "ethers";
 
 import { THREE_DAYS_IN_SECONDS } from "../../common/constants";
 import { Eip1559Transaction } from "../../common/types";
@@ -44,28 +43,6 @@ export const setNextExpectedL2BlockNumberForForcedTx = async (
   return expectedBlockNumber;
 };
 
-/**
- * Splits a 32-byte value into MSB and LSB (128 bits each),
- * matching Solidity assembly behavior.
- */
-const splitBytes32 = (hashedPayload: string): { msb: string; lsb: string } => {
-  // Parse as 256-bit integer
-  const value = BigInt(hashedPayload);
-
-  // Masks
-  const MASK_128 = (1n << 128n) - 1n;
-
-  // Split
-  const msb = value >> 128n;
-  const lsb = value & MASK_128;
-
-  // Return as bytes32 (zero-left-padded)
-  return {
-    msb: "0x" + msb.toString(16).padStart(64, "0"),
-    lsb: "0x" + lsb.toString(16).padStart(64, "0"),
-  };
-};
-
 export const decodeForcedTransactionAdded = async (tx: ethers.ContractTransactionResponse, contract: LinethRollup) => {
   const receipt = await tx.wait();
   if (!receipt) return [];
@@ -80,23 +57,28 @@ export const decodeForcedTransactionAdded = async (tx: ethers.ContractTransactio
   });
 };
 
+/**
+ * Rolling hash formula per the rollup spec (§6.3):
+ * keccak256(prev ‖ txHash ‖ deadlineBlockNumber ‖ fromAddress), packed (32 + 32 + 32 + 20 bytes),
+ * where txHash = keccak256(signedTxRlp) is the standard EIP-2718 transaction hash.
+ */
 const _computeForcedTransactionRollingHash = (
   previousRollingHash: string,
-  hashedPayload: string,
+  signedTransactionHash: string,
   expectedBlockNumber: bigint,
   from: string,
 ): string => {
-  const { msb: hashedPayloadMsb, lsb: hashedPayloadLsb } = splitBytes32(hashedPayload);
-
-  const encodedPayload = encodeData(
-    ["bytes32", "bytes32", "bytes32", "uint256", "address"],
-    [previousRollingHash, hashedPayloadMsb, hashedPayloadLsb, expectedBlockNumber, from],
+  return ethers.keccak256(
+    ethers.solidityPacked(
+      ["bytes32", "bytes32", "uint256", "address"],
+      [previousRollingHash, signedTransactionHash, expectedBlockNumber, from],
+    ),
   );
-  return ethers.keccak256(encodedPayload);
 };
 
-const hashEip1559LikeSolidity = (tx: Eip1559Transaction, chainId: bigint): string => {
-  const unsignedTx = Transaction.from({
+/** Computes keccak256 of the signed type-2 transaction envelope, matching the contract's stored RLP payload. */
+const hashSignedEip1559LikeSolidity = (tx: Eip1559Transaction, chainId: bigint): string => {
+  const signedTx = Transaction.from({
     type: 2,
     chainId,
     nonce: Number(tx.nonce),
@@ -107,9 +89,14 @@ const hashEip1559LikeSolidity = (tx: Eip1559Transaction, chainId: bigint): strin
     value: tx.value,
     data: tx.input,
     accessList: tx.accessList.map((a) => [a.contractAddress, a.storageKeys]) as AccessListish,
+    signature: Signature.from({
+      r: ethers.toBeHex(tx.r, 32),
+      s: ethers.toBeHex(tx.s, 32),
+      yParity: Number(tx.yParity) as 0 | 1,
+    }),
   });
 
-  return unsignedTx.unsignedHash;
+  return ethers.keccak256(signedTx.serialized);
 };
 
 export const getForcedTransactionRollingHash = async (
@@ -121,11 +108,11 @@ export const getForcedTransactionRollingHash = async (
 ): Promise<string> => {
   const { previousForcedTransactionRollingHash } = await linethRollup.getRequiredForcedTransactionFields();
 
-  const hashedPayload = hashEip1559LikeSolidity(eip1559Tx, chainId);
+  const signedTransactionHash = hashSignedEip1559LikeSolidity(eip1559Tx, chainId);
 
   return _computeForcedTransactionRollingHash(
     previousForcedTransactionRollingHash,
-    hashedPayload,
+    signedTransactionHash,
     expectedBlockNumber,
     from,
   );

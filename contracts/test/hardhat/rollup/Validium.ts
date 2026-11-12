@@ -608,7 +608,7 @@ describe("Validium contract", () => {
       await expect(validium.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash, 0n)).to.not.be.reverted;
     });
 
-    it("Should revert if l1 message number is not greater than the last finalized message number", async () => {
+    it("Should revert if l1 message number is lower than the last finalized message number", async () => {
       const l1MessageNumber = 5n;
       const messageHash = generateRandomBytes(32);
 
@@ -616,17 +616,16 @@ describe("Validium contract", () => {
 
       const l1RollingHash = calculateRollingHash(HASH_ZERO, messageHash);
 
-      for (const lastFinalizedMessageNumber of [l1MessageNumber, l1MessageNumber + 1n]) {
-        await expectRevertWithCustomError(
-          validium,
-          validium.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash, lastFinalizedMessageNumber),
-          "L1RollingHashMessageNumberNotIncreasing",
-          [l1MessageNumber, lastFinalizedMessageNumber],
-        );
-      }
+      const lastFinalizedMessageNumber = l1MessageNumber + 1n;
+      await expectRevertWithCustomError(
+        validium,
+        validium.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash, lastFinalizedMessageNumber),
+        "L1RollingHashMessageNumberDecreasing",
+        [l1MessageNumber, lastFinalizedMessageNumber],
+      );
     });
 
-    it("Should succeed if l1 message number is greater than the last finalized message number", async () => {
+    it("Should succeed if l1 message number is equal to or greater than the last finalized message number", async () => {
       const l1MessageNumber = 5n;
       const messageHash = generateRandomBytes(32);
 
@@ -634,6 +633,8 @@ describe("Validium contract", () => {
 
       const l1RollingHash = calculateRollingHash(HASH_ZERO, messageHash);
 
+      await expect(validium.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash, l1MessageNumber)).to.not.be
+        .reverted;
       await expect(validium.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash, l1MessageNumber - 1n)).to.not
         .be.reverted;
     });

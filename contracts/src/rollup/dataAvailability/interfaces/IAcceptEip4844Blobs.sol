@@ -9,11 +9,6 @@ import { IDataRollingHashAcceptorBase } from "./IDataRollingHashAcceptorBase.sol
  */
 interface IAcceptEip4844Blobs is IDataRollingHashAcceptorBase {
   /**
-   * @dev Thrown when the blobhash at an index equals to the zero hash.
-   */
-  error EmptyBlobDataAtIndex(uint256 index);
-
-  /**
    * @dev Thrown when a blob carrying transaction carries no blobs.
    */
   error BlobSubmissionDataIsMissing();

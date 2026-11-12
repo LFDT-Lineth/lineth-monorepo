@@ -1,5 +1,5 @@
 import * as kzg from "c-kzg";
-import { LineaRollup__factory, type ILineaRollupBase } from "contracts/typechain-types";
+import { LinethRollup__factory, type ILinethRollupBase } from "contracts/typechain-types";
 import { Transaction, Wallet, ethers } from "ethers";
 
 import aggregateProof1to305 from "./aggregatedProof-1-305.json";
@@ -31,29 +31,33 @@ const dataItems = [
 ];
 
 /**
- * A single blob's submission data plus the shnarf chain values computed for it.
- * @dev `submitBlobs` no longer takes a KZG proof or data-evaluation claim: the point-evaluation
+ * A single blob's submission data plus the dataRollingHash chain values computed for it.
+ * @dev `submitBlobs` takes only the parent and expected end dataRollingHash: the point-evaluation
  *   precompile-based verification was removed from the contract in favor of relying on the EVM's
  *   native `blobhash()` (the beacon chain already guarantees blob/commitment validity for a landed
- *   EIP-4844 transaction).
+ *   EIP-4844 transaction), and every blob carried by the transaction is folded into the stream.
  */
 type BlobEntry = {
   finalBlockHash: string;
   dataHash: string;
   compressedData: string;
-  parentShnarf: string;
-  expectedShnarf: string;
+  parentDataRollingHash: string;
+  expectedDataRollingHash: string;
 };
 
 /**
- * Mirrors the Solidity 3-field _computeShnarf: keccak256(abi.encodePacked(parentShnarf, finalBlockHash, dataHash)).
+ * Mirrors the Solidity fold `EfficientLeftRightKeccak._efficientKeccak(parentDataRollingHash, blobHash)`:
+ * keccak256(abi.encodePacked(parentDataRollingHash, blobHash)).
  */
-function computeShnarfV2(parentShnarf: string, finalBlockHash: string, dataHash: string): string {
-  return ethers.keccak256(ethers.concat([parentShnarf, finalBlockHash, dataHash]));
+function foldDataRollingHash(parentDataRollingHash: string, blobHash: string): string {
+  return ethers.keccak256(ethers.concat([parentDataRollingHash, blobHash]));
 }
 
-function computeGenesisShnarf(initialBlockHash: string): string {
-  return computeShnarfV2(ethers.ZeroHash, initialBlockHash, ethers.ZeroHash);
+/**
+ * Mirrors `__LinethRollup_init`: the genesis dataRollingHash is keccak256(EMPTY_HASH || initialBlockHash).
+ */
+function computeGenesisDataRollingHash(initialBlockHash: string): string {
+  return foldDataRollingHash(ethers.ZeroHash, initialBlockHash);
 }
 
 /**
@@ -65,7 +69,7 @@ function computeBlobVersionedHash(commitment: string): string {
 }
 
 /**
- * Builds the blob submission chain (final block hash + shnarf per blob) from the JSON fixtures.
+ * Builds the blob submission chain (final block hash + dataRollingHash per blob) from the JSON fixtures.
  * @dev The fixtures already carry the real KZG `commitment` for their `compressedData`, so it's reused
  *   directly here rather than recomputed — c-kzg/ethers will derive the identical commitment when the
  *   blob transaction is built and signed in `submitBlob`.
@@ -73,16 +77,22 @@ function computeBlobVersionedHash(commitment: string): string {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function buildBlobChain(dataSet: any[]): BlobEntry[] {
   const initialBlockHash = dataSet[0].parentStateRootHash;
-  let parentShnarf = computeGenesisShnarf(initialBlockHash);
+  let parentDataRollingHash = computeGenesisDataRollingHash(initialBlockHash);
 
   return dataSet.map((data) => {
     const compressedData = ethers.hexlify(ethers.decodeBase64(data.compressedData));
     const finalBlockHash = data.finalStateRootHash;
     const dataHash = computeBlobVersionedHash(data.commitment);
-    const expectedShnarf = computeShnarfV2(parentShnarf, finalBlockHash, dataHash);
+    const expectedDataRollingHash = foldDataRollingHash(parentDataRollingHash, dataHash);
 
-    const entry: BlobEntry = { finalBlockHash, dataHash, compressedData, parentShnarf, expectedShnarf };
-    parentShnarf = expectedShnarf;
+    const entry: BlobEntry = {
+      finalBlockHash,
+      dataHash,
+      compressedData,
+      parentDataRollingHash,
+      expectedDataRollingHash,
+    };
+    parentDataRollingHash = expectedDataRollingHash;
     return entry;
   });
 }
@@ -108,10 +118,9 @@ async function main() {
 
   const blobChain = buildBlobChain(dataItems);
 
-  const encodedCall = LineaRollup__factory.createInterface().encodeFunctionData("submitBlobs", [
-    blobChain.map((blob) => blob.finalBlockHash),
-    blobChain[0].parentShnarf,
-    blobChain[blobChain.length - 1].expectedShnarf,
+  const encodedCall = LinethRollup__factory.createInterface().encodeFunctionData("submitBlobs", [
+    blobChain[0].parentDataRollingHash,
+    blobChain[blobChain.length - 1].expectedDataRollingHash,
   ]);
 
   await submitBlob(
@@ -209,8 +218,11 @@ async function submitBlob(
  * @dev Assumes this is the *first* finalization after a fresh deploy (no prior finalized state, no
  *   forced transactions yet), matching the `aggregatedProof-1-305.json` fixture. `parentBlockHash` and
  *   `lastFinalizedTimestamp` must match whatever `INITIAL_L2_BLOCK_HASH` / `L2_GENESIS_TIMESTAMP` the
- *   contract was actually deployed with (see `contracts/deploy/03_deploy_LineaRollup.ts`) — the values
+ *   contract was actually deployed with (see `contracts/deploy/03_deploy_LinethRollup.ts`) — the values
  *   below assume the deploy step reused the same fixture values as `blocks-1-46.json`.
+ * @dev The blob stream is consumed whole: `parentDataRollingHash` is the genesis dataRollingHash seeded at
+ *   initialization, `endDataRollingHash` is the value anchored by `submitBlobs`, and both tail-byte fields
+ *   are 0 because the fixtures end on a chunk boundary.
  * @dev `aggregatedProof-1-305.json`'s `aggregatedProof`/`finalShnarf` were generated for the legacy
  *   5-field/Horner-Y public input formula, not the current blockhash-centric one, so verification will
  *   fail on-chain until the fixture is regenerated by the prover against the current ABI.
@@ -229,17 +241,9 @@ async function sendProof(proofFile: any, blobChain: BlobEntry[]) {
   const lastBlob = blobChain[blobChain.length - 1];
   const initialBlockHash = dataItems[0].parentStateRootHash;
 
-  const finalizationData: ILineaRollupBase.FinalizationDataV5Struct = {
-    parentStateRootHash: proofFile.parentStateRootHash,
+  const finalizationData: ILinethRollupBase.FinalizationDataV5Struct = {
     parentBlockHash: initialBlockHash,
     endBlockNumber: BigInt(proofFile.finalBlockNumber),
-    shnarfData: {
-      parentShnarf: lastBlob.parentShnarf,
-      snarkHash: ethers.ZeroHash,
-      finalStateRootHash: ethers.ZeroHash,
-      dataEvaluationPoint: ethers.ZeroHash,
-      dataEvaluationClaim: ethers.ZeroHash,
-    },
     lastFinalizedTimestamp: BigInt(proofFile.parentAggregationLastBlockTimestamp),
     finalTimestamp: BigInt(proofFile.finalTimestamp),
     lastFinalizedL1RollingHash: ethers.ZeroHash,
@@ -251,14 +255,17 @@ async function sendProof(proofFile: any, blobChain: BlobEntry[]) {
     finalForcedTransactionNumber: 0n,
     lastFinalizedForcedTransactionRollingHash: ethers.ZeroHash,
     finalBlockHash: lastBlob.finalBlockHash,
-    finalBlobHash: lastBlob.dataHash,
+    parentDataRollingHash: blobChain[0].parentDataRollingHash,
+    endDataRollingHash: lastBlob.expectedDataRollingHash,
+    parentDataTailTakeBytes: 0n,
+    finalDataTailDiscardBytes: 0n,
     l2MerkleRoots: proofFile.l2MerkleRoots,
     filteredAddresses: [],
     verifierKeys: [],
     l2MessagingBlocksOffsets: proofFile.l2MessagingBlocksOffsets,
   };
 
-  const encodedCall = LineaRollup__factory.createInterface().encodeFunctionData("finalizeBlocks", [
+  const encodedCall = LinethRollup__factory.createInterface().encodeFunctionData("finalizeBlocks", [
     proofFile.aggregatedProof,
     proofFile.aggregatedVerifierIndex,
     finalizationData,

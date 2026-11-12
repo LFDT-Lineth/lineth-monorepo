@@ -15,11 +15,6 @@ interface IAddressFilter {
   event FilteredStatusesSet(address[] filteredAddresses, bool isFiltered);
 
   /**
-   * @dev Thrown when the address is already filtered.
-   */
-  error AddressAlreadyFiltered(address filteredAddress);
-
-  /**
    * @dev Thrown when the address list to change filter status for is empty.
    */
   error FilteredAddressesEmpty();

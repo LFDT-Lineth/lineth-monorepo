@@ -354,7 +354,7 @@ describe("Lineth Rollup contract", () => {
       await expectRevertWithCustomError(linethRollup, upgradeCall, "ZeroHashNotAllowed");
     });
 
-    it("Should emit LineaRollupVersionChanged 9.0 to 10.0", async () => {
+    it("Should emit LineaRollupVersionChanged 8.0 to 9.0", async () => {
       const upgradeCall = reinitializeUpgradeableProxy(
         linethRollup,
         LinethRollup__factory.abi,
@@ -362,8 +362,8 @@ describe("Lineth Rollup contract", () => {
         [],
       );
 
-      const previousVersion = ethers.zeroPadBytes(ethers.toUtf8Bytes("9.0"), 8);
-      const newVersion = ethers.zeroPadBytes(ethers.toUtf8Bytes("10.0"), 8);
+      const previousVersion = ethers.zeroPadBytes(ethers.toUtf8Bytes("8.0"), 8);
+      const newVersion = ethers.zeroPadBytes(ethers.toUtf8Bytes("9.0"), 8);
 
       await expectEvent(linethRollup, upgradeCall, "LineaRollupVersionChanged", [previousVersion, newVersion]);
       expect(await linethRollup.CONTRACT_VERSION()).to.equal("9.0");
@@ -606,7 +606,7 @@ describe("Lineth Rollup contract", () => {
       await expect(linethRollup.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash, 0n)).to.not.be.reverted;
     });
 
-    it("Should revert if l1 message number is not greater than the last finalized message number", async () => {
+    it("Should revert if l1 message number is lower than the last finalized message number", async () => {
       const l1MessageNumber = 5n;
       const messageHash = generateRandomBytes(32);
 
@@ -614,17 +614,16 @@ describe("Lineth Rollup contract", () => {
 
       const l1RollingHash = calculateRollingHash(HASH_ZERO, messageHash);
 
-      for (const lastFinalizedMessageNumber of [l1MessageNumber, l1MessageNumber + 1n]) {
-        await expectRevertWithCustomError(
-          linethRollup,
-          linethRollup.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash, lastFinalizedMessageNumber),
-          "L1RollingHashMessageNumberNotIncreasing",
-          [l1MessageNumber, lastFinalizedMessageNumber],
-        );
-      }
+      const lastFinalizedMessageNumber = l1MessageNumber + 1n;
+      await expectRevertWithCustomError(
+        linethRollup,
+        linethRollup.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash, lastFinalizedMessageNumber),
+        "L1RollingHashMessageNumberDecreasing",
+        [l1MessageNumber, lastFinalizedMessageNumber],
+      );
     });
 
-    it("Should succeed if l1 message number is greater than the last finalized message number", async () => {
+    it("Should succeed if l1 message number is equal to or greater than the last finalized message number", async () => {
       const l1MessageNumber = 5n;
       const messageHash = generateRandomBytes(32);
 
@@ -632,6 +631,8 @@ describe("Lineth Rollup contract", () => {
 
       const l1RollingHash = calculateRollingHash(HASH_ZERO, messageHash);
 
+      await expect(linethRollup.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash, l1MessageNumber)).to.not
+        .be.reverted;
       await expect(linethRollup.validateL2ComputedRollingHash(l1MessageNumber, l1RollingHash, l1MessageNumber - 1n)).to
         .not.be.reverted;
     });

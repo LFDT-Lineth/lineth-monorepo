@@ -1,5 +1,10 @@
 [
     {
+      "inputs": [],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
       "inputs": [
         {
           "internalType": "address",
@@ -93,17 +98,6 @@
         }
       ],
       "name": "DataTailBytesOutOfRange",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "index",
-          "type": "uint256"
-        }
-      ],
-      "name": "EmptyBlobDataAtIndex",
       "type": "error"
     },
     {
@@ -286,6 +280,22 @@
         }
       ],
       "name": "L1RollingHashDoesNotExistOnL1",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "messageNumber",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "lastFinalizedMessageNumber",
+          "type": "uint256"
+        }
+      ],
+      "name": "L1RollingHashMessageNumberDecreasing",
       "type": "error"
     },
     {

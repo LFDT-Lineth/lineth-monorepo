@@ -475,9 +475,33 @@ contract LinethRollupTest is Test {
       _expectedPublicInput(d, 0, bytes32(0), FTX_NUMBER, FTX_ROLLING_HASH),
       "Public input must bind the L1 defaults as passed in"
     );
+  }
 
-    // Re-supplying the previous L1 pair explicitly is no longer a way to "carry forward": the message number
-    // must strictly increase, see testFinalizeBlocksRevertsOnNonIncreasingL1RollingHashMessageNumber.
+  function testFinalizeBlocksExplicitL1PairCarryForwardMatchesDefaults() public {
+    RecordingVerifier recordingVerifier = _setupRecordingVerifier();
+    bytes32 endDataRollingHash1 = _finalizeRound1Explicit();
+    ILinethRollupBase.FinalizationDataV5 memory d = _round2Data(endDataRollingHash1);
+
+    // Re-supplying the already finalized pair explicitly (the prover carries it forward when no new L1 message
+    // was anchored) is accepted: equal is fine, only a lower message number reverts.
+    d.l1RollingHashMessageNumber = L1_MESSAGE_NUMBER;
+    d.l1RollingHash = L1_ROLLING_HASH;
+
+    vm.expectEmit(true, false, false, true, address(linethRollup));
+    emit ILinethRollupBase.FinalizedStateUpdated(20, 3, L1_MESSAGE_NUMBER, FTX_NUMBER);
+    vm.prank(operator);
+    linethRollup.finalizeBlocks(hex"01", PROOF_TYPE_RECORDING, d);
+
+    assertEq(
+      linethRollup.currentFinalizedState(),
+      _finalizedState(L1_MESSAGE_NUMBER, L1_ROLLING_HASH, FTX_NUMBER, FTX_ROLLING_HASH, 3),
+      "Explicit carry-forward must leave the same finalized state as the defaults"
+    );
+    assertEq(
+      recordingVerifier.lastPublicInput(),
+      _expectedPublicInput(d, L1_MESSAGE_NUMBER, L1_ROLLING_HASH, FTX_NUMBER, FTX_ROLLING_HASH),
+      "Public input must bind the explicitly carried-forward L1 pair"
+    );
   }
 
   function testFinalizeBlocksDefaultL1KeepsStateWithForcedTransactionTransition() public {
@@ -550,25 +574,12 @@ contract LinethRollupTest is Test {
     linethRollup.finalizeBlocks(hex"01", PROOF_TYPE_RECORDING, d);
   }
 
-  function testFinalizeBlocksRevertsOnNonIncreasingL1RollingHashMessageNumber() public {
+  function testFinalizeBlocksRevertsOnDecreasingL1RollingHashMessageNumber() public {
     _setupRecordingVerifier();
     bytes32 endDataRollingHash1 = _finalizeRound1Explicit();
     ILinethRollupBase.FinalizationDataV5 memory d = _round2Data(endDataRollingHash1);
 
-    // Re-submitting the already finalized pair (an authentic hash that exists on L1) must not be accepted.
-    d.l1RollingHashMessageNumber = L1_MESSAGE_NUMBER;
-    d.l1RollingHash = L1_ROLLING_HASH;
-    vm.prank(operator);
-    vm.expectRevert(
-      abi.encodeWithSelector(
-        bytes4(keccak256("L1RollingHashMessageNumberNotIncreasing(uint256,uint256)")),
-        L1_MESSAGE_NUMBER,
-        L1_MESSAGE_NUMBER
-      )
-    );
-    linethRollup.finalizeBlocks(hex"01", PROOF_TYPE_RECORDING, d);
-
-    // An older anchored pair must not be accepted either.
+    // An older anchored pair (an authentic hash that exists on L1) must not be accepted.
     bytes32 olderRollingHash = keccak256("older-l1-rolling-hash");
     linethRollup.setRollingHash(L1_MESSAGE_NUMBER - 1, olderRollingHash);
     d.l1RollingHashMessageNumber = L1_MESSAGE_NUMBER - 1;
@@ -576,7 +587,7 @@ contract LinethRollupTest is Test {
     vm.prank(operator);
     vm.expectRevert(
       abi.encodeWithSelector(
-        bytes4(keccak256("L1RollingHashMessageNumberNotIncreasing(uint256,uint256)")),
+        bytes4(keccak256("L1RollingHashMessageNumberDecreasing(uint256,uint256)")),
         L1_MESSAGE_NUMBER - 1,
         L1_MESSAGE_NUMBER
       )

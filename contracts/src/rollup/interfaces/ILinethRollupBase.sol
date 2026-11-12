@@ -230,11 +230,12 @@ interface ILinethRollupBase {
   error MissingRollingHashForMessageNumber(uint256 messageNumber);
 
   /**
-   * @dev Thrown when a non-zero L1 rolling hash message number does not advance past the last finalized one.
+   * @dev Thrown when a non-zero L1 rolling hash message number is lower than the last finalized one.
+   *   Equal is allowed (the pair is carried forward when no new L1 message was anchored).
    * @param messageNumber The L1 rolling hash message number submitted for finalization.
    * @param lastFinalizedMessageNumber The L1 rolling hash message number at the last finalization.
    */
-  error L1RollingHashMessageNumberNotIncreasing(uint256 messageNumber, uint256 lastFinalizedMessageNumber);
+  error L1RollingHashMessageNumberDecreasing(uint256 messageNumber, uint256 lastFinalizedMessageNumber);
 
   /**
    * @dev Thrown when a final dataRollingHash being finalized was not anchored by a prior submission.

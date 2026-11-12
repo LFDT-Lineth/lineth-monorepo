@@ -30,17 +30,6 @@ export function calculateLastFinalizedState(
   );
 }
 
-export function calculateLastFinalizedStateV6(
-  l1RollingHashMessageNumber: bigint,
-  l1RollingHash: string,
-  finalTimestamp: bigint,
-): string {
-  return generateKeccak256(
-    ["uint256", "bytes32", "uint256"],
-    [l1RollingHashMessageNumber, l1RollingHash, finalTimestamp],
-  );
-}
-
 export function calculateRollingHash(existingRollingHash: string, messageHash: string) {
   return generateKeccak256(["bytes32", "bytes32"], [existingRollingHash, messageHash]);
 }
