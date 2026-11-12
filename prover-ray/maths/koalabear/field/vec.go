@@ -10,6 +10,13 @@ import (
 	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
 )
 
+// minusOne and oneExt are the scalars of the vectorised negations and
+// base-by-extension accumulations below.
+var (
+	minusOne = func() (m Element) { m.SetOne(); m.Neg(&m); return m }()
+	oneExt   = func() (o Ext) { o.SetOne(); return o }()
+)
+
 // Vec holds a vector of field elements in either the base field 𝔽_p or
 // the degree-6 extension 𝔽_{p^6}. Exactly one of base or ext is non-nil;
 // this invariant is the caller's responsibility when constructing via
@@ -102,6 +109,10 @@ func VecAddBaseBase(res, a, b []Element) {
 // b is a base vector. Only the first coordinate of each a[i] is updated; the
 // remaining five are copied unchanged. Cost: 1 base addition per element.
 // All slices must have equal length.
+//
+// It stays a loop: no gnark-crypto kernel adds a base vector into the first
+// coordinates only, and copying a then accumulating b with
+// VectorE6.ScalarMulAccByElement measured ~4x slower at 2^16.
 func VecAddExtBase(res []Ext, a []Ext, b []Element) {
 	mustEqualLen(len(res), len(a), len(b))
 	for i := range res {
@@ -159,6 +170,7 @@ func VecSubBaseBase(res, a, b []Element) {
 // VecSubExtBase sets res[i] = a[i] - b[i] where a is an extension vector and
 // b is a base vector. Only the first coordinate of each a[i] is updated.
 // Cost: 1 base subtraction per element. All slices must have equal length.
+// It stays a loop for the reason given on [VecAddExtBase].
 func VecSubExtBase(res []Ext, a []Ext, b []Element) {
 	mustEqualLen(len(res), len(a), len(b))
 	for i := range res {
@@ -168,18 +180,15 @@ func VecSubExtBase(res []Ext, a []Ext, b []Element) {
 }
 
 // VecSubBaseExt sets res[i] = a[i] - b[i] where a is a base vector and b is
-// an extension vector. Note that subtraction is not commutative, so this
-// cannot simply delegate to VecSubExtBase.
-// Cost: 6 base negations + 1 base addition per element.
-// All slices must have equal length.
+// an extension vector. Subtraction is not commutative, so this cannot
+// delegate to VecSubExtBase: it negates b through its limb view and adds a
+// into the first coordinates with the vectorised base-by-extension
+// accumulation. All slices must have equal length.
 func VecSubBaseExt(res []Ext, a []Element, b []Ext) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		// Compute Lift(a[i]) - b[i] without allocating:
-		// negate all six components of b[i], then add a[i] to the first.
-		res[i].Neg(&b[i])
-		res[i].B0.A0.Add(&res[i].B0.A0, &a[i])
-	}
+	limbs := ExtLimbs(res)
+	limbs.ScalarMul(ExtLimbs(b), &minusOne)
+	extensions.VectorE6(res).ScalarMulAccByElement(a, &oneExt)
 }
 
 // VecSubExtExt sets res[i] = a[i] - b[i] over the extension field.
@@ -282,18 +291,15 @@ func VecMulInto(res, a, b Vec) {
 // All slices must have equal length.
 func VecNegBase(res, a []Element) {
 	mustEqualLen2(len(res), len(a))
-	for i := range res {
-		res[i].Neg(&a[i])
-	}
+	(*koalabear.Vector)(&res).ScalarMul(a, &minusOne)
 }
 
 // VecNegExt sets res[i] = -a[i] over the extension field.
 // All slices must have equal length.
 func VecNegExt(res, a []Ext) {
 	mustEqualLen2(len(res), len(a))
-	for i := range res {
-		res[i].Neg(&a[i])
-	}
+	limbs := ExtLimbs(res)
+	limbs.ScalarMul(ExtLimbs(a), &minusOne)
 }
 
 // VecNegInto sets res[i] = -a[i] for all i, dispatching on the field type of
@@ -320,32 +326,27 @@ func VecScaleExtExt(res []Ext, s Ext, a []Ext) {
 }
 
 // ---------------------------------------------------------------------------
-// ScaleAdd (fused Horner step: acc = acc·s + b)
+// ScaleAdd (Horner step: acc = acc·s + b)
 // ---------------------------------------------------------------------------
 
-// VecScaleAddExtBase sets acc[i] = acc[i]·s + b[i] where b is a base vector,
-// in a single pass over memory (one fused Horner fold step instead of a
-// scale pass followed by an add pass).
-// Cost: ~24 base multiplications + 1 base addition per element.
-// acc and b must have equal length.
+// VecScaleAddExtBase sets acc[i] = acc[i]·s + b[i] where b is a base vector:
+// a vectorised scaling of acc, then a vectorised base-by-extension
+// accumulation of b into the first coordinates (about 4x faster than one
+// fused scalar pass). acc and b must have equal length.
 func VecScaleAddExtBase(acc []Ext, s Ext, b []Element) {
 	mustEqualLen2(len(acc), len(b))
-	for i := range acc {
-		acc[i].Mul(&acc[i], &s)
-		acc[i].B0.A0.Add(&acc[i].B0.A0, &b[i])
-	}
+	extensions.VectorE6(acc).ScalarMul(acc, &s)
+	extensions.VectorE6(acc).ScalarMulAccByElement(b, &oneExt)
 }
 
-// VecScaleAddExtExt sets acc[i] = acc[i]·s + b[i] over the extension field,
-// in a single pass over memory.
-// Cost: ~24 base multiplications + 6 base additions per element.
-// acc and b must have equal length.
+// VecScaleAddExtExt sets acc[i] = acc[i]·s + b[i] over the extension field: a
+// vectorised scaling of acc, then a limb-view addition of b (about 5x faster
+// than one fused scalar pass). acc and b must have equal length.
 func VecScaleAddExtExt(acc []Ext, s Ext, b []Ext) {
 	mustEqualLen2(len(acc), len(b))
-	for i := range acc {
-		acc[i].Mul(&acc[i], &s)
-		acc[i].Add(&acc[i], &b[i])
-	}
+	extensions.VectorE6(acc).ScalarMul(acc, &s)
+	limbs := ExtLimbs(acc)
+	limbs.Add(limbs, ExtLimbs(b))
 }
 
 // ---------------------------------------------------------------------------
