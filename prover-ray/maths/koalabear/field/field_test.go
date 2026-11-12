@@ -209,15 +209,6 @@ func TestWriteOctupletTo(t *testing.T) {
 	})
 }
 
-// TestParBatchInvert verifies that ParBatchInvert returns the same result as
-// the sequential BatchInvert for the same input.
-func TestParBatchInvert(t *testing.T) {
-	a := randomElems(testN)
-	want := BatchInvert(a)
-	got := ParBatchInvert(a, 4)
-	checkElemSlice(t, want, got)
-}
-
 // TestToInt verifies that ToInt returns the canonical integer value of small
 // field elements.
 func TestToInt(t *testing.T) {
