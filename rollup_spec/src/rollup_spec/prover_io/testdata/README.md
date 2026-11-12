@@ -63,17 +63,6 @@ The rollup request's blob chunk carries the real EIP-4844 `kzgCommitment` and
 `kzgProof` of its `blobBytes`, and its `chunkHash` is that commitment's versioned
 hash; calldata chunks leave both fields empty.
 
-## SSZ fixtures
-
-The `.ssz` file beside the l2-execution and rollup JSON fixtures holds the bytes the
-spec's own encoders produce for it. A request's `.ssz` is the guest input,
-`schema_id (2 bytes BE) || SSZ`; a response's `.ssz` is the guest output,
-`keccak256(frame) || frame`, built from the response's public inputs. They are the
-contract vectors for a guest's SSZ declarations: decoding them must give the
-values of the JSON fixture. Regenerate them from `rollup_spec/` with
-`PYTHONPATH=src python -m tests.ssz_fixtures`; `tests/test_ssz_fixtures.py` fails
-when a committed file differs from the current encoding.
-
 ## Running the tests locally
 
 `tests/test_proof_io_v1.py` imports the guest dataclasses, which pull in the
