@@ -84,6 +84,8 @@ type compileOptions struct {
 	elisionEnabled bool
 	moduleGroups   bool
 	fixedFRIDomain bool
+	// bnPackedMerkle selects [fri.MerkleHashBNPacked] (see [WithMerkleHash]).
+	bnPackedMerkle bool
 }
 
 // merkleCapMode tells how a System chose its Merkle cap height. The zero value
@@ -287,6 +289,29 @@ func WithFixedFRIDomain() Option {
 	return func(o *compileOptions) { o.fixedFRIDomain = true }
 }
 
+// WithMerkleHash selects the hash of every committed Merkle tree, FRI layer
+// tree and their openings (see [fri.MerkleHash]). The default is
+// [fri.MerkleHashKoalaBear]. [fri.MerkleHashBNPacked] makes the proof much
+// cheaper to verify in a BN254 gnark circuit, at a higher native proving cost;
+// the transcript keeps KoalaBear Poseidon2 either way.
+//
+// The in-circuit KoalaBear recursion verifies KoalaBear trees only, so a
+// System whose proof is verified by the recursion must keep the default.
+func WithMerkleHash(hash fri.MerkleHash) Option {
+	if hash > fri.MerkleHashBNPacked {
+		utils.Panic("unknown Merkle hash %v", hash)
+	}
+	return func(o *compileOptions) { o.bnPackedMerkle = hash == fri.MerkleHashBNPacked }
+}
+
+// merkleHash is the selected [fri.MerkleHash].
+func (o compileOptions) merkleHash() fri.MerkleHash {
+	if o.bnPackedMerkle {
+		return fri.MerkleHashBNPacked
+	}
+	return fri.MerkleHashKoalaBear
+}
+
 // WithSizeOblivious makes the proof's structure independent of the dynamic
 // module sizes, as a size-oblivious recursive verifier needs (#4246): it is
 // [WithModuleGroups] and [WithFixedFRIDomain] together. Only the heights at
@@ -345,7 +370,12 @@ func merge(sys *wiop.System, opts []Option) (compileOptions, error) {
 	}
 	cfg.elisionEnabled = cfg.elisionEnabled || pre.elisionEnabled
 	cfg.moduleGroups = cfg.moduleGroups || pre.moduleGroups
+	if cfg.bnPackedMerkle && state.consumed && !pre.bnPackedMerkle {
+		return cfg, fmt.Errorf("pcs: WithMerkleHash(%v) conflicts with the consumed compile with %v",
+			cfg.merkleHash(), pre.merkleHash())
+	}
 	cfg.fixedFRIDomain = cfg.fixedFRIDomain || pre.fixedFRIDomain
+	cfg.bnPackedMerkle = cfg.bnPackedMerkle || pre.bnPackedMerkle
 	if cfg.moduleGroups && cfg.elisionEnabled {
 		return cfg, fmt.Errorf("pcs: WithModuleGroups conflicts with WithColumnElision")
 	}
@@ -497,12 +527,23 @@ func FRIFixedDomain(sys *wiop.System) bool {
 	return state.consumed && state.fixedFRIDomain
 }
 
+// MerkleHash returns the Merkle hash [Compile] configured for sys
+// ([fri.MerkleHashKoalaBear] when sys has no PCS opening).
+func MerkleHash(sys *wiop.System) fri.MerkleHash {
+	state := configOf(sys)
+	if !state.consumed {
+		return fri.MerkleHashKoalaBear
+	}
+	return state.merkleHash()
+}
+
 // FRIStaticParams returns the FRI envelope parameters of sys (sized to
 // [FRIMaxCommittableSizeLog2] at sys's blowup, at the production query count).
 // sys may open fewer queries; see [FRINumQueries]. It panics when sys has no
 // PCS opening.
 func FRIStaticParams(sys *wiop.System) fri.Params {
 	params, _ := staticFRI(compiledLogRSBlowup(sys))
+	params.MerkleHash = MerkleHash(sys)
 	return params
 }
 
@@ -517,6 +558,7 @@ func (c *compiled) newPCS() *fri.PCS {
 	params, encoders := staticFRI(c.logRSBlowup)
 	params.NumQueries = uint(c.friNumQueries)
 	params.MerkleCapHeight = c.merkleCapHeight
+	params.MerkleHash = c.merkleHash
 	pcs, err := fri.NewPCS(params, encoders)
 	if err != nil {
 		utils.Panic("pcs: newPCS: %v", err)
@@ -608,7 +650,9 @@ type compiled struct {
 	friNumQueries      int
 	// merkleCapHeight is the resolved [fri.Params.MerkleCapHeight].
 	merkleCapHeight uint8
-	logRSBlowup     uint8
+	// merkleHash is the hash of every committed tree (see [WithMerkleHash]).
+	merkleHash  fri.MerkleHash
+	logRSBlowup uint8
 	// maxSizeLog2 is the largest committable padded column size (log2) at
 	// logRSBlowup; see [maxCommittableSizeLog2].
 	maxSizeLog2 uint8
@@ -659,6 +703,7 @@ func Compile(sys *wiop.System, opts ...Option) {
 		fixedFRIDomain:  cfg.fixedFRIDomain,
 		friNumQueries:   cfg.friNumQueries,
 		merkleCapHeight: cfg.merkleCap.resolve(cfg.friNumQueries),
+		merkleHash:      cfg.merkleHash(),
 		logRSBlowup:     logBlowup,
 		maxSizeLog2:     maxCommittableSizeLog2(logBlowup),
 	}
@@ -1082,7 +1127,7 @@ func (c *compiled) commitVectors(
 		utils.Panic("pcs: round %d commits a column of size 2^%d, above the 2^%d committable at RS blowup %d",
 			round.ID, maxSizeIndex, c.maxSizeLog2, 1<<c.logRSBlowup)
 	}
-	committerState := fri.Commit(roundEncoders(c.logRSBlowup, uint8(maxSizeIndex)), sortedColumns[:maxSizeIndex+1])
+	committerState := fri.CommitWithHash(c.merkleHash, roundEncoders(c.logRSBlowup, uint8(maxSizeIndex)), sortedColumns[:maxSizeIndex+1])
 	return &committerState
 }
 
