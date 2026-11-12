@@ -31,6 +31,9 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 			EndProcessedFtxNumber:                 14,
 			FilteredAddresses:                     [][20]byte{{0x09}},
 			TxFromsHash:                           filledHash(0x0a),
+			BlockCount:                            3,
+			L2MessagingBlocksOffsets:              []uint16{1, 3},
+			L2L1Messages:                          [][32]byte{filledHash(0x11), filledHash(0x22)},
 		},
 	}
 
@@ -48,7 +51,7 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 	assert.Equal(t, repeatHex(0x02), pi.EndBlockHash)
 	assert.Equal(t, uint64(1000503), pi.EndBlockNumber)
 	assert.Equal(t, uint64(1763000101), pi.EndBlockTimestamp)
-	assert.Empty(t, pi.L2L1Messages)
+	assert.Equal(t, []string{repeatHex(0x11), repeatHex(0x22)}, pi.L2L1Messages)
 	assert.Equal(t, repeatHex(0x05), pi.EndL1L2BridgeRollingHash)
 	assert.Equal(t, uint64(12), pi.EndL1L2BridgeRollingHashMessageNumber)
 	assert.Equal(t, repeatHex(0x06), pi.DynamicChainConfigHash)
@@ -58,6 +61,8 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 	assert.Equal(t, uint64(14), pi.EndProcessedFtxNumber)
 	assert.Equal(t, []string{"0x09" + strings.Repeat("00", 19)}, pi.FilteredAddresses)
 	assert.Equal(t, repeatHex(0x0a), pi.TxFromsHash)
+	assert.Equal(t, uint64(3), pi.BlockCount)
+	assert.Equal(t, []uint16{1, 3}, pi.L2MessagingBlocksOffsets)
 }
 
 func TestNewExecutionResponse_MatchesReferenceResponseShape(t *testing.T) {

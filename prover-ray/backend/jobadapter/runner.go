@@ -280,7 +280,7 @@ func (r *Runner) runL2ExecutionExtended(ctx context.Context, runReq RunRequest, 
 			"guest public inputs do not match the request: end block %d, block count %d, want %d and %d",
 			pi.EndBlockNumber, pi.BlockCount, endBlock, len(req.Payloads)))
 	}
-	if native != nil && !bytes.Equal(result.GuestOutput, native) {
+	if r.nativeRunnerBin != "" && !bytes.Equal(result.GuestOutput, native) {
 		return failedRunResult(runReq.ID, FailureCodeInternalError, fmt.Errorf(
 			"native runner check failed: guest output %x != native output %x", result.GuestOutput, native))
 	}

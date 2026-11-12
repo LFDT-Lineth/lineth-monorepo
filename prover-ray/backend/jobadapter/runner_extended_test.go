@@ -28,17 +28,17 @@ var extendedModes = map[backend.ProverMode][]byte{
 	backend.ProverModeDevPartial: []byte("devmode proof"),
 }
 
-// guestPublicInputs are the public inputs of a single-block job ending at
-// endBlock.
-func guestPublicInputs(endBlock uint64) backend.PublicInputs {
-	return backend.PublicInputs{EndBlockNumber: endBlock, BlockCount: 1, ParentBlockHash: [32]byte{0xee}}
+// guestPublicInputs are the public inputs of a job of blockCount blocks ending
+// at endBlock.
+func guestPublicInputs(endBlock, blockCount uint64) backend.PublicInputs {
+	return backend.PublicInputs{EndBlockNumber: endBlock, BlockCount: blockCount, ParentBlockHash: [32]byte{0xee}}
 }
 
 // extendedProver returns what the mode's prover returns: the proof, the public
 // inputs decoded from the guest output, changed by edit if set, and that output.
 func extendedProver(mode backend.ProverMode, output []byte, edit func(*backend.PublicInputs)) *mockProver {
 	return &mockProver{result: func(job backend.Job) backend.Result {
-		pi := guestPublicInputs(job.EndBlock)
+		pi := guestPublicInputs(job.EndBlock, job.EndBlock-job.StartBlock+1)
 		if edit != nil {
 			edit(&pi)
 		}
@@ -76,35 +76,42 @@ func fakeNativeRunner(t *testing.T, sszBytes []byte) string {
 }
 
 // The response comes from the prover's result, and the guest runs on the same
-// extended input as the native runner.
+// extended input as the native runner. In the multi-block request the start
+// and end blocks differ.
 func TestRunner_Extended_ResponseFromResult(t *testing.T) {
-	body := readFixture(t, "request_single_block.json")
-	req, err := DecodeL2ExecutionRequest(body)
-	require.NoError(t, err)
-	for mode, proof := range extendedModes {
-		t.Run(string(mode), func(t *testing.T) {
-			mock := extendedProver(mode, guestOutput, nil)
-			runner, err := NewRunner(mock, testProverVersion,
-				WithMode(mode), WithNativeRunnerBin(fakeNativeRunner(t, guestOutput)))
-			require.NoError(t, err)
+	for _, fixture := range []string{"request_single_block.json", "request_multi_block.json"} {
+		body := readFixture(t, fixture)
+		req, err := DecodeL2ExecutionRequest(body)
+		require.NoError(t, err)
+		startBlock := req.Payloads[0].BlockNumber
+		endBlock := req.Payloads[len(req.Payloads)-1].BlockNumber
+		for mode, proof := range extendedModes {
+			t.Run(fixture+"/"+string(mode), func(t *testing.T) {
+				mock := extendedProver(mode, guestOutput, nil)
+				runner, err := NewRunner(mock, testProverVersion,
+					WithMode(mode), WithNativeRunnerBin(fakeNativeRunner(t, guestOutput)))
+				require.NoError(t, err)
 
-			result := runner.Run(context.Background(), l2ExecutionRunRequest("e-1", body))
+				result := runner.Run(context.Background(), l2ExecutionRunRequest("e-1", body))
 
-			require.Equal(t, RunStatusSuccess, result.Status, "run err: %v", result.Err)
-			require.Len(t, mock.jobs, 1)
-			assert.Equal(t, ssz.EncodeExtendedInput(buildExtendedInput(req)), mock.jobs[0].Payload,
-				"the guest should run on the extended input")
-			assert.Equal(t, requestGuestProgramID(t, body), mock.jobs[0].GuestProgramID)
+				require.Equal(t, RunStatusSuccess, result.Status, "run err: %v", result.Err)
+				require.Len(t, mock.jobs, 1)
+				assert.Equal(t, ssz.EncodeExtendedInput(buildExtendedInput(req)), mock.jobs[0].Payload,
+					"the guest should run on the extended input")
+				assert.Equal(t, requestGuestProgramID(t, body), mock.jobs[0].GuestProgramID)
 
-			resp, ok := result.ResponseBody.(executionResponse)
-			require.True(t, ok)
-			assert.Equal(t, testProverVersion+"-"+string(mode), resp.ProverVersion)
-			assert.Equal(t, hexBytes(proof), resp.ProofHex)
-			assert.Equal(t, req.Payloads[0].BlockNumber, resp.StartBlockNumber, "the start block should come from the request")
-			assert.Equal(t, publicInputs(guestPublicInputs(req.Payloads[0].BlockNumber)),
-				resp.PublicInputs, "the public inputs should come from the prover's result")
-			assert.Equal(t, guestProgramID, resp.ProgramVk)
-		})
+				resp, ok := result.ResponseBody.(executionResponse)
+				require.True(t, ok)
+				assert.Equal(t, testProverVersion+"-"+string(mode), resp.ProverVersion)
+				assert.Equal(t, hexBytes(proof), resp.ProofHex)
+				assert.Equal(t, startBlock, resp.StartBlockNumber, "the start block should be the request's first block")
+				assert.Equal(t, endBlock, resp.PublicInputs.EndBlockNumber)
+				assert.Equal(t, uint64(len(req.Payloads)), resp.PublicInputs.BlockCount)
+				assert.Equal(t, hexHash([32]byte{0xee}), resp.PublicInputs.ParentBlockHash,
+					"the public inputs should come from the prover's result")
+				assert.Equal(t, guestProgramID, resp.ProgramVk)
+			})
+		}
 	}
 }
 
@@ -129,12 +136,21 @@ func TestRunner_Extended_NativeCheckFails(t *testing.T) {
 
 // The guest's end block and block count must match the request.
 func TestRunner_Extended_PublicInputsMatchRequest(t *testing.T) {
+	req, err := DecodeL2ExecutionRequest(readFixture(t, "request_single_block.json"))
+	require.NoError(t, err)
+	end := req.Payloads[0].BlockNumber
 	cases := map[string]struct {
 		edit    func(*backend.PublicInputs)
 		wantErr string
 	}{
-		"end block":   {func(pi *backend.PublicInputs) { pi.EndBlockNumber++ }, "end block"},
-		"block count": {func(pi *backend.PublicInputs) { pi.BlockCount = 2 }, "block count"},
+		"end block": {
+			func(pi *backend.PublicInputs) { pi.EndBlockNumber++ },
+			fmt.Sprintf("end block %d, block count 1, want %d and 1", end+1, end),
+		},
+		"block count": {
+			func(pi *backend.PublicInputs) { pi.BlockCount = 2 },
+			fmt.Sprintf("end block %d, block count 2, want %d and 1", end, end),
+		},
 	}
 	for mode := range extendedModes {
 		for name, tc := range cases {
@@ -167,6 +183,7 @@ func TestRunner_Extended_NativeRunnerFailsFirst(t *testing.T) {
 				l2ExecutionRunRequest("e-4", readFixture(t, "request_single_block.json")))
 
 			assert.Equal(t, RunStatusFailed, result.Status)
+			require.ErrorContains(t, result.Err, "running native runner")
 			assert.Empty(t, mock.jobs, "the guest should not run")
 		})
 	}
