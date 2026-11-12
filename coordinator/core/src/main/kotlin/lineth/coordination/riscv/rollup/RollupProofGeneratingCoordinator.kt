@@ -5,348 +5,347 @@ import linea.clients.ChunkWitness
 import linea.clients.ConflationWitness
 import linea.clients.RollupProofRequestV1
 import linea.clients.RollupProverClientV1
-import linea.da.DaConstants
+import linea.da.DaCodecVersion
+import linea.da.DaStream
+import linea.da.DaStreamFactory
+import linea.da.RollupResumePoint
+import linea.da.blobBytes
+import linea.domain.Batch
 import linea.domain.BlobData
 import linea.domain.Block
 import linea.domain.BlockIntervalProofIndex
 import linea.domain.BlocksConflation
 import linea.domain.ConflationCalculationResult
-import linea.domain.Constants
-import linea.domain.DataRollingHashCalculator
-import linea.domain.StreamPosition
+import linea.domain.ConflationTrigger
 import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
 import lineth.conflation.ConflationHandler
-import lineth.conflation.calculators.RollupCalculator
-import lineth.coordination.riscv.conflation.ConflationSegmentBuilder
+import lineth.conflation.calculators.BlobTriggerCalculator
+import lineth.conflation.calculators.GlobalBlobCalculator
+import lineth.conflation.calculators.GlobalRollupCalculator
+import lineth.conflation.calculators.Rollup
+import lineth.conflation.calculators.RollupDaAssembler
+import lineth.conflation.calculators.RollupHandler
+import lineth.conflation.calculators.RollupTriggerCalculator
 import lineth.encoding.BlockEncoder
 import lineth.persistence.BatchesRepository
-import net.consensys.linea.async.toSafeFuture
-import net.consensys.linea.metrics.MetricsFacade
+import net.consensys.linea.traces.TracesCountersV5
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import java.io.ByteArrayOutputStream
+import java.nio.file.Path
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant
 
-fun interface StreamPositionProvider {
-  fun getStreamPosition(): SafeFuture<StreamPosition>
+/** Fetches the L2 blocks `startBlockNumber..endBlockNumber`, in order. */
+fun interface L2BlocksFetcher {
+  fun fetchBlocks(startBlockNumber: ULong, endBlockNumber: ULong): SafeFuture<List<Block>>
 }
 
+/**
+ * Builds RISC-V rollup proof requests from the DA stream.
+ *
+ * The DA stream is fed only from proven, persisted `batches` rows, using their boundaries: conflation boundaries are
+ * not guaranteed to match across restarts, but persisted ones are, so a restart rebuilds byte-identical blobs. Blocks
+ * come from conflations cached by [handleConflatedBatch] when their boundaries match a persisted batch, and from
+ * [l2BlocksFetcher] otherwise.
+ *
+ * Each tick of [action]:
+ * 1. on the first tick, opens the [DaStream] and the calculators at the resume point;
+ * 2. feeds the next persisted batches to the [GlobalBlobCalculator], which emits rollups to [onRollup];
+ * 3. checks the blob and rollup deadlines;
+ * 4. submits the pending rollups in order. A rollup is dropped from the queue only once its request succeeds.
+ *
+ * All DA stream and calculator calls run under this object's monitor, and ticks never overlap (fixed-delay timer).
+ * An error from the DA stream or the calculators leaves them in an unknown state, so the rollup stage stops there.
+ */
 class RollupProofGeneratingCoordinator(
-  private val chainId: ULong,
-  private val rollupCalculator: RollupCalculator,
   private val rollupProverClient: RollupProverClientV1,
   private val batchesRepository: BatchesRepository,
-  private val streamPositionProvider: StreamPositionProvider,
+  private val resumePointSupplier: () -> SafeFuture<RollupResumePoint>,
   private val rollupProofPoller: RollupProofPoller,
-  private val conflationSegmentBuilder: ConflationSegmentBuilder,
-  private val dataRollingHashCalculator: DataRollingHashCalculator,
+  private val l2BlocksFetcher: L2BlocksFetcher,
+  private val daStreamFactory: DaStreamFactory,
+  private val blobTriggers: List<BlobTriggerCalculator>,
+  private val rollupTriggers: List<RollupTriggerCalculator>,
   private val blockEncoder: BlockEncoder,
-  private val chunkHasher: (ByteArray) -> ByteArray,
-  private val proofCheckingInterval: Duration,
+  private val config: Config,
   private val vertx: Vertx,
+  private val clock: Clock = Clock.System,
   private val log: Logger = LogManager.getLogger(RollupProofGeneratingCoordinator::class.java),
-  @Suppress("UNUSED_PARAMETER") metricsFacade: MetricsFacade,
 ) : ConflationHandler,
+  RollupHandler,
   VertxPeriodicPollingService(
     vertx = vertx,
     name = "RollupProofGeneratingCoordinator",
-    pollingIntervalMs = proofCheckingInterval.inWholeMilliseconds,
+    pollingIntervalMs = config.pollingInterval.inWholeMilliseconds,
     log = log,
     timerSchedule = TimerSchedule.FIXED_DELAY,
   ) {
 
-  private data class SealedChunk(
-    val blobBytes: ByteArray,
-    val chunkHash: ByteArray,
-    val parentDataRollingHash: ByteArray,
-    val endOffset: Int,
-  ) {
-    override fun equals(other: Any?): Boolean {
-      if (this === other) return true
-      if (javaClass != other?.javaClass) return false
-      other as SealedChunk
-      if (endOffset != other.endOffset) return false
-      if (!blobBytes.contentEquals(other.blobBytes)) return false
-      if (!chunkHash.contentEquals(other.chunkHash)) return false
-      if (!parentDataRollingHash.contentEquals(other.parentDataRollingHash)) return false
-      return true
-    }
+  data class Config(
+    val pollingInterval: Duration,
+    val daCodecVersion: DaCodecVersion,
+    val dictionaryPath: Path,
+    val blobDeadline: Duration? = null,
+    val rollupDeadline: Duration? = null,
+    val maxConflationsToFeedPerTick: Int = 100,
+  )
 
-    override fun hashCode(): Int {
-      var result = endOffset
-      result = 31 * result + blobBytes.contentHashCode()
-      result = 31 * result + chunkHash.contentHashCode()
-      result = 31 * result + parentDataRollingHash.contentHashCode()
-      return result
-    }
-  }
+  private class DaPipeline(
+    val daStream: DaStream,
+    val blobCalculator: GlobalBlobCalculator,
+    val rollupCalculator: GlobalRollupCalculator,
+  )
 
-  private data class ChunkedData(
-    val chunks: List<SealedChunk>,
-    // data rolling hash after folding the last chunk
-    val dataRollingHash: ByteArray,
-  ) {
-    val parentDataRollingHash: ByteArray get() = chunks.first().parentDataRollingHash
+  private var pipeline: DaPipeline? = null
+  private var failure: Throwable? = null
 
-    override fun equals(other: Any?): Boolean {
-      if (this === other) return true
-      if (javaClass != other?.javaClass) return false
-      other as ChunkedData
-      if (chunks != other.chunks) return false
-      if (!dataRollingHash.contentEquals(other.dataRollingHash)) return false
-      return true
-    }
-
-    override fun hashCode(): Int {
-      var result = chunks.hashCode()
-      result = 31 * result + dataRollingHash.contentHashCode()
-      return result
-    }
-  }
-
-  private data class PendingConflation(
-    val conflationResult: ConflationCalculationResult,
-    val blocks: List<Block>,
-    val segmentBytes: ByteArray,
-  ) {
-    val startBlockNumber: ULong get() = conflationResult.startBlockNumber
-    val endBlockNumber: ULong get() = conflationResult.endBlockNumber
-    val startBlockTimestamp: Instant get() = Instant.fromEpochSeconds(blocks.first().timestamp.toLong())
-    val endBlockTimestamp: Instant get() = Instant.fromEpochSeconds(blocks.last().timestamp.toLong())
-
-    fun intervalString(): String = "$startBlockNumber..$endBlockNumber"
-
-    override fun equals(other: Any?): Boolean {
-      if (this === other) return true
-      if (javaClass != other?.javaClass) return false
-
-      other as PendingConflation
-
-      if (conflationResult != other.conflationResult) return false
-      if (blocks != other.blocks) return false
-      if (!segmentBytes.contentEquals(other.segmentBytes)) return false
-
-      return true
-    }
-
-    override fun hashCode(): Int {
-      var result = conflationResult.hashCode()
-      result = 31 * result + blocks.hashCode()
-      result = 31 * result + segmentBytes.contentHashCode()
-      return result
-    }
-  }
-
-  private lateinit var parentDataRollingHash: ByteArray
-  private var lastHandledBlockNumber: ULong = 0u
-  private var nextBlockNumberToPoll: Long? = null
-  private val pendingConflations = ArrayDeque<PendingConflation>()
-  private var streamPositionFuture: SafeFuture<Unit>? = null
-
-  // Each handleConflatedBatch chains on the previous call's future, guaranteeing arrival order.
-  private var lastHandleFuture: SafeFuture<Unit> = SafeFuture.completedFuture(Unit)
-
-  init {
-    rollupCalculator.onRollup { window -> submitProofWindow(window) }
-  }
-
-  private fun ensureStreamPositionInitialized(): SafeFuture<Unit> =
-    synchronized(this) {
-      if (::parentDataRollingHash.isInitialized) return SafeFuture.completedFuture(Unit)
-      streamPositionFuture?.let { return it }
-      streamPositionProvider.getStreamPosition()
-        .thenApply { position ->
-          synchronized(this) {
-            if (!::parentDataRollingHash.isInitialized) {
-              parentDataRollingHash = position.dataRollingHash
-              lastHandledBlockNumber = position.lastConflationEndBlock
-              nextBlockNumberToPoll = position.lastConflationEndBlock.toLong() + 1L
-            }
-          }
-        }.toSafeFuture()
-        .also { streamPositionFuture = it }
-    }
+  @Volatile
+  private var lastFedBlockNumber: ULong = 0UL
+  private val pendingRollups = ArrayDeque<Rollup>()
+  private val conflationCache = ConcurrentHashMap<Pair<ULong, ULong>, BlocksConflation>()
 
   override fun handleConflatedBatch(conflation: BlocksConflation): SafeFuture<*> {
-    return synchronized(this) {
-      val next = lastHandleFuture
-        .thenCompose { ensureStreamPositionInitialized() }
-        .thenApply {
-          synchronized(this) {
-            require(conflation.conflationResult.startBlockNumber == lastHandledBlockNumber + 1u) {
-              "Conflation out of order: expected startBlockNumber=${lastHandledBlockNumber + 1u}, " +
-                "got ${conflation.conflationResult.startBlockNumber}"
-            }
-            val segmentBytes = conflationSegmentBuilder.buildSegment(conflation.blocks, chainId)
-            pendingConflations += PendingConflation(conflation.conflationResult, conflation.blocks, segmentBytes)
-            lastHandledBlockNumber = conflation.conflationResult.endBlockNumber
-          }
-        }.toSafeFuture()
-      lastHandleFuture = next
-      next
+    if (conflation.endBlockNumber > lastFedBlockNumber) {
+      conflationCache[conflation.startBlockNumber to conflation.endBlockNumber] = conflation
     }
+    return SafeFuture.completedFuture(Unit)
+  }
+
+  /** Called by the rollup calculator while [feed] holds the monitor: only enqueues. */
+  override fun onRollup(rollup: Rollup) {
+    pendingRollups.addLast(rollup)
   }
 
   override fun action(): SafeFuture<*> {
-    val pollFrom = nextBlockNumberToPoll ?: return SafeFuture.completedFuture(Unit)
-    return batchesRepository.findHighestConsecutiveEndBlockNumberFromBlockNumber(pollFrom)
-      .thenApply { highestProven ->
-        if (highestProven != null) processProvenConflations(highestProven)
+    failure?.let {
+      log.error("rollup stage stopped after a DA pipeline error: errorMessage={}", it.message)
+      return SafeFuture.completedFuture(Unit)
+    }
+    return ensureInitialized()
+      .thenCompose { loadNextProvenConflations() }
+      .thenApply { conflations -> feed(conflations) }
+      .thenCompose { submitPendingRollups() }
+  }
+
+  override fun stop(): SafeFuture<Unit> {
+    return super.stop().thenApply {
+      synchronized(this) {
+        pipeline?.daStream?.close()
+        pipeline = null
       }
+    }
+  }
+
+  private fun ensureInitialized(): SafeFuture<Unit> {
+    if (synchronized(this) { pipeline != null }) return SafeFuture.completedFuture(Unit)
+    return resumePointSupplier().thenApply { resumePoint -> synchronized(this) { initPipeline(resumePoint) } }
+  }
+
+  private fun initPipeline(resumePoint: RollupResumePoint) {
+    if (pipeline != null) return
+    val position = resumePoint.daPosition
+    val daStream = daStreamFactory.open(config.daCodecVersion, config.dictionaryPath, position)
+    lateinit var blobCalculator: GlobalBlobCalculator
+    val rollupCalculator = GlobalRollupCalculator(
+      triggers = rollupTriggers,
+      openRollup = RollupDaAssembler(position),
+      blobCalculator = { blobCalculator },
+      rollupDeadline = config.rollupDeadline,
+    ).also { it.onRollup(this) }
+    blobCalculator = GlobalBlobCalculator(
+      daStream = daStream,
+      triggers = blobTriggers,
+      blockEncoder = blockEncoder,
+      handler = rollupCalculator,
+      blobDeadline = config.blobDeadline,
+      sharedBlobTailBytes = position.tailBytes,
+    )
+    pipeline = DaPipeline(daStream, blobCalculator, rollupCalculator)
+    lastFedBlockNumber = resumePoint.lastConflationEndBlock
+    log.info("rollup stage resumed: lastConflationEndBlock={} daPosition={}", lastFedBlockNumber, position)
+  }
+
+  /** The next persisted batches after [lastFedBlockNumber], with their blocks, in order and without gaps. */
+  private fun loadNextProvenConflations(): SafeFuture<List<BlocksConflation>> {
+    val from = lastFedBlockNumber + 1UL
+    return batchesRepository.findHighestConsecutiveEndBlockNumberFromBlockNumber(from.toLong())
+      .thenCompose { highest ->
+        if (highest == null) {
+          SafeFuture.completedFuture(emptyList())
+        } else {
+          batchesRepository.findBatchesByBlockRange(from.toLong(), highest).thenCompose { batches ->
+            consecutiveBatches(from, batches)
+              .take(config.maxConflationsToFeedPerTick)
+              .fold(SafeFuture.completedFuture(emptyList<BlocksConflation>())) { acc, batch ->
+                acc.thenCompose { loaded -> conflationOf(batch).thenApply { loaded + it } }
+              }
+          }
+        }
+      }
+  }
+
+  /** The gap-free chain of batches from [from]; where several share a start block, the shortest wins. */
+  private fun consecutiveBatches(from: ULong, batches: List<Batch>): List<Batch> {
+    val byStart = batches.groupBy { it.startBlockNumber }.mapValues { (_, it) -> it.minBy { it.endBlockNumber } }
+    return generateSequence(byStart[from]) { byStart[it.endBlockNumber + 1UL] }.toList()
+  }
+
+  private fun conflationOf(batch: Batch): SafeFuture<BlocksConflation> {
+    conflationCache[batch.startBlockNumber to batch.endBlockNumber]?.let { return SafeFuture.completedFuture(it) }
+    return l2BlocksFetcher.fetchBlocks(batch.startBlockNumber, batch.endBlockNumber).thenApply { blocks ->
+      check(blocks.map { it.number } == (batch.startBlockNumber..batch.endBlockNumber).toList()) {
+        "fetched blocks=${blocks.map { it.number }} do not match " +
+          "batch=${batch.startBlockNumber}..${batch.endBlockNumber}"
+      }
+      BlocksConflation(
+        blocks = blocks,
+        conflationResult = ConflationCalculationResult(
+          startBlockNumber = batch.startBlockNumber,
+          endBlockNumber = batch.endBlockNumber,
+          // The trigger and traces are not persisted with a batch; the DA pipeline does not use them.
+          conflationTrigger = ConflationTrigger.BLOCKS_LIMIT,
+          tracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
+        ),
+      )
+    }
   }
 
   @Synchronized
-  private fun processProvenConflations(highestProven: Long) {
-    val toFeed = buildList {
-      for (pending in pendingConflations) {
-        if (pending.endBlockNumber.toLong() > highestProven) break
-        if (pending.endBlockNumber.toLong() < nextBlockNumberToPoll!!) continue
-        add(pending)
+  private fun feed(conflations: List<BlocksConflation>) {
+    val pipeline = this.pipeline ?: return
+    try {
+      conflations.forEach { conflation ->
+        check(conflation.startBlockNumber == lastFedBlockNumber + 1UL) {
+          "conflation=${conflation.intervalString()} does not follow lastFedBlockNumber=$lastFedBlockNumber"
+        }
+        pipeline.blobCalculator.newConflation(conflation)
+        lastFedBlockNumber = conflation.endBlockNumber
       }
-    }
-    toFeed.forEach { pending ->
-      rollupCalculator.newConflation(BlocksConflation(pending.blocks, pending.conflationResult))
-      nextBlockNumberToPoll = pending.endBlockNumber.toLong() + 1L
+      val now = clock.now()
+      pipeline.blobCalculator.checkDeadline(now)
+      pipeline.rollupCalculator.checkDeadline(now)
+    } catch (e: Exception) {
+      failure = e
+      log.error("DA pipeline failed, stopping the rollup stage: errorMessage={}", e.message, e)
+      throw e
+    } finally {
+      conflationCache.keys.removeIf { (_, end) -> end <= lastFedBlockNumber }
     }
   }
 
-  @Synchronized
-  private fun submitProofWindow(window: List<BlocksConflation>) {
-    val windowPending = drainWindow(window)
-    val chunkedData = chunkSegments(windowPending)
-    parentDataRollingHash = chunkedData.dataRollingHash
-
-    findL2Executions(windowPending)
-      .thenCompose { l2Executions ->
-        rollupProverClient.createProofRequest(buildRequest(chunkedData, windowPending, l2Executions))
+  private fun submitPendingRollups(): SafeFuture<Unit> {
+    val next = synchronized(this) { pendingRollups.firstOrNull() } ?: return SafeFuture.completedFuture(Unit)
+    return submitRollup(next)
+      .whenException { th ->
+        log.warn(
+          "rollup proof request failed, will retry: rollup={}..{} errorMessage={}",
+          next.startBlockNumber,
+          next.endBlockNumber,
+          th.message,
+        )
       }
-      .thenApply { proofIndex -> trackProofInProgress(proofIndex, chunkedData, windowPending) }
-  }
-
-  private fun chunkSegments(windowPending: List<PendingConflation>): ChunkedData {
-    val buffer = ByteArrayOutputStream()
-    val sealedChunks = mutableListOf<SealedChunk>()
-    var currentDrh = parentDataRollingHash
-
-    for (pending in windowPending) {
-      buffer.write(pending.segmentBytes)
-      while (buffer.size() >= Constants.Eip4844BlobSize) {
-        val raw = buffer.toByteArray()
-        val blobBytes = raw.copyOfRange(0, Constants.Eip4844BlobSize)
-        buffer.reset()
-        buffer.write(raw, Constants.Eip4844BlobSize, raw.size - Constants.Eip4844BlobSize)
-        val chunkHash = chunkHasher(blobBytes)
-        sealedChunks += SealedChunk(blobBytes, chunkHash, currentDrh, Constants.Eip4844BlobSize)
-        currentDrh = dataRollingHashCalculator.fold(currentDrh, chunkHash)
+      .thenCompose {
+        synchronized(this) { check(pendingRollups.removeFirst() === next) }
+        submitPendingRollups()
       }
-    }
-
-    val partialChunk: SealedChunk? = if (buffer.size() > 0) {
-      val endOffset = buffer.size()
-      val blobBytes = buffer.toByteArray().copyOf(Constants.Eip4844BlobSize)
-      val chunkHash = chunkHasher(blobBytes)
-      val chunk = SealedChunk(blobBytes, chunkHash, currentDrh, endOffset)
-      currentDrh = dataRollingHashCalculator.fold(currentDrh, chunkHash)
-      chunk
-    } else {
-      null
-    }
-
-    return ChunkedData(sealedChunks + listOfNotNull(partialChunk), currentDrh)
   }
 
-  private fun drainWindow(window: List<BlocksConflation>): List<PendingConflation> {
-    val windowPending = (1..window.size).map { pendingConflations.removeFirst() }
-    check(
-      windowPending.zip(window).all { (pending, conflation) ->
-        pending.startBlockNumber == conflation.conflationResult.startBlockNumber &&
-          pending.endBlockNumber == conflation.conflationResult.endBlockNumber
-      },
-    ) {
-      "submitProofWindow: drained conflations don't match calculator window — " +
-        "pending ${windowPending.map { it.startBlockNumber..it.endBlockNumber }}, " +
-        "window ${window.map { it.conflationResult.startBlockNumber..it.conflationResult.endBlockNumber }}"
+  private fun submitRollup(rollup: Rollup): SafeFuture<Unit> {
+    return findL2Executions(rollup).thenCompose { l2Executions ->
+      val request = buildRequest(rollup, l2Executions)
+      val proofIndex = rollupProverClient.getProofIndex(request)
+      // A request rebuilt after a restart is byte-identical, so its proof may already exist.
+      rollupProverClient.findProofResponse(proofIndex)
+        .thenCompose { existing ->
+          if (existing != null) {
+            SafeFuture.completedFuture(proofIndex)
+          } else {
+            rollupProverClient.createProofRequest(request)
+          }
+        }
+        .thenApply { trackProofInProgress(it, rollup) }
     }
-    return windowPending
   }
 
-  private fun findL2Executions(windowPending: List<PendingConflation>): SafeFuture<List<BlockIntervalProofIndex>> {
+  private fun findL2Executions(rollup: Rollup): SafeFuture<List<BlockIntervalProofIndex>> {
     return batchesRepository.findBatchesByBlockRange(
-      windowPending.first().startBlockNumber.toLong(),
-      windowPending.last().endBlockNumber.toLong(),
+      rollup.startBlockNumber.toLong(),
+      rollup.endBlockNumber.toLong(),
     ).thenApply { batches ->
-      val batchesByStartAndEnd = batches.associateBy { Pair(it.startBlockNumber, it.endBlockNumber) }
-      windowPending.map { pending ->
-        val batch = batchesByStartAndEnd[Pair(pending.startBlockNumber, pending.endBlockNumber)]
-          ?: error("Batch not found for conflation ${pending.intervalString()}")
+      val batchesByStartAndEnd = batches.associateBy { it.startBlockNumber to it.endBlockNumber }
+      rollup.conflations.map { conflation ->
+        val batch = batchesByStartAndEnd[conflation.startBlockNumber to conflation.endBlockNumber]
+          ?: error("Batch not found for conflation ${conflation.intervalString()}")
         val hash = batch.proofIndexHash
-          ?: error("proofIndexHash is null for batch ${pending.intervalString()}")
+          ?: error("proofIndexHash is null for batch ${conflation.intervalString()}")
         BlockIntervalProofIndex(
-          startBlockNumber = pending.startBlockNumber,
-          endBlockNumber = pending.endBlockNumber,
-          startBlockTimestamp = pending.startBlockTimestamp,
+          startBlockNumber = conflation.startBlockNumber,
+          endBlockNumber = conflation.endBlockNumber,
+          startBlockTimestamp = conflation.startBlockTimestamp(),
           hash = hash,
         )
       }
     }
   }
 
-  private fun trackProofInProgress(
-    proofIndex: BlockIntervalProofIndex,
-    chunkedData: ChunkedData,
-    windowPending: List<PendingConflation>,
-  ) {
-    rollupProofPoller.addProofInProgress(
-      proofIndex = proofIndex,
-      blobsData = chunkedData.chunks.mapIndexed { i, chunk ->
-        BlobData(
-          chunkHash = chunk.chunkHash,
-          blobBytes = chunk.blobBytes,
-          batchesCount = 0u,
-          prevDataRollingHash = chunk.parentDataRollingHash,
-          dataRollingHash = chunkedData.chunks.getOrNull(i + 1)?.parentDataRollingHash ?: chunkedData.dataRollingHash,
-        )
-      },
-      parentDataRollingHash = chunkedData.parentDataRollingHash,
-      dataRollingHash = chunkedData.dataRollingHash,
-      // Every proof window closes its own last chunk, so no bytes are shared with the next window.
-      parentDataTailTakeBytes = 0,
-      boundaryPrevDataRollingHash = null,
-      finalDataTailDiscardBytes = 0,
-      startBlockTimestamp = windowPending.first().startBlockTimestamp,
-      endBlockTimestamp = windowPending.last().endBlockTimestamp,
-      totalBatchesCount = windowPending.size,
-    )
-  }
-
-  private fun buildRequest(
-    chunkedData: ChunkedData,
-    conflations: List<PendingConflation>,
-    l2Executions: List<BlockIntervalProofIndex>,
-  ): RollupProofRequestV1 {
+  private fun buildRequest(rollup: Rollup, l2Executions: List<BlockIntervalProofIndex>): RollupProofRequestV1 {
+    val da = rollup.da
     return RollupProofRequestV1(
-      conflations = conflations.map { ConflationWitness(it.blocks.map(blockEncoder::encode)) },
+      conflations = rollup.conflations.map { ConflationWitness(it.blocks.map(blockEncoder::encode)) },
       l2Executions = l2Executions,
-      // Blob chunks only. Canonical field-element packing of blobBytes, a KZG versioned-hash chunkHasher, and the
-      // blob's KZG commitment and proof are still to do; until then the guest will reject these chunks even though
-      // the request is schema-valid.
-      chunks = chunkedData.chunks.map {
+      chunks = da.blobs.map {
         ChunkWitness(
           chunkHash = it.chunkHash,
           isCalldata = false,
-          blobBytes = it.blobBytes,
+          blobBytes = it.blobBytes(),
           calldataBytes = ByteArray(0),
-          kzgCommitment = ByteArray(DaConstants.KZG_POINT_BYTES),
-          kzgProof = ByteArray(DaConstants.KZG_POINT_BYTES),
+          kzgCommitment = it.kzgCommitment,
+          kzgProof = it.kzgProof,
         )
       },
-      parentDataRollingHash = chunkedData.parentDataRollingHash,
-      // Proof windows always start at a chunk boundary; the guest derives finalDataTailDiscardBytes itself.
-      parentDataTailTakeBytes = 0,
-      boundaryPrevDataRollingHash = null,
+      parentDataRollingHash = da.parentDataRollingHash,
+      parentDataTailTakeBytes = da.parentDataTailTakeBytes,
+      boundaryPrevDataRollingHash = da.boundaryPrevDataRollingHash,
     )
   }
+
+  private fun trackProofInProgress(proofIndex: BlockIntervalProofIndex, rollup: Rollup) {
+    val da = rollup.da
+    log.info(
+      "rollup proof request created: rollup={}..{} blobs={} tailTake={} tailDiscard={}",
+      rollup.startBlockNumber,
+      rollup.endBlockNumber,
+      da.blobs.size,
+      da.parentDataTailTakeBytes,
+      da.expectedFinalDataTailDiscardBytes,
+    )
+    rollupProofPoller.addProofInProgress(
+      proofIndex = proofIndex,
+      blobsData = da.blobs.map {
+        BlobData(
+          chunkHash = it.chunkHash,
+          blobBytes = it.blobBytes(),
+          batchesCount = it.segmentEnds.size.toUInt(),
+          prevDataRollingHash = it.prevDataRollingHash,
+          dataRollingHash = it.dataRollingHash,
+        )
+      },
+      parentDataRollingHash = da.parentDataRollingHash,
+      dataRollingHash = da.expectedEndDataRollingHash,
+      parentDataTailTakeBytes = da.parentDataTailTakeBytes,
+      boundaryPrevDataRollingHash = da.boundaryPrevDataRollingHash,
+      finalDataTailDiscardBytes = da.expectedFinalDataTailDiscardBytes,
+      startBlockTimestamp = rollup.conflations.first().startBlockTimestamp(),
+      endBlockTimestamp = Instant.fromEpochSeconds(rollup.conflations.last().blocks.last().timestamp.toLong()),
+      totalBatchesCount = rollup.conflations.size,
+    )
+  }
+
+  private fun BlocksConflation.startBlockTimestamp(): Instant = Instant.fromEpochSeconds(
+    blocks.first().timestamp.toLong(),
+  )
 }

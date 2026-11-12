@@ -18,7 +18,7 @@ object DaPipelineTestSupport {
     rollupDeadline: Duration? = null,
   ) {
     val rollups = mutableListOf<Rollup>()
-    val rollupCalculator: GlobalRollupCalculatorV2 = GlobalRollupCalculatorV2(
+    val rollupCalculator: GlobalRollupCalculator = GlobalRollupCalculator(
       triggers = rollupTriggers,
       openRollup = RollupDaAssembler(position),
       blobCalculator = { this.blobCalculator },
