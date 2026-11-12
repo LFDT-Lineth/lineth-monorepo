@@ -68,10 +68,6 @@ type Core struct {
 	// binaryFile is the compiled R5 arithmetization, used by dev-zkvm to run the
 	// guest under ZkC Execute (the no-trace path). nil outside dev-zkvm.
 	binaryFile *zkcdriver.BinaryFile
-
-	// devSys is the devmode system whose proof dev-partial returns. nil outside
-	// dev-partial.
-	devSys *wiop.System
 }
 
 // guestProgram is a guest ELF mapped and predecoded for ZkC.
@@ -240,10 +236,6 @@ func newDevPartial(cfg Config, mode ProverMode) (*Core, error) {
 	grandproduct.Compile(sys)
 	risc5.CheckPublicInputs(sys)
 
-	devSys, err := devmode.NewSystem()
-	if err != nil {
-		return nil, err
-	}
 	return &Core{
 		cfg:    cfg,
 		mode:   mode,
@@ -253,7 +245,6 @@ func newDevPartial(cfg Config, mode ProverMode) (*Core, error) {
 		// Without sharding the single shard checks its own message bus; with
 		// it, the mock merger checks the bus across the shards.
 		merger: conglomeration.NewMockMerger(sys),
-		devSys: devSys,
 	}, nil
 }
 
@@ -347,11 +338,15 @@ func (c *Core) proveDevPartial(ctx context.Context, job Job) Result {
 	if err != nil {
 		return failResult(job.ID, err)
 	}
-	proof, pub, err := devmode.Prove(c.devSys, pub)
+	devSys, err := devmode.NewSystem()
+	if err != nil {
+		return failResult(job.ID, fmt.Errorf("building the devmode system: %w", err))
+	}
+	proof, pub, err := devmode.Prove(devSys, pub)
 	if err != nil {
 		return failResult(job.ID, err)
 	}
-	proofBytes, err := devmode.Encode(c.devSys, proof, pub, devmode.GuestBase)
+	proofBytes, err := devmode.Encode(devSys, proof, pub, devmode.GuestBase)
 	if err != nil {
 		return failResult(job.ID, fmt.Errorf("encoding the devmode proof: %w", err))
 	}
