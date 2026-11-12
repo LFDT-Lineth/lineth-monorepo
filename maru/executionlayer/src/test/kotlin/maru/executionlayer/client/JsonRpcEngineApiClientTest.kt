@@ -33,6 +33,7 @@ import maru.executionlayer.manager.ForkChoiceUpdatedResult
 import maru.executionlayer.manager.LatestBlockMetadata
 import maru.executionlayer.manager.PayloadStatus
 import net.consensys.linea.async.get
+import net.consensys.linea.jsonrpc.JsonRpcErrorException
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponseException
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import org.apache.logging.log4j.LogManager
@@ -55,6 +56,7 @@ import java.util.Base64
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicInteger
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import kotlin.time.Duration
@@ -261,8 +263,7 @@ class JsonRpcEngineApiClientTest {
   @Test
   fun `sends a freshly signed JWT with every request when a secret is configured`() {
     val secret = ByteArray(32) { it.toByte() }
-    val secretFile = Files.createTempFile("jwt", ".hex").apply { toFile().deleteOnExit() }
-    Files.writeString(secretFile, "0x" + secret.joinToString("") { "%02x".format(it) } + "\n")
+    val secretFile = jwtSecretFile(secret)
     var now = Instant.ofEpochSecond(1_700_000_000)
     val clock = object : Clock() {
       override fun getZone() = ZoneOffset.UTC
@@ -282,6 +283,35 @@ class JsonRpcEngineApiClientTest {
     assertThat(tokens).hasSize(2)
     tokens.forEach { assertThat(hasValidSignature(it, secret)).isTrue() }
     assertThat(tokens.map(::issuedAt)).containsExactly(1_700_000_000L, 1_700_000_030L)
+  }
+
+  @Test
+  fun `execution layer rejecting the JWT fails the future with the HTTP status, without retrying`() {
+    val receivedRequests = AtomicInteger()
+    val rejectingServer =
+      vertx
+        .createHttpServer()
+        .requestHandler { request ->
+          receivedRequests.incrementAndGet()
+          request.response().setStatusCode(401).setStatusMessage("Unauthorized").end("invalid token")
+        }.listen(0)
+        .get()
+    val endpoint = URI("http://127.0.0.1:${rejectingServer.actualPort()}").toURL()
+    val client = client(ElFork.Prague, endpoint = endpoint, jwtSecretPath = jwtSecretFile(ByteArray(32)))
+
+    // The rejection surfaces as a failed future carrying the HTTP 401, not as a JSON-RPC error or a decoding failure
+    assertThatThrownBy { client.getPayload(payloadId).get() }
+      .isInstanceOf(ExecutionException::class.java)
+      .cause()
+      .isInstanceOfSatisfying(JsonRpcErrorException::class.java) {
+        assertThat(it.httpStatusCode).isEqualTo(401)
+      }
+    // The rejected request is recorded as a failure in the engine API request metrics
+    awaitRequestLatencyCount(fork = ElFork.Prague, method = "getPayload", status = "failure", expected = 1)
+    // The client does not retry, leaving retry policy to its callers
+    assertThat(receivedRequests.get()).isEqualTo(1)
+    // An execution layer that rejects the JWT is reported as offline
+    assertThat(client.isOnline().get()).isFalse()
   }
 
   @Test
@@ -308,6 +338,12 @@ class JsonRpcEngineApiClientTest {
   }
 
   /** The timer records in a completion callback that may run after the caller's `get()` returns. */
+  private fun jwtSecretFile(secret: ByteArray): java.nio.file.Path {
+    val secretFile = Files.createTempFile("jwt", ".hex").apply { toFile().deleteOnExit() }
+    Files.writeString(secretFile, "0x" + secret.joinToString("") { "%02x".format(it) } + "\n")
+    return secretFile
+  }
+
   private fun awaitRequestLatencyCount(fork: ElFork, method: String, status: String, expected: Long) {
     await().atMost(5, TimeUnit.SECONDS).untilAsserted {
       assertThat(requestLatencyCount(fork, method, status)).isEqualTo(expected)
