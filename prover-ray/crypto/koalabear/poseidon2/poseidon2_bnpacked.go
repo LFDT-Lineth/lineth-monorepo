@@ -286,7 +286,7 @@ func init() {
 	solver.RegisterHint(koalaCanonicalSplitHint)
 }
 
-// koalaCanonicalSplitHint takes v in [0, 2^31) and returns (q, h, l) such that
+// koalaCanonicalSplitHint takes v in [0, 2^31) and computes (q, h, l) such that
 // v = q*p + x with q in {0, 1}, x = v mod p, and x = h*2^24 + l with
 // h < 2^7 and l < 2^24.
 func koalaCanonicalSplitHint(_ *big.Int, in, out []*big.Int) error {
@@ -334,11 +334,17 @@ func canonicalKoala(
 	}
 	q, hi, lo := out[0], out[1], out[2]
 
+	// q is boolean
 	api.AssertIsBoolean(q)
+	// hi < 2^7
 	rc.Check(hi, 7)
+	// lo < 2^24
 	rc.Check(lo, 24)
+	// x = hi*2^24 + lo
 	x := api.Add(api.Mul(hi, 1<<24), lo)
+	// v = q*p + x
 	api.AssertIsEqual(v, api.Add(api.Mul(q, koalaModulus), x))
+	// (h == 127) * l == 0
 	api.AssertIsEqual(api.Mul(api.IsZero(api.Sub(hi, 127)), lo), 0)
 	return x
 }
