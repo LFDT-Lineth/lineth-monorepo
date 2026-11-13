@@ -23,15 +23,11 @@
 // wire bytes) is still stubbed and returns [ErrNotImplemented].
 //
 // With sharding ([Config.ShardSize]), the shard proofs of a job are reduced to
-// one node by a [conglomeration.Merger]. The implementations,
-// [conglomeration.MockMerger] and [conglomeration.RecursionMerger], are for dev
-// and test: neither verifies the children's proofs in-circuit (the recursion
-// merger verifies them in Go, through the mock in-machine verifier), so a
-// sharded job in production returns [ErrNotImplemented] until the in-machine
-// verifier does. A merged node's public inputs are the shard layout followed
-// by the recursion machine's key box (see package recursionguests/node), so
-// they are wider than a shard proof's.
+// one node by a [conglomeration.Merger]; only a mock exists, which dev-partial
+// uses, so a
+// sharded job in full returns [ErrNotImplemented] until the recursion
+// machine lands.
+// The modes are described in docs/prover-modes.md.
 //
-// Circuit compiler passes and [wiop.Materialize] are also not yet wired
-// in [New]; see the inline comments in [core.go].
+// [wiop.Materialize] is not yet wired in [New].
 package backend
