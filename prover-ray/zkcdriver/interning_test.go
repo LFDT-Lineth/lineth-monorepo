@@ -85,8 +85,8 @@ func censusOf(exprs []wiop.Expression) nodeCensus {
 	return nodeCensus{occurrences: occurrences, distinct: len(distinct)}
 }
 
-// TestInterningSharesCompoundSubexpressions measures what the zkcdriver
-// interning cache removes on the real RISC-V system, at the two points the
+// TestInterningSharesCompoundSubexpressions measures what interning removes
+// from zkcdriver's constraints on the real RISC-V system, at the two points the
 // acceptance criteria of #4034 name: straight after [zkcdriver.Define], and
 // over the non-reduced vanishings left by localvanishing+global, which is what
 // the quotient pass binds.
@@ -562,7 +562,7 @@ func measureLiftedSharing(sys *wiop.System) map[string]liftedSharing {
 
 // TestLiftedVanishingsShareStructure covers issue #4035: the lift that
 // localvanishing applies to each local vanishing must preserve the sharing
-// zkcdriver's interning established. It asserts that no lifted node denotes a
+// that registering zkcdriver's constraints established. It asserts that no lifted node denotes a
 // value already carried by a different pointer of the module, and that lifted
 // trees share compound nodes with the module's other vanishings.
 func TestLiftedVanishingsShareStructure(t *testing.T) {
