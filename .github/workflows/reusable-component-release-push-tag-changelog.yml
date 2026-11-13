@@ -56,7 +56,7 @@ on:
 jobs:
   release-component:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
-    environment: ${{ !inputs.create_pull_request && 'release-bot' || '' }}
+    environment: ${{ !inputs.create_pull_request && (github.ref == 'refs/heads/main' && 'release-bot' || 'release-bot-approval') || '' }}
     permissions:
       contents: write
       pull-requests: write

@@ -404,7 +404,7 @@ jobs:
     # produced provenance, so a run that died before recording anything writes no row of dashes.
     if: ${{ always() && !cancelled() && needs.prepare.outputs.zkc_ref != '' }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
-    environment: release-bot
+    environment: ${{ github.ref == 'refs/heads/main' && 'release-bot' || 'release-bot-approval' }}
     timeout-minutes: 20
     steps:
       # fetch-depth: 0 because the commit step rebases onto origin/<branch>; a shallow clone cannot.
