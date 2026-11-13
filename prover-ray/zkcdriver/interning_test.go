@@ -281,6 +281,11 @@ func structuralKey(e wiop.Expression) string {
 	case *wiop.ColumnPosition:
 		return fmt.Sprintf("at(%d,%d)", e.Column.Context.ID, e.Position)
 	case *wiop.Constant:
+		// A vector constant is multi-valued and a scalar one is not, so they
+		// are not interchangeable even when their values match.
+		if m := e.Module(); m != nil {
+			return fmt.Sprintf("const(%v@%d)", e.Value, m.Context.ID)
+		}
 		return fmt.Sprintf("const(%v)", e.Value)
 	case *wiop.LagrangeSelector:
 		// Keys are compared within one module, so the position alone tells
@@ -580,4 +585,54 @@ func TestLiftedVanishingsShareStructure(t *testing.T) {
 	require.NotZero(t, total.lifted, "expected the RISC-V system to declare local constraints")
 	assert.Zero(t, total.leaks, "lifted nodes duplicate a value already carried by another pointer")
 	assert.NotZero(t, total.sharedAcross, "no lifted compound node is shared with any other vanishing")
+}
+
+// TestCompiledVanishingsAreInterned checks, on the RISC-V system after the
+// full compilation, that each module's vanishings carry each value by one
+// pointer, whichever pass built them. verifier-ray's codegen relies on it.
+func TestCompiledVanishingsAreInterned(t *testing.T) {
+
+	serialized := riscvConstraints(t)
+	sys := buildRiscvSystem(t, serialized)
+	proverCompilePipeline(sys)
+
+	totalPointers, totalValues := 0, 0
+	for _, module := range sys.Modules {
+
+		// keys memoises the rendering per pointer, keeping the walk linear.
+		keys := map[wiop.Expression]string{}
+		values := map[string]struct{}{}
+
+		var walk func(e wiop.Expression) string
+		walk = func(e wiop.Expression) string {
+			if key, ok := keys[e]; ok {
+				return key
+			}
+			var key string
+			if op, ok := e.(*wiop.ArithmeticOperation); ok {
+				operands := make([]string, len(op.Operands))
+				for i, operand := range op.Operands {
+					operands[i] = walk(operand)
+				}
+				key = fmt.Sprintf("%v(%v)", op.Operator, operands)
+			} else {
+				key = structuralKey(e)
+			}
+			keys[e] = key
+			values[key] = struct{}{}
+			return key
+		}
+		for _, v := range module.Vanishings {
+			walk(v.Expression)
+		}
+
+		totalPointers += len(keys)
+		totalValues += len(values)
+		assert.Lenf(t, keys, len(values),
+			"module %s: %d nodes denote a value that already has a different pointer",
+			module.Context.Path(), len(keys)-len(values))
+	}
+
+	t.Logf("compiled vanishings: %d distinct pointers, %d distinct values", totalPointers, totalValues)
+	require.NotZero(t, totalValues)
 }
