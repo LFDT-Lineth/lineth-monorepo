@@ -3,10 +3,18 @@ package field
 import (
 	"fmt"
 	"math/rand/v2"
-	"strings"
+	"unsafe"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
+	"github.com/consensys/gnark-crypto/field/koalabear"
 	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
+)
+
+// minusOne and oneExt are the scalars of the vectorised negations and
+// base-by-extension accumulations below.
+var (
+	minusOne = func() (m Element) { m.SetOne(); m.Neg(&m); return m }()
+	oneExt   = func() (o Ext) { o.SetOne(); return o }()
 )
 
 // Vec holds a vector of field elements in either the base field 𝔽_p or
@@ -58,6 +66,19 @@ func (v Vec) AsExt() []Ext {
 	return v.ext
 }
 
+// ExtLimbs views extension elements as their 6·len(v) contiguous base-field
+// coordinates (an Ext is six Elements laid out back to back). Coordinate-wise
+// operations — Add, Sub, scaling by a base scalar — on the view act on the
+// extension elements, so they can run through the koalabear.Vector kernels.
+// The view aliases v.
+func ExtLimbs(v []Ext) Vector {
+	if len(v) == 0 {
+		return nil
+	}
+	// #nosec G103 -- an Ext is six contiguous Elements
+	return unsafe.Slice((*Element)(unsafe.Pointer(unsafe.SliceData(v))), ExtensionDegree*len(v))
+}
+
 // mustEqualLen panics if the three lengths are not all equal. Used to guard
 // all typed vector operations against mismatched slice lengths.
 func mustEqualLen(res, a, b int) {
@@ -81,15 +102,17 @@ func mustEqualLen2(res, a int) {
 // base field. All slices must have equal length.
 func VecAddBaseBase(res, a, b []Element) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		res[i].Add(&a[i], &b[i])
-	}
+	(*koalabear.Vector)(&res).Add(a, b)
 }
 
 // VecAddExtBase sets res[i] = a[i] + b[i] where a is an extension vector and
 // b is a base vector. Only the first coordinate of each a[i] is updated; the
 // remaining five are copied unchanged. Cost: 1 base addition per element.
 // All slices must have equal length.
+//
+// It stays a loop: no gnark-crypto kernel adds a base vector into the first
+// coordinates only, and copying a then accumulating b with
+// VectorE6.ScalarMulAccByElement measured ~4x slower at 2^16.
 func VecAddExtBase(res []Ext, a []Ext, b []Element) {
 	mustEqualLen(len(res), len(a), len(b))
 	for i := range res {
@@ -106,12 +129,13 @@ func VecAddBaseExt(res []Ext, a []Element, b []Ext) {
 }
 
 // VecAddExtExt sets res[i] = a[i] + b[i] over the extension field.
-// Cost: 6 base additions per element. All slices must have equal length.
+// Cost: 6 base additions per element, run as one koalabear.Vector.Add over
+// the limb views (see [ExtLimbs]). All slices must have equal length; res
+// may alias a or b.
 func VecAddExtExt(res, a, b []Ext) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		res[i].Add(&a[i], &b[i])
-	}
+	limbs := ExtLimbs(res)
+	limbs.Add(ExtLimbs(a), ExtLimbs(b))
 }
 
 // VecAddInto sets res[i] = a[i] + b[i] for all i, dispatching to the typed
@@ -140,14 +164,13 @@ func VecAddInto(res, a, b Vec) {
 // All slices must have equal length.
 func VecSubBaseBase(res, a, b []Element) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		res[i].Sub(&a[i], &b[i])
-	}
+	(*koalabear.Vector)(&res).Sub(a, b)
 }
 
 // VecSubExtBase sets res[i] = a[i] - b[i] where a is an extension vector and
 // b is a base vector. Only the first coordinate of each a[i] is updated.
 // Cost: 1 base subtraction per element. All slices must have equal length.
+// It stays a loop for the reason given on [VecAddExtBase].
 func VecSubExtBase(res []Ext, a []Ext, b []Element) {
 	mustEqualLen(len(res), len(a), len(b))
 	for i := range res {
@@ -157,27 +180,25 @@ func VecSubExtBase(res []Ext, a []Ext, b []Element) {
 }
 
 // VecSubBaseExt sets res[i] = a[i] - b[i] where a is a base vector and b is
-// an extension vector. Note that subtraction is not commutative, so this
-// cannot simply delegate to VecSubExtBase.
-// Cost: 6 base negations + 1 base addition per element.
-// All slices must have equal length.
+// an extension vector. Subtraction is not commutative, so this cannot
+// delegate to VecSubExtBase: it negates b through its limb view and adds a
+// into the first coordinates with the vectorised base-by-extension
+// accumulation. All slices must have equal length.
 func VecSubBaseExt(res []Ext, a []Element, b []Ext) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		// Compute Lift(a[i]) - b[i] without allocating:
-		// negate all six components of b[i], then add a[i] to the first.
-		res[i].Neg(&b[i])
-		res[i].B0.A0.Add(&res[i].B0.A0, &a[i])
-	}
+	limbs := ExtLimbs(res)
+	limbs.ScalarMul(ExtLimbs(b), &minusOne)
+	extensions.VectorE6(res).ScalarMulAccByElement(a, &oneExt)
 }
 
 // VecSubExtExt sets res[i] = a[i] - b[i] over the extension field.
-// Cost: 6 base subtractions per element. All slices must have equal length.
+// Cost: 6 base subtractions per element, run as one koalabear.Vector.Sub over
+// the limb views (see [ExtLimbs]). All slices must have equal length; res
+// may alias a or b.
 func VecSubExtExt(res, a, b []Ext) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		res[i].Sub(&a[i], &b[i])
-	}
+	limbs := ExtLimbs(res)
+	limbs.Sub(ExtLimbs(a), ExtLimbs(b))
 }
 
 // VecSubInto sets res[i] = a[i] - b[i] for all i, dispatching to the typed
@@ -207,9 +228,7 @@ func VecSubInto(res, a, b Vec) {
 // All slices must have equal length.
 func VecMulBaseBase(res, a, b []Element) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		res[i].Mul(&a[i], &b[i])
-	}
+	(*koalabear.Vector)(&res).Mul(a, b)
 }
 
 // VecMulExtBase sets res[i] = a[i] * b[i] where a is an extension vector and
@@ -219,9 +238,7 @@ func VecMulBaseBase(res, a, b []Element) {
 // All slices must have equal length.
 func VecMulExtBase(res []Ext, a []Ext, b []Element) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		res[i].MulByElement(&a[i], &b[i])
-	}
+	extensions.VectorE6(res).MulByElement(a, b)
 }
 
 // VecMulBaseExt sets res[i] = a[i] * b[i] where a is a base vector and b is
@@ -274,18 +291,15 @@ func VecMulInto(res, a, b Vec) {
 // All slices must have equal length.
 func VecNegBase(res, a []Element) {
 	mustEqualLen2(len(res), len(a))
-	for i := range res {
-		res[i].Neg(&a[i])
-	}
+	(*koalabear.Vector)(&res).ScalarMul(a, &minusOne)
 }
 
 // VecNegExt sets res[i] = -a[i] over the extension field.
 // All slices must have equal length.
 func VecNegExt(res, a []Ext) {
 	mustEqualLen2(len(res), len(a))
-	for i := range res {
-		res[i].Neg(&a[i])
-	}
+	limbs := ExtLimbs(res)
+	limbs.ScalarMul(ExtLimbs(a), &minusOne)
 }
 
 // VecNegInto sets res[i] = -a[i] for all i, dispatching on the field type of
@@ -301,42 +315,6 @@ func VecNegInto(res, a Vec) {
 // ---------------------------------------------------------------------------
 // Scale (scalar × vector)
 // ---------------------------------------------------------------------------
-//
-// For each variant, the naming convention is VecScale{ScalarType}{VecType}
-// where ScalarType and VecType are "Base" or "Ext".
-
-// VecScaleBaseBase sets res[i] = s * a[i] where s and a are both base-field.
-// Cost: 1 base multiplication per element.
-// res and a must have equal length.
-func VecScaleBaseBase(res []Element, s Element, a []Element) {
-	mustEqualLen2(len(res), len(a))
-	for i := range res {
-		res[i].Mul(&s, &a[i])
-	}
-}
-
-// VecScaleBaseExt sets res[i] = s * a[i] where s is a base scalar and a is an
-// extension vector. Uses [Ext.MulByElement] to exploit the base structure of s.
-// Cost: 6 base multiplications per element.
-// res and a must have equal length.
-func VecScaleBaseExt(res []Ext, s Element, a []Ext) {
-	mustEqualLen2(len(res), len(a))
-	for i := range res {
-		res[i].MulByElement(&a[i], &s)
-	}
-}
-
-// VecScaleExtBase sets res[i] = s * a[i] where s is an extension scalar and a
-// is a base vector. Uses [Ext.MulByElement] to exploit the base structure of
-// each a[i].
-// Cost: 6 base multiplications per element.
-// res and a must have equal length.
-func VecScaleExtBase(res []Ext, s Ext, a []Element) {
-	mustEqualLen2(len(res), len(a))
-	for i := range res {
-		res[i].MulByElement(&s, &a[i])
-	}
-}
 
 // VecScaleExtExt sets res[i] = s * a[i] where s and a are both extension-field.
 // Cost: ~24 base multiplications per element; AVX-512 vectorized (gnark-crypto
@@ -347,51 +325,28 @@ func VecScaleExtExt(res []Ext, s Ext, a []Ext) {
 	extensions.VectorE6(res).ScalarMul(extensions.VectorE6(a), &s)
 }
 
-// VecScaleInto sets res[i] = s * v[i] for all i, dispatching to the typed
-// variant that matches the field types of s and v.
-//
-// res must be pre-allocated; its field type (IsBase) must be true iff both s
-// and v are base. res and v must have equal length. Panics otherwise.
-func VecScaleInto(res Vec, s Gen, v Vec) {
-	switch {
-	case res.IsBase():
-		VecScaleBaseBase(res.base, s.B0.A0, v.base)
-	case s.isBase && !v.IsBase():
-		VecScaleBaseExt(res.ext, s.B0.A0, v.ext)
-	case !s.isBase && v.IsBase():
-		VecScaleExtBase(res.ext, s.Ext, v.base)
-	default:
-		VecScaleExtExt(res.ext, s.Ext, v.ext)
-	}
-}
-
 // ---------------------------------------------------------------------------
-// ScaleAdd (fused Horner step: acc = acc·s + b)
+// ScaleAdd (Horner step: acc = acc·s + b)
 // ---------------------------------------------------------------------------
 
-// VecScaleAddExtBase sets acc[i] = acc[i]·s + b[i] where b is a base vector,
-// in a single pass over memory (one fused Horner fold step instead of a
-// scale pass followed by an add pass).
-// Cost: ~24 base multiplications + 1 base addition per element.
-// acc and b must have equal length.
+// VecScaleAddExtBase sets acc[i] = acc[i]·s + b[i] where b is a base vector:
+// a vectorised scaling of acc, then a vectorised base-by-extension
+// accumulation of b into the first coordinates (about 4x faster than one
+// fused scalar pass). acc and b must have equal length.
 func VecScaleAddExtBase(acc []Ext, s Ext, b []Element) {
 	mustEqualLen2(len(acc), len(b))
-	for i := range acc {
-		acc[i].Mul(&acc[i], &s)
-		acc[i].B0.A0.Add(&acc[i].B0.A0, &b[i])
-	}
+	extensions.VectorE6(acc).ScalarMul(acc, &s)
+	extensions.VectorE6(acc).ScalarMulAccByElement(b, &oneExt)
 }
 
-// VecScaleAddExtExt sets acc[i] = acc[i]·s + b[i] over the extension field,
-// in a single pass over memory.
-// Cost: ~24 base multiplications + 6 base additions per element.
-// acc and b must have equal length.
+// VecScaleAddExtExt sets acc[i] = acc[i]·s + b[i] over the extension field: a
+// vectorised scaling of acc, then a limb-view addition of b (about 5x faster
+// than one fused scalar pass). acc and b must have equal length.
 func VecScaleAddExtExt(acc []Ext, s Ext, b []Ext) {
 	mustEqualLen2(len(acc), len(b))
-	for i := range acc {
-		acc[i].Mul(&acc[i], &s)
-		acc[i].Add(&acc[i], &b[i])
-	}
+	extensions.VectorE6(acc).ScalarMul(acc, &s)
+	limbs := ExtLimbs(acc)
+	limbs.Add(limbs, ExtLimbs(b))
 }
 
 // ---------------------------------------------------------------------------
@@ -399,19 +354,18 @@ func VecScaleAddExtExt(acc []Ext, s Ext, b []Ext) {
 // ---------------------------------------------------------------------------
 
 // VecBatchInvBase sets res[i] = 1/a[i] for all i over the base field, using
-// the Montgomery batch-inversion trick (one inversion + n multiplications).
-// Zeroes map to zero. res and a must have equal length.
+// the Montgomery batch-inversion trick (one inversion + n multiplications)
+// without allocating; see [BatchInvertInto]. Zeroes map to zero. res and a
+// must have equal length; res may alias a.
 func VecBatchInvBase(res, a []Element) {
-	mustEqualLen2(len(res), len(a))
-	tmp := BatchInvert(a)
-	copy(res, tmp)
+	BatchInvertInto(res, a)
 }
 
 // VecBatchInvExt sets res[i] = 1/a[i] for all i over the extension field,
 // using the batch-inversion trick. Zeroes map to zero. res and a must have
 // equal length; res may alias a.
 func VecBatchInvExt(res, a []Ext) {
-	BatchInvertExtInto(a, res)
+	BatchInvertExtInto(res, a)
 }
 
 // VecBatchInvInto sets res[i] = 1/a[i] for all i, dispatching on the field
@@ -426,87 +380,14 @@ func VecBatchInvInto(res, a Vec) {
 }
 
 // ---------------------------------------------------------------------------
-// Prettify
-// ---------------------------------------------------------------------------
-
-// VecPrettifyBase returns a human-readable string representation of a base-field
-// vector, e.g. "[1, 2, 3]".
-func VecPrettifyBase(a []Element) string {
-	var b strings.Builder
-	b.WriteByte('[')
-	for i := range a {
-		if i > 0 {
-			b.WriteString(", ")
-		}
-		b.WriteString(a[i].String())
-	}
-	b.WriteByte(']')
-	return b.String()
-}
-
-// VecPrettifyExt returns a human-readable string representation of an
-// extension-field vector.
-func VecPrettifyExt(a []Ext) string {
-	var b strings.Builder
-	b.WriteByte('[')
-	for i := range a {
-		if i > 0 {
-			b.WriteString(", ")
-		}
-		b.WriteString(a[i].String())
-	}
-	b.WriteByte(']')
-	return b.String()
-}
-
-// ---------------------------------------------------------------------------
 // Construction
 // ---------------------------------------------------------------------------
-
-// VecFromInts allocates a []Element from a list of integer literals.
-// Each integer is converted via SetInt64. Useful in tests.
-func VecFromInts(xs ...int) []Element {
-	res := make([]Element, len(xs))
-	for i, x := range xs {
-		res[i].SetInt64(int64(x))
-	}
-	return res
-}
 
 // VecRepeatBase allocates a []Element of length n where every entry equals x.
 func VecRepeatBase(x Element, n int) []Element {
 	res := make([]Element, n)
 	for i := range res {
 		res[i] = x
-	}
-	return res
-}
-
-// VecRepeatExt allocates a []Ext of length n where every entry equals x.
-func VecRepeatExt(x Ext, n int) []Ext {
-	res := make([]Ext, n)
-	for i := range res {
-		res[i] = x
-	}
-	return res
-}
-
-// VecRandomBase allocates a []Element of length size filled with
-// cryptographically random base-field elements.
-func VecRandomBase(size int) []Element {
-	res := make([]Element, size)
-	for i := range res {
-		res[i] = RandomElement()
-	}
-	return res
-}
-
-// VecRandomExt allocates a []Ext of length size filled with
-// cryptographically random extension-field elements.
-func VecRandomExt(size int) []Ext {
-	res := make([]Ext, size)
-	for i := range res {
-		res[i] = RandomElementExt()
 	}
 	return res
 }
@@ -531,24 +412,6 @@ func VecPseudoRandExt(rng *rand.Rand, size int) []Ext {
 	return res
 }
 
-// VecPowerBase allocates and returns [x^0, x^1, ..., x^{n-1}].
-// Panics if x is zero or n is negative.
-func VecPowerBase(x Element, n int) []Element {
-	var zero Element
-	if x == zero {
-		panic("field: VecPowerBase called with x=0")
-	}
-	if n == 0 {
-		return []Element{}
-	}
-	res := make([]Element, n)
-	res[0].SetOne()
-	for i := 1; i < n; i++ {
-		res[i].Mul(&res[i-1], &x)
-	}
-	return res
-}
-
 // ---------------------------------------------------------------------------
 // In-place mutation
 // ---------------------------------------------------------------------------
@@ -567,47 +430,9 @@ func VecFillExt(v []Ext, val Ext) {
 	}
 }
 
-// VecReverseBase reverses v in-place.
-func VecReverseBase(v []Element) {
-	for i, j := 0, len(v)-1; i < j; i, j = i+1, j-1 {
-		v[i], v[j] = v[j], v[i]
-	}
-}
-
-// VecReverseExt reverses v in-place.
-func VecReverseExt(v []Ext) {
-	for i, j := 0, len(v)-1; i < j; i, j = i+1, j-1 {
-		v[i], v[j] = v[j], v[i]
-	}
-}
-
 // ---------------------------------------------------------------------------
-// Comparison
+// Prefix scans
 // ---------------------------------------------------------------------------
-
-// VecEqualBase reports whether a and b contain the same values.
-// Panics if a and b have different lengths.
-func VecEqualBase(a, b []Element) bool {
-	mustEqualLen2(len(a), len(b))
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
-}
-
-// VecEqualExt reports whether a and b contain the same values.
-// Panics if a and b have different lengths.
-func VecEqualExt(a, b []Ext) bool {
-	mustEqualLen2(len(a), len(b))
-	for i := range a {
-		if !a[i].Equal(&b[i]) {
-			return false
-		}
-	}
-	return true
-}
 
 // prefixScanMinChunk is the smallest number of elements a worker of
 // [VecPrefixSumExt] or [VecPrefixProductExt] scans: below it, splitting costs

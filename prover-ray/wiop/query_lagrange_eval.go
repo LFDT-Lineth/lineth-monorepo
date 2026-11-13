@@ -6,7 +6,6 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/hugepage"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark/frontend"
 )
@@ -209,7 +208,9 @@ func (le *LagrangeEval) evalPolynomialsShared(rt *Runtime, z field.Ext) []field.
 		return out
 	}
 
-	// Weight tables, largest domains first.
+	// Weight tables, largest domains first. They come from the pool, every
+	// row is written by the chunks below, and they go back once the inner
+	// products have read them.
 	domainSizes := make([]int, len(domains))
 	for i, d := range domains {
 		domainSizes[i] = d.n
@@ -217,8 +218,7 @@ func (le *LagrangeEval) evalPolynomialsShared(rt *Runtime, z field.Ext) []field.
 	weights := make([][]field.Ext, len(domains))
 	var weightChunks []rowChunk
 	for _, i := range parallel.OrderDesc(domainSizes) {
-		weights[i] = make([]field.Ext, domains[i].n)
-		hugepage.Advise(weights[i])
+		weights[i] = field.ExtPool.Get(domains[i].n)
 		weightChunks = chunksOf(i, domains[i].n, weightChunks)
 	}
 	parallel.ExecuteDynamic(len(weightChunks), func(c int) {
@@ -290,6 +290,10 @@ func (le *LagrangeEval) evalPolynomialsShared(rt *Runtime, z field.Ext) []field.
 		}
 		sums[p] = acc
 	})
+	for i, w := range weights {
+		field.ExtPool.Put(w)
+		weights[i] = nil
+	}
 
 	totals := make([]field.Ext, len(terms))
 	for p, it := range parts {

@@ -97,7 +97,7 @@ func TestBatchInvertExtInto(t *testing.T) {
 		a := randomExts(testN)
 		a[0] = ZeroExt()
 		res := make([]Ext, testN)
-		BatchInvertExtInto(a, res) // must not panic
+		BatchInvertExtInto(res, a) // must not panic
 
 		oneExt := OneExt()
 		for i := 1; i < testN; i++ {
@@ -424,15 +424,6 @@ func TestText(t *testing.T) {
 			t.Error("Text: returned empty string for valid input")
 		}
 	})
-}
-
-// TestParBatchInvertExt verifies that ParBatchInvertExt returns the same
-// result as the sequential BatchInvertExt.
-func TestParBatchInvertExt(t *testing.T) {
-	a := randomExts(testN)
-	want := BatchInvertExt(a)
-	got := ParBatchInvertExt(a, 4)
-	checkExtSlice(t, want, got)
 }
 
 // TestMulRInvExt verifies that MulRInvExt is the inverse of multiplication by

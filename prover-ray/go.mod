@@ -6,14 +6,14 @@ require (
 	github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20261110120652-88fe45db48d1
 	github.com/LFDT-Lineth/zkc v1.2.36
 	github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565
-	github.com/consensys/gnark-crypto v0.22.1-0.20261014224656-bf76cc82bdd1
+	github.com/consensys/gnark-crypto v0.22.1-0.20261112125213-98b06120d35c
 	github.com/go-playground/assert/v2 v2.2.0
 	github.com/pkg/profile v1.7.0
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.12.1
 	golang.org/x/crypto v0.57.0
-	golang.org/x/sync v0.23.0
+	golang.org/x/sync v0.24.0
 )
 
 require (
@@ -50,7 +50,7 @@ require (
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.21.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/term v0.46.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
 )

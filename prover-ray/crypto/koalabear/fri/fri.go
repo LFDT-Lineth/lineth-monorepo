@@ -271,7 +271,8 @@ func groupColumnsByClaimPoints(columns []quotientColumn, alphaPow []field.Ext) [
 // Column c is weighted by alphaDeep^Powers[c] and running by
 // alphaDeep^RunningPower (see deepPowers; by default, alphaDeep^c and
 // alphaDeep^len(Columns)). A nil running is the zero codeword (see
-// ProverState).
+// ProverState). The result comes from [field.ExtPool]; a caller done with it
+// may release it there.
 //
 // The batched DEEP quotient is computed combine-then-divide: the columns of
 // each quotientGroup are first combined into G_g(X) = Σ_{c∈g} alphaDeep^{p(c)}·f_c(X)
@@ -296,9 +297,14 @@ func groupColumnsByClaimPoints(columns []quotientColumn, alphaPow []field.Ext) [
 // rot_z = rs mod N, scale_z = ω^{−rs}.
 func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
 	if len(l.Columns) == 0 {
-		return append([]field.Ext(nil), running...)
+		if running == nil {
+			return nil
+		}
+		evals := field.ExtPool.Get(len(running))
+		copy(evals, running)
+		return evals
 	}
-	evals := make([]field.Ext, l.Columns[0].codewordLen())
+	evals := field.ExtPool.Get(l.Columns[0].codewordLen())
 	if running != nil && len(running) != len(evals) {
 		panic(fmt.Sprintf("fri: Level.EvalsAt: running codeword has %d values, want %d", len(running), len(evals)))
 	}
@@ -322,6 +328,8 @@ func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
 	parallel.Execute(len(evals), func(start, end int) {
 		if running != nil {
 			field.VecScaleExtExt(evals[start:end], alphaTop, running[start:end])
+		} else {
+			clear(evals[start:end])
 		}
 
 		gbuf := make([]field.Ext, end-start)
@@ -614,15 +622,19 @@ func checkBranchShape(b Branch, numLeaves, capDepth int) error {
 // buildTreeExt builds the FRI Merkle tree over one folding layer: a complete
 // binary tree whose leaves are the layer's extension elements (padded into
 // octuplets). Unlike NewTree, which is the 3-ary multi-size builder, this is a
-// plain power-of-two binary tree with no auxiliary leaves.
+// plain power-of-two binary tree with no auxiliary leaves. Its nodes come from
+// the octuplet pool and go back through [ProverState.Release].
 func buildTreeExt(layer []field.Ext) *Tree {
 	n := len(layer)
-	t := allocTree(n)
+	t := allocPooledTree(n)
 	bottom := t.Nodes[n-1:]
 	parallel.Execute(n, func(start, end int) {
 		for i := start; i < end; i++ {
+			// The whole leaf is written: a pooled node holds stale limbs.
+			var leaf field.Octuplet
 			limbs := extLimbs(layer[i])
-			copy(bottom[i][:6], limbs[:])
+			copy(leaf[:6], limbs[:])
+			bottom[i] = leaf
 		}
 	})
 	t.buildLevels(nil)
@@ -635,7 +647,8 @@ func buildTreeExt(layer []field.Ext) *Tree {
 // evaluations of a fold, p(x) and p(-x), sit at the adjacent positions 2j and
 // 2j+1, so the fold combines layer[2j] and layer[2j+1] into next[j]. The output
 // is itself in bit-reversed order over the half-size domain, ready to be fed
-// back into the next round.
+// back into the next round. It comes from [field.ExtPool]; a caller done with
+// it may release it there.
 //
 // The folding formula, writing x = g^i for the natural-order domain point of
 // pair j (i.e. i = bitReverse(j) over the half-domain):
@@ -652,7 +665,7 @@ func foldLayerInternally(layer []field.Ext, alpha field.Ext, domain *fft.Domain)
 
 	var (
 		half        = len(layer) / 2
-		next        = make([]field.Ext, half)
+		next        = field.ExtPool.Get(half) // every pair is written below
 		invTwiddles = foldTwiddles(domain)
 	)
 
