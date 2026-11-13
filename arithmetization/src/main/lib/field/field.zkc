@@ -43,15 +43,40 @@ static FIELD_MODULUS(field:u3) -> (p:u256, p_is_3_mod_4:u1) {
 }
 
 // field_op performs `op` in `field` on the 256-bit little-endian operands at
-// a_addr (and b_addr for MUL and DIV) and writes the result to out_addr. The
-// destination may alias a source. status is 1 when there is no result
-// (x/0, or a non-square for SQRT) and 0 otherwise.
+// a_addr (and b_addr for MUL and DIV; b_addr is still read on SQRT) and writes
+// the canonical (< p) result to out_addr. The destination may alias a source.
+// status is 1 when there is no mathematical result (x/0 -> out = 0, or a
+// non-square for SQRT when p = 3 mod 4 -> out = sqrt(-a)) and 0 otherwise.
 //
-// Every register is assigned once on each path, so that the function stays a
-// single trace row.
+// Compiler & AIR layout notes for reviewers:
+//   1. Every register is assigned at most once on each path so zkc vectorizes
+//      field_op into a single trace row (PC_max = 1, no $pc columns).
+//   2. op:u2 is decomposed into u1 bits `op_hi::op_lo = op`. Rejecting op == 3
+//      via nested u1 checks (`op_hi * op_lo = 0`) uses 0 helper columns (unlike
+//      `op == c` on a multi-bit register, which allocates a `$sc` inverse).
+//      Under `op_hi * op_lo = 0`, the three valid ops map directly to u1 flags:
+//        - MUL  (0 = 0b00): op_hi = 0, op_lo = 0  (not_mul = 0)
+//        - DIV  (1 = 0b01): op_hi = 0, op_lo = 1  (op_lo selects DIV)
+//        - SQRT (2 = 0b10): op_hi = 1, op_lo = 0  (op_hi selects SQRT)
+//      And `not_mul = op_hi + op_lo` is linear in u1 bits (never 2).
+//   3. hint_field_op_256 computes `(a * b) mod p` for MUL as well as the DIV
+//      and SQRT witnesses, so `field_write(out_addr, hint)` writes `hint`
+//      unconditionally for every op (saving a 16-limb output mux and avoiding
+//      conditional RAM writes). Soundness for MUL holds because `prod` is
+//      constrained to `(a * b) mod p` by mulmod_256 and `prod == want == hint`
+//      pins all 16 limbs of `hint` to `prod`.
+//   4. Both `hint_lt_p == 0` and `prod != want` sit as unconditional tail
+//      `fail` guards after `field_write`: zkc's mirc pass inverts a tail
+//      `if x != y { fail }` directly into 16 degree-1 limb equalities
+//      (`prod'i - want'i = 0`) instead of allocating 16 `$sc` inverse columns.
 fn field_op<ram>(op:u2, field:u3, out_addr:Address, a_addr:Address, b_addr:Address) -> (status:u1) {
-    if op == 3 {
-        fail "field_op: unknown operation 3"
+    var op_hi:u1
+    var op_lo:u1
+    op_hi::op_lo = op
+    if op_hi == 1 {
+        if op_lo == 1 {
+            fail "field_op: unknown operation 3"
+        }
     }
     var p:u256
     var p_is_3_mod_4:u1
@@ -60,33 +85,33 @@ fn field_op<ram>(op:u2, field:u3, out_addr:Address, a_addr:Address, b_addr:Addre
     var b:u256 = field_load(b_addr, p)
     var hint:u256
     var non_square:u1
-    hint, non_square = hint_field_op_256(op, a, b, p)
+    hint, non_square = hint_field_op_256(op, field, a, b)
 
-    // One checked product, lhs*rhs = want (mod p), lhs and rhs inline below:
-    //   MUL         a*b    = .     the product is the output
-    //   DIV         hint*b = a
-    //   DIV, b = 0  hint*1 = 0     (x/0 = 0)
-    //   SQRT        hint^2 = a     status 0
-    //   SQRT        hint^2 = -a    status 1: a is not a square. Only claimable
-    //               when p = 3 mod 4: -1 is then a non-residue, so a and -a are
-    //               not both squares. For a = 0, -a = p is out of reach.
-    var div0:u1 = ((op == FIELD_OP_DIV) && (b == 0)) ? 1 : 0
-    var neg:u1 = ((op == FIELD_OP_SQRT) && (non_square == 1) && (p_is_3_mod_4 == 1)) ? 1 : 0
+    // One checked product, lhs * rhs = want (mod p), pinned against hint < p:
+    //   MUL         a * b      = hint   (pins hint = (a * b) mod p)
+    //   DIV         hint * b   = a
+    //   DIV, b = 0  hint * 1   = 0      (pins hint = 0, status = 1)
+    //   SQRT        hint^2     = a      (status = 0)
+    //   SQRT, QNR   hint^2     = p - a  (status = 1; only enabled when
+    //               p = 3 mod 4, where -1 is a non-residue so a and -a cannot
+    //               both be squares; for a = 0, want = p is unreachable since
+    //               mulmod_256 enforces prod < p).
+    var not_mul:u1 = op_hi + op_lo
+    var div0:u1 = ((op_lo == 1) && (b == 0)) ? 1:0
+    var neg:u1 = ((op_hi == 1) && (non_square == 1) && (p_is_3_mod_4 == 1)) ? 1:0
     status = div0 + neg
-    var prod:u256 = mulmod_256(op == FIELD_OP_MUL ? a : hint, op == FIELD_OP_SQRT ? hint : (div0 == 1 ? 1 : b), p)
-    var want:u256 = div0 == 1 ? 0 : (neg == 1 ? p - a : a)
-    // The hint must be canonical: below p.
+    var prod:u256 = mulmod_256(not_mul == 0 ? a:hint, op_hi == 1 ? hint:(div0 == 1 ? 1:b), p)
+    var want:u256 = not_mul == 0 ? hint:(div0 == 1 ? 0:(neg == 1 ? p - a:a))
+    field_write(out_addr, hint)
+
     var hint_lt_p:u1
     var hint_minus_p:u256
     hint_lt_p::hint_minus_p = (hint - p) as u257
-    if op == FIELD_OP_MUL {
-        field_write(out_addr, prod)
-    } else {
-        if (prod == want) && (hint_lt_p == 1) {
-            field_write(out_addr, hint)
-        } else {
-            fail "field_op: bad hint"
-        }
+    if hint_lt_p == 0 {
+        fail "field_op: bad hint"
+    }
+    if prod != want {
+        fail "field_op: bad hint"
     }
 }
 
@@ -95,6 +120,10 @@ fn field_op<ram>(op:u2, field:u3, out_addr:Address, a_addr:Address, b_addr:Addre
 // borrow tells whether it already is. The operand must be below 2p, as every
 // 256-bit value is when p > 2^255 (the secp256k1 and secp256r1 fields); a larger
 // one is not reduced below p, and the result of the call is then unspecified.
+// NOTE: field_load is intentionally NOT marked #[inline]. field_op calls it
+// twice (a and b); keeping it as a shared module pays its ~139 columns once
+// across all loads rather than duplicating ~127 split columns twice inside
+// field_op.
 fn field_load<ram>(addr:Address, p:u256) -> (r:u256) {
     var l0:u64 = read_64(addr)
     var l1:u64 = read_64((addr + 8) as Address)
@@ -104,9 +133,13 @@ fn field_load<ram>(addr:Address, p:u256) -> (r:u256) {
     var v_lt_p:u1
     var v_minus_p:u256
     v_lt_p::v_minus_p = (v - p) as u257
-    r = v_lt_p == 1 ? v : v_minus_p
+    r = v_lt_p == 1 ? v:v_minus_p
 }
 
+// field_write is called once in field_op and does only limb slicing + four
+// aligned write_64 calls; inlining it eliminates a 70-column module and its
+// 31-column call lookup at negligible net column cost in field_op.
+#[inline]
 fn field_write<ram>(addr:Address, v:u256) {
     var l0:u64
     var l1:u64
@@ -141,64 +174,69 @@ fn mulmod_256(lhsL:u256, rhsL:u256, modL:u256) -> (remainder:u256) {
     }
 }
 
-// hint_field_op_256 computes the answer field_op checks, and for SQRT whether a
-// is a non-square (only meaningful when p = 3 mod 4):
-//   DIV  a*b^(p-2)    SQRT  a^((p+1)/4), a root of a or of -a    (MUL: unused)
-// prover-ray leaves every `hint_*` native function unconstrained: a wrong
-// answer is caught by field_op. The body only runs in the zkc VM.
+// hint_field_op_256 computes the unconstrained witness `(res, non_square)` that
+// field_op verifies with a single constrained mulmod_256:
+//   MUL   (a * b) mod p                      non_square = 0
+//   DIV   (a * b^(p - 2)) mod p (0 if b = 0) non_square = 0
+//   SQRT  a^((p + 1) / 4) mod p              non_square = (res^2 mod p != a)
 //
-// zkc v1.2.35 handles a native function only if it compiles to a single trace
-// row; otherwise it emits control-flow columns ($pc, $ret) that the native
-// schema lacks. Hence the shape below:
-//   - every register is written at most once on each path (zkc's vectorizer
-//     does not merge a second write, nor a read of a conditional write);
-//   - the exponentiation recurses (HINT_POW: a^b mod p) and takes its products
-//     from mulmod_256, as wide arithmetic next to calls also splits the row.
-//     That costs about 1.5 constrained mulmod_256 rows per exponent bit. A
-//     separate unconstrained product would be unreachable (native functions
-//     make no lookups, so zkc rejects it).
+// Compiler & prover-ray interaction notes for reviewers:
+//   1. Why `#[native]` (and not `#[inline]`): prover-ray treats any `#[native]`
+//      module prefixed `hint_` as an unconstrained witness table
+//      (`prover-ray/zkcdriver/native_modules.go`). Marking a `#[native]`
+//      function `#[inline]` is rejected by zkc (`cannot inline native function`),
+//      and zkc's `InlineFunctions` pass skips `#[native]` callers while
+//      `validateModuleReachability` rejects any helper module called only from
+//      a `#[native]` body (because native modules emit no AIR lookups).
+//   2. Zero extra committed columns from u512 math: zkc splits the 512-bit
+//      products/remainders below into internal computed registers for VM
+//      execution, but `defineNativeHint` in `native_modules.go` commits ONLY
+//      columns referenced by lookups — namely the 51 input/output limbs of
+//      `(op, field, a, b) -> (res, non_square)`. Passing `field:u3` instead of
+//      `p:u256` saves 15 committed columns and 15 lookup terms, and doing
+//      `(x * y) % p` in u512 VM arithmetic emits 0 constrained `mulmod_256`
+//      rows during exponentiation (down from ~384 rows per DIV/SQRT).
+//   3. Single-vector invariant: zkc's `AlignAndPad` requires a `#[native]`
+//      module's trace columns to match its AIR schema, which omits `$pc`/`$ret`.
+//      Every variable below is written at most once per path with no read-after-
+//      conditional-write hazard, so zkc vectorizes the body into one vector
+//      (`IsOneLine() == true`).
 const HINT_POW:u2 = 3
 
 #[native]
-fn hint_field_op_256(op:u2, a:u256, b:u256, p:u256) -> (res:u256, non_square:u1) {
-    if op == HINT_POW {
-        non_square = 0
-        if b == 0 {
-            res = 1
-        } else {
-            var half:u255
-            var bit:u1
-            half::bit = b
-            var t:u256
-            var t_ns:u1
-            t, t_ns = hint_field_op_256(HINT_POW, a, half as u256, p)
-            var sq:u256 = mulmod_256(t, t, p)
-            if bit == 1 {
-                res = mulmod_256(sq, a, p)
-            } else {
-                res = sq
-            }
-        }
-    } else if op == FIELD_OP_DIV {
-        non_square = 0
-        var inv:u256
-        var inv_ns:u1
-        inv, inv_ns = hint_field_op_256(HINT_POW, b, p - 2, p)
-        res = mulmod_256(a, inv, p)
-    } else if op == FIELD_OP_SQRT {
-        // (p+1)/4 = floor(p/4) + 1, as p = 3 mod 4
-        var quarter:u254
-        var low:u2
-        quarter::low = p
-        var r_ns:u1
-        res, r_ns = hint_field_op_256(HINT_POW, a, (quarter as u256) + 1, p)
-        if mulmod_256(res, res, p) == a {
-            non_square = 0
-        } else {
-            non_square = 1
-        }
-    } else {
-        res = 0
-        non_square = 0
+fn hint_field_op_256(op:u2, field:u3, a:u256, b:u256) -> (res:u256, non_square:u1) {
+    var p:u256
+    var p_is_3_mod_4:u1
+    p, p_is_3_mod_4 = FIELD_MODULUS[field]
+    if p == 0 {
+        fail
     }
+    var half:u255
+    var bit:u1
+    half::bit = b
+    var quarter:u254
+    var low:u2
+    quarter::low = p
+
+    var need_pow:u1 = (op == FIELD_OP_SQRT) || (((op == HINT_POW) || (op == FIELD_OP_DIV)) && (b != 0)) ? 1:0
+    var pow_base:u256 = op == FIELD_OP_DIV ? b:a
+    var pow_exp:u256 = op == HINT_POW ? (half as u256):(op == FIELD_OP_DIV ? p - 2:(quarter as u256) + 1)
+    var pow_res:u256
+    var pow_ns:u1
+    if need_pow == 1 {
+        pow_res, pow_ns = hint_field_op_256(HINT_POW, field, pow_base, pow_exp)
+    } else {
+        pow_res = 0
+        pow_ns = 0
+    }
+
+    // Share two u512 `%` sites across all four ops to keep VM trace width small.
+    var x1:u256 = (op == FIELD_OP_MUL) || (op == FIELD_OP_DIV) ? a:pow_res
+    var y1:u256 = op == FIELD_OP_MUL ? b:pow_res
+    var m1:u256 = (((x1 as u512) * (y1 as u512)) % (p as u512)) as u256
+    var m2:u256 = (((m1 as u512) * (a as u512)) % (p as u512)) as u256
+    var div_res:u256 = m1
+
+    non_square = (op == FIELD_OP_SQRT) && (m1 != a) ? 1:0
+    res = op == HINT_POW ? (b == 0 ? 1:(bit == 1 ? m2:m1)):(op == FIELD_OP_SQRT ? pow_res:(op == FIELD_OP_DIV ? div_res:m1))
 }

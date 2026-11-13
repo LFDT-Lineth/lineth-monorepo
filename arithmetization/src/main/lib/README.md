@@ -54,9 +54,9 @@ by `zkc exec --gogen` yet.
 - Operands are four little-endian u64 limbs below 2p (not checked: a larger one gives an
   unspecified result); any 256-bit value qualifies when p > 2^255.
   b is read for every op. The output is reduced and may alias an input. The status comes back in a0.
-- Each call makes one constrained `mulmod_256` (prover-ray's NonNative gadget). DIV and SQRT
-  take their answer from the unconstrained `hint_field_op_256`, whose exponentiation adds
-  about 1.5 more `mulmod_256` rows per exponent bit.
+- Each call makes one constrained `mulmod_256` (prover-ray's NonNative gadget). All three ops
+  take their output witness from the unconstrained `hint_field_op_256`, which computes modular
+  products in 512-bit VM arithmetic without adding `mulmod_256` rows.
 - The guest-side C interface is `lineth_zkvm_field_op` in
   `riscv-guests/lineth_accelerators/include/lineth_accelerators.h`.
 
