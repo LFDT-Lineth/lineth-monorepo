@@ -1,5 +1,5 @@
-//! The rollup guest statement over the curated blocks: each accepted EF block alone and the EF chain of
-//! ten consecutive blocks. Each run of consecutive blocks is
+//! The rollup guest statement over the curated blocks: each accepted EF block alone, the EF chain of
+//! ten consecutive blocks, the Linea mainnet window of 150 and three generated blocks of random calldata. Each run of consecutive blocks is
 //! grouped into conflations whose hashes, parent hashes, numbers, timestamps and senders are the
 //! fixture's own, published in calldata and blob chunks, alone and sharing a blob with the
 //! neighbouring proofs. Every request is accepted with the public inputs the fixture determines, and
@@ -35,6 +35,10 @@ const Layout = enum {
     /// Calldata cut at a segment boundary, when there is one.
     calldata_cut,
     calldata,
+    /// Two full blobs and the rest of the stream in a third.
+    full_blobs,
+    /// A range that starts inside the first of two blobs.
+    range_in_first_blob,
 
     fn chunks(self: Layout, conflations: usize) []const scenario.ChunkSpec {
         return switch (self) {
@@ -46,11 +50,15 @@ const Layout = enum {
             else
                 &.{.{ .kind = .calldata }},
             .calldata => &.{.{ .kind = .calldata }},
+            .full_blobs => &.{ .{ .own = .{ .bytes = scenario.blob_capacity } }, .{ .own = .{ .bytes = scenario.blob_capacity } }, .{} },
+            .range_in_first_blob => &.{ .{ .own = .{ .bytes = 30_000 }, .prefix = .full }, .{ .suffix = 70 } },
         };
     }
 };
 
 const short_layouts = [_]Layout{ .one_blob, .blob_into_calldata, .shared_blob, .calldata_cut, .calldata };
+const long_layouts = [_]Layout{ .calldata_cut, .range_in_first_blob };
+const incompressible_layouts = [_]Layout{.full_blobs};
 
 const Tally = struct {
     requests: usize = 0,
@@ -177,6 +185,8 @@ test "requests built from the curated blocks are accepted and their tampered cop
         try runs.append(gpa, .{ .label = ef_labels[index], .chain_id = scenario.ef_chain_id, .blocks = @as(*const [1]Fact, pick), .layouts = &short_layouts });
     }
     try runs.append(gpa, .{ .label = "EF chain", .chain_id = scenario.ef_chain_id, .blocks = selection.chain, .layouts = &short_layouts });
+    try runs.append(gpa, .{ .label = "Linea window", .chain_id = scenario.linea_chain_id, .blocks = selection.linea, .layouts = &long_layouts });
+    try runs.append(gpa, .{ .label = "incompressible blocks", .chain_id = scenario.incompressible_chain_id, .blocks = selection.incompressible, .layouts = &incompressible_layouts });
 
     var tally: Tally = .{};
     var index: usize = 0;

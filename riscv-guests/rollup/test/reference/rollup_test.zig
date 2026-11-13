@@ -1,6 +1,6 @@
 //! The public inputs of accepted rollup requests: what each field is derived from, over the DA
 //! layouts a stream can take across blob and calldata chunks. The requests are built from real
-//! blocks of the EF zkevm fixtures.
+//! blocks of the EF zkevm fixtures and of Linea mainnet.
 
 const std = @import("std");
 
@@ -95,6 +95,16 @@ test "each accepted EF block is accepted as a conflation of its own" {
         try expectSpanOf(pi, &.{pick});
         try std.testing.expectEqualSlices(u8, &scenario.keccak(&(hashOf(0x47) ++ request.chunks[0].chunk_hash)), &pi.end_data_rolling_hash);
     }
+}
+
+test "an Osaka block of Linea mainnet is accepted as a conflation of its own" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+
+    const block = (try scenario.selection()).linea[0..1];
+    const request = try scenario.build(a, &.{try scenario.conflationFrom(a, scenario.linea_chain_id, block)}, .{});
+    try expectSpanOf(try run(a, request), block);
 }
 
 test "the framed request yields a framed output that decodes to the public inputs" {
@@ -270,9 +280,14 @@ const Expected = struct {
     discard: u64 = 0,
 };
 
+const Accepted = struct {
+    request: scenario.Request,
+    pi: rollup_proof.RollupPublicInput,
+};
+
 /// Builds the request of `conflations` cut into `chunks` and checks the stream part of its public inputs.
-fn expectStreamOf(a: Allocator, conflations: []const scenario.Conflation, chunks: []const scenario.ChunkSpec, expected: Expected) !void {
-    const request = try scenario.build(a, conflations, .{ .chunks = chunks });
+fn expectStreamOf(a: Allocator, conflations: []const scenario.Conflation, options: scenario.Options, expected: Expected) !Accepted {
+    const request = try scenario.build(a, conflations, options);
     const pi = try run(a, request);
 
     if (expected.take) |take| {
@@ -284,6 +299,7 @@ fn expectStreamOf(a: Allocator, conflations: []const scenario.Conflation, chunks
     try std.testing.expectEqual(expected.discard, pi.final_data_tail_discard_bytes);
     try std.testing.expectEqualSlices(u8, &request.parent_data_rolling_hash, &pi.parent_data_rolling_hash);
     try std.testing.expectEqualSlices(u8, &request.end_data_rolling_hash, &pi.end_data_rolling_hash);
+    return .{ .request = request, .pi = pi };
 }
 
 /// The same for consecutive conflations of the chain, `counts[i]` blocks in the `i`-th.
@@ -292,7 +308,7 @@ fn expectStream(counts: []const usize, chunks: []const scenario.ChunkSpec, expec
     defer arena.deinit();
     const a = arena.allocator();
 
-    try expectStreamOf(a, try scenario.chainConflations(a, counts), chunks, expected);
+    _ = try expectStreamOf(a, try scenario.chainConflations(a, counts), .{ .chunks = chunks }, expected);
 }
 
 test "the stream of two conflations in one calldata chunk" {
@@ -310,4 +326,48 @@ test "a segment that continues from a blob into calldata" {
 test "a range inside one shared blob takes the bytes behind its neighbour and discards those before the next" {
     // The blob holds 1000 bytes of the previous proof's stream, the segments, then 500 bytes of the next proof's.
     try expectStream(&.{1}, &.{.{ .prefix = .{ .bytes = 1000 }, .suffix = 500 }}, .{ .take = null, .discard = 500 });
+}
+
+// ── The Linea window ─────────────────────────────────────────────────────────────────────────────
+
+const linea_conflations = [_]usize{ 40, 60, 50 };
+
+/// The Linea window as three conflations published as `chunks`: accepted, with the span of all its
+/// blocks and the stream part of the public inputs `expected` says.
+fn expectLineaStream(options: scenario.Options, expected: Expected) !void {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+
+    const conflations = try scenario.lineaConflations(a, &linea_conflations);
+    const accepted = try expectStreamOf(a, conflations, options, expected);
+    try expectSpanOf(accepted.pi, (try scenario.selection()).linea);
+}
+
+test "three conflations of the Linea window in calldata cut at their segment boundaries" {
+    try expectLineaStream(.{ .chunks = &.{
+        .{ .kind = .calldata, .own = .{ .through_segment = 1 } },
+        .{ .kind = .calldata, .own = .{ .through_segment = 2 } },
+        .{ .kind = .calldata },
+    } }, .{});
+}
+
+test "a range starting inside the first of two blobs" {
+    // Only the last 30000 bytes of the first full blob belong to the range; the second blob holds
+    // the rest of the stream and 70 bytes of the next proof's behind it.
+    try expectLineaStream(.{ .chunks = &.{ .{ .own = .{ .bytes = 30_000 }, .prefix = .full }, .{ .suffix = 70 } } }, .{ .take = 30_000, .discard = 70 });
+}
+
+test "incompressible blocks fill two blobs and run into a third" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+
+    const conflations = try scenario.incompressibleConflations(a);
+    const chunks = [_]scenario.ChunkSpec{ .{ .own = .{ .bytes = scenario.blob_capacity } }, .{ .own = .{ .bytes = scenario.blob_capacity } }, .{} };
+    const accepted = try expectStreamOf(a, conflations, .{ .chunks = &chunks }, .{});
+    try expectSpanOf(accepted.pi, (try scenario.selection()).incompressible);
+    var stream: usize = 0;
+    for (accepted.request.segments) |segment| stream += segment.len;
+    try std.testing.expect(stream > 2 * scenario.blob_capacity);
 }

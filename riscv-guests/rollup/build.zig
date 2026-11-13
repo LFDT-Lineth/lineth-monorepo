@@ -18,6 +18,7 @@ pub fn build(b: *std.Build) void {
     const tools = addHostTools(b, unit, crypto);
     addHostTests(b, options, unit, crypto, prover);
     addFixtureStep(b, tools);
+    addFetchBlocksStep(b, tools);
 }
 
 /// Every `-D` option of this package, read once.
@@ -52,6 +53,7 @@ const Options = struct {
 const Deps = struct {
     guest_common: *std.Build.Module,
     core_serde: *std.Build.Module,
+    zkvm_accelerators: *std.Build.Module,
     verifier_ray: *std.Build.Module,
     lineth_da: *std.Build.Dependency,
     /// Imports of the package module (`src/root.zig`).
@@ -83,6 +85,7 @@ const Deps = struct {
         return .{
             .guest_common = guest_common.module("guest_common"),
             .core_serde = guest_common.module("core_serde"),
+            .zkvm_accelerators = zkvm_accelerators,
             .verifier_ray = verifier_ray.module("verifier_ray"),
             .lineth_da = lineth_da,
             .package = b.allocator.dupe(Import, &.{
@@ -148,6 +151,7 @@ const Host = struct {
         } else {
             paths.addOption([]const u8, "amsterdam_blocks", "");
         }
+        paths.addOptionPath("linea_window", b.path("test/testdata/linea_mainnet_27434569_27434718.json.gz"));
         const ef_fixtures = paths.createModule();
         const sample_input = b.createModule(.{
             .root_source_file = b.path("test/support/sample_input.zig"),
@@ -171,6 +175,16 @@ const Host = struct {
                 .{ .name = "verifier_ray", .module = deps.verifier_ray },
             },
         });
+        const incompressible_blocks = b.createModule(.{
+            .root_source_file = b.path("test/support/incompressible_blocks.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "ef_blocks", .module = ef_blocks },
+                .{ .name = "lineth_da", .module = deps.lineth_da.module("lineth_da") },
+                .{ .name = "zesu_executor", .module = deps.lineth_da.module("zesu_executor") },
+            },
+        });
         const scenario = b.createModule(.{
             .root_source_file = b.path("test/support/scenario.zig"),
             .target = target,
@@ -185,6 +199,7 @@ const Host = struct {
                 .{ .name = "zstd_encoder", .module = zstd_encoder },
                 .{ .name = "ef_blocks", .module = ef_blocks },
                 .{ .name = "ef_fixtures", .module = ef_fixtures },
+                .{ .name = "incompressible_blocks", .module = incompressible_blocks },
             },
         });
         return .{
@@ -198,22 +213,25 @@ const Host = struct {
                     .{ .name = "core_serde", .module = deps.core_serde },
                     .{ .name = "guest_common", .module = deps.guest_common },
                     .{ .name = "lineth_da", .module = deps.lineth_da.module("lineth_da") },
+                    .{ .name = "zesu_executor", .module = deps.lineth_da.module("zesu_executor") },
                     .{ .name = "sample_input", .module = sample_input },
                     .{ .name = "scenario", .module = scenario },
                     .{ .name = "devmode_prover", .module = devmode_prover },
                     .{ .name = "ef_blocks", .module = ef_blocks },
                     .{ .name = "ef_fixtures", .module = ef_fixtures },
+                    .{ .name = "zkvm_accelerators", .module = deps.zkvm_accelerators },
                 }) catch @panic("OOM"),
             },
         };
     }
 };
 
-/// Every `tools/*.zig` executable. `gen_fixture` builds the sample request and links the host
-/// crypto provider.
+/// Every `tools/*.zig` executable. `gen_fixture` builds the sample request and
+/// `fetch_blocks` recovers senders; both link the host crypto provider.
 fn addHostTools(b: *std.Build, host: Host, crypto: common.HostCrypto) Tools {
     const tools = common.addTools(b, host.native, .{});
     crypto.link(tools.get("gen_fixture").?);
+    crypto.link(tools.get("fetch_blocks").?);
     return tools;
 }
 
@@ -237,4 +255,11 @@ fn addFixtureStep(b: *std.Build, tools: Tools) void {
     const gen_fixture = b.addRunArtifact(tools.get("gen_fixture").?);
     if (b.args) |args| gen_fixture.addArgs(args);
     b.step("gen-fixture", "Write a sample RollupProofPrivateInput to the path after `--`").dependOn(&gen_fixture.step);
+}
+
+/// Runs `fetch_blocks` with the arguments after `--`.
+fn addFetchBlocksStep(b: *std.Build, tools: Tools) void {
+    const fetch_blocks = b.addRunArtifact(tools.get("fetch_blocks").?);
+    if (b.args) |args| fetch_blocks.addArgs(args);
+    b.step("fetch-blocks", "Fetch a block window from a JSON-RPC endpoint into the dataset file given by the arguments after `--`").dependOn(&fetch_blocks.step);
 }

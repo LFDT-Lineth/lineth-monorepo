@@ -58,6 +58,7 @@ pub fn build(b: *std.Build) void {
         .imports = packageImports(b, target, optimize, zstd),
     });
     addPackageSources(b, package, zstd);
+    b.modules.put(b.allocator, b.dupe("zesu_executor"), zesuFor(b, target, optimize).module("executor")) catch @panic("OOM");
 
     const host_tools = b.option(bool, "host-tools", "Build the native tests: fetches the reference vectors and builds the host crypto providers") orelse false;
     const zkevm_fixtures = b.option(std.Build.LazyPath, "zkevm-fixtures", "Directory holding the EF zkevm fixtures; enables the reference tests over its blocks");
