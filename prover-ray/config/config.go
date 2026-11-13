@@ -35,7 +35,8 @@ type Execution struct {
 	RequestsRootDir string `mapstructure:"requests_root_dir"`
 	// NativeRunnerBin is the native l2_execution_runner binary, required by
 	// dev-zkvm. Optional in dev-partial, which then checks the guest output against
-	// it. It must be an executable file; the other modes ignore it.
+	// it. It is a path or a name found on PATH, and must be a program that can
+	// be run; the other modes ignore it.
 	NativeRunnerBin string `mapstructure:"native_runner_bin"`
 	// ShardSize is the number of executed RISC-V instructions per trace shard;
 	// zero is one shard. dev-partial needs it for a real block, whose single
