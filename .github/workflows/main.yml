@@ -20,86 +20,21 @@ permissions:
   packages: write
 
 jobs:
-  # Manual-dispatch gate: only internal contributors (collaborators with
-  # write/maintain/admin) may trigger the full pipeline via workflow_dispatch.
-  # triage is intentionally excluded (cannot push code, so must not drive the
-  # publish pipeline). PR and push triggers skip this gate entirely.
-  # Read-only; fails fast to block external dispatches before any job runs.
-  authorise-dispatch:
-    if: github.event_name == 'workflow_dispatch'
+  # Everything the pipeline needs to know before real work starts, in one job:
+  # dispatch authorisation, PR title lint, component path filters, image tags,
+  # e2e change detection and CodeQL language detection. These used to be six
+  # separate jobs that each waited for a runner, mostly one after another.
+  # Draft PRs skip the whole pipeline, as before.
+  plan:
+    name: Plan
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
-    permissions:
-      contents: read
-    steps:
-      - name: Verify dispatch actor is a repo collaborator
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ACTOR: ${{ github.triggering_actor }}
-        run: |
-          set -euo pipefail
-          perm="$(gh api "repos/${{ github.repository }}/collaborators/${ACTOR}/permission" --jq .permission)"
-          [ -n "$perm" ] || { echo "::error::No permission returned for '${ACTOR}' (not a repo collaborator)."; exit 1; }
-          echo "Dispatch actor '${ACTOR}' permission: ${perm}"
-          # triage intentionally excluded: it cannot push code, so it must not drive the publish pipeline.
-          case "$perm" in
-            admin|maintain|write) echo "Authorised." ;;
-            *) echo "::error::Actor '${ACTOR}' (permission '${perm}') is not authorised to run this workflow manually."; exit 1 ;;
-          esac
-
-  code-analysis:
-    needs: [authorise-dispatch]
-    # !cancelled() (not always()): tolerate the skipped dispatch gate without
-    # letting a cancelled run still start CodeQL.
-    if: |
-      !cancelled() &&
-      (needs.authorise-dispatch.result == 'success' || needs.authorise-dispatch.result == 'skipped') &&
-      (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
-    uses: ./.github/workflows/codeql.yml
-
-  lint-latest-commit-messages:
-    needs: [authorise-dispatch]
-    if: |
-      !cancelled() &&
-      (needs.authorise-dispatch.result == 'success' || needs.authorise-dispatch.result == 'skipped') &&
-      (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
-    uses: ./.github/workflows/lint-commit-messages.yml
+    timeout-minutes: 10
     permissions:
       contents: read
       pull-requests: read
-    secrets: inherit
-
-  component-changelog-upload:
-    # Push-only: never run on manual dispatch, which could otherwise push
-    # changelog commits to main via the release bot.
-    # !cancelled() + explicit success check: without a status function the skipped
-    # authorise-dispatch gate propagates down the needs graph and skips this job.
-    if: >
-      !cancelled() &&
-      needs.lint-latest-commit-messages.result == 'success' &&
-      github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [lint-latest-commit-messages]
-    uses: ./.github/workflows/component-changelog-upload.yml
-
-  component-changelog-commit:
-    if: >
-      !cancelled() &&
-      needs.component-changelog-upload.result == 'success' &&
-      github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [component-changelog-upload]
-    permissions:
-      contents: write
-      pull-requests: write
-    uses: ./.github/workflows/component-changelog-commit.yml
-    secrets: inherit
-
-  filter-commit-changes:
-    needs: [lint-latest-commit-messages]
-    # !cancelled() + explicit success check: break the skip cascade from the
-    # skipped authorise-dispatch gate while still gating on a green lint.
-    if: ${{ !cancelled() && needs.lint-latest-commit-messages.result == 'success' }}
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
-    name: Filter commit changes
     outputs:
+      # Component path filters
       coordinator: ${{ steps.filter.outputs.coordinator }}
       staterecovery: ${{ steps.filter.outputs.staterecovery }}
       postman: ${{ steps.filter.outputs.postman }}
@@ -119,9 +54,49 @@ jobs:
       has-changes-requiring-build: ${{ steps.exclusion-filter.outputs.has-changes-requiring-build }}
       has-changes-requiring-linea-besu-package-build: ${{ steps.filter.outputs.linea-sequencer-plugin == 'true' || steps.filter.outputs.tracer == 'true' || steps.filter.outputs.tracer-constraints == 'true' ||  steps.filter.outputs.linea-besu == 'true' || steps.filter.outputs.linea-besu-package == 'true' }}
       besu-commit-changed: ${{ steps.check_besu_commit.outputs.version_changed == 'true' }}
+      # Image tags
+      commit_tag: ${{ steps.compute-version-tags.outputs.commit_tag }}
+      develop_tag: ${{ steps.compute-version-tags.outputs.develop_tag }}
+      # E2E change detection
+      has-changes-requiring-e2e-testing: ${{ steps.evaluate.outputs.zkevm }}
+      has-changes-requiring-riscv-e2e-testing: ${{ steps.evaluate.outputs.riscv }}
+      riscv-prover-mode: ${{ steps.evaluate.outputs.riscv_prover_mode }}
+      # CodeQL
+      codeql-languages: ${{ steps.codeql-languages.outputs.languages }}
     steps:
+      # Manual-dispatch gate: only internal contributors (collaborators with
+      # write/maintain/admin) may trigger the full pipeline via workflow_dispatch.
+      # triage is intentionally excluded (cannot push code, so must not drive the
+      # publish pipeline). Runs before checkout so an external dispatch fails
+      # before any repository code is touched; every other job depends on plan.
+      - name: Verify dispatch actor is a repo collaborator
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.triggering_actor }}
+        run: |
+          set -euo pipefail
+          perm="$(gh api "repos/${{ github.repository }}/collaborators/${ACTOR}/permission" --jq .permission)"
+          [ -n "$perm" ] || { echo "::error::No permission returned for '${ACTOR}' (not a repo collaborator)."; exit 1; }
+          echo "Dispatch actor '${ACTOR}' permission: ${perm}"
+          case "$perm" in
+            admin|maintain|write) echo "Authorised." ;;
+            *) echo "::error::Actor '${ACTOR}' (permission '${perm}') is not authorised to run this workflow manually."; exit 1 ;;
+          esac
+
+      # Check the PR title is in Conventional Commits format: in a squash merge
+      # the PR title becomes the single commit message on main.
+      - name: Lint PR title
+        if: github.event_name == 'pull_request'
+        uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6.1.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          requireScope: true
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
       - name: Filter commit changes
         uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
@@ -276,21 +251,100 @@ jobs:
           target_lib: besuCommit
           target_file_path: gradle/libs.versions.toml
 
-  compute-commit-tags:
-    needs: [filter-commit-changes]
-    if: ${{ !cancelled() && needs.filter-commit-changes.result == 'success' }}
-    uses: ./.github/workflows/reusable-compute-commit-tags.yml
+      - name: Compute version tags
+        id: compute-version-tags
+        uses: ./.github/actions/compute-version-tags
+
+      - name: Filter for e2e-relevant paths
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: e2e-filter
+        with:
+          # On manual dispatch, diff against main so a stacked branch's e2e-relevant
+          # changes are detected (github.ref would diff the branch vs itself).
+          base: ${{ github.event_name == 'workflow_dispatch' && 'refs/heads/main' || github.ref }}
+          list-files: json
+          filters: |
+            shared: &shared
+              - 'coordinator/**/src/main/**'
+              - 'jvm-libs/**/src/main/**'
+              - 'config/**/*.toml'
+              - 'linea-besu/**'
+              - 'maru/**/src/main/**'
+              - 'gradle/libs.versions.toml'
+              - 'contracts/local-deployments-artifacts/**'
+              - 'docker/**'
+              - '**/Dockerfile'
+              - 'e2e/src/**'
+              - 'e2e/package.json'
+              - 'e2e/jest*.config.ts'
+              - 'Makefile'
+              - '.github/actions/run-e2e-tests/**'
+              - 'linea-besu/plugins/linea-sequencer/**'
+              - 'linea-besu/plugins/sequencer-interfaces/**'
+              - 'ts-libs/**/src/**'
+              - 'ts-libs/**/package.json'
+              - '.github/workflows/reusable-run-e2e-tests.yml'
+              - '.nvmrc'
+              - 'package.json'
+            zkevm:
+              - *shared
+              - 'transaction-exclusion-api/**/src/main/**'
+              - 'postman/src/**'
+              - 'postman/package.json'
+              - 'prover/**/*.go'
+              - 'prover/**/*.mod'
+              - 'tracer/**'
+              - 'tracer-constraints/**'
+            riscv:
+              - *shared
+              - 'prover-ray/**'
+              - 'riscv-guests/**'
+
+      - name: Evaluate excluding test/doc files and other-stack paths
+        id: evaluate
+        env:
+          E2E_ZKEVM_FILES: ${{ steps.e2e-filter.outputs.zkevm_files }}
+          E2E_RISCV_FILES: ${{ steps.e2e-filter.outputs.riscv_files }}
+        run: make -s e2e-ci-detect-changes >> "$GITHUB_OUTPUT"
+
+      - name: Detect CodeQL languages
+        id: codeql-languages
+        uses: ./.github/actions/codeql-languages
+
+  code-analysis:
+    needs: [plan]
+    uses: ./.github/workflows/codeql.yml
+    with:
+      languages: ${{ needs.plan.outputs.codeql-languages }}
+
+  component-changelog-upload:
+    # Push-only: never run on manual dispatch, which could otherwise push
+    # changelog commits to main via the release bot.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [plan]
+    uses: ./.github/workflows/component-changelog-upload.yml
+
+  component-changelog-commit:
+    # Skip when no component changed: there is nothing to commit.
+    if: >
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      needs.component-changelog-upload.outputs.has_changes == 'true'
+    needs: [component-changelog-upload]
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: ./.github/workflows/component-changelog-commit.yml
+    secrets: inherit
 
   # Runs once before the JVM testing jobs: checks whether the Besu version pinned by
   # besuCommit (gradle/libs.versions.toml) is published to a remote maven repo and, if not,
   # builds the Besu source distribution a single time and shares it as a workflow artifact.
   prepare-linea-besu-maven:
-    needs: [filter-commit-changes, compute-commit-tags]
+    needs: [plan]
     if: >
-      !cancelled() &&
-      needs.filter-commit-changes.outputs.besu-commit-changed == 'true' &&
-      needs.filter-commit-changes.outputs.has-changes-requiring-build == 'true' &&
-      needs.compute-commit-tags.outputs.commit_tag != ''
+      needs.plan.outputs.besu-commit-changed == 'true' &&
+      needs.plan.outputs.has-changes-requiring-build == 'true' &&
+      needs.plan.outputs.commit_tag != ''
     uses: ./.github/workflows/prepare-linea-besu-maven.yml
 
   testing:
@@ -298,42 +352,36 @@ jobs:
       contents: read
       actions: read
       id-token: write
-    needs: [filter-commit-changes, compute-commit-tags, prepare-linea-besu-maven]
-    # !cancelled() (not always()): run on need failure/skip, but not after a
-    # concurrency cancel supersedes this run.
-    if: ${{ !cancelled() && (needs.prepare-linea-besu-maven.result == 'success' || needs.prepare-linea-besu-maven.result == 'skipped') }}
+    needs: [plan, prepare-linea-besu-maven]
+    # !cancelled() (not always()): run when prepare-linea-besu-maven was skipped, but
+    # not after a concurrency cancel supersedes this run.
+    if: ${{ !cancelled() && needs.plan.result == 'success' && (needs.prepare-linea-besu-maven.result == 'success' || needs.prepare-linea-besu-maven.result == 'skipped') }}
     uses: ./.github/workflows/testing.yml
     with:
-      commit_tag: ${{ needs.compute-commit-tags.outputs.commit_tag }}
-      coordinator_changed: ${{ needs.filter-commit-changes.outputs.coordinator }}
-      linea_sequencer_changed: ${{ needs.filter-commit-changes.outputs.linea-sequencer-plugin }}
-      postman_changed: ${{ needs.filter-commit-changes.outputs.postman }}
-      prover_changed: ${{ needs.filter-commit-changes.outputs.prover }}
-      prover_ray_changed: ${{ needs.filter-commit-changes.outputs.prover-ray }}
-      rollup_spec_changed: ${{ needs.filter-commit-changes.outputs.rollup-spec }}
-      smart_contracts_changed: ${{ needs.filter-commit-changes.outputs.smart-contracts }}
-      staterecovery_changed: false # disable until we have time to address it ${{ needs.filter-commit-changes.outputs.staterecovery }}
-      transaction_exclusion_api_changed: ${{ needs.filter-commit-changes.outputs.transaction-exclusion-api }}
-      native_yield_automation_service_changed: ${{ needs.filter-commit-changes.outputs.native-yield-automation-service }}
-      lido_governance_monitor_changed: ${{ needs.filter-commit-changes.outputs.lido-governance-monitor }}
-      tracer_changed: ${{ needs.filter-commit-changes.outputs.tracer }}
-      constraints_changed: ${{ needs.filter-commit-changes.outputs.tracer-constraints }}
-      maru_changed: ${{ needs.filter-commit-changes.outputs.maru }}
+      commit_tag: ${{ needs.plan.outputs.commit_tag }}
+      coordinator_changed: ${{ needs.plan.outputs.coordinator }}
+      linea_sequencer_changed: ${{ needs.plan.outputs.linea-sequencer-plugin }}
+      postman_changed: ${{ needs.plan.outputs.postman }}
+      prover_changed: ${{ needs.plan.outputs.prover }}
+      prover_ray_changed: ${{ needs.plan.outputs.prover-ray }}
+      rollup_spec_changed: ${{ needs.plan.outputs.rollup-spec }}
+      smart_contracts_changed: ${{ needs.plan.outputs.smart-contracts }}
+      staterecovery_changed: false # disable until we have time to address it ${{ needs.plan.outputs.staterecovery }}
+      transaction_exclusion_api_changed: ${{ needs.plan.outputs.transaction-exclusion-api }}
+      native_yield_automation_service_changed: ${{ needs.plan.outputs.native-yield-automation-service }}
+      lido_governance_monitor_changed: ${{ needs.plan.outputs.lido-governance-monitor }}
+      tracer_changed: ${{ needs.plan.outputs.tracer }}
+      constraints_changed: ${{ needs.plan.outputs.tracer-constraints }}
+      maru_changed: ${{ needs.plan.outputs.maru }}
     secrets: inherit
-
-  get-has-changes-requiring-e2e-testing:
-    needs: [filter-commit-changes]
-    if: ${{ !cancelled() && needs.filter-commit-changes.result == 'success' }}
-    uses: ./.github/workflows/get-has-changes-requiring-e2e-testing.yml
 
   manual-docker-build-and-e2e-tests:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
-    needs: [compute-commit-tags, get-has-changes-requiring-e2e-testing, prepare-linea-besu-maven]
+    needs: [plan, prepare-linea-besu-maven]
     if: >
       !cancelled() &&
-      needs.compute-commit-tags.result == 'success' &&
-      needs.get-has-changes-requiring-e2e-testing.result == 'success' &&
-      needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing == 'true' &&
+      needs.plan.result == 'success' &&
+      needs.plan.outputs.has-changes-requiring-e2e-testing == 'true' &&
       (needs.prepare-linea-besu-maven.result == 'success' || needs.prepare-linea-besu-maven.result == 'skipped')
     environment: ${{ github.ref != 'refs/heads/main' && 'docker-build-and-e2e' || '' }}
     concurrency:
@@ -350,32 +398,23 @@ jobs:
       actions: read
       packages: write
       id-token: write
-    needs:
-      [
-        filter-commit-changes,
-        compute-commit-tags,
-        manual-docker-build-and-e2e-tests,
-      ]
-    # !cancelled() + explicit success checks replicate the previous implicit
-    # success() gate (all three needs must succeed) while breaking the skip
-    # cascade from the skipped authorise-dispatch gate.
+    needs: [plan, manual-docker-build-and-e2e-tests]
     if: >
       !cancelled() &&
-      needs.filter-commit-changes.result == 'success' &&
-      needs.compute-commit-tags.result == 'success' &&
+      needs.plan.result == 'success' &&
       needs.manual-docker-build-and-e2e-tests.result == 'success'
     uses: ./.github/workflows/build-and-publish.yml
     with:
-      commit_tag: ${{ needs.compute-commit-tags.outputs.commit_tag }}
-      develop_tag: ${{ needs.compute-commit-tags.outputs.develop_tag }}
-      coordinator_changed: ${{ needs.filter-commit-changes.outputs.coordinator }}
-      postman_changed: ${{ needs.filter-commit-changes.outputs.postman }}
-      prover_changed: ${{ needs.filter-commit-changes.outputs.prover }}
-      transaction_exclusion_api_changed: ${{ needs.filter-commit-changes.outputs.transaction-exclusion-api }}
-      native_yield_automation_service_changed: ${{ needs.filter-commit-changes.outputs.native-yield-automation-service }}
-      lido_governance_monitor_changed: ${{ needs.filter-commit-changes.outputs.lido-governance-monitor }}
-      maru_changed: ${{ needs.filter-commit-changes.outputs.maru }}
-      build_linea_besu_package: ${{ needs.filter-commit-changes.outputs.has-changes-requiring-linea-besu-package-build }}
+      commit_tag: ${{ needs.plan.outputs.commit_tag }}
+      develop_tag: ${{ needs.plan.outputs.develop_tag }}
+      coordinator_changed: ${{ needs.plan.outputs.coordinator }}
+      postman_changed: ${{ needs.plan.outputs.postman }}
+      prover_changed: ${{ needs.plan.outputs.prover }}
+      transaction_exclusion_api_changed: ${{ needs.plan.outputs.transaction-exclusion-api }}
+      native_yield_automation_service_changed: ${{ needs.plan.outputs.native-yield-automation-service }}
+      lido_governance_monitor_changed: ${{ needs.plan.outputs.lido-governance-monitor }}
+      maru_changed: ${{ needs.plan.outputs.maru }}
+      build_linea_besu_package: ${{ needs.plan.outputs.has-changes-requiring-linea-besu-package-build }}
     secrets: inherit
 
   run-e2e-tests:
@@ -385,23 +424,22 @@ jobs:
       id-token: write
     needs:
       [
-        compute-commit-tags,
+        plan,
         docker-build,
-        get-has-changes-requiring-e2e-testing,
         manual-docker-build-and-e2e-tests,
       ]
     # Make this execute for has-changes-requiring-e2e-testing == 'false' so that we can get to the required job @ which is in reusable-run-e2e-tests.yml
     # !cancelled() (not always()): don't start expensive e2e after a concurrency cancel.
-    if: ${{ !cancelled() && (needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing == 'false' || needs.docker-build.result == 'success') }}
+    if: ${{ !cancelled() && (needs.plan.outputs.has-changes-requiring-e2e-testing == 'false' || needs.docker-build.result == 'success') }}
     concurrency:
       group: run-e2e-tests-${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
     uses: ./.github/workflows/reusable-run-e2e-tests.yml
     with:
-      image_tag: ${{ needs.compute-commit-tags.outputs.commit_tag }}
+      image_tag: ${{ needs.plan.outputs.commit_tag }}
       linea_besu_package_tag: ${{ needs.docker-build.outputs.linea_besu_package_tag }}
       e2e-tests-logs-dump: true
-      has-changes-requiring-e2e-testing: ${{ needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing }}
+      has-changes-requiring-e2e-testing: ${{ needs.plan.outputs.has-changes-requiring-e2e-testing }}
     secrets: inherit
 
   # Not a required check. Prover-ray/guest changes run dev-zkvm with prover-ray built from this commit.
@@ -412,37 +450,36 @@ jobs:
       id-token: write
     needs:
       [
-        compute-commit-tags,
+        plan,
         docker-build,
-        get-has-changes-requiring-e2e-testing,
       ]
     if: >
       !cancelled() &&
       github.event_name == 'push' && github.ref == 'refs/heads/main' &&
-      needs.compute-commit-tags.result == 'success' &&
+      needs.plan.result == 'success' &&
       needs.docker-build.result != 'failure' &&
-      needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-riscv-e2e-testing == 'true'
+      needs.plan.outputs.has-changes-requiring-riscv-e2e-testing == 'true'
     concurrency:
       group: run-riscv-e2e-tests-${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: false
     uses: ./.github/workflows/reusable-run-e2e-tests.yml
     with:
-      image_tag: ${{ needs.compute-commit-tags.outputs.commit_tag }}
+      image_tag: ${{ needs.plan.outputs.commit_tag }}
       stack: riscv
-      riscv_prover_mode: ${{ needs.get-has-changes-requiring-e2e-testing.outputs.riscv-prover-mode }}
+      riscv_prover_mode: ${{ needs.plan.outputs.riscv-prover-mode }}
       linea_besu_package_tag: ${{ needs.docker-build.outputs.linea_besu_package_tag }}
       e2e-tests-logs-dump: true
     secrets: inherit
 
   publish-linea-besu-after-run-tests-success:
-    needs: [filter-commit-changes, run-e2e-tests]
+    needs: [plan, run-e2e-tests]
     # Only run for same-repo PRs: do not checkout and run PR head from forks (avoids untrusted code with contents/packages write).
     # !cancelled() (not always()): don't start a publish after a concurrency cancel.
     if: >
       !cancelled() &&
       github.ref != 'refs/heads/main' &&
       (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) &&
-      needs.filter-commit-changes.outputs.has-changes-requiring-linea-besu-package-build == 'true' &&
+      needs.plan.outputs.has-changes-requiring-linea-besu-package-build == 'true' &&
       needs.run-e2e-tests.outputs.tests_outcome == 'success'
     permissions:
       contents: write
@@ -452,7 +489,7 @@ jobs:
     secrets: inherit
 
   cleanup-deployments:
-    needs: [authorise-dispatch, manual-docker-build-and-e2e-tests, run-e2e-tests]
+    needs: [plan, manual-docker-build-and-e2e-tests, run-e2e-tests]
     # Only clean up when a deployment was actually created. The docker-build-and-e2e
     # environment is approval-gated (required reviewers), so manual-docker-build-and-e2e-tests
     # creates the deployment the moment it engages the environment (waiting-for-approval),
@@ -475,7 +512,7 @@ jobs:
         ) ||
         (
           github.event_name == 'workflow_dispatch' &&
-          needs.authorise-dispatch.result == 'success'
+          needs.plan.result == 'success'
         )
       )
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
@@ -495,11 +532,9 @@ jobs:
   notify:
     needs:
       [
-        filter-commit-changes,
-        compute-commit-tags,
+        plan,
         code-analysis,
         testing,
-        get-has-changes-requiring-e2e-testing,
         manual-docker-build-and-e2e-tests,
         docker-build,
         run-e2e-tests,

@@ -1,0 +1,86 @@
+name: CodeQL languages
+description: >
+  Detect which CodeQL languages to analyze for the current event and return them as a JSON array.
+  Scheduled and manual runs analyze every language; other events analyze only the languages whose
+  files changed. Java/Kotlin is analyzed only on pushes to main to limit Maven Central traffic.
+  Requires the repository to be checked out.
+
+outputs:
+  languages:
+    description: JSON array of CodeQL languages, e.g. ["go","actions"]; [] when nothing needs analysis
+    value: ${{ steps.set-matrix.outputs.languages }}
+
+runs:
+  using: composite
+  steps:
+    - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+      id: changes
+      with:
+        filters: |
+          go:
+            - '**/*.go'
+            - '**/go.mod'
+            - '**/go.sum'
+          java-kotlin:
+            - '**/*.java'
+            - '**/*.kt'
+            - '**/*.gradle'
+            - '**/*.gradle.kts'
+            - '**/pom.xml'
+            - '**/build.gradle'
+            - '**/gradle.properties'
+            - '**/settings.gradle'
+            - 'build.gradle'
+            - 'gradle.properties'
+            - 'settings.gradle'
+            - 'gradle/**'
+          javascript-typescript:
+            - '**/*.js'
+            - '**/*.ts'
+            - '**/*.tsx'
+            - '**/*.jsx'
+            - '**/*.json'
+            - '**/package.json'
+            - '**/tsconfig.json'
+            - '**/pnpm-lock.yaml'
+            - '**/yarn.lock'
+            - '**/package-lock.json'
+          actions:
+            - '.github/workflows/**'
+            - '.github/actions/**'
+          python:
+            - '**/*.py'
+            - '**/requirements.txt'
+            - '**/pyproject.toml'
+            - '**/setup.py'
+            - '**/Pipfile'
+
+    - name: Build matrix
+      id: set-matrix
+      shell: bash
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        ANALYZE_JVM: ${{ github.ref == 'refs/heads/main' && !startsWith(github.event_name, 'pull_request') }}
+        GO_CHANGED: ${{ steps.changes.outputs.go }}
+        JVM_CHANGED: ${{ steps.changes.outputs.java-kotlin }}
+        JS_CHANGED: ${{ steps.changes.outputs.javascript-typescript }}
+        ACTIONS_CHANGED: ${{ steps.changes.outputs.actions }}
+        PYTHON_CHANGED: ${{ steps.changes.outputs.python }}
+      run: |
+        # Scheduled and manual runs analyze all eligible languages.
+        analyze_all=false
+        if [ "$EVENT_NAME" == "schedule" ] || [ "$EVENT_NAME" == "workflow_dispatch" ]; then
+          analyze_all=true
+        fi
+
+        languages=()
+        if [ "$analyze_all" == "true" ] || [ "$GO_CHANGED" == "true" ]; then languages+=("\"go\""); fi
+        # JVM builds share a Maven Central IP; analyze on main to reduce dependency traffic.
+        if [ "$ANALYZE_JVM" == "true" ] && { [ "$analyze_all" == "true" ] || [ "$JVM_CHANGED" == "true" ]; }; then
+          languages+=("\"java-kotlin\"")
+        fi
+        if [ "$analyze_all" == "true" ] || [ "$JS_CHANGED" == "true" ]; then languages+=("\"javascript-typescript\""); fi
+        if [ "$analyze_all" == "true" ] || [ "$ACTIONS_CHANGED" == "true" ]; then languages+=("\"actions\""); fi
+        if [ "$analyze_all" == "true" ] || [ "$PYTHON_CHANGED" == "true" ]; then languages+=("\"python\""); fi
+
+        echo "languages=[$(IFS=,; echo "${languages[*]}")]" >> "$GITHUB_OUTPUT"

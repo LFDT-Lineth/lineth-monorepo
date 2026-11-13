@@ -11,22 +11,14 @@
 ## Pipeline at a Glance
 
 ```
-┌─────────────────────────┐
-│  filter-commit-changes  │  Which components actually changed?
-└──────────┬──────────────┘
-           │
-     ┌─────┴──────────────────────────────┐
-     │                                    │
-     ▼                                    ▼
-┌──────────────────────┐    ┌────────────────────────────────┐
-│  check-and-tag-images│    │  get-has-changes-requiring-    │
-│  (image cache check) │    │  e2e-testing                   │
-└──────────┬───────────┘    └──────────────┬─────────────────┘
-           │                               │
-           │             ┌─────────────────┘
-           ▼             ▼
 ┌──────────────────────────────────┐
-│  code-analysis (CodeQL)          │  parallel, always runs
+│  plan                            │  one job: dispatch auth, PR title lint,
+│                                  │  path filters, image tags, e2e + CodeQL
+│                                  │  change detection
+└──────────────┬───────────────────┘
+               │
+┌──────────────────────────────────┐
+│  code-analysis (CodeQL)          │  languages chosen by plan
 └──────────────────────────────────┘
 
 ┌──────────────────────────────────┐
@@ -67,39 +59,38 @@
 
 ## Stage-by-Stage Breakdown
 
-### 1. `filter-commit-changes`
+### 1. `plan`
 
-**What it does:** Runs `dorny/paths-filter` twice to produce two sets of flags:
+**What it does:** One job on a small runner that works out everything the rest of the pipeline needs, so later jobs don't each wait for a runner of their own. Every other job depends on it. Steps, in order:
 
-- **Per-component flags** (`coordinator`, `prover`, `postman`, `smart-contracts`, `tracer`, `linea-sequencer-plugin`, `transaction-exclusion-api`, `linea-besu`, `linea-besu-package`, `tracer-constraints`, `native-yield-automation-service`, `lido-governance-monitor`, `staterecovery`) - `true` when any file belonging to that component changed.
-- **`has-changes-requiring-build`** - `false` when every changed file is on the exclusion list (`*.md`, `*.mdx`, `docs/**`, `contracts/token-generation-event/**`, `codeql.yml`), meaning the PR contains nothing that requires compilation or testing. `true` as soon as any changed file falls outside that list. This is the main gate that determines whether most downstream jobs run at all.
-- **`has-changes-requiring-linea-besu-package-build`** - `true` when the sequencer plugin, tracer, tracer-constraints, linea-besu, or linea-besu-package changed.
+1. **Dispatch authorisation** (`workflow_dispatch` only) - fails unless the triggering actor has `write`, `maintain` or `admin` permission. Runs before checkout.
+2. **PR title lint** (PRs only) - the title must follow Conventional Commits with a scope, because in a squash merge it becomes the commit message on `main`. A failure here stops the whole pipeline.
+3. **Path filters** - `dorny/paths-filter` produces:
+   - **Per-component flags** (`coordinator`, `prover`, `prover-ray`, `postman`, `smart-contracts`, `tracer`, `linea-sequencer-plugin`, `transaction-exclusion-api`, `linea-besu`, `linea-besu-package`, `tracer-constraints`, `native-yield-automation-service`, `lido-governance-monitor`, `rollup-spec`, `maru`, `staterecovery`) - `true` when any file belonging to that component changed.
+   - **`has-changes-requiring-build`** - `false` when every changed file is on the exclusion list (`*.md`, `*.mdx`, `docs/**`, `contracts/token-generation-event/**`, `codeql.yml`), meaning the PR contains nothing that requires compilation or testing. `true` as soon as any changed file falls outside that list.
+   - **`has-changes-requiring-linea-besu-package-build`** - `true` when the sequencer plugin, tracer, tracer-constraints, linea-besu, or linea-besu-package changed.
+4. **besuCommit check** - `besu-commit-changed` is `true` when `besuCommit` in `gradle/libs.versions.toml` changed; it gates `prepare-linea-besu-maven`.
+5. **Image tags** (`.github/actions/compute-version-tags`) - `commit_tag` (short SHA of the PR head or pushed commit) and `develop_tag`.
+6. **E2E change detection** - a stricter path filter plus `make e2e-ci-detect-changes`, which ignores test and doc files. Outputs `has-changes-requiring-e2e-testing` (zkEVM stack), `has-changes-requiring-riscv-e2e-testing` and `riscv-prover-mode`.
+7. **CodeQL languages** (`.github/actions/codeql-languages`) - which languages `code-analysis` should scan.
 
-**New contributor tip:** If your PR only touches markdown or docs, every job after this point except CodeQL is skipped. This is intentional.
+Draft PRs skip `plan`, and therefore the whole pipeline.
 
----
-
-### 2. `check-and-tag-images` (reuse-check-images-tags-and-push.yml)
-
-**What it does:** For each Docker image (`coordinator`, `prover`, `postman`, `transaction-exclusion-api`, `native-yield-automation-service`, `lido-governance-monitor`), checks whether an image tagged with the current commit SHA already exists in the registry. If it does, that image is reused in all subsequent steps. If not, the image tag is reserved for later.
-
-**Outputs:** `commit_tag`, `develop_tag`, and per-image `image_tagged_*` flags that tell `docker-build` whether to skip rebuilding a particular image.
-
-**Why:** Avoids redundant builds when multiple workflow runs reference the same commit.
-
----
-
-### 3. `code-analysis` (codeql.yml)
-
-Runs CodeQL static analysis across Go, Java/Kotlin, JavaScript/TypeScript, Python, and GitHub Actions. Always runs regardless of what changed.
+**New contributor tip:** If your PR only touches markdown or docs, testing, docker-build and E2E are skipped. This is intentional.
 
 ---
 
-### 4. `testing` (testing.yml)
+### 2. `code-analysis` (codeql.yml)
+
+Runs CodeQL static analysis for the languages whose files changed, as computed by `plan`: Go, JavaScript/TypeScript, Python and GitHub Actions, plus Java/Kotlin on pushes to `main` only. The weekly scheduled run and manual runs of `codeql.yml` analyze every language and detect changes themselves.
+
+---
+
+### 3. `testing` (testing.yml)
 
 **Condition:** `has-changes-requiring-build == 'true'`.
 
-Fans out to a set of per-component test workflows in parallel. Each receives a boolean flag from step 1 and skips itself if that component did not change:
+Fans out to a set of per-component test workflows in parallel. Each receives a boolean flag from `plan` and skips itself if that component did not change:
 
 | Job | Workflow |
 |-----|----------|
@@ -122,13 +113,7 @@ The native-yield and lido jobs upload LCOV for `ts-libs/linea-shared-utils/` plu
 
 ---
 
-### 5. `get-has-changes-requiring-e2e-testing` (get-has-changes-requiring-e2e-testing.yml)
-
-Runs a stricter path filter: changed files must match `coordinator/**/src/main/**` or `jvm-libs/**/src/main/**` (production source, not tests). Only coordinator production-source changes justify the cost of spinning up the full protocol stack for E2E. The output `has-changes-requiring-e2e-testing` drives whether docker-build and E2E actually execute.
-
----
-
-### 6. `manual-docker-build-and-e2e-tests` (gate step)
+### 4. `manual-docker-build-and-e2e-tests` (gate step)
 
 **On PRs only:** This job targets the `docker-build-and-e2e` GitHub Environment, which has a required reviewer configured. A maintainer must manually approve this step before Docker images are built and E2E tests run. This prevents untrusted or expensive workflows from running automatically on every PR commit.
 
@@ -136,7 +121,7 @@ Runs a stricter path filter: changed files must match `coordinator/**/src/main/*
 
 ---
 
-### 7. `docker-build` (build-and-publish.yml)
+### 5. `docker-build` (build-and-publish.yml)
 
 **Condition:** `has-changes-requiring-e2e-testing == 'true'` (gate step must have passed).
 
@@ -144,15 +129,15 @@ Builds Docker images for all changed components. Also builds the `linea-besu-pac
 
 ---
 
-### 8. `run-e2e-tests` (reuse-run-e2e-tests.yml)
+### 6. `run-e2e-tests` (reuse-run-e2e-tests.yml)
 
-Starts the full local Lineth stack (L1 + L2 + coordinator + prover + postman + ...) using the images from step 7 and runs the protocol E2E test suite. Dumps logs on completion.
+Starts the full local Lineth stack (L1 + L2 + coordinator + prover + postman + ...) using the images from step 5 and runs the protocol E2E test suite. Dumps logs on completion.
 
 When `has-changes-requiring-e2e-testing == 'false'`, this job still runs but passes immediately - this keeps required status checks green on every PR.
 
 ---
 
-### 9. Publish (branch-dependent)
+### 7. Publish (branch-dependent)
 
 | Condition | Job | What happens |
 |-----------|-----|--------------|
@@ -163,13 +148,13 @@ Images are **never pushed** from fork PRs or from PRs where tests did not pass.
 
 ---
 
-### 10. `cleanup-deployments`
+### 8. `cleanup-deployments`
 
 Removes the `docker-build-and-e2e` deployment record from GitHub's Deployments UI after the run completes (success or failure). Runs for all non-fork PRs.
 
 ---
 
-### 11. `notify`
+### 9. `notify`
 
 Sends a Slack alert to the engineering alerts channel if any job in the pipeline failed, but only on `main`. PRs do not generate Slack alerts.
 
@@ -179,7 +164,7 @@ Sends a Slack alert to the engineering alerts channel if any job in the pipeline
 
 ### Path filtering drives everything
 
-The filter step is the most important job in the pipeline. It determines what runs, what is skipped, and which images get built. Because each component's filter also watches the workflow files that test it (`.github/workflows/coordinator-*.yml`, etc.), changing a workflow file itself re-triggers the relevant test jobs.
+The path filters in `plan` are the most important step in the pipeline. It determines what runs, what is skipped, and which images get built. Because each component's filter also watches the workflow files that test it (`.github/workflows/coordinator-*.yml`, etc.), changing a workflow file itself re-triggers the relevant test jobs.
 
 ### Docs-only changes are nearly free
 
