@@ -127,6 +127,10 @@ var spec = map[string]specEntry{
 var custom1Names = []string{"RTYPE_KECCAK", "RTYPE_POSEIDON2"}
 
 // TestDecodeAllWords decodes every 32-bit word and compares its record with the reference.
+// Every word must either match the reference (valid instructions: same
+// compute_op and operands; invalid words: rejected) or fall into knownExtras.
+// The knownExtras check works in both directions: a new over-accepted group,
+// or a changed count, fails; so does a known group that disappears.
 func TestDecodeAllWords(t *testing.T) {
 	if testing.Short() {
 		t.Skip("decodes all 2^32 words (~3 min on 14 cores); run without -short")
@@ -171,11 +175,16 @@ func TestDecodeAllWords(t *testing.T) {
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
+		// Allow exceptions for knownExtras but only if their counts match exactly.
+		// This prevents a new over-acceptance from slipping in unnoticed.
 		if want, ok := knownExtras[k]; ok && want == all[k].n {
 			continue
 		}
 		t.Errorf("%s: count=%d (known: %d) e.g. %#08x", k, all[k].n, knownExtras[k], all[k].sample)
 	}
+
+	// Catches a known extra group that is no longer accepted at all, e.g. after
+	// the decoder is tightened. Then knownExtras must be updated to match.
 	for k := range knownExtras {
 		if all[k] == nil {
 			t.Errorf("%s: known extra no longer accepted; update knownExtras", k)
@@ -183,8 +192,9 @@ func TestDecodeAllWords(t *testing.T) {
 	}
 }
 
-// TestCheckWordDetectsWrongNumbering shows the exhaustive test can fail: with
-// the ADD and SUB numbers swapped, `add x1, x2, x3` must be reported.
+// TestCheckWordDetectsWrongNumbering is basically the test of the test itself.
+// It shows the exhaustive test `TestDecodeAllWords` can fail: with the ADD and SUB
+// numbers swapped, `add x1, x2, x3` must be reported.
 func TestCheckWordDetectsWrongNumbering(t *testing.T) {
 	c := loadZkcConstants(t)
 	var bw bitWriter
@@ -192,30 +202,44 @@ func TestCheckWordDetectsWrongNumbering(t *testing.T) {
 	if k := checkWord(add, c, &bw); k != "" {
 		t.Fatalf("baseline should pass, got %q", k)
 	}
+
+	// Deliberately swap the numbers for ADD and SUB, so the reference disagrees with the decoder.
 	c["RTYPE_ADD_WB"], c["RTYPE_SUB_WB"] = c["RTYPE_SUB_WB"], c["RTYPE_ADD_WB"]
 	if checkWord(add, c, &bw) == "" {
 		t.Fatal("swapped ADD/SUB numbers were not detected")
 	}
 }
 
-// checkWord decodes x and compares the record with the reference. It returns
-// "" when they agree, otherwise a category naming the disagreement. A word the
-// decoder accepts but RV64IM does not define gets an "extra" category, which
+// checkWord decodes `x` (one 32-bit word) with Lineth's decoder and compares the
+// record against an independent RV reference; `c` maps compute_op names to
+// numbers (from constants.zkc). It returns empty string `""` when they agree, otherwise a category naming the disagreement.
+// A word the decoder accepts but RV64IM does not define gets an "extra" category, which
 // the caller compares with knownExtras.
 func checkWord(x uint32, c map[string]uint64, bw *bitWriter) string {
+	// Reset the bit writer so that it is reused instead of allocating a new one for every instruction.
 	*bw = bitWriter{buf: bw.buf[:0]}
+
 	decodeInstruction(bw, x)
 	got := readRecord(bw.buf)
 	want, name, defined := reference(x, c)
 	switch {
+	// Both agree the instruction is invalid
 	case !defined && got.op == computeInvalid:
 		return ""
+
+	// The reference says invalid, but Lineth decoder accepts it
 	case !defined:
 		return fmt.Sprintf("extra: opcode=%07b funct3=%03b compute_op=%d", x&0x7f, (x>>12)&7, got.op)
+
+	// Wrong operation
 	case got.op != want.op:
 		return "wrong compute_op: " + name
-	case want.op == computeNoOp: // NO_OP carries no operands
+
+	// Expected operation is NO_OP, which carries no operands
+	case want.op == computeNoOp:
 		return ""
+
+	// Wrong operands
 	case got != want:
 		return "wrong operands: " + name
 	}
@@ -223,12 +247,17 @@ func checkWord(x uint32, c map[string]uint64, bw *bitWriter) string {
 }
 
 // reference returns the record x should decode to, the instruction's name, and
-// whether x is an instruction Lineth defines at all.
+// whether `x` is an instruction Lineth defines at all.
 func reference(x uint32, c map[string]uint64) (rec, string, bool) {
-	if x&3 != 3 { // 16-bit compressed encoding; Lineth has no C extension
+
+	// Reject compressed instructions: RISC-V has 16-bit compressed instructions but
+	// Lineth doesn't support the C extension.
+	if x&3 != 3 {
 		return rec{}, "", false
 	}
-	if x&0x7f == opcodeCUSTOM1 { // Lineth-only opcode: the reference knows nothing about it
+
+	// Lineth-only opcode: the reference knows nothing about it
+	if x&0x7f == opcodeCUSTOM1 {
 		f3, f7 := (x>>12)&7, x>>25
 		if f7 != 0 || int(f3) >= len(custom1Names) {
 			return rec{}, "", false
@@ -236,6 +265,9 @@ func reference(x uint32, c map[string]uint64) (rec, string, bool) {
 		r := rec{op: c[custom1Names[f3]], rs1: uint64((x >> 15) & 31), rs2: uint64((x >> 20) & 31), rd: uint64((x >> 7) & 31)}
 		return r, custom1Names[f3], true // no x0 folding for precompiles
 	}
+
+	// Use the independent reference RV decoder; riscv64asm expects the word as
+	// little-endian bytes, as it would sit in memory.
 	var b [4]byte
 	binary.LittleEndian.PutUint32(b[:], x)
 	inst, err := riscv64asm.Decode(b[:])
@@ -246,50 +278,55 @@ func reference(x uint32, c map[string]uint64) (rec, string, bool) {
 	return r, inst.Op.String(), ok
 }
 
-// expected builds the record for a word the reference decoded as inst:
-// compute_op from the spec table and constants.zkc, operands from the
-// reference. ok=false means the instruction is not RV64IM.
+// expected takes an instruction decoded by riscv64asm and translates it into Lineth's internal representation.
+// It builds the record for a word the reference decoded as inst: compute_op from the spec table and constants.zkc,
+// operands from the reference. ok=false means the instruction is not RV64IM.
 func expected(inst riscv64asm.Inst, x uint32, c map[string]uint64) (rec, bool) {
-	e, ok := spec[inst.Op.String()]
+	entry, ok := spec[inst.Op.String()]
 	if !ok {
 		return rec{}, false
 	}
 	rd := uint64((x >> 7) & 31)
 	var r rec
-	switch e.cl {
+	switch entry.cl {
 	case cFENCE:
 		return rec{op: computeNoOp}, true
-	case cJAL, cJALR: // rd == x0 means jump only; otherwise also save the return address
-		r.op = c[e.name]
+
+	// rd == x0 means jump only; otherwise also save the return address
+	case cJAL, cJALR:
+		r.op = c[entry.name]
 		if rd != 0 {
-			r.op = c[e.name+"_WB"]
+			r.op = c[entry.name+"_WB"]
 		}
 	default:
-		if e.fold && rd == 0 {
+		if entry.fold && rd == 0 {
 			return rec{op: computeNoOp}, true
 		}
-		r.op = c[e.name]
+		r.op = c[entry.name]
 	}
-	a := inst.Args
-	switch e.cl {
+	args := inst.Args
+
+	// Read the operands according to the instruction class
+	switch entry.cl {
 	case cR:
-		r.rd, r.rs1, r.rs2 = regNum(a[0]), regNum(a[1]), regNum(a[2])
+		r.rd, r.rs1, r.rs2 = regNum(args[0]), regNum(args[1]), regNum(args[2])
 	case cI:
-		r.rd, r.rs1, r.imm = regNum(a[0]), regNum(a[1]), uint64(int64(a[2].(riscv64asm.Simm).Imm))
+		r.rd, r.rs1, r.imm = regNum(args[0]), regNum(args[1]), uint64(int64(args[2].(riscv64asm.Simm).Imm))
 	case cSH:
-		r.rd, r.rs1, r.imm = regNum(a[0]), regNum(a[1]), uint64(a[2].(riscv64asm.Uimm).Imm)
+		r.rd, r.rs1, r.imm = regNum(args[0]), regNum(args[1]), uint64(args[2].(riscv64asm.Uimm).Imm)
 	case cLOAD, cJALR:
-		o := a[1].(riscv64asm.RegOffset)
-		r.rd, r.rs1, r.imm = regNum(a[0]), uint64(o.OfsReg-riscv64asm.X0), uint64(int64(o.Ofs.Imm))
+		o := args[1].(riscv64asm.RegOffset)
+		r.rd, r.rs1, r.imm = regNum(args[0]), uint64(o.OfsReg-riscv64asm.X0), uint64(int64(o.Ofs.Imm))
+	// No `rd` for stores since they write to memory, not a destination register
 	case cSTORE:
-		o := a[1].(riscv64asm.RegOffset)
-		r.rs2, r.rs1, r.imm = regNum(a[0]), uint64(o.OfsReg-riscv64asm.X0), uint64(int64(o.Ofs.Imm))
+		o := args[1].(riscv64asm.RegOffset)
+		r.rs2, r.rs1, r.imm = regNum(args[0]), uint64(o.OfsReg-riscv64asm.X0), uint64(int64(o.Ofs.Imm))
 	case cBR:
-		r.rs1, r.rs2, r.imm = regNum(a[0]), regNum(a[1]), uint64(int64(a[2].(riscv64asm.Simm).Imm))
+		r.rs1, r.rs2, r.imm = regNum(args[0]), regNum(args[1]), uint64(int64(args[2].(riscv64asm.Simm).Imm))
 	case cJAL:
-		r.rd, r.imm = regNum(a[0]), uint64(int64(a[1].(riscv64asm.Simm).Imm))
+		r.rd, r.imm = regNum(args[0]), uint64(int64(args[1].(riscv64asm.Simm).Imm))
 	case cU:
-		r.rd, r.imm = regNum(a[0]), uint64(int64(int32(a[1].(riscv64asm.Uimm).Imm<<12)))
+		r.rd, r.imm = regNum(args[0]), uint64(int64(int32(args[1].(riscv64asm.Uimm).Imm<<12)))
 	case cSYS:
 		r.imm = uint64((x >> 20) & 0xfff)
 	}
