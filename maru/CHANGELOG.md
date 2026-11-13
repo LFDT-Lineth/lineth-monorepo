@@ -3,6 +3,10 @@
 ### 🚀 Features
 
 - *(coordinator, maru, docker)* Let downstream images override the image labels and maru jar (#4393)
+
+### ⛓ Security
+
+- *(docker)* The maru, coordinator, transaction-exclusion-api, prover and prover-ray images now run as a dedicated non-root user (uid 1000) instead of root, and all base images are pinned by digest
 ## [1.5.0] - 2026-11-03
 
 ### 🚀 Features

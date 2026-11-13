@@ -1,12 +1,20 @@
-# BUILDER image
-FROM eclipse-temurin:25-jre-noble
+# FINAL image
+FROM eclipse-temurin:25-jre-noble@sha256:e3b6f7887a50f20d8f07abf279d8a81a5953fb398a9555bd9edd56b9bd15968c
 
 WORKDIR /opt/consensys/maru
 
-COPY --from=libs ./** ./
+# Run as a dedicated non-root user (uid 1000, same convention as the besu image).
+# Ubuntu noble ships an "ubuntu" user at uid 1000 — remove it first.
+RUN userdel ubuntu 2>/dev/null || true && rm -rf /home/ubuntu && \
+    adduser --uid 1000 --disabled-password --gecos "" --home /opt/consensys/maru maru && \
+    chown -R maru:maru /opt/consensys/maru
+
+COPY --from=libs --chown=maru:maru ./** ./
 # The glob lets downstream builds whose licenses context has no license files skip them
 # (scripts/docker/build-image.sh --no-license-check).
 COPY --from=licenses LICENSE-* /licenses/
+
+USER maru
 
 ARG LINETH_APP_JAR=/opt/consensys/maru/maru.jar
 ENV LINETH_APP_JAR=$LINETH_APP_JAR

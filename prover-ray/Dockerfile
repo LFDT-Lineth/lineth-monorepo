@@ -1,4 +1,8 @@
 # syntax=docker/dockerfile:1
+# kics-scan disable=965a08d7-ef86-4f14-8792-4a3b2098937e
+# Apt Get Install Pin Version Not Defined: apt packages are intentionally unpinned.
+# They track the digest-pinned debian base images; pinning would break the build
+# on base refresh for negligible security gain on top of --no-install-recommends.
 #
 # One prover-ray image for all modes; the mode is set per pipeline in the mounted
 # config (CONFIG_FILE), not on the command line.
@@ -17,7 +21,7 @@
 ########################################
 # Go builder: the static prover binary
 ########################################
-FROM docker.io/library/golang:1.27.1-bookworm AS go-builder
+FROM docker.io/library/golang:1.27.1-bookworm@sha256:8d48e12ec56735e9358640898b9d9b9fcca110612ed8a5567438c0a1baa24e66 AS go-builder
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -32,16 +36,20 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/prover ./cmd/prove
 ########################################
 # debian:bookworm = glibc 2.36, matching the debian:bookworm-slim final stage,
 # so the native runner is built on the same glibc it runs on.
-FROM docker.io/library/debian:bookworm AS zig-builder
+FROM docker.io/library/debian:bookworm@sha256:268fb24c39bca92d326dd83ea3abebe4a3f7751c804ffef23bb6d857dd343ff8 AS zig-builder
 ARG ZIG_VERSION=0.16.0
 # Override if 0.16.0 is not a tagged release (e.g. a nightly under /builds/).
+# When overriding ZIG_URL, override ZIG_SHA256 to match — the download is
+# verified against it (checksums: https://ziglang.org/download/index.json).
 ARG ZIG_URL=https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz
+ARG ZIG_SHA256=70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
         ca-certificates curl xz-utils git make build-essential python3 \
     && rm -rf /var/lib/apt/lists/*
-# Zig toolchain (pinned; see riscv-guests/l2_execution/build.zig.zon).
+# Zig toolchain (pinned version + verified checksum; see riscv-guests/l2_execution/build.zig.zon).
 RUN curl -fsSL "${ZIG_URL}" -o /tmp/zig.tar.xz \
+    && echo "${ZIG_SHA256}  /tmp/zig.tar.xz" | sha256sum -c - \
     && tar -xJf /tmp/zig.tar.xz -C /opt \
     && ln -s "/opt/zig-x86_64-linux-${ZIG_VERSION}/zig" /usr/local/bin/zig \
     && rm /tmp/zig.tar.xz
@@ -67,7 +75,7 @@ RUN make -C /riscv-guests/l2_execution fetch-host \
 # legacy prover). The native runner's crypto (Constantine) is linked statically,
 # so it only needs glibc from the base image.
 ########################################
-FROM docker.io/library/debian:bookworm-slim AS final
+FROM docker.io/library/debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc AS final
 ARG VERSION
 ARG VCS_REF
 ARG BUILD_DATE
@@ -84,6 +92,14 @@ COPY --from=licenses LICENSE-APACHE LICENSE-MIT /licenses/
 
 ENV PATH="/opt/linea/prover-ray:${PATH}"
 WORKDIR /opt/linea/prover-ray
+
+# Run as a dedicated non-root user (uid 1000). Volumes mounted at runtime
+# (e.g. /data, guests/) must be readable/writable by uid 1000 — chown them
+# on the host (1000:1000) before docker run.
+RUN useradd --uid 1000 --no-create-home --home-dir /opt/linea/prover-ray prover-ray \
+    && chown -R prover-ray:prover-ray /opt/linea/prover-ray
+
+USER prover-ray
 
 # Configuration is a TOML file. No default is baked in (fail loudly rather than
 # run a wrong config): mount one and point CONFIG_FILE at it. The CMD runs the

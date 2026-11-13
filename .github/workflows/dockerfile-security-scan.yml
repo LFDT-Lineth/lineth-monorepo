@@ -1,11 +1,14 @@
 name: Weekly Dockerfile Security Scan
 
-# Temporarily disabled. Do NOT re-enable until the KICS container image is
-# pinned by a verified digest — the upstream action pulls a mutable image tag
-# at build time, so pinning the action by commit SHA alone is not sufficient.
+# The KICS GitHub Action is intentionally NOT used: it builds/pulls a mutable
+# image tag at run time. Instead we run the KICS image directly, pinned by
+# digest. Bump the digest deliberately when upgrading KICS.
 
 on:
   workflow_dispatch:
+  schedule:
+    # Weekly, Tuesday 04:23 UTC (off the :00/:30 marks)
+    - cron: '23 4 * * 2'
 
 permissions:
   security-events: write
@@ -13,21 +16,25 @@ permissions:
 
 jobs:
   kics-scan:
-    name: KICS Dockerfile Scan (disabled)
+    name: KICS Dockerfile Scan
     runs-on: ubuntu-latest
-    if: false # Disabled — see header note
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Run KICS
-        uses: checkmarx/kics-github-action@05aa5eb70eede1355220f4ca5238d96b397e30a6 # v2.1.20
-        with:
-          path: '.'
-          platform_type: Dockerfile
-          output_formats: 'sarif'
-          output_path: kics-results
-          ignore_on_exit: results
+      - name: Run KICS (digest-pinned image)
+        # checkmarx/kics@sha256:49ccc... = kics:latest at pin time; bump deliberately.
+        run: |
+          docker run --rm -t \
+            -v "$GITHUB_WORKSPACE:/path" \
+            checkmarx/kics@sha256:49ccc54b6ae7f5d5fc95e96f8f95c18c57f3bba047ab611a03d80792bdff6757 \
+            scan \
+              --path /path \
+              --type Dockerfile \
+              --output-path /path/kics-results \
+              --report-formats sarif \
+              --ignore-on-exit results \
+              --ci --no-progress
 
       - name: Upload SARIF to GitHub Security
         if: ${{ !cancelled() && hashFiles('kics-results/results.sarif') != '' }}
@@ -36,4 +43,3 @@ jobs:
         with:
           sarif_file: kics-results/results.sarif
           category: kics-dockerfiles
-
