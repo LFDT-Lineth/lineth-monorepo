@@ -92,7 +92,7 @@ jobs:
     needs: [ run-test, run-e2e-tests ]
     if: ${{ always() && !cancelled() && (!inputs.run_e2e_test || needs.run-e2e-tests.outputs.tests_outcome == 'success') && (!inputs.run-test || needs.run-test.result == 'success') }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
-    environment: ${{ inputs.skip_docker_image_build_and_push && 'dockerhub-pull' || github.ref == 'refs/heads/main' && 'dockerhub-linea-besu-package' || 'dockerhub-approval' }}
+    environment: ${{ inputs.skip_docker_image_build_and_push && 'dockerhub-pull' || github.ref == 'refs/heads/main' && 'dockerhub-linea-besu-package' || 'dockerhub-linea-besu-package-approval' }}
     outputs:
       docker_tag: ${{ steps.build-plugins-and-assemble.outputs.dockertag }}
       docker_tag_with_suffix: ${{ steps.build-plugins-and-assemble.outputs.dockertag_with_suffix }}

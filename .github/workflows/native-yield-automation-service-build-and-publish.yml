@@ -53,7 +53,7 @@ concurrency:
 jobs:
   build-and-publish:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
-    environment: ${{ !inputs.push_image && 'dockerhub-pull' || github.ref == 'refs/heads/main' && 'dockerhub-linea-native-yield-automation-service' || 'dockerhub-approval' }}
+    environment: ${{ !inputs.push_image && 'dockerhub-pull' || github.ref == 'refs/heads/main' && 'dockerhub-linea-native-yield-automation-service' || 'dockerhub-linea-native-yield-automation-service-approval' }}
     name: Native yield automation service build
     env:
       COMMIT_TAG: ${{ inputs.commit_tag }}
