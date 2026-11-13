@@ -30,15 +30,9 @@
 //     analytically on the quotient coset and at the verifier's point.
 //  6. Marks the original scalar vanishing as reduced.
 //
-// The rewrite preserves sharing. It visits each distinct node once (see
-// [wiop.EditExpression]) and re-interns every rebuilt node through a
-// per-module structural cache seeded with the module's multi-valued
-// vanishings, so a lifted subtree reuses the pointer of any structurally
-// identical node already in the module — from a global constraint, or from
-// another lifted constraint, whatever its anchor. Without it, every lifted
-// leaf and compound would be a fresh allocation and the pointer-keyed caches
-// downstream (the expression compiler, the verifier-ray codegen walk) would
-// see a pure tree.
+// The rewrite visits each distinct node once (see [wiop.EditExpression]), so
+// it is linear and its output is a DAG. Registering the result interns it
+// against the module's other vanishings (see [wiop.Module.NewVanishingManual]).
 //
 // At row min the product evaluates to the original local predicate; at
 // every other row the Lagrange factor is zero. The new vanishing therefore
@@ -104,31 +98,11 @@ func Compile(sys *wiop.System) {
 
 	compCtx := sys.Context.Childf("local-vanishing")
 	selectors := make(map[lagrangeKey]*wiop.LagrangeSelector)
-	interners := make(map[int]*interner)
 
 	for _, w := range work {
-		in, ok := interners[w.mIdx]
-		if !ok {
-			in = seededInterner(w.m)
-			interners[w.mIdx] = in
-		}
 		ctx := compCtx.Childf("m%d-v%d", w.mIdx, w.vIdx)
-		reduce(ctx, w.m, w.mIdx, w.v, selectors, in)
+		reduce(ctx, w.m, w.mIdx, w.v, selectors)
 	}
-}
-
-// seededInterner returns an [interner] for m, seeded with the nodes of every
-// unreduced multi-valued vanishing already registered on it.
-func seededInterner(m *wiop.Module) *interner {
-	in := newInterner()
-	visited := make(map[wiop.Expression]wiop.Expression)
-	for _, v := range m.Vanishings {
-		if v.IsReduced() || !v.Expression.IsMultiValued() {
-			continue
-		}
-		in.seed(v.Expression, visited)
-	}
-	return in
 }
 
 // reduce performs the Lagrange × shifted-expression rewrite for a single
@@ -139,7 +113,6 @@ func reduce(
 	mIdx int,
 	v *wiop.Vanishing,
 	cache map[lagrangeKey]*wiop.LagrangeSelector,
-	in *interner,
 ) {
 	anchor, ok := minColumnPosition(v.Expression)
 	if !ok {
@@ -160,12 +133,12 @@ func reduce(
 		curr wiop.Expression, newChildren []wiop.Expression,
 	) wiop.Expression {
 		if cp, ok := curr.(*wiop.ColumnPosition); ok {
-			return in.intern(cp.Column.View().Shift(cp.Position - anchor))
+			return cp.Column.View().Shift(cp.Position - anchor)
 		}
-		return in.intern(wiop.DefaultConstruct(curr, newChildren))
+		return wiop.DefaultConstruct(curr, newChildren)
 	})
 
-	lifted := in.intern(wiop.Mul(shifted, in.intern(lagSel)))
+	lifted := wiop.Mul(shifted, lagSel)
 	// Register with no cancelled positions: the constraint must hold on every
 	// row. That is safe and intentional. The shifted sub-expression may read
 	// out-of-domain (wrap-around) values at rows other than `anchor`, but the
