@@ -27,7 +27,7 @@ const (
 
 // testSystem declares a system with one message-bus handle and the public
 // inputs of a RISCV-ZKC shard proof registered under their tags, without
-// compiling it: the mock merger only reads the public inputs by tag.
+// compiling it: the mergers only read the public inputs by tag.
 func testSystem(seeded bool) *wiop.System {
 	sys := wiop.NewSystemf("conglomeration-test")
 	r0 := sys.NewRound()

@@ -8,7 +8,10 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/conglomeration"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/verifier"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	minimal_elf "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/minimal-elf"
 	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
@@ -16,8 +19,9 @@ import (
 )
 
 // shardedTestCore builds a Core with the all-in-one minimal ELF as its only
-// guest and the given shard size, and returns the guest's Program ID. The guest
-// runs ~300 instructions, so a shard size of 100 yields 3 shards.
+// guest and the given shard size, merging through the recursion merger, and
+// returns the guest's Program ID. The guest runs ~300 instructions, so a shard
+// size of 100 yields 3 shards.
 func shardedTestCore(t *testing.T, shardSize uint64) (*Core, [32]byte) {
 	t.Helper()
 	binF, err := embedded.CompiledBinaryFile()
@@ -33,7 +37,8 @@ func shardedTestCore(t *testing.T, shardSize uint64) (*Core, [32]byte) {
 
 	c, err := New(Config{CircuitBinPath: binPath, GuestsDir: dir, ShardSize: shardSize})
 	require.NoError(t, err)
-	c.merger = conglomeration.NewMockMerger(c.sys)
+	c.merger, err = conglomeration.NewRecursionMerger(c.sys, verifier.NewMock, wioptest.TestingCompileOptions()...)
+	require.NoError(t, err)
 	return c, id
 }
 
@@ -62,7 +67,7 @@ func TestRunProve_ShardIndexes(t *testing.T) {
 		require.Equal(t, uint(3), numShards, "the trace should have 3 shards")
 		require.Equal(t, []uint{0, 1, 2}, node.Coverage, "the root should cover every shard")
 		require.Equal(t, conglomeration.Merged, node.Kind, "the root should be a merged node")
-		require.Equal(t, wiop.Proof{}, node.Proof, "a mock merge carries no proof")
+		requireRoot(t, c, node)
 	})
 
 	t.Run("strict subset", func(t *testing.T) {
@@ -78,6 +83,34 @@ func TestRunProve_ShardIndexes(t *testing.T) {
 		_, _, err := runProveShards(t, ctx, c, id, 3)
 		require.ErrorContains(t, err, "shard index 3 out of range, the trace has 3 shards")
 	})
+}
+
+// TestRunProve_DeepTree proves a trace of more than RecursionTreeArity shards
+// over the real shard layout, so that the reducer merges in the background
+// and the tree has an internal level: leaf nodes merged by the internal
+// program under the root.
+func TestRunProve_DeepTree(t *testing.T) {
+	c, id := shardedTestCore(t, 40)
+	node, numShards, err := runProveShards(t, context.Background(), c, id)
+	require.NoError(t, err)
+	require.Greater(t, numShards, uint(conglomeration.RecursionTreeArity), "the trace should need more than one leaf merge")
+	coverage := make([]uint, numShards)
+	for i := range coverage {
+		coverage[i] = uint(i)
+	}
+	require.Equal(t, coverage, node.Coverage, "the root should cover every shard")
+	requireRoot(t, c, node)
+}
+
+// requireRoot checks that node is a root of c's recursion merger: its proof
+// verifies and every bus handle balances.
+func requireRoot(t *testing.T, c *Core, node conglomeration.Node) {
+	t.Helper()
+	require.NoError(t, c.merger.(*conglomeration.RecursionMerger).VerifyRoot(node), "the root proof should verify")
+	for h, p := range messagebus.GetProducts(c.sys, node.Pub) {
+		diff := p.Sub(field.ElemOne())
+		require.True(t, diff.IsZero(), "bus handle %d should balance at the root", h)
+	}
 }
 
 // TestRunProve_Sharded_NoMerger_NotImplemented checks that a sharded trace
