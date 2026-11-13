@@ -82,27 +82,6 @@ type schemaScanner struct {
 	ColumnIDs map[string]wiop.ObjectID
 	// TraceRound is the round of every column outside of [programModule].
 	TraceRound int
-	// ExprCache interns the expression nodes built by [castExpression], per
-	// module, so that structurally identical subexpressions share one pointer
-	// instead of being re-allocated at every occurrence. See [intern].
-	//
-	// This is a fallback for zkc not deduplicating its own [air.Term] DAG; it
-	// is the designated removal point once zkc interns natively (see
-	// LFDT-Lineth/lineth-monorepo#4038). The map is used for lookup only and
-	// is never iterated, so it does not affect output ordering.
-	//
-	// Removing this structural fallback alone does not complete the native-zkc
-	// migration. ExprCache dedupes the *output*, but every traversal of the
-	// *input* still descends into each occurrence of a term, so a shared
-	// [air.Term] DAG would be expanded as a tree, which is exponential in DAG
-	// depth (a chain of 19 nested Add(t, t) costs ~786K allocations per
-	// conversion). Before relying on native sharing:
-	//   - [castExpression] must keep a per-module map[air.Term]wiop.Expression,
-	//     keyed on the original n-ary term and checked before descending;
-	//   - [collectFromTerm] must memoise visited terms in the same way;
-	//   - the Lisp rendering used to order constraints in [scanConstraints]
-	//     must not expand shared subterms (or must use another ordering key).
-	ExprCache map[schema.ModuleId]map[exprKey]wiop.Expression
 }
 
 // Define registers the arithmetization from a corset air.Schema and trace limits
@@ -129,7 +108,6 @@ func Define(sys *wiop.System, schema *air.Schema[koalabear.Element], traceRound 
 		ModulesIDsWiop: map[string]int{},
 		ColumnIDs:      map[string]wiop.ObjectID{},
 		TraceRound:     traceRound,
-		ExprCache:      newExprCache(),
 	}
 
 	scanner.scanColumns()
@@ -361,7 +339,7 @@ func (s *schemaScanner) collectReferencedColumns() map[string]struct{} {
 //
 // It does not memoise visited terms, so a shared [air.Term] is re-walked at
 // every occurrence. That is fine for the tree-shaped terms zkc emits today;
-// see [schemaScanner.ExprCache] for what native zkc interning requires.
+// see [schemaScanner.castExpression] for what native zkc interning requires.
 func (s *schemaScanner) collectFromTerm(
 	modID schema.ModuleId,
 	term air.Term[koalabear.Element],
@@ -430,7 +408,7 @@ func (s *schemaScanner) scanConstraints() {
 
 	// Pre-compute Lisp names to avoid O(n²) serialisation inside the comparator.
 	// The rendering expands shared subterms, so it would blow up on a native
-	// zkc DAG; see [schemaScanner.ExprCache].
+	// zkc DAG; see [schemaScanner.castExpression].
 	names := make([]string, len(corsetCSS))
 	for i, cs := range corsetCSS {
 		names[i] = cs.Lisp(s.Schema).String(false)
@@ -556,18 +534,14 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 		// and the domain is the position of the vanishing vector.
 		position := cs.Domain.Unwrap()
 
-		// The rewrite allocates fresh nodes throughout — [wiop.Column.At] for
-		// every leaf, [wiop.DefaultConstruct] for every compound — so the
-		// result is re-interned to let local constraints pinned at the same
-		// position share their lifted subexpressions. [wiop.EditExpression]
-		// visits bottom-up, which is the order [schemaScanner.intern] requires.
+		// The rewrite allocates fresh nodes; registering interns them.
 		wExpr = wiop.EditExpression(wExpr,
 			func(e wiop.Expression, children []wiop.Expression) wiop.Expression {
 				switch e := e.(type) {
 				case *wiop.ColumnView:
-					return s.intern(cs.Context, e.Column.At(position+e.ShiftingOffset))
+					return e.Column.At(position + e.ShiftingOffset)
 				default:
-					return s.intern(cs.Context, wiop.DefaultConstruct(e, children))
+					return wiop.DefaultConstruct(e, children)
 				}
 			})
 
@@ -581,19 +555,15 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 // castExpression turns a corset expression into a [symbolic.Expression] whose
 // variables are [wiop.System] components.
 //
-// Every node it returns is interned per module (see [schemaScanner.intern]):
-// zkc hands out a tree in which structurally identical subexpressions are
-// distinct [air.Term] values, and allocating a fresh [wiop.Expression] for
-// each occurrence would starve every pointer-keyed cache downstream. Leaves
-// are interned too, and necessarily so: [wiop.Column.View] and
-// [wiop.ColumnView.Shift] allocate a new pointer on every call, so without
-// leaf interning no compound key could ever match.
+// The result is a tree, as zkc's input is; [wiop.Module.NewVanishing]
+// interns it when it is registered.
 //
-// Interning dedupes the output only: the recursion still descends into every
-// occurrence of an input term before the lookup. This is linear for today's
-// tree-shaped input but exponential in depth for a shared [air.Term] DAG, so
-// native zkc interning needs an input-term memo here (see
-// [schemaScanner.ExprCache]).
+// The recursion descends into every occurrence of an input term, which is
+// exponential in depth on a shared [air.Term] DAG. If zkc starts sharing terms
+// (LFDT-Lineth/lineth-monorepo#4038), castExpression and
+// [schemaScanner.collectFromTerm] need a per-module memo keyed on the n-ary
+// air.Term, and [schemaScanner.scanConstraints] an ordering key that does not
+// expand shared subterms.
 func (s *schemaScanner) castExpression(context schema.ModuleId, expr air.Term[koalabear.Element]) wiop.Expression {
 
 	switch e := expr.(type) {
@@ -604,13 +574,13 @@ func (s *schemaScanner) castExpression(context schema.ModuleId, expr air.Term[ko
 		for i := range args {
 			args[i] = s.castExpression(context, e.Args[i])
 		}
-		return s.internedSum(context, args...)
+		return wiop.Sum(args...)
 
 	case *air.Sub[koalabear.Element]:
 
 		res := s.castExpression(context, e.Args[0])
 		for i := 1; i < len(e.Args); i++ {
-			res = s.intern(context, wiop.Sub(res, s.castExpression(context, e.Args[i])))
+			res = wiop.Sub(res, s.castExpression(context, e.Args[i]))
 		}
 		return res
 
@@ -620,7 +590,7 @@ func (s *schemaScanner) castExpression(context schema.ModuleId, expr air.Term[ko
 		for i := range args {
 			args[i] = s.castExpression(context, e.Args[i])
 		}
-		return s.internedProduct(context, args...)
+		return wiop.Product(args...)
 
 	case *air.Constant[koalabear.Element]:
 		// @alex: this bit is a bit hacky, because corset's koalabear.Element
@@ -628,11 +598,11 @@ func (s *schemaScanner) castExpression(context schema.ModuleId, expr air.Term[ko
 		// layout. Ideally, both dependencies should converge toward using the
 		// exact same implementation. This would remove this kind of hacky
 		// conversions.
-		return s.intern(context, wiop.NewConstantField(field.Element(e.Value)))
+		return wiop.NewConstantField(field.Element(e.Value))
 
 	case *air.ColumnAccess[koalabear.Element]:
 
-		return s.intern(context, s.compColumnByCorsetColumnAccess(context, e))
+		return s.compColumnByCorsetColumnAccess(context, e)
 
 	default:
 		eStr := fmt.Sprintf("%v", e)
