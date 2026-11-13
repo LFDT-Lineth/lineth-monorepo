@@ -12,7 +12,7 @@ const ef_blocks = @import("ef_blocks");
 const ef_fixtures = @import("ef_fixtures");
 const lineth_da = @import("lineth_da");
 const rollup = @import("rollup");
-const support = @import("support");
+const sample_input = @import("sample_input");
 const zstd_encoder = @import("zstd_encoder");
 
 const blob_payload = lineth_da.encoding.blob_payload;
@@ -490,7 +490,7 @@ pub fn build(a: Allocator, conflations_in: []const Conflation, options: Options)
     const witnesses = try a.alloc(rollup_ssz.ConflationWitness, conflations_in.len);
     const proofs = try a.alloc(l2_execution_proof.VerifiableL2ExecutionProof, conflations_in.len);
     for (conflations_in, witnesses, proofs, 0..) |conflation, *witness, *proof, index| {
-        witness.* = try support.conflationOf(a, conflation.block_rlps);
+        witness.* = try sample_input.conflationOf(a, conflation.block_rlps);
         proof.* = proofOf(conflation, index, if (index < options.proofs.len) options.proofs[index] else .{}, options.dynamic_chain_config_hash);
     }
 
