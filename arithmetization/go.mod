@@ -2,7 +2,10 @@ module github.com/LFDT-Lineth/lineth-monorepo/arithmetization
 
 go 1.27.1
 
-require github.com/LFDT-Lineth/zkc v1.2.36
+require (
+	github.com/LFDT-Lineth/zkc v1.2.36
+	golang.org/x/arch v0.28.0
+)
 
 require (
 	github.com/bits-and-blooms/bitset v1.25.0 // indirect
