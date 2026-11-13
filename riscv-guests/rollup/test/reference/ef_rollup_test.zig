@@ -152,6 +152,7 @@ fn expectRejected(a: Allocator, request: *scenario.Request, rule: Rule) !void {
         },
         .chunk_content => flipChunkContent(request.chunks[0]),
     }
+    try scenario.prove(a, request.proofs);
     try std.testing.expectError(expected, rollup.rollup.run(a, request.input()));
 
     @memcpy(request.proofs, proofs);
