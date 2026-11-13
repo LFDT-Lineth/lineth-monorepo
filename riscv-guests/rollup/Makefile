@@ -8,7 +8,7 @@
 # run itself (ELF->JSON via elf_to_json_gen, then zkc) is owned by
 # arithmetization/src/test/Makefile; `exec`/`debug` build that ELF and hand it over.
 
-.PHONY: fetch test clean compile exec debug require-input fetch-linea-blocks
+.PHONY: fetch test clean compile exec debug require-input zkc-smoke-exec zkc-smoke-external fetch-linea-blocks
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -33,12 +33,18 @@ BIN  := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 include $(MAKEFILE_DIR)../build_common/release.mk
 include $(MAKEFILE_DIR)../build_common/zkevm_fixtures.mk
 
-# Sample fixture input used by exec/debug. The default is generated fresh by
+# Sample fixture input used by exec/debug and the zkc smoke. The default is generated fresh by
 # `require-input` via `zig build gen-fixture` (this package's own encodeInput over a valid request
-# of one conflation of real blocks in one blob), so it always matches the current wire format.
-# Pass your own INPUT=path/to/file to use something else instead.
-GENERATED_INPUT := $(MAKEFILE_DIR)zig-out/sample.request.ssz
+# of one conflation of real blocks in one blob), together with the output the native statement
+# computes for it, so both always match the current wire format and statement. Pass your own
+# INPUT=path/to/file to use something else instead.
+GENERATED_INPUT  := $(MAKEFILE_DIR)zig-out/sample.request.ssz
+GENERATED_OUTPUT := $(MAKEFILE_DIR)zig-out/sample.output.bin
 INPUT ?= $(GENERATED_INPUT)
+
+# The output the guest has to print for INPUT, and the guest ELF the zkc smoke runs.
+EXPECTED_OUTPUT ?= $(GENERATED_OUTPUT)
+ELF ?= $(BIN)
 
 # Flags forwarded to `zkc exec` by exec. Quiet (no per-instruction printf) is zkc's default unless
 # -v/-vv/-vvv raise verbosity.
@@ -85,13 +91,13 @@ compile: $(DEVMODE_SYSTEM)
 		echo "\nSkipping objdump: riscv64-unknown-elf-objdump is not on PATH"; \
 	fi
 
-# Regenerates the default INPUT via `zig build gen-fixture` (a no-op for a user-supplied INPUT=
-# override), then fails early on a still-missing/empty INPUT instead of building then erroring in
-# the converter.
+# Regenerates the default INPUT and its expected output via `zig build gen-fixture` (a no-op for a
+# user-supplied INPUT= override), then fails early on a still-missing/empty INPUT instead of
+# building then erroring in the converter.
 require-input: $(DEVMODE_SYSTEM)
 	@if [ "$(INPUT)" = "$(GENERATED_INPUT)" ]; then \
 		mkdir -p $(dir $(GENERATED_INPUT)); \
-		$(ZIG) build gen-fixture $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) -- $(GENERATED_INPUT); \
+		$(ZIG) build gen-fixture $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) -- $(GENERATED_INPUT) $(GENERATED_OUTPUT); \
 	fi
 	@[ -n "$(INPUT)" ] && [ -s "$(INPUT)" ] || { echo "INPUT missing or empty: '$(INPUT)' (set INPUT=path/to/input.ssz)"; exit 1; }
 
@@ -100,3 +106,18 @@ exec: require-input compile
 
 debug: require-input compile
 	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-debug BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)"
+
+# Compile the guest, then run it under zkc on INPUT and compare its output with the native one.
+zkc-smoke-exec: require-input compile
+	$(MAKE) zkc-smoke-external ELF="$(BIN)" INPUT="$(INPUT)" ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"
+
+# The same for a prebuilt ELF: the guest output printed by zkc has to equal EXPECTED_OUTPUT byte for byte.
+zkc-smoke-external:
+	@[ -s "$(ELF)" ] || { echo "ELF missing or empty: '$(ELF)' (set ELF=path/to/rollup_guest)"; exit 1; }
+	@[ -s "$(INPUT)" ] && [ -s "$(EXPECTED_OUTPUT)" ] || { echo "INPUT or EXPECTED_OUTPUT missing or empty: '$(INPUT)', '$(EXPECTED_OUTPUT)'"; exit 1; }
+	$(ZIG) build zkc-smoke $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -- \
+		--elf "$(abspath $(ELF))" \
+		--input "$(abspath $(INPUT))" \
+		--expected "$(abspath $(EXPECTED_OUTPUT))" \
+		--makefile "$(abspath $(ARITHMETIZATION_TESTING_MAKEFILE))" \
+		$(if $(ZKC_EXEC_FLAGS),--zkc-flags "$(ZKC_EXEC_FLAGS)")
