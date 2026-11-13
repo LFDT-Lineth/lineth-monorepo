@@ -161,10 +161,8 @@ func BuildVanishingSystem(sys *wiop.System, routing CoinRouting) (VanishingSyste
 				views[viewKey{id: view.Column.Context.ID, shift: view.ShiftingOffset}] = i
 			}
 
-			// Expression interning is per-module: indices in module.Expressions
-			// are module-local, so a node may only be shared with other nodes of
-			// the same module.
-			seen := make(map[exprKey]int)
+			// Indices are module-local, so nodes are shared within a module only.
+			nodes := exprNodes{leaves: make(map[leafKey]int), memo: make(map[wiop.Expression]int)}
 
 			out.TotalWitnessClaims += len(verifier.WitnessClaims)
 			for _, bucket := range verifier.Buckets {
@@ -175,7 +173,7 @@ func BuildVanishingSystem(sys *wiop.System, routing CoinRouting) (VanishingSyste
 				out.TotalQuotientClaims += len(bucket.QuotientClaims)
 
 				for _, v := range bucket.Vanishings {
-					exprIdx, err := appendExpr(&module, views, seen, routing, v.Expression)
+					exprIdx, err := appendExpr(&module, views, &nodes, routing, v.Expression)
 					if err != nil {
 						return VanishingSystem{}, err
 					}
@@ -227,35 +225,33 @@ func flatCoinIndex(routing CoinRouting, coin *wiop.CoinField) (int, error) {
 	return idx, nil
 }
 
-// exprKey identifies an expression node by the value it computes, so two nodes
-// with the same key are interchangeable. Operands are named by their already-
-// assigned indices, which is enough to make the key canonical: appendExpr
-// emits in post-order, so an operand is interned before the node that
-// references it, and equal operand subtrees have therefore already collapsed
-// onto one index.
-//
-// The struct is comparable (no slices), so it can be a map key directly.
-// `a` and `b` hold operand indices, unused ones staying -1 to keep a unary
-// node distinct from a binary one that happens to reference index 0.
-type exprKey struct {
-	kind     ExprKind
-	operator Operator
-	a, b     int
-	round    int
-	index    int
-	constant string
+// exprNodes holds the per-module state of appendExpr.
+type exprNodes struct {
+	// memo maps each emitted wiop.Expression to its index. prover-ray interns
+	// every vanishing (wiop.Module.NewVanishing), so one node per pointer is
+	// one node per value, and each shared node is walked once.
+	memo map[wiop.Expression]int
+	// leaves merges leaves of equal value that are separate wiop objects: a
+	// vector and a scalar constant, which prover-ray keeps apart.
+	leaves map[leafKey]int
 }
 
-func makeExprKey(node ExprNode, a, b int) exprKey {
-	k := exprKey{kind: node.Kind, a: a, b: b}
+// leafKey identifies a leaf node by the value it reads; only the fields
+// relevant to kind are set.
+type leafKey struct {
+	kind     ExprKind
+	index    int
+	round    int
+	constant field.Element
+}
+
+func makeLeafKey(node ExprNode) leafKey {
+	k := leafKey{kind: node.Kind}
 	switch node.Kind {
 	case ExprColumnClaim:
 		k.index = node.ColumnClaim
 	case ExprConstant:
-		// field.Element is not comparable in general; its decimal string is.
-		k.constant = node.Constant.String()
-	case ExprOp:
-		k.operator = node.Operator
+		k.constant = node.Constant
 	case ExprCellValue:
 		k.round, k.index = node.Cell.Round, node.Cell.Index
 	case ExprCoinValue:
@@ -266,42 +262,49 @@ func makeExprKey(node ExprNode, a, b int) exprKey {
 	return k
 }
 
-// intern appends node unless an identical one already exists, returning the
-// index either way. This turns each module's expression array from a tree
-// (every occurrence of a subexpression re-emitted) into a DAG (one node per
-// distinct value, referenced by many parents).
-//
-// Sharing is sound because a node denotes a pure function of the proof's
-// claims and coins: two structurally identical nodes always evaluate to the
-// same value within one module. Indices stay module-local, and the post-order
-// invariant that operands precede their parent (relied on by vanishing.zig's
-// evalExpr for termination) is preserved, since an interned operand's index is
-// always one already assigned.
-func intern(module *VanishingModule, seen map[exprKey]int, node ExprNode, a, b int) int {
-	key := makeExprKey(node, a, b)
-	if idx, ok := seen[key]; ok {
+// appendLeaf appends a leaf node unless one reading the same value exists,
+// returning its index either way.
+func appendLeaf(module *VanishingModule, nodes *exprNodes, node ExprNode) int {
+	key := makeLeafKey(node)
+	if idx, ok := nodes.leaves[key]; ok {
 		return idx
 	}
 	module.Expressions = append(module.Expressions, node)
 	idx := len(module.Expressions) - 1
-	seen[key] = idx
+	nodes.leaves[key] = idx
 	return idx
 }
 
-func appendExpr(module *VanishingModule, views map[viewKey]int, seen map[exprKey]int, routing CoinRouting, expr wiop.Expression) (int, error) {
+// appendExpr returns the index of expr in module.Expressions, emitting it and
+// its operands in post-order on first visit. Operands precede their parent, as
+// vanishing.zig's evalExpr requires.
+func appendExpr(module *VanishingModule, views map[viewKey]int, nodes *exprNodes, routing CoinRouting, expr wiop.Expression) (int, error) {
+	if idx, ok := nodes.memo[expr]; ok {
+		return idx, nil
+	}
+	idx, err := emitExpr(module, views, nodes, routing, expr)
+	if err != nil {
+		return 0, err
+	}
+	nodes.memo[expr] = idx
+	return idx, nil
+}
+
+// emitExpr emits expr's node, after appending its operands via appendExpr.
+func emitExpr(module *VanishingModule, views map[viewKey]int, nodes *exprNodes, routing CoinRouting, expr wiop.Expression) (int, error) {
 	switch e := expr.(type) {
 	case *wiop.ColumnView:
 		idx, ok := views[viewKey{id: e.Column.Context.ID, shift: e.ShiftingOffset}]
 		if !ok {
 			return 0, fmt.Errorf("column view %s shift %d was not exported as a witness claim", e.Column.Context.Path(), e.ShiftingOffset)
 		}
-		return intern(module, seen, ExprNode{Kind: ExprColumnClaim, ColumnClaim: idx, ColumnSourceName: e.Column.Context.Label}, -1, -1), nil
+		return appendLeaf(module, nodes, ExprNode{Kind: ExprColumnClaim, ColumnClaim: idx, ColumnSourceName: e.Column.Context.Label}), nil
 	case *wiop.Constant:
-		return intern(module, seen, ExprNode{Kind: ExprConstant, Constant: e.Value}, -1, -1), nil
+		return appendLeaf(module, nodes, ExprNode{Kind: ExprConstant, Constant: e.Value}), nil
 	case *wiop.ArithmeticOperation:
 		operands := make([]int, len(e.Operands))
 		for i, operand := range e.Operands {
-			idx, err := appendExpr(module, views, seen, routing, operand)
+			idx, err := appendExpr(module, views, nodes, routing, operand)
 			if err != nil {
 				return 0, err
 			}
@@ -311,37 +314,31 @@ func appendExpr(module *VanishingModule, views map[viewKey]int, seen map[exprKey
 		if err != nil {
 			return 0, err
 		}
-		a, b := -1, -1
-		if len(operands) > 0 {
-			a = operands[0]
-		}
-		if len(operands) > 1 {
-			b = operands[1]
-		}
-		return intern(module, seen, ExprNode{Kind: ExprOp, Operator: op, Operands: operands}, a, b), nil
+		module.Expressions = append(module.Expressions, ExprNode{Kind: ExprOp, Operator: op, Operands: operands})
+		return len(module.Expressions) - 1, nil
 	case *wiop.Cell:
-		return intern(module, seen, ExprNode{
+		return appendLeaf(module, nodes, ExprNode{
 			Kind: ExprCellValue,
 			Cell: ScalarRef{
 				Round:      e.Context.ID.Slot(),
 				Index:      e.Context.ID.Position(),
 				SourceName: e.Context.Label,
 			},
-		}, -1, -1), nil
+		}), nil
 	case *wiop.CoinField:
 		flatIdx, err := flatCoinIndex(routing, e)
 		if err != nil {
 			return 0, fmt.Errorf("coin %q: %w", e.Context.Path(), err)
 		}
-		return intern(module, seen, ExprNode{
+		return appendLeaf(module, nodes, ExprNode{
 			Kind: ExprCoinValue,
 			Coin: ScalarRef{
 				FlatIndex:  flatIdx,
 				SourceName: e.Context.Label,
 			},
-		}, -1, -1), nil
+		}), nil
 	case *wiop.LagrangeSelector:
-		return intern(module, seen, ExprNode{Kind: ExprLagrangeSelector, SelectorPosition: e.Position}, -1, -1), nil
+		return appendLeaf(module, nodes, ExprNode{Kind: ExprLagrangeSelector, SelectorPosition: e.Position}), nil
 	default:
 		return 0, &UnsupportedExpressionError{Type: fmt.Sprintf("%T", expr)}
 	}
