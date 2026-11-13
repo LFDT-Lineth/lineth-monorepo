@@ -3,6 +3,7 @@ name: "Reusable: Run E2E Tests"
 permissions:
   contents: read
   actions: read
+  id-token: write
 
 on:
   workflow_dispatch:
@@ -95,11 +96,6 @@ on:
     outputs:
       tests_outcome:
         value: ${{ jobs.run-e2e-tests.outputs.tests_outcome }}
-    secrets:
-      DOCKERHUB_USERNAME:
-        required: false
-      DOCKERHUB_TOKEN:
-        required: false
 
 jobs:
   # Required job
@@ -110,6 +106,7 @@ jobs:
     outputs:
       tests_outcome: ${{ steps.run-e2e-tests.outputs.tests_outcome }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
+    environment: dockerhub-pull
     timeout-minutes: ${{ inputs.stack == 'riscv' && 75 || 360 }}
     steps:
       - name: Checkout
@@ -131,5 +128,4 @@ jobs:
           e2e-tests-with-ssh: ${{ inputs.e2e-tests-with-ssh }}
           e2e-tests-logs-dump: ${{ inputs.e2e-tests-logs-dump }}
           e2e-tests-containers-list: ${{ inputs.e2e-tests-containers-list }}
-          dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
-          dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}
+          dockerhub_oidc_connection_id: ${{ github.event.pull_request.head.repo.fork != true && vars.DOCKERHUB_OIDC_CONNECTIONID_PULL || '' }}

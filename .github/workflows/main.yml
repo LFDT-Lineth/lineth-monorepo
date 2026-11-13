@@ -294,6 +294,10 @@ jobs:
     uses: ./.github/workflows/prepare-linea-besu-maven.yml
 
   testing:
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
     needs: [filter-commit-changes, compute-commit-tags, prepare-linea-besu-maven]
     # !cancelled() (not always()): run on need failure/skip, but not after a
     # concurrency cancel supersedes this run.
@@ -341,6 +345,11 @@ jobs:
           echo "Build and e2e test environment deployed"
 
   docker-build:
+    permissions:
+      contents: read
+      actions: read
+      packages: write
+      id-token: write
     needs:
       [
         filter-commit-changes,
@@ -370,6 +379,10 @@ jobs:
     secrets: inherit
 
   run-e2e-tests:
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
     needs:
       [
         compute-commit-tags,
@@ -393,6 +406,10 @@ jobs:
 
   # Not a required check. Prover-ray/guest changes run dev-zkvm with prover-ray built from this commit.
   run-riscv-e2e-tests:
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
     needs:
       [
         compute-commit-tags,
