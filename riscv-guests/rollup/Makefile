@@ -35,11 +35,9 @@ include $(MAKEFILE_DIR)../build_common/zkevm_fixtures.mk
 
 # Sample fixture input used by exec/debug. The default is generated fresh by
 # `require-input` via `zig build gen-fixture` (this package's own encodeInput over a valid request
-# of one conflation of real blocks in one blob), together with the output the native statement
-# computes for it, so both always match the current wire format and statement. Pass your own
-# INPUT=path/to/file to use something else instead.
-GENERATED_INPUT  := $(MAKEFILE_DIR)zig-out/sample.request.ssz
-GENERATED_OUTPUT := $(MAKEFILE_DIR)zig-out/sample.output.bin
+# of one conflation of real blocks in one blob), so it always matches the current wire format.
+# Pass your own INPUT=path/to/file to use something else instead.
+GENERATED_INPUT := $(MAKEFILE_DIR)zig-out/sample.request.ssz
 INPUT ?= $(GENERATED_INPUT)
 
 # Flags forwarded to `zkc exec` by exec. Quiet (no per-instruction printf) is zkc's default unless
@@ -71,13 +69,13 @@ compile:
 		echo "\nSkipping objdump: riscv64-unknown-elf-objdump is not on PATH"; \
 	fi
 
-# Regenerates the default INPUT and its expected output via `zig build gen-fixture` (a no-op for a
-# user-supplied INPUT= override), then fails early on a still-missing/empty INPUT instead of
-# building then erroring in the converter.
+# Regenerates the default INPUT via `zig build gen-fixture` (a no-op for a user-supplied INPUT=
+# override), then fails early on a still-missing/empty INPUT instead of building then erroring in
+# the converter.
 require-input: fetch-zkevm-fixtures
 	@if [ "$(INPUT)" = "$(GENERATED_INPUT)" ]; then \
 		mkdir -p $(dir $(GENERATED_INPUT)); \
-		$(ZIG) build gen-fixture $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) -- "$(ZKEVM_FIXTURES_DIR)/blockchain_tests/for_amsterdam" $(GENERATED_INPUT) $(GENERATED_OUTPUT); \
+		$(ZIG) build gen-fixture $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) -- "$(ZKEVM_FIXTURES_DIR)/blockchain_tests/for_amsterdam" $(GENERATED_INPUT); \
 	fi
 	@[ -n "$(INPUT)" ] && [ -s "$(INPUT)" ] || { echo "INPUT missing or empty: '$(INPUT)' (set INPUT=path/to/input.ssz)"; exit 1; }
 

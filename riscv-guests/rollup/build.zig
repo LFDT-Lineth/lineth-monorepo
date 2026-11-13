@@ -161,8 +161,8 @@ const Host = struct {
     }
 };
 
-/// Every `tools/*.zig` executable. `gen_fixture` runs the statement and links the host crypto
-/// provider.
+/// Every `tools/*.zig` executable. `gen_fixture` builds the sample request and links the host
+/// crypto provider.
 fn addHostTools(b: *std.Build, host: Host, crypto: common.HostCrypto) Tools {
     const tools = common.addTools(b, host.native, .{});
     crypto.link(tools.get("gen_fixture").?);
@@ -188,5 +188,5 @@ fn addHostTests(b: *std.Build, options: Options, unit: Host, crypto: common.Host
 fn addFixtureStep(b: *std.Build, tools: Tools) void {
     const gen_fixture = b.addRunArtifact(tools.get("gen_fixture").?);
     if (b.args) |args| gen_fixture.addArgs(args);
-    b.step("gen-fixture", "Write a sample RollupProofPrivateInput and its expected output to the paths after `--`").dependOn(&gen_fixture.step);
+    b.step("gen-fixture", "Write a sample RollupProofPrivateInput to the path after `--`").dependOn(&gen_fixture.step);
 }
