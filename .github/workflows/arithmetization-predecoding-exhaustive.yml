@@ -1,0 +1,44 @@
+name: Predecoding exhaustive decoder check
+
+# Decodes all 2^32 words with the Go decoder and checks every record against
+# riscv-opcodes and constants.zkc (TestDecodeAllWords). Runs only when the
+# decoder, the constants it numbers against, or this workflow change.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'arithmetization/gopkg/predecoding/**'
+      - 'arithmetization/src/main/common/constants.zkc'
+      - 'arithmetization/go.mod'
+      - '.github/workflows/arithmetization-predecoding-exhaustive.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'arithmetization/gopkg/predecoding/**'
+      - 'arithmetization/src/main/common/constants.zkc'
+      - 'arithmetization/go.mod'
+      - '.github/workflows/arithmetization-predecoding-exhaustive.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  decode-all-words:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: arithmetization/go.mod
+          cache-dependency-path: arithmetization/go.sum
+
+      - name: Run predecoding tests (including all 2^32 words)
+        run: go test ./gopkg/predecoding/... -timeout 50m
+        working-directory: arithmetization
