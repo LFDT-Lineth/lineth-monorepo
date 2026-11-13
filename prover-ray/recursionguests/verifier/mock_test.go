@@ -29,10 +29,9 @@ func stubSystem(key field.Octuplet) *wiop.System {
 }
 
 // TestMock checks that a program verifying one mock proof accepts the cells
-// the mock assigns, rejects a proof of another system, a public input, a
-// commitment or a verdict changed after the fact, and checks nothing for an
-// inactive proof; and that Assign fails a system of another shape, the Go
-// verification and the shape checks.
+// the mock assigns and rejects a proof of another system, a public input, a
+// commitment or a verdict changed after the fact; and that Assign fails a
+// system of another shape, the Go verification and the shape checks.
 func TestMock(t *testing.T) {
 	key := field.Octuplet{field.NewElement(7)}
 	sys := stubSystem(key)
@@ -40,12 +39,11 @@ func TestMock(t *testing.T) {
 	require.NoError(t, err)
 	kinds := []int{recursion.KindScalar, recursion.KindE6, recursion.KindScalar}
 
-	// The program: an active flag, a proof, verified under the key as a
-	// constant; the public inputs are published.
+	// The program: a proof, verified under the key as a constant; the public
+	// inputs are published.
 	m := &recursion.Machine{}
-	active := m.InputScalar()
 	proof := v.Allocate(m)
-	pubs := v.Define(m, active, m.Const(recursion.Cell(key)), proof)
+	pubs := v.Define(m, m.Const(recursion.Cell(key)), proof)
 	require.Len(t, pubs, 3)
 	for pos, kind := range kinds {
 		m.Public(pubs[pos], kind, "Out", pos)
@@ -61,8 +59,8 @@ func TestMock(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, cells, len(proof))
 
-	prove := func(active field.Element, cells []recursion.Cell) error {
-		run, err := p.Execute(append([]recursion.Cell{recursion.ScalarCell(active)}, cells...))
+	prove := func(cells []recursion.Cell) error {
+		run, err := p.Execute(cells)
 		if err != nil {
 			return err
 		}
@@ -73,22 +71,21 @@ func TestMock(t *testing.T) {
 		require.Len(t, got, 3)
 		return nil
 	}
-	require.NoError(t, prove(field.One(), cells), "an assigned proof should verify")
-	require.NoError(t, prove(field.Element{}, make([]recursion.Cell, len(cells))), "an inactive proof should check nothing")
+	require.NoError(t, prove(cells), "an assigned proof should verify")
 
 	other, err := v.Assign(stubSystem(field.Octuplet{field.NewElement(8)}), wp, pub)
 	require.NoError(t, err, "a system of the shape should be assigned")
-	require.Error(t, prove(field.One(), other), "a proof of another system should fail")
+	require.Error(t, prove(other), "a proof of another system should fail")
 
 	tampered := append([]recursion.Cell(nil), cells...)
 	tampered[0][0].SetUint64(4)
-	require.Error(t, prove(field.One(), tampered), "a changed public input should fail")
+	require.Error(t, prove(tampered), "a changed public input should fail")
 	tampered = append([]recursion.Cell(nil), cells...)
 	tampered[len(tampered)-1][7].SetUint64(1)
-	require.Error(t, prove(field.One(), tampered), "a changed verdict should fail")
+	require.Error(t, prove(tampered), "a changed verdict should fail")
 	tampered = append([]recursion.Cell(nil), cells...)
 	tampered[3][2].SetUint64(1)
-	require.Error(t, prove(field.One(), tampered), "a changed commitment should fail")
+	require.Error(t, prove(tampered), "a changed commitment should fail")
 
 	forged := wp
 	forged.DynamicSizes = map[int]int{0: 8}

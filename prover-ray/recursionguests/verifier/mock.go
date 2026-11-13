@@ -87,7 +87,7 @@ func (v *Mock) Allocate(m *recursion.Machine) ProofCells {
 // Define implements [Verifier]: the verdict is the digest of the key, the
 // public inputs and the commitments, laid out as Pack does, which
 // [Mock.Assign] computes with poseidon2.MDHasher.
-func (v *Mock) Define(m *recursion.Machine, active, key int, proof ProofCells) []int {
+func (v *Mock) Define(m *recursion.Machine, key int, proof ProofCells) []int {
 	n := len(v.shape.pubs)
 	if len(proof) != n+v.shape.commitments+1 {
 		panic(fmt.Sprintf("verifier: %d proof cells, want %d", len(proof), n+v.shape.commitments+1))
@@ -99,7 +99,7 @@ func (v *Mock) Define(m *recursion.Machine, active, key int, proof ProofCells) [
 		items = append(items, c)
 		kinds = append(kinds, recursion.KindDigest)
 	}
-	AssertEqDigest(m, active, m.MDHash(m.Pack(items, kinds)), verdict)
+	AssertEqDigest(m, m.MDHash(m.Pack(items, kinds)), verdict)
 	return slices.Clone([]int(pubs))
 }
 

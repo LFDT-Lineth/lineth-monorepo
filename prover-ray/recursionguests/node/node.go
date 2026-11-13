@@ -78,7 +78,9 @@
 //
 // A node has a fixed number of children, [Arity], each with an active flag: a
 // merge of fewer children leaves the other slots inactive, so one program (one
-// verification key) serves every merge.
+// verification key) serves every merge. An inactive slot holds a copy of the
+// first child, whose proof the verifier checks as any other, so that the
+// verifier needs no gate; its values are left out of the node's.
 package node
 
 import (
@@ -315,8 +317,8 @@ func NewRoot(l Layout, leaf, internal *Program, newVerifier verifier.Constructor
 // for childSys, the system of the children verified under the constant child
 // key, childSys's, pinning the key box to internalKey for the root. Its
 // inputs are laid out as [Program.Inputs] describes; the first child is
-// always active, and an inactive child's proof is not verified and
-// contributes the neutral value of every role.
+// always active, and an inactive child contributes the neutral value of every
+// role.
 func build(l Layout, kind Kind, newVerifier verifier.Constructor, childSys *wiop.System, internalKey field.Octuplet, opts ...compilers.Option) (*Program, error) {
 	if len(l) == 0 {
 		return nil, errors.New("node: empty layout")
@@ -353,7 +355,7 @@ func build(l Layout, kind Kind, newVerifier verifier.Constructor, childSys *wiop
 		box = m.InputDigest()
 	}
 	if kind == Root {
-		verifier.AssertEqDigest(m, one, box, m.Const(recursion.Cell(internalKey)))
+		verifier.AssertEqDigest(m, box, m.Const(recursion.Cell(internalKey)))
 	}
 	limbs := make([]int, NumKey)
 	for j := range limbs {
@@ -386,7 +388,7 @@ func build(l Layout, kind Kind, newVerifier verifier.Constructor, childSys *wiop
 		if kind != Leaf {
 			key = m.Select(leaf[c], constKey, box)
 		}
-		values[c] = v.Define(m, active[c], key, proof)
+		values[c] = v.Define(m, key, proof)
 		if len(values[c]) != len(child) {
 			return nil, fmt.Errorf("node: the verifier yields %d public inputs, want %d", len(values[c]), len(child))
 		}
@@ -494,46 +496,51 @@ func (p *Program) checkLayout() error {
 // then, for each of the [Arity] slots, an active flag (0 or 1), a leaf flag
 // (internal and root programs) and the cells of the child's proof as the
 // verifier assigns them; the given children fill the first slots, the other
-// slots are inactive and zero. box is the node's key box, the internal
-// program's key; a leaf program ignores it. It fails on a child whose proof
-// the verifier does not accept.
+// slots are inactive copies of the first child. box is the node's key box,
+// the internal program's key; a leaf program ignores it. It fails on a child
+// whose proof the verifier does not accept.
 func (p *Program) Inputs(box field.Octuplet, children ...Child) ([]recursion.Cell, error) {
 	if len(children) < 1 || len(children) > Arity {
 		return nil, fmt.Errorf("node: %d children, want 1 to %d", len(children), Arity)
 	}
-	perChild := 1 + p.numProofCells
-	if p.Kind != Leaf {
-		perChild++
-	}
-	cells := make([]recursion.Cell, 0, 1+Arity*perChild)
-	if p.Kind != Leaf {
-		cells = append(cells, recursion.Cell(box))
-	}
-	for c := range Arity {
-		if c >= len(children) {
-			cells = append(cells, make([]recursion.Cell, perChild)...)
-			continue
-		}
+	// slots[c] is the slot of child c after its active flag: the leaf flag
+	// (internal and root programs) and the proof cells.
+	slots := make([][]recursion.Cell, len(children))
+	for c, child := range children {
 		sys := p.childSys
-		if p.Kind != Leaf && !children[c].Leaf {
+		if p.Kind != Leaf && !child.Leaf {
 			sys = p.nodeSys
 		}
-		proof, err := p.verifier.Assign(sys, children[c].Proof, children[c].Pub)
+		proof, err := p.verifier.Assign(sys, child.Proof, child.Pub)
 		if err != nil {
 			return nil, fmt.Errorf("node: child %d: %w", c, err)
 		}
 		if len(proof) != p.numProofCells {
 			return nil, fmt.Errorf("node: child %d: the verifier assigns %d cells, want %d", c, len(proof), p.numProofCells)
 		}
-		cells = append(cells, recursion.ScalarCell(field.One()))
 		if p.Kind != Leaf {
 			var leaf field.Element
-			if children[c].Leaf {
+			if child.Leaf {
 				leaf.SetOne()
 			}
-			cells = append(cells, recursion.ScalarCell(leaf))
+			slots[c] = append(slots[c], recursion.ScalarCell(leaf))
 		}
-		cells = append(cells, proof...)
+		slots[c] = append(slots[c], proof...)
+	}
+
+	cells := make([]recursion.Cell, 0, 1+Arity*(1+len(slots[0])))
+	if p.Kind != Leaf {
+		cells = append(cells, recursion.Cell(box))
+	}
+	for c := range Arity {
+		var active field.Element
+		slot := slots[0]
+		if c < len(children) {
+			active.SetOne()
+			slot = slots[c]
+		}
+		cells = append(cells, recursion.ScalarCell(active))
+		cells = append(cells, slot...)
 	}
 	return cells, nil
 }

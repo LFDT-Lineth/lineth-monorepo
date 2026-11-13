@@ -16,11 +16,25 @@
 // A proof is verified under a key, its system's setup commitment
 // (wiop.System.PrecomputedCommitment), held in a digest cell of the program:
 // a constant, or a value the program computes, so that one program can
-// verify proofs of several systems of the same shape, itself included.
+// verify proofs of several systems of the same shape, itself included. The
+// key is only the Merkle root of the precomputed batch: the machine's
+// programs share the chips' constraints and differ in their setup columns, so
+// a verifier of one shape (module heights, rounds, PCS geometry) verifies
+// every program of that shape under its key. A program verifying proofs of
+// itself must then be padded to the shape its verifier was built for, which
+// is only known after compiling: the real constructor will take a shape, not
+// a system, and the machine a target shape to pad to.
+//
+// Define verifies unconditionally. A program with a slot it does not use
+// fills it with a proof that verifies (the node program copies its first
+// child) and leaves the slot's values out of its own computation.
 //
 // The wiop verifier is not written in the machine's instructions yet. [New],
 // the production constructor, returns [ErrNotImplemented]; dev and test code
-// uses [NewMock], which is not sound.
+// uses [NewMock], which is not sound. Like wiop.AllocateVerifierCircuit, [New]
+// must fail on a system registering a verifier action it cannot run in the
+// machine (the node programs register recursion.E6Check for every extension
+// public input), rather than drop the check.
 package verifier
 
 import (
@@ -60,10 +74,9 @@ type Verifier interface {
 	// Define adds to m the child's wiop verifier, in machine instructions,
 	// on proof, under the key in the digest cell key: it replays the
 	// transcript to derive the coins, runs the verifier actions and checks
-	// the PCS openings. It checks this when the scalar cell active is 1; when
-	// it is 0 it checks nothing and the cells may be zero. It returns the
-	// proof's public inputs as cells, in the child system's order.
-	Define(m *recursion.Machine, active, key int, proof ProofCells) []int
+	// the PCS openings. It returns the proof's public inputs as cells, in the
+	// child system's order.
+	Define(m *recursion.Machine, key int, proof ProofCells) []int
 
 	// Assign, for the host, turns a proof of sys and its public inputs into
 	// the values of the cells of Allocate. It only lays the proof out; the
@@ -72,13 +85,10 @@ type Verifier interface {
 }
 
 // AssertEqDigest asserts that the cells a and b hold the same digest (all 8
-// lanes) when the scalar cell active is 1, and asserts nothing when it is 0.
-// Machine.AssertEqE6 compares 6 lanes, so the digests are compared as two
-// overlapping E6 values, lanes 0..5 and 2..7.
-func AssertEqDigest(m *recursion.Machine, active, a, b int) {
+// lanes). Machine.AssertEqE6 compares 6 lanes, so the digests are compared as
+// two overlapping E6 values, lanes 0..5 and 2..7.
+func AssertEqDigest(m *recursion.Machine, a, b int) {
 	for _, off := range []int{0, recursion.KindDigest - recursion.KindE6} {
-		x := m.Lanes(a, off, recursion.KindE6)
-		y := m.Lanes(b, off, recursion.KindE6)
-		m.AssertEqE6(m.Select(active, x, y), y)
+		m.AssertEqE6(m.Lanes(a, off, recursion.KindE6), m.Lanes(b, off, recursion.KindE6))
 	}
 }
