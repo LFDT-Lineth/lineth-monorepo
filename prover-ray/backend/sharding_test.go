@@ -9,7 +9,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/conglomeration"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion/verifier"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/verifier"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
@@ -87,6 +87,27 @@ func TestRunProve_ShardIndexes(t *testing.T) {
 		_, _, err := runProveShards(t, ctx, c, id, 3)
 		require.ErrorContains(t, err, "shard index 3 out of range, the trace has 3 shards")
 	})
+}
+
+// TestRunProve_DeepTree proves a trace of more than RecursionTreeArity shards
+// over the real shard layout, so that the reducer merges in the background
+// and the tree has an internal level: leaf nodes merged by the internal
+// program under the root.
+func TestRunProve_DeepTree(t *testing.T) {
+	c, id := shardedTestCore(t, 40)
+	node, numShards, err := runProveShards(t, context.Background(), c, id)
+	require.NoError(t, err)
+	require.Greater(t, numShards, uint(conglomeration.RecursionTreeArity), "the trace should need more than one leaf merge")
+	coverage := make([]uint, numShards)
+	for i := range coverage {
+		coverage[i] = uint(i)
+	}
+	require.Equal(t, coverage, node.Coverage, "the root should cover every shard")
+	require.NoError(t, c.merger.(*conglomeration.RecursionMerger).VerifyRoot(node), "the root proof should verify")
+	for h, p := range messagebus.GetProducts(c.sys, node.Pub) {
+		diff := p.Sub(field.ElemOne())
+		require.True(t, diff.IsZero(), "bus handle %d should balance at the root", h)
+	}
 }
 
 // TestRunProve_Sharded_NoMerger_NotImplemented checks that a sharded trace

@@ -66,7 +66,7 @@
 // two verifiers, of two systems, and pay for both in every slot.
 //
 // A program verifies each child's proof with the in-machine verifier of its
-// children's systems (package recursion/verifier) under the child key and
+// children's systems (package recursionguests/verifier) under the child key and
 // folds the public inputs the verifier yields, so a child's values enter the
 // node only through its verified proof. The caller chooses the verifier with
 // a verifier.Constructor: verifier.New in production, which fails until the
@@ -85,7 +85,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion/verifier"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/verifier"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
 )

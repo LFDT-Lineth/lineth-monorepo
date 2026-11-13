@@ -5,8 +5,8 @@ import (
 
 	multisethashing "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/multiset_hashing"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion/verifier"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/node"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/verifier"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
@@ -190,8 +190,9 @@ func TestRecursionMerger_VerifiesChildren(t *testing.T) {
 }
 
 // TestRecursionMerger_SharedRandomness checks that the contributions add up
-// in a merge and that the root's γ must be derived from them: named by the
-// merger first, and rejected by the root program itself.
+// in a merge and that the root's γ must be derived from them, named by the
+// merger before a proof is attempted (the root program's own rejection is
+// node.TestNew_Seed).
 func TestRecursionMerger_SharedRandomness(t *testing.T) {
 	sys := testSystem(true)
 	merger := newTestRecursionMerger(t, sys)
@@ -220,8 +221,49 @@ func TestRecursionMerger_SharedRandomness(t *testing.T) {
 	require.NoError(t, err)
 	_, err = merger.Finalize([]Node{lifted}, 1)
 	require.ErrorContains(t, err, "not derived from the shards' contributions")
-	child, err := merger.child(lifted)
+}
+
+// TestRecursionMerger_Reduce reduces more shards than two full leaf merges
+// to a root through the reducer, merges running in the background: two full
+// leaf merges and a lifted shard, an internal node over them, then the root.
+// The bus products balance only over all the shards, and γ derives from all
+// the contributions.
+func TestRecursionMerger_Reduce(t *testing.T) {
+	sys := testSystem(true)
+	merger := newTestRecursionMerger(t, sys)
+	const numShards = 2*RecursionTreeArity + 1
+	contributions := make([]multisethashing.MSetHash, numShards)
+	sum := multisethashing.Identity()
+	for i := range contributions {
+		contributions[i] = multisethashing.Hash(field.Octuplet{field.NewElement(uint64(i + 1))})
+		sum = multisethashing.Combine(sum, contributions[i])
+	}
+	gamma := multisethashing.ToSeed(sum)
+	nodes := make([]Node, numShards)
+	product := elem(1)
+	for i := range nodes {
+		nodes[i] = seededShardNode(sys, uint(i), gamma, contributions[i])
+		bus := elem(uint(i + 2))
+		if i == numShards-1 {
+			bus = product.Inverse()
+		}
+		nodes[i].Pub[busPos] = bus
+		product = product.Mul(bus)
+	}
+
+	last := func(children []Node) (Node, error) { return merger.Finalize(children, numShards) }
+	root, err := reduceWith(merger, 2, last, nodes...)
 	require.NoError(t, err)
-	_, _, err = merger.root.ProveChildren(merger.internal.Key(), child)
-	require.ErrorContains(t, err, "verifying the node proof", "the root program should reject the seed")
+	require.NoError(t, merger.VerifyRoot(root), "the root proof should verify")
+	coverage := make([]uint, numShards)
+	for i := range coverage {
+		coverage[i] = uint(i)
+	}
+	require.Equal(t, coverage, root.Coverage, "the root should cover every shard")
+	requireElemEqual(t, elem(1), messagebus.GetProducts(sys, root.Pub)[0], "the root should expose a balanced bus")
+	require.Equal(t, sum, messagebus.GetSharedRandomnessContribution(sys, root.Pub), "the contributions should add up")
+	require.Equal(t, gamma, messagebus.GetSharedRandomnessSeed(sys, root.Pub), "the seed should be propagated")
+	key, err := node.KeyOf(root.Pub)
+	require.NoError(t, err)
+	require.Equal(t, merger.internal.Key(), key, "the root should expose the internal key")
 }

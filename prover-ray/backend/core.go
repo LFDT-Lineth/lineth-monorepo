@@ -59,8 +59,8 @@ type Core struct {
 	guests guests.Store
 
 	// merger runs the conglomeration steps over the shard proofs. nil in
-	// production until the recursion machine lands; tests set
-	// [conglomeration.MockMerger].
+	// production until the in-machine verifier lands; tests set a
+	// [conglomeration.RecursionMerger] over the mock verifier.
 	merger conglomeration.Merger
 
 	// binaryFile is the compiled R5 arithmetization, used by dev-zkvm to run the

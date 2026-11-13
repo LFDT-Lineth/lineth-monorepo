@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion/verifier"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/node"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/verifier"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
@@ -37,7 +37,7 @@ var roles = map[wiop.PublicInputTag]node.Op{
 // package).
 //
 // The programs verify the children with the in-machine verifier its caller
-// chooses (see package recursion/verifier): verifier.NewMock in tests, as
+// chooses (see package recursionguests/verifier): verifier.NewMock in tests, as
 // verifier.New fails until the wiop verifier is written in the machine's
 // instructions. The programs then check the children agree on the program VK, the
 // guest output and the seed γ, multiply the bus products, add the

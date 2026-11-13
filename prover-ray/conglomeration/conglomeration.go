@@ -66,8 +66,9 @@ const RecursionTreeArity = 6
 // finalisation.
 type Merger interface {
 	// Merge verifies 1 to [RecursionTreeArity] children of the same [Kind]
-	// and returns their parent, a [Merged] node covering the union of their
-	// coverage. A single child is accepted for a shard proof only: the lift
+	// ([MockMerger] verifies no proof) and returns their parent, a [Merged]
+	// node covering the union of their coverage. A single child is accepted
+	// for a shard proof only: the lift
 	// that turns a lone shard proof into a merged node. It rejects a child
 	// count out of that range, mixed kinds, overlapping coverage, a child of
 	// another public-input shape, and children that disagree on the public
