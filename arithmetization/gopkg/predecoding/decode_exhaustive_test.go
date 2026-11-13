@@ -41,6 +41,15 @@ import (
 // instructions, with their exact counts. All are reserved or malformed
 // encodings that no compiler emits. Any change to this set fails the test, so a
 // new over-acceptance cannot slip in unnoticed.
+//
+// How the entries were derived: a full run with an empty map reports every
+// "extra" group with its count. To regenerate, empty the map and rerun. The
+// counts also follow from which bits each group leaves free:
+//   - MISC-MEM fixes opcode (7 bits) and funct3 (3 bits), leaving 22 free bits,
+//     so 2^22 words per funct3. funct3 = 000 is FENCE, a real instruction, so
+//     it is not listed.
+//   - ECALL/EBREAK fix every bit except rd and rs1 (5 + 5 free bits): 2^10 = 1024
+//     words, minus the one valid encoding with rd = rs1 = 0, gives 1023 each.
 var knownExtras = map[string]uint64{
 	// MISC-MEM opcode with funct3 != 0 (FENCE.I, CBO.*, reserved) -> NO_OP.
 	"extra: opcode=0001111 funct3=001 compute_op=0": 1 << 22,
@@ -128,6 +137,8 @@ func TestDecodeAllWords(t *testing.T) {
 		n      uint64
 		sample uint32 // first word seen in this category, for reproduction
 	}
+
+	// Each worker scans their assigned parts
 	parts := forEachWord(func(lo, hi uint64) map[string]*tally {
 		m := map[string]*tally{}
 		var bw bitWriter
@@ -141,6 +152,8 @@ func TestDecodeAllWords(t *testing.T) {
 		}
 		return m
 	})
+
+	// Merge all worker results
 	all := map[string]*tally{}
 	for _, m := range parts {
 		for k, v := range m {
@@ -151,6 +164,7 @@ func TestDecodeAllWords(t *testing.T) {
 		}
 	}
 
+	// Check the results against known exceptions
 	keys := make([]string, 0, len(all))
 	for k := range all {
 		keys = append(keys, k)
