@@ -1,6 +1,8 @@
 from .fork import (
     Block as EthereumBlock,
     Header,
+    OsakaBlock,
+    OsakaHeader,
     Withdrawal,
     Transaction,
     recover_sender,
@@ -14,6 +16,7 @@ from ethereum_types.numeric import U64, Uint
 from ethereum.crypto.hash import Hash32, keccak256
 from ethereum_types.bytes import Bytes, Bytes32
 from ethereum_rlp import rlp
+from ethereum_rlp.exceptions import DecodingError
 from enum import Enum
 from typing import List, TypeAlias
 
@@ -308,16 +311,20 @@ class LinethPayloadInput:
     stateless_input_ssz: bytes
     rollup_extension: LinethRollupExtension = field(default_factory=LinethRollupExtension)
 
-def block_hash(header: Header) -> Hash32:
+def block_hash(header: Header | OsakaHeader) -> Hash32:
     """Hash of a block header."""
     return keccak256(rlp.encode(header))
 
-def decode_block_rlp(block_rlp: bytes) -> EthereumBlock:
+def decode_block_rlp(block_rlp: bytes) -> EthereumBlock | OsakaBlock:
     """
     Decode a canonical block RLP carried by the rollup DA witness into the
-    Ethereum execution-specs block view.
+    Ethereum execution-specs block view: an Amsterdam block, or an Osaka block
+    when the header does not have Amsterdam's fields.
     """
-    return rlp.decode_to(EthereumBlock, block_rlp)
+    try:
+        return rlp.decode_to(EthereumBlock, block_rlp)
+    except DecodingError:
+        return rlp.decode_to(OsakaBlock, block_rlp)
 
 def decode_signed_transaction_rlp(signed_tx_rlp: bytes) -> Transaction:
     """Decode a forced transaction's signed bytes (typed EIP-2718 or legacy)."""

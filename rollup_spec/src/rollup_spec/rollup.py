@@ -831,6 +831,9 @@ def _decode_block_transaction(tx_item: Transaction | Bytes) -> Transaction:
         if len(tx_item) < 2 or tx_item[0] not in (1, 2, 4):
             raise Exception("transaction is neither a legacy list nor an envelope of type 1, 2 or 4")
         return decode_transaction(Bytes(tx_item))
+    if not isinstance(tx_item, LegacyTransaction):
+        # A legacy transaction of an Osaka block has Osaka's class; its fields are Amsterdam's.
+        return rlp.decode_to(LegacyTransaction, rlp.encode(tx_item))
     return tx_item
 
 
