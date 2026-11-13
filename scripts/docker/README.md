@@ -55,6 +55,7 @@ which `make -C linea-besu/package clean` removes).
 | `DRY_RUN` | `false` | `true` prints the commands instead of running them, and skips the pre-build step. A missing Dockerfile or build context is a warning rather than an error, so you can inspect the command before anything is assembled |
 | `SKIP_PREBUILD` | `false` | `true` skips the gradle/dist step |
 | `NODE_VERSION` | from `.nvmrc` | Passed to the Node-based images, like `.github/actions/get-node-version` does |
+| `NODE_IMAGE_DIGEST` | pinned in each Dockerfile | Digest of `node:${NODE_VERSION}-slim`. When overriding `NODE_VERSION`, override this too — a mismatch fails the build deliberately |
 | `LINEA_BESU_VCS_REF` | `git rev-parse HEAD` | `VCS_REF` build arg for `linea-besu-package` (CI passes `github.sha`) |
 | `LINEA_BESU_BUILD_DATE` | today, UTC | `BUILD_DATE` build arg for `linea-besu-package` |
 

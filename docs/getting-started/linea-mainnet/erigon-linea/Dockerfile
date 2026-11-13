@@ -1,5 +1,10 @@
 # Erigon v3.3.0 patched for Linea
 # Based on Keith C's findings: https://github.com/erigontech/erigon/issues/18160
+#
+# kics-scan disable=965a08d7-ef86-4f14-8792-4a3b2098937e
+# Apt Get Install Pin Version Not Defined: apt packages are intentionally unpinned.
+# They track the digest-pinned base images; version pinning would break the build
+# on every base refresh for negligible security gain.
 
 # Base images pinned by digest for reproducible, tamper-resistant builds.
 # Bump these digests when refreshing golang / debian patch updates.

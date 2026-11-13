@@ -1,5 +1,5 @@
 # BUILDER image
-FROM eclipse-temurin:25-jdk-noble AS builder
+FROM eclipse-temurin:25-jdk-noble@sha256:80f67fb3d6f76e2d817d98a4cc2a9cf05f054d4e6adc5e2144bde671d722e63f AS builder
 
 RUN mkdir -p /libs
 COPY --from=libs ./** /libs
@@ -26,16 +26,23 @@ RUN bcJar=$(set -- blob-compressor*.jar; echo $1) && \
 RUN rm -rf unpacked-blob-compressor unpacked-blob-shnarf-calculator
 
 # FINAL image
-FROM eclipse-temurin:25-jre-noble
+FROM eclipse-temurin:25-jre-noble@sha256:e3b6f7887a50f20d8f07abf279d8a81a5953fb398a9555bd9edd56b9bd15968c
 
 WORKDIR /opt/consensys/linea/coordinator
 
-RUN mkdir -p logs /tmp/prover/request /tmp/prover/response
+# Run as a dedicated non-root user (uid 1000, same convention as the besu image).
+# Ubuntu noble ships an "ubuntu" user at uid 1000 — remove it first.
+RUN userdel ubuntu 2>/dev/null || true && rm -rf /home/ubuntu && \
+    adduser --uid 1000 --disabled-password --gecos "" --home /opt/consensys/linea/coordinator coordinator && \
+    mkdir -p logs /tmp/prover/request /tmp/prover/response && \
+    chown -R coordinator:coordinator /opt/consensys/linea/coordinator /tmp/prover
 
-COPY --from=builder /libs/** libs/
+COPY --from=builder --chown=coordinator:coordinator /libs/** libs/
 # The glob lets downstream builds whose context has no license files skip them
 # (scripts/docker/build-image.sh --no-license-check).
 COPY LICENSE-* /licenses/
+
+USER coordinator
 
 ARG LINETH_APP_JAR=/opt/consensys/linea/coordinator/libs/coordinator.jar
 ENV LINETH_APP_JAR=$LINETH_APP_JAR

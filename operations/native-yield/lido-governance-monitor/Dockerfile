@@ -3,8 +3,11 @@
 # They track the node:slim base image; pinning would break the build on base refresh
 # for negligible security gain on top of --no-install-recommends.
 ARG NODE_VERSION=24.22.1
+# Digest of node:${NODE_VERSION}-slim, kept in sync with .nvmrc. If you override
+# NODE_VERSION at build time, override NODE_IMAGE_DIGEST to match.
+ARG NODE_IMAGE_DIGEST=sha256:be8204d4bd327363357f532187b752ff62759c31bedf98e9e18fc08c9cbd605c
 
-FROM node:${NODE_VERSION}-slim AS base
+FROM node:${NODE_VERSION}-slim@${NODE_IMAGE_DIGEST} AS base
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
@@ -46,7 +49,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store DATABASE_URL=postgresql://loca
     && pnpm run build \
     && pnpm --config.allow-unused-patches=true --config.block-exotic-subdeps=false deploy --legacy --filter=./operations/native-yield/lido-governance-monitor --prod ./prod/operations/native-yield/lido-governance-monitor
 
-FROM node:${NODE_VERSION}-slim AS production
+FROM node:${NODE_VERSION}-slim@${NODE_IMAGE_DIGEST} AS production
 
 ENV NODE_ENV=production
 
