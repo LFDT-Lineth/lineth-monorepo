@@ -19,6 +19,7 @@ pub fn build(b: *std.Build) void {
     addHostTests(b, options, unit, crypto, prover);
     addFixtureStep(b, tools);
     addFetchBlocksStep(b, tools);
+    addZkcSmokeStep(b, tools);
 }
 
 /// Every `-D` option of this package, read once.
@@ -226,8 +227,8 @@ const Host = struct {
     }
 };
 
-/// Every `tools/*.zig` executable. `gen_fixture` builds the sample request and
-/// `fetch_blocks` recovers senders; both link the host crypto provider.
+/// Every `tools/*.zig` executable. `gen_fixture` runs the statement and `fetch_blocks` recovers
+/// senders; both link the host crypto provider.
 fn addHostTools(b: *std.Build, host: Host, crypto: common.HostCrypto) Tools {
     const tools = common.addTools(b, host.native, .{});
     crypto.link(tools.get("gen_fixture").?);
@@ -254,7 +255,7 @@ fn addHostTests(b: *std.Build, options: Options, unit: Host, crypto: common.Host
 fn addFixtureStep(b: *std.Build, tools: Tools) void {
     const gen_fixture = b.addRunArtifact(tools.get("gen_fixture").?);
     if (b.args) |args| gen_fixture.addArgs(args);
-    b.step("gen-fixture", "Write a sample RollupProofPrivateInput to the path after `--`").dependOn(&gen_fixture.step);
+    b.step("gen-fixture", "Write a sample RollupProofPrivateInput and its expected output to the paths after `--`").dependOn(&gen_fixture.step);
 }
 
 /// Runs `fetch_blocks` with the arguments after `--`.
@@ -262,4 +263,12 @@ fn addFetchBlocksStep(b: *std.Build, tools: Tools) void {
     const fetch_blocks = b.addRunArtifact(tools.get("fetch_blocks").?);
     if (b.args) |args| fetch_blocks.addArgs(args);
     b.step("fetch-blocks", "Fetch a block window from a JSON-RPC endpoint into the dataset file given by the arguments after `--`").dependOn(&fetch_blocks.step);
+}
+
+/// Runs the guest ELF under zkc and compares its output with the native statement's; the options
+/// of `zkc_smoke` follow `--`.
+fn addZkcSmokeStep(b: *std.Build, tools: Tools) void {
+    const zkc_smoke = b.addRunArtifact(tools.get("zkc_smoke").?);
+    if (b.args) |args| zkc_smoke.addArgs(args);
+    b.step("zkc-smoke", "Run a guest ELF under zkc and compare its output with the native statement's").dependOn(&zkc_smoke.step);
 }
