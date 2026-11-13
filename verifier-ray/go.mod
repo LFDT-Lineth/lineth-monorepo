@@ -3,13 +3,13 @@ module github.com/consensys/linea-monorepo/verifier-ray
 go 1.27.1
 
 require (
-	github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20261104204635-1957390836c0
-	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20261105091006-b4c76aeef374
+	github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20261110120652-88fe45db48d1
+	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20261112142725-3147f54bca09
 	github.com/stretchr/testify v1.12.1
 )
 
 require (
-	github.com/LFDT-Lineth/zkc v1.2.35 // indirect
+	github.com/LFDT-Lineth/zkc v1.2.36 // indirect
 	github.com/bits-and-blooms/bitset v1.25.0 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565 // indirect
