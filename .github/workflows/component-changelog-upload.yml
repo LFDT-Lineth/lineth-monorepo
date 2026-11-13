@@ -2,6 +2,10 @@ name: "Component Changelog Upload"
 
 on:
   workflow_call:
+    outputs:
+      has_changes:
+        description: "true when at least one component changed, so there are CHANGELOG.md artifacts to commit"
+        value: ${{ jobs.filter-commit-changes.outputs.has_changes }}
 
 concurrency:
   group: component-changelog-${{ github.workflow }}-${{ github.ref }}
@@ -12,16 +16,8 @@ jobs:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     name: Filter commit changes
     outputs:
-      coordinator: ${{ steps.filter.outputs.coordinator }}
-      riscv-l2-execution: ${{ steps.filter.outputs.riscv-l2-execution }}
-      riscv-rollup: ${{ steps.filter.outputs.riscv-rollup }}
-      postman: ${{ steps.filter.outputs.postman }}
-      prover: ${{ steps.filter.outputs.prover }}
-      prover-ray: ${{ steps.filter.outputs.prover-ray }}
-      tx-exclusion-api: ${{ steps.filter.outputs.tx-exclusion-api }}
-      linea-besu-package: ${{ steps.filter.outputs.linea-besu-package }}
-      maru: ${{ steps.filter.outputs.maru }}
-      linea: ${{ steps.filter.outputs.linea }}
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      has_changes: ${{ steps.matrix.outputs.has_changes }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -31,106 +27,55 @@ jobs:
         with:
           base: ${{ github.ref }}
           list-files: "json"
-          filters: |
-            coordinator:
-              - 'coordinator/**'
-            riscv-l2-execution:
-              - 'riscv-guests/l2_execution/**'
-              - 'riscv-guests/guest_common/**'
-              - 'riscv-guests/build_common/**'
-              - 'riscv-guests/release/**'
-              - 'riscv-guests/lineth_accelerators/**'
-              - 'riscv-guests/guest_crypto_ctt/**'
-              - 'riscv-guests/.zigversion'
-              - 'riscv-guests/Makefile'
-            riscv-rollup:
-              - 'riscv-guests/rollup/**'
-              - 'riscv-guests/guest_common/**'
-              - 'riscv-guests/build_common/**'
-              - 'riscv-guests/release/**'
-              - 'riscv-guests/lineth_accelerators/**'
-              - 'riscv-guests/.zigversion'
-              - 'riscv-guests/Makefile'
-            maru:
-              - 'maru/**'
-            postman:
-              - 'postman/**'
-            prover:
-              - 'prover/**'
-            prover-ray:
-              - 'prover-ray/**'
-              - 'riscv-guests/l2_execution/**'
-              - 'riscv-guests/guest_common/**'
-              - 'riscv-guests/build_common/**'
-              - 'riscv-guests/release/**'
-              - 'riscv-guests/lineth_accelerators/**'
-              - 'riscv-guests/guest_crypto_ctt/**'
-              - 'riscv-guests/.zigversion'
-              - 'riscv-guests/Makefile'
-            tx-exclusion-api:
-              - 'transaction-exclusion-api/**'
-            linea-besu-package:
-              - 'tracer/**'
-              - 'tracer-constraints/**'
-              - 'linea-besu/plugins/linea-sequencer/**'
-              - 'linea-besu/plugins/sequencer-interfaces/**'
-              - 'linea-besu/besu/**'
-              - 'linea-besu/package/**'
-              - 'gradle/libs.versions.toml'
-            linea:
-              - 'coordinator/**'
-              - 'maru/**'
-              - 'postman/**'
-              - 'prover/**'
-              - 'transaction-exclusion-api/**'
-              - 'tracer/**'
-              - 'tracer-constraints/**'
-              - 'linea-besu/plugins/linea-sequencer/**'
-              - 'linea-besu/plugins/sequencer-interfaces/**'
-              - 'linea-besu/besu/**'
-              - 'linea-besu/package/**'
-              - 'gradle/libs.versions.toml'
+          filters: .github/path-filters/changelog.yml
+
+      # Turn the changed filters into a matrix so only changed components get a
+      # runner. folder-name: where CHANGELOG.md lives. artifact-name: suffix of the
+      # artifact name (defaults to folder-name). scopes/include-path per component
+      # are the single source of truth in
+      # .github/actions/run-git-cliff-commands/scripts/components.sh, which the
+      # run-git-cliff-commands action resolves from component-name.
+      - name: Build matrix of changed components
+        id: matrix
+        env:
+          CHANGES: ${{ steps.filter.outputs.changes }}
+        run: |
+          set -euo pipefail
+          matrix=$(jq -c '
+            {
+              "coordinator":        {"folder-name": "coordinator"},
+              "riscv-l2-execution": {"folder-name": "riscv-guests/l2_execution", "artifact-name": "riscv-l2-execution"},
+              "riscv-rollup":       {"folder-name": "riscv-guests/rollup",       "artifact-name": "riscv-rollup"},
+              "maru":               {"folder-name": "maru"},
+              "prover":             {"folder-name": "prover"},
+              "prover-ray":         {"folder-name": "prover-ray"},
+              "postman":            {"folder-name": "postman"},
+              "tx-exclusion-api":   {"folder-name": "transaction-exclusion-api"},
+              "linea-besu-package": {"folder-name": "linea-besu/package",        "artifact-name": "linea-besu-package"},
+              "linea":              {"folder-name": ".",                         "artifact-name": "linea"}
+            } as $components
+            | [ .[] | select($components[.]) | {component: .} + $components[.] ]
+          ' <<< "${CHANGES:-[]}")
+          echo "Changed components: ${matrix}"
+          echo "matrix=${matrix}" >> "$GITHUB_OUTPUT"
+          if [ "${matrix}" = "[]" ]; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
 
   upload-component-changelog:
     needs: [filter-commit-changes]
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    if: needs.filter-commit-changes.outputs.has_changes == 'true'
     strategy:
       fail-fast: false
       matrix:
-        component: [ coordinator, riscv-l2-execution, riscv-rollup, maru, prover, prover-ray, postman, tx-exclusion-api, linea-besu-package, linea ]
-        include:
-          # scopes/include-path per component are the single source of truth in
-          # .github/actions/run-git-cliff-commands/scripts/components.sh — the
-          # run-git-cliff-commands action resolves them from component-name.
-          - component: coordinator
-            folder-name: coordinator
-          - component: riscv-l2-execution
-            folder-name: riscv-guests/l2_execution
-            artifact-name: riscv-l2-execution
-          - component: riscv-rollup
-            folder-name: riscv-guests/rollup
-            artifact-name: riscv-rollup
-          - component: maru
-            folder-name: maru
-          - component: prover
-            folder-name: prover
-          - component: prover-ray
-            folder-name: prover-ray
-          - component: postman
-            folder-name: postman
-          - component: tx-exclusion-api
-            folder-name: transaction-exclusion-api
-          - component: linea-besu-package
-            folder-name: linea-besu/package
-            artifact-name: linea-besu-package
-          - component: linea
-            folder-name: .
-            artifact-name: linea
+        include: ${{ fromJSON(needs.filter-commit-changes.outputs.matrix) }}
 
     name: Generate ${{ matrix.component }} [Unreleased] changelog
     steps:
       - name: Checkout
-        if: needs.filter-commit-changes.outputs[matrix.component] == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # git-cliff needs full history + tags to compute changelog/version
@@ -141,13 +86,11 @@ jobs:
           submodules: false
 
       - name: Install git-cliff
-        if: needs.filter-commit-changes.outputs[matrix.component] == 'true'
         uses: taiki-e/install-action@682ce6c3c696a4cd5168a05f98e51aa02b877941 # v2.89.1
         with:
           tool: git-cliff
 
       - name: Update [Unreleased] section in ${{ matrix.folder-name }}/CHANGELOG.md
-        if: needs.filter-commit-changes.outputs[matrix.component] == 'true'
         id: changelog
         uses: ./.github/actions/run-git-cliff-commands
         with:
@@ -156,7 +99,7 @@ jobs:
           prepend-changelog: 'true'
 
       - name: Upload CHANGELOG.md artifact
-        if: github.ref == 'refs/heads/main' && needs.filter-commit-changes.outputs[matrix.component] == 'true'
+        if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: unreleased-changelog-${{ matrix.artifact-name || matrix.folder-name }}
