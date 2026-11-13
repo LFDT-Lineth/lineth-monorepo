@@ -149,8 +149,8 @@ const Host = struct {
             paths.addOption([]const u8, "amsterdam_blocks", "");
         }
         const ef_fixtures = paths.createModule();
-        const support = b.createModule(.{
-            .root_source_file = b.path("test/support.zig"),
+        const sample_input = b.createModule(.{
+            .root_source_file = b.path("test/support/sample_input.zig"),
             .target = target,
             .optimize = optimize,
             .imports = &.{
@@ -172,13 +172,13 @@ const Host = struct {
             },
         });
         const scenario = b.createModule(.{
-            .root_source_file = b.path("test/scenario.zig"),
+            .root_source_file = b.path("test/support/scenario.zig"),
             .target = target,
             .optimize = optimize,
             .imports = &.{
                 .{ .name = "rollup", .module = package },
                 .{ .name = "core_serde", .module = deps.core_serde },
-                .{ .name = "support", .module = support },
+                .{ .name = "sample_input", .module = sample_input },
                 .{ .name = "devmode_prover", .module = devmode_prover },
                 .{ .name = "lineth_da", .module = deps.lineth_da.module("lineth_da") },
                 .{ .name = "da_support", .module = da_support },
@@ -198,7 +198,7 @@ const Host = struct {
                     .{ .name = "core_serde", .module = deps.core_serde },
                     .{ .name = "guest_common", .module = deps.guest_common },
                     .{ .name = "lineth_da", .module = deps.lineth_da.module("lineth_da") },
-                    .{ .name = "support", .module = support },
+                    .{ .name = "sample_input", .module = sample_input },
                     .{ .name = "scenario", .module = scenario },
                     .{ .name = "devmode_prover", .module = devmode_prover },
                     .{ .name = "ef_blocks", .module = ef_blocks },
