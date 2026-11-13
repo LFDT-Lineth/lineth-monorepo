@@ -136,8 +136,6 @@ jobs:
 
       - name: Setup RISC-V guests environment (Zig + caches)
         uses: ./.github/actions/setup-riscv-guests
-        with:
-          needs-zkevm-fixtures: 'true'
 
       # The rollup guest's tests and sample request are proved by verifier-ray's Go devmode prover.
       - name: Install Go

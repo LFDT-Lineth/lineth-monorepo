@@ -8,7 +8,7 @@
 # run itself (ELF->JSON via elf_to_json_gen, then zkc) is owned by
 # arithmetization/src/test/Makefile; `exec`/`debug` build that ELF and hand it over.
 
-.PHONY: fetch test clean compile exec debug require-input
+.PHONY: fetch test clean compile exec debug require-input fetch-linea-blocks
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -61,9 +61,14 @@ $(DEVMODE_SYSTEM): $(DEVMODE_SYSTEM_INPUTS)
 fetch: $(DEVMODE_SYSTEM)
 	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) --fetch=all
 
-# The unit suites and, over the curated blocks of the EF zkevm corpus, the test/reference suites.
+# The unit suites and, over the curated blocks of the EF zkevm corpus and the Linea mainnet window,
+# the test/reference suites.
 test: $(DEVMODE_SYSTEM) fetch-zkevm-fixtures
 	$(ZIG) build test $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FIXTURES_FLAGS) $(ZIG_FETCH_FLAGS)
+
+# Rebuilds the Linea mainnet window in test/testdata from the public RPC.
+fetch-linea-blocks: $(DEVMODE_SYSTEM)
+	$(ZIG) build fetch-linea-blocks $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -- "$(MAKEFILE_DIR)test/testdata"
 
 clean:
 	rm -rf $(MAKEFILE_DIR)zig-out/
@@ -83,10 +88,10 @@ compile: $(DEVMODE_SYSTEM)
 # Regenerates the default INPUT via `zig build gen-fixture` (a no-op for a user-supplied INPUT=
 # override), then fails early on a still-missing/empty INPUT instead of building then erroring in
 # the converter.
-require-input: $(DEVMODE_SYSTEM) fetch-zkevm-fixtures
+require-input: $(DEVMODE_SYSTEM)
 	@if [ "$(INPUT)" = "$(GENERATED_INPUT)" ]; then \
 		mkdir -p $(dir $(GENERATED_INPUT)); \
-		$(ZIG) build gen-fixture $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) -- "$(ZKEVM_FIXTURES_DIR)/blockchain_tests/for_amsterdam" $(GENERATED_INPUT); \
+		$(ZIG) build gen-fixture $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) -- $(GENERATED_INPUT); \
 	fi
 	@[ -n "$(INPUT)" ] && [ -s "$(INPUT)" ] || { echo "INPUT missing or empty: '$(INPUT)' (set INPUT=path/to/input.ssz)"; exit 1; }
 

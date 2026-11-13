@@ -1,8 +1,9 @@
 //! Builders of valid rollup requests for the tests and the fixture generator. Conflations of real
-//! blocks of the Ethereum Foundation's zkevm fixtures, their canonical payloads compressed against
-//! the dictionary into the DA stream, the stream cut into blob and calldata chunks with the
-//! commitments and proofs of Constantine, and the l2-execution proofs that tie them together are
-//! computed with the test-side encoders of `lineth_da` and put into the wire types of `rollup_ssz`.
+//! blocks of the Ethereum Foundation's zkevm fixtures, of Linea mainnet and generated ones of random
+//! calldata, their canonical payloads compressed against the dictionary into the DA stream, the stream cut into blob and calldata
+//! chunks with the commitments and proofs of Constantine, and the l2-execution proofs that tie them
+//! together are computed with the test-side encoders of `lineth_da` and put into the wire types of
+//! `rollup_ssz`.
 
 const std = @import("std");
 
@@ -11,6 +12,7 @@ const da_support = @import("da_support");
 const devmode_prover = @import("devmode_prover");
 const ef_blocks = @import("ef_blocks");
 const ef_fixtures = @import("ef_fixtures");
+const incompressible_blocks = @import("incompressible_blocks");
 const lineth_da = @import("lineth_da");
 const rollup = @import("rollup");
 const sample_input = @import("sample_input");
@@ -46,6 +48,10 @@ fn keccakPair(left: Hash, right: Hash) Hash {
 
 /// The chain ID of the EF fixtures.
 pub const ef_chain_id: u64 = 1;
+/// The chain ID of Linea mainnet.
+pub const linea_chain_id: u64 = 59144;
+/// The chain ID of the incompressible blocks.
+pub const incompressible_chain_id: u64 = 31337;
 
 /// A block of a fixture case and what the selection claims it is, which loading checks.
 const Pick = struct {
@@ -158,6 +164,12 @@ const chain_pick: Pick = .{
 };
 const chain_length = 10;
 
+/// The Linea mainnet window: consecutive blocks of legacy and fee-market transactions, in the gzip
+/// of one case of the shape of the EF fixtures.
+const linea_case = "linea_mainnet_27434569_27434718";
+const linea_blocks = 150;
+const linea_transactions = 2576;
+
 /// The blocks every request is built from.
 pub const Selection = struct {
     arena: std.heap.ArenaAllocator,
@@ -167,8 +179,13 @@ pub const Selection = struct {
     blob_transaction: Fact,
     /// Ten consecutive blocks of the EF fixtures.
     chain: []const Fact,
+    /// 150 consecutive blocks of Linea mainnet.
+    linea: []const Fact,
+    /// Blocks of random calldata, which do not compress.
+    incompressible: []const Fact,
 
-    /// Reads the selected blocks from `corpus_dir`, a directory of fixture files.
+    /// Reads the selected blocks from `corpus_dir`, a directory of fixture files, and the Linea
+    /// window.
     pub fn load(gpa: Allocator, io: std.Io, corpus_dir: []const u8) !Selection {
         var arena = std.heap.ArenaAllocator.init(gpa);
         errdefer arena.deinit();
@@ -193,6 +210,8 @@ pub const Selection = struct {
             .picks = picks,
             .blob_transaction = blob_transaction,
             .chain = chain,
+            .linea = try lineaWindow(a, io),
+            .incompressible = try incompressible_blocks.build(a, incompressible_chain_id),
         };
     }
 
@@ -240,6 +259,30 @@ fn readBlock(a: Allocator, io: std.Io, corpus_dir: []const u8, pick: Pick) !Fact
     const block = case.blocks[pick.block] orelse return fail(error.BlockNotAccepted, "block {d} of {s} is not accepted by its fixture", .{ pick.block, pick.case });
     try checkProfile(pick, block);
     return block;
+}
+
+/// The blocks of the Linea mainnet window, which need no EF corpus.
+pub fn lineaWindow(a: Allocator, io: std.Io) ![]const Fact {
+    const compressed = try std.Io.Dir.cwd().readFileAlloc(io, ef_fixtures.linea_window, a, .limited(64 << 20));
+    var input: std.Io.Reader = .fixed(compressed);
+    var window: [std.compress.flate.max_window_len]u8 = undefined;
+    var gunzip: std.compress.flate.Decompress = .init(&input, .gzip, &window);
+    const text = try gunzip.reader.allocRemaining(a, .limited(1 << 30));
+    const case = try ef_blocks.caseOf(a, text, ef_fixtures.linea_window, linea_case);
+
+    if (case.chain_id != linea_chain_id) return fail(error.UnexpectedChainId, "the Linea window runs on chain {d}, not {d}", .{ case.chain_id, linea_chain_id });
+    if (case.blocks.len != linea_blocks) return fail(error.LineaLength, "the Linea window has {d} blocks, not {d}", .{ case.blocks.len, linea_blocks });
+    const blocks = try a.alloc(Fact, linea_blocks);
+    var transactions: usize = 0;
+    var types: u8 = 0;
+    for (case.blocks, blocks, 0..) |block, *slot, index| {
+        slot.* = block orelse return fail(error.LineaBlockNotAccepted, "block {d} of the Linea window is not accepted", .{index});
+        transactions += slot.transactions.len;
+        types |= slot.profile.types;
+    }
+    if (transactions != linea_transactions or types != 0b101) return fail(error.LineaChanged, "the Linea window holds {d} transactions of the types {b}", .{ transactions, types });
+    try checkChained(blocks, "the Linea window");
+    return blocks;
 }
 
 var cached: ?Selection = null;
@@ -315,6 +358,17 @@ fn splitConflations(a: Allocator, chain_id: u64, blocks: []const Fact, counts: [
 /// Consecutive conflations of the EF chain's blocks.
 pub fn chainConflations(a: Allocator, counts: []const usize) ![]Conflation {
     return splitConflations(a, ef_chain_id, (try selection()).chain, counts);
+}
+
+/// One conflation for each of the incompressible blocks.
+pub fn incompressibleConflations(a: Allocator) ![]Conflation {
+    const blocks = (try selection()).incompressible;
+    return splitConflations(a, incompressible_chain_id, blocks, &([_]usize{1} ** incompressible_blocks.block_count));
+}
+
+/// Consecutive conflations of the Linea window's blocks.
+pub fn lineaConflations(a: Allocator, counts: []const usize) ![]Conflation {
+    return splitConflations(a, linea_chain_id, (try selection()).linea, counts);
 }
 
 /// `next` as the proof range right behind `previous`: its first block number continues the numbers
