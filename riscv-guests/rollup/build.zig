@@ -1,78 +1,192 @@
 const std = @import("std");
 const common = @import("build_common");
 
+const Import = std.Build.Module.Import;
+const Compile = std.Build.Step.Compile;
+const Tools = std.StringHashMap(*Compile);
+
 pub fn build(b: *std.Build) void {
     common.requireZigVersion();
 
-    // Same freestanding rv64im profile every guest targets (shared helper).
-    const target = common.standardGuestTarget(b);
+    const options = Options.parse(b);
+    addGuestProgram(b, options);
+    if (!options.host_tools) return;
 
-    // Use b.option directly (not standardOptimizeOption) so the `-Doptimize` enum option stays
-    // exposed while still defaulting to ReleaseSmall — mirrors l2-execution's own build.zig.
-    const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseSmall)") orelse .ReleaseSmall;
+    const crypto = common.HostCrypto.forTarget(b, options.host_target, options.crypto) orelse return;
+    const unit = Host.init(b, options.host_target, .Debug, null);
+    const tools = addHostTools(b, unit, crypto);
+    addHostTests(b, options, unit, crypto);
+    addFixtureStep(b, tools);
+}
 
-    // Production proving config knob, same contract as l2-execution's flag of the same name. The
-    // stub's keccak use is comptime-only, so today the flag only keeps the CI/production
-    // invocation stable; the real guest implementation wires it to the arithmetization keccak
-    // accelerator backend.
-    _ = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: unaccelerated)") orelse false;
+/// Every `-D` option of this package, read once.
+const Options = struct {
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    crypto: common.CryptoOptions,
+    host_tools: bool,
+    /// Directory holding the EF zkevm fixtures; its `blockchain_tests/` is the corpus.
+    zkevm_fixtures: ?std.Build.LazyPath,
+    host_target: std.Build.ResolvedTarget,
 
-    // ── Guest: statically-linked rv64im ELF ───────────────────────────────────────────────────
-    // Two path dependencies: guest_common for the SSZ codec primitives, lineth_accelerators for
-    // the zkVM io-interface (read_input/write_output).
-    const guest_common_mod = b.dependency("guest_common", .{ .target = target, .optimize = optimize }).module("guest_common");
-    const lineth_accel_mod = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("lineth_accelerators");
+    fn parse(b: *std.Build) Options {
+        // All guests target the same freestanding rv64im profile.
+        const target = common.standardGuestTarget(b);
+        // Keep `-Doptimize` exposed to dependency consumers and default to ReleaseSmall.
+        const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseSmall)") orelse .ReleaseSmall;
+        const host_tools = b.option(bool, "host-tools", "Build native test and helper targets") orelse false;
+        const zkevm_fixtures = b.option(std.Build.LazyPath, "zkevm-fixtures", "Directory holding the EF zkevm fixtures; enables the test/reference suites");
+        return .{
+            .target = target,
+            .optimize = optimize,
+            .crypto = common.CryptoOptions.parse(b),
+            .host_tools = host_tools,
+            .zkevm_fixtures = zkevm_fixtures,
+            .host_target = b.resolveTargetQuery(.{}),
+        };
+    }
+};
 
-    const package_mod = common.createPackageModule(b, target, optimize, &.{
-        .{ .name = "guest_common", .module = guest_common_mod },
-    });
+/// What the sources of the package import by name, for one target.
+const Deps = struct {
+    guest_common: *std.Build.Module,
+    core_serde: *std.Build.Module,
+    lineth_da: *std.Build.Dependency,
+    /// Imports of the package module (`src/root.zig`).
+    package: []const Import,
+
+    /// `host_tools` also builds the test-side modules `lineth_da` exposes to its consumers.
+    fn init(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, host_tools: bool) Deps {
+        const guest_common = b.dependency("guest_common", .{ .target = target, .optimize = optimize });
+        const lineth_da = if (host_tools)
+            b.dependency("lineth_da", .{ .target = target, .optimize = optimize, .@"host-tools" = true })
+        else
+            b.dependency("lineth_da", .{ .target = target, .optimize = optimize });
+        // The same instance `lineth_da` and `guest_common` import, so one compilation holds the module once.
+        const zkvm_accelerators = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("zkvm_accelerators");
+        return .{
+            .guest_common = guest_common.module("guest_common"),
+            .core_serde = guest_common.module("core_serde"),
+            .lineth_da = lineth_da,
+            .package = b.allocator.dupe(Import, &.{
+                .{ .name = "guest_common", .module = guest_common.module("guest_common") },
+                .{ .name = "core_serde", .module = guest_common.module("core_serde") },
+                .{ .name = "lineth_da", .module = lineth_da.module("lineth_da") },
+                .{ .name = "zkvm_accelerators", .module = zkvm_accelerators },
+            }) catch @panic("OOM"),
+        };
+    }
+};
+
+/// The self-contained rv64im guest ELF (rollup statement, data-availability verification, crypto,
+/// input I/O).
+fn addGuestProgram(b: *std.Build, options: Options) void {
+    const accelerators = common.acceleratorsDependency(b, options.target, options.optimize, options.crypto);
+    const deps = Deps.init(b, options.target, options.optimize, false);
+    const package = common.createPackageModule(b, options.target, options.optimize, deps.package);
     common.addGuest(b, .{
         .name = "rollup_guest",
-        .target = target,
-        .optimize = optimize,
+        .target = options.target,
+        .optimize = options.optimize,
         .imports = &.{
-            .{ .name = "rollup", .module = package_mod },
-            .{ .name = "lineth_accelerators", .module = lineth_accel_mod },
+            .{ .name = "rollup", .module = package },
+            .{ .name = "lineth_accelerators", .module = accelerators.module("lineth_accelerators") },
+            .{ .name = "zkvm_provide", .module = accelerators.module("zkvm_provide") },
         },
+        .code_model = .medium,
     });
+}
 
-    // ── Native tests ───────────────────────────────────────────────────────────────────────────
-    // Like every other `b.addTest` artifact in this tree, these run on the native host: a
-    // freestanding riscv64 target has no OS to run a `std.testing` binary against. The entry point
-    // (`src/main.zig`) is the only caller of `lineth_accelerators`' io, so the native package
-    // module needs `guest_common` alone.
-    const native_target = b.resolveTargetQuery(.{});
-    const guest_common_native_mod = b.dependency("guest_common", .{ .target = native_target, .optimize = .Debug }).module("guest_common");
-    const package_native_mod = common.createPackageModule(b, native_target, .Debug, &.{
-        .{ .name = "guest_common", .module = guest_common_native_mod },
-    });
+/// What the native tests and tools of one optimize mode share: the modules they import.
+const Host = struct {
+    native: common.NativeOptions,
 
-    // Shared test-only sample data (`sampleInput`/`repeat32`/`repeat20`), used by the native tests
-    // and the fixture generator — one definition of a valid sample input.
-    const support_mod = b.createModule(.{
-        .root_source_file = b.path("test/support.zig"),
-        .target = native_target,
-        .optimize = .Debug,
-        .imports = &.{.{ .name = "rollup", .module = package_native_mod }},
-    });
-    const native: common.NativeOptions = .{
-        .target = native_target,
-        .imports = &.{
-            .{ .name = "rollup", .module = package_native_mod },
-            .{ .name = "support", .module = support_mod },
-        },
+    /// `fixtures` is the directory of the EF zkevm fixtures the `ef_fixtures` module names.
+    fn init(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, fixtures: ?std.Build.LazyPath) Host {
+        const deps = Deps.init(b, target, optimize, true);
+        const package = common.createPackageModule(b, target, optimize, deps.package);
+        const da_support = deps.lineth_da.module("support");
+        const zstd_encoder = deps.lineth_da.module("zstd_encoder");
+        const ef_blocks = deps.lineth_da.module("ef_blocks");
+        const paths = b.addOptions();
+        if (fixtures) |dir| {
+            paths.addOptionPath("amsterdam_blocks", dir.path(b, "blockchain_tests/for_amsterdam"));
+        } else {
+            paths.addOption([]const u8, "amsterdam_blocks", "");
+        }
+        const ef_fixtures = paths.createModule();
+        const sample_input = b.createModule(.{
+            .root_source_file = b.path("test/support/sample_input.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "rollup", .module = package },
+                .{ .name = "core_serde", .module = deps.core_serde },
+                .{ .name = "guest_common", .module = deps.guest_common },
+            },
+        });
+        const scenario = b.createModule(.{
+            .root_source_file = b.path("test/support/scenario.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "rollup", .module = package },
+                .{ .name = "core_serde", .module = deps.core_serde },
+                .{ .name = "sample_input", .module = sample_input },
+                .{ .name = "lineth_da", .module = deps.lineth_da.module("lineth_da") },
+                .{ .name = "da_support", .module = da_support },
+                .{ .name = "zstd_encoder", .module = zstd_encoder },
+                .{ .name = "ef_blocks", .module = ef_blocks },
+                .{ .name = "ef_fixtures", .module = ef_fixtures },
+            },
+        });
+        return .{
+            // Tests run on the native host: a freestanding riscv64 target has no OS to run a
+            // `std.testing` binary against.
+            .native = .{
+                .target = target,
+                .optimize = optimize,
+                .imports = b.allocator.dupe(Import, &.{
+                    .{ .name = "rollup", .module = package },
+                    .{ .name = "core_serde", .module = deps.core_serde },
+                    .{ .name = "guest_common", .module = deps.guest_common },
+                    .{ .name = "lineth_da", .module = deps.lineth_da.module("lineth_da") },
+                    .{ .name = "sample_input", .module = sample_input },
+                    .{ .name = "scenario", .module = scenario },
+                    .{ .name = "ef_blocks", .module = ef_blocks },
+                    .{ .name = "ef_fixtures", .module = ef_fixtures },
+                }) catch @panic("OOM"),
+            },
+        };
+    }
+};
+
+/// Every `tools/*.zig` executable. `gen_fixture` builds the sample request and links the host
+/// crypto provider.
+fn addHostTools(b: *std.Build, host: Host, crypto: common.HostCrypto) Tools {
+    const tools = common.addTools(b, host.native, .{});
+    crypto.link(tools.get("gen_fixture").?);
+    return tools;
+}
+
+/// The `test/*_test.zig` suites, and with `-Dzkevm-fixtures` the `test/reference/*_test.zig` suites
+/// over the Amsterdam blocks of the EF zkevm fixtures. The reference suites are compiled optimized:
+/// the corpus is gigabytes of JSON.
+fn addHostTests(b: *std.Build, options: Options, unit: Host, crypto: common.HostCrypto) void {
+    const test_step = b.step("test", "Run native Zig tests for the rollup guest");
+    crypto.linkAll(common.addTests(b, test_step, unit.native, .{}));
+
+    const fixtures = options.zkevm_fixtures orelse {
+        if (b.pkg_hash.len == 0) std.log.warn("test/reference skipped: pass -Dzkevm-fixtures=<dir> (`make test` does)", .{});
+        return;
     };
+    const reference = Host.init(b, options.host_target, .ReleaseSafe, fixtures);
+    crypto.linkAll(common.addTests(b, test_step, reference.native, .{ .dir = "test/reference" }));
+}
 
-    const test_step = b.step("test", "Run native Zig unit tests for the rollup guest");
-    _ = common.addTests(b, test_step, native, .{});
-    const tools = common.addTools(b, native, .{});
-
-    // ── Fixture generation ─────────────────────────────────────────────────────────────────────
-    // Prints a framed sample input as raw bytes on stdout, from the same `sampleInput` the tests use —
-    // `make exec`'s guest input is this package's own encoder output, not an externally-produced
-    // or separately-checked-in fixture. `require-input` in this guest's Makefile invokes this step
-    // to (re)generate the default INPUT on every `make exec`/`debug`, so nothing here is checked
-    // into git and it can never silently drift from what the current wire format produces.
-    const gen_fixture_step = b.step("gen-fixture", "Print a sample RollupProofPrivateInput as framed raw bytes on stdout");
-    gen_fixture_step.dependOn(&b.addRunArtifact(tools.get("gen_fixture").?).step);
+/// Runs `gen_fixture` with the arguments after `--`.
+fn addFixtureStep(b: *std.Build, tools: Tools) void {
+    const gen_fixture = b.addRunArtifact(tools.get("gen_fixture").?);
+    if (b.args) |args| gen_fixture.addArgs(args);
+    b.step("gen-fixture", "Write a sample RollupProofPrivateInput to the path after `--`").dependOn(&gen_fixture.step);
 }

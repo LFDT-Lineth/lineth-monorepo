@@ -272,7 +272,7 @@ For each conflation `c ∈ [1, N]`, derive its canonical truncated-block RLP (st
 
     Adjacent l2-execution proofs already chain `endBlockHash → parentBlockHash` via step 7 below, so the head-anchor in (b) only needs to look at `PI_E₁.parentBlockHash`.
 
- 6. **Build the L2→L1 Merkle trees.** Concatenate the ordered `PI_Eₑ.l2L1Messages` lists from the recursively verified execution public inputs in proof order. Partition the combined list into consecutive groups of `2^D` leaves (where D is chosen by the guest program, currently 5), one group per tree. Pad the final group with zero-value (0x00…00) leaves to fill it. Each leaf is a 32-byte message hash; internal nodes are `keccak256(left ‖ right)`. Compute the root of each full tree and emit the ordered array `[root_1, …, root_T]` and `l2L1TreeDepth = D` in the public inputs.
+ 6. **Concatenate the L2→L1 messages.** Concatenate the ordered `PI_Eₑ.l2L1Messages` lists from the recursively verified execution public inputs in proof order and emit the combined list as `l2L1Messages`. The rollup-aggregation guest builds the fixed-depth trees once over the full finalization (§2.3 step 3).
 
 7. **Chain the l2-execution proofs.** For each consecutive pair `(Eᵢ, Eᵢ₊₁)` assert:
    ```
@@ -528,7 +528,7 @@ The L2→L1 bridge state is tracked through an ordered list of fixed-depth Merkl
 
 **`l2MessagingBlocksOffsets`.** The execution guest derives one strictly increasing uint16 offset for each block containing a L2MessageService MessageSent receipt log. Offsets are relative to the parent block (first block is 1); the execution and rollup PIs also carry `blockCount`. Rollup and aggregation validate ranges and rebase the verified offsets into their own block ranges. The final offset list lives inside the aggregation PI and L1 emits its exact values as big-endian uint16 bytes for `L2MessagingBlockAnchored` events.
 
-**Comparison with the current approach:** The structure is identical to today — fixed-depth, zero-padded trees, one depth for all, roots stored per finalization in `l2MerkleRootsDepths`. The guest builds the trees and emits their roots; the prover commits to the list internally, while L1 retains its existing root-list hashing.
+**Comparison with the current approach:** The structure is identical to today — fixed-depth, zero-padded trees, one depth for all, roots stored per finalization in `l2MerkleRootsDepths`. The rollup-aggregation guest builds the trees and emits their roots; the prover commits to the list internally, while L1 retains its existing root-list hashing.
 
 ---
 
