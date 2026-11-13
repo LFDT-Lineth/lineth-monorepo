@@ -8,9 +8,9 @@ pnpm-specific CI.
 
 ## Rules
 
-- Keep pnpm as the only package manager. Respect `packageManager`, `.npmrc`, `engines`, `engine-strict`, and
+- Keep pnpm as the only package manager. Respect `packageManager`, `pnpm-workspace.yaml`, `engines`, `engineStrict`, and
   `only-allow` guards.
-- `minimumReleaseAge` is a maturity window in minutes. For example, `4320` means 3 days.
+- `minimumReleaseAge` is a maturity window in minutes. For example, `10080` means 7 days.
 - Respect `minimumReleaseAgeExclude`; do not manually block an excluded package solely because it is inside the maturity
   window. Treat the list as read-only — never add or widen entries to push a fresher version through.
 - Preserve `catalog:` and `workspace:` dependency references. Update the catalog entry rather than each manifest when a

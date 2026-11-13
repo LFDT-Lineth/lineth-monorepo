@@ -72,6 +72,7 @@ type pipeline struct {
 	mode            backend.ProverMode
 	requestsRootDir string
 	nativeRunnerBin string
+	shardSize       uint64
 	guestsDir       string
 	priority        int
 }
@@ -92,6 +93,7 @@ func pipelineFor(cfg *config.Config, t backend.ProofType) (p pipeline, ok bool) 
 			mode:            backend.ProverMode(cfg.Execution.ProverMode),
 			requestsRootDir: cfg.Execution.RequestsRootDir,
 			nativeRunnerBin: cfg.Execution.NativeRunnerBin,
+			shardSize:       cfg.Execution.ShardSize,
 			guestsDir:       cfg.GuestsDir,
 			priority:        0,
 		}, true
@@ -122,7 +124,7 @@ func pipelineFor(cfg *config.Config, t backend.ProofType) (p pipeline, ok bool) 
 // buildRunner builds the request-to-response runner for one pipeline, backed by an
 // in-process Core.
 func buildRunner(version string, p pipeline) (*jobadapter.Runner, error) {
-	core, err := backend.New(backend.Config{Mode: p.mode, GuestsDir: p.guestsDir})
+	core, err := backend.New(backend.Config{Mode: p.mode, GuestsDir: p.guestsDir, ShardSize: p.shardSize})
 	if err != nil {
 		return nil, fmt.Errorf("building prover core: %w", err)
 	}

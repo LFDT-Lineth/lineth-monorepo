@@ -13,7 +13,7 @@ const SHA_RE = /^[0-9a-f]{40}$/;
 const USES_RE = /uses:\s*([^\s'"#]+)(?:\s*#\s*(\S+))?/;
 
 function parseArgs(argv) {
-  // Actions use a 7-day maturity window (longer than the 3-day JS/npm/pnpm gate).
+  // Actions use a 7-day maturity window (same as the JS/npm/pnpm gate).
   const args = { days: 7, minutes: null, dir: ".github" };
   for (let index = 2; index < argv.length; index += 1) {
     const arg = argv[index];
