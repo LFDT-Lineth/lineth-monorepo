@@ -3,6 +3,7 @@
 from dataclasses import replace
 
 import pytest
+from ethereum.crypto.hash import keccak256
 from ethereum.exceptions import InvalidSignatureError
 from ethereum_rlp import rlp
 from ethereum_types.bytes import Bytes
@@ -15,6 +16,7 @@ from rollup_spec.fork import (
     LegacyTransaction,
     SetCodeTransaction,
 )
+from rollup_spec.block import block_hash, decode_block_rlp
 from rollup_spec.rollup import truncate_block_rlp
 from tests.blocks import (
     CHAIN_ID,
@@ -163,3 +165,24 @@ def test_eip_155_signature_of_another_chain_is_rejected():
     assert truncate_block_rlp(other_chain, U64(1)).froms == [SENDER]
     with pytest.raises(InvalidSignatureError):
         truncate_block_rlp(other_chain, CHAIN_ID)
+
+
+def test_block_with_an_osaka_header_is_decoded_and_truncated_like_the_amsterdam_block():
+    amsterdam = block([wire(sign(legacy_tx(3))), wire(sign(typed_tx(FeeMarketTransaction, 4)))], number=5)
+    parts = list(rlp.decode(rlp.encode(amsterdam)))
+    osaka_header = list(parts[0])[:-2]
+    osaka_rlp = rlp.encode([osaka_header, *parts[1:]])
+
+    decoded = decode_block_rlp(osaka_rlp)
+    assert decoded.header.parent_hash == amsterdam.header.parent_hash
+    assert rlp.encode(decoded.transactions) == rlp.encode(amsterdam.transactions)
+    assert block_hash(decoded.header) == keccak256(rlp.encode(osaka_header))
+    assert len(rlp.decode(rlp.encode(decoded.header))) == 21
+
+    truncated = truncate_block_rlp(osaka_rlp, CHAIN_ID)
+    expected = truncate_block_rlp(rlp.encode(amsterdam), CHAIN_ID)
+    assert truncated.transactions == expected.transactions
+    assert truncated.froms == expected.froms == [SENDER, SENDER]
+
+    with pytest.raises(Exception):
+        decode_block_rlp(rlp.encode([parts[0][:-1], *parts[1:]]))

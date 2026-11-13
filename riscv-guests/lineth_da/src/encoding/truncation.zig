@@ -3,9 +3,9 @@
 //! transactions and their senders; `encodeBlocks` serializes a conflation's truncated blocks into
 //! the canonical payload its zstd frame decompresses to.
 //!
-//! Full blocks are Amsterdam blocks: `[header, transactions, ommers, withdrawals]` in canonical
-//! RLP, the encoding ending with the block, and the transactions are the ones the header's
-//! transactions root commits to.
+//! Full blocks are Osaka or Amsterdam blocks: `[header, transactions, ommers, withdrawals]` in
+//! canonical RLP, the encoding ending with the block, and the transactions are the ones the
+//! header's transactions root commits to.
 
 const std = @import("std");
 
@@ -28,9 +28,9 @@ pub const Address = [20]u8;
 pub const Error = error{
     /// An allocator refused a request, whichever step made it.
     OutOfMemory,
-    /// The bytes are not a canonical Amsterdam block, a transaction in it is of a type outside
-    /// legacy, access-list, fee-market and set-code (a blob transaction included) or cannot be
-    /// decoded, or the transactions are not the ones the header commits to.
+    /// The bytes are not a canonical Osaka or Amsterdam block, a transaction in it is of a type
+    /// outside legacy, access-list, fee-market and set-code (a blob transaction included) or cannot
+    /// be decoded, or the transactions are not the ones the header commits to.
     MalformedBlock,
     /// A transaction's signature does not recover a sender under the chain ID, which has to be
     /// positive: its r or s is out of range, or the `v` of a legacy transaction is none of 27, 28
@@ -86,6 +86,7 @@ pub fn truncateBlockRlp(output: Allocator, scratch: Allocator, block_rlp: []cons
     const froms = try output.alloc(Address, decoded.len);
     for (decoded, senders_input, stripped, froms) |tx, tx_input, *stripped_tx, *from| {
         stripped_tx.* = try strippedTransaction(output, scratch, tx);
+        // Every fork since Homestead recovers a sender alike, from EIP-2's low s and the chain ID.
         const sender = tx_signing.recoverSender(decoding, &tx_input, chain_id, .amsterdam) catch return refusals.failure(error.SenderRecoveryFailed);
         from.* = sender orelse return error.SenderRecoveryFailed;
     }
@@ -180,7 +181,9 @@ const HeaderFields = struct {
     prev_randao: Hash,
 };
 
-/// The fields of an Amsterdam header's RLP list, all of which have to be present and canonical.
+/// The fields of an Osaka or an Amsterdam header's RLP list, all of which have to be present and
+/// canonical: Osaka's 21, which end with the requests hash, and for Amsterdam also the block access
+/// list hash and the slot number.
 fn parseHeader(payload: []const u8) Error!HeaderFields {
     var fields = Reader{ .rest = payload };
     const parent_hash = (try fields.fixed(32)).*;
@@ -204,8 +207,10 @@ fn parseHeader(payload: []const u8) Error!HeaderFields {
     _ = try fields.unsigned(u64); // excess blob gas
     _ = try fields.fixed(32); // parent beacon block root
     _ = try fields.fixed(32); // requests hash
-    _ = try fields.fixed(32); // block access list hash
-    _ = try fields.unsigned(u64); // slot number
+    if (!fields.atEnd()) {
+        _ = try fields.fixed(32); // block access list hash
+        _ = try fields.unsigned(u64); // slot number
+    }
     if (!fields.atEnd()) return error.MalformedBlock;
     return .{ .parent_hash = parent_hash, .transactions_root = transactions_root, .timestamp = timestamp, .prev_randao = prev_randao };
 }

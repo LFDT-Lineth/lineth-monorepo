@@ -55,6 +55,8 @@ from ethereum.forks.amsterdam.fork import (
     get_last_256_block_hashes,
 )
 from ethereum.forks.amsterdam.bloom import logs_bloom
+# The rollup's block truncation also reads Osaka blocks.
+from ethereum.forks.osaka.blocks import Block as OsakaBlock, Header as OsakaHeader
 from ethereum.forks.amsterdam.block_access_lists import (
     BlockAccessListBuilder,
     hash_block_access_list,
@@ -124,6 +126,8 @@ __all__ = [
     "vm",
     "Block",
     "Header",
+    "OsakaBlock",
+    "OsakaHeader",
     "Log",
     "Withdrawal",
     "AccessListTransaction",
