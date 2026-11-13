@@ -65,7 +65,7 @@
 
 1. **Dispatch authorisation** (`workflow_dispatch` only) - fails unless the triggering actor has `write`, `maintain` or `admin` permission. Runs before checkout.
 2. **PR title lint** (PRs only) - the title must follow Conventional Commits with a scope, because in a squash merge it becomes the commit message on `main`. A failure here stops the whole pipeline.
-3. **Path filters** - `dorny/paths-filter` produces the following. The per-component filters live in `.github/path-filters/components.yml`; a new component also needs a matching output on `plan` in `main.yml`.
+3. **Path filters** - `dorny/paths-filter` produces the following. The per-component filters live in `.github/path-filters/build-components.yml`; a new component also needs a matching output on `plan` in `main.yml`.
    - **Per-component flags** (`coordinator`, `prover`, `prover-ray`, `postman`, `smart-contracts`, `tracer`, `linea-sequencer-plugin`, `transaction-exclusion-api`, `linea-besu`, `linea-besu-package`, `tracer-constraints`, `native-yield-automation-service`, `lido-governance-monitor`, `rollup-spec`, `maru`, `staterecovery`) - `true` when any file belonging to that component changed.
    - **`has-changes-requiring-build`** - `false` when every changed file is on the exclusion list (`*.md`, `*.mdx`, `docs/**`, `contracts/token-generation-event/**`, `codeql.yml`), meaning the PR contains nothing that requires compilation or testing. `true` as soon as any changed file falls outside that list.
    - **`has-changes-requiring-linea-besu-package-build`** - `true` when the sequencer plugin, tracer, tracer-constraints, linea-besu, or linea-besu-package changed.
@@ -164,13 +164,13 @@ Sends a Slack alert to the engineering alerts channel if any job in the pipeline
 
 ### Path filtering drives everything
 
-The path filters in `plan` are the most important step in the pipeline. It determines what runs, what is skipped, and which images get built. Because each component's filter also watches the workflow files that test it (`.github/workflows/coordinator-*.yml`, etc.), changing a workflow file itself re-triggers the relevant test jobs. Filters that watch `main.yml` also watch `.github/path-filters/components.yml`, so editing a filter re-runs the tests it affects.
+The path filters in `plan` are the most important step in the pipeline. It determines what runs, what is skipped, and which images get built. Because each component's filter also watches the workflow files that test it (`.github/workflows/coordinator-*.yml`, etc.), changing a workflow file itself re-triggers the relevant test jobs. Filters that watch `main.yml` also watch `.github/path-filters/build-components.yml`, so editing a filter re-runs the tests it affects.
 
 Every `dorny/paths-filter` filter used by this pipeline lives in `.github/path-filters/`:
 
 | File | Used by | Decides |
 |---|---|---|
-| `components.yml` | `plan` | which component tests and images run |
+| `build-components.yml` | `plan` | which component tests and images run |
 | `build-required.yml` | `plan` | whether anything beyond docs changed (`has-changes-requiring-build`) |
 | `e2e.yml` | `.github/actions/e2e-detect-changes` | whether the zkEVM and RISC-V e2e stacks run |
 | `codeql-languages.yml` | `.github/actions/codeql-languages` | which languages CodeQL scans |

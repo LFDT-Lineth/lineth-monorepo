@@ -15,7 +15,7 @@ coordinator:
   - '.github/workflows/coordinator-*.yml'
   - '.github/workflows/build-and-publish.yml'
   - '.github/workflows/main.yml'
-  - '.github/path-filters/components.yml'
+  - '.github/path-filters/build-components.yml'
 staterecovery:
   - 'state-recovery/**'
   - 'buildSrc/**'
@@ -26,7 +26,7 @@ staterecovery:
   - 'settings.gradle'
   - '.github/workflows/staterecovery-*.yml'
   - '.github/workflows/main.yml'
-  - '.github/path-filters/components.yml'
+  - '.github/path-filters/build-components.yml'
 postman:
   - 'postman/**'
   - 'ts-libs/sdk/**'
@@ -35,14 +35,14 @@ postman:
   - '.github/workflows/postman-*.yml'
   - '.github/workflows/build-and-publish.yml'
   - '.github/workflows/main.yml'
-  - '.github/path-filters/components.yml'
+  - '.github/path-filters/build-components.yml'
   - '.nvmrc'
 prover:
   - 'prover/**'
   - '.github/workflows/prover-testing.yml'
   - '.github/workflows/build-and-publish.yml'
   - '.github/workflows/main.yml'
-  - '.github/path-filters/components.yml'
+  - '.github/path-filters/build-components.yml'
 prover-ray:
   - 'prover-ray/**'
   - 'rollup_spec/src/**'
@@ -50,7 +50,7 @@ prover-ray:
   - 'riscv-guests/build_common/linker_script.ld'
   - '.github/workflows/prover-ray-testing.yml'
   - '.github/workflows/main.yml'
-  - '.github/path-filters/components.yml'
+  - '.github/path-filters/build-components.yml'
 rollup-spec:
   - 'rollup_spec/src/**'
   - 'rollup_spec/tests/**'
@@ -70,7 +70,7 @@ transaction-exclusion-api:
   - '.github/workflows/transaction-exclusion-api-*.yml'
   - '.github/workflows/build-and-publish.yml'
   - '.github/workflows/main.yml'
-  - '.github/path-filters/components.yml'
+  - '.github/path-filters/build-components.yml'
   - 'buildSrc/**'
   - 'gradle/**'
   - 'build.gradle'
@@ -81,7 +81,7 @@ smart-contracts:
   - 'testdata/**'
   - 'prover/**'
   - '.github/workflows/main.yml'
-  - '.github/path-filters/components.yml'
+  - '.github/path-filters/build-components.yml'
   - '.github/workflows/run-smc-tests.yml'
 linea-sequencer-plugin:
   - 'linea-besu/plugins/linea-sequencer/**'
@@ -126,4 +126,4 @@ maru:
   - '.github/workflows/maru-*.yml'
   - '.github/workflows/build-and-publish.yml'
   - '.github/workflows/main.yml'
-  - '.github/path-filters/components.yml'
+  - '.github/path-filters/build-components.yml'

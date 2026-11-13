@@ -105,7 +105,7 @@ jobs:
           # change set is detected (github.ref would diff the branch vs itself).
           base: ${{ github.event_name == 'workflow_dispatch' && 'refs/heads/main' || github.ref }}
           list-files: "json"
-          filters: .github/path-filters/components.yml
+          filters: .github/path-filters/build-components.yml
 
       - name: Filter out commit changes
         uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
