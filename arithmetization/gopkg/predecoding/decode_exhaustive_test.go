@@ -71,10 +71,16 @@ const (
 	cFENCE              // always NO_OP
 )
 
+// specEntry serves as the translation manual specifying how a valid RISC-V instruction should map
+// to Lineth's internal instruction representation.
 type specEntry struct {
-	name string // constants.zkc name; for JAL/JALR the jump-only name (the _WB name is derived)
-	cl   class
-	fold bool // rd == x0 turns the instruction into NO_OP
+	// constants.zkc name; for JAL/JALR the jump-only name (the _WB name is derived)
+	name string
+
+	cl class
+
+	// rd == x0 turns the instruction into NO_OP
+	fold bool
 }
 
 // spec maps every RV64IM mnemonic (as riscv64asm names it) to Lineth's
@@ -289,6 +295,10 @@ func loadZkcConstants(t *testing.T) map[string]uint64 {
 	for _, g := range regexp.MustCompile(`(?m)^const (\w+):ComputeOp = (\d+)`).FindAllStringSubmatch(string(b), -1) {
 		c[g[1]], _ = strconv.ParseUint(g[2], 10, 64)
 	}
+	// Every name expected() can look up: the spec table's names, plus three
+	// sources the table doesn't list. The _WB variants of JAL/JALR are built by
+	// appending "_WB" in expected(); only the jump-only names are in the table.
+	// The custom-1 precompile names live in custom1Names, not in the table.
 	need := append([]string{"ITYPE_JALR_WB", "JTYPE_JAL_WB"}, custom1Names...)
 	for _, e := range spec {
 		need = append(need, e.name)
