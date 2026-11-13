@@ -61,7 +61,10 @@
 // select over a key value fed to one verifier, cheap because leaf and
 // internal proofs are proofs of the same machine; with the real verifier it
 // requires the two programs to compile to the same shape, that is the same
-// chips at the same heights, which they will have to pad to. A program
+// chips at the same heights, which they will have to pad to, and, as the
+// internal program verifies proofs of itself, that the verifier of that shape
+// fits in a program of that shape: a fixed point, reached by padding after
+// compiling. A program
 // accepting shard proofs and node proofs alike would instead select between
 // two verifiers, of two systems, and pay for both in every slot.
 //
@@ -94,12 +97,10 @@ import (
 // node of the conglomeration tree merges.
 const Arity = 6
 
-// KeyPI is the tag of the key box of a node proof: the program key the node
-// accepts its node children under, as [NumKey] base public inputs KeyPI_0 …
-// KeyPI_7, the last public inputs of a node proof. A leaf node's box is empty
-// (zero); an internal node's is the internal program's key, claimed; a root's
-// is the internal program's key, pinned. It is a child key, not the key of
-// the node's own proof, which is [Program.Key].
+// KeyPI is the tag of the key box of a node proof, its last [NumKey] base
+// public inputs KeyPI_0 … KeyPI_7: the program key the node accepts its node
+// children under (see the package doc). Zero for a leaf node, the internal
+// program's key otherwise.
 const KeyPI wiop.PublicInputTag = "NodeVerificationKey"
 
 // NumKey is the number of limbs of the key box: a [field.Octuplet].
@@ -112,13 +113,8 @@ const (
 	OpMul   Op = iota // the product of the children's values: a message-bus product
 	OpEqual           // the same on every child, propagated: the program VK, the guest output
 	OpAdd             // the sum of the children's values: a limb of the shared randomness contribution
+	OpSeed            // a limb of the shared randomness seed γ: propagated as OpEqual, checked at the root (see seedRoles)
 	OpKey             // the key box: equal to the node's on a node child, empty on a leaf child
-	// OpSeed is a limb of the shared randomness seed γ: the same on every
-	// child, propagated, and checked at the root to be the digest of the OpAdd
-	// values, the contributions added over every shard, taken in index order,
-	// as multisethashing.ToSeed derives it. A layout with OpSeed roles has
-	// [NumKey] of them, a digest, and at least one OpAdd role, all base values.
-	OpSeed
 )
 
 // Role is one public input of a child proof: its tag and index, whether it
@@ -189,9 +185,12 @@ func KeyOf(pub wiop.PublicInput) (field.Octuplet, error) {
 	return key, nil
 }
 
-// seedRoles returns the positions of the OpSeed roles of l, the seed, and of
-// its OpAdd roles, the contributions the seed is the digest of, both in index
-// order. A layout without OpSeed roles has no seed check: both are nil.
+// seedRoles returns the positions of the OpSeed roles of l, the seed γ, and
+// of its OpAdd roles, the contributions, both in index order. The root checks
+// that γ is the digest of the contributions added over every shard, taken in
+// index order, as multisethashing.ToSeed derives it, so a layout with OpSeed
+// roles has [NumKey] of them and at least one OpAdd role, all base values. A
+// layout without OpSeed roles has no seed check: both are nil.
 func seedRoles(l Layout) (seed, contributions []int, err error) {
 	for pos, role := range l {
 		switch role.Op {
@@ -238,9 +237,6 @@ const (
 type Program struct {
 	*recursion.Program
 	Kind Kind
-	// Child is the layout of a child's public inputs: the shard layout for
-	// a leaf program, the node layout for the others.
-	Child Layout
 	// Layout is the layout of the program's public inputs: the node layout.
 	Layout Layout
 
@@ -263,10 +259,8 @@ type Child struct {
 	Leaf  bool
 }
 
-// Key returns the program key: the verification key of the program, the
-// commitment to its setup, which holds the program. It is the key a proof of
-// this program is verified under, not the key box ([KeyOf]) the proof
-// carries nor the guest program VK.
+// Key returns the program key, the verification key of the program: the key
+// a proof of it is verified under.
 func (p *Program) Key() field.Octuplet { return p.Sys.PrecomputedCommitment }
 
 // NewLeaf builds and compiles the leaf program of the shard layout l, the
@@ -320,12 +314,9 @@ func NewRoot(l Layout, leaf, internal *Program, newVerifier verifier.Constructor
 // build builds the program of a kind over the verifier newVerifier returns
 // for childSys, the system of the children verified under the constant child
 // key, childSys's, pinning the key box to internalKey for the root. Its
-// inputs are the key box (internal and root programs; a leaf's is empty)
-// then, for each of the [Arity] children, an active flag (0 or 1), a leaf
-// flag (internal and root programs) and the cells of the child's proof, as
-// the verifier allocates them; the first child is always active. An inactive
-// child's proof is not verified and it contributes the neutral value of every
-// role.
+// inputs are laid out as [Program.Inputs] describes; the first child is
+// always active, and an inactive child's proof is not verified and
+// contributes the neutral value of every role.
 func build(l Layout, kind Kind, newVerifier verifier.Constructor, childSys *wiop.System, internalKey field.Octuplet, opts ...compilers.Option) (*Program, error) {
 	if len(l) == 0 {
 		return nil, errors.New("node: empty layout")
@@ -476,7 +467,7 @@ func build(l Layout, kind Kind, newVerifier verifier.Constructor, childSys *wiop
 	if err != nil {
 		return nil, fmt.Errorf("node: %w", err)
 	}
-	p := &Program{Program: rp, Kind: kind, Child: child, Layout: layout, verifier: v, childSys: childSys, numProofCells: numProofCells}
+	p := &Program{Program: rp, Kind: kind, Layout: layout, verifier: v, childSys: childSys, numProofCells: numProofCells}
 	return p, p.checkLayout()
 }
 
@@ -499,10 +490,13 @@ func (p *Program) checkLayout() error {
 }
 
 // Inputs lays the key box and 1 to [Arity] children out as the program's
-// input cells: the given children active with their proofs laid out by the
-// verifier under their child keys, the other slots inactive and zero. box is
-// the node's key box, the internal program's key; a leaf program ignores it.
-// It fails on a child whose proof the verifier does not accept.
+// input cells: the key box (internal and root programs; a leaf's is empty)
+// then, for each of the [Arity] slots, an active flag (0 or 1), a leaf flag
+// (internal and root programs) and the cells of the child's proof as the
+// verifier assigns them; the given children fill the first slots, the other
+// slots are inactive and zero. box is the node's key box, the internal
+// program's key; a leaf program ignores it. It fails on a child whose proof
+// the verifier does not accept.
 func (p *Program) Inputs(box field.Octuplet, children ...Child) ([]recursion.Cell, error) {
 	if len(children) < 1 || len(children) > Arity {
 		return nil, fmt.Errorf("node: %d children, want 1 to %d", len(children), Arity)

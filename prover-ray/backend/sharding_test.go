@@ -67,11 +67,7 @@ func TestRunProve_ShardIndexes(t *testing.T) {
 		require.Equal(t, uint(3), numShards, "the trace should have 3 shards")
 		require.Equal(t, []uint{0, 1, 2}, node.Coverage, "the root should cover every shard")
 		require.Equal(t, conglomeration.Merged, node.Kind, "the root should be a merged node")
-		require.NoError(t, c.merger.(*conglomeration.RecursionMerger).VerifyRoot(node), "the root proof should verify")
-		for h, p := range messagebus.GetProducts(c.sys, node.Pub) {
-			diff := p.Sub(field.ElemOne())
-			require.True(t, diff.IsZero(), "bus handle %d should balance at the root", h)
-		}
+		requireRoot(t, c, node)
 	})
 
 	t.Run("strict subset", func(t *testing.T) {
@@ -103,6 +99,13 @@ func TestRunProve_DeepTree(t *testing.T) {
 		coverage[i] = uint(i)
 	}
 	require.Equal(t, coverage, node.Coverage, "the root should cover every shard")
+	requireRoot(t, c, node)
+}
+
+// requireRoot checks that node is a root of c's recursion merger: its proof
+// verifies and every bus handle balances.
+func requireRoot(t *testing.T, c *Core, node conglomeration.Node) {
+	t.Helper()
 	require.NoError(t, c.merger.(*conglomeration.RecursionMerger).VerifyRoot(node), "the root proof should verify")
 	for h, p := range messagebus.GetProducts(c.sys, node.Pub) {
 		diff := p.Sub(field.ElemOne())

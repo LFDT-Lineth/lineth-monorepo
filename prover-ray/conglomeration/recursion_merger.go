@@ -12,10 +12,6 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/risc5"
 )
 
-// A node program merges RecursionTreeArity children: the two constants must
-// agree, which these conversions only compile if they do.
-const _ = uint(RecursionTreeArity-node.Arity) + uint(node.Arity-RecursionTreeArity)
-
 // roles is how a node combines each public input of a RISCV-ZKC shard proof.
 var roles = map[wiop.PublicInputTag]node.Op{
 	messagebus.PublicInputTag:            node.OpMul,
@@ -25,25 +21,17 @@ var roles = map[wiop.PublicInputTag]node.Op{
 	risc5.SharedRandomnessContributionPI: node.OpAdd,
 }
 
-// RecursionMerger is the dev and test [Merger] proving the merges with the
-// recursion machine's node programs (package recursionguests/node): the merger is
-// the host side of a merge, picking the program by the children's kind and
-// checking their coverage and shape, and the program its in-circuit layer.
-// Shard proofs are merged by the leaf program, merged nodes by the internal program
-// whatever their depth, and the root by the root program: one key per role,
-// so that the tree has any shape. A merged node's public inputs are the shard
-// layout followed by the node's key box: empty for a leaf node, the internal
-// program's key for the others, which the root program pins (see the node
-// package).
+// RecursionMerger is the [Merger] proving the merges with the recursion
+// machine's node programs (package recursionguests/node, which describes the
+// programs and the key box). It is the host side of a merge: it picks the
+// program by the children's kind, checks their coverage, shape and agreement,
+// and proves with the program, whose checks a violation fails at
+// verification. The programs verify the children with the in-machine
+// verifier the caller chooses: verifier.New in production, which fails until
+// the wiop verifier is written in the machine's instructions, and
+// verifier.NewMock in dev and test, under which the merger is not sound.
 //
-// The programs verify the children with the in-machine verifier its caller
-// chooses (see package recursionguests/verifier): verifier.NewMock in tests, as
-// verifier.New fails until the wiop verifier is written in the machine's
-// instructions. The programs then check the children agree on the program VK, the
-// guest output and the seed γ, multiply the bus products, add the
-// contributions and apply the key rule; the root program also checks that
-// every product is one and that γ is the digest of the contributions added
-// over every shard. A violation is caught by verifying the node's own proof.
+// Merge is safe for concurrent use, as [Reducer] requires.
 type RecursionMerger struct {
 	sys                  *wiop.System // the shard system, for its public-input layout
 	shard                node.Layout  // the layout of a shard proof

@@ -40,7 +40,8 @@ func requireMerged(t *testing.T, merger *RecursionMerger, program *node.Program,
 }
 
 // TestRecursionMerger_Merge checks the merges of shard proofs and merged
-// nodes, and the rejections of disagreeing or malformed children.
+// nodes, and the rejections of disagreeing or malformed children and of
+// children whose proof does not verify.
 func TestRecursionMerger_Merge(t *testing.T) {
 	sys := testSystem(false)
 	merger := newTestRecursionMerger(t, sys)
@@ -89,6 +90,15 @@ func TestRecursionMerger_Merge(t *testing.T) {
 		n.Pub[pos] = v
 		return n
 	}
+	forgedProof := shardNode(sys, 0, elem(1))
+	forgedProof.Proof.DynamicSizes = map[int]int{0: 8}
+	stolen, err := merger.Merge([]Node{shardNode(sys, 5, elem(2))})
+	require.NoError(t, err)
+	stolen.Proof = merged.Proof
+	lifted, err := merger.Merge([]Node{shardNode(sys, 0, elem(1))})
+	require.NoError(t, err)
+	root, err := merger.Finalize([]Node{lifted}, 1)
+	require.NoError(t, err)
 	cases := []struct {
 		name     string
 		children []Node
@@ -107,6 +117,13 @@ func TestRecursionMerger_Merge(t *testing.T) {
 			wantErr: "has 41 public inputs, want 49"},
 		{name: "foreign key box", children: []Node{merged, foreign}, wantErr: "carries a foreign key box"},
 		{name: "too many children", children: make([]Node, RecursionTreeArity+1), wantErr: "merging 7 nodes"},
+		// Proofs the verifier rejects in Go: a shard proof with a size for a
+		// module the shard system has not, a merged node carrying another
+		// node's proof, and a root, whose key box is the internal key but
+		// whose proof is of the root program.
+		{name: "forged shard proof", children: []Node{forgedProof}, wantErr: "verifying the proof in Go"},
+		{name: "merged node with another's proof", children: []Node{merged, stolen}, wantErr: "verifying the proof in Go"},
+		{name: "root as a child", children: []Node{merged, root}, wantErr: "verifying the proof in Go"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -167,26 +184,6 @@ func TestRecursionMerger_Finalize(t *testing.T) {
 			require.Equal(t, merger.internal.Key(), key, "the root should expose the internal key")
 		})
 	}
-}
-
-// TestRecursionMerger_VerifiesChildren checks that a child whose proof does
-// not verify in Go is rejected: a shard proof with a size for a module the
-// shard system has not, and a merged node carrying another node's proof.
-func TestRecursionMerger_VerifiesChildren(t *testing.T) {
-	sys := testSystem(false)
-	merger := newTestRecursionMerger(t, sys)
-	forged := shardNode(sys, 0, elem(1))
-	forged.Proof.DynamicSizes = map[int]int{0: 8}
-	_, err := merger.Merge([]Node{forged})
-	require.ErrorContains(t, err, "verifying the proof in Go")
-
-	a, err := merger.Merge([]Node{shardNode(sys, 0, elem(1))})
-	require.NoError(t, err)
-	b, err := merger.Merge([]Node{shardNode(sys, 1, elem(2))})
-	require.NoError(t, err)
-	b.Proof = a.Proof
-	_, err = merger.Merge([]Node{a, b})
-	require.ErrorContains(t, err, "verifying the proof in Go")
 }
 
 // TestRecursionMerger_SharedRandomness checks that the contributions add up

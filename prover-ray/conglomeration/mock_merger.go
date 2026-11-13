@@ -118,8 +118,8 @@ func (m MockMerger) Finalize(children []Node, numShards uint) (Node, error) {
 }
 
 // checkSeedDerived checks, when sys has shared randomness, that the seed γ
-// of the public inputs pubs, of the children of a root, is the one their
-// contributions, added up, derive.
+// of the public inputs pubs (at least one), of the children of a root, is the
+// one their contributions, added up, derive.
 func checkSeedDerived(sys *wiop.System, pubs ...wiop.PublicInput) error {
 	if !messagebus.HasSharedRandomness(sys) {
 		return nil
