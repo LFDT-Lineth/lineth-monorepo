@@ -44,55 +44,33 @@ func (s shape) equal(o shape) bool {
 // Mock is the dev and test [Verifier]. It runs the child's wiop verifier in
 // Go, on the host, instead of in the machine's instructions:
 //
-//   - Declare allocates the public inputs, the round commitments and a
+//   - Allocate allocates the public inputs, the round commitments and a
 //     verdict, instead of the whole proof.
-//   - Cells verifies the proof in Go with the system of the key, then sets
-//     the verdict to the digest of the key, the public inputs and the
+//   - Assign verifies the proof in Go with its system, then sets the verdict
+//     to the digest of the system's key, the public inputs and the
 //     commitments.
-//   - Verify only recomputes that digest and checks it equals the verdict.
+//   - Define only recomputes that digest and checks it equals the verdict.
 //
 // Programs built on a Mock have the inputs and the flow of programs built on
 // the real verifier, but the Mock is not sound: a host can skip the Go
 // verification and compute the verdict anyway. Never on a production path.
 type Mock struct {
-	shape   shape
-	systems map[field.Octuplet]*wiop.System
+	shape shape
 }
 
-// NewMock returns the mock verifier of the proofs of the systems, which share
-// a shape, each verified in Go under its key (wiop.System.PrecomputedCommitment).
-// A system that exists only once a program is compiled with the mock, the
-// program verifying proofs of itself, is added with [Mock.Accept].
-func NewMock(systems ...*wiop.System) (Verifier, error) {
-	if len(systems) == 0 {
+// NewMock returns the mock verifier of the proofs of the systems of sys's
+// shape.
+func NewMock(sys *wiop.System) (Verifier, error) {
+	if sys == nil {
 		return nil, errors.New("verifier: no system")
 	}
-	v := &Mock{shape: shapeOf(systems[0]), systems: make(map[field.Octuplet]*wiop.System)}
-	for _, sys := range systems {
-		if err := v.Accept(sys); err != nil {
-			return nil, err
-		}
-	}
-	return v, nil
+	return &Mock{shape: shapeOf(sys)}, nil
 }
 
-// Accept adds sys to the systems the mock verifies the proofs of, under its
-// key. sys must have the mock's shape and a key no other system has.
-func (v *Mock) Accept(sys *wiop.System) error {
-	if !shapeOf(sys).equal(v.shape) {
-		return errors.New("verifier: the system has not the mock's shape")
-	}
-	if _, dup := v.systems[sys.PrecomputedCommitment]; dup {
-		return fmt.Errorf("verifier: two systems have the key %v", sys.PrecomputedCommitment)
-	}
-	v.systems[sys.PrecomputedCommitment] = sys
-	return nil
-}
-
-// Declare implements [Verifier]: the public inputs, the commitments, the
+// Allocate implements [Verifier]: the public inputs, the commitments, the
 // verdict.
-func (v *Mock) Declare(m *recursion.Machine) []int {
-	cells := make([]int, 0, len(v.shape.pubs)+v.shape.commitments+1)
+func (v *Mock) Allocate(m *recursion.Machine) ProofCells {
+	cells := make(ProofCells, 0, len(v.shape.pubs)+v.shape.commitments+1)
 	for _, kind := range v.shape.pubs {
 		if kind == recursion.KindE6 {
 			cells = append(cells, m.InputE6())
@@ -106,10 +84,10 @@ func (v *Mock) Declare(m *recursion.Machine) []int {
 	return cells
 }
 
-// Verify implements [Verifier]: the verdict is the digest of the key, the
-// public inputs and the commitments, laid out as Pack does, which [Mock.Cells]
-// computes with poseidon2.MDHasher.
-func (v *Mock) Verify(m *recursion.Machine, active, key int, proof []int) []int {
+// Define implements [Verifier]: the verdict is the digest of the key, the
+// public inputs and the commitments, laid out as Pack does, which
+// [Mock.Assign] computes with poseidon2.MDHasher.
+func (v *Mock) Define(m *recursion.Machine, active, key int, proof ProofCells) []int {
 	n := len(v.shape.pubs)
 	if len(proof) != n+v.shape.commitments+1 {
 		panic(fmt.Sprintf("verifier: %d proof cells, want %d", len(proof), n+v.shape.commitments+1))
@@ -122,12 +100,19 @@ func (v *Mock) Verify(m *recursion.Machine, active, key int, proof []int) []int 
 		kinds = append(kinds, recursion.KindDigest)
 	}
 	AssertEqDigest(m, active, m.MDHash(m.Pack(items, kinds)), verdict)
-	return slices.Clone(pubs)
+	return slices.Clone([]int(pubs))
 }
 
-// Cells implements [Verifier]: it checks the proof's shape, verifies it in Go
-// with the system of the key and lays it out with its verdict.
-func (v *Mock) Cells(key field.Octuplet, proof wiop.Proof, pub wiop.PublicInput) ([]recursion.Cell, error) {
+// Assign implements [Verifier]: it checks that sys has the mock's shape and
+// the proof its shape, verifies the proof in Go with sys and lays it out with
+// its verdict.
+func (v *Mock) Assign(sys *wiop.System, proof wiop.Proof, pub wiop.PublicInput) ([]recursion.Cell, error) {
+	if sys == nil {
+		return nil, errors.New("no system")
+	}
+	if !shapeOf(sys).equal(v.shape) {
+		return nil, errors.New("the system has not the verifier's shape")
+	}
 	if len(pub) != len(v.shape.pubs) {
 		return nil, fmt.Errorf("%d public inputs, want %d", len(pub), len(v.shape.pubs))
 	}
@@ -135,7 +120,7 @@ func (v *Mock) Cells(key field.Octuplet, proof wiop.Proof, pub wiop.PublicInput)
 		return nil, fmt.Errorf("%d round commitments, want %d", len(proof.Commitments), v.shape.commitments)
 	}
 	cells := make([]recursion.Cell, 0, len(pub)+v.shape.commitments+1)
-	elements := append([]field.Element(nil), key[:]...)
+	elements := append([]field.Element(nil), sys.PrecomputedCommitment[:]...)
 	for pos, kind := range v.shape.pubs {
 		var c recursion.Cell
 		switch {
@@ -148,10 +133,6 @@ func (v *Mock) Cells(key field.Octuplet, proof wiop.Proof, pub wiop.PublicInput)
 		}
 		cells = append(cells, c)
 		elements = append(elements, c[:kind]...)
-	}
-	sys, ok := v.systems[key]
-	if !ok {
-		return nil, fmt.Errorf("the proof is claimed under the key %v of no system", key)
 	}
 	if err := sys.Verify(proof, pub); err != nil {
 		return nil, fmt.Errorf("verifying the proof in Go: %w", err)
