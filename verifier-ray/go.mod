@@ -3,8 +3,8 @@ module github.com/consensys/linea-monorepo/verifier-ray
 go 1.27.1
 
 require (
-	github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20261027092207-e9e81bae1626
-	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20261102134247-a59136a98341
+	github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20261104204635-1957390836c0
+	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20261105091006-b4c76aeef374
 	github.com/stretchr/testify v1.12.1
 )
 
@@ -13,7 +13,7 @@ require (
 	github.com/bits-and-blooms/bitset v1.25.0 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565 // indirect
-	github.com/consensys/gnark-crypto v0.22.0 // indirect
+	github.com/consensys/gnark-crypto v0.22.1-0.20261014224656-bf76cc82bdd1 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.1 // indirect
 	github.com/google/pprof v0.0.0-20260402051712-545e8a4df936 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect

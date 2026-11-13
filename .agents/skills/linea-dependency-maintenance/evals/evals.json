@@ -9,8 +9,8 @@
     },
     {
       "id": 2,
-      "prompt": "In a pnpm monorepo with pnpm-workspace catalogs, minimumReleaseAge: 4320, and many pnpm overrides, bump safe patch/minor dependencies, clean stale overrides, and create issues for majors.",
-      "expected_output": "Updates catalog entries where appropriate, respects the 3-day maturity window and exclusions, regenerates pnpm-lock.yaml, pins every bumped version exactly (no ^/~), refreshes overrides by removing them then running pnpm i / pnpm audit --fix / pnpm i and reviewing what audit --fix generated, reverts any override forcing an incompatible transitive major, treats any fix still inside the maturity window as blocked rather than widening minimumReleaseAgeExclude, validates affected workspaces, and tracks majors separately.",
+      "prompt": "In a pnpm monorepo with pnpm-workspace catalogs, minimumReleaseAge: 10080, and many pnpm overrides, bump safe patch/minor dependencies, clean stale overrides, and create issues for majors.",
+      "expected_output": "Updates catalog entries where appropriate, respects the 7-day maturity window and exclusions, regenerates pnpm-lock.yaml, pins every bumped version exactly (no ^/~), refreshes overrides by removing them then running pnpm i / pnpm audit --fix / pnpm i and reviewing what audit --fix generated, reverts any override forcing an incompatible transitive major, treats any fix still inside the maturity window as blocked rather than widening minimumReleaseAgeExclude, validates affected workspaces, and tracks majors separately.",
       "files": []
     },
     {

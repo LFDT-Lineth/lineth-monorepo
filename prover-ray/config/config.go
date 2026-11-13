@@ -29,12 +29,18 @@ type Config struct {
 
 // Execution holds the L2-execution pipeline settings.
 type Execution struct {
-	// ProverMode is one of backend.ProverMode (dev-mock, dev-zkvm, partial, full).
+	// ProverMode is one of backend.ProverMode (dev-mock, dev-zkvm, dev-partial, full).
 	ProverMode string `mapstructure:"prover_mode"`
 	// RequestsRootDir contains the requests/, responses/, requests-done/ queue.
 	RequestsRootDir string `mapstructure:"requests_root_dir"`
-	// NativeRunnerBin is the native l2_execution_runner binary, required by dev-zkvm.
+	// NativeRunnerBin is the native l2_execution_runner binary, required by
+	// dev-zkvm. Optional in dev-partial, which then checks the guest output against
+	// it.
 	NativeRunnerBin string `mapstructure:"native_runner_bin"`
+	// ShardSize is the number of executed RISC-V instructions per trace shard;
+	// zero is one shard. dev-partial needs it for a real block, whose single
+	// shard does not fit in a column. full does not support sharding yet.
+	ShardSize uint64 `mapstructure:"shard_size"`
 }
 
 // Pipeline holds the rollup and aggregation pipeline settings (no guest, so no

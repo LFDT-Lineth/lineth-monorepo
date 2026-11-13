@@ -50,7 +50,7 @@ class BlockCreationMonitor(
     val lastL2BlockTimestampToProcessInclusive: Instant? = null,
   )
 
-  private val _nexBlockNumberToFetch: AtomicLong = AtomicLong(
+  private val _nextBlockNumberToFetch: AtomicLong = AtomicLong(
     when (startingPoint) {
       is StartingPoint.ByBlockNumberExclusive -> startingPoint.blockNumberExclusive + 1
       is StartingPoint.ByTimestampInclusive -> -1L
@@ -58,10 +58,10 @@ class BlockCreationMonitor(
   )
   private val expectedParentBlockHash: AtomicReference<ByteArray> = AtomicReference(null)
   private val reorgDetected: AtomicBoolean = AtomicBoolean(false)
-  private var statingBlockAvailabilityFuture: SafeFuture<*>? = null
+  private var startingBlockAvailabilityFuture: SafeFuture<*>? = null
 
-  private val nexBlockNumberToFetch: Long
-    get() = _nexBlockNumberToFetch.get()
+  private val nextBlockNumberToFetch: Long
+    get() = _nextBlockNumberToFetch.get()
 
   override fun handleError(error: Throwable) {
     log.error("Error with block creation monitor: errorMessage={}", error.message, error)
@@ -81,13 +81,11 @@ class BlockCreationMonitor(
 
   @Synchronized
   fun awaitStartingBlockToBePresent(): SafeFuture<*> {
-    if (statingBlockAvailabilityFuture == null) {
-      statingBlockAvailabilityFuture = when (startingPoint) {
+    return startingBlockAvailabilityFuture
+      ?: when (startingPoint) {
         is StartingPoint.ByBlockNumberExclusive -> awaitBlockByNumber(startingPoint.blockNumberExclusive)
         is StartingPoint.ByTimestampInclusive -> awaitBlockByTimestamp(startingPoint.timestampInclusive)
-      }
-    }
-    return statingBlockAvailabilityFuture!!
+      }.also { startingBlockAvailabilityFuture = it }
   }
 
   private fun awaitBlockByNumber(blockNumberExclusive: Long): SafeFuture<*> {
@@ -147,7 +145,7 @@ class BlockCreationMonitor(
       )
       binarySearchFirstBlockAtOrAfterTimestamp(0L, latestBlock.number.toLong(), targetTimestamp)
     }.thenCompose { firstBlockNumber ->
-      _nexBlockNumberToFetch.set(firstBlockNumber)
+      _nextBlockNumberToFetch.set(firstBlockNumber)
       log.info(
         "Block creation monitor ready. Starting from block number={}",
         firstBlockNumber,
@@ -194,10 +192,10 @@ class BlockCreationMonitor(
 
   override fun action(): SafeFuture<*> {
     if (targetCheckpointPauseController.shouldPauseConflation()) {
-      log.trace("target checkpoint pause: skipping tick nexBlockNumberToFetch={}", nexBlockNumberToFetch)
+      log.trace("target checkpoint pause: skipping tick nextBlockNumberToFetch={}", nextBlockNumberToFetch)
       return SafeFuture.completedFuture(Unit)
     }
-    log.trace("tick start: nexBlockNumberToFetch={}", nexBlockNumberToFetch)
+    log.trace("tick start: nextBlockNumberToFetch={}", nextBlockNumberToFetch)
     return lastProvenBlockNumberProviderSync.getLastKnownProvenBlockNumber()
       .let { lastProvenBlockNumber ->
         if (!nextBlockNumberWithinLimit(lastProvenBlockNumber)) {
@@ -205,20 +203,20 @@ class BlockCreationMonitor(
             "Gap between highest consecutive proven block and L2 block is too big: lastProvenBlock={} " +
               "nextBlockToFetch={} gapOverflow={} gapLimit={}",
             lastProvenBlockNumber,
-            _nexBlockNumberToFetch.get(),
-            _nexBlockNumberToFetch.get() - lastProvenBlockNumber,
+            _nextBlockNumberToFetch.get(),
+            _nextBlockNumberToFetch.get() - lastProvenBlockNumber,
             config.blocksFetchLimit,
           )
           SafeFuture.COMPLETE
         } else if (config.lastL2BlockNumberToProcessInclusive != null &&
-          nexBlockNumberToFetch.toULong() > config.lastL2BlockNumberToProcessInclusive
+          nextBlockNumberToFetch.toULong() > config.lastL2BlockNumberToProcessInclusive
         ) {
           log.warn(
             "stopping conflation at lastL2BlockNumberInclusiveToProcess - 1. " +
               "All blocks upto and including lastL2BlockNumberInclusiveToProcess={} have been processed. " +
               "nextBlockNumberToFetch={}",
             config.lastL2BlockNumberToProcessInclusive,
-            nexBlockNumberToFetch,
+            nextBlockNumberToFetch,
           )
           this.stop()
           SafeFuture.COMPLETE
@@ -241,9 +239,9 @@ class BlockCreationMonitor(
                   notifyListener(block)
                     .whenSuccess {
                       log.debug(
-                        "updating nexBlockNumberToFetch from {} --> {}",
-                        _nexBlockNumberToFetch.get(),
-                        _nexBlockNumberToFetch.incrementAndGet(),
+                        "updating nextBlockNumberToFetch from {} --> {}",
+                        _nextBlockNumberToFetch.get(),
+                        _nextBlockNumberToFetch.incrementAndGet(),
                       )
                       expectedParentBlockHash.set(block.hash)
                       targetCheckpointPauseController.importBlock(block)
@@ -304,9 +302,9 @@ class BlockCreationMonitor(
       .thenCompose { latestBlockNumber ->
         // Check if is safe to fetch nextWaitingBlockNumber
         if (latestBlockNumber.toLong() >=
-          _nexBlockNumberToFetch.get() + config.blocksToFinalization
+          _nextBlockNumberToFetch.get() + config.blocksToFinalization
         ) {
-          val blockNumber = _nexBlockNumberToFetch.get()
+          val blockNumber = _nextBlockNumberToFetch.get()
           ethApi.ethGetBlockByNumberFullTxs(BlockParameter.fromNumber(blockNumber))
             .thenPeek { block ->
               log.trace("requestedBlock={} responseBlock={}", blockNumber, block?.number)
@@ -326,6 +324,6 @@ class BlockCreationMonitor(
   }
 
   private fun nextBlockNumberWithinLimit(lastProvenBlockNumber: Long): Boolean {
-    return _nexBlockNumberToFetch.get() - lastProvenBlockNumber <= config.blocksFetchLimit
+    return _nextBlockNumberToFetch.get() - lastProvenBlockNumber <= config.blocksFetchLimit
   }
 }

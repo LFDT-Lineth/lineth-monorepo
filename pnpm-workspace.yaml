@@ -31,6 +31,8 @@ allowBuilds:
   web3-shh: false
   yarn: false
 
+autoInstallPeers: true
+
 catalog:
   '@jest/globals': 30.5.2
   '@typechain/ethers-v6': 0.5.1
@@ -57,6 +59,10 @@ catalog:
   yargs: 18.2.0
   zod: 4.6.7
 
+enablePrePostScripts: true
+
+engineStrict: true
+
 ignoredBuiltDependencies:
   - '@arbitrum/nitro-contracts'
   - '@lidofinance/lsv-cli'
@@ -80,7 +86,15 @@ ignoredBuiltDependencies:
   - web3-shh
   - yarn
 
-minimumReleaseAge: 4320
+# Breaks linea-native-yield-automation-service local build.
+injectWorkspacePackages: false
+
+# pnpm 12 records the pinned pnpm in a first lockfile document, which hides all dependencies
+# from GitHub's dependency graph and Dependabot. `ignore` keeps a single-document lockfile,
+# but pnpm no longer switches to the pinned version locally (CI, Docker and Vercel still pin it).
+pmOnFail: ignore
+
+minimumReleaseAge: 10080
 
 onlyBuiltDependencies:
   # Required by contracts/ blob tests; additions to this allowlist need security review.

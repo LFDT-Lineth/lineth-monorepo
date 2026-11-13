@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -156,7 +157,7 @@ func TestBoolEnv(t *testing.T) {
 	}
 }
 
-func TestWriteJSONLegacyLayout(t *testing.T) {
+func TestWriteJSONPreservesPartialByte(t *testing.T) {
 	inputs := map[string]bit.Array{
 		elfmapping.EntryPointAndBlobsCountInput: mustDecodeHex(t, "0080000000000002"),
 		elfmapping.BlobsOffsetAndSizeInput: mustDecodeHex(t, "0080000000000004"+
@@ -164,22 +165,22 @@ func TestWriteJSONLegacyLayout(t *testing.T) {
 		elfmapping.BlobsExecutableInput:  elfmapping.BitArrayFromBytes(0x80),
 		elfmapping.BlobsDataInput:        elfmapping.BitArrayFromBytes(1, 2, 3, 4, 5),
 		predecoding.InstructionBaseInput: mustDecodeHex(t, "00800000"),
-		predecoding.DecodedInput:         elfmapping.BitArrayFromBytes(0xaa, 0xbb),
+		predecoding.DecodedInput:         bit.NewArray([]byte{0xaa, 0xba}, 15, bit.BigEndian),
 	}
 	var output bytes.Buffer
 	if err := writeJSON(&output, inputs); err != nil {
 		t.Fatalf("writeJSON() error = %v", err)
 	}
-	want := "{\n" +
-		"\t\"entry_point_and_blobs_count\": \"0x00800000_00000002\",\n" +
-		"\t\"blobs_offset_and_size\": \"0x00800000_00000004____08800000_00000001\",\n" +
-		"\t\"blobs_executable\": \"0x80\",\n" +
-		"\t\"blobs_data\": \"0x01020304____05\",\n" +
-		"\t\"instruction_base\": \"0x00800000\",\n" +
-		"\t\"decoded\": \"0xaabb\"\n" +
-		"}\n"
-	if output.String() != want {
-		t.Fatalf("writeJSON():\n%s\nwant:\n%s", output.String(), want)
+	var encoded map[string]string
+	if err := json.Unmarshal(output.Bytes(), &encoded); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	decoded, err := bit.ParseArray(strings.TrimPrefix(encoded[predecoding.DecodedInput], "0x"))
+	if err != nil {
+		t.Fatalf("invalid decoded input: %v", err)
+	}
+	if !decoded.Equals(inputs[predecoding.DecodedInput]) {
+		t.Fatalf("decoded input lost bits or bit length: %s", decoded.String())
 	}
 }
 

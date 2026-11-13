@@ -164,7 +164,7 @@ fn runFoldCase(allocator: std.mem.Allocator, comptime params: fri.Params, case: 
 
     try fri.checkOpeningProofShape(params, proof, fold_alphas, positions);
 
-    // rounds[0] is never written (round 0 always introduces a level), so
+    // rounds[0] is never written (round 0 has no running layer), so
     // initialize it rather than leaving allocator garbage.
     const rounds = try allocator.alloc(fri.Pair, params.numRounds());
     @memset(rounds, .{ .self = ext.Ext.zero(), .sibling = ext.Ext.zero() });

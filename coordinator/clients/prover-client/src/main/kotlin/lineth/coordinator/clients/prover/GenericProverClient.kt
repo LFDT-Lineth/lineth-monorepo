@@ -103,10 +103,8 @@ open class GenericProverClient<Request, Response, RequestDto, ResponseDto, TProo
             .thenCompose {
               transport.awaitResponse(proofIndex)
             }
-            .thenApply { responseDto ->
-              responsesWaiting.decrementAndGet()
-              parseResponse(responseDto)
-            }
+            .whenComplete { _, _ -> responsesWaiting.decrementAndGet() }
+            .thenApply { responseDto -> parseResponse(responseDto) }
         }
       }
       .whenException {

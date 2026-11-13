@@ -13,6 +13,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - *(misc)* Ship license files and metadata in all published artifacts (#4336)
+- *(coordinator)* Review fixes — null safety, typos, concurrency and error handling (#2965) (#4421)
 ## [2.3.0] - 2026-10-28
 
 ### 🚀 Features

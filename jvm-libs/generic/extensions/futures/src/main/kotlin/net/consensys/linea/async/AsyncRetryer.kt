@@ -1,12 +1,16 @@
 package net.consensys.linea.async
 
 import io.vertx.core.Vertx
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.function.Consumer
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
+
+private val log: Logger = LogManager.getLogger(AsyncRetryer::class.java)
 
 class RetriedExecutionException(override val message: String) : RuntimeException(message)
 
@@ -154,6 +158,7 @@ internal class SequentialAsyncActionRetryer<T>(
         (ignoreFirstExceptionsUntilTimeElapsed?.inWholeMilliseconds ?: -1L)
       ) {
         exceptionConsumer?.runCatching { exceptionConsumer.accept(errorThrowable) }
+          ?.onFailure { log.warn("AsyncRetryer exceptionConsumer failed: errorMessage={}", it.message, it) }
       }
 
       if (stopRetrying) {
