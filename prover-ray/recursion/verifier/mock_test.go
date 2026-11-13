@@ -29,12 +29,14 @@ func stubSystem(key field.Octuplet) *wiop.System {
 }
 
 // TestMock checks that a program verifying one mock proof accepts the cells
-// the mock lays out, rejects a public input, a commitment or a verdict
-// changed after the fact, and checks nothing for an inactive proof; and that
-// Cells fails an unknown key, the Go verification and the shape checks.
+// the mock assigns, rejects a proof of another system, a public input, a
+// commitment or a verdict changed after the fact, and checks nothing for an
+// inactive proof; and that Assign fails a system of another shape, the Go
+// verification and the shape checks.
 func TestMock(t *testing.T) {
 	key := field.Octuplet{field.NewElement(7)}
-	v, err := verifier.NewMock(stubSystem(key))
+	sys := stubSystem(key)
+	v, err := verifier.NewMock(sys)
 	require.NoError(t, err)
 	kinds := []int{recursion.KindScalar, recursion.KindE6, recursion.KindScalar}
 
@@ -42,8 +44,8 @@ func TestMock(t *testing.T) {
 	// constant; the public inputs are published.
 	m := &recursion.Machine{}
 	active := m.InputScalar()
-	proof := v.Declare(m)
-	pubs := v.Verify(m, active, m.Const(recursion.Cell(key)), proof)
+	proof := v.Allocate(m)
+	pubs := v.Define(m, active, m.Const(recursion.Cell(key)), proof)
 	require.Len(t, pubs, 3)
 	for pos, kind := range kinds {
 		m.Public(pubs[pos], kind, "Out", pos)
@@ -55,7 +57,7 @@ func TestMock(t *testing.T) {
 	ext.SetRandom()
 	pub := wiop.PublicInput{field.ElemFromBase(field.NewElement(3)), field.ElemFromExt(ext), field.ElemFromBase(field.NewElement(5))}
 	wp := wiop.Proof{Commitments: map[int]field.Octuplet{0: {field.NewElement(11)}, 1: {field.NewElement(13)}}}
-	cells, err := v.Cells(key, wp, pub)
+	cells, err := v.Assign(sys, wp, pub)
 	require.NoError(t, err)
 	require.Len(t, cells, len(proof))
 
@@ -71,8 +73,12 @@ func TestMock(t *testing.T) {
 		require.Len(t, got, 3)
 		return nil
 	}
-	require.NoError(t, prove(field.One(), cells), "a laid-out proof should verify")
+	require.NoError(t, prove(field.One(), cells), "an assigned proof should verify")
 	require.NoError(t, prove(field.Element{}, make([]recursion.Cell, len(cells))), "an inactive proof should check nothing")
+
+	other, err := v.Assign(stubSystem(field.Octuplet{field.NewElement(8)}), wp, pub)
+	require.NoError(t, err, "a system of the shape should be assigned")
+	require.Error(t, prove(field.One(), other), "a proof of another system should fail")
 
 	tampered := append([]recursion.Cell(nil), cells...)
 	tampered[0][0].SetUint64(4)
@@ -84,27 +90,24 @@ func TestMock(t *testing.T) {
 	tampered[3][2].SetUint64(1)
 	require.Error(t, prove(field.One(), tampered), "a changed commitment should fail")
 
-	_, err = v.Cells(field.Octuplet{}, wp, pub)
-	require.ErrorContains(t, err, "of no system")
 	forged := wp
 	forged.DynamicSizes = map[int]int{0: 8}
-	_, err = v.Cells(key, forged, pub)
+	_, err = v.Assign(sys, forged, pub)
 	require.ErrorContains(t, err, "verifying the proof in Go")
-	_, err = v.Cells(key, wp, pub[:2])
+	_, err = v.Assign(sys, wp, pub[:2])
 	require.ErrorContains(t, err, "2 public inputs, want 3")
-	_, err = v.Cells(key, wiop.Proof{}, pub)
+	_, err = v.Assign(sys, wiop.Proof{}, pub)
 	require.ErrorContains(t, err, "0 round commitments, want 2")
 	extPub := append(wiop.PublicInput(nil), pub...)
 	extPub[0] = field.ElemFromExt(ext)
-	_, err = v.Cells(key, wp, extPub)
+	_, err = v.Assign(sys, wp, extPub)
 	require.ErrorContains(t, err, "public input 0 is not a base field element")
-
-	other := stubSystem(field.Octuplet{field.NewElement(8)})
-	require.NoError(t, v.Accept(other), "a system of the shape should be accepted")
-	require.ErrorContains(t, v.Accept(other), "two systems have the key")
-	_, err = verifier.NewMock()
-	require.ErrorContains(t, err, "no system")
 	narrow := wiop.NewSystemf("narrow")
 	narrow.RegisterPublicInputs("Out", narrow.NewRound().NewCell(narrow.Context.Childf("x"), false), 0)
-	require.ErrorContains(t, v.Accept(narrow), "not the mock's shape")
+	_, err = v.Assign(narrow, wp, pub)
+	require.ErrorContains(t, err, "not the verifier's shape")
+	_, err = v.Assign(nil, wp, pub)
+	require.ErrorContains(t, err, "no system")
+	_, err = verifier.NewMock(nil)
+	require.ErrorContains(t, err, "no system")
 }
