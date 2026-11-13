@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
 )
@@ -199,5 +200,87 @@ func TestExprNodeLiteralRendersZeroConstant(t *testing.T) {
 	want := ".{ .constant = .{ .value = 0 } },"
 	if got != want {
 		t.Fatalf("exprNodeLiteral(zero constant) = %q, want %q", got, want)
+	}
+}
+
+func appendExprForTest(t *testing.T, expr wiop.Expression) VanishingModule {
+	t.Helper()
+	var module VanishingModule
+	nodes := exprNodes{leaves: make(map[leafKey]int), memo: make(map[wiop.Expression]int)}
+	if _, err := appendExpr(&module, nil, &nodes, CoinRouting{}, expr); err != nil {
+		t.Fatalf("appendExpr() error = %v", err)
+	}
+	return module
+}
+
+// x_{i+1} = x_i + x_i over 64 levels is 65 nodes but 2^65 - 1 as a tree; the
+// pointer memo lets the walk finish.
+func TestAppendExprWalksSharedDAGOnce(t *testing.T) {
+	const depth = 64
+	var x wiop.Expression = wiop.NewConstantField(field.NewElement(3))
+	for range depth {
+		x = wiop.Add(x, x)
+	}
+	module := appendExprForTest(t, x)
+	if got, want := len(module.Expressions), depth+1; got != want {
+		t.Fatalf("node count = %d, want %d", got, want)
+	}
+	for i := 1; i <= depth; i++ {
+		node := module.Expressions[i]
+		if node.Kind != ExprOp || node.Operands[0] != i-1 || node.Operands[1] != i-1 {
+			t.Fatalf("node %d = %+v, want add(%d, %d)", i, node, i-1, i-1)
+		}
+	}
+}
+
+// Compounds are shared by pointer (prover-ray interns them), leaves by value:
+// a vector and a scalar 1 become one node.
+func TestAppendExprSharesCompoundsByPointerAndLeavesByValue(t *testing.T) {
+	sys := wiop.NewSystemf("leaves")
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
+	build := func(one wiop.Expression) wiop.Expression {
+		return wiop.Add(one, wiop.NewConstantField(field.NewElement(2)))
+	}
+	module := appendExprForTest(t, wiop.Mul(
+		build(wiop.NewConstantField(field.One())),
+		build(wiop.NewConstantVector(mod, field.One())),
+	))
+	// const 1, const 2, add, add, mul.
+	if got, want := len(module.Expressions), 5; got != want {
+		t.Fatalf("node count = %d, want %d: %+v", got, want, module.Expressions)
+	}
+	for _, i := range []int{2, 3} {
+		if add := module.Expressions[i]; add.Kind != ExprOp || add.Operands[0] != 0 || add.Operands[1] != 1 {
+			t.Fatalf("node %d = %+v, want add(0, 1)", i, add)
+		}
+	}
+	if mul := module.Expressions[4]; mul.Operands[0] != 2 || mul.Operands[1] != 3 {
+		t.Fatalf("mul operands = %v, want [2 3]", mul.Operands)
+	}
+}
+
+// Separately built equal subexpressions of two vanishings share one node,
+// since prover-ray interns them on registration.
+func TestBuildVanishingSystemSharesSubexpressionsAcrossVanishings(t *testing.T) {
+	sys := wiop.NewSystemf("shared")
+	r0 := sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
+	a := mod.NewColumn(sys.Context.Childf("a"), r0)
+	b := mod.NewColumn(sys.Context.Childf("b"), r0)
+	mod.NewVanishing(sys.Context.Childf("v1"), wiop.Sub(wiop.Mul(a.View(), b.View()), a.View()))
+	mod.NewVanishing(sys.Context.Childf("v2"), wiop.Sub(wiop.Mul(a.View(), b.View()), b.View()))
+
+	global.Compile(sys)
+	routing, err := BuildCoinRouting(sys)
+	if err != nil {
+		t.Fatalf("BuildCoinRouting() error = %v", err)
+	}
+	got, err := BuildVanishingSystem(sys, routing)
+	if err != nil {
+		t.Fatalf("BuildVanishingSystem() error = %v", err)
+	}
+	// claim a, claim b, a·b, a·b - a, a·b - b.
+	if n := len(got.Modules[0].Expressions); n != 5 {
+		t.Fatalf("node count = %d, want 5: %+v", n, got.Modules[0].Expressions)
 	}
 }
