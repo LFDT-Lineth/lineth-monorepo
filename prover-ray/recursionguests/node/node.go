@@ -268,7 +268,9 @@ func (p *Program) Key() field.Octuplet { return p.Sys.PrecomputedCommitment }
 // NewLeaf builds and compiles the leaf program of the shard layout l, the
 // layout of shardSys, whose children are shard proofs: proofs of shardSys,
 // verified under its key, with the verifier newVerifier returns.
-func NewLeaf(l Layout, shardSys *wiop.System, newVerifier verifier.Constructor, opts ...compilers.Option) (*Program, error) {
+func NewLeaf(
+	l Layout, shardSys *wiop.System, newVerifier verifier.Constructor, opts ...compilers.Option,
+) (*Program, error) {
 	if shardSys == nil {
 		return nil, errors.New("node: no shard system")
 	}
@@ -280,7 +282,9 @@ func NewLeaf(l Layout, shardSys *wiop.System, newVerifier verifier.Constructor, 
 // verified under the leaf program's key, a node child, a proof of the
 // internal program itself, under the key box, with the verifier newVerifier
 // returns.
-func NewInternal(l Layout, leaf *Program, newVerifier verifier.Constructor, opts ...compilers.Option) (*Program, error) {
+func NewInternal(
+	l Layout, leaf *Program, newVerifier verifier.Constructor, opts ...compilers.Option,
+) (*Program, error) {
 	if leaf == nil || leaf.Kind != Leaf {
 		return nil, errors.New("node: no leaf program")
 	}
@@ -298,7 +302,9 @@ func NewInternal(l Layout, leaf *Program, newVerifier verifier.Constructor, opts
 // to the internal program's key, and checking every bus product is one and,
 // when l has a seed, that it is the digest of the contributions. It verifies
 // its children with the verifier newVerifier returns.
-func NewRoot(l Layout, leaf, internal *Program, newVerifier verifier.Constructor, opts ...compilers.Option) (*Program, error) {
+func NewRoot(
+	l Layout, leaf, internal *Program, newVerifier verifier.Constructor, opts ...compilers.Option,
+) (*Program, error) {
 	if leaf == nil || leaf.Kind != Leaf {
 		return nil, errors.New("node: no leaf program")
 	}
@@ -319,7 +325,10 @@ func NewRoot(l Layout, leaf, internal *Program, newVerifier verifier.Constructor
 // inputs are laid out as [Program.Inputs] describes; the first child is
 // always active, and an inactive child contributes the neutral value of every
 // role.
-func build(l Layout, kind Kind, newVerifier verifier.Constructor, childSys *wiop.System, internalKey field.Octuplet, opts ...compilers.Option) (*Program, error) {
+func build(
+	l Layout, kind Kind, newVerifier verifier.Constructor,
+	childSys *wiop.System, internalKey field.Octuplet, opts ...compilers.Option,
+) (*Program, error) {
 	if len(l) == 0 {
 		return nil, errors.New("node: empty layout")
 	}

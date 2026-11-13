@@ -56,7 +56,7 @@ type Constructor func(sys *wiop.System) (Verifier, error)
 // New returns the verifier of the proofs of the systems of sys's shape. It is
 // the production constructor and returns [ErrNotImplemented] for now; use
 // [NewMock] in dev and test code.
-func New(sys *wiop.System) (Verifier, error) {
+func New(_ *wiop.System) (Verifier, error) {
 	return nil, ErrNotImplemented
 }
 

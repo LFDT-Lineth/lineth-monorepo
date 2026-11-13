@@ -165,8 +165,9 @@ func TestNew_Aggregates(t *testing.T) {
 		}
 	}
 
-	var leaves []node.Child
-	for _, n := range []int{1, 2, node.Arity} {
+	counts := []int{1, 2, node.Arity}
+	leaves := make([]node.Child, 0, len(counts))
+	for _, n := range counts {
 		children := shards(r, l, n)
 		proof, pub, err := tr.leaf.ProveChildren(field.Octuplet{}, children...)
 		require.NoError(t, err, "%d shards", n)

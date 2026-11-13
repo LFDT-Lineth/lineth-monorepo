@@ -13,6 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const errGoVerify = "verifying the proof in Go"
+
 func newTestRecursionMerger(t *testing.T, sys *wiop.System) *RecursionMerger {
 	t.Helper()
 	merger, err := NewRecursionMerger(sys, verifier.NewMock, wioptest.TestingCompileOptions()...)
@@ -121,9 +123,9 @@ func TestRecursionMerger_Merge(t *testing.T) {
 		// module the shard system has not, a merged node carrying another
 		// node's proof, and a root, whose key box is the internal key but
 		// whose proof is of the root program.
-		{name: "forged shard proof", children: []Node{forgedProof}, wantErr: "verifying the proof in Go"},
-		{name: "merged node with another's proof", children: []Node{merged, stolen}, wantErr: "verifying the proof in Go"},
-		{name: "root as a child", children: []Node{merged, root}, wantErr: "verifying the proof in Go"},
+		{name: "forged shard proof", children: []Node{forgedProof}, wantErr: errGoVerify},
+		{name: "merged node with another's proof", children: []Node{merged, stolen}, wantErr: errGoVerify},
+		{name: "root as a child", children: []Node{merged, root}, wantErr: errGoVerify},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

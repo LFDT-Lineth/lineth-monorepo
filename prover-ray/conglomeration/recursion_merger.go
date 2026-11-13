@@ -42,7 +42,9 @@ type RecursionMerger struct {
 // public-input layout of sys, a compiled RISCV-ZKC system (see
 // risc5.CheckPublicInputs), verifying their children with the verifiers
 // newVerifier returns.
-func NewRecursionMerger(sys *wiop.System, newVerifier verifier.Constructor, opts ...compilers.Option) (*RecursionMerger, error) {
+func NewRecursionMerger(
+	sys *wiop.System, newVerifier verifier.Constructor, opts ...compilers.Option,
+) (*RecursionMerger, error) {
 	shard, err := node.LayoutOf(sys, roles)
 	if err != nil {
 		return nil, err

@@ -52,7 +52,8 @@ func TestMock(t *testing.T) {
 	require.NoError(t, err)
 
 	var ext field.Ext
-	ext.SetRandom()
+	_, err = ext.SetRandom()
+	require.NoError(t, err)
 	pub := wiop.PublicInput{field.ElemFromBase(field.NewElement(3)), field.ElemFromExt(ext), field.ElemFromBase(field.NewElement(5))}
 	wp := wiop.Proof{Commitments: map[int]field.Octuplet{0: {field.NewElement(11)}, 1: {field.NewElement(13)}}}
 	cells, err := v.Assign(sys, wp, pub)
