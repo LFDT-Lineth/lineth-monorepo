@@ -53,7 +53,7 @@ concurrency:
 jobs:
   build-and-publish:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
-    environment: ${{ inputs.push_image && 'dockerhub-linea-lido-governance-monitor' || 'dockerhub-pull' }}
+    environment: ${{ !inputs.push_image && 'dockerhub-pull' || github.ref == 'refs/heads/main' && 'dockerhub-linea-lido-governance-monitor' || 'dockerhub-linea-lido-governance-monitor-approval' }}
     name: lido-governance-monitor
     env:
       COMMIT_TAG: ${{ inputs.commit_tag }}

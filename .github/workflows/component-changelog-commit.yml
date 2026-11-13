@@ -20,6 +20,7 @@ concurrency:
 jobs:
   push-component-changelog:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    environment: ${{ !inputs.create_pull_request && (github.ref == 'refs/heads/main' && 'release-bot' || 'release-bot-approval') || '' }}
     steps:
       # Mint a short-lived token either for the release bot GitHub App to commit the changelog changes
       # directly bypassin the branch-protection or for PR bot GitHub App to create PR with the changelog changes.

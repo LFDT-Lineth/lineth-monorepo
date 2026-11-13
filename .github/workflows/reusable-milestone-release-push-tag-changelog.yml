@@ -53,6 +53,7 @@ permissions:
 jobs:
   update-linea-milestone-changelog:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    environment: ${{ !inputs.create_pull_request && (github.ref == 'refs/heads/main' && 'release-bot' || 'release-bot-approval') || '' }}
     outputs:
       changelog: ${{ steps.prepend-milestone-header.outputs.changelog }}
     env:
@@ -85,7 +86,8 @@ jobs:
         with:
           # Use the App token so subsequent `git push` is authenticated as the App.
           token: ${{ steps.app-token.outputs.token }}
-          ref: ${{ github.head_ref || github.ref_name }}
+          # Outside main, run the approved commit rather than whatever the branch tip is now.
+          ref: ${{ github.ref == 'refs/heads/main' && github.ref_name || github.sha }}
           fetch-depth: 0
           fetch-tags: true
           submodules: false
