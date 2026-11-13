@@ -166,6 +166,18 @@ Sends a Slack alert to the engineering alerts channel if any job in the pipeline
 
 The path filters in `plan` are the most important step in the pipeline. It determines what runs, what is skipped, and which images get built. Because each component's filter also watches the workflow files that test it (`.github/workflows/coordinator-*.yml`, etc.), changing a workflow file itself re-triggers the relevant test jobs. Filters that watch `main.yml` also watch `.github/path-filters/components.yml`, so editing a filter re-runs the tests it affects.
 
+Every `dorny/paths-filter` filter used by this pipeline lives in `.github/path-filters/`:
+
+| File | Used by | Decides |
+|---|---|---|
+| `components.yml` | `plan` | which component tests and images run |
+| `build-required.yml` | `plan` | whether anything beyond docs changed (`has-changes-requiring-build`) |
+| `e2e.yml` | `.github/actions/e2e-detect-changes` | whether the zkEVM and RISC-V e2e stacks run |
+| `codeql-languages.yml` | `.github/actions/codeql-languages` | which languages CodeQL scans |
+| `changelog.yml` | `component-changelog-upload.yml` | which component changelogs are regenerated on `main` |
+
+Filters in a workflow's `on: paths:` trigger can't be moved there, because GitHub evaluates them before any job starts.
+
 ### Docs-only changes are nearly free
 
 A PR that only touches `*.md`, `docs/**`, or `contracts/token-generation-event/**` sets `has-changes-requiring-build=false`. This skips testing, docker-build, and E2E. Only CodeQL runs.

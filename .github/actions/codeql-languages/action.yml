@@ -16,44 +16,7 @@ runs:
     - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
       id: changes
       with:
-        filters: |
-          go:
-            - '**/*.go'
-            - '**/go.mod'
-            - '**/go.sum'
-          java-kotlin:
-            - '**/*.java'
-            - '**/*.kt'
-            - '**/*.gradle'
-            - '**/*.gradle.kts'
-            - '**/pom.xml'
-            - '**/build.gradle'
-            - '**/gradle.properties'
-            - '**/settings.gradle'
-            - 'build.gradle'
-            - 'gradle.properties'
-            - 'settings.gradle'
-            - 'gradle/**'
-          javascript-typescript:
-            - '**/*.js'
-            - '**/*.ts'
-            - '**/*.tsx'
-            - '**/*.jsx'
-            - '**/*.json'
-            - '**/package.json'
-            - '**/tsconfig.json'
-            - '**/pnpm-lock.yaml'
-            - '**/yarn.lock'
-            - '**/package-lock.json'
-          actions:
-            - '.github/workflows/**'
-            - '.github/actions/**'
-          python:
-            - '**/*.py'
-            - '**/requirements.txt'
-            - '**/pyproject.toml'
-            - '**/setup.py'
-            - '**/Pipfile'
+        filters: .github/path-filters/codeql-languages.yml
 
     - name: Build matrix
       id: set-matrix

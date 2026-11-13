@@ -26,42 +26,7 @@ runs:
         # github.ref would diff a dispatched branch against itself.
         base: ${{ github.event_name == 'workflow_dispatch' && 'refs/heads/main' || github.ref }}
         list-files: json
-        filters: |
-          shared: &shared
-            - 'coordinator/**/src/main/**'
-            - 'jvm-libs/**/src/main/**'
-            - 'config/**/*.toml'
-            - 'linea-besu/**'
-            - 'maru/**/src/main/**'
-            - 'gradle/libs.versions.toml'
-            - 'contracts/local-deployments-artifacts/**'
-            - 'docker/**'
-            - '**/Dockerfile'
-            - 'e2e/src/**'
-            - 'e2e/package.json'
-            - 'e2e/jest*.config.ts'
-            - 'Makefile'
-            - '.github/actions/run-e2e-tests/**'
-            - 'linea-besu/plugins/linea-sequencer/**'
-            - 'linea-besu/plugins/sequencer-interfaces/**'
-            - 'ts-libs/**/src/**'
-            - 'ts-libs/**/package.json'
-            - '.github/workflows/reusable-run-e2e-tests.yml'
-            - '.nvmrc'
-            - 'package.json'
-          zkevm:
-            - *shared
-            - 'transaction-exclusion-api/**/src/main/**'
-            - 'postman/src/**'
-            - 'postman/package.json'
-            - 'prover/**/*.go'
-            - 'prover/**/*.mod'
-            - 'tracer/**'
-            - 'tracer-constraints/**'
-          riscv:
-            - *shared
-            - 'prover-ray/**'
-            - 'riscv-guests/**'
+        filters: .github/path-filters/e2e.yml
 
     - name: Evaluate excluding test/doc files and other-stack paths
       id: evaluate

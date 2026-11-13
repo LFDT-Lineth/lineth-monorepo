@@ -27,65 +27,7 @@ jobs:
         with:
           base: ${{ github.ref }}
           list-files: "json"
-          filters: |
-            coordinator:
-              - 'coordinator/**'
-            riscv-l2-execution:
-              - 'riscv-guests/l2_execution/**'
-              - 'riscv-guests/guest_common/**'
-              - 'riscv-guests/build_common/**'
-              - 'riscv-guests/release/**'
-              - 'riscv-guests/lineth_accelerators/**'
-              - 'riscv-guests/guest_crypto_ctt/**'
-              - 'riscv-guests/.zigversion'
-              - 'riscv-guests/Makefile'
-            riscv-rollup:
-              - 'riscv-guests/rollup/**'
-              - 'riscv-guests/guest_common/**'
-              - 'riscv-guests/build_common/**'
-              - 'riscv-guests/release/**'
-              - 'riscv-guests/lineth_accelerators/**'
-              - 'riscv-guests/.zigversion'
-              - 'riscv-guests/Makefile'
-            maru:
-              - 'maru/**'
-            postman:
-              - 'postman/**'
-            prover:
-              - 'prover/**'
-            prover-ray:
-              - 'prover-ray/**'
-              - 'riscv-guests/l2_execution/**'
-              - 'riscv-guests/guest_common/**'
-              - 'riscv-guests/build_common/**'
-              - 'riscv-guests/release/**'
-              - 'riscv-guests/lineth_accelerators/**'
-              - 'riscv-guests/guest_crypto_ctt/**'
-              - 'riscv-guests/.zigversion'
-              - 'riscv-guests/Makefile'
-            tx-exclusion-api:
-              - 'transaction-exclusion-api/**'
-            linea-besu-package:
-              - 'tracer/**'
-              - 'tracer-constraints/**'
-              - 'linea-besu/plugins/linea-sequencer/**'
-              - 'linea-besu/plugins/sequencer-interfaces/**'
-              - 'linea-besu/besu/**'
-              - 'linea-besu/package/**'
-              - 'gradle/libs.versions.toml'
-            linea:
-              - 'coordinator/**'
-              - 'maru/**'
-              - 'postman/**'
-              - 'prover/**'
-              - 'transaction-exclusion-api/**'
-              - 'tracer/**'
-              - 'tracer-constraints/**'
-              - 'linea-besu/plugins/linea-sequencer/**'
-              - 'linea-besu/plugins/sequencer-interfaces/**'
-              - 'linea-besu/besu/**'
-              - 'linea-besu/package/**'
-              - 'gradle/libs.versions.toml'
+          filters: .github/path-filters/changelog.yml
 
       # Turn the changed filters into a matrix so only changed components get a
       # runner. folder-name: where CHANGELOG.md lives. artifact-name: suffix of the

@@ -114,14 +114,7 @@ jobs:
           # On manual dispatch, diff against main (see Filter commit changes).
           base: ${{ github.event_name == 'workflow_dispatch' && 'refs/heads/main' || github.ref }}
           list-files: "json"
-          filters: |
-            has-changes-requiring-build:
-              - '!**/*.md'
-              - '!**/*.mdx'
-              - '!**/docs/**'
-              - '!docs/**'
-              - '!contracts/token-generation-event/**'
-              - '!.github/workflows/codeql.yml'
+          filters: .github/path-filters/build-required.yml
           # Means that ALL (and not just one) filter patterns must match. In other words applies the 'AND' operator to filter patterns.
           # The default is 'some', which requires just one filter pattern match and applies the 'OR' operator.
           # For 'has-changes-requiring-build', it means we have an exclusion list that we can append to.
