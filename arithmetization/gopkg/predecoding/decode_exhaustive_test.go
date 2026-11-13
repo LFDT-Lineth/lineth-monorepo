@@ -13,6 +13,14 @@ package predecoding
 //     whether that design is right: what a compute_op *does* is checked by
 //     executing programs (the ACT4 suite), not here.
 //
+// How this relates to ACT4. ACT4 runs a few dozen RISC-V certification programs
+// through the decoder AND the interpreter, so it checks results, but only for
+// the words those programs contain, and all of them are valid instructions.
+// This test checks the decoder alone, on every word: other registers and
+// immediates, and the malformed or reserved encodings ACT4 never feeds in. A
+// failure here names the field that is wrong, where an ACT4 failure only says
+// that some result is wrong. Each catches bugs the other misses.
+//
 // A failure names the instruction and the field that differs, with a sample word.
 
 import (
