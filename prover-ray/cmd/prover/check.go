@@ -35,7 +35,8 @@ type layers struct{ execution, rollup, aggregation bool }
 // It follows the "Status per layer" table of docs/prover-modes.md: rollup and
 // aggregation have no guest input format yet, so dev-zkvm and dev-partial
 // cannot run there. full is not ready on any layer, but stays allowed while it
-// is being built.
+// is being built. Change a false to true when the mode starts to work on that
+// layer.
 var modeLayers = map[backend.ProverMode]layers{
 	backend.ProverModeDevMock:    {execution: true, rollup: true, aggregation: true},
 	backend.ProverModeDevZkVM:    {execution: true, rollup: false, aggregation: false},
