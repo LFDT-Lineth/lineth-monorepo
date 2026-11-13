@@ -5,6 +5,7 @@ import (
 
 	multisethashing "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/multiset_hashing"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion/verifier"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/node"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
@@ -14,7 +15,7 @@ import (
 
 func newTestRecursionMerger(t *testing.T, sys *wiop.System) *RecursionMerger {
 	t.Helper()
-	merger, err := NewRecursionMerger(sys, wioptest.TestingCompileOptions()...)
+	merger, err := NewRecursionMerger(sys, verifier.NewMock, wioptest.TestingCompileOptions()...)
 	require.NoError(t, err)
 	return merger
 }

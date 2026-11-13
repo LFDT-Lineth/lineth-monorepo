@@ -7,6 +7,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion/verifier"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/node"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
@@ -62,11 +63,11 @@ type tree struct {
 
 func newTree(t *testing.T, l node.Layout) tree {
 	t.Helper()
-	leaf, err := node.NewLeaf(l, stubSystem(l, shardKey), testOpts...)
+	leaf, err := node.NewLeaf(l, stubSystem(l, shardKey), verifier.NewMock, testOpts...)
 	require.NoError(t, err)
-	internal, err := node.NewInternal(l, leaf, testOpts...)
+	internal, err := node.NewInternal(l, leaf, verifier.NewMock, testOpts...)
 	require.NoError(t, err)
-	root, err := node.NewRoot(l, leaf, internal, testOpts...)
+	root, err := node.NewRoot(l, leaf, internal, verifier.NewMock, testOpts...)
 	require.NoError(t, err)
 	return tree{leaf, internal, root}
 }
@@ -209,7 +210,7 @@ func TestNew_Rejects(t *testing.T) {
 	}
 	foreign := key
 	foreign[0].Add(&foreign[0], new(field.Element).SetOne())
-	const circuit, noSystem, inGo = "verifying the node proof", "of no system", "verifying the proof in Go"
+	const circuit, inGo = "verifying the node proof", "verifying the proof in Go"
 
 	cases := []struct {
 		name, wantErr string
@@ -227,7 +228,7 @@ func TestNew_Rejects(t *testing.T) {
 			_, _, err := tr.leaf.ProveChildren(field.Octuplet{}, a, b)
 			return err
 		}},
-		{name: "node child with a different key box", wantErr: noSystem, run: func() error {
+		{name: "node child with a different key box", wantErr: circuit, run: func() error {
 			_, _, err := tr.internal.ProveChildren(foreign, internal())
 			return err
 		}},
@@ -344,26 +345,26 @@ func TestNew_InvalidArguments(t *testing.T) {
 	tr := newTree(t, l)
 	sys := stubSystem(l, shardKey)
 
-	_, err := node.NewLeaf(nil, sys, testOpts...)
+	_, err := node.NewLeaf(nil, sys, verifier.NewMock, testOpts...)
 	require.ErrorContains(t, err, "empty layout")
-	_, err = node.NewLeaf(l, nil, testOpts...)
+	_, err = node.NewLeaf(l, nil, verifier.NewMock, testOpts...)
 	require.ErrorContains(t, err, "no shard system")
-	_, err = node.NewInternal(l, tr.internal, testOpts...)
+	_, err = node.NewInternal(l, tr.internal, verifier.NewMock, testOpts...)
 	require.ErrorContains(t, err, "no leaf program")
-	_, err = node.NewRoot(l, tr.leaf, tr.leaf, testOpts...)
+	_, err = node.NewRoot(l, tr.leaf, tr.leaf, verifier.NewMock, testOpts...)
 	require.ErrorContains(t, err, "no internal program")
-	_, err = node.NewLeaf(l.WithKey(), sys, testOpts...)
+	_, err = node.NewLeaf(l.WithKey(), sys, verifier.NewMock, testOpts...)
 	require.ErrorContains(t, err, "has a key box")
 	_, err = node.KeyOf(childPub(r, l)[:3])
 	require.ErrorContains(t, err, "no key box")
 	shortSeed := append(testLayout(1, false), node.Role{Tag: "Seed", Index: 0, Op: node.OpSeed})
-	_, err = node.NewLeaf(shortSeed, sys, testOpts...)
+	_, err = node.NewLeaf(shortSeed, sys, verifier.NewMock, testOpts...)
 	require.ErrorContains(t, err, "1 seed limbs, want 8")
 	noContribution := testLayout(1, false)
 	for i := range node.NumKey {
 		noContribution = append(noContribution, node.Role{Tag: "Seed", Index: i, Op: node.OpSeed})
 	}
-	_, err = node.NewLeaf(noContribution, sys, testOpts...)
+	_, err = node.NewLeaf(noContribution, sys, verifier.NewMock, testOpts...)
 	require.ErrorContains(t, err, "no contribution")
 
 	short := childPub(r, l)[:3]

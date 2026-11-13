@@ -9,6 +9,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/conglomeration"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion/verifier"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
@@ -36,7 +37,7 @@ func shardedTestCore(t *testing.T, shardSize uint64) (*Core, [32]byte) {
 
 	c, err := New(Config{CircuitBinPath: binPath, GuestsDir: dir, ShardSize: shardSize})
 	require.NoError(t, err)
-	c.merger, err = conglomeration.NewRecursionMerger(c.sys, wioptest.TestingCompileOptions()...)
+	c.merger, err = conglomeration.NewRecursionMerger(c.sys, verifier.NewMock, wioptest.TestingCompileOptions()...)
 	require.NoError(t, err)
 	return c, id
 }

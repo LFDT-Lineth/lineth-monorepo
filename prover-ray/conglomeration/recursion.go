@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion/verifier"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/node"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
@@ -35,11 +36,10 @@ var roles = map[wiop.PublicInputTag]node.Op{
 // program's key for the others, which the root program pins (see the node
 // package).
 //
-// The programs verify the children with the in-machine verifier, the mock
-// until the wiop verifier is written in the machine's language (see package
-// recursion/verifier): a child's proof is verified in Go by the system of
-// the key it is claimed under, and the mock binds its public inputs to that
-// key and to the proof's commitments in the circuit. The programs then check the children agree on the program VK, the
+// The programs verify the children with the in-machine verifier its caller
+// chooses (see package recursion/verifier): verifier.NewMock in tests, as
+// verifier.New fails until the wiop verifier is written in the machine's
+// instructions. The programs then check the children agree on the program VK, the
 // guest output and the seed γ, multiply the bus products, add the
 // contributions and apply the key rule; the root program also checks that
 // every product is one and that γ is the digest of the contributions added
@@ -52,20 +52,21 @@ type RecursionMerger struct {
 
 // NewRecursionMerger compiles the leaf, internal and root programs for the
 // public-input layout of sys, a compiled RISCV-ZKC system (see
-// risc5.CheckPublicInputs).
-func NewRecursionMerger(sys *wiop.System, opts ...compilers.Option) (*RecursionMerger, error) {
+// risc5.CheckPublicInputs), verifying their children with the verifiers
+// newVerifier returns.
+func NewRecursionMerger(sys *wiop.System, newVerifier verifier.Constructor, opts ...compilers.Option) (*RecursionMerger, error) {
 	shard, err := node.LayoutOf(sys, roles)
 	if err != nil {
 		return nil, err
 	}
 	m := &RecursionMerger{sys: sys, shard: shard}
-	if m.leaf, err = node.NewLeaf(shard, sys, opts...); err != nil {
+	if m.leaf, err = node.NewLeaf(shard, sys, newVerifier, opts...); err != nil {
 		return nil, fmt.Errorf("leaf program: %w", err)
 	}
-	if m.internal, err = node.NewInternal(shard, m.leaf, opts...); err != nil {
+	if m.internal, err = node.NewInternal(shard, m.leaf, newVerifier, opts...); err != nil {
 		return nil, fmt.Errorf("internal program: %w", err)
 	}
-	if m.root, err = node.NewRoot(shard, m.leaf, m.internal, opts...); err != nil {
+	if m.root, err = node.NewRoot(shard, m.leaf, m.internal, newVerifier, opts...); err != nil {
 		return nil, fmt.Errorf("root program: %w", err)
 	}
 	return m, nil

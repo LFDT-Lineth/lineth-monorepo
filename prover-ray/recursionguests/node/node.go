@@ -68,11 +68,10 @@
 // A program verifies each child's proof with the in-machine verifier of its
 // children's systems (package recursion/verifier) under the child key and
 // folds the public inputs the verifier yields, so a child's values enter the
-// node only through its verified proof. The verifier is the mock
-// (verifier.Mock) until the wiop verifier is written in the machine's
-// language: the mock binds a child's public inputs to the child key and to
-// its proof's commitments in the circuit and leaves the verification itself
-// to the host, in Go, so the programs are dev and test only until then.
+// node only through its verified proof. The caller chooses the verifier with
+// a verifier.Constructor: verifier.New in production, which fails until the
+// wiop verifier is written in the machine's instructions, and
+// verifier.NewMock in tests.
 //
 // A node has a fixed number of children, [Arity], each with an active flag: a
 // merge of fewer children leaves the other slots inactive, so one program (one
@@ -246,11 +245,12 @@ type Program struct {
 	Layout Layout
 
 	verifier verifier.Verifier
-	// childKey is the constant child key: the shard system's key for a leaf
-	// program, the leaf program's key for the others, whose node children
-	// are verified under the key box instead.
-	childKey      field.Octuplet
-	numProofCells int // the cells the verifier declares for one child
+	// childSys is the system of the children verified under the constant
+	// child key: the shard system for a leaf program, the leaf program's
+	// for the others, whose node children are proofs of nodeSys, verified
+	// under the key box instead: the internal program's system.
+	childSys, nodeSys *wiop.System
+	numProofCells     int // the cells the verifier allocates for one child
 }
 
 // Child is one child of a node: its proof and public inputs and, for an
@@ -271,72 +271,71 @@ func (p *Program) Key() field.Octuplet { return p.Sys.PrecomputedCommitment }
 
 // NewLeaf builds and compiles the leaf program of the shard layout l, the
 // layout of shardSys, whose children are shard proofs: proofs of shardSys,
-// verified under its key.
-func NewLeaf(l Layout, shardSys *wiop.System, opts ...compilers.Option) (*Program, error) {
+// verified under its key, with the verifier newVerifier returns.
+func NewLeaf(l Layout, shardSys *wiop.System, newVerifier verifier.Constructor, opts ...compilers.Option) (*Program, error) {
 	if shardSys == nil {
 		return nil, errors.New("node: no shard system")
 	}
-	v, err := verifier.New(shardSys)
-	if err != nil {
-		return nil, fmt.Errorf("node: %w", err)
-	}
-	return build(l, Leaf, v, shardSys.PrecomputedCommitment, field.Octuplet{}, opts...)
+	return build(l, Leaf, newVerifier, shardSys, field.Octuplet{}, opts...)
 }
 
 // NewInternal builds and compiles the internal program of the shard layout
 // l over the leaf program, whose children are node proofs: a leaf child is
 // verified under the leaf program's key, a node child, a proof of the
-// internal program itself, under the key box.
-func NewInternal(l Layout, leaf *Program, opts ...compilers.Option) (*Program, error) {
+// internal program itself, under the key box, with the verifier newVerifier
+// returns.
+func NewInternal(l Layout, leaf *Program, newVerifier verifier.Constructor, opts ...compilers.Option) (*Program, error) {
 	if leaf == nil || leaf.Kind != Leaf {
 		return nil, errors.New("node: no leaf program")
 	}
-	v, err := verifier.New(leaf.Sys)
-	if err != nil {
-		return nil, fmt.Errorf("node: %w", err)
-	}
-	p, err := build(l, Internal, v, leaf.Key(), field.Octuplet{}, opts...)
+	p, err := build(l, Internal, newVerifier, leaf.Sys, field.Octuplet{}, opts...)
 	if err != nil {
 		return nil, err
 	}
 	// The internal program verifies proofs of itself.
-	if err := v.Accept(p.Sys); err != nil {
-		return nil, fmt.Errorf("node: %w", err)
-	}
+	p.nodeSys = p.Sys
 	return p, nil
 }
 
 // NewRoot builds and compiles the root program of the shard layout l over
 // the leaf and internal programs: the internal program, pinning the key box
 // to the internal program's key, and checking every bus product is one and,
-// when l has a seed, that it is the digest of the contributions.
-func NewRoot(l Layout, leaf, internal *Program, opts ...compilers.Option) (*Program, error) {
+// when l has a seed, that it is the digest of the contributions. It verifies
+// its children with the verifier newVerifier returns.
+func NewRoot(l Layout, leaf, internal *Program, newVerifier verifier.Constructor, opts ...compilers.Option) (*Program, error) {
 	if leaf == nil || leaf.Kind != Leaf {
 		return nil, errors.New("node: no leaf program")
 	}
 	if internal == nil || internal.Kind != Internal {
 		return nil, errors.New("node: no internal program")
 	}
-	v, err := verifier.New(leaf.Sys, internal.Sys)
+	p, err := build(l, Root, newVerifier, leaf.Sys, internal.Key(), opts...)
 	if err != nil {
-		return nil, fmt.Errorf("node: %w", err)
+		return nil, err
 	}
-	return build(l, Root, v, leaf.Key(), internal.Key(), opts...)
+	p.nodeSys = internal.Sys
+	return p, nil
 }
 
-// build builds the program of a kind over the verifier v and the constant
-// child key, pinning the key box to internalKey for the root. Its inputs are
-// the key box (internal and root programs; a leaf's is empty) then, for each
-// of the [Arity] children, an active flag (0 or 1), a leaf flag (internal and
-// root programs) and the cells of the child's proof, as v declares them; the
-// first child is always active. An inactive child's proof is not verified and
-// it contributes the neutral value of every role.
-func build(l Layout, kind Kind, v verifier.Verifier, childKey, internalKey field.Octuplet, opts ...compilers.Option) (*Program, error) {
+// build builds the program of a kind over the verifier newVerifier returns
+// for childSys, the system of the children verified under the constant child
+// key, childSys's, pinning the key box to internalKey for the root. Its
+// inputs are the key box (internal and root programs; a leaf's is empty)
+// then, for each of the [Arity] children, an active flag (0 or 1), a leaf
+// flag (internal and root programs) and the cells of the child's proof, as
+// the verifier allocates them; the first child is always active. An inactive
+// child's proof is not verified and it contributes the neutral value of every
+// role.
+func build(l Layout, kind Kind, newVerifier verifier.Constructor, childSys *wiop.System, internalKey field.Octuplet, opts ...compilers.Option) (*Program, error) {
 	if len(l) == 0 {
 		return nil, errors.New("node: empty layout")
 	}
-	if v == nil {
+	if newVerifier == nil {
 		return nil, errors.New("node: no verifier")
+	}
+	v, err := newVerifier(childSys)
+	if err != nil {
+		return nil, fmt.Errorf("node: %w", err)
 	}
 	for _, role := range l {
 		if role.Op == OpKey {
@@ -376,7 +375,7 @@ func build(l Layout, kind Kind, v verifier.Verifier, childKey, internalKey field
 	// The children: each one's proof is verified under the child key, the
 	// constant or, for a node child of an internal or root program, the key
 	// box, by the leaf flag; its public inputs are what the verifier yields.
-	constKey := m.Const(recursion.Cell(childKey))
+	constKey := m.Const(recursion.Cell(childSys.PrecomputedCommitment))
 	active := make([]int, Arity)
 	leaf := make([]int, Arity)
 	values := make([][]int, Arity)
@@ -386,17 +385,17 @@ func build(l Layout, kind Kind, v verifier.Verifier, childKey, internalKey field
 		if kind != Leaf {
 			leaf[c] = m.InputScalar()
 		}
-		proof := v.Declare(m)
+		proof := v.Allocate(m)
 		if c == 0 {
 			numProofCells = len(proof)
 		} else if len(proof) != numProofCells {
-			return nil, fmt.Errorf("node: the verifier declares %d cells for a child, then %d", numProofCells, len(proof))
+			return nil, fmt.Errorf("node: the verifier allocates %d cells for a child, then %d", numProofCells, len(proof))
 		}
 		key := constKey
 		if kind != Leaf {
 			key = m.Select(leaf[c], constKey, box)
 		}
-		values[c] = v.Verify(m, active[c], key, proof)
+		values[c] = v.Define(m, active[c], key, proof)
 		if len(values[c]) != len(child) {
 			return nil, fmt.Errorf("node: the verifier yields %d public inputs, want %d", len(values[c]), len(child))
 		}
@@ -477,7 +476,7 @@ func build(l Layout, kind Kind, v verifier.Verifier, childKey, internalKey field
 	if err != nil {
 		return nil, fmt.Errorf("node: %w", err)
 	}
-	p := &Program{Program: rp, Kind: kind, Child: child, Layout: layout, verifier: v, childKey: childKey, numProofCells: numProofCells}
+	p := &Program{Program: rp, Kind: kind, Child: child, Layout: layout, verifier: v, childSys: childSys, numProofCells: numProofCells}
 	return p, p.checkLayout()
 }
 
@@ -521,16 +520,16 @@ func (p *Program) Inputs(box field.Octuplet, children ...Child) ([]recursion.Cel
 			cells = append(cells, make([]recursion.Cell, perChild)...)
 			continue
 		}
-		key := p.childKey
+		sys := p.childSys
 		if p.Kind != Leaf && !children[c].Leaf {
-			key = box
+			sys = p.nodeSys
 		}
-		proof, err := p.verifier.Cells(key, children[c].Proof, children[c].Pub)
+		proof, err := p.verifier.Assign(sys, children[c].Proof, children[c].Pub)
 		if err != nil {
 			return nil, fmt.Errorf("node: child %d: %w", c, err)
 		}
 		if len(proof) != p.numProofCells {
-			return nil, fmt.Errorf("node: child %d: the verifier lays %d cells out, want %d", c, len(proof), p.numProofCells)
+			return nil, fmt.Errorf("node: child %d: the verifier assigns %d cells, want %d", c, len(proof), p.numProofCells)
 		}
 		cells = append(cells, recursion.ScalarCell(field.One()))
 		if p.Kind != Leaf {
