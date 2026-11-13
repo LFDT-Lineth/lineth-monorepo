@@ -1,6 +1,7 @@
 package grandproduct_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -399,4 +400,45 @@ func checkAllVerifierActions(rt *wiop.Runtime) error {
 		}
 	}
 	return nil
+}
+
+// TestCompile_NoMultiplicationByEmptyProduct: one side of each Z is empty in
+// a single-column permutation, and no Z constraint may multiply by its 1.
+func TestCompile_NoMultiplicationByEmptyProduct(t *testing.T) {
+	sys, colA, colB := newSingleColumnPermutation(t)
+	grandproduct.Compile(sys)
+
+	var walk func(e wiop.Expression) bool
+	walk = func(e wiop.Expression) bool {
+		op, ok := e.(*wiop.ArithmeticOperation)
+		if !ok {
+			return false
+		}
+		if op.Operator == wiop.ArithmeticOperatorMul {
+			for _, o := range op.Operands {
+				if c, ok := o.(*wiop.Constant); ok && c.Value.IsOne() {
+					return true
+				}
+			}
+		}
+		for _, o := range op.Operands {
+			if walk(o) {
+				return true
+			}
+		}
+		return false
+	}
+
+	for _, m := range []*wiop.Module{colA.Module, colB.Module} {
+		var zConstraints int
+		for _, v := range m.Vanishings {
+			label := v.Context().Label
+			if !strings.HasPrefix(label, "z-recurrence-") && !strings.HasPrefix(label, "z-init-") {
+				continue
+			}
+			zConstraints++
+			assert.Falsef(t, walk(v.Expression), "vanishing %q multiplies by the constant 1", v.Context().Path())
+		}
+		require.Equalf(t, 2, zConstraints, "module %q: want a recurrence and a row-0 constraint", m.Context.Path())
+	}
 }

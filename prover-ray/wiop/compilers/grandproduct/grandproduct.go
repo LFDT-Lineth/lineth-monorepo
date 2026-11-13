@@ -146,8 +146,8 @@ func buildZ(
 	if m.IsDynamic() || m.Size() > 1 {
 		zView := zCol.View()
 		recurrence := wiop.Sub(
-			wiop.Mul(zView, zDen),
-			wiop.Mul(zView.Shift(-1), zNum),
+			mulUnlessEmpty(zView, zDen, packedDen),
+			mulUnlessEmpty(zView.Shift(-1), zNum, packedNum),
 		)
 		m.NewVanishing(ctx.Childf("z-recurrence-m%d-k%d", mi, k), recurrence)
 	}
@@ -155,7 +155,7 @@ func buildZ(
 	// Initial condition at row 0: Z[0]·zDen − zNum = 0, i.e. Z[0] = zNum/zDen.
 	m.NewLocalConstraint(
 		ctx.Childf("z-init-m%d-k%d", mi, k),
-		wiop.Sub(wiop.Mul(zCol.View(), zDen), zNum),
+		wiop.Sub(mulUnlessEmpty(zCol.View(), zDen, packedDen), zNum),
 		0,
 	)
 
@@ -203,6 +203,15 @@ func productOrOne(m *wiop.Module, factors []wiop.Expression) wiop.Expression {
 		return wiop.NewConstantVector(m, field.One())
 	}
 	return wiop.Product(factors...)
+}
+
+// mulUnlessEmpty returns x·product, or x when factors is empty and product is
+// productOrOne's constant 1, which would otherwise add a Z·1 node.
+func mulUnlessEmpty(x, product wiop.Expression, factors []wiop.Expression) wiop.Expression {
+	if len(factors) == 0 {
+		return x
+	}
+	return wiop.Mul(x, product)
 }
 
 // subslice returns factors[start:stop], truncated to the slice bounds and empty
