@@ -162,7 +162,7 @@ const Host = struct {
         const prover_paths = b.addOptions();
         prover_paths.addOptionPath("devmode_prove", prover);
         const devmode_prover = b.createModule(.{
-            .root_source_file = b.path("test/devmode_prover.zig"),
+            .root_source_file = b.path("test/support/devmode_prover.zig"),
             .target = target,
             .optimize = optimize,
             .imports = &.{
