@@ -8,6 +8,7 @@ const std = @import("std");
 
 const core_serde = @import("core_serde");
 const da_support = @import("da_support");
+const devmode_prover = @import("devmode_prover");
 const ef_blocks = @import("ef_blocks");
 const ef_fixtures = @import("ef_fixtures");
 const lineth_da = @import("lineth_da");
@@ -355,8 +356,10 @@ pub const ChunkSpec = struct {
     suffix: usize = 0,
 };
 
-/// The l2-execution proof of a conflation, beyond what its blocks determine.
+/// The l2-execution proof of a conflation, beyond what its blocks determine. The proof itself is a
+/// devmode proof for its public input and program VK.
 pub const ProofSpec = struct {
+    /// Eight canonical KoalaBear limbs.
     program_vk: Hash = @splat(0x2a),
     l2_l1_messages: []const Hash = &.{},
     filtered_addresses: []const Address = &.{},
@@ -493,6 +496,7 @@ pub fn build(a: Allocator, conflations_in: []const Conflation, options: Options)
         witness.* = try support.conflationOf(a, conflation.block_rlps);
         proof.* = proofOf(conflation, index, if (index < options.proofs.len) options.proofs[index] else .{}, options.dynamic_chain_config_hash);
     }
+    try prove(a, proofs);
 
     return .{
         .chain_id = conflations_in[0].chain_id,
@@ -559,4 +563,17 @@ fn proofOf(conflation: Conflation, index: usize, spec: ProofSpec, chain_config_h
             .proof = .{ .bytes = &.{} },
         },
     };
+}
+
+/// Replaces the proof of every entry of `proofs` with one that is valid for its program VK and its
+/// public input as they are now, which an edit of either leaves unproved. An entry whose public
+/// input is beyond a bound of its wire schema has no hash to prove and is left as it is.
+pub fn prove(a: Allocator, proofs: []l2_execution_proof.VerifiableL2ExecutionProof) !void {
+    for (proofs) |*verifiable| {
+        const hash = l2_execution_proof.hashPublicInputs(a, verifiable.proof.public_inputs) catch |err| switch (err) {
+            error.OutOfMemory => return error.OutOfMemory,
+            error.BoundsViolation => continue,
+        };
+        verifiable.proof.proof = .{ .bytes = try devmode_prover.prove(a, verifiable.program_vk, hash) };
+    }
 }

@@ -228,7 +228,7 @@ Each l2-execution proof `Eₑ` (`e ∈ [1, N]`) has:
 
 | `Eₑ` field | Description |
 |---|---|
-| `proof` | The recursive STARK proof artifact, verified against `Eₑ.programVk` (step 4). |
+| `proof` | The recursive STARK proof artifact, verified against `Eₑ.programVk` (step 4): the proof image of one devmode proof, as verifier-ray's `devmode.Encode` writes it for `devmode.GuestBase`. |
 | `publicInputs` (`PI_Eₑ`) | The l2-execution PI (§2.1). |
 | `programVk` (`programVk_e`) | The 32-byte verifying key of the exec guest that produced `Eₑ` — the key the recursive verifier checks `Eₑ` against (step 4), emitted into `programVks` (step 9). A guest cannot attest its own VK, so it is carried on the proof, not in `Eₑ`'s own PI. |
 | `startBlockNumber` | First block number of `Eₑ`'s range — used to verify proof tiling. |
@@ -254,7 +254,7 @@ For each conflation `c ∈ [1, N]`, derive its canonical truncated-block RLP (st
    ```
    where each `froms_e[j]` is a 20-byte address and the empty list hashes as `keccak256(b"")`. The same full block RLPs supply the canonical truncated blocks and block hashes checked in steps 2 and 5, binding these sender hashes to the verified DA stream and execution-proof chain.
 
-4. **Verify the l2-execution proofs.** Recursively verify each `Eᵢ` against `PI_Eᵢ`, using `programVk_e` (private input, above) as the recursive verifier's verifying key for proof `Eᵢ`.
+4. **Verify the l2-execution proofs.** Recursively verify each `Eᵢ` against `PI_Eᵢ`, using `programVk_e` (private input, above) as the recursive verifier's verifying key for proof `Eᵢ`. The verified statement has 40 cells built by the guest, never read from the proof image: the 32 bytes of the hash of `PI_Eᵢ` (the commitment its guest outputs), one cell each, then the 8 limbs of `programVk_e`, each 4 big-endian bytes and a canonical KoalaBear element. A malformed proof image, a non-canonical limb and a failed verification each reject the request.
 
 5. **Bind conflation blocks to the l2-execution-proof chain.** Two checks together pin every block in the conflations — boundary *and* intermediate — to the chain that the l2-execution proofs verified.
 

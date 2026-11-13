@@ -696,7 +696,14 @@ def recursive_stark_verify(program_vk: Hash32, proof: bytes, public_input_hash: 
     of its full canonical public input. Stubbed in this reference; the point is
     that the SAME `program_vk` passed here is the value
     the caller emits into `program_vks`, so the anchored VK is provably the
-    verification key (no divergence between what is verified and what L1 checks)."""
+    verification key (no divergence between what is verified and what L1 checks).
+
+    `proof` is the proof image of one devmode proof, as verifier-ray's
+    `devmode.Encode` writes it for `devmode.GuestBase`. The statement verified is
+    40 cells the verifier builds itself, never read from the image: the 32 bytes
+    of `public_input_hash`, one cell each, then the 8 limbs of `program_vk`, each 4
+    big-endian bytes and a canonical KoalaBear element. A malformed image, a
+    non-canonical limb and a failed verification are each a rejection."""
     return None
 
 
@@ -708,8 +715,8 @@ def verify_l2_execution_proof(program_vk: Hash32, proof: L2ExecutionProof) -> No
     is the explicit verify-key parameter it checks against (§ProgramVK
     anchoring). The rollup guest passes the same `program_vk` it bubbles up into
     `exec_vks` / `program_vks`, so the anchored VK is provably the key the
-    verification ran against. `L2ExecutionProof.proof` stands in for those
-    recursive-STARK bytes; the verifier binds the complete PI, including its
+    verification ran against. `L2ExecutionProof.proof` is the devmode proof image
+    of `recursive_stark_verify`; the verifier binds the complete PI, including its
     ordered message list. The caller checks sender hashes against DA blocks.
     """
     # First: the recursive STARK verify against the explicit verify key.
