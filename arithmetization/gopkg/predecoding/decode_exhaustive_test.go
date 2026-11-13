@@ -295,8 +295,8 @@ func loadZkcConstants(t *testing.T) map[string]uint64 {
 	for _, g := range regexp.MustCompile(`(?m)^const (\w+):ComputeOp = (\d+)`).FindAllStringSubmatch(string(b), -1) {
 		c[g[1]], _ = strconv.ParseUint(g[2], 10, 64)
 	}
-	// Every name expected() can look up: the spec table's names, plus three
-	// sources the table doesn't list. The _WB variants of JAL/JALR are built by
+	// Every name the test looks up: the spec table's names, plus two kinds the
+	// table doesn't list. The _WB variants of JAL/JALR are built by
 	// appending "_WB" in expected(); only the jump-only names are in the table.
 	// The custom-1 precompile names live in custom1Names, not in the table.
 	need := append([]string{"ITYPE_JALR_WB", "JTYPE_JAL_WB"}, custom1Names...)
