@@ -1,13 +1,13 @@
-//! Builds a Linea mainnet block dataset in the shape of the EF blockchain tests.
+//! Builds a block dataset in the shape of the EF blockchain tests from a JSON-RPC endpoint.
 //!
-//! `fetch_linea_blocks TESTDATA_DIR` downloads the blocks
-//! `window_first..window_last` from the public RPC with full transaction objects, rebuilds every
-//! header and transaction as RLP and checks each against the hash the RPC reports, and checks that
-//! the truncation of each rebuilt block recovers the senders the RPC reports.
-//! `TESTDATA_DIR/linea_mainnet_<first>_<last>.json.gz` holds one case with `config.chainid`
-//! 0xe708 and one entry per block with `rlp`, `blockHeader` (hash, parentHash, mixHash, number,
-//! timestamp) and `transactions`. The headers and the hashes of the file are mainnet's. The gzip
-//! stream carries no filename and a zero mtime, so a rerun reproduces the file byte for byte.
+//! `fetch_blocks --rpc-url URL --first N --last N --output PATH` downloads the blocks
+//! `first..last` with full transaction objects, rebuilds every header and transaction as RLP and
+//! checks each against the hash the RPC reports, and checks that the truncation of each rebuilt
+//! block recovers the senders the RPC reports. `PATH` ends in `.json.gz` and holds one case, named
+//! after its basename, with `config.chainid` as the endpoint's `eth_chainId` and one entry per
+//! block with `rlp`, `blockHeader` (hash, parentHash, mixHash, number, timestamp) and
+//! `transactions`. The headers and the hashes of the file are the chain's. The gzip stream carries
+//! no filename and a zero mtime, so a rerun reproduces the file byte for byte.
 
 const std = @import("std");
 const lineth_da = @import("lineth_da");
@@ -19,26 +19,22 @@ const Value = std.json.Value;
 const truncation = lineth_da.encoding.truncation;
 const rlp = @import("zesu_executor").executor_rlp_encode;
 
-const rpc_url = "https://rpc.linea.build";
 const user_agent = "lineth-rollup-testdata/1.0 (block fixture builder for the Lineth monorepo)";
-const chain_id: u64 = 59144;
 const request_spacing: Io.Duration = .fromMilliseconds(150);
 const max_attempts = 6;
-
-const window_first: u64 = 27434569;
-const window_last: u64 = 27434718;
-const window_blocks: u64 = 150;
+const usage = "usage: fetch_blocks --rpc-url URL --first N --last N --output PATH";
+const output_suffix = ".json.gz";
 
 const Failure = error{Failed};
 
 fn fail(comptime fmt: []const u8, args: anytype) Failure {
-    std.debug.print("fetch_linea_blocks: " ++ fmt ++ "\n", args);
+    std.debug.print("fetch_blocks: " ++ fmt ++ "\n", args);
     return error.Failed;
 }
 
 pub fn main(init: std.process.Init) u8 {
     run(init) catch |err| {
-        if (err != error.Failed) std.debug.print("fetch_linea_blocks: {s}\n", .{@errorName(err)});
+        if (err != error.Failed) std.debug.print("fetch_blocks: {s}\n", .{@errorName(err)});
         return 1;
     };
     return 0;
@@ -46,19 +42,59 @@ pub fn main(init: std.process.Init) u8 {
 
 fn run(init: std.process.Init) !void {
     const args = try init.minimal.args.toSlice(init.arena.allocator());
-    if (args.len != 2) return fail("usage: fetch_linea_blocks TESTDATA_DIR", .{});
+    const window = try parseArgs(args);
     var client: std.http.Client = .{ .allocator = init.gpa, .io = init.io };
     defer client.deinit();
-    var node: Node = .{ .client = &client, .io = init.io };
+    var node: Node = .{ .client = &client, .io = init.io, .rpc_url = window.rpc_url };
     var arena = std.heap.ArenaAllocator.init(init.gpa);
     defer arena.deinit();
-    try fetch(arena.allocator(), &node, args[1]);
+    try fetch(arena.allocator(), &node, window);
+}
+
+const Window = struct {
+    rpc_url: []const u8,
+    first: u64,
+    last: u64,
+    output: []const u8,
+};
+
+fn parseArgs(args: []const [:0]const u8) !Window {
+    var rpc_url: ?[]const u8 = null;
+    var first: ?u64 = null;
+    var last: ?u64 = null;
+    var output: ?[]const u8 = null;
+    if (args.len != 9) return fail("{s}", .{usage});
+    var i: usize = 1;
+    while (i < args.len) : (i += 2) {
+        const value = args[i + 1];
+        if (std.mem.eql(u8, args[i], "--rpc-url")) {
+            rpc_url = value;
+        } else if (std.mem.eql(u8, args[i], "--first")) {
+            first = std.fmt.parseInt(u64, value, 10) catch return fail("--first '{s}' is not a block number", .{value});
+        } else if (std.mem.eql(u8, args[i], "--last")) {
+            last = std.fmt.parseInt(u64, value, 10) catch return fail("--last '{s}' is not a block number", .{value});
+        } else if (std.mem.eql(u8, args[i], "--output")) {
+            output = value;
+        } else return fail("unknown option {s}\n{s}", .{ args[i], usage });
+    }
+    const window: Window = .{
+        .rpc_url = rpc_url orelse return fail("missing --rpc-url\n{s}", .{usage}),
+        .first = first orelse return fail("missing --first\n{s}", .{usage}),
+        .last = last orelse return fail("missing --last\n{s}", .{usage}),
+        .output = output orelse return fail("missing --output\n{s}", .{usage}),
+    };
+    if (window.first > window.last) return fail("--first {d} is after --last {d}", .{ window.first, window.last });
+    if (!std.mem.endsWith(u8, window.output, output_suffix) or std.fs.path.basename(window.output).len == output_suffix.len) {
+        return fail("--output '{s}' is not a NAME{s} path", .{ window.output, output_suffix });
+    }
+    return window;
 }
 
 /// A JSON-RPC endpoint reached over one HTTP client, with the spacing between requests.
 const Node = struct {
     client: *std.http.Client,
     io: Io,
+    rpc_url: []const u8,
     last_request: ?Io.Timestamp = null,
 
     /// The `result` of `method`, allocated from `a`. A failed attempt is retried with exponential
@@ -85,7 +121,7 @@ const Node = struct {
 
         var response: Io.Writer.Allocating = .init(a);
         const result = try node.client.fetch(.{
-            .location = .{ .url = rpc_url },
+            .location = .{ .url = node.rpc_url },
             .payload = body,
             .headers = .{
                 .content_type = .{ .override = "application/json" },
@@ -102,6 +138,11 @@ const Node = struct {
         const value = reply.object.get("result") orelse return fail("{s}{s}: empty result", .{ method, params });
         if (value == .null) return fail("{s}{s}: empty result", .{ method, params });
         return value;
+    }
+
+    fn chainId(node: *Node, a: Allocator) !u64 {
+        const value = try node.call(a, "eth_chainId", "[]");
+        return std.fmt.parseInt(u64, try hexDigits(value), 16) catch fail("eth_chainId is not a 64-bit quantity", .{});
     }
 
     fn blockByNumber(node: *Node, a: Allocator, number: u64, full: bool) !Value {
@@ -332,7 +373,7 @@ fn rebuild(a: Allocator, block: Value, types: *[5]u64) !Rebuilt {
 
 // -- JSON in the EF shape ------------------------------------------------------------------------
 
-fn writeTransaction(a: Allocator, json: *std.json.Stringify, tx: Value) !void {
+fn writeTransaction(a: Allocator, json: *std.json.Stringify, tx: Value, chain_id: u64) !void {
     const kind = try quantityOf(tx, "type");
     const typed = kind >= 1;
     try json.beginObject();
@@ -399,7 +440,7 @@ fn writeTransaction(a: Allocator, json: *std.json.Stringify, tx: Value) !void {
     try json.endObject();
 }
 
-fn writeBlock(a: Allocator, json: *std.json.Stringify, block: Value, built: Rebuilt) !void {
+fn writeBlock(a: Allocator, json: *std.json.Stringify, block: Value, built: Rebuilt, chain_id: u64) !void {
     try json.beginObject();
     try json.objectField("rlp");
     try json.write(try std.fmt.allocPrint(a, "0x{x}", .{built.rlp}));
@@ -418,7 +459,7 @@ fn writeBlock(a: Allocator, json: *std.json.Stringify, block: Value, built: Rebu
     try json.endObject();
     try json.objectField("transactions");
     try json.beginArray();
-    for ((try field(block, "transactions")).array.items) |tx| try writeTransaction(a, json, tx);
+    for ((try field(block, "transactions")).array.items) |tx| try writeTransaction(a, json, tx, chain_id);
     try json.endArray();
     try json.endObject();
 }
@@ -426,7 +467,7 @@ fn writeBlock(a: Allocator, json: *std.json.Stringify, block: Value, built: Rebu
 // -- fetch ---------------------------------------------------------------------------------------
 
 /// The truncation of the rebuilt block has to recover the senders the RPC reports.
-fn checkTruncation(a: Allocator, block: Value, built: Rebuilt) !void {
+fn checkTruncation(a: Allocator, block: Value, built: Rebuilt, chain_id: u64) !void {
     const number = try quantityOf(block, "number");
     const truncated = truncation.truncateBlockRlp(a, a, built.rlp, chain_id) catch |err| {
         return fail("block {d}: truncation rejects the block: {s}", .{ number, @errorName(err) });
@@ -439,12 +480,14 @@ fn checkTruncation(a: Allocator, block: Value, built: Rebuilt) !void {
     }
 }
 
-fn fetch(a: Allocator, node: *Node, testdata: []const u8) !void {
-    const name = try std.fmt.allocPrint(a, "linea_mainnet_{d}_{d}", .{ window_first, window_last });
+fn fetch(a: Allocator, node: *Node, window: Window) !void {
+    const chain_id = try node.chainId(a);
+    const name = std.fs.path.basename(window.output);
+    const case_name = name[0 .. name.len - output_suffix.len];
     var json_buffer: Io.Writer.Allocating = .init(a);
     var json: std.json.Stringify = .{ .writer = &json_buffer.writer };
     try json.beginObject();
-    try json.objectField(name);
+    try json.objectField(case_name);
     try json.beginObject();
     try json.objectField("config");
     try json.beginObject();
@@ -457,12 +500,12 @@ fn fetch(a: Allocator, node: *Node, testdata: []const u8) !void {
     var types: [5]u64 = @splat(0);
     var block_count: u64 = 0;
     var rlp_total: usize = 0;
-    var number = window_first;
-    while (number <= window_last) : (number += 1) {
+    var number = window.first;
+    while (number <= window.last) : (number += 1) {
         const block = try node.blockByNumber(a, number, true);
         const built = try rebuild(a, block, &types);
-        try checkTruncation(a, block, built);
-        try writeBlock(a, &json, block, built);
+        try checkTruncation(a, block, built, chain_id);
+        try writeBlock(a, &json, block, built, chain_id);
         rlp_total += built.rlp.len;
         block_count += 1;
     }
@@ -471,22 +514,21 @@ fn fetch(a: Allocator, node: *Node, testdata: []const u8) !void {
     try json.endObject();
 
     var compressed: Io.Writer.Allocating = try .initCapacity(a, 4096);
-    const window = try a.alloc(u8, std.compress.flate.max_window_len);
-    var compressor = try std.compress.flate.Compress.init(&compressed.writer, window, .gzip, .best);
+    const flate_window = try a.alloc(u8, std.compress.flate.max_window_len);
+    var compressor = try std.compress.flate.Compress.init(&compressed.writer, flate_window, .gzip, .best);
     try compressor.writer.writeAll(json_buffer.written());
     try compressor.finish();
 
     const cwd = Io.Dir.cwd();
-    try cwd.createDirPath(node.io, testdata);
-    const path = try std.fmt.allocPrint(a, "{s}/{s}.json.gz", .{ testdata, name });
-    try cwd.writeFile(node.io, .{ .sub_path = path, .data = compressed.written() });
+    if (std.fs.path.dirname(window.output)) |dir| try cwd.createDirPath(node.io, dir);
+    try cwd.writeFile(node.io, .{ .sub_path = window.output, .data = compressed.written() });
 
     var stdout_buffer: [1024]u8 = undefined;
     var stdout = Io.File.stdout().writer(node.io, &stdout_buffer);
     const out = &stdout.interface;
     var total: u64 = 0;
     for (types) |count| total += count;
-    try out.print("{s}\nblocks {d}, transactions {d}, type histogram {{", .{ path, block_count, total });
+    try out.print("{s}\nchain ID {d}, blocks {d}, transactions {d}, type histogram {{", .{ window.output, chain_id, block_count, total });
     var separator: []const u8 = "";
     for (types, 0..) |count, kind| {
         if (count == 0) continue;

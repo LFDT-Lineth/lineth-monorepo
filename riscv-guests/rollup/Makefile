@@ -72,9 +72,15 @@ fetch: $(DEVMODE_SYSTEM)
 test: $(DEVMODE_SYSTEM) fetch-zkevm-fixtures
 	$(ZIG) build test $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FIXTURES_FLAGS) $(ZIG_FETCH_FLAGS)
 
-# Rebuilds the Linea mainnet window in test/testdata from the public RPC.
+# The Linea mainnet window in test/testdata and the endpoint it is fetched from.
+LINEA_RPC_URL ?= https://rpc.linea.build
+LINEA_WINDOW_FIRST ?= 27434569
+LINEA_WINDOW_LAST ?= 27434718
+LINEA_WINDOW := $(MAKEFILE_DIR)test/testdata/linea_mainnet_$(LINEA_WINDOW_FIRST)_$(LINEA_WINDOW_LAST).json.gz
+
+# Rebuilds the Linea mainnet window from the public RPC.
 fetch-linea-blocks: $(DEVMODE_SYSTEM)
-	$(ZIG) build fetch-linea-blocks $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -- "$(MAKEFILE_DIR)test/testdata"
+	$(ZIG) build fetch-blocks $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -- --rpc-url "$(LINEA_RPC_URL)" --first $(LINEA_WINDOW_FIRST) --last $(LINEA_WINDOW_LAST) --output "$(LINEA_WINDOW)"
 
 clean:
 	rm -rf $(MAKEFILE_DIR)zig-out/

@@ -18,7 +18,7 @@ pub fn build(b: *std.Build) void {
     const tools = addHostTools(b, unit, crypto);
     addHostTests(b, options, unit, crypto, prover);
     addFixtureStep(b, tools);
-    addFetchLineaBlocksStep(b, tools);
+    addFetchBlocksStep(b, tools);
     addZkcSmokeStep(b, tools);
 }
 
@@ -227,12 +227,12 @@ const Host = struct {
     }
 };
 
-/// Every `tools/*.zig` executable. `gen_fixture` runs the statement and `fetch_linea_blocks`
-/// recovers senders; both link the host crypto provider.
+/// Every `tools/*.zig` executable. `gen_fixture` runs the statement and `fetch_blocks` recovers
+/// senders; both link the host crypto provider.
 fn addHostTools(b: *std.Build, host: Host, crypto: common.HostCrypto) Tools {
     const tools = common.addTools(b, host.native, .{});
     crypto.link(tools.get("gen_fixture").?);
-    crypto.link(tools.get("fetch_linea_blocks").?);
+    crypto.link(tools.get("fetch_blocks").?);
     return tools;
 }
 
@@ -258,11 +258,11 @@ fn addFixtureStep(b: *std.Build, tools: Tools) void {
     b.step("gen-fixture", "Write a sample RollupProofPrivateInput and its expected output to the paths after `--`").dependOn(&gen_fixture.step);
 }
 
-/// Runs `fetch_linea_blocks` with the arguments after `--`.
-fn addFetchLineaBlocksStep(b: *std.Build, tools: Tools) void {
-    const fetch_linea_blocks = b.addRunArtifact(tools.get("fetch_linea_blocks").?);
-    if (b.args) |args| fetch_linea_blocks.addArgs(args);
-    b.step("fetch-linea-blocks", "Rebuild the Linea mainnet window from the public RPC into the directory after `--`").dependOn(&fetch_linea_blocks.step);
+/// Runs `fetch_blocks` with the arguments after `--`.
+fn addFetchBlocksStep(b: *std.Build, tools: Tools) void {
+    const fetch_blocks = b.addRunArtifact(tools.get("fetch_blocks").?);
+    if (b.args) |args| fetch_blocks.addArgs(args);
+    b.step("fetch-blocks", "Fetch a block window from a JSON-RPC endpoint into the dataset file given by the arguments after `--`").dependOn(&fetch_blocks.step);
 }
 
 /// Runs the guest ELF under zkc and compares its output with the native statement's; the options
