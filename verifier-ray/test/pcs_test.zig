@@ -472,7 +472,7 @@ test "routeInputRoots ignores an unused batch root" {
     }
     roots[1][0] = field.Element.init(1);
     const routing = try pcs.routeInputRoots(system, &recon, &roots);
-    try std.testing.expectEqual(@as(usize, 1), routing.distinct_count);
+    try std.testing.expectEqual(@as(usize, 1), routing.tree_count);
     try std.testing.expectEqual(@as(usize, 0), routing.index_by_batch[0]);
 }
 
@@ -902,30 +902,30 @@ test "routeInputRoots follows input-opening order as dynamic sizes change" {
 
     const smaller = try pcs.reconstruct(recon_system, &[_]usize{4});
     const smaller_routing = try pcs.routeInputRoots(recon_system, &smaller, &roots);
-    try std.testing.expectEqual(@as(usize, 2), smaller_routing.distinct_count);
-    try std.testing.expectEqualDeep(roots[1], smaller_routing.distinctRoots()[0]);
-    try std.testing.expectEqualDeep(roots[0], smaller_routing.distinctRoots()[1]);
+    try std.testing.expectEqual(@as(usize, 2), smaller_routing.tree_count);
+    try std.testing.expectEqualDeep(roots[1], smaller_routing.treeRoots()[0]);
+    try std.testing.expectEqualDeep(roots[0], smaller_routing.treeRoots()[1]);
     try std.testing.expectEqual(@as(usize, 1), smaller_routing.index_by_batch[0]);
     try std.testing.expectEqual(@as(usize, 0), smaller_routing.index_by_batch[1]);
 
     const larger = try pcs.reconstruct(recon_system, &[_]usize{16});
     const larger_routing = try pcs.routeInputRoots(recon_system, &larger, &roots);
-    try std.testing.expectEqual(@as(usize, 2), larger_routing.distinct_count);
-    try std.testing.expectEqualDeep(roots[0], larger_routing.distinctRoots()[0]);
-    try std.testing.expectEqualDeep(roots[1], larger_routing.distinctRoots()[1]);
+    try std.testing.expectEqual(@as(usize, 2), larger_routing.tree_count);
+    try std.testing.expectEqualDeep(roots[0], larger_routing.treeRoots()[0]);
+    try std.testing.expectEqualDeep(roots[1], larger_routing.treeRoots()[1]);
     try std.testing.expectEqual(@as(usize, 0), larger_routing.index_by_batch[0]);
     try std.testing.expectEqual(@as(usize, 1), larger_routing.index_by_batch[1]);
 }
 
-test "routeInputRoots deduplicates equal batch roots" {
+test "routeInputRoots keeps batches with equal roots apart" {
     const recon = try pcs.reconstruct(recon_system, &[_]usize{16});
     const shared = challengeDigest(300);
     const routing = try pcs.routeInputRoots(recon_system, &recon, &[_]poseidon2.Digest{ shared, shared });
 
-    try std.testing.expectEqual(@as(usize, 1), routing.distinct_count);
-    try std.testing.expectEqualDeep(shared, routing.distinctRoots()[0]);
-    try std.testing.expectEqual(@as(usize, 0), routing.index_by_batch[0]);
-    try std.testing.expectEqual(@as(usize, 0), routing.index_by_batch[1]);
+    try std.testing.expectEqual(@as(usize, 2), routing.tree_count);
+    try std.testing.expectEqualDeep(shared, routing.treeRoots()[0]);
+    try std.testing.expectEqualDeep(shared, routing.treeRoots()[1]);
+    try std.testing.expect(routing.index_by_batch[0] != routing.index_by_batch[1]);
 }
 
 test "input auxiliary table includes encoded size two" {

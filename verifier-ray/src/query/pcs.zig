@@ -273,9 +273,8 @@ pub const System = struct {
 };
 
 pub const OpeningProof = struct {
-    /// input_queries[q][i] is query q's opening of the i-th distinct input
-    /// tree (input-opening order: first batch encountered by the canonical
-    /// size-descending layout, with equal Merkle roots deduplicated).
+    /// input_queries[q][i] is query q's opening of the i-th input tree: one
+    /// tree per opened batch, in input-opening order.
     input_queries: []const []const merkle.InputTreeOpening,
     input_caps: []const InputCap = &.{},
     fri_proof: fri.Proof,
@@ -295,8 +294,8 @@ pub const InputCapTable = struct {
 
 pub const VerifyInput = struct {
     /// One Merkle root per committed batch, in canonical batch order
-    /// (`batch_idx == roots[idx]`). `verify` reorders and deduplicates these
-    /// into the proof's input-opening order, mirroring prover-ray's
+    /// (`batch_idx == roots[idx]`). `verify` reorders these into the proof's
+    /// input-opening order, one tree per opened batch, mirroring prover-ray's
     /// `inputOpeningRoots`.
     roots: []const poseidon2.Digest,
     /// Per-opened-column claimed evaluations, in reconstructed canonical layout
@@ -379,22 +378,21 @@ pub fn Reconstructed(comptime system: System) type {
     };
 }
 
-/// The proof's input-tree routing derived from the reconstructed layout and the
-/// actual per-batch roots: distinct roots in input-opening order plus the
-/// input-tree branch index each batch maps to.
+/// The proof's input-tree routing: one root per opened batch, in input-opening
+/// order, and the input tree each batch maps to.
 pub fn InputRootRouting(comptime system: System) type {
     return struct {
         const Self = @This();
         const batch_cap = @max(system.num_batches, 1);
 
-        distinct_count: usize = 0,
+        tree_count: usize = 0,
         roots: [batch_cap]poseidon2.Digest = undefined,
         // Every entry is overwritten by routeInputRoots before any read, so this
         // default is unused filler, not a sentinel that's ever checked.
         index_by_batch: [batch_cap]usize = [_]usize{0} ** batch_cap,
 
-        pub fn distinctRoots(self: *const Self) []const poseidon2.Digest {
-            return self.roots[0..self.distinct_count];
+        pub fn treeRoots(self: *const Self) []const poseidon2.Digest {
+            return self.roots[0..self.tree_count];
         }
     };
 }
@@ -759,10 +757,9 @@ pub fn buildEntryClaims(
     }
 }
 
-/// Mirrors prover-ray's `inputOpeningRoots`: walk the canonical entry order,
-/// take each batch's root the first time that batch appears, and deduplicate
-/// equal roots by value so batches sharing a Merkle root consume one input-tree
-/// opening.
+/// Mirrors prover-ray's `inputOpeningRoots`: each batch gets its own input tree
+/// on first appearance in the canonical entry order, even when two batches share
+/// a Merkle root (prover-ray #4435).
 pub fn routeInputRoots(
     comptime system: System,
     recon: *const Reconstructed(system),
@@ -771,26 +768,17 @@ pub fn routeInputRoots(
     if (batch_roots.len != system.num_batches) return Error.RootCountMismatch;
 
     var routing = InputRootRouting(system){};
+    var routed = [_]bool{false} ** InputRootRouting(system).batch_cap;
     for (0..recon.num_entries) |entry_idx| {
         const batch_idx = recon.entry_batch[entry_idx];
-        const root = batch_roots[batch_idx];
-        const branch_idx = findRootIndex(routing.roots[0..routing.distinct_count], root) orelse blk: {
-            if (routing.distinct_count >= system.num_batches) return Error.RootCountMismatch;
-            const next = routing.distinct_count;
-            routing.roots[next] = root;
-            routing.distinct_count = next + 1;
-            break :blk next;
-        };
-        routing.index_by_batch[batch_idx] = branch_idx;
+        if (routed[batch_idx]) continue;
+        const next = routing.tree_count;
+        routing.roots[next] = batch_roots[batch_idx];
+        routing.tree_count = next + 1;
+        routing.index_by_batch[batch_idx] = next;
+        routed[batch_idx] = true;
     }
     return routing;
-}
-
-fn findRootIndex(roots: []const poseidon2.Digest, want: poseidon2.Digest) ?usize {
-    for (roots, 0..) |root, i| {
-        if (poseidon2.eql(root, want)) return i;
-    }
-    return null;
 }
 
 // =============================================================================
@@ -1096,7 +1084,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     }
 
     if (input.proof.input_queries.len != params.num_queries) return Error.InputQueryCountMismatch;
-    if (input.proof.input_caps.len != routing.distinct_count) return Error.InputTreeCountMismatch;
+    if (input.proof.input_caps.len != routing.tree_count) return Error.InputTreeCountMismatch;
     if (input.query_positions.len < params.num_queries) return Error.QueryPositionCountMismatch;
     try fri.checkOpeningProofShape(params, input.proof.fri_proof, input.fold_alphas, input.query_positions[0..params.num_queries]);
 
@@ -1106,7 +1094,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     var input_frontiers: [tree_cap][]const poseidon2.Digest = undefined;
     var input_root_frontiers: [tree_cap]poseidon2.Digest = undefined;
     var input_aux_storage: [inputAuxCapacity(system)]?poseidon2.Digest = undefined;
-    for (0..routing.distinct_count) |tree_idx| {
+    for (0..routing.tree_count) |tree_idx| {
         const info = try buildInputCapInfo(system, &recon, routing, tree_idx);
         input_infos[tree_idx] = info;
         if (info.depth == 0) {
@@ -1160,8 +1148,8 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
         const source = Source{
             .opening = opening,
             .caps = input.proof.input_caps,
-            .infos = input_infos[0..routing.distinct_count],
-            .frontiers = input_frontiers[0..routing.distinct_count],
+            .infos = input_infos[0..routing.tree_count],
+            .frontiers = input_frontiers[0..routing.tree_count],
             .routing = routing,
             .params = params,
             .query_position = query_position,
