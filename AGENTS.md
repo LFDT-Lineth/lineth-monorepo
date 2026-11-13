@@ -395,7 +395,7 @@ docs/                    Project documentation
 
 - **Platform:** GitHub Actions
 - **Main workflow:** `.github/workflows/main.yml` — triggers on PR and push to `main`
-- **Path filtering:** `dorny/paths-filter` detects which components changed
+- **Path filtering:** `dorny/paths-filter` detects which components changed (filters in `.github/path-filters/components.yml`)
 - **Pipeline:** Filter changed paths -> Run component tests -> Build Docker images -> E2E tests -> Publish
 - **Coverage:** Codecov with Jacoco (JVM), Hardhat (Solidity), Jest LCOV (TS packages), and tracer Jacoco XML (`tracer` flag)
 - **Security:** CodeQL analysis, KICS Dockerfile scanning (weekly)

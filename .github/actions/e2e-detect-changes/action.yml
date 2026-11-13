@@ -1,0 +1,72 @@
+name: E2E change detection
+description: >
+  Decide whether the zkEVM and RISC-V e2e stacks need testing. A path filter lists the changed
+  files that can affect each stack, then `make e2e-ci-detect-changes` drops test and doc files.
+  On manual dispatch it diffs against main so a stacked branch's full change set is seen.
+  Requires the repository to be checked out.
+
+outputs:
+  zkevm:
+    description: "'true' when the zkEVM e2e stack needs testing"
+    value: ${{ steps.evaluate.outputs.zkevm }}
+  riscv:
+    description: "'true' when the RISC-V e2e stack needs testing"
+    value: ${{ steps.evaluate.outputs.riscv }}
+  riscv-prover-mode:
+    description: Prover mode for the RISC-V e2e run
+    value: ${{ steps.evaluate.outputs.riscv_prover_mode }}
+
+runs:
+  using: composite
+  steps:
+    - name: Filter for e2e-relevant paths
+      uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+      id: e2e-filter
+      with:
+        # github.ref would diff a dispatched branch against itself.
+        base: ${{ github.event_name == 'workflow_dispatch' && 'refs/heads/main' || github.ref }}
+        list-files: json
+        filters: |
+          shared: &shared
+            - 'coordinator/**/src/main/**'
+            - 'jvm-libs/**/src/main/**'
+            - 'config/**/*.toml'
+            - 'linea-besu/**'
+            - 'maru/**/src/main/**'
+            - 'gradle/libs.versions.toml'
+            - 'contracts/local-deployments-artifacts/**'
+            - 'docker/**'
+            - '**/Dockerfile'
+            - 'e2e/src/**'
+            - 'e2e/package.json'
+            - 'e2e/jest*.config.ts'
+            - 'Makefile'
+            - '.github/actions/run-e2e-tests/**'
+            - 'linea-besu/plugins/linea-sequencer/**'
+            - 'linea-besu/plugins/sequencer-interfaces/**'
+            - 'ts-libs/**/src/**'
+            - 'ts-libs/**/package.json'
+            - '.github/workflows/reusable-run-e2e-tests.yml'
+            - '.nvmrc'
+            - 'package.json'
+          zkevm:
+            - *shared
+            - 'transaction-exclusion-api/**/src/main/**'
+            - 'postman/src/**'
+            - 'postman/package.json'
+            - 'prover/**/*.go'
+            - 'prover/**/*.mod'
+            - 'tracer/**'
+            - 'tracer-constraints/**'
+          riscv:
+            - *shared
+            - 'prover-ray/**'
+            - 'riscv-guests/**'
+
+    - name: Evaluate excluding test/doc files and other-stack paths
+      id: evaluate
+      shell: bash
+      env:
+        E2E_ZKEVM_FILES: ${{ steps.e2e-filter.outputs.zkevm_files }}
+        E2E_RISCV_FILES: ${{ steps.e2e-filter.outputs.riscv_files }}
+      run: make -s e2e-ci-detect-changes >> "$GITHUB_OUTPUT"

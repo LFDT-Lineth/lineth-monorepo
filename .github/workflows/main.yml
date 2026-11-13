@@ -58,9 +58,9 @@ jobs:
       commit_tag: ${{ steps.compute-version-tags.outputs.commit_tag }}
       develop_tag: ${{ steps.compute-version-tags.outputs.develop_tag }}
       # E2E change detection
-      has-changes-requiring-e2e-testing: ${{ steps.evaluate.outputs.zkevm }}
-      has-changes-requiring-riscv-e2e-testing: ${{ steps.evaluate.outputs.riscv }}
-      riscv-prover-mode: ${{ steps.evaluate.outputs.riscv_prover_mode }}
+      has-changes-requiring-e2e-testing: ${{ steps.e2e.outputs.zkevm }}
+      has-changes-requiring-riscv-e2e-testing: ${{ steps.e2e.outputs.riscv }}
+      riscv-prover-mode: ${{ steps.e2e.outputs.riscv-prover-mode }}
       # CodeQL
       codeql-languages: ${{ steps.codeql-languages.outputs.languages }}
     steps:
@@ -105,124 +105,7 @@ jobs:
           # change set is detected (github.ref would diff the branch vs itself).
           base: ${{ github.event_name == 'workflow_dispatch' && 'refs/heads/main' || github.ref }}
           list-files: "json"
-          filters: |
-            coordinator:
-              - 'coordinator/**'
-              - 'testdata/**'
-              - 'rollup_spec/src/rollup_spec/prover_io/**'
-              - 'buildSrc/**'
-              - 'jvm-libs/**'
-              - 'gradle/**'
-              - 'build.gradle'
-              - 'gradle.properties'
-              - 'settings.gradle'
-              - '.github/workflows/coordinator-*.yml'
-              - '.github/workflows/build-and-publish.yml'
-              - '.github/workflows/main.yml'
-            staterecovery:
-              - 'state-recovery/**'
-              - 'buildSrc/**'
-              - 'jvm-libs/**'
-              - 'gradle/**'
-              - 'build.gradle'
-              - 'gradle.properties'
-              - 'settings.gradle'
-              - '.github/workflows/staterecovery-*.yml'
-              - '.github/workflows/main.yml'
-            postman:
-              - 'postman/**'
-              - 'ts-libs/sdk/**'
-              - 'ts-libs/linea-native-libs/**'
-              - 'ts-libs/linea-shared-utils/**'
-              - '.github/workflows/postman-*.yml'
-              - '.github/workflows/build-and-publish.yml'
-              - '.github/workflows/main.yml'
-              - '.nvmrc'
-            prover:
-              - 'prover/**'
-              - '.github/workflows/prover-testing.yml'
-              - '.github/workflows/build-and-publish.yml'
-              - '.github/workflows/main.yml'
-            prover-ray:
-              - 'prover-ray/**'
-              - 'rollup_spec/src/**'
-              - 'riscv-guests/l2_execution/test/testdata/**'
-              - 'riscv-guests/build_common/linker_script.ld'
-              - '.github/workflows/prover-ray-testing.yml'
-              - '.github/workflows/main.yml'
-            rollup-spec:
-              - 'rollup_spec/src/**'
-              - 'rollup_spec/tests/**'
-              - 'rollup_spec/requirements.txt'
-              - 'rollup_spec/pyproject.toml'
-              - '.github/workflows/rollup-spec-testing.yml'
-            transaction-exclusion-api:
-              - 'transaction-exclusion-api/**'
-              - 'jvm-libs/generic/extensions/futures/**'
-              - 'jvm-libs/generic/extensions/kotlin/**'
-              - 'jvm-libs/generic/json-rpc/**'
-              - 'jvm-libs/generic/persistence/**'
-              - 'jvm-libs/generic/vertx-helper/**'
-              - 'jvm-libs/linea/core/long-running-service/**'
-              - 'jvm-libs/linea/core/metrics/**'
-              - 'jvm-libs/linea/metrics/**'
-              - '.github/workflows/transaction-exclusion-api-*.yml'
-              - '.github/workflows/build-and-publish.yml'
-              - '.github/workflows/main.yml'
-              - 'buildSrc/**'
-              - 'gradle/**'
-              - 'build.gradle'
-              - 'gradle.properties'
-              - 'settings.gradle'
-            smart-contracts:
-              - 'contracts/**'
-              - 'testdata/**'
-              - 'prover/**'
-              - '.github/workflows/main.yml'
-              - '.github/workflows/run-smc-tests.yml'
-            linea-sequencer-plugin:
-              - 'linea-besu/plugins/linea-sequencer/**'
-              - 'linea-besu/plugins/sequencer-interfaces/**'
-              - '.github/workflows/linea-sequencer-plugin-testing.yml'
-              - 'buildSrc/**'
-              - 'gradle/**'
-              - 'build.gradle'
-              - 'gradle.properties'
-              - 'settings.gradle'
-            linea-besu:
-              - 'linea-besu/besu/**'
-            linea-besu-package:
-              - 'linea-besu/package/versions.env'
-              - 'linea-besu/package/scripts/assemble-packages.sh'
-            native-yield-automation-service:
-              - 'operations/native-yield/automation-service/**'
-              - 'ts-libs/linea-shared-utils/**'
-              - '.github/workflows/native-yield-automation-service-*.yml'
-              - '.nvmrc'
-            lido-governance-monitor:
-              - 'operations/native-yield/lido-governance-monitor/**'
-              - 'ts-libs/linea-shared-utils/**'
-              - '.github/workflows/lido-governance-monitor-*.yml'
-              - '.nvmrc'
-            tracer:
-              - 'gradle/**'
-              - 'tracer/**'
-            tracer-constraints:
-              - 'gradle/**'
-              - 'tracer-constraints/**'
-              - '.github/workflows/tracer-constraints-*.yml'
-              - 'tracer/gradle/corset.gradle'
-            maru:
-              - 'maru/**'
-              - 'buildSrc/**'
-              - 'jvm-libs/**'
-              - 'gradle/**'
-              - 'build.gradle'
-              - 'gradle.properties'
-              - 'settings.gradle'
-              - '.github/workflows/maru-*.yml'
-              - '.github/workflows/build-and-publish.yml'
-              - '.github/workflows/main.yml'
+          filters: .github/path-filters/components.yml
 
       - name: Filter out commit changes
         uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
@@ -255,57 +138,9 @@ jobs:
         id: compute-version-tags
         uses: ./.github/actions/compute-version-tags
 
-      - name: Filter for e2e-relevant paths
-        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
-        id: e2e-filter
-        with:
-          # On manual dispatch, diff against main so a stacked branch's e2e-relevant
-          # changes are detected (github.ref would diff the branch vs itself).
-          base: ${{ github.event_name == 'workflow_dispatch' && 'refs/heads/main' || github.ref }}
-          list-files: json
-          filters: |
-            shared: &shared
-              - 'coordinator/**/src/main/**'
-              - 'jvm-libs/**/src/main/**'
-              - 'config/**/*.toml'
-              - 'linea-besu/**'
-              - 'maru/**/src/main/**'
-              - 'gradle/libs.versions.toml'
-              - 'contracts/local-deployments-artifacts/**'
-              - 'docker/**'
-              - '**/Dockerfile'
-              - 'e2e/src/**'
-              - 'e2e/package.json'
-              - 'e2e/jest*.config.ts'
-              - 'Makefile'
-              - '.github/actions/run-e2e-tests/**'
-              - 'linea-besu/plugins/linea-sequencer/**'
-              - 'linea-besu/plugins/sequencer-interfaces/**'
-              - 'ts-libs/**/src/**'
-              - 'ts-libs/**/package.json'
-              - '.github/workflows/reusable-run-e2e-tests.yml'
-              - '.nvmrc'
-              - 'package.json'
-            zkevm:
-              - *shared
-              - 'transaction-exclusion-api/**/src/main/**'
-              - 'postman/src/**'
-              - 'postman/package.json'
-              - 'prover/**/*.go'
-              - 'prover/**/*.mod'
-              - 'tracer/**'
-              - 'tracer-constraints/**'
-            riscv:
-              - *shared
-              - 'prover-ray/**'
-              - 'riscv-guests/**'
-
-      - name: Evaluate excluding test/doc files and other-stack paths
-        id: evaluate
-        env:
-          E2E_ZKEVM_FILES: ${{ steps.e2e-filter.outputs.zkevm_files }}
-          E2E_RISCV_FILES: ${{ steps.e2e-filter.outputs.riscv_files }}
-        run: make -s e2e-ci-detect-changes >> "$GITHUB_OUTPUT"
+      - name: Detect e2e changes
+        id: e2e
+        uses: ./.github/actions/e2e-detect-changes
 
       - name: Detect CodeQL languages
         id: codeql-languages
