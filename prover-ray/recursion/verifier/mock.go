@@ -41,17 +41,19 @@ func (s shape) equal(o shape) bool {
 	return slices.Equal(s.pubs, o.pubs) && s.commitments == o.commitments
 }
 
-// Mock is the dev and test [Verifier] of the proofs of one or more systems of
-// one shape, each known by its key. It verifies nothing in the machine: a
-// mock proof is the proof's round commitments and a verdict, the digest of
-// the key, the public inputs and the commitments, which [Mock.Cells] computes
-// once the proof is verified in Go by the system whose key it is claimed
-// under, and the machine recomputes and checks. That binds the public inputs
-// to the key and to the commitments of a proof that verified, so that a
-// program built on a Mock has the inputs and the flow of one built on the
-// real verifier, whose public inputs are likewise inputs it absorbs and
-// constrains, but it is not sound: a host can claim any verdict. Never on a
-// production path.
+// Mock is the dev and test [Verifier]. It runs the child's wiop verifier in
+// Go, on the host, instead of in the machine's instructions:
+//
+//   - Declare allocates the public inputs, the round commitments and a
+//     verdict, instead of the whole proof.
+//   - Cells verifies the proof in Go with the system of the key, then sets
+//     the verdict to the digest of the key, the public inputs and the
+//     commitments.
+//   - Verify only recomputes that digest and checks it equals the verdict.
+//
+// Programs built on a Mock have the inputs and the flow of programs built on
+// the real verifier, but the Mock is not sound: a host can skip the Go
+// verification and compute the verdict anyway. Never on a production path.
 type Mock struct {
 	shape   shape
 	systems map[field.Octuplet]*wiop.System
@@ -61,7 +63,7 @@ type Mock struct {
 // a shape, each verified in Go under its key (wiop.System.PrecomputedCommitment).
 // A system that exists only once a program is compiled with the mock, the
 // program verifying proofs of itself, is added with [Mock.Accept].
-func NewMock(systems ...*wiop.System) (*Mock, error) {
+func NewMock(systems ...*wiop.System) (Verifier, error) {
 	if len(systems) == 0 {
 		return nil, errors.New("verifier: no system")
 	}
