@@ -2,11 +2,12 @@ package zkcdriver
 
 import (
 	"fmt"
-	"sort"
-
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/sirupsen/logrus"
+	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/LFDT-Lineth/zkc/pkg/ir/air"
@@ -28,6 +29,12 @@ const (
 	// programModule is the module committed in [ProgramRound]: the memory
 	// holding the pre-decoded instruction table of the guest program.
 	programModule = "decoded"
+	// zkcStaticRangePrefix is the synthetic module prefix ZkC uses for static
+	// power-of-two range tables ($range_u<k>).
+	zkcStaticRangePrefix = "$range_u"
+	// maxStaticRangeBitwidth caps k in $range_u<k> so 1<<k stays within
+	// [wiop.ColumnSizeMaxSupported] without integer overflow.
+	maxStaticRangeBitwidth = 20
 )
 
 // ProgramRound is the round holding the columns of [programModule], which
@@ -82,6 +89,13 @@ type schemaScanner struct {
 	ColumnIDs map[string]wiop.ObjectID
 	// TraceRound is the round of every column outside of [programModule].
 	TraceRound int
+	// RangeTableBounds maps eligible static $range_u<k> module IDs to their
+	// exclusive upper bound (1 << k). Lookups into these modules are emitted as
+	// [wiop.RangeCheck] queries instead of instantiating module-$range_u<k>.
+	RangeTableBounds map[schema.ModuleId]int
+	// RangeTableNames holds the module names in RangeTableBounds so [scanColumns]
+	// omits their duplicate precomputed modules.
+	RangeTableNames map[string]struct{}
 	// ExprCache interns the expression nodes built by [castExpression], per
 	// module, so that structurally identical subexpressions share one pointer
 	// instead of being re-allocated at every occurrence. See [intern].
@@ -132,6 +146,7 @@ func Define(sys *wiop.System, schema *air.Schema[koalabear.Element], traceRound 
 		ExprCache:      newExprCache(),
 	}
 
+	scanner.RangeTableBounds, scanner.RangeTableNames = scanner.collectRangeTables()
 	scanner.scanColumns()
 	scanner.scanConstraints()
 
@@ -233,6 +248,10 @@ func (s *schemaScanner) scanColumns() {
 		// wiop modules whose dynamic size would never be set.
 		if !modDecl.IsNative() && !s.moduleHasReferencedColumn(modDecl, moduleName, referenced) {
 			logrus.Warnf("zkcdriver: scanColumns: skipping module %q (no referenced columns)", moduleName)
+			continue
+		}
+
+		if _, ok := s.RangeTableNames[moduleName]; ok {
 			continue
 		}
 
@@ -436,18 +455,18 @@ func (s *schemaScanner) scanConstraints() {
 		names[i] = cs.Lisp(s.Schema).String(false)
 	}
 
-	sort.Slice(indices, func(i, j int) bool {
+	sort.SliceStable(indices, func(i, j int) bool {
 		return names[indices[i]] < names[indices[j]]
 	})
 
 	// Process constraints in the sorted order
-	for _, idx := range indices {
-		s.addConstraintInComp(names[idx], corsetCSS[idx])
+	for orderIdx, idx := range indices {
+		s.addConstraintInComp(orderIdx, names[idx], corsetCSS[idx])
 	}
 }
 
-// addCsInComp adds a corset constraint into the [wiop.System]
-func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constraint[koalabear.Element]) {
+// addConstraintInComp adds a corset constraint into the [wiop.System].
+func (s *schemaScanner) addConstraintInComp(orderIdx int, name string, corsetCS schema.Constraint[koalabear.Element]) {
 
 	switch cs := corsetCS.(type) {
 
@@ -481,6 +500,18 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 
 	case *air.LookupConstraint[koalabear.Element]:
 
+		if len(cs.Targets) == 1 {
+			if bound, ok := s.RangeTableBounds[cs.Targets[0].Module]; ok {
+				cSource := cs.Sources[0]
+				sourceCol := s.compColumnByCorsetID(cSource.Module, cSource.Registers[0])
+				sourceCol.Module.NewRangeCheck(
+					sourceCol.Module.Context.Childf("range-%d-%v", orderIdx, name),
+					sourceCol,
+					bound,
+				)
+				return
+			}
+		}
 		var (
 			cSource                  = cs.Sources[0]
 			cTarget                  = cs.Targets[0]
@@ -683,4 +714,110 @@ func (s *schemaScanner) compColumnByCorsetID(
 	)
 
 	return s.Sys.LookupColumn(s.ColumnIDs[columnName])
+}
+
+// collectRangeTables identifies canonical ZkC static range modules ($range_u<k>)
+// whose every referencing constraint in the schema is an unfiltered single-column
+// lookup convertible to [wiop.Module.NewRangeCheck]. Any $range_u<k> referenced by
+// a filtered lookup or other constraint is excluded as a whole so its
+// module-$range_u<k> table is preserved as a fallback.
+func (s *schemaScanner) collectRangeTables() (map[schema.ModuleId]int, map[string]struct{}) {
+	bounds := make(map[schema.ModuleId]int)
+	for modID := range s.Schema.Width() {
+		if bound, ok := staticRangeModuleBound(s.Schema.Module(modID)); ok {
+			bounds[modID] = bound
+		}
+	}
+	if len(bounds) == 0 {
+		return nil, nil
+	}
+
+	for _, cs := range s.Schema.Constraints().Collect() {
+		filterIneligibleRangeTargets(cs, bounds)
+	}
+
+	names := make(map[string]struct{}, len(bounds))
+	for modID := range bounds {
+		names[s.Schema.Module(modID).Name()] = struct{}{}
+	}
+	return bounds, names
+}
+
+// staticRangeModuleBound reports (1<<k, true) when modDecl is a static 1-column
+// module named $range_u<k> (1 <= k <= maxStaticRangeBitwidth) with no internal
+// constraints and static contents [0, 1, ..., 2^k - 1].
+func staticRangeModuleBound(modDecl schema.Module[koalabear.Element]) (int, bool) {
+	if !modDecl.IsStatic() || modDecl.IsNative() || modDecl.IsPublicOutput() {
+		return 0, false
+	}
+	suffix, ok := strings.CutPrefix(modDecl.Name(), zkcStaticRangePrefix)
+	if !ok {
+		return 0, false
+	}
+	k, err := strconv.Atoi(suffix)
+	if err != nil || k < 1 || k > maxStaticRangeBitwidth || strconv.Itoa(k) != suffix {
+		return 0, false
+	}
+	bound := 1 << k
+	if bound > wiop.ColumnSizeMaxSupported || len(modDecl.Registers()) != 1 {
+		return 0, false
+	}
+	if len(modDecl.Constraints().Collect()) != 0 {
+		return 0, false
+	}
+	content := modDecl.StaticContents()
+	if len(content) != bound {
+		return 0, false
+	}
+	for j := range bound {
+		if len(content[j]) != 1 || field.Element(content[j][0]) != field.NewElement(uint64(j)) {
+			return 0, false
+		}
+	}
+	return bound, true
+}
+
+// filterIneligibleRangeTargets removes from bounds any candidate module that
+// appears in a non-convertible constraint (including filtered lookups, lookup
+// sources, vanishing constraints, or bus constraints).
+func filterIneligibleRangeTargets(
+	cs schema.Constraint[koalabear.Element],
+	bounds map[schema.ModuleId]int,
+) {
+	if lookupCS, ok := cs.(*air.LookupConstraint[koalabear.Element]); ok {
+		for _, src := range lookupCS.Sources {
+			delete(bounds, src.Module)
+		}
+		if !isConvertibleRangeLookup(lookupCS, bounds) {
+			for _, tgt := range lookupCS.Targets {
+				delete(bounds, tgt.Module)
+			}
+		}
+		return
+	}
+	for _, modID := range cs.Contexts() {
+		delete(bounds, modID)
+	}
+}
+
+// isConvertibleRangeLookup reports whether cs is a single-fragment, single-column,
+// unfiltered lookup targeting register 0 of a still-eligible range module.
+func isConvertibleRangeLookup(
+	cs *air.LookupConstraint[koalabear.Element],
+	bounds map[schema.ModuleId]int,
+) bool {
+	if len(cs.Sources) != 1 || len(cs.Targets) != 1 {
+		return false
+	}
+	cSource, cTarget := cs.Sources[0], cs.Targets[0]
+	if _, ok := bounds[cTarget.Module]; !ok {
+		return false
+	}
+	if cSource.Module == cTarget.Module || cSource.Len() != 1 || cTarget.Len() != 1 {
+		return false
+	}
+	if cSource.HasSelector() || cTarget.HasSelector() {
+		return false
+	}
+	return cTarget.Registers[0].Unwrap() == 0
 }
