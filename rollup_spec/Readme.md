@@ -228,7 +228,7 @@ Each l2-execution proof `Eₑ` (`e ∈ [1, N]`) has:
 
 | `Eₑ` field | Description |
 |---|---|
-| `proof` | The recursive STARK proof artifact, verified against `Eₑ.programVk` (step 4). |
+| `proof` | The recursive STARK proof artifact, verified against `Eₑ.programVk` (step 4): the proof image of one devmode proof, as verifier-ray's `devmode.Encode` writes it for `devmode.GuestBase`. |
 | `publicInputs` (`PI_Eₑ`) | The l2-execution PI (§2.1). |
 | `programVk` (`programVk_e`) | The 32-byte verifying key of the exec guest that produced `Eₑ` — the key the recursive verifier checks `Eₑ` against (step 4), emitted into `programVks` (step 9). A guest cannot attest its own VK, so it is carried on the proof, not in `Eₑ`'s own PI. |
 | `startBlockNumber` | First block number of `Eₑ`'s range — used to verify proof tiling. |
@@ -254,7 +254,7 @@ For each conflation `c ∈ [1, N]`, derive its canonical truncated-block RLP (st
    ```
    where each `froms_e[j]` is a 20-byte address and the empty list hashes as `keccak256(b"")`. The same full block RLPs supply the canonical truncated blocks and block hashes checked in steps 2 and 5, binding these sender hashes to the verified DA stream and execution-proof chain.
 
-4. **Verify the l2-execution proofs.** Recursively verify each `Eᵢ` against `PI_Eᵢ`, using `programVk_e` (private input, above) as the recursive verifier's verifying key for proof `Eᵢ`.
+4. **Verify the l2-execution proofs.** Recursively verify each `Eᵢ` against `PI_Eᵢ`, using `programVk_e` (private input, above) as the recursive verifier's verifying key for proof `Eᵢ`. The verified statement has 40 cells built by the guest, never read from the proof image: the 32 bytes of the hash of `PI_Eᵢ` (the commitment its guest outputs), one cell each, then the 8 limbs of `programVk_e`, each 4 big-endian bytes and a canonical KoalaBear element. A malformed proof image, a non-canonical limb and a failed verification each reject the request.
 
 5. **Bind conflation blocks to the l2-execution-proof chain.** Two checks together pin every block in the conflations — boundary *and* intermediate — to the chain that the l2-execution proofs verified.
 
@@ -272,7 +272,7 @@ For each conflation `c ∈ [1, N]`, derive its canonical truncated-block RLP (st
 
     Adjacent l2-execution proofs already chain `endBlockHash → parentBlockHash` via step 7 below, so the head-anchor in (b) only needs to look at `PI_E₁.parentBlockHash`.
 
- 6. **Build the L2→L1 Merkle trees.** Concatenate the ordered `PI_Eₑ.l2L1Messages` lists from the recursively verified execution public inputs in proof order. Partition the combined list into consecutive groups of `2^D` leaves (where D is chosen by the guest program, currently 5), one group per tree. Pad the final group with zero-value (0x00…00) leaves to fill it. Each leaf is a 32-byte message hash; internal nodes are `keccak256(left ‖ right)`. Compute the root of each full tree and emit the ordered array `[root_1, …, root_T]` and `l2L1TreeDepth = D` in the public inputs.
+ 6. **Concatenate the L2→L1 messages.** Concatenate the ordered `PI_Eₑ.l2L1Messages` lists from the recursively verified execution public inputs in proof order and emit the combined list as `l2L1Messages`. The rollup-aggregation guest builds the fixed-depth trees once over the full finalization (§2.3 step 3).
 
 7. **Chain the l2-execution proofs.** For each consecutive pair `(Eᵢ, Eᵢ₊₁)` assert:
    ```
@@ -528,7 +528,7 @@ The L2→L1 bridge state is tracked through an ordered list of fixed-depth Merkl
 
 **`l2MessagingBlocksOffsets`.** The execution guest derives one strictly increasing uint16 offset for each block containing a L2MessageService MessageSent receipt log. Offsets are relative to the parent block (first block is 1); the execution and rollup PIs also carry `blockCount`. Rollup and aggregation validate ranges and rebase the verified offsets into their own block ranges. The final offset list lives inside the aggregation PI and L1 emits its exact values as big-endian uint16 bytes for `L2MessagingBlockAnchored` events.
 
-**Comparison with the current approach:** The structure is identical to today — fixed-depth, zero-padded trees, one depth for all, roots stored per finalization in `l2MerkleRootsDepths`. The guest builds the trees and emits their roots; the prover commits to the list internally, while L1 retains its existing root-list hashing.
+**Comparison with the current approach:** The structure is identical to today — fixed-depth, zero-padded trees, one depth for all, roots stored per finalization in `l2MerkleRootsDepths`. The rollup-aggregation guest builds the trees and emits their roots; the prover commits to the list internally, while L1 retains its existing root-list hashing.
 
 ---
 

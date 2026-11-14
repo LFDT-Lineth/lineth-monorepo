@@ -322,7 +322,7 @@ test "validateForcedTransactions: INCLUDED must appear in the payload's transact
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .signed_tx_rlp = .{ .bytes = &SIGNED_TX_RLP },
         .acceptance = api.Acceptance.INCLUDED,
         .deadline = 100,
     };
@@ -356,7 +356,7 @@ test "validateForcedTransactions: FILTERED_ADDRESS_FROM bubbles up the sender" {
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .signed_tx_rlp = .{ .bytes = &SIGNED_TX_RLP },
         .acceptance = api.Acceptance.FILTERED_ADDRESS_FROM,
         .deadline = 100,
     };
@@ -377,7 +377,7 @@ test "validateForcedTransactions: FILTERED_ADDRESS_TO bubbles up the recipient" 
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .signed_tx_rlp = .{ .bytes = &SIGNED_TX_RLP },
         .acceptance = api.Acceptance.FILTERED_ADDRESS_TO,
         .deadline = 100,
     };
@@ -395,7 +395,7 @@ test "validateForcedTransactions: BAD_NONCE dispatch mirrors the account's nonce
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .signed_tx_rlp = .{ .bytes = &SIGNED_TX_RLP },
         .acceptance = api.Acceptance.BAD_NONCE,
         .deadline = 100,
     };
@@ -425,7 +425,7 @@ test "validateForcedTransactions: BAD_BALANCE dispatch mirrors the gas+value ari
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .signed_tx_rlp = .{ .bytes = &SIGNED_TX_RLP },
         .acceptance = api.Acceptance.BAD_BALANCE,
         .deadline = 100,
     };
@@ -459,7 +459,7 @@ test "validateForcedTransactions: ascending-number and deadline checks" {
     // Out-of-order FTX number (last_processed=0, declared number=2, expected 1).
     const out_of_order = l2_execution_ssz.ForcedTransactionWitness{
         .number = 2,
-        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .signed_tx_rlp = .{ .bytes = &SIGNED_TX_RLP },
         .acceptance = api.Acceptance.FILTERED_ADDRESS_FROM,
         .deadline = 100,
     };
@@ -473,7 +473,7 @@ test "validateForcedTransactions: ascending-number and deadline checks" {
     // Deadline already passed (payload.block_number=10, deadline=1).
     const expired = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .signed_tx_rlp = .{ .bytes = &SIGNED_TX_RLP },
         .acceptance = api.Acceptance.FILTERED_ADDRESS_FROM,
         .deadline = 1,
     };
@@ -495,7 +495,7 @@ test "validateForcedTransactions: an unknown acceptance value is rejected" {
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .signed_tx_rlp = .{ .bytes = &SIGNED_TX_RLP },
         .acceptance = 7,
         .deadline = 100,
     };
@@ -529,7 +529,7 @@ test "validateForcedTransactions: FILTERED_ADDRESS_TO on a contract-creation tx 
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = creation_tx_rlp,
+        .signed_tx_rlp = .{ .bytes = creation_tx_rlp },
         .acceptance = api.Acceptance.FILTERED_ADDRESS_TO,
         .deadline = 100,
     };
@@ -553,7 +553,7 @@ test "validateForcedTransactions: BAD_NONCE with a sender proven absent at the p
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .signed_tx_rlp = .{ .bytes = &SIGNED_TX_RLP },
         .acceptance = api.Acceptance.BAD_NONCE,
         .deadline = 100,
     };
@@ -575,7 +575,7 @@ test "validateForcedTransactions: BAD_NONCE whose tx is actually in the block is
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .signed_tx_rlp = .{ .bytes = &SIGNED_TX_RLP },
         .acceptance = api.Acceptance.BAD_NONCE,
         .deadline = 100,
     };
@@ -598,7 +598,7 @@ test "validateForcedTransactions: a deadline equal to the block number clears th
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .signed_tx_rlp = .{ .bytes = &SIGNED_TX_RLP },
         .acceptance = api.Acceptance.FILTERED_ADDRESS_FROM,
         .deadline = DUMMY_PAYLOAD.block_number,
     };
@@ -629,7 +629,7 @@ test "validateForcedTransactions: BAD_BALANCE dispatch mirrors a type-2 (EIP-155
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = tx_rlp,
+        .signed_tx_rlp = .{ .bytes = tx_rlp },
         .acceptance = api.Acceptance.BAD_BALANCE,
         .deadline = 100,
     };
@@ -678,7 +678,7 @@ test "validateForcedTransactions: BAD_BALANCE dispatch mirrors a type-3 (blob) t
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = tx_rlp,
+        .signed_tx_rlp = .{ .bytes = tx_rlp },
         .acceptance = api.Acceptance.BAD_BALANCE,
         .deadline = 100,
     };
@@ -723,7 +723,7 @@ test "validateForcedTransactions: BAD_BALANCE dispatch mirrors a type-4 (EIP-770
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = tx_rlp,
+        .signed_tx_rlp = .{ .bytes = tx_rlp },
         .acceptance = api.Acceptance.BAD_BALANCE,
         .deadline = 100,
     };

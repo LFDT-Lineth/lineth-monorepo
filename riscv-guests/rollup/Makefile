@@ -8,7 +8,7 @@
 # run itself (ELF->JSON via elf_to_json_gen, then zkc) is owned by
 # arithmetization/src/test/Makefile; `exec`/`debug` build that ELF and hand it over.
 
-.PHONY: fetch test clean compile exec debug require-input
+.PHONY: fetch test clean compile exec debug require-input zkc-smoke-exec zkc-smoke-external fetch-linea-blocks
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -19,21 +19,32 @@ ZIG ?= zig
 
 BUILD_CACHE_DIR ?= $(MAKEFILE_DIR).zig-cache
 ZIG_BUILD_FLAGS ?= --cache-dir $(BUILD_CACHE_DIR) --summary all
+# The native tests and tools: they fetch the DA test dependencies and build the host crypto providers.
+ZIG_HOST_FLAGS ?= -Dhost-tools=true
+ZIG_FIXTURES_FLAGS ?= -Dzkevm-fixtures="$(ZKEVM_FIXTURES_DIR)"
 # NOTE: `zig build --fetch` fetches the dependency tree and EXITS without building or running, so
-# it must NOT be passed to build/test targets. Pre-fetching is the dedicated `fetch` target.
+# it must NOT be passed to build/test targets. Pre-fetching is the dedicated `fetch` target; a build
+# fetches the lazy dependencies of the steps it runs on demand.
 ZIG_FETCH_FLAGS ?=
 
 NAME := rollup_guest
 BIN  := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 
 include $(MAKEFILE_DIR)../build_common/release.mk
+include $(MAKEFILE_DIR)../build_common/zkevm_fixtures.mk
 
-# Sample fixture input used by exec/debug. The default is generated fresh by `require-input` via
-# `zig build gen-fixture` (this package's own encodeInput over its own test sample) — never checked
-# into git, so it can't silently drift from what the current wire format produces. Pass your own
+# Sample fixture input used by exec/debug and the zkc smoke. The default is generated fresh by
+# `require-input` via `zig build gen-fixture` (this package's own encodeInput over a valid request
+# of one conflation of real blocks in one blob), together with the output the native statement
+# computes for it, so both always match the current wire format and statement. Pass your own
 # INPUT=path/to/file to use something else instead.
-GENERATED_INPUT := $(MAKEFILE_DIR)zig-out/sample.request.ssz
+GENERATED_INPUT  := $(MAKEFILE_DIR)zig-out/sample.request.ssz
+GENERATED_OUTPUT := $(MAKEFILE_DIR)zig-out/sample.output.bin
 INPUT ?= $(GENERATED_INPUT)
+
+# The output the guest has to print for INPUT, and the guest ELF the zkc smoke runs.
+EXPECTED_OUTPUT ?= $(GENERATED_OUTPUT)
+ELF ?= $(BIN)
 
 # Flags forwarded to `zkc exec` by exec. Quiet (no per-instruction printf) is zkc's default unless
 # -v/-vv/-vvv raise verbosity.
@@ -42,18 +53,33 @@ ZKC_EXEC_FLAGS ?=
 # If true, generates an objdump of the generated ELF for debugging purposes.
 OBJDUMP ?= false
 
-fetch:
-	$(ZIG) build $(ZIG_BUILD_FLAGS) --fetch
+# The system of the recursive verifier: verifier-ray's devmode system, a Go-generated source the
+# build imports. The sample request and the host tests also build and run verifier-ray's devmode
+# prover with `go`.
+VERIFIER_RAY_DIR := $(MAKEFILE_DIR)../../verifier-ray
+DEVMODE_SYSTEM := $(VERIFIER_RAY_DIR)/testdata/generated/devmode_system.zig
 
-test:
-	$(ZIG) build test $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS)
+$(DEVMODE_SYSTEM):
+	$(MAKE) -C $(VERIFIER_RAY_DIR) generate-devmode-system ZIG="$(ZIG)"
+
+fetch: $(DEVMODE_SYSTEM)
+	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) --fetch=all
+
+# The unit suites and, over the curated blocks of the EF zkevm corpus and the Linea mainnet window,
+# the test/reference suites.
+test: $(DEVMODE_SYSTEM) fetch-zkevm-fixtures
+	$(ZIG) build test $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FIXTURES_FLAGS) $(ZIG_FETCH_FLAGS)
+
+# Rebuilds the Linea mainnet window in test/testdata from the public RPC.
+fetch-linea-blocks: $(DEVMODE_SYSTEM)
+	$(ZIG) build fetch-linea-blocks $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -- fetch "$(MAKEFILE_DIR)test/testdata"
 
 clean:
 	rm -rf $(MAKEFILE_DIR)zig-out/
 	rm -rf $(BUILD_CACHE_DIR)
 
-compile:
-	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(KECCAK_ACCEL),-Dkeccak-accel=$(KECCAK_ACCEL))
+compile: $(DEVMODE_SYSTEM)
+	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(KECCAK_ACCEL),-Dkeccak-accel=$(KECCAK_ACCEL)) $(if $(SECP256K1_BACKEND),-Dsecp256k1-backend=$(SECP256K1_BACKEND))
 	@if command -v riscv64-unknown-elf-objdump >/dev/null 2>&1; then \
 		if [ "$(OBJDUMP)" = "true" ]; then \
 			echo "\nDisassembling $(BIN)"; \
@@ -63,13 +89,13 @@ compile:
 		echo "\nSkipping objdump: riscv64-unknown-elf-objdump is not on PATH"; \
 	fi
 
-# Regenerates the default INPUT via `zig build gen-fixture` (a no-op for a user-supplied INPUT=
-# override), then fails early on a still-missing/empty INPUT instead of building then erroring in
-# the converter.
-require-input:
+# Regenerates the default INPUT and its expected output via `zig build gen-fixture` (a no-op for a
+# user-supplied INPUT= override), then fails early on a still-missing/empty INPUT instead of
+# building then erroring in the converter.
+require-input: $(DEVMODE_SYSTEM) fetch-zkevm-fixtures
 	@if [ "$(INPUT)" = "$(GENERATED_INPUT)" ]; then \
 		mkdir -p $(dir $(GENERATED_INPUT)); \
-		$(ZIG) build gen-fixture $(ZIG_BUILD_FLAGS) > $(GENERATED_INPUT); \
+		$(ZIG) build gen-fixture $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) -- "$(ZKEVM_FIXTURES_DIR)/blockchain_tests/for_amsterdam" $(GENERATED_INPUT) $(GENERATED_OUTPUT); \
 	fi
 	@[ -n "$(INPUT)" ] && [ -s "$(INPUT)" ] || { echo "INPUT missing or empty: '$(INPUT)' (set INPUT=path/to/input.ssz)"; exit 1; }
 
@@ -78,3 +104,18 @@ exec: require-input compile
 
 debug: require-input compile
 	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-debug BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)"
+
+# Compile the guest, then run it under zkc on INPUT and compare its output with the native one.
+zkc-smoke-exec: require-input compile
+	$(MAKE) zkc-smoke-external ELF="$(BIN)" INPUT="$(INPUT)" ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"
+
+# The same for a prebuilt ELF: the guest output printed by zkc has to equal EXPECTED_OUTPUT byte for byte.
+zkc-smoke-external:
+	@[ -s "$(ELF)" ] || { echo "ELF missing or empty: '$(ELF)' (set ELF=path/to/rollup_guest)"; exit 1; }
+	@[ -s "$(INPUT)" ] && [ -s "$(EXPECTED_OUTPUT)" ] || { echo "INPUT or EXPECTED_OUTPUT missing or empty: '$(INPUT)', '$(EXPECTED_OUTPUT)'"; exit 1; }
+	$(ZIG) build zkc-smoke $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -- \
+		--elf "$(abspath $(ELF))" \
+		--input "$(abspath $(INPUT))" \
+		--expected "$(abspath $(EXPECTED_OUTPUT))" \
+		--makefile "$(abspath $(ARITHMETIZATION_TESTING_MAKEFILE))" \
+		$(if $(ZKC_EXEC_FLAGS),--zkc-flags "$(ZKC_EXEC_FLAGS)")

@@ -13,7 +13,7 @@ const executor = @import("zesu_executor");
 const input = @import("zesu_input");
 const mpt = @import("zesu_mpt");
 const rlp_decode = @import("zesu_rlp_decode");
-const accelerators = @import("zesu_accelerators");
+const accelerators = @import("zkvm_accelerators");
 
 const Allocator = std.mem.Allocator;
 
