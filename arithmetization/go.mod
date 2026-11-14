@@ -6,7 +6,8 @@ require github.com/LFDT-Lineth/zkc v1.2.36
 
 require (
 	github.com/bits-and-blooms/bitset v1.25.0 // indirect
-	github.com/consensys/gnark-crypto v0.22.0 // indirect
+	github.com/consensys/gnark-crypto v0.22.1-0.20261105032453-23c660cd7688 // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/segmentio/asm v1.1.3 // indirect
 	github.com/segmentio/encoding v0.3.4 // indirect
@@ -20,7 +21,7 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.21.0 // indirect
-	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/term v0.28.0 // indirect
 )
 
