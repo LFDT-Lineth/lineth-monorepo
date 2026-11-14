@@ -28,7 +28,6 @@ dependencies {
   implementation(project(':maru:crypto'))
   implementation(project(':maru:serialization'))
   implementation(project(':maru:observability'))
-  implementation(project(':jvm-libs:linea:teku-web3j'))
   api(project(':maru:linea-finalization-provider')) {
     exclude group: "build.linea", module: "besu-libs"
   }

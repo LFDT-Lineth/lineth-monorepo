@@ -9,6 +9,7 @@ import com.github.michaelbull.result.Result
 import io.vertx.core.Future
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpClient
+import io.vertx.core.http.HttpClientRequest
 import io.vertx.core.http.HttpClientResponse
 import io.vertx.core.http.HttpMethod
 import io.vertx.core.http.RequestOptions
@@ -27,7 +28,19 @@ import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import java.net.URL
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
+import kotlin.time.Duration
 
+/**
+ * @param requestTimeout Vert.x connect/idle timeout in milliseconds applied to every request. It is not an overall
+ * deadline: a server that keeps streaming bytes slowly will not trip it.
+ * @param requestHeadersProvider evaluated once per request; the returned headers are added to that request only.
+ * Useful for credentials that must be regenerated per call, e.g. Engine API JWTs.
+ * @param requestOverallTimeoutProvider returns the overall deadline for a request of the given JSON-RPC method, covering
+ * connection acquisition, sending and reading the full response. When it elapses the HTTP request is reset and the
+ * returned future fails with [TimeoutException]. Returning null applies no overall deadline.
+ */
 class VertxHttpJsonRpcClient(
   private val httpClient: HttpClient,
   private val endpoint: URL,
@@ -41,11 +54,21 @@ class VertxHttpJsonRpcClient(
   private val metricsCategory: MetricsCategory = object : MetricsCategory {
     override val name: String = "jsonrpc"
   },
+  private val requestHeadersProvider: () -> Map<String, String> = { emptyMap() },
+  private val requestOverallTimeoutProvider: (method: String) -> Duration? = { null },
 ) : JsonRpcClient {
-  private val requestOptions = RequestOptions().apply {
+  private val baseRequestOptions = RequestOptions().apply {
     setMethod(HttpMethod.POST)
     setAbsoluteURI(endpoint)
     requestTimeout?.let { setTimeout(it) }
+  }
+
+  private fun buildRequestOptions(): RequestOptions {
+    val headers = requestHeadersProvider()
+    if (headers.isEmpty()) return baseRequestOptions
+    return RequestOptions(baseRequestOptions).apply {
+      headers.forEach { (name, value) -> putHeader(name, value) }
+    }
   }
 
   private fun serializeRequest(request: JsonRpcRequest): String {
@@ -64,8 +87,18 @@ class VertxHttpJsonRpcClient(
     resultMapper: (Any?) -> Any?,
   ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
     val json = serializeRequest(request)
+    val (requestOptions, overallTimeout) =
+      runCatching { buildRequestOptions() to requestOverallTimeoutProvider(request.method) }
+        .getOrElse { error ->
+          return Future.failedFuture<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>(error)
+            .onFailure { th -> logRequestFailure(json, th) }
+        }
+    val inFlightRequest = InFlightHttpRequest()
 
     return httpClient.request(requestOptions).flatMap { httpClientRequest ->
+      inFlightRequest.attach(httpClientRequest)?.let { cancellationCause ->
+        return@flatMap Future.failedFuture(cancellationCause)
+      }
       httpClientRequest.putHeader("Content-Type", "application/json")
       logRequest(json)
 
@@ -104,7 +137,53 @@ class VertxHttpJsonRpcClient(
         .captureTime(requestFuture.toCompletableFuture())
         .toVertxFuture()
     }
+      .withOverallTimeout(request.method, overallTimeout, inFlightRequest)
       .onFailure { th -> logRequestFailure(json, th) }
+  }
+
+  private fun <T> Future<T>.withOverallTimeout(
+    method: String,
+    timeout: Duration?,
+    inFlightRequest: InFlightHttpRequest,
+  ): Future<T> {
+    if (timeout == null) return this
+    val responseFuture = this
+    return responseFuture
+      .timeout(timeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
+      .recover { error ->
+        if (error is TimeoutException && !responseFuture.isComplete) {
+          val timeoutError = TimeoutException("JSON-RPC request method=$method to $endpoint timed out after $timeout")
+          inFlightRequest.cancel(timeoutError)
+          Future.failedFuture(timeoutError)
+        } else {
+          Future.failedFuture(error)
+        }
+      }
+  }
+
+  /**
+   * Tracks the HTTP request backing a JSON-RPC call so an overall timeout can reset it, including when the timeout
+   * elapses before a connection has been acquired from the pool.
+   */
+  private class InFlightHttpRequest {
+    private var request: HttpClientRequest? = null
+    private var cancellationCause: Throwable? = null
+
+    @Synchronized
+    fun attach(httpClientRequest: HttpClientRequest): Throwable? {
+      cancellationCause?.let {
+        httpClientRequest.reset(0, it)
+        return it
+      }
+      request = httpClientRequest
+      return null
+    }
+
+    @Synchronized
+    fun cancel(cause: Throwable) {
+      cancellationCause = cause
+      request?.reset(0, cause)
+    }
   }
 
   private fun handleResponse(
