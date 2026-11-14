@@ -103,8 +103,8 @@ fi
 echo "    ok: l2-execution staged as ${staged[0]##*/}"
 
 echo "==> dev-zkvm: bundled guest and native runner agree on a real request"
-# Runs one dev-zkvm prove: the bundled guest ELF under ZkC Execute, cross-checked
-# byte for byte against the bundled native runner. A runner/guest mismatch in the
+# Runs one dev-zkvm prove: the bundled guest ELF under ZkC Execute, its output
+# checked byte for byte against the bundled native runner's. A runner/guest mismatch in the
 # image fails here. The request fixture encodes the guest's own stateless_input.ssz;
 # its guestProgramId is set to the staged guest, as the coordinator would.
 ZKVM_FIXTURE="$SCRIPT_DIR/../backend/jobadapter/testdata/request_guest_fixture.json"
@@ -137,7 +137,7 @@ if ! grep -q '"proverVersion": "smoke-dev-zkvm"' "$WORK/zkvm/response.json"; the
     cat "$WORK/zkvm/response.json"
     exit 1
 fi
-echo "    ok: guest commitment matches the native runner"
+echo "    ok: guest output matches the native runner"
 
 echo "==> dev-zkvm over stdin/stdout: the way the supervisor runs every child"
 # Same request, but piped in and out as the shared subprocess spawn does. Fails

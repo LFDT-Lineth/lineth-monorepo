@@ -72,9 +72,9 @@ const (
 )
 
 // PublicInputs carries the 16 public output fields of the coordinator
-// response. dev-partial decodes them from the guest's 0x0003 output, whose
-// hash is all the trace carries (see zkcdriver/risc5.RegisterPublicInputs);
-// dev-zkvm reads them from the native runner.
+// response. dev-zkvm and dev-partial decode them from the guest's 0x0003
+// output, whose hash is all the trace carries (see
+// zkcdriver/risc5.RegisterPublicInputs).
 //
 // Count and field names follow the getZkL2ExecutionProofV1 response schema.
 type PublicInputs struct {
@@ -103,15 +103,14 @@ type Result struct {
 
 	// ProofBytes is the proof output for the mode. For full it is the serialized
 	// wiop.Proof (wire format not yet decided); for dev-partial it is the image of
-	// a devmode proof of the guest output hash; for dev-zkvm it is the guest's
-	// 0x0003 output from the ZkC Execute run, which the runner cross-checks
-	// against the native runner. nil when Status is not ResultStatusOK.
+	// a devmode proof of the guest output hash; for dev-mock and dev-zkvm it is
+	// the mode's marker. nil when Status is not ResultStatusOK.
 	ProofBytes []byte
 
 	PublicInputs PublicInputs
 
-	// GuestOutput is the guest's 0x0003 output (hash || frame) in dev-partial, for
-	// the runner's optional native runner check. nil in the other modes.
+	// GuestOutput is the guest's 0x0003 output (hash || frame) in dev-zkvm and
+	// dev-partial, for the runner's native runner check. nil in the other modes.
 	GuestOutput []byte
 
 	// Node is the non-root conglomeration node when Status is

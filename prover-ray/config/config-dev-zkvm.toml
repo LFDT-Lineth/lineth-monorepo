@@ -1,5 +1,6 @@
-# dev-zkvm: real public inputs from the native runner, cross-checked against the
-# guest run under ZkC Execute. The native runner is bundled in the image. The
+# dev-zkvm: the guest runs under ZkC Execute, without a trace, and the public
+# inputs come from the guest output. The native runner is required: the guest
+# output must equal its output. The native runner is bundled in the image. The
 # guests folder is mounted read-only, like the legacy prover-assets;
 # scripts/stage-guest.sh stages the bundled guest ELF for it.
 version = "0.0.0-riscv"
