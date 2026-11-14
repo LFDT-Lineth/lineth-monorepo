@@ -115,7 +115,7 @@ Each component has its own release workflow. Run the one that matches the compon
 | ---------------- | ------------------------------------------------ | -------------------------------- |
 | linea-besu       | [.github/workflows/linea-besu-release.yml](https://github.com/LFDT-Lineth/lineth-monorepo/actions/workflows/linea-besu-release.yml)       | `releases/linea-besu-package/v[semver]` |
 | coordinator      | [.github/workflows/coordinator-release.yml](https://github.com/LFDT-Lineth/lineth-monorepo/actions/workflows/coordinator-release.yml)      | `releases/coordinator/v[semver]`        |
-| maru             | [.github/workflows/maru-release-manual.yml](https://github.com/LFDT-Lineth/lineth-monorepo/actions/workflows/maru-release-manual.yml)      | `releases/maru/v[semver]`        |
+| maru             | [.github/workflows/maru-release.yml](https://github.com/LFDT-Lineth/lineth-monorepo/actions/workflows/maru-release.yml)      | `releases/maru/v[semver]`        |
 | postman          | [.github/workflows/postman-release.yml](https://github.com/LFDT-Lineth/lineth-monorepo/actions/workflows/postman-release.yml)          | `releases/postman/v[semver]`            |
 | prover           | [.github/workflows/prover-release.yml](https://github.com/LFDT-Lineth/lineth-monorepo/actions/workflows/prover-release.yml)           | `releases/prover/v[semver]`             |
 | tx-exclusion-api | [.github/workflows/tx-exclusion-api-release.yml](https://github.com/LFDT-Lineth/lineth-monorepo/actions/workflows/tx-exclusion-api-release.yml) | `releases/tx-exclusion-api/v[semver]`   |
