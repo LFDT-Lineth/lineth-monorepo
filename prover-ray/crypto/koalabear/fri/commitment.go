@@ -3,7 +3,6 @@ package fri
 import (
 	"math/bits"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/bufpool"
@@ -21,7 +20,12 @@ const leafDomainTag uint64 = 0x4c66_7269_5f6c_6631 // "Lfri_lf1"
 // before any row values. Prover ([MultiSizeTable.Merkleize]) and verifier
 // ([hashRowOpening]) MUST call this identically or roots will not
 // reconstruct.
-func absorbLeafHeader(h *poseidon2.MDHasher, baseWidth, extWidth int) {
+//
+// The widths make a leaf's element stream decode in one way only: exactly
+// baseWidth base values, then extWidth blocks of 6 extension coordinates (see
+// [writeRowElements]). The header encodes the shape but not the order in which
+// the columns were declared; see writeRowElements for why that is not needed.
+func absorbLeafHeader(h leafHasher, baseWidth, extWidth int) {
 	var tag, b, e field.Element
 	tag.SetUint64(leafDomainTag)
 	b.SetUint64(uint64(baseWidth))
@@ -41,6 +45,12 @@ type CommitterState struct {
 // Commit commits to a sorted list of tables. The table must satisfy the format
 // expected by [MultiSizeTable.checkWellFormedness] with a K of 1.
 func Commit(encoders []*RSEncoder, witness MultiSizeTable) CommitterState {
+	return CommitWithHash(MerkleHashKoalaBear, encoders, witness)
+}
+
+// CommitWithHash is [Commit] with the given Merkle hash. The verifier must use
+// a PCS whose [Params.MerkleHash] is the same.
+func CommitWithHash(hash MerkleHash, encoders []*RSEncoder, witness MultiSizeTable) CommitterState {
 
 	k, err := witness.checkWellFormedness()
 	if err != nil {
@@ -52,7 +62,7 @@ func Commit(encoders []*RSEncoder, witness MultiSizeTable) CommitterState {
 	}
 
 	encoded := witness.Encode(encoders)
-	tree := encoded.Merkleize()
+	tree := encoded.MerkleizeWithHash(hash)
 
 	return CommitterState{
 		EncodedTable: encoded,
@@ -166,6 +176,11 @@ func (st *CommitterState) Release() {
 // C(…C(h_1, h_2)…, h_m). The tree is then one level shorter, and the opening
 // proof keeps its shape.
 func (table MultiSizeTable) Merkleize() *Tree {
+	return table.MerkleizeWithHash(MerkleHashKoalaBear)
+}
+
+// MerkleizeWithHash is [MultiSizeTable.Merkleize] with the given Merkle hash.
+func (table MultiSizeTable) MerkleizeWithHash(hash MerkleHash) *Tree {
 
 	bottom := len(table) - 1
 	if table[bottom].NumRows() == 0 {
@@ -186,12 +201,12 @@ func (table MultiSizeTable) Merkleize() *Tree {
 		}
 		numLeaves = size / 2
 	}
-	tree := allocPooledTree(numLeaves)
+	tree := allocPooledTree(hash, numLeaves)
 	leaves := tree.Nodes[numLeaves-1:]
 	if pairLeaves {
-		hashPairLeaves(table[bottom].groupViews(), leaves)
+		hashPairLeaves(hash, table[bottom].groupViews(), leaves)
 	} else {
-		hashSizedLeaves(table[bottom], false, leaves)
+		hashSizedLeaves(hash, table[bottom], false, leaves)
 	}
 
 	// Every table but the bottom is digested as conjugate pairs, one tree
@@ -215,7 +230,7 @@ func (table MultiSizeTable) Merkleize() *Tree {
 		level := make([][]field.Octuplet, len(groups))
 		for g, group := range groups {
 			level[g] = make([]field.Octuplet, s/2)
-			hashSizedLeaves(group, true, level[g])
+			hashSizedLeaves(hash, group, true, level[g])
 		}
 		injections[utils.Log2Ceil(s/2)] = level
 	})
@@ -227,17 +242,17 @@ func (table MultiSizeTable) Merkleize() *Tree {
 // hashPairLeaves writes the pair-leaf digests of the bottom groups into leaves:
 // leaf j is the first group's digest of rows (2j, 2j+1), with the next groups'
 // digests chained after it.
-func hashPairLeaves(groups []SizedTable, leaves []field.Octuplet) {
-	hashSizedLeaves(groups[0], true, leaves)
+func hashPairLeaves(hash MerkleHash, groups []SizedTable, leaves []field.Octuplet) {
+	hashSizedLeaves(hash, groups[0], true, leaves)
 	if len(groups) == 1 {
 		return
 	}
 	digests := make([]field.Octuplet, len(leaves))
 	for _, group := range groups[1:] {
-		hashSizedLeaves(group, true, digests)
+		hashSizedLeaves(hash, group, true, digests)
 		parallel.Execute(len(leaves), func(start, end int) {
 			for j := start; j < end; j++ {
-				leaves[j] = poseidon2.Compress(leaves[j], digests[j])
+				leaves[j] = hash.compress(leaves[j], digests[j])
 			}
 		})
 	}
@@ -245,17 +260,29 @@ func hashPairLeaves(groups []SizedTable, leaves []field.Octuplet) {
 
 // chainDigests is the pair-leaf node of one position: the first digest with
 // the others chained after it, C(…C(d_1, d_2)…, d_m).
-func chainDigests(digests []field.Octuplet) field.Octuplet {
+func chainDigests(hash MerkleHash, digests []field.Octuplet) field.Octuplet {
 	res := digests[0]
 	for _, d := range digests[1:] {
-		res = poseidon2.Compress(res, d)
+		res = hash.compress(res, d)
 	}
 	return res
 }
 
 // writeRowElements absorbs one row into hasher without resetting or summing,
 // so a caller can digest several rows into one combined value.
-func writeRowElements(hasher *poseidon2.MDHasher, t SizedTable, row int) {
+//
+// All base values come first, then the 6 coordinates of each extension value
+// (see [extLimbs]), whatever order the columns were declared in: the table
+// only has a Base and an Ext list (the wiop PCS compiler splits a round's
+// columns by kind, see its commitVectors). Rounds declared [a, E] and [E, a]
+// therefore hash identically. This is not an ambiguity a prover can use: the
+// verifier does not learn the column order from the digest, it derives every
+// column's slot from the compiled layout, which the proof cannot change. A
+// second reading of the same digest would need a second layout inside the same
+// verifier. The one place a verifier compares different tables against one
+// root, root dedup in inputOpeningRoots, is covered by the shape in the leaf
+// header (see [absorbLeafHeader]).
+func writeRowElements(hasher leafHasher, t SizedTable, row int) {
 	for k := range t.Base {
 		hasher.WriteElements(t.Base[k][row])
 	}

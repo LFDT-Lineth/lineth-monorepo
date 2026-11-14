@@ -36,8 +36,8 @@ type capCircuit struct {
 
 func (c *capCircuit) Define(api frontend.API) error {
 	f := circuit.NewAPI(api)
-	frontier := authenticateCapGnark(f, c.Cap, c.capDepth, c.Root)
-	authenticateToCapGnark(f, c.Branch, c.IdxBits, frontier)
+	frontier := authenticateCapGnark(f, MerkleHashKoalaBear, c.Cap, c.capDepth, c.Root)
+	authenticateToCapGnark(f, MerkleHashKoalaBear, c.Branch, c.IdxBits, frontier)
 	return nil
 }
 

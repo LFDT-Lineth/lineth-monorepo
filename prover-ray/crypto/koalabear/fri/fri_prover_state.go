@@ -153,9 +153,9 @@ func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 
 	var tree layerTree
 	if st.running == nil {
-		tree = zeroLayerTree{height: int(st.p.LogCodewordSize - j - 1)}
+		tree = zeroLayerTree{height: int(st.p.LogCodewordSize - j - 1), hash: st.p.MerkleHash}
 	} else {
-		tree = buildTreeExt(st.running)
+		tree = buildTreeExt(st.p.MerkleHash, st.running)
 	}
 	st.trees[j+1] = tree
 	root := tree.Root()

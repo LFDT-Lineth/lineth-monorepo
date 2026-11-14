@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math/bits"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/circuit"
 	"github.com/consensys/gnark/frontend"
 )
@@ -52,7 +51,7 @@ func convertMerkleCap(c MerkleCap, withValues bool) GnarkMerkleCap {
 // trees pass nil throughout, while input trees supply digests rebuilt from
 // their revealed tables.
 func recoverCapRootGnark(
-	api *circuit.KoalaBearAPI, nodes []circuit.Octuplet, injections [][]circuit.Octuplet,
+	api *circuit.KoalaBearAPI, hash MerkleHash, nodes []circuit.Octuplet, injections [][]circuit.Octuplet,
 ) circuit.Octuplet {
 	n := len(nodes)
 	if n == 0 {
@@ -68,10 +67,10 @@ func recoverCapRootGnark(
 	work := make([]circuit.Octuplet, 2*n-1)
 	copy(work[n-1:], nodes)
 	for i := n - 2; i >= 0; i-- {
-		work[i] = poseidon2.KoalagnarkCompress(api, work[2*i+1], work[2*i+2])
+		work[i] = hash.compressGnark(api, work[2*i+1], work[2*i+2])
 		if injections != nil {
 			for _, injected := range injections[i] {
-				work[i] = poseidon2.KoalagnarkCompress(api, work[i], injected)
+				work[i] = hash.compressGnark(api, work[i], injected)
 			}
 		}
 	}
@@ -83,7 +82,7 @@ func recoverCapRootGnark(
 // that tree is then checked against. A depth-zero cap must be empty and the
 // frontier is the root alone.
 func authenticateCapGnark(
-	api *circuit.KoalaBearAPI, treeCap GnarkMerkleCap, depth int, root circuit.Octuplet,
+	api *circuit.KoalaBearAPI, hash MerkleHash, treeCap GnarkMerkleCap, depth int, root circuit.Octuplet,
 ) []circuit.Octuplet {
 	if depth == 0 {
 		if len(treeCap.Nodes) != 0 {
@@ -94,7 +93,7 @@ func authenticateCapGnark(
 	if want := 1 << depth; len(treeCap.Nodes) != want {
 		panic(fmt.Sprintf("fri: authenticateCapGnark: cap has %d nodes, want %d", len(treeCap.Nodes), want))
 	}
-	assertOctupletEqual(api, recoverCapRootGnark(api, treeCap.Nodes, nil), root)
+	assertOctupletEqual(api, recoverCapRootGnark(api, hash, treeCap.Nodes, nil), root)
 	return treeCap.Nodes
 }
 
@@ -108,8 +107,11 @@ func authenticateCapGnark(
 // `ancestor == frontier[currPos]` check where currPos is idx shifted right
 // past the folded levels. The selection is a multiplexer over the whole
 // frontier, since the index is a circuit variable.
+//
+// The branch is a FRI layer tree's: its leaf and its bottom sibling are raw
+// extension values, not digests, which the first fold accounts for.
 func authenticateToCapGnark(
-	api *circuit.KoalaBearAPI, branch GnarkBranch, idxBits []frontend.Variable,
+	api *circuit.KoalaBearAPI, hash MerkleHash, branch GnarkBranch, idxBits []frontend.Variable,
 	frontier []circuit.Octuplet,
 ) {
 	n := len(branch.Siblings)
@@ -120,7 +122,7 @@ func authenticateToCapGnark(
 
 	ancestor := branch.Leaf
 	for i := n - 1; i >= 0; i-- {
-		ancestor = foldOneLevelGnark(api, ancestor, branch.Siblings[i], nil, nil, idxBits[n-1-i])
+		ancestor = foldOneLevelGnark(api, hash, ancestor, branch.Siblings[i], nil, nil, idxBits[n-1-i], i == n-1)
 	}
 	assertOctupletEqual(api, ancestor, selectFrontierNodeGnark(api, frontier, idxBits[n:n+depth]))
 }

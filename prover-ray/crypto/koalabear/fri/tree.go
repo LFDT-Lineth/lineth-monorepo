@@ -6,7 +6,6 @@ import (
 	"math/bits"
 	"runtime"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
@@ -39,6 +38,9 @@ type Tree struct {
 	// nodes Nodes[2^l-1 : 2^(l+1)-1], and Injections[l][i][j] is the i-th
 	// digest injected into the j-th node of that level.
 	Injections [][][]field.Octuplet
+	// hash is the Merkle hash the tree is built with; the zero value is
+	// KoalaBear Poseidon2.
+	hash MerkleHash
 }
 
 // Branch is a Merkle opening proof for a single leaf. The branch does  not open
@@ -119,6 +121,11 @@ func (p Params) merkleCapDepth(height int) int {
 //
 //	for all 0 <= i < len(leaves): len(leaves[i]) = 2**i or 0
 func NewTree(leaves [][]field.Octuplet) *Tree {
+	return newTreeWithHash(MerkleHashKoalaBear, leaves)
+}
+
+// newTreeWithHash is [NewTree] with the given Merkle hash.
+func newTreeWithHash(hash MerkleHash, leaves [][]field.Octuplet) *Tree {
 
 	if len(leaves) == 0 {
 		panic("at least one level must be provided")
@@ -145,7 +152,7 @@ func NewTree(leaves [][]field.Octuplet) *Tree {
 		}
 	}
 
-	t := allocTree(len(leaves[bottom]))
+	t := allocTree(hash, len(leaves[bottom]))
 	copy(t.Nodes[len(leaves[bottom])-1:], leaves[bottom])
 	t.buildLevels(injections)
 	return t
@@ -154,13 +161,14 @@ func NewTree(leaves [][]field.Octuplet) *Tree {
 // allocTree allocates the node and aux storage for a tree with the given
 // power-of-two number of bottom leaves. The caller must fill
 // Nodes[numLeaves-1:] with the bottom leaves and then call buildLevels.
-func allocTree(numLeaves int) *Tree {
+func allocTree(hash MerkleHash, numLeaves int) *Tree {
 	if numLeaves <= 0 || numLeaves&(numLeaves-1) != 0 {
 		panic("fri: allocTree: number of leaves must be a positive power of two")
 	}
 	return &Tree{
 		Nodes:      make([]field.Octuplet, 2*numLeaves-1),
 		Injections: make([][][]field.Octuplet, utils.Log2Ceil(numLeaves)),
+		hash:       hash,
 	}
 }
 
@@ -169,13 +177,14 @@ func allocTree(numLeaves int) *Tree {
 // to the pool through [CommitterState.Release]. Every node is written by the leaf
 // hashing and buildLevels, so the stale nodes of a pooled slice are fine; its
 // capacity, 2·numLeaves, is the pool's power-of-two class.
-func allocPooledTree(numLeaves int) *Tree {
+func allocPooledTree(hash MerkleHash, numLeaves int) *Tree {
 	if numLeaves <= 0 || numLeaves&(numLeaves-1) != 0 {
 		panic("fri: allocPooledTree: number of leaves must be a positive power of two")
 	}
 	return &Tree{
 		Nodes:      field.OctupletPool.Get(2 * numLeaves)[:2*numLeaves-1],
 		Injections: make([][][]field.Octuplet, utils.Log2Ceil(numLeaves)),
+		hash:       hash,
 	}
 }
 
@@ -211,7 +220,7 @@ func (t *Tree) buildLevels(injections [][][]field.Octuplet) {
 		numSubtrees *= 2
 	}
 	top := n / 2 // the largest level left to the per-level loop below
-	if numSubtrees > 1 && n/2 >= minParallelTreeLevel {
+	if numSubtrees > 1 && n/2 >= minParallelTreeLevel && t.hash.batched() {
 		floor := numSubtrees * batchLanes
 		parallel.Execute(numSubtrees, func(sStart, sEnd int) {
 			sc := newGroupScratch(maxSteps)
@@ -226,7 +235,7 @@ func (t *Tree) buildLevels(injections [][][]field.Octuplet) {
 	}
 
 	for levelSize := top; levelSize > 0; levelSize /= 2 {
-		hashTreeLevel(t.Nodes, injectionsOf(levelSize), levelSize)
+		hashTreeLevel(t.hash, t.Nodes, injectionsOf(levelSize), levelSize)
 	}
 
 	// as the tree cannot be empty (as per our sanity-checks), the root cannot
@@ -252,6 +261,7 @@ func checkInjections(injections [][]field.Octuplet, levelSize int) {
 // injections holds exactly one digest per node of this level (checked by
 // [Tree.buildLevels]); they are chained into each node in order.
 func hashTreeLevel(
+	hash MerkleHash,
 	nodes []field.Octuplet,
 	injections [][]field.Octuplet,
 	levelSize int,
@@ -259,15 +269,27 @@ func hashTreeLevel(
 	levelStart := levelSize - 1
 
 	// Levels smaller than one batch (only the topmost few nodes) are hashed
-	// with the scalar compression.
-	if levelSize < batchLanes {
-		for j := range levelSize {
+	// with the scalar compression, as are all levels of a hash without a
+	// batched path.
+	scalar := func(jStart, jEnd int) {
+		for j := jStart; j < jEnd; j++ {
 			k := levelStart + j
-			res := poseidon2.Compress(nodes[2*k+1], nodes[2*k+2])
+			res := hash.compress(nodes[2*k+1], nodes[2*k+2])
 			for _, injected := range injections {
-				res = poseidon2.Compress(res, injected[j])
+				res = hash.compress(res, injected[j])
 			}
 			nodes[k] = res
+		}
+	}
+	if levelSize < batchLanes {
+		scalar(0, levelSize)
+		return
+	}
+	if !hash.batched() {
+		if levelSize < minParallelTreeLevel {
+			scalar(0, levelSize)
+		} else {
+			parallel.Execute(levelSize, scalar)
 		}
 		return
 	}
@@ -489,6 +511,11 @@ func (cap MerkleCap) Validate(depth int) error {
 
 // RecoverRoot rebuilds the root from a structurally valid nonempty cap.
 func (cap MerkleCap) RecoverRoot(depth int) (field.Octuplet, error) {
+	return cap.recoverRoot(MerkleHashKoalaBear, depth)
+}
+
+// recoverRoot is [MerkleCap.RecoverRoot] with the given Merkle hash.
+func (cap MerkleCap) recoverRoot(hash MerkleHash, depth int) (field.Octuplet, error) {
 	if err := cap.Validate(depth); err != nil {
 		return field.Octuplet{}, err
 	}
@@ -502,18 +529,18 @@ func (cap MerkleCap) RecoverRoot(depth int) (field.Octuplet, error) {
 			injections[i] = []field.Octuplet{*aux}
 		}
 	}
-	return capRoot(cap.Nodes, injections), nil
+	return capRoot(hash, cap.Nodes, injections), nil
 }
 
 // capRoot rebuilds the root above a frontier of nodes, a nonempty power of two
 // left to right. injections[i] lists the digests injected into the i-th node of
 // the heap-order prefix above the frontier, in injection order, and may be
 // empty.
-func capRoot(nodes []field.Octuplet, injections [][]field.Octuplet) field.Octuplet {
+func capRoot(hash MerkleHash, nodes []field.Octuplet, injections [][]field.Octuplet) field.Octuplet {
 	work := make([]field.Octuplet, 2*len(nodes)-1)
 	copy(work[len(nodes)-1:], nodes)
 	for i := len(nodes) - 2; i >= 0; i-- {
-		work[i] = hashNode(work[2*i+1], work[2*i+2], injections[i]...)
+		work[i] = hashNode(hash, work[2*i+1], work[2*i+2], injections[i]...)
 	}
 	return work[0]
 }
@@ -521,10 +548,15 @@ func capRoot(nodes []field.Octuplet, injections [][]field.Octuplet) field.Octupl
 // Authenticate checks a cap once against the caller's trusted root. A
 // depth-zero cap is empty and represents the trusted root directly.
 func (cap MerkleCap) Authenticate(depth int, root field.Octuplet) error {
+	return cap.authenticate(MerkleHashKoalaBear, depth, root)
+}
+
+// authenticate is [MerkleCap.Authenticate] with the given Merkle hash.
+func (cap MerkleCap) authenticate(hash MerkleHash, depth int, root field.Octuplet) error {
 	if depth == 0 {
 		return cap.Validate(depth)
 	}
-	recovered, err := cap.RecoverRoot(depth)
+	recovered, err := cap.recoverRoot(hash, depth)
 	if err != nil {
 		return err
 	}
@@ -537,6 +569,11 @@ func (cap MerkleCap) Authenticate(depth int, root field.Octuplet) error {
 // AuthenticateToCap checks this lower branch against a previously
 // authenticated frontier.
 func (branch *Branch) AuthenticateToCap(idx int, frontier []field.Octuplet) error {
+	return branch.authenticateToCap(MerkleHashKoalaBear, idx, frontier)
+}
+
+// authenticateToCap is [Branch.AuthenticateToCap] with the given Merkle hash.
+func (branch *Branch) authenticateToCap(hash MerkleHash, idx int, frontier []field.Octuplet) error {
 	if idx < 0 {
 		return errors.New("negative opening index")
 	}
@@ -559,7 +596,7 @@ func (branch *Branch) AuthenticateToCap(idx int, frontier []field.Octuplet) erro
 		if currPos&1 > 0 {
 			left, right = right, left
 		}
-		ancestor = hashNode(left, right, branch.AuxSiblings[i]...)
+		ancestor = hashNode(hash, left, right, branch.AuxSiblings[i]...)
 		currPos >>= 1
 	}
 	if ancestor != frontier[currPos] {
@@ -571,10 +608,10 @@ func (branch *Branch) AuthenticateToCap(idx int, frontier []field.Octuplet) erro
 // hashNode hashes two field.Octuplets, then chains the injected digests in
 // order. It calls the compression function C directly (not MD hashing):
 // res = C(…C(C(left, right), injected_1)…, injected_m).
-func hashNode(left, right field.Octuplet, injected ...field.Octuplet) field.Octuplet {
-	res := poseidon2.Compress(left, right)
+func hashNode(hash MerkleHash, left, right field.Octuplet, injected ...field.Octuplet) field.Octuplet {
+	res := hash.compress(left, right)
 	for i := range injected {
-		res = poseidon2.Compress(res, injected[i])
+		res = hash.compress(res, injected[i])
 	}
 	return res
 }
