@@ -9,6 +9,9 @@
 //!   const dep = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize });
 //!   some_module.addImport("lineth_zkvm_accel", dep.module("lineth_accelerators"));
 //!
+//! The `zkvm_accelerators` module declares the `zkvm_*` and `lineth_zkvm_*` symbols that the guests'
+//! own code calls (hashing, blob verification); the providers below define them.
+//!
 //! `-Dzkvm-provide=true` additionally exposes the crypto surface zesu's extern backend needs:
 //! `zkvm_provide` (defines every `zkvm_*` symbol, linking the Constantine archive for the target),
 //! `guest_crypto` (the Zig bindings to that archive) and `secp256k1_std`. `-Dkeccak-accel=true`
@@ -20,8 +23,6 @@
 
 const std = @import("std");
 const common = @import("build_common");
-
-const Secp256k1Backend = enum { std, constantine };
 
 pub fn build(b: *std.Build) void {
     common.requireZigVersion();
@@ -35,8 +36,7 @@ pub fn build(b: *std.Build) void {
     // `-Doptimize` for `-Drelease`, breaking the dependency pass-through.)
     const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseSmall)") orelse .ReleaseSmall;
     const zkvm_provide = b.option(bool, "zkvm-provide", "Expose the zkvm_provide, guest_crypto and secp256k1_std modules (fetches zesu, builds Constantine)") orelse false;
-    const keccak_accel = b.option(bool, "keccak-accel", "zkvm_provide exports the arithmetization keccak wrapper instead of standard zig keccak (default: unaccelerated)") orelse false;
-    const secp256k1_backend = b.option(Secp256k1Backend, "secp256k1-backend", "zkvm_provide's secp256k1 ecrecover/verify provider: constantine (default) or std") orelse .constantine;
+    const crypto = common.CryptoOptions.parse(b);
 
     const accelerators = b.addModule("lineth_accelerators", .{
         .root_source_file = b.path("src/root.zig"),
@@ -44,7 +44,13 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    if (zkvm_provide) addCryptoProviders(b, accelerators, target, optimize, keccak_accel, secp256k1_backend);
+    _ = b.addModule("zkvm_accelerators", .{
+        .root_source_file = b.path("src/zkvm_accelerators.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    if (zkvm_provide) addCryptoProviders(b, accelerators, target, optimize, crypto);
 }
 
 /// The `zkvm_provide`, `guest_crypto` and `secp256k1_std` modules for `target`. The freestanding
@@ -58,8 +64,7 @@ fn addCryptoProviders(
     accelerators: *std.Build.Module,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
-    keccak_accel: bool,
-    secp256k1_backend: Secp256k1Backend,
+    crypto: common.CryptoOptions,
 ) void {
     const is_guest = target.result.os.tag == .freestanding;
 
@@ -80,9 +85,9 @@ fn addCryptoProviders(
     });
 
     const provide_options = b.addOptions();
-    provide_options.addOption(bool, "keccak_accel", keccak_accel);
+    provide_options.addOption(bool, "keccak_accel", crypto.keccak_accel);
     provide_options.addOption(bool, "is_guest", is_guest);
-    provide_options.addOption(Secp256k1Backend, "secp256k1_backend", secp256k1_backend);
+    provide_options.addOption(common.Secp256k1Backend, "secp256k1_backend", crypto.secp256k1_backend);
 
     const provide = b.addModule("zkvm_provide", .{
         .root_source_file = b.path("src/zkvm_provide.zig"),

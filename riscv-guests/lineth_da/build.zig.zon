@@ -7,11 +7,10 @@
         // Shared build helpers (pinned toolchain, the common freestanding rv64im guest target, the
         // native test wiring).
         .build_common = .{ .path = "../build_common" },
-        // The zkvm_* crypto providers (opt-in through -Dzkvm-provide) that the package's sha256,
-        // keccak256 and KZG point evaluation resolve to in the native tests.
+        // The accelerator calls the package makes (sha256, keccak256, blob verification) and, through
+        // -Dzkvm-provide, the zkvm_* crypto providers they resolve to in the native tests.
         .lineth_accelerators = .{ .path = "../lineth_accelerators" },
-        // Block and transaction decoding, sender recovery and the crypto accelerator interface of
-        // the truncation and the blob verification.
+        // Block and transaction decoding, sender recovery and the trie of the truncation.
         .zesu = .{
             .url = "https://github.com/Consensys-Incorporated/zesu/archive/2835883c929407ff7252f7f70924436833d767c7.tar.gz",
             .hash = "zesu-0.1.0-UtqpADrkRgCDa2Q8oghvNCEGFguQic--Rv8uGWFjwqp2",

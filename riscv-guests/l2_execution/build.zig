@@ -4,7 +4,6 @@ const common = @import("build_common");
 const Import = std.Build.Module.Import;
 const Compile = std.Build.Step.Compile;
 const Tools = std.StringHashMap(*Compile);
-const Secp256k1Backend = enum { std, constantine };
 
 pub fn build(b: *std.Build) void {
     common.requireZigVersion();
@@ -26,10 +25,7 @@ pub fn build(b: *std.Build) void {
 const Options = struct {
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
-    /// Keccak provider: the arithmetization wrapper (prover-accelerated custom op) or standard zig keccak.
-    keccak_accel: bool,
-    /// secp256k1 ecrecover/verify provider: standard zig or the Constantine staticlib.
-    secp256k1_backend: Secp256k1Backend,
+    crypto: common.CryptoOptions,
     /// Directory holding the EF zkevm fixtures; its `blockchain_tests/` is the corpus.
     zkevm_fixtures: ?std.Build.LazyPath,
     zkc_smoke_input: []const u8,
@@ -40,40 +36,19 @@ const Options = struct {
         const target = common.standardGuestTarget(b);
         // Keep `-Doptimize` exposed to dependency consumers and default to ReleaseSmall.
         const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseSmall)") orelse .ReleaseSmall;
-        const keccak_accel = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: unaccelerated)") orelse false;
-        const secp256k1_backend = b.option(Secp256k1Backend, "secp256k1-backend", "secp256k1 ecrecover/verify provider: constantine (default) or std") orelse .constantine;
         const zkevm_fixtures = b.option(std.Build.LazyPath, "zkevm-fixtures", "Directory holding the EF zkevm fixtures; enables the corpus suites and reference steps");
         const zkc_smoke_input = b.option([]const u8, "zkc-smoke-input", "Extended SSZ input for the ZkC smoke test") orelse "test/testdata/stateless_input.ssz";
         const host_tools = b.option(bool, "host-tools", "Build native test and helper targets") orelse false;
         return .{
             .target = target,
             .optimize = optimize,
-            .keccak_accel = keccak_accel,
-            .secp256k1_backend = secp256k1_backend,
+            .crypto = common.CryptoOptions.parse(b),
             .zkevm_fixtures = zkevm_fixtures,
             .zkc_smoke_input = zkc_smoke_input,
             .host_tools = host_tools,
         };
     }
 };
-
-/// The accelerator package with its opt-in `zkvm_*` providers. The wrappers and every provider
-/// module come from this one instance, so they share one set of sources and build options.
-fn acceleratorsDependency(
-    b: *std.Build,
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
-    keccak_accel: bool,
-    secp256k1_backend: Secp256k1Backend,
-) *std.Build.Dependency {
-    return b.dependency("lineth_accelerators", .{
-        .target = target,
-        .optimize = optimize,
-        .@"zkvm-provide" = true,
-        .@"keccak-accel" = keccak_accel,
-        .@"secp256k1-backend" = secp256k1_backend,
-    });
-}
 
 /// The self-contained rv64im guest ELF (execution, crypto, accelerators, input I/O).
 fn addGuestProgram(b: *std.Build, options: Options) void {
@@ -82,7 +57,7 @@ fn addGuestProgram(b: *std.Build, options: Options) void {
         .optimize = options.optimize,
         .@"crypto-backend" = .@"extern",
     });
-    const accelerators = acceleratorsDependency(b, options.target, options.optimize, options.keccak_accel, options.secp256k1_backend);
+    const accelerators = common.acceleratorsDependency(b, options.target, options.optimize, options.crypto);
     const deps = Deps.init(b, options.target, options.optimize, zesu, accelerators);
 
     const package = common.createPackageModule(b, options.target, options.optimize, deps.package);
@@ -121,7 +96,7 @@ const Host = struct {
         // so host-specific extensions (e.g. AVX-512 on the build machine) would SIGILL on older
         // or emulated (Rosetta) x86_64 hosts.
         const target = b.resolveTargetQuery(.{ .cpu_model = .baseline });
-        const accelerators = acceleratorsDependency(b, target, optimize, false, options.secp256k1_backend);
+        const accelerators = common.acceleratorsDependency(b, target, optimize, options.crypto.native());
         const crypto = common.HostCrypto.init(b, accelerators) orelse return null;
         const zlob = b.lazyDependency("zlob", .{ .target = target, .optimize = optimize }) orelse
             @panic("zlob dependency is required for native test and helper targets");
@@ -328,7 +303,7 @@ fn addReferenceSteps(b: *std.Build, tools: Tools, options: Options) void {
 /// What l2_execution's source files import by name, for one target.
 const Deps = struct {
     /// zesu's exposed modules under the `zesu_*` names the sources use.
-    zesu: [13]Import,
+    zesu: [12]Import,
     core_serde: *std.Build.Module,
     accelerators: *std.Build.Dependency,
     /// Imports of the package module (`src/root.zig`).
@@ -344,6 +319,7 @@ const Deps = struct {
         const zesu = zesuImports(zesu_dep);
         const guest_common = b.dependency("guest_common", .{ .target = target, .optimize = optimize });
         const core_serde = guest_common.module("core_serde");
+        const zkvm_accelerators = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("zkvm_accelerators");
         return .{
             .zesu = zesu,
             .core_serde = core_serde,
@@ -351,6 +327,7 @@ const Deps = struct {
             .package = concatImports(b, &.{ &zesu, &.{
                 .{ .name = "guest_common", .module = guest_common.module("guest_common") },
                 .{ .name = "core_serde", .module = core_serde },
+                .{ .name = "zkvm_accelerators", .module = zkvm_accelerators },
             } }),
         };
     }
@@ -358,7 +335,7 @@ const Deps = struct {
 
 /// Pull zesu's exposed modules by name. Which crypto backend zesu uses is selected inside zesu by
 /// target (freestanding leaves zkvm_* extern; native links real crypto) — that's zesu's concern.
-fn zesuImports(zesu: *std.Build.Dependency) [13]Import {
+fn zesuImports(zesu: *std.Build.Dependency) [12]Import {
     return .{
         .{ .name = "zesu_allocator", .module = zesu.module("zesu_allocator") },
         .{ .name = "zesu_executor", .module = zesu.module("executor") },
@@ -371,9 +348,6 @@ fn zesuImports(zesu: *std.Build.Dependency) [13]Import {
         .{ .name = "zesu_input", .module = zesu.module("input") },
         .{ .name = "zesu_hardfork", .module = zesu.module("hardfork") },
         .{ .name = "zesu_rlp_decode", .module = zesu.module("rlp_decode") },
-        // The crypto-accelerator interface tx_signing.zig uses for ecrecover/keccak256; the
-        // `executor` module does not re-export it.
-        .{ .name = "zesu_accelerators", .module = zesu.module("accelerators") },
         .{ .name = "zesu_block_rlp_size", .module = zesu.module("block_rlp_size") },
     };
 }

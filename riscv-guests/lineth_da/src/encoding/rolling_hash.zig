@@ -3,7 +3,7 @@
 
 const std = @import("std");
 
-const accelerators = @import("zesu_accelerators");
+const accelerators = @import("zkvm_accelerators");
 
 pub const Hash = [32]u8;
 

@@ -59,7 +59,6 @@ pub fn build(b: *std.Build) void {
     });
     addPackageSources(b, package, zstd);
 
-    // Consumers of the package build the guest side only.
     const host_tools = b.option(bool, "host-tools", "Build the native tests: fetches the reference vectors and builds the host crypto providers") orelse false;
     const zkevm_fixtures = b.option(std.Build.LazyPath, "zkevm-fixtures", "Directory holding the EF zkevm fixtures; enables the reference tests over its blocks");
     if (host_tools) addHostBuild(b, zstd, target, optimize, zkevm_fixtures);
@@ -104,11 +103,13 @@ fn zesuFor(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builti
 }
 
 /// What `src/` imports by name, for one target: the zesu modules under the `zesu_*` names the
-/// sources use, the declarations of libzstd and the memory hooks of the decoder.
+/// sources use, the accelerator calls, the declarations of libzstd and the memory hooks of the
+/// decoder.
 fn packageImports(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, zstd: Zstd) []const Import {
     const zesu = zesuFor(b, target, optimize);
+    const accelerators = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize });
     return b.allocator.dupe(Import, &.{
-        .{ .name = "zesu_accelerators", .module = zesu.module("accelerators") },
+        .{ .name = "zkvm_accelerators", .module = accelerators.module("zkvm_accelerators") },
         .{ .name = "zesu_executor", .module = zesu.module("executor") },
         .{ .name = "zesu_input", .module = zesu.module("input") },
         .{ .name = "zesu_mpt", .module = zesu.module("mpt") },
@@ -260,14 +261,8 @@ fn addKzgReferences(
 }
 
 /// Every native test links the host build of the zkvm_* providers.
-/// Optimized: the compiler's own linker crashes on a debug-built provider object.
 fn linkHostCrypto(b: *std.Build, target: std.Build.ResolvedTarget, artifacts: []const std.StringHashMap(*std.Build.Step.Compile)) void {
-    const accelerators = b.dependency("lineth_accelerators", .{
-        .target = target,
-        .optimize = .ReleaseSafe,
-        .@"zkvm-provide" = true,
-    });
-    const crypto = common.HostCrypto.init(b, accelerators) orelse return;
+    const crypto = common.HostCrypto.forTarget(b, target, .{}) orelse return;
     for (artifacts) |group| crypto.linkAll(group);
 }
 
