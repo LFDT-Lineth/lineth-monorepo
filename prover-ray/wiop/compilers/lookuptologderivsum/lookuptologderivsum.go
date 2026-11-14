@@ -10,18 +10,25 @@
 //     row's value appears across the union of all checked-table A's that
 //     reference T.
 //
-//   - Sample two random extension-field coins:
+//   - Sample two random extension-field coins, shared by every group:
 //
-//   - α — used only when the lookup is multi-column, to fold every row
-//     into a single field element via random linear combination.
+//   - α — used to fold every row, prefixed by its group's lookup ID, into a
+//     single field element via random linear combination.
 //
-//   - γ — used to randomise the denominators (γ + RLC(row)); sampled per group
-//     so fractions of different groups cannot cancel each other.
+//   - γ — used to randomise the denominators (γ + RLC(id, row)).
 //
 //   - Emit fractions
 //
-//     Σ_T  ( −M(row) ) / ( γ + RLC(T(row)) )       (one per T fragment)
-//     Σ_S  ( filter_S(row) ) / ( γ + RLC(S(row)) ) (one per A fragment)
+//     Σ_T  ( −M(row) ) / ( γ + RLC(id, T(row)) )       (one per T fragment)
+//     Σ_S  ( filter_S(row) ) / ( γ + RLC(id, S(row)) ) (one per A fragment)
+//
+//     where id is a constant column holding a lookup ID unique to the group.
+//     Every group's fractions are summed into one query, so without the ID a
+//     row of one group could cancel an equal row of another group (e.g. a
+//     value of T2 smuggled into a lookup on T1 and absorbed by T2's M). The
+//     ID makes rows of distinct groups distinct tuples, so the aggregated
+//     identity holds iff every group's lookup holds. A verifier action
+//     checks that the IDs are non-zero and pairwise distinct.
 //
 //     into a single [wiop.LogDerivativeSum] query. The α-randomised RLC
 //     binds the multi-column case via Schwartz–Zippel; the γ-randomised
@@ -127,6 +134,11 @@ func Compile(sys *wiop.System) {
 
 	compCtx := sys.Context.Childf("lookuptologderiv")
 
+	// α and γ are shared across every group: the per-group lookup ID folded
+	// into every row (see compileGroup) is what keeps the groups apart.
+	alpha := coinRound.NewCoinField(compCtx.Childf("alpha"))
+	gamma := coinRound.NewCoinField(compCtx.Childf("gamma"))
+
 	// Register one row-limit check per lookup query, before the group loop
 	// below registers any M-assignment task on the same witness round. The
 	// check runs first (registration order), so the prover fails fast — it
@@ -135,9 +147,14 @@ func Compile(sys *wiop.System) {
 	// validates both the query's included (A) and including (B) sides.
 	registerRowLimitChecks(groups)
 
+	// Because α and γ are shared, the soundness error grows with the total row
+	// count N across every group (see [MaxTotalLookupRows]); bound it.
+	registerTotalRowLimitCheck(groups, latestWitness)
+
 	var (
 		fractions  []wiop.Fraction
 		consumedQs []*wiop.TableRelationQuery
+		idColumns  = make([][]*wiop.Constant, len(groups))
 	)
 	// The M-assignment tasks of the groups sharing a witness round run as
 	// one batch, after the row-limit checks registered above.
@@ -146,9 +163,13 @@ func Compile(sys *wiop.System) {
 		batches     = map[*wiop.Round]*mAssignmentBatch{}
 	)
 	for i, g := range groups {
-		gFractions, task := compileGroup(g, i, coinRound, compCtx)
+		// IDs start at 1 so that no group's ID is zero.
+		var id field.Element
+		id.SetUint64(uint64(i + 1))
+		gFractions, gIDColumns, task := compileGroup(g, i, id, alpha, gamma, compCtx)
 		fractions = append(fractions, gFractions...)
 		consumedQs = append(consumedQs, g.queries...)
+		idColumns[i] = gIDColumns
 
 		b, ok := batches[g.witnessRound]
 		if !ok {
@@ -164,7 +185,9 @@ func Compile(sys *wiop.System) {
 
 	ld := sys.NewLogDerivativeSum(compCtx.Childf("aggregated"), fractions)
 
-	// The verifier check: the aggregated log-derivative sum must be zero.
+	// The verifier checks: the lookup IDs keep the groups apart, and the
+	// aggregated log-derivative sum must be zero.
+	ld.Result.Round().RegisterVerifierAction(&LookupIDsAreUniqueVerifierAction{IDColumns: idColumns})
 	ld.Result.Round().RegisterVerifierAction(&ResultIsZeroVerifierAction{LogDerivativeSum: ld})
 
 	// Mark every consumed query as reduced so subsequent compiler passes skip
@@ -392,28 +415,23 @@ func collectGroups(sys *wiop.System) []*lookupGroup {
 // inclusion queries. It also allocates the group's multiplicity column M on
 // the group's witness round and returns the prover task that fills it, which
 // the caller registers there, so M is committed before α and γ are sampled in
-// coinRound.
+// the coin round.
+//
+// Every row on both sides is prefixed with a constant column holding id, the
+// group's lookup ID. It returns the fractions, the ID columns it created and
+// the M-assignment task.
 func compileGroup(
 	g *lookupGroup,
 	groupIdx int,
-	coinRound *wiop.Round,
+	id field.Element,
+	alpha, gamma *wiop.CoinField,
 	compCtx *wiop.ContextFrame,
-) ([]wiop.Fraction, *mAssignmentTask) {
+) ([]wiop.Fraction, []*wiop.Constant, *mAssignmentTask) {
 	// groupIdx is the group's position in collectGroups' deterministic output
 	// order, so the derived names are reproducible across runs (unlike a
 	// pointer-based name, which would break serializing or diffing the
 	// compiled system).
 	gCtx := compCtx.Childf("group-%d", groupIdx)
-
-	// γ is sampled per group, never shared. Every group's fractions are summed
-	// into one LogDerivativeSum checked only for a zero total, so with a
-	// shared γ and no α (single-column, unfiltered groups) the denominators
-	// γ+v of two groups over different tables are identical: a prover could
-	// put v ∈ T2 \ T1 into a lookup on T1 and absorb it with T2's M, making
-	// the total vanish identically in γ. Independent γ's make each group's
-	// rational function independent, so cross-group cancellation only
-	// happens with negligible probability.
-	gamma := coinRound.NewCoinField(gCtx.Childf("gamma"))
 
 	// All B fragments share the same column width (enforced at construction by
 	// wiop.NewInclusion). Take the first fragment's width as the reference and
@@ -442,16 +460,16 @@ func compileGroup(
 			break
 		}
 	}
-	effectiveWidth := bWidth
-	if prependOnesToA {
-		effectiveWidth++
-	}
 
-	// α is needed whenever we have to fold more than one column down to a
-	// single field element.
-	var alpha *wiop.CoinField
-	if effectiveWidth > 1 {
-		alpha = coinRound.NewCoinField(gCtx.Childf("alpha"))
+	// idColumns collects the constant ID column of every fragment, so the
+	// verifier can check the IDs actually folded into the denominators.
+	var idColumns []*wiop.Constant
+	// withID folds the group's ID column in front of an RLC already built
+	// with α: id + α·RLC(head, cols) = RLC(id, head, cols).
+	withID := func(m *wiop.Module, rlc wiop.Expression) wiop.Expression {
+		idCol := wiop.NewConstantVector(m, id)
+		idColumns = append(idColumns, idCol)
+		return wiop.RLCExpression(alpha, []wiop.Expression{idCol, rlc})
 	}
 
 	// One −M/(γ+RLC(T)) fraction per B fragment, each with its own
@@ -474,7 +492,7 @@ func compileGroup(
 				bHead = wiop.NewConstantVector(it.module, field.One())
 			}
 		}
-		bRLC := wiop.RLCOfEntries(alpha, bHead, it.cols)
+		bRLC := withID(it.module, wiop.RLCOfEntries(alpha, bHead, it.cols))
 
 		mCol := it.module.NewColumn(
 			gCtx.Childf("M-%d", frag),
@@ -494,7 +512,7 @@ func compileGroup(
 		if prependOnesToA {
 			sHead = wiop.NewConstantVector(inc.module, field.One())
 		}
-		sRLC := wiop.RLCOfEntries(alpha, sHead, inc.cols)
+		sRLC := withID(inc.module, wiop.RLCOfEntries(alpha, sHead, inc.cols))
 		sDen := wiop.Add(gamma, sRLC)
 		// Numerator is the constant 1 broadcast over the A fragment's module
 		// so the fraction is vector-valued on the A side.
@@ -521,7 +539,7 @@ func compileGroup(
 		prependOneOnAOk: prependOnesToA,
 	}
 
-	return fractions, task
+	return fractions, idColumns, task
 }
 
 // RowLimitVerifierAction enforces, at runtime, that a single subgroup's summed row
@@ -608,6 +626,133 @@ func (a *RowLimitVerifierAction) overLimitError(side string, rows uint64) error 
 			"constraints would overflow over a small field",
 		strings.Join(paths, ", "), side, rows, wiop.MaxLookupRows,
 	)
+}
+
+// MaxTotalLookupRows bounds N, the total number of rows over every lookup
+// group compiled together: all A-side rows plus all B-side rows, a table being
+// counted once per group that uses it. With α and γ shared by every group, the
+// soundness error of the aggregated check is at most
+//
+//	(C(N,2)·(L−1) + 2N) / |F|,   |F| = p⁶ ≈ 2^185.93,
+//
+// where L is the longest tagged tuple (lookup ID, optional head, columns). For
+// L = 16 and N < 2^41 this is below 2^−100.
+const MaxTotalLookupRows uint64 = 1 << 41
+
+// registerTotalRowLimitCheck enforces [MaxTotalLookupRows] across all groups.
+// At compile time it panics if the static row total (dynamic modules counted as
+// their maximum height) reaches the limit. At runtime one [TotalRowLimitAction]
+// re-checks the exact per-run total on latestWitness, by which point every
+// lookup column has been committed.
+func registerTotalRowLimitCheck(groups []*lookupGroup, latestWitness *wiop.Round) {
+	var modules []*wiop.Module
+	for _, g := range groups {
+		for _, inc := range g.included {
+			modules = append(modules, inc.module)
+		}
+		for _, it := range g.includings {
+			modules = append(modules, it.module)
+		}
+	}
+
+	var static uint64
+	for _, m := range modules {
+		if m.IsSized() {
+			static += uint64(m.Size())
+		} else {
+			static += uint64(wiop.ColumnSizeMaxSupported)
+		}
+	}
+	if static >= MaxTotalLookupRows {
+		panic(totalOverLimitError(static, " (dynamic/unsized modules counted as their maximum height)"))
+	}
+
+	action := &TotalRowLimitAction{Modules: modules}
+	latestWitness.RegisterAction(action)
+	latestWitness.RegisterVerifierAction(action)
+}
+
+// TotalRowLimitAction checks that the per-run row total over every lookup
+// group stays below [MaxTotalLookupRows]. Modules lists one module per
+// fragment of every group, A sides then B sides, so a module appears once per
+// fragment that uses it. One instance serves both roles: it panics as a prover
+// action and returns an error as a verifier action.
+type TotalRowLimitAction struct {
+	Modules []*wiop.Module
+}
+
+// Run implements [wiop.ProverAction]: it panics when the limit is reached.
+func (a *TotalRowLimitAction) Run(rt *wiop.Runtime) {
+	if err := a.Check(rt); err != nil {
+		panic(err)
+	}
+}
+
+// Check implements [wiop.VerifierAction].
+func (a *TotalRowLimitAction) Check(rt *wiop.Runtime) error {
+	var total uint64
+	for _, m := range a.Modules {
+		total += uint64(m.RuntimeSize(rt))
+	}
+	if total >= MaxTotalLookupRows {
+		return totalOverLimitError(total, "")
+	}
+	return nil
+}
+
+func totalOverLimitError(total uint64, note string) error {
+	return fmt.Errorf(
+		"wiop/compilers/lookuptologderivsum: lookups have %d rows in total%s, which is >= the "+
+			"total row limit %d; the shared-coin soundness bound would exceed its target",
+		total, note, MaxTotalLookupRows,
+	)
+}
+
+// LookupIDsAreUniqueVerifierAction asserts that the lookup IDs folded into the
+// denominators keep every group apart: each group's ID columns all hold the
+// same non-zero value, and no two groups share a value. Without this, rows of
+// two groups over different tables could cancel each other in the aggregated
+// sum (see the package documentation).
+//
+// Every ID corresponds to exactly one lookup group, and a group gathers every
+// inclusion query that looks up the same table T. All fragments of a group —
+// T's fragments and every A side looking up into T — carry that group's ID,
+// so they share it, while no two groups do.
+//
+// IDColumns[g] lists the constant ID columns of group g, one per fragment, as
+// they appear in the compiled fractions.
+type LookupIDsAreUniqueVerifierAction struct {
+	IDColumns [][]*wiop.Constant // Every ID corresponds to exactly one lookup group
+}
+
+// Check implements [wiop.VerifierAction].
+func (a *LookupIDsAreUniqueVerifierAction) Check(_ *wiop.Runtime) error {
+	seen := make(map[field.Element]int, len(a.IDColumns))
+	for g, cols := range a.IDColumns {
+		if len(cols) == 0 {
+			return fmt.Errorf("wiop/compilers/lookuptologderivsum: lookup group %d has no ID column", g)
+		}
+		id := cols[0].Value
+		for _, c := range cols[1:] {
+			if c.Value != id {
+				return fmt.Errorf(
+					"wiop/compilers/lookuptologderivsum: lookup group %d has inconsistent IDs %v and %v",
+					g, id.String(), c.Value.String(),
+				)
+			}
+		}
+		if id.IsZero() {
+			return fmt.Errorf("wiop/compilers/lookuptologderivsum: lookup group %d has a zero ID", g)
+		}
+		if prev, ok := seen[id]; ok {
+			return fmt.Errorf(
+				"wiop/compilers/lookuptologderivsum: lookup groups %d and %d share the ID %v",
+				prev, g, id.String(),
+			)
+		}
+		seen[id] = g
+	}
+	return nil
 }
 
 // ResultIsZeroVerifierAction asserts that the aggregated [wiop.LogDerivativeSum]
