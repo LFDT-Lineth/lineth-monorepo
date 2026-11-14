@@ -294,3 +294,18 @@ func TestCheckAssignment(t *testing.T) {
 		assert.ErrorContains(t, err, "product is")
 	})
 }
+
+// TestProveDevPartial_ShardTooBig checks that dev-partial fails the job when a
+// shard does not fit in a column.
+func TestProveDevPartial_ShardTooBig(t *testing.T) {
+	hash, framed := referenceFrame(t)
+	dir := t.TempDir()
+	id := writeGuest(t, dir, minimal_elf.OutputAndLogELF(hash, framed))
+	c, err := New(Config{Mode: ProverModeDevPartial, GuestsDir: dir, ShardSize: devPartialShardSize})
+	require.NoError(t, err)
+	c.maxColumnRows = 16
+
+	result := c.Prove(context.Background(), devPartialJob(id))
+	assert.Equal(t, ResultStatusFailed, result.Status)
+	assert.ErrorContains(t, result.Err, "shard 0 does not fit in a column")
+}

@@ -380,6 +380,20 @@ func TestReducer_MergeError(t *testing.T) {
 	require.ErrorContains(t, err, "different program VK")
 }
 
+// panicMerger panics in every merge, as a merge whose assignment does not fit
+// in a column would.
+type panicMerger struct{ MockMerger }
+
+func (panicMerger) Merge([]Node) (Node, error) { panic("data length too large for column") }
+
+// TestReducer_MergePanic checks that a merge that panics in the background
+// fails the reduction instead of the process.
+func TestReducer_MergePanic(t *testing.T) {
+	sys := testSystem(false)
+	_, err := reduce(panicMerger{NewMockMerger(sys)}, 1, shardNode(sys, 0, elem(1)), shardNode(sys, 1, elem(1)))
+	require.ErrorContains(t, err, "merge panicked: data length too large for column")
+}
+
 // seededShardNode is a shard proof over the seeded sys with a balanced bus,
 // the seed gamma and the given contribution.
 func seededShardNode(sys *wiop.System, i uint, gamma field.Octuplet, contribution multisethashing.MSetHash) Node {

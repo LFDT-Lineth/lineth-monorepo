@@ -263,6 +263,17 @@ func (r *Reducer) startFullMerges() {
 	}
 }
 
+// safeMerge merges the children and returns a panic of the merge as an error:
+// it runs in a goroutine of its own, where a panic would end the process.
+func safeMerge(merger Merger, children []Node) (node Node, err error) {
+	defer func() {
+		if p := recover(); p != nil {
+			err = fmt.Errorf("merge panicked: %v", p)
+		}
+	}()
+	return merger.Merge(children)
+}
+
 // start merges the first k ready nodes of a kind in the background; the
 // result is a ready merged node. Called with mu held.
 func (r *Reducer) start(ready *[]Node, k int) {
@@ -270,7 +281,7 @@ func (r *Reducer) start(ready *[]Node, k int) {
 	*ready = slices.Delete(*ready, 0, k)
 	r.inFlight++
 	go func() {
-		node, err := r.merger.Merge(children)
+		node, err := safeMerge(r.merger, children)
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.inFlight--

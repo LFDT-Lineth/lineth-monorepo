@@ -2,6 +2,7 @@ package backend
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -157,4 +158,29 @@ func TestProveFull_Subset_ReturnsNode(t *testing.T) {
 	require.NotNil(t, res.Node)
 	require.Equal(t, []uint{1}, res.Node.Coverage)
 	require.Equal(t, uint(3), res.NumShards)
+}
+
+// TestRunProve_ShardTooBig checks that a shard with a module over the column
+// limit fails the job with an error that names the module and says what to
+// change, instead of panicking in a worker goroutine.
+func TestRunProve_ShardTooBig(t *testing.T) {
+	cases := map[string]struct {
+		shardSize uint64
+		shard     uint
+		wantHint  string
+	}{
+		"unsharded":     {0, 0, "set shard_size"},
+		"first shard":   {100, 0, "shard 0 also holds the input setup"},
+		"a later shard": {100, 1, "use a smaller shard_size"},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			c, id := shardedTestCore(t, tc.shardSize)
+			c.maxColumnRows = 16
+			_, _, err := runProveShards(t, context.Background(), c, id, tc.shard)
+			require.ErrorContains(t, err, fmt.Sprintf("shard %d does not fit in a column", tc.shard))
+			require.ErrorContains(t, err, "rows, more than the 16 a column can hold")
+			require.ErrorContains(t, err, tc.wantHint)
+		})
+	}
 }
