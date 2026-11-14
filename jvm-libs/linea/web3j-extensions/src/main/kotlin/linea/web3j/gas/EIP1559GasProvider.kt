@@ -7,6 +7,7 @@ import linea.kotlin.toIntervalString
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.web3j.protocol.core.methods.request.Transaction
+import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.math.BigInteger
 import kotlin.math.min
 
@@ -32,49 +33,62 @@ class EIP1559GasProvider(private val ethApiClient: EthApiClient, private val con
   private var feesCache: EIP1559GasFees = getRecentFees()
 
   private fun getRecentFees(): EIP1559GasFees {
-    val currentBlockNumber = ethApiClient.ethBlockNumber().get().toBigInteger()
-    if (currentBlockNumber > cacheIsValidForBlockNumber) {
-      ethApiClient
-        .ethFeeHistory(
-          config.feeHistoryBlockCount.toInt(),
-          BlockParameter.Tag.LATEST,
-          listOf(config.feeHistoryRewardPercentile),
-        )
-        .thenApply { feeHistory ->
-          var maxPriorityFeePerGas = feeHistory.reward.sumOf { it[0] } / feeHistory.reward.size.toUInt()
-
-          if (maxPriorityFeePerGas > config.maxFeePerGasCap) {
-            maxPriorityFeePerGas = config.maxFeePerGasCap
-            log.warn(
-              "Estimated miner tip of $maxPriorityFeePerGas exceeds configured max " +
-                "fee per gas of ${config.maxFeePerGasCap} returning cap instead!",
-            )
-          }
-
-          cacheIsValidForBlockNumber = currentBlockNumber
-
-          val maxFeePerGas = (feeHistory.baseFeePerGas.last() * 2uL) + maxPriorityFeePerGas
-
-          if (maxFeePerGas > 0uL && maxPriorityFeePerGas > 0uL) {
-            feesCache = EIP1559GasFees(
-              maxPriorityFeePerGas = maxPriorityFeePerGas,
-              maxFeePerGas = min(maxFeePerGas, config.maxFeePerGasCap),
-            )
-            log.debug(
-              "New fees estimation: fees={} l2Blocks={}",
-              feeHistory.blocksRange().toIntervalString(),
-              feesCache,
-            )
-          } else {
-            feesCache = EIP1559GasFees(
-              maxPriorityFeePerGas = 0uL,
-              maxFeePerGas = config.maxFeePerGasCap,
-            )
-          }
-        }
-        .get()
-    }
+    // the future yields the uninitialized cache when called from the initializer at block 0
+    getRecentFeesAsync().get()
     return feesCache
+  }
+
+  private fun getRecentFeesAsync(): SafeFuture<EIP1559GasFees> {
+    return ethApiClient.ethBlockNumber().thenCompose { blockNumber ->
+      val currentBlockNumber = blockNumber.toBigInteger()
+      if (currentBlockNumber > cacheIsValidForBlockNumber) {
+        fetchFees(currentBlockNumber)
+      } else {
+        SafeFuture.completedFuture(feesCache)
+      }
+    }
+  }
+
+  private fun fetchFees(currentBlockNumber: BigInteger): SafeFuture<EIP1559GasFees> {
+    return ethApiClient
+      .ethFeeHistory(
+        config.feeHistoryBlockCount.toInt(),
+        BlockParameter.Tag.LATEST,
+        listOf(config.feeHistoryRewardPercentile),
+      )
+      .thenApply { feeHistory ->
+        var maxPriorityFeePerGas = feeHistory.reward.sumOf { it[0] } / feeHistory.reward.size.toUInt()
+
+        if (maxPriorityFeePerGas > config.maxFeePerGasCap) {
+          maxPriorityFeePerGas = config.maxFeePerGasCap
+          log.warn(
+            "Estimated miner tip of $maxPriorityFeePerGas exceeds configured max " +
+              "fee per gas of ${config.maxFeePerGasCap} returning cap instead!",
+          )
+        }
+
+        cacheIsValidForBlockNumber = currentBlockNumber
+
+        val maxFeePerGas = (feeHistory.baseFeePerGas.last() * 2uL) + maxPriorityFeePerGas
+
+        if (maxFeePerGas > 0uL && maxPriorityFeePerGas > 0uL) {
+          feesCache = EIP1559GasFees(
+            maxPriorityFeePerGas = maxPriorityFeePerGas,
+            maxFeePerGas = min(maxFeePerGas, config.maxFeePerGasCap),
+          )
+          log.debug(
+            "New fees estimation: fees={} l2Blocks={}",
+            feeHistory.blocksRange().toIntervalString(),
+            feesCache,
+          )
+        } else {
+          feesCache = EIP1559GasFees(
+            maxPriorityFeePerGas = 0uL,
+            maxFeePerGas = config.maxFeePerGasCap,
+          )
+        }
+        feesCache
+      }
   }
 
   @Deprecated("Deprecated in Java")
@@ -105,5 +119,9 @@ class EIP1559GasProvider(private val ethApiClient: EthApiClient, private val con
 
   override fun getEIP1559GasFees(): EIP1559GasFees {
     return getRecentFees()
+  }
+
+  override fun getEIP1559GasFeesAsync(): SafeFuture<EIP1559GasFees> {
+    return getRecentFeesAsync()
   }
 }
