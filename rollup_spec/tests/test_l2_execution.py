@@ -10,6 +10,7 @@ guest unchanged — it is the reference-side counterpart of the guest's
 Run from the rollup_spec/ directory:  python -m pytest
 """
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -18,7 +19,13 @@ from ethereum.state import Address
 from ethereum_types.numeric import U64
 
 from rollup_spec import l2_execution
-from rollup_spec.block import ChainConfig, LinethPayloadInput, SystemContracts
+from rollup_spec.block import (
+    MAINNET_BEACON_ROOTS_ADDRESS,
+    MAINNET_HISTORY_STORAGE_ADDRESS,
+    ChainConfig,
+    LinethPayloadInput,
+    SystemContracts,
+)
 from rollup_spec.fork import Log
 from rollup_spec.l2_execution import (
     BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0,
@@ -39,10 +46,11 @@ _TESTDATA_DIR = Path(l2_execution.__file__).resolve().parent / "prover_io" / "te
 _MESSAGE_SERVICE = Address(bytes([0x11]) * 20)
 _OTHER_CONTRACT = Address(bytes([0x22]) * 20)
 
-# Distinct per-field addresses so a field swap anywhere in the pipeline is caught.
+# Distinct per-field addresses so a field swap anywhere in the pipeline is caught; beacon
+# roots and history storage must be mainnet.
 _SYSTEM_CONTRACTS = SystemContracts(
-    beacon_roots=Address(bytes([0xA1]) * 20),
-    history_storage=Address(bytes([0xA2]) * 20),
+    beacon_roots=MAINNET_BEACON_ROOTS_ADDRESS,
+    history_storage=MAINNET_HISTORY_STORAGE_ADDRESS,
     deposit=Address(bytes([0xA3]) * 20),
     withdrawal_request=Address(bytes([0xA4]) * 20),
     consolidation_request=Address(bytes([0xA5]) * 20),
@@ -322,7 +330,7 @@ def test_payload_with_a_blob_transaction_is_rejected_before_execution(monkeypatc
         run_l2_execution_guest(execution_input)
 
 
-# ── dynamicChainConfigHash excludes the system contracts ────────────────────────
+# ── dynamicChainConfigHash and the system contracts ───────────────────────────
 
 
 def _config_with_system_contracts() -> ChainConfig:
@@ -334,21 +342,35 @@ def _config_with_system_contracts() -> ChainConfig:
     )
 
 
-def test_chain_config_hash_preimage_excludes_system_contracts() -> None:
+def test_chain_config_hash_preimage() -> None:
     expected = keccak256(
         (59144).to_bytes(32, "big")
-        + bytes(20)
-        + bytes([0x11]) * 20
         + (1_000_000_000).to_bytes(32, "big")
+        + b"".join(bytes(12) + bytes([byte]) * 20 for byte in (0x00, 0x11, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7))
     )
+    # Golden vector shared with riscv-guests/l2_execution/test/l2_execution_test.zig.
+    assert expected == bytes.fromhex("22a4a19c730005a8ec6de4f29e818b679c822d1989b409dbc82bf1526a3eb235")
     assert _config_with_system_contracts().hash(1_000_000_000) == expected
 
 
-def test_chain_config_hash_ignores_system_contracts() -> None:
-    from dataclasses import replace
-
+@pytest.mark.parametrize("field", SystemContracts.__dataclass_fields__)
+def test_chain_config_hash_commits_to_configurable_system_contracts_only(field: str) -> None:
     config = _config_with_system_contracts()
-    baseline = config.hash(7)
-    for field in SystemContracts.__dataclass_fields__:
-        tampered = replace(config, system_contracts=replace(_SYSTEM_CONTRACTS, **{field: Address(bytes(20))}))
-        assert tampered.hash(7) == baseline, field
+    tampered = replace(config, system_contracts=replace(_SYSTEM_CONTRACTS, **{field: Address(bytes(20))}))
+    hashed = field not in ("beacon_roots", "history_storage")
+    assert (tampered.hash(7) != config.hash(7)) == hashed
+
+
+@pytest.mark.parametrize(
+    ("field", "message"),
+    [
+        ("beacon_roots", "beacon roots contract must be the mainnet address"),
+        ("history_storage", "history storage contract must be the mainnet address"),
+    ],
+)
+def test_run_l2_execution_guest_rejects_non_mainnet_fixed_system_contracts(field: str, message: str) -> None:
+    ext = _zero_bridge_input(_golden_vanilla_stateless_input_ssz())
+    system_contracts = replace(ext.chain_config.system_contracts, **{field: Address(bytes([0xEE]) * 20)})
+    ext = replace(ext, chain_config=replace(ext.chain_config, system_contracts=system_contracts))
+    with pytest.raises(Exception, match=message):
+        run_l2_execution_guest(ext)

@@ -57,17 +57,18 @@ fn sampleChainConfig() l2_execution_ssz.ChainConfig {
 
 test "chainConfigHash matches Readme.md's §2.1 dynamicChainConfigHash formula" {
     const got = api.chainConfigHashFn(sampleChainConfig(), 1_000_000_000);
-    const want = [_]u8{ 0xeb, 0x9a, 0xbc, 0xa2, 0x92, 0x7e, 0x7d, 0x36, 0x99, 0x9c, 0x8d, 0x0a, 0xe3, 0xf4, 0x94, 0xf7, 0xb0, 0x12, 0x0a, 0xde, 0xc4, 0x1f, 0x5c, 0xe1, 0x3a, 0x2b, 0x98, 0xdd, 0xa4, 0x38, 0x50, 0x06 };
+    const want = [_]u8{ 0x22, 0xa4, 0xa1, 0x9c, 0x73, 0x00, 0x05, 0xa8, 0xec, 0x6d, 0xe4, 0xf2, 0x9e, 0x81, 0x8b, 0x67, 0x9c, 0x82, 0x2d, 0x19, 0x89, 0xb4, 0x09, 0xdb, 0xc8, 0x2b, 0xf1, 0x52, 0x6a, 0x3e, 0xb2, 0x35 };
     try testing.expectEqualSlices(u8, &want, &got);
 }
 
-test "chainConfigHash excludes the system-contract addresses" {
+test "chainConfigHash commits to every system contract except beacon roots and history storage" {
     const baseline = api.chainConfigHashFn(sampleChainConfig(), 7);
     inline for (std.meta.fields(l2_execution_ssz.SystemContracts)) |field| {
         var tampered = sampleChainConfig();
         @field(tampered.system_contracts, field.name) = repeat(20, 0x00);
         const got = api.chainConfigHashFn(tampered, 7);
-        try testing.expectEqualSlices(u8, &baseline, &got);
+        const hashed = !std.mem.eql(u8, field.name, "beacon_roots") and !std.mem.eql(u8, field.name, "history_storage");
+        try testing.expectEqual(hashed, !std.mem.eql(u8, &baseline, &got));
     }
 }
 

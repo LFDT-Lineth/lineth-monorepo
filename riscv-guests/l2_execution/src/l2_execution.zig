@@ -77,16 +77,39 @@ fn u64ToSlot32(n: u64) [32]u8 {
     return out;
 }
 
-/// `ChainConfig.hash(base_fee)`: keccak256(chainID_be32 || coinbase || l2MessageServiceAddress ||
-/// baseFee_be32). `system_contracts` is deliberately NOT part of the preimage: the hash is anchored
-/// in the L1 verifier's chain configuration.
+fn addressToSlot32(address: [20]u8) [32]u8 {
+    var out: [32]u8 = @splat(0);
+    @memcpy(out[12..32], &address);
+    return out;
+}
+
+/// `ChainConfig.hash(base_fee)` (Readme.md §2.1): keccak256 over `abi.encode`-style 32-byte words,
+/// in the L1 verifier's chain-configuration parameter order. `beacon_roots` and `history_storage`
+/// are not hashed (see `checkFixedSystemContracts`).
 fn chainConfigHash(chain_config: l2_execution_ssz.ChainConfig, base_fee: u64) [32]u8 {
-    var buf: [104]u8 = undefined;
-    @memcpy(buf[0..32], &u64ToSlot32(chain_config.chain_id));
-    @memcpy(buf[32..52], &chain_config.coinbase);
-    @memcpy(buf[52..72], &chain_config.l2_message_service_address);
-    @memcpy(buf[72..104], &u64ToSlot32(base_fee));
-    return mpt.keccak256(&buf);
+    const sc = chain_config.system_contracts;
+    const words = [_][32]u8{
+        u64ToSlot32(chain_config.chain_id),
+        u64ToSlot32(base_fee),
+        addressToSlot32(chain_config.coinbase),
+        addressToSlot32(chain_config.l2_message_service_address),
+        addressToSlot32(sc.deposit),
+        addressToSlot32(sc.withdrawal_request),
+        addressToSlot32(sc.consolidation_request),
+        addressToSlot32(sc.builder_deposit_request),
+        addressToSlot32(sc.builder_exit_request),
+    };
+    return mpt.keccak256(std.mem.asBytes(&words));
+}
+
+/// The EIP-4788 and EIP-2935 contracts are not in `dynamicChainConfigHash`, so pin them to mainnet.
+fn checkFixedSystemContracts(sc: l2_execution_ssz.SystemContracts) !void {
+    if (!std.mem.eql(u8, &sc.beacon_roots, &input.SystemContracts.MAINNET_BEACON_ROOTS)) {
+        return error.BeaconRootsAddressNotMainnet;
+    }
+    if (!std.mem.eql(u8, &sc.history_storage, &input.SystemContracts.MAINNET_HISTORY_STORAGE)) {
+        return error.HistoryStorageAddressNotMainnet;
+    }
 }
 
 /// The range-level system contracts in zesu's own type (same fields, same order).
@@ -335,6 +358,7 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
     zesu_allocator.set(alloc);
 
     if (in.payloads.len == 0) return error.EmptyPayloads;
+    try checkFixedSystemContracts(in.chain_config.system_contracts);
 
     // Decode each payload's vanilla stateless input ONCE; parsed objects are shared between
     // execution and the Linea logic below.
