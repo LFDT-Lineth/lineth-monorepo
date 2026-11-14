@@ -6,7 +6,9 @@ import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.containing
 import com.github.tomakehurst.wiremock.client.WireMock.ok
 import com.github.tomakehurst.wiremock.client.WireMock.post
+import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.status
+import com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import com.github.tomakehurst.wiremock.matching.EqualToJsonPattern
 import com.github.tomakehurst.wiremock.matching.EqualToPattern
@@ -21,6 +23,7 @@ import io.vertx.core.http.HttpVersion
 import io.vertx.core.http.PoolOptions
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
+import linea.jsonrpc.TestingJsonRpcServer
 import linea.kotlin.decodeHex
 import lineth.vertx.vertxTestOptions
 import net.consensys.linea.async.get
@@ -47,6 +50,11 @@ import java.net.URI
 import java.net.URL
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 class VertxHttpJsonRpcClientTest {
   private lateinit var vertx: Vertx
@@ -61,6 +69,8 @@ class VertxHttpJsonRpcClientTest {
       .setKeepAlive(true)
       .setProtocolVersion(HttpVersion.HTTP_1_1)
   private lateinit var endpoint: URL
+  private lateinit var testingServer: TestingJsonRpcServer
+  private lateinit var testingServerEndpoint: URL
 
   @BeforeEach
   fun setUp() {
@@ -70,6 +80,10 @@ class VertxHttpJsonRpcClientTest {
     endpoint = URI(wiremock.baseUrl() + path).toURL()
     meterRegistry = SimpleMeterRegistry()
     metricsFacade = MicrometerMetricsFacade(registry = meterRegistry)
+    testingServer = TestingJsonRpcServer(vertx = vertx, recordRequestsResponses = true)
+    listOf("engine_getPayloadV1", "engine_newPayloadV1", "engine_forkchoiceUpdatedV1", "eth_blockNumber")
+      .forEach { method -> testingServer.handle(method) { "OK" } }
+    testingServerEndpoint = testingServer.httpEndpoint
     httpClient = vertx.createHttpClient(clientOptions, PoolOptions().setHttp1MaxSize(2))
     client = VertxHttpJsonRpcClient(
       httpClient,
@@ -81,6 +95,7 @@ class VertxHttpJsonRpcClientTest {
   @AfterEach
   fun tearDown() {
     httpClient.close().get()
+    testingServer.stopHttpServer().get()
     wiremock.stop()
     vertx.close().get()
   }
@@ -371,6 +386,142 @@ class VertxHttpJsonRpcClientTest {
         assertThat(timer.count()).isEqualTo(requestsFutures.size.toLong())
       }
   }
+
+  @Test
+  fun makesRequest_addsHeadersFromProviderEvaluatedPerRequest() {
+    replyRequestWith(JsonObject().put("jsonrpc", "2.0").put("id", "1").put("result", null))
+    val invocations = AtomicInteger(0)
+    client = clientWithHooks(
+      requestHeadersProvider = { mapOf("Authorization" to "Bearer token-${invocations.incrementAndGet()}") },
+    )
+
+    repeat(3) {
+      client.makeRequest(JsonRpcRequestListParams("2.0", it, "eth_blockNumber", emptyList())).get()
+    }
+
+    val authorizationHeaders =
+      wiremock.findAll(postRequestedFor(urlEqualTo(path))).map { it.getHeader("Authorization") }
+    assertThat(authorizationHeaders)
+      .containsExactlyInAnyOrder("Bearer token-1", "Bearer token-2", "Bearer token-3")
+    wiremock.verify(
+      3,
+      postRequestedFor(urlEqualTo(path)).withHeader("Content-Type", EqualToPattern("application/json")),
+    )
+  }
+
+  @Test
+  fun makesRequest_failsWithoutSendingWhenHeadersProviderThrows() {
+    replyRequestWith(JsonObject().put("jsonrpc", "2.0").put("id", "1").put("result", null))
+    client = clientWithHooks(requestHeadersProvider = { throw IllegalStateException("jwt secret unavailable") })
+
+    assertThatThrownBy {
+      client.makeRequest(JsonRpcRequestListParams("2.0", 1, "eth_blockNumber", emptyList())).get()
+    }
+      .isInstanceOf(ExecutionException::class.java)
+      .cause()
+      .isInstanceOf(IllegalStateException::class.java)
+      .hasMessage("jwt secret unavailable")
+    wiremock.verify(0, postRequestedFor(urlEqualTo(path)))
+  }
+
+  @Test
+  fun makesRequest_appliesPerMethodTimeoutAndKeepsClientUsable() {
+    testingServer.delayResponses("engine_getPayloadV1", 2.seconds)
+    testingServer.delayResponses("engine_newPayloadV1", 300.milliseconds)
+    client = clientWithHooks(
+      endpoint = testingServerEndpoint,
+      requestTimeoutProvider = { method -> if (method == "engine_getPayloadV1") 200.milliseconds else null },
+    )
+
+    assertThatThrownBy {
+      client.makeRequest(JsonRpcRequestListParams("2.0", 1, "engine_getPayloadV1", emptyList())).get()
+    }
+      .isInstanceOf(ExecutionException::class.java)
+      .cause()
+      .isInstanceOf(TimeoutException::class.java)
+      .hasMessageContaining("method=engine_getPayloadV1")
+      .hasMessageContaining("timed out after 200ms")
+
+    client.makeRequest(JsonRpcRequestListParams("2.0", 2, "engine_newPayloadV1", emptyList())).get()
+      .also { response -> assertThat(response).isEqualTo(Ok(JsonRpcSuccessResponse(2, "OK"))) }
+  }
+
+  /**
+   * Vert.x cancels the idle timeout once the response headers arrive, so it never bounds the streaming of the body. The
+   * idle timeout is generous because a cold request on a loaded CI runner can take over a second to receive headers.
+   */
+  @Test
+  fun makesRequest_overallTimeoutTripsOnSlowlyStreamedResponseThatIdleTimeoutTolerates() {
+    testingServer.streamResponses("eth_blockNumber", chunkInterval = 40.milliseconds)
+    val idleTimeoutMillis = 10_000L
+    val idleOnlyClient = clientWithHooks(endpoint = testingServerEndpoint, requestTimeout = idleTimeoutMillis)
+    val overallDeadlineClient = clientWithHooks(
+      endpoint = testingServerEndpoint,
+      requestTimeout = idleTimeoutMillis,
+      requestTimeoutProvider = { 500.milliseconds },
+    )
+
+    idleOnlyClient.makeRequest(JsonRpcRequestListParams("2.0", 1, "eth_blockNumber", emptyList())).get()
+      .also { response -> assertThat(response).isEqualTo(Ok(JsonRpcSuccessResponse(1, "OK"))) }
+
+    assertThatThrownBy {
+      overallDeadlineClient.makeRequest(JsonRpcRequestListParams("2.0", 2, "eth_blockNumber", emptyList())).get()
+    }
+      .isInstanceOf(ExecutionException::class.java)
+      .cause()
+      .isInstanceOf(TimeoutException::class.java)
+      .hasMessageContaining("method=eth_blockNumber")
+  }
+
+  @Test
+  fun makesRequest_overallTimeoutCoversWaitingForPooledConnectionAndRequestIsNeverSent() {
+    testingServer.delayResponses("engine_newPayloadV1", 1.seconds)
+    httpClient.close().get()
+    httpClient = vertx.createHttpClient(clientOptions, PoolOptions().setHttp1MaxSize(1))
+    client = clientWithHooks(
+      endpoint = testingServerEndpoint,
+      requestTimeoutProvider = { method -> if (method == "engine_forkchoiceUpdatedV1") 200.milliseconds else null },
+    )
+
+    val occupyingRequest =
+      client.makeRequest(JsonRpcRequestListParams("2.0", 1, "engine_newPayloadV1", emptyList()))
+    assertThatThrownBy {
+      client.makeRequest(JsonRpcRequestListParams("2.0", 2, "engine_forkchoiceUpdatedV1", emptyList())).get()
+    }
+      .isInstanceOf(ExecutionException::class.java)
+      .cause()
+      .isInstanceOf(TimeoutException::class.java)
+      .hasMessageContaining("method=engine_forkchoiceUpdatedV1")
+    occupyingRequest.get()
+
+    client.makeRequest(JsonRpcRequestListParams("2.0", 3, "engine_newPayloadV1", emptyList())).get()
+    assertThat(testingServer.recordedRequests().map { it.first.method })
+      .containsExactly("engine_newPayloadV1", "engine_newPayloadV1")
+  }
+
+  @Test
+  fun makesRequest_withoutTimeoutProviderWaitsForSlowResponse() {
+    testingServer.delayResponses("engine_newPayloadV1", 500.milliseconds)
+    client = clientWithHooks(endpoint = testingServerEndpoint)
+
+    client.makeRequest(JsonRpcRequestListParams("2.0", 1, "engine_newPayloadV1", emptyList())).get()
+      .also { response -> assertThat(response).isEqualTo(Ok(JsonRpcSuccessResponse(1, "OK"))) }
+  }
+
+  private fun clientWithHooks(
+    endpoint: URL = this.endpoint,
+    requestTimeout: Long? = null,
+    requestHeadersProvider: () -> Map<String, String> = { emptyMap() },
+    requestTimeoutProvider: (String) -> Duration? = { null },
+  ): VertxHttpJsonRpcClient =
+    VertxHttpJsonRpcClient(
+      httpClient,
+      endpoint,
+      metricsFacade,
+      requestTimeout = requestTimeout,
+      requestHeadersProvider = requestHeadersProvider,
+      requestTimeoutProvider = requestTimeoutProvider,
+    )
 
   private fun replyRequestWith(jsonRpcResponse: JsonObject) {
     wiremock.stubFor(
