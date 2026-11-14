@@ -1,7 +1,7 @@
+import { FinalizationMessagingInfo, Proof } from "./IMerkleTreeService";
 import { OnChainMessageStatus } from "../../enums";
 import { Message } from "../../types";
 import { IMessageServiceContract } from "../IMessageServiceContract";
-import { FinalizationMessagingInfo, Proof } from "./IMerkleTreeService";
 
 export interface ILinethRollupClient<
   Overrides,
