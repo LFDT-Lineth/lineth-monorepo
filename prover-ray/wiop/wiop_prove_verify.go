@@ -235,6 +235,10 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 
 		for _, cell := range r.Cells {
 			if pos, isPI := piIdx[cell.Context.ID]; isPI {
+				if !cell.hasDeclaredTag(pub[pos]) {
+					return fmt.Errorf("public input %q does not carry its declared field tag (extension=%v)",
+						cell.Context.Path(), cell.IsExtension())
+				}
 				rt.AssignCell(cell, pub[pos])
 				continue
 			}
@@ -242,6 +246,14 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 			v, ok := proof.Cells[cell.Context.ID]
 			if !ok {
 				return fmt.Errorf("cell %q not found in proof", cell.Context.Path())
+			}
+			// The tag fixes how many field elements the cell absorbs into the
+			// transcript, so it must be the declared one: AssignCell would
+			// otherwise lift a base value silently and replay a transcript the
+			// proof was not made for.
+			if !cell.hasDeclaredTag(v) {
+				return fmt.Errorf("cell %q does not carry its declared field tag (extension=%v)",
+					cell.Context.Path(), cell.IsExtension())
 			}
 
 			rt.AssignCell(cell, v)
@@ -361,49 +373,43 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 // their result.
 func (sys *System) UnreducedQueries() []Query {
 	var out []Query
+	sys.forEachQuery(func(q Query) {
+		if !q.IsReduced() {
+			out = append(out, q)
+		}
+	})
+	return out
+}
+
+// forEachQuery calls fn on every query of the system, in the order documented
+// on [System.UnreducedQueries].
+func (sys *System) forEachQuery(fn func(Query)) {
 	for _, m := range sys.Modules {
 		for _, q := range m.Vanishings {
-			if !q.IsReduced() {
-				out = append(out, q)
-			}
+			fn(q)
 		}
 		for _, q := range m.RangeChecks {
-			if !q.IsReduced() {
-				out = append(out, q)
-			}
+			fn(q)
 		}
 		for _, q := range m.NonNatives {
-			if !q.IsReduced() {
-				out = append(out, q)
-			}
+			fn(q)
 		}
 	}
 	for _, q := range sys.LagrangeEvals {
-		if !q.IsReduced() {
-			out = append(out, q)
-		}
+		fn(q)
 	}
 	for _, q := range sys.TableRelations {
-		if !q.IsReduced() {
-			out = append(out, q)
-		}
+		fn(q)
 	}
 	for _, q := range sys.LogDerivativeSums {
-		if !q.IsReduced() {
-			out = append(out, q)
-		}
+		fn(q)
 	}
 	for _, q := range sys.GrandProducts {
-		if !q.IsReduced() {
-			out = append(out, q)
-		}
+		fn(q)
 	}
 	for _, q := range sys.MessageBuses {
-		if !q.IsReduced() {
-			out = append(out, q)
-		}
+		fn(q)
 	}
-	return out
 }
 
 // checkUnreducedQueries calls [Query.Check] on every query that has not yet
