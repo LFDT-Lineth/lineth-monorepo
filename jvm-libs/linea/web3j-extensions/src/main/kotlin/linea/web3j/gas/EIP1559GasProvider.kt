@@ -29,11 +29,16 @@ class EIP1559GasProvider(private val ethApiClient: EthApiClient, private val con
   }
 
   private val chainId: Long = ethApiClient.ethChainId().get().toLong()
+
+  // Volatile: the async path updates these from whichever thread completes the RPC future.
+  @Volatile
   private var cacheIsValidForBlockNumber: BigInteger = BigInteger.ZERO
+
+  @Volatile
   private var feesCache: EIP1559GasFees = getRecentFees()
 
   private fun getRecentFees(): EIP1559GasFees {
-    // the future yields the uninitialized cache when called from the initializer at block 0
+    // read the field, not the future: during construction at block 0 the future yields the unassigned cache
     getRecentFeesAsync().get()
     return feesCache
   }
@@ -67,27 +72,29 @@ class EIP1559GasProvider(private val ethApiClient: EthApiClient, private val con
           )
         }
 
-        cacheIsValidForBlockNumber = currentBlockNumber
-
         val maxFeePerGas = (feeHistory.baseFeePerGas.last() * 2uL) + maxPriorityFeePerGas
 
-        if (maxFeePerGas > 0uL && maxPriorityFeePerGas > 0uL) {
-          feesCache = EIP1559GasFees(
+        val fees = if (maxFeePerGas > 0uL && maxPriorityFeePerGas > 0uL) {
+          EIP1559GasFees(
             maxPriorityFeePerGas = maxPriorityFeePerGas,
             maxFeePerGas = min(maxFeePerGas, config.maxFeePerGasCap),
-          )
-          log.debug(
-            "New fees estimation: fees={} l2Blocks={}",
-            feeHistory.blocksRange().toIntervalString(),
-            feesCache,
-          )
+          ).also {
+            log.debug(
+              "New fees estimation: fees={} l2Blocks={}",
+              feeHistory.blocksRange().toIntervalString(),
+              it,
+            )
+          }
         } else {
-          feesCache = EIP1559GasFees(
+          EIP1559GasFees(
             maxPriorityFeePerGas = 0uL,
             maxFeePerGas = config.maxFeePerGasCap,
           )
         }
-        feesCache
+        feesCache = fees
+        // publish the block number after the cache, so a concurrent reader never pairs it with stale fees
+        cacheIsValidForBlockNumber = currentBlockNumber
+        fees
       }
   }
 
@@ -110,15 +117,11 @@ class EIP1559GasProvider(private val ethApiClient: EthApiClient, private val con
   }
 
   override fun getMaxFeePerGas(): BigInteger {
-    return getRecentFees().maxFeePerGas.toBigInteger()
+    return getEIP1559GasFees().maxFeePerGas.toBigInteger()
   }
 
   override fun getMaxPriorityFeePerGas(): BigInteger {
-    return getRecentFees().maxPriorityFeePerGas.toBigInteger()
-  }
-
-  override fun getEIP1559GasFees(): EIP1559GasFees {
-    return getRecentFees()
+    return getEIP1559GasFees().maxPriorityFeePerGas.toBigInteger()
   }
 
   override fun getEIP1559GasFeesAsync(): SafeFuture<EIP1559GasFees> {
