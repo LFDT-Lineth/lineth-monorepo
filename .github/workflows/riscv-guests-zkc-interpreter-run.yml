@@ -226,7 +226,7 @@ jobs:
         working-directory: riscv-guests/l2_execution
 
   zkc-interpreter-run:
-    name: l2-execution guest in ZKC interpreter (accel)
+    name: guest programs in ZKC interpreter (accel)
     # The host comparator fetches the same Zig dependency graph as the host reference suite.
     needs: reference-tests
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
