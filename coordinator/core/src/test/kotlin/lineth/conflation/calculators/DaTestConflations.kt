@@ -1,5 +1,6 @@
 package lineth.conflation.calculators
 
+import linea.da.DaConstants.SEGMENT_LENGTH_PREFIX_BYTES
 import linea.domain.BlocksConflation
 import linea.domain.ConflationCalculationResult
 import linea.domain.ConflationTrigger
@@ -14,29 +15,29 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
-/** Conflations with an exact DA frame size, for tests of the RISC-V blob and rollup calculators on [FakeDaStream]. */
+/** Conflations with an exact DA segment size, for tests of the RISC-V blob and rollup calculators on [FakeDaStream]. */
 object DaTestConflations {
   val encoder = BlockEncoder { RLP.encodeBlock(it.toBesu()) }
   val baseTime: Instant = Instant.parse("2026-10-01T00:00:00Z")
   val genesisDataRollingHash = ByteArray(32) { 0x11 }
 
-  /** One-block conflation whose DA frame is exactly [frameSize] bytes. */
+  /** One-block conflation whose DA segment is exactly [segmentSize] bytes. */
   fun conflation(
     number: ULong,
-    frameSize: Int,
+    segmentSize: Int,
     timestamp: Instant = baseTime + (number.toLong() * 2).seconds,
     gasUsed: ULong = 1_000UL,
-  ): BlocksConflation = conflation(number, number, frameSize, timestamp, gasUsed)
+  ): BlocksConflation = conflation(number, number, segmentSize, timestamp, gasUsed)
 
   /**
    * Conflation of blocks [startNumber]..[endNumber], [blockInterval] apart from [firstTimestamp], each using [gasUsed]
-   * and holding [txsPerBlock] signed transactions, whose DA frame is exactly [frameSize] bytes. The last block's
-   * extraData pads the frame.
+   * and holding [txsPerBlock] signed transactions, whose DA segment is exactly [segmentSize] bytes. The last block's
+   * extraData pads the segment.
    */
   fun conflation(
     startNumber: ULong,
     endNumber: ULong,
-    frameSize: Int,
+    segmentSize: Int,
     firstTimestamp: Instant = baseTime + (startNumber.toLong() * 2).seconds,
     gasUsed: ULong = 1_000UL,
     blockInterval: Duration = 2.seconds,
@@ -48,8 +49,8 @@ object DaTestConflations {
       createBlock(number = it, timestamp = timestamp(it), gasUsed = gasUsed, transactions = transactions())
     }
     val lastTransactions = transactions()
-    val leadingBytes = Int.SIZE_BYTES + leading.sumOf { encoder.encode(it).size }
-    var extraDataSize = frameSize - leadingBytes
+    val leadingBytes = SEGMENT_LENGTH_PREFIX_BYTES + leading.sumOf { encoder.encode(it).size }
+    var extraDataSize = segmentSize - leadingBytes
     repeat(10) {
       val last = createBlock(
         number = endNumber,
@@ -59,7 +60,7 @@ object DaTestConflations {
         extraData = ByteArray(extraDataSize) { 0x2a },
       )
       val size = leadingBytes + encoder.encode(last).size
-      if (size == frameSize) {
+      if (size == segmentSize) {
         return BlocksConflation(
           leading + last,
           ConflationCalculationResult(
@@ -70,8 +71,8 @@ object DaTestConflations {
           ),
         )
       }
-      extraDataSize += frameSize - size
+      extraDataSize += segmentSize - size
     }
-    error("could not build a frame of $frameSize bytes")
+    error("could not build a segment of $segmentSize bytes")
   }
 }

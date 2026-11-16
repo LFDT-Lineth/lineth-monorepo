@@ -6,42 +6,39 @@ import linea.da.DaConstants.BLOB_BYTES
 import linea.da.DaConstants.BLOB_PAYLOAD_CAPACITY
 import linea.da.DaConstants.BLOB_PAYLOAD_TERMINAL
 import linea.da.DaConstants.KZG_POINT_BYTES
+import linea.da.DaConstants.SEGMENT_LENGTH_PREFIX_BYTES
 import linea.da.DaStream
+import linea.da.DaStreamErrorType
 import linea.da.DaStreamException
 import linea.da.DaStreamFactory
 import linea.da.DaStreamPosition
-import linea.da.DaStreamStatus
 import linea.da.SealedBlob
 import linea.da.SegmentEnd
-import linea.domain.BlockInterval
 import linea.domain.DataRollingHashCalculator
 import lineth.coordination.riscv.rollup.Keccak256DataRollingHashCalculator
 import org.apache.tuweni.bytes.Bytes
 import org.hyperledger.besu.datatypes.Hash
-import org.hyperledger.besu.ethereum.rlp.RLP
-import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
-import java.nio.file.Path
 
 /**
  * Pure-Kotlin [DaStream] with the real stream semantics and simple stand-ins for the codec. Used in tests, and in
- * production to exercise the rollup proof flow until the native `lineth_da` library is available.
+ * production to exercise the rollup proof flow until the native `lineth_da` library is available. Its conflations are
+ * compressed by [FakeDaCompressor].
  *
  * Real semantics:
- * - frames `[u32 BE len][frame]`, appended in order
- * - blobs of [BLOB_PAYLOAD_CAPACITY] payload bytes, sealed lazily (a full blob is sealed only when the next frame
+ * - segments `[u32 BE len][frame]`, appended in order
+ * - blobs of [BLOB_PAYLOAD_CAPACITY] payload bytes, sealed lazily (a full blob is sealed only when the next segment
  *   needs space, or on [flush])
- * - segment ends where each conflation's frame ends, including frames that span blobs
+ * - segment ends where each conflation's segment ends, including segments that span blobs
  * - resume inside a shared blob from [DaStreamPosition]: appended bytes must reproduce the shared blob's tail
- *   ([DaStreamStatus.SEEDED_BLOB_MISMATCH] otherwise), and flushing is rejected until they have
+ *   ([DaStreamErrorType.SEEDED_BLOB_MISMATCH] otherwise), and flushing is rejected until they have
  *
  * Stand-ins (the guest will not accept these blobs):
- * - no zstd and no block truncation: the frame body is the concatenated block RLPs
  * - no 254-bit packing: the blob is the payload, the `0xff` terminal, then zero padding
  * - [chunkHasher] instead of a KZG versioned hash
  * - [fakeKzgCommitment] and [fakeKzgProof] instead of a KZG commitment and proof
  *
- * Not thread-safe: [append] and [flush] must be confined to one thread. [compress] is pure.
+ * Not thread-safe: [append] and [flush] must be confined to one thread.
  */
 class FakeDaStream(
   initialState: DaStreamPosition,
@@ -59,8 +56,8 @@ class FakeDaStream(
     val payload = ByteArray(capacity)
     var used = 0
 
-    /** Conflation end block and payload offset where its frame ends; turned into [SegmentEnd]s when sealed. */
-    val frameEnds = mutableListOf<Pair<ULong, Int>>()
+    /** Conflation end block and payload offset where its segment ends; turned into [SegmentEnd]s when sealed. */
+    val segmentEnds = mutableListOf<Pair<ULong, Int>>()
 
     fun isReproducing(): Boolean = reproduce != null && used < capacity
   }
@@ -74,52 +71,32 @@ class FakeDaStream(
   private var closed = false
 
   init {
-    if (initialState.tailBytes > 0) {
+    if (initialState.sharedBlobCarryOverTailBytes > 0) {
       open = openInsideSharedBlob(initialState)
     }
   }
 
-  override fun compress(blockRlps: List<ByteArray>): CompressedConflation {
-    checkNotClosed()
-    if (blockRlps.isEmpty()) {
-      throw DaStreamException(DaStreamStatus.INVALID_ARGUMENT, "a conflation must have at least one block")
-    }
-    val blockNumbers = blockRlps.map(::decodeBlockNumber)
-    blockNumbers.zipWithNext().forEach { (current, next) ->
-      if (next != current + 1UL) {
-        throw DaStreamException(DaStreamStatus.INVALID_ARGUMENT, "blocks are not consecutive: $current then $next")
-      }
-    }
-    val body = ByteArrayOutputStream().also { out -> blockRlps.forEach(out::writeBytes) }.toByteArray()
-    val frame = ByteBuffer.allocate(Int.SIZE_BYTES + body.size).putInt(body.size).put(body).array()
-    return FakeCompressedConflation(
-      blockInterval = BlockInterval(blockNumbers.first(), blockNumbers.last()),
-      frame = frame,
-      uncompressedBytes = body.size,
-    )
-  }
-
   override fun append(conflation: CompressedConflation): List<SealedBlob> {
     checkNotClosed()
-    val frame = conflation as? FakeCompressedConflation
-      ?: throw DaStreamException(DaStreamStatus.INVALID_ARGUMENT, "frame was not produced by a FakeDaStream")
-    if (frame.consumed) {
-      throw DaStreamException(DaStreamStatus.INVALID_ARGUMENT, "frame ${frame.blockInterval} was already appended")
+    val data = conflation.compressedData
+    if (data.isEmpty()) {
+      throw DaStreamException(DaStreamErrorType.INVALID_ARGUMENT, "the frame of ${conflation.blockInterval} is empty")
     }
+    val segment = ByteBuffer.allocate(SEGMENT_LENGTH_PREFIX_BYTES + data.size).putInt(data.size).put(data).array()
     // Validate before mutating, so a failed append leaves the stream unchanged.
-    open?.let { checkReproduces(it, frame.frame) }
+    open?.let { checkReproduces(it, segment) }
 
     val sealed = mutableListOf<SealedBlob>()
     var written = 0
-    while (written < frame.frame.size) {
+    while (written < segment.size) {
       var blob = open ?: newBlob()
       if (blob.used == blob.capacity) {
         sealed += seal(blob)
         blob = newBlob()
       }
       open = blob
-      val count = minOf(frame.frame.size - written, blob.capacity - blob.used)
-      frame.frame.copyInto(
+      val count = minOf(segment.size - written, blob.capacity - blob.used)
+      segment.copyInto(
         blob.payload,
         destinationOffset = blob.used,
         startIndex = written,
@@ -128,8 +105,7 @@ class FakeDaStream(
       blob.used += count
       written += count
     }
-    open!!.frameEnds += frame.blockInterval.endBlockNumber to open!!.used
-    frame.consumed = true
+    open!!.segmentEnds += conflation.blockInterval.endBlockNumber to open!!.used
     return sealed
   }
 
@@ -138,7 +114,7 @@ class FakeDaStream(
     val blob = open ?: return null
     if (blob.isReproducing()) {
       throw DaStreamException(
-        DaStreamStatus.INVALID_ARGUMENT,
+        DaStreamErrorType.INVALID_ARGUMENT,
         "cannot flush while reproducing the shared blob: ${blob.capacity - blob.used} bytes left to reproduce",
       )
     }
@@ -166,26 +142,31 @@ class FakeDaStream(
     }
     dataRollingHash = sealedDataRollingHash
     open = null
-    return FakeSealedBlob(
-      bytes = blobBytes,
+    return SealedBlob(
+      blob = blobBytes,
       chunkHash = chunkHash,
       kzgCommitment = fakeKzgCommitment(blobBytes),
       kzgProof = fakeKzgProof(blobBytes),
       prevDataRollingHash = blob.prevDataRollingHash,
       dataRollingHash = sealedDataRollingHash,
       payloadBytes = blob.used,
-      segmentEnds = blob.frameEnds.map { (endBlock, frameEnd) -> SegmentEnd(endBlock, blob.used - frameEnd) },
+      segmentEnds = blob.segmentEnds.map { (endBlock, segmentEnd) ->
+        SegmentEnd(
+          endBlock,
+          unusedTailBytes = blob.used - segmentEnd,
+        )
+      },
     )
   }
 
-  /** Throws if [frame]'s leading bytes don't reproduce the rest of the shared blob [blob] is resuming. */
-  private fun checkReproduces(blob: OpenBlob, frame: ByteArray) {
+  /** Throws if [segment]'s leading bytes don't reproduce the rest of the shared blob [blob] is resuming. */
+  private fun checkReproduces(blob: OpenBlob, segment: ByteArray) {
     val reproduction = blob.reproduce ?: return
-    val count = minOf(frame.size, blob.capacity - blob.used)
+    val count = minOf(segment.size, blob.capacity - blob.used)
     for (i in 0 until count) {
-      if (frame[i] != reproduction.sharedBlob[blob.used + i]) {
+      if (segment[i] != reproduction.sharedBlob[blob.used + i]) {
         throw DaStreamException(
-          DaStreamStatus.SEEDED_BLOB_MISMATCH,
+          DaStreamErrorType.SEEDED_BLOB_MISMATCH,
           "appended bytes differ from the shared blob at payload offset ${blob.used + i}",
         )
       }
@@ -194,22 +175,23 @@ class FakeDaStream(
 
   private fun openInsideSharedBlob(position: DaStreamPosition): OpenBlob {
     val sharedBlob = position.sharedBlob!!
-    val prevDataRollingHash = position.prevDataRollingHash!!
+    val prevDataRollingHash = position.parentBlobDataRollingHash
     val payloadBytes = sharedBlob.indexOfLast { it != 0.toByte() }
     if (payloadBytes < 0 || sharedBlob[payloadBytes] != BLOB_PAYLOAD_TERMINAL) {
-      throw DaStreamException(DaStreamStatus.INVALID_ARGUMENT, "shared blob has no payload terminal")
+      throw DaStreamException(DaStreamErrorType.INVALID_ARGUMENT, "shared blob has no payload terminal")
     }
-    if (position.tailBytes >= payloadBytes) {
+    if (position.sharedBlobCarryOverTailBytes >= payloadBytes) {
       throw DaStreamException(
-        DaStreamStatus.INVALID_ARGUMENT,
-        "tailBytes=${position.tailBytes} must be less than the shared blob's payload of $payloadBytes bytes",
+        DaStreamErrorType.INVALID_ARGUMENT,
+        "sharedBlobCarryOverTailBytes=${position.sharedBlobCarryOverTailBytes} must be less than the shared " +
+          "blob's payload of $payloadBytes bytes",
       )
     }
     val sharedDataRollingHash = dataRollingHashCalculator.fold(prevDataRollingHash, chunkHasher(sharedBlob))
     if (!sharedDataRollingHash.contentEquals(position.dataRollingHash)) {
       throw DaStreamException(
-        DaStreamStatus.INVALID_ARGUMENT,
-        "shared blob does not fold from prevDataRollingHash to dataRollingHash",
+        DaStreamErrorType.INVALID_ARGUMENT,
+        "shared blob does not fold from parentBlobDataRollingHash to dataRollingHash",
       )
     }
     return OpenBlob(
@@ -217,41 +199,16 @@ class FakeDaStream(
       prevDataRollingHash = prevDataRollingHash,
       reproduce = Reproduction(sharedBlob = sharedBlob, dataRollingHash = position.dataRollingHash),
     ).also { blob ->
-      blob.used = payloadBytes - position.tailBytes
+      blob.used = payloadBytes - position.sharedBlobCarryOverTailBytes
       sharedBlob.copyInto(blob.payload, endIndex = blob.used)
     }
   }
 
   private fun checkNotClosed() {
-    if (closed) throw DaStreamException(DaStreamStatus.INVALID_ARGUMENT, "stream is closed")
-  }
-
-  private class FakeCompressedConflation(
-    override val blockInterval: BlockInterval,
-    val frame: ByteArray,
-    override val uncompressedBytes: Int,
-  ) : CompressedConflation {
-    override val compressedBytes: Int = frame.size
-    var consumed = false
-  }
-
-  private class FakeSealedBlob(
-    private val bytes: ByteArray,
-    override val chunkHash: ByteArray,
-    override val kzgCommitment: ByteArray,
-    override val kzgProof: ByteArray,
-    override val prevDataRollingHash: ByteArray,
-    override val dataRollingHash: ByteArray,
-    override val payloadBytes: Int,
-    override val segmentEnds: List<SegmentEnd>,
-  ) : SealedBlob {
-    override val blob: ByteBuffer get() = ByteBuffer.wrap(bytes).asReadOnlyBuffer()
+    if (closed) throw DaStreamException(DaStreamErrorType.INVALID_ARGUMENT, "stream is closed")
   }
 
   companion object {
-    /** Header field index of the block number: after parentHash, ommersHash, coinbase, 3 roots, bloom, difficulty. */
-    private const val HEADER_NUMBER_INDEX = 8
-
     /** A versioned-hash-shaped stand-in for the KZG versioned hash: `0x01 ‖ keccak256(blob)[1:]`. */
     fun fakeVersionedHash(blob: ByteArray): ByteArray =
       Hash.hash(Bytes.wrap(blob)).bytes.toArray().also { it[0] = 0x01 }
@@ -268,29 +225,17 @@ class FakeDaStream(
       val second = Hash.hash(first).bytes
       return Bytes.concatenate(first, second.slice(0, KZG_POINT_BYTES - first.size())).toArray()
     }
-
-    private fun decodeBlockNumber(blockRlp: ByteArray): ULong {
-      return try {
-        val input = RLP.input(Bytes.wrap(blockRlp))
-        input.enterList()
-        input.enterList()
-        repeat(HEADER_NUMBER_INDEX) { input.skipNext() }
-        input.readLongScalar().toULong()
-      } catch (e: Exception) {
-        throw DaStreamException(DaStreamStatus.INVALID_BLOCK_RLP, "cannot decode block number: ${e.message}", e)
-      }
-    }
   }
 }
 
-/** Opens [FakeDaStream]s. The dictionary is ignored: the fake does not compress. */
+/** Opens [FakeDaStream]s. */
 class FakeDaStreamFactory(
   private val chunkHasher: (ByteArray) -> ByteArray = { blob -> FakeDaStream.fakeVersionedHash(blob) },
 ) : DaStreamFactory {
-  override fun open(version: DaCodecVersion, dictionary: Path, initialState: DaStreamPosition): DaStream {
+  override fun open(version: DaCodecVersion, initialState: DaStreamPosition): DaStream {
     if (version != DaCodecVersion.FAKE) {
       throw DaStreamException(
-        DaStreamStatus.INVALID_ARGUMENT,
+        DaStreamErrorType.INVALID_ARGUMENT,
         "FakeDaStreamFactory only opens ${DaCodecVersion.FAKE}, got $version",
       )
     }

@@ -8,9 +8,9 @@ import linea.clients.RollupProverClientV1
 import linea.clients.dummyRollupProofResponse
 import linea.da.DaCodecVersion
 import linea.da.DaConstants
+import linea.da.DaStreamErrorType
 import linea.da.DaStreamException
 import linea.da.DaStreamPosition
-import linea.da.DaStreamStatus
 import linea.da.RollupResumePoint
 import linea.domain.Batch
 import linea.domain.Block
@@ -25,6 +25,7 @@ import lineth.conflation.calculators.DaTestConflations.baseTime
 import lineth.conflation.calculators.DaTestConflations.genesisDataRollingHash
 import lineth.conflation.calculators.RollupTriggerCalculator
 import lineth.conflation.calculators.RollupTriggerCalculatorByConflationCount
+import lineth.coordination.riscv.da.FakeDaCompressorFactory
 import lineth.coordination.riscv.da.FakeDaStream
 import lineth.coordination.riscv.da.FakeDaStreamFactory
 import lineth.persistence.FakeBatchesRepository
@@ -101,8 +102,8 @@ class RollupProofGeneratingCoordinatorTest {
     vertx.close().toCompletionStage().toCompletableFuture().get()
   }
 
-  private fun conflation(number: ULong, frameSize: Int): BlocksConflation =
-    DaTestConflations.conflation(number, frameSize).also { conflation ->
+  private fun conflation(number: ULong, segmentSize: Int): BlocksConflation =
+    DaTestConflations.conflation(number, segmentSize).also { conflation ->
       conflation.blocks.forEach { l2Blocks[it.number] = it }
     }
 
@@ -126,7 +127,7 @@ class RollupProofGeneratingCoordinatorTest {
   }
 
   private fun createCoordinator(
-    resumePoint: RollupResumePoint = RollupResumePoint(0UL, DaStreamPosition(genesisDataRollingHash)),
+    resumePoint: RollupResumePoint = RollupResumePoint(0UL, DaStreamPosition.fresh(genesisDataRollingHash)),
     rollupTriggers: List<RollupTriggerCalculator> = listOf(RollupTriggerCalculatorByConflationCount(3)),
     blobTriggers: List<BlobTriggerCalculator> = emptyList(),
     rollupDeadline: Duration? = null,
@@ -140,6 +141,7 @@ class RollupProofGeneratingCoordinatorTest {
         fetchedRanges += start..end
         SafeFuture.completedFuture((start..end).map { l2Blocks.getValue(it) })
       },
+      daCompressorFactory = FakeDaCompressorFactory(),
       daStreamFactory = FakeDaStreamFactory(),
       blobTriggers = blobTriggers,
       rollupTriggers = rollupTriggers,
@@ -328,13 +330,13 @@ class RollupProofGeneratingCoordinatorTest {
     uninterrupted.action().get()
     val context1 = pollProofs().first()
 
-    // After the restart, blocks 4..5 are persisted as one batch: its frame differs from D's.
+    // After the restart, blocks 4..5 are persisted as one batch: its segment differs from D's.
     batchesRepository.deleteBatchesAfterBlockNumber(4L).get()
     prove(merged(d, e))
     val restarted = createCoordinator(resumePoint = resumePointAfter(context1))
 
     val error = runCatching { restarted.action().get() }.exceptionOrNull()
-    assertThat((error?.cause as? DaStreamException)?.status).isEqualTo(DaStreamStatus.SEEDED_BLOB_MISMATCH)
+    assertThat((error?.cause as? DaStreamException)?.errorType).isEqualTo(DaStreamErrorType.SEEDED_BLOB_MISMATCH)
     fetchedRanges.clear()
     restarted.action().get()
     assertThat(fetchedRanges).`as`("the stopped stage reads nothing more").isEmpty()
@@ -346,12 +348,16 @@ class RollupProofGeneratingCoordinatorTest {
     val lastBlob = context.blobsData.last()
     return RollupResumePoint(
       context.proofIndex.endBlockNumber,
-      DaStreamPosition(
-        dataRollingHash = context.dataRollingHash,
-        tailBytes = tail,
-        sharedBlob = lastBlob.blobBytes.takeIf { tail > 0 },
-        prevDataRollingHash = lastBlob.prevDataRollingHash.takeIf { tail > 0 },
-      ),
+      if (tail == 0) {
+        DaStreamPosition.fresh(context.dataRollingHash)
+      } else {
+        DaStreamPosition(
+          dataRollingHash = context.dataRollingHash,
+          parentBlobDataRollingHash = lastBlob.prevDataRollingHash,
+          sharedBlobCarryOverTailBytes = tail,
+          sharedBlob = lastBlob.blobBytes,
+        )
+      },
     )
   }
 }

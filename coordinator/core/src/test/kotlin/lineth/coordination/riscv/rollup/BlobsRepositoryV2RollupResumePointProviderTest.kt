@@ -90,7 +90,7 @@ class BlobsRepositoryV2RollupResumePointProviderTest {
   @Test
   fun `before the cutover with no rows it resumes at the genesis position`() {
     assertThat(resume(100UL, cutover - 1.seconds))
-      .isEqualTo(RollupResumePoint(100UL, DaStreamPosition(genesisDataRollingHash)))
+      .isEqualTo(RollupResumePoint(100UL, DaStreamPosition.fresh(genesisDataRollingHash)))
   }
 
   @Test
@@ -100,7 +100,7 @@ class BlobsRepositoryV2RollupResumePointProviderTest {
     addRow(131UL, 140UL) // after a gap
 
     assertThat(resume(100UL, cutover - 1.seconds))
-      .isEqualTo(RollupResumePoint(120UL, DaStreamPosition(last.dataRollingHash)))
+      .isEqualTo(RollupResumePoint(120UL, DaStreamPosition.fresh(last.dataRollingHash)))
   }
 
   @Test
@@ -108,7 +108,7 @@ class BlobsRepositoryV2RollupResumePointProviderTest {
     val anchor = addRow(91UL, 100UL)
 
     assertThat(resume(100UL, cutover))
-      .isEqualTo(RollupResumePoint(100UL, DaStreamPosition(anchor.dataRollingHash)))
+      .isEqualTo(RollupResumePoint(100UL, DaStreamPosition.fresh(anchor.dataRollingHash)))
   }
 
   @Test
@@ -122,9 +122,9 @@ class BlobsRepositoryV2RollupResumePointProviderTest {
         110UL,
         DaStreamPosition(
           dataRollingHash = last.dataRollingHash,
-          tailBytes = 500,
+          parentBlobDataRollingHash = lastBlob.prevDataRollingHash,
+          sharedBlobCarryOverTailBytes = 500,
           sharedBlob = lastBlob.blobBytes,
-          prevDataRollingHash = lastBlob.prevDataRollingHash,
         ),
       ),
     )

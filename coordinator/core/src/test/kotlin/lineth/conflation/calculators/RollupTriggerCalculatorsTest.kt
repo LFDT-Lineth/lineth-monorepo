@@ -1,40 +1,38 @@
 package lineth.conflation.calculators
 
-import linea.da.DaStreamPosition
 import lineth.conflation.calculators.DaTestConflations.conflation
 import lineth.conflation.calculators.DaTestConflations.encoder
-import lineth.conflation.calculators.DaTestConflations.genesisDataRollingHash
-import lineth.coordination.riscv.da.FakeDaStream
+import lineth.coordination.riscv.da.FakeDaCompressor
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
 class RollupTriggerCalculatorsTest {
-  private val stream = FakeDaStream(DaStreamPosition(genesisDataRollingHash))
+  private val compressor = FakeDaCompressor()
 
   private fun compressed(
     startNumber: ULong,
     endNumber: ULong,
-    frameSize: Int = 20_000,
+    segmentSize: Int = 20_000,
     gasUsed: ULong = 1_000UL,
     txsPerBlock: Int = 0,
   ): CompressedBlocksConflation {
-    val conflation = conflation(startNumber, endNumber, frameSize, gasUsed = gasUsed, txsPerBlock = txsPerBlock)
-    return CompressedBlocksConflation(conflation, stream.compress(conflation.blocks.map(encoder::encode)))
+    val conflation = conflation(startNumber, endNumber, segmentSize, gasUsed = gasUsed, txsPerBlock = txsPerBlock)
+    return CompressedBlocksConflation(conflation, compressor.compress(conflation.blocks.map(encoder::encode)))
   }
 
   @Test
-  fun `data limit sums frames across conflations, allows reaching the limit, and resets`() {
+  fun `data limit sums segments across conflations, allows reaching the limit, and resets`() {
     val calculator = RollupTriggerCalculatorByDataLimit(60_000UL)
-    calculator.appendConflation(compressed(1UL, 3UL, frameSize = 20_000))
-    calculator.appendConflation(compressed(4UL, 5UL, frameSize = 25_000))
+    calculator.appendConflation(compressed(1UL, 3UL, segmentSize = 20_000))
+    calculator.appendConflation(compressed(4UL, 5UL, segmentSize = 25_000))
 
     // 45k so far: 15k reaches the limit exactly, 15k + 1 byte exceeds it.
-    assertThat(calculator.checkOverflow(compressed(6UL, 8UL, frameSize = 15_000))).isNull()
-    assertThat(calculator.checkOverflow(compressed(6UL, 8UL, frameSize = 15_001))).isEqualTo(RollupTrigger.DATA_LIMIT)
+    assertThat(calculator.checkOverflow(compressed(6UL, 8UL, segmentSize = 15_000))).isNull()
+    assertThat(calculator.checkOverflow(compressed(6UL, 8UL, segmentSize = 15_001))).isEqualTo(RollupTrigger.DATA_LIMIT)
     assertThat(calculator.checkTrigger(compressed(6UL, 8UL).conflation)).isNull()
     calculator.reset()
-    assertThat(calculator.checkOverflow(compressed(6UL, 8UL, frameSize = 60_000))).isNull()
+    assertThat(calculator.checkOverflow(compressed(6UL, 8UL, segmentSize = 60_000))).isNull()
   }
 
   @Test

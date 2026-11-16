@@ -30,7 +30,7 @@ class BlobsRepositoryV2RollupResumePointProvider(
   ): SafeFuture<RollupResumePoint> {
     val anchor = if (lastFinalizedBlockTimestamp < riscvCutoverTimestamp) {
       genesisDataRollingHashProvider.getGenesisDataRollingHash()
-        .thenApply { RollupResumePoint(lastFinalizedBlock, DaStreamPosition(it)) }
+        .thenApply { RollupResumePoint(lastFinalizedBlock, DaStreamPosition.fresh(it)) }
     } else {
       findRow(lastFinalizedBlock) {
         "L1 finalized block $lastFinalizedBlock is past the RISC-V cutover but no rollup row ends at it"
@@ -58,12 +58,16 @@ class BlobsRepositoryV2RollupResumePointProvider(
     val tail = row.finalDataTailDiscardBytes
     return RollupResumePoint(
       lastConflationEndBlock = row.endBlockNumber,
-      daPosition = DaStreamPosition(
-        dataRollingHash = row.dataRollingHash,
-        tailBytes = tail,
-        sharedBlob = lastBlob.blobBytes.takeIf { tail > 0 },
-        prevDataRollingHash = lastBlob.prevDataRollingHash.takeIf { tail > 0 },
-      ),
+      daPosition = if (tail == 0) {
+        DaStreamPosition.fresh(row.dataRollingHash)
+      } else {
+        DaStreamPosition(
+          dataRollingHash = row.dataRollingHash,
+          parentBlobDataRollingHash = lastBlob.prevDataRollingHash,
+          sharedBlobCarryOverTailBytes = tail,
+          sharedBlob = lastBlob.blobBytes,
+        )
+      },
     )
   }
 }
