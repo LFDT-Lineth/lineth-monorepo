@@ -305,7 +305,10 @@ function ContractsDeployUiPage() {
     return `${apiBaseUrl}/api/session`;
   }, [apiBaseUrl]);
 
-  const deployRunLooksComplete = sessionEnded && deployHistory.length > 0 && session?.pendingRequest === null;
+  const deployRunLooksComplete =
+    sessionEnded &&
+    session?.sessionOutcome !== "error" &&
+    (session?.sessionOutcome === "complete" || (deployHistory.length > 0 && session?.pendingRequest === null));
 
   const heroSubtitle = useMemo(() => {
     if (!sessionEnded) {
@@ -324,7 +327,7 @@ function ContractsDeployUiPage() {
       if (deployHistory.length > 0) {
         return "Run complete. Submitted transactions are preserved below; polling has stopped.";
       }
-      return "Run complete. The Hardhat bridge has closed; polling has stopped.";
+      return "Run complete. Nothing needed a signature (e.g. nothing new to deploy); polling has stopped.";
     }
     if (deployHistory.length > 0 && session?.pendingRequest === null) {
       return "Run complete. The Hardhat bridge has closed; submitted transactions are saved below and polling has stopped.";
@@ -823,11 +826,13 @@ function ContractsDeployUiPage() {
           <section className={`deploy-card ${deployRunLooksComplete ? "deploy-card--complete" : "deploy-card--muted"}`}>
             <h2>{deployRunLooksComplete ? "Run complete" : "Session disconnected"}</h2>
             <p>
-              {deployRunLooksComplete
-                ? "Hardhat finished and closed the local HTTP bridge. The Next.js UI usually keeps running so this tab stays loaded. Details below are kept in session storage; use #signer-tx-… links to jump to each signed transaction."
-                : deployHistory.length > 0
-                  ? "The bridge stopped before the last poll showed an idle session—check Hardhat for errors. Any transactions you already signed are listed below."
-                  : "The Hardhat signer bridge has stopped. Polling is disabled. If you are not running another script, you can close this browser tab."}
+              {deployRunLooksComplete && deployHistory.length === 0
+                ? "Hardhat finished without asking for a signature and closed the local HTTP bridge. You can close this tab."
+                : deployRunLooksComplete
+                  ? "Hardhat finished and closed the local HTTP bridge. The Next.js UI usually keeps running so this tab stays loaded. Details below are kept in session storage; use #signer-tx-… links to jump to each signed transaction."
+                  : deployHistory.length > 0
+                    ? "The bridge stopped before the last poll showed an idle session—check Hardhat for errors. Any transactions you already signed are listed below."
+                    : "The Hardhat signer bridge has stopped. Polling is disabled. If you are not running another script, you can close this browser tab."}
             </p>
           </section>
         ) : null}
