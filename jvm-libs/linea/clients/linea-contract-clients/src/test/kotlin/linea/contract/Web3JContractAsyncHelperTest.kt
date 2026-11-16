@@ -14,9 +14,12 @@ import lineth.vertx.vertxTestOptions
 import net.consensys.linea.contract.Web3JContractAsyncHelper
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.web3j.abi.datatypes.Function
+import org.web3j.crypto.Blob
+import org.web3j.crypto.BlobUtils
 import org.web3j.crypto.Credentials
 import org.web3j.crypto.TransactionDecoder
 import org.web3j.crypto.transaction.type.Transaction1559
@@ -36,6 +39,15 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 
 class Web3JContractAsyncHelperTest {
+  companion object {
+    // the first KZG call loads the trusted setup (seconds on CI); keep it out of the timed event-loop runs
+    @BeforeAll
+    @JvmStatic
+    fun loadKzgTrustedSetup() {
+      BlobUtils.getCommitment(Blob(ByteArray(131072)))
+    }
+  }
+
   private val chainId = 1337L
   private val contractAddress = "0x" + "aa".repeat(20)
   private val function = Function("someFunction", emptyList(), emptyList())
