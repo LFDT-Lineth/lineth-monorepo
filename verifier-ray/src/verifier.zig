@@ -347,8 +347,8 @@ pub fn verifyWithWorkspace(
 
     // Rebuild the per-batch Merkle roots from their transcript-bound
     // provenance (round oracle commitments + compile-time precomputed roots),
-    // NOT from the proof. `pcs.verify` will reorder/deduplicate these into the
-    // proof's input-opening order, so the root each batch is authenticated
+    // NOT from the proof. `pcs.verify` will reorder these into the proof's
+    // input-opening order (one input tree per batch), so the root each batch is authenticated
     // against is provably the same octuplet zeta is bound to. Mirrors
     // prover-ray's `collectRoots` + `inputOpeningRoots`.
     var bound_roots: [pcs_system.num_batches]poseidon2.Digest = undefined;

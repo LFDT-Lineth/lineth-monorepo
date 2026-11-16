@@ -37,7 +37,7 @@ The prover does not start when `dev-zkvm` or `dev-partial` is set for rollup or 
 ### dev-zkvm
 
 - Runs the guest on the real input, without a trace.
-- The public inputs are real.
+- The public inputs are real: they come from the guest output, as in dev-partial.
 - Nothing is checked against the constraints.
 - The guest output must be equal to the native runner's output (temporary, see below).
 
