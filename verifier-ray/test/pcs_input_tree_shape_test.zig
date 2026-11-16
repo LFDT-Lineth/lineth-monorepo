@@ -36,18 +36,44 @@ fn caseIndexByName(comptime name: []const u8) usize {
 const spec = vf.get(case_index).spec;
 const systems = vf.get(case_index).systems;
 
-fn sameCap(a: pcs.InputCap, b: pcs.InputCap) bool {
-    if (a.nodes.len != b.nodes.len) return false;
-    for (a.nodes, b.nodes) |x, y| {
-        if (!poseidon2.eql(x, y)) return false;
+fn sameRow(a: merkle.RowOpening, b: merkle.RowOpening) bool {
+    if (a.base.len != b.base.len or a.ext.len != b.ext.len) return false;
+    for (a.base, b.base) |x, y| {
+        if (!x.eql(y)) return false;
+    }
+    for (a.ext, b.ext) |x, y| {
+        if (!x.eql(y)) return false;
     }
     return true;
 }
 
-/// Index of the second of two input trees with identical caps, i.e. the tree a
-/// root-deduplicating prover would have omitted.
+fn sameTable(a: pcs.InputCapTable, b: pcs.InputCapTable) bool {
+    if (a.size_log2 != b.size_log2 or a.rows.len != b.rows.len) return false;
+    for (a.rows, b.rows) |x, y| {
+        if (!sameRow(x, y)) return false;
+    }
+    return true;
+}
+
+fn sameCap(a: pcs.InputCap, b: pcs.InputCap) bool {
+    if (a.nodes.len != b.nodes.len or a.tables.len != b.tables.len) return false;
+    for (a.nodes, b.nodes) |x, y| {
+        if (!poseidon2.eql(x, y)) return false;
+    }
+    for (a.tables, b.tables) |x, y| {
+        if (!sameTable(x, y)) return false;
+    }
+    return true;
+}
+
+/// Index of the second of two non-empty input trees with identical caps, i.e.
+/// the tree a root-deduplicating prover would have omitted.
 fn twinTreeIndex(caps: []const pcs.InputCap) ?usize {
     for (caps, 0..) |cap, j| {
+        // Depth-0 trees have empty caps (nodes.len == 0, tables.len == 0), so
+        // any two depth-0 trees compare equal. Skip empty caps so the fixture
+        // guard cannot pass if regeneration drops every tree to depth 0.
+        if (cap.nodes.len == 0) continue;
         for (caps[0..j]) |earlier| {
             if (sameCap(earlier, cap)) return j;
         }
@@ -60,6 +86,18 @@ fn without(comptime T: type, a: std.mem.Allocator, items: []const T, drop: usize
     @memcpy(res[0..drop], items[0..drop]);
     @memcpy(res[drop..], items[drop + 1 ..]);
     return res;
+}
+
+fn dropTreeOpenings(
+    a: std.mem.Allocator,
+    input_queries: []const []const merkle.InputTreeOpening,
+    drop: usize,
+) ![]const []const merkle.InputTreeOpening {
+    const queries = try a.alloc([]const merkle.InputTreeOpening, input_queries.len);
+    for (input_queries, queries) |query, *out| {
+        out.* = try without(merkle.InputTreeOpening, a, query, drop);
+    }
+    return queries;
 }
 
 test "input trees: twin batches each get their own tree and verify" {
@@ -87,14 +125,30 @@ test "input trees: the old deduplicated shape is rejected" {
 
     // Drop the twin's cap and its opening in every query; everything else
     // stays honest.
-    const queries = try a.alloc([]const merkle.InputTreeOpening, opening.input_queries.len);
-    for (opening.input_queries, queries) |query, *out| {
-        out.* = try without(merkle.InputTreeOpening, a, query, twin);
-    }
-
     var bad = input;
     bad.proof.pcs_opening.proof.input_caps = try without(pcs.InputCap, a, opening.input_caps, twin);
-    bad.proof.pcs_opening.proof.input_queries = queries;
+    bad.proof.pcs_opening.proof.input_queries = try dropTreeOpenings(a, opening.input_queries, twin);
+
+    try std.testing.expectError(
+        error.InputTreeCountMismatch,
+        verifier.verify(spec, systems, bad.proof, bad.public_inputs),
+    );
+}
+
+test "input trees: partial deduplication (all caps kept, twin query opening dropped) is rejected" {
+    const input = vf.getInput(case_index);
+    const opening = input.proof.pcs_opening.proof;
+    const twin = twinTreeIndex(opening.input_caps) orelse return error.FixtureHasNoTwinTrees;
+
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+
+    // Keep all input caps so the top-level cap-count check passes, and drop
+    // only the twin's opening in every query to hit InputQuerySource.authenticate.
+    var bad = input;
+    bad.proof.pcs_opening.proof.input_queries = try dropTreeOpenings(a, opening.input_queries, twin);
+    try std.testing.expectEqual(opening.input_caps.len, bad.proof.pcs_opening.proof.input_caps.len);
 
     try std.testing.expectError(
         error.InputTreeCountMismatch,

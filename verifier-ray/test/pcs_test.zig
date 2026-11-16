@@ -474,6 +474,8 @@ test "routeInputRoots ignores an unused batch root" {
     const routing = try pcs.routeInputRoots(system, &recon, &roots);
     try std.testing.expectEqual(@as(usize, 1), routing.tree_count);
     try std.testing.expectEqual(@as(usize, 0), routing.index_by_batch[0]);
+    try std.testing.expectEqual(pcs.InputRootRouting(system).unrouted, routing.index_by_batch[1]);
+    try std.testing.expectEqual(@as(usize, 0), routing.batch_by_tree[0]);
 }
 
 // ── PCS challenge derivation ──────────────────────────────────────────────────
