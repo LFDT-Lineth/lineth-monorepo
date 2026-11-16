@@ -128,6 +128,21 @@ func TestVanishing_AutoCancelledPositions_NegativeShift(t *testing.T) {
 	assert.Equal(t, 0, v.CancelledPositions[0])
 }
 
+// TestVanishing_AutoCancelledPositions_SharedDAG declares a vanishing over a
+// depth-64 DAG of shared subexpressions (a tree of 2^64 leaves, 66 distinct
+// nodes). Collecting its shifts must walk each shared node once and still find
+// the shift at the bottom.
+func TestVanishing_AutoCancelledPositions_SharedDAG(t *testing.T) {
+	sys, r0, _, mod := newTestSystem(t)
+	col := mod.NewColumn(sys.Context.Childf("dagCol"), r0)
+	x := wiop.Mul(col.View(), col.View().Shift(-1))
+	for range 64 {
+		x = wiop.Add(x, x)
+	}
+	v := mod.NewVanishing(sys.Context.Childf("dagV"), x)
+	assert.Equal(t, []int{0}, v.CancelledPositions, "the shift -1 at the bottom of the shared DAG must cancel position 0")
+}
+
 func TestVanishing_CheckGnark_Panics(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
 	col := mod.NewColumn(sys.Context.Childf("vgCol"), r0)

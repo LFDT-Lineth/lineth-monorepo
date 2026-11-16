@@ -4,6 +4,7 @@ permissions:
   contents: read
   actions: read
   packages: write
+  id-token: write
 
 on:
   workflow_call:
@@ -26,11 +27,6 @@ on:
         required: false
         type: boolean
         default: false
-    secrets:
-      DOCKERHUB_USERNAME:
-        required: false
-      DOCKERHUB_TOKEN:
-        required: false
 
 concurrency:
   group: coordinator-build-and-publish-${{ github.workflow }}-${{ github.ref }}
@@ -39,6 +35,7 @@ concurrency:
 jobs:
   build-and-publish:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+    environment: ${{ inputs.push_image && 'dockerhub-linea-coordinator' || 'dockerhub-pull' }}
     name: Coordinator build
     env:
       IMAGE_TAG: ${{ inputs.image_tag }}
@@ -46,18 +43,18 @@ jobs:
       DEVELOP_TAG: ${{ inputs.develop_tag }}
       IMAGE_NAME: ${{ inputs.image_name }}
       PUSH_IMAGE: ${{ inputs.push_image }}
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Login to Docker Hub
-        if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
+        if: ${{ github.event.pull_request.head.repo.fork != true }}
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        env:
+          DOCKERHUB_OIDC_CONNECTIONID: ${{ inputs.push_image && vars.DOCKERHUB_OIDC_CONNECTIONID_LINEA_COORDINATOR || vars.DOCKERHUB_OIDC_CONNECTIONID_PULL }}
+          DOCKERHUB_OIDC_EXPIREIN: 1800
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: consensys
 
       - name: Set up Java and Gradle
         uses: ./.github/actions/setup-java-and-gradle
