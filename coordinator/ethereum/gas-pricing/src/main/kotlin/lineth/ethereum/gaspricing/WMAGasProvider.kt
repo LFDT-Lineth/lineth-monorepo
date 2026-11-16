@@ -24,23 +24,6 @@ class WMAGasProvider(
     val maxPriorityFeePerGasCap: ULong,
   )
 
-  private fun getRecentFeesAsync(): SafeFuture<EIP4844GasFees> {
-    return feesFetcher.getL1EthGasPriceData().thenApply { feesData ->
-      val maxPriorityFeePerGas =
-        priorityFeeCalculator.calculateFees(feesData)
-          .coerceAtMost(config.maxPriorityFeePerGasCap.toDouble())
-      val maxFeePerGas = (feesData.baseFeePerGas.last().toDouble() * 2) + maxPriorityFeePerGas
-      val maxFeePerBlobGas = config.maxFeePerBlobGasCap
-      EIP4844GasFees(
-        EIP1559GasFees(
-          maxPriorityFeePerGas.toULong(),
-          maxFeePerGas.toULong(),
-        ),
-        maxFeePerBlobGas,
-      )
-    }
-  }
-
   @Deprecated("Deprecated in Java")
   override fun getGasPrice(): BigInteger {
     throw NotImplementedError("EIP1559GasProvider only implements EIP1559 specific methods")
@@ -67,26 +50,22 @@ class WMAGasProvider(
     return getEIP1559GasFees().maxPriorityFeePerGas.toBigInteger()
   }
 
-  override fun getEIP1559GasFees(): EIP1559GasFees {
-    return getEIP1559GasFeesAsync().get()
-  }
-
-  override fun getEIP4844GasFees(): EIP4844GasFees {
-    return getEIP4844GasFeesAsync().get()
-  }
-
   override fun getEIP1559GasFeesAsync(): SafeFuture<EIP1559GasFees> {
     return getEIP4844GasFeesAsync().thenApply { it.eip1559GasFees }
   }
 
   override fun getEIP4844GasFeesAsync(): SafeFuture<EIP4844GasFees> {
-    return getRecentFeesAsync().thenApply {
+    return feesFetcher.getL1EthGasPriceData().thenApply { feesData ->
+      val maxPriorityFeePerGas =
+        priorityFeeCalculator.calculateFees(feesData)
+          .coerceAtMost(config.maxPriorityFeePerGasCap.toDouble())
+      val maxFeePerGas = (feesData.baseFeePerGas.last().toDouble() * 2) + maxPriorityFeePerGas
       EIP4844GasFees(
         eip1559GasFees = EIP1559GasFees(
-          maxPriorityFeePerGas = min(it.eip1559GasFees.maxPriorityFeePerGas, config.maxFeePerGasCap),
-          maxFeePerGas = min(it.eip1559GasFees.maxFeePerGas, config.maxFeePerGasCap),
+          maxPriorityFeePerGas = min(maxPriorityFeePerGas.toULong(), config.maxFeePerGasCap),
+          maxFeePerGas = min(maxFeePerGas.toULong(), config.maxFeePerGasCap),
         ),
-        maxFeePerBlobGas = min(it.maxFeePerBlobGas, config.maxFeePerBlobGasCap),
+        maxFeePerBlobGas = config.maxFeePerBlobGasCap,
       )
     }
   }

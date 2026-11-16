@@ -3,7 +3,6 @@ package lineth.ethereum.gaspricing
 import linea.domain.FeeHistory
 import linea.kotlin.toULong
 import linea.web3j.gas.EIP1559GasFees
-import linea.web3j.gas.EIP4844GasFees
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
@@ -216,29 +215,6 @@ class WMAGasProviderTest {
     assertThat(calculatedFees.eip1559GasFees.maxPriorityFeePerGas).isEqualTo(maxFeePerGasCap)
     assertThat(calculatedFees.eip1559GasFees.maxFeePerGas).isEqualTo(maxFeePerGasCap)
     assertThat(calculatedFees.maxFeePerBlobGas).isEqualTo(maxFeePerBlobGasCap)
-  }
-
-  @Test
-  fun `getEIP4844GasFeesAsync applies the gas and blob fee caps`() {
-    val wmaGasProvider =
-      WMAGasProvider(
-        chainId.toLong(),
-        mockFeesFetcher,
-        l1PriorityFeeCalculator,
-        WMAGasProvider.Config(
-          gasLimit = gasLimit,
-          maxFeePerGasCap = 1500uL,
-          maxPriorityFeePerGasCap = 100000000uL,
-          maxFeePerBlobGasCap = 100uL,
-        ),
-      )
-
-    assertThat(wmaGasProvider.getEIP4844GasFeesAsync().get()).isEqualTo(
-      EIP4844GasFees(
-        EIP1559GasFees(maxPriorityFeePerGas = 1229uL, maxFeePerGas = 1500uL),
-        maxFeePerBlobGas = 100uL,
-      ),
-    )
   }
 
   @Test

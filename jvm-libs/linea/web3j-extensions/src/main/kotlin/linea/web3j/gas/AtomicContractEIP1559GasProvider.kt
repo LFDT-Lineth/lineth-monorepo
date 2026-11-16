@@ -9,8 +9,8 @@ data class EIP1559GasFees(
 )
 
 interface AtomicContractEIP1559GasProvider : ContractEIP1559GasProvider {
-  /** May block; use [getEIP1559GasFeesAsync] from async code. */
-  fun getEIP1559GasFees(): EIP1559GasFees
-
   fun getEIP1559GasFeesAsync(): SafeFuture<EIP1559GasFees>
+
+  /** Blocks until the fees are resolved; use [getEIP1559GasFeesAsync] from async code. */
+  fun getEIP1559GasFees(): EIP1559GasFees = getEIP1559GasFeesAsync().get()
 }
