@@ -1,5 +1,6 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
+import { addLidoStVaultYieldProvider } from "./YieldManager.js";
 import {
   pinnedLidoStVaultYieldProviderFactory20260114Artifact,
   pinnedValidatorContainerProofVerifier20260114Artifact,
@@ -8,7 +9,7 @@ import {
 import { deployPinnedTransparentProxy } from "../lib/proxy.js";
 
 /**
- * Replaces `21_deploy_YieldManagerArtifacts.ts` (tag `YieldManagerArtifacts`): same graph as `YieldManager.ts`, but every
+ * Same graph as `YieldManager.ts`, but every
  * contract is the audited bytecode pinned in `deployments/bytecode/2026-01-14` (verify from git tag
  * `contract-audit-2026-01-14`, commit 25e323d055dec40ef167a190c71c30aa9bf92c23).
  *
@@ -54,19 +55,8 @@ export default buildModule("YieldManagerArtifacts", (m) => {
     { id: "LidoStVaultYieldProviderFactory" },
   );
 
-  const createYieldProvider = m.call(lidoStVaultYieldProviderFactory, "createLidoStVaultYieldProvider", [], {
-    id: "CreateLidoStVaultYieldProvider",
-  });
-  const yieldProviderAddress = m.readEventArgument(
-    createYieldProvider,
-    "LidoStVaultYieldProviderCreated",
-    "providerAddress",
-    { id: "LidoStVaultYieldProviderAddress", emitter: lidoStVaultYieldProviderFactory },
-  );
-  // The provider is created by the pinned factory; the compiled ABI is only used to address it (nothing is deployed).
-  const lidoStVaultYieldProvider = m.contractAt("LidoStVaultYieldProvider", yieldProviderAddress, {
-    id: "LidoStVaultYieldProvider",
-  });
+  // Created by the pinned factory; the compiled ABI is only used to address it.
+  const lidoStVaultYieldProvider = addLidoStVaultYieldProvider(m, lidoStVaultYieldProviderFactory);
 
   return {
     yieldManager,

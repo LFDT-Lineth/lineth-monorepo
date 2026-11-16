@@ -1,10 +1,15 @@
 # Hardhat signer UI (browser signing)
 
-When `HARDHAT_SIGNER_UI=true`, Hardhat deploy scripts can route transactions through this local Next.js app so you approve them in a browser wallet (MetaMask, Rabby, etc.) instead of putting `DEPLOYER_PRIVATE_KEY` in the environment.
+With `--signer-ui` (or `HARDHAT_SIGNER_UI=true`), Hardhat routes transactions through this local Next.js app so you approve them in a browser wallet (MetaMask, Rabby, etc.) instead of putting `DEPLOYER_PRIVATE_KEY` in the environment. Without it, Hardhat signs with `DEPLOYER_PRIVATE_KEY` as usual.
 
-`HARDHAT_SIGNER_UI=true` and `DEPLOYER_PRIVATE_KEY` are mutually exclusive. If both are set, Hardhat fails immediately rather than guessing between browser signing and private-key signing.
+`--signer-ui` and `DEPLOYER_PRIVATE_KEY` are mutually exclusive. If both are set, Hardhat fails immediately rather than guessing between browser signing and private-key signing. Without `DEPLOYER_PRIVATE_KEY`, the network has no configured account; the wallet you connect in the browser is the signer.
 
-The Hardhat side (`contracts/hardhat-plugins/signer-ui/bridge.ts`, enabled with `--signer-ui` or `HARDHAT_SIGNER_UI=true`) starts a **local HTTP bridge** (session API + CORS), launches **`pnpm --dir contracts/signer-ui exec next dev`** on a free port, prints/opens the UI URL, bootstraps the browser session over loopback, and blocks until each transaction is **verified on-chain** against the pending request.
+## How it works
+
+The Hardhat side (`contracts/hardhat-plugins/signer-ui/`) starts a **local HTTP bridge** (session API + CORS), launches **`pnpm --dir contracts/signer-ui exec next dev`** on a free port, prints/opens the UI URL and blocks until each transaction is **verified on-chain** against the pending request.
+
+- **Session token.** The UI URL only carries the bridge address (`apiBaseUrl`). On load, the page calls `POST /api/bootstrap` once to get the per-run session token; the bridge only answers that call from the UI's origin and before the session is authenticated. The page then sends the token in the `x-hardhat-signer-ui-session-token` header on every bridge request.
+- **Routing.** Code that signs wraps its work in `withSignerUi(hre, label, fn)` (`hardhat-plugins/signer-ui/session.ts`): for that call, `eth_accounts` answers with the browser wallet and `eth_sendTransaction` goes to the browser, so Ignition, OpenZeppelin Upgrades and viem wallet clients sign in the browser; the session closes when `fn` settles. `hardhat ignition deploy` and the operational tasks/scripts do this; scripts get the signer with `getUiWalletClient`. A standalone script run with `tsx` does not use the browser signer.
 
 This app is local operator tooling for the contracts package. It is not intended to be published, imported, or consumed as a standalone package.
 
@@ -31,8 +36,8 @@ If you reject a wallet prompt or stop the run before signing, the Ignition journ
 - **Sticky “Sign current transaction”** bar at the top while a request is pending (same action as the pending card below).
 - **Submitted transaction history** with tx hash, from/to, constructor/proxy context, and raw request JSON; stored in **session storage** so it survives closing the HTTP bridge.
 - **In-page anchors** `#signer-tx-<requestId>` after each successful submit; **Jump to** links and **Copy page link** for bookmarks.
-- **Proxy hints** (OpenZeppelin transparent / UUPS / beacon) when scripts pass metadata through `setUiTransactionContext` (`contracts/hardhat-plugins/signer-ui/bridge.ts`).
-- After a full **`hardhat ignition deploy`** run (success or failure), Hardhat **stops the Next.js dev server by default** so the process exits cleanly; the browser tab stays open with history in session storage. Set `HARDHAT_SIGNER_UI_LEAVE_NEXT_DEV_AFTER_DEPLOY=true` to leave Next running (legacy behavior). For **non-deploy** sessions (operational scripts, etc.), Next still runs unless you set `HARDHAT_SIGNER_UI_SHUTDOWN_NEXT_DEV=true`.
+- **Transaction labels**: Ignition transactions are labelled with their contract and Ignition future.
+- After a full **`hardhat ignition deploy`** run (success or failure), Hardhat **stops the Next.js dev server by default** so the process exits cleanly; the browser tab stays open with history in session storage. Set `HARDHAT_SIGNER_UI_LEAVE_NEXT_DEV_AFTER_DEPLOY=true` to leave Next running. For **non-deploy** sessions (operational scripts, etc.), Next still runs unless you set `HARDHAT_SIGNER_UI_SHUTDOWN_NEXT_DEV=true`.
 - The bridge sends a **terminal session outcome** (`complete` / `error`) before closing so the UI **stops polling** immediately instead of only noticing a dead bridge.
 
 ## Network: `zkevm_dev` (local L1)
@@ -85,7 +90,7 @@ pnpm exec hardhat ignition deploy <YourL2Module> --network l2
 
 | Variable | Effect |
 |----------|--------|
-| `HARDHAT_SIGNER_UI=true` | Enable browser signing. When unset or not `true`, scripts use `DEPLOYER_PRIVATE_KEY`. Must not be combined with `DEPLOYER_PRIVATE_KEY`. |
+| `HARDHAT_SIGNER_UI=true` | Same as `--signer-ui`. When unset or not `true`, Hardhat uses `DEPLOYER_PRIVATE_KEY`. Must not be combined with `DEPLOYER_PRIVATE_KEY`. |
 | `HARDHAT_SIGNER_UI_OPEN_BROWSER=false` | Do not auto-open a tab; open the URL from the terminal. |
 | `HARDHAT_SIGNER_UI_DEBUG=true` | Forward `next dev` stdout/stderr to the terminal. |
 | `HARDHAT_SIGNER_UI_LEAVE_NEXT_DEV_AFTER_DEPLOY=true` | After `hardhat ignition deploy`, **keep** the Next.js dev server running when the bridge closes (default is to stop Next). |
@@ -108,11 +113,10 @@ A full signing round-trip still requires the bridge from a running `hardhat igni
 ## Further reading
 
 - [Lineth deployment scripts overview](../docs/deployment/README.md) — env vars, modules, verification, upgrade checks.
-- [Chained deployments](../docs/deployment/chained-deployments.md) — one UI session for the whole tag batch.
-- [Removing the signer UI](../docs/deployment/signer-ui-removal.md) — maintainers only.
+- [Chained deployments](../docs/deployment/chained-deployments.md) — one UI session for a composite module.
 
 ## Limitations
 
-- Scripts that broadcast **fixed pre-signed** transactions (some predeploy paths) do not use the browser signer.
+- Tasks that broadcast **fixed pre-signed** transactions (`deploy:eip2935-system-contract`, `deploy:eip4788-system-contract`) do not use the browser signer.
 - **One in-flight transaction** from Hardhat’s perspective at a time per session.
 - Ignition **skips futures already deployed** in the deployment id (e.g. the shared `ProxyAdmin`) — fewer wallet prompts than three does not imply a bug.

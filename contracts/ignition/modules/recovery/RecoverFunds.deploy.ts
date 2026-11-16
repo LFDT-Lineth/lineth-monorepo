@@ -1,10 +1,8 @@
 import { requireAddressFromRegistryOrEnv } from "../../../common/helpers/readAddress.js";
 
-import type { DeployCompanion, ParameterContext } from "../../../hardhat-plugins/deploy/types.js";
-import type { ModuleParameters } from "@nomicfoundation/ignition-core";
+import type { DeployCompanion } from "../../../hardhat-plugins/deploy/types.js";
 
-/** `10_deploy_RecoverFunds.ts`. */
-export function recoverFundsParameters(context: ParameterContext): ModuleParameters {
+export const parameters: NonNullable<DeployCompanion["parameters"]> = async (context) => {
   const { networkName } = context;
   const recoverFundsSecurityCouncil = requireAddressFromRegistryOrEnv(
     networkName,
@@ -16,9 +14,5 @@ export function recoverFundsParameters(context: ParameterContext): ModuleParamet
     "RECOVERFUNDS_EXECUTOR_ADDRESS",
     "RECOVERFUNDS_EXECUTOR_ADDRESS",
   );
-  return { securityCouncil: recoverFundsSecurityCouncil, executor: recoverFundsExecutorAddress };
-}
-
-export const parameters: NonNullable<DeployCompanion["parameters"]> = async (context) => ({
-  RecoverFunds: recoverFundsParameters(context),
-});
+  return { RecoverFunds: { securityCouncil: recoverFundsSecurityCouncil, executor: recoverFundsExecutorAddress } };
+};

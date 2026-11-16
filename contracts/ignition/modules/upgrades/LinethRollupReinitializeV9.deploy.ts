@@ -4,7 +4,6 @@ import { toUint } from "../lib/parameters.js";
 
 import type { DeployCompanion } from "../../../hardhat-plugins/deploy/types.js";
 
-/** Same inputs as the Hardhat 2 `03_deploy_LinethRollupV8WithReinitialization.ts` script. */
 export const parameters: NonNullable<DeployCompanion["parameters"]> = async ({ networkName }) => ({
   LinethRollupReinitializeV9: {
     proxy: requireAddressFromRegistryOrEnv(networkName, "LinethRollup", "LINETH_ROLLUP_ADDRESS"),

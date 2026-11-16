@@ -1,9 +1,9 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
-import { deployPinnedTransparentProxy } from "../lib/proxy.js";
+import { UNSAFE_ALLOW, deployPinnedTransparentProxy } from "../lib/proxy.js";
 
 /**
- * Replaces `18_deploy_RollupRevenueVault.ts` (tag `RollupRevenueVault`): implementation + pinned OZ 4.x proxy,
+ * Implementation + pinned OZ 4.x proxy,
  * `initializeRolesAndStorageVariables(...)`.
  *
  * Parameters: `lastInvoiceDate`, `securityCouncil`, `invoiceSubmitter`, `burner`, `invoicePaymentReceiver`, `tokenBridge`,
@@ -13,7 +13,7 @@ export default buildModule("RollupRevenueVault", (m) => {
   const implementation = m.contract("RollupRevenueVault", [], { id: "RollupRevenueVaultImplementation" });
   const { proxy, proxyAdmin } = deployPinnedTransparentProxy(m, {
     name: "RollupRevenueVault",
-    unsafeAllow: ["constructor", "incorrect-initializer-order"],
+    unsafeAllow: UNSAFE_ALLOW.RollupRevenueVault,
     implementation,
     initializer: "initializeRolesAndStorageVariables",
     initializerArgs: [

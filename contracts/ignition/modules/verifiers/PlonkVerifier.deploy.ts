@@ -1,5 +1,4 @@
-import { concat, encodeAbiParameters, parseAbiParameters } from "viem";
-import { getAddress, isAddress } from "viem";
+import { encodeFunctionData, getAddress, isAddress, parseAbi } from "viem";
 
 import { getOptionalEnvVar, getRequiredEnvVar } from "../../../common/helpers/environment.js";
 import { formatEnvVarValueForMessage } from "../../../common/helpers/envVarLogging.js";
@@ -9,7 +8,7 @@ import { toBytes32, toUint } from "../lib/parameters.js";
 import type { DeployCompanion, ParameterContext } from "../../../hardhat-plugins/deploy/types.js";
 import type { ModuleParameters } from "@nomicfoundation/ignition-core";
 
-/** `01_deploy_PlonkVerifier.ts`. Also validates `VERIFIER_PROOF_TYPE` (used for the printed `setVerifierAddress` calldata). */
+/** Also validates `VERIFIER_PROOF_TYPE` (used for the printed `setVerifierAddress` calldata). */
 export async function plonkVerifierParameters(context: ParameterContext): Promise<ModuleParameters> {
   const { networkName } = context;
   getRequiredEnvVar("VERIFIER_CONTRACT_NAME");
@@ -59,16 +58,16 @@ export const parameters: NonNullable<DeployCompanion["parameters"]> = async (con
   PlonkVerifier: await plonkVerifierParameters(context),
 });
 
-/** Prints the `setVerifierAddress(address,uint256)` calldata (selector 0xc2116974) for the new verifier. */
+/** Prints the LinethRollup `setVerifierAddress` calldata for the new verifier. */
 export const afterDeploy: NonNullable<DeployCompanion["afterDeploy"]> = ({ contracts }) => {
   const verifier = contracts["PlonkVerifier#PlonkVerifier"];
   if (verifier === undefined) {
     throw new Error('Future "PlonkVerifier#PlonkVerifier" is not in the deployment result.');
   }
   const verifierIndex = toUint("VERIFIER_PROOF_TYPE", getRequiredEnvVar("VERIFIER_PROOF_TYPE"));
-  const setVerifierAddress = concat([
-    "0xc2116974",
-    encodeAbiParameters(parseAbiParameters("address, uint256"), [verifier, verifierIndex]),
-  ]);
+  const setVerifierAddress = encodeFunctionData({
+    abi: parseAbi(["function setVerifierAddress(address newVerifierAddress, uint256 proofType)"]),
+    args: [verifier, verifierIndex],
+  });
   console.log("setVerifierAddress calldata:", setVerifierAddress);
 };

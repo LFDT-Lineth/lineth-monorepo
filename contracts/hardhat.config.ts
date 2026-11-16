@@ -58,7 +58,7 @@ export default defineConfig({
     ],
     overrides,
   },
-  // Replaces the Hardhat 2 compile-subtask filter. `func-mutability` is solc warning 2018: the
+  // `func-mutability` is solc warning 2018: the
   // SafeExecutionConditions guards are intentionally non-`view` so multisig UIs (e.g. Safe{Wallet}) stage them
   // as transactions rather than read-only calls.
   warnings: {
@@ -128,8 +128,8 @@ export default defineConfig({
       accounts: deployerAccounts,
     },
   },
-  // Hoodi, Linea Sepolia and Linea mainnet use Hardhat's built-in chain descriptors and the Etherscan v2 API,
-  // which replace the Hardhat 2 `etherscan.customChains` entries. Only Etherscan is enabled, as before.
+  // Hoodi, Linea Sepolia and Linea mainnet use Hardhat's built-in chain descriptors and the Etherscan v2 API.
+  // Only Etherscan is enabled.
   verify: {
     etherscan: {
       apiKey: configVariable("ETHERSCAN_API_KEY"),
@@ -141,7 +141,7 @@ export default defineConfig({
       enabled: false,
     },
   },
-  // Mocks, the pinned proxies and code exercised only by gas-heavy tests are not instrumented (Hardhat 2 .solcover.js).
+  // Mocks, the pinned proxies and code exercised only by gas-heavy tests are not instrumented.
   coverage: {
     skipFiles: [
       "src/_testing/**",
@@ -150,18 +150,5 @@ export default defineConfig({
       "src/rollup/_exampleImplementations/**",
       "src/libraries/SparseMerkleProof.sol",
     ],
-  },
-  test: {
-    solidity: {
-      // Reduced during the Hardhat 3 migration; restore production values once the migration is stable.
-      fuzz: {
-        runs: 4,
-      },
-      invariant: {
-        runs: 4,
-        depth: 4,
-        failOnRevert: true,
-      },
-    },
   },
 });

@@ -182,22 +182,7 @@ body.signer-ui-body {
   min-height: 56px;
 }
 
-.deploy-proxy-tip {
-  margin-top: 14px;
-  margin-bottom: 0;
-  padding: 12px 14px;
-  font-size: 0.8125rem;
-  line-height: 1.45;
-  color: var(--linea-text-muted);
-  background: rgba(10, 10, 18, 0.55);
-  border: 1px solid var(--linea-code-border);
-  border-radius: var(--radius-control);
-}
 
-.deploy-proxy-tip code {
-  font-size: 0.75rem;
-  color: #d1d5db;
-}
 
 .deploy-card {
   border-radius: var(--radius-card);
@@ -376,11 +361,6 @@ body.signer-ui-body {
   color: var(--linea-cyan);
 }
 
-.deploy-batch-note {
-  margin-bottom: 12px;
-  color: var(--linea-text-muted);
-  font-size: 0.9375rem;
-}
 
 .deploy-history-list {
   list-style: none;
@@ -490,29 +470,8 @@ body.signer-ui-body {
   text-decoration: underline;
 }
 
-.deploy-kind-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 4px;
-}
 
-.deploy-pending-label + .deploy-kind-badges {
-  margin-top: 0;
-  margin-bottom: 8px;
-}
 
-.deploy-kind-badge {
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 4px 8px;
-  border-radius: 6px;
-  background: rgba(97, 223, 255, 0.1);
-  color: var(--linea-cyan);
-  border: 1px solid rgba(97, 223, 255, 0.35);
-}
 
 .deploy-progress {
   margin: 10px 0 12px;

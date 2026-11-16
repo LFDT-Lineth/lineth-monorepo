@@ -1,7 +1,6 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 /**
- * Replaces `20_deploy_V3DexSwapAdapter.ts` (tag `V3DexSwapAdapter`).
  * Parameters: `router`, `wethToken`, `lineaToken`, `poolTickSpacing`.
  */
 export default buildModule("V3DexSwapAdapter", (m) => {

@@ -5,7 +5,6 @@ import { splitList, toUint } from "../lib/parameters.js";
 import type { DeployCompanion, ParameterContext } from "../../../hardhat-plugins/deploy/types.js";
 import type { ModuleParameters } from "@nomicfoundation/ignition-core";
 
-/** `02_deploy_Timelock.ts`. */
 export function timelockParameters(context: ParameterContext): ModuleParameters {
   const timeLockProposers = getRequiredEnvVar("TIMELOCK_PROPOSERS");
   const timelockExecutors = getRequiredEnvVar("TIMELOCK_EXECUTORS");

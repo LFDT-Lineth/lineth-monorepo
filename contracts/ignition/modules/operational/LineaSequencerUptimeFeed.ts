@@ -1,7 +1,6 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 /**
- * Replaces `13_deploy_BaseSequencerUptimeFeed.ts` (tag `LineaSequencerUptimeFeed`).
  * Parameters: `initialStatus`, `admin`, `feedUpdater`.
  */
 export default buildModule("LineaSequencerUptimeFeed", (m) => {

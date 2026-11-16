@@ -1,10 +1,10 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 import { zeroAddress } from "viem";
 
-import { deployPinnedTransparentProxy } from "../lib/proxy.js";
+import { UNSAFE_ALLOW, deployPinnedTransparentProxy } from "../lib/proxy.js";
 
 /**
- * Replaces `03_deploy_Validium.ts` (tag `Validium`): implementation + pinned OZ 4.x proxy, `initialize(InitializationData)`.
+ * Implementation + pinned OZ 4.x proxy, `initialize(InitializationData)`.
  *
  * Parameters: `initialStateRootHash`, `initialL2BlockNumber`, `genesisTimestamp`, `verifier`, `rateLimitPeriodInSeconds`,
  * `rateLimitAmountInWei`, `roleAddresses`, `pauseTypeRoles`, `unpauseTypeRoles`, `securityCouncil`, `addressFilter`.
@@ -13,7 +13,7 @@ export default buildModule("Validium", (m) => {
   const implementation = m.contract("Validium", [], { id: "ValidiumImplementation" });
   const { proxy, proxyAdmin } = deployPinnedTransparentProxy(m, {
     name: "Validium",
-    unsafeAllow: ["constructor", "incorrect-initializer-order"],
+    unsafeAllow: UNSAFE_ALLOW.Validium,
     implementation,
     initializer: "initialize",
     initializerArgs: [

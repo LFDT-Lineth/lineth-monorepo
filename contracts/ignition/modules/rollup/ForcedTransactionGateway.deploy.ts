@@ -2,11 +2,9 @@ import { getRequiredEnvVar } from "../../../common/helpers/environment.js";
 import { requireAddressFromRegistryOrEnv } from "../../../common/helpers/readAddress.js";
 import { toUint } from "../lib/parameters.js";
 
-import type { DeployCompanion, ParameterContext } from "../../../hardhat-plugins/deploy/types.js";
-import type { ModuleParameters } from "@nomicfoundation/ignition-core";
+import type { DeployCompanion } from "../../../hardhat-plugins/deploy/types.js";
 
-/** `22_deploy_ForcedTransactionGateway.ts`. */
-export function forcedTransactionGatewayParameters(context: ParameterContext): ModuleParameters {
+export const parameters: NonNullable<DeployCompanion["parameters"]> = async (context) => {
   const { networkName } = context;
   const linethRollupAddress = requireAddressFromRegistryOrEnv(networkName, "LinethRollup", "LINETH_ROLLUP_ADDRESS");
   const destinationChainId = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID");
@@ -28,19 +26,17 @@ export function forcedTransactionGatewayParameters(context: ParameterContext): M
   const blockNumberDeadlineBuffer = getRequiredEnvVar("FORCED_TRANSACTION_BLOCK_NUMBER_DEADLINE_BUFFER");
 
   return {
-    mimcLibrary: mimcLibraryAddress,
-    linethRollup: linethRollupAddress,
-    destinationChainId: toUint("FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID", destinationChainId),
-    l2BlockBuffer: toUint("FORCED_TRANSACTION_GATEWAY_L2_BLOCK_BUFFER", l2BlockBuffer),
-    maxGasLimit: toUint("FORCED_TRANSACTION_GATEWAY_MAX_GAS_LIMIT", maxGasLimit),
-    maxInputLengthBuffer: toUint("FORCED_TRANSACTION_GATEWAY_MAX_INPUT_LENGTH_BUFFER", maxInputLengthBuffer),
-    securityCouncil: defaultAdmin,
-    addressFilter,
-    l2BlockDurationSeconds: toUint("FORCED_TRANSACTION_L2_BLOCK_DURATION_SECONDS", l2BlockDurationSeconds),
-    blockNumberDeadlineBuffer: toUint("FORCED_TRANSACTION_BLOCK_NUMBER_DEADLINE_BUFFER", blockNumberDeadlineBuffer),
+    ForcedTransactionGateway: {
+      mimcLibrary: mimcLibraryAddress,
+      linethRollup: linethRollupAddress,
+      destinationChainId: toUint("FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID", destinationChainId),
+      l2BlockBuffer: toUint("FORCED_TRANSACTION_GATEWAY_L2_BLOCK_BUFFER", l2BlockBuffer),
+      maxGasLimit: toUint("FORCED_TRANSACTION_GATEWAY_MAX_GAS_LIMIT", maxGasLimit),
+      maxInputLengthBuffer: toUint("FORCED_TRANSACTION_GATEWAY_MAX_INPUT_LENGTH_BUFFER", maxInputLengthBuffer),
+      securityCouncil: defaultAdmin,
+      addressFilter,
+      l2BlockDurationSeconds: toUint("FORCED_TRANSACTION_L2_BLOCK_DURATION_SECONDS", l2BlockDurationSeconds),
+      blockNumberDeadlineBuffer: toUint("FORCED_TRANSACTION_BLOCK_NUMBER_DEADLINE_BUFFER", blockNumberDeadlineBuffer),
+    },
   };
-}
-
-export const parameters: NonNullable<DeployCompanion["parameters"]> = async (context) => ({
-  ForcedTransactionGateway: forcedTransactionGatewayParameters(context),
-});
+};

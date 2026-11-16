@@ -1,9 +1,11 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
-import { deployPinnedTransparentProxy } from "../lib/proxy.js";
+import { UNSAFE_ALLOW, deployPinnedTransparentProxy } from "../lib/proxy.js";
+
+import type { CallableContractFuture, IgnitionModuleBuilder } from "@nomicfoundation/ignition-core";
 
 /**
- * Replaces `21_deploy_YieldManager.ts` (tag `YieldManager`): YieldManager (implementation with constructor `linethRollup` +
+ * YieldManager (implementation with constructor `linethRollup` +
  * pinned OZ 4.x proxy, `initialize(YieldManagerInitializationData)`), ValidatorContainerProofVerifier,
  * LidoStVaultYieldProviderFactory, and one LidoStVaultYieldProvider created through the factory.
  *
@@ -16,7 +18,7 @@ export default buildModule("YieldManager", (m) => {
   const implementation = m.contract("YieldManager", [linethRollup], { id: "YieldManagerImplementation" });
   const { proxy, proxyAdmin } = deployPinnedTransparentProxy(m, {
     name: "YieldManager",
-    unsafeAllow: ["constructor", "incorrect-initializer-order", "state-variable-immutable", "delegatecall"],
+    unsafeAllow: UNSAFE_ALLOW.YieldManager,
     implementation,
     initializer: "initialize",
     initializerArgs: [m.getParameter("yieldManagerInitializationData")],
@@ -46,18 +48,7 @@ export default buildModule("YieldManager", (m) => {
     { id: "LidoStVaultYieldProviderFactory" },
   );
 
-  const createYieldProvider = m.call(lidoStVaultYieldProviderFactory, "createLidoStVaultYieldProvider", [], {
-    id: "CreateLidoStVaultYieldProvider",
-  });
-  const yieldProviderAddress = m.readEventArgument(
-    createYieldProvider,
-    "LidoStVaultYieldProviderCreated",
-    "providerAddress",
-    { id: "LidoStVaultYieldProviderAddress", emitter: lidoStVaultYieldProviderFactory },
-  );
-  const lidoStVaultYieldProvider = m.contractAt("LidoStVaultYieldProvider", yieldProviderAddress, {
-    id: "LidoStVaultYieldProvider",
-  });
+  const lidoStVaultYieldProvider = addLidoStVaultYieldProvider(m, lidoStVaultYieldProviderFactory);
 
   return {
     yieldManager,
@@ -69,3 +60,19 @@ export default buildModule("YieldManager", (m) => {
     lidoStVaultYieldProvider,
   };
 });
+
+/** Creates one LidoStVaultYieldProvider through `factory` and addresses it with the compiled ABI. */
+export function addLidoStVaultYieldProvider(m: IgnitionModuleBuilder, factory: CallableContractFuture<string>) {
+  const createYieldProvider = m.call(factory, "createLidoStVaultYieldProvider", [], {
+    id: "CreateLidoStVaultYieldProvider",
+  });
+  const yieldProviderAddress = m.readEventArgument(
+    createYieldProvider,
+    "LidoStVaultYieldProviderCreated",
+    "providerAddress",
+    { id: "LidoStVaultYieldProviderAddress", emitter: factory },
+  );
+  return m.contractAt("LidoStVaultYieldProvider", yieldProviderAddress, {
+    id: "LidoStVaultYieldProvider",
+  });
+}

@@ -15,7 +15,7 @@ import { toSolidityParameter, toUint } from "../lib/parameters.js";
 import type { DeployCompanion, ParameterContext } from "../../../hardhat-plugins/deploy/types.js";
 import type { ModuleParameters } from "@nomicfoundation/ignition-core";
 
-/** `03_deploy_LinethRollup.ts`. `verifier` is resolved only for the standalone module (the composite deploys one). */
+/** `verifier` is resolved only for the standalone module (the composite deploys one). */
 export function linethRollupParameters(
   context: ParameterContext,
   options: { includeVerifier: boolean },

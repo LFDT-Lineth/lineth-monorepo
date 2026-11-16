@@ -1,9 +1,9 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
-import { deployPinnedTransparentProxy } from "../lib/proxy.js";
+import { UNSAFE_ALLOW, deployPinnedTransparentProxy } from "../lib/proxy.js";
 
 /**
- * Replaces `08_deploy_CustomBridgedToken.ts` (tag `CustomBridgedToken`): implementation + pinned OZ 4.x proxy,
+ * Implementation + pinned OZ 4.x proxy,
  * `initializeV2(name, symbol, decimals, bridge)`.
  *
  * Parameters: `name`, `symbol`, `decimals`, `bridge`.
@@ -12,7 +12,7 @@ export default buildModule("CustomBridgedToken", (m) => {
   const implementation = m.contract("CustomBridgedToken", [], { id: "CustomBridgedTokenImplementation" });
   const { proxy, proxyAdmin } = deployPinnedTransparentProxy(m, {
     name: "CustomBridgedToken",
-    unsafeAllow: ["constructor", "missing-initializer"],
+    unsafeAllow: UNSAFE_ALLOW.CustomBridgedToken,
     implementation,
     initializer: "initializeV2",
     initializerArgs: [

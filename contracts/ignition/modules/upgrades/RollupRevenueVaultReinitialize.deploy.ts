@@ -4,7 +4,6 @@ import { toUint } from "../lib/parameters.js";
 
 import type { DeployCompanion } from "../../../hardhat-plugins/deploy/types.js";
 
-/** Same inputs as the Hardhat 2 `18_deploy_RollupRevenueVaultWithReinitialization.ts` script. */
 export const parameters: NonNullable<DeployCompanion["parameters"]> = async ({ networkName }) => ({
   RollupRevenueVaultReinitialize: {
     proxy: requireAddressFromRegistryOrEnv(networkName, "RollupRevenueVault", "ROLLUP_REVENUE_VAULT_ADDRESS"),

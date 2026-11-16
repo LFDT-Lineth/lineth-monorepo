@@ -14,9 +14,6 @@
     "signer-ui",
     "integrity-verifier",
     "cache",
-    "cache_forge",
-    "out",
-    "lib",
     "docs",
     "coverage"
   ]

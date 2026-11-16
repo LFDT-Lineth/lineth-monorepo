@@ -4,8 +4,8 @@ import { pinnedL2MessageServiceV1Artifact } from "../lib/pinned.js";
 import { deployPinnedTransparentProxy } from "../lib/proxy.js";
 
 /**
- * Replaces `04_deploy_L2MessageServiceV1.ts` (tag `L2MessageServiceLineaMainnet`): the Linea mainnet V1 implementation
- * from `deploy/V1/L2MessageServiceV1Deployed.json` (pinned bytecode) + pinned OZ 4.x proxy,
+ * The Linea mainnet V1 implementation
+ * from `deployments/bytecode/V1/L2MessageServiceV1Deployed.json` (pinned bytecode) + pinned OZ 4.x proxy,
  * `initialize(securityCouncil, l1l2MessageSetter, rateLimitPeriod, rateLimitAmount)`.
  *
  * Parameters: `securityCouncil`, `l1l2MessageSetter`, `rateLimitPeriod`, `rateLimitAmount`.

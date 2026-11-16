@@ -2,11 +2,9 @@ import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 import { getOptionalEnvVar, getRequiredEnvVar } from "../../../common/helpers/environment.js";
 
-import type { IgnitionModuleBuilder } from "@nomicfoundation/ignition-core";
-
 /**
  * Structural choices for the verifier deployment. Ignition parameters cannot pick which contract to deploy or whether a
- * future exists, so these two are read when the module is loaded (from the same env vars as the Hardhat 2 script);
+ * future exists, so these two are read from env vars when the module is loaded;
  * every value goes through `m.getParameter`.
  */
 export type PlonkVerifierShape = {
@@ -24,32 +22,16 @@ export function resolvePlonkVerifierShape(): PlonkVerifierShape {
   };
 }
 
-/** Adds `Mimc` (deployed or reused) and the Mimc-linked verifier to `m`. Parameters: `verifierChainConfiguration`, `mimcLibrary`. */
-export function addPlonkVerifier(m: IgnitionModuleBuilder, shape: PlonkVerifierShape) {
-  const mimc = shape.reuseMimc
-    ? m.contractAt("Mimc", m.getParameter<string>("mimcLibrary"), { id: "Mimc" })
-    : m.library("Mimc", { id: "Mimc" });
-  const verifier = m.contract(shape.verifierContractName, [m.getParameter("verifierChainConfiguration")], {
-    id: "PlonkVerifier",
-    libraries: { Mimc: mimc },
-  });
-  return { verifier, mimc };
-}
-
-const modulesByShape = new Map<string, ReturnType<typeof createPlonkVerifierModule>>();
-
-function createPlonkVerifierModule(shape: PlonkVerifierShape) {
-  return buildModule("PlonkVerifier", (m) => addPlonkVerifier(m, shape));
-}
-
-/** One module object per shape, so composites and the standalone module never hold two different "PlonkVerifier" modules. */
+/** `Mimc` (deployed or reused) and the Mimc-linked verifier. Parameters: `verifierChainConfiguration`, `mimcLibrary`. */
 export function buildPlonkVerifierModule(shape: PlonkVerifierShape) {
-  const key = `${shape.verifierContractName}|${shape.reuseMimc}`;
-  const existing = modulesByShape.get(key);
-  if (existing !== undefined) {
-    return existing;
-  }
-  const created = createPlonkVerifierModule(shape);
-  modulesByShape.set(key, created);
-  return created;
+  return buildModule("PlonkVerifier", (m) => {
+    const mimc = shape.reuseMimc
+      ? m.contractAt("Mimc", m.getParameter<string>("mimcLibrary"), { id: "Mimc" })
+      : m.library("Mimc", { id: "Mimc" });
+    const verifier = m.contract(shape.verifierContractName, [m.getParameter("verifierChainConfiguration")], {
+      id: "PlonkVerifier",
+      libraries: { Mimc: mimc },
+    });
+    return { verifier, mimc };
+  });
 }

@@ -16,7 +16,7 @@ import { reportTokenBridge } from "../lib/tokenBridgeReport.js";
 import type { DeployCompanion, ParameterContext } from "../../../hardhat-plugins/deploy/types.js";
 import type { ModuleParameters } from "@nomicfoundation/ignition-core";
 
-/** `06_deploy_TokenBridge.ts`. `tokenBeacon` is resolved only for the standalone module (the composite deploys one). */
+/** `tokenBeacon` is resolved only for the standalone module (the composite deploys one). */
 export function tokenBridgeParameters(
   context: ParameterContext,
   options: { includeBeacon: boolean },

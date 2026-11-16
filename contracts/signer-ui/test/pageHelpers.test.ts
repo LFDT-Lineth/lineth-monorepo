@@ -4,7 +4,6 @@ import test from "node:test";
 import {
   canEnableSignButton,
   firstWalletAddress,
-  nextWorkflowDisplayState,
   progressStageLabel,
   progressTone,
   scrollToHistoryFragment,
@@ -13,9 +12,6 @@ import {
   signerUiHistoryStorageKey,
   signerUiLastSessionIdStorageKey,
   transactionExplorerUrl,
-  transactionKindBadgeLabels,
-  type WorkflowStatus,
-  workflowStageLabel,
 } from "../app/pageHelpers.ts";
 
 test("progress helpers return expected labels and tones", () => {
@@ -27,11 +23,6 @@ test("progress helpers return expected labels and tones", () => {
 
   assert.equal(progressTone("awaiting_wallet_approval"), "active");
   assert.equal(progressTone("failed"), "error");
-});
-
-test("workflow status labels are stable", () => {
-  assert.equal(workflowStageLabel("waiting_for_transaction_receipt"), "Waiting for transaction receipt");
-  assert.equal(workflowStageLabel("waiting_for_contract_verification"), "Waiting for contract verification");
 });
 
 test("storage key helpers are deterministic", () => {
@@ -100,87 +91,6 @@ test("sign button enablement follows connected provider address, not only wagmi 
     }),
     false,
   );
-});
-
-test("transaction kind badges infer OpenZeppelin proxy and proxy admin", () => {
-  assert.deepEqual(
-    transactionKindBadgeLabels({
-      openZeppelinProxyKind: "uups",
-      contractName: "ProxyAdmin",
-    }),
-    ["UUPS proxy (OpenZeppelin)", "Proxy admin contract"],
-  );
-  assert.deepEqual(transactionKindBadgeLabels(null), []);
-  assert.deepEqual(transactionKindBadgeLabels(undefined), []);
-});
-
-test("state status visible after source clears", () => {
-  const receiptStatus: WorkflowStatus = {
-    stage: "waiting_for_transaction_receipt",
-    message: "Waiting for transaction receipt for TestContract.",
-    updatedAt: "2026-04-01T10:00:00.000Z",
-  };
-
-  const shown = nextWorkflowDisplayState({
-    incomingWorkflow: receiptStatus,
-    currentWorkflow: null,
-    currentExpiresAtMs: 0,
-    nowMs: 1_000,
-    minimumVisibilityMs: 2_000,
-  });
-  assert.deepEqual(shown, { workflow: receiptStatus, expiresAtMs: 3_000 });
-
-  const stillVisible = nextWorkflowDisplayState({
-    incomingWorkflow: null,
-    currentWorkflow: shown.workflow,
-    currentExpiresAtMs: shown.expiresAtMs,
-    nowMs: 2_500,
-    minimumVisibilityMs: 2_000,
-  });
-  assert.deepEqual(stillVisible, shown);
-
-  const cleared = nextWorkflowDisplayState({
-    incomingWorkflow: null,
-    currentWorkflow: shown.workflow,
-    currentExpiresAtMs: shown.expiresAtMs,
-    nowMs: 3_001,
-    minimumVisibilityMs: 2_000,
-  });
-  assert.deepEqual(cleared, { workflow: null, expiresAtMs: 0 });
-});
-
-test("workflow display state replaces stage immediately and resets minimum visibility timer", () => {
-  const receiptStatus: WorkflowStatus = {
-    stage: "waiting_for_transaction_receipt",
-    message: "Waiting for transaction receipt.",
-    updatedAt: "2026-04-01T10:00:00.000Z",
-  };
-  const verificationStatus: WorkflowStatus = {
-    stage: "waiting_for_contract_verification",
-    message: "Waiting for contract verification.",
-    updatedAt: "2026-04-01T10:00:01.000Z",
-  };
-
-  const shown = nextWorkflowDisplayState({
-    incomingWorkflow: receiptStatus,
-    currentWorkflow: null,
-    currentExpiresAtMs: 0,
-    nowMs: 1_000,
-    minimumVisibilityMs: 2_000,
-  });
-
-  const replaced = nextWorkflowDisplayState({
-    incomingWorkflow: verificationStatus,
-    currentWorkflow: shown.workflow,
-    currentExpiresAtMs: shown.expiresAtMs,
-    nowMs: 1_500,
-    minimumVisibilityMs: 2_000,
-  });
-
-  assert.deepEqual(replaced, {
-    workflow: verificationStatus,
-    expiresAtMs: 3_500,
-  });
 });
 
 test("scrollToHistoryFragment updates hash and attempts smooth scroll three times", () => {

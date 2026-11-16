@@ -1,3 +1,5 @@
+import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
+
 import { pinnedTransparentUpgradeableProxyArtifact, pinnedUpgradeableBeaconArtifact } from "./pinned.js";
 import { recordUpgradeTarget } from "../../../hardhat-plugins/deploy/targets.js";
 import ProxyAdminModule from "../proxies/ProxyAdmin.js";
@@ -5,8 +7,22 @@ import ProxyAdminModule from "../proxies/ProxyAdmin.js";
 import type { UnsafeAllow } from "../../../hardhat-plugins/deploy/types.js";
 import type { ArgumentType, CallableContractFuture, IgnitionModuleBuilder } from "@nomicfoundation/ignition-core";
 
+/**
+ * OpenZeppelin Upgrades validation exceptions of each upgradeable contract, shared by its deploy and upgrade modules.
+ * `constructor`: the implementations disable initializers in their constructor.
+ */
+export const UNSAFE_ALLOW = {
+  LinethRollup: ["constructor", "incorrect-initializer-order"],
+  Validium: ["constructor", "incorrect-initializer-order"],
+  RollupRevenueVault: ["constructor", "incorrect-initializer-order"],
+  YieldManager: ["constructor", "incorrect-initializer-order", "state-variable-immutable", "delegatecall"],
+  L2MessageService: ["constructor"],
+  CustomBridgedToken: ["constructor", "missing-initializer"],
+  RecoverFunds: ["constructor"],
+} satisfies Record<string, UnsafeAllow>;
+
 type UpgradeSafety = {
-  /** OpenZeppelin validation exceptions (the Hardhat 2 script's `unsafeAllow`). */
+  /** OpenZeppelin validation exceptions (see `UNSAFE_ALLOW`). */
   unsafeAllow?: UnsafeAllow;
 };
 
@@ -88,7 +104,25 @@ export function deployUpgradeImplementation<ContractNameT extends string>(
     unsafeAllow: options.unsafeAllow ?? [],
     ...(options.reinitializer === undefined
       ? {}
-      : { reinitializer: { functionName: options.reinitializer.functionName, args: options.reinitializer.args ?? [] } }),
+      : {
+          reinitializer: { functionName: options.reinitializer.functionName, args: options.reinitializer.args ?? [] },
+        }),
   });
   return implementation;
+}
+
+/** An `Upgradeable*Predeploy` contract behind the pinned OZ 4.x proxy, initialized with `initialize()`. No parameters. */
+export function buildPredeployModule<ContractNameT extends string>(contractName: ContractNameT) {
+  return buildModule(contractName, (m) => {
+    const implementation = m.contract(contractName, [], { id: `${contractName}Implementation` });
+    const { proxy, proxyAdmin } = deployPinnedTransparentProxy(m, {
+      name: contractName,
+      unsafeAllow: ["constructor"],
+      implementation,
+      initializer: "initialize",
+      initializerArgs: [],
+    });
+    const predeploy = m.contractAt(contractName, proxy, { id: contractName });
+    return { predeploy, predeployImplementation: implementation, predeployProxy: proxy, proxyAdmin };
+  });
 }

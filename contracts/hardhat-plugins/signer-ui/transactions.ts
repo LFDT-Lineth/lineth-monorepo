@@ -2,6 +2,7 @@
  * `eth_sendTransaction` → wallet request conversion, and validation that the transaction the browser reports is the
  * one Hardhat asked for.
  */
+import { setTimeout as sleep } from "node:timers/promises";
 import {
   type Address,
   type Hash,
@@ -68,10 +69,6 @@ const QUANTITY_FIELDS = [
 const UNSUPPORTED_TRANSACTION_FIELDS = ["blobs", "blobVersionedHashes", "authorizationList"] as const;
 const TX_LOOKUP_INTERVAL_MS = 200;
 const TX_LOOKUP_RPC_ATTEMPT_TIMEOUT_MS = 5_000;
-
-export async function sleep(ms: number): Promise<void> {
-  await new Promise((resolveSleep) => setTimeout(resolveSleep, ms));
-}
 
 /**
  * Wallets reject `eth_sendTransaction` if both legacy `gasPrice` and EIP-1559 fee fields are set.

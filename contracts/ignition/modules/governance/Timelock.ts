@@ -1,9 +1,8 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
-import type { IgnitionModuleBuilder } from "@nomicfoundation/ignition-core";
-
 /** Parameters: `timelockMinDelay`, `timelockProposers`, `timelockExecutors`, `timelockAdmin`. */
-export function addTimelock(m: IgnitionModuleBuilder) {
+
+export default buildModule("Timelock", (m) => {
   const timelock = m.contract(
     "TimeLock",
     [
@@ -15,7 +14,4 @@ export function addTimelock(m: IgnitionModuleBuilder) {
     { id: "TimeLock" },
   );
   return { timelock };
-}
-
-/** Replaces `02_deploy_Timelock.ts` (tag `Timelock`). */
-export default buildModule("Timelock", (m) => addTimelock(m));
+});

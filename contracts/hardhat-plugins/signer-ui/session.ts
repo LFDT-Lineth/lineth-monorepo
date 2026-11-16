@@ -32,4 +32,4 @@ export async function withSignerUi<T>(
   }
 }
 
-export { getUiWalletClient, setUiTransactionContext, warnIfUsingPrivateKeySigning } from "./bridge.js";
+export { getUiWalletClient, warnIfUsingPrivateKeySigning } from "./bridge.js";

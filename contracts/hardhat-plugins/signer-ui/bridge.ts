@@ -5,6 +5,7 @@
  */
 import { randomBytes, randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { setTimeout as sleep } from "node:timers/promises";
 import { type Address, type Hash, getAddress, hexToNumber, isAddress, isHex } from "viem";
 
 import { appendSignerUiBroadcast, getSignerUiBroadcastLogPath } from "./broadcast-log.js";
@@ -41,7 +42,6 @@ import {
   logSubmittedTransactionMismatch,
   normalizeGasFeeFieldsForWallet,
   parseSendTransactionParams,
-  sleep,
 } from "./transactions.js";
 import { getOptionalEnvVar } from "../../common/helpers/environment.js";
 import signerUiChainCatalog from "../../signer-ui/shared/chainCatalog.json" with { type: "json" };
@@ -64,17 +64,8 @@ type ChainMetadata = {
   nativeCurrency: { name: string; symbol: string; decimals: number };
 };
 
-/** Optional human-readable context shown in the signer UI (constructor / initializer args, etc.). */
-export type UiTransactionDetails = {
-  contractName?: string;
-  constructorArgs?: unknown;
-  initializerArgs?: unknown;
-  /** Short summary of proxy options when relevant */
-  proxyOptions?: string;
-  notes?: string;
-  /** Set for OpenZeppelin `deployProxy` flows (`transparent` | `uups` | `beacon`). */
-  openZeppelinProxyKind?: "transparent" | "uups" | "beacon";
-};
+/** Human-readable context shown in the signer UI next to a transaction. */
+export type UiTransactionDetails = { contractName?: string; notes?: string };
 
 type TransactionPrompt = {
   id: string;
@@ -104,10 +95,6 @@ type TransactionProgressStage =
   | "waiting_for_hardhat_confirmation"
   | "failed";
 
-export type WorkflowStatusStage = "waiting_for_transaction_receipt" | "waiting_for_contract_verification";
-
-type WorkflowStatus = { stage: WorkflowStatusStage; message: string; updatedAt: string };
-
 /** `GET /api/session` payload (wire protocol of `signer-ui/app/page.tsx`). */
 type SessionState = {
   sessionId: string;
@@ -123,14 +110,9 @@ type SessionState = {
     message: string;
     updatedAt: string;
   } | null;
-  workflowStatus: WorkflowStatus | null;
   startedAt: string;
   /** 1-based index of signer-UI scopes (`withSignerUi`) that used this session. */
   scriptOrdinal: number;
-  /** True while a signer-UI scope is open. */
-  batchRunActive: boolean;
-  /** Former hardhat-deploy `--tags` list; always `null`. */
-  batchTagsSummary: null;
   /** Browser-signed transactions requested in this session. */
   transactionOrdinal: number;
   /** Set just before the bridge closes so the UI can stop polling; `null` while the run is in progress. */
@@ -165,8 +147,6 @@ export interface SignerUiSessionHandle {
     details: UiTransactionDetails | undefined,
   ): Promise<TransactionOutcome>;
   clearTransactionProgress(requestId?: string): void;
-  setWorkflowStatus(stage: WorkflowStatusStage, message: string): void;
-  clearWorkflowStatus(): void;
   setTerminalSessionOutcome(outcome: "complete" | "error", message?: string): void;
 }
 
@@ -218,8 +198,8 @@ let activeSession: SignerUiSessionHandle | undefined;
 let sessionCreation: Promise<SignerUiSessionHandle> | undefined;
 let sessionFactory: SignerUiSessionFactory = (context) => new SignerUiSession(context);
 let privateKeyUsageWarningShown = false;
-/** Labels for the next browser-signed transaction (set before the session may exist; consumed by the hook). */
-let nextTransactionDetails: UiTransactionDetails | undefined;
+/** Labels browser-signed transactions in the UI (`SignerUiScopeOptions.describeTransaction` of the outermost scope). */
+let describeTransaction: SignerUiScopeOptions["describeTransaction"];
 /** Serializes `eth_sendTransaction` prompts: the UI shows one pending request at a time. */
 let sendQueue: Promise<void> = Promise.resolve();
 const chainIdByConnection = new WeakMap<object, number>();
@@ -280,24 +260,6 @@ export function warnIfUsingPrivateKeySigning(details: { networkName?: string; sc
   );
 }
 
-/**
- * Minimum time a workflow stage stays on screen (`HARDHAT_SIGNER_UI_WORKFLOW_STATUS_STAGE_MIN_MS`) before the next one
- * replaces it, so fast stages remain readable.
- */
-function workflowStatusTransitionDelayMs(params: {
-  currentStage: WorkflowStatusStage | null;
-  nextStage: WorkflowStatusStage | null;
-  currentStageChangedAtMs: number;
-  nowMs: number;
-  minimumStageMs: number;
-}): number {
-  const { currentStage, nextStage, currentStageChangedAtMs, nowMs, minimumStageMs } = params;
-  if (currentStage === null || currentStage === nextStage || minimumStageMs <= 0) {
-    return 0;
-  }
-  return Math.max(minimumStageMs - Math.max(nowMs - currentStageChangedAtMs, 0), 0);
-}
-
 type PendingTransaction = {
   prompt: TransactionPrompt;
   resolve: (value: TransactionOutcome) => void;
@@ -323,9 +285,6 @@ class SignerUiSession implements SignerUiSessionHandle {
   private sessionAuthenticated = false;
   private pendingRequest: PendingTransaction | undefined;
   private transactionProgress: SessionState["transactionProgress"] = null;
-  private workflowStatus: WorkflowStatus | null = null;
-  private workflowStatusChangedAtMs = 0;
-  private workflowStatusTimer: NodeJS.Timeout | undefined;
   private walletState: SessionWalletState | null = null;
   private walletWaiters: WalletWaiter[] = [];
   private sessionOutcome: SessionState["sessionOutcome"] = null;
@@ -405,7 +364,6 @@ class SignerUiSession implements SignerUiSessionHandle {
     }
     this.closed = true;
     this.failPendingState(new Error(`HARDHAT_SIGNER_UI session closed during ${this.activeScriptContext}`));
-    clearTimeout(this.workflowStatusTimer);
 
     const server = this.server;
     this.server = undefined;
@@ -447,11 +405,8 @@ class SignerUiSession implements SignerUiSessionHandle {
       wallet: this.walletState,
       pendingRequest: this.pendingRequest?.prompt ?? null,
       transactionProgress: this.transactionProgress,
-      workflowStatus: this.workflowStatus,
       startedAt: this.startedAt,
       scriptOrdinal: this.scriptOrdinal,
-      batchRunActive: isSignerUiEnabled(),
-      batchTagsSummary: null,
       transactionOrdinal: this.transactionOrdinal,
       sessionOutcome: this.sessionOutcome,
       outcomeMessage: this.sessionOutcomeMessage,
@@ -466,37 +421,6 @@ class SignerUiSession implements SignerUiSessionHandle {
     if (this.transactionProgress && (!requestId || this.transactionProgress.requestId === requestId)) {
       this.transactionProgress = null;
     }
-  }
-
-  public setWorkflowStatus(stage: WorkflowStatusStage, message: string): void {
-    this.transitionWorkflowStatus({ stage, message });
-  }
-
-  public clearWorkflowStatus(): void {
-    this.transitionWorkflowStatus(null);
-  }
-
-  /** Applies `next` now, or once the current stage has been visible for the minimum time (latest update wins). */
-  private transitionWorkflowStatus(next: { stage: WorkflowStatusStage; message: string } | null): void {
-    clearTimeout(this.workflowStatusTimer);
-    const apply = () => {
-      this.workflowStatus = next && { ...next, updatedAt: new Date().toISOString() };
-      this.workflowStatusChangedAtMs = next ? Date.now() : 0;
-    };
-    const delayMs = workflowStatusTransitionDelayMs({
-      currentStage: this.workflowStatus?.stage ?? null,
-      nextStage: next?.stage ?? null,
-      currentStageChangedAtMs: this.workflowStatusChangedAtMs,
-      nowMs: Date.now(),
-      minimumStageMs: envMs("HARDHAT_SIGNER_UI_WORKFLOW_STATUS_STAGE_MIN_MS", 2000),
-    });
-    if (delayMs <= 0) {
-      apply();
-      return;
-    }
-    this.workflowStatusTimer = setTimeout(apply, delayMs);
-    // A deferred status update must not keep a finished command alive.
-    this.workflowStatusTimer.unref();
   }
 
   public async waitForWallet(): Promise<SessionWalletState> {
@@ -898,8 +822,7 @@ async function sendThroughSignerUi<ChainTypeT extends ChainType | string>(
     txRequest.chainId === undefined ? { ...txRequest, chainId: `0x${chainId.toString(16)}` } : txRequest;
   const label = serialized.to ? "Contract transaction" : "Contract creation";
   const description = serialized.to ? `Send transaction to ${serialized.to}` : "Send contract creation transaction";
-  const details = nextTransactionDetails;
-  nextTransactionDetails = undefined;
+  const details = describeTransaction?.(serialized);
 
   let outcome: TransactionOutcome;
   try {
@@ -994,26 +917,10 @@ export async function getUiWalletClient<ChainTypeT extends ChainType | string>(
   return wallet;
 }
 
-/** Labels the next browser-signed transaction only (kept until the next `eth_sendTransaction`). No-op outside a scope. */
-export function setUiTransactionContext(details: UiTransactionDetails): void {
-  if (isSignerUiEnabled()) {
-    nextTransactionDetails = details;
-  }
-}
-
-export function setUiWorkflowStatus(stage: WorkflowStatusStage, message: string): void {
-  if (isSignerUiEnabled()) {
-    activeSession?.setWorkflowStatus(stage, message);
-  }
-}
-
-export function clearUiWorkflowStatus(): void {
-  if (isSignerUiEnabled()) {
-    activeSession?.clearWorkflowStatus();
-  }
-}
-
-export type SignerUiScopeOptions = CloseSignerUiSessionOptions;
+export type SignerUiScopeOptions = CloseSignerUiSessionOptions & {
+  /** Labels each browser-signed transaction of the scope in the UI. */
+  describeTransaction?: ((request: SerializedTransactionRequest) => UiTransactionDetails | undefined) | undefined;
+};
 
 /**
  * Enables browser signing for the duration of `fn`. The session opens on the first `eth_accounts` /
@@ -1039,10 +946,17 @@ export async function runSignerUiScope<T>(
 
   signerUiScopeDepth = 1;
   signerUiScopeLabel = label;
+  describeTransaction = options.describeTransaction;
   console.log(`HARDHAT_SIGNER_UI: signing in the browser wallet for ${label}.`);
   let failureMessage: string | undefined;
+  const exitCodeBefore = process.exitCode;
   try {
-    return await fn();
+    const result = await fn();
+    // Tasks such as `ignition deploy` report a failure through the exit code instead of throwing.
+    if (process.exitCode !== exitCodeBefore && process.exitCode !== 0 && process.exitCode !== undefined) {
+      failureMessage = `${label} failed (exit code ${process.exitCode}); see the terminal.`;
+    }
+    return result;
   } catch (error: unknown) {
     failureMessage = error instanceof Error ? error.message : String(error);
     throw error;
@@ -1056,6 +970,7 @@ export async function runSignerUiScope<T>(
     } finally {
       signerUiScopeDepth = 0;
       signerUiScopeLabel = null;
+      describeTransaction = undefined;
     }
   }
 }
@@ -1069,7 +984,6 @@ export const __testOnlySignerUiBridge = {
   parseRespondPayload,
   parseSendTransactionParams,
   parseWalletPayload,
-  workflowStatusTransitionDelayMs,
   /** Replace the session implementation (e.g. a stub that signs locally); `undefined` restores the real one. */
   setSessionFactory(factory: SignerUiSessionFactory | undefined): void {
     sessionFactory = factory ?? ((context) => new SignerUiSession(context));

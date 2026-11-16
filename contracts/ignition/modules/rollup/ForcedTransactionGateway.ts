@@ -1,7 +1,7 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 /**
- * Replaces `22_deploy_ForcedTransactionGateway.ts` (tag `ForcedTransactionGateway`), linked against an existing `Mimc`.
+ * Linked against an existing `Mimc`.
  *
  * Parameters: `mimcLibrary`, `linethRollup`, `destinationChainId`, `l2BlockBuffer`, `maxGasLimit`, `maxInputLengthBuffer`,
  * `securityCouncil`, `addressFilter`, `l2BlockDurationSeconds`, `blockNumberDeadlineBuffer`.

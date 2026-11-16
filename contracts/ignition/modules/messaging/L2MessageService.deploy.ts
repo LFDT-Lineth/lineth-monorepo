@@ -12,7 +12,6 @@ import { toSolidityParameter, toUint } from "../lib/parameters.js";
 import type { DeployCompanion, ParameterContext } from "../../../hardhat-plugins/deploy/types.js";
 import type { ModuleParameters } from "@nomicfoundation/ignition-core";
 
-/** `04_deploy_L2MessageService.ts`. */
 export function l2MessageServiceParameters(context: ParameterContext): ModuleParameters {
   const { networkName } = context;
   const l2MessageServiceSecurityCouncil = requireAddressFromRegistryOrEnv(

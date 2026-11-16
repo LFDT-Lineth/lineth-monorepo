@@ -63,6 +63,10 @@ jobs:
       - name: Pre-compile contracts to cache solc
         run: pnpm -F contracts run build
 
+      # Needs the build: the contract types come from the generated artifacts.
+      - name: Type-check TypeScript
+        run: pnpm -F contracts run typecheck
+
       - name: Run smart contracts tests and generate coverage report
         run: pnpm -F contracts run coverage
 

@@ -2,11 +2,9 @@ import { getRequiredEnvVar } from "../../../common/helpers/environment.js";
 import { requireAddressFromRegistryOrEnv } from "../../../common/helpers/readAddress.js";
 import { toUint } from "../lib/parameters.js";
 
-import type { DeployCompanion, ParameterContext } from "../../../hardhat-plugins/deploy/types.js";
-import type { ModuleParameters } from "@nomicfoundation/ignition-core";
+import type { DeployCompanion } from "../../../hardhat-plugins/deploy/types.js";
 
-/** `18_deploy_RollupRevenueVault.ts`. */
-export function rollupRevenueVaultParameters(context: ParameterContext): ModuleParameters {
+export const parameters: NonNullable<DeployCompanion["parameters"]> = async (context) => {
   const { networkName } = context;
   const lastInvoiceDate = getRequiredEnvVar("ROLLUP_REVENUE_VAULT_LAST_INVOICE_DATE");
   const securityCouncil = requireAddressFromRegistryOrEnv(networkName, "L2_SECURITY_COUNCIL", "L2_SECURITY_COUNCIL");
@@ -44,19 +42,17 @@ export function rollupRevenueVaultParameters(context: ParameterContext): ModuleP
   );
 
   return {
-    lastInvoiceDate: toUint("ROLLUP_REVENUE_VAULT_LAST_INVOICE_DATE", lastInvoiceDate),
-    securityCouncil,
-    invoiceSubmitter,
-    burner,
-    invoicePaymentReceiver,
-    tokenBridge,
-    messageService,
-    l1LineaTokenBurner,
-    lineaToken,
-    dexSwapAdapter,
+    RollupRevenueVault: {
+      lastInvoiceDate: toUint("ROLLUP_REVENUE_VAULT_LAST_INVOICE_DATE", lastInvoiceDate),
+      securityCouncil,
+      invoiceSubmitter,
+      burner,
+      invoicePaymentReceiver,
+      tokenBridge,
+      messageService,
+      l1LineaTokenBurner,
+      lineaToken,
+      dexSwapAdapter,
+    },
   };
-}
-
-export const parameters: NonNullable<DeployCompanion["parameters"]> = async (context) => ({
-  RollupRevenueVault: rollupRevenueVaultParameters(context),
-});
+};

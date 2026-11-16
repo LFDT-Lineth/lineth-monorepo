@@ -8,34 +8,27 @@ import { formatEnvVarForLog } from "../../../common/helpers/envVarLogging.js";
 import { requireAddressFromRegistryOrEnv } from "../../../common/helpers/readAddress.js";
 import { getUiWalletClient } from "../../../hardhat-plugins/signer-ui/session.js";
 
-import type { DeployCompanion, ParameterContext } from "../../../hardhat-plugins/deploy/types.js";
+import type { DeployCompanion } from "../../../hardhat-plugins/deploy/types.js";
 import type { WalletClient } from "@nomicfoundation/hardhat-viem/types";
-import type { ModuleParameters } from "@nomicfoundation/ignition-core";
 import type { NetworkConnection } from "hardhat/types/network";
-
-/** `21_deploy_AddressFilter.ts`: the module has no parameters; resolve the Security Council now so a gap fails early. */
-export function addressFilterPreflight(context: ParameterContext): ModuleParameters {
-  requireAddressFromRegistryOrEnv(context.networkName, "L1_SECURITY_COUNCIL", "L1_SECURITY_COUNCIL");
-  return {};
-}
 
 /** The module has no parameters; resolve the Security Council now so a gap fails early. */
 export const parameters: NonNullable<DeployCompanion["parameters"]> = async (context) => {
-  addressFilterPreflight(context);
+  requireAddressFromRegistryOrEnv(context.networkName, "L1_SECURITY_COUNCIL", "L1_SECURITY_COUNCIL");
   return {};
 };
 
 const DEFAULT_FILTERED_ADDRESS_PATH = join(import.meta.dirname, "..", "..", "..", "addresses-filter.txt");
 
 /** Keeps each `setFilteredStatus` tx under Osaka-era gas limits (cold mapping writes per address). */
-export const SET_FILTERED_STATUS_BATCH_SIZE = 300;
+const SET_FILTERED_STATUS_BATCH_SIZE = 300;
 
 /**
  * Reads filtered addresses from the file at `ADDRESS_FILTER_FILE_PATH` (env) or
  * `contracts/addresses-filter.txt` (default). YAML-style list entries; excludes
  * precompiles already covered by {@link PRECOMPILES_ADDRESSES}.
  */
-export function loadAddressFilterFilteredAddressesFromFile(): Address[] {
+function loadAddressFilterFilteredAddressesFromFile(): Address[] {
   const customPath = getOptionalEnvVar("ADDRESS_FILTER_FILE_PATH");
   const filePath = customPath ?? DEFAULT_FILTERED_ADDRESS_PATH;
   const precompileSet = new Set(PRECOMPILES_ADDRESSES.map((a) => a.toLowerCase()));
@@ -67,7 +60,7 @@ export function loadAddressFilterFilteredAddressesFromFile(): Address[] {
 }
 
 /**
- * Second half of `21_deploy_AddressFilter.ts`: `setFilteredStatus` in batches, then hand `DEFAULT_ADMIN_ROLE` to
+ * `setFilteredStatus` in batches, then hands `DEFAULT_ADMIN_ROLE` to
  * `L1_SECURITY_COUNCIL` and renounce it (skipped when the deployer is the council). Safe to re-run: stops early when the
  * signer no longer holds `DEFAULT_ADMIN_ROLE` (configuration already done).
  */

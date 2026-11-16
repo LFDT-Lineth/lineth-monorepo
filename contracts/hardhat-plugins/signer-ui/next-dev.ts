@@ -4,8 +4,7 @@ import { readFileSync, unlinkSync } from "node:fs";
 import { createServer } from "node:http";
 import { Socket } from "node:net";
 import { join, resolve } from "node:path";
-
-import { sleep } from "./transactions.js";
+import { setTimeout as sleep } from "node:timers/promises";
 
 export const LOCALHOST = "127.0.0.1";
 const SIGNER_UI_DIR = resolve(import.meta.dirname, "../../signer-ui");

@@ -1,12 +1,12 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
-import { deployUpgradeImplementation } from "../lib/proxy.js";
+import { UNSAFE_ALLOW, deployUpgradeImplementation } from "../lib/proxy.js";
 
 /** New RollupRevenueVault implementation + `initializeRolesAndStorageVariables(...)` (`ProxyAdmin.upgradeAndCall` calldata). Parameters: `proxy`, `lastInvoiceDate`, `securityCouncil`, `invoiceSubmitter`, `burner`, `invoicePaymentReceiver`, `tokenBridge`, `messageService`, `l1LineaTokenBurner`, `lineaToken`, `dexSwapAdapter`. */
 export default buildModule("RollupRevenueVaultReinitialize", (m) => {
   const implementation = deployUpgradeImplementation(m, {
     contractName: "RollupRevenueVault",
-    unsafeAllow: ["constructor", "incorrect-initializer-order"],
+    unsafeAllow: UNSAFE_ALLOW.RollupRevenueVault,
     reinitializer: {
       functionName: "initializeRolesAndStorageVariables",
       args: [

@@ -9,12 +9,11 @@ import {
 import { getEnvVarOrDefault, getRequiredEnvVar } from "../../../common/helpers/environment.js";
 import { requireAddressFromRegistryOrEnv } from "../../../common/helpers/readAddress.js";
 import { generateRoleAssignments } from "../../../common/helpers/roles.js";
-import { toSolidityParameter } from "../lib/parameters.js";
+import { toInteger, toSolidityParameter, toUint } from "../lib/parameters.js";
 
 import type { DeployCompanion, ParameterContext } from "../../../hardhat-plugins/deploy/types.js";
 import type { ModuleParameters } from "@nomicfoundation/ignition-core";
 
-/** `21_deploy_YieldManager.ts` and `21_deploy_YieldManagerArtifacts.ts` (same inputs). */
 export function yieldManagerParameters(context: ParameterContext): ModuleParameters {
   const { networkName } = context;
   const linethRollupAddress = requireAddressFromRegistryOrEnv(networkName, "LinethRollup", "LINETH_ROLLUP_ADDRESS");
@@ -31,14 +30,22 @@ export function yieldManagerParameters(context: ParameterContext): ModuleParamet
   const vaultHub = requireAddressFromRegistryOrEnv(networkName, "VAULT_HUB", "VAULT_HUB");
   const vaultFactory = requireAddressFromRegistryOrEnv(networkName, "VAULT_FACTORY", "VAULT_FACTORY");
   const steth = requireAddressFromRegistryOrEnv(networkName, "STETH", "STETH");
-  const initialMinimumWithdrawalReservePercentageBps = parseInt(
+  const initialMinimumWithdrawalReservePercentageBps = toInteger(
+    "MINIMUM_WITHDRAWAL_RESERVE_PERCENTAGE_BPS",
     getRequiredEnvVar("MINIMUM_WITHDRAWAL_RESERVE_PERCENTAGE_BPS"),
   );
-  const initialTargetWithdrawalReservePercentageBps = parseInt(
+  const initialTargetWithdrawalReservePercentageBps = toInteger(
+    "TARGET_WITHDRAWAL_RESERVE_PERCENTAGE_BPS",
     getRequiredEnvVar("TARGET_WITHDRAWAL_RESERVE_PERCENTAGE_BPS"),
   );
-  const initialMinimumWithdrawalReserveAmount = BigInt(getRequiredEnvVar("MINIMUM_WITHDRAWAL_RESERVE_AMOUNT"));
-  const initialTargetWithdrawalReserveAmount = BigInt(getRequiredEnvVar("TARGET_WITHDRAWAL_RESERVE_AMOUNT"));
+  const initialMinimumWithdrawalReserveAmount = toUint(
+    "MINIMUM_WITHDRAWAL_RESERVE_AMOUNT",
+    getRequiredEnvVar("MINIMUM_WITHDRAWAL_RESERVE_AMOUNT"),
+  );
+  const initialTargetWithdrawalReserveAmount = toUint(
+    "TARGET_WITHDRAWAL_RESERVE_AMOUNT",
+    getRequiredEnvVar("TARGET_WITHDRAWAL_RESERVE_AMOUNT"),
+  );
   const gIFirstValidator = getEnvVarOrDefault("GI_FIRST_VALIDATOR", GI_FIRST_VALIDATOR);
   const gIPendingPartialWithdrawalsRoot = getEnvVarOrDefault(
     "GI_PENDING_PARTIAL_WITHDRAWALS_ROOT",

@@ -1,15 +1,9 @@
 import { requireAddressFromRegistryOrEnv } from "../../../common/helpers/readAddress.js";
 
-import type { DeployCompanion, ParameterContext } from "../../../hardhat-plugins/deploy/types.js";
-import type { ModuleParameters } from "@nomicfoundation/ignition-core";
+import type { DeployCompanion } from "../../../hardhat-plugins/deploy/types.js";
 
-/** `12_deploy_CallForwardingProxy.ts`. */
-export function callForwardingProxyParameters(context: ParameterContext): ModuleParameters {
+export const parameters: NonNullable<DeployCompanion["parameters"]> = async (context) => {
   // This should be the LinethRollup
   const targetAddress = requireAddressFromRegistryOrEnv(context.networkName, "LinethRollup", "LINETH_ROLLUP_ADDRESS");
-  return { target: targetAddress };
-}
-
-export const parameters: NonNullable<DeployCompanion["parameters"]> = async (context) => ({
-  CallForwardingProxy: callForwardingProxyParameters(context),
-});
+  return { CallForwardingProxy: { target: targetAddress } };
+};

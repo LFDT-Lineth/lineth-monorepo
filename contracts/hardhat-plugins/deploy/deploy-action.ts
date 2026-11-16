@@ -11,6 +11,7 @@ import {
   resolveModulePath,
   writeParametersFile,
 } from "./companion.js";
+import { createTransactionLabeler } from "./transaction-labels.js";
 import {
   collectUpgradeTargets,
   constructorArgsOf,
@@ -124,7 +125,8 @@ export default async function deployWithUpgradeChecks(
         if (constructorArgs.length === 0) {
           return bytecode.slice(2);
         }
-        const resolved = constructorArgs.map((arg) => resolveArgument(arg, { parameters }));
+        // Futures resolve to placeholders: their addresses are not known before the deployment.
+        const resolved = constructorArgs.map((arg) => resolveArgument(arg, { parameters, placeholders: true }));
         return `${bytecode.slice(2)}${toHex(JSON.stringify(resolved, jsonBigint)).slice(2)}`;
       }),
     );
@@ -177,6 +179,9 @@ export default async function deployWithUpgradeChecks(
       });
       return result;
     },
-    { shutdownNextDev: process.env.HARDHAT_SIGNER_UI_LEAVE_NEXT_DEV_AFTER_DEPLOY !== "true" },
+    {
+      shutdownNextDev: process.env.HARDHAT_SIGNER_UI_LEAVE_NEXT_DEV_AFTER_DEPLOY !== "true",
+      describeTransaction: hre.globalOptions.signerUi ? await createTransactionLabeler(hre, ignitionModule) : undefined,
+    },
   );
 }

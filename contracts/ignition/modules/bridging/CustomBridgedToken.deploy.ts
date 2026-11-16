@@ -2,11 +2,9 @@ import { getRequiredEnvVar } from "../../../common/helpers/environment.js";
 import { requireAddressFromRegistryOrEnv } from "../../../common/helpers/readAddress.js";
 import { toInteger } from "../lib/parameters.js";
 
-import type { DeployCompanion, ParameterContext } from "../../../hardhat-plugins/deploy/types.js";
-import type { ModuleParameters } from "@nomicfoundation/ignition-core";
+import type { DeployCompanion } from "../../../hardhat-plugins/deploy/types.js";
 
-/** `08_deploy_CustomBridgedToken.ts`. */
-export function customBridgedTokenParameters(context: ParameterContext): ModuleParameters {
+export const parameters: NonNullable<DeployCompanion["parameters"]> = async (context) => {
   const customTokenBridgeName = getRequiredEnvVar("CUSTOMTOKENBRIDGE_NAME");
   const customTokenBridgeSymbol = getRequiredEnvVar("CUSTOMTOKENBRIDGE_SYMBOL");
   const customTokenBridgeDecimals = getRequiredEnvVar("CUSTOMTOKENBRIDGE_DECIMALS");
@@ -18,13 +16,11 @@ export function customBridgedTokenParameters(context: ParameterContext): ModuleP
   console.log(`Current network's chainId is ${context.chainId}`);
 
   return {
-    name: customTokenBridgeName,
-    symbol: customTokenBridgeSymbol,
-    decimals: toInteger("CUSTOMTOKENBRIDGE_DECIMALS", customTokenBridgeDecimals),
-    bridge: customTokenBridgeBridgeAddress,
+    CustomBridgedToken: {
+      name: customTokenBridgeName,
+      symbol: customTokenBridgeSymbol,
+      decimals: toInteger("CUSTOMTOKENBRIDGE_DECIMALS", customTokenBridgeDecimals),
+      bridge: customTokenBridgeBridgeAddress,
+    },
   };
-}
-
-export const parameters: NonNullable<DeployCompanion["parameters"]> = async (context) => ({
-  CustomBridgedToken: customBridgedTokenParameters(context),
-});
+};

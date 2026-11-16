@@ -4,18 +4,18 @@
  * - `deployments/bytecode/mainnet-proxy`: OpenZeppelin 4.x `ProxyAdmin` / `TransparentUpgradeableProxy` (v4.8.3) and
  *   `UpgradeableBeacon` (v4.4.1), solc 0.8.9, byte-identical to the mainnet fleet. Every upgradeable / beacon module
  *   deploys these, never the OpenZeppelin 5 proxies of hardhat-upgrades 3+.
- * - `deploy/V1/L2MessageServiceV1Deployed.json`: the Linea mainnet L2MessageService V1 implementation.
+ * - `deployments/bytecode/V1/L2MessageServiceV1Deployed.json`: the Linea mainnet L2MessageService V1 implementation.
  * - `deployments/bytecode/2026-01-14`: YieldManager, ValidatorContainerProofVerifier, LidoStVaultYieldProviderFactory.
  */
 import { isHex } from "viem";
 
-import l2MessageServiceV1Json from "../../../deploy/V1/L2MessageServiceV1Deployed.json" with { type: "json" };
 import lidoStVaultYieldProviderFactoryJson from "../../../deployments/bytecode/2026-01-14/LidoStVaultYieldProviderFactory.json" with { type: "json" };
 import validatorContainerProofVerifierJson from "../../../deployments/bytecode/2026-01-14/ValidatorContainerProofVerifier.json" with { type: "json" };
 import yieldManagerJson from "../../../deployments/bytecode/2026-01-14/YieldManager.json" with { type: "json" };
 import proxyAdminJson from "../../../deployments/bytecode/mainnet-proxy/ProxyAdmin.json" with { type: "json" };
 import transparentUpgradeableProxyJson from "../../../deployments/bytecode/mainnet-proxy/TransparentUpgradeableProxy.json" with { type: "json" };
 import upgradeableBeaconJson from "../../../deployments/bytecode/mainnet-proxy/UpgradeableBeacon.json" with { type: "json" };
+import l2MessageServiceV1Json from "../../../deployments/bytecode/V1/L2MessageServiceV1Deployed.json" with { type: "json" };
 
 import type { Artifact } from "@nomicfoundation/ignition-core";
 import type { Abi, Hex } from "viem";
@@ -28,8 +28,7 @@ const ABI_ITEM_TYPES = new Set(["function", "event", "error", "constructor", "fa
 
 function isAbi(value: readonly unknown[]): value is Abi {
   return value.every(
-    (item) =>
-      typeof item === "object" && item !== null && "type" in item && ABI_ITEM_TYPES.has(String(item.type)),
+    (item) => typeof item === "object" && item !== null && "type" in item && ABI_ITEM_TYPES.has(String(item.type)),
   );
 }
 

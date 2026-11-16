@@ -10,7 +10,7 @@ import type {
 
 /**
  * Implementation + pinned OZ 4.x proxy, `initialize(InitializationData)`. `tokenBeacon` is a parameter for the standalone
- * module and the freshly deployed beacon in `chains/TokenBridgeWithBeacon`.
+ * module and the freshly deployed beacon in `stacks/TokenBridgeWithBeacon`.
  *
  * Parameters: `securityCouncil`, `messageService`, `sourceChainId`, `targetChainId`, `remoteSender`, `reservedTokens`,
  * `roleAddresses`, `pauseTypeRoles`, `unpauseTypeRoles`.
@@ -43,5 +43,5 @@ export function addTokenBridge(
   return { tokenBridge, tokenBridgeImplementation: implementation, tokenBridgeProxy: proxy, proxyAdmin };
 }
 
-/** Replaces `06_deploy_TokenBridge.ts` (tag `TokenBridge`). Extra parameter: `tokenBeacon`. */
+/** Extra parameter: `tokenBeacon`. */
 export default buildModule("TokenBridge", (m) => addTokenBridge(m, m.getParameter<string>("tokenBeacon")));

@@ -6,15 +6,7 @@ import {
   isModuleParameterRuntimeValue,
 } from "@nomicfoundation/ignition-core";
 import { upgrades } from "@openzeppelin/hardhat-upgrades/viem";
-import {
-  concat,
-  encodeAbiParameters,
-  encodeFunctionData,
-  getAddress,
-  isAddress,
-  parseAbiParameters,
-  zeroAddress,
-} from "viem";
+import { encodeFunctionData, getAddress, isAddress, parseAbi, zeroAddress } from "viem";
 
 import { getUpgradeTarget } from "./targets.js";
 
@@ -74,7 +66,6 @@ export function constructorArgsOf(future: Future): ArgumentType[] {
 type ResolveContext = {
   parameters: DeploymentParameters;
   contracts?: Record<string, Address>;
-  accounts?: readonly Address[];
   /** Before deploying: futures and accounts resolve to the zero address (OpenZeppelin only encodes the arguments). */
   placeholders?: boolean;
 };
@@ -91,11 +82,11 @@ export function resolveArgument(argument: ArgumentType, context: ResolveContext)
     }
     return value;
   }
-  if (isAccountRuntimeValue(argument)) {
-    return context.placeholders === true ? zeroAddress : context.accounts?.[argument.accountIndex];
-  }
-  if (isFuture(argument) && context.placeholders === true) {
+  if ((isAccountRuntimeValue(argument) || isFuture(argument)) && context.placeholders === true) {
     return zeroAddress;
+  }
+  if (isAccountRuntimeValue(argument)) {
+    throw new Error(`Account ${argument.accountIndex} cannot be used in an upgrade target's arguments.`);
   }
   if (isFuture(argument)) {
     const address = isContractFuture(argument) ? context.contracts?.[argument.id] : undefined;
@@ -187,21 +178,21 @@ export async function validateUpgradeTargets(
   }
 }
 
-/** `ProxyAdmin.upgrade(proxy, implementation)` (selector 0x99a88ec4). */
+const PROXY_ADMIN_ABI = parseAbi([
+  "function upgrade(address proxy, address implementation)",
+  "function upgradeAndCall(address proxy, address implementation, bytes data) payable",
+]);
+
 export function encodeProxyAdminUpgrade(proxy: Address, implementation: Address): Hex {
-  return concat(["0x99a88ec4", encodeAbiParameters(parseAbiParameters("address, address"), [proxy, implementation])]);
+  return encodeFunctionData({ abi: PROXY_ADMIN_ABI, functionName: "upgrade", args: [proxy, implementation] });
 }
 
-/** `ProxyAdmin.upgradeAndCall(proxy, implementation, data)` (selector 0x9623609d). */
 export function encodeProxyAdminUpgradeAndCall(proxy: Address, implementation: Address, data: Hex): Hex {
-  return concat([
-    "0x9623609d",
-    encodeAbiParameters(parseAbiParameters("address, address, bytes"), [proxy, implementation, data]),
-  ]);
-}
-
-function deployedAddress(contracts: Record<string, Address>, future: Future): Address | undefined {
-  return contracts[future.id];
+  return encodeFunctionData({
+    abi: PROXY_ADMIN_ABI,
+    functionName: "upgradeAndCall",
+    args: [proxy, implementation, data],
+  });
 }
 
 /**
@@ -220,7 +211,7 @@ export async function registerAndReportUpgradeTargets(
   }
   const oz = await upgrades(hre, connection);
   for (const target of targets) {
-    const implementation = deployedAddress(contracts, target.implementation);
+    const implementation = contracts[target.implementation.id];
     if (target.kind === "upgrade" && implementation !== undefined) {
       const proxy = resolveAddress(target.proxy, parameters);
       if (target.reinitializer === undefined) {
@@ -243,9 +234,9 @@ export async function registerAndReportUpgradeTargets(
 
     const imported =
       target.kind === "transparent"
-        ? deployedAddress(contracts, target.proxy)
+        ? contracts[target.proxy.id]
         : target.kind === "beacon"
-          ? deployedAddress(contracts, target.beacon)
+          ? contracts[target.beacon.id]
           : implementation;
     if (imported === undefined || isPinnedImplementation(target)) {
       continue;

@@ -12,11 +12,9 @@ import {
 import { generateRoleAssignments } from "../../../common/helpers/roles.js";
 import { toSolidityParameter, toUint } from "../lib/parameters.js";
 
-import type { DeployCompanion, ParameterContext } from "../../../hardhat-plugins/deploy/types.js";
-import type { ModuleParameters } from "@nomicfoundation/ignition-core";
+import type { DeployCompanion } from "../../../hardhat-plugins/deploy/types.js";
 
-/** `03_deploy_Validium.ts`. */
-export function validiumParameters(context: ParameterContext): ModuleParameters {
+export const parameters: NonNullable<DeployCompanion["parameters"]> = async (context) => {
   const { networkName } = context;
   const verifierAddress = requireAddressFromRegistryOrEnv(networkName, "PlonkVerifier", "VERIFIER_ADDRESS");
   const validiumInitialStateRootHash = getRequiredEnvVar("INITIAL_L2_STATE_ROOT_HASH");
@@ -40,20 +38,18 @@ export function validiumParameters(context: ParameterContext): ModuleParameters 
   const addressFilter = requireAddressFromRegistryOrEnv(networkName, "AddressFilter", "LINETH_ROLLUP_ADDRESS_FILTER");
 
   return {
-    verifier: verifierAddress,
-    initialStateRootHash: validiumInitialStateRootHash,
-    initialL2BlockNumber: toUint("INITIAL_L2_BLOCK_NUMBER", validiumInitialL2BlockNumber),
-    genesisTimestamp: toUint("L2_GENESIS_TIMESTAMP", validiumGenesisTimestamp),
-    rateLimitPeriodInSeconds: toUint("VALIDIUM_RATE_LIMIT_PERIOD", validiumRateLimitPeriodInSeconds),
-    rateLimitAmountInWei: toUint("VALIDIUM_RATE_LIMIT_AMOUNT", validiumRateLimitAmountInWei),
-    roleAddresses: toSolidityParameter(roleAddresses, "VALIDIUM_ROLE_ADDRESSES"),
-    pauseTypeRoles: toSolidityParameter(pauseTypeRoles, "VALIDIUM_PAUSE_TYPES_ROLES"),
-    unpauseTypeRoles: toSolidityParameter(unpauseTypeRoles, "VALIDIUM_UNPAUSE_TYPES_ROLES"),
-    securityCouncil: validiumSecurityCouncil,
-    addressFilter,
+    Validium: {
+      verifier: verifierAddress,
+      initialStateRootHash: validiumInitialStateRootHash,
+      initialL2BlockNumber: toUint("INITIAL_L2_BLOCK_NUMBER", validiumInitialL2BlockNumber),
+      genesisTimestamp: toUint("L2_GENESIS_TIMESTAMP", validiumGenesisTimestamp),
+      rateLimitPeriodInSeconds: toUint("VALIDIUM_RATE_LIMIT_PERIOD", validiumRateLimitPeriodInSeconds),
+      rateLimitAmountInWei: toUint("VALIDIUM_RATE_LIMIT_AMOUNT", validiumRateLimitAmountInWei),
+      roleAddresses: toSolidityParameter(roleAddresses, "VALIDIUM_ROLE_ADDRESSES"),
+      pauseTypeRoles: toSolidityParameter(pauseTypeRoles, "VALIDIUM_PAUSE_TYPES_ROLES"),
+      unpauseTypeRoles: toSolidityParameter(unpauseTypeRoles, "VALIDIUM_UNPAUSE_TYPES_ROLES"),
+      securityCouncil: validiumSecurityCouncil,
+      addressFilter,
+    },
   };
-}
-
-export const parameters: NonNullable<DeployCompanion["parameters"]> = async (context) => ({
-  Validium: validiumParameters(context),
-});
+};

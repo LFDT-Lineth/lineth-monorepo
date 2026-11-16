@@ -4,10 +4,8 @@ import { getRequiredEnvVar } from "../../../common/helpers/environment.js";
 import { formatEnvVarForLog, formatEnvVarValueForMessage } from "../../../common/helpers/envVarLogging.js";
 
 import type { DeployCompanion } from "../../../hardhat-plugins/deploy/types.js";
-import type { ModuleParameters } from "@nomicfoundation/ignition-core";
 
-/** `23_deploy_PaymentSplitterWrapper.ts` (same parsing and validation). */
-export function paymentSplitterWrapperParameters(): ModuleParameters {
+export const parameters: NonNullable<DeployCompanion["parameters"]> = async () => {
   const payeesRaw = getRequiredEnvVar("PAYMENT_SPLITTER_PAYEES");
   const sharesRaw = getRequiredEnvVar("PAYMENT_SPLITTER_SHARES");
 
@@ -58,9 +56,5 @@ export function paymentSplitterWrapperParameters(): ModuleParameters {
   console.log(`  payees: ${formatEnvVarForLog("PAYMENT_SPLITTER_PAYEES", payeesRaw)}`);
   console.log(`  shares: ${formatEnvVarForLog("PAYMENT_SPLITTER_SHARES", sharesRaw)}`);
 
-  return { payees: payeesArray, shares: sharesBigInt };
-}
-
-export const parameters: NonNullable<DeployCompanion["parameters"]> = async () => ({
-  PaymentSplitterWrapper: paymentSplitterWrapperParameters(),
-});
+  return { PaymentSplitterWrapper: { payees: payeesArray, shares: sharesBigInt } };
+};

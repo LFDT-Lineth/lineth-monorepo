@@ -4,8 +4,7 @@ import TimelockModule from "../governance/Timelock.js";
 import L2MessageServiceModule from "../messaging/L2MessageService.js";
 
 /**
- * Replaces `hardhat deploy --tags L2MessageService,Timelock`.
- * Parameters: `L2MessageService.*`, `Timelock.*`.
+ * L2MessageService and Timelock. Parameters: `L2MessageService.*`, `Timelock.*`.
  */
 export default buildModule("L2Protocol", (m) => {
   const l2MessageService = m.useModule(L2MessageServiceModule);

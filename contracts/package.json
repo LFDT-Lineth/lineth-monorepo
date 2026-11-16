@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "hardhat build",
+    "typecheck": "tsc --noEmit",
     "test": "pnpm run autoupdate && hardhat test",
     "test:reportgas": "hardhat test --gas-stats",
     "coverage": "pnpm run autoupdate && hardhat test --coverage",
@@ -21,7 +22,6 @@
     "lint": "pnpm run lint:sol && pnpm run lint:ts && pnpm run prettier:sol",
     "lint:fix": "pnpm run lint:sol:fix && pnpm run lint:ts:fix && pnpm run prettier:sol:fix",
     "validate:address-registry": "tsx scripts/deployment/validateAddressRegistry.ts",
-    "validate:deploy-scripts": "tsx scripts/deployment/validateDeployScripts.ts",
     "clean": "rimraf build cache node_modules coverage",
     "clean:validations": "rimraf cache/validations.json && hardhat build",
     "solidity:docgen": "hardhat build && tsx scripts/docgen.ts"
@@ -30,7 +30,6 @@
     "@chainlink/contracts": "1.5.0",
     "@chainsafe/blst": "2.2.0",
     "@chainsafe/persistent-merkle-tree": "1.3.1",
-    "@ethereumjs/util": "10.1.3",
     "@lfdt-lineth/eslint-config": "workspace:*",
     "@lidofinance/lsv-cli": "1.9.0",
     "@lodestar/types": "1.50.1",
@@ -52,9 +51,7 @@
     "@types/yargs": "catalog:",
     "c-kzg": "4.1.0",
     "chai": "6.3.0",
-    "colors": "1.4.0",
     "csv-parser": "3.2.1",
-    "diff": "8.0.4",
     "dotenv": "catalog:",
     "ethers": "6.17.0",
     "forge-std": "github:foundry-rs/forge-std#1eea5bae12ae557d589f9f0f0edae2faa47cb262",
