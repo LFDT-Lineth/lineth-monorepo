@@ -54,7 +54,7 @@ permissions:
 jobs:
   retag-latest-docker-tags:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
-    environment: dockerhub-${{ matrix.image-name }}
+    environment: ${{ github.ref == 'refs/heads/main' && format('dockerhub-{0}', matrix.image-name) || format('dockerhub-{0}-approval', matrix.image-name) }}
     strategy:
       fail-fast: true
       matrix:
