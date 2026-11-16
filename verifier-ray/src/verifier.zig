@@ -385,7 +385,7 @@ pub fn verifyWithWorkspace(
     const entry_claims = entry_claims_buf.slice();
 
     const pcs_challenges = try pcs.deriveChallenges(pcs_system, &recon, &transcript, opening.proof.fri_proof);
-    try pcs.verify(pcs_system, .{
+    try pcs.verifyReconstructed(pcs_system, &recon, .{
         .roots = &bound_roots,
         .entry_claims = entry_claims,
         .zeta = all_coins[zeta_index],

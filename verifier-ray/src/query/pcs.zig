@@ -1031,7 +1031,15 @@ fn InputQuerySource(comptime system: System) type {
 
 pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     const recon = try reconstructWithManifest(system, input.module_sizes, input.manifest);
-    const routing = try routeInputRoots(system, &recon, input.roots);
+    return verifyReconstructed(system, &recon, input);
+}
+
+/// `verify` on a layout the caller has already reconstructed. `recon` must be
+/// `reconstructWithManifest(system, input.module_sizes, input.manifest)`; the
+/// full verifier builds it once and shares it with claim routing instead of
+/// rebuilding it here.
+pub fn verifyReconstructed(comptime system: System, recon: *const Reconstructed(system), input: VerifyInput) Error!void {
+    const routing = try routeInputRoots(system, recon, input.roots);
     const params = recon.params;
     const num_entries = recon.num_entries;
     const num_rounds = params.numRoundsRuntime();
@@ -1090,7 +1098,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     var input_root_frontiers: [tree_cap]poseidon2.Digest = undefined;
     var input_aux_storage: [inputAuxCapacity(system)]?poseidon2.Digest = undefined;
     for (0..routing.tree_count) |tree_idx| {
-        const info = try buildInputCapInfo(system, &recon, routing, tree_idx);
+        const info = try buildInputCapInfo(system, recon, routing, tree_idx);
         input_infos[tree_idx] = info;
         if (info.depth == 0) {
             if (input.proof.input_caps[tree_idx].nodes.len != 0 or input.proof.input_caps[tree_idx].tables.len != 0) return Error.InvalidCap;
@@ -1099,7 +1107,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
         } else {
             input_frontiers[tree_idx] = try authenticateInputCap(
                 system,
-                &recon,
+                recon,
                 info,
                 input.proof.input_caps[tree_idx],
                 routing.roots[tree_idx],
@@ -1175,7 +1183,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
             const domain_log_size = params.log_codeword_size - round;
             const level_size = @as(usize, 1) << @intCast(domain_log_size);
 
-            try bindInputTreeOpenings(system, &recon, source, e0, e1, level_size);
+            try bindInputTreeOpenings(system, recon, source, e0, e1, level_size);
 
             const alpha_deep: ext.Ext = if (round < num_rounds)
                 input.fold_alphas[round].square()
@@ -1189,7 +1197,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
 
             const self_val = try reconstructQueryValueAt(
                 system,
-                &recon,
+                recon,
                 source,
                 e0,
                 e1,
@@ -1204,7 +1212,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
             );
             const sib_val = try reconstructQueryValueAt(
                 system,
-                &recon,
+                recon,
                 source,
                 e0,
                 e1,
