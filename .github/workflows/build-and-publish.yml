@@ -41,14 +41,14 @@ on:
     outputs:
       linea_besu_package_tag:
         value: ${{ jobs.linea_besu_package_build_and_upload.outputs.linea_besu_package_tag }}
-    secrets:
-      DOCKERHUB_USERNAME:
-        required: false
-      DOCKERHUB_TOKEN:
-        required: false
 
 jobs:
   coordinator:
+    permissions:
+      contents: read
+      actions: read
+      packages: write
+      id-token: write
     uses: ./.github/workflows/coordinator-build-and-publish.yml
     if: ${{ inputs.coordinator_changed == 'true' }}
     with:
@@ -58,6 +58,11 @@ jobs:
     secrets: inherit
 
   native_yield_automation_service:
+    permissions:
+      contents: read
+      actions: read
+      packages: write
+      id-token: write
     uses: ./.github/workflows/native-yield-automation-service-build-and-publish.yml
     if: ${{ inputs.native_yield_automation_service_changed == 'true' }}
     with:
@@ -68,6 +73,11 @@ jobs:
     secrets: inherit
 
   lido_governance_monitor:
+    permissions:
+      contents: read
+      actions: read
+      packages: write
+      id-token: write
     uses: ./.github/workflows/lido-governance-monitor-build-and-publish.yml
     if: ${{ inputs.lido_governance_monitor_changed == 'true' }}
     with:
@@ -78,6 +88,11 @@ jobs:
     secrets: inherit
 
   prover:
+    permissions:
+      contents: read
+      actions: read
+      packages: write
+      id-token: write
     uses: ./.github/workflows/prover-build-and-publish.yml
     if: ${{ inputs.prover_changed == 'true' }}
     with:
@@ -87,6 +102,11 @@ jobs:
     secrets: inherit
 
   postman:
+    permissions:
+      contents: read
+      actions: read
+      packages: write
+      id-token: write
     uses: ./.github/workflows/postman-build-and-publish.yml
     if: ${{ inputs.postman_changed == 'true' }}
     with:
@@ -96,6 +116,11 @@ jobs:
     secrets: inherit
 
   transaction_exclusion_api:
+    permissions:
+      contents: read
+      actions: read
+      packages: write
+      id-token: write
     uses: ./.github/workflows/transaction-exclusion-api-build-and-publish.yml
     if: ${{ inputs.transaction_exclusion_api_changed == 'true' }}
     with:
@@ -105,6 +130,11 @@ jobs:
     secrets: inherit
 
   maru:
+    permissions:
+      contents: read
+      actions: read
+      packages: write
+      id-token: write
     uses: ./.github/workflows/maru-build-and-publish.yml
     if: ${{ inputs.maru_changed == 'true' }}
     with:

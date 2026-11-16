@@ -301,26 +301,23 @@ jobs:
           RUN_ID: ${{ inputs.run_id }}
         run: |
           set -euo pipefail
+          # Keep only the fields used below and pass them via a file, not a step
+          # output: the full job objects (with steps) of a large run exceed the
+          # 128 KiB per-env-var limit and the next step fails with E2BIG.
           gh api --paginate "repos/${REPO}/actions/runs/${RUN_ID}/jobs" \
-            --jq '.jobs' \
-            | jq -s '{jobs: map(.[]) }' \
-            > jobs.json
-
-          echo "json<<EOF" >> $GITHUB_OUTPUT
-          cat jobs.json >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+            --jq '.jobs[] | {name, conclusion, html_url}' \
+            | jq -s '{jobs: .}' \
+            > "${RUNNER_TEMP}/jobs.json"
 
       - name: Extract failed and cancelled jobs
         id: extract_jobs
         shell: bash
-        env:
-          JOBS_JSON: "${{ steps.jobs.outputs.json }}"
         run: |
           set -euo pipefail
 
           extract_jobs() {
             local conclusion="$1"
-            printf "%s" "$JOBS_JSON" | jq -c --arg c "$conclusion" '
+            jq -c --arg c "$conclusion" '
               [
                 .jobs[]
                 | select(.conclusion == $c)
@@ -332,7 +329,7 @@ jobs:
                     ]
                   }
               ]
-            '
+            ' "${RUNNER_TEMP}/jobs.json"
           }
 
           failed=$(extract_jobs "failure")
