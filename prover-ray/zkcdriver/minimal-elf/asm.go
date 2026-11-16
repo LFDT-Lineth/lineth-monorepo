@@ -184,8 +184,14 @@ func (a *assembler) ecall()                      { a.emit(opSystem) }
 // through the write syscall on the GUEST_OUT file descriptor (4). It clobbers
 // a0, which receives size back, a1, a2 and a7, so addr must not be a0 and size
 // neither a0 nor a1.
-func (a *assembler) writeOutput(addr, size reg) {
-	a.addi(a0, zero, 4)
+func (a *assembler) writeOutput(addr, size reg) { a.write(4, addr, size) }
+
+// writeLog is [assembler.writeOutput] to guest_log, on the GUEST_LOG file
+// descriptor (3).
+func (a *assembler) writeLog(addr, size reg) { a.write(3, addr, size) }
+
+func (a *assembler) write(fd int32, addr, size reg) {
+	a.addi(a0, zero, fd)
 	a.addi(a1, addr, 0)
 	a.addi(a2, size, 0)
 	a.addi(a7, zero, 64)

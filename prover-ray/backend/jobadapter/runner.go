@@ -56,7 +56,7 @@ func WithMode(m backend.ProverMode) RunnerOption {
 }
 
 // WithNativeRunnerBin sets the path to the native l2_execution_runner binary,
-// required by dev-zkvm mode.
+// required by dev-zkvm mode and optional in dev-partial.
 func WithNativeRunnerBin(path string) RunnerOption {
 	return func(r *Runner) { r.nativeRunnerBin = path }
 }
@@ -147,10 +147,13 @@ func (r *Runner) runL2Execution(ctx context.Context, runReq RunRequest) RunResul
 	if r.mode == backend.ProverModeDevZkVM {
 		return r.runL2ExecutionZkVM(ctx, runReq, req)
 	}
+	if r.mode == backend.ProverModeDevPartial {
+		return r.runL2ExecutionDevPartial(ctx, runReq, req)
+	}
 
-	// dev-mock accepts ranges and forced transactions (it runs no guest); dev-zkvm
-	// is handled above. The real proving modes (full, partial) support a single
-	// block only, today.
+	// dev-mock accepts ranges and forced transactions (it runs no guest);
+	// dev-zkvm and dev-partial are handled above. full supports a single block
+	// only, today.
 	if r.mode != backend.ProverModeDevMock {
 		if len(req.Payloads) != 1 {
 			return failedRunResult(runReq.ID, FailureCodeInvalidInput, fmt.Errorf(
@@ -287,6 +290,54 @@ func (r *Runner) runL2ExecutionZkVM(ctx context.Context, runReq RunRequest, req 
 
 	return RunResult{
 		ResponseBody: newExecutionResponseFromNative(out, r.responseVersion(), req.GuestProgramID),
+		Status:       RunStatusSuccess,
+	}
+}
+
+// runL2ExecutionDevPartial runs the guest on the extended input, as dev-zkvm
+// does, and shapes the response from the result: the public inputs decoded
+// from the guest output and a devmode proof. The guest's end block and block
+// count must match the request. With a native runner set, the guest output
+// must also equal the native runner's --ssz output byte for byte.
+func (r *Runner) runL2ExecutionDevPartial(ctx context.Context, runReq RunRequest, req *L2ExecutionRequest) RunResult {
+	extended := ssz.EncodeExtendedInput(buildExtendedInput(req))
+	startBlock := req.Payloads[0].BlockNumber
+	endBlock := req.Payloads[len(req.Payloads)-1].BlockNumber
+
+	// Temporary: drop the native runner check once the VM passes the RISC-V
+	// compliance tests, or before a second guest version goes live. It runs
+	// first, as it is fast and the guest is not.
+	var native []byte
+	if r.nativeRunnerBin != "" {
+		var err error
+		if native, err = nativerunner.RunSSZ(ctx, r.nativeRunnerBin, extended); err != nil {
+			return failedRunResult(runReq.ID, FailureCodeInternalError, err)
+		}
+	}
+
+	result := r.prover.Prove(ctx, backend.Job{
+		ID:             runReq.ID,
+		Type:           runReq.Type,
+		GuestProgramID: [32]byte(req.GuestProgramID),
+		StartBlock:     startBlock,
+		EndBlock:       endBlock,
+		Payload:        extended,
+	})
+	if result.Status != backend.ResultStatusOK {
+		return proverFailure(runReq.ID, result)
+	}
+	if pi := result.PublicInputs; pi.EndBlockNumber != endBlock || pi.BlockCount != uint64(len(req.Payloads)) {
+		return failedRunResult(runReq.ID, FailureCodeInternalError, fmt.Errorf(
+			"guest public inputs do not match the request: end block %d, block count %d, want %d and %d",
+			pi.EndBlockNumber, pi.BlockCount, endBlock, len(req.Payloads)))
+	}
+	if native != nil && !bytes.Equal(result.GuestOutput, native) {
+		return failedRunResult(runReq.ID, FailureCodeInternalError, fmt.Errorf(
+			"native runner check failed: guest output %x != native output %x", result.GuestOutput, native))
+	}
+
+	return RunResult{
+		ResponseBody: newExecutionResponse(result, startBlock, r.responseVersion(), req.GuestProgramID),
 		Status:       RunStatusSuccess,
 	}
 }

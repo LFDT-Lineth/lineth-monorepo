@@ -14,8 +14,7 @@ import (
 // leafDomainTag domain-separates Merkle leaves so a table with the same row
 // values but a different (BaseWidth, ExtWidth) shape hashes to a different
 // digest. Without this, e.g. an all-zero base row and an all-zero ext row
-// collide, letting two structurally distinct commitments share a Merkle root
-// and get deduplicated inside inputOpeningRoots.
+// collide, letting two structurally distinct commitments share a Merkle root.
 const leafDomainTag uint64 = 0x4c66_7269_5f6c_6631 // "Lfri_lf1"
 
 // absorbLeafHeader writes the domain tag and (baseWidth, extWidth) into h

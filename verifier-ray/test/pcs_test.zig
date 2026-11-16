@@ -178,6 +178,164 @@ test "pcs verify cases from prover-ray vectors" {
     }
 }
 
+fn pcsCaseNamed(comptime name: []const u8) fixtures.PcsCase {
+    inline for (fixtures.pcs_cases) |case| {
+        if (comptime std.mem.eql(u8, case.name, name)) return case;
+    }
+    @compileError("no pcs case named " ++ name);
+}
+
+fn withMerkleCapHeight(comptime system: pcs.System, comptime height: u8) pcs.System {
+    var s = system;
+    s.envelope_params.merkle_cap_height = height;
+    return s;
+}
+
+// The cap height is a per-System compile option (prover-ray defaults to none),
+// so the verifier must use the baked height rather than derive it from the
+// query count. normal_flow and normal_flow_no_cap are the same proof at cap
+// height 2 and 0 (4 queries); each must be rejected under the other's height.
+test "pcs uses the baked Merkle cap height" {
+    const capped = comptime pcsCaseNamed("normal_flow");
+    const uncapped = comptime pcsCaseNamed("normal_flow_no_cap");
+    comptime std.debug.assert(capped.system.envelope_params.merkle_cap_height == 2);
+    comptime std.debug.assert(uncapped.system.envelope_params.merkle_cap_height == 0);
+
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    try pcs.verify(capped.system, try toPCSVerifyInput(allocator, capped));
+    try pcs.verify(uncapped.system, try toPCSVerifyInput(allocator, uncapped));
+
+    try std.testing.expectError(error.InvalidCap, pcs.verify(
+        comptime withMerkleCapHeight(capped.system, 0),
+        try toPCSVerifyInput(allocator, capped),
+    ));
+    try std.testing.expectError(error.InvalidCap, pcs.verify(
+        comptime withMerkleCapHeight(uncapped.system, 2),
+        try toPCSVerifyInput(allocator, uncapped),
+    ));
+}
+
+// prover-ray keeps at least one FRI fold (#4322): with every column at size 1
+// under an envelope that can fold, the top size is raised to 2^1, round 0
+// folds the zero codeword and all columns join at the boundary round weighted
+// by the last fold challenge. Without the floor, alpha_DEEP would be zero and
+// only the first column would be checked, so a wrong claim on any later
+// column must still be rejected here.
+test "pcs keeps one fold when every column has size one" {
+    const case = comptime pcsCaseNamed("all_size_one");
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const recon = try pcs.reconstruct(case.system, &.{});
+    try std.testing.expectEqual(@as(u8, 1), recon.top_size);
+    try std.testing.expectEqual(@as(u8, 1), recon.params.numRoundsRuntime());
+    try std.testing.expectEqual(@as(usize, 3), recon.num_entries);
+
+    try pcs.verify(case.system, try toPCSVerifyInput(allocator, case));
+
+    for (0..recon.num_entries) |e| {
+        var input = try toPCSVerifyInput(allocator, case);
+        const claims = try allocator.dupe([]const ext.Ext, input.entry_claims);
+        const values = try allocator.dupe(ext.Ext, claims[e]);
+        values[0] = values[0].add(ext.Ext.one());
+        claims[e] = values;
+        input.entry_claims = claims;
+        if (pcs.verify(case.system, input)) |_| {
+            std.debug.print("all_size_one: tampered claim of entry {d} accepted\n", .{e});
+            return error.TamperedClaimAccepted;
+        } else |_| {}
+    }
+}
+
+test "minFoldedTopSize raises the top only when the envelope can fold" {
+    const foldable = fri.Params{ .log_codeword_size = 3, .log_plaintext_size = 2, .log_final_poly_size = 0, .num_queries = 1, .merkle_cap_height = 0 };
+    try std.testing.expectEqual(@as(u8, 1), pcs.minFoldedTopSize(foldable, 0));
+    try std.testing.expectEqual(@as(u8, 1), pcs.minFoldedTopSize(foldable, 1));
+    try std.testing.expectEqual(@as(u8, 2), pcs.minFoldedTopSize(foldable, 2));
+
+    const final_one = fri.Params{ .log_codeword_size = 4, .log_plaintext_size = 3, .log_final_poly_size = 1, .num_queries = 1, .merkle_cap_height = 0 };
+    try std.testing.expectEqual(@as(u8, 2), pcs.minFoldedTopSize(final_one, 0));
+    try std.testing.expectEqual(@as(u8, 2), pcs.minFoldedTopSize(final_one, 1));
+
+    // An envelope with no fold at all cannot be raised (see the backstop).
+    const no_fold = fri.Params{ .log_codeword_size = 2, .log_plaintext_size = 0, .log_final_poly_size = 0, .num_queries = 1, .merkle_cap_height = 0 };
+    try std.testing.expectEqual(@as(u8, 0), pcs.minFoldedTopSize(no_fold, 0));
+}
+
+// Backstop for an envelope that cannot fold (log_plaintext_size ==
+// log_final_poly_size): there is no fold challenge, so only one column can be
+// checked and a schedule over more than one is rejected up front, as
+// prover-ray's checkFoldedSchedule does.
+test "pcs rejects several columns opened with no fold" {
+    const system = pcs.System{
+        .envelope_params = .{ .log_codeword_size = 2, .log_plaintext_size = 0, .num_queries = 1, .merkle_cap_height = 0 },
+        .columns = &.{
+            .{ .batch_idx = 0, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+            .{ .batch_idx = 0, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        },
+        .all_shifts = &[_]i32{ 0, 0 },
+        .num_batches = 1,
+        .max_entries = 2,
+        .max_size_log2 = 0,
+    };
+    const claim = [_]ext.Ext{ext.Ext.one()};
+    const claims = [_][]const ext.Ext{ &claim, &claim };
+    const roots = [_]poseidon2.Digest{challengeDigest(3)};
+    const final_poly = [_]ext.Ext{ext.Ext.zero()};
+    const input = pcs.VerifyInput{
+        .roots = &roots,
+        .entry_claims = &claims,
+        .zeta = ext.Ext.one(),
+        .fold_alphas = &.{},
+        .query_positions = &[_]usize{0},
+        .proof = .{
+            .input_queries = &.{},
+            .input_caps = &.{},
+            .fri_proof = .{ .round_roots = &.{}, .final_poly = &final_poly, .running_queries = &.{} },
+        },
+    };
+    try std.testing.expectError(error.NoFoldMultipleColumns, pcs.verify(system, input));
+}
+
+// With log_final_poly_size >= 1 the one-fold floor raises the top above a
+// column smaller than the final polynomial: a size-1 column under final_one
+// params (top 0 -> 2, num_rounds 1) would join at round 2, past the boundary.
+// prover-ray's resolve rejects that level; so must the verifier, rather than
+// read the per-round buffer out of bounds.
+test "pcs rejects a level beyond the boundary round" {
+    const system = pcs.System{
+        .envelope_params = .{ .log_codeword_size = 4, .log_plaintext_size = 3, .log_final_poly_size = 1, .num_queries = 1, .merkle_cap_height = 0 },
+        .columns = &.{
+            .{ .batch_idx = 0, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        },
+        .all_shifts = &[_]i32{0},
+        .num_batches = 1,
+        .max_entries = 1,
+        .max_size_log2 = 3,
+    };
+    const claim = [_]ext.Ext{ext.Ext.one()};
+    const claims = [_][]const ext.Ext{&claim};
+    const roots = [_]poseidon2.Digest{challengeDigest(3)};
+    const final_poly = [_]ext.Ext{ ext.Ext.zero(), ext.Ext.zero() };
+    const input = pcs.VerifyInput{
+        .roots = &roots,
+        .entry_claims = &claims,
+        .zeta = toExt(.{ 19, 2, 3, 5, 7, 11 }), // off every domain
+        .fold_alphas = &.{ext.Ext.one()},
+        .query_positions = &[_]usize{0},
+        .proof = .{
+            .input_queries = &.{},
+            .input_caps = &.{},
+            .fri_proof = .{ .round_roots = &.{}, .final_poly = &final_poly, .running_queries = &.{} },
+        },
+    };
+    try std.testing.expectError(error.LevelBeyondBoundaryRound, pcs.verify(system, input));
+}
+
 test "pcs rejects reordered input cap tables" {
     const case = fixtures.pcs_cases[0];
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
@@ -300,7 +458,7 @@ test "pcs rejects tampered running cap auxiliary digest" {
 
 test "routeInputRoots ignores an unused batch root" {
     const system = pcs.System{
-        .envelope_params = .{ .log_codeword_size = 2, .log_plaintext_size = 1, .num_queries = 1 },
+        .envelope_params = .{ .log_codeword_size = 2, .log_plaintext_size = 1, .num_queries = 1, .merkle_cap_height = 0 },
         .columns = &.{},
         .num_batches = 2,
         .max_entries = 1,
@@ -333,7 +491,7 @@ test "routeInputRoots ignores an unused batch root" {
 // log_plaintext_size = 2, num_queries = 3 } (numRounds = 2, one running-layer
 // root). The envelope is that same params (restrictTo is a no-op).
 const challenge_system = pcs.System{
-    .envelope_params = .{ .log_codeword_size = 4, .log_plaintext_size = 2, .num_queries = 3 },
+    .envelope_params = .{ .log_codeword_size = 4, .log_plaintext_size = 2, .num_queries = 3, .merkle_cap_height = 0 },
     .columns = &.{
         .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
     },
@@ -364,7 +522,7 @@ fn challengeFriProof(root_seed: u32) fri.Proof {
 // roots, but prover-ray still squeezes one final alpha and uses it as the
 // top-level alpha_DEEP.
 const d1_challenge_system = pcs.System{
-    .envelope_params = .{ .log_codeword_size = 2, .log_plaintext_size = 0, .num_queries = 1 },
+    .envelope_params = .{ .log_codeword_size = 2, .log_plaintext_size = 0, .num_queries = 1, .merkle_cap_height = 0 },
     .columns = &.{
         .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
     },
@@ -442,7 +600,7 @@ test "deriveChallenges retains deep alpha when there are no fold rounds" {
 // STATIC base column at size 2^2. Batch 1 owns one STATIC ext column at size 2^3.
 // Declaration order: [dyn(b0), static2(b0), static3ext(b1)].
 const recon_system = pcs.System{
-    .envelope_params = .{ .log_codeword_size = 6, .log_plaintext_size = 5, .num_queries = 1 },
+    .envelope_params = .{ .log_codeword_size = 6, .log_plaintext_size = 5, .num_queries = 1, .merkle_cap_height = 0 },
     .columns = &.{
         .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
         .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 2, .claim_start = 0 },
@@ -546,7 +704,7 @@ test "reconstruct: accepts a dynamic size below the column's declared min_size_l
 // base s2 (shift 1), static-2 base s3 (shift 0)]. Batch 1: one static-3 ext
 // column. Declaration order: d0, s1, s2, s3, e4.
 const manifest_system = pcs.System{
-    .envelope_params = .{ .log_codeword_size = 6, .log_plaintext_size = 5, .num_queries = 1 },
+    .envelope_params = .{ .log_codeword_size = 6, .log_plaintext_size = 5, .num_queries = 1, .merkle_cap_height = 0 },
     .columns = &.{
         .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
         .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 2, .claim_start = 1 },
@@ -649,7 +807,7 @@ test "buildEntryClaims pins elided claim cells; routedClaim serves them" {
     // An alias whose shift the target never opens cannot be pinned: column 1
     // (shift 1) aliases column 0, which is opened at shift 0 only.
     const narrow_system = pcs.System{
-        .envelope_params = .{ .log_codeword_size = 6, .log_plaintext_size = 5, .num_queries = 1 },
+        .envelope_params = .{ .log_codeword_size = 6, .log_plaintext_size = 5, .num_queries = 1, .merkle_cap_height = 0 },
         .columns = &.{
             .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
             .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },

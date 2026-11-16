@@ -72,6 +72,7 @@ type pipeline struct {
 	mode            backend.ProverMode
 	requestsRootDir string
 	nativeRunnerBin string
+	shardSize       uint64
 	guestsDir       string
 	priority        int
 }
@@ -92,6 +93,7 @@ func pipelineFor(cfg *config.Config, t backend.ProofType) (p pipeline, ok bool) 
 			mode:            backend.ProverMode(cfg.Execution.ProverMode),
 			requestsRootDir: cfg.Execution.RequestsRootDir,
 			nativeRunnerBin: cfg.Execution.NativeRunnerBin,
+			shardSize:       cfg.Execution.ShardSize,
 			guestsDir:       cfg.GuestsDir,
 			priority:        0,
 		}, true
@@ -122,7 +124,7 @@ func pipelineFor(cfg *config.Config, t backend.ProofType) (p pipeline, ok bool) 
 // buildRunner builds the request-to-response runner for one pipeline, backed by an
 // in-process Core.
 func buildRunner(version string, p pipeline) (*jobadapter.Runner, error) {
-	core, err := backend.New(backend.Config{Mode: p.mode, GuestsDir: p.guestsDir})
+	core, err := backend.New(backend.Config{Mode: p.mode, GuestsDir: p.guestsDir, ShardSize: p.shardSize})
 	if err != nil {
 		return nil, fmt.Errorf("building prover core: %w", err)
 	}
@@ -150,20 +152,9 @@ func runAdapter(args []string) error {
 		return fmt.Errorf("invalid config %q: %w", path, err)
 	}
 
-	var queues []filesystem.Queue
-	for _, t := range proofTypes {
-		p, ok := pipelineFor(cfg, t)
-		if !ok {
-			continue
-		}
-		if !p.mode.Valid() {
-			return fmt.Errorf("invalid prover_mode %q for %s", p.mode, t)
-		}
-		queues = append(queues, filesystem.Queue{RequestsRootDir: p.requestsRootDir, Priority: p.priority})
-		if p.mode.IsDev() {
-			logrus.Warnf("prover-ray %s in DEV mode %q against %s: responses are NOT real proofs",
-				t, p.mode, p.requestsRootDir)
-		}
+	queues, err := pipelineQueues(cfg, path)
+	if err != nil {
+		return err
 	}
 
 	self, err := os.Executable()
@@ -180,6 +171,31 @@ func runAdapter(args []string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	return adapter.Run(ctx)
+}
+
+// pipelineQueues checks every configured pipeline of the config read from path
+// and returns their queues. It logs the warnings of the checks.
+func pipelineQueues(cfg *config.Config, path string) ([]filesystem.Queue, error) {
+	var queues []filesystem.Queue
+	for _, t := range proofTypes {
+		p, ok := pipelineFor(cfg, t)
+		if !ok {
+			continue
+		}
+		warnings, err := checkPipeline(t, p)
+		if err != nil {
+			return nil, fmt.Errorf("invalid config %q: %w", path, err)
+		}
+		for _, w := range warnings {
+			logrus.Warn(w)
+		}
+		queues = append(queues, filesystem.Queue{RequestsRootDir: p.requestsRootDir, Priority: p.priority})
+		if p.mode.IsDev() {
+			logrus.Warnf("prover-ray %s in DEV mode %q against %s: responses are NOT real proofs",
+				t, p.mode, p.requestsRootDir)
+		}
+	}
+	return queues, nil
 }
 
 // resolveWorkerID picks the worker id from the flag, then WORKER_ID, then the
@@ -247,7 +263,7 @@ func runProve(args []string) error {
 		defer func() { os.Stdout = respOut }()
 	}
 
-	cfg, _, err := loadConfig(*configPath)
+	cfg, path, err := loadConfig(*configPath)
 	if err != nil {
 		return err
 	}
@@ -259,8 +275,10 @@ func runProve(args []string) error {
 	if !ok {
 		return fmt.Errorf("proof type %q is not configured", proofType)
 	}
-	if !p.mode.Valid() {
-		return fmt.Errorf("invalid prover_mode %q for %s", p.mode, proofType)
+	// The adapter logs the warnings at startup. They are not logged here, as
+	// this runs for every job.
+	if _, err := checkPipeline(proofType, p); err != nil {
+		return fmt.Errorf("invalid config %q: %w", path, err)
 	}
 	runner, err := buildRunner(cfg.Version, p)
 	if err != nil {
