@@ -277,7 +277,7 @@ func appendLeaf(module *VanishingModule, nodes *exprNodes, node ExprNode) int {
 
 // appendExpr returns the index of expr in module.Expressions, emitting it and
 // its operands in post-order on first visit. Operands precede their parent, as
-// vanishing.zig's evalExpr requires.
+// vanishing.zig's evalExpressions requires (and checks).
 func appendExpr(module *VanishingModule, views map[viewKey]int, nodes *exprNodes, routing CoinRouting, expr wiop.Expression) (int, error) {
 	if idx, ok := nodes.memo[expr]; ok {
 		return idx, nil
