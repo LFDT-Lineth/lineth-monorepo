@@ -13,11 +13,21 @@ import (
 )
 
 // shape is what a [Mock] knows of a child system: the kind of each public
-// input, recursion.KindScalar or recursion.KindE6 in registration order, and
-// the number of round commitments of its proofs.
+// input, recursion.KindScalar or recursion.KindE6 in registration order, the
+// number of round commitments of its proofs, and its modules, each by name
+// and number of columns. The modules' heights are not part of it, as for a
+// size-oblivious verifier: systems with the same modules and columns have one
+// shape whatever their heights.
 type shape struct {
 	pubs        []int
 	commitments int
+	modules     []moduleShape
+}
+
+// moduleShape is a module of a shape: its name and its number of columns.
+type moduleShape struct {
+	name    string
+	columns int
 }
 
 // shapeOf returns the shape of the proofs of sys.
@@ -34,11 +44,14 @@ func shapeOf(sys *wiop.System) shape {
 			s.commitments++
 		}
 	}
+	for _, mod := range sys.Modules {
+		s.modules = append(s.modules, moduleShape{name: mod.Context.Path(), columns: len(mod.Columns)})
+	}
 	return s
 }
 
 func (s shape) equal(o shape) bool {
-	return slices.Equal(s.pubs, o.pubs) && s.commitments == o.commitments
+	return slices.Equal(s.pubs, o.pubs) && s.commitments == o.commitments && slices.Equal(s.modules, o.modules)
 }
 
 // Mock is the dev and test [Verifier]. It runs the child's wiop verifier in

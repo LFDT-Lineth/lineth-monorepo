@@ -2,6 +2,7 @@ package node_test
 
 import (
 	"math/rand/v2"
+	"slices"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
@@ -10,6 +11,8 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/node"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/verifier"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/require"
 )
@@ -61,13 +64,14 @@ type tree struct {
 	leaf, internal, root *node.Program
 }
 
-func newTree(t *testing.T, l node.Layout) tree {
+func newTree(t *testing.T, l node.Layout, extra ...compilers.Option) tree {
 	t.Helper()
-	leaf, err := node.NewLeaf(l, stubSystem(l, shardKey), verifier.NewMock, testOpts...)
+	opts := append(slices.Clone(testOpts), extra...)
+	leaf, err := node.NewLeaf(l, stubSystem(l, shardKey), verifier.NewMock, opts...)
 	require.NoError(t, err)
-	internal, err := node.NewInternal(l, leaf, verifier.NewMock, testOpts...)
+	internal, err := node.NewInternal(l, leaf, verifier.NewMock, opts...)
 	require.NoError(t, err)
-	root, err := node.NewRoot(l, leaf, internal, verifier.NewMock, testOpts...)
+	root, err := node.NewRoot(l, leaf, internal, verifier.NewMock, opts...)
 	require.NoError(t, err)
 	return tree{leaf, internal, root}
 }
@@ -188,6 +192,35 @@ func TestNew_Aggregates(t *testing.T) {
 	got, err := node.KeyOf(pub)
 	require.NoError(t, err)
 	require.Equal(t, key, got, "the key box should be the internal key")
+}
+
+// TestNew_SizeOblivious checks that the leaf and internal programs, compiled
+// with the size-oblivious PCS layout, have the same modules and columns at
+// different heights, and that an internal node still merges a leaf node and a
+// node of itself: what one size-oblivious verifier needs to accept both.
+func TestNew_SizeOblivious(t *testing.T) {
+	r := rand.New(rand.NewPCG(5, 6))
+	l := testLayout(2, true)
+	tr := newTree(t, l, compilers.ConfigurePCS(pcs.WithSizeOblivious()))
+
+	leafMods, internalMods := tr.leaf.Sys.Modules, tr.internal.Sys.Modules
+	require.Len(t, internalMods, len(leafMods), "the programs should have the same modules")
+	sameHeights := true
+	for i, mod := range leafMods {
+		require.Equal(t, mod.Context.Path(), internalMods[i].Context.Path(), "module %d", i)
+		require.Len(t, internalMods[i].Columns, len(mod.Columns), "the columns of %s", mod.Context.Path())
+		sameHeights = sameHeights && mod.Size() == internalMods[i].Size()
+	}
+	require.False(t, sameHeights, "the programs should differ in a height, or the test checks nothing")
+
+	proof, pub, err := tr.leaf.ProveChildren(field.Octuplet{}, shards(r, l, 2)...)
+	require.NoError(t, err, "a leaf node")
+	leaf := node.Child{Proof: proof, Pub: pub, Leaf: true}
+	key := tr.internal.Key()
+	proof, pub, err = tr.internal.ProveChildren(key, leaf)
+	require.NoError(t, err, "an internal node over a leaf")
+	_, _, err = tr.internal.ProveChildren(key, node.Child{Proof: proof, Pub: pub}, leaf)
+	require.NoError(t, err, "an internal node over an internal node and a leaf")
 }
 
 // TestNew_Rejects checks that children disagreeing on a propagated value, a

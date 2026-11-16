@@ -56,22 +56,28 @@
 // the tree two levels deep, leaves under a root, no program would verify a
 // proof of itself and there would be no box.
 //
-// The internal program tells a leaf child from a node child by a per-child
-// leaf flag, which selects the child key: the constant or the box. That is a
-// select over a key value fed to one verifier, cheap because leaf and
-// internal proofs are proofs of the same machine; with the real verifier it
-// requires the two programs to compile to the same shape, that is the same
-// chips at the same heights, which they will have to pad to, and, as the
-// internal program verifies proofs of itself, that the verifier of that shape
-// fits in a program of that shape: a fixed point, reached by padding after
-// compiling. A program
-// accepting shard proofs and node proofs alike would instead select between
-// two verifiers, of two systems, and pay for both in every slot.
+// A program is a [Arity] slots, each holding one verifier and the
+// cells of one child's proof. The internal program has one verifier per
+// slot, used for both kinds of child, as leaf and internal proofs are proofs
+// of the same machine. A per-child leaf flag selects what differs between
+// them, the child key: the constant leaf key or the box. Everything else the
+// verifier relies on must then be the same for both programs:
 //
-// The common shape is the larger of the two, and the leaf program's is set
-// by the shard system it verifies. Should it prove much larger than the
-// internal program's, a leaf arity of its own and a shrink program between
-// them, re-proving each leaf node in the internal shape, would lift the
+//   - with a static verifier, only the key may differ: the leaf and internal
+//     programs must compile to the same chips, columns and heights;
+//   - with a size-oblivious verifier (pcs.WithSizeOblivious), the heights
+//     may differ too: they are data of each child's proof, bound by the key
+//     it is verified under, so the programs need only the same chips and
+//     columns. This is the plan, as shard proofs need that verifier anyway.
+//
+// A static verifier, of fixed heights, would make a node cheaper to prove,
+// as a later optimisation. The two programs would then pad to a common shape,
+// the larger of the two, in which the verifier of that shape must fit as the
+// internal program verifies proofs of itself: a fixed point, reached by
+// padding after compiling. The leaf program's shape is set by the shard
+// system it verifies: should it prove much larger than the internal
+// program's, a leaf arity of its own and a shrink program between them,
+// re-proving each leaf node in the internal shape, would lift the
 // requirement off the leaf program (see issue #4405).
 //
 // A program verifies each child's proof with the in-machine verifier of its

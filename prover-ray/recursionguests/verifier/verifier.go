@@ -18,12 +18,16 @@
 // a constant, or a value the program computes, so that one program can
 // verify proofs of several systems of the same shape, itself included. The
 // key is only the Merkle root of the precomputed batch: the machine's
-// programs share the chips' constraints and differ in their setup columns, so
-// a verifier of one shape (module heights, rounds, PCS geometry) verifies
-// every program of that shape under its key. A program verifying proofs of
-// itself must then be padded to the shape its verifier was built for, which
-// is only known after compiling: the real constructor will take a shape, not
-// a system, and the machine a target shape to pad to.
+// programs share the chips' constraints and differ in their setup columns and
+// heights, so a size-oblivious verifier, which takes the heights of the
+// child's modules as data (pcs.WithSizeOblivious), verifies every program
+// with the same chips and columns under its key: that is the plan, with the
+// verifier shard proofs need anyway. A static verifier, of one shape (module
+// heights, rounds, PCS geometry), would be cheaper, as a later optimisation:
+// a program verifying proofs of itself must then be padded to the shape its
+// verifier was built for, which is only known after compiling, so the
+// constructor would take a shape, not a system, and the machine a target
+// shape to pad to.
 //
 // Define verifies unconditionally. A program with a slot it does not use
 // fills it with a proof that verifies (the node program copies its first

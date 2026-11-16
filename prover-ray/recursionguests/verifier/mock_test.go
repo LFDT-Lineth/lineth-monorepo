@@ -104,6 +104,32 @@ func TestMock(t *testing.T) {
 	narrow.RegisterPublicInputs("Out", narrow.NewRound().NewCell(narrow.Context.Childf("x"), false), 0)
 	_, err = v.Assign(narrow, wp, pub)
 	require.ErrorContains(t, err, "not the verifier's shape")
+
+	// The modules: their names and columns are part of the shape, their
+	// heights are not, as for a size-oblivious verifier. withModules returns
+	// the stub with a module "m" of the height and columns, then one empty
+	// module per name of extra.
+	withModules := func(height, columns int, extra ...string) *wiop.System {
+		sys := stubSystem(key)
+		mod := sys.NewSizedModule(sys.Context.Childf("m"), height, wiop.PaddingDirectionNone)
+		for c := range columns {
+			v := &wiop.ConcreteVector{Plain: field.VecFromBase(make([]field.Element, height))}
+			mod.NewPrecomputedColumn(sys.Context.Childf("m.c%d", c), v)
+		}
+		for _, name := range extra {
+			sys.NewSizedModule(sys.Context.Childf("%s", name), 4, wiop.PaddingDirectionNone)
+		}
+		return sys
+	}
+	vm, err := verifier.NewMock(withModules(4, 2))
+	require.NoError(t, err)
+	_, err = vm.Assign(withModules(16, 2), wp, pub)
+	require.NoError(t, err, "a module at another height should be assigned")
+	_, err = vm.Assign(withModules(4, 3), wp, pub)
+	require.ErrorContains(t, err, "not the verifier's shape", "a module with another column should not be assigned")
+	_, err = vm.Assign(withModules(4, 2, "extra"), wp, pub)
+	require.ErrorContains(t, err, "not the verifier's shape", "a system with another module should not be assigned")
+
 	_, err = v.Assign(nil, wp, pub)
 	require.ErrorContains(t, err, "no system")
 	_, err = verifier.NewMock(nil)
