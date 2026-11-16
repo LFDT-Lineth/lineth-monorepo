@@ -13,7 +13,7 @@ import {
   UNPAUSE_INITIATE_TOKEN_BRIDGING_ROLE,
   PAUSE_COMPLETE_TOKEN_BRIDGING_ROLE,
   UNPAUSE_COMPLETE_TOKEN_BRIDGING_ROLE,
-} from "./roles";
+} from "./roles.js";
 
 export const UNUSED_PAUSE_TYPE = 0;
 export const GENERAL_PAUSE_TYPE = 1;

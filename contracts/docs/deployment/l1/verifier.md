@@ -10,7 +10,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | -------------------------- | -------- | ---------- | ----------- |
 | VERIFY_CONTRACT    | false    |true\|false| Verifies the deployed contract |
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
-| \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
+| \**ETHERSCAN_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network. |
 | VERIFIER_CONTRACT_NAME | true  | string | The name of the PlonkVerifier contract that should be deployed |
 | VERIFIER_PROOF_TYPE | true  | string | The proof type that the verifier should be mapped to |
@@ -25,19 +25,19 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-pnpm exec hardhat deploy --network sepolia --tags PlonkVerifier
+pnpm exec hardhat ignition deploy PlonkVerifier --network sepolia
 ```
 
 Base command with cli arguments:
 
 ```shell
-VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> VERIFIER_CONTRACT_NAME=PlonkVerifierDev VERIFIER_IS_ALLOWED_CIRCUIT_ID=<value> pnpm exec hardhat deploy --network sepolia --tags PlonkVerifier
+VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> VERIFIER_CONTRACT_NAME=PlonkVerifierDev VERIFIER_IS_ALLOWED_CIRCUIT_ID=<value> pnpm exec hardhat ignition deploy PlonkVerifier --network sepolia
 ```
 
 Reuse an existing `Mimc` library (no new `Mimc` deployment or `Mimc` explorer verification from this script):
 
 ```shell
-VERIFIER_IS_ALLOWED_CIRCUIT_ID=<value> VERIFIER_MIMC_ADDRESS=<0x-address-of-deployed-Mimc-library> npx hardhat deploy --network sepolia --tags PlonkVerifier
+VERIFIER_IS_ALLOWED_CIRCUIT_ID=<value> VERIFIER_MIMC_ADDRESS=<0x-address-of-deployed-Mimc-library> pnpm exec hardhat ignition deploy PlonkVerifier --network sepolia
 ```
 
 (make sure to replace `<key>`, `<value>`, and `<0x-address-of-deployed-Mimc-library>` with actual values)

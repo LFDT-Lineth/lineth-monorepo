@@ -1,10 +1,10 @@
-import { ethers } from "ethers";
 import fs from "fs";
 import path from "path";
+import { type Address, getAddress, isAddress, zeroAddress } from "viem";
 
-import { envVarNameFromContext, formatEnvVarValueForMessage, isEnvVarContext } from "./envVarLogging";
+import { envVarNameFromContext, formatEnvVarValueForMessage, isEnvVarContext } from "./envVarLogging.js";
 
-export const REGISTRY_DIR = path.join(__dirname, "..", "..", "deployments", "addresses");
+export const REGISTRY_DIR = path.join(import.meta.dirname, "..", "..", "deployments", "addresses");
 
 export const REGISTRY_NETWORKS = new Set(["mainnet", "sepolia", "hoodi", "linea_mainnet", "linea_sepolia"]);
 
@@ -55,8 +55,14 @@ export function isMultiRegistryEntry(entry: RegistryContractEntry): entry is Mul
   return "addresses" in entry && Array.isArray(entry.addresses);
 }
 
-export function parseChecksummedAddress(raw: string, context: string): string {
-  if (!ethers.isAddress(raw)) {
+/**
+ * Parses a user-supplied address (env var, CLI option, input file) into its EIP-55 form.
+ * Unlike viem `getAddress`, a mixed-case address with a wrong checksum is rejected instead of silently
+ * re-checksummed, so a mistyped address fails like it did with ethers ("bad address checksum").
+ * `context` names the source in the error; an env var name (e.g. `PROXY_ADDRESS`) gets redaction-aware wording.
+ */
+export function parseChecksummedAddress(raw: string, context: string): Address {
+  if (!isAddress(raw)) {
     if (isEnvVarContext(context)) {
       const envVarName = envVarNameFromContext(context);
       throw new Error(
@@ -66,7 +72,7 @@ export function parseChecksummedAddress(raw: string, context: string): string {
     }
     throw new Error(`${context}: invalid EVM address "${raw}"`);
   }
-  return ethers.getAddress(raw);
+  return getAddress(raw);
 }
 
 export function assertChecksummedAddress(address: string, context: string): void {
@@ -76,7 +82,7 @@ export function assertChecksummedAddress(address: string, context: string): void
   }
 }
 
-export function resolveRegistryEntryAddresses(entry: RegistryContractEntry): string[] {
+export function resolveRegistryEntryAddresses(entry: RegistryContractEntry): Address[] {
   if (isMultiRegistryEntry(entry)) {
     return entry.addresses.map((item, index) => parseChecksummedAddress(item.address, `addresses[${index}].address`));
   }
@@ -87,9 +93,9 @@ export function resolveRegistryEntryAddresses(entry: RegistryContractEntry): str
  * Returns populated addresses for a registry entry, or `undefined` when the entry is
  * treated as unpopulated (single zero address, or an `addresses` array where every item is zero).
  */
-export function getPopulatedAddresses(entry: RegistryContractEntry): string[] | undefined {
+export function getPopulatedAddresses(entry: RegistryContractEntry): Address[] | undefined {
   const addresses = resolveRegistryEntryAddresses(entry);
-  const nonZero = addresses.filter((value) => value !== ethers.ZeroAddress);
+  const nonZero = addresses.filter((value) => value !== zeroAddress);
   if (nonZero.length === 0) {
     return undefined;
   }
@@ -124,7 +130,7 @@ export function lookupRegistryEntry(
   return undefined;
 }
 
-export function parseEnvAddressList(envVarName: string): string[] | undefined {
+export function parseEnvAddressList(envVarName: string): Address[] | undefined {
   const raw = process.env[envVarName];
   if (!raw?.trim()) {
     return undefined;
@@ -132,7 +138,7 @@ export function parseEnvAddressList(envVarName: string): string[] | undefined {
   return raw.split(",").map((part, index) => parseChecksummedAddress(part.trim(), `${envVarName}[${index}]`));
 }
 
-export function parseEnvAddress(envVarName: string): string | undefined {
+export function parseEnvAddress(envVarName: string): Address | undefined {
   const addresses = parseEnvAddressList(envVarName);
   if (addresses === undefined) {
     return undefined;
@@ -357,10 +363,10 @@ function validateDuplicateAddressObjects(
       continue;
     }
     const address = (entry as Record<string, unknown>).address;
-    if (typeof address !== "string" || !ethers.isAddress(address)) {
+    if (typeof address !== "string" || !isAddress(address)) {
       continue;
     }
-    const normalized = ethers.getAddress(address).toLowerCase();
+    const normalized = getAddress(address).toLowerCase();
     if (seen.has(normalized)) {
       addIssue(issues, file, addressesPath, `Duplicate address "${address}" in \`addresses\` array.`);
       return;

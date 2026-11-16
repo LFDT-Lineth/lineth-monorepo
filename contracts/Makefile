@@ -3,9 +3,8 @@
 compile:
 	pnpm run build
 
-force-compile: export TS_NODE_TRANSPILE_ONLY := 1
 force-compile:
-	pnpm exec hardhat compile --force
+	pnpm exec hardhat build --force
 
 clean:
 	rm -rf coverage/
@@ -18,11 +17,9 @@ fmt:
 fmt-fix:
 	pnpm run lint:fix
 
-test: export SKIP_DEPLOY_LOG := true
 test:
-	pnpm test -- --parallel
+	pnpm test
 
-coverage: export SKIP_DEPLOY_LOG := true
 coverage:
 	pnpm run coverage
 

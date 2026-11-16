@@ -1,9 +1,11 @@
+import type { Address, Hex } from "viem";
+
 export interface YieldManagerInitializationData {
-  pauseTypeRoles: { pauseType: number; role: string }[];
-  unpauseTypeRoles: { pauseType: number; role: string }[];
-  roleAddresses: { addressWithRole: string; role: string }[];
-  initialL2YieldRecipients: string[];
-  defaultAdmin: string;
+  pauseTypeRoles: { pauseType: number; role: Hex }[];
+  unpauseTypeRoles: { pauseType: number; role: Hex }[];
+  roleAddresses: { addressWithRole: Address; role: Hex }[];
+  initialL2YieldRecipients: Address[];
+  defaultAdmin: Address;
   initialMinimumWithdrawalReservePercentageBps: number; // uint16 on-chain
   initialTargetWithdrawalReservePercentageBps: number; // uint16 on-chain
   initialMinimumWithdrawalReserveAmount: bigint; // uint256 on-chain
@@ -12,14 +14,14 @@ export interface YieldManagerInitializationData {
 
 export interface YieldProviderRegistration {
   yieldProviderVendor: number;
-  primaryEntrypoint: string;
-  ossifiedEntrypoint: string;
+  primaryEntrypoint: Address;
+  ossifiedEntrypoint: Address;
   usersFundsIncrement: bigint;
 }
 
 export interface ValidatorContainer {
-  pubkey: string;
-  withdrawalCredentials: string;
+  pubkey: Hex;
+  withdrawalCredentials: Hex;
   effectiveBalance: bigint;
   slashed: boolean;
   activationEligibilityEpoch: bigint;
@@ -29,28 +31,28 @@ export interface ValidatorContainer {
 }
 
 export interface BeaconBlockHeader {
-  slot: number | bigint;
-  proposerIndex: number | bigint;
-  parentRoot: string;
-  stateRoot: string;
-  bodyRoot: string;
+  slot: bigint;
+  proposerIndex: bigint;
+  parentRoot: Hex;
+  stateRoot: Hex;
+  bodyRoot: Hex;
 }
 
 export interface PendingPartialWithdrawal {
-  validatorIndex: number | bigint;
-  amount: number | bigint;
-  withdrawableEpoch: number | bigint;
+  validatorIndex: bigint;
+  amount: bigint;
+  withdrawableEpoch: bigint;
 }
 
 export interface ValidatorContainerWitness {
-  proof: string[];
+  proof: Hex[];
   effectiveBalance: bigint;
   activationEpoch: bigint;
   activationEligibilityEpoch: bigint;
 }
 
 export interface PendingPartialWithdrawalsWitness {
-  proof: string[];
+  proof: Hex[];
   pendingPartialWithdrawals: PendingPartialWithdrawal[];
 }
 
@@ -63,24 +65,25 @@ export interface BeaconProofWitness {
 
 export interface EIP4788Witness {
   // Beacon block root
-  blockRoot: string;
+  blockRoot: Hex;
   // GI First Validator
-  gIFirstValidator: string;
+  gIFirstValidator: Hex;
   beaconBlockHeader: BeaconBlockHeader;
   validatorIndex: bigint;
-  pubkey: string;
+  pubkey: Hex;
+  withdrawalCredentials: Hex;
   beaconProofWitness: BeaconProofWitness;
 }
 
 export interface ClaimMessageWithProofParams {
-  proof: string[];
+  proof: Hex[];
   messageNumber: bigint;
-  leafIndex: bigint;
-  from: string;
-  to: string;
+  leafIndex: number; // uint32 on-chain
+  from: Address;
+  to: Address;
   fee: bigint;
   value: bigint;
-  feeRecipient: string;
-  merkleRoot: string;
-  data: string;
+  feeRecipient: Address;
+  merkleRoot: Hex;
+  data: Hex;
 }

@@ -1,48 +1,50 @@
+import type { Address, Hex } from "viem";
+
 export type BlobSubmission = {
-  dataEvaluationClaim: string;
-  kzgCommitment: string;
-  kzgProof: string;
-  finalStateRootHash: string;
-  snarkHash: string;
+  dataEvaluationClaim: Hex;
+  kzgCommitment: Hex;
+  kzgProof: Hex;
+  finalStateRootHash: Hex;
+  snarkHash: Hex;
 };
 
 export type ParentAndExpectedShnarf = {
-  parentShnarf: string;
-  expectedShnarf: string;
+  parentShnarf: Hex;
+  expectedShnarf: Hex;
 };
 
 export type ShnarfData = {
-  parentShnarf: string;
-  snarkHash: string;
-  finalStateRootHash: string;
-  dataEvaluationPoint: string;
-  dataEvaluationClaim: string;
+  parentShnarf: Hex;
+  snarkHash: Hex;
+  finalStateRootHash: Hex;
+  dataEvaluationPoint: Hex;
+  dataEvaluationClaim: Hex;
 };
 
 export type CalldataSubmissionData = {
-  finalStateRootHash: string;
-  snarkHash: string;
-  compressedData: string;
+  finalStateRootHash: Hex;
+  snarkHash: Hex;
+  compressedData: Hex;
 };
 
 export type FinalizationData = {
-  aggregatedProof: string;
+  aggregatedProof: Hex;
   endBlockNumber: bigint;
   shnarfData: ShnarfData;
-  parentStateRootHash: string;
+  parentStateRootHash: Hex;
   lastFinalizedTimestamp: bigint;
   finalTimestamp: bigint;
-  l1RollingHash: string;
+  l1RollingHash: Hex;
   l1RollingHashMessageNumber: bigint;
-  l2MerkleRoots: string[];
-  filteredAddresses: string[];
+  l2MerkleRoots: Hex[];
+  filteredAddresses: Address[];
   l2MerkleTreesDepth: bigint;
-  l2MessagingBlocksOffsets: string;
-  lastFinalizedL1RollingHash: string;
+  l2MessagingBlocksOffsets: Hex;
+  lastFinalizedL1RollingHash: Hex;
   lastFinalizedL1RollingHashMessageNumber: bigint;
   lastFinalizedForcedTransactionNumber: bigint;
   finalForcedTransactionNumber: bigint;
-  lastFinalizedForcedTransactionRollingHash: string;
+  lastFinalizedForcedTransactionRollingHash: Hex;
 };
 
 export type ShnarfDataGenerator = (blobParentShnarfIndex: number, isMultiple?: boolean) => ShnarfData;
@@ -52,18 +54,18 @@ export type Eip1559Transaction = {
   maxPriorityFeePerGas: bigint;
   maxFeePerGas: bigint;
   gasLimit: bigint;
-  to: string;
+  to: Address;
   value: bigint;
-  input: string;
+  input: Hex;
   accessList: AccessList[];
-  yParity: bigint;
+  yParity: number;
   r: bigint;
   s: bigint;
 };
 
 export type AccessList = {
-  contractAddress: string;
-  storageKeys: string[];
+  contractAddress: Address;
+  storageKeys: Hex[];
 };
 
 export type AccessListEntryInput = {
@@ -74,34 +76,34 @@ export type AccessListEntryInput = {
 export type LastFinalizedState = {
   timestamp: bigint;
   messageNumber: bigint;
-  messageRollingHash: string;
+  messageRollingHash: Hex;
   forcedTransactionNumber: bigint;
-  forcedTransactionRollingHash: string;
+  forcedTransactionRollingHash: Hex;
 };
 
 export type RoleAddress = {
-  addressWithRole: string;
-  role: string;
+  addressWithRole: Address;
+  role: Hex;
 };
 
 export type PauseTypeRole = {
-  pauseType: string;
-  role: string;
+  pauseType: number;
+  role: Hex;
 };
 
 export type LinethRollupInitializationData = {
-  initialStateRootHash: string;
+  initialStateRootHash: Hex;
   initialL2BlockNumber: bigint;
   genesisTimestamp: bigint;
-  defaultVerifier: string;
+  defaultVerifier: Address;
   rateLimitPeriodInSeconds: bigint;
   rateLimitAmountInWei: bigint;
   roleAddresses: RoleAddress[];
   pauseTypeRoles: PauseTypeRole[];
   unpauseTypeRoles: PauseTypeRole[];
-  defaultAdmin: string;
-  shnarfProvider: string;
-  addressFilter: string;
+  defaultAdmin: Address;
+  shnarfProvider: Address;
+  addressFilter: Address;
 };
 
 export type AggregatedProofData = {

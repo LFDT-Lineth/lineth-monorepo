@@ -10,14 +10,16 @@
     NUMBER_OF_RUNS=<number> \
     DEPLOYER_PRIVATE_KEY=<key> \
     RPC_URL=<url> \
-    pnpm exec ts-node local-deployments-artifacts/executeAllOpcodes.ts
+    pnpm exec tsx local-deployments-artifacts/executeAllOpcodes.ts
     *******************************************************************************************
 */
 
-import { TransactionReceipt, ethers } from "ethers";
+import { type TransactionReceipt, ethers } from "ethers";
 
-import { abi as opcodeTesterAbi } from "./static-artifacts/OpcodeTester.json";
-import { getRequiredEnvVar } from "../common/helpers/environment";
+import opcodeTesterJson from "./static-artifacts/OpcodeTester.json" with { type: "json" };
+import { getRequiredEnvVar } from "../common/helpers/environment.js";
+
+const { abi: opcodeTesterAbi } = opcodeTesterJson;
 
 async function main() {
   const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);

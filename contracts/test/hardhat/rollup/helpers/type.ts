@@ -1,15 +1,19 @@
-import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
-import { TestLinethRollup } from "contracts/typechain-types";
-import { Contract } from "ethers";
-
-import { FinalizationData, ShnarfDataGenerator, AggregatedProofData, ExpectedCustomError } from "../../common/types";
+import type { TestAccount } from "../../common/helpers/index.js";
+import type {
+  FinalizationData,
+  ShnarfDataGenerator,
+  AggregatedProofData,
+  ExpectedCustomError,
+} from "../../common/types.js";
+import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
+import type { Address } from "viem";
 
 // Re-export shared types for backward compatibility
-export type { AggregatedProofData, ExpectedCustomError } from "../../common/types";
+export type { AggregatedProofData, ExpectedCustomError } from "../../common/types.js";
 
 export type FinalizeContext = {
-  linethRollup: TestLinethRollup;
-  operator: SignerWithAddress;
+  linethRollup: ContractReturnType<"TestLinethRollup">;
+  operator: TestAccount;
 };
 
 export type FinalizeProofConfig = {
@@ -26,8 +30,8 @@ export type FinalizeParams = {
 };
 
 export type FinalizeCallForwardingParams = {
-  callforwarderAddress: string;
-  upgradedContract: Contract;
+  callforwarderAddress: Address;
+  upgradedContract: ContractReturnType<"TestLinethRollup">;
 };
 
 export type FailedFinalizeParams = FinalizeParams & { expectedError: ExpectedCustomError };

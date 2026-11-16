@@ -1,19 +1,22 @@
 import { expect } from "chai";
-import { BaseContract, Transaction } from "ethers";
-import { ethers } from "hardhat";
+import { encodeFunctionData } from "viem";
 
-import { getWalletForIndex } from "./";
-import { FailedFinalizeParams, SucceedFinalizeParams, SucceedFinalizeParamsCallForwardingProxy } from "./type";
-import { TEST_PUBLIC_VERIFIER_INDEX } from "../../common/constants";
+import { generateKeccak256 } from "../../../../common/helpers/hashing.js";
+import { TEST_PUBLIC_VERIFIER_INDEX } from "../../common/constants/index.js";
+import { getAccountsFixture } from "../../common/helpers/before.js";
+import { getConnection } from "../../common/helpers/connection.js";
+import { type AssertionTarget } from "../../common/helpers/expectations.js";
 import {
   calculateLastFinalizedState,
-  expectEvent,
   expectEventDirectFromReceiptData,
-  expectRevertWithCustomError,
   generateFinalizationData,
-  generateKeccak256,
+  hex,
   proofDataToFinalizationParams,
-} from "../../common/helpers";
+  expectEvent,
+  expectRevertWithCustomError,
+} from "../../common/helpers/index.js";
+
+import type { FailedFinalizeParams, SucceedFinalizeParams, SucceedFinalizeParamsCallForwardingProxy } from "./type.js";
 
 export async function expectSuccessfulFinalize(params: SucceedFinalizeParams) {
   const { context, proofConfig, overrides = {} } = params;
@@ -25,11 +28,12 @@ export async function expectSuccessfulFinalize(params: SucceedFinalizeParams) {
     ...overrides,
   });
 
-  await linethRollup.setRollingHash(proofData.l1RollingHashMessageNumber, proofData.l1RollingHash);
+  await linethRollup.write.setRollingHash([BigInt(proofData.l1RollingHashMessageNumber), hex(proofData.l1RollingHash)]);
 
-  const finalizeCompressedCall = linethRollup
-    .connect(operator)
-    .finalizeBlocks(proofData.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
+  const finalizeCompressedCall = linethRollup.write.finalizeBlocks(
+    [hex(proofData.aggregatedProof), BigInt(TEST_PUBLIC_VERIFIER_INDEX), finalizationData],
+    { account: operator.account },
+  );
 
   await expectEvent(linethRollup, finalizeCompressedCall, "FinalizedStateUpdated", [
     finalizationData.endBlockNumber,
@@ -41,15 +45,15 @@ export async function expectSuccessfulFinalize(params: SucceedFinalizeParams) {
   await expectEvent(linethRollup, finalizeCompressedCall, "DataFinalizedV3", [
     BigInt(proofData.lastFinalizedBlockNumber) + 1n,
     finalizationData.endBlockNumber,
-    proofData.finalShnarf,
+    hex(proofData.finalShnarf),
     finalizationData.parentStateRootHash,
-    proofData.finalStateRootHash,
+    hex(proofData.finalStateRootHash),
   ]);
 
   const [expectedFinalStateRootHash, lastFinalizedBlockNumber, lastFinalizedState] = await Promise.all([
-    linethRollup.stateRootHashes(finalizationData.endBlockNumber),
-    linethRollup.currentL2BlockNumber(),
-    linethRollup.currentFinalizedState(),
+    linethRollup.read.stateRootHashes([finalizationData.endBlockNumber]),
+    linethRollup.read.currentL2BlockNumber(),
+    linethRollup.read.currentFinalizedState(),
   ]);
 
   expect(expectedFinalStateRootHash).to.equal(finalizationData.shnarfData.finalStateRootHash);
@@ -59,7 +63,7 @@ export async function expectSuccessfulFinalize(params: SucceedFinalizeParams) {
       finalizationData.l1RollingHashMessageNumber,
       finalizationData.l1RollingHash,
       BigInt(proofData.finalFtxNumber),
-      proofData.finalFtxRollingHash,
+      hex(proofData.finalFtxRollingHash),
       finalizationData.finalTimestamp,
     ),
   );
@@ -75,13 +79,15 @@ export async function expectFailedCustomErrorFinalize(params: FailedFinalizePara
     ...overrides,
   });
 
-  await linethRollup.setRollingHash(proofData.l1RollingHashMessageNumber, proofData.l1RollingHash);
+  await linethRollup.write.setRollingHash([BigInt(proofData.l1RollingHashMessageNumber), hex(proofData.l1RollingHash)]);
 
-  const finalizeCompressedCall = linethRollup
-    .connect(operator)
-    .finalizeBlocks(proofData.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
+  const finalizeCompressedCall = linethRollup.write.finalizeBlocks(
+    [hex(proofData.aggregatedProof), BigInt(TEST_PUBLIC_VERIFIER_INDEX), finalizationData],
+    { account: operator.account },
+  );
 
-  await expectRevertWithCustomError(linethRollup, finalizeCompressedCall, expectedError.name, expectedError.args ?? []);
+  const target: AssertionTarget = linethRollup;
+  await expectRevertWithCustomError(target, finalizeCompressedCall, expectedError.name, expectedError.args);
 }
 
 export async function expectSuccessfulFinalizeViaCallForwarder(params: SucceedFinalizeParamsCallForwardingProxy) {
@@ -94,7 +100,10 @@ export async function expectSuccessfulFinalizeViaCallForwarder(params: SucceedFi
     ...overrides,
   });
 
-  await upgradedContract.setRollingHash(proofData.l1RollingHashMessageNumber, proofData.l1RollingHash);
+  await upgradedContract.write.setRollingHash([
+    BigInt(proofData.l1RollingHashMessageNumber),
+    hex(proofData.l1RollingHash),
+  ]);
 
   const shnarfData = shnarfDataGenerator(blobParentShnarfIndex, isMultiple);
 
@@ -107,81 +116,37 @@ export async function expectSuccessfulFinalizeViaCallForwarder(params: SucceedFi
       shnarfData.dataEvaluationPoint,
       shnarfData.dataEvaluationClaim,
     ],
+    { encodePacked: false },
   );
-  const blobShnarfExists = await upgradedContract.blobShnarfExists(finalShnarf);
+  const blobShnarfExists = await upgradedContract.read.blobShnarfExists([finalShnarf]);
   expect(blobShnarfExists).to.equal(1n);
 
-  await upgradedContract.setRollingHash(proofData.l1RollingHashMessageNumber, proofData.l1RollingHash);
-
-  const txData = [
-    proofData.aggregatedProof,
-    0,
-    [
-      finalizationData.parentStateRootHash,
-      BigInt(finalizationData.endBlockNumber),
-      [
-        shnarfData.parentShnarf,
-        shnarfData.snarkHash,
-        shnarfData.finalStateRootHash,
-        shnarfData.dataEvaluationPoint,
-        shnarfData.dataEvaluationClaim,
-      ],
-      finalizationData.lastFinalizedTimestamp,
-      finalizationData.finalTimestamp,
-      finalizationData.lastFinalizedL1RollingHash,
-      finalizationData.l1RollingHash,
-      finalizationData.lastFinalizedL1RollingHashMessageNumber,
-      finalizationData.l1RollingHashMessageNumber,
-      finalizationData.l2MerkleTreesDepth,
-      finalizationData.lastFinalizedForcedTransactionNumber,
-      finalizationData.finalForcedTransactionNumber,
-      finalizationData.lastFinalizedForcedTransactionRollingHash,
-      finalizationData.l2MerkleRoots,
-      finalizationData.filteredAddresses,
-      finalizationData.l2MessagingBlocksOffsets,
-    ],
-  ];
-
-  const encodedCall = ethers.concat([
-    "0x755bc62f",
-    ethers.AbiCoder.defaultAbiCoder().encode(
-      [
-        "bytes",
-        "uint256",
-        "tuple(bytes32,uint256,tuple(bytes32,bytes32,bytes32,bytes32,bytes32),uint256,uint256,bytes32,bytes32,uint256,uint256,uint256,uint256,uint256,bytes32,bytes32[],address[],bytes)",
-      ],
-      txData,
-    ),
+  await upgradedContract.write.setRollingHash([
+    BigInt(proofData.l1RollingHashMessageNumber),
+    hex(proofData.l1RollingHash),
   ]);
 
-  const { maxFeePerGas, maxPriorityFeePerGas } = await ethers.provider.getFeeData();
-  const operatorHDSigner = getWalletForIndex(2);
-  const nonce = await operatorHDSigner.getNonce();
-
-  const transaction = Transaction.from({
-    data: encodedCall,
-    maxPriorityFeePerGas: maxPriorityFeePerGas!,
-    maxFeePerGas: maxFeePerGas!,
+  const { viem } = await getConnection();
+  const publicClient = await viem.getPublicClient();
+  const { operator } = await getAccountsFixture();
+  const txHash = await operator.sendTransaction({
     to: callforwarderAddress,
-    chainId: (await ethers.provider.getNetwork()).chainId,
-    type: 2,
-    nonce,
-    value: 0,
-    gasLimit: 10_000_000,
+    data: encodeFunctionData({
+      abi: upgradedContract.abi,
+      functionName: "finalizeBlocks",
+      args: [hex(proofData.aggregatedProof), BigInt(TEST_PUBLIC_VERIFIER_INDEX), { ...finalizationData, shnarfData }],
+    }),
+    gas: 10_000_000n,
   });
-
-  const signedTx = await operatorHDSigner.signTransaction(transaction);
-
-  const txResponse = await ethers.provider.broadcastTransaction(signedTx);
-  const receipt = await ethers.provider.getTransactionReceipt(txResponse.hash);
+  const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
   expect(receipt).is.not.null;
 
   const finalizedStateUpdatedLogIndex = 8;
   const dataFinalizedLogIndex = 9;
 
   expectEventDirectFromReceiptData(
-    upgradedContract as BaseContract,
-    receipt!,
+    upgradedContract,
+    receipt,
     "FinalizedStateUpdated",
     [
       finalizationData.endBlockNumber,
@@ -193,8 +158,8 @@ export async function expectSuccessfulFinalizeViaCallForwarder(params: SucceedFi
   );
 
   expectEventDirectFromReceiptData(
-    upgradedContract as BaseContract,
-    receipt!,
+    upgradedContract,
+    receipt,
     "DataFinalizedV3",
     [
       BigInt(proofData.lastFinalizedBlockNumber) + 1n,
@@ -207,9 +172,9 @@ export async function expectSuccessfulFinalizeViaCallForwarder(params: SucceedFi
   );
 
   const [expectedFinalStateRootHash, lastFinalizedBlockNumber, lastFinalizedState] = await Promise.all([
-    upgradedContract.stateRootHashes(finalizationData.endBlockNumber),
-    upgradedContract.currentL2BlockNumber(),
-    upgradedContract.currentFinalizedState(),
+    upgradedContract.read.stateRootHashes([finalizationData.endBlockNumber]),
+    upgradedContract.read.currentL2BlockNumber(),
+    upgradedContract.read.currentFinalizedState(),
   ]);
 
   expect(expectedFinalStateRootHash).to.equal(finalizationData.shnarfData.finalStateRootHash);
@@ -219,7 +184,7 @@ export async function expectSuccessfulFinalizeViaCallForwarder(params: SucceedFi
       finalizationData.l1RollingHashMessageNumber,
       finalizationData.l1RollingHash,
       finalizationData.finalForcedTransactionNumber,
-      proofData.finalFtxRollingHash,
+      hex(proofData.finalFtxRollingHash),
       finalizationData.finalTimestamp,
     ),
   );

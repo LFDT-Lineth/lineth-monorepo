@@ -24,7 +24,7 @@ class PlonkVerifier:
     The chain-configuration preimage (`chainId`, `baseFee`, `coinbase`,
     `l2MessageServiceAddress`) is passed to the verifier at deploy time as
     a `ChainConfigurationParameter[]` array of named bytes32 values (see
-    `contracts/deploy/01_deploy_PlonkVerifier.ts`); the constructor hashes
+    `contracts/ignition/modules/verifiers/PlonkVerifier.deploy.ts`); the constructor hashes
     those values and stores ONLY the digest in `bytes32 immutable
     CHAIN_CONFIGURATION`, then emits the full preimage in the
     `ChainConfigurationSet` event. The L1 `LinethRollupBase` reads the

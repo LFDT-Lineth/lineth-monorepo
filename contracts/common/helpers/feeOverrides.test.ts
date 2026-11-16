@@ -1,4 +1,4 @@
-import { ethers } from "ethers";
+import { type ethers, FeeData as EthersFeeData } from "ethers";
 import * as assert from "node:assert/strict";
 
 import {
@@ -6,7 +6,7 @@ import {
   feeBudgetPricePerGas,
   parseGasPriceWeiEnv,
   resolveOneModelFeeOverrides,
-} from "./feeOverrides";
+} from "./feeOverrides.js";
 
 type FeeData = {
   gasPrice?: bigint | null;
@@ -14,20 +14,20 @@ type FeeData = {
   maxPriorityFeePerGas?: bigint | null;
 };
 
-function mockProvider(feeData: FeeData): ethers.Provider {
-  return {
-    getFeeData: async () => feeData,
-  } as unknown as ethers.Provider;
+function mockProvider({ gasPrice, maxFeePerGas, maxPriorityFeePerGas }: FeeData): Pick<ethers.Provider, "getFeeData"> {
+  return { getFeeData: async () => new EthersFeeData(gasPrice, maxFeePerGas, maxPriorityFeePerGas) };
 }
 
 type TestCase = {
   name: string;
-  run: () => Promise<void> | void;
+  run: () => unknown;
 };
 
 const ENV_NAME = "LINETH_FEE_OVERRIDES_TEST_GAS_PRICE_WEI";
 
-function withEnv(value: string | undefined, run: () => Promise<void> | void): Promise<void> | void {
+function withEnv<T>(value: string | undefined, run: () => Promise<T>): Promise<T>;
+function withEnv<T>(value: string | undefined, run: () => T): T;
+function withEnv(value: string | undefined, run: () => unknown): unknown {
   const previous = process.env[ENV_NAME];
   if (value === undefined) {
     delete process.env[ENV_NAME];

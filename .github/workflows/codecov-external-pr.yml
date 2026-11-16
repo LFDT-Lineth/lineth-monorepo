@@ -98,7 +98,7 @@ jobs:
         continue-on-error: true
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: smart-contract-coverage-${{ needs.get-commit-tag.outputs.commit-tag }}.json
+          name: smart-contract-coverage-${{ needs.get-commit-tag.outputs.commit-tag }}.lcov
           path: |
             ${{ github.workspace }}/ci-smart-contract-coverage
           # Required to download artifacts from another workflow run
@@ -109,7 +109,7 @@ jobs:
         if: ${{ steps.smc-report-download.outcome == 'success' }}
         with:
           fail_ci_if_error: true
-          files: ${{ github.workspace }}/ci-smart-contract-coverage/**/coverage-final.json
+          files: ${{ github.workspace }}/ci-smart-contract-coverage/**/lcov.info
           flags: hardhat
           os: linux
           name: codecov-contracts

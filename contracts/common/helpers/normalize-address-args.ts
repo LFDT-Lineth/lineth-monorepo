@@ -1,4 +1,4 @@
-import { ContractFactory, getAddress } from "ethers";
+import { type ContractFactory, getAddress } from "ethers";
 
 /**
  * Checksums ABI address constructor args before ethers attempts name resolution.

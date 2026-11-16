@@ -1,6 +1,8 @@
-import { ethers, upgrades } from "hardhat";
+import { upgrades } from "@openzeppelin/hardhat-upgrades/viem";
+import hre from "hardhat";
+import { describe, it } from "node:test";
 
-// pnpm exec hardhat test --network mainnet
+// pnpm exec hardhat test nodejs --network mainnet <this file>
 // THIS IS A MANUAL TEST TO VERIFY MAINNET DOES NOT BREAK
 // ALSO SEE PR FOR LAYOUT TABLE
 describe.skip("LinethRollup Upgrade from ZkEvmMainnet", () => {
@@ -8,15 +10,15 @@ describe.skip("LinethRollup Upgrade from ZkEvmMainnet", () => {
 
   describe("Collision", () => {
     it("Does not collide", async () => {
-      const contract = await ethers.getContractFactory("ZkEvmV2Mainnet");
+      const connection = await hre.network.getOrCreate();
+      const oz = await upgrades(hre, connection);
 
       console.log("Importing contract");
-      await upgrades.forceImport(mainnetProxyAddress, contract, {
+      await oz.forceImport(mainnetProxyAddress, "ZkEvmV2Mainnet", {
         kind: "transparent",
       });
 
-      const LinethRollupFactory = await ethers.getContractFactory("LinethRollup");
-      await upgrades.validateUpgrade(mainnetProxyAddress, LinethRollupFactory);
+      await oz.validateUpgrade(mainnetProxyAddress, "LinethRollup");
     });
   });
 });

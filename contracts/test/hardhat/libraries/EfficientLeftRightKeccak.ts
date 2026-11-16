@@ -1,26 +1,31 @@
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
+import { describe, it, beforeEach } from "node:test";
 
-import { TestEfficientLeftRightKeccak } from "../../../typechain-types";
-import { deployFromFactory } from "../common/deployment";
-import { generateKeccak256, generateRandomBytes } from "../common/helpers";
+import { randomBytes32 } from "../../../common/helpers/encoding.js";
+import { generateKeccak256 } from "../../../common/helpers/hashing.js";
+import { deployFromFactory } from "../common/deployment.js";
+import { loadFixture } from "../common/helpers/connection.js";
+
+import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
 
 describe("EfficientLeftRightKeccak Library", () => {
-  let contract: TestEfficientLeftRightKeccak;
+  let contract: ContractReturnType<"TestEfficientLeftRightKeccak">;
 
   async function deployTestEfficientLeftRightKeccakFixture() {
     return deployFromFactory("TestEfficientLeftRightKeccak");
   }
   beforeEach(async () => {
-    contract = (await loadFixture(deployTestEfficientLeftRightKeccakFixture)) as TestEfficientLeftRightKeccak;
+    contract = await loadFixture(deployTestEfficientLeftRightKeccakFixture);
   });
 
   describe("efficientKeccak", () => {
     it("Should return the correct keccak hash", async () => {
-      const leftValue = generateRandomBytes(32);
-      const rightValue = generateRandomBytes(32);
-      const solidityKeccakHash = generateKeccak256(["bytes32", "bytes32"], [leftValue, rightValue]);
-      expect(await contract.efficientKeccak(leftValue, rightValue)).to.equal(solidityKeccakHash);
+      const leftValue = randomBytes32();
+      const rightValue = randomBytes32();
+      const solidityKeccakHash = generateKeccak256(["bytes32", "bytes32"], [leftValue, rightValue], {
+        encodePacked: false,
+      });
+      expect(await contract.read.efficientKeccak([leftValue, rightValue])).to.equal(solidityKeccakHash);
     });
   });
 });

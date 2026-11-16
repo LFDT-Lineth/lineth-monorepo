@@ -1,33 +1,36 @@
-import { AbiCoder, Wallet } from "ethers";
+import { type Address, type Hex, encodeAbiParameters, parseAbiParameters } from "viem";
+import { generatePrivateKey, privateKeyToAddress } from "viem/accounts";
+
+const randomAddress = () => privateKeyToAddress(generatePrivateKey());
 
 export const buildVendorInitializationData = (
   overrides: Partial<{
-    defaultAdmin: string;
-    nodeOperator: string;
-    nodeOperatorManager: string;
+    defaultAdmin: Address;
+    nodeOperator: Address;
+    nodeOperatorManager: Address;
     nodeOperatorFeeBP: bigint;
     confirmExpiry: bigint;
-    roleAssignments: { addressWithRole: string; role: string }[];
+    roleAssignments: { addressWithRole: Address; role: Hex }[];
   }> = {},
-) => {
+): Hex => {
   const params = {
-    defaultAdmin: overrides.defaultAdmin ?? Wallet.createRandom().address,
-    nodeOperator: overrides.nodeOperator ?? Wallet.createRandom().address,
-    nodeOperatorManager: overrides.nodeOperatorManager ?? Wallet.createRandom().address,
+    defaultAdmin: overrides.defaultAdmin ?? randomAddress(),
+    nodeOperator: overrides.nodeOperator ?? randomAddress(),
+    nodeOperatorManager: overrides.nodeOperatorManager ?? randomAddress(),
     nodeOperatorFeeBP: overrides.nodeOperatorFeeBP ?? 0n,
     confirmExpiry: overrides.confirmExpiry ?? 0n,
     roleAssignments: overrides.roleAssignments ?? [],
   };
 
-  return AbiCoder.defaultAbiCoder().encode(
-    ["address", "address", "address", "uint256", "uint256", "tuple(address addressWithRole, bytes32 role)[]"],
+  return encodeAbiParameters(
+    parseAbiParameters("address, address, address, uint256, uint256, (address addressWithRole, bytes32 role)[]"),
     [
       params.defaultAdmin,
       params.nodeOperator,
       params.nodeOperatorManager,
       params.nodeOperatorFeeBP,
       params.confirmExpiry,
-      params.roleAssignments.map(({ addressWithRole, role }) => [addressWithRole, role]),
+      params.roleAssignments,
     ],
   );
 };

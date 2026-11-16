@@ -1,6 +1,4 @@
-import { ethers } from "ethers";
-
-import { get1559Fees } from "../../scripts/utils";
+import type { ethers } from "ethers";
 
 // A transaction fee override that must describe exactly one fee model: either a
 // legacy `gasPrice`, or a complete EIP-1559 pair, never a mix of both.
@@ -42,6 +40,21 @@ export function assertSingleFeeModel(fees: FeeOverrides): FeeOverrides {
   return fees;
 }
 
+/**
+ * Ethers fee data for the Hardhat-free `local-deployments-artifacts/*` scripts, with null fields dropped.
+ * Hardhat-side code uses viem's `estimateFeesPerGas` instead.
+ */
+export async function get1559Fees(
+  provider: Pick<ethers.Provider, "getFeeData">,
+): Promise<{ maxPriorityFeePerGas?: bigint; maxFeePerGas?: bigint; gasPrice?: bigint }> {
+  const { maxPriorityFeePerGas, maxFeePerGas, gasPrice } = await provider.getFeeData();
+  return {
+    ...(maxPriorityFeePerGas ? { maxPriorityFeePerGas } : {}),
+    ...(maxFeePerGas ? { maxFeePerGas } : {}),
+    ...(gasPrice ? { gasPrice } : {}),
+  };
+}
+
 // Fixed local-devnet L2 deploy fees (gwei-scale wei). Centralizes the value copied
 // across local L2 deploy scripts. These are deterministic local-only fees, not a policy
 // for real networks. Validated as a single complete EIP-1559 model.
@@ -54,11 +67,11 @@ export const LOCAL_L2_DEPLOY_FEE_OVERRIDES: FeeOverrides = assertSingleFeeModel(
 // when legacy fees are selected, otherwise the EIP-1559 ceiling maxFeePerGas.
 export function feeBudgetPricePerGas(fees: FeeOverrides): bigint {
   assertSingleFeeModel(fees);
-  if (fees.gasPrice !== undefined) {
-    return fees.gasPrice;
+  const pricePerGas = fees.gasPrice ?? fees.maxFeePerGas;
+  if (pricePerGas === undefined) {
+    throw new Error("fee overrides set neither gasPrice nor maxFeePerGas");
   }
-  // assertSingleFeeModel guarantees maxFeePerGas is present here.
-  return fees.maxFeePerGas as bigint;
+  return pricePerGas;
 }
 
 // Resolve a single-model fee override for a deploy transaction:
@@ -67,7 +80,7 @@ export function feeBudgetPricePerGas(fees: FeeOverrides): bigint {
 //   - otherwise fall back to the provider's legacy gasPrice;
 //   - throw when the provider returns only partial or no usable fee data.
 export async function resolveOneModelFeeOverrides(
-  provider: ethers.Provider,
+  provider: Pick<ethers.Provider, "getFeeData">,
   explicitGasPriceEnvName?: string,
 ): Promise<FeeOverrides> {
   if (explicitGasPriceEnvName !== undefined) {

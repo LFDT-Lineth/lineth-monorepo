@@ -66,7 +66,6 @@ Lineth zkEVM monorepo — the principal repository for [Linea](https://linea.bui
 | Docker | 24+ | Local stack, CI |
 | Docker Compose | 2.19+ | Multi-service orchestration |
 | Make | 3.81+ | Environment management |
-| Foundry | stable | Solidity testing and docgen |
 
 ### Install
 
@@ -222,8 +221,7 @@ After writing or editing code, check LSP diagnostics and fix any type errors or 
 
 | Area | Framework | Notes |
 |------|----------|-------|
-| Contracts (Hardhat) | Hardhat + ethers.js | `pnpm -F contracts run test` |
-| Contracts (Foundry) | Forge | `test/foundry/*` |
+| Contracts | Hardhat + viem (TypeScript), Hardhat Solidity tests (`test/foundry/*.t.sol`) | `pnpm -F contracts run test` |
 | TypeScript packages | Jest 30.4.2 + ts-jest | `pnpm -F <pkg> run test` |
 | Coordinator | JUnit 5 + Mockito + WireMock | `./gradlew :coordinator:app:test` |
 | Prover | Go test | `go test ./... -tags nocorset,fuzzlight` |
@@ -346,7 +344,7 @@ These require human approval and follow the release process:
 
 | Name | Type | Stack | Purpose |
 |------|------|-------|---------|
-| `contracts` | Smart contracts | Solidity 0.8.33, Hardhat, Foundry | Core protocol contracts (rollup, messaging, bridge, tokens) |
+| `contracts` | Smart contracts | Solidity 0.8.33, Hardhat | Core protocol contracts (rollup, messaging, bridge, tokens) |
 | `coordinator` | Backend service | Kotlin 2.4.0, Gradle, Vertx | Orchestrates proof submission, blob submission, finalization |
 | `prover` | Backend service | Go 1.25.7 | ZK proof generation (gnark, gnark-crypto) |
 | `postman` | Backend service | TypeScript, Express, TypeORM | Bridge message execution service |
@@ -368,7 +366,7 @@ These require human approval and follow the release process:
 ### Key Directories
 
 ```
-contracts/               Solidity smart contracts (Hardhat + Foundry)
+contracts/               Solidity smart contracts (Hardhat)
 coordinator/             Kotlin coordinator service
 prover/                  Go ZK prover
 postman/                 TypeScript bridge message executor

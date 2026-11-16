@@ -1,0 +1,14 @@
+# Written by `hardhat ignition deploy` from the module's <Module>.deploy.ts (env vars + address registry); do not edit.
+parameters/*.json
+# Deployment journals: only public networks' are committed (`chain-<id>`, or `<Module>-<id>-<hash>` for upgrades).
+deployments/*
+!deployments/chain-1/
+!deployments/*-1-*/
+!deployments/chain-11155111/
+!deployments/*-11155111-*/
+!deployments/chain-560048/
+!deployments/*-560048-*/
+!deployments/chain-59144/
+!deployments/*-59144-*/
+!deployments/chain-59141/
+!deployments/*-59141-*/

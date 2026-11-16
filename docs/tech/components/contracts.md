@@ -149,13 +149,7 @@ contracts/
 │       ├── bridging/
 │       └── security/
 │
-├── deploy/                     # Deployment scripts
-│   ├── 01_deploy_PlonkVerifier.ts
-│   ├── 02_deploy_Timelock.ts
-│   ├── 03_deploy_LinethRollup.ts
-│   ├── 04_deploy_L2MessageService.ts
-│   ├── 05_deploy_BridgedToken.ts
-│   └── 06_deploy_TokenBridge.ts
+├── ignition/modules/           # Hardhat Ignition deployment modules
 │
 └── local-deployments-artifacts/ # Local deployment scripts
     ├── deployPlonkVerifierAndLinethRollupV6.ts
@@ -320,9 +314,9 @@ interface IPlonkVerifier {
 
 ## Deployment
 
-Hardhat scripts live under `contracts/deploy/`. The canonical parameter and tag reference is **[contracts/docs/deployment/README.md](../../../contracts/docs/deployment/README.md)** in this repository.
+Deployments are Hardhat Ignition modules under `contracts/ignition/modules/` (`pnpm -F contracts exec hardhat ignition deploy <ModuleId> --network <net>`). The canonical parameter reference is **[contracts/docs/deployment/README.md](../../../contracts/docs/deployment/README.md)**.
 
-**Optional browser signing:** set `HARDHAT_SIGNER_UI=true` to approve transactions in a local Next.js UI instead of putting `DEPLOYER_PRIVATE_KEY` in the environment. See [contracts/signer-ui/README.md](../../../contracts/signer-ui/README.md) and the “Browser wallet signing” section in the deployment README. To remove that stack entirely, see [contracts/docs/deployment/signer-ui-removal.md](../../../contracts/docs/deployment/signer-ui-removal.md).
+**Optional browser signing:** `--signer-ui` (or `HARDHAT_SIGNER_UI=true`) approves transactions in a local Next.js UI instead of putting `DEPLOYER_PRIVATE_KEY` in the environment. See [contracts/signer-ui/README.md](../../../contracts/signer-ui/README.md).
 
 ### Local Development
 
@@ -367,7 +361,7 @@ L2MSGSERVICE_L1L2_MESSAGE_SETTER=0x...
 cd contracts
 
 # Compile
-pnpm exec hardhat compile
+pnpm exec hardhat build
 
 # Run all tests
 pnpm exec hardhat test
@@ -375,8 +369,8 @@ pnpm exec hardhat test
 # Run specific test file
 pnpm exec hardhat test test/hardhat/rollup/LinethRollup.ts
 
-# Coverage
-pnpm exec hardhat coverage
+# Coverage (report in contracts/coverage/)
+pnpm run coverage
 ```
 
 ## Security Features

@@ -1,7 +1,6 @@
-import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
-import { ethers } from "ethers";
+import { type Address, type Hex, encodeFunctionData, parseSignature } from "viem";
 
-import { BridgedToken } from "../../../../../typechain-types";
+import type { ContractReturnType, WalletClient } from "@nomicfoundation/hardhat-viem/types";
 
 const Permit = [
   { name: "owner", type: "address" },
@@ -9,39 +8,30 @@ const Permit = [
   { name: "value", type: "uint256" },
   { name: "nonce", type: "uint256" },
   { name: "deadline", type: "uint256" },
-];
-
-function buildData(
-  owner: string,
-  name: string,
-  version: string,
-  chainId: number,
-  verifyingContract: string,
-  spender: string,
-  value: number,
-  nonce: bigint,
-  deadline: bigint,
-) {
-  return {
-    domain: { name, version, chainId, verifyingContract },
-    types: { Permit },
-    value: { owner, spender, value, nonce, deadline },
-  };
-}
+] as const;
 
 export async function getPermitData(
-  wallet: SignerWithAddress,
-  token: BridgedToken,
+  wallet: WalletClient,
+  token: ContractReturnType<"BridgedToken">,
   nonce: bigint,
   chainId: number,
-  spender: string,
-  value: number,
+  spender: Address,
+  value: number | bigint,
   deadline: bigint,
-) {
-  const name = await token.name();
-  const data = buildData(wallet.address, name, "1", chainId, await token.getAddress(), spender, value, nonce, deadline);
-  const signature = await wallet.signTypedData(data.domain, data.types, data.value);
-  const { v, r, s } = ethers.Signature.from(signature);
-  const permitCall = token.interface.encodeFunctionData("permit", [wallet.address, spender, value, deadline, v, r, s]);
+): Promise<Hex> {
+  const owner = wallet.account.address;
+  const name = await token.read.name();
+  const signature = await wallet.signTypedData({
+    domain: { name, version: "1", chainId, verifyingContract: token.address },
+    types: { Permit },
+    primaryType: "Permit",
+    message: { owner, spender, value: BigInt(value), nonce, deadline },
+  });
+  const { v, r, s, yParity } = parseSignature(signature);
+  const permitCall = encodeFunctionData({
+    abi: token.abi,
+    functionName: "permit",
+    args: [owner, spender, BigInt(value), deadline, v !== undefined ? Number(v) : yParity + 27, r, s],
+  });
   return permitCall;
 }

@@ -5,21 +5,9 @@ export type TransactionProgressStage =
   | "waiting_for_hardhat_confirmation"
   | "failed";
 
-export type WorkflowStatusStage = "waiting_for_transaction_receipt" | "waiting_for_contract_verification";
-
-export type WorkflowStatus = {
-  stage: WorkflowStatusStage;
-  message: string;
-  updatedAt: string;
-};
-
 export type TransactionDetails = {
   contractName?: string;
-  constructorArgs?: unknown;
-  initializerArgs?: unknown;
-  proxyOptions?: string;
   notes?: string;
-  openZeppelinProxyKind?: "transparent" | "uups" | "beacon";
 } | null;
 
 export function progressStageLabel(stage: TransactionProgressStage): string {
@@ -39,43 +27,6 @@ export function progressStageLabel(stage: TransactionProgressStage): string {
 
 export function progressTone(stage: TransactionProgressStage): "active" | "error" {
   return stage === "failed" ? "error" : "active";
-}
-
-export function workflowStageLabel(stage: WorkflowStatusStage): string {
-  switch (stage) {
-    case "waiting_for_transaction_receipt":
-      return "Waiting for transaction receipt";
-    case "waiting_for_contract_verification":
-      return "Waiting for contract verification";
-  }
-}
-
-export function nextWorkflowDisplayState(params: {
-  incomingWorkflow: WorkflowStatus | null | undefined;
-  currentWorkflow: WorkflowStatus | null;
-  currentExpiresAtMs: number;
-  nowMs: number;
-  minimumVisibilityMs?: number;
-}): { workflow: WorkflowStatus | null; expiresAtMs: number } {
-  const minVisibilityMs = params.minimumVisibilityMs ?? 2000;
-  if (params.incomingWorkflow) {
-    return {
-      workflow: params.incomingWorkflow,
-      expiresAtMs: params.nowMs + minVisibilityMs,
-    };
-  }
-
-  if (params.currentWorkflow && params.nowMs < params.currentExpiresAtMs) {
-    return {
-      workflow: params.currentWorkflow,
-      expiresAtMs: params.currentExpiresAtMs,
-    };
-  }
-
-  return {
-    workflow: null,
-    expiresAtMs: 0,
-  };
 }
 
 export function signerUiHistoryStorageKey(apiBaseUrl: string, sessionId: string): string {
@@ -106,27 +57,6 @@ export function scrollToHistoryFragment(frag: string): void {
   run();
   requestAnimationFrame(run);
   window.setTimeout(run, 100);
-}
-
-export function transactionKindBadgeLabels(details: TransactionDetails | undefined): string[] {
-  if (!details) {
-    return [];
-  }
-
-  const labels: string[] = [];
-  if (details.openZeppelinProxyKind === "uups") {
-    labels.push("UUPS proxy (OpenZeppelin)");
-  } else if (details.openZeppelinProxyKind === "transparent") {
-    labels.push("Transparent proxy (OpenZeppelin)");
-  } else if (details.openZeppelinProxyKind === "beacon") {
-    labels.push("Beacon proxy (OpenZeppelin)");
-  }
-
-  const name = (details.contractName ?? "").replace(/\s+/g, "");
-  if (/proxyadmin/i.test(name)) {
-    labels.push("Proxy admin contract");
-  }
-  return labels;
 }
 
 export function firstWalletAddress(accounts: readonly string[] | null | undefined): string | null {

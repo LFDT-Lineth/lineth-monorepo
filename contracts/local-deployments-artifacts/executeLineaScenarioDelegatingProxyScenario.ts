@@ -14,14 +14,16 @@
     GAS_LIMIT=<number> \
     DEPLOYER_PRIVATE_KEY=<key> \
     RPC_URL=<url> \
-    pnpm exec ts-node local-deployments-artifacts/executeLineaScenarioDelegatingProxyScenario.ts
+    pnpm exec tsx local-deployments-artifacts/executeLineaScenarioDelegatingProxyScenario.ts
     *******************************************************************************************
 */
 
 import { ethers } from "ethers";
 
-import { abi as testerAbi } from "./static-artifacts/LineaScenarioDelegatingProxy.json";
-import { getRequiredEnvVar } from "../common/helpers/environment";
+import lineaScenarioDelegatingProxyJson from "./static-artifacts/LineaScenarioDelegatingProxy.json" with { type: "json" };
+import { getRequiredEnvVar } from "../common/helpers/environment.js";
+
+const { abi: testerAbi } = lineaScenarioDelegatingProxyJson;
 
 async function main() {
   const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);

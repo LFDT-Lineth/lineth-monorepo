@@ -1,7 +1,7 @@
 import csv from "csv-parser";
-import { ethers } from "ethers";
 import fs from "fs";
 import path from "path";
+import { isAddress, zeroAddress } from "viem";
 import { hideBin } from "yargs/helpers";
 import yargs from "yargs/yargs";
 
@@ -91,7 +91,7 @@ function checkIfDuplicateExists(recipientArrayValidation: string[]) {
 }
 
 function checkIfValidAddresses(recipient: string): boolean {
-  return ethers.isAddress(recipient) && recipient !== ethers.ZeroAddress;
+  return isAddress(recipient) && recipient !== zeroAddress;
 }
 
 function arraysContainSameValues(array1: string[], array2: string[]): boolean {

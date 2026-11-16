@@ -282,7 +282,7 @@ check_docker_preflight() {
 }
 
 run_ts_preflight() {
-  if ! lineth_ts_node_available "$ROOT"; then
+  if ! lineth_tsx_available "$ROOT"; then
     lineth_warn "host L1 check skipped; run pnpm install for earlier balance/gas checks"
     lineth_info "account generation still runs the same checks before runtime containers are created"
     return 0
@@ -291,7 +291,7 @@ run_ts_preflight() {
   tmp="$(mktemp)"
   if (
     export LINETH_STACK_DIR="$STACK"
-    lineth_run_ts_node "$ROOT" "$STACK/scripts/internal/quickstart-preflight.ts"
+    lineth_run_tsx "$ROOT" "$STACK/scripts/internal/quickstart-preflight.ts"
   ) > "$tmp" 2>&1; then
     status=0
   else

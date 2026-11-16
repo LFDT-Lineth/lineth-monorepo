@@ -27,13 +27,13 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-pnpm exec hardhat deploy --network custom --tags EIP2935SystemContract
+pnpm exec hardhat deploy:eip2935-system-contract --network custom
 ```
 
 Base command with cli arguments:
 
 ```shell
-DEPLOYER_PRIVATE_KEY=<key> CUSTOM_RPC_URL=<l2_rpc_url> pnpm exec hardhat deploy --network custom --tags EIP2935SystemContract
+DEPLOYER_PRIVATE_KEY=<key> CUSTOM_RPC_URL=<l2_rpc_url> pnpm exec hardhat deploy:eip2935-system-contract --network custom
 ```
 
 (make sure to replace `<key>` with actual values)
@@ -58,13 +58,13 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-pnpm exec hardhat deploy --network custom --tags EIP4788SystemContract
+pnpm exec hardhat deploy:eip4788-system-contract --network custom
 ```
 
 Base command with cli arguments:
 
 ```shell
-DEPLOYER_PRIVATE_KEY=<key> CUSTOM_RPC_URL=<l2_rpc_url> pnpm exec hardhat deploy --network custom --tags EIP4788SystemContract
+DEPLOYER_PRIVATE_KEY=<key> CUSTOM_RPC_URL=<l2_rpc_url> pnpm exec hardhat deploy:eip4788-system-contract --network custom
 ```
 
 (make sure to replace `<key>` with actual values)
@@ -81,20 +81,20 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | -------------------------- | -------- | ---------- | ----------- |
 | VERIFY_CONTRACT    | false    |true\|false| Verifies the deployed contract |
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
-| \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
+| \**ETHERSCAN_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network. |
 
 <br />
 
 Base command:
 ```shell
-pnpm exec hardhat deploy --network linea_sepolia --tags UpgradeableWithdrawalQueuePredeploy
+pnpm exec hardhat ignition deploy UpgradeableWithdrawalQueuePredeploy --network linea_sepolia
 ```
 
 Base command with cli arguments:
 
 ```shell
-VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> pnpm exec hardhat deploy --network linea_sepolia --tags UpgradeableWithdrawalQueuePredeploy
+VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> pnpm exec hardhat ignition deploy UpgradeableWithdrawalQueuePredeploy --network linea_sepolia
 ```
 
 (make sure to replace `<key>` with actual values)
@@ -111,20 +111,20 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | -------------------------- | -------- | ---------- | ----------- |
 | VERIFY_CONTRACT    | false    |true\|false| Verifies the deployed contract |
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
-| \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
+| \**ETHERSCAN_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network. |
 
 <br />
 
 Base command:
 ```shell
-pnpm exec hardhat deploy --network linea_sepolia --tags UpgradeableConsolidationQueuePredeploy
+pnpm exec hardhat ignition deploy UpgradeableConsolidationQueuePredeploy --network linea_sepolia
 ```
 
 Base command with cli arguments:
 
 ```shell
-VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> pnpm exec hardhat deploy --network linea_sepolia --tags UpgradeableConsolidationQueuePredeploy
+VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> pnpm exec hardhat ignition deploy UpgradeableConsolidationQueuePredeploy --network linea_sepolia
 ```
 
 (make sure to replace `<key>` with actual values)
@@ -141,20 +141,20 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | -------------------------- | -------- | ---------- | ----------- |
 | VERIFY_CONTRACT    | false    |true\|false| Verifies the deployed contract |
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
-| \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
+| \**ETHERSCAN_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network. |
 
 <br />
 
 Base command:
 ```shell
-pnpm exec hardhat deploy --network linea_sepolia --tags UpgradeableBeaconChainDepositPredeploy
+pnpm exec hardhat ignition deploy UpgradeableBeaconChainDepositPredeploy --network linea_sepolia
 ```
 
 Base command with cli arguments:
 
 ```shell
-VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> pnpm exec hardhat deploy --network linea_sepolia --tags UpgradeableBeaconChainDepositPredeploy
+VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> pnpm exec hardhat ignition deploy UpgradeableBeaconChainDepositPredeploy --network linea_sepolia
 ```
 
 (make sure to replace `<key>` with actual values)

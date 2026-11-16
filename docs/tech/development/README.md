@@ -174,7 +174,7 @@ go build -o controller ./cmd/controller
 cd contracts
 
 # Compile
-pnpm exec hardhat compile
+pnpm exec hardhat build
 
 # Test
 pnpm exec hardhat test
@@ -182,8 +182,8 @@ pnpm exec hardhat test
 # Specific test file
 pnpm exec hardhat test test/hardhat/rollup/LinethRollup.ts
 
-# Coverage
-pnpm exec hardhat coverage
+# Coverage (report in contracts/coverage/)
+pnpm run coverage
 ```
 
 ## Docker Images

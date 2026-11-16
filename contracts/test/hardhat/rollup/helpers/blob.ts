@@ -1,34 +1,52 @@
-import * as kzg from "c-kzg";
-import { TestLinethRollup } from "contracts/typechain-types";
-import { BaseContract, Contract, HDNodeWallet, Transaction, TransactionReceipt } from "ethers";
-import * as fs from "fs";
-import { ethers } from "hardhat";
-import path from "path";
-
-import { getWalletForIndex } from "./";
 import {
-  expectEventDirectFromReceiptData,
-  generateBlobDataSubmission,
-  generateBlobDataSubmissionFromFile,
-} from "../../common/helpers";
-import { BlobSubmission } from "../../common/types";
+  type Abi,
+  type Address,
+  type Hex,
+  type TransactionReceipt,
+  type TransactionSerializableEIP4844,
+  encodeFunctionData,
+  pad,
+} from "viem";
+
+import { getWalletForIndex } from "./index.js";
+import { ensureKzgSetup } from "./kzg-setup.js";
+import { getConnection } from "../../common/helpers/connection.js";
+import { expectEventDirectFromReceiptData, generateBlobDataSubmission } from "../../common/helpers/index.js";
+
+import type { BlobSubmission } from "../../common/types.js";
+import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
+import type { HDAccount } from "viem/accounts";
+
+/** EIP-4844 blob size in bytes (4096 field elements of 32 bytes). */
+const BLOB_SIZE = 4096 * 32;
+
+/**
+ * Converts blob submissions to the `submitBlobs` struct shape: `dataEvaluationClaim` is a `uint256` in the ABI.
+ */
+export function toBlobSubmissionStructs(blobSubmission: BlobSubmission[]) {
+  return blobSubmission.map((submission) => ({
+    ...submission,
+    dataEvaluationClaim: BigInt(submission.dataEvaluationClaim),
+  }));
+}
 
 /**
  * Context for building and sending blob transactions
  */
 export type BlobTransactionContext = {
-  linethRollupAddress: string;
-  encodedCall: string;
-  compressedBlobs: string[];
-  operatorHDSigner?: HDNodeWallet | undefined;
+  linethRollupAddress: Address;
+  encodedCall: Hex;
+  compressedBlobs: Hex[];
+  operatorHDSigner?: HDAccount | undefined;
   gasLimit?: number | undefined;
-  targetAddress?: string | undefined; // Override for callforwarder scenarios
+  targetAddress?: Address | undefined; // Override for callforwarder scenarios
 };
 
 /**
- * Builds a type-3 blob transaction (EIP-4844)
+ * Builds a type-3 blob transaction (EIP-4844). Each blob is zero-padded on the right to the blob size; the KZG
+ * commitments and proofs are computed when the transaction is signed.
  */
-export async function buildBlobTransaction(context: BlobTransactionContext): Promise<Transaction> {
+export async function buildBlobTransaction(context: BlobTransactionContext): Promise<TransactionSerializableEIP4844> {
   const {
     linethRollupAddress,
     encodedCall,
@@ -38,57 +56,61 @@ export async function buildBlobTransaction(context: BlobTransactionContext): Pro
     targetAddress,
   } = context;
 
-  const signer = operatorHDSigner ?? getWalletForIndex(2);
-  const { maxFeePerGas, maxPriorityFeePerGas } = await ethers.provider.getFeeData();
-  const nonce = await signer.getNonce();
+  const signer = operatorHDSigner ?? (await getWalletForIndex(2));
+  const { viem } = await getConnection();
+  const publicClient = await viem.getPublicClient();
+  const { maxFeePerGas, maxPriorityFeePerGas } = await publicClient.estimateFeesPerGas();
+  const nonce = await publicClient.getTransactionCount({ address: signer.address, blockTag: "pending" });
 
-  return Transaction.from({
+  return {
+    type: "eip4844",
     data: encodedCall,
-    maxPriorityFeePerGas: maxPriorityFeePerGas!,
-    maxFeePerGas: maxFeePerGas!,
+    maxPriorityFeePerGas,
+    maxFeePerGas,
     to: targetAddress ?? linethRollupAddress,
-    chainId: (await ethers.provider.getNetwork()).chainId,
-    type: 3,
+    chainId: await publicClient.getChainId(),
     nonce,
-    value: 0,
-    gasLimit,
-    kzg,
+    value: 0n,
+    gas: BigInt(gasLimit),
+    kzg: ensureKzgSetup(),
     maxFeePerBlobGas: 1n,
-    blobs: compressedBlobs,
-  });
+    blobs: compressedBlobs.map((blob) => pad(blob, { dir: "right", size: BLOB_SIZE })),
+  };
 }
 
 /**
  * Signs and broadcasts a blob transaction, returning the receipt
  */
-export async function signAndBroadcastBlobTransaction(
-  transaction: Transaction,
-  operatorHDSigner?: HDNodeWallet,
-): Promise<TransactionReceipt | null> {
-  const signer = operatorHDSigner ?? getWalletForIndex(2);
+async function signAndBroadcastBlobTransaction(
+  transaction: TransactionSerializableEIP4844,
+  operatorHDSigner?: HDAccount,
+): Promise<TransactionReceipt> {
+  const signer = operatorHDSigner ?? (await getWalletForIndex(2));
   const signedTx = await signer.signTransaction(transaction);
-  const txResponse = await ethers.provider.broadcastTransaction(signedTx);
-  return await ethers.provider.getTransactionReceipt(txResponse.hash);
+  const { viem } = await getConnection();
+  const publicClient = await viem.getPublicClient();
+  const hash = await publicClient.sendRawTransaction({ serializedTransaction: signedTx });
+  return await publicClient.waitForTransactionReceipt({ hash });
 }
 
 /**
  * Context for submitting blobs with validation
  */
 export type SubmitBlobsContext = {
-  linethRollup: TestLinethRollup;
+  linethRollup: ContractReturnType<"TestLinethRollup">;
   blobSubmission: BlobSubmission[];
-  compressedBlobs: string[];
-  parentShnarf: string;
-  finalShnarf: string;
-  operatorHDSigner?: HDNodeWallet;
+  compressedBlobs: Hex[];
+  parentShnarf: Hex;
+  finalShnarf: Hex;
+  operatorHDSigner?: HDAccount;
   gasLimit?: number;
-  targetAddress?: string;
+  targetAddress?: Address;
 };
 
 /**
  * Builds and submits blobs, returning the receipt
  */
-export async function submitBlobsAndGetReceipt(context: SubmitBlobsContext): Promise<TransactionReceipt | null> {
+export async function submitBlobsAndGetReceipt(context: SubmitBlobsContext): Promise<TransactionReceipt> {
   const {
     linethRollup,
     blobSubmission,
@@ -100,15 +122,14 @@ export async function submitBlobsAndGetReceipt(context: SubmitBlobsContext): Pro
     targetAddress,
   } = context;
 
-  const linethRollupAddress = await linethRollup.getAddress();
-  const encodedCall = linethRollup.interface.encodeFunctionData("submitBlobs", [
-    blobSubmission,
-    parentShnarf,
-    finalShnarf,
-  ]);
+  const encodedCall = encodeFunctionData({
+    abi: linethRollup.abi,
+    functionName: "submitBlobs",
+    args: [toBlobSubmissionStructs(blobSubmission), parentShnarf, finalShnarf],
+  });
 
   const transaction = await buildBlobTransaction({
-    linethRollupAddress,
+    linethRollupAddress: linethRollup.address,
     encodedCall,
     compressedBlobs,
     operatorHDSigner,
@@ -119,17 +140,8 @@ export async function submitBlobsAndGetReceipt(context: SubmitBlobsContext): Pro
   return signAndBroadcastBlobTransaction(transaction, operatorHDSigner);
 }
 
-let kzgLoaded = false;
-
-export function ensureKzgIsLoaded() {
-  if (!kzgLoaded) {
-    kzg.loadTrustedSetup(0, path.resolve(__dirname, "../../_testData/trusted_setup.txt"));
-    kzgLoaded = true;
-  }
-}
-
 export async function sendBlobTransaction(
-  linethRollup: TestLinethRollup,
+  linethRollup: ContractReturnType<"TestLinethRollup">,
   startIndex: number,
   finalIndex: number,
   isMultiple: boolean = false,
@@ -150,47 +162,14 @@ export async function sendBlobTransaction(
   });
 
   const expectedEventArgs = [parentShnarf, finalShnarf, blobSubmission[blobSubmission.length - 1].finalStateRootHash];
-  expectEventDirectFromReceiptData(linethRollup as BaseContract, receipt!, "DataSubmittedV3", expectedEventArgs);
-}
-
-export async function sendVersionedBlobTransactionFromFile(
-  linethRollup: TestLinethRollup,
-  filePath: string,
-  versionedLinethRollup: TestLinethRollup,
-  versionFolderName: string,
-) {
-  const versionedLinethRollupAddress = await versionedLinethRollup.getAddress();
-
-  const {
-    blobDataSubmission: blobSubmission,
-    compressedBlobs,
-    parentShnarf,
-    finalShnarf,
-  } = generateBlobDataSubmissionFromFile(path.resolve(__dirname, `../../_testData/${versionFolderName}`, filePath));
-
-  const encodedCall = linethRollup.interface.encodeFunctionData("submitBlobs", [
-    blobSubmission,
-    parentShnarf,
-    finalShnarf,
-  ]);
-
-  const transaction = await buildBlobTransaction({
-    linethRollupAddress: versionedLinethRollupAddress,
-    encodedCall,
-    compressedBlobs,
-  });
-
-  const receipt = await signAndBroadcastBlobTransaction(transaction);
-  const expectedEventArgs = [parentShnarf, finalShnarf, blobSubmission[blobSubmission.length - 1].finalStateRootHash];
-
-  expectEventDirectFromReceiptData(linethRollup as BaseContract, receipt!, "DataSubmittedV3", expectedEventArgs);
+  expectEventDirectFromReceiptData(linethRollup, receipt, "DataSubmittedV3", expectedEventArgs);
 }
 
 export async function sendBlobTransactionViaCallForwarder(
-  linethRollupUpgraded: Contract,
+  linethRollupUpgraded: { abi: Abi },
   startIndex: number,
   finalIndex: number,
-  callforwarderAddress: string,
+  callforwarderAddress: Address,
 ) {
   const {
     blobDataSubmission: blobSubmission,
@@ -199,11 +178,11 @@ export async function sendBlobTransactionViaCallForwarder(
     finalShnarf,
   } = generateBlobDataSubmission(startIndex, finalIndex, false);
 
-  const encodedCall = linethRollupUpgraded.interface.encodeFunctionData("submitBlobs", [
-    blobSubmission,
-    parentShnarf,
-    finalShnarf,
-  ]);
+  const encodedCall = encodeFunctionData({
+    abi: linethRollupUpgraded.abi,
+    functionName: "submitBlobs",
+    args: [toBlobSubmissionStructs(blobSubmission), parentShnarf, finalShnarf],
+  });
 
   const transaction = await buildBlobTransaction({
     linethRollupAddress: callforwarderAddress,
@@ -215,36 +194,5 @@ export async function sendBlobTransactionViaCallForwarder(
   const receipt = await signAndBroadcastBlobTransaction(transaction);
   const expectedEventArgs = [parentShnarf, finalShnarf, blobSubmission[blobSubmission.length - 1].finalStateRootHash];
 
-  expectEventDirectFromReceiptData(
-    linethRollupUpgraded as BaseContract,
-    receipt!,
-    "DataSubmittedV3",
-    expectedEventArgs,
-  );
-}
-
-// "betaV1" getBetaV1BlobFiles
-export function getVersionedBlobFiles(versionFolderName: string): string[] {
-  // Read all files in the folder
-  const files = fs.readdirSync(path.resolve(__dirname, `../../_testData/${versionFolderName}`));
-
-  // Map files to their ranges and filter invalid ones
-  const filesWithRanges = files
-    .map((fileName) => {
-      const range = extractBlockRangeFromFileName(fileName);
-      return range ? { fileName, range } : null;
-    })
-    .filter(Boolean) as { fileName: string; range: [number, number] }[];
-
-  return filesWithRanges.sort((a, b) => a.range[0] - b.range[0]).map((f) => f.fileName);
-}
-
-// Function to extract range from the file name
-function extractBlockRangeFromFileName(fileName: string): [number, number] | null {
-  const rangeRegex = /(\d+)-(\d+)-/;
-  const match = fileName.match(rangeRegex);
-  if (match && match.length >= 3) {
-    return [parseInt(match[1], 10), parseInt(match[2], 10)];
-  }
-  return null;
+  expectEventDirectFromReceiptData(linethRollupUpgraded, receipt, "DataSubmittedV3", expectedEventArgs);
 }

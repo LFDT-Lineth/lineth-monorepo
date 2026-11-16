@@ -39,10 +39,8 @@ export L1_DEPLOYER_KEYSTORE_PATH L1_DEPLOYER_KEYSTORE_PASSWORD L1_DEPLOYER_KEYST
 
 cd /workspace/contracts
 export NODE_PATH="/workspace/node_modules:/workspace/contracts/node_modules${NODE_PATH:+:$NODE_PATH}"
-export TS_NODE_TRANSPILE_ONLY=1
-export TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"Node"}'
 
 corepack enable >/dev/null 2>&1 || true
 corepack prepare pnpm@12.17.0 --activate >/dev/null 2>&1 || true
 
-pnpm -s exec ts-node /scripts/internal/ensure-demo-erc20.ts "$lane"
+pnpm -s exec tsx /scripts/internal/ensure-demo-erc20.ts "$lane"

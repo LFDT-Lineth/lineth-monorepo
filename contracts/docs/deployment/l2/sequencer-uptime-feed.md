@@ -21,5 +21,5 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-pnpm exec hardhat deploy --network linea_sepolia --tags LineaSequencerUptimeFeed
+pnpm exec hardhat ignition deploy LineaSequencerUptimeFeed --network linea_sepolia
 ```

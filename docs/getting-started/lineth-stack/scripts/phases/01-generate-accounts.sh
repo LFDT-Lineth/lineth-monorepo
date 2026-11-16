@@ -22,7 +22,7 @@ log "Preparing Node/ethers account setup runtime"
 corepack enable >/dev/null 2>&1 || true
 corepack prepare pnpm@12.17.0 --activate >/dev/null 2>&1 || true
 
-if [ ! -x "$WORKSPACE_DIR/node_modules/.bin/ts-node" ] \
+if [ ! -x "$CONTRACTS_DIR/node_modules/.bin/tsx" ] \
   || [ ! -d "$WORKSPACE_DIR/node_modules/.pnpm" ] \
   || [ ! -e "$CONTRACTS_DIR/node_modules/ethers" ]; then
   log "Installing minimal workspace dependencies for TypeScript account setup (seconds from a warm cache; ~2 minutes on a cold one)"
@@ -43,6 +43,4 @@ fi
 
 cd "$CONTRACTS_DIR"
 export NODE_PATH="$WORKSPACE_DIR/node_modules:$CONTRACTS_DIR/node_modules${NODE_PATH:+:$NODE_PATH}"
-TS_NODE_TRANSPILE_ONLY=1 \
-TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"Node"}' \
-  pnpm -s exec ts-node /scripts/internal/account-setup.ts
+pnpm -s exec tsx /scripts/internal/account-setup.ts

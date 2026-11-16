@@ -547,15 +547,7 @@ check_account_setup_key_model() {
 }
 
 check_internal_typescript_typecheck() {
-  # Named tsconfig.typecheck.json on purpose: a plain tsconfig.json here would be
-  # auto-discovered by ts-node in the deploy containers, where its extends path
-  # (repo-root tsconfig.json) does not exist under the /scripts mount.
   internal_tsconfig="$STACK/scripts/internal/tsconfig.typecheck.json"
-
-  if [ -f "$STACK/scripts/internal/tsconfig.json" ]; then
-    fail "scripts/internal must not contain tsconfig.json; ts-node auto-discovers it inside containers where its extends target is missing"
-    return
-  fi
 
   if [ ! -f "$internal_tsconfig" ]; then
     warn "scripts/internal/tsconfig.typecheck.json not found; skipped quickstart TypeScript typecheck"
@@ -865,7 +857,7 @@ check_incremental_typescript_helpers() {
   deploy_contracts="$STACK/scripts/phases/04-deploy-contracts.sh"
   aggregate_ts="$STACK/scripts/internal/aggregate-addresses.ts"
 
-  if [ -f "$aggregate_ts" ] && grep -q 'ts-node /scripts/internal/aggregate-addresses.ts' "$deploy_contracts"; then
+  if [ -f "$aggregate_ts" ] && grep -q 'tsx /scripts/internal/aggregate-addresses.ts' "$deploy_contracts"; then
     pass "addresses.json aggregation is implemented as an incremental TypeScript helper"
   else
     fail "deploy-contracts should call scripts/internal/aggregate-addresses.ts for addresses.json aggregation"
@@ -1325,7 +1317,7 @@ check_smoke_and_traffic_scripts() {
 
   if [ -f "$STACK/scripts/internal/deploy-rpc-error.ts" ] \
     && grep -q 'formatQuickstartDeployRpcError' "$STACK/scripts/internal/deployBridgedTokenAndTokenBridgeV1_1.ts" \
-    && grep -q 'require("/scripts/internal/deploy-rpc-error")' "$STACK/scripts/internal/deployBridgedTokenAndTokenBridgeV1_1.ts" \
+    && grep -q 'from "/scripts/internal/deploy-rpc-error.js"' "$STACK/scripts/internal/deployBridgedTokenAndTokenBridgeV1_1.ts" \
     && grep -q './scripts/internal:/scripts/internal:ro' "$STACK/docker-compose.yml" \
     && ! grep -q 'deploy-rpc-error.ts:/workspace/contracts/local-deployments-artifacts' "$STACK/docker-compose.yml" \
     && grep -q 'free or overloaded Sepolia RPC endpoint' "$STACK/scripts/internal/deploy-rpc-error.ts" \

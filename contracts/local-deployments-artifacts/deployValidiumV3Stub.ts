@@ -1,30 +1,12 @@
 import * as dotenv from "dotenv";
 import { ethers } from "ethers";
 
-import { abi as ValidiumV3StubAbi, bytecode as ValidiumV3StubBytecode } from "./dynamic-artifacts/ValidiumV3Stub.json";
-import {
-  contractName as AddressFilterContractName,
-  abi as AddressFilterAbi,
-  bytecode as AddressFilterBytecode,
-} from "./static-artifacts/AddressFilter.json";
-import {
-  abi as ForcedTransactionGatewayAbi,
-  bytecode as ForcedTransactionGatewayBytecode,
-} from "./static-artifacts/ForcedTransactionGateway.json";
-import {
-  contractName as MimcAddressContractName,
-  abi as MimcAddressAbi,
-  bytecode as MimcAddressFilterBytecode,
-} from "./static-artifacts/Mimc.json";
-import {
-  contractName as ProxyAdminContractName,
-  abi as ProxyAdminAbi,
-  bytecode as ProxyAdminBytecode,
-} from "./static-artifacts/ProxyAdmin.json";
-import {
-  abi as TransparentUpgradeableProxyAbi,
-  bytecode as TransparentUpgradeableProxyBytecode,
-} from "./static-artifacts/TransparentUpgradeableProxy.json";
+import validiumV3StubJson from "./dynamic-artifacts/ValidiumV3Stub.json" with { type: "json" };
+import addressFilterJson from "./static-artifacts/AddressFilter.json" with { type: "json" };
+import forcedTransactionGatewayJson from "./static-artifacts/ForcedTransactionGateway.json" with { type: "json" };
+import mimcJson from "./static-artifacts/Mimc.json" with { type: "json" };
+import proxyAdminJson from "./static-artifacts/ProxyAdmin.json" with { type: "json" };
+import transparentUpgradeableProxyJson from "./static-artifacts/TransparentUpgradeableProxy.json" with { type: "json" };
 import {
   VALIDIUM_PAUSE_TYPES_ROLES,
   VALIDIUM_UNPAUSE_TYPES_ROLES,
@@ -35,16 +17,32 @@ import {
   DEAD_ADDRESS,
   PRECOMPILES_ADDRESSES,
   FORCED_TRANSACTION_SENDER_ROLE,
-} from "../common/constants";
-import { deployContractFromArtifacts, getDeployNonceFromEnv, getInitializerData } from "../common/helpers/deployments";
-import { getBooleanEnvVarOrDefault, getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment";
-import { resolveOneModelFeeOverrides } from "../common/helpers/feeOverrides";
+} from "../common/constants/index.js";
+import {
+  deployContractFromArtifacts,
+  getDeployNonceFromEnv,
+  getInitializerData,
+} from "../common/helpers/deployments.js";
+import { getBooleanEnvVarOrDefault, getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment.js";
+import { resolveOneModelFeeOverrides } from "../common/helpers/feeOverrides.js";
 import {
   getDeploymentNetworkName,
   requireAddressesFromRegistryOrEnv,
   requireAddressFromRegistryOrEnv,
-} from "../common/helpers/readAddress";
-import { generateRoleAssignments } from "../common/helpers/roles";
+} from "../common/helpers/readAddress.js";
+import { generateRoleAssignments } from "../common/helpers/roles.js";
+
+const { abi: ValidiumV3StubAbi, bytecode: ValidiumV3StubBytecode } = validiumV3StubJson;
+const {
+  contractName: AddressFilterContractName,
+  abi: AddressFilterAbi,
+  bytecode: AddressFilterBytecode,
+} = addressFilterJson;
+const { abi: ForcedTransactionGatewayAbi, bytecode: ForcedTransactionGatewayBytecode } = forcedTransactionGatewayJson;
+const { contractName: MimcAddressContractName, abi: MimcAddressAbi, bytecode: MimcAddressFilterBytecode } = mimcJson;
+const { contractName: ProxyAdminContractName, abi: ProxyAdminAbi, bytecode: ProxyAdminBytecode } = proxyAdminJson;
+const { abi: TransparentUpgradeableProxyAbi, bytecode: TransparentUpgradeableProxyBytecode } =
+  transparentUpgradeableProxyJson;
 
 dotenv.config();
 

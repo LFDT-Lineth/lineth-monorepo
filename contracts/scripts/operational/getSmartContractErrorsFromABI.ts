@@ -1,88 +1,40 @@
 // Get smart contract Errors (with code) from smart contract ABI
-// Usage - `pnpm exec ts-node scripts/operational/getSmartContractErrorsFromABI.ts <ABI_JSON_FILE_PATH>`
+// Usage - `pnpm exec tsx scripts/operational/getSmartContractErrorsFromABI.ts <ABI_JSON_FILE_PATH>`
 
 import { readFileSync } from "fs";
+import { type Abi, toFunctionSelector } from "viem";
+import { formatAbiItem } from "viem/utils";
 
-import { generateFunctionSelector } from "../../common/helpers/hashing";
-
-// Input types
-type ABIElementInput = {
-  internalType: string;
-  name: string;
-  type: string;
-};
-
-type ABIElement = {
-  type: string;
-  name: string;
-  inputs: ABIElementInput[];
-};
-
-type ABI = ABIElement[];
-
-type HardhatBuildArtifactJson = {
-  abi: ABI;
-};
-
-const ERROR_TYPE = "error";
-
-// Output types
 type SmartContractErrorOutput = {
   name: string;
   functionSignature: string;
   selector: string;
 };
 
-// Function to get smart contract errors from ABI
-function getSmartContractErrorsFromABI(abiInput: ABI): SmartContractErrorOutput[] {
-  const resp: SmartContractErrorOutput[] = [];
-
-  abiInput.forEach((element: ABIElement) => {
-    if (element.type === ERROR_TYPE) {
-      const functionSignature = getFunctionSignature(element);
-      resp.push({
-        name: element.name,
-        functionSignature: functionSignature,
-        selector: generateFunctionSelector(functionSignature),
-      });
+function getSmartContractErrorsFromABI(abi: Abi): SmartContractErrorOutput[] {
+  return abi.flatMap((item) => {
+    if (item.type !== "error") {
+      return [];
     }
+    const functionSignature = formatAbiItem(item);
+    return [{ name: item.name, functionSignature, selector: toFunctionSelector(functionSignature).slice(2) }];
   });
-  return resp;
 }
 
-function getFunctionSignature(abiElement: ABIElement): string {
-  let functionSignature = abiElement.name;
-  functionSignature += "(";
-  abiElement.inputs.forEach((input: ABIElementInput) => {
-    functionSignature += input.type;
-    functionSignature += ",";
-  });
-  // Remove trailing "," if have error param/s
-  if (abiElement.inputs.length > 0) functionSignature = functionSignature.substring(0, functionSignature.length - 1);
-  functionSignature += ")";
-  return functionSignature;
-}
-
-function importABIFromCLIArg(): ABI {
+function importABIFromCLIArg(): Abi {
   const filePath = process.argv[2];
-  if (filePath.length === 0)
+  if (!filePath) {
     throw new Error(
-      "No file path provided. Usage: pnpm exec ts-node scripts/operational/getSmartContractErrorsFromABI.ts <ABI_JSON_FILE_PATH>",
+      "No file path provided. Usage: pnpm exec tsx scripts/operational/getSmartContractErrorsFromABI.ts <ABI_JSON_FILE_PATH>",
     );
+  }
 
   try {
-    const fileContent = readFileSync(filePath, "utf8");
-    const artifactJson: HardhatBuildArtifactJson = JSON.parse(fileContent);
+    const artifactJson: { abi: Abi } = JSON.parse(readFileSync(filePath, "utf8"));
     return artifactJson.abi;
   } catch (error: unknown) {
     throw new Error(`Failed to import ABI from ${filePath}: ${error}`);
   }
 }
 
-function main() {
-  const abi = importABIFromCLIArg();
-  const smartContractErrors = getSmartContractErrorsFromABI(abi);
-  console.log(smartContractErrors);
-}
-
-main();
+console.log(getSmartContractErrorsFromABI(importABIFromCLIArg()));

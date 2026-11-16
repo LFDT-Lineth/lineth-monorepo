@@ -22,14 +22,14 @@ deploy-eip-system-contracts:
 		cd $(contracts_package_dir); \
 		DEPLOYER_PRIVATE_KEY=$${DEPLOYMENT_PRIVATE_KEY:-0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae} \
 		RPC_URL=http:\\localhost:8545/ \
-		pnpm exec ts-node local-deployments-artifacts/deployEIPSystemContracts.ts
+		pnpm exec tsx local-deployments-artifacts/deployEIPSystemContracts.ts
 
 deploy-upgradeable-predeploys:
 		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
 		cd $(contracts_package_dir); \
 		DEPLOYER_PRIVATE_KEY=$${DEPLOYMENT_PRIVATE_KEY:-0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae} \
 		RPC_URL=http:\\localhost:8545/ \
-		pnpm exec ts-node local-deployments-artifacts/deployPredeployContractsV1.ts
+		pnpm exec tsx local-deployments-artifacts/deployPredeployContractsV1.ts
 
 deploy-lineth-rollup: L1_CONTRACT_VERSION:=8
 deploy-lineth-rollup:
@@ -54,7 +54,7 @@ deploy-lineth-rollup:
 		FORCED_TRANSACTION_BLOCK_NUMBER_DEADLINE_BUFFER=10 \
 		SECURITY_COUNCIL_PRIVATE_KEY=0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6 \
 		YIELD_MANAGER_ADDRESS=0x000000000000000000000000000000000000dEaD \
-		pnpm exec ts-node local-deployments-artifacts/deployPlonkVerifierAndLinethRollupV$(L1_CONTRACT_VERSION).ts
+		pnpm exec tsx local-deployments-artifacts/deployPlonkVerifierAndLinethRollupV$(L1_CONTRACT_VERSION).ts
 
 deploy-lineth-rollup-v6:
 		$(MAKE) deploy-lineth-rollup L1_CONTRACT_VERSION=6
@@ -90,7 +90,7 @@ deploy-lineth-rollup-v9-stub:
 		FORCED_TRANSACTION_L2_BLOCK_DURATION_SECONDS=2 \
 		FORCED_TRANSACTION_BLOCK_NUMBER_DEADLINE_BUFFER=10 \
 		SECURITY_COUNCIL_PRIVATE_KEY=0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6 \
-		pnpm exec ts-node local-deployments-artifacts/deployLinethRollupV9Stub.ts
+		pnpm exec tsx local-deployments-artifacts/deployLinethRollupV9Stub.ts
 
 deploy-validium: L1_CONTRACT_VERSION:=2
 deploy-validium:
@@ -107,7 +107,7 @@ deploy-validium:
 		VALIDIUM_OPERATORS=$${VALIDIUM_OPERATORS:-0x70997970C51812dc3A010C7d01b50e0d17dc79C8,0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC} \
 		VALIDIUM_RATE_LIMIT_PERIOD=86400 \
 		VALIDIUM_RATE_LIMIT_AMOUNT=1000000000000000000000 \
-		pnpm exec ts-node local-deployments-artifacts/deployPlonkVerifierAndValidiumV$(L1_CONTRACT_VERSION).ts
+		pnpm exec tsx local-deployments-artifacts/deployPlonkVerifierAndValidiumV$(L1_CONTRACT_VERSION).ts
 
 deploy-validium-v1:
 		$(MAKE) deploy-validium L1_CONTRACT_VERSION=1
@@ -138,7 +138,7 @@ deploy-validium-v3-stub:
 		FORCED_TRANSACTION_L2_BLOCK_DURATION_SECONDS=2 \
 		FORCED_TRANSACTION_BLOCK_NUMBER_DEADLINE_BUFFER=10 \
 		SECURITY_COUNCIL_PRIVATE_KEY=0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6 \
-		pnpm exec ts-node local-deployments-artifacts/deployValidiumV3Stub.ts
+		pnpm exec tsx local-deployments-artifacts/deployValidiumV3Stub.ts
 
 deploy-l2messageservice:
 		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
@@ -150,7 +150,7 @@ deploy-l2messageservice:
 		L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER=$${L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER:-0xd42e308fc964b71e18126df469c21b0d7bcb86cc} \
 		L2_MESSAGE_SERVICE_RATE_LIMIT_PERIOD=86400 \
 		L2_MESSAGE_SERVICE_RATE_LIMIT_AMOUNT=1000000000000000000000 \
-		pnpm exec ts-node local-deployments-artifacts/deployL2MessageServiceV1.ts
+		pnpm exec tsx local-deployments-artifacts/deployL2MessageServiceV1.ts
 
 deploy-token-bridge-l1:
 		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
@@ -163,7 +163,7 @@ deploy-token-bridge-l1:
 		L1_SECURITY_COUNCIL=0x90F79bf6EB2c4f870365E785982E1f101E93b906 \
 		L2_MESSAGE_SERVICE_ADDRESS=0xe537D669CA013d86EBeF1D64e40fC74CADC91987 \
 		LINETH_ROLLUP_ADDRESS=0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9 \
-		pnpm exec ts-node local-deployments-artifacts/deployBridgedTokenAndTokenBridgeV1_1.ts
+		pnpm exec tsx local-deployments-artifacts/deployBridgedTokenAndTokenBridgeV1_1.ts
 
 deploy-token-bridge-l2:
 		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
@@ -176,7 +176,7 @@ deploy-token-bridge-l2:
 		L2_SECURITY_COUNCIL=0xf17f52151EbEF6C7334FAD080c5704D77216b732 \
 		L2_MESSAGE_SERVICE_ADDRESS=0xe537D669CA013d86EBeF1D64e40fC74CADC91987 \
 		LINETH_ROLLUP_ADDRESS=0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9 \
-		pnpm exec ts-node local-deployments-artifacts/deployBridgedTokenAndTokenBridgeV1_1.ts
+		pnpm exec tsx local-deployments-artifacts/deployBridgedTokenAndTokenBridgeV1_1.ts
 
 deploy-l1-test-erc20:
 		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
@@ -187,7 +187,7 @@ deploy-l1-test-erc20:
 		TEST_ERC20_NAME=TestERC20 \
 		TEST_ERC20_SYMBOL=TERC20 \
 		TEST_ERC20_INITIAL_SUPPLY=100000 \
-		pnpm exec ts-node local-deployments-artifacts/deployTestERC20.ts
+		pnpm exec tsx local-deployments-artifacts/deployTestERC20.ts
 
 deploy-l2-test-erc20:
 		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
@@ -198,15 +198,15 @@ deploy-l2-test-erc20:
 		TEST_ERC20_NAME=TestERC20 \
 		TEST_ERC20_SYMBOL=TERC20 \
 		TEST_ERC20_INITIAL_SUPPLY=100000 \
-		pnpm exec ts-node local-deployments-artifacts/deployTestERC20.ts
+		pnpm exec tsx local-deployments-artifacts/deployTestERC20.ts
 
 deploy-contracts: L1_CONTRACT_VERSION:=8
 deploy-contracts: LINETH_PROTOCOL_CONTRACTS_ONLY:=false
 deploy-contracts: LINETH_L1_CONTRACT_DEPLOYMENT_TARGET:=deploy-lineth-rollup-v$(L1_CONTRACT_VERSION)
 deploy-contracts:
 	cd $(contracts_package_dir); \
-	export L1_NONCE=$$(pnpm exec ts-node local-deployments-artifacts/get-wallet-nonce.ts --wallet-priv-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --rpc-url http://localhost:8445) && \
-	export L2_NONCE=$$(pnpm exec ts-node local-deployments-artifacts/get-wallet-nonce.ts --wallet-priv-key 0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae --rpc-url http://localhost:8545) && \
+	export L1_NONCE=$$(pnpm exec tsx local-deployments-artifacts/get-wallet-nonce.ts --wallet-priv-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --rpc-url http://localhost:8445) && \
+	export L2_NONCE=$$(pnpm exec tsx local-deployments-artifacts/get-wallet-nonce.ts --wallet-priv-key 0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae --rpc-url http://localhost:8545) && \
 	cd .. && \
 	if [ "$(LINETH_PROTOCOL_CONTRACTS_ONLY)" = "false" ]; then \
 		$(MAKE) -j7 $(LINETH_L1_CONTRACT_DEPLOYMENT_TARGET) deploy-token-bridge-l1 deploy-l1-test-erc20 deploy-l2messageservice deploy-token-bridge-l2 deploy-l2-test-erc20 deploy-l2-evm-opcode-tester; \
@@ -220,7 +220,7 @@ deploy-l2-evm-opcode-tester:
 		cd $(contracts_package_dir); \
 		DEPLOYER_PRIVATE_KEY=0x8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63 \
 		RPC_URL=http:\\localhost:8545/ \
-		pnpm exec ts-node local-deployments-artifacts/deployOpcodeTestingFramework.ts
+		pnpm exec tsx local-deployments-artifacts/deployOpcodeTestingFramework.ts
 
 evm-opcode-tester-execute-all-opcodes: OPCODE_TEST_CONTRACT_ADDRESS:=0xa50a51c09a5c451C52BB714527E1974b686D8e77
 evm-opcode-tester-execute-all-opcodes: NUMBER_OF_RUNS:=3
@@ -231,14 +231,14 @@ evm-opcode-tester-execute-all-opcodes:
 		NUMBER_OF_RUNS=$(NUMBER_OF_RUNS) \
 		DEPLOYER_PRIVATE_KEY=0x8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63 \
 		RPC_URL=http:\\localhost:8545/ \
-		pnpm exec ts-node local-deployments-artifacts/executeAllOpcodes.ts
+		pnpm exec tsx local-deployments-artifacts/executeAllOpcodes.ts
 
 deploy-l2-scenario-testing-proxy:
 		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
 		cd $(contracts_package_dir); \
 		DEPLOYER_PRIVATE_KEY=0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae \
 		RPC_URL=http:\\localhost:8545/ \
-		pnpm exec ts-node local-deployments-artifacts/deployLineaScenarioDelegatingProxy.ts
+		pnpm exec tsx local-deployments-artifacts/deployLineaScenarioDelegatingProxy.ts
 
 execute-scenario-testing-proxy-scenario: LINETH_SCENARIO_DELEGATING_PROXY_ADDRESS:=0x2f6dAaF8A81AB675fbD37Ca6Ed5b72cf86237453
 execute-scenario-testing-proxy-scenario:
@@ -251,5 +251,5 @@ execute-scenario-testing-proxy-scenario:
 		GAS_LIMIT=452500 \
 		DEPLOYER_PRIVATE_KEY=0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae \
 		RPC_URL=http:\\localhost:8545/ \
-		pnpm exec ts-node local-deployments-artifacts/executeLineaScenarioDelegatingProxyScenario.ts
+		pnpm exec tsx local-deployments-artifacts/executeLineaScenarioDelegatingProxyScenario.ts
 

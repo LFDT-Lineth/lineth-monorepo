@@ -50,12 +50,11 @@ Please see [Testing guidelines](./test/README.md) for in depth testing layout an
 
 This project uses the following libraries
 - [PNPM](https://pnpm.io/) as the Package Manager
-- [Ethers](https://github.com/ethers-io/ethers.js/) as Ethereum library
+- [viem](https://viem.sh/) as Ethereum library
 - [Hardhat](https://hardhat.org/getting-started/) as development environment
 - [Chai](https://www.chaijs.com/) for assertions
 - [GoLang](https://go.dev/) for the compilation of code to autogenerate data for L2 data and proofs (not strictly required)
 - [Docker](https://www.docker.com/) for the local stack to run in
-- [Foundry](https://book.getfoundry.sh/getting-started/installation) for Hardhat to run with `hardhat-foundry` plugin
 
 If you already have an understanding of the tech stack, use our [Get Started](../docs/get-started.md) guide.
 
@@ -75,7 +74,7 @@ pnpm exec hardhat test
 cd contracts # from the root folder
 pnpm install
 
-pnpm exec hardhat coverage
+pnpm run coverage
 ```
 ## Deploying the contracts to the local stack
 Prerequisites: 
@@ -84,7 +83,7 @@ Prerequisites:
 Some caveats:
 - The L2 chain will not produce empty blocks if there are no transactions, so it would be useful to execute a script to keep the chain "moving". 
   - The following script can be run with the expectation the local stack is running: [generateL2Traffic.ts](../e2e/src/common/generateL2Traffic.ts)
-  - To execute it run the following from the `e2e` folder: `pnpm exec ts-node src/common/generateL2Traffic.ts`
+  - To execute it run the following from the `e2e` folder: `pnpm exec tsx src/common/generateL2Traffic.ts`
 - For blob submission and finalization, there needs to be sufficient blocks to trigger it. Keeping the chain moving on L2 is vital for this to take place.
 
 From the root of the repository:
@@ -107,7 +106,7 @@ Note: The addresses change per deployment due to nonce increments, so be sure to
 
 If there is a need to get predetermined addresses for contract deployments, the following script can be used [precomputeDeployedAddresses.ts](./scripts/operational/precomputeDeployedAddress.ts).
 
-This can be used by altering the values in the script file and running the script (from the `/contracts` folder) with: `pnpm exec ts-node scripts/operational/precomputeDeployedAddress.ts`
+This can be used by altering the values in the script file and running the script (from the `/contracts` folder) with: `pnpm exec tsx scripts/operational/precomputeDeployedAddress.ts`
 
 *Note the following nonce values for a fresh stack deploy:*
 

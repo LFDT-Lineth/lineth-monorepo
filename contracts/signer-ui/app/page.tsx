@@ -10,7 +10,6 @@ import { LineaWordmark } from "./components/LineaWordmark";
 import {
   canEnableSignButton,
   firstWalletAddress,
-  nextWorkflowDisplayState,
   progressStageLabel,
   progressTone,
   scrollToHistoryFragment,
@@ -19,11 +18,8 @@ import {
   signerUiHistoryStorageKey,
   signerUiLastSessionIdStorageKey,
   transactionExplorerUrl,
-  transactionKindBadgeLabels,
   type TransactionDetails,
   type TransactionProgressStage,
-  type WorkflowStatus,
-  workflowStageLabel,
 } from "./pageHelpers";
 
 declare global {
@@ -86,14 +82,11 @@ type SessionState = {
     message: string;
     updatedAt: string;
   } | null;
-  workflowStatus?: WorkflowStatus | null;
   startedAt: string;
   scriptOrdinal?: number;
-  batchRunActive?: boolean;
-  batchTagsSummary?: string | null;
   /** Wallet-signed transaction count for this session (proxy deploys use multiple steps). */
   transactionOrdinal?: number;
-  /** Set by the bridge just before a deploy batch closes so the UI can stop polling. */
+  /** Set by the bridge just before the session closes so the UI can stop polling. */
   sessionOutcome?: "complete" | "error" | null;
   outcomeMessage?: string | null;
 };
@@ -128,20 +121,6 @@ function PendingTransactionProgress({ progress }: { progress: NonNullable<Sessio
   );
 }
 
-function WorkflowStatusPanel({ workflow }: { workflow: NonNullable<SessionState["workflowStatus"]> }) {
-  return (
-    <div className="deploy-progress deploy-progress--active" aria-live="polite">
-      <div className="deploy-progress__row">
-        <span className="deploy-spinner" aria-hidden="true" />
-        <div className="deploy-progress__copy">
-          <p className="deploy-progress__stage">{workflowStageLabel(workflow.stage)}</p>
-          <p className="deploy-progress__message">{workflow.message}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function loadDeployHistoryFromStorage(key: string): CompletedDeploymentTx[] {
   try {
     const raw = sessionStorage.getItem(key);
@@ -159,24 +138,6 @@ function persistDeployHistory(key: string, items: CompletedDeploymentTx[]): void
   sessionStorage.setItem(key, JSON.stringify(items));
 }
 
-function TransactionKindBadges({ details }: { details: TransactionPrompt["transactionDetails"] }) {
-  const labels = transactionKindBadgeLabels(details);
-  if (labels.length === 0) {
-    return null;
-  }
-  return (
-    <div className="deploy-kind-badges" aria-label="Transaction context">
-      {labels.map((label, index) => (
-        <span key={`${label}-${index}`} className="deploy-kind-badge">
-          {label}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-const WORKFLOW_STATUS_MIN_VISIBILITY_MS = 2000;
-
 function ContractsDeployUiPage() {
   const searchParams = useSearchParams();
   const apiBaseUrl = searchParams.get("apiBaseUrl");
@@ -191,13 +152,6 @@ function ContractsDeployUiPage() {
   const [isConnectingWallet, setIsConnectingWallet] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTerminating, setIsTerminating] = useState(false);
-  const [workflowDisplayState, setWorkflowDisplayState] = useState<{
-    workflow: WorkflowStatus | null;
-    expiresAtMs: number;
-  }>({
-    workflow: null,
-    expiresAtMs: 0,
-  });
   /** Wagmi reconnect differs SSR vs first client paint — gate wallet UI until mount. */
   const [walletUiReady, setWalletUiReady] = useState(false);
   const [providerWalletAddress, setProviderWalletAddress] = useState<string | null>(null);
@@ -351,7 +305,10 @@ function ContractsDeployUiPage() {
     return `${apiBaseUrl}/api/session`;
   }, [apiBaseUrl]);
 
-  const deployRunLooksComplete = sessionEnded && deployHistory.length > 0 && session?.pendingRequest === null;
+  const deployRunLooksComplete =
+    sessionEnded &&
+    session?.sessionOutcome !== "error" &&
+    (session?.sessionOutcome === "complete" || (deployHistory.length > 0 && session?.pendingRequest === null));
 
   const heroSubtitle = useMemo(() => {
     if (!sessionEnded) {
@@ -370,7 +327,7 @@ function ContractsDeployUiPage() {
       if (deployHistory.length > 0) {
         return "Run complete. Submitted transactions are preserved below; polling has stopped.";
       }
-      return "Run complete. The Hardhat bridge has closed; polling has stopped.";
+      return "Run complete. Nothing needed a signature (e.g. nothing new to deploy); polling has stopped.";
     }
     if (deployHistory.length > 0 && session?.pendingRequest === null) {
       return "Run complete. The Hardhat bridge has closed; submitted transactions are saved below and polling has stopped.";
@@ -427,16 +384,6 @@ function ContractsDeployUiPage() {
         if (cancelled || pollingTerminatedRef.current) {
           return;
         }
-        setWorkflowDisplayState((prev) =>
-          nextWorkflowDisplayState({
-            incomingWorkflow: data.workflowStatus ?? null,
-            currentWorkflow: prev.workflow,
-            currentExpiresAtMs: prev.expiresAtMs,
-            nowMs: Date.now(),
-            minimumVisibilityMs: WORKFLOW_STATUS_MIN_VISIBILITY_MS,
-          }),
-        );
-
         if (data.sessionOutcome === "complete" || data.sessionOutcome === "error") {
           pollingTerminatedRef.current = true;
           hadSuccessfulBridgeFetch.current = true;
@@ -543,35 +490,6 @@ function ContractsDeployUiPage() {
       window.ethereum?.removeListener?.("chainChanged", chainChanged);
     };
   }, [apiBaseUrl, providerWalletAddress, sessionSecret, sessionEnded]);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !workflowDisplayState.workflow) {
-      return;
-    }
-
-    const clearIfExpired = () => {
-      setWorkflowDisplayState((prev) =>
-        nextWorkflowDisplayState({
-          incomingWorkflow: null,
-          currentWorkflow: prev.workflow,
-          currentExpiresAtMs: prev.expiresAtMs,
-          nowMs: Date.now(),
-          minimumVisibilityMs: WORKFLOW_STATUS_MIN_VISIBILITY_MS,
-        }),
-      );
-    };
-
-    const remainingMs = workflowDisplayState.expiresAtMs - Date.now();
-    if (remainingMs <= 0) {
-      clearIfExpired();
-      return;
-    }
-
-    const timeout = window.setTimeout(clearIfExpired, remainingMs);
-    return () => {
-      window.clearTimeout(timeout);
-    };
-  }, [workflowDisplayState.workflow, workflowDisplayState.expiresAtMs]);
 
   const ensureTargetChain = async (chain: ChainMetadata) => {
     if (!window.ethereum) {
@@ -835,14 +753,12 @@ function ContractsDeployUiPage() {
 
   const pending = session?.pendingRequest;
   const progress = session?.transactionProgress;
-  const workflow = workflowDisplayState.workflow;
   const isPostSubmitProgress =
     progress !== undefined &&
     progress !== null &&
     progress.stage !== "awaiting_wallet_approval" &&
     progress.stage !== "failed" &&
     pending?.id === progress.requestId;
-  const hasWorkflowStatus = workflow !== null;
   const expectedSignerAddress = session?.expectedSignerAddress ?? null;
   const resolvedWalletAddress = providerWalletAddress;
   const walletConnected = !!resolvedWalletAddress;
@@ -868,7 +784,6 @@ function ContractsDeployUiPage() {
         <section className="deploy-card deploy-card--hero">
           <h1 className="deploy-card__title">Sign with your wallet</h1>
           <p className="deploy-card__subtitle">{heroSubtitle}</p>
-          {hasWorkflowStatus ? <WorkflowStatusPanel workflow={workflow} /> : null}
         </section>
 
         {pending && !sessionEnded ? (
@@ -881,11 +796,10 @@ function ContractsDeployUiPage() {
                 <p className="deploy-quick-action__label">{pending.label}</p>
                 {session?.transactionOrdinal && session.transactionOrdinal > 1 ? (
                   <p className="deploy-quick-action__hint">
-                    Hardhat is waiting for wallet step {session.transactionOrdinal}. OpenZeppelin proxy deploys usually
-                    need several signatures — approve each one until the terminal reports complete.
+                    Hardhat is waiting for wallet step {session.transactionOrdinal}. Deployments usually need several
+                    signatures — approve each one until the terminal reports complete.
                   </p>
                 ) : null}
-                <TransactionKindBadges details={pending.transactionDetails} />
                 {progress && pending.id === progress.requestId ? (
                   <PendingTransactionProgress progress={progress} />
                 ) : null}
@@ -912,11 +826,13 @@ function ContractsDeployUiPage() {
           <section className={`deploy-card ${deployRunLooksComplete ? "deploy-card--complete" : "deploy-card--muted"}`}>
             <h2>{deployRunLooksComplete ? "Run complete" : "Session disconnected"}</h2>
             <p>
-              {deployRunLooksComplete
-                ? "Hardhat finished and closed the local HTTP bridge. The Next.js UI usually keeps running so this tab stays loaded. Details below are kept in session storage; use #signer-tx-… links to jump to each signed transaction."
-                : deployHistory.length > 0
-                  ? "The bridge stopped before the last poll showed an idle session—check Hardhat for errors. Any transactions you already signed are listed below."
-                  : "The Hardhat signer bridge has stopped. Polling is disabled. If you are not running another script, you can close this browser tab."}
+              {deployRunLooksComplete && deployHistory.length === 0
+                ? "Hardhat finished without asking for a signature and closed the local HTTP bridge. You can close this tab."
+                : deployRunLooksComplete
+                  ? "Hardhat finished and closed the local HTTP bridge. The Next.js UI usually keeps running so this tab stays loaded. Details below are kept in session storage; use #signer-tx-… links to jump to each signed transaction."
+                  : deployHistory.length > 0
+                    ? "The bridge stopped before the last poll showed an idle session—check Hardhat for errors. Any transactions you already signed are listed below."
+                    : "The Hardhat signer bridge has stopped. Polling is disabled. If you are not running another script, you can close this browser tab."}
             </p>
           </section>
         ) : null}
@@ -982,22 +898,10 @@ function ContractsDeployUiPage() {
 
         <section className="deploy-card">
           <h2>Session target</h2>
-          {session?.batchRunActive ? (
-            <p className="deploy-batch-note">
-              <strong>Batch run:</strong>{" "}
-              {session.batchTagsSummary
-                ? `Hardhat is running multiple deploy scripts for --tags ${session.batchTagsSummary}. This tab stays open until the full run finishes.`
-                : "Hardhat is running multiple deploy scripts in one run. This tab stays open until every script completes."}
-            </p>
-          ) : null}
           <p className="deploy-meta-row">
             <strong>Script / operation:</strong> {session?.scriptContext ?? "Loading…"}
             {session && (session.scriptOrdinal ?? 0) > 0 ? (
-              <span className="deploy-meta-row--subtle">
-                {" "}
-                (step {session.scriptOrdinal}
-                {session.batchRunActive ? " in this batch" : ""})
-              </span>
+              <span className="deploy-meta-row--subtle"> (step {session.scriptOrdinal})</span>
             ) : null}
           </p>
           <p className="deploy-meta-row">
@@ -1009,13 +913,6 @@ function ContractsDeployUiPage() {
           <p className="deploy-meta-row">
             <strong>Chain ID:</strong> {session?.chain.chainId ?? "Loading…"}
           </p>
-          <p className="deploy-proxy-tip">
-            <strong>Upgradeable (OpenZeppelin) deploys:</strong> Hardhat Upgrades stores prior deployments under{" "}
-            <code>.openzeppelin/</code>. If an implementation or ProxyAdmin for this chain is already recorded, only the
-            missing contracts are deployed — so you may see <em>one</em> wallet prompt for LinethRollup instead of three
-            (implementation + ProxyAdmin + proxy). The rollup you use is still the <strong>proxy</strong> address from
-            Hardhat logs; fewer prompts does not mean steps were skipped incorrectly.
-          </p>
         </section>
 
         <section className="deploy-card">
@@ -1023,7 +920,6 @@ function ContractsDeployUiPage() {
           {session?.pendingRequest ? (
             <>
               <p className="deploy-pending-label">{session.pendingRequest.label}</p>
-              <TransactionKindBadges details={session.pendingRequest.transactionDetails} />
               <p>{session.pendingRequest.description}</p>
               {progress && session.pendingRequest.id === progress.requestId ? (
                 <>
@@ -1053,14 +949,7 @@ function ContractsDeployUiPage() {
               </div>
             </>
           ) : (
-            <>
-              {hasWorkflowStatus ? <WorkflowStatusPanel workflow={workflow} /> : null}
-              <p>
-                {hasWorkflowStatus
-                  ? "No wallet approval is pending right now."
-                  : "No transaction is waiting for approval yet."}
-              </p>
-            </>
+            <p>No transaction is waiting for approval yet.</p>
           )}
         </section>
 
@@ -1104,7 +993,6 @@ function ContractsDeployUiPage() {
                       <summary>
                         <div className="deploy-history-summary-box">
                           <span className="deploy-history-summary-text">{item.label}</span>
-                          <TransactionKindBadges details={item.transactionDetails} />
                         </div>
                       </summary>
                       <div className="deploy-history-meta">

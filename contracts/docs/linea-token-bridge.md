@@ -66,7 +66,7 @@ You can refer to the following links that describe the usage of these scripts. <
 - [Bridged Token Deployment Script](./deployment/dual-chain/token-bridge.md#bridgedtoken) <br />
 - [Token Bridge Deployment Script](./deployment/dual-chain/token-bridge.md#tokenbridge) <br />
 
-All addresses created will be stored in the deployments folder as a separate file. `./contracts/deployment/<network_name>`
+Deployed addresses are written to `contracts/ignition/deployments/<deploymentId>/deployed_addresses.json`; stable addresses are then added to the address registry `contracts/deployments/addresses/<network>.json` by PR.
 
 ## Development
 
@@ -86,8 +86,7 @@ pnpm hardhat test
 
 ### Test coverage
 
-This project uses the Hardhat plugin [solidity-coverage](https://github.com/sc-forks/solidity-coverage/blob/master/README.md) to assess the overall coverage of the unit tests.
-To generate a boilerplate report, use the following command:
+Coverage uses Hardhat's built-in coverage. To generate a report, use the following command:
 
 ```shell
 pnpm -F contracts run coverage
@@ -96,11 +95,10 @@ pnpm -F contracts run coverage
 or
 
 ```shell
-pnpm hardhat coverage --solcoverjs ./.solcover.js
+pnpm hardhat test --coverage
 ```
 
-The report will be generated in the `coverage` folder at the root of the repository. To visualize it in your web browser, you can use the `coverage/index.html` file.
-Note: the second command line might not work if the folder `coverage` already exists. If you encounter an issue, please delete the whole `coverage` folder and let hardhat-coverage regenerate a new one.
+The report is generated in `contracts/coverage/` (`lcov.info`, and `html/index.html` to view it in a browser).
 
 ### Contract verification on Etherscan
 
@@ -149,16 +147,16 @@ pnpm -F contracts run lint:sol
 pnpm -F contracts run lint:ts
 ```
 
-### Prettier
+### Prettier (Solidity)
 
 Check format code:
 
 ```bash
-pnpm -F contracts run prettier:check
+pnpm -F contracts run prettier:sol
 ```
 
 Format code:
 
 ```bash
-pnpm -F contracts run prettier
+pnpm -F contracts run prettier:sol:fix
 ```

@@ -2,7 +2,7 @@ import { JsonRpcProvider, Wallet } from "ethers";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 
-import { sanitizePrivKey } from "../scripts/cli";
+import { parsePrivateKey } from "../scripts/cli.js";
 
 const argv = yargs(hideBin(process.argv))
   .option("rpc-url", {
@@ -14,7 +14,7 @@ const argv = yargs(hideBin(process.argv))
     describe: "deployer private key",
     type: "string",
     demandOption: true,
-    coerce: sanitizePrivKey("priv-key"),
+    coerce: (value: string) => parsePrivateKey(value, "wallet-priv-key"),
   })
   .parseSync();
 

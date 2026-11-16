@@ -1,18 +1,17 @@
 // The current supported EVM version is Osaka, which is a hardfork of the EVM.
 import { ethers } from "ethers";
 
-import {
-  contractName as opcodeTesterName,
-  abi as opcodeTesterAbi,
-  bytecode as opcodeTesterBytecode,
-} from "./static-artifacts/OpcodeTester.json";
-import {
-  contractName as yulBasedOpcodeTestingName,
-  abi as yulBasedOpcodeTestingAbi,
-  bytecode as yulBasedOpcodeTestingBytecode,
-} from "./static-artifacts/YulBasedOpcodeTesting.json";
-import { deployContractFromArtifacts } from "../common/helpers/deployments";
-import { LOCAL_L2_DEPLOY_FEE_OVERRIDES } from "../common/helpers/feeOverrides";
+import opcodeTesterJson from "./static-artifacts/OpcodeTester.json" with { type: "json" };
+import yulBasedOpcodeTestingJson from "./static-artifacts/YulBasedOpcodeTesting.json" with { type: "json" };
+import { deployContractFromArtifacts } from "../common/helpers/deployments.js";
+import { LOCAL_L2_DEPLOY_FEE_OVERRIDES } from "../common/helpers/feeOverrides.js";
+
+const { contractName: opcodeTesterName, abi: opcodeTesterAbi, bytecode: opcodeTesterBytecode } = opcodeTesterJson;
+const {
+  contractName: yulBasedOpcodeTestingName,
+  abi: yulBasedOpcodeTestingAbi,
+  bytecode: yulBasedOpcodeTestingBytecode,
+} = yulBasedOpcodeTestingJson;
 
 async function main() {
   const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);

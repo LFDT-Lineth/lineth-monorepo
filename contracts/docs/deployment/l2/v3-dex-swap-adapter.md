@@ -22,5 +22,5 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-pnpm exec hardhat deploy --network linea_sepolia --tags V3DexSwapAdapter
+pnpm exec hardhat ignition deploy V3DexSwapAdapter --network linea_sepolia
 ```

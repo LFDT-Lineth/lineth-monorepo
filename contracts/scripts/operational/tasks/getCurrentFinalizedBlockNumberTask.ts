@@ -1,6 +1,8 @@
-import { task } from "hardhat/config";
+import { parseChecksummedAddress } from "../../../common/helpers/addressRegistry.js";
+import { getTaskCliOrEnvValue } from "../../../common/helpers/environmentHelper.js";
 
-import { getTaskCliOrEnvValue } from "../../../common/helpers/environmentHelper";
+import type { HardhatRuntimeEnvironment } from "hardhat/types/hre";
+import type { TaskArguments } from "hardhat/types/tasks";
 
 /*
     *******************************************************************************************
@@ -18,21 +20,21 @@ import { getTaskCliOrEnvValue } from "../../../common/helpers/environmentHelper"
     *******************************************************************************************
 */
 
-task("getCurrentFinalizedBlockNumber", "Gets the finalized block number")
-  .addOptionalParam("contractType")
-  .addOptionalParam("proxyAddress")
-  .setAction(async (taskArgs, hre) => {
-    const ethers = hre.ethers;
+export default async function getCurrentFinalizedBlockNumber(taskArgs: TaskArguments, hre: HardhatRuntimeEnvironment) {
+  const { viem } = await hre.network.getOrCreate();
 
-    const contractType = getTaskCliOrEnvValue(taskArgs, "contractType", "CONTRACT_TYPE");
-    const proxyAddress = getTaskCliOrEnvValue(taskArgs, "proxyAddress", "PROXY_ADDRESS");
+  const contractType = getTaskCliOrEnvValue(taskArgs, "contractType", "CONTRACT_TYPE");
+  const proxyAddress = getTaskCliOrEnvValue(taskArgs, "proxyAddress", "PROXY_ADDRESS");
 
-    if (!contractType || !proxyAddress) {
-      throw new Error(`PROXY_ADDRESS and CONTRACT_NAME env variables are undefined.`);
-    }
+  if (!contractType || !proxyAddress) {
+    throw new Error(`PROXY_ADDRESS and CONTRACT_NAME env variables are undefined.`);
+  }
 
-    const LinethRollupContract = await ethers.getContractAt(contractType, proxyAddress);
-    const blockNum = await LinethRollupContract.currentL2BlockNumber();
+  const LinethRollupContract = await viem.getContractAt(
+    contractType,
+    parseChecksummedAddress(proxyAddress, "--proxy-address / PROXY_ADDRESS"),
+  );
+  const blockNum = await LinethRollupContract.read.currentL2BlockNumber();
 
-    console.log("Current finalized L2 block number", blockNum);
-  });
+  console.log("Current finalized L2 block number", blockNum);
+}

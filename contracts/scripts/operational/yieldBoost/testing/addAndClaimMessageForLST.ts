@@ -1,8 +1,11 @@
-import { task } from "hardhat/config";
+import { setTimeout } from "node:timers/promises";
 
-import { prepareAndAddMessageMerkleRoot } from "./addAndClaimMessageHelper";
-import { delay } from "../../../../common/helpers/general";
-import { runWithSignerUiSession } from "../../../../scripts/hardhat/signer-ui-bridge";
+import { prepareAndAddMessageMerkleRoot } from "./addAndClaimMessageHelper.js";
+import { waitForSuccessfulReceipt } from "../../../../common/helpers/receipt.js";
+import { withSignerUi } from "../../../../hardhat-plugins/signer-ui/session.js";
+
+import type { HardhatRuntimeEnvironment } from "hardhat/types/hre";
+import type { TaskArguments } from "hardhat/types/tasks";
 
 /*
   *******************************************************************************************
@@ -28,46 +31,41 @@ import { runWithSignerUiSession } from "../../../../scripts/hardhat/signer-ui-br
 */
 
 // TASKS
-task(
-  "addAndClaimMessageForLST",
-  "Setup and execute TestLinethRollup.claimMessageWithProofAndWithdrawLST by adding L2->L1 message merkle tree root",
-)
-  .addOptionalParam("linethRollupAddress")
-  .addOptionalParam("from")
-  .addOptionalParam("to")
-  .addOptionalParam("value")
-  .addOptionalParam("data")
-  .addOptionalParam("yieldProvider")
-  .setAction(async (taskArgs, hre) => {
-    return runWithSignerUiSession(hre, "task:addAndClaimMessageForLST", async () => {
-      const { claimParams, linethRollup } = await prepareAndAddMessageMerkleRoot(taskArgs, hre, true);
+export default async function addAndClaimMessageForLST(taskArgs: TaskArguments, hre: HardhatRuntimeEnvironment) {
+  const connection = await hre.network.getOrCreate();
+  return withSignerUi(hre, "task:addAndClaimMessageForLST", async () => {
+    const { claimParams, linethRollup, publicClient } = await prepareAndAddMessageMerkleRoot(
+      taskArgs,
+      connection,
+      true,
+    );
 
-      if (!claimParams.yieldProvider) {
-        throw new Error("yieldProvider is required but was not provided");
-      }
+    if (!claimParams.yieldProvider) {
+      throw new Error("yieldProvider is required but was not provided");
+    }
 
-      {
-        console.log("Waiting for 10 seconds...");
-        await delay(10000);
-        console.log("Claiming message with LST withdrawal...");
-        const tx = await linethRollup.claimMessageWithProofAndWithdrawLST(
-          {
-            proof: claimParams.proof,
-            messageNumber: claimParams.messageNumber,
-            leafIndex: claimParams.leafIndex,
-            from: claimParams.from,
-            to: claimParams.to,
-            fee: claimParams.fee,
-            value: claimParams.value,
-            feeRecipient: claimParams.feeRecipient,
-            merkleRoot: claimParams.merkleRoot,
-            data: claimParams.data,
-          },
-          claimParams.yieldProvider,
-        );
-        console.log("  Transaction hash:", tx.hash);
-        const receipt = await tx.wait();
-        console.log("  Transaction confirmed in block:", receipt?.blockNumber);
-      }
-    });
+    {
+      console.log("Waiting for 10 seconds...");
+      await setTimeout(10_000);
+      console.log("Claiming message with LST withdrawal...");
+      const hash = await linethRollup.write.claimMessageWithProofAndWithdrawLST([
+        {
+          proof: claimParams.proof,
+          messageNumber: claimParams.messageNumber,
+          leafIndex: claimParams.leafIndex,
+          from: claimParams.from,
+          to: claimParams.to,
+          fee: claimParams.fee,
+          value: claimParams.value,
+          feeRecipient: claimParams.feeRecipient,
+          merkleRoot: claimParams.merkleRoot,
+          data: claimParams.data,
+        },
+        claimParams.yieldProvider,
+      ]);
+      console.log("  Transaction hash:", hash);
+      const receipt = await waitForSuccessfulReceipt(publicClient, hash);
+      console.log("  Transaction confirmed in block:", receipt.blockNumber.toString());
+    }
   });
+}

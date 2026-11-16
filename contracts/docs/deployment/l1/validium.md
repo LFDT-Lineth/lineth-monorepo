@@ -12,7 +12,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | --------------------- | -------- | -------------- | ----------- |
 | VERIFY_CONTRACT    | false    | true\|false | Verifies the deployed contract |
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
-| \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
+| \**ETHERSCAN_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network.|
 | VERIFIER_ADDRESS | registry\|env | address | PlonkVerifier contract address. Read from registry on stable networks; env var used as fallback. |
 | INITIAL_L2_STATE_ROOT_HASH   | true      | bytes | Initial State Root Hash (shared base) |
@@ -27,12 +27,12 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-pnpm exec hardhat deploy --network sepolia --tags Validium
+pnpm exec hardhat ignition deploy Validium --network sepolia
 ```
 
 Base command with cli arguments:
 ```shell
-VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> INITIAL_L2_STATE_ROOT_HASH=<bytes> INITIAL_L2_BLOCK_NUMBER=<value> L2_GENESIS_TIMESTAMP=<value> L1_SECURITY_COUNCIL=<address> VALIDIUM_OPERATORS=<address> VALIDIUM_RATE_LIMIT_PERIOD=<value> VALIDIUM_RATE_LIMIT_AMOUNT=<value> pnpm exec hardhat deploy --network sepolia --tags Validium
+VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> INITIAL_L2_STATE_ROOT_HASH=<bytes> INITIAL_L2_BLOCK_NUMBER=<value> L2_GENESIS_TIMESTAMP=<value> L1_SECURITY_COUNCIL=<address> VALIDIUM_OPERATORS=<address> VALIDIUM_RATE_LIMIT_PERIOD=<value> VALIDIUM_RATE_LIMIT_AMOUNT=<value> pnpm exec hardhat ignition deploy Validium --network sepolia
 ```
 
 (make sure to replace `<value>` `<key>` `<bytes>` `<address>` with actual values).

@@ -1,10 +1,11 @@
-import { AbstractSigner } from "ethers";
 import fs from "fs";
 import * as assert from "node:assert/strict";
 import os from "os";
 import path from "path";
 
-import { getDeployNonceFromEnv, loadArtifactFromDirectory } from "./deployments";
+import { getDeployNonceFromEnv, loadArtifactFromDirectory } from "./deployments.js";
+
+import type { AbstractSigner } from "ethers";
 
 type TestCase = {
   name: string;
@@ -40,10 +41,8 @@ function withEnv(value: string | undefined, run: () => Promise<void> | void): Pr
   }
 }
 
-function mockWallet(liveNonce: number): AbstractSigner {
-  return {
-    getNonce: async () => liveNonce,
-  } as unknown as AbstractSigner;
+function mockWallet(liveNonce: number): Pick<AbstractSigner, "getNonce"> {
+  return { getNonce: async () => liveNonce };
 }
 
 const tests: TestCase[] = [

@@ -1,7 +1,3 @@
-import { ethers } from "ethers";
-import fs from "fs";
-import path from "path";
-
 import {
   getPopulatedAddresses,
   isMultiRegistryEntry,
@@ -11,9 +7,10 @@ import {
   parseEnvAddressList,
   REGISTRY_NETWORKS,
   sameAddressSet,
-} from "./addressRegistry";
-import { getHandoffAddress } from "./deploymentHandoff";
-import { formatEnvVarForLog, formatEnvVarValueForMessage } from "./envVarLogging";
+} from "./addressRegistry.js";
+import { formatEnvVarForLog, formatEnvVarValueForMessage } from "./envVarLogging.js";
+
+import type { Address } from "viem";
 
 /**
  * Resolves the deployment network for standalone scripts without Hardhat runtime.
@@ -32,7 +29,7 @@ export function getAddressFromRegistry(
   networkName: string,
   contractKey: string,
   envVarName?: string,
-): string | undefined {
+): Address | undefined {
   if (!REGISTRY_NETWORKS.has(networkName)) {
     return undefined;
   }
@@ -61,7 +58,7 @@ export function getAddressesFromRegistry(
   networkName: string,
   contractKey: string,
   envVarName?: string,
-): string[] | undefined {
+): Address[] | undefined {
   if (!REGISTRY_NETWORKS.has(networkName)) {
     return undefined;
   }
@@ -94,13 +91,11 @@ export function getAddressesFromRegistry(
  *
  * Lookup tries `contractKey` first, then `envVarName` when they differ.
  */
-export function requireAddressFromRegistryOrEnv(networkName: string, contractKey: string, envVarName?: string): string {
-  const handoffAddress = envVarName ? getHandoffAddress(envVarName) : undefined;
-  if (handoffAddress !== undefined) {
-    console.log(`Using in-process handoff address for ${contractKey}: ${handoffAddress}`);
-    return handoffAddress;
-  }
-
+export function requireAddressFromRegistryOrEnv(
+  networkName: string,
+  contractKey: string,
+  envVarName?: string,
+): Address {
   const registryAddress = getAddressFromRegistry(networkName, contractKey, envVarName);
   const envAddress = envVarName ? parseEnvAddress(envVarName) : undefined;
 
@@ -142,7 +137,7 @@ export function requireAddressesFromRegistryOrEnv(
   networkName: string,
   contractKey: string,
   envVarName: string,
-): string[] {
+): Address[] {
   const registryAddresses = getAddressesFromRegistry(networkName, contractKey, envVarName);
   const envAddresses = parseEnvAddressList(envVarName);
 
@@ -182,7 +177,7 @@ export function requireAddressesFromRegistryOrEnv(
  * Use this for optional address lists (e.g. reserved token addresses) where an empty
  * configuration is a valid deployment choice.
  */
-export function getAddressesFromRegistryOrEnv(networkName: string, contractKey: string, envVarName: string): string[] {
+export function getAddressesFromRegistryOrEnv(networkName: string, contractKey: string, envVarName: string): Address[] {
   const registryAddresses = getAddressesFromRegistry(networkName, contractKey, envVarName);
   const envAddresses = parseEnvAddressList(envVarName);
 
@@ -210,23 +205,3 @@ export function getAddressesFromRegistryOrEnv(networkName: string, contractKey: 
 
   return [];
 }
-
-/**
- * @deprecated Use getAddressFromRegistry instead.
- *
- * Reads a deployed contract address from the legacy hardhat-deploy artefact format at
- * `deployments/<networkName>/<contractName>.json`. This path is no longer written by
- * deploy scripts; prefer the address registry under `deployments/addresses/`.
- */
-export const getDeployedContractOnNetwork = async (
-  networkName: string,
-  contractName: string,
-): Promise<string | undefined> => {
-  const filePath = path.join(__dirname, "..", "..", "deployments", `${networkName}`, `${contractName}.json`);
-  if (!fs.existsSync(filePath)) {
-    return undefined;
-  }
-  const data = fs.readFileSync(filePath, "utf-8");
-  const address: string = JSON.parse(data).address;
-  return ethers.isAddress(address) ? ethers.getAddress(address) : undefined;
-};

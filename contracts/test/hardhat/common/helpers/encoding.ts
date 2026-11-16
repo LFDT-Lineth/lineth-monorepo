@@ -1,16 +1,10 @@
-import { TokenBridgeInitializationData } from "contracts/scripts/tokenBridge/test/deployTokenBridges";
-import { ethers, AbiCoder } from "ethers";
+import { getAddress } from "viem";
 
-export const encodeData = (types: string[], values: unknown[], packed?: boolean) => {
-  if (packed) {
-    return ethers.solidityPacked(types, values);
-  }
-  return AbiCoder.defaultAbiCoder().encode(types, values);
-};
+import type { TokenBridgeInitializationData } from "../../../../scripts/tokenBridge/test/deployTokenBridges.js";
 
 /**
- * Serializes TokenBridgeInitializationData to the positional array format
- * that ethers v6 `toArray()` produces from parsed event structs.
+ * Serializes TokenBridgeInitializationData to the positional array format used by the event assertions
+ * (structs compare positionally, in ABI order, as viem decodes them: checksummed addresses, `uint8` as numbers).
  *
  * Struct field order in Solidity:
  * 1. defaultAdmin, 2. messageService, 3. tokenBeacon, 4. sourceChainId,
@@ -19,15 +13,15 @@ export const encodeData = (types: string[], values: unknown[], packed?: boolean)
  */
 export function serializeTokenBridgeInitData(data: TokenBridgeInitializationData): unknown[] {
   return [
-    data.defaultAdmin,
-    data.messageService,
-    data.tokenBeacon,
+    getAddress(data.defaultAdmin),
+    getAddress(data.messageService),
+    getAddress(data.tokenBeacon),
     BigInt(data.sourceChainId),
     BigInt(data.targetChainId),
-    data.remoteSender,
-    data.reservedTokens,
-    data.roleAddresses.map((r) => [r.addressWithRole, r.role]),
-    data.pauseTypeRoles.map((r) => [BigInt(r.pauseType), r.role]),
-    data.unpauseTypeRoles.map((r) => [BigInt(r.pauseType), r.role]),
+    getAddress(data.remoteSender),
+    data.reservedTokens.map((token) => getAddress(token)),
+    data.roleAddresses.map((r) => [getAddress(r.addressWithRole), r.role]),
+    data.pauseTypeRoles.map((r) => [Number(r.pauseType), r.role]),
+    data.unpauseTypeRoles.map((r) => [Number(r.pauseType), r.role]),
   ];
 }
