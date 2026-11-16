@@ -1,5 +1,6 @@
-import { encodeFunctionData, getAddress, zeroHash } from "viem";
+import { encodeFunctionData, zeroHash } from "viem";
 
+import { parseChecksummedAddress } from "../../../common/helpers/addressRegistry.js";
 import { getTaskCliOrEnvValue } from "../../../common/helpers/environmentHelper.js";
 
 import type { TaskArguments } from "hardhat/types/tasks";
@@ -36,18 +37,21 @@ import type { TaskArguments } from "hardhat/types/tasks";
 */
 export default async function prepareInitiateOssification(taskArgs: TaskArguments) {
   // --- Resolve inputs from CLI or ENV ---
-  const yieldManager = getTaskCliOrEnvValue(taskArgs, "yieldManager", "YIELD_MANAGER_ADDRESS");
-  const yieldProvider = getTaskCliOrEnvValue(taskArgs, "yieldProvider", "YIELD_PROVIDER_ADDRESS");
-  const dashboard = getTaskCliOrEnvValue(taskArgs, "dashboard", "DASHBOARD");
+  const yieldManagerInput = getTaskCliOrEnvValue(taskArgs, "yieldManager", "YIELD_MANAGER_ADDRESS");
+  const yieldProviderInput = getTaskCliOrEnvValue(taskArgs, "yieldProvider", "YIELD_PROVIDER_ADDRESS");
+  const dashboardInput = getTaskCliOrEnvValue(taskArgs, "dashboard", "DASHBOARD");
 
   // --- Basic required fields check ---
   const missing: string[] = [];
-  if (!yieldManager) missing.push("yieldManager / YIELD_MANAGER_ADDRESS");
-  if (!yieldProvider) missing.push("yieldProvider / YIELD_PROVIDER_ADDRESS");
-  if (!dashboard) missing.push("dashboard / DASHBOARD");
-  if (!yieldManager || !yieldProvider || !dashboard) {
+  if (!yieldManagerInput) missing.push("yieldManager / YIELD_MANAGER_ADDRESS");
+  if (!yieldProviderInput) missing.push("yieldProvider / YIELD_PROVIDER_ADDRESS");
+  if (!dashboardInput) missing.push("dashboard / DASHBOARD");
+  if (!yieldManagerInput || !yieldProviderInput || !dashboardInput) {
     throw new Error(`Missing required params/envs: ${missing.join(", ")}`);
   }
+  const yieldManager = parseChecksummedAddress(yieldManagerInput, "--yield-manager / YIELD_MANAGER_ADDRESS");
+  const yieldProvider = parseChecksummedAddress(yieldProviderInput, "--yield-provider / YIELD_PROVIDER_ADDRESS");
+  const dashboard = parseChecksummedAddress(dashboardInput, "--dashboard / DASHBOARD");
 
   // --- Log params ---
   console.log("Params:");
@@ -75,7 +79,7 @@ export default async function prepareInitiateOssification(taskArgs: TaskArgument
   const pauseStakingCalldata = encodeFunctionData({
     abi: YIELD_MANAGER_ABI,
     functionName: "pauseStaking",
-    args: [getAddress(yieldProvider)],
+    args: [yieldProvider],
   });
 
   // Step 2 - Prepare and log calldata for Dashboard.grantRole(DEFAULT_ADMIN_ROLE, yieldManager)
@@ -99,7 +103,7 @@ export default async function prepareInitiateOssification(taskArgs: TaskArgument
     functionName: "grantRole",
     args: [
       zeroHash, // DEFAULT_ADMIN_ROLE = 0x00
-      getAddress(yieldManager),
+      yieldManager,
     ],
   });
 

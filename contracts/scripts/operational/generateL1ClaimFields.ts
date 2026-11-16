@@ -41,15 +41,16 @@ import {
   type TransactionReceipt,
   createPublicClient,
   encodePacked,
-  getAddress,
   http,
   isHex,
   keccak256,
   parseAbi,
   parseEventLogs,
   zeroAddress,
+  zeroHash,
 } from "viem";
 
+import { parseChecksummedAddress } from "../../common/helpers/addressRegistry.js";
 import { encodeSendMessage } from "../../common/helpers/encoding.js";
 import { getRequiredEnvVar } from "../../common/helpers/environment.js";
 import { getCliOrEnvValue } from "../../common/helpers/environmentHelper.js";
@@ -62,7 +63,6 @@ const L2_MERKLE_ROOT_ADDED_ABI = parseAbi([
   "event L2MerkleRootAdded(bytes32 indexed l2MerkleRoot, uint256 indexed treeDepth)",
 ]);
 const FINALIZATION_ABI = [...L2_MERKLE_ROOT_ADDED_ABI, ...L2_BLOCK_ANCHORED_ABI];
-const ZERO_HASH: Hex = "0x0000000000000000000000000000000000000000000000000000000000000000";
 const TOTAL_STEPS = 6;
 
 type BlockBound = number | "earliest" | "latest";
@@ -190,11 +190,18 @@ function loadConfig(): ScriptConfig {
     messageHash,
     l1RpcUrl: getRequiredCliOrEnvValue("l1-rpc-url", "L1_RPC_URL"),
     l2RpcUrl: getRequiredCliOrEnvValue("l2-rpc-url", "L2_RPC_URL"),
-    linethRollupAddress: getAddress(getRequiredCliOrEnvValue("lineth-rollup-address", "LINETH_ROLLUP_ADDRESS")),
-    l2MessageServiceAddress: getAddress(
-      getRequiredCliOrEnvValue("l2-message-service-address", "L2_MESSAGE_SERVICE_ADDRESS"),
+    linethRollupAddress: parseChecksummedAddress(
+      getRequiredCliOrEnvValue("lineth-rollup-address", "LINETH_ROLLUP_ADDRESS"),
+      "--lineth-rollup-address / LINETH_ROLLUP_ADDRESS",
     ),
-    feeRecipient: getAddress(getOptionalCliOrEnvValue("fee-recipient", "FEE_RECIPIENT") ?? zeroAddress),
+    l2MessageServiceAddress: parseChecksummedAddress(
+      getRequiredCliOrEnvValue("l2-message-service-address", "L2_MESSAGE_SERVICE_ADDRESS"),
+      "--l2-message-service-address / L2_MESSAGE_SERVICE_ADDRESS",
+    ),
+    feeRecipient: parseChecksummedAddress(
+      getOptionalCliOrEnvValue("fee-recipient", "FEE_RECIPIENT") ?? zeroAddress,
+      "--fee-recipient / FEE_RECIPIENT",
+    ),
     outputPath: getCliValueFromEqualsSyntax("out") ?? getCliOrEnvValue("--out", "CLAIM_PARAMS_OUT"),
     pretty: hasCliFlag("pretty"),
     l1FromBlock: parseBlockBound(l1FromRaw, "l1-from"),
@@ -218,7 +225,7 @@ class SparseMerkleTree {
       throw new Error("Merkle tree depth must be greater than 1");
     }
     this.depth = depth;
-    this.zeroHashes = [ZERO_HASH];
+    this.zeroHashes = [zeroHash];
     for (let i = 1; i <= depth; i++) {
       this.zeroHashes[i] = smtHash(this.zeroHashes[i - 1], this.zeroHashes[i - 1]);
     }
@@ -302,7 +309,7 @@ function getMessageSiblings(targetMessageHash: Hex, messageHashes: Hex[], treeDe
 
   const remainder = siblings.length % treeCapacity;
   if (remainder !== 0) {
-    siblings.push(...Array<Hex>(treeCapacity - remainder).fill(ZERO_HASH));
+    siblings.push(...Array<Hex>(treeCapacity - remainder).fill(zeroHash));
   }
 
   return siblings;
@@ -524,9 +531,6 @@ async function main() {
 
   info(3, "Parsing finalization receipt...");
   const finalizationReceipt = await l1Client.getTransactionReceipt({ hash: finalizationTxHash });
-  if (!finalizationReceipt) {
-    throw new Error(`Could not fetch receipt for finalization tx ${finalizationTxHash}`);
-  }
   const finalization = parseFinalizationReceipt(finalizationReceipt, config.linethRollupAddress);
   info(
     3,
@@ -546,7 +550,7 @@ async function main() {
   const siblings = getMessageSiblings(config.messageHash, allMessageHashes, finalization.treeDepth);
   const tree = new SparseMerkleTree(finalization.treeDepth);
   for (const [index, leaf] of siblings.entries()) {
-    if (leaf !== ZERO_HASH) {
+    if (leaf !== zeroHash) {
       tree.addLeaf(index, leaf);
     }
   }

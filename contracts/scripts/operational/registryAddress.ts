@@ -1,10 +1,10 @@
-import { type Address, getAddress } from "viem";
-
 import { getAddressFromRegistry } from "../../common/helpers/readAddress.js";
 
+import type { Address } from "viem";
+
 /**
- * Registry keys (`deployments/addresses/<network>.json`) for the contract names the operational tasks used to
- * resolve through hardhat-deploy's `deployments.get(<name>)`. Lookup tries the contract name first, then this key.
+ * Registry keys (`deployments/addresses/<network>.json`) of the contracts the operational tasks look up by name.
+ * Lookup tries the contract name first, then this key.
  */
 const REGISTRY_KEY_BY_CONTRACT_NAME: Record<string, string> = {
   LinethRollup: "LINETH_ROLLUP_ADDRESS",
@@ -28,5 +28,5 @@ export function requireRegistryAddress(networkName: string, contractName: string
         `${registryKey ? ` (key ${contractName} or ${registryKey})` : ""}. Pass the address explicitly.`,
     );
   }
-  return getAddress(address);
+  return address;
 }

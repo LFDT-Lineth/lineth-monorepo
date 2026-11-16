@@ -1,6 +1,6 @@
-import { getAddress } from "viem";
-
+import { parseChecksummedAddress } from "../../../common/helpers/addressRegistry.js";
 import { getTaskCliOrEnvValue } from "../../../common/helpers/environmentHelper.js";
+import { waitForSuccessfulReceipt } from "../../../common/helpers/receipt.js";
 import { getUiWalletClient, withSignerUi } from "../../../hardhat-plugins/signer-ui/session.js";
 import { requireRegistryAddress } from "../registryAddress.js";
 import { parseRoles } from "./roles.js";
@@ -34,7 +34,7 @@ export default async function grantContractRoles(taskArgs: TaskArguments, hre: H
     const { viem, networkName } = connection;
 
     const adminAddress = getTaskCliOrEnvValue(taskArgs, "adminAddress", "ADMIN_ADDRESS");
-    let proxyAddress = getTaskCliOrEnvValue(taskArgs, "proxyAddress", "PROXY_ADDRESS");
+    const proxyAddressInput = getTaskCliOrEnvValue(taskArgs, "proxyAddress", "PROXY_ADDRESS");
     const contractType = getTaskCliOrEnvValue(taskArgs, "contractType", "CONTRACT_TYPE");
     const contractRoles = getTaskCliOrEnvValue(taskArgs, "contractRoles", "CONTRACT_ROLES");
 
@@ -42,9 +42,10 @@ export default async function grantContractRoles(taskArgs: TaskArguments, hre: H
       throw "Please specify a Message Service name e.g: --proxy-address LinethRollup or PROXY_ADDRESS=LinethRollup";
     }
 
-    if (proxyAddress === undefined) {
-      proxyAddress = requireRegistryAddress(networkName, contractType);
-    }
+    const proxyAddress =
+      proxyAddressInput === undefined
+        ? requireRegistryAddress(networkName, contractType)
+        : parseChecksummedAddress(proxyAddressInput, "--proxy-address / PROXY_ADDRESS");
 
     if (contractRoles === undefined) {
       throw "Please specify a role e.g. --contract-roles 0x9a80e24e463f00a8763c4dcec6a92d07d33272fa5db895d8589be70dccb002df or CONTRACT_ROLES=0x9a80e24e463f00a8763c4dcec6a92d07d33272fa5db895d8589be70dccb002df";
@@ -56,17 +57,17 @@ export default async function grantContractRoles(taskArgs: TaskArguments, hre: H
 
     const wallet = await getUiWalletClient(connection);
     const publicClient = await viem.getPublicClient();
-    const contract = await viem.getContractAt(contractType, getAddress(proxyAddress), {
+    const contract = await viem.getContractAt(contractType, proxyAddress, {
       client: { public: publicClient, wallet },
     });
 
     const rolesArray = parseRoles(contractRoles);
-    const admin = getAddress(adminAddress);
+    const admin = parseChecksummedAddress(adminAddress, "--admin-address / ADMIN_ADDRESS");
     for (let i = 0; i < rolesArray.length; i++) {
       console.log(`Granting ${rolesArray[i]} to ${adminAddress}`);
       const hash = await contract.write.grantRole([rolesArray[i], admin]);
       console.log("Waiting for transaction to process");
-      await publicClient.waitForTransactionReceipt({ hash });
+      await waitForSuccessfulReceipt(publicClient, hash);
     }
 
     console.log("Done");

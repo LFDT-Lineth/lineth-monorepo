@@ -41,10 +41,8 @@ function withEnv(value: string | undefined, run: () => Promise<void> | void): Pr
   }
 }
 
-function mockWallet(liveNonce: number): AbstractSigner {
-  return {
-    getNonce: async () => liveNonce,
-  } as unknown as AbstractSigner;
+function mockWallet(liveNonce: number): Pick<AbstractSigner, "getNonce"> {
+  return { getNonce: async () => liveNonce };
 }
 
 const tests: TestCase[] = [

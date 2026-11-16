@@ -1,5 +1,5 @@
 /**
- * Former `13_deploy_EIP2935SystemContract.ts` / `16_deploy_EIP4788SystemContract.ts`: broadcast the presigned
+ * Broadcast the presigned
  * (Nick's method, pre-EIP-155) deployment transaction from the EIP. No local signer is involved.
  * Prerequisite: fund the predetermined sender address with enough ETH to cover the deployment cost.
  *
@@ -53,7 +53,7 @@ const DEPLOYMENT_GAS = 0x3d090n;
 const DEPLOYMENT_GAS_PRICE = 0xe8d4a51000n;
 const DEPLOYMENT_V = 0x1bn;
 
-/** The signed legacy deployment transaction, as `ethers.Transaction.from(...)` + signature serialized it. */
+/** The signed legacy (pre-EIP-155) deployment transaction. */
 export function serializePresignedDeployment(systemContract: PresignedSystemContract): Hex {
   return serializeTransaction(
     {

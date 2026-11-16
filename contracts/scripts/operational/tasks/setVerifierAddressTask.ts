@@ -1,6 +1,7 @@
-import { getAddress } from "viem";
-
+import { parseChecksummedAddress } from "../../../common/helpers/addressRegistry.js";
 import { getTaskCliOrEnvValue } from "../../../common/helpers/environmentHelper.js";
+import { requireAddressFromRegistryOrEnv } from "../../../common/helpers/readAddress.js";
+import { waitForSuccessfulReceipt } from "../../../common/helpers/receipt.js";
 import { getUiWalletClient, withSignerUi } from "../../../hardhat-plugins/signer-ui/session.js";
 import { requireRegistryAddress } from "../registryAddress.js";
 
@@ -11,6 +12,7 @@ import type { TaskArguments } from "hardhat/types/tasks";
     *******************************************************************************************
     1. Deploy the verifier and get the address
     2. Run this script matching the correct PROOF_TYPE
+       (without --verifier-address, VERIFIER_ADDRESS from the address registry or env is used)
     *******************************************************************************************
 
     *******************************************************************************************
@@ -20,7 +22,6 @@ import type { TaskArguments } from "hardhat/types/tasks";
     --verifier-proof-type <uint256> \
     --proxy-address <address> \
     --verifier-address <address> \
-    --verifier-name <string> \
     --network sepolia
     *******************************************************************************************
 */
@@ -31,20 +32,18 @@ export default async function setVerifierAddress(taskArgs: TaskArguments, hre: H
     const { viem, networkName } = connection;
 
     const proofType = getTaskCliOrEnvValue(taskArgs, "verifierProofType", "VERIFIER_PROOF_TYPE");
-    let LinethRollupAddress = getTaskCliOrEnvValue(taskArgs, "proxyAddress", "LINETH_ROLLUP_ADDRESS");
-    const verifierName = getTaskCliOrEnvValue(taskArgs, "verifierName", "VERIFIER_CONTRACT_NAME");
+    const linethRollupAddressInput = getTaskCliOrEnvValue(taskArgs, "proxyAddress", "LINETH_ROLLUP_ADDRESS");
+    const linethRollupAddress =
+      linethRollupAddressInput === undefined
+        ? requireRegistryAddress(networkName, "LinethRollup")
+        : parseChecksummedAddress(linethRollupAddressInput, "--proxy-address / LINETH_ROLLUP_ADDRESS");
 
-    if (LinethRollupAddress === undefined) {
-      LinethRollupAddress = requireRegistryAddress(networkName, "LinethRollup");
-    }
-
-    let verifierAddress = getTaskCliOrEnvValue(taskArgs, "verifierAddress", "VERIFIER_ADDRESS");
-    if (verifierAddress === undefined) {
-      if (verifierName === undefined) {
-        throw "Please specify a verifier name e.g. --verifier-name PlonkVerifierDev";
-      }
-      verifierAddress = requireRegistryAddress(networkName, verifierName);
-    }
+    // The VERIFIER_ADDRESS env var is resolved (and checked against the registry) by requireAddressFromRegistryOrEnv.
+    const verifierAddressOption: string | undefined = taskArgs.verifierAddress;
+    const verifierAddress =
+      verifierAddressOption === undefined
+        ? requireAddressFromRegistryOrEnv(networkName, "VERIFIER_ADDRESS", "VERIFIER_ADDRESS")
+        : parseChecksummedAddress(verifierAddressOption, "--verifier-address");
 
     if (!proofType) {
       throw "Please specify a verifierProofType";
@@ -52,17 +51,17 @@ export default async function setVerifierAddress(taskArgs: TaskArguments, hre: H
 
     const wallet = await getUiWalletClient(connection);
     const publicClient = await viem.getPublicClient();
-    const LinethRollup = await viem.getContractAt("LinethRollup", getAddress(LinethRollupAddress), {
+    const linethRollup = await viem.getContractAt("LinethRollup", linethRollupAddress, {
       client: { public: publicClient, wallet },
     });
 
     console.log(`Setting verifier address ${verifierAddress} of type ${proofType}`);
-    const hash = await LinethRollup.write.setVerifierAddress([getAddress(verifierAddress), BigInt(proofType)]);
+    const hash = await linethRollup.write.setVerifierAddress([verifierAddress, BigInt(proofType)]);
 
     console.log("Waiting for transaction to process");
-    await publicClient.waitForTransactionReceipt({ hash });
+    await waitForSuccessfulReceipt(publicClient, hash);
 
-    const checkVerifierIsSet = await LinethRollup.read.verifiers([BigInt(proofType)]);
+    const checkVerifierIsSet = await linethRollup.read.verifiers([BigInt(proofType)]);
     console.log(`Lineth Rollup implementation added ${checkVerifierIsSet} as new verifier`);
   });
 }

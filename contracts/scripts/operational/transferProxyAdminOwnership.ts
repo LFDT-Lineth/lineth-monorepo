@@ -1,7 +1,7 @@
 import { upgrades } from "@openzeppelin/hardhat-upgrades/viem";
 import hre, { network } from "hardhat";
-import { getAddress } from "viem";
 
+import { parseChecksummedAddress } from "../../common/helpers/addressRegistry.js";
 import { getRequiredEnvVar } from "../../common/helpers/environment.js";
 import {
   getUiWalletClient,
@@ -38,8 +38,11 @@ async function main() {
     scriptContext: "scripts/operational/transferProxyAdminOwnership.ts",
   });
 
-  const proxyAdminOwnerAddress = getAddress(getRequiredEnvVar("PROXY_ADMIN_OWNER_ADDRESS"));
-  const proxyAddress = getAddress(getRequiredEnvVar("PROXY_ADDRESS"));
+  const proxyAdminOwnerAddress = parseChecksummedAddress(
+    getRequiredEnvVar("PROXY_ADMIN_OWNER_ADDRESS"),
+    "PROXY_ADMIN_OWNER_ADDRESS",
+  );
+  const proxyAddress = parseChecksummedAddress(getRequiredEnvVar("PROXY_ADDRESS"), "PROXY_ADDRESS");
   const contractType = getRequiredEnvVar("CONTRACT_TYPE");
 
   await withSignerUi(hre, "scripts/operational/transferProxyAdminOwnership.ts", async () => {

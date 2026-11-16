@@ -75,7 +75,6 @@ import {
   createPublicClient,
   createWalletClient,
   encodeAbiParameters,
-  getAddress,
   hexToBigInt,
   http,
   isHex,
@@ -88,7 +87,10 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
+import { parseChecksummedAddress } from "../../../common/helpers/addressRegistry.js";
 import { getRequiredEnvVar } from "../../../common/helpers/environment.js";
+import { waitForSuccessfulReceipt } from "../../../common/helpers/receipt.js";
+import { parsePrivateKey } from "../../cli.js";
 
 // Fragments of the LinethRollupV8 / ForcedTransactionGateway ABIs
 // (local-deployments-artifacts/{dynamic-artifacts/LinethRollupV8,static-artifacts/ForcedTransactionGateway}.json).
@@ -146,6 +148,28 @@ type Eip1559TransactionStruct = {
   s: bigint;
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function toBigIntValue(value: unknown, label: string): bigint {
+  if (typeof value !== "string" && typeof value !== "number" && typeof value !== "bigint") {
+    throw new Error(`Invalid ${label}: expected a number or numeric string.`);
+  }
+  return BigInt(value);
+}
+
+/** An absent value reads as an empty array. */
+function toArrayValue(value: unknown, label: string): unknown[] {
+  if (value === undefined) {
+    return [];
+  }
+  if (!Array.isArray(value)) {
+    throw new Error(`Invalid ${label}: expected an array.`);
+  }
+  return value;
+}
+
 function toHexValue(value: unknown, label: string): Hex {
   if (typeof value !== "string" || !isHex(value)) {
     throw new Error(`Invalid ${label}: expected a 0x-prefixed hex string.`);
@@ -176,8 +200,9 @@ function computeFinalizedStateHash(state: LastFinalizedState): Hex {
  * 2. If not, reconstructs the state from the FinalizedStateUpdated event
  *    and the rollingHashes / forcedTransactionRollingHashes mappings.
  */
-async function resolveLastFinalizedState(provider: PublicClient, rollupAddress: Address): Promise<LastFinalizedState> {
-  const rollup = { address: rollupAddress, abi: LinethRollupV8Abi } as const;
+type RollupContract = { address: Address; abi: typeof LinethRollupV8Abi };
+
+async function resolveLastFinalizedState(provider: PublicClient, rollup: RollupContract): Promise<LastFinalizedState> {
   const onChainStateHash = await provider.readContract({ ...rollup, functionName: "currentFinalizedState" });
   console.log(`On-chain currentFinalizedState: ${onChainStateHash}`);
 
@@ -258,25 +283,34 @@ function buildTransactionFromFile(filePath: string): Eip1559TransactionStruct {
   const absolutePath = path.resolve(filePath);
   console.log(`Reading transaction data from: ${absolutePath}`);
 
-  const raw = JSON.parse(fs.readFileSync(absolutePath, "utf-8"));
+  const raw: unknown = JSON.parse(fs.readFileSync(absolutePath, "utf-8"));
+  if (!isRecord(raw)) {
+    throw new Error(`${absolutePath} must contain a JSON object.`);
+  }
+  const accessList: unknown[] = toArrayValue(raw.accessList, "accessList");
 
   return {
-    nonce: BigInt(raw.nonce),
-    maxPriorityFeePerGas: BigInt(raw.maxPriorityFeePerGas),
-    maxFeePerGas: BigInt(raw.maxFeePerGas),
-    gasLimit: BigInt(raw.gasLimit ?? raw.gas),
-    to: getAddress(raw.to),
-    value: BigInt(raw.value ?? 0),
+    nonce: toBigIntValue(raw.nonce, "nonce"),
+    maxPriorityFeePerGas: toBigIntValue(raw.maxPriorityFeePerGas, "maxPriorityFeePerGas"),
+    maxFeePerGas: toBigIntValue(raw.maxFeePerGas, "maxFeePerGas"),
+    gasLimit: toBigIntValue(raw.gasLimit ?? raw.gas, "gasLimit"),
+    to: parseChecksummedAddress(String(raw.to), "to"),
+    value: toBigIntValue(raw.value ?? 0, "value"),
     input: toHexValue(raw.input ?? raw.data ?? "0x", "input"),
-    accessList: (raw.accessList ?? []).map(
-      (entry: { address?: string; contractAddress?: string; storageKeys: string[] }) => ({
-        contractAddress: getAddress(entry.contractAddress ?? entry.address ?? ""),
-        storageKeys: (entry.storageKeys ?? []).map((key) => toHexValue(key, "accessList storage key")),
-      }),
-    ),
+    accessList: accessList.map((entry) => {
+      if (!isRecord(entry)) {
+        throw new Error("Invalid accessList entry: expected { address | contractAddress, storageKeys[] }.");
+      }
+      return {
+        contractAddress: parseChecksummedAddress(String(entry.contractAddress ?? entry.address), "accessList address"),
+        storageKeys: toArrayValue(entry.storageKeys, "storageKeys").map((key) =>
+          toHexValue(key, "accessList storage key"),
+        ),
+      };
+    }),
     yParity: Number(raw.yParity ?? raw.v),
-    r: BigInt(raw.r),
-    s: BigInt(raw.s),
+    r: toBigIntValue(raw.r, "r"),
+    s: toBigIntValue(raw.s, "s"),
   };
 }
 
@@ -287,7 +321,7 @@ async function buildTransactionFromParams(
   account: PrivateKeyAccount,
   chainId: bigint,
 ): Promise<Eip1559TransactionStruct> {
-  const to = getAddress(getRequiredEnvVar("TX_TO"));
+  const to = parseChecksummedAddress(getRequiredEnvVar("TX_TO"), "TX_TO");
   const gasLimit = BigInt(getRequiredEnvVar("TX_GAS_LIMIT"));
   const maxFeePerGas = BigInt(getRequiredEnvVar("TX_MAX_FEE_PER_GAS"));
   const maxPriorityFeePerGas = BigInt(getRequiredEnvVar("TX_MAX_PRIORITY_FEE_PER_GAS"));
@@ -344,12 +378,15 @@ async function buildTransactionFromParams(
 async function main() {
   // --- Configuration ---
   const l1RpcUrl = getRequiredEnvVar("L1_RPC_URL");
-  const privateKey = toHexValue(getRequiredEnvVar("PRIVATE_KEY"), "PRIVATE_KEY");
-  const gatewayAddress = getAddress(getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_ADDRESS"));
-  const rollupAddress = getAddress(getRequiredEnvVar("LINETH_ROLLUP_ADDRESS"));
+  const privateKey = parsePrivateKey(getRequiredEnvVar("PRIVATE_KEY"), "PRIVATE_KEY");
+  const gatewayAddress = parseChecksummedAddress(
+    getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_ADDRESS"),
+    "FORCED_TRANSACTION_GATEWAY_ADDRESS",
+  );
+  const rollupAddress = parseChecksummedAddress(getRequiredEnvVar("LINETH_ROLLUP_ADDRESS"), "LINETH_ROLLUP_ADDRESS");
 
   const l2PrivateKey = process.env.L2_PRIVATE_KEY
-    ? toHexValue(process.env.L2_PRIVATE_KEY, "L2_PRIVATE_KEY")
+    ? parsePrivateKey(process.env.L2_PRIVATE_KEY, "L2_PRIVATE_KEY")
     : privateKey;
   const txDataFile = process.env.TX_DATA_FILE;
 
@@ -361,12 +398,12 @@ async function main() {
   console.log(`Connected — l1RpcUrl=${l1RpcUrl}, chainId=${chainId}, l1Sender=${l1Account.address}`);
 
   // --- Contract Instances ---
-  const rollup = { address: rollupAddress, abi: LinethRollupV8Abi } as const;
+  const rollup: RollupContract = { address: rollupAddress, abi: LinethRollupV8Abi };
   const gateway = { address: gatewayAddress, abi: ForcedTransactionGatewayAbi } as const;
 
   // --- Resolve Last Finalized State ---
   console.log("\n--- Resolving last finalized state ---");
-  const lastFinalizedState = await resolveLastFinalizedState(provider, rollupAddress);
+  const lastFinalizedState = await resolveLastFinalizedState(provider, rollup);
   console.log(
     `Last finalized state — timestamp=${lastFinalizedState.timestamp}, messageNumber=${lastFinalizedState.messageNumber}, messageRollingHash=${lastFinalizedState.messageRollingHash}, forcedTransactionNumber=${lastFinalizedState.forcedTransactionNumber}, forcedTransactionRollingHash=${lastFinalizedState.forcedTransactionRollingHash}`,
   );
@@ -404,39 +441,29 @@ async function main() {
   const l1PriorityFee = l1FeesPerGas?.maxPriorityFeePerGas;
 
   // Prefer EIP-1559 fields; only fall back to gasPrice for legacy chains
-  const l1GasOverrides =
+  const l1GasOverrides: { gasPrice: bigint } | { maxFeePerGas: bigint; maxPriorityFeePerGas: bigint } =
     l1MaxFee != null && l1PriorityFee != null
       ? {
           maxFeePerGas: l1MaxFee * 2n,
           maxPriorityFeePerGas: l1PriorityFee == 0n ? l1MaxFee * 2n : l1PriorityFee * 2n,
-          gasPrice: undefined,
         }
-      : { gasPrice: l1GasPrice, maxFeePerGas: undefined, maxPriorityFeePerGas: undefined };
+      : { gasPrice: l1GasPrice };
 
-  console.log(
-    `forcedTransactionFee=${feeAmount}, l1MaxFeePerGas=${l1GasOverrides.maxFeePerGas}, l1MaxPriorityFeePerGas=${l1GasOverrides.maxPriorityFeePerGas}, l1GasPrice=${l1GasPrice}, gasPrice=${l1GasOverrides.gasPrice}`,
-  );
+  console.log(`forcedTransactionFee=${feeAmount}, l1GasPrice=${l1GasPrice}, l1GasOverrides:`, l1GasOverrides);
 
-  const submitArgs = {
+  const hash = await l1Wallet.writeContract({
     ...gateway,
     functionName: "submitForcedTransaction",
     args: [forcedTransaction, lastFinalizedState],
     value: feeAmount,
     chain: null,
-  } as const;
-  const hash =
-    l1GasOverrides.gasPrice !== undefined
-      ? await l1Wallet.writeContract({ ...submitArgs, gasPrice: l1GasOverrides.gasPrice })
-      : await l1Wallet.writeContract({
-          ...submitArgs,
-          maxFeePerGas: l1GasOverrides.maxFeePerGas,
-          maxPriorityFeePerGas: l1GasOverrides.maxPriorityFeePerGas,
-        });
+    ...l1GasOverrides,
+  });
 
   console.log(`Transaction submitted — txHash=${hash}`);
   console.log("Waiting for confirmation...");
 
-  const receipt = await provider.waitForTransactionReceipt({ hash });
+  const receipt = await waitForSuccessfulReceipt(provider, hash);
   console.log(`Transaction confirmed — block=${receipt.blockNumber}, gasUsed=${receipt.gasUsed}`);
 
   // Decode ForcedTransactionAdded events from the rollup (logs from other contracts are skipped)

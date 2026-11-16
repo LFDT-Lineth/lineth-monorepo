@@ -1,5 +1,7 @@
+import { setTimeout } from "node:timers/promises";
+
 import { prepareAndAddMessageMerkleRoot } from "./addAndClaimMessageHelper.js";
-import { delay } from "../../../../common/helpers/general.js";
+import { waitForSuccessfulReceipt } from "../../../../common/helpers/receipt.js";
 import { withSignerUi } from "../../../../hardhat-plugins/signer-ui/session.js";
 
 import type { HardhatRuntimeEnvironment } from "hardhat/types/hre";
@@ -44,7 +46,7 @@ export default async function addAndClaimMessageForLST(taskArgs: TaskArguments, 
 
     {
       console.log("Waiting for 10 seconds...");
-      await delay(10000);
+      await setTimeout(10_000);
       console.log("Claiming message with LST withdrawal...");
       const hash = await linethRollup.write.claimMessageWithProofAndWithdrawLST([
         {
@@ -62,7 +64,7 @@ export default async function addAndClaimMessageForLST(taskArgs: TaskArguments, 
         claimParams.yieldProvider,
       ]);
       console.log("  Transaction hash:", hash);
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      const receipt = await waitForSuccessfulReceipt(publicClient, hash);
       console.log("  Transaction confirmed in block:", receipt.blockNumber.toString());
     }
   });

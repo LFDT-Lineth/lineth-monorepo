@@ -3,7 +3,7 @@ import { ArgumentType } from "hardhat/types/arguments";
 
 /**
  * Operational tasks. Every option is an optional string (`--kebab-case` on the CLI) whose fallback is an
- * environment variable resolved inside the action via `getTaskCliOrEnvValue`, as in Hardhat 2.
+ * environment variable resolved inside the action via `getTaskCliOrEnvValue`.
  * Actions are loaded lazily, so a task module is only imported when that task runs.
  */
 function optionalString<NameT extends string>(name: NameT) {
@@ -46,7 +46,6 @@ export const operationalTasks = [
     .addOption(optionalString("verifierProofType"))
     .addOption(optionalString("proxyAddress"))
     .addOption(optionalString("verifierAddress"))
-    .addOption(optionalString("verifierName"))
     .setAction(() => import("../operational/tasks/setVerifierAddressTask.js"))
     .build(),
   task("addLidoStVaultYieldProvider", "Generates parameters for adding and configuring a new LidoStVaultYieldProvider")
@@ -97,10 +96,6 @@ export const operationalTasks = [
     .build(),
 ];
 
-/**
- * Ignition deployment tasks (replace hardhat-deploy `deploy --tags`). Actions are imported lazily so a module's env-driven
- * shape (e.g. `VERIFIER_CONTRACT_NAME`) is only read when that task runs. See docs/deployment/README.md.
- */
 /** Presigned system-contract deployments (Nick's method); everything else deploys with `hardhat ignition deploy`. */
 export const deployTasks = [
   task("deploy:eip2935-system-contract", "Broadcasts the presigned EIP-2935 system contract deployment")

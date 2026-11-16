@@ -1,6 +1,5 @@
-import { getAddress } from "viem";
-
 import { LIDO_DASHBOARD_OPERATIONAL_ROLES } from "../../../common/constants/index.js";
+import { parseChecksummedAddress } from "../../../common/helpers/addressRegistry.js";
 import { buildVendorInitializationData } from "../../../common/helpers/buildVendorInitializationData.js";
 import { getTaskCliOrEnvValue } from "../../../common/helpers/environmentHelper.js";
 import { generateRoleAssignments } from "../../../common/helpers/roles.js";
@@ -49,26 +48,30 @@ export default async function addLidoStVaultYieldProvider(taskArgs: TaskArgument
   const { networkName } = await hre.network.getOrCreate();
 
   // --- Resolve inputs from CLI or ENV (with sensible fallbacks to the address registry) ---
-  let yieldManager = getTaskCliOrEnvValue(taskArgs, "yieldManager", "YIELD_MANAGER_ADDRESS");
-  const yieldProvider = getTaskCliOrEnvValue(taskArgs, "yieldProvider", "YIELD_PROVIDER_ADDRESS");
-  const nodeOperator = getTaskCliOrEnvValue(taskArgs, "nodeOperator", "NODE_OPERATOR");
-  const securityCouncil = getTaskCliOrEnvValue(taskArgs, "securityCouncil", "L1_SECURITY_COUNCIL");
+  const yieldManagerInput = getTaskCliOrEnvValue(taskArgs, "yieldManager", "YIELD_MANAGER_ADDRESS");
+  const yieldProviderInput = getTaskCliOrEnvValue(taskArgs, "yieldProvider", "YIELD_PROVIDER_ADDRESS");
+  const nodeOperatorInput = getTaskCliOrEnvValue(taskArgs, "nodeOperator", "NODE_OPERATOR");
+  const securityCouncilInput = getTaskCliOrEnvValue(taskArgs, "securityCouncil", "L1_SECURITY_COUNCIL");
   const nodeOperatorFeeRaw = getTaskCliOrEnvValue(taskArgs, "nodeOperatorFee", "NODE_OPERATOR_FEE");
   const confirmExpiryRaw = getTaskCliOrEnvValue(taskArgs, "confirmExpiry", "CONFIRM_EXPIRY");
 
   // --- Use address from the address registry ---
-  if (yieldManager === undefined) {
-    yieldManager = requireRegistryAddress(networkName, "YieldManager");
-  }
+  const yieldManager =
+    yieldManagerInput === undefined
+      ? requireRegistryAddress(networkName, "YieldManager")
+      : parseChecksummedAddress(yieldManagerInput, "--yield-manager / YIELD_MANAGER_ADDRESS");
 
   // --- Basic required fields check (adjust as needed) ---
   const missing: string[] = [];
-  if (!yieldProvider) missing.push("yieldProvider / YIELD_PROVIDER_ADDRESS");
-  if (!nodeOperator) missing.push("nodeOperator / NODE_OPERATOR");
-  if (!securityCouncil) missing.push("securityCouncil / L1_SECURITY_COUNCIL");
-  if (!yieldProvider || !nodeOperator || !securityCouncil) {
+  if (!yieldProviderInput) missing.push("yieldProvider / YIELD_PROVIDER_ADDRESS");
+  if (!nodeOperatorInput) missing.push("nodeOperator / NODE_OPERATOR");
+  if (!securityCouncilInput) missing.push("securityCouncil / L1_SECURITY_COUNCIL");
+  if (!yieldProviderInput || !nodeOperatorInput || !securityCouncilInput) {
     throw new Error(`Missing required params/envs: ${missing.join(", ")}`);
   }
+  const yieldProvider = parseChecksummedAddress(yieldProviderInput, "--yield-provider / YIELD_PROVIDER_ADDRESS");
+  const nodeOperator = parseChecksummedAddress(nodeOperatorInput, "--node-operator / NODE_OPERATOR");
+  const securityCouncil = parseChecksummedAddress(securityCouncilInput, "--security-council / L1_SECURITY_COUNCIL");
 
   // --- Parse numeric params ---
   const nodeOperatorFee = nodeOperatorFeeRaw ? BigInt(nodeOperatorFeeRaw) : 0n;
@@ -89,12 +92,12 @@ export default async function addLidoStVaultYieldProvider(taskArgs: TaskArgument
 
   // --- Build YieldProvider initialization data ---
   const yieldProviderInitData = buildVendorInitializationData({
-    defaultAdmin: getAddress(securityCouncil),
-    nodeOperator: getAddress(nodeOperator),
-    nodeOperatorManager: getAddress(securityCouncil),
+    defaultAdmin: securityCouncil,
+    nodeOperator,
+    nodeOperatorManager: securityCouncil,
     nodeOperatorFeeBP: nodeOperatorFee,
     confirmExpiry,
-    roleAssignments: generateRoleAssignments(LIDO_DASHBOARD_OPERATIONAL_ROLES, getAddress(yieldManager), []),
+    roleAssignments: generateRoleAssignments(LIDO_DASHBOARD_OPERATIONAL_ROLES, yieldManager, []),
   });
 
   // --- Output parameters for addYieldProvider ---

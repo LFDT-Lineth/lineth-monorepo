@@ -4,13 +4,18 @@ import { type Address, getContractAddress } from "viem";
 
 import { deployBridgedTokenBeacon } from "./deployBridgedTokenBeacon.js";
 import { TOKEN_BRIDGE_ROLES } from "../../../common/constants/index.js";
-import { generateRoleAssignments } from "../../../common/helpers/index.js";
+import { generateRoleAssignments } from "../../../common/helpers/roles.js";
 import { SupportedChainIds } from "../../../common/supportedNetworks.js";
 import { pauseTypeRoles, unpauseTypeRoles } from "../../../test/hardhat/common/constants/index.js";
 
 import type { PauseTypeRole, RoleAddress } from "../../../test/hardhat/common/types.js";
 
-export async function deployTokenBridge(messageServiceAddress: Address, verbose = false) {
+/** `contractName` lets gas estimation deploy `MockTokenBridge` (TokenBridge plus a test setter) the same way. */
+export async function deployTokenBridge<ContractName extends "TokenBridge" | "MockTokenBridge" = "TokenBridge">(
+  messageServiceAddress: Address,
+  verbose = false,
+  contractName: ContractName = "TokenBridge" as ContractName,
+) {
   const connection = await network.getOrCreate();
   const { viem } = connection;
   const oz = await upgrades(hre, connection);
@@ -27,7 +32,9 @@ export async function deployTokenBridge(messageServiceAddress: Address, verbose 
   // Deploying TokenBridges. The implementation is deployed up front so each deployProxy below is exactly one owner
   // transaction (OZ Upgrades v4 proxies create their ProxyAdmin inside the proxy constructor), which keeps the
   // counterfactual address of l2TokenBridge (owner nonce + 1) correct.
-  await oz.deployImplementation("TokenBridge");
+  // MockTokenBridge inherits TokenBridge's initializer.
+  const deployOptions = contractName === "MockTokenBridge" ? { unsafeAllow: ["missing-initializer" as const] } : {};
+  await oz.deployImplementation(contractName, deployOptions);
 
   const l1TokenBridgeInitializationData: TokenBridgeInitializationData = {
     defaultAdmin: ownerAddress,
@@ -45,7 +52,7 @@ export async function deployTokenBridge(messageServiceAddress: Address, verbose 
     unpauseTypeRoles,
   };
 
-  const l1TokenBridge = await oz.deployProxy("TokenBridge", [l1TokenBridgeInitializationData]);
+  const l1TokenBridge = await oz.deployProxy(contractName, [l1TokenBridgeInitializationData], deployOptions);
   if (verbose) {
     console.log("L1TokenBridge deployed, at address:", l1TokenBridge.address);
   }
@@ -63,7 +70,7 @@ export async function deployTokenBridge(messageServiceAddress: Address, verbose 
     unpauseTypeRoles,
   };
 
-  const l2TokenBridge = await oz.deployProxy("TokenBridge", [l2TokenBridgeInitializationData]);
+  const l2TokenBridge = await oz.deployProxy(contractName, [l2TokenBridgeInitializationData], deployOptions);
   if (verbose) {
     console.log("L2TokenBridge deployed, at address:", l2TokenBridge.address);
   }

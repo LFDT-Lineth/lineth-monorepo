@@ -1,5 +1,4 @@
-import { getAddress } from "viem";
-
+import { parseChecksummedAddress } from "../../../common/helpers/addressRegistry.js";
 import { getTaskCliOrEnvValue } from "../../../common/helpers/environmentHelper.js";
 
 import type { HardhatRuntimeEnvironment } from "hardhat/types/hre";
@@ -31,7 +30,10 @@ export default async function getCurrentFinalizedBlockNumber(taskArgs: TaskArgum
     throw new Error(`PROXY_ADDRESS and CONTRACT_NAME env variables are undefined.`);
   }
 
-  const LinethRollupContract = await viem.getContractAt(contractType, getAddress(proxyAddress));
+  const LinethRollupContract = await viem.getContractAt(
+    contractType,
+    parseChecksummedAddress(proxyAddress, "--proxy-address / PROXY_ADDRESS"),
+  );
   const blockNum = await LinethRollupContract.read.currentL2BlockNumber();
 
   console.log("Current finalized L2 block number", blockNum);

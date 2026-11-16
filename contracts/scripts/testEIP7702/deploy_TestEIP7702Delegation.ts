@@ -1,5 +1,6 @@
 import hre, { network } from "hardhat";
 
+import { waitForSuccessfulReceipt } from "../../common/helpers/receipt.js";
 import {
   getUiWalletClient,
   withSignerUi,
@@ -22,7 +23,7 @@ const func = async function () {
       client: { wallet },
     });
     const publicClient = await connection.viem.getPublicClient();
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: deploymentTransaction.hash });
+    const receipt = await waitForSuccessfulReceipt(publicClient, deploymentTransaction.hash);
     console.log(
       `contract=${contractName} deployed: address=${contract.address} blockNumber=${receipt.blockNumber} chainId=${await publicClient.getChainId()}`,
     );

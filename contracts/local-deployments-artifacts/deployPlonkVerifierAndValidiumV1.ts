@@ -19,9 +19,9 @@ import {
   loadArtifactFromDirectory,
 } from "../common/helpers/deployments.js";
 import { getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment.js";
+import { get1559Fees } from "../common/helpers/feeOverrides.js";
 import { getDeploymentNetworkName, requireAddressFromRegistryOrEnv } from "../common/helpers/readAddress.js";
 import { generateRoleAssignments } from "../common/helpers/roles.js";
-import { get1559Fees } from "../scripts/utils.js";
 
 const { abi: ValidiumV1Abi, bytecode: ValidiumV1Bytecode } = validiumV1Json;
 const { contractName: ProxyAdminContractName, abi: ProxyAdminAbi, bytecode: ProxyAdminBytecode } = proxyAdminJson;

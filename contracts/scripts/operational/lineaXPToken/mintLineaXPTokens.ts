@@ -1,5 +1,6 @@
 import { config } from "dotenv";
 import fs from "fs";
+import { setTimeout } from "node:timers/promises";
 import path from "path";
 import {
   type Address,
@@ -15,14 +16,16 @@ import {
   createWalletClient,
   encodeAbiParameters,
   http,
-  isAddress,
   isHex,
   parseAbiParameters,
   parseEther,
   parseGwei,
-  size,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+
+import { parseChecksummedAddress } from "../../../common/helpers/addressRegistry.js";
+import { getRequiredEnvVar } from "../../../common/helpers/environment.js";
+import { parsePrivateKey } from "../../cli.js";
 
 config();
 
@@ -72,36 +75,19 @@ function isValidUrl(urlString: string): boolean {
   }
 }
 
-function requireEnv(name: string): string {
-  const envVariable = process.env[name];
-  if (!envVariable) {
-    throw new Error(`Missing ${name} environment variable.`);
-  }
-  return envVariable;
-}
-
 function getConfig(): Config {
-  const inputFile = requireEnv("INPUT_FILE");
-  const destinationAddress = requireEnv("DESTINATION_ADDRESS");
-  const zodiacRolesModifierAddress = requireEnv("ZODIAC_ROLES_MODIFIER_ADDRESS");
-  const providerUrl = requireEnv("PROVIDER_URL");
-  const signerPrivateKey = requireEnv("SIGNER_PRIVATE_KEY");
-  const waitTimeInSeconds = requireEnv("WAIT_TIME_IN_SECONDS");
-
-  if (!isAddress(destinationAddress)) {
-    throw new Error(`Destination address is not a valid Ethereum address.`);
-  }
-
-  if (!isAddress(zodiacRolesModifierAddress)) {
-    throw new Error(`Zodiac roles modifier address is not a valid Ethereum address.`);
-  }
+  const inputFile = getRequiredEnvVar("INPUT_FILE");
+  const destinationAddress = parseChecksummedAddress(getRequiredEnvVar("DESTINATION_ADDRESS"), "DESTINATION_ADDRESS");
+  const zodiacRolesModifierAddress = parseChecksummedAddress(
+    getRequiredEnvVar("ZODIAC_ROLES_MODIFIER_ADDRESS"),
+    "ZODIAC_ROLES_MODIFIER_ADDRESS",
+  );
+  const providerUrl = getRequiredEnvVar("PROVIDER_URL");
+  const signerPrivateKey = parsePrivateKey(getRequiredEnvVar("SIGNER_PRIVATE_KEY"), "SIGNER_PRIVATE_KEY");
+  const waitTimeInSeconds = getRequiredEnvVar("WAIT_TIME_IN_SECONDS");
 
   if (!isValidUrl(providerUrl)) {
     throw new Error(`Invalid provider URL.`);
-  }
-
-  if (!isHex(signerPrivateKey, { strict: true }) || size(signerPrivateKey) !== 32) {
-    throw new Error(`Signer private key must be hexadecimal string of length 64`);
   }
 
   if (path.extname(inputFile) !== ".json") {
@@ -131,8 +117,6 @@ function getConfig(): Config {
 // ********************************* UTILS FUNCTIONS *******************************
 // *********************************************************************************
 
-export const wait = (timeout: number) => new Promise((resolve) => setTimeout(resolve, timeout));
-
 type MintTransactionRequest = {
   to: Address;
   value: bigint;
@@ -149,7 +133,7 @@ async function estimateTransactionGas(
   transaction: MintTransactionRequest,
 ): Promise<bigint> {
   try {
-    return provider.estimateGas({ account: signer, ...transaction });
+    return await provider.estimateGas({ account: signer, ...transaction });
   } catch (error: unknown) {
     throw new Error(`GasEstimationError: ${JSON.stringify(error)}`);
   }
@@ -185,11 +169,6 @@ async function getTransactionReceiptOrNull(provider: PublicClient, hash: Hash): 
     }
     throw error;
   }
-}
-
-async function get1559Fees(provider: PublicClient): Promise<{ maxFeePerGas: bigint; maxPriorityFeePerGas: bigint }> {
-  const { maxFeePerGas, maxPriorityFeePerGas } = await provider.estimateFeesPerGas();
-  return { maxFeePerGas, maxPriorityFeePerGas };
 }
 
 function createTrackingFile(path: string): Map<number, TrackingData> {
@@ -310,12 +289,9 @@ async function main() {
 
   for (const batch of filteredBatches) {
     try {
-      const recipients = batch.recipients.map((recipient) => {
-        if (!isAddress(recipient)) {
-          throw new Error(`Invalid recipient address ${recipient} in batch ${batch.id}`);
-        }
-        return recipient;
-      });
+      const recipients = batch.recipients.map((recipient) =>
+        parseChecksummedAddress(recipient, `batch ${batch.id} recipient`),
+      );
 
       const encodedBatchMintCall = concat([
         "0x83b74baa",
@@ -337,7 +313,7 @@ async function main() {
         ]),
       ]);
 
-      let fees = await get1559Fees(provider);
+      let fees = await provider.estimateFeesPerGas();
 
       while (fees.maxFeePerGas > BigInt(gasPriceCap)) {
         console.warn(`Max fee per gas (${fees.maxFeePerGas.toString()}) exceeds gas price cap (${gasPriceCap})`);
@@ -345,10 +321,10 @@ async function main() {
         const currentBlockNumber = await provider.getBlockNumber();
         while ((await provider.getBlockNumber()) === currentBlockNumber) {
           console.warn(`Waiting for next block: ${currentBlockNumber}`);
-          await wait(4_000);
+          await setTimeout(4_000);
         }
 
-        fees = await get1559Fees(provider);
+        fees = await provider.estimateFeesPerGas();
       }
 
       const transactionRequest: MintTransactionRequest = {
@@ -396,7 +372,7 @@ async function main() {
     }
 
     console.log(`Pause the execution for ${waitTimeInSeconds} seconds...`);
-    await wait(waitTimeInSeconds * 1000);
+    await setTimeout(waitTimeInSeconds * 1000);
   }
 
   if (pendingTransactions.length !== 0) {
@@ -406,14 +382,15 @@ async function main() {
   const transactionsInfos = await Promise.all(
     pendingTransactions.map(async ({ transactionHash, batch }) => {
       return {
-        transactionReceipt: await provider.waitForTransactionReceipt({ hash: transactionHash }),
+        // No timeout (viem defaults to 180 s); a reverted batch is recorded as Failed below rather than thrown.
+        transactionReceipt: await provider.waitForTransactionReceipt({ hash: transactionHash, timeout: 0 }),
         batch,
       };
     }),
   );
 
   for (const { batch, transactionReceipt } of transactionsInfos) {
-    if (transactionReceipt && transactionReceipt.status === "reverted") {
+    if (transactionReceipt.status === "reverted") {
       trackingData.set(batch.id, {
         recipients: batch.recipients,
         tokenAmount: batch.amount,
@@ -430,11 +407,11 @@ async function main() {
       recipients: batch.recipients,
       tokenAmount: batch.amount,
       status: BatchStatuses.Success,
-      ...(transactionReceipt?.transactionHash ? { transactionHash: transactionReceipt?.transactionHash } : {}),
+      transactionHash: transactionReceipt.transactionHash,
     });
 
     updateTrackingFile(trackingData);
-    console.log(`Transaction succeed. Hash: ${transactionReceipt?.transactionHash}, batchId: ${batch.id}`);
+    console.log(`Transaction succeed. Hash: ${transactionReceipt.transactionHash}, batchId: ${batch.id}`);
   }
 }
 

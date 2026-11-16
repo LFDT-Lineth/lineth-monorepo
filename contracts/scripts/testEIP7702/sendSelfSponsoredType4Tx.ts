@@ -1,17 +1,12 @@
 import * as dotenv from "dotenv";
-import {
-  createPublicClient,
-  createWalletClient,
-  encodeFunctionData,
-  getAddress,
-  http,
-  isHex,
-  parseAbi,
-  zeroAddress,
-} from "viem";
+import { createPublicClient, createWalletClient, encodeFunctionData, http, parseAbi, zeroAddress } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
-import { requireEnv, checkDelegation, getAccountInfo, createAuthorization, estimateGasFees } from "./utils.js";
+import { checkDelegation, getAccountInfo, estimateGasFees } from "./utils.js";
+import { parseChecksummedAddress } from "../../common/helpers/addressRegistry.js";
+import { getRequiredEnvVar } from "../../common/helpers/environment.js";
+import { waitForSuccessfulReceipt } from "../../common/helpers/receipt.js";
+import { parsePrivateKey } from "../cli.js";
 
 // Self-sponsored EIP-7702 transaction: the same wallet signs the authorization AND sends the transaction.
 // Prerequisite - Deploy a contract with NON-VIEW initialize() function, e.g. TestEIP7702Delegation
@@ -27,17 +22,16 @@ dotenv.config();
 const SHORT_ZERO_ADDRESS = "0x0";
 
 async function main() {
-  const rpcUrl = requireEnv("RPC_URL");
-  const privateKey = requireEnv("DEPLOYER_PRIVATE_KEY");
+  const rpcUrl = getRequiredEnvVar("RPC_URL");
   const targetAddressEnv = process.env.TARGET_ADDRESS?.trim();
   const targetAddress =
-    targetAddressEnv == null || targetAddressEnv === SHORT_ZERO_ADDRESS ? zeroAddress : getAddress(targetAddressEnv);
+    targetAddressEnv == null || targetAddressEnv === SHORT_ZERO_ADDRESS
+      ? zeroAddress
+      : parseChecksummedAddress(targetAddressEnv, "TARGET_ADDRESS");
 
-  const normalizedPrivateKey = privateKey.startsWith("0x") ? privateKey : `0x${privateKey}`;
-  if (!isHex(normalizedPrivateKey)) {
-    throw new Error("DEPLOYER_PRIVATE_KEY must be a hex string");
-  }
-  const signer = privateKeyToAccount(normalizedPrivateKey);
+  const signer = privateKeyToAccount(
+    parsePrivateKey(getRequiredEnvVar("DEPLOYER_PRIVATE_KEY"), "DEPLOYER_PRIVATE_KEY"),
+  );
   const provider = createPublicClient({ transport: http(rpcUrl) });
   const walletClient = createWalletClient({ account: signer, transport: http(rpcUrl) });
 
@@ -55,8 +49,8 @@ async function main() {
     console.log("TARGET_ADDRESS not set or set to 0x0 - sending revocation (zero address) to remove delegation.");
   }
 
-  // +1 nonce offset: sender nonce is incremented before authorization processing
-  const authorization = await createAuthorization(signer, provider, targetAddress, 1);
+  // executor "self": the sender's nonce is incremented before the authorization is processed, so viem signs nonce + 1.
+  const authorization = await walletClient.signAuthorization({ contractAddress: targetAddress, executor: "self" });
 
   let hash;
   if (isRevocation) {
@@ -88,14 +82,13 @@ async function main() {
       data: calldata,
       gas: 500000n,
       value: 0n,
-      ...(delegationFees.maxFeePerGas != null && { maxFeePerGas: delegationFees.maxFeePerGas }),
-      ...(delegationFees.maxPriorityFeePerGas != null && { maxPriorityFeePerGas: delegationFees.maxPriorityFeePerGas }),
+      ...delegationFees,
     });
   }
 
   console.log("Self-sponsored transaction sent:", hash);
 
-  const receipt = await provider.waitForTransactionReceipt({ hash });
+  const receipt = await waitForSuccessfulReceipt(provider, hash);
   console.log("Receipt:", receipt);
 }
 

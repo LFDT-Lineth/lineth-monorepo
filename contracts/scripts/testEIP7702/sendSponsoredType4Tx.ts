@@ -1,16 +1,12 @@
 import * as dotenv from "dotenv";
-import { type Hex, createPublicClient, createWalletClient, getAddress, http, isHex } from "viem";
+import { createPublicClient, createWalletClient, http, isHex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
-import { requireEnv, checkDelegation, getAccountInfo, createAuthorization, estimateGasFees } from "./utils.js";
-
-function toPrivateKey(name: string, value: string): Hex {
-  const normalized = value.startsWith("0x") ? value : `0x${value}`;
-  if (!isHex(normalized)) {
-    throw new Error(`${name} must be a hex string`);
-  }
-  return normalized;
-}
+import { checkDelegation, getAccountInfo, estimateGasFees } from "./utils.js";
+import { parseChecksummedAddress } from "../../common/helpers/addressRegistry.js";
+import { getRequiredEnvVar } from "../../common/helpers/environment.js";
+import { waitForSuccessfulReceipt } from "../../common/helpers/receipt.js";
+import { parsePrivateKey } from "../cli.js";
 
 // Sponsored EIP-7702 transaction: one wallet (authority) signs the authorization,
 // a different wallet (sponsor) sends and pays for the transaction.
@@ -30,20 +26,22 @@ function toPrivateKey(name: string, value: string): Hex {
 dotenv.config();
 
 async function main() {
-  const rpcUrl = requireEnv("RPC_URL");
-  const sponsorPrivateKey = requireEnv("SPONSOR_PRIVATE_KEY");
-  const authorityPrivateKey = requireEnv("AUTHORITY_PRIVATE_KEY");
-  const targetAddress = getAddress(requireEnv("TARGET_ADDRESS"));
+  const rpcUrl = getRequiredEnvVar("RPC_URL");
+  const targetAddress = parseChecksummedAddress(getRequiredEnvVar("TARGET_ADDRESS"), "TARGET_ADDRESS");
   const calldata = process.env.CALLDATA ?? "0x";
   if (!isHex(calldata)) {
     throw new Error("CALLDATA must be a hex string");
   }
 
   const provider = createPublicClient({ transport: http(rpcUrl) });
-  const sponsor = privateKeyToAccount(toPrivateKey("SPONSOR_PRIVATE_KEY", sponsorPrivateKey));
-  const authority = privateKeyToAccount(toPrivateKey("AUTHORITY_PRIVATE_KEY", authorityPrivateKey));
+  const sponsor = privateKeyToAccount(parsePrivateKey(getRequiredEnvVar("SPONSOR_PRIVATE_KEY"), "SPONSOR_PRIVATE_KEY"));
+  const authority = privateKeyToAccount(
+    parsePrivateKey(getRequiredEnvVar("AUTHORITY_PRIVATE_KEY"), "AUTHORITY_PRIVATE_KEY"),
+  );
   const sponsorWallet = createWalletClient({ account: sponsor, transport: http(rpcUrl) });
-  const toAddress = getAddress(process.env.TO_ADDRESS ?? authority.address);
+  const toAddress = process.env.TO_ADDRESS
+    ? parseChecksummedAddress(process.env.TO_ADDRESS, "TO_ADDRESS")
+    : authority.address;
 
   console.log("Sponsor info:", await getAccountInfo(provider, sponsor.address));
   console.log("Authority info:", await getAccountInfo(provider, authority.address));
@@ -58,10 +56,10 @@ async function main() {
   console.log(`Tx to: ${toAddress}`);
   console.log(`Calldata: ${calldata}`);
 
-  // +0 nonce offset: authority is not the sender, so its nonce is not incremented before auth processing
-  const authorization = await createAuthorization(authority, provider, targetAddress, 0);
+  // The authority is not the sender, so its current nonce is signed as is.
+  const authorization = await sponsorWallet.signAuthorization({ account: authority, contractAddress: targetAddress });
 
-  const { maxFeePerGas, maxPriorityFeePerGas } = await estimateGasFees(provider, sponsor.address, toAddress, calldata);
+  const fees = await estimateGasFees(provider, sponsor.address, toAddress, calldata);
   const nonce = await provider.getTransactionCount({ address: sponsor.address });
 
   const hash = await sponsorWallet.sendTransaction({
@@ -73,12 +71,11 @@ async function main() {
     nonce,
     gas: 500000n,
     value: 0n,
-    ...(maxFeePerGas != null && { maxFeePerGas }),
-    ...(maxPriorityFeePerGas != null && { maxPriorityFeePerGas }),
+    ...fees,
   });
   console.log("Sponsored transaction sent:", hash);
 
-  const receipt = await provider.waitForTransactionReceipt({ hash });
+  const receipt = await waitForSuccessfulReceipt(provider, hash);
   console.log("Receipt:", receipt);
 }
 

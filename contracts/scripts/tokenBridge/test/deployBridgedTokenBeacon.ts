@@ -2,6 +2,7 @@ import { upgrades } from "@openzeppelin/hardhat-upgrades/viem";
 import hre, { network } from "hardhat";
 import { getAddress, getContract } from "viem";
 
+import { waitForSuccessfulReceipt } from "../../../common/helpers/receipt.js";
 import { pinnedUpgradeableBeaconArtifact } from "../../../ignition/modules/lib/pinned.js";
 
 /**
@@ -26,7 +27,7 @@ export async function deployBridgedTokenBeacon(verbose = false) {
       bytecode: pinnedUpgradeableBeaconArtifact.bytecode,
       args: [implementation.address],
     });
-    const { contractAddress } = await publicClient.waitForTransactionReceipt({ hash });
+    const { contractAddress } = await waitForSuccessfulReceipt(publicClient, hash);
     if (!contractAddress) {
       throw new Error("UpgradeableBeacon deployment produced no contract address");
     }

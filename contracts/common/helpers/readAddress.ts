@@ -1,7 +1,3 @@
-import fs from "fs";
-import path from "path";
-import { getAddress, isAddress } from "viem";
-
 import {
   getPopulatedAddresses,
   isMultiRegistryEntry,
@@ -33,7 +29,7 @@ export function getAddressFromRegistry(
   networkName: string,
   contractKey: string,
   envVarName?: string,
-): string | undefined {
+): Address | undefined {
   if (!REGISTRY_NETWORKS.has(networkName)) {
     return undefined;
   }
@@ -62,7 +58,7 @@ export function getAddressesFromRegistry(
   networkName: string,
   contractKey: string,
   envVarName?: string,
-): string[] | undefined {
+): Address[] | undefined {
   if (!REGISTRY_NETWORKS.has(networkName)) {
     return undefined;
   }
@@ -95,7 +91,11 @@ export function getAddressesFromRegistry(
  *
  * Lookup tries `contractKey` first, then `envVarName` when they differ.
  */
-export function requireAddressFromRegistryOrEnv(networkName: string, contractKey: string, envVarName?: string): string {
+export function requireAddressFromRegistryOrEnv(
+  networkName: string,
+  contractKey: string,
+  envVarName?: string,
+): Address {
   const registryAddress = getAddressFromRegistry(networkName, contractKey, envVarName);
   const envAddress = envVarName ? parseEnvAddress(envVarName) : undefined;
 
@@ -137,7 +137,7 @@ export function requireAddressesFromRegistryOrEnv(
   networkName: string,
   contractKey: string,
   envVarName: string,
-): string[] {
+): Address[] {
   const registryAddresses = getAddressesFromRegistry(networkName, contractKey, envVarName);
   const envAddresses = parseEnvAddressList(envVarName);
 
@@ -177,7 +177,7 @@ export function requireAddressesFromRegistryOrEnv(
  * Use this for optional address lists (e.g. reserved token addresses) where an empty
  * configuration is a valid deployment choice.
  */
-export function getAddressesFromRegistryOrEnv(networkName: string, contractKey: string, envVarName: string): string[] {
+export function getAddressesFromRegistryOrEnv(networkName: string, contractKey: string, envVarName: string): Address[] {
   const registryAddresses = getAddressesFromRegistry(networkName, contractKey, envVarName);
   const envAddresses = parseEnvAddressList(envVarName);
 
@@ -204,32 +204,4 @@ export function getAddressesFromRegistryOrEnv(networkName: string, contractKey: 
   }
 
   return [];
-}
-
-/** Hardhat Ignition journals: `contracts/ignition/deployments/<deploymentId>/`. */
-export const IGNITION_DEPLOYMENTS_DIR = path.join(import.meta.dirname, "..", "..", "ignition", "deployments");
-
-/**
- * Reads `ignition/deployments/<deploymentId>/deployed_addresses.json` (future id → checksummed address).
- * Returns `undefined` when the deployment does not exist.
- */
-export function getIgnitionDeployedAddresses(
-  deploymentId: string,
-  deploymentsDir: string = IGNITION_DEPLOYMENTS_DIR,
-): Record<string, Address> | undefined {
-  const filePath = path.join(deploymentsDir, deploymentId, "deployed_addresses.json");
-  if (!fs.existsSync(filePath)) {
-    return undefined;
-  }
-  const parsed: unknown = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error(`${filePath} is not a JSON object.`);
-  }
-  const addresses: Record<string, Address> = {};
-  for (const [futureId, value] of Object.entries(parsed)) {
-    if (typeof value === "string" && isAddress(value, { strict: false })) {
-      addresses[futureId] = getAddress(value);
-    }
-  }
-  return addresses;
 }

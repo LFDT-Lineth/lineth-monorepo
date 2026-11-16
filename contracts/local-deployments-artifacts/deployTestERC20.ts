@@ -3,8 +3,7 @@ import { ethers } from "ethers";
 import testERC20Json from "./static-artifacts/TestERC20.json" with { type: "json" };
 import { deployContractFromArtifacts, getDeployNonceFromEnv } from "../common/helpers/deployments.js";
 import { getBooleanEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment.js";
-import { LOCAL_L2_DEPLOY_FEE_OVERRIDES } from "../common/helpers/feeOverrides.js";
-import { get1559Fees } from "../scripts/utils.js";
+import { get1559Fees, LOCAL_L2_DEPLOY_FEE_OVERRIDES } from "../common/helpers/feeOverrides.js";
 
 const { contractName: TestERC20ContractName, abi: TestERC20Abi, bytecode: TestERC20Bytecode } = testERC20Json;
 

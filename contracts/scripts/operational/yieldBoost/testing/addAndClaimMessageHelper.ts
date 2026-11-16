@@ -1,7 +1,9 @@
-import { type Address, type Hex, bytesToBigInt, getAddress, isHex, keccak256, zeroAddress } from "viem";
+import { type Address, type Hex, bytesToBigInt, isHex, keccak256, zeroAddress } from "viem";
 
+import { parseChecksummedAddress } from "../../../../common/helpers/addressRegistry.js";
 import { encodeSendMessage, randomBytes32 } from "../../../../common/helpers/encoding.js";
 import { getTaskCliOrEnvValue } from "../../../../common/helpers/environmentHelper.js";
+import { waitForSuccessfulReceipt } from "../../../../common/helpers/receipt.js";
 import { getUiWalletClient } from "../../../../hardhat-plugins/signer-ui/session.js";
 
 import type { ContractReturnType, PublicClient } from "@nomicfoundation/hardhat-viem/types";
@@ -70,8 +72,11 @@ export async function prepareAndAddMessageMerkleRoot(
   if (!isHex(data)) {
     throw new Error(`Invalid data "${data}": expected a 0x-prefixed hex string`);
   }
-  const from = getAddress(fromAddress);
-  const to = getAddress(toAddress);
+  const from = parseChecksummedAddress(fromAddress, "--from / FROM_ADDRESS");
+  const to = parseChecksummedAddress(toAddress, "--to / TO_ADDRESS");
+  const yieldProviderAddress = yieldProvider
+    ? parseChecksummedAddress(yieldProvider, "--yield-provider / YIELD_PROVIDER_ADDRESS")
+    : undefined;
 
   // --- Parse numeric params ---
   const value = valueRaw ? BigInt(valueRaw) : 0n;
@@ -83,28 +88,27 @@ export async function prepareAndAddMessageMerkleRoot(
   const proof = Array.from({ length: 32 }, () => randomBytes32());
   const proofDepth = proof.length;
 
-  const linethRollup = await viem.getContractAt("TestLinethRollup", getAddress(linethRollupAddress), {
-    client: { public: publicClient, wallet },
-  });
+  const linethRollup = await viem.getContractAt(
+    "TestLinethRollup",
+    parseChecksummedAddress(linethRollupAddress, "--lineth-rollup-address / LINETH_ROLLUP_ADDRESS"),
+    {
+      client: { public: publicClient, wallet },
+    },
+  );
   // Generate random messageNumber and check if it's already claimed
-  let messageNumber: bigint;
-  let attempts = 0;
-  const maxAttempts = 100; // Prevent infinite loop
-  do {
-    messageNumber = bytesToBigInt(crypto.getRandomValues(new Uint8Array(32)));
-    attempts++;
-    if (attempts > maxAttempts) {
-      throw new Error(
-        `Failed to find unclaimed message number after ${maxAttempts} attempts. This is highly unlikely.`,
-      );
+  const maxAttempts = 100;
+  let messageNumber: bigint | undefined;
+  for (let attempt = 0; attempt < maxAttempts && messageNumber === undefined; attempt++) {
+    const candidate = bytesToBigInt(crypto.getRandomValues(new Uint8Array(32)));
+    if (await linethRollup.read.isMessageClaimed([candidate])) {
+      console.log(`  Message number ${candidate.toString()} already claimed, generating new one...`);
+    } else {
+      messageNumber = candidate;
     }
-    const isClaimed = await linethRollup.read.isMessageClaimed([messageNumber]);
-    if (!isClaimed) {
-      break;
-    }
-    console.log(`  Message number ${messageNumber.toString()} already claimed, generating new one...`);
-    // eslint-disable-next-line no-constant-condition
-  } while (true);
+  }
+  if (messageNumber === undefined) {
+    throw new Error(`Failed to find unclaimed message number after ${maxAttempts} attempts. This is highly unlikely.`);
+  }
 
   // Log params
   console.log("Parameters:");
@@ -136,7 +140,7 @@ export async function prepareAndAddMessageMerkleRoot(
   {
     const hash = await linethRollup.write.addL2MerkleRoots([[generatedRoot], BigInt(proofDepth)]);
     console.log("  Transaction hash:", hash);
-    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    const receipt = await waitForSuccessfulReceipt(publicClient, hash);
     console.log("  Transaction confirmed in block:", receipt.blockNumber.toString());
   }
 
@@ -154,8 +158,8 @@ export async function prepareAndAddMessageMerkleRoot(
     data,
   };
 
-  if (yieldProvider) {
-    claimParams.yieldProvider = getAddress(yieldProvider);
+  if (yieldProviderAddress) {
+    claimParams.yieldProvider = yieldProviderAddress;
   }
 
   // Output claim parameters

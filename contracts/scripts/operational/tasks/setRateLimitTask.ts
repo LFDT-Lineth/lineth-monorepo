@@ -1,6 +1,6 @@
-import { getAddress } from "viem";
-
+import { parseChecksummedAddress } from "../../../common/helpers/addressRegistry.js";
 import { getTaskCliOrEnvValue } from "../../../common/helpers/environmentHelper.js";
+import { waitForSuccessfulReceipt } from "../../../common/helpers/receipt.js";
 import { getUiWalletClient, withSignerUi } from "../../../hardhat-plugins/signer-ui/session.js";
 import { requireRegistryAddress } from "../registryAddress.js";
 
@@ -31,15 +31,20 @@ export default async function setRateLimit(taskArgs: TaskArguments, hre: Hardhat
     const { viem, networkName } = connection;
 
     const messageServiceContractType = getTaskCliOrEnvValue(taskArgs, "messageServiceType", "MESSAGE_SERVICE_TYPE");
-    let messageServiceAddress = getTaskCliOrEnvValue(taskArgs, "messageServiceAddress", "MESSAGE_SERVICE_ADDRESS");
+    const messageServiceAddressInput = getTaskCliOrEnvValue(
+      taskArgs,
+      "messageServiceAddress",
+      "MESSAGE_SERVICE_ADDRESS",
+    );
 
     if (messageServiceContractType === undefined) {
       throw "Please specify a Message Service name e.g: --message-service-type LinethRollup or MESSAGE_SERVICE_TYPE=LinethRollup";
     }
 
-    if (messageServiceAddress === undefined) {
-      messageServiceAddress = requireRegistryAddress(networkName, messageServiceContractType);
-    }
+    const messageServiceAddress =
+      messageServiceAddressInput === undefined
+        ? requireRegistryAddress(networkName, messageServiceContractType)
+        : parseChecksummedAddress(messageServiceAddressInput, "--message-service-address / MESSAGE_SERVICE_ADDRESS");
 
     const withdrawLimitRaw = getTaskCliOrEnvValue(taskArgs, "withdrawLimit", "WITHDRAW_LIMIT_IN_WEI");
     if (withdrawLimitRaw === undefined || String(withdrawLimitRaw).trim() === "") {
@@ -51,7 +56,7 @@ export default async function setRateLimit(taskArgs: TaskArguments, hre: Hardhat
 
     const wallet = await getUiWalletClient(connection);
     const publicClient = await viem.getPublicClient();
-    const messageService = await viem.getContractAt(messageServiceContractType, getAddress(messageServiceAddress), {
+    const messageService = await viem.getContractAt(messageServiceContractType, messageServiceAddress, {
       client: { public: publicClient, wallet },
     });
 
@@ -64,7 +69,7 @@ export default async function setRateLimit(taskArgs: TaskArguments, hre: Hardhat
     // set limit
 
     const hash = await messageService.write.resetRateLimitAmount([withdrawLimitInWei]);
-    await publicClient.waitForTransactionReceipt({ hash });
+    await waitForSuccessfulReceipt(publicClient, hash);
 
     console.log(`Changed rate limit in wei to ${withdrawLimitInWei} at ${messageServiceAddress}`);
 

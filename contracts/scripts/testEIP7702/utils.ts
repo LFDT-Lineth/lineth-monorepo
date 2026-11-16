@@ -1,12 +1,4 @@
-import {
-  type Address,
-  type Hex,
-  type LocalAccount,
-  type PublicClient,
-  type SignedAuthorization,
-  formatEther,
-  getAddress,
-} from "viem";
+import { type Address, type Hex, type PublicClient, formatEther, getAddress } from "viem";
 import { estimateGas as lineaEstimateGas } from "viem/linea";
 
 import { SupportedChainIds } from "../../common/supportedNetworks.js";
@@ -14,7 +6,7 @@ import { SupportedChainIds } from "../../common/supportedNetworks.js";
 const BASE_FEE_MULTIPLIER_PERCENT = 135n;
 const PRIORITY_FEE_MULTIPLIER_PERCENT = 105n;
 
-export function isLineaChainId(chainId: number): boolean {
+function isLineaChainId(chainId: number): boolean {
   const lineaChainIds = new Set<number>([
     SupportedChainIds.LINEA_DEVNET,
     SupportedChainIds.LINEA_SEPOLIA,
@@ -22,14 +14,6 @@ export function isLineaChainId(chainId: number): boolean {
     SupportedChainIds.LINEA,
   ]);
   return lineaChainIds.has(chainId);
-}
-
-export function requireEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Missing ${name} environment variable`);
-  }
-  return value;
 }
 
 export async function checkDelegation(
@@ -63,37 +47,13 @@ export async function getAccountInfo(
   return { address, balance: formatEther(balance), nonce };
 }
 
-// Signs an EIP-7702 authorization tuple.
-// nonceOffset: +1 for self-sponsored (sender nonce incremented before auth processing), +0 for sponsored (separate authority)
-export async function createAuthorization(
-  authority: LocalAccount,
-  client: PublicClient,
-  targetContractAddress: Address,
-  nonceOffset: number,
-): Promise<SignedAuthorization> {
-  const chainId = await client.getChainId();
-  const currentNonce = await client.getTransactionCount({ address: authority.address });
-  const authNonce = currentNonce + nonceOffset;
-
-  if (!authority.signAuthorization) {
-    throw new Error(`Account ${authority.address} cannot sign EIP-7702 authorizations`);
-  }
-  const authorization = await authority.signAuthorization({
-    address: targetContractAddress,
-    nonce: authNonce,
-    chainId,
-  });
-  console.log(`Authorization created for ${authority.address} with nonce: ${authorization.nonce}`);
-  return authorization;
-}
-
 // Estimates gas fees, branching on whether the chain is Linea (linea_estimateGas) or not (EIP-1559 fee history).
 export async function estimateGasFees(
   client: PublicClient,
   from: Address,
   to?: Address,
   data: Hex = "0x",
-): Promise<{ maxFeePerGas?: bigint; maxPriorityFeePerGas?: bigint; gasPrice?: bigint }> {
+): Promise<{ maxFeePerGas: bigint; maxPriorityFeePerGas: bigint }> {
   const chainId = await client.getChainId();
   if (isLineaChainId(chainId)) {
     const { baseFeePerGas, priorityFeePerGas } = await lineaEstimateGas(client, { account: from, to, data, value: 0n });

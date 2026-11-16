@@ -1,16 +1,17 @@
+import { createProof, ProofType } from "@chainsafe/persistent-merkle-tree";
 import {
   fetchBeaconHeader,
   fetchBeaconState,
   fetchBeaconHeaderByParentRoot,
 } from "@lidofinance/lsv-cli/dist/utils/fetch-cl.js";
 import { createBeaconHeaderProof, createStateProof } from "@lidofinance/lsv-cli/dist/utils/proof/proofs.js";
-import * as fs from "fs";
-import * as path from "path";
-import { pathToFileURL } from "url";
-import { bytesToHex, getAddress } from "viem";
+import { ssz } from "@lodestar/types";
+import { BaseError, ContractFunctionRevertedError, bytesToHex } from "viem";
 
+import { parseChecksummedAddress } from "../../../../common/helpers/addressRegistry.js";
 import { encodeData } from "../../../../common/helpers/encoding.js";
 import { getTaskCliOrEnvValue } from "../../../../common/helpers/environmentHelper.js";
+import { waitForSuccessfulReceipt } from "../../../../common/helpers/receipt.js";
 import { getUiWalletClient, withSignerUi } from "../../../../hardhat-plugins/signer-ui/session.js";
 
 import type { HardhatRuntimeEnvironment } from "hardhat/types/hre";
@@ -79,22 +80,31 @@ export default async function unstakePermissionless(taskArgs: TaskArguments, hre
     const signerAddress = wallet.account.address;
 
     // --- Resolve inputs from CLI or ENV ---
-    const yieldManagerAddress = getTaskCliOrEnvValue(taskArgs, "yieldManager", "YIELD_MANAGER_ADDRESS");
-    const yieldProvider = getTaskCliOrEnvValue(taskArgs, "yieldProvider", "YIELD_PROVIDER_ADDRESS");
+    const yieldManagerInput = getTaskCliOrEnvValue(taskArgs, "yieldManager", "YIELD_MANAGER_ADDRESS");
+    const yieldProviderInput = getTaskCliOrEnvValue(taskArgs, "yieldProvider", "YIELD_PROVIDER_ADDRESS");
     const validatorIndexRaw = getTaskCliOrEnvValue(taskArgs, "validatorIndex", "VALIDATOR_INDEX");
     const slotRaw = getTaskCliOrEnvValue(taskArgs, "slot", "SLOT");
     const beaconRpcUrl = getTaskCliOrEnvValue(taskArgs, "beaconRpcUrl", "BEACON_RPC_URL");
 
     // --- Basic required fields check (adjust as needed) ---
     const missing: string[] = [];
-    if (!yieldManagerAddress) missing.push("yieldManager / YIELD_MANAGER_ADDRESS");
-    if (!yieldProvider) missing.push("yieldProvider / YIELD_PROVIDER_ADDRESS");
+    if (!yieldManagerInput) missing.push("yieldManager / YIELD_MANAGER_ADDRESS");
+    if (!yieldProviderInput) missing.push("yieldProvider / YIELD_PROVIDER_ADDRESS");
     if (!validatorIndexRaw) missing.push("validatorIndex / VALIDATOR_INDEX");
     if (!slotRaw) missing.push("slot / SLOT");
     if (!beaconRpcUrl) missing.push("beaconRpcUrl / BEACON_RPC_URL");
-    if (missing.length || !yieldManagerAddress || !yieldProvider || !validatorIndexRaw || !slotRaw || !beaconRpcUrl) {
+    if (
+      missing.length ||
+      !yieldManagerInput ||
+      !yieldProviderInput ||
+      !validatorIndexRaw ||
+      !slotRaw ||
+      !beaconRpcUrl
+    ) {
       throw new Error(`Missing required params/envs: ${missing.join(", ")}`);
     }
+    const yieldManagerAddress = parseChecksummedAddress(yieldManagerInput, "--yield-manager / YIELD_MANAGER_ADDRESS");
+    const yieldProvider = parseChecksummedAddress(yieldProviderInput, "--yield-provider / YIELD_PROVIDER_ADDRESS");
 
     // --- Parse numeric params ---
     const validatorIndex = parseInt(validatorIndexRaw, 10);
@@ -107,25 +117,6 @@ export default async function unstakePermissionless(taskArgs: TaskArguments, hre
     console.log("  validatorIndex:", validatorIndex.toString());
     console.log("  slot:", slot.toString());
     console.log("  beaconRpcUrl:", beaconRpcUrl);
-
-    // Resolve path relative to contracts directory (where script is run from)
-    const persistentMerkleTreePath = path.resolve(
-      process.cwd(),
-      "node_modules/@chainsafe/persistent-merkle-tree/lib/proof/index.js",
-    );
-    // Verify file exists before attempting import
-    if (!fs.existsSync(persistentMerkleTreePath)) {
-      throw new Error(`Module not found at: ${persistentMerkleTreePath}. Current working directory: ${process.cwd()}`);
-    }
-    // Convert path to file:// URL using Node's pathToFileURL for proper formatting
-    // Use Function constructor to prevent ts-node from statically analyzing the import
-    const fileUrl = pathToFileURL(persistentMerkleTreePath).href;
-    const importModule = new Function("url", "return import(url)");
-    const proofModule = await importModule(fileUrl);
-    const { createProof, ProofType } = proofModule;
-
-    // Import @lodestar/types using the same dynamic import pattern
-    const lodestarTypes = await importModule("@lodestar/types");
 
     // Get beacon state
     const beaconHeaderJson = await fetchBeaconHeader(slot, beaconRpcUrl);
@@ -150,14 +141,19 @@ export default async function unstakePermissionless(taskArgs: TaskArguments, hre
 
     // Pending Partial Withdrawals Proof
     console.log("Using forkName for SSZ schema access:", forkName);
-    console.log("Available SSZ forks:", Object.keys(lodestarTypes.ssz));
-    // const stateViewDU = lodestarTypes.ssz.fulu.BeaconState.getViewDU(stateView.node);
-    const stateViewDU = lodestarTypes.ssz[forkName].BeaconState.getViewDU(stateView.node);
+    console.log("Available SSZ forks:", Object.keys(ssz));
+    const stateViewDU = ssz[forkName].BeaconState.getViewDU(stateView.node);
+    if (!("pendingPartialWithdrawals" in stateViewDU)) {
+      throw new Error(`Fork ${forkName} has no pendingPartialWithdrawals (requires Electra or later)`);
+    }
     const { pendingPartialWithdrawals } = stateViewDU;
     const pendingPartialWithdrawalsProof = createProof(stateView.node, {
       type: ProofType.single,
       gindex: gIndexPendingPartialWithdrawals,
-    }) as { witnesses: Uint8Array[] };
+    });
+    if (pendingPartialWithdrawalsProof.type !== ProofType.single) {
+      throw new Error("Expected a single proof for pendingPartialWithdrawals");
+    }
     const pendingPartialWithdrawalsProofConcat = [
       ...pendingPartialWithdrawalsProof.witnesses,
       ...beaconHeaderProof.witnesses,
@@ -247,34 +243,21 @@ export default async function unstakePermissionless(taskArgs: TaskArguments, hre
     console.log("Calling unstakePermissionless...");
     try {
       const hash = await wallet.writeContract({
-        address: getAddress(yieldManagerAddress),
+        address: yieldManagerAddress,
         abi: YIELD_MANAGER_ABI,
         functionName: "unstakePermissionless",
-        args: [
-          getAddress(yieldProvider),
-          BigInt(validatorIndex),
-          BigInt(slot),
-          withdrawalParams,
-          withdrawalParamsProof,
-        ],
+        args: [yieldProvider, BigInt(validatorIndex), BigInt(slot), withdrawalParams, withdrawalParamsProof],
         value: 1n,
       });
       console.log("Transaction sent, hash:", hash);
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      const receipt = await waitForSuccessfulReceipt(publicClient, hash);
       console.log("Transaction receipt:", receipt);
       console.log("Transaction successful!");
     } catch (error: unknown) {
-      // Extract error data
-      if (error && typeof error === "object") {
-        const errorObj = error as Record<string, unknown>;
-        if (errorObj.data) {
-          console.error("Error data:", errorObj.data);
-        } else if (errorObj.error && typeof errorObj.error === "object") {
-          const nestedError = errorObj.error as Record<string, unknown>;
-          if (nestedError.data) {
-            console.error("Error data:", nestedError.data);
-          }
-        }
+      const revert =
+        error instanceof BaseError ? error.walk((cause) => cause instanceof ContractFunctionRevertedError) : null;
+      if (revert instanceof ContractFunctionRevertedError) {
+        console.error("Revert data:", revert.raw ?? revert.data ?? revert.reason);
       }
       throw error;
     }

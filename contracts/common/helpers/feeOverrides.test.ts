@@ -1,3 +1,4 @@
+import { type ethers, FeeData as EthersFeeData } from "ethers";
 import * as assert from "node:assert/strict";
 
 import {
@@ -7,18 +8,14 @@ import {
   resolveOneModelFeeOverrides,
 } from "./feeOverrides.js";
 
-import type { ethers } from "ethers";
-
 type FeeData = {
   gasPrice?: bigint | null;
   maxFeePerGas?: bigint | null;
   maxPriorityFeePerGas?: bigint | null;
 };
 
-function mockProvider(feeData: FeeData): ethers.Provider {
-  return {
-    getFeeData: async () => feeData,
-  } as unknown as ethers.Provider;
+function mockProvider({ gasPrice, maxFeePerGas, maxPriorityFeePerGas }: FeeData): Pick<ethers.Provider, "getFeeData"> {
+  return { getFeeData: async () => new EthersFeeData(gasPrice, maxFeePerGas, maxPriorityFeePerGas) };
 }
 
 type TestCase = {
