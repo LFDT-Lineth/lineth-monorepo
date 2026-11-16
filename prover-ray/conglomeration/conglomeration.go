@@ -6,13 +6,12 @@
 //
 // Every node of the tree exposes the public-input layout of a shard proof
 // (see zkcdriver/risc5), which a merged node extends with the node programs'
-// key box. Across shards, the
-// message-bus products multiply and the shared randomness contributions add;
-// the program VK, the guest output and the shared randomness seed γ are the
-// same on every shard. At the root, every message-bus handle balances and γ
-// is the seed the contributions add up to: that is the external check of γ
-// the message-bus compiler leaves to the conglomeration (see the soundness
-// precondition in package messagebus).
+// key box. Across shards, the message-bus products multiply and the shared
+// randomness contributions add; the program VK, the guest output and the
+// shared randomness seed γ are the same on every shard. At the root, every
+// message-bus handle balances and γ is the seed the contributions add up to:
+// that is the external check of γ the message-bus compiler leaves to the
+// conglomeration (see the soundness precondition in package messagebus).
 //
 // A merge takes children of one [Kind] only: shard proofs are verified by the
 // leaf program and merged nodes by the internal program, which serves every
@@ -21,9 +20,10 @@
 // merged nodes. A node's Kind and Coverage are host-side labels. A wrong Kind
 // fails the merge, which verifies a child under the key its Kind implies. No
 // proof sees Coverage: the host checks it for duplicates and completeness,
-// and the shard set is bound in-proof by γ alone, the digest of the
-// contributions of the shards under the root; without shared randomness (see
-// messagebus.WithoutSharedRandomness) only the bus balance binds it.
+// and the only in-proof binding of the shard set is γ, the digest of the
+// contributions added over the shards under the root. That binding holds for
+// a bounded number of shards only, which no proof enforces yet: a child may
+// appear any number of times under a node (see issue #4491).
 package conglomeration
 
 import (

@@ -1,4 +1,8 @@
-package verifier
+// Package verifiertest holds the mock in-machine verifier: the
+// [verifier.Verifier] of dev and test code, which is not sound. It is a
+// package of its own so that no program can be built on the mock without
+// importing it by name.
+package verifiertest
 
 import (
 	"errors"
@@ -9,6 +13,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/verifier"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
@@ -54,8 +59,8 @@ func (s shape) equal(o shape) bool {
 	return slices.Equal(s.pubs, o.pubs) && s.commitments == o.commitments && slices.Equal(s.modules, o.modules)
 }
 
-// Mock is the dev and test [Verifier]. It runs the child's wiop verifier in
-// Go, on the host, instead of in the machine's instructions:
+// Mock is the dev and test [verifier.Verifier]. It runs the child's wiop
+// verifier in Go, on the host, instead of in the machine's instructions:
 //
 //   - Allocate allocates the public inputs, the round commitments and a
 //     verdict, instead of the whole proof.
@@ -73,17 +78,17 @@ type Mock struct {
 
 // NewMock returns the mock verifier of the proofs of the systems of sys's
 // shape.
-func NewMock(sys *wiop.System) (Verifier, error) {
+func NewMock(sys *wiop.System) (verifier.Verifier, error) {
 	if sys == nil {
 		return nil, errors.New("verifier: no system")
 	}
 	return &Mock{shape: shapeOf(sys)}, nil
 }
 
-// Allocate implements [Verifier]: the public inputs, the commitments, the
-// verdict.
-func (v *Mock) Allocate(m *recursion.Machine) ProofCells {
-	cells := make(ProofCells, 0, len(v.shape.pubs)+v.shape.commitments+1)
+// Allocate implements [verifier.Verifier]: the public inputs, the
+// commitments, the verdict.
+func (v *Mock) Allocate(m *recursion.Machine) verifier.ProofCells {
+	cells := make(verifier.ProofCells, 0, len(v.shape.pubs)+v.shape.commitments+1)
 	for _, kind := range v.shape.pubs {
 		if kind == recursion.KindE6 {
 			cells = append(cells, m.InputE6())
@@ -97,10 +102,10 @@ func (v *Mock) Allocate(m *recursion.Machine) ProofCells {
 	return cells
 }
 
-// Define implements [Verifier]: the verdict is the digest of the key, the
-// public inputs and the commitments, laid out as Pack does, which
+// Define implements [verifier.Verifier]: the verdict is the digest of the
+// key, the public inputs and the commitments, laid out as Pack does, which
 // [Mock.Assign] computes with poseidon2.MDHasher.
-func (v *Mock) Define(m *recursion.Machine, key int, proof ProofCells) []int {
+func (v *Mock) Define(m *recursion.Machine, key int, proof verifier.ProofCells) []int {
 	n := len(v.shape.pubs)
 	if len(proof) != n+v.shape.commitments+1 {
 		panic(fmt.Sprintf("verifier: %d proof cells, want %d", len(proof), n+v.shape.commitments+1))
@@ -112,13 +117,13 @@ func (v *Mock) Define(m *recursion.Machine, key int, proof ProofCells) []int {
 		items = append(items, c)
 		kinds = append(kinds, recursion.KindDigest)
 	}
-	AssertEqDigest(m, m.MDHash(m.Pack(items, kinds)), verdict)
+	verifier.AssertEqDigest(m, m.MDHash(m.Pack(items, kinds)), verdict)
 	return slices.Clone([]int(pubs))
 }
 
-// Assign implements [Verifier]: it checks that sys has the mock's shape and
-// the proof its shape, verifies the proof in Go with sys and lays it out with
-// its verdict.
+// Assign implements [verifier.Verifier]: it checks that sys has the mock's
+// shape and the proof its shape, verifies the proof in Go with sys and lays
+// it out with its verdict.
 func (v *Mock) Assign(sys *wiop.System, proof wiop.Proof, pub wiop.PublicInput) ([]recursion.Cell, error) {
 	if sys == nil {
 		return nil, errors.New("no system")

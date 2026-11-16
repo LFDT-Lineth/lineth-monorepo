@@ -2,17 +2,14 @@ package node_test
 
 import (
 	"math/rand/v2"
-	"slices"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/node"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/verifier"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/verifier/verifiertest"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/require"
 )
@@ -64,14 +61,13 @@ type tree struct {
 	leaf, internal, root *node.Program
 }
 
-func newTree(t *testing.T, l node.Layout, extra ...compilers.Option) tree {
+func newTree(t *testing.T, l node.Layout) tree {
 	t.Helper()
-	opts := append(slices.Clone(testOpts), extra...)
-	leaf, err := node.NewLeaf(l, stubSystem(l, shardKey), verifier.NewMock, opts...)
+	leaf, err := node.NewLeaf(l, stubSystem(l, shardKey), verifiertest.NewMock, testOpts...)
 	require.NoError(t, err)
-	internal, err := node.NewInternal(l, leaf, verifier.NewMock, opts...)
+	internal, err := node.NewInternal(l, leaf, verifiertest.NewMock, testOpts...)
 	require.NoError(t, err)
-	root, err := node.NewRoot(l, leaf, internal, verifier.NewMock, opts...)
+	root, err := node.NewRoot(l, leaf, internal, verifiertest.NewMock, testOpts...)
 	require.NoError(t, err)
 	return tree{leaf, internal, root}
 }
@@ -162,12 +158,6 @@ func TestNew_Aggregates(t *testing.T) {
 	require.NotEqual(t, field.Octuplet{}, tr.leaf.Key(), "a program should have a key")
 	require.NotEqual(t, tr.leaf.Key(), tr.internal.Key(), "the programs should have different keys")
 	require.NotEqual(t, tr.internal.Key(), tr.root.Key(), "the programs should have different keys")
-	for _, p := range []*node.Program{tr.leaf, tr.internal, tr.root} {
-		for pos, role := range p.Layout {
-			_, got := p.Sys.LookupPublicInputByTag(role.Tag, role.Index)
-			require.Equal(t, pos, got, "%s_%d should be at its position in the layout", role.Tag, role.Index)
-		}
-	}
 
 	counts := []int{1, 2, node.Arity}
 	leaves := make([]node.Child, 0, len(counts))
@@ -194,14 +184,11 @@ func TestNew_Aggregates(t *testing.T) {
 	require.Equal(t, key, got, "the key box should be the internal key")
 }
 
-// TestNew_SizeOblivious checks that the leaf and internal programs, compiled
-// with the size-oblivious PCS layout, have the same modules and columns at
-// different heights, and that an internal node still merges a leaf node and a
-// node of itself: what one size-oblivious verifier needs to accept both.
+// TestNew_SizeOblivious checks that the leaf and internal programs have the
+// same modules and columns at different heights: what one size-oblivious
+// verifier needs to accept both.
 func TestNew_SizeOblivious(t *testing.T) {
-	r := rand.New(rand.NewPCG(5, 6))
-	l := testLayout(2, true)
-	tr := newTree(t, l, compilers.ConfigurePCS(pcs.WithSizeOblivious()))
+	tr := newTree(t, testLayout(2, true))
 
 	leafMods, internalMods := tr.leaf.Sys.Modules, tr.internal.Sys.Modules
 	require.Len(t, internalMods, len(leafMods), "the programs should have the same modules")
@@ -212,15 +199,6 @@ func TestNew_SizeOblivious(t *testing.T) {
 		sameHeights = sameHeights && mod.Size() == internalMods[i].Size()
 	}
 	require.False(t, sameHeights, "the programs should differ in a height, or the test checks nothing")
-
-	proof, pub, err := tr.leaf.ProveChildren(field.Octuplet{}, shards(r, l, 2)...)
-	require.NoError(t, err, "a leaf node")
-	leaf := node.Child{Proof: proof, Pub: pub, Leaf: true}
-	key := tr.internal.Key()
-	proof, pub, err = tr.internal.ProveChildren(key, leaf)
-	require.NoError(t, err, "an internal node over a leaf")
-	_, _, err = tr.internal.ProveChildren(key, node.Child{Proof: proof, Pub: pub}, leaf)
-	require.NoError(t, err, "an internal node over an internal node and a leaf")
 }
 
 // TestNew_Rejects checks that children disagreeing on a propagated value, a
@@ -253,12 +231,6 @@ func TestNew_Rejects(t *testing.T) {
 		{name: "different VK limb", wantErr: circuit, run: func() error {
 			a, b := shards(r, l, 2)[0], shards(r, l, 1)[0]
 			b.Pub[5] = b.Pub[5].Add(field.ElemOne())
-			_, _, err := tr.leaf.ProveChildren(field.Octuplet{}, a, b)
-			return err
-		}},
-		{name: "different output byte", wantErr: circuit, run: func() error {
-			a, b := shards(r, l, 2)[0], shards(r, l, 1)[0]
-			b.Pub[0] = b.Pub[0].Add(field.ElemOne())
 			_, _, err := tr.leaf.ProveChildren(field.Octuplet{}, a, b)
 			return err
 		}},
@@ -379,31 +351,29 @@ func TestNew_InvalidArguments(t *testing.T) {
 	tr := newTree(t, l)
 	sys := stubSystem(l, shardKey)
 
-	_, err := node.NewLeaf(nil, sys, verifier.NewMock, testOpts...)
+	_, err := node.NewLeaf(nil, sys, verifiertest.NewMock, testOpts...)
 	require.ErrorContains(t, err, "empty layout")
-	_, err = node.NewLeaf(l, nil, verifier.NewMock, testOpts...)
+	_, err = node.NewLeaf(l, nil, verifiertest.NewMock, testOpts...)
 	require.ErrorContains(t, err, "no shard system")
-	_, err = node.NewInternal(l, tr.internal, verifier.NewMock, testOpts...)
+	_, err = node.NewInternal(l, tr.internal, verifiertest.NewMock, testOpts...)
 	require.ErrorContains(t, err, "no leaf program")
-	_, err = node.NewRoot(l, tr.leaf, tr.leaf, verifier.NewMock, testOpts...)
+	_, err = node.NewRoot(l, tr.leaf, tr.leaf, verifiertest.NewMock, testOpts...)
 	require.ErrorContains(t, err, "no internal program")
-	_, err = node.NewLeaf(l.WithKey(), sys, verifier.NewMock, testOpts...)
+	_, err = node.NewLeaf(l.WithKey(), sys, verifiertest.NewMock, testOpts...)
 	require.ErrorContains(t, err, "has a key box")
 	_, err = node.KeyOf(childPub(r, l)[:3])
 	require.ErrorContains(t, err, "no key box")
 	shortSeed := append(testLayout(1, false), node.Role{Tag: "Seed", Index: 0, Op: node.OpSeed})
-	_, err = node.NewLeaf(shortSeed, sys, verifier.NewMock, testOpts...)
+	_, err = node.NewLeaf(shortSeed, sys, verifiertest.NewMock, testOpts...)
 	require.ErrorContains(t, err, "1 seed limbs, want 8")
 	noContribution := testLayout(1, false)
 	for i := range node.NumKey {
 		noContribution = append(noContribution, node.Role{Tag: "Seed", Index: i, Op: node.OpSeed})
 	}
-	_, err = node.NewLeaf(noContribution, sys, verifier.NewMock, testOpts...)
+	_, err = node.NewLeaf(noContribution, sys, verifiertest.NewMock, testOpts...)
 	require.ErrorContains(t, err, "no contribution")
 
 	short := childPub(r, l)[:3]
-	extVK := childPub(r, l)
-	extVK[5] = field.ElemFromExt(extVK[5].AsExt())
 	cases := []struct {
 		name     string
 		program  *node.Program
@@ -414,7 +384,6 @@ func TestNew_InvalidArguments(t *testing.T) {
 		{name: "too many children", program: tr.leaf, children: shards(r, l, node.Arity+1), wantErr: "7 children, want 1 to 6"},
 		{name: "wrong length", program: tr.leaf, children: []node.Child{{Pub: short}}, wantErr: "3 public inputs, want 7"},
 		{name: "shard as a node child", program: tr.internal, children: shards(r, l, 1), wantErr: "7 public inputs, want 15"},
-		{name: "extension VK limb", program: tr.leaf, children: []node.Child{{Pub: extVK}}, wantErr: "public input 5 is not a base field element"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

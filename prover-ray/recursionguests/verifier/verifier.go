@@ -35,10 +35,11 @@
 //
 // The wiop verifier is not written in the machine's instructions yet. [New],
 // the production constructor, returns [ErrNotImplemented]; dev and test code
-// uses [NewMock], which is not sound. Like wiop.AllocateVerifierCircuit, [New]
-// must fail on a system registering a verifier action it cannot run in the
-// machine (the node programs register recursion.E6Check for every extension
-// public input), rather than drop the check.
+// uses verifiertest.NewMock, which is not sound. Like
+// wiop.AllocateVerifierCircuit, [New] must fail on a system registering a
+// verifier action it cannot run in the machine (the node programs register
+// recursion.E6Check for every extension public input), rather than drop the
+// check.
 package verifier
 
 import (
@@ -53,13 +54,13 @@ import (
 var ErrNotImplemented = errors.New("verifier: the in-machine wiop verifier is not implemented")
 
 // Constructor returns the verifier of the proofs of the systems of sys's
-// shape: [New] in production, [NewMock] in tests. Code that builds programs
-// takes a Constructor, so that only its caller chooses the mock.
+// shape: [New] in production, verifiertest.NewMock in tests. Code that builds
+// programs takes a Constructor, so that only its caller chooses the mock.
 type Constructor func(sys *wiop.System) (Verifier, error)
 
 // New returns the verifier of the proofs of the systems of sys's shape. It is
 // the production constructor and returns [ErrNotImplemented] for now; use
-// [NewMock] in dev and test code.
+// verifiertest.NewMock in dev and test code.
 func New(_ *wiop.System) (Verifier, error) {
 	return nil, ErrNotImplemented
 }
@@ -78,8 +79,10 @@ type Verifier interface {
 	// Define adds to m the child's wiop verifier, in machine instructions,
 	// on proof, under the key in the digest cell key: it replays the
 	// transcript to derive the coins, runs the verifier actions and checks
-	// the PCS openings. It returns the proof's public inputs as cells, in the
-	// child system's order.
+	// the PCS openings. The transcript must absorb the key and the public
+	// inputs: a program may take the key from its prover (the node programs'
+	// key box). It returns the proof's public inputs as cells, in the child
+	// system's order.
 	Define(m *recursion.Machine, key int, proof ProofCells) []int
 
 	// Assign, for the host, turns a proof of sys and its public inputs into

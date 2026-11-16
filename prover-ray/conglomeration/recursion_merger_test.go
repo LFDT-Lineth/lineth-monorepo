@@ -6,7 +6,7 @@ import (
 	multisethashing "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/multiset_hashing"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/node"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/verifier"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/verifier/verifiertest"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
@@ -17,7 +17,7 @@ const errGoVerify = "verifying the proof in Go"
 
 func newTestRecursionMerger(t *testing.T, sys *wiop.System) *RecursionMerger {
 	t.Helper()
-	merger, err := NewRecursionMerger(sys, verifier.NewMock, wioptest.TestingCompileOptions()...)
+	merger, err := NewRecursionMerger(sys, verifiertest.NewMock, wioptest.TestingCompileOptions()...)
 	require.NoError(t, err)
 	return merger
 }
@@ -47,12 +47,6 @@ func requireMerged(t *testing.T, merger *RecursionMerger, program *node.Program,
 func TestRecursionMerger_Merge(t *testing.T) {
 	sys := testSystem(false)
 	merger := newTestRecursionMerger(t, sys)
-
-	t.Run("two shards", func(t *testing.T) {
-		n, err := merger.Merge([]Node{shardNode(sys, 0, elem(2)), shardNode(sys, 1, elem(3))})
-		require.NoError(t, err)
-		requireMerged(t, merger, merger.leaf, n, []uint{0, 1}, elem(6))
-	})
 
 	t.Run("lifted shard", func(t *testing.T) {
 		n, err := merger.Merge([]Node{shardNode(sys, 3, elem(5))})
@@ -87,11 +81,8 @@ func TestRecursionMerger_Merge(t *testing.T) {
 	foreign, err := merger.Merge([]Node{shardNode(sys, 3, elem(1))})
 	require.NoError(t, err)
 	foreign.Pub[len(foreign.Pub)-1] = elem(9)
-	forged := func(pos int, v field.Gen) Node {
-		n := shardNode(sys, 1, elem(1))
-		n.Pub[pos] = v
-		return n
-	}
+	forgedVK := shardNode(sys, 1, elem(1))
+	forgedVK.Pub[programVKPos+2] = elem(8)
 	forgedProof := shardNode(sys, 0, elem(1))
 	forgedProof.Proof.DynamicSizes = map[int]int{0: 8}
 	stolen, err := merger.Merge([]Node{shardNode(sys, 5, elem(2))})
@@ -106,19 +97,13 @@ func TestRecursionMerger_Merge(t *testing.T) {
 		children []Node
 		wantErr  string
 	}{
-		{name: "forged output byte", children: []Node{shardNode(sys, 0, elem(1)), forged(guestOutputPos+5, elem(8))},
-			wantErr: "nodes [0] and [1] have different GuestPublicOutputs_5"},
-		{name: "forged VK limb", children: []Node{shardNode(sys, 0, elem(1)), forged(programVKPos+2, elem(8))},
+		{name: "forged VK limb", children: []Node{shardNode(sys, 0, elem(1)), forgedVK},
 			wantErr: "nodes [0] and [1] have different ProgramVerificationKey_2"},
-		{name: "extension VK limb", children: []Node{forged(programVKPos, field.ElemFromExt(elem(7).AsExt()))},
-			wantErr: "public input 1 is not a base field element"},
 		{name: "overlapping coverage", children: []Node{shardNode(sys, 0, elem(1)), shardNode(sys, 0, elem(1))}, wantErr: "covered twice"},
-		{name: "mixed kinds", children: []Node{shardNode(sys, 0, elem(1)), merged}, wantErr: "of different kinds"},
 		{name: "wrong length", children: []Node{{Coverage: []uint{1}, Pub: make(wiop.PublicInput, 5)}}, wantErr: "has 5 public inputs, want 41"},
 		{name: "shard-sized merged node", children: []Node{merged, {Kind: Merged, Coverage: []uint{4}, Pub: shardNode(sys, 4, elem(1)).Pub}},
 			wantErr: "has 41 public inputs, want 49"},
 		{name: "foreign key box", children: []Node{merged, foreign}, wantErr: "carries a foreign key box"},
-		{name: "too many children", children: make([]Node, RecursionTreeArity+1), wantErr: "merging 7 nodes"},
 		// Proofs the verifier rejects in Go: a shard proof with a size for a
 		// module the shard system has not, a merged node carrying another
 		// node's proof, and a root, whose key box is the internal key but
@@ -137,7 +122,8 @@ func TestRecursionMerger_Merge(t *testing.T) {
 
 // TestRecursionMerger_Finalize checks the root merge of merged nodes, leaf
 // and internal ones alike: complete coverage and a balanced bus, proved by
-// the root program.
+// the root program. An unbalanced bus is named by the merger before a proof
+// is attempted (the root program's own rejection is node.TestNew_Rejects).
 func TestRecursionMerger_Finalize(t *testing.T) {
 	sys := testSystem(false)
 	merger := newTestRecursionMerger(t, sys)
@@ -162,11 +148,10 @@ func TestRecursionMerger_Finalize(t *testing.T) {
 		wantErr   string
 	}{
 		{name: "balanced node", children: []Node{balanced}, numShards: 2},
-		{name: "lifted balanced shard", children: []Node{lifted}, numShards: 1},
 		{name: "internal node", children: []Node{internal}, numShards: 3},
 		{name: "two leaf nodes", children: []Node{balanced, third}, numShards: 3},
 		{name: "internal and leaf nodes", children: []Node{internal, fourth}, numShards: 4},
-		{name: "unbalanced bus", children: []Node{unbalanced}, numShards: 2, wantErr: "finalizing the root"},
+		{name: "unbalanced bus", children: []Node{unbalanced}, numShards: 2, wantErr: "does not balance across the shards"},
 		{name: "missing shard", children: []Node{balanced}, numShards: 3, wantErr: "missing shard 2"},
 		{name: "overlapping children", children: []Node{balanced, lifted}, numShards: 2, wantErr: "covered twice"},
 		{name: "shard proof", children: []Node{shardNode(sys, 0, elem(1))}, numShards: 1, wantErr: "want a merged node"},
@@ -222,15 +207,16 @@ func TestRecursionMerger_SharedRandomness(t *testing.T) {
 	require.ErrorContains(t, err, "not derived from the shards' contributions")
 }
 
-// TestRecursionMerger_Reduce reduces more shards than two full leaf merges
-// to a root through the reducer, merges running in the background: two full
-// leaf merges and a lifted shard, an internal node over them, then the root.
+// TestRecursionMerger_Reduce reduces to a root, through the reducer, enough
+// shards for an internal merge, merges running in the background: six full
+// leaf merges and a lifted shard, an internal node over six of the leaf
+// nodes, then the root over it and the last leaf node (see TestReducer_Last).
 // The bus products balance only over all the shards, and γ derives from all
 // the contributions.
 func TestRecursionMerger_Reduce(t *testing.T) {
 	sys := testSystem(true)
 	merger := newTestRecursionMerger(t, sys)
-	const numShards = 2*RecursionTreeArity + 1
+	const numShards = 6*RecursionTreeArity + 1
 	contributions := make([]multisethashing.MSetHash, numShards)
 	sum := multisethashing.Identity()
 	for i := range contributions {

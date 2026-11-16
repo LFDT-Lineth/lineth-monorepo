@@ -7,9 +7,9 @@
 //
 // Packages:
 //
-//   - verifier: the contract a guest verifies a child proof through, with its
-//     mock; the real in-machine wiop verifier implements it (package
-//     recursion's side).
+//   - verifier: the contract a guest verifies a child proof through; the real
+//     in-machine wiop verifier implements it (package recursion's side). Its
+//     mock, for dev and test, is package verifier/verifiertest.
 //   - node: the node program of the conglomeration tree (its host is package
 //     conglomeration).
 package recursionguests

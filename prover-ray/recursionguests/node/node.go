@@ -13,28 +13,13 @@
 // kind, checks their coverage and shape and proves with the program, is a
 // conglomeration.Merger (see conglomeration.RecursionMerger).
 //
-// Three keys appear here and must be told apart:
-//
-//   - the program key, [Program.Key], is the verification key of a node
-//     program, the commitment to its compiled setup. The leaf, internal and
-//     root programs are three programs with three program keys. Their node
-//     proofs share the layout, not the key: a leaf node verifies under the
-//     leaf key, an internal node under the internal key;
-//   - the child key is the key a child's proof is verified under: the shard
-//     system's key for a shard child, the leaf program's key for a leaf
-//     child, the key box for a node child. It is never an input of a
-//     program, which knows it from the child's kind and leaf flag;
-//   - the guest program VK (risc5.ProgramVKPI) is a public input of a shard
-//     proof naming the guest binary the zkVM ran. It is propagated like any
-//     other value shared by the shards and plays no part in verification here.
-//
-// Three programs make the tree, one per role, so that one program key
-// serves every merge of a role whatever the depth of the tree: the leaf
-// program merges shard proofs, the internal program merges node proofs, of
-// the leaf program or of itself, and the root program is the internal
-// program plus the root checks: every bus product is one, the key box is the
-// internal program's key and the shared randomness seed is the digest of the
-// contributions. Each program knows the child key of each child it accepts:
+// Three programs make the tree, one per role, so that one program key (the
+// verification key of a program, [Program.Key]) serves every merge of a role
+// whatever the depth of the tree. The root program is the internal program
+// plus the root checks: every bus product is one, the key box is the internal
+// program's key and the shared randomness seed is the digest of the
+// contributions. Each program knows the child key, the key a child's proof is
+// verified under, of each child it accepts:
 //
 //	program   child          child key               known as
 //	leaf      shard proof    shard system's key      a constant
@@ -43,6 +28,11 @@
 //	root      leaf node      leaf program's key      a constant
 //	root      internal node  internal program's key  a constant
 //
+// Neither key is the guest program VK (risc5.ProgramVKPI), a public input of
+// a shard proof naming the guest binary the zkVM ran: it is propagated like
+// any other value shared by the shards and plays no part in verification
+// here.
+//
 // Every child key is a constant of the program, compiled after the child's,
 // but one: the internal program verifying a node of itself, whose child key
 // is its own program key, which it cannot hold as a constant since the key
@@ -50,49 +40,29 @@
 // internal program takes the key as an input, publishes it as a claim it
 // cannot check, and demands that every node child carries the same box, so
 // the value propagates unchanged to the root, which pins it once to the
-// internal program's key, a constant there as the root is compiled after the
-// internal program. A bogus key used anywhere in the tree would be the box
-// the root sees. A leaf node's box is empty: a leaf has no node child. Were
-// the tree two levels deep, leaves under a root, no program would verify a
-// proof of itself and there would be no box.
+// internal program's key. A bogus key used anywhere in the tree would be the
+// box the root sees. A leaf node's box is empty: a leaf has no node child.
 //
-// A program is a [Arity] slots, each holding one verifier and the
-// cells of one child's proof. The internal program has one verifier per
-// slot, used for both kinds of child, as leaf and internal proofs are proofs
-// of the same machine. A per-child leaf flag selects what differs between
-// them, the child key: the constant leaf key or the box. Everything else the
-// verifier relies on must then be the same for both programs:
+// A program has [Arity] slots, each with an active flag, one verifier and the
+// cells of one child's proof, so that one program serves every merge of 1 to
+// [Arity] children. An inactive slot holds a copy of the first child, whose
+// proof the verifier checks as any other, so that the verifier needs no gate;
+// its values are left out of the node's. The internal and root programs use a
+// slot's verifier for both kinds of child and select the child key with a
+// per-child leaf flag. The leaf and internal programs must then have the same
+// chips and columns; they are compiled size-oblivious, so that their heights
+// may differ (see package recursionguests/verifier, and issue #4405 for a
+// leaf program much larger than the internal one).
 //
-//   - with a static verifier, only the key may differ: the leaf and internal
-//     programs must compile to the same chips, columns and heights;
-//   - with a size-oblivious verifier (pcs.WithSizeOblivious), the heights
-//     may differ too: they are data of each child's proof, bound by the key
-//     it is verified under, so the programs need only the same chips and
-//     columns. This is the plan, as shard proofs need that verifier anyway.
+// A program verifies each child's proof with the in-machine verifier (package
+// recursionguests/verifier) under the child key and folds the public inputs
+// the verifier yields, so a child's values enter the node only through its
+// verified proof. The caller chooses the verifier with a verifier.Constructor:
+// verifier.New in production, which fails until the wiop verifier is written
+// in the machine's instructions, and verifiertest.NewMock in tests.
 //
-// A static verifier, of fixed heights, would make a node cheaper to prove,
-// as a later optimisation. The two programs would then pad to a common shape,
-// the larger of the two, in which the verifier of that shape must fit as the
-// internal program verifies proofs of itself: a fixed point, reached by
-// padding after compiling. The leaf program's shape is set by the shard
-// system it verifies: should it prove much larger than the internal
-// program's, a leaf arity of its own and a shrink program between them,
-// re-proving each leaf node in the internal shape, would lift the
-// requirement off the leaf program (see issue #4405).
-//
-// A program verifies each child's proof with the in-machine verifier of its
-// children's systems (package recursionguests/verifier) under the child key and
-// folds the public inputs the verifier yields, so a child's values enter the
-// node only through its verified proof. The caller chooses the verifier with
-// a verifier.Constructor: verifier.New in production, which fails until the
-// wiop verifier is written in the machine's instructions, and
-// verifier.NewMock in tests.
-//
-// A node has a fixed number of children, [Arity], each with an active flag: a
-// merge of fewer children leaves the other slots inactive, so one program (one
-// verification key) serves every merge. An inactive slot holds a copy of the
-// first child, whose proof the verifier checks as any other, so that the
-// verifier needs no gate; its values are left out of the node's.
+// No program bounds how many times a child appears under a node, nor the
+// depth of the tree: see issue #4491.
 package node
 
 import (
@@ -105,6 +75,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/verifier"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 )
 
 // Arity is the number of children of a node program: the most proofs one
@@ -368,9 +339,8 @@ func build(
 	one := m.Const(recursion.ScalarCell(field.One()))
 	zero := m.Const(recursion.Cell{})
 
-	// The key box: a digest the internal program takes as an input and
-	// publishes as its claim, which the root pins to the internal program's
-	// key; a leaf's is empty. Its limbs are the public inputs.
+	// The key box (see the package doc): an input, pinned by the root; a
+	// leaf's is empty.
 	box := zero
 	if kind != Leaf {
 		box = m.InputDigest()
@@ -386,9 +356,8 @@ func build(
 		}
 	}
 
-	// The children: each one's proof is verified under the child key, the
-	// constant or, for a node child of an internal or root program, the key
-	// box, by the leaf flag; its public inputs are what the verifier yields.
+	// Each child's proof is verified under the child key: the constant or,
+	// by the leaf flag, the key box.
 	constKey := m.Const(recursion.Cell(childSys.PrecomputedCommitment))
 	active := make([]int, Arity)
 	leaf := make([]int, Arity)
@@ -459,8 +428,7 @@ func build(
 	}
 
 	// The key rule of an internal or root node: a node child carries the
-	// node's key box, a leaf child an empty one. This is what propagates the
-	// box unchanged to the root, which is the only place it is checked.
+	// node's key box, a leaf child an empty one.
 	if kind != Leaf {
 		for c := range Arity {
 			for j := range NumKey {
@@ -485,7 +453,9 @@ func build(
 	// The box as one digest cell gives KeyPI_0 … KeyPI_7, one per lane.
 	m.Public(box, recursion.KindDigest, KeyPI, 0)
 
-	rp, err := m.Compile(opts...)
+	// Size-oblivious, as the verifier of the node proofs is (see the package
+	// doc).
+	rp, err := m.Compile(append([]compilers.Option{compilers.ConfigurePCS(pcs.WithSizeOblivious())}, opts...)...)
 	if err != nil {
 		return nil, fmt.Errorf("node: %w", err)
 	}

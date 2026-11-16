@@ -1,11 +1,11 @@
-package verifier_test
+package verifiertest_test
 
 import (
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/verifier"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/verifier/verifiertest"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/require"
@@ -35,7 +35,7 @@ func stubSystem(key field.Octuplet) *wiop.System {
 func TestMock(t *testing.T) {
 	key := field.Octuplet{field.NewElement(7)}
 	sys := stubSystem(key)
-	v, err := verifier.NewMock(sys)
+	v, err := verifiertest.NewMock(sys)
 	require.NoError(t, err)
 	kinds := []int{recursion.KindScalar, recursion.KindE6, recursion.KindScalar}
 
@@ -121,7 +121,7 @@ func TestMock(t *testing.T) {
 		}
 		return sys
 	}
-	vm, err := verifier.NewMock(withModules(4, 2))
+	vm, err := verifiertest.NewMock(withModules(4, 2))
 	require.NoError(t, err)
 	_, err = vm.Assign(withModules(16, 2), wp, pub)
 	require.NoError(t, err, "a module at another height should be assigned")
@@ -132,6 +132,6 @@ func TestMock(t *testing.T) {
 
 	_, err = v.Assign(nil, wp, pub)
 	require.ErrorContains(t, err, "no system")
-	_, err = verifier.NewMock(nil)
+	_, err = verifiertest.NewMock(nil)
 	require.ErrorContains(t, err, "no system")
 }

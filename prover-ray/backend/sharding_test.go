@@ -9,7 +9,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/conglomeration"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/verifier"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/verifier/verifiertest"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
@@ -37,7 +37,7 @@ func shardedTestCore(t *testing.T, shardSize uint64) (*Core, [32]byte) {
 
 	c, err := New(Config{CircuitBinPath: binPath, GuestsDir: dir, ShardSize: shardSize})
 	require.NoError(t, err)
-	c.merger, err = conglomeration.NewRecursionMerger(c.sys, verifier.NewMock, wioptest.TestingCompileOptions()...)
+	c.merger, err = conglomeration.NewRecursionMerger(c.sys, verifiertest.NewMock, wioptest.TestingCompileOptions()...)
 	require.NoError(t, err)
 	return c, id
 }
@@ -85,11 +85,12 @@ func TestRunProve_ShardIndexes(t *testing.T) {
 	})
 }
 
-// TestRunProve_DeepTree proves a trace of more than RecursionTreeArity shards
-// over the real shard layout, so that the reducer merges in the background
-// and the tree has an internal level: leaf nodes merged by the internal
-// program under the root.
-func TestRunProve_DeepTree(t *testing.T) {
+// TestRunProve_SeveralLeafNodes proves a trace of more than
+// RecursionTreeArity shards over the real shard layout, so that the reducer
+// merges in the background and the root is over several leaf nodes. The
+// internal program needs more than RecursionTreeArity leaf nodes (see
+// conglomeration.TestRecursionMerger_Reduce).
+func TestRunProve_SeveralLeafNodes(t *testing.T) {
 	c, id := shardedTestCore(t, 40)
 	node, numShards, err := runProveShards(t, context.Background(), c, id)
 	require.NoError(t, err)

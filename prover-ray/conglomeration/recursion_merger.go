@@ -29,7 +29,7 @@ var roles = map[wiop.PublicInputTag]node.Op{
 // verification. The programs verify the children with the in-machine
 // verifier the caller chooses: verifier.New in production, which fails until
 // the wiop verifier is written in the machine's instructions, and
-// verifier.NewMock in dev and test, under which the merger is not sound.
+// verifiertest.NewMock in dev and test, under which the merger is not sound.
 //
 // Merge is safe for concurrent use, as [Reducer] requires.
 type RecursionMerger struct {
@@ -160,11 +160,14 @@ func (m *RecursionMerger) Finalize(children []Node, numShards uint) (Node, error
 	if err := checkCoverageComplete(coverage, numShards); err != nil {
 		return Node{}, err
 	}
-	// Named before the root program rejects it at verification, as checkAgree
-	// does for a disagreement.
+	// Named before the root program rejects them at verification, as
+	// checkAgree does for a disagreement.
 	pubs := make([]wiop.PublicInput, len(children))
 	for c, child := range children {
 		pubs[c] = child.Pub
+	}
+	if err := checkBusBalanced(m.sys, pubs...); err != nil {
+		return Node{}, err
 	}
 	if err := checkSeedDerived(m.sys, pubs...); err != nil {
 		return Node{}, err

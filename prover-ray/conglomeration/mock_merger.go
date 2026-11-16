@@ -106,15 +106,31 @@ func (m MockMerger) Finalize(children []Node, numShards uint) (Node, error) {
 	if err := checkCoverageComplete(root.Coverage, numShards); err != nil {
 		return Node{}, err
 	}
-	for h, p := range messagebus.GetProducts(m.sys, root.Pub) {
-		if diff := p.Sub(field.ElemOne()); !diff.IsZero() {
-			return Node{}, fmt.Errorf("message-bus handle %d does not balance across the shards: product is %v", h, p)
-		}
+	if err := checkBusBalanced(m.sys, root.Pub); err != nil {
+		return Node{}, err
 	}
 	if err := checkSeedDerived(m.sys, root.Pub); err != nil {
 		return Node{}, err
 	}
 	return root, nil
+}
+
+// checkBusBalanced checks that the bus products of the public inputs pubs (at
+// least one), of the children of a root, multiply to one on every handle of
+// sys.
+func checkBusBalanced(sys *wiop.System, pubs ...wiop.PublicInput) error {
+	products := messagebus.GetProducts(sys, pubs[0])
+	for _, pub := range pubs[1:] {
+		for h, p := range messagebus.GetProducts(sys, pub) {
+			products[h] = products[h].Mul(p)
+		}
+	}
+	for h, p := range products {
+		if diff := p.Sub(field.ElemOne()); !diff.IsZero() {
+			return fmt.Errorf("message-bus handle %d does not balance across the shards: product is %v", h, p)
+		}
+	}
+	return nil
 }
 
 // checkSeedDerived checks, when sys has shared randomness, that the seed γ
