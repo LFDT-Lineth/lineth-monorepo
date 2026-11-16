@@ -1,5 +1,6 @@
 package lineth.conflation.calculators
 
+import linea.da.DaConstants.BLOB_BYTES
 import linea.da.DaConstants.BLOB_PAYLOAD_CAPACITY
 import linea.da.DaConstants.KZG_POINT_BYTES
 import linea.da.DaStreamPosition
@@ -9,31 +10,33 @@ import linea.domain.BlocksConflation
 import lineth.conflation.calculators.DaTestConflations.conflation
 import lineth.conflation.calculators.DaTestConflations.encoder
 import lineth.conflation.calculators.DaTestConflations.genesisDataRollingHash
+import lineth.coordination.riscv.da.FakeDaCompressor
 import lineth.coordination.riscv.da.FakeDaStream
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
-import java.nio.ByteBuffer
 
 class RollupDaAssemblerTest {
-  /** Seals blobs from real frames: blob1 = [1 (40k), 2 (50k), start of 3], blob2 = [end of 3]. */
+  private val compressor = FakeDaCompressor()
+
+  /** Seals blobs from real segments: blob1 = [1 (40k), 2 (50k), start of 3], blob2 = [end of 3]. */
   private fun sealedBlobs(): List<SealedBlob> {
-    val stream = FakeDaStream(DaStreamPosition(genesisDataRollingHash))
+    val stream = FakeDaStream(DaStreamPosition.fresh(genesisDataRollingHash))
     val conflations = listOf(conflation(1UL, 40_000), conflation(2UL, 50_000), conflation(3UL, 60_000))
     val sealed = conflations.flatMap {
-      stream.append(stream.compress(it.blocks.map(encoder::encode)))
+      stream.append(compressor.compress(it.blocks.map(encoder::encode)))
     }
     return sealed + stream.flush()!!
   }
 
   /**
    * Feeds [conflations] through a [FakeDaStream] and the assembler in the order the rollup calculator does (each sealed
-   * blob, then the conflations whose frame ends in it), ending a rollup after each conflation whose end block is in
+   * blob, then the conflations whose segment ends in it), ending a rollup after each conflation whose end block is in
    * [cutAfter]. The open blob is flushed at the end.
    */
   private fun assemble(conflations: List<BlocksConflation>, cutAfter: Set<ULong>): List<Rollup> {
-    val stream = FakeDaStream(DaStreamPosition(genesisDataRollingHash))
-    val assembler = RollupDaAssembler(DaStreamPosition(genesisDataRollingHash))
+    val stream = FakeDaStream(DaStreamPosition.fresh(genesisDataRollingHash))
+    val assembler = RollupDaAssembler(DaStreamPosition.fresh(genesisDataRollingHash))
     val unsealed = ArrayDeque<BlocksConflation>()
     val rollups = mutableListOf<Rollup>()
     fun onBlob(blob: SealedBlob) {
@@ -45,7 +48,7 @@ class RollupDaAssemblerTest {
     }
     conflations.forEach {
       unsealed += it
-      stream.append(stream.compress(it.blocks.map(encoder::encode))).forEach(::onBlob)
+      stream.append(compressor.compress(it.blocks.map(encoder::encode))).forEach(::onBlob)
     }
     stream.flush()?.let(::onBlob)
     return rollups
@@ -137,7 +140,7 @@ class RollupDaAssemblerTest {
   @Test
   fun `a fresh start rollup ending mid-blob hands the blob to the next rollup`() {
     val (blob1, blob2) = sealedBlobs()
-    val assembler = RollupDaAssembler(DaStreamPosition(genesisDataRollingHash))
+    val assembler = RollupDaAssembler(DaStreamPosition.fresh(genesisDataRollingHash))
 
     assembler.addBlob(blob1)
     assembler.addConflation(conflation(1UL, 40_000))
@@ -162,7 +165,7 @@ class RollupDaAssemblerTest {
   @Test
   fun `a rollup ending at a blob's payload end makes the next rollup start fresh`() {
     val (blob1, blob2) = sealedBlobs()
-    val assembler = RollupDaAssembler(DaStreamPosition(genesisDataRollingHash))
+    val assembler = RollupDaAssembler(DaStreamPosition.fresh(genesisDataRollingHash))
     assembler.addBlob(blob1)
     assembler.addBlob(blob2)
     listOf(conflation(1UL, 40_000), conflation(2UL, 50_000), conflation(3UL, 60_000)).forEach(assembler::addConflation)
@@ -181,9 +184,9 @@ class RollupDaAssemblerTest {
     val assembler = RollupDaAssembler(
       DaStreamPosition(
         dataRollingHash = blob1.dataRollingHash,
-        tailBytes = 100,
-        sharedBlob = ByteArray(linea.da.DaConstants.BLOB_BYTES),
-        prevDataRollingHash = blob1.prevDataRollingHash,
+        parentBlobDataRollingHash = blob1.prevDataRollingHash,
+        sharedBlobCarryOverTailBytes = 100,
+        sharedBlob = ByteArray(BLOB_BYTES),
       ),
     )
 
@@ -197,7 +200,7 @@ class RollupDaAssemblerTest {
   @Test
   fun `blobs must chain by rolling hash and cuts must end the last conflation in the newest blob`() {
     val (blob1, blob2) = sealedBlobs()
-    val assembler = RollupDaAssembler(DaStreamPosition(genesisDataRollingHash))
+    val assembler = RollupDaAssembler(DaStreamPosition.fresh(genesisDataRollingHash))
     assembler.addBlob(blob1)
 
     assertThatThrownBy { assembler.addBlob(blob1) }.hasMessageContaining("does not continue the open rollup")
@@ -212,23 +215,27 @@ class RollupDaAssemblerTest {
         blob1.segmentEnds[1],
       )
     }.hasMessageContaining("does not end the open rollup")
-    assertThatThrownBy { RollupDaAssembler(DaStreamPosition(genesisDataRollingHash)).endRollup(SegmentEnd(1UL, 1)) }
+    assertThatThrownBy {
+      RollupDaAssembler(
+        DaStreamPosition.fresh(genesisDataRollingHash),
+      ).endRollup(SegmentEnd(1UL, 1))
+    }
       .hasMessageContaining("without blobs")
   }
 
   @Test
-  fun `witness equality compares blobs by reference and hashes by content`() {
-    val blob = object : SealedBlob {
-      override val blob: ByteBuffer = ByteBuffer.allocate(0)
-      override val chunkHash = ByteArray(32)
-      override val kzgCommitment = ByteArray(KZG_POINT_BYTES)
-      override val kzgProof = ByteArray(KZG_POINT_BYTES)
-      override val prevDataRollingHash = ByteArray(32)
-      override val dataRollingHash = ByteArray(32)
-      override val payloadBytes = 1
-      override val segmentEnds = emptyList<SegmentEnd>()
-    }
-    fun witness() = RollupDaWitness(listOf(blob), ByteArray(32) { 1 }, 0, null, ByteArray(32) { 2 }, 0)
+  fun `witness equality compares blobs and hashes by content`() {
+    fun blob() = SealedBlob(
+      blob = ByteArray(BLOB_BYTES),
+      chunkHash = ByteArray(32),
+      kzgCommitment = ByteArray(KZG_POINT_BYTES),
+      kzgProof = ByteArray(KZG_POINT_BYTES),
+      prevDataRollingHash = ByteArray(32),
+      dataRollingHash = ByteArray(32),
+      payloadBytes = 1,
+      segmentEnds = emptyList(),
+    )
+    fun witness() = RollupDaWitness(listOf(blob()), ByteArray(32) { 1 }, 0, null, ByteArray(32) { 2 }, 0)
 
     assertThat(witness()).isEqualTo(witness())
     assertThat(witness().hashCode()).isEqualTo(witness().hashCode())
