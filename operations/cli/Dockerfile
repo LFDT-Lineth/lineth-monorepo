@@ -1,7 +1,7 @@
 ARG NODE_VERSION=24.22.3
 # Digest of node:${NODE_VERSION}-slim, kept in sync with .nvmrc. If you override
 # NODE_VERSION at build time, override NODE_IMAGE_DIGEST to match.
-ARG NODE_IMAGE_DIGEST=sha256:be8204d4bd327363357f532187b752ff62759c31bedf98e9e18fc08c9cbd605c
+ARG NODE_IMAGE_DIGEST=sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54
 
 FROM node:${NODE_VERSION}-slim@${NODE_IMAGE_DIGEST} AS base
 

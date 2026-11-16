@@ -1,11 +1,14 @@
 # kics-scan disable=965a08d7-ef86-4f14-8792-4a3b2098937e
 # Apt Get Install Pin Version Not Defined: apt packages are intentionally unpinned.
-# They track the digest-pinned node:slim base image; pinning would break the build
-# on base refresh for negligible security gain on top of --no-install-recommends.
+# They track the digest-pinned node:trixie-slim base image; pinning would break
+# the build on base refresh for negligible security gain on top of --no-install-recommends.
 ARG NODE_VERSION=24.22.3
-# Digest of node:${NODE_VERSION}-slim, kept in sync with .nvmrc. If you override
-# NODE_VERSION at build time, override NODE_IMAGE_DIGEST to match.
-ARG NODE_IMAGE_DIGEST=sha256:be8204d4bd327363357f532187b752ff62759c31bedf98e9e18fc08c9cbd605c
+# Digest of node:${NODE_VERSION}-trixie-slim, kept in sync with .nvmrc. If you
+# override NODE_VERSION at build time, override NODE_IMAGE_DIGEST to match.
+# trixie-slim (Debian 13) matches the distroless debian13 production stage, so
+# native code is built against the same glibc major it runs on. Note that
+# node:*-slim is still bookworm (Debian 12) — a different image.
+ARG NODE_IMAGE_DIGEST=sha256:af02d57b57719b9657a45199a79264a9437940cd55b3c7b3fc99615654f124a0
 
 FROM node:${NODE_VERSION}-trixie-slim@${NODE_IMAGE_DIGEST} AS base
 
