@@ -6,10 +6,11 @@ import linea.clients.ConflationWitness
 import linea.clients.RollupProofRequestV1
 import linea.clients.RollupProverClientV1
 import linea.da.DaCodecVersion
+import linea.da.DaCompressor
+import linea.da.DaCompressorFactory
 import linea.da.DaStream
 import linea.da.DaStreamFactory
 import linea.da.RollupResumePoint
-import linea.da.blobBytes
 import linea.domain.Batch
 import linea.domain.BlobData
 import linea.domain.Block
@@ -67,6 +68,7 @@ class RollupProofGeneratingCoordinator(
   private val resumePointSupplier: () -> SafeFuture<RollupResumePoint>,
   private val rollupProofPoller: RollupProofPoller,
   private val l2BlocksFetcher: L2BlocksFetcher,
+  private val daCompressorFactory: DaCompressorFactory,
   private val daStreamFactory: DaStreamFactory,
   private val blobTriggers: List<BlobTriggerCalculator>,
   private val rollupTriggers: List<RollupTriggerCalculator>,
@@ -95,6 +97,7 @@ class RollupProofGeneratingCoordinator(
   )
 
   private class DaPipeline(
+    val compressor: DaCompressor,
     val daStream: DaStream,
     val blobCalculator: GlobalBlobCalculator,
     val rollupCalculator: GlobalRollupCalculator,
@@ -134,7 +137,10 @@ class RollupProofGeneratingCoordinator(
   override fun stop(): SafeFuture<Unit> {
     return super.stop().thenApply {
       synchronized(this) {
-        pipeline?.daStream?.close()
+        pipeline?.let {
+          it.daStream.close()
+          it.compressor.close()
+        }
         pipeline = null
       }
     }
@@ -148,7 +154,8 @@ class RollupProofGeneratingCoordinator(
   private fun initPipeline(resumePoint: RollupResumePoint) {
     if (pipeline != null) return
     val position = resumePoint.daPosition
-    val daStream = daStreamFactory.open(config.daCodecVersion, config.dictionaryPath, position)
+    val compressor = daCompressorFactory.create(config.daCodecVersion, config.dictionaryPath)
+    val daStream = daStreamFactory.open(config.daCodecVersion, position)
     lateinit var blobCalculator: GlobalBlobCalculator
     val rollupCalculator = GlobalRollupCalculator(
       triggers = rollupTriggers,
@@ -157,14 +164,15 @@ class RollupProofGeneratingCoordinator(
       rollupDeadline = config.rollupDeadline,
     ).also { it.onRollup(this) }
     blobCalculator = GlobalBlobCalculator(
+      compressor = compressor,
       daStream = daStream,
       triggers = blobTriggers,
       blockEncoder = blockEncoder,
       handler = rollupCalculator,
       blobDeadline = config.blobDeadline,
-      sharedBlobTailBytes = position.tailBytes,
+      sharedBlobCarryOverTailBytes = position.sharedBlobCarryOverTailBytes,
     )
-    pipeline = DaPipeline(daStream, blobCalculator, rollupCalculator)
+    pipeline = DaPipeline(compressor, daStream, blobCalculator, rollupCalculator)
     lastFedBlockNumber = resumePoint.lastConflationEndBlock
     log.info("rollup stage resumed: lastConflationEndBlock={} daPosition={}", lastFedBlockNumber, position)
   }
@@ -301,7 +309,7 @@ class RollupProofGeneratingCoordinator(
         ChunkWitness(
           chunkHash = it.chunkHash,
           isCalldata = false,
-          blobBytes = it.blobBytes(),
+          blobBytes = it.blob,
           calldataBytes = ByteArray(0),
           kzgCommitment = it.kzgCommitment,
           kzgProof = it.kzgProof,
@@ -328,7 +336,7 @@ class RollupProofGeneratingCoordinator(
       blobsData = da.blobs.map {
         BlobData(
           chunkHash = it.chunkHash,
-          blobBytes = it.blobBytes(),
+          blobBytes = it.blob,
           batchesCount = it.segmentEnds.size.toUInt(),
           prevDataRollingHash = it.prevDataRollingHash,
           dataRollingHash = it.dataRollingHash,

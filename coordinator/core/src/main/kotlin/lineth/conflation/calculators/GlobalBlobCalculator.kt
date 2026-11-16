@@ -1,6 +1,8 @@
 package lineth.conflation.calculators
 
+import linea.da.DaCompressor
 import linea.da.DaConstants.BLOB_PAYLOAD_CAPACITY
+import linea.da.DaConstants.SEGMENT_LENGTH_PREFIX_BYTES
 import linea.da.DaStream
 import linea.da.SealedBlob
 import linea.domain.BlocksConflation
@@ -11,10 +13,11 @@ import kotlin.time.Duration
 import kotlin.time.Instant
 
 /**
- * Decides RISC-V blob cut-offs: feeds conflations to the [DaStream] in order, flushes the open blob on blob triggers,
- * and emits one [BlobEvent] per sealed blob, carrying every conflation whose frame ends in it.
+ * Decides RISC-V blob cut-offs: compresses conflations with the [DaCompressor], appends them to the [DaStream] in
+ * order, flushes the open blob on blob triggers, and emits one [BlobEvent] per sealed blob, carrying every conflation
+ * whose segment ends in it.
  *
- * Frames end in the order conflations were appended, so a sealed blob's cut points belong to the oldest queued
+ * Segments end in the order conflations were appended, so a sealed blob's cut points belong to the oldest queued
  * conflations, one to one.
  *
  * Not thread-safe: all calls must be confined to the thread that owns [daStream]. Not re-entrant: [handler] (and the
@@ -23,36 +26,39 @@ import kotlin.time.Instant
  * @param blobDeadline flushes the open blob once its oldest conflation's first block is this old; see [checkDeadline].
  *   It bounds the data's age from the block timestamp, and conflations arrive only once their execution proof is done,
  *   so it must be well above the execution proving time: otherwise every blob is flushed with a single conflation.
- * @param sharedBlobTailBytes the `tailBytes` [daStream] was opened with: > 0 when it resumes inside a shared blob. Until
- *   appended frames have reproduced that many bytes, flushing is skipped: a shorter seal would differ from the already
- *   stored and submitted blob.
+ * @param sharedBlobCarryOverTailBytes the `sharedBlobCarryOverTailBytes` [daStream] was opened with: > 0 when it
+ *   resumes inside a shared blob. Until appended segments have reproduced that many bytes, flushing is skipped: a
+ *   shorter seal would differ from the already stored and submitted blob.
  */
 class GlobalBlobCalculator(
+  private val compressor: DaCompressor,
   private val daStream: DaStream,
   private val triggers: List<BlobTriggerCalculator>,
   private val blockEncoder: BlockEncoder,
   private val handler: BlobHandler,
   private val blobDeadline: Duration? = null,
-  sharedBlobTailBytes: Int = 0,
+  sharedBlobCarryOverTailBytes: Int = 0,
   private val log: Logger = LogManager.getLogger(GlobalBlobCalculator::class.java),
 ) {
-  /** Appended to the stream, but the blob holding the end of their frame is not sealed yet. */
+  /** Appended to the stream, but the blob holding the end of their segment is not sealed yet. */
   private val appended = ArrayDeque<CompressedBlocksConflation>()
 
   /** Shared blob bytes still to reproduce; flushing is skipped while > 0. */
-  private var bytesToReproduce = sharedBlobTailBytes
+  private var bytesToReproduce = sharedBlobCarryOverTailBytes
 
   init {
-    require(sharedBlobTailBytes >= 0) { "sharedBlobTailBytes=$sharedBlobTailBytes must not be negative" }
+    require(sharedBlobCarryOverTailBytes >= 0) {
+      "sharedBlobCarryOverTailBytes=$sharedBlobCarryOverTailBytes must not be negative"
+    }
   }
 
-  /** The oldest conflation appended to the stream whose frame end is not in a sealed blob yet, if any. */
+  /** The oldest conflation appended to the stream whose segment end is not in a sealed blob yet, if any. */
   val oldestUnsealedConflation: BlocksConflation? get() = appended.firstOrNull()?.conflation
 
   fun newConflation(conflation: BlocksConflation) {
     triggers.firstNotNullOfOrNull { it.checkOverflow(conflation) }?.let { flush(it) }
 
-    val compressed = daStream.compress(conflation.blocks.map(blockEncoder::encode))
+    val compressed = compressor.compress(conflation.blocks.map(blockEncoder::encode))
     check(
       compressed.blockInterval.startBlockNumber == conflation.startBlockNumber &&
         compressed.blockInterval.endBlockNumber == conflation.endBlockNumber,
@@ -68,7 +74,7 @@ class GlobalBlobCalculator(
       appended.removeLast()
       throw e
     }
-    bytesToReproduce = maxOf(0, bytesToReproduce - compressed.compressedBytes)
+    bytesToReproduce = maxOf(0, bytesToReproduce - (SEGMENT_LENGTH_PREFIX_BYTES + compressed.compressedData.size))
     // append seals only full blobs; a short one can only be a resumed shared blob that was flushed originally.
     sealed.forEach { emit(it, flushed = it.payloadBytes < BLOB_PAYLOAD_CAPACITY) }
 

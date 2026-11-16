@@ -2,25 +2,26 @@ package lineth.conflation.calculators
 
 import linea.da.CompressedConflation
 import linea.da.DaCodecVersion
+import linea.da.DaConstants.BLOB_BYTES
 import linea.da.DaConstants.BLOB_PAYLOAD_CAPACITY
 import linea.da.DaConstants.KZG_POINT_BYTES
+import linea.da.DaConstants.SEGMENT_LENGTH_PREFIX_BYTES
 import linea.da.DaStream
+import linea.da.DaStreamErrorType
 import linea.da.DaStreamException
 import linea.da.DaStreamPosition
-import linea.da.DaStreamStatus
 import linea.da.SealedBlob
 import linea.da.SegmentEnd
-import linea.da.blobBytes
 import linea.domain.BlocksConflation
 import lineth.conflation.calculators.DaTestConflations.baseTime
 import lineth.conflation.calculators.DaTestConflations.conflation
 import lineth.conflation.calculators.DaTestConflations.encoder
 import lineth.conflation.calculators.DaTestConflations.genesisDataRollingHash
+import lineth.coordination.riscv.da.FakeDaCompressor
 import lineth.coordination.riscv.da.FakeDaStream
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
-import java.nio.ByteBuffer
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
@@ -28,11 +29,19 @@ class GlobalBlobCalculatorTest {
   private val events = mutableListOf<BlobEvent>()
 
   private fun calculator(
-    stream: DaStream = FakeDaStream(DaStreamPosition(genesisDataRollingHash)),
+    stream: DaStream = FakeDaStream(DaStreamPosition.fresh(genesisDataRollingHash)),
     triggers: List<BlobTriggerCalculator> = emptyList(),
     blobDeadline: kotlin.time.Duration? = null,
-    sharedBlobTailBytes: Int = 0,
-  ) = GlobalBlobCalculator(stream, triggers, encoder, { events += it }, blobDeadline, sharedBlobTailBytes)
+    sharedBlobCarryOverTailBytes: Int = 0,
+  ) = GlobalBlobCalculator(
+    FakeDaCompressor(),
+    stream,
+    triggers,
+    encoder,
+    { events += it },
+    blobDeadline,
+    sharedBlobCarryOverTailBytes,
+  )
 
   private fun BlobEvent.conflationEnds(): List<ULong> = conflations.map { it.conflation.conflation.endBlockNumber }
 
@@ -58,14 +67,16 @@ class GlobalBlobCalculatorTest {
     assertThat(events[0].conflationEnds()).containsExactly(1UL)
     assertThat(
       events[0].conflations.single().cut,
-    ).isEqualTo(SegmentEnd(1UL, tailBytes = BLOB_PAYLOAD_CAPACITY - 50_000))
+    ).isEqualTo(SegmentEnd(1UL, unusedTailBytes = BLOB_PAYLOAD_CAPACITY - 50_000))
     assertThat(events[0].next!!.conflation).isEqualTo(b)
     assertThat(events[0].flushed).isFalse()
     assertThat(events[1].conflationEnds()).containsExactly(2UL, 3UL)
-    assertThat(events[1].conflations.map { it.cut.tailBytes })
+    assertThat(events[1].conflations.map { it.cut.unusedTailBytes })
       .containsExactly(BLOB_PAYLOAD_CAPACITY - 19_953, BLOB_PAYLOAD_CAPACITY - 59_953)
     assertThat(events[1].next!!.conflation).isEqualTo(d)
-    assertThat(events[1].conflations.first().conflation.compressed.compressedBytes).isEqualTo(100_000)
+    assertThat(
+      SEGMENT_LENGTH_PREFIX_BYTES + events[1].conflations.first().conflation.compressed.compressedData.size,
+    ).isEqualTo(100_000)
   }
 
   @Test
@@ -143,7 +154,7 @@ class GlobalBlobCalculatorTest {
     assertThat(events[0].conflations.single().conflation.conflation).isEqualTo(first)
     assertThat(
       events[0].conflations.single().cut,
-    ).isEqualTo(SegmentEnd(3UL, tailBytes = BLOB_PAYLOAD_CAPACITY - 50_000))
+    ).isEqualTo(SegmentEnd(3UL, unusedTailBytes = BLOB_PAYLOAD_CAPACITY - 50_000))
     assertThat(events[0].next!!.conflation).isEqualTo(second)
     assertThat(events[1].conflations.map { it.conflation.conflation }).containsExactly(second, third)
     assertThat(events[1].conflations.map { it.cut.conflationEndBlock }).containsExactly(7UL, 9UL)
@@ -211,14 +222,14 @@ class GlobalBlobCalculatorTest {
     val cutAfterC = events[1].conflations.last().cut
     val position = DaStreamPosition(
       dataRollingHash = blob2.dataRollingHash,
-      tailBytes = cutAfterC.tailBytes,
-      sharedBlob = blob2.blobBytes(),
-      prevDataRollingHash = blob2.prevDataRollingHash,
+      sharedBlobCarryOverTailBytes = cutAfterC.unusedTailBytes,
+      sharedBlob = blob2.blob,
+      parentBlobDataRollingHash = blob2.prevDataRollingHash,
     )
     events.clear()
     val resumed = calculator(
       stream = FakeDaStream(position),
-      sharedBlobTailBytes = position.tailBytes,
+      sharedBlobCarryOverTailBytes = position.sharedBlobCarryOverTailBytes,
       blobDeadline = 1.seconds,
     )
 
@@ -227,7 +238,7 @@ class GlobalBlobCalculatorTest {
     resumed.newConflation(d)
 
     assertThat(events).hasSize(1)
-    assertThat(events.single().blob.blobBytes()).isEqualTo(blob2.blobBytes())
+    assertThat(events.single().blob.blob).isEqualTo(blob2.blob)
     assertThat(events.single().conflations).isEmpty()
     assertThat(events.single().next!!.conflation).isEqualTo(d)
     assertThat(resumed.flush()).isTrue()
@@ -245,9 +256,9 @@ class GlobalBlobCalculatorTest {
     events.clear()
     val position = DaStreamPosition(
       dataRollingHash = flushed.blob.dataRollingHash,
-      tailBytes = flushed.conflations.first().cut.tailBytes,
-      sharedBlob = flushed.blob.blobBytes(),
-      prevDataRollingHash = flushed.blob.prevDataRollingHash,
+      sharedBlobCarryOverTailBytes = flushed.conflations.first().cut.unusedTailBytes,
+      sharedBlob = flushed.blob.blob,
+      parentBlobDataRollingHash = flushed.blob.prevDataRollingHash,
     )
     return position to flushed
   }
@@ -256,15 +267,18 @@ class GlobalBlobCalculatorTest {
   fun `once a resumed short shared blob is reproduced in full, flush re-seals it without waiting for more data`() {
     val short = conflation(2UL, 30_000)
     val (position, original) = positionInsideShortFlushedBlob(short)
-    val resumed = calculator(stream = FakeDaStream(position), sharedBlobTailBytes = position.tailBytes)
+    val resumed = calculator(
+      stream = FakeDaStream(position),
+      sharedBlobCarryOverTailBytes = position.sharedBlobCarryOverTailBytes,
+    )
 
     assertThat(resumed.flush()).isFalse()
-    // The frame fills the shared blob exactly, so append does not seal it: the blob stays open until flushed.
+    // The segment fills the shared blob exactly, so append does not seal it: the blob stays open until flushed.
     resumed.newConflation(short)
     assertThat(events).isEmpty()
 
     assertThat(resumed.flush()).isTrue()
-    assertThat(events.single().blob.blobBytes()).isEqualTo(original.blob.blobBytes())
+    assertThat(events.single().blob.blob).isEqualTo(original.blob.blob)
     assertThat(events.single().flushed).isTrue()
     assertThat(events.single().conflationEnds()).containsExactly(2UL)
   }
@@ -275,14 +289,14 @@ class GlobalBlobCalculatorTest {
     val (position, original) = positionInsideShortFlushedBlob(short)
     val resumed = calculator(
       stream = FakeDaStream(position),
-      sharedBlobTailBytes = position.tailBytes,
+      sharedBlobCarryOverTailBytes = position.sharedBlobCarryOverTailBytes,
       blobDeadline = 1.seconds,
     )
 
     resumed.newConflation(short)
 
     assertThat(resumed.checkDeadline(baseTime + 1000.minutes)).isTrue()
-    assertThat(events.single().blob.blobBytes()).isEqualTo(original.blob.blobBytes())
+    assertThat(events.single().blob.blob).isEqualTo(original.blob.blob)
   }
 
   @Test
@@ -291,16 +305,19 @@ class GlobalBlobCalculatorTest {
     val blob2 = events[1].blob
     val position = DaStreamPosition(
       dataRollingHash = blob2.dataRollingHash,
-      tailBytes = events[1].conflations.last().cut.tailBytes,
-      sharedBlob = blob2.blobBytes(),
-      prevDataRollingHash = blob2.prevDataRollingHash,
+      sharedBlobCarryOverTailBytes = events[1].conflations.last().cut.unusedTailBytes,
+      sharedBlob = blob2.blob,
+      parentBlobDataRollingHash = blob2.prevDataRollingHash,
     )
     events.clear()
-    val resumed = calculator(stream = FakeDaStream(position), sharedBlobTailBytes = position.tailBytes)
+    val resumed = calculator(
+      stream = FakeDaStream(position),
+      sharedBlobCarryOverTailBytes = position.sharedBlobCarryOverTailBytes,
+    )
 
     assertThatThrownBy { resumed.newConflation(conflation(4UL, 80_001)) }
       .isInstanceOfSatisfying(DaStreamException::class.java) {
-        assertThat(it.status).isEqualTo(DaStreamStatus.SEEDED_BLOB_MISMATCH)
+        assertThat(it.errorType).isEqualTo(DaStreamErrorType.SEEDED_BLOB_MISMATCH)
       }
     resumed.newConflation(d)
     resumed.flush()
@@ -328,25 +345,23 @@ class GlobalBlobCalculatorTest {
       .hasMessageContaining("a flushed blob must end at least one conflation")
   }
 
-  private fun blobWithCuts(vararg cuts: SegmentEnd): SealedBlob = object : SealedBlob {
-    override val blob: ByteBuffer = ByteBuffer.allocate(0)
-    override val chunkHash = ByteArray(32)
-    override val kzgCommitment = ByteArray(KZG_POINT_BYTES)
-    override val kzgProof = ByteArray(KZG_POINT_BYTES)
-    override val prevDataRollingHash = ByteArray(32)
-    override val dataRollingHash = ByteArray(32)
-    override val payloadBytes = BLOB_PAYLOAD_CAPACITY
-    override val segmentEnds = cuts.toList()
-  }
+  private fun blobWithCuts(vararg cuts: SegmentEnd) = SealedBlob(
+    blob = ByteArray(BLOB_BYTES),
+    chunkHash = ByteArray(32),
+    kzgCommitment = ByteArray(KZG_POINT_BYTES),
+    kzgProof = ByteArray(KZG_POINT_BYTES),
+    prevDataRollingHash = ByteArray(32),
+    dataRollingHash = ByteArray(32),
+    payloadBytes = BLOB_PAYLOAD_CAPACITY,
+    segmentEnds = cuts.toList(),
+  )
 
-  /** Compresses like [FakeDaStream], but returns scripted blobs from append and flush. */
+  /** Returns scripted blobs from append and flush. */
   private inner class ScriptedDaStream(
     private val sealOnAppend: List<SealedBlob> = emptyList(),
     private val flushResult: SealedBlob? = null,
   ) : DaStream {
-    private val delegate = FakeDaStream(DaStreamPosition(genesisDataRollingHash))
     override val version = DaCodecVersion.FAKE
-    override fun compress(blockRlps: List<ByteArray>): CompressedConflation = delegate.compress(blockRlps)
     override fun append(conflation: CompressedConflation): List<SealedBlob> = sealOnAppend
     override fun flush(): SealedBlob? = flushResult
     override fun close() = Unit

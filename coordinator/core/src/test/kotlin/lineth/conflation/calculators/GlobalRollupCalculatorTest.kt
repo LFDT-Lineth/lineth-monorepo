@@ -1,7 +1,6 @@
 package lineth.conflation.calculators
 
 import linea.da.DaConstants.BLOB_PAYLOAD_CAPACITY
-import linea.da.blobBytes
 import lineth.conflation.calculators.DaPipelineTestSupport.Pipeline
 import lineth.conflation.calculators.DaPipelineTestSupport.positionAfter
 import lineth.conflation.calculators.DaTestConflations.baseTime
@@ -187,9 +186,9 @@ class GlobalRollupCalculatorTest {
     assertThat(resumedRollup2.conflations).isEqualTo(rollup2.conflations)
     assertThat(
       resumedRollup2.da.blobs.map {
-        it.blobBytes()
+        it.blob
       },
-    ).containsExactlyElementsOf(rollup2.da.blobs.map { it.blobBytes() })
+    ).containsExactlyElementsOf(rollup2.da.blobs.map { it.blob })
     assertThat(resumedRollup2.da.parentDataRollingHash).isEqualTo(rollup2.da.parentDataRollingHash)
     assertThat(resumedRollup2.da.parentDataTailTakeBytes).isEqualTo(rollup2.da.parentDataTailTakeBytes)
     assertThat(resumedRollup2.da.boundaryPrevDataRollingHash).isEqualTo(rollup2.da.boundaryPrevDataRollingHash)

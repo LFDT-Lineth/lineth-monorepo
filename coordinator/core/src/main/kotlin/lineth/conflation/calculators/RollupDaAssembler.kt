@@ -85,12 +85,12 @@ class RollupDaAssembler(start: DaStreamPosition) {
   private val blobs = mutableListOf<SealedBlob>()
 
   // Start values of the open rollup.
-  private var take = start.tailBytes
+  private var take = start.sharedBlobCarryOverTailBytes
   private var parent = start.dataRollingHash
 
   // Set only when the open rollup starts inside a shared blob (take > 0); the spec requires
   // boundaryPrevDataRollingHash exactly then, to open the preimage of `parent`.
-  private var boundaryPrev: ByteArray? = start.prevDataRollingHash.takeIf { start.tailBytes > 0 }
+  private var boundaryPrev: ByteArray? = start.parentBlobDataRollingHash.takeIf { take > 0 }
 
   /** The open rollup's conflations, oldest first. */
   val openConflations: List<BlocksConflation> get() = conflations
@@ -128,7 +128,7 @@ class RollupDaAssembler(start: DaStreamPosition) {
     check(conflations.lastOrNull()?.endBlockNumber == at.conflationEndBlock) {
       "cut=$at does not end the open rollup's last conflation=${conflations.lastOrNull()?.intervalString()}"
     }
-    val tail = at.tailBytes
+    val tail = at.unusedTailBytes
     val witness = RollupDaWitness(
       blobs = blobs.toList(),
       parentDataRollingHash = parent,
