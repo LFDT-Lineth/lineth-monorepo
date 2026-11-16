@@ -1,10 +1,10 @@
 package lineth.conflation.calculators
 
 import linea.da.DaStreamPosition
-import linea.da.blobBytes
 import linea.domain.BlocksConflation
 import lineth.conflation.calculators.DaTestConflations.encoder
 import lineth.conflation.calculators.DaTestConflations.genesisDataRollingHash
+import lineth.coordination.riscv.da.FakeDaCompressor
 import lineth.coordination.riscv.da.FakeDaStream
 import kotlin.time.Duration
 
@@ -12,7 +12,7 @@ import kotlin.time.Duration
 object DaPipelineTestSupport {
   /** Blob and rollup calculators wired together on a [FakeDaStream] opened at [position], collecting the rollups. */
   class Pipeline(
-    position: DaStreamPosition = DaStreamPosition(genesisDataRollingHash),
+    position: DaStreamPosition = DaStreamPosition.fresh(genesisDataRollingHash),
     rollupTriggers: List<RollupTriggerCalculator> = emptyList(),
     blobTriggers: List<BlobTriggerCalculator> = emptyList(),
     rollupDeadline: Duration? = null,
@@ -25,11 +25,12 @@ object DaPipelineTestSupport {
       rollupDeadline = rollupDeadline,
     ).also { it.onRollup { rollup -> rollups += rollup } }
     val blobCalculator: GlobalBlobCalculator = GlobalBlobCalculator(
+      compressor = FakeDaCompressor(),
       daStream = FakeDaStream(position),
       triggers = blobTriggers,
       blockEncoder = encoder,
       handler = rollupCalculator,
-      sharedBlobTailBytes = position.tailBytes,
+      sharedBlobCarryOverTailBytes = position.sharedBlobCarryOverTailBytes,
     )
 
     fun feed(vararg conflations: BlocksConflation) = conflations.forEach(blobCalculator::newConflation)
@@ -39,11 +40,12 @@ object DaPipelineTestSupport {
   fun positionAfter(rollup: Rollup): DaStreamPosition {
     val last = rollup.da.blobs.last()
     val tail = rollup.da.expectedFinalDataTailDiscardBytes
+    if (tail == 0) return DaStreamPosition.fresh(rollup.da.expectedEndDataRollingHash)
     return DaStreamPosition(
       dataRollingHash = rollup.da.expectedEndDataRollingHash,
-      tailBytes = tail,
-      sharedBlob = last.blobBytes().takeIf { tail > 0 },
-      prevDataRollingHash = last.prevDataRollingHash.takeIf { tail > 0 },
+      parentBlobDataRollingHash = last.prevDataRollingHash,
+      sharedBlobCarryOverTailBytes = tail,
+      sharedBlob = last.blob,
     )
   }
 }

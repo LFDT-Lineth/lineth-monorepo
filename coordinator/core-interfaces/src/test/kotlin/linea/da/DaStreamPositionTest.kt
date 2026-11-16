@@ -10,43 +10,54 @@ class DaStreamPositionTest {
   private val sharedBlob = ByteArray(DaConstants.BLOB_BYTES)
 
   @Test
-  fun `fresh position needs only the data rolling hash`() {
-    val position = DaStreamPosition(hash)
+  fun `fresh position starts the next blob after the data rolling hash`() {
+    val position = DaStreamPosition.fresh(hash)
 
-    assertThat(position.tailBytes).isZero()
+    assertThat(position.sharedBlobCarryOverTailBytes).isZero()
     assertThat(position.sharedBlob).isNull()
-    assertThat(position.prevDataRollingHash).isNull()
+    assertThat(position.parentBlobDataRollingHash).isEqualTo(hash)
+    assertThatThrownBy { DaStreamPosition(hash, prevHash) }.isInstanceOf(IllegalArgumentException::class.java)
   }
 
   @Test
-  fun `position inside a shared blob requires the blob and the previous rolling hash`() {
-    val position = DaStreamPosition(hash, tailBytes = 100, sharedBlob = sharedBlob, prevDataRollingHash = prevHash)
+  fun `position inside a shared blob requires the blob`() {
+    val position = DaStreamPosition(hash, prevHash, sharedBlobCarryOverTailBytes = 100, sharedBlob = sharedBlob)
 
-    assertThat(
-      position,
-    ).isEqualTo(position.copy(sharedBlob = sharedBlob.copyOf(), prevDataRollingHash = prevHash.copyOf()))
-    assertThatThrownBy { DaStreamPosition(hash, tailBytes = 100) }.isInstanceOf(IllegalArgumentException::class.java)
+    assertThat(position).isEqualTo(
+      position.copy(parentBlobDataRollingHash = prevHash.copyOf(), sharedBlob = sharedBlob.copyOf()),
+    )
+    assertThatThrownBy { DaStreamPosition(hash, prevHash, sharedBlobCarryOverTailBytes = 100) }
+      .isInstanceOf(IllegalArgumentException::class.java)
     assertThatThrownBy {
-      DaStreamPosition(hash, tailBytes = 100, sharedBlob = ByteArray(10), prevDataRollingHash = prevHash)
+      DaStreamPosition(
+        hash,
+        prevHash,
+        sharedBlobCarryOverTailBytes = 100,
+        sharedBlob = ByteArray(10),
+      )
     }
       .isInstanceOf(IllegalArgumentException::class.java)
   }
 
   @Test
-  fun `rejects invalid hashes, tail bytes and stray shared-blob fields`() {
-    assertThatThrownBy { DaStreamPosition(ByteArray(31)) }.isInstanceOf(IllegalArgumentException::class.java)
-    assertThatThrownBy { DaStreamPosition(hash, tailBytes = -1) }.isInstanceOf(IllegalArgumentException::class.java)
+  fun `rejects invalid hashes, tail bytes and a stray shared blob`() {
+    assertThatThrownBy { DaStreamPosition.fresh(ByteArray(31)) }.isInstanceOf(IllegalArgumentException::class.java)
+    assertThatThrownBy {
+      DaStreamPosition(hash, ByteArray(31), sharedBlobCarryOverTailBytes = 100, sharedBlob = sharedBlob)
+    }
+      .isInstanceOf(IllegalArgumentException::class.java)
+    assertThatThrownBy { DaStreamPosition(hash, hash, sharedBlobCarryOverTailBytes = -1) }
+      .isInstanceOf(IllegalArgumentException::class.java)
     assertThatThrownBy {
       DaStreamPosition(
         hash,
-        tailBytes = DaConstants.BLOB_PAYLOAD_CAPACITY,
+        prevHash,
+        sharedBlobCarryOverTailBytes = DaConstants.BLOB_PAYLOAD_CAPACITY,
         sharedBlob = sharedBlob,
-        prevDataRollingHash = prevHash,
       )
     }.isInstanceOf(IllegalArgumentException::class.java)
-    assertThatThrownBy {
-      DaStreamPosition(hash, sharedBlob = sharedBlob)
-    }.isInstanceOf(IllegalArgumentException::class.java)
+    assertThatThrownBy { DaStreamPosition(hash, hash, sharedBlob = sharedBlob) }
+      .isInstanceOf(IllegalArgumentException::class.java)
   }
 
   @Test
