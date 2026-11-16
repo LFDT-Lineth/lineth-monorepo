@@ -111,6 +111,17 @@ const l2MessageServiceEnv = {
   L2_MESSAGE_SERVICE_RATE_LIMIT_AMOUNT: "1000000000000000000000",
 };
 
+function readIfExists(filePath: string): string | undefined {
+  try {
+    return fs.readFileSync(filePath, "utf-8");
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      return undefined;
+    }
+    throw error;
+  }
+}
+
 describe("Ignition deploy plugin", () => {
   useFreshChain();
 
@@ -436,7 +447,7 @@ describe("Ignition deploy plugin", () => {
       // every file in isolation, which takes ~90 s and appends ~200 entries to OpenZeppelin's cache/validations.json.
       const defaultProfileHre = await createHardhatRuntimeEnvironment(hardhatConfig, { buildProfile: "default" });
       const parametersFile = path.join(IGNITION_DIR, "parameters", "default.json");
-      const previousParameters = fs.existsSync(parametersFile) ? fs.readFileSync(parametersFile, "utf-8") : undefined;
+      const previousParameters = readIfExists(parametersFile);
       try {
         const { result, lines } = await captureLogs(() =>
           withEnv({ L1_SECURITY_COUNCIL: role(40), RECOVERFUNDS_EXECUTOR_ADDRESS: role(41) }, () =>
