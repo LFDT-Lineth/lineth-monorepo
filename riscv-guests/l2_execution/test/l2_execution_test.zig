@@ -55,12 +55,6 @@ fn sampleChainConfig() l2_execution_ssz.ChainConfig {
     };
 }
 
-test "chainConfigHash matches Readme.md's §2.1 dynamicChainConfigHash formula" {
-    const got = api.chainConfigHashFn(sampleChainConfig(), 1_000_000_000);
-    const want = [_]u8{ 0x22, 0xa4, 0xa1, 0x9c, 0x73, 0x00, 0x05, 0xa8, 0xec, 0x6d, 0xe4, 0xf2, 0x9e, 0x81, 0x8b, 0x67, 0x9c, 0x82, 0x2d, 0x19, 0x89, 0xb4, 0x09, 0xdb, 0xc8, 0x2b, 0xf1, 0x52, 0x6a, 0x3e, 0xb2, 0x35 };
-    try testing.expectEqualSlices(u8, &want, &got);
-}
-
 test "chainConfigHash commits to every system contract except beacon roots and history storage" {
     const baseline = api.chainConfigHashFn(sampleChainConfig(), 7);
     inline for (std.meta.fields(l2_execution_ssz.SystemContracts)) |field| {

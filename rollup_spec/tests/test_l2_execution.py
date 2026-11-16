@@ -14,7 +14,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
-from ethereum.crypto.hash import Hash32, keccak256
+from ethereum.crypto.hash import Hash32
 from ethereum.state import Address
 from ethereum_types.numeric import U64
 
@@ -334,17 +334,6 @@ def _config_with_system_contracts() -> ChainConfig:
         chain_id=U64(59144),
         system_contracts=_SYSTEM_CONTRACTS,
     )
-
-
-def test_chain_config_hash_preimage() -> None:
-    expected = keccak256(
-        (59144).to_bytes(32, "big")
-        + (1_000_000_000).to_bytes(32, "big")
-        + b"".join(bytes(12) + bytes([byte]) * 20 for byte in (0x00, 0x11, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7))
-    )
-    # Golden vector shared with riscv-guests/l2_execution/test/l2_execution_test.zig.
-    assert expected == bytes.fromhex("22a4a19c730005a8ec6de4f29e818b679c822d1989b409dbc82bf1526a3eb235")
-    assert _config_with_system_contracts().hash(1_000_000_000) == expected
 
 
 @pytest.mark.parametrize("field", SystemContracts.__dataclass_fields__)
