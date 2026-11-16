@@ -252,7 +252,8 @@ jobs:
       - name: Setup RISC-V guests environment
         uses: ./.github/actions/setup-riscv-guests
 
-      # Install Go for the module-pinned zkc and elf_to_json tools.
+      # Install Go for the module-pinned zkc and elf_to_json tools, and for verifier-ray's devmode
+      # system, which the rollup's host tools compile.
       - name: Install Go
         uses: ./.github/actions/setup-go
         with:

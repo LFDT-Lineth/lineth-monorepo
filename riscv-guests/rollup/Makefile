@@ -118,7 +118,7 @@ zkc-smoke-exec: require-input compile
 	$(MAKE) zkc-smoke-external ELF="$(BIN)" INPUT="$(INPUT)" ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"
 
 # The same for a prebuilt ELF: the guest output printed by zkc has to equal EXPECTED_OUTPUT byte for byte.
-zkc-smoke-external:
+zkc-smoke-external: $(DEVMODE_SYSTEM)
 	@[ -s "$(ELF)" ] || { echo "ELF missing or empty: '$(ELF)' (set ELF=path/to/rollup_guest)"; exit 1; }
 	@[ -s "$(INPUT)" ] && [ -s "$(EXPECTED_OUTPUT)" ] || { echo "INPUT or EXPECTED_OUTPUT missing or empty: '$(INPUT)', '$(EXPECTED_OUTPUT)'"; exit 1; }
 	$(ZIG) build zkc-smoke $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -- \
