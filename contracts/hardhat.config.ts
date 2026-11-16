@@ -29,6 +29,25 @@ const deployerAccounts = resolveDeployerAccounts();
 const infuraUrl = (subdomain: string) =>
   configVariable("INFURA_API_KEY", { format: `https://${subdomain}.infura.io/v3/{variable}` });
 
+// NB: double check the autoupdate shell script version complies to the latest solidity version if you add a new one.
+/// @dev Please see the overrides file for the files compiled with other settings.
+const solidityProfile = {
+  compilers: [
+    {
+      version: "0.8.33",
+      settings: {
+        viaIR: useViaIR,
+        optimizer: {
+          enabled: true,
+          runs: 10_000,
+        },
+        evmVersion: "osaka",
+      },
+    },
+  ],
+  overrides,
+};
+
 export default defineConfig({
   plugins: [hardhatToolboxViem, hardhatUpgrades, hardhatIgnoreWarnings, linethDeployPlugin],
   tasks: [...operationalTasks, ...deployTasks],
@@ -41,22 +60,12 @@ export default defineConfig({
     },
   },
   solidity: {
-    // NB: double check the autoupdate shell script version complies to the latest solidity version if you add a new one.
-    /// @dev Please see the overrides file for a list of files not targetting the default EVM version of Prague.
-    compilers: [
-      {
-        version: "0.8.33",
-        settings: {
-          viaIR: useViaIR,
-          optimizer: {
-            enabled: true,
-            runs: 10_000,
-          },
-          evmVersion: "osaka",
-        },
-      },
-    ],
-    overrides,
+    // Both profiles are declared: Hardhat derives a missing `production` profile from `default` without its settings
+    // (optimizer at 200 runs), so deployments and verification would not match the bytecode on chain.
+    profiles: {
+      default: solidityProfile,
+      production: solidityProfile,
+    },
   },
   // `func-mutability` is solc warning 2018: the
   // SafeExecutionConditions guards are intentionally non-`view` so multisig UIs (e.g. Safe{Wallet}) stage them
