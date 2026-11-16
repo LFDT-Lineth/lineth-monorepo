@@ -63,9 +63,13 @@ class Web3JContractAsyncHelperTest {
   fun setUp() {
     vertx = Vertx.vertx(vertxTestOptions)
     web3jService = FakeWeb3jService()
-    val web3j = Web3j.build(web3jService)
     gasProvider = TimerCompletedGasProvider(vertx, chainId, eip4844Fees)
-    helper = Web3JContractAsyncHelper(
+    helper = createHelper(useEthEstimateGas = false)
+  }
+
+  private fun createHelper(useEthEstimateGas: Boolean): Web3JContractAsyncHelper {
+    val web3j = Web3j.build(web3jService)
+    return Web3JContractAsyncHelper(
       contractAddress = contractAddress,
       web3j = web3j,
       transactionManager = AsyncFriendlyTransactionManager(
@@ -76,7 +80,7 @@ class Web3JContractAsyncHelperTest {
       ),
       contractGasProvider = gasProvider,
       smartContractErrors = emptyMap(),
-      useEthEstimateGas = false,
+      useEthEstimateGas = useEthEstimateGas,
     )
   }
 
@@ -124,6 +128,31 @@ class Web3JContractAsyncHelperTest {
     assertThat(web3jService.sentRawTransactions).hasSize(1)
   }
 
+  @Test
+  fun `blob transactions request EIP-4844 fees without waiting for the gas estimate`() {
+    val helper = createHelper(useEthEstimateGas = true)
+    val calls = listOf<() -> SafeFuture<Any?>>(
+      { helper.executeBlobEthCall(function, listOf(ByteArray(10)), gasPriceCaps = null).thenApply { it } },
+      {
+        helper.sendBlobCarryingTransactionAndGetTxHash(function, listOf(ByteArray(10)), gasPriceCaps = null)
+          .thenApply { it }
+      },
+    )
+
+    calls.forEach { call ->
+      val feesRequested = gasProvider.nextFeesRequest()
+      val estimateGasResponse = web3jService.holdNextEstimateGas()
+      val result = SafeFuture<Any?>()
+      vertx.runOnContext { call().propagateTo(result) }
+
+      feesRequested.get(10, TimeUnit.SECONDS)
+      assertThat(result).isNotDone()
+
+      estimateGasResponse.complete(Unit)
+      result.get(10, TimeUnit.SECONDS)
+    }
+  }
+
   // fees complete on a Vert.x timer, like the L1 client's retry backoff
   private class TimerCompletedGasProvider(
     private val vertx: Vertx,
@@ -132,8 +161,14 @@ class Web3JContractAsyncHelperTest {
   ) : AtomicContractEIP1559GasProvider, EIP4844GasProvider {
     val asyncCallsOnEventLoop = CopyOnWriteArrayList<Boolean>()
 
+    @Volatile
+    private var feesRequest = CompletableFuture<Unit>()
+
+    fun nextFeesRequest(): CompletableFuture<Unit> = CompletableFuture<Unit>().also { feesRequest = it }
+
     private fun <T> completeOnTimer(value: T): SafeFuture<T> {
       asyncCallsOnEventLoop.add(Context.isOnEventLoopThread())
+      feesRequest.complete(Unit)
       val future = SafeFuture<T>()
       vertx.setTimer(10) { future.complete(value) }
       return future
@@ -170,9 +205,16 @@ class Web3JContractAsyncHelperTest {
     val sentRawTransactions = CopyOnWriteArrayList<String>()
     val ethCallTransactions = CopyOnWriteArrayList<Any>()
 
+    @Volatile
+    private var estimateGasGate: CompletableFuture<Unit> = CompletableFuture.completedFuture(Unit)
+
+    // eth_estimateGas responds only once the returned future is completed
+    fun holdNextEstimateGas(): CompletableFuture<Unit> = CompletableFuture<Unit>().also { estimateGasGate = it }
+
     private fun result(request: Request<*, *>): Any {
       return when (request.method) {
         "eth_getTransactionCount" -> "0x0"
+        "eth_estimateGas" -> "0x5208"
         "eth_call" -> {
           ethCallTransactions.add(request.params[0])
           "0x"
@@ -189,8 +231,9 @@ class Web3JContractAsyncHelperTest {
       @Suppress("UNCHECKED_CAST")
       val response = responseType.getDeclaredConstructor().newInstance() as Response<Any>
       response.result = result(request)
+      val gate = if (request.method == "eth_estimateGas") estimateGasGate else CompletableFuture.completedFuture(Unit)
       @Suppress("UNCHECKED_CAST")
-      return CompletableFuture.completedFuture(response as T)
+      return gate.thenApply { response as T }
     }
 
     override fun <T : Response<*>> send(request: Request<*, *>, responseType: Class<T>): T =

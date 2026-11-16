@@ -152,20 +152,18 @@ class Web3JContractAsyncHelper(
       .map(Bytes::toArray)
 
     return getGasLimit(function, blobs, blobVersionedHashes)
-      .thenCompose { gasLimit ->
-        getEip4844GasFeesAsync().thenApply { (_, maxFeePerBlobGas) ->
-          Eip4844Transaction.createFunctionCallTransaction(
-            from = transactionManager.fromAddress,
-            to = contractAddress,
-            data = FunctionEncoder.encode(function),
-            blobs = blobs,
-            maxFeePerBlobGas = gasPriceCaps?.maxFeePerBlobGasCap?.toBigInteger() ?: maxFeePerBlobGas.toBigInteger(),
-            maxPriorityFeePerGas = gasPriceCaps?.maxPriorityFeePerGasCap?.toBigInteger(),
-            maxFeePerGas = gasPriceCaps?.maxFeePerGasCap?.toBigInteger(),
-            gasLimit = gasLimit,
-            blobVersionedHashes = blobVersionedHashes,
-          )
-        }
+      .thenCombine(getEip4844GasFeesAsync()) { gasLimit, (_, maxFeePerBlobGas) ->
+        Eip4844Transaction.createFunctionCallTransaction(
+          from = transactionManager.fromAddress,
+          to = contractAddress,
+          data = FunctionEncoder.encode(function),
+          blobs = blobs,
+          maxFeePerBlobGas = gasPriceCaps?.maxFeePerBlobGasCap?.toBigInteger() ?: maxFeePerBlobGas.toBigInteger(),
+          maxPriorityFeePerGas = gasPriceCaps?.maxPriorityFeePerGasCap?.toBigInteger(),
+          maxFeePerGas = gasPriceCaps?.maxFeePerGasCap?.toBigInteger(),
+          gasLimit = gasLimit,
+          blobVersionedHashes = blobVersionedHashes,
+        )
       }
   }
 
@@ -335,35 +333,34 @@ class Web3JContractAsyncHelper(
     val blobVersionedHashes = blobs
       .map { BlobUtils.kzgToVersionedHash(BlobUtils.getCommitment(it)).toArray() }
     return getGasLimit(function, blobs, blobVersionedHashes)
-      .thenCompose { gasLimit ->
-        val eip4844GasProvider = contractGasProvider as EIP4844GasProvider
-        getEip4844GasFeesAsync().thenCompose { (eip1559fees, maxFeePerBlobGas) ->
-          logGasPriceCapsInfo(
-            logMessagePrefix = function.name,
-            maxPriorityFeePerGas = eip1559fees.maxPriorityFeePerGas,
-            maxFeePerGas = eip1559fees.maxFeePerGas,
-            maxFeePerBlobGas = maxFeePerBlobGas,
-            dynamicMaxPriorityFeePerGas = gasPriceCaps?.maxPriorityFeePerGasCap,
-            dynamicMaxFeePerGas = gasPriceCaps?.maxFeePerGasCap,
-            dynamicMaxFeePerBlobGas = gasPriceCaps?.maxFeePerBlobGasCap,
-          )
+      .thenCombine(getEip4844GasFeesAsync()) { gasLimit, (eip1559fees, maxFeePerBlobGas) ->
+        logGasPriceCapsInfo(
+          logMessagePrefix = function.name,
+          maxPriorityFeePerGas = eip1559fees.maxPriorityFeePerGas,
+          maxFeePerGas = eip1559fees.maxFeePerGas,
+          maxFeePerBlobGas = maxFeePerBlobGas,
+          dynamicMaxPriorityFeePerGas = gasPriceCaps?.maxPriorityFeePerGasCap,
+          dynamicMaxFeePerGas = gasPriceCaps?.maxFeePerGasCap,
+          dynamicMaxFeePerBlobGas = gasPriceCaps?.maxFeePerBlobGasCap,
+        )
 
-          val transaction = transactionManager.createRawTransaction(
-            blobs = blobs,
-            chainId = eip4844GasProvider.chainId,
-            maxPriorityFeePerGas = gasPriceCaps?.maxPriorityFeePerGasCap?.toBigInteger()
-              ?: eip1559fees.maxPriorityFeePerGas.toBigInteger(),
-            maxFeePerGas = gasPriceCaps?.maxFeePerGasCap?.toBigInteger() ?: eip1559fees.maxFeePerGas.toBigInteger(),
-            gasLimit = gasLimit,
-            to = contractAddress,
-            data = FunctionEncoder.encode(function),
-            value = weiValue,
-            maxFeePerBlobGas = gasPriceCaps?.maxFeePerBlobGasCap?.toBigInteger() ?: maxFeePerBlobGas.toBigInteger(),
-          )
-          val signedMessage = transactionManager.sign(transaction)
-          web3j.ethSendRawTransaction(signedMessage)
-            .requestAsync { it }
-        }
+        transactionManager.createRawTransaction(
+          blobs = blobs,
+          chainId = (contractGasProvider as EIP4844GasProvider).chainId,
+          maxPriorityFeePerGas = gasPriceCaps?.maxPriorityFeePerGasCap?.toBigInteger()
+            ?: eip1559fees.maxPriorityFeePerGas.toBigInteger(),
+          maxFeePerGas = gasPriceCaps?.maxFeePerGasCap?.toBigInteger() ?: eip1559fees.maxFeePerGas.toBigInteger(),
+          gasLimit = gasLimit,
+          to = contractAddress,
+          data = FunctionEncoder.encode(function),
+          value = weiValue,
+          maxFeePerBlobGas = gasPriceCaps?.maxFeePerBlobGasCap?.toBigInteger() ?: maxFeePerBlobGas.toBigInteger(),
+        )
+      }
+      .thenCompose { transaction ->
+        val signedMessage = transactionManager.sign(transaction)
+        web3j.ethSendRawTransaction(signedMessage)
+          .requestAsync { it }
       }
   }
 
