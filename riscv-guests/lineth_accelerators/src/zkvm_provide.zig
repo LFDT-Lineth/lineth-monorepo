@@ -45,7 +45,8 @@ comptime {
         @export(&lineth_accel.write_output, .{ .name = "write_output" });
         @export(&guest_allocator, .{ .name = "guest_allocator" });
         // Referenced by a Constantine archive built with CTT_EXTERN_FIELD_ACCEL.
-        @export(&lineth_accel.lineth_zkvm_field_op, .{ .name = "lineth_zkvm_field_op" });
+        @export(&lineth_accel.lineth_zkvm_field_op_256, .{ .name = "lineth_zkvm_field_op_256" });
+        @export(&lineth_accel.lineth_zkvm_field_op_384, .{ .name = "lineth_zkvm_field_op_384" });
     }
 }
 

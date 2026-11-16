@@ -37,4 +37,5 @@ pub const write_output = io.write_output;
 pub const lineth_zkvm_poseidon2_permutation = poseidon2.lineth_zkvm_poseidon2_permutation;
 
 // ── Field accelerator (include/lineth_accelerators.h) ───────────────────────
-pub const lineth_zkvm_field_op = field.lineth_zkvm_field_op;
+pub const lineth_zkvm_field_op_256 = field.lineth_zkvm_field_op_256;
+pub const lineth_zkvm_field_op_384 = field.lineth_zkvm_field_op_384;

@@ -17,10 +17,9 @@ import (
 
 const liveArithSrcDir = "../../arithmetization/src"
 
-// TestRisc5FieldAccel traces and proves a guest issuing field accelerator
-// calls: the native mulmod_256
-// (NonNative) and the unconstrained hint_field_op_256 go through the full
-// pipeline.
+// TestRisc5FieldAccel traces and proves a guest issuing 256-bit and 384-bit
+// field accelerator calls: the native mulmod_384 (NonNative) and the
+// unconstrained hint_field_op_384 go through the full pipeline.
 func TestRisc5FieldAccel(t *testing.T) {
 	binf, err := embedded.CompiledBinaryFile(embedded.WithRootFS(os.DirFS(liveArithSrcDir)))
 	if err != nil {
@@ -30,15 +29,14 @@ func TestRisc5FieldAccel(t *testing.T) {
 }
 
 // TestRisc5FieldAccelUnreducedHint runs the same guest with a dishonest hint
-// that returns its answer plus p whenever that still fits in 256 bits. The hint
+// that returns its answer plus p whenever that still fits in u384. The hint
 // is unconstrained and only pinned modulo p by the product, so field_op must
 // reject it (hint < p), or the output would not be canonical.
 func TestRisc5FieldAccelUnreducedHint(t *testing.T) {
 	const (
-		fieldZkc = "main/lib/field/field.zkc"
-		honest   = "    var div_res:u256 = m1\n"
-		// 2^256 - p for secp256k1 Fp: below it, div_res + p fits in 256 bits.
-		dishonest = "    var div_res:u256 = m1 < 0x1000003d1 ? m1 + p:m1\n"
+		fieldZkc  = "main/lib/field/field.zkc"
+		honest    = "    var div_res:u384 = m1\n"
+		dishonest = "    var div_res:u384 = m1 < 0x1000003d1 ? m1 + p:m1\n"
 	)
 	liveFS := os.DirFS(liveArithSrcDir)
 	overlay := fstest.MapFS{}

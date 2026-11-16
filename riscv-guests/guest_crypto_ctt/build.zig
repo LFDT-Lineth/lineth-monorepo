@@ -59,7 +59,7 @@ fn findToolCandidates(
 pub fn build(b: *std.Build) void {
     const tc = resolveToolchain(b);
     // Forwarded to the fork's nimble task as CTT_EXTERN_FIELD_ACCEL. The host archive never uses it.
-    const ctt_field_accel = b.option(bool, "ctt-field-accel", "delegate constantine field operations to the extern lineth_zkvm_field_op (default: false)") orelse false;
+    const ctt_field_accel = b.option(bool, "ctt-field-accel", "delegate constantine field operations to the extern lineth_zkvm_field_op_{256,384} (default: false)") orelse false;
     // Fetched on demand, by builds that use one of the archives.
     const ctt = b.lazyDependency("constantine", .{}) orelse return;
     // Build the rv64 archive in place and the host archive into Zig output dirs.

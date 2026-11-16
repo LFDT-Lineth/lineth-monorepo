@@ -74,7 +74,7 @@ zkvm_status lineth_zkvm_kzg_verify_blob_batch(const uint8_t* blobs,
 #define LINETH_FIELD_OP_DIV 1  /* out = a / b; out = 0 and status 1 if b = 0 */
 #define LINETH_FIELD_OP_SQRT 2 /* out^2 = a; if a is not a square, out^2 = -a and status 1 */
 
-/* Fields */
+/* Fields (1..7 are 256-bit / 4 limbs; 8 is 384-bit / 6 limbs) */
 #define LINETH_FIELD_SECP256K1_FP 1
 #define LINETH_FIELD_SECP256K1_FR 2
 #define LINETH_FIELD_SECP256R1_FP 3
@@ -82,30 +82,35 @@ zkvm_status lineth_zkvm_kzg_verify_blob_batch(const uint8_t* blobs,
 #define LINETH_FIELD_BN254_FP 5
 #define LINETH_FIELD_BN254_FR 6
 #define LINETH_FIELD_BLS12_381_FR 7
+#define LINETH_FIELD_BLS12_381_FP 8
 
 /**
- * One operation in a known 256-bit prime field, proven by the arithmetization.
+ * One operation in a known 256-bit or 384-bit prime field, proven by the
+ * arithmetization via the same FIELD_OP_SYSCALL (0xF0) ECALL.
  *
- * Elements are four little-endian 64-bit limbs of the plain value (not in
- * Montgomery form). Inputs must be below 2p (any 256-bit value for the
+ * Elements are four (fields 1..7, `lineth_zkvm_field_op_256`) or six (field 8,
+ * `lineth_zkvm_field_op_384`) little-endian 64-bit limbs of the plain value
+ * (not in Montgomery form). Inputs must be below 2p (any 256-bit value for the
  * secp256k1 and secp256r1 fields), or the result is unspecified; out is reduced
  * and may alias an input. b is read for every operation (pass a for SQRT). SQRT
- * is only supported where p = 3 (mod 4) (secp256k1 and secp256r1 Fp, bn254 Fp)
- * and returns either root.
+ * is only supported where p = 3 (mod 4) (secp256k1, secp256r1, bn254, and
+ * bls12-381 Fp) and returns either root.
  * An inverse is DIV with a = 1.
  *
  * An unknown op or field is unprovable.
  *
  * @param op LINETH_FIELD_OP_*
- * @param field LINETH_FIELD_*
+ * @param field LINETH_FIELD_* (1..7 for _256, 8 for _384)
  * @param[out] out Pointer to the result
  * @param a Pointer to the first operand
  * @param b Pointer to the second operand
  * @return 0, or 1 if there is no result (b = 0, or a is not a square)
  */
-uint32_t lineth_zkvm_field_op(uint32_t op, uint32_t field, uint64_t out[4],
-                              const uint64_t a[4], const uint64_t b[4]);
+uint32_t lineth_zkvm_field_op_256(uint32_t op, uint32_t field, uint64_t out[4],
+                                  const uint64_t a[4], const uint64_t b[4]);
 
+uint32_t lineth_zkvm_field_op_384(uint32_t op, uint32_t field, uint64_t out[6],
+                                  const uint64_t a[6], const uint64_t b[6]);
 #ifdef __cplusplus
 }
 #endif
