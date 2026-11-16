@@ -18,6 +18,7 @@
 - *(prover-ray)* Adopt the guest log syscall in the prover-ray (#4371)
 - *(riscv-guest, misc, prover-ray)* Riscv guest/shared zkevm fixtures (#4368)
 - *(prover-ray)* Bump arithmetization commit to support u16 addresses (#4396)
+- *(prover-ray)* Use bit-accurate arithmetization inputs with ZkC v1.2.36 to prevent incomplete decoded rows.
 
 ### 🚜 Refactor
 

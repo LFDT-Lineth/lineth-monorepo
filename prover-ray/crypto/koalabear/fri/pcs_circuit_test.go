@@ -327,23 +327,26 @@ func TestPCSVerifyGnarkCapHeights(t *testing.T) {
 // natively and in-circuit. The circuit is allocated from the proof's own
 // shape, as a recursion would if it trusted the prover's geometry.
 func TestPCSVerifyRejectsMismatchedCapHeight(t *testing.T) {
-	for _, tc := range []struct{ prover, verifier uint8 }{
-		{prover: 0, verifier: pcsCircuitCapHeight},
-		{prover: pcsCircuitCapHeight, verifier: 0},
-		{prover: 1, verifier: 3},
-		{prover: 3, verifier: 1},
+	for _, tc := range []struct {
+		prover, verifier uint8
+		wantErr          string
+	}{
+		{prover: 0, verifier: pcsCircuitCapHeight, wantErr: "input cap has 0 nodes, want 4"},
+		{prover: pcsCircuitCapHeight, verifier: 0, wantErr: "depth-zero input cap must be empty"},
+		{prover: 1, verifier: 3, wantErr: "input cap has 2 nodes, want 8"},
+		{prover: 3, verifier: 1, wantErr: "input cap has 8 nodes, want 2"},
 	} {
 		t.Run(fmt.Sprintf("prover=%d/verifier=%d", tc.prover, tc.verifier), func(t *testing.T) {
 			proved := newPCSCircuitFixture(t, tc.prover)
 			fx := newPCSCircuitFixture(t, tc.verifier)
 
-			require.Error(t, fx.pcs.Verify(fx.input, proved.proof),
+			require.ErrorContains(t, fx.pcs.Verify(fx.input, proved.proof), tc.wantErr,
 				"native verifier must reject a proof with another cap shape")
 
 			mismatched := fx
 			mismatched.proof = proved.proof
 			template, assignment := circuitFor(mismatched, proved.proof)
-			require.Error(t, compileAndSolvePCSCircuit(template, assignment),
+			require.ErrorContains(t, compileAndSolvePCSCircuit(template, assignment), tc.wantErr,
 				"circuit must reject a proof with another cap shape")
 		})
 	}

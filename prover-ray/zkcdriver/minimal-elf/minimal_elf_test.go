@@ -84,3 +84,62 @@ func traceAndCheck(t *testing.T, elf, want []byte) {
 		t.Fatalf("guest_output = %x, want %x", got, want)
 	}
 }
+
+// TestOutputAndLogGuest checks that minimalelf.OutputAndLogELF writes its
+// output to guest_output and its log to guest_log, and traces within the
+// constraints.
+func TestOutputAndLogGuest(t *testing.T) {
+	output := bytes.Repeat([]byte{0xab}, 32)
+	log := []byte{0x00, 0x03, 0xff, 0x7f, 0x80, 0x01}
+	elf := minimalelf.OutputAndLogELF(output, log)
+
+	binf, err := embedded.CompiledBinaryFile()
+	if err != nil {
+		t.Fatalf("failed to compile embedded R5 arithmetization: %v", err)
+	}
+	inputs, err := predecoding.PrepareInputs(elf, nil)
+	if err != nil {
+		t.Fatalf("failed to prepare inputs: %v", err)
+	}
+	outputs, errs := binf.Execute(inputs)
+	if len(errs) > 0 {
+		t.Fatalf("execution failed: %v", errors.Join(errs...))
+	}
+	got := outputs["guest_log"]
+	if !bytes.Equal(got.Bytes(), log) {
+		t.Fatalf("guest_log = %x, want %x", got.Bytes(), log)
+	}
+	traceAndCheck(t, elf, output)
+}
+
+// Both buffers at the size cap. ZkC runs the predecoded program, so this passes
+// even if a buffer overlaps .text; TestOutputAndLogText_BuffersPastText checks
+// the layout.
+func TestOutputAndLogGuest_MaxSize(t *testing.T) {
+	output := make([]byte, 2047)
+	log := make([]byte, 2047)
+	for i := range output {
+		output[i] = byte(i)
+		log[i] = byte(i * 7)
+	}
+	elf := minimalelf.OutputAndLogELF(output, log)
+
+	binf, err := embedded.CompiledBinaryFile()
+	if err != nil {
+		t.Fatalf("failed to compile embedded R5 arithmetization: %v", err)
+	}
+	inputs, err := predecoding.PrepareInputs(elf, nil)
+	if err != nil {
+		t.Fatalf("failed to prepare inputs: %v", err)
+	}
+	outputs, errs := binf.Execute(inputs)
+	if len(errs) > 0 {
+		t.Fatalf("execution failed: %v", errors.Join(errs...))
+	}
+	if got := outputs["guest_output"]; !bytes.Equal(got.Bytes(), output) {
+		t.Fatalf("guest_output is %d bytes, want the %d bytes written", len(got.Bytes()), len(output))
+	}
+	if got := outputs["guest_log"]; !bytes.Equal(got.Bytes(), log) {
+		t.Fatalf("guest_log is %d bytes, want the %d bytes written", len(got.Bytes()), len(log))
+	}
+}

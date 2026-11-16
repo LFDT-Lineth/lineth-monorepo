@@ -309,11 +309,18 @@ func TestPipelineFor_GuestsDir(t *testing.T) {
 	}
 }
 
+func TestPipelineFor_ShardSize(t *testing.T) {
+	cfg := &config.Config{Execution: config.Execution{ProverMode: "dev-partial", ShardSize: 500000}}
+	p, ok := pipelineFor(cfg, backend.ProofTypeL2Execution)
+	require.True(t, ok)
+	assert.Equal(t, uint64(500000), p.shardSize, "the execution pipeline must shard its trace as configured")
+}
+
 func TestRunProve_DevZkVMRequiresGuestsDir(t *testing.T) {
 	dir := t.TempDir()
 	cfg := filepath.Join(dir, "config.toml")
-	require.NoError(t, os.WriteFile(cfg, []byte(
-		"version = \"t\"\n[execution]\nprover_mode = \"dev-zkvm\"\n"), 0o600))
+	require.NoError(t, os.WriteFile(cfg, []byte("version = \"t\"\n[execution]\nprover_mode = \"dev-zkvm\"\n"+
+		"native_runner_bin = \""+writeRunner(t, 0o700)+"\"\n"), 0o600))
 	in := filepath.Join(dir, "1-1-getZkL2ExecutionProofV1.json")
 	reqData, err := os.ReadFile(filepath.Join(fixtureDir, "request_single_block.json"))
 	require.NoError(t, err)

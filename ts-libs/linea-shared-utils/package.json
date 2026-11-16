@@ -42,7 +42,7 @@
     "axios": "catalog:",
     "express": "catalog:",
     "neverthrow": "catalog:",
-    "node-forge": "1.4.2",
+    "node-forge": "1.4.3",
     "prom-client": "catalog:",
     "viem": "catalog:",
     "winston": "catalog:"
