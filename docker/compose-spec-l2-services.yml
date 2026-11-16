@@ -42,7 +42,7 @@ services:
       - ./config/maru/sequencer.zkevm.config.overrides.toml:/opt/consensys/maru/configs/config.stack.toml:ro
       - ./config/maru/sequencer.extra-followers.config.overrides.toml:/opt/consensys/maru/configs/config.overrides.toml:ro
       - ./config/maru/log4j.xml:/opt/consensys/maru/configs/log4j.xml:ro
-      - ./config/maru/0x083e11f14b68d5ebeb4be3e3e0237ebbc5675ab5.key:/tmp/maru-db/private-key
+      - ./config/maru/0x083e11f14b68d5ebeb4be3e3e0237ebbc5675ab5.key:/tmp/maru-db/private-key:ro
       - ./config/l2-genesis-initialization:/initialization/:ro
     ports:
       # Attach the IDE's remote java debugger to localhost:5005 to debug maru

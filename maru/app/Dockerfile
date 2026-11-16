@@ -5,9 +5,13 @@ WORKDIR /opt/consensys/maru
 
 # Run as a dedicated non-root user (uid 1000, same convention as the besu image).
 # Ubuntu noble ships an "ubuntu" user at uid 1000 — remove it first.
+# /tmp/maru-db is maru's persistence data-path (docker/config/maru/sequencer.config.toml);
+# pre-create it maru-owned so bind-mounting the private key file into it does not
+# leave a root-owned directory that uid 1000 cannot write the database into.
 RUN userdel ubuntu 2>/dev/null || true && rm -rf /home/ubuntu && \
     adduser --uid 1000 --disabled-password --gecos "" --home /opt/consensys/maru maru && \
-    chown -R maru:maru /opt/consensys/maru
+    mkdir -p /tmp/maru-db && \
+    chown -R maru:maru /opt/consensys/maru /tmp/maru-db
 
 COPY --from=libs --chown=maru:maru ./** ./
 # The glob lets downstream builds whose licenses context has no license files skip them
