@@ -31,20 +31,20 @@ interface BlobTriggerCalculator {
   fun reset()
 }
 
-/** A conflation together with the result of [linea.da.DaStream.compress] for it. */
+/** A conflation together with the result of [linea.da.DaCompressor.compress] for it. */
 data class CompressedBlocksConflation(
   val conflation: BlocksConflation,
   val compressed: CompressedConflation,
 )
 
-/** A compressed conflation together with where its frame ends in a sealed blob. */
+/** A compressed conflation together with where its segment ends in a sealed blob. */
 data class SealedConflation(
   val conflation: CompressedBlocksConflation,
   val cut: SegmentEnd,
 )
 
 /**
- * One sealed blob and every conflation whose frame ends in it, in order.
+ * One sealed blob and every conflation whose segment ends in it, in order.
  *
  * - A conflation spanning several blobs appears once, in the event of the blob where it ends; the blobs it fills
  *   entirely produce events with no conflations.

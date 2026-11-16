@@ -1,33 +1,40 @@
 package linea.da
 
 import linea.domain.BlockInterval
-import java.nio.ByteBuffer
+import linea.kotlin.encodeHex
 import java.nio.file.Path
 
 /**
- * The RISC-V DA stream: compresses conflations into frames, appends them to the DA stream, packs and seals blobs, and
- * computes each blob's KZG versioned hash and data rolling hash.
+ * Compresses conflations into zstd frames for the RISC-V DA stream, with one codec version and dictionary.
  *
- * The DA stream is `[u32 BE len][compressed truncated-block RLP]` per conflation, concatenated. Blobs are windows over
+ * Stateless: [compress] is order-free and pure, so it may run ahead of [DaStream.append] and from any thread.
+ */
+interface DaCompressor : AutoCloseable {
+  val version: DaCodecVersion
+
+  /** Decodes, truncates, RLP-encodes and compresses one conflation into a zstd frame. */
+  fun compress(blockRlps: List<ByteArray>): CompressedConflation
+}
+
+/**
+ * The RISC-V DA stream: appends one segment per compressed conflation, packs and seals blobs, and computes each blob's
+ * KZG versioned hash and data rolling hash.
+ *
+ * The DA stream is the concatenation of segments, one per conflation: `[u32 BE len][zstd frame]`, where the frame is the
+ * compressed truncated-block RLP. Blobs are windows over
  * it: each holds up to [DaConstants.BLOB_PAYLOAD_CAPACITY] payload bytes plus a `0xff` terminal. Conflations may span
  * blobs, and adjacent rollup proofs may share a blob.
  *
- * Blobs are sealed **lazily**: a full blob is sealed only when the next frame needs a new blob, or on [flush].
+ * Blobs are sealed **lazily**: a full blob is sealed only when the next segment needs a new blob, or on [flush].
  *
- * Threading: [compress] is pure and safe from any thread. [append] and [flush] must be confined to one thread.
+ * Not thread-safe: [append] and [flush] must be confined to one thread.
  */
 interface DaStream : AutoCloseable {
   val version: DaCodecVersion
 
   /**
-   * Decodes, truncates, RLP-encodes and compresses one conflation into a frame. Order-free and pure: may run ahead of
-   * time and in parallel. The frame records the conflation's block interval, reported back in [SegmentEnd]s.
-   */
-  fun compress(blockRlps: List<ByteArray>): CompressedConflation
-
-  /**
-   * Appends a frame. Frames must be appended in conflation order; ordering is the caller's responsibility. Consumes
-   * the frame on success. On error the frame stays with the caller and the stream is unchanged.
+   * Appends the segment of a conflation compressed by a [DaCompressor] of the same [version]. Conflations must be
+   * appended in order, each once; ordering is the caller's responsibility. On error the stream is unchanged.
    *
    * @return the blobs this call sealed, in order (0..n).
    */
@@ -37,69 +44,140 @@ interface DaStream : AutoCloseable {
   fun flush(): SealedBlob?
 }
 
-/** A conflation compressed into one frame of the DA stream, consumed by [DaStream.append]. */
-interface CompressedConflation {
-  val blockInterval: BlockInterval
+/**
+ * A conflation compressed into one zstd frame: the body of its segment in the DA stream.
+ *
+ * @property blockInterval the conflation's blocks, reported back in [SegmentEnd]s
+ * @property compressedData the zstd frame, without the length prefix: its segment takes
+ *   [DaConstants.SEGMENT_LENGTH_PREFIX_BYTES] + `compressedData.size` bytes of the stream
+ */
+data class CompressedConflation(
+  val blockInterval: BlockInterval,
+  val compressedData: ByteArray,
+) {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
 
-  /** Bytes this conflation adds to the DA stream: the 4-byte length prefix plus the compressed frame. */
-  val compressedBytes: Int
+    other as CompressedConflation
 
-  /** Size of the truncated-block RLP the frame decompresses to. */
-  val uncompressedBytes: Int
-}
+    if (blockInterval != other.blockInterval) return false
+    if (!compressedData.contentEquals(other.compressedData)) return false
 
-/** A sealed blob: immutable and independent of the stream. Share it by reference; it is never mutated. */
-interface SealedBlob {
-  /** Read-only view of the [DaConstants.BLOB_BYTES]-byte packed blob. */
-  val blob: ByteBuffer
+    return true
+  }
 
-  /** KZG versioned hash of [blob], derived from [kzgCommitment]. */
-  val chunkHash: ByteArray
+  override fun hashCode(): Int {
+    var result = blockInterval.hashCode()
+    result = 31 * result + compressedData.contentHashCode()
+    return result
+  }
 
-  /** [DaConstants.KZG_POINT_BYTES]-byte KZG commitment of [blob]. */
-  val kzgCommitment: ByteArray
-
-  /** [DaConstants.KZG_POINT_BYTES]-byte KZG proof for [blob] against [kzgCommitment]. */
-  val kzgProof: ByteArray
-
-  /** Data rolling hash before this blob. */
-  val prevDataRollingHash: ByteArray
-
-  /** Data rolling hash after this blob. */
-  val dataRollingHash: ByteArray
-
-  /** Payload bytes in this blob: [DaConstants.BLOB_PAYLOAD_CAPACITY] unless ended early by a flush. */
-  val payloadBytes: Int
-
-  /** Cut points inside this blob, in order: where each conflation frame ending in this blob ends. */
-  val segmentEnds: List<SegmentEnd>
-}
-
-/** Copies the blob bytes out of [SealedBlob.blob]. */
-fun SealedBlob.blobBytes(): ByteArray {
-  val view = blob.duplicate()
-  return ByteArray(view.remaining()).also { view.get(it) }
+  override fun toString(): String {
+    return "CompressedConflation(blockInterval=${blockInterval.intervalString()}, " +
+      "compressedData.size=${compressedData.size})"
+  }
 }
 
 /**
- * A cut point: the frame of the conflation ending at [conflationEndBlock] ends inside this blob, followed by
- * [tailBytes] payload bytes. A rollup ending here discards them (`finalDataTailDiscardBytes`), and the next rollup
- * takes them (`parentDataTailTakeBytes`).
+ * A sealed blob: independent of the stream, never mutated by it. Shared by reference, e.g. by the two rollups of a
+ * shared blob, so holders must not mutate its arrays either.
+ *
+ * @property blob the [DaConstants.BLOB_BYTES]-byte packed blob
+ * @property chunkHash KZG versioned hash of [blob], derived from [kzgCommitment]
+ * @property kzgCommitment [DaConstants.KZG_POINT_BYTES]-byte KZG commitment of [blob]
+ * @property kzgProof [DaConstants.KZG_POINT_BYTES]-byte KZG proof for [blob] against [kzgCommitment]
+ * @property prevDataRollingHash data rolling hash before this blob
+ * @property dataRollingHash data rolling hash after this blob
+ * @property payloadBytes payload bytes in this blob: [DaConstants.BLOB_PAYLOAD_CAPACITY] unless ended early by a flush
+ * @property segmentEnds cut points inside this blob, in order: where each conflation segment ending in this blob ends
+ */
+data class SealedBlob(
+  val blob: ByteArray,
+  val chunkHash: ByteArray,
+  val kzgCommitment: ByteArray,
+  val kzgProof: ByteArray,
+  val prevDataRollingHash: ByteArray,
+  val dataRollingHash: ByteArray,
+  val payloadBytes: Int,
+  val segmentEnds: List<SegmentEnd>,
+) {
+  init {
+    require(blob.size == DaConstants.BLOB_BYTES) { "blob must be ${DaConstants.BLOB_BYTES} bytes, got ${blob.size}" }
+    require(chunkHash.size == 32) { "chunkHash must be 32 bytes, got ${chunkHash.size}" }
+    require(kzgCommitment.size == DaConstants.KZG_POINT_BYTES) {
+      "kzgCommitment must be ${DaConstants.KZG_POINT_BYTES} bytes, got ${kzgCommitment.size}"
+    }
+    require(kzgProof.size == DaConstants.KZG_POINT_BYTES) {
+      "kzgProof must be ${DaConstants.KZG_POINT_BYTES} bytes, got ${kzgProof.size}"
+    }
+    require(prevDataRollingHash.size == 32) { "prevDataRollingHash must be 32 bytes, got ${prevDataRollingHash.size}" }
+    require(dataRollingHash.size == 32) { "dataRollingHash must be 32 bytes, got ${dataRollingHash.size}" }
+    require(payloadBytes in 1..DaConstants.BLOB_PAYLOAD_CAPACITY) {
+      "payloadBytes=$payloadBytes must be in 1..${DaConstants.BLOB_PAYLOAD_CAPACITY}"
+    }
+  }
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as SealedBlob
+
+    if (!blob.contentEquals(other.blob)) return false
+    if (!chunkHash.contentEquals(other.chunkHash)) return false
+    if (!kzgCommitment.contentEquals(other.kzgCommitment)) return false
+    if (!kzgProof.contentEquals(other.kzgProof)) return false
+    if (!prevDataRollingHash.contentEquals(other.prevDataRollingHash)) return false
+    if (!dataRollingHash.contentEquals(other.dataRollingHash)) return false
+    if (payloadBytes != other.payloadBytes) return false
+    if (segmentEnds != other.segmentEnds) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = blob.contentHashCode()
+    result = 31 * result + chunkHash.contentHashCode()
+    result = 31 * result + kzgCommitment.contentHashCode()
+    result = 31 * result + kzgProof.contentHashCode()
+    result = 31 * result + prevDataRollingHash.contentHashCode()
+    result = 31 * result + dataRollingHash.contentHashCode()
+    result = 31 * result + payloadBytes
+    result = 31 * result + segmentEnds.hashCode()
+    return result
+  }
+
+  override fun toString(): String {
+    return "SealedBlob(chunkHash=${chunkHash.encodeHex()}, prevDataRollingHash=${prevDataRollingHash.encodeHex()}, " +
+      "dataRollingHash=${dataRollingHash.encodeHex()}, payloadBytes=$payloadBytes, segmentEnds=$segmentEnds)"
+  }
+}
+
+/**
+ * A cut point: the segment of the conflation ending at [conflationEndBlock] ends inside this blob, followed by
+ * [unusedTailBytes] payload bytes. A rollup ending here leaves them unused (`finalDataTailDiscardBytes`), and the next
+ * rollup takes them (`parentDataTailTakeBytes`).
  */
 data class SegmentEnd(
   val conflationEndBlock: ULong,
-  val tailBytes: Int,
+  val unusedTailBytes: Int,
 ) {
   init {
-    require(tailBytes in 0..DaConstants.MAX_TAIL_BYTES) {
-      "tailBytes=$tailBytes must be in 0..${DaConstants.MAX_TAIL_BYTES}"
+    require(unusedTailBytes in 0..DaConstants.MAX_TAIL_BYTES) {
+      "unusedTailBytes=$unusedTailBytes must be in 0..${DaConstants.MAX_TAIL_BYTES}"
     }
   }
 }
 
+/** Creates [DaCompressor]s. */
+fun interface DaCompressorFactory {
+  fun create(version: DaCodecVersion, dictionary: Path): DaCompressor
+}
+
 /** Opens [DaStream]s. */
 fun interface DaStreamFactory {
-  fun open(version: DaCodecVersion, dictionary: Path, initialState: DaStreamPosition): DaStream
+  fun open(version: DaCodecVersion, initialState: DaStreamPosition): DaStream
 }
 
 /** Identifies the DA codec build. The compression dictionary is configured independently. */
@@ -124,12 +202,15 @@ object DaConstants {
    */
   const val MAX_TAIL_BYTES = BLOB_PAYLOAD_CAPACITY - 1
 
+  /** Size of a segment's big-endian `u32` length prefix, written before its zstd frame. */
+  const val SEGMENT_LENGTH_PREFIX_BYTES = 4
+
   /** Terminal byte that ends a blob's payload. */
   const val BLOB_PAYLOAD_TERMINAL: Byte = 0xff.toByte()
 }
 
-/** Error codes of the DA stream, mirroring `lineth_da_status`. */
-enum class DaStreamStatus {
+/** Kinds of DA stream and compressor failures, mirroring the error codes of `lineth_da_status`. */
+enum class DaStreamErrorType {
   INVALID_ARGUMENT,
   INVALID_DICTIONARY,
   INVALID_BLOCK_RLP,
@@ -142,7 +223,7 @@ enum class DaStreamStatus {
 }
 
 class DaStreamException(
-  val status: DaStreamStatus,
+  val errorType: DaStreamErrorType,
   message: String,
   cause: Throwable? = null,
-) : RuntimeException("$status: $message", cause)
+) : RuntimeException("$errorType: $message", cause)
