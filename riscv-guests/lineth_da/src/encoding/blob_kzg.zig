@@ -7,8 +7,8 @@ const accelerators = @import("zkvm_accelerators");
 const blob_payload = @import("blob_payload.zig");
 
 pub const blob_len = blob_payload.blob_len;
-pub const commitment_len = 48;
-pub const proof_len = 48;
+pub const commitment_len = accelerators.commitment_len;
+pub const proof_len = accelerators.proof_len;
 
 /// `0x01 ‖ sha256(commitment)[1..]`.
 pub fn versionedHash(commitment: *const [commitment_len]u8) [32]u8 {
