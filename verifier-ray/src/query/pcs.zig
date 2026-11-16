@@ -387,11 +387,15 @@ pub fn InputRootRouting(comptime system: System) type {
         const Self = @This();
         const batch_cap = @max(system.num_batches, 1);
 
+        /// `index_by_batch` value of a batch that never appears in the layout.
+        pub const unrouted = std.math.maxInt(usize);
+
         tree_count: usize = 0,
         roots: [batch_cap]poseidon2.Digest = undefined,
-        // Every entry is overwritten by routeInputRoots before any read, so this
-        // default is unused filler, not a sentinel that's ever checked.
-        index_by_batch: [batch_cap]usize = [_]usize{0} ** batch_cap,
+        /// The batch behind each input tree: `batch_by_tree[t]` is the batch
+        /// whose tree is `t`. Valid for `t < tree_count`.
+        batch_by_tree: [batch_cap]usize = undefined,
+        index_by_batch: [batch_cap]usize = [_]usize{unrouted} ** batch_cap,
 
         pub fn treeRoots(self: *const Self) []const poseidon2.Digest {
             return self.roots[0..self.tree_count];
@@ -770,12 +774,12 @@ pub fn routeInputRoots(
     if (batch_roots.len != system.num_batches) return Error.RootCountMismatch;
 
     var routing = InputRootRouting(system){};
-    var assigned = [_]bool{false} ** @max(system.num_batches, 1);
+    const unrouted = InputRootRouting(system).unrouted;
     for (0..recon.num_entries) |entry_idx| {
         const batch_idx = recon.entry_batch[entry_idx];
-        if (!assigned[batch_idx]) {
-            assigned[batch_idx] = true;
+        if (routing.index_by_batch[batch_idx] == unrouted) {
             routing.index_by_batch[batch_idx] = routing.tree_count;
+            routing.batch_by_tree[routing.tree_count] = batch_idx;
             routing.roots[routing.tree_count] = batch_roots[batch_idx];
             routing.tree_count += 1;
         }
@@ -858,19 +862,14 @@ pub fn inputAuxDepth(rate_log: u8, size_log2: u8, bottom_size_log2: u8) ?usize {
 
 fn buildInputCapInfo(comptime system: System, recon: *const Reconstructed(system), routing: InputRootRouting(system), tree_idx: usize) Error!InputCapInfo(system) {
     const Info = InputCapInfo(system);
-    var info = Info{ .rate_log = recon.params.log_codeword_size - recon.params.log_plaintext_size };
-    var found = false;
+    var info = Info{
+        .rate_log = recon.params.log_codeword_size - recon.params.log_plaintext_size,
+        .batch_idx = routing.batch_by_tree[tree_idx],
+    };
     var bottom: u8 = 0;
     for (0..recon.num_entries) |e| {
-        const batch = recon.entry_batch[e];
-        if (routing.index_by_batch[batch] != tree_idx) continue;
-        if (!found) {
-            info.batch_idx = batch;
-            found = true;
-        }
-        bottom = @max(bottom, recon.entry_size_log2[e]);
+        if (recon.entry_batch[e] == info.batch_idx) bottom = @max(bottom, recon.entry_size_log2[e]);
     }
-    if (!found) return Error.InputTreeShapeMismatch;
     info.height = @as(usize, info.rate_log) + bottom;
     if (info.height == 0 or info.height > recon.params.log_codeword_size) return Error.InputTreeShapeMismatch;
     info.depth = merkle.capDepth(recon.params.merkle_cap_height, info.height);
