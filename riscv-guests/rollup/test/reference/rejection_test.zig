@@ -119,14 +119,14 @@ test "senders that do not hash to the proof's txFromsHash are rejected" {
     try expectRejected(error.SendersHashMismatch, guest_errors.CODE_BLOCK_BINDING, a, request);
 }
 
-test "a block RLP that is not canonical is rejected" {
+test "a block RLP whose last item runs past its end is rejected" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
     const a = arena.allocator();
 
     var request = try requestOf(a, &.{2}, .{});
-    // The last byte of a block is the amount of its last withdrawal; 0xc1 announces a byte that is
-    // missing.
+    // The last byte of a block is the amount of its last withdrawal; 0xc1 turns it into the header
+    // of a list whose one-byte payload lies past the block's end.
     const block_rlps = try a.dupe(ByteList, request.conflations[0].block_rlps.items);
     const block_rlp = try a.dupe(u8, block_rlps[1].bytes);
     block_rlp[block_rlp.len - 1] = 0xc1;
