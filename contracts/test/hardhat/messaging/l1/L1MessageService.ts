@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { describe, it, before, beforeEach } from "node:test";
-import { type Hash, BaseError, encodeAbiParameters, keccak256, parseAbiParameters, slice } from "viem";
+import { encodeAbiParameters, keccak256, parseAbiParameters, slice } from "viem";
 
 import { encodeSendMessage } from "../../../../common/helpers/encoding.js";
 import {
@@ -33,6 +33,9 @@ import {
   unpauseTypeRoles,
 } from "../../common/constants/index.js";
 import { deployFromFactory, deployUpgradableFromFactory } from "../../common/deployment.js";
+import { loadFixture } from "../../common/helpers/connection.js";
+import { expectRevert } from "../../common/helpers/expectations.js";
+import { generateKeccak256ForString } from "../../common/helpers/hashing.js";
 import {
   type TestAccount,
   buildAccessErrorMessage,
@@ -43,7 +46,6 @@ import {
   expectRevertWhenPaused,
   expectPaused,
   expectNotPaused,
-  generateKeccak256Hash,
   getTestAccounts,
   hex,
   validateRollingHashStorage,
@@ -104,23 +106,6 @@ describe("L1MessageService", () => {
     return deployUpgradableFromFactory("TestL1RevertContract", []);
   }
 
-  /** Awaits a write and asserts its transaction succeeded (ethers' `.to.not.be.reverted`). */
-  async function expectNotReverted(call: Promise<Hash>): Promise<void> {
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: await call });
-    expect(receipt.status).to.equal("success");
-  }
-
-  /** Awaits a write and asserts it reverted, with or without a custom error (ethers' `.to.be.reverted`). */
-  async function expectReverted(call: Promise<Hash>): Promise<void> {
-    let error: unknown;
-    try {
-      await call;
-    } catch (e) {
-      error = e;
-    }
-    expect(error, "Expected transaction to be reverted, but it did not revert").to.be.instanceOf(BaseError);
-  }
-
   before(async () => {
     const { networkHelpers, viem } = await getConnection();
     publicClient = await viem.getPublicClient();
@@ -134,10 +119,9 @@ describe("L1MessageService", () => {
   });
 
   beforeEach(async () => {
-    const { networkHelpers } = await getConnection();
-    l1MessageService = await networkHelpers.loadFixture(deployTestL1MessageServiceFixture);
-    l1MessageServiceMerkleProof = await networkHelpers.loadFixture(deployL1MessageServiceMerkleFixture);
-    l1TestRevert = await networkHelpers.loadFixture(deployL1TestRevertFixture);
+    l1MessageService = await loadFixture(deployTestL1MessageServiceFixture);
+    l1MessageServiceMerkleProof = await loadFixture(deployL1MessageServiceMerkleFixture);
+    l1TestRevert = await loadFixture(deployL1TestRevertFixture);
 
     await l1MessageService.write.grantRole([PAUSE_L1_L2_ROLE, pauser.address]);
     await l1MessageService.write.grantRole([PAUSE_L2_L1_ROLE, pauser.address]);
@@ -467,17 +451,15 @@ describe("L1MessageService", () => {
 
       await l1MessageService.write.addL2L1MessageHash([keccak256(expectedBytes)]);
 
-      await expectNotReverted(
-        l1MessageService.write.claimMessage([
-          l1MessageService.address,
-          notAuthorizedAccount.address,
-          MESSAGE_FEE,
-          MESSAGE_VALUE_1ETH,
-          postmanAddress.address,
-          EMPTY_CALLDATA,
-          1n,
-        ]),
-      );
+      await l1MessageService.write.claimMessage([
+        l1MessageService.address,
+        notAuthorizedAccount.address,
+        MESSAGE_FEE,
+        MESSAGE_VALUE_1ETH,
+        postmanAddress.address,
+        EMPTY_CALLDATA,
+        1n,
+      ]);
     });
 
     it("Should claim message and send the fees when L1 to L2 communication is paused", async () => {
@@ -495,17 +477,15 @@ describe("L1MessageService", () => {
       // this is for sending only and should not affect claim
       await l1MessageService.write.pauseByType([L1_L2_PAUSE_TYPE], { account: pauser.account });
 
-      await expectNotReverted(
-        l1MessageService.write.claimMessage([
-          l1MessageService.address,
-          notAuthorizedAccount.address,
-          MESSAGE_FEE,
-          MESSAGE_VALUE_1ETH,
-          postmanAddress.address,
-          EMPTY_CALLDATA,
-          1n,
-        ]),
-      );
+      await l1MessageService.write.claimMessage([
+        l1MessageService.address,
+        notAuthorizedAccount.address,
+        MESSAGE_FEE,
+        MESSAGE_VALUE_1ETH,
+        postmanAddress.address,
+        EMPTY_CALLDATA,
+        1n,
+      ]);
     });
 
     it("Should execute the claim message and emit the MessageClaimed event", async () => {
@@ -870,16 +850,14 @@ describe("L1MessageService", () => {
       const storedSenderBeforeSending = await l1MessageService.read.originalSender();
       expect(storedSenderBeforeSending).to.be.equal(ADDRESS_ZERO);
 
-      await expectNotReverted(
-        l1MessageService.write.claimMessage(
-          [l2Sender.address, claimingCaller.address, MESSAGE_FEE, MESSAGE_VALUE_1ETH, ADDRESS_ZERO, EMPTY_CALLDATA, 1n],
-          { account: admin.account },
-        ),
+      await l1MessageService.write.claimMessage(
+        [l2Sender.address, claimingCaller.address, MESSAGE_FEE, MESSAGE_VALUE_1ETH, ADDRESS_ZERO, EMPTY_CALLDATA, 1n],
+        { account: admin.account },
       );
     });
 
     it("Should allow sending post claiming a message", async () => {
-      const sendCalldata = slice(generateKeccak256Hash("sendNewMessage()"), 0, 4);
+      const sendCalldata = slice(generateKeccak256ForString("sendNewMessage()"), 0, 4);
 
       const expectedBytes = encodeSendMessage(
         l1MessageService.address,
@@ -892,24 +870,22 @@ describe("L1MessageService", () => {
 
       await l1MessageService.write.addL2L1MessageHash([keccak256(expectedBytes)]);
 
-      await expectNotReverted(
-        l1MessageService.write.claimMessage(
-          [
-            l1MessageService.address,
-            l1MessageService.address,
-            MESSAGE_FEE,
-            MESSAGE_VALUE_1ETH,
-            ADDRESS_ZERO,
-            sendCalldata,
-            1n,
-          ],
-          { account: admin.account },
-        ),
+      await l1MessageService.write.claimMessage(
+        [
+          l1MessageService.address,
+          l1MessageService.address,
+          MESSAGE_FEE,
+          MESSAGE_VALUE_1ETH,
+          ADDRESS_ZERO,
+          sendCalldata,
+          1n,
+        ],
+        { account: admin.account },
       );
     });
 
     it("Should fail on reentry when sending to recipient", async () => {
-      const callSignature = slice(generateKeccak256Hash("doReentry()"), 0, 4);
+      const callSignature = slice(generateKeccak256ForString("doReentry()"), 0, 4);
 
       const expectedBytes = encodeSendMessage(
         l1MessageService.address,
@@ -1073,22 +1049,20 @@ describe("L1MessageService", () => {
         BigInt(VALID_PROOF.proof.length),
       ]);
 
-      await expectNotReverted(
-        l1MessageServiceMerkleProof.write.claimMessageWithProof([
-          {
-            proof: VALID_PROOF.proof,
-            messageNumber: 1n,
-            leafIndex: VALID_PROOF.index,
-            from: admin.address,
-            to: admin.address,
-            fee: MESSAGE_FEE,
-            value: MESSAGE_FEE + MESSAGE_VALUE_1ETH,
-            feeRecipient: ADDRESS_ZERO,
-            merkleRoot: VALID_PROOF.merkleRoot,
-            data: EMPTY_CALLDATA,
-          },
-        ]),
-      );
+      await l1MessageServiceMerkleProof.write.claimMessageWithProof([
+        {
+          proof: VALID_PROOF.proof,
+          messageNumber: 1n,
+          leafIndex: VALID_PROOF.index,
+          from: admin.address,
+          to: admin.address,
+          fee: MESSAGE_FEE,
+          value: MESSAGE_FEE + MESSAGE_VALUE_1ETH,
+          feeRecipient: ADDRESS_ZERO,
+          merkleRoot: VALID_PROOF.merkleRoot,
+          data: EMPTY_CALLDATA,
+        },
+      ]);
     });
 
     it("Should be able to claim a message and emit a MessageClaimed event", async () => {
@@ -1237,7 +1211,7 @@ describe("L1MessageService", () => {
         BigInt(INVALID_PROOF_REVERT.proof.length),
       ]);
 
-      await expectReverted(
+      await expectRevert(
         l1MessageServiceMerkleProof.write.claimMessageWithProof([
           {
             proof: INVALID_PROOF_REVERT.proof,
@@ -1505,16 +1479,14 @@ describe("L1MessageService", () => {
 
     await l1MessageService.write.addL2L1MessageHash([keccak256(expectedBytes)]);
 
-    await expectNotReverted(
-      l1MessageService.write.claimMessage([
-        l1MessageService.address,
-        notAuthorizedAccount.address,
-        fee,
-        value,
-        postmanAddress.address,
-        EMPTY_CALLDATA,
-        1n,
-      ]),
-    );
+    await l1MessageService.write.claimMessage([
+      l1MessageService.address,
+      notAuthorizedAccount.address,
+      fee,
+      value,
+      postmanAddress.address,
+      EMPTY_CALLDATA,
+      1n,
+    ]);
   }
 });

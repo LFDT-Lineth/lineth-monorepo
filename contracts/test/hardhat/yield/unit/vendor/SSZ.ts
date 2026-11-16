@@ -1,11 +1,12 @@
 import { expect } from "chai";
-import { network } from "hardhat";
 import { describe, it, beforeEach } from "node:test";
 import { type Hex, bytesToHex, concat, hexToBytes, pad, sha256, zeroHash } from "viem";
 
+import { randomBytes32 } from "../../../../../common/helpers/encoding.js";
 import { UINT64_MAX } from "../../../common/constants/general.js";
 import { deployFromFactory } from "../../../common/deployment.js";
-import { generateRandomBytes, expectRevertWithCustomError } from "../../../common/helpers/index.js";
+import { loadFixture } from "../../../common/helpers/connection.js";
+import { expectRevertWithCustomError } from "../../../common/helpers/index.js";
 
 import type { BeaconBlockHeader, PendingPartialWithdrawal, ValidatorContainer } from "../../../yield/helpers/types.js";
 import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
@@ -20,8 +21,7 @@ describe("SSZ", () => {
       return { ssz_, gindex_ };
     }
 
-    const { networkHelpers } = await network.getOrCreate();
-    const deployed = await networkHelpers.loadFixture(deploy);
+    const deployed = await loadFixture(deploy);
     ssz = deployed.ssz_;
     gIndexLib = deployed.gindex_;
   });
@@ -54,7 +54,7 @@ describe("SSZ", () => {
 
     it("fuzz-ish: applying twice returns original", async () => {
       for (let i = 0; i < 10; i++) {
-        const v = BigInt(generateRandomBytes(32));
+        const v = BigInt(randomBytes32());
         const once = await ssz.read.toLittleEndianUint([v]);
         const twice = await ssz.read.toLittleEndianUint([BigInt(once)]);
         expect(BigInt(twice)).to.equal(v);

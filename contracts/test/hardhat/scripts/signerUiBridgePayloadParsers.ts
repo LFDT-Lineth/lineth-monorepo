@@ -117,48 +117,4 @@ describe("signer-ui bridge payload parsing and request shaping", () => {
       gasPrice: "0x1",
     });
   });
-
-  it("enforces minimum dwell time when workflow stage transitions", () => {
-    expect(
-      __testOnlySignerUiBridge.workflowStatusTransitionDelayMs({
-        currentStage: "waiting_for_transaction_receipt",
-        nextStage: "waiting_for_contract_verification",
-        currentStageChangedAtMs: 1_000,
-        nowMs: 1_500,
-        minimumStageMs: 2_000,
-      }),
-    ).to.equal(1_500);
-
-    expect(
-      __testOnlySignerUiBridge.workflowStatusTransitionDelayMs({
-        currentStage: "waiting_for_transaction_receipt",
-        nextStage: "waiting_for_contract_verification",
-        currentStageChangedAtMs: 1_000,
-        nowMs: 3_100,
-        minimumStageMs: 2_000,
-      }),
-    ).to.equal(0);
-  });
-
-  it("does not delay when staying on same stage or when no current stage exists", () => {
-    expect(
-      __testOnlySignerUiBridge.workflowStatusTransitionDelayMs({
-        currentStage: "waiting_for_transaction_receipt",
-        nextStage: "waiting_for_transaction_receipt",
-        currentStageChangedAtMs: 1_000,
-        nowMs: 1_500,
-        minimumStageMs: 2_000,
-      }),
-    ).to.equal(0);
-
-    expect(
-      __testOnlySignerUiBridge.workflowStatusTransitionDelayMs({
-        currentStage: null,
-        nextStage: "waiting_for_transaction_receipt",
-        currentStageChangedAtMs: 0,
-        nowMs: 1_000,
-        minimumStageMs: 2_000,
-      }),
-    ).to.equal(0);
-  });
 });

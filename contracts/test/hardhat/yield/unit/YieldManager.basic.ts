@@ -4,6 +4,9 @@ import { describe, it, before, beforeEach } from "node:test";
 import { type Hex, pad, parseEther, stringToHex, zeroAddress } from "viem";
 
 import { MINIMUM_FEE, EMPTY_CALLDATA, ONE_THOUSAND_ETHER, MAX_BPS, ZERO_VALUE } from "../../common/constants/index.js";
+import { loadFixture } from "../../common/helpers/connection.js";
+import { expectRevert } from "../../common/helpers/expectations.js";
+import { randomAddress } from "../../common/helpers/general.js";
 import {
   expectAccessControlRevert,
   expectHasRole,
@@ -18,13 +21,7 @@ import {
   deployYieldManagerForUnitTest,
   deployYieldManagerForUnitTestWithMutatedInitData,
 } from "../helpers/deploy.js";
-import {
-  buildSetWithdrawalReserveParams,
-  expectRevert,
-  getBalance,
-  randomAddress,
-  setBalance,
-} from "../helpers/index.js";
+import { buildSetWithdrawalReserveParams, getBalance, setBalance } from "../helpers/index.js";
 import { addMockYieldProvider, buildMockYieldProviderRegistration } from "../helpers/mocks.js";
 
 import type { YieldManagerInitializationData } from "../helpers/types.js";
@@ -40,18 +37,11 @@ describe("YieldManager contract - basic operations", () => {
   let initializationData: YieldManagerInitializationData;
 
   before(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    ({
-      securityCouncil,
-      operator: nonAuthorizedAccount,
-      nativeYieldOperator,
-    } = await networkHelpers.loadFixture(getAccountsFixture));
+    ({ securityCouncil, operator: nonAuthorizedAccount, nativeYieldOperator } = await loadFixture(getAccountsFixture));
   });
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    ({ yieldManager, initializationData, mockLinethRollup } =
-      await networkHelpers.loadFixture(deployYieldManagerForUnitTest));
+    ({ yieldManager, initializationData, mockLinethRollup } = await loadFixture(deployYieldManagerForUnitTest));
   });
 
   describe("Fallback/Receive tests", () => {

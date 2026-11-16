@@ -5,7 +5,7 @@ import { getAddress, zeroAddress } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 
 import { L2_MESSAGE_SERVICE_ROLES } from "../../../common/constants/index.js";
-import { generateRoleAssignments } from "../../../common/helpers/index.js";
+import { generateRoleAssignments } from "../../../common/helpers/roles.js";
 import {
   INITIALIZED_ERROR_MESSAGE,
   INITIAL_WITHDRAW_LIMIT,
@@ -15,6 +15,7 @@ import {
   unpauseTypeRoles,
 } from "../common/constants/index.js";
 import { deployUpgradableFromFactory } from "../common/deployment.js";
+import { loadFixture } from "../common/helpers/connection.js";
 import {
   type TestAccount,
   getTestAccounts,
@@ -55,9 +56,8 @@ describe("MessageServiceBase", () => {
   }
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
     [admin, remoteSender, securityCouncil, l1L2MessageSetter] = await getTestAccounts();
-    const contracts = await networkHelpers.loadFixture(deployMessageServiceBaseFixture);
+    const contracts = await loadFixture(deployMessageServiceBaseFixture);
     messageService = contracts.messageService;
     messageServiceBase = contracts.messageServiceBase;
   });

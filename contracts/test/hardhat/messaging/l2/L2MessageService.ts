@@ -1,18 +1,7 @@
 import { expect } from "chai";
 import { network } from "hardhat";
 import { describe, it, before, beforeEach } from "node:test";
-import {
-  type Address,
-  type Hash,
-  type Hex,
-  BaseError,
-  keccak256,
-  pad,
-  parseEther,
-  slice,
-  stringToHex,
-  zeroHash,
-} from "viem";
+import { type Address, type Hex, keccak256, pad, parseEther, slice, stringToHex, zeroHash } from "viem";
 
 import {
   L2_MESSAGE_SERVICE_PAUSE_TYPES_ROLES,
@@ -20,7 +9,7 @@ import {
   L2_MESSAGE_SERVICE_UNPAUSE_TYPES_ROLES,
 } from "../../../../common/constants/index.js";
 import { encodeSendMessage } from "../../../../common/helpers/encoding.js";
-import { generateRoleAssignments } from "../../../../common/helpers/index.js";
+import { generateRoleAssignments } from "../../../../common/helpers/roles.js";
 import {
   ADDRESS_ZERO,
   BLOCK_COINBASE,
@@ -44,7 +33,15 @@ import {
   RATE_LIMIT_SETTER_ROLE,
   USED_RATE_LIMIT_RESETTER_ROLE,
 } from "../../common/constants/index.js";
-import { deployFromFactory, deployUpgradableFromFactory, getUpgrades } from "../../common/deployment.js";
+import {
+  deployFromFactory,
+  deployUpgradableFromFactory,
+  getUpgrades,
+  getProxyDeploymentReceipt,
+} from "../../common/deployment.js";
+import { loadFixture } from "../../common/helpers/connection.js";
+import { expectRevert } from "../../common/helpers/expectations.js";
+import { generateKeccak256ForString } from "../../common/helpers/hashing.js";
 import {
   type TestAccount,
   buildAccessErrorMessage,
@@ -54,7 +51,6 @@ import {
   expectRevertWhenPaused,
   expectPaused,
   expectNotPaused,
-  generateKeccak256Hash,
   getTestAccounts,
   expectRevertWithCustomError,
   expectRevertWithReason,
@@ -84,35 +80,6 @@ describe("L2MessageService", () => {
     ]);
   }
 
-  /** Awaits a write and asserts its transaction succeeded (ethers' `.to.not.be.reverted`). */
-  async function expectNotReverted(call: Promise<Hash>): Promise<void> {
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: await call });
-    expect(receipt.status).to.equal("success");
-  }
-
-  /** Awaits a write and asserts it reverted, with or without a custom error (ethers' `.to.be.reverted`). */
-  async function expectReverted(call: Promise<Hash>): Promise<void> {
-    let error: unknown;
-    try {
-      await call;
-    } catch (e) {
-      error = e;
-    }
-    expect(error, "Expected transaction to be reverted, but it did not revert").to.be.instanceOf(BaseError);
-  }
-
-  /** Receipt of the transaction that deployed the proxy at `proxyAddress` (ethers' `deploymentTransaction().wait()`). */
-  async function getProxyDeploymentReceipt(proxyAddress: Address) {
-    const block = await publicClient.getBlock();
-    for (const hash of block.transactions) {
-      const receipt = await publicClient.getTransactionReceipt({ hash });
-      if (receipt.contractAddress?.toLowerCase() === proxyAddress.toLowerCase()) {
-        return receipt;
-      }
-    }
-    throw new Error(`No deployment transaction found for ${proxyAddress} in the latest block`);
-  }
-
   before(async () => {
     const { viem } = await network.getOrCreate();
     publicClient = await viem.getPublicClient();
@@ -123,8 +90,7 @@ describe("L2MessageService", () => {
   });
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    l2MessageService = await networkHelpers.loadFixture(deployL2MessageServiceFixture);
+    l2MessageService = await loadFixture(deployL2MessageServiceFixture);
   });
 
   describe("Initialization checks", () => {
@@ -179,7 +145,7 @@ describe("L2MessageService", () => {
         L2_MESSAGE_SERVICE_UNPAUSE_TYPES_ROLES,
       ]);
 
-      const receipt = await getProxyDeploymentReceipt(l2MessageServiceLocal.address);
+      const receipt = await getProxyDeploymentReceipt(l2MessageServiceLocal);
 
       await expectEventDirectFromReceiptData(
         l2MessageServiceLocal,
@@ -1168,7 +1134,7 @@ describe("L2MessageService", () => {
       });
 
       it("Should provide the correct origin sender", async () => {
-        const sendCalldata = slice(generateKeccak256Hash("setSender()"), 0, 4);
+        const sendCalldata = slice(generateKeccak256ForString("setSender()"), 0, 4);
 
         const expectedBytes = encodeSendMessage(
           l2MessageService.address,
@@ -1192,19 +1158,17 @@ describe("L2MessageService", () => {
         const storedSenderBeforeSending = await l2MessageService.read.originalSender();
         expect(storedSenderBeforeSending).to.be.equal(ADDRESS_ZERO);
 
-        await expectNotReverted(
-          l2MessageService.write.claimMessage(
-            [
-              l2MessageService.address,
-              l2MessageService.address,
-              MESSAGE_FEE,
-              MESSAGE_VALUE_1ETH,
-              ADDRESS_ZERO,
-              sendCalldata,
-              1n,
-            ],
-            { account: admin.account },
-          ),
+        await l2MessageService.write.claimMessage(
+          [
+            l2MessageService.address,
+            l2MessageService.address,
+            MESSAGE_FEE,
+            MESSAGE_VALUE_1ETH,
+            ADDRESS_ZERO,
+            sendCalldata,
+            1n,
+          ],
+          { account: admin.account },
         );
 
         const newSender = await l2MessageService.read.originalSender();
@@ -1212,7 +1176,7 @@ describe("L2MessageService", () => {
       });
 
       it("Should fail on reentry when sending to recipient", async () => {
-        const callSignature = slice(generateKeccak256Hash("doReentry()"), 0, 4);
+        const callSignature = slice(generateKeccak256ForString("doReentry()"), 0, 4);
 
         const expectedBytes = encodeSendMessage(
           l2MessageService.address,
@@ -1269,7 +1233,7 @@ describe("L2MessageService", () => {
           account: l1l2MessageSetter.account,
         });
 
-        await expectReverted(
+        await expectRevert(
           l2MessageService.write.claimMessage(
             [
               l2MessageService.address,
@@ -1309,7 +1273,7 @@ describe("L2MessageService", () => {
           account: l1l2MessageSetter.account,
         });
 
-        await expectReverted(
+        await expectRevert(
           l2MessageService.write.claimMessage(
             [
               l2MessageService.address,

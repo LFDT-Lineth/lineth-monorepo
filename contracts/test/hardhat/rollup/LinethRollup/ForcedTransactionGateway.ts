@@ -16,6 +16,7 @@ import {
   FORCED_TRANSACTION_FEE_SETTER_ROLE,
   PRECOMPILES_ADDRESSES,
 } from "../../../../common/constants/index.js";
+import { randomBytes32 } from "../../../../common/helpers/encoding.js";
 import l2SendMessageTransaction from "../../_testData/eip1559RlpEncoderTransactions/l2SendMessage.json" with { type: "json" };
 import transactionWithCalldata from "../../_testData/eip1559RlpEncoderTransactions/withCalldata.json" with { type: "json" };
 import transactionWithCalldataAndAccessList from "../../_testData/eip1559RlpEncoderTransactions/withCalldataAndAccessList.json" with { type: "json" };
@@ -36,9 +37,9 @@ import {
   BLOCK_NUMBER_DEADLINE_BUFFER,
 } from "../../common/constants/index.js";
 import { deployFromFactory } from "../../common/deployment.js";
+import { loadFixture } from "../../common/helpers/connection.js";
 import {
   type TestAccount,
-  address,
   buildAccessErrorMessage,
   buildEip1559Transaction,
   calculateLastFinalizedState,
@@ -70,18 +71,16 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
   };
 
   before(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    ({ nonAuthorizedAccount, securityCouncil } = await networkHelpers.loadFixture(getAccountsFixture));
+    ({ nonAuthorizedAccount, securityCouncil } = await loadFixture(getAccountsFixture));
   });
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
     ({
       linethRollup,
       forcedTransactionGateway,
       addressFilter,
       mimc: mimcLibrary,
-    } = await networkHelpers.loadFixture(deployForcedTransactionGatewayFixture));
+    } = await loadFixture(deployForcedTransactionGatewayFixture));
     mimcLibraryAddress = mimcLibrary.address;
 
     await linethRollup.write.grantRole([FORCED_TRANSACTION_SENDER_ROLE, forcedTransactionGateway.address], {
@@ -137,7 +136,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
       expectedError: "ZeroAddressNotAllowed" | "ZeroValueNotAllowed";
     }> = [
       {
-        description: "Lineth rollup is set as address(0)",
+        description: "Lineth rollup is set as getAddress(0)",
         override: { linethRollupAddr: ADDRESS_ZERO },
         expectedError: "ZeroAddressNotAllowed",
       },
@@ -488,10 +487,9 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
 
     it("Should fail LinethRollup.storeForcedTransaction if not FORCED_TRANSACTION_SENDER_ROLE", async () => {
       await expectRevertWithReason(
-        linethRollup.write.storeForcedTransaction(
-          [generateRandomBytes(32), securityCouncil.address, 121n, generateRandomBytes(32)],
-          { account: nonAuthorizedAccount.account },
-        ),
+        linethRollup.write.storeForcedTransaction([randomBytes32(), securityCouncil.address, 121n, randomBytes32()], {
+          account: nonAuthorizedAccount.account,
+        }),
         buildAccessErrorMessage(nonAuthorizedAccount, FORCED_TRANSACTION_SENDER_ROLE),
       );
     });
@@ -500,7 +498,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
       await expectRevertWithCustomError(
         linethRollup,
         linethRollup.write.storeForcedTransaction(
-          [generateRandomBytes(32), securityCouncil.address, 121n, generateRandomBytes(0)],
+          [randomBytes32(), securityCouncil.address, 121n, generateRandomBytes(0)],
           { account: securityCouncil.account },
         ),
         "ZeroLengthNotAllowed",
@@ -510,10 +508,9 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
     it("Should fail if the block number deadline is zero", async () => {
       await expectRevertWithCustomError(
         linethRollup,
-        linethRollup.write.storeForcedTransaction(
-          [generateRandomBytes(32), securityCouncil.address, 0n, generateRandomBytes(32)],
-          { account: securityCouncil.account },
-        ),
+        linethRollup.write.storeForcedTransaction([randomBytes32(), securityCouncil.address, 0n, randomBytes32()], {
+          account: securityCouncil.account,
+        }),
         "ZeroValueNotAllowed",
       );
     });
@@ -521,10 +518,9 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
     it("Should fail if the from address is zero address", async () => {
       await expectRevertWithCustomError(
         linethRollup,
-        linethRollup.write.storeForcedTransaction(
-          [generateRandomBytes(32), ADDRESS_ZERO, 121n, generateRandomBytes(32)],
-          { account: securityCouncil.account },
-        ),
+        linethRollup.write.storeForcedTransaction([randomBytes32(), ADDRESS_ZERO, 121n, randomBytes32()], {
+          account: securityCouncil.account,
+        }),
         "ZeroAddressNotAllowed",
       );
     });
@@ -532,7 +528,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
     it("Should fail if the forced transaction rolling hash is zero hash", async () => {
       await expectRevertWithCustomError(
         linethRollup,
-        linethRollup.write.storeForcedTransaction([HASH_ZERO, securityCouncil.address, 121n, generateRandomBytes(32)], {
+        linethRollup.write.storeForcedTransaction([HASH_ZERO, securityCouncil.address, 121n, randomBytes32()], {
           account: securityCouncil.account,
         }),
         "ZeroHashNotAllowed",
@@ -639,7 +635,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
       await expectRevertWithCustomError(
         linethRollup,
         linethRollup.write.storeForcedTransaction(
-          [generateRandomBytes(32), securityCouncil.address, blockNumberDeadline, generateRandomBytes(32)],
+          [randomBytes32(), securityCouncil.address, blockNumberDeadline, randomBytes32()],
           { account: securityCouncil.account },
         ),
         "ForcedTransactionExistsForBlockOrIsTooLow",
@@ -957,7 +953,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
     it("Fails to add the transaction with `to` on the address filter list.", async () => {
       expect(await linethRollup.read.forcedTransactionL2BlockNumbers([1n])).equal(0n);
 
-      await addressFilter.write.setFilteredStatus([[address(l2SendMessageTransaction.result.to)], true], {
+      await addressFilter.write.setFilteredStatus([[getAddress(l2SendMessageTransaction.result.to)], true], {
         account: securityCouncil.account,
       });
 
@@ -972,7 +968,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
     it("Fails to add the transaction with `from` on the address filter list.", async () => {
       expect(await linethRollup.read.forcedTransactionL2BlockNumbers([1n])).equal(0n);
 
-      await addressFilter.write.setFilteredStatus([[address(l2SendMessageTransaction.result.from)], true], {
+      await addressFilter.write.setFilteredStatus([[getAddress(l2SendMessageTransaction.result.from)], true], {
         account: securityCouncil.account,
       });
 
@@ -987,7 +983,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
     it("Adds the transaction with `to` on the address filter list, but the feature is disabled.", async () => {
       expect(await linethRollup.read.forcedTransactionL2BlockNumbers([1n])).equal(0n);
 
-      await addressFilter.write.setFilteredStatus([[address(l2SendMessageTransaction.result.to)], true], {
+      await addressFilter.write.setFilteredStatus([[getAddress(l2SendMessageTransaction.result.to)], true], {
         account: securityCouncil.account,
       });
 
@@ -1004,7 +1000,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
     it("Adds the transaction with `from` on the address filter list, but the feature is disabled.", async () => {
       expect(await linethRollup.read.forcedTransactionL2BlockNumbers([1n])).equal(0n);
 
-      await addressFilter.write.setFilteredStatus([[address(l2SendMessageTransaction.result.from)], true], {
+      await addressFilter.write.setFilteredStatus([[getAddress(l2SendMessageTransaction.result.from)], true], {
         account: securityCouncil.account,
       });
 

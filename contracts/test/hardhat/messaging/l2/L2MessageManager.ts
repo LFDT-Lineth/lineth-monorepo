@@ -12,6 +12,8 @@ import {
   unpauseTypeRoles,
 } from "../../common/constants/index.js";
 import { deployUpgradableFromFactory } from "../../common/deployment.js";
+import { loadFixture } from "../../common/helpers/connection.js";
+import { generateKeccak256ForString } from "../../common/helpers/hashing.js";
 import {
   type TestAccount,
   buildAccessErrorMessage,
@@ -19,7 +21,6 @@ import {
   expectHasRole,
   expectNoEvent,
   expectRevertWhenPaused,
-  generateKeccak256Hash,
   generateNKeccak256Hashes,
   getTestAccounts,
   validateRollingHashStorage,
@@ -49,9 +50,8 @@ describe("L2MessageManager", () => {
   }
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
     [admin, pauser, l1l2MessageSetter, notAuthorizedAccount] = await getTestAccounts();
-    l2MessageManager = await networkHelpers.loadFixture(deployL2MessageManagerFixture);
+    l2MessageManager = await loadFixture(deployL2MessageManagerFixture);
   });
 
   describe("Initialization checks", () => {
@@ -303,7 +303,7 @@ describe("L2MessageManager", () => {
 
   describe("Update L1->L2 message status to 'claimed' in 'inboxL1L2MessageStatus'", () => {
     it("Should revert if the message hash has not the status 'received' in 'inboxL1L2MessageStatus' mapping", async () => {
-      const messageHash = generateKeccak256Hash("message");
+      const messageHash = generateKeccak256ForString("message");
 
       await expectRevertWithCustomError(
         l2MessageManager,

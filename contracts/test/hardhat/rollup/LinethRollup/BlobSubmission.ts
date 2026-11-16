@@ -3,6 +3,8 @@ import { network } from "hardhat";
 import { describe, it, before, beforeEach } from "node:test";
 import { encodeFunctionData } from "viem";
 
+import { randomBytes32 } from "../../../../common/helpers/encoding.js";
+import { generateKeccak256 } from "../../../../common/helpers/hashing.js";
 import firstCompressedDataContent from "../../_testData/compressedData/blocks-1-46.json" with { type: "json" };
 import {
   GENERAL_PAUSE_TYPE,
@@ -10,11 +12,10 @@ import {
   OPERATOR_ROLE,
   STATE_DATA_SUBMISSION_PAUSE_TYPE,
 } from "../../common/constants/index.js";
+import { loadFixture } from "../../common/helpers/connection.js";
 import {
   type TestAccount,
   hex,
-  generateRandomBytes,
-  generateKeccak256,
   buildAccessErrorMessage,
   generateBlobDataSubmission,
   expectEventDirectFromReceiptData,
@@ -51,14 +52,13 @@ describe("Lineth Rollup contract: EIP-4844 Blob submission tests", () => {
   const prevShnarf = hex(firstCompressedDataContent.prevShnarf);
 
   before(async () => {
-    const { viem, networkHelpers } = await network.getOrCreate();
-    ({ securityCouncil, operator, nonAuthorizedAccount } = await networkHelpers.loadFixture(getAccountsFixture));
+    const { viem } = await network.getOrCreate();
+    ({ securityCouncil, operator, nonAuthorizedAccount } = await loadFixture(getAccountsFixture));
     publicClient = await viem.getPublicClient();
   });
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    ({ linethRollup, addressFilter } = await networkHelpers.loadFixture(deployForcedTransactionGatewayFixture));
+    ({ linethRollup, addressFilter } = await loadFixture(deployForcedTransactionGatewayFixture));
 
     addressFilterAddress = addressFilter.address;
 
@@ -93,11 +93,12 @@ describe("Lineth Rollup contract: EIP-4844 Blob submission tests", () => {
   it("Fails the blob submission when the parent shnarf is missing", async () => {
     const linethRollupAddress = linethRollup.address;
     const { blobDataSubmission, compressedBlobs } = generateBlobDataSubmission(0, 1);
-    const nonExistingParentShnarf = generateRandomBytes(32);
+    const nonExistingParentShnarf = randomBytes32();
 
     const wrongExpectedShnarf = generateKeccak256(
       ["bytes32", "bytes32", "bytes32", "bytes32", "bytes32"],
       [HASH_ZERO, HASH_ZERO, blobDataSubmission[0].finalStateRootHash, HASH_ZERO, HASH_ZERO],
+      { encodePacked: false },
     );
 
     const encodedCall = encodeFunctionData({
@@ -245,7 +246,7 @@ describe("Lineth Rollup contract: EIP-4844 Blob submission tests", () => {
     const { blobDataSubmission, compressedBlobs, parentShnarf, finalShnarf } = generateBlobDataSubmission(0, 1);
 
     // Set the snarkHash to a random value for a specific index
-    blobDataSubmission[0].snarkHash = generateRandomBytes(32);
+    blobDataSubmission[0].snarkHash = randomBytes32();
 
     const encodedCall = encodeFunctionData({
       abi: linethRollup.abi,
@@ -272,7 +273,7 @@ describe("Lineth Rollup contract: EIP-4844 Blob submission tests", () => {
   it("Should revert if the final shnarf is wrong", async () => {
     const linethRollupAddress = linethRollup.address;
     const { blobDataSubmission, compressedBlobs, parentShnarf, finalShnarf } = generateBlobDataSubmission(0, 2);
-    const badFinalShnarf = generateRandomBytes(32);
+    const badFinalShnarf = randomBytes32();
 
     const encodedCall = encodeFunctionData({
       abi: linethRollup.abi,

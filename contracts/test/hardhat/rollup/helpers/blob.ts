@@ -1,5 +1,3 @@
-import * as fs from "fs";
-import path from "path";
 import {
   type Abi,
   type Address,
@@ -13,11 +11,7 @@ import {
 import { getWalletForIndex } from "./index.js";
 import { ensureKzgSetup } from "./kzg-setup.js";
 import { getConnection } from "../../common/helpers/connection.js";
-import {
-  expectEventDirectFromReceiptData,
-  generateBlobDataSubmission,
-  generateBlobDataSubmissionFromFile,
-} from "../../common/helpers/index.js";
+import { expectEventDirectFromReceiptData, generateBlobDataSubmission } from "../../common/helpers/index.js";
 
 import type { BlobSubmission } from "../../common/types.js";
 import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
@@ -87,7 +81,7 @@ export async function buildBlobTransaction(context: BlobTransactionContext): Pro
 /**
  * Signs and broadcasts a blob transaction, returning the receipt
  */
-export async function signAndBroadcastBlobTransaction(
+async function signAndBroadcastBlobTransaction(
   transaction: TransactionSerializableEIP4844,
   operatorHDSigner?: HDAccount,
 ): Promise<TransactionReceipt> {
@@ -146,11 +140,6 @@ export async function submitBlobsAndGetReceipt(context: SubmitBlobsContext): Pro
   return signAndBroadcastBlobTransaction(transaction, operatorHDSigner);
 }
 
-/** Kept for compatibility: delegates to the idempotent `ensureKzgSetup`. */
-export function ensureKzgIsLoaded() {
-  ensureKzgSetup();
-}
-
 export async function sendBlobTransaction(
   linethRollup: ContractReturnType<"TestLinethRollup">,
   startIndex: number,
@@ -173,39 +162,6 @@ export async function sendBlobTransaction(
   });
 
   const expectedEventArgs = [parentShnarf, finalShnarf, blobSubmission[blobSubmission.length - 1].finalStateRootHash];
-  expectEventDirectFromReceiptData(linethRollup, receipt, "DataSubmittedV3", expectedEventArgs);
-}
-
-export async function sendVersionedBlobTransactionFromFile(
-  linethRollup: ContractReturnType<"TestLinethRollup">,
-  filePath: string,
-  versionedLinethRollup: { address: Address },
-  versionFolderName: string,
-) {
-  const {
-    blobDataSubmission: blobSubmission,
-    compressedBlobs,
-    parentShnarf,
-    finalShnarf,
-  } = generateBlobDataSubmissionFromFile(
-    path.resolve(import.meta.dirname, `../../_testData/${versionFolderName}`, filePath),
-  );
-
-  const encodedCall = encodeFunctionData({
-    abi: linethRollup.abi,
-    functionName: "submitBlobs",
-    args: [toBlobSubmissionStructs(blobSubmission), parentShnarf, finalShnarf],
-  });
-
-  const transaction = await buildBlobTransaction({
-    linethRollupAddress: versionedLinethRollup.address,
-    encodedCall,
-    compressedBlobs,
-  });
-
-  const receipt = await signAndBroadcastBlobTransaction(transaction);
-  const expectedEventArgs = [parentShnarf, finalShnarf, blobSubmission[blobSubmission.length - 1].finalStateRootHash];
-
   expectEventDirectFromReceiptData(linethRollup, receipt, "DataSubmittedV3", expectedEventArgs);
 }
 
@@ -239,30 +195,4 @@ export async function sendBlobTransactionViaCallForwarder(
   const expectedEventArgs = [parentShnarf, finalShnarf, blobSubmission[blobSubmission.length - 1].finalStateRootHash];
 
   expectEventDirectFromReceiptData(linethRollupUpgraded, receipt, "DataSubmittedV3", expectedEventArgs);
-}
-
-// "betaV1" getBetaV1BlobFiles
-export function getVersionedBlobFiles(versionFolderName: string): string[] {
-  // Read all files in the folder
-  const files = fs.readdirSync(path.resolve(import.meta.dirname, `../../_testData/${versionFolderName}`));
-
-  // Map files to their ranges and filter invalid ones
-  const filesWithRanges = files
-    .map((fileName) => {
-      const range = extractBlockRangeFromFileName(fileName);
-      return range ? { fileName, range } : null;
-    })
-    .filter(Boolean) as { fileName: string; range: [number, number] }[];
-
-  return filesWithRanges.sort((a, b) => a.range[0] - b.range[0]).map((f) => f.fileName);
-}
-
-// Function to extract range from the file name
-function extractBlockRangeFromFileName(fileName: string): [number, number] | null {
-  const rangeRegex = /(\d+)-(\d+)-/;
-  const match = fileName.match(rangeRegex);
-  if (match && match.length >= 3) {
-    return [parseInt(match[1], 10), parseInt(match[2], 10)];
-  }
-  return null;
 }

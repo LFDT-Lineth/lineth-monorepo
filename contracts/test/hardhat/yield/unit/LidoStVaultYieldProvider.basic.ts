@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import hre, { network } from "hardhat";
 import { describe, it, before, beforeEach } from "node:test";
-import { type Address, type Hex, zeroAddress } from "viem";
+import { type Address, zeroAddress } from "viem";
 
 import { encodeData, randomBytes32 } from "../../../../common/helpers/encoding.js";
 import {
@@ -15,6 +15,9 @@ import {
   BEACON_PROOF_WITNESS_TYPE,
 } from "../../common/constants/index.js";
 import { deployFromFactory } from "../../common/deployment.js";
+import { loadFixture } from "../../common/helpers/connection.js";
+import { expectRevert } from "../../common/helpers/expectations.js";
+import { randomAddress } from "../../common/helpers/general.js";
 import {
   type TestAccount,
   generateRandomBytes,
@@ -28,14 +31,12 @@ import {
   buildVendorExitData,
   buildVendorInitializationData,
   deployAndAddSingleLidoStVaultYieldProvider,
-  expectRevert,
   fundLidoStVaultYieldProvider,
   getBalance,
   getImpersonatedAccount,
   getWithdrawLSTCall,
   incrementBalance,
   ossifyYieldProvider,
-  randomAddress,
   setupLSTPrincipalDecrementForPaxMaximumPossibleLSTLiability,
   setBalance,
   setWithdrawalReserveToMinimum,
@@ -55,14 +56,6 @@ type TestLidoStVaultYieldProvider = ContractReturnType<"TestLidoStVaultYieldProv
 type ValidatorContainerProofVerifier = ContractReturnType<"ValidatorContainerProofVerifier">;
 type SSZMerkleTree = ContractReturnType<"SSZMerkleTree">;
 type TestValidatorContainerProofVerifier = ContractReturnType<"TestValidatorContainerProofVerifier">;
-
-/** Asserts that the transaction `asyncCall` resolves to was mined successfully (chai-matchers' `.to.not.be.reverted`). */
-async function expectNotReverted(asyncCall: Promise<Hex>): Promise<void> {
-  const { viem } = await network.getOrCreate();
-  const publicClient = await viem.getPublicClient();
-  const receipt = await publicClient.waitForTransactionReceipt({ hash: await asyncCall });
-  expect(receipt.status).to.equal("success");
-}
 
 describe("LidoStVaultYieldProvider contract - basic operations", () => {
   let yieldProvider: TestLidoStVaultYieldProvider;
@@ -90,12 +83,10 @@ describe("LidoStVaultYieldProvider contract - basic operations", () => {
   let verifierAddress: Address;
 
   before(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    ({ nativeYieldOperator, securityCouncil } = await networkHelpers.loadFixture(getAccountsFixture));
+    ({ nativeYieldOperator, securityCouncil } = await loadFixture(getAccountsFixture));
   });
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
     ({
       yieldProvider,
       yieldProviderAddress,
@@ -109,7 +100,7 @@ describe("LidoStVaultYieldProvider contract - basic operations", () => {
       sszMerkleTree,
       verifier,
       testVerifier,
-    } = await networkHelpers.loadFixture(deployAndAddSingleLidoStVaultYieldProvider));
+    } = await loadFixture(deployAndAddSingleLidoStVaultYieldProvider));
 
     l1MessageServiceAddress = mockLinethRollup.address;
     yieldManagerAddress = yieldManager.address;
@@ -425,17 +416,18 @@ describe("LidoStVaultYieldProvider contract - basic operations", () => {
     it("Should successfully sync LST liability", async () => {
       await yieldManager.write.pauseStaking([yieldProviderAddress], { account: nativeYieldOperator.account });
       await yieldManager.write.setYieldProviderLstLiabilityPrincipal([yieldProviderAddress, 1n]);
-      await expectRevert(
+      await setWithdrawalReserveToMinimum(yieldManager);
+      // The vendor still reports the liability, so it is kept.
+      await mockSTETH.write.setPooledEthBySharesRoundUpReturn([1n]);
+      await expectRevertWithCustomError(
+        yieldManager,
         yieldManager.write.unpauseStaking([yieldProviderAddress], { account: nativeYieldOperator.account }),
+        "UnpauseStakingForbiddenWithCurrentLSTLiability",
       );
       // Will sync to this if below current lstLiabilityPrincipal.
       await mockSTETH.write.setPooledEthBySharesRoundUpReturn([0n]);
       // If it didn't sync lstLiabilityPrincipal to 0, the below will revert.
-      // Not awaited (as in the ethers version); the rejection is swallowed so node:test does not abort the run on an
-      // unhandled rejection.
-      yieldManager.write
-        .unpauseStaking([yieldProviderAddress], { account: nativeYieldOperator.account })
-        .catch(() => undefined);
+      await yieldManager.write.unpauseStaking([yieldProviderAddress], { account: nativeYieldOperator.account });
     });
   });
 
@@ -546,7 +538,7 @@ describe("LidoStVaultYieldProvider contract - basic operations", () => {
       });
 
       // Assert
-      await expectNotReverted(call);
+      await call;
       expect(isOssificationComplete).eq(ProgressOssificationResult.COMPLETE);
     });
     it("If vault is connected and pending disconnect, should succeed with no-op and return false", async () => {
@@ -565,7 +557,7 @@ describe("LidoStVaultYieldProvider contract - basic operations", () => {
       });
 
       // Assert
-      await expectNotReverted(call);
+      await call;
       expect(isOssificationComplete).eq(ProgressOssificationResult.NOOP);
     });
     it("If vault is connected and not pending disconnect, should successfully redo initiate ossification and return false", async () => {
@@ -584,7 +576,7 @@ describe("LidoStVaultYieldProvider contract - basic operations", () => {
       });
 
       // Assert
-      await expectNotReverted(call);
+      await call;
       expect(isOssificationComplete).eq(ProgressOssificationResult.REINITIATED);
     });
   });
@@ -624,7 +616,7 @@ describe("LidoStVaultYieldProvider contract - basic operations", () => {
         [yieldProviderAddress, buildVendorInitializationData()],
         { account: securityCouncil.account },
       );
-      await expectNotReverted(call);
+      await call;
       expect(registrationData.yieldProviderVendor).eq(YieldProviderVendor.LIDO_ST_VAULT_YIELD_PROVIDER_VENDOR);
       expect(registrationData.primaryEntrypoint).eq(expectedDashboardAddress);
       expect(registrationData.ossifiedEntrypoint).eq(expectedVaultAddress);
@@ -675,7 +667,7 @@ describe("LidoStVaultYieldProvider contract - basic operations", () => {
       const call = yieldManager.write.removeYieldProvider([yieldProviderAddress, buildVendorExitData()], {
         account: securityCouncil.account,
       });
-      await expectNotReverted(call);
+      await call;
       expect(await mockDashboard.read.transferVaultOwnershipCallCount()).eq(1n);
       expect(await mockStakingVault.read.transferOwnershipCallCount()).eq(0n);
     });
@@ -685,7 +677,7 @@ describe("LidoStVaultYieldProvider contract - basic operations", () => {
       const call = yieldManager.write.removeYieldProvider([yieldProviderAddress, buildVendorExitData()], {
         account: securityCouncil.account,
       });
-      await expectNotReverted(call);
+      await call;
       expect(await mockDashboard.read.transferVaultOwnershipCallCount()).eq(0n);
       expect(await mockStakingVault.read.transferOwnershipCallCount()).eq(1n);
     });

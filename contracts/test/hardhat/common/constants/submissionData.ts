@@ -1,4 +1,3 @@
-import { HASH_ZERO } from "./general.js";
 import firstCompressedDataContent from "../../_testData/compressedData/blocks-1-46.json" with { type: "json" };
 import fourthCompressedDataContent from "../../_testData/compressedData/blocks-115-155.json" with { type: "json" };
 import secondCompressedDataContent from "../../_testData/compressedData/blocks-47-81.json" with { type: "json" };
@@ -15,16 +14,6 @@ import firstBlobContent_multiple from "../../_testData/compressedDataEip4844/mul
 import fourthBlobContent_multiple from "../../_testData/compressedDataEip4844/multipleProofs/blocks-111-139.json" with { type: "json" };
 import secondBlobContent_multiple from "../../_testData/compressedDataEip4844/multipleProofs/blocks-47-81.json" with { type: "json" };
 import thirdBlobContent_multiple from "../../_testData/compressedDataEip4844/multipleProofs/blocks-82-110.json" with { type: "json" };
-
-export const DEFAULT_SUBMISSION_DATA = {
-  dataParentHash: HASH_ZERO,
-  compressedData: "0x",
-  finalBlockInData: 0n,
-  firstBlockInData: 0n,
-  parentStateRootHash: HASH_ZERO,
-  finalStateRootHash: HASH_ZERO,
-  snarkHash: HASH_ZERO,
-};
 
 export const COMPRESSED_SUBMISSION_DATA = [
   firstCompressedDataContent,

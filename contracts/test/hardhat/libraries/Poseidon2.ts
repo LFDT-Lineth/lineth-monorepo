@@ -1,9 +1,9 @@
 import { expect } from "chai";
-import { network } from "hardhat";
 import { describe, it, beforeEach } from "node:test";
 
 import poseidon2TestData from "../_testData/poseidon2-test-data.json" with { type: "json" };
 import { deployFromFactory } from "../common/deployment.js";
+import { loadFixture } from "../common/helpers/connection.js";
 import { hex, expectRevertWithCustomError } from "../common/helpers/index.js";
 
 import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
@@ -16,8 +16,7 @@ describe("Poseidon2", () => {
   }
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    poseidon2 = await networkHelpers.loadFixture(deployPoseidon2Fixture);
+    poseidon2 = await loadFixture(deployPoseidon2Fixture);
   });
 
   describe("hash", () => {

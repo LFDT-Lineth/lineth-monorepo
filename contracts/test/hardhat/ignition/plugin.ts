@@ -2,6 +2,7 @@ import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 import { expect } from "chai";
 import hre, { network } from "hardhat";
 import { createHardhatRuntimeEnvironment } from "hardhat/hre";
+import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -17,7 +18,7 @@ import {
   zeroHash,
 } from "viem";
 
-import { buildParametersFromEnv, deployedAddress, expectCode, withEnv } from "./helpers.js";
+import { IGNITION_DIR, buildParametersFromEnv, deployedAddress, expectCode, role, withEnv } from "./helpers.js";
 import {
   createParameterContext,
   findModuleFiles,
@@ -47,43 +48,11 @@ import {
   EIP4788_SYSTEM_CONTRACT,
 } from "../../../scripts/hardhat/systemContractTasks.js";
 import { getConnection, useFreshChain } from "../common/helpers/connection.js";
+import { captureLogs } from "../common/helpers/general.js";
 
 import type { DeploymentParameters, IgnitionModule } from "@nomicfoundation/ignition-core";
 import type { NetworkConnection } from "hardhat/types/network";
 import type { Address } from "viem";
-
-const IGNITION_DIR = path.join(import.meta.dirname, "..", "..", "..", "ignition");
-
-function role(index: number): Address {
-  return getAddress(`0x${(0x2000 + index).toString(16).padStart(40, "0")}`);
-}
-
-/** Runs `fn` while capturing `console.log` / `console.warn` lines. */
-async function captureLogs<T>(fn: () => Promise<T>): Promise<{ result: T; lines: string[] }> {
-  const { log, warn } = console;
-  const lines: string[] = [];
-  const capture = (...args: unknown[]) => {
-    lines.push(args.map((arg) => String(arg)).join(" "));
-  };
-  console.log = capture;
-  console.warn = capture;
-  try {
-    const result = await fn();
-    return { result, lines };
-  } finally {
-    console.log = log;
-    console.warn = warn;
-  }
-}
-
-async function captureError(fn: () => Promise<unknown>): Promise<string> {
-  try {
-    await fn();
-  } catch (error: unknown) {
-    return error instanceof Error ? error.message : String(error);
-  }
-  return "";
-}
 
 function temporaryFile(name: string, content: string): string {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "lineth-ignition-"));
@@ -164,14 +133,12 @@ describe("Ignition deploy plugin", () => {
 
     it("fails like the Hardhat 2 script when a required env var is missing", async () => {
       const connection = await getConnection();
-      const message = await captureError(() =>
+      await assert.rejects(
         buildParametersFromEnv(connection, "L2MessageService", {
           ...l2MessageServiceEnv,
           L2_MESSAGE_SERVICE_RATE_LIMIT_PERIOD: undefined,
         }),
-      );
-      expect(message).to.equal(
-        'Required environment variable "L2_MESSAGE_SERVICE_RATE_LIMIT_PERIOD" is missing or empty.',
+        { message: 'Required environment variable "L2_MESSAGE_SERVICE_RATE_LIMIT_PERIOD" is missing or empty.' },
       );
     });
 
@@ -191,12 +158,22 @@ describe("Ignition deploy plugin", () => {
       // Upgrade modules point at a proxy with no code here: implementations are validated on their own.
       // Constructor arguments are taken from the modules' parameters (YieldManager: `linethRollup`).
       const parameters: DeploymentParameters = { $global: { proxy: role(99), linethRollup: role(98) } };
+      const moduleNames = new Set<string>();
+      let targetCount = 0;
       await withEnv({ VERIFIER_CONTRACT_NAME: "PlonkVerifierForDataAggregation" }, async () => {
         for (const modulePath of findModuleFiles(path.join(IGNITION_DIR, "modules"))) {
-          const targets = collectUpgradeTargets(await loadIgnitionModule(modulePath));
+          const ignitionModule = await loadIgnitionModule(modulePath);
+          // `ignition deploy <Module>` resolves modules by file name, so it must be the module id and unique.
+          const name = path.basename(modulePath, ".ts");
+          expect(ignitionModule.id, modulePath).to.equal(name);
+          expect(moduleNames.has(name), `duplicate module name ${name}`).to.equal(false);
+          moduleNames.add(name);
+          const targets = collectUpgradeTargets(ignitionModule);
+          targetCount += targets.length;
           await captureLogs(() => validateUpgradeTargets(hre, connection, targets, parameters));
         }
       });
+      expect(targetCount).to.be.at.least(28);
     });
 
     it("rejects an implementation that is not upgrade-safe without its unsafeAllow", async () => {
@@ -212,10 +189,10 @@ describe("Ignition deploy plugin", () => {
         });
         return { proxy };
       });
-      const message = await captureError(() =>
+      await assert.rejects(
         validateUpgradeTargets(hre, connection, collectUpgradeTargets(unsafe), {}),
+        /YieldManager[\s\S]*(state-variable-immutable|delegatecall)/,
       );
-      expect(message).to.contain("YieldManager");
     });
 
     it("refuses a pinned proxy deployed without the proxy helpers", () => {
@@ -247,12 +224,12 @@ describe("Ignition deploy plugin", () => {
       );
       expect(compatible.lines).to.include(`OZ Upgrades: L2MessageService is upgrade-safe for proxy ${proxy}.`);
 
-      const message = await captureError(async () =>
+      await assert.rejects(
         validateUpgradeTargets(hre, connection, await upgradeTargets("TokenBridgeUpgrade"), {
           TokenBridgeUpgrade: { proxy },
         }),
+        /New storage layout is incompatible/,
       );
-      expect(message).to.contain("New storage layout is incompatible");
     });
 
     it("skips pinned-bytecode implementations", async () => {
@@ -459,7 +436,7 @@ describe("Ignition deploy plugin", () => {
       // every file in isolation, which takes ~90 s and appends ~200 entries to OpenZeppelin's cache/validations.json.
       const defaultProfileHre = await createHardhatRuntimeEnvironment(hardhatConfig, { buildProfile: "default" });
       const parametersFile = path.join(IGNITION_DIR, "parameters", "default.json");
-      const hadParametersFile = fs.existsSync(parametersFile);
+      const previousParameters = fs.existsSync(parametersFile) ? fs.readFileSync(parametersFile, "utf-8") : undefined;
       try {
         const { result, lines } = await captureLogs(() =>
           withEnv({ L1_SECURITY_COUNCIL: role(40), RECOVERFUNDS_EXECUTOR_ADDRESS: role(41) }, () =>
@@ -471,8 +448,10 @@ describe("Ignition deploy plugin", () => {
         expect(lines.join("\n")).to.contain("OZ Upgrades manifest: imported RecoverFunds (transparent)");
         expect(fs.readFileSync(parametersFile, "utf-8")).to.contain(role(41));
       } finally {
-        if (!hadParametersFile) {
-          fs.rmSync(path.dirname(parametersFile), { recursive: true, force: true });
+        if (previousParameters === undefined) {
+          fs.rmSync(parametersFile, { force: true });
+        } else {
+          fs.writeFileSync(parametersFile, previousParameters);
         }
       }
     });
@@ -508,8 +487,10 @@ describe("Ignition deploy plugin", () => {
       // Unfunded predetermined sender: gas estimation fails, which must not exit 0.
       const connection = await network.create({ override: { hardfork: "shanghai" } });
       try {
-        const message = await captureError(() => deployPresignedSystemContract(connection, EIP2935_SYSTEM_CONTRACT));
-        expect(message).to.contain(`Error during contract=${EIP2935_SYSTEM_CONTRACT.contractName} deployment`);
+        await assert.rejects(
+          deployPresignedSystemContract(connection, EIP2935_SYSTEM_CONTRACT),
+          new RegExp(`Error during contract=${EIP2935_SYSTEM_CONTRACT.contractName} deployment`),
+        );
       } finally {
         await connection.close();
       }

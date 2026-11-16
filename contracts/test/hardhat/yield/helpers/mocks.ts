@@ -1,15 +1,13 @@
 import { type Address, type Hex, encodeAbiParameters, parseAbiParameters } from "viem";
-import { generatePrivateKey, privateKeyToAddress } from "viem/accounts";
 
 import { deployMockWithdrawTarget, deployMockYieldProvider } from "./deploy.js";
 import { EMPTY_CALLDATA } from "../../common/constants/index.js";
 import { YieldProviderVendor } from "../../common/constants/index.js";
+import { randomAddress } from "../../common/helpers/general.js";
 import { getAccountsFixture } from "../../common/helpers/index.js";
 
 import type { YieldProviderRegistration } from "./types.js";
 import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
-
-const randomAddress = (): Address => privateKeyToAddress(generatePrivateKey());
 
 export const buildMockYieldProviderRegistration = (
   overrides: Partial<{

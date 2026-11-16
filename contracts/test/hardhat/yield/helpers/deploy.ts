@@ -1,5 +1,3 @@
-import { network } from "hardhat";
-
 import { buildVendorInitializationData } from "./mocks.js";
 import { incrementBalance } from "./setup.js";
 import {
@@ -9,7 +7,7 @@ import {
   YIELD_MANAGER_SECURITY_COUNCIL_ROLES,
   YIELD_MANAGER_INITIALIZE_SIGNATURE,
 } from "../../../../common/constants/index.js";
-import { generateRoleAssignments } from "../../../../common/helpers/index.js";
+import { generateRoleAssignments } from "../../../../common/helpers/roles.js";
 import {
   MINIMUM_WITHDRAWAL_RESERVE_PERCENTAGE_BPS,
   TARGET_WITHDRAWAL_RESERVE_PERCENTAGE_BPS,
@@ -20,7 +18,8 @@ import {
   YIELD_PROVIDER_STAKING_ROLE,
   ONE_ETHER,
 } from "../../common/constants/index.js";
-import { deployFromFactory, deployUpgradableWithConstructorArgs, getUpgrades } from "../../common/deployment.js";
+import { deployFromFactory, deployUpgradableFromFactory, getUpgrades } from "../../common/deployment.js";
+import { getConnection } from "../../common/helpers/connection.js";
 import { type TestAccount, getAccountsFixture } from "../../common/helpers/index.js";
 import { deployLinethRollupFixture } from "../../rollup/helpers/deploy.js";
 
@@ -34,8 +33,7 @@ async function getYieldManagerRoleAddressesFixture(): Promise<
     addressWithRole: Address;
   }[]
 > {
-  const { networkHelpers } = await network.getOrCreate();
-  const { nativeYieldOperator, securityCouncil } = await networkHelpers.loadFixture(getAccountsFixture);
+  const { nativeYieldOperator, securityCouncil } = await getAccountsFixture();
   const yieldManagerOpereratorRoleAssignments = generateRoleAssignments(
     YIELD_MANAGER_OPERATOR_ROLES,
     nativeYieldOperator.address,
@@ -89,10 +87,9 @@ export async function deploySSZMerkleTree(): Promise<ContractReturnType<"SSZMerk
 
 // Deploys with MockLinethRollup and MockYieldProvider
 export async function deployYieldManagerForUnitTest() {
-  const { networkHelpers } = await network.getOrCreate();
   (await getUpgrades()).silenceWarnings();
-  const { securityCouncil, l2YieldRecipient } = await networkHelpers.loadFixture(getAccountsFixture);
-  const roleAddresses = await networkHelpers.loadFixture(getYieldManagerRoleAddressesFixture);
+  const { securityCouncil, l2YieldRecipient } = await getAccountsFixture();
+  const roleAddresses = await getYieldManagerRoleAddressesFixture();
 
   const mockLinethRollup = await deployMockLinethRollup();
 
@@ -108,15 +105,11 @@ export async function deployYieldManagerForUnitTest() {
     initialTargetWithdrawalReserveAmount: TARGET_WITHDRAWAL_RESERVE_AMOUNT,
   };
 
-  const yieldManager = await deployUpgradableWithConstructorArgs(
-    "TestYieldManager",
-    [mockLinethRollup.address],
-    [initializationData],
-    {
-      initializer: YIELD_MANAGER_INITIALIZE_SIGNATURE,
-      unsafeAllow: ["constructor", "incorrect-initializer-order", "state-variable-immutable", "delegatecall"],
-    },
-  );
+  const yieldManager = await deployUpgradableFromFactory("TestYieldManager", [initializationData], {
+    constructorArgs: [mockLinethRollup.address],
+    initializer: YIELD_MANAGER_INITIALIZE_SIGNATURE,
+    unsafeAllow: ["constructor", "incorrect-initializer-order", "state-variable-immutable", "delegatecall"],
+  });
 
   return { mockLinethRollup, yieldManager, initializationData };
 }
@@ -126,8 +119,8 @@ export async function deployYieldManagerForUnitTestWithMutatedInitData(
 ) {
   (await getUpgrades()).silenceWarnings();
   const mockLinethRollup = await deployMockLinethRollup();
-  await deployUpgradableWithConstructorArgs("TestYieldManager", [mockLinethRollup.address], [mutatedInitData], {
-    // initializer: "initialize",
+  await deployUpgradableFromFactory("TestYieldManager", [mutatedInitData], {
+    constructorArgs: [mockLinethRollup.address],
     initializer: YIELD_MANAGER_INITIALIZE_SIGNATURE,
     unsafeAllow: ["constructor", "incorrect-initializer-order", "state-variable-immutable", "delegatecall"],
   });
@@ -154,8 +147,7 @@ export async function deployMockStakingVault(): Promise<ContractReturnType<"Mock
 }
 
 export async function deployLidoStVaultYieldProviderFactory() {
-  const { networkHelpers } = await network.getOrCreate();
-  const { mockLinethRollup, yieldManager } = await networkHelpers.loadFixture(deployYieldManagerForUnitTest);
+  const { mockLinethRollup, yieldManager } = await deployYieldManagerForUnitTest();
   const mockVaultHub = await deployMockVaultHub();
   const mockVaultFactory = await deployMockVaultFactory();
   const mockSTETH = await deployMockSTETH();
@@ -212,7 +204,7 @@ async function deployLidoStVaultYieldProviderDependenciesFixture() {
 }
 
 export async function deployAndAddSingleLidoStVaultYieldProvider() {
-  const { viem, networkHelpers } = await network.getOrCreate();
+  const { viem } = await getConnection();
   const {
     securityCouncil,
     mockLinethRollup,
@@ -225,7 +217,7 @@ export async function deployAndAddSingleLidoStVaultYieldProvider() {
     sszMerkleTree,
     verifier,
     testVerifier,
-  } = await networkHelpers.loadFixture(deployLidoStVaultYieldProviderDependenciesFixture);
+  } = await deployLidoStVaultYieldProviderDependenciesFixture();
 
   const yieldManagerAddress = yieldManager.address;
   const verifierAddress = verifier.address;
@@ -274,12 +266,11 @@ export async function deployAndAddSingleLidoStVaultYieldProvider() {
 }
 
 export async function deployYieldManagerIntegrationTestFixture() {
-  const { viem, networkHelpers } = await network.getOrCreate();
-  const { securityCouncil, l2YieldRecipient, nativeYieldOperator } =
-    await networkHelpers.loadFixture(getAccountsFixture);
-  const yieldManagerRoleAddresses = await networkHelpers.loadFixture(getYieldManagerRoleAddressesFixture);
+  const { viem } = await getConnection();
+  const { securityCouncil, l2YieldRecipient, nativeYieldOperator } = await getAccountsFixture();
+  const yieldManagerRoleAddresses = await getYieldManagerRoleAddressesFixture();
   // Deploy LinethRollup
-  const { linethRollup } = await networkHelpers.loadFixture(deployLinethRollupFixture);
+  const { linethRollup } = await deployLinethRollupFixture();
   const l1MessageServiceAddress = linethRollup.address;
 
   // Deploy YieldManager
@@ -296,15 +287,11 @@ export async function deployYieldManagerIntegrationTestFixture() {
   };
 
   (await getUpgrades()).silenceWarnings();
-  const yieldManager = await deployUpgradableWithConstructorArgs(
-    "TestYieldManager",
-    [l1MessageServiceAddress],
-    [initializationData],
-    {
-      initializer: YIELD_MANAGER_INITIALIZE_SIGNATURE,
-      unsafeAllow: ["constructor", "incorrect-initializer-order", "state-variable-immutable", "delegatecall"],
-    },
-  );
+  const yieldManager = await deployUpgradableFromFactory("TestYieldManager", [initializationData], {
+    constructorArgs: [l1MessageServiceAddress],
+    initializer: YIELD_MANAGER_INITIALIZE_SIGNATURE,
+    unsafeAllow: ["constructor", "incorrect-initializer-order", "state-variable-immutable", "delegatecall"],
+  });
 
   // Deploy LidoStVaultYieldProviderFactory
   const mockVaultHub = await deployMockVaultHub();
@@ -379,7 +366,7 @@ export async function deployAndAddAdditionalLidoStVaultYieldProvider(
   securityCouncil: TestAccount,
   mockVaultFactory: ContractReturnType<"MockVaultFactory">,
 ) {
-  const { viem } = await network.getOrCreate();
+  const { viem } = await getConnection();
   // Create YieldProvider
   const { result: yieldProviderAddress } = await factory.simulate.createTestLidoStVaultYieldProvider();
   await factory.write.createTestLidoStVaultYieldProvider();

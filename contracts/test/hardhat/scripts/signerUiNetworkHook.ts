@@ -13,11 +13,7 @@ import {
   getSignerUiBroadcastLogPath,
   readSignerUiBroadcasts,
 } from "../../../hardhat-plugins/signer-ui/broadcast-log.js";
-import {
-  getUiWalletClient,
-  setUiTransactionContext,
-  withSignerUi,
-} from "../../../hardhat-plugins/signer-ui/session.js";
+import { getUiWalletClient, withSignerUi } from "../../../hardhat-plugins/signer-ui/session.js";
 import hardhatConfig from "../../../hardhat.config.js";
 
 import type {
@@ -25,6 +21,7 @@ import type {
   SessionWalletState,
   SignerUiSessionContext,
   SignerUiSessionHandle,
+  SignerUiScopeOptions,
   TransactionOutcome,
   UiTransactionDetails,
 } from "../../../hardhat-plugins/signer-ui/bridge.js";
@@ -47,6 +44,7 @@ class StubSignerUiSession implements SignerUiSessionHandle {
   public readonly scriptContexts: string[] = [];
   public started = 0;
   public closed = 0;
+  public outcome: "complete" | "error" | undefined;
   public rejectNextWith: Error | undefined;
 
   public constructor(
@@ -128,11 +126,9 @@ class StubSignerUiSession implements SignerUiSessionHandle {
 
   public clearTransactionProgress(): void {}
 
-  public setWorkflowStatus(): void {}
-
-  public clearWorkflowStatus(): void {}
-
-  public setTerminalSessionOutcome(): void {}
+  public setTerminalSessionOutcome(outcome: "complete" | "error"): void {
+    this.outcome = outcome;
+  }
 }
 
 const ENV_KEYS = [
@@ -158,7 +154,8 @@ describe("signer-ui withSignerUi scopes", () => {
     }
     return session;
   };
-  const inScope = <T>(label: string, fn: () => Promise<T>) => withSignerUi(uiHre, label, fn);
+  const inScope = <T>(label: string, fn: () => Promise<T>, options?: SignerUiScopeOptions) =>
+    withSignerUi(uiHre, label, fn, options);
   const networkAccounts = () => connection.provider.request({ method: "eth_accounts" });
 
   before(async () => {
@@ -245,13 +242,15 @@ describe("signer-ui withSignerUi scopes", () => {
   it("routes eth_sendTransaction to the session, returns its hash and appends the broadcast log", async () => {
     const recipient: Address = privateKeyToAccount(generatePrivateKey()).address;
 
-    const hash = await inScope("hook routing test", async () => {
-      const wallet = await getUiWalletClient(connection);
-      expect(wallet.account.address).to.equal(browserAccount.address);
-
-      setUiTransactionContext({ contractName: "Transfer", notes: "routing test" });
-      return wallet.sendTransaction({ to: recipient, value: 1234n });
-    });
+    const hash = await inScope(
+      "hook routing test",
+      async () => {
+        const wallet = await getUiWalletClient(connection);
+        expect(wallet.account.address).to.equal(browserAccount.address);
+        return wallet.sendTransaction({ to: recipient, value: 1234n });
+      },
+      { describeTransaction: (request) => ({ contractName: "Transfer", notes: `to ${request.to}` }) },
+    );
 
     const session = lastSession();
     expect(session.scriptContexts).to.deep.equal(["hook routing test"]);
@@ -262,7 +261,7 @@ describe("signer-ui withSignerUi scopes", () => {
     expect(recorded?.request.to).to.equal(recipient);
     expect(recorded?.request.value).to.equal("0x4d2");
     expect(recorded?.request.chainId).to.equal("0x7a69");
-    expect(recorded?.details).to.deep.equal({ contractName: "Transfer", notes: "routing test" });
+    expect(recorded?.details).to.deep.equal({ contractName: "Transfer", notes: `to ${recipient}` });
 
     const publicClient = await connection.viem.getPublicClient();
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
@@ -349,8 +348,22 @@ describe("signer-ui withSignerUi scopes", () => {
 
     expect(thrown).to.have.property("message", "deploy failed");
     expect(lastSession().closed).to.equal(1);
+    expect(lastSession().outcome).to.equal("error");
     expect(__testOnlySignerUiBridge.getActiveSession()).to.equal(undefined);
     expect(await networkAccounts()).to.not.include(browserAccount.address.toLowerCase());
+  });
+
+  it("reports an error outcome when the scope sets a failing exit code without throwing", async () => {
+    const exitCodeBefore = process.exitCode;
+    try {
+      await inScope("ignition deploy that fails", async () => {
+        await connection.provider.request({ method: "eth_accounts" });
+        process.exitCode = 1;
+      });
+      expect(lastSession().outcome).to.equal("error");
+    } finally {
+      process.exitCode = exitCodeBefore;
+    }
   });
 
   it("refuses to open a scope while DEPLOYER_PRIVATE_KEY is also set", async () => {

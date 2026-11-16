@@ -1,9 +1,9 @@
 import { expect } from "chai";
-import { network } from "hardhat";
 import { describe, it, beforeEach } from "node:test";
 import { type Hex, hexToBigInt, maxUint256, toHex, zeroHash } from "viem";
 
 import { deployFromFactory } from "../../../common/deployment.js";
+import { loadFixture } from "../../../common/helpers/connection.js";
 import { generateRandomBytes, expectRevertWithCustomError } from "../../../common/helpers/index.js";
 
 import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
@@ -18,8 +18,7 @@ describe("GIndex", () => {
     async function deployTestGIndex() {
       return deployFromFactory("TestGIndex");
     }
-    const { networkHelpers } = await network.getOrCreate();
-    gIndex = await networkHelpers.loadFixture(deployTestGIndex);
+    gIndex = await loadFixture(deployTestGIndex);
     ZERO = await gIndex.read.wrap([zeroHash]);
     ROOT = await gIndex.read.wrap(["0x0000000000000000000000000000000000000000000000000000000000000100"]);
     MAX = await gIndex.read.wrap(["0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"]);

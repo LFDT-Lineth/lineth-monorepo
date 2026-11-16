@@ -4,6 +4,7 @@ import { describe, it, before, beforeEach } from "node:test";
 import { type Address, zeroAddress } from "viem";
 
 import { deployFromFactory } from "../../common/deployment.js";
+import { loadFixture } from "../../common/helpers/connection.js";
 import {
   type TestAccount,
   getAccountsFixture,
@@ -33,12 +34,10 @@ describe("LidoStVaultYieldProviderFactory", () => {
   let verifierAddress: Address;
 
   before(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    ({ nativeYieldOperator } = await networkHelpers.loadFixture(getAccountsFixture));
+    ({ nativeYieldOperator } = await loadFixture(getAccountsFixture));
   });
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
     ({
       lidoStVaultYieldProviderFactory,
       mockVaultHub,
@@ -48,7 +47,7 @@ describe("LidoStVaultYieldProviderFactory", () => {
       mockSTETH,
       verifier,
       verifierAddress,
-    } = await networkHelpers.loadFixture(deployLidoStVaultYieldProviderFactory));
+    } = await loadFixture(deployLidoStVaultYieldProviderFactory));
     l1MessageServiceAddress = mockLinethRollup.address;
     yieldManagerAddress = yieldManager.address;
     vaultHubAddress = mockVaultHub.address;

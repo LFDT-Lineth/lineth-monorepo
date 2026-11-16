@@ -10,24 +10,6 @@ const Permit = [
   { name: "deadline", type: "uint256" },
 ] as const;
 
-function buildData(
-  owner: Address,
-  name: string,
-  version: string,
-  chainId: number,
-  verifyingContract: Address,
-  spender: Address,
-  value: bigint,
-  nonce: bigint,
-  deadline: bigint,
-) {
-  return {
-    domain: { name, version, chainId, verifyingContract },
-    types: { Permit },
-    value: { owner, spender, value, nonce, deadline },
-  };
-}
-
 export async function getPermitData(
   wallet: WalletClient,
   token: ContractReturnType<"BridgedToken">,
@@ -39,12 +21,11 @@ export async function getPermitData(
 ): Promise<Hex> {
   const owner = wallet.account.address;
   const name = await token.read.name();
-  const data = buildData(owner, name, "1", chainId, token.address, spender, BigInt(value), nonce, deadline);
   const signature = await wallet.signTypedData({
-    domain: data.domain,
-    types: data.types,
+    domain: { name, version: "1", chainId, verifyingContract: token.address },
+    types: { Permit },
     primaryType: "Permit",
-    message: data.value,
+    message: { owner, spender, value: BigInt(value), nonce, deadline },
   });
   const { v, r, s, yParity } = parseSignature(signature);
   const permitCall = encodeFunctionData({

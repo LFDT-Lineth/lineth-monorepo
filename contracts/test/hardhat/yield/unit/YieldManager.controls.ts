@@ -1,5 +1,4 @@
 import { expect } from "chai";
-import { network } from "hardhat";
 import { describe, it, before, beforeEach } from "node:test";
 
 import {
@@ -10,6 +9,8 @@ import {
   NATIVE_YIELD_REPORTING_PAUSE_TYPE,
   ProgressOssificationResult,
 } from "../../common/constants/index.js";
+import { loadFixture } from "../../common/helpers/connection.js";
+import { randomAddress } from "../../common/helpers/general.js";
 import {
   expectAccessControlRevert,
   expectPaused,
@@ -21,7 +22,7 @@ import {
 } from "../../common/helpers/index.js";
 import { deployYieldManagerForUnitTest } from "../helpers/deploy.js";
 import { addMockYieldProvider } from "../helpers/mocks.js";
-import { randomAddress, setWithdrawalReserveBalance, setWithdrawalReserveToMinimum } from "../helpers/setup.js";
+import { setWithdrawalReserveBalance, setWithdrawalReserveToMinimum } from "../helpers/setup.js";
 
 import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
 
@@ -33,12 +34,7 @@ describe("YieldManager contract - control operations", () => {
   let nativeYieldOperator: TestAccount;
 
   before(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    ({
-      securityCouncil,
-      operator: nonAuthorizedAccount,
-      nativeYieldOperator,
-    } = await networkHelpers.loadFixture(getAccountsFixture));
+    ({ securityCouncil, operator: nonAuthorizedAccount, nativeYieldOperator } = await loadFixture(getAccountsFixture));
   });
 
   describe("pausing", () => {
@@ -218,8 +214,7 @@ describe("YieldManager contract - control operations", () => {
   });
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    ({ yieldManager } = await networkHelpers.loadFixture(deployYieldManagerForUnitTest));
+    ({ yieldManager } = await loadFixture(deployYieldManagerForUnitTest));
   });
 
   // pauseStaking() unit tests

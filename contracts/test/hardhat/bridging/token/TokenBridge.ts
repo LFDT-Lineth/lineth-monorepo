@@ -13,7 +13,6 @@ import {
   parseAbiParameters,
   stringToHex,
 } from "viem";
-import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 
 import { getPermitData } from "./helpers/permitHelper.js";
 import { SupportedChainIds } from "../../../../common/supportedNetworks.js";
@@ -33,7 +32,14 @@ import {
   unpauseTypeRoles,
 } from "../../common/constants/index.js";
 import { TOKEN_BRIDGE_RESERVED_STATUS } from "../../common/constants/index.js";
-import { deployFromFactory, deployUpgradableFromFactory, getUpgrades } from "../../common/deployment.js";
+import {
+  deployFromFactory,
+  deployUpgradableFromFactory,
+  getUpgrades,
+  getProxyDeploymentReceipt,
+} from "../../common/deployment.js";
+import { loadFixture, getContractAt } from "../../common/helpers/connection.js";
+import { randomAddress } from "../../common/helpers/general.js";
 import {
   expectAccessControlRevert,
   expectEventDirectFromReceiptData,
@@ -49,8 +55,6 @@ import {
   expectRevertWithReason,
 } from "../../common/helpers/index.js";
 
-import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
-
 const initialUserBalance = BigInt(10 ** 9);
 const mockName = "L1 DAI";
 const mockSymbol = "L1DAI";
@@ -60,32 +64,6 @@ const RESERVED_STATUS = TOKEN_BRIDGE_RESERVED_STATUS;
 const PLACEHOLDER_ADDRESS = getAddress("0x5555555555555555555555555555555555555555");
 const CUSTOM_ADDRESS = getAddress("0x9999999999999999999999999999999999999999");
 const EMPTY_PERMIT_DATA = "0x";
-
-async function loadFixture<T>(fixture: () => Promise<T>): Promise<T> {
-  const { networkHelpers } = await network.getOrCreate();
-  return networkHelpers.loadFixture(fixture);
-}
-
-async function getContractAt<ContractName extends string>(
-  contractName: ContractName,
-  address: Address,
-): Promise<ContractReturnType<ContractName>> {
-  const { viem } = await network.getOrCreate();
-  return viem.getContractAt(contractName, address);
-}
-
-/** Receipt of the proxy deployment transaction: the first transaction that emitted a log from the proxy address. */
-async function getDeploymentReceipt(contract: { address: Address }) {
-  const { viem } = await network.getOrCreate();
-  const publicClient = await viem.getPublicClient();
-  const [firstLog] = await publicClient.getLogs({ address: contract.address, fromBlock: 0n });
-  expect(firstLog, `no log emitted by ${contract.address}`).to.not.equal(undefined);
-  return publicClient.getTransactionReceipt({ hash: firstLog.transactionHash });
-}
-
-function randomAddress(): Address {
-  return privateKeyToAccount(generatePrivateKey()).address;
-}
 
 describe("TokenBridge", function () {
   async function deployContractsFixture() {
@@ -389,7 +367,7 @@ describe("TokenBridge", function () {
       const l1InitDataSerialized = serializeTokenBridgeInitData(l1TokenBridgeInitializationData);
       const l2InitDataSerialized = serializeTokenBridgeInitData(l2TokenBridgeInitializationData);
 
-      let receipt = await getDeploymentReceipt(l1TokenBridge);
+      let receipt = await getProxyDeploymentReceipt(l1TokenBridge);
 
       await expectEventDirectFromReceiptData(
         l1TokenBridge,
@@ -399,7 +377,7 @@ describe("TokenBridge", function () {
         29,
       );
 
-      receipt = await getDeploymentReceipt(l2TokenBridge);
+      receipt = await getProxyDeploymentReceipt(l2TokenBridge);
       await expectEventDirectFromReceiptData(
         l2TokenBridge,
         receipt,

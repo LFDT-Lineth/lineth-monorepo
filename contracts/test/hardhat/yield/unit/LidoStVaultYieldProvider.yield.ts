@@ -1,5 +1,4 @@
 import { expect } from "chai";
-import { network } from "hardhat";
 import { describe, it, before, beforeEach } from "node:test";
 
 import {
@@ -9,6 +8,7 @@ import {
   YieldProviderVendor,
   CONNECT_DEPOSIT,
 } from "../../common/constants/index.js";
+import { loadFixture } from "../../common/helpers/connection.js";
 import {
   type TestAccount,
   expectNoEvent,
@@ -49,13 +49,11 @@ describe("LidoStVaultYieldProvider contract - yield operations", () => {
   let l2YieldRecipientAddress: Address;
 
   before(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    ({ nativeYieldOperator, securityCouncil, l2YieldRecipient } = await networkHelpers.loadFixture(getAccountsFixture));
+    ({ nativeYieldOperator, securityCouncil, l2YieldRecipient } = await loadFixture(getAccountsFixture));
     l2YieldRecipientAddress = l2YieldRecipient.address;
   });
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
     ({
       yieldProvider,
       yieldProviderAddress,
@@ -64,7 +62,7 @@ describe("LidoStVaultYieldProvider contract - yield operations", () => {
       yieldManager,
       mockSTETH,
       mockLinethRollup,
-    } = await networkHelpers.loadFixture(deployAndAddSingleLidoStVaultYieldProvider));
+    } = await loadFixture(deployAndAddSingleLidoStVaultYieldProvider));
 
     mockStakingVaultAddress = mockStakingVault.address;
   });

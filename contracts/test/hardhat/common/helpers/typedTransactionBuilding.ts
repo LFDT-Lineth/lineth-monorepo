@@ -1,4 +1,6 @@
-import { address, hex } from "./general.js";
+import { getAddress } from "viem";
+
+import { hex } from "./general.js";
 
 import type { AccessListEntryInput, Eip1559Transaction } from "../types.js";
 
@@ -24,11 +26,11 @@ export function buildEip1559Transaction(data: RpcEip1559Transaction): Eip1559Tra
     maxPriorityFeePerGas: BigInt(data.maxPriorityFeePerGas),
     maxFeePerGas: BigInt(data.maxFeePerGas),
     gasLimit: BigInt(data.gas),
-    to: address(data.to),
+    to: getAddress(data.to),
     value: BigInt(data.value),
     input: hex(data.input),
     accessList: data.accessList.map((entry) => ({
-      contractAddress: address(entry.address),
+      contractAddress: getAddress(entry.address),
       storageKeys: entry.storageKeys.map(hex),
     })),
     yParity: Number(data.yParity),

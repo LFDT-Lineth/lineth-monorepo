@@ -6,6 +6,7 @@ import { type Address, decodeEventLog, getAddress, parseEther, parseUnits } from
 import { deployWETH9Fixture } from "./helpers/deploy.js";
 import { ADDRESS_ZERO, ONE_MINUTE_IN_SECONDS } from "../common/constants/index.js";
 import { deployFromFactory } from "../common/deployment.js";
+import { loadFixture } from "../common/helpers/connection.js";
 import {
   type TestAccount,
   generateRandomBytes,
@@ -46,13 +47,12 @@ describe("V3DexSwapAdapter", () => {
   });
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
     ({
       dexSwapAdapter,
       lineaToken,
       testWETH9: testWETH9Address,
       router,
-    } = await networkHelpers.loadFixture(deployDexAdapterContractFixture));
+    } = await loadFixture(deployDexAdapterContractFixture));
   });
 
   describe("construtor", () => {

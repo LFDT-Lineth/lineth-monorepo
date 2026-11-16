@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import hre, { network } from "hardhat";
+import hre from "hardhat";
 import { describe, it, before, beforeEach } from "node:test";
 import { type Hex, zeroAddress } from "viem";
 
@@ -14,6 +14,8 @@ import {
   SLOTS_PER_EPOCH,
 } from "../../common/constants/index.js";
 import { deployFromFactory } from "../../common/deployment.js";
+import { loadFixture } from "../../common/helpers/connection.js";
+import { randomAddress } from "../../common/helpers/general.js";
 import {
   type TestAccount,
   buildAccessErrorMessage,
@@ -24,11 +26,7 @@ import {
   expectRevertWithReason,
   expectRevertWithCustomError,
 } from "../../common/helpers/index.js";
-import {
-  deployTestValidatorContainerProofVerifier,
-  randomAddress as generateRandomAddress,
-  type ValidatorContainerWitness,
-} from "../helpers/index.js";
+import { deployTestValidatorContainerProofVerifier, type ValidatorContainerWitness } from "../helpers/index.js";
 import {
   ACTIVE_0X01_VALIDATOR_PROOF,
   generateBeaconHeader,
@@ -64,8 +62,7 @@ describe("ValidatorContainerProofVerifier", () => {
   });
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    verifier = await networkHelpers.loadFixture(deployTestValidatorContainerProofVerifier);
+    verifier = await loadFixture(deployTestValidatorContainerProofVerifier);
     const accounts = await getAccountsFixture();
     admin = accounts.admin;
     nonAdmin = accounts.nonAuthorizedAccount;
@@ -411,8 +408,8 @@ describe("ValidatorContainerProofVerifier", () => {
   });
 
   it("should verify fabricated 0x02 validator object in merkle tree", async () => {
-    const randomAddress = generateRandomAddress();
-    const eip4788Witness = await generateEIP4478Witness(sszMerkleTree, verifier, randomAddress);
+    const withdrawalAddress = randomAddress();
+    const eip4788Witness = await generateEIP4478Witness(sszMerkleTree, verifier, withdrawalAddress);
     const timestamp = await setBeaconBlockRoot(eip4788Witness.blockRoot);
     // PG style proof verification from PK+WC to BeaconBlockRoot
     await verifier.read.verifyActiveValidatorContainer([
@@ -441,11 +438,11 @@ describe("ValidatorContainerProofVerifier", () => {
   });
 
   it("should verify random pending partial withdrawals with synthetic Merkle proofs", async () => {
-    const randomAddress = generateRandomAddress();
+    const withdrawalAddress = randomAddress();
     const eip4788Witness = await generateEIP4478Witness(
       sszMerkleTree,
       verifier,
-      randomAddress,
+      withdrawalAddress,
       ONE_GWEI * 32n,
       [],
       200, // increase the number of random pending partial withdrawals to higher manually to avoid flakiness on the CI

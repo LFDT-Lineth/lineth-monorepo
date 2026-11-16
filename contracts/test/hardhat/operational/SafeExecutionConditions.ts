@@ -1,9 +1,9 @@
-import { expect } from "chai";
 import { network } from "hardhat";
 import { describe, it, beforeEach } from "node:test";
-import { type Hash, encodeFunctionData } from "viem";
+import { encodeFunctionData } from "viem";
 
 import { deployFromFactory } from "../common/deployment.js";
+import { loadFixture } from "../common/helpers/connection.js";
 import { type TestAccount, getTestAccounts, expectRevertWithCustomError } from "../common/helpers/index.js";
 
 import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
@@ -24,34 +24,23 @@ describe("SafeExecutionConditions", () => {
     return { conditions, safe, executor, owner, stranger };
   }
 
-  // Equivalent of chai-matchers' `.to.not.be.reverted` for a sent transaction.
-  async function expectNotReverted(call: Promise<Hash>) {
-    const { viem } = await network.getOrCreate();
-    const publicClient = await viem.getPublicClient();
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: await call });
-    expect(receipt.status).to.equal("success");
-  }
-
   // Hardhat 2 reset the chain in a `before` hook (`hardhat_reset`), which Hardhat 3's EDR does not support; the
   // fixture below does not depend on a fresh chain.
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    ({ conditions, safe, executor, owner, stranger } = await networkHelpers.loadFixture(
-      deploySafeExecutionConditionsFixture,
-    ));
+    ({ conditions, safe, executor, owner, stranger } = await loadFixture(deploySafeExecutionConditionsFixture));
   });
 
   describe("onlyOnOrAfterTimestamp", () => {
     it("Should not revert when the current timestamp equals the threshold", async () => {
       const { networkHelpers } = await network.getOrCreate();
       const currentTimestamp = await networkHelpers.time.latest();
-      await expectNotReverted(conditions.write.onlyOnOrAfterTimestamp([BigInt(currentTimestamp)]));
+      await conditions.write.onlyOnOrAfterTimestamp([BigInt(currentTimestamp)]);
     });
 
     it("Should not revert when the current timestamp is after the threshold", async () => {
       const { networkHelpers } = await network.getOrCreate();
       const pastTimestamp = (await networkHelpers.time.latest()) - 1;
-      await expectNotReverted(conditions.write.onlyOnOrAfterTimestamp([BigInt(pastTimestamp)]));
+      await conditions.write.onlyOnOrAfterTimestamp([BigInt(pastTimestamp)]);
     });
 
     it("Should revert with OnlyOnOrAfter when the current timestamp is before the threshold", async () => {
@@ -68,9 +57,7 @@ describe("SafeExecutionConditions", () => {
 
   describe("onlyExecutedBy", () => {
     it("Should not revert when the transaction origin is in the executors list", async () => {
-      await expectNotReverted(
-        conditions.write.onlyExecutedBy([[stranger.address, executor.address]], { account: executor.account }),
-      );
+      await conditions.write.onlyExecutedBy([[stranger.address, executor.address]], { account: executor.account });
     });
 
     it("Should revert with OnlyAllowedExecutor when the transaction origin is not in the executors list", async () => {
@@ -95,7 +82,7 @@ describe("SafeExecutionConditions", () => {
         functionName: "onlyExecutedBy",
         args: [[owner.address]],
       });
-      await expectNotReverted(safe.write.execute([conditions.address, calldata], { account: owner.account }));
+      await safe.write.execute([conditions.address, calldata], { account: owner.account });
     });
   });
 
@@ -106,7 +93,7 @@ describe("SafeExecutionConditions", () => {
         functionName: "onlyExecutedBySafeOwner",
         args: [safe.address],
       });
-      await expectNotReverted(safe.write.execute([conditions.address, calldata], { account: owner.account }));
+      await safe.write.execute([conditions.address, calldata], { account: owner.account });
     });
 
     it("Should revert with OnlySafeOwner when the transaction origin is not a Safe owner", async () => {

@@ -1,9 +1,10 @@
 import { expect } from "chai";
-import { network } from "hardhat";
 import { describe, it, before, beforeEach } from "node:test";
 
 import { getAccountsFixture, deployLinethRollupFixture } from "./../helpers/index.js";
 import { STATE_DATA_SUBMISSION_PAUSE_TYPE } from "../../../../common/constants/index.js";
+import { randomBytes32 } from "../../../../common/helpers/encoding.js";
+import { generateKeccak256 } from "../../../../common/helpers/hashing.js";
 import firstCompressedDataContent from "../../_testData/compressedData/blocks-1-46.json" with { type: "json" };
 import secondCompressedDataContent from "../../_testData/compressedData/blocks-47-81.json" with { type: "json" };
 import {
@@ -13,14 +14,13 @@ import {
   EMPTY_CALLDATA,
   MAX_GAS_LIMIT,
 } from "../../common/constants/index.js";
+import { loadFixture } from "../../common/helpers/connection.js";
 import {
   type TestAccount,
   hex,
-  generateRandomBytes,
   generateCallDataSubmission,
   buildAccessErrorMessage,
   expectRevertWhenPaused,
-  generateKeccak256,
   expectRevertWithCustomError,
   expectEvent,
   expectRevertWithReason,
@@ -41,13 +41,11 @@ describe("Lineth Rollup contract: Calldata Submission", () => {
   const secondExpectedShnarf = hex(secondCompressedDataContent.expectedShnarf);
 
   before(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    ({ securityCouncil, operator, nonAuthorizedAccount } = await networkHelpers.loadFixture(getAccountsFixture));
+    ({ securityCouncil, operator, nonAuthorizedAccount } = await loadFixture(getAccountsFixture));
   });
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    ({ linethRollup } = await networkHelpers.loadFixture(deployLinethRollupFixture));
+    ({ linethRollup } = await loadFixture(deployLinethRollupFixture));
     await linethRollup.write.setLastFinalizedBlock([0n]);
   });
 
@@ -66,11 +64,12 @@ describe("Lineth Rollup contract: Calldata Submission", () => {
 
   it("Should fail when the parent shnarf does not exist", async () => {
     const [submissionData] = generateCallDataSubmission(0, 1);
-    const nonExistingParentShnarf = generateRandomBytes(32);
+    const nonExistingParentShnarf = randomBytes32();
 
     const wrongExpectedShnarf = generateKeccak256(
       ["bytes32", "bytes32", "bytes32", "bytes32", "bytes32"],
       [HASH_ZERO, HASH_ZERO, submissionData.finalStateRootHash, HASH_ZERO, HASH_ZERO],
+      { encodePacked: false },
     );
 
     const asyncCall = linethRollup.write.submitDataAsCalldata(
@@ -150,7 +149,7 @@ describe("Lineth Rollup contract: Calldata Submission", () => {
       gas: BigInt(MAX_GAS_LIMIT),
     });
 
-    const wrongComputedShnarf = generateRandomBytes(32);
+    const wrongComputedShnarf = randomBytes32();
 
     const submitDataCall = linethRollup.write.submitDataAsCalldata(
       [secondSubmissionData, expectedShnarf, wrongComputedShnarf],

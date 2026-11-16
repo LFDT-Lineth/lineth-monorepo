@@ -1,18 +1,13 @@
-import { type Hex, keccak256 } from "viem";
+import { type Hex, keccak256, stringToHex } from "viem";
 
-import { encodeData } from "./encoding.js";
+import { generateKeccak256 } from "../../../../common/helpers/hashing.js";
 
-export const generateKeccak256BytesDirectly = (data: Hex) => keccak256(data);
-
-export const generateKeccak256Hash = (str: string) => generateKeccak256(["string"], [str], true);
-
-export const generateKeccak256 = (types: string[], values: unknown[], packed?: boolean): Hex =>
-  keccak256(encodeData(types, values, packed));
+export const generateKeccak256ForString = (value: string): Hex => keccak256(stringToHex(value));
 
 export const generateNKeccak256Hashes = (str: string, numberOfHashToGenerate: number): Hex[] => {
   let arr: Hex[] = [];
   for (let i = 1; i < numberOfHashToGenerate + 1; i++) {
-    arr = [...arr, generateKeccak256(["string"], [`${str}${i}`], true)];
+    arr = [...arr, generateKeccak256ForString(`${str}${i}`)];
   }
   return arr;
 };
@@ -27,6 +22,7 @@ export function calculateLastFinalizedState(
   return generateKeccak256(
     ["uint256", "bytes32", "uint256", "bytes32", "uint256"],
     [l1RollingHashMessageNumber, l1RollingHash, forcedTransactionNumber, forcedTransactionRollingHash, finalTimestamp],
+    { encodePacked: false },
   );
 }
 
@@ -38,11 +34,12 @@ export function calculateLastFinalizedStateV6(
   return generateKeccak256(
     ["uint256", "bytes32", "uint256"],
     [l1RollingHashMessageNumber, l1RollingHash, finalTimestamp],
+    { encodePacked: false },
   );
 }
 
 export function calculateRollingHash(existingRollingHash: Hex, messageHash: Hex): Hex {
-  return generateKeccak256(["bytes32", "bytes32"], [existingRollingHash, messageHash]);
+  return generateKeccak256(["bytes32", "bytes32"], [existingRollingHash, messageHash], { encodePacked: false });
 }
 
 export function calculateRollingHashFromCollection(existingRollingHash: Hex, messageHashes: Hex[]): Hex {

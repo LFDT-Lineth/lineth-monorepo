@@ -1,16 +1,16 @@
 import { expect } from "chai";
 import { describe, it } from "node:test";
 
-import { resolveDeployerAccounts } from "../../../hardhat-plugins/signer-ui/signer-mode.js";
 import {
   assertExclusiveSignerMode,
   getSignerModeConflictMessage,
   hasConfiguredDeployerPrivateKey,
   isSignerUiEnvSet,
   normalizeSignerUiEnv,
+  resolveDeployerAccounts,
 } from "../../../hardhat-plugins/signer-ui/signer-mode.js";
 
-describe("signer mode and hardhat task-args helpers", () => {
+describe("signer mode helpers", () => {
   it("signer mode helpers detect configured env values", () => {
     expect(hasConfiguredDeployerPrivateKey(undefined)).to.equal(false);
     expect(hasConfiguredDeployerPrivateKey("   ")).to.equal(false);

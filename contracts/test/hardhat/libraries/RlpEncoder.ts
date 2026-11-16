@@ -1,8 +1,8 @@
 import { expect } from "chai";
-import { network } from "hardhat";
 import { describe, it, beforeEach } from "node:test";
 
 import { deployFromFactory } from "../common/deployment.js";
+import { loadFixture } from "../common/helpers/connection.js";
 
 import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
 
@@ -13,8 +13,7 @@ describe("RlpEncoder Library", () => {
     return deployFromFactory("TestRlpEncoder");
   }
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    contract = await networkHelpers.loadFixture(deployTestEip1559RlpEncoderFixture);
+    contract = await loadFixture(deployTestEip1559RlpEncoderFixture);
   });
 
   describe("RLP Encoding", () => {

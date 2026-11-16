@@ -12,6 +12,7 @@ import {
   INITIAL_WITHDRAW_LIMIT,
 } from "../common/constants/index.js";
 import { deployFromFactory, deployUpgradableFromFactory } from "../common/deployment.js";
+import { loadFixture } from "../common/helpers/connection.js";
 import {
   type TestAccount,
   buildAccessErrorMessage,
@@ -58,9 +59,8 @@ describe("RecoverFunds contract", () => {
   });
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    recoverFunds = await networkHelpers.loadFixture(deployRecoverFundsFixture);
-    testContract = await networkHelpers.loadFixture(deployTestContractFixture);
+    recoverFunds = await loadFixture(deployRecoverFundsFixture);
+    testContract = await loadFixture(deployTestContractFixture);
   });
 
   describe("Fallback/Receive tests", () => {
@@ -107,8 +107,7 @@ describe("RecoverFunds contract", () => {
     });
 
     it("Should revert if the initialize function is called a second time", async () => {
-      const { networkHelpers } = await network.getOrCreate();
-      recoverFunds = await networkHelpers.loadFixture(deployRecoverFundsFixture);
+      recoverFunds = await loadFixture(deployRecoverFundsFixture);
       const initializeCall = recoverFunds.write.initialize([securityCouncil.address, executor.address]);
 
       await expectRevertWithReason(initializeCall, INITIALIZED_ALREADY_MESSAGE);

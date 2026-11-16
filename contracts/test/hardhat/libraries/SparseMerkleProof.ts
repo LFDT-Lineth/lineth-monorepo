@@ -1,12 +1,12 @@
 import { expect } from "chai";
-import { network } from "hardhat";
 import { describe, it, beforeEach } from "node:test";
-import { size, slice } from "viem";
+import { size, slice, getAddress } from "viem";
 
 import accountKeyTestVectors from "../_testData/account-key-test-vectors.json" with { type: "json" };
 import merkleProofTestDataJson from "../_testData/merkle-proof-data-poseidon2.json" with { type: "json" };
 import { deployFromFactory } from "../common/deployment.js";
-import { address, hex, expectRevertWithCustomError } from "../common/helpers/index.js";
+import { loadFixture } from "../common/helpers/connection.js";
+import { hex, expectRevertWithCustomError } from "../common/helpers/index.js";
 
 import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
 
@@ -39,8 +39,7 @@ describe("SparseMerkleProof", () => {
   }
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    sparseMerkleProof = await networkHelpers.loadFixture(deploySparseMerkleProofFixture);
+    sparseMerkleProof = await loadFixture(deploySparseMerkleProofFixture);
   });
 
   describe("verifyProof", () => {
@@ -321,7 +320,7 @@ describe("SparseMerkleProof", () => {
 
     it("Should return account key hash from test vectors", async () => {
       for (const { input, output } of accountKeyTestVectors) {
-        const hKey = await sparseMerkleProof.read.hashAccountKey([address(input)]);
+        const hKey = await sparseMerkleProof.read.hashAccountKey([getAddress(input)]);
         expect(hKey).to.be.equal(output);
       }
     });

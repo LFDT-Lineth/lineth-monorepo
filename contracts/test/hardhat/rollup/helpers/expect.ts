@@ -1,15 +1,15 @@
 import { expect } from "chai";
-import { concat, encodeAbiParameters, parseAbiParameters } from "viem";
+import { encodeFunctionData } from "viem";
 
-import { getWalletForIndex } from "./index.js";
+import { generateKeccak256 } from "../../../../common/helpers/hashing.js";
 import { TEST_PUBLIC_VERIFIER_INDEX } from "../../common/constants/index.js";
+import { getAccountsFixture } from "../../common/helpers/before.js";
 import { getConnection } from "../../common/helpers/connection.js";
 import { type AssertionTarget } from "../../common/helpers/expectations.js";
 import {
   calculateLastFinalizedState,
   expectEventDirectFromReceiptData,
   generateFinalizationData,
-  generateKeccak256,
   hex,
   proofDataToFinalizationParams,
   expectEvent,
@@ -116,6 +116,7 @@ export async function expectSuccessfulFinalizeViaCallForwarder(params: SucceedFi
       shnarfData.dataEvaluationPoint,
       shnarfData.dataEvaluationClaim,
     ],
+    { encodePacked: false },
   );
   const blobShnarfExists = await upgradedContract.read.blobShnarfExists([finalShnarf]);
   expect(blobShnarfExists).to.equal(1n);
@@ -125,64 +126,18 @@ export async function expectSuccessfulFinalizeViaCallForwarder(params: SucceedFi
     hex(proofData.l1RollingHash),
   ]);
 
-  const txData = [
-    hex(proofData.aggregatedProof),
-    0n,
-    [
-      finalizationData.parentStateRootHash,
-      BigInt(finalizationData.endBlockNumber),
-      [
-        shnarfData.parentShnarf,
-        shnarfData.snarkHash,
-        shnarfData.finalStateRootHash,
-        shnarfData.dataEvaluationPoint,
-        shnarfData.dataEvaluationClaim,
-      ],
-      finalizationData.lastFinalizedTimestamp,
-      finalizationData.finalTimestamp,
-      finalizationData.lastFinalizedL1RollingHash,
-      finalizationData.l1RollingHash,
-      finalizationData.lastFinalizedL1RollingHashMessageNumber,
-      finalizationData.l1RollingHashMessageNumber,
-      finalizationData.l2MerkleTreesDepth,
-      finalizationData.lastFinalizedForcedTransactionNumber,
-      finalizationData.finalForcedTransactionNumber,
-      finalizationData.lastFinalizedForcedTransactionRollingHash,
-      finalizationData.l2MerkleRoots,
-      finalizationData.filteredAddresses,
-      finalizationData.l2MessagingBlocksOffsets,
-    ],
-  ] as const;
-
-  const encodedCall = concat([
-    "0x755bc62f",
-    encodeAbiParameters(
-      parseAbiParameters(
-        "bytes, uint256, (bytes32,uint256,(bytes32,bytes32,bytes32,bytes32,bytes32),uint256,uint256,bytes32,bytes32,uint256,uint256,uint256,uint256,uint256,bytes32,bytes32[],address[],bytes)",
-      ),
-      txData,
-    ),
-  ]);
-
   const { viem } = await getConnection();
   const publicClient = await viem.getPublicClient();
-  const { maxFeePerGas, maxPriorityFeePerGas } = await publicClient.estimateFeesPerGas();
-  const operatorHDSigner = await getWalletForIndex(2);
-  const nonce = await publicClient.getTransactionCount({ address: operatorHDSigner.address, blockTag: "pending" });
-
-  const signedTx = await operatorHDSigner.signTransaction({
-    data: encodedCall,
-    maxPriorityFeePerGas,
-    maxFeePerGas,
+  const { operator } = await getAccountsFixture();
+  const txHash = await operator.sendTransaction({
     to: callforwarderAddress,
-    chainId: await publicClient.getChainId(),
-    type: "eip1559",
-    nonce,
-    value: 0n,
+    data: encodeFunctionData({
+      abi: upgradedContract.abi,
+      functionName: "finalizeBlocks",
+      args: [hex(proofData.aggregatedProof), BigInt(TEST_PUBLIC_VERIFIER_INDEX), { ...finalizationData, shnarfData }],
+    }),
     gas: 10_000_000n,
   });
-
-  const txHash = await publicClient.sendRawTransaction({ serializedTransaction: signedTx });
   const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
   expect(receipt).is.not.null;
 

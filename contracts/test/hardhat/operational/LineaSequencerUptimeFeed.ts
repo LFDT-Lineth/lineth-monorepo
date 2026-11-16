@@ -4,6 +4,7 @@ import { describe, it, before, beforeEach } from "node:test";
 import { zeroAddress } from "viem";
 
 import { deployFromFactory } from "../common/deployment.js";
+import { loadFixture } from "../common/helpers/connection.js";
 import {
   type TestAccount,
   getLastBlockTimestamp,
@@ -11,7 +12,6 @@ import {
   expectRevertWithCustomError,
   expectEvent,
   expectRevertWithReason,
-  expectEvents,
 } from "../common/helpers/index.js";
 
 import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
@@ -35,8 +35,7 @@ describe("LineaSequencerUptimeFeed", () => {
   });
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    contract = await networkHelpers.loadFixture(deployLineaSequencerUptimeFeedFixture);
+    contract = await loadFixture(deployLineaSequencerUptimeFeedFixture);
   });
 
   describe("constructor", () => {
@@ -172,16 +171,9 @@ describe("LineaSequencerUptimeFeed", () => {
       const timestamp = currentBlockTs + 10n;
       await networkHelpers.time.setNextBlockTimestamp(timestamp);
 
-      await expectEvents(contract, contract.write.updateStatus([newStatus, timestamp], { account: l2Sender.account }), [
-        {
-          name: "NewRound",
-          args: [2n, l2Sender.address, timestamp],
-        },
-        {
-          name: "AnswerUpdated",
-          args: [1n, 2n, timestamp],
-        },
-      ]);
+      const txHash = await contract.write.updateStatus([newStatus, timestamp], { account: l2Sender.account });
+      await expectEvent(contract, txHash, "NewRound", [2n, l2Sender.address, timestamp]);
+      await expectEvent(contract, txHash, "AnswerUpdated", [1n, 2n, timestamp]);
 
       const [roundId, answer, startedAt, updatedAt, answeredInRound] = await contract.read.latestRoundData();
 

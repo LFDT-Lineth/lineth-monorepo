@@ -1,8 +1,9 @@
 import { expect } from "chai";
+import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { getAddress, parseEther, zeroHash } from "viem";
 
-import { buildParametersFromEnv, deployedAddress, expectCode, expectPinnedTransparentProxy } from "./helpers.js";
+import { buildParametersFromEnv, deployedAddress, expectCode, expectPinnedTransparentProxy, role } from "./helpers.js";
 import {
   L1_L2_MESSAGE_SETTER_ROLE,
   OPERATOR_ROLE,
@@ -44,15 +45,8 @@ import YieldManagerModule from "../../../ignition/modules/yield/YieldManager.js"
 import YieldManagerArtifactsModule from "../../../ignition/modules/yield/YieldManagerArtifacts.js";
 import { getConnection, useFreshChain } from "../common/helpers/connection.js";
 
-import type { Address } from "viem";
-
 const VERIFIER_CONTRACT_NAME = "PlonkVerifierForDataAggregation";
 const STATE_ROOT_HASH = "0x072ead6777750dc20232d1cee8dc9a395c2d350df4bbaa5096c6f59b214dcecd";
-
-/** Distinct, deterministic addresses for roles and external dependencies (none of them needs code). */
-function role(index: number): Address {
-  return getAddress(`0x${(0x1000 + index).toString(16).padStart(40, "0")}`);
-}
 
 const securityCouncil = role(1);
 const operatorA = role(2);
@@ -167,16 +161,10 @@ describe("Ignition deployment modules", () => {
 
     it("PlonkVerifier parameters reject a VERIFIER_MIMC_ADDRESS without code", async () => {
       const connection = await getConnection();
-      let message = "";
-      try {
-        await buildParametersFromEnv(connection, "PlonkVerifier", {
-          ...verifierEnv(),
-          VERIFIER_MIMC_ADDRESS: role(99),
-        });
-      } catch (error: unknown) {
-        message = error instanceof Error ? error.message : String(error);
-      }
-      expect(message).to.contain("has no contract bytecode on this network");
+      await assert.rejects(
+        buildParametersFromEnv(connection, "PlonkVerifier", { ...verifierEnv(), VERIFIER_MIMC_ADDRESS: role(99) }),
+        /has no contract bytecode on this network/,
+      );
     });
 
     it("Timelock", async () => {
@@ -463,23 +451,23 @@ describe("Ignition deployment modules", () => {
       const withdrawal = await connection.ignition.deploy(UpgradeableWithdrawalQueuePredeployModule);
       await expectPinnedTransparentProxy(
         publicClient,
-        withdrawal.upgradeableWithdrawalQueuePredeployProxy.address,
+        withdrawal.predeployProxy.address,
         withdrawal.proxyAdmin.address,
-        withdrawal.upgradeableWithdrawalQueuePredeployImplementation.address,
+        withdrawal.predeployImplementation.address,
       );
       const consolidation = await connection.ignition.deploy(UpgradeableConsolidationQueuePredeployModule);
       await expectPinnedTransparentProxy(
         publicClient,
-        consolidation.upgradeableConsolidationQueuePredeployProxy.address,
+        consolidation.predeployProxy.address,
         consolidation.proxyAdmin.address,
-        consolidation.upgradeableConsolidationQueuePredeployImplementation.address,
+        consolidation.predeployImplementation.address,
       );
       const deposit = await connection.ignition.deploy(UpgradeableBeaconChainDepositPredeployModule);
       await expectPinnedTransparentProxy(
         publicClient,
-        deposit.upgradeableBeaconChainDepositPredeployProxy.address,
+        deposit.predeployProxy.address,
         deposit.proxyAdmin.address,
-        deposit.upgradeableBeaconChainDepositPredeployImplementation.address,
+        deposit.predeployImplementation.address,
       );
     });
 

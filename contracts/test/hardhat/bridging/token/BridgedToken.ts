@@ -5,6 +5,7 @@ import { getAddress } from "viem";
 
 import { deployBridgedTokenBeacon } from "../../../../scripts/tokenBridge/test/deployBridgedTokenBeacon.js";
 import { getUpgrades } from "../../common/deployment.js";
+import { loadFixture } from "../../common/helpers/connection.js";
 import { getTestAccounts, expectRevertWithCustomError, expectRevertWithReason } from "../../common/helpers/index.js";
 
 const initialUserBalance = 10000n;
@@ -47,8 +48,7 @@ async function createTokenBeaconProxy() {
 }
 
 async function loadTokenBeaconProxyFixture() {
-  const { networkHelpers } = await network.getOrCreate();
-  return networkHelpers.loadFixture(createTokenBeaconProxy);
+  return loadFixture(createTokenBeaconProxy);
 }
 
 describe("BridgedToken", function () {

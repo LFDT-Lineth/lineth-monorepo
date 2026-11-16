@@ -1,4 +1,3 @@
-import { network } from "hardhat";
 import { describe, it, before, beforeEach } from "node:test";
 
 import forcedTx0 from "../../_testData/eip1559RlpEncoderTransactions/forced-transaction-0.json" with { type: "json" };
@@ -11,6 +10,7 @@ import {
   MAX_INPUT_LENGTH_LIMIT,
 } from "../../common/constants/index.js";
 import { deployFromFactory } from "../../common/deployment.js";
+import { loadFixture } from "../../common/helpers/connection.js";
 import { type TestAccount, buildEip1559Transaction } from "../../common/helpers/index.js";
 import {
   getAccountsFixture,
@@ -39,15 +39,11 @@ describe.skip("Lineth Rollup contract: Forced Transactions", () => {
 
   before(async () => {
     // No `hardhat_reset`: Hardhat 3's simulated network does not support it; loadFixture snapshots isolate the state.
-    const { networkHelpers } = await network.getOrCreate();
-    ({ securityCouncil } = await networkHelpers.loadFixture(getAccountsFixture));
+    ({ securityCouncil } = await loadFixture(getAccountsFixture));
   });
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    ({ linethRollup, forcedTransactionGateway } = await networkHelpers.loadFixture(
-      deployForcedTransactionGatewayFixtureLocally,
-    ));
+    ({ linethRollup, forcedTransactionGateway } = await loadFixture(deployForcedTransactionGatewayFixtureLocally));
 
     await linethRollup.write.grantRole([FORCED_TRANSACTION_SENDER_ROLE, forcedTransactionGateway.address], {
       account: securityCouncil.account,
@@ -76,10 +72,9 @@ describe.skip("Lineth Rollup contract: Forced Transactions", () => {
   });
 
   async function deployForcedTransactionGatewayFixtureLocally() {
-    const { networkHelpers } = await network.getOrCreate();
-    const { securityCouncil, nonAuthorizedAccount } = await networkHelpers.loadFixture(getAccountsFixture);
-    const { linethRollup } = await networkHelpers.loadFixture(deployLinethRollupFixture);
-    const { mimc } = await networkHelpers.loadFixture(deployMimcFixture);
+    const { securityCouncil, nonAuthorizedAccount } = await getAccountsFixture();
+    const { linethRollup } = await deployLinethRollupFixture();
+    const { mimc } = await deployMimcFixture();
 
     const { addressFilter } = await deployAddressFilter(securityCouncil.address, [nonAuthorizedAccount.address]);
 

@@ -2,15 +2,14 @@
  * Define fixtures to be loaded in the 'before' block using the network helpers' 'loadFixture()' function, e.g.
  
   before(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    ({ admin, securityCouncil, operator, nonAuthorizedAccount } = await networkHelpers.loadFixture(getAccountsFixture));
-    roleAddresses = await networkHelpers.loadFixture(getRoleAddressesFixture);
+    ({ admin, securityCouncil, operator, nonAuthorizedAccount } = await loadFixture(getAccountsFixture));
+    roleAddresses = await loadFixture(getRoleAddressesFixture);
   });
 
  */
 
 import { LINETH_ROLLUP_V8_ROLES, VALIDIUM_ROLES } from "../../../../common/constants/index.js";
-import { generateRoleAssignments } from "../../../../common/helpers/index.js";
+import { generateRoleAssignments } from "../../../../common/helpers/roles.js";
 import { OPERATOR_ROLE } from "../../common/constants/index.js";
 import { getAccountsFixture } from "../../common/helpers/before.js";
 

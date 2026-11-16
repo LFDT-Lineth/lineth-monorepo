@@ -2,7 +2,7 @@ import { getTestAccounts } from "./accounts.js";
 
 /**
  * Common accounts fixture for all tests.
- * Use with `networkHelpers.loadFixture(getAccountsFixture)` to ensure consistent accounts across tests.
+ * Use with `loadFixture(getAccountsFixture)` to ensure consistent accounts across tests.
  *
  * Note: This is the canonical source for account fixtures. The rollup/helpers/before.ts
  * re-exports this and adds role-specific fixtures.

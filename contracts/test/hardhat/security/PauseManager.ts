@@ -1,5 +1,4 @@
 import { expect } from "chai";
-import { network } from "hardhat";
 import { describe, it, beforeEach } from "node:test";
 import { maxUint256 } from "viem";
 
@@ -30,6 +29,7 @@ import {
   SET_ADDRESS_FILTER_ROLE,
 } from "../common/constants/index.js";
 import { deployUpgradableFromFactory } from "../common/deployment.js";
+import { loadFixture } from "../common/helpers/connection.js";
 import {
   type TestAccount,
   buildAccessErrorMessage,
@@ -66,9 +66,8 @@ describe("PauseManager", () => {
   let pauseManager: ContractReturnType<"TestPauseManager">;
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
     [defaultAdmin, pauseManagerAccount, nonManager, securityCouncil] = await getTestAccounts();
-    pauseManager = await networkHelpers.loadFixture(deployTestPauseManagerFixture);
+    pauseManager = await loadFixture(deployTestPauseManagerFixture);
 
     await Promise.all([
       // Roles for pauseManagerAccount

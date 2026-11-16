@@ -4,7 +4,7 @@ import { network } from "hardhat";
 import { describe, it, before, beforeEach } from "node:test";
 import { type Address, type Hex, keccak256, parseEther, toHex, zeroHash } from "viem";
 
-import { encodeData, encodeSendMessage } from "../../../../common/helpers/encoding.js";
+import { encodeData, encodeSendMessage, randomBytes32 } from "../../../../common/helpers/encoding.js";
 import {
   ADDRESS_ZERO,
   EMPTY_CALLDATA,
@@ -18,12 +18,14 @@ import {
   VALID_MERKLE_PROOF,
   ZERO_VALUE,
 } from "../../common/constants/index.js";
+import { loadFixture } from "../../common/helpers/connection.js";
+import { expectRevert } from "../../common/helpers/expectations.js";
+import { randomAddress } from "../../common/helpers/general.js";
 import {
   type TestAccount,
   buildAccessErrorMessage,
   expectRevertWhenPaused,
   calculateRollingHash,
-  generateRandomBytes,
   getAccountsFixture,
   hex,
   expectRevertWithReason,
@@ -31,7 +33,7 @@ import {
   expectEvent,
 } from "../../common/helpers/index.js";
 import { deployLinethRollupFixture } from "../../rollup/helpers/deploy.js";
-import { expectRevert, getBalance, getImpersonatedAccount, randomAddress, setBalance } from "../helpers/index.js";
+import { getBalance, getImpersonatedAccount, setBalance } from "../helpers/index.js";
 
 import type { ClaimMessageWithProofParams } from "../helpers/types.js";
 import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
@@ -46,13 +48,11 @@ describe("Lineth Rollup Yield Extension", () => {
   let nonAuthorizedAccount: TestAccount;
 
   before(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    ({ admin, securityCouncil, operator, nonAuthorizedAccount } = await networkHelpers.loadFixture(getAccountsFixture));
+    ({ admin, securityCouncil, operator, nonAuthorizedAccount } = await loadFixture(getAccountsFixture));
   });
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    ({ yieldManager, linethRollup } = await networkHelpers.loadFixture(deployLinethRollupFixture));
+    ({ yieldManager, linethRollup } = await loadFixture(deployLinethRollupFixture));
   });
 
   describe("Change yield manager address", () => {
@@ -346,7 +346,7 @@ describe("Lineth Rollup Yield Extension", () => {
 
     it("Should correctly update the rolling hash after sendMessage", async () => {
       // ARRANGE STAGE 1 - Perform sendMessage
-      const calldataHex = generateRandomBytes(32);
+      const calldataHex = randomBytes32();
 
       const initialMessageNumber = await linethRollup.read.nextMessageNumber();
       const sendMessageHash = computeMessageHash(
@@ -416,7 +416,7 @@ describe("Lineth Rollup Yield Extension", () => {
       await linethRollup.write.fund({ account: securityCouncil.account, value: preFundAmount });
 
       const params: ClaimMessageWithProofParams = {
-        proof: [] as Hex[],
+        proof: [],
         messageNumber: 0n,
         leafIndex: 0,
         from: admin.address,
@@ -442,7 +442,7 @@ describe("Lineth Rollup Yield Extension", () => {
       await linethRollup.write.fund({ account: securityCouncil.account, value: preFundAmount });
 
       const params: ClaimMessageWithProofParams = {
-        proof: [] as Hex[],
+        proof: [],
         messageNumber: 0n,
         leafIndex: 0,
         from: admin.address,
@@ -468,7 +468,7 @@ describe("Lineth Rollup Yield Extension", () => {
       await linethRollup.write.fund({ account: securityCouncil.account, value: preFundAmount });
 
       const params: ClaimMessageWithProofParams = {
-        proof: [] as Hex[],
+        proof: [],
         messageNumber: 0n,
         leafIndex: 0,
         from: admin.address,

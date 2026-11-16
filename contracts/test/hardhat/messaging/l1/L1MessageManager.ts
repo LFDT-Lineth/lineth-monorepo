@@ -2,13 +2,14 @@ import { expect } from "chai";
 import { network } from "hardhat";
 import { describe, it, beforeEach } from "node:test";
 
+import { randomBytes32 } from "../../../../common/helpers/encoding.js";
 import { INBOX_STATUS_UNKNOWN } from "../../common/constants/index.js";
 import { deployFromFactory } from "../../common/deployment.js";
+import { loadFixture } from "../../common/helpers/connection.js";
+import { generateKeccak256ForString } from "../../common/helpers/hashing.js";
 import {
   expectNoEvent,
-  generateKeccak256Hash,
   generateL2MessagingBlocksOffsets,
-  generateRandomBytes,
   range,
   expectRevertWithCustomError,
   expectEvent,
@@ -24,13 +25,12 @@ describe("L1MessageManager", () => {
   }
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    l1MessageManager = await networkHelpers.loadFixture(deployTestL1MessageManagerFixture);
+    l1MessageManager = await loadFixture(deployTestL1MessageManagerFixture);
   });
 
   describe("Update L2->L1 message hash status in 'inboxL2L1MessageStatus' mapping to 'claimed'", () => {
     it("Should revert if the message hash has not the status 'received' in 'inboxL2L1MessageStatus' mapping", async () => {
-      const messageHash = generateKeccak256Hash("message1");
+      const messageHash = generateKeccak256ForString("message1");
 
       await l1MessageManager.write.addL2L1MessageHash([messageHash]);
       await l1MessageManager.write.updateL2L1MessageStatusToClaimed([messageHash]);
@@ -43,7 +43,7 @@ describe("L1MessageManager", () => {
     });
 
     it("Should succeed if message hash has the status 'received' in 'inboxL2L1MessageStatus' mapping", async () => {
-      const messageHash = generateKeccak256Hash("message1");
+      const messageHash = generateKeccak256ForString("message1");
 
       await l1MessageManager.write.addL2L1MessageHash([messageHash]);
       await l1MessageManager.write.updateL2L1MessageStatusToClaimed([messageHash]);
@@ -87,7 +87,7 @@ describe("L1MessageManager", () => {
 
   describe("Add L2 merkle root in 'l2MerkleRootsDepths' mapping", () => {
     it("Should revert if the merkle root already exists", async () => {
-      const merkleRoot = generateRandomBytes(32);
+      const merkleRoot = randomBytes32();
       const treeDepth = 32n;
 
       await l1MessageManager.write.addL2MerkleRoots([[merkleRoot], treeDepth]);
@@ -100,7 +100,7 @@ describe("L1MessageManager", () => {
     });
 
     it("Should add the new root to contract storage and emit a 'L2MerkleRootAdded' event", async () => {
-      const merkleRoot = generateRandomBytes(32);
+      const merkleRoot = randomBytes32();
       const treeDepth = 32n;
 
       await expectEvent(

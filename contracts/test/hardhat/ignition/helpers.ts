@@ -75,7 +75,12 @@ export async function withEnv<T>(vars: Record<string, string | undefined>, fn: (
   }
 }
 
-const IGNITION_DIR = path.join(import.meta.dirname, "..", "..", "..", "ignition");
+export const IGNITION_DIR = path.join(import.meta.dirname, "..", "..", "..", "ignition");
+
+/** Distinct, deterministic addresses for roles and external dependencies (none of them needs code). */
+export function role(index: number): Address {
+  return getAddress(`0x${(0x1000 + index).toString(16).padStart(40, "0")}`);
+}
 
 /** Parameters for `moduleId` built by its `<Module>.deploy.ts` from `env`. */
 export async function buildParametersFromEnv(

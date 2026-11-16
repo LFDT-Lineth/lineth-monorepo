@@ -7,7 +7,7 @@ import { ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE } from "./constants.js";
 import { getRollupRevenueVaultAccountsFixture } from "./helpers/before.js";
 import { deployRollupRevenueVaultFixture } from "./helpers/deploy.js";
 import { ADDRESS_ZERO, EMPTY_CALLDATA, ONE_DAY_IN_SECONDS, ONE_ETHER } from "../common/constants/index.js";
-import { deployUpgradableFromFactory } from "../common/deployment.js";
+import { deployUpgradableFromFactory, getProxyDeploymentReceipt } from "../common/deployment.js";
 import {
   type TestAccount,
   expectNoEvent,
@@ -203,11 +203,7 @@ describe("RollupRevenueVault", () => {
           unsafeAllow: ["constructor"],
         },
       );
-      // The OZ Upgrades viem API does not expose the proxy deployment transaction: with automine it is the only
-      // transaction of the latest block.
-      const { transactions } = await publicClient.getBlock();
-      const receipt = await publicClient.getTransactionReceipt({ hash: transactions[0] });
-      expect(receipt.contractAddress && getAddress(receipt.contractAddress)).to.equal(getAddress(contract.address));
+      const receipt = await getProxyDeploymentReceipt(contract);
       // OZ 5 proxies (OZ Upgrades 4.x) also deploy their ProxyAdmin in this transaction (`OwnershipTransferred`);
       // the Hardhat 2 setup reused a shared ProxyAdmin, so only the proxy's own logs are counted.
       const logs = receipt.logs.filter((log) => getAddress(log.address) === getAddress(contract.address));

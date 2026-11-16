@@ -1,10 +1,10 @@
 import { expect } from "chai";
-import { network } from "hardhat";
 import { describe, it, before, beforeEach } from "node:test";
 import { zeroAddress } from "viem";
 
 import { CANCELLER_ROLE, EXECUTOR_ROLE, PROPOSER_ROLE, TIMELOCK_ADMIN_ROLE } from "../common/constants/index.js";
 import { deployFromFactory } from "../common/deployment.js";
+import { loadFixture } from "../common/helpers/connection.js";
 import { type TestAccount, getTestAccounts } from "../common/helpers/index.js";
 
 import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
@@ -23,8 +23,7 @@ describe("Timelock", () => {
   });
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    contract = await networkHelpers.loadFixture(deployTimeLockFixture);
+    contract = await loadFixture(deployTimeLockFixture);
   });
 
   describe("Initialization", () => {

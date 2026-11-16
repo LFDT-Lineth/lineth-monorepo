@@ -1,16 +1,13 @@
 import { expect } from "chai";
-import { network } from "hardhat";
 import {
   type Address,
   type Hex,
-  BaseError,
   encodeAbiParameters,
   getAddress,
   hexToBigInt,
   keccak256,
   parseAbiParameters,
 } from "viem";
-import { generatePrivateKey, privateKeyToAddress } from "viem/accounts";
 
 import { generateLidoUnstakePermissionlessWitness } from "./proof.js";
 import { encodeData, encodeSendMessage, randomBytes32 } from "../../../../common/helpers/encoding.js";
@@ -21,6 +18,8 @@ import {
   MAX_0X2_VALIDATOR_EFFECTIVE_BALANCE_GWEI,
   ONE_ETHER,
 } from "../../common/constants/index.js";
+import { getConnection } from "../../common/helpers/connection.js";
+import { randomAddress } from "../../common/helpers/general.js";
 import { type TestAccount } from "../../common/helpers/index.js";
 
 import type { ClaimMessageWithProofParams, YieldManagerInitializationData } from "./types.js";
@@ -37,31 +36,12 @@ type MockSTETH = ContractReturnType<"MockSTETH">;
 type SSZMerkleTree = ContractReturnType<"SSZMerkleTree">;
 type TestValidatorContainerProofVerifier = ContractReturnType<"TestValidatorContainerProofVerifier">;
 
-/** Random address, replaces ethers' `Wallet.createRandom().address`. */
-export const randomAddress = (): Address => privateKeyToAddress(generatePrivateKey());
-
 /** Impersonates `address` and returns it as a test account (ethers' `getImpersonatedSigner`). */
 export const getImpersonatedAccount = async (address: Address): Promise<TestAccount> => {
-  const { viem, networkHelpers } = await network.getOrCreate();
+  const { viem, networkHelpers } = await getConnection();
   await networkHelpers.impersonateAccount(address);
   const wallet = await viem.getWalletClient(address);
-  const publicClient = await viem.getPublicClient();
-  return Object.assign(wallet, { address: getAddress(address), publicClient });
-};
-
-/** Asserts that `asyncCall` reverts, whatever the reason (chai-matchers' `.to.be.reverted`). */
-export const expectRevert = async (asyncCall: Promise<unknown>): Promise<void> => {
-  let error: unknown;
-  try {
-    await asyncCall;
-  } catch (e) {
-    error = e;
-  }
-  expect(error, "Expected the call to revert, but it did not revert").to.not.equal(undefined);
-  expect(
-    error instanceof BaseError && /revert/i.test(error.message),
-    `Expected a revert, got: ${String(error)}`,
-  ).to.equal(true);
+  return Object.assign(wallet, { address: getAddress(address) });
 };
 
 // TODO - Existence of this setup function means that YieldManager has invariants that withdraw cannot underflow for userFunds and userFundsInYieldProvidersTotal
@@ -98,12 +78,12 @@ export const decrementBalance = async (address: Address, decrement: bigint) => {
 };
 
 export const setBalance = async (address: Address, balance: bigint) => {
-  const { networkHelpers } = await network.getOrCreate();
+  const { networkHelpers } = await getConnection();
   await networkHelpers.setBalance(address, balance);
 };
 
 const getAddressBalance = async (address: Address): Promise<bigint> => {
-  const { viem } = await network.getOrCreate();
+  const { viem } = await getConnection();
   const publicClient = await viem.getPublicClient();
   return publicClient.getBalance({ address });
 };
@@ -162,7 +142,7 @@ export const getWithdrawLSTCall = async (
   signer: TestAccount,
   withdrawAmount: bigint,
 ) => {
-  const { networkHelpers } = await network.getOrCreate();
+  const { networkHelpers } = await getConnection();
   const recipient = randomAddress();
   await fundLidoStVaultYieldProvider(yieldManager, yieldProvider, signer, withdrawAmount);
 
@@ -369,19 +349,6 @@ export const setupMaxLSTLiabilityPaymentForWithdrawal = async (
   // Set rebalance amount
   await mockSTETH.write.setSharesByPooledEthReturn([lstLiabilityPrincipal]);
   await mockDashboard.write.setLiabilitySharesReturn([lstLiabilityPrincipal]);
-  await mockDashboard.write.setRebalanceVaultWithSharesWithdrawingFromVault([true]);
-};
-
-export const cleanupMaxLSTLiabilityPayment = async (
-  mockDashboard: MockDashboard,
-  mockVaultHub: MockVaultHub,
-  mockSTETH: MockSTETH,
-) => {
-  // Setup obligations and their withdrawals from StakingVault
-  await mockVaultHub.write.setIsSettleLidoFeesWithdrawingFromVault([true]);
-  await mockSTETH.write.setPooledEthBySharesRoundUpReturn([0n]);
-  await mockSTETH.write.setSharesByPooledEthReturn([0n]);
-  await mockDashboard.write.setLiabilitySharesReturn([0n]);
   await mockDashboard.write.setRebalanceVaultWithSharesWithdrawingFromVault([true]);
 };
 

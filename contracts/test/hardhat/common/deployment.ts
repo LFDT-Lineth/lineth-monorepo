@@ -1,6 +1,14 @@
 import { upgrades } from "@openzeppelin/hardhat-upgrades/viem";
 import hre from "hardhat";
-import { type Abi, type Address, type Hash, encodeFunctionData, getAddress, parseAbi } from "viem";
+import {
+  type Abi,
+  type Address,
+  type Hash,
+  type TransactionReceipt,
+  encodeFunctionData,
+  getAddress,
+  parseAbi,
+} from "viem";
 
 import { getConnection } from "./helpers/connection.js";
 
@@ -10,7 +18,7 @@ import type {
   DeployContractConfig,
   KeyedClient,
 } from "@nomicfoundation/hardhat-viem/types";
-import type { DeployProxyOptions, HardhatViemUpgrades, Libraries } from "@openzeppelin/hardhat-upgrades/viem";
+import type { DeployProxyOptions, HardhatViemUpgrades } from "@openzeppelin/hardhat-upgrades/viem";
 import type { NetworkConnection } from "hardhat/types/network";
 
 /** OpenZeppelin `ProxyAdmin.upgradeAndCall` (same signature in Contracts 4.x and 5.x). */
@@ -60,32 +68,25 @@ async function withChecksummedAddress<ContractName extends string>(
     : viem.getContractAt(contractName, checksummed, { client });
 }
 
+/** Deploys `contractName` behind a proxy; pass `opts.constructorArgs` to set the implementation's immutables. */
 async function deployUpgradableFromFactory<ContractName extends string>(
   contractName: ContractName,
   args?: unknown[],
   opts?: DeployProxyOptions,
-  factoryOpts?: { libraries?: Libraries },
 ): Promise<ContractReturnType<ContractName>> {
-  const proxy = await (await getUpgrades()).deployProxy(contractName, args, { ...opts, ...factoryOpts });
+  const proxy = await (await getUpgrades()).deployProxy(contractName, args, opts);
   return withChecksummedAddress(contractName, proxy, opts?.client);
 }
 
-// Use constructor in upgradeable contract to set immutable for static global constants.
-async function deployUpgradableWithConstructorArgs<ContractName extends string>(
-  contractName: ContractName,
-  constructorArgs: unknown[] = [],
-  initializerArgs: unknown[] = [],
-  opts: DeployProxyOptions = {},
-  factoryOpts?: { libraries?: Libraries },
-): Promise<ContractReturnType<ContractName>> {
-  const proxy = await (
-    await getUpgrades()
-  ).deployProxy(contractName, initializerArgs, {
-    ...opts,
-    ...factoryOpts,
-    constructorArgs,
-  });
-  return withChecksummedAddress(contractName, proxy, opts.client);
+/** Receipt of the transaction that deployed the proxy at `proxy.address`: the first one that emitted a log from it. */
+async function getProxyDeploymentReceipt(proxy: { address: Address }): Promise<TransactionReceipt> {
+  const { viem } = await getConnection();
+  const publicClient = await viem.getPublicClient();
+  const [firstLog] = await publicClient.getLogs({ address: proxy.address, fromBlock: 0n });
+  if (firstLog === undefined) {
+    throw new Error(`No log emitted by ${proxy.address}`);
+  }
+  return publicClient.getTransactionReceipt({ hash: firstLog.transactionHash });
 }
 
 /**
@@ -118,9 +119,4 @@ async function reinitializeUpgradeableProxy(
   });
 }
 
-export {
-  deployFromFactory,
-  deployUpgradableFromFactory,
-  deployUpgradableWithConstructorArgs,
-  reinitializeUpgradeableProxy,
-};
+export { deployFromFactory, deployUpgradableFromFactory, getProxyDeploymentReceipt, reinitializeUpgradeableProxy };

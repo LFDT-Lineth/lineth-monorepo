@@ -1,17 +1,12 @@
 import { expect } from "chai";
-import { network } from "hardhat";
 import { describe, it, beforeEach } from "node:test";
 import { type Hex, encodePacked, keccak256 } from "viem";
 
+import { randomBytes32 } from "../../../../common/helpers/encoding.js";
 import { MAX_UINT32, MAX_UINT33, MESSAGE_FEE, MESSAGE_VALUE_1ETH } from "../../common/constants/index.js";
 import { deployFromFactory } from "../../common/deployment.js";
-import {
-  type TestAccount,
-  generateRandomBytes,
-  getTestAccounts,
-  range,
-  expectRevertWithCustomError,
-} from "../../common/helpers/index.js";
+import { loadFixture } from "../../common/helpers/connection.js";
+import { type TestAccount, getTestAccounts, range, expectRevertWithCustomError } from "../../common/helpers/index.js";
 
 import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
 
@@ -25,9 +20,8 @@ describe("SparseMerkleTreeVerifier", () => {
   }
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
     [sender, recipient] = await getTestAccounts();
-    sparseMerkleTreeVerifier = await networkHelpers.loadFixture(deploySparseMerkleTreeVerifierFixture);
+    sparseMerkleTreeVerifier = await loadFixture(deploySparseMerkleTreeVerifierFixture);
   });
 
   describe("efficientKeccak", () => {
@@ -201,11 +195,11 @@ describe("SparseMerkleTreeVerifier", () => {
     });
 
     it("Should revert if proof length results in casting to a value higher than 32 bit uint", async () => {
-      const proof = range(0, 32).map(() => generateRandomBytes(32));
+      const proof = range(0, 32).map(() => randomBytes32());
 
       await expectRevertWithCustomError(
         sparseMerkleTreeVerifier,
-        sparseMerkleTreeVerifier.read.verifyMerkleProof([generateRandomBytes(32), proof, 25, generateRandomBytes(32)]),
+        sparseMerkleTreeVerifier.read.verifyMerkleProof([randomBytes32(), proof, 25, randomBytes32()]),
         "SafeCastOverflowedUintDowncast",
         [32, MAX_UINT33],
       );

@@ -11,6 +11,7 @@ import {
   USED_RATE_LIMIT_RESETTER_ROLE,
 } from "../common/constants/index.js";
 import { deployUpgradableFromFactory } from "../common/deployment.js";
+import { loadFixture } from "../common/helpers/connection.js";
 import {
   type TestAccount,
   expectAccessControlRevert,
@@ -48,8 +49,7 @@ describe("Rate limiter", () => {
   });
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    testRateLimiter = await networkHelpers.loadFixture(deployTestRateLimiterFixture);
+    testRateLimiter = await loadFixture(deployTestRateLimiterFixture);
     await testRateLimiter.write.grantRole([RATE_LIMIT_SETTER_ROLE, resetAdmin.address]);
     await testRateLimiter.write.grantRole([USED_RATE_LIMIT_RESETTER_ROLE, resetAdmin.address]);
   });

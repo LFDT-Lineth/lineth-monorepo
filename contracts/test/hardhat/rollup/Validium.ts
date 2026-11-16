@@ -8,6 +8,8 @@ import {
   VALIDIUM_UNPAUSE_TYPES_ROLES,
   STATE_DATA_SUBMISSION_PAUSE_TYPE,
 } from "../../../common/constants/index.js";
+import { randomBytes32 } from "../../../common/helpers/encoding.js";
+import { generateKeccak256 } from "../../../common/helpers/hashing.js";
 import firstCompressedDataContent from "../_testData/compressedData/blocks-1-46.json" with { type: "json" };
 import secondCompressedDataContent from "../_testData/compressedData/blocks-47-81.json" with { type: "json" };
 import {
@@ -27,15 +29,14 @@ import {
   MAX_GAS_LIMIT,
 } from "../common/constants/index.js";
 import { deployUpgradableFromFactory } from "../common/deployment.js";
+import { loadFixture } from "../common/helpers/connection.js";
 import {
   type TestAccount,
   hex,
   calculateRollingHash,
-  generateRandomBytes,
   generateCallDataSubmission,
   buildAccessErrorMessage,
   expectRevertWhenPaused,
-  generateKeccak256,
   expectRevertWithCustomError,
   expectRevertWithReason,
   expectEvent,
@@ -64,15 +65,13 @@ describe("Validium contract", () => {
   const secondExpectedShnarf = hex(secondCompressedDataContent.expectedShnarf);
 
   before(async () => {
-    const { networkHelpers } = await network.getOrCreate();
     ({ admin, securityCouncil, operator, nonAuthorizedAccount, alternateShnarfProviderAddress } =
-      await networkHelpers.loadFixture(getAccountsFixture));
-    roleAddresses = await networkHelpers.loadFixture(getValidiumRoleAddressesFixture);
+      await loadFixture(getAccountsFixture));
+    roleAddresses = await loadFixture(getValidiumRoleAddressesFixture);
   });
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    ({ verifier, validium, addressFilter } = await networkHelpers.loadFixture(deployValidiumFixture));
+    ({ verifier, validium, addressFilter } = await loadFixture(deployValidiumFixture));
     addressFilterAddress = addressFilter.address;
   });
 
@@ -147,26 +146,22 @@ describe("Validium contract", () => {
     });
 
     it("Should store verifier address in storage", async () => {
-      const { networkHelpers } = await network.getOrCreate();
-      ({ verifier, validium } = await networkHelpers.loadFixture(deployValidiumFixture));
+      ({ verifier, validium } = await loadFixture(deployValidiumFixture));
       expect(await validium.read.verifiers([0n])).to.be.equal(verifier);
     });
 
     it("Should assign the OPERATOR_ROLE to operator addresses", async () => {
-      const { networkHelpers } = await network.getOrCreate();
-      ({ verifier, validium } = await networkHelpers.loadFixture(deployValidiumFixture));
+      ({ verifier, validium } = await loadFixture(deployValidiumFixture));
       expect(await validium.read.hasRole([OPERATOR_ROLE, operator.address])).to.be.true;
     });
 
     it("Should assign the VERIFIER_SETTER_ROLE to securityCouncil addresses", async () => {
-      const { networkHelpers } = await network.getOrCreate();
-      ({ verifier, validium } = await networkHelpers.loadFixture(deployValidiumFixture));
+      ({ verifier, validium } = await loadFixture(deployValidiumFixture));
       expect(await validium.read.hasRole([VERIFIER_SETTER_ROLE, securityCouncil.address])).to.be.true;
     });
 
     it("Should assign the VERIFIER_UNSETTER_ROLE to securityCouncil addresses", async () => {
-      const { networkHelpers } = await network.getOrCreate();
-      ({ verifier, validium } = await networkHelpers.loadFixture(deployValidiumFixture));
+      ({ verifier, validium } = await loadFixture(deployValidiumFixture));
       expect(await validium.read.hasRole([VERIFIER_UNSETTER_ROLE, securityCouncil.address])).to.be.true;
     });
 
@@ -268,22 +263,19 @@ describe("Validium contract", () => {
     });
 
     it("Should have the validium address as the shnarfProvider", async () => {
-      const { networkHelpers } = await network.getOrCreate();
-      ({ verifier, validium } = await networkHelpers.loadFixture(deployValidiumFixture));
+      ({ verifier, validium } = await loadFixture(deployValidiumFixture));
       const validiumAddress = validium.address;
 
       expect(await validium.read.shnarfProvider()).to.equal(validiumAddress);
     });
 
     it("Should have the correct contract version", async () => {
-      const { networkHelpers } = await network.getOrCreate();
-      ({ verifier, validium } = await networkHelpers.loadFixture(deployValidiumFixture));
+      ({ verifier, validium } = await loadFixture(deployValidiumFixture));
       expect(await validium.read.CONTRACT_VERSION()).to.equal("2.0");
     });
 
     it("Should revert if the initialize function is called a second time", async () => {
-      const { networkHelpers } = await network.getOrCreate();
-      ({ verifier, validium } = await networkHelpers.loadFixture(deployValidiumFixture));
+      ({ verifier, validium } = await loadFixture(deployValidiumFixture));
       const initializeCall = validium.write.initialize([
         {
           initialStateRootHash: parentStateRootHash,
@@ -338,16 +330,14 @@ describe("Validium contract", () => {
     });
 
     it("Should remove verifier address in storage ", async () => {
-      const { networkHelpers } = await network.getOrCreate();
-      ({ verifier, validium } = await networkHelpers.loadFixture(deployValidiumFixture));
+      ({ verifier, validium } = await loadFixture(deployValidiumFixture));
       await validium.write.unsetVerifierAddress([0n], { account: securityCouncil.account });
 
       expect(await validium.read.verifiers([0n])).to.be.equal(ADDRESS_ZERO);
     });
 
     it("Should revert when removing verifier address if the caller has not the VERIFIER_UNSETTER_ROLE ", async () => {
-      const { networkHelpers } = await network.getOrCreate();
-      ({ verifier, validium } = await networkHelpers.loadFixture(deployValidiumFixture));
+      ({ verifier, validium } = await loadFixture(deployValidiumFixture));
 
       await expectRevertWithReason(
         validium.write.unsetVerifierAddress([0n], { account: nonAuthorizedAccount.account }),
@@ -390,11 +380,12 @@ describe("Validium contract", () => {
 
     it("Should fail when the parent shnarf does not exist", async () => {
       const [submissionData] = generateCallDataSubmission(0, 1);
-      const nonExistingParentShnarf = generateRandomBytes(32);
+      const nonExistingParentShnarf = randomBytes32();
 
       const wrongExpectedShnarf = generateKeccak256(
         ["bytes32", "bytes32", "bytes32", "bytes32", "bytes32"],
         [HASH_ZERO, HASH_ZERO, submissionData.finalStateRootHash, HASH_ZERO, HASH_ZERO],
+        { encodePacked: false },
       );
 
       const asyncCall = validium.write.acceptShnarfData(
@@ -539,7 +530,7 @@ describe("Validium contract", () => {
   describe("Validate L2 computed rolling hash", () => {
     it("Should revert if l1 message number == 0 and l1 rolling hash is not empty", async () => {
       const l1MessageNumber = 0n;
-      const l1RollingHash = generateRandomBytes(32);
+      const l1RollingHash = randomBytes32();
 
       await expectRevertWithCustomError(
         validium,
@@ -563,7 +554,7 @@ describe("Validium contract", () => {
 
     it("Should revert if l1RollingHash does not exist on L1", async () => {
       const l1MessageNumber = 1n;
-      const l1RollingHash = generateRandomBytes(32);
+      const l1RollingHash = randomBytes32();
 
       await expectRevertWithCustomError(
         validium,
@@ -581,7 +572,7 @@ describe("Validium contract", () => {
 
     it("Should succeed if l1 message number != 0, l1 rolling hash is not empty and exists on L1", async () => {
       const l1MessageNumber = 1n;
-      const messageHash = generateRandomBytes(32);
+      const messageHash = randomBytes32();
 
       await validium.write.addRollingHash([l1MessageNumber, messageHash]);
 

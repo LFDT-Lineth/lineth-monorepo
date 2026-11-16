@@ -1,7 +1,9 @@
 import { network } from "hardhat";
 import { after, before } from "node:test";
 
+import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
 import type { NetworkConnection } from "hardhat/types/network";
+import type { Address } from "viem";
 
 let isolatedConnection: NetworkConnection | undefined;
 
@@ -11,6 +13,21 @@ let isolatedConnection: NetworkConnection | undefined;
  */
 export async function getConnection(): Promise<NetworkConnection> {
   return isolatedConnection ?? network.getOrCreate();
+}
+
+/** `networkHelpers.loadFixture` on the test connection (see `getConnection`). */
+export async function loadFixture<T>(fixture: () => Promise<T>): Promise<T> {
+  const { networkHelpers } = await getConnection();
+  return networkHelpers.loadFixture(fixture);
+}
+
+/** `viem.getContractAt` on the test connection (see `getConnection`). */
+export async function getContractAt<ContractName extends string>(
+  contractName: ContractName,
+  address: Address,
+): Promise<ContractReturnType<ContractName>> {
+  const { viem } = await getConnection();
+  return viem.getContractAt(contractName, address);
 }
 
 /**

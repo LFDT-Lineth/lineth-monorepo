@@ -1,5 +1,4 @@
 import { expect } from "chai";
-import { network } from "hardhat";
 import { describe, it } from "node:test";
 import { type Address, encodeAbiParameters, maxUint256, parseAbiParameters, zeroAddress } from "viem";
 
@@ -16,6 +15,7 @@ import {
   TOKEN_BRIDGE_DEPLOYED_STATUS,
 } from "../../common/constants/index.js";
 import { deployFromFactory } from "../../common/deployment.js";
+import { loadFixture, getContractAt } from "../../common/helpers/connection.js";
 import {
   buildAccessErrorMessage,
   expectRevertWhenPaused,
@@ -25,8 +25,6 @@ import {
   expectEvent,
 } from "../../common/helpers/index.js";
 
-import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
-
 const initialUserBalance = BigInt(10 ** 9);
 // Use shared constants from common/constants/general.ts
 const RESERVED_STATUS = TOKEN_BRIDGE_RESERVED_STATUS;
@@ -35,19 +33,6 @@ const DEPLOYED_STATUS = TOKEN_BRIDGE_DEPLOYED_STATUS;
 const mockName = "L1 DAI";
 const mockSymbol = "L1DAI";
 const mockDecimals = 18;
-
-async function loadFixture<T>(fixture: () => Promise<T>): Promise<T> {
-  const { networkHelpers } = await network.getOrCreate();
-  return networkHelpers.loadFixture(fixture);
-}
-
-async function getContractAt<ContractName extends string>(
-  contractName: ContractName,
-  address: Address,
-): Promise<ContractReturnType<ContractName>> {
-  const { viem } = await network.getOrCreate();
-  return viem.getContractAt(contractName, address);
-}
 
 describe("Mocked E2E tests", function () {
   async function deployContractsFixture() {

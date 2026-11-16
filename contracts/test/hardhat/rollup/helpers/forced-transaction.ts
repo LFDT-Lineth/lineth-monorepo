@@ -1,6 +1,6 @@
 import { type Hash, type Hex, keccak256, parseEventLogs, serializeTransaction, toHex, zeroAddress } from "viem";
 
-import { encodeData } from "../../../../common/helpers/index.js";
+import { encodeData } from "../../../../common/helpers/encoding.js";
 import { THREE_DAYS_IN_SECONDS } from "../../common/constants/index.js";
 import { getConnection } from "../../common/helpers/connection.js";
 import { type TestAccount } from "../../common/helpers/index.js";

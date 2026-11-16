@@ -14,6 +14,8 @@ import {
   NATIVE_YIELD_UNSTAKING_PAUSE_TYPE,
   NATIVE_YIELD_PERMISSIONLESS_ACTIONS_PAUSE_TYPE,
 } from "../../common/constants/index.js";
+import { loadFixture } from "../../common/helpers/connection.js";
+import { randomAddress } from "../../common/helpers/general.js";
 import {
   expectAccessControlRevert,
   expectRevertWhenPaused,
@@ -30,7 +32,6 @@ import {
   getBalance,
   getImpersonatedAccount,
   incrementBalance,
-  randomAddress,
   setBalance,
   setWithdrawalReserveToMinimum,
   setWithdrawalReserveToTarget,
@@ -57,20 +58,18 @@ describe("YieldManager contract - ETH transfer operations", () => {
   const mockSlot = 100000n; // Must be > lastProvenSlot + SLOTS_PER_HISTORICAL_ROOT (8192)
 
   before(async () => {
-    const { viem, networkHelpers } = await network.getOrCreate();
+    const { viem } = await network.getOrCreate();
     publicClient = await viem.getPublicClient();
     ({
       securityCouncil,
       operator: nonAuthorizedAccount,
       nativeYieldOperator,
       l2YieldRecipient,
-    } = await networkHelpers.loadFixture(getAccountsFixture));
+    } = await loadFixture(getAccountsFixture));
   });
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    ({ yieldManager, mockLinethRollup, initializationData } =
-      await networkHelpers.loadFixture(deployYieldManagerForUnitTest));
+    ({ yieldManager, mockLinethRollup, initializationData } = await loadFixture(deployYieldManagerForUnitTest));
   });
 
   describe("receiving ETH from the L1MessageService", () => {

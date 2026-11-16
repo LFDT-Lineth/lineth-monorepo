@@ -14,6 +14,7 @@ import {
   VALID_MERKLE_PROOF_WITH_ZERO_FEE,
 } from "../common/constants/index.js";
 import { deployFromFactory, deployUpgradableFromFactory } from "../common/deployment.js";
+import { loadFixture } from "../common/helpers/connection.js";
 import {
   type TestAccount,
   getTestAccounts,
@@ -46,22 +47,18 @@ describe("L1LineaTokenBurner", () => {
   }
 
   async function deployL1LineaTokenBurnerContractFixture() {
-    const { networkHelpers } = await network.getOrCreate();
-    const messageService = await networkHelpers.loadFixture(deployTestL1MessageServiceFixture);
+    const messageService = await deployTestL1MessageServiceFixture();
 
     const l2LineaToken = await deployFromFactory("TestERC20", ["TestERC20", "TEST", parseUnits("1000000000", 18)]);
-    const lineaTokenFn = async () =>
-      deployUpgradableFromFactory(
-        "MockL1LineaToken",
-        [messageService.address, l2LineaToken.address, "TestERC20", "TEST"],
-        { unsafeAllow: ["constructor", "incorrect-initializer-order"] },
-      );
-
-    const l1LineaToken = await networkHelpers.loadFixture(lineaTokenFn);
-
-    const l1LineaTokenBurnerFn = async () =>
-      deployFromFactory("L1LineaTokenBurner", [messageService.address, l1LineaToken.address]);
-    const l1LineaTokenBurner = await networkHelpers.loadFixture(l1LineaTokenBurnerFn);
+    const l1LineaToken = await deployUpgradableFromFactory(
+      "MockL1LineaToken",
+      [messageService.address, l2LineaToken.address, "TestERC20", "TEST"],
+      { unsafeAllow: ["constructor", "incorrect-initializer-order"] },
+    );
+    const l1LineaTokenBurner = await deployFromFactory("L1LineaTokenBurner", [
+      messageService.address,
+      l1LineaToken.address,
+    ]);
 
     return { l1LineaTokenBurner, lineaToken: l1LineaToken, messageService };
   }
@@ -73,10 +70,7 @@ describe("L1LineaTokenBurner", () => {
   });
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    ({ l1LineaTokenBurner, lineaToken, messageService } = await networkHelpers.loadFixture(
-      deployL1LineaTokenBurnerContractFixture,
-    ));
+    ({ l1LineaTokenBurner, lineaToken, messageService } = await loadFixture(deployL1LineaTokenBurnerContractFixture));
     // Mint some LINEA tokens to the admin so that we can test the burning functionality.
     // It is used to initialize the total supply of the token.
     await lineaToken.write.mint([admin.address, INITIAL_LINEA_TOKEN_SUPPLY]);

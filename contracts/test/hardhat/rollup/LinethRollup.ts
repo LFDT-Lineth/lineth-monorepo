@@ -17,6 +17,7 @@ import {
   LINETH_ROLLUP_V8_PAUSE_TYPES_ROLES,
   LINETH_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
 } from "../../../common/constants/index.js";
+import { encodeData, randomBytes32 } from "../../../common/helpers/encoding.js";
 import firstCompressedDataContent from "../_testData/compressedData/blocks-1-46.json" with { type: "json" };
 import blobAggregatedProof1To155 from "../_testData/compressedDataEip4844/aggregatedProof-1-155.json" with { type: "json" };
 import {
@@ -40,12 +41,17 @@ import {
   SET_ADDRESS_FILTER_ROLE,
   INITIALIZED_ALREADY_MESSAGE,
 } from "../common/constants/index.js";
-import { deployUpgradableFromFactory, getUpgrades, reinitializeUpgradeableProxy } from "../common/deployment.js";
+import {
+  deployUpgradableFromFactory,
+  getUpgrades,
+  reinitializeUpgradeableProxy,
+  getProxyDeploymentReceipt,
+} from "../common/deployment.js";
+import { loadFixture } from "../common/helpers/connection.js";
 import {
   type TestAccount,
   hex,
   calculateRollingHash,
-  encodeData,
   generateRandomBytes,
   buildAccessErrorMessage,
   generateBlobParentShnarfData,
@@ -85,16 +91,14 @@ describe("Lineth Rollup contract", () => {
   const parentStateRootHash = hex(firstCompressedDataContent.parentStateRootHash);
 
   before(async () => {
-    const { networkHelpers } = await network.getOrCreate();
     ({ admin, securityCouncil, operator, nonAuthorizedAccount, alternateShnarfProviderAddress } =
-      await networkHelpers.loadFixture(getAccountsFixture));
-    roleAddresses = await networkHelpers.loadFixture(getRoleAddressesFixture);
+      await loadFixture(getAccountsFixture));
+    roleAddresses = await loadFixture(getRoleAddressesFixture);
     ({ abi: linethRollupAbi } = await hre.artifacts.readArtifact("src/rollup/LinethRollup.sol:LinethRollup"));
   });
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    ({ addressFilter, verifier, linethRollup, yieldManager } = await networkHelpers.loadFixture(
+    ({ addressFilter, verifier, linethRollup, yieldManager } = await loadFixture(
       deployForcedTransactionGatewayFixture,
     ));
     addressFilterAddress = addressFilter.address;
@@ -188,32 +192,26 @@ describe("Lineth Rollup contract", () => {
     });
 
     it("Should store verifier address in storage", async () => {
-      const { networkHelpers } = await network.getOrCreate();
-      ({ verifier, linethRollup } = await networkHelpers.loadFixture(deployLinethRollupFixture));
+      ({ verifier, linethRollup } = await loadFixture(deployLinethRollupFixture));
       expect(await linethRollup.read.verifiers([0n])).to.be.equal(verifier);
     });
 
     it("Should assign the OPERATOR_ROLE to operator addresses", async () => {
-      const { networkHelpers } = await network.getOrCreate();
-      ({ verifier, linethRollup } = await networkHelpers.loadFixture(deployLinethRollupFixture));
+      ({ verifier, linethRollup } = await loadFixture(deployLinethRollupFixture));
       expect(await linethRollup.read.hasRole([OPERATOR_ROLE, operator.address])).to.be.true;
     });
 
     it("Should assign the VERIFIER_SETTER_ROLE to securityCouncil addresses", async () => {
-      const { networkHelpers } = await network.getOrCreate();
-      ({ verifier, linethRollup } = await networkHelpers.loadFixture(deployLinethRollupFixture));
+      ({ verifier, linethRollup } = await loadFixture(deployLinethRollupFixture));
       expect(await linethRollup.read.hasRole([VERIFIER_SETTER_ROLE, securityCouncil.address])).to.be.true;
     });
 
     it("Should assign the VERIFIER_UNSETTER_ROLE to securityCouncil addresses", async () => {
-      const { networkHelpers } = await network.getOrCreate();
-      ({ verifier, linethRollup } = await networkHelpers.loadFixture(deployLinethRollupFixture));
+      ({ verifier, linethRollup } = await loadFixture(deployLinethRollupFixture));
       expect(await linethRollup.read.hasRole([VERIFIER_UNSETTER_ROLE, securityCouncil.address])).to.be.true;
     });
 
     it("Should store the startingRootHash in storage for the first block number", async () => {
-      // This test needs explicit BigInt types for event verification
-      const { viem } = await network.getOrCreate();
       const initializationData: LinethRollupInitializationData = {
         initialStateRootHash: parentStateRootHash,
         initialL2BlockNumber: BigInt(INITIAL_MIGRATION_BLOCK),
@@ -237,8 +235,8 @@ describe("Lineth Rollup contract", () => {
         initializationData.rateLimitPeriodInSeconds,
         initializationData.rateLimitAmountInWei,
         initializationData.roleAddresses.map((r) => [r.addressWithRole, r.role]),
-        initializationData.pauseTypeRoles.map((p) => [BigInt(p.pauseType), p.role]),
-        initializationData.unpauseTypeRoles.map((p) => [BigInt(p.pauseType), p.role]),
+        initializationData.pauseTypeRoles.map((p) => [p.pauseType, p.role]),
+        initializationData.unpauseTypeRoles.map((p) => [p.pauseType, p.role]),
         initializationData.defaultAdmin,
         initializationData.shnarfProvider,
         initializationData.addressFilter,
@@ -253,12 +251,7 @@ describe("Lineth Rollup contract", () => {
         },
       );
 
-      // The OZ viem plugin does not expose the proxy deployment transaction: with automine it is the only
-      // transaction of the latest block.
-      const publicClient = await viem.getPublicClient();
-      const { transactions } = await publicClient.getBlock();
-      const receipt = await publicClient.getTransactionReceipt({ hash: transactions[transactions.length - 1] });
-      expect(receipt.contractAddress?.toLowerCase()).to.equal(linethRollup.address.toLowerCase());
+      const receipt = await getProxyDeploymentReceipt(linethRollup);
 
       await expectEventDirectFromReceiptData(
         linethRollup,
@@ -325,22 +318,19 @@ describe("Lineth Rollup contract", () => {
     });
 
     it("Should have the linethRollup address as the shnarfProvider", async () => {
-      const { networkHelpers } = await network.getOrCreate();
-      ({ verifier, linethRollup } = await networkHelpers.loadFixture(deployLinethRollupFixture));
+      ({ verifier, linethRollup } = await loadFixture(deployLinethRollupFixture));
       const linethRollupAddress = linethRollup.address;
 
       expect(await linethRollup.read.shnarfProvider()).to.equal(linethRollupAddress);
     });
 
     it("Should have the correct contract version", async () => {
-      const { networkHelpers } = await network.getOrCreate();
-      ({ verifier, linethRollup } = await networkHelpers.loadFixture(deployLinethRollupFixture));
+      ({ verifier, linethRollup } = await loadFixture(deployLinethRollupFixture));
       expect(await linethRollup.read.CONTRACT_VERSION()).to.equal("8.0");
     });
 
     it("Should revert if the initialize function is called a second time", async () => {
-      const { networkHelpers } = await network.getOrCreate();
-      ({ verifier, linethRollup } = await networkHelpers.loadFixture(deployLinethRollupFixture));
+      ({ verifier, linethRollup } = await loadFixture(deployLinethRollupFixture));
       const initData = { ...createDefaultInitData(), roleAddresses };
       const initializeCall = linethRollup.write.initialize([initData, FALLBACK_OPERATOR_ADDRESS, yieldManager]);
 
@@ -485,16 +475,14 @@ describe("Lineth Rollup contract", () => {
     });
 
     it("Should remove verifier address in storage ", async () => {
-      const { networkHelpers } = await network.getOrCreate();
-      ({ verifier, linethRollup } = await networkHelpers.loadFixture(deployLinethRollupFixture));
+      ({ verifier, linethRollup } = await loadFixture(deployLinethRollupFixture));
       await linethRollup.write.unsetVerifierAddress([0n], { account: securityCouncil.account });
 
       expect(await linethRollup.read.verifiers([0n])).to.be.equal(ADDRESS_ZERO);
     });
 
     it("Should revert when removing verifier address if the caller has not the VERIFIER_UNSETTER_ROLE ", async () => {
-      const { networkHelpers } = await network.getOrCreate();
-      ({ verifier, linethRollup } = await networkHelpers.loadFixture(deployLinethRollupFixture));
+      ({ verifier, linethRollup } = await loadFixture(deployLinethRollupFixture));
 
       await expectRevertWithReason(
         linethRollup.write.unsetVerifierAddress([0n], { account: nonAuthorizedAccount.account }),
@@ -591,7 +579,7 @@ describe("Lineth Rollup contract", () => {
   describe("Validate L2 computed rolling hash", () => {
     it("Should revert if l1 message number == 0 and l1 rolling hash is not empty", async () => {
       const l1MessageNumber = 0n;
-      const l1RollingHash = generateRandomBytes(32);
+      const l1RollingHash = randomBytes32();
 
       await expectRevertWithCustomError(
         linethRollup,
@@ -615,7 +603,7 @@ describe("Lineth Rollup contract", () => {
 
     it("Should revert if l1RollingHash does not exist on L1", async () => {
       const l1MessageNumber = 1n;
-      const l1RollingHash = generateRandomBytes(32);
+      const l1RollingHash = randomBytes32();
 
       await expectRevertWithCustomError(
         linethRollup,
@@ -633,7 +621,7 @@ describe("Lineth Rollup contract", () => {
 
     it("Should succeed if l1 message number != 0, l1 rolling hash is not empty and exists on L1", async () => {
       const l1MessageNumber = 1n;
-      const messageHash = generateRandomBytes(32);
+      const messageHash = randomBytes32();
 
       await linethRollup.write.addRollingHash([l1MessageNumber, messageHash]);
 
@@ -654,7 +642,7 @@ describe("Lineth Rollup contract", () => {
     it("Should revert if first byte is no zero", async () => {
       const compressedDataBytes = encodeData(
         ["bytes32", "bytes32", "bytes32"],
-        [generateRandomBytes(32), HASH_WITHOUT_ZERO_FIRST_BYTE, generateRandomBytes(32)],
+        [randomBytes32(), HASH_WITHOUT_ZERO_FIRST_BYTE, randomBytes32()],
       );
 
       await expectRevertWithCustomError(
@@ -737,7 +725,7 @@ describe("Lineth Rollup contract", () => {
     it("Should revert if the time has passed and the last finalized L1 rolling hash does not match", async () => {
       const { networkHelpers } = await network.getOrCreate();
       await networkHelpers.time.increase(SIX_MONTHS_IN_SECONDS);
-      const random32Bytes = generateRandomBytes(32);
+      const random32Bytes = randomBytes32();
       const actualSentState = calculateLastFinalizedState(
         0n,
         random32Bytes,

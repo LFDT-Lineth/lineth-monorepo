@@ -1,8 +1,8 @@
-import * as fs from "fs";
-import { type Account, type Hash, type Hex, bytesToHex, concat, encodePacked, keccak256 } from "viem";
+import { type Account, type Hash, type Hex, bytesToHex, concat, encodePacked, keccak256, getAddress } from "viem";
 
 import { getConnection } from "./connection.js";
-import { address, generateRandomBytes, hex, range } from "./general.js";
+import { generateRandomBytes, hex, range } from "./general.js";
+import { randomBytes32 } from "../../../../common/helpers/encoding.js";
 import {
   HASH_ZERO,
   COMPRESSED_SUBMISSION_DATA,
@@ -60,7 +60,7 @@ export function proofDataToFinalizationParams(context: ProofFinalizationContext)
     lastFinalizedForcedTransactionRollingHash: hex(proofData.parentAggregationFtxRollingHash),
     lastFinalizedForcedTransactionNumber: BigInt(proofData.parentAggregationFtxNumber),
     finalForcedTransactionNumber: BigInt(proofData.finalFtxNumber),
-    filteredAddresses: proofData.filteredAddresses.map(address),
+    filteredAddresses: proofData.filteredAddresses.map((value) => getAddress(value)),
   };
 }
 
@@ -71,12 +71,12 @@ export async function generateFinalizationData(overrides?: Partial<FinalizationD
     aggregatedProof: generateRandomBytes(928),
     endBlockNumber: 99n,
     shnarfData: generateParentShnarfData(1),
-    parentStateRootHash: generateRandomBytes(32),
+    parentStateRootHash: randomBytes32(),
     lastFinalizedTimestamp: BigInt(latest - 2),
     finalTimestamp: BigInt(latest),
-    l1RollingHash: generateRandomBytes(32),
+    l1RollingHash: randomBytes32(),
     l1RollingHashMessageNumber: 10n,
-    l2MerkleRoots: [generateRandomBytes(32)],
+    l2MerkleRoots: [randomBytes32()],
     filteredAddresses: [],
     l2MerkleTreesDepth: 5n,
     l2MessagingBlocksOffsets: generateL2MessagingBlocksOffsets(1, 1),
@@ -134,42 +134,10 @@ export function generateBlobDataSubmission(
   };
 }
 
-export function generateBlobDataSubmissionFromFile(filePath: string): {
-  blobDataSubmission: BlobSubmission[];
-  compressedBlobs: Hex[];
-  parentShnarf: Hex;
-  finalShnarf: Hex;
-} {
-  const fileContents = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-
-  const compressedBlobs: Hex[] = [];
-  const parentShnarf = hex(fileContents.prevShnarf);
-  const finalShnarf = hex(fileContents.expectedShnarf);
-
-  compressedBlobs.push(base64ToHex(fileContents.compressedData));
-
-  const blobDataSubmission = [
-    {
-      dataEvaluationClaim: hex(fileContents.expectedY),
-      kzgCommitment: hex(fileContents.commitment),
-      kzgProof: hex(fileContents.kzgProofContract),
-      finalStateRootHash: hex(fileContents.finalStateRootHash),
-      snarkHash: hex(fileContents.snarkHash),
-    },
-  ];
-
-  return {
-    compressedBlobs,
-    blobDataSubmission,
-    parentShnarf,
-    finalShnarf,
-  };
-}
-
 /**
  * Mirrors the Solidity _computeShnarf: keccak256(abi.encodePacked(parentShnarf, snarkHash, finalStateRootHash, dataEvaluationPoint, dataEvaluationClaim)).
  */
-export function computeShnarf(shnarfData: ShnarfData): Hex {
+function computeShnarf(shnarfData: ShnarfData): Hex {
   return keccak256(
     concat([
       shnarfData.parentShnarf,

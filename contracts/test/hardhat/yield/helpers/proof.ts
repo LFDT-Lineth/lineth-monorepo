@@ -1,5 +1,4 @@
 import { SecretKey } from "@chainsafe/blst";
-import { network } from "hardhat";
 import { type Address, type Hex, parseGwei } from "viem";
 
 import { randomBytes32 } from "../../../../common/helpers/encoding.js";
@@ -10,6 +9,7 @@ import {
   SLOTS_PER_EPOCH,
 } from "../../common/constants/index.js";
 import { deployFromFactory } from "../../common/deployment.js";
+import { getConnection } from "../../common/helpers/connection.js";
 import { hex } from "../../common/helpers/index.js";
 
 import type {
@@ -84,19 +84,8 @@ export const generatePendingPartialWithdrawal = (
   };
 };
 
-export const generatePendingPartialWithdrawals = (
-  ...withdrawals: PendingPartialWithdrawal[]
-): PendingPartialWithdrawal[] => {
-  const randomCount = randomInt(1000, 0); // Generate 0-5 random withdrawals
-  const randomWithdrawals: PendingPartialWithdrawal[] = [];
-  for (let i = 0; i < randomCount; i++) {
-    randomWithdrawals.push(generatePendingPartialWithdrawal());
-  }
-  return [...withdrawals, ...randomWithdrawals];
-};
-
 export const setBeaconBlockRoot = async (root: Hex): Promise<number> => {
-  const { viem, networkHelpers } = await network.getOrCreate();
+  const { viem, networkHelpers } = await getConnection();
   const publicClient = await viem.getPublicClient();
   const systemAddress: Address = "0xfffffffffffffffffffffffffffffffffffffffe";
   const initialBalance = 999999999999999999999999999n;

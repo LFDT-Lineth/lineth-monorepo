@@ -1,11 +1,11 @@
 // Test scenarios with LinethRollup + YieldManager + LidoStVaultYieldProvider
 import { expect } from "chai";
-import { network } from "hardhat";
 import { describe, it, before, beforeEach } from "node:test";
 import { type Address, encodeFunctionData, keccak256 } from "viem";
 
 import { encodeSendMessage } from "../../../../common/helpers/encoding.js";
 import { EMPTY_CALLDATA, ONE_ETHER, ZERO_VALUE, CONNECT_DEPOSIT } from "../../common/constants/index.js";
+import { loadFixture } from "../../common/helpers/connection.js";
 import {
   type TestAccount,
   getAccountsFixture,
@@ -62,13 +62,11 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
   let mockStakingVaultAddress: Address;
 
   before(async () => {
-    const { networkHelpers } = await network.getOrCreate();
     ({ nativeYieldOperator, nonAuthorizedAccount, l2YieldRecipient, securityCouncil } =
-      await networkHelpers.loadFixture(getAccountsFixture));
+      await loadFixture(getAccountsFixture));
   });
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
     ({
       linethRollup,
       yieldProvider,
@@ -83,7 +81,7 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       sszMerkleTree,
       testVerifier,
       initializationData,
-    } = await networkHelpers.loadFixture(deployYieldManagerIntegrationTestFixture));
+    } = await loadFixture(deployYieldManagerIntegrationTestFixture));
     l1MessageServiceAddress = linethRollup.address;
     yieldManagerAddress = yieldManager.address;
     mockStakingVaultAddress = mockStakingVault.address;

@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import hre, { network } from "hardhat";
+import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 import { encodeFunctionData, parseAbi, parseEther, zeroHash } from "viem";
 
@@ -12,6 +13,8 @@ import {
   VERIFIER_SETTER_ROLE,
 } from "../../common/constants/index.js";
 import { deployUpgradableFromFactory } from "../../common/deployment.js";
+import { loadFixture } from "../../common/helpers/connection.js";
+import { captureLogs } from "../../common/helpers/general.js";
 import { type TestAccount, getAccountsFixture } from "../../common/helpers/index.js";
 import { deployLinethRollupFixture } from "../../rollup/helpers/index.js";
 
@@ -19,21 +22,12 @@ import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
 
 /**
  * Runs the operational task actions (scripts/operational/**) against the in-process network, through the same
- * `hre.tasks` entry point as `pnpm exec hardhat <task>`. The signer is the first configured account (key mode).
+ * `hre.tasks` entry point as `pnpm exec hardhat <task>`, and returns the logged lines. The signer is the first
+ * configured account (key mode).
  */
 async function runTask(name: string, args: Record<string, string>): Promise<string[]> {
-  const logged: string[] = [];
-  const originalLog = console.log;
-  console.log = (...values: unknown[]) => {
-    logged.push(values.map((value) => String(value)).join(" "));
-    originalLog(...values);
-  };
-  try {
-    await hre.tasks.getTask(name).run(args);
-  } finally {
-    console.log = originalLog;
-  }
-  return logged;
+  const { lines } = await captureLogs(() => hre.tasks.getTask(name).run(args));
+  return lines;
 }
 
 async function deployRateLimiterFixture() {
@@ -48,16 +42,14 @@ describe("Operational tasks", () => {
   let nonAuthorizedAccount: TestAccount;
 
   before(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    ({ admin, securityCouncil, nonAuthorizedAccount } = await networkHelpers.loadFixture(getAccountsFixture));
+    ({ admin, securityCouncil, nonAuthorizedAccount } = await loadFixture(getAccountsFixture));
   });
 
   describe("grantContractRoles / setRateLimit / renounceContractRoles", () => {
     let rateLimiter: ContractReturnType<"TestRateLimiter">;
 
     before(async () => {
-      const { networkHelpers } = await network.getOrCreate();
-      rateLimiter = await networkHelpers.loadFixture(deployRateLimiterFixture);
+      rateLimiter = await loadFixture(deployRateLimiterFixture);
     });
 
     it("grants the rate limit setter role, sets the limit, then hands the roles over", async () => {
@@ -100,18 +92,15 @@ describe("Operational tasks", () => {
     });
 
     it("rejects a malformed role list", async () => {
-      let error: unknown;
-      try {
-        await runTask("grantContractRoles", {
+      await assert.rejects(
+        runTask("grantContractRoles", {
           adminAddress: admin.address,
           proxyAddress: rateLimiter.address,
           contractType: "TestRateLimiter",
           contractRoles: "0x1234",
-        });
-      } catch (caught) {
-        error = caught;
-      }
-      expect(String(error)).to.contain('Invalid role "0x1234"');
+        }),
+        /Invalid role "0x1234"/,
+      );
     });
   });
 
@@ -119,8 +108,7 @@ describe("Operational tasks", () => {
     let linethRollup: ContractReturnType<"TestLinethRollup">;
 
     before(async () => {
-      const { networkHelpers } = await network.getOrCreate();
-      ({ linethRollup } = await networkHelpers.loadFixture(deployLinethRollupFixture));
+      ({ linethRollup } = await loadFixture(deployLinethRollupFixture));
       await linethRollup.write.grantRole([VERIFIER_SETTER_ROLE, admin.address], { account: securityCouncil.account });
       await linethRollup.write.grantRole([DEFAULT_ADMIN_ROLE, admin.address], { account: securityCouncil.account });
     });
@@ -160,17 +148,14 @@ describe("Operational tasks", () => {
     });
 
     it("addAndClaimMessageForLST fails fast without a yield provider", async () => {
-      let error: unknown;
-      try {
-        await runTask("addAndClaimMessageForLST", {
+      await assert.rejects(
+        runTask("addAndClaimMessageForLST", {
           linethRollupAddress: linethRollup.address,
           to: securityCouncil.address,
           value: "1000",
-        });
-      } catch (caught) {
-        error = caught;
-      }
-      expect(String(error)).to.contain("yieldProvider / YIELD_PROVIDER_ADDRESS");
+        }),
+        /yieldProvider \/ YIELD_PROVIDER_ADDRESS/,
+      );
     });
   });
 
@@ -219,12 +204,9 @@ describe("Operational tasks", () => {
   });
 
   it("unstakePermissionless fails fast on missing params", async () => {
-    let error: unknown;
-    try {
-      await runTask("unstakePermissionless", { yieldManager: admin.address });
-    } catch (caught) {
-      error = caught;
-    }
-    expect(String(error)).to.contain("Missing required params/envs");
+    await assert.rejects(
+      runTask("unstakePermissionless", { yieldManager: admin.address }),
+      /Missing required params\/envs/,
+    );
   });
 });

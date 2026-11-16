@@ -11,6 +11,7 @@ import {
   type ContractEventName,
   type Hash,
   type TransactionReceipt,
+  BaseError,
   decodeEventLog,
   parseEventLogs,
   zeroAddress,
@@ -38,11 +39,11 @@ type WithPredicates<TArgs> = TArgs extends readonly unknown[]
     : { -readonly [K in keyof TArgs]: TArgs[K] | ((value: TArgs[K]) => boolean) }
   : unknown[];
 
-export type ExpectedErrorArgs<TAbi extends Abi, TErrorName extends ContractErrorName<TAbi>> = WithPredicates<
+type ExpectedErrorArgs<TAbi extends Abi, TErrorName extends ContractErrorName<TAbi>> = WithPredicates<
   ContractErrorArgs<TAbi, TErrorName>
 >;
 
-export type ExpectedEventArgs<TAbi extends Abi, TEventName extends ContractEventName<TAbi>> =
+type ExpectedEventArgs<TAbi extends Abi, TEventName extends ContractEventName<TAbi>> =
   TEventName extends AbiItemName<TAbi> ? WithPredicates<AbiItemArgs<TAbi, TEventName>> : unknown[];
 
 /** The `viem.assertions` methods the helpers call, seen with string names and untyped args (the helpers type them). */
@@ -95,6 +96,21 @@ export async function expectRevertWithReason(asyncCall: Promise<unknown>, reason
   await assertions.revertWith(asyncCall, reason);
 }
 
+/** Asserts that `asyncCall` reverts, whatever the reason (chai-matchers' `.to.be.reverted`). */
+export async function expectRevert(asyncCall: Promise<unknown>): Promise<void> {
+  let error: unknown;
+  try {
+    await asyncCall;
+  } catch (e) {
+    error = e;
+  }
+  expect(error, "Expected the call to revert, but it did not revert").to.not.equal(undefined);
+  expect(
+    error instanceof BaseError && /revert/i.test(error.message),
+    `Expected a revert, got: ${String(error)}`,
+  ).to.equal(true);
+}
+
 /**
  * Asserts that the transaction emitted `eventName` from `contract.address`, with `eventArgs` when given (passes if
  * any emitted occurrence matches).
@@ -110,19 +126,6 @@ export async function expectEvent<const TAbi extends Abi, TEventName extends Con
     await assertions.emit(asyncCall, contract, eventName);
   } else {
     await assertions.emitWithArgs(asyncCall, contract, eventName, eventArgs);
-  }
-}
-
-/** Asserts several events of one transaction (each as `expectEvent` with args). */
-export async function expectEvents(
-  contract: AssertionTarget,
-  asyncCall: Hash | Promise<Hash>,
-  events: { name: string; args: readonly unknown[] }[],
-): Promise<void> {
-  const assertions = await getAssertions();
-  const hash = await asyncCall;
-  for (const event of events) {
-    await assertions.emitWithArgs(hash, contract, event.name, event.args);
   }
 }
 
@@ -143,67 +146,41 @@ export async function expectNoEvent(
 }
 
 /**
- * Decodes the log at `logIndex` of a receipt with `contract.abi` and checks its name and args (as a set, positionally
- * normalized). For events emitted by another address than the ABI holder (e.g. a proxy called through a forwarder),
- * which `viem.assertions.emit*` filter out.
+ * Decodes the log at `logIndex` of a receipt with `contract.abi` and checks its name and args, positionally and
+ * strictly (structs as positional arrays in ABI order). For events emitted by another address than the ABI holder
+ * (e.g. a proxy called through a forwarder), which `viem.assertions.emit*` filter out.
  */
 export function expectEventDirectFromReceiptData(
   contract: { abi: Abi },
   transactionReceipt: TransactionReceipt,
   expectedEventName: string,
-  expectedEventArgs: unknown[] = [],
+  expectedEventArgs: readonly unknown[] = [],
   logIndex: number = 0,
 ) {
   const log = transactionReceipt.logs[logIndex];
   expect(log, `no log at index ${logIndex}`).to.not.equal(undefined);
-  const event = decodeEventLog({ abi: contract.abi, data: log!.data, topics: log!.topics });
-  expect(event.eventName).to.equal(expectedEventName);
-  const inputs = eventInputs(contract.abi, expectedEventName);
-  expect(normalizeArgs(event.args ?? [], inputs)).to.have.deep.members(normalizeArgs(expectedEventArgs, inputs));
+  const { eventName, args } = decodeEventLog({ abi: contract.abi, data: log!.data, topics: log!.topics });
+  expect(eventName).to.equal(expectedEventName);
+  const event = contract.abi.find((item): item is AbiEvent => item.type === "event" && item.name === eventName);
+  expect(toPositional(args, event?.inputs ?? [])).to.deep.equal(expectedEventArgs);
 }
 
-function eventInputs(abi: Abi, eventName: string): readonly AbiParameter[] {
-  const event = abi.find((item): item is AbiEvent => item.type === "event" && item.name === eventName);
-  return event?.inputs ?? [];
-}
-
-/** Converts decoded or expected args (array or named object) to a positional, normalized array. */
-function normalizeArgs(args: unknown, inputs: readonly AbiParameter[]): unknown[] {
+/** Converts decoded args or a decoded struct (array or named object) to a positional array, recursing into structs. */
+function toPositional(value: unknown, params: readonly AbiParameter[]): unknown[] {
   let list: readonly unknown[] = [];
-  if (Array.isArray(args)) {
-    list = args;
-  } else if (isRecord(args)) {
-    list = inputs.map((input, index) => args[input.name ?? String(index)]);
-  }
-  return list.map((value, index) => normalizeValue(value, inputs[index]));
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-/** Numbers and bigints compare as decimal strings, hex case-insensitively, structs as positional arrays. */
-function normalizeValue(value: unknown, param?: AbiParameter): unknown {
-  if (typeof value === "number" || typeof value === "bigint") {
-    return BigInt(value).toString();
-  }
-  if (typeof value === "string") {
-    return value.startsWith("0x") ? value.toLowerCase() : value;
-  }
-  if (param?.type.startsWith("tuple") && "components" in param) {
-    const isArray = param.type.endsWith("]");
-    if (isArray && Array.isArray(value)) {
-      const element: AbiParameter = { ...param, type: param.type.slice(0, param.type.lastIndexOf("[")) };
-      return value.map((item) => normalizeValue(item, element));
-    }
-    return normalizeArgs(value, param.components);
-  }
   if (Array.isArray(value)) {
-    const element: AbiParameter | undefined =
-      param && param.type.endsWith("]")
-        ? { ...param, type: param.type.slice(0, param.type.lastIndexOf("[")) }
-        : undefined;
-    return value.map((item) => normalizeValue(item, element));
+    list = value;
+  } else if (typeof value === "object" && value !== null) {
+    const record: Record<string, unknown> = { ...value };
+    list = params.map((param, index) => record[param.name ?? String(index)]);
   }
-  return value;
+  return list.map((item, index) => {
+    const param = params[index];
+    if (param === undefined || !("components" in param)) {
+      return item;
+    }
+    return param.type.endsWith("]") && Array.isArray(item)
+      ? item.map((element) => toPositional(element, param.components))
+      : toPositional(item, param.components);
+  });
 }

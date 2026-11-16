@@ -1,4 +1,4 @@
-import { type Address, pad, toHex } from "viem";
+import { type Address, pad, toHex, getAddress } from "viem";
 
 import { getAccountsFixture, getRoleAddressesFixture, getValidiumRoleAddressesFixture } from "./before.js";
 import { PRECOMPILES_ADDRESSES } from "../../../../common/constants/index.js";
@@ -25,7 +25,7 @@ import {
   VALIDIUM_INITIALIZE_SIGNATURE,
 } from "../../common/constants/index.js";
 import { deployFromFactory, deployUpgradableFromFactory } from "../../common/deployment.js";
-import { address, hex } from "../../common/helpers/index.js";
+import { hex } from "../../common/helpers/index.js";
 
 import type { LinethRollupInitializationData } from "../../common/types.js";
 
@@ -38,9 +38,6 @@ export async function deployCallForwardingProxy(target: Address) {
   return deployFromFactory("CallForwardingProxy", [target]);
 }
 
-// Fixtures call the fixtures they build on directly instead of through `loadFixture`: Hardhat 3's network helpers
-// lose snapshot invalidations made by a `loadFixture` nested inside another fixture (the outer call keeps the snapshot
-// list it read before running the fixture), which later fails with HHE60013 when a stale snapshot is restored.
 export async function deployValidiumFixture() {
   const { securityCouncil, nonAuthorizedAccount } = await getAccountsFixture();
   const roleAddresses = await getValidiumRoleAddressesFixture();
@@ -73,7 +70,7 @@ export async function deployValidiumFixture() {
   return { verifier, validium, addressFilter };
 }
 
-export async function deployMockYieldManager(): Promise<Address> {
+async function deployMockYieldManager(): Promise<Address> {
   const mockYieldManager = await deployFromFactory("MockYieldManager");
   return mockYieldManager.address;
 }
@@ -119,7 +116,7 @@ export async function deployLinethRollupFixture() {
 export async function deployAddressFilter(securityCouncil: Address, nonAuthorizedAccount: Address[]) {
   const addressFilter = await deployFromFactory("AddressFilter", [
     securityCouncil,
-    [...PRECOMPILES_ADDRESSES.map(address), ...nonAuthorizedAccount],
+    [...PRECOMPILES_ADDRESSES.map((value) => getAddress(value)), ...nonAuthorizedAccount],
   ]);
 
   return { addressFilter };

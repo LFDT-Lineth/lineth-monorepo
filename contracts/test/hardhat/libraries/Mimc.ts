@@ -1,10 +1,10 @@
 import { expect } from "chai";
-import { network } from "hardhat";
 import { describe, it, beforeEach } from "node:test";
 import { concat } from "viem";
 
 import mimcTestData from "../_testData/mimc-test-data.json" with { type: "json" };
 import { deployFromFactory } from "../common/deployment.js";
+import { loadFixture } from "../common/helpers/connection.js";
 import { hex, expectRevertWithCustomError } from "../common/helpers/index.js";
 
 import type { ContractReturnType } from "@nomicfoundation/hardhat-viem/types";
@@ -17,8 +17,7 @@ describe("Mimc", () => {
   }
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    mimc = await networkHelpers.loadFixture(deployMIMCFixture);
+    mimc = await loadFixture(deployMIMCFixture);
   });
 
   describe("hash", () => {

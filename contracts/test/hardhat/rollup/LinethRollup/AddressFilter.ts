@@ -1,9 +1,9 @@
 import { expect } from "chai";
-import { network } from "hardhat";
 import { describe, it, before, beforeEach } from "node:test";
 
 import { DEFAULT_ADMIN_ROLE } from "../../../../common/constants/index.js";
 import { ADDRESS_ZERO } from "../../common/constants/index.js";
+import { loadFixture } from "../../common/helpers/connection.js";
 import {
   type TestAccount,
   buildAccessErrorMessage,
@@ -24,13 +24,11 @@ describe("AddressFilter: Forced Transactions", () => {
   // let securityCouncil: TestAccount;
 
   before(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    ({ nonAuthorizedAccount, securityCouncil, operator } = await networkHelpers.loadFixture(getAccountsFixture));
+    ({ nonAuthorizedAccount, securityCouncil, operator } = await loadFixture(getAccountsFixture));
   });
 
   beforeEach(async () => {
-    const { networkHelpers } = await network.getOrCreate();
-    ({ addressFilter } = await networkHelpers.loadFixture(deployAddressFilterFixture));
+    ({ addressFilter } = await loadFixture(deployAddressFilterFixture));
   });
 
   describe("Contract Construction", () => {
