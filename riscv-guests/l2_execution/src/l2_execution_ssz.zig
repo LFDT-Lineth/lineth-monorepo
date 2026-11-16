@@ -38,8 +38,7 @@ pub const MAX_TX_BYTES: usize = 1 << 30; // matches the consensus-layer Transact
 
 /// System-contract addresses handed to the execution engine (field order = wire order, and matches
 /// zesu's `input.SystemContracts`). Supplied by the coordinator from the node's genesis config.
-/// `deposit` through `builder_exit_request` are hashed into `dynamicChainConfigHash`;
-/// `beacon_roots` and `history_storage` must be the mainnet addresses.
+/// See Readme.md §2.1 for which are hashed into `dynamicChainConfigHash`.
 pub const SystemContracts = struct {
     beacon_roots: [20]u8,
     history_storage: [20]u8,

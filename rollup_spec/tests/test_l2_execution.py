@@ -19,14 +19,8 @@ from ethereum.state import Address
 from ethereum_types.numeric import U64
 
 from rollup_spec import l2_execution
-from rollup_spec.block import (
-    MAINNET_BEACON_ROOTS_ADDRESS,
-    MAINNET_HISTORY_STORAGE_ADDRESS,
-    ChainConfig,
-    LinethPayloadInput,
-    SystemContracts,
-)
-from rollup_spec.fork import Log
+from rollup_spec.block import ChainConfig, LinethPayloadInput, SystemContracts
+from rollup_spec.fork import BEACON_ROOTS_ADDRESS, HISTORY_STORAGE_ADDRESS, Log
 from rollup_spec.l2_execution import (
     BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0,
     BRIDGE_ROLLING_HASH_UPDATED_TOPIC_0,
@@ -49,8 +43,8 @@ _OTHER_CONTRACT = Address(bytes([0x22]) * 20)
 # Distinct per-field addresses so a field swap anywhere in the pipeline is caught; beacon
 # roots and history storage must be mainnet.
 _SYSTEM_CONTRACTS = SystemContracts(
-    beacon_roots=MAINNET_BEACON_ROOTS_ADDRESS,
-    history_storage=MAINNET_HISTORY_STORAGE_ADDRESS,
+    beacon_roots=BEACON_ROOTS_ADDRESS,
+    history_storage=HISTORY_STORAGE_ADDRESS,
     deposit=Address(bytes([0xA3]) * 20),
     withdrawal_request=Address(bytes([0xA4]) * 20),
     consolidation_request=Address(bytes([0xA5]) * 20),

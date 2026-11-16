@@ -84,8 +84,7 @@ fn addressToSlot32(address: [20]u8) [32]u8 {
 }
 
 /// `ChainConfig.hash(base_fee)` (Readme.md §2.1): keccak256 over `abi.encode`-style 32-byte words,
-/// in the L1 verifier's chain-configuration parameter order. `beacon_roots` and `history_storage`
-/// are not hashed (see `checkFixedSystemContracts`).
+/// in the L1 verifier's chain-configuration parameter order.
 fn chainConfigHash(chain_config: l2_execution_ssz.ChainConfig, base_fee: u64) [32]u8 {
     const sc = chain_config.system_contracts;
     const words = [_][32]u8{
