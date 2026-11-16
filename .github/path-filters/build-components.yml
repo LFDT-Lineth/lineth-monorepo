@@ -95,8 +95,11 @@ linea-sequencer-plugin:
 linea-besu:
   - 'linea-besu/besu/**'
 linea-besu-package:
+  - 'linea-besu/package/docker/**'
+  - 'linea-besu/package/linea-besu/**'
+  - 'linea-besu/package/scripts/**'
+  - 'linea-besu/package/Makefile'
   - 'linea-besu/package/versions.env'
-  - 'linea-besu/package/scripts/assemble-packages.sh'
 native-yield-automation-service:
   - 'operations/native-yield/automation-service/**'
   - 'ts-libs/linea-shared-utils/**'
