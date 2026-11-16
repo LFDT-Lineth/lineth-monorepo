@@ -4,38 +4,15 @@
 
 <br />
 
-This section describes the composite Ignition modules (`contracts/ignition/modules/stacks/`) that deploy multiple contracts in one deployment. They replace the chained `hardhat deploy --tags A,B,C` runs: the contracts a later step needs (the new verifier for LinethRollup, the new BridgedToken beacon for TokenBridge) are wired inside the module, so no address is handed over between scripts and a stale registry/env value for them is never used.
-
-| Hardhat 2 | Now | Module file |
-|---|---|---|
-| `--tags PlonkVerifier,LinethRollup,Timelock` | `hardhat ignition deploy L1Protocol` | `ignition/modules/stacks/L1Protocol.ts` |
-| `--tags L2MessageService,Timelock` | `hardhat ignition deploy L2Protocol` | `ignition/modules/stacks/L2Protocol.ts` |
-| `--tags BridgedToken,TokenBridge` | `hardhat ignition deploy TokenBridgeWithBeacon` | `ignition/modules/stacks/TokenBridgeWithBeacon.ts` |
+This section describes the composite Ignition modules (`contracts/ignition/modules/stacks/`) that deploy multiple contracts in one deployment. The contracts a later step needs (the new verifier for LinethRollup, the new BridgedToken beacon for TokenBridge) are wired inside the module, so no address is handed over between scripts and a stale registry/env value for them is never used.
 
 `hardhat ignition deploy <Name>` builds the parameters (env vars + address registry → `ignition/parameters/<network>.json`), runs the OpenZeppelin Upgrades checks, deploys with Ignition and runs the post-deploy steps. See [README.md](README.md#generalized-command-format) for the details, deployment ids and resume.
 
 <br />
 
-## UI-backed chained deployments
+## Browser wallet signing
 
-Composite deployments support the browser-wallet flow with **one session for the entire run**:
-
-```shell
-pnpm exec hardhat ignition deploy L1Protocol --network sepolia --signer-ui
-```
-
-With `--signer-ui` (or `HARDHAT_SIGNER_UI=true`):
-
-- **Single session per `hardhat ignition deploy` run** — with `--signer-ui`, the whole Ignition deployment and the post-deploy steps run in one signer session, so the local HTTP bridge and Next.js UI stay up until the whole module is deployed.
-- **Multiple transactions** share that same session (sequential wallet approvals). Ignition skips what is already deployed in the deployment id, so a resumed run only asks for the missing transactions.
-- The UI can show **batch context** (module, step) and keep a **submitted-transaction history** in the browser (session storage) after the bridge closes.
-- By default the **Next.js process is stopped** when the deploy run ends (success or failure), alongside the HTTP bridge; the tab stays open with history in session storage. Set `HARDHAT_SIGNER_UI_LEAVE_NEXT_DEV_AFTER_DEPLOY=true` to keep Next running. The bridge reports a terminal outcome so the UI stops polling cleanly.
-- If a wallet prompt is rejected or the run is interrupted, run `pnpm exec hardhat deploy:recover --network <n>` before re-running the same command.
-- `--signer-ui` and `DEPLOYER_PRIVATE_KEY` cannot be used together. Hardhat errors if both are present.
-
-If `HARDHAT_SIGNER_UI` is not set (or not `true`), deployments sign with **`DEPLOYER_PRIVATE_KEY`** (the network's account 0).
-
-See the **Browser wallet signing (`HARDHAT_SIGNER_UI`)** section in [README.md](README.md) and [signer-ui/README.md](../../signer-ui/README.md) for env vars and local stack notes.
+With `--signer-ui` (or `HARDHAT_SIGNER_UI=true`), a composite module is signed in one browser session for the whole run: one wallet prompt per transaction, and a resumed run only asks for the transactions not yet deployed. See [signer-ui/README.md](../../signer-ui/README.md).
 
 <br />
 
@@ -49,7 +26,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | ------------------ | -------- | ---------- | ----------- |
 | VERIFY_CONTRACT    | false    |true\|false| Verifies the deployed contracts (same as `--verify`) |
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
-| \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
+| \**ETHERSCAN_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network. |
 | INITIAL_L2_STATE_ROOT_HASH   | true      | bytes | Initial State Root Hash (shared base) |
 | INITIAL_L2_BLOCK_NUMBER   | true      | uint256 | Initial L2 Block Number (shared base) |
@@ -102,7 +79,7 @@ Module `L2Protocol`: deploys L2MessageService (behind the pinned OpenZeppelin 4.
 | ------------------ | -------- | ---------- | ----------- |
 | VERIFY_CONTRACT    | false    |true\|false| Verifies the deployed contracts (same as `--verify`) |
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
-| \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
+| \**ETHERSCAN_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network. |
 | L2_SECURITY_COUNCIL | registry\|env | address | L2 Security council address. Read from registry on stable networks; env var used as fallback. |
 | L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER  | registry\|env  |  address | L1L2 Message Setter address on L2. Read from registry on stable networks; env var used as fallback. |
@@ -137,7 +114,7 @@ Module `TokenBridgeWithBeacon`: deploys the BridgedToken implementation behind t
 | --------------------- | -------- | ---------- | ----------- |
 | VERIFY_CONTRACT       | false    |true\|false| Verifies the deployed contracts (same as `--verify`). |
 | \**DEPLOYER_PRIVATE_KEY*       | true     | key | Network-specific private key used when deploying the contract. |
-| \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
+| \**ETHERSCAN_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY         | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network. |
 | L2_MESSAGE_SERVICE_ADDRESS    | registry\|env  | address   | L2 Message Service address. Read from registry on stable networks; env var used as fallback. |
 | LINETH_ROLLUP_ADDRESS         | registry\|env    | address       | L1 Rollup address. Read from registry on stable networks; env var used as fallback. |

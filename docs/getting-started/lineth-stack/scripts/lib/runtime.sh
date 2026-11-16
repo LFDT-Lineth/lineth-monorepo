@@ -29,11 +29,11 @@ lineth_runtime_init() {
   return 1
 }
 
-lineth_ts_node_available() {
-  [ -n "$1" ] && [ -x "$1/node_modules/.bin/ts-node" ]
+lineth_tsx_available() {
+  [ -n "$1" ] && [ -x "$1/contracts/node_modules/.bin/tsx" ]
 }
 
-lineth_run_ts_node() {
+lineth_run_tsx() {
   ts_root="$1"
   ts_script="$2"
   shift 2
@@ -42,9 +42,7 @@ lineth_run_ts_node() {
   # verify-deps-before-run=false: pnpm 11 otherwise auto-runs `pnpm install` before
   # exec when node_modules looks outdated, and its interactive purge prompt hangs
   # forever because quickstart callers redirect this output to a temp file.
-  TS_NODE_TRANSPILE_ONLY=1 \
-  TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"Node"}' \
-    pnpm -s --config.verify-deps-before-run=false exec ts-node "$ts_script" "$@"
+  pnpm -s --config.verify-deps-before-run=false exec tsx "$ts_script" "$@"
 }
 
 lineth_valid_env_key() {
@@ -130,10 +128,10 @@ lineth_l1_deployer_shell_env() {
   fi
 
   root="$(git -C "$LINETH_STACK_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
-  if [ -n "$root" ] && lineth_ts_node_available "$root"; then
+  if [ -n "$root" ] && lineth_tsx_available "$root"; then
     (
       export LINETH_STACK_DIR
-      lineth_run_ts_node "$root" "$LINETH_STACK_DIR/scripts/internal/deployer-wallet.ts" emit-shell-env --context host
+      lineth_run_tsx "$root" "$LINETH_STACK_DIR/scripts/internal/deployer-wallet.ts" emit-shell-env --context host
     )
     return $?
   fi
@@ -148,7 +146,7 @@ lineth_l1_deployer_shell_env() {
     return 0
   fi
 
-  printf 'host ts-node is required to resolve the generated Sepolia deployer; run pnpm install or use ./scripts/start.sh first\n' >&2
+  printf 'host tsx is required to resolve the generated Sepolia deployer; run pnpm install or use ./scripts/start.sh first\n' >&2
   return 1
 }
 

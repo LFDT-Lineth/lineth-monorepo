@@ -16,7 +16,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | --------------------- | -------- | ---------- | ----------- |
 | VERIFY_CONTRACT       | false    |true\|false| Verifies the deployed contract. |
 | \**DEPLOYER_PRIVATE_KEY*       | true     | key | Network-specific private key used when deploying the contract. |
-| \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
+| \**ETHERSCAN_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY         | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network. |
 
 <br />
@@ -47,7 +47,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | CUSTOMTOKENBRIDGE_BRIDGE_ADDRESS | true    |address| Token bridge's address|
 | VERIFY_CONTRACT       | false    |true\|false| Verifies the deployed contract. |
 | \**DEPLOYER_PRIVATE_KEY*       | true     | key | Network-specific private key used when deploying the contract. |
-| \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
+| \**ETHERSCAN_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY         | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network. |
 
 <br />
@@ -74,7 +74,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | --------------------- | -------- | ---------- | ----------- |
 | VERIFY_CONTRACT       | false    |true\|false| Verifies the deployed contract. |
 | \**DEPLOYER_PRIVATE_KEY*       | true     | key | Network-specific private key used when deploying the contract. |
-| \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
+| \**ETHERSCAN_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY         | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network. |
 | L2_MESSAGE_SERVICE_ADDRESS    | registry\|env  | address   | L2 Message Service address. Read from the address registry on stable networks; env var used as fallback or on unregistered networks. |
 | LINETH_ROLLUP_ADDRESS         | registry\|env    | address       | L1 Rollup address. Read from the address registry on stable networks; env var used as fallback.   |

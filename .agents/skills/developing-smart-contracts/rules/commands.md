@@ -30,7 +30,7 @@ pnpm -F contracts run lint:fix
 cd contracts && pnpm hardhat test
 
 # Run tests with coverage
-cd contracts && SOLIDITY_COVERAGE=true pnpm hardhat coverage
+pnpm -F contracts run coverage
 
 # Run specific test file
 cd contracts && pnpm hardhat test test/hardhat/messaging/l1/L1MessageService.ts

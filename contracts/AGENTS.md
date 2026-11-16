@@ -4,7 +4,7 @@
 
 ## Package Overview
 
-Solidity smart contracts for the Lineth protocol: L1 rollup (LinethRollup), messaging services (L1/L2MessageService), token bridge (TokenBridge), and supporting libraries. Built with Hardhat and Foundry.
+Solidity smart contracts for the Lineth protocol: L1 rollup (LinethRollup), messaging services (L1/L2MessageService), token bridge (TokenBridge), and supporting libraries. Built with Hardhat.
 
 ## How to Run
 
@@ -39,7 +39,7 @@ pnpm -F contracts run prettier:sol:fix
 # Full lint + format
 pnpm -F contracts run lint:fix
 
-# Generate Solidity docs (requires Foundry)
+# Generate Solidity docs
 pnpm -F contracts run solidity:docgen
 ```
 
@@ -48,7 +48,7 @@ pnpm -F contracts run solidity:docgen
 ### Compiler and EVM
 
 - Solidity version: `0.8.33` (exact for contracts, caret `^0.8.33` for interfaces/abstract/libraries)
-- EVM version: osaka (Hardhat), cancun (Foundry)
+- EVM version: osaka
 - OpenZeppelin contracts: 4.9.6
 
 ### Licenses
@@ -118,8 +118,8 @@ Named imports only. Explicit inheritance of key ancestors. Blank line after impo
 ## Testing
 
 - Hardhat tests: `test/hardhat/` — TypeScript test files
-- Foundry tests: `test/foundry/` — Solidity test files
-- Coverage: `hardhat test --coverage` (`pnpm -F contracts run coverage`, which also sets `SOLIDITY_COVERAGE=true` so gas-heavy `SparseMerkleProof` cases skip themselves)
+- Solidity tests: `test/foundry/` — `*.t.sol` files, run by Hardhat (`hardhat test solidity`)
+- Coverage: `pnpm -F contracts run coverage` (`hardhat test --coverage`; report in `coverage/`)
 - CI runs coverage and uploads to Codecov with `hardhat` flag
 
 ## Agent Rules (Overrides)
@@ -131,9 +131,7 @@ Named imports only. Explicit inheritance of key ancestors. Blank line after impo
 
 ## Hardhat scripts and optional browser signer UI (`HARDHAT_SIGNER_UI`)
 
-- **Default:** deployments use **`DEPLOYER_PRIVATE_KEY`** (the network `accounts` resolved in `hardhat.config.ts`) like any standard Hardhat project.
-- **Opt-in UI:** pass `--signer-ui` (or set `HARDHAT_SIGNER_UI=true`) to sign in a browser via the local Next.js app under `contracts/signer-ui/`, driven by the in-repo plugin `contracts/hardhat-plugins/signer-ui/` (bridge in `bridge.ts`). Code that signs wraps its work in `withSignerUi(hre, label, fn)` (`hardhat-plugins/signer-ui/session.ts`): for that call it registers a `network.onRequest` handler that answers `eth_accounts` with the browser wallet and routes `eth_sendTransaction` to it, so Ignition, OZ Upgrades and viem wallet clients sign in the browser, and it closes the session when `fn` settles. `hardhat ignition deploy` and the operational tasks do this; get the signer with `getUiWalletClient` and label transactions with `setUiTransactionContext`. `--signer-ui` and `DEPLOYER_PRIVATE_KEY` are mutually exclusive; Hardhat errors if both are set. After `hardhat ignition deploy`, the bridge reports a terminal outcome and **stops Next.js by default** (see `HARDHAT_SIGNER_UI_LEAVE_NEXT_DEV_AFTER_DEPLOY` / `HARDHAT_SIGNER_UI_SHUTDOWN_NEXT_DEV` in deployment docs). A rejected or interrupted wallet prompt leaves the Ignition journal on an unsent transaction: run `hardhat deploy:recover` (it reads `cache/signer-ui/broadcasts-<chainId>.jsonl`) before resuming.
-- **Docs:** [contracts/docs/deployment/README.md](docs/deployment/README.md) (overview), [contracts/signer-ui/README.md](signer-ui/README.md) (operator walkthrough), [contracts/docs/deployment/signer-ui-removal.md](docs/deployment/signer-ui-removal.md) (how to delete the feature).
+- Deployments sign with `DEPLOYER_PRIVATE_KEY` by default; `--signer-ui` (or `HARDHAT_SIGNER_UI=true`, mutually exclusive with it) signs in a browser wallet through the local app under `signer-ui/`, driven by `hardhat-plugins/signer-ui/`. Code that signs wraps its work in `withSignerUi(hre, label, fn)`. See [signer-ui/README.md](signer-ui/README.md).
 - **Lint:** `contracts/eslint.config.mjs` ignores `signer-ui/**` so Next’s `.next` output is not parsed by the contracts ESLint project.
 
 ## `local-deployments-artifacts/`
@@ -148,6 +146,6 @@ Hardhat compilation artifacts consumed by the E2E test pipeline (`e2e/scripts/ge
 
 ### Producing an artifact
 
-1. Run `pnpm hardhat compile` in `/contracts` (requires `pnpm i` first).
+1. Run `pnpm hardhat build` in `/contracts` (requires `pnpm i` first).
 2. Find the JSON build artifact in `contracts/build/src/`.
 3. Copy it to the appropriate subdirectory above.

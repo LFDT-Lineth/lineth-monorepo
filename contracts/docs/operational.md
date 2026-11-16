@@ -198,9 +198,8 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | INFURA_API_KEY     | true     | key | Infura API Key |
 | VERIFIER_PROOF_TYPE | true | uint256 | Verifier Proof type ("0" - Full Verifier, "1" - Full-Large Verifier, "2" - Light Verifier). If omitted in the .env, it must be provided as CLI argument using the `--verifier-proof-type` flag|
-| LINETH_ROLLUP_ADDRESS | true | address | Proxy contract address. If omitted in the .env, it must be provided as CLI argument using the `--proxy-address` flag|
-| VERIFIER_ADDRESS | true | address | Verifier Address. If omitted in the .env, it must be provided as CLI argument using the `--verifier-address` flag|
-| VERIFIER_CONTRACT_NAME | true | string | Verifier Name. If omitted in the .env, it must be provided as CLI argument using the `--verifier-contract-name` flag|
+| LINETH_ROLLUP_ADDRESS | false | address | Proxy contract address (`--proxy-address`). Defaults to the `LinethRollup` entry of the address registry|
+| VERIFIER_ADDRESS | true | address | Verifier address (`--verifier-address`). If omitted, read from the `VERIFIER_ADDRESS` env var or address registry key|
 
 <br />
 
@@ -219,7 +218,6 @@ pnpm exec hardhat setVerifierAddress \
 --verifier-proof-type <uint256> \
 --proxy-address <address> \
 --verifier-address <address> \
---verifier-contract-name <string> \
 --network sepolia
 ```
 
@@ -270,40 +268,24 @@ pnpm exec hardhat setMessageServiceOnTokenBridge \
 ### transferProxyAdminOwnership
 
 <br />
-Transfers ownership of a proxy's ProxyAdmin to a new address.
-<br />
-<br />
-Parameters that should be filled either in .env or passed as CLI arguments:
+Transfers ownership of a proxy's ProxyAdmin to a new address. This is a script, configured with environment variables only:
 
 | Parameter name        | Required | Input Value | Description |
 | ------------------ | -------- | ---------- | ----------- |
-| \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
+| \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key (or `HARDHAT_SIGNER_UI=true`) |
 | INFURA_API_KEY     | true     | key | Infura API Key |
-| PROXY_ADMIN_OWNER_ADDRESS | true | address | New owner address for the ProxyAdmin. If omitted in the .env, it must be provided as CLI argument using the `--proxy-admin-owner-address` flag|
-| PROXY_ADDRESS | true | address | Proxy contract address. If omitted in the .env, it must be provided as CLI argument using the `--proxy-address` flag|
-| CONTRACT_TYPE | true | Contract name | Contract name parameter. If omitted in the .env, it must be provided as CLI argument using the `--contract-type` flag|
-
-<br />
-
-Base command:
-
-```shell
-pnpm exec hardhat transferProxyAdminOwnership --network sepolia
-```
-
-Base command with cli arguments:
+| PROXY_ADMIN_OWNER_ADDRESS | true | address | New owner address for the ProxyAdmin |
+| PROXY_ADDRESS | true | address | Proxy contract address |
+| CONTRACT_TYPE | true | Contract name | Contract name of the proxy implementation |
 
 ```shell
 DEPLOYER_PRIVATE_KEY=<key> \
 INFURA_API_KEY=<key> \
-pnpm exec hardhat transferProxyAdminOwnership \
---proxy-admin-owner-address <address> \
---proxy-address <address> \
---contract-type <string> \
---network sepolia
+PROXY_ADMIN_OWNER_ADDRESS=<address> \
+PROXY_ADDRESS=<address> \
+CONTRACT_TYPE=<string> \
+pnpm -F contracts exec hardhat run --network sepolia scripts/operational/transferProxyAdminOwnership.ts
 ```
-
-(make sure to replace `<key>` `<address>` with actual values)
 
 <br />
 <br />
@@ -311,40 +293,24 @@ pnpm exec hardhat transferProxyAdminOwnership \
 ### changeProxyAdmin
 
 <br />
-Changes the ProxyAdmin contract for a given proxy.
-<br />
-<br />
-Parameters that should be filled either in .env or passed as CLI arguments:
+Changes the ProxyAdmin contract for a given proxy. This is a script, configured with environment variables only:
 
 | Parameter name        | Required | Input Value | Description |
 | ------------------ | -------- | ---------- | ----------- |
-| \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
+| \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key (or `HARDHAT_SIGNER_UI=true`) |
 | INFURA_API_KEY     | true     | key | Infura API Key |
-| NEW_PROXY_ADMIN_ADDRESS | true | address | New ProxyAdmin contract address. If omitted in the .env, it must be provided as CLI argument using the `--new-proxy-admin-address` flag|
-| PROXY_ADDRESS | true | address | Proxy contract address. If omitted in the .env, it must be provided as CLI argument using the `--proxy-address` flag|
-| CONTRACT_TYPE | true | Contract name | Contract name parameter. If omitted in the .env, it must be provided as CLI argument using the `--contract-type` flag|
-
-<br />
-
-Base command:
-
-```shell
-pnpm exec hardhat changeProxyAdmin --network sepolia
-```
-
-Base command with cli arguments:
+| NEW_PROXY_ADMIN_ADDRESS | true | address | New ProxyAdmin contract address |
+| PROXY_ADDRESS | true | address | Proxy contract address |
+| CONTRACT_TYPE | true | Contract name | Contract name of the proxy implementation |
 
 ```shell
 DEPLOYER_PRIVATE_KEY=<key> \
 INFURA_API_KEY=<key> \
-pnpm exec hardhat changeProxyAdmin \
---new-proxy-admin-address <address> \
---proxy-address <address> \
---contract-type <string> \
---network sepolia
+NEW_PROXY_ADMIN_ADDRESS=<address> \
+PROXY_ADDRESS=<address> \
+CONTRACT_TYPE=<string> \
+pnpm -F contracts exec hardhat run --network sepolia scripts/operational/changeProxyAdmin.ts
 ```
-
-(make sure to replace `<key>` `<address>` with actual values)
 
 <br />
 <br />

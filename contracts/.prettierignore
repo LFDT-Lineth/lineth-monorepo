@@ -4,6 +4,3 @@ signer-ui/node_modules
 build
 cache
 coverage*
-gasReporterOutput.json
-typechain-types
-lib

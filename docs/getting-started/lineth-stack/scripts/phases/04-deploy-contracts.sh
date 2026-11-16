@@ -96,11 +96,9 @@ RESOLVER_ENV_FILE=""
 
 timing_record() {
   local name="$1" started_ms="$2" ended_ms="$3" status="$4"
-  if [[ -x /workspace/node_modules/.bin/ts-node ]]; then
+  if [[ -x /workspace/contracts/node_modules/.bin/tsx ]]; then
     NODE_PATH="/workspace/node_modules:/workspace/contracts/node_modules${NODE_PATH:+:$NODE_PATH}" \
-    TS_NODE_TRANSPILE_ONLY=1 \
-    TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"Node"}' \
-      pnpm -s exec ts-node /scripts/internal/deploy-timing.ts record \
+      pnpm -s exec tsx /scripts/internal/deploy-timing.ts record \
         "$DEPLOY_TIMING_PATH" "$name" "$started_ms" "$ended_ms" "$status" \
       >/dev/null 2>&1 || true
   fi
@@ -166,9 +164,9 @@ log "Enabling corepack + pnpm"
 corepack enable >/dev/null 2>&1 || true
 corepack prepare pnpm@12.17.0 --activate >/dev/null 2>&1 || true
 
-# Hardhat-foundry plugin calls `forge` at config-load time; foundry isn't in
-# the node image. The foundry-tools init service seeds pinned binaries into
-# /root/.foundry before this container starts.
+# The deploy steps below call `cast`; foundry isn't in the node image. The
+# foundry-tools init service seeds pinned binaries into /root/.foundry before
+# this container starts.
 FOUNDRY_HOME="${FOUNDRY_HOME:-$HOME/.foundry}"
 FOUNDRY_TAG="${FOUNDRY_TAG:-v1.3.1}"
 export FOUNDRY_DIR="$FOUNDRY_HOME"
@@ -185,10 +183,8 @@ step "Resolve L1 deployer"
 export NODE_PATH="/workspace/node_modules:/workspace/contracts/node_modules${NODE_PATH:+:$NODE_PATH}"
 set +x 2>/dev/null || true
 RESOLVER_ENV_FILE="$(mktemp)"
-TS_NODE_TRANSPILE_ONLY=1 \
-TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"Node"}' \
-  pnpm -s exec ts-node /scripts/internal/deployer-wallet.ts emit-shell-env --context container \
-    --output-file "$RESOLVER_ENV_FILE"
+pnpm -s exec tsx /scripts/internal/deployer-wallet.ts emit-shell-env --context container \
+  --output-file "$RESOLVER_ENV_FILE"
 # shellcheck disable=SC1090
 . "$RESOLVER_ENV_FILE"
 rm -f "$RESOLVER_ENV_FILE"
@@ -435,9 +431,7 @@ log "L2_GENESIS_STATE_ROOT (from Shomei): $L2_GENESIS_STATE_ROOT"
 # Genesis shnarf matches the LinethRollup V8 helper shape used in
 # contracts/test/hardhat/common/helpers/dataGeneration.ts::computeGenesisShnarf.
 L2_GENESIS_SHNARF="$(
-  TS_NODE_TRANSPILE_ONLY=1 \
-  TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"Node"}' \
-    pnpm -s exec ts-node /scripts/internal/quickstart-invariants.ts genesis-shnarf "$L2_GENESIS_STATE_ROOT"
+  pnpm -s exec tsx /scripts/internal/quickstart-invariants.ts genesis-shnarf "$L2_GENESIS_STATE_ROOT"
 )" \
   || die "Failed to compute genesis shnarf"
 log "L2_GENESIS_SHNARF=$L2_GENESIS_SHNARF"
@@ -448,7 +442,7 @@ export L1_CHAIN_ID L1_DEPLOYER_ADDRESS L2_GENESIS_STATE_ROOT L2_GENESIS_SHNARF
 # Install + compile (idempotent against host bind mount)
 # ─────────────────────────────────────────────────────────────────────────────
 
-step "pnpm install + hardhat compile"
+step "pnpm install + hardhat build"
 
 check_linux_native_optional_deps() {
   node --input-type=module <<'NODE'
@@ -486,7 +480,7 @@ if [[ ! -d /workspace/node_modules ]]; then
   pnpm_install_reason="workspace node_modules is missing"
 elif [[ ! -d /workspace/node_modules/.pnpm ]]; then
   pnpm_install_reason="workspace node_modules virtual store is missing"
-elif [[ ! -x /workspace/node_modules/.bin/ts-node || ! -x /workspace/contracts/node_modules/.bin/hardhat ]]; then
+elif [[ ! -x /workspace/contracts/node_modules/.bin/tsx || ! -x /workspace/contracts/node_modules/.bin/hardhat ]]; then
   pnpm_install_reason="workspace node_modules is missing deploy tooling bins"
 else
   if ! pnpm_install_reason="$(check_linux_native_optional_deps)"; then
@@ -506,8 +500,8 @@ if [[ -n "$pnpm_install_reason" ]]; then
   ( cd /workspace && HUSKY=0 CI=true pnpm "${pnpm_install_args[@]}" )
 fi
 
-log "Checking contract compilation cache (pnpm exec hardhat compile)"
-pnpm exec hardhat compile
+log "Checking contract compilation cache (pnpm exec hardhat build)"
+pnpm exec hardhat build
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Capture pre-deploy nonces (the parent prelude in makefile-contracts.mk:158)
@@ -515,9 +509,9 @@ pnpm exec hardhat compile
 
 step "Capture pre-deploy nonces"
 
-L1_NONCE=$(pnpm -s exec ts-node "$ART_DIR/get-wallet-nonce.ts" \
+L1_NONCE=$(pnpm -s exec tsx "$ART_DIR/get-wallet-nonce.ts" \
   --wallet-priv-key "$L1_DEPLOYER_PRIVATE_KEY" --rpc-url "$L1_RPC_URL")
-L2_NONCE=$(pnpm -s exec ts-node "$ART_DIR/get-wallet-nonce.ts" \
+L2_NONCE=$(pnpm -s exec tsx "$ART_DIR/get-wallet-nonce.ts" \
   --wallet-priv-key "$L2_DEPLOYER_PRIVATE_KEY" --rpc-url "$L2_RPC_URL")
 log "L1_NONCE=$L1_NONCE  L2_NONCE=$L2_NONCE"
 export L1_NONCE L2_NONCE
@@ -727,7 +721,7 @@ step1_l1_rollup() {
     fi
     export SECURITY_COUNCIL_PRIVATE_KEY="$L1_DEPLOYER_PRIVATE_KEY"
     export YIELD_MANAGER_ADDRESS="0x000000000000000000000000000000000000dEaD"
-    pnpm -s exec ts-node "$script"
+    pnpm -s exec tsx "$script"
   ) 2>&1 | tee "$logfile"
 
   # Forward the rollup address into the global env for steps 3 + 4.
@@ -764,7 +758,7 @@ step2_l2_message_service() {
   L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER="${L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER:-$PRECOMPUTED_L2_MESSAGE_ANCHORING}" \
   L2_MESSAGE_SERVICE_RATE_LIMIT_PERIOD="86400" \
   L2_MESSAGE_SERVICE_RATE_LIMIT_AMOUNT="1000000000000000000000" \
-    pnpm -s exec ts-node "$ART_DIR/deployL2MessageServiceV1.ts" 2>&1 | tee "$logfile"
+    pnpm -s exec tsx "$ART_DIR/deployL2MessageServiceV1.ts" 2>&1 | tee "$logfile"
 
   L2_MESSAGE_SERVICE_ADDRESS="$(extract_required_address "$logfile" "L2MessageService")"
   verify_address "$L2_MESSAGE_SERVICE_ADDRESS" "$PRECOMPUTED_L2_MS" "L2MessageService"
@@ -815,7 +809,7 @@ step3_token_bridge_l1() {
   L1_SECURITY_COUNCIL="$L1_DEPLOYER_ADDRESS" \
   L2_MESSAGE_SERVICE_ADDRESS="$L2_MESSAGE_SERVICE_ADDRESS" \
   LINETH_ROLLUP_ADDRESS="$LINETH_ROLLUP_ADDRESS" \
-    pnpm -s exec ts-node "$ART_DIR/deployBridgedTokenAndTokenBridgeV1_1.ts" 2>&1 | tee "$logfile"
+    pnpm -s exec tsx "$ART_DIR/deployBridgedTokenAndTokenBridgeV1_1.ts" 2>&1 | tee "$logfile"
   local pipeline_status=("${PIPESTATUS[@]}")
   deploy_status="${pipeline_status[0]}"
   tee_status="${pipeline_status[1]}"
@@ -880,7 +874,7 @@ step4_token_bridge_l2() {
   L2_SECURITY_COUNCIL="$PRECOMPUTED_L2_DEPLOYER" \
   L2_MESSAGE_SERVICE_ADDRESS="$L2_MESSAGE_SERVICE_ADDRESS" \
   LINETH_ROLLUP_ADDRESS="$LINETH_ROLLUP_ADDRESS" \
-    pnpm -s exec ts-node "$ART_DIR/deployBridgedTokenAndTokenBridgeV1_1.ts" 2>&1 | tee "$logfile"
+    pnpm -s exec tsx "$ART_DIR/deployBridgedTokenAndTokenBridgeV1_1.ts" 2>&1 | tee "$logfile"
 
   L2_TOKEN_BRIDGE_ADDRESS="$(extract_required_address "$logfile" "TokenBridge")"
   verify_bridge_step_addresses \
@@ -924,9 +918,7 @@ L1_POSTMAN_TOP_UP_WEI="$L1_POSTMAN_TOP_UP_WEI" \
 L2_RUNTIME_MIN_BALANCE_WEI="$L2_RUNTIME_MIN_BALANCE_WEI" \
 L2_RUNTIME_TOP_UP_WEI="$L2_RUNTIME_TOP_UP_WEI" \
 L2_GAS_PRICE_WEI="$L2_GAS_PRICE_WEI" \
-TS_NODE_TRANSPILE_ONLY=1 \
-TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"Node"}' \
-  pnpm -s exec ts-node /scripts/internal/fund-runtime-accounts.ts
+  pnpm -s exec tsx /scripts/internal/fund-runtime-accounts.ts
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Aggregate addresses → addresses.json
@@ -934,7 +926,7 @@ TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"Node"}' \
 
 step "Aggregate addresses → $OUT_PATH"
 
-TS_NODE_TRANSPILE_ONLY=1 TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"Node"}' pnpm -s exec ts-node /scripts/internal/aggregate-addresses.ts \
+pnpm -s exec tsx /scripts/internal/aggregate-addresses.ts \
   "$LOG_DIR" "$OUT_PATH" "$L1_CHAIN_ID" "$L2_CHAIN_ID" "$L2_RPC_URL"
 
 address_from_json() {

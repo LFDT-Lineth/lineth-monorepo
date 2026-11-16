@@ -14,7 +14,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | --------------------- | -------- | -------------- | ----------- |
 | VERIFY_CONTRACT    | false    | true\|false | Verifies the deployed contract |
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
-| \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
+| \**ETHERSCAN_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. |
 | L2_SECURITY_COUNCIL  | registry\|env | address | L2 Security Council Address. Read from registry on stable networks; env var used as fallback. |
 | ROLLUP_REVENUE_VAULT_LAST_INVOICE_DATE | true | uint256 | Last invoice date timestamp |

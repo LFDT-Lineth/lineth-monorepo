@@ -8,7 +8,7 @@ Automated code quality enforcement, documentation validation, and security revie
 
 ## Scope
 
-All files in `contracts/src/**/*.sol` and `contracts/test/**`. Skip `contracts/lib/`, `typechain-types/`, and generated files.
+All files in `contracts/src/**/*.sol` and `contracts/test/**`. Skip generated files.
 
 ## NatSpec Documentation Checks
 

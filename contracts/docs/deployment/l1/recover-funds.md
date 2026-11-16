@@ -12,7 +12,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | --------------------- | -------- | -------------- | ----------- |
 | VERIFY_CONTRACT    | false    | true\|false | Verifies the deployed contract |
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
-| \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
+| \**ETHERSCAN_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network.|
 | L1_SECURITY_COUNCIL  | registry\|env | address | L1 Security Council Address. Read from registry on stable networks; env var used as fallback. |
 | RECOVERFUNDS_EXECUTOR_ADDRESS | registry\|env | address | Executor address for the RecoverFunds contract. Read from registry if present; env var used as fallback. |

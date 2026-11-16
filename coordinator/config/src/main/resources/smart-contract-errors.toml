@@ -7,7 +7,7 @@
 
 [smart-contract-errors]
 # L1 Lineth Rollup
-# Generated from `pnpm exec ts-node contracts/scripts/operational/getSmartContractErrorsFromABI.ts contracts/local-deployments-artifacts/deployed-artifacts/LinethRollupV6-Deployed-2024-12-03.json`
+# Generated from `pnpm -F contracts exec tsx scripts/operational/getSmartContractErrorsFromABI.ts local-deployments-artifacts/deployed-artifacts/LinethRollupV6-Deployed-2024-12-03.json`
 "0f06cd15" = "DataAlreadySubmitted"
 "c01eab56" = "EmptySubmissionData"
 "36459fa0" = "L1RollingHashDoesNotExistOnL1"
@@ -59,7 +59,7 @@
 "beb1b948" = "ForcedTransactionExistsForBlockOrIsTooLow"
 
 # L2 Message Service
-# Generated from `pnpm exec ts-node contracts/scripts/operational/getSmartContractErrorsFromABI.ts contracts/local-deployments-artifacts/deployed-artifacts/L2MessageServiceV1-Deployed-2024-12-03.json`
+# Generated from `pnpm -F contracts exec tsx scripts/operational/getSmartContractErrorsFromABI.ts local-deployments-artifacts/deployed-artifacts/L2MessageServiceV1-Deployed-2024-12-03.json`
 "3b174434" = "MessageHashesListLengthHigherThanOneHundred"
 "6446cc9c" = "MessageHashesListLengthIsZero"
 "d39e75f9" = "L1MessageNumberSynchronizationWrong"

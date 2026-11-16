@@ -86,8 +86,8 @@ def unpack_blob_payload(blob: bytes) -> bytes:
 # EIP-4844 trusted setup (4096 G1 + 65 G2 monomial points from the Ethereum
 # KZG ceremony). The `ckzg` wheel does not bundle a setup file, so we reuse
 # the one already vendored in this repo for the hardhat contract tests. All
-# four trusted-setup files we found in lineth-monorepo (`contracts/test/...`,
-# `contracts/scripts/testEIP4844/...`, `tmp/besu-eth/.../resources/...`)
+# trusted-setup files we found in lineth-monorepo (`contracts/test/...`,
+# `tmp/besu-eth/.../resources/...`)
 # produce identical KZG commitments; the byte-level sha256 differences are
 # just file-format ordering variants that ckzg parses transparently.
 # parents: [0]=src/rollup_spec, [1]=src, [2]=rollup_spec (project), [3]=repo root.

@@ -139,7 +139,7 @@ root package.json
 - Protocol contracts: Solidity **0.8.33** (see [`contracts/AGENTS.md`](../../../contracts/AGENTS.md))
 - Besu plugin acceptance tests use Web3j wrappers generated from a separate Solidity version for fixtures (see [`linea-besu/plugins/AGENTS.md`](../../../linea-besu/plugins/AGENTS.md))
 - OpenZeppelin upgradeable contracts
-- Compile: `pnpm -F contracts run compile`
+- Compile: `pnpm -F contracts run build`
 
 ### Lisp (Corset)
 

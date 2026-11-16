@@ -17,11 +17,9 @@ fmt:
 fmt-fix:
 	pnpm run lint:fix
 
-test: export SKIP_DEPLOY_LOG := true
 test:
 	pnpm test
 
-coverage: export SKIP_DEPLOY_LOG := true
 coverage:
 	pnpm run coverage
 

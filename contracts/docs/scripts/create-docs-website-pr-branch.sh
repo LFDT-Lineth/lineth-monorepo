@@ -8,7 +8,7 @@
 ### ASSUMPTIONS
 # - Requires permissions to create a branch on docs.linea.build repo
 # - Must execute this script from within lineth-monorepo (can be anywhere)
-# - Hardhat must be installed in the local project, Foundry must be installed globally
+# - Hardhat must be installed in the local project
 
 ### CONSTANTS
 DOCS_WEBSITE_REPO_NAME=doc.linea
@@ -30,11 +30,6 @@ cd $MONOREPO_ROOT_PATH
 cd contracts
 
 # Check required installations
-if ! command -v forge &> /dev/null; then
-    echo "Please install Foundry - https://book.getfoundry.sh/getting-started/installation"
-    exit 1
-fi
-
 if ! command -v pnpm &> /dev/null; then
     echo "Please install pnpm - https://pnpm.io/installation"
     exit 1

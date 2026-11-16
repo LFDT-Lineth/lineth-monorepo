@@ -536,7 +536,7 @@ lineth_wizard_check_rpc_deep() {
     return "$LINETH_WIZARD_RPC_CHECK_STATUS"
   fi
   [ -n "${ROOT:-}" ] || return 0
-  if ! lineth_ts_node_available "$ROOT"; then
+  if ! lineth_tsx_available "$ROOT"; then
     lineth_warn "host Sepolia RPC check skipped; run pnpm install for earlier chain checks"
     return 0
   fi
@@ -548,7 +548,7 @@ lineth_wizard_check_rpc_deep() {
     export LINETH_PREFLIGHT_RPC_ONLY=true
     export L1_MODE="$WIZARD_L1_MODE_RESOLVED"
     export L1_RPC_URL="$WIZARD_L1_RPC_URL_RESOLVED"
-    lineth_run_ts_node "$ROOT" "$LINETH_WIZARD_STACK/scripts/internal/quickstart-preflight.ts"
+    lineth_run_tsx "$ROOT" "$LINETH_WIZARD_STACK/scripts/internal/quickstart-preflight.ts"
   ) > "$wizard_rpc_tmp" 2>&1; then
     lineth_child_output < "$wizard_rpc_tmp"
     rm -f "$wizard_rpc_tmp"
