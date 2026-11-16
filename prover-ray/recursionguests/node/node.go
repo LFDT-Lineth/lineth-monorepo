@@ -68,6 +68,12 @@
 // accepting shard proofs and node proofs alike would instead select between
 // two verifiers, of two systems, and pay for both in every slot.
 //
+// The common shape is the larger of the two, and the leaf program's is set
+// by the shard system it verifies. Should it prove much larger than the
+// internal program's, a leaf arity of its own and a shrink program between
+// them, re-proving each leaf node in the internal shape, would lift the
+// requirement off the leaf program (see issue #4405).
+//
 // A program verifies each child's proof with the in-machine verifier of its
 // children's systems (package recursionguests/verifier) under the child key and
 // folds the public inputs the verifier yields, so a child's values enter the
@@ -470,9 +476,8 @@ func build(
 		}
 		m.Public(results[pos], kind, role.Tag, role.Index)
 	}
-	for j := range NumKey {
-		m.Public(limbs[j], recursion.KindScalar, KeyPI, j)
-	}
+	// The box as one digest cell gives KeyPI_0 … KeyPI_7, one per lane.
+	m.Public(box, recursion.KindDigest, KeyPI, 0)
 
 	rp, err := m.Compile(opts...)
 	if err != nil {
