@@ -88,7 +88,7 @@ func TestCompile_MerkleHashBindsProof(t *testing.T) {
 	proofK, pubK := koala.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(colK, nonConstVec(16)) })
 	proofB, pubB := bn.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(colB, nonConstVec(16)) })
 	require.NotEqual(t, proofK.Commitments, proofB.Commitments, "modes must commit to different roots")
-
+	// check that cross-verification fails with the expected error message
 	require.ErrorContains(t, bn.Verify(proofK, pubK), "input tree 0: invalid Merkle proof")
 	require.ErrorContains(t, koala.Verify(proofB, pubB), "query 0: input tree 0: invalid Merkle proof")
 }
