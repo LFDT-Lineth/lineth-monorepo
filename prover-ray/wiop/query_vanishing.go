@@ -159,21 +159,27 @@ func (m *Module) newVanishing(ctx *ContextFrame, expr Expression, positions []in
 // row positions, and returns the merged set in sorted order.
 func cancelledPositionsFromExpr(expr Expression) []int {
 	shifts := make(map[int]struct{})
-	collectShifts(expr, shifts)
+	collectShifts(expr, shifts, make(map[*ArithmeticOperation]struct{}))
 	return cancelledPositionsFromShifts(shifts)
 }
 
 // collectShifts recursively traverses expr and records all non-zero
-// [ColumnView.ShiftingOffset] values into the shifts set.
-func collectShifts(expr Expression, shifts map[int]struct{}) {
+// [ColumnView.ShiftingOffset] values into the shifts set. Operations in
+// visited are skipped, so a subexpression shared by several parents is walked
+// once.
+func collectShifts(expr Expression, shifts map[int]struct{}, visited map[*ArithmeticOperation]struct{}) {
 	switch e := expr.(type) {
 	case *ColumnView:
 		if e.ShiftingOffset != 0 {
 			shifts[e.ShiftingOffset] = struct{}{}
 		}
 	case *ArithmeticOperation:
+		if _, ok := visited[e]; ok {
+			return
+		}
+		visited[e] = struct{}{}
 		for _, op := range e.Operands {
-			collectShifts(op, shifts)
+			collectShifts(op, shifts, visited)
 		}
 		// *Cell, *CoinField, and other leaf types carry no shifts.
 	}

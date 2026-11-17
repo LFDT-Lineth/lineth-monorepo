@@ -58,7 +58,7 @@ Lineth zkEVM monorepo — the principal repository for [Linea](https://linea.bui
 
 | Tool | Version | Notes |
 |------|---------|-------|
-| Node.js | >= 24.22.1 | See `.nvmrc` |
+| Node.js | >= 24.22.3 | See `.nvmrc` |
 | pnpm | >= 12.17.0 | Enforced via `preinstall` |
 | JDK | 25 | Coordinator, Besu plugins, transaction-exclusion-api — enforced by Gradle; JDK 25+ required |
 | Gradle | 9.6+ | use the root ./gradlew <task> (single wrapper for all JVM projects) |
@@ -395,7 +395,7 @@ docs/                    Project documentation
 
 - **Platform:** GitHub Actions
 - **Main workflow:** `.github/workflows/main.yml` — triggers on PR and push to `main`
-- **Path filtering:** `dorny/paths-filter` detects which components changed
+- **Path filtering:** `dorny/paths-filter` detects which components changed (filters in `.github/path-filters/`)
 - **Pipeline:** Filter changed paths -> Run component tests -> Build Docker images -> E2E tests -> Publish
 - **Coverage:** Codecov with Jacoco (JVM), Hardhat (Solidity), Jest LCOV (TS packages), and tracer Jacoco XML (`tracer` flag)
 - **Security:** CodeQL analysis, KICS Dockerfile scanning (weekly)

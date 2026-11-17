@@ -33,12 +33,13 @@ pub const Error = merkle.Error || fri.Error || error{
     ConjugateRowShapeMismatch,
     ClaimPointOnQueryPoint,
     InconsistentAliasedClaim,
+    NoFoldMultipleColumns,
+    LevelBeyondBoundaryRound,
     MissingTopLevelAux,
     BoundaryFinalSelfMismatch,
     BoundaryFinalSiblingMismatch,
     MissingDynamicModuleSize,
     NonPowerOfTwoModuleSize,
-    DynamicModuleSizeBelowMinimum,
     RestrictOutOfRange,
     LayoutOverflow,
     ManifestLengthMismatch,
@@ -154,9 +155,10 @@ fn batchFirstColumn(comptime system: System) [@max(system.num_batches, 1)]usize 
 /// `.dynamic` names an index into the runtime `module_sizes` slice plus the
 /// minimum runtime size_log2 this raw shift schedule is valid for. The
 /// dynamic-module column's size_log2 = log2(module_sizes[idx]) varies per
-/// proof, but proofs below `min_size_log2` are rejected because the baked raw
-/// shift schedule would alias there. Mirrors how prover-ray's `GetLayout`
-/// derives size_log2 from `col.Module.RuntimeSize(rt)`.
+/// proof. `min_size_log2` is the size below which the baked raw shift schedule
+/// would alias; `reconstruct` does not enforce it, the per-module minimum in
+/// `protocol.Spec.dynamic_module_min_sizes` does. Mirrors how prover-ray's
+/// `GetLayout` derives size_log2 from `col.Module.RuntimeSize(rt)`.
 pub const SizeSource = union(enum) {
     static: u8,
     dynamic: struct {
@@ -271,9 +273,9 @@ pub const System = struct {
 };
 
 pub const OpeningProof = struct {
-    /// input_queries[q][i] is query q's opening of the i-th distinct input
-    /// tree (input-opening order: first batch encountered by the canonical
-    /// size-descending layout, with equal Merkle roots deduplicated).
+    /// input_queries[q][i] is query q's opening of the i-th input tree
+    /// (input-opening order: one tree per batch, in order of first appearance
+    /// in the canonical size-descending layout).
     input_queries: []const []const merkle.InputTreeOpening,
     input_caps: []const InputCap = &.{},
     fri_proof: fri.Proof,
@@ -293,8 +295,8 @@ pub const InputCapTable = struct {
 
 pub const VerifyInput = struct {
     /// One Merkle root per committed batch, in canonical batch order
-    /// (`batch_idx == roots[idx]`). `verify` reorders and deduplicates these
-    /// into the proof's input-opening order, mirroring prover-ray's
+    /// (`batch_idx == roots[idx]`). `verify` reorders these into the proof's
+    /// input-opening order, one input tree per batch, mirroring prover-ray's
     /// `inputOpeningRoots`.
     roots: []const poseidon2.Digest,
     /// Per-opened-column claimed evaluations, in reconstructed canonical layout
@@ -303,17 +305,18 @@ pub const VerifyInput = struct {
     entry_claims: []const []const ext.Ext,
     zeta: ext.Ext,
     fold_alphas: []const ext.Ext,
-    /// The top-level DEEP batching challenge. When FRI has one or more fold
-    /// rounds this equals the last entry of `fold_alphas`; when the largest
-    /// opened size is 1 (num_rounds == 0), prover-ray still squeezes this final
-    /// alpha and uses it as alpha_DEEP even though there are no fold alphas.
+    /// The final fold challenge, squeezed unconditionally. With one or more
+    /// fold rounds it equals the last entry of `fold_alphas`. It is only used
+    /// when the schedule has no fold at all (an envelope with
+    /// `log_plaintext_size == log_final_poly_size`): at most one column is
+    /// then opened, so only its alpha^0 term matters (prover-ray uses zero).
     deep_alpha: ext.Ext = ext.Ext.zero(),
     query_positions: []const usize,
     proof: OpeningProof,
     /// Runtime dynamic-module sizes, in canonical dynamic-module order (the
-    /// same order `SizeSource.dynamic.index` indices into). Powers of two, and
-    /// each one must satisfy the emitted `min_size_log2` bound for every column
-    /// that references it.
+    /// same order `SizeSource.dynamic.index` indices into). Powers of two. The
+    /// per-module minimum (`protocol.Spec.dynamic_module_min_sizes`) is enforced by
+    /// `protocol.replayWithTranscript`, not here.
     module_sizes: []const usize = &.{},
     /// Per-column manifest codes in declaration order (see `readManifest`).
     /// Empty means every column is Present.
@@ -339,8 +342,9 @@ pub fn Reconstructed(comptime system: System) type {
         /// runtime number of opened columns (== the number of Present columns;
         /// == system.columns.len without elision).
         num_entries: usize,
-        /// runtime max size_log2 across Present columns (== restricted
-        /// log_plaintext_size).
+        /// restricted log_plaintext_size: the max size_log2 across Present
+        /// columns, raised to the smallest folded size when it is below it
+        /// (see `minFoldedTopSize`).
         top_size: u8,
 
         // Per-entry arrays, canonical order, filled [0, num_entries).
@@ -376,21 +380,25 @@ pub fn Reconstructed(comptime system: System) type {
 }
 
 /// The proof's input-tree routing derived from the reconstructed layout and the
-/// actual per-batch roots: distinct roots in input-opening order plus the
-/// input-tree branch index each batch maps to.
+/// actual per-batch roots: one root per input tree (one tree per opened batch)
+/// in input-opening order, plus the input-tree branch index each batch maps to.
 pub fn InputRootRouting(comptime system: System) type {
     return struct {
         const Self = @This();
         const batch_cap = @max(system.num_batches, 1);
 
-        distinct_count: usize = 0,
-        roots: [batch_cap]poseidon2.Digest = undefined,
-        // Every entry is overwritten by routeInputRoots before any read, so this
-        // default is unused filler, not a sentinel that's ever checked.
-        index_by_batch: [batch_cap]usize = [_]usize{0} ** batch_cap,
+        /// `index_by_batch` value of a batch that never appears in the layout.
+        pub const unrouted = std.math.maxInt(usize);
 
-        pub fn distinctRoots(self: *const Self) []const poseidon2.Digest {
-            return self.roots[0..self.distinct_count];
+        tree_count: usize = 0,
+        roots: [batch_cap]poseidon2.Digest = undefined,
+        /// The batch behind each input tree: `batch_by_tree[t]` is the batch
+        /// whose tree is `t`. Valid for `t < tree_count`.
+        batch_by_tree: [batch_cap]usize = undefined,
+        index_by_batch: [batch_cap]usize = [_]usize{unrouted} ** batch_cap,
+
+        pub fn treeRoots(self: *const Self) []const poseidon2.Digest {
+            return self.roots[0..self.tree_count];
         }
     };
 }
@@ -488,18 +496,13 @@ pub fn reconstructWithManifest(
                 const n = module_sizes[dyn.index];
                 if (!field.isPowerOfTwo(n)) return Error.NonPowerOfTwoModuleSize;
                 const sz: u8 = @intCast(field.log2PowerOfTwo(n));
-                // dyn.min_size_log2 used to reject runtime sizes where two
-                // distinct RAW shifts of this column alias to the same domain
-                // point (e.g. offsets 0 and -1 both normalize to row 0 at
-                // runtime size 1). That rejection was overly conservative: an
-                // honest prover CAN legitimately run a module at an aliasing
-                // size (prover-ray's own RecoverBatchClaims dedupes such
-                // openings into a single FRI claim before batching, and
-                // reconstructQueryValueAt below dedupes the same way when
-                // summing the DEEP quotient), so aliasing sizes are safe to
-                // accept, not just aliasing-completeness gaps to reject. Kept
-                // as a documented field (still emitted by codegen) but no
-                // longer enforced here.
+                // dyn.min_size_log2 (two raw shifts of this column alias
+                // below it) is not enforced here: the stronger per-module
+                // minimum, prover-ray's Module.MinRuntimeSize (N > 2·max|shift|,
+                // which implies no two shifts alias), is checked up front by
+                // protocol.replayWithTranscript against
+                // Spec.dynamic_module_min_sizes. Kept as a documented field
+                // (still emitted by codegen).
                 _ = dyn.min_size_log2;
                 break :blk sz;
             },
@@ -537,7 +540,7 @@ pub fn reconstructWithManifest(
         col_position[c] = count.*;
         count.* += 1;
     }
-    r.top_size = top_size;
+    r.top_size = minFoldedTopSize(system.envelope_params, top_size);
     r.num_entries = num_present;
     // A batch that owns columns must keep at least one (prover-ray never
     // empties a batch; an empty batch would have no committed rows to open).
@@ -588,8 +591,24 @@ pub fn reconstructWithManifest(
     }
     if (entry_idx != num_present) return Error.LayoutOverflow;
 
-    r.params = system.envelope_params.restrictTo(top_size) catch return Error.RestrictOutOfRange;
+    r.params = system.envelope_params.restrictTo(r.top_size) catch return Error.RestrictOutOfRange;
     return r;
+}
+
+/// Raises the largest opened size to the smallest one FRI folds,
+/// `2^(log_final_poly_size + 1)` (prover-ray `Params.MinFoldedSizeLog2`), when
+/// the envelope can fold at all. Mirrors prover-ray's `PCS.restrictTo` floor
+/// (#4322): with every column at or below the final polynomial's size the
+/// schedule would otherwise have no fold, hence no fold challenge, so
+/// alpha_DEEP would be zero and only the first column of the DEEP combination
+/// would be checked. With the floor, round 0 folds the zero codeword (no level
+/// sits at the raised top) and the levels join at the boundary round, weighted
+/// by the last fold challenge. The query positions and fold challenges follow
+/// from the restricted params, as on the prover side (`effectiveN`).
+pub fn minFoldedTopSize(envelope: fri.Params, top_size: u8) u8 {
+    const min_folded = envelope.log_final_poly_size + 1;
+    if (top_size < min_folded and min_folded <= envelope.log_plaintext_size) return min_folded;
+    return top_size;
 }
 
 /// Index of the slot in column `k`'s shift schedule that opens the same domain
@@ -745,9 +764,8 @@ pub fn buildEntryClaims(
 }
 
 /// Mirrors prover-ray's `inputOpeningRoots`: walk the canonical entry order,
-/// take each batch's root the first time that batch appears, and deduplicate
-/// equal roots by value so batches sharing a Merkle root consume one input-tree
-/// opening.
+/// and give each batch its own input tree the first time that batch appears.
+/// Batches are never merged, even when their roots coincide.
 pub fn routeInputRoots(
     comptime system: System,
     recon: *const Reconstructed(system),
@@ -756,26 +774,17 @@ pub fn routeInputRoots(
     if (batch_roots.len != system.num_batches) return Error.RootCountMismatch;
 
     var routing = InputRootRouting(system){};
+    const unrouted = InputRootRouting(system).unrouted;
     for (0..recon.num_entries) |entry_idx| {
         const batch_idx = recon.entry_batch[entry_idx];
-        const root = batch_roots[batch_idx];
-        const branch_idx = findRootIndex(routing.roots[0..routing.distinct_count], root) orelse blk: {
-            if (routing.distinct_count >= system.num_batches) return Error.RootCountMismatch;
-            const next = routing.distinct_count;
-            routing.roots[next] = root;
-            routing.distinct_count = next + 1;
-            break :blk next;
-        };
-        routing.index_by_batch[batch_idx] = branch_idx;
+        if (routing.index_by_batch[batch_idx] == unrouted) {
+            routing.index_by_batch[batch_idx] = routing.tree_count;
+            routing.batch_by_tree[routing.tree_count] = batch_idx;
+            routing.roots[routing.tree_count] = batch_roots[batch_idx];
+            routing.tree_count += 1;
+        }
     }
     return routing;
-}
-
-fn findRootIndex(roots: []const poseidon2.Digest, want: poseidon2.Digest) ?usize {
-    for (roots, 0..) |root, i| {
-        if (poseidon2.eql(root, want)) return i;
-    }
-    return null;
 }
 
 // =============================================================================
@@ -853,22 +862,17 @@ pub fn inputAuxDepth(rate_log: u8, size_log2: u8, bottom_size_log2: u8) ?usize {
 
 fn buildInputCapInfo(comptime system: System, recon: *const Reconstructed(system), routing: InputRootRouting(system), tree_idx: usize) Error!InputCapInfo(system) {
     const Info = InputCapInfo(system);
-    var info = Info{ .rate_log = recon.params.log_codeword_size - recon.params.log_plaintext_size };
-    var found = false;
+    var info = Info{
+        .rate_log = recon.params.log_codeword_size - recon.params.log_plaintext_size,
+        .batch_idx = routing.batch_by_tree[tree_idx],
+    };
     var bottom: u8 = 0;
     for (0..recon.num_entries) |e| {
-        const batch = recon.entry_batch[e];
-        if (routing.index_by_batch[batch] != tree_idx) continue;
-        if (!found) {
-            info.batch_idx = batch;
-            found = true;
-        }
-        bottom = @max(bottom, recon.entry_size_log2[e]);
+        if (recon.entry_batch[e] == info.batch_idx) bottom = @max(bottom, recon.entry_size_log2[e]);
     }
-    if (!found) return Error.InputTreeShapeMismatch;
     info.height = @as(usize, info.rate_log) + bottom;
     if (info.height == 0 or info.height > recon.params.log_codeword_size) return Error.InputTreeShapeMismatch;
-    info.depth = merkle.capDepth(recon.params.num_queries, info.height);
+    info.depth = merkle.capDepth(recon.params.merkle_cap_height, info.height);
     info.query_rows[info.height - 1] = true;
 
     for (0..recon.num_entries) |e| {
@@ -913,6 +917,24 @@ fn inputSizeWidths(recon: anytype, batch_idx: usize, size_log2: u8) InputWidths 
         if (recon.entry_is_ext[e]) widths.ext += 1 else widths.base += 1;
     }
     return widths;
+}
+
+/// Largest Merkle cap height a System may bake. `verify` keeps the input-cap
+/// interior nodes in a stack buffer of `2^height` digests, so this bounds the
+/// guest stack use (~37 KiB at 10); prover-ray's optimal height is 8 at the
+/// production 229 queries. codegen/pcs_zig.go enforces the same bound.
+pub const max_merkle_cap_height: u8 = 10;
+
+/// Scratch slots `authenticateInputCap` needs for the interior nodes above a
+/// cap of depth `capDepth(cap_height, height) <= min(cap_height,
+/// log_codeword_size - 1)`: `2^depth - 1`, rounded up to `2^depth`.
+fn inputAuxCapacity(comptime system: System) usize {
+    const params = system.envelope_params;
+    if (params.merkle_cap_height > max_merkle_cap_height) @compileError(std.fmt.comptimePrint(
+        "merkle_cap_height {d} exceeds max_merkle_cap_height {d}",
+        .{ params.merkle_cap_height, max_merkle_cap_height },
+    ));
+    return @as(usize, 1) << @intCast(@min(params.merkle_cap_height, params.log_codeword_size -| 1));
 }
 
 fn authenticateInputCap(
@@ -984,10 +1006,10 @@ fn InputQuerySource(comptime system: System) type {
             }
         }
 
-        fn pairAtLevel(self: Self, batch_idx: usize, level_size: usize) Error!merkle.RowPair {
+        fn pairAtLevel(self: *const Self, batch_idx: usize, level_size: usize) Error!merkle.RowPair {
             const branch_idx = self.routing.index_by_batch[batch_idx];
             if (branch_idx >= self.opening.len or branch_idx >= self.caps.len) return Error.InputTreeCountMismatch;
-            const info = self.infos[branch_idx];
+            const info = &self.infos[branch_idx];
             if (level_size == 0 or level_size & (level_size - 1) != 0) return Error.InvalidLevelSize;
             const level_log: usize = @ctz(level_size);
             if (level_log > 0) {
@@ -1022,6 +1044,12 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
 
     if (input.entry_claims.len != num_entries) return Error.ClaimedValueCountMismatch;
 
+    // Backstop for an envelope that cannot fold at all (log_plaintext_size ==
+    // log_final_poly_size, so `minFoldedTopSize` cannot raise the top): with
+    // no fold challenge only one column can be checked. Mirrors prover-ray's
+    // `checkFoldedSchedule`.
+    if (num_rounds == 0 and num_entries > 1) return Error.NoFoldMultipleColumns;
+
     // Each opened column owns exactly `shifts.len` claimed values. Guarded by a
     // comptime len check so a column-free System (columns == &.{}) doesn't force
     // Zig to analyze indexing into an empty slice.
@@ -1039,6 +1067,16 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
         if (input.zeta.isZero()) return Error.ZetaZeroWithMultipleShifts;
     }
 
+    // Every level must join at or before the boundary round. With
+    // log_final_poly_size >= 1, `minFoldedTopSize` can raise the top above a
+    // column smaller than the final polynomial, putting its level past
+    // num_rounds (out of bounds in `seedPair`). Mirrors prover-ray's `resolve`
+    // check; codegen bakes log_final_poly_size = 0, so only hand-written
+    // Systems reach it.
+    for (0..num_entries) |e| {
+        if (recon.top_size - recon.entry_size_log2[e] > num_rounds) return Error.LevelBeyondBoundaryRound;
+    }
+
     // zeta must not land in any bundle's domain.
     for (0..num_entries) |e| {
         const round = recon.top_size - recon.entry_size_log2[e];
@@ -1047,7 +1085,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     }
 
     if (input.proof.input_queries.len != params.num_queries) return Error.InputQueryCountMismatch;
-    if (input.proof.input_caps.len != routing.distinct_count) return Error.InputTreeCountMismatch;
+    if (input.proof.input_caps.len != routing.tree_count) return Error.InputTreeCountMismatch;
     if (input.query_positions.len < params.num_queries) return Error.QueryPositionCountMismatch;
     try fri.checkOpeningProofShape(params, input.proof.fri_proof, input.fold_alphas, input.query_positions[0..params.num_queries]);
 
@@ -1056,8 +1094,8 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     var input_infos: [tree_cap]Info = undefined;
     var input_frontiers: [tree_cap][]const poseidon2.Digest = undefined;
     var input_root_frontiers: [tree_cap]poseidon2.Digest = undefined;
-    var input_aux_storage: [@max(system.envelope_params.num_queries * 2, 2)]?poseidon2.Digest = undefined;
-    for (0..routing.distinct_count) |tree_idx| {
+    var input_aux_storage: [inputAuxCapacity(system)]?poseidon2.Digest = undefined;
+    for (0..routing.tree_count) |tree_idx| {
         const info = try buildInputCapInfo(system, &recon, routing, tree_idx);
         input_infos[tree_idx] = info;
         if (info.depth == 0) {
@@ -1081,7 +1119,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     var running_root_frontiers: [cap_rounds]poseidon2.Digest = undefined;
     if (num_rounds > 0) {
         for (1..@as(usize, num_rounds)) |j| {
-            const depth = merkle.capDepth(params.num_queries, params.log_codeword_size - @as(u8, @intCast(j)));
+            const depth = merkle.capDepth(params.merkle_cap_height, params.log_codeword_size - @as(u8, @intCast(j)));
             const cap = input.proof.fri_proof.round_caps[j - 1];
             if (depth == 0) {
                 running_root_frontiers[j] = input.proof.fri_proof.round_roots[j - 1];
@@ -1111,8 +1149,8 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
         const source = Source{
             .opening = opening,
             .caps = input.proof.input_caps,
-            .infos = input_infos[0..routing.distinct_count],
-            .frontiers = input_frontiers[0..routing.distinct_count],
+            .infos = input_infos[0..routing.tree_count],
+            .frontiers = input_frontiers[0..routing.tree_count],
             .routing = routing,
             .params = params,
             .query_position = query_position,
