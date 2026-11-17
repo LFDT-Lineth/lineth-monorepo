@@ -9,8 +9,5 @@ data class EIP4844GasFees(
 )
 
 interface EIP4844GasProvider : ContractEIP1559GasProvider {
-  fun getEIP4844GasFeesAsync(): SafeFuture<EIP4844GasFees>
-
-  /** Blocks until the fees are resolved; use [getEIP4844GasFeesAsync] from async code. */
-  fun getEIP4844GasFees(): EIP4844GasFees = getEIP4844GasFeesAsync().get()
+  fun getEIP4844GasFees(): SafeFuture<EIP4844GasFees>
 }

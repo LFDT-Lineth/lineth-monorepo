@@ -141,7 +141,7 @@ class WMAGasProviderTest {
         ),
       )
 
-    val calculatedFees = wmaGasProvider.getEIP1559GasFees()
+    val calculatedFees = wmaGasProvider.getEIP1559GasFees().get()
     assertThat(calculatedFees.maxPriorityFeePerGas).isEqualTo(1229uL) // 1229.57 rounded down
     assertThat(calculatedFees.maxFeePerGas).isEqualTo(1509uL) // 1509.57 rounded down
   }
@@ -164,7 +164,7 @@ class WMAGasProviderTest {
         ),
       )
 
-    val calculatedFees = wmaGasProvider.getEIP1559GasFees()
+    val calculatedFees = wmaGasProvider.getEIP1559GasFees().get()
     assertThat(calculatedFees.maxPriorityFeePerGas).isEqualTo(maxFeePerGasCap)
     assertThat(calculatedFees.maxFeePerGas).isEqualTo(maxFeePerGasCap)
   }
@@ -187,7 +187,7 @@ class WMAGasProviderTest {
         ),
       )
 
-    val calculatedFees = wmaGasProvider.getEIP4844GasFees()
+    val calculatedFees = wmaGasProvider.getEIP4844GasFees().get()
     assertThat(calculatedFees.eip1559GasFees.maxPriorityFeePerGas).isEqualTo(1229uL) // 1229.57 rounded down
     assertThat(calculatedFees.eip1559GasFees.maxFeePerGas).isEqualTo(1509uL) // 1509.57 rounded down
     assertThat(calculatedFees.maxFeePerBlobGas).isEqualTo(maxFeePerBlobGasCap)
@@ -211,14 +211,14 @@ class WMAGasProviderTest {
         ),
       )
 
-    val calculatedFees = wmaGasProvider.getEIP4844GasFees()
+    val calculatedFees = wmaGasProvider.getEIP4844GasFees().get()
     assertThat(calculatedFees.eip1559GasFees.maxPriorityFeePerGas).isEqualTo(maxFeePerGasCap)
     assertThat(calculatedFees.eip1559GasFees.maxFeePerGas).isEqualTo(maxFeePerGasCap)
     assertThat(calculatedFees.maxFeePerBlobGas).isEqualTo(maxFeePerBlobGasCap)
   }
 
   @Test
-  fun `async fee getters do not block while fee history is pending`() {
+  fun `fee getters do not block while fee history is pending`() {
     val pendingFeeHistory = SafeFuture<FeeHistory>()
     val pendingFeesFetcher =
       mock<FeesFetcher> {
@@ -237,8 +237,8 @@ class WMAGasProviderTest {
         ),
       )
 
-    val eip1559Fees = wmaGasProvider.getEIP1559GasFeesAsync()
-    val eip4844Fees = wmaGasProvider.getEIP4844GasFeesAsync()
+    val eip1559Fees = wmaGasProvider.getEIP1559GasFees()
+    val eip4844Fees = wmaGasProvider.getEIP4844GasFees()
     assertThat(eip1559Fees).isNotDone()
     assertThat(eip4844Fees).isNotDone()
 

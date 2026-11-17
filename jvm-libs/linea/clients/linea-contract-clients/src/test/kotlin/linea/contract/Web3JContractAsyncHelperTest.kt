@@ -174,13 +174,9 @@ class Web3JContractAsyncHelperTest {
       return future
     }
 
-    override fun getEIP1559GasFeesAsync(): SafeFuture<EIP1559GasFees> = completeOnTimer(fees.eip1559GasFees)
+    override fun getEIP1559GasFees(): SafeFuture<EIP1559GasFees> = completeOnTimer(fees.eip1559GasFees)
 
-    override fun getEIP4844GasFeesAsync(): SafeFuture<EIP4844GasFees> = completeOnTimer(fees)
-
-    override fun getEIP1559GasFees(): EIP1559GasFees = throw AssertionError("blocking fee lookup")
-
-    override fun getEIP4844GasFees(): EIP4844GasFees = throw AssertionError("blocking fee lookup")
+    override fun getEIP4844GasFees(): SafeFuture<EIP4844GasFees> = completeOnTimer(fees)
 
     override fun getMaxFeePerGas(): BigInteger = throw AssertionError("blocking fee lookup")
 

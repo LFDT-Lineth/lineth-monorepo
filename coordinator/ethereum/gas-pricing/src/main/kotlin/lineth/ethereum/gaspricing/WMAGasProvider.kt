@@ -43,18 +43,18 @@ class WMAGasProvider(
   }
 
   override fun getMaxFeePerGas(): BigInteger {
-    return getEIP1559GasFees().maxFeePerGas.toBigInteger()
+    return getEIP1559GasFees().get().maxFeePerGas.toBigInteger()
   }
 
   override fun getMaxPriorityFeePerGas(): BigInteger {
-    return getEIP1559GasFees().maxPriorityFeePerGas.toBigInteger()
+    return getEIP1559GasFees().get().maxPriorityFeePerGas.toBigInteger()
   }
 
-  override fun getEIP1559GasFeesAsync(): SafeFuture<EIP1559GasFees> {
-    return getEIP4844GasFeesAsync().thenApply { it.eip1559GasFees }
+  override fun getEIP1559GasFees(): SafeFuture<EIP1559GasFees> {
+    return getEIP4844GasFees().thenApply { it.eip1559GasFees }
   }
 
-  override fun getEIP4844GasFeesAsync(): SafeFuture<EIP4844GasFees> {
+  override fun getEIP4844GasFees(): SafeFuture<EIP4844GasFees> {
     return feesFetcher.getL1EthGasPriceData().thenApply { feesData ->
       val maxPriorityFeePerGas =
         priorityFeeCalculator.calculateFees(feesData)
