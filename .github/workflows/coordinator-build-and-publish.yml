@@ -35,7 +35,7 @@ concurrency:
 jobs:
   build-and-publish:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
-    environment: ${{ inputs.push_image && 'dockerhub-linea-coordinator' || 'dockerhub-pull' }}
+    environment: ${{ !inputs.push_image && 'dockerhub-pull' || github.ref == 'refs/heads/main' && 'dockerhub-linea-coordinator' || 'dockerhub-linea-coordinator-approval' }}
     name: Coordinator build
     env:
       IMAGE_TAG: ${{ inputs.image_tag }}
