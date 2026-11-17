@@ -186,9 +186,19 @@ pub const CryptoOptions = struct {
     secp256k1_backend: Secp256k1Backend = .constantine,
 
     pub fn parse(b: *std.Build) CryptoOptions {
-        const keccak_accel = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: unaccelerated)") orelse false;
-        const secp256k1_backend = b.option(Secp256k1Backend, "secp256k1-backend", "secp256k1 ecrecover/verify provider: constantine (default) or std") orelse .constantine;
-        return .{ .keccak_accel = keccak_accel, .secp256k1_backend = secp256k1_backend };
+        return parseIfSet(b) orelse .{};
+    }
+
+    /// The options with an unset one at its default; null when neither is set.
+    pub fn parseIfSet(b: *std.Build) ?CryptoOptions {
+        const default: CryptoOptions = .{};
+        const keccak_accel = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: unaccelerated)");
+        const secp256k1_backend = b.option(Secp256k1Backend, "secp256k1-backend", "secp256k1 ecrecover/verify provider: constantine (default) or std");
+        if (keccak_accel == null and secp256k1_backend == null) return null;
+        return .{
+            .keccak_accel = keccak_accel orelse default.keccak_accel,
+            .secp256k1_backend = secp256k1_backend orelse default.secp256k1_backend,
+        };
     }
 
     /// The options of a native build: the arithmetization keccak wrapper exists on the guest target only.
