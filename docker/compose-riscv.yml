@@ -52,14 +52,6 @@ services:
     image: ${LINEA_COORDINATOR_IMAGE_NAME:-consensys/linea-coordinator}:${LINEA_COORDINATOR_TAG:-2.3.0-20261028-9bfcca4}
     # Started by start-env-with-riscv once the L1 contract is deployed.
     profiles: !override ["riscv"]
-    # The coordinator image has no curl, so the base healthcheck never passes.
-    healthcheck:
-      test:
-        - CMD-SHELL
-        - >-
-          bash -ec 'exec 3<>/dev/tcp/127.0.0.1/9545;
-          printf "GET /health HTTP/1.0\r\n\r\n" >&3;
-          grep -q "200 OK" <&3'
     depends_on: !override
       l2-genesis-initialization:
         condition: service_completed_successfully

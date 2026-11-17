@@ -264,8 +264,14 @@ services:
 #        condition: service_started
     ports:
       - "9545:9545"
+    # The coordinator image (eclipse-temurin) has no curl; probe with bash /dev/tcp.
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9545/health || exit 1"]
+      test:
+        - CMD-SHELL
+        - >-
+          bash -ec 'exec 3<>/dev/tcp/127.0.0.1/9545;
+          printf "GET /health HTTP/1.0\r\n\r\n" >&3;
+          grep -q "200 OK" <&3'
       interval: 1s
       timeout: 1s
       retries: 120
