@@ -1,11 +1,11 @@
-package verifier_test
+package verifiertest_test
 
 import (
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion/verifier"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion/verifier/verifiertest"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/require"
@@ -29,23 +29,21 @@ func stubSystem(key field.Octuplet) *wiop.System {
 }
 
 // TestMock checks that a program verifying one mock proof accepts the cells
-// the mock assigns, rejects a proof of another system, a public input, a
-// commitment or a verdict changed after the fact, and checks nothing for an
-// inactive proof; and that Assign fails a system of another shape, the Go
-// verification and the shape checks.
+// the mock assigns and rejects a proof of another system, a public input, a
+// commitment or a verdict changed after the fact; and that Assign fails a
+// system of another shape, the Go verification and the shape checks.
 func TestMock(t *testing.T) {
 	key := field.Octuplet{field.NewElement(7)}
 	sys := stubSystem(key)
-	v, err := verifier.NewMock(sys)
+	v, err := verifiertest.NewMock(sys)
 	require.NoError(t, err)
 	kinds := []int{recursion.KindScalar, recursion.KindE6, recursion.KindScalar}
 
-	// The program: an active flag, a proof, verified under the key as a
-	// constant; the public inputs are published.
+	// The program: a proof, verified under the key as a constant; the public
+	// inputs are published.
 	m := &recursion.Machine{}
-	active := m.InputScalar()
 	proof := v.Allocate(m)
-	pubs := v.Define(m, active, m.Const(recursion.Cell(key)), proof)
+	pubs := v.Define(m, m.Const(recursion.Cell(key)), proof)
 	require.Len(t, pubs, 3)
 	for pos, kind := range kinds {
 		m.Public(pubs[pos], kind, "Out", pos)
@@ -54,15 +52,16 @@ func TestMock(t *testing.T) {
 	require.NoError(t, err)
 
 	var ext field.Ext
-	ext.SetRandom()
+	_, err = ext.SetRandom()
+	require.NoError(t, err)
 	pub := wiop.PublicInput{field.ElemFromBase(field.NewElement(3)), field.ElemFromExt(ext), field.ElemFromBase(field.NewElement(5))}
 	wp := wiop.Proof{Commitments: map[int]field.Octuplet{0: {field.NewElement(11)}, 1: {field.NewElement(13)}}}
 	cells, err := v.Assign(sys, wp, pub)
 	require.NoError(t, err)
 	require.Len(t, cells, len(proof))
 
-	prove := func(active field.Element, cells []recursion.Cell) error {
-		run, err := p.Execute(append([]recursion.Cell{recursion.ScalarCell(active)}, cells...))
+	prove := func(cells []recursion.Cell) error {
+		run, err := p.Execute(cells)
 		if err != nil {
 			return err
 		}
@@ -73,22 +72,21 @@ func TestMock(t *testing.T) {
 		require.Len(t, got, 3)
 		return nil
 	}
-	require.NoError(t, prove(field.One(), cells), "an assigned proof should verify")
-	require.NoError(t, prove(field.Element{}, make([]recursion.Cell, len(cells))), "an inactive proof should check nothing")
+	require.NoError(t, prove(cells), "an assigned proof should verify")
 
 	other, err := v.Assign(stubSystem(field.Octuplet{field.NewElement(8)}), wp, pub)
 	require.NoError(t, err, "a system of the shape should be assigned")
-	require.Error(t, prove(field.One(), other), "a proof of another system should fail")
+	require.Error(t, prove(other), "a proof of another system should fail")
 
 	tampered := append([]recursion.Cell(nil), cells...)
 	tampered[0][0].SetUint64(4)
-	require.Error(t, prove(field.One(), tampered), "a changed public input should fail")
+	require.Error(t, prove(tampered), "a changed public input should fail")
 	tampered = append([]recursion.Cell(nil), cells...)
 	tampered[len(tampered)-1][7].SetUint64(1)
-	require.Error(t, prove(field.One(), tampered), "a changed verdict should fail")
+	require.Error(t, prove(tampered), "a changed verdict should fail")
 	tampered = append([]recursion.Cell(nil), cells...)
 	tampered[3][2].SetUint64(1)
-	require.Error(t, prove(field.One(), tampered), "a changed commitment should fail")
+	require.Error(t, prove(tampered), "a changed commitment should fail")
 
 	forged := wp
 	forged.DynamicSizes = map[int]int{0: 8}
@@ -106,8 +104,34 @@ func TestMock(t *testing.T) {
 	narrow.RegisterPublicInputs("Out", narrow.NewRound().NewCell(narrow.Context.Childf("x"), false), 0)
 	_, err = v.Assign(narrow, wp, pub)
 	require.ErrorContains(t, err, "not the verifier's shape")
+
+	// The modules: their names and columns are part of the shape, their
+	// heights are not, as for a size-oblivious verifier. withModules returns
+	// the stub with a module "m" of the height and columns, then one empty
+	// module per name of extra.
+	withModules := func(height, columns int, extra ...string) *wiop.System {
+		sys := stubSystem(key)
+		mod := sys.NewSizedModule(sys.Context.Childf("m"), height, wiop.PaddingDirectionNone)
+		for c := range columns {
+			v := &wiop.ConcreteVector{Plain: field.VecFromBase(make([]field.Element, height))}
+			mod.NewPrecomputedColumn(sys.Context.Childf("m.c%d", c), v)
+		}
+		for _, name := range extra {
+			sys.NewSizedModule(sys.Context.Childf("%s", name), 4, wiop.PaddingDirectionNone)
+		}
+		return sys
+	}
+	vm, err := verifiertest.NewMock(withModules(4, 2))
+	require.NoError(t, err)
+	_, err = vm.Assign(withModules(16, 2), wp, pub)
+	require.NoError(t, err, "a module at another height should be assigned")
+	_, err = vm.Assign(withModules(4, 3), wp, pub)
+	require.ErrorContains(t, err, "not the verifier's shape", "a module with another column should not be assigned")
+	_, err = vm.Assign(withModules(4, 2, "extra"), wp, pub)
+	require.ErrorContains(t, err, "not the verifier's shape", "a system with another module should not be assigned")
+
 	_, err = v.Assign(nil, wp, pub)
 	require.ErrorContains(t, err, "no system")
-	_, err = verifier.NewMock(nil)
+	_, err = verifiertest.NewMock(nil)
 	require.ErrorContains(t, err, "no system")
 }

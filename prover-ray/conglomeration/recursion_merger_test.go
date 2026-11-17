@@ -5,8 +5,8 @@ import (
 
 	multisethashing "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/multiset_hashing"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion/verifier/verifiertest"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/node"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/verifier/verifiertest"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"

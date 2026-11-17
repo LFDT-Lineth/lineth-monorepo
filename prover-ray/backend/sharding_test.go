@@ -9,7 +9,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/conglomeration"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/verifier/verifiertest"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion/verifier/verifiertest"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
