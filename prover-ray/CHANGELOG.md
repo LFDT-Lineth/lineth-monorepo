@@ -9,6 +9,12 @@
 - *(riscv-guest)* Refactoring to enable further Rollup GP development (#4342)
 - *(prover-ray)* Prepare centralized prover (#4242)
 - *(prover-ray)* Conglomerate the shard proofs behind a Merger interface (#4372)
+- *(prover-ray)* Merge conglomeration nodes of one kind only (#4404)
+- *(prover-ray)* Public-input chip for the recursion machine (#4437)
+- *(prover-ray)* Add partial mode for l2 execution (#4455)
+- *(prover-ray)* Remove deduplication (#4435)
+- *(prover-ray)* Check the pipeline config at startup (#4463)
+- *(prover-ray)* Decode dev-zkvm public inputs from the guest output (#4462)
 
 ### 🐛 Bug Fixes
 
@@ -18,7 +24,6 @@
 - *(prover-ray)* Adopt the guest log syscall in the prover-ray (#4371)
 - *(riscv-guest, misc, prover-ray)* Riscv guest/shared zkevm fixtures (#4368)
 - *(prover-ray)* Bump arithmetization commit to support u16 addresses (#4396)
-- *(prover-ray)* Use bit-accurate arithmetization inputs with ZkC v1.2.36 to prevent incomplete decoded rows.
 
 ### 🚜 Refactor
 
@@ -29,6 +34,7 @@
 - *(prover-ray)* Preserve expression sharing through the localvanishing lift (#4155)
 - *(prover-ray)* Parallelise and pool the R5 commits, opening, Lagrange evaluation and lookup (#4202)
 - *(prover-ray)* Evaluate the quotient, log-derivative and grand-product rows with vector programs (#4203)
+- *(prover-ray)* Evaluate each shared verifier subexpression once (#4157)
 
 ### ⚙️ Miscellaneous Tasks
 
