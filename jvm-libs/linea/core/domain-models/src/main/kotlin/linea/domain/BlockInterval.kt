@@ -14,6 +14,10 @@ interface BlockInterval {
     get() = startBlockNumber..endBlockNumber
 
   fun intervalString(): String = CommonDomainFunctions.blockIntervalString(startBlockNumber, endBlockNumber)
+
+  /** Whether [other] covers the same blocks, whatever its implementation (`==` also compares the types). */
+  fun isSameInterval(other: BlockInterval): Boolean =
+    startBlockNumber == other.startBlockNumber && endBlockNumber == other.endBlockNumber
   fun contains(blockNumber: ULong): Boolean = blockNumber >= startBlockNumber && blockNumber <= endBlockNumber
   fun contains(
     other: BlockInterval,

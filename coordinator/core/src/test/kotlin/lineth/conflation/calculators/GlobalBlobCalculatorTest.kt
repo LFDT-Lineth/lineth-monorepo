@@ -86,7 +86,7 @@ class GlobalBlobCalculatorTest {
 
     calculator.newConflation(conflation(1UL, 10_000))
     calculator.newConflation(spanning)
-    assertThat(calculator.flush()).isTrue()
+    assertThat(calculator.tryFlush()).isTrue()
 
     assertThat(events.map { it.conflationEnds() }).containsExactly(listOf(1UL), emptyList(), emptyList(), listOf(2UL))
     assertThat(events.take(3).map { it.next!!.conflation }).containsOnly(spanning)
@@ -109,6 +109,39 @@ class GlobalBlobCalculatorTest {
   }
 
   @Test
+  fun `a conflation whose append seals a blob and that hits a trigger seals two different blobs`() {
+    val calculator = calculator(triggers = listOf(BlobTriggerCalculatorByTargetBlockNumbers(setOf(4UL))))
+    listOf(a, b, c).forEach(calculator::newConflation)
+    events.clear()
+
+    // D needs a new blob, so its append seals blob2 = [end of B, C, start of D]; the trigger then flushes blob3.
+    calculator.newConflation(d)
+
+    assertThat(events).hasSize(2)
+    assertThat(events[0].conflationEnds()).containsExactly(2UL, 3UL)
+    assertThat(events[0].flushed).isFalse()
+    assertThat(events[0].next!!.conflation).isEqualTo(d)
+    assertThat(events[1].conflationEnds()).containsExactly(4UL)
+    assertThat(events[1].flushed).isTrue()
+    assertThat(events[1].next).isNull()
+    assertThat(events[1].blob.prevDataRollingHash).isEqualTo(events[0].blob.dataRollingHash)
+    assertThat(events[1].blob.payloadBytes).isLessThan(BLOB_PAYLOAD_CAPACITY)
+  }
+
+  @Test
+  fun `a trigger on a conflation spanning blobs flushes the blob where it ends`() {
+    val calculator = calculator(triggers = listOf(BlobTriggerCalculatorByTargetBlockNumbers(setOf(2UL))))
+    val spanning = conflation(2UL, 2 * BLOB_PAYLOAD_CAPACITY)
+
+    calculator.newConflation(conflation(1UL, 10_000))
+    calculator.newConflation(spanning)
+
+    assertThat(events.map { it.conflationEnds() }).containsExactly(listOf(1UL), emptyList(), listOf(2UL))
+    assertThat(events.map { it.flushed }).containsExactly(false, false, true)
+    assertThat(calculator.tryFlush()).isFalse()
+  }
+
+  @Test
   fun `a hard fork flushes the blob before the first conflation after the fork`() {
     val fork = baseTime + 1.minutes
     val calculator = calculator(
@@ -123,7 +156,7 @@ class GlobalBlobCalculatorTest {
     assertThat(events).hasSize(1)
     assertThat(events.single().conflationEnds()).containsExactly(1UL, 2UL)
     assertThat(events.single().flushed).isTrue()
-    assertThat(calculator.flush()).isTrue()
+    assertThat(calculator.tryFlush()).isTrue()
     assertThat(events.last().conflationEnds()).containsExactly(3UL)
   }
 
@@ -203,15 +236,15 @@ class GlobalBlobCalculatorTest {
 
     assertThat(events.single().conflationEnds()).containsExactly(3UL, 6UL)
     assertThat(events.single().flushed).isTrue()
-    assertThat(calculator.flush()).isTrue()
+    assertThat(calculator.tryFlush()).isTrue()
     assertThat(events.last().conflationEnds()).containsExactly(9UL)
   }
 
   @Test
-  fun `flush with no open blob does nothing`() {
+  fun `tryFlush with no open blob flushes nothing`() {
     val calculator = calculator()
 
-    assertThat(calculator.flush()).isFalse()
+    assertThat(calculator.tryFlush()).isFalse()
     assertThat(events).isEmpty()
   }
 
@@ -233,7 +266,7 @@ class GlobalBlobCalculatorTest {
       blobDeadline = 1.seconds,
     )
 
-    assertThat(resumed.flush()).isFalse()
+    assertThat(resumed.tryFlush()).isFalse()
     assertThat(resumed.checkDeadline(baseTime + 1000.minutes)).isFalse()
     resumed.newConflation(d)
 
@@ -241,7 +274,7 @@ class GlobalBlobCalculatorTest {
     assertThat(events.single().blob.blob).isEqualTo(blob2.blob)
     assertThat(events.single().conflations).isEmpty()
     assertThat(events.single().next!!.conflation).isEqualTo(d)
-    assertThat(resumed.flush()).isTrue()
+    assertThat(resumed.tryFlush()).isTrue()
     assertThat(events.last().conflationEnds()).containsExactly(4UL)
   }
 
@@ -250,7 +283,7 @@ class GlobalBlobCalculatorTest {
     calculator().apply {
       newConflation(a)
       newConflation(short)
-      flush()
+      tryFlush()
     }
     val flushed = events.single()
     events.clear()
@@ -264,7 +297,7 @@ class GlobalBlobCalculatorTest {
   }
 
   @Test
-  fun `once a resumed short shared blob is reproduced in full, flush re-seals it without waiting for more data`() {
+  fun `once the carry-over tail of a resumed short shared blob is filled, tryFlush re-seals it without waiting`() {
     val short = conflation(2UL, 30_000)
     val (position, original) = positionInsideShortFlushedBlob(short)
     val resumed = calculator(
@@ -272,19 +305,19 @@ class GlobalBlobCalculatorTest {
       sharedBlobCarryOverTailBytes = position.sharedBlobCarryOverTailBytes,
     )
 
-    assertThat(resumed.flush()).isFalse()
+    assertThat(resumed.tryFlush()).isFalse()
     // The segment fills the shared blob exactly, so append does not seal it: the blob stays open until flushed.
     resumed.newConflation(short)
     assertThat(events).isEmpty()
 
-    assertThat(resumed.flush()).isTrue()
+    assertThat(resumed.tryFlush()).isTrue()
     assertThat(events.single().blob.blob).isEqualTo(original.blob.blob)
     assertThat(events.single().flushed).isTrue()
     assertThat(events.single().conflationEnds()).containsExactly(2UL)
   }
 
   @Test
-  fun `once a resumed short shared blob is reproduced in full, the blob deadline re-seals it`() {
+  fun `once the carry-over tail of a resumed short shared blob is filled, the blob deadline re-seals it`() {
     val short = conflation(2UL, 30_000)
     val (position, original) = positionInsideShortFlushedBlob(short)
     val resumed = calculator(
@@ -320,7 +353,7 @@ class GlobalBlobCalculatorTest {
         assertThat(it.errorType).isEqualTo(DaStreamErrorType.SEEDED_BLOB_MISMATCH)
       }
     resumed.newConflation(d)
-    resumed.flush()
+    resumed.tryFlush()
 
     assertThat(events.last().conflationEnds()).containsExactly(4UL)
   }
@@ -340,7 +373,7 @@ class GlobalBlobCalculatorTest {
     val stream = ScriptedDaStream(flushResult = blobWithCuts())
     val calculator = calculator(stream = stream)
 
-    assertThatThrownBy { calculator.flush() }
+    assertThatThrownBy { calculator.tryFlush() }
       .isInstanceOf(IllegalStateException::class.java)
       .hasMessageContaining("a flushed blob must end at least one conflation")
   }
