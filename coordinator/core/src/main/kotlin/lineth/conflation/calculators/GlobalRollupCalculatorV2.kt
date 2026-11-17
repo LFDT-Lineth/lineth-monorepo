@@ -1,5 +1,6 @@
 package lineth.conflation.calculators
 
+import linea.kotlin.toInstantFromEpochSeconds
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import kotlin.time.Duration
@@ -74,7 +75,7 @@ class GlobalRollupCalculatorV2(
     val deadline = rollupDeadline ?: return false
     val blobs = blobCalculator()
     val oldest = openRollup.openConflations.firstOrNull() ?: blobs.oldestUnsealedConflation ?: return false
-    val oldestBlockTimestamp = Instant.fromEpochSeconds(oldest.blocks.first().timestamp.toLong())
-    return if (now - oldestBlockTimestamp >= deadline) blobs.flush(BlobTrigger.TIME_LIMIT) else false
+    val oldestBlockTimestamp = oldest.blocks.first().timestamp.toInstantFromEpochSeconds()
+    return if (now - oldestBlockTimestamp >= deadline) blobs.tryFlush(BlobTrigger.TIME_LIMIT) else false
   }
 }

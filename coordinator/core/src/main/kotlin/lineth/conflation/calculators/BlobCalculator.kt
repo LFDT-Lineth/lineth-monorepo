@@ -15,16 +15,29 @@ enum class BlobTrigger {
 /**
  * Decides when the open blob is flushed (ended early), in the same shape as [RollupTriggerCalculator].
  *
+ * For each conflation, [GlobalBlobCalculator.newConflation] calls, in order:
+ * 1. [checkOverflow] with the conflation, before it is appended: a trigger flushes the open blob without it;
+ * 2. the conflation is appended to the stream, which may seal full blobs ([reset] runs for each);
+ * 3. [appendConflation] with the conflation;
+ * 4. [checkTrigger] with the conflation: a trigger flushes the open blob with it as the last conflation.
+ *
  * Triggers may only depend on the conflations' blocks (numbers, timestamps), not on how a conflation was cut: after a
  * restart, conflations are rebuilt from persisted batches.
  */
 interface BlobTriggerCalculator {
+  /** Records [conflation] as part of the open blob. */
   fun appendConflation(conflation: BlocksConflation)
 
-  /** Flush right AFTER [conflation] (inclusive). */
+  /**
+   * Checked after [conflation] is appended. A trigger ends the open blob right AFTER [conflation], which becomes its
+   * last conflation. For conditions met by a conflation itself, e.g. one ending at a target block number.
+   */
   fun checkTrigger(conflation: BlocksConflation): BlobTrigger?
 
-  /** Flush BEFORE [next] is appended, e.g. when [next] is the first conflation after a hard fork. */
+  /**
+   * Checked before [next] is appended. A trigger ends the open blob BEFORE [next], which then starts a new blob. For
+   * boundaries that [next] would cross, e.g. [next] being the first conflation after a hard fork.
+   */
   fun checkOverflow(next: BlocksConflation): BlobTrigger? = null
 
   /** Called when a blob is sealed (a new blob opens). */
