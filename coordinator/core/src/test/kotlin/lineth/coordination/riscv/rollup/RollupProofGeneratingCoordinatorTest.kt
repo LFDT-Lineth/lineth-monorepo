@@ -334,9 +334,15 @@ class RollupProofGeneratingCoordinatorTest {
     batchesRepository.deleteBatchesAfterBlockNumber(4L).get()
     prove(merged(d, e))
     val restarted = createCoordinator(resumePoint = resumePointAfter(context1))
+    val f = conflation(6UL, 10_000)
+    restarted.handleConflatedBatch(f).get()
 
     val error = runCatching { restarted.action().get() }.exceptionOrNull()
     assertThat((error?.cause as? DaStreamException)?.errorType).isEqualTo(DaStreamErrorType.SEEDED_BLOB_MISMATCH)
+    assertThat(restarted.cachedConflationsCount).`as`("the stopped stage drops its cache").isZero()
+
+    restarted.handleConflatedBatch(conflation(7UL, 10_000)).get()
+    assertThat(restarted.cachedConflationsCount).`as`("the stopped stage caches nothing more").isZero()
     fetchedRanges.clear()
     restarted.action().get()
     assertThat(fetchedRanges).`as`("the stopped stage reads nothing more").isEmpty()
