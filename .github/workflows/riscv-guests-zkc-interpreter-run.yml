@@ -9,9 +9,9 @@
 # — depending on both the guest source AND the interpreter program + ELF->JSON tooling — so it
 # triggers on changes to either.
 #
-# Two trigger tiers: a change confined to rollup_spec/src (the Python reference the guests' wire
-# formats and golden vectors derive from) runs only the host unit tests; a change to the guests or
-# the interpreter tooling runs the full pipeline.
+# Two trigger tiers: a change confined to the reference output bytes the guests' codec is checked
+# against runs only the host unit tests; a change to the guests or the interpreter tooling runs the
+# full pipeline.
 #
 # In the full pipeline the production ELF build is the single prerequisite for every automatic L2
 # guest check. A broken guest build therefore prevents the expensive host reference suite and ZkC
@@ -23,7 +23,7 @@ on:
     # Intentionally unfiltered by base branch: stacked PRs also need this focused gate.
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
-      - "rollup_spec/src/**"
+      - "prover-ray/utils/ssz/testdata/l2_execution_output.ssz"
       - "riscv-guests/**"
       - "arithmetization/src/main/riscv/**" # main.zkc — the interpreter (ZKC_MAIN)
       - "arithmetization/src/main/common/**" # shared constants used by the RISC-V program
@@ -42,7 +42,7 @@ on:
     branches:
       - main
     paths:
-      - "rollup_spec/src/**"
+      - "prover-ray/utils/ssz/testdata/l2_execution_output.ssz"
       - "riscv-guests/**"
       - "arithmetization/src/main/riscv/**"
       - "arithmetization/src/main/common/**"

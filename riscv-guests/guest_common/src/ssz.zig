@@ -6,8 +6,8 @@
 //! owned by the allocator that decoded it, which is an arena or a bump allocator that never frees.
 //!
 //! Decoding returns `error.InvalidSsz` for every rejection by the library or by a list type, and
-//! `error.MalformedFrame` for a frame without its schema id. Encoding returns
-//! `error.BoundsViolation` for a list beyond its bound.
+//! `error.MalformedFrame` for a frame without its schema id. Encoding returns `error.BoundsViolation`
+//! for a list beyond its bound or for an encoding longer than a u32 offset reaches.
 
 const std = @import("std");
 const builtin = @import("builtin");
@@ -242,6 +242,8 @@ fn encodeAfter(comptime T: type, alloc: Allocator, head_len: usize, prefix: []co
         const any: anyerror = err;
         return if (any == error.ListTooLong) error.BoundsViolation else unreachable;
     };
+    // SSZ offsets are u32, and the library truncates a larger one.
+    if (size > std.math.maxInt(u32)) return error.BoundsViolation;
     var out = try ArrayList(u8).initCapacity(alloc, head_len + prefix.len + size);
     errdefer out.deinit(alloc);
     out.items.len = head_len;
