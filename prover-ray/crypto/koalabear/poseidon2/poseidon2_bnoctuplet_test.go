@@ -22,6 +22,9 @@ func randDigestOctuplet() field.Octuplet {
 
 // TestBNCompressOctupletRejectsNonDigest checks that a child limb >= 2^30,
 // which no digest encoding has, is rejected.
+//
+// The 30-bit range check makes each limb canonical (< 2^30 < p), so a prover
+// cannot pass limb + p, which packs differently, in place of limb.
 func TestBNCompressOctupletRejectsNonDigest(t *testing.T) {
 	l, r := randDigestOctuplet(), randDigestOctuplet()
 	// Override only the first limb of l with 2^30, one past the 30-bit digest
