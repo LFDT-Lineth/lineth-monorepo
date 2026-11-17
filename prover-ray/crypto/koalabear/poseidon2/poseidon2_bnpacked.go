@@ -238,7 +238,8 @@ func (h *BNPackedGnarkHasher) Sum() frontend.Variable {
 		panic(err)
 	}
 	var iv frontend.Variable = 0
-	// if the mode is [BNPackedLengthInIV], the initial chaining value is n, which is a compile-time constant, so it costs no constraints.
+	// if the mode is [BNPackedLengthInIV], the initial chaining value is n, which is a
+	// compile-time constant, so it costs no constraints.
 	if h.domain == BNPackedLengthInIV {
 		// empty inputs are rejected, as the initial chaining value is n
 		checkBNPackedNonEmpty(n)
@@ -274,7 +275,8 @@ func packKoalaCanonical(api frontend.API, koalaAPI *circuit.KoalaBearAPI, xs []c
 		end := min(start+BNPackedNbKoalaPerLimb, len(xs))
 		var acc frontend.Variable = 0
 		for i := start; i < end; i++ {
-			// canonicalKoala returns a native variable in [0, p) for the KoalaBear element, which is guaranteed to fit in 31 bits.
+			// canonicalKoala returns a native variable in [0, p) for the KoalaBear element,
+			// which is guaranteed to fit in 31 bits.
 			// The packing is big-endian.
 			// uniqueness is guaranteed by the canonicalization, so x and x+p cannot hash differently.
 			x := canonicalKoala(api, koalaAPI, rc, xs[i])
