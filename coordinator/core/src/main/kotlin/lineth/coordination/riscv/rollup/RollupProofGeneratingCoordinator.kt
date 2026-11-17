@@ -18,6 +18,7 @@ import linea.domain.BlockIntervalProofIndex
 import linea.domain.BlocksConflation
 import linea.domain.ConflationCalculationResult
 import linea.domain.ConflationTrigger
+import linea.kotlin.toInstantFromEpochSeconds
 import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
 import lineth.conflation.ConflationHandler
@@ -38,7 +39,6 @@ import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Clock
 import kotlin.time.Duration
-import kotlin.time.Instant
 
 /** Fetches the L2 blocks `startBlockNumber..endBlockNumber`, in order. */
 fun interface L2BlocksFetcher {
@@ -293,7 +293,7 @@ class RollupProofGeneratingCoordinator(
         BlockIntervalProofIndex(
           startBlockNumber = conflation.startBlockNumber,
           endBlockNumber = conflation.endBlockNumber,
-          startBlockTimestamp = conflation.startBlockTimestamp(),
+          startBlockTimestamp = conflation.blocks.first().timestamp.toInstantFromEpochSeconds(),
           hash = hash,
         )
       }
@@ -347,13 +347,9 @@ class RollupProofGeneratingCoordinator(
       parentDataTailTakeBytes = da.parentDataTailTakeBytes,
       boundaryPrevDataRollingHash = da.boundaryPrevDataRollingHash,
       finalDataTailDiscardBytes = da.expectedFinalDataTailDiscardBytes,
-      startBlockTimestamp = rollup.conflations.first().startBlockTimestamp(),
-      endBlockTimestamp = Instant.fromEpochSeconds(rollup.conflations.last().blocks.last().timestamp.toLong()),
+      startBlockTimestamp = rollup.conflations.first().blocks.first().timestamp.toInstantFromEpochSeconds(),
+      endBlockTimestamp = rollup.conflations.last().blocks.last().timestamp.toInstantFromEpochSeconds(),
       totalBatchesCount = rollup.conflations.size,
     )
   }
-
-  private fun BlocksConflation.startBlockTimestamp(): Instant = Instant.fromEpochSeconds(
-    blocks.first().timestamp.toLong(),
-  )
 }
