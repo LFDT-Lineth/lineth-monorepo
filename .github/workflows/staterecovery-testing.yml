@@ -3,6 +3,7 @@ name: staterecovery-testing
 permissions:
   contents: read
   actions: read
+  id-token: write
 
 on:
   workflow_call:
@@ -10,11 +11,6 @@ on:
       commit_tag:
         required: true
         type: string
-    secrets:
-      DOCKERHUB_USERNAME:
-        required: false
-      DOCKERHUB_TOKEN:
-        required: false
 
 concurrency:
   group: staterecovery-testing-${{ github.workflow }}-${{ github.ref }}
@@ -24,11 +20,10 @@ jobs:
   run-tests:
     env:
       COMMIT_TAG: ${{ inputs.commit_tag }}
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       # CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     # ~2.5 mins saved vs large
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+    environment: dockerhub-pull
     name: Staterecovery tests
     steps:
       - name: Checkout
@@ -52,11 +47,13 @@ jobs:
         run: |
           ./gradlew linea-besu:plugins:state-recovery:besu-plugin:shadowJar
       - name: Login to Docker Hub
-        if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
+        if: ${{ github.event.pull_request.head.repo.fork != true }}
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        env:
+          DOCKERHUB_OIDC_CONNECTIONID: ${{ vars.DOCKERHUB_OIDC_CONNECTIONID_PULL }}
+          DOCKERHUB_OIDC_EXPIREIN: 1800
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: consensys
       - name: Run integration tests
         timeout-minutes: 15
         run: |

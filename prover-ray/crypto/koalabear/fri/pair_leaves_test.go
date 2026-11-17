@@ -26,8 +26,9 @@ func pairLeavesWitness(prng *rand.Rand) Batch {
 }
 
 // newPairLeavesPCSFixture commits pairLeavesWitness, a grouped table and so
-// one with pair leaves, opens it as numBatches batches sharing one input tree
-// at four queries, and checks the native verifier accepts.
+// one with pair leaves, opens it as numBatches batches of that one commitment
+// (each its own input tree) at four queries, and checks the native verifier
+// accepts.
 func newPairLeavesPCSFixture(t *testing.T, numBatches int) pcsOpenVerifyFixture {
 	t.Helper()
 	params, err := NewParams(4, 3, 4)

@@ -1,10 +1,13 @@
 package backend
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
+	"slices"
 	"testing"
 
+	minimal_elf "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/minimal-elf"
 	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 	"github.com/stretchr/testify/assert"
@@ -98,4 +101,46 @@ func guestOutputs(frame []byte) map[string]bit.Array {
 		guestOutputMemory: bitsFromBytes(frame[:split]...),
 		guestLogMemory:    bitsFromBytes(frame[split:]...),
 	}
+}
+
+// TestProveDevZkVM runs dev-zkvm on guests that write a given output: it
+// returns the public inputs decoded from the output, the output itself, and the
+// dev-zkvm marker in place of a proof.
+func TestProveDevZkVM(t *testing.T) {
+	hash, framed := referenceFrame(t)
+	badHash := slices.Clone(hash)
+	badHash[0] ^= 0xff
+	// A well-hashed frame whose public inputs are shorter than the fixed head.
+	shortFrame := framed[:guestOutputSchemaIDSize+10]
+
+	dir := t.TempDir()
+	valid := writeGuest(t, dir, minimal_elf.OutputAndLogELF(hash, framed))
+	wrongHash := writeGuest(t, dir, minimal_elf.OutputAndLogELF(badHash, framed))
+	shortInputs := writeGuest(t, dir, minimal_elf.OutputAndLogELF(keccak256(shortFrame), shortFrame))
+
+	c, err := New(Config{Mode: ProverModeDevZkVM, GuestsDir: dir})
+	require.NoError(t, err)
+	prove := func(id [32]byte) Result {
+		return c.Prove(context.Background(), Job{ID: "dev-zkvm", Type: ProofTypeL2Execution, GuestProgramID: id})
+	}
+
+	t.Run("valid output", func(t *testing.T) {
+		result := prove(valid)
+		require.Equal(t, ResultStatusOK, result.Status, "prove err: %v", result.Err)
+		assert.Equal(t, referencePublicInputs(t), result.PublicInputs, "the public inputs should be decoded from the guest output")
+		assert.Equal(t, slices.Concat(hash, framed), result.GuestOutput, "the guest output should be returned for the native runner check")
+		assert.Equal(t, DevMarkerProof(ProverModeDevZkVM), result.ProofBytes, "the proof should be the dev-zkvm marker")
+	})
+
+	t.Run("hash does not match the frame", func(t *testing.T) {
+		result := prove(wrongHash)
+		assert.Equal(t, ResultStatusFailed, result.Status)
+		assert.ErrorContains(t, result.Err, "hash does not match")
+	})
+
+	t.Run("public inputs do not decode", func(t *testing.T) {
+		result := prove(shortInputs)
+		assert.Equal(t, ResultStatusFailed, result.Status)
+		assert.ErrorContains(t, result.Err, "fixed head")
+	})
 }

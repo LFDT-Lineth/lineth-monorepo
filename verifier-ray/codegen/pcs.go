@@ -44,7 +44,12 @@ type PcsSystem struct {
 	LogPlaintextSize int
 	LogFinalPolySize int
 	NumQueries       int
-	NumBatches       int
+	// MerkleCapHeight is prover-ray's pcs.MerkleCapHeight(sys): the cap height
+	// every committed tree uses before its own height-1 clamp (0 = no cap). It
+	// is a per-System compile option, so the verifier must be told it rather
+	// than derive it from NumQueries.
+	MerkleCapHeight int
+	NumBatches      int
 
 	// Columns is the symbolic committed-column descriptor list in prover
 	// DECLARATION order (batch-major, then round.Columns order). The Zig verifier
@@ -245,9 +250,9 @@ func pcsShiftClaimCells(sys *wiop.System) (map[wiop.ObjectID][]int, map[wiop.Obj
 // observes this: it dedups by normalized shift before opening
 // (recoverBatchClaims), producing exactly one claim, so the two claims baked
 // here can never both be supplied correctly by an honest prover at an aliasing
-// size — there is no valid completion, only rejection (enforced against each
-// specific proof's actual runtime size by the Zig verifier's own
-// `pcs.reconstruct`, which returns `error.DynamicModuleSizeBelowMinimum`).
+// size — there is no valid completion, only rejection (enforced by the
+// stronger per-module minimum, CoinRouting.DynamicModuleMinSizes, which
+// protocol.replayWithTranscript checks).
 func pcsDynamicMinSizeLog2(colPath string, shifts []int, maxSizeLog2 int) (int, error) {
 	minSizeLog2 := 0
 	var (
@@ -367,6 +372,13 @@ func BuildPcsSystem(sys *wiop.System, routing CoinRouting) (PcsSystem, error) {
 				if err != nil {
 					return PcsSystem{}, err
 				}
+				// The verifier only enforces the per-module minimum, which covers
+				// this column's bound as long as its shifts are among the module's
+				// Lagrange-evaluation shifts. Fail here if that ever stops holding.
+				if moduleMin := routing.DynamicModuleMinSizes[idx]; 1<<minSizeLog2 > moduleMin {
+					return PcsSystem{}, fmt.Errorf("codegen: BuildPcsSystem: column %q needs module size >= %d, above the module minimum %d",
+						col.Context.Path(), 1<<minSizeLog2, moduleMin)
+				}
 				desc.DynamicMinSizeLog2 = minSizeLog2
 			} else {
 				// Static column: size_log2 is the padded, fixed module size. SetSize
@@ -403,6 +415,7 @@ func BuildPcsSystem(sys *wiop.System, routing CoinRouting) (PcsSystem, error) {
 		LogPlaintextSize: int(envelope.LogPlainTextSize),
 		LogFinalPolySize: 0,
 		NumQueries:       pcscompiler.FRINumQueries(sys),
+		MerkleCapHeight:  pcscompiler.MerkleCapHeight(sys),
 		NumBatches:       len(batches),
 		Columns:          columns,
 		MaxEntries:       len(columns),
