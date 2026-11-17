@@ -24,6 +24,9 @@ func randDigestOctuplet() field.Octuplet {
 // which no digest encoding has, is rejected.
 func TestBNCompressOctupletRejectsNonDigest(t *testing.T) {
 	l, r := randDigestOctuplet(), randDigestOctuplet()
+	// Override only the first limb of l with 2^30, one past the 30-bit digest
+	// limb range. l[1..7] and all of r stay valid digest limbs, so the range
+	// check on l[0] is the only thing that can fail.
 	l[0].SetUint64(1 << 30)
 	out := BNCompressOctuplet(l, r)
 	w := &bnCompressOctCircuit{Left: octupletWitness(l), Right: octupletWitness(r), Output: octupletWitness(out)}
