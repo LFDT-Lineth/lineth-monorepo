@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### Upcoming Breaking Changes
+
+- *(docker)* Container filesystem layout moved from `/opt/consensys/maru` to `/opt/lineth/maru` — update any volume mounts or command overrides that reference the old path
+
 ### 🚀 Features
 
 - *(coordinator, maru, docker)* Let downstream images override the image labels and maru jar (#4393)

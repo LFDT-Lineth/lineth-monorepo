@@ -10,7 +10,7 @@ services:
     environment:
       LINETH_USE_MARU_OVERRIDE_CONFIG: "false"
     volumes:
-      - ./config/maru/sequencer.riscv.config.overrides.toml:/opt/consensys/maru/configs/config.stack.toml:ro
+      - ./config/maru/sequencer.riscv.config.overrides.toml:/opt/lineth/maru/configs/config.stack.toml:ro
 
   sequencer:
     command:
@@ -73,4 +73,4 @@ services:
       COORDINATOR_CONFIG_FILES: config/coordinator-config.toml config/coordinator-config-riscv.toml
       config__override__prover__l2_execution__program_id: *riscv-execution-program-id
     volumes:
-      - ./config/coordinator/coordinator-config-riscv.toml:/opt/consensys/linea/coordinator/config/coordinator-config-riscv.toml:ro
+      - ./config/coordinator/coordinator-config-riscv.toml:/opt/lineth/coordinator/config/coordinator-config-riscv.toml:ro
