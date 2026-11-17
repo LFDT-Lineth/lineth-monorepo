@@ -36,10 +36,19 @@ jobs:
               --ignore-on-exit results \
               --ci --no-progress
 
-      - name: Upload SARIF to GitHub Security
+      - name: Deduplicate SARIF taxa
+        # KICS emits duplicate taxa ids under runs[].taxonomies (e.g. CWE-710
+        # once per rule), which code scanning rejects: "taxa contains duplicate
+        # item". Dedupe by id before upload.
         if: ${{ !cancelled() && hashFiles('kics-results/results.sarif') != '' }}
-        continue-on-error: true
+        run: |
+          jq '(.runs[].taxonomies[]?.taxa) |= unique_by(.id)' \
+            kics-results/results.sarif > "$RUNNER_TEMP/kics.sarif"
+
+      - name: Upload SARIF to GitHub Security
+        # No continue-on-error: a failed upload must fail the job so we notice.
+        if: ${{ !cancelled() && hashFiles('kics-results/results.sarif') != '' }}
         uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
-          sarif_file: kics-results/results.sarif
+          sarif_file: ${{ runner.temp }}/kics.sarif
           category: kics-dockerfiles
