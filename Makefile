@@ -166,7 +166,8 @@ start-env:
 	if [ "$(SKIP_CONTRACTS_DEPLOYMENT)" = "true" ]; then \
 		echo "Skipping contracts deployment"; \
 	else \
-		timeout 5m $(MAKE) deploy-contracts L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION) LINETH_PROTOCOL_CONTRACTS_ONLY=$(LINETH_PROTOCOL_CONTRACTS_ONLY) LINETH_L1_CONTRACT_DEPLOYMENT_TARGET=$(LINETH_L1_CONTRACT_DEPLOYMENT_TARGET) || { echo "deploy-contracts timed out after 5m or failed"; exit 1; }; \
+		echo "Deploying contracts (300s cap via perl alarm — GNU timeout is absent on macOS; same idiom as the retry target)"; \
+		perl -e 'alarm shift; exec @ARGV' 300 $(MAKE) deploy-contracts L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION) LINETH_PROTOCOL_CONTRACTS_ONLY=$(LINETH_PROTOCOL_CONTRACTS_ONLY) LINETH_L1_CONTRACT_DEPLOYMENT_TARGET=$(LINETH_L1_CONTRACT_DEPLOYMENT_TARGET) || { echo "deploy-contracts timed out after 300s or failed"; exit 1; }; \
 	fi
 
 start-env-with-validium:
