@@ -2,7 +2,7 @@
 
 Data-availability building blocks for the RISC-V guests, packaged as the `lineth_da` Zig module. `src/root.zig` is the package module, one namespace per source file; guests consume the package as a path dependency.
 
-The `zstd_decoder` namespace decompresses frames, the `encoding` namespace holds the byte formats of the DA stream, the `decompress` namespace verifies a stream against the chunks that carry it, the `accelerators` namespace is the crypto interface the others hash and recover signatures through. A guest that uses `encoding` or `decompress` links the `zkvm_*` crypto providers of `lineth_accelerators` (`-Dzkvm-provide=true`), which supply sha256, keccak256, secp256k1 recovery and the verification of KZG blob proofs.
+The `zstd_decoder` namespace decompresses frames, the `encoding` namespace holds the byte formats of the DA stream, and the `decompress` namespace verifies a stream against the chunks that carry it. `encoding` and `decompress` hash and verify blob proofs through the `zkvm_accelerators` module of `lineth_accelerators`, and `encoding` recovers transaction senders through zesu. A guest that uses `encoding` or `decompress` links the `zkvm_*` crypto providers of `lineth_accelerators` (`-Dzkvm-provide=true`), which supply sha256, keccak256, secp256k1 recovery and the verification of KZG blob proofs.
 
 ## `zstd_decoder`
 
