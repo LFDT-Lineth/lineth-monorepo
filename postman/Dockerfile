@@ -12,6 +12,13 @@ ARG NODE_IMAGE_DIGEST=sha256:af02d57b57719b9657a45199a79264a9437940cd55b3c7b3fc9
 
 FROM node:${NODE_VERSION}-trixie-slim@${NODE_IMAGE_DIGEST} AS base
 
+# Fail the build if NODE_VERSION and NODE_IMAGE_DIGEST drift: CI passes
+# NODE_VERSION from .nvmrc but not the digest, and with tag@digest only the
+# digest selects content — a .nvmrc bump alone would silently build the old
+# Node under a new label.
+ARG NODE_VERSION
+RUN [ "$(node --version)" = "v${NODE_VERSION}" ]
+
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
