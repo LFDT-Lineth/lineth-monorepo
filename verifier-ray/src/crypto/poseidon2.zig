@@ -179,11 +179,17 @@ fn permutationNative(comptime width: usize, state: *[width]field.Element) void {
     var s: [width]u64 = undefined;
     inline for (0..width) |i| s[i] = state[i].value;
 
+    // Under zkc, a 32-bit round key built from immediates costs two
+    // instructions (lui + addi); a load from the key table costs one. The
+    // volatile view keeps the optimizer from folding the loads back into
+    // immediates. Natively the keys stay compile-time constants.
+    const keys: *const volatile [num_round_keys]u32 = if (comptime r5_config.is_r5_zkvm) round_key_ptr else undefined;
+
     matMulExternal(&s);
     const half_full = full_rounds / 2;
-    inline for (0..half_full) |round| fullRound(&s, round);
-    inline for (half_full..half_full + partial_rounds) |round| partialRound(&s, round);
-    inline for (half_full + partial_rounds..total_rounds) |round| fullRound(&s, round);
+    inline for (0..half_full) |round| fullRound(&s, round, keys);
+    inline for (half_full..half_full + partial_rounds) |round| partialRound(&s, round, keys);
+    inline for (half_full + partial_rounds..total_rounds) |round| fullRound(&s, round, keys);
 
     inline for (0..width) |i| state[i] = .{ .value = @intCast(s[i]) };
 }
@@ -213,20 +219,56 @@ fn zeroArray(comptime len: usize) [len]field.Element {
 
 const p: u64 = field.modulus;
 
+// The round keys in the order the rounds use them: every lane of a full
+// round, lane 0 only of a partial round.
+const num_round_keys = full_rounds * constants.width + partial_rounds;
+const round_key_table: [num_round_keys]u32 = blk: {
+    var table: [num_round_keys]u32 = undefined;
+    var n: usize = 0;
+    for (0..total_rounds) |round| {
+        const lanes = if (isPartialRound(round)) 1 else constants.width;
+        for (0..lanes) |i| {
+            table[n] = constants.round_keys[round][i].value;
+            n += 1;
+        }
+    }
+    break :blk table;
+};
+
+// A runtime pointer to the table: loads through a comptime-known pointer are
+// resolved at compile time, volatile or not.
+var round_key_ptr: *const volatile [num_round_keys]u32 = &round_key_table;
+
+fn isPartialRound(round: usize) bool {
+    return round >= full_rounds / 2 and round < full_rounds / 2 + partial_rounds;
+}
+
+// Index of round `round`, lane `lane`'s key in `round_key_table`.
+fn roundKeyIndex(comptime round: usize, comptime lane: usize) usize {
+    var n: usize = 0;
+    for (0..round) |r| n += if (isPartialRound(r)) 1 else constants.width;
+    return n + lane;
+}
+
+inline fn roundKey(keys: *const volatile [num_round_keys]u32, comptime round: usize, comptime lane: usize) u64 {
+    if (comptime r5_config.is_r5_zkvm) return keys[comptime roundKeyIndex(round, lane)];
+    return constants.round_keys[round][lane].value;
+}
+
 // (x + key)^3 mod p, for x < p.
-inline fn sBox(x: u64, comptime key: u64) u64 {
+inline fn sBox(x: u64, key: u64) u64 {
     const t = x + key;
     const t2 = (t * t) % p;
     return (t2 * t) % p;
 }
 
-inline fn fullRound(s: *[constants.width]u64, comptime round: usize) void {
-    inline for (0..constants.width) |i| s[i] = sBox(s[i], constants.round_keys[round][i].value);
+inline fn fullRound(s: *[constants.width]u64, comptime round: usize, keys: *const volatile [num_round_keys]u32) void {
+    inline for (0..constants.width) |i| s[i] = sBox(s[i], roundKey(keys, round, i));
     matMulExternal(s);
 }
 
-inline fn partialRound(s: *[constants.width]u64, comptime round: usize) void {
-    s[0] = sBox(s[0], constants.round_keys[round][0].value);
+inline fn partialRound(s: *[constants.width]u64, comptime round: usize, keys: *const volatile [num_round_keys]u32) void {
+    s[0] = sBox(s[0], roundKey(keys, round, 0));
     matMulInternal(s);
 }
 
