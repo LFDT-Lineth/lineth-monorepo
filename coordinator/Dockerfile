@@ -37,10 +37,6 @@ RUN userdel ubuntu 2>/dev/null || true && rm -rf /home/ubuntu && \
     mkdir -p logs /tmp/prover/request /tmp/prover/response && \
     chown -R coordinator:coordinator /opt/lineth/coordinator /tmp/prover
 
-# Compatibility shim: in-repo compose stacks and published develop images still
-# reference the old /opt/consensys/linea layout. Remove once those flip to /opt/lineth.
-RUN mkdir -p /opt/consensys && ln -s /opt/lineth /opt/consensys/linea
-
 COPY --from=builder --chown=coordinator:coordinator /libs/** libs/
 # The glob lets downstream builds whose context has no license files skip them
 # (scripts/docker/build-image.sh --no-license-check).

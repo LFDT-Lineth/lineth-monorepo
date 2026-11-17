@@ -13,13 +13,6 @@ RUN userdel ubuntu 2>/dev/null || true && rm -rf /home/ubuntu && \
     mkdir -p /tmp/maru-db && \
     chown -R maru:maru /opt/lineth/maru /tmp/maru-db
 
-# Compatibility shim: in-repo compose stacks and published develop images still
-# reference the old /opt/consensys/maru layout (and maru's dev compose mounts the
-# jwt dir at /opt/consensys/docker). Remove once those flip to /opt/lineth.
-RUN mkdir -p /opt/consensys /opt/lineth/docker && \
-    ln -s /opt/lineth/maru /opt/consensys/maru && \
-    ln -s /opt/lineth/docker /opt/consensys/docker
-
 COPY --from=libs --chown=maru:maru ./** ./
 # The glob lets downstream builds whose licenses context has no license files skip them
 # (scripts/docker/build-image.sh --no-license-check).
