@@ -18,7 +18,7 @@ import kotlin.time.Duration
 
 /** One execution-layer Engine API endpoint. The [EngineApiClient] of every fork shares its JSON-RPC transport. */
 class EngineApiEndpoint(
-  val endpoint: URL,
+  private val endpoint: URL,
   private val rpcClient: JsonRpcV2Client,
   private val metricsFacade: MetricsFacade,
 ) {

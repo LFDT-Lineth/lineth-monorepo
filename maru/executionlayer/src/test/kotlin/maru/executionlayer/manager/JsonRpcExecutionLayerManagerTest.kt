@@ -87,8 +87,7 @@ class JsonRpcExecutionLayerManagerTest {
     respondToGetPayload(executionPayload)
 
     assertThat(executionLayerManager.finishBlockBuilding().get()).isEqualTo(executionPayload)
-    assertThat(engineApiClient.getPayloadCalls).hasSize(1)
-    assertThat(engineApiClient.getPayloadCalls.single()).isEqualTo(payloadId)
+    assertThat(engineApiClient.getPayloadCalls).containsExactly(payloadId)
   }
 
   @ParameterizedTest(name = "FCU argument propagation with Amsterdam attributes = {0}")
@@ -140,8 +139,7 @@ class JsonRpcExecutionLayerManagerTest {
     pendingFcu.complete(ForkChoiceUpdatedResult(validStatus(), payloadId))
 
     assertThat(finishFuture.get()).isEqualTo(executionPayload)
-    assertThat(engineApiClient.getPayloadCalls).hasSize(1)
-    assertThat(engineApiClient.getPayloadCalls.single()).isEqualTo(payloadId)
+    assertThat(engineApiClient.getPayloadCalls).containsExactly(payloadId)
   }
 
   @Test

@@ -21,20 +21,16 @@ import kotlin.time.Duration.Companion.seconds
  * - Other methods, such as `eth_getBlockByNumber`, are not Engine API block-execution calls; Teku allows 1s.
  */
 object EngineApiTimeouts {
-  val GET_PAYLOAD: Duration = 2.seconds
-  val NEW_PAYLOAD: Duration = 8.seconds
-  val FORK_CHOICE_UPDATED: Duration = 8.seconds
-  val NON_BLOCK_EXECUTION: Duration = 1.seconds
-
-  private val getPayloadMethod = Regex("engine_getPayloadV\\d+")
-  private val newPayloadMethod = Regex("engine_newPayloadV\\d+")
-  private val forkChoiceUpdatedMethod = Regex("engine_forkchoiceUpdatedV\\d+")
+  private val GET_PAYLOAD: Duration = 2.seconds
+  private val NEW_PAYLOAD: Duration = 8.seconds
+  private val FORK_CHOICE_UPDATED: Duration = 8.seconds
+  private val NON_BLOCK_EXECUTION: Duration = 1.seconds
 
   fun defaultFor(method: String): Duration =
     when {
-      getPayloadMethod.matches(method) -> GET_PAYLOAD
-      newPayloadMethod.matches(method) -> NEW_PAYLOAD
-      forkChoiceUpdatedMethod.matches(method) -> FORK_CHOICE_UPDATED
+      method.startsWith("engine_getPayloadV") -> GET_PAYLOAD
+      method.startsWith("engine_newPayloadV") -> NEW_PAYLOAD
+      method.startsWith("engine_forkchoiceUpdatedV") -> FORK_CHOICE_UPDATED
       else -> NON_BLOCK_EXECUTION
     }
 

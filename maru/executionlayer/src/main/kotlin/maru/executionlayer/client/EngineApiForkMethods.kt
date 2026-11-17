@@ -19,9 +19,9 @@ internal data class EngineApiForkMethods(
   val forkChoiceUpdatedVersion: Int,
   val schemaVersion: Int,
 ) {
-  val getPayload: String get() = "engine_getPayloadV$getPayloadVersion"
-  val newPayload: String get() = "engine_newPayloadV$newPayloadVersion"
-  val forkChoiceUpdated: String get() = "engine_forkchoiceUpdatedV$forkChoiceUpdatedVersion"
+  val getPayload: String = "engine_getPayloadV$getPayloadVersion"
+  val newPayload: String = "engine_newPayloadV$newPayloadVersion"
+  val forkChoiceUpdated: String = "engine_forkchoiceUpdatedV$forkChoiceUpdatedVersion"
 
   companion object {
     fun of(fork: ElFork): EngineApiForkMethods =
