@@ -26,8 +26,12 @@ func newMerkleHashSystem(opts ...pcs.Option) (*wiop.System, *wiop.Column) {
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 16, wiop.PaddingDirectionNone)
 	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	zeta := r1.NewCoinField(sys.Context.Childf("zeta"))
-	le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{col.View()}, zeta)
-	r1.RegisterAction(&selfAssignLagrange{le: le})
+	// Claim to prove: P_col(zeta) = y, where P_col is the interpolant of the
+	// round-0 committed col and y is the value assigned to lagrEval in round 1.
+	// The PCS compile turns this claim into Merkle openings plus a FRI proof.
+	lagrEval := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{col.View()}, zeta)
+	// Assign the Lagrange evaluation claim.
+	r1.RegisterAction(&selfAssignLagrange{le: lagrEval})
 	pcs.Compile(sys, append(testPCSOptions(), opts...)...)
 	return sys, col
 }
@@ -36,16 +40,24 @@ func newMerkleHashSystem(opts ...pcs.Option) (*wiop.System, *wiop.Column) {
 // natively and in the verifier circuit, with and without a Merkle cap, and
 // logs the circuit sizes.
 func TestVerifierCircuit_MerkleHash(t *testing.T) {
-	for _, hash := range []fri.MerkleHash{fri.MerkleHashKoalaBear, fri.MerkleHashBNPacked} {
+	// The Merkle hash is a property of the System
+	// iterate over the two supported Merkle hash modes
+	for _, hashMode := range []fri.MerkleHash{fri.MerkleHashKoalaBear, fri.MerkleHashBNPacked} {
+		// Each subtest builds its own System, since the cap height is fixed at compile
+		// time. 0 commits to a single root; 2 stands in for any non-zero cap.
 		for _, capHeight := range []int{0, 2} {
-			t.Run(fmt.Sprintf("%v/cap=%d", hash, capHeight), func(t *testing.T) {
-				sys, col := newMerkleHashSystem(pcs.WithMerkleHash(hash), pcs.WithMerkleCapHeight(capHeight))
-				require.Equal(t, hash, pcs.MerkleHash(sys), "System must record its Merkle hash")
+			t.Run(fmt.Sprintf("%v/cap=%d", hashMode, capHeight), func(t *testing.T) {
+				// build and compile a System with the given Merkle hash and cap height
+				sys, col := newMerkleHashSystem(pcs.WithMerkleHash(hashMode), pcs.WithMerkleCapHeight(capHeight))
+				require.Equal(t, hashMode, pcs.MerkleHash(sys), "System must record its Merkle hash")
 
+				// Prove with an honest, non-constant assignment of col and check that the
+				// proof verifies natively, outside the circuit.
 				proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, nonConstVec(16)) })
 				require.NoError(t, sys.Verify(proof, pub), "honest proof must verify natively")
-
+				// Compile the verifier circuit
 				cv := compileVerifierCircuit(t, sys, proof, pub)
+				// runtime check that the honest proof satisfies it.
 				require.NoError(t, cv.solve(t, proof, pub), "honest proof must satisfy the circuit")
 				t.Logf("constraints: %d", cv.ccs.GetNbConstraints())
 
@@ -70,6 +82,7 @@ func TestVerifierCircuit_MerkleHash(t *testing.T) {
 // of the System: a proof made in one mode is rejected by the other.
 func TestCompile_MerkleHashBindsProof(t *testing.T) {
 	koala, colK := newMerkleHashSystem()
+	// BN-packed mode is not compatible with KoalaBear mode, so we cannot use the default options.
 	bn, colB := newMerkleHashSystem(pcs.WithMerkleHash(fri.MerkleHashBNPacked))
 
 	proofK, pubK := koala.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(colK, nonConstVec(16)) })
@@ -98,9 +111,11 @@ func TestVerifierCircuit_PLONKProve(t *testing.T) {
 		t.Skip("PLONK setup and proving")
 	}
 	modulus := ecc.BN254.ScalarField()
-	for _, hash := range []fri.MerkleHash{fri.MerkleHashKoalaBear, fri.MerkleHashBNPacked} {
-		t.Run(hash.String(), func(t *testing.T) {
-			sys, col := newMerkleHashSystem(pcs.WithMerkleHash(hash))
+	// PLONK setup and proving dominate the runtime, so this runs each Merkle hash mode once, without a Merkle cap.
+	// Cap heights are covered by TestVerifierCircuit_MerkleHash, which compiles and solves the circuit without proving.
+	for _, hashMode := range []fri.MerkleHash{fri.MerkleHashKoalaBear, fri.MerkleHashBNPacked} {
+		t.Run(hashMode.String(), func(t *testing.T) {
+			sys, col := newMerkleHashSystem(pcs.WithMerkleHash(hashMode))
 			proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, nonConstVec(16)) })
 			require.NoError(t, sys.Verify(proof, pub), "honest proof must verify natively")
 
