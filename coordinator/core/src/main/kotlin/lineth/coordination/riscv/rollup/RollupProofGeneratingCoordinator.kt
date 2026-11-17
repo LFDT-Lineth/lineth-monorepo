@@ -104,6 +104,8 @@ class RollupProofGeneratingCoordinator(
   )
 
   private var pipeline: DaPipeline? = null
+
+  @Volatile
   private var failure: Throwable? = null
 
   @Volatile
@@ -111,8 +113,12 @@ class RollupProofGeneratingCoordinator(
   private val pendingRollups = ArrayDeque<Rollup>()
   private val conflationCache = ConcurrentHashMap<Pair<ULong, ULong>, BlocksConflation>()
 
+  /** Number of cached conflations, for tests. */
+  internal val cachedConflationsCount: Int get() = conflationCache.size
+
+  /** Caches the conflation's blocks until it is fed. A stage stopped by a DA pipeline error caches nothing. */
   override fun handleConflatedBatch(conflation: BlocksConflation): SafeFuture<*> {
-    if (conflation.endBlockNumber > lastFedBlockNumber) {
+    if (failure == null && conflation.endBlockNumber > lastFedBlockNumber) {
       conflationCache[conflation.startBlockNumber to conflation.endBlockNumber] = conflation
     }
     return SafeFuture.completedFuture(Unit)
@@ -241,7 +247,12 @@ class RollupProofGeneratingCoordinator(
       log.error("DA pipeline failed, stopping the rollup stage: errorMessage={}", e.message, e)
       throw e
     } finally {
-      conflationCache.keys.removeIf { (_, end) -> end <= lastFedBlockNumber }
+      if (failure != null) {
+        // The stopped stage never feeds again.
+        conflationCache.clear()
+      } else {
+        conflationCache.keys.removeIf { (_, end) -> end <= lastFedBlockNumber }
+      }
     }
   }
 
